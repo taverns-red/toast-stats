@@ -333,7 +333,7 @@ describe('territory colours (#2178)', () => {
     })
   }
 
-  describe('areas take their division hue in lightness steps', () => {
+  describe('areas take shades of their division hue', () => {
     const clubs = district(12)
     const divisions = new Map(
       named(territoryModel('division', clubs)).map(c => [c.code!, c.fill])
@@ -397,10 +397,11 @@ describe('territory colours (#2178)', () => {
         counts: [6, 6, 6, 4, 4, 5, 5, 5, 4],
         min: 10,
       },
-      // The largest district on 2026-10-18.
+      // The largest district on 2026-10-18: four divisions of 7 areas each
+      // share one hue's L*–chroma slice, which tops out near ΔE 9.
       'D70 (8 divisions, 51 areas)': {
         counts: [7, 5, 7, 5, 7, 7, 7, 6],
-        min: 9.5,
+        min: 8.5,
       },
     }
     for (const [name, { counts, min }] of Object.entries(layouts))
