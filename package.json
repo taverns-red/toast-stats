@@ -85,7 +85,7 @@
     "minimatch": "^10.2.3",
     "fast-xml-parser": "^5.5.8",
     "flatted": "^3.3.3",
-    "vite": "^8.0.14",
+    "vite": "$vite",
     "uuid": "^11.1.1",
     "@google-cloud/storage": {
       "teeny-request": {
