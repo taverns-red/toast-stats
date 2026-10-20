@@ -6,6 +6,7 @@
 #   rescrape — re-collect CSVs from the dashboard for specific dates or a program year
 #   prune    — remove non-month-end dates from local cache and GCS staging;
 #              with reconcile_prod=true, also reconcile production (#1133)
+#              through the scoped promoter (#1767)
 #   backfill-global-totals
 #            — build snapshots/{date}/global-totals.json for already-published
 #              historical dates, one date at a time (#1498)
@@ -113,7 +114,7 @@ on:
         type: boolean
         default: false
       reconcile_prod:
-        description: 'Prune only: also reconcile PRODUCTION — delete pruned prefixes + sync manifests (#1133, see runbook)'
+        description: 'Prune only: also reconcile PRODUCTION via the scoped promoter — copy the pruned indexes, then delete (#1767)'
         required: false
         type: boolean
         default: false
@@ -280,9 +281,17 @@ jobs:
             DRY_RUN="false"
             RECONCILE_PROD="true"
           fi
+          # A prune that reconciles prod promotes through the manifest
+          # (#1767): the gates and the scoped promoter run for it. Derived
+          # once here, after the schedule override.
+          PRUNE_RECONCILE="false"
+          if [ "${MODE}" = "prune" ] && [ "${RECONCILE_PROD:-false}" = "true" ] && [ "${DRY_RUN:-false}" != "true" ]; then
+            PRUNE_RECONCILE="true"
+          fi
           echo "mode=${MODE}" >> "$GITHUB_OUTPUT"
           echo "dry_run=${DRY_RUN:-false}" >> "$GITHUB_OUTPUT"
           echo "reconcile_prod=${RECONCILE_PROD:-false}" >> "$GITHUB_OUTPUT"
+          echo "prune_reconcile=${PRUNE_RECONCILE}" >> "$GITHUB_OUTPUT"
           echo "skip_promotion=${SKIP_PROMOTION:-false}" >> "$GITHUB_OUTPUT"
           echo "## 🔧 Pipeline Mode: \`${MODE}\`" >> "$GITHUB_STEP_SUMMARY"
           if [ "${SKIP_PROMOTION:-false}" = "true" ]; then
@@ -1777,15 +1786,16 @@ jobs:
             /tmp/divisions-areas-index.json >> "$GITHUB_STEP_SUMMARY"
 
       # ════════════════════════════════════════════════════════
-      # PRUNE MODE: PROD RECONCILIATION (#1133)
-      # Prune deletes only from staging; promotion rsync has no -d, so a
+      # PRUNE MODE: PROD RECONCILIATION (#1133, #1767)
+      # Prune deletes only from staging; promotion never deletes, so a
       # staging-only prune leaves staging < prod and the count gate freezes
       # promotion. The plan is the prod-minus-staging diff of dated dirs
       # (fail-closed in scripts/lib/pruneProdReconcile.ts), which also
-      # sweeps stragglers from earlier staging-only prunes. These steps run
-      # AFTER the shared manifest regeneration above, so the v1/ rsync
-      # copies the post-prune dates.json — rsyncing the stale manifest
-      # would re-freeze the count gate the mechanism exists to unfreeze.
+      # sweeps stragglers from earlier staging-only prunes. It is the
+      # run's DELETE MANIFEST: `[prune] Promote prod reconciliation` below
+      # hands it to the scoped promoter (ADR-015 step 9), which copies the
+      # regenerated v1/ + config/ indexes from the run manifest after the
+      # content gate, and only then deletes. This step only reads.
       # Runbook: docs/runbooks/prune-prod-reconciliation.md
       # ════════════════════════════════════════════════════════
 
@@ -1814,30 +1824,6 @@ jobs:
           echo "## 🔁 Prod Reconcile Plan (#1133)" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Prod-only prefixes to delete**: ${COUNT}" >> "$GITHUB_STEP_SUMMARY"
           sed 's/^/- `/; s/$/`/' /tmp/prod-reconcile-paths.txt >> "$GITHUB_STEP_SUMMARY"
-
-      - name: '[prune] Reconcile production'
-        if: >-
-          steps.mode.outputs.mode == 'prune' &&
-          steps.mode.outputs.reconcile_prod == 'true' &&
-          steps.mode.outputs.dry_run != 'true' &&
-          steps.mode.outputs.skip_promotion != 'true'
-        run: |
-          DELETED=0
-          while IFS= read -r PREFIX; do
-            echo "Deleting gs://${GCS_BUCKET_PRODUCTION}/${PREFIX}/..."
-            gcloud storage rm -r "gs://${GCS_BUCKET_PRODUCTION}/${PREFIX}/" || true
-            DELETED=$((DELETED + 1))
-          done < /tmp/prod-reconcile-paths.txt
-
-          # Sync the regenerated manifests so the next daily's count gate
-          # compares like with like (prod's v1/dates.json would otherwise
-          # still list the pruned dates and freeze promotion).
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/v1/" "gs://${GCS_BUCKET_PRODUCTION}/v1/"
-          gcloud storage rsync -r "gs://${GCS_BUCKET}/config/" "gs://${GCS_BUCKET_PRODUCTION}/config/"
-
-          echo "## ✅ Prod Reconciliation Complete (#1133)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Prefixes deleted from prod**: ${DELETED}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Manifests (v1/, config/) synced staging → prod" >> "$GITHUB_STEP_SUMMARY"
 
       # ════════════════════════════════════════════════════════
       # STAGING → PRODUCTION PROMOTION (#316)
@@ -2100,7 +2086,7 @@ jobs:
       # so the promotion-held steps below stay reachable.
       - name: Content gate staging objects (#1715)
         id: contentgate
-        if: steps.mode.outputs.mode != 'prune'
+        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.prune_reconcile == 'true'
         env:
           CONTENT_GATE_FILE: /tmp/content-gate.json
         run: npx tsx scripts/promotion-content-gate.ts
@@ -2116,7 +2102,7 @@ jobs:
       # Runs under skip_promotion too, so a proof run reports its verdict.
       - name: Completeness gate touched dates (#1761)
         id: completenessgate
-        if: steps.mode.outputs.mode != 'prune'
+        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.prune_reconcile == 'true'
         env:
           ALLOW_VALUE_CHANGES: ${{ inputs.allow_value_changes }}
           COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
@@ -2131,9 +2117,11 @@ jobs:
       # fails closed on the same inputs.
       - name: Plan scoped promotion (#1763)
         id: promoteplan
-        if: steps.mode.outputs.mode != 'prune'
+        if: steps.mode.outputs.mode != 'prune' || steps.mode.outputs.prune_reconcile == 'true'
         env:
           COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
+          # A prune reconcile previews its deletes too (#1767).
+          PROD_DELETES_FILE: ${{ steps.mode.outputs.mode == 'prune' && '/tmp/prod-reconcile-paths.txt' || '' }}
         run: |
           if npx tsx scripts/promote-run-manifest.ts --dry-run > /tmp/manifest-promotion-plan.tsv; then
             cat /tmp/manifest-promotion-plan.tsv
@@ -2186,6 +2174,35 @@ jobs:
         env:
           COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
         run: npx tsx scripts/promote-run-manifest.ts --execute
+
+      # Prune reconcile (#1133) through the manifest (#1767, ADR-015 step 9).
+      # The same promoter as above, so there is one prod-write mechanism: it
+      # copies the indexes this prune regenerated (in the run manifest),
+      # then removes the planned prod-only prefixes, and deletes nothing
+      # unless those indexes promoted. The count and value gates do not
+      # apply: a reconcile is subtractive by design, bounded by the plan's
+      # deletion ceiling instead. The content gate must pass; the
+      # completeness gate has no dates here and passes unless it errored.
+      # Held deletes fail the step: prune has no promotion-held flow, and a
+      # prod left ahead of staging freezes the next daily's count gate.
+      # No CDN purge, as before: dates.json carries a 15-minute max-age.
+      - name: '[prune] Promote prod reconciliation (#1767)'
+        id: prunepromote
+        if: >-
+          steps.mode.outputs.mode == 'prune'
+          && steps.mode.outputs.prune_reconcile == 'true'
+          && steps.completenessgate.outputs.completeness_promote != ''
+          && steps.mode.outputs.skip_promotion != 'true'
+        env:
+          COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
+          PROD_DELETES_FILE: /tmp/prod-reconcile-paths.txt
+          CONTENT_PROMOTE: ${{ steps.contentgate.outputs.content_promote }}
+        run: |
+          if [ "${CONTENT_PROMOTE}" != "true" ]; then
+            echo "::error title=Prune reconcile::the content gate did not pass (content_promote='${CONTENT_PROMOTE}') — prod not reconciled; see the content gate summary"
+            exit 1
+          fi
+          npx tsx scripts/promote-run-manifest.ts --execute
 
       # Purge the Cloud CDN edge so freshly-promoted data is served immediately
       # (#1294). Without this, cdn.taverns.red keeps the previous objects until

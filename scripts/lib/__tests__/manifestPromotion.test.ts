@@ -384,3 +384,122 @@ function phaseOrder(a: string, b: string): number {
   const order = ['dates', 'globals', 'entry']
   return order.indexOf(a) - order.indexOf(b)
 }
+
+/**
+ * The prune reconcile's deletes (#1767, ADR-015 step 9): the delete plan
+ * (scripts/prune-prod-reconcile.ts) goes through the same promoter, after
+ * the regenerated indexes, so prod's index never names a deleted date.
+ */
+describe('planManifestPromotion: prune reconcile deletes (#1767)', () => {
+  // What a prune run writes: the regenerated indexes, and no dated object.
+  const pruneEntries = [
+    'v1/latest.json',
+    'v1/dates.json',
+    'v1/rankings.json',
+    'config/district-snapshot-index.json',
+    'config/club-index.json',
+  ].map(entry)
+  const DELETES = ['snapshots/2026-09-15', 'raw-csv/2026-09-15']
+  const prune = (over: Partial<PromotionInputs> = {}): PromotionInputs => ({
+    entries: pruneEntries,
+    held: resolveHeldDates(pass),
+    indexDates: ['2026-08-31', '2026-09-30'],
+    prodDates: new Set(['2026-08-31', '2026-09-15', '2026-09-30']),
+    deletes: DELETES,
+    ...over,
+  })
+
+  it('plans the deletes, sorted, once the regenerated indexes promote', () => {
+    const plan = planManifestPromotion(prune())
+    expect(plan.globals.promote).toBe(true)
+    expect(plan.deletes).toEqual({
+      promote: true,
+      reason: expect.any(String),
+      paths: ['raw-csv/2026-09-15', 'snapshots/2026-09-15'],
+    })
+    // Deletes are not copies.
+    expect(copied(plan)).not.toContain('snapshots/2026-09-15')
+    expect(plan.objectCount).toBe(5)
+  })
+
+  it('plans no deletes when none are requested (every other mode)', () => {
+    const plan = planManifestPromotion(inputs())
+    expect(plan.deletes.paths).toEqual([])
+    expect(plan.deletes.promote).toBe(false)
+  })
+
+  it('holds the deletes when the globals hold: the old index still names them', () => {
+    const plan = planManifestPromotion(prune({ indexDates: null }))
+    expect(plan.globals.promote).toBe(false)
+    expect(plan.deletes.promote).toBe(false)
+    expect(plan.deletes.reason).toMatch(/index/)
+  })
+
+  it('holds the deletes when the run did not write the v1/ entry points', () => {
+    const plan = planManifestPromotion(
+      prune({ entries: [entry('config/district-snapshot-index.json')] })
+    )
+    expect(plan.deletes.promote).toBe(false)
+    expect(plan.deletes.reason).toContain('v1/dates.json')
+  })
+
+  it("holds the globals and the deletes when staging's index still names a deleted date", () => {
+    const plan = planManifestPromotion(
+      prune({ indexDates: ['2026-08-31', '2026-09-15', '2026-09-30'] })
+    )
+    expect(plan.globals.promote).toBe(false)
+    expect(plan.globals.reason).toContain('2026-09-15')
+    expect(plan.deletes.promote).toBe(false)
+  })
+
+  it.each([
+    ['a derived layer', 'v1/rank-history'],
+    ['an object, not a dated prefix', 'snapshots/2026-09-15/district_61.json'],
+    ['a store', 'club-trends/2026-2027'],
+    ['a wildcard', 'snapshots/2026-09-*'],
+  ])('refuses %s', (_label, bad) => {
+    expect(() => planManifestPromotion(prune({ deletes: [bad] }))).toThrow(
+      /scope/
+    )
+  })
+
+  it('refuses to delete a date the run also writes', () => {
+    expect(() =>
+      planManifestPromotion(
+        prune({
+          entries: [
+            ...pruneEntries,
+            entry('snapshots/2026-09-15/district_61.json'),
+          ],
+        })
+      )
+    ).toThrow(/2026-09-15/)
+  })
+
+  it('lists the deletes in the dry run, after every copy', () => {
+    const text = formatPromotionPlan(
+      planManifestPromotion(prune()),
+      'stg',
+      'prod'
+    )
+    const lines = text.split('\n').filter(Boolean)
+    expect(lines.filter(l => l.startsWith('delete\t'))).toEqual([
+      'delete\tgs://prod/raw-csv/2026-09-15/',
+      'delete\tgs://prod/snapshots/2026-09-15/',
+    ])
+    const lastCopy = lines.map(l => l.startsWith('copy\t')).lastIndexOf(true)
+    expect(lines.findIndex(l => l.startsWith('delete\t'))).toBeGreaterThan(
+      lastCopy
+    )
+  })
+
+  it('lists held deletes as holds, with the reason', () => {
+    const text = formatPromotionPlan(
+      planManifestPromotion(prune({ indexDates: null })),
+      'stg',
+      'prod'
+    )
+    expect(text).not.toMatch(/^delete\t/m)
+    expect(text).toMatch(/^hold\tsnapshots\/2026-09-15\/\t/m)
+  })
+})

@@ -46,8 +46,10 @@ describe('data-pipeline content gate (#1715)', () => {
     expect(gate?.run).toMatch(/scripts\/promotion-content-gate\.ts/)
   })
 
-  it('runs in every mode that promotes (everything but prune)', () => {
-    expect(gate?.if).toBe("steps.mode.outputs.mode != 'prune'")
+  it('runs in every mode that promotes, a prune reconcile included (#1767)', () => {
+    expect(gate?.if).toBe(
+      "steps.mode.outputs.mode != 'prune' || steps.mode.outputs.prune_reconcile == 'true'"
+    )
   })
 
   it('cannot be silently skipped by continue-on-error', () => {

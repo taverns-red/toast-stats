@@ -91,6 +91,8 @@ Eliminates: D-11, D-15, D-16, I-5. Efficiency follows for free: the daily promot
 
 > **Implementation note (2026-10-17, #1763):** the step is `Promote run manifest to production (#1763)` (`scripts/promote-run-manifest.ts --execute`, per-object server-side `cp`); the whole-prefix rsync step is deleted. Two classes the rsync used to sweep up are routed explicitly until step 9 (#1767): `time-series/` files current in staging but stale in prod are recorded in the next run's manifest (stage `publish-stores-carry`), and report sidecars prod lacks are copied by `[reports] Carry missing report sidecars into prod`.
 
+> **Implementation note (2026-10-20, #1767, prune half):** the prune reconcile no longer writes prod itself. `[prune] Plan prod reconciliation` writes the delete manifest; `[prune] Promote prod reconciliation (#1767)` runs the same promoter with `PROD_DELETES_FILE`, after the content and completeness gates, which copies the regenerated `v1/` + `config/` from the run manifest and then runs `rm -r` on the planned prefixes (only if the indexes promoted). `PROD_RSYNC_EXEMPT` is empty. The reports half is still open: `[reports] Mirror placed datasets into prod` and `[rollup] Mirror the reports rollups into prod (#2012)` copy into prod with their own `gcloud storage cp`, and the carry and education-mirror scripts write prod too; `dataPipelinePruneReconcileManifest.test.ts` pins the two direct steps.
+
 ### P7. Dead inputs are retired, not kept for compatibility
 
 - rescrape `program_year` generates month-end dates from `docs/month-end-closing-dates.json` (ADR-011), not the 15th (D-6). The allow-listed inline `node -e` from #1743 goes with it.

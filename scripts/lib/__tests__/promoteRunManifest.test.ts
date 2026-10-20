@@ -466,3 +466,170 @@ describe('gcloud shim: bucket-to-bucket cp, cat, one-level ls (#1763 harness)', 
     ])
   })
 })
+
+/**
+ * The prune reconcile through the promoter (#1767, ADR-015 step 9). Prod
+ * still holds a pruned daily (2026-09-15) and the index that names it;
+ * staging is already pruned and the run regenerated the indexes. The
+ * promoter copies the indexes, then deletes the planned prefixes — and
+ * deletes nothing unless the indexes promoted.
+ */
+describe('promote-run-manifest --execute: prune reconcile deletes (#1767)', () => {
+  let deletesFile: string
+
+  beforeEach(() => {
+    fs.rmSync(root, { recursive: true, force: true })
+    fs.mkdirSync(path.join(root, STG), { recursive: true })
+    fs.mkdirSync(path.join(root, PROD), { recursive: true })
+    manifestLines.length = 0
+    put(PROD, 'snapshots/2026-09-15/district_61.json', '{"daily":1}', true)
+    put(PROD, 'snapshots/2026-09-15/analytics/d61.json', '{"a":1}', true)
+    put(PROD, 'snapshots/2026-09-30/district_61.json', '{"me":1}', true)
+    put(PROD, 'raw-csv/2026-09-15/all-districts.csv', 'a,b\n')
+    put(PROD, 'v1/dates.json', DATES_JSON(['2026-09-15', '2026-09-30']))
+    put(PROD, 'v1/latest.json', LATEST_JSON('2026-09-30'))
+    put(PROD, 'config/district-snapshot-index.json', '{"old":1}')
+
+    put(STG, 'snapshots/2026-09-30/district_61.json', '{"me":1}', true)
+    stage('v1/dates.json', DATES_JSON(['2026-09-30']))
+    stage('v1/latest.json', LATEST_JSON('2026-09-30'))
+    stage('config/district-snapshot-index.json', '{"new":1}')
+
+    deletesFile = path.join(tmp, 'prod-reconcile-paths.txt')
+    fs.writeFileSync(deletesFile, 'raw-csv/2026-09-15\nsnapshots/2026-09-15\n')
+    writeInputs({ promote: true })
+  })
+
+  const runPrune = (args: string[], env: Record<string, string> = {}) =>
+    run(args, { PROD_DELETES_FILE: deletesFile, ...env })
+
+  it('shrinks the index and deletes the pruned prefixes from prod', async () => {
+    const r = await runPrune(['--execute'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(read(PROD, 'v1/dates.json')?.toString()).toBe(
+      DATES_JSON(['2026-09-30'])
+    )
+    expect(read(PROD, 'config/district-snapshot-index.json')?.toString()).toBe(
+      '{"new":1}'
+    )
+    expect(Object.keys(tree(PROD)).sort()).toEqual([
+      'config/district-snapshot-index.json',
+      'snapshots/2026-09-30/district_61.json',
+      'v1/dates.json',
+      'v1/latest.json',
+    ])
+    expect(r.outputs.prefixes_deleted).toBe('2')
+    expect(r.outputs.complete).toBe('true')
+  })
+
+  it('deletes only after the v1/ entry points are copied, and never rsyncs', async () => {
+    expect((await runPrune(['--execute'])).status).toBe(0)
+    const log = fs.readFileSync(shimLog, 'utf-8').split('\n')
+    const lastCopy = log.map(l => l.startsWith('storage cp ')).lastIndexOf(true)
+    const rms = log.filter(l => l.startsWith('storage rm '))
+    expect(rms).toEqual([
+      `storage rm -r gs://${PROD}/raw-csv/2026-09-15/`,
+      `storage rm -r gs://${PROD}/snapshots/2026-09-15/`,
+    ])
+    expect(log.findIndex(l => l.startsWith('storage rm '))).toBeGreaterThan(
+      lastCopy
+    )
+    expect(log[lastCopy]).toContain('v1/dates.json')
+    expect(log.join('\n')).not.toMatch(/^storage rsync\b/m)
+  })
+
+  it('deletes nothing when the indexes hold, and fails so the run is red', async () => {
+    // Staging's index names a date prod lacks: the globals hold.
+    put(STG, 'v1/dates.json', DATES_JSON(['2026-09-20', '2026-09-30']))
+    const before = tree(PROD)
+    const r = await runPrune(['--execute'])
+    expect(r.status).toBe(1)
+    expect(tree(PROD)).toEqual(before)
+    expect(r.stderr).toMatch(/::error title=Prune reconcile::/)
+    expect(r.outputs.prefixes_deleted).toBe('0')
+  })
+
+  it('refuses an out-of-scope delete and touches nothing', async () => {
+    fs.writeFileSync(deletesFile, 'v1/rank-history\n')
+    const before = tree(PROD)
+    const r = await runPrune(['--execute'])
+    expect(r.status).toBe(2)
+    expect(tree(PROD)).toEqual(before)
+  })
+
+  it('refuses a missing delete manifest and touches nothing', async () => {
+    fs.rmSync(deletesFile)
+    const before = tree(PROD)
+    const r = await runPrune(['--execute'])
+    expect(r.status).toBe(2)
+    expect(tree(PROD)).toEqual(before)
+  })
+
+  it('an empty delete manifest just promotes the indexes', async () => {
+    fs.writeFileSync(deletesFile, '')
+    const r = await runPrune(['--execute'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(read(PROD, 'snapshots/2026-09-15/district_61.json')).not.toBeNull()
+    expect(r.outputs.prefixes_deleted).toBe('0')
+  })
+
+  it('a failed delete warns and goes on, as the old reconcile did; the next prune sweeps it', async () => {
+    const r = await runPrune(['--execute'], {
+      SHIM_FAIL_MATCH: '^rm -r .*raw-csv',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(read(PROD, 'raw-csv/2026-09-15/all-districts.csv')).not.toBeNull()
+    expect(read(PROD, 'snapshots/2026-09-15/district_61.json')).toBeNull()
+    expect(r.stderr).toMatch(
+      /::warning title=Prune reconcile::.*raw-csv\/2026-09-15/
+    )
+    expect(r.outputs.prefixes_deleted).toBe('1')
+    expect(r.outputs.complete).toBe('false')
+  })
+
+  it('the dry run lists the deletes and writes nothing', async () => {
+    const before = tree(PROD)
+    const r = await runPrune(['--dry-run'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(tree(PROD)).toEqual(before)
+    expect(r.stdout.split('\n').filter(l => l.startsWith('delete\t'))).toEqual([
+      `delete\tgs://${PROD}/raw-csv/2026-09-15/`,
+      `delete\tgs://${PROD}/snapshots/2026-09-15/`,
+    ])
+  })
+})
+
+describe('gcloud shim: rm -r of a prefix (#1767 harness)', () => {
+  const shim = (...args: string[]) =>
+    spawnSync(SHIM, args, {
+      encoding: 'utf-8',
+      env: { ...process.env, SHIM_ROOT: root },
+    })
+
+  it('removes every object under the prefix and its metadata', () => {
+    const r = shim('storage', 'rm', '-r', `gs://${PROD}/snapshots/2026-10-01/`)
+    expect(r.status, r.stderr).toBe(0)
+    expect(read(PROD, 'snapshots/2026-10-01/district_61.json')).toBeNull()
+    expect(meta(PROD, 'snapshots/2026-10-01/district_61.json')).toBeNull()
+    expect(read(PROD, 'snapshots/2026-10-10/district_61.json')).not.toBeNull()
+  })
+
+  it('fails on a prefix with no objects', () => {
+    const r = shim('storage', 'rm', '-r', `gs://${PROD}/snapshots/2026-01-01/`)
+    expect(r.status).toBe(1)
+    expect(r.stderr).toContain('matched no objects')
+  })
+})
+
+describe('promote-run-manifest: a prune reconcile whose gate could not run (#1767)', () => {
+  it('deletes nothing and fails, since prune has no promotion-held flow', async () => {
+    const deletesFile = path.join(tmp, 'prod-reconcile-paths.txt')
+    fs.writeFileSync(deletesFile, 'snapshots/2026-10-01\n')
+    writeInputs({ promote: false, heldDates: [] })
+    const before = tree(PROD)
+    const r = await run(['--execute'], { PROD_DELETES_FILE: deletesFile })
+    expect(r.status).toBe(1)
+    expect(tree(PROD)).toEqual(before)
+    expect(r.outputs.prefixes_deleted).toBe('0')
+  })
+})

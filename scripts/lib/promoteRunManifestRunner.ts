@@ -21,6 +21,14 @@ import {
 } from './manifestPromotion.js'
 import { parseRunManifest, type RunManifestEntry } from './runManifest.js'
 
+/** One prefix per line; blank lines ignored. Validation is the planner's. */
+export function parseDeletesFile(text: string): string[] {
+  return text
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean)
+}
+
 export const DEFAULT_COMPLETENESS_GATE_FILE = '/tmp/completeness-gate.json'
 const MAX_SUMMARY_LINES = 60
 
@@ -106,6 +114,26 @@ export async function runPromoteRunManifest(
       child.on('close', code => resolve(code === 0))
     })
 
+  /** `rm -r` one prod prefix (#1767); false on failure. */
+  const deletePrefix = (prefix: string, prod: string) =>
+    new Promise<boolean>(resolve => {
+      const child = spawn(
+        gcloud,
+        ['storage', 'rm', '-r', `gs://${prod}/${prefix}/`],
+        {
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env,
+        }
+      )
+      child.stdout.on('data', d => io.err(String(d)))
+      child.stderr.on('data', d => io.err(String(d)))
+      child.on('error', e => {
+        log(`[promote] rm ${prefix}: ${String(e)}`)
+        resolve(false)
+      })
+      child.on('close', code => resolve(code === 0))
+    })
+
   /** One phase's batches, `concurrency` at a time; stop at the first failure. */
   const runPhase = async (
     batches: CopyBatch[],
@@ -163,6 +191,21 @@ export async function runPromoteRunManifest(
     return 2
   }
 
+  // The prune reconcile's delete manifest (#1767). Set but unreadable is
+  // bad input: never promote a reconcile without the deletes it planned.
+  let deletes: string[] | undefined
+  const deletesFile = env.PROD_DELETES_FILE
+  if (deletesFile) {
+    try {
+      deletes = parseDeletesFile(readFileSync(deletesFile, 'utf-8'))
+    } catch (e) {
+      log(
+        `::error title=Prune reconcile::delete manifest ${deletesFile} unreadable — nothing promoted: ${String(e)}`
+      )
+      return 2
+    }
+  }
+
   const verdict: CompletenessVerdict | null = args.has('--assume-pass')
     ? { promote: true }
     : readVerdict(env.COMPLETENESS_GATE_FILE || DEFAULT_COMPLETENESS_GATE_FILE)
@@ -180,6 +223,7 @@ export async function runPromoteRunManifest(
       held,
       indexDates: checkIndex ? readIndexDates(staging) : null,
       prodDates: checkIndex ? readProdDates(prod) : null,
+      deletes,
     })
   } catch (e) {
     log(`::error title=Scoped promotion::${String(e)} — nothing promoted`)
@@ -210,16 +254,20 @@ export async function runPromoteRunManifest(
     'globals_reason',
     plan.globals.promote ? '' : plan.globals.reason.replace(/\s+/g, ' ')
   )
+  if (deletesFile) emit('prefixes_planned', plan.deletes.paths.length)
 
   if (!execute) return 0
   if (plan.heldAll) {
     log(`::error title=Scoped promotion::${plan.heldAll}`)
     emit('objects_copied', 0)
     emit('complete', false)
+    if (deletesFile) emit('prefixes_deleted', 0)
     // A verdict that holds everything (the gate errored) is a hold: exit 0
     // so the promotion-held steps still run. No verdict at all means the
-    // step ran out of order or the file was lost — fail the step.
-    return verdict === null ? 2 : 0
+    // step ran out of order or the file was lost — fail the step. A prune
+    // reconcile has no promotion-held flow: its held deletes fail it (#1767).
+    if (verdict === null) return 2
+    return plan.deletes.paths.length > 0 ? 1 : 0
   }
 
   const concurrency = Number(env.PROMOTE_CONCURRENCY) || 4
@@ -240,17 +288,53 @@ export async function runPromoteRunManifest(
       break
     }
   }
+  // Deletes last (#1767): only after every copy succeeded, so prod's
+  // index has stopped naming the dates. One at a time. A failed delete
+  // warns and the rest go on, as the old reconcile's `rm || true` did: a
+  // leftover directory no index names is swept by the next prune's plan.
+  let deleted = 0
+  const runDeletes = ok && plan.deletes.promote
+  if (runDeletes) {
+    for (const prefix of plan.deletes.paths) {
+      if (await deletePrefix(prefix, prod)) deleted++
+      else
+        log(
+          `::warning title=Prune reconcile::could not delete gs://${prod}/${prefix}/; the next prune sweeps it`
+        )
+    }
+  }
+  const deletesHeld = plan.deletes.paths.length > 0 && !plan.deletes.promote
+  if (deletesHeld) {
+    log(
+      `::error title=Prune reconcile::${plan.deletes.paths.length} prod prefix(es) not deleted — ${plan.deletes.reason}`
+    )
+  }
   const complete =
     ok &&
     plan.heldDates.length === 0 &&
-    (plan.globals.paths.length === 0 || plan.globals.promote)
+    (plan.globals.paths.length === 0 || plan.globals.promote) &&
+    !deletesHeld &&
+    deleted === (runDeletes ? plan.deletes.paths.length : 0)
   emit('objects_copied', copied)
   emit('complete', complete)
-  log(`[promote] copied ${copied} of ${plan.objectCount}; complete=${complete}`)
-  summary(
-    `- **Copied**: ${copied} of ${plan.objectCount}${ok ? '' : ' — ❌ a copy failed; later phases not run'}\n`
+  if (deletesFile) emit('prefixes_deleted', deleted)
+  log(
+    `[promote] copied ${copied} of ${plan.objectCount}` +
+      (deletesFile
+        ? `; deleted ${deleted} of ${plan.deletes.paths.length} prefix(es)`
+        : '') +
+      `; complete=${complete}`
   )
-  return ok ? 0 : 1
+  summary(
+    `- **Copied**: ${copied} of ${plan.objectCount}${ok ? '' : ' — ❌ a copy failed; later phases not run'}\n` +
+      (deletesFile
+        ? `- **Prod prefixes deleted (#1767)**: ${deleted} of ${plan.deletes.paths.length}${deletesHeld ? ` — ❌ held: ${plan.deletes.reason}` : ''}\n`
+        : '')
+  )
+  if (!ok) return 1
+  // A reconcile that could not delete is a failed reconcile: prod keeps
+  // dates staging pruned, and the next daily's count gate would freeze.
+  return deletesHeld ? 1 : 0
 }
 
 function readVerdict(file: string): CompletenessVerdict | null {
@@ -280,6 +364,9 @@ function summaryMarkdown(
     `- **Held dates**: ${plan.heldDates.join(', ') || 'none'}`,
     `- **Globals (v1/, config/, time-series/)**: ${globals}`,
     `- **Never promoted (internal)**: ${plan.excluded.length}`,
+    plan.deletes.paths.length > 0
+      ? `- **Prod prefixes to delete (#1767)**: ${plan.deletes.paths.length} — ${plan.deletes.promote ? 'after the entry points' : `HELD — ${plan.deletes.reason}`}`
+      : '',
     plan.heldAll ? `- ⚠️ ${plan.heldAll}` : '',
     '',
     copies.length > 0 ? '```' : '',

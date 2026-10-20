@@ -47,8 +47,10 @@ describe('data-pipeline per-date completeness gate (#1761)', () => {
     expect(gate?.run).toMatch(/scripts\/date-completeness-gate\.ts/)
   })
 
-  it('runs in every mode that promotes, skip_promotion included', () => {
-    expect(gate?.if).toBe("steps.mode.outputs.mode != 'prune'")
+  it('runs in every mode that promotes, skip_promotion and a prune reconcile included (#1767)', () => {
+    expect(gate?.if).toBe(
+      "steps.mode.outputs.mode != 'prune' || steps.mode.outputs.prune_reconcile == 'true'"
+    )
   })
 
   it('cannot be silently skipped by continue-on-error', () => {
