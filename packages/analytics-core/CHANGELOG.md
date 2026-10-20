@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.21.0...analytics-core-v1.22.0) (2026-10-20)
+
+
+### Features
+
+* **clubs-by-region:** meetsOnline on shard rows + region map online chip ([#2175](https://github.com/taverns-red/toast-stats/issues/2175)) ([#2201](https://github.com/taverns-red/toast-stats/issues/2201)) ([4d95425](https://github.com/taverns-red/toast-stats/commit/4d954259e2d6be7acc60781ddbbe2298c759371e))
+
 ## [1.21.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.20.0...analytics-core-v1.21.0) (2026-10-20)
 
 
