@@ -1,24 +1,30 @@
 import React, { useMemo } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
-  EVENING_END_HOUR,
-  EVENING_START_HOUR,
-  MEETING_MODES,
   MEETING_MODE_LABELS,
-  WEEKDAYS,
   buildMeetingHeatmap,
   clubsForSelection,
   entriesInSlot,
   describeMeetingEntry,
-  hourRangeLabel,
-  intensityLevel,
   meetingFilterToken,
   slotKey,
   type MeetingClub,
   type MeetingMode,
   type MeetingSelection,
-  type MeetingSlot,
 } from '../utils/meetingHeatmap'
+import {
+  EveningGapsNote,
+  MeetingGrid,
+  MeetingKpis,
+  MeetingModeSwitch,
+  MeetingTable,
+} from './meetings/MeetingHeatmapParts'
+import {
+  clubsText,
+  isSlot,
+  slotTitle,
+  useParamHref,
+} from './meetings/meetingHeatmapView'
 
 /* District meeting-time heatmap body (#1796, epic #1781).
 
@@ -46,35 +52,6 @@ export interface MeetingHeatmapProps {
   mapContext: { py?: string; date?: string }
 }
 
-const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const HOURS = Array.from({ length: 24 }, (_, h) => h)
-const pad = (h: number) => String(h).padStart(2, '0')
-const clubsText = (n: number) =>
-  n === 0 ? 'no clubs' : n === 1 ? '1 club' : `${n.toLocaleString()} clubs`
-
-function useParamHref(): (key: string, value: string | null) => string {
-  const [params] = useSearchParams()
-  return (key, value) => {
-    const next = new URLSearchParams(params)
-    if (value === null) next.delete(key)
-    else next.set(key, value)
-    const s = next.toString()
-    return s ? `?${s}` : '?'
-  }
-}
-
-const isSlot = (s: MeetingSelection | null): s is MeetingSlot =>
-  s !== null && typeof s === 'object'
-
-const sameSlot = (a: MeetingSelection | null, b: MeetingSlot) =>
-  isSlot(a) && a.day === b.day && a.hour === b.hour
-
-function slotTitle(slot: MeetingSlot): string {
-  return slot.hour === null
-    ? `${slot.day}, time not stated`
-    : `${slot.day} ${hourRangeLabel(slot.hour)}`
-}
-
 export const MeetingHeatmap: React.FC<MeetingHeatmapProps> = ({
   clubs,
   districtId,
@@ -84,44 +61,6 @@ export const MeetingHeatmap: React.FC<MeetingHeatmapProps> = ({
 }) => {
   const href = useParamHref()
   const map = useMemo(() => buildMeetingHeatmap(clubs, mode), [clubs, mode])
-  const hasNoTime = map.noTime.some(n => n > 0)
-  const modeLabel = MEETING_MODE_LABELS[mode]
-  const modeSuffix = mode === 'all' ? '' : ` (${modeLabel.toLowerCase()})`
-
-  const cell = (slot: MeetingSlot, count: number, d: number, h: number) => {
-    const level = intensityLevel(count, map.max)
-    const label = `${slotTitle(slot)}: ${clubsText(count)}`
-    const className = `meeting-cell meeting-cell--l${level}${
-      sameSlot(selection, slot) ? ' is-selected' : ''
-    }`
-    const style = { '--d': d + 1, '--h': h + 1 } as React.CSSProperties
-    if (count === 0)
-      return (
-        <span
-          key={`${d}-${h}`}
-          className={className}
-          style={style}
-          role="img"
-          aria-label={label}
-          data-testid="meeting-cell"
-        />
-      )
-    return (
-      <Link
-        key={`${d}-${h}`}
-        to={href('slot', slotKey(slot))}
-        replace
-        preventScrollReset
-        className={className}
-        style={style}
-        aria-label={label}
-        aria-current={sameSlot(selection, slot) ? 'true' : undefined}
-        data-testid="meeting-cell"
-      >
-        <span aria-hidden="true">{count}</span>
-      </Link>
-    )
-  }
 
   return (
     <section className="meetings-page" aria-labelledby="meetings-title">
@@ -133,31 +72,13 @@ export const MeetingHeatmap: React.FC<MeetingHeatmapProps> = ({
         each club&rsquo;s Find-a-Club listing. Pick a cell for its clubs.
       </p>
 
-      <ul className="meetings-kpis" aria-label="Meetings at a glance">
-        <li className="meetings-kpi">
-          <span className="meetings-kpi__label">Schedule listed</span>
-          <span className="meetings-kpi__value">
-            {map.scheduled.toLocaleString()} of{' '}
-            {map.totalClubs.toLocaleString()}
-          </span>
-        </li>
-        <li className="meetings-kpi">
-          <span className="meetings-kpi__label">Meet in person</span>
-          <span className="meetings-kpi__value">
-            {map.inPerson.toLocaleString()}
-          </span>
-          <span className="meetings-kpi__hint">incl. hybrid</span>
-        </li>
-        <li className="meetings-kpi">
-          <span className="meetings-kpi__label">Online-capable</span>
-          <span className="meetings-kpi__value">
-            {map.onlineCapable.toLocaleString()}
-          </span>
-          <span className="meetings-kpi__hint">online or hybrid</span>
-        </li>
-        <li className="meetings-kpi">
-          <span className="meetings-kpi__label">Schedule not stated</span>
-          {map.unknown.length > 0 ? (
+      <MeetingKpis
+        scheduled={map.scheduled}
+        totalClubs={map.totalClubs}
+        inPerson={map.inPerson}
+        onlineCapable={map.onlineCapable}
+        unknown={
+          map.unknown.length > 0 ? (
             <Link
               to={href('slot', 'unknown')}
               replace
@@ -169,29 +90,13 @@ export const MeetingHeatmap: React.FC<MeetingHeatmapProps> = ({
             </Link>
           ) : (
             <span className="meetings-kpi__value">0</span>
-          )}
-        </li>
-      </ul>
+          )
+        }
+      />
 
-      <nav aria-label="How clubs meet" className="meetings-switch">
-        {MEETING_MODES.map(m => (
-          <Link
-            key={m}
-            to={href('mode', m === 'all' ? null : m)}
-            replace
-            preventScrollReset
-            aria-current={m === mode ? 'true' : undefined}
-            className={`meetings-switch__link${m === mode ? ' is-current' : ''}`}
-          >
-            {MEETING_MODE_LABELS[m]}
-          </Link>
-        ))}
-      </nav>
+      <MeetingModeSwitch mode={mode} href={href} />
 
-      <p className="meetings-note" data-testid="meeting-evening-gaps">
-        {map.eveningGaps.length === 0
-          ? `Every evening has a club starting between ${pad(EVENING_START_HOUR)}:00 and ${pad(EVENING_END_HOUR)}:00${modeSuffix}.`
-          : `No club starts between ${pad(EVENING_START_HOUR)}:00 and ${pad(EVENING_END_HOUR)}:00${modeSuffix} on ${map.eveningGaps.join(', ')}.`}
+      <EveningGapsNote gaps={map.eveningGaps} mode={mode}>
         {map.modeNotStated.length > 0 && (
           <>
             {' '}
@@ -207,63 +112,16 @@ export const MeetingHeatmap: React.FC<MeetingHeatmapProps> = ({
             and are left out of this view.
           </>
         )}
-      </p>
+      </EveningGapsNote>
 
-      <div
-        className={`meeting-grid${hasNoTime ? ' has-notime' : ''}`}
-        role="group"
-        aria-label={`Clubs by weekday and start hour${modeSuffix}`}
-      >
-        {WEEKDAYS.map((day, d) => (
-          <span
-            key={day}
-            className="meeting-grid__day"
-            style={{ '--d': d + 1 } as React.CSSProperties}
-            aria-hidden="true"
-          >
-            {DAY_SHORT[d]}
-          </span>
-        ))}
-        {HOURS.map(h => (
-          <span
-            key={h}
-            className="meeting-grid__hour"
-            style={{ '--h': h + 1 } as React.CSSProperties}
-            aria-hidden="true"
-          >
-            {pad(h)}
-          </span>
-        ))}
-        {hasNoTime && (
-          <span
-            className="meeting-grid__hour meeting-grid__hour--notime"
-            style={{ '--h': 25 } as React.CSSProperties}
-            aria-hidden="true"
-          >
-            ?
-          </span>
-        )}
-        {WEEKDAYS.map((day, d) => (
-          <React.Fragment key={day}>
-            {HOURS.map(h => cell({ day, hour: h }, map.counts[d]![h]!, d, h))}
-            {hasNoTime && cell({ day, hour: null }, map.noTime[d]!, d, 24)}
-          </React.Fragment>
-        ))}
-      </div>
-
-      <div className="meetings-legend" aria-hidden="true">
-        <span>Fewer</span>
-        {[1, 2, 3, 4].map(l => (
-          <span
-            key={l}
-            className={`meetings-legend__swatch meeting-cell--l${l}`}
-          />
-        ))}
-        <span>More clubs</span>
-        <span className="meetings-legend__note">
-          Hour = start time{hasNoTime ? ' · ? = time not stated' : ''}
-        </span>
-      </div>
+      <MeetingGrid
+        counts={map.counts}
+        noTime={map.noTime}
+        max={map.max}
+        mode={mode}
+        selection={selection}
+        cellHref={slot => href('slot', slotKey(slot))}
+      />
 
       {selection && (
         <SelectionPanel
@@ -276,47 +134,7 @@ export const MeetingHeatmap: React.FC<MeetingHeatmapProps> = ({
         />
       )}
 
-      <details className="meetings-table">
-        <summary className="meetings-table__summary">Show as a table</summary>
-        <div
-          className="meetings-table__scroll"
-          role="region"
-          aria-label="Meeting times table"
-          tabIndex={0}
-        >
-          <table>
-            <caption>Clubs by start hour and weekday{modeSuffix}</caption>
-            <thead>
-              <tr>
-                <th scope="col">Start</th>
-                {WEEKDAYS.map((day, d) => (
-                  <th key={day} scope="col">
-                    <abbr title={day}>{DAY_SHORT[d]}</abbr>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {HOURS.map(h => (
-                <tr key={h}>
-                  <th scope="row">{pad(h)}:00</th>
-                  {WEEKDAYS.map((day, d) => (
-                    <td key={day}>{map.counts[d]![h]}</td>
-                  ))}
-                </tr>
-              ))}
-              {hasNoTime && (
-                <tr>
-                  <th scope="row">Time not stated</th>
-                  {WEEKDAYS.map((day, d) => (
-                    <td key={day}>{map.noTime[d]}</td>
-                  ))}
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </details>
+      <MeetingTable counts={map.counts} noTime={map.noTime} mode={mode} />
     </section>
   )
 }

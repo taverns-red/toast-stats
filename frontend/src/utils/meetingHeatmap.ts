@@ -121,6 +121,15 @@ const entryInSlot = (
 ) =>
   e.day === slot.day && entryHour(e) === slot.hour && entryMatchesMode(e, mode)
 
+/** Weekdays where no club starts 17:00–21:59 in a [day][hour] grid. */
+export function eveningGapsOf(
+  counts: readonly (readonly number[])[]
+): MeetingWeekday[] {
+  return WEEKDAYS.filter((_, d) =>
+    counts[d]!.slice(EVENING_START_HOUR, EVENING_END_HOUR).every(n => n === 0)
+  )
+}
+
 export function buildMeetingHeatmap(
   clubs: readonly MeetingClub[],
   mode: MeetingMode
@@ -158,9 +167,7 @@ export function buildMeetingHeatmap(
 
   const counts = cells.map(row => row.map(s => s.size))
   const max = Math.max(0, ...counts.flat())
-  const eveningGaps = WEEKDAYS.filter((_, d) =>
-    counts[d]!.slice(EVENING_START_HOUR, EVENING_END_HOUR).every(n => n === 0)
-  )
+  const eveningGaps = eveningGapsOf(counts)
   return {
     counts,
     noTime: noTime.map(s => s.size),

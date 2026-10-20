@@ -15,6 +15,11 @@
  */
 
 import {
+  MEETING_TIMES_FILE,
+  parseMeetingTimes,
+  type MeetingTimesView,
+} from '../utils/meetingTimesRollup'
+import {
   CLUBS_BY_REGION_DIR,
   CLUBS_BY_REGION_WORLD_FILE_NAME,
   ClubsByRegionShardSchema,
@@ -697,6 +702,32 @@ export async function fetchCdnRegionRollups(
     recordCdnResponse(res)
     const parsed = RegionRollupsSchema.safeParse(await res.json())
     return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
+}
+
+/** `snapshots/{date}/meeting-times.json` (#1814) — per-district meeting
+ *  counts for the region and world heatmaps. */
+export function cdnMeetingTimesUrl(date: SnapshotDate): string {
+  return `${cdnBaseUrl()}/snapshots/${date}/${MEETING_TIMES_FILE}`
+}
+
+/**
+ * A date's meeting-time counts (#1814), **tolerantly**: ONE request feeds
+ * `/regions/meetings` and every `/region/:n/meetings`. A date before the
+ * artifact existed (404), an off-contract body or a network error is `null`
+ * — "not available yet" — never a grid of zeros; one unreadable district is
+ * left out and named, not the whole file (#2183).
+ */
+export async function fetchCdnMeetingTimes(
+  date: SnapshotDate
+): Promise<MeetingTimesView | null> {
+  try {
+    const res = await fetch(cdnMeetingTimesUrl(date))
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    return parseMeetingTimes(await res.json())
   } catch {
     return null
   }

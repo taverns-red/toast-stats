@@ -306,3 +306,95 @@
     font-style: italic;
   }
 }
+
+/* ── Region and world meeting times (#1814) ──────────────────────────
+   The grid, KPIs, legend and table are the district page's (meetings.css).
+   These are the two rollup-only pieces: the district/region filter and the
+   breakdown table. Legacy tokens only (#2080); 44px targets. */
+
+.meetings-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.meetings-filter__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.meetings-filter__select {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md);
+}
+
+.meetings-filter__select:focus-visible,
+.meetings-breakdown:focus-visible,
+.meetings-breakdown a:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.meetings-breakdown {
+  margin-top: 1rem;
+  max-width: 40rem;
+  overflow-x: auto;
+}
+
+.meetings-breakdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.meetings-breakdown caption {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink-2);
+  padding: 0.25rem 0;
+}
+
+.meetings-breakdown th,
+.meetings-breakdown td {
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--line-2);
+  text-align: right;
+}
+
+.meetings-breakdown thead th {
+  font-weight: 600;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.meetings-breakdown th[scope='row'],
+.meetings-breakdown thead th:first-child {
+  text-align: left;
+}
+
+.meetings-breakdown th[scope='row'] {
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.meetings-breakdown a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--link);
+}
+
+.meetings-selection__club--plain {
+  color: var(--ink);
+}
