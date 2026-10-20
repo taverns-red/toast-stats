@@ -560,6 +560,13 @@
   border-color: var(--tm-loyal-blue);
 }
 
+/* A year without a ledger (#1807): the words, no bar — never a 0. */
+.education-year__na {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
 .education-district {
   display: flex;
   flex-direction: column;

@@ -35,23 +35,25 @@ export function useEducationRollup(
     staleTime: STALE,
     gcTime: GC,
   })
+  const { index } = useEducationRollupIndex()
+  return {
+    rollup: year.data ?? null,
+    index,
+    isLoading: year.isLoading,
+  }
+}
+
+/** The rollup index alone (#1807) — one shared read: the district page's
+ *  multi-year bars need only its `trend`. `null` = not published yet. */
+export function useEducationRollupIndex(): {
+  index: EducationRollupIndex | null
+  isLoading: boolean
+} {
   const index = useQuery({
     queryKey: ['education-rollup-index'] as const,
     queryFn: fetchCdnEducationRollupIndex,
     staleTime: STALE,
     gcTime: GC,
   })
-  return {
-    rollup: year.data ?? null,
-    index: index.data ?? null,
-    isLoading: year.isLoading,
-  }
-}
-
-// Red stub (#1807): implemented in the next commit.
-export function useEducationRollupIndex(): {
-  index: EducationRollupIndex | null
-  isLoading: boolean
-} {
-  return { index: null, isLoading: false }
+  return { index: index.data ?? null, isLoading: index.isLoading }
 }
