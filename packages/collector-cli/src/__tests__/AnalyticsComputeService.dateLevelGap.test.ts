@@ -21,6 +21,7 @@ import {
   GLOBAL_CLUB_RACE_FILE_NAME,
   GLOBAL_TOTALS_FILE_NAME,
   GlobalTotalsSchema,
+  MEETING_TIMES_FILE_NAME,
   REGION_ROLLUPS_FILE_NAME,
 } from '@taverns-red/shared-contracts'
 import { TransformService } from '../services/TransformService.js'
@@ -158,9 +159,12 @@ describe('AnalyticsComputeService — a recorded gap is accounted for in the rol
     // The per-region club shards (#1800) are a fourth date-level artifact
     // under the same refusal rule.
     expect(result.clubsByRegionFailed).toBe(true)
+    // So are the meeting-time counts (#1814), the fifth.
+    expect(result.meetingTimesFailed).toBe(true)
+    expect(await exists(MEETING_TIMES_FILE_NAME)).toBe(false)
     const refusals = result.errors.filter(
       e => e.error.startsWith('Refused') && e.error.includes('missing: U')
     )
-    expect(refusals.length).toBe(4)
+    expect(refusals.length).toBe(5)
   })
 })

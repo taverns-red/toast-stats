@@ -50,6 +50,15 @@ export {
   type ClubsByRegionResult,
 } from './clubsByRegion.js'
 
+// Meeting times per district — snapshots/{date}/meeting-times.json (#1814)
+export {
+  buildMeetingTimes,
+  readMeetingTimesInput,
+  type MeetingTimesDistrictInput,
+  type MeetingTimesInput,
+  type MeetingTimesResult,
+} from './meetingTimes.js'
+
 // Region and world membership series — time-series/regions/{PY}.json (#2127)
 export {
   buildRegionMembershipSeries,
