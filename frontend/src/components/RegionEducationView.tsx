@@ -49,7 +49,7 @@ const REASONS: Record<string, string> = {
 
 /* ── KPI strip ───────────────────────────────────────────────────────── */
 
-const KpiStrip: React.FC<{ e: Available }> = ({ e }) => {
+export const KpiStrip: React.FC<{ e: Pick<Available, 'kpis'> }> = ({ e }) => {
   const k = e.kpis
   const items = [
     { label: 'Awards', value: fmt(k.awards) },
