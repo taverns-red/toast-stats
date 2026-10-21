@@ -8,7 +8,15 @@
  */
 
 import React, { Suspense } from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import {
   cleanup,
   render,
@@ -231,6 +239,14 @@ expect.extend(toHaveNoViolations)
 const DistrictActionListPage = React.lazy(
   () => import('../DistrictActionListPage')
 )
+
+// Compile the page's module graph once, up front (#2211, the DistrictMapPage
+// idiom): otherwise the FIRST test's 1 s findBy window pays Vite's cold
+// transform of the whole graph and, under CI contention, times out on the
+// lazy route's `Loading…` fallback. A cold-start cost, not a slow render.
+beforeAll(async () => {
+  await import('../DistrictActionListPage')
+}, 30_000)
 
 const renderAt = (initialUrl: string) => {
   const queryClient = new QueryClient({
