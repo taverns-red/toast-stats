@@ -622,122 +622,158 @@ describe('gcloud shim: rm -r of a prefix (#1767 harness)', () => {
 })
 
 /**
- * #2232: the rebuild removed district U's stale per-date objects from
- * staging (U failed on that date) and recorded them in the run removals
- * file. Prod still holds its copies from the earlier build; promotion of
- * the date must remove them, exactly those objects, after every copy.
+ * #2232: prod still holds district U's 0-club junk from an earlier build
+ * on 2026-10-10. Staging no longer has it (the rebuild's staging step, or
+ * an earlier proof run, removed it) and staging's metadata.json records U
+ * as a #1671 gap. Promotion of the date derives the prod removals from
+ * that state, not from any record of the run, so every path converges.
  */
-describe('promote-run-manifest --execute: removals of a failed district (#2232)', () => {
-  let removalsFile: string
+describe('promote-run-manifest --execute: a gap district converges in prod (#2232)', () => {
+  const D = 'snapshots/2026-10-10'
+  const JUNK = '{"districtId":"U","data":{"clubs":[]}}'
+  const GAP_META = JSON.stringify({
+    successfulDistricts: ['61'],
+    failedDistricts: ['U'],
+    errors: ['U: Skipped: club-performance.csv is not a CSV (#1671)'],
+  })
   const STALE = [
-    'snapshots/2026-10-10/analytics/district_U_analytics.json',
-    'snapshots/2026-10-10/district_U.json',
+    `${D}/analytics/district_U_analytics.json`,
+    `${D}/analytics/district_U_membership.json`,
+    `${D}/district_U.json`,
   ]
 
   beforeEach(() => {
-    for (const p of STALE) put(PROD, p, '{"stale":0}', true)
-    // A neighbour the run did not remove, and U on a date it did not touch.
-    put(PROD, 'snapshots/2026-10-10/district_UX.json', '{"keep":1}', true)
-    put(PROD, 'snapshots/2026-10-01/district_U.json', '{"keep":1}', true)
-    removalsFile = path.join(tmp, 'removed.jsonl')
-    fs.writeFileSync(
-      removalsFile,
-      STALE.map(p =>
-        JSON.stringify({ path: p, date: '2026-10-10', stage: 'test' })
-      ).join('\n') + '\n'
+    put(STG, `${D}/metadata.json`, GAP_META, true)
+    put(PROD, `${D}/district_U.json`, JUNK, true)
+    put(PROD, `${D}/analytics/district_U_analytics.json`, '{"m":0}', true)
+    put(PROD, `${D}/analytics/district_U_membership.json`, '{"m":0}', true)
+    // Kept: the reports sidecar (real TI data), a neighbour id, and U on
+    // a date this run does not promote.
+    put(PROD, `${D}/district_U_reports.json`, '{"reports":1}', true)
+    put(STG, `${D}/district_U_reports.json`, '{"reports":1}', true)
+    put(PROD, `${D}/district_UX.json`, '{"keep":1}', true)
+    put(PROD, 'snapshots/2026-10-01/district_U.json', JUNK, true)
+  })
+
+  it("removes the gap district's transform objects from prod with no removals record at all", async () => {
+    writeInputs({ promote: true })
+    const before = tree(PROD)
+    const r = await run(['--execute'])
+    expect(r.status, r.stderr).toBe(0)
+    const after = tree(PROD)
+    expect(Object.keys(before).filter(k => !(k in after))).toEqual(STALE)
+    for (const p of STALE) expect(meta(PROD, p)).toBeNull()
+    expect(read(PROD, `${D}/district_U_reports.json`)).not.toBeNull()
+    expect(read(PROD, `${D}/district_UX.json`)).not.toBeNull()
+    expect(read(PROD, 'snapshots/2026-10-01/district_U.json')).not.toBeNull()
+    expect(r.outputs.objects_removed).toBe('3')
+    expect(r.outputs.complete).toBe('true')
+  })
+
+  it('removes after the v1/ entry points: analytics first, the district file last', async () => {
+    writeInputs({ promote: true })
+    expect((await run(['--execute'])).status).toBe(0)
+    const log = fs.readFileSync(shimLog, 'utf-8').split('\n')
+    const lastCopy = log.map(l => l.startsWith('storage cp ')).lastIndexOf(true)
+    expect(log[lastCopy]).toContain('v1/dates.json')
+    const rms = log.filter(l => l.startsWith('storage rm '))
+    expect(rms).toEqual([
+      `storage rm gs://${PROD}/${STALE[0]} gs://${PROD}/${STALE[1]}`,
+      `storage rm gs://${PROD}/${STALE[2]}`,
+    ])
+    expect(log.findIndex(l => l.startsWith('storage rm '))).toBeGreaterThan(
+      lastCopy
     )
   })
 
-  const runRemovals = (args: string[], env: Record<string, string> = {}) =>
-    run(args, { RUN_REMOVALS_FILE: removalsFile, ...env })
-
-  it('removes exactly the recorded objects from prod, and nothing else', async () => {
+  it('a re-run converges and removes nothing more', async () => {
     writeInputs({ promote: true })
-    const before = tree(PROD)
-    const r = await runRemovals(['--execute'])
+    expect((await run(['--execute'])).status).toBe(0)
+    const once = tree(PROD)
+    const r = await run(['--execute'])
     expect(r.status, r.stderr).toBe(0)
-    for (const p of STALE) expect(read(PROD, p)).toBeNull()
-    for (const p of STALE) expect(meta(PROD, p)).toBeNull()
-    const after = tree(PROD)
-    const gone = Object.keys(before).filter(k => !(k in after))
-    expect(gone.sort()).toEqual(STALE)
-    expect(read(PROD, 'snapshots/2026-10-10/district_UX.json')).not.toBeNull()
-    expect(read(PROD, 'snapshots/2026-10-01/district_U.json')).not.toBeNull()
-    expect(r.outputs.objects_removed).toBe('2')
-    expect(r.outputs.complete).toBe('true')
+    expect(tree(PROD)).toEqual(once)
+    expect(r.outputs.objects_removed).toBe('0')
   })
 
-  it('removes only after the v1/ entry points are copied', async () => {
-    writeInputs({ promote: true })
-    expect((await runRemovals(['--execute'])).status).toBe(0)
-    const log = fs.readFileSync(shimLog, 'utf-8').split('\n')
-    const lastCopy = log.map(l => l.startsWith('storage cp ')).lastIndexOf(true)
-    const firstRm = log.findIndex(l => l.startsWith('storage rm '))
-    expect(log[lastCopy]).toContain('v1/dates.json')
-    expect(firstRm).toBeGreaterThan(lastCopy)
-    expect(log.filter(l => l.startsWith('storage rm '))).toEqual([
-      `storage rm ${STALE.map(p => `gs://${PROD}/${p}`).join(' ')}`,
-    ])
-  })
-
-  it('keeps the removals of a held date: prod keeps that date whole', async () => {
+  it('a held date keeps its objects, and a later promote of it removes them', async () => {
     writeInputs({ promote: false, heldDates: ['2026-10-10'] })
-    const r = await runRemovals(['--execute'])
-    expect(r.status, r.stderr).toBe(0)
+    expect((await run(['--execute'])).status).toBe(0)
     for (const p of STALE) expect(read(PROD, p)).not.toBeNull()
-    expect(r.outputs.objects_removed).toBe('0')
-    expect(r.outputs.complete).toBe('false')
+    writeInputs({ promote: true })
+    expect((await run(['--execute'])).status).toBe(0)
+    for (const p of STALE) expect(read(PROD, p)).toBeNull()
   })
 
-  it('skips an object prod never had (a re-run converges)', async () => {
+  it('a failed copy removes nothing, and the next promote converges', async () => {
     writeInputs({ promote: true })
-    fs.rmSync(path.join(root, PROD, STALE[0]!))
-    const r = await runRemovals(['--execute'])
-    expect(r.status, r.stderr).toBe(0)
-    expect(read(PROD, STALE[1]!)).toBeNull()
-    expect(r.outputs.objects_removed).toBe('1')
-    expect(r.outputs.complete).toBe('true')
-    expect((await runRemovals(['--execute'])).status).toBe(0)
-  })
-
-  it('a failed removal fails the step: nothing else would ever remove it', async () => {
-    writeInputs({ promote: true })
-    const r = await runRemovals(['--execute'], { SHIM_FAIL_MATCH: '^rm ' })
+    const r = await run(['--execute'], { SHIM_FAIL_MATCH: '^cp .*2026-10-11' })
     expect(r.status).toBe(1)
-    expect(r.stderr).toMatch(/::error title=Scoped promotion::.*remov/)
-    expect(r.outputs.complete).toBe('false')
+    for (const p of STALE) expect(read(PROD, p)).not.toBeNull()
+    expect((await run(['--execute'])).status).toBe(0)
+    for (const p of STALE) expect(read(PROD, p)).toBeNull()
   })
 
-  it('refuses a malformed removals file and copies nothing', async () => {
+  it('keeps prod whole while staging still holds the district file', async () => {
+    put(STG, `${D}/district_U.json`, JUNK, true)
     writeInputs({ promote: true })
-    fs.writeFileSync(removalsFile, 'not json\n')
-    const before = tree(PROD)
-    const r = await runRemovals(['--execute'])
-    expect(r.status).toBe(2)
-    expect(tree(PROD)).toEqual(before)
-  })
-
-  it('a run that removed nothing has no removals file, and promotes as before', async () => {
-    writeInputs({ promote: true })
-    fs.rmSync(removalsFile)
-    const r = await runRemovals(['--execute'])
+    const r = await run(['--execute'])
     expect(r.status, r.stderr).toBe(0)
     for (const p of STALE) expect(read(PROD, p)).not.toBeNull()
-    expect(r.outputs.objects_removed).toBe('0')
+  })
+
+  it("never removes prod's real clubs, whatever a gate allowed", async () => {
+    put(
+      PROD,
+      `${D}/district_U.json`,
+      '{"districtId":"U","data":{"clubs":[{"id":1}]}}',
+      true
+    )
+    writeInputs({ promote: true })
+    const r = await run(['--execute'])
+    expect(r.status, r.stderr).toBe(0)
+    for (const p of STALE) expect(read(PROD, p)).not.toBeNull()
+    expect(r.stderr).toMatch(/::warning title=Gap removal::.*1 club/)
+  })
+
+  it('removes nothing for a failed district without the #1671 gap reason', async () => {
+    put(
+      STG,
+      `${D}/metadata.json`,
+      JSON.stringify({
+        successfulDistricts: ['61'],
+        failedDistricts: ['U'],
+        errors: ['U: transform failed'],
+      }),
+      true
+    )
+    writeInputs({ promote: true })
+    expect((await run(['--execute'])).status).toBe(0)
+    for (const p of STALE) expect(read(PROD, p)).not.toBeNull()
+  })
+
+  it('a failed removal fails the step; the next promote converges', async () => {
+    writeInputs({ promote: true })
+    const r = await run(['--execute'], { SHIM_FAIL_MATCH: '^rm ' })
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/::error title=Gap removal::/)
+    expect(r.outputs.complete).toBe('false')
+    expect((await run(['--execute'])).status).toBe(0)
+    for (const p of STALE) expect(read(PROD, p)).toBeNull()
   })
 
   it('the dry run lists the removals and writes nothing', async () => {
     writeInputs({ promote: true })
     const before = tree(PROD)
-    const r = await runRemovals(['--dry-run'])
+    const r = await run(['--dry-run'])
     expect(r.status, r.stderr).toBe(0)
     expect(tree(PROD)).toEqual(before)
     expect(r.stdout.split('\n').filter(l => l.startsWith('remove\t'))).toEqual(
       STALE.map(p => `remove\tgs://${PROD}/${p}`)
     )
+    expect(r.outputs.removals_planned).toBe('3')
   })
 })
-
 describe('gcloud shim: rm of exact objects (#2232 harness)', () => {
   const shim = (...args: string[]) =>
     spawnSync(SHIM, args, {
