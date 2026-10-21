@@ -164,12 +164,13 @@ env:
   # scripts/plan-report-sidecars.ts from the run manifest above.
   REPORT_SIDECAR_MANIFEST_FILE: '/tmp/report-sidecars/written.jsonl'
   REPORT_SIDECAR_VERDICT_FILE: '/tmp/report-sidecars/verdict.json'
-  # Its removal twin (#2232): one JSON line per staging object this run
+  # The run manifest's removal twin (#2232): one JSON line per staging object this run
   # removed (a #1671 gap district's earlier transform objects), appended by
   # scripts/pipeline/gcs-remove.sh; published to
   # runs/<github_run_id>/removed.jsonl. An audit log only: scoped promotion
-  # derives prod's removals from bucket state, never from this file.
-  # Absent when nothing was removed.
+  # derives prod's removals from bucket state, never from this file (in
+  # the pipeline job and, for its sidecar dates, the promote-reports job;
+  # reports sidecars are never removed). Absent when nothing was removed.
   RUN_REMOVALS_FILE: '/tmp/run-manifest/removed.jsonl'
   # The education ledger seed (#2102): restored from the Actions cache before
   # each rollup build. scripts/pipeline/build-education-rollup.sh verifies it
