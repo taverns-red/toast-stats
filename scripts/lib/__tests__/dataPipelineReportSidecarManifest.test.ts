@@ -47,7 +47,10 @@ const workflow = parse(
     path.join(process.cwd(), '.github/workflows/data-pipeline.yml'),
     'utf-8'
   )
-) as Workflow & { jobs: Record<string, Job> }
+) as Workflow & {
+  jobs: Record<string, Job>
+  env?: Record<string, string>
+}
 
 const JOB = 'promote-reports'
 const steps = (job: string) => (workflow.jobs[job]?.steps ?? []) as Step[]
@@ -200,10 +203,9 @@ describe('promote-reports job (#1767)', () => {
 
   it('promotes the dates that passed the gate, through the manifest promoter, holding the rest (#2227)', () => {
     const p = step(JOB, PROMOTE)
-    // --education-rollup (#2222): the rollup the plan put in the manifest.
-    expect(p?.run).toBe(
-      'npx tsx scripts/promote-run-manifest.ts --execute --education-rollup'
-    )
+    // The sidecars only: the education rollup has its own gate and
+    // promote (#2222 M1), so a rollup fault never holds a sidecar.
+    expect(p?.run).toBe('npx tsx scripts/promote-run-manifest.ts --execute')
     const c = topLevelConjuncts(p?.if ?? '')
     // Not content_promote: one bad date must not hold the others (#2227).
     expect(p?.if ?? '').not.toContain('content_promote')
@@ -304,6 +306,77 @@ describe('promote-reports job (#1767)', () => {
         )
       )
     ).toBe(true)
+  })
+})
+
+describe('the education rollup is gated and promoted on its own (#2222 M1)', () => {
+  const RGATE = '[rollup] Content gate the education rollup (#2222)'
+  const RPROMOTE = '[rollup] Promote the education rollup (#2222)'
+  const RHELD = '[rollup] Education rollup held by the content gate (#2222)'
+
+  it('plan → its own gate → its own promote, independent of the sidecars’ steps', () => {
+    const order = [PLAN, RGATE, RPROMOTE, RHELD].map(n => index(JOB, n))
+    expect(
+      order.every(i => i >= 0),
+      JSON.stringify(order)
+    ).toBe(true)
+    expect([...order].sort((a, b) => a - b)).toEqual(order)
+    // Before the sidecars' gate, whose hold fails the job.
+    expect(index(JOB, RHELD)).toBeLessThan(index(JOB, GATE))
+  })
+
+  it('gates exactly the rollup manifest, and a gate error never fails the job', () => {
+    const g = step(JOB, RGATE)
+    expect(g?.id).toBe('rollupgate')
+    expect(g?.run).toBe(
+      'npx tsx scripts/promotion-content-gate.ts --manifest-only'
+    )
+    expect(g?.env?.RUN_MANIFEST_FILE).toBe(
+      '${{ env.EDUCATION_ROLLUP_MANIFEST_FILE }}'
+    )
+    expect(g?.env?.CONTENT_GATE_FILE).not.toBe(
+      step(JOB, GATE)?.env?.CONTENT_GATE_FILE
+    )
+    expect(g?.if).toContain("steps.plan.outputs.rollup_objects != '0'")
+    expect(g?.['continue-on-error']).toBe(true)
+  })
+
+  it('promotes it with --education-rollup only when its own gate passed', () => {
+    const p = step(JOB, RPROMOTE)
+    expect(p?.run).toBe(
+      'npx tsx scripts/promote-run-manifest.ts --execute --education-rollup'
+    )
+    expect(p?.env?.RUN_MANIFEST_FILE).toBe(
+      '${{ env.EDUCATION_ROLLUP_MANIFEST_FILE }}'
+    )
+    const c = topLevelConjuncts(p?.if ?? '')
+    expect(c).toContain("steps.rollupgate.outputs.content_promote == 'true'")
+    expect(p?.if).not.toContain('steps.contentgate')
+    expect(p?.['continue-on-error']).toBe(true)
+    const found = findProdWriteSteps(workflow).find(
+      s => s.job === JOB && s.step === RPROMOTE
+    )
+    expect(found?.reasons).toEqual(['manifest promotion → production'])
+    expect(found?.guarded).toBe(true)
+  })
+
+  it('a held rollup warns and is summarised, without failing the job', () => {
+    const h = step(JOB, RHELD)
+    expect(h?.if).toContain(
+      "steps.rollupgate.outputs.content_promote == 'false'"
+    )
+    expect(h?.run).toContain('::warning title=Education rollup::')
+    expect(h?.run).toContain('GITHUB_STEP_SUMMARY')
+    expect(h?.run).not.toMatch(/exit 1/)
+  })
+
+  it('the sidecars’ gate and promote never read the rollup manifest', () => {
+    for (const n of [GATE, PROMOTE]) {
+      expect(step(JOB, n)?.env?.RUN_MANIFEST_FILE).toBe(
+        '${{ env.REPORT_SIDECAR_MANIFEST_FILE }}'
+      )
+    }
+    expect(workflow.env?.EDUCATION_ROLLUP_MANIFEST_FILE).toBeTruthy()
   })
 })
 

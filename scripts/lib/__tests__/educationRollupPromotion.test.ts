@@ -210,7 +210,9 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
   let root: string
   let runManifest: string
   let sidecarManifest: string
+  let rollupManifest: string
   let verdictFile: string
+  let summaryFile: string
   let output: string
   let shimLog: string
 
@@ -261,7 +263,9 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
       RUN_MANIFEST_FILE: runManifest,
       REPORT_SIDECAR_MANIFEST_FILE: sidecarManifest,
       REPORT_SIDECAR_VERDICT_FILE: verdictFile,
+      EDUCATION_ROLLUP_MANIFEST_FILE: rollupManifest,
       GITHUB_OUTPUT: output,
+      GITHUB_STEP_SUMMARY: summaryFile,
       ...extra,
     }) as Record<string, string>
 
@@ -281,7 +285,7 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
       ['--execute', '--education-rollup'],
       {
         env: env({
-          RUN_MANIFEST_FILE: sidecarManifest,
+          RUN_MANIFEST_FILE: rollupManifest,
           COMPLETENESS_GATE_FILE: verdictFile,
           ...extra,
         }),
@@ -293,16 +297,19 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
     )
     return { status, err }
   }
-  const planned = () =>
-    fs.existsSync(sidecarManifest)
-      ? parseRunManifest(fs.readFileSync(sidecarManifest, 'utf-8'))
-      : []
+  const manifestAt = (f: string) =>
+    fs.existsSync(f) ? parseRunManifest(fs.readFileSync(f, 'utf-8')) : []
+  /** The education rollup's own manifest (#2222 M1). */
+  const planned = () => manifestAt(rollupManifest)
+  const SIDECAR = 'snapshots/2026-10-16/district_61_reports.json'
 
   beforeEach(() => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'education-rollup-promo-'))
     root = path.join(tmp, 'gcs')
     runManifest = path.join(tmp, 'run.jsonl')
     sidecarManifest = path.join(tmp, 'sidecars', 'written.jsonl')
+    rollupManifest = path.join(tmp, 'education-rollup', 'written.jsonl')
+    summaryFile = path.join(tmp, 'summary.md')
     verdictFile = path.join(tmp, 'sidecars', 'verdict.json')
     output = path.join(tmp, 'output.txt')
     shimLog = path.join(tmp, 'gcloud.log')
@@ -334,6 +341,13 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
           stage: 'daily',
         }),
         JSON.stringify(entry(INDEX, 'education-rollup')),
+        // A sidecar this run placed: it must promote whatever the rollup does.
+        JSON.stringify({
+          path: SIDECAR,
+          sha256: sha('{"districtId":"61"}'),
+          date: '2026-10-16',
+          stage: 'place-reports',
+        }),
       ].join('\n') + '\n'
     )
   })
@@ -352,8 +366,11 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
       sha('{"py":"2018-2019"}')
     )
     expect(rollup.every(e => e.stage === 'education-rollup')).toBe(true)
+    // Its own manifest: the sidecar manifest holds only the sidecars.
+    expect(manifestAt(sidecarManifest).map(e => e.path)).toEqual([SIDECAR])
     expect(outputs()).toMatchObject({
-      objects: '3',
+      objects: '1',
+      rollup_objects: '3',
       education_rollup: 'promote',
     })
     expect({ stg: tree(STG), prod: tree(PROD) }).toEqual(before)
@@ -410,9 +427,10 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
     fs.rmSync(output)
     expect((await plan()).status).toBe(0)
     expect(outputs()).toMatchObject({
-      objects: '0',
+      rollup_objects: '0',
       education_rollup: 'current',
     })
+    expect(fs.existsSync(rollupManifest)).toBe(false)
   })
 
   it('no staging rollup is nothing to promote, not an error', async () => {
@@ -422,7 +440,24 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
     expect(outputs().education_rollup).toBe('none')
   })
 
-  it('a bad index plans no rollup and fails the plan, so nothing is promoted', async () => {
+  // #2222 M1: a rollup problem holds only the rollup, as the old
+  // continue-on-error mirror did; the sidecars are planned regardless.
+  const expectRollupOnlyHeld = (r: { status: number; err: string }) => {
+    expect(r.status, r.err).toBe(0)
+    expect(outputs()).toMatchObject({
+      objects: '1',
+      rollup_objects: '0',
+      education_rollup: 'error',
+    })
+    expect(manifestAt(sidecarManifest).map(e => e.path)).toEqual([SIDECAR])
+    expect(fs.existsSync(rollupManifest)).toBe(false)
+    expect(r.err).toMatch(/::warning title=Education rollup::/)
+    expect(fs.readFileSync(summaryFile, 'utf-8')).toMatch(
+      /Education rollup \(#2222\)\*\*: error/
+    )
+  }
+
+  it('a bad index holds only the rollup: the sidecars still plan', async () => {
     put(
       STG,
       INDEX,
@@ -431,18 +466,38 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
         programYears: [{ path: 'v1/dates.json' }],
       })
     )
-    const r = await plan()
-    expect(r.status).toBe(1)
-    expect(r.err).toMatch(/education rollup/i)
-    expect(fs.existsSync(sidecarManifest)).toBe(false)
+    expectRollupOnlyHeld(await plan())
   })
 
-  it('fails on a transport error reading the staging index', async () => {
-    const r = await plan({
-      SHIM_FAIL_MATCH: `^cat gs://${STG}/${PREFIX}index\\.json`,
-    })
-    expect(r.status).toBe(1)
-    expect(fs.existsSync(sidecarManifest)).toBe(false)
+  it('an index that is not JSON holds only the rollup', async () => {
+    put(STG, INDEX, 'not json')
+    expectRollupOnlyHeld(await plan())
+  })
+
+  it('a transport error reading staging’s index holds only the rollup', async () => {
+    expectRollupOnlyHeld(
+      await plan({ SHIM_FAIL_MATCH: `^cat gs://${STG}/${PREFIX}index\\.json` })
+    )
+  })
+
+  it('a transport error reading prod’s index holds only the rollup', async () => {
+    expectRollupOnlyHeld(
+      await plan({
+        SHIM_FAIL_MATCH: `^cat gs://${PROD}/${PREFIX}index\\.json`,
+      })
+    )
+  })
+
+  it('a failed rollup download holds only the rollup', async () => {
+    expectRollupOnlyHeld(await plan({ SHIM_FAIL_MATCH: `^cp .*${PREFIX}` }))
+  })
+
+  it('an earlier plan’s rollup manifest never survives a plan that holds it', async () => {
+    expect((await plan()).status).toBe(0)
+    expect(fs.existsSync(rollupManifest)).toBe(true)
+    put(STG, INDEX, index('2026-10-17', ['2018-2019']), ROLLUP_META)
+    expect((await plan()).status).toBe(0)
+    expect(fs.existsSync(rollupManifest)).toBe(false)
   })
 
   it('a failed year copy never writes the index', async () => {
