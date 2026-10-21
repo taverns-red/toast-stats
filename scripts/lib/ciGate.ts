@@ -42,6 +42,11 @@
  * A third case rounds it out: PRESENT BUT `conclusion: skipped` (a job-level
  * `if:` skip, or a job skipped because a `needs:` dependency failed). An
  * expected job that reports `skipped` is a failure — only `success` passes.
+ * Two exceptions, both because a skip there is not the job's verdict:
+ * a skipped run beside a green one is ignored (#2204), and a check whose only
+ * runs are skipped stays `pending` while another workflow run on the head SHA
+ * is still queued or in progress — that run may yet report it for real
+ * (#2219). Once every run on the head has completed, skipped-only fails.
  */
 
 import { isDocsOnly, isNonCodeFile } from './changedFilesGate'
@@ -66,6 +71,48 @@ export interface ObservedCheck {
   status: string
   /** `success` | `failure` | `skipped` | `cancelled` | … | `null` if running. */
   conclusion: string | null
+}
+
+/**
+ * One workflow run as reported by `GET /repos/{repo}/actions/runs?head_sha=`,
+ * trimmed to the fields the gate reads.
+ */
+export interface ObservedWorkflowRun {
+  id: number
+  /** The workflow's `name:` (e.g. `CI`, `Docs`, `CI Gate`). */
+  name: string
+  /** `queued` | `in_progress` | `completed` (also `waiting`, `pending`, …). */
+  status: string
+}
+
+/** The aggregator's own workflow name (same string as its job name). */
+const GATE_WORKFLOW = GATE_CHECK
+
+/**
+ * True when some workflow run on the head SHA, other than a CI Gate run, has
+ * not completed yet — so a required check may still be reported (#2219).
+ *
+ * The gate's own run is always in progress while it polls, and a superseded
+ * gate run never produces a required check, so every `CI Gate` run (and the
+ * caller's own run id, belt and braces) is excluded.
+ */
+export function workflowRunsInFlight(
+  runs: ObservedWorkflowRun[],
+  selfRunId: number
+): boolean {
+  return runs.some(
+    r =>
+      r.id !== selfRunId && r.name !== GATE_WORKFLOW && r.status !== 'completed'
+  )
+}
+
+export interface EvaluateOptions {
+  /**
+   * Another workflow run on the head SHA is still queued/in progress (see
+   * {@link workflowRunsInFlight}). Turns a skipped-only check from a failure
+   * into `pending`. Defaults to `false` — the old, fail-closed behaviour.
+   */
+  runsInFlight?: boolean
 }
 
 export type GateState = 'pass' | 'fail' | 'pending'
@@ -117,7 +164,8 @@ export function expectedChecks(files: string[]): string[] {
  */
 export function evaluateChecks(
   expected: string[],
-  observed: ObservedCheck[]
+  observed: ObservedCheck[],
+  { runsInFlight = false }: EvaluateOptions = {}
 ): GateVerdict {
   const verdict: GateVerdict = {
     state: 'pending',
@@ -148,13 +196,25 @@ export function evaluateChecks(
     // job `if:`-skipped (#2204). The green run already proved this head SHA.
     // A check whose ONLY runs are skipped still fails below.
     const hasGreen = runs.some(r => r.conclusion === 'success')
-    const bad = runs.find(
+    const bad = runs.filter(
       r =>
         r.conclusion !== 'success' && !(hasGreen && r.conclusion === 'skipped')
     )
-    if (bad) {
+    const skippedOnly =
+      bad.length > 0 && bad.every(r => r.conclusion === 'skipped')
+    // Skipped-only while another run on the head is still going is not a
+    // verdict yet: on #2212 a no-op `edited` CI run finished all-skipped
+    // before the real run had created its jobs (#2219). The deadline still
+    // bounds the wait.
+    if (skippedOnly && runsInFlight) {
+      verdict.pending.push(name)
+      continue
+    }
+    // Report a real failure ahead of a skip when both are present.
+    const worst = bad.find(r => r.conclusion !== 'skipped') ?? bad[0]
+    if (worst) {
       // `skipped` lands here on purpose: an EXPECTED job must actually run.
-      verdict.failed.push({ name, conclusion: bad.conclusion ?? 'unknown' })
+      verdict.failed.push({ name, conclusion: worst.conclusion ?? 'unknown' })
       continue
     }
     verdict.satisfied.push(name)

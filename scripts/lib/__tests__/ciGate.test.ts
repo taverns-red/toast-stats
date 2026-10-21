@@ -300,7 +300,7 @@ describe('workflowRunsInFlight — is another run on the head still going? (#221
 
   it('ci-gate.yml grants actions: read so the run listing is readable', () => {
     expect(workflow('ci-gate.yml')).toMatch(
-      /permissions:\n(?:\s+\S+: \S+\n)*\s+actions: read\n/
+      /^permissions:\n(?: {2}.*\n)* {2}actions: read$/m
     )
   })
 })

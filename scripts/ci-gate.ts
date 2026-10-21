@@ -7,6 +7,8 @@
  *
  *   1. Read the PR's changed files  → `GET /repos/{repo}/pulls/{n}/files`
  *   2. Read the head SHA's checks    → `GET /repos/{repo}/commits/{sha}/check-runs`
+ *   3. Read the head SHA's workflow runs → `GET /repos/{repo}/actions/runs?head_sha=`
+ *      (is anything besides the gate still in flight? #2219)
  *
  * …then polls (2) until the verdict is terminal or the deadline expires. A
  * still-incomplete verdict at the deadline FAILS — an expected check that
@@ -16,8 +18,9 @@
  * JSON, so a caller can `| jq` it.
  *
  * Env (all supplied by the workflow):
- *   GITHUB_TOKEN       — repo-scoped token with `checks: read`, `pull-requests: read`
+ *   GITHUB_TOKEN       — repo-scoped token with `checks: read`, `pull-requests: read`, `actions: read`
  *   GITHUB_REPOSITORY  — "owner/repo"
+ *   GITHUB_RUN_ID      — this gate's own workflow run (excluded from in-flight)
  *   GATE_PR_NUMBER     — the PR being gated
  *   GATE_HEAD_SHA      — the PR head SHA the check runs attach to
  *   GATE_DEADLINE_MINUTES — optional, default 40
@@ -32,8 +35,10 @@ import {
   evaluateChecks,
   expectedChecks,
   isDeadlineFailure,
+  workflowRunsInFlight,
   type GateVerdict,
   type ObservedCheck,
+  type ObservedWorkflowRun,
 } from './lib/ciGate'
 
 const API = 'https://api.github.com'
@@ -51,6 +56,7 @@ const token = requireEnv('GITHUB_TOKEN')
 const repo = requireEnv('GITHUB_REPOSITORY')
 const prNumber = requireEnv('GATE_PR_NUMBER')
 const headSha = requireEnv('GATE_HEAD_SHA')
+const selfRunId = Number(process.env.GITHUB_RUN_ID ?? 0)
 const deadlineMs = Number(process.env.GATE_DEADLINE_MINUTES ?? 40) * 60_000
 const pollMs = Number(process.env.GATE_POLL_SECONDS ?? 20) * 1000
 
@@ -105,6 +111,27 @@ async function observedChecks(): Promise<ObservedCheck[]> {
   }
 }
 
+/** Every workflow run on the head SHA (any event, any workflow). */
+async function headWorkflowRuns(): Promise<ObservedWorkflowRun[]> {
+  const runs: ObservedWorkflowRun[] = []
+  for (let page = 1; ; page++) {
+    const body = await api<{
+      total_count: number
+      workflow_runs: ObservedWorkflowRun[]
+    }>(
+      `/repos/${repo}/actions/runs?head_sha=${headSha}&per_page=100&page=${page}`
+    )
+    runs.push(
+      ...body.workflow_runs.map(r => ({
+        id: r.id,
+        name: r.name,
+        status: r.status,
+      }))
+    )
+    if (body.workflow_runs.length < 100) return runs
+  }
+}
+
 function summarise(
   expected: string[],
   verdict: GateVerdict,
@@ -150,7 +177,13 @@ async function main(): Promise<void> {
   let verdict = evaluateChecks(expected, [])
 
   for (;;) {
-    verdict = evaluateChecks(expected, await observedChecks())
+    const [checks, wfRuns] = await Promise.all([
+      observedChecks(),
+      headWorkflowRuns(),
+    ])
+    verdict = evaluateChecks(expected, checks, {
+      runsInFlight: workflowRunsInFlight(wfRuns, selfRunId),
+    })
     const elapsedMs = Date.now() - startedAt
     const expired = elapsedMs >= deadlineMs
     console.error(
