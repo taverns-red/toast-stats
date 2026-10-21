@@ -43,14 +43,6 @@ describe('prodWriteGuard sentinels (#1754)', () => {
     }
   })
 
-  it('flags the education rollup mirror, which writes prod through its own gcloud calls (#1810)', () => {
-    expect(
-      prodWriteReasons(
-        'bash scripts/pipeline/mirror-education-rollup.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" --if-changed'
-      )
-    ).toEqual(['education rollup mirror → production'])
-  })
-
   it('does not flag the report-sidecar planner: it only reads (#1767)', () => {
     expect(prodWriteReasons('npx tsx scripts/plan-report-sidecars.ts')).toEqual(
       []
@@ -151,8 +143,6 @@ describe('data-pipeline skip_promotion contract (#1754)', () => {
       'File or refresh promotion-held issue',
       'Auto-close promotion-held issue on a promoting run',
       '[reports] Promote the report sidecars (#1767)',
-      '[rollup] Mirror the education rollup into prod (#1810)',
-      '[reports] Mirror the education rollup a held run built (#1810)',
     ]) {
       expect(names).toContain(expected)
     }

@@ -76,21 +76,13 @@ describe('the prod-write guard (#1767): one mechanism', () => {
     expect(direct.map(s => `${s.job} / ${s.step}`)).toEqual([])
   })
 
-  it('every other prod data write is the manifest promote, or a pinned exemption', () => {
-    const found = directProdWriteSteps(workflow)
+  it('every prod data write is the manifest promote: no exemption is left (#2222)', () => {
+    expect(DIRECT_PROD_WRITE_EXEMPT).toEqual({})
     expect(
-      found
-        .filter(s => !(s.step in DIRECT_PROD_WRITE_EXEMPT))
-        .map(s => `${s.job} / ${s.step}: ${s.reasons.join(', ')}`)
+      directProdWriteSteps(workflow).map(
+        s => `${s.job} / ${s.step}: ${s.reasons.join(', ')}`
+      )
     ).toEqual([])
-    // An exemption names a live step and the issue that retires it.
-    for (const [name, why] of Object.entries(DIRECT_PROD_WRITE_EXEMPT)) {
-      expect(
-        found.some(s => s.step === name),
-        name
-      ).toBe(true)
-      expect(why).toMatch(/#\d+/)
-    }
   })
 
   it('directProdWriteSteps sees a direct copy and ignores the promote', () => {
@@ -208,7 +200,10 @@ describe('promote-reports job (#1767)', () => {
 
   it('promotes the dates that passed the gate, through the manifest promoter, holding the rest (#2227)', () => {
     const p = step(JOB, PROMOTE)
-    expect(p?.run).toBe('npx tsx scripts/promote-run-manifest.ts --execute')
+    // --education-rollup (#2222): the rollup the plan put in the manifest.
+    expect(p?.run).toBe(
+      'npx tsx scripts/promote-run-manifest.ts --execute --education-rollup'
+    )
     const c = topLevelConjuncts(p?.if ?? '')
     // Not content_promote: one bad date must not hold the others (#2227).
     expect(p?.if ?? '').not.toContain('content_promote')
@@ -312,7 +307,25 @@ describe('promote-reports job (#1767)', () => {
   })
 })
 
-describe('the old direct writers are gone (#1767)', () => {
+describe('the old direct writers are gone (#1767, #2222)', () => {
+  it('no step runs mirror-education-rollup.sh, and it is deleted (#2222)', () => {
+    const all = Object.values(workflow.jobs).flatMap(j => j.steps ?? [])
+    expect(
+      all.some(s => (s.run ?? '').includes('mirror-education-rollup'))
+    ).toBe(false)
+    expect(
+      fs.existsSync(
+        path.join(process.cwd(), 'scripts/pipeline/mirror-education-rollup.sh')
+      )
+    ).toBe(false)
+  })
+
+  it('education-rollup writes nothing to prod: the build is recorded in the run manifest', () => {
+    expect(
+      findProdWriteSteps(workflow).filter(s => s.job === 'education-rollup')
+    ).toEqual([])
+  })
+
   it('no step runs carry-report-sidecars.sh', () => {
     const all = Object.values(workflow.jobs).flatMap(j => j.steps ?? [])
     expect(all.some(s => (s.run ?? '').includes('carry-report-sidecars'))).toBe(
