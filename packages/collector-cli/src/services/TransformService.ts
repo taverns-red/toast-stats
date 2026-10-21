@@ -1104,10 +1104,12 @@ export class TransformService {
           )
           if (confirmed > 0) {
             metric.distinguishedClubs = confirmed
-            metric.distinguishedPercent =
-              metric.activeClubs > 0
-                ? (confirmed / metric.activeClubs) * 100
-                : 0
+            // Same divisor as TI's own figure: Paid Club Base (DDP Item
+            // 1490; #537, #2224), never current Active Clubs.
+            metric.distinguishedPercent = calculateDistinguishedPercent(
+              confirmed,
+              metric.paidClubBase
+            )
           }
         }
       } catch {
