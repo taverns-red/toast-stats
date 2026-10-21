@@ -77,6 +77,51 @@ export function parseRunManifest(text: string): RunManifestEntry[] {
   return out
 }
 
+/**
+ * One object a run removed from staging (#2232): a failed district's
+ * per-date object left by an earlier build, appended by
+ * scripts/pipeline/gcs-remove.sh to `runs/<id>/removed.jsonl`. Scoped
+ * promotion removes the same object from prod, with its date.
+ */
+export interface RunRemovalEntry {
+  /** Object name, bucket stripped. */
+  path: string
+  /** The date the object belongs to, or null. */
+  date: string | null
+  /** The pipeline stage that removed it. */
+  stage: string
+}
+
+/**
+ * Parse the removals file. Empty is valid (a run that removed nothing has
+ * no file at all). Throws on a malformed line, naming it; callers fail closed.
+ */
+export function parseRunRemovals(text: string): RunRemovalEntry[] {
+  const out: RunRemovalEntry[] = []
+  for (const [i, raw] of text.split('\n').entries()) {
+    const line = raw.trim()
+    if (!line) continue
+    const where = `run removals line ${i + 1}`
+    let v: Record<string, unknown>
+    try {
+      v = JSON.parse(line) as Record<string, unknown>
+    } catch {
+      throw new Error(`${where}: not JSON`)
+    }
+    if (typeof v?.path !== 'string' || v.path === '') {
+      throw new Error(`${where}: no path`)
+    }
+    if (v.date !== null && (typeof v.date !== 'string' || !DATE.test(v.date))) {
+      throw new Error(`${where}: date is not YYYY-MM-DD or null`)
+    }
+    if (typeof v.stage !== 'string' || v.stage === '') {
+      throw new Error(`${where}: no stage`)
+    }
+    out.push({ path: v.path, date: v.date, stage: v.stage })
+  }
+  return out
+}
+
 /** The last write of each path (a later step may rewrite an object). */
 export function latestByPath(
   entries: readonly RunManifestEntry[]

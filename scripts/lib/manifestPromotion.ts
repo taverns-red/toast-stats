@@ -38,6 +38,12 @@
  *   the globals promoted and the run wrote the v1/ entry points, so prod's
  *   index stops naming a date before its directory goes. A staging index
  *   that still names a deleted date holds the globals and the deletes.
+ * - **Removals follow their date (#2232).** A rebuild that records a
+ *   district as failed removes that district's per-date objects from
+ *   staging and lists them in `runs/<id>/removed.jsonl`. Each is removed
+ *   from prod with its date, after the entry points: never on a held date,
+ *   never while the globals hold. Only per-district objects of a date the
+ *   run wrote, and never one the run also writes; anything else throws.
  * - **Fail closed.** A malformed path (wildcard, `..`, an undated
  *   snapshots/ object) throws; a missing completeness verdict holds
  *   everything; an unreadable index or prod listing holds the globals.
@@ -45,7 +51,12 @@
 
 import { PROMOTED_PREFIXES } from './promotionContentGate.js'
 import { assertPruneDeletionScope } from './pruneGcsDeletions.js'
-import { latestByPath, type RunManifestEntry } from './runManifest.js'
+import {
+  latestByPath,
+  type RunManifestEntry,
+  type RunRemovalEntry,
+} from './runManifest.js'
+import { districtObjectId } from './sourceGap.js'
 
 /** The frontend's entry points: copied last, in their own `cp`. */
 export const ENTRY_POINT_PATHS = ['v1/dates.json', 'v1/latest.json'] as const
@@ -132,6 +143,11 @@ export interface PromotionInputs {
    * every other mode.
    */
   deletes?: readonly string[]
+  /**
+   * Objects the run removed from staging (#2232, `runs/<id>/removed.jsonl`):
+   * a failed district's per-date objects. Removed from prod with their date.
+   */
+  removals?: readonly RunRemovalEntry[]
 }
 
 export type CopyPhase = 'dates' | 'globals' | 'entry'
@@ -157,6 +173,11 @@ export interface PromotionPlan {
   objectCount: number
   /** Prod prefixes removed after the entry phase (#1767). */
   deletes: { promote: boolean; reason: string; paths: string[] }
+  /**
+   * Prod objects removed after the entry phase (#2232): `paths` those of
+   * promoted dates, `held` those of held dates, with why.
+   */
+  removals: { paths: string[]; held: Array<{ path: string; reason: string }> }
 }
 
 function dirOf(path: string): string {
@@ -269,6 +290,46 @@ function deletesVerdict(
   }
 }
 
+/**
+ * The run's removals (#2232), validated, sorted and unique. Only a
+ * per-district object (`district_<id>[_kind].json`, top level or under
+ * analytics/) of a date the run wrote — so its date has a gate verdict —
+ * and never an object the run also writes. Throws on anything else.
+ */
+function resolveRemovals(
+  removals: readonly RunRemovalEntry[] | undefined,
+  dated: ReadonlyMap<string, string[]>,
+  written: ReadonlySet<string>
+): Map<string, string[]> {
+  const byDate = new Map<string, string[]>()
+  for (const path of [...new Set((removals ?? []).map(r => r.path))].sort()) {
+    const m = /^snapshots\/(\d{4}-\d{2}-\d{2})\/(.+)$/.exec(path)
+    if (
+      !SAFE_PATH.test(path) ||
+      !m ||
+      path.split('/').some(s => s === '..' || s === '.') ||
+      districtObjectId(m[2]!) === null
+    ) {
+      throw new Error(
+        `refusing to remove '${path}': only a per-district object under snapshots/<date>/`
+      )
+    }
+    const date = m[1]!
+    if (!dated.has(date)) {
+      throw new Error(
+        `refusing to remove '${path}': the run wrote nothing for ${date}, so no gate judged it`
+      )
+    }
+    if (written.has(path)) {
+      throw new Error(
+        `refusing to promote: the run both writes and removes ${path}`
+      )
+    }
+    byDate.set(date, [...(byDate.get(date) ?? []), path])
+  }
+  return byDate
+}
+
 export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
   const deletePaths = resolveDeletes(inputs.deletes)
   const deletedSnapshotDates = deletePaths
@@ -291,6 +352,12 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
       `refusing to promote: the run both writes and deletes ${both.join(', ')}`
     )
   }
+  const removalsByDate = resolveRemovals(
+    inputs.removals,
+    dated,
+    new Set(latest)
+  )
+  const allRemovals = [...removalsByDate.values()].flat().sort()
 
   if (inputs.held.all) {
     const reason =
@@ -310,6 +377,10 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
         promote: false,
         reason: deletePaths.length > 0 ? reason : 'no deletes requested',
         paths: deletePaths,
+      },
+      removals: {
+        paths: [],
+        held: allRemovals.map(path => ({ path, reason })),
       },
     }
   }
@@ -346,6 +417,22 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
     for (const p of globalPaths) held.push({ path: p, reason: globals.reason })
   }
 
+  // A removal goes with its date, and only once the globals land: an index
+  // that still names the district on that date must not outlive its objects.
+  const removals: PromotionPlan['removals'] = { paths: [], held: [] }
+  const globalsLand = globalPaths.length === 0 || globals.promote
+  for (const [d, paths] of [...removalsByDate].sort()) {
+    const reason = heldSet.has(d)
+      ? `date ${d} held by the completeness gate`
+      : globalsLand
+        ? null
+        : globals.reason
+    for (const path of paths) {
+      if (reason === null) removals.paths.push(path)
+      else removals.held.push({ path, reason })
+    }
+  }
+
   return {
     promotedDates,
     heldDates,
@@ -359,6 +446,7 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
       ...deletesVerdict(deletePaths, globals, globalPaths),
       paths: deletePaths,
     },
+    removals,
   }
 }
 
@@ -399,7 +487,8 @@ export function parseSnapshotDateListing(ls: string): Set<string> {
 /**
  * The dry run: one tab-separated line per object, in copy order —
  * `copy\t<phase>\t<gs://src>\t<gs://dst>`, then `delete\t<gs://prod/prefix/>`
- * for each planned delete (#1767), then `hold\t<path>\t<reason>` (a held
+ * for each planned delete (#1767), `remove\t<gs://prod/object>` for each
+ * planned removal (#2232), then `hold\t<path>\t<reason>` (a held
  * delete as `hold\t<prefix>/\t<reason>`) and `skip\t<path>\t<reason>` for
  * everything in the manifest not copied.
  */
@@ -421,7 +510,11 @@ export function formatPromotionPlan(
         : `hold\t${d}/\t${plan.deletes.reason}`
     )
   }
+  for (const r of plan.removals.paths) lines.push(`remove\tgs://${prod}/${r}`)
   for (const h of plan.held) lines.push(`hold\t${h.path}\t${h.reason}`)
+  for (const h of plan.removals.held) {
+    lines.push(`hold\t${h.path}\t${h.reason} (removal held)`)
+  }
   for (const e of plan.excluded) lines.push(`skip\t${e.path}\t${e.reason}`)
   return lines.join('\n') + '\n'
 }

@@ -164,6 +164,12 @@ env:
   # scripts/plan-report-sidecars.ts from the run manifest above.
   REPORT_SIDECAR_MANIFEST_FILE: '/tmp/report-sidecars/written.jsonl'
   REPORT_SIDECAR_VERDICT_FILE: '/tmp/report-sidecars/verdict.json'
+  # Its removal twin (#2232): one JSON line per staging object this run
+  # removed (a rebuild's failed district's earlier per-date objects),
+  # appended by scripts/pipeline/gcs-remove.sh; published to
+  # runs/<github_run_id>/removed.jsonl. Scoped promotion removes the same
+  # objects from prod with their date. Absent when nothing was removed.
+  RUN_REMOVALS_FILE: '/tmp/run-manifest/removed.jsonl'
   # The education ledger seed (#2102): restored from the Actions cache before
   # each rollup build. scripts/pipeline/build-education-rollup.sh verifies it
   # against raw-education-ledger/ and downloads only what differs.
@@ -2067,9 +2073,17 @@ jobs:
           fi
           gcloud storage cp --content-type="application/x-ndjson" \
             "${RUN_MANIFEST_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl"
+          # The removals (#2232), when the run made any.
+          if [ -s "${RUN_REMOVALS_FILE}" ]; then
+            gcloud storage cp --content-type="application/x-ndjson" \
+              "${RUN_REMOVALS_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/removed.jsonl"
+          fi
           {
             echo "## 🧾 Run manifest (#1762)"
             echo "- **Objects written**: $(wc -l < "${RUN_MANIFEST_FILE}" | tr -d ' ') → \`runs/${GITHUB_RUN_ID}/written.jsonl\`"
+            if [ -s "${RUN_REMOVALS_FILE}" ]; then
+              echo "- **Stale objects removed from staging (#2232)**: $(wc -l < "${RUN_REMOVALS_FILE}" | tr -d ' ') → \`runs/${GITHUB_RUN_ID}/removed.jsonl\`"
+            fi
             echo ""
             echo "| Stage | Objects |"
             echo "| --- | ---: |"
@@ -2167,7 +2181,10 @@ jobs:
       # are run-level and must pass; the completeness gate is applied PER
       # DATE inside the promoter (a held date holds itself and the globals,
       # the other dates promote), so it only has to have produced a verdict.
-      # Additive: nothing in prod is deleted. Exits 1 on a failed copy.
+      # Additive, except the run's own removals (#2232): the exact stale
+      # per-date objects a rebuild removed from staging for a failed
+      # district (runs/<id>/removed.jsonl), removed from prod with their
+      # date after every copy. Exits 1 on a failed copy or removal.
       - name: Promote run manifest to production (#1763)
         id: promotemanifest
         if: >-

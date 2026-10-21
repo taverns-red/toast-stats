@@ -565,6 +565,18 @@ describe('planManifestPromotion: removals of a failed district (#2232)', () => {
     expect(plan.removals.held[0]!.reason).toMatch(/2018-06-30 held/)
   })
 
+  it('holds the removals while the globals hold: an index must not outlive them', () => {
+    const plan = planManifestPromotion(
+      rebuild({
+        entries: [...runEntries, entry('config/district-snapshot-index.json')],
+        indexDates: null,
+      })
+    )
+    expect(plan.globals.promote).toBe(false)
+    expect(plan.removals.paths).toEqual([])
+    expect(plan.removals.held).toHaveLength(REMOVALS.length)
+  })
+
   it('holds every removal when the gate gave no per-date verdict', () => {
     const plan = planManifestPromotion(
       rebuild({ held: resolveHeldDates(null) })

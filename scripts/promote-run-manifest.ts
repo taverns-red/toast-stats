@@ -29,13 +29,22 @@
  * them as `delete\t<gs://prod/prefix/>`. Held deletes exit 1; a failed
  * delete warns (the next prune's plan sweeps it).
  *
+ * Removals (#2232): with RUN_REMOVALS_FILE (runs/<id>/removed.jsonl, the
+ * stale per-date objects of a failed district a rebuild removed from
+ * staging), --execute then runs `gcloud storage rm <gs://prod/object>…`
+ * for those of promoted dates prod still holds, after the entry points.
+ * The dry run lists them as `remove\t<gs://prod/object>`. A held date
+ * keeps its removals; a failed removal exits 1. No file: nothing removed.
+ *
  * Env: GCS_BUCKET, GCS_BUCKET_PRODUCTION, RUN_MANIFEST_FILE,
+ *      RUN_REMOVALS_FILE (optional),
  *      COMPLETENESS_GATE_FILE (default /tmp/completeness-gate.json),
  *      PROD_DELETES_FILE (optional, prune reconcile only),
  *      GCLOUD (default gcloud), PROMOTE_CONCURRENCY (default 4).
  * Outputs (GITHUB_OUTPUT): objects_planned, promoted_dates, held_dates,
  *      globals_promoted, globals_reason (why they held; empty when they
- *      promoted); with --execute also objects_copied and complete
+ *      promoted), removals_planned; with --execute also objects_copied,
+ *      objects_removed and complete
  *      ('true' only when every promotable object of the run was copied,
  *      and every planned delete ran); with PROD_DELETES_FILE also
  *      prefixes_planned and, on --execute, prefixes_deleted.

@@ -66,6 +66,12 @@
 #                push. rescrape then rsyncs the re-collected raw-csv/<date>/
 #                up, replacing the old copy. Every object uploaded is
 #                recorded in the run manifest (gcs-upload.sh, #1762).
+#  10b. remove   rebuild only (#2232): each district the date's metadata.json
+#                records as failed (not also successful) loses its earlier
+#                per-date objects in staging — the transform wrote none, and
+#                an upload only adds. Recorded in the removals file
+#                (gcs-remove.sh); scoped promotion removes them from prod
+#                with the date. See remove_failed_districts.
 #  11. cleanup   the date's raw, snapshot, hydrated and prior-year
 #                directories, so no later step reads a rebuilt date as
 #                "latest" (#295, #1670).
@@ -133,6 +139,8 @@
 #   RUN_MANIFEST_FILE      required by any upload: every object uploaded is
 #                          appended (scripts/pipeline/gcs-upload.sh, #1762);
 #                          the completeness gate takes its dates from it
+#   RUN_REMOVALS_FILE      required by any removal (stage 10b): every object
+#                          removed is appended (gcs-remove.sh, #2232)
 #
 # Output: stdout is ONE JSON line, {"succeeded":N,"refused":N,"failed":N}
 # (R4); everything else, including the CLI's own output, goes to stderr.
@@ -213,6 +221,8 @@ read -r -a ROLLUPS <<<"${BUILD_REPORTS_ROLLUPS:-bash ${REPO}/scripts/pipeline/bu
 # Every upload goes through the wrapper, so it lands in the run manifest.
 export GCLOUD
 UPLOAD=(bash "${REPO}/scripts/pipeline/gcs-upload.sh" "process-dates:${MODE}")
+# Every removal goes through its twin, so it lands in the removals file (#2232).
+REMOVE=(bash "${REPO}/scripts/pipeline/gcs-remove.sh" "process-dates:${MODE}")
 
 # stdout is reserved for the result line; fd 3 keeps it.
 exec 3>&1 1>&2
@@ -352,6 +362,40 @@ upload_snapshot() {
       "${shards[@]}" \
       "gs://${BUCKET}/snapshots/${actual}/clubs-by-region/"
   fi
+}
+
+# rebuild (#2232): remove from staging the per-date objects of each district
+# the date's own metadata.json records as failed (failedDistricts, not also
+# successfulDistricts: a #1671 gap or a failed transform). The transform
+# wrote nothing for such a district and uploads only add, so without this
+# its objects from an earlier build survive — a 0-member analytics file on
+# a date whose metadata says the district failed. Only per-district objects
+# (`district_<id>[_kind].json`, top level or analytics/) are removed, of
+# exactly those ids, and never one this run wrote. gcs-remove.sh records
+# each in the removals file, and scoped promotion removes the same objects
+# from prod with the date. A listing or removal error aborts the loop, like
+# an upload error: a stale object must not survive unreported.
+remove_failed_districts() {
+  local actual="$1" meta="${SNAPSHOTS}/$1/metadata.json" ids listing url rel
+  local stale=()
+  if [ ! -f "${meta}" ] ||
+    ! ids="$(jq -r '((.failedDistricts // []) - (.successfulDistricts // []))[]
+      | strings | select(test("^[A-Za-z0-9]+$"))' "${meta}")"; then
+    echo "::warning::No readable metadata.json for ${actual}; its failed districts' earlier objects were not checked (#2232)"
+    return 0
+  fi
+  [ -n "${ids}" ] || return 0
+  listing="$("${GCLOUD}" storage ls "gs://${BUCKET}/snapshots/${actual}/**")"
+  while IFS= read -r url; do
+    rel="${url#"gs://${BUCKET}/snapshots/${actual}/"}"
+    [[ "${rel}" =~ ^(analytics/)?district_([A-Za-z0-9]+)(_[a-z-]+)?\.json$ ]] || continue
+    grep -qxF "${BASH_REMATCH[2]}" <<<"${ids}" || continue
+    [ -e "${SNAPSHOTS}/${actual}/${rel}" ] && continue
+    stale+=("${url}")
+  done <<<"${listing}"
+  [ "${#stale[@]}" -gt 0 ] || return 0
+  echo "Removing ${#stale[@]} earlier object(s) of failed district(s) $(echo "${ids}" | paste -sd, -) from snapshots/${actual}/ (#2232)..."
+  "${REMOVE[@]}" "${stale[@]}"
 }
 
 # Merge the persisted Find-A-Club fetch for <date> into its snapshots, if
@@ -502,6 +546,12 @@ process_one() {
   # 10. upload
   if [ -d "${SNAPSHOTS}/${actual}" ]; then
     upload_snapshot "${actual}"
+    # 10b. remove — rebuild only (#2232). R17: the other modes keep what
+    # staging holds for districts they did not re-derive.
+    case "${MODE}" in
+      rebuild) remove_failed_districts "${actual}" ;;
+      rescrape | rescrape-historical) ;;
+    esac
     PUBLISHED_DATES+=("${actual}")
     if [ "${compute_ok}" = 1 ]; then OUTCOME=published; else OUTCOME=compute-failed; fi
   else
