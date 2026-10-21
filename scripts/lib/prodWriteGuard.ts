@@ -173,3 +173,34 @@ export function findProdWriteSteps(
   }
   return out
 }
+
+/**
+ * The reasons that are not a direct data write: the one prod-write
+ * mechanism (the manifest promoter, which every staged object reaches prod
+ * through, gated) and the promotion's side effects.
+ */
+const NOT_A_DIRECT_WRITE: ReadonlySet<string> = new Set([
+  'manifest promotion → production',
+  'CDN invalidation',
+  'promotion-held issue flow',
+])
+
+/**
+ * Steps allowed to write prod data outside the manifest promote, by step
+ * name, with the issue that retires each. The contract test
+ * (dataPipelineReportSidecarManifest.test.ts) pins `directProdWriteSteps`
+ * to exactly these.
+ */
+export const DIRECT_PROD_WRITE_EXEMPT: Readonly<Record<string, string>> = {}
+
+/**
+ * Every step that writes prod data by itself — a `gcloud storage` copy,
+ * move, remove or update into prod, or a script known to — instead of
+ * through scripts/promote-run-manifest.ts (#1767, ADR-015 step 9: one
+ * prod-write mechanism).
+ */
+export function directProdWriteSteps(workflow: Workflow): ProdWriteStep[] {
+  return findProdWriteSteps(workflow).filter(s =>
+    s.reasons.some(r => !NOT_A_DIRECT_WRITE.has(r))
+  )
+}

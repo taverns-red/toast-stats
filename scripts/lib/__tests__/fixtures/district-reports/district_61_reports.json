@@ -1,0 +1,273 @@
+{
+  "districtId": "61",
+  "programYear": "2026-2027",
+  "generatedAt": "2026-10-21T09:07:23.516Z",
+  "sections": {
+    "aprilDuesRenewal": {
+      "sources": [
+        {
+          "reportType": "dues-renewal",
+          "tableId": "0235cdd5-ffee-4101-ab43-a952a2736fc0",
+          "asOf": "October 21, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "1009147",
+          "division": "D",
+          "area": "33",
+          "renewalStatus": "Verified complete - 01/30/2026",
+          "name": "Los Amigos Online",
+          "location": "Ottawa"
+        },
+        {
+          "club": "1036983",
+          "division": "F",
+          "area": "53",
+          "renewalStatus": "Verified complete - 03/16/2026",
+          "name": "Maîtres parleurs de Blainville",
+          "location": "Blainville"
+        }
+      ]
+    },
+    "octoberDuesRenewal": {
+      "sources": [
+        {
+          "reportType": "dues-renewal",
+          "tableId": "0d56c054-0cd2-46ba-b3b1-3bf17221bd6c",
+          "asOf": "October 21, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "1009147",
+          "division": "D",
+          "area": "33",
+          "renewalStatus": "Verified complete - 08/03/2026",
+          "name": "Los Amigos Online",
+          "location": "Ottawa"
+        },
+        {
+          "club": "1036983",
+          "division": "F",
+          "area": "53",
+          "renewalStatus": "Verified complete - 08/03/2026",
+          "name": "Maîtres parleurs de Blainville",
+          "location": "Blainville"
+        }
+      ]
+    },
+    "officerList": {
+      "sources": [
+        {
+          "reportType": "officer-list",
+          "tableId": "43abeb51-40a6-4514-868a-d697d6481753",
+          "asOf": "October 21, 2026"
+        },
+        {
+          "reportType": "officer-list",
+          "tableId": "68d834ff-90c1-40ae-a79e-c9270bd9919c",
+          "asOf": "October 21, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "1009147",
+          "clubName": "Los Amigos Online",
+          "division": "D",
+          "area": "33",
+          "listStatus": "Received - 05/25/2026",
+          "electionCadence": "annual",
+          "officerListSubmitted": true
+        },
+        {
+          "club": "1036983",
+          "clubName": "Maîtres parleurs de Blainville",
+          "division": "F",
+          "area": "53",
+          "listStatus": "Received - 06/19/2026",
+          "electionCadence": "annual",
+          "officerListSubmitted": true
+        }
+      ]
+    },
+    "clubSuccessPlan": {
+      "sources": [
+        {
+          "reportType": "club-success-plan",
+          "tableId": "99b20422-f82f-456b-8376-18d5ce1b70c5",
+          "asOf": "October 21, 2026"
+        }
+      ],
+      "records": [
+        {
+          "clubNumber": "1009147",
+          "division": "D",
+          "area": "33",
+          "submissionDate": "July 9, 2026",
+          "clubName": "Los Amigos Online"
+        },
+        {
+          "clubNumber": "1036983",
+          "division": "F",
+          "area": "53",
+          "submissionDate": "September 12, 2026",
+          "clubName": "Maîtres parleurs de Blainville"
+        }
+      ]
+    },
+    "educationAchievements": {
+      "sources": [
+        {
+          "reportType": "education-achievements",
+          "tableId": "c757d313-f815-4b22-93dc-b839d04cec7b",
+          "asOf": "October 21, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "1009147",
+          "division": "D",
+          "area": "33",
+          "name": "Los Amigos Online",
+          "location": "Ottawa",
+          "award": "MS1Motivational Strategies Level 1",
+          "achievementCount": 2
+        },
+        {
+          "club": "1009147",
+          "division": "D",
+          "area": "33",
+          "name": "Los Amigos Online",
+          "location": "Ottawa",
+          "award": "VC3Visionary Communication Level 3",
+          "achievementCount": 1
+        }
+      ]
+    },
+    "educationMembers": {
+      "sources": [
+        {
+          "reportType": "education-achievements",
+          "tableId": "c757d313-f815-4b22-93dc-b839d04cec7b",
+          "asOf": "October 21, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "1009147",
+          "membersWithAward": 3
+        },
+        {
+          "club": "1036983",
+          "membersWithAward": 3
+        }
+      ]
+    },
+    "tripleCrown": {
+      "sources": [
+        {
+          "reportType": "triple-crown",
+          "tableId": "b546ef04-e602-4ffc-95c5-5a786aba36b7",
+          "asOf": "October 21, 2026"
+        }
+      ],
+      "summary": {
+        "achieverCount": 9
+      }
+    },
+    "newClubs": {
+      "sources": [
+        {
+          "reportType": "new-clubs",
+          "tableId": "ac6df5db-13de-425a-b8b9-f9c6093b538a",
+          "asOf": ""
+        }
+      ],
+      "records": []
+    },
+    "prospectiveClubs": {
+      "sources": [
+        {
+          "reportType": "prospective-clubs",
+          "tableId": "50630d17-1492-40c9-8244-930b1d94167b",
+          "asOf": "October 21, 2026"
+        }
+      ],
+      "records": [
+        {
+          "division": "F",
+          "area": "53",
+          "club": "28678700",
+          "status": "Prospective",
+          "name": "Parole Chrétienne et Passionné de Dieu",
+          "location": "Hawkesbury",
+          "prospect": "#1 Application to Organize Complete - 04/15/2025Payment Complete - 04/19/2025"
+        },
+        {
+          "division": "A",
+          "area": "3",
+          "club": "28679454",
+          "status": "Prospective",
+          "name": "Perth, CAN Prospective Club",
+          "location": "Perth",
+          "prospect": "#1 Application to Organize Complete - 12/03/2025Payment Complete - 12/03/2025"
+        }
+      ]
+    },
+    "coaches": {
+      "sources": [
+        {
+          "reportType": "coaches",
+          "tableId": "41955922-25ab-4a5a-8025-ebb7634f68bf",
+          "asOf": "October 21, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "1269833",
+          "clubName": "FSA-Universite Laval",
+          "code": "COACH",
+          "beginDate": "09/30/2026",
+          "status": "PENDING",
+          "activeCoach": true
+        },
+        {
+          "club": "1269833",
+          "clubName": "FSA-Universite Laval",
+          "code": "COACH",
+          "beginDate": "09/30/2026",
+          "status": "PENDING",
+          "activeCoach": true
+        }
+      ]
+    },
+    "sponsorsMentors": {
+      "sources": [
+        {
+          "reportType": "sponsors-mentors",
+          "tableId": "4da53bd8-f6d9-4fa5-81d8-34ed5966dddd",
+          "asOf": "October 21, 2026"
+        }
+      ],
+      "records": [
+        {
+          "club": "28678571",
+          "clubName": "Club Toastmasters de Drummondville",
+          "charterDate": "04/17/2026",
+          "code": "MENTOR",
+          "status": "PENDING",
+          "count": 2
+        },
+        {
+          "club": "28678571",
+          "clubName": "Club Toastmasters de Drummondville",
+          "charterDate": "04/17/2026",
+          "code": "SPONSOR",
+          "status": "AWARDED",
+          "count": 2
+        }
+      ]
+    }
+  }
+}
