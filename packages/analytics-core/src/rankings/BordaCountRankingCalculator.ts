@@ -649,10 +649,12 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
           )
           if (confirmedCount > 0) {
             metric.distinguishedClubs = confirmedCount
-            metric.distinguishedPercent =
-              metric.activeClubs > 0
-                ? (confirmedCount / metric.activeClubs) * 100
-                : 0
+            // Same divisor as TI's own figure: Paid Club Base (DDP Item
+            // 1490; #537, #2224), never current Active Clubs.
+            metric.distinguishedPercent = calculateDistinguishedPercent(
+              confirmedCount,
+              metric.paidClubBase
+            )
             this.logger.debug(
               'Using confirmed Distinguished count (pre-April)',
               {

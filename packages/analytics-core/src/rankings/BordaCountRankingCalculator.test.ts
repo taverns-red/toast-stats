@@ -570,6 +570,90 @@ describe('BordaCountRankingCalculator', () => {
       // Should have 2 confirmed Distinguished clubs (club 1 + club 3)
       expect(ranked.ranking!.distinguishedClubs).toBe(2)
     })
+
+    /* #2224: the override must use the same divisor as the #537/#545 rule —
+       TI DDP Item 1490 measures % Distinguished against Paid Club Base (the
+       PY-start count), not current Active Clubs. The fixture has a base of
+       48 and 50 active clubs so the two divisors give different answers. */
+    function mkPreAprilDistrict(
+      overrides: Record<string, string | number> = {}
+    ): RankingDistrictStatistics {
+      return {
+        districtId: '14',
+        asOfDate: '2026-03-31',
+        membership: { total: 100, change: 5, changePercent: 5, byClub: [] },
+        clubs: {
+          total: 50,
+          active: 50,
+          suspended: 0,
+          ineligible: 0,
+          low: 0,
+          distinguished: 0,
+        },
+        education: { totalAwards: 0, byType: [], topClubs: [] },
+        districtPerformance: [
+          {
+            DISTRICT: '14',
+            REGION: '1',
+            '% Club Growth': '4.17%',
+            '% Payment Growth': '5%',
+            'Paid Clubs': 50,
+            'Paid Club Base': 48,
+            'Total YTD Payments': 4200,
+            'Payment Base': 4000,
+            'Total Distinguished Clubs': 0,
+            'Active Clubs': 50,
+            ...overrides,
+          },
+          { Club: '00001401', 'Apr. Ren.': '22' },
+          { Club: '00001403', 'Apr. Ren.': '21' },
+        ],
+        clubPerformance: [
+          {
+            'Club Number': '00001401',
+            'Goals Met': 6,
+            'Mem. Base': 15,
+            'Active Members': 25,
+          },
+          {
+            'Club Number': '00001403',
+            'Goals Met': 8,
+            'Mem. Base': 18,
+            'Active Members': 28,
+          },
+        ],
+      }
+    }
+
+    it('computes the confirmed distinguishedPercent over Paid Club Base, not Active Clubs (#2224)', async () => {
+      const calculator = new BordaCountRankingCalculator()
+      const result = await calculator.calculateRankings([mkPreAprilDistrict()])
+      const ranking = result[0]!.ranking!
+      expect(ranking.distinguishedClubs).toBe(2)
+      // 2 / 48 = 4.1667% (TI rule). 2 / 50 = 4% is the Active Clubs bug.
+      expect(ranking.distinguishedPercent).toBeCloseTo((2 / 48) * 100, 6)
+    })
+
+    it('returns 0% for a confirmed count when Paid Club Base is 0 (#2224)', async () => {
+      const calculator = new BordaCountRankingCalculator()
+      const result = await calculator.calculateRankings([
+        mkPreAprilDistrict({ 'Paid Club Base': 0 }),
+      ])
+      const ranking = result[0]!.ranking!
+      expect(ranking.distinguishedClubs).toBe(2)
+      expect(ranking.distinguishedPercent).toBe(0)
+    })
+
+    it('leaves TI figures untouched when TI already reports Distinguished clubs (#2224)', async () => {
+      const calculator = new BordaCountRankingCalculator()
+      const result = await calculator.calculateRankings([
+        mkPreAprilDistrict({ 'Total Distinguished Clubs': 30 }),
+      ])
+      const ranking = result[0]!.ranking!
+      // The override does not run: TI's 30 stands, over the same base.
+      expect(ranking.distinguishedClubs).toBe(30)
+      expect(ranking.distinguishedPercent).toBeCloseTo((30 / 48) * 100, 6)
+    })
   })
 
   describe('% Distinguished denominator — TI DDP rule (#537)', () => {
