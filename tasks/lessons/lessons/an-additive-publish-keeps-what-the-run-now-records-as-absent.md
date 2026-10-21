@@ -26,12 +26,20 @@ gates read what the run wrote, and the stale files were not among them.
 
 If a re-derivation can conclude "this entity is not here for this date", an
 add-only publish cannot express that conclusion. The run has to remove the
-entity's old objects, and it has to record each removal the same way it
-records an upload, so the promotion step can apply it to prod with the same
-date verdict. A one-off prune (#2038) cleans up what has already gone wrong,
-but it does not stop the next build from leaving stale objects behind.
+entity's old objects. A one-off prune (#2038) cleans up what has already gone
+wrong, but it does not stop the next build from leaving stale objects behind.
 
-Scope the removal to the run's own record (`failedDistricts` minus
-`successfulDistricts` in the date's metadata), to per-entity objects only, and
-never to an object the run wrote. Let it hold with its date, so a held date
-keeps prod whole.
+Derive the downstream removal from state, not from a log of what this run
+removed. The first fix (PR #2233, first version) carried staging removals to
+prod through a per-run `removed.jsonl`. Review found that a held date, a
+failed copy, a re-run, or a `skip_promotion` proof followed by a promote
+would each lose the removal for good. Deriving it at promote time from the
+date's own metadata, plus what staging lacks, converges on every one of those
+paths.
+
+Scope it narrowly:
+- only the reason that proves absence (the #1671 gap), not every failure;
+- only the objects the re-derivation itself produces, never a sibling
+  dataset it cannot regenerate (the reports sidecar holds real TI data);
+- only while the target's copy is provably junk (0 clubs), so a gate
+  override can never turn it into a deletion of real data.
