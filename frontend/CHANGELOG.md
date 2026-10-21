@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.46.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.46.0...frontend-v3.46.1) (2026-10-21)
+
+
+### Tests
+
+* **e2e:** the world-map online-chip smoke controls its own data ([#2229](https://github.com/taverns-red/toast-stats/issues/2229)) ([#2230](https://github.com/taverns-red/toast-stats/issues/2230)) ([89a5b5e](https://github.com/taverns-red/toast-stats/commit/89a5b5e9f33113e5d4d838a28529f54c21b8ebe7))
+* **frontend:** preload the DistrictActionListPage module graph before the first test ([#2211](https://github.com/taverns-red/toast-stats/issues/2211)) ([#2217](https://github.com/taverns-red/toast-stats/issues/2217)) ([811630b](https://github.com/taverns-red/toast-stats/commit/811630b2587a334907cb045772c853653ba17b9c))
+
+
+### Dependencies
+
+* **deps-dev:** Bump vite from 8.3.1 to 8.3.4 ([#2212](https://github.com/taverns-red/toast-stats/issues/2212)) ([97ccf9b](https://github.com/taverns-red/toast-stats/commit/97ccf9bc40f1d29c1150341615dddca2e1213596))
+
 ## [3.46.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.45.0...frontend-v3.46.0) (2026-10-20)
 
 

@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.65.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.65.0...toast-stats-v2.65.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **ci-gate:** wait while a skipped-only check may still run for real ([#2219](https://github.com/taverns-red/toast-stats/issues/2219)) ([#2220](https://github.com/taverns-red/toast-stats/issues/2220)) ([b5793e8](https://github.com/taverns-red/toast-stats/commit/b5793e8fb1c9da4198686bed673a07128fafbcd7))
+
+
+### Tests
+
+* **e2e:** the world-map online-chip smoke controls its own data ([#2229](https://github.com/taverns-red/toast-stats/issues/2229)) ([#2230](https://github.com/taverns-red/toast-stats/issues/2230)) ([89a5b5e](https://github.com/taverns-red/toast-stats/commit/89a5b5e9f33113e5d4d838a28529f54c21b8ebe7))
+* **frontend:** preload the DistrictActionListPage module graph before the first test ([#2211](https://github.com/taverns-red/toast-stats/issues/2211)) ([#2217](https://github.com/taverns-red/toast-stats/issues/2217)) ([811630b](https://github.com/taverns-red/toast-stats/commit/811630b2587a334907cb045772c853653ba17b9c))
+
+
+### Dependencies
+
+* **deps-dev:** Bump vite from 8.3.1 to 8.3.4 ([#2212](https://github.com/taverns-red/toast-stats/issues/2212)) ([97ccf9b](https://github.com/taverns-red/toast-stats/commit/97ccf9bc40f1d29c1150341615dddca2e1213596))
+* **deps:** Bump hono from 4.13.7 to 4.13.13 ([#2209](https://github.com/taverns-red/toast-stats/issues/2209)) ([1f9e601](https://github.com/taverns-red/toast-stats/commit/1f9e6015c68c50ee1909af78488144790182725b))
+
 ## [2.65.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.64.0...toast-stats-v2.65.0) (2026-10-20)
 
 
