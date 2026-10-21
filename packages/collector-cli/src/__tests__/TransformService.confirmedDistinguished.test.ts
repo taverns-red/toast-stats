@@ -43,6 +43,7 @@ const DISTRICT_PERFORMANCE = `"District","Division","Area","Club","Club Name","N
 interface RankingRow {
   districtId: string
   distinguishedClubs: number
+  distinguishedPercent: number
 }
 
 describe('TransformService — confirmed Distinguished reads April renewals (#2221)', () => {
@@ -114,6 +115,20 @@ describe('TransformService — confirmed Distinguished reads April renewals (#22
     expect(rankings.get('61')?.distinguishedClubs).toBe(2)
   })
 
+  it('divides the confirmed count by Paid Club Base, not Active Clubs (#2224)', async () => {
+    await writeDate([D61_ROW, D50_ROW_ZERO])
+    await service.transform({ date: DATE, force: true })
+    const rankings = await readRankings()
+
+    // TI DDP Item 1490: % Distinguished is over the PY-start Paid Club Base
+    // (D61: 156), the same divisor TI's own figure uses (#537). Active Clubs
+    // (159) gives 1.258%, not 1.282%.
+    expect(rankings.get('61')?.distinguishedPercent).toBeCloseTo(
+      (2 / 156) * 100,
+      6
+    )
+  })
+
   it('leaves TI counts untouched when any district reports Distinguished clubs', async () => {
     await writeDate([D61_ROW, D50_ROW_FIVE])
     await service.transform({ date: DATE, force: true })
@@ -121,5 +136,11 @@ describe('TransformService — confirmed Distinguished reads April renewals (#22
 
     expect(rankings.get('50')?.distinguishedClubs).toBe(5)
     expect(rankings.get('61')?.distinguishedClubs).toBe(0)
+    // The override does not run, so TI's count stays over the same base.
+    expect(rankings.get('50')?.distinguishedPercent).toBeCloseTo(
+      (5 / 115) * 100,
+      6
+    )
+    expect(rankings.get('61')?.distinguishedPercent).toBe(0)
   })
 })
