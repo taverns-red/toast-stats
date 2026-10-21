@@ -527,26 +527,37 @@ describe('BordaCountRankingCalculator', () => {
             'Presidents Distinguished Clubs': 0,
             '% Distinguished Clubs': '0%',
           },
+          // Per-club district-performance rows: "Apr. Ren." is the COUNT of
+          // April renewals each club has paid (#2221).
+          { Club: '00001401', 'Apr. Ren.': '22' },
+          { Club: '00001402', 'Apr. Ren.': '3' },
+          { Club: '1403', 'Apr. Ren.': '21' },
         ],
         clubPerformance: [
+          // "Mem. dues on time Apr" is TI's 0/1 on-time FLAG, never a count
+          // (#2221) — every club below has paid on time.
           {
             // Club with 6 goals, 22 April renewals, base 15 → confirmed Distinguished
+            'Club Number': '00001401',
             'Goals Met': 6,
-            'Mem. dues on time Apr': 22,
+            'Mem. dues on time Apr': 1,
             'Mem. Base': 15,
             'Active Members': 25,
           },
           {
             // Club with 5 goals, 3 April renewals, base 15 → NOT confirmed
+            'Club Number': '00001402',
             'Goals Met': 5,
-            'Mem. dues on time Apr': 3,
+            'Mem. dues on time Apr': 1,
             'Mem. Base': 15,
             'Active Members': 20,
           },
           {
             // Club with 8 goals, 21 April renewals, base 18 → confirmed Select
+            // (TI's two exports disagree on zero-padding; joined canonically)
+            'Club Number': '00001403',
             'Goals Met': 8,
-            'Mem. dues on time Apr': 21,
+            'Mem. dues on time Apr': 1,
             'Mem. Base': 18,
             'Active Members': 28,
           },
