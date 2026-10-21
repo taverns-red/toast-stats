@@ -812,8 +812,8 @@ export async function fetchCdnRegionMembershipSeries(
 
 /** `derived/education-rollup/<PY>.json` (#1801) — one program year's
  *  education awards per district, region and world. Same path in both
- *  buckets: the build writes staging, mirror-education-rollup.sh copies it
- *  to prod (#1810). Throws on a string that is not a program year. */
+ *  buckets: the build writes staging, promote-reports promotes it to prod
+ *  (#1810, #2222). Throws on a string that is not a program year. */
 export function cdnEducationRollupUrl(programYear: string): string {
   return `${cdnBaseUrl()}/${educationRollupObjectPath(programYear)}`
 }

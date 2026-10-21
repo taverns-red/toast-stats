@@ -13,8 +13,7 @@
  *     (`gcloud storage cp|rsync|mv` whose destination is prod),
  *   - removes or updates a production object,
  *   - runs the scoped promoter with `--execute` (#1763; it calls gcloud
- *     itself, so the pattern above cannot see its writes) or the education
- *     rollup mirror (mirror-education-rollup.sh, #1810, likewise),
+ *     itself, so the pattern above cannot see its writes),
  *   - invalidates the Cloud CDN, or
  *   - writes to the `promotion-held` issue flow (label/issue create, comment,
  *     close). An intentional skip must not open or close alerts.
@@ -93,10 +92,6 @@ export function prodWriteReasons(run: string): string[] {
     // invisible to the pattern above; its dry run only reads.
     if (/promote-run-manifest\.ts\b.*--execute\b/.test(cmd)) {
       reasons.push('manifest promotion → production')
-    }
-    // And the education rollup mirror (#1810).
-    if (/mirror-education-rollup\.sh\b/.test(cmd)) {
-      reasons.push('education rollup mirror → production')
     }
     if (/invalidate-cdn-cache/.test(cmd)) reasons.push('CDN invalidation')
     if (
@@ -182,17 +177,13 @@ const NOT_A_DIRECT_WRITE: ReadonlySet<string> = new Set([
 
 /**
  * Steps allowed to write prod data outside the manifest promote, by step
- * name, with the issue that retires each. The contract test
+ * name, with the issue that retires each. None is left: the report
+ * sidecars moved onto the promote in #1767, and the education rollup
+ * (mirror-education-rollup.sh, deleted) in #2222. The contract test
  * (dataPipelineReportSidecarManifest.test.ts) pins `directProdWriteSteps`
- * to exactly these.
+ * to none, and this to empty.
  */
-export const DIRECT_PROD_WRITE_EXEMPT: Readonly<Record<string, string>> = {
-  // derived/ is not a promoted prefix, so the promoter cannot copy it yet.
-  '[rollup] Mirror the education rollup into prod (#1810)':
-    '#2222: the education rollup moves onto the manifest promote',
-  '[reports] Mirror the education rollup a held run built (#1810)':
-    '#2222: the education rollup moves onto the manifest promote',
-}
+export const DIRECT_PROD_WRITE_EXEMPT: Readonly<Record<string, string>> = {}
 
 /**
  * Every step that writes prod data by itself — a `gcloud storage` copy,

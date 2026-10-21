@@ -3093,7 +3093,7 @@ jobs:
             || echo "Nothing to clean up at incoming/daily-reports/${RAW_DATE}/"
 
   # ══════════════════════════════════════════════════════════
-  # DAILY EDUCATION ROLLUP (#1801, #2028) — STAGING derived/, MIRRORED (#1810)
+  # DAILY EDUCATION ROLLUP (#1801, #2028) — STAGING derived/, PROMOTED (#2222)
   #
   # The rollup reads each reports PY's newest snapshot date that HAS
   # district_*_reports.json. `place-reports` writes today's, after the
@@ -3109,6 +3109,10 @@ jobs:
   # The same job then builds snapshots/<date>/reports-rollups.json (#2012),
   # the reports-derived region/world rollups of the date's placed sidecars,
   # so both writers append to one manifest copy before it is republished.
+  #
+  # No prod write here (#2222): promote-reports plans the rollup into the
+  # sidecar manifest (held unless its reports date is one prod indexes),
+  # content-gates it and promotes it through the manifest promoter.
   # ══════════════════════════════════════════════════════════
   education-rollup:
     name: 'daily education rollup'
@@ -3154,7 +3158,7 @@ jobs:
       # Start from what the pipeline job published, so republishing below
       # keeps its records and adds this job's. If it cannot be read, nothing
       # is republished: overwriting it with this job's lines alone would drop
-      # the pipeline job's (derived/ is unpromoted, so the gap is a record).
+      # the pipeline job's (the rollup is planned from staging, not this record, #2222).
       - name: '[rollup] Fetch the run manifest'
         id: seed
         run: |
@@ -3215,23 +3219,6 @@ jobs:
             echo "built=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # ── PROD PATH (#1810) — the one direct prod write left (#1767) ──
-      # This job runs after the run's own promotion, and derived/ is not a
-      # promoted prefix, so the rollup is mirrored here: only a build that
-      # succeeded, only when this run promoted THIS snapshot date. The script
-      # also holds a rollup whose reports date prod does not index, copies
-      # the years the index names, then the index. A held day is retried
-      # with --if-changed by a later run's promote-reports. Bucket to
-      # bucket: bytes and headers arrive as built. Pinned as an exemption in
-      # scripts/lib/prodWriteGuard.ts until it moves onto the manifest.
-      - name: '[rollup] Mirror the education rollup into prod (#1810)'
-        if: >-
-          steps.education.outputs.built == 'true'
-          && contains(format(',{0},', needs.pipeline.outputs.promoted_dates), format(',{0},', needs.pipeline.outputs.snapshot_date))
-          && needs.pipeline.outputs.skip_promotion != 'true'
-        continue-on-error: true
-        run: bash scripts/pipeline/mirror-education-rollup.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}"
-
       - name: '[rollup] Publish run manifest'
         if: ${{ !cancelled() && steps.seed.outputs.seeded == 'true' }}
         run: |
@@ -3241,22 +3228,25 @@ jobs:
   # ══════════════════════════════════════════════════════════
   # PROMOTE THE REPORT SIDECARS (#1767, ADR-015 step 9; #1763, #2144)
   #
-  # district_*_reports.json (place-reports) and reports-rollups.json
-  # (education-rollup) land in staging AFTER the pipeline job promoted, so
-  # its promotion never sees them. Both writers record them in the run
-  # manifest; this job sends them to prod through the same promoter, after
-  # the content gate has read every one (D-16: they used to be mirrored
+  # district_*_reports.json (place-reports), reports-rollups.json and the
+  # education rollup, derived/education-rollup/ (education-rollup), land in
+  # staging AFTER the pipeline job promoted, so its promotion never sees
+  # them. This job sends them to prod through the same promoter, after the
+  # content gate has read every one (D-16, #2222: they used to be mirrored
   # straight to prod, unchecked):
   #   1. plan the sidecar manifest: this run's sidecars, plus every sidecar
   #      staging holds and prod lacks for prod's newest 7 indexed dates and
   #      the dates this run promoted (the carry: a held day's reports once
   #      that day promotes; a rebuild's promoted dates, #2144). A date this
-  #      run wrote and did not promote holds its sidecars;
+  #      run wrote and did not promote holds its sidecars. Plus staging's
+  #      education rollup: the years its index names and the index, held
+  #      unless its reports date (asOf) is one prod indexes, and nothing
+  #      when prod already has staging's index (#1810's rules, #2222);
   #   2. content-gate exactly that manifest;
-  #   3. promote it (scripts/promote-run-manifest.ts --execute);
+  #   3. promote it (scripts/promote-run-manifest.ts --execute
+  #      --education-rollup: the rollup's years, then its index, last);
   #   4. completeness: a promoted date whose reports staging holds and prod
-  #      lacks fails the run, so the gap is never silent (#2144);
-  #   5. retry the education rollup a held run built (#1810), --if-changed.
+  #      lacks fails the run, so the gap is never silent (#2144).
   # Runs in every mode that promoted a date, and after every daily scrape.
   # ══════════════════════════════════════════════════════════
   promote-reports:
@@ -3319,7 +3309,8 @@ jobs:
 
       # The pipeline's content gate (#1715), on the sidecar manifest only:
       # decode, parse, hash and the reports contract (district-reports,
-      # reports-rollups). Its verdict is applied per date by the next step.
+      # reports-rollups, the education-rollup kinds, #2222). Its verdict is
+      # applied per date by the next step.
       - name: '[reports] Content gate the report sidecars (#1767)'
         id: contentgate
         if: steps.plan.outputs.objects != '' && steps.plan.outputs.objects != '0'
@@ -3341,6 +3332,8 @@ jobs:
 
       # The one prod-write mechanism: the same promoter as the pipeline job,
       # on the sidecar manifest, holding the dates the verdict holds.
+      # --education-rollup (#2222): it also copies the rollup the plan put in
+      # the manifest; the pipeline job's own promote never does.
       - name: '[reports] Promote the report sidecars (#1767)'
         id: promote
         if: >-
@@ -3349,7 +3342,7 @@ jobs:
         env:
           RUN_MANIFEST_FILE: ${{ env.REPORT_SIDECAR_MANIFEST_FILE }}
           COMPLETENESS_GATE_FILE: ${{ env.REPORT_SIDECAR_VERDICT_FILE }}
-        run: npx tsx scripts/promote-run-manifest.ts --execute
+        run: npx tsx scripts/promote-run-manifest.ts --execute --education-rollup
 
       # ── Report-sidecar promotion-held alert (#2227) ──
       # The main promotion's flow (#1073, scripts/promotion-alert.ts), scoped
@@ -3430,15 +3423,6 @@ jobs:
         env:
           PROMOTED_DATES: ${{ needs.pipeline.outputs.promoted_dates }}
         run: bash scripts/pipeline/check-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" "${PROMOTED_DATES}"
-
-      # The education rollup a held run built (#1810), once its reports
-      # date is one prod indexes; a no-op when prod already has staging's.
-      # derived/ is not a promoted prefix: the last direct prod write,
-      # pinned in scripts/lib/prodWriteGuard.ts.
-      - name: '[reports] Mirror the education rollup a held run built (#1810)'
-        if: ${{ !cancelled() }}
-        continue-on-error: true
-        run: bash scripts/pipeline/mirror-education-rollup.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" --if-changed
 
   # ══════════════════════════════════════════════════════════
   # EDUCATION LEDGER HISTORY BACKFILL (#1802) — STAGING ONLY

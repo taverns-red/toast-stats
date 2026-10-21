@@ -509,7 +509,7 @@ describe('daily: promoted with the sidecars, never mirrored (#1767)', () => {
       findProdWriteSteps(workflow)
         .filter(s => s.job === 'education-rollup')
         .map(s => s.step)
-    ).toEqual(['[rollup] Mirror the education rollup into prod (#1810)'])
+    ).toEqual([]) // nor the education rollup, since #2222
     expect(
       steps.some(s => /reports rollups into prod/.test(s.name ?? ''))
     ).toBe(false)
