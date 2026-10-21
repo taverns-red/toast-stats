@@ -211,6 +211,7 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
   let runManifest: string
   let sidecarManifest: string
   let rollupManifest: string
+  let rollupVerdict: string
   let verdictFile: string
   let summaryFile: string
   let output: string
@@ -264,6 +265,7 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
       REPORT_SIDECAR_MANIFEST_FILE: sidecarManifest,
       REPORT_SIDECAR_VERDICT_FILE: verdictFile,
       EDUCATION_ROLLUP_MANIFEST_FILE: rollupManifest,
+      EDUCATION_ROLLUP_VERDICT_FILE: rollupVerdict,
       GITHUB_OUTPUT: output,
       GITHUB_STEP_SUMMARY: summaryFile,
       ...extra,
@@ -286,7 +288,7 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
       {
         env: env({
           RUN_MANIFEST_FILE: rollupManifest,
-          COMPLETENESS_GATE_FILE: verdictFile,
+          COMPLETENESS_GATE_FILE: rollupVerdict,
           ...extra,
         }),
         out: () => {},
@@ -309,6 +311,7 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
     runManifest = path.join(tmp, 'run.jsonl')
     sidecarManifest = path.join(tmp, 'sidecars', 'written.jsonl')
     rollupManifest = path.join(tmp, 'education-rollup', 'written.jsonl')
+    rollupVerdict = path.join(tmp, 'education-rollup', 'verdict.json')
     summaryFile = path.join(tmp, 'summary.md')
     verdictFile = path.join(tmp, 'sidecars', 'verdict.json')
     output = path.join(tmp, 'output.txt')

@@ -225,13 +225,16 @@ promoted, so each class the rsync used to sweep up has its own route:
   write: scoped promotion never copies one, so it is gated here, per date, instead of holding
   the whole daily promotion. No step writes them to prod directly.
 - `derived/education-rollup/` (built after the promote, not a promoted prefix): the
-  `promote-reports` planner adds staging's rollup to the sidecar manifest
-  (`scripts/lib/educationRollupPlan.ts`, #2222): only the years staging's index names, then the
+  `promote-reports` planner writes staging's rollup to its own manifest
+  (`scripts/lib/educationRollupPlan.ts`, #2222), gated and promoted by its own
+  continue-on-error steps: a malformed index, a read error or a gate hold holds only the rollup
+  (a warning and a summary line), never a report sidecar. It plans only the years staging's index names, then the
   index; held while its reports date (`asOf`) is not one prod indexes (a later run plans it
   again); nothing when prod's index is byte-identical. The content gate reads each object
   (`education-rollup-program-year`, `education-rollup-index`: the shared-contracts schemas, the
   PY its path names, every index row at its own year's path), and
-  `promote-run-manifest.ts --execute --education-rollup` copies the years, then the index last.
+  `promote-run-manifest.ts --execute --education-rollup` (its own step) copies the years, then
+  the index last.
   The pipeline job's own promote never copies it. Same path in both buckets; the CDN serves it
   like `config/`. No step writes prod outside the promoter: `DIRECT_PROD_WRITE_EXEMPT`
   (`scripts/lib/prodWriteGuard.ts`) is empty.

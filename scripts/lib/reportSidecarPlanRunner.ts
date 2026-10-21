@@ -54,6 +54,10 @@ export const DEFAULT_SIDECAR_MANIFEST_FILE =
 export const DEFAULT_SIDECAR_VERDICT_FILE = '/tmp/report-sidecars/verdict.json'
 export const DEFAULT_SIDECAR_GATE_FILE =
   '/tmp/report-sidecars/content-gate.json'
+export const DEFAULT_EDUCATION_ROLLUP_MANIFEST_FILE =
+  '/tmp/education-rollup/written.jsonl'
+export const DEFAULT_EDUCATION_ROLLUP_VERDICT_FILE =
+  '/tmp/education-rollup/verdict.json'
 
 export interface PlanIo {
   env: Record<string, string | undefined>
@@ -84,9 +88,14 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
     env.REPORT_SIDECAR_MANIFEST_FILE || DEFAULT_SIDECAR_MANIFEST_FILE
   const verdictFile =
     env.REPORT_SIDECAR_VERDICT_FILE || DEFAULT_SIDECAR_VERDICT_FILE
+  const rollupFile =
+    env.EDUCATION_ROLLUP_MANIFEST_FILE || DEFAULT_EDUCATION_ROLLUP_MANIFEST_FILE
+  const rollupVerdictFile =
+    env.EDUCATION_ROLLUP_VERDICT_FILE || DEFAULT_EDUCATION_ROLLUP_VERDICT_FILE
   // Never leave an earlier plan behind for the gate or the promoter.
-  rmSync(outFile, { force: true })
-  rmSync(verdictFile, { force: true })
+  for (const f of [outFile, verdictFile, rollupFile, rollupVerdictFile]) {
+    rmSync(f, { force: true })
+  }
   if (!staging || !prod || !runFile || staging === prod) {
     log(
       '[report-sidecars] GCS_BUCKET, GCS_BUCKET_PRODUCTION (different) and RUN_MANIFEST_FILE must be set'
@@ -137,6 +146,78 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
     )
   }
 
+  /**
+   * Plan staging's education rollup into its own manifest: when its
+   * reports date is one prod indexes and prod does not already have it.
+   * Never throws: a malformed index, a read or a download error is
+   * `education_rollup=error`, a warning and a summary line, and no rollup
+   * manifest, so nothing of it promotes.
+   */
+  const planRollup = (indexed: readonly string[]) => {
+    const catOrNull = (bucket: string, p: string): string | null => {
+      const r = run(['storage', 'cat', `gs://${bucket}/${p}`])
+      if (r.status === 0) return r.stdout
+      if (NO_MATCH.test(r.stderr ?? '')) return null
+      throw new Error(
+        `could not read gs://${bucket}/${p}: ${(r.stderr ?? '').trim()}`
+      )
+    }
+    let action: EducationRollupPlan['action'] | 'error'
+    let reason: string
+    let entries: RunManifestEntry[] = []
+    try {
+      const rollup = planEducationRollup({
+        stagingIndex: catOrNull(staging, EDUCATION_ROLLUP_INDEX_PATH),
+        prodIndex: catOrNull(prod, EDUCATION_ROLLUP_INDEX_PATH),
+        prodIndexedDates: indexed,
+      })
+      if (rollup.paths.length > 0) {
+        const dir = path.join(work, 'education-rollup')
+        mkdirSync(dir, { recursive: true })
+        read(
+          [
+            'storage',
+            'cp',
+            ...rollup.paths.map(p => `gs://${staging}/${p}`),
+            `${dir}/`,
+          ],
+          `could not download the ${rollup.paths.length} education rollup object(s)`
+        )
+        entries = rollup.paths.map(p => ({
+          path: p,
+          sha256: createHash('sha256')
+            .update(readFileSync(path.join(dir, path.basename(p))))
+            .digest('hex'),
+          date: null,
+          stage: EDUCATION_ROLLUP_STAGE,
+        }))
+      }
+      action = rollup.action
+      reason = rollup.reason
+    } catch (e) {
+      action = 'error'
+      reason = `${e instanceof Error ? e.message : String(e)} — the rollup is held; the sidecars are not affected`
+      entries = []
+      log(`::warning title=Education rollup::${reason.replace(/\s+/g, ' ')}`)
+    }
+    if (entries.length > 0) {
+      mkdirSync(path.dirname(rollupFile), { recursive: true })
+      writeFileSync(
+        rollupFile,
+        entries.map(e => JSON.stringify(e)).join('\n') + '\n'
+      )
+      mkdirSync(path.dirname(rollupVerdictFile), { recursive: true })
+      writeFileSync(
+        rollupVerdictFile,
+        JSON.stringify({ promote: true, heldDates: [] }, null, 2) + '\n'
+      )
+    }
+    emit('rollup_objects', entries.length)
+    emit('education_rollup', action)
+    log(`[report-sidecars] education rollup: ${action} — ${reason}`)
+    summary(`- 🎓 **Education rollup (#2222)**: ${action} — ${reason}\n`)
+  }
+
   const work = mkdtempSync(path.join(env.RUNNER_TEMP || tmpdir(), 'sidecars-'))
   try {
     const datesJson = read(
@@ -154,6 +235,11 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
     } catch (e) {
       throw new ReadError(`prod v1/dates.json is unusable: ${String(e)}`)
     }
+
+    // The education rollup (#2222), first and on its own (review M1): a
+    // fault in it holds only the rollup, as the old continue-on-error
+    // mirror did, never the sidecars below.
+    planRollup(indexed)
 
     const own = runSidecarEntries(runEntries)
     const ownPaths = new Set(own.map(e => e.path))
@@ -187,55 +273,7 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
       }
     }
 
-    // The education rollup (#2222): staging's, when its reports date is
-    // one prod indexes and prod does not already have it.
-    const catOrNull = (bucket: string, p: string): string | null => {
-      const r = run(['storage', 'cat', `gs://${bucket}/${p}`])
-      if (r.status === 0) return r.stdout
-      if (NO_MATCH.test(r.stderr ?? '')) return null
-      throw new ReadError(
-        `could not read gs://${bucket}/${p}: ${(r.stderr ?? '').trim()}`
-      )
-    }
-    let rollup: EducationRollupPlan
-    try {
-      rollup = planEducationRollup({
-        stagingIndex: catOrNull(staging, EDUCATION_ROLLUP_INDEX_PATH),
-        prodIndex: catOrNull(prod, EDUCATION_ROLLUP_INDEX_PATH),
-        prodIndexedDates: indexed,
-      })
-    } catch (e) {
-      if (e instanceof ReadError) throw e
-      throw new ReadError(`education rollup: ${String(e)}`)
-    }
-    const rollupEntries: RunManifestEntry[] = []
-    if (rollup.paths.length > 0) {
-      const dir = path.join(work, 'education-rollup')
-      mkdirSync(dir, { recursive: true })
-      read(
-        [
-          'storage',
-          'cp',
-          ...rollup.paths.map(p => `gs://${staging}/${p}`),
-          `${dir}/`,
-        ],
-        `could not download the ${rollup.paths.length} education rollup object(s)`
-      )
-      for (const p of rollup.paths) {
-        const bytes = readFileSync(path.join(dir, path.basename(p)))
-        rollupEntries.push({
-          path: p,
-          sha256: createHash('sha256').update(bytes).digest('hex'),
-          date: null,
-          stage: EDUCATION_ROLLUP_STAGE,
-        })
-      }
-    }
-    log(
-      `[report-sidecars] education rollup: ${rollup.action} — ${rollup.reason}`
-    )
-
-    const entries = [...sidecarManifest(own, carried), ...rollupEntries]
+    const entries = sidecarManifest(own, carried)
     const verdict = sidecarVerdict(held)
     mkdirSync(path.dirname(verdictFile), { recursive: true })
     writeFileSync(verdictFile, JSON.stringify(verdict, null, 2) + '\n')
@@ -249,7 +287,6 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
     emit('objects', entries.length)
     emit('carried', carried.length)
     emit('held_dates', verdict.heldDates.join(','))
-    emit('education_rollup', rollup.action)
     log(
       `[report-sidecars] ${entries.length} object(s): ${own.length} written by this run, ` +
         `${carried.length} carried; held ${verdict.heldDates.join(' ') || '(none)'}`
@@ -260,7 +297,6 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
         '## 📎 Report sidecars (#1767)',
         `- **Sidecar manifest**: ${entries.length} object(s) — ${own.length} this run wrote, ${carried.length} carried${carried.length > 0 ? ` (${carriedDates})` : ''}; content-gated, then promoted through the manifest promoter`,
         `- **Held dates**: ${verdict.heldDates.join(', ') || 'none'}`,
-        `- 🎓 **Education rollup (#2222)**: ${rollup.action} — ${rollup.reason}`,
         '',
       ].join('\n')
     )

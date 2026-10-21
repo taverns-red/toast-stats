@@ -5,8 +5,10 @@
  * the content gate (`promotion-content-gate.ts --manifest-only`) reads and
  * the promoter (`promote-run-manifest.ts --execute`) copies, plus the
  * verdict holding every date this run wrote and did not promote. It also
- * plans the education rollup into the same manifest (#2222), held unless
- * its reports date is one prod indexes (./lib/educationRollupPlan.ts). The
+ * plans the education rollup into its own manifest and verdict (#2222),
+ * held unless its reports date is one prod indexes
+ * (./lib/educationRollupPlan.ts), first and isolated: a rollup fault is
+ * education_rollup=error and a warning, never a failed plan. The
  * plan and its design are in ./lib/reportSidecarPlan.ts; the I/O in
  * ./lib/reportSidecarPlanRunner.ts. Writes nothing to any bucket.
  *
@@ -17,11 +19,14 @@
  *      REPORT_SIDECAR_MANIFEST_FILE (default /tmp/report-sidecars/written.jsonl;
  *        not written when the plan is empty),
  *      REPORT_SIDECAR_VERDICT_FILE (default /tmp/report-sidecars/verdict.json),
+ *      EDUCATION_ROLLUP_MANIFEST_FILE (default /tmp/education-rollup/written.jsonl)
+ *        and EDUCATION_ROLLUP_VERDICT_FILE (default
+ *        /tmp/education-rollup/verdict.json): written only when it promotes,
  *      GCLOUD (default gcloud).
- * Outputs (GITHUB_OUTPUT): objects, carried, held_dates, education_rollup
- *      (none | held | current | promote).
- * Exit: 0 planned (possibly nothing) · 1 a bucket read failed, or staging's
- *      education rollup index is malformed · 2 bad input
+ * Outputs (GITHUB_OUTPUT): objects, carried, held_dates, rollup_objects,
+ *      education_rollup (none | held | current | promote | error).
+ * Exit: 0 planned (possibly nothing) · 1 a bucket read for the sidecars
+ *      failed (the rollup, planned first, stands) · 2 bad input
  *      (no or malformed run manifest, a malformed date list).
  *
  * `--apply-content-gate` (#2227), the step after the content gate: drop
