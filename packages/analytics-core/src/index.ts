@@ -227,6 +227,8 @@ export {
 // Rankings computation
 export {
   BordaCountRankingCalculator,
+  aprilRenewalsByClub,
+  countConfirmedDistinguishedClubs,
   MetricRankingsCalculator,
   CompetitiveAwardsCalculator,
   type IRankingCalculator,

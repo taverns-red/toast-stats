@@ -17,6 +17,11 @@ export {
 } from './BordaCountRankingCalculator.js'
 
 export {
+  aprilRenewalsByClub,
+  countConfirmedDistinguishedClubs,
+} from './confirmedDistinguished.js'
+
+export {
   MetricRankingsCalculator,
   type MetricType,
   type RegionRankResult,

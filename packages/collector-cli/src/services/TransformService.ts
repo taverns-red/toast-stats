@@ -27,7 +27,7 @@ import {
 import {
   DataTransformer,
   ANALYTICS_SCHEMA_VERSION,
-  getConfirmedDistinguishedLevel,
+  countConfirmedDistinguishedClubs,
   CompetitiveAwardsCalculator,
   DistinguishedDistrictCalculator,
   ClubStrengthAwardCalculator,
@@ -1047,21 +1047,23 @@ export class TransformService {
         // 'Charter 04/15/26' (new charter) or ' Susp 03/31/26' (suspension —
         // live values carry a leading space). Both branches are counted, each
         // scoped to dates falling in the current PY.
+        const districtPerfPath = path.join(
+          districtDir,
+          'district-performance.csv'
+        )
+        const districtContent = await fs
+          .readFile(districtPerfPath, 'utf-8')
+          .catch(() => null)
+        // Same #1671 guard for the district report: an HTML body yields
+        // no charter, suspension or April-renewal count, not zero (#2037).
+        const districtRows =
+          districtContent &&
+          validateCsvBody(districtContent, 'districtperformance').ok
+            ? this.parseCSVToRecords(districtContent)
+            : null
         if (programYearStart) {
-          const districtPerfPath = path.join(
-            districtDir,
-            'district-performance.csv'
-          )
-          const districtContent = await fs
-            .readFile(districtPerfPath, 'utf-8')
-            .catch(() => null)
-          // Same #1671 guard for the district report: an HTML body yields
-          // no charter or suspension count, not zero (#2037).
-          if (
-            districtContent &&
-            validateCsvBody(districtContent, 'districtperformance').ok
-          ) {
-            const rows = this.parseCSVToRecords(districtContent)
+          if (districtRows) {
+            const rows = districtRows
             let newCharters = 0
             const suspendedRows: SuspendedClub[] = []
             for (const row of rows) {
@@ -1088,29 +1090,26 @@ export class TransformService {
           }
         }
 
-        // Compute confirmed Distinguished only when all districts report 0 (#304)
-        if (clubs && allZeroDistinguished) {
-          let confirmed = 0
-          for (const club of clubs) {
-            const goals = this.parseNumber(club['Goals Met'])
-            const renewals = this.parseNumber(club['Mem. dues on time Apr'])
-            const base = this.parseNumber(club['Mem. Base'])
-            if (
-              getConfirmedDistinguishedLevel(
-                goals,
-                renewals,
-                base,
-                calculateProgramYear(date)
-              ) !== 'NotDistinguished'
-            )
-              confirmed++
-          }
+        // Compute confirmed Distinguished only when all districts report 0
+        // (#304): clubs whose April renewals alone meet a Distinguished rung
+        // (#296). The renewal COUNT is district-performance "Apr. Ren.";
+        // club-performance "Mem. dues on time Apr" is a 0/1 flag (#2221).
+        // Without a usable district report the renewals are unknown and no
+        // club is confirmed.
+        if (clubs && districtRows && allZeroDistinguished) {
+          const confirmed = countConfirmedDistinguishedClubs(
+            clubs,
+            districtRows,
+            calculateProgramYear(date)
+          )
           if (confirmed > 0) {
             metric.distinguishedClubs = confirmed
-            metric.distinguishedPercent =
-              metric.activeClubs > 0
-                ? (confirmed / metric.activeClubs) * 100
-                : 0
+            // Same divisor as TI's own figure: Paid Club Base (DDP Item
+            // 1490; #537, #2224), never current Active Clubs.
+            metric.distinguishedPercent = calculateDistinguishedPercent(
+              confirmed,
+              metric.paidClubBase
+            )
           }
         }
       } catch {

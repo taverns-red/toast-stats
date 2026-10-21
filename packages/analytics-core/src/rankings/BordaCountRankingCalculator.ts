@@ -17,7 +17,7 @@ import type {
   DistrictRanking,
 } from '@taverns-red/shared-contracts'
 
-import { getConfirmedDistinguishedLevel } from '../analytics/ClubEligibilityUtils.js'
+import { countConfirmedDistinguishedClubs } from './confirmedDistinguished.js'
 import { programYearForDate } from '../analytics/AnalyticsUtils.js'
 import { calculateDistinguishedPercent } from './distinguishedPercent.js'
 import {
@@ -644,14 +644,17 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
         ) {
           const confirmedCount = this.countConfirmedDistinguished(
             district.clubPerformance,
+            district.districtPerformance ?? [],
             district.asOfDate
           )
           if (confirmedCount > 0) {
             metric.distinguishedClubs = confirmedCount
-            metric.distinguishedPercent =
-              metric.activeClubs > 0
-                ? (confirmedCount / metric.activeClubs) * 100
-                : 0
+            // Same divisor as TI's own figure: Paid Club Base (DDP Item
+            // 1490; #537, #2224), never current Active Clubs.
+            metric.distinguishedPercent = calculateDistinguishedPercent(
+              confirmedCount,
+              metric.paidClubBase
+            )
             this.logger.debug(
               'Using confirmed Distinguished count (pre-April)',
               {
@@ -677,9 +680,14 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
   }
 
   /**
-   * Count clubs whose confirmed Distinguished level (using April renewals)
-   * is not NotDistinguished. Used pre-April when TI reports 0. (#304)
+   * Count clubs whose confirmed Distinguished level (April renewals alone as
+   * the membership count) is not NotDistinguished. Used pre-April when TI
+   * reports 0 (#304). The renewal count is the per-club district-performance
+   * "Apr. Ren." — not club-performance "Mem. dues on time Apr", a 0/1 flag
+   * (#2221); see `countConfirmedDistinguishedClubs` for the rule.
    *
+   * @param districtPerformance - this district's rows; only per-club rows
+   *   (those with a `Club` column) carry renewals, the summary row is ignored
    * @param asOfDate - The export's as-of date, so the club ladder is the one
    *   that applied in that program year (#1406). The count itself is
    *   tier-insensitive (it only asks "distinguished at all?"), but the
@@ -688,24 +696,14 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
    */
   private countConfirmedDistinguished(
     clubPerformance: Array<Record<string, string | number | null>>,
+    districtPerformance: Array<Record<string, string | number | null>>,
     asOfDate?: string
   ): number {
-    const programYear = asOfDate ? programYearForDate(asOfDate) : undefined
-    let count = 0
-    for (const club of clubPerformance) {
-      const goals = this.parseNumber(club['Goals Met'])
-      const aprilRenewals = this.parseNumber(club['Mem. dues on time Apr'])
-      const membershipBase = this.parseNumber(club['Mem. Base'])
-
-      const level = getConfirmedDistinguishedLevel(
-        goals,
-        aprilRenewals,
-        membershipBase,
-        programYear
-      )
-      if (level !== 'NotDistinguished') count++
-    }
-    return count
+    return countConfirmedDistinguishedClubs(
+      clubPerformance,
+      districtPerformance,
+      asOfDate ? programYearForDate(asOfDate) : undefined
+    )
   }
 
   /**
