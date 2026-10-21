@@ -4,8 +4,10 @@
  * The `promote-reports` job's first step. Writes the sidecar manifest that
  * the content gate (`promotion-content-gate.ts --manifest-only`) reads and
  * the promoter (`promote-run-manifest.ts --execute`) copies, plus the
- * verdict holding every date this run wrote and did not promote. The plan
- * and its design are in ./lib/reportSidecarPlan.ts; the I/O in
+ * verdict holding every date this run wrote and did not promote. It also
+ * plans the education rollup into the same manifest (#2222), held unless
+ * its reports date is one prod indexes (./lib/educationRollupPlan.ts). The
+ * plan and its design are in ./lib/reportSidecarPlan.ts; the I/O in
  * ./lib/reportSidecarPlanRunner.ts. Writes nothing to any bucket.
  *
  * Env: GCS_BUCKET, GCS_BUCKET_PRODUCTION,
@@ -16,8 +18,10 @@
  *        not written when the plan is empty),
  *      REPORT_SIDECAR_VERDICT_FILE (default /tmp/report-sidecars/verdict.json),
  *      GCLOUD (default gcloud).
- * Outputs (GITHUB_OUTPUT): objects, carried, held_dates.
- * Exit: 0 planned (possibly nothing) · 1 a bucket read failed · 2 bad input
+ * Outputs (GITHUB_OUTPUT): objects, carried, held_dates, education_rollup
+ *      (none | held | current | promote).
+ * Exit: 0 planned (possibly nothing) · 1 a bucket read failed, or staging's
+ *      education rollup index is malformed · 2 bad input
  *      (no or malformed run manifest, a malformed date list).
  *
  * `--apply-content-gate` (#2227), the step after the content gate: drop

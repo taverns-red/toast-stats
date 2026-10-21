@@ -5,9 +5,10 @@
  * injected) so the shim tests do not pay a `tsx` start per case; only
  * gcloud (or the shim) is spawned.
  *
- * Reads only: `storage cat` of prod's v1/dates.json, one-level `storage ls`
- * of each carried date in both buckets, and `storage cp gs://… <local dir>`
- * downloads of the carried objects, to hash them. Under the 588 pin a
+ * Reads only: `storage cat` of prod's v1/dates.json and of both buckets'
+ * derived/education-rollup/index.json (#2222), one-level `storage ls` of
+ * each carried date in both buckets, and `storage cp gs://… <local dir>`
+ * downloads of the carried objects and the planned rollup, to hash them. Under the 588 pin a
  * download inflates the one Content-Encoding layer (#1702), so the hash is
  * of the bytes a browser is served: the hash gcs-upload.sh records, and the
  * one the content gate checks. (On a gcloud that kept the gzip bytes the
@@ -41,6 +42,12 @@ import {
   type SidecarVerdict,
 } from './reportSidecarPlan.js'
 import { parseRunManifest, type RunManifestEntry } from './runManifest.js'
+import {
+  EDUCATION_ROLLUP_STAGE,
+  planEducationRollup,
+  type EducationRollupPlan,
+} from './educationRollupPlan.js'
+import { EDUCATION_ROLLUP_INDEX_PATH } from '@taverns-red/shared-contracts'
 
 export const DEFAULT_SIDECAR_MANIFEST_FILE =
   '/tmp/report-sidecars/written.jsonl'
@@ -180,7 +187,55 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
       }
     }
 
-    const entries = sidecarManifest(own, carried)
+    // The education rollup (#2222): staging's, when its reports date is
+    // one prod indexes and prod does not already have it.
+    const catOrNull = (bucket: string, p: string): string | null => {
+      const r = run(['storage', 'cat', `gs://${bucket}/${p}`])
+      if (r.status === 0) return r.stdout
+      if (NO_MATCH.test(r.stderr ?? '')) return null
+      throw new ReadError(
+        `could not read gs://${bucket}/${p}: ${(r.stderr ?? '').trim()}`
+      )
+    }
+    let rollup: EducationRollupPlan
+    try {
+      rollup = planEducationRollup({
+        stagingIndex: catOrNull(staging, EDUCATION_ROLLUP_INDEX_PATH),
+        prodIndex: catOrNull(prod, EDUCATION_ROLLUP_INDEX_PATH),
+        prodIndexedDates: indexed,
+      })
+    } catch (e) {
+      if (e instanceof ReadError) throw e
+      throw new ReadError(`education rollup: ${String(e)}`)
+    }
+    const rollupEntries: RunManifestEntry[] = []
+    if (rollup.paths.length > 0) {
+      const dir = path.join(work, 'education-rollup')
+      mkdirSync(dir, { recursive: true })
+      read(
+        [
+          'storage',
+          'cp',
+          ...rollup.paths.map(p => `gs://${staging}/${p}`),
+          `${dir}/`,
+        ],
+        `could not download the ${rollup.paths.length} education rollup object(s)`
+      )
+      for (const p of rollup.paths) {
+        const bytes = readFileSync(path.join(dir, path.basename(p)))
+        rollupEntries.push({
+          path: p,
+          sha256: createHash('sha256').update(bytes).digest('hex'),
+          date: null,
+          stage: EDUCATION_ROLLUP_STAGE,
+        })
+      }
+    }
+    log(
+      `[report-sidecars] education rollup: ${rollup.action} — ${rollup.reason}`
+    )
+
+    const entries = [...sidecarManifest(own, carried), ...rollupEntries]
     const verdict = sidecarVerdict(held)
     mkdirSync(path.dirname(verdictFile), { recursive: true })
     writeFileSync(verdictFile, JSON.stringify(verdict, null, 2) + '\n')
@@ -194,6 +249,7 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
     emit('objects', entries.length)
     emit('carried', carried.length)
     emit('held_dates', verdict.heldDates.join(','))
+    emit('education_rollup', rollup.action)
     log(
       `[report-sidecars] ${entries.length} object(s): ${own.length} written by this run, ` +
         `${carried.length} carried; held ${verdict.heldDates.join(' ') || '(none)'}`
@@ -204,6 +260,7 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
         '## 📎 Report sidecars (#1767)',
         `- **Sidecar manifest**: ${entries.length} object(s) — ${own.length} this run wrote, ${carried.length} carried${carried.length > 0 ? ` (${carriedDates})` : ''}; content-gated, then promoted through the manifest promoter`,
         `- **Held dates**: ${verdict.heldDates.join(', ') || 'none'}`,
+        `- 🎓 **Education rollup (#2222)**: ${rollup.action} — ${rollup.reason}`,
         '',
       ].join('\n')
     )

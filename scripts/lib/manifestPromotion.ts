@@ -38,12 +38,23 @@
  *   the globals promoted and the run wrote the v1/ entry points, so prod's
  *   index stops naming a date before its directory goes. A staging index
  *   that still names a deleted date holds the globals and the deletes.
+ * - **The education rollup (#2222).** `derived/education-rollup/` is not
+ *   a promoted prefix: the pipeline's own promote never copies it (a
+ *   rebuild's build is in its run manifest, unchecked against its reports
+ *   date). Only the report-sidecar promotion passes `educationRollup`, from
+ *   a manifest scripts/lib/educationRollupPlan.ts planned (held unless its
+ *   reports date is in prod). It is neither dated nor global: no date or
+ *   index verdict holds it, only a missing completeness verdict. Its years
+ *   are copied in their own phase, after the globals, and its index in the
+ *   entry phase, so prod never names a year it does not hold (R15).
  * - **Fail closed.** A malformed path (wildcard, `..`, an undated
  *   snapshots/ object) throws; a missing completeness verdict holds
  *   everything; an unreadable index or prod listing holds the globals.
  */
 
 import { PROMOTED_PREFIXES } from './promotionContentGate.js'
+import { EDUCATION_ROLLUP_INDEX_PATH } from '@taverns-red/shared-contracts'
+import { isEducationRollupObject } from './educationRollupPlan.js'
 import { assertPruneDeletionScope } from './pruneGcsDeletions.js'
 import { latestByPath, type RunManifestEntry } from './runManifest.js'
 
@@ -66,8 +77,10 @@ export const MAX_SOURCES_PER_COPY = 500
 export type PromotionClass =
   | { kind: 'date'; date: string }
   | { kind: 'global' }
+  | { kind: 'education-rollup' }
   | { kind: 'excluded'; reason: string }
 
+const EDUCATION_ROLLUP_DIR = 'derived/education-rollup/'
 const DATED = /^snapshots\/(\d{4}-\d{2}-\d{2})\/[^/]/
 /** Characters an object path may hold here; no gcloud wildcard (`*?[]`). */
 const SAFE_PATH = /^[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/
@@ -78,6 +91,14 @@ export function classifyPromotionPath(path: string): PromotionClass {
     path.split('/').some(s => s === '..' || s === '.')
   ) {
     throw new Error(`refusing to promote '${path}': not a plain object path`)
+  }
+  if (path.startsWith(EDUCATION_ROLLUP_DIR)) {
+    if (!isEducationRollupObject(path)) {
+      throw new Error(
+        `refusing to promote '${path}': under ${EDUCATION_ROLLUP_DIR} only <PY>.json and index.json are`
+      )
+    }
+    return { kind: 'education-rollup' }
   }
   const prefix = PROMOTED_PREFIXES.find(p => path.startsWith(p))
   if (!prefix) {
@@ -132,9 +153,14 @@ export interface PromotionInputs {
    * every other mode.
    */
   deletes?: readonly string[]
+  /**
+   * Promote the education rollup (#2222): the report-sidecar promotion
+   * only. Omitted, its objects are excluded.
+   */
+  educationRollup?: boolean
 }
 
-export type CopyPhase = 'dates' | 'globals' | 'entry'
+export type CopyPhase = 'dates' | 'globals' | 'rollup' | 'entry'
 
 export interface CopyBatch {
   phase: CopyPhase
@@ -278,10 +304,19 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
   const excluded: PromotionPlan['excluded'] = []
   const dated = new Map<string, string[]>()
   const globalPaths: string[] = []
+  const rollupPaths: string[] = []
   for (const p of latest) {
     const c = classifyPromotionPath(p)
     if (c.kind === 'excluded') excluded.push({ path: p, reason: c.reason })
-    else if (c.kind === 'global') globalPaths.push(p)
+    else if (c.kind === 'education-rollup') {
+      if (inputs.educationRollup) rollupPaths.push(p)
+      else
+        excluded.push({
+          path: p,
+          reason:
+            'the education rollup promotes only through the report-sidecar manifest, after its reports-date check (#2222)',
+        })
+    } else if (c.kind === 'global') globalPaths.push(p)
     else dated.set(c.date, [...(dated.get(c.date) ?? []), p])
   }
   const deletedDates = new Set(deletePaths.map(p => DELETED_DATE.exec(p)![1]!))
@@ -300,7 +335,7 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
       heldDates: [...dated.keys()].sort(),
       heldAll: reason,
       globals: { promote: false, reason, paths: globalPaths },
-      held: [...[...dated.values()].flat(), ...globalPaths]
+      held: [...[...dated.values()].flat(), ...globalPaths, ...rollupPaths]
         .sort()
         .map(path => ({ path, reason })),
       excluded,
@@ -345,6 +380,17 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
   } else {
     for (const p of globalPaths) held.push({ path: p, reason: globals.reason })
   }
+  // The education rollup (#2222): its years, then its index, alone.
+  batches.push(
+    ...batch(
+      'rollup',
+      rollupPaths.filter(p => p !== EDUCATION_ROLLUP_INDEX_PATH)
+    ),
+    ...batch(
+      'entry',
+      rollupPaths.filter(p => p === EDUCATION_ROLLUP_INDEX_PATH)
+    )
+  )
 
   return {
     promotedDates,

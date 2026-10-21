@@ -187,7 +187,9 @@ export async function runPromoteRunManifest(
   const args = new Set(argv)
   const execute = args.has('--execute')
   if (execute === args.has('--dry-run')) {
-    log('usage: promote-run-manifest.ts --dry-run [--assume-pass] | --execute')
+    log(
+      'usage: promote-run-manifest.ts --dry-run [--assume-pass] | --execute [--education-rollup]'
+    )
     return 2
   }
   if (execute && args.has('--assume-pass')) {
@@ -247,6 +249,7 @@ export async function runPromoteRunManifest(
       indexDates: checkIndex ? readIndexDates(staging) : null,
       prodDates: checkIndex ? readProdDates(prod) : null,
       deletes,
+      educationRollup: args.has('--education-rollup'),
     })
   } catch (e) {
     log(`::error title=Scoped promotion::${String(e)} — nothing promoted`)
@@ -342,7 +345,7 @@ export async function runPromoteRunManifest(
   const concurrency = Number(env.PROMOTE_CONCURRENCY) || 4
   let copied = 0
   let ok = true
-  for (const phase of ['dates', 'globals', 'entry'] as const) {
+  for (const phase of ['dates', 'globals', 'rollup', 'entry'] as const) {
     const r = await runPhase(
       plan.batches.filter(b => b.phase === phase),
       staging,

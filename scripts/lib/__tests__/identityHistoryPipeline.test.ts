@@ -40,7 +40,10 @@ import {
   DistrictRegionHistorySchema,
 } from '@taverns-red/shared-contracts'
 import { prodWriteReasons, type Workflow } from '../prodWriteGuard.js'
-import { classifyPromotionPath } from '../manifestPromotion.js'
+import {
+  classifyPromotionPath,
+  planManifestPromotion,
+} from '../manifestPromotion.js'
 import { classifyObject, PROMOTED_PREFIXES } from '../promotionContentGate.js'
 
 const REPO = process.cwd()
@@ -608,9 +611,26 @@ describe('the script writes only to the bucket it is given', () => {
     )
     expect(promote, 'no promote step').toBeDefined()
     expect(promote!.run ?? '').not.toContain('derived')
-    expect(classifyPromotionPath('derived/education-rollup/x.json').kind).toBe(
-      'excluded'
-    )
+    expect(classifyPromotionPath('derived/x/y.json').kind).toBe('excluded')
+    // The education rollup is promotable only by the report-sidecar
+    // promotion (#2222); the pipeline's own plan excludes it.
+    const plan = planManifestPromotion({
+      entries: [
+        {
+          path: 'derived/education-rollup/index.json',
+          sha256: 'a'.repeat(64),
+          date: null,
+          stage: 'rebuild',
+        },
+      ],
+      held: { all: false, dates: [] },
+      indexDates: null,
+      prodDates: null,
+    })
+    expect(plan.objectCount).toBe(0)
+    expect(plan.excluded.map(e => e.path)).toEqual([
+      'derived/education-rollup/index.json',
+    ])
   })
 })
 
