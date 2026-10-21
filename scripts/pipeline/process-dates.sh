@@ -66,6 +66,14 @@
 #                push. rescrape then rsyncs the re-collected raw-csv/<date>/
 #                up, replacing the old copy. Every object uploaded is
 #                recorded in the run manifest (gcs-upload.sh, #1762).
+#  10b. remove   rebuild only (#2232): each #1671 gap district the date's
+#                metadata.json records loses its earlier transform objects
+#                in staging (district_<id>.json, analytics/district_<id>_*;
+#                never the reports sidecar), while they are the 0-club
+#                junk — the transform wrote none, and an upload only adds.
+#                Logged in the removals file (gcs-remove.sh); scoped
+#                promotion converges prod from the same state. See
+#                remove_gap_districts.
 #  11. cleanup   the date's raw, snapshot, hydrated and prior-year
 #                directories, so no later step reads a rebuilt date as
 #                "latest" (#295, #1670).
@@ -133,6 +141,11 @@
 #   RUN_MANIFEST_FILE      required by any upload: every object uploaded is
 #                          appended (scripts/pipeline/gcs-upload.sh, #1762);
 #                          the completeness gate takes its dates from it
+#   RUN_REMOVALS_FILE      required by any removal (stage 10b): every object
+#                          removed is appended (gcs-remove.sh, #2232); an
+#                          audit log, never read back
+#   PLAN_GAP_REMOVALS      gap removal planner, rebuild only (default: tsx
+#                          plan-gap-removals.ts)
 #
 # Output: stdout is ONE JSON line, {"succeeded":N,"refused":N,"failed":N}
 # (R4); everything else, including the CLI's own output, goes to stderr.
@@ -209,10 +222,13 @@ read -r -a GUARD <<<"${GUARD_SNAPSHOT_UPLOAD:-${TSX} ${REPO}/scripts/guard-snaps
 read -r -a VALIDATE <<<"${VALIDATE_SNAPSHOTS:-${TSX} ${REPO}/scripts/validate-snapshots.ts}"
 read -r -a IDENTITY <<<"${BUILD_IDENTITY_HISTORY:-bash ${REPO}/scripts/pipeline/build-identity-history.sh}"
 read -r -a EDUCATION <<<"${BUILD_EDUCATION_ROLLUP:-bash ${REPO}/scripts/pipeline/build-education-rollup.sh}"
+read -r -a PLAN_GAP <<<"${PLAN_GAP_REMOVALS:-${TSX} ${REPO}/scripts/plan-gap-removals.ts}"
 read -r -a ROLLUPS <<<"${BUILD_REPORTS_ROLLUPS:-bash ${REPO}/scripts/pipeline/build-reports-rollups.sh}"
 # Every upload goes through the wrapper, so it lands in the run manifest.
 export GCLOUD
 UPLOAD=(bash "${REPO}/scripts/pipeline/gcs-upload.sh" "process-dates:${MODE}")
+# Every removal goes through its twin, so it lands in the removals file (#2232).
+REMOVE=(bash "${REPO}/scripts/pipeline/gcs-remove.sh" "process-dates:${MODE}")
 
 # stdout is reserved for the result line; fd 3 keeps it.
 exec 3>&1 1>&2
@@ -352,6 +368,42 @@ upload_snapshot() {
       "${shards[@]}" \
       "gs://${BUCKET}/snapshots/${actual}/clubs-by-region/"
   fi
+}
+
+# rebuild (#2232): remove from staging the earlier per-date objects of each
+# #1671 gap district — failed with an `<id>: Skipped: ` reason in the
+# date's own metadata.json. The transform wrote nothing for it and uploads
+# only add, so its objects from an earlier build survive: a 0-member
+# analytics file on a date whose metadata says the district failed. What
+# goes is decided by scripts/plan-gap-removals.ts (scripts/lib/gapRemoval.ts):
+# only `district_<id>.json` and `analytics/district_<id>_*.json` (never the
+# reports sidecar), only while staging's district file is the 0-club junk,
+# never a file this run wrote. Analytics first, the district file last.
+# gcs-remove.sh records each removal (an audit log). Prod is converged by
+# scoped promotion from the same state, not from that log. A cheap local
+# check first, so a date without a gap spawns nothing. A read or removal
+# error aborts the loop, like an upload error.
+remove_gap_districts() {
+  local actual="$1" meta="${SNAPSHOTS}/$1/metadata.json" ids urls url
+  local analytics=() files=()
+  [ -f "${meta}" ] || return 0
+  ids="$(jq -r '. as $m
+    | ((($m.failedDistricts // []) - ($m.successfulDistricts // [])) | .[] | strings)
+    | select(. as $id | ($m.errors // []) | any(strings | startswith($id + ": Skipped: ")))' \
+    "${meta}" 2>/dev/null)" || ids=""
+  [ -n "${ids}" ] || return 0
+  urls="$("${PLAN_GAP[@]}" "${BUCKET}" "${actual}" "${SNAPSHOTS}/${actual}")"
+  while IFS= read -r url; do
+    case "${url}" in
+      "") ;;
+      */analytics/*) analytics+=("${url}") ;;
+      *) files+=("${url}") ;;
+    esac
+  done <<<"${urls}"
+  if [ "${#analytics[@]}" -eq 0 ] && [ "${#files[@]}" -eq 0 ]; then return 0; fi
+  echo "Removing $((${#analytics[@]} + ${#files[@]})) earlier object(s) of #1671 gap district(s) $(echo "${ids}" | paste -sd, -) from snapshots/${actual}/ (#2232)..."
+  if [ "${#analytics[@]}" -gt 0 ]; then "${REMOVE[@]}" "${analytics[@]}"; fi
+  if [ "${#files[@]}" -gt 0 ]; then "${REMOVE[@]}" "${files[@]}"; fi
 }
 
 # Merge the persisted Find-A-Club fetch for <date> into its snapshots, if
@@ -502,6 +554,12 @@ process_one() {
   # 10. upload
   if [ -d "${SNAPSHOTS}/${actual}" ]; then
     upload_snapshot "${actual}"
+    # 10b. remove — rebuild only (#2232). R17: the other modes keep what
+    # staging holds for districts they did not re-derive.
+    case "${MODE}" in
+      rebuild) remove_gap_districts "${actual}" ;;
+      rescrape | rescrape-historical) ;;
+    esac
     PUBLISHED_DATES+=("${actual}")
     if [ "${compute_ok}" = 1 ]; then OUTCOME=published; else OUTCOME=compute-failed; fi
   else

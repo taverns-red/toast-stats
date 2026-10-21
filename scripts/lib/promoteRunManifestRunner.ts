@@ -9,7 +9,9 @@
 
 import { spawn, spawnSync } from 'node:child_process'
 import { appendFileSync, readFileSync } from 'node:fs'
+import { planBucketGapRemovals } from './gapRemovalIo.js'
 import {
+  MAX_SOURCES_PER_COPY,
   formatPromotionPlan,
   parseIndexDates,
   parseSnapshotDateListing,
@@ -129,6 +131,27 @@ export async function runPromoteRunManifest(
       child.stderr.on('data', d => io.err(String(d)))
       child.on('error', e => {
         log(`[promote] rm ${prefix}: ${String(e)}`)
+        resolve(false)
+      })
+      child.on('close', code => resolve(code === 0))
+    })
+
+  /** `rm` exact prod objects of one date (#2232); false on failure. */
+  const removeObjects = (names: readonly string[], date: string, p: string) =>
+    new Promise<boolean>(resolve => {
+      const child = spawn(
+        gcloud,
+        [
+          'storage',
+          'rm',
+          ...names.map(n => `gs://${p}/snapshots/${date}/${n}`),
+        ],
+        { stdio: ['ignore', 'pipe', 'pipe'], env }
+      )
+      child.stdout.on('data', d => io.err(String(d)))
+      child.stderr.on('data', d => io.err(String(d)))
+      child.on('error', e => {
+        log(`[promote] rm ${date}: ${String(e)}`)
         resolve(false)
       })
       child.on('close', code => resolve(code === 0))
@@ -256,10 +279,56 @@ export async function runPromoteRunManifest(
   )
   if (deletesFile) emit('prefixes_planned', plan.deletes.paths.length)
 
+  // Gap-district removals (#2232), derived from state for every promoted
+  // date whose globals land: the date's own staging metadata.json (its
+  // #1671 gaps) and what staging no longer holds. Never from a record of
+  // this or an earlier run, so a held date, a failed copy, a re-run or a
+  // proof run followed by a promote all converge (scripts/lib/gapRemoval.ts).
+  const removalDates =
+    plan.heldAll || !(plan.globals.paths.length === 0 || plan.globals.promote)
+      ? []
+      : plan.promotedDates
+  const removals: Array<{ date: string; remove: string[] }> = []
+  let removalError = false
+  for (const date of removalDates) {
+    try {
+      const p = planBucketGapRemovals(
+        { gcloud, env },
+        {
+          metadataBucket: staging,
+          bucket: prod,
+          date,
+          keepFromBucket: staging,
+        }
+      )
+      for (const k of p.kept) {
+        log(
+          `::warning title=Gap removal::kept gs://${prod}/snapshots/${date}/${k.path}: ${k.reason}`
+        )
+      }
+      if (p.remove.length > 0) removals.push({ date, remove: p.remove })
+    } catch (e) {
+      removalError = true
+      log(
+        `::error title=Gap removal::${date}: ${e instanceof Error ? e.message : String(e)} — its removals did not run; the next promote of it converges`
+      )
+    }
+  }
+  const removalsPlanned = removals.reduce((n, r) => n + r.remove.length, 0)
+  if (!execute) {
+    for (const r of removals) {
+      for (const n of r.remove) {
+        io.out(`remove\tgs://${prod}/snapshots/${r.date}/${n}\n`)
+      }
+    }
+  }
+  emit('removals_planned', removalsPlanned)
+
   if (!execute) return 0
   if (plan.heldAll) {
     log(`::error title=Scoped promotion::${plan.heldAll}`)
     emit('objects_copied', 0)
+    emit('objects_removed', 0)
     emit('complete', false)
     if (deletesFile) emit('prefixes_deleted', 0)
     // A verdict that holds everything (the gate errored) is a hold: exit 0
@@ -309,13 +378,44 @@ export async function runPromoteRunManifest(
       `::error title=Prune reconcile::${plan.deletes.paths.length} prod prefix(es) not deleted — ${plan.deletes.reason}`
     )
   }
+  // Gap removals last (#2232), only after every copy succeeded: per date,
+  // the analytics, then the district files, so a failure part way leaves
+  // the junk witness for the next promote to prove again.
+  let removed = 0
+  let removalsOk = !removalError
+  if (ok) {
+    for (const r of removals) {
+      const groups = [
+        r.remove.filter(n => n.startsWith('analytics/')),
+        r.remove.filter(n => !n.startsWith('analytics/')),
+      ]
+      let dateOk = true
+      for (const group of groups) {
+        for (let i = 0; dateOk && i < group.length; i += MAX_SOURCES_PER_COPY) {
+          const chunk = group.slice(i, i + MAX_SOURCES_PER_COPY)
+          if (await removeObjects(chunk, r.date, prod)) removed += chunk.length
+          else dateOk = false
+        }
+      }
+      if (!dateOk) {
+        removalsOk = false
+        log(
+          `::error title=Gap removal::removing ${r.date}'s stale gap-district objects from prod failed; the next promote of it converges`
+        )
+      }
+    }
+  } else if (removalsPlanned > 0) {
+    removalsOk = false
+  }
   const complete =
     ok &&
     plan.heldDates.length === 0 &&
     (plan.globals.paths.length === 0 || plan.globals.promote) &&
     !deletesHeld &&
-    deleted === (runDeletes ? plan.deletes.paths.length : 0)
+    deleted === (runDeletes ? plan.deletes.paths.length : 0) &&
+    removalsOk
   emit('objects_copied', copied)
+  emit('objects_removed', removed)
   emit('complete', complete)
   if (deletesFile) emit('prefixes_deleted', deleted)
   log(
@@ -323,15 +423,20 @@ export async function runPromoteRunManifest(
       (deletesFile
         ? `; deleted ${deleted} of ${plan.deletes.paths.length} prefix(es)`
         : '') +
+      `; removed ${removed} of ${removalsPlanned} gap-district object(s)` +
       `; complete=${complete}`
   )
   summary(
     `- **Copied**: ${copied} of ${plan.objectCount}${ok ? '' : ' — ❌ a copy failed; later phases not run'}\n` +
       (deletesFile
         ? `- **Prod prefixes deleted (#1767)**: ${deleted} of ${plan.deletes.paths.length}${deletesHeld ? ` — ❌ held: ${plan.deletes.reason}` : ''}\n`
+        : '') +
+      (removalsPlanned > 0 || removalError
+        ? `- **Stale #1671 gap-district objects removed (#2232)**: ${removed} of ${removalsPlanned}${removalsOk ? '' : ' — ❌ not all; the next promote of the date converges'}\n`
         : '')
   )
   if (!ok) return 1
+  if (!removalsOk) return 1
   // A reconcile that could not delete is a failed reconcile: prod keeps
   // dates staging pruned, and the next daily's count gate would freeze.
   return deletesHeld ? 1 : 0

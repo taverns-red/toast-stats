@@ -39,6 +39,7 @@ let shimLog: string
 let stubLog: string
 let summary: string
 let manifest: string
+let removals: string
 let uploadLog: string
 
 interface Result {
@@ -72,6 +73,7 @@ function run(
       BUILD_REPORTS_ROLLUPS: path.join(STUBS, 'build-reports-rollups'),
       STUB_LOG: stubLog,
       RUN_MANIFEST_FILE: manifest,
+      RUN_REMOVALS_FILE: removals,
       SHIM_UPLOAD_LOG: uploadLog,
       ...env,
     },
@@ -140,6 +142,7 @@ beforeEach(() => {
   stubLog = path.join(tmp, 'stubs.log')
   summary = path.join(tmp, 'summary.md')
   manifest = path.join(tmp, 'run', 'written.jsonl')
+  removals = path.join(tmp, 'run', 'removed.jsonl')
   uploadLog = path.join(tmp, 'uploads.log')
   fs.mkdirSync(path.join(root, BUCKET), { recursive: true })
 })
@@ -1156,6 +1159,192 @@ describe('process-dates.sh: force (#1771, ADR-015 P7)', () => {
     expect(r.status).toBe(2)
     expect(r.stderr).toMatch(/::error::process-dates: FORCE must be/)
     expect(lines(shimLog)).toEqual([])
+  })
+})
+
+/**
+ * #2232: a rebuild that records a district as a #1671 gap (TI's HTML error
+ * page as the club report) writes nothing for it, but uploads only add,
+ * so the district's per-date objects from an earlier build survived in
+ * staging: a 0-member district_U_analytics.json on a date whose
+ * metadata.json says U failed. The staging step runs the real planner
+ * (scripts/plan-gap-removals.ts, scripts/lib/gapRemoval.ts) against the
+ * shim; prod is converged by scoped promotion from the same state.
+ */
+describe('process-dates.sh rebuild: a #1671 gap district leaves no per-date object (#2232)', () => {
+  const DATE = '2018-06-30'
+  const JUNK = '{"districtId":"U","data":{"clubs":[]}}'
+  const STALE = [
+    'analytics/district_U_analytics.json',
+    'analytics/district_U_membership.json',
+    'district_U.json',
+  ]
+  const KEPT = [
+    // The gap district's reports sidecar: real TI data rebuild never writes.
+    'district_U_reports.json',
+    'district_61_reports.json',
+    // A district the date's metadata does not record as a gap.
+    'district_99.json',
+    // A date-level object.
+    'reports-rollups.json',
+  ]
+
+  function seed(districtU = JUNK): void {
+    putRaw(DATE)
+    putObject(`snapshots/${DATE}/district_U.json`, districtU, true)
+    for (const rel of [
+      ...STALE.filter(r => r !== 'district_U.json'),
+      ...KEPT,
+    ]) {
+      putObject(`snapshots/${DATE}/${rel}`, '{"earlier":"build"}', true)
+    }
+  }
+
+  it("removes the gap district's transform objects from staging and keeps everything else", () => {
+    seed()
+    const r = run('rebuild', [DATE], { STUB_FAILED_DISTRICTS: 'U' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(objectsUnder(`snapshots/${DATE}`)).toEqual([
+      'analytics/district_61_analytics.json',
+      'district_61.json',
+      'district_61_reports.json',
+      'district_99.json',
+      'district_U_reports.json',
+      'metadata.json',
+      'reports-rollups.json',
+    ])
+  })
+
+  it('records each removal in the removals file (an audit log, not the source of prod removals)', () => {
+    seed()
+    const r = run('rebuild', [DATE], { STUB_FAILED_DISTRICTS: 'U' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(lines(removals).map(l => JSON.parse(l))).toEqual(
+      STALE.map(rel => ({
+        path: `snapshots/${DATE}/${rel}`,
+        date: DATE,
+        stage: 'process-dates:rebuild',
+      }))
+    )
+    const written = lines(manifest).map(l => JSON.parse(l).path as string)
+    for (const rel of STALE) {
+      expect(written).not.toContain(`snapshots/${DATE}/${rel}`)
+    }
+  })
+
+  it('removes the analytics before the district file, so a failed run can still prove the junk', () => {
+    seed()
+    expect(run('rebuild', [DATE], { STUB_FAILED_DISTRICTS: 'U' }).status).toBe(
+      0
+    )
+    const rms = lines(shimLog).filter(l => l.startsWith('storage rm '))
+    expect(rms).toEqual([
+      `storage rm gs://${BUCKET}/snapshots/${DATE}/${STALE[0]} gs://${BUCKET}/snapshots/${DATE}/${STALE[1]}`,
+      `storage rm gs://${BUCKET}/snapshots/${DATE}/${STALE[2]}`,
+    ])
+  })
+
+  it('keeps everything when the district file has real clubs', () => {
+    seed('{"districtId":"U","data":{"clubs":[{"id":1}]}}')
+    const r = run('rebuild', [DATE], { STUB_FAILED_DISTRICTS: 'U' })
+    expect(r.status, r.stderr).toBe(0)
+    for (const rel of STALE) {
+      expect(objectExists(`snapshots/${DATE}/${rel}`)).toBe(true)
+    }
+    expect(lines(removals)).toEqual([])
+  })
+
+  it('removes nothing for a failed district without the #1671 gap reason', () => {
+    seed()
+    const r = run('rebuild', [DATE], { STUB_FAILED_NONGAP: 'U' })
+    expect(r.status, r.stderr).toBe(0)
+    for (const rel of STALE) {
+      expect(objectExists(`snapshots/${DATE}/${rel}`)).toBe(true)
+    }
+    expect(lines(shimLog).some(l => l.startsWith('storage rm'))).toBe(false)
+  })
+
+  it('removes one id exactly: district_U never matches district_UX', () => {
+    seed()
+    putObject(`snapshots/${DATE}/district_UX.json`, '{"other":1}', true)
+    const r = run('rebuild', [DATE], { STUB_FAILED_DISTRICTS: 'U' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(objectExists(`snapshots/${DATE}/district_UX.json`)).toBe(true)
+  })
+
+  it('removes nothing when no district failed', () => {
+    seed()
+    const r = run('rebuild', [DATE])
+    expect(r.status, r.stderr).toBe(0)
+    for (const rel of STALE) {
+      expect(objectExists(`snapshots/${DATE}/${rel}`)).toBe(true)
+    }
+    expect(lines(removals)).toEqual([])
+    expect(lines(shimLog).some(l => l.startsWith('storage rm'))).toBe(false)
+  })
+
+  it('removes nothing for a date it does not publish', () => {
+    seed()
+    const r = run('rebuild', [DATE], {
+      STUB_FAILED_DISTRICTS: 'U',
+      STUB_TRANSFORM_FAIL: DATE,
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+    for (const rel of STALE) {
+      expect(objectExists(`snapshots/${DATE}/${rel}`)).toBe(true)
+    }
+  })
+
+  it('a failed removal fails the run, and its intent is still recorded (M1)', () => {
+    seed()
+    const r = run('rebuild', [DATE], {
+      STUB_FAILED_DISTRICTS: 'U',
+      SHIM_FAIL_MATCH: '^rm ',
+    })
+    expect(r.status).toBe(1)
+    expect(lines(removals).map(l => JSON.parse(l).path)).toEqual(
+      STALE.slice(0, 2).map(rel => `snapshots/${DATE}/${rel}`)
+    )
+  })
+})
+
+describe('gcs-remove.sh (#2232)', () => {
+  const REMOVE = path.join(REPO, 'scripts/pipeline/gcs-remove.sh')
+  const remove = (args: string[], env: Record<string, string> = {}) =>
+    spawnSync('bash', [REMOVE, 'test-stage', ...args], {
+      encoding: 'utf-8',
+      env: {
+        ...process.env,
+        GCLOUD: SHIM,
+        SHIM_ROOT: root,
+        GCS_BUCKET: BUCKET,
+        RUN_REMOVALS_FILE: removals,
+        ...env,
+      },
+    })
+
+  it('removes only from the run bucket: any other bucket is refused (allowlist)', () => {
+    fs.mkdirSync(path.join(root, 'other-bucket'), { recursive: true })
+    putObject('snapshots/2018-06-30/district_U.json', '{}')
+    const r = remove(['gs://other-bucket/snapshots/2018-06-30/district_U.json'])
+    expect(r.status).toBe(2)
+    expect(r.stderr).toMatch(/not the run bucket/)
+    expect(lines(removals)).toEqual([])
+  })
+
+  it.each([
+    ['a wildcard', `gs://${BUCKET}/snapshots/2018-06-30/district_*.json`],
+    ['a prefix', `gs://${BUCKET}/snapshots/2018-06-30/`],
+  ])('refuses %s', (_label, url) => {
+    expect(remove([url]).status).toBe(2)
+  })
+
+  it('refuses without a removals file', () => {
+    expect(
+      remove([`gs://${BUCKET}/x.json`], { RUN_REMOVALS_FILE: '' }).status
+    ).toBe(2)
   })
 })
 

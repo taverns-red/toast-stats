@@ -58,6 +58,27 @@ describe('data-pipeline run manifest (#1762)', () => {
     expect(workflow.env?.RUN_MANIFEST_FILE).toMatch(/written\.jsonl$/)
   })
 
+  it('names one removals file beside it, which the promoter reads and the run publishes (#2232)', () => {
+    const removals = workflow.env?.RUN_REMOVALS_FILE ?? ''
+    expect(removals).toMatch(/removed\.jsonl$/)
+    expect(path.dirname(removals)).toBe(
+      path.dirname(workflow.env?.RUN_MANIFEST_FILE ?? '')
+    )
+    const publish = byName('Publish run manifest (#1762)')?.run ?? ''
+    expect(publish).toMatch(
+      /"\$\{RUN_REMOVALS_FILE\}" "gs:\/\/\$\{GCS_BUCKET\}\/runs\/\$\{GITHUB_RUN_ID\}\/removed\.jsonl"/
+    )
+    // Published even when the run wrote nothing (L2).
+    expect(publish.indexOf('removed.jsonl')).toBeLessThan(
+      publish.indexOf('nothing to publish')
+    )
+  })
+
+  it('purges the CDN when the promotion removed objects, not only when it copied (#2232)', () => {
+    const purge = steps.find(s => /invalidate-cdn-cache/.test(s.run ?? ''))
+    expect(purge?.if).toMatch(/objects_removed/)
+  })
+
   it('no step in the pipeline job uploads to staging with a raw gcloud call: every write is recorded', () => {
     // The one exemption: publishing the manifest itself, which is not an
     // object the run produced for promotion.

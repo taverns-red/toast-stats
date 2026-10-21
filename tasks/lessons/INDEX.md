@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `an-additive-publish-keeps-what-the-run-now-records-as-absent.md` — When a re-derivation can record an entity as absent, an upload-only publish keeps the entity's old objects; the run must remove them and record the removal for promotion  (2026-10-21)
 - `release-please-reparses-notes-as-html-so-angle-brackets-in-titles-drop-releases.md` — release-please re-parses release notes as HTML, so a `<word>` in a squash subject silently drops or overflows component releases  (2026-10-19)
 - `a-budget-gate-keyed-on-one-chunk-goes-vacuous-when-a-second-consumer-hoists-it.md` — A bundle-budget gate that finds its route by "the chunk that holds the lazy import" goes vacuous when a second page shares that code — the bundler hoists it into a shared chunk and the gate measures that alone; key routes on what the router lazy-imports  (2026-10-17)
 - `a-key-normalisation-must-also-run-where-a-persisted-store-is-loaded.md` — Normalising an id at write time leaves a persisted store keyed the old way; normalise when the store is loaded too  (2026-10-17)
