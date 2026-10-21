@@ -34,7 +34,9 @@ name: CI Gate
 # A base change (retarget to main) is also `edited`: ci.yml and docs.yml run
 # on it too, and this gate waits for them (#2204). A body-only edit re-runs
 # this gate harmlessly; the skipped ci.yml/docs.yml re-runs it causes are
-# ignored beside their green runs (scripts/lib/ciGate.ts).
+# ignored beside their green runs (scripts/lib/ciGate.ts). A skip with no green
+# run beside it waits while any other run on the head is still in flight -- the
+# real run may not have created its jobs yet (#2219).
 on:
   pull_request:
     branches: [main]
@@ -44,6 +46,9 @@ permissions:
   contents: read
   checks: read
   pull-requests: read
+  # Lists the workflow runs on the head SHA: a skipped-only check waits while
+  # another run is still in flight (#2219).
+  actions: read
 
 concurrency:
   # Supersede an in-flight gate when the PR is pushed again. The superseded run
