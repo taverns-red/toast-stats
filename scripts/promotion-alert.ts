@@ -28,6 +28,10 @@
  *                     empty = the promote did not run
  *   SCOPED_HELD_DATES, SCOPED_GLOBALS_REASON — its `held_dates` and
  *                     `globals_reason`, named in the alert
+ *   ALERT_SCOPE     — unset: the main promotion. `report-sidecars` (#2227):
+ *                     the promote-reports job's sidecar alert, its own title
+ *                     (REPORT_SIDECARS_HELD_TITLE) and body; anything else
+ *                     is a crash, so the fallback alert is filed
  *
  * Always exits 0; the workflow decides whether to open/refresh or close the
  * issue based on the `blocked`/`promoted` outputs. A missing/garbage
@@ -40,6 +44,8 @@ import {
   evaluatePromotion,
   buildPromotionHeldTitle,
   buildPromotionHeldBody,
+  REPORT_SIDECARS_HELD_TITLE,
+  type AlertScope,
   type ContentGateFailure,
   type ValueDiffOutput,
 } from './lib/promotionAlert.js'
@@ -94,7 +100,15 @@ function readGateFailures(path: string | undefined): ContentGateFailure[] {
   }
 }
 
+function readScope(): AlertScope | undefined {
+  const scope = process.env.ALERT_SCOPE ?? ''
+  if (scope === '') return undefined
+  if (scope === 'report-sidecars') return scope
+  throw new Error(`unknown ALERT_SCOPE '${scope}'`)
+}
+
 function main(): void {
+  const scope = readScope()
   const countPromote = process.env.COUNT_PROMOTE === 'true'
   const valuePromote = process.env.VALUE_PROMOTE === 'true'
   const contentPromote = process.env.CONTENT_PROMOTE === 'true'
@@ -137,7 +151,7 @@ function main(): void {
   // output, so a failure here lands in the catch with no half-written outputs
   // to override — the crash handler then emits a clean blocked=true alert.
   if (result.blocked) {
-    writeFileSync(BODY_FILE, buildPromotionHeldBody(result, { now }))
+    writeFileSync(BODY_FILE, buildPromotionHeldBody(result, { now, scope }))
     log('Promotion is HELD — alert body written.')
   } else {
     log('Promotion succeeded — any open promotion-held issue should close.')
@@ -148,7 +162,7 @@ function main(): void {
   emitOutput('gate', result.gate)
   emitOutput('staging_ahead', String(result.stagingAhead))
   if (result.blocked) {
-    emitOutput('title', buildPromotionHeldTitle(result))
+    emitOutput('title', buildPromotionHeldTitle(result, scope))
     emitOutput('body_file', BODY_FILE)
   }
 }
@@ -180,7 +194,12 @@ try {
       ].join('\n')
     )
     emitOutput('body_file', BODY_FILE)
-    emitOutput('title', '🚫 Promotion-held alert runner crashed (#1073)')
+    emitOutput(
+      'title',
+      process.env.ALERT_SCOPE === 'report-sidecars'
+        ? `${REPORT_SIDECARS_HELD_TITLE} — alert runner crashed (#2227)`
+        : '🚫 Promotion-held alert runner crashed (#1073)'
+    )
   } catch {
     // If even the fallback body can't be written, still flag blocked so the
     // workflow's create step surfaces *something* rather than going quiet.

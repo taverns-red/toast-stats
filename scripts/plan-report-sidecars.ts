@@ -19,15 +19,27 @@
  * Outputs (GITHUB_OUTPUT): objects, carried, held_dates.
  * Exit: 0 planned (possibly nothing) · 1 a bucket read failed · 2 bad input
  *      (no or malformed run manifest, a malformed date list).
+ *
+ * `--apply-content-gate` (#2227), the step after the content gate: drop
+ * every date with a sidecar that failed the gate (CONTENT_GATE_FILE, default
+ * /tmp/report-sidecars/content-gate.json) from the manifest and add it to
+ * the verdict, so the other dates still promote. Outputs: objects,
+ * content_promote, content_held_dates, held_dates. Exit 2 when there is no
+ * planned manifest or verdict.
+ *
  * Logs go to stderr (R4).
  */
 
-import { runPlanReportSidecars } from './lib/reportSidecarPlanRunner.js'
+import {
+  runApplySidecarContentGate,
+  runPlanReportSidecars,
+} from './lib/reportSidecarPlanRunner.js'
 
-runPlanReportSidecars({
-  env: process.env,
-  err: s => process.stderr.write(s),
-})
+const io = { env: process.env, err: (s: string) => process.stderr.write(s) }
+;(process.argv.includes('--apply-content-gate')
+  ? runApplySidecarContentGate(io)
+  : runPlanReportSidecars(io)
+)
   .then(code => {
     process.exitCode = code
   })

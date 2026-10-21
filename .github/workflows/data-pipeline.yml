@@ -2329,8 +2329,10 @@ jobs:
         run: |
           # Deduplicate: one open alert at a time. Refresh (comment on) the
           # existing issue rather than spamming a new one each blocked run.
+          # The report-sidecar alert (#2227) is promote-reports' own.
           EXISTING=$(gh issue list --label promotion-held --state open \
-            --json number --jq '.[0].number // empty')
+            --json number,title \
+            --jq '[.[] | select(.title | contains("Report sidecars held") | not)][0].number // empty')
           if [ -n "${EXISTING}" ]; then
             echo "Existing open alert #${EXISTING} — adding a refresh comment."
             gh issue comment "${EXISTING}" \
@@ -2353,8 +2355,11 @@ jobs:
           # group (top of file) serializes pipeline runs, so a promoting run
           # can't race a concurrent blocking run — once we promote, any prior
           # held state is genuinely resolved regardless of which mode filed it.
+          # Not the report-sidecar alert (#2227): promote-reports closes
+          # that one once its sidecars promote with none held.
           OPEN=$(gh issue list --label promotion-held --state open \
-            --json number --jq '.[].number')
+            --json number,title \
+            --jq '.[] | select(.title | contains("Report sidecars held") | not) | .number')
           if [ -z "${OPEN}" ]; then
             echo "No open promotion-held issue to close."
           else
@@ -3291,7 +3296,7 @@ jobs:
 
       # The pipeline's content gate (#1715), on the sidecar manifest only:
       # decode, parse, hash and the reports contract (district-reports,
-      # reports-rollups). Fails closed through content_promote.
+      # reports-rollups). Its verdict is applied per date by the next step.
       - name: '[reports] Content gate the report sidecars (#1767)'
         id: contentgate
         if: steps.plan.outputs.objects != '' && steps.plan.outputs.objects != '0'
@@ -3300,23 +3305,102 @@ jobs:
           CONTENT_GATE_FILE: /tmp/report-sidecars/content-gate.json
         run: npx tsx scripts/promotion-content-gate.ts --manifest-only
 
+      # Per date, not all or nothing (#2227): every date with a sidecar the
+      # gate refused leaves the manifest and joins the verdict's held dates,
+      # so one bad sidecar carried from an older date no longer holds this
+      # run's own. A gate that could not run holds every date (fail closed).
+      - name: '[reports] Hold only the dates whose sidecars fail the content gate (#2227)'
+        id: contenthold
+        if: steps.plan.outputs.objects != '' && steps.plan.outputs.objects != '0'
+        env:
+          CONTENT_GATE_FILE: /tmp/report-sidecars/content-gate.json
+        run: npx tsx scripts/plan-report-sidecars.ts --apply-content-gate
+
       # The one prod-write mechanism: the same promoter as the pipeline job,
-      # on the sidecar manifest, holding the dates the plan's verdict holds.
+      # on the sidecar manifest, holding the dates the verdict holds.
       - name: '[reports] Promote the report sidecars (#1767)'
         id: promote
         if: >-
-          steps.contentgate.outputs.content_promote == 'true'
-          && steps.plan.outputs.objects != '0'
+          steps.contenthold.outputs.objects != ''
+          && steps.contenthold.outputs.objects != '0'
         env:
           RUN_MANIFEST_FILE: ${{ env.REPORT_SIDECAR_MANIFEST_FILE }}
           COMPLETENESS_GATE_FILE: ${{ env.REPORT_SIDECAR_VERDICT_FILE }}
         run: npx tsx scripts/promote-run-manifest.ts --execute
 
-      - name: '[reports] Report sidecars held by the content gate (#1767)'
-        if: steps.contentgate.outputs.content_promote == 'false'
+      # ── Report-sidecar promotion-held alert (#2227) ──
+      # The main promotion's flow (#1073, scripts/promotion-alert.ts), scoped
+      # to the sidecars: a content hold files or refreshes its own
+      # promotion-held issue (title REPORT_SIDECARS_HELD_TITLE) instead of
+      # failing the run, and a later clean sidecar promote closes it. The
+      # pipeline job's alert steps skip this issue, and these skip its.
+      - name: '[reports] Evaluate the report sidecar alert (#2227)'
+        id: sidecaralert
+        if: ${{ !cancelled() && steps.contenthold.outcome == 'success' }}
+        env:
+          ALERT_SCOPE: report-sidecars
+          COUNT_PROMOTE: 'true'
+          VALUE_PROMOTE: 'true'
+          COMPLETENESS_PROMOTE: 'true'
+          CONTENT_PROMOTE: ${{ steps.contenthold.outputs.content_promote }}
+          CONTENT_GATE_FILE: /tmp/report-sidecars/content-gate.json
+          SCOPED_COMPLETE: ${{ steps.contenthold.outputs.content_promote }}
+          SCOPED_HELD_DATES: ${{ steps.contenthold.outputs.content_held_dates }}
+        run: npx tsx scripts/promotion-alert.ts
+
+      - name: '[reports] Ensure promotion-held label exists (#2227)'
+        if: ${{ !cancelled() && steps.sidecaralert.outputs.blocked == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "::error title=Report sidecars::the content gate held the sidecar manifest — nothing promoted; see the content gate summary"
-          exit 1
+          gh label create promotion-held \
+            --color B60205 \
+            --description "Staging→prod promotion is held; prod is serving stale content" \
+            2>/dev/null || echo "Label already exists"
+
+      - name: '[reports] File or refresh the report sidecar alert (#2227)'
+        if: ${{ !cancelled() && steps.sidecaralert.outputs.blocked == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ steps.sidecaralert.outputs.title }}
+        run: |
+          # One open report-sidecar alert at a time, refreshed by comment.
+          EXISTING=$(gh issue list --label promotion-held --state open \
+            --json number,title \
+            --jq '[.[] | select(.title | contains("Report sidecars held"))][0].number // empty')
+          if [ -n "${EXISTING}" ]; then
+            echo "Existing open report-sidecar alert #${EXISTING} — adding a refresh comment."
+            gh issue comment "${EXISTING}" \
+              --body-file "${{ steps.sidecaralert.outputs.body_file }}"
+          else
+            echo "No open report-sidecar alert — creating one."
+            gh issue create \
+              --title "${TITLE}" \
+              --label promotion-held \
+              --body-file "${{ steps.sidecaralert.outputs.body_file }}"
+          fi
+
+      - name: '[reports] Auto-close the report sidecar alert (#2227)'
+        if: >-
+          !cancelled()
+          && steps.sidecaralert.outputs.promoted == 'true'
+          && steps.promote.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          OPEN=$(gh issue list --label promotion-held --state open \
+            --json number,title \
+            --jq '.[] | select(.title | contains("Report sidecars held")) | .number')
+          if [ -z "${OPEN}" ]; then
+            echo "No open report-sidecar alert to close."
+          else
+            for n in ${OPEN}; do
+              echo "Closing report-sidecar alert #${n} — the sidecars promoted with none held."
+              gh issue close "${n}" \
+                --comment "✅ A later run promoted its report sidecars with no date held by the content gate. Auto-closing (#2227)." \
+                --reason completed
+            done
+          fi
 
       - name: '[reports] Completeness gate: promoted dates have their reports (#2144)'
         if: ${{ !cancelled() && needs.pipeline.outputs.promoted_dates != '' }}

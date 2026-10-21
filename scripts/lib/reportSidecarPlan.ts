@@ -133,3 +133,91 @@ export function sidecarVerdict(heldDates: readonly string[]): SidecarVerdict {
         : `this run wrote and did not promote ${held.join(', ')}: their sidecars stay in staging`,
   }
 }
+
+/** The part of the content gate's result the per-date hold reads. */
+export interface SidecarGateResult {
+  promote: boolean
+  failures: ReadonlyArray<{ path: string; reason: string }>
+}
+
+export interface SidecarContentHold {
+  /** The sidecar manifest without the held dates' objects. */
+  entries: RunManifestEntry[]
+  /** The plan's verdict plus the dates the gate held. */
+  verdict: SidecarVerdict
+  /** Dates held because one of their objects failed the gate, sorted. */
+  contentHeldDates: string[]
+  /** The failures, each placed under its date ('' when it has none). */
+  failures: Array<{ date: string; path: string; reason: string }>
+  /** Set when the result could not be placed per date: every date held. */
+  heldAll: string | null
+}
+
+/**
+ * Apply the content gate per date (#2227). The gate is all or nothing (one
+ * failure sets promote=false); holding the whole sidecar manifest on it let
+ * one bad sidecar carried from an older date hold the run's own date, every
+ * day for the carry window. A failing object holds its own date instead:
+ * that date's objects leave the manifest (a date's sidecars ship together,
+ * as its snapshot does) and the date joins the verdict's heldDates, so the
+ * promoter holds it twice over. The other dates promote.
+ *
+ * Fails closed to holding every date when the result is missing, when the
+ * gate could not run, when it refused with no failure listed, or when a
+ * failure names an object the manifest does not plan.
+ */
+export function applySidecarContentGate(
+  entries: readonly RunManifestEntry[],
+  verdict: SidecarVerdict,
+  gate: SidecarGateResult | null
+): SidecarContentHold {
+  const planned = new Map(entries.map(e => [e.path, e]))
+  const failures = (gate?.failures ?? []).map(f => ({
+    date: planned.has(f.path) ? (REPORT_SIDECAR.exec(f.path)?.[1] ?? '') : '',
+    path: f.path,
+    reason: f.reason,
+  }))
+  let heldAll: string | null = null
+  if (!gate) heldAll = 'no content gate result'
+  else if (!gate.promote && failures.length === 0)
+    heldAll = 'the content gate refused with no failing object'
+  else if (failures.some(f => f.date === ''))
+    heldAll =
+      'the content gate refused an object this plan cannot place under a date'
+
+  const contentHeld = new Set(
+    heldAll !== null
+      ? entries.map(e => REPORT_SIDECAR.exec(e.path)?.[1] ?? e.date ?? '')
+      : failures.map(f => f.date)
+  )
+  contentHeld.delete('')
+  const contentHeldDates = [...contentHeld].sort()
+  const kept = entries.filter(e => {
+    const date = REPORT_SIDECAR.exec(e.path)?.[1] ?? e.date ?? ''
+    return heldAll === null && !contentHeld.has(date)
+  })
+  if (contentHeldDates.length === 0 && heldAll === null) {
+    return {
+      entries: [...entries],
+      verdict,
+      contentHeldDates,
+      failures,
+      heldAll,
+    }
+  }
+  const held = [...new Set([...verdict.heldDates, ...contentHeldDates])].sort()
+  const why =
+    heldAll ??
+    `a sidecar failed the content gate on ${contentHeldDates.join(', ')}`
+  return {
+    entries: kept,
+    verdict: {
+      promote: false,
+      heldDates: held,
+      reason: verdict.promote ? why : `${verdict.reason}; ${why}`,
+    },
+    contentHeldDates,
+    failures,
+    heldAll,
+  }
+}
