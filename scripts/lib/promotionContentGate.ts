@@ -61,6 +61,7 @@ import {
 } from './cdnSchemaCanary.js'
 import { summarizeZodIssues } from './zodIssueSummary.js'
 import { latestByPath, type RunManifestEntry } from './runManifest.js'
+import { isReportSidecar } from './reportSidecarPlan.js'
 import {
   REPORTS_ROLLUP_FIGURE_KEYS,
   sumReportsRollupFigures,
@@ -462,8 +463,12 @@ export function planManifestChecks(
       ...(kind === 'time-series-program-year' ? { compareWithProd: true } : {}),
     })
   }
+  // A changed sidecar the run did not write is left out (#2227): scoped
+  // promotion never copies it, and promote-reports, the one path that does,
+  // content-gates it per date. Sampling it here held the whole daily
+  // promotion on a staging-only object. Still counted as changed.
   const carried = planContentChecks(
-    changed.filter(o => !writtenPaths.has(o.name)),
+    changed.filter(o => !writtenPaths.has(o.name) && !isReportSidecar(o.name)),
     opts
   )
   return {
