@@ -29,15 +29,16 @@
  * them as `delete\t<gs://prod/prefix/>`. Held deletes exit 1; a failed
  * delete warns (the next prune's plan sweeps it).
  *
- * Removals (#2232): with RUN_REMOVALS_FILE (runs/<id>/removed.jsonl, the
- * stale per-date objects of a failed district a rebuild removed from
- * staging), --execute then runs `gcloud storage rm <gs://prod/object>…`
- * for those of promoted dates prod still holds, after the entry points.
- * The dry run lists them as `remove\t<gs://prod/object>`. A held date
- * keeps its removals; a failed removal exits 1. No file: nothing removed.
+ * Gap-district removals (#2232): for each promoted date whose globals
+ * land, the #1671 gap districts staging's metadata.json records lose, in
+ * prod, the transform objects staging no longer holds (district_<id>.json,
+ * analytics/district_<id>_*; never the reports sidecar), and only while
+ * prod's district file is the 0-club junk (scripts/lib/gapRemoval.ts).
+ * Derived from state, so every path converges. --execute removes them
+ * after the entry points; the dry run lists `remove\t<gs://prod/object>`.
+ * A failed read or removal exits 1.
  *
  * Env: GCS_BUCKET, GCS_BUCKET_PRODUCTION, RUN_MANIFEST_FILE,
- *      RUN_REMOVALS_FILE (optional),
  *      COMPLETENESS_GATE_FILE (default /tmp/completeness-gate.json),
  *      PROD_DELETES_FILE (optional, prune reconcile only),
  *      GCLOUD (default gcloud), PROMOTE_CONCURRENCY (default 4).

@@ -8,7 +8,8 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process'
-import { appendFileSync, existsSync, readFileSync } from 'node:fs'
+import { appendFileSync, readFileSync } from 'node:fs'
+import { planBucketGapRemovals } from './gapRemovalIo.js'
 import {
   MAX_SOURCES_PER_COPY,
   formatPromotionPlan,
@@ -20,12 +21,7 @@ import {
   type CopyBatch,
   type PromotionPlan,
 } from './manifestPromotion.js'
-import {
-  parseRunManifest,
-  parseRunRemovals,
-  type RunManifestEntry,
-  type RunRemovalEntry,
-} from './runManifest.js'
+import { parseRunManifest, type RunManifestEntry } from './runManifest.js'
 
 /** One prefix per line; blank lines ignored. Validation is the planner's. */
 export function parseDeletesFile(text: string): string[] {
@@ -140,89 +136,26 @@ export async function runPromoteRunManifest(
       child.on('close', code => resolve(code === 0))
     })
 
-  /** `rm` exact prod objects (#2232); false on failure. */
-  const removeObjects = (paths: readonly string[], prod: string) =>
+  /** `rm` exact prod objects of one date (#2232); false on failure. */
+  const removeObjects = (names: readonly string[], date: string, p: string) =>
     new Promise<boolean>(resolve => {
       const child = spawn(
         gcloud,
-        ['storage', 'rm', ...paths.map(p => `gs://${prod}/${p}`)],
+        [
+          'storage',
+          'rm',
+          ...names.map(n => `gs://${p}/snapshots/${date}/${n}`),
+        ],
         { stdio: ['ignore', 'pipe', 'pipe'], env }
       )
       child.stdout.on('data', d => io.err(String(d)))
       child.stderr.on('data', d => io.err(String(d)))
       child.on('error', e => {
-        log(`[promote] rm: ${String(e)}`)
+        log(`[promote] rm ${date}: ${String(e)}`)
         resolve(false)
       })
       child.on('close', code => resolve(code === 0))
     })
-
-  /**
-   * The objects prod holds under `snapshots/<date>/`, bucket stripped;
-   * empty when it holds none, null when the listing failed.
-   */
-  const listProdDate = (date: string, prod: string): Set<string> | null => {
-    const r = spawnSync(
-      gcloud,
-      ['storage', 'ls', `gs://${prod}/snapshots/${date}/**`],
-      { encoding: 'utf-8', env }
-    )
-    if (r.status !== 0) {
-      if ((r.stderr ?? '').includes('matched no objects')) return new Set()
-      log(`[promote] gcloud storage ls of prod ${date} failed: ${r.stderr}`)
-      return null
-    }
-    const prefix = `gs://${prod}/`
-    return new Set(
-      r.stdout
-        .split('\n')
-        .map(l => l.trim())
-        .filter(l => l.startsWith(prefix))
-        .map(l => l.slice(prefix.length))
-    )
-  }
-
-  /**
-   * Remove the planned objects prod still holds (#2232), date by date. One
-   * prod never had (or an earlier attempt removed) is skipped, so a re-run
-   * converges. Returns how many were removed and whether all went.
-   */
-  const runRemovals = async (paths: readonly string[], prod: string) => {
-    const byDate = new Map<string, string[]>()
-    for (const p of paths) {
-      const d = p.split('/')[1]!
-      byDate.set(d, [...(byDate.get(d) ?? []), p])
-    }
-    let removed = 0
-    let ok = true
-    for (const [date, planned] of byDate) {
-      const present = listProdDate(date, prod)
-      if (present === null) {
-        ok = false
-        log(
-          `::error title=Scoped promotion::could not list prod snapshots/${date}/; its ${planned.length} removal(s) did not run`
-        )
-        continue
-      }
-      const todo = planned.filter(p => present.has(p))
-      if (todo.length < planned.length) {
-        log(
-          `[promote] ${planned.length - todo.length} removal(s) on ${date} already absent from prod`
-        )
-      }
-      for (let i = 0; i < todo.length; i += MAX_SOURCES_PER_COPY) {
-        const chunk = todo.slice(i, i + MAX_SOURCES_PER_COPY)
-        if (await removeObjects(chunk, prod)) removed += chunk.length
-        else {
-          ok = false
-          log(
-            `::error title=Scoped promotion::removing ${chunk.length} stale object(s) of ${date} from prod failed; nothing else removes them (#2232)`
-          )
-        }
-      }
-    }
-    return { removed, ok }
-  }
 
   /** One phase's batches, `concurrency` at a time; stop at the first failure. */
   const runPhase = async (
@@ -296,22 +229,6 @@ export async function runPromoteRunManifest(
     }
   }
 
-  // The run's removals (#2232). A run that removed nothing has no file;
-  // one that is there but unreadable is bad input: never promote a date
-  // without the removals its run made in staging.
-  let removals: RunRemovalEntry[] = []
-  const removalsFile = env.RUN_REMOVALS_FILE
-  if (removalsFile && existsSync(removalsFile)) {
-    try {
-      removals = parseRunRemovals(readFileSync(removalsFile, 'utf-8'))
-    } catch (e) {
-      log(
-        `::error title=Scoped promotion::run removals ${removalsFile} unusable — nothing promoted: ${String(e)}`
-      )
-      return 2
-    }
-  }
-
   const verdict: CompletenessVerdict | null = args.has('--assume-pass')
     ? { promote: true }
     : readVerdict(env.COMPLETENESS_GATE_FILE || DEFAULT_COMPLETENESS_GATE_FILE)
@@ -330,7 +247,6 @@ export async function runPromoteRunManifest(
       indexDates: checkIndex ? readIndexDates(staging) : null,
       prodDates: checkIndex ? readProdDates(prod) : null,
       deletes,
-      removals,
     })
   } catch (e) {
     log(`::error title=Scoped promotion::${String(e)} — nothing promoted`)
@@ -362,7 +278,51 @@ export async function runPromoteRunManifest(
     plan.globals.promote ? '' : plan.globals.reason.replace(/\s+/g, ' ')
   )
   if (deletesFile) emit('prefixes_planned', plan.deletes.paths.length)
-  emit('removals_planned', plan.removals.paths.length)
+
+  // Gap-district removals (#2232), derived from state for every promoted
+  // date whose globals land: the date's own staging metadata.json (its
+  // #1671 gaps) and what staging no longer holds. Never from a record of
+  // this or an earlier run, so a held date, a failed copy, a re-run or a
+  // proof run followed by a promote all converge (scripts/lib/gapRemoval.ts).
+  const removalDates =
+    plan.heldAll || !(plan.globals.paths.length === 0 || plan.globals.promote)
+      ? []
+      : plan.promotedDates
+  const removals: Array<{ date: string; remove: string[] }> = []
+  let removalError = false
+  for (const date of removalDates) {
+    try {
+      const p = planBucketGapRemovals(
+        { gcloud, env },
+        {
+          metadataBucket: staging,
+          bucket: prod,
+          date,
+          keepFromBucket: staging,
+        }
+      )
+      for (const k of p.kept) {
+        log(
+          `::warning title=Gap removal::kept gs://${prod}/snapshots/${date}/${k.path}: ${k.reason}`
+        )
+      }
+      if (p.remove.length > 0) removals.push({ date, remove: p.remove })
+    } catch (e) {
+      removalError = true
+      log(
+        `::error title=Gap removal::${date}: ${e instanceof Error ? e.message : String(e)} — its removals did not run; the next promote of it converges`
+      )
+    }
+  }
+  const removalsPlanned = removals.reduce((n, r) => n + r.remove.length, 0)
+  if (!execute) {
+    for (const r of removals) {
+      for (const n of r.remove) {
+        io.out(`remove\tgs://${prod}/snapshots/${r.date}/${n}\n`)
+      }
+    }
+  }
+  emit('removals_planned', removalsPlanned)
 
   if (!execute) return 0
   if (plan.heldAll) {
@@ -418,22 +378,44 @@ export async function runPromoteRunManifest(
       `::error title=Prune reconcile::${plan.deletes.paths.length} prod prefix(es) not deleted — ${plan.deletes.reason}`
     )
   }
-  // Removals last (#2232): a failed district's stale per-date objects, only
-  // after every copy succeeded. A held one stays with its held date.
-  const removal =
-    ok && plan.removals.paths.length > 0
-      ? await runRemovals(plan.removals.paths, prod)
-      : { removed: 0, ok: plan.removals.paths.length === 0 }
+  // Gap removals last (#2232), only after every copy succeeded: per date,
+  // the analytics, then the district files, so a failure part way leaves
+  // the junk witness for the next promote to prove again.
+  let removed = 0
+  let removalsOk = !removalError
+  if (ok) {
+    for (const r of removals) {
+      const groups = [
+        r.remove.filter(n => n.startsWith('analytics/')),
+        r.remove.filter(n => !n.startsWith('analytics/')),
+      ]
+      let dateOk = true
+      for (const group of groups) {
+        for (let i = 0; dateOk && i < group.length; i += MAX_SOURCES_PER_COPY) {
+          const chunk = group.slice(i, i + MAX_SOURCES_PER_COPY)
+          if (await removeObjects(chunk, r.date, prod)) removed += chunk.length
+          else dateOk = false
+        }
+      }
+      if (!dateOk) {
+        removalsOk = false
+        log(
+          `::error title=Gap removal::removing ${r.date}'s stale gap-district objects from prod failed; the next promote of it converges`
+        )
+      }
+    }
+  } else if (removalsPlanned > 0) {
+    removalsOk = false
+  }
   const complete =
     ok &&
     plan.heldDates.length === 0 &&
     (plan.globals.paths.length === 0 || plan.globals.promote) &&
     !deletesHeld &&
     deleted === (runDeletes ? plan.deletes.paths.length : 0) &&
-    removal.ok &&
-    plan.removals.held.length === 0
+    removalsOk
   emit('objects_copied', copied)
-  emit('objects_removed', removal.removed)
+  emit('objects_removed', removed)
   emit('complete', complete)
   if (deletesFile) emit('prefixes_deleted', deleted)
   log(
@@ -441,7 +423,7 @@ export async function runPromoteRunManifest(
       (deletesFile
         ? `; deleted ${deleted} of ${plan.deletes.paths.length} prefix(es)`
         : '') +
-      `; removed ${removal.removed} of ${plan.removals.paths.length} stale object(s)` +
+      `; removed ${removed} of ${removalsPlanned} gap-district object(s)` +
       `; complete=${complete}`
   )
   summary(
@@ -449,13 +431,12 @@ export async function runPromoteRunManifest(
       (deletesFile
         ? `- **Prod prefixes deleted (#1767)**: ${deleted} of ${plan.deletes.paths.length}${deletesHeld ? ` — ❌ held: ${plan.deletes.reason}` : ''}\n`
         : '') +
-      (plan.removals.paths.length + plan.removals.held.length > 0
-        ? `- **Stale objects removed (#2232)**: ${removal.removed} of ${plan.removals.paths.length}${removal.ok ? '' : ' — ❌ a removal failed'}${plan.removals.held.length ? `; ${plan.removals.held.length} held with their date` : ''}\n`
+      (removalsPlanned > 0 || removalError
+        ? `- **Stale #1671 gap-district objects removed (#2232)**: ${removed} of ${removalsPlanned}${removalsOk ? '' : ' — ❌ not all; the next promote of the date converges'}\n`
         : '')
   )
   if (!ok) return 1
-  // Nothing else ever removes a stale object: a failed removal fails the step.
-  if (!removal.ok) return 1
+  if (!removalsOk) return 1
   // A reconcile that could not delete is a failed reconcile: prod keeps
   // dates staging pruned, and the next daily's count gate would freeze.
   return deletesHeld ? 1 : 0
@@ -490,9 +471,6 @@ function summaryMarkdown(
     `- **Never promoted (internal)**: ${plan.excluded.length}`,
     plan.deletes.paths.length > 0
       ? `- **Prod prefixes to delete (#1767)**: ${plan.deletes.paths.length} — ${plan.deletes.promote ? 'after the entry points' : `HELD — ${plan.deletes.reason}`}`
-      : '',
-    plan.removals.paths.length + plan.removals.held.length > 0
-      ? `- **Stale objects to remove (#2232)**: ${plan.removals.paths.length} after the entry points; ${plan.removals.held.length} held with their date`
       : '',
     plan.heldAll ? `- ⚠️ ${plan.heldAll}` : '',
     '',

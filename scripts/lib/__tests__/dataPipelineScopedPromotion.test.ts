@@ -200,18 +200,25 @@ describe('data-pipeline scoped promotion steps (#1763)', () => {
     )
   })
 
-  it('purges the CDN after a scoped promotion that copied anything, and only then', () => {
+  it('purges the CDN after a scoped promotion that copied or removed anything (#2232), and only then', () => {
     const purge = steps.find(
       s => s.name === 'Invalidate CDN cache after promotion (#1294)'
     )
     const c = conj(purge)
     for (const clause of [
-      "steps.promotemanifest.outputs.objects_copied != ''",
-      "steps.promotemanifest.outputs.objects_copied != '0'",
       "steps.mode.outputs.mode != 'prune'",
       SKIP_CLAUSE_SAME_JOB,
     ]) {
       expect(c, clause).toContain(clause)
+    }
+    const cond = (purge?.if ?? '').replace(/\s+/g, ' ')
+    for (const clause of [
+      "steps.promotemanifest.outputs.objects_copied != ''",
+      "steps.promotemanifest.outputs.objects_copied != '0'",
+      "steps.promotemanifest.outputs.objects_removed != ''",
+      "steps.promotemanifest.outputs.objects_removed != '0'",
+    ]) {
+      expect(cond, clause).toContain(clause)
     }
   })
 

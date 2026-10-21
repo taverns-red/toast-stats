@@ -165,10 +165,11 @@ env:
   REPORT_SIDECAR_MANIFEST_FILE: '/tmp/report-sidecars/written.jsonl'
   REPORT_SIDECAR_VERDICT_FILE: '/tmp/report-sidecars/verdict.json'
   # Its removal twin (#2232): one JSON line per staging object this run
-  # removed (a rebuild's failed district's earlier per-date objects),
-  # appended by scripts/pipeline/gcs-remove.sh; published to
-  # runs/<github_run_id>/removed.jsonl. Scoped promotion removes the same
-  # objects from prod with their date. Absent when nothing was removed.
+  # removed (a #1671 gap district's earlier transform objects), appended by
+  # scripts/pipeline/gcs-remove.sh; published to
+  # runs/<github_run_id>/removed.jsonl. An audit log only: scoped promotion
+  # derives prod's removals from bucket state, never from this file.
+  # Absent when nothing was removed.
   RUN_REMOVALS_FILE: '/tmp/run-manifest/removed.jsonl'
   # The education ledger seed (#2102): restored from the Actions cache before
   # each rollup build. scripts/pipeline/build-education-rollup.sh verifies it
@@ -2067,17 +2068,18 @@ jobs:
         id: runmanifest
         if: ${{ !cancelled() }}
         run: |
+          # The removals log (#2232) first, so it is published even when the
+          # run uploaded nothing.
+          if [ -s "${RUN_REMOVALS_FILE}" ]; then
+            gcloud storage cp --content-type="application/x-ndjson" \
+              "${RUN_REMOVALS_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/removed.jsonl"
+          fi
           if [ ! -s "${RUN_MANIFEST_FILE}" ]; then
             echo "No uploads recorded in ${RUN_MANIFEST_FILE}; nothing to publish"
             exit 0
           fi
           gcloud storage cp --content-type="application/x-ndjson" \
             "${RUN_MANIFEST_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl"
-          # The removals (#2232), when the run made any.
-          if [ -s "${RUN_REMOVALS_FILE}" ]; then
-            gcloud storage cp --content-type="application/x-ndjson" \
-              "${RUN_REMOVALS_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/removed.jsonl"
-          fi
           {
             echo "## 🧾 Run manifest (#1762)"
             echo "- **Objects written**: $(wc -l < "${RUN_MANIFEST_FILE}" | tr -d ' ') → \`runs/${GITHUB_RUN_ID}/written.jsonl\`"
@@ -2181,10 +2183,12 @@ jobs:
       # are run-level and must pass; the completeness gate is applied PER
       # DATE inside the promoter (a held date holds itself and the globals,
       # the other dates promote), so it only has to have produced a verdict.
-      # Additive, except the run's own removals (#2232): the exact stale
-      # per-date objects a rebuild removed from staging for a failed
-      # district (runs/<id>/removed.jsonl), removed from prod with their
-      # date after every copy. Exits 1 on a failed copy or removal.
+      # Additive, except #1671 gap districts (#2232): for each promoted date,
+      # prod objects of a gap district its staging metadata.json records
+      # (district_<id>.json, analytics/district_<id>_*; never the reports
+      # sidecar) that staging no longer holds are removed after every copy,
+      # only while prod's district file is the 0-club junk. Derived from
+      # state, so it converges. Exits 1 on a failed copy or removal.
       - name: Promote run manifest to production (#1763)
         id: promotemanifest
         if: >-
@@ -2234,13 +2238,15 @@ jobs:
       # hiccup, and the edge expires on its own TTL as a fallback. Note this
       # purges the EDGE only — an already-open browser tab still honours the
       # response's max-age until it reloads.
-      # Keyed off what the promote copied (#1763): a run that held a date
-      # still copied the others, and a run that copied nothing has nothing
-      # to purge.
+      # Keyed off what the promote copied (#1763) or removed (#2232): a run
+      # that held a date still copied the others, and a run that changed
+      # nothing has nothing to purge.
       - name: Invalidate CDN cache after promotion (#1294)
         if: >-
-          steps.promotemanifest.outputs.objects_copied != ''
-          && steps.promotemanifest.outputs.objects_copied != '0'
+          ((steps.promotemanifest.outputs.objects_copied != ''
+          && steps.promotemanifest.outputs.objects_copied != '0')
+          || (steps.promotemanifest.outputs.objects_removed != ''
+          && steps.promotemanifest.outputs.objects_removed != '0'))
           && steps.mode.outputs.mode != 'prune'
           && steps.mode.outputs.skip_promotion != 'true'
         continue-on-error: true
