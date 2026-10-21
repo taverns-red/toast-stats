@@ -10,7 +10,9 @@ import {
   evaluateChecks,
   expectedChecks,
   isDeadlineFailure,
+  workflowRunsInFlight,
   type ObservedCheck,
+  type ObservedWorkflowRun,
 } from '../ciGate'
 import { NON_CODE_GLOBS } from '../changedFilesGate'
 import { findJobNames, findPathFilterGlobs } from '../ciConfigGuard'
@@ -156,6 +158,56 @@ describe('evaluateChecks — fail closed on absence (#1484)', () => {
     expect(v.failed).toEqual([{ name: 'Test Suite', conclusion: 'skipped' }])
   })
 
+  it('waits on a skipped-only check while another run on the head is in flight (#2219)', () => {
+    // #2212: a no-op `edited` CI run (all jobs skipped) finished before the
+    // real CI run had created Test Suite / Build Applications. Skipped-only is
+    // not a verdict yet — the in-flight run may still report the real check.
+    const v = evaluateChecks(
+      [...CI_CHECKS],
+      [
+        completed('Quality Gates', 'skipped'),
+        completed('Test Suite', 'skipped'),
+        completed('Build Applications', 'skipped'),
+      ],
+      { runsInFlight: true }
+    )
+    expect(v.state).toBe('pending')
+    expect(v.failed).toEqual([])
+    expect(v.pending).toEqual([...CI_CHECKS])
+    expect(isDeadlineFailure(v, false)).toBe(false)
+    // ...but never forever: the existing deadline still converts it to a fail.
+    expect(isDeadlineFailure(v, true)).toBe(true)
+  })
+
+  it('still fails a skipped-only check once every run on the head completed (#2219)', () => {
+    const v = evaluateChecks(
+      [...CI_CHECKS],
+      [
+        completed('Quality Gates', 'success'),
+        completed('Test Suite', 'skipped'),
+        completed('Build Applications', 'success'),
+      ],
+      { runsInFlight: false }
+    )
+    expect(v.state).toBe('fail')
+    expect(v.failed).toEqual([{ name: 'Test Suite', conclusion: 'skipped' }])
+  })
+
+  it('an in-flight run does not soften a real failure (#2219)', () => {
+    const v = evaluateChecks(
+      [...CI_CHECKS],
+      [
+        completed('Quality Gates', 'success'),
+        completed('Test Suite', 'skipped'),
+        completed('Test Suite', 'failure'),
+        completed('Build Applications', 'success'),
+      ],
+      { runsInFlight: true }
+    )
+    expect(v.state).toBe('fail')
+    expect(v.failed).toEqual([{ name: 'Test Suite', conclusion: 'failure' }])
+  })
+
   it('a failure still fails even when another run of the name is green', () => {
     const v = evaluateChecks(
       [...CI_CHECKS],
@@ -199,6 +251,57 @@ describe('evaluateChecks — fail closed on absence (#1484)', () => {
     expect(describeVerdict(v)).toContain('not-yet-reported')
     expect(describeVerdict(v)).not.toContain('NOT SCHEDULED')
     expect(describeVerdict(v, true)).toContain('NOT SCHEDULED')
+  })
+})
+
+// Real shape of GET /repos/{repo}/actions/runs?head_sha=… items, trimmed to
+// the fields the gate reads (observed on #2212's head 5a7c3fa, 2026-10-20).
+const wfRun = (
+  id: number,
+  name: string,
+  status: string
+): ObservedWorkflowRun => ({ id, name, status })
+
+describe('workflowRunsInFlight — is another run on the head still going? (#2219)', () => {
+  it('is true while a non-gate workflow run is queued or in progress', () => {
+    expect(
+      workflowRunsInFlight(
+        [
+          wfRun(39513092034, 'CI', 'completed'),
+          wfRun(39513094743, 'CI', 'in_progress'),
+          wfRun(39513094797, 'CI Gate', 'in_progress'),
+        ],
+        39513094797
+      )
+    ).toBe(true)
+    expect(workflowRunsInFlight([wfRun(1, 'Docs', 'queued')], 2)).toBe(true)
+  })
+
+  it('ignores the gate itself and any other CI Gate run', () => {
+    // The gate is always in progress while it polls, and a superseded gate
+    // run never produces a required check.
+    expect(
+      workflowRunsInFlight(
+        [
+          wfRun(39513092034, 'CI', 'completed'),
+          wfRun(39513094743, 'CI', 'completed'),
+          wfRun(39513092089, 'CI Gate', 'in_progress'),
+          wfRun(39513094797, 'CI Gate', 'in_progress'),
+        ],
+        39513094797
+      )
+    ).toBe(false)
+  })
+
+  it('is false when every run on the head has completed', () => {
+    expect(workflowRunsInFlight([wfRun(1, 'CI', 'completed')], 2)).toBe(false)
+    expect(workflowRunsInFlight([], 2)).toBe(false)
+  })
+
+  it('ci-gate.yml grants actions: read so the run listing is readable', () => {
+    expect(workflow('ci-gate.yml')).toMatch(
+      /permissions:\n(?:\s+\S+: \S+\n)*\s+actions: read\n/
+    )
   })
 })
 
