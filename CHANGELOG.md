@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.65.2](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.65.1...toast-stats-v2.65.2) (2026-10-21)
+
+
+### Bug Fixes
+
+* **pipeline:** a rebuild leaves no per-date objects for a skipped district ([#2232](https://github.com/taverns-red/toast-stats/issues/2232)) ([#2233](https://github.com/taverns-red/toast-stats/issues/2233)) ([c63350c](https://github.com/taverns-red/toast-stats/commit/c63350ce7fc43e2946bcfa3c44a4b2e4f52585f6))
+* **rankings:** read April renewals from 'Apr. Ren.', not the on-time flag, in the confirmed-Distinguished check ([#2221](https://github.com/taverns-red/toast-stats/issues/2221)) ([#2223](https://github.com/taverns-red/toast-stats/issues/2223)) ([fe3ce4a](https://github.com/taverns-red/toast-stats/commit/fe3ce4ae5963387411277a92f2a468b25feaa09d))
+
+
+### Refactors
+
+* **pipeline:** reports sidecars reach prod only through the manifest promote ([#1767](https://github.com/taverns-red/toast-stats/issues/1767)) ([#2225](https://github.com/taverns-red/toast-stats/issues/2225)) ([b573646](https://github.com/taverns-red/toast-stats/commit/b5736460984c95e4ae6cde59c83266e0a221e069))
+
+
+### Performance
+
+* **mobile:** final mobile Lighthouse budgets at error level ([#1856](https://github.com/taverns-red/toast-stats/issues/1856)) ([#2231](https://github.com/taverns-red/toast-stats/issues/2231)) ([04bdae8](https://github.com/taverns-red/toast-stats/commit/04bdae8e0262418215e431619837c591e5790626))
+
 ## [2.65.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.65.0...toast-stats-v2.65.1) (2026-10-21)
 
 

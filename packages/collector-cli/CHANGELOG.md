@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.22.0...collector-cli-v1.22.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **rankings:** read April renewals from 'Apr. Ren.', not the on-time flag, in the confirmed-Distinguished check ([#2221](https://github.com/taverns-red/toast-stats/issues/2221)) ([#2223](https://github.com/taverns-red/toast-stats/issues/2223)) ([fe3ce4a](https://github.com/taverns-red/toast-stats/commit/fe3ce4ae5963387411277a92f2a468b25feaa09d))
+
 ## [1.22.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.21.0...collector-cli-v1.22.0) (2026-10-20)
 
 
