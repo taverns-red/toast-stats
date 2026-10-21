@@ -39,6 +39,9 @@
 #                        here — what the real CLI would have read (#1756)
 #   STUB_COPY_ON_COMPUTE optional: `<path under CACHE_DIR>=<dest>`; compute
 #                        copies that file to <dest>, the bytes it would parse
+#   STUB_FAILED_DISTRICTS optional: comma-separated ids the transform
+#                        records in metadata.json's failedDistricts, with a
+#                        #1671 gap reason in errors[] (#2232)
 #   STUB_CLUBS_BY_REGION optional: compute also rewrites
 #                        snapshots/A/clubs-by-region/{05,world}.json (#1800)
 set -euo pipefail
@@ -100,7 +103,16 @@ write_snapshot() {
   actual="$(remapped)"
   dir="${CACHE_DIR}/snapshots/${actual}"
   mkdir -p "${dir}"
-  printf '{"snapshotDate":"%s","sourceDate":"%s"}\n' "${actual}" "${DATE}" \
+  # The TransformService metadata fields the loop reads (#2232): district
+  # 61 succeeds; STUB_FAILED_DISTRICTS are recorded as failed, each with
+  # the `<id>: Skipped: ` #1671 gap reason.
+  jq -nc --arg a "${actual}" --arg d "${DATE}" \
+    --arg failed "${STUB_FAILED_DISTRICTS:-}" '
+    ($failed | split(",") | map(select(. != ""))) as $f
+    | {snapshotDate: $a, sourceDate: $d,
+       successfulDistricts: ["61"],
+       failedDistricts: $f,
+       errors: ($f | map("\(.): Skipped: club-performance.csv is not a CSV, a gap, not zero clubs (#1671)"))}' \
     >"${dir}/metadata.json"
   printf '{"districtId":"61","asOf":"%s"}\n' "${actual}" >"${dir}/district_61.json"
 }

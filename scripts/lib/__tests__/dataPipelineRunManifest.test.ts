@@ -58,6 +58,17 @@ describe('data-pipeline run manifest (#1762)', () => {
     expect(workflow.env?.RUN_MANIFEST_FILE).toMatch(/written\.jsonl$/)
   })
 
+  it('names one removals file beside it, which the promoter reads and the run publishes (#2232)', () => {
+    const removals = workflow.env?.RUN_REMOVALS_FILE ?? ''
+    expect(removals).toMatch(/removed\.jsonl$/)
+    expect(path.dirname(removals)).toBe(
+      path.dirname(workflow.env?.RUN_MANIFEST_FILE ?? '')
+    )
+    expect(byName('Publish run manifest (#1762)')?.run).toMatch(
+      /"\$\{RUN_REMOVALS_FILE\}" "gs:\/\/\$\{GCS_BUCKET\}\/runs\/\$\{GITHUB_RUN_ID\}\/removed\.jsonl"/
+    )
+  })
+
   it('no step in the pipeline job uploads to staging with a raw gcloud call: every write is recorded', () => {
     // The one exemption: publishing the manifest itself, which is not an
     // object the run produced for promotion.

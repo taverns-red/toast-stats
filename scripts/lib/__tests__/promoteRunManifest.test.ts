@@ -621,6 +621,149 @@ describe('gcloud shim: rm -r of a prefix (#1767 harness)', () => {
   })
 })
 
+/**
+ * #2232: the rebuild removed district U's stale per-date objects from
+ * staging (U failed on that date) and recorded them in the run removals
+ * file. Prod still holds its copies from the earlier build; promotion of
+ * the date must remove them, exactly those objects, after every copy.
+ */
+describe('promote-run-manifest --execute: removals of a failed district (#2232)', () => {
+  let removalsFile: string
+  const STALE = [
+    'snapshots/2026-10-10/analytics/district_U_analytics.json',
+    'snapshots/2026-10-10/district_U.json',
+  ]
+
+  beforeEach(() => {
+    for (const p of STALE) put(PROD, p, '{"stale":0}', true)
+    // A neighbour the run did not remove, and U on a date it did not touch.
+    put(PROD, 'snapshots/2026-10-10/district_UX.json', '{"keep":1}', true)
+    put(PROD, 'snapshots/2026-10-01/district_U.json', '{"keep":1}', true)
+    removalsFile = path.join(tmp, 'removed.jsonl')
+    fs.writeFileSync(
+      removalsFile,
+      STALE.map(p =>
+        JSON.stringify({ path: p, date: '2026-10-10', stage: 'test' })
+      ).join('\n') + '\n'
+    )
+  })
+
+  const runRemovals = (args: string[], env: Record<string, string> = {}) =>
+    run(args, { RUN_REMOVALS_FILE: removalsFile, ...env })
+
+  it('removes exactly the recorded objects from prod, and nothing else', async () => {
+    writeInputs({ promote: true })
+    const before = tree(PROD)
+    const r = await runRemovals(['--execute'])
+    expect(r.status, r.stderr).toBe(0)
+    for (const p of STALE) expect(read(PROD, p)).toBeNull()
+    for (const p of STALE) expect(meta(PROD, p)).toBeNull()
+    const after = tree(PROD)
+    const gone = Object.keys(before).filter(k => !(k in after))
+    expect(gone.sort()).toEqual(STALE)
+    expect(read(PROD, 'snapshots/2026-10-10/district_UX.json')).not.toBeNull()
+    expect(read(PROD, 'snapshots/2026-10-01/district_U.json')).not.toBeNull()
+    expect(r.outputs.objects_removed).toBe('2')
+    expect(r.outputs.complete).toBe('true')
+  })
+
+  it('removes only after the v1/ entry points are copied', async () => {
+    writeInputs({ promote: true })
+    expect((await runRemovals(['--execute'])).status).toBe(0)
+    const log = fs.readFileSync(shimLog, 'utf-8').split('\n')
+    const lastCopy = log.map(l => l.startsWith('storage cp ')).lastIndexOf(true)
+    const firstRm = log.findIndex(l => l.startsWith('storage rm '))
+    expect(log[lastCopy]).toContain('v1/dates.json')
+    expect(firstRm).toBeGreaterThan(lastCopy)
+    expect(log.filter(l => l.startsWith('storage rm '))).toEqual([
+      `storage rm ${STALE.map(p => `gs://${PROD}/${p}`).join(' ')}`,
+    ])
+  })
+
+  it('keeps the removals of a held date: prod keeps that date whole', async () => {
+    writeInputs({ promote: false, heldDates: ['2026-10-10'] })
+    const r = await runRemovals(['--execute'])
+    expect(r.status, r.stderr).toBe(0)
+    for (const p of STALE) expect(read(PROD, p)).not.toBeNull()
+    expect(r.outputs.objects_removed).toBe('0')
+    expect(r.outputs.complete).toBe('false')
+  })
+
+  it('skips an object prod never had (a re-run converges)', async () => {
+    writeInputs({ promote: true })
+    fs.rmSync(path.join(root, PROD, STALE[0]!))
+    const r = await runRemovals(['--execute'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(read(PROD, STALE[1]!)).toBeNull()
+    expect(r.outputs.objects_removed).toBe('1')
+    expect(r.outputs.complete).toBe('true')
+    expect((await runRemovals(['--execute'])).status).toBe(0)
+  })
+
+  it('a failed removal fails the step: nothing else would ever remove it', async () => {
+    writeInputs({ promote: true })
+    const r = await runRemovals(['--execute'], { SHIM_FAIL_MATCH: '^rm ' })
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/::error title=Scoped promotion::.*remov/)
+    expect(r.outputs.complete).toBe('false')
+  })
+
+  it('refuses a malformed removals file and copies nothing', async () => {
+    writeInputs({ promote: true })
+    fs.writeFileSync(removalsFile, 'not json\n')
+    const before = tree(PROD)
+    const r = await runRemovals(['--execute'])
+    expect(r.status).toBe(2)
+    expect(tree(PROD)).toEqual(before)
+  })
+
+  it('a run that removed nothing has no removals file, and promotes as before', async () => {
+    writeInputs({ promote: true })
+    fs.rmSync(removalsFile)
+    const r = await runRemovals(['--execute'])
+    expect(r.status, r.stderr).toBe(0)
+    for (const p of STALE) expect(read(PROD, p)).not.toBeNull()
+    expect(r.outputs.objects_removed).toBe('0')
+  })
+
+  it('the dry run lists the removals and writes nothing', async () => {
+    writeInputs({ promote: true })
+    const before = tree(PROD)
+    const r = await runRemovals(['--dry-run'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(tree(PROD)).toEqual(before)
+    expect(r.stdout.split('\n').filter(l => l.startsWith('remove\t'))).toEqual(
+      STALE.map(p => `remove\tgs://${PROD}/${p}`)
+    )
+  })
+})
+
+describe('gcloud shim: rm of exact objects (#2232 harness)', () => {
+  const shim = (...args: string[]) =>
+    spawnSync(SHIM, args, {
+      encoding: 'utf-8',
+      env: { ...process.env, SHIM_ROOT: root },
+    })
+
+  it('removes each named object and its metadata, nothing else', () => {
+    const r = shim(
+      'storage',
+      'rm',
+      `gs://${PROD}/snapshots/2026-10-01/district_61.json`
+    )
+    expect(r.status, r.stderr).toBe(0)
+    expect(read(PROD, 'snapshots/2026-10-01/district_61.json')).toBeNull()
+    expect(meta(PROD, 'snapshots/2026-10-01/district_61.json')).toBeNull()
+    expect(read(PROD, 'snapshots/2026-10-10/district_61.json')).not.toBeNull()
+  })
+
+  it('fails on a URL that matches no object', () => {
+    const r = shim('storage', 'rm', `gs://${PROD}/snapshots/none.json`)
+    expect(r.status).toBe(1)
+    expect(r.stderr).toContain('matched no objects')
+  })
+})
+
 describe('promote-run-manifest: a prune reconcile whose gate could not run (#1767)', () => {
   it('deletes nothing and fails, since prune has no promotion-held flow', async () => {
     const deletesFile = path.join(tmp, 'prod-reconcile-paths.txt')

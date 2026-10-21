@@ -39,6 +39,7 @@ let shimLog: string
 let stubLog: string
 let summary: string
 let manifest: string
+let removals: string
 let uploadLog: string
 
 interface Result {
@@ -72,6 +73,7 @@ function run(
       BUILD_REPORTS_ROLLUPS: path.join(STUBS, 'build-reports-rollups'),
       STUB_LOG: stubLog,
       RUN_MANIFEST_FILE: manifest,
+      RUN_REMOVALS_FILE: removals,
       SHIM_UPLOAD_LOG: uploadLog,
       ...env,
     },
@@ -140,6 +142,7 @@ beforeEach(() => {
   stubLog = path.join(tmp, 'stubs.log')
   summary = path.join(tmp, 'summary.md')
   manifest = path.join(tmp, 'run', 'written.jsonl')
+  removals = path.join(tmp, 'run', 'removed.jsonl')
   uploadLog = path.join(tmp, 'uploads.log')
   fs.mkdirSync(path.join(root, BUCKET), { recursive: true })
 })
@@ -1156,6 +1159,116 @@ describe('process-dates.sh: force (#1771, ADR-015 P7)', () => {
     expect(r.status).toBe(2)
     expect(r.stderr).toMatch(/::error::process-dates: FORCE must be/)
     expect(lines(shimLog)).toEqual([])
+  })
+})
+
+/**
+ * #2232: a rebuild that records a district as failed (a #1671 gap: TI's
+ * HTML error page as the club report) writes nothing for it, but uploads
+ * only add, so the district's per-date objects from an earlier build
+ * survived in staging — and the next promotion of the date left prod's
+ * copies too. A 0-member district_U_analytics.json was still served on a
+ * date whose metadata.json says U failed.
+ */
+describe('process-dates.sh rebuild: a failed district leaves no per-date object (#2232)', () => {
+  const DATE = '2018-06-30'
+  const STALE = [
+    'analytics/district_U_analytics.json',
+    'analytics/district_U_membership.json',
+    'district_U.json',
+    'district_U_reports.json',
+  ]
+  const KEPT = [
+    // A succeeded district's report sidecar: rebuild does not write it.
+    'district_61_reports.json',
+    // A district the date's metadata does not record as failed.
+    'district_99.json',
+    // A date-level object.
+    'reports-rollups.json',
+  ]
+
+  function seed(): void {
+    putRaw(DATE)
+    for (const rel of [...STALE, ...KEPT]) {
+      putObject(`snapshots/${DATE}/${rel}`, '{"earlier":"build"}', true)
+    }
+  }
+
+  it("removes the failed district's earlier objects from staging and keeps everything else", () => {
+    seed()
+    const r = run('rebuild', [DATE], { STUB_FAILED_DISTRICTS: 'U' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(objectsUnder(`snapshots/${DATE}`)).toEqual([
+      'analytics/district_61_analytics.json',
+      'district_61.json',
+      'district_61_reports.json',
+      'district_99.json',
+      'metadata.json',
+      'reports-rollups.json',
+    ])
+  })
+
+  it('records every removal in the run removals file, for scoped promotion to carry to prod', () => {
+    seed()
+    const r = run('rebuild', [DATE], { STUB_FAILED_DISTRICTS: 'U' })
+    expect(r.status, r.stderr).toBe(0)
+    const recorded = lines(removals).map(l => JSON.parse(l))
+    expect(recorded).toEqual(
+      STALE.map(rel => ({
+        path: `snapshots/${DATE}/${rel}`,
+        date: DATE,
+        stage: 'process-dates:rebuild',
+      }))
+    )
+    // The removals are not uploads: the run manifest never names them.
+    const written = lines(manifest).map(l => JSON.parse(l).path as string)
+    for (const rel of STALE) {
+      expect(written).not.toContain(`snapshots/${DATE}/${rel}`)
+    }
+  })
+
+  it('removes one id exactly: district_U never matches district_UX', () => {
+    seed()
+    putObject(`snapshots/${DATE}/district_UX.json`, '{"other":1}', true)
+    const r = run('rebuild', [DATE], { STUB_FAILED_DISTRICTS: 'U' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(objectExists(`snapshots/${DATE}/district_UX.json`)).toBe(true)
+  })
+
+  it('removes nothing when no district failed', () => {
+    seed()
+    const r = run('rebuild', [DATE])
+    expect(r.status, r.stderr).toBe(0)
+    for (const rel of STALE) {
+      expect(objectExists(`snapshots/${DATE}/${rel}`)).toBe(true)
+    }
+    expect(lines(removals)).toEqual([])
+    expect(lines(shimLog).some(l => l.startsWith('storage rm'))).toBe(false)
+  })
+
+  it('removes nothing for a date it does not publish', () => {
+    seed()
+    const r = run('rebuild', [DATE], {
+      STUB_FAILED_DISTRICTS: 'U',
+      STUB_TRANSFORM_FAIL: DATE,
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+    for (const rel of STALE) {
+      expect(objectExists(`snapshots/${DATE}/${rel}`)).toBe(true)
+    }
+    expect(lines(removals)).toEqual([])
+  })
+
+  it('fails the run when a removal fails, so no stale object goes unreported', () => {
+    seed()
+    const r = run('rebuild', [DATE], {
+      STUB_FAILED_DISTRICTS: 'U',
+      SHIM_FAIL_MATCH: '^rm ',
+    })
+    expect(r.status).toBe(1)
+    expect(lines(removals)).toEqual([])
   })
 })
 
