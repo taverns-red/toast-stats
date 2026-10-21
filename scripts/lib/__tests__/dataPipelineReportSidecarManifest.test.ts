@@ -165,7 +165,8 @@ describe('promote-reports job (#1767)', () => {
       expect.arrayContaining(['pipeline', 'place-reports', 'education-rollup'])
     )
     const c = topLevelConjuncts(job?.if ?? '')
-    expect(c).toContain('!cancelled()')
+    // `!cancelled()` collapses to a group placeholder in the parser.
+    expect(c).toContain('!cancelled⟨group⟩')
     expect(c).toContain("needs.pipeline.result == 'success'")
     expect(c).toContain(SKIP_CLAUSE_DOWNSTREAM)
     expect(job?.if).toContain("needs.pipeline.outputs.promoted_dates != ''")

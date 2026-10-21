@@ -14,7 +14,7 @@
 #   2. hold unless the reports date the rollup was read from (`asOf`) is a
 #      date prod's v1/dates.json indexes: a rollup of a held day's reports
 #      must not ship ahead of that day;
-#   3. --if-changed (the place-reports carry): stop when prod's index is
+#   3. --if-changed (the promote-reports retry): stop when prod's index is
 #      byte-identical to staging's;
 #   4. copy exactly the per-PY objects the index names, bucket to bucket
 #      (a server-side rewrite: bytes and headers as built), then the index
@@ -23,8 +23,8 @@
 # derived/education-rollup/ is written.
 #
 # Called by the education-rollup job (gated on this run promoting its
-# snapshot date and skip_promotion off) and by carry-report-sidecars.sh with
-# --if-changed (a held day's rollup, on a later run).
+# snapshot date and skip_promotion off) and by the promote-reports job with
+# --if-changed (a held day's rollup, on a later run; #1767).
 #
 # Env: GCLOUD (default `gcloud`), GITHUB_STEP_SUMMARY (optional).
 # Exit codes: 0 mirrored, held or nothing to do · 1 a read, contract or copy
@@ -118,7 +118,7 @@ if [ -z "${AS_OF}" ] ||
   exit 0
 fi
 
-# 3. Nothing new for the carry.
+# 3. Nothing new for the retry.
 if [ "${IF_CHANGED}" -eq 1 ]; then
   set +e
   read_object "gs://${PROD}/${PREFIX}/index.json" "${WORK}/prod-index.json"

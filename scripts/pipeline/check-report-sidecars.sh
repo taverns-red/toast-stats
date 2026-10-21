@@ -8,8 +8,8 @@
 # holds a district_<id>_reports.json or reports-rollups.json that prod does
 # not: the date is live without the reports its pages read (on 2026-10-17 a
 # rebuild promoted 2026-10-16 with none of its 94 sidecars). A date without
-# reports in staging is complete. Read-only; runs after
-# carry-report-sidecars.sh, which is what should have closed every gap.
+# reports in staging is complete. Read-only; runs after the promote-reports
+# job's manifest promote (#1767), which is what should have closed every gap.
 #
 # Env: GCLOUD (default `gcloud`), GITHUB_STEP_SUMMARY (optional).
 # Exit codes: 0 complete · 1 a date is incomplete or a listing failed ·

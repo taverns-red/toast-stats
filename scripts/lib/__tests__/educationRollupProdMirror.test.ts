@@ -9,8 +9,8 @@
  *
  * - the job mirrors it when the build succeeded AND this run promoted its
  *   snapshot date AND skip_promotion is off;
- * - place-reports' carry re-tries on a later run, only when prod's copy
- *   differs from staging's.
+ * - a later run's promote-reports job re-tries it (--if-changed), only
+ *   when prod's copy differs from staging's (the carry did, until #1767).
  * Both go through scripts/pipeline/mirror-education-rollup.sh, which copies
  * exactly the objects staging's index names (each one the build recorded in
  * the run manifest), the index LAST (R15), and only when the reports date
@@ -35,7 +35,6 @@ import {
 
 const REPO = process.cwd()
 const MIRROR = path.join(REPO, 'scripts/pipeline/mirror-education-rollup.sh')
-const CARRY = path.join(REPO, 'scripts/pipeline/carry-report-sidecars.sh')
 const SHIM_DIR = path.join(REPO, 'scripts/lib/__tests__/fixtures/gcloud-shim')
 const STG = 'stg-bucket'
 const PROD = 'prod-bucket'
@@ -106,11 +105,19 @@ describe('the education-rollup job mirrors its build into prod (#1810)', () => {
     expect(found?.guarded).toBe(true)
   })
 
-  it('the carry re-tries it with --if-changed', () => {
-    const text = fs.readFileSync(CARRY, 'utf-8')
-    expect(text).toMatch(
-      /mirror-education-rollup\.sh"? "\$\{STAGING\}" "\$\{PROD\}" --if-changed/
+  it('a later run’s promote-reports re-tries it with --if-changed (#1767)', () => {
+    const retry = (workflow.jobs['promote-reports']?.steps ?? []).find(
+      s =>
+        s.name ===
+        '[reports] Mirror the education rollup a held run built (#1810)'
     )
+    expect(retry?.run).toBe(
+      'bash scripts/pipeline/mirror-education-rollup.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" --if-changed'
+    )
+    const found = findProdWriteSteps(workflow).find(
+      s => s.job === 'promote-reports' && s.step === retry?.name
+    )
+    expect(found?.guarded).toBe(true)
   })
 })
 
@@ -323,8 +330,8 @@ describe('mirror-education-rollup.sh (shim)', () => {
     expect(run([STG, PROD, '--always']).status).toBe(2)
   })
 
-  it('the carry re-tries a rollup prod lacks, as part of its run', () => {
-    const r = spawnSync('bash', [CARRY, STG, PROD], {
+  it('the --if-changed retry copies a rollup prod lacks', () => {
+    const r = spawnSync('bash', [MIRROR, STG, PROD, '--if-changed'], {
       cwd: REPO,
       encoding: 'utf-8',
       env: {

@@ -55,14 +55,13 @@ const PROMOTING =
   "steps.mode.outputs.mode != 'prune' || steps.mode.outputs.prune_reconcile == 'true'"
 
 describe('no direct gcloud writes into production (#1767 AC)', () => {
-  it('only the two reports mirrors still write prod with their own gcloud command', () => {
+  it('no step writes prod with its own gcloud command', () => {
+    // The two reports mirrors were the last; they now promote through the
+    // manifest too (dataPipelineReportSidecarManifest.test.ts).
     const direct = findProdWriteSteps(workflow)
       .filter(s => s.reasons.some(r => r.startsWith('gcloud storage ')))
-      .map(s => s.step)
-    expect(direct).toEqual([
-      '[reports] Mirror placed datasets into prod',
-      '[rollup] Mirror the reports rollups into prod (#2012)',
-    ])
+      .map(s => `${s.job} / ${s.step}`)
+    expect(direct).toEqual([])
   })
 
   it('has no step that deletes from or rsyncs into prod on its own', () => {
