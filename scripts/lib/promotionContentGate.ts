@@ -26,6 +26,7 @@ import {
   CLUBS_BY_REGION_UNASSIGNED,
   ClosedClubNameIndexSchema,
   ClubsByRegionShardSchema,
+  DistrictReportsDatasetSchema,
   ClubsByRegionWorldPointsSchema,
   ClubsByRegionWorldSchema,
   clubsByRegionShardFileName,
@@ -46,6 +47,7 @@ import {
   REGION_ROLLUPS_FILE_NAME,
   REPORTS_ROLLUPS_FILE_NAME,
   RegionRollupsSchema,
+  repairReportsPlaceText,
   ReportsRollupsSchema,
   type RegionRollupFigures,
 } from '@taverns-red/shared-contracts'
@@ -105,6 +107,7 @@ export type ObjectKind =
   | 'clubs-by-region-world-points'
   | 'region-membership-series'
   | 'reports-rollups'
+  | 'district-reports'
   | 'meeting-times'
   | 'latest'
   | 'json'
@@ -161,6 +164,9 @@ const REPORTS_ROLLUPS = new RegExp(
 const MEETING_TIMES = new RegExp(
   `^snapshots/(\\d{4}-\\d{2}-\\d{2})/${MEETING_TIMES_FILE_NAME.replace('.', '\\.')}$`
 )
+/** The daily-reports sidecar (#1069, #1767): one district's reports. */
+const DISTRICT_REPORTS =
+  /^snapshots\/(\d{4}-\d{2}-\d{2})\/district_([A-Za-z0-9]+)_reports\.json$/
 const DISTRICT_ANALYTICS =
   /^snapshots\/\d{4}-\d{2}-\d{2}\/analytics\/district_[A-Za-z0-9]+_[a-z-]+\.json$/
 
@@ -219,6 +225,7 @@ export function classifyObject(path: string): ObjectKind | null {
   if (CLUBS_BY_REGION_SHARD.test(path)) return 'clubs-by-region-shard'
   if (REGION_SERIES.test(path)) return 'region-membership-series'
   if (REPORTS_ROLLUPS.test(path)) return 'reports-rollups'
+  if (DISTRICT_REPORTS.test(path)) return 'district-reports'
   if (MEETING_TIMES.test(path)) return 'meeting-times'
   if (path === SNAPSHOT_INDEX_PATH) return 'snapshot-index'
   if (path === REGION_HISTORY_PATH) return 'district-region-history'
@@ -1130,6 +1137,39 @@ function checkReportsRollups(path: string, value: unknown): string | null {
 }
 
 /**
+ * snapshots/<date>/district_<id>_reports.json (#1069; content-checked since
+ * #1767, D-16): read the way the frontend reads it — fetchCdnDistrictReports
+ * drops a file that fails DistrictReportsDatasetSchema, silently, so a file
+ * that fails it is a missing overlay. Also the district its path names, the
+ * program year of its LOGICAL date (a June close collected in July is the
+ * June year's, as the pipeline places it), and no link, email or meeting
+ * credential left in a place-text field (#2097): the reports scrubber must
+ * find nothing to remove.
+ */
+function checkDistrictReports(path: string, value: unknown): string | null {
+  const parsed = DistrictReportsDatasetSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const m = DISTRICT_REPORTS.exec(path)
+  const r = parsed.data
+  if (m && r.districtId !== m[2]) {
+    return `districtId is ${JSON.stringify(r.districtId)}, but its path names district ${m[2]}`
+  }
+  if (m) {
+    const want = programYearForSnapshotDate(m[1]!)
+    if (r.programYear !== want) {
+      return `programYear is ${JSON.stringify(r.programYear)}, but ${m[1]} is in ${want}`
+    }
+  }
+  const scrub = repairReportsPlaceText(value)
+  if (scrub.scrubbed > 0) {
+    return `${scrub.scrubbed} place text value(s) carry a link, email or meeting credential (#2097)`
+  }
+  return null
+}
+
+/**
  * snapshots/<date>/meeting-times.json (#1814): the shared-contracts schema;
  * served under its own date with that logical date's program year; totals
  * = Σ districts; per district, scheduled ≤ clubs, the KPIs and every cell
@@ -1259,6 +1299,8 @@ export function checkObject(
       return checkRegionSeries(check.path, value)
     case 'reports-rollups':
       return checkReportsRollups(check.path, value)
+    case 'district-reports':
+      return checkDistrictReports(check.path, value)
     case 'meeting-times':
       return checkMeetingTimes(check.path, value)
     case 'latest':
@@ -1372,6 +1414,8 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
     'decoded, ClubsByRegionWorldPointsSchema, served under its snapshotDate with that date’s program year, count = its points, no club twice (#1800)',
   'region-membership-series':
     'decoded, RegionMembershipSeriesSchema, served under its programYear, every date in that year and ascending, each district in one region, world = Σ regions (null where a region is) (#2127)',
+  'district-reports':
+    'decoded, DistrictReportsDatasetSchema (what the frontend accepts), the districtId its path names, its logical date’s program year, no link, email or meeting credential in place text (#1767)',
   'reports-rollups':
     'decoded, ReportsRollupsSchema, served under its snapshotDate with that date’s program year, a district without reports null throughout, world = Σ districts, each region = Σ its districts, null when any district is (#2012)',
   'meeting-times':

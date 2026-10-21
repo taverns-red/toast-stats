@@ -25,6 +25,10 @@
  * Env: GCS_BUCKET (staging), GCS_BUCKET_PRODUCTION, RUN_MANIFEST_FILE,
  *      CONTENT_GATE_FILE (default /tmp/content-gate.json)
  *
+ * `--manifest-only` (#1767): read the manifest's objects and nothing else —
+ * no listing of the promoted prefixes, no sample of other changed objects.
+ * The report-sidecar promotion gates its own sidecar manifest this way.
+ *
  * `--self-check` (GCS_BUCKET only): list one small staging prefix through
  * the gate's listing path and exit non-zero if the SDK shape won't convert.
  */
@@ -79,7 +83,7 @@ async function run(): Promise<ContentGateResult> {
     gateBucket(storage, stagingName),
     gateBucket(storage, prodName),
     log,
-    { manifest }
+    { manifest, manifestOnly: process.argv.includes('--manifest-only') }
   )
 }
 

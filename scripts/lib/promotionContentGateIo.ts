@@ -194,6 +194,26 @@ export async function listPromoted(
   return parts.flat()
 }
 
+/**
+ * The directories of the manifest's promoted objects, listed flat (#1767):
+ * enough to know each object's encoding and whether staging has it.
+ */
+export async function listManifestDirs(
+  bucket: GateBucket,
+  manifest: readonly RunManifestEntry[]
+): Promise<GcsObjectMeta[]> {
+  const dirs = [
+    ...new Set(
+      manifest
+        .map(e => e.path)
+        .filter(p => PROMOTED_PREFIXES.some(prefix => p.startsWith(prefix)))
+        .map(p => p.slice(0, p.lastIndexOf('/') + 1))
+    ),
+  ].sort()
+  const parts = await mapLimit(dirs, CONCURRENCY, d => listFlat(bucket, d))
+  return parts.flat()
+}
+
 /** Stored bytes (no client-side decompression) + the served encoding. */
 export async function readStored(
   bucket: GateBucket,
@@ -250,19 +270,36 @@ export async function runContentGate(
   staging: GateBucket,
   prod: GateBucket,
   log: (msg: string) => void = () => {},
-  opts: { random?: () => number; manifest?: readonly RunManifestEntry[] } = {}
+  opts: {
+    random?: () => number
+    manifest?: readonly RunManifestEntry[]
+    /**
+     * Read the manifest's objects and nothing else (#1767): the report
+     * sidecar promotion, which runs after the run's own gate and promotes
+     * only its manifest. Lists just the directories the manifest names.
+     */
+    manifestOnly?: boolean
+  } = {}
 ): Promise<ContentGateResult> {
+  if (opts.manifestOnly && !opts.manifest) {
+    throw new Error('manifestOnly needs a run manifest')
+  }
   const started = Date.now()
+  const list = opts.manifestOnly
+    ? (b: GateBucket) => listManifestDirs(b, opts.manifest!)
+    : listPromoted
   const [stagingObjects, prodObjects] = await Promise.all([
-    listPromoted(staging),
-    listPromoted(prod),
+    list(staging),
+    list(prod),
   ])
   log(
     `[content-gate] listed ${stagingObjects.length} staging / ${prodObjects.length} prod objects ` +
       `in ${Math.round((Date.now() - started) / 1000)}s`
   )
 
-  const changed = diffChangedObjects(stagingObjects, prodObjects)
+  const changed = opts.manifestOnly
+    ? []
+    : diffChangedObjects(stagingObjects, prodObjects)
   const plan = opts.manifest
     ? planManifestChecks(opts.manifest, changed, { random: opts.random })
     : {
