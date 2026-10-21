@@ -682,7 +682,7 @@ jobs:
       # #1830 routes against the deployed channel — real CSP, staging CDN data,
       # real fonts. Assertions are `error` since 2026-10-19, after a green
       # week at `warn` (recorded on #1830); see lighthouserc.mobile.js for
-      # the per-route budgets and their ratchet issue.
+      # the per-route budgets (final since 2026-10-21, #1856).
       - name: Lighthouse mobile gate against preview
         if: env.HEAVY_SMOKE == 'true'
         uses: treosh/lighthouse-ci-action@v12
