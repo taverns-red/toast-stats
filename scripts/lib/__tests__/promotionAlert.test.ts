@@ -15,6 +15,7 @@ import {
   evaluatePromotion,
   buildPromotionHeldTitle,
   buildPromotionHeldBody,
+  REPORT_SIDECARS_HELD_TITLE,
   type ValueDiffOutput,
 } from '../promotionAlert'
 
@@ -406,5 +407,47 @@ describe('scoped promotion holds through the promotion-held flow (#1763)', () =>
     const body = buildPromotionHeldBody(r, { now: new Date(0) })
     expect(body).toContain('promotion only copies what a run wrote')
     expect(body).toContain('-f mode=rebuild -f dates=2025-06-30')
+  })
+})
+
+describe('report sidecar scope (#2227)', () => {
+  // promote-reports' alert: only the content gate on the sidecar manifest,
+  // held per date; the run's other dates promoted.
+  const r = evaluatePromotion({
+    countPromote: true,
+    valuePromote: true,
+    valueDiff: null,
+    contentPromote: false,
+    contentFailures: [
+      {
+        path: 'snapshots/2026-10-15/district_61_reports.json',
+        reason: 'place text holds a phone number',
+      },
+    ],
+    completenessPromote: true,
+    scopedComplete: false,
+    scopedHeldDates: ['2026-10-15'],
+  })
+
+  it('titles the issue as a report sidecar hold, with the held dates', () => {
+    const title = buildPromotionHeldTitle(r, 'report-sidecars')
+    expect(title.startsWith(REPORT_SIDECARS_HELD_TITLE)).toBe(true)
+    expect(title).toContain('Report sidecars held')
+    expect(title).toContain('2026-10-15')
+    // The main promotion's title is unchanged.
+    expect(buildPromotionHeldTitle(r)).toMatch(/^🚫 Promotion held/)
+  })
+
+  it('says only those sidecars are held, not the daily promotion', () => {
+    const body = buildPromotionHeldBody(r, {
+      now: new Date(0),
+      scope: 'report-sidecars',
+    })
+    expect(body).toContain('Report sidecars are held')
+    expect(body).not.toContain('Staging → production promotion is held')
+    expect(body).not.toContain('| Count gate (additive)')
+    expect(body).toContain('snapshots/2026-10-15/district_61_reports.json')
+    expect(body).toContain('Held date(s): 2026-10-15')
+    expect(body).toContain('promote-reports')
   })
 })

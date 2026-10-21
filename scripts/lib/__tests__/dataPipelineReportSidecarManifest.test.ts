@@ -60,6 +60,11 @@ const FETCH = '[reports] Fetch the run manifest'
 const PLAN = '[reports] Plan the report sidecar manifest (#1767)'
 const GATE = '[reports] Content gate the report sidecars (#1767)'
 const PROMOTE = '[reports] Promote the report sidecars (#1767)'
+const HOLD =
+  '[reports] Hold only the dates whose sidecars fail the content gate (#2227)'
+const ALERT = '[reports] Evaluate the report sidecar alert (#2227)'
+const FILE_ALERT = '[reports] File or refresh the report sidecar alert (#2227)'
+const CLOSE_ALERT = '[reports] Auto-close the report sidecar alert (#2227)'
 const CHECK =
   '[reports] Completeness gate: promoted dates have their reports (#2144)'
 
@@ -201,12 +206,14 @@ describe('promote-reports job (#1767)', () => {
     expect(gate?.if).toContain("steps.plan.outputs.objects != '0'")
   })
 
-  it('promotes only what passed the gate, through the manifest promoter, holding the run’s held dates', () => {
+  it('promotes the dates that passed the gate, through the manifest promoter, holding the rest (#2227)', () => {
     const p = step(JOB, PROMOTE)
     expect(p?.run).toBe('npx tsx scripts/promote-run-manifest.ts --execute')
     const c = topLevelConjuncts(p?.if ?? '')
-    expect(c).toContain("steps.contentgate.outputs.content_promote == 'true'")
-    expect(c).toContain("steps.plan.outputs.objects != '0'")
+    // Not content_promote: one bad date must not hold the others (#2227).
+    expect(p?.if ?? '').not.toContain('content_promote')
+    expect(c).toContain("steps.contenthold.outputs.objects != ''")
+    expect(c).toContain("steps.contenthold.outputs.objects != '0'")
     expect(p?.env?.RUN_MANIFEST_FILE).toBe(
       '${{ env.REPORT_SIDECAR_MANIFEST_FILE }}'
     )
@@ -219,6 +226,68 @@ describe('promote-reports job (#1767)', () => {
     )
     expect(found?.reasons).toEqual(['manifest promotion → production'])
     expect(found?.guarded).toBe(true)
+  })
+
+  it('applies the gate per date between the gate and the promote (#2227)', () => {
+    const h = step(JOB, HOLD)
+    expect(h?.id).toBe('contenthold')
+    expect(h?.run).toBe(
+      'npx tsx scripts/plan-report-sidecars.ts --apply-content-gate'
+    )
+    expect(h?.env?.CONTENT_GATE_FILE).toBe(
+      step(JOB, GATE)?.env?.CONTENT_GATE_FILE
+    )
+    expect(h?.if).toContain("steps.plan.outputs.objects != '0'")
+    expect(index(JOB, HOLD)).toBeGreaterThan(index(JOB, GATE))
+    expect(index(JOB, HOLD)).toBeLessThan(index(JOB, PROMOTE))
+  })
+
+  it('a content hold no longer fails the job; it files an alert instead (#2227)', () => {
+    expect(
+      steps(JOB).some(
+        s => /exit 1/.test(s.run ?? '') && /content_promote/.test(s.if ?? '')
+      )
+    ).toBe(false)
+    const a = step(JOB, ALERT)
+    expect(a?.id).toBe('sidecaralert')
+    expect(a?.run).toBe('npx tsx scripts/promotion-alert.ts')
+    expect(a?.if).toContain('!cancelled()')
+    expect(a?.env).toMatchObject({
+      ALERT_SCOPE: 'report-sidecars',
+      CONTENT_PROMOTE: '${{ steps.contenthold.outputs.content_promote }}',
+      CONTENT_GATE_FILE: step(JOB, GATE)?.env?.CONTENT_GATE_FILE,
+      SCOPED_COMPLETE: '${{ steps.contenthold.outputs.content_promote }}',
+      SCOPED_HELD_DATES: '${{ steps.contenthold.outputs.content_held_dates }}',
+    })
+    expect(index(JOB, ALERT)).toBeGreaterThan(index(JOB, PROMOTE))
+  })
+
+  it('files or refreshes only a report sidecar promotion-held issue (#2227)', () => {
+    const f = step(JOB, FILE_ALERT)
+    expect(f?.if).toContain("steps.sidecaralert.outputs.blocked == 'true'")
+    expect(f?.run).toContain('--label promotion-held')
+    expect(f?.run).toContain('Report sidecars held')
+    expect(f?.run).toContain('steps.sidecaralert.outputs.body_file')
+    expect(f?.env?.GH_TOKEN).toBe('${{ github.token }}')
+  })
+
+  it('auto-closes only the report sidecar issue, and only after a clean promote (#2227)', () => {
+    const c = step(JOB, CLOSE_ALERT)
+    expect(c?.if).toContain("steps.sidecaralert.outputs.promoted == 'true'")
+    expect(c?.if).toContain("steps.promote.outcome == 'success'")
+    expect(c?.run).toContain('Report sidecars held')
+    expect(c?.run).toContain('gh issue close')
+  })
+
+  it('the main promotion’s alert steps leave the report sidecar issue alone (#2227)', () => {
+    for (const name of [
+      'File or refresh promotion-held issue',
+      'Auto-close promotion-held issue on a promoting run',
+    ]) {
+      expect(step('pipeline', name)?.run, name).toContain(
+        'Report sidecars held'
+      )
+    }
   })
 
   it('then gates completeness for the promoted dates, even after a failure', () => {

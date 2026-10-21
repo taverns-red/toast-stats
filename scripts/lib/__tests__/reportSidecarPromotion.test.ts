@@ -26,7 +26,11 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as zlib from 'node:zlib'
-import { runPlanReportSidecars } from '../reportSidecarPlanRunner.js'
+import {
+  runApplySidecarContentGate,
+  runPlanReportSidecars,
+} from '../reportSidecarPlanRunner.js'
+import { evaluateContentGate } from '../promotionContentGate.js'
 import { runPromoteRunManifest } from '../promoteRunManifestRunner.js'
 import {
   carryDates,
@@ -395,5 +399,177 @@ describe('plan-report-sidecars + promote-run-manifest (shim)', () => {
         .status
     ).toBe(1)
     expect(fs.existsSync(sidecarManifest)).toBe(false)
+  })
+})
+
+/**
+ * A sidecar that fails the content gate holds only its own date (#2227).
+ *
+ * The gate (`promotion-content-gate.ts --manifest-only`) is all or nothing:
+ * one failure sets content_promote=false. Before #2227 the job then promoted
+ * nothing, so one bad sidecar carried from an older date held the run's own
+ * ~94 sidecars and reports-rollups.json, every day for up to 7 days. Now
+ * `plan-report-sidecars.ts --apply-content-gate` drops the failing dates from
+ * the sidecar manifest and adds them to the verdict, and the promoter copies
+ * the rest. The gate result is the real evaluateContentGate shape (its
+ * failures name the object path, pinned in promotionContentGateIo.test.ts).
+ */
+describe('a failing sidecar holds only its own date (#2227)', () => {
+  let gateFile: string
+  beforeEach(() => {
+    gateFile = path.join(tmp, 'sidecars', 'content-gate.json')
+  })
+
+  function writeGate(failing: Record<string, string>, error?: string) {
+    const planned = parseRunManifest(fs.readFileSync(sidecarManifest, 'utf-8'))
+    const result = evaluateContentGate({
+      changedCount: 0,
+      manifestCount: planned.length,
+      results: planned.map(e => ({
+        path: e.path,
+        kind: 'district-reports' as const,
+        failure: failing[e.path] ?? null,
+      })),
+      ...(error ? { error } : {}),
+    })
+    fs.mkdirSync(path.dirname(gateFile), { recursive: true })
+    fs.writeFileSync(gateFile, JSON.stringify(result, null, 2))
+  }
+
+  async function hold(extra: Record<string, string> = {}) {
+    let err = ''
+    const status = await runApplySidecarContentGate({
+      env: env({ CONTENT_GATE_FILE: gateFile, ...extra }),
+      err: s => {
+        err += s
+      },
+    })
+    return { status, err }
+  }
+
+  it('a bad carried sidecar holds its date; the run’s own date still promotes', async () => {
+    expect((await plan({ PROMOTED_DATES: '2026-10-16' })).status).toBe(0)
+    writeGate({ [C15]: 'district-reports: place text holds a phone number' })
+    fs.rmSync(output)
+    const h = await hold()
+    expect(h.status, h.err).toBe(0)
+    const kept = parseRunManifest(fs.readFileSync(sidecarManifest, 'utf-8'))
+    expect(kept.map(e => e.path).sort()).toEqual([F16, R16, R17, ROLL16].sort())
+    expect(JSON.parse(fs.readFileSync(verdictFile, 'utf-8'))).toMatchObject({
+      promote: false,
+      heldDates: ['2026-10-15', '2026-10-17'],
+    })
+    expect(outputs()).toMatchObject({
+      objects: '4',
+      content_promote: 'false',
+      content_held_dates: '2026-10-15',
+      held_dates: '2026-10-15,2026-10-17',
+    })
+
+    const before = tree(PROD)
+    const p = await promote()
+    expect(p.status, p.err).toBe(0)
+    const after = tree(PROD)
+    expect(
+      Object.keys(after)
+        .filter(k => after[k] !== before[k])
+        .sort()
+    ).toEqual([F16, R16, ROLL16].sort())
+    // The held date never reaches prod.
+    expect(read(PROD, C15)).toBeNull()
+    const copies = fs
+      .readFileSync(shimLog, 'utf-8')
+      .split('\n')
+      .filter(c => c.startsWith('storage cp') && c.includes(`gs://${PROD}/`))
+    expect(copies.some(c => c.includes('2026-10-15'))).toBe(false)
+  })
+
+  it('a bad sidecar of the run’s own date holds that date; the carry still promotes', async () => {
+    expect((await plan({ PROMOTED_DATES: '2026-10-16' })).status).toBe(0)
+    writeGate({ [F16]: 'district-reports: districtId is not "F"' })
+    expect((await hold()).status).toBe(0)
+    expect(outputs().content_held_dates).toBe('2026-10-16')
+    expect((await promote()).status).toBe(0)
+    expect(served(PROD, R16)).toContain('"old"')
+    expect(read(PROD, F16)).toBeNull()
+    expect(read(PROD, ROLL16)).toBeNull()
+    expect(served(PROD, C15)).toContain('"carry"')
+  })
+
+  it('every date failing: an empty manifest, nothing to promote', async () => {
+    expect((await plan({ PROMOTED_DATES: '2026-10-16' })).status).toBe(0)
+    writeGate({ [C15]: 'bad', [R16]: 'bad', [R17]: 'bad' })
+    expect((await hold()).status).toBe(0)
+    expect(outputs()).toMatchObject({
+      objects: '0',
+      content_held_dates: '2026-10-15,2026-10-16,2026-10-17',
+    })
+    expect(fs.existsSync(sidecarManifest)).toBe(false)
+  })
+
+  it('a passing gate changes nothing', async () => {
+    expect((await plan({ PROMOTED_DATES: '2026-10-16' })).status).toBe(0)
+    const planned = fs.readFileSync(sidecarManifest, 'utf-8')
+    writeGate({})
+    fs.rmSync(output)
+    expect((await hold()).status).toBe(0)
+    expect(fs.readFileSync(sidecarManifest, 'utf-8')).toBe(planned)
+    expect(outputs()).toMatchObject({
+      objects: '5',
+      content_promote: 'true',
+      content_held_dates: '',
+      held_dates: '2026-10-17',
+    })
+  })
+
+  it('fails closed: a gate that could not run, or no gate result, holds every date', async () => {
+    expect((await plan({ PROMOTED_DATES: '2026-10-16' })).status).toBe(0)
+    const planned = fs.readFileSync(sidecarManifest, 'utf-8')
+    writeGate({}, 'listing failed')
+    expect((await hold()).status).toBe(0)
+    expect(outputs()).toMatchObject({
+      objects: '0',
+      content_promote: 'false',
+      content_held_dates: '2026-10-15,2026-10-16,2026-10-17',
+    })
+    expect(fs.existsSync(sidecarManifest)).toBe(false)
+
+    fs.mkdirSync(path.dirname(sidecarManifest), { recursive: true })
+    fs.writeFileSync(sidecarManifest, planned)
+    fs.rmSync(gateFile)
+    fs.rmSync(output)
+    expect((await hold()).status).toBe(0)
+    expect(outputs()).toMatchObject({ objects: '0', content_promote: 'false' })
+  })
+
+  it('fails closed on a failure it cannot place under a planned date', async () => {
+    expect((await plan({ PROMOTED_DATES: '2026-10-16' })).status).toBe(0)
+    writeGate({})
+    const g = JSON.parse(fs.readFileSync(gateFile, 'utf-8'))
+    g.promote = false
+    g.failures = [{ path: 'v1/latest.json', reason: 'not planned' }]
+    fs.writeFileSync(gateFile, JSON.stringify(g))
+    fs.rmSync(output)
+    expect((await hold()).status).toBe(0)
+    expect(outputs()).toMatchObject({ objects: '0', content_promote: 'false' })
+  })
+
+  it('reports the held objects in the step summary', async () => {
+    expect((await plan({ PROMOTED_DATES: '2026-10-16' })).status).toBe(0)
+    writeGate({ [C15]: 'district-reports: place text holds a phone number' })
+    const summaryFile = path.join(tmp, 'summary.md')
+    expect((await hold({ GITHUB_STEP_SUMMARY: summaryFile })).status).toBe(0)
+    const md = fs.readFileSync(summaryFile, 'utf-8')
+    expect(md).toContain('2026-10-15')
+    expect(md).toContain(C15)
+    expect(md).toContain('place text holds a phone number')
+    expect(md).toMatch(/other dates? (still )?promote/)
+  })
+
+  it('needs the planned manifest and verdict', async () => {
+    expect((await plan({ PROMOTED_DATES: '2026-10-16' })).status).toBe(0)
+    writeGate({})
+    fs.rmSync(verdictFile)
+    expect((await hold()).status).toBe(2)
   })
 })
