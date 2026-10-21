@@ -491,57 +491,34 @@ describe('daily: built after place-reports, in the education-rollup job', () => 
   })
 })
 
-describe('daily: mirrored to prod when this run promoted the date (#1763)', () => {
-  // The job runs after the run's own promotion, and the next run's promoter
-  // copies only its own manifest, so without a mirror the artifact would
-  // never reach prod. Same rule as the sidecars' mirror: this snapshot date
-  // promoted, and skip_promotion is off. A held day is carried by
-  // carry-report-sidecars.sh on a later run.
-  type Step = WorkflowStep & { 'continue-on-error'?: boolean }
+describe('daily: promoted with the sidecars, never mirrored (#1767)', () => {
+  // The job runs after the run's own promotion. Until #1767 it mirrored the
+  // file straight to prod, unchecked; now the build's manifest line goes to
+  // the promote-reports job, which content-gates it (reports-rollups) and
+  // promotes it through the manifest promoter with the sidecars.
   const workflow = parse(
     fs.readFileSync(
       path.join(REPO, '.github/workflows/data-pipeline.yml'),
       'utf-8'
     )
-  ) as Workflow
-  const steps = (workflow.jobs['education-rollup']?.steps ?? []) as Step[]
-  const MIRROR = '[rollup] Mirror the reports rollups into prod (#2012)'
-  const mirror = steps.find(s => s.name === MIRROR)
-  const build = steps.find(s =>
-    (s.run ?? '').includes('build-reports-rollups.sh')
-  )
+  ) as Workflow & { jobs: Record<string, { needs?: string[] | string }> }
+  const steps = workflow.jobs['education-rollup']?.steps ?? []
 
-  it('runs after the build, keyed on the build having written the file', () => {
-    expect(mirror, 'no mirror step').toBeDefined()
-    expect(steps.indexOf(mirror!)).toBeGreaterThan(steps.indexOf(build!))
-    expect(build?.id).toBe('reportsrollups')
-    expect(topLevelConjuncts(mirror?.if ?? '')).toContain(
-      "steps.reportsrollups.outputs.built == 'true'"
-    )
+  it('the education-rollup job writes no reports rollup to prod', () => {
+    expect(
+      findProdWriteSteps(workflow)
+        .filter(s => s.job === 'education-rollup')
+        .map(s => s.step)
+    ).toEqual(['[rollup] Mirror the education rollup into prod (#1810)'])
+    expect(
+      steps.some(s => /reports rollups into prod/.test(s.name ?? ''))
+    ).toBe(false)
   })
 
-  it('only when this snapshot date promoted, and never under skip_promotion', () => {
-    const expr = (mirror?.if ?? '').replace(/\s+/g, ' ')
-    const c = topLevelConjuncts(mirror?.if ?? '')
-    expect(c).toContain(SKIP_CLAUSE_DOWNSTREAM)
-    expect(c).toContain('contains⟨group⟩')
-    expect(expr).toContain(
-      "contains(format(',{0},', needs.pipeline.outputs.promoted_dates), format(',{0},', needs.pipeline.outputs.snapshot_date))"
-    )
-  })
-
-  it('copies the one object bucket to bucket, and the guard sees it guarded', () => {
-    const run = (mirror?.run ?? '').replace(/\\\r?\n\s*/g, ' ')
-    expect(run).toContain(
-      'gcloud storage cp "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/reports-rollups.json" "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${SNAPSHOT_DATE}/"'
-    )
-    const found = findProdWriteSteps(workflow).find(s => s.step === MIRROR)
-    expect(found?.reasons).toEqual(['gcloud storage cp → production'])
-    expect(found?.guarded).toBe(true)
-  })
-
-  it('a prod-side failure does not fail the job (the carry catches up)', () => {
-    expect(mirror?.['continue-on-error']).toBe(true)
+  it('promote-reports runs after it, so the rollup is in the manifest it plans from', () => {
+    expect(
+      ([] as string[]).concat(workflow.jobs['promote-reports']?.needs ?? [])
+    ).toContain('education-rollup')
   })
 })
 

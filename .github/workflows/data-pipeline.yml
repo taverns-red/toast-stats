@@ -159,6 +159,11 @@ env:
   # runs/<github_run_id>/written.jsonl. The content gate reads every object
   # in it; the completeness gate takes its dates from it.
   RUN_MANIFEST_FILE: '/tmp/run-manifest/written.jsonl'
+  # The report-sidecar manifest and its verdict (#1767): what the
+  # promote-reports job content-gates and promotes, planned by
+  # scripts/plan-report-sidecars.ts from the run manifest above.
+  REPORT_SIDECAR_MANIFEST_FILE: '/tmp/report-sidecars/written.jsonl'
+  REPORT_SIDECAR_VERDICT_FILE: '/tmp/report-sidecars/verdict.json'
   # The education ledger seed (#2102): restored from the Actions cache before
   # each rollup build. scripts/pipeline/build-education-rollup.sh verifies it
   # against raw-education-ledger/ and downloads only what differs.
@@ -203,9 +208,10 @@ jobs:
       # re-statement of its gates, so a gate hold (#1715) or skip_promotion
       # (#1754) also reads false.
       promoted: ${{ steps.promotemanifest.outputs.complete == 'true' }}
-      # The dates it promoted, comma-separated. `place-reports` mirrors the
-      # sidecars, which land AFTER the promote, when the snapshot date is
-      # among them, even if the run held another date (#1763 PR 2).
+      # The dates it promoted, comma-separated. `promote-reports` promotes
+      # the sidecars, which land AFTER the promote, for exactly these dates
+      # (and carries older ones); every other date the run wrote holds its
+      # sidecars (#1763 PR 2, #1767).
       promoted_dates: ${{ steps.promotemanifest.outputs.promoted_dates }}
       # 'true' | 'false' — a staging-only proof run (#1754). Downstream jobs
       # gate their prod writes on it.
@@ -2832,7 +2838,7 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      # For scripts/pipeline/carry-report-sidecars.sh (#1763).
+      # For scripts/pipeline/gcs-upload.sh (#1767).
       - name: Checkout code
         uses: actions/checkout@v7
 
@@ -2937,6 +2943,23 @@ jobs:
           echo "place=true" >> "$GITHUB_OUTPUT"
           echo "- ✅ Program year agreed: \`${PIPELINE_PY}\`" >> "$GITHUB_STEP_SUMMARY"
 
+      # Start from what the pipeline job published, so the republish below
+      # keeps its records and adds the placed sidecars (#1767): the
+      # promote-reports job promotes them from it. If it cannot be read,
+      # nothing is republished (this job's lines alone would drop the
+      # pipeline's), and the sidecars wait for a later run's carry.
+      - name: '[reports] Fetch the run manifest'
+        id: seed
+        if: steps.py-assert.outputs.place == 'true'
+        run: |
+          mkdir -p "$(dirname "${RUN_MANIFEST_FILE}")"
+          if gcloud storage cp \
+            "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl" "${RUN_MANIFEST_FILE}"; then
+            echo "seeded=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Could not read runs/${GITHUB_RUN_ID}/written.jsonl; the placed sidecars go unrecorded and wait for a later run's carry"
+          fi
+
       - name: '[reports] Place datasets into the snapshot directory'
         id: place
         if: steps.py-assert.outputs.place == 'true'
@@ -2970,8 +2993,9 @@ jobs:
             exit 0
           fi
 
-          # Same headers as the pipeline's snapshot upload.
-          gcloud storage cp \
+          # Same headers as the pipeline's snapshot upload. Recorded in the
+          # run manifest (#1767): promote-reports reads it.
+          bash scripts/pipeline/gcs-upload.sh place-reports cp \
             --content-type="application/json" \
             --cache-control="public, max-age=3600, must-revalidate" \
             -Z \
@@ -2987,47 +3011,19 @@ jobs:
           if [ "${PROMOTED_DATES#*,"${SNAPSHOT_DATE}",}" = "${PROMOTED_DATES}" ]; then
             echo "::warning::[reports] This run did not promote ${SNAPSHOT_DATE}, so its" \
               "reports stay staging-only. Once a run promotes the date, a later" \
-              "run's carry step copies them (#1763)."
-            echo "- ⏸️ ${SNAPSHOT_DATE} was held or skipped — its reports are staging-only until a run promotes the date; the carry step then copies them (#1763)." \
+              "run's promote-reports carries them (#1763, #1767)."
+            echo "- ⏸️ ${SNAPSHOT_DATE} was held or skipped — its reports are staging-only until a run promotes the date; promote-reports then carries them (#1763, #1767)." \
               >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      # ── PROD PATH — explicit mirror ──
-      # This job runs AFTER `pipeline` has already promoted, and the run
-      # manifest never lists the sidecars, so promotion does not copy them.
-      # Mirror explicitly, only when `pipeline` promoted THIS snapshot date
-      # (a scoped run can promote it and hold another, #1763). Its own step
-      # so the skip_promotion guard (#1754) sits on the `if:`.
-      - name: '[reports] Mirror placed datasets into prod'
-        if: >-
-          steps.place.outputs.placed == 'true'
-          && contains(format(',{0},', needs.pipeline.outputs.promoted_dates), format(',{0},', needs.pipeline.outputs.snapshot_date))
-          && needs.pipeline.outputs.skip_promotion != 'true'
+      # No prod write here (#1767, D-16): the placed sidecars are in the run
+      # manifest, and the promote-reports job content-gates and promotes
+      # them through the manifest promoter, with the carry.
+      - name: '[reports] Publish run manifest'
+        if: ${{ !cancelled() && steps.seed.outputs.seeded == 'true' }}
         run: |
-          SNAPSHOT_DATE="${{ needs.pipeline.outputs.snapshot_date }}"
-          gcloud storage cp \
-            --content-type="application/json" \
-            --cache-control="public, max-age=3600, must-revalidate" \
-            -Z \
-            /tmp/daily-reports/*.json \
-            "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${SNAPSHOT_DATE}/"
-          echo "- ✅ Mirrored to \`prod:snapshots/${SNAPSHOT_DATE}/\` (this run promoted)" \
-            >> "$GITHUB_STEP_SUMMARY"
-
-      # ── PROD PATH — carry what a held run left (#1763 PR 2) ──
-      # The whole-prefix rsync used to copy a held day's sidecars on the next
-      # promoting run. Scoped promotion does not, so for the newest dates
-      # PROD indexes (dates whose own snapshot passed its gates), copy every
-      # sidecar staging holds and prod lacks, bucket to bucket. Additive,
-      # never a date prod does not index. Runs whatever this run did (that
-      # is the point); non-fatal, like the CDN purge.
-      - name: '[reports] Carry missing report sidecars into prod'
-        if: >-
-          !cancelled()
-          && needs.pipeline.result == 'success'
-          && needs.pipeline.outputs.skip_promotion != 'true'
-        continue-on-error: true
-        run: bash scripts/pipeline/carry-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}"
+          gcloud storage cp --content-type="application/x-ndjson" \
+            "${RUN_MANIFEST_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl"
 
       # Best-effort teardown of the run-scoped hand-off prefix so `incoming/`
       # never accumulates. Runs on every path, including a refused placement:
@@ -3152,8 +3148,9 @@ jobs:
 
       # snapshots/<date>/reports-rollups.json (#2012): region/world rollups
       # of the date's placed sidecars, written beside them in staging and
-      # recorded in the manifest republished below. No prod write: it moves
-      # with its date at the next promotion. No sidecars → nothing written.
+      # recorded in the manifest republished below. No prod write here:
+      # promote-reports content-gates and promotes it with the sidecars
+      # (#1767). No sidecars → nothing written.
       - name: '[rollup] Build the reports rollups (#2012)'
         id: reportsrollups
         run: |
@@ -3166,32 +3163,15 @@ jobs:
             echo "built=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # ── PROD PATH (#1763) — like place-reports' sidecar mirror ──
-      # This job runs after the run's own promotion, and a later run's
-      # promoter copies only its own manifest, so the artifact is mirrored
-      # here, only when this run promoted THIS snapshot date. A held day is
-      # carried by carry-report-sidecars.sh on a later run's place-reports.
-      # Bucket to bucket: the -Z layer and the CDN headers arrive as written.
-      - name: '[rollup] Mirror the reports rollups into prod (#2012)'
-        if: >-
-          steps.reportsrollups.outputs.built == 'true'
-          && contains(format(',{0},', needs.pipeline.outputs.promoted_dates), format(',{0},', needs.pipeline.outputs.snapshot_date))
-          && needs.pipeline.outputs.skip_promotion != 'true'
-        continue-on-error: true
-        run: |
-          SNAPSHOT_DATE="${{ needs.pipeline.outputs.snapshot_date }}"
-          gcloud storage cp "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/reports-rollups.json" "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${SNAPSHOT_DATE}/"
-          echo "- ✅ Mirrored \`reports-rollups.json\` to \`prod:snapshots/${SNAPSHOT_DATE}/\` (this run promoted the date)" \
-            >> "$GITHUB_STEP_SUMMARY"
-
-      # ── PROD PATH (#1810) — like place-reports' sidecar mirror ──
+      # ── PROD PATH (#1810) — the one direct prod write left (#1767) ──
       # This job runs after the run's own promotion, and derived/ is not a
       # promoted prefix, so the rollup is mirrored here: only a build that
       # succeeded, only when this run promoted THIS snapshot date. The script
       # also holds a rollup whose reports date prod does not index, copies
-      # the years the index names, then the index. A held day is carried by
-      # carry-report-sidecars.sh on a later run's place-reports. Bucket to
-      # bucket: bytes and headers arrive as built.
+      # the years the index names, then the index. A held day is retried
+      # with --if-changed by a later run's promote-reports. Bucket to
+      # bucket: bytes and headers arrive as built. Pinned as an exemption in
+      # scripts/lib/prodWriteGuard.ts until it moves onto the manifest.
       - name: '[rollup] Mirror the education rollup into prod (#1810)'
         if: >-
           steps.education.outputs.built == 'true'
@@ -3207,31 +3187,52 @@ jobs:
             "${RUN_MANIFEST_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl"
 
   # ══════════════════════════════════════════════════════════
-  # CARRY THE PROMOTED DATES' REPORTS (#2144) — EVERY MODE
+  # PROMOTE THE REPORT SIDECARS (#1767, ADR-015 step 9; #1763, #2144)
   #
-  # Report sidecars are not in the run manifest, so scoped promotion never
-  # copies them. place-reports mirrors and carries them, but it runs only
-  # after a daily scrape: rebuild 39053839345 (2026-10-17) promoted
-  # 2026-10-16 with none of its 94 sidecars. This job runs whenever the
-  # run promoted dates, in any mode, after the placement and the rollups:
-  #   1. carry-report-sidecars.sh for exactly those dates (CARRY_DATES);
-  #   2. a completeness gate: a promoted date whose reports staging holds
-  #      and prod lacks fails the run, so the gap is never silent.
+  # district_*_reports.json (place-reports) and reports-rollups.json
+  # (education-rollup) land in staging AFTER the pipeline job promoted, so
+  # its promotion never sees them. Both writers record them in the run
+  # manifest; this job sends them to prod through the same promoter, after
+  # the content gate has read every one (D-16: they used to be mirrored
+  # straight to prod, unchecked):
+  #   1. plan the sidecar manifest: this run's sidecars, plus every sidecar
+  #      staging holds and prod lacks for prod's newest 7 indexed dates and
+  #      the dates this run promoted (the carry: a held day's reports once
+  #      that day promotes; a rebuild's promoted dates, #2144). A date this
+  #      run wrote and did not promote holds its sidecars;
+  #   2. content-gate exactly that manifest;
+  #   3. promote it (scripts/promote-run-manifest.ts --execute);
+  #   4. completeness: a promoted date whose reports staging holds and prod
+  #      lacks fails the run, so the gap is never silent (#2144);
+  #   5. retry the education rollup a held run built (#1810), --if-changed.
+  # Runs in every mode that promoted a date, and after every daily scrape.
   # ══════════════════════════════════════════════════════════
-  carry-reports:
-    name: 'carry the promoted dates’ reports into prod'
+  promote-reports:
+    name: 'promote the report sidecars into prod'
     runs-on: ubuntu-26.04
     needs: [pipeline, place-reports, education-rollup]
     if: >-
       !cancelled()
       && needs.pipeline.result == 'success'
-      && needs.pipeline.outputs.promoted_dates != ''
+      && (needs.pipeline.outputs.promoted_dates != '' || needs.pipeline.outputs.snapshot_date != '')
       && needs.pipeline.outputs.skip_promotion != 'true'
     timeout-minutes: 30
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared-contracts
+        run: npm run build --workspace=@taverns-red/shared-contracts
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3
@@ -3242,22 +3243,71 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
         with:
-          # Exact pin (#1720): rsync must decompress gzip downloads (#1702).
+          # Exact pin (#1720): downloads decompress gzip (#1702); the planner
+          # hashes what it downloads.
           version: '588.0.0'
 
       - name: Log Cloud SDK version
         run: gcloud version
 
-      - name: '[reports] Carry the promoted dates’ report sidecars (#2144)'
+      # Everything the run wrote, including place-reports' and
+      # education-rollup's lines. Unreadable fails the job: without it the
+      # planner cannot tell a held date from a promoted one.
+      - name: '[reports] Fetch the run manifest'
+        run: |
+          mkdir -p "$(dirname "${RUN_MANIFEST_FILE}")"
+          gcloud storage cp \
+            "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl" "${RUN_MANIFEST_FILE}"
+
+      - name: '[reports] Plan the report sidecar manifest (#1767)'
+        id: plan
         env:
-          CARRY_DATES: ${{ needs.pipeline.outputs.promoted_dates }}
-        run: bash scripts/pipeline/carry-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}"
+          PROMOTED_DATES: ${{ needs.pipeline.outputs.promoted_dates }}
+        run: npx tsx scripts/plan-report-sidecars.ts
+
+      # The pipeline's content gate (#1715), on the sidecar manifest only:
+      # decode, parse, hash and the reports contract (district-reports,
+      # reports-rollups). Fails closed through content_promote.
+      - name: '[reports] Content gate the report sidecars (#1767)'
+        id: contentgate
+        if: steps.plan.outputs.objects != '' && steps.plan.outputs.objects != '0'
+        env:
+          RUN_MANIFEST_FILE: ${{ env.REPORT_SIDECAR_MANIFEST_FILE }}
+          CONTENT_GATE_FILE: /tmp/report-sidecars/content-gate.json
+        run: npx tsx scripts/promotion-content-gate.ts --manifest-only
+
+      # The one prod-write mechanism: the same promoter as the pipeline job,
+      # on the sidecar manifest, holding the dates the plan's verdict holds.
+      - name: '[reports] Promote the report sidecars (#1767)'
+        id: promote
+        if: >-
+          steps.contentgate.outputs.content_promote == 'true'
+          && steps.plan.outputs.objects != '0'
+        env:
+          RUN_MANIFEST_FILE: ${{ env.REPORT_SIDECAR_MANIFEST_FILE }}
+          COMPLETENESS_GATE_FILE: ${{ env.REPORT_SIDECAR_VERDICT_FILE }}
+        run: npx tsx scripts/promote-run-manifest.ts --execute
+
+      - name: '[reports] Report sidecars held by the content gate (#1767)'
+        if: steps.contentgate.outputs.content_promote == 'false'
+        run: |
+          echo "::error title=Report sidecars::the content gate held the sidecar manifest — nothing promoted; see the content gate summary"
+          exit 1
 
       - name: '[reports] Completeness gate: promoted dates have their reports (#2144)'
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.pipeline.outputs.promoted_dates != '' }}
         env:
           PROMOTED_DATES: ${{ needs.pipeline.outputs.promoted_dates }}
         run: bash scripts/pipeline/check-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" "${PROMOTED_DATES}"
+
+      # The education rollup a held run built (#1810), once its reports
+      # date is one prod indexes; a no-op when prod already has staging's.
+      # derived/ is not a promoted prefix: the last direct prod write,
+      # pinned in scripts/lib/prodWriteGuard.ts.
+      - name: '[reports] Mirror the education rollup a held run built (#1810)'
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: bash scripts/pipeline/mirror-education-rollup.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" --if-changed
 
   # ══════════════════════════════════════════════════════════
   # EDUCATION LEDGER HISTORY BACKFILL (#1802) — STAGING ONLY

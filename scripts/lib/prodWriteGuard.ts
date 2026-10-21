@@ -13,9 +13,8 @@
  *     (`gcloud storage cp|rsync|mv` whose destination is prod),
  *   - removes or updates a production object,
  *   - runs the scoped promoter with `--execute` (#1763; it calls gcloud
- *     itself, so the pattern above cannot see its writes) or the report
- *     sidecar carry (scripts/pipeline/carry-report-sidecars.sh, likewise)
- *     or the education rollup mirror (mirror-education-rollup.sh, #1810),
+ *     itself, so the pattern above cannot see its writes) or the education
+ *     rollup mirror (mirror-education-rollup.sh, #1810, likewise),
  *   - invalidates the Cloud CDN, or
  *   - writes to the `promotion-held` issue flow (label/issue create, comment,
  *     close). An intentional skip must not open or close alerts.
@@ -95,10 +94,6 @@ export function prodWriteReasons(run: string): string[] {
     if (/promote-run-manifest\.ts\b.*--execute\b/.test(cmd)) {
       reasons.push('manifest promotion → production')
     }
-    // Likewise the report-sidecar carry (#1763 PR 2).
-    if (/carry-report-sidecars\.sh\b/.test(cmd)) {
-      reasons.push('report sidecar carry → production')
-    }
     // And the education rollup mirror (#1810).
     if (/mirror-education-rollup\.sh\b/.test(cmd)) {
       reasons.push('education rollup mirror → production')
@@ -172,4 +167,41 @@ export function findProdWriteSteps(
     }
   }
   return out
+}
+
+/**
+ * The reasons that are not a direct data write: the one prod-write
+ * mechanism (the manifest promoter, which every staged object reaches prod
+ * through, gated) and the promotion's side effects.
+ */
+const NOT_A_DIRECT_WRITE: ReadonlySet<string> = new Set([
+  'manifest promotion → production',
+  'CDN invalidation',
+  'promotion-held issue flow',
+])
+
+/**
+ * Steps allowed to write prod data outside the manifest promote, by step
+ * name, with the issue that retires each. The contract test
+ * (dataPipelineReportSidecarManifest.test.ts) pins `directProdWriteSteps`
+ * to exactly these.
+ */
+export const DIRECT_PROD_WRITE_EXEMPT: Readonly<Record<string, string>> = {
+  // derived/ is not a promoted prefix, so the promoter cannot copy it yet.
+  '[rollup] Mirror the education rollup into prod (#1810)':
+    '#2222: the education rollup moves onto the manifest promote',
+  '[reports] Mirror the education rollup a held run built (#1810)':
+    '#2222: the education rollup moves onto the manifest promote',
+}
+
+/**
+ * Every step that writes prod data by itself — a `gcloud storage` copy,
+ * move, remove or update into prod, or a script known to — instead of
+ * through scripts/promote-run-manifest.ts (#1767, ADR-015 step 9: one
+ * prod-write mechanism).
+ */
+export function directProdWriteSteps(workflow: Workflow): ProdWriteStep[] {
+  return findProdWriteSteps(workflow).filter(s =>
+    s.reasons.some(r => !NOT_A_DIRECT_WRITE.has(r))
+  )
 }

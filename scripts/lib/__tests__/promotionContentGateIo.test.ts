@@ -572,3 +572,86 @@ describe('selfCheckListing (read-only probe of the real SDK shape)', () => {
     )
   })
 })
+
+describe('runContentGate manifestOnly: the report-sidecar promotion (#1767)', () => {
+  // A real prod sidecar (D61, 2026-10-20), sections cut to two records.
+  const SIDECAR = JSON.parse(
+    fs.readFileSync(
+      path.resolve(
+        __dirname,
+        'fixtures/district-reports/district_61_reports.json'
+      ),
+      'utf-8'
+    )
+  ) as Record<string, unknown>
+  const DATE = '2026-10-20'
+  const P = `snapshots/${DATE}/district_61_reports.json`
+  const sha256 = (s: Stored) =>
+    createHash('sha256')
+      .update(gunzipSync(Buffer.from(s.bytes)))
+      .digest('hex')
+  const entry = (p: string, s: Stored) => ({
+    path: p,
+    sha256: sha256(s),
+    date: DATE,
+    stage: 'place-reports',
+  })
+  const LEFTOVER = 'snapshots/2026-10-08/district_61.json'
+  const nested: Stored = {
+    bytes: gzipSync(gzipSync(Buffer.from('{}'))),
+    contentEncoding: 'gzip',
+  }
+
+  it('reads only the manifest: a corrupt leftover elsewhere does not hold it', async () => {
+    const good = gz(SIDECAR)
+    const { staging, prod } = buckets({ [P]: good, [LEFTOVER]: nested })
+    const result = await runContentGate(staging, prod, () => {}, {
+      random: () => 0,
+      manifest: [entry(P, good)],
+      manifestOnly: true,
+    })
+    expect(result.failures).toEqual([])
+    expect(result.promote).toBe(true)
+    expect(result.checked.map(c => c.path)).toEqual([P])
+  })
+
+  it('lists only the directories the manifest names, never the promoted prefixes', async () => {
+    const good = gz(SIDECAR)
+    const { staging, prod } = buckets({ [P]: good })
+    await runContentGate(staging, prod, () => {}, {
+      manifest: [entry(P, good)],
+      manifestOnly: true,
+    })
+    for (const b of [staging, prod]) {
+      expect(b.calls.map(c => c.prefix)).toEqual([`snapshots/${DATE}/`])
+    }
+  })
+
+  it('holds a sidecar that fails the reports contract', async () => {
+    const bad = gz({ ...SIDECAR, districtId: 42 })
+    const { staging, prod } = buckets({ [P]: bad })
+    const result = await runContentGate(staging, prod, () => {}, {
+      manifest: [entry(P, bad)],
+      manifestOnly: true,
+    })
+    expect(result.promote).toBe(false)
+    expect(result.failures.map(f => f.path)).toEqual([P])
+  })
+
+  it('holds a listed sidecar staging does not have', async () => {
+    const { staging, prod } = buckets()
+    const result = await runContentGate(staging, prod, () => {}, {
+      manifest: [entry(P, gz(SIDECAR))],
+      manifestOnly: true,
+    })
+    expect(result.promote).toBe(false)
+    expect(result.failures[0]?.reason).toMatch(/missing from staging/)
+  })
+
+  it('needs a manifest', async () => {
+    const { staging, prod } = buckets()
+    await expect(
+      runContentGate(staging, prod, () => {}, { manifestOnly: true })
+    ).rejects.toThrow(/manifest/)
+  })
+})
