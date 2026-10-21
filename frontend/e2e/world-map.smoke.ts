@@ -10,9 +10,10 @@ import { test, expect, type Page } from './fixtures/test'
  *    the Map button opens the full-screen map, which then loads the shards;
  *  - 768 / 1280: the map loads every shard in parallel and draws the world
  *    (the status line counts > 10k clubs), with no CSP / worker / WebGL error;
- *  - online-only clubs (#2174): with three rows of one shard flagged
- *    `meetsOnline` (served by route interception until #2175 writes the
- *    flag), the legend shows "3 online clubs".
+ *  - online-only clubs (#2174): every region shard is intercepted, the real
+ *    `meetsOnline` flags (written since #2175 / #2201) are stripped and three
+ *    rows of one shard flagged, so the legend shows "3 online clubs" whatever
+ *    the live data holds.
  */
 
 const WORLD = '/regions/map'
@@ -148,15 +149,30 @@ test('world map: online-only clubs get the online clubs chip', async ({
   page,
 }) => {
   test.setTimeout(90_000)
-  await page.route('**/clubs-by-region/05.json', async route => {
-    const res = await route.fetch()
-    const body = (await res.json()) as { clubs: Record<string, unknown>[] }
-    body.clubs = body.clubs.map((c, i) =>
-      i < 3 ? { ...c, meetsOnline: true } : c
-    )
-    await route.fulfill({ response: res, json: body })
-  })
-  await open(page, WORLD, 'light', 1280)
+  // The count is fully the test's: every shard loses its live flags, and
+  // shard 05's first three rows are flagged (#2175 writes real ones).
+  const routed: string[] = []
+  await page.route(
+    url => SHARD_RE.test(url.pathname),
+    async route => {
+      const res = await route.fetch()
+      const body = (await res.json()) as { clubs: Record<string, unknown>[] }
+      const flag = new URL(route.request().url()).pathname.endsWith('/05.json')
+      body.clubs = body.clubs.map((c, i) => {
+        const { meetsOnline: _live, ...rest } = c
+        return flag && i < 3 ? { ...rest, meetsOnline: true } : rest
+      })
+      routed.push(route.request().url())
+      await route.fulfill({ response: res, json: body })
+    }
+  )
+  const { shards } = await open(page, WORLD, 'light', 1280)
+  await expect(
+    page.locator('.region-map__canvas:not([aria-busy])')
+  ).toBeVisible({ timeout: 60_000 })
+  // Every shard the page read went through the route above.
+  expect(shards.length).toBeGreaterThanOrEqual(14)
+  expect(routed.length).toBe(shards.length)
   await expect(
     page.getByRole('button', { name: /^3 online clubs$/ })
   ).toBeVisible({ timeout: 60_000 })
