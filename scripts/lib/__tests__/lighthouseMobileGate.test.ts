@@ -134,77 +134,56 @@ describe('lighthouserc.mobile.js (#1830)', () => {
       }
     })
 
-    it('is ratcheted to the 2026-10-13 runner measurements (#1856, #2014)', () => {
-      // Ceilings from 8 PR-preview runs x 3 samples (2026-10-13). LHCI asserts
-      // the best of 3 (`optimistic`), so each ceiling is the worst per-run
-      // best + headroom, or the #1830 target where that already passes. A
-      // budget may only go DOWN from here; never raise one to make a run pass.
+    it('holds the final budgets re-baselined on 2026-10-21 (#1856)', () => {
+      // Ron, 2026-10-21: "Re-baseline and close." 13 PR-preview runs x 3
+      // samples (2026-10-20/21). LHCI asserts the best of 3 (`optimistic`),
+      // so each LCP and total-bytes budget is the worst per-run best + ~10%,
+      // or the #1830 target where that already passes. These are the final
+      // budgets: no ratchet issue tracks them further. A budget may only go
+      // DOWN from here; never raise one to make a run pass.
       const KB = 1024
-      const CEILING: Record<string, Record<string, number>> = {
+      const FINAL: Record<string, Record<string, number>> = {
+        // LCP worst-best 3273 ms; total 327 KB
         landing: {
-          lcpMs: 4200,
-          cls: 0.1,
-          scriptBytes: 300 * KB,
-          totalBytes: 500 * KB,
-        },
-        district: {
-          lcpMs: 6600,
-          cls: 0.1,
-          scriptBytes: 300 * KB,
-          totalBytes: 1200 * KB,
-        },
-        // Ratchet 2 (#2014): #2009 dropped the Recharts chunk from clubs.
-        // 3 post-#2009 runs: script 229-230 KB, total 1180 KB per-run best.
-        clubs: {
-          lcpMs: 4800,
-          cls: 0.1,
-          scriptBytes: 300 * KB,
-          totalBytes: 1300 * KB,
-        },
-        // #1852 option C (2026-10-18): the hero data chain's floor on this
-        // gate. 4 PR-preview runs x 3 samples after PR #2147: median 3471 ms,
-        // worst per-run best 3469 ms. 3.0 s is not reachable without a new
-        // artifact (Lantern charges the CDN connection to any data-gated h1),
-        // so the budget is the measured median + ~10%.
-        club: {
-          lcpMs: 3800,
-          cls: 0.1,
-          scriptBytes: 300 * KB,
-          totalBytes: 1300 * KB,
-        },
-        regions: {
           lcpMs: 3600,
           cls: 0.1,
           scriptBytes: 300 * KB,
           totalBytes: 500 * KB,
         },
+        // LCP worst-best 4021 ms (no longer bimodal, #1995); total 481 KB
+        district: {
+          lcpMs: 4450,
+          cls: 0.1,
+          scriptBytes: 300 * KB,
+          totalBytes: 530 * KB,
+        },
+        // LCP worst-best 4310 ms; total 560 KB
+        clubs: {
+          lcpMs: 4750,
+          cls: 0.1,
+          scriptBytes: 300 * KB,
+          totalBytes: 620 * KB,
+        },
+        // LCP worst-best 3501 ms: 3800 stays (never raised); total 584 KB
+        club: {
+          lcpMs: 3800,
+          cls: 0.1,
+          scriptBytes: 300 * KB,
+          totalBytes: 640 * KB,
+        },
+        // LCP worst-best 3193 ms; total 317 KB
+        regions: {
+          lcpMs: 3500,
+          cls: 0.1,
+          scriptBytes: 300 * KB,
+          totalBytes: 500 * KB,
+        },
       }
-      for (const [route, ceiling] of Object.entries(CEILING)) {
-        for (const [metric, max] of Object.entries(ceiling)) {
-          expect(
-            rc.BUDGETS[route][metric],
-            `${route}.${metric}`
-          ).toBeLessThanOrEqual(max)
-        }
-      }
+      expect(rc.BUDGETS).toEqual(FINAL)
     })
 
-    it('any budget looser than its target names a ratchet issue', () => {
-      const { TARGET, BUDGETS, RATCHET_ISSUE } = rc
-      const loose = Object.entries(
-        BUDGETS as Record<string, Record<string, number>>
-      ).filter(([route, b]) => {
-        const lcpTarget = route === 'club' ? TARGET.clubLcpMs : TARGET.hubLcpMs
-        return (
-          b.lcpMs! > lcpTarget ||
-          b.cls! > TARGET.cls ||
-          b.scriptBytes! > TARGET.scriptBytes ||
-          b.totalBytes! > TARGET.totalBytes
-        )
-      })
-      if (loose.length > 0) {
-        expect(RATCHET_ISSUE).toMatch(/^#\d+$/)
-      }
+    it('has no open ratchet: the budgets are final, not tracked by an issue (#1856)', () => {
+      expect(rc).not.toHaveProperty('RATCHET_ISSUE')
     })
   })
 })
