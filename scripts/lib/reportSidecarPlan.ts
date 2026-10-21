@@ -21,7 +21,9 @@
  * What holds: every date this run wrote and did not promote (the pipeline's
  * scoped promote held it, or a run-level gate held everything). The verdict
  * is the completeness-gate shape the promoter reads, so a held date's
- * sidecars stay in staging exactly as its snapshot does.
+ * sidecars stay in staging exactly as its snapshot does. After the content
+ * gate, applySidecarContentGate holds each date with a refused sidecar the
+ * same way, so the other dates still promote (#2227).
  *
  * Pure; the I/O is in ./reportSidecarPlanRunner.ts.
  */
