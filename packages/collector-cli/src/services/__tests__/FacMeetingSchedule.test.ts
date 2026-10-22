@@ -761,6 +761,28 @@ describe('parseMeetingSchedule (#2243) — a bare hour starting a range', () => 
   })
 
   it.each([
+    ['Room 3 - 7 pm', '19:00'],
+    ['Level 3 - 6:30 PM', '18:30'],
+    ['Floor 2 - 7:00 pm', '19:00'],
+    ['Week 2 - 7 pm', '19:00'],
+    ['Sesion 1 - 7 pm', '19:00'],
+    ['Sala 2 a 7 pm', '19:00'],
+    ['Unit 7 - 8 pm', '20:00'],
+    ['Planta 2 - 19:00', '19:00'],
+    ['2 - 7 pm', '19:00'],
+  ])('a label number before a dash in %j is not a start', (time, start) => {
+    expect(starts('Tuesday', time)).toEqual([`Tuesday ${start}`])
+  })
+
+  it.each([
+    ['Thursdays 7-9 pm', '19:00'],
+    ['from 7 - 9 pm', '19:00'],
+    ['1st & 3rd 6-7:30 pm', '18:00'],
+  ])('a bare start after a day or "from" in %j still counts', (time, start) => {
+    expect(starts('Tuesday', time)).toEqual([`Tuesday ${start}`])
+  })
+
+  it.each([
     ['UTC-5 - 7 pm'],
     ['GMT+6 - 7 pm'],
     ['GMT + 6 - 7 pm'],
