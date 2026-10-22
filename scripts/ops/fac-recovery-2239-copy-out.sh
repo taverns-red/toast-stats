@@ -110,7 +110,23 @@ jnl() {
     args+=(--arg "${k}" "${kv#*=}")
     filter="${filter} + {${k}: \$${k}}"
   done
+  terminate_torn_tail "${sd}/journal.jsonl"
   jq -nc "${args[@]}" "${filter}" >>"${sd}/journal.jsonl"
+}
+
+# Before any append (#2240 T-1): a torn last line (no trailing newline, a
+# kill or a full disk mid-append) is ended with a newline and followed by a
+# `journal-tear-terminated` marker, so the next line never merges into the
+# fragment, and clean_journal knows that bad line was the tail it found.
+terminate_torn_tail() {
+  local f="$1"
+  [ -s "${f}" ] || return 0
+  # $(...) strips a trailing newline: empty means the last byte is "\n".
+  [ -n "$(tail -c 1 "${f}")" ] || return 0
+  printf '\n' >>"${f}"
+  jq -nc --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg run "${RUN_ID:-}" \
+    '{ts: $ts, run: $run, name: "", event: "journal-tear-terminated"}' >>"${f}"
+  echo "copy-out: warning: the journal ended in a torn line; terminated it before appending" >&2
 }
 
 # ── One object, steps 1-3 (run by xargs as `<script> __one ...`) ──
@@ -379,29 +395,44 @@ if [ "${MODE}" != dry-run ]; then
   touch "${STATE_DIR}/journal.jsonl"
   echo "copy-out: journal ${STATE_DIR}/journal.jsonl (kept; --recover reads it)"
 fi
-
-# The journal as a JSON array in <out> (#2240 R-3). Each line is one
-# append written before its step, so only the LAST line can be torn (a kill
-# or a full disk mid-append): it is skipped with a warning. A bad line
-# anywhere else means the file is not ours or was edited: 1, refuse.
+# The journal as a JSON array in <out> (#2240 R-3, T-1). Each line is one
+# append written before its step, so a bad (unparseable) line is accepted
+# only as a tear: the file's current last line (skipped, warned), or a line
+# directly followed by the `journal-tear-terminated` marker that
+# terminate_torn_tail wrote when it found that line as the tail (skipped,
+# warned). Any other bad line means the file is not ours or was edited:
+# return 1, and every caller refuses or fails — never reads it as empty.
 clean_journal() {
   local out="$1" parsed
   parsed="$(jq -R -s -c '
-    split("\n") | (if (.[-1] // "") == "" then .[:-1] else . end) as $ls
+    [split("\n") | to_entries[] | select(.value | length > 0)
+     | {line: (.key + 1), j: (.value | try fromjson catch null)}] as $ls
     | ($ls | length) as $n
-    | [$ls | to_entries[]
-       | (.value | try fromjson catch null) as $j
-       | if ($j | type) == "object" then {ok: $j} else {torn: .key} end]
-    | {entries: map(select(has("ok")) | .ok),
-       torn: map(select(has("torn")) | .torn), n: $n}' \
-    "${STATE_DIR}/journal.jsonl")" || return 1
-  if jq -e '.torn | length > 1 or (length == 1 and .[0] != ($n - 1))' \
-    --argjson n "$(jq '.n' <<<"${parsed}")" <<<"${parsed}" >/dev/null; then
-    echo "::error::copy-out: ${STATE_DIR}/journal.jsonl has a bad line before its last (lines $(jq -c '.torn | map(. + 1)' <<<"${parsed}")); not using it"
+    | [range(0; $n) as $k | $ls[$k] as $x
+       | if ($x.j | type) == "object" then {ok: $x.j}
+         elif $k == $n - 1 then {tornLast: $x.line}
+         elif (($ls[$k + 1].j | type) == "object"
+               and $ls[$k + 1].j.event == "journal-tear-terminated")
+           then {tornTerminated: $x.line}
+         else {bad: $x.line} end]
+    | {entries: map(select(has("ok")) | .ok
+                    | select(.event != "journal-tear-terminated")),
+       tornLast: map(select(has("tornLast")) | .tornLast),
+       tornTerminated: map(select(has("tornTerminated")) | .tornTerminated),
+       bad: map(select(has("bad")) | .bad)}' \
+    "${STATE_DIR}/journal.jsonl")" || {
+    echo "::error::copy-out: ${STATE_DIR}/journal.jsonl cannot be read"
+    return 1
+  }
+  if jq -e '.bad | length > 0' <<<"${parsed}" >/dev/null; then
+    echo "::error::copy-out: ${STATE_DIR}/journal.jsonl has a bad line before its last (lines $(jq -c '.bad' <<<"${parsed}")); not using it"
     return 1
   fi
-  if jq -e '.torn | length == 1' <<<"${parsed}" >/dev/null; then
-    echo "copy-out: warning: skipping a torn final journal line (line $(jq '.n' <<<"${parsed}")), cut by a kill or a full disk"
+  if jq -e '.tornLast | length > 0' <<<"${parsed}" >/dev/null; then
+    echo "copy-out: warning: skipping a torn final journal line (line $(jq -c '.tornLast[0]' <<<"${parsed}")), cut by a kill or a full disk"
+  fi
+  if jq -e '.tornTerminated | length > 0' <<<"${parsed}" >/dev/null; then
+    echo "copy-out: warning: skipping earlier torn journal line(s) $(jq -c '.tornTerminated' <<<"${parsed}"), terminated before a later append"
   fi
   jq -c '.entries' <<<"${parsed}" >"${out}"
 }
@@ -523,6 +554,18 @@ recover() {
 if [ "${MODE}" = recover ]; then
   : >"${WORK}/candidates.jsonl"
   recover
+fi
+
+# A resumed --execute / --pilot (#2240 T-1): the journal it will append to
+# must read cleanly first, so a corrupt one is never extended or reported
+# over as if empty. Its torn tail, if any, is terminated here, once, before
+# any worker appends.
+if [ "${MODE}" != dry-run ] && [ -s "${STATE_DIR}/journal.jsonl" ]; then
+  if ! clean_journal "${WORK}/resume-journal.json"; then
+    echo "::error::copy-out: not resuming over an unreadable journal in ${STATE_DIR}; nothing written"
+    exit 1
+  fi
+  terminate_torn_tail "${STATE_DIR}/journal.jsonl"
 fi
 
 # ══ Preflight (verify, never change) ══
@@ -708,9 +751,13 @@ while IFS= read -r d; do
 done <"${WORK}/batches"
 
 # ══ Report, from this run's journal lines ══
-# Tolerant of a torn last line (R-3); a corrupt journal still reports.
+# Tolerant of a torn tail (R-3). An unreadable journal (T-1) still prints
+# what can be printed, but marks the summary and fails the run: it is never
+# read as an empty, clean run.
+JOURNAL_OK=1
 if ! clean_journal "${WORK}/journal.json"; then
-  echo "::error::copy-out: the journal cannot be read; run --recover with --state-dir ${STATE_DIR}"
+  JOURNAL_OK=0
+  echo "::error::copy-out: the journal cannot be read, so this report cannot account for the run; inspect ${STATE_DIR}/journal.jsonl and the live objects of ${DATES[*]}"
   echo '[]' >"${WORK}/journal.json"
 fi
 jq -c --arg run "${RUN_ID}" '
@@ -729,6 +776,7 @@ RECOVER_CMD="${RECOVER_CMD} ${BUCKET} ${DATES[*]}"
 plan_summary | jq -c --slurpfile last "${WORK}/last.json" --arg bucket "${BUCKET}" \
   --argjson interrupted "$([ "${INTERRUPTED}" = 1 ] && echo true || echo false)" \
   --argjson gateFailed "$([ "${GATE_FAILED}" = 1 ] && echo true || echo false)" \
+  --argjson journalOk "$([ "${JOURNAL_OK}" = 1 ] && echo true || echo false)" \
   --arg sd "${STATE_DIR}" --arg recover "${RECOVER_CMD}" '
   ($last[0]) as $L
   | def stuckish: [.event] | inside(["step1-begin", "step1-ok", "step2-begin",
@@ -745,11 +793,14 @@ plan_summary | jq -c --slurpfile last "${WORK}/last.json" --arg bucket "${BUCKET
                  else null end)})),
      liveChanged: ($L | map(select(.event == "live-changed")) | map({name, reason})),
      interrupted: $interrupted, pipelineGateFailed: $gateFailed,
-     stateDir: $sd}
+     journalReadable: $journalOk, stateDir: $sd}
   | if (.stuck | length) > 0 then . + {recover: $recover} else . end' >&3
 
 if [ "${INTERRUPTED}" = 1 ]; then
   exit 130
+fi
+if [ "${JOURNAL_OK}" != 1 ]; then
+  exit 1
 fi
 if jq -e 'any(.[]; .event != "done" and .event != "skipped")' "${WORK}/last.json" >/dev/null ||
   [ "${GATE_FAILED}" = 1 ]; then
