@@ -349,8 +349,11 @@ interface TimeToken {
   meridiem?: 'am' | 'pm'
 }
 
+/** `:`, `h` or `.` between hour and minute ("7:30", "18h30", "7.30 pm",
+ *  #2243). A dot takes no spaces, so prose like "Rm 2. 30 people" is not
+ *  a time. A token never starts inside a number ("9.00pm" is not "00pm"). */
 const TIME_TOKEN =
-  /\bnoon\b|\b(\d{1,2})(?:\s*([:h])\s*(\d{2}))?(\s*h\b)?\s*(am|pm)?(?!\d)/g
+  /\bnoon\b|(?<![\d.:])\b(\d{1,2})(?:\s*([:h])\s*(\d{2})|(\.)(\d{2}))?(\s*h\b)?\s*(am|pm)?(?!\d)/g
 const RANGE_SEPARATOR = /^\s*(?:-|–|—|to|a|until|jusqu'?a)\s*$/
 const LIST_SEPARATOR = /^\s*(?:et|and|&|,|\/)\s*$/
 
@@ -364,12 +367,18 @@ function timeTokensIn(text: string): TimeToken[] {
       tokens.push({ start: at, end, hour: 12, minute: 0, twentyFour: true })
       continue
     }
-    const [, hourText, separator, minuteText, trailingH, meridiem] = match
+    const [, hourText, sep, colonMinute, dot, dotMinute, trailingH, meridiem] =
+      match
+    const separator = sep ?? dot
+    const minuteText = colonMinute ?? dotMinute
     // A bare number ("UTC-5", "1hr") is not a time.
     if (!minuteText && !trailingH && !meridiem && separator !== 'h') continue
     const hour = Number(hourText)
     const minute = minuteText ? Number(minuteText) : 0
     if (hour > 23 || minute > 59) continue
+    // "00 pm" names no hour; reading it as midnight put evening clubs at
+    // 00:00 (#2243). Unreadable → no start time ("time not stated").
+    if (hour === 0 && meridiem) continue
     tokens.push({
       start: at,
       end: match[0].trimEnd().length + at,
