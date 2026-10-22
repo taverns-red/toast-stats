@@ -17,7 +17,10 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { containsPlaceSecret } from '@taverns-red/shared-contracts'
+import {
+  containsPlaceSecret,
+  findClubContactField,
+} from '@taverns-red/shared-contracts'
 import {
   FAC_PARSED_ONLY_FIELDS,
   FAC_ROW_FIELDS,
@@ -365,5 +368,28 @@ describe('carryForwardFacDir (the CLI command)', () => {
     expect((await run()).totalDistricts).toBe(0)
     mkdirSync(join(dir, 'prior', 'district_61.json'), { recursive: true })
     expect((await run()).failed).toBe(1)
+  })
+})
+
+describe('carryForwardFac — a pre-#2026 prior (#2239 recovery source)', () => {
+  it('writes no contact key, though the prior carries them everywhere', () => {
+    // The soft-deleted generations predate the #2026 scrub. Synthetic values.
+    const prior = clone(ENRICHED)
+    rows(prior, 'clubs').forEach((r, i) => {
+      r['email'] = `club-${i}@example.com`
+      r['phone'] = `+1555010000${i}`
+    })
+    rows(prior, 'clubPerformance').forEach((r, i) => {
+      r['email'] = `club-${i}@example.com`
+      r['phone'] = `+1555010000${i}`
+    })
+    for (const p of (prior.data as Row)['prospectiveClubs'] as Row[]) {
+      p['email'] = 'ato@example.com'
+      p['phone'] = '+15550100999'
+    }
+    expect(findClubContactField(prior)).not.toBeNull()
+    const out = carryForwardFac(stripped(ENRICHED), prior)
+    expect(out.carried).toBe(4)
+    expect(findClubContactField(out.snapshot)).toBeNull()
   })
 })
