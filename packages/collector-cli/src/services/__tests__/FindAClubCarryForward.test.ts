@@ -393,3 +393,15 @@ describe('carryForwardFac — a pre-#2026 prior (#2239 recovery source)', () => 
     expect(findClubContactField(out.snapshot)).toBeNull()
   })
 })
+
+describe('carryForwardFac — prospectiveClubs only where the prior had it (#2238 review, low)', () => {
+  it('writes no prospectiveClubs when the prior copy was never merged', () => {
+    // Enriched by its rows (an older merge shape), with no prospectiveClubs.
+    const prior = clone(ENRICHED)
+    delete (prior.data as Row)['prospectiveClubs']
+    expect(isFacEnriched(prior)).toBe(true)
+    const out = carryForwardFac(stripped(ENRICHED), prior)
+    expect(out.carried).toBe(4)
+    expect(out.snapshot.data).not.toHaveProperty('prospectiveClubs')
+  })
+})
