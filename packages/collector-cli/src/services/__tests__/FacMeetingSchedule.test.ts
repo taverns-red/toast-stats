@@ -837,6 +837,19 @@ describe('parseMeetingSchedule (#2243) — Spanish ordinal weeks', () => {
   })
 })
 
+describe("parseMeetingSchedule (#2243) — 'p.m.' written against the digits", () => {
+  it.each([
+    ['7:30p.m.', '19:30'],
+    ['8p.m. - 10p.m.', '20:00'],
+    ['6:45p.m. - 8:00pm', '18:45'],
+    ['7:00-9:00p.m.', '19:00'],
+    ['7p.m. Pacific Time', '19:00'],
+    ['9:30a.m.', '09:30'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Monday', time)).toEqual([`Monday ${start}`])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
