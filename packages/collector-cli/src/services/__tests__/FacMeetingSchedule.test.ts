@@ -905,6 +905,21 @@ describe('parseMeetingSchedule (#2243) — a range ending at noon or later', () 
   )
 })
 
+describe('parseMeetingSchedule (#2243) — German, Dutch and Italian weekdays', () => {
+  it.each([
+    ['Montag', 'Monday'],
+    ['Mittwoch', 'Wednesday'],
+    ['Dienstag', 'Tuesday'],
+    ['Maandagavond (elke even week)', 'Monday'],
+    ['dinsdag', 'Tuesday'],
+    ['Donderdag', 'Thursday'],
+    ['Giovedì', 'Thursday'],
+    ['Sabato', 'Saturday'],
+  ])('%j is %s', (meetingDay, day) => {
+    expect(starts(meetingDay, '20:00')).toEqual([`${day} 20:00`])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
