@@ -1156,6 +1156,20 @@ describe('process-dates.sh: no raw-fac on an enriched date carries FAC forward (
     expect(uploadedSnapshot('2026-10-10').facCarriedForward).toBe(true)
   })
 
+  it('no raw-fac, staged snapshot enriched, nothing carried: the date fails, not counted carried', () => {
+    // Review of #2238: an enriched staging copy that put FAC on no
+    // district is the strip in disguise, never "carried".
+    putRaw('2026-10-09')
+    putStagedSnapshot('2026-10-09', true)
+    const r = run('rebuild', ['2026-10-09'], { STUB_CARRY_ALREADY: '1' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+    expect(objectsUnder('snapshots/2026-10-09')).toEqual(['district_61.json'])
+    expect(summaryText()).toContain(
+      '- **Dates carried forward from their staged snapshot (no raw-fac)**: 0'
+    )
+  })
+
   it('no raw-fac, staged snapshot unreadable: fails closed, nothing uploaded', () => {
     putRaw('2026-10-09')
     putStagedSnapshot('2026-10-09', true)

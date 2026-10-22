@@ -42,6 +42,8 @@
 #   STUB_COMPUTE_FAIL    optional: ERE; a compute of a matching date fails
 #   STUB_MERGE_FAIL      optional: ERE; a merge into a matching snapshot
 #                        date (the --snapshot-dir basename) fails
+#   STUB_CARRY_ALREADY   optional: non-empty; every rebuilt district counts
+#                        as already enriched, so nothing is carried (#2237)
 #   STUB_CARRY_FAIL      optional: ERE; a carry-forward into a matching
 #                        snapshot date fails (#2237)
 #   STUB_DISK_LOG        optional: before acting, each call appends
@@ -233,7 +235,7 @@ case "${CMD}" in
       fi
       jq -e '.data.prospectiveClubs | arrays' "${prior}" >/dev/null || continue
       prior_enriched=$((prior_enriched + 1))
-      if jq -e '(.data.prospectiveClubs | arrays) or .facCarriedForward or .facMergedClubs' "${snap}" >/dev/null; then
+      if [ -n "${STUB_CARRY_ALREADY:-}" ] || jq -e '(.data.prospectiveClubs | arrays) or .facCarriedForward or .facMergedClubs' "${snap}" >/dev/null; then
         already=$((already + 1))
         continue
       fi
