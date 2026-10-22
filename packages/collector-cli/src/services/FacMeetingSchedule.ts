@@ -366,8 +366,9 @@ const HHMM_HRS =
 /** 12-hour only: "2026 pm" is a year, not 20:26. */
 const HHMM_MERIDIEM = /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
 const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
-/** "UTC-5", "GMT +6": the number after is an offset, not a time. */
-const OFFSET_BEFORE = /(?:[+\-−]|utc|gmt)\s*$/
+/** "UTC-5", "GMT + 6", "-4DT": the number after is an offset, not a time.
+ *  A dash after a word and a space ("Saturday- 7-9 pm") is not a sign. */
+const OFFSET_BEFORE = /(?:utc|gmt)\s*(?:[+\-−]\s*)?$|[+\-−]$/
 const LIST_SEPARATOR = /^\s*(?:et|and|&|,|\/)\s*$/
 
 function timeTokensIn(text: string): TimeToken[] {
