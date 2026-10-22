@@ -807,6 +807,23 @@ describe("parseMeetingSchedule (#2243) — 'A for B': the meeting starts at B", 
     expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
   })
 
+  it.each([
+    ['6:00 pm for 2:00 hrs', '18:00'],
+    ['7:00 pm for 2.00 hrs', '19:00'],
+    ['7 pm for 1h30', '19:00'],
+    ['7:00 pm for 01:30', '19:00'],
+    ['7:00 pm for 1:30', '19:00'],
+    ['7 pm for 90 minutes', '19:00'],
+  ])('a duration after "for" in %j is not the start', (time, start) => {
+    expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
+  })
+
+  it('12 noon for 12.15 starts at 12:15', () => {
+    expect(starts('Wednesday', '12 noon for 12.15')).toEqual([
+      'Wednesday 12:15',
+    ])
+  })
+
   it('keeps the end of the range after the start', () => {
     expect(
       parseMeetingSchedule({
