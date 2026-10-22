@@ -767,6 +767,37 @@ describe('parseMeetingSchedule (#2243) — a bare hour starting a range', () => 
   )
 })
 
+describe("parseMeetingSchedule (#2243) — 'A for B': the meeting starts at B", () => {
+  it.each([
+    ['5:45 pm for 6:00 pm', '18:00'],
+    ['6:45 pm for 7:00pm start', '19:00'],
+    ['7.30 for 7:45 pm', '19:45'],
+    ['5.45 for a 6 pm start', '18:00'],
+    ['9:15 for 09:30', '09:30'],
+    ['18h15 for 18h30', '18:30'],
+    ['6:45 p.m. (for 7pm start)', '19:00'],
+    ['8:45 am for 9:00 am to 11:am UTC+2', '09:00'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
+  })
+
+  it('keeps the end of the range after the start', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Thursday',
+        meetingTime: '6:15 for 6:30  to 8h30 PM',
+      })
+    ).toEqual([
+      {
+        day: 'Thursday',
+        cadence: 'weekly',
+        startTime: '18:30',
+        endTime: '20:30',
+      },
+    ])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
