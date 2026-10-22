@@ -512,8 +512,19 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
     }
     let slot: Slot
     if (next && RANGE_SEPARATOR.test(between(start, next))) {
-      const startMinutes = resolve(start, inherited(start, next, true))
+      let startMinutes = resolve(start, inherited(start, next, true))
       const endMinutes = resolve(next, inherited(next, start, false))
+      // "12:00 AM - 1:10 PM": a midnight start before an afternoon end is
+      // a slip for noon (#2243).
+      if (
+        start.hour === 12 &&
+        start.meridiem === 'am' &&
+        endMinutes !== undefined &&
+        endMinutes > 12 * 60 &&
+        endMinutes <= 18 * 60
+      ) {
+        startMinutes = 12 * 60 + start.minute
+      }
       slot =
         startMinutes === undefined
           ? {}
