@@ -437,6 +437,17 @@ function inherited(
   bareIsStart: boolean
 ): 'am' | 'pm' | undefined {
   const suffix = partner.meridiem
+  // "11:45 - 13:00", "10:00 - 12:00": an end at noon or on a 24-hour clock
+  // puts a smaller bare start in the morning (#2243).
+  if (
+    !suffix &&
+    bareIsStart &&
+    bare.hour < 12 &&
+    bare.hour < partner.hour &&
+    (partner.hour >= 12 || partner.twentyFour)
+  ) {
+    return 'am'
+  }
   if (!suffix || bare.twentyFour || bare.hour === 12) return undefined
   if (partner.hour === 12) return bareIsStart ? 'am' : 'pm'
   const wraps = bareIsStart
