@@ -397,7 +397,10 @@ describe('process-dates.sh rebuild: upload stage', () => {
     putRaw('2026-09-09')
     putRaw('2026-09-10')
     const r = run('rebuild', ['2026-09-09', '2026-09-10'], {
-      SHIM_FAIL_MATCH: '^cp .*gs://test-bucket/snapshots/2026-09-09/',
+      // The upload (a local source to gs://), not the #2237 read of the
+      // staged snapshot (gs:// to local), which fails the date instead.
+      SHIM_FAIL_MATCH:
+        '^cp --content-type.*gs://test-bucket/snapshots/2026-09-09/',
     })
     expect(r.status).not.toBe(0)
     expect(lines(stubLog)).not.toContain(
@@ -1061,6 +1064,282 @@ describe('process-dates.sh: enrich stage, persisted FAC (#1758, D-1)', () => {
     run('rebuild', ['2026-09-10'])
     expect(localDateDirs('find-a-club')).toEqual([])
     expect(localDateDirs('raw-fac')).toEqual([])
+  })
+})
+
+/**
+ * #2237 — a date with no raw-fac/ that its daily enriched (2026-05-15 ..
+ * 2026-10-10: raw-fac persistence began 2026-10-11) keeps its Find-A-Club
+ * fields: they are carried forward from the date's existing staging snapshot
+ * (collector-cli carry-forward-find-a-club). If they cannot be, the date
+ * fails closed. A date staging never enriched still rebuilds unenriched.
+ *
+ * The staged district files are gzip objects (uploaded `-Z`), read through
+ * gcloud 588's decompressing download (SHIM_DOWNLOAD_DECOMPRESS=1). Their
+ * enrichment mark is the merge's `data.prospectiveClubs` array.
+ */
+function putStagedSnapshot(date: string, enriched: boolean): void {
+  const club: Record<string, unknown> = {
+    clubId: '3045',
+    clubName: 'Limestone Toastmasters',
+  }
+  const data: Record<string, unknown> = { clubs: [club] }
+  if (enriched) {
+    club.meetingDay = 'Tuesday'
+    data.prospectiveClubs = []
+  }
+  putObject(
+    `snapshots/${date}/district_61.json`,
+    JSON.stringify({ districtId: '61', data }),
+    true
+  )
+}
+
+const isCarry = (l: string) => l.includes(' carry-forward-find-a-club ')
+
+describe('process-dates.sh: no raw-fac on an enriched date carries FAC forward (#2237)', () => {
+  it('raw-fac present: merges it and never carries forward', () => {
+    putRaw('2026-10-12')
+    putRawFac('2026-10-12')
+    putStagedSnapshot('2026-10-12', true)
+    const r = run('rebuild', ['2026-10-12'])
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(lines(stubLog).some(isCarry)).toBe(false)
+    expect(uploadedSnapshot('2026-10-12').facMergedClubs).toBe(2)
+    expect(uploadedSnapshot('2026-10-12').facCarriedForward).toBeUndefined()
+  })
+
+  it('no raw-fac, staged snapshot enriched: carries its FAC fields onto the rebuild, after the guard and before compute', () => {
+    putRaw('2026-10-09')
+    putStagedSnapshot('2026-10-09', true)
+    const seen = path.join(tmp, 'computed.json')
+    const r = run('rebuild', ['2026-10-09'], {
+      STUB_COPY_ON_COMPUTE: `snapshots/2026-10-09/district_61.json=${seen}`,
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    const stubs = lines(stubLog)
+    const guard = stubs.indexOf('guard 2026-10-09')
+    const carry = stubs.findIndex(l =>
+      /^collector-cli carry-forward-find-a-club --from-dir \S+ --snapshot-dir \S+\/snapshots\/2026-10-09 --verbose$/.test(
+        l
+      )
+    )
+    const compute = stubs.findIndex(l => l.includes(' compute-analytics '))
+    expect(carry, stubs.join('\n')).toBeGreaterThan(guard)
+    expect(compute).toBeGreaterThan(carry)
+    expect(stubs.some(l => l.includes('merge-find-a-club'))).toBe(false)
+    // compute (global-totals, region-rollups, clubs-by-region,
+    // meeting-times) reads the carried snapshot, and it is what uploads.
+    expect(JSON.parse(fs.readFileSync(seen, 'utf-8')).facCarriedForward).toBe(
+      true
+    )
+    expect(uploadedSnapshot('2026-10-09').facCarriedForward).toBe(true)
+    expect(summaryText()).toContain(
+      '- **Dates carried forward from their staged snapshot (no raw-fac)**: 1'
+    )
+    expect(summaryText()).toContain('- **Dates unenriched (no raw-fac)**: 0')
+  })
+
+  it('no raw-fac, staged snapshot enriched, carry-forward fails: the date fails, nothing uploaded', () => {
+    putRaw('2026-10-09')
+    putRaw('2026-10-10')
+    putStagedSnapshot('2026-10-09', true)
+    putStagedSnapshot('2026-10-10', true)
+    const r = run('rebuild', ['2026-10-09', '2026-10-10'], {
+      STUB_CARRY_FAIL: '^2026-10-09$',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 1 })
+    // Only the staged copy put above remains for the failed date.
+    expect(objectsUnder('snapshots/2026-10-09')).toEqual(['district_61.json'])
+    expect(uploadedSnapshot('2026-10-10').facCarriedForward).toBe(true)
+  })
+
+  it('no raw-fac, staged snapshot enriched, nothing carried: the date fails, not counted carried', () => {
+    // Review of #2238: an enriched staging copy that put FAC on no
+    // district is the strip in disguise, never "carried".
+    putRaw('2026-10-09')
+    putStagedSnapshot('2026-10-09', true)
+    const r = run('rebuild', ['2026-10-09'], { STUB_CARRY_ALREADY: '1' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+    expect(objectsUnder('snapshots/2026-10-09')).toEqual(['district_61.json'])
+    expect(summaryText()).toContain(
+      '- **Dates carried forward from their staged snapshot (no raw-fac)**: 0'
+    )
+  })
+
+  it('no raw-fac, staged snapshot unreadable: fails closed, nothing uploaded', () => {
+    putRaw('2026-10-09')
+    putStagedSnapshot('2026-10-09', true)
+    const r = run('rebuild', ['2026-10-09'], {
+      SHIM_FAIL_MATCH: '^cp gs://test-bucket/snapshots/2026-10-09/',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+    expect(lines(stubLog).some(isCarry)).toBe(false)
+    expect(objectsUnder('snapshots/2026-10-09')).toEqual(['district_61.json'])
+    expect(readMeta('snapshots/2026-10-09/district_61.json')).toBe(
+      'content-encoding=gzip\n'
+    )
+  })
+
+  it('no raw-fac, staged snapshot never enriched: rebuilds unenriched, as before', () => {
+    putRaw('2026-04-10')
+    putStagedSnapshot('2026-04-10', false)
+    const r = run('rebuild', ['2026-04-10'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(uploadedSnapshot('2026-04-10').facCarriedForward).toBeUndefined()
+    expect(uploadedSnapshot('2026-04-10').facMergedClubs).toBeUndefined()
+    expect(summaryText()).toContain('- **Dates unenriched (no raw-fac)**: 1')
+    expect(summaryText()).toContain(
+      '- **Dates carried forward from their staged snapshot (no raw-fac)**: 0'
+    )
+  })
+
+  it('no raw-fac and no staged snapshot (a date staging never held): rebuilds unenriched', () => {
+    putRaw('2026-04-10')
+    const r = run('rebuild', ['2026-04-10'])
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(lines(stubLog).some(isCarry)).toBe(false)
+    expect(uploadedSnapshot('2026-04-10').facCarriedForward).toBeUndefined()
+    expect(summaryText()).toContain('- **Dates unenriched (no raw-fac)**: 1')
+  })
+
+  it('keys the staged snapshot by the date the transform wrote (remap)', () => {
+    putStagedSnapshot('2026-06-30', true)
+    const r = run('rescrape', ['2026-07-02'], {
+      DISTRICTS: '61',
+      STUB_REMAP: '2026-07-02=2026-06-30',
+    })
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(uploadedSnapshot('2026-06-30').facCarriedForward).toBe(true)
+  })
+})
+
+/**
+ * #2239 — FAC_PRIOR_ROOT (the `fac_prior_root` dispatch input): the
+ * carry-forward reads each date's prior copy from the private recovery
+ * bucket (`<root>/<date>/district_*.json`, the soft-deleted enriched
+ * generations copied out by scripts/ops/fac-recovery-2239-copy-out.sh)
+ * instead of the live, stripped staging copy. The operator asserts a
+ * recovered source exists, so a date missing there, or not enriched there,
+ * FAILS rather than going unenriched. The copies are server-side rewrites,
+ * so they keep Content-Encoding: gzip like the staged objects they came from.
+ */
+const RECOVERY_BUCKET = 'toast-stats-fac-recovery-2239'
+const PRIOR_ROOT = `gs://${RECOVERY_BUCKET}/fac-2239`
+
+function putRecovered(date: string, enriched: boolean): void {
+  const club: Record<string, unknown> = {
+    clubId: '3045',
+    clubName: 'Limestone Toastmasters',
+  }
+  const data: Record<string, unknown> = { clubs: [club] }
+  if (enriched) {
+    club.meetingDay = 'Tuesday'
+    data.prospectiveClubs = []
+  }
+  const objectPath = `fac-2239/${date}/district_61.json`
+  const obj = path.join(root, RECOVERY_BUCKET, objectPath)
+  fs.mkdirSync(path.dirname(obj), { recursive: true })
+  fs.writeFileSync(
+    obj,
+    zlib.gzipSync(JSON.stringify({ districtId: '61', data }))
+  )
+  const meta = path.join(root, '.meta', RECOVERY_BUCKET, objectPath)
+  fs.mkdirSync(path.dirname(meta), { recursive: true })
+  fs.writeFileSync(meta, 'content-encoding=gzip\n')
+}
+
+describe('process-dates.sh: FAC_PRIOR_ROOT reads the recovered prior copy (#2239)', () => {
+  it('carries from the recovery root, never reading the live staging copy', () => {
+    putRaw('2026-06-15')
+    putStagedSnapshot('2026-06-15', false) // live staging: stripped
+    putRecovered('2026-06-15', true)
+    const r = run('rebuild', ['2026-06-15'], { FAC_PRIOR_ROOT: PRIOR_ROOT })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    const calls = lines(shimLog)
+    const read = new RegExp(
+      `^storage cp ${PRIOR_ROOT}/2026-06-15/district_\\*\\.json `
+    )
+    expect(
+      calls.some(l => read.test(l)),
+      calls.join('\n')
+    ).toBe(true)
+    expect(
+      calls.some(l =>
+        l.startsWith(`storage cp gs://${BUCKET}/snapshots/2026-06-15/district_`)
+      )
+    ).toBe(false)
+    expect(uploadedSnapshot('2026-06-15').facCarriedForward).toBe(true)
+    expect(summaryText()).toContain(
+      '- **Dates carried forward from their staged snapshot (no raw-fac)**: 1'
+    )
+    expect(summaryText()).toContain(`- **FAC prior root**: ${PRIOR_ROOT}`)
+  })
+
+  it('fails the date when the recovery root has no copy of it', () => {
+    putRaw('2026-06-15')
+    putStagedSnapshot('2026-06-15', true)
+    fs.mkdirSync(path.join(root, RECOVERY_BUCKET), { recursive: true })
+    const r = run('rebuild', ['2026-06-15'], { FAC_PRIOR_ROOT: PRIOR_ROOT })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+    expect(objectsUnder('snapshots/2026-06-15')).toEqual(['district_61.json'])
+  })
+
+  it('fails the date when its recovered copy is not enriched', () => {
+    putRaw('2026-06-15')
+    putRecovered('2026-06-15', false)
+    const r = run('rebuild', ['2026-06-15'], { FAC_PRIOR_ROOT: PRIOR_ROOT })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+    expect(objectsUnder('snapshots/2026-06-15')).toEqual([])
+  })
+
+  it('raw-fac present: merges it, the recovery root is not read', () => {
+    putRaw('2026-10-12')
+    putRawFac('2026-10-12')
+    putRecovered('2026-10-12', true)
+    const r = run('rebuild', ['2026-10-12'], { FAC_PRIOR_ROOT: PRIOR_ROOT })
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(lines(shimLog).some(l => l.includes(PRIOR_ROOT))).toBe(false)
+    expect(uploadedSnapshot('2026-10-12').facMergedClubs).toBe(2)
+  })
+
+  it('unset: unchanged, the live staging copy is the prior', () => {
+    putRaw('2026-06-15')
+    putStagedSnapshot('2026-06-15', true)
+    const r = run('rebuild', ['2026-06-15'])
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(uploadedSnapshot('2026-06-15').facCarriedForward).toBe(true)
+    expect(summaryText()).not.toContain('FAC prior root')
+  })
+
+  it('is a usage error outside rebuild mode', () => {
+    const r = run('rescrape', ['2026-06-15'], {
+      DISTRICTS: '61',
+      FAC_PRIOR_ROOT: PRIOR_ROOT,
+    })
+    expect(r.status).toBe(2)
+    expect(lines(shimLog)).toEqual([])
+  })
+
+  it('is a usage error for any root but the allowlisted one', () => {
+    for (const bad of [
+      `gs://${BUCKET}/snapshots`,
+      `${PRIOR_ROOT}/`,
+      `${PRIOR_ROOT}/../x`,
+      `gs://${RECOVERY_BUCKET}`,
+    ]) {
+      const r = run('rebuild', ['2026-06-15'], { FAC_PRIOR_ROOT: bad })
+      expect(r.status, bad).toBe(2)
+    }
+    expect(lines(shimLog)).toEqual([])
   })
 })
 

@@ -1694,6 +1694,50 @@ export function createCLI(): Command {
       }
     )
 
+  // Carry the FAC enrichment of a date's existing snapshot onto its rebuild
+  // (#2237): the per-date loop's fallback when no raw-fac/<date>/ was ever
+  // persisted (2026-05-15..10-10). <from-dir> holds the existing
+  // district_<id>.json files (gzip or plain), <snapshot-dir> the rebuilt
+  // ones, rewritten in place only when FAC fields are carried onto them.
+  program
+    .command('carry-forward-find-a-club')
+    .description(
+      "Carry the Find-A-Club fields of a date's existing snapshots onto its rebuilt ones (#2237)"
+    )
+    .requiredOption(
+      '--from-dir <dir>',
+      'Directory of the existing district_<id>.json snapshots (the source)'
+    )
+    .requiredOption(
+      '--snapshot-dir <dir>',
+      'Directory of the rebuilt district snapshots (target — rewritten in place)'
+    )
+    .option('-v, --verbose', 'Enable detailed logging output', false)
+    .action(
+      async (options: {
+        fromDir: string
+        snapshotDir: string
+        verbose: boolean
+      }) => {
+        const { carryForwardFacDir } =
+          await import('./services/FindAClubCarryForward.js')
+        const summary = await carryForwardFacDir({
+          fromDir: options.fromDir,
+          snapshotDir: options.snapshotDir,
+          // Errors always; per-district progress with --verbose (R4: stderr).
+          log: line => {
+            if (options.verbose || line.startsWith('[ERROR]')) {
+              console.error(line)
+            }
+          },
+        })
+        emitJsonAndExit(
+          summary,
+          summary.failed === 0 ? ExitCode.SUCCESS : ExitCode.PARTIAL_FAILURE
+        )
+      }
+    )
+
   // Value-aware staging→production diff for the full-range re-derive promote
   // gate (#1034, epic #1031). Complements the count-only gate in
   // data-pipeline.yml: detects re-derived VALUE changes the count gate is blind

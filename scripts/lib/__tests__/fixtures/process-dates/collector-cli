@@ -25,6 +25,14 @@
 #       `facMergedClubs` marker. Prints the real summary JSON on stdout
 #       (totalDistricts, succeeded, failed, totalMatched, ...) and exits 1
 #       when a district failed (PARTIAL_FAILURE), as the real CLI does.
+#   carry-forward-find-a-club --from-dir P --snapshot-dir S --verbose
+#       (#2237) for every district_<id>.json in S with a counterpart in P:
+#       a counterpart with a `data.prospectiveClubs` array (the merge's
+#       mark, isFacEnriched) is counted in priorEnriched and, unless S's
+#       file is already enriched, S's file gains a `facCarriedForward`
+#       marker. A counterpart that is not JSON fails the district. Prints
+#       the real summary JSON (totalDistricts, priorEnriched, carried,
+#       alreadyEnriched, failed) and exits 1 when a district failed.
 # Env:
 #   CACHE_DIR            required, as for the real CLI
 #   STUB_LOG             optional: argv of each call is appended here
@@ -34,6 +42,10 @@
 #   STUB_COMPUTE_FAIL    optional: ERE; a compute of a matching date fails
 #   STUB_MERGE_FAIL      optional: ERE; a merge into a matching snapshot
 #                        date (the --snapshot-dir basename) fails
+#   STUB_CARRY_ALREADY   optional: non-empty; every rebuilt district counts
+#                        as already enriched, so nothing is carried (#2237)
+#   STUB_CARRY_FAIL      optional: ERE; a carry-forward into a matching
+#                        snapshot date fails (#2237)
 #   STUB_DISK_LOG        optional: before acting, each call appends
 #                        `<command>: <path>` for every file under $CACHE_DIR
 #                        here — what the real CLI would have read (#1756)
@@ -62,6 +74,7 @@ CMD="${1:?}"
 shift
 DATE=""
 FAC_DIR=""
+FROM_DIR=""
 SNAP_DIR=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -77,9 +90,18 @@ while [ "$#" -gt 0 ]; do
       SNAP_DIR="$2"
       shift 2
       ;;
+    --from-dir)
+      FROM_DIR="$2"
+      shift 2
+      ;;
     *) shift ;;
   esac
 done
+if [ "${CMD}" = "carry-forward-find-a-club" ]; then
+  : "${FROM_DIR:?--from-dir is required}"
+  : "${SNAP_DIR:?--snapshot-dir is required}"
+  DATE="$(basename "${SNAP_DIR}")"
+fi
 if [ "${CMD}" = "merge-find-a-club" ]; then
   : "${FAC_DIR:?--fac-dir is required}"
   : "${SNAP_DIR:?--snapshot-dir is required}"
@@ -197,6 +219,32 @@ case "${CMD}" in
     done
     printf '{"totalDistricts":%d,"succeeded":%d,"failed":%d,"totalMatched":%d,"totalSnapshotOnly":0,"totalFacOnly":0,"results":[]}\n' \
       "${total}" "${ok}" "${failed}" "${matched}"
+    [ "${failed}" -eq 0 ] || exit 1
+    ;;
+  carry-forward-find-a-club)
+    total=0 prior_enriched=0 carried=0 already=0 failed=0
+    for snap in "${SNAP_DIR}"/district_*.json; do
+      [ -f "${snap}" ] || continue
+      prior="${FROM_DIR}/$(basename "${snap}")"
+      [ -f "${prior}" ] || continue
+      total=$((total + 1))
+      if matches "${STUB_CARRY_FAIL:-}" || ! jq -e . "${prior}" >/dev/null 2>&1; then
+        echo "[ERROR] $(basename "${snap}"): carry-forward failed" >&2
+        failed=$((failed + 1))
+        continue
+      fi
+      jq -e '.data.prospectiveClubs | arrays' "${prior}" >/dev/null || continue
+      prior_enriched=$((prior_enriched + 1))
+      if [ -n "${STUB_CARRY_ALREADY:-}" ] || jq -e '(.data.prospectiveClubs | arrays) or .facCarriedForward or .facMergedClubs' "${snap}" >/dev/null; then
+        already=$((already + 1))
+        continue
+      fi
+      jq -c '. + {facCarriedForward: true}' "${snap}" >"${snap}.tmp"
+      mv "${snap}.tmp" "${snap}"
+      carried=$((carried + 1))
+    done
+    printf '{"totalDistricts":%d,"priorEnriched":%d,"carried":%d,"alreadyEnriched":%d,"failed":%d,"results":[]}\n' \
+      "${total}" "${prior_enriched}" "${carried}" "${already}" "${failed}"
     [ "${failed}" -eq 0 ] || exit 1
     ;;
   *)

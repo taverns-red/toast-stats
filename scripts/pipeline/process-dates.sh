@@ -43,10 +43,24 @@
 #                raw-fac/<actual>/ (ADR-015 P2, #1758) is pulled and
 #                merged into the snapshots with collector-cli
 #                merge-find-a-club, so a re-derived date keeps the daily's
-#                enrichment. No raw-fac for the date (historical dates, FAC
-#                started 2026-05-15): processed unenriched and counted. An
-#                unreadable raw-fac or a failed merge FAILS the date: an
-#                unenriched upload over an enriched date is the D-1 strip.
+#                enrichment. No raw-fac for the date does NOT mean the date
+#                was never enriched (#2237): raw-fac persistence began
+#                2026-10-11, but every daily since 2026-05-15 merged FAC
+#                without persisting it. So the date's existing staging
+#                snapshot (snapshots/<actual>/district_*.json) is read and,
+#                where it is enriched, its FAC fields are carried onto the
+#                rebuild (collector-cli carry-forward-find-a-club: the
+#                carried text re-scrubbed as a fresh FAC parse would,
+#                prospectives the rebuild now lists dropped) and the date
+#                counted as carried forward. Only a date with no staging
+#                snapshot, or whose staging snapshot is not enriched (before
+#                2026-05-15, or already stripped: as of 2026-10-22 most of
+#                05-15..10-08 was, by earlier rebuilds), is processed
+#                unenriched and counted. An unreadable raw-fac or staging
+#                snapshot, a failed merge, a failed carry-forward, or an
+#                enriched staging snapshot that carried nothing FAILS the
+#                date: an unenriched upload over an enriched date is the D-1
+#                strip.
 #   8. compute   first the prior year, in every mode (#1769, D-8): best
 #                effort, snapshots/<actual - 1y>/district_*.json, the date
 #                compute-analytics reads for YoY (findPreviousProgramYearDate,
@@ -146,6 +160,15 @@
 #                          audit log, never read back
 #   PLAN_GAP_REMOVALS      gap removal planner, rebuild only (default: tsx
 #                          plan-gap-removals.ts)
+#   FAC_PRIOR_ROOT         rebuild only, the `fac_prior_root` input (#2239):
+#                          stage 7's carry-forward reads each date's prior copy
+#                          from <root>/<date>/district_*.json (the private
+#                          recovery bucket) instead of the live staging
+#                          snapshot. Checked by scripts/pipeline/
+#                          fac-prior-root.sh (exact allowlist; usage error
+#                          otherwise). Set, a date missing there or not
+#                          enriched there FAILS: the operator asserted a
+#                          recovered source. Empty: the staging snapshot.
 #
 # Output: stdout is ONE JSON line, {"succeeded":N,"refused":N,"failed":N}
 # (R4); everything else, including the CLI's own output, goes to stderr.
@@ -209,6 +232,9 @@ for date in "$@"; do
 done
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# #2239: validated before anything touches the bucket; exit 2 on a bad one.
+FAC_PRIOR_ROOT="$(bash "${REPO}/scripts/pipeline/fac-prior-root.sh" \
+  "${MODE}" "${FAC_PRIOR_ROOT:-}")" || exit 2
 TSX="${TSX:-${REPO}/node_modules/.bin/tsx}"
 GCLOUD="${GCLOUD:-gcloud}"
 CACHE_DIR="${CACHE_DIR:-./cache}"
@@ -249,6 +275,7 @@ SUCCEEDED=0
 FAILED=0
 REFUSED=0
 ENRICHED=0
+CARRIED=0
 UNENRICHED=0
 YOY_PRESENT=0
 YOY_ABSENT=0
@@ -406,16 +433,74 @@ remove_gap_districts() {
   if [ "${#files[@]}" -gt 0 ]; then "${REMOVE[@]}" "${files[@]}"; fi
 }
 
+# No raw-fac for <date> (#2237): carry the FAC fields of the date's existing
+# staging snapshot onto the rebuild. Sets ENRICH to carried | unenriched |
+# failed. A staging snapshot that cannot be read is not "never enriched":
+# the date fails rather than risk stripping it. With FAC_PRIOR_ROOT (#2239)
+# the prior is <root>/<date>/ instead, and its absence or an unenriched copy
+# there fails the date too.
+carry_forward_fac() {
+  local actual="$1" prior="${WORK}/prior-snapshot/$1"
+  local err="${WORK}/prior-snapshot-cp.err" out="${WORK}/carry-forward.json"
+  local src="gs://${BUCKET}/snapshots/${actual}" what="staging snapshots/${actual}/"
+  if [ -n "${FAC_PRIOR_ROOT}" ]; then
+    src="${FAC_PRIOR_ROOT}/${actual}"
+    what="recovered ${src}/"
+  fi
+  ENRICH=failed
+  mkdir -p "${prior}"
+  if ! "${GCLOUD}" storage cp "${src}/district_*.json" \
+    "${prior}/" >/dev/null 2>"${err}"; then
+    rm -rf "${prior}"
+    if grep -q 'matched no objects' "${err}"; then
+      if [ -n "${FAC_PRIOR_ROOT}" ]; then
+        echo "::warning::No ${what} copy of ${actual} under fac_prior_root; nothing uploaded for it"
+        return 0
+      fi
+      echo "No raw-fac/${actual}/ and no staging snapshot of it; ${actual} is processed unenriched"
+      ENRICH=unenriched
+      return 0
+    fi
+    cat "${err}"
+    echo "::warning::Could not read ${what} to carry its Find-A-Club fields forward; not publishing ${actual} unenriched"
+    return 0
+  fi
+  if ! "${COLLECTOR[@]}" carry-forward-find-a-club --from-dir "${prior}" \
+    --snapshot-dir "${SNAPSHOTS}/${actual}" --verbose >"${out}"; then
+    echo "::warning::Find-A-Club carry-forward failed for ${actual}; nothing uploaded for it"
+    rm -rf "${prior}"
+    return 0
+  fi
+  rm -rf "${prior}"
+  # R17, one case per result: carried onto some district | staging enriched
+  # but nothing carried (every district already merged: not a carry, and
+  # never published as one) | staging not enriched | unreadable.
+  if jq -e '.carried > 0' "${out}" >/dev/null 2>&1; then
+    echo "No raw-fac/${actual}/; carried its Find-A-Club fields forward from ${what} ($(jq -c '{priorEnriched, carried, rowsCarried, alreadyEnriched}' "${out}"))"
+    ENRICH=carried
+  elif jq -e '.priorEnriched > 0' "${out}" >/dev/null 2>&1; then
+    echo "::warning::${what} is enriched but no Find-A-Club field was carried ($(jq -c '{priorEnriched, carried, alreadyEnriched}' "${out}")); nothing uploaded for it"
+  elif [ -n "${FAC_PRIOR_ROOT}" ]; then
+    echo "::warning::${what} is not enriched, though fac_prior_root asserts a recovered source; nothing uploaded for ${actual}"
+  elif jq -e '.priorEnriched == 0' "${out}" >/dev/null 2>&1; then
+    echo "No raw-fac/${actual}/ and its staging snapshot is not enriched; ${actual} is processed unenriched"
+    ENRICH=unenriched
+  else
+    echo "::warning::Unreadable carry-forward result for ${actual}; nothing uploaded for it"
+  fi
+  return 0
+}
+
 # Merge the persisted Find-A-Club fetch for <date> into its snapshots, if
-# daily persisted one. Sets ENRICH to enriched | unenriched | failed.
+# daily persisted one; otherwise carry_forward_fac. Sets ENRICH to enriched
+# | carried | unenriched | failed.
 enrich_snapshot() {
   local actual="$1" fac="${WORK}/raw-fac/$1" err="${WORK}/raw-fac-ls.err"
   ENRICH=failed
   if ! "${GCLOUD}" storage ls "gs://${BUCKET}/raw-fac/${actual}/**" \
     >/dev/null 2>"${err}"; then
     if grep -q 'matched no objects' "${err}"; then
-      echo "No raw-fac/${actual}/; ${actual} is processed unenriched"
-      ENRICH=unenriched
+      carry_forward_fac "${actual}"
       return 0
     fi
     cat "${err}"
@@ -524,6 +609,7 @@ process_one() {
   enrich_snapshot "${actual}"
   case "${ENRICH}" in
     enriched) ENRICHED=$((ENRICHED + 1)) ;;
+    carried) CARRIED=$((CARRIED + 1)) ;;
     unenriched) UNENRICHED=$((UNENRICHED + 1)) ;;
     *)
       cleanup_date "${source}" "${actual}" "${prev}"
@@ -650,6 +736,10 @@ fi
   echo "- **Refused by the upload guard**: ${REFUSED}"
   echo "- **Dates failed**: ${FAILED}"
   echo "- **Dates enriched from raw-fac**: ${ENRICHED}"
+  echo "- **Dates carried forward from their staged snapshot (no raw-fac)**: ${CARRIED}"
+  if [ -n "${FAC_PRIOR_ROOT}" ]; then
+    echo "- **FAC prior root**: ${FAC_PRIOR_ROOT}"
+  fi
   echo "- **Dates unenriched (no raw-fac)**: ${UNENRICHED}"
   echo "- **Dates with a prior-year snapshot (YoY)**: ${YOY_PRESENT}"
   echo "- **Dates without one (no YoY)**: ${YOY_ABSENT}"

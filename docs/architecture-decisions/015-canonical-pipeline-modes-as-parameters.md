@@ -43,7 +43,7 @@ Eliminates: D-1, D-8, D-9, D-10 (a failed daily fetch falls back to `persisted` 
 
 ### P2. Every input the pipeline derives from is persisted in staging
 
-- `raw-fac/<snapshotDate>/district_<id>.json` — the daily FAC fetch output, uploaded before the merge (plain, no `-Z`, internal). A re-derivation of a date merges from it. Historical dates with no FAC are processed unenriched and the completeness gate (P5) knows they have no prod enrichment to regress from.
+- `raw-fac/<snapshotDate>/district_<id>.json` — the daily FAC fetch output, uploaded before the merge (plain, no `-Z`, internal). A re-derivation of a date merges from it. Historical dates with no FAC are processed unenriched and the completeness gate (P5) knows they have no prod enrichment to regress from. _Amended (#2237): no `raw-fac/` does not mean no FAC. Persistence began 2026-10-11, but the dailies enriched 2026-05-15..10-10 without persisting it, so a date with no `raw-fac/` carries the FAC fields forward from its staging snapshot (`collector-cli carry-forward-find-a-club`), and fails closed when that snapshot cannot be read. Only a date whose staging snapshot is absent or unenriched is processed unenriched._
 - `raw-csv/<date>/` stays the source of truth for the transform; its `metadata.json` describes the **date's full district set**, written only when the run had it (P3).
 - `district_<id>_reports.json` sidecars are inputs (TI daily reports), not derived; a re-derivation never deletes them. This is already true (`cp`, not `rsync --delete`) and becomes a tested contract.
 

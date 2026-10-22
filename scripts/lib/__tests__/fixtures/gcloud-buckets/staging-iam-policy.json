@@ -1,0 +1,31 @@
+{
+  "bindings": [
+    {
+      "members": [
+        "projectEditor:example-project",
+        "projectOwner:example-project"
+      ],
+      "role": "roles/storage.legacyBucketOwner"
+    },
+    {
+      "members": ["projectViewer:example-project"],
+      "role": "roles/storage.legacyBucketReader"
+    },
+    {
+      "members": [
+        "projectEditor:example-project",
+        "projectOwner:example-project"
+      ],
+      "role": "roles/storage.legacyObjectOwner"
+    },
+    {
+      "members": ["projectViewer:example-project"],
+      "role": "roles/storage.legacyObjectReader"
+    },
+    {
+      "members": ["allUsers"],
+      "role": "roles/storage.objectViewer"
+    }
+  ],
+  "etag": "CAE="
+}

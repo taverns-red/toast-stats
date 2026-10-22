@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.66.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.65.2...toast-stats-v2.66.0) (2026-10-22)
+
+
+### Features
+
+* **pipeline:** FAC recovery input and copy-out script ([#2239](https://github.com/taverns-red/toast-stats/issues/2239)) ([#2240](https://github.com/taverns-red/toast-stats/issues/2240)) ([bf9e7af](https://github.com/taverns-red/toast-stats/commit/bf9e7af6c41796d70c8e17de555b9f98267e599f))
+
+
+### Bug Fixes
+
+* **pipeline:** a rebuild keeps Find-A-Club fields on an enriched date with no raw-fac ([#2237](https://github.com/taverns-red/toast-stats/issues/2237)) ([#2238](https://github.com/taverns-red/toast-stats/issues/2238)) ([24e5d93](https://github.com/taverns-red/toast-stats/commit/24e5d931c0f2f0e2bf78cd2cc82e76526d08c039))
+
+## [2.65.2](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.65.1...toast-stats-v2.65.2) (2026-10-21)
+
+
+### Bug Fixes
+
+* **pipeline:** a rebuild leaves no per-date objects for a skipped district ([#2232](https://github.com/taverns-red/toast-stats/issues/2232)) ([#2233](https://github.com/taverns-red/toast-stats/issues/2233)) ([c63350c](https://github.com/taverns-red/toast-stats/commit/c63350ce7fc43e2946bcfa3c44a4b2e4f52585f6))
+* **rankings:** read April renewals from 'Apr. Ren.', not the on-time flag, in the confirmed-Distinguished check ([#2221](https://github.com/taverns-red/toast-stats/issues/2221)) ([#2223](https://github.com/taverns-red/toast-stats/issues/2223)) ([fe3ce4a](https://github.com/taverns-red/toast-stats/commit/fe3ce4ae5963387411277a92f2a468b25feaa09d))
+
+
+### Refactors
+
+* **pipeline:** reports sidecars reach prod only through the manifest promote ([#1767](https://github.com/taverns-red/toast-stats/issues/1767)) ([#2225](https://github.com/taverns-red/toast-stats/issues/2225)) ([b573646](https://github.com/taverns-red/toast-stats/commit/b5736460984c95e4ae6cde59c83266e0a221e069))
+
+
+### Performance
+
+* **mobile:** final mobile Lighthouse budgets at error level ([#1856](https://github.com/taverns-red/toast-stats/issues/1856)) ([#2231](https://github.com/taverns-red/toast-stats/issues/2231)) ([04bdae8](https://github.com/taverns-red/toast-stats/commit/04bdae8e0262418215e431619837c591e5790626))
+
 ## [2.65.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.65.0...toast-stats-v2.65.1) (2026-10-21)
 
 
