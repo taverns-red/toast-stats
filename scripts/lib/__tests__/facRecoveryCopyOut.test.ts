@@ -829,6 +829,8 @@ describe('copy-out: --recover (#2240 R-1..R-3)', () => {
     )
     expect(r.status, r.stderr).toBe(0)
     expect(md5(liveBytes(STAGING, s.name)!)).toBe(md5(s.enriched))
+    // The arrangement is not the script's: start its call log clean.
+    fs.rmSync(shimLog, { force: true })
   }
 
   /** The step1-begin line a worker writes before its restore. */

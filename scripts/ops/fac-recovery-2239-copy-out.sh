@@ -44,9 +44,15 @@
 #   - Workers ignore INT/HUP/TERM, so Ctrl-C or a closed terminal lets each
 #     in-flight object finish step 3. The parent traps them, starts nothing
 #     new, waits, and prints the report (exit 130).
-#   - --recover rebuilds the undo state from the journal plus fresh listings
-#     (for a hard crash, or a call that completed server-side after its
-#     worker died) and puts every pre-scrub live object back to its L.
+#   - --recover (after a hard crash, or a call that completed server-side
+#     after its worker died) acts only on an object whose live md5 is its
+#     recorded E (journal or manifest) and restores its journalled L by
+#     generation, with a precondition on the live generation; anything else
+#     is left alone and reported. No journal and no manifest: refused. It is
+#     idempotent. A torn final journal line is skipped with a warning.
+#   - One execute / pilot / recover at a time: an exclusive lock directory,
+#     .routine-tmp/fac-2239-copyout.lock (COPYOUT_LOCK_DIR), removed on exit;
+#     a stale one is named and never broken automatically.
 #   - Before each batch (one date; --pilot: one object) it re-checks that no
 #     data-pipeline run is in progress, pausing PAUSE_SECONDS (default 300)
 #     until none is.
@@ -67,10 +73,11 @@
 #
 # Modes: default a dry run (only reads: listings, bucket describe and IAM).
 # --execute: every copy. --pilot: exactly one object (the plan's first copy).
-# --recover: no copy; puts pre-scrub live objects back (see recover()).
+# --recover: no copy; puts a live E back to its L (see recover()).
 # --allow-prod: required to name toast-stats-data-ca as the source.
 #
-# Env: GCLOUD (default gcloud), GH (default gh), PAUSE_SECONDS.
+# Env: GCLOUD (default gcloud), GH (default gh), PAUSE_SECONDS,
+#      COPYOUT_LOCK_DIR.
 # Output: stdout is JSON lines (R4): {"type":"plan"} per object, or
 # {"type":"recover"} per object in --recover; {"type":"cdn-invalidate"} when
 # a date was touched; one {"type":"summary"} last. Logs go to stderr.
@@ -327,8 +334,11 @@ URL_MAP="${STAGING_URL_MAP}"
 exec 3>&1 1>&2
 
 WORK="$(mktemp -d)"
+LOCKED=0
+LOCK_DIR="${COPYOUT_LOCK_DIR:-${REPO}/.routine-tmp/fac-2239-copyout.lock}"
 cleanup() {
   rm -rf "${WORK}" # listings only; the journal lives in STATE_DIR
+  if [ "${LOCKED}" = 1 ]; then rm -rf "${LOCK_DIR}"; fi
   return 0
 }
 trap cleanup EXIT
@@ -340,12 +350,61 @@ fi
 
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 export RUN_ID
+
+# One execute / pilot / recover at a time (#2240 R-4): `mkdir` is atomic, so
+# it is the lock (bash 3.2 has no flock). Never broken automatically: a
+# stale lock (its process gone) is named, with what to check first.
+acquire_lock() {
+  local owner pid
+  mkdir -p "$(dirname "${LOCK_DIR}")"
+  if mkdir "${LOCK_DIR}" 2>/dev/null; then
+    LOCKED=1
+    printf 'pid=%s run=%s host=%s\n' "$$" "${RUN_ID}" "$(hostname)" >"${LOCK_DIR}/owner"
+    return 0
+  fi
+  owner="$(head -1 "${LOCK_DIR}/owner" 2>/dev/null || echo 'owner unknown')"
+  pid="$(sed -n 's/^pid=\([0-9][0-9]*\).*/\1/p' <<<"${owner}")"
+  if [ -n "${pid}" ] && kill -0 "${pid}" 2>/dev/null; then
+    echo "::error::copy-out: the lock ${LOCK_DIR} is held by a running copy-out (${owner}); one run at a time"
+  else
+    echo "::error::copy-out: stale lock ${LOCK_DIR} (${owner}): that process is gone. Check that no copy-out is running (on its host too), run --recover with its --state-dir if it crashed, then remove the lock: rm -r '${LOCK_DIR}'"
+  fi
+  exit 1
+}
+
 if [ "${MODE}" != dry-run ]; then
+  acquire_lock
   STATE_DIR="${STATE_DIR:-${REPO}/.routine-tmp/fac-2239-copyout-${RUN_ID}}"
   mkdir -p "${STATE_DIR}"
   touch "${STATE_DIR}/journal.jsonl"
   echo "copy-out: journal ${STATE_DIR}/journal.jsonl (kept; --recover reads it)"
 fi
+
+# The journal as a JSON array in <out> (#2240 R-3). Each line is one
+# append written before its step, so only the LAST line can be torn (a kill
+# or a full disk mid-append): it is skipped with a warning. A bad line
+# anywhere else means the file is not ours or was edited: 1, refuse.
+clean_journal() {
+  local out="$1" parsed
+  parsed="$(jq -R -s -c '
+    split("\n") | (if (.[-1] // "") == "" then .[:-1] else . end) as $ls
+    | ($ls | length) as $n
+    | [$ls | to_entries[]
+       | (.value | try fromjson catch null) as $j
+       | if ($j | type) == "object" then {ok: $j} else {torn: .key} end]
+    | {entries: map(select(has("ok")) | .ok),
+       torn: map(select(has("torn")) | .torn), n: $n}' \
+    "${STATE_DIR}/journal.jsonl")" || return 1
+  if jq -e '.torn | length > 1 or (length == 1 and .[0] != ($n - 1))' \
+    --argjson n "$(jq '.n' <<<"${parsed}")" <<<"${parsed}" >/dev/null; then
+    echo "::error::copy-out: ${STATE_DIR}/journal.jsonl has a bad line before its last (lines $(jq -c '.torn | map(. + 1)' <<<"${parsed}")); not using it"
+    return 1
+  fi
+  if jq -e '.torn | length == 1' <<<"${parsed}" >/dev/null; then
+    echo "copy-out: warning: skipping a torn final journal line (line $(jq '.n' <<<"${parsed}")), cut by a kill or a full disk"
+  fi
+  jq -c '.entries' <<<"${parsed}" >"${out}"
+}
 
 # Listings of one date into $WORK/{live,soft,dest}.json.
 list_date() {
@@ -370,72 +429,80 @@ cdn_line() {
   echo "copy-out: invalidate the CDN for the dates touched (commands on stdout)"
 }
 
-# ══ --recover ══
-# Per live district_<id>.json of each date, from fresh listings plus the
-# journal (any run in --state-dir) and the manifest:
-#   pre-scrub evidence: the live md5 is a journalled E, a manifest md5, or
-#     the md5 of a soft-deleted generation of the same object;
-#   then the target is the journalled L, else the newest soft-deleted
-#     generation under live/1.5 in size; it is restored with
-#     --if-generation-match=<live>, and the live md5 checked against it.
-#   A journalled object that is neither E nor L now: live-changed (another
-#   writer), reported, not reverted. Anything else: ok, untouched.
+# ══ --recover (#2240 R-1) ══
+# Evidence is recorded, never inferred: an object's E md5 comes from the
+# journal (any run in --state-dir) or the manifest, its L (generation and
+# md5) from the journal only. Soft-deleted generations are no evidence: a
+# restore keeps them, so every L and E stays listed after a clean run.
+# Per live district_<id>.json:
+#   live md5 == a recorded E, L recorded  → restore L by its generation with
+#     --if-generation-match=<live>, then check the live md5 == L's: restored
+#   live md5 == a recorded E, no L        → no-recorded-l (reported; exit 1)
+#   live md5 == the recorded L            → ok
+#   anything else                         → left alone (left-alone when it
+#     has a record, ok when it has none), never written
+# So it is idempotent: once nothing pre-scrub is live, it writes nothing.
+# No journal entry and no manifest entry: refused (exit 1) before any call.
 recover() {
-  local d out="${WORK}/recover.jsonl" journal_all="${WORK}/journal-all.json"
+  local d out="${WORK}/recover.jsonl" ev="${WORK}/evidence.json"
   : >"${out}"
-  jq -s 'map(select(.l != null and .l != "")) | group_by(.name)
-    | map(last) | map({key: .name, value: .}) | from_entries' \
-    "${STATE_DIR}/journal.jsonl" >"${journal_all}"
+  clean_journal "${WORK}/journal.json" || exit 1
+  jq -c -n --slurpfile j "${WORK}/journal.json" --slurpfile m "${WORK}/manifest.json" \
+    --arg bucket "${BUCKET}" '
+    ($j[0] | map(select(.bucket == $bucket))) as $J
+    | {e: (([$J[] | select((.emd5 // "") != "") | {name, md5: .emd5}]
+            + [$m[0][] | select(.bucket == $bucket and (.md5 // "") != "") | {name, md5}])
+           | group_by(.name) | map({key: .[0].name, value: (map(.md5) | unique)})
+           | from_entries),
+       l: ([$J[] | select((.l // "") != "" and (.lmd5 // "") != "")]
+           | group_by(.name) | map(last | {key: .name, value: {l, lmd5}})
+           | from_entries)}' >"${ev}"
+  if jq -e '.e | length == 0' "${ev}" >/dev/null; then
+    echo "::error::copy-out: --recover needs evidence: no journal entry in ${STATE_DIR}/journal.jsonl and no --manifest entry for ${BUCKET}; refusing"
+    exit 1
+  fi
+  local touched=() line name live lgen lmd5 action
   for d in "${DATES[@]}"; do
-    list_date "${d}"
-    jq -c -n --slurpfile live "${WORK}/live.json" --slurpfile soft "${WORK}/soft.json" \
-      --slurpfile man "${WORK}/manifest.json" --slurpfile jr "${journal_all}" \
-      --arg bucket "${BUCKET}" --arg date "${d}" '
-      ($soft[0]) as $S | ($man[0]) as $M | ($jr[0]) as $J
-      | $live[0]
+    "${GCLOUD}" storage objects list "gs://${BUCKET}/snapshots/${d}/district_*.json" \
+      --format=json >"${WORK}/live.json"
+    jq -c --slurpfile ev "${ev}" --arg date "${d}" '
+      ($ev[0]) as $V
       | map(select(.name | test("/district_[A-Za-z0-9]+\\.json$")))
       | sort_by(.name)[]
-      | . as $l
-      | ($J[$l.name]) as $j
-      | ([$j.emd5?] + [$M[] | select(.bucket == $bucket and .name == $l.name) | .md5]
-         + [$S[] | select(.name == $l.name) | .md5_hash]
-         | map(select(. != null and . != ""))) as $evidence
-      | ([$S[] | select(.name == $l.name and (.size * 1.5) < $l.size)]
-         | sort_by(.generation | tonumber) | last) as $small
-      | {date: $date, name: $l.name, live: $l.generation, liveMd5: $l.md5_hash,
-         prescrub: ($evidence | index($l.md5_hash) != null),
-         target: (if $j != null then $j.l elif $small != null then $small.generation else null end),
-         targetMd5: (if $j != null then $j.lmd5 elif $small != null then $small.md5_hash else null end),
-         journalled: ($j != null), jlmd5: ($j.lmd5?)}' >>"${WORK}/candidates.jsonl"
+      | . as $o | ($V.e[.name] // []) as $e | ($V.l[.name]) as $l
+      | {date: $date, name, live: .generation,
+         case: (if ($e | index($o.md5_hash)) != null then
+                  (if $l != null then "restore" else "no-recorded-l" end)
+                elif $l != null and .md5_hash == $l.lmd5 then "ok"
+                elif ($e | length) > 0 or $l != null then "left-alone"
+                else "ok" end),
+         l: ($l.l // null), lmd5: ($l.lmd5 // null)}' "${WORK}/live.json" \
+      >>"${WORK}/candidates.jsonl"
   done
-  local line name live target tmd5 action touched=()
   while IFS= read -r line; do
-    name="$(jq -r .name <<<"${line}")"
-    live="$(jq -r .live <<<"${line}")"
-    target="$(jq -r '.target // ""' <<<"${line}")"
-    tmd5="$(jq -r '.targetMd5 // ""' <<<"${line}")"
-    action=ok
-    if jq -e .prescrub <<<"${line}" >/dev/null; then
-      if [ -z "${target}" ]; then
-        action="no-target"
-      else
-        touched+=("$(jq -r .date <<<"${line}")")
-        jnl "${STATE_DIR}" "${name}" recover-begin bucket="${BUCKET}" l="${target}" lmd5="${tmd5}" r="${live}"
-        if "${GCLOUD}" storage restore "gs://${BUCKET}/${name}#${target}" \
-          --if-generation-match="${live}" >&2 &&
-          [ "$("${GCLOUD}" storage objects describe "gs://${BUCKET}/${name}" --format=json |
-            jq -r .md5_hash)" = "${tmd5}" ]; then
+    action="$(jq -r .case <<<"${line}")"
+    if [ "${action}" = restore ]; then
+      name="$(jq -r .name <<<"${line}")"
+      live="$(jq -r .live <<<"${line}")"
+      lgen="$(jq -r .l <<<"${line}")"
+      lmd5="$(jq -r .lmd5 <<<"${line}")"
+      touched+=("$(jq -r .date <<<"${line}")")
+      jnl "${STATE_DIR}" "${name}" recover-begin bucket="${BUCKET}" l="${lgen}" \
+        lmd5="${lmd5}" r="${live}"
+      action=failed
+      if "${GCLOUD}" storage restore "gs://${BUCKET}/${name}#${lgen}" \
+        --if-generation-match="${live}" >&2; then
+        if [ "$("${GCLOUD}" storage objects describe "gs://${BUCKET}/${name}" \
+          --format=json | jq -r '.md5_hash // ""' 2>/dev/null)" = "${lmd5}" ]; then
           action=restored
-        else
-          action=failed
         fi
-        jnl "${STATE_DIR}" "${name}" "recover-${action}" bucket="${BUCKET}" l="${target}" lmd5="${tmd5}" r="${live}"
       fi
-    elif jq -e '.journalled and .liveMd5 != .jlmd5' <<<"${line}" >/dev/null; then
-      action="live-changed"
+      jnl "${STATE_DIR}" "${name}" "recover-${action}" bucket="${BUCKET}" \
+        l="${lgen}" lmd5="${lmd5}" r="${live}"
     fi
     jq -c --arg action "${action}" \
-      '{type: "recover", date, name, action: $action, live, target}' <<<"${line}" >>"${out}"
+      '{type: "recover", date, name, action: $action, live, target: .l}' \
+      <<<"${line}" >>"${out}"
   done <"${WORK}/candidates.jsonl"
   cat "${out}" >&3
   cdn_line "${touched[@]+"${touched[@]}"}"
@@ -443,9 +510,11 @@ recover() {
     def n(a): map(select(.action == a)) | length;
     {type: "summary", mode: "recover", bucket: $bucket, stateDir: $sd,
      objects: length, restored: n("restored"), ok: n("ok"),
-     failed: n("failed"), noTarget: n("no-target"), liveChanged: n("live-changed")}' \
-    "${out}" >&3
-  if jq -s -e 'any(.[]; .action != "ok" and .action != "restored")' "${out}" >/dev/null; then
+     leftAlone: n("left-alone"), noRecordedL: n("no-recorded-l"),
+     failed: n("failed")}' "${out}" >&3
+  if jq -s -e 'any(.[]; .action == "failed" or .action == "no-recorded-l")' \
+    "${out}" >/dev/null; then
+    echo "::error::copy-out: recover could not put every pre-scrub object back; see the recover lines"
     exit 1
   fi
   exit 0
@@ -639,13 +708,18 @@ while IFS= read -r d; do
 done <"${WORK}/batches"
 
 # ══ Report, from this run's journal lines ══
-jq -s -c --arg run "${RUN_ID}" --arg bucket "${BUCKET}" '
+# Tolerant of a torn last line (R-3); a corrupt journal still reports.
+if ! clean_journal "${WORK}/journal.json"; then
+  echo "::error::copy-out: the journal cannot be read; run --recover with --state-dir ${STATE_DIR}"
+  echo '[]' >"${WORK}/journal.json"
+fi
+jq -c --arg run "${RUN_ID}" '
   map(select(.run == $run and .name != "")) | group_by(.name) | map(last)' \
-  "${STATE_DIR}/journal.jsonl" >"${WORK}/last.json"
+  "${WORK}/journal.json" >"${WORK}/last.json"
 jq -c '.[] | select(.event != "done") | {type: "result", name, event, r, reason}' \
   "${WORK}/last.json" >&3
-jq -s -r --arg run "${RUN_ID}" 'map(select(.run == $run and .event == "step1-begin")
-  | .name | split("/")[1]) | unique | .[]' "${STATE_DIR}/journal.jsonl" >"${WORK}/touched"
+jq -r --arg run "${RUN_ID}" 'map(select(.run == $run and .event == "step1-begin")
+  | .name | split("/")[1]) | unique | .[]' "${WORK}/journal.json" >"${WORK}/touched"
 TOUCHED=()
 while IFS= read -r d; do TOUCHED+=("${d}"); done <"${WORK}/touched"
 cdn_line "${TOUCHED[@]+"${TOUCHED[@]}"}"
