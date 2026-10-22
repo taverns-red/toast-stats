@@ -848,7 +848,7 @@ describe('copy-out: --recover', () => {
       }) + '\n'
     )
     const r = run(withState(['--recover', STAGING, '2026-06-15']))
-    expect(r.status, r.stderr).toBe(0)
+    expect(r.status, JSON.stringify(r.recover) + r.stderr).toBe(0)
     expect(md5(liveBytes(STAGING, a!.name)!)).toBe(md5(a!.live))
     expect(md5(liveBytes(STAGING, b!.name)!)).toBe(md5(b!.live))
     expect(r.recover.find(x => x.name === a!.name)).toMatchObject({
@@ -892,7 +892,7 @@ describe('copy-out: --recover', () => {
       STAGING,
       '2026-06-15',
     ])
-    expect(r.status, r.stderr).toBe(0)
+    expect(r.status, JSON.stringify(r.recover) + r.stderr).toBe(0)
     expect(md5(liveBytes(STAGING, a!.name)!)).toBe(md5(a!.live))
     expect(md5(liveBytes(STAGING, c!.name)!)).toBe(md5(fresh))
     expect(r.recover.find(x => x.name === c!.name)).toMatchObject({
