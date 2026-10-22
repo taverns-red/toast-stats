@@ -1719,95 +1719,18 @@ export function createCLI(): Command {
         snapshotDir: string
         verbose: boolean
       }) => {
-        const { carryForwardFac, isFacEnriched } =
+        const { carryForwardFacDir } =
           await import('./services/FindAClubCarryForward.js')
-        const { readFile, writeFile, readdir, access } =
-          await import('fs/promises')
-        const { join } = await import('path')
-        const { gunzipSync } = await import('zlib')
-
-        // A downloaded object may still be gzip (a gcloud that does not
-        // decompress, #1702): inflate it rather than fail on the bytes.
-        const readJson = async (file: string): Promise<unknown> => {
-          const bytes = await readFile(file)
-          const text =
-            bytes[0] === 0x1f && bytes[1] === 0x8b
-              ? gunzipSync(bytes).toString('utf-8')
-              : bytes.toString('utf-8')
-          return JSON.parse(text)
-        }
-
-        const FILE_PATTERN = /^district_([A-Za-z0-9]+)\.json$/
-        const ids = (await readdir(options.snapshotDir))
-          .map(f => FILE_PATTERN.exec(f)?.[1])
-          .filter((id): id is string => Boolean(id))
-          .sort()
-
-        type Outcome = 'carried' | 'alreadyEnriched' | 'priorUnenriched'
-        const results: Array<{
-          districtId: string
-          ok: boolean
-          outcome?: Outcome
-          rows?: number
-          error?: string
-        }> = []
-        let priorEnriched = 0
-
-        for (const districtId of ids) {
-          const file = `district_${districtId}.json`
-          const priorPath = join(options.fromDir, file)
-          try {
-            await access(priorPath)
-          } catch {
-            continue // no existing copy of this district: nothing to carry
-          }
-          try {
-            const prior = (await readJson(priorPath)) as Parameters<
-              typeof carryForwardFac
-            >[1]
-            const snapshotPath = join(options.snapshotDir, file)
-            const rebuilt = (await readJson(snapshotPath)) as Parameters<
-              typeof carryForwardFac
-            >[0]
-            let outcome: Outcome = 'priorUnenriched'
-            let rows = 0
-            if (isFacEnriched(prior)) {
-              priorEnriched += 1
-              if (isFacEnriched(rebuilt)) {
-                outcome = 'alreadyEnriched'
-              } else {
-                const result = carryForwardFac(rebuilt, prior)
-                await writeFile(
-                  snapshotPath,
-                  JSON.stringify(result.snapshot, null, 2),
-                  'utf-8'
-                )
-                outcome = 'carried'
-                rows = result.carried
-              }
+        const summary = await carryForwardFacDir({
+          fromDir: options.fromDir,
+          snapshotDir: options.snapshotDir,
+          // Errors always; per-district progress with --verbose (R4: stderr).
+          log: line => {
+            if (options.verbose || line.startsWith('[ERROR]')) {
+              console.error(line)
             }
-            results.push({ districtId, ok: true, outcome, rows })
-            if (options.verbose) {
-              console.error(
-                `[INFO] district ${districtId}: ${outcome}, rows=${rows}`
-              )
-            }
-          } catch (err) {
-            const message = err instanceof Error ? err.message : String(err)
-            results.push({ districtId, ok: false, error: message })
-            console.error(`[ERROR] district ${districtId}: ${message}`)
-          }
-        }
-
-        const summary = {
-          totalDistricts: results.length,
-          priorEnriched,
-          carried: results.filter(r => r.outcome === 'carried').length,
-          alreadyEnriched: results.filter(r => r.outcome === 'alreadyEnriched')
-            .length,
-          failed: results.filter(r => !r.ok).length,
-          results,
-        }
+          },
+        })
         emitJsonAndExit(
           summary,
           summary.failed === 0 ? ExitCode.SUCCESS : ExitCode.PARTIAL_FAILURE

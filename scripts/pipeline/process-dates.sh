@@ -49,13 +49,18 @@
 #                without persisting it. So the date's existing staging
 #                snapshot (snapshots/<actual>/district_*.json) is read and,
 #                where it is enriched, its FAC fields are carried onto the
-#                rebuild (collector-cli carry-forward-find-a-club) and the
-#                date counted as carried forward. Only a date with no staging
+#                rebuild (collector-cli carry-forward-find-a-club: the
+#                carried text re-scrubbed as a fresh FAC parse would,
+#                prospectives the rebuild now lists dropped) and the date
+#                counted as carried forward. Only a date with no staging
 #                snapshot, or whose staging snapshot is not enriched (before
-#                2026-05-15, or already stripped), is processed unenriched
-#                and counted. An unreadable raw-fac or staging snapshot, a
-#                failed merge or a failed carry-forward FAILS the date: an
-#                unenriched upload over an enriched date is the D-1 strip.
+#                2026-05-15, or already stripped: as of 2026-10-22 most of
+#                05-15..10-08 was, by earlier rebuilds), is processed
+#                unenriched and counted. An unreadable raw-fac or staging
+#                snapshot, a failed merge, a failed carry-forward, or an
+#                enriched staging snapshot that carried nothing FAILS the
+#                date: an unenriched upload over an enriched date is the D-1
+#                strip.
 #   8. compute   first the prior year, in every mode (#1769, D-8): best
 #                effort, snapshots/<actual - 1y>/district_*.json, the date
 #                compute-analytics reads for YoY (findPreviousProgramYearDate,
@@ -444,9 +449,14 @@ carry_forward_fac() {
     return 0
   fi
   rm -rf "${prior}"
-  if jq -e '.priorEnriched > 0' "${out}" >/dev/null 2>&1; then
-    echo "No raw-fac/${actual}/; carried its Find-A-Club fields forward from staging ($(jq -c '{priorEnriched, carried, alreadyEnriched}' "${out}"))"
+  # R17, one case per result: carried onto some district | staging enriched
+  # but nothing carried (every district already merged: not a carry, and
+  # never published as one) | staging not enriched | unreadable.
+  if jq -e '.carried > 0' "${out}" >/dev/null 2>&1; then
+    echo "No raw-fac/${actual}/; carried its Find-A-Club fields forward from staging ($(jq -c '{priorEnriched, carried, rowsCarried, alreadyEnriched}' "${out}"))"
     ENRICH=carried
+  elif jq -e '.priorEnriched > 0' "${out}" >/dev/null 2>&1; then
+    echo "::warning::Staging snapshots/${actual}/ is enriched but no Find-A-Club field was carried ($(jq -c '{priorEnriched, carried, alreadyEnriched}' "${out}")); nothing uploaded for it"
   elif jq -e '.priorEnriched == 0' "${out}" >/dev/null 2>&1; then
     echo "No raw-fac/${actual}/ and its staging snapshot is not enriched; ${actual} is processed unenriched"
     ENRICH=unenriched

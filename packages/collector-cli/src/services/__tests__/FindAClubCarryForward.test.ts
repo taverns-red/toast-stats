@@ -58,7 +58,31 @@ function stripped(snap: DistrictSnapshot): DistrictSnapshot {
   return out
 }
 
+/**
+ * The fixture as today's FAC parse would write it. Prod's 2026-10-10 merge
+ * kept a trailing space in club 9560's city ("Kingston "); scrubFacText
+ * (#2157, later) trims it. That trim is the only difference, so the carried
+ * snapshot is checked against this, not against the raw fixture.
+ */
+function freshlyScrubbed(snap: DistrictSnapshot): DistrictSnapshot {
+  const out = clone(snap)
+  for (const key of ['clubs', 'clubPerformance'] as const) {
+    for (const r of rows(out, key)) {
+      const a = r['address'] as Row | undefined
+      if (a && typeof a['city'] === 'string') a['city'] = a['city'].trim()
+    }
+  }
+  return out
+}
+
 describe('the fixture', () => {
+  it('differs from its fresh-scrubbed form only by the city trim', () => {
+    expect(rows(ENRICHED, 'clubs')[1]!['address']).toMatchObject({
+      city: 'Kingston ',
+    })
+    expect(freshlyScrubbed(ENRICHED)).not.toEqual(ENRICHED)
+  })
+
   it('is an enriched snapshot with padded clubPerformance ids', () => {
     expect(isFacEnriched(ENRICHED)).toBe(true)
     expect(rows(ENRICHED, 'clubPerformance')[0]!['Club Number']).toBe(
@@ -89,7 +113,7 @@ describe('isFacEnriched', () => {
 describe('carryForwardFac', () => {
   it('restores every FAC field and prospectiveClubs onto the rebuilt snapshot', () => {
     const result = carryForwardFac(stripped(ENRICHED), ENRICHED)
-    expect(result.snapshot).toEqual(ENRICHED)
+    expect(result.snapshot).toEqual(freshlyScrubbed(ENRICHED))
     // 3045 and 9560 in both arrays; 28678196 was never matched.
     expect(result.carried).toBe(4)
     expect(isFacEnriched(result.snapshot)).toBe(true)
@@ -233,9 +257,11 @@ describe('carryForwardFac — carried text is scrubbed like fresh FAC (#2157, #2
     expect(club['location']).toContain('Library')
   })
 
-  it('leaves already-clean text byte-identical', () => {
+  it('changes clean text only as a fresh parse would (the trim)', () => {
     const out = carryForwardFac(stripped(ENRICHED), ENRICHED).snapshot
-    expect(out).toEqual(ENRICHED)
+    expect(out).toEqual(freshlyScrubbed(ENRICHED))
+    // A second carry of the result changes nothing more (idempotent).
+    expect(carryForwardFac(stripped(out), out).snapshot).toEqual(out)
   })
 })
 
