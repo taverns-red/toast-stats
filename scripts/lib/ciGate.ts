@@ -98,11 +98,18 @@ const GATE_WORKFLOW = GATE_CHECK
  * The gate's own run is always in progress while it polls, and a superseded
  * gate run never produces a required check, so every `CI Gate` run (and the
  * caller's own run id, belt and braces) is excluded.
+ *
+ * A listing that does not contain the gate's own run is incomplete, so it
+ * counts as in flight. The endpoint intermittently answers 200 with
+ * `total_count: 0` for a head that has runs (7 of 16 reads of PR #2240's head
+ * on 2026-10-22), and that is how CI Gate run 39810475356 failed. Waiting is
+ * the safe side: the gate's deadline still bounds it.
  */
 export function workflowRunsInFlight(
   runs: ObservedWorkflowRun[],
   selfRunId: number
 ): boolean {
+  if (selfRunId > 0 && !runs.some(r => r.id === selfRunId)) return true
   return runs.some(
     r =>
       r.id !== selfRunId && r.name !== GATE_WORKFLOW && r.status !== 'completed'
