@@ -485,6 +485,14 @@ function inherited(
   return suffix === 'pm' ? 'am' : 'pm'
 }
 
+/** B is 1–60 minutes after A on a 12-hour dial ("6:45 for 7:00",
+ *  "18h15 for 18h30", "noon for 12.15"). */
+function arrivalLead(a: TimeToken, b: TimeToken): boolean {
+  const dial = (t: TimeToken): number => (t.hour % 12) * 60 + t.minute
+  const lead = (dial(b) - dial(a) + 720) % 720
+  return lead >= 1 && lead <= 60
+}
+
 function meetingLength(
   start: number | undefined,
   end: number | undefined
@@ -531,7 +539,12 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
     const start = tokens[i] as TimeToken
     const next = tokens[i + 1]
     // "6:45 for 7:00 pm": arrive at A for a B start; the meeting is B.
-    if (next && ARRIVE_FOR.test(between(start, next))) {
+    // Only for a short lead: "6:00 pm for 2:00 hrs" is a duration.
+    if (
+      next &&
+      ARRIVE_FOR.test(between(start, next)) &&
+      arrivalLead(start, next)
+    ) {
       // "7:15pm for a 7.30 start": B takes A's am/pm when it has none.
       if (
         !next.meridiem &&
