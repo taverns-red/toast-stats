@@ -874,6 +874,17 @@ describe('parseMeetingSchedule (#2243) — HHMM with am/pm or hrs', () => {
   )
 })
 
+describe("parseMeetingSchedule (#2243) — '~' and '--' between a range", () => {
+  it.each([
+    ['3:00~5:00 pm(KST)', '15:00'],
+    ['2:00~5:00 PM', '14:00'],
+    ['2:00 ～ 4:00 pm', '14:00'],
+    ['5:45 -- 7:00 PM Mountain Time', '17:45'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Sunday', time)).toEqual([`Sunday ${start}`])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
