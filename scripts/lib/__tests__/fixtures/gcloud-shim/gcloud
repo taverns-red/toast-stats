@@ -34,9 +34,11 @@
 # `objects list`/`describe` then report `generation` and `md5_hash`. A
 # soft-deleted generation lives at $SHIM_ROOT/.soft/<bucket>/<path>#<gen>
 # (meta in .soft-meta/, with its `soft-delete-time=`), never readable: only
-# listed (`--soft-deleted`) or restored. A restore overwrites the live object
-# and soft-deletes it, as the JSON API documents (versioning off); its
-# --if-generation-match is a precondition on the LIVE object.
+# listed (`--soft-deleted`) or restored. A restore copies the soft-deleted
+# generation to a new live generation and KEEPS the soft-deleted one (the
+# soft-delete docs); it overwrites the live object and soft-deletes it, as
+# the JSON API documents (versioning off); its --if-generation-match is a
+# precondition on the LIVE object.
 # Error texts are the ones Google Cloud SDK 583.0.0 prints (probed read-only
 # against the staging bucket, 2026-10-09). The `objects list` JSON keys are a
 # subset of the real ones recorded in ../gcloud-objects-list/ (#1731); a test
@@ -98,7 +100,9 @@ gen_enabled() { [ "${SHIM_GENERATIONS:-0}" = "1" ]; }
 
 # The next generation number (monotonic, per shim root).
 next_gen() {
-  local f="${SHIM_ROOT}/.gen-counter" n=1700000000000000
+  # Real generations are microsecond write times, so a new one is newer than
+  # any seeded (pre-2026-10-23) generation: start just after that.
+  local f="${SHIM_ROOT}/.gen-counter" n=1793000000000000
   [ -f "${f}" ] && n="$(cat "${f}")"
   n=$((n + 1))
   echo "${n}" >"${f}"
@@ -615,10 +619,13 @@ case "${CMD}" in
         echo "soft-delete-time=2026-10-24T12:00:00+0000"; } \
         >"$(soft_meta_of "${obj_url}" "${lgen}")"
     fi
+    # The soft-deleted generation is COPIED to a new live generation and
+    # stays soft-deleted until its retention ends ("Cloud Storage generates
+    # a new version of the object ... The original, soft-deleted version
+    # remains in the background", docs/storage/docs/soft-delete; #2240 R-2).
     mkdir -p "$(dirname "${live}")" "$(dirname "${lmeta}")"
-    mv "${sfile}" "${live}"
+    cp "${sfile}" "${live}"
     grep -v '^soft-delete-time=' "${smeta}" >"${lmeta}" 2>/dev/null || true
-    rm -f "${smeta}"
     stamp_generation "${lmeta}"
     ;;
 

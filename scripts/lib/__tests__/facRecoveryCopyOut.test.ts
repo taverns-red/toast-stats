@@ -177,6 +177,7 @@ function env(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
     SHIM_GENERATIONS: '1',
     HOOK_DIR: tmp,
     STUB_GH_DIR: tmp,
+    COPYOUT_LOCK_DIR: path.join(tmp, 'lock'),
     PAUSE_SECONDS: '0',
     ...extra,
   }
@@ -812,8 +813,8 @@ describe('copy-out: kill cases (#2240 review)', () => {
   })
 })
 
-describe('copy-out: --recover', () => {
-  /** A hard crash after step 1: E is live, the journal says step1-ok. */
+describe('copy-out: --recover (#2240 R-1..R-3)', () => {
+  /** A hard crash after step 1: E is live (and, as in GCS, still soft-deleted). */
   function crashAfterStep1(s: Seeded) {
     const r = spawnSync(
       'bash',
@@ -830,109 +831,188 @@ describe('copy-out: --recover', () => {
     expect(md5(liveBytes(STAGING, s.name)!)).toBe(md5(s.enriched))
   }
 
-  it('puts L back from the journal (begin written, the worker died)', () => {
+  /** The step1-begin line a worker writes before its restore. */
+  function journalLine(s: Seeded, event = 'step1-begin'): string {
+    return JSON.stringify({
+      ts: '2026-10-24T12:00:00Z',
+      run: 'crashed-run',
+      bucket: STAGING,
+      name: s.name,
+      event,
+      e: s.E,
+      emd5: md5(s.enriched),
+      l: s.L,
+      lmd5: md5(s.live),
+      r: '',
+    })
+  }
+
+  function writeJournal(text: string) {
+    fs.mkdirSync(stateDir, { recursive: true })
+    fs.writeFileSync(path.join(stateDir, 'journal.jsonl'), text)
+  }
+
+  const restoresOf = (s: Seeded) =>
+    calls().filter(l => l.startsWith('storage restore ') && l.includes(s.name))
+
+  it('restores the recorded L, by generation, over a live E, with a live precondition', () => {
     const [a, b] = seedDate(STAGING, '2026-06-15', ['61', '62'])
     crashAfterStep1(a!)
-    fs.mkdirSync(stateDir, { recursive: true })
-    fs.writeFileSync(
-      path.join(stateDir, 'journal.jsonl'),
-      JSON.stringify({
-        ts: '2026-10-24T12:00:00Z',
-        bucket: STAGING,
-        name: a!.name,
-        event: 'step1-begin',
-        e: a!.E,
-        emd5: md5(a!.enriched),
-        l: a!.L,
-        lmd5: md5(a!.live),
-      }) + '\n'
-    )
+    const liveE = liveMeta(STAGING, a!.name).match(/generation=(\d+)/)![1]
+    writeJournal(journalLine(a!) + '\n' + journalLine(b!) + '\n')
     const r = run(withState(['--recover', STAGING, '2026-06-15']))
     expect(r.status, JSON.stringify(r.recover) + r.stderr).toBe(0)
     expect(md5(liveBytes(STAGING, a!.name)!)).toBe(md5(a!.live))
-    expect(md5(liveBytes(STAGING, b!.name)!)).toBe(md5(b!.live))
+    expect(restoresOf(a!)).toEqual([
+      `storage restore gs://${STAGING}/${a!.name}#${a!.L} --if-generation-match=${liveE}`,
+    ])
     expect(r.recover.find(x => x.name === a!.name)).toMatchObject({
       action: 'restored',
     })
+    // b's live is L already: never touched.
     expect(r.recover.find(x => x.name === b!.name)).toMatchObject({
       action: 'ok',
     })
-    const back = calls().find(
-      l => l.startsWith('storage restore ') && l.includes(`#${a!.L} `)
-    )
-    expect(back).toMatch(/--if-generation-match=\d+$/)
+    expect(restoresOf(b!)).toEqual([])
     expect(r.cdn).toBeDefined()
   })
 
-  it('without a journal, uses the listing and the manifest: a pre-scrub live object goes back, a legitimately enriched one stays', () => {
-    const [a, c] = seedDate(STAGING, '2026-06-15', ['61', '63'])
+  it('is idempotent: a second run finds nothing to do and writes nothing', () => {
+    const [a] = seedDate(STAGING, '2026-06-15', ['61'])
     crashAfterStep1(a!)
-    // 63: a later rebuild legitimately enriched it (its md5 is no recorded E).
+    writeJournal(journalLine(a!) + '\n')
+    expect(run(withState(['--recover', STAGING, '2026-06-15'])).status).toBe(0)
+    const gen = liveMeta(STAGING, a!.name)
+    fs.rmSync(shimLog)
+    const again = run(withState(['--recover', STAGING, '2026-06-15']))
+    expect(again.status, again.stderr).toBe(0)
+    expect(writes()).toEqual([])
+    expect(liveMeta(STAGING, a!.name)).toBe(gen)
+    expect(again.recover[0]).toMatchObject({ action: 'ok' })
+    expect(again.cdn).toBeUndefined()
+  })
+
+  it('after a clean --execute it is a no-op, though every L and E stays soft-deleted', () => {
+    seedDate(STAGING, '2026-06-15', ['61', '62'])
+    expect(run(withState(['--execute', STAGING, '2026-06-15'])).status).toBe(0)
+    fs.rmSync(shimLog)
+    const r = run(withState(['--recover', STAGING, '2026-06-15']))
+    expect(r.status, r.stderr).toBe(0)
+    expect(writes()).toEqual([])
+    expect(r.recover.map(x => x.action)).toEqual(['ok', 'ok'])
+  })
+
+  it('refuses with no journal and no manifest, before any call', () => {
+    seedDate(STAGING, '2026-06-15', ['61'])
+    const r = run(withState(['--recover', STAGING, '2026-06-15']))
+    expect(r.status).toBe(1)
+    expect(r.stderr).toContain('no journal')
+    expect(calls()).toEqual([])
+    // An existing but empty journal is the same.
+    writeJournal('')
+    expect(run(withState(['--recover', STAGING, '2026-06-15'])).status).toBe(1)
+    expect(calls()).toEqual([])
+  })
+
+  it('never touches an object whose live md5 is not its E (soft-deleted presence is no evidence)', () => {
+    const [a, c] = seedDate(STAGING, '2026-06-15', ['61', '63'])
+    // 63: a later rebuild legitimately enriched it, larger than every
+    // soft-deleted generation, and an old tiny generation is also there.
     const fresh = body(22, 'carried-forward-rebuild')
     putLive(STAGING, c!.name, fresh, '1792500000000000')
-    // The stored inventory's md5s are the evidence of a pre-scrub generation.
-    const m = path.join(tmp, 'manifest.json')
-    fs.writeFileSync(
-      m,
-      JSON.stringify(
-        [a!, c!].map(s => ({
-          bucket: STAGING,
-          name: s.name,
-          generation: s.E,
-          md5: md5(s.enriched),
-        }))
-      )
-    )
-    const r = run([
-      '--recover',
-      '--manifest',
-      m,
-      '--state-dir',
-      path.join(tmp, 'empty'),
-      STAGING,
-      '2026-06-15',
-    ])
-    expect(r.status, JSON.stringify(r.recover) + r.stderr).toBe(0)
-    expect(md5(liveBytes(STAGING, a!.name)!)).toBe(md5(a!.live))
+    putSoft(STAGING, c!.name, body(1, 'early-0-club'), '1771000000000000')
+    writeJournal(journalLine(a!) + '\n' + journalLine(c!) + '\n')
+    const r = run(withState(['--recover', STAGING, '2026-06-15']))
+    expect(r.status, r.stderr).toBe(0)
+    expect(writes()).toEqual([])
     expect(md5(liveBytes(STAGING, c!.name)!)).toBe(md5(fresh))
     expect(r.recover.find(x => x.name === c!.name)).toMatchObject({
-      action: 'ok',
+      action: 'left-alone',
     })
   })
 
-  it('a live object changed by another writer after the crash is reported, not reverted', () => {
+  it('with only a manifest, a live E is reported, never guessed at', () => {
     const [a] = seedDate(STAGING, '2026-06-15', ['61'])
     crashAfterStep1(a!)
-    fs.writeFileSync(path.join(tmp, 'newer.json'), 'a newer daily')
-    spawnSync(
-      'bash',
-      [
-        SHIM,
-        'storage',
-        'cp',
-        path.join(tmp, 'newer.json'),
-        `gs://${STAGING}/${a!.name}`,
-      ],
-      {
-        env: env(),
-      }
-    )
-    fs.mkdirSync(stateDir, { recursive: true })
+    const m = path.join(tmp, 'manifest.json')
     fs.writeFileSync(
-      path.join(stateDir, 'journal.jsonl'),
-      JSON.stringify({
-        bucket: STAGING,
-        name: a!.name,
-        event: 'step1-ok',
-        e: a!.E,
-        emd5: md5(a!.enriched),
-        l: a!.L,
-        lmd5: md5(a!.live),
-      }) + '\n'
+      m,
+      JSON.stringify([
+        {
+          bucket: STAGING,
+          name: a!.name,
+          generation: a!.E,
+          md5: md5(a!.enriched),
+        },
+      ])
     )
-    const r = run(withState(['--recover', STAGING, '2026-06-15']))
-    expect(liveBytes(STAGING, a!.name)!.toString()).toBe('a newer daily')
-    expect(r.recover[0]).toMatchObject({ action: 'live-changed' })
+    const r = run(
+      withState(['--recover', '--manifest', m, STAGING, '2026-06-15'])
+    )
     expect(r.status).toBe(1)
+    expect(writes()).toEqual([])
+    expect(r.recover[0]).toMatchObject({ action: 'no-recorded-l' })
+    expect(md5(liveBytes(STAGING, a!.name)!)).toBe(md5(a!.enriched))
+  })
+
+  it('skips a torn final journal line with a warning, and still recovers', () => {
+    const [a, b] = seedDate(STAGING, '2026-06-15', ['61', '62'])
+    crashAfterStep1(a!)
+    const torn = journalLine(b!, 'step2-begin').slice(0, 40)
+    writeJournal(journalLine(a!) + '\n' + torn)
+    const r = run(withState(['--recover', STAGING, '2026-06-15']))
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toMatch(/torn final journal line/)
+    expect(md5(liveBytes(STAGING, a!.name)!)).toBe(md5(a!.live))
+  })
+
+  it('refuses a journal torn anywhere but its last line', () => {
+    const [a, b] = seedDate(STAGING, '2026-06-15', ['61', '62'])
+    crashAfterStep1(a!)
+    writeJournal(journalLine(a!).slice(0, 40) + '\n' + journalLine(b!) + '\n')
+    const r = run(withState(['--recover', STAGING, '2026-06-15']))
+    expect(r.status).toBe(1)
+    expect(writes()).toEqual([])
+  })
+})
+
+describe('copy-out: one run at a time (#2240 R-4)', () => {
+  const lockDir = () => path.join(tmp, 'lock')
+
+  it('refuses execute, pilot and recover while another run holds the lock', () => {
+    seedDate(STAGING, '2026-06-15', ['61'])
+    fs.mkdirSync(lockDir())
+    fs.writeFileSync(
+      path.join(lockDir(), 'owner'),
+      `pid=${process.pid} run=other host=${os.hostname()}\n`
+    )
+    for (const mode of ['--execute', '--pilot', '--recover']) {
+      const r = run(withState([mode, STAGING, '2026-06-15']))
+      expect(r.status, mode).toBe(1)
+      expect(r.stderr).toContain('held by')
+    }
+    expect(calls()).toEqual([])
+  })
+
+  it('names a stale lock (its pid is gone) and still refuses', () => {
+    seedDate(STAGING, '2026-06-15', ['61'])
+    fs.mkdirSync(lockDir())
+    fs.writeFileSync(
+      path.join(lockDir(), 'owner'),
+      `pid=999999 run=crashed host=${os.hostname()}\n`
+    )
+    const r = run(withState(['--execute', STAGING, '2026-06-15']))
+    expect(r.status).toBe(1)
+    expect(r.stderr).toContain('stale')
+    expect(r.stderr).toContain(lockDir())
+    expect(calls()).toEqual([])
+  })
+
+  it('takes the lock for a run and releases it on exit; a dry run takes none', () => {
+    seedDate(STAGING, '2026-06-15', ['61'])
+    expect(run(withState(['--pilot', STAGING, '2026-06-15'])).status).toBe(0)
+    expect(fs.existsSync(lockDir())).toBe(false)
+    fs.mkdirSync(lockDir())
+    expect(run([STAGING, '2026-06-15']).status).toBe(0)
   })
 })
