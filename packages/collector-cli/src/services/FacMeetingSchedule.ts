@@ -361,8 +361,11 @@ interface TimeToken {
 const TIME_TOKEN =
   /\bnoon\b|(?<![\d.:])\b(\d{1,2})(?:\s*([:h])\s*(\d{2})|(\.)(\d{2}))?(\s*h\b)?\s*(am|pm)?(?!\d)/g
 const RANGE_SEPARATOR = /^\s*(?:-+|–|—|~|〜|～|to|a|until|jusqu'?a)\s*$/
+/** A two-digit hour before hrs/hours ("1600 hrs", "11:00 hours") is a
+ *  24-hour clock; "1:30 hours" is a duration. The lookbehinds keep an
+ *  offset ("+0530 hrs", "- 0600 hrs") out. */
 const HHMM_HRS =
-  /(?<![\d:.+\-−])(?<![+\-−]\s)(\d{1,2})[:.]?(\d{2})\s*(?:hrs?|hours?)\b\.?/g
+  /(?<![\d:.+\-−])(?<![+\-−]\s)(\d{2})[:.]?(\d{2})\s*(?:hrs?|hours?)\b\.?/g
 /** 12-hour only: "2026 pm" is a year, not 20:26. */
 const HHMM_MERIDIEM = /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
 const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
