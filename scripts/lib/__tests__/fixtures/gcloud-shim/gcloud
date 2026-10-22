@@ -24,7 +24,10 @@
 # and, for the #2239 copy-out (scripts/ops/fac-recovery-2239-copy-out.sh),
 # `storage objects describe <url>[#gen] --format=json`,
 # `storage restore <url>#<gen> [--if-generation-match=<gen>]` and
-# `storage cp [--no-clobber] gs://<b>/<o>#<gen> gs://<b>/<o>`.
+# `storage cp [--no-clobber] gs://<b>/<o>#<gen> gs://<b>/<o>`, and
+# `storage buckets describe|get-iam-policy gs://<b> --format=json`, served
+# from $SHIM_ROOT/.buckets/<b>/{describe,iam}.json (shapes recorded in
+# ../gcloud-buckets/); a bucket without the file is a 404.
 #
 # Generations and soft delete (#2239), only with SHIM_GENERATIONS=1: every
 # write gives the object a new generation (`generation=` in its meta), and
@@ -544,6 +547,29 @@ case "${CMD}" in
       sep=', '
     done
     printf ']\n'
+    ;;
+
+  buckets)
+    sub="${1:-}"
+    url="${2:-}"
+    if [ "${3:-}" != "--format=json" ] || [[ "${url}" != gs://* ]]; then
+      echo "gcloud shim: unsupported: storage buckets $*" >&2
+      exit 2
+    fi
+    b="$(bucket_of "${url}")"
+    case "${sub}" in
+      describe) f="${SHIM_ROOT}/.buckets/${b}/describe.json" ;;
+      get-iam-policy) f="${SHIM_ROOT}/.buckets/${b}/iam.json" ;;
+      *)
+        echo "gcloud shim: unsupported: storage buckets ${sub}" >&2
+        exit 2
+        ;;
+    esac
+    if [ ! -f "${f}" ]; then
+      echo "ERROR: (gcloud.storage.buckets.${sub}) gs://${b} not found: 404." >&2
+      exit 1
+    fi
+    cat "${f}"
     ;;
 
   restore)
