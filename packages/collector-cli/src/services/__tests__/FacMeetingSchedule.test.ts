@@ -777,6 +777,7 @@ describe("parseMeetingSchedule (#2243) — 'A for B': the meeting starts at B", 
     ['18h15 for 18h30', '18:30'],
     ['6:45 p.m. (for 7pm start)', '19:00'],
     ['8:45 am for 9:00 am to 11:am UTC+2', '09:00'],
+    ['7:15pm for a 7.30 start', '19:30'],
   ])('%j starts at %s', (time, start) => {
     expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
   })

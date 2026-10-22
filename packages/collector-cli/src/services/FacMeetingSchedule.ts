@@ -357,6 +357,7 @@ interface TimeToken {
 const TIME_TOKEN =
   /\bnoon\b|(?<![\d.:])\b(\d{1,2})(?:\s*([:h])\s*(\d{2})|(\.)(\d{2}))?(\s*h\b)?\s*(am|pm)?(?!\d)/g
 const RANGE_SEPARATOR = /^\s*(?:-|–|—|to|a|until|jusqu'?a)\s*$/
+const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
 /** "UTC-5", "GMT +6": the number after is an offset, not a time. */
 const OFFSET_BEFORE = /(?:[+\-−]|utc|gmt)\s*$/
 const LIST_SEPARATOR = /^\s*(?:et|and|&|,|\/)\s*$/
@@ -472,6 +473,20 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
   while (i < tokens.length) {
     const start = tokens[i] as TimeToken
     const next = tokens[i + 1]
+    // "6:45 for 7:00 pm": arrive at A for a B start; the meeting is B.
+    if (next && ARRIVE_FOR.test(between(start, next))) {
+      // "7:15pm for a 7.30 start": B takes A's am/pm when it has none.
+      if (
+        !next.meridiem &&
+        start.meridiem &&
+        !next.twentyFour &&
+        next.hour % 12 >= start.hour % 12
+      ) {
+        tokens[i + 1] = { ...next, meridiem: start.meridiem }
+      }
+      i += 1
+      continue
+    }
     let slot: Slot
     if (next && RANGE_SEPARATOR.test(between(start, next))) {
       const startMinutes = resolve(start, inherited(start, next, true))
