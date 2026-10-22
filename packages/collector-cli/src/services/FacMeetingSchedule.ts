@@ -451,7 +451,10 @@ function timeTokensIn(text: string): TimeToken[] {
         : {}),
     })
   }
-  const joined = (a: TimeToken | undefined, b: TimeToken | undefined) =>
+  const joined = (
+    a: TimeToken | undefined,
+    b: TimeToken | undefined
+  ): boolean =>
     a !== undefined &&
     b !== undefined &&
     (RANGE_SEPARATOR.test(text.slice(a.end, b.start)) ||
