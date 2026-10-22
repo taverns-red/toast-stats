@@ -240,14 +240,18 @@ export function meetingModeFromText(
 
 /* ── Weekdays, cadence, weeks of the month ─────────────────────────── */
 
+/** English, French, Spanish, German, Dutch and Italian day names
+ *  (#2243), diacritics folded. */
 const WEEKDAY_WORDS: Record<MeetingWeekday, string> = {
-  Monday: 'mon|mondays?|lundis?',
-  Tuesday: 'tues?|tuesdays?|mardis?',
-  Wednesday: 'weds?|wednesdays?|mercredis?',
-  Thursday: 'thu|thur|thurs|thursdays?|jeudis?',
-  Friday: 'fri|fridays?|vendredis?',
-  Saturday: 'sat|saturdays?|samedis?',
-  Sunday: 'sun|sundays?|dimanches?',
+  Monday: 'mon|mondays?|lundis?|lunes|montag|maandag(?:avond)?|lunedi',
+  Tuesday: 'tues?|tuesdays?|mardis?|martes|dienstag|dinsdag(?:avond)?|martedi',
+  Wednesday:
+    'weds?|wednesdays?|mercredis?|miercoles|mittwoch|woensdag(?:avond)?|mercoledi',
+  Thursday:
+    'thu|thur|thurs|thursdays?|jeudis?|jueves|donnerstag|donderdag(?:avond)?|giovedi',
+  Friday: 'fri|fridays?|vendredis?|viernes|freitag|vrijdag(?:avond)?|venerdi',
+  Saturday: 'sat|saturdays?|samedis?|sabados?|samstag|zaterdag|sabato',
+  Sunday: 'sun|sundays?|dimanches?|domingos?|sonntag|zondag|domenica',
 }
 
 const WEEKDAY_PATTERNS = (
@@ -272,11 +276,11 @@ const UNCERTAIN_CADENCE =
   /\btwice\b|\bmost\b|\bcheck\b|\brefer\b|\bcontact\b|\bvar(?:y|ies)\b|\boccasional\w*/
 
 const ORDINAL_WORDS: [number, string][] = [
-  [1, '1st|first|1er|1re|1ere'],
-  [2, '2nd|second|2e|2eme'],
-  [3, '3rd|third|3e|3eme'],
-  [4, '4th|fourth|4e|4eme'],
-  [5, '5th|fifth|5e|5eme'],
+  [1, '1st|first|1er|1re|1ere|1ro|1o|primero?'],
+  [2, '2nd|second|2e|2eme|2do|2o|segundo'],
+  [3, '3rd|third|3e|3eme|3ro|3o|3er|tercero?'],
+  [4, '4th|fourth|4e|4eme|4to|4o|cuarto'],
+  [5, '5th|fifth|5e|5eme|5to|5o|quinto'],
 ]
 const MODE_WORDS: [MeetingMode, string][] = [
   ['hybrid', 'hybri\\w*'],
@@ -347,11 +351,57 @@ interface TimeToken {
   /** h-notation ("19 h 00", "14h") or a leading zero ("07:15"). */
   twentyFour: boolean
   meridiem?: 'am' | 'pm'
+  /** A lone number ("7" in "7-9 pm"): a time only as a range start. */
+  bare?: boolean
+  /** "3.15" with no am/pm: a time only next to another time. */
+  looseDot?: boolean
 }
 
+/** `:`, `h` or `.` between hour and minute ("7:30", "18h30", "7.30 pm",
+ *  #2243). A dot takes no spaces, so prose like "Rm 2. 30 people" is not
+ *  a time. A token never starts inside a number ("9.00pm" is not "00pm"). */
 const TIME_TOKEN =
-  /\bnoon\b|\b(\d{1,2})(?:\s*([:h])\s*(\d{2}))?(\s*h\b)?\s*(am|pm)?(?!\d)/g
-const RANGE_SEPARATOR = /^\s*(?:-|–|—|to|a|until|jusqu'?a)\s*$/
+  /\bnoon\b|(?<![\d.:])\b(\d{1,2})(?:\s*([:h])\s*(\d{2})|(\.)(\d{2}))?(\s*h\b)?\s*(am|pm)?(?!\d)/g
+const RANGE_SEPARATOR = /^\s*(?:-+|–|—|~|〜|～|to|a|until|jusqu'?a)\s*$/
+/** A two-digit hour before hrs/hours ("1600 hrs", "11:00 hours") is a
+ *  24-hour clock; "1:30 hours" is a duration. The lookbehinds keep an
+ *  offset ("+0530 hrs", "- 0600 hrs") out. */
+const HHMM_HRS =
+  /(?<![\d:.+\-−])(?<![+\-−]\s)(\d{2})[:.]?(\d{2})\s*(?:hrs?|hours?)\b\.?/g
+/** Both ends of "730-930 pm", so the start is not lost (#2243). */
+const HHMM_RANGE_MERIDIEM =
+  /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(\s*(?:-|–|to)\s*)(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
+/** 12-hour only: "2026 pm" is a year, not 20:26. */
+const HHMM_MERIDIEM = /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
+const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
+/** "UTC-5", "GMT + 6", "-4DT": the number after is an offset, not a time.
+ *  A dash after a word and a space ("Saturday- 7-9 pm") is not a sign. */
+const OFFSET_BEFORE = /(?:utc|gmt)\s*(?:[+\-−]\s*)?$|[+\-−]$/
+const WEEKDAY_WORD = new RegExp(
+  `^(?:${Object.values(WEEKDAY_WORDS).join('|')})$`
+)
+/** Words a bare range start may follow: "Thursdays 7-9 pm", "from 7 - 9". */
+const BARE_START_AFTER =
+  /^(?:from|at|de|des|between|entre|and|et|y|or|ou|start|starts|begins)$/
+/** An ordinal week ("1st & 3rd 6-7:30 pm"). */
+const ORDINAL_END = /\d(?:st|nd|rd|th|er|e|o|ro|do|to)$/
+
+/**
+ * A lone number starts a range only after a day, an ordinal, a linking
+ * word or punctuation. After any other word it is a label ("Room 3 - 7
+ * pm", "Planta 2 - 19:00", #2243); after a sign it is an offset.
+ */
+function bareStartAllowed(before: string): boolean {
+  if (OFFSET_BEFORE.test(before)) return false
+  const trimmed = before.replace(/[\s\-–:,(]+$/, '')
+  if (ORDINAL_END.test(trimmed)) return true
+  const word = /([a-z]+)$/.exec(trimmed)?.[1]
+  if (word === undefined) return true
+  return WEEKDAY_WORD.test(word) || BARE_START_AFTER.test(word)
+}
+
+const SIGNED_OFFSET_BEFORE = /(?:utc|gmt)\s*[+\-−]\s*$/
+const CURRENCY_BEFORE = /[$€£¥₹]\s*$/
 const LIST_SEPARATOR = /^\s*(?:et|and|&|,|\/)\s*$/
 
 function timeTokensIn(text: string): TimeToken[] {
@@ -364,12 +414,25 @@ function timeTokensIn(text: string): TimeToken[] {
       tokens.push({ start: at, end, hour: 12, minute: 0, twentyFour: true })
       continue
     }
-    const [, hourText, separator, minuteText, trailingH, meridiem] = match
-    // A bare number ("UTC-5", "1hr") is not a time.
-    if (!minuteText && !trailingH && !meridiem && separator !== 'h') continue
+    const [, hourText, sep, colonMinute, dot, dotMinute, trailingH, meridiem] =
+      match
+    const separator = sep ?? dot
+    const minuteText = colonMinute ?? dotMinute
+    // A bare number ("UTC-5", "1hr") is not a time on its own; it may
+    // start a range ("7-9 pm", #2243), checked below. An offset is never one.
+    const bare = !minuteText && !trailingH && !meridiem && separator !== 'h'
+    const before = text.slice(0, at)
+    if (bare && !bareStartAllowed(before)) continue
+    // "GMT+5.30", "$7.50": an offset or a price, never a time.
+    if (SIGNED_OFFSET_BEFORE.test(before) || CURRENCY_BEFORE.test(before)) {
+      continue
+    }
     const hour = Number(hourText)
     const minute = minuteText ? Number(minuteText) : 0
     if (hour > 23 || minute > 59) continue
+    // "00 pm" names no hour; reading it as midnight put evening clubs at
+    // 00:00 (#2243). Unreadable → no start time ("time not stated").
+    if (hour === 0 && meridiem) continue
     tokens.push({
       start: at,
       end: match[0].trimEnd().length + at,
@@ -382,9 +445,38 @@ function timeTokensIn(text: string): TimeToken[] {
           hourText.length === 2 &&
           hourText[0] === '0'),
       ...(meridiem ? { meridiem: meridiem as 'am' | 'pm' } : {}),
+      ...(bare ? { bare } : {}),
+      ...(dot && !meridiem && hour <= 12 && hourText?.[0] !== '0'
+        ? { looseDot: true }
+        : {}),
     })
   }
-  return tokens
+  const joined = (
+    a: TimeToken | undefined,
+    b: TimeToken | undefined
+  ): boolean =>
+    a !== undefined &&
+    b !== undefined &&
+    (RANGE_SEPARATOR.test(text.slice(a.end, b.start)) ||
+      ARRIVE_FOR.test(text.slice(a.end, b.start)))
+  return tokens.filter((token, i) => {
+    const next = tokens[i + 1]
+    // "Rm 3.15, 7:00 pm", "Fee 12.50": a 12-hour dotted number with no
+    // am/pm is a time only next to another one ("7.30 - 9.30 pm").
+    if (
+      token.looseDot &&
+      !joined(tokens[i - 1], token) &&
+      !joined(token, next)
+    ) {
+      return false
+    }
+    if (!token.bare) return true
+    return (
+      next !== undefined &&
+      !next.bare &&
+      RANGE_SEPARATOR.test(text.slice(token.end, next.start))
+    )
+  })
 }
 
 /** Minutes after midnight, or undefined when am/pm cannot be known. */
@@ -407,6 +499,18 @@ function inherited(
   bareIsStart: boolean
 ): 'am' | 'pm' | undefined {
   const suffix = partner.meridiem
+  // "11:45 - 13:00", "10:00 - 12:00": an end at noon or on a 24-hour clock
+  // puts a smaller bare start in the morning (#2243).
+  if (
+    !suffix &&
+    bareIsStart &&
+    !bare.bare &&
+    bare.hour < 12 &&
+    bare.hour < partner.hour &&
+    (partner.hour >= 12 || partner.twentyFour)
+  ) {
+    return 'am'
+  }
   if (!suffix || bare.twentyFour || bare.hour === 12) return undefined
   if (partner.hour === 12) return bareIsStart ? 'am' : 'pm'
   const wraps = bareIsStart
@@ -414,6 +518,23 @@ function inherited(
     : bare.hour < partner.hour
   if (!wraps) return suffix
   return suffix === 'pm' ? 'am' : 'pm'
+}
+
+/** B is 1–60 minutes after A on a 12-hour dial ("6:45 for 7:00",
+ *  "18h15 for 18h30", "noon for 12.15"). */
+function arrivalLead(a: TimeToken, b: TimeToken): boolean {
+  const dial = (t: TimeToken): number => (t.hour % 12) * 60 + t.minute
+  const lead = (dial(b) - dial(a) + 720) % 720
+  return lead >= 1 && lead <= 60
+}
+
+function meetingLength(
+  start: number | undefined,
+  end: number | undefined
+): boolean {
+  if (start === undefined || end === undefined) return false
+  const length = end - start
+  return length >= 15 && length <= 180
 }
 
 interface Slot {
@@ -439,7 +560,12 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
     .replace(/\b12(?::00)?\s*noon\b/g, 'noon')
     .replace(/\bnoon\s*\/\s*midi\b/g, 'noon')
     .replace(/(?<!-)\bmidi\b/g, 'noon')
-    .replace(/\b([ap])\.?\s?m\b\.?/g, '$1m')
+    .replace(/(?:(?<=\d)|\b)([ap])\.?\s?m\b\.?/g, '$1m') // "7:30p.m." too
+    // "1600 hrs", "11:00 hours" → h-notation (24-hour); a lone "2 hours"
+    // is a duration and stays out. "730 pm" → "7:30 pm" (#2243).
+    .replace(HHMM_HRS, '$1h$2')
+    .replace(HHMM_RANGE_MERIDIEM, '$1:$2$3$4:$5')
+    .replace(HHMM_MERIDIEM, '$1:$2')
   const tokens = timeTokensIn(text)
   const between = (a: TimeToken, b: TimeToken): string =>
     text.slice(a.end, b.start)
@@ -448,10 +574,56 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
   while (i < tokens.length) {
     const start = tokens[i] as TimeToken
     const next = tokens[i + 1]
+    // "6:45 for 7:00 pm": arrive at A for a B start; the meeting is B.
+    // Only for a short lead: "6:00 pm for 2:00 hrs" is a duration.
+    if (
+      next &&
+      ARRIVE_FOR.test(between(start, next)) &&
+      arrivalLead(start, next)
+    ) {
+      // "7:15pm for a 7.30 start": B takes A's am/pm when it has none.
+      if (
+        !next.meridiem &&
+        start.meridiem &&
+        !next.twentyFour &&
+        next.hour % 12 >= start.hour % 12
+      ) {
+        tokens[i + 1] = { ...next, meridiem: start.meridiem }
+      }
+      i += 1
+      continue
+    }
     let slot: Slot
     if (next && RANGE_SEPARATOR.test(between(start, next))) {
-      const startMinutes = resolve(start, inherited(start, next, true))
-      const endMinutes = resolve(next, inherited(next, start, false))
+      let startMinutes = resolve(start, inherited(start, next, true))
+      let endMinutes = resolve(next, inherited(next, start, false))
+      // "10-12 am": a morning range ends at noon, not midnight.
+      if (
+        next.hour === 12 &&
+        next.meridiem === 'am' &&
+        startMinutes !== undefined &&
+        startMinutes < 12 * 60
+      ) {
+        endMinutes = 12 * 60 + next.minute
+      }
+      // "12:00 AM - 1:10 PM": a midnight start before an afternoon end is
+      // a slip for noon (#2243). Up to 18:00 only: a later end could be a
+      // real long event from midnight, so it is left as written.
+      if (
+        start.hour === 12 &&
+        start.meridiem === 'am' &&
+        endMinutes !== undefined &&
+        endMinutes > 12 * 60 &&
+        endMinutes <= 18 * 60
+      ) {
+        startMinutes = 12 * 60 + start.minute
+      }
+      // A lone-number start must make a meeting-length range (15 min–3 h):
+      // "2 - 7 pm" is not 14:00–19:00.
+      if (start.bare && !meetingLength(startMinutes, endMinutes)) {
+        i += 1
+        continue
+      }
       slot =
         startMinutes === undefined
           ? {}

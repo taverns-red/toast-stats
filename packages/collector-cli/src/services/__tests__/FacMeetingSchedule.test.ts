@@ -701,6 +701,305 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
   })
 })
 
+describe('parseMeetingSchedule (#2243) — dot as the minute separator', () => {
+  it.each([
+    ['7.30 pm to 9.00pm AT', '19:30', '21:00'],
+    ['7.00 pm - 8.30 pm', '19:00', '20:30'],
+    ['7.30pm', '19:30', undefined],
+    ['19.30', '19:30', undefined],
+    ['18.45 - 20.15', '18:45', '20:15'],
+  ])('%j → starts %s', (time, startTime, endTime) => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Tuesday', meetingTime: time })
+    ).toEqual([
+      {
+        day: 'Tuesday',
+        cadence: 'weekly',
+        startTime,
+        ...(endTime ? { endTime } : {}),
+      },
+    ])
+  })
+
+  it.each([['00pm'], ['00 pm'], ['0 am'], ['9.00x pm']])(
+    'an unreadable time %j → time not stated, never 00:00',
+    time => {
+      expect(
+        parseMeetingSchedule({ meetingDay: 'Tuesday', meetingTime: time })
+      ).toEqual([{ day: 'Tuesday', cadence: 'weekly' }])
+    }
+  )
+
+  it.each([
+    ['GMT+5.30 7 pm', '19:00'],
+    ['UTC +5.30, 7:00 pm', '19:00'],
+    ['$7.50 7 pm', '19:00'],
+    ['Rm 3.15, 7:00 pm', '19:00'],
+    ['Fee 12.50, 7pm', '19:00'],
+  ])('a decimal before the time in %j is not a time', (time, start) => {
+    expect(starts('Tuesday', time)).toEqual([`Tuesday ${start}`])
+  })
+
+  it('a dotted time with no am/pm under 13 stays unstated (no guess)', () => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Tuesday', meetingTime: '7.30' })
+    ).toEqual([{ day: 'Tuesday', cadence: 'weekly' }])
+  })
+})
+
+/** Start times only: the slot the heatmap counts. */
+function starts(meetingDay: string, meetingTime: string): string[] {
+  return (parseMeetingSchedule({ meetingDay, meetingTime }) ?? []).map(
+    e => `${e.day} ${e.startTime ?? '?'}`
+  )
+}
+
+describe('parseMeetingSchedule (#2243) — a bare hour starting a range', () => {
+  it.each([
+    ['7 - 9 pm', '19:00'],
+    ['7-9 PM', '19:00'],
+    ['3-5 PM', '15:00'],
+    ['2 -3 PM', '14:00'],
+    ['7 to 9:15 p.m.', '19:00'],
+    ['1-2:00pm', '13:00'],
+    ['6-7:30 pm AT', '18:00'],
+    ['12-1 PM CET', '12:00'],
+    ['11-1 pm', '11:00'],
+    ['Saturday- 7-8:30PM', '19:00'],
+  ])('%j starts at %s, not at the end hour', (time, start) => {
+    expect(starts('Tuesday', time)).toEqual([`Tuesday ${start}`])
+  })
+
+  it.each([
+    ['Room 3 - 7 pm', '19:00'],
+    ['Level 3 - 6:30 PM', '18:30'],
+    ['Floor 2 - 7:00 pm', '19:00'],
+    ['Week 2 - 7 pm', '19:00'],
+    ['Sesion 1 - 7 pm', '19:00'],
+    ['Sala 2 a 7 pm', '19:00'],
+    ['Unit 7 - 8 pm', '20:00'],
+    ['Planta 2 - 19:00', '19:00'],
+    ['2 - 7 pm', '19:00'],
+  ])('a label number before a dash in %j is not a start', (time, start) => {
+    expect(starts('Tuesday', time)).toEqual([`Tuesday ${start}`])
+  })
+
+  it.each([
+    ['Thursdays 7-9 pm', '19:00'],
+    ['from 7 - 9 pm', '19:00'],
+    ['1st & 3rd 6-7:30 pm', '18:00'],
+  ])('a bare start after a day or "from" in %j still counts', (time, start) => {
+    expect(starts('Tuesday', time)).toEqual([`Tuesday ${start}`])
+  })
+
+  it.each([
+    ['UTC-5 - 7 pm'],
+    ['GMT+6 - 7 pm'],
+    ['GMT + 6 - 7 pm'],
+    ['1hr - 7 pm'],
+  ])('an offset or duration before a range %j is not a start', time => {
+    expect(starts('Tuesday', time)).toEqual(['Tuesday 19:00'])
+  })
+})
+
+describe("parseMeetingSchedule (#2243) — 'A for B': the meeting starts at B", () => {
+  it.each([
+    ['5:45 pm for 6:00 pm', '18:00'],
+    ['6:45 pm for 7:00pm start', '19:00'],
+    ['7.30 for 7:45 pm', '19:45'],
+    ['5.45 for a 6 pm start', '18:00'],
+    ['9:15 for 09:30', '09:30'],
+    ['18h15 for 18h30', '18:30'],
+    ['6:45 p.m. (for 7pm start)', '19:00'],
+    ['8:45 am for 9:00 am to 11:am UTC+2', '09:00'],
+    ['7:15pm for a 7.30 start', '19:30'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
+  })
+
+  it.each([
+    ['6:00 pm for 2:00 hrs', '18:00'],
+    ['7:00 pm for 2.00 hrs', '19:00'],
+    ['7 pm for 1h30', '19:00'],
+    ['7:00 pm for 01:30', '19:00'],
+    ['7:00 pm for 1:30', '19:00'],
+    ['7 pm for 90 minutes', '19:00'],
+  ])('a duration after "for" in %j is not the start', (time, start) => {
+    expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
+  })
+
+  it('12 noon for 12.15 starts at 12:15', () => {
+    expect(starts('Wednesday', '12 noon for 12.15')).toEqual([
+      'Wednesday 12:15',
+    ])
+  })
+
+  it('keeps the end of the range after the start', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Thursday',
+        meetingTime: '6:15 for 6:30  to 8h30 PM',
+      })
+    ).toEqual([
+      {
+        day: 'Thursday',
+        cadence: 'weekly',
+        startTime: '18:30',
+        endTime: '20:30',
+      },
+    ])
+  })
+})
+
+describe('parseMeetingSchedule (#2243) — Spanish weekday names', () => {
+  it.each([
+    ['Lunes', 'Monday'],
+    ['MARTES', 'Tuesday'],
+    ['Miércoles', 'Wednesday'],
+    ['miercoles', 'Wednesday'],
+    ['Jueves (Hora Cancun)', 'Thursday'],
+    ['Viernes', 'Friday'],
+    ['Sábado', 'Saturday'],
+    ['Sabados', 'Saturday'],
+    ['Domingo', 'Sunday'],
+    ['2do y 4to miércoles', 'Wednesday'],
+  ])('%j is %s', (meetingDay, day) => {
+    expect(starts(meetingDay, '7:30 pm')).toEqual([`${day} 19:30`])
+  })
+})
+
+describe('parseMeetingSchedule (#2243) — Spanish ordinal weeks', () => {
+  it.each([
+    ['2do y 4to miércoles', 'Wednesday', [2, 4]],
+    ['2o y 4o Martes', 'Tuesday', [2, 4]],
+    ['1er & 3er Miércoles', 'Wednesday', [1, 3]],
+    ['Segundo y Cuarto Jueves de cada Mes', 'Thursday', [2, 4]],
+    ['Lunes 1ro y 5to', 'Monday', [1, 5]],
+  ])('%j: %s, monthly', (meetingDay, day, weeks) => {
+    expect(
+      parseMeetingSchedule({ meetingDay, meetingTime: '7:30 pm' })
+    ).toEqual([
+      {
+        day,
+        cadence: 'monthly',
+        weeksOfMonth: weeks,
+        startTime: '19:30',
+      },
+    ])
+  })
+})
+
+describe("parseMeetingSchedule (#2243) — 'p.m.' written against the digits", () => {
+  it.each([
+    ['7:30p.m.', '19:30'],
+    ['8p.m. - 10p.m.', '20:00'],
+    ['6:45p.m. - 8:00pm', '18:45'],
+    ['7:00-9:00p.m.', '19:00'],
+    ['7p.m. Pacific Time', '19:00'],
+    ['9:30a.m.', '09:30'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Monday', time)).toEqual([`Monday ${start}`])
+  })
+})
+
+describe('parseMeetingSchedule (#2243) — HHMM with am/pm or hrs', () => {
+  it.each([
+    ['730 pm', '19:30'],
+    ['1000 am', '10:00'],
+    ['0230pm - 0430pm', '14:30'],
+    ['1600 hrs - 1800 hrs', '16:00'],
+    ['1830 hrs', '18:30'],
+    ['1000hrs - 1200hrs', '10:00'],
+    ['0615 HRS - 0755 HRS', '06:15'],
+    ['1130 Hours', '11:30'],
+    ['1600 Hours (GMT+6)', '16:00'],
+    ['11:00 hrs', '11:00'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Monday', time)).toEqual([`Monday ${start}`])
+  })
+
+  it.each([
+    ['730-930 pm', '19:30', '21:30'],
+    ['1000 - 1130 am', '10:00', '11:30'],
+    ['10-12 am', '10:00', '12:00'],
+  ])('%j is %s–%s', (time, startTime, endTime) => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Monday', meetingTime: time })
+    ).toEqual([{ day: 'Monday', cadence: 'weekly', startTime, endTime }])
+  })
+
+  it.each([
+    ['1:30 hours'],
+    ['1.30 hrs'],
+    ['2:00 hours, 7 pm'],
+    ['2 Hours'],
+    ['8 hrs'],
+    ['1930'],
+    ['2026 pm'],
+  ])('%j is not a time', time => {
+    expect(starts('Monday', time)).toEqual(['Monday ?'])
+  })
+})
+
+describe("parseMeetingSchedule (#2243) — '~' and '--' between a range", () => {
+  it.each([
+    ['3:00~5:00 pm(KST)', '15:00'],
+    ['2:00~5:00 PM', '14:00'],
+    ['2:00 ～ 4:00 pm', '14:00'],
+    ['5:45 -- 7:00 PM Mountain Time', '17:45'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Sunday', time)).toEqual([`Sunday ${start}`])
+  })
+})
+
+describe('parseMeetingSchedule (#2243) — a range ending at noon or later', () => {
+  it.each([
+    ['11:45 - 13:00', '11:45'],
+    ['11:30-13:30/19:30-21:30', '11:30'],
+    ['10:00 - 12:00', '10:00'],
+    ['11:30-12:30', '11:30'],
+    ['9:30 - 12:00/14:00-16:30', '09:30'],
+    ['11:30 - 12.30', '11:30'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Saturday', time)).toEqual([`Saturday ${start}`])
+  })
+
+  it.each([['7:30 - 9:30'], ['6:00-7:30'], ['5:30 to 7:00']])(
+    'a range %j with no am/pm and no noon stays unstated',
+    time => {
+      expect(starts('Saturday', time)).toEqual(['Saturday ?'])
+    }
+  )
+})
+
+describe('parseMeetingSchedule (#2243) — German, Dutch and Italian weekdays', () => {
+  it.each([
+    ['Montag', 'Monday'],
+    ['Mittwoch', 'Wednesday'],
+    ['Dienstag', 'Tuesday'],
+    ['Maandagavond (elke even week)', 'Monday'],
+    ['dinsdag', 'Tuesday'],
+    ['Donderdag', 'Thursday'],
+    ['Giovedì', 'Thursday'],
+    ['Sabato', 'Saturday'],
+  ])('%j is %s', (meetingDay, day) => {
+    expect(starts(meetingDay, '20:00')).toEqual([`${day} 20:00`])
+  })
+})
+
+describe("parseMeetingSchedule (#2243) — '12 AM' before an afternoon end is noon", () => {
+  it.each([
+    ['12:00 AM ~ 13:30 PM', '12:00'],
+    ['12:00 AM-1:10 PM', '12:00'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
+  })
+
+  it('a lone 12:00 AM is left as written', () => {
+    expect(starts('Wednesday', '12:00 AM')).toEqual(['Wednesday 00:00'])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
