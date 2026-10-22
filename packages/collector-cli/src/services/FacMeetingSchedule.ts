@@ -240,15 +240,18 @@ export function meetingModeFromText(
 
 /* ── Weekdays, cadence, weeks of the month ─────────────────────────── */
 
-/** English, French and Spanish (#2243) day names, diacritics folded. */
+/** English, French, Spanish, German, Dutch and Italian day names
+ *  (#2243), diacritics folded. */
 const WEEKDAY_WORDS: Record<MeetingWeekday, string> = {
-  Monday: 'mon|mondays?|lundis?|lunes',
-  Tuesday: 'tues?|tuesdays?|mardis?|martes',
-  Wednesday: 'weds?|wednesdays?|mercredis?|miercoles',
-  Thursday: 'thu|thur|thurs|thursdays?|jeudis?|jueves',
-  Friday: 'fri|fridays?|vendredis?|viernes',
-  Saturday: 'sat|saturdays?|samedis?|sabados?',
-  Sunday: 'sun|sundays?|dimanches?|domingos?',
+  Monday: 'mon|mondays?|lundis?|lunes|montag|maandag(?:avond)?|lunedi',
+  Tuesday: 'tues?|tuesdays?|mardis?|martes|dienstag|dinsdag(?:avond)?|martedi',
+  Wednesday:
+    'weds?|wednesdays?|mercredis?|miercoles|mittwoch|woensdag(?:avond)?|mercoledi',
+  Thursday:
+    'thu|thur|thurs|thursdays?|jeudis?|jueves|donnerstag|donderdag(?:avond)?|giovedi',
+  Friday: 'fri|fridays?|vendredis?|viernes|freitag|vrijdag(?:avond)?|venerdi',
+  Saturday: 'sat|saturdays?|samedis?|sabados?|samstag|zaterdag|sabato',
+  Sunday: 'sun|sundays?|dimanches?|domingos?|sonntag|zondag|domenica',
 }
 
 const WEEKDAY_PATTERNS = (
