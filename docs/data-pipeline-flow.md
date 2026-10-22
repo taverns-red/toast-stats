@@ -215,8 +215,15 @@ promoted, so each class the rsync used to sweep up has its own route:
   indexed dates and the run's promoted dates (the carry). A date the run wrote and did not
   promote holds its sidecars. `promotion-content-gate.ts --manifest-only` then reads every
   object in it (the `district-reports` kind: `DistrictReportsDatasetSchema`, the district its
-  path names, its logical date's program year, no link or email in place text), and
-  `promote-run-manifest.ts --execute` copies it. No step writes them to prod directly.
+  path names, its logical date's program year, no link or email in place text). The gate is
+  applied per date (#2227): `plan-report-sidecars.ts --apply-content-gate` drops every date
+  with a refused sidecar from the manifest and adds it to the verdict (a gate that could not
+  run holds every date), and `promote-run-manifest.ts --execute` copies the rest. A held date
+  is listed in the step summary and files or refreshes its own `promotion-held` issue (title
+  `🚫 Report sidecars held`, closed by a later clean sidecar promote; the pipeline job's alert
+  steps leave it alone). The daily content gate does not sample a sidecar the run did not
+  write: scoped promotion never copies one, so it is gated here, per date, instead of holding
+  the whole daily promotion. No step writes them to prod directly.
 - `derived/education-rollup/` (built after the promote, under an unpromoted prefix): the
   `education-rollup` job mirrors it when its build succeeded and this run promoted the snapshot
   date; `promote-reports` re-tries it with `--if-changed` when prod's index differs. Both run

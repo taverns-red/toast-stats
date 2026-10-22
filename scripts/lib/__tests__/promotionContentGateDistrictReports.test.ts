@@ -117,6 +117,35 @@ describe('planning — sidecars are read', () => {
     ])
   })
 
+  // F2 of the #2225 review (#2227): the pipeline job's promotion never
+  // copies a sidecar it did not write (scoped promotion, #1763); sidecars
+  // reach prod only through promote-reports, which gates them per date. So
+  // the daily gate leaves them to it, rather than holding the whole daily
+  // promotion on a staging-only sidecar.
+  it('the daily gate leaves sidecars the run did not write to the sidecar promote (#2227)', () => {
+    const ROLLUP = 'snapshots/2026-10-20/reports-rollups.json'
+    const OTHER = 'snapshots/2026-10-20/district_61.json'
+    const plan = planManifestChecks(
+      [],
+      [
+        { name: PATH, size: 1 },
+        { name: ROLLUP, size: 1 },
+        { name: OTHER, size: 1 },
+      ],
+      { random: () => 0 }
+    )
+    expect(plan.checks.map(c => c.path)).toEqual([OTHER])
+    expect(plan.changedCount).toBe(3)
+  })
+
+  it('a sidecar the run wrote is still checked by the daily gate (#2227)', () => {
+    const plan = planManifestChecks(
+      [{ path: PATH, sha256: 'a'.repeat(64), date: '2026-10-20', stage: 's' }],
+      [{ name: PATH, size: 1 }]
+    )
+    expect(plan.checks.map(c => c.path)).toEqual([PATH])
+  })
+
   it('a changed sidecar the run did not write is in the sampled set', () => {
     const plan = planContentChecks([{ name: PATH, size: 1 }], {
       random: () => 0,

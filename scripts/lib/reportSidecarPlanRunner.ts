@@ -29,6 +29,7 @@ import * as path from 'node:path'
 import {
   CARRY_STAGE,
   DEFAULT_CARRY_DAYS,
+  applySidecarContentGate,
   carryDates,
   heldSidecarDates,
   parseDateList,
@@ -36,12 +37,16 @@ import {
   sidecarManifest,
   sidecarNames,
   sidecarVerdict,
+  type SidecarGateResult,
+  type SidecarVerdict,
 } from './reportSidecarPlan.js'
 import { parseRunManifest, type RunManifestEntry } from './runManifest.js'
 
 export const DEFAULT_SIDECAR_MANIFEST_FILE =
   '/tmp/report-sidecars/written.jsonl'
 export const DEFAULT_SIDECAR_VERDICT_FILE = '/tmp/report-sidecars/verdict.json'
+export const DEFAULT_SIDECAR_GATE_FILE =
+  '/tmp/report-sidecars/content-gate.json'
 
 export interface PlanIo {
   env: Record<string, string | undefined>
@@ -212,4 +217,127 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
   } finally {
     rmSync(work, { recursive: true, force: true })
   }
+}
+
+/** The content gate's result file, or null when it is absent or unusable. */
+function readGateResult(
+  file: string,
+  log: (msg: string) => void
+): SidecarGateResult | null {
+  try {
+    const g = JSON.parse(
+      readFileSync(file, 'utf-8')
+    ) as Partial<SidecarGateResult>
+    if (typeof g.promote !== 'boolean' || !Array.isArray(g.failures)) {
+      throw new Error('no promote/failures')
+    }
+    return { promote: g.promote, failures: g.failures }
+  } catch (e) {
+    log(
+      `[report-sidecars] content gate result ${file} is unusable: ${String(e)}`
+    )
+    return null
+  }
+}
+
+/**
+ * `plan-report-sidecars.ts --apply-content-gate` (#2227): after the content
+ * gate, drop every date with a failing sidecar from the sidecar manifest and
+ * add it to the verdict, so the promoter copies the other dates. Rewrites
+ * REPORT_SIDECAR_MANIFEST_FILE (removed when nothing is left) and
+ * REPORT_SIDECAR_VERDICT_FILE in place; reads CONTENT_GATE_FILE.
+ * Outputs: objects, content_promote ("false" when the gate held any date),
+ * content_held_dates, held_dates. Exit: 0 applied · 2 no planned manifest or
+ * verdict to apply it to.
+ */
+export async function runApplySidecarContentGate(io: PlanIo): Promise<number> {
+  const { env } = io
+  const log = (msg: string) => io.err(`${msg}\n`)
+  const emit = (key: string, value: string | number) => {
+    if (env.GITHUB_OUTPUT)
+      appendFileSync(env.GITHUB_OUTPUT, `${key}=${value}\n`)
+  }
+  const outFile =
+    env.REPORT_SIDECAR_MANIFEST_FILE || DEFAULT_SIDECAR_MANIFEST_FILE
+  const verdictFile =
+    env.REPORT_SIDECAR_VERDICT_FILE || DEFAULT_SIDECAR_VERDICT_FILE
+  const gateFile = env.CONTENT_GATE_FILE || DEFAULT_SIDECAR_GATE_FILE
+
+  let entries: RunManifestEntry[]
+  let verdict: SidecarVerdict
+  try {
+    entries = parseRunManifest(readFileSync(outFile, 'utf-8'))
+    verdict = JSON.parse(readFileSync(verdictFile, 'utf-8')) as SidecarVerdict
+    if (
+      typeof verdict.promote !== 'boolean' ||
+      !Array.isArray(verdict.heldDates)
+    ) {
+      throw new Error(`${verdictFile} is not a sidecar verdict`)
+    }
+  } catch (e) {
+    log(
+      `::error title=Report sidecars::${String(e)} — no planned sidecar manifest to apply the content gate to; nothing promoted`
+    )
+    rmSync(outFile, { force: true })
+    return 2
+  }
+
+  const r = applySidecarContentGate(
+    entries,
+    verdict,
+    readGateResult(gateFile, log)
+  )
+  writeFileSync(verdictFile, JSON.stringify(r.verdict, null, 2) + '\n')
+  if (r.entries.length > 0) {
+    writeFileSync(
+      outFile,
+      r.entries.map(e => JSON.stringify(e)).join('\n') + '\n'
+    )
+  } else {
+    rmSync(outFile, { force: true })
+  }
+
+  const contentPromote = r.contentHeldDates.length === 0 && r.heldAll === null
+  emit('objects', r.entries.length)
+  emit('content_promote', String(contentPromote))
+  emit('content_held_dates', r.contentHeldDates.join(','))
+  emit('held_dates', r.verdict.heldDates.join(','))
+
+  if (contentPromote) {
+    log(
+      `[report-sidecars] content gate passed: ${r.entries.length} object(s) to promote`
+    )
+    return 0
+  }
+  const held = r.contentHeldDates.join(', ') || '(none)'
+  log(
+    `::warning title=Report sidecars::the content gate held ${held}${r.heldAll ? ` (${r.heldAll})` : ''}; ` +
+      `${r.entries.length} object(s) of the other dates still promote`
+  )
+  if (env.GITHUB_STEP_SUMMARY) {
+    const cell = (t: string) => t.replaceAll('|', '\\|')
+    const rows = r.failures
+      .slice(0, 50)
+      .map(f => `| ${f.date || '—'} | ${cell(f.path)} | ${cell(f.reason)} |`)
+    appendFileSync(
+      env.GITHUB_STEP_SUMMARY,
+      [
+        '## 🧪 Report sidecars held by the content gate (#2227)',
+        r.heldAll
+          ? `- **Every date held** — ${r.heldAll}.`
+          : `- **Held date(s)**: ${held} — their sidecars stay in staging; the other dates still promote (${r.entries.length} object(s)).`,
+        '',
+        ...(rows.length > 0
+          ? ['| Date | Object | Reason |', '| --- | --- | --- |', ...rows]
+          : []),
+        ...(r.failures.length > 50
+          ? [
+              `_…and ${r.failures.length - 50} more; see the content gate summary._`,
+            ]
+          : []),
+        '',
+      ].join('\n')
+    )
+  }
+  return 0
 }

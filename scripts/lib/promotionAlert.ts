@@ -193,9 +193,22 @@ export function evaluatePromotion(
   }
 }
 
+/**
+ * What the alert is about. Omitted: the pipeline job's staging → prod
+ * promotion. `report-sidecars`: the promote-reports job's sidecar promote
+ * (#2227), which the content gate holds per date while the run's other
+ * dates promote. Its issue carries REPORT_SIDECARS_HELD_TITLE, so each flow
+ * refreshes and closes only its own issue.
+ */
+export type AlertScope = 'report-sidecars'
+
+/** Title prefix of the report-sidecar alert issue (#2227). */
+export const REPORT_SIDECARS_HELD_TITLE = '🚫 Report sidecars held'
+
 export interface PromotionAlertBodyOptions {
   /** Evaluation time, surfaced for context. */
   now: Date
+  scope?: AlertScope
 }
 
 const GATE_LABEL: Record<Exclude<BlockingGate, 'none'>, string> = {
@@ -208,8 +221,15 @@ const GATE_LABEL: Record<Exclude<BlockingGate, 'none'>, string> = {
 }
 
 /** Title for the `promotion-held` alert issue. */
-export function buildPromotionHeldTitle(result: PromotionAlertResult): string {
+export function buildPromotionHeldTitle(
+  result: PromotionAlertResult,
+  scope?: AlertScope
+): string {
   if (result.gate === 'none') return 'promotion not held'
+  if (scope === 'report-sidecars') {
+    const dates = result.scopedHeldDates.join(', ') || 'every date'
+    return `${REPORT_SIDECARS_HELD_TITLE} — prod lacks their reports (content gate: ${dates})`
+  }
   let label =
     result.gate === 'both' ? 'count + value gates' : GATE_LABEL[result.gate]
   if (!result.contentPromote && result.gate !== 'content') {
@@ -237,19 +257,27 @@ export function buildPromotionHeldBody(
   result: PromotionAlertResult,
   opts: PromotionAlertBodyOptions
 ): string {
-  const lines: string[] = [
-    '## 🚫 Staging → production promotion is held',
-    '',
-    `A daily Data Pipeline run completed but **did not promote** staging to production — the corrected staging data is **not on prod**. Checked at ${opts.now.toISOString()}.`,
-    '',
-    '| Gate | Result |',
-    '|------|--------|',
-    `| Count gate (additive) | ${result.countPromote ? '✅ pass' : '❌ **blocked**'} |`,
-    `| Value gate (#1034) | ${result.valuePromote ? '✅ pass' : '❌ **blocked**'} |`,
-    `| Content gate (#1715) | ${result.contentPromote ? '✅ pass' : '❌ **blocked**'} |`,
-    `| Completeness gate (#1761) | ${result.completenessPromote ? '✅ pass' : '❌ **blocked**'} |`,
-    '',
-  ]
+  const lines: string[] =
+    opts.scope === 'report-sidecars'
+      ? [
+          '## 🚫 Report sidecars are held',
+          '',
+          `The \`promote-reports\` job's content gate refused report sidecars (\`district_<id>_reports.json\`, \`reports-rollups.json\`). Those dates' sidecars **stay in staging**; the run's other dates and its main promotion are not held by this (#2227). Checked at ${opts.now.toISOString()}.`,
+          '',
+        ]
+      : [
+          '## 🚫 Staging → production promotion is held',
+          '',
+          `A daily Data Pipeline run completed but **did not promote** staging to production — the corrected staging data is **not on prod**. Checked at ${opts.now.toISOString()}.`,
+          '',
+          '| Gate | Result |',
+          '|------|--------|',
+          `| Count gate (additive) | ${result.countPromote ? '✅ pass' : '❌ **blocked**'} |`,
+          `| Value gate (#1034) | ${result.valuePromote ? '✅ pass' : '❌ **blocked**'} |`,
+          `| Content gate (#1715) | ${result.contentPromote ? '✅ pass' : '❌ **blocked**'} |`,
+          `| Completeness gate (#1761) | ${result.completenessPromote ? '✅ pass' : '❌ **blocked**'} |`,
+          '',
+        ]
   const cell = (s: string) => s.replaceAll('|', '\\|')
   const failureTable = (failures: ContentGateFailure[], header: string) => {
     lines.push(`| ${header} | Reason |`, '| --- | --- |')
@@ -396,7 +424,9 @@ export function buildPromotionHeldBody(
 
   lines.push(
     '---',
-    '_This issue auto-closes when a later run successfully promotes. Filed by `.github/workflows/data-pipeline.yml` (#1073)._'
+    opts.scope === 'report-sidecars'
+      ? '_This issue auto-closes when a later run promotes its report sidecars with none held. Filed by the `promote-reports` job of `.github/workflows/data-pipeline.yml` (#2227)._'
+      : '_This issue auto-closes when a later run successfully promotes. Filed by `.github/workflows/data-pipeline.yml` (#1073)._'
   )
 
   const body = lines.join('\n')
