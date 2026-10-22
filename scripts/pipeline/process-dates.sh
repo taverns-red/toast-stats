@@ -43,9 +43,18 @@
 #                raw-fac/<actual>/ (ADR-015 P2, #1758) is pulled and
 #                merged into the snapshots with collector-cli
 #                merge-find-a-club, so a re-derived date keeps the daily's
-#                enrichment. No raw-fac for the date (historical dates, FAC
-#                started 2026-05-15): processed unenriched and counted. An
-#                unreadable raw-fac or a failed merge FAILS the date: an
+#                enrichment. No raw-fac for the date does NOT mean the date
+#                was never enriched (#2237): raw-fac persistence began
+#                2026-10-11, but every daily since 2026-05-15 merged FAC
+#                without persisting it. So the date's existing staging
+#                snapshot (snapshots/<actual>/district_*.json) is read and,
+#                where it is enriched, its FAC fields are carried onto the
+#                rebuild (collector-cli carry-forward-find-a-club) and the
+#                date counted as carried forward. Only a date with no staging
+#                snapshot, or whose staging snapshot is not enriched (before
+#                2026-05-15, or already stripped), is processed unenriched
+#                and counted. An unreadable raw-fac or staging snapshot, a
+#                failed merge or a failed carry-forward FAILS the date: an
 #                unenriched upload over an enriched date is the D-1 strip.
 #   8. compute   first the prior year, in every mode (#1769, D-8): best
 #                effort, snapshots/<actual - 1y>/district_*.json, the date
@@ -249,6 +258,7 @@ SUCCEEDED=0
 FAILED=0
 REFUSED=0
 ENRICHED=0
+CARRIED=0
 UNENRICHED=0
 YOY_PRESENT=0
 YOY_ABSENT=0
@@ -406,16 +416,56 @@ remove_gap_districts() {
   if [ "${#files[@]}" -gt 0 ]; then "${REMOVE[@]}" "${files[@]}"; fi
 }
 
+# No raw-fac for <date> (#2237): carry the FAC fields of the date's existing
+# staging snapshot onto the rebuild. Sets ENRICH to carried | unenriched |
+# failed. A staging snapshot that cannot be read is not "never enriched":
+# the date fails rather than risk stripping it.
+carry_forward_fac() {
+  local actual="$1" prior="${WORK}/prior-snapshot/$1"
+  local err="${WORK}/prior-snapshot-cp.err" out="${WORK}/carry-forward.json"
+  ENRICH=failed
+  mkdir -p "${prior}"
+  if ! "${GCLOUD}" storage cp "gs://${BUCKET}/snapshots/${actual}/district_*.json" \
+    "${prior}/" >/dev/null 2>"${err}"; then
+    rm -rf "${prior}"
+    if grep -q 'matched no objects' "${err}"; then
+      echo "No raw-fac/${actual}/ and no staging snapshot of it; ${actual} is processed unenriched"
+      ENRICH=unenriched
+      return 0
+    fi
+    cat "${err}"
+    echo "::warning::Could not read staging snapshots/${actual}/ to carry its Find-A-Club fields forward; not publishing ${actual} unenriched"
+    return 0
+  fi
+  if ! "${COLLECTOR[@]}" carry-forward-find-a-club --from-dir "${prior}" \
+    --snapshot-dir "${SNAPSHOTS}/${actual}" --verbose >"${out}"; then
+    echo "::warning::Find-A-Club carry-forward failed for ${actual}; nothing uploaded for it"
+    rm -rf "${prior}"
+    return 0
+  fi
+  rm -rf "${prior}"
+  if jq -e '.priorEnriched > 0' "${out}" >/dev/null 2>&1; then
+    echo "No raw-fac/${actual}/; carried its Find-A-Club fields forward from staging ($(jq -c '{priorEnriched, carried, alreadyEnriched}' "${out}"))"
+    ENRICH=carried
+  elif jq -e '.priorEnriched == 0' "${out}" >/dev/null 2>&1; then
+    echo "No raw-fac/${actual}/ and its staging snapshot is not enriched; ${actual} is processed unenriched"
+    ENRICH=unenriched
+  else
+    echo "::warning::Unreadable carry-forward result for ${actual}; nothing uploaded for it"
+  fi
+  return 0
+}
+
 # Merge the persisted Find-A-Club fetch for <date> into its snapshots, if
-# daily persisted one. Sets ENRICH to enriched | unenriched | failed.
+# daily persisted one; otherwise carry_forward_fac. Sets ENRICH to enriched
+# | carried | unenriched | failed.
 enrich_snapshot() {
   local actual="$1" fac="${WORK}/raw-fac/$1" err="${WORK}/raw-fac-ls.err"
   ENRICH=failed
   if ! "${GCLOUD}" storage ls "gs://${BUCKET}/raw-fac/${actual}/**" \
     >/dev/null 2>"${err}"; then
     if grep -q 'matched no objects' "${err}"; then
-      echo "No raw-fac/${actual}/; ${actual} is processed unenriched"
-      ENRICH=unenriched
+      carry_forward_fac "${actual}"
       return 0
     fi
     cat "${err}"
@@ -524,6 +574,7 @@ process_one() {
   enrich_snapshot "${actual}"
   case "${ENRICH}" in
     enriched) ENRICHED=$((ENRICHED + 1)) ;;
+    carried) CARRIED=$((CARRIED + 1)) ;;
     unenriched) UNENRICHED=$((UNENRICHED + 1)) ;;
     *)
       cleanup_date "${source}" "${actual}" "${prev}"
@@ -650,6 +701,7 @@ fi
   echo "- **Refused by the upload guard**: ${REFUSED}"
   echo "- **Dates failed**: ${FAILED}"
   echo "- **Dates enriched from raw-fac**: ${ENRICHED}"
+  echo "- **Dates carried forward from their staged snapshot (no raw-fac)**: ${CARRIED}"
   echo "- **Dates unenriched (no raw-fac)**: ${UNENRICHED}"
   echo "- **Dates with a prior-year snapshot (YoY)**: ${YOY_PRESENT}"
   echo "- **Dates without one (no YoY)**: ${YOY_ABSENT}"

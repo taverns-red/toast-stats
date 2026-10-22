@@ -397,7 +397,10 @@ describe('process-dates.sh rebuild: upload stage', () => {
     putRaw('2026-09-09')
     putRaw('2026-09-10')
     const r = run('rebuild', ['2026-09-09', '2026-09-10'], {
-      SHIM_FAIL_MATCH: '^cp .*gs://test-bucket/snapshots/2026-09-09/',
+      // The upload (a local source to gs://), not the #2237 read of the
+      // staged snapshot (gs:// to local), which fails the date instead.
+      SHIM_FAIL_MATCH:
+        '^cp --content-type.*gs://test-bucket/snapshots/2026-09-09/',
     })
     expect(r.status).not.toBe(0)
     expect(lines(stubLog)).not.toContain(
