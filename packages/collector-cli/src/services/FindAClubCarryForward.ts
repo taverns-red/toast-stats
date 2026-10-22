@@ -126,7 +126,11 @@ export function carryForwardFac(
   if (!rebuiltData) return { snapshot: rebuilt, carried: 0 }
 
   let carried = 0
-  const carry = (key: string, idKey: string, fields: readonly string[]) => {
+  const carry = (
+    key: string,
+    idKey: string,
+    fields: readonly string[]
+  ): unknown[] | undefined => {
     const rows = rebuiltData[key]
     if (!Array.isArray(rows)) return undefined
     const fac = facFieldsById(rowsOf(priorData, key), idKey, fields)
