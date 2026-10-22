@@ -46,7 +46,10 @@
  * a skipped run beside a green one is ignored (#2204), and a check whose only
  * runs are skipped stays `pending` while another workflow run on the head SHA
  * is still queued or in progress — that run may yet report it for real
- * (#2219). Once every run on the head has completed, skipped-only fails.
+ * (#2219). "In flight" is read from the workflow-run listing OR from any
+ * non-gate check run on the head that has not completed (the listing alone
+ * missed a running Test Suite on PR #2240). Once nothing on the head is still
+ * running, skipped-only fails.
  */
 
 import { isDocsOnly, isNonCodeFile } from './changedFilesGate'
@@ -110,7 +113,8 @@ export interface EvaluateOptions {
   /**
    * Another workflow run on the head SHA is still queued/in progress (see
    * {@link workflowRunsInFlight}). Turns a skipped-only check from a failure
-   * into `pending`. Defaults to `false` — the old, fail-closed behaviour.
+   * into `pending`. A non-gate check in `observed` that has not completed
+   * has the same effect on its own. Defaults to `false`.
    */
   runsInFlight?: boolean
 }
@@ -181,6 +185,15 @@ export function evaluateChecks(
     return verdict
   }
 
+  // A non-gate check run that is still going proves a workflow run on the head
+  // is in flight, whatever the workflow-run listing says. On PR #2240 the
+  // listing read in the same poll reported nothing in flight while Test Suite
+  // was visibly in progress, and Build Applications (blocked on it) failed as
+  // skipped-only (#2219). The gate's own check is always running, so skip it.
+  const inFlight =
+    runsInFlight ||
+    observed.some(c => c.name !== GATE_CHECK && c.status !== 'completed')
+
   for (const name of expected) {
     const runs = observed.filter(c => c.name === name)
     if (runs.length === 0) {
@@ -206,7 +219,7 @@ export function evaluateChecks(
     // verdict yet: on #2212 a no-op `edited` CI run finished all-skipped
     // before the real run had created its jobs (#2219). The deadline still
     // bounds the wait.
-    if (skippedOnly && runsInFlight) {
+    if (skippedOnly && inFlight) {
       verdict.pending.push(name)
       continue
     }
