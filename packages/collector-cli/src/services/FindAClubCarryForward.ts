@@ -270,8 +270,9 @@ export function carryForwardFac(
         ...rebuiltData,
         ...(clubPerformance !== undefined && { clubPerformance }),
         ...(clubs !== undefined && { clubs }),
-        // Always written when the prior was merged, as the merge does.
-        prospectiveClubs: prospectiveClubs ?? [],
+        // Only where the prior had it (the merge's mark): a prior enriched
+        // by its rows alone gains no empty array.
+        ...(prospectiveClubs !== undefined && { prospectiveClubs }),
       },
     } as DistrictSnapshot,
     carried,
