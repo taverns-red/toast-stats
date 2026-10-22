@@ -1,0 +1,12 @@
+{
+  "name": "toast-stats-data-staging",
+  "location": "US",
+  "location_type": "multi-region",
+  "public_access_prevention": "inherited",
+  "uniform_bucket_level_access": true,
+  "soft_delete_policy": {
+    "effectiveTime": "2026-10-04T18:26:07.379000+00:00",
+    "retentionDurationSeconds": "2592000"
+  },
+  "storage_url": "gs://toast-stats-data-staging/"
+}
