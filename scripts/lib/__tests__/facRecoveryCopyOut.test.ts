@@ -288,6 +288,11 @@ beforeEach(() => {
       '  touch "$H/cp-reached"',
       '  while [ ! -e "$H/go" ]; do sleep 0.05; done',
       'fi',
+      // corrupt-journal (holds the journal path): the first source→dest cp
+      // appends a complete but unparseable line to it, mid-run.
+      'if [ -s "$H/corrupt-journal" ] && [[ "$args" == "storage cp --no-clobber "* ]] && [ ! -e "$H/corrupted" ]; then',
+      '  touch "$H/corrupted"; printf "%s\\n" "not json {" >>"$(cat "$H/corrupt-journal")"',
+      'fi',
       'if [[ "$args" == "storage restore "* ]] && [ -e "$H/enriched-gen" ] && [[ "$args" == *"#$(cat "$H/enriched-gen") "* ]]; then',
       '  "$SHIM" "$@"; s=$?; touch "$H/restored-enriched"; exit $s',
       'fi',
@@ -975,6 +980,71 @@ describe('copy-out: --recover (#2240 R-1..R-3)', () => {
     const r = run(withState(['--recover', STAGING, '2026-06-15']))
     expect(r.status).toBe(1)
     expect(writes()).toEqual([])
+  })
+
+  it('T-1: a torn last line, then an append, then recover reads both entries', () => {
+    const [a, b] = seedDate(STAGING, '2026-06-15', ['61', '62'])
+    crashAfterStep1(a!)
+    // a's entry is whole; b's was cut mid-append (no newline).
+    writeJournal(
+      journalLine(a!) + '\n' + journalLine(b!, 'step2-begin').slice(0, 40)
+    )
+    const first = run(withState(['--recover', STAGING, '2026-06-15']))
+    expect(first.status, first.stderr).toBe(0)
+    // The append (recover-begin, recover-restored) did not merge into the
+    // fragment: the fragment stands alone, terminated, then a marker.
+    const lines = fs
+      .readFileSync(path.join(stateDir, 'journal.jsonl'), 'utf-8')
+      .split('\n')
+    expect(lines[1]).toBe(journalLine(b!, 'step2-begin').slice(0, 40))
+    expect(JSON.parse(lines[2]!)).toMatchObject({
+      event: 'journal-tear-terminated',
+    })
+    expect(JSON.parse(lines[3]!)).toMatchObject({
+      name: a!.name,
+      event: 'recover-begin',
+    })
+    // The next recover reads a's original entry and the appended ones: a is
+    // L now, so ok, and nothing is written.
+    fs.rmSync(shimLog)
+    const again = run(withState(['--recover', STAGING, '2026-06-15']))
+    expect(again.status, again.stderr).toBe(0)
+    expect(writes()).toEqual([])
+    expect(again.recover.find(x => x.name === a!.name)).toMatchObject({
+      action: 'ok',
+    })
+    expect(md5(liveBytes(STAGING, a!.name)!)).toBe(md5(a!.live))
+  })
+
+  it('T-1: a mid-file tear refuses execute (before any write) and recover', () => {
+    const [a, b] = seedDate(STAGING, '2026-06-15', ['61', '62'])
+    writeJournal(journalLine(a!).slice(0, 40) + '\n' + journalLine(b!) + '\n')
+    const x = run(withState(['--execute', STAGING, '2026-06-15']))
+    expect(x.status).toBe(1)
+    expect(x.stderr).toContain('bad line')
+    expect(writes()).toEqual([])
+    const p = run(withState(['--pilot', STAGING, '2026-06-15']))
+    expect(p.status).toBe(1)
+    expect(writes()).toEqual([])
+    const r = run(withState(['--recover', STAGING, '2026-06-15']))
+    expect(r.status).toBe(1)
+    expect(writes()).toEqual([])
+  })
+
+  it('T-1: a journal that becomes unreadable mid-run fails the report, never exit 0', () => {
+    seedDate(STAGING, '2026-06-15', ['61', '62'])
+    fs.mkdirSync(stateDir, { recursive: true })
+    fs.writeFileSync(
+      path.join(tmp, 'corrupt-journal'),
+      path.join(stateDir, 'journal.jsonl')
+    )
+    const r = run(
+      withState(['--execute', '--parallel', '1', STAGING, '2026-06-15'])
+    )
+    expect(fs.existsSync(path.join(tmp, 'corrupted'))).toBe(true)
+    expect(r.status).toBe(1)
+    expect(r.stderr).toContain('journal')
+    expect(r.summary).toMatchObject({ journalReadable: false })
   })
 })
 
