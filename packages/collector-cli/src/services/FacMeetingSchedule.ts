@@ -357,7 +357,7 @@ interface TimeToken {
  *  a time. A token never starts inside a number ("9.00pm" is not "00pm"). */
 const TIME_TOKEN =
   /\bnoon\b|(?<![\d.:])\b(\d{1,2})(?:\s*([:h])\s*(\d{2})|(\.)(\d{2}))?(\s*h\b)?\s*(am|pm)?(?!\d)/g
-const RANGE_SEPARATOR = /^\s*(?:-|–|—|to|a|until|jusqu'?a)\s*$/
+const RANGE_SEPARATOR = /^\s*(?:-+|–|—|~|〜|～|to|a|until|jusqu'?a)\s*$/
 const HHMM_HRS =
   /(?<![\d:.+\-−])(?<![+\-−]\s)(\d{1,2})[:.]?(\d{2})\s*(?:hrs?|hours?)\b\.?/g
 /** 12-hour only: "2026 pm" is a year, not 20:26. */
