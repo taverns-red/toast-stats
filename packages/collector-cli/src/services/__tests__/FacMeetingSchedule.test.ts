@@ -920,6 +920,19 @@ describe('parseMeetingSchedule (#2243) — German, Dutch and Italian weekdays', 
   })
 })
 
+describe("parseMeetingSchedule (#2243) — '12 AM' before an afternoon end is noon", () => {
+  it.each([
+    ['12:00 AM ~ 13:30 PM', '12:00'],
+    ['12:00 AM-1:10 PM', '12:00'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
+  })
+
+  it('a lone 12:00 AM is left as written', () => {
+    expect(starts('Wednesday', '12:00 AM')).toEqual(['Wednesday 00:00'])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
