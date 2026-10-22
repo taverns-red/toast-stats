@@ -799,6 +799,23 @@ describe("parseMeetingSchedule (#2243) — 'A for B': the meeting starts at B", 
   })
 })
 
+describe('parseMeetingSchedule (#2243) — Spanish weekday names', () => {
+  it.each([
+    ['Lunes', 'Monday'],
+    ['MARTES', 'Tuesday'],
+    ['Miércoles', 'Wednesday'],
+    ['miercoles', 'Wednesday'],
+    ['Jueves (Hora Cancun)', 'Thursday'],
+    ['Viernes', 'Friday'],
+    ['Sábado', 'Saturday'],
+    ['Sabados', 'Saturday'],
+    ['Domingo', 'Sunday'],
+    ['2do y 4to miércoles', 'Wednesday'],
+  ])('%j is %s', (meetingDay, day) => {
+    expect(starts(meetingDay, '7:30 pm')).toEqual([`${day} 19:30`])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
