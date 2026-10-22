@@ -347,6 +347,8 @@ interface TimeToken {
   /** h-notation ("19 h 00", "14h") or a leading zero ("07:15"). */
   twentyFour: boolean
   meridiem?: 'am' | 'pm'
+  /** A lone number ("7" in "7-9 pm"): a time only as a range start. */
+  bare?: boolean
 }
 
 /** `:`, `h` or `.` between hour and minute ("7:30", "18h30", "7.30 pm",
@@ -355,6 +357,8 @@ interface TimeToken {
 const TIME_TOKEN =
   /\bnoon\b|(?<![\d.:])\b(\d{1,2})(?:\s*([:h])\s*(\d{2})|(\.)(\d{2}))?(\s*h\b)?\s*(am|pm)?(?!\d)/g
 const RANGE_SEPARATOR = /^\s*(?:-|–|—|to|a|until|jusqu'?a)\s*$/
+/** "UTC-5", "GMT +6": the number after is an offset, not a time. */
+const OFFSET_BEFORE = /(?:[+\-−]|utc|gmt)\s*$/
 const LIST_SEPARATOR = /^\s*(?:et|and|&|,|\/)\s*$/
 
 function timeTokensIn(text: string): TimeToken[] {
@@ -371,8 +375,10 @@ function timeTokensIn(text: string): TimeToken[] {
       match
     const separator = sep ?? dot
     const minuteText = colonMinute ?? dotMinute
-    // A bare number ("UTC-5", "1hr") is not a time.
-    if (!minuteText && !trailingH && !meridiem && separator !== 'h') continue
+    // A bare number ("UTC-5", "1hr") is not a time on its own; it may
+    // start a range ("7-9 pm", #2243), checked below. An offset is never one.
+    const bare = !minuteText && !trailingH && !meridiem && separator !== 'h'
+    if (bare && OFFSET_BEFORE.test(text.slice(0, at))) continue
     const hour = Number(hourText)
     const minute = minuteText ? Number(minuteText) : 0
     if (hour > 23 || minute > 59) continue
@@ -391,9 +397,18 @@ function timeTokensIn(text: string): TimeToken[] {
           hourText.length === 2 &&
           hourText[0] === '0'),
       ...(meridiem ? { meridiem: meridiem as 'am' | 'pm' } : {}),
+      ...(bare ? { bare } : {}),
     })
   }
-  return tokens
+  return tokens.filter((token, i) => {
+    if (!token.bare) return true
+    const next = tokens[i + 1]
+    return (
+      next !== undefined &&
+      !next.bare &&
+      RANGE_SEPARATOR.test(text.slice(token.end, next.start))
+    )
+  })
 }
 
 /** Minutes after midnight, or undefined when am/pm cannot be known. */
