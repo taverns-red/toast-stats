@@ -737,6 +737,36 @@ describe('parseMeetingSchedule (#2243) — dot as the minute separator', () => {
   })
 })
 
+/** Start times only: the slot the heatmap counts. */
+function starts(meetingDay: string, meetingTime: string): string[] {
+  return (parseMeetingSchedule({ meetingDay, meetingTime }) ?? []).map(
+    e => `${e.day} ${e.startTime ?? '?'}`
+  )
+}
+
+describe('parseMeetingSchedule (#2243) — a bare hour starting a range', () => {
+  it.each([
+    ['7 - 9 pm', '19:00'],
+    ['7-9 PM', '19:00'],
+    ['3-5 PM', '15:00'],
+    ['2 -3 PM', '14:00'],
+    ['7 to 9:15 p.m.', '19:00'],
+    ['1-2:00pm', '13:00'],
+    ['6-7:30 pm AT', '18:00'],
+    ['12-1 PM CET', '12:00'],
+    ['11-1 pm', '11:00'],
+  ])('%j starts at %s, not at the end hour', (time, start) => {
+    expect(starts('Tuesday', time)).toEqual([`Tuesday ${start}`])
+  })
+
+  it.each([['UTC-5 - 7 pm'], ['GMT+6 - 7 pm'], ['1hr - 7 pm']])(
+    'an offset or duration before a range %j is not a start',
+    time => {
+      expect(starts('Tuesday', time)).toEqual(['Tuesday 19:00'])
+    }
+  )
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
