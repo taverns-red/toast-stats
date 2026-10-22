@@ -885,6 +885,26 @@ describe("parseMeetingSchedule (#2243) — '~' and '--' between a range", () => 
   })
 })
 
+describe('parseMeetingSchedule (#2243) — a range ending at noon or later', () => {
+  it.each([
+    ['11:45 - 13:00', '11:45'],
+    ['11:30-13:30/19:30-21:30', '11:30'],
+    ['10:00 - 12:00', '10:00'],
+    ['11:30-12:30', '11:30'],
+    ['9:30 - 12:00/14:00-16:30', '09:30'],
+    ['11:30 - 12.30', '11:30'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Saturday', time)).toEqual([`Saturday ${start}`])
+  })
+
+  it.each([['7:30 - 9:30'], ['6:00-7:30'], ['5:30 to 7:00']])(
+    'a range %j with no am/pm and no noon stays unstated',
+    time => {
+      expect(starts('Saturday', time)).toEqual(['Saturday ?'])
+    }
+  )
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
