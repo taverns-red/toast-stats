@@ -193,6 +193,47 @@ describe('evaluateChecks — fail closed on absence (#1484)', () => {
     expect(v.failed).toEqual([{ name: 'Test Suite', conclusion: 'skipped' }])
   })
 
+  it('waits on a skipped-only check while a sibling check is still running, even if the run listing says nothing is in flight (#2219, PR #2240)', () => {
+    // The exact 62s poll of CI Gate run 39810475356 (2026-10-22 16:04:42Z):
+    // the all-skipped `ready_for_review` CI run 39810475367 had reported
+    // Build Applications: skipped, while the real CI run 39810455729 still had
+    // Test Suite in progress and had not created Build Applications yet
+    // (`needs: [quality-gates, test]`). The workflow-run listing read in that
+    // same poll reported nothing in flight, so the gate failed. A running
+    // check on the head proves a run is still in flight on its own.
+    const v = evaluateChecks(
+      [...CI_CHECKS],
+      [
+        completed('Quality Gates', 'success'),
+        completed('Security Scan', 'success'),
+        running('Test Suite'),
+        completed('Build Applications', 'skipped'),
+        running(GATE_CHECK),
+      ],
+      { runsInFlight: false }
+    )
+    expect(v.state).toBe('pending')
+    expect(v.failed).toEqual([])
+    expect(v.pending).toEqual(['Test Suite', 'Build Applications'])
+  })
+
+  it('the gate’s own running check does not hold a skipped-only check open (#2219)', () => {
+    const v = evaluateChecks(
+      [...CI_CHECKS],
+      [
+        completed('Quality Gates', 'success'),
+        completed('Test Suite', 'success'),
+        completed('Build Applications', 'skipped'),
+        running(GATE_CHECK),
+      ],
+      { runsInFlight: false }
+    )
+    expect(v.state).toBe('fail')
+    expect(v.failed).toEqual([
+      { name: 'Build Applications', conclusion: 'skipped' },
+    ])
+  })
+
   it('an in-flight run does not soften a real failure (#2219)', () => {
     const v = evaluateChecks(
       [...CI_CHECKS],
