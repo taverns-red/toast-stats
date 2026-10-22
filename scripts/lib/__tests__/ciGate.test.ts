@@ -193,6 +193,47 @@ describe('evaluateChecks — fail closed on absence (#1484)', () => {
     expect(v.failed).toEqual([{ name: 'Test Suite', conclusion: 'skipped' }])
   })
 
+  it('waits on a skipped-only check while a sibling check is still running, even if the run listing says nothing is in flight (#2219, PR #2240)', () => {
+    // The exact 62s poll of CI Gate run 39810475356 (2026-10-22 16:04:42Z):
+    // the all-skipped `ready_for_review` CI run 39810475367 had reported
+    // Build Applications: skipped, while the real CI run 39810455729 still had
+    // Test Suite in progress and had not created Build Applications yet
+    // (`needs: [quality-gates, test]`). The workflow-run listing read in that
+    // same poll reported nothing in flight, so the gate failed. A running
+    // check on the head proves a run is still in flight on its own.
+    const v = evaluateChecks(
+      [...CI_CHECKS],
+      [
+        completed('Quality Gates', 'success'),
+        completed('Security Scan', 'success'),
+        running('Test Suite'),
+        completed('Build Applications', 'skipped'),
+        running(GATE_CHECK),
+      ],
+      { runsInFlight: false }
+    )
+    expect(v.state).toBe('pending')
+    expect(v.failed).toEqual([])
+    expect(v.pending).toEqual(['Test Suite', 'Build Applications'])
+  })
+
+  it('the gate’s own running check does not hold a skipped-only check open (#2219)', () => {
+    const v = evaluateChecks(
+      [...CI_CHECKS],
+      [
+        completed('Quality Gates', 'success'),
+        completed('Test Suite', 'success'),
+        completed('Build Applications', 'skipped'),
+        running(GATE_CHECK),
+      ],
+      { runsInFlight: false }
+    )
+    expect(v.state).toBe('fail')
+    expect(v.failed).toEqual([
+      { name: 'Build Applications', conclusion: 'skipped' },
+    ])
+  })
+
   it('an in-flight run does not soften a real failure (#2219)', () => {
     const v = evaluateChecks(
       [...CI_CHECKS],
@@ -294,8 +335,24 @@ describe('workflowRunsInFlight — is another run on the head still going? (#221
   })
 
   it('is false when every run on the head has completed', () => {
-    expect(workflowRunsInFlight([wfRun(1, 'CI', 'completed')], 2)).toBe(false)
-    expect(workflowRunsInFlight([], 2)).toBe(false)
+    expect(
+      workflowRunsInFlight(
+        [wfRun(1, 'CI', 'completed'), wfRun(2, 'CI Gate', 'in_progress')],
+        2
+      )
+    ).toBe(false)
+  })
+
+  it('treats a listing that omits the gate’s own run as incomplete — in flight (#2219)', () => {
+    // `GET /actions/runs?head_sha=` intermittently answers 200 with
+    // total_count 0 for a head that has runs: 7 of 16 reads of PR #2240's head
+    // came back empty on 2026-10-22, and CI Gate run 39810475356 failed on
+    // one. The gate's own run is always on the head, so a listing without it
+    // cannot be trusted to say nothing is in flight.
+    expect(workflowRunsInFlight([], 39810475356)).toBe(true)
+    expect(
+      workflowRunsInFlight([wfRun(1, 'CI', 'completed')], 39810475356)
+    ).toBe(true)
   })
 
   it('ci-gate.yml grants actions: read so the run listing is readable', () => {

@@ -181,13 +181,16 @@ async function main(): Promise<void> {
       observedChecks(),
       headWorkflowRuns(),
     ])
-    verdict = evaluateChecks(expected, checks, {
-      runsInFlight: workflowRunsInFlight(wfRuns, selfRunId),
-    })
+    const runsInFlight = workflowRunsInFlight(wfRuns, selfRunId)
+    verdict = evaluateChecks(expected, checks, { runsInFlight })
     const elapsedMs = Date.now() - startedAt
     const expired = elapsedMs >= deadlineMs
+    // Log what the run listing said, so a disagreement with the check runs is
+    // visible in the job log next time (#2219: it was not, on PR #2240).
+    const listed = wfRuns.map(r => `${r.id}:${r.name}:${r.status}`).join(', ')
     console.error(
-      `[${Math.round(elapsedMs / 1000)}s] ${describeVerdict(verdict)}`
+      `[${Math.round(elapsedMs / 1000)}s] ${describeVerdict(verdict)} ` +
+        `runsInFlight=${runsInFlight} runs=[${listed}]`
     )
 
     if (verdict.state === 'pass') break
