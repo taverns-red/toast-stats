@@ -816,6 +816,27 @@ describe('parseMeetingSchedule (#2243) — Spanish weekday names', () => {
   })
 })
 
+describe('parseMeetingSchedule (#2243) — Spanish ordinal weeks', () => {
+  it.each([
+    ['2do y 4to miércoles', 'Wednesday', [2, 4]],
+    ['2o y 4o Martes', 'Tuesday', [2, 4]],
+    ['1er & 3er Miércoles', 'Wednesday', [1, 3]],
+    ['Segundo y Cuarto Jueves de cada Mes', 'Thursday', [2, 4]],
+    ['Lunes 1ro y 5to', 'Monday', [1, 5]],
+  ])('%j: %s, monthly', (meetingDay, day, weeks) => {
+    expect(
+      parseMeetingSchedule({ meetingDay, meetingTime: '7:30 pm' })
+    ).toEqual([
+      {
+        day,
+        cadence: 'monthly',
+        weeksOfMonth: weeks,
+        startTime: '19:30',
+      },
+    ])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
