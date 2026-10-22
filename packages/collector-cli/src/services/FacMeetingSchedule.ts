@@ -273,11 +273,11 @@ const UNCERTAIN_CADENCE =
   /\btwice\b|\bmost\b|\bcheck\b|\brefer\b|\bcontact\b|\bvar(?:y|ies)\b|\boccasional\w*/
 
 const ORDINAL_WORDS: [number, string][] = [
-  [1, '1st|first|1er|1re|1ere'],
-  [2, '2nd|second|2e|2eme'],
-  [3, '3rd|third|3e|3eme'],
-  [4, '4th|fourth|4e|4eme'],
-  [5, '5th|fifth|5e|5eme'],
+  [1, '1st|first|1er|1re|1ere|1ro|1o|primero?'],
+  [2, '2nd|second|2e|2eme|2do|2o|segundo'],
+  [3, '3rd|third|3e|3eme|3ro|3o|3er|tercero?'],
+  [4, '4th|fourth|4e|4eme|4to|4o|cuarto'],
+  [5, '5th|fifth|5e|5eme|5to|5o|quinto'],
 ]
 const MODE_WORDS: [MeetingMode, string][] = [
   ['hybrid', 'hybri\\w*'],
