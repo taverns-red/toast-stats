@@ -908,12 +908,17 @@ describe('parseMeetingSchedule (#2243) — HHMM with am/pm or hrs', () => {
     expect(starts('Monday', time)).toEqual([`Monday ${start}`])
   })
 
-  it.each([['2 Hours'], ['8 hrs'], ['1930'], ['2026 pm']])(
-    '%j is not a time',
-    time => {
-      expect(starts('Monday', time)).toEqual(['Monday ?'])
-    }
-  )
+  it.each([
+    ['1:30 hours'],
+    ['1.30 hrs'],
+    ['2:00 hours, 7 pm'],
+    ['2 Hours'],
+    ['8 hrs'],
+    ['1930'],
+    ['2026 pm'],
+  ])('%j is not a time', time => {
+    expect(starts('Monday', time)).toEqual(['Monday ?'])
+  })
 })
 
 describe("parseMeetingSchedule (#2243) — '~' and '--' between a range", () => {
