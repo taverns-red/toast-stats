@@ -335,8 +335,24 @@ describe('workflowRunsInFlight — is another run on the head still going? (#221
   })
 
   it('is false when every run on the head has completed', () => {
-    expect(workflowRunsInFlight([wfRun(1, 'CI', 'completed')], 2)).toBe(false)
-    expect(workflowRunsInFlight([], 2)).toBe(false)
+    expect(
+      workflowRunsInFlight(
+        [wfRun(1, 'CI', 'completed'), wfRun(2, 'CI Gate', 'in_progress')],
+        2
+      )
+    ).toBe(false)
+  })
+
+  it('treats a listing that omits the gate’s own run as incomplete — in flight (#2219)', () => {
+    // `GET /actions/runs?head_sha=` intermittently answers 200 with
+    // total_count 0 for a head that has runs: 7 of 16 reads of PR #2240's head
+    // came back empty on 2026-10-22, and CI Gate run 39810475356 failed on
+    // one. The gate's own run is always on the head, so a listing without it
+    // cannot be trusted to say nothing is in flight.
+    expect(workflowRunsInFlight([], 39810475356)).toBe(true)
+    expect(
+      workflowRunsInFlight([wfRun(1, 'CI', 'completed')], 39810475356)
+    ).toBe(true)
   })
 
   it('ci-gate.yml grants actions: read so the run listing is readable', () => {
