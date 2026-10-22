@@ -369,6 +369,29 @@ const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
 /** "UTC-5", "GMT + 6", "-4DT": the number after is an offset, not a time.
  *  A dash after a word and a space ("Saturday- 7-9 pm") is not a sign. */
 const OFFSET_BEFORE = /(?:utc|gmt)\s*(?:[+\-−]\s*)?$|[+\-−]$/
+const WEEKDAY_WORD = new RegExp(
+  `^(?:${Object.values(WEEKDAY_WORDS).join('|')})$`
+)
+/** Words a bare range start may follow: "Thursdays 7-9 pm", "from 7 - 9". */
+const BARE_START_AFTER =
+  /^(?:from|at|de|des|between|entre|and|et|y|or|ou|start|starts|begins)$/
+/** An ordinal week ("1st & 3rd 6-7:30 pm"). */
+const ORDINAL_END = /\d(?:st|nd|rd|th|er|e|o|ro|do|to)$/
+
+/**
+ * A lone number starts a range only after a day, an ordinal, a linking
+ * word or punctuation. After any other word it is a label ("Room 3 - 7
+ * pm", "Planta 2 - 19:00", #2243); after a sign it is an offset.
+ */
+function bareStartAllowed(before: string): boolean {
+  if (OFFSET_BEFORE.test(before)) return false
+  const trimmed = before.replace(/[\s\-–:,(]+$/, '')
+  if (ORDINAL_END.test(trimmed)) return true
+  const word = /([a-z]+)$/.exec(trimmed)?.[1]
+  if (word === undefined) return true
+  return WEEKDAY_WORD.test(word) || BARE_START_AFTER.test(word)
+}
+
 const LIST_SEPARATOR = /^\s*(?:et|and|&|,|\/)\s*$/
 
 function timeTokensIn(text: string): TimeToken[] {
@@ -388,7 +411,7 @@ function timeTokensIn(text: string): TimeToken[] {
     // A bare number ("UTC-5", "1hr") is not a time on its own; it may
     // start a range ("7-9 pm", #2243), checked below. An offset is never one.
     const bare = !minuteText && !trailingH && !meridiem && separator !== 'h'
-    if (bare && OFFSET_BEFORE.test(text.slice(0, at))) continue
+    if (bare && !bareStartAllowed(text.slice(0, at))) continue
     const hour = Number(hourText)
     const minute = minuteText ? Number(minuteText) : 0
     if (hour > 23 || minute > 59) continue
@@ -446,6 +469,7 @@ function inherited(
   if (
     !suffix &&
     bareIsStart &&
+    !bare.bare &&
     bare.hour < 12 &&
     bare.hour < partner.hour &&
     (partner.hour >= 12 || partner.twentyFour)
@@ -459,6 +483,15 @@ function inherited(
     : bare.hour < partner.hour
   if (!wraps) return suffix
   return suffix === 'pm' ? 'am' : 'pm'
+}
+
+function meetingLength(
+  start: number | undefined,
+  end: number | undefined
+): boolean {
+  if (start === undefined || end === undefined) return false
+  const length = end - start
+  return length >= 15 && length <= 180
 }
 
 interface Slot {
@@ -525,6 +558,12 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
         endMinutes <= 18 * 60
       ) {
         startMinutes = 12 * 60 + start.minute
+      }
+      // A lone-number start must make a meeting-length range (15 min–3 h):
+      // "2 - 7 pm" is not 14:00–19:00.
+      if (start.bare && !meetingLength(startMinutes, endMinutes)) {
+        i += 1
+        continue
       }
       slot =
         startMinutes === undefined
