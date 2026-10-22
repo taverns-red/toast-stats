@@ -465,7 +465,7 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
     .replace(/\b12(?::00)?\s*noon\b/g, 'noon')
     .replace(/\bnoon\s*\/\s*midi\b/g, 'noon')
     .replace(/(?<!-)\bmidi\b/g, 'noon')
-    .replace(/\b([ap])\.?\s?m\b\.?/g, '$1m')
+    .replace(/(?:(?<=\d)|\b)([ap])\.?\s?m\b\.?/g, '$1m') // "7:30p.m." too
   const tokens = timeTokensIn(text)
   const between = (a: TimeToken, b: TimeToken): string =>
     text.slice(a.end, b.start)
