@@ -850,6 +850,30 @@ describe("parseMeetingSchedule (#2243) — 'p.m.' written against the digits", (
   })
 })
 
+describe('parseMeetingSchedule (#2243) — HHMM with am/pm or hrs', () => {
+  it.each([
+    ['730 pm', '19:30'],
+    ['1000 am', '10:00'],
+    ['0230pm - 0430pm', '14:30'],
+    ['1600 hrs - 1800 hrs', '16:00'],
+    ['1830 hrs', '18:30'],
+    ['1000hrs - 1200hrs', '10:00'],
+    ['0615 HRS - 0755 HRS', '06:15'],
+    ['1130 Hours', '11:30'],
+    ['1600 Hours (GMT+6)', '16:00'],
+    ['11:00 hrs', '11:00'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Monday', time)).toEqual([`Monday ${start}`])
+  })
+
+  it.each([['2 Hours'], ['8 hrs'], ['1930'], ['2026 pm']])(
+    '%j is not a time',
+    time => {
+      expect(starts('Monday', time)).toEqual(['Monday ?'])
+    }
+  )
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
