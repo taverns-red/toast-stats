@@ -755,16 +755,19 @@ describe('parseMeetingSchedule (#2243) — a bare hour starting a range', () => 
     ['6-7:30 pm AT', '18:00'],
     ['12-1 PM CET', '12:00'],
     ['11-1 pm', '11:00'],
+    ['Saturday- 7-8:30PM', '19:00'],
   ])('%j starts at %s, not at the end hour', (time, start) => {
     expect(starts('Tuesday', time)).toEqual([`Tuesday ${start}`])
   })
 
-  it.each([['UTC-5 - 7 pm'], ['GMT+6 - 7 pm'], ['1hr - 7 pm']])(
-    'an offset or duration before a range %j is not a start',
-    time => {
-      expect(starts('Tuesday', time)).toEqual(['Tuesday 19:00'])
-    }
-  )
+  it.each([
+    ['UTC-5 - 7 pm'],
+    ['GMT+6 - 7 pm'],
+    ['GMT + 6 - 7 pm'],
+    ['1hr - 7 pm'],
+  ])('an offset or duration before a range %j is not a start', time => {
+    expect(starts('Tuesday', time)).toEqual(['Tuesday 19:00'])
+  })
 })
 
 describe("parseMeetingSchedule (#2243) — 'A for B': the meeting starts at B", () => {
