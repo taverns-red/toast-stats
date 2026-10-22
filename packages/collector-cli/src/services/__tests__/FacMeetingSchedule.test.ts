@@ -730,6 +730,16 @@ describe('parseMeetingSchedule (#2243) — dot as the minute separator', () => {
     }
   )
 
+  it.each([
+    ['GMT+5.30 7 pm', '19:00'],
+    ['UTC +5.30, 7:00 pm', '19:00'],
+    ['$7.50 7 pm', '19:00'],
+    ['Rm 3.15, 7:00 pm', '19:00'],
+    ['Fee 12.50, 7pm', '19:00'],
+  ])('a decimal before the time in %j is not a time', (time, start) => {
+    expect(starts('Tuesday', time)).toEqual([`Tuesday ${start}`])
+  })
+
   it('a dotted time with no am/pm under 13 stays unstated (no guess)', () => {
     expect(
       parseMeetingSchedule({ meetingDay: 'Tuesday', meetingTime: '7.30' })
