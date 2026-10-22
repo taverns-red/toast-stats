@@ -368,6 +368,9 @@ const RANGE_SEPARATOR = /^\s*(?:-+|–|—|~|〜|～|to|a|until|jusqu'?a)\s*$/
  *  offset ("+0530 hrs", "- 0600 hrs") out. */
 const HHMM_HRS =
   /(?<![\d:.+\-−])(?<![+\-−]\s)(\d{2})[:.]?(\d{2})\s*(?:hrs?|hours?)\b\.?/g
+/** Both ends of "730-930 pm", so the start is not lost (#2243). */
+const HHMM_RANGE_MERIDIEM =
+  /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(\s*(?:-|–|to)\s*)(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
 /** 12-hour only: "2026 pm" is a year, not 20:26. */
 const HHMM_MERIDIEM = /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
 const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
@@ -558,6 +561,7 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
     // "1600 hrs", "11:00 hours" → h-notation (24-hour); a lone "2 hours"
     // is a duration and stays out. "730 pm" → "7:30 pm" (#2243).
     .replace(HHMM_HRS, '$1h$2')
+    .replace(HHMM_RANGE_MERIDIEM, '$1:$2$3$4:$5')
     .replace(HHMM_MERIDIEM, '$1:$2')
   const tokens = timeTokensIn(text)
   const between = (a: TimeToken, b: TimeToken): string =>
@@ -589,9 +593,19 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
     let slot: Slot
     if (next && RANGE_SEPARATOR.test(between(start, next))) {
       let startMinutes = resolve(start, inherited(start, next, true))
-      const endMinutes = resolve(next, inherited(next, start, false))
+      let endMinutes = resolve(next, inherited(next, start, false))
+      // "10-12 am": a morning range ends at noon, not midnight.
+      if (
+        next.hour === 12 &&
+        next.meridiem === 'am' &&
+        startMinutes !== undefined &&
+        startMinutes < 12 * 60
+      ) {
+        endMinutes = 12 * 60 + next.minute
+      }
       // "12:00 AM - 1:10 PM": a midnight start before an afternoon end is
-      // a slip for noon (#2243).
+      // a slip for noon (#2243). Up to 18:00 only: a later end could be a
+      // real long event from midnight, so it is left as written.
       if (
         start.hour === 12 &&
         start.meridiem === 'am' &&
