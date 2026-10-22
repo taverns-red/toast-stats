@@ -353,6 +353,8 @@ interface TimeToken {
   meridiem?: 'am' | 'pm'
   /** A lone number ("7" in "7-9 pm"): a time only as a range start. */
   bare?: boolean
+  /** "3.15" with no am/pm: a time only next to another time. */
+  looseDot?: boolean
 }
 
 /** `:`, `h` or `.` between hour and minute ("7:30", "18h30", "7.30 pm",
@@ -395,6 +397,8 @@ function bareStartAllowed(before: string): boolean {
   return WEEKDAY_WORD.test(word) || BARE_START_AFTER.test(word)
 }
 
+const SIGNED_OFFSET_BEFORE = /(?:utc|gmt)\s*[+\-−]\s*$/
+const CURRENCY_BEFORE = /[$€£¥₹]\s*$/
 const LIST_SEPARATOR = /^\s*(?:et|and|&|,|\/)\s*$/
 
 function timeTokensIn(text: string): TimeToken[] {
@@ -414,7 +418,12 @@ function timeTokensIn(text: string): TimeToken[] {
     // A bare number ("UTC-5", "1hr") is not a time on its own; it may
     // start a range ("7-9 pm", #2243), checked below. An offset is never one.
     const bare = !minuteText && !trailingH && !meridiem && separator !== 'h'
-    if (bare && !bareStartAllowed(text.slice(0, at))) continue
+    const before = text.slice(0, at)
+    if (bare && !bareStartAllowed(before)) continue
+    // "GMT+5.30", "$7.50": an offset or a price, never a time.
+    if (SIGNED_OFFSET_BEFORE.test(before) || CURRENCY_BEFORE.test(before)) {
+      continue
+    }
     const hour = Number(hourText)
     const minute = minuteText ? Number(minuteText) : 0
     if (hour > 23 || minute > 59) continue
@@ -434,11 +443,28 @@ function timeTokensIn(text: string): TimeToken[] {
           hourText[0] === '0'),
       ...(meridiem ? { meridiem: meridiem as 'am' | 'pm' } : {}),
       ...(bare ? { bare } : {}),
+      ...(dot && !meridiem && hour <= 12 && hourText?.[0] !== '0'
+        ? { looseDot: true }
+        : {}),
     })
   }
+  const joined = (a: TimeToken | undefined, b: TimeToken | undefined) =>
+    a !== undefined &&
+    b !== undefined &&
+    (RANGE_SEPARATOR.test(text.slice(a.end, b.start)) ||
+      ARRIVE_FOR.test(text.slice(a.end, b.start)))
   return tokens.filter((token, i) => {
-    if (!token.bare) return true
     const next = tokens[i + 1]
+    // "Rm 3.15, 7:00 pm", "Fee 12.50": a 12-hour dotted number with no
+    // am/pm is a time only next to another one ("7.30 - 9.30 pm").
+    if (
+      token.looseDot &&
+      !joined(tokens[i - 1], token) &&
+      !joined(token, next)
+    ) {
+      return false
+    }
+    if (!token.bare) return true
     return (
       next !== undefined &&
       !next.bare &&
