@@ -19,8 +19,21 @@
 # `storage rm -r gs://<bucket>/<prefix>/` (every object under the prefix,
 # the prune reconcile's delete phase, #1767; a prefix holding no object
 # fails like `cat` does on a missing URL), `storage rm <gs://object>...`
-# (exact objects, #2232) and
-# `storage objects list <prefix>** --format=json`.
+# (exact objects, #2232),
+# `storage objects list <prefix>**|<glob>|<object> [--soft-deleted] --format=json`,
+# and, for the #2239 copy-out (scripts/ops/fac-recovery-2239-copy-out.sh),
+# `storage objects describe <url>[#gen] --format=json`,
+# `storage restore <url>#<gen> [--if-generation-match=<gen>]` and
+# `storage cp [--no-clobber] gs://<b>/<o>#<gen> gs://<b>/<o>`.
+#
+# Generations and soft delete (#2239), only with SHIM_GENERATIONS=1: every
+# write gives the object a new generation (`generation=` in its meta), and
+# `objects list`/`describe` then report `generation` and `md5_hash`. A
+# soft-deleted generation lives at $SHIM_ROOT/.soft/<bucket>/<path>#<gen>
+# (meta in .soft-meta/, with its `soft-delete-time=`), never readable: only
+# listed (`--soft-deleted`) or restored. A restore overwrites the live object
+# and soft-deletes it, as the JSON API documents (versioning off); its
+# --if-generation-match is a precondition on the LIVE object.
 # Error texts are the ones Google Cloud SDK 583.0.0 prints (probed read-only
 # against the staging bucket, 2026-10-09). The `objects list` JSON keys are a
 # subset of the real ones recorded in ../gcloud-objects-list/ (#1731); a test
@@ -40,6 +53,7 @@
 #                          objects whose relative path matches (a short read)
 #   SHIM_DOWNLOAD_LOG      optional: every object a download reads is
 #                          appended as its path (bucket name stripped)
+#   SHIM_GENERATIONS       "1": track generations and soft delete (#2239)
 #   SHIM_UPLOAD_LOG        optional: every object an upload writes is appended
 #                          as `<object path>\t<sha256 of the uploaded,
 #                          uncompressed bytes>` (bucket name stripped), so a
@@ -76,6 +90,38 @@ require_bucket() {
     exit 1
   fi
 }
+
+gen_enabled() { [ "${SHIM_GENERATIONS:-0}" = "1" ]; }
+
+# The next generation number (monotonic, per shim root).
+next_gen() {
+  local f="${SHIM_ROOT}/.gen-counter" n=1700000000000000
+  [ -f "${f}" ] && n="$(cat "${f}")"
+  n=$((n + 1))
+  echo "${n}" >"${f}"
+  echo "${n}"
+}
+
+# The value of <key>= in a meta file, or nothing.
+meta_get() { sed -n "s/^$2=//p" "$1" 2>/dev/null | head -1; }
+
+# Give the object behind <meta file> a new generation (SHIM_GENERATIONS).
+stamp_generation() {
+  gen_enabled || return 0
+  local meta="$1" g
+  g="$(next_gen)"
+  mkdir -p "$(dirname "${meta}")"
+  touch "${meta}"
+  grep -v '^generation=' "${meta}" >"${meta}.tmp" || true
+  echo "generation=${g}" >>"${meta}.tmp"
+  mv "${meta}.tmp" "${meta}"
+}
+
+# Base64 MD5 of a stored object's bytes (the API's md5Hash).
+md5_b64() { openssl dgst -md5 -binary <"$1" | base64; }
+
+soft_of() { echo "${SHIM_ROOT}/.soft/${1#gs://}#$2"; }
+soft_meta_of() { echo "${SHIM_ROOT}/.soft-meta/${1#gs://}#$2"; }
 
 # Download one object to a local file, honouring SHIM_DOWNLOAD_DECOMPRESS.
 download_object() {
@@ -117,6 +163,7 @@ upload_object() {
     fi
     true
   } >"${meta}"
+  stamp_generation "${meta}"
   if [ -n "${SHIM_UPLOAD_LOG:-}" ]; then
     local sum rel="${url#gs://}"
     sum="$({ sha256sum "${src}" 2>/dev/null || shasum -a 256 "${src}"; } | awk '{print $1}')"
@@ -128,14 +175,16 @@ upload_object() {
 # prints them (custom_fields only when the object has custom metadata).
 object_json() {
   local f="$1" b="$2" name="$3" meta line
-  local enc="" ctype="" cache="" custom=""
-  meta="${SHIM_ROOT}/.meta/${b}/${name}"
+  local enc="" ctype="" cache="" custom="" gen="" sdt=""
+  meta="${4:-${SHIM_ROOT}/.meta/${b}/${name}}"
   if [ -f "${meta}" ]; then
     while IFS= read -r line; do
       case "${line}" in
         content-encoding=*) enc="${line#content-encoding=}" ;;
         content-type=*) ctype="${line#content-type=}" ;;
         cache-control=*) cache="${line#cache-control=}" ;;
+        generation=*) gen="${line#generation=}" ;;
+        soft-delete-time=*) sdt="${line#soft-delete-time=}" ;;
         x-goog-meta-*)
           line="${line#x-goog-meta-}"
           custom+="${custom:+, }\"${line%%=*}\": \"${line#*=}\""
@@ -149,6 +198,10 @@ object_json() {
   [ -n "${enc}" ] && printf ', "content_encoding": "%s"' "${enc}"
   [ -n "${ctype}" ] && printf ', "content_type": "%s"' "${ctype}"
   [ -n "${custom}" ] && printf ', "custom_fields": {%s}' "${custom}"
+  if [ -n "${gen}" ]; then
+    printf ', "generation": "%s", "md5_hash": "%s"' "${gen}" "$(md5_b64 "${f}")"
+  fi
+  [ -n "${sdt}" ] && printf ', "soft_delete_time": "%s"' "${sdt}"
   printf '}'
 }
 
@@ -241,11 +294,12 @@ case "${CMD}" in
     ;;
 
   cp)
-    recursive=0 gz=0 ctype="" cache="" custom=""
+    recursive=0 gz=0 ctype="" cache="" custom="" noclobber=0
     args=()
     for a in "$@"; do
       case "${a}" in
         -r) recursive=1 ;;
+        -n | --no-clobber) noclobber=1 ;;
         -Z) gz=1 ;;
         --content-type=*) ctype="${a#--content-type=}" ;;
         --cache-control=*) cache="${a#--cache-control=}" ;;
@@ -265,7 +319,15 @@ case "${CMD}" in
         # A single-segment wildcard (`snapshots/D/district_*.json`, the
         # prior-year pull of the per-date loop, #1742) expands like `ls`.
         matched=()
-        if [[ "${src}" == *'*'* ]]; then
+        if [[ "${src}" == *'#'* ]]; then
+          # gs://b/o#<gen>: only the live generation is readable (#2239).
+          want="${src##*#}"
+          src="${src%#*}"
+          if [ -f "$(local_of "${src}")" ] &&
+            [ "$(meta_get "$(meta_of "${src}")" generation)" = "${want}" ]; then
+            matched=("${src}")
+          fi
+        elif [[ "${src}" == *'*'* ]]; then
           while IFS= read -r f; do
             [ -f "${f}" ] && matched+=("gs://${f#"${SHIM_ROOT}/"}")
           done < <(compgen -G "$(local_of "${src}")" | LC_ALL=C sort)
@@ -282,6 +344,10 @@ case "${CMD}" in
           for url in "${matched[@]}"; do
             target="${dst}"
             [[ "${dst}" == */ ]] && target="${dst}$(basename "${url}")"
+            if [ "${noclobber}" = 1 ] && [ -f "$(local_of "${target}")" ]; then
+              echo "Skipping existing destination item (no-clobber): ${target}" >&2
+              continue
+            fi
             mkdir -p "$(dirname "$(local_of "${target}")")" \
               "$(dirname "$(meta_of "${target}")")"
             cp "$(local_of "${url}")" "$(local_of "${target}")"
@@ -290,6 +356,7 @@ case "${CMD}" in
             else
               rm -f "$(meta_of "${target}")"
             fi
+            stamp_generation "$(meta_of "${target}")"
           done
           continue
         fi
@@ -396,30 +463,137 @@ case "${CMD}" in
     ;;
 
   objects)
-    if [ "${1:-}" != "list" ] || [ "${3:-}" != "--format=json" ]; then
-      echo "gcloud shim: unsupported: storage objects $*" >&2
+    sub="${1:-}"
+    shift || true
+    url="" fmt="" soft=0
+    for a in "$@"; do
+      case "${a}" in
+        --format=json) fmt=json ;;
+        --soft-deleted) soft=1 ;;
+        -*)
+          echo "gcloud shim: unsupported: storage objects ${sub} ${a}" >&2
+          exit 2
+          ;;
+        *) url="${a}" ;;
+      esac
+    done
+    if [ "${fmt}" != json ] || [ -z "${url}" ]; then
+      echo "gcloud shim: unsupported: storage objects ${sub} $*" >&2
       exit 2
     fi
-    url="${2:?}"
     b="$(bucket_of "${url}")"
+    if [ "${sub}" = describe ]; then
+      want=""
+      if [[ "${url}" == *'#'* ]]; then
+        want="${url##*#}"
+        url="${url%#*}"
+      fi
+      obj="$(local_of "${url}")"
+      if [ ! -f "${obj}" ] || { [ -n "${want}" ] &&
+        [ "$(meta_get "$(meta_of "${url}")" generation)" != "${want}" ]; }; then
+        echo "ERROR: (gcloud.storage.objects.describe) ${url}${want:+#${want}} not found: 404." >&2
+        exit 1
+      fi
+      object_json "${obj}" "${b}" "${url#gs://"${b}"/}"
+      printf '\n'
+      exit 0
+    fi
+    if [ "${sub}" != list ]; then
+      echo "gcloud shim: unsupported: storage objects ${sub}" >&2
+      exit 2
+    fi
     if [ ! -d "${SHIM_ROOT}/${b}" ]; then
       # Real 583 behaviour: the error on stderr AND `[]` on stdout, exit 1.
       echo "ERROR: (gcloud.storage.objects.list) gs://${b} not found: 404." >&2
       echo '[]'
       exit 1
     fi
-    prefix="${url%\*\*}"
-    dir="$(local_of "${prefix}")"
+    # The candidate files: a `**` prefix, a single-segment glob or one
+    # object; live from the bucket tree, soft-deleted from .soft/ (#2239).
+    # A glob or object matching nothing lists `[]`, exit 0 (probed, 583).
+    if [ "${soft}" = 1 ]; then
+      base="${SHIM_ROOT}/.soft"
+    else
+      base="${SHIM_ROOT}"
+    fi
+    files=()
+    if [[ "${url}" == *'**' ]]; then
+      dir="${base}/${url#gs://}"
+      dir="${dir%\*\*}"
+      if [ -d "${dir}" ]; then
+        while IFS= read -r f; do files+=("${f}"); done < <(find "${dir}" -type f | LC_ALL=C sort)
+      fi
+    else
+      pat="${base}/${url#gs://}"
+      [ "${soft}" = 1 ] && pat="${pat}#*"
+      while IFS= read -r f; do
+        [ -f "${f}" ] && files+=("${f}")
+      done < <(compgen -G "${pat}" | LC_ALL=C sort)
+    fi
     sep=''
     printf '['
-    if [ -d "${dir}" ]; then
-      while IFS= read -r f; do
-        printf '%s' "${sep}"
+    for f in "${files[@]+"${files[@]}"}"; do
+      printf '%s' "${sep}"
+      if [ "${soft}" = 1 ]; then
+        rel="${f#"${SHIM_ROOT}/.soft/${b}/"}"
+        object_json "${f}" "${b}" "${rel%#*}" \
+          "${SHIM_ROOT}/.soft-meta/${b}/${rel}"
+      else
         object_json "${f}" "${b}" "${f#"${SHIM_ROOT}/${b}/"}"
-        sep=', '
-      done < <(find "${dir}" -type f | LC_ALL=C sort)
-    fi
+      fi
+      sep=', '
+    done
     printf ']\n'
+    ;;
+
+  restore)
+    # `restore gs://b/o#<gen> [--if-generation-match=<live gen>]` (#2239).
+    url="" match=""
+    for a in "$@"; do
+      case "${a}" in
+        --if-generation-match=*) match="${a#--if-generation-match=}" ;;
+        -*)
+          echo "gcloud shim: unsupported restore flag ${a}" >&2
+          exit 2
+          ;;
+        *) url="${a}" ;;
+      esac
+    done
+    if [[ "${url}" != gs://*'#'* ]]; then
+      echo "gcloud shim: restore needs gs://<bucket>/<object>#<generation>" >&2
+      exit 2
+    fi
+    require_bucket "${url}"
+    gen="${url##*#}"
+    obj_url="${url%#*}"
+    sfile="$(soft_of "${obj_url}" "${gen}")"
+    smeta="$(soft_meta_of "${obj_url}" "${gen}")"
+    if [ ! -f "${sfile}" ]; then
+      echo "ERROR: (gcloud.storage.restore) ${url} not found: 404." >&2
+      exit 1
+    fi
+    live="$(local_of "${obj_url}")"
+    lmeta="$(meta_of "${obj_url}")"
+    if [ -n "${match}" ] && { [ ! -f "${live}" ] ||
+      [ "$(meta_get "${lmeta}" generation)" != "${match}" ]; }; then
+      echo "ERROR: (gcloud.storage.restore) HTTPError 412: At least one of the pre-conditions you specified did not hold." >&2
+      exit 1
+    fi
+    # The live object is overwritten and soft-deleted (versioning off).
+    if [ -f "${live}" ]; then
+      lgen="$(meta_get "${lmeta}" generation)"
+      mkdir -p "$(dirname "$(soft_of "${obj_url}" "${lgen}")")" \
+        "$(dirname "$(soft_meta_of "${obj_url}" "${lgen}")")"
+      mv "${live}" "$(soft_of "${obj_url}" "${lgen}")"
+      { cat "${lmeta}" 2>/dev/null || true
+        echo "soft-delete-time=2026-10-24T12:00:00+0000"; } \
+        >"$(soft_meta_of "${obj_url}" "${lgen}")"
+    fi
+    mkdir -p "$(dirname "${live}")" "$(dirname "${lmeta}")"
+    mv "${sfile}" "${live}"
+    grep -v '^soft-delete-time=' "${smeta}" >"${lmeta}" 2>/dev/null || true
+    rm -f "${smeta}"
+    stamp_generation "${lmeta}"
     ;;
 
   *)
