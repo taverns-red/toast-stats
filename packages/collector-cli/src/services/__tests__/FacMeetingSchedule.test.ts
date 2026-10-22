@@ -919,6 +919,16 @@ describe('parseMeetingSchedule (#2243) — HHMM with am/pm or hrs', () => {
   })
 
   it.each([
+    ['730-930 pm', '19:30', '21:30'],
+    ['1000 - 1130 am', '10:00', '11:30'],
+    ['10-12 am', '10:00', '12:00'],
+  ])('%j is %s–%s', (time, startTime, endTime) => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Monday', meetingTime: time })
+    ).toEqual([{ day: 'Monday', cadence: 'weekly', startTime, endTime }])
+  })
+
+  it.each([
     ['1:30 hours'],
     ['1.30 hrs'],
     ['2:00 hours, 7 pm'],
