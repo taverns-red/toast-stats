@@ -240,14 +240,15 @@ export function meetingModeFromText(
 
 /* ── Weekdays, cadence, weeks of the month ─────────────────────────── */
 
+/** English, French and Spanish (#2243) day names, diacritics folded. */
 const WEEKDAY_WORDS: Record<MeetingWeekday, string> = {
-  Monday: 'mon|mondays?|lundis?',
-  Tuesday: 'tues?|tuesdays?|mardis?',
-  Wednesday: 'weds?|wednesdays?|mercredis?',
-  Thursday: 'thu|thur|thurs|thursdays?|jeudis?',
-  Friday: 'fri|fridays?|vendredis?',
-  Saturday: 'sat|saturdays?|samedis?',
-  Sunday: 'sun|sundays?|dimanches?',
+  Monday: 'mon|mondays?|lundis?|lunes',
+  Tuesday: 'tues?|tuesdays?|mardis?|martes',
+  Wednesday: 'weds?|wednesdays?|mercredis?|miercoles',
+  Thursday: 'thu|thur|thurs|thursdays?|jeudis?|jueves',
+  Friday: 'fri|fridays?|vendredis?|viernes',
+  Saturday: 'sat|saturdays?|samedis?|sabados?',
+  Sunday: 'sun|sundays?|dimanches?|domingos?',
 }
 
 const WEEKDAY_PATTERNS = (
