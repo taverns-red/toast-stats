@@ -135,6 +135,15 @@ on:
         required: false
         type: boolean
         default: false
+      fac_prior_root:
+        description: >-
+          Rebuild only (#2239): carry Find-A-Club fields from this recovery root
+          (<root>/<date>/district_*.json) instead of the live staging snapshot. Exactly
+          gs://toast-stats-fac-recovery-2239/fac-2239 or empty; anything else fails the run.
+          A date missing there, or not enriched there, fails.
+        required: false
+        type: string
+        default: ''
       skip_promotion:
         description: >-
           Staging-only proof run (#1754): run everything through the count, value and content
@@ -270,6 +279,10 @@ jobs:
 
       - name: Determine mode
         id: mode
+        env:
+          # A free-text input: read through env, never interpolated into
+          # the script (#2239).
+          FAC_PRIOR_ROOT_INPUT: ${{ inputs.fac_prior_root }}
         run: |
           MODE="${{ inputs.mode || 'daily' }}"
           # Scheduled events carry no inputs; the quarterly prune cron is
@@ -307,7 +320,14 @@ jobs:
           echo "reconcile_prod=${RECONCILE_PROD:-false}" >> "$GITHUB_OUTPUT"
           echo "prune_reconcile=${PRUNE_RECONCILE}" >> "$GITHUB_OUTPUT"
           echo "skip_promotion=${SKIP_PROMOTION:-false}" >> "$GITHUB_OUTPUT"
+          # fac_prior_root (#2239): rebuild only, exact allowlist. A bad value
+          # fails the run here, before any stage.
+          FAC_PRIOR_ROOT="$(bash scripts/pipeline/fac-prior-root.sh "${MODE}" "${FAC_PRIOR_ROOT_INPUT}")"
+          echo "fac_prior_root=${FAC_PRIOR_ROOT}" >> "$GITHUB_OUTPUT"
           echo "## 🔧 Pipeline Mode: \`${MODE}\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "${FAC_PRIOR_ROOT}" ]; then
+            echo "- ♻️ **fac_prior_root**: \`${FAC_PRIOR_ROOT}\` — FAC carried from the recovery bucket (#2239)." >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ "${SKIP_PROMOTION:-false}" = "true" ]; then
             echo "- 🧪 **skip_promotion**: staging-only run — nothing will be written to production." >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -947,6 +967,9 @@ jobs:
           # The runner forces every re-derivation; it takes the input to log
           # and validate it, so force reads the same everywhere (#1771).
           FORCE: ${{ inputs.force }}
+          # #2239: validated in the Determine-mode step; process-dates.sh
+          # checks it again.
+          FAC_PRIOR_ROOT: ${{ steps.mode.outputs.fac_prior_root }}
         run: |
           # Determine which dates to rebuild
           if [ -n "${{ inputs.dates }}" ]; then

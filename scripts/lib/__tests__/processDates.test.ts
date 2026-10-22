@@ -1263,14 +1263,16 @@ describe('process-dates.sh: FAC_PRIOR_ROOT reads the recovered prior copy (#2239
     expect(r.status, r.stderr).toBe(0)
     expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
     const calls = lines(shimLog)
-    expect(calls).toContain(
-      expect.stringMatching(
-        new RegExp(`^cp ${PRIOR_ROOT}/2026-06-15/district_\\*\\.json `)
-      )
+    const read = new RegExp(
+      `^storage cp ${PRIOR_ROOT}/2026-06-15/district_\\*\\.json `
     )
     expect(
+      calls.some(l => read.test(l)),
+      calls.join('\n')
+    ).toBe(true)
+    expect(
       calls.some(l =>
-        l.startsWith(`cp gs://${BUCKET}/snapshots/2026-06-15/district_`)
+        l.startsWith(`storage cp gs://${BUCKET}/snapshots/2026-06-15/district_`)
       )
     ).toBe(false)
     expect(uploadedSnapshot('2026-06-15').facCarriedForward).toBe(true)
