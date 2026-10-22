@@ -358,6 +358,10 @@ interface TimeToken {
 const TIME_TOKEN =
   /\bnoon\b|(?<![\d.:])\b(\d{1,2})(?:\s*([:h])\s*(\d{2})|(\.)(\d{2}))?(\s*h\b)?\s*(am|pm)?(?!\d)/g
 const RANGE_SEPARATOR = /^\s*(?:-|–|—|to|a|until|jusqu'?a)\s*$/
+const HHMM_HRS =
+  /(?<![\d:.+\-−])(?<![+\-−]\s)(\d{1,2})[:.]?(\d{2})\s*(?:hrs?|hours?)\b\.?/g
+/** 12-hour only: "2026 pm" is a year, not 20:26. */
+const HHMM_MERIDIEM = /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
 const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
 /** "UTC-5", "GMT +6": the number after is an offset, not a time. */
 const OFFSET_BEFORE = /(?:[+\-−]|utc|gmt)\s*$/
@@ -466,6 +470,10 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
     .replace(/\bnoon\s*\/\s*midi\b/g, 'noon')
     .replace(/(?<!-)\bmidi\b/g, 'noon')
     .replace(/(?:(?<=\d)|\b)([ap])\.?\s?m\b\.?/g, '$1m') // "7:30p.m." too
+    // "1600 hrs", "11:00 hours" → h-notation (24-hour); a lone "2 hours"
+    // is a duration and stays out. "730 pm" → "7:30 pm" (#2243).
+    .replace(HHMM_HRS, '$1h$2')
+    .replace(HHMM_MERIDIEM, '$1:$2')
   const tokens = timeTokensIn(text)
   const between = (a: TimeToken, b: TimeToken): string =>
     text.slice(a.end, b.start)
