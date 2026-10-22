@@ -701,6 +701,42 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
   })
 })
 
+describe('parseMeetingSchedule (#2243) — dot as the minute separator', () => {
+  it.each([
+    ['7.30 pm to 9.00pm AT', '19:30', '21:00'],
+    ['7.00 pm - 8.30 pm', '19:00', '20:30'],
+    ['7.30pm', '19:30', undefined],
+    ['19.30', '19:30', undefined],
+    ['18.45 - 20.15', '18:45', '20:15'],
+  ])('%j → starts %s', (time, startTime, endTime) => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Tuesday', meetingTime: time })
+    ).toEqual([
+      {
+        day: 'Tuesday',
+        cadence: 'weekly',
+        startTime,
+        ...(endTime ? { endTime } : {}),
+      },
+    ])
+  })
+
+  it.each([['00pm'], ['00 pm'], ['0 am'], ['9.00x pm']])(
+    'an unreadable time %j → time not stated, never 00:00',
+    time => {
+      expect(
+        parseMeetingSchedule({ meetingDay: 'Tuesday', meetingTime: time })
+      ).toEqual([{ day: 'Tuesday', cadence: 'weekly' }])
+    }
+  )
+
+  it('a dotted time with no am/pm under 13 stays unstated (no guess)', () => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Tuesday', meetingTime: '7.30' })
+    ).toEqual([{ day: 'Tuesday', cadence: 'weekly' }])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
