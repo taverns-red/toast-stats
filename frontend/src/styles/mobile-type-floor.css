@@ -49,14 +49,17 @@
   .dcp-subhead,
   .dcp-cell__lab,
   .club-growth-recipients__tier-heading,
-  .club-grid-area__title {
+  .club-grid-area__title,
+  /* Landing (#2249): the Red Vote eyebrow, the World pulse table head and
+     the my-district eyebrow. */
+  .red-vote-block__eyebrow,
+  .world-pulse__table thead th,
+  .my-district-card__eyebrow {
     font-size: 12px;
   }
 
   /* 4. Data, links, pills, chips, captions and prose: 14px. */
   /* Landing */
-  .districts-page-header__orientation,
-  .districts-orientation__count,
   .districts-methodology-callout,
   .districts-methodology-callout__link,
   .districts-toolbar__recognition-chip,
