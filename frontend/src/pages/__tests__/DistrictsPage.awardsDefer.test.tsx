@@ -158,14 +158,27 @@ describe('DistrictsPage — defer Awards Race behind a mobile link (#862)', () =
     ).toBeInTheDocument()
   })
 
-  it('places the mobile link in the hero stack, adjacent to the deferred section', async () => {
+  // #2249 — the race is leaders-only, so it sits BELOW the rankings table
+  // (out of the first screen), with its mobile link adjacent; the hero
+  // stack holds the search, the KPIs, the pulse and the Red Vote block.
+  it('places the section and its mobile link below the rankings table, not in the hero stack', async () => {
     setupSingleRow()
     const { container } = renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 7')
 
-    const stack = container.querySelector('.districts-hero-stack')
-    expect(stack).not.toBeNull()
-    expect(stack!.querySelector('.awards-race-mobile-link')).not.toBeNull()
-    expect(stack!.querySelector('.awards-race')).not.toBeNull()
+    const stack = container.querySelector('.districts-hero-stack')!
+    expect(stack.querySelector('.awards-race')).toBeNull()
+    expect(stack.querySelector('.awards-race-mobile-link')).toBeNull()
+
+    const table = container.querySelector(
+      'table[aria-label="District rankings"]'
+    )!
+    const section = container.querySelector('.awards-race')!
+    const link = container.querySelector('.awards-race-mobile-link')!
+    const after = (a: Element, b: Element) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(after(table, section)).toBe(true)
+    expect(after(table, link)).toBe(true)
+    expect(section.nextElementSibling).toBe(link)
   })
 })

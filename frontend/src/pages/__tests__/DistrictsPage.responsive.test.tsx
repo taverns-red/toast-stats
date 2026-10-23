@@ -323,14 +323,20 @@ describe('DistrictsPage landing hero hoist + KPI demotion (#861)', () => {
 
     const stack = container.querySelector('.districts-hero-stack')
     expect(stack).not.toBeNull()
-    // The Awards Race section's own skeleton — same component the loaded page
-    // renders, not a look-alike placeholder.
-    expect(stack!.querySelector('.awards-race')).not.toBeNull()
-    // Its <768px counterpart, where .awards-race is display:none.
-    expect(stack!.querySelector('.awards-race-mobile-link')).not.toBeNull()
     // Region toolbar + its chip row.
     expect(stack!.querySelector('.districts-toolbar')).not.toBeNull()
     expect(stack!.querySelector('.districts-toolbar__row')).not.toBeNull()
+    // #2249 — the Awards Race moved below the table; its own skeleton (same
+    // component, not a look-alike) is reserved there, after the loading
+    // body, with its <768px link.
+    expect(stack!.querySelector('.awards-race')).toBeNull()
+    const status = screen.getByRole('status', {
+      name: /loading district rankings/i,
+    })
+    const section = container.querySelector('.awards-race')
+    expect(section).not.toBeNull()
+    expect(precedesInDom(status, section!)).toBe(true)
+    expect(container.querySelector('.awards-race-mobile-link')).not.toBeNull()
   })
 
   it('does not reserve the pulsing slots in a terminal error state (#1359)', async () => {
