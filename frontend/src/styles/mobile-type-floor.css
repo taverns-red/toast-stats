@@ -49,20 +49,20 @@
   .dcp-subhead,
   .dcp-cell__lab,
   .club-growth-recipients__tier-heading,
-  .club-grid-area__title,
-  /* Landing (#2249): the Red Vote eyebrow, the World pulse table head and
-     the my-district eyebrow. */
-  .red-vote-block__eyebrow,
-  .world-pulse__table thead th,
-  .my-district-card__eyebrow {
+  .club-grid-area__title {
     font-size: 12px;
   }
 
   /* 4. Data, links, pills, chips, captions and prose: 14px. */
   /* Landing */
-  /* #2249: the Red Vote fine print, the World pulse tile labels and
-     captions, the KPI sub-line and the my-district movement line. */
+  /* #2249: the Red Vote fine print and eyebrow, the World pulse tile
+     labels, captions and table head, the KPI sub-line and the my-district
+     eyebrow and movement line. The landing ratchets at 5% under 14px, so
+     even its uppercase labels take the floor. */
   .red-vote-block__fine,
+  .red-vote-block__eyebrow,
+  .world-pulse__table thead th,
+  .my-district-card__eyebrow,
   .world-pulse__tile-label,
   .world-pulse__caption,
   .districts-kpi-card__sub,
