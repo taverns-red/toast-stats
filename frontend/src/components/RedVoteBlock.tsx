@@ -67,13 +67,15 @@ export const RedVoteBlock: React.FC = () => {
   const headingId = useId()
   const { search } = useLocation()
 
-  // Brand fonts only near the viewport (mobile Lighthouse gate): the block
-  // is below the fold at every width, and fetching Space Grotesk + Inter
-  // (71 KB) at first paint cost the landing ~480ms of LCP. Until the block
-  // is within 150px the stacks name only the metric-matched fallback faces
-  // (nothing to fetch); the switch is reflow-free by construction. 150px,
-  // not more: the block starts at ~1150px at phone widths and a 600px
-  // margin reached it on load in the 823px Lighthouse viewport.
+  // Brand fonts only once the page has settled (mobile Lighthouse gate):
+  // the block is below the fold at every width, and fetching Space
+  // Grotesk + Inter (71 KB) at first paint cost the landing ~480ms of LCP.
+  // Until then the stacks name only the metric-matched fallback faces
+  // (nothing to fetch) and the switch is reflow-free. Triggers: the first
+  // scroll, pointer or key (the page is in use), or the block itself in
+  // view (tall viewports). Not a positive observer margin: the loading
+  // shell is shorter than the loaded page, so a margin reached the block
+  // at mount and the fonts were in the first paint after all.
   const ref = useRef<HTMLElement>(null)
   const [brandFonts, setBrandFonts] = useState(
     () => typeof IntersectionObserver === 'undefined'
@@ -83,17 +85,22 @@ export const RedVoteBlock: React.FC = () => {
     if (brandFonts || !el || typeof IntersectionObserver === 'undefined') {
       return
     }
+    const arm = () => setBrandFonts(true)
+    const events = ['scroll', 'pointerdown', 'keydown', 'touchstart'] as const
+    for (const ev of events) {
+      window.addEventListener(ev, arm, { once: true, passive: true })
+    }
     const io = new IntersectionObserver(
       entries => {
-        if (entries.some(e => e.isIntersecting)) {
-          setBrandFonts(true)
-          io.disconnect()
-        }
+        if (entries.some(e => e.isIntersecting)) arm()
       },
-      { rootMargin: '150px 0px' }
+      { rootMargin: '0px' }
     )
     io.observe(el)
-    return () => io.disconnect()
+    return () => {
+      io.disconnect()
+      for (const ev of events) window.removeEventListener(ev, arm)
+    }
   }, [brandFonts])
   const season = useMemo(
     () =>
