@@ -19,6 +19,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WorldPulse, type WorldPulseRow } from '../WorldPulse'
 import { useRegionRollups } from '../../hooks/useRegionRollups'
 import { fetchCdnRegionMembershipSeries } from '../../services/cdn'
+import { toSnapshotDate } from '../../types/snapshotDate'
+
+const DATE = toSnapshotDate('2026-10-22')!
 
 vi.mock('../../hooks/useRegionRollups', () => ({
   useRegionRollups: vi.fn(),
@@ -56,7 +59,7 @@ function renderPulse(reserve = false) {
       <MemoryRouter>
         <WorldPulse
           rows={reserve ? [] : ROWS}
-          date="2026-10-22"
+          date={DATE}
           programYear="2026-2027"
           reserve={reserve}
         />
