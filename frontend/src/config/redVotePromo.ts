@@ -27,9 +27,10 @@ export const RED_VOTE_COPY = {
   // season when one is on.
   blockEyebrow: 'District Council · DEC meetings',
   blockEyebrowSeason: 'District Council season',
-  body: 'Running DEC meetings or District Council votes? Red Vote handles secure district voting.',
+  body: "Red Vote handles your meeting's votes securely and with ease. Built for district leaders and district budgets.",
   cta: 'See Red Vote',
-  attribution: 'Red Vote is from Red Taverns, the makers of Toast Stats.',
+  attribution:
+    'Red Vote is a product of Red Taverns, the makers of Toast Stats.',
   disclaimer: 'Not affiliated with Toastmasters International.',
   dismissLabel: 'Dismiss the Red Vote banner',
   madeByPrefix: 'Free from Red Taverns · Also from us:',
