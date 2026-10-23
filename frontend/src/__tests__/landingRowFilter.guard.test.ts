@@ -43,20 +43,23 @@ describe('landing H1 fits beside the actions at 1024 (#2249)', () => {
    Vote eyebrow and the World pulse table headers; the my-district eyebrow is
    the same size. Uppercase eyebrows/labels are 12px on phones, in ONE place
    (mobile-type-floor.css rule 3, R10), not per component sheet. */
-describe('new landing eyebrows join the 12px phone floor (#2249)', () => {
+describe('new landing eyebrows are 14px on phones, not 12 (#2249, 375 ratchet)', () => {
   const floor = readFileSync(
     resolve(here, '../styles/mobile-type-floor.css'),
     'utf8'
   )
   const rule3 = /\.uppercase:is\([^{]*\{\s*font-size:\s*12px/.exec(floor)
-  it('lists the Red Vote eyebrow, the pulse table headers and the my-district eyebrow', () => {
+  // The landing's 375 ratchet is 5% of characters under 14px (the site cap
+  // is 15%); at 12px these three put it at 8.3%, so on the landing they
+  // take the 14px floor and leave rule 3 to the pre-existing chrome.
+  it('keeps the Red Vote eyebrow, the pulse table head and the my-district eyebrow OUT of the 12px rule', () => {
     expect(rule3, 'rule 3 not found').not.toBeNull()
     for (const sel of [
       '.red-vote-block__eyebrow',
       '.world-pulse__table thead th',
       '.my-district-card__eyebrow',
     ]) {
-      expect(rule3![0], sel).toContain(sel)
+      expect(rule3![0], sel).not.toContain(sel)
     }
   })
   it('no longer names the retired orientation paragraph', () => {
@@ -82,6 +85,9 @@ describe('new landing captions join the 14px phone floor (#2249)', () => {
     '.world-pulse__caption',
     '.districts-kpi-card__sub',
     '.my-district-card__move',
+    '.red-vote-block__eyebrow',
+    '.world-pulse__table thead th',
+    '.my-district-card__eyebrow',
   ])('sets %s to 14px below 768', sel => {
     const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     expect(floor).toMatch(new RegExp(`${esc}[^{]*\\{[^}]*font-size:\\s*14px`))
