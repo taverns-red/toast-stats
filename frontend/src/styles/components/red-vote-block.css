@@ -50,11 +50,13 @@
 
   .red-vote-block__pennant-v {
     fill: var(--rt-ink-on-dk);
-    font-family: 'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
+    font-family:
+      'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
   }
 
   .red-vote-block__wordmark {
-    font-family: 'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
+    font-family:
+      'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
     font-size: 18px;
     font-weight: 600;
     letter-spacing: var(--rt-track-snug);
@@ -73,7 +75,8 @@
 
   .red-vote-block__heading {
     margin: 0 0 8px;
-    font-family: 'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
+    font-family:
+      'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
     font-size: var(--rt-text-lg);
     font-weight: 700;
     line-height: 1.15;
@@ -109,7 +112,8 @@
     border: 1px solid var(--rt-red-dk);
     border-radius: 0;
     color: var(--rt-ink-on-dk);
-    font-family: 'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
+    font-family:
+      'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
     font-size: var(--rt-text-base);
     font-weight: 600;
     text-decoration: none;
