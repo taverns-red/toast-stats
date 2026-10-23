@@ -22,3 +22,16 @@ describe('landing row filter touch target (#2249 B2)', () => {
     )
   })
 })
+
+/* Landing H1 at tablet widths (#2249, preview smoke
+   landing-header-tablet.smoke.ts): measured on the preview, the intro column
+   is 394px at 1024 (the actions share the row) while "Find a district, club
+   or region" needs 419px at 28px, so it wrapped; at 25px it needs 374px. The
+   band is landing-only (.districts-page-root), 900–1099px. */
+describe('landing H1 fits beside the actions at 1024 (#2249)', () => {
+  it('sizes the landing title down in the 900–1099px band', () => {
+    expect(css).toMatch(
+      /@media\s*\(min-width:\s*900px\)\s*and\s*\(max-width:\s*1099px\)\s*\{[^}]*\.districts-page-root\s+\.districts-page-header__title\s*\{[^}]*font-size:\s*25px/
+    )
+  })
+})
