@@ -48,6 +48,24 @@ const INDEX: searchIndex.SearchIndex = {
       route: '/district/61/club/00001234',
       terms: ['00001234', 'toast of the town'],
     },
+    // Real-shape collisions (review B1): old clubs carry low numbers, so
+    // Club 61 shares its number with District 61, and regions 1–14 share
+    // theirs with districts 1–14.
+    {
+      type: 'club',
+      id: '61',
+      label: 'Boise Club',
+      context: 'District 207',
+      route: '/district/207/club/61',
+      terms: ['61', 'boise club'],
+    },
+    {
+      type: 'region',
+      id: '06',
+      label: 'Region 6',
+      route: '/region/06',
+      terms: ['06', '6', 'region 6'],
+    },
     {
       type: 'page',
       id: '/methodology',
@@ -115,7 +133,7 @@ describe('LandingSearch (#2249)', () => {
     expect(input()).toHaveAttribute('aria-expanded', 'true')
   })
 
-  it('Enter on a single exact match navigates', async () => {
+  it('Enter on a district number goes to that district, even when a club shares the number (B1)', async () => {
     renderSearch()
     fireEvent.focus(input())
     fireEvent.change(input(), { target: { value: '61' } })
@@ -123,6 +141,28 @@ describe('LandingSearch (#2249)', () => {
     fireEvent.keyDown(input(), { key: 'Enter' })
     await waitFor(() =>
       expect(screen.getByTestId('location')).toHaveTextContent('/district/61')
+    )
+  })
+
+  it('Enter on a district number beats a region with the same number (B1)', async () => {
+    renderSearch()
+    fireEvent.focus(input())
+    fireEvent.change(input(), { target: { value: '6' } })
+    await screen.findByRole('listbox')
+    fireEvent.keyDown(input(), { key: 'Enter' })
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/district/6')
+    )
+  })
+
+  it('Enter on a single exact match navigates', async () => {
+    renderSearch()
+    fireEvent.focus(input())
+    fireEvent.change(input(), { target: { value: 'region 6' } })
+    await screen.findByRole('listbox')
+    fireEvent.keyDown(input(), { key: 'Enter' })
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/region/06')
     )
   })
 

@@ -9,11 +9,13 @@
  *   original ranks (#102) and lives in ?q= (#978).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { Routes, Route } from 'react-router-dom'
 import '@testing-library/jest-dom'
 import DistrictsPage from '../DistrictsPage'
 import { fetchCdnRankings } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
+import * as searchIndex from '../../services/searchIndex'
 
 // Mock CDN service — all data now comes from CDN (#173)
 vi.mock('../../services/cdn', () => ({
@@ -141,6 +143,46 @@ describe('DistrictsPage - hero search (#2249)', () => {
     mockedFetchCdnRankings.mockReturnValue(new Promise(() => {}))
     renderWithProviders(<DistrictsPage />)
     expect(heroSearch()).toBeInTheDocument()
+  })
+
+  // Review B1 — the one journey the page exists for, end to end through the
+  // real index shape: a district number shared by a club still lands on
+  // the district.
+  it('typing a district number and pressing Enter opens that district', async () => {
+    vi.spyOn(searchIndex, 'loadSearchIndex').mockResolvedValue({
+      entities: [
+        {
+          type: 'district',
+          id: '61',
+          label: 'District 61',
+          route: '/district/61',
+          terms: ['61', 'district 61'],
+        },
+        {
+          type: 'club',
+          id: '61',
+          label: 'Boise Club',
+          context: 'District 207',
+          route: '/district/207/club/61',
+          terms: ['61', 'boise club'],
+        },
+      ],
+    })
+    setupWithData()
+    renderWithProviders(
+      <Routes>
+        <Route path="/" element={<DistrictsPage />} />
+        <Route path="/district/:id" element={<p>district page stub</p>} />
+      </Routes>
+    )
+    await screen.findByText('District 57')
+    fireEvent.focus(heroSearch())
+    fireEvent.change(heroSearch(), { target: { value: '61' } })
+    await screen.findByRole('listbox')
+    fireEvent.keyDown(heroSearch(), { key: 'Enter' })
+    await waitFor(() =>
+      expect(screen.getByText('district page stub')).toBeInTheDocument()
+    )
   })
 
   it("'/' keyboard shortcut focuses the hero search (#435)", async () => {
