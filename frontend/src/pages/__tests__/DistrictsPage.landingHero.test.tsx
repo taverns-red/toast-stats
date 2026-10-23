@@ -9,6 +9,10 @@ import '@testing-library/jest-dom'
 import DistrictsPage from '../DistrictsPage'
 import { fetchCdnRankings } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
+import { storageKey } from '../../utils/localStorageStore'
+
+const star = (id: string) =>
+  window.localStorage.setItem(storageKey('my-district-id'), JSON.stringify(id))
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnDates: vi.fn().mockResolvedValue({
@@ -76,7 +80,7 @@ describe('DistrictsPage — landing hero wiring (#2249)', () => {
   })
 
   it('shows the starred district as a card under the search, with its rank', async () => {
-    window.localStorage.setItem('my-district-id', JSON.stringify('61'))
+    star('61')
     setupWithData()
     const { container } = renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 57')
@@ -93,7 +97,7 @@ describe('DistrictsPage — landing hero wiring (#2249)', () => {
     const { container, unmount } = renderWithProviders(<DistrictsPage />)
     expect(container.querySelector('.my-district-card')).toBeNull()
     unmount()
-    window.localStorage.setItem('my-district-id', JSON.stringify('61'))
+    star('61')
     const { container: c2 } = renderWithProviders(<DistrictsPage />)
     expect(c2.querySelector('.my-district-card--reserve')).not.toBeNull()
   })

@@ -62,6 +62,11 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { useScrollEdges } from '../hooks/useScrollEdges'
 import { LandingContextBar } from '../components/LandingContextBar'
 import { LandingSearch } from '../components/LandingSearch'
+import {
+  MyDistrictCard,
+  MyDistrictCardReserve,
+} from '../components/MyDistrictCard'
+import { WorldPulse } from '../components/WorldPulse'
 import { RedVotePromo } from '../components/RedVotePromo'
 import { snapshotDatesFrom } from '../types/snapshotDate'
 
@@ -408,20 +413,47 @@ const DistrictsPage: React.FC = () => {
   // (rules of hooks).
   const kpiTotals = React.useMemo(() => {
     let paidClubs = 0
+    let paidClubBase = 0
     let totalPayments = 0
+    let paymentBase = 0
     let distinguishedClubs = 0
     for (const r of rankings) {
       paidClubs += r.paidClubs ?? 0
+      paidClubBase += r.paidClubBase ?? 0
       totalPayments += r.totalPayments ?? 0
+      paymentBase += r.paymentBase ?? 0
       distinguishedClubs += r.distinguishedClubs ?? 0
     }
     return {
       paidClubs,
+      paidClubBase,
       totalPayments,
+      paymentBase,
       distinguishedClubs,
       tracked: rankings.length,
     }
   }, [rankings])
+
+  // #2249 — each KPI against the program-year base, from the same rows
+  // (paidClubBase / paymentBase ride on every rankings row). The loading
+  // shell holds the same line with an em dash so the strip's height is
+  // data-independent.
+  const signedDelta = (n: number) =>
+    n === 0 ? '0' : `${n > 0 ? '+' : '−'}${Math.abs(n).toLocaleString()}`
+  const kpiSub = (reserve: boolean) => {
+    if (reserve || kpiTotals.tracked === 0) {
+      return { paidClubs: '—', payments: '—', distinguished: '—' }
+    }
+    const pct =
+      kpiTotals.paidClubs > 0
+        ? Math.round((kpiTotals.distinguishedClubs / kpiTotals.paidClubs) * 100)
+        : null
+    return {
+      paidClubs: `${signedDelta(kpiTotals.paidClubs - kpiTotals.paidClubBase)} vs base`,
+      payments: `${signedDelta(kpiTotals.totalPayments - kpiTotals.paymentBase)} vs base`,
+      distinguished: pct === null ? '—' : `${pct}% of paid clubs`,
+    }
+  }
 
   // Get district IDs for selected regions
   const selectedDistricts = React.useMemo(() => {
@@ -549,6 +581,15 @@ const DistrictsPage: React.FC = () => {
     const row = rankedRankings.find(r => r.districtId === myDistrictId)
     return row?.displayRank ?? null
   }, [rankedRankings, myDistrictId])
+
+  // #2249 — the starred district's row, for the card under the search.
+  const myDistrictRow = React.useMemo(
+    () =>
+      myDistrictId
+        ? rankedRankings.find(r => r.districtId === myDistrictId)
+        : undefined,
+    [rankedRankings, myDistrictId]
+  )
 
   const { diff: lastVisitDiff, commit: commitLastVisit } = useLastVisit({
     currentAsOfDate: data?.asOfDate ?? null,
@@ -930,13 +971,16 @@ const DistrictsPage: React.FC = () => {
             at 1350px and 328px at 375px when the data landed. */}
         <div className="districts-hero-stack">
           {heroSearch}
+          {/* #2249 — the my-district card is data-fed; reserve its box
+              whenever a star is set (known synchronously from storage). */}
+          {myDistrictId && <MyDistrictCardReserve />}
           <div className="districts-kpi-strip" aria-hidden="true">
             {[
-              'Paid Clubs · Global',
-              'Total Payments',
-              'Distinguished Clubs',
-              'Districts Tracked',
-            ].map((label, i) => (
+              ['Paid Clubs · Global', 'kpi-paid-clubs'],
+              ['Total Payments', 'kpi-total-payments'],
+              ['Distinguished Clubs', 'kpi-distinguished-clubs'],
+              ['Districts Tracked', 'kpi-districts-tracked'],
+            ].map(([label, id], i) => (
               <div
                 key={label}
                 className={`districts-kpi-card${i > 0 ? ' districts-kpi-card--secondary' : ''}`}
@@ -953,9 +997,24 @@ const DistrictsPage: React.FC = () => {
                   className="districts-kpi-card__value animate-pulse bg-gray-200 rounded-sm"
                   style={{ height: 30, width: '60%' }}
                 />
+                <p
+                  className="districts-kpi-card__sub"
+                  data-testid={`${id}-delta`}
+                >
+                  —
+                </p>
               </div>
             ))}
           </div>
+          {/* #2249 — World pulse, reserved with the other data-fed slots. */}
+          {reserveHeroSlots && (
+            <WorldPulse
+              rows={[]}
+              date={effectiveRankingsDate}
+              programYear={selectedProgramYear.label}
+              reserve
+            />
+          )}
           {reserveHeroSlots && (
             <>
               {/* The section's own #750 skeleton — same component, so the
@@ -1704,6 +1763,17 @@ const DistrictsPage: React.FC = () => {
             so desktop is visually unchanged. */}
         <div className="districts-hero-stack">
           {heroSearch}
+          {/* #2249 — the starred district, one tap away. */}
+          {myDistrictRow && (
+            <MyDistrictCard
+              districtId={myDistrictRow.districtId}
+              districtName={myDistrictRow.districtName}
+              rank={myDistrictRow.displayRank}
+              total={kpiTotals.tracked}
+              rankDelta={lastVisitDiff.myRankDelta}
+              previousDate={lastVisitDiff.previousDate}
+            />
+          )}
           {/* Global KPI strip (#356, tooltips per #413) */}
           <div className="districts-kpi-strip">
             <div className="districts-kpi-card">
@@ -1717,6 +1787,12 @@ const DistrictsPage: React.FC = () => {
               >
                 {kpiTotals.paidClubs.toLocaleString()}
               </div>
+              <p
+                className="districts-kpi-card__sub"
+                data-testid="kpi-paid-clubs-delta"
+              >
+                {kpiSub(false).paidClubs}
+              </p>
             </div>
             <div className="districts-kpi-card districts-kpi-card--secondary">
               <p className="districts-kpi-card__label">
@@ -1729,6 +1805,12 @@ const DistrictsPage: React.FC = () => {
               >
                 {kpiTotals.totalPayments.toLocaleString()}
               </div>
+              <p
+                className="districts-kpi-card__sub"
+                data-testid="kpi-total-payments-delta"
+              >
+                {kpiSub(false).payments}
+              </p>
             </div>
             <div className="districts-kpi-card districts-kpi-card--secondary">
               <p className="districts-kpi-card__label">
@@ -1741,6 +1823,12 @@ const DistrictsPage: React.FC = () => {
               >
                 {kpiTotals.distinguishedClubs.toLocaleString()}
               </div>
+              <p
+                className="districts-kpi-card__sub"
+                data-testid="kpi-distinguished-clubs-delta"
+              >
+                {kpiSub(false).distinguished}
+              </p>
             </div>
             <div className="districts-kpi-card districts-kpi-card--secondary">
               <p className="districts-kpi-card__label">
@@ -1753,8 +1841,21 @@ const DistrictsPage: React.FC = () => {
               >
                 {kpiTotals.tracked.toLocaleString()}
               </div>
+              <p
+                className="districts-kpi-card__sub"
+                data-testid="kpi-districts-tracked-delta"
+              >
+                {data?.asOfDate ? `as of ${data.asOfDate}` : '—'}
+              </p>
             </div>
           </div>
+          {/* #2249 — World pulse: attention figures, the membership line and
+              the regions, for international leaders and observers. */}
+          <WorldPulse
+            rows={rankings}
+            date={effectiveRankingsDate}
+            programYear={selectedProgramYear.label}
+          />
 
           {/* Awards Race — competitive district awards (#331).
               #862 — at <768px the heavy 3-card section is deferred behind a

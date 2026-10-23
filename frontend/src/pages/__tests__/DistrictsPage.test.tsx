@@ -446,8 +446,11 @@ describe('DistrictsPage - Table Cell Rendering', () => {
     await screen.findByText('District 1')
 
     // Scope to the rankings table — the KPI strip from #356 also renders
-    // these same numbers as global totals.
-    const table = within(container.querySelector('table')!)
+    // these same numbers as global totals, and the World pulse (#2249)
+    // puts a regions table before it in the DOM.
+    const table = within(
+      container.querySelector('table[aria-label="District rankings"]')!
+    )
 
     // Check paid clubs column. Per #546 the "Rank " word prefix is
     // dropped — per-metric cells show just "#N · +X.X%".
@@ -724,7 +727,11 @@ describe('DistrictsPage - My District sticky pin (#417)', () => {
     fireEvent.click(star2)
 
     // After click, District 2 should appear before District 1 in DOM order
-    const rows = screen.getAllByRole('row')
+    // (scoped to the rankings table: the World pulse's regions table also
+    // has rows, #2249).
+    const rows = within(
+      screen.getByRole('table', { name: 'District rankings' })
+    ).getAllByRole('row')
     const dataRows = rows.slice(1) // skip header
     const firstDistrictText =
       dataRows[0]?.querySelector('td:first-child')?.textContent || ''
