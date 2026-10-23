@@ -14,11 +14,17 @@ import { DistrictChipAndName } from './DistrictChipAndName'
 export interface MyDistrictCardProps {
   districtId: string
   districtName: string
-  rank: number
+  /** null = the starred district is not in this year's rankings (a
+      consolidated or older district) — the card still links to it, so the
+      shell's reserve never collapses (review S10). */
+  rank: number | null
   total: number
   /** Positive = moved up since the last visit; null = no previous visit. */
   rankDelta: number | null
   previousDate: string | null
+  /** The rankings' as-of date. A last visit on this same date is not a
+      comparison, so no movement line is shown (review S10). */
+  asOfDate?: string | null
 }
 
 function movement(delta: number, previousDate: string | null): string {
@@ -36,6 +42,7 @@ export const MyDistrictCard: React.FC<MyDistrictCardProps> = ({
   total,
   rankDelta,
   previousDate,
+  asOfDate,
 }) => (
   <Link
     to={`/district/${districtId}`}
@@ -51,10 +58,16 @@ export const MyDistrictCard: React.FC<MyDistrictCardProps> = ({
       />
     </span>
     <span className="my-district-card__rank">
-      Rank #{rank} of {total}
+      {rank === null
+        ? "Not in this year's rankings"
+        : `Rank #${rank} of ${total}`}
     </span>
     <span className="my-district-card__move">
-      {rankDelta === null ? '' : movement(rankDelta, previousDate)}
+      {rankDelta === null ||
+      rank === null ||
+      (!!asOfDate && previousDate === asOfDate)
+        ? ''
+        : movement(rankDelta, previousDate)}
     </span>
     <span className="my-district-card__go" aria-hidden="true">
       →

@@ -29,7 +29,9 @@ const LISTBOX_ID = 'landing-search-results'
 const OPTION_PREFIX = 'landing-search-option'
 const INPUT_ID = 'landing-search-input'
 
-export const LANDING_SEARCH_LABEL = 'Find a district, club or region'
+// Not the H1 repeated (review S8): the H1 names the job, the label says
+// what to type, so a screen reader hears each once.
+export const LANDING_SEARCH_LABEL = 'District number, club name or region'
 
 interface LandingSearchProps {
   /** The page's "/" shortcut focuses this input. */

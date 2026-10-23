@@ -90,12 +90,36 @@ function worldPoints(
   return out
 }
 
+/** Toastmasters dues are semi-annual: members who have not renewed drop
+    off the count on Oct 1 and Apr 1, then return as they pay. A line that
+    crosses either date falling reads as a collapse unless it says so
+    (review S3). Returns the renewal date the line dips across, if any. */
+function renewalDip(
+  points: Array<{ date: string; value: number }>
+): 'Oct 1' | 'Apr 1' | null {
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1]!
+    const cur = points[i]!
+    if (cur.value >= prev.value) continue
+    for (const [md, name] of [
+      ['10-01', 'Oct 1'],
+      ['04-01', 'Apr 1'],
+    ] as const) {
+      const year = cur.date.slice(0, 4)
+      const boundary = `${year}-${md}`
+      if (prev.date < boundary && cur.date >= boundary) return name
+    }
+  }
+  return null
+}
+
 const SPARK_W = 240
 const SPARK_H = 48
 
 const Sparkline: React.FC<{
   points: Array<{ date: string; value: number }>
-}> = ({ points }) => {
+  dip: string | null
+}> = ({ points, dip }) => {
   const min = Math.min(...points.map(p => p.value))
   const max = Math.max(...points.map(p => p.value))
   // Pad symmetrically when the range is zero (tripwire: no `|| 1` fallback).
@@ -115,7 +139,7 @@ const Sparkline: React.FC<{
       viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
       className="world-pulse__sparkline-svg"
       role="img"
-      aria-label={`Members this program year, ${fmt(points[0]!.value)} to ${fmt(points[points.length - 1]!.value)}`}
+      aria-label={`Members this program year, ${fmt(points[0]!.value)} to ${fmt(points[points.length - 1]!.value)}${dip ? `; the drop at ${dip} is the dues renewal, as members who have not renewed leave the count until they pay` : ''}`}
       data-testid="pulse-sparkline"
     >
       <polyline
@@ -151,6 +175,7 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
     () => (series ? worldPoints(series, date) : []),
     [series, date]
   )
+  const dip = useMemo(() => renewalDip(points), [points])
 
   const regions = useMemo(() => summarizeRegions(rows), [rows])
   const shownRegions = regions.slice(0, TOP_REGION_ROWS)
@@ -229,13 +254,24 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
             <div className="world-pulse__sparkline-box" />
           ) : points.length > 1 ? (
             <>
-              <Sparkline points={points} />
+              <Sparkline points={points} dip={dip} />
               <span
                 className="world-pulse__caption"
                 data-testid="pulse-sparkline-caption"
               >
                 {fmt(points[0]!.value)} →{' '}
                 {fmt(points[points.length - 1]!.value)}
+                {/* Inline, not a new line: the caption lands after the data,
+                    so a second line would shift the page (Lesson 107). */}
+                {dip && (
+                  <span
+                    data-testid="pulse-sparkline-note"
+                    title="Members who have not renewed their dues yet leave the count on Oct 1 and Apr 1, and return as they pay."
+                  >
+                    {' '}
+                    · {dip} dues renewal
+                  </span>
+                )}
               </span>
             </>
           ) : (

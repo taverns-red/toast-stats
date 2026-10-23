@@ -1770,15 +1770,18 @@ const DistrictsPage: React.FC = () => {
             so desktop is visually unchanged. */}
         <div className="districts-hero-stack">
           {heroSearch}
-          {/* #2249 — the starred district, one tap away. */}
-          {myDistrictRow && (
+          {/* #2249 — the starred district, one tap away; rendered whenever a
+              star is set (even off this year's rankings) so the shell's
+              reserve never collapses (review S10). */}
+          {myDistrictId && (
             <MyDistrictCard
-              districtId={myDistrictRow.districtId}
-              districtName={myDistrictRow.districtName}
-              rank={myDistrictRow.displayRank}
+              districtId={myDistrictId}
+              districtName={myDistrictRow?.districtName ?? ''}
+              rank={myDistrictRow?.displayRank ?? null}
               total={kpiTotals.tracked}
               rankDelta={lastVisitDiff.myRankDelta}
               previousDate={lastVisitDiff.previousDate}
+              asOfDate={data?.asOfDate ?? null}
             />
           )}
           {/* Global KPI strip (#356, tooltips per #413) */}
