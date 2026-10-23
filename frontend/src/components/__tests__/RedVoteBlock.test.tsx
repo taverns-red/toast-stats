@@ -135,7 +135,22 @@ describe('RedVoteBlock — brand fonts load only near the viewport (#2249 LCP)',
   it('watches with a margin small enough to leave the block below the fold on load', () => {
     renderAt(OUT_OF_SEASON)
     const px = parseInt(margins[0] ?? '0', 10)
-    expect(px, `rootMargin ${margins[0]}`).toBeLessThanOrEqual(200)
+    expect(px, `rootMargin ${margins[0]}`).toBeLessThanOrEqual(0)
+  })
+
+  // A probe on the preview (412×823) found the block at 1019px with the
+  // class already applied: the loading shell is shorter, so a positive
+  // margin reached it at mount. The fonts must wait for the page to
+  // settle — the first scroll, pointer or key — or for the block itself to
+  // come into view, never the first paint.
+  it('switches to the brand stacks on the first scroll', () => {
+    renderAt(OUT_OF_SEASON)
+    const block = screen.getByTestId('red-vote-block')
+    expect(block).not.toHaveClass('red-vote-block--brand-fonts')
+    act(() => {
+      window.dispatchEvent(new Event('scroll'))
+    })
+    expect(block).toHaveClass('red-vote-block--brand-fonts')
   })
 
   it('uses the brand stacks at once where IntersectionObserver is missing', () => {
