@@ -69,6 +69,27 @@ describe('no --rt-stats accent outside the brand tokens file (#2080)', () => {
     expect('className="chart-stats__val"'.match(FORBIDDEN)).toBeNull()
   })
 
+  // #2249 — the Red Vote block is the ONE place on the site in Red Vote's
+  // own palette (--rt-vote / --rt-red*, --rt-paper, --rt-bg*), and the
+  // guard's stated intent is "new UI matches the existing app palette", so
+  // those tokens are forbidden everywhere else too.
+  it('also catches the Red Vote brand tokens and reds (#2249)', () => {
+    for (const s of [
+      'color: var(--rt-vote);',
+      'background: var(--rt-red-soft);',
+      'border-color: var(--rt-red-dk);',
+      'background: var(--rt-paper);',
+      'background: var(--rt-bg-2);',
+      'fill="#E63946"',
+      'color: #8e1b25;',
+    ]) {
+      expect(s.match(FORBIDDEN), s).not.toBeNull()
+    }
+    // The brand's neutral type/spacing tokens stay allowed everywhere.
+    expect('font-family: var(--rt-font-display);'.match(FORBIDDEN)).toBeNull()
+    expect('gap: var(--rt-space-4);'.match(FORBIDDEN)).toBeNull()
+  })
+
   it('no component, page or stylesheet uses it', () => {
     const hits = findAccentUses(walk(srcDir))
     expect(hits, hits.join('\n')).toEqual([])
