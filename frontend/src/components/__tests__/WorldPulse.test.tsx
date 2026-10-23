@@ -134,20 +134,50 @@ describe('WorldPulse (#2249)', () => {
     expect(screen.queryByTestId('pulse-sparkline')).toBeNull()
   })
 
-  it('sums the rankings rows per region, linking numeric regions', () => {
+  it('sums the rankings rows per region, largest first, linking numeric regions', () => {
     renderPulse()
     const table = screen.getByRole('table', { name: /regions/i })
+    expect(table).toHaveTextContent(/vs PY start/)
     const rows = within(table).getAllByRole('row').slice(1)
     expect(rows.map(r => r.textContent)).toEqual([
-      expect.stringMatching(/Region 5.*1.*139.*−19/),
       expect.stringMatching(/Region 9.*2.*276.*−16/),
+      expect.stringMatching(/Region 5.*1.*139.*−19/),
       expect.stringMatching(/DNAR.*1.*17.*−3/),
     ])
     expect(within(rows[0]!).getByRole('link')).toHaveAttribute(
       'href',
-      '/region/05'
+      '/region/09'
     )
     expect(within(rows[2]!).queryByRole('link')).toBeNull()
+  })
+
+  // Review S1 — the brief's own 375 wireframe: the five largest regions and
+  // a link to the rest, at every width, so the rankings start higher.
+  it('shows the five largest regions by paid clubs and links to all of them', () => {
+    const many: WorldPulseRow[] = Array.from({ length: 7 }, (_, i) => ({
+      districtId: String(i + 1),
+      region: String(i + 1).padStart(2, '0'),
+      paidClubs: 100 + i * 10,
+      paidClubBase: 100,
+    }))
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <WorldPulse rows={many} date={DATE} programYear="2026-2027" />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+    const table = screen.getByRole('table', { name: /regions/i })
+    const rows = within(table).getAllByRole('row').slice(1)
+    expect(rows).toHaveLength(5)
+    expect(rows[0]).toHaveTextContent(/Region 7/)
+    expect(rows[4]).toHaveTextContent(/Region 3/)
+    expect(
+      screen.getByRole('link', { name: /all 7 regions/i })
+    ).toHaveTextContent('All 7 regions →')
   })
 
   it('keeps every slot in the reserve, with no links and no numbers', () => {
