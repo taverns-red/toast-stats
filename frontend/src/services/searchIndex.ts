@@ -22,7 +22,18 @@ import {
 } from '@taverns-red/shared-contracts'
 
 export type SearchEntityType =
-  'district' | 'region' | 'club' | 'division' | 'area'
+  'district' | 'region' | 'club' | 'division' | 'area' | 'page'
+
+/* Site pages (#2249) — the worldwide views where districts, regions and
+   clubs are found. Static, so they cost no fetch; ranked last (TYPE_RANK)
+   so a page never displaces a place on a shared term. */
+const SITE_PAGES: ReadonlyArray<{ label: string; route: string }> = [
+  { label: 'Regions', route: '/regions' },
+  { label: 'Clubs worldwide', route: '/clubs' },
+  { label: 'Awards', route: '/awards' },
+  { label: 'History', route: '/history' },
+  { label: 'Methodology', route: '/methodology' },
+]
 
 export interface SearchEntity {
   type: SearchEntityType
@@ -84,6 +95,7 @@ const GROUP_ORDER: SearchEntityType[] = [
   'club',
   'division',
   'area',
+  'page',
 ]
 
 // Higher = ranked first among equal-strength matches, and weighted to survive
@@ -94,6 +106,7 @@ const TYPE_RANK: Record<SearchEntityType, number> = {
   club: 2,
   division: 1,
   area: 0,
+  page: -1,
 }
 
 // A district that no longer exists ranks BELOW clubs and above divisions/areas
@@ -250,6 +263,17 @@ export function buildSearchIndex(
         })
       }
     }
+  }
+
+  // Site pages (#2249) — matched on the label and each of its words.
+  for (const page of SITE_PAGES) {
+    entities.push({
+      type: 'page',
+      id: page.route,
+      label: page.label,
+      route: page.route,
+      terms: dedupeTerms([page.label, ...page.label.split(' ')]),
+    })
   }
 
   return { entities }
