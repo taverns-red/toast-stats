@@ -159,12 +159,14 @@
 /* Landing H1 beside the header actions (#2249). Measured on the preview:
    the intro column is 394px at 1024 (the actions share the row from ~900px)
    and "Find a district, club or region" needs 419px at 28px, so it wrapped
-   (landing-header-tablet.smoke.ts); at 25px it needs 374px. From 1100 the
-   column is 470px+ and 28px fits again. Landing-only. */
+   (landing-header-tablet.smoke.ts). 25px (374px) still wrapped in the Linux
+   Chromium smoke: its classic ~15px scrollbar narrows the column to ~379px
+   and rasterisation eats the rest, so 23px (~344px, ~35px slack). From
+   1100 the column is 470px+ and 28px fits again. Landing-only. */
 @layer components {
   @media (min-width: 900px) and (max-width: 1099px) {
     .districts-page-root .districts-page-header__title {
-      font-size: 25px;
+      font-size: 23px;
     }
   }
 }
