@@ -41,7 +41,7 @@ test.describe('Landing Page', () => {
     await expect(
       page.getByRole('heading', {
         level: 1,
-        name: /District Rankings/i,
+        name: /Find a district, club or region/i,
       })
     ).toBeVisible()
 

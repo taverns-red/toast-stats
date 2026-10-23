@@ -52,7 +52,7 @@ for (const width of [375, 390]) {
         }
         return {
           bar: top('.districts-page > .context-bar'),
-          search: top('.districts-toolbar__search-input'),
+          search: top('.landing-search__input'),
           kpi: top('.districts-kpi-strip [data-testid="kpi-paid-clubs"]'),
           kpiCard: top('.districts-kpi-strip .districts-kpi-card'),
           orientation: top('[data-testid="districts-orientation"]'),
@@ -78,7 +78,7 @@ for (const width of [375, 390]) {
         .getByTestId('context-bar-chip')
         .click()
       const sheet = page.getByRole('dialog')
-      await expect(sheet).toContainText(/Each row below is one of the \d+/)
+      await expect(sheet).toContainText(/Tap a district to drill into/)
       await expect(
         sheet.getByRole('button', { name: 'Export CSV' })
       ).toBeVisible()
@@ -117,16 +117,20 @@ for (const width of [375, 390]) {
   })
 }
 
-test('desktop ≥768 keeps the inline header (orientation visible, no bar)', async ({
+test('desktop ≥768 keeps the inline header (H1 visible, no bar, no orientation paragraph)', async ({
   page,
 }) => {
   for (const width of [768, 1280]) {
     await page.setViewportSize({ width, height: 900 })
     await load(page)
-    await expect(page.getByTestId('districts-orientation')).toBeVisible()
+    // #2249 — the orientation paragraph is gone at every width.
+    await expect(page.getByTestId('districts-orientation')).toHaveCount(0)
     await expect(page.locator('.districts-page > .context-bar')).toBeHidden()
     await expect(
-      page.getByRole('heading', { level: 1, name: /District Rankings/ })
+      page.getByRole('heading', {
+        level: 1,
+        name: /Find a district, club or region/,
+      })
     ).toBeVisible()
   }
 })

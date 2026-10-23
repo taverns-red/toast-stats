@@ -8,7 +8,7 @@
   "routes": [
     {
       "path": "/",
-      "sentinel": ".districts-kpi-strip",
+      "sentinel": ".landing-search__input",
       "firstContentMaxPx": 240,
       "maxShareUnder14": 0.05
     },
