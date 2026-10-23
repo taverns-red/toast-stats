@@ -70,8 +70,10 @@ export const RedVoteBlock: React.FC = () => {
   // Brand fonts only near the viewport (mobile Lighthouse gate): the block
   // is below the fold at every width, and fetching Space Grotesk + Inter
   // (71 KB) at first paint cost the landing ~480ms of LCP. Until the block
-  // is within 600px the stacks name only the metric-matched fallback faces
-  // (nothing to fetch); the switch is reflow-free by construction.
+  // is within 150px the stacks name only the metric-matched fallback faces
+  // (nothing to fetch); the switch is reflow-free by construction. 150px,
+  // not more: the block starts at ~1150px at phone widths and a 600px
+  // margin reached it on load in the 823px Lighthouse viewport.
   const ref = useRef<HTMLElement>(null)
   const [brandFonts, setBrandFonts] = useState(
     () => typeof IntersectionObserver === 'undefined'
@@ -88,7 +90,7 @@ export const RedVoteBlock: React.FC = () => {
           io.disconnect()
         }
       },
-      { rootMargin: '600px 0px' }
+      { rootMargin: '150px 0px' }
     )
     io.observe(el)
     return () => io.disconnect()
