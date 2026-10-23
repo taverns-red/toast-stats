@@ -90,7 +90,7 @@ export const LandingContextBar: React.FC<LandingContextBarProps> = ({
   onExportCsv,
 }) => (
   <ContextBar
-    title="District Rankings"
+    title="Find a district, club or region"
     programYear={selectedProgramYear}
     date={effectiveDate}
     controls={
