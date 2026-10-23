@@ -256,6 +256,9 @@
   @media (max-width: 767px) {
     .world-pulse__th-short {
       display: inline;
+      /* A global span rule sets 21px; on the cell's 18.2px line box it made
+         the head 33.5px and overran the reserve below. */
+      line-height: inherit;
     }
     .world-pulse__th-long {
       position: absolute;
@@ -291,9 +294,10 @@
 
   /* Five rows at every width (review S1) plus the head and the link; a
      data-dependent count would have nothing to reserve against (#1359 gap
-     c). */
+     c). Rows measure 31.2px (14px x 1.3 + 12px padding + 1px border), so
+     the pitch is 32px, not 31: at 375 the loaded block is ~231px. */
   .world-pulse__regions {
-    min-height: calc(6 * 31px + 44px);
+    min-height: calc(6 * 32px + 44px);
   }
 
   .world-pulse__table tbody th {
