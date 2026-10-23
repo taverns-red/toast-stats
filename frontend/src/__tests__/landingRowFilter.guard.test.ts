@@ -93,3 +93,26 @@ describe('new landing captions join the 14px phone floor (#2249)', () => {
     expect(floor).toMatch(new RegExp(`${esc}[^{]*\\{[^}]*font-size:\\s*14px`))
   })
 })
+
+/* World pulse regions table (#2249): no-horizontal-scroll.smoke.ts measured
+   the auto-layout table at 382px in a 375px viewport on the CI runner
+   (Linux text metrics; it sits at the edge on a Mac). A fixed layout with
+   column shares and wrapping headers cannot be widened by its text. */
+describe('World pulse regions table cannot overflow a phone (#2249)', () => {
+  const pulse = readFileSync(
+    resolve(here, '../styles/components/landing-pulse.css'),
+    'utf8'
+  )
+  it('uses a fixed table layout at full width', () => {
+    expect(pulse).toMatch(/\.world-pulse__table\s*\{[^}]*table-layout:\s*fixed/)
+    expect(pulse).toMatch(/\.world-pulse__table\s*\{[^}]*width:\s*100%/)
+  })
+  it('lets the column headers wrap and clips the region cell', () => {
+    expect(pulse).toMatch(
+      /\.world-pulse__table thead th\s*\{[^}]*white-space:\s*normal/
+    )
+    expect(pulse).toMatch(
+      /\.world-pulse__table tbody th\s*\{[^}]*text-overflow:\s*ellipsis/
+    )
+  })
+})
