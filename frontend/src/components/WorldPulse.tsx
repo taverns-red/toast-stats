@@ -154,6 +154,22 @@ const Sparkline: React.FC<{
   )
 }
 
+/** A numeric column head (re-review R1): the full label is the header's
+    accessible name at every width; below 768px it is only visually hidden
+    and an aria-hidden short label shows, so a ~48px phone column never
+    splits a word. */
+const HeadLabel: React.FC<{ long: string; short: string }> = ({
+  long,
+  short,
+}) => (
+  <>
+    <span className="world-pulse__th-long">{long}</span>
+    <span className="world-pulse__th-short" aria-hidden="true">
+      {short}
+    </span>
+  </>
+)
+
 export const WorldPulse: React.FC<WorldPulseProps> = ({
   rows,
   date,
@@ -294,13 +310,13 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
             <tr>
               <th scope="col">Region</th>
               <th scope="col" className="world-pulse__num">
-                Districts
+                <HeadLabel long="Districts" short="Dist." />
               </th>
               <th scope="col" className="world-pulse__num">
-                Paid clubs
+                <HeadLabel long="Paid clubs" short="Clubs" />
               </th>
               <th scope="col" className="world-pulse__num">
-                vs PY start
+                <HeadLabel long="vs PY start" short="± PY" />
               </th>
             </tr>
           </thead>

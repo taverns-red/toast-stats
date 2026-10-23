@@ -215,7 +215,7 @@
 
   /* Fixed layout (no-horizontal-scroll smoke, #2249): an auto-layout table
      measured 382px in a 375px viewport on the Linux runner. Column shares
-     below; headers wrap; the region cell clips. */
+     below; headers wrap only at spaces; the region cell clips. */
   .world-pulse__table {
     width: 100%;
     table-layout: fixed;
@@ -224,7 +224,7 @@
   }
 
   .world-pulse__table col:first-child {
-    width: 34%;
+    width: 30%; /* "Region 13" measures 66px; the rest go to the numbers */
   }
 
   .world-pulse__table th,
@@ -237,12 +237,38 @@
 
   .world-pulse__table thead th {
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--ink-3);
+  }
+
+  /* Re-review R1: when words could break anywhere, with ~48px numeric columns
+     at 375 the heads split mid-word ("DISTR/ICTS", "PAID/CLUB/S") and the
+     3-line head overran the regions reserve. Phones show the short label;
+     the long one stays the accessible name, only visually hidden. */
+  .world-pulse__th-short {
+    display: none;
+  }
+
+  @media (max-width: 767px) {
+    .world-pulse__th-short {
+      display: inline;
+    }
+    .world-pulse__th-long {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
   }
 
   .world-pulse__table tbody th {

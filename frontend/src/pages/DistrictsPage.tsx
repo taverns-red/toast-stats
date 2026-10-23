@@ -435,7 +435,9 @@ const DistrictsPage: React.FC = () => {
   }, [rankings])
 
   // #2249 — each KPI against the program-year base, from the same rows
-  // (paidClubBase / paymentBase ride on every rankings row). The loading
+  // (paidClubBase / paymentBase ride on every rankings row). Payments are
+  // year-to-date against last year's full-year total, so the label says
+  // YTD (re-review S2). The loading
   // shell holds the same line with an em dash so the strip's height is
   // data-independent.
   const signedDelta = (n: number) =>
@@ -450,7 +452,7 @@ const DistrictsPage: React.FC = () => {
         : null
     return {
       paidClubs: `${signedDelta(kpiTotals.paidClubs - kpiTotals.paidClubBase)} vs PY start`,
-      payments: `${signedDelta(kpiTotals.totalPayments - kpiTotals.paymentBase)} vs last year's base`,
+      payments: `${signedDelta(kpiTotals.totalPayments - kpiTotals.paymentBase)} YTD vs last year's total`,
       distinguished: pct === null ? '—' : `${pct}% of paid clubs`,
     }
   }
