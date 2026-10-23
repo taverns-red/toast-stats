@@ -267,6 +267,7 @@
   .world-pulse__more {
     display: inline-flex;
     align-items: center;
+    gap: 4px; /* inline-flex drops the whitespace node before the arrow */
     min-height: 44px;
   }
 
