@@ -22,7 +22,7 @@
    no data, no fetch, no dismiss (a section, not a banner), so it is its
    own reserve and the data landing moves nothing. */
 
-import React, { useId, useMemo } from 'react'
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
   RED_VOTE_COPY,
@@ -66,6 +66,33 @@ const Pennant: React.FC = () => (
 export const RedVoteBlock: React.FC = () => {
   const headingId = useId()
   const { search } = useLocation()
+
+  // Brand fonts only near the viewport (mobile Lighthouse gate): the block
+  // is below the fold at every width, and fetching Space Grotesk + Inter
+  // (71 KB) at first paint cost the landing ~480ms of LCP. Until the block
+  // is within 600px the stacks name only the metric-matched fallback faces
+  // (nothing to fetch); the switch is reflow-free by construction.
+  const ref = useRef<HTMLElement>(null)
+  const [brandFonts, setBrandFonts] = useState(
+    () => typeof IntersectionObserver === 'undefined'
+  )
+  useEffect(() => {
+    const el = ref.current
+    if (brandFonts || !el || typeof IntersectionObserver === 'undefined') {
+      return
+    }
+    const io = new IntersectionObserver(
+      entries => {
+        if (entries.some(e => e.isIntersecting)) {
+          setBrandFonts(true)
+          io.disconnect()
+        }
+      },
+      { rootMargin: '600px 0px' }
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [brandFonts])
   const season = useMemo(
     () =>
       activeRedVoteSeason(
@@ -76,7 +103,8 @@ export const RedVoteBlock: React.FC = () => {
 
   return (
     <section
-      className="red-vote-block"
+      ref={ref}
+      className={`red-vote-block${brandFonts ? ' red-vote-block--brand-fonts' : ''}`}
       aria-labelledby={headingId}
       data-testid="red-vote-block"
     >

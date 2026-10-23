@@ -28,7 +28,7 @@
     border-top: 4px solid var(--rt-vote);
     border-radius: 0;
     color: var(--rt-ink);
-    font-family: 'Inter', 'Inter Fallback', var(--rt-font-body);
+    font-family: 'Inter Fallback', ui-sans-serif, system-ui, sans-serif;
   }
 
   .red-vote-block__brand {
@@ -50,13 +50,11 @@
 
   .red-vote-block__pennant-v {
     fill: var(--rt-ink-on-dk);
-    font-family:
-      'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
+    font-family: 'Space Grotesk Fallback', ui-sans-serif, system-ui, sans-serif;
   }
 
   .red-vote-block__wordmark {
-    font-family:
-      'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
+    font-family: 'Space Grotesk Fallback', ui-sans-serif, system-ui, sans-serif;
     font-size: 18px;
     font-weight: 600;
     letter-spacing: var(--rt-track-snug);
@@ -75,8 +73,7 @@
 
   .red-vote-block__heading {
     margin: 0 0 8px;
-    font-family:
-      'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
+    font-family: 'Space Grotesk Fallback', ui-sans-serif, system-ui, sans-serif;
     font-size: var(--rt-text-lg);
     font-weight: 700;
     line-height: 1.15;
@@ -112,8 +109,7 @@
     border: 1px solid var(--rt-red-dk);
     border-radius: 0;
     color: var(--rt-ink-on-dk);
-    font-family:
-      'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
+    font-family: 'Space Grotesk Fallback', ui-sans-serif, system-ui, sans-serif;
     font-size: var(--rt-text-base);
     font-weight: 600;
     text-decoration: none;
@@ -201,5 +197,26 @@
     .red-vote-block__cta {
       transition: none;
     }
+  }
+}
+
+/* Brand fonts only once the block nears the viewport (#2249, mobile
+   Lighthouse gate): the base stacks above name only the metric-matched
+   fallback faces, so no web font is fetched at first paint; RedVoteBlock
+   adds the modifier within 600px of the viewport and the swap reflows
+   nothing. */
+@layer components {
+  .red-vote-block--brand-fonts .red-vote-block__heading,
+  .red-vote-block--brand-fonts .red-vote-block__wordmark,
+  .red-vote-block--brand-fonts .red-vote-block__cta,
+  .red-vote-block--brand-fonts .red-vote-block__pennant-v {
+    font-family:
+      'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
+  }
+
+  .red-vote-block--brand-fonts,
+  .red-vote-block--brand-fonts .red-vote-block__body,
+  .red-vote-block--brand-fonts .red-vote-block__fine {
+    font-family: 'Inter', 'Inter Fallback', var(--rt-font-body);
   }
 }
