@@ -62,7 +62,11 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
   const ownRef = useRef<HTMLInputElement>(null)
   // The page may hand in the ref its "/" shortcut focuses; otherwise ours.
   const ref = inputRef ?? ownRef
+  // `focused` gates the lazy index fetch; `listOpen` is the list's own
+  // state, so Escape can close the list while the field keeps focus
+  // (review S5) and typing reopens it.
   const [focused, setFocused] = useState(false)
+  const [listOpen, setListOpen] = useState(true)
 
   // Plain functions: the React Compiler memoizes them (a manual useCallback
   // over `ref.current` is what it refuses to preserve).
@@ -87,9 +91,16 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
     activeEntity,
     hasQuery,
     handleKeyDown,
+    indexStatus,
+    retryIndex,
   } = useOmniSearch({
     onSelect: selectEntity,
-    onDismiss: dismiss,
+    // Escape (the hook's dismiss): first close the list, keeping focus and
+    // the text; a second Escape clears the text. Never blur.
+    onDismiss: () => {
+      if (listOpen && hasQuery) setListOpen(false)
+      else setQuery('')
+    },
     enabled: focused,
   })
 
@@ -106,6 +117,13 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
     return () => document.removeEventListener('mousedown', onPointerDown)
   }, [focused, ref])
 
+  // Tabbing away collapses the list too (focus leaving the container).
+  const onBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (!containerRef.current?.contains(e.relatedTarget as Node | null)) {
+      setFocused(false)
+    }
+  }
+
   // Enter navigates only on a single exact match, or on a row the user
   // highlighted with the arrow keys; otherwise the list stays open.
   const [armed, setArmed] = useState(false)
@@ -121,9 +139,21 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
     handleKeyDown(e)
   }
 
-  const showResults = focused && hasQuery
+  const showResults = focused && hasQuery && listOpen
   const listboxOpen = showResults && !!index && flat.length > 0
   const optionId = (e: SearchEntity) => `${OPTION_PREFIX}-${e.type}-${e.id}`
+
+  // One live region for what the list cannot show: loading, failure (with
+  // a Retry — review S4: a rejected index load used to read "Searching…"
+  // forever) and no matches. Absent while results are listed.
+  const status =
+    !showResults || listboxOpen
+      ? null
+      : indexStatus === 'error'
+        ? 'error'
+        : !index
+          ? 'Searching…'
+          : 'No matches.'
 
   return (
     <div className="landing-search" ref={containerRef}>
@@ -155,9 +185,14 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
           value={query}
           onChange={e => {
             setArmed(false)
+            setListOpen(true)
             setQuery(e.target.value)
           }}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true)
+            setListOpen(true)
+          }}
+          onBlur={onBlur}
           onKeyDown={onKeyDown}
           placeholder="District number, club name or number, region…"
           aria-autocomplete="list"
@@ -172,10 +207,30 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
       </div>
       {showResults && (
         <div className="landing-search__results">
-          {!index ? (
-            <p className="command-palette__empty">Searching…</p>
-          ) : flat.length === 0 ? (
-            <p className="command-palette__empty">No matches.</p>
+          {status === 'error' ? (
+            <p
+              role="status"
+              aria-live="polite"
+              className="command-palette__empty landing-search__status"
+            >
+              Could not load search.{' '}
+              <button
+                type="button"
+                className="landing-search__retry"
+                onMouseDown={e => e.preventDefault()}
+                onClick={retryIndex}
+              >
+                Retry
+              </button>
+            </p>
+          ) : status ? (
+            <p
+              role="status"
+              aria-live="polite"
+              className="command-palette__empty landing-search__status"
+            >
+              {status}
+            </p>
           ) : (
             <OmniSearchResults
               groups={groups}

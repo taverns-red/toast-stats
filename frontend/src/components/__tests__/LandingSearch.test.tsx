@@ -84,7 +84,7 @@ const INDEX: searchIndex.SearchIndex = {
 
 const Location: React.FC = () => {
   const { pathname } = useLocation()
-  return <output data-testid="location">{pathname}</output>
+  return <span data-testid="location">{pathname}</span>
 }
 
 function renderSearch() {

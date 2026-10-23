@@ -130,3 +130,28 @@
     color: var(--ink);
   }
 }
+
+/* Status line and Retry (review S4): the live region shares the palette's
+   empty-state style; Retry is a plain text button inside it. */
+@layer components {
+  .landing-search__status {
+    margin: 0;
+  }
+
+  .landing-search__retry {
+    padding: 0 4px;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    color: var(--link);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .landing-search__retry:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
