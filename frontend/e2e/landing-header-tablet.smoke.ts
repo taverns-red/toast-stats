@@ -100,11 +100,13 @@ for (const width of [768, 820, 1024]) {
         m.intro!.w,
         `intro column ${Math.round(m.intro!.w)}px < ${INTRO_MIN_WIDTH}px`
       ).toBeGreaterThanOrEqual(INTRO_MIN_WIDTH)
-      // #2249 — the H1 is now the 31-character "Find a district, club or
-      // region", which may take two lines at 768 in both shells (static
-      // text, so no shift); the intro-width and no-overlap checks above and
-      // below are what this test protects.
-      expect(m.titleLines, 'title wraps past two lines').toBeLessThanOrEqual(2)
+      // #2249 — the H1 is "Find a district, club or region"; measured on
+      // the PR preview it fits one line at 768 (the actions wrap below the
+      // intro there, so the title has the full width).
+      expect(
+        m.titleLines,
+        'title "Find a district, club or region" wraps'
+      ).toBe(1)
 
       // Intro and actions never overlap.
       const a = m.actions!
