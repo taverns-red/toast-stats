@@ -37,3 +37,31 @@ describe('landing H1 fits beside the actions at 1024 (#2249)', () => {
     )
   })
 })
+
+/* Phone type floor (#1840) for the new landing sections (#2249): the preview
+   smoke (type-floor.smoke.ts) found 11px uppercase labels at 375 — the Red
+   Vote eyebrow and the World pulse table headers; the my-district eyebrow is
+   the same size. Uppercase eyebrows/labels are 12px on phones, in ONE place
+   (mobile-type-floor.css rule 3, R10), not per component sheet. */
+describe('new landing eyebrows join the 12px phone floor (#2249)', () => {
+  const floor = readFileSync(
+    resolve(here, '../styles/mobile-type-floor.css'),
+    'utf8'
+  )
+  const rule3 = /\.uppercase:is\([^{]*\{\s*font-size:\s*12px/.exec(floor)
+  it('lists the Red Vote eyebrow, the pulse table headers and the my-district eyebrow', () => {
+    expect(rule3, 'rule 3 not found').not.toBeNull()
+    for (const sel of [
+      '.red-vote-block__eyebrow',
+      '.world-pulse__table thead th',
+      '.my-district-card__eyebrow',
+    ]) {
+      expect(rule3![0], sel).toContain(sel)
+    }
+  })
+  it('no longer names the retired orientation paragraph', () => {
+    expect(floor).not.toMatch(
+      /districts-page-header__orientation|districts-orientation__count/
+    )
+  })
+})
