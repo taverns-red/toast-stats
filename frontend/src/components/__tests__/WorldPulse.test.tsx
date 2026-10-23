@@ -153,6 +153,32 @@ describe('WorldPulse (#2249)', () => {
     expect(screen.queryByTestId('pulse-sparkline')).toBeNull()
   })
 
+  it('keeps the full header names for assistive tech and shows short labels on phones (#2249 R1)', () => {
+    renderPulse()
+    const table = screen.getByRole('table', { name: /regions/i })
+    const heads = within(table).getAllByRole('columnheader')
+    expect(heads).toHaveLength(4)
+    // Accessible names stay the full words: the short label is aria-hidden.
+    expect(
+      within(table).getByRole('columnheader', { name: 'Districts' })
+    ).toBeInTheDocument()
+    expect(
+      within(table).getByRole('columnheader', { name: 'Paid clubs' })
+    ).toBeInTheDocument()
+    expect(
+      within(table).getByRole('columnheader', { name: 'vs PY start' })
+    ).toBeInTheDocument()
+    const short = heads
+      .slice(1)
+      .map(h => h.querySelector('.world-pulse__th-short'))
+    expect(short.map(s => s?.textContent)).toEqual(['Dist.', 'Clubs', '± PY'])
+    for (const s of short) expect(s).toHaveAttribute('aria-hidden', 'true')
+    const long = heads
+      .slice(1)
+      .map(h => h.querySelector('.world-pulse__th-long')?.textContent)
+    expect(long).toEqual(['Districts', 'Paid clubs', 'vs PY start'])
+  })
+
   it('sums the rankings rows per region, largest first, linking numeric regions', () => {
     renderPulse()
     const table = screen.getByRole('table', { name: /regions/i })

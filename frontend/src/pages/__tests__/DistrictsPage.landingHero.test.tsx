@@ -144,13 +144,14 @@ describe('DistrictsPage — landing hero wiring (#2249)', () => {
     renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 57')
     // Review S2 — plain, neutral framing: paid clubs move against the PY
-    // start (renewals are still arriving in autumn), payments against last
-    // year's base.
+    // start (renewals are still arriving in autumn). Payments are
+    // year-to-date against last year's full-year total (re-review S2), so
+    // the label says YTD rather than implying a like-for-like comparison.
     expect(screen.getByTestId('kpi-paid-clubs-delta')).toHaveTextContent(
       /\+30 vs PY start/
     )
     expect(screen.getByTestId('kpi-total-payments-delta')).toHaveTextContent(
-      /−600 vs last year's base/
+      /^−600 YTD vs last year's total$/
     )
     expect(
       screen.getByTestId('kpi-distinguished-clubs-delta')

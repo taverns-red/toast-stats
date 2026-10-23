@@ -116,3 +116,41 @@ describe('World pulse regions table cannot overflow a phone (#2249)', () => {
     )
   })
 })
+
+/* World pulse headers break mid-word at 375 (#2249, re-review R1): with
+   `overflow-wrap: anywhere` and ~48px numeric columns the preview rendered
+   "DISTR/ICTS", "PAID/CLUB/S" and "VS PY/STAR/T", and the 3-line head
+   overran the .world-pulse__regions reserve. Headers may wrap only at
+   spaces; phones get short visible labels (the smoke
+   landing-pulse-headers.smoke.ts proves one line live). */
+describe('World pulse headers never split a word (#2249 R1)', () => {
+  const pulse = readFileSync(
+    resolve(here, '../styles/components/landing-pulse.css'),
+    'utf8'
+  )
+  const headRule = /\.world-pulse__table thead th\s*\{([^}]*)\}/.exec(pulse)
+  it('has no overflow-wrap: anywhere / break-word or word-break on thead th', () => {
+    expect(headRule, 'thead th rule not found').not.toBeNull()
+    expect(headRule![1]).not.toMatch(/overflow-wrap:\s*(anywhere|break-word)/)
+    expect(headRule![1]).not.toMatch(/word-break/)
+    expect(headRule![1]).toMatch(/overflow-wrap:\s*normal/)
+  })
+  it('nowhere in the sheet lets a pulse header break inside a word', () => {
+    expect(pulse).not.toMatch(/overflow-wrap:\s*anywhere/)
+    expect(pulse).not.toMatch(/word-break/)
+  })
+  it('swaps to the short labels below 768px, hiding the long one only visually', () => {
+    const phone = /@media\s*\(max-width:\s*767px\)\s*\{([\s\S]*?)\n {2}\}/.exec(
+      pulse
+    )
+    expect(phone, 'max-width: 767px block not found').not.toBeNull()
+    expect(phone![1]).toMatch(
+      /\.world-pulse__th-short\s*\{[^}]*display:\s*inline/
+    )
+    const long = /\.world-pulse__th-long\s*\{([^}]*)\}/.exec(phone![1])
+    expect(long, '.world-pulse__th-long phone rule').not.toBeNull()
+    expect(long![1]).not.toMatch(/display:\s*none/)
+    expect(long![1]).toMatch(/clip/)
+    expect(pulse).toMatch(/\.world-pulse__th-short\s*\{[^}]*display:\s*none/)
+  })
+})
