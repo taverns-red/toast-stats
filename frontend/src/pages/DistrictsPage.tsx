@@ -1019,16 +1019,6 @@ const DistrictsPage: React.FC = () => {
           {reserveHeroSlots && <RedVoteBlock />}
           {reserveHeroSlots && (
             <>
-              {/* The section's own #750 skeleton — same component, so the
-                  reserve cannot drift from what it reserves for. Hidden
-                  <768px by .awards-race, where the mobile link takes over. */}
-              <AwardsRaceSection standings={null} isLoading />
-              {/* Static destination, so render the real link rather than a
-                  placeholder: it needs no data and works while loading. */}
-              <Link to="/awards" className="awards-race-mobile-link">
-                See Awards
-                <span aria-hidden="true"> →</span>
-              </Link>
               {/* Region toolbar. One chip row, and since #1359 gap (c) that
                   is EXACT below 768px too: the loaded row is a single
                   horizontally-scrolling line whatever the region count, so
@@ -1076,6 +1066,21 @@ const DistrictsPage: React.FC = () => {
             load explains nothing. */}
         {reserveHeroSlots && <RecognitionLegend />}
         {body}
+        {/* #2249 — the Awards Race sits below the table now (leaders-only,
+            out of the first screen). Its own #750 skeleton — same component,
+            so the reserve cannot drift from what it reserves for — is held
+            here, after the loading body, in the loaded tree's order. Hidden
+            <768px by .awards-race, where the mobile link takes over; the
+            link is static, so it is the real thing. */}
+        {reserveHeroSlots && (
+          <>
+            <AwardsRaceSection standings={null} isLoading />
+            <Link to="/awards" className="awards-race-mobile-link">
+              See Awards
+              <span aria-hidden="true"> →</span>
+            </Link>
+          </>
+        )}
       </div>
     </div>
   )
@@ -1861,23 +1866,6 @@ const DistrictsPage: React.FC = () => {
           {/* #2249 — Red Vote: prominent but secondary, in its own brand. */}
           <RedVoteBlock />
 
-          {/* Awards Race — competitive district awards (#331).
-              #862 — at <768px the heavy 3-card section is deferred behind a
-              compact "See Awards →" link to its canonical home (/awards); the
-              full section returns at ≥768px. Both stay mounted — the toggle is
-              pure CSS `display` (see .awards-race / .awards-race-mobile-link),
-              so the desktop render path and the #750 reserved-skeleton CLS
-              contract are untouched, and the mobile section never expands to
-              shift the page. */}
-          <AwardsRaceSection
-            standings={competitiveAwards ?? null}
-            isLoading={isLoadingAwards}
-          />
-          <Link to="/awards" className="awards-race-mobile-link">
-            See Awards
-            <span aria-hidden="true"> →</span>
-          </Link>
-
           {/* Region Filter Toolbar — compact (#83). The dedicated "Sort by:"
             button row was retired in #851: sort now lives on the table
             column headers (click to toggle, URL-synced). */}
@@ -2086,6 +2074,24 @@ const DistrictsPage: React.FC = () => {
           />
         </div>
 
+        {/* Awards Race — competitive district awards (#331), below the
+            table since #2249 (leaders-only, so out of the first screen).
+            #862 — at <768px the heavy 3-card section is deferred behind a
+            compact "See Awards →" link to its canonical home (/awards); the
+            full section returns at ≥768px. Both stay mounted — the toggle is
+            pure CSS `display` (see .awards-race / .awards-race-mobile-link),
+            so the desktop render path and the #750 reserved-skeleton CLS
+            contract are untouched, and the mobile section never expands to
+            shift the page. */}
+        <AwardsRaceSection
+          standings={competitiveAwards ?? null}
+          isLoading={isLoadingAwards}
+        />
+        <Link to="/awards" className="awards-race-mobile-link">
+          See Awards
+          <span aria-hidden="true"> →</span>
+        </Link>
+
         {/* Historical Rank Progression — collapsed by default (#83) */}
         <details className="bg-white rounded-lg shadow-md mt-4">
           <summary className="cursor-pointer select-none text-lg font-bold text-gray-900 p-4 hover:text-tm-loyal-blue transition-colors">
@@ -2189,56 +2195,12 @@ const DistrictsPage: React.FC = () => {
           </div>
         </details>
 
-        {/* Legend */}
-        <div className="bg-white rounded-lg shadow-md p-6 mt-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Scoring Methodology
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-4">
-            <div>
-              <span className="font-medium text-gray-900">Paid Clubs:</span>{' '}
-              Number of clubs with paid memberships
-            </div>
-            <div>
-              <span className="font-medium text-gray-900">Total Payments:</span>{' '}
-              Year-to-date membership payments
-            </div>
-            <div>
-              <span className="font-medium text-gray-900">
-                Distinguished Clubs:
-              </span>{' '}
-              Clubs achieving distinguished status
-            </div>
-          </div>
-          <div className="bg-tm-loyal-blue-10 border-l-4 border-tm-loyal-blue p-4 text-sm">
-            <p className="font-medium text-tm-loyal-blue mb-2 font-tm-headline">
-              Ranking Formula (Borda Count System):
-            </p>
-            <p className="text-tm-loyal-blue-80 font-tm-body">
-              Each district is ranked in three categories: Paid Clubs, Total
-              Payments, and Distinguished Clubs. Points are awarded based on
-              rank position (higher rank = more points).
-            </p>
-            <p className="text-tm-loyal-blue-70 mt-2 font-tm-body">
-              <strong>Point Allocation:</strong> If there are N districts, rank
-              #1 receives N points, rank #2 receives N-1 points, and so on. The{' '}
-              <strong>Overall Score</strong> is the sum of points from all three
-              categories (higher is better).
-            </p>
-            <p className="text-tm-loyal-blue-70 mt-2 text-xs font-tm-body">
-              Example: With 100 districts, if a district ranks #5 in Paid Clubs
-              (96 pts), #3 in Payments (98 pts), and #8 in Distinguished Clubs
-              (93 pts), their Overall Score = 96 + 98 + 93 = 287 points
-            </p>
-          </div>
-        </div>
-
-        {/* Forward-pointer to the dedicated methodology page (#356).
-            The legacy in-page Scoring Methodology block above stays as
-            the canonical explainer until #368 ships real /methodology
-            content; #369 will remove the duplication. */}
+        {/* Forward-pointer to the dedicated methodology page (#356). The
+            in-page Borda explainer that duplicated /methodology was
+            removed in #2249. */}
         <div className="districts-methodology-callout">
-          Definitions, refresh cadence, and known caveats live on the{' '}
+          Scoring (Borda count), definitions, refresh cadence, and known caveats
+          live on the{' '}
           <a
             href="/methodology"
             className="districts-methodology-callout__link"

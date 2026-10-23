@@ -1666,15 +1666,9 @@
     color: var(--ink-3);
   }
 
-  @media (min-width: 640px) {
-    .recognition-legend__toggle {
-      display: none;
-    }
-
-    .recognition-legend__items {
-      display: flex;
-    }
-  }
+  /* #2249 — the legend stays behind its disclosure at every width (it is
+     reference content between the filters and the data); the 640px
+     inline rule is gone. */
 
   /* Rankings table chrome */
   .districts-rankings-table-wrap {
