@@ -82,4 +82,45 @@
       font-size: 16px;
     }
   }
+
+  /* The hero slot: first in .districts-hero-stack in every shell state. */
+  .districts-hero-search {
+    margin-bottom: 8px;
+  }
+
+  /* The rankings row filter (#2249) — a third toolbar row, same rhythm as
+     the Regions and Recognition rows above it. */
+  .districts-toolbar__row--filter .districts-toolbar__search {
+    max-width: 360px;
+  }
+
+  .districts-toolbar__search-clear {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-3);
+    cursor: pointer;
+  }
+
+  .districts-toolbar__search-clear:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .districts-rankings-title {
+    margin: 0 8px 4px;
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ink);
+  }
 }

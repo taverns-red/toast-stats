@@ -187,10 +187,7 @@
 
     .context-bar ~ .districts-page-header .districts-page-header__lede,
     .context-bar ~ .districts-page-header .districts-page-header__actions,
-    .context-bar ~ .districts-page-header .districts-page-header__eyebrow,
-    /* Landing (#1846): the 4-line orientation paragraph moves into the
-       sheet's "About this page". */
-    .context-bar ~ .districts-page-header .districts-page-header__orientation {
+    .context-bar ~ .districts-page-header .districts-page-header__eyebrow {
       display: none;
     }
 
