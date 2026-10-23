@@ -8,7 +8,13 @@
  */
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LandingSearch } from '../LandingSearch'
@@ -193,5 +199,67 @@ describe('LandingSearch (#2249)', () => {
       </QueryClientProvider>
     )
     expect(ref.current).toBe(input())
+  })
+})
+
+describe('LandingSearch — keyboard and failure states (#2250 review)', () => {
+  let load: ReturnType<typeof vi.spyOn>
+  beforeEach(() => {
+    load = vi.spyOn(searchIndex, 'loadSearchIndex').mockResolvedValue(INDEX)
+  })
+
+  it('says so and offers Retry when the index fails to load, then recovers', async () => {
+    load.mockRejectedValueOnce(new Error('cdn down'))
+    renderSearch()
+    fireEvent.focus(input())
+    fireEvent.change(input(), { target: { value: 'dis' } })
+    const retry = await screen.findByRole('button', { name: /retry/i })
+    expect(screen.getByRole('status')).toHaveTextContent(/could not load/i)
+    fireEvent.click(retry)
+    expect(await screen.findByRole('listbox')).toBeInTheDocument()
+  })
+
+  it('announces "Searching…" and "No matches." in a live region', async () => {
+    renderSearch()
+    fireEvent.focus(input())
+    fireEvent.change(input(), { target: { value: 'zzz' } })
+    const status = await screen.findByRole('status')
+    await waitFor(() => expect(status).toHaveTextContent(/no matches/i))
+    expect(status).toHaveAttribute('aria-live', 'polite')
+  })
+
+  it('Escape closes the list and keeps focus; a second Escape clears the text', async () => {
+    renderSearch()
+    input().focus()
+    fireEvent.change(input(), { target: { value: 'dis' } })
+    await screen.findByRole('listbox')
+    fireEvent.keyDown(input(), { key: 'Escape' })
+    expect(screen.queryByRole('listbox')).toBeNull()
+    expect(document.activeElement).toBe(input())
+    expect(input()).toHaveValue('dis')
+    fireEvent.keyDown(input(), { key: 'Escape' })
+    expect(input()).toHaveValue('')
+    expect(document.activeElement).toBe(input())
+  })
+
+  it('typing after Escape reopens the list', async () => {
+    renderSearch()
+    input().focus()
+    fireEvent.change(input(), { target: { value: 'dis' } })
+    await screen.findByRole('listbox')
+    fireEvent.keyDown(input(), { key: 'Escape' })
+    fireEvent.change(input(), { target: { value: 'dist' } })
+    expect(await screen.findByRole('listbox')).toBeInTheDocument()
+  })
+
+  it('ArrowDown moves aria-activedescendant to the next option', async () => {
+    renderSearch()
+    fireEvent.focus(input())
+    fireEvent.change(input(), { target: { value: 'district' } })
+    const list = await screen.findByRole('listbox')
+    const options = within(list).getAllByRole('option')
+    expect(input()).toHaveAttribute('aria-activedescendant', options[0]!.id)
+    fireEvent.keyDown(input(), { key: 'ArrowDown' })
+    expect(input()).toHaveAttribute('aria-activedescendant', options[1]!.id)
   })
 })

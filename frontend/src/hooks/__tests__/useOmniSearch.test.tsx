@@ -339,3 +339,32 @@ describe('useOmniSearch closed clubs by name (#2062)', () => {
     expect(result.current.flat).toEqual([])
   })
 })
+
+describe('index status (#2249 — the landing hero needs an error state)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('reports loading → ready, and error with a retry that recovers', async () => {
+    setupCdn()
+    mockedClubIndex.mockRejectedValueOnce(new Error('cdn down'))
+    const { result } = renderHook(
+      () => useOmniSearch({ onSelect: vi.fn(), enabled: true }),
+      { wrapper }
+    )
+    expect(result.current.indexStatus).toBe('loading')
+    await waitFor(() => expect(result.current.indexStatus).toBe('error'))
+    expect(result.current.index).toBeUndefined()
+    act(() => result.current.retryIndex())
+    await waitFor(() => expect(result.current.indexStatus).toBe('ready'))
+    expect(result.current.index).toBeDefined()
+  })
+
+  it('is idle while the fetch is gated off', () => {
+    const { result } = renderHook(
+      () => useOmniSearch({ onSelect: vi.fn(), enabled: false }),
+      { wrapper }
+    )
+    expect(result.current.indexStatus).toBe('idle')
+  })
+})
