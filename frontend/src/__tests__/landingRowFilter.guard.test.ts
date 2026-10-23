@@ -65,3 +65,25 @@ describe('new landing eyebrows join the 12px phone floor (#2249)', () => {
     )
   })
 })
+
+/* Phone type floor, share (#1840): type-floor.smoke.ts measured 22.3% of the
+   landing's visible characters under 14px at 375 (max 15%) after #2249 —
+   the Red Vote fine print, the pulse tile labels and captions, the KPI
+   sub-line and the my-district movement line. Captions and data are 14px
+   on phones (rule 4); only uppercase eyebrows stay at 12px. */
+describe('new landing captions join the 14px phone floor (#2249)', () => {
+  const floor = readFileSync(
+    resolve(here, '../styles/mobile-type-floor.css'),
+    'utf8'
+  )
+  it.each([
+    '.red-vote-block__fine',
+    '.world-pulse__tile-label',
+    '.world-pulse__caption',
+    '.districts-kpi-card__sub',
+    '.my-district-card__move',
+  ])('sets %s to 14px below 768', sel => {
+    const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    expect(floor).toMatch(new RegExp(`${esc}[^{]*\\{[^}]*font-size:\\s*14px`))
+  })
+})
