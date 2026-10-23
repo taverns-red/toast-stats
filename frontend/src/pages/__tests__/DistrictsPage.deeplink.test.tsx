@@ -168,7 +168,7 @@ describe('DistrictsPage deep-link — search (?q=)', () => {
     await screen.findByText('District 2')
     expect(screen.queryByText('District 1')).not.toBeInTheDocument()
     expect(screen.queryByText('District 3')).not.toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/search/i)).toHaveValue('2')
+    expect(screen.getByPlaceholderText(/filter/i)).toHaveValue('2')
   })
 
   it('OUTWARD: typing pushes the settled query to ?q= (debounced)', async () => {
@@ -177,7 +177,7 @@ describe('DistrictsPage deep-link — search (?q=)', () => {
 
     await screen.findByText('District 1')
 
-    fireEvent.change(screen.getByPlaceholderText(/search/i), {
+    fireEvent.change(screen.getByPlaceholderText(/filter/i), {
       target: { value: '3' },
     })
 
