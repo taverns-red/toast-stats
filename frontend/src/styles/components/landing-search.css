@@ -94,6 +94,12 @@
     max-width: 360px;
   }
 
+  /* Touch target (WCAG 2.5.5, review B2): the shared input padding gives
+     42px; floor it at 44 here, where it is a toolbar control. */
+  .districts-toolbar__row--filter .districts-toolbar__search-input {
+    min-height: 44px;
+  }
+
   .districts-toolbar__search-clear {
     position: absolute;
     right: 4px;

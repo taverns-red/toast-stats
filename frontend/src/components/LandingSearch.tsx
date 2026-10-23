@@ -13,10 +13,11 @@
    fetch, not a chunk). The field's box is static, so the loading shell can
    render this same component as its own reserve — no drift, no CLS.
 
-   Enter: a single EXACT match navigates (the user typed "61" and there is
-   one District 61); otherwise Enter keeps the list open rather than guessing
-   — the highlighted row is still chosen with the arrow keys, the shared
-   combobox contract. */
+   Enter: a district id opens that district (the user typed "61": District
+   61, not Club 61 — see enterTarget); otherwise a single EXACT match
+   navigates; otherwise Enter keeps the list open rather than guessing — the
+   highlighted row is still chosen with the arrow keys, the shared combobox
+   contract. */
 
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -35,10 +36,20 @@ interface LandingSearchProps {
   inputRef?: React.RefObject<HTMLInputElement | null>
 }
 
-/** The one entity the query names exactly, or null when it is ambiguous. */
-function exactMatch(query: string, flat: SearchEntity[]): SearchEntity | null {
+/** What Enter opens for `query` (review B1):
+    1. a query that IS a district id opens that district — old clubs carry
+       low numbers (Club 61) and regions 1–14 share theirs with districts,
+       so "61" and "6" are never a single exact match on real data, and
+       "find my district fast" is the page's primary job;
+    2. otherwise the one entity the query names exactly;
+    3. otherwise null — the list stays open and the arrow keys choose. */
+function enterTarget(query: string, flat: SearchEntity[]): SearchEntity | null {
   const q = query.trim().toLowerCase()
   if (!q) return null
+  const district = flat.find(
+    e => e.type === 'district' && e.id.toLowerCase() === q
+  )
+  if (district) return district
   const exact = flat.filter(
     e => e.terms.includes(q) || e.exactTerms?.includes(q)
   )
@@ -101,9 +112,9 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') setArmed(true)
     if (e.key === 'Enter' && !armed) {
-      const exact = exactMatch(query, flat)
+      const target = enterTarget(query, flat)
       e.preventDefault()
-      if (exact) selectEntity(exact)
+      if (target) selectEntity(target)
       else setFocused(true)
       return
     }

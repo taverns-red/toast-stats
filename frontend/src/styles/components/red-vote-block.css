@@ -5,7 +5,11 @@
    other stylesheet may use these tokens until Phase 2 (#2080).
 
    Red Vote's own audit: brand red on a light surface is 4.16:1, so the
-   resting CTA is --rt-red-dk (≈ 8:1 on paper) and brand red is the hover.
+   resting CTA is --rt-red-dk (ink-on-dk on it: 7.98:1) in BOTH themes, and
+   the hover is brand red with dark ink (4.62:1) — ink-on-dk on brand red
+   is 3.70:1 and fails (review B3). Fine print and eyebrow are --rt-ink-2
+   on paper (9.9:1); --rt-ink-3 was 3.07:1. RedVoteBlockContrast.test.ts
+   computes all of this from the tokens.
    Red Vote sets every radius to 0 — square corners here too. The box is
    static (no data), so it is its own CLS reserve; the min-height keeps the
    Space Grotesk / Inter swap from moving the page (neither has a
@@ -64,7 +68,7 @@
     font-weight: 500;
     letter-spacing: var(--rt-track-loose);
     text-transform: uppercase;
-    color: var(--rt-ink-3);
+    color: var(--rt-ink-2);
   }
 
   .red-vote-block__heading {
@@ -88,7 +92,7 @@
     margin: 8px 0 0;
     font-size: var(--rt-text-sm);
     line-height: 1.4;
-    color: var(--rt-ink-3);
+    color: var(--rt-ink-2);
   }
 
   .red-vote-block__actions {
@@ -116,6 +120,7 @@
   .red-vote-block__cta:hover {
     background-color: var(--rt-vote);
     border-color: var(--rt-vote);
+    color: var(--rt-ink);
   }
 
   .red-vote-block__cta:focus-visible {
@@ -173,14 +178,15 @@
   }
 
   [data-theme='dark'] .red-vote-block__cta {
-    background-color: var(--rt-vote);
-    border-color: var(--rt-vote);
+    background-color: var(--rt-red-dk);
+    border-color: var(--rt-red-dk);
     color: var(--rt-ink-on-dk);
   }
 
   [data-theme='dark'] .red-vote-block__cta:hover {
-    background-color: var(--rt-red-dk);
-    border-color: var(--rt-red-dk);
+    background-color: var(--rt-vote);
+    border-color: var(--rt-vote);
+    color: var(--rt-ink);
   }
 
   [data-theme='dark'] .red-vote-block__cta:focus-visible {
