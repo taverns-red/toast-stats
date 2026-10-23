@@ -125,6 +125,25 @@ describe('WorldPulse (#2249)', () => {
     )
   })
 
+  it('labels the October renewal drop instead of leaving an unexplained cliff (review S3)', async () => {
+    // Real shape (time-series/regions/2026-2027.json, prod CDN 2026-10-23):
+    // 283,841 on 09-30, 204,639 on 10-11 — unrenewed members drop on Oct 1.
+    mockedSeries.mockResolvedValue({
+      dates: ['2026-07-26', '2026-09-30', '2026-10-11', '2026-10-19'],
+      world: { districts: 94, membership: [263094, 283841, 204639, 210763] },
+    } as never)
+    renderPulse()
+    const note = await screen.findByTestId('pulse-sparkline-note')
+    expect(note).toHaveTextContent(/oct 1/i)
+    expect(note).toHaveTextContent(/renew/i)
+  })
+
+  it('adds no renewal note when the line has no renewal-date drop', async () => {
+    renderPulse()
+    await screen.findByTestId('pulse-sparkline')
+    expect(screen.queryByTestId('pulse-sparkline-note')).toBeNull()
+  })
+
   it('draws no line when the series is not published for the year', async () => {
     mockedSeries.mockResolvedValue(null)
     renderPulse()

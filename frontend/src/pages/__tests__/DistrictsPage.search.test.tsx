@@ -120,7 +120,9 @@ const setupWithData = () => {
 }
 
 const heroSearch = () =>
-  screen.getByRole('combobox', { name: /find a district, club or region/i })
+  screen.getByRole('combobox', {
+    name: /district number, club name or region/i,
+  })
 const rowFilter = () =>
   screen.getByRole('textbox', { name: /filter districts/i })
 

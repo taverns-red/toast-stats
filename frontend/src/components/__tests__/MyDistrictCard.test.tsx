@@ -78,6 +78,38 @@ describe('MyDistrictCard (#2249)', () => {
     expect(screen.getByRole('link')).toHaveTextContent(/no change since/i)
   })
 
+  it('says nothing about movement when the last visit is this same data date (review S10)', () => {
+    renderCard(
+      <MyDistrictCard
+        districtId="61"
+        districtName="District 61"
+        rank={11}
+        total={94}
+        rankDelta={0}
+        previousDate="2026-10-22"
+        asOfDate="2026-10-22"
+      />
+    )
+    expect(screen.getByRole('link')).not.toHaveTextContent(/since/i)
+  })
+
+  it("still links to a starred district missing from this year's rankings, so the reserve never collapses (review S10)", () => {
+    renderCard(
+      <MyDistrictCard
+        districtId="U"
+        districtName=""
+        rank={null}
+        total={94}
+        rankDelta={null}
+        previousDate={null}
+      />
+    )
+    const link = screen.getByRole('link', { name: /your district/i })
+    expect(link).toHaveAttribute('href', '/district/U')
+    expect(link).toHaveTextContent(/not in this year's rankings/i)
+    expect(link).not.toHaveTextContent(/rank #/i)
+  })
+
   it('has a same-class reserve for the loading shell that is not a link', () => {
     const { container } = renderCard(<MyDistrictCardReserve />)
     expect(container.querySelector('.my-district-card')).not.toBeNull()

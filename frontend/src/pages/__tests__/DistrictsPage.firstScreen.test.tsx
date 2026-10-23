@@ -137,7 +137,7 @@ describe('DistrictsPage first screen on phones (#1846)', () => {
     )
     expect(
       screen.getByRole('combobox', {
-        name: /find a district, club or region/i,
+        name: /district number, club name or region/i,
       })
     ).toBeInTheDocument()
   })

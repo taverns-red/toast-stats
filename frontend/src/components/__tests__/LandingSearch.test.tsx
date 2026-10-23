@@ -111,7 +111,9 @@ function renderSearch() {
 }
 
 const input = () =>
-  screen.getByRole('combobox', { name: /find a district, club or region/i })
+  screen.getByRole('combobox', {
+    name: /district number, club name or region/i,
+  })
 
 describe('LandingSearch (#2249)', () => {
   let load: ReturnType<typeof vi.spyOn>
@@ -122,12 +124,21 @@ describe('LandingSearch (#2249)', () => {
   it('is a visibly labelled combobox and fetches nothing until focused', () => {
     renderSearch()
     expect(input()).toBeInTheDocument()
-    expect(screen.getByText(/find a district, club or region/i).tagName).toBe(
-      'LABEL'
-    )
+    expect(
+      screen.getByText(/district number, club name or region/i).tagName
+    ).toBe('LABEL')
     expect(load).not.toHaveBeenCalled()
     fireEvent.focus(input())
     expect(load).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not repeat the page H1 as its label, so a screen reader hears the job once (review S8)', () => {
+    renderSearch()
+    const name = input().getAttribute('id')
+    const label = document.querySelector(`label[for="${name}"]`)!
+    expect(label.textContent!.trim().toLowerCase()).not.toBe(
+      'find a district, club or region'
+    )
   })
 
   it('shows grouped results, with site pages, for a query', async () => {
