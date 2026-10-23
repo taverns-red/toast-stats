@@ -32,12 +32,14 @@ const ALLOWLIST = new Set([
 ])
 
 /** The accent token (any suffix, e.g. -focus), its two amber hexes, and —
-    since #2249 — the Red Vote brand colour tokens (--rt-vote, --rt-red*,
-    --rt-paper*, --rt-bg*), which only the allowlisted sheet may use. Hexes
-    beyond the ambers are not policed: the map's red pin (locatorPins.ts)
-    predates this and is a pin, not a palette. */
+    since #2249 — the Red Vote SURFACE tokens (--rt-vote, --rt-red-soft,
+    --rt-paper*, --rt-bg*), which only the allowlisted sheet may use. The
+    house red (--rt-red, --rt-red-dk) is not policed: it is already in the
+    legacy chrome (the club mini-map pin, the Retention and Distinguished
+    badge accents in redesign.css) and predates this. Hexes beyond the
+    ambers are not policed either (locatorPins.ts draws the pin in hex). */
 const FORBIDDEN =
-  /--rt-(?:stats|vote|red|paper|bg)(?![\w])|--rt-(?:stats|red|paper|bg)-[\w-]+|#d4873f\b|#b5651d\b/gi
+  /--rt-(?:stats|vote|paper|bg)(?![\w])|--rt-(?:stats|paper|bg)-[\w-]+|--rt-red-soft(?![\w])|#d4873f\b|#b5651d\b/gi
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -83,20 +85,23 @@ describe('no --rt-stats accent outside the brand tokens file (#2080)', () => {
   })
 
   // #2249 — the Red Vote block is the ONE place on the site in Red Vote's
-  // own palette (--rt-vote / --rt-red*, --rt-paper, --rt-bg*), and the
-  // guard's stated intent is "new UI matches the existing app palette", so
-  // those tokens are forbidden everywhere else too.
-  it('also catches the Red Vote brand tokens and reds (#2249)', () => {
+  // own surface palette (--rt-vote, --rt-red-soft, --rt-paper*, --rt-bg*),
+  // and the guard's stated intent is "new UI matches the existing app
+  // palette", so those tokens are forbidden everywhere else too.
+  it('also catches the Red Vote surface tokens (#2249)', () => {
     for (const s of [
       'color: var(--rt-vote);',
       'background: var(--rt-red-soft);',
-      'border-color: var(--rt-red-dk);',
       'background: var(--rt-paper);',
+      'border-color: var(--rt-paper-3);',
       'background: var(--rt-bg-2);',
     ]) {
       expect(s.match(FORBIDDEN), s).not.toBeNull()
     }
-    // The brand's neutral type/spacing tokens stay allowed everywhere.
+    // The house red already lives in the legacy chrome (mini-map pin,
+    // badge accents), and the brand's type/spacing tokens are fine anywhere.
+    expect('fill: var(--rt-red);'.match(FORBIDDEN)).toBeNull()
+    expect('color: var(--rt-red-dk);'.match(FORBIDDEN)).toBeNull()
     expect('font-family: var(--rt-font-display);'.match(FORBIDDEN)).toBeNull()
     expect('gap: var(--rt-space-4);'.match(FORBIDDEN)).toBeNull()
   })
