@@ -1,0 +1,85 @@
+/* LandingSearch (#2249) — the landing hero's "find anything" field.
+   Legacy palette only (#2080): --ink*, --surface*, --line, --loyal-400 /
+   --focus-ring, all remapped under [data-theme='dark']. The box is static
+   (label + 56px field) so the loading shell can render the same component
+   as its reserve and the data landing shifts nothing. */
+
+@layer components {
+  .landing-search {
+    position: relative;
+    margin-bottom: 16px;
+  }
+
+  .landing-search__label {
+    display: block;
+    margin-bottom: 8px;
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  .landing-search__field {
+    position: relative;
+  }
+
+  .landing-search__icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-4);
+    pointer-events: none;
+  }
+
+  .landing-search__input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 56px;
+    padding: 0 16px 0 48px;
+    background-color: var(--surface);
+    border: 2px solid var(--line);
+    border-radius: var(--rds-radius-md);
+    font-family: var(--sans);
+    font-size: 16px;
+    color: var(--ink);
+    transition: border-color 150ms;
+  }
+
+  .landing-search__input::placeholder {
+    color: var(--ink-4);
+  }
+
+  .landing-search__input:focus {
+    outline: none;
+    border-color: var(--loyal-400);
+  }
+
+  .landing-search__input:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* The list reuses the palette's result styles (command-palette__*), so a
+     result looks the same here, in the header and in the Cmd-K palette. */
+  .landing-search__results {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 420px;
+    overflow-y: auto;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-md);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  @media (min-width: 768px) {
+    .landing-search__label {
+      font-size: 16px;
+    }
+  }
+}
