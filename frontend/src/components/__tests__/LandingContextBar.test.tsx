@@ -44,7 +44,8 @@ describe('LandingContextBar (#1846)', () => {
   it('names the page and shows the PY · date chip, with no back crumb (root page)', () => {
     renderBar()
     const bar = screen.getByTestId('context-bar')
-    expect(bar).toHaveTextContent('District Rankings')
+    // #2249 — the bar replaces the header on phones, so it carries the H1.
+    expect(bar).toHaveTextContent('Find a district, club or region')
     expect(screen.getByTestId('context-bar-chip')).toHaveTextContent(
       'PY 26–27 · Oct 10'
     )
