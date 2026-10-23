@@ -5,7 +5,7 @@ import { test, expect, type Page } from './fixtures/test'
  * Before: at 375 each numeric header had ~48px for 14px bold uppercase text
  * and `overflow-wrap: anywhere`, so the preview rendered "DISTR/ICTS",
  * "PAID/CLUB/S" and "VS PY/STAR/T" — on the first screen — and the 3-line
- * head overran the `.world-pulse__regions` reserve (6 × 31px + 44px).
+ * head overran the `.world-pulse__regions` reserve (6 × 32px + 44px).
  *
  * After: phones show short labels ("Dist." / "Clubs" / "± PY"), the full
  * label stays the header's accessible name, and headers can only wrap at
@@ -43,17 +43,24 @@ function measureHeads(page: Page) {
         cell.clientWidth -
         parseFloat(cs.paddingLeft) -
         parseFloat(cs.paddingRight)
-      const range = document.createRange()
-      range.selectNodeContents(cell)
-      // Visible line boxes only: the visually hidden long label is a 1px
-      // clipped box, not a line of text.
-      const rects = [...range.getClientRects()].filter(
-        r => r.width > 1 && r.height > 1
-      )
+      // Visible text only: the visually hidden long label is a 1px clipped
+      // box whose glyphs still report rects, so skip text whose element box
+      // is 1px or less.
+      const rects: DOMRect[] = []
+      const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT)
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const box = n.parentElement!.getBoundingClientRect()
+        if (box.width <= 1 || box.height <= 1) continue
+        const range = document.createRange()
+        range.selectNodeContents(n)
+        for (const r of range.getClientRects()) {
+          if (r.width > 0 && r.height > 0) rects.push(r)
+        }
+      }
       const tops = new Set(rects.map(r => Math.round(r.top)))
       const textWidth = rects.reduce((w, r) => Math.max(w, r.width), 0)
       return {
-        text: cell.innerText.replace(/\s+/g, ' ').trim(),
+        text: cell.textContent!.replace(/\s+/g, ' ').trim(),
         lines: tops.size,
         textWidth: Math.round(textWidth),
         inner: Math.round(inner),
@@ -89,7 +96,7 @@ for (const width of [375, 1280]) {
         ).toHaveCount(1)
       }
 
-      // The head plus five rows fit the reserve (6 × 31px + 44px link).
+      // The head plus five rows fit the reserve (6 × 32px + 44px link).
       const regions = await page
         .locator('.world-pulse__regions')
         .evaluate(el => ({
