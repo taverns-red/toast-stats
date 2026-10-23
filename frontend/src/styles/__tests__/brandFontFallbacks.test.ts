@@ -39,3 +39,19 @@ describe('Space Grotesk / Inter fallback faces (#2249)', () => {
     expect(fallbacks).not.toMatch(/zero live consumers/)
   })
 })
+
+describe('the brand web fonts are not referenced until the block is near (#2249 LCP)', () => {
+  it('base stacks name only the fallback faces; the modifier names the web fonts', () => {
+    const base =
+      /\.red-vote-block__heading\s*\{[^}]*font-family:\s*([^;]+);/.exec(block)
+    expect(base, 'heading rule').not.toBeNull()
+    expect(base![1]).toMatch(/'Space Grotesk Fallback'/)
+    expect(base![1]).not.toMatch(/'Space Grotesk',/)
+    expect(block).toMatch(
+      /\.red-vote-block--brand-fonts\s+\.red-vote-block__heading[^{]*\{[^}]*'Space Grotesk',\s*'Space Grotesk Fallback'/
+    )
+    expect(block).toMatch(
+      /\.red-vote-block--brand-fonts\s+\.red-vote-block__body[^{]*\{[^}]*'Inter',\s*'Inter Fallback'/
+    )
+  })
+})

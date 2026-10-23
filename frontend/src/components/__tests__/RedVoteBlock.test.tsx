@@ -5,8 +5,8 @@
  * config/redVotePromo.ts (ops#117); the placement is `landing-block`.
  */
 import React from 'react'
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { RedVoteBlock } from '../RedVoteBlock'
 import { RED_VOTE_COPY } from '../../config/redVotePromo'
@@ -82,6 +82,54 @@ describe('RedVoteBlock (#2249)', () => {
         promotion_id: 'red-vote',
         creative_slot: 'landing-block',
       })
+    )
+  })
+})
+
+/* Mobile Lighthouse gate (#2249): the block pulled Space Grotesk + Inter
+   (71 KB) at first paint and the landing's LCP went 3273 → 3752 ms. The
+   block is below the fold at every width, so its brand stacks apply only
+   once it nears the viewport; until then the metric-matched fallback faces
+   (no web font in the stack, so nothing is fetched) set the same metrics. */
+describe('RedVoteBlock — brand fonts load only near the viewport (#2249 LCP)', () => {
+  type IOCallback = (entries: IntersectionObserverEntry[]) => void
+  let callbacks: IOCallback[]
+  let observe: ReturnType<typeof vi.fn>
+  beforeEach(() => {
+    callbacks = []
+    observe = vi.fn()
+    class FakeIO {
+      constructor(cb: IOCallback) {
+        callbacks.push(cb)
+      }
+      observe = observe
+      disconnect = vi.fn()
+      unobserve = vi.fn()
+      takeRecords = () => []
+      root = null
+      rootMargin = ''
+      thresholds = []
+    }
+    vi.stubGlobal('IntersectionObserver', FakeIO)
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('starts on the fallback faces and switches to the brand stacks when intersecting', () => {
+    renderAt(OUT_OF_SEASON)
+    const block = screen.getByTestId('red-vote-block')
+    expect(block).not.toHaveClass('red-vote-block--brand-fonts')
+    expect(observe).toHaveBeenCalledWith(block)
+    act(() => {
+      callbacks[0]!([{ isIntersecting: true } as IntersectionObserverEntry])
+    })
+    expect(block).toHaveClass('red-vote-block--brand-fonts')
+  })
+
+  it('uses the brand stacks at once where IntersectionObserver is missing', () => {
+    vi.stubGlobal('IntersectionObserver', undefined)
+    renderAt(OUT_OF_SEASON)
+    expect(screen.getByTestId('red-vote-block')).toHaveClass(
+      'red-vote-block--brand-fonts'
     )
   })
 })
