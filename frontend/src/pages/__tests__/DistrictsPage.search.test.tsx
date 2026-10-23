@@ -1,16 +1,15 @@
 /**
- * Unit tests for DistrictsPage search bar (#91)
+ * Landing search surfaces (#91, #435, #2249).
  *
- * Verifies:
- * - Search input renders with placeholder
- * - Typing a district number filters the table
- * - Typing a district name filters the table
- * - Clear button resets the filter
- * - Search is case-insensitive
+ * Two fields, two jobs:
+ * - the HERO search is the shared omni-search (LandingSearch): it finds a
+ *   district, region, club, division, area or page and navigates. "/" focuses
+ *   it. Its behaviour is unit-tested in LandingSearch.test.tsx.
+ * - the table FILTER narrows the rankings rows by number or name, keeps the
+ *   original ranks (#102) and lives in ?q= (#978).
  */
-
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, fireEvent, within } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import DistrictsPage from '../DistrictsPage'
 import { fetchCdnRankings } from '../../services/cdn'
@@ -118,33 +117,76 @@ const setupWithData = () => {
   })
 }
 
-describe('DistrictsPage - District Search (#91)', () => {
+const heroSearch = () =>
+  screen.getByRole('combobox', { name: /find a district, club or region/i })
+const rowFilter = () =>
+  screen.getByRole('textbox', { name: /filter districts/i })
+
+describe('DistrictsPage - hero search (#2249)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('should render a search input with appropriate placeholder', async () => {
+  it('renders the labelled omni-search as the first thing in the hero stack', async () => {
+    setupWithData()
+    const { container } = renderWithProviders(<DistrictsPage />)
+    await screen.findByText('District 57')
+    const stack = container.querySelector('.districts-hero-stack')!
+    const first = stack.firstElementChild!
+    expect(first).toHaveClass('districts-toolbar__search--hero')
+    expect(first.contains(heroSearch())).toBe(true)
+  })
+
+  it('also renders it in the loading shell, so the field never moves on data', () => {
+    mockedFetchCdnRankings.mockReturnValue(new Promise(() => {}))
+    renderWithProviders(<DistrictsPage />)
+    expect(heroSearch()).toBeInTheDocument()
+  })
+
+  it("'/' keyboard shortcut focuses the hero search (#435)", async () => {
     setupWithData()
     renderWithProviders(<DistrictsPage />)
-
     await screen.findByText('District 57')
+    expect(document.activeElement).not.toBe(heroSearch())
+    fireEvent.keyDown(window, { key: '/' })
+    expect(document.activeElement).toBe(heroSearch())
+  })
 
-    const searchInput = screen.getByPlaceholderText(/search/i)
-    expect(searchInput).toBeInTheDocument()
+  it("'/' shortcut does not steal focus when an input is already focused (#435)", async () => {
+    setupWithData()
+    renderWithProviders(<DistrictsPage />)
+    await screen.findByText('District 57')
+    const sentinel = document.createElement('input')
+    document.body.appendChild(sentinel)
+    sentinel.focus()
+    fireEvent.keyDown(window, { key: '/' })
+    expect(document.activeElement).toBe(sentinel)
+    document.body.removeChild(sentinel)
+  })
+})
+
+describe('DistrictsPage - rankings row filter (#91)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders a labelled filter field for the rankings rows', async () => {
+    setupWithData()
+    renderWithProviders(<DistrictsPage />)
+    await screen.findByText('District 57')
+    expect(rowFilter()).toBeInTheDocument()
+    expect(rowFilter().getAttribute('placeholder')).not.toMatch(/press/)
   })
 
   it('should filter table rows when typing a district number', async () => {
     setupWithData()
     renderWithProviders(<DistrictsPage />)
-
     await screen.findByText('District 57')
     expect(screen.getByText('District 61')).toBeInTheDocument()
     expect(screen.getByText('District 83')).toBeInTheDocument()
 
-    const searchInput = screen.getByPlaceholderText(/search/i)
-    fireEvent.change(searchInput, { target: { value: '61' } })
+    fireEvent.change(rowFilter(), { target: { value: '61' } })
 
-    // Should show District 61 but not the others
     expect(screen.getByText('District 61')).toBeInTheDocument()
     expect(screen.queryByText('District 57')).not.toBeInTheDocument()
     expect(screen.queryByText('District 83')).not.toBeInTheDocument()
@@ -153,169 +195,42 @@ describe('DistrictsPage - District Search (#91)', () => {
   it('should filter table rows when typing a district name', async () => {
     setupWithData()
     renderWithProviders(<DistrictsPage />)
-
     await screen.findByText('District 57')
 
-    const searchInput = screen.getByPlaceholderText(/search/i)
-    fireEvent.change(searchInput, { target: { value: 'district 83' } })
+    fireEvent.change(rowFilter(), { target: { value: 'district 83' } })
 
     expect(screen.getByText('District 83')).toBeInTheDocument()
     expect(screen.queryByText('District 57')).not.toBeInTheDocument()
     expect(screen.queryByText('District 61')).not.toBeInTheDocument()
   })
 
-  it('should clear search and show all districts when clear button is clicked', async () => {
+  it('should clear the filter and show all districts when clear is clicked', async () => {
     setupWithData()
     renderWithProviders(<DistrictsPage />)
-
     await screen.findByText('District 57')
 
-    const searchInput = screen.getByPlaceholderText(/search/i)
-    fireEvent.change(searchInput, { target: { value: '57' } })
-
-    // Only District 57 visible
+    fireEvent.change(rowFilter(), { target: { value: '57' } })
     expect(screen.queryByText('District 61')).not.toBeInTheDocument()
 
-    // Click the clear button
-    const clearButton = screen.getByRole('button', {
-      name: /clear search/i,
-    })
-    fireEvent.click(clearButton)
+    fireEvent.click(screen.getByRole('button', { name: /clear filter/i }))
 
-    // All districts should be visible again
     expect(screen.getByText('District 57')).toBeInTheDocument()
     expect(screen.getByText('District 61')).toBeInTheDocument()
     expect(screen.getByText('District 83')).toBeInTheDocument()
   })
 
-  it("'/' keyboard shortcut focuses the search input (#435)", async () => {
-    setupWithData()
-    renderWithProviders(<DistrictsPage />)
-
-    await screen.findByText('District 57')
-
-    const searchInput = screen.getByPlaceholderText(/search/i)
-    expect(document.activeElement).not.toBe(searchInput)
-
-    fireEvent.keyDown(window, { key: '/' })
-    expect(document.activeElement).toBe(searchInput)
-  })
-
-  it("'/' shortcut does not steal focus when an input is already focused (#435)", async () => {
-    setupWithData()
-    renderWithProviders(<DistrictsPage />)
-
-    await screen.findByText('District 57')
-
-    // Focus a different input-like surface first by typing into search,
-    // then a separate input would normally absorb '/'. Simulate by adding
-    // a sentinel input and focusing it.
-    const sentinel = document.createElement('input')
-    document.body.appendChild(sentinel)
-    sentinel.focus()
-    expect(document.activeElement).toBe(sentinel)
-
-    fireEvent.keyDown(window, { key: '/' })
-
-    // Search input should NOT have stolen focus
-    const searchInput = screen.getByPlaceholderText(/search/i)
-    expect(document.activeElement).not.toBe(searchInput)
-
-    document.body.removeChild(sentinel)
-  })
-
-  it('shows type-ahead suggestions (top 5) when typing a query (#435)', async () => {
-    setupWithData()
-    renderWithProviders(<DistrictsPage />)
-
-    await screen.findByText('District 57')
-
-    const searchInput = screen.getByPlaceholderText(/search/i)
-    fireEvent.focus(searchInput)
-    fireEvent.change(searchInput, { target: { value: 'district' } })
-
-    // Suggestions container should appear
-    const suggestions = screen.getByRole('listbox', {
-      name: /district search suggestions/i,
-    })
-    expect(suggestions).toBeInTheDocument()
-
-    // 3 mock districts all match — all should appear (cap at 5).
-    // The <li> wrappers and the <a> children both have role="option",
-    // so we expect 6 (2 per suggestion). Cap = 5 suggestions = 10 elements.
-    const items = within(suggestions).getAllByRole('option')
-    expect(items.length).toBeGreaterThanOrEqual(3)
-    expect(items.length).toBeLessThanOrEqual(10)
-  })
-
-  it('clicking a suggestion navigates to the district detail page (#435)', async () => {
-    setupWithData()
-    renderWithProviders(<DistrictsPage />)
-
-    await screen.findByText('District 57')
-
-    const searchInput = screen.getByPlaceholderText(/search/i)
-    fireEvent.focus(searchInput)
-    fireEvent.change(searchInput, { target: { value: '61' } })
-
-    const suggestions = screen.getByRole('listbox', {
-      name: /district search suggestions/i,
-    })
-    // The <a> element with role=option carries the link
-    const links = within(suggestions).getAllByRole('option')
-    const link = links.find(el => el.tagName === 'A') as
-      HTMLAnchorElement | undefined
-    expect(link).toBeDefined()
-    expect(link!.getAttribute('href')).toMatch(/^\/district\/\d+/)
-  })
-
   it('should retain original rank when filtering (#102)', async () => {
     setupWithData()
     renderWithProviders(<DistrictsPage />)
-
     await screen.findByText('District 57')
 
     // Before filtering: D57=rank 1 (score 300), D61=rank 2 (score 250), D83=rank 3 (score 200)
-    const searchInput = screen.getByPlaceholderText(/search/i)
-    fireEvent.change(searchInput, { target: { value: '61' } })
+    fireEvent.change(rowFilter(), { target: { value: '61' } })
 
     // District 61 should retain its original rank of 2, NOT become rank 1
     expect(screen.getByText('District 61')).toBeInTheDocument()
-
-    // D61's rank badge should show "2" (its original rank), not "1". The rank
-    // column is no longer a sticky cell (#811 dropped the hardcoded second
-    // sticky), so identify the badge by its stable testid instead.
     expect(screen.getByTestId('rank-badge-61').textContent?.trim()).toBe('2')
-
     // No surviving row should show rank "1" — D57 (rank 1) is filtered out.
     expect(screen.queryByTestId('rank-badge-57')).toBeNull()
-  })
-
-  it('search suggestions do not duplicate bare-numeric districtName (#522)', async () => {
-    mockedFetchCdnRankings.mockResolvedValueOnce({
-      rankings: [
-        {
-          ...MOCK_RANKINGS[0]!,
-          districtId: '86',
-          districtName: '86',
-          region: '6',
-        },
-      ],
-      asOfDate: '2025-11-22',
-      generatedAt: '2025-01-01T00:00:00Z',
-    })
-    renderWithProviders(<DistrictsPage />)
-
-    await screen.findByTestId('district-number-chip-D86')
-    const searchInput = screen.getByPlaceholderText(/search/i)
-    fireEvent.focus(searchInput)
-    fireEvent.change(searchInput, { target: { value: '86' } })
-
-    const suggestions = await screen.findByRole('listbox', {
-      name: /district search suggestions/i,
-    })
-    expect(within(suggestions).getByText('D86')).toBeInTheDocument()
-    // Bare "86" should NOT render as a sibling — the chip already conveys it.
-    expect(within(suggestions).queryByText(/^86$/)).not.toBeInTheDocument()
   })
 })

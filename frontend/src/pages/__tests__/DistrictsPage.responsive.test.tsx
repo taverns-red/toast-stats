@@ -100,19 +100,17 @@ const precedesInDom = (a: Element, b: Element): boolean =>
   Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
 
 const expectReservedShell = (container: HTMLElement) => {
-  const skel = container.querySelector('.districts-hero-search-skeleton')
+  // #2249 — the reserve IS the real hero search (LandingSearch needs no
+  // data), first in the stack in every state, so it cannot drift from the
+  // loaded field. It still carries the --hero modifier the stack's hoist
+  // rule keys on.
+  const skel = container.querySelector('.districts-hero-search')
   const strip = container.querySelector('.districts-kpi-strip')
   expect(skel).not.toBeNull()
   expect(strip).not.toBeNull()
-  // #1359 — the hoist is no longer DOM order. The reserve now sits inside a
-  // real .districts-hero-stack in the LOADED tree's position (after the KPI
-  // strip) and carries the real --hero modifier, so the stack's own
-  // `.districts-hero-stack .districts-toolbar__search--hero { order: -1 }`
-  // rule lifts it above the strip below 768px — the identical mechanism, and
-  // the identical rule, that positions the loaded search. Asserting DOM order
-  // would now assert the OPPOSITE of the loaded page it is reserving for.
   expect(skel!.closest('.districts-hero-stack')).not.toBeNull()
   expect(skel!.classList.contains('districts-toolbar__search--hero')).toBe(true)
+  expect(precedesInDom(skel!, strip!)).toBe(true)
   expect(strip!.closest('.districts-hero-stack')).not.toBeNull()
   // 3 secondary KPI cards → the strip's mobile height matches across states.
   expect(
@@ -416,7 +414,7 @@ describe('DistrictsPage mobile sub-line collapse (#890)', () => {
 
     const title = screen.getByRole('heading', {
       level: 1,
-      name: /District Rankings/i,
+      name: /find a district, club or region/i,
     })
     expect(title).toContainElement(suffix as HTMLElement)
   })

@@ -111,44 +111,34 @@ describe('DistrictsPage first screen on phones (#1846)', () => {
     ).not.toBeNull()
   })
 
-  it('carries the orientation copy, with the data-derived count, in the sheet', async () => {
+  it('carries the orientation copy and the actions in the sheet', async () => {
     stubViewport(true)
     setupRows(3)
     renderWithProviders(<DistrictsPage />)
     await screen.findAllByTestId(/^district-row-/)
     await userEvent.click(screen.getByTestId('context-bar-chip'))
     const sheet = screen.getByRole('dialog')
-    expect(sheet).toHaveTextContent(
-      /Each row below is one of the 3 Toastmasters districts worldwide/
-    )
+    // #2249 — the count-bearing sentence is gone with the orientation
+    // paragraph; the sheet keeps the touch-worded how-to.
+    expect(sheet).toHaveTextContent(/Tap a district to drill into/)
     expect(
       within(sheet).getByRole('button', { name: 'Export CSV' })
     ).toBeInTheDocument()
   })
 
-  it('drops the "(press /)" keyboard hint from the phone search placeholder', async () => {
+  it('leads with the labelled hero search on phones (#2249)', async () => {
     stubViewport(true)
     setupRows(3)
-    renderWithProviders(<DistrictsPage />)
+    const { container } = renderWithProviders(<DistrictsPage />)
     await screen.findAllByTestId(/^district-row-/)
-    const input = screen.getByRole('textbox', {
-      name: 'Search districts by number or name',
-    })
-    expect(input.getAttribute('placeholder')).not.toMatch(/press/)
-  })
-
-  it('keeps the desktop placeholder, shortcut hint included (>=768 unchanged)', async () => {
-    stubViewport(false)
-    setupRows(3)
-    renderWithProviders(<DistrictsPage />)
-    await screen.findAllByTestId(/^district-row-/)
-    expect(
-      screen.getByRole('textbox', {
-        name: 'Search districts by number or name',
-      })
-    ).toHaveAttribute(
-      'placeholder',
-      'Search by district number or name… (press /)'
+    const stack = container.querySelector('.districts-hero-stack')!
+    expect(stack.firstElementChild).toHaveClass(
+      'districts-toolbar__search--hero'
     )
+    expect(
+      screen.getByRole('combobox', {
+        name: /find a district, club or region/i,
+      })
+    ).toBeInTheDocument()
   })
 })

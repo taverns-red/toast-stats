@@ -624,21 +624,20 @@ describe('DistrictsPage - Layout Order (#83)', () => {
     expect(selectRegionsButton).toHaveAttribute('aria-expanded', 'true')
   })
 
-  it('renders the redesign h1 "District Rankings" (#356)', async () => {
+  it('renders the h1 "Find a district, club or region" (#356, #2249)', async () => {
     setupWithData()
 
     renderWithProviders(<DistrictsPage />)
 
     await screen.findByText('District 1')
 
-    // The h1 was rewritten in #356 — old wording was "Toastmasters District
-    // Rankings" with a text-2xl class; the redesign uses just "District
-    // Rankings" with the .districts-page-header__title class (Montserrat
-    // 800 / 28px). The chrome contract is asserted in detail by
+    // #356 rewrote the h1 to "District Rankings"; #2249 made the page's
+    // primary job its title and moved "District Rankings" to the table's
+    // own h2. The chrome contract is asserted in detail by
     // DistrictsPage.redesign.test.tsx.
     const heading = screen.getByRole('heading', {
       level: 1,
-      name: /^district rankings$/i,
+      name: /^find a district, club or region$/i,
     })
     expect(heading).toBeInTheDocument()
   })
