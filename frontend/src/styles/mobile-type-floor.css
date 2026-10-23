@@ -60,6 +60,13 @@
 
   /* 4. Data, links, pills, chips, captions and prose: 14px. */
   /* Landing */
+  /* #2249: the Red Vote fine print, the World pulse tile labels and
+     captions, the KPI sub-line and the my-district movement line. */
+  .red-vote-block__fine,
+  .world-pulse__tile-label,
+  .world-pulse__caption,
+  .districts-kpi-card__sub,
+  .my-district-card__move,
   .districts-methodology-callout,
   .districts-methodology-callout__link,
   .districts-toolbar__recognition-chip,
