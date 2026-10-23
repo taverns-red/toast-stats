@@ -72,6 +72,7 @@
 @import './styles/components/red-vote-promo.css';
 @import './styles/components/landing-search.css';
 @import './styles/components/landing-pulse.css';
+@import './styles/components/red-vote-block.css';
 @import './styles/components/priority-columns.css';
 /* Safe-area insets + short-landscape chrome (#1847) — after the chrome
    sheets it pads (app-shell, context-bar, section-bar, chart sheet). */

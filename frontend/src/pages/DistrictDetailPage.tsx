@@ -894,7 +894,7 @@ const DistrictDetailPageInner: React.FC = () => {
                 it too since #2093 freed the hub's 4,000px page budget
                 (e2e/district-overview-hub-mobile.smoke.ts). */}
             {districtId && hasOverviewData && !isLoadingOverview && (
-              <RedVotePromo surface="district" />
+              <RedVotePromo />
             )}
           </div>
         </div>

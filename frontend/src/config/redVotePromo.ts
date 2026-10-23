@@ -14,11 +14,19 @@ const RED_VOTE_BASE_URL = 'https://taverns.red/red-vote'
 
 /** Where a link sits; it becomes the link's `utm_medium` and the GA slot. */
 export type RedVotePlacement =
-  'district-card' | 'seasonal-banner' | 'footer' | 'methodology'
+  | 'district-card'
+  | 'seasonal-banner'
+  | 'landing-block'
+  | 'footer'
+  | 'methodology'
 
 export const RED_VOTE_COPY = {
   cardHeading: 'Run your DEC and District Council votes with Red Vote',
   bannerHeading: 'District Council voting season',
+  // #2249 — the landing block's eyebrow: what Red Vote is for, and the
+  // season when one is on.
+  blockEyebrow: 'District Council · DEC meetings',
+  blockEyebrowSeason: 'District Council season',
   body: 'Running DEC meetings or District Council votes? Red Vote handles secure district voting.',
   cta: 'See Red Vote',
   attribution: 'Red Vote is from Red Taverns, the makers of Toast Stats.',

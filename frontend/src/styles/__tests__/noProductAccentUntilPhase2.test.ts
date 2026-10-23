@@ -21,10 +21,23 @@ import { dirname, join, relative, resolve } from 'node:path'
 const here = dirname(fileURLToPath(import.meta.url))
 const srcDir = resolve(here, '../..')
 
-const ALLOWLIST = new Set(['styles/tokens/rt-brand-v1.css'])
+const ALLOWLIST = new Set([
+  'styles/tokens/rt-brand-v1.css',
+  // #2249 — the ONE scoped exception (Ron, 2026-10-23): the landing's Red
+  // Vote block is a self-contained surface in Red Vote's own colours, logo
+  // and type. Its stylesheet alone — the component carries no brand value
+  // (the inlined pennant's fills are classes in this sheet). Everything
+  // around it stays on the legacy palette.
+  'styles/components/red-vote-block.css',
+])
 
-/** The accent token (any suffix, e.g. -focus) and its two amber hexes. */
-const FORBIDDEN = /--rt-stats(?![\w])|#d4873f\b|#b5651d\b/gi
+/** The accent token (any suffix, e.g. -focus), its two amber hexes, and —
+    since #2249 — the Red Vote brand colour tokens (--rt-vote, --rt-red*,
+    --rt-paper*, --rt-bg*), which only the allowlisted sheet may use. Hexes
+    beyond the ambers are not policed: the map's red pin (locatorPins.ts)
+    predates this and is a pin, not a palette. */
+const FORBIDDEN =
+  /--rt-(?:stats|vote|red|paper|bg)(?![\w])|--rt-(?:stats|red|paper|bg)-[\w-]+|#d4873f\b|#b5651d\b/gi
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -80,8 +93,6 @@ describe('no --rt-stats accent outside the brand tokens file (#2080)', () => {
       'border-color: var(--rt-red-dk);',
       'background: var(--rt-paper);',
       'background: var(--rt-bg-2);',
-      'fill="#E63946"',
-      'color: #8e1b25;',
     ]) {
       expect(s.match(FORBIDDEN), s).not.toBeNull()
     }

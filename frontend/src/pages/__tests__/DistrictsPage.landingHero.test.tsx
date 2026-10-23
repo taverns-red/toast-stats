@@ -119,6 +119,21 @@ describe('DistrictsPage — landing hero wiring (#2249)', () => {
     expect(container.querySelector('.world-pulse--reserve')).not.toBeNull()
   })
 
+  it('puts the Red Vote block right after the World pulse, in both shells, and retires the landing banner', async () => {
+    mockedFetchCdnRankings.mockReturnValueOnce(new Promise(() => {}))
+    const { container, unmount } = renderWithProviders(<DistrictsPage />)
+    expect(container.querySelector('.red-vote-block')).not.toBeNull()
+    unmount()
+
+    setupWithData()
+    const { container: c2 } = renderWithProviders(<DistrictsPage />)
+    await screen.findByText('District 57')
+    const pulse = screen.getByRole('region', { name: /world pulse/i })
+    expect(pulse.nextElementSibling).toBe(screen.getByTestId('red-vote-block'))
+    // One Red Vote surface on the landing: no seasonal banner / promo card.
+    expect(c2.querySelector('.red-vote-promo')).toBeNull()
+  })
+
   it('states each KPI against the program-year base, with a held slot while loading', async () => {
     mockedFetchCdnRankings.mockReturnValueOnce(new Promise(() => {}))
     const { unmount } = renderWithProviders(<DistrictsPage />)

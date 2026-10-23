@@ -12,11 +12,13 @@ import { trackEvent } from '../utils/analytics'
 
 /* Red Vote promotion (#2090). District-level only — never on club pages.
 
-     district surface — out of season, or once the banner is dismissed: a
-                        quiet card. In season: the dismissible banner.
-     landing surface  — in season only: the same dismissible banner.
+     district Overview — out of season, or once the banner is dismissed: a
+                         quiet card. In season: the dismissible banner.
+     landing           — since #2249 its own RedVoteBlock (components/
+                         RedVoteBlock.tsx); the seasonal banner no longer
+                         renders there.
 
-   Both surfaces sit at the END of their page, after the data has rendered,
+   The card sits at the END of its page, after the data has rendered,
    so they never cover data, never push content down (no CLS) and leave the
    375 first-content budgets alone. Dismissal is one localStorage value per
    season (try/catch-wrapped in localStorageStore), so dismissing on one page
@@ -59,9 +61,7 @@ const PromoLink: React.FC<{
   </a>
 )
 
-export const RedVotePromo: React.FC<{ surface: 'district' | 'landing' }> = ({
-  surface,
-}) => {
+export const RedVotePromo: React.FC = () => {
   const headingId = useId()
   const season = useRedVoteSeason()
   const [dismissed, setDismissed] = useState<string | null>(() =>
@@ -69,7 +69,6 @@ export const RedVotePromo: React.FC<{ surface: 'district' | 'landing' }> = ({
   )
 
   const banner = season !== null && dismissed !== season.key
-  if (!banner && surface === 'landing') return null
 
   const placement: RedVotePlacement = banner
     ? 'seasonal-banner'

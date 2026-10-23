@@ -67,7 +67,7 @@ import {
   MyDistrictCardReserve,
 } from '../components/MyDistrictCard'
 import { WorldPulse } from '../components/WorldPulse'
-import { RedVotePromo } from '../components/RedVotePromo'
+import { RedVoteBlock } from '../components/RedVoteBlock'
 import { snapshotDatesFrom } from '../types/snapshotDate'
 
 // Columns in the rankings table head: District, Rank, Paid Clubs, Total
@@ -1015,6 +1015,8 @@ const DistrictsPage: React.FC = () => {
               reserve
             />
           )}
+          {/* #2249 — the Red Vote block is static, so the real thing. */}
+          {reserveHeroSlots && <RedVoteBlock />}
           {reserveHeroSlots && (
             <>
               {/* The section's own #750 skeleton — same component, so the
@@ -1856,6 +1858,8 @@ const DistrictsPage: React.FC = () => {
             date={effectiveRankingsDate}
             programYear={selectedProgramYear.label}
           />
+          {/* #2249 — Red Vote: prominent but secondary, in its own brand. */}
+          <RedVoteBlock />
 
           {/* Awards Race — competitive district awards (#331).
               #862 — at <768px the heavy 3-card section is deferred behind a
@@ -2243,10 +2247,6 @@ const DistrictsPage: React.FC = () => {
           </a>{' '}
           page.
         </div>
-
-        {/* Red Vote seasonal banner (#2090) — in season only, last on the
-            loaded page, so it never covers data or shifts it. */}
-        <RedVotePromo surface="landing" />
       </div>
     </div>
   )
