@@ -19,7 +19,6 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useRegionRollups } from '../hooks/useRegionRollups'
 import { fetchCdnRegionMembershipSeries } from '../services/cdn'
-import { useIsMobile } from '../hooks/useIsMobile'
 import type { SnapshotDate } from '../types/snapshotDate'
 
 /** The four fields the section reads from a rankings row. */
@@ -39,7 +38,7 @@ interface WorldPulseProps {
   reserve?: boolean
 }
 
-const PHONE_REGION_ROWS = 5
+const TOP_REGION_ROWS = 5
 
 const fmt = (n: number) => n.toLocaleString()
 const signed = (n: number) =>
@@ -66,15 +65,11 @@ function summarizeRegions(rows: readonly WorldPulseRow[]): RegionSummary[] {
     s.delta += (r.paidClubs ?? 0) - (r.paidClubBase ?? 0)
     by.set(r.region, s)
   }
-  // Numeric regions first, in order; the non-numeric buckets (DNAR) last.
-  return Array.from(by.values()).sort((a, b) => {
-    const an = /^\d+$/.test(a.region)
-    const bn = /^\d+$/.test(b.region)
-    if (an !== bn) return an ? -1 : 1
-    return an
-      ? Number(a.region) - Number(b.region)
-      : a.region.localeCompare(b.region)
-  })
+  // Largest first (review S1): the section shows the five biggest regions
+  // at every width and links to the rest.
+  return Array.from(by.values()).sort(
+    (a, b) => b.paidClubs - a.paidClubs || a.region.localeCompare(b.region)
+  )
 }
 
 const regionLabel = (region: string) =>
@@ -141,7 +136,6 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
   programYear,
   reserve = false,
 }) => {
-  const isMobile = useIsMobile(768)
   const { rollups, isLoading: rollupsLoading } = useRegionRollups(date)
   const world = rollups?.world ?? null
 
@@ -159,8 +153,7 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
   )
 
   const regions = useMemo(() => summarizeRegions(rows), [rows])
-  const shownRegions =
-    isMobile && !reserve ? regions.slice(0, PHONE_REGION_ROWS) : regions
+  const shownRegions = regions.slice(0, TOP_REGION_ROWS)
 
   const figure = (n: number | null | undefined): string => {
     if (reserve || rollupsLoading) return '—'
@@ -265,7 +258,7 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
                 Paid clubs
               </th>
               <th scope="col" className="world-pulse__num">
-                vs base
+                vs PY start
               </th>
             </tr>
           </thead>
@@ -288,7 +281,7 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
             ))}
           </tbody>
         </table>
-        {isMobile && !reserve && regions.length > PHONE_REGION_ROWS && (
+        {!reserve && regions.length > TOP_REGION_ROWS && (
           <Link to="/regions" className="world-pulse__more">
             All {regions.length} regions <span aria-hidden="true">→</span>
           </Link>

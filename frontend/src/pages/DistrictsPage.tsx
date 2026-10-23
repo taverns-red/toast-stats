@@ -449,8 +449,8 @@ const DistrictsPage: React.FC = () => {
         ? Math.round((kpiTotals.distinguishedClubs / kpiTotals.paidClubs) * 100)
         : null
     return {
-      paidClubs: `${signedDelta(kpiTotals.paidClubs - kpiTotals.paidClubBase)} vs base`,
-      payments: `${signedDelta(kpiTotals.totalPayments - kpiTotals.paymentBase)} vs base`,
+      paidClubs: `${signedDelta(kpiTotals.paidClubs - kpiTotals.paidClubBase)} vs PY start`,
+      payments: `${signedDelta(kpiTotals.totalPayments - kpiTotals.paymentBase)} vs last year's base`,
       distinguished: pct === null ? '—' : `${pct}% of paid clubs`,
     }
   }

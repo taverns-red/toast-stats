@@ -253,11 +253,15 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* The region count is stable (14 + DNAR), so the reserve holds 15 rows
-     on wide screens and the phone's 5; a data-dependent count would have
-     nothing to reserve against (#1359 gap c). */
+  /* Five rows at every width (review S1) plus the head and the link; a
+     data-dependent count would have nothing to reserve against (#1359 gap
+     c). */
   .world-pulse__regions {
     min-height: calc(6 * 31px + 44px);
+  }
+
+  .world-pulse__table tbody th {
+    white-space: nowrap;
   }
 
   .world-pulse__more {
@@ -269,10 +273,6 @@
   @media (min-width: 768px) {
     .world-pulse__grid {
       grid-template-columns: 3fr 2fr;
-    }
-
-    .world-pulse__regions {
-      min-height: calc(16 * 31px);
     }
   }
 }
