@@ -94,13 +94,16 @@ describe('RedVoteBlock (#2249)', () => {
 describe('RedVoteBlock — brand fonts load only near the viewport (#2249 LCP)', () => {
   type IOCallback = (entries: IntersectionObserverEntry[]) => void
   let callbacks: IOCallback[]
+  let margins: string[]
   let observe: ReturnType<typeof vi.fn>
   beforeEach(() => {
     callbacks = []
+    margins = []
     observe = vi.fn()
     class FakeIO {
-      constructor(cb: IOCallback) {
+      constructor(cb: IOCallback, init?: { rootMargin?: string }) {
         callbacks.push(cb)
+        margins.push(init?.rootMargin ?? '')
       }
       observe = observe
       disconnect = vi.fn()
@@ -123,6 +126,16 @@ describe('RedVoteBlock — brand fonts load only near the viewport (#2249 LCP)',
       callbacks[0]!([{ isIntersecting: true } as IntersectionObserverEntry])
     })
     expect(block).toHaveClass('red-vote-block--brand-fonts')
+  })
+
+  // The mobile Lighthouse viewport is 412×823 and the block starts at
+  // ~1150px at phone widths: a 600px margin covered it on load, so the
+  // fonts were fetched at first paint after all (attempt 2 of run
+  // 40014700309). The margin must leave the block out of reach on load.
+  it('watches with a margin small enough to leave the block below the fold on load', () => {
+    renderAt(OUT_OF_SEASON)
+    const px = parseInt(margins[0] ?? '0', 10)
+    expect(px, `rootMargin ${margins[0]}`).toBeLessThanOrEqual(200)
   })
 
   it('uses the brand stacks at once where IntersectionObserver is missing', () => {
