@@ -30,6 +30,8 @@ Complete data flow from Toastmasters dashboard scraping through GCS to Cloud CDN
 | `backfill-global-totals`    | Manual dispatch                                     | Builds `global-totals.json` for already-published dates, one at a time                             |
 | `backfill-education-ledger` | Manual dispatch                                     | Fetches the education ledger history into staging only; no gates/promotion                         |
 
+On `daily`, a manual `districts` override has its spaces dropped (`57, 58` → `57,58`) before it reaches the runner, which takes only a comma-separated id list (#2274).
+
 #### `force` and `allow_partial` per mode (#1771, ADR-015 P7)
 
 `force` means one thing in every mode: **re-fetch and re-derive even if cached**. Where a

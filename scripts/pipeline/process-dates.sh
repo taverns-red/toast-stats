@@ -789,7 +789,7 @@ process_one() {
     # staging holds for districts they did not re-derive.
     case "${MODE}" in
       rebuild) remove_gap_districts "${actual}" ;;
-      rescrape | rescrape-historical) ;;
+      rescrape | rescrape-historical | daily) ;;
     esac
     PUBLISHED_DATES+=("${actual}")
     if [ "${compute_ok}" = 1 ]; then OUTCOME=published; else OUTCOME=compute-failed; fi
