@@ -21,6 +21,11 @@ export interface ClubMeetingInfo {
   /** Free-text day (TI's field, verbatim) and time, joined with " · ". */
   schedule: string | null
   /**
+   * #2247 — set (and `schedule` null) when TI's day or time is unreadable
+   * (`isUnreadableFacText`): the "?" text is never shown.
+   */
+  scheduleNote?: string
+  /**
    * "Meets online" when TI's street is a meeting link; else "Online or
    * hybrid" / "In person" from allowsVirtualAttendance.
    */
@@ -146,6 +151,49 @@ function safeHttpUrl(value: string | undefined): string | null {
 }
 
 /**
+ * #2247 — TI's Find-a-Club API sends literal "?" bytes (0x3F) where a club
+ * typed CJK text: D88 06513503 is `"MeetingDay":"???"`,
+ * `"MeetingTime":"??2:30-??4:30"` on the wire (上午/下午 → "??",
+ * 星期X → "???"). The words are gone upstream, so the text is never shown
+ * or parsed (Ron, 2026-10-24); the note sends the reader to TI's page.
+ */
+export const UNREADABLE_SCHEDULE_NOTE =
+  'Meeting time not readable — see toastmasters.org'
+
+/**
+ * True when a FAC day/time value is "?" placeholders for lost words:
+ * it has no letter in any script (so "Tuesday?", "Mon ??" and real CJK
+ * like "下午2:30" stay readable), contains a "?", and either has a run of
+ * two or more "?" ("??2:30-??4:30", "??6?") or no digit at all ("?").
+ * A lone "?" beside a real time ("7:30?", "19:00 ?") stays readable.
+ */
+export function isUnreadableFacText(text: string): boolean {
+  if (/\p{L}/u.test(text) || !text.includes('?')) return false
+  return /\?{2,}/.test(text) || !/\p{N}/u.test(text)
+}
+
+const UNREADABLE = Symbol('unreadable')
+
+/**
+ * The public day and formatted time, or UNREADABLE when either is "?"
+ * text: a time without its day (D88 07166169: "???" + "6:30 - 8:30 PM")
+ * is half a schedule, so the note replaces both.
+ */
+function scheduleParts(
+  club: Pick<ClubMeetingSource, 'meetingDay' | 'meetingTime'>
+): [string | null, string | null] | typeof UNREADABLE {
+  const day = publicText(club.meetingDay)
+  const rawTime = publicText(club.meetingTime)
+  if (
+    (day !== null && isUnreadableFacText(day)) ||
+    (rawTime !== null && isUnreadableFacText(rawTime))
+  ) {
+    return UNREADABLE
+  }
+  return [day, rawTime === null ? null : formatMeetingTime(rawTime)]
+}
+
+/**
  * #2174 — when an online-only club meets, as "Tuesday 7:00 pm": the same
  * public, link-free day and time the hero shows. Null when neither is known.
  * FAC carries no meeting timezone, so none is added.
@@ -153,10 +201,10 @@ function safeHttpUrl(value: string | undefined): string | null {
 export function meetingWhen(
   club: Pick<ClubMeetingSource, 'meetingDay' | 'meetingTime'>
 ): string | null {
-  const day = publicText(club.meetingDay)
-  const rawTime = publicText(club.meetingTime)
-  const time = rawTime === null ? null : formatMeetingTime(rawTime)
-  return [day, time].filter(Boolean).join(' ') || null
+  const parts = scheduleParts(club)
+  return parts === UNREADABLE
+    ? UNREADABLE_SCHEDULE_NOTE
+    : parts.filter(Boolean).join(' ') || null
 }
 
 /**
@@ -169,10 +217,9 @@ export function meetingWhen(
 export function buildClubMeetingInfo(
   club: ClubMeetingSource
 ): ClubMeetingInfo | null {
-  const day = publicText(club.meetingDay)
-  const rawTime = publicText(club.meetingTime)
-  const time = rawTime === null ? null : formatMeetingTime(rawTime)
-  const schedule = [day, time].filter(Boolean).join(' · ') || null
+  const parts = scheduleParts(club)
+  const unreadable = parts === UNREADABLE
+  const schedule = unreadable ? null : parts.filter(Boolean).join(' · ') || null
 
   // A street that is only a link (or meeting access) means the club's
   // meeting place is online. A street left after the link is kept (#2069).
@@ -199,6 +246,7 @@ export function buildClubMeetingInfo(
   const websiteUrl = safeHttpUrl(club.website)
 
   const hasFac =
+    unreadable ||
     schedule !== null ||
     mode !== null ||
     place !== null ||
@@ -208,6 +256,7 @@ export function buildClubMeetingInfo(
 
   return {
     schedule,
+    ...(unreadable && { scheduleNote: UNREADABLE_SCHEDULE_NOTE }),
     mode,
     place,
     websiteUrl,
