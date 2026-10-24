@@ -564,24 +564,36 @@ function clock(minutes: number | undefined): string | undefined {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
+/** The folded time text with am/pm, noon and HHMM forms normalised. */
+function normalisedTimeText(time: string): string {
+  return (
+    fold(time)
+      .replace(/\b12(?::00)?\s*noon\b/g, 'noon')
+      .replace(/\bnoon\s*\/\s*midi\b/g, 'noon')
+      .replace(/(?<!-)\bmidi\b/g, 'noon')
+      .replace(/(?:(?<=\d)|\b)([ap])\.?\s?m\b\.?/g, '$1m') // "7:30p.m." too
+      // "1600 hrs", "11:00 hours" → h-notation (24-hour); a lone "2 hours"
+      // is a duration and stays out. "730 pm" → "7:30 pm" (#2243).
+      .replace(HHMM_HRS, '$1h$2')
+      .replace(HHMM_RANGE_MERIDIEM, '$1:$2$3$4:$5')
+      .replace(HHMM_MERIDIEM, '$1:$2')
+  )
+}
+
 /**
- * Meeting time slots: "7:00 pm - 9:00 pm" is one slot with an end; "18h30
+ * Meeting time slots: "7:00 pm - 9:00 pm" is one slot; "18h30
  * pm et 7:00 am" is two. A token that follows prose ("link opens 7:15PM")
  * ends the list.
  */
 function timeSlotsIn(time: string | null | undefined): Slot[] {
   if (typeof time !== 'string') return []
-  const text = fold(time)
-    .replace(/\b12(?::00)?\s*noon\b/g, 'noon')
-    .replace(/\bnoon\s*\/\s*midi\b/g, 'noon')
-    .replace(/(?<!-)\bmidi\b/g, 'noon')
-    .replace(/(?:(?<=\d)|\b)([ap])\.?\s?m\b\.?/g, '$1m') // "7:30p.m." too
-    // "1600 hrs", "11:00 hours" → h-notation (24-hour); a lone "2 hours"
-    // is a duration and stays out. "730 pm" → "7:30 pm" (#2243).
-    .replace(HHMM_HRS, '$1h$2')
-    .replace(HHMM_RANGE_MERIDIEM, '$1:$2$3$4:$5')
-    .replace(HHMM_MERIDIEM, '$1:$2')
-  const tokens = timeTokensIn(text)
+  const text = normalisedTimeText(time)
+  return slotsFrom(timeTokensIn(text), text)
+}
+
+/** Slots read from `tokens`, a run of the tokens of `text`. */
+function slotsFrom(found: readonly TimeToken[], text: string): Slot[] {
+  const tokens = [...found]
   const between = (a: TimeToken, b: TimeToken): string =>
     text.slice(a.end, b.start)
   const slots: Slot[] = []
@@ -657,6 +669,94 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
   return slots
 }
 
+interface DayMention {
+  day: MeetingWeekday
+  start: number
+  end: number
+}
+
+function dayMentionsIn(text: string): DayMention[] {
+  const mentions: DayMention[] = []
+  for (const [day, pattern] of WEEKDAY_PATTERNS) {
+    pattern.lastIndex = 0
+    for (const match of text.matchAll(pattern)) {
+      const start = match.index ?? 0
+      mentions.push({ day, start, end: start + match[0].length })
+    }
+  }
+  return mentions.sort((a, b) => a.start - b.start)
+}
+
+/**
+ * Per-day slots when the time text names two or more weekdays (#2246):
+ * "Sat 9:15am - 11:45 | Wed 7pm - 9pm", "6:30 pm(Sat), 7:00 pm(Fri)".
+ *
+ * Day words with no time between them form a group that shares one time
+ * ("Mon & Wed 7 pm"). If the text opens with a day, each group owns the
+ * times that follow it, up to the next group; if it opens with a time,
+ * each group owns the times before it, back to the previous group. Each
+ * group takes the first slot of its own times.
+ *
+ * Undefined when fewer than two weekdays are named: the caller keeps the
+ * whole-field reading. An ambiguous pairing gives an empty map, so every
+ * day is "time not stated" rather than a guess: a time both before the
+ * first day and after the last ("7 pm Tue, Wed 8 pm"), or one day given
+ * two different times.
+ */
+function daySlotsIn(
+  time: string | null | undefined
+): Map<MeetingWeekday, Slot> | undefined {
+  if (typeof time !== 'string') return undefined
+  const text = normalisedTimeText(time)
+  const mentions = dayMentionsIn(text)
+  if (new Set(mentions.map(m => m.day)).size < 2) return undefined
+  const tokens = timeTokensIn(text)
+  const first = tokens[0]
+  if (first === undefined) return undefined
+
+  const groups: { days: MeetingWeekday[]; start: number; end: number }[] = []
+  for (const mention of mentions) {
+    const last = groups[groups.length - 1]
+    const timeBetween =
+      last !== undefined &&
+      tokens.some(t => t.start >= last.end && t.start < mention.start)
+    if (last && !timeBetween) {
+      last.days.push(mention.day)
+      last.end = mention.end
+    } else {
+      groups.push({
+        days: [mention.day],
+        start: mention.start,
+        end: mention.end,
+      })
+    }
+  }
+
+  const ambiguous = new Map<MeetingWeekday, Slot>()
+  const dayFirst = (mentions[0] as DayMention).start < first.start
+  const lastGroup = groups[groups.length - 1] as (typeof groups)[number]
+  if (!dayFirst && tokens.some(t => t.start >= lastGroup.end)) return ambiguous
+
+  const bySlot = new Map<MeetingWeekday, Slot>()
+  for (const [k, group] of groups.entries()) {
+    const from = dayFirst ? group.end : (groups[k - 1]?.end ?? 0)
+    const to = dayFirst ? (groups[k + 1]?.start ?? text.length) : group.start
+    const own = tokens.filter(t => t.start >= from && t.start < to)
+    const slot = slotsFrom(own, text)[0] ?? {}
+    for (const day of group.days) {
+      const held = bySlot.get(day)
+      if (
+        held &&
+        (held.startTime !== slot.startTime || held.endTime !== slot.endTime)
+      ) {
+        return ambiguous
+      }
+      bySlot.set(day, slot)
+    }
+  }
+  return bySlot
+}
+
 /* ── Parser ────────────────────────────────────────────────────────── */
 
 export interface MeetingScheduleSource {
@@ -702,12 +802,17 @@ export function parseMeetingSchedule(
     meetingModeFromText(scrubFacLocation(source.location), { place: true })
 
   const slots = timeSlotsIn(source.meetingTime)
-  const slotFor = (index: number): Slot =>
-    (slots.length === days.length ? slots[index] : slots[0]) ?? {}
+  const perDay = daySlotsIn(source.meetingTime)
+  const slotFor = (day: MeetingWeekday, index: number): Slot =>
+    (perDay
+      ? perDay.get(day)
+      : slots.length === days.length
+        ? slots[index]
+        : slots[0]) ?? {}
 
   const entries: MeetingScheduleEntry[] = []
   days.forEach((day, index) => {
-    const { startTime, endTime } = slotFor(index)
+    const { startTime, endTime } = slotFor(day, index)
     if (cadence === 'monthly') {
       for (const group of groups) {
         entries.push(
