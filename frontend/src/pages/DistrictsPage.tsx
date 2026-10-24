@@ -599,9 +599,9 @@ const DistrictsPage: React.FC = () => {
     currentMyDistrictId: myDistrictId,
   })
 
-  // Stamp the current visit forward whenever the snapshot date changes,
-  // so the next visit reads it as the previous one. The effect runs once
-  // per data load.
+  // Record this visit once the data lands. The baseline only moves when
+  // the as-of date is later than the last one seen (#2254), so a same-day
+  // reload keeps showing the movement since the previous data day.
   React.useEffect(() => {
     if (data?.asOfDate) commitLastVisit()
   }, [data?.asOfDate, commitLastVisit])
@@ -1672,7 +1672,8 @@ const DistrictsPage: React.FC = () => {
             </p>
             {/* What changed since last visit (#418) — only renders when the
                 user has visited before AND the snapshot date has changed.
-                Quiet, no dismiss control needed (it self-clears next visit). */}
+                Quiet, no dismiss control needed (it clears when a visit
+                on the same as-of date has nothing earlier to compare). */}
             {lastVisitDiff.isNewSnapshot && (
               <p
                 className="districts-page-header__diff-strip"
