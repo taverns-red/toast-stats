@@ -1292,6 +1292,37 @@ describe('parseMeetingSchedule (#2246) — per-day review cases (PR #2262)', () 
   })
 })
 
+describe('parseMeetingSchedule (#2246) — census cases (PR #2262 census)', () => {
+  it.each([
+    [
+      'Thursday, Monday',
+      '12:00 pm, hybrid Thurs, virtual Monday',
+      ['Thursday 12:00', 'Monday 12:00'],
+    ],
+    [
+      'Friday, Thursday',
+      'Fri:- 6 pm - 8 pm & Thur:6:30 am to 8 am',
+      ['Friday 18:00', 'Thursday 06:30'],
+    ],
+  ])('%j / %j', (d, t, e) => {
+    expect(starts(d, t)).toEqual(e)
+  })
+
+  it.each([
+    ['Time:7pm', '19:00'],
+    ['Tuesday:7:30 pm', '19:30'],
+  ])('a time right after a word and a colon counts: %j', (t, start) => {
+    expect(starts('Tuesday', t)).toEqual([`Tuesday ${start}`])
+  })
+
+  it.each([['12:00:00'], ['7.45:00 pm']])(
+    'a number after a digit and a colon still does not start a time: %j',
+    t => {
+      expect(starts('Tuesday', t)).not.toContain('Tuesday 00:00')
+    }
+  )
+})
+
 describe('parseMeetingSchedule (#2246) — a bare range after a mode or zone word', () => {
   it.each([
     ['Zoom 7-9 pm', '19:00'],
