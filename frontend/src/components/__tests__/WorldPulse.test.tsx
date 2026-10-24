@@ -287,6 +287,25 @@ describe('WorldPulse (#2249)', () => {
     expect(screen.getByTestId('pulse-payments-delta')).toHaveTextContent('—')
   })
 
+  // #2256 — measured on a local build at 375 and 1280: the shell's pulse
+  // was ~45px short of the loaded one (head 23 vs 45-49px: the loaded
+  // "All regions" link takes the 44px link floor, the reserve's span did
+  // not; sparkline 88 vs 107-111px: the reserve had no caption line), so
+  // everything below shifted when the data landed.
+  it('reserves the sparkline caption line while the series loads', () => {
+    mockedRollups.mockReturnValue({
+      rollups: null,
+      snapshotDate: null,
+      isLoading: true,
+    })
+    const { container } = renderPulse(true)
+    const caption = container.querySelector(
+      '.world-pulse__sparkline .world-pulse__caption'
+    )
+    expect(caption).not.toBeNull()
+    expect(caption).toHaveAttribute('aria-hidden', 'true')
+  })
+
   it('keeps every slot in the reserve, with no links and no numbers', () => {
     mockedRollups.mockReturnValue({
       rollups: null,

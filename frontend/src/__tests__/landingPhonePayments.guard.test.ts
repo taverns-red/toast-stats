@@ -41,3 +41,13 @@ describe('World pulse phone payments row (#2256)', () => {
     expect(rule('.world-pulse__payments')).toMatch(/min-height:\s*64px/)
   })
 })
+
+describe('World pulse reserve matches the loaded head (#2256)', () => {
+  it('gives "All regions" a 44px box as span (reserve) and link (loaded)', () => {
+    // The loaded link gets base.css's 44px link floor; the reserve renders
+    // a <span>, which does not. One rule for the class makes both 44px.
+    const own = rule('.world-pulse__all')
+    expect(own).toMatch(/min-height:\s*44px/)
+    expect(own).toMatch(/display:\s*inline-flex/)
+  })
+})
