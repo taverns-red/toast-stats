@@ -1,0 +1,96 @@
+name: Pipeline Harness
+
+# The local pipeline harness in CI (#1768, ADR-015 migration step 10, P3-2).
+#
+# Runs the data pipeline's canonical modes (daily, a subset rescrape, a
+# rescrape-historical, plus a truncated-store failure) end to end against the
+# gcloud shim, with a staging and a production bucket in one SHIM_ROOT, and
+# asserts the bytes and parsed shape of every object in the prod shim after
+# promotion (scripts/lib/pipelineHarness.ts, scripts/harness/). No network
+# and no GCS: `gcloud` is the shim and `gsutil` fails.
+#
+# Path-filtered so it costs nothing on PRs that cannot change the pipeline.
+# The filter names every file the harness runs: data-pipeline.yml (whose
+# step order it mirrors), the pipeline scripts and their libraries, the
+# collector-cli services, the shared contracts the gates and the schema gate
+# read, and the harness itself. Locally: `npm run test:pipeline-harness`, or
+# one mode with `npm run pipeline:local -- --mode <m> --fixture <date>`.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/data-pipeline.yml'
+      - '.github/workflows/pipeline-harness.yml'
+      - 'scripts/pipeline/**'
+      - 'scripts/lib/**'
+      - 'scripts/harness/**'
+      - 'scripts/pipeline-local.ts'
+      - 'scripts/club-trends-sync-scope.ts'
+      - 'scripts/store-encoding.ts'
+      - 'scripts/validate-snapshots.ts'
+      - 'scripts/partial-failure-gate.sh'
+      - 'scripts/pull-awards-history.sh'
+      - 'packages/collector-cli/src/services/**'
+      - 'packages/shared-contracts/src/**'
+      - 'package.json'
+      - '.nvmrc'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/data-pipeline.yml'
+      - '.github/workflows/pipeline-harness.yml'
+      - 'scripts/pipeline/**'
+      - 'scripts/lib/**'
+      - 'scripts/harness/**'
+      - 'scripts/pipeline-local.ts'
+      - 'scripts/club-trends-sync-scope.ts'
+      - 'scripts/store-encoding.ts'
+      - 'scripts/validate-snapshots.ts'
+      - 'scripts/partial-failure-gate.sh'
+      - 'scripts/pull-awards-history.sh'
+      - 'packages/collector-cli/src/services/**'
+      - 'packages/shared-contracts/src/**'
+      - 'package.json'
+      - '.nvmrc'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pipeline-harness-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  harness:
+    name: Pipeline Harness
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The gates and the schema gate import the built workspace packages
+      # (dist/ is gitignored, R16).
+      - name: Build packages
+        run: |
+          npm run build:shared-contracts
+          npm run build:analytics-core
+
+      - name: Toolchain versions
+        run: |
+          bash --version | head -1
+          jq --version
+          gzip --version | head -1
+
+      - name: Run the pipeline harness
+        run: npm run test:pipeline-harness
