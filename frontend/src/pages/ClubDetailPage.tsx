@@ -1296,6 +1296,7 @@ const ClubDetailPage: React.FC = () => {
             clubName={club.clubName}
             clubs={analytics?.allClubs ?? []}
             place={heroMeetingInfo?.place}
+            placeNote={heroMeetingInfo?.placeNote}
             meetsOnline={club.meetsOnline === true}
             when={meetingWhen(club)}
           />

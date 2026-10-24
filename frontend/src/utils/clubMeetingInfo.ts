@@ -32,6 +32,11 @@ export interface ClubMeetingInfo {
   mode: string | null
   /** Street, city, region — no postal code, country or meeting link. */
   place: string | null
+  /**
+   * #2268 — set when part or all of TI's address is "?" text
+   * (`isUnreadableFacText`): those parts are dropped from `place`.
+   */
+  placeNote?: string
   /** The club's own site, http(s) only, never a meeting host. */
   websiteUrl: string | null
   /** The club's page on toastmasters.org. */
@@ -176,6 +181,55 @@ export function isUnreadableFacText(text: string): boolean {
 export const UNREADABLE_DAY_NOTE = 'day not readable — see toastmasters.org'
 export const UNREADABLE_TIME_NOTE = 'time not readable — see toastmasters.org'
 
+/** #2268 — the address counterparts of the notes above. */
+export const UNREADABLE_ADDRESS_NOTE =
+  'Address not readable — see toastmasters.org'
+export const UNREADABLE_PARTIAL_ADDRESS_NOTE =
+  'address partly not readable — see toastmasters.org'
+
+/**
+ * One comma-separated address part with its "?" text removed, or null when
+ * nothing readable is left. A part the #2247 rule calls unreadable ("??")
+ * goes whole; inside a readable part, a word that is a "?" run among
+ * digits ("1????31" in "1????31 Xishiku") goes too. A lone "?" word
+ * ("(Room ?)") is left alone, as in a day or time.
+ */
+function readableAddressPart(part: string): string | null {
+  if (isUnreadableFacText(part)) return null
+  const words = part
+    .split(' ')
+    .filter(word => !(/\?{2,}/.test(word) && isUnreadableFacText(word)))
+  return words.join(' ') || null
+}
+
+/**
+ * #2268 — the public place line, dropping address parts TI sent as "?"
+ * text (D88 06513503: street "1????31 Xishiku,Xic", city "??", region
+ * "BJ" → "Xishiku, Xic, BJ"). A fully readable address is returned exactly
+ * as before; the note says whether some or all of it was lost.
+ */
+function placeParts(fields: Array<string | null>): {
+  place: string | null
+  note: string | null
+} {
+  const present = fields.filter((f): f is string => f !== null)
+  const parts = present.flatMap(f =>
+    f
+      .split(',')
+      .map(p => p.trim())
+      .filter(Boolean)
+  )
+  const kept = parts
+    .map(readableAddressPart)
+    .filter((p): p is string => p !== null)
+  const lost =
+    kept.length !== parts.length || kept.some((p, i) => p !== parts[i])
+  if (!lost) return { place: present.join(', ') || null, note: null }
+  return kept.length === 0
+    ? { place: null, note: UNREADABLE_ADDRESS_NOTE }
+    : { place: kept.join(', '), note: UNREADABLE_PARTIAL_ADDRESS_NOTE }
+}
+
 interface ScheduleParts {
   day: string | null
   time: string | null
@@ -252,10 +306,11 @@ export function buildClubMeetingInfo(
         ? 'In person'
         : null
 
-  const place =
-    [street, publicText(club.address?.city), publicText(club.address?.region)]
-      .filter(Boolean)
-      .join(', ') || null
+  const { place, note: placeNote } = placeParts([
+    street,
+    publicText(club.address?.city),
+    publicText(club.address?.region),
+  ])
 
   const websiteUrl = safeHttpUrl(club.website)
 
@@ -264,6 +319,7 @@ export function buildClubMeetingInfo(
     schedule !== null ||
     mode !== null ||
     place !== null ||
+    placeNote !== null ||
     websiteUrl !== null ||
     club.coordinates !== undefined
   if (!hasFac) return null
@@ -273,6 +329,7 @@ export function buildClubMeetingInfo(
     ...(scheduleNote !== null && { scheduleNote }),
     mode,
     place,
+    ...(placeNote !== null && { placeNote }),
     websiteUrl,
     contactUrl: toastmastersClubPageUrl(club.clubId),
   }

@@ -5,7 +5,9 @@ import {
   isUnreadableFacText,
   meetingWhen,
   toastmastersClubPageUrl,
+  UNREADABLE_ADDRESS_NOTE,
   UNREADABLE_DAY_NOTE,
+  UNREADABLE_PARTIAL_ADDRESS_NOTE,
   UNREADABLE_SCHEDULE_NOTE,
   UNREADABLE_TIME_NOTE,
 } from '../clubMeetingInfo'
@@ -574,5 +576,62 @@ describe('buildClubMeetingInfo — unreadable meeting text (#2247)', () => {
     expect(meetingWhen({ meetingDay: 'Friday', meetingTime: '??6?' })).toBe(
       'Friday · time not readable — see toastmasters.org'
     )
+  })
+})
+
+/**
+ * #2268 — the same "?" loss reaches addresses. D88 06513503 on the wire
+ * (prod snapshot 2026-10-23, district_88_analytics.json): street
+ * "1????31 Xishiku,Xic", city "??", region "BJ". Ron (2026-10-24): decide
+ * per comma-separated part — drop what the #2247 rule calls unreadable
+ * (a "?"-run word such as "1????31" too), keep the rest, and say so.
+ */
+describe('buildClubMeetingInfo — unreadable address (#2268)', () => {
+  const D88_06513503 = {
+    clubId: '06513503',
+    address: {
+      street: '1????31 Xishiku,Xic',
+      city: '??',
+      region: 'BJ',
+      country: 'China',
+    },
+    allowsVirtualAttendance: false,
+  }
+
+  it('keeps the readable parts and says the address is partly lost', () => {
+    const info = buildClubMeetingInfo(D88_06513503)
+    expect(info?.place).toBe('Xishiku, Xic, BJ')
+    expect(info?.placeNote).toBe(UNREADABLE_PARTIAL_ADDRESS_NOTE)
+    expect(UNREADABLE_PARTIAL_ADDRESS_NOTE).toBe(
+      'address partly not readable — see toastmasters.org'
+    )
+    expect(JSON.stringify(info)).not.toContain('?')
+  })
+
+  it('says the whole address is not readable when nothing is left', () => {
+    const info = buildClubMeetingInfo({
+      clubId: '1',
+      address: { street: '1????31 ??,???', city: '??', region: '?' },
+    })
+    expect(info).not.toBeNull()
+    expect(info?.place).toBeNull()
+    expect(info?.placeNote).toBe(UNREADABLE_ADDRESS_NOTE)
+    expect(UNREADABLE_ADDRESS_NOTE).toBe(
+      'Address not readable — see toastmasters.org'
+    )
+  })
+
+  it.each([
+    ['Where? Cafe, 12 King St', 'Where? Cafe, 12 King St, Kingston, ON'],
+    ['12 King St (Room ?)', '12 King St (Room ?), Kingston, ON'],
+    ['Suite 4?, 90 Elgin St', 'Suite 4?, 90 Elgin St, Kingston, ON'],
+    ['下午 Building, 5 Main', '下午 Building, 5 Main, Kingston, ON'],
+  ])('keeps a legitimate address with a "?" unchanged: %j', (street, place) => {
+    const info = buildClubMeetingInfo({
+      clubId: '2',
+      address: { street, city: 'Kingston', region: 'ON' },
+    })
+    expect(info?.place).toBe(place)
+    expect(info?.placeNote).toBeUndefined()
   })
 })
