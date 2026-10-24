@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# The per-date loop shared by the dispatch-only data modes (#1742, plan P3-1).
+# The per-date loop shared by every data mode (#1742, plan P3-1; daily
+# since #1765, ADR-015 step 7, P1).
 #
 # Usage: scripts/pipeline/process-dates.sh <bucket> <mode> [<date>...]
-#   <mode>: rebuild | rescrape | rescrape-historical
+#   <mode>: daily | rebuild | rescrape | rescrape-historical
 #   <date>: YYYY-MM-DD, processed in the order given. rescrape-historical
 #           takes the raw dates the previous step downloaded into
 #           $CACHE_DIR/raw-csv/ and leaves them there for its upload step.
@@ -17,6 +18,11 @@
 #                had landed).
 #   3. prev-year moved into stage 8 (#1769): it is keyed on the date the
 #                transform wrote, and every mode pulls it.
+#   3a. raw      daily: rsync raw-csv/<date>/ down from staging first, as
+#                the daily always has, so a re-run of a date reuses its
+#                stored raw unless FORCE is true (the scrape then re-fetches,
+#                #1771). Best effort: a date staging has never seen is
+#                scraped fresh.
 #   3b. hydrate  rescrape: rsync raw-csv/<date>/ and snapshots/<date>/ (with
 #                analytics/) down from staging, so the date-level artifacts
 #                are computed over the date's whole district set, not just
@@ -33,13 +39,26 @@
 #                requests the date's own as-of
 #                and fails rather than store another day's data (#1669). A
 #                failed scrape's leftovers are dropped so nothing publishes.
+#                daily: collector-cli scrape --date <date> --transform
+#                --districts $DISTRICTS (--force only when FORCE is true).
+#                Its exit code alone does not fail the date: a partial
+#                scrape (some districts failed, a #1671 gap) publishes what
+#                it wrote, as the daily always has (its `| tee` dropped the
+#                code). A scrape that wrote no snapshot fails the date. The
+#                scrape counts go to the summary.
 #   5. remap     the transform can write a different date than it was given
 #                (a close lands on its month-end, #193): the date it actually
 #                wrote is the one guarded, computed and uploaded.
 #   6. guard     never publish over a remote close (#1621,
 #                scripts/guard-snapshot-upload.ts). Exit 3 is the guard
 #                working: REFUSED. Any other non-zero (unreadable GCS): FAILED.
-#   7. enrich    the daily Find-A-Club fetch persisted under
+#   7. enrich    daily: fetch Find-A-Club live and persist it to raw-fac/
+#                <actual>/ (scripts/pipeline/daily-fac-fetch.sh, both
+#                non-blocking), then merge it, filling a district the fetch
+#                missed from the last persisted raw-fac/ before the date
+#                (scripts/pipeline/daily-fac-merge.sh, #1770, D-10). A
+#                failed merge or unreadable raw-fac/ FAILS the date.
+#                The other modes: the daily Find-A-Club fetch persisted under
 #                raw-fac/<actual>/ (ADR-015 P2, #1758) is pulled and
 #                merged into the snapshots with collector-cli
 #                merge-find-a-club, so a re-derived date keeps the daily's
@@ -69,7 +88,9 @@
 #                false) and the date is counted. Then collector-cli
 #                compute-analytics. A failure is counted, but
 #                the snapshots still upload (#1708); its JSON feeds the store
-#                counters either way.
+#                counters either way. daily: computes the $DISTRICTS list,
+#                and a failed compute FAILS the date, nothing uploaded, as
+#                the daily always has (its step failed before the upload).
 #   9. validate  scripts/validate-snapshots.ts on the date's directory
 #                (#1125, D-9): the merge rewrites snapshots in place, so the
 #                final files are checked against shared-contracts. A
@@ -78,7 +99,9 @@
 #                clubs-by-region/*.json (#1800), `-Z` with the CDN headers. An upload error aborts the loop (exit 1), as the
 #                inline loop's `set -e` did: the step fails before any store
 #                push. rescrape then rsyncs the re-collected raw-csv/<date>/
-#                up, replacing the old copy. Every object uploaded is
+#                up, replacing the old copy, and so does daily (raw-csv/
+#                <date>/ is keyed by the collection date, not the snapshot
+#                date). Every object uploaded is
 #                recorded in the run manifest (gcs-upload.sh, #1762).
 #  10b. remove   rebuild only (#2232): each #1671 gap district the date's
 #                metadata.json records loses its earlier transform objects
@@ -92,19 +115,25 @@
 #                directories, so no later step reads a rebuilt date as
 #                "latest" (#295, #1670).
 #                rescrape-historical keeps its raw: the next step uploads it.
+#                daily keeps the raw and snapshot of a date it published:
+#                the workflow's CDN-manifest step reads the local latest
+#                snapshot and its rankings, as it always has.
 # After the loop, once per run:
 #  12. identity  scripts/pipeline/build-identity-history.sh <bucket> (#1782):
 #                the club-district history from the club-race store, to
 #                config/club-district-history/, and the district → region
 #                history (#1820) to config/district-region-history.json;
-#                both are promoted with the run. Daily runs the same script, so no mode builds it
-#                differently (ADR-015 P1). A failure is a warning and a
+#                both are promoted with the run. A failure is a warning and a
 #                summary line, never a failed run: the previous copies stand.
+#                daily: only when the date published (a failed daily never
+#                reached it before).
 #  13. education scripts/pipeline/build-education-rollup.sh <bucket> (#1801):
 #                the education rollup from the ledger history, the staged
 #                reports and the region history step 12 just wrote, to
 #                staging derived/education-rollup/ (never promoted until
-#                #1763). Same failure posture as step 12.
+#                #1763). Same failure posture as step 12. daily: skipped;
+#                the `education-rollup` job builds it after `place-reports`
+#                has written the date's reports (#2028).
 #  14. rollups   rebuild only: scripts/pipeline/build-reports-rollups.sh
 #                <bucket> <date> (#2012, #2202) for each date this run
 #                published (post-remap, in order, once each), after step 12
@@ -142,15 +171,31 @@
 #   DISTRICTS              rescrape: required. `discover` scrapes, per date,
 #                          the districts that date's own districtsummary lists
 #                          (scrape --discover-districts, #1766); otherwise a
-#                          comma-separated id list, the same for every date
+#                          comma-separated id list, the same for every date.
+#                          daily: required, an id list only: the workflow
+#                          resolves it once, with the program year (#1284),
+#                          and the FAC fetch and compute take it too
+#   DATE_RESULTS_FILE      optional: one JSON line per date is appended,
+#                          {"date":D,"actual":A|null,"outcome":O}, A the
+#                          date the transform wrote (post-remap), O one of
+#                          published | compute-failed | refused | failed.
+#                          The daily caller reads its raw and snapshot date
+#                          from it
+#   DAILY_FAC_FETCH        daily FAC fetch command (default: bash
+#                          scripts/pipeline/daily-fac-fetch.sh)
+#   DAILY_FAC_MERGE        daily FAC merge command (default: bash
+#                          scripts/pipeline/daily-fac-merge.sh)
 #   FORCE                  the `force` dispatch input: "true", "false" or ""
 #                          (a scheduled run); anything else is a usage error.
 #                          `force` means one thing in every mode: re-fetch and
-#                          re-derive even if cached (#1771, ADR-015 P7). Every
-#                          mode here IS a re-derivation, so all three are
-#                          forced whatever FORCE says (transform/scrape
-#                          --force, compute --force-analytics); the effective
-#                          value is logged. Decided once, in FORCE_ARGS below.
+#                          re-derive even if cached (#1771, ADR-015 P7).
+#                          rebuild, rescrape and rescrape-historical ARE
+#                          re-derivations, so they are forced whatever FORCE
+#                          says (transform/scrape --force, compute
+#                          --force-analytics). daily is forced only when
+#                          FORCE is true: otherwise its scrape reuses the
+#                          raw-csv stage 3a pulled. The effective value is
+#                          logged. Decided once, in FORCE_ARGS below.
 #   GITHUB_STEP_SUMMARY    date counts and store counters are appended here
 #   RUN_MANIFEST_FILE      required by any upload: every object uploaded is
 #                          appended (scripts/pipeline/gcs-upload.sh, #1762);
@@ -188,6 +233,18 @@ shift 2
 
 case "${MODE}" in
   rebuild | rescrape-historical) ;;
+  daily)
+    # One list, resolved once by the workflow with the program year (#1284):
+    # the scrape, the FAC fetch and compute all take it. R17: `discover` and
+    # empty are usage errors here, never a second discovery.
+    if [ "${DISTRICTS:-}" != "discover" ] &&
+      [[ "${DISTRICTS:-}" =~ ^[A-Za-z0-9]+(,[A-Za-z0-9]+)*$ ]]; then
+      DISTRICT_ARGS=(--districts "${DISTRICTS}")
+    else
+      echo "::error::process-dates: daily needs DISTRICTS (comma-separated ids, resolved by the workflow), got '${DISTRICTS:-}'" >&2
+      exit 2
+    fi
+    ;;
   rescrape)
     # `discover`: each date scrapes the districts its own districtsummary
     # lists (#1766, D-7). A list: those districts, hydrated (#1756). Empty is
@@ -215,12 +272,24 @@ case "${FORCE:-}" in
     ;;
 esac
 
-# The one force decision (#1771). R17: an explicit case per mode, even though
-# today every mode lands on the same answer.
+# The one force decision (#1771). R17: an explicit case per mode.
+# FORCE_ARGS goes to the scrape/transform, COMPUTE_FORCE_ARGS to compute.
 case "${MODE}" in
   rebuild | rescrape | rescrape-historical)
     FORCE_ARGS=(--force)
+    COMPUTE_FORCE_ARGS=(--force-analytics)
     echo "process-dates: force=always for ${MODE} (FORCE='${FORCE:-}')" >&2
+    ;;
+  daily)
+    if [ "${FORCE:-}" = "true" ]; then
+      FORCE_ARGS=(--force)
+      COMPUTE_FORCE_ARGS=(--force-analytics)
+      echo "process-dates: force=true for daily (FORCE='${FORCE}')" >&2
+    else
+      FORCE_ARGS=()
+      COMPUTE_FORCE_ARGS=()
+      echo "process-dates: force=false for daily (FORCE='${FORCE:-}')" >&2
+    fi
     ;;
 esac
 
@@ -250,6 +319,8 @@ read -r -a IDENTITY <<<"${BUILD_IDENTITY_HISTORY:-bash ${REPO}/scripts/pipeline/
 read -r -a EDUCATION <<<"${BUILD_EDUCATION_ROLLUP:-bash ${REPO}/scripts/pipeline/build-education-rollup.sh}"
 read -r -a PLAN_GAP <<<"${PLAN_GAP_REMOVALS:-${TSX} ${REPO}/scripts/plan-gap-removals.ts}"
 read -r -a ROLLUPS <<<"${BUILD_REPORTS_ROLLUPS:-bash ${REPO}/scripts/pipeline/build-reports-rollups.sh}"
+read -r -a FAC_FETCH <<<"${DAILY_FAC_FETCH:-bash ${REPO}/scripts/pipeline/daily-fac-fetch.sh}"
+read -r -a FAC_MERGE <<<"${DAILY_FAC_MERGE:-bash ${REPO}/scripts/pipeline/daily-fac-merge.sh}"
 # Every upload goes through the wrapper, so it lands in the run manifest.
 export GCLOUD
 UPLOAD=(bash "${REPO}/scripts/pipeline/gcs-upload.sh" "process-dates:${MODE}")
@@ -281,6 +352,8 @@ YOY_PRESENT=0
 YOY_ABSENT=0
 HYDRATED=""
 PREV=""
+ACTUAL=""
+RESULTS="${DATE_RESULTS_FILE:-/dev/null}"
 # Snapshot dates this run uploaded (post-remap), for step 14.
 PUBLISHED_DATES=()
 
@@ -491,6 +564,23 @@ carry_forward_fac() {
   return 0
 }
 
+# daily (#1765): fetch Find-A-Club live and persist it (non-blocking), then
+# merge it with the persisted fallback (fail-closed). Sets ENRICH to
+# enriched | failed.
+enrich_daily() {
+  local actual="$1"
+  ENRICH=failed
+  if ! "${FAC_FETCH[@]}" "${BUCKET}" "${actual}" "${DISTRICTS}" >/dev/null; then
+    echo "::warning::The Find-A-Club fetch for ${actual} did not run; the merge falls back to the last persisted raw-fac/"
+  fi
+  if "${FAC_MERGE[@]}" "${BUCKET}" "${actual}" >"${WORK}/fac-merge.json"; then
+    ENRICH=enriched
+  else
+    echo "::warning::Find-A-Club merge failed for ${actual}; nothing uploaded for it"
+  fi
+  return 0
+}
+
 # Merge the persisted Find-A-Club fetch for <date> into its snapshots, if
 # daily persisted one; otherwise carry_forward_fac. Sets ENRICH to enriched
 # | carried | unenriched | failed.
@@ -532,6 +622,7 @@ process_one() {
   OUTCOME=failed
   HYDRATED=""
   PREV=""
+  ACTUAL=""
   source="${date}"
   prev=""
 
@@ -557,6 +648,17 @@ process_one() {
     fi
   fi
 
+  # 3a. raw (daily) — the stored raw of the date, which the scrape reuses
+  # unless forced (#1771).
+  if [ "${MODE}" = "daily" ]; then
+    mkdir -p "${RAW}/${date}"
+    if ! "${GCLOUD}" storage rsync -r \
+      "gs://${BUCKET}/raw-csv/${date}/" "${RAW}/${date}/"; then
+      echo "No existing raw-csv for ${date} in staging (first run); the scrape fetches it"
+    fi
+    echo "- **CSV files restored** (raw-csv/${date}/): $(find "${RAW}/${date}" -name '*.csv' | wc -l | tr -d ' ')" >>"${SUMMARY}"
+  fi
+
   # 3b. hydrate (rescrape) — before `before`, so a hydrated date directory
   # is not mistaken for the transform's output by the remap below.
   if [ "${MODE}" = "rescrape" ]; then
@@ -565,7 +667,31 @@ process_one() {
   before="$(snapshot_dates)"
 
   # 4. transform
-  if [ "${MODE}" = "rescrape" ]; then
+  if [ "${MODE}" = "daily" ]; then
+    echo "Scraping and transforming ${date}..."
+    local scrape_status=0 scraped
+    "${COLLECTOR[@]}" scrape --date "${date}" --transform \
+      "${FORCE_ARGS[@]+"${FORCE_ARGS[@]}"}" --verbose "${DISTRICT_ARGS[@]}" \
+      >"${WORK}/scrape.json" || scrape_status=$?
+    cat "${WORK}/scrape.json"
+    {
+      echo "## 📥 Scrape Results"
+      echo "- **Date**: ${date}"
+      jq -r '"- **Districts succeeded**: \(.districts.succeeded)",
+        "- **Districts failed**: \(.districts.failed)"' "${WORK}/scrape.json" 2>/dev/null ||
+        echo "- ⚠️ the scrape printed no summary (exit ${scrape_status})"
+    } >>"${SUMMARY}"
+    scraped="$(comm -13 <(echo "${before}") <(snapshot_dates) | head -1)"
+    if [ -z "${scraped}" ] || [ ! -f "${SNAPSHOTS}/${scraped}/metadata.json" ]; then
+      echo "::warning::Scrape/transform of ${date} wrote no snapshot (exit ${scrape_status}); nothing uploaded for it"
+      if [ -n "${scraped}" ]; then rm -rf "${SNAPSHOTS:?}/${scraped}"; fi
+      cleanup_date "${source}" "" "${prev}"
+      return 0
+    fi
+    if [ "${scrape_status}" -ne 0 ]; then
+      echo "::warning::scrape exited ${scrape_status} for ${date} (some districts failed); publishing what it wrote, as the daily always has"
+    fi
+  elif [ "${MODE}" = "rescrape" ]; then
     echo "Scraping and transforming ${date}..."
     if ! "${COLLECTOR[@]}" scrape --date "${date}" --transform "${FORCE_ARGS[@]}" \
       --verbose "${DISTRICT_ARGS[@]}"; then
@@ -592,6 +718,7 @@ process_one() {
   if [ "${actual}" != "${date}" ]; then
     echo "Date remapped: ${date} → ${actual}"
   fi
+  ACTUAL="${actual}"
 
   # 6. guard
   guard_status=0
@@ -606,7 +733,10 @@ process_one() {
   fi
 
   # 7. enrich
-  enrich_snapshot "${actual}"
+  case "${MODE}" in
+    daily) enrich_daily "${actual}" ;;
+    rebuild | rescrape | rescrape-historical) enrich_snapshot "${actual}" ;;
+  esac
   case "${ENRICH}" in
     enriched) ENRICHED=$((ENRICHED + 1)) ;;
     carried) CARRIED=$((CARRIED + 1)) ;;
@@ -621,14 +751,29 @@ process_one() {
   pull_prior_year "${actual}"
   prev="${PREV}"
   echo "Computing analytics for ${actual}..."
-  local compute_ok=1
+  local compute_ok=1 compute_districts=()
+  if [ "${MODE}" = "daily" ]; then compute_districts=("${DISTRICT_ARGS[@]}"); fi
   if ! "${COLLECTOR[@]}" compute-analytics --date "${actual}" \
-    --force-analytics --verbose >"${COMPUTE_JSON}"; then
+    "${COMPUTE_FORCE_ARGS[@]+"${COMPUTE_FORCE_ARGS[@]}"}" --verbose \
+    "${compute_districts[@]+"${compute_districts[@]}"}" >"${COMPUTE_JSON}"; then
     echo "::warning::Compute failed for ${actual}"
     compute_ok=0
   fi
   jq -c . "${COMPUTE_JSON}" >>"${COUNTERS_JSONL}" ||
     echo "::warning::No compute JSON for ${actual}; the counters omit it"
+  # R17: daily fails the date on a failed compute, nothing uploaded (its
+  # compute step failed the run before the upload); the re-derivations
+  # upload and count it (#1708).
+  case "${MODE}" in
+    daily)
+      if [ "${compute_ok}" = 0 ]; then
+        echo "::warning::Not publishing ${actual}: compute failed (daily)"
+        cleanup_date "${source}" "${actual}" "${prev}"
+        return 0
+      fi
+      ;;
+    rebuild | rescrape | rescrape-historical) ;;
+  esac
 
   # 9. validate
   if ! "${VALIDATE[@]}" "${SNAPSHOTS}/${actual}"; then
@@ -651,19 +796,32 @@ process_one() {
   else
     echo "::warning::No snapshot directory found for ${date} (expected ${actual})"
   fi
-  if [ "${MODE}" = "rescrape" ] && [ -d "${RAW}/${date}" ]; then
-    echo "Uploading raw-csv/${date}/..."
-    "${UPLOAD[@]}" rsync -r "${RAW}/${date}/" "gs://${BUCKET}/raw-csv/${date}/"
-  fi
+  case "${MODE}" in
+    rescrape | daily)
+      if [ -d "${RAW}/${date}" ]; then
+        echo "Uploading raw-csv/${date}/..."
+        "${UPLOAD[@]}" rsync -r "${RAW}/${date}/" "gs://${BUCKET}/raw-csv/${date}/"
+      fi
+      ;;
+    rebuild | rescrape-historical) ;;
+  esac
 
-  # 11. cleanup
-  cleanup_date "${source}" "${actual}" "${prev}"
+  # 11. cleanup. daily keeps the raw and snapshot it published: the
+  # workflow's CDN-manifest step reads the local latest snapshot.
+  case "${MODE}" in
+    daily) cleanup_date "" "" "${prev}" ;;
+    rebuild | rescrape | rescrape-historical)
+      cleanup_date "${source}" "${actual}" "${prev}"
+      ;;
+  esac
 }
 
 cleanup_date() {
   local source="$1" actual="$2" prev="$3"
   # rescrape-historical's raw belongs to the step after this one.
-  if [ "${MODE}" != "rescrape-historical" ]; then rm -rf "${RAW:?}/${source}"; fi
+  if [ -n "${source}" ] && [ "${MODE}" != "rescrape-historical" ]; then
+    rm -rf "${RAW:?}/${source}"
+  fi
   if [ -n "${actual}" ]; then rm -rf "${SNAPSHOTS:?}/${actual}"; fi
   if [ -n "${prev}" ]; then rm -rf "${SNAPSHOTS:?}/${prev}"; fi
   if [ -n "${HYDRATED}" ]; then rm -rf "${SNAPSHOTS:?}/${HYDRATED}"; fi
@@ -680,6 +838,9 @@ for date in "$@"; do
   echo "[${INDEX}/${TOTAL}] ${MODE} ${date}"
   echo "═══════════════════════════════════════"
   process_one "${date}"
+  jq -nc --arg d "${date}" --arg a "${ACTUAL}" --arg o "${OUTCOME}" \
+    '{date: $d, actual: (if $a == "" then null else $a end), outcome: $o}' \
+    >>"${RESULTS}"
   case "${OUTCOME}" in
     published) SUCCEEDED=$((SUCCEEDED + 1)) ;;
     # Uploaded, so it is a published date, AND a failure for the gate.
@@ -695,20 +856,33 @@ for date in "$@"; do
   fi
 done
 
-# 12. identity — once, after every date is uploaded (#1782).
+# 12. identity — once, after every date is uploaded (#1782). R17: daily
+# builds it only when its date published.
 IDENTITY_STATUS=built
-if ! "${IDENTITY[@]}" "${BUCKET}"; then
+case "${MODE}" in
+  daily) [ "${SUCCEEDED}" -gt 0 ] || IDENTITY_STATUS="skipped (no date published)" ;;
+  rebuild | rescrape | rescrape-historical) ;;
+esac
+if [ "${IDENTITY_STATUS}" = built ] && ! "${IDENTITY[@]}" "${BUCKET}"; then
   echo "::warning::Identity histories were not rebuilt (#1782, #1820); the previous copies stand"
   IDENTITY_STATUS="FAILED (see the step log)"
 fi
 
 # 13. education — once, after the identity histories (#1801): it reads the
-# region history step 12 just wrote.
-EDUCATION_STATUS=built
-if ! "${EDUCATION[@]}" "${BUCKET}"; then
-  echo "::warning::Education rollup was not rebuilt (#1801); the previous derived/ copy stands"
-  EDUCATION_STATUS="FAILED (see the step log)"
-fi
+# region history step 12 just wrote. R17: daily never builds it here; it
+# reads the newest reports, which `place-reports` writes later (#2028).
+case "${MODE}" in
+  daily)
+    EDUCATION_STATUS="skipped (the education-rollup job builds it, #2028)"
+    ;;
+  rebuild | rescrape | rescrape-historical)
+    EDUCATION_STATUS=built
+    if ! "${EDUCATION[@]}" "${BUCKET}"; then
+      echo "::warning::Education rollup was not rebuilt (#1801); the previous derived/ copy stands"
+      EDUCATION_STATUS="FAILED (see the step log)"
+    fi
+    ;;
+esac
 
 # 14. rollups — rebuild only, once per published date, after step 12 (#2202).
 if [ "${MODE}" = "rebuild" ]; then
@@ -735,7 +909,10 @@ fi
   echo "- **Dates succeeded**: ${SUCCEEDED}"
   echo "- **Refused by the upload guard**: ${REFUSED}"
   echo "- **Dates failed**: ${FAILED}"
-  echo "- **Dates enriched from raw-fac**: ${ENRICHED}"
+  case "${MODE}" in
+    daily) echo "- **Dates enriched (today's fetch, else the last persisted raw-fac)**: ${ENRICHED}" ;;
+    *) echo "- **Dates enriched from raw-fac**: ${ENRICHED}" ;;
+  esac
   echo "- **Dates carried forward from their staged snapshot (no raw-fac)**: ${CARRIED}"
   if [ -n "${FAC_PRIOR_ROOT}" ]; then
     echo "- **FAC prior root**: ${FAC_PRIOR_ROOT}"
