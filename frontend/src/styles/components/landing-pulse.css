@@ -188,6 +188,36 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* #2256 — phone payments row: the Total Payments KPI card is hidden
+     below 768, so the pulse carries the figure there. A fixed box (8px +
+     18.2px label + 4px + 24px value + 8px, rounded up) so the reserve and
+     the loaded row match whatever the numbers; the total and delta share
+     one baseline and never wrap. Hidden from 768 (below). */
+  .world-pulse__payments {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 64px;
+    padding: 8px 10px;
+    background-color: var(--surface-2);
+    border-radius: var(--rds-radius-sm);
+  }
+
+  .world-pulse__payments-line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .world-pulse__payments-delta {
+    font-size: 14px;
+    line-height: 1.3;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+
   .world-pulse__sparkline {
     display: flex;
     flex-direction: column;
@@ -326,6 +356,9 @@
   @media (min-width: 768px) {
     .world-pulse__grid {
       grid-template-columns: 3fr 2fr;
+    }
+    .world-pulse__payments {
+      display: none;
     }
   }
 }
