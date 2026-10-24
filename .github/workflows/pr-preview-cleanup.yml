@@ -20,7 +20,19 @@ on:
   pull_request:
     types: [closed]
 
-# A PR number is unique, so two closes can't race; no concurrency group needed.
+# Join pr-preview.yml's per-PR concurrency group and cancel what is in it
+# (#2278). Merging a PR mid-smoke used to delete `pr-<N>` under the running
+# suite, so every later test failed against a 404 (#2248: run 40050767724).
+# Concurrency groups are repo-wide across workflows, so this run cancels the
+# in-flight or pending PR Preview run for the same PR, and stays pending
+# until that run has completed. The delete below therefore always comes after
+# the preview run is done. This needs no `actions:` token permission.
+# A smoke against a PR that has just closed proves nothing, so cancelling it
+# loses nothing. A reopen re-deploys the channel through pr-preview.yml.
+# scripts/lib/__tests__/prPreviewCleanupRace.test.ts pins this group.
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
