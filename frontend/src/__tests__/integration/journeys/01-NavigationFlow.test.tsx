@@ -1,5 +1,13 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 
 // Journey tests render <App /> and click through multi-step flows; the
@@ -10,6 +18,17 @@ import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import App from '../../../App'
 import { setupCdnFetchMock } from '../utils/mockCdnData'
+
+// Compile the lazy routes this journey visits once, up front: otherwise the
+// first test's 1 s findBy window measures Vite's cold transform of their
+// module graphs, not the app; on a slow CI runner that alone
+// overruns the window (#2248; same pattern as DistrictMapPage.test.tsx).
+beforeAll(async () => {
+  await Promise.all([
+    import('../../../pages/DistrictDetailPage'),
+    import('../../../components/GlobalRankingsTab'),
+  ])
+})
 
 describe('Journey 01: The Navigation Flow', () => {
   let user: ReturnType<typeof userEvent.setup>

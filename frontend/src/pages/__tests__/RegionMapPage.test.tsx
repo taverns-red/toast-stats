@@ -63,8 +63,17 @@ const RegionMapPage = React.lazy(() => import('../RegionMapPage'))
 beforeAll(async () => {
   await Promise.all([
     import('../RegionMapPage'),
+    import('../../components/ClubSearchBox'),
+    import('../../components/filters/FilterSheet'),
     import('../../components/map/MapClubLists'),
+    import('../../components/map/MapClubSummary'),
     import('../../components/map/MapModePicker'),
+    import('../../components/map/MapPhoneSheets'),
+    import('../../components/map/MapPinKeys'),
+    import('../../components/map/OnlineClubsChip'),
+    import('../../components/map/RegionClubList'),
+    import('../../components/map/MapPreview'),
+    import('../../components/map/regionModels'),
   ])
 }, 30_000)
 

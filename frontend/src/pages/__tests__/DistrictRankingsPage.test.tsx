@@ -10,7 +10,15 @@
  */
 
 import React, { Suspense } from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
@@ -114,6 +122,14 @@ vi.mock('../../components/GlobalRankingsTab', async () => {
 })
 
 const DistrictRankingsPage = React.lazy(() => import('../DistrictRankingsPage'))
+
+// Compile the page's module graph (and its on-demand chunks) once, up front:
+// otherwise the first test's 1 s findBy window measures Vite's cold
+// transform of the whole graph, not the page; on a slow CI runner that alone
+// overruns the window (#2248; same pattern as DistrictMapPage.test.tsx).
+beforeAll(async () => {
+  await import('../DistrictRankingsPage')
+})
 
 const renderAt = (initialUrl: string) => {
   const queryClient = new QueryClient({

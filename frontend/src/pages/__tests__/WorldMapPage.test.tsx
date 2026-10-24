@@ -75,8 +75,16 @@ const WorldMapPage = React.lazy(() => import('../WorldMapPage'))
 beforeAll(async () => {
   await Promise.all([
     import('../WorldMapPage'),
+    import('../../components/ClubSearchBox'),
+    import('../../components/filters/FilterSheet'),
     import('../../components/map/MapClubLists'),
+    import('../../components/map/MapClubSummary'),
     import('../../components/map/MapModePicker'),
+    import('../../components/map/MapPhoneSheets'),
+    import('../../components/map/MapPinKeys'),
+    import('../../components/map/OnlineClubsChip'),
+    import('../../components/map/RegionClubList'),
+    import('../../components/map/worldModels'),
   ])
 }, 30_000)
 
