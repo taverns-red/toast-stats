@@ -5,7 +5,9 @@ import {
   isUnreadableFacText,
   meetingWhen,
   toastmastersClubPageUrl,
+  UNREADABLE_DAY_NOTE,
   UNREADABLE_SCHEDULE_NOTE,
+  UNREADABLE_TIME_NOTE,
 } from '../clubMeetingInfo'
 
 /**
@@ -518,14 +520,30 @@ describe('buildClubMeetingInfo — unreadable meeting text (#2247)', () => {
     )
   })
 
-  it('hides a readable time whose day is unreadable (D88 07166169)', () => {
+  // Ron (2026-10-24, PR #2267): keep the readable half and name the other.
+  it('keeps a readable time whose day is unreadable (D88 07166169)', () => {
     const info = buildClubMeetingInfo({
       clubId: '07166169',
       meetingDay: '???',
       meetingTime: '6:30 - 8:30 PM',
     })
-    expect(info?.schedule).toBeNull()
-    expect(info?.scheduleNote).toBe(UNREADABLE_SCHEDULE_NOTE)
+    expect(info?.schedule).toBe('6:30 - 8:30 PM')
+    expect(info?.scheduleNote).toBe(UNREADABLE_DAY_NOTE)
+    expect(UNREADABLE_DAY_NOTE).toBe('day not readable — see toastmasters.org')
+    expect(JSON.stringify(info)).not.toContain('?')
+  })
+
+  it('keeps a readable day whose time is unreadable', () => {
+    const info = buildClubMeetingInfo({
+      clubId: '1234',
+      meetingDay: 'Wednesday',
+      meetingTime: '??7:30',
+    })
+    expect(info?.schedule).toBe('Wednesday')
+    expect(info?.scheduleNote).toBe(UNREADABLE_TIME_NOTE)
+    expect(UNREADABLE_TIME_NOTE).toBe(
+      'time not readable — see toastmasters.org'
+    )
   })
 
   it('hides an unreadable time next to a "??" day (D128 05789778)', () => {
@@ -551,7 +569,10 @@ describe('buildClubMeetingInfo — unreadable meeting text (#2247)', () => {
   it('meetingWhen gives the note instead of the "?" text', () => {
     expect(meetingWhen(D88_06513503)).toBe(UNREADABLE_SCHEDULE_NOTE)
     expect(meetingWhen({ meetingDay: '??', meetingTime: '7:00 pm' })).toBe(
-      UNREADABLE_SCHEDULE_NOTE
+      '7:00 pm · day not readable — see toastmasters.org'
+    )
+    expect(meetingWhen({ meetingDay: 'Friday', meetingTime: '??6?' })).toBe(
+      'Friday · time not readable — see toastmasters.org'
     )
   })
 })
