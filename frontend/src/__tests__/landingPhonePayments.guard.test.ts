@@ -50,4 +50,8 @@ describe('World pulse reserve matches the loaded head (#2256)', () => {
     expect(own).toMatch(/min-height:\s*44px/)
     expect(own).toMatch(/display:\s*inline-flex/)
   })
+
+  it('keeps nested caption spans on the caption line box (18.2px, not 21px)', () => {
+    expect(rule('.world-pulse__caption span')).toMatch(/line-height:\s*inherit/)
+  })
 })

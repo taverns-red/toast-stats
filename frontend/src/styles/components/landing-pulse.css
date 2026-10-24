@@ -132,6 +132,15 @@
     white-space: nowrap;
   }
 
+  /* #2256 — the loaded link takes base.css's 44px link floor; the reserve
+     renders a <span>, which did not, so the shell's head was ~22px short.
+     One box for both. */
+  .world-pulse__all {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
   .world-pulse__all:hover,
   .world-pulse__more:hover {
     text-decoration: underline;
@@ -241,6 +250,13 @@
     line-height: 1.3;
     color: var(--ink-2);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* #2256 — the renewal note is a nested span, and a global span rule
+     sets a 21px line-height, which made the loaded caption 2.8px taller
+     than its reserve (18.2px). */
+  .world-pulse__caption span {
+    line-height: inherit;
   }
 
   /* Fixed layout (no-horizontal-scroll smoke, #2249): an auto-layout table

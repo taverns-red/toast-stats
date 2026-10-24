@@ -316,7 +316,13 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
             Members this program year
           </span>
           {reserve || seriesPending ? (
-            <div className="world-pulse__sparkline-box" />
+            <>
+              <div className="world-pulse__sparkline-box" />
+              {/* #2256 — every loaded state has a caption line; hold it. */}
+              <span className="world-pulse__caption" aria-hidden="true">
+                {'\u00a0'}
+              </span>
+            </>
           ) : points.length > 1 ? (
             <>
               <Sparkline points={points} dip={dip} />
