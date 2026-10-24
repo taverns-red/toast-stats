@@ -11,9 +11,10 @@
 #   3. `objects describe` / `objects list --format=json` carry the keys the
 #      shim and the recorded fixture (gcloud-objects-list/staging-live.json)
 #      use, and report Content-Encoding: gzip for a gzip object.
-#   4. `cat` and a download inflate exactly one gzip layer (the shim's
-#      SHIM_DOWNLOAD_DECOMPRESS=1 model of gcloud >= 576, #1702), and the
-#      shim, seeded with those bytes, prints the same thing.
+#   4. A download inflates exactly one gzip layer (the shim's
+#      SHIM_DOWNLOAD_DECOMPRESS=1 model of gcloud >= 576, #1702) while `cat`
+#      prints the stored bytes, and the shim, seeded with the same stored
+#      bytes, does both the same way.
 #
 # Reads only: no upload, copy between buckets, delete or metadata change.
 # scripts/lib/__tests__/harnessStagingCanary.test.ts scans this file and
@@ -93,39 +94,45 @@ else
   pass "objects list prints every recorded key${extra:+ (new keys, not recorded: ${extra})}"
 fi
 
-# 4. One gzip layer inflated by cat and by a download.
-gcloud storage cat "${OBJ}" >"${TMP}/cat.json"
+# 4. A download inflates the one gzip layer (SHIM_DOWNLOAD_DECOMPRESS=1);
+#    `cat` prints the stored bytes (observed on 588, run 40143638422).
+gcloud storage cat "${OBJ}" >"${TMP}/cat.bin"
 gcloud storage cp "${OBJ}" "${TMP}/download.json"
-for f in cat download; do
-  if is_gzip "${TMP}/${f}.json"; then
-    fail "${f}: still gzip after one read (the shim inflates one layer)"
-  elif ! jq -e . "${TMP}/${f}.json" >/dev/null 2>&1; then
-    fail "${f}: does not parse as JSON"
-  else
-    pass "${f} inflates the gzip layer and parses"
-  fi
-done
-if ! cmp -s "${TMP}/cat.json" "${TMP}/download.json"; then
-  fail "cat and download disagree"
-fi
 stored="$(jq '.size' "${TMP}/describe.json")"
-if [ "$(wc -c <"${TMP}/cat.json" | tr -d ' ')" -le "${stored}" ]; then
-  fail "cat printed no more than the ${stored} stored bytes: not inflated"
+if ! is_gzip "${TMP}/cat.bin" ||
+  [ "$(wc -c <"${TMP}/cat.bin" | tr -d ' ')" != "${stored}" ]; then
+  fail "cat: want the ${stored} stored gzip bytes, got $(wc -c <"${TMP}/cat.bin" | tr -d ' ') bytes"
+else
+  pass "cat prints the ${stored} stored gzip bytes"
+fi
+if is_gzip "${TMP}/download.json"; then
+  fail "download: still gzip (the shim inflates one layer)"
+elif ! jq -e . "${TMP}/download.json" >/dev/null 2>&1; then
+  fail "download: does not parse as JSON"
+elif ! gzip -dc <"${TMP}/cat.bin" | cmp -s - "${TMP}/download.json"; then
+  fail "download is not the stored bytes inflated once"
+else
+  pass "download inflates exactly one gzip layer and parses"
 fi
 
-# The shim, seeded with the same object, must print what the real CLI did.
+# The shim, seeded with the real stored bytes, must do what the real CLI did.
 SHIM_ROOT="${TMP}/shim"
 rel="${OBJ#gs://}"
 mkdir -p "$(dirname "${SHIM_ROOT}/${rel}")" "$(dirname "${SHIM_ROOT}/.meta/${rel}")"
-gzip -c -n <"${TMP}/cat.json" >"${SHIM_ROOT}/${rel}"
+cp "${TMP}/cat.bin" "${SHIM_ROOT}/${rel}"
 printf 'content-encoding=gzip\ncontent-type=application/json\n' >"${SHIM_ROOT}/.meta/${rel}"
-SHIM_ROOT="${SHIM_ROOT}" SHIM_DOWNLOAD_DECOMPRESS=1 "${SHIM}" storage cat "${OBJ}" >"${TMP}/shim-cat.json"
-SHIM_ROOT="${SHIM_ROOT}" "${SHIM}" storage objects describe "${OBJ}" --format=json >"${TMP}/shim-describe.json"
-if ! cmp -s "${TMP}/cat.json" "${TMP}/shim-cat.json"; then
-  fail "the shim's cat differs from the real cat"
-else
-  pass "the shim's cat matches the real cat"
-fi
+shim() { SHIM_ROOT="${SHIM_ROOT}" SHIM_DOWNLOAD_DECOMPRESS=1 "${SHIM}" storage "$@"; }
+shim cat "${OBJ}" >"${TMP}/shim-cat.bin"
+shim cp "${OBJ}" "${TMP}/shim-download.json" 2>/dev/null
+shim objects describe "${OBJ}" --format=json >"${TMP}/shim-describe.json"
+for pair in "cat:cat.bin:shim-cat.bin" "download:download.json:shim-download.json"; do
+  IFS=: read -r what real mine <<<"${pair}"
+  if cmp -s "${TMP}/${real}" "${TMP}/${mine}"; then
+    pass "the shim's ${what} matches the real ${what}"
+  else
+    fail "the shim's ${what} differs from the real ${what}"
+  fi
+done
 shim_only="$(jq -r --slurpfile real "${TMP}/describe.json" 'keys - ($real[0] | keys) | join(",")' \
   "${TMP}/shim-describe.json")"
 if [ -n "${shim_only}" ]; then

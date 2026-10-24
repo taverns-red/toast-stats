@@ -15,7 +15,8 @@
 # [-r] [-Z] <src>... <dst>` (a gs:// source to a gs:// destination is a
 # server-side rewrite: bytes and metadata carried as stored — the SDK's
 # IntraCloudCopyTask copies the source object's metadata, read in the
-# 583.0.0 source, #1763), `storage cat <url>`,
+# 583.0.0 source, #1763), `storage cat <url>` (the stored bytes: it never
+# inflates a gzip object, under any SHIM_DOWNLOAD_DECOMPRESS, #1768),
 # `storage rm -r gs://<bucket>/<prefix>/` (every object under the prefix,
 # the prune reconcile's delete phase, #1767; a prefix holding no object
 # fails like `cat` does on a missing URL), `storage rm <gs://object>...`
@@ -53,7 +54,8 @@
 #                          "1": downloads inflate one layer of a
 #                          Content-Encoding: gzip object (gcloud >= 576, the
 #                          588 pin). Anything else: bytes as stored (gcloud 568,
-#                          the runner's old `latest`) (#1702).
+#                          the runner's old `latest`) (#1702). `cat` is not a
+#                          download: it prints stored bytes either way.
 #   SHIM_DOWNLOAD_SKIP     optional: ERE; an rsync download silently skips
 #                          objects whose relative path matches (a short read)
 #   SHIM_DOWNLOAD_LOG      optional: every object a download reads is
@@ -418,14 +420,11 @@ case "${CMD}" in
       echo "${url}" >&2
       exit 1
     fi
-    # The pipeline reads only identity-encoded v1/ objects with cat (#1852);
-    # a gzip-encoded one follows SHIM_DOWNLOAD_DECOMPRESS like a download.
-    if [ "${SHIM_DOWNLOAD_DECOMPRESS:-0}" = "1" ] &&
-      grep -qx 'content-encoding=gzip' "$(meta_of "${url}")" 2>/dev/null; then
-      gzip -dc <"$(local_of "${url}")"
-    else
-      cat "$(local_of "${url}")"
-    fi
+    # The stored bytes, whatever SHIM_DOWNLOAD_DECOMPRESS says: gcloud 588's
+    # `cat` does NOT inflate a Content-Encoding: gzip object, only a download
+    # does (the staging canary, run 40143638422, #1768). The pipeline cats
+    # only identity-encoded objects (v1/, #1852; the education index).
+    cat "$(local_of "${url}")"
     ;;
 
   rm)
