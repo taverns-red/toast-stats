@@ -1,4 +1,10 @@
-import { test as base, expect, type Request } from '@playwright/test'
+import {
+  test as base,
+  expect,
+  type Request,
+  type Response,
+} from '@playwright/test'
+import { describeErrorResponse } from '../helpers/errorResponses'
 
 /* Shared smoke fixture (#1979): no smoke may send a real GA hit.
  *
@@ -36,9 +42,35 @@ export function isGaCollect(url: URL): boolean {
 interface GaFixtures {
   /** GA collect requests the stub answered, in arrival order. */
   gaCollect: Request[]
+  /** Responses with status >= 400, as `status host/path` (#2248). */
+  errorResponses: string[]
 }
 
 export const test = base.extend<GaFixtures>({
+  /* Diagnostics only (#2248): record every response with status >= 400 and
+   * attach the list to the test result, so a failure names the URL that
+   * failed (the reporter prints a text attachment under the failing test).
+   * Query strings and hashes are dropped (describeErrorResponse). This
+   * never fails a test. */
+  errorResponses: [
+    async ({ context }, use, testInfo) => {
+      const lines: string[] = []
+      const onResponse = (res: Response) => {
+        const line = describeErrorResponse(res.url(), res.status())
+        if (line) lines.push(line)
+      }
+      context.on('response', onResponse)
+      await use(lines)
+      context.off('response', onResponse)
+      if (lines.length > 0) {
+        await testInfo.attach('error-responses', {
+          body: lines.join('\n'),
+          contentType: 'text/plain',
+        })
+      }
+    },
+    { auto: true },
+  ],
   gaCollect: [
     async ({ context }, use) => {
       const stubbed: Request[] = []

@@ -114,8 +114,10 @@ describe('pr-preview.yml: heavy smoke runs once the PR is ready (#2101)', () => 
     const after = steps.slice(stickyAt + 1)
     // Install, ~30 Playwright specs, and the Lighthouse mobile gate.
     expect(after.length).toBeGreaterThan(20)
+    // The failure-evidence upload (#2248) is heavy-gated too, and also
+    // waits for a failure.
     const ungated = after
-      .filter(s => s.if !== HEAVY_IF)
+      .filter(s => s.if !== HEAVY_IF && s.if !== `failure() && ${HEAVY_IF}`)
       .filter(s => !s.name?.startsWith('Report heavy smoke skipped'))
       .map(s => s.name)
     expect(ungated).toEqual([])
