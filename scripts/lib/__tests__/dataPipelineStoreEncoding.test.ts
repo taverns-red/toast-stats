@@ -195,6 +195,14 @@ describe('data-pipeline.yml store encoding guards (#1702)', () => {
       })
     }
     expect(masked).toEqual([])
-    expect(piped).toBeGreaterThanOrEqual(1)
+    // Since #1765 no workflow step runs compute-analytics itself: every mode,
+    // daily included, runs it in process-dates.sh, which tests its exit
+    // status directly (no pipe to mask it; processDates.test.ts).
+    expect(piped).toBe(0)
+    const runner = fs.readFileSync(
+      path.resolve(process.cwd(), 'scripts/pipeline/process-dates.sh'),
+      'utf-8'
+    )
+    expect(runner).toMatch(/if ! "\$\{COLLECTOR\[@\]\}" compute-analytics /)
   })
 })

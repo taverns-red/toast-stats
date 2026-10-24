@@ -8,8 +8,8 @@
  *      field), the path's date and key, that date's program year, and the
  *      internal counts;
  *   2. both are promoted with their date, never as global objects;
- *   3. every upload path (daily, and process-dates.sh for rebuild /
- *      rescrape / rescrape-historical) sends the subdirectory, through
+ *   3. every upload path (process-dates.sh, for daily since #1765, rebuild,
+ *      rescrape and rescrape-historical) sends the subdirectory, through
  *      gcs-upload.sh so each object is in the run manifest (ADR-015 P5).
  *
  * The CDN schema canary is deliberately NOT extended: the objects are not on
@@ -220,18 +220,28 @@ describe('data-pipeline.yml: the daily upload sends clubs-by-region/ (#1800)', (
   }
   const steps = workflow.jobs['pipeline']!.steps ?? []
 
-  it('uploads the subdirectory through gcs-upload.sh, gzip with the CDN headers', () => {
-    const run = steps
-      .filter(s => (s.name ?? '').startsWith('[daily]'))
-      .map(s => s.run ?? '')
-      .find(r => r.includes('clubs-by-region'))
-    expect(run, 'a daily step uploads clubs-by-region/').toBeDefined()
-    const block = run!.slice(run!.indexOf('clubs-by-region') - 400)
-    expect(block).toMatch(/gcs-upload\.sh daily-upload cp/)
-    expect(block).toMatch(/-Z/)
-    expect(block).toMatch(/max-age=3600, must-revalidate/)
-    expect(run).toContain(
-      '"gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/clubs-by-region/"'
+  // Daily uploads through process-dates.sh since #1765, which sends the
+  // subdirectory through gcs-upload.sh, -Z with the CDN headers, in every
+  // mode: processDates.test.ts ("publishes the per-region club shards" for
+  // rebuild, "process-dates.sh daily (#1765)" for daily).
+  it('daily hands its upload to process-dates.sh, which sends the subdirectory', () => {
+    const daily = steps.filter(s => (s.name ?? '').startsWith('[daily]'))
+    expect(
+      daily.some(s =>
+        (s.run ?? '').includes(
+          'scripts/pipeline/process-dates.sh "${GCS_BUCKET}" daily'
+        )
+      )
+    ).toBe(true)
+    expect(daily.some(s => (s.run ?? '').includes('clubs-by-region'))).toBe(
+      false
+    )
+    const runner = readFileSync(
+      path.join(REPO, 'scripts/pipeline/process-dates.sh'),
+      'utf-8'
+    )
+    expect(runner).toContain(
+      '"gs://${BUCKET}/snapshots/${actual}/clubs-by-region/"'
     )
   })
 })

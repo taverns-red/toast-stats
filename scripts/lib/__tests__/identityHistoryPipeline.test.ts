@@ -736,18 +736,20 @@ describe('every mode that publishes club-race builds the history', () => {
     })
   }
 
-  it('daily calls the same script, after its snapshot upload, non-fatally', () => {
-    const upload = steps.find(s => s.name === '[daily] Upload to GCS')
-    const run = upload?.run ?? ''
-    const call = run.indexOf(
-      'bash scripts/pipeline/build-identity-history.sh "${GCS_BUCKET}"'
-    )
-    expect(call, 'daily upload step does not call the script').toBeGreaterThan(
-      0
-    )
-    const snapshotUpload = run.indexOf('"gs://${GCS_BUCKET}/snapshots/')
-    expect(snapshotUpload).toBeGreaterThan(0)
-    expect(call).toBeGreaterThan(snapshotUpload)
-    expect(run.slice(call)).toMatch(/\|\|\s*echo "::warning::/)
+  // Since #1765 daily runs process-dates.sh, which builds the histories
+  // after its loop, non-fatally, and in daily only when the date published
+  // (processDates.test.ts, "process-dates.sh daily").
+  it('daily builds it through the runner, never inline', () => {
+    const daily = steps.filter(s => modeOf(s.name) === 'daily')
+    expect(
+      daily.filter(s =>
+        (s.run ?? '').includes(
+          'scripts/pipeline/process-dates.sh "${GCS_BUCKET}" daily'
+        )
+      )
+    ).toHaveLength(1)
+    expect(
+      daily.some(s => /build-identity-history\.sh/.test(s.run ?? ''))
+    ).toBe(false)
   })
 })

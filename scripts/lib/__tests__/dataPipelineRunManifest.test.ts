@@ -90,9 +90,25 @@ describe('data-pipeline run manifest (#1762)', () => {
     expect(raw).toEqual([])
   })
 
+  // Daily uploads through process-dates.sh (#1765): the runner and its FAC
+  // persist record every object through gcs-upload.sh; processDates.test.ts
+  // compares what the shim wrote with the manifest.
+  it('[daily] uploads only through the runner, which records through gcs-upload.sh', () => {
+    const step = byName('[daily] Scrape, enrich, compute and publish the date')
+    expect(step?.run).toMatch(
+      /scripts\/pipeline\/process-dates\.sh "\$\{GCS_BUCKET\}" daily /
+    )
+    for (const script of ['process-dates.sh', 'daily-fac-fetch.sh']) {
+      expect(
+        fs.readFileSync(
+          path.join(process.cwd(), 'scripts/pipeline', script),
+          'utf-8'
+        )
+      ).toMatch(/scripts\/pipeline\/gcs-upload\.sh/)
+    }
+  })
+
   it.each([
-    '[daily] Persist raw Find-A-Club',
-    '[daily] Upload to GCS',
     '[backfill] Build global-totals.json one date at a time',
     '[rescrape-historical] Upload upserted stores and raw-csv',
     'Generate CDN manifests',
