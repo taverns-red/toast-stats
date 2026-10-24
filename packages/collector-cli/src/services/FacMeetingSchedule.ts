@@ -359,9 +359,10 @@ interface TimeToken {
 
 /** `:`, `h` or `.` between hour and minute ("7:30", "18h30", "7.30 pm",
  *  #2243). A dot takes no spaces, so prose like "Rm 2. 30 people" is not
- *  a time. A token never starts inside a number ("9.00pm" is not "00pm"). */
+ *  a time. A token never starts inside a number ("9.00pm" is not "00pm"),
+ *  but may follow a word and a colon ("Thur:6:30 am", #2246). */
 const TIME_TOKEN =
-  /\bnoon\b|(?<![\d.:])\b(\d{1,2})(?:\s*([:h])\s*(\d{2})|(\.)(\d{2}))?(\s*h\b)?\s*(am|pm)?(?!\d)/g
+  /\bnoon\b|(?<![\d.])(?<!\d:)\b(\d{1,2})(?:\s*([:h])\s*(\d{2})|(\.)(\d{2}))?(\s*h\b)?\s*(am|pm)?(?!\d)/g
 const RANGE_SEPARATOR = /^\s*(?:-+|–|—|~|〜|～|to|a|until|jusqu'?a)\s*$/
 /** A two-digit hour before hrs/hours ("1600 hrs", "11:00 hours") is a
  *  24-hour clock; "1:30 hours" is a duration. The lookbehinds keep an
@@ -380,9 +381,11 @@ const OFFSET_BEFORE = /(?:utc|gmt)\s*(?:[+\-−]\s*)?$|[+\-−]$/
 const WEEKDAY_WORD = new RegExp(
   `^(?:${Object.values(WEEKDAY_WORDS).join('|')})$`
 )
-/** Words a bare range start may follow: "Thursdays 7-9 pm", "from 7 - 9". */
+/** Words a bare range start may follow: "Thursdays 7-9 pm", "from 7 - 9",
+ *  and mode, zone and time words ("Zoom 7-9 pm", "EST 7-9 pm", "Meets
+ *  7-9 pm", #2246). The meeting-length check still drops "Zoom 2 - 7 pm". */
 const BARE_START_AFTER =
-  /^(?:from|at|de|des|between|entre|and|et|y|or|ou|start|starts|begins)$/
+  /^(?:from|at|de|des|between|entre|and|et|y|or|ou|start|starts|begins|zoom|teams|online|virtual|hybrid|person|presentiel|[ecmp][sd]t|ak[sd]t|hst|[an][sd]t|ist|w?cet|cest|eet|bst|wat|eat|sast|aes?t|aedt|jst|kst|sgt|hkt|pht|wib|time|times|hora|horario|meets?|weekly|evenings?|mornings?|afternoons?|noche|tarde)$/
 /** An ordinal week ("1st & 3rd 6-7:30 pm"). */
 const ORDINAL_END = /\d(?:st|nd|rd|th|er|e|o|ro|do|to)$/
 
@@ -537,6 +540,19 @@ function meetingLength(
   return length >= 15 && length <= 180
 }
 
+/** A literal "12:00 AM" start that no rule read as noon is "time not
+ *  stated" (Ron, 2026-10-23, #2246): no club meets at midnight, and noon
+ *  would be a guess. */
+function unlessTwelveAm(
+  token: TimeToken,
+  minutes: number | undefined
+): number | undefined {
+  if (token.hour === 12 && token.meridiem === 'am' && minutes !== undefined) {
+    return minutes < 60 ? undefined : minutes
+  }
+  return minutes
+}
+
 interface Slot {
   startTime?: string
   endTime?: string
@@ -549,24 +565,36 @@ function clock(minutes: number | undefined): string | undefined {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
+/** The folded time text with am/pm, noon and HHMM forms normalised. */
+function normalisedTimeText(time: string): string {
+  return (
+    fold(time)
+      .replace(/\b12(?::00)?\s*noon\b/g, 'noon')
+      .replace(/\bnoon\s*\/\s*midi\b/g, 'noon')
+      .replace(/(?<!-)\bmidi\b/g, 'noon')
+      .replace(/(?:(?<=\d)|\b)([ap])\.?\s?m\b\.?/g, '$1m') // "7:30p.m." too
+      // "1600 hrs", "11:00 hours" → h-notation (24-hour); a lone "2 hours"
+      // is a duration and stays out. "730 pm" → "7:30 pm" (#2243).
+      .replace(HHMM_HRS, '$1h$2')
+      .replace(HHMM_RANGE_MERIDIEM, '$1:$2$3$4:$5')
+      .replace(HHMM_MERIDIEM, '$1:$2')
+  )
+}
+
 /**
- * Meeting time slots: "7:00 pm - 9:00 pm" is one slot with an end; "18h30
+ * Meeting time slots: "7:00 pm - 9:00 pm" is one slot; "18h30
  * pm et 7:00 am" is two. A token that follows prose ("link opens 7:15PM")
  * ends the list.
  */
 function timeSlotsIn(time: string | null | undefined): Slot[] {
   if (typeof time !== 'string') return []
-  const text = fold(time)
-    .replace(/\b12(?::00)?\s*noon\b/g, 'noon')
-    .replace(/\bnoon\s*\/\s*midi\b/g, 'noon')
-    .replace(/(?<!-)\bmidi\b/g, 'noon')
-    .replace(/(?:(?<=\d)|\b)([ap])\.?\s?m\b\.?/g, '$1m') // "7:30p.m." too
-    // "1600 hrs", "11:00 hours" → h-notation (24-hour); a lone "2 hours"
-    // is a duration and stays out. "730 pm" → "7:30 pm" (#2243).
-    .replace(HHMM_HRS, '$1h$2')
-    .replace(HHMM_RANGE_MERIDIEM, '$1:$2$3$4:$5')
-    .replace(HHMM_MERIDIEM, '$1:$2')
-  const tokens = timeTokensIn(text)
+  const text = normalisedTimeText(time)
+  return slotsFrom(timeTokensIn(text), text)
+}
+
+/** Slots read from `tokens`, a run of the tokens of `text`. */
+function slotsFrom(found: readonly TimeToken[], text: string): Slot[] {
+  const tokens = [...found]
   const between = (a: TimeToken, b: TimeToken): string =>
     text.slice(a.end, b.start)
   const slots: Slot[] = []
@@ -618,9 +646,23 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
       ) {
         startMinutes = 12 * 60 + start.minute
       }
+      startMinutes = unlessTwelveAm(start, startMinutes)
+      // "12-1 am": a bare 12 before an am end is a 12 AM start too, so
+      // not stated; the end alone is no start either.
+      const twelveAmBare =
+        start.hour === 12 &&
+        !start.meridiem &&
+        !start.twentyFour &&
+        next.meridiem === 'am' &&
+        next.hour < 12
+      if (twelveAmBare) startMinutes = undefined
       // A lone-number start must make a meeting-length range (15 min–3 h):
       // "2 - 7 pm" is not 14:00–19:00.
-      if (start.bare && !meetingLength(startMinutes, endMinutes)) {
+      if (
+        start.bare &&
+        !twelveAmBare &&
+        !meetingLength(startMinutes, endMinutes)
+      ) {
         i += 1
         continue
       }
@@ -630,7 +672,7 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
           : { startTime: clock(startMinutes), endTime: clock(endMinutes) }
       i += 2
     } else {
-      slot = { startTime: clock(resolve(start)) }
+      slot = { startTime: clock(unlessTwelveAm(start, resolve(start))) }
       i += 1
     }
     slots.push(slot)
@@ -639,6 +681,160 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
     if (!following || !LIST_SEPARATOR.test(between(last, following))) break
   }
   return slots
+}
+
+interface DayMention {
+  day: MeetingWeekday
+  start: number
+  end: number
+}
+
+function dayMentionsIn(text: string): DayMention[] {
+  const mentions: DayMention[] = []
+  for (const [day, pattern] of WEEKDAY_PATTERNS) {
+    pattern.lastIndex = 0
+    for (const match of text.matchAll(pattern)) {
+      const start = match.index ?? 0
+      mentions.push({ day, start, end: start + match[0].length })
+    }
+  }
+  return mentions.sort((a, b) => a.start - b.start)
+}
+
+/** Only a list joiner between two day words, perhaps with a mode word:
+ *  they share one time ("Mon & Wed", "Sat, Sun", "mardi et jeudi",
+ *  "hybrid Thurs, virtual Monday"). */
+const DAY_JOINER =
+  /^[\s,&/+\-–—]*(?:(?:and|or|et|ou|y|o|e|und|en)[\s,&/+\-–—]*)?(?:(?:hybrid|virtual|online|zoom|teams|in[\s-]?person|en ligne|presentiel)[\s,&/+\-–—:]*)?$/
+/** A range of days: "Mon-Fri", "Tue to Fri" also covers the days between. */
+const DAY_RANGE = /^\s*(?:-|–|—|to|thru|through|au|a|al|bis|tot)\s*$/
+const WEEK_ORDER = Object.keys(WEEKDAY_WORDS) as MeetingWeekday[]
+
+/** The days strictly between `from` and `to`, wrapping past Sunday. */
+function daysBetween(
+  from: MeetingWeekday,
+  to: MeetingWeekday
+): MeetingWeekday[] {
+  const days: MeetingWeekday[] = []
+  let k = (WEEK_ORDER.indexOf(from) + 1) % 7
+  while (WEEK_ORDER[k] !== to && days.length < 6) {
+    days.push(WEEK_ORDER[k] as MeetingWeekday)
+    k = (k + 1) % 7
+  }
+  return days
+}
+
+interface DaySlots {
+  byDay: Map<MeetingWeekday, Slot>
+  /** The one time every timed group agreed on, for a day the text does
+   *  not split out ("7 pm, except Mon/Fri holidays"); else `{}`. */
+  fallback: Slot
+}
+
+const sameSlot = (a: Slot, b: Slot): boolean =>
+  a.startTime === b.startTime && a.endTime === b.endTime
+
+/**
+ * Per-day slots when the time text names two or more weekdays (#2246):
+ * "Sat 9:15am - 11:45 | Wed 7pm - 9pm", "6:30 pm(Sat), 7:00 pm(Fri)",
+ * "7:00 pm (Wed) / Sat 9 am".
+ *
+ * Day words joined only by a list joiner form a group that shares one
+ * time ("Mon & Wed 7 pm"). The groups cut the text into runs of times:
+ * before the first group, between groups, after the last. The first run
+ * belongs to the first group and the last run to the last group. A run
+ * between two groups goes to the earlier group when the text opens with
+ * a day ("Sat 9am | Wed 7pm") and that group has no time yet; otherwise
+ * to the later one ("6:30 pm(Sat), 7:00 pm(Fri)"). A group takes the
+ * first slot of its run, or pairs its days with its slots in order when
+ * the counts match ("Tue & Thu: 7pm & 12pm"); another count is "time not
+ * stated". A day range ("Mon-Fri") covers the days between. A named day
+ * with no run is "time not stated"; a day the text does not name takes
+ * `fallback`, the one time every timed group agreed on (#2262 review).
+ *
+ * Undefined when fewer than two weekdays are named: the caller keeps the
+ * whole-field reading. A group given two runs ("7 pm Tue, Wed 8 pm") or
+ * a day given two different times is ambiguous and gives no times at
+ * all, so every day is "time not stated" rather than a guess.
+ */
+function daySlotsIn(time: string | null | undefined): DaySlots | undefined {
+  if (typeof time !== 'string') return undefined
+  const text = normalisedTimeText(time)
+  const mentions = dayMentionsIn(text)
+  if (new Set(mentions.map(m => m.day)).size < 2) return undefined
+  const tokens = timeTokensIn(text)
+  if (tokens.length === 0) return undefined
+
+  const groups: { days: MeetingWeekday[]; start: number; end: number }[] = []
+  for (const mention of mentions) {
+    const last = groups[groups.length - 1]
+    const joiner = last ? text.slice(last.end, mention.start) : ''
+    if (last && DAY_RANGE.test(joiner)) {
+      last.days.push(
+        ...daysBetween(
+          last.days[last.days.length - 1] as MeetingWeekday,
+          mention.day
+        ),
+        mention.day
+      )
+      last.end = mention.end
+    } else if (last && DAY_JOINER.test(joiner)) {
+      last.days.push(mention.day)
+      last.end = mention.end
+    } else {
+      groups.push({ ...mention, days: [mention.day] })
+    }
+  }
+  const runs = [0, ...groups.map(g => g.end)].map((from, k) => {
+    const to = groups[k]?.start ?? text.length
+    return tokens.filter(t => t.start >= from && t.start < to)
+  })
+
+  const dayFirst =
+    (groups[0] as (typeof groups)[number]).start <
+    (tokens[0] as TimeToken).start
+  const owned: (TimeToken[] | undefined)[] = groups.map(() => undefined)
+  const ambiguous: DaySlots = { byDay: new Map(), fallback: {} }
+  for (const [k, run] of runs.entries()) {
+    if (run.length === 0) continue
+    const earlier = k - 1
+    const owner =
+      k === 0
+        ? 0
+        : k === groups.length
+          ? earlier
+          : dayFirst && owned[earlier] === undefined
+            ? earlier
+            : k
+    if (owned[owner] !== undefined) return ambiguous
+    owned[owner] = run
+  }
+
+  const byDay = new Map<MeetingWeekday, Slot>()
+  const timed: Slot[] = []
+  for (const [k, group] of groups.entries()) {
+    const run = owned[k]
+    const slots = run ? slotsFrom(run, text) : []
+    // "Tue & Thu: 7pm & 12pm": as many times as days pair in order; any
+    // other count for a group of days is not stated.
+    const paired =
+      group.days.length > 1 && slots.length > 1
+        ? slots.length === group.days.length
+          ? slots
+          : group.days.map(() => ({}))
+        : group.days.map(() => slots[0] ?? {})
+    for (const [d, day] of group.days.entries()) {
+      const slot = paired[d] ?? {}
+      const held = byDay.get(day)
+      if (held && !sameSlot(held, slot)) return ambiguous
+      byDay.set(day, slot)
+      if (run) timed.push(slot)
+    }
+  }
+  const first = timed[0]
+  const fallback =
+    first && timed.every(slot => sameSlot(slot, first)) ? first : {}
+  return { byDay, fallback }
 }
 
 /* ── Parser ────────────────────────────────────────────────────────── */
@@ -686,12 +882,17 @@ export function parseMeetingSchedule(
     meetingModeFromText(scrubFacLocation(source.location), { place: true })
 
   const slots = timeSlotsIn(source.meetingTime)
-  const slotFor = (index: number): Slot =>
-    (slots.length === days.length ? slots[index] : slots[0]) ?? {}
+  const perDay = daySlotsIn(source.meetingTime)
+  const slotFor = (day: MeetingWeekday, index: number): Slot =>
+    (perDay
+      ? (perDay.byDay.get(day) ?? perDay.fallback)
+      : slots.length === days.length
+        ? slots[index]
+        : slots[0]) ?? {}
 
   const entries: MeetingScheduleEntry[] = []
   days.forEach((day, index) => {
-    const { startTime, endTime } = slotFor(index)
+    const { startTime, endTime } = slotFor(day, index)
     if (cadence === 'monthly') {
       for (const group of groups) {
         entries.push(

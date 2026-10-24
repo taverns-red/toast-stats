@@ -995,9 +995,358 @@ describe("parseMeetingSchedule (#2243) — '12 AM' before an afternoon end is no
     expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
   })
 
-  it('a lone 12:00 AM is left as written', () => {
-    expect(starts('Wednesday', '12:00 AM')).toEqual(['Wednesday 00:00'])
+  // Product decision (Ron, 2026-10-23, #2246): a literal 12 AM start is
+  // "time not stated", not midnight and not noon.
+  it.each([['12:00 AM'], ['12 AM'], ['12:30 am'], ['12:00 AM - 7:00 PM']])(
+    'a 12 AM start in %j → time not stated',
+    time => {
+      expect(starts('Wednesday', time)).toEqual(['Wednesday ?'])
+    }
+  )
+
+  it.each([['12-1 am'], ['12 - 1 am'], ['12 to 1:30 am']])(
+    'a bare 12 before an am end in %j is a 12 AM start → not stated, not 01:00',
+    time => {
+      expect(starts('Wednesday', time)).toEqual(['Wednesday ?'])
+    }
+  )
+
+  it.each([
+    ['00:30', '00:30'],
+    ['12-1 pm', '12:00'],
+    ['12:00 PM', '12:00'],
+    ['12 noon', '12:00'],
+  ])('%j is not a 12 AM start (%s)', (time, start) => {
+    expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
   })
+})
+
+describe('parseMeetingSchedule (#2246) — a time per day in one time field', () => {
+  it.each([
+    [
+      'Wednesday, Saturday',
+      'Sat 9:15am - 11:45 | Wed 7pm - 9pm',
+      ['Wednesday 19:00', 'Saturday 09:15'],
+    ],
+    [
+      'Friday, Saturday',
+      '6:30 pm(Sat), 7:00 pm(Fri)',
+      ['Friday 19:00', 'Saturday 18:30'],
+    ],
+    [
+      'Tuesday and Saturday',
+      'Tues 18:15 and Sat 08:30',
+      ['Tuesday 18:15', 'Saturday 08:30'],
+    ],
+    [
+      'Tuesday, Thursday',
+      'Thursday 7:00 pm - 9:00 pm (Tuesday: 12:00 PM)',
+      ['Tuesday 12:00', 'Thursday 19:00'],
+    ],
+    [
+      'Monday, Saturday',
+      '6:30 pm (Mon), 10 am (Sat)',
+      ['Monday 18:30', 'Saturday 10:00'],
+    ],
+    [
+      'Mardi et jeudi',
+      'mardi 19h00 et jeudi 12h15',
+      ['Tuesday 19:00', 'Thursday 12:15'],
+    ],
+    ['Saturday', 'Tues 18:15 and Sat 08:30', ['Saturday 08:30']],
+  ])('%j / %j → each day gets its own time', (day, time, expected) => {
+    expect(starts(day, time)).toEqual(expected)
+  })
+
+  it('keeps the end time with its own day', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Wednesday, Saturday',
+        meetingTime: 'Sat 9:15am - 11:45 | Wed 7pm - 9pm',
+      })
+    ).toEqual([
+      {
+        day: 'Wednesday',
+        cadence: 'weekly',
+        startTime: '19:00',
+        endTime: '21:00',
+      },
+      {
+        day: 'Saturday',
+        cadence: 'weekly',
+        startTime: '09:15',
+        endTime: '11:45',
+      },
+    ])
+  })
+
+  it.each([
+    [
+      'Monday, Wednesday',
+      'Mon & Wed 7 pm',
+      ['Monday 19:00', 'Wednesday 19:00'],
+    ],
+    ['Monday, Friday', 'Mon-Fri 12-1pm', ['Monday 12:00', 'Friday 12:00']],
+    [
+      'Saturday, Sunday',
+      '10 am (Sat & Sun)',
+      ['Saturday 10:00', 'Sunday 10:00'],
+    ],
+  ])('days named together share one time: %j / %j', (day, time, expected) => {
+    expect(starts(day, time)).toEqual(expected)
+  })
+
+  it.each([
+    // A time before the days and another after: which day owns which?
+    ['Saturday, Sunday', '7:00 pm; Sat & Sun 10am'],
+    ['Tuesday, Wednesday', '7 pm Tue, Wed 8 pm'],
+    // One day named with two different times.
+    ['Tuesday, Saturday', 'Tue 7 pm, Sat 9 am, Tue 6 pm'],
+  ])('an ambiguous pairing %j / %j → time not stated, no guess', (d, t) => {
+    expect(starts(d, t).every(s => s.endsWith(' ?'))).toBe(true)
+  })
+
+  it.each([
+    [
+      'Wednesday, Saturday',
+      '7:00 pm (Wed) / Sat 9 am online',
+      ['Wednesday 19:00', 'Saturday 09:00'],
+    ],
+    ['Wednesday', '7:00 pm (Wed) / Sat 9 am online', ['Wednesday 19:00']],
+  ])('a time-then-day and a day-then-time in one field: %j / %j', (d, t, e) => {
+    expect(starts(d, t)).toEqual(e)
+  })
+
+  it('a day the time field does not name gets no guessed time', () => {
+    expect(starts('Monday, Wednesday', 'Mon 7pm | Sat 9am')).toEqual([
+      'Monday 19:00',
+      'Wednesday ?',
+    ])
+  })
+
+  it.each([
+    ['Tuesday', 'Tues 18:15 and Sat 08:30', ['Tuesday 18:15']],
+    ['Tuesday', '7:00 pm (2nd and 4th Tuesday)', ['Tuesday 19:00']],
+    ['Tuesday, Thursday', '7 pm and 8 pm', ['Tuesday 19:00', 'Thursday 20:00']],
+    ['Tuesday, Thursday', '7 pm', ['Tuesday 19:00', 'Thursday 19:00']],
+  ])(
+    'one day word or none in the time: %j / %j unchanged',
+    (d, t, expected) => {
+      expect(starts(d, t)).toEqual(expected)
+    }
+  )
+})
+
+describe('parseMeetingSchedule (#2246) — per-day review cases (PR #2262)', () => {
+  it.each([
+    // B1: N days named together with N times pair in order.
+    [
+      'Tuesday, Thursday',
+      'Tue & Thu: 7pm & 12pm',
+      ['Tuesday 19:00', 'Thursday 12:00'],
+    ],
+    [
+      'Monday, Friday',
+      'Monday and Friday at 7:00 am and 6:00 pm',
+      ['Monday 07:00', 'Friday 18:00'],
+    ],
+  ])(
+    'days named together with as many times pair in order: %j / %j',
+    (d, t, e) => {
+      expect(starts(d, t)).toEqual(e)
+    }
+  )
+
+  it('days named together with a different count of times → not stated', () => {
+    expect(
+      starts('Monday, Wednesday, Friday', 'Mon, Wed & Fri 7 am and 6 pm')
+    ).toEqual(['Monday ?', 'Wednesday ?', 'Friday ?'])
+  })
+
+  it.each([
+    // B2: a day the text does not split per-day keeps the whole-field time.
+    ['Wednesday', 'Mon-Fri 12-1pm', ['Wednesday 12:00']],
+    ['Tuesday', 'Mon-Wed 7pm', ['Tuesday 19:00']],
+    ['Thursday', 'Tue to Fri 7pm', ['Thursday 19:00']],
+    ['Wednesday', '7 pm, except Mon/Fri holidays', ['Wednesday 19:00']],
+    ['Wednesday', 'Tue 7pm (Thu if holiday)', ['Wednesday 19:00']],
+  ])('%j / %j keeps an unambiguous time', (d, t, e) => {
+    expect(starts(d, t)).toEqual(e)
+  })
+
+  it.each([
+    [
+      'Tuesday, Thursday',
+      'Tue 12 noon, Thu 7 pm',
+      ['Tuesday 12:00', 'Thursday 19:00'],
+    ],
+    [
+      'Tuesday, Thursday',
+      'Tue noon / Thu 7pm',
+      ['Tuesday 12:00', 'Thursday 19:00'],
+    ],
+    [
+      'Tuesday, Thursday',
+      'Tue 12 PM & Thu 7:30 PM',
+      ['Tuesday 12:00', 'Thursday 19:30'],
+    ],
+    [
+      'Tuesday, Thursday',
+      'Tue 7.30 pm & Thu 6.30 pm',
+      ['Tuesday 19:30', 'Thursday 18:30'],
+    ],
+    [
+      'Tuesday, Thursday',
+      'Tue 19:30 & Thu 18:30',
+      ['Tuesday 19:30', 'Thursday 18:30'],
+    ],
+    [
+      'Tuesday, Thursday',
+      'Tue 19h30, Thu 12h00',
+      ['Tuesday 19:30', 'Thursday 12:00'],
+    ],
+    [
+      'Montag, Mittwoch',
+      'Montag 19:00 und Mittwoch 12:00',
+      ['Monday 19:00', 'Wednesday 12:00'],
+    ],
+    [
+      'lundi et mercredi',
+      'lundi 19h et mercredi 12h',
+      ['Monday 19:00', 'Wednesday 12:00'],
+    ],
+    [
+      'sábado y domingo',
+      'sábado 10:00 am y domingo 4:00 pm',
+      ['Saturday 10:00', 'Sunday 16:00'],
+    ],
+    [
+      'Tuesday, Thursday',
+      '7pm Tue, 12pm Thu',
+      ['Tuesday 19:00', 'Thursday 12:00'],
+    ],
+    [
+      'Tuesday, Thursday',
+      '7 pm (Tue) 12 pm (Thu)',
+      ['Tuesday 19:00', 'Thursday 12:00'],
+    ],
+    [
+      'Tuesday, Thursday',
+      'Tue (7pm) Thu (12pm)',
+      ['Tuesday 19:00', 'Thursday 12:00'],
+    ],
+    [
+      'Tuesday, Thursday',
+      'Tuesday 7-9 pm - Thursday 12-1 pm',
+      ['Tuesday 19:00', 'Thursday 12:00'],
+    ],
+    [
+      'Tuesday, Thursday',
+      'Tuesday - 7pm, Thursday - 12pm',
+      ['Tuesday 19:00', 'Thursday 12:00'],
+    ],
+    [
+      'Tuesday, Thursday',
+      'Tues. 7pm, Thurs. 12pm',
+      ['Tuesday 19:00', 'Thursday 12:00'],
+    ],
+    [
+      'Monday, Wednesday, Friday',
+      'Mon, Wed 7am; Fri 12pm',
+      ['Monday 07:00', 'Wednesday 07:00', 'Friday 12:00'],
+    ],
+    [
+      'Tuesday, Thursday',
+      'Tue room 3 - 7 pm, Thu 6 pm',
+      ['Tuesday 19:00', 'Thursday 18:00'],
+    ],
+    [
+      'Tuesday, Thursday',
+      'Tue 7 pm for 2:00 hrs, Thu 6 pm',
+      ['Tuesday 19:00', 'Thursday 18:00'],
+    ],
+    [
+      'Tuesday, Thursday',
+      'Tue 6:45 for 7:00 pm; Thu 12 noon',
+      ['Tuesday 19:00', 'Thursday 12:00'],
+    ],
+    [
+      'Monday, Wednesday, Friday',
+      'Mon/Wed/Fri 7am',
+      ['Monday 07:00', 'Wednesday 07:00', 'Friday 07:00'],
+    ],
+    ['Tuesday, Thursday', 'Tue-Thu 7pm', ['Tuesday 19:00', 'Thursday 19:00']],
+    [
+      'lundi et mercredi',
+      'lundi et mercredi 19h',
+      ['Monday 19:00', 'Wednesday 19:00'],
+    ],
+    ['Tuesday', '7pm (Thu if holiday)', ['Tuesday 19:00']],
+    ['Monday', 'Mon 7pm. Board meets on Sat', ['Monday 19:00']],
+    ['Thursday', 'Thursday 7 pm, 2nd Sunday 3 pm', ['Thursday 19:00']],
+    ['Wednesday', 'Wed 7pm (Sun 6pm in summer)', ['Wednesday 19:00']],
+    ['Sunday', 'Sun 3pm, Wed if needed', ['Sunday 15:00']],
+    ['Monday, Friday', 'Mon 7am Fri', ['Monday 07:00', 'Friday ?']],
+  ])('%j / %j', (d, t, e) => {
+    expect(starts(d, t)).toEqual(e)
+  })
+})
+
+describe('parseMeetingSchedule (#2246) — census cases (PR #2262 census)', () => {
+  it.each([
+    [
+      'Thursday, Monday',
+      '12:00 pm, hybrid Thurs, virtual Monday',
+      ['Thursday 12:00', 'Monday 12:00'],
+    ],
+    [
+      'Friday, Thursday',
+      'Fri:- 6 pm - 8 pm & Thur:6:30 am to 8 am',
+      ['Friday 18:00', 'Thursday 06:30'],
+    ],
+  ])('%j / %j', (d, t, e) => {
+    expect(starts(d, t)).toEqual(e)
+  })
+
+  it.each([
+    ['Time:7pm', '19:00'],
+    ['Tuesday:7:30 pm', '19:30'],
+  ])('a time right after a word and a colon counts: %j', (t, start) => {
+    expect(starts('Tuesday', t)).toEqual([`Tuesday ${start}`])
+  })
+
+  it.each([['12:00:00'], ['7.45:00 pm']])(
+    'a number after a digit and a colon still does not start a time: %j',
+    t => {
+      expect(starts('Tuesday', t)).not.toContain('Tuesday 00:00')
+    }
+  )
+})
+
+describe('parseMeetingSchedule (#2246) — a bare range after a mode or zone word', () => {
+  it.each([
+    ['Zoom 7-9 pm', '19:00'],
+    ['Online 7-9 pm', '19:00'],
+    ['Hybrid: 7-9 pm', '19:00'],
+    ['In person 7-9 pm', '19:00'],
+    ['EST 7-9 pm', '19:00'],
+    ['CST 6-8 pm', '18:00'],
+    ['Time: 7-9 pm', '19:00'],
+    ['Meets 7-9 pm', '19:00'],
+    ['Tuesday evenings 7-9 pm', '19:00'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Tuesday', time)).toEqual([`Tuesday ${start}`])
+  })
+
+  it.each([
+    ['Zoom 2 - 7:30 pm', '19:30'],
+    ['Online 3 - 7 pm', '19:00'],
+  ])(
+    'a label-like number after a mode word in %j is still not a start',
+    (t, s) => {
+      expect(starts('Tuesday', t)).toEqual([`Tuesday ${s}`])
+    }
+  )
 })
 
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
