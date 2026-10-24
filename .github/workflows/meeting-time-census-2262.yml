@@ -1,0 +1,37 @@
+# TEMPORARY (#2262): one read-only census of meetingTime strings over the
+# public prod CDN. No credentials, no GCS writes, no dispatch. Removed from
+# the PR before it is marked ready.
+name: Meeting-time census (#2262, temporary)
+
+on:
+  pull_request:
+    paths:
+      - scripts/meeting-time-census-2262.ts
+      - .github/workflows/meeting-time-census-2262.yml
+
+permissions:
+  contents: read
+
+jobs:
+  census:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build:shared-contracts
+      - name: origin/main parser as the base
+        run: |
+          git fetch --depth=1 origin main
+          git show FETCH_HEAD:packages/collector-cli/src/services/FacMeetingSchedule.ts \
+            > packages/collector-cli/src/services/FacMeetingScheduleBase.ts
+      - run: npx tsx scripts/meeting-time-census-2262.ts census-out
+      - uses: actions/upload-artifact@v7
+        with:
+          name: meeting-time-census-2262
+          path: census-out/
+          retention-days: 3
