@@ -21,12 +21,15 @@ import { useRegionRollups } from '../hooks/useRegionRollups'
 import { fetchCdnRegionMembershipSeries } from '../services/cdn'
 import type { SnapshotDate } from '../types/snapshotDate'
 
-/** The four fields the section reads from a rankings row. */
+/** The fields the section reads from a rankings row. */
 export interface WorldPulseRow {
   districtId: string
   region: string
   paidClubs: number
   paidClubBase: number
+  /** Year-to-date payments and last year's full-year total (#2256). */
+  totalPayments?: number
+  paymentBase?: number
 }
 
 interface WorldPulseProps {
@@ -194,6 +197,18 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
   const dip = useMemo(() => renewalDip(points), [points])
 
   const regions = useMemo(() => summarizeRegions(rows), [rows])
+  // #2256 — the phone payments row, summed from the same rows as the KPI
+  // strip's Total Payments card (which is hidden below 768).
+  const payments = useMemo(() => {
+    let total = 0
+    let base = 0
+    for (const r of rows) {
+      total += r.totalPayments ?? 0
+      base += r.paymentBase ?? 0
+    }
+    return { total, delta: total - base }
+  }, [rows])
+  const showPayments = !reserve && rows.length > 0
   const shownRegions = regions.slice(0, TOP_REGION_ROWS)
 
   const figure = (n: number | null | undefined): string => {
@@ -262,12 +277,52 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
           </li>
         </ul>
 
+        {/* #2256 — phone-only (CSS hides it from 768, where the Total
+            Payments KPI card shows). The total and delta share one line;
+            the on-screen delta is short so it fits at 375, and assistive
+            tech reads the KPI card's full wording. Rendered in the reserve
+            with dashes, so the shell holds its box. */}
+        <div className="world-pulse__payments" data-testid="pulse-payments">
+          <span className="world-pulse__tile-label">Payments YTD</span>
+          <span className="world-pulse__payments-line">
+            <span
+              className="world-pulse__tile-value"
+              data-testid="pulse-payments-total"
+            >
+              {showPayments ? fmt(payments.total) : '—'}
+            </span>
+            <span
+              className="world-pulse__payments-delta"
+              data-testid="pulse-payments-delta"
+            >
+              {showPayments ? (
+                <>
+                  <span aria-hidden="true">
+                    {signed(payments.delta)} vs last PY
+                  </span>
+                  <span className="sr-only">
+                    {signed(payments.delta)} YTD vs last year's total
+                  </span>
+                </>
+              ) : (
+                '—'
+              )}
+            </span>
+          </span>
+        </div>
+
         <div className="world-pulse__sparkline">
           <span className="world-pulse__tile-label">
             Members this program year
           </span>
           {reserve || seriesPending ? (
-            <div className="world-pulse__sparkline-box" />
+            <>
+              <div className="world-pulse__sparkline-box" />
+              {/* #2256 — every loaded state has a caption line; hold it. */}
+              <span className="world-pulse__caption" aria-hidden="true">
+                {'\u00a0'}
+              </span>
+            </>
           ) : points.length > 1 ? (
             <>
               <Sparkline points={points} dip={dip} />

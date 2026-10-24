@@ -44,8 +44,12 @@ describe('LandingContextBar (#1846)', () => {
   it('names the page and shows the PY · date chip, with no back crumb (root page)', () => {
     renderBar()
     const bar = screen.getByTestId('context-bar')
-    // #2249 — the bar replaces the header on phones, so it carries the H1.
-    expect(bar).toHaveTextContent('Find a district, club or region')
+    // #2249 — the bar replaces the header on phones. #2256 — the H1's full
+    // text needs ~242px in the ~208px title slot at 375 and ellipsised, so
+    // the bar shows a shorter phone title; the H1 itself is unchanged.
+    const title = bar.querySelector('.context-bar__title')!
+    expect(title).toHaveTextContent(/^Find a district$/)
+    expect(title).toHaveAttribute('aria-hidden', 'true')
     expect(screen.getByTestId('context-bar-chip')).toHaveTextContent(
       'PY 26–27 · Oct 10'
     )
