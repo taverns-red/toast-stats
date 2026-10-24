@@ -120,16 +120,43 @@ export function planEducationRollup(
   }
 }
 
+/**
+ * Where the sidecar verdict stands on the content gate: `none` when the
+ * plan had no sidecar to gate, `pending` until `--apply-content-gate` has
+ * applied the gate's per-date hold (#2227), then `applied`.
+ */
+export type SidecarContentGateState = 'none' | 'pending' | 'applied'
+
 /** The part of the sidecar verdict the rollup's date hold reads. */
 export interface SidecarHoldState {
   heldDates: readonly string[]
-  contentGate?: string
+  contentGate?: SidecarContentGateState
 }
 
-/** Red stub (#2222 M2): never holds. */
+/**
+ * Hold the rollup with its reports date (#2222 review M2, L1). The rollup
+ * is read from staging's reports of `asOf`. When the sidecars hold that
+ * date, because this run wrote it and did not promote it or because one of
+ * its reports failed the content gate, a rollup built from those reports
+ * must not ship ahead of them. Another date's hold does not touch it.
+ *
+ * Fails closed: no sidecar verdict (the sidecar plan failed), a content
+ * gate that was planned and never applied, or a rollup with no `asOf`
+ * holds it. A later run plans it again. Returns the reason, or null.
+ */
 export function educationRollupDateHold(
-  _asOf: string | null,
-  _sidecar: SidecarHoldState | null
+  asOf: string | null,
+  sidecar: SidecarHoldState | null
 ): string | null {
+  if (asOf === null) return 'it names no reports date (asOf)'
+  if (sidecar === null) {
+    return 'there is no sidecar verdict to say whether its reports date is held'
+  }
+  if (sidecar.contentGate !== 'none' && sidecar.contentGate !== 'applied') {
+    return `the sidecars' content gate was not applied, so it is unknown whether ${asOf} is held`
+  }
+  if (sidecar.heldDates.includes(asOf)) {
+    return `its reports date ${asOf} is held: its sidecars stay in staging, so the rollup built from them does too`
+  }
   return null
 }

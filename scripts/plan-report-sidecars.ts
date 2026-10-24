@@ -36,10 +36,16 @@
  * content_promote, content_held_dates, held_dates. Exit 2 when there is no
  * planned manifest or verdict.
  *
+ * `--apply-rollup-hold` (#2222 M2), after that: drop the education rollup's
+ * manifest when the sidecar verdict holds its reports date (asOf), or when
+ * it cannot tell (no verdict, the content gate not applied). Outputs:
+ * rollup_objects, education_rollup. Exit 0.
+ *
  * Logs go to stderr (R4).
  */
 
 import {
+  runApplyEducationRollupHold,
   runApplySidecarContentGate,
   runPlanReportSidecars,
 } from './lib/reportSidecarPlanRunner.js'
@@ -47,7 +53,9 @@ import {
 const io = { env: process.env, err: (s: string) => process.stderr.write(s) }
 ;(process.argv.includes('--apply-content-gate')
   ? runApplySidecarContentGate(io)
-  : runPlanReportSidecars(io)
+  : process.argv.includes('--apply-rollup-hold')
+    ? runApplyEducationRollupHold(io)
+    : runPlanReportSidecars(io)
 )
   .then(code => {
     process.exitCode = code

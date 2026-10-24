@@ -44,8 +44,10 @@ import {
 import { parseRunManifest, type RunManifestEntry } from './runManifest.js'
 import {
   EDUCATION_ROLLUP_STAGE,
+  educationRollupDateHold,
   planEducationRollup,
   type EducationRollupPlan,
+  type SidecarHoldState,
 } from './educationRollupPlan.js'
 import { EDUCATION_ROLLUP_INDEX_PATH } from '@taverns-red/shared-contracts'
 
@@ -165,6 +167,7 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
     let action: EducationRollupPlan['action'] | 'error'
     let reason: string
     let entries: RunManifestEntry[] = []
+    let asOf: string | null = null
     try {
       const rollup = planEducationRollup({
         stagingIndex: catOrNull(staging, EDUCATION_ROLLUP_INDEX_PATH),
@@ -194,6 +197,7 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
       }
       action = rollup.action
       reason = rollup.reason
+      asOf = rollup.asOf
     } catch (e) {
       action = 'error'
       reason = `${e instanceof Error ? e.message : String(e)} — the rollup is held; the sidecars are not affected`
@@ -209,7 +213,8 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
       mkdirSync(path.dirname(rollupVerdictFile), { recursive: true })
       writeFileSync(
         rollupVerdictFile,
-        JSON.stringify({ promote: true, heldDates: [] }, null, 2) + '\n'
+        // asOf: what --apply-rollup-hold holds it with (#2222 M2).
+        JSON.stringify({ promote: true, heldDates: [], asOf }, null, 2) + '\n'
       )
     }
     emit('rollup_objects', entries.length)
@@ -275,8 +280,15 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
 
     const entries = sidecarManifest(own, carried)
     const verdict = sidecarVerdict(held)
+    // Until --apply-content-gate runs, a planned sidecar's date may still
+    // be held by the gate; the rollup's date hold reads this (#2222 M2).
+    const contentGate: SidecarHoldState['contentGate'] =
+      entries.length > 0 ? 'pending' : 'none'
     mkdirSync(path.dirname(verdictFile), { recursive: true })
-    writeFileSync(verdictFile, JSON.stringify(verdict, null, 2) + '\n')
+    writeFileSync(
+      verdictFile,
+      JSON.stringify({ ...verdict, contentGate }, null, 2) + '\n'
+    )
     if (entries.length > 0) {
       mkdirSync(path.dirname(outFile), { recursive: true })
       writeFileSync(
@@ -380,7 +392,10 @@ export async function runApplySidecarContentGate(io: PlanIo): Promise<number> {
     verdict,
     readGateResult(gateFile, log)
   )
-  writeFileSync(verdictFile, JSON.stringify(r.verdict, null, 2) + '\n')
+  writeFileSync(
+    verdictFile,
+    JSON.stringify({ ...r.verdict, contentGate: 'applied' }, null, 2) + '\n'
+  )
   if (r.entries.length > 0) {
     writeFileSync(
       outFile,
@@ -435,9 +450,84 @@ export async function runApplySidecarContentGate(io: PlanIo): Promise<number> {
   return 0
 }
 
-/** Red stub (#2222 M2): does nothing. */
-export async function runApplyEducationRollupHold(
-  _io: PlanIo
-): Promise<number> {
+/**
+ * `plan-report-sidecars.ts --apply-rollup-hold` (#2222 review M2, L1), after
+ * the sidecars' content hold: drop the rollup manifest when the sidecar
+ * verdict holds the rollup's reports date (see educationRollupDateHold).
+ * Reads EDUCATION_ROLLUP_MANIFEST_FILE, EDUCATION_ROLLUP_VERDICT_FILE (its
+ * asOf) and REPORT_SIDECAR_VERDICT_FILE. Outputs: rollup_objects,
+ * education_rollup (promote | held). Exit 0; a hold warns and is
+ * summarised, and never touches a sidecar.
+ */
+export async function runApplyEducationRollupHold(io: PlanIo): Promise<number> {
+  const { env } = io
+  const log = (msg: string) => io.err(`${msg}\n`)
+  const emit = (key: string, value: string | number) => {
+    if (env.GITHUB_OUTPUT)
+      appendFileSync(env.GITHUB_OUTPUT, `${key}=${value}\n`)
+  }
+  const rollupFile =
+    env.EDUCATION_ROLLUP_MANIFEST_FILE || DEFAULT_EDUCATION_ROLLUP_MANIFEST_FILE
+  const rollupVerdictFile =
+    env.EDUCATION_ROLLUP_VERDICT_FILE || DEFAULT_EDUCATION_ROLLUP_VERDICT_FILE
+  const verdictFile =
+    env.REPORT_SIDECAR_VERDICT_FILE || DEFAULT_SIDECAR_VERDICT_FILE
+
+  let entries: RunManifestEntry[]
+  try {
+    entries = parseRunManifest(readFileSync(rollupFile, 'utf-8'))
+  } catch {
+    entries = []
+  }
+  if (entries.length === 0) {
+    rmSync(rollupFile, { force: true })
+    emit('rollup_objects', 0)
+    log('[education-rollup] no rollup manifest: nothing to hold')
+    return 0
+  }
+
+  let asOf: string | null = null
+  try {
+    const v = JSON.parse(readFileSync(rollupVerdictFile, 'utf-8')) as {
+      asOf?: unknown
+    }
+    asOf = typeof v.asOf === 'string' ? v.asOf : null
+  } catch {
+    asOf = null
+  }
+  let sidecar: SidecarHoldState | null = null
+  try {
+    const v = JSON.parse(
+      readFileSync(verdictFile, 'utf-8')
+    ) as Partial<SidecarHoldState>
+    if (Array.isArray(v.heldDates)) {
+      sidecar = { heldDates: v.heldDates, contentGate: v.contentGate }
+    }
+  } catch {
+    sidecar = null
+  }
+
+  const why = educationRollupDateHold(asOf, sidecar)
+  if (why === null) {
+    emit('rollup_objects', entries.length)
+    emit('education_rollup', 'promote')
+    log(
+      `[education-rollup] reports date ${asOf} is not held: ${entries.length} object(s) go on to the gate`
+    )
+    return 0
+  }
+  rmSync(rollupFile, { force: true })
+  rmSync(rollupVerdictFile, { force: true })
+  emit('rollup_objects', 0)
+  emit('education_rollup', 'held')
+  log(
+    `::warning title=Education rollup::held — ${why}; prod keeps its copy and a later run plans it again`
+  )
+  if (env.GITHUB_STEP_SUMMARY) {
+    appendFileSync(
+      env.GITHUB_STEP_SUMMARY,
+      `- 🎓 ⏸️ **Education rollup held (#2222)**: ${why}. Prod keeps its copy; the report sidecars are not affected.\n`
+    )
+  }
   return 0
 }

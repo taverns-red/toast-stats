@@ -3314,45 +3314,6 @@ jobs:
           PROMOTED_DATES: ${{ needs.pipeline.outputs.promoted_dates }}
         run: npx tsx scripts/plan-report-sidecars.ts
 
-      # ── The education rollup (#2222): its own gate and promote ──
-      # Planned above into its own manifest (held unless its reports date
-      # is one prod indexes). A fault here holds only the rollup, as the old
-      # continue-on-error mirror did: never a sidecar, never the job. The
-      # plan step may fail on the sidecars after planning the rollup, so
-      # these steps run whatever it exited with.
-      - name: '[rollup] Content gate the education rollup (#2222)'
-        id: rollupgate
-        if: >-
-          !cancelled()
-          && steps.plan.outputs.rollup_objects != ''
-          && steps.plan.outputs.rollup_objects != '0'
-        continue-on-error: true
-        env:
-          RUN_MANIFEST_FILE: ${{ env.EDUCATION_ROLLUP_MANIFEST_FILE }}
-          CONTENT_GATE_FILE: /tmp/education-rollup/content-gate.json
-        run: npx tsx scripts/promotion-content-gate.ts --manifest-only
-
-      # The years, then the index (R15). --education-rollup: the only
-      # promote that copies derived/education-rollup/.
-      - name: '[rollup] Promote the education rollup (#2222)'
-        if: >-
-          !cancelled()
-          && steps.rollupgate.outputs.content_promote == 'true'
-        continue-on-error: true
-        env:
-          RUN_MANIFEST_FILE: ${{ env.EDUCATION_ROLLUP_MANIFEST_FILE }}
-          COMPLETENESS_GATE_FILE: ${{ env.EDUCATION_ROLLUP_VERDICT_FILE }}
-        run: npx tsx scripts/promote-run-manifest.ts --execute --education-rollup
-
-      - name: '[rollup] Education rollup held by the content gate (#2222)'
-        if: >-
-          !cancelled()
-          && steps.rollupgate.outputs.content_promote == 'false'
-        run: |
-          echo "::warning title=Education rollup::the content gate held the education rollup — prod keeps its copy; the report sidecars are not affected"
-          echo "- 🎓 ⏸️ Education rollup held by the content gate (#2222): prod keeps its copy; see the content gate summary" \
-            >> "$GITHUB_STEP_SUMMARY"
-
       # The pipeline's content gate (#1715), on the sidecar manifest only:
       # decode, parse, hash and the reports contract (district-reports,
       # reports-rollups). Its verdict is applied per date by the next step.
@@ -3374,6 +3335,78 @@ jobs:
         env:
           CONTENT_GATE_FILE: /tmp/report-sidecars/content-gate.json
         run: npx tsx scripts/plan-report-sidecars.ts --apply-content-gate
+
+      # ── The education rollup (#2222): its own hold, gate and promote ──
+      # Planned above into its own manifest (held unless its reports date
+      # is one prod indexes). A fault here holds only the rollup, as the old
+      # continue-on-error mirror did: never a sidecar, never the job. These
+      # steps run whatever the sidecar steps exited with (!cancelled()).
+      #
+      # First the date hold (review M2/L1): the rollup is read from
+      # staging's reports of its asOf date, so it leaves its manifest when
+      # the sidecar verdict holds that date (written and not promoted, or a
+      # report the content gate refused, #2227), and when it cannot tell
+      # (no verdict, the content gate not applied): fail closed.
+      - name: '[rollup] Hold the education rollup of a held reports date (#2222)'
+        id: rolluphold
+        if: >-
+          !cancelled()
+          && steps.plan.outputs.rollup_objects != ''
+          && steps.plan.outputs.rollup_objects != '0'
+        continue-on-error: true
+        run: npx tsx scripts/plan-report-sidecars.ts --apply-rollup-hold
+
+      - name: '[rollup] Content gate the education rollup (#2222)'
+        id: rollupgate
+        if: >-
+          !cancelled()
+          && steps.rolluphold.outputs.rollup_objects != ''
+          && steps.rolluphold.outputs.rollup_objects != '0'
+        continue-on-error: true
+        env:
+          RUN_MANIFEST_FILE: ${{ env.EDUCATION_ROLLUP_MANIFEST_FILE }}
+          CONTENT_GATE_FILE: /tmp/education-rollup/content-gate.json
+        run: npx tsx scripts/promotion-content-gate.ts --manifest-only
+
+      # The years, then the index (R15). --education-rollup: the only
+      # promote that copies derived/education-rollup/.
+      - name: '[rollup] Promote the education rollup (#2222)'
+        id: rolluppromote
+        if: >-
+          !cancelled()
+          && steps.rollupgate.outputs.content_promote == 'true'
+        continue-on-error: true
+        env:
+          RUN_MANIFEST_FILE: ${{ env.EDUCATION_ROLLUP_MANIFEST_FILE }}
+          COMPLETENESS_GATE_FILE: ${{ env.EDUCATION_ROLLUP_VERDICT_FILE }}
+        run: npx tsx scripts/promote-run-manifest.ts --execute --education-rollup
+
+      - name: '[rollup] Education rollup held by the content gate (#2222)'
+        if: >-
+          !cancelled()
+          && steps.rollupgate.outputs.content_promote == 'false'
+        run: |
+          echo "::warning title=Education rollup::the content gate held the education rollup — prod keeps its copy; the report sidecars are not affected"
+          echo "- 🎓 ⏸️ Education rollup held by the content gate (#2222): prod keeps its copy; see the content gate summary" \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      # continue-on-error keeps a rollup fault off the sidecars and the job,
+      # but must not leave it silent: a failed rollup step is an error
+      # annotation and a summary line on an otherwise green run.
+      - name: '[rollup] Education rollup step failed (#2222)'
+        if: >-
+          !cancelled()
+          && (steps.rolluphold.outcome == 'failure'
+            || steps.rollupgate.outcome == 'failure'
+            || steps.rolluppromote.outcome == 'failure')
+        env:
+          HOLD: ${{ steps.rolluphold.outcome }}
+          GATE: ${{ steps.rollupgate.outcome }}
+          PROMOTE: ${{ steps.rolluppromote.outcome }}
+        run: |
+          echo "::error title=Education rollup::a rollup step failed (hold=${HOLD}, gate=${GATE}, promote=${PROMOTE}) — prod keeps its previous rollup; the report sidecars are not affected. See that step's log."
+          echo "- 🎓 ❌ **Education rollup step failed (#2222)**: hold=${HOLD}, gate=${GATE}, promote=${PROMOTE}. Prod keeps its previous rollup; see that step's log." \
+            >> "$GITHUB_STEP_SUMMARY"
 
       # The one prod-write mechanism: the same promoter as the pipeline job,
       # on the sidecar manifest, holding the dates the verdict holds.
