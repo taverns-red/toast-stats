@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.67.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.67.0...toast-stats-v2.67.1) (2026-10-24)
+
+
+### Bug Fixes
+
+* **awards:** raise the tied chip to a 12px uppercase label ([#2264](https://github.com/taverns-red/toast-stats/issues/2264)) ([#2265](https://github.com/taverns-red/toast-stats/issues/2265)) ([4767a45](https://github.com/taverns-red/toast-stats/commit/4767a457b55c8394ad946d0049d8183a6503d55c))
+* **ci-gate:** retry transient 5xx from the GitHub API while polling ([#2261](https://github.com/taverns-red/toast-stats/issues/2261)) ([#2266](https://github.com/taverns-red/toast-stats/issues/2266)) ([7d9c38d](https://github.com/taverns-red/toast-stats/commit/7d9c38deb28839fdb0a736dc6ac150c2e1cddb49))
+* **collector:** per-day FAC meeting times, 12 AM as unstated ([#2246](https://github.com/taverns-red/toast-stats/issues/2246)) ([#2262](https://github.com/taverns-red/toast-stats/issues/2262)) ([e2a7854](https://github.com/taverns-red/toast-stats/commit/e2a785494d1d8d8f1ab45a4de93abee2bb31e6bb))
+
+
+### Refactors
+
+* **pipeline:** the education rollup reaches prod through the manifest promote ([#2222](https://github.com/taverns-red/toast-stats/issues/2222)) ([#2235](https://github.com/taverns-red/toast-stats/issues/2235)) ([4765d81](https://github.com/taverns-red/toast-stats/commit/4765d81d5d98304c1a1abf3b0e2e05ee45d51844))
+
+
+### Dependencies
+
+* **deps:** Bump body-parser from 2.3.0 to 2.4.0 ([#2257](https://github.com/taverns-red/toast-stats/issues/2257)) ([571e4b9](https://github.com/taverns-red/toast-stats/commit/571e4b974a26b41881eaa17c9060fe5252ec71fa))
+* **deps:** Bump fast-uri from 3.1.8 to 3.1.9 ([#2259](https://github.com/taverns-red/toast-stats/issues/2259)) ([869387f](https://github.com/taverns-red/toast-stats/commit/869387f9f59b146b27a9c29697f05307123f73b7))
+* **deps:** Bump ip-address from 10.7.3 to 10.7.4 ([#2258](https://github.com/taverns-red/toast-stats/issues/2258)) ([932adc6](https://github.com/taverns-red/toast-stats/commit/932adc6a27c3b1f933327bd66d72c20bae1ec3c6))
+
 ## [2.67.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.66.0...toast-stats-v2.67.0) (2026-10-24)
 
 
