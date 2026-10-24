@@ -22,6 +22,10 @@ export default defineConfig({
     baseURL: resolveBaseUrl(process.env),
     headless: true,
     screenshot: 'only-on-failure',
+    // A trace of the retry, for the failure artifact the preview job uploads
+    // (#2248). Recorded only when a test is retried, so a green run pays
+    // nothing.
+    trace: 'on-first-retry',
   },
   projects: [
     {

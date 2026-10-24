@@ -692,3 +692,18 @@ jobs:
           configPath: './lighthouserc.mobile.js'
           uploadArtifacts: true
           temporaryPublicStorage: true
+
+      # Failure evidence (#2248). Run 40050767724 lost the WebKit app partway
+      # through (a landing-page 404) and nothing recorded which URL failed.
+      # When a smoke fails, the steps after it are skipped, so
+      # frontend/test-results/ still holds the failing run's screenshots,
+      # first-retry traces and error-responses lists. Diagnostics only: this
+      # step runs only once the job has already failed.
+      - name: Upload Playwright results on failure
+        if: failure() && env.HEAVY_SMOKE == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-results-attempt-${{ github.run_attempt }}
+          path: frontend/test-results/
+          retention-days: 3
+          if-no-files-found: ignore
