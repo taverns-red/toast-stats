@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.67.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.66.0...toast-stats-v2.67.0) (2026-10-24)
+
+
+### Features
+
+* **landing:** find your district first, world pulse, Red Vote block ([#2249](https://github.com/taverns-red/toast-stats/issues/2249)) ([#2250](https://github.com/taverns-red/toast-stats/issues/2250)) ([dfbb0d1](https://github.com/taverns-red/toast-stats/commit/dfbb0d10e5a99eac751c846c879687ca4ec20026))
+
+
+### Bug Fixes
+
+* **pipeline:** a bad report sidecar holds only its own date ([#2227](https://github.com/taverns-red/toast-stats/issues/2227)) ([#2228](https://github.com/taverns-red/toast-stats/issues/2228)) ([1774b17](https://github.com/taverns-red/toast-stats/commit/1774b176b39ce0c64c398342d544e94a2a9b4bd7))
+* **pipeline:** read '7.30 pm' meeting times as 19:30 ([#2243](https://github.com/taverns-red/toast-stats/issues/2243)) ([#2244](https://github.com/taverns-red/toast-stats/issues/2244)) ([02d4169](https://github.com/taverns-red/toast-stats/commit/02d4169e2d237cd9c00f8ee548797b8c0c3801de))
+
 ## [2.66.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.65.2...toast-stats-v2.66.0) (2026-10-22)
 
 

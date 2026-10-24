@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.23.0...collector-cli-v1.23.1) (2026-10-24)
+
+
+### Bug Fixes
+
+* **pipeline:** read '7.30 pm' meeting times as 19:30 ([#2243](https://github.com/taverns-red/toast-stats/issues/2243)) ([#2244](https://github.com/taverns-red/toast-stats/issues/2244)) ([02d4169](https://github.com/taverns-red/toast-stats/commit/02d4169e2d237cd9c00f8ee548797b8c0c3801de))
+
 ## [1.23.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.22.1...collector-cli-v1.23.0) (2026-10-22)
 
 
