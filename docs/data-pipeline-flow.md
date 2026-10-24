@@ -203,6 +203,18 @@ bytes and headers arrive as staged. Rules (`scripts/lib/manifestPromotion.ts`):
 - Never promoted: the stores, `raw-*/`, `derived/` and `runs/`. Staging path == prod path, so an
   identity artifact becomes promotable by being written under `config/` once it is gated.
 
+**Find-A-Club continuity (#2239 AC3).** The completeness gate compares a date with prod's copy
+of that date, so once prod is stripped it cannot see a FAC loss (#2237: 81 dates), and a daily's
+new date has no prod copy at all. For every touched date from 2026-05-15 on (less the 39
+known-unenriched dates in `FAC_KNOWN_UNENRICHED_DATES`, `scripts/lib/facContinuity.ts`), the
+gate also samples staging's district files and holds the date when a district loses the FAC
+merge (`data.prospectiveClubs`) or drops 10 points and 3 clubs of coordinates / address /
+meeting coverage against the best of prod's copy and the 3 nearest earlier prod dates (from
+prod's `v1/dates.json`; unreadable fails closed), or when fewer than half the sampled districts
+are FAC-merged. That floor is what a stripped baseline cannot satisfy. A date that is
+legitimately unenriched for good is added to the list in review; a one-off goes through
+`allow_value_changes`.
+
 **What reaches prod without being written by the run.** Only what the manifest lists is
 promoted, so each class the rsync used to sweep up has its own route:
 
