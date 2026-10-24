@@ -242,15 +242,16 @@ const DistrictsPage: React.FC = () => {
   }, [])
 
   // URL-synced region filter (?regions=1,2,3, #978; was localStorage #416).
-  // Storage backend only — the selection semantics are unchanged from the
-  // localStorage version: it inflates to the full region set on first data
-  // render (see the effect below) and "All" / solo-toggle reset to that full
-  // set. That post-data inflate render is also load-bearing for CLS — it
-  // settles the rankings-table layout after the web-font swap; dropping it
-  // exposed a second table-wrap layout shift on the Linux CI runner that
-  // pushed `/` over the 0.1 budget (0.081 → 0.248). See Lesson 145. The
-  // tradeoff is a fuller default URL (the explicit region list) rather than a
-  // bare `/`; a strict subset still reads as `?regions=1,2,3`.
+  // Empty = all regions, so a bare `/` stays bare and "All" / deselecting the
+  // last chip drop the param (#2255). A link carrying the explicit full list
+  // still reads as "All". #978 used to inflate the selection to that full
+  // list on first data render, which `replaceState`d every cold visit to
+  // `?regions=01,…,DNAR`. That extra commit was incidentally load-bearing for
+  // CLS (Lesson 145: it folded a web-font-swap reflow of the rankings table
+  // into the skeleton→table shift). The metric-matched font fallbacks of
+  // #1373 removed that reflow, so #2255 retired the effect; its CLS is
+  // re-measured on the PR preview and guarded by the e2e font-swap smoke and
+  // the Lighthouse gate.
   const [selectedRegions, setSelectedRegions] = useUrlState<string[]>(
     'regions',
     EMPTY_LIST,
@@ -496,19 +497,6 @@ const DistrictsPage: React.FC = () => {
   // row tracks its own). Keyed on the region count so the row re-measures
   // when the regions land.
   const regionScrollerEdges = useScrollEdges<HTMLDivElement>(regions.length)
-
-  // Inflate the selection to all known regions on first data render (#416,
-  // retained for #978). Beyond initializing the toolbar's selected state, this
-  // post-data setState is load-bearing for CLS: the extra commit settles the
-  // rankings-table layout after the web-font swap, coalescing what is
-  // otherwise a second table-wrap layout shift on the Linux CI runner (#978 /
-  // Lesson 145). selectedRegions is URL-backed now, so the inflated set lands
-  // in `?regions=`.
-  React.useEffect(() => {
-    if (regions.length > 0 && selectedRegions.length === 0) {
-      setSelectedRegions(regions)
-    }
-  }, [regions, selectedRegions.length, setSelectedRegions])
 
   // Filter by selected regions
   const filteredRankings = React.useMemo(() => {
@@ -1907,10 +1895,9 @@ const DistrictsPage: React.FC = () => {
                       r => selectedRegions.includes(r) || r === region
                     )
                 // Deselecting the last region means "no filtering", not an
-                // empty table. Land on the explicit full set, which is the
-                // same state the inflate-on-load effect produces (#978 /
-                // Lesson 145) and what the "All" pill writes.
-                setSelectedRegions(next.length === 0 ? regions : next)
+                // empty table: the empty selection, which is what the "All"
+                // pill writes and drops `?regions=` from the URL (#2255).
+                setSelectedRegions(next)
               }
               const stateLabel = isAllActive
                 ? 'Showing all regions'
@@ -1931,7 +1918,7 @@ const DistrictsPage: React.FC = () => {
                   >
                     <button
                       type="button"
-                      onClick={() => setSelectedRegions(regions)}
+                      onClick={() => setSelectedRegions(EMPTY_LIST)}
                       className={`districts-toolbar__region-chip${isAllActive ? ' districts-toolbar__region-chip--active' : ''}`}
                       aria-pressed={isAllActive}
                     >
