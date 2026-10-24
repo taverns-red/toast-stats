@@ -218,13 +218,16 @@ jobs:
     # #309), so no sibling job can derive it without scraping — which is
     # exactly why `daily-reports` fetches into a raw-date-keyed staging prefix
     # and a trailing job does the placement. It is the empty string for every
-    # non-daily mode, because the daily-process step (the runner's daily
-    # mode, which reports the date the transform wrote, #1765) never ran;
-    # `place-reports` keys its whole existence off that.
+    # non-daily mode, because neither daily-config nor the daily-process
+    # step (the runner's daily mode, which reports the date the transform
+    # wrote, #1765) ran; `place-reports` keys its whole existence off that.
+    # On daily it falls back to the raw date from daily-config, so a step
+    # failing before the runner (the store sync) still lets place-reports
+    # clean up incoming/daily-reports/<raw>/ (#2274).
     outputs:
       mode: ${{ steps.mode.outputs.mode }}
-      raw_date: ${{ steps.daily-process.outputs.date }}
-      snapshot_date: ${{ steps.daily-process.outputs.snapshot_date }}
+      raw_date: ${{ steps.daily-config.outputs.date }}
+      snapshot_date: ${{ steps.daily-process.outputs.snapshot_date || steps.daily-config.outputs.date }}
       # Literally the string 'unknown' when a manual `districts` override
       # skipped discovery (#1343) — `place-reports` guards for it.
       program_year: ${{ steps.daily-config.outputs.program_year }}
@@ -355,6 +358,9 @@ jobs:
             TARGET_DATE=$(date -u -d '1 day ago' +%Y-%m-%d)
           fi
           echo "Target date: ${TARGET_DATE}"
+          # Before anything can fail: the job's snapshot_date falls back to
+          # it, so place-reports cleans up after any later failure (#2274).
+          echo "date=${TARGET_DATE}" >> "$GITHUB_OUTPUT"
 
           # If districts were manually specified, use them directly
           if [ -n "${{ inputs.districts }}" ]; then
@@ -392,7 +398,6 @@ jobs:
           fi
 
           echo "districts=${DISTRICTS}" >> "$GITHUB_OUTPUT"
-          echo "date=${TARGET_DATE}" >> "$GITHUB_OUTPUT"
           # Carry the resolver's verdict to the rollover monitor (#1343). A
           # manual district override skips discovery, so default to 'unknown' —
           # the monitor alerts on anything it does not recognise rather than
@@ -472,14 +477,13 @@ jobs:
           COUNTS=$(DATE_RESULTS_FILE="${RESULTS}" bash scripts/pipeline/process-dates.sh "${GCS_BUCKET}" daily "${TARGET_DATE}") || STATUS=$?
           ACTUAL=$(jq -r 'select(.actual != null) | .actual' "${RESULTS}" | tail -1)
 
-          # raw_date keys the daily-reports staging prefix; snapshot_date is
-          # the date the transform wrote (post closing-period remap, #309),
+          # raw_date (daily-config) keys the daily-reports staging prefix;
+          # snapshot_date is the date the transform wrote (post closing-period remap, #309),
           # where place-reports puts the sidecars. A date that wrote nothing
           # falls back to the raw date, as the scrape summary's
           # `.snapshotDate // .date` did: place-reports then only cleans up,
           # since this job is red.
           SNAPSHOT_DATE="${ACTUAL:-${TARGET_DATE}}"
-          echo "date=${TARGET_DATE}" >> "$GITHUB_OUTPUT"
           echo "snapshot_date=${SNAPSHOT_DATE}" >> "$GITHUB_OUTPUT"
           if [ "${TARGET_DATE}" != "${SNAPSHOT_DATE}" ]; then
             echo "Closing period detected: raw date ${TARGET_DATE} → snapshot ${SNAPSHOT_DATE}"
