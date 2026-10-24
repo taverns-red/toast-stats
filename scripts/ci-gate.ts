@@ -10,7 +10,9 @@
  *   3. Read the head SHA's workflow runs → `GET /repos/{repo}/actions/runs?head_sha=`
  *      (is anything besides the gate still in flight? #2219)
  *
- * …then polls (2) until the verdict is terminal or the deadline expires. A
+ * …then polls (2) until the verdict is terminal or the deadline expires. Each
+ * GET retries a 5xx, rate limit or network error up to 3 tries in all, within
+ * the deadline (#2261); any other 4xx fails at once. A
  * still-incomplete verdict at the deadline FAILS — an expected check that
  * never showed up is the failure mode this gate exists to catch (PR #1484).
  *
@@ -34,6 +36,7 @@ import {
   describeVerdict,
   evaluateChecks,
   expectedChecks,
+  getJsonWithRetry,
   isDeadlineFailure,
   workflowRunsInFlight,
   type GateVerdict,
@@ -60,18 +63,25 @@ const selfRunId = Number(process.env.GITHUB_RUN_ID ?? 0)
 const deadlineMs = Number(process.env.GATE_DEADLINE_MINUTES ?? 40) * 60_000
 const pollMs = Number(process.env.GATE_POLL_SECONDS ?? 20) * 1000
 
+/**
+ * The poll deadline, fixed at start-up. A retry's wait must fit before it, so
+ * retrying a transient 5xx never stretches the gate's budget (#2261).
+ */
+const deadlineAt = Date.now() + deadlineMs
+
 async function api<T>(path: string): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
-    headers: {
-      authorization: `Bearer ${token}`,
-      accept: 'application/vnd.github+json',
-      'x-github-api-version': '2022-11-28',
-    },
-  })
-  if (!res.ok) {
-    throw new Error(`GET ${path} -> ${res.status} ${await res.text()}`)
-  }
-  return (await res.json()) as T
+  return getJsonWithRetry<T>(
+    url =>
+      fetch(url, {
+        headers: {
+          authorization: `Bearer ${token}`,
+          accept: 'application/vnd.github+json',
+          'x-github-api-version': '2022-11-28',
+        },
+      }),
+    `${API}${path}`,
+    { remainingMs: () => deadlineAt - Date.now() }
+  )
 }
 
 /** Every changed file in the PR (paginated; GitHub caps the list at 3000). */

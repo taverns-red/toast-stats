@@ -291,3 +291,78 @@ export function describeVerdict(
     )
   return parts.join(' ')
 }
+
+/** Knobs for {@link getJsonWithRetry}; every field has a default. */
+export interface RetryOptions {
+  /** Total tries, including the first. Default 3. */
+  attempts?: number
+  /** Wait before the 2nd try; doubles each retry. Default 2000 ms. */
+  baseDelayMs?: number
+  /** Injected for tests. Defaults to a real `setTimeout` wait. */
+  sleep?: (ms: number) => Promise<void>
+  /**
+   * Time left on the gate's own deadline. A retry whose wait would not fit is
+   * not attempted, so retrying never stretches the overall budget (#2261).
+   */
+  remainingMs?: () => number
+}
+
+/**
+ * True for a response worth trying again: any 5xx, a 429, or a 403 that
+ * GitHub marks as rate limiting (`x-ratelimit-remaining: 0`). Every other 4xx
+ * is a real answer (bad path, missing permission) and fails fast.
+ */
+export function isRetryableResponse(res: Response): boolean {
+  if (res.status >= 500) return true
+  if (res.status === 429) return true
+  return res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0'
+}
+
+/**
+ * GET `url` and parse JSON, retrying transient failures (#2261).
+ *
+ * CI Gate run 39985288980 was polling a healthy PR when one HTTP 500 from the
+ * check-runs endpoint threw out of the loop and turned the PR red. A 5xx, a
+ * rate limit, or a network error (fetch rejects) is now retried with
+ * exponential backoff, up to `attempts` tries in all. Anything else fails on
+ * the first answer.
+ *
+ * The wait before a retry must fit inside `remainingMs()`; when it does not,
+ * the last error is thrown instead. The gate's deadline is the budget and a
+ * retry never extends it.
+ */
+export async function getJsonWithRetry<T>(
+  doFetch: (url: string) => Promise<Response>,
+  url: string,
+  {
+    attempts = 3,
+    baseDelayMs = 2000,
+    sleep = ms => new Promise(r => setTimeout(r, ms)),
+    remainingMs = () => Infinity,
+  }: RetryOptions = {}
+): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    let error: Error
+    try {
+      const res = await doFetch(url)
+      if (res.ok) return (await res.json()) as T
+      error = new Error(`GET ${url} -> ${res.status} ${await res.text()}`)
+      if (!isRetryableResponse(res)) throw new FailFast(error)
+    } catch (err) {
+      if (err instanceof FailFast) throw err.cause
+      // fetch rejects only on a network failure (DNS, reset, timeout).
+      error = err instanceof Error ? err : new Error(String(err))
+    }
+    const delay = baseDelayMs * 2 ** (attempt - 1)
+    if (attempt >= attempts || delay > remainingMs()) throw error
+    console.error(
+      `⚠️  ${error.message} — retry ${attempt}/${attempts - 1} in ${delay}ms`
+    )
+    await sleep(delay)
+  }
+}
+
+/** Carries a non-retryable HTTP error past the network-error catch. */
+class FailFast {
+  constructor(readonly cause: Error) {}
+}
