@@ -230,7 +230,12 @@ promoted, so each class the rsync used to sweep up has its own route:
   continue-on-error steps: a malformed index, a read error or a gate hold holds only the rollup
   (a warning and a summary line), never a report sidecar. It plans only the years staging's index names, then the
   index; held while its reports date (`asOf`) is not one prod indexes (a later run plans it
-  again); nothing when prod's index is byte-identical. The content gate reads each object
+  again); nothing when prod's index is byte-identical. After the sidecars' per-date content hold,
+  `plan-report-sidecars.ts --apply-rollup-hold` drops it when the sidecar verdict holds `asOf`
+  (the run wrote that date and did not promote it, or one of its reports failed the gate), and
+  when it cannot tell (no verdict, the content gate not applied): the rollup never ships ahead
+  of the reports it was read from. A failed rollup step is an error annotation and a summary
+  line, never a failed job. The content gate reads each object
   (`education-rollup-program-year`, `education-rollup-index`: the shared-contracts schemas, the
   PY its path names, every index row at its own year's path), and
   `promote-run-manifest.ts --execute --education-rollup` (its own step) copies the years, then

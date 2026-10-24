@@ -3250,7 +3250,9 @@ jobs:
   #      The rollup goes in its own manifest, content-gated and promoted
   #      (--education-rollup: its years, then its index) by its own
   #      continue-on-error steps, so a rollup fault holds only the rollup;
-  #   2. content-gate exactly the sidecar manifest;
+  #   2. content-gate exactly the sidecar manifest, and hold only the dates
+  #      it refuses (#2227); the rollup is held when its asOf is one of the
+  #      held dates (--apply-rollup-hold, #2222 M2);
   #   3. promote it (scripts/promote-run-manifest.ts --execute);
   #   4. completeness: a promoted date whose reports staging holds and prod
   #      lacks fails the run, so the gap is never silent (#2144).
