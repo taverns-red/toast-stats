@@ -380,9 +380,11 @@ const OFFSET_BEFORE = /(?:utc|gmt)\s*(?:[+\-−]\s*)?$|[+\-−]$/
 const WEEKDAY_WORD = new RegExp(
   `^(?:${Object.values(WEEKDAY_WORDS).join('|')})$`
 )
-/** Words a bare range start may follow: "Thursdays 7-9 pm", "from 7 - 9". */
+/** Words a bare range start may follow: "Thursdays 7-9 pm", "from 7 - 9",
+ *  and mode, zone and time words ("Zoom 7-9 pm", "EST 7-9 pm", "Meets
+ *  7-9 pm", #2246). The meeting-length check still drops "Zoom 2 - 7 pm". */
 const BARE_START_AFTER =
-  /^(?:from|at|de|des|between|entre|and|et|y|or|ou|start|starts|begins)$/
+  /^(?:from|at|de|des|between|entre|and|et|y|or|ou|start|starts|begins|zoom|teams|online|virtual|hybrid|person|presentiel|[ecmp][sd]t|ak[sd]t|hst|[an][sd]t|ist|w?cet|cest|eet|bst|wat|eat|sast|aes?t|aedt|jst|kst|sgt|hkt|pht|wib|time|times|hora|horario|meets?|weekly|evenings?|mornings?|afternoons?|noche|tarde)$/
 /** An ordinal week ("1st & 3rd 6-7:30 pm"). */
 const ORDINAL_END = /\d(?:st|nd|rd|th|er|e|o|ro|do|to)$/
 
