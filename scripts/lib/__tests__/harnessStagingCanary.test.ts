@@ -13,8 +13,11 @@
  * to devstorage.read_only, so a write would be refused even if one slipped in.
  */
 import { describe, it, expect } from 'vitest'
+import { spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
+import * as os from 'node:os'
 import * as path from 'node:path'
+import * as zlib from 'node:zlib'
 import { parse } from 'yaml'
 import {
   gcloudInvocations,
@@ -177,5 +180,44 @@ describe('the staging canary job (#1768, D10)', () => {
 
   it('may mint an OIDC token and read the repo, nothing more', () => {
     expect(wf.permissions).toEqual({ contents: 'read', 'id-token': 'write' })
+  })
+})
+
+describe('the shim models what the canary observed on gcloud 588 (#1768)', () => {
+  // Run 40143638422 (PR #2284): `storage cat` of a Content-Encoding: gzip
+  // object printed the stored gzip bytes (730 of them, gzip magic), while
+  // `storage cp` to a local file inflated the one layer.
+  const SHIM = path.join(
+    REPO,
+    'scripts/lib/__tests__/fixtures/gcloud-shim/gcloud'
+  )
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'canary-shim-'))
+  const rel = `${STAGING_BUCKET}/time-series/district_61/2020-2021.json`
+  const doc = Buffer.from('{"programYear":"2020-2021","points":[]}\n')
+  const stored = zlib.gzipSync(doc)
+  fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true })
+  fs.mkdirSync(path.dirname(path.join(root, '.meta', rel)), {
+    recursive: true,
+  })
+  fs.writeFileSync(path.join(root, rel), stored)
+  fs.writeFileSync(
+    path.join(root, '.meta', rel),
+    'content-encoding=gzip\ncontent-type=application/json\n'
+  )
+  const shim = (...args: string[]) =>
+    spawnSync(SHIM, args, {
+      env: { ...process.env, SHIM_ROOT: root, SHIM_DOWNLOAD_DECOMPRESS: '1' },
+    })
+
+  it('cat prints the stored bytes of a gzip object, not inflated', () => {
+    const r = shim('storage', 'cat', `gs://${rel}`)
+    expect(r.status).toBe(0)
+    expect(Buffer.compare(r.stdout, stored)).toBe(0)
+  })
+
+  it('a download to a local file inflates the one layer', () => {
+    const dest = path.join(root, 'download.json')
+    expect(shim('storage', 'cp', `gs://${rel}`, dest).status).toBe(0)
+    expect(fs.readFileSync(dest).equals(doc)).toBe(true)
   })
 })
