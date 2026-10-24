@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.67.2](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.67.1...toast-stats-v2.67.2) (2026-10-24)
+
+
+### Bug Fixes
+
+* **ci:** preview cleanup waits out the PR's in-flight smoke ([#2278](https://github.com/taverns-red/toast-stats/issues/2278)) ([#2279](https://github.com/taverns-red/toast-stats/issues/2279)) ([1e5d9d6](https://github.com/taverns-red/toast-stats/commit/1e5d9d67fd2b749494bc03f83ce3550d72a12ff0))
+* **club:** say the meeting time is not readable instead of TI's '?' text ([#2247](https://github.com/taverns-red/toast-stats/issues/2247)) ([#2267](https://github.com/taverns-red/toast-stats/issues/2267)) ([8f2f274](https://github.com/taverns-red/toast-stats/commit/8f2f2743041e1405a71478d68b3753f2354c7fbf))
+* **clubs:** drop '?' address parts and say the address is not readable ([#2268](https://github.com/taverns-red/toast-stats/issues/2268)) ([#2270](https://github.com/taverns-red/toast-stats/issues/2270)) ([ba5d732](https://github.com/taverns-red/toast-stats/commit/ba5d7324590cc129b2c425a19af6ed1b7f562071))
+* **landing:** full phone title and a payments row in the 375 World pulse ([#2256](https://github.com/taverns-red/toast-stats/issues/2256)) ([#2263](https://github.com/taverns-red/toast-stats/issues/2263)) ([6bbc28d](https://github.com/taverns-red/toast-stats/commit/6bbc28da9cd2b64f43774d2d3f413af48c4d2039))
+* **landing:** keep a bare / free of ?regions= ([#2255](https://github.com/taverns-red/toast-stats/issues/2255)) ([#2273](https://github.com/taverns-red/toast-stats/issues/2273)) ([4e80f8b](https://github.com/taverns-red/toast-stats/commit/4e80f8b7bc8fa5c1580fb2e9cedbc6d8a4c59ff6))
+* last-visit baseline moves only on a later as-of date ([#2254](https://github.com/taverns-red/toast-stats/issues/2254)) ([#2271](https://github.com/taverns-red/toast-stats/issues/2271)) ([7a9e3df](https://github.com/taverns-red/toast-stats/commit/7a9e3df105ba2a2be41ae346940c25ff739bccf8))
+* **map:** load the online clubs chip eagerly to drop the Suspense throttle ([#2248](https://github.com/taverns-red/toast-stats/issues/2248)) ([#2280](https://github.com/taverns-red/toast-stats/issues/2280)) ([77b5178](https://github.com/taverns-red/toast-stats/commit/77b517844afae77664421fe546ba6cf64fd2f8c4))
+* **pipeline:** [#1765](https://github.com/taverns-red/toast-stats/issues/1765) daily follow-ups N1-N4 and the ADR-015 step 7 wording ([#2274](https://github.com/taverns-red/toast-stats/issues/2274)) ([#2276](https://github.com/taverns-red/toast-stats/issues/2276)) ([70a5039](https://github.com/taverns-red/toast-stats/commit/70a50396601234cddb3ae4f0fd340cd1aa4e7620))
+
+
+### Refactors
+
+* **pipeline:** daily runs on process-dates.sh (ADR-015 step 7, [#1765](https://github.com/taverns-red/toast-stats/issues/1765)) ([#2272](https://github.com/taverns-red/toast-stats/issues/2272)) ([5b8a483](https://github.com/taverns-red/toast-stats/commit/5b8a4832be88ebd6d88de605ba5fb2a7a0819990))
+
+
+### Tests
+
+* preload lazy page graphs before the first findBy ([#2248](https://github.com/taverns-red/toast-stats/issues/2248)) ([#2275](https://github.com/taverns-red/toast-stats/issues/2275)) ([55a1c2c](https://github.com/taverns-red/toast-stats/commit/55a1c2ce9b06b2d56ba0a207149500396c8254e8))
+
+
+### Continuous Integration
+
+* **preview:** upload smoke results on failure and log error responses ([#2248](https://github.com/taverns-red/toast-stats/issues/2248)) ([#2277](https://github.com/taverns-red/toast-stats/issues/2277)) ([2d84132](https://github.com/taverns-red/toast-stats/commit/2d841329dc138ad2a2617c92cb0d94b9ac083da6))
+
 ## [2.67.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.67.0...toast-stats-v2.67.1) (2026-10-24)
 
 
