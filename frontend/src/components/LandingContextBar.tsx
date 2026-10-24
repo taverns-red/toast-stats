@@ -90,7 +90,10 @@ export const LandingContextBar: React.FC<LandingContextBarProps> = ({
   onExportCsv,
 }) => (
   <ContextBar
-    title="Find a district, club or region"
+    // #2256 — the H1's full text ("Find a district, club or region")
+    // needs ~242px in the ~208px slot at 375 and ellipsised. The bar title
+    // is presentational (aria-hidden); the H1 keeps the full name.
+    title="Find a district"
     programYear={selectedProgramYear}
     date={effectiveDate}
     controls={

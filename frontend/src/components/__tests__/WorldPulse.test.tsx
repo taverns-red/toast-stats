@@ -37,10 +37,38 @@ const mockedRollups = vi.mocked(useRegionRollups)
 const mockedSeries = vi.mocked(fetchCdnRegionMembershipSeries)
 
 const ROWS: WorldPulseRow[] = [
-  { districtId: '61', region: '05', paidClubs: 139, paidClubBase: 158 },
-  { districtId: '93', region: '09', paidClubs: 76, paidClubBase: 76 },
-  { districtId: '80', region: '09', paidClubs: 200, paidClubBase: 216 },
-  { districtId: 'U', region: 'DNAR', paidClubs: 17, paidClubBase: 20 },
+  {
+    districtId: '61',
+    region: '05',
+    paidClubs: 139,
+    paidClubBase: 158,
+    totalPayments: 3000,
+    paymentBase: 5000,
+  },
+  {
+    districtId: '93',
+    region: '09',
+    paidClubs: 76,
+    paidClubBase: 76,
+    totalPayments: 1500,
+    paymentBase: 1200,
+  },
+  {
+    districtId: '80',
+    region: '09',
+    paidClubs: 200,
+    paidClubBase: 216,
+    totalPayments: 4000,
+    paymentBase: 4100,
+  },
+  {
+    districtId: 'U',
+    region: 'DNAR',
+    paidClubs: 17,
+    paidClubBase: 20,
+    totalPayments: 300,
+    paymentBase: 400,
+  },
 ]
 
 const rollups = (world: Record<string, unknown>) =>
@@ -223,6 +251,59 @@ describe('WorldPulse (#2249)', () => {
     expect(
       screen.getByRole('link', { name: /all 7 regions/i })
     ).toHaveTextContent('All 7 regions →')
+  })
+
+  // #2256 — the Total Payments KPI card is hidden below 768, so phones
+  // never saw payments. The pulse carries a phone-only payments row (the
+  // CSS hides it from 768, where the KPI card shows), summed from the same
+  // rankings rows as the KPI strip.
+  it('shows the payments total and its delta vs last year in one row', () => {
+    renderPulse()
+    const row = screen.getByTestId('pulse-payments')
+    expect(row).toHaveTextContent(/Payments YTD/)
+    // 3,000 + 1,500 + 4,000 + 300 = 8,800 against 10,700.
+    expect(screen.getByTestId('pulse-payments-total')).toHaveTextContent(
+      /^8,800$/
+    )
+    const delta = screen.getByTestId('pulse-payments-delta')
+    // Short on screen so it fits one line at 375; the full wording (the KPI
+    // card's) is what assistive tech reads.
+    const shown = delta.querySelector('[aria-hidden="true"]')
+    expect(shown).toHaveTextContent(/^−1,900 vs last PY$/)
+    expect(delta.querySelector('.sr-only')).toHaveTextContent(
+      /^−1,900 YTD vs last year's total$/
+    )
+  })
+
+  it('holds the payments row in the reserve with dashes', () => {
+    mockedRollups.mockReturnValue({
+      rollups: null,
+      snapshotDate: null,
+      isLoading: true,
+    })
+    renderPulse(true)
+    expect(screen.getByTestId('pulse-payments')).toBeInTheDocument()
+    expect(screen.getByTestId('pulse-payments-total')).toHaveTextContent('—')
+    expect(screen.getByTestId('pulse-payments-delta')).toHaveTextContent('—')
+  })
+
+  // #2256 — measured on a local build at 375 and 1280: the shell's pulse
+  // was ~45px short of the loaded one (head 23 vs 45-49px: the loaded
+  // "All regions" link takes the 44px link floor, the reserve's span did
+  // not; sparkline 88 vs 107-111px: the reserve had no caption line), so
+  // everything below shifted when the data landed.
+  it('reserves the sparkline caption line while the series loads', () => {
+    mockedRollups.mockReturnValue({
+      rollups: null,
+      snapshotDate: null,
+      isLoading: true,
+    })
+    const { container } = renderPulse(true)
+    const caption = container.querySelector(
+      '.world-pulse__sparkline .world-pulse__caption'
+    )
+    expect(caption).not.toBeNull()
+    expect(caption).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('keeps every slot in the reserve, with no links and no numbers', () => {
