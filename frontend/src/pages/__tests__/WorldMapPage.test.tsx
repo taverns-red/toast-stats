@@ -232,6 +232,22 @@ describe('WorldMapPage', () => {
     ).toBeInTheDocument()
   })
 
+  // #2248: the chip is part of the page's own chunk, so it commits with the
+  // club data. As a lazy chunk it suspended on first render and React's
+  // 300 ms Suspense reveal throttle pushed it past the data.
+  it('shows the online clubs chip in the same commit as the club data (#2248)', async () => {
+    const s05 = shardOf('05')
+    s05.clubs = s05.clubs.map((c, i) =>
+      i < 3 ? { ...c, meetsOnline: true } : c
+    )
+    serve({ '05': s05 })
+    renderAt('/regions/map')
+    await screen.findByText(/^Showing \d+ of \d+ clubs$/)
+    expect(
+      screen.getByRole('button', { name: /3 online clubs/ })
+    ).toBeInTheDocument()
+  })
+
   it('offers Region and District colour modes; ?color=region keys by region', async () => {
     serve()
     renderAt('/regions/map?color=region')

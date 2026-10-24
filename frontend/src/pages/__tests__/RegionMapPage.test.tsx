@@ -248,6 +248,21 @@ describe('RegionMapPage', () => {
     ).toHaveAttribute('href', '/district/61/club/5097')
   })
 
+  // #2248: the chip commits with the club data, not a Suspense throttle later.
+  it('shows the online clubs chip in the same commit as the club data (#2248)', async () => {
+    fetchShard.mockResolvedValue({
+      ...shard05,
+      clubs: shard05.clubs.map(c =>
+        c.id === '5097' ? { ...c, meetsOnline: true as const } : c
+      ),
+    })
+    renderAt('/region/05/map')
+    await screen.findByText(/^Showing \d+ of \d+ clubs$/)
+    expect(
+      screen.getByRole('button', { name: /1 online club/ })
+    ).toBeInTheDocument()
+  })
+
   it('shows no online chip for a shard without the flag (#2175)', async () => {
     fetchShard.mockResolvedValue(shard05)
     renderAt('/region/05/map')
