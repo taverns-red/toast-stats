@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -9,6 +9,7 @@ import {
   describeVerdict,
   evaluateChecks,
   expectedChecks,
+  getJsonWithRetry,
   isDeadlineFailure,
   workflowRunsInFlight,
   type ObservedCheck,
@@ -499,5 +500,118 @@ describe('retarget wiring — a base change runs the required checks (#2204)', (
     expect(workflow('docs.yml')).toContain(
       "group: docs-${{ github.workflow }}-${{ github.ref }}${{ github.event.action == 'edited' && !github.event.changes.base && format('-noop-{0}', github.run_id) || '' }}"
     )
+  })
+})
+
+describe('getJsonWithRetry — a transient GitHub 5xx does not error the gate (#2261)', () => {
+  const URL_ =
+    '/repos/o/r/commits/abc/check-runs?per_page=100&filter=latest&page=1'
+  const json = (
+    body: unknown,
+    status = 200,
+    headers: Record<string, string> = {}
+  ) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'content-type': 'application/json', ...headers },
+    })
+  const fail = (status: number, headers: Record<string, string> = {}) =>
+    new Response('{"message":"Server Error"}', { status, headers })
+  const greenBody = { total_count: 3, check_runs: allGreen(CI_CHECKS) }
+  const noSleep = () => {
+    const waits: number[] = []
+    return { waits, sleep: async (ms: number) => void waits.push(ms) }
+  }
+
+  it('a transient 500 then success returns the body, and the gate passes', async () => {
+    // CI Gate run 39985288980 died on exactly this: one 500 mid-poll.
+    const doFetch = vi
+      .fn<(u: string) => Promise<Response>>()
+      .mockResolvedValueOnce(fail(500))
+      .mockResolvedValueOnce(json(greenBody))
+    const { waits, sleep } = noSleep()
+    const body = await getJsonWithRetry<typeof greenBody>(doFetch, URL_, {
+      sleep,
+    })
+    expect(doFetch).toHaveBeenCalledTimes(2)
+    expect(waits).toHaveLength(1)
+    expect(evaluateChecks([...CI_CHECKS], body.check_runs).state).toBe('pass')
+  })
+
+  it('a network error (fetch rejects) is retried like a 5xx', async () => {
+    const doFetch = vi
+      .fn<(u: string) => Promise<Response>>()
+      .mockRejectedValueOnce(new TypeError('fetch failed'))
+      .mockResolvedValueOnce(json(greenBody))
+    const { sleep } = noSleep()
+    await expect(getJsonWithRetry(doFetch, URL_, { sleep })).resolves.toEqual(
+      greenBody
+    )
+    expect(doFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('a persistent 500 errors after a bounded number of attempts', async () => {
+    const doFetch = vi
+      .fn<(u: string) => Promise<Response>>()
+      .mockImplementation(async () => fail(502))
+    const { waits, sleep } = noSleep()
+    await expect(
+      getJsonWithRetry(doFetch, URL_, { sleep, attempts: 3, baseDelayMs: 1000 })
+    ).rejects.toThrow(/-> 502/)
+    expect(doFetch).toHaveBeenCalledTimes(3)
+    expect(waits).toEqual([1000, 2000])
+  })
+
+  it('a 404 fails immediately, with no retry', async () => {
+    const doFetch = vi
+      .fn<(u: string) => Promise<Response>>()
+      .mockImplementation(async () => fail(404))
+    const { waits, sleep } = noSleep()
+    await expect(getJsonWithRetry(doFetch, URL_, { sleep })).rejects.toThrow(
+      /-> 404/
+    )
+    expect(doFetch).toHaveBeenCalledTimes(1)
+    expect(waits).toEqual([])
+  })
+
+  it('a plain 403 fails fast, but a rate-limit 403 or a 429 is retried', async () => {
+    const plain = vi
+      .fn<(u: string) => Promise<Response>>()
+      .mockImplementation(async () => fail(403))
+    const { sleep } = noSleep()
+    await expect(getJsonWithRetry(plain, URL_, { sleep })).rejects.toThrow(
+      /-> 403/
+    )
+    expect(plain).toHaveBeenCalledTimes(1)
+
+    for (const limited of [
+      fail(403, { 'x-ratelimit-remaining': '0' }),
+      fail(429),
+    ]) {
+      const doFetch = vi
+        .fn<(u: string) => Promise<Response>>()
+        .mockResolvedValueOnce(limited)
+        .mockResolvedValueOnce(json(greenBody))
+      await expect(getJsonWithRetry(doFetch, URL_, { sleep })).resolves.toEqual(
+        greenBody
+      )
+      expect(doFetch).toHaveBeenCalledTimes(2)
+    }
+  })
+
+  it('never waits past the gate deadline — the budget does not grow', async () => {
+    const doFetch = vi
+      .fn<(u: string) => Promise<Response>>()
+      .mockImplementation(async () => fail(500))
+    const { waits, sleep } = noSleep()
+    await expect(
+      getJsonWithRetry(doFetch, URL_, {
+        sleep,
+        baseDelayMs: 2000,
+        remainingMs: () => 500,
+      })
+    ).rejects.toThrow(/-> 500/)
+    expect(doFetch).toHaveBeenCalledTimes(1)
+    expect(waits).toEqual([])
   })
 })

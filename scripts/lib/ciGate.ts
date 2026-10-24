@@ -291,3 +291,32 @@ export function describeVerdict(
     )
   return parts.join(' ')
 }
+
+/** Knobs for {@link getJsonWithRetry}; every field has a default. */
+export interface RetryOptions {
+  /** Total tries, including the first. Default 3. */
+  attempts?: number
+  /** Wait before the 2nd try; doubles each retry. Default 2000 ms. */
+  baseDelayMs?: number
+  /** Injected for tests. Defaults to a real `setTimeout` wait. */
+  sleep?: (ms: number) => Promise<void>
+  /**
+   * Time left on the gate's own deadline. A retry whose wait would not fit is
+   * not attempted, so retrying never stretches the overall budget (#2261).
+   */
+  remainingMs?: () => number
+}
+
+/**
+ * GET `url` and parse JSON (#2261). Placeholder: one attempt, no retry.
+ */
+export async function getJsonWithRetry<T>(
+  doFetch: (url: string) => Promise<Response>,
+  url: string,
+  _opts: RetryOptions = {}
+): Promise<T> {
+  const res = await doFetch(url)
+  if (!res.ok)
+    throw new Error(`GET ${url} -> ${res.status} ${await res.text()}`)
+  return (await res.json()) as T
+}
