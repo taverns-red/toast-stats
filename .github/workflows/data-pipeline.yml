@@ -466,8 +466,10 @@ jobs:
         run: |
           RESULTS=/tmp/daily-date-results.jsonl
           : > "${RESULTS}"
-          COUNTS=$(DATE_RESULTS_FILE="${RESULTS}" bash scripts/pipeline/process-dates.sh "${GCS_BUCKET}" daily "${TARGET_DATE}")
-          SUCCEEDED=$(jq -r .succeeded <<<"${COUNTS}")
+          # Exit 1 (an upload failed) or 2 (usage) must still set the date
+          # outputs below, so place-reports cleans up the incoming prefix.
+          STATUS=0
+          COUNTS=$(DATE_RESULTS_FILE="${RESULTS}" bash scripts/pipeline/process-dates.sh "${GCS_BUCKET}" daily "${TARGET_DATE}") || STATUS=$?
           ACTUAL=$(jq -r 'select(.actual != null) | .actual' "${RESULTS}" | tail -1)
 
           # raw_date keys the daily-reports staging prefix; snapshot_date is
@@ -489,6 +491,11 @@ jobs:
             echo "- **Runner result**: \`${COUNTS}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+          if [ "${STATUS}" -ne 0 ]; then
+            echo "::error::process-dates.sh daily exited ${STATUS} for ${TARGET_DATE} (1: an upload failed; 2: usage). No store is pushed."
+            exit 1
+          fi
+          SUCCEEDED=$(jq -r .succeeded <<<"${COUNTS}")
           if [ "${SUCCEEDED}" != "1" ]; then
             echo "::error::Daily ${TARGET_DATE} was not published (${COUNTS}): refused by the closing upload guard (#1621), failed, or never written. See the step log; no store is pushed."
             exit 1
