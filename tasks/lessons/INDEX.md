@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-findby-window-pays-for-cold-lazy-imports-and-the-suspense-throttle-preload-in-beforeall.md` — A test's first findBy window pays for Vite's cold compile of every lazily imported module and for React 19's 300 ms Suspense reveal throttle, so on a ~4x slower runner it overruns 1 s; import the lazy graph in beforeAll, and calibrate a CPU-throttle repro to the slowdown per worker, not the slowdown of the whole suite  (2026-10-24)
 - `widen-a-guard-to-its-stated-intent-only-after-inventorying-what-already-passes.md` — A guard test's regex can be narrower than its comment; before widening it to the stated intent, inventory the uses that pass today, because some of them are the house style, not leaks  (2026-10-23)
 - `an-empty-api-listing-is-not-evidence-of-absence-check-it-contains-a-known-member.md` — GitHub's workflow-run listing intermittently returns 200 with zero results; an empty listing is not evidence that nothing is running, so check that it contains a run you know exists  (2026-10-22)
 - `an-additive-publish-keeps-what-the-run-now-records-as-absent.md` — When a re-derivation can record an entity as absent, an upload-only publish keeps the entity's old objects; the run must remove them and record the removal for promotion  (2026-10-21)
