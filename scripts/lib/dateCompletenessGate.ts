@@ -492,6 +492,20 @@ export function buildCompletenessGateSummary(
   return lines.join('\n')
 }
 
+/** "district 05, district 61" from warning paths. */
+function districtList(warnings: ReadonlyArray<{ path: string }>): string {
+  const ids = [
+    ...new Set(
+      warnings
+        .map(w => /district_([A-Za-z0-9]+)\.json$/.exec(w.path)?.[1])
+        .filter((id): id is string => id !== undefined)
+    ),
+  ]
+  return ids.length
+    ? ids.map(id => `district ${id}`).join(', ')
+    : 'the district'
+}
+
 /**
  * The `fac-loss` issue body for a run whose gate warned (#2239), null when
  * nothing warned. The dates promoted: the issue is the loud record.
@@ -514,7 +528,7 @@ export function buildFacWarningBody(
     '',
     ...result.warnings.map(w => `- \`${w.path}\`: ${w.reason}`),
     '',
-    'To repair: once FAC is back for the district, re-derive the date with a `fac_prior_root` holding an enriched copy, or accept the loss. A re-derive from `raw-fac/` alone reproduces it, since the daily fallback is never persisted.',
+    `What to do: the next daily refetches Find-A-Club, so a one-day fetch failure clears there. If the loss persists, investigate the FAC fetch for ${districtList(result.warnings)}. A re-derive of this date from \`raw-fac/\` reproduces the loss, since the daily fallback is never persisted.`,
     '',
   ].join('\n')
 }

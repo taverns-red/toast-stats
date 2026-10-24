@@ -216,8 +216,10 @@ them (#490). **Warn on few, hold on many** (Ron, 2026-10-24): losses in 1 or 2 d
 districts (`FAC_HOLD_MIN_DISTRICTS`), or fewer than half the sampled districts FAC-merged (the
 floor, which no stripped baseline can satisfy), hold it. A date that is legitimately unenriched
 for good is added to the list in review; a one-off goes through `allow_value_changes`. A
-re-derive of a date with a district loss needs `fac_prior_root`: `raw-fac/` never holds the
-daily fallback, so it reproduces the loss. Sequencing note: a rebuild of a group-C date such as
+warned district loss clears on the next daily, which refetches FAC; if it persists, investigate
+that district's FAC fetch. A re-derive from `raw-fac/` reproduces the loss (the daily fallback
+is never persisted), and `fac_prior_root` accepts only the #2239 recovery bucket. The issue step
+is `continue-on-error`, so an API error only warns. Sequencing note: a rebuild of a group-C date such as
 2026-10-08 (for example the October Distinguished backfill) without `fac_prior_root` now holds
 that date, since it would re-strip it.
 

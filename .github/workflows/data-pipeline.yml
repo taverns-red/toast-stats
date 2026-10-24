@@ -2216,22 +2216,33 @@ jobs:
           steps.completenessgate.outputs.fac_warnings != ''
           && steps.completenessgate.outputs.fac_warnings != '0'
           && steps.mode.outputs.skip_promotion != 'true'
+        # An alert only: an issue-API error must never fail the job, or
+        # place-reports, education-rollup and promote-reports (which need
+        # needs.pipeline.result == 'success') skip the day (#2282 review).
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh label create fac-loss --color D93F0B \
             --description "Find-A-Club data lost on a promoted date (#2239)" \
             2>/dev/null || echo "Label already exists"
-          EXISTING=$(gh issue list --label fac-loss --state open \
-            --json number --jq '.[0].number // empty')
-          if [ -n "${EXISTING}" ]; then
-            echo "Existing open fac-loss issue #${EXISTING}; adding a comment."
-            gh issue comment "${EXISTING}" --body-file /tmp/fac-loss-warning.md
-          else
-            gh issue create \
-              --title "⚠️ Find-A-Club loss on a promoted date" \
-              --label fac-loss \
-              --body-file /tmp/fac-loss-warning.md
+          filed=false
+          if EXISTING=$(gh issue list --label fac-loss --state open \
+            --json number --jq '.[0].number // empty'); then
+            if [ -n "${EXISTING}" ]; then
+              echo "Existing open fac-loss issue #${EXISTING}; adding a comment."
+              gh issue comment "${EXISTING}" \
+                --body-file /tmp/fac-loss-warning.md && filed=true
+            else
+              gh issue create \
+                --title "⚠️ Find-A-Club loss on a promoted date" \
+                --label fac-loss \
+                --body-file /tmp/fac-loss-warning.md && filed=true
+            fi
+          fi
+          if [ "${filed}" != true ]; then
+            echo "::warning::Could not file the fac-loss issue (GitHub API error);" \
+              "the Find-A-Club warnings are in the completeness gate log and summary."
           fi
 
       # ── Summary ──
