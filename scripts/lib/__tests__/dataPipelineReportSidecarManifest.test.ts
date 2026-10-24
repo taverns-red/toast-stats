@@ -314,15 +314,45 @@ describe('the education rollup is gated and promoted on its own (#2222 M1)', () 
   const RPROMOTE = '[rollup] Promote the education rollup (#2222)'
   const RHELD = '[rollup] Education rollup held by the content gate (#2222)'
 
-  it('plan → its own gate → its own promote, independent of the sidecars’ steps', () => {
-    const order = [PLAN, RGATE, RPROMOTE, RHELD].map(n => index(JOB, n))
+  const RHOLD =
+    '[rollup] Hold the education rollup of a held reports date (#2222)'
+  const RFAIL = '[rollup] Education rollup step failed (#2222)'
+
+  it('plan → sidecar hold → its own date hold → gate → promote (#2222 M2)', () => {
+    // After the sidecars' per-date hold (#2227): the rollup of a date the
+    // sidecars hold must see that hold before it is gated or promoted.
+    const order = [PLAN, HOLD, RHOLD, RGATE, RPROMOTE, RHELD, RFAIL].map(n =>
+      index(JOB, n)
+    )
     expect(
       order.every(i => i >= 0),
       JSON.stringify(order)
     ).toBe(true)
     expect([...order].sort((a, b) => a - b)).toEqual(order)
-    // Before the sidecars' gate, whose hold fails the job.
-    expect(index(JOB, RHELD)).toBeLessThan(index(JOB, GATE))
+  })
+
+  it('holds the rollup whose reports date the sidecar verdict holds, never failing the job', () => {
+    const h = step(JOB, RHOLD)
+    expect(h?.id).toBe('rolluphold')
+    expect(h?.run).toBe(
+      'npx tsx scripts/plan-report-sidecars.ts --apply-rollup-hold'
+    )
+    const c = topLevelConjuncts(h?.if ?? '')
+    expect(c).toContain('!cancelled⟨group⟩')
+    expect(h?.if).toContain("steps.plan.outputs.rollup_objects != '0'")
+    expect(h?.['continue-on-error']).toBe(true)
+  })
+
+  it('a rollup step that fails is an error annotation and a summary line, not silent green', () => {
+    const f = step(JOB, RFAIL)
+    for (const id of ['rolluphold', 'rollupgate', 'rolluppromote']) {
+      expect(f?.if).toContain(`steps.${id}.outcome == 'failure'`)
+    }
+    expect(f?.if).toContain('!cancelled()')
+    expect(f?.run).toContain('::error title=Education rollup::')
+    expect(f?.run).toContain('GITHUB_STEP_SUMMARY')
+    expect(f?.run).not.toMatch(/exit 1/)
+    expect(step(JOB, RPROMOTE)?.id).toBe('rolluppromote')
   })
 
   it('gates exactly the rollup manifest, and a gate error never fails the job', () => {
@@ -337,7 +367,8 @@ describe('the education rollup is gated and promoted on its own (#2222 M1)', () 
     expect(g?.env?.CONTENT_GATE_FILE).not.toBe(
       step(JOB, GATE)?.env?.CONTENT_GATE_FILE
     )
-    expect(g?.if).toContain("steps.plan.outputs.rollup_objects != '0'")
+    // Only what the date hold left (#2222 M2).
+    expect(g?.if).toContain("steps.rolluphold.outputs.rollup_objects != '0'")
     expect(g?.['continue-on-error']).toBe(true)
   })
 

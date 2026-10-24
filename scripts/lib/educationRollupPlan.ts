@@ -119,3 +119,17 @@ export function planEducationRollup(
     reason: `${new Set(years).size} program year(s) + index, reports as of ${asOf}`,
   }
 }
+
+/** The part of the sidecar verdict the rollup's date hold reads. */
+export interface SidecarHoldState {
+  heldDates: readonly string[]
+  contentGate?: string
+}
+
+/** Red stub (#2222 M2): never holds. */
+export function educationRollupDateHold(
+  _asOf: string | null,
+  _sidecar: SidecarHoldState | null
+): string | null {
+  return null
+}

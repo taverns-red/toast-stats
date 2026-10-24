@@ -25,13 +25,21 @@ import { createHash } from 'node:crypto'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { runPlanReportSidecars } from '../reportSidecarPlanRunner.js'
+import {
+  runApplyEducationRollupHold,
+  runApplySidecarContentGate,
+  runPlanReportSidecars,
+} from '../reportSidecarPlanRunner.js'
 import { runPromoteRunManifest } from '../promoteRunManifestRunner.js'
 import {
   planManifestPromotion,
   type PromotionInputs,
 } from '../manifestPromotion.js'
-import { planEducationRollup } from '../educationRollupPlan.js'
+import {
+  educationRollupDateHold,
+  planEducationRollup,
+} from '../educationRollupPlan.js'
+import { evaluateContentGate } from '../promotionContentGate.js'
 import { parseRunManifest, type RunManifestEntry } from '../runManifest.js'
 
 const REPO = process.cwd()
@@ -141,6 +149,58 @@ describe('planEducationRollup (pure)', () => {
         })
       ).toThrow()
     }
+  })
+})
+
+/**
+ * #2222 M2 (and L1): the rollup is built from staging's reports of its
+ * `asOf` date. When the sidecar plan holds that date (this run wrote it and
+ * did not promote it) or the sidecars' content gate holds it (a refused
+ * report), a rollup read from those reports must not ship ahead of them.
+ */
+describe('educationRollupDateHold (pure)', () => {
+  const applied = (heldDates: string[]) => ({
+    heldDates,
+    contentGate: 'applied' as const,
+  })
+
+  it('holds a rollup whose reports date the sidecar verdict holds', () => {
+    expect(
+      educationRollupDateHold('2026-10-16', applied(['2026-10-16']))
+    ).toMatch(/2026-10-16/)
+    expect(
+      educationRollupDateHold('2026-10-16', {
+        heldDates: ['2026-10-16'],
+        contentGate: 'none',
+      })
+    ).toMatch(/2026-10-16/)
+  })
+
+  it('keeps it when only other dates are held, or none', () => {
+    expect(
+      educationRollupDateHold('2026-10-16', applied(['2026-10-15']))
+    ).toBeNull()
+    expect(educationRollupDateHold('2026-10-16', applied([]))).toBeNull()
+    expect(
+      educationRollupDateHold('2026-10-16', {
+        heldDates: [],
+        contentGate: 'none',
+      })
+    ).toBeNull()
+  })
+
+  it('fails closed: no sidecar verdict, an unapplied content gate, or no asOf', () => {
+    expect(educationRollupDateHold('2026-10-16', null)).not.toBeNull()
+    expect(
+      educationRollupDateHold('2026-10-16', {
+        heldDates: [],
+        contentGate: 'pending',
+      })
+    ).not.toBeNull()
+    expect(
+      educationRollupDateHold('2026-10-16', { heldDates: [] })
+    ).not.toBeNull()
+    expect(educationRollupDateHold(null, applied([]))).not.toBeNull()
   })
 })
 
@@ -508,5 +568,147 @@ describe('plan-report-sidecars + promote-run-manifest --education-rollup (shim)'
     const r = await promote({ SHIM_FAIL_MATCH: '^cp .*2018-2019' })
     expect(r.status).not.toBe(0)
     expect(read(PROD, INDEX)).toBeNull()
+  })
+
+  // #2222 M2/L1: after the sidecars' per-date content gate (#2227), the
+  // rollup of a held reports date leaves the rollup manifest.
+  describe('a held reports date holds its rollup (#2222 M2)', () => {
+    let gateFile: string
+    const C15 = 'snapshots/2026-10-15/district_61_reports.json'
+    beforeEach(() => {
+      gateFile = path.join(tmp, 'sidecars', 'content-gate.json')
+      // Carried: staging holds it for an indexed date, prod lacks it.
+      put(STG, C15, '{"districtId":"61"}')
+    })
+
+    function writeGate(failing: Record<string, string>) {
+      const sidecars = manifestAt(sidecarManifest)
+      const result = evaluateContentGate({
+        changedCount: 0,
+        manifestCount: sidecars.length,
+        results: sidecars.map(e => ({
+          path: e.path,
+          kind: 'district-reports' as const,
+          failure: failing[e.path] ?? null,
+        })),
+      })
+      fs.mkdirSync(path.dirname(gateFile), { recursive: true })
+      fs.writeFileSync(gateFile, JSON.stringify(result, null, 2))
+    }
+    const applyGate = async () => {
+      let err = ''
+      const status = await runApplySidecarContentGate({
+        env: env({ CONTENT_GATE_FILE: gateFile }),
+        err: s => {
+          err += s
+        },
+      })
+      return { status, err }
+    }
+    const rollupHold = async () => {
+      let err = ''
+      const status = await runApplyEducationRollupHold({
+        env: env(),
+        err: s => {
+          err += s
+        },
+      })
+      return { status, err }
+    }
+    const expectRollupHeld = (r: { status: number; err: string }) => {
+      expect(r.status, r.err).toBe(0)
+      expect(outputs()).toMatchObject({
+        rollup_objects: '0',
+        education_rollup: 'held',
+      })
+      expect(fs.existsSync(rollupManifest)).toBe(false)
+      expect(r.err).toMatch(/::warning title=Education rollup::/)
+      expect(fs.readFileSync(summaryFile, 'utf-8')).toMatch(
+        /Education rollup held/
+      )
+    }
+
+    it('a content-held reports date holds the rollup built from it', async () => {
+      expect((await plan()).status).toBe(0)
+      expect(outputs().rollup_objects).toBe('3')
+      writeGate({ [SIDECAR]: 'district-reports: place text holds a link' })
+      expect((await applyGate()).status).toBe(0)
+      fs.rmSync(output)
+      const r = await rollupHold()
+      expectRollupHeld(r)
+      expect(r.err).toMatch(/2026-10-16/)
+      // And nothing of it reaches prod.
+      await promote()
+      expect(read(PROD, INDEX)).toBeNull()
+      expect(read(PROD, Y18)).toBeNull()
+    })
+
+    it('a content hold of another date leaves the rollup to promote', async () => {
+      expect((await plan()).status).toBe(0)
+      writeGate({ [C15]: 'district-reports: place text holds a link' })
+      expect((await applyGate()).status).toBe(0)
+      fs.rmSync(output)
+      const r = await rollupHold()
+      expect(r.status, r.err).toBe(0)
+      expect(outputs()).toMatchObject({
+        rollup_objects: '3',
+        education_rollup: 'promote',
+      })
+      expect((await promote()).status).toBe(0)
+      expect(read(PROD, INDEX)).toBe(read(STG, INDEX))
+    })
+
+    it('a re-run that wrote its reports date and did not promote it holds the rollup (L1)', async () => {
+      // Prod already indexes 2026-10-16, but this run's promote of it held.
+      expect((await plan({ PROMOTED_DATES: '' })).status).toBe(0)
+      writeGate({})
+      expect((await applyGate()).status).toBe(0)
+      fs.rmSync(output)
+      expectRollupHeld(await rollupHold())
+    })
+
+    it('holds it when the sidecars were planned but their content gate never applied', async () => {
+      expect((await plan()).status).toBe(0)
+      fs.rmSync(output)
+      expectRollupHeld(await rollupHold())
+    })
+
+    it('holds it when there is no sidecar verdict (the sidecar plan failed)', async () => {
+      expect((await plan()).status).toBe(0)
+      fs.rmSync(verdictFile)
+      fs.rmSync(output)
+      expectRollupHeld(await rollupHold())
+    })
+
+    it('with no sidecar to gate, the rollup of a promoted date promotes', async () => {
+      fs.writeFileSync(
+        runManifest,
+        JSON.stringify({
+          path: 'snapshots/2026-10-16/district_61.json',
+          sha256: sha('{}'),
+          date: '2026-10-16',
+          stage: 'daily',
+        }) + '\n'
+      )
+      fs.rmSync(path.join(root, STG, C15))
+      expect((await plan()).status).toBe(0)
+      expect(outputs().objects).toBe('0')
+      fs.rmSync(output)
+      const r = await rollupHold()
+      expect(r.status, r.err).toBe(0)
+      expect(outputs()).toMatchObject({
+        rollup_objects: '3',
+        education_rollup: 'promote',
+      })
+    })
+
+    it('no rollup manifest is nothing to hold', async () => {
+      put(STG, INDEX, index('2026-10-17', ['2018-2019']), ROLLUP_META)
+      expect((await plan()).status).toBe(0)
+      fs.rmSync(output)
+      const r = await rollupHold()
+      expect(r.status, r.err).toBe(0)
+      expect(outputs().rollup_objects).toBe('0')
+    })
   })
 })

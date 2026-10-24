@@ -434,3 +434,10 @@ export async function runApplySidecarContentGate(io: PlanIo): Promise<number> {
   }
   return 0
 }
+
+/** Red stub (#2222 M2): does nothing. */
+export async function runApplyEducationRollupHold(
+  _io: PlanIo
+): Promise<number> {
+  return 0
+}
