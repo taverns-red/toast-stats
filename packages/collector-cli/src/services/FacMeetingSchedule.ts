@@ -646,9 +646,22 @@ function slotsFrom(found: readonly TimeToken[], text: string): Slot[] {
         startMinutes = 12 * 60 + start.minute
       }
       startMinutes = unlessTwelveAm(start, startMinutes)
+      // "12-1 am": a bare 12 before an am end is a 12 AM start too, so
+      // not stated; the end alone is no start either.
+      const twelveAmBare =
+        start.hour === 12 &&
+        !start.meridiem &&
+        !start.twentyFour &&
+        next.meridiem === 'am' &&
+        next.hour < 12
+      if (twelveAmBare) startMinutes = undefined
       // A lone-number start must make a meeting-length range (15 min–3 h):
       // "2 - 7 pm" is not 14:00–19:00.
-      if (start.bare && !meetingLength(startMinutes, endMinutes)) {
+      if (
+        start.bare &&
+        !twelveAmBare &&
+        !meetingLength(startMinutes, endMinutes)
+      ) {
         i += 1
         continue
       }
