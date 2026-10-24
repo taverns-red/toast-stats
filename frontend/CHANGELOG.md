@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.47.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.47.0...frontend-v3.47.1) (2026-10-24)
+
+
+### Bug Fixes
+
+* **awards:** raise the tied chip to a 12px uppercase label ([#2264](https://github.com/taverns-red/toast-stats/issues/2264)) ([#2265](https://github.com/taverns-red/toast-stats/issues/2265)) ([4767a45](https://github.com/taverns-red/toast-stats/commit/4767a457b55c8394ad946d0049d8183a6503d55c))
+
+
+### Refactors
+
+* **pipeline:** the education rollup reaches prod through the manifest promote ([#2222](https://github.com/taverns-red/toast-stats/issues/2222)) ([#2235](https://github.com/taverns-red/toast-stats/issues/2235)) ([4765d81](https://github.com/taverns-red/toast-stats/commit/4765d81d5d98304c1a1abf3b0e2e05ee45d51844))
+
 ## [3.47.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.46.1...frontend-v3.47.0) (2026-10-24)
 
 

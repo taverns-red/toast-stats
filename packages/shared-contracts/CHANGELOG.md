@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.22.0...shared-contracts-v1.22.1) (2026-10-24)
+
+
+### Refactors
+
+* **pipeline:** the education rollup reaches prod through the manifest promote ([#2222](https://github.com/taverns-red/toast-stats/issues/2222)) ([#2235](https://github.com/taverns-red/toast-stats/issues/2235)) ([4765d81](https://github.com/taverns-red/toast-stats/commit/4765d81d5d98304c1a1abf3b0e2e05ee45d51844))
+
 ## [1.22.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.21.0...shared-contracts-v1.22.0) (2026-10-20)
 
 

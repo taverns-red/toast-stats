@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.2](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.23.1...collector-cli-v1.23.2) (2026-10-24)
+
+
+### Bug Fixes
+
+* **collector:** per-day FAC meeting times, 12 AM as unstated ([#2246](https://github.com/taverns-red/toast-stats/issues/2246)) ([#2262](https://github.com/taverns-red/toast-stats/issues/2262)) ([e2a7854](https://github.com/taverns-red/toast-stats/commit/e2a785494d1d8d8f1ab45a4de93abee2bb31e6bb))
+
 ## [1.23.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.23.0...collector-cli-v1.23.1) (2026-10-24)
 
 
