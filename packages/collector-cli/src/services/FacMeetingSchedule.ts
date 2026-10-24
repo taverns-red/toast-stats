@@ -537,6 +537,19 @@ function meetingLength(
   return length >= 15 && length <= 180
 }
 
+/** A literal "12:00 AM" start that no rule read as noon is "time not
+ *  stated" (Ron, 2026-10-23, #2246): no club meets at midnight, and noon
+ *  would be a guess. */
+function unlessTwelveAm(
+  token: TimeToken,
+  minutes: number | undefined
+): number | undefined {
+  if (token.hour === 12 && token.meridiem === 'am' && minutes !== undefined) {
+    return minutes < 60 ? undefined : minutes
+  }
+  return minutes
+}
+
 interface Slot {
   startTime?: string
   endTime?: string
@@ -618,6 +631,7 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
       ) {
         startMinutes = 12 * 60 + start.minute
       }
+      startMinutes = unlessTwelveAm(start, startMinutes)
       // A lone-number start must make a meeting-length range (15 min–3 h):
       // "2 - 7 pm" is not 14:00–19:00.
       if (start.bare && !meetingLength(startMinutes, endMinutes)) {
@@ -630,7 +644,7 @@ function timeSlotsIn(time: string | null | undefined): Slot[] {
           : { startTime: clock(startMinutes), endTime: clock(endMinutes) }
       i += 2
     } else {
-      slot = { startTime: clock(resolve(start)) }
+      slot = { startTime: clock(unlessTwelveAm(start, resolve(start))) }
       i += 1
     }
     slots.push(slot)
