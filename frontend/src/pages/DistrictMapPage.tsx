@@ -20,6 +20,9 @@ import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
+// #2248: eager, not a lazy chunk. It is ~0.6 KB gzip, and a lazy first
+// render suspends and pays React's 300 ms Suspense reveal throttle.
+import OnlineClubsChip from '../components/map/OnlineClubsChip'
 import { useClubPins } from '../components/map/useClubPins'
 import MapViewControls from '../components/map/MapViewControls'
 import {
@@ -111,10 +114,6 @@ const Realign = React.lazy(
 
 // The keyboard path between pins (#1940), once the map is up.
 const PinKeys = React.lazy(() => import('../components/map/MapPinKeys'))
-// #2174: only districts with online-only clubs fetch it.
-const OnlineClubsChip = React.lazy(
-  () => import('../components/map/OnlineClubsChip')
-)
 
 // Only a tap needs the club summary, so it loads on the first selection.
 const MapClubSummary = React.lazy(() =>
@@ -412,9 +411,7 @@ const DistrictMapPage: React.FC = () => {
         </React.Suspense>
       )}
       {limit === undefined && online.length > 0 && (
-        <React.Suspense fallback={null}>
-          <OnlineClubsChip clubs={online} districtId={districtId} />
-        </React.Suspense>
+        <OnlineClubsChip clubs={online} districtId={districtId} />
       )}
     </div>
   )

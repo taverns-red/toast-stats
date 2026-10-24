@@ -10,6 +10,9 @@ import { useDarkMode } from '../contexts/DarkModeContext'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 import { RollupPageShell } from '../components/rollups/RollupPageShell'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
+// #2248: eager, not a lazy chunk. It is ~0.6 KB gzip, and a lazy first
+// render suspends and pays React's 300 ms Suspense reveal throttle.
+import OnlineClubsChip from '../components/map/OnlineClubsChip'
 import { useClubPins } from '../components/map/useClubPins'
 import MapViewControls from '../components/map/MapViewControls'
 import {
@@ -81,10 +84,6 @@ const Chips = React.lazy(() =>
   }))
 )
 const MapPreview = React.lazy(() => import('../components/map/MapPreview'))
-// #2174: only regions with online-only clubs fetch it.
-const OnlineClubsChip = React.lazy(
-  () => import('../components/map/OnlineClubsChip')
-)
 const ModePopover = React.lazy(() =>
   import('../components/map/MapModePicker').then(m => ({
     default: m.ModePopover,
@@ -345,9 +344,7 @@ const RegionMapPage: React.FC = () => {
         </React.Suspense>
       )}
       {limit === undefined && online.length > 0 && (
-        <React.Suspense fallback={null}>
-          <OnlineClubsChip clubs={online} />
-        </React.Suspense>
+        <OnlineClubsChip clubs={online} />
       )}
     </div>
   )
