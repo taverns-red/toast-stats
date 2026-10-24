@@ -364,16 +364,13 @@ describe('Region filter — URL round-trip (?regions=, #978)', () => {
     fireEvent.click(chip('03'))
     await waitFor(() => expect(param('regions')).toBe('01,03'))
 
-    // Removing the last one lands on the explicit full set — the "All" state,
-    // which is what the inflate-on-load effect also produces (#978).
+    // Removing the last one lands on "All" — the empty selection, which
+    // drops the param rather than spelling out every region (#2255).
     fireEvent.click(chip('01'))
     await waitFor(() => expect(param('regions')).toBe('03'))
     fireEvent.click(chip('03'))
-    await waitFor(() =>
-      expect(param('regions')?.split(',')).toEqual(
-        expect.arrayContaining(['01', '02', '03'])
-      )
-    )
+    await waitFor(() => expect(param('regions')).toBeNull())
+    expect(allChip()).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('INWARD: a pasted multi-region link reproduces the exact view', async () => {
