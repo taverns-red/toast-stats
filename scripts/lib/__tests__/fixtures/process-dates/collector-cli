@@ -74,6 +74,10 @@
 #                        date fetches no district (a TI outage) and exits 1
 #   STUB_FAC_FETCH_MISS  optional: comma-separated ids the fetch fails for
 #                        (a partial fetch, exit 1)
+#   STUB_FAC_FETCH_CRASH optional: ERE; a fetch-find-a-club of a matching
+#                        date dies before it creates its output folder (an
+#                        npx or config failure), prints nothing on stdout
+#                        and exits 1 (#2274 N1)
 set -euo pipefail
 
 : "${CACHE_DIR:?CACHE_DIR must be set}"
@@ -196,6 +200,10 @@ case "${CMD}" in
   fetch-find-a-club)
     : "${DISTRICTS_ARG:?--districts is required}"
     : "${COMPARE_DIR:?--compare-snapshot-dir is required}"
+    if matches "${STUB_FAC_FETCH_CRASH:-}"; then
+      echo "Error: Cannot find module 'collector-cli'" >&2
+      exit 1
+    fi
     out="${CACHE_DIR}/find-a-club/${DATE}"
     mkdir -p "${out}"
     fixture="$(dirname "${BASH_SOURCE[0]}")/raw-fac/district_61.json"

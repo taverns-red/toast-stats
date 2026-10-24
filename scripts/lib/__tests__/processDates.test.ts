@@ -2034,6 +2034,52 @@ describe('process-dates.sh daily (#1765)', () => {
       )
     })
 
+    it('a fetch that dies before creating its output folder still reports, persists nothing and falls back (#2274 N1)', () => {
+      putRawFac('2026-10-20')
+      const r = daily({ STUB_FAC_FETCH_CRASH: `^${DATE}$` })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(r.stderr).not.toMatch(/The Find-A-Club fetch for .* did not run/)
+      expect(r.stderr).toMatch(
+        /::warning::The Find-A-Club fetch created no output folder for 2026-10-23/
+      )
+      expect(summaryText()).toContain(
+        '- **Raw FAC persisted**: 0 files (the fetch wrote none)'
+      )
+      expect(objectsUnder(`raw-fac/${DATE}`)).toEqual([])
+      expect(uploadedSnapshot(DATE).facMergedClubs).toBe(2)
+    })
+
+    it('daily-fac-fetch.sh prints its result line when the output folder is missing (#2274 N1)', () => {
+      const r = spawnSync(
+        'bash',
+        [
+          path.join(REPO, 'scripts/pipeline/daily-fac-fetch.sh'),
+          BUCKET,
+          DATE,
+          '61',
+        ],
+        {
+          cwd: REPO,
+          encoding: 'utf-8',
+          env: {
+            ...process.env,
+            GCLOUD: SHIM,
+            SHIM_ROOT: root,
+            SHIM_LOG: shimLog,
+            CACHE_DIR: cache,
+            GITHUB_STEP_SUMMARY: summary,
+            COLLECTOR_CLI: path.join(STUBS, 'collector-cli'),
+            RUN_MANIFEST_FILE: manifest,
+            STUB_FAC_FETCH_CRASH: `^${DATE}$`,
+          },
+        }
+      )
+      expect(r.status, r.stderr).toBe(0)
+      expect(JSON.parse(r.stdout)).toEqual({ fetched: 0, persisted: 0 })
+      expect(lines(shimLog)).toEqual([])
+    })
+
     it('a partial fetch persists exactly what it fetched (#1770)', () => {
       const r = daily({ DISTRICTS: '61,62', STUB_FAC_FETCH_MISS: '62' })
       expect(r.status, r.stderr).toBe(0)
@@ -2137,5 +2183,57 @@ describe('process-dates.sh daily (#1765)', () => {
       daily({ STUB_MERGE_FAIL: `^${DATE}$` })
       expect(lines(stubLog).some(l => l.startsWith('identity '))).toBe(false)
     })
+  })
+})
+
+describe('process-dates.sh: every MODE case names every mode (R17, #2274 N2)', () => {
+  const source = fs.readFileSync(SCRIPT, 'utf-8').split('\n')
+
+  /** Labels of each `case "${MODE}" in` block: lines one level deeper. */
+  function modeCases(): { line: number; labels: string[] }[] {
+    const out: { line: number; labels: string[] }[] = []
+    source.forEach((l, i) => {
+      const m = /^(\s*)case "\$\{MODE\}" in\s*$/.exec(l)
+      if (!m) return
+      const indent = m[1]!.length
+      const labels: string[] = []
+      for (let j = i + 1; j < source.length; j++) {
+        const line = source[j]!
+        const lead = /^\s*/.exec(line)![0].length
+        if (lead === indent && /^\s*esac\b/.test(line)) break
+        if (lead !== indent + 2) continue
+        const label = /^\s*([a-z*][a-z*| -]*)\)/.exec(line)
+        if (label) labels.push(...label[1]!.split('|').map(s => s.trim()))
+      }
+      out.push({ line: i + 1, labels })
+    })
+    return out
+  }
+
+  it('finds the mode cases', () => {
+    expect(modeCases().length).toBeGreaterThan(5)
+  })
+
+  it('the usage case accepts exactly the four modes', () => {
+    const [usage] = modeCases()
+    expect(usage!.labels.filter(l => l !== '*').sort()).toEqual([
+      'daily',
+      'rebuild',
+      'rescrape',
+      'rescrape-historical',
+    ])
+  })
+
+  it('no case leaves a mode implicit, the 10b remove included', () => {
+    const modes = ['daily', 'rebuild', 'rescrape', 'rescrape-historical']
+    const gaps = modeCases()
+      .map(c => ({
+        line: c.line,
+        missing: c.labels.includes('*')
+          ? []
+          : modes.filter(m => !c.labels.includes(m)),
+      }))
+      .filter(c => c.missing.length > 0)
+    expect(gaps).toEqual([])
   })
 })

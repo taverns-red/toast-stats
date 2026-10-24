@@ -12,6 +12,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
+import { spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { parse } from 'yaml'
@@ -106,12 +107,15 @@ describe('daily runs on process-dates.sh (#1765)', () => {
     expect(firstExit).toBeGreaterThan(outputs)
   })
 
-  it('exposes the raw and snapshot date from the runner step', () => {
+  it('exposes the raw date from daily-config and the snapshot date from the runner, falling back to the raw date (#2274 N3)', () => {
+    // A step failing between daily-config and the runner (the store sync)
+    // must still leave snapshot_date set, or place-reports is skipped and
+    // incoming/daily-reports/<raw>/ is orphaned in staging.
     expect(pipeline.outputs?.raw_date).toBe(
-      '${{ steps.daily-process.outputs.date }}'
+      '${{ steps.daily-config.outputs.date }}'
     )
     expect(pipeline.outputs?.snapshot_date).toBe(
-      '${{ steps.daily-process.outputs.snapshot_date }}'
+      '${{ steps.daily-process.outputs.snapshot_date || steps.daily-config.outputs.date }}'
     )
     const index = steps.find(s => s.name === 'Update district-snapshot-index')
     expect(code(index!)).toContain(
@@ -137,6 +141,45 @@ describe('the daily date is derived exactly once (D-23)', () => {
   it('inputs.date is read only by daily-config; everything else takes its output', () => {
     const readers = steps.filter(s => /inputs\.date(?![\w-])/.test(text(s)))
     expect(readers.map(s => s.id)).toEqual(['daily-config'])
+  })
+})
+
+describe('daily-config sets the date before it can fail (#2274 N3)', () => {
+  it('writes date= to GITHUB_OUTPUT before discovery can exit', () => {
+    const run = code(steps.find(s => s.id === 'daily-config')!)
+    const date = run.indexOf('echo "date=${TARGET_DATE}" >> "$GITHUB_OUTPUT"')
+    expect(date, 'no date output').toBeGreaterThan(0)
+    expect(run.indexOf('exit 1')).toBeGreaterThan(date)
+    expect(run.indexOf('collector-cli discover-districts')).toBeGreaterThan(
+      date
+    )
+  })
+})
+
+describe('a manual districts override with spaces is accepted (#2274 N4)', () => {
+  const step = () => steps.find(s => s.id === 'daily-config')!
+
+  it('reads the override from env, never interpolated into the script', () => {
+    expect(step().env?.DISTRICTS_INPUT).toBe('${{ inputs.districts }}')
+    expect(code(step())).not.toContain('${{ inputs.districts }}')
+  })
+
+  it('normalises "57, 58 ,59" to the id list the runner accepts', () => {
+    const assign = code(step())
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => /^DISTRICTS=.*DISTRICTS_INPUT/.test(l))
+    expect(assign).toHaveLength(1)
+    const r = spawnSync(
+      'bash',
+      ['-c', `${assign[0]}; printf %s "$DISTRICTS"`],
+      {
+        encoding: 'utf-8',
+        env: { ...process.env, DISTRICTS_INPUT: ' 57, 58 ,59\t' },
+      }
+    )
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stdout).toBe('57,58,59')
   })
 })
 
