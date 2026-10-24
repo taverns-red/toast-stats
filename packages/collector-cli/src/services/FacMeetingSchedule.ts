@@ -691,6 +691,33 @@ function dayMentionsIn(text: string): DayMention[] {
  *  ("Mon & Wed", "Sat, Sun", "Mon-Fri", "mardi et jeudi"). */
 const DAY_JOINER =
   /^[\s,&/+\-–—]*(?:(?:and|or|et|ou|y|o|e|und|en)[\s,&/+\-–—]*)?$/
+/** A range of days: "Mon-Fri", "Tue to Fri" also covers the days between. */
+const DAY_RANGE = /^\s*(?:-|–|—|to|thru|through|au|a|al|bis|tot)\s*$/
+const WEEK_ORDER = Object.keys(WEEKDAY_WORDS) as MeetingWeekday[]
+
+/** The days strictly between `from` and `to`, wrapping past Sunday. */
+function daysBetween(
+  from: MeetingWeekday,
+  to: MeetingWeekday
+): MeetingWeekday[] {
+  const days: MeetingWeekday[] = []
+  let k = (WEEK_ORDER.indexOf(from) + 1) % 7
+  while (WEEK_ORDER[k] !== to && days.length < 6) {
+    days.push(WEEK_ORDER[k] as MeetingWeekday)
+    k = (k + 1) % 7
+  }
+  return days
+}
+
+interface DaySlots {
+  byDay: Map<MeetingWeekday, Slot>
+  /** The one time every timed group agreed on, for a day the text does
+   *  not split out ("7 pm, except Mon/Fri holidays"); else `{}`. */
+  fallback: Slot
+}
+
+const sameSlot = (a: Slot, b: Slot): boolean =>
+  a.startTime === b.startTime && a.endTime === b.endTime
 
 /**
  * Per-day slots when the time text names two or more weekdays (#2246):
@@ -703,17 +730,19 @@ const DAY_JOINER =
  * belongs to the first group and the last run to the last group. A run
  * between two groups goes to the earlier group when the text opens with
  * a day ("Sat 9am | Wed 7pm") and that group has no time yet; otherwise
- * to the later one ("6:30 pm(Sat), 7:00 pm(Fri)"). Each group takes the
- * first slot of its run; a group with no run is "time not stated".
+ * to the later one ("6:30 pm(Sat), 7:00 pm(Fri)"). A group takes the
+ * first slot of its run, or pairs its days with its slots in order when
+ * the counts match ("Tue & Thu: 7pm & 12pm"); another count is "time not
+ * stated". A day range ("Mon-Fri") covers the days between. A named day
+ * with no run is "time not stated"; a day the text does not name takes
+ * `fallback`, the one time every timed group agreed on (#2262 review).
  *
  * Undefined when fewer than two weekdays are named: the caller keeps the
  * whole-field reading. A group given two runs ("7 pm Tue, Wed 8 pm") or
- * a day given two different times is ambiguous and gives an empty map,
- * so every day is "time not stated" rather than a guess.
+ * a day given two different times is ambiguous and gives no times at
+ * all, so every day is "time not stated" rather than a guess.
  */
-function daySlotsIn(
-  time: string | null | undefined
-): Map<MeetingWeekday, Slot> | undefined {
+function daySlotsIn(time: string | null | undefined): DaySlots | undefined {
   if (typeof time !== 'string') return undefined
   const text = normalisedTimeText(time)
   const mentions = dayMentionsIn(text)
@@ -724,7 +753,17 @@ function daySlotsIn(
   const groups: { days: MeetingWeekday[]; start: number; end: number }[] = []
   for (const mention of mentions) {
     const last = groups[groups.length - 1]
-    if (last && DAY_JOINER.test(text.slice(last.end, mention.start))) {
+    const joiner = last ? text.slice(last.end, mention.start) : ''
+    if (last && DAY_RANGE.test(joiner)) {
+      last.days.push(
+        ...daysBetween(
+          last.days[last.days.length - 1] as MeetingWeekday,
+          mention.day
+        ),
+        mention.day
+      )
+      last.end = mention.end
+    } else if (last && DAY_JOINER.test(joiner)) {
       last.days.push(mention.day)
       last.end = mention.end
     } else {
@@ -740,7 +779,7 @@ function daySlotsIn(
     (groups[0] as (typeof groups)[number]).start <
     (tokens[0] as TimeToken).start
   const owned: (TimeToken[] | undefined)[] = groups.map(() => undefined)
-  const ambiguous = new Map<MeetingWeekday, Slot>()
+  const ambiguous: DaySlots = { byDay: new Map(), fallback: {} }
   for (const [k, run] of runs.entries()) {
     if (run.length === 0) continue
     const earlier = k - 1
@@ -756,22 +795,31 @@ function daySlotsIn(
     owned[owner] = run
   }
 
-  const bySlot = new Map<MeetingWeekday, Slot>()
+  const byDay = new Map<MeetingWeekday, Slot>()
+  const timed: Slot[] = []
   for (const [k, group] of groups.entries()) {
     const run = owned[k]
-    const slot = run ? (slotsFrom(run, text)[0] ?? {}) : {}
-    for (const day of group.days) {
-      const held = bySlot.get(day)
-      if (
-        held &&
-        (held.startTime !== slot.startTime || held.endTime !== slot.endTime)
-      ) {
-        return ambiguous
-      }
-      bySlot.set(day, slot)
+    const slots = run ? slotsFrom(run, text) : []
+    // "Tue & Thu: 7pm & 12pm": as many times as days pair in order; any
+    // other count for a group of days is not stated.
+    const paired =
+      group.days.length > 1 && slots.length > 1
+        ? slots.length === group.days.length
+          ? slots
+          : group.days.map(() => ({}))
+        : group.days.map(() => slots[0] ?? {})
+    for (const [d, day] of group.days.entries()) {
+      const slot = paired[d] ?? {}
+      const held = byDay.get(day)
+      if (held && !sameSlot(held, slot)) return ambiguous
+      byDay.set(day, slot)
+      if (run) timed.push(slot)
     }
   }
-  return bySlot
+  const first = timed[0]
+  const fallback =
+    first && timed.every(slot => sameSlot(slot, first)) ? first : {}
+  return { byDay, fallback }
 }
 
 /* ── Parser ────────────────────────────────────────────────────────── */
@@ -822,7 +870,7 @@ export function parseMeetingSchedule(
   const perDay = daySlotsIn(source.meetingTime)
   const slotFor = (day: MeetingWeekday, index: number): Slot =>
     (perDay
-      ? perDay.get(day)
+      ? (perDay.byDay.get(day) ?? perDay.fallback)
       : slots.length === days.length
         ? slots[index]
         : slots[0]) ?? {}
