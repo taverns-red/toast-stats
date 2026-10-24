@@ -359,9 +359,10 @@ interface TimeToken {
 
 /** `:`, `h` or `.` between hour and minute ("7:30", "18h30", "7.30 pm",
  *  #2243). A dot takes no spaces, so prose like "Rm 2. 30 people" is not
- *  a time. A token never starts inside a number ("9.00pm" is not "00pm"). */
+ *  a time. A token never starts inside a number ("9.00pm" is not "00pm"),
+ *  but may follow a word and a colon ("Thur:6:30 am", #2246). */
 const TIME_TOKEN =
-  /\bnoon\b|(?<![\d.:])\b(\d{1,2})(?:\s*([:h])\s*(\d{2})|(\.)(\d{2}))?(\s*h\b)?\s*(am|pm)?(?!\d)/g
+  /\bnoon\b|(?<![\d.])(?<!\d:)\b(\d{1,2})(?:\s*([:h])\s*(\d{2})|(\.)(\d{2}))?(\s*h\b)?\s*(am|pm)?(?!\d)/g
 const RANGE_SEPARATOR = /^\s*(?:-+|–|—|~|〜|～|to|a|until|jusqu'?a)\s*$/
 /** A two-digit hour before hrs/hours ("1600 hrs", "11:00 hours") is a
  *  24-hour clock; "1:30 hours" is a duration. The lookbehinds keep an
@@ -700,10 +701,11 @@ function dayMentionsIn(text: string): DayMention[] {
   return mentions.sort((a, b) => a.start - b.start)
 }
 
-/** Only a list joiner between two day words: they share one time
- *  ("Mon & Wed", "Sat, Sun", "Mon-Fri", "mardi et jeudi"). */
+/** Only a list joiner between two day words, perhaps with a mode word:
+ *  they share one time ("Mon & Wed", "Sat, Sun", "mardi et jeudi",
+ *  "hybrid Thurs, virtual Monday"). */
 const DAY_JOINER =
-  /^[\s,&/+\-–—]*(?:(?:and|or|et|ou|y|o|e|und|en)[\s,&/+\-–—]*)?$/
+  /^[\s,&/+\-–—]*(?:(?:and|or|et|ou|y|o|e|und|en)[\s,&/+\-–—]*)?(?:(?:hybrid|virtual|online|zoom|teams|in[\s-]?person|en ligne|presentiel)[\s,&/+\-–—:]*)?$/
 /** A range of days: "Mon-Fri", "Tue to Fri" also covers the days between. */
 const DAY_RANGE = /^\s*(?:-|–|—|to|thru|through|au|a|al|bis|tot)\s*$/
 const WEEK_ORDER = Object.keys(WEEKDAY_WORDS) as MeetingWeekday[]
