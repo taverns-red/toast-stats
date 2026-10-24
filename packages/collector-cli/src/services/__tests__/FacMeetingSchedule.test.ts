@@ -1098,6 +1098,17 @@ describe('parseMeetingSchedule (#2246) — a time per day in one time field', ()
     expect(starts(d, t).every(s => s.endsWith(' ?'))).toBe(true)
   })
 
+  it.each([
+    [
+      'Wednesday, Saturday',
+      '7:00 pm (Wed) / Sat 9 am online',
+      ['Wednesday 19:00', 'Saturday 09:00'],
+    ],
+    ['Wednesday', '7:00 pm (Wed) / Sat 9 am online', ['Wednesday 19:00']],
+  ])('a time-then-day and a day-then-time in one field: %j / %j', (d, t, e) => {
+    expect(starts(d, t)).toEqual(e)
+  })
+
   it('a day the time field does not name gets no guessed time', () => {
     expect(starts('Monday, Wednesday', 'Mon 7pm | Sat 9am')).toEqual([
       'Monday 19:00',
