@@ -17,7 +17,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor, act } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { useLocation } from 'react-router-dom'
 import DistrictsPage from '../DistrictsPage'
@@ -67,6 +67,12 @@ const renderPage = (initialEntry = '/') =>
   )
 
 const search = () => screen.getByTestId('loc-search').textContent ?? ''
+
+// Flush the passive effects queued by the data render. `findByText` resolves
+// on the commit that paints the rows, before any post-data effect (such as a
+// URL write) has run — so a "nothing was written" assertion must flush first
+// or it passes vacuously.
+const settle = () => act(async () => {})
 
 const row = (
   i: number,
@@ -146,17 +152,106 @@ describe('DistrictsPage deep-link — region filter (?regions=)', () => {
     expect(screen.getByText('District 3')).toBeInTheDocument()
     expect(screen.queryByText('District 1')).not.toBeInTheDocument()
 
-    // Emptying the selection one chip at a time → back to the full (inflated)
-    // set, not an empty table.
+    // Emptying the selection one chip at a time → back to "All", not an
+    // empty table. Empty = all (product spec), so the param is dropped
+    // rather than spelled out as the full region list (#2255).
     fireEvent.click(screen.getByRole('button', { name: 'Region 3' }))
     fireEvent.click(screen.getByRole('button', { name: 'Region 2' }))
     expect(screen.getByText('District 1')).toBeInTheDocument()
     expect(screen.getByText('District 3')).toBeInTheDocument()
-    // The region param now carries the explicit full set (deep-linkable), not
-    // a bare URL (storage-backend swap of the localStorage default — #978).
-    expect(new URLSearchParams(search()).get('regions')?.split(',')).toEqual(
-      expect.arrayContaining(['1', '2', '3'])
+    expect(new URLSearchParams(search()).get('regions')).toBeNull()
+  })
+})
+
+/**
+ * #2255 — an empty selection means all regions, so a first load of a bare
+ * `/` must leave the URL bare. #978 used to inflate the selection to the
+ * explicit region list once data landed, which `replaceState`d every cold
+ * visit to `?regions=01,02,…,DNAR`. Shared and bookmarked `?regions=` links —
+ * including ones carrying that full list — keep filtering exactly as before.
+ */
+describe('DistrictsPage — ?regions= stays clean unless the user filters (#2255)', () => {
+  it('a first load of / keeps the URL free of ?regions=', async () => {
+    setupThreeRegions()
+    renderPage('/')
+
+    await screen.findByText('District 1')
+    await settle()
+    expect(screen.getByText('District 2')).toBeInTheDocument()
+    expect(screen.getByText('District 3')).toBeInTheDocument()
+    expect(screen.getByText(/showing all regions/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
     )
+    expect(new URLSearchParams(search()).get('regions')).toBeNull()
+  })
+
+  it('a first load keeps unrelated params untouched and adds no regions', async () => {
+    setupThreeRegions()
+    renderPage('/?q=District')
+
+    await screen.findByText('District 1')
+    await settle()
+    const params = new URLSearchParams(search())
+    expect(params.get('regions')).toBeNull()
+    expect(params.get('q')).toBe('District')
+  })
+
+  it('the All pill clears ?regions= instead of spelling out every region', async () => {
+    setupThreeRegions()
+    renderPage('/?regions=2')
+
+    await screen.findByText('District 2')
+    fireEvent.click(screen.getByRole('button', { name: 'All' }))
+
+    expect(screen.getByText('District 1')).toBeInTheDocument()
+    expect(screen.getByText('District 3')).toBeInTheDocument()
+    expect(new URLSearchParams(search()).get('regions')).toBeNull()
+  })
+
+  it('INWARD: a bookmarked full-list link shows all regions and is left as-is', async () => {
+    setupThreeRegions()
+    renderPage('/?regions=1,2,3')
+
+    await screen.findByText('District 1')
+    await settle()
+    expect(screen.getByText('District 2')).toBeInTheDocument()
+    expect(screen.getByText('District 3')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    expect(new URLSearchParams(search()).get('regions')).toBe('1,2,3')
+  })
+
+  it('INWARD: a shared multi-region link filters and is left as-is', async () => {
+    setupThreeRegions()
+    renderPage('/?regions=1,3')
+
+    await screen.findByText('District 1')
+    await settle()
+    expect(screen.getByText('District 3')).toBeInTheDocument()
+    expect(screen.queryByText('District 2')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Region 1' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    expect(screen.getByRole('button', { name: 'Region 2' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+    expect(new URLSearchParams(search()).get('regions')).toBe('1,3')
+  })
+
+  it('from a bookmarked full-list link, a chip click still starts a one-region filter', async () => {
+    setupThreeRegions()
+    renderPage('/?regions=1,2,3')
+
+    await screen.findByText('District 1')
+    fireEvent.click(screen.getByRole('button', { name: 'Region 2' }))
+    expect(new URLSearchParams(search()).get('regions')).toBe('2')
+    expect(screen.queryByText('District 1')).not.toBeInTheDocument()
   })
 })
 
