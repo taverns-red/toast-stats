@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest'
 import {
   buildClubMeetingInfo,
   formatMeetingTime,
+  isUnreadableFacText,
   meetingWhen,
   toastmastersClubPageUrl,
+  UNREADABLE_SCHEDULE_NOTE,
 } from '../clubMeetingInfo'
 
 /**
@@ -451,5 +453,105 @@ describe('meetingWhen (#2174)', () => {
         meetingTime: 'https://zoom.us/j/123',
       })
     ).toBe('Monday')
+  })
+})
+
+/**
+ * #2247 — TI's Find-a-Club API sends literal "?" bytes where a club typed
+ * CJK text (raw response for D88 06513503: `"MeetingTime":"??2:30-??4:30"`,
+ * `"MeetingDay":"???"`). The text is gone upstream. Ron (2026-10-24): never
+ * show or parse it; say it is not readable and point to toastmasters.org.
+ * Fixtures are the four prod values from the 2026-10-21 census.
+ */
+describe('isUnreadableFacText (#2247)', () => {
+  it.each([
+    ['???'],
+    ['??'],
+    ['??2:30-??4:30'],
+    ['??9:30-??12:00'],
+    ['??6?'],
+    ['?'],
+    [' ? ? '],
+  ])('treats %j as unreadable', text => {
+    expect(isUnreadableFacText(text)).toBe(true)
+  })
+
+  it.each([
+    ['6:30 - 8:30 PM'],
+    ['7:30 pm'],
+    ['Tuesday'],
+    // A stray "?" next to real words or a real time is still readable.
+    ['Tuesday?'],
+    ['Mon ??'],
+    ['1st & 3rd Wed ???'],
+    ['7:30?'],
+    ['19:00 ?'],
+    // Real CJK text, should TI ever store it, is letters: readable.
+    ['下午2:30-下午4:30'],
+    ['星期三'],
+    ['12:00 - 13:00'],
+  ])('keeps %j as readable', text => {
+    expect(isUnreadableFacText(text)).toBe(false)
+  })
+})
+
+describe('buildClubMeetingInfo — unreadable meeting text (#2247)', () => {
+  const D88_06513503 = {
+    clubId: '06513503',
+    meetingDay: '???',
+    meetingTime: '??2:30-??4:30',
+    allowsVirtualAttendance: false,
+    coordinates: { lat: 25.03, lng: 121.56 },
+  }
+
+  it('never renders the "?" text and says the time is not readable', () => {
+    const info = buildClubMeetingInfo(D88_06513503)
+    expect(info).not.toBeNull()
+    expect(info?.schedule).toBeNull()
+    expect(info?.scheduleNote).toBe(UNREADABLE_SCHEDULE_NOTE)
+    expect(UNREADABLE_SCHEDULE_NOTE).toBe(
+      'Meeting time not readable — see toastmasters.org'
+    )
+    expect(JSON.stringify(info)).not.toContain('??')
+    expect(info?.contactUrl).toBe(
+      'https://www.toastmasters.org/Find-a-Club/06513503'
+    )
+  })
+
+  it('hides a readable time whose day is unreadable (D88 07166169)', () => {
+    const info = buildClubMeetingInfo({
+      clubId: '07166169',
+      meetingDay: '???',
+      meetingTime: '6:30 - 8:30 PM',
+    })
+    expect(info?.schedule).toBeNull()
+    expect(info?.scheduleNote).toBe(UNREADABLE_SCHEDULE_NOTE)
+  })
+
+  it('hides an unreadable time next to a "??" day (D128 05789778)', () => {
+    const info = buildClubMeetingInfo({
+      clubId: '05789778',
+      meetingDay: '??',
+      meetingTime: '??6?',
+    })
+    expect(info?.schedule).toBeNull()
+    expect(info?.scheduleNote).toBe(UNREADABLE_SCHEDULE_NOTE)
+  })
+
+  it('carries no note for readable text, even with a stray "?"', () => {
+    const info = buildClubMeetingInfo({
+      clubId: '3045',
+      meetingDay: 'Tuesday?',
+      meetingTime: '7:30 pm',
+    })
+    expect(info?.schedule).toBe('Tuesday? · 7:30 pm')
+    expect(info?.scheduleNote).toBeUndefined()
+  })
+
+  it('meetingWhen gives the note instead of the "?" text', () => {
+    expect(meetingWhen(D88_06513503)).toBe(UNREADABLE_SCHEDULE_NOTE)
+    expect(meetingWhen({ meetingDay: '??', meetingTime: '7:00 pm' })).toBe(
+      UNREADABLE_SCHEDULE_NOTE
+    )
   })
 })

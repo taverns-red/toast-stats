@@ -66,3 +66,25 @@ describe('ClubWhereItMeets', () => {
     expect(container).toBeEmptyDOMElement()
   })
 })
+
+describe('ClubWhereItMeets — unreadable meeting text (#2247)', () => {
+  it('shows the not-readable note beside the contact link, no schedule', () => {
+    render(
+      <ClubWhereItMeets
+        info={{
+          ...INFO,
+          schedule: null,
+          scheduleNote: 'Meeting time not readable — see toastmasters.org',
+        }}
+      />
+    )
+    const links = screen.getByRole('list', { name: 'Club links' })
+    expect(links).toHaveTextContent(
+      'Meeting time not readable — see toastmasters.org'
+    )
+    expect(
+      screen.getByRole('link', { name: /contact on toastmasters\.org/i })
+    ).toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('?')
+  })
+})
