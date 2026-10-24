@@ -108,3 +108,41 @@ describe('ClubWhereItMeets — half-readable meeting text (#2247)', () => {
     )
   })
 })
+
+describe('ClubWhereItMeets — unreadable address (#2268)', () => {
+  it('shows the readable place and the address note beside the contact link', () => {
+    render(
+      <ClubWhereItMeets
+        info={{
+          ...INFO,
+          place: 'Xishiku, Xic, BJ',
+          placeNote: 'address partly not readable — see toastmasters.org',
+        }}
+      />
+    )
+    expect(
+      screen.getByRole('list', { name: 'Where the club meets' })
+    ).toHaveTextContent('Xishiku, Xic, BJ')
+    expect(screen.getByRole('list', { name: 'Club links' })).toHaveTextContent(
+      'address partly not readable — see toastmasters.org'
+    )
+  })
+
+  it('shows the note alone when no part of the address is readable', () => {
+    render(
+      <ClubWhereItMeets
+        info={{
+          schedule: null,
+          mode: null,
+          place: null,
+          placeNote: 'Address not readable — see toastmasters.org',
+          websiteUrl: null,
+          contactUrl: 'https://www.toastmasters.org/Find-a-Club/06513503',
+        }}
+      />
+    )
+    expect(screen.getByRole('list', { name: 'Club links' })).toHaveTextContent(
+      'Address not readable — see toastmasters.org'
+    )
+  })
+})
