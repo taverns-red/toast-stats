@@ -260,6 +260,16 @@
          the head 33.5px and overran the reserve below. */
       line-height: inherit;
     }
+    /* On the Linux CI runner "CLUBS" measured 55px in a 52px cell (system
+       fonts run wider than on a Mac): tighter tracking on the phone heads
+       and a 4px leading gap on the right-aligned number cells leave ~56px
+       for ~52px of text. */
+    .world-pulse__table thead th {
+      letter-spacing: 0.02em;
+    }
+    .world-pulse__table .world-pulse__num {
+      padding-left: 4px;
+    }
     .world-pulse__th-long {
       position: absolute;
       width: 1px;
