@@ -1,0 +1,89 @@
+name: Harness Staging Canary
+
+# Read-only staging canary for the gcloud shim (#1768, ADR-015 D10).
+#
+# The Pipeline Harness proves the pipeline against a gcloud shim. This job
+# checks the shim's model of the real CLI: it runs the pipeline's pinned
+# gcloud against the STAGING bucket (one prefix listed, one ~0.7 KB object
+# described, listed, read and downloaded, two missing URLs) and compares
+# with what the shim does (scripts/harness/staging-canary.sh).
+#
+# Read-only, three ways: the script runs only reads (a contract test in
+# scripts/lib/__tests__/harnessStagingCanary.test.ts scans every gcloud
+# command), the only credential is an access token scoped to
+# devstorage.read_only (no credentials file), and it never names
+# production.
+#
+# Advisory, not required by CI Gate. Runs on PRs that change the shim or
+# the harness, and weekly to catch a CLI or service change on its own.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/harness-staging-canary.yml'
+      - 'scripts/harness/staging-canary.sh'
+      - 'scripts/lib/__tests__/fixtures/gcloud-shim/**'
+      - 'scripts/lib/__tests__/fixtures/gcloud-objects-list/**'
+      - 'scripts/lib/pipelineHarness.ts'
+      - 'scripts/harness/**'
+  schedule:
+    # Mondays 16:15 UTC, clear of the daily pipeline (08:00, backup 11:00).
+    - cron: '15 16 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # Workload Identity Federation
+
+concurrency:
+  group: harness-staging-canary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  canary:
+    name: Harness Staging Canary
+    # Fork PRs get no OIDC token; skip rather than fail.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # A short-lived access token limited to the read-only storage scope,
+      # and no credentials file: gcloud has no other credential to fall
+      # back on, so even the service account's write role cannot be used.
+      - name: Authenticate to GCP (read-only token)
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/devstorage.read_only
+          access_token_lifetime: 600s
+          create_credentials_file: false
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          # The pipeline's pin (#1720); the canary checks that version.
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        run: gcloud version
+
+      - name: Write the token for gcloud
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          umask 077
+          printf '%s' "${ACCESS_TOKEN}" >"${RUNNER_TEMP}/gcs-read-token"
+
+      - name: Run the staging canary
+        env:
+          CLOUDSDK_AUTH_ACCESS_TOKEN_FILE: ${{ runner.temp }}/gcs-read-token
+        run: bash scripts/harness/staging-canary.sh
