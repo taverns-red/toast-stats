@@ -7,8 +7,10 @@
  * the input ever reaching it, so "what does force do in mode X" had no
  * answer in the file. The contract, sourced from the workflow YAML, gives
  * every dispatch mode an explicit case (R17):
- *  - daily: the scrape re-fetches when `force` is true, otherwise reuses the
- *    raw-csv/<date>/ pre-synced from staging;
+ *  - daily: the input is passed to scripts/pipeline/process-dates.sh as
+ *    FORCE (#1765); the runner's scrape re-fetches and its compute
+ *    re-derives when it is true, otherwise the scrape reuses the
+ *    raw-csv/<date>/ the runner pre-synced from staging;
  *  - rebuild, rescrape, rescrape-historical: the input is passed through to
  *    scripts/pipeline/process-dates.sh as FORCE; those modes are
  *    re-derivations, so the runner forces them always (processDates.test.ts);
@@ -67,15 +69,10 @@ function mentionsForce(step: Step): boolean {
 }
 
 const CASES: Record<string, () => void> = {
-  daily: () => {
-    const scrape = modeSteps('daily').find(
-      s => s.name === '[daily] Scrape & Transform'
-    )
-    expect(scrape?.run).toMatch(/npx collector-cli scrape \$ARGS/)
-    expect(scrape?.run).toContain(
-      `if [ "${FORCE_EXPR}" = "true" ]; then\n  ARGS="$ARGS --force"\nfi`
-    )
-  },
+  // Since #1765 the daily runs on the runner too; there `force` is not
+  // always on: true re-fetches and re-derives, anything else reuses the
+  // pre-synced raw-csv (processDates.test.ts, "process-dates.sh daily").
+  daily: () => expectRunnerGetsForce('daily'),
   rebuild: () => expectRunnerGetsForce('rebuild'),
   rescrape: () => expectRunnerGetsForce('rescrape'),
   'rescrape-historical': () => expectRunnerGetsForce('rescrape-historical'),
@@ -143,7 +140,7 @@ describe('data-pipeline.yml: force has one meaning (#1771, ADR-015 P7)', () => {
     const readers = allSteps.filter(mentionsForce).map(s => s.name)
     expect(readers.sort()).toEqual(
       [
-        '[daily] Scrape & Transform',
+        '[daily] Scrape, enrich, compute and publish the date',
         '[rebuild] Stream rebuild — one date at a time',
         '[rescrape] Re-collect and process dates',
         '[rescrape-historical] Rebuild, guard and publish one date at a time',

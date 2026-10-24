@@ -1879,6 +1879,20 @@ describe('process-dates.sh daily (#1765)', () => {
       expect(summaryText()).toContain('- **Raw FAC persisted**: 1 files')
     })
 
+    it('publishes the per-region club shards under clubs-by-region/, gzip, in the run manifest (#1800)', () => {
+      const r = daily({ STUB_CLUBS_BY_REGION: '1' })
+      expect(r.status, r.stderr).toBe(0)
+      for (const f of ['05.json', 'world.json']) {
+        const obj = `snapshots/${DATE}/clubs-by-region/${f}`
+        expect(readMeta(obj)).toContain('content-encoding=gzip')
+        expect(readMeta(obj)).toContain(`cache-control=${CACHE_CONTROL}`)
+      }
+      const paths = lines(manifest).map(
+        l => (JSON.parse(l) as { path: string }).path
+      )
+      expect(paths).toContain(`snapshots/${DATE}/clubs-by-region/world.json`)
+    })
+
     it('records the raw and snapshot date for the caller (DATE_RESULTS_FILE)', () => {
       daily()
       expect(lines(results).map(l => JSON.parse(l))).toEqual([
@@ -2018,6 +2032,15 @@ describe('process-dates.sh daily (#1765)', () => {
       expect(summaryText()).toContain(
         '- **Fallback FAC (persisted raw-fac/2026-10-20/)**: 1'
       )
+    })
+
+    it('a partial fetch persists exactly what it fetched (#1770)', () => {
+      const r = daily({ DISTRICTS: '61,62', STUB_FAC_FETCH_MISS: '62' })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(objectsUnder(`raw-fac/${DATE}`)).toEqual(['district_61.json'])
+      expect(r.stderr).toMatch(/::warning::fetch-find-a-club exited 1/)
+      expect(uploadedSnapshot(DATE).facMergedClubs).toBe(2)
     })
 
     it('no FAC anywhere: published unenriched, counted and flagged', () => {

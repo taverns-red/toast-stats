@@ -1,7 +1,8 @@
 # Unified Data Pipeline Workflow (#191)
 #
 # Modes:
-#   daily    — scrape → transform → compute-analytics → upload ONE date (default, cron)
+#   daily    — scrape → transform → compute-analytics → upload ONE date (default, cron),
+#              through scripts/pipeline/process-dates.sh like the modes below (#1765)
 #   rebuild  — sync all raw-csv from GCS → rebuild ALL dates → upload ALL snapshots
 #   rescrape — re-collect CSVs from the dashboard for specific dates or a program year
 #   prune    — remove non-month-end dates from local cache and GCS staging;
@@ -19,8 +20,9 @@
 #   1. Run scripts/setup-wif.sh (one-time)
 #   2. Add GitHub secrets: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
 #
-# The collector uses Playwright (chromium) to scrape Toastmasters dashboards.
-# Data is processed locally and uploaded to GCS for the frontend to consume.
+# The collector fetches the Toastmasters dashboards over plain HTTP (no
+# browser, so no Playwright install, D-24, #1765). Data is processed locally
+# and uploaded to GCS for the frontend to consume.
 #
 # GCS CLI — `gcloud storage` only; no `gsutil` anywhere (#1412):
 #   Google drops the bundled `gsutil` from the Cloud SDK in March 2027, and this
@@ -216,12 +218,13 @@ jobs:
     # #309), so no sibling job can derive it without scraping — which is
     # exactly why `daily-reports` fetches into a raw-date-keyed staging prefix
     # and a trailing job does the placement. It is the empty string for every
-    # non-daily mode, because the `[daily] Scrape & Transform` step never ran;
+    # non-daily mode, because the daily-process step (the runner's daily
+    # mode, which reports the date the transform wrote, #1765) never ran;
     # `place-reports` keys its whole existence off that.
     outputs:
       mode: ${{ steps.mode.outputs.mode }}
-      raw_date: ${{ steps.daily-scrape.outputs.date }}
-      snapshot_date: ${{ steps.daily-scrape.outputs.snapshot_date }}
+      raw_date: ${{ steps.daily-process.outputs.date }}
+      snapshot_date: ${{ steps.daily-process.outputs.snapshot_date }}
       # Literally the string 'unknown' when a manual `districts` override
       # skipped discovery (#1343) — `place-reports` guards for it.
       program_year: ${{ steps.daily-config.outputs.program_year }}
@@ -261,10 +264,6 @@ jobs:
           npm run build --workspace=@taverns-red/shared-contracts
           npm run build --workspace=@taverns-red/analytics-core
           npm run build --workspace=@taverns-red/collector-cli
-
-      - name: Install Playwright browsers
-        if: inputs.mode == 'daily' || inputs.mode == '' || github.event_name == 'schedule'
-        run: npx playwright install chromium --with-deps
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3
@@ -341,8 +340,12 @@ jobs:
       # DAILY MODE
       # ════════════════════════════════════════════════════════
 
-      # ── Daily Step 1: Discover districts + sync raw-csv cache ──
-      - name: '[daily] Discover districts and sync raw-csv'
+      # ── Daily Step 1: the date, once, and the districts ──
+      # The ONLY place the daily date is derived (D-23, #1765): every later
+      # step takes steps.daily-config.outputs.date. It used to be computed
+      # again in the scrape step, and the two `1 day ago` could straddle
+      # midnight UTC.
+      - name: '[daily] Discover districts and resolve the date'
         if: steps.mode.outputs.mode == 'daily'
         id: daily-config
         run: |
@@ -397,322 +400,105 @@ jobs:
           echo "program_year=${DISCOVERED_PY:-unknown}" >> "$GITHUB_OUTPUT"
           echo "rollover_reason=${DISCOVERED_REASON:-unknown}" >> "$GITHUB_OUTPUT"
 
-          # Sync raw-csv cache for target date
-          mkdir -p "./cache/raw-csv/${TARGET_DATE}"
-          gcloud storage rsync -r \
-            "gs://${GCS_BUCKET}/raw-csv/${TARGET_DATE}/" \
-            "./cache/raw-csv/${TARGET_DATE}/" \
-            2>&1 || echo "No existing raw-csv for ${TARGET_DATE} in GCS (first run)"
-
-          echo "## ⏬ District Discovery & Raw CSV Sync" >> "$GITHUB_STEP_SUMMARY"
+          echo "## ⏬ District Discovery" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Districts**: ${DISTRICTS}" >> "$GITHUB_STEP_SUMMARY"
-          FILE_COUNT=$(find "./cache/raw-csv/${TARGET_DATE}" -name '*.csv' 2>/dev/null | wc -l | tr -d ' ')
           echo "- **Date**: ${TARGET_DATE}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **CSV files restored**: ${FILE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
-      # ── Daily Step 2a: Pull district awards history BEFORE the transform ──
-      # (#1704) scrape --transform loads this store to compute Club Strength
-      # and Leadership Excellence, then saves its upsert. Pulled after the
-      # transform (as it was from #333), every daily competitive-awards.json
-      # was computed from an empty store and the late pull overwrote the
-      # transform's save before the upload pushed it back.
-      - name: '[daily] Pull district-awards-history from GCS'
+      # ── Daily Step 2: pull every store BEFORE the runner ──
+      # The runner's scrape --transform loads the district awards history
+      # (Club Strength / Leadership Excellence, #1704) and its compute upserts
+      # time-series, club-trends and club-race; a store that loads empty is
+      # pushed back over the accumulated copy (#1111). The script fails on
+      # anything but an empty remote, checks the file count against the
+      # listing, and peels gzip layers on disk under either gcloud rsync
+      # behaviour (#1702, #1722). district-region-history (#1799) is a
+      # read-only input: each PY's regions for compute's region-rollups.json.
+      #
+      # Club-trends is keyed by program year and daily writes one PY, so
+      # pull only the PYs this run can write (#1728, E2-2): the PY the
+      # discovery resolver chose (#1284; in July it can still be the prior
+      # PY), the target date's PY, and the prior PY for any July date. The
+      # snapshot date is not known before the scrape, and needs no flag of
+      # its own: a closing remap writes the previous month-end, which leaves
+      # the date's PY only from July to 06-30, and the July rule carries the
+      # prior PY. publish-stores.sh refuses any PY the sync did not pull, so
+      # a miss fails the run instead of clobbering a PY. No verdict (manual
+      # districts) -> `all`.
+      - name: '[daily] Sync stores from GCS'
         if: steps.mode.outputs.mode == 'daily'
         run: |
-          # Fail-closed pull + on-disk normalise (#1704, #1702, #1722).
-          bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" district-awards-history
-
-      # ── Daily Step 2: Scrape + Transform ──
-      - name: '[daily] Scrape & Transform'
-        if: steps.mode.outputs.mode == 'daily'
-        id: daily-scrape
-        env:
-          TOASTMASTERS_DASHBOARD_URL: 'https://dashboards.toastmasters.org'
-        run: |
-          ARGS="--transform --verbose"
-          if [ -n "${{ inputs.date }}" ]; then
-            ARGS="$ARGS --date ${{ inputs.date }}"
-          else
-            ARGS="$ARGS --date $(date -u -d '1 day ago' +%Y-%m-%d)"
-          fi
-          DISTRICT_LIST="${{ steps.daily-config.outputs.districts }}"
-          ARGS="$ARGS --districts ${DISTRICT_LIST}"
-          if [ "${{ inputs.force }}" = "true" ]; then
-            ARGS="$ARGS --force"
-          fi
-
-          echo "Running: npx collector-cli scrape $ARGS"
-          npx collector-cli scrape $ARGS | tee /tmp/scrape-output.json
-
-          DATE=$(jq -r '.date' /tmp/scrape-output.json)
-          # Snapshot date may differ from raw date after closing-period remap (#309)
-          SNAPSHOT_DATE=$(jq -r '.snapshotDate // .date' /tmp/scrape-output.json)
-          echo "date=${DATE}" >> "$GITHUB_OUTPUT"
-          echo "snapshot_date=${SNAPSHOT_DATE}" >> "$GITHUB_OUTPUT"
-          if [ "${DATE}" != "${SNAPSHOT_DATE}" ]; then
-            echo "Closing period detected: raw date ${DATE} → snapshot ${SNAPSHOT_DATE}"
-          fi
-
-          echo "## 📥 Scrape Results" >> "$GITHUB_STEP_SUMMARY"
-          SUCCEEDED=$(jq '.districts.succeeded' /tmp/scrape-output.json)
-          FAILED=$(jq '.districts.failed' /tmp/scrape-output.json)
-          echo "- **Date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Districts succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Districts failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
-
-      # ── Daily Step 3: Sync accumulated stores from GCS ──
-      - name: '[daily] Sync time-series, club-trends, prev-year from GCS'
-        if: steps.mode.outputs.mode == 'daily'
-        run: |
-          DATE="${{ steps.daily-scrape.outputs.date }}"
-
           echo "## ⏬ Store Sync" >> "$GITHUB_STEP_SUMMARY"
-
-          # Club-race (#1556) and the other stores MUST be pulled before
-          # compute: a store that loads empty is pushed back over the
-          # accumulated copy (#1111). The script fails on anything but an
-          # empty remote, checks the file count against the listing, and
-          # peels gzip layers on disk under either gcloud rsync behaviour
-          # (#1702, #1722). District awards history is pulled before the
-          # transform, in its own step (#1704).
-          #
-          # Club-trends is keyed by program year and daily writes one PY, so
-          # pull only the PYs this run can write (#1728, E2-2): the PY the
-          # discovery resolver chose (#1284; in July it can still be the
-          # prior PY), the PYs of the raw and snapshot dates, and the prior
-          # PY for any July date. No verdict (manual districts) -> `all`.
-          CLUB_TRENDS_PROGRAM_YEARS="$(npx tsx scripts/club-trends-sync-scope.ts --program-year "${{ steps.daily-config.outputs.program_year }}" --date "${DATE}" --date "${{ steps.daily-scrape.outputs.snapshot_date }}")"
+          CLUB_TRENDS_PROGRAM_YEARS="$(npx tsx scripts/club-trends-sync-scope.ts --program-year "${{ steps.daily-config.outputs.program_year }}" --date "${{ steps.daily-config.outputs.date }}")"
           echo "Club-trends program years to pull: ${CLUB_TRENDS_PROGRAM_YEARS}"
-          # district-region-history (#1799) is a read-only input: each PY's
-          # regions for compute's snapshots/<date>/region-rollups.json.
           CLUB_TRENDS_PROGRAM_YEARS="${CLUB_TRENDS_PROGRAM_YEARS}" \
             bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
-            time-series club-trends club-race district-region-history
+            district-awards-history time-series club-trends club-race \
+            district-region-history
 
-          # Previous year snapshots for YoY comparison
-          PREV_YEAR=$(date -d "${DATE} - 1 year" +%Y-%m-%d)
-          echo "Syncing previous year snapshots (${PREV_YEAR})..."
-          mkdir -p "./cache/snapshots/${PREV_YEAR}"
-          gcloud storage cp "gs://${GCS_BUCKET}/snapshots/${PREV_YEAR}/district_*.json" \
-            "./cache/snapshots/${PREV_YEAR}/" 2>/dev/null || true
-
-          PREV_COUNT=$(find "./cache/snapshots/${PREV_YEAR}" -name 'district_*.json' 2>/dev/null | wc -l | tr -d ' ')
-          echo "- **Prev-year snapshots**: ${PREV_COUNT}" >> "$GITHUB_STEP_SUMMARY"
-
-      # ── Daily Step 3b: Find-A-Club enrichment fetch (#430) ──
-      # Hits the public TI Find-A-Club Search endpoint per district and
-      # writes raw JSON to ./cache/find-a-club/<date>/district_<id>.json.
-      # Non-blocking: TI's endpoint is public/unauth'd and can fail, rate-
-      # limit or change at any time. It writes only the districts it
-      # fetched; the merge (Step 3c) fills the rest from the last persisted
-      # raw-fac/ and counts what it could not (#1770), so an outage is never
-      # silent. `--compare-snapshot-dir` surfaces the FAC-vs-snapshot diff
-      # per district (ATO/prospective clubs, extraInFac > 0).
-      - name: '[daily] Fetch Find-A-Club enrichment'
+      # ── Daily Step 3: the date through the shared runner (#1765) ──
+      # ADR-015 step 7 (P1): the same per-date loop as rebuild, rescrape and
+      # rescrape-historical, so daily gets every stage they have and a stage
+      # added to one mode reaches all of them. scripts/pipeline/
+      # process-dates.sh daily runs, for the one date: raw-csv pre-sync
+      # (reused unless `force`, #1771) → scrape --transform with the resolved
+      # districts → closing upload guard (D-20, #1621) → Find-A-Club fetch,
+      # persisted to raw-fac/ (#430, #1758) → fail-closed merge with the
+      # persisted fallback (#1770) → prior-year pull and compute → schema gate
+      # (#1125) → upload of the snapshot, analytics, club shards and raw-csv
+      # through gcs-upload.sh (run manifest, #1762) → identity histories
+      # (#1782, #1820). Per-stage tests: processDates.test.ts; wiring:
+      # dataPipelineDailyProcessDates.test.ts.
+      #
+      # The daily publishes one date or nothing: refused by the guard,
+      # failed, or not written, the run fails here, before any store push.
+      # A red pipeline places no report sidecar (place-reports) and builds no
+      # education rollup.
+      - name: '[daily] Scrape, enrich, compute and publish the date'
         if: steps.mode.outputs.mode == 'daily'
-        id: daily-fac-fetch
-        continue-on-error: true
+        id: daily-process
+        env:
+          TOASTMASTERS_DASHBOARD_URL: 'https://dashboards.toastmasters.org'
+          TARGET_DATE: ${{ steps.daily-config.outputs.date }}
+          DISTRICTS: ${{ steps.daily-config.outputs.districts }}
+          # true: re-fetch and re-derive (scrape --force, compute
+          # --force-analytics); otherwise the pre-synced raw is reused (#1771).
+          FORCE: ${{ inputs.force }}
         run: |
-          SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.snapshot_date }}"
-          if [ -z "${SNAPSHOT_DATE}" ]; then
-            SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.date }}"
+          RESULTS=/tmp/daily-date-results.jsonl
+          : > "${RESULTS}"
+          COUNTS=$(DATE_RESULTS_FILE="${RESULTS}" bash scripts/pipeline/process-dates.sh "${GCS_BUCKET}" daily "${TARGET_DATE}")
+          SUCCEEDED=$(jq -r .succeeded <<<"${COUNTS}")
+          ACTUAL=$(jq -r 'select(.actual != null) | .actual' "${RESULTS}" | tail -1)
+
+          # raw_date keys the daily-reports staging prefix; snapshot_date is
+          # the date the transform wrote (post closing-period remap, #309),
+          # where place-reports puts the sidecars. A date that wrote nothing
+          # falls back to the raw date, as the scrape summary's
+          # `.snapshotDate // .date` did: place-reports then only cleans up,
+          # since this job is red.
+          SNAPSHOT_DATE="${ACTUAL:-${TARGET_DATE}}"
+          echo "date=${TARGET_DATE}" >> "$GITHUB_OUTPUT"
+          echo "snapshot_date=${SNAPSHOT_DATE}" >> "$GITHUB_OUTPUT"
+          if [ "${TARGET_DATE}" != "${SNAPSHOT_DATE}" ]; then
+            echo "Closing period detected: raw date ${TARGET_DATE} → snapshot ${SNAPSHOT_DATE}"
           fi
-          DISTRICT_LIST="${{ steps.daily-config.outputs.districts }}"
-          ARGS="--districts ${DISTRICT_LIST} --include-undistricted --verbose"
-          ARGS="$ARGS --date ${SNAPSHOT_DATE}"
-          ARGS="$ARGS --compare-snapshot-dir ./cache/snapshots/${SNAPSHOT_DATE}"
+          {
+            echo "## ☁️ GCS Upload"
+            echo "- **Raw date**: ${TARGET_DATE}"
+            echo "- **Snapshot date**: ${SNAPSHOT_DATE}"
+            echo "- **Runner result**: \`${COUNTS}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-          echo "Running: npx collector-cli fetch-find-a-club $ARGS"
-          npx collector-cli fetch-find-a-club $ARGS | tee /tmp/fac-output.json
-
-          echo "## 🔍 Find-A-Club Enrichment (#430)" >> "$GITHUB_STEP_SUMMARY"
-          SUCCEEDED=$(jq -r '.succeeded' /tmp/fac-output.json)
-          FAILED=$(jq -r '.failed' /tmp/fac-output.json)
-          TOTAL_CLUBS=$(jq -r '.totalClubs' /tmp/fac-output.json)
-          EXTRA_IN_FAC=$(jq -r '.compare.totalExtraInFac // "n/a"' /tmp/fac-output.json)
-          SNAPSHOT_TOTAL=$(jq -r '.compare.totalSnapshotClubs // "n/a"' /tmp/fac-output.json)
-          echo "- **Districts succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Districts failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **FAC clubs total**: ${TOTAL_CLUBS}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Snapshot clubs total**: ${SNAPSHOT_TOTAL}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Extra in FAC** (ATO / prospective): ${EXTRA_IN_FAC}" >> "$GITHUB_STEP_SUMMARY"
-
-          # Top 5 districts by extraInFac for quick visual scan.
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Top 5 districts by ATO/prospective surplus" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| District | FAC | Snapshot | Extra |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|----------|-----|----------|-------|" >> "$GITHUB_STEP_SUMMARY"
-          jq -r '.results
-            | map(select(.extraInFac != null))
-            | sort_by(.extraInFac)
-            | reverse
-            | .[0:5][]
-            | "| \(.districtId) | \(.clubCount) | \(.snapshotClubCount) | \(if .extraInFac > 0 then "+" else "" end)\(.extraInFac) |"' \
-            /tmp/fac-output.json >> "$GITHUB_STEP_SUMMARY"
-
-      # ── Daily Step 3b': persist the raw FAC fetch (ADR-015 P2, #1758) ──
-      # The FAC JSON used to live only on this runner, so a rebuild or
-      # rescrape of the date could only produce an unenriched snapshot
-      # (audit D-1). Kept under staging raw-fac/<snapshotDate>/ for
-      # scripts/pipeline/process-dates.sh to merge back. Internal: plain
-      # JSON (no -Z), staging only, never promoted. Persists whatever the
-      # fetch wrote, a partial fetch included (#1770): raw-fac/<date>/
-      # holds exactly what <date>'s fetch returned, never a fallback.
-      # Non-blocking; a failure is a warning.
-      - name: '[daily] Persist raw Find-A-Club'
-        if: steps.mode.outputs.mode == 'daily'
-        id: daily-fac-persist
-        continue-on-error: true
-        run: |
-          SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.snapshot_date }}"
-          if [ -z "${SNAPSHOT_DATE}" ]; then
-            SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.date }}"
-          fi
-          if [ -z "$(find "./cache/find-a-club/${SNAPSHOT_DATE}" -name 'district_*.json' 2>/dev/null | head -1)" ]; then
-            echo "::warning::The Find-A-Club fetch wrote nothing for ${SNAPSHOT_DATE}; nothing to persist"
-            echo "- **Raw FAC persisted**: 0 files (the fetch wrote none)" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          if ! bash scripts/pipeline/gcs-upload.sh daily-raw-fac rsync -r \
-            "./cache/find-a-club/${SNAPSHOT_DATE}/" "gs://${GCS_BUCKET}/raw-fac/${SNAPSHOT_DATE}/"; then
-            echo "::warning::Could not persist raw-fac/${SNAPSHOT_DATE}/; a re-derivation of ${SNAPSHOT_DATE} will be unenriched"
+          if [ "${SUCCEEDED}" != "1" ]; then
+            echo "::error::Daily ${TARGET_DATE} was not published (${COUNTS}): refused by the closing upload guard (#1621), failed, or never written. See the step log; no store is pushed."
             exit 1
           fi
-          FAC_FILES=$(find "./cache/find-a-club/${SNAPSHOT_DATE}" -name 'district_*.json' | wc -l | tr -d ' ')
-          echo "- **Raw FAC persisted**: ${FAC_FILES} files → raw-fac/${SNAPSHOT_DATE}/" >> "$GITHUB_STEP_SUMMARY"
 
-      # ── Daily Step 3c: Find-A-Club snapshot merge (#429) ──
-      # Joins FAC into each district snapshot (charterDate / coordinates /
-      # address / contact / meeting fields) before compute, validation and
-      # upload. Runs on every daily and fails closed (#1770, ADR-015 P2,
-      # audit D-10): a district the fetch missed takes the most recent
-      # persisted raw-fac/ before the date; one with no FAC at all is
-      # published unenriched, counted and flagged (the completeness gate,
-      # #1761, holds it only where prod already has the date). A merge or
-      # GCS failure fails the run before upload (D7). FAC-only clubs (ATOs /
-      # prospective, #489) are counted but NOT merged into clubPerformance.
-      # Logic and tests: scripts/pipeline/daily-fac-merge.sh,
-      # scripts/lib/__tests__/dailyFacMerge.test.ts.
-      - name: '[daily] Merge Find-A-Club into snapshots'
-        if: steps.mode.outputs.mode == 'daily'
-        id: daily-fac-merge
-        run: |
-          SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.snapshot_date }}"
-          if [ -z "${SNAPSHOT_DATE}" ]; then
-            SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.date }}"
-          fi
-          bash scripts/pipeline/daily-fac-merge.sh "${GCS_BUCKET}" "${SNAPSHOT_DATE}"
-
-      # ── Daily Step 4: Compute Analytics ──
-      - name: '[daily] Compute Analytics'
-        if: steps.mode.outputs.mode == 'daily'
-        run: |
-          DATE="${{ steps.daily-scrape.outputs.date }}"
-          if [ -z "${DATE}" ]; then
-            DATE="${{ steps.daily-config.outputs.date }}"
-            echo "::warning::Scrape step did not output a date; using config date: ${DATE}"
-          fi
-          DISTRICT_LIST="${{ steps.daily-config.outputs.districts }}"
-          ARGS="--date ${DATE} --districts ${DISTRICT_LIST} --verbose"
-
-          # pipefail (#1702): without it `| tee` discards the CLI's exit code,
-          # and a run that wrote no time-series point for any district (or no
-          # worldwide rollup, #1498) reported green.
-          set -o pipefail
-          echo "Running: npx collector-cli compute-analytics $ARGS"
-          npx collector-cli compute-analytics $ARGS | tee /tmp/analytics-output.json
-
-          echo "## 📊 Analytics Results" >> "$GITHUB_STEP_SUMMARY"
-          SUCCEEDED=$(jq '.districts.succeeded' /tmp/analytics-output.json)
-          echo "- **Districts computed**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
-          # Store write counters (#1708)
-          jq -rs -f scripts/compute-counters.jq /tmp/analytics-output.json >> "$GITHUB_STEP_SUMMARY"
-
-      # ── Daily Step 4.5: Snapshot schema gate (#1125) ──
-      # The transform write path validates, but merge-find-a-club rewrites
-      # snapshots in place WITHOUT re-validating — the exact path the #1096
-      # FAC-enrichment drift took to prod. Validate the final on-disk files
-      # against shared-contracts immediately before upload: fail-loud with
-      # district + date, staging-side. Decision logic is unit-tested in
-      # scripts/lib/__tests__/snapshotPublishGate.test.ts.
-      - name: '[daily] Validate snapshots against shared contracts'
-        if: steps.mode.outputs.mode == 'daily'
-        run: |
-          SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.snapshot_date }}"
-          if [ -z "${SNAPSHOT_DATE}" ]; then
-            SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.date }}"
-          fi
-          npx tsx scripts/validate-snapshots.ts "./cache/snapshots/${SNAPSHOT_DATE}"
-
-      # ── Daily Step 5: Upload to GCS ──
-      - name: '[daily] Upload to GCS'
-        if: steps.mode.outputs.mode == 'daily'
-        run: |
-          DATE="${{ steps.daily-scrape.outputs.date }}"
-          # Use the actual snapshot date (post closing-period remap) for snapshot upload (#309)
-          SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.snapshot_date }}"
-          if [ -z "${SNAPSHOT_DATE}" ]; then
-            SNAPSHOT_DATE="${DATE}"
-          fi
-          echo "Uploading daily data — raw=${DATE}, snapshot=${SNAPSHOT_DATE}"
-
-          # Internal state: rsync (no CDN metadata needed)
-          # raw-csv keyed by collection date (DATE), not snapshot date
-          bash scripts/pipeline/gcs-upload.sh daily-upload rsync -r \
-            "./cache/raw-csv/${DATE}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
-
-          # Stateful stores (#1722): the double-encoding check runs before
-          # any store push (#1702), then rsync for internal state, the awards
-          # history copy (#333), and the CDN-headed -Z time-series overlay.
+          # Push the upserted stores back (#1722): the double-encoding check
+          # runs before any push (#1702), then rsync for internal state, the
+          # awards history copy (#333), and the CDN-headed -Z time-series.
           bash scripts/pipeline/publish-stores.sh "${GCS_BUCKET}" \
             time-series club-trends club-race district-awards-history
-
-          # CDN-served: snapshots + analytics (immutable, gzipped)
-          # Use SNAPSHOT_DATE for the actual snapshot directory (#309)
-          bash scripts/pipeline/gcs-upload.sh daily-upload cp \
-            --content-type="application/json" \
-            --cache-control="public, max-age=3600, must-revalidate" \
-            -Z \
-            "./cache/snapshots/${SNAPSHOT_DATE}"/*.json \
-            "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/"
-
-          # Analytics subdirectory
-          if [ -d "./cache/snapshots/${SNAPSHOT_DATE}/analytics" ]; then
-            bash scripts/pipeline/gcs-upload.sh daily-upload cp \
-              --content-type="application/json" \
-              --cache-control="public, max-age=3600, must-revalidate" \
-              -Z \
-              "./cache/snapshots/${SNAPSHOT_DATE}/analytics"/*.json \
-              "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/analytics/"
-          fi
-
-          # Per-region club shards + world file (#1800): written by compute
-          # only when the run has the whole district set (ADR-015 P3); in
-          # the run manifest via gcs-upload.sh, promoted with their date.
-          if [ -d "./cache/snapshots/${SNAPSHOT_DATE}/clubs-by-region" ]; then
-            bash scripts/pipeline/gcs-upload.sh daily-upload cp \
-              --content-type="application/json" \
-              --cache-control="public, max-age=3600, must-revalidate" \
-              -Z \
-              "./cache/snapshots/${SNAPSHOT_DATE}/clubs-by-region"/*.json \
-              "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/clubs-by-region/"
-          fi
-
-          echo "## ☁️ GCS Upload" >> "$GITHUB_STEP_SUMMARY"
-          SNAPSHOT_COUNT=$(find "./cache/snapshots/${SNAPSHOT_DATE}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
-          echo "- **Raw date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Snapshot date**: ${SNAPSHOT_DATE}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Snapshot/analytics files**: ${SNAPSHOT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
-
-          # Identity histories (#1782, #1820): the same script process-dates.sh
-          # runs after its loop (ADR-015 P1, no daily-only stage). Both go to
-          # config/ and are promoted with the run: the club history as
-          # config/club-district-history/{NN,index}.json, the region history
-          # as config/district-region-history.json. A failure leaves the
-          # previous copies, not a red run.
-          bash scripts/pipeline/build-identity-history.sh "${GCS_BUCKET}" \
-            || echo "::warning::Identity histories were not rebuilt (#1782, #1820); the previous copies stand"
 
           # The daily education rollup (#1801) is NOT built here: it reads
           # the newest district_*_reports.json, which `place-reports` writes
@@ -1692,7 +1478,7 @@ jobs:
           daily)
             # Daily: merge today's snapshot date into existing index
             # Use snapshot_date (post closing-period remap) not raw date (#309)
-            DATE="${{ steps.daily-scrape.outputs.snapshot_date || steps.daily-scrape.outputs.date || steps.daily-config.outputs.date }}"
+            DATE="${{ steps.daily-process.outputs.snapshot_date }}"
             DISTRICT_LIST="${{ steps.daily-config.outputs.districts }}"
 
             gcloud storage cp "${INDEX_PATH}" /tmp/district-snapshot-index.json 2>/dev/null || \
@@ -2458,7 +2244,7 @@ jobs:
   # any open alert through the existing step.
   #
   # Least privilege: `contents: write` + `pull-requests: write` live HERE and
-  # nowhere else. The `pipeline` job that runs Playwright against TI keeps
+  # nowhere else. The `pipeline` job that scrapes TI keeps
   # `contents: read`. Job-level permissions are the only granularity GitHub
   # offers, which is why this is a separate job rather than a step.
   closing-registry-pr:
@@ -2649,7 +2435,7 @@ jobs:
   daily-reports:
     name: 'daily district reports fetch'
     runs-on: ubuntu-26.04
-    # Mirrors the daily gate on the Playwright step, minus the quarterly-prune
+    # Mirrors the daily gate of the pipeline job, minus the quarterly-prune
     # cron (#1148), which is the one scheduled event that is NOT a daily run.
     # R17: every value of `mode` has an explicit outcome — daily/'' → run,
     # rebuild/rescrape/rescrape-historical/prune → skip.
@@ -3038,7 +2824,7 @@ jobs:
 
           # Down-then-up rather than a GCS→GCS rewrite, deliberately: the
           # CDN-facing object must be byte-for-byte the same shape the
-          # pipeline's own `[daily] Upload to GCS` step produces (gzipped via
+          # pipeline's own snapshot upload (process-dates.sh) produces (gzipped via
           # -Z with the same two headers), and `cp -Z` is an UPLOAD-side flag.
           rm -rf /tmp/daily-reports && mkdir -p /tmp/daily-reports
           gcloud storage cp "${INCOMING}/district_*_reports.json" /tmp/daily-reports/
