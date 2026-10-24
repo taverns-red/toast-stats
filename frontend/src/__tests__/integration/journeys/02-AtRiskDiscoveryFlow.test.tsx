@@ -17,6 +17,17 @@ import { clickDistrictRow } from './_helpers'
 
 import { setupCdnFetchMock } from '../utils/mockCdnData'
 
+// Compile the lazy routes this journey visits once, up front: otherwise the
+// first test's 1 s findBy window measures Vite's cold transform of their
+// module graphs, not the app; on a slow CI runner that alone
+// overruns the window (#2248; same pattern as DistrictMapPage.test.tsx).
+beforeAll(async () => {
+  await Promise.all([
+    import('../../../pages/DistrictDetailPage'),
+    import('../../../pages/DistrictClubsPage'),
+  ])
+})
+
 // Journey tests render <App /> and click through multi-step flows; the
 // full-page scope is the test. 15s recognises that category — unit
 // tests still inherit the 5s cap from vitest.config.ts (#473).
