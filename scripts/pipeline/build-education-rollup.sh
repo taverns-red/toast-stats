@@ -34,8 +34,8 @@
 #   gs://<bucket>/derived/education-rollup/index.json  last: it names them
 # derived/ is NOT a promoted prefix: this script only ever writes to
 # <bucket> (the #1755 prod-write guard checks it). Prod gets the result from
-# scripts/pipeline/mirror-education-rollup.sh (#1810), gated on the run
-# having promoted its date and on the rollup's reports date being in prod.
+# the promote-reports job, through the report-sidecar manifest and the
+# content gate, once the rollup's reports date is in prod (#1810, #2222).
 #
 # Env:   GCLOUD     the gcloud binary (default `gcloud`; tests use a shim, D10)
 #        EDUCATION_LEDGER_DIR  optional: the ledger seed directory (#2102);

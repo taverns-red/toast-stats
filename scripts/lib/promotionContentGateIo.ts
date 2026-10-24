@@ -13,6 +13,7 @@
 import {
   DATES_PATH,
   LATEST_PATH,
+  MANIFEST_GATED_PREFIXES,
   PROMOTED_PREFIXES,
   SNAPSHOT_INDEX_PATH,
   checkLatestAgreesWithIndex,
@@ -206,7 +207,9 @@ export async function listManifestDirs(
     ...new Set(
       manifest
         .map(e => e.path)
-        .filter(p => PROMOTED_PREFIXES.some(prefix => p.startsWith(prefix)))
+        .filter(p =>
+          MANIFEST_GATED_PREFIXES.some(prefix => p.startsWith(prefix))
+        )
         .map(p => p.slice(0, p.lastIndexOf('/') + 1))
     ),
   ].sort()

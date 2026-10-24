@@ -47,7 +47,10 @@ const workflow = parse(
     path.join(process.cwd(), '.github/workflows/data-pipeline.yml'),
     'utf-8'
   )
-) as Workflow & { jobs: Record<string, Job> }
+) as Workflow & {
+  jobs: Record<string, Job>
+  env?: Record<string, string>
+}
 
 const JOB = 'promote-reports'
 const steps = (job: string) => (workflow.jobs[job]?.steps ?? []) as Step[]
@@ -76,21 +79,13 @@ describe('the prod-write guard (#1767): one mechanism', () => {
     expect(direct.map(s => `${s.job} / ${s.step}`)).toEqual([])
   })
 
-  it('every other prod data write is the manifest promote, or a pinned exemption', () => {
-    const found = directProdWriteSteps(workflow)
+  it('every prod data write is the manifest promote: no exemption is left (#2222)', () => {
+    expect(DIRECT_PROD_WRITE_EXEMPT).toEqual({})
     expect(
-      found
-        .filter(s => !(s.step in DIRECT_PROD_WRITE_EXEMPT))
-        .map(s => `${s.job} / ${s.step}: ${s.reasons.join(', ')}`)
+      directProdWriteSteps(workflow).map(
+        s => `${s.job} / ${s.step}: ${s.reasons.join(', ')}`
+      )
     ).toEqual([])
-    // An exemption names a live step and the issue that retires it.
-    for (const [name, why] of Object.entries(DIRECT_PROD_WRITE_EXEMPT)) {
-      expect(
-        found.some(s => s.step === name),
-        name
-      ).toBe(true)
-      expect(why).toMatch(/#\d+/)
-    }
   })
 
   it('directProdWriteSteps sees a direct copy and ignores the promote', () => {
@@ -208,6 +203,8 @@ describe('promote-reports job (#1767)', () => {
 
   it('promotes the dates that passed the gate, through the manifest promoter, holding the rest (#2227)', () => {
     const p = step(JOB, PROMOTE)
+    // The sidecars only: the education rollup has its own gate and
+    // promote (#2222 M1), so a rollup fault never holds a sidecar.
     expect(p?.run).toBe('npx tsx scripts/promote-run-manifest.ts --execute')
     const c = topLevelConjuncts(p?.if ?? '')
     // Not content_promote: one bad date must not hold the others (#2227).
@@ -312,7 +309,127 @@ describe('promote-reports job (#1767)', () => {
   })
 })
 
-describe('the old direct writers are gone (#1767)', () => {
+describe('the education rollup is gated and promoted on its own (#2222 M1)', () => {
+  const RGATE = '[rollup] Content gate the education rollup (#2222)'
+  const RPROMOTE = '[rollup] Promote the education rollup (#2222)'
+  const RHELD = '[rollup] Education rollup held by the content gate (#2222)'
+
+  const RHOLD =
+    '[rollup] Hold the education rollup of a held reports date (#2222)'
+  const RFAIL = '[rollup] Education rollup step failed (#2222)'
+
+  it('plan → sidecar hold → its own date hold → gate → promote (#2222 M2)', () => {
+    // After the sidecars' per-date hold (#2227): the rollup of a date the
+    // sidecars hold must see that hold before it is gated or promoted.
+    const order = [PLAN, HOLD, RHOLD, RGATE, RPROMOTE, RHELD, RFAIL].map(n =>
+      index(JOB, n)
+    )
+    expect(
+      order.every(i => i >= 0),
+      JSON.stringify(order)
+    ).toBe(true)
+    expect([...order].sort((a, b) => a - b)).toEqual(order)
+  })
+
+  it('holds the rollup whose reports date the sidecar verdict holds, never failing the job', () => {
+    const h = step(JOB, RHOLD)
+    expect(h?.id).toBe('rolluphold')
+    expect(h?.run).toBe(
+      'npx tsx scripts/plan-report-sidecars.ts --apply-rollup-hold'
+    )
+    const c = topLevelConjuncts(h?.if ?? '')
+    expect(c).toContain('!cancelled⟨group⟩')
+    expect(h?.if).toContain("steps.plan.outputs.rollup_objects != '0'")
+    expect(h?.['continue-on-error']).toBe(true)
+  })
+
+  it('a rollup step that fails is an error annotation and a summary line, not silent green', () => {
+    const f = step(JOB, RFAIL)
+    for (const id of ['rolluphold', 'rollupgate', 'rolluppromote']) {
+      expect(f?.if).toContain(`steps.${id}.outcome == 'failure'`)
+    }
+    expect(f?.if).toContain('!cancelled()')
+    expect(f?.run).toContain('::error title=Education rollup::')
+    expect(f?.run).toContain('GITHUB_STEP_SUMMARY')
+    expect(f?.run).not.toMatch(/exit 1/)
+    expect(step(JOB, RPROMOTE)?.id).toBe('rolluppromote')
+  })
+
+  it('gates exactly the rollup manifest, and a gate error never fails the job', () => {
+    const g = step(JOB, RGATE)
+    expect(g?.id).toBe('rollupgate')
+    expect(g?.run).toBe(
+      'npx tsx scripts/promotion-content-gate.ts --manifest-only'
+    )
+    expect(g?.env?.RUN_MANIFEST_FILE).toBe(
+      '${{ env.EDUCATION_ROLLUP_MANIFEST_FILE }}'
+    )
+    expect(g?.env?.CONTENT_GATE_FILE).not.toBe(
+      step(JOB, GATE)?.env?.CONTENT_GATE_FILE
+    )
+    // Only what the date hold left (#2222 M2).
+    expect(g?.if).toContain("steps.rolluphold.outputs.rollup_objects != '0'")
+    expect(g?.['continue-on-error']).toBe(true)
+  })
+
+  it('promotes it with --education-rollup only when its own gate passed', () => {
+    const p = step(JOB, RPROMOTE)
+    expect(p?.run).toBe(
+      'npx tsx scripts/promote-run-manifest.ts --execute --education-rollup'
+    )
+    expect(p?.env?.RUN_MANIFEST_FILE).toBe(
+      '${{ env.EDUCATION_ROLLUP_MANIFEST_FILE }}'
+    )
+    const c = topLevelConjuncts(p?.if ?? '')
+    expect(c).toContain("steps.rollupgate.outputs.content_promote == 'true'")
+    expect(p?.if).not.toContain('steps.contentgate')
+    expect(p?.['continue-on-error']).toBe(true)
+    const found = findProdWriteSteps(workflow).find(
+      s => s.job === JOB && s.step === RPROMOTE
+    )
+    expect(found?.reasons).toEqual(['manifest promotion → production'])
+    expect(found?.guarded).toBe(true)
+  })
+
+  it('a held rollup warns and is summarised, without failing the job', () => {
+    const h = step(JOB, RHELD)
+    expect(h?.if).toContain(
+      "steps.rollupgate.outputs.content_promote == 'false'"
+    )
+    expect(h?.run).toContain('::warning title=Education rollup::')
+    expect(h?.run).toContain('GITHUB_STEP_SUMMARY')
+    expect(h?.run).not.toMatch(/exit 1/)
+  })
+
+  it('the sidecars’ gate and promote never read the rollup manifest', () => {
+    for (const n of [GATE, PROMOTE]) {
+      expect(step(JOB, n)?.env?.RUN_MANIFEST_FILE).toBe(
+        '${{ env.REPORT_SIDECAR_MANIFEST_FILE }}'
+      )
+    }
+    expect(workflow.env?.EDUCATION_ROLLUP_MANIFEST_FILE).toBeTruthy()
+  })
+})
+
+describe('the old direct writers are gone (#1767, #2222)', () => {
+  it('no step runs mirror-education-rollup.sh, and it is deleted (#2222)', () => {
+    const all = Object.values(workflow.jobs).flatMap(j => j.steps ?? [])
+    expect(
+      all.some(s => (s.run ?? '').includes('mirror-education-rollup'))
+    ).toBe(false)
+    expect(
+      fs.existsSync(
+        path.join(process.cwd(), 'scripts/pipeline/mirror-education-rollup.sh')
+      )
+    ).toBe(false)
+  })
+
+  it('education-rollup writes nothing to prod: the build is recorded in the run manifest', () => {
+    expect(
+      findProdWriteSteps(workflow).filter(s => s.job === 'education-rollup')
+    ).toEqual([])
+  })
+
   it('no step runs carry-report-sidecars.sh', () => {
     const all = Object.values(workflow.jobs).flatMap(j => j.steps ?? [])
     expect(all.some(s => (s.run ?? '').includes('carry-report-sidecars'))).toBe(
