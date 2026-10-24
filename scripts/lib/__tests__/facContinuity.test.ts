@@ -1,0 +1,566 @@
+/**
+ * Find-A-Club continuity in the completeness gate (#2239 AC3).
+ *
+ * The same-date gate compares staging with production, so once production
+ * is stripped it has no memory: in #2237, 81 prod dates lost their FAC data
+ * and the later rebuilds of those dates passed, because staging matched the
+ * stripped prod copy. These tests hold the gate to two more questions for a
+ * date in the FAC era (2026-05-15 on):
+ *   - does each sampled district keep the FAC coverage of the nearest
+ *     earlier production dates (best of the last 3)?
+ *   - is the date FAC-merged at all? A stripped baseline cannot answer
+ *     this one, so a whole stripped run of dates still holds.
+ *
+ * District files are built from the real date-completeness fixtures
+ * (`prod-district_02.json`, enriched; `staging-district_02.json`, the
+ * stripped shape) by repeating their club rows under new ids. The fake
+ * bucket answers `getFiles` like @google-cloud/storage 8.2.0 with `fields`
+ * (see dateCompletenessGate.test.ts).
+ */
+
+import { describe, it, expect } from 'vitest'
+import { gzipSync } from 'node:zlib'
+import { createHash } from 'node:crypto'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+import { runCompletenessGate } from '../dateCompletenessGate.js'
+import {
+  FAC_ENRICHED_SINCE,
+  FAC_KNOWN_UNENRICHED_DATES,
+  compareFacContinuity,
+  facBaselineDates,
+  facCheckApplies,
+  facCoverage,
+  type FacBaseline,
+  type FacCoverage,
+} from '../facContinuity.js'
+import type { GateBucket } from '../promotionContentGateIo.js'
+
+const FIX = path.resolve(__dirname, 'fixtures/date-completeness')
+const load = (f: string): Record<string, unknown> =>
+  JSON.parse(fs.readFileSync(path.join(FIX, f), 'utf-8'))
+
+const enriched = load('prod-district_02.json')
+const stripped = load('staging-district_02.json')
+
+type Row = Record<string, unknown>
+const dataOf = (v: Record<string, unknown>) => v.data as Row
+const clubsOf = (v: Record<string, unknown>) => dataOf(v).clubs as Row[]
+
+/** clubs[0] is FAC-matched, clubs[2] is in the snapshot but not in FAC. */
+const MATCHED = clubsOf(enriched)[0]!
+const UNMATCHED = clubsOf(enriched)[2]!
+
+/**
+ * A district file of `clubs` rows, the first `fac` of them FAC-matched (less
+ * the keys in `drop`), the rest unmatched. Merged (the merge's
+ * `prospectiveClubs` mark) when `merged`, default: any club matched.
+ */
+function district(o: {
+  clubs: number
+  fac: number
+  merged?: boolean
+  drop?: string[]
+  id?: string
+}): Record<string, unknown> {
+  const drop = new Set(o.drop ?? [])
+  const rows = Array.from({ length: o.clubs }, (_, i) => {
+    const src = i < o.fac ? MATCHED : UNMATCHED
+    const row: Row = { ...src, clubId: String(10000 + i) }
+    for (const k of drop) if (i < o.fac) delete row[k]
+    return row
+  })
+  const data: Row = { ...dataOf(stripped), clubs: rows }
+  if (o.merged ?? o.fac > 0) {
+    data.prospectiveClubs = dataOf(enriched).prospectiveClubs
+  }
+  return { ...stripped, districtId: o.id ?? '02', data }
+}
+
+const cov = (
+  clubs: number,
+  fac: number,
+  merged = fac > 0,
+  over: Partial<FacCoverage> = {}
+): FacCoverage => ({
+  clubs,
+  merged,
+  coordinates: fac,
+  address: fac,
+  meeting: fac,
+  ...over,
+})
+
+// ── Fake bucket ─────────────────────────────────────────────────────────────
+
+interface Stored {
+  bytes: Uint8Array
+  contentEncoding?: string
+}
+
+const gz = (value: unknown): Stored => ({
+  bytes: gzipSync(Buffer.from(JSON.stringify(value))),
+  contentEncoding: 'gzip',
+})
+
+function fakeBucket(objects: Record<string, unknown>): GateBucket & {
+  queries: Array<Record<string, unknown>>
+  downloads: string[]
+} {
+  const stored = Object.fromEntries(
+    Object.entries(objects).map(([k, v]) => [k, gz(v)])
+  )
+  const queries: Array<Record<string, unknown>> = []
+  const downloads: string[] = []
+  return {
+    queries,
+    downloads,
+    async getFiles(query) {
+      queries.push(query)
+      const prefix = String(query.prefix ?? '')
+      const items = Object.keys(stored)
+        .filter(n => n.startsWith(prefix))
+        .sort()
+        .map(name => {
+          const o = stored[name]!
+          const md5 = createHash('md5').update(o.bytes).digest('base64')
+          const item: Record<string, string> = {
+            name,
+            size: String(o.bytes.length),
+            md5Hash: md5,
+            crc32c: md5.slice(0, 8),
+          }
+          if (o.contentEncoding) item.contentEncoding = o.contentEncoding
+          return query.fields ? item : { name, metadata: item }
+        })
+      return [items]
+    },
+    file(name) {
+      return {
+        async download() {
+          downloads.push(name)
+          const o = stored[name]
+          if (!o) throw new Error(`No such object: ${name}`)
+          return [o.bytes]
+        },
+      }
+    },
+  }
+}
+
+/** prod's `v1/dates.json`, shaped like the CDN index (CdnDatesIndex). */
+const datesIndex = (dates: string[]) => ({
+  'v1/dates.json': {
+    _format: { version: '1.0.0', type: 'dates-index' },
+    dates,
+    count: dates.length,
+    generatedAt: '2026-10-24T09:10:00.000Z',
+  },
+})
+
+/** `snapshots/<date>/district_<id>.json` for each (id → file). */
+const day = (date: string, files: Record<string, unknown>) =>
+  Object.fromEntries(
+    Object.entries(files).map(([id, f]) => [
+      `snapshots/${date}/district_${id}.json`,
+      f,
+    ])
+  )
+
+const D61_ENRICHED = () => district({ clubs: 162, fac: 158, id: '61' })
+const D61_STRIPPED = () =>
+  district({ clubs: 162, fac: 0, merged: false, id: '61' })
+const D02_ENRICHED = () => district({ clubs: 204, fac: 196 })
+const D02_STRIPPED = () => district({ clubs: 204, fac: 0, merged: false })
+
+const gate = (
+  staging: Record<string, unknown>,
+  prod: Record<string, unknown>,
+  dates: string[],
+  allowValueChanges = false
+) =>
+  runCompletenessGate(fakeBucket(staging), fakeBucket(prod), dates, {
+    allowValueChanges,
+  })
+
+const text = (r: { failures: Array<{ path: string; reason: string }> }) =>
+  r.failures.map(f => `${f.path}: ${f.reason}`).join('\n')
+
+// ── Pure parts ──────────────────────────────────────────────────────────────
+
+describe('facCoverage', () => {
+  it('counts the real enriched fixture: 2 of 3 clubs matched, merged', () => {
+    expect(facCoverage(enriched)).toEqual({
+      clubs: 3,
+      merged: true,
+      coordinates: 2,
+      address: 2,
+      meeting: 2,
+    })
+  })
+
+  it('reads the real stripped shape as unmerged with no coverage', () => {
+    expect(facCoverage(stripped)).toEqual({
+      clubs: 3,
+      merged: false,
+      coordinates: 0,
+      address: 0,
+      meeting: 0,
+    })
+  })
+
+  it('a coordinates object without numeric lat/lng is not a map point', () => {
+    const f = district({ clubs: 2, fac: 2 })
+    clubsOf(f)[0]!.coordinates = { lat: null, lng: null }
+    expect(facCoverage(f)?.coordinates).toBe(1)
+  })
+
+  it('is null for something that is not a district snapshot', () => {
+    expect(facCoverage({ data: [] })).toBeNull()
+    expect(facCoverage(null)).toBeNull()
+  })
+})
+
+describe('which dates the check covers', () => {
+  it('starts with the FAC era (2026-05-15)', () => {
+    expect(FAC_ENRICHED_SINCE).toBe('2026-05-15')
+    expect(facCheckApplies('2026-05-14')).toBe(false)
+    expect(facCheckApplies('2019-06-30')).toBe(false)
+    expect(facCheckApplies('2026-05-15')).toBe(true)
+    expect(facCheckApplies('2026-10-24')).toBe(true)
+  })
+
+  it('exempts the 39 known-unenriched dates of the #2239 audit, and only them', () => {
+    // Group A (6, prod-only source, recovery declined) + group D (33, no source).
+    expect(FAC_KNOWN_UNENRICHED_DATES.size).toBe(39)
+    for (const d of ['2026-05-30', '2026-06-09', '2026-06-30', '2026-07-26']) {
+      expect(facCheckApplies(d)).toBe(false)
+    }
+    for (const d of ['2026-08-11', '2026-08-30', '2026-09-04', '2026-09-11']) {
+      expect(facCheckApplies(d)).toBe(false)
+    }
+    // Recovered groups B and C, and 08-31 (group C) are not exempt.
+    for (const d of ['2026-06-10', '2026-06-29', '2026-07-31', '2026-08-31']) {
+      expect(facCheckApplies(d)).toBe(true)
+    }
+    expect(facCheckApplies('2026-09-12')).toBe(true)
+    expect(facCheckApplies('2026-10-08')).toBe(true)
+    for (const d of FAC_KNOWN_UNENRICHED_DATES) {
+      expect(d >= FAC_ENRICHED_SINCE).toBe(true)
+    }
+  })
+
+  it('takes the 3 nearest earlier prod dates, skipping exempt and pre-FAC ones', () => {
+    const prod = [
+      '2026-10-24',
+      '2026-07-31',
+      '2026-06-29',
+      '2026-06-30',
+      '2026-07-26',
+      '2026-07-27',
+      '2026-06-28',
+      '2026-06-27',
+      '2026-05-31',
+      '2026-04-30',
+    ]
+    expect(facBaselineDates(prod, '2026-07-31')).toEqual([
+      '2026-06-29',
+      '2026-06-28',
+      '2026-06-27',
+    ])
+    expect(facBaselineDates(prod, '2026-06-10')).toEqual([])
+    expect(facBaselineDates(prod, '2026-10-24', 1)).toEqual(['2026-07-31'])
+  })
+})
+
+describe('compareFacContinuity', () => {
+  const DATE = '2026-10-24'
+  const base = (date: string, coverage: FacCoverage | null): FacBaseline => ({
+    date,
+    coverage,
+  })
+
+  it('holds a district whose FAC merge is lost against the previous date', () => {
+    const r = compareFacContinuity(
+      DATE,
+      { '61': cov(162, 0, false), '02': cov(204, 196) },
+      {
+        '61': [base('2026-10-23', cov(162, 158))],
+        '02': [base('2026-10-23', cov(204, 196))],
+      }
+    )
+    expect(r.map(x => x.path)).toEqual([`snapshots/${DATE}/district_61.json`])
+    expect(r[0]!.reason).toMatch(/prospectiveClubs/)
+    expect(r[0]!.reason).toContain('2026-10-23')
+  })
+
+  it('holds a significant coverage drop on a still-merged district', () => {
+    const r = compareFacContinuity(
+      DATE,
+      { '61': cov(162, 158, true, { coordinates: 20 }) },
+      { '61': [base('2026-10-23', cov(162, 158))] }
+    )
+    expect(r).toHaveLength(1)
+    expect(r[0]!.reason).toMatch(/coordinates.*158\/162.*2026-10-23.*20\/162/)
+  })
+
+  it('passes day-to-day FAC churn (a few clubs)', () => {
+    const r = compareFacContinuity(
+      DATE,
+      { '61': cov(162, 155) },
+      { '61': [base('2026-10-23', cov(162, 158))] }
+    )
+    expect(r).toEqual([])
+  })
+
+  it('passes a small district losing fewer than 3 clubs', () => {
+    const r = compareFacContinuity(
+      DATE,
+      { '61': cov(10, 7) },
+      { '61': [base('2026-10-23', cov(10, 9))] }
+    )
+    expect(r).toEqual([])
+  })
+
+  it('takes the best of the baseline dates, so one stripped neighbour cannot satisfy it', () => {
+    const r = compareFacContinuity(
+      DATE,
+      { '61': cov(162, 0, false) },
+      {
+        '61': [
+          base('2026-10-23', cov(162, 0, false)),
+          base('2026-10-22', cov(162, 158)),
+        ],
+      }
+    )
+    expect(r.length).toBeGreaterThan(0)
+    expect(r.map(x => x.reason).join('\n')).toContain('2026-10-22')
+  })
+
+  it('holds a date whose sampled districts are mostly unmerged, even against stripped baselines (#2237)', () => {
+    const r = compareFacContinuity(
+      '2026-06-15',
+      { '61': cov(162, 0, false), '02': cov(204, 0, false) },
+      {
+        '61': [base('2026-06-14', cov(162, 0, false))],
+        '02': [base('2026-06-14', cov(204, 0, false))],
+      }
+    )
+    expect(r).toHaveLength(1)
+    expect(r[0]!.path).toBe('snapshots/2026-06-15/')
+    expect(r[0]!.reason).toMatch(/0 of 2 sampled district\(s\).*merged/)
+  })
+
+  it('a legitimately new district (no baseline) does not hold its date', () => {
+    const r = compareFacContinuity(
+      DATE,
+      { '02': cov(204, 196), '61': cov(162, 158), '130': cov(20, 0, false) },
+      {
+        '02': [base('2026-10-23', cov(204, 196))],
+        '61': [base('2026-10-23', cov(162, 158))],
+        '130': [base('2026-10-23', null)],
+      }
+    )
+    expect(r).toEqual([])
+  })
+
+  it('a removed district (baseline only) is not a FAC loss', () => {
+    const r = compareFacContinuity(
+      DATE,
+      { '02': cov(204, 196) },
+      {
+        '02': [base('2026-10-23', cov(204, 196))],
+        '61': [base('2026-10-23', cov(162, 158))],
+      }
+    )
+    expect(r).toEqual([])
+  })
+
+  it('ignores a 0-club district (a #1671 gap file)', () => {
+    const r = compareFacContinuity(
+      DATE,
+      { '02': cov(204, 196), U: cov(0, 0, false) },
+      {
+        '02': [base('2026-10-23', cov(204, 196))],
+        U: [base('2026-10-23', cov(0, 0, true))],
+      }
+    )
+    expect(r).toEqual([])
+  })
+
+  it('the first date of a program year compares with the prior year’s last date', () => {
+    // At rollover the club list changes (suspended clubs drop, new charters
+    // join); coverage is a share of the clubs listed, so it carries over.
+    const r = compareFacContinuity(
+      '2026-07-01',
+      { '61': cov(150, 146) },
+      { '61': [base('2026-06-29', cov(162, 158))] }
+    )
+    expect(r).toEqual([])
+  })
+
+  it('does nothing on a known-unenriched date or before the FAC era', () => {
+    const lost = { '61': cov(162, 0, false) }
+    const had = { '61': [base('2026-06-29', cov(162, 158))] }
+    expect(compareFacContinuity('2026-06-30', lost, had)).toEqual([])
+    expect(compareFacContinuity('2026-05-14', lost, had)).toEqual([])
+  })
+})
+
+// ── End to end through the gate ─────────────────────────────────────────────
+
+describe('#2237 replay: a rebuild over dates prod already lost', () => {
+  // Prod as it stood on 2026-10-14: 05-30..06-29 stripped (06-06..06-09 are
+  // exempt group-A dates). The rebuild re-writes 06-15 stripped again.
+  const prodDates = [
+    '2026-05-30',
+    '2026-05-31',
+    '2026-06-06',
+    '2026-06-07',
+    '2026-06-08',
+    '2026-06-09',
+    '2026-06-10',
+    '2026-06-11',
+    '2026-06-12',
+    '2026-06-13',
+    '2026-06-14',
+    '2026-06-15',
+  ]
+  const strippedProd = () => ({
+    ...datesIndex(prodDates),
+    ...Object.assign(
+      {},
+      ...prodDates.map(d =>
+        day(d, { '02': D02_STRIPPED(), '61': D61_STRIPPED() })
+      )
+    ),
+  })
+
+  it('HOLDS 06-15 although staging matches the stripped prod copy', async () => {
+    const staging = day('2026-06-15', {
+      '02': D02_STRIPPED(),
+      '61': D61_STRIPPED(),
+    })
+    const r = await gate(staging, strippedProd(), ['2026-06-15'])
+    expect(r.promote).toBe(false)
+    expect(r.heldDates).toEqual(['2026-06-15'])
+    expect(text(r)).toMatch(/2026-06-15.*Find-A-Club/)
+  })
+
+  it('passes the same rebuild once it carries the FAC fields (#2238)', async () => {
+    const staging = day('2026-06-15', {
+      '02': D02_ENRICHED(),
+      '61': D61_ENRICHED(),
+    })
+    const r = await gate(staging, strippedProd(), ['2026-06-15'])
+    expect(r.failures).toEqual([])
+    expect(r.promote).toBe(true)
+  })
+
+  it('HOLDS the original strip (10-07 shape: prod still enriched)', async () => {
+    const enrichedDays = ['2026-06-13', '2026-06-14', '2026-06-15']
+    const prod = {
+      ...datesIndex(enrichedDays),
+      ...Object.assign(
+        {},
+        ...enrichedDays.map(d =>
+          day(d, { '02': D02_ENRICHED(), '61': D61_ENRICHED() })
+        )
+      ),
+    }
+    const staging = day('2026-06-15', {
+      '02': D02_STRIPPED(),
+      '61': D61_STRIPPED(),
+    })
+    const r = await gate(staging, prod, ['2026-06-15'])
+    expect(r.promote).toBe(false)
+    expect(text(r)).toMatch(/district_61\.json.*prospectiveClubs/)
+  })
+
+  it('allow_value_changes overrides it, still listing the failures', async () => {
+    const staging = day('2026-06-15', {
+      '02': D02_STRIPPED(),
+      '61': D61_STRIPPED(),
+    })
+    const r = await gate(staging, strippedProd(), ['2026-06-15'], true)
+    expect(r.promote).toBe(true)
+    expect(r.failures.length).toBeGreaterThan(0)
+  })
+})
+
+describe('a daily on a new date (no prod copy to compare against)', () => {
+  const prod = () => ({
+    ...datesIndex(['2026-10-21', '2026-10-22', '2026-10-23']),
+    ...day('2026-10-21', { '02': D02_ENRICHED(), '61': D61_ENRICHED() }),
+    ...day('2026-10-22', { '02': D02_ENRICHED(), '61': D61_ENRICHED() }),
+    ...day('2026-10-23', { '02': D02_ENRICHED(), '61': D61_ENRICHED() }),
+  })
+
+  it('HOLDS a district that lost its FAC since the previous date', async () => {
+    const staging = day('2026-10-24', {
+      '02': D02_ENRICHED(),
+      '61': D61_STRIPPED(),
+    })
+    const r = await gate(staging, prod(), ['2026-10-24'])
+    expect(r.newDates).toEqual(['2026-10-24'])
+    expect(r.promote).toBe(false)
+    expect(r.failures.map(f => f.path)).toEqual([
+      'snapshots/2026-10-24/district_61.json',
+    ])
+  })
+
+  it('HOLDS a merged district whose coordinates collapsed', async () => {
+    const staging = day('2026-10-24', {
+      '02': D02_ENRICHED(),
+      '61': district({ clubs: 162, fac: 158, drop: ['coordinates'], id: '61' }),
+    })
+    const r = await gate(staging, prod(), ['2026-10-24'])
+    expect(r.promote).toBe(false)
+    expect(text(r)).toMatch(/district_61\.json.*coordinates.*0\/162/)
+  })
+
+  it('passes an enriched daily, reading only the 3 prior dates it needs', async () => {
+    const staging = fakeBucket(
+      day('2026-10-24', { '02': D02_ENRICHED(), '61': D61_ENRICHED() })
+    )
+    const prodBucket = fakeBucket({
+      ...prod(),
+      ...day('2026-10-20', { '02': D02_ENRICHED() }),
+    })
+    const r = await runCompletenessGate(staging, prodBucket, ['2026-10-24'], {
+      allowValueChanges: false,
+    })
+    expect(r.failures).toEqual([])
+    expect(r.promote).toBe(true)
+    expect(staging.queries.map(q => q.prefix)).toEqual([
+      'snapshots/2026-10-24/',
+    ])
+    expect(prodBucket.downloads.some(d => d.includes('2026-10-20'))).toBe(false)
+  })
+
+  it('fails closed when prod’s v1/dates.json cannot be read', async () => {
+    const { ['v1/dates.json']: _omit, ...noIndex } = prod()
+    const staging = day('2026-10-24', {
+      '02': D02_ENRICHED(),
+      '61': D61_ENRICHED(),
+    })
+    await expect(gate(staging, noIndex, ['2026-10-24'])).rejects.toThrow(
+      /v1\/dates\.json/
+    )
+  })
+})
+
+describe('outside the FAC era', () => {
+  it('a historical date reads no earlier dates and no dates index', async () => {
+    const prodBucket = fakeBucket(day('2019-06-30', { '02': D02_STRIPPED() }))
+    const staging = fakeBucket(day('2019-06-30', { '02': D02_STRIPPED() }))
+    const r = await runCompletenessGate(staging, prodBucket, ['2019-06-30'], {
+      allowValueChanges: false,
+    })
+    expect(r.promote).toBe(true)
+    expect(prodBucket.downloads).not.toContain('v1/dates.json')
+    expect(prodBucket.queries.map(q => q.prefix)).toEqual([
+      'snapshots/2019-06-30/',
+    ])
+  })
+})
