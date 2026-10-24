@@ -157,4 +157,30 @@ describe('DistrictsPage — landing hero wiring (#2249)', () => {
       screen.getByTestId('kpi-distinguished-clubs-delta')
     ).toHaveTextContent(/25% of paid clubs/)
   })
+
+  // #2254 — a return visit on a later as-of date shows the real movement on
+  // the card AND the #418 strip, and a same-day reload keeps showing it.
+  it('shows rank movement since the last visit on the card and the strip, across a same-day reload', async () => {
+    star('61')
+    window.localStorage.setItem(
+      storageKey('last-visit-snapshot'),
+      JSON.stringify({
+        lastSeenDate: '2025-11-15',
+        lastSeenMyRank: 5,
+        lastSeenMyDistrictId: '61',
+      })
+    )
+    for (let load = 0; load < 2; load++) {
+      setupWithData()
+      const { unmount } = renderWithProviders(<DistrictsPage />)
+      await screen.findByText('District 57')
+      expect(screen.getByTestId('my-district-card')).toHaveTextContent(
+        /up 3 places since 2025-11-15/i
+      )
+      const strip = screen.getByTestId('last-visit-diff-strip')
+      expect(strip).toHaveTextContent(/2025-11-15/)
+      expect(strip).toHaveTextContent(/moved up 3 places/i)
+      unmount()
+    }
+  })
 })
