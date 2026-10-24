@@ -134,7 +134,14 @@ describe('Find-A-Club warnings (#2239: warn on few, hold on many)', () => {
     expect(filer?.run).toContain('gh issue comment')
     expect(filer?.run).toContain('gh issue create')
     expect(filer?.env?.GH_TOKEN).toBe('${{ github.token }}')
-    expect(filer?.['continue-on-error']).toBeUndefined()
+  })
+
+  it('can never fail the run: an issue-API error must not skip the sidecars and rollup', () => {
+    // place-reports, education-rollup and promote-reports need
+    // needs.pipeline.result == 'success'; this step is only an alert.
+    expect(filer?.['continue-on-error']).toBe(true)
+    expect(filer?.run).toMatch(/::warning::/)
+    expect(filer?.run).not.toMatch(/^\s*set -e/m)
   })
 
   it('runs after the gate', () => {

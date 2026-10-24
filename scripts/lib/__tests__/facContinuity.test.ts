@@ -665,6 +665,10 @@ describe('a daily on a new date (no prod copy to compare against)', () => {
     const body = buildFacWarningBody(r)
     expect(body).toContain('2026-10-24')
     expect(body).toContain('district_61.json')
+    // fac_prior_root only accepts the #2239 recovery bucket: never advise it.
+    expect(body).not.toContain('fac_prior_root')
+    expect(body).toMatch(/next daily/i)
+    expect(body).toMatch(/district 61/)
   })
 
   it('2 districts warn and promote', async () => {
