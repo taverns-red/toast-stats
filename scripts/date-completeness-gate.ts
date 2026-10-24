@@ -13,7 +13,10 @@
  *
  * Env: GCS_BUCKET (staging), GCS_BUCKET_PRODUCTION, ALLOW_VALUE_CHANGES,
  *      RUN_MANIFEST_FILE,
- *      COMPLETENESS_GATE_FILE (default /tmp/completeness-gate.json)
+ *      COMPLETENESS_GATE_FILE (default /tmp/completeness-gate.json),
+ *      FAC_WARNING_BODY_FILE (default /tmp/fac-loss-warning.md): the
+ *      `fac-loss` issue body, written when Find-A-Club losses warned
+ *      (#2239). Outputs: completeness_promote, fac_warnings (count).
  *
  * Always exits 0: the decision flows through `completeness_promote`, like
  * the value and content gates, so the promotion-held steps stay reachable.
@@ -24,6 +27,7 @@ import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { Storage } from '@google-cloud/storage'
 import {
   buildCompletenessGateSummary,
+  buildFacWarningBody,
   evaluateCompletenessGate,
   runCompletenessGate,
   type CompletenessGateResult,
@@ -32,6 +36,7 @@ import { gateBucket } from './lib/gcsMedia.js'
 import { manifestSnapshotDates, parseRunManifest } from './lib/runManifest.js'
 
 const DEFAULT_RESULT_FILE = '/tmp/completeness-gate.json'
+const DEFAULT_FAC_WARNING_FILE = '/tmp/fac-loss-warning.md'
 
 function log(msg: string): void {
   process.stderr.write(`${msg}\n`)
@@ -91,6 +96,9 @@ async function main(): Promise<void> {
   for (const f of result.failures.slice(0, 50)) {
     log(`::${level} title=Completeness gate::${f.path}: ${f.reason}`)
   }
+  for (const w of result.warnings.slice(0, 50)) {
+    log(`::warning title=Find-A-Club loss (promoted)::${w.path}: ${w.reason}`)
+  }
   log(
     `[completeness-gate] ${result.promote ? 'PASS' : 'HOLD'} — ${result.reason} ` +
       `(${Math.round((Date.now() - started) / 1000)}s)`
@@ -105,6 +113,23 @@ async function main(): Promise<void> {
   } catch (err) {
     log(`[completeness-gate] could not write result: ${String(err)}`)
   }
+  const body = buildFacWarningBody(result)
+  let warned = result.warnings.length
+  if (body) {
+    try {
+      writeFileSync(
+        process.env.FAC_WARNING_BODY_FILE || DEFAULT_FAC_WARNING_FILE,
+        body
+      )
+    } catch (err) {
+      // No body file means no issue: say so loudly rather than drop it.
+      log(
+        `::error::could not write the Find-A-Club warning body: ${String(err)}`
+      )
+      warned = 0
+    }
+  }
+  emitOutput('fac_warnings', String(warned))
   emitOutput('completeness_promote', String(result.promote))
 }
 

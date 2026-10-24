@@ -203,6 +203,26 @@ bytes and headers arrive as staged. Rules (`scripts/lib/manifestPromotion.ts`):
 - Never promoted: the stores, `raw-*/`, `derived/` and `runs/`. Staging path == prod path, so an
   identity artifact becomes promotable by being written under `config/` once it is gated.
 
+**Find-A-Club continuity (#2239 AC3).** The completeness gate compares a date with prod's copy
+of that date, so once prod is stripped it cannot see a FAC loss (#2237: 81 dates), and a daily's
+new date has no prod copy at all. For every touched date from 2026-05-15 on (less the 39
+known-unenriched dates in `FAC_KNOWN_UNENRICHED_DATES`, `scripts/lib/facContinuity.ts`), the
+gate also samples staging's district files. A district has a FAC loss when it loses the FAC merge
+(`data.prospectiveClubs`) or drops 10 points and 3 clubs of coordinates / address / meeting
+coverage against the best of prod's copy and the 3 nearest earlier prod dates (from prod's
+`v1/dates.json`; unreadable fails closed). Suspended clubs are left out of the shares: FAC hides
+them (#490). **Warn on few, hold on many** (Ron, 2026-10-24): losses in 1 or 2 districts warn —
+`::warning::`, the step summary and one open `fac-loss` issue — and the date promotes; 3 or more
+districts (`FAC_HOLD_MIN_DISTRICTS`), or fewer than half the sampled districts FAC-merged (the
+floor, which no stripped baseline can satisfy), hold it. A date that is legitimately unenriched
+for good is added to the list in review; a one-off goes through `allow_value_changes`. A
+warned district loss clears on the next daily, which refetches FAC; if it persists, investigate
+that district's FAC fetch. A re-derive from `raw-fac/` reproduces the loss (the daily fallback
+is never persisted), and `fac_prior_root` accepts only the #2239 recovery bucket. The issue step
+is `continue-on-error`, so an API error only warns. Sequencing note: a rebuild of a group-C date such as
+2026-10-08 (for example the October Distinguished backfill) without `fac_prior_root` now holds
+that date, since it would re-strip it.
+
 **What reaches prod without being written by the run.** Only what the manifest lists is
 promoted, so each class the rsync used to sweep up has its own route:
 

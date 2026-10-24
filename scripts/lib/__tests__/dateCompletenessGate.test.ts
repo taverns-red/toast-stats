@@ -117,6 +117,9 @@ function dateTree(over: {
     [`${dir}global-totals.json`]: over.totals ?? prodTotals,
     [`${dir}district_02.json`]: over.district ?? prodDistrict,
     [`${dir}analytics/district_02_analytics.json`]: { metadata: {}, data: {} },
+    // prod's dates index: the FAC continuity check (#2239) reads it for the
+    // earlier dates of a FAC-era date, and fails closed without it.
+    'v1/dates.json': { dates: [DATE], count: 1 },
     ...over.extra,
   }
   return Object.fromEntries(Object.entries(tree).map(([k, v]) => [k, gz(v)]))

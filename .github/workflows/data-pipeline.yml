@@ -1959,6 +1959,9 @@ jobs:
         env:
           ALLOW_VALUE_CHANGES: ${{ inputs.allow_value_changes }}
           COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
+          # Find-A-Club losses too narrow to hold (#2239) promote with a
+          # `fac-loss` issue; this is its body.
+          FAC_WARNING_BODY_FILE: /tmp/fac-loss-warning.md
         run: npx tsx scripts/date-completeness-gate.ts
 
       # Scoped promotion plan (#1763, ADR-015 P6) — the dry run, in every
@@ -2199,6 +2202,47 @@ jobs:
                 --comment "✅ A subsequent pipeline run promoted staging → production; the held state has cleared. Auto-closing (#1073)." \
                 --reason completed
             done
+          fi
+
+      # Find-A-Club loss warning (#2239, Ron 2026-10-24: "warn on few, hold
+      # on many"). FAC lost in 1–2 districts of a date does not hold it (a
+      # held daily freezes every later daily's globals); the date promotes,
+      # and this files or refreshes one open `fac-loss` issue so the loss is
+      # loud. A broad loss holds through the promotion-held flow above. Not
+      # tied to completeness_promote: a warning can ride with a hold or a
+      # promote. Never closed automatically: a promoted loss stays a loss.
+      - name: File or refresh Find-A-Club loss warning issue (#2239)
+        if: >-
+          steps.completenessgate.outputs.fac_warnings != ''
+          && steps.completenessgate.outputs.fac_warnings != '0'
+          && steps.mode.outputs.skip_promotion != 'true'
+        # An alert only: an issue-API error must never fail the job, or
+        # place-reports, education-rollup and promote-reports (which need
+        # needs.pipeline.result == 'success') skip the day (#2282 review).
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create fac-loss --color D93F0B \
+            --description "Find-A-Club data lost on a promoted date (#2239)" \
+            2>/dev/null || echo "Label already exists"
+          filed=false
+          if EXISTING=$(gh issue list --label fac-loss --state open \
+            --json number --jq '.[0].number // empty'); then
+            if [ -n "${EXISTING}" ]; then
+              echo "Existing open fac-loss issue #${EXISTING}; adding a comment."
+              gh issue comment "${EXISTING}" \
+                --body-file /tmp/fac-loss-warning.md && filed=true
+            else
+              gh issue create \
+                --title "⚠️ Find-A-Club loss on a promoted date" \
+                --label fac-loss \
+                --body-file /tmp/fac-loss-warning.md && filed=true
+            fi
+          fi
+          if [ "${filed}" != true ]; then
+            echo "::warning::Could not file the fac-loss issue (GitHub API error);" \
+              "the Find-A-Club warnings are in the completeness gate log and summary."
           fi
 
       # ── Summary ──

@@ -14,9 +14,10 @@
 #                 degrades to the last good FAC rather than to nothing.
 #   3. none       the district is merged unenriched, counted and flagged
 #                 (::warning:: and the step summary), so nothing ships
-#                 unenriched silently. If prod already holds an enriched
-#                 copy of the date, the completeness gate (#1761) holds it;
-#                 a new daily date has no prod copy to compare against.
+#                 unenriched silently. When prod's copy of the date or one
+#                 of the 3 earlier prod dates had the district merged, the
+#                 completeness gate warns (1-2 districts: the date promotes
+#                 and a `fac-loss` issue opens) or holds (3 or more), #2239.
 # The fallback files are merged, never persisted: raw-fac/<date>/ only ever
 # holds what <date>'s own fetch returned.
 #
