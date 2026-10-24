@@ -687,21 +687,29 @@ function dayMentionsIn(text: string): DayMention[] {
   return mentions.sort((a, b) => a.start - b.start)
 }
 
+/** Only a list joiner between two day words: they share one time
+ *  ("Mon & Wed", "Sat, Sun", "Mon-Fri", "mardi et jeudi"). */
+const DAY_JOINER =
+  /^[\s,&/+\-–—]*(?:(?:and|or|et|ou|y|o|e|und|en)[\s,&/+\-–—]*)?$/
+
 /**
  * Per-day slots when the time text names two or more weekdays (#2246):
- * "Sat 9:15am - 11:45 | Wed 7pm - 9pm", "6:30 pm(Sat), 7:00 pm(Fri)".
+ * "Sat 9:15am - 11:45 | Wed 7pm - 9pm", "6:30 pm(Sat), 7:00 pm(Fri)",
+ * "7:00 pm (Wed) / Sat 9 am".
  *
- * Day words with no time between them form a group that shares one time
- * ("Mon & Wed 7 pm"). If the text opens with a day, each group owns the
- * times that follow it, up to the next group; if it opens with a time,
- * each group owns the times before it, back to the previous group. Each
- * group takes the first slot of its own times.
+ * Day words joined only by a list joiner form a group that shares one
+ * time ("Mon & Wed 7 pm"). The groups cut the text into runs of times:
+ * before the first group, between groups, after the last. The first run
+ * belongs to the first group and the last run to the last group. A run
+ * between two groups goes to the earlier group when the text opens with
+ * a day ("Sat 9am | Wed 7pm") and that group has no time yet; otherwise
+ * to the later one ("6:30 pm(Sat), 7:00 pm(Fri)"). Each group takes the
+ * first slot of its run; a group with no run is "time not stated".
  *
  * Undefined when fewer than two weekdays are named: the caller keeps the
- * whole-field reading. An ambiguous pairing gives an empty map, so every
- * day is "time not stated" rather than a guess: a time both before the
- * first day and after the last ("7 pm Tue, Wed 8 pm"), or one day given
- * two different times.
+ * whole-field reading. A group given two runs ("7 pm Tue, Wed 8 pm") or
+ * a day given two different times is ambiguous and gives an empty map,
+ * so every day is "time not stated" rather than a guess.
  */
 function daySlotsIn(
   time: string | null | undefined
@@ -711,38 +719,47 @@ function daySlotsIn(
   const mentions = dayMentionsIn(text)
   if (new Set(mentions.map(m => m.day)).size < 2) return undefined
   const tokens = timeTokensIn(text)
-  const first = tokens[0]
-  if (first === undefined) return undefined
+  if (tokens.length === 0) return undefined
 
   const groups: { days: MeetingWeekday[]; start: number; end: number }[] = []
   for (const mention of mentions) {
     const last = groups[groups.length - 1]
-    const timeBetween =
-      last !== undefined &&
-      tokens.some(t => t.start >= last.end && t.start < mention.start)
-    if (last && !timeBetween) {
+    if (last && DAY_JOINER.test(text.slice(last.end, mention.start))) {
       last.days.push(mention.day)
       last.end = mention.end
     } else {
-      groups.push({
-        days: [mention.day],
-        start: mention.start,
-        end: mention.end,
-      })
+      groups.push({ ...mention, days: [mention.day] })
     }
   }
+  const runs = [0, ...groups.map(g => g.end)].map((from, k) => {
+    const to = groups[k]?.start ?? text.length
+    return tokens.filter(t => t.start >= from && t.start < to)
+  })
 
+  const dayFirst =
+    (groups[0] as (typeof groups)[number]).start <
+    (tokens[0] as TimeToken).start
+  const owned: (TimeToken[] | undefined)[] = groups.map(() => undefined)
   const ambiguous = new Map<MeetingWeekday, Slot>()
-  const dayFirst = (mentions[0] as DayMention).start < first.start
-  const lastGroup = groups[groups.length - 1] as (typeof groups)[number]
-  if (!dayFirst && tokens.some(t => t.start >= lastGroup.end)) return ambiguous
+  for (const [k, run] of runs.entries()) {
+    if (run.length === 0) continue
+    const earlier = k - 1
+    const owner =
+      k === 0
+        ? 0
+        : k === groups.length
+          ? earlier
+          : dayFirst && owned[earlier] === undefined
+            ? earlier
+            : k
+    if (owned[owner] !== undefined) return ambiguous
+    owned[owner] = run
+  }
 
   const bySlot = new Map<MeetingWeekday, Slot>()
   for (const [k, group] of groups.entries()) {
-    const from = dayFirst ? group.end : (groups[k - 1]?.end ?? 0)
-    const to = dayFirst ? (groups[k + 1]?.start ?? text.length) : group.start
-    const own = tokens.filter(t => t.start >= from && t.start < to)
-    const slot = slotsFrom(own, text)[0] ?? {}
+    const run = owned[k]
+    const slot = run ? (slotsFrom(run, text)[0] ?? {}) : {}
     for (const day of group.days) {
       const held = bySlot.get(day)
       if (
