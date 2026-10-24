@@ -6,7 +6,15 @@
  * path-filtered CI job (.github/workflows/pipeline-harness.yml).
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from 'vitest'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -36,12 +44,30 @@ const RECORDED = JSON.parse(
   )
 ) as { items: Array<Record<string, string>> }
 
+let template: string
 let tmp: string
 let world: World
 
+// The corpus is built once (it runs the harness collector-cli); each test
+// gets a byte-for-byte copy to mutate.
+beforeAll(() => {
+  template = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-lib-template-'))
+  createWorld(template)
+})
+
+afterAll(() => {
+  fs.rmSync(template, { recursive: true, force: true })
+})
+
 beforeEach(() => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-lib-'))
-  world = createWorld(tmp)
+  fs.cpSync(template, tmp, { recursive: true, verbatimSymlinks: true })
+  world = {
+    dir: tmp,
+    root: path.join(tmp, 'gcs'),
+    cache: path.join(tmp, 'cache'),
+    bin: path.join(tmp, 'bin'),
+  }
 })
 
 afterEach(() => {
@@ -147,7 +173,7 @@ describe('the fixture corpus (ADR-015 "Harness requirements")', () => {
     expect(dir(HARNESS_STAGING, `raw-fac/${FIXTURE_DATES.daily}/`)).toEqual([])
   })
 
-  it('prod copies are FAC-enriched (28-key clubs) where staging holds the stripped 17-key ones', () => {
+  it('prod copies are FAC-enriched (26-key clubs: 28 recorded, less the #2026 contact keys) where staging holds the stripped 17-key ones', () => {
     const clubKeys = (bucket: string) => {
       const o = readBucket(world.root, bucket).get(
         `snapshots/${FIXTURE_DATES.daily}/district_02.json`
@@ -155,7 +181,7 @@ describe('the fixture corpus (ADR-015 "Harness requirements")', () => {
       const v = JSON.parse(zlib.gunzipSync(o.bytes).toString('utf-8'))
       return Math.max(...v.data.clubs.map((c: object) => Object.keys(c).length))
     }
-    expect(clubKeys(HARNESS_PROD)).toBe(28)
+    expect(clubKeys(HARNESS_PROD)).toBe(26)
     expect(clubKeys(HARNESS_STAGING)).toBe(17)
   })
 

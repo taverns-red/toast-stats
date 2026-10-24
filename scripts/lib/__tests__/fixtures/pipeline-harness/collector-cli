@@ -1,0 +1,224 @@
+#!/usr/bin/env bash
+# Stand-in `collector-cli` for the local pipeline harness (#1768, ADR-015
+# step 10). Same CLI contract as ../process-dates/collector-cli (the on-disk
+# layout and the stdout summary JSON the runner reads), but the files it
+# writes are the RECORDED snapshot shapes, so the gates and the prod-twin
+# assertions read real content:
+#   ../date-completeness/staging-district_02.json  what a transform writes
+#       before the FAC merge (17-key clubs, no prospectiveClubs; README there)
+#   ../date-completeness/prod-district_02.json     the same file after the
+#       FAC merge (prospectiveClubs; 26-key clubs once the club contact keys
+#       email/phone are dropped, as every writer has since #2026)
+#   ../date-completeness/prod-{metadata,manifest}.json  the per-date
+#       metadata.json / manifest.json, reduced to the date's districts
+# Every district file is the recorded one re-keyed (districtId,
+# data.districtId, data.snapshotDate); nothing else is edited.
+#
+#   scrape --date D --transform [--force] --verbose --districts X|--discover-districts
+#       writes raw-csv/D/district-<id>/club-performance.csv for each id
+#       (discover: $HARNESS_DISTRICTS) and the unenriched snapshot, prints
+#       the scrape summary JSON on stdout.
+#   transform --date D --force --verbose
+#       one unenriched district file per raw-csv/D/district-<id>/; fails
+#       with no raw.
+#   fetch-find-a-club ...   delegated to ../process-dates/collector-cli (the
+#       recorded raw fetch shape, raw-fac/district_61.json).
+#   merge-find-a-club --fac-dir F --snapshot-dir S --verbose
+#       every district in both F and S whose FAC file has the recorded
+#       top-level `Clubs` array becomes the enriched file.
+#   carry-forward-find-a-club --from-dir P --snapshot-dir S --verbose
+#       a district whose prior copy is enriched (data.prospectiveClubs) and
+#       whose rebuilt file is not becomes the enriched file.
+#   compute-analytics --date A [--force-analytics] --verbose [--districts X]
+#       analytics/district_<id>_analytics.json for every district file of
+#       the date: `{metadata, data}`, the content gate's district-analytics
+#       contract (no recorded analytics file is in the repo yet).
+# After writing district files, metadata.json and manifest.json list every
+# district file in the date directory (hydrated ones included), as the real
+# transform's snapshot write does. Output is deterministic (no clock), so a
+# re-derived file left unchanged is byte-identical.
+#
+# Env: CACHE_DIR (required), HARNESS_DISTRICTS (default 02,61,201),
+#      STUB_LOG (optional argv log).
+set -euo pipefail
+
+: "${CACHE_DIR:?CACHE_DIR must be set}"
+if [ -n "${STUB_LOG:-}" ]; then printf 'collector-cli %s\n' "$*" >>"${STUB_LOG}"; fi
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REC="${HERE}/../date-completeness"
+UNENRICHED="${REC}/staging-district_02.json"
+ENRICHED="${REC}/prod-district_02.json"
+
+CMD="${1:?}"
+shift
+if [ "${CMD}" = "fetch-find-a-club" ]; then
+  exec "${HERE}/../process-dates/collector-cli" "${CMD}" "$@"
+fi
+
+DATE="" FAC_DIR="" FROM_DIR="" SNAP_DIR="" DISTRICTS_ARG="" DISCOVER=0
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --date) DATE="$2"; shift 2 ;;
+    --fac-dir) FAC_DIR="$2"; shift 2 ;;
+    --snapshot-dir) SNAP_DIR="$2"; shift 2 ;;
+    --from-dir) FROM_DIR="$2"; shift 2 ;;
+    --districts) DISTRICTS_ARG="$2"; shift 2 ;;
+    --discover-districts) DISCOVER=1; shift ;;
+    *) shift ;;
+  esac
+done
+
+# One recorded district file, re-keyed to <id> and <date>.
+rekey() {
+  jq -c --arg id "$2" --arg d "$3" \
+    '.districtId = $id | .districtName = "District \($id)"
+     | .data.districtId = $id | .data.snapshotDate = $d' "$1"
+}
+
+# The enriched file for <id> and <date>: no club contact keys (#2026).
+enriched() {
+  rekey "${ENRICHED}" "$1" "$2" |
+    jq -c 'walk(if type == "object" then del(.email, .phone) else . end)'
+}
+
+# metadata.json + manifest.json over the date's district files.
+write_date_files() {
+  local dir="$1" d="$2" ids
+  ids="$(find "${dir}" -maxdepth 1 -name 'district_*.json' ! -name '*_reports.json' |
+    sed 's|.*/district_\(.*\)\.json$|\1|' | LC_ALL=C sort | jq -Rsc 'split("\n") | map(select(. != ""))')"
+  jq -c --arg d "${d}" --argjson ids "${ids}" \
+    '.snapshotId = $d | .createdAt = "\($d)T12:00:00.000Z" | .dataAsOfDate = $d
+     | .configuredDistricts = $ids | .successfulDistricts = $ids
+     | .failedDistricts = [] | .errors = []' \
+    "${REC}/prod-metadata.json" >"${dir}/metadata.json"
+  jq -c --arg d "${d}" --argjson ids "${ids}" \
+    '.districts[0] as $row
+     | .snapshotId = $d | .createdAt = "\($d)T12:00:00.000Z"
+     | .districts = [$ids[] | $row + {districtId: ., fileName: "district_\(.).json"}]
+     | .totalDistricts = ($ids | length) | .successfulDistricts = ($ids | length)
+     | .failedDistricts = 0' \
+    "${REC}/prod-manifest.json" >"${dir}/manifest.json"
+}
+
+write_snapshot() {
+  local dir="${CACHE_DIR}/snapshots/${DATE}" id
+  mkdir -p "${dir}"
+  for id in "$@"; do
+    rekey "${UNENRICHED}" "${id}" "${DATE}" >"${dir}/district_${id}.json"
+  done
+  write_date_files "${dir}" "${DATE}"
+}
+
+is_enriched() { jq -e '.data.prospectiveClubs | arrays' "$1" >/dev/null 2>&1; }
+
+case "${CMD}" in
+  scrape)
+    if [ "${DISCOVER}" = 1 ]; then DISTRICTS_ARG="${HARNESS_DISTRICTS:-02,61,201}"; fi
+    : "${DISTRICTS_ARG:?--districts or --discover-districts is required}"
+    echo "[INFO] scrape ${DATE}" >&2
+    ids=()
+    for id in ${DISTRICTS_ARG//,/ }; do
+      mkdir -p "${CACHE_DIR}/raw-csv/${DATE}/district-${id}"
+      printf 'District,Club Number,Club Name\n%s,1,Harness Club\n' "${id}" \
+        >"${CACHE_DIR}/raw-csv/${DATE}/district-${id}/club-performance.csv"
+      ids+=("${id}")
+    done
+    write_snapshot "${ids[@]}"
+    printf '{"date":"%s","snapshotDate":"%s","districts":{"succeeded":%d,"failed":0}}\n' \
+      "${DATE}" "${DATE}" "${#ids[@]}"
+    ;;
+  transform)
+    echo "[INFO] transform ${DATE}"
+    raw="${CACHE_DIR}/raw-csv/${DATE}"
+    ids=()
+    while IFS= read -r d; do ids+=("${d##*/district-}"); done < <(
+      find "${raw}" -mindepth 1 -maxdepth 1 -type d -name 'district-*' 2>/dev/null | LC_ALL=C sort
+    )
+    if [ "${#ids[@]}" -eq 0 ]; then
+      echo "[ERROR] no raw CSVs in ${raw}" >&2
+      exit 1
+    fi
+    write_snapshot "${ids[@]}"
+    ;;
+  merge-find-a-club)
+    : "${FAC_DIR:?--fac-dir is required}"
+    : "${SNAP_DIR:?--snapshot-dir is required}"
+    DATE="$(basename "${SNAP_DIR}")"
+    total=0 ok=0 failed=0 matched=0
+    for fac in "${FAC_DIR}"/district_*.json; do
+      [ -f "${fac}" ] || continue
+      id="$(basename "${fac}" .json)"
+      id="${id#district_}"
+      snap="${SNAP_DIR}/district_${id}.json"
+      [ -f "${snap}" ] || continue
+      total=$((total + 1))
+      if ! clubs="$(jq -e '.Clubs | arrays | length' "${fac}")"; then
+        echo "[ERROR] district_${id}: merge failed" >&2
+        failed=$((failed + 1))
+        continue
+      fi
+      enriched "${id}" "${DATE}" >"${snap}"
+      ok=$((ok + 1))
+      matched=$((matched + clubs))
+    done
+    printf '{"totalDistricts":%d,"succeeded":%d,"failed":%d,"totalMatched":%d,"totalSnapshotOnly":0,"totalFacOnly":0,"results":[]}\n' \
+      "${total}" "${ok}" "${failed}" "${matched}"
+    [ "${failed}" -eq 0 ] || exit 1
+    ;;
+  carry-forward-find-a-club)
+    : "${FROM_DIR:?--from-dir is required}"
+    : "${SNAP_DIR:?--snapshot-dir is required}"
+    DATE="$(basename "${SNAP_DIR}")"
+    total=0 prior_enriched=0 carried=0 already=0 failed=0
+    for snap in "${SNAP_DIR}"/district_*.json; do
+      [ -f "${snap}" ] || continue
+      prior="${FROM_DIR}/$(basename "${snap}")"
+      [ -f "${prior}" ] || continue
+      total=$((total + 1))
+      if ! jq -e . "${prior}" >/dev/null 2>&1; then
+        echo "[ERROR] $(basename "${snap}"): carry-forward failed" >&2
+        failed=$((failed + 1))
+        continue
+      fi
+      is_enriched "${prior}" || continue
+      prior_enriched=$((prior_enriched + 1))
+      if is_enriched "${snap}"; then
+        already=$((already + 1))
+        continue
+      fi
+      id="$(basename "${snap}" .json)"
+      enriched "${id#district_}" "${DATE}" >"${snap}"
+      carried=$((carried + 1))
+    done
+    printf '{"totalDistricts":%d,"priorEnriched":%d,"carried":%d,"alreadyEnriched":%d,"failed":%d,"results":[]}\n' \
+      "${total}" "${prior_enriched}" "${carried}" "${already}" "${failed}"
+    [ "${failed}" -eq 0 ] || exit 1
+    ;;
+  compute-analytics)
+    dir="${CACHE_DIR}/snapshots/${DATE}"
+    if [ ! -d "${dir}" ]; then
+      printf '{"success":false,"date":"%s","requestedDate":"%s","districtsSucceeded":[],"districtsFailed":[],"timeSeries":{"written":0,"failed":0},"clubTrends":{"written":0,"failed":0},"clubRace":{"written":0,"failed":0}}\n' \
+        "${DATE}" "${DATE}"
+      exit 1
+    fi
+    mkdir -p "${dir}/analytics"
+    done_ids=()
+    for f in "${dir}"/district_*.json; do
+      [ -f "${f}" ] || continue
+      id="$(basename "${f}" .json)"
+      id="${id#district_}"
+      jq -nc --arg id "${id}" --arg d "${DATE}" \
+        '{metadata: {districtId: $id, snapshotDate: $d, schemaVersion: "1.0.0"},
+          data: {districtId: $id}}' >"${dir}/analytics/district_${id}_analytics.json"
+      done_ids+=("${id}")
+    done
+    echo "[INFO] computing ${DATE}" >&2
+    printf '{"success":true,"date":"%s","requestedDate":"%s","districtsSucceeded":%s,"districtsFailed":[],"timeSeries":{"written":0,"failed":0},"clubTrends":{"written":0,"failed":0},"clubRace":{"written":0,"failed":0}}\n' \
+      "${DATE}" "${DATE}" "$(printf '%s\n' "${done_ids[@]}" | jq -Rsc 'split("\n") | map(select(. != ""))')"
+    ;;
+  *)
+    echo "collector-cli harness stub: unsupported command ${CMD}" >&2
+    exit 2
+    ;;
+esac

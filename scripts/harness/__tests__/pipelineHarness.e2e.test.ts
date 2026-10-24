@@ -32,6 +32,11 @@ import {
 } from '../../lib/pipelineHarness.js'
 
 const { daily: D, historical: H } = FIXTURE_DATES
+/**
+ * Keys of the richest club record after the FAC merge: the recorded 28, less
+ * the club contact keys email/phone no writer emits since #2026.
+ */
+const ENRICHED_CLUB_KEYS = 26
 
 const tmps: string[] = []
 afterAll(() => {
@@ -103,7 +108,7 @@ describe('daily (fixture date without persisted FAC; prod enriched, staging stri
       const o = prod.get(`snapshots/${D}/district_${id}.json`)!
       const v = decoded(o) as { districtId: string }
       expect(v.districtId).toBe(id)
-      expect(richestClub(v)).toBe(28)
+      expect(richestClub(v)).toBe(ENRICHED_CLUB_KEYS)
       expect(s.run.promoted).toContain(`snapshots/${D}/district_${id}.json`)
       expect(s.run.promoted).toContain(
         `snapshots/${D}/analytics/district_${id}_analytics.json`
@@ -161,7 +166,7 @@ describe('subset rescrape of the FAC-persisted date with one district’s raw mi
     for (const id of HARNESS_DISTRICTS) {
       expect(
         richestClub(decoded(prod.get(`snapshots/${H}/district_${id}.json`)!))
-      ).toBe(28)
+      ).toBe(ENRICHED_CLUB_KEYS)
     }
     const meta = decoded(prod.get(`snapshots/${H}/metadata.json`)!) as {
       successfulDistricts: string[]
