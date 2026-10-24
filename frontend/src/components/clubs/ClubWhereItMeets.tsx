@@ -15,7 +15,7 @@ export function ClubWhereItMeets({ info }: { info: ClubMeetingInfo | null }) {
   const external = { target: '_blank', rel: 'noopener noreferrer' } as const
 
   const hasFacts = !!(info.schedule || info.mode || info.place)
-  const hasLinks = !!(info.websiteUrl || info.contactUrl)
+  const hasLinks = !!(info.websiteUrl || info.contactUrl || info.scheduleNote)
 
   // #1843 — two lists: the facts (one ellipsized line on phones; the full
   // place is printed again under the mini-map) and the links (their own
@@ -80,6 +80,11 @@ export function ClubWhereItMeets({ info }: { info: ClubMeetingInfo | null }) {
                 Website <span aria-hidden="true">↗</span>
               </a>
             </li>
+          )}
+          {/* #2247 — TI's day/time arrived as "?" text: say so beside
+              the link that has the real schedule. */}
+          {info.scheduleNote && (
+            <li className="club-meets__item">{info.scheduleNote}</li>
           )}
           {info.contactUrl && (
             <li className="club-meets__item">

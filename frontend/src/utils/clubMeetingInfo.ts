@@ -21,6 +21,11 @@ export interface ClubMeetingInfo {
   /** Free-text day (TI's field, verbatim) and time, joined with " · ". */
   schedule: string | null
   /**
+   * #2247 — set when TI's day or time is unreadable (`isUnreadableFacText`):
+   * the "?" text is never shown; `schedule` keeps any readable half.
+   */
+  scheduleNote?: string
+  /**
    * "Meets online" when TI's street is a meeting link; else "Online or
    * hybrid" / "In person" from allowsVirtualAttendance.
    */
@@ -146,6 +151,65 @@ function safeHttpUrl(value: string | undefined): string | null {
 }
 
 /**
+ * #2247 — TI's Find-a-Club API sends literal "?" bytes (0x3F) where a club
+ * typed CJK text: D88 06513503 is `"MeetingDay":"???"`,
+ * `"MeetingTime":"??2:30-??4:30"` on the wire (上午/下午 → "??",
+ * 星期X → "???"). The words are gone upstream, so the text is never shown
+ * or parsed (Ron, 2026-10-24); the note sends the reader to TI's page.
+ */
+export const UNREADABLE_SCHEDULE_NOTE =
+  'Meeting time not readable — see toastmasters.org'
+
+/**
+ * True when a FAC day/time value is "?" placeholders for lost words:
+ * it has no letter in any script (so "Tuesday?", "Mon ??" and real CJK
+ * like "下午2:30" stay readable), contains a "?", and either has a run of
+ * two or more "?" ("??2:30-??4:30", "??6?") or no digit at all ("?").
+ * A lone "?" beside a real time ("7:30?", "19:00 ?") stays readable.
+ */
+export function isUnreadableFacText(text: string): boolean {
+  if (/\p{L}/u.test(text) || !text.includes('?')) return false
+  return /\?{2,}/.test(text) || !/\p{N}/u.test(text)
+}
+
+/** Ron (2026-10-24, PR #2267): keep the readable half, name the other. */
+export const UNREADABLE_DAY_NOTE = 'day not readable — see toastmasters.org'
+export const UNREADABLE_TIME_NOTE = 'time not readable — see toastmasters.org'
+
+interface ScheduleParts {
+  day: string | null
+  time: string | null
+  /** Set when TI's day or time is "?" text (`isUnreadableFacText`). */
+  note: string | null
+}
+
+/**
+ * The public day and formatted time, dropping either half that is "?"
+ * text. The note names what was dropped: the day (D88 07166169: "???" +
+ * "6:30 - 8:30 PM" keeps the time), the time, or — when nothing readable
+ * is left — the whole meeting time.
+ */
+function scheduleParts(
+  club: Pick<ClubMeetingSource, 'meetingDay' | 'meetingTime'>
+): ScheduleParts {
+  const rawDay = publicText(club.meetingDay)
+  const rawTime = publicText(club.meetingTime)
+  const dayLost = rawDay !== null && isUnreadableFacText(rawDay)
+  const timeLost = rawTime !== null && isUnreadableFacText(rawTime)
+  const day = dayLost ? null : rawDay
+  const time = timeLost || rawTime === null ? null : formatMeetingTime(rawTime)
+  const note =
+    !dayLost && !timeLost
+      ? null
+      : day === null && time === null
+        ? UNREADABLE_SCHEDULE_NOTE
+        : dayLost
+          ? UNREADABLE_DAY_NOTE
+          : UNREADABLE_TIME_NOTE
+  return { day, time, note }
+}
+
+/**
  * #2174 — when an online-only club meets, as "Tuesday 7:00 pm": the same
  * public, link-free day and time the hero shows. Null when neither is known.
  * FAC carries no meeting timezone, so none is added.
@@ -153,10 +217,9 @@ function safeHttpUrl(value: string | undefined): string | null {
 export function meetingWhen(
   club: Pick<ClubMeetingSource, 'meetingDay' | 'meetingTime'>
 ): string | null {
-  const day = publicText(club.meetingDay)
-  const rawTime = publicText(club.meetingTime)
-  const time = rawTime === null ? null : formatMeetingTime(rawTime)
-  return [day, time].filter(Boolean).join(' ') || null
+  const { day, time, note } = scheduleParts(club)
+  const when = [day, time].filter(Boolean).join(' ') || null
+  return [when, note].filter(Boolean).join(' · ') || null
 }
 
 /**
@@ -169,9 +232,7 @@ export function meetingWhen(
 export function buildClubMeetingInfo(
   club: ClubMeetingSource
 ): ClubMeetingInfo | null {
-  const day = publicText(club.meetingDay)
-  const rawTime = publicText(club.meetingTime)
-  const time = rawTime === null ? null : formatMeetingTime(rawTime)
+  const { day, time, note: scheduleNote } = scheduleParts(club)
   const schedule = [day, time].filter(Boolean).join(' · ') || null
 
   // A street that is only a link (or meeting access) means the club's
@@ -199,6 +260,7 @@ export function buildClubMeetingInfo(
   const websiteUrl = safeHttpUrl(club.website)
 
   const hasFac =
+    scheduleNote !== null ||
     schedule !== null ||
     mode !== null ||
     place !== null ||
@@ -208,6 +270,7 @@ export function buildClubMeetingInfo(
 
   return {
     schedule,
+    ...(scheduleNote !== null && { scheduleNote }),
     mode,
     place,
     websiteUrl,
