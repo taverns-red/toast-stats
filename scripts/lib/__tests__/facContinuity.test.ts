@@ -23,16 +23,22 @@ import { gzipSync } from 'node:zlib'
 import { createHash } from 'node:crypto'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { runCompletenessGate } from '../dateCompletenessGate.js'
+import {
+  buildCompletenessGateSummary,
+  buildFacWarningBody,
+  runCompletenessGate,
+} from '../dateCompletenessGate.js'
 import {
   FAC_ENRICHED_SINCE,
   FAC_KNOWN_UNENRICHED_DATES,
+  FAC_HOLD_MIN_DISTRICTS,
   compareFacContinuity,
   facBaselineDates,
   facCheckApplies,
   facCoverage,
   type FacBaseline,
   type FacCoverage,
+  type FacFindings,
 } from '../facContinuity.js'
 import type { GateBucket } from '../promotionContentGateIo.js'
 
@@ -279,8 +285,28 @@ describe('compareFacContinuity', () => {
     date,
     coverage,
   })
+  const all = (r: FacFindings) => [...r.holds, ...r.warnings]
+  const none = (r: FacFindings) => {
+    expect(r.holds).toEqual([])
+    expect(r.warnings).toEqual([])
+  }
 
-  it('holds a district whose FAC merge is lost against the previous date', () => {
+  /** `n` merged districts 01..n on DATE and on the day before. */
+  const districts = (n: number, lost: number) => {
+    const ids = Array.from({ length: n }, (_, i) =>
+      String(i + 1).padStart(2, '0')
+    )
+    return {
+      staging: Object.fromEntries(
+        ids.map((id, i) => [id, i < lost ? cov(162, 0, false) : cov(162, 158)])
+      ),
+      baselines: Object.fromEntries(
+        ids.map(id => [id, [base('2026-10-23', cov(162, 158))]])
+      ),
+    }
+  }
+
+  it('warns, and does not hold, on one district losing its FAC merge', () => {
     const r = compareFacContinuity(
       DATE,
       { '61': cov(162, 0, false), '02': cov(204, 196) },
@@ -289,37 +315,66 @@ describe('compareFacContinuity', () => {
         '02': [base('2026-10-23', cov(204, 196))],
       }
     )
-    expect(r.map(x => x.path)).toEqual([`snapshots/${DATE}/district_61.json`])
-    expect(r[0]!.reason).toMatch(/prospectiveClubs/)
-    expect(r[0]!.reason).toContain('2026-10-23')
+    expect(r.holds).toEqual([])
+    expect(r.warnings.map(x => x.path)).toEqual([
+      `snapshots/${DATE}/district_61.json`,
+    ])
+    expect(r.warnings[0]!.reason).toMatch(/prospectiveClubs/)
+    expect(r.warnings[0]!.reason).toContain('2026-10-23')
   })
 
-  it('holds a significant coverage drop on a still-merged district', () => {
+  it('warns on a significant coverage drop on one still-merged district', () => {
     const r = compareFacContinuity(
       DATE,
       { '61': cov(162, 158, true, { coordinates: 20 }) },
       { '61': [base('2026-10-23', cov(162, 158))] }
     )
-    expect(r).toHaveLength(1)
-    expect(r[0]!.reason).toMatch(/coordinates.*158\/162.*2026-10-23.*20\/162/)
+    expect(r.holds).toEqual([])
+    expect(r.warnings).toHaveLength(1)
+    expect(r.warnings[0]!.reason).toMatch(
+      /coordinates.*158\/162.*2026-10-23.*20\/162/
+    )
+  })
+
+  it('warn on few, hold on many: the cut-off is 3 districts', () => {
+    expect(FAC_HOLD_MIN_DISTRICTS).toBe(3)
+    const at = (lost: number) => {
+      const d = districts(10, lost)
+      return compareFacContinuity(DATE, d.staging, d.baselines)
+    }
+    const one = at(1)
+    expect(one.holds).toEqual([])
+    expect(one.warnings).toHaveLength(1)
+    const two = at(2)
+    expect(two.holds).toEqual([])
+    expect(two.warnings).toHaveLength(2)
+    const three = at(3)
+    expect(three.warnings).toEqual([])
+    expect(three.holds.map(x => x.path)).toEqual([
+      `snapshots/${DATE}/district_01.json`,
+      `snapshots/${DATE}/district_02.json`,
+      `snapshots/${DATE}/district_03.json`,
+    ])
   })
 
   it('passes day-to-day FAC churn (a few clubs)', () => {
-    const r = compareFacContinuity(
-      DATE,
-      { '61': cov(162, 155) },
-      { '61': [base('2026-10-23', cov(162, 158))] }
+    none(
+      compareFacContinuity(
+        DATE,
+        { '61': cov(162, 155) },
+        { '61': [base('2026-10-23', cov(162, 158))] }
+      )
     )
-    expect(r).toEqual([])
   })
 
   it('passes a small district losing fewer than 3 clubs', () => {
-    const r = compareFacContinuity(
-      DATE,
-      { '61': cov(10, 7) },
-      { '61': [base('2026-10-23', cov(10, 9))] }
+    none(
+      compareFacContinuity(
+        DATE,
+        { '61': cov(10, 7) },
+        { '61': [base('2026-10-23', cov(10, 9))] }
+      )
     )
-    expect(r).toEqual([])
   })
 
   it('takes the best of the baseline dates, so one stripped neighbour cannot satisfy it', () => {
@@ -333,8 +388,12 @@ describe('compareFacContinuity', () => {
         ],
       }
     )
-    expect(r.length).toBeGreaterThan(0)
-    expect(r.map(x => x.reason).join('\n')).toContain('2026-10-22')
+    expect(all(r).length).toBeGreaterThan(0)
+    expect(
+      all(r)
+        .map(x => x.reason)
+        .join('\n')
+    ).toContain('2026-10-22')
   })
 
   it('holds a date whose sampled districts are mostly unmerged, even against stripped baselines (#2237)', () => {
@@ -346,64 +405,141 @@ describe('compareFacContinuity', () => {
         '02': [base('2026-06-14', cov(204, 0, false))],
       }
     )
-    expect(r).toHaveLength(1)
-    expect(r[0]!.path).toBe('snapshots/2026-06-15/')
-    expect(r[0]!.reason).toMatch(/0 of 2 sampled district\(s\).*merged/)
+    expect(r.warnings).toEqual([])
+    expect(r.holds).toHaveLength(1)
+    expect(r.holds[0]!.path).toBe('snapshots/2026-06-15/')
+    expect(r.holds[0]!.reason).toMatch(/0 of 2 sampled district\(s\).*merged/)
+  })
+
+  it('the floor turns a per-district warning into a hold', () => {
+    const r = compareFacContinuity(
+      DATE,
+      { '61': cov(162, 0, false), '02': cov(204, 0, false) },
+      {
+        '61': [base('2026-10-23', cov(162, 158))],
+        '02': [base('2026-10-23', cov(204, 196))],
+      }
+    )
+    expect(r.warnings).toEqual([])
+    expect(r.holds.map(x => x.path)).toEqual([
+      `snapshots/${DATE}/district_02.json`,
+      `snapshots/${DATE}/district_61.json`,
+      `snapshots/${DATE}/`,
+    ])
   })
 
   it('a legitimately new district (no baseline) does not hold its date', () => {
-    const r = compareFacContinuity(
-      DATE,
-      { '02': cov(204, 196), '61': cov(162, 158), '130': cov(20, 0, false) },
-      {
-        '02': [base('2026-10-23', cov(204, 196))],
-        '61': [base('2026-10-23', cov(162, 158))],
-        '130': [base('2026-10-23', null)],
-      }
+    none(
+      compareFacContinuity(
+        DATE,
+        { '02': cov(204, 196), '61': cov(162, 158), '130': cov(20, 0, false) },
+        {
+          '02': [base('2026-10-23', cov(204, 196))],
+          '61': [base('2026-10-23', cov(162, 158))],
+          '130': [base('2026-10-23', null)],
+        }
+      )
     )
-    expect(r).toEqual([])
   })
 
   it('a removed district (baseline only) is not a FAC loss', () => {
-    const r = compareFacContinuity(
-      DATE,
-      { '02': cov(204, 196) },
-      {
-        '02': [base('2026-10-23', cov(204, 196))],
-        '61': [base('2026-10-23', cov(162, 158))],
-      }
+    none(
+      compareFacContinuity(
+        DATE,
+        { '02': cov(204, 196) },
+        {
+          '02': [base('2026-10-23', cov(204, 196))],
+          '61': [base('2026-10-23', cov(162, 158))],
+        }
+      )
     )
-    expect(r).toEqual([])
   })
 
   it('ignores a 0-club district (a #1671 gap file)', () => {
-    const r = compareFacContinuity(
-      DATE,
-      { '02': cov(204, 196), U: cov(0, 0, false) },
-      {
-        '02': [base('2026-10-23', cov(204, 196))],
-        U: [base('2026-10-23', cov(0, 0, true))],
-      }
+    none(
+      compareFacContinuity(
+        DATE,
+        { '02': cov(204, 196), U: cov(0, 0, false) },
+        {
+          '02': [base('2026-10-23', cov(204, 196))],
+          U: [base('2026-10-23', cov(0, 0, true))],
+        }
+      )
     )
-    expect(r).toEqual([])
   })
 
   it('the first date of a program year compares with the prior year’s last date', () => {
-    // At rollover the club list changes (suspended clubs drop, new charters
-    // join); coverage is a share of the clubs listed, so it carries over.
-    const r = compareFacContinuity(
-      '2026-07-01',
-      { '61': cov(150, 146) },
-      { '61': [base('2026-06-29', cov(162, 158))] }
+    // At rollover the club list changes (new charters join); coverage is a
+    // share of the clubs listed, so it carries over.
+    none(
+      compareFacContinuity(
+        '2026-07-01',
+        { '61': cov(150, 146) },
+        { '61': [base('2026-06-29', cov(162, 158))] }
+      )
     )
-    expect(r).toEqual([])
   })
 
   it('does nothing on a known-unenriched date or before the FAC era', () => {
     const lost = { '61': cov(162, 0, false) }
     const had = { '61': [base('2026-06-29', cov(162, 158))] }
-    expect(compareFacContinuity('2026-06-30', lost, had)).toEqual([])
-    expect(compareFacContinuity('2026-05-14', lost, had)).toEqual([])
+    none(compareFacContinuity('2026-06-30', lost, had))
+    none(compareFacContinuity('2026-05-14', lost, had))
+  })
+})
+
+describe('suspended clubs (FAC hides them, #490)', () => {
+  /** A 28-club district, 26 with FAC; `suspended` of the matched ones suspended and hidden. */
+  const small = (suspended: number) => {
+    const f = district({ clubs: 28, fac: 26 })
+    clubsOf(f).forEach((row, i) => {
+      if (i < suspended) {
+        // TI hides a suspended club from Find-A-Club: no FAC fields on it.
+        for (const k of [
+          'coordinates',
+          'address',
+          'meetingDay',
+          'meetingTime',
+        ]) {
+          delete row[k]
+        }
+        row.clubStatus = 'Suspended'
+      }
+    })
+    return f
+  }
+
+  it('leaves Suspended clubs out of the numerator and the denominator', () => {
+    expect(facCoverage(small(3))).toEqual({
+      clubs: 25,
+      merged: true,
+      coordinates: 23,
+      address: 23,
+      meeting: 23,
+    })
+  })
+
+  it('3 suspensions in a 28-club district neither hold nor warn (26/28 → 23/28)', () => {
+    const r = compareFacContinuity(
+      '2026-11-02',
+      { '41': facCoverage(small(3)) },
+      { '41': [{ date: '2026-11-01', coverage: facCoverage(small(0)) }] }
+    )
+    expect(r.holds).toEqual([])
+    expect(r.warnings).toEqual([])
+  })
+
+  it('a FAC loss on the clubs that are not suspended still counts', () => {
+    const f = small(3)
+    clubsOf(f).forEach((row, i) => {
+      if (i >= 3) delete row.coordinates
+    })
+    const r = compareFacContinuity(
+      '2026-11-02',
+      { '41': facCoverage(f) },
+      { '41': [{ date: '2026-11-01', coverage: facCoverage(small(0)) }] }
+    )
+    expect(r.warnings.map(x => x.reason).join('\n')).toMatch(/coordinates/)
   })
 })
 
@@ -489,34 +625,89 @@ describe('#2237 replay: a rebuild over dates prod already lost', () => {
 })
 
 describe('a daily on a new date (no prod copy to compare against)', () => {
+  const IDS = ['02', '03', '04', '05', '06', '61']
+  const enrichedDay = () =>
+    Object.fromEntries(
+      IDS.map(id => [id, district({ clubs: 162, fac: 158, id })])
+    )
   const prod = () => ({
     ...datesIndex(['2026-10-21', '2026-10-22', '2026-10-23']),
-    ...day('2026-10-21', { '02': D02_ENRICHED(), '61': D61_ENRICHED() }),
-    ...day('2026-10-22', { '02': D02_ENRICHED(), '61': D61_ENRICHED() }),
-    ...day('2026-10-23', { '02': D02_ENRICHED(), '61': D61_ENRICHED() }),
+    ...day('2026-10-21', enrichedDay()),
+    ...day('2026-10-22', enrichedDay()),
+    ...day('2026-10-23', enrichedDay()),
+  })
+  /** The daily's staging copy with `lost` districts' FAC gone. */
+  const daily = (lost: string[]) =>
+    day(
+      '2026-10-24',
+      Object.fromEntries(
+        IDS.map(id => [
+          id,
+          lost.includes(id)
+            ? district({ clubs: 162, fac: 0, merged: false, id })
+            : district({ clubs: 162, fac: 158, id }),
+        ])
+      )
+    )
+
+  it('1 district losing its FAC warns and the date still promotes', async () => {
+    const r = await gate(daily(['61']), prod(), ['2026-10-24'])
+    expect(r.newDates).toEqual(['2026-10-24'])
+    expect(r.promote).toBe(true)
+    expect(r.heldDates).toEqual([])
+    expect(r.failures).toEqual([])
+    expect(r.warnings.map(f => f.path)).toEqual([
+      'snapshots/2026-10-24/district_61.json',
+    ])
+    expect(buildCompletenessGateSummary(r)).toMatch(
+      /Find-A-Club warning[\s\S]*district_61\.json/
+    )
+    const body = buildFacWarningBody(r)
+    expect(body).toContain('2026-10-24')
+    expect(body).toContain('district_61.json')
   })
 
-  it('HOLDS a district that lost its FAC since the previous date', async () => {
-    const staging = day('2026-10-24', {
-      '02': D02_ENRICHED(),
-      '61': D61_STRIPPED(),
-    })
-    const r = await gate(staging, prod(), ['2026-10-24'])
-    expect(r.newDates).toEqual(['2026-10-24'])
+  it('2 districts warn and promote', async () => {
+    const r = await gate(daily(['05', '61']), prod(), ['2026-10-24'])
+    expect(r.promote).toBe(true)
+    expect(r.warnings).toHaveLength(2)
+  })
+
+  it('3 districts hold the date', async () => {
+    const r = await gate(daily(['04', '05', '61']), prod(), ['2026-10-24'])
     expect(r.promote).toBe(false)
+    expect(r.heldDates).toEqual(['2026-10-24'])
+    expect(r.warnings).toEqual([])
     expect(r.failures.map(f => f.path)).toEqual([
+      'snapshots/2026-10-24/district_04.json',
+      'snapshots/2026-10-24/district_05.json',
       'snapshots/2026-10-24/district_61.json',
     ])
   })
 
-  it('HOLDS a merged district whose coordinates collapsed', async () => {
-    const staging = day('2026-10-24', {
-      '02': D02_ENRICHED(),
-      '61': district({ clubs: 162, fac: 158, drop: ['coordinates'], id: '61' }),
-    })
+  it('a merged district whose coordinates collapsed warns', async () => {
+    const staging = {
+      ...daily([]),
+      ...day('2026-10-24', {
+        '61': district({
+          clubs: 162,
+          fac: 158,
+          drop: ['coordinates'],
+          id: '61',
+        }),
+      }),
+    }
     const r = await gate(staging, prod(), ['2026-10-24'])
-    expect(r.promote).toBe(false)
-    expect(text(r)).toMatch(/district_61\.json.*coordinates.*0\/162/)
+    expect(r.promote).toBe(true)
+    expect(r.warnings.map(f => `${f.path}: ${f.reason}`).join('\n')).toMatch(
+      /district_61\.json.*coordinates.*0\/162/
+    )
+  })
+
+  it('no warning body when nothing warned', async () => {
+    const r = await gate(daily([]), prod(), ['2026-10-24'])
+    expect(r.warnings).toEqual([])
+    expect(buildFacWarningBody(r)).toBeNull()
   })
 
   it('passes an enriched daily, reading only the 3 prior dates it needs', async () => {

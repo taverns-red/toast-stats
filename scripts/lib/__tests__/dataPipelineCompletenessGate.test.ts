@@ -114,3 +114,34 @@ describe('data-pipeline per-date completeness gate (#1761)', () => {
     expect(indexOf(s => s.id === 'promoalert')).toBeGreaterThan(gateIndex)
   })
 })
+
+describe('Find-A-Club warnings (#2239: warn on few, hold on many)', () => {
+  const WARNINGS = 'steps.completenessgate.outputs.fac_warnings'
+  const filer = byName('File or refresh Find-A-Club loss warning issue (#2239)')
+
+  it('the gate writes the warning issue body to a known file', () => {
+    const gate = steps.find(s => s.id === 'completenessgate')
+    expect(gate?.env?.FAC_WARNING_BODY_FILE).toBeTruthy()
+  })
+
+  it('files or refreshes a fac-loss issue when the gate warned, whatever it promoted', () => {
+    expect(filer).toBeDefined()
+    expect(filer?.if).toContain(`${WARNINGS} != '0'`)
+    expect(filer?.if).toContain(`${WARNINGS} != ''`)
+    expect(filer?.if).toContain("steps.mode.outputs.skip_promotion != 'true'")
+    expect(filer?.if).not.toContain('completeness_promote')
+    expect(filer?.run).toContain('--label fac-loss')
+    expect(filer?.run).toContain('gh issue comment')
+    expect(filer?.run).toContain('gh issue create')
+    expect(filer?.env?.GH_TOKEN).toBe('${{ github.token }}')
+    expect(filer?.['continue-on-error']).toBeUndefined()
+  })
+
+  it('runs after the gate', () => {
+    expect(
+      indexOf(
+        s => s.name === 'File or refresh Find-A-Club loss warning issue (#2239)'
+      )
+    ).toBeGreaterThan(indexOf(s => s.id === 'completenessgate'))
+  })
+})
