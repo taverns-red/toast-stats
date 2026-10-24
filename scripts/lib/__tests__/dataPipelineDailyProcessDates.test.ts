@@ -95,6 +95,17 @@ describe('daily runs on process-dates.sh (#1765)', () => {
     expect(run.slice(gate, push)).toMatch(/::error::[\s\S]*exit 1/)
   })
 
+  it('sets the date outputs before it can fail, so place-reports still cleans up', () => {
+    const run = code(daily.find(s => s.id === 'daily-process')!)
+    expect(run).toMatch(/\) \|\| STATUS=\$\?/)
+    const outputs = run.indexOf(
+      'echo "snapshot_date=${SNAPSHOT_DATE}" >> "$GITHUB_OUTPUT"'
+    )
+    const firstExit = run.indexOf('exit 1')
+    expect(outputs).toBeGreaterThan(0)
+    expect(firstExit).toBeGreaterThan(outputs)
+  })
+
   it('exposes the raw and snapshot date from the runner step', () => {
     expect(pipeline.outputs?.raw_date).toBe(
       '${{ steps.daily-process.outputs.date }}'
