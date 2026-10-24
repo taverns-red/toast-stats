@@ -38,6 +38,10 @@ import {
   CharterCohortSurvivalFileSchema,
   CharterCohortSurvivalRollupFileSchema,
   DistrictRegionHistorySchema,
+  EDUCATION_ROLLUP_PREFIX,
+  EducationRollupIndexSchema,
+  EducationRollupProgramYearSchema,
+  educationRollupObjectPath,
   findClubContactField,
   MEETING_TIMES_FILE_NAME,
   MEETING_TIMES_MODES,
@@ -109,6 +113,8 @@ export type ObjectKind =
   | 'region-membership-series'
   | 'reports-rollups'
   | 'district-reports'
+  | 'education-rollup-program-year'
+  | 'education-rollup-index'
   | 'meeting-times'
   | 'latest'
   | 'json'
@@ -168,6 +174,11 @@ const MEETING_TIMES = new RegExp(
 /** The daily-reports sidecar (#1069, #1767): one district's reports. */
 const DISTRICT_REPORTS =
   /^snapshots\/(\d{4}-\d{2}-\d{2})\/district_([A-Za-z0-9]+)_reports\.json$/
+/** The education rollup (#1801; gated since #2222): a year and its index. */
+const EDUCATION_ROLLUP_YEAR = new RegExp(
+  `^${EDUCATION_ROLLUP_PREFIX}/(\\d{4}-\\d{4})\\.json$`
+)
+const EDUCATION_ROLLUP_INDEX = `${EDUCATION_ROLLUP_PREFIX}/index.json`
 const DISTRICT_ANALYTICS =
   /^snapshots\/\d{4}-\d{2}-\d{2}\/analytics\/district_[A-Za-z0-9]+_[a-z-]+\.json$/
 
@@ -182,6 +193,19 @@ export const PROMOTED_PREFIXES = [
   'snapshots/',
   'time-series/',
   'config/',
+] as const
+
+/**
+ * Gated beyond PROMOTED_PREFIXES (#2222): the education rollup, which only
+ * the report-sidecar promotion copies (`promote-run-manifest.ts
+ * --education-rollup`). Every manifest object under it is read.
+ */
+export const EDUCATION_ROLLUP_GATED_PREFIX = `${EDUCATION_ROLLUP_PREFIX}/`
+
+/** The prefixes a run manifest's objects are content-checked under. */
+export const MANIFEST_GATED_PREFIXES = [
+  ...PROMOTED_PREFIXES,
+  EDUCATION_ROLLUP_GATED_PREFIX,
 ] as const
 
 export const LATEST_PATH = 'v1/latest.json'
@@ -228,6 +252,8 @@ export function classifyObject(path: string): ObjectKind | null {
   if (REPORTS_ROLLUPS.test(path)) return 'reports-rollups'
   if (DISTRICT_REPORTS.test(path)) return 'district-reports'
   if (MEETING_TIMES.test(path)) return 'meeting-times'
+  if (EDUCATION_ROLLUP_YEAR.test(path)) return 'education-rollup-program-year'
+  if (path === EDUCATION_ROLLUP_INDEX) return 'education-rollup-index'
   if (path === SNAPSHOT_INDEX_PATH) return 'snapshot-index'
   if (path === REGION_HISTORY_PATH) return 'district-region-history'
   if (path === CLUB_HISTORY_INDEX_PATH) return 'club-district-history-index'
@@ -425,7 +451,7 @@ export interface ManifestCheckPlan extends ContentCheckPlan {
 }
 
 const isPromoted = (path: string) =>
-  PROMOTED_PREFIXES.some(prefix => path.startsWith(prefix))
+  MANIFEST_GATED_PREFIXES.some(prefix => path.startsWith(prefix))
 
 /**
  * Plan with the run manifest (#1762, ADR-015 P5, D-13): EVERY object the run
@@ -1142,6 +1168,47 @@ function checkReportsRollups(path: string, value: unknown): string | null {
 }
 
 /**
+ * derived/education-rollup/<PY>.json (#1801; gated since #2222): the
+ * shared-contracts schema the frontend reads it by, and the program year
+ * its path names.
+ */
+function checkEducationRollupYear(path: string, value: unknown): string | null {
+  const parsed = EducationRollupProgramYearSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const py = EDUCATION_ROLLUP_YEAR.exec(path)?.[1]
+  if (parsed.data.programYear !== py) {
+    return `programYear is "${parsed.data.programYear}", but its path names ${py}`
+  }
+  return null
+}
+
+/**
+ * derived/education-rollup/index.json (#1807; gated since #2222): the
+ * schema, and every row pointing at its own year's object, each year once,
+ * so the index never sends the frontend anywhere else.
+ */
+function checkEducationRollupIndex(value: unknown): string | null {
+  const parsed = EducationRollupIndexSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const seen = new Set<string>()
+  for (const [i, row] of parsed.data.programYears.entries()) {
+    const want = educationRollupObjectPath(row.programYear)
+    if (row.path !== want) {
+      return `programYears[${i}] (${row.programYear}) points at "${row.path}", not "${want}"`
+    }
+    if (seen.has(row.programYear)) {
+      return `programYears names ${row.programYear} twice`
+    }
+    seen.add(row.programYear)
+  }
+  return null
+}
+
+/**
  * snapshots/<date>/district_<id>_reports.json (#1069; content-checked since
  * #1767, D-16): read the way the frontend reads it — fetchCdnDistrictReports
  * drops a file that fails DistrictReportsDatasetSchema, silently, so a file
@@ -1308,6 +1375,10 @@ export function checkObject(
       return checkDistrictReports(check.path, value)
     case 'meeting-times':
       return checkMeetingTimes(check.path, value)
+    case 'education-rollup-program-year':
+      return checkEducationRollupYear(check.path, value)
+    case 'education-rollup-index':
+      return checkEducationRollupIndex(value)
     case 'latest':
       return checkLatest(value)
     case 'json':
@@ -1423,6 +1494,10 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
     'decoded, DistrictReportsDatasetSchema (what the frontend accepts), the districtId its path names, its logical date’s program year, no link, email or meeting credential in place text (#1767)',
   'reports-rollups':
     'decoded, ReportsRollupsSchema, served under its snapshotDate with that date’s program year, a district without reports null throughout, world = Σ districts, each region = Σ its districts, null when any district is (#2012)',
+  'education-rollup-program-year':
+    'decoded, EducationRollupProgramYearSchema (what the frontend reads), the program year its path names (#2222)',
+  'education-rollup-index':
+    'decoded, EducationRollupIndexSchema, every program year once, each row at derived/education-rollup/<PY>.json (#2222)',
   'meeting-times':
     'decoded, MeetingTimesSchema, served under its snapshotDate with that date’s program year, totals = Σ districts, each district’s counts within its clubs and every mode cell within the all-meetings cell (#1814)',
   latest: 'decoded, latestSnapshotDate is a real date',

@@ -173,6 +173,11 @@ env:
   # scripts/plan-report-sidecars.ts from the run manifest above.
   REPORT_SIDECAR_MANIFEST_FILE: '/tmp/report-sidecars/written.jsonl'
   REPORT_SIDECAR_VERDICT_FILE: '/tmp/report-sidecars/verdict.json'
+  # The education rollup's own manifest and verdict (#2222): planned by the
+  # same step, gated and promoted on their own, so a rollup fault never
+  # holds a sidecar.
+  EDUCATION_ROLLUP_MANIFEST_FILE: '/tmp/education-rollup/written.jsonl'
+  EDUCATION_ROLLUP_VERDICT_FILE: '/tmp/education-rollup/verdict.json'
   # The run manifest's removal twin (#2232): one JSON line per staging object this run
   # removed (a #1671 gap district's earlier transform objects), appended by
   # scripts/pipeline/gcs-remove.sh; published to
@@ -3093,7 +3098,7 @@ jobs:
             || echo "Nothing to clean up at incoming/daily-reports/${RAW_DATE}/"
 
   # ══════════════════════════════════════════════════════════
-  # DAILY EDUCATION ROLLUP (#1801, #2028) — STAGING derived/, MIRRORED (#1810)
+  # DAILY EDUCATION ROLLUP (#1801, #2028) — STAGING derived/, PROMOTED (#2222)
   #
   # The rollup reads each reports PY's newest snapshot date that HAS
   # district_*_reports.json. `place-reports` writes today's, after the
@@ -3109,6 +3114,10 @@ jobs:
   # The same job then builds snapshots/<date>/reports-rollups.json (#2012),
   # the reports-derived region/world rollups of the date's placed sidecars,
   # so both writers append to one manifest copy before it is republished.
+  #
+  # No prod write here (#2222): promote-reports plans the rollup into the
+  # sidecar manifest (held unless its reports date is one prod indexes),
+  # content-gates it and promotes it through the manifest promoter.
   # ══════════════════════════════════════════════════════════
   education-rollup:
     name: 'daily education rollup'
@@ -3154,7 +3163,7 @@ jobs:
       # Start from what the pipeline job published, so republishing below
       # keeps its records and adds this job's. If it cannot be read, nothing
       # is republished: overwriting it with this job's lines alone would drop
-      # the pipeline job's (derived/ is unpromoted, so the gap is a record).
+      # the pipeline job's (the rollup is planned from staging, not this record, #2222).
       - name: '[rollup] Fetch the run manifest'
         id: seed
         run: |
@@ -3215,23 +3224,6 @@ jobs:
             echo "built=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # ── PROD PATH (#1810) — the one direct prod write left (#1767) ──
-      # This job runs after the run's own promotion, and derived/ is not a
-      # promoted prefix, so the rollup is mirrored here: only a build that
-      # succeeded, only when this run promoted THIS snapshot date. The script
-      # also holds a rollup whose reports date prod does not index, copies
-      # the years the index names, then the index. A held day is retried
-      # with --if-changed by a later run's promote-reports. Bucket to
-      # bucket: bytes and headers arrive as built. Pinned as an exemption in
-      # scripts/lib/prodWriteGuard.ts until it moves onto the manifest.
-      - name: '[rollup] Mirror the education rollup into prod (#1810)'
-        if: >-
-          steps.education.outputs.built == 'true'
-          && contains(format(',{0},', needs.pipeline.outputs.promoted_dates), format(',{0},', needs.pipeline.outputs.snapshot_date))
-          && needs.pipeline.outputs.skip_promotion != 'true'
-        continue-on-error: true
-        run: bash scripts/pipeline/mirror-education-rollup.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}"
-
       - name: '[rollup] Publish run manifest'
         if: ${{ !cancelled() && steps.seed.outputs.seeded == 'true' }}
         run: |
@@ -3241,22 +3233,29 @@ jobs:
   # ══════════════════════════════════════════════════════════
   # PROMOTE THE REPORT SIDECARS (#1767, ADR-015 step 9; #1763, #2144)
   #
-  # district_*_reports.json (place-reports) and reports-rollups.json
-  # (education-rollup) land in staging AFTER the pipeline job promoted, so
-  # its promotion never sees them. Both writers record them in the run
-  # manifest; this job sends them to prod through the same promoter, after
-  # the content gate has read every one (D-16: they used to be mirrored
+  # district_*_reports.json (place-reports), reports-rollups.json and the
+  # education rollup, derived/education-rollup/ (education-rollup), land in
+  # staging AFTER the pipeline job promoted, so its promotion never sees
+  # them. This job sends them to prod through the same promoter, after the
+  # content gate has read every one (D-16, #2222: they used to be mirrored
   # straight to prod, unchecked):
   #   1. plan the sidecar manifest: this run's sidecars, plus every sidecar
   #      staging holds and prod lacks for prod's newest 7 indexed dates and
   #      the dates this run promoted (the carry: a held day's reports once
   #      that day promotes; a rebuild's promoted dates, #2144). A date this
-  #      run wrote and did not promote holds its sidecars;
-  #   2. content-gate exactly that manifest;
+  #      run wrote and did not promote holds its sidecars. Plus staging's
+  #      education rollup: the years its index names and the index, held
+  #      unless its reports date (asOf) is one prod indexes, and nothing
+  #      when prod already has staging's index (#1810's rules, #2222);
+  #      The rollup goes in its own manifest, content-gated and promoted
+  #      (--education-rollup: its years, then its index) by its own
+  #      continue-on-error steps, so a rollup fault holds only the rollup;
+  #   2. content-gate exactly the sidecar manifest, and hold only the dates
+  #      it refuses (#2227); the rollup is held when its asOf is one of the
+  #      held dates (--apply-rollup-hold, #2222 M2);
   #   3. promote it (scripts/promote-run-manifest.ts --execute);
   #   4. completeness: a promoted date whose reports staging holds and prod
-  #      lacks fails the run, so the gap is never silent (#2144);
-  #   5. retry the education rollup a held run built (#1810), --if-changed.
+  #      lacks fails the run, so the gap is never silent (#2144).
   # Runs in every mode that promoted a date, and after every daily scrape.
   # ══════════════════════════════════════════════════════════
   promote-reports:
@@ -3339,8 +3338,81 @@ jobs:
           CONTENT_GATE_FILE: /tmp/report-sidecars/content-gate.json
         run: npx tsx scripts/plan-report-sidecars.ts --apply-content-gate
 
+      # ── The education rollup (#2222): its own hold, gate and promote ──
+      # Planned above into its own manifest (held unless its reports date
+      # is one prod indexes). A fault here holds only the rollup, as the old
+      # continue-on-error mirror did: never a sidecar, never the job. These
+      # steps run whatever the sidecar steps exited with (!cancelled()).
+      #
+      # First the date hold (review M2/L1): the rollup is read from
+      # staging's reports of its asOf date, so it leaves its manifest when
+      # the sidecar verdict holds that date (written and not promoted, or a
+      # report the content gate refused, #2227), and when it cannot tell
+      # (no verdict, the content gate not applied): fail closed.
+      - name: '[rollup] Hold the education rollup of a held reports date (#2222)'
+        id: rolluphold
+        if: >-
+          !cancelled()
+          && steps.plan.outputs.rollup_objects != ''
+          && steps.plan.outputs.rollup_objects != '0'
+        continue-on-error: true
+        run: npx tsx scripts/plan-report-sidecars.ts --apply-rollup-hold
+
+      - name: '[rollup] Content gate the education rollup (#2222)'
+        id: rollupgate
+        if: >-
+          !cancelled()
+          && steps.rolluphold.outputs.rollup_objects != ''
+          && steps.rolluphold.outputs.rollup_objects != '0'
+        continue-on-error: true
+        env:
+          RUN_MANIFEST_FILE: ${{ env.EDUCATION_ROLLUP_MANIFEST_FILE }}
+          CONTENT_GATE_FILE: /tmp/education-rollup/content-gate.json
+        run: npx tsx scripts/promotion-content-gate.ts --manifest-only
+
+      # The years, then the index (R15). --education-rollup: the only
+      # promote that copies derived/education-rollup/.
+      - name: '[rollup] Promote the education rollup (#2222)'
+        id: rolluppromote
+        if: >-
+          !cancelled()
+          && steps.rollupgate.outputs.content_promote == 'true'
+        continue-on-error: true
+        env:
+          RUN_MANIFEST_FILE: ${{ env.EDUCATION_ROLLUP_MANIFEST_FILE }}
+          COMPLETENESS_GATE_FILE: ${{ env.EDUCATION_ROLLUP_VERDICT_FILE }}
+        run: npx tsx scripts/promote-run-manifest.ts --execute --education-rollup
+
+      - name: '[rollup] Education rollup held by the content gate (#2222)'
+        if: >-
+          !cancelled()
+          && steps.rollupgate.outputs.content_promote == 'false'
+        run: |
+          echo "::warning title=Education rollup::the content gate held the education rollup — prod keeps its copy; the report sidecars are not affected"
+          echo "- 🎓 ⏸️ Education rollup held by the content gate (#2222): prod keeps its copy; see the content gate summary" \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      # continue-on-error keeps a rollup fault off the sidecars and the job,
+      # but must not leave it silent: a failed rollup step is an error
+      # annotation and a summary line on an otherwise green run.
+      - name: '[rollup] Education rollup step failed (#2222)'
+        if: >-
+          !cancelled()
+          && (steps.rolluphold.outcome == 'failure'
+            || steps.rollupgate.outcome == 'failure'
+            || steps.rolluppromote.outcome == 'failure')
+        env:
+          HOLD: ${{ steps.rolluphold.outcome }}
+          GATE: ${{ steps.rollupgate.outcome }}
+          PROMOTE: ${{ steps.rolluppromote.outcome }}
+        run: |
+          echo "::error title=Education rollup::a rollup step failed (hold=${HOLD}, gate=${GATE}, promote=${PROMOTE}) — prod keeps its previous rollup; the report sidecars are not affected. See that step's log."
+          echo "- 🎓 ❌ **Education rollup step failed (#2222)**: hold=${HOLD}, gate=${GATE}, promote=${PROMOTE}. Prod keeps its previous rollup; see that step's log." \
+            >> "$GITHUB_STEP_SUMMARY"
+
       # The one prod-write mechanism: the same promoter as the pipeline job,
       # on the sidecar manifest, holding the dates the verdict holds.
+      # No --education-rollup: the rollup is promoted by its own step.
       - name: '[reports] Promote the report sidecars (#1767)'
         id: promote
         if: >-
@@ -3430,15 +3502,6 @@ jobs:
         env:
           PROMOTED_DATES: ${{ needs.pipeline.outputs.promoted_dates }}
         run: bash scripts/pipeline/check-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" "${PROMOTED_DATES}"
-
-      # The education rollup a held run built (#1810), once its reports
-      # date is one prod indexes; a no-op when prod already has staging's.
-      # derived/ is not a promoted prefix: the last direct prod write,
-      # pinned in scripts/lib/prodWriteGuard.ts.
-      - name: '[reports] Mirror the education rollup a held run built (#1810)'
-        if: ${{ !cancelled() }}
-        continue-on-error: true
-        run: bash scripts/pipeline/mirror-education-rollup.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" --if-changed
 
   # ══════════════════════════════════════════════════════════
   # EDUCATION LEDGER HISTORY BACKFILL (#1802) — STAGING ONLY

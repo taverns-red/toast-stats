@@ -46,8 +46,9 @@
  * per-row field (Lesson 153) can be carried.
  *
  * `derived/` is not a promoted prefix: the build writes staging only and
- * scripts/pipeline/mirror-education-rollup.sh copies it to the same path in
- * prod once its reports date is a promoted date (#1810). The CDN serves it.
+ * the promote-reports job promotes it to the same path in prod, content-
+ * gated against these schemas, once its reports date is a promoted date
+ * (#1810, #2222). The CDN serves it.
  *
  * @module education-rollup.schema
  */
