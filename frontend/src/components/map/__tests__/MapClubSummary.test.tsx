@@ -125,6 +125,53 @@ describe('MapClubSummary', () => {
     expect(text).not.toMatch(/\b(?:812|999)\b/)
   })
 
+  it('says the meeting time is not readable instead of TI\'s "?" text (#2247)', () => {
+    render(
+      <MemoryRouter>
+        <MapClubSummary
+          clubs={[
+            club({
+              website: undefined,
+              meetingDay: '???',
+              meetingTime: '??2:30-??4:30',
+              allowsVirtualAttendance: false,
+            }),
+          ]}
+          districtId="88"
+        />
+      </MemoryRouter>
+    )
+    expect(
+      screen.getByText(
+        'Meeting time not readable — see toastmasters.org · In person'
+      )
+    ).toBeVisible()
+    expect(document.body.textContent).not.toContain('??')
+  })
+
+  it('keeps the readable time and names the unreadable day (D88 07166169)', () => {
+    render(
+      <MemoryRouter>
+        <MapClubSummary
+          clubs={[
+            club({
+              website: undefined,
+              meetingDay: '???',
+              meetingTime: '6:30 - 8:30 PM',
+              allowsVirtualAttendance: false,
+            }),
+          ]}
+          districtId="88"
+        />
+      </MemoryRouter>
+    )
+    expect(
+      screen.getByText(
+        '6:30 - 8:30 PM · day not readable — see toastmasters.org · In person'
+      )
+    ).toBeVisible()
+  })
+
   it('omits the meeting line without Find-a-Club data, and the counts without a trend', () => {
     render(
       <MemoryRouter>

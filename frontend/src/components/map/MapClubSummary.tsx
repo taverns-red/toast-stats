@@ -40,7 +40,11 @@ function countsLine(club: ClubTrend): string | null {
 
 function meetingLine(club: ClubTrend): string | null {
   const info = buildClubMeetingInfo(club)
-  return [info?.schedule, info?.mode].filter(Boolean).join(' · ') || null
+  return (
+    [info?.schedule, info?.scheduleNote, info?.mode]
+      .filter(Boolean)
+      .join(' · ') || null
+  )
 }
 
 const Fact: React.FC<{ term: string; cat: PinCategory }> = ({ term, cat }) => (
