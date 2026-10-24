@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.47.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.46.1...frontend-v3.47.0) (2026-10-24)
+
+
+### Features
+
+* **landing:** find your district first, world pulse, Red Vote block ([#2249](https://github.com/taverns-red/toast-stats/issues/2249)) ([#2250](https://github.com/taverns-red/toast-stats/issues/2250)) ([dfbb0d1](https://github.com/taverns-red/toast-stats/commit/dfbb0d10e5a99eac751c846c879687ca4ec20026))
+
 ## [3.46.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.46.0...frontend-v3.46.1) (2026-10-21)
 
 
