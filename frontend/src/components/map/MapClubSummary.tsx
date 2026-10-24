@@ -41,7 +41,7 @@ function countsLine(club: ClubTrend): string | null {
 function meetingLine(club: ClubTrend): string | null {
   const info = buildClubMeetingInfo(club)
   return (
-    [info?.schedule ?? info?.scheduleNote, info?.mode]
+    [info?.schedule, info?.scheduleNote, info?.mode]
       .filter(Boolean)
       .join(' · ') || null
   )

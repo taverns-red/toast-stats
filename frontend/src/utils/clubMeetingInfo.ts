@@ -21,8 +21,8 @@ export interface ClubMeetingInfo {
   /** Free-text day (TI's field, verbatim) and time, joined with " · ". */
   schedule: string | null
   /**
-   * #2247 — set (and `schedule` null) when TI's day or time is unreadable
-   * (`isUnreadableFacText`): the "?" text is never shown.
+   * #2247 — set when TI's day or time is unreadable (`isUnreadableFacText`):
+   * the "?" text is never shown; `schedule` keeps any readable half.
    */
   scheduleNote?: string
   /**
@@ -172,25 +172,41 @@ export function isUnreadableFacText(text: string): boolean {
   return /\?{2,}/.test(text) || !/\p{N}/u.test(text)
 }
 
-const UNREADABLE = Symbol('unreadable')
+/** Ron (2026-10-24, PR #2267): keep the readable half, name the other. */
+export const UNREADABLE_DAY_NOTE = 'day not readable — see toastmasters.org'
+export const UNREADABLE_TIME_NOTE = 'time not readable — see toastmasters.org'
+
+interface ScheduleParts {
+  day: string | null
+  time: string | null
+  /** Set when TI's day or time is "?" text (`isUnreadableFacText`). */
+  note: string | null
+}
 
 /**
- * The public day and formatted time, or UNREADABLE when either is "?"
- * text: a time without its day (D88 07166169: "???" + "6:30 - 8:30 PM")
- * is half a schedule, so the note replaces both.
+ * The public day and formatted time, dropping either half that is "?"
+ * text. The note names what was dropped: the day (D88 07166169: "???" +
+ * "6:30 - 8:30 PM" keeps the time), the time, or — when nothing readable
+ * is left — the whole meeting time.
  */
 function scheduleParts(
   club: Pick<ClubMeetingSource, 'meetingDay' | 'meetingTime'>
-): [string | null, string | null] | typeof UNREADABLE {
-  const day = publicText(club.meetingDay)
+): ScheduleParts {
+  const rawDay = publicText(club.meetingDay)
   const rawTime = publicText(club.meetingTime)
-  if (
-    (day !== null && isUnreadableFacText(day)) ||
-    (rawTime !== null && isUnreadableFacText(rawTime))
-  ) {
-    return UNREADABLE
-  }
-  return [day, rawTime === null ? null : formatMeetingTime(rawTime)]
+  const dayLost = rawDay !== null && isUnreadableFacText(rawDay)
+  const timeLost = rawTime !== null && isUnreadableFacText(rawTime)
+  const day = dayLost ? null : rawDay
+  const time = timeLost || rawTime === null ? null : formatMeetingTime(rawTime)
+  const note =
+    !dayLost && !timeLost
+      ? null
+      : day === null && time === null
+        ? UNREADABLE_SCHEDULE_NOTE
+        : dayLost
+          ? UNREADABLE_DAY_NOTE
+          : UNREADABLE_TIME_NOTE
+  return { day, time, note }
 }
 
 /**
@@ -201,10 +217,9 @@ function scheduleParts(
 export function meetingWhen(
   club: Pick<ClubMeetingSource, 'meetingDay' | 'meetingTime'>
 ): string | null {
-  const parts = scheduleParts(club)
-  return parts === UNREADABLE
-    ? UNREADABLE_SCHEDULE_NOTE
-    : parts.filter(Boolean).join(' ') || null
+  const { day, time, note } = scheduleParts(club)
+  const when = [day, time].filter(Boolean).join(' ') || null
+  return [when, note].filter(Boolean).join(' · ') || null
 }
 
 /**
@@ -217,9 +232,8 @@ export function meetingWhen(
 export function buildClubMeetingInfo(
   club: ClubMeetingSource
 ): ClubMeetingInfo | null {
-  const parts = scheduleParts(club)
-  const unreadable = parts === UNREADABLE
-  const schedule = unreadable ? null : parts.filter(Boolean).join(' · ') || null
+  const { day, time, note: scheduleNote } = scheduleParts(club)
+  const schedule = [day, time].filter(Boolean).join(' · ') || null
 
   // A street that is only a link (or meeting access) means the club's
   // meeting place is online. A street left after the link is kept (#2069).
@@ -246,7 +260,7 @@ export function buildClubMeetingInfo(
   const websiteUrl = safeHttpUrl(club.website)
 
   const hasFac =
-    unreadable ||
+    scheduleNote !== null ||
     schedule !== null ||
     mode !== null ||
     place !== null ||
@@ -256,7 +270,7 @@ export function buildClubMeetingInfo(
 
   return {
     schedule,
-    ...(unreadable && { scheduleNote: UNREADABLE_SCHEDULE_NOTE }),
+    ...(scheduleNote !== null && { scheduleNote }),
     mode,
     place,
     websiteUrl,
