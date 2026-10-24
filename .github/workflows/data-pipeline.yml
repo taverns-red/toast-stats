@@ -351,6 +351,9 @@ jobs:
       - name: '[daily] Discover districts and resolve the date'
         if: steps.mode.outputs.mode == 'daily'
         id: daily-config
+        env:
+          # Through env, never interpolated into the script (#2274).
+          DISTRICTS_INPUT: ${{ inputs.districts }}
         run: |
           # Toastmasters dashboard is always one day behind — use yesterday
           TARGET_DATE="${{ inputs.date || '' }}"
@@ -362,9 +365,11 @@ jobs:
           # it, so place-reports cleans up after any later failure (#2274).
           echo "date=${TARGET_DATE}" >> "$GITHUB_OUTPUT"
 
-          # If districts were manually specified, use them directly
-          if [ -n "${{ inputs.districts }}" ]; then
-            DISTRICTS="${{ inputs.districts }}"
+          # If districts were manually specified, use them directly. Spaces
+          # are dropped ("57, 58" -> "57,58"): the runner takes an id list
+          # and rejects anything else as a usage error (#2274).
+          DISTRICTS="${DISTRICTS_INPUT//[[:space:]]/}"
+          if [ -n "${DISTRICTS}" ]; then
             echo "Using manual district override: ${DISTRICTS}"
             # Discovery — and therefore program-year resolution — never ran, so
             # there is no verdict to judge. The rollover monitor skips rather
