@@ -2,7 +2,8 @@
  * Every per-date mode fails the run on a compute or store failure unless the
  * operator passed `allow_partial` (#1708, plan S1-3, decision D7).
  *
- * Only daily failed the run. In `rebuild`, `rescrape` and
+ * Only daily failed the run (and still does, on the runner since #1765:
+ * one date, which publishes or fails the step). In `rebuild`, `rescrape` and
  * `rescrape-historical` a non-zero `compute-analytics` exit was a
  * `::warning::` plus `FAILED++`; the step stayed green and the run went on
  * to promote. The first corrupt write of the 2026-10 incident came from a
@@ -133,7 +134,8 @@ describe('data-pipeline.yml: per-date modes fail on compute failure (#1708)', ()
         return mode !== undefined && isLoopStep(s, mode)
       })
       .map(stepMode)
-    expect(new Set(modes)).toEqual(new Set(PER_DATE_MODES))
+    // daily runs the same loop since #1765, with its own posture (below).
+    expect(new Set(modes)).toEqual(new Set([...PER_DATE_MODES, 'daily']))
   })
 
   for (const mode of PER_DATE_MODES) {
@@ -218,11 +220,22 @@ describe('data-pipeline.yml: per-date modes fail on compute failure (#1708)', ()
     })
   }
 
+  // daily (#1765): one date, so no allow_partial. The runner prints the
+  // store counters into the step summary (processDates.test.ts); the step
+  // fails before any store push unless the date published
+  // (dataPipelineDailyProcessDates.test.ts), as its compute step used to.
   it('prints the store counters in the daily step summary too', () => {
-    const daily = pipelineSteps.find(
-      s => s.name === '[daily] Compute Analytics'
+    const loop = pipelineSteps.find(
+      s => stepMode(s) === 'daily' && delegatesLoop(s.run ?? '', 'daily')
     )
-    expect(daily?.run).toMatch(/scripts\/compute-counters\.jq/)
+    expect(loop, 'daily delegates its loop to process-dates.sh').toBeDefined()
+    expect(loop!.run).not.toMatch(/collector-cli\s+compute-analytics\b/)
+    expect(
+      fs.readFileSync(
+        path.resolve(process.cwd(), 'scripts/pipeline/process-dates.sh'),
+        'utf-8'
+      )
+    ).toMatch(/scripts\/compute-counters\.jq/)
   })
 })
 

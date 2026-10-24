@@ -67,6 +67,8 @@ export interface ClubMiniMapProps {
   clubs: readonly LocatorSource[]
   /** The where-it-meets place line (street, city, region), if any. */
   place?: string | null | undefined
+  /** #2268 — set when part or all of the address is TI's "?" text. */
+  placeNote?: string | undefined
   /** The page's hero has painted (R3: the page's own gate, #2147). The tile
    *  chunk never loads before it. */
   heroPainted: boolean
@@ -120,6 +122,7 @@ export function ClubMiniMap({
   clubName,
   clubs,
   place,
+  placeNote,
   heroPainted,
   meetsOnline = false,
   when = null,
@@ -240,7 +243,11 @@ export function ClubMiniMap({
           {othersLeftOut > 0 &&
             ` ${othersLeftOut === 1 ? '1 far-off location is' : `${othersLeftOut} far-off locations are`} left out.`}
         </p>
-        {place && <p className="club-minimap__place">{place}</p>}
+        {(place || placeNote) && (
+          <p className="club-minimap__place">
+            {[place, placeNote].filter(Boolean).join(' · ')}
+          </p>
+        )}
       </div>
     </section>
   )

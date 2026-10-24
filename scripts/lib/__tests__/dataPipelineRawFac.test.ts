@@ -5,8 +5,9 @@
  * The FAC JSON used to live only on the daily runner, so every re-derivation
  * of a date (rebuild, rescrape) could only produce an unenriched snapshot.
  * Daily now uploads `./cache/find-a-club/<snapshotDate>/` to staging
- * `raw-fac/<snapshotDate>/` before the merge, and process-dates.sh merges it
- * back (processDates.test.ts). The copy is internal: plain (no `-Z`, nothing
+ * `raw-fac/<snapshotDate>/` before the merge (since #1765 inside the
+ * runner's daily mode, scripts/pipeline/daily-fac-fetch.sh), and
+ * process-dates.sh merges it back in the other modes (processDates.test.ts). The copy is internal: plain (no `-Z`, nothing
  * reads it through the CDN), staging only, and never promoted.
  */
 
@@ -27,42 +28,57 @@ const steps = workflow.jobs.pipeline?.steps ?? []
 const indexOf = (pred: (s: (typeof steps)[number]) => boolean) =>
   steps.findIndex(pred)
 
-const PERSIST = '[daily] Persist raw Find-A-Club'
-const persist = steps.find(s => s.name === PERSIST)
+// Since #1765 the fetch, persist and merge are stages of the runner's daily
+// mode: scripts/pipeline/daily-fac-fetch.sh (fetch + persist) and
+// daily-fac-merge.sh, called by process-dates.sh. Their behaviour runs for
+// real against the shim in processDates.test.ts ("process-dates.sh daily");
+// here the persist's shape and the wiring are pinned from the source.
+const read = (rel: string) =>
+  fs.readFileSync(path.resolve(process.cwd(), rel), 'utf-8')
+const FETCH_SCRIPT = read('scripts/pipeline/daily-fac-fetch.sh')
+const RUNNER = read('scripts/pipeline/process-dates.sh')
+/** Shell text with comment lines dropped and continuations joined. */
+const code = (text: string) =>
+  text
+    .split('\n')
+    .filter(l => !/^\s*#/.test(l))
+    .join('\n')
+    .replace(/\\\n\s*/g, ' ')
 
 describe('daily persists the raw FAC fetch to staging raw-fac/ (#1758)', () => {
-  it('has a persist step that runs on every daily: a partial fetch (exit 1) persists what it fetched (#1770)', () => {
-    expect(persist, 'no persist step').toBeDefined()
-    expect(persist!.if).toBe("steps.mode.outputs.mode == 'daily'")
+  it('daily runs the fetch-and-persist script in its enrich stage (#1765)', () => {
+    expect(code(RUNNER)).toMatch(/daily\) enrich_daily "\$\{actual\}" ;;/)
+    expect(code(RUNNER)).toMatch(
+      /"\$\{FAC_FETCH\[@\]\}" "\$\{BUCKET\}" "\$\{actual\}" "\$\{DISTRICTS\}"/
+    )
   })
 
   it('uploads the snapshot date’s FAC directory under raw-fac/<snapshotDate>/', () => {
-    // Shell continuations joined.
-    const run = (persist?.run ?? '').replace(/\\\n\s*/g, ' ')
-    expect(run).toMatch(
+    expect(code(FETCH_SCRIPT)).toMatch(
       // Through gcs-upload.sh so the upload lands in the run manifest (#1762).
-      /scripts\/pipeline\/gcs-upload\.sh [\w-]+ rsync -r\s+"\.\/cache\/find-a-club\/\$\{SNAPSHOT_DATE\}\/"\s+"gs:\/\/\$\{GCS_BUCKET\}\/raw-fac\/\$\{SNAPSHOT_DATE\}\/"/
+      /scripts\/pipeline\/gcs-upload\.sh" [\w-]+ rsync -r\s+"\$\{FRESH\}\/"\s+"gs:\/\/\$\{BUCKET\}\/raw-fac\/\$\{DATE\}\/"/
     )
+    expect(FETCH_SCRIPT).toContain('FRESH="${CACHE_DIR}/find-a-club/${DATE}"')
   })
 
   it('uploads plain JSON (no -Z): the runner merges it back from disk', () => {
-    expect(persist?.run ?? '').not.toMatch(/\s-Z\b/)
-  })
-
-  it('runs after the fetch and before the merge', () => {
-    const fetch = indexOf(s => s.id === 'daily-fac-fetch')
-    const at = indexOf(s => s.name === PERSIST)
-    const merge = indexOf(s => s.id === 'daily-fac-merge')
-    expect(fetch).toBeGreaterThanOrEqual(0)
-    expect(at).toBeGreaterThan(fetch)
-    expect(merge).toBeGreaterThan(at)
+    expect(code(FETCH_SCRIPT)).not.toMatch(/\s-Z\b/)
   })
 
   it('writes to staging only (the #1755 prod-write guard sees no prod write)', () => {
-    expect(prodWriteReasons(persist?.run ?? '')).toEqual([])
-    expect(persist?.run ?? '').not.toMatch(
+    expect(prodWriteReasons(code(FETCH_SCRIPT))).toEqual([])
+    expect(FETCH_SCRIPT).not.toMatch(
       /GCS_BUCKET_PRODUCTION|toast-stats-data-ca/
     )
+  })
+
+  it('no workflow step fetches, persists or merges FAC inline any more', () => {
+    const inline = steps.filter(s =>
+      /fetch-find-a-club|merge-find-a-club|daily-fac-merge\.sh|raw-fac\//.test(
+        code(s.run ?? '')
+      )
+    )
+    expect(inline.map(s => s.name)).toEqual([])
   })
 })
 
@@ -85,41 +101,33 @@ describe('raw-fac/ is internal: never promoted (#1758)', () => {
 })
 
 describe('daily FAC fails closed with a persisted fallback (#1770, D-10)', () => {
-  type Step = (typeof steps)[number] & { 'continue-on-error'?: boolean }
-  const merge = steps.find(s => s.id === 'daily-fac-merge') as Step | undefined
-  const fetch = steps.find(s => s.id === 'daily-fac-fetch') as Step | undefined
-
-  it('the merge runs on every daily, whatever the fetch did', () => {
-    expect(merge, 'no merge step').toBeDefined()
-    expect(merge!.if).toBe("steps.mode.outputs.mode == 'daily'")
-  })
-
-  it('the merge is not continue-on-error: a failed merge fails the run before upload', () => {
-    expect(merge!['continue-on-error']).toBeUndefined()
-  })
-
   it('the merge goes through daily-fac-merge.sh (fresh FAC, else the last persisted raw-fac/)', () => {
-    const run = (merge?.run ?? '').replace(/\\\n\s*/g, ' ')
-    expect(run).toMatch(
-      /bash scripts\/pipeline\/daily-fac-merge\.sh "\$\{GCS_BUCKET\}" "\$\{SNAPSHOT_DATE\}"/
+    expect(RUNNER).toContain(
+      'read -r -a FAC_MERGE <<<"${DAILY_FAC_MERGE:-bash ${REPO}/scripts/pipeline/daily-fac-merge.sh}"'
     )
-    expect(run).not.toContain('merge-find-a-club')
+    expect(code(RUNNER)).toMatch(
+      /if "\$\{FAC_MERGE\[@\]\}" "\$\{BUCKET\}" "\$\{actual\}"/
+    )
   })
 
-  it('the fetch may still fail: that is what the fallback is for', () => {
-    expect(fetch!['continue-on-error']).toBe(true)
+  it('the fetch may still fail: that is what the fallback is for (the script never fails the date)', () => {
+    expect(code(FETCH_SCRIPT)).toMatch(
+      /--compare-snapshot-dir [^\n]*\|\| status=\$\?/
+    )
   })
 
-  it('merges before compute, the schema gate and the upload', () => {
-    const at = indexOf(s => s.id === 'daily-fac-merge')
-    const compute = indexOf(s => s.name === '[daily] Compute Analytics')
-    const validate = indexOf(
-      s => s.name === '[daily] Validate snapshots against shared contracts'
+  it('a failed merge fails the date before compute, the schema gate and the upload', () => {
+    // enrich_daily leaves ENRICH=failed on a failed merge, and the enrich
+    // case cleans up and returns before compute for anything but a success.
+    const body = RUNNER.slice(
+      RUNNER.indexOf('enrich_daily() {'),
+      RUNNER.indexOf('# Merge the persisted Find-A-Club fetch')
     )
-    const upload = indexOf(s => s.name === '[daily] Upload to GCS')
-    expect(at).toBeGreaterThanOrEqual(0)
-    expect(compute).toBeGreaterThan(at)
-    expect(validate).toBeGreaterThan(at)
-    expect(upload).toBeGreaterThan(at)
+    expect(body).toMatch(/ENRICH=failed[\s\S]*ENRICH=enriched/)
+    const loop = RUNNER.slice(RUNNER.indexOf('  # 7. enrich'))
+    const failed = loop.indexOf('cleanup_date')
+    const compute = loop.indexOf('compute-analytics')
+    expect(failed).toBeGreaterThan(0)
+    expect(compute).toBeGreaterThan(failed)
   })
 })

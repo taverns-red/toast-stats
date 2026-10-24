@@ -8,7 +8,9 @@
  * argv, exit-code and on-disk contracts. Each describe block is one stage of
  * the loop: resolve → fetch raw → prev-year → transform → date remap →
  * closing guard → enrich (persisted FAC) → compute → validate → upload →
- * cleanup → counters.
+ * cleanup → counters. The daily mode (#1765, ADR-015 step 7) has its own
+ * blocks at the end: scrape → guard → fetch FAC → persist → merge →
+ * compute → validate → upload.
  *
  * The S1-3 contract (#1708) the loop must keep: a failed date is counted and
  * the loop goes on (per-date uploads are intended; the partial-failure gate
@@ -153,7 +155,7 @@ afterEach(() => {
 
 describe('process-dates.sh: usage', () => {
   it('rejects an unknown mode with exit 2', () => {
-    expect(run('daily', ['2026-09-10']).status).toBe(2)
+    expect(run('bogus', ['2026-09-10']).status).toBe(2)
   })
 
   it('rejects a malformed date before touching the bucket', () => {
@@ -1751,5 +1753,487 @@ describe('process-dates.sh rebuild: the real build-reports-rollups.sh against th
     expect(summaryText()).toContain(
       '- **Reports rollups** (#2012): 1 built, 1 skipped (no sidecars), 0 failed'
     )
+  })
+})
+
+/**
+ * The daily mode (#1765, ADR-015 step 7, P1): the daily's inline steps,
+ * moved into the runner so the daily gets the stages every other mode has
+ * (the upload guard, D-20; one date, D-23) and keeps the ones it alone had:
+ * the raw-csv pre-sync that `force` bypasses, the live Find-A-Club fetch,
+ * its persistence to raw-fac/ and the fail-closed merge with the persisted
+ * fallback (scripts/pipeline/daily-fac-fetch.sh and daily-fac-merge.sh,
+ * the real scripts here, against the shim). Stage order:
+ * scrape → guard → fetch FAC → persist → merge → compute → validate →
+ * upload.
+ */
+describe('process-dates.sh daily (#1765)', () => {
+  const DATE = '2026-10-23'
+  const env = {
+    DISTRICTS: '61',
+    BUILD_EDUCATION_ROLLUP: path.join(STUBS, 'build-education-rollup'),
+  }
+  let results: string
+  beforeEach(() => {
+    results = path.join(tmp, 'date-results.jsonl')
+  })
+  const daily = (extra: Record<string, string> = {}, dates = [DATE]) =>
+    run('daily', dates, { ...env, DATE_RESULTS_FILE: results, ...extra })
+
+  describe('usage', () => {
+    it('needs DISTRICTS as an id list: the workflow resolves it once (#1284)', () => {
+      expect(run('daily', [DATE]).status).toBe(2)
+      expect(run('daily', [DATE], { DISTRICTS: '' }).status).toBe(2)
+      const r = run('daily', [DATE], { DISTRICTS: 'discover' })
+      expect(r.status).toBe(2)
+      expect(r.stderr).toMatch(/::error::process-dates: daily needs DISTRICTS/)
+      expect(lines(shimLog)).toEqual([])
+    })
+  })
+
+  describe('a clean date end to end', () => {
+    it('publishes the enriched snapshot, its analytics and its raw', () => {
+      const r = daily()
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(objectsUnder(`snapshots/${DATE}`)).toEqual([
+        'analytics/district_61_analytics.json',
+        'district_61.json',
+        'metadata.json',
+      ])
+      for (const obj of [
+        `snapshots/${DATE}/district_61.json`,
+        `snapshots/${DATE}/analytics/district_61_analytics.json`,
+      ]) {
+        const meta = readMeta(obj)
+        expect(meta).toContain('content-encoding=gzip')
+        expect(meta).toContain('content-type=application/json')
+        expect(meta).toContain(`cache-control=${CACHE_CONTROL}`)
+      }
+      expect(uploadedSnapshot(DATE).facMergedClubs).toBe(2)
+      expect(objectsUnder(`raw-csv/${DATE}`)).toEqual([
+        'district-61/club-performance.csv',
+      ])
+    })
+
+    it('scrapes with the district list and no --force; computes those districts', () => {
+      daily()
+      const stubs = lines(stubLog)
+      expect(stubs).toContain(
+        `collector-cli scrape --date ${DATE} --transform --verbose --districts 61`
+      )
+      expect(stubs).toContain(
+        `collector-cli compute-analytics --date ${DATE} --verbose --districts 61`
+      )
+    })
+
+    it('runs the stages in order: scrape → guard → fetch FAC → persist → merge → compute → validate → upload', () => {
+      // One log for the stubs and the shim, so the order is across both.
+      const r = daily({ SHIM_LOG: stubLog })
+      expect(r.status, r.stderr).toBe(0)
+      const log = lines(stubLog)
+      const at = (re: RegExp) => {
+        const i = log.findIndex(l => re.test(l))
+        expect(i, `${re} not in\n${log.join('\n')}`).toBeGreaterThanOrEqual(0)
+        return i
+      }
+      const order = [
+        at(/^collector-cli scrape /),
+        at(new RegExp(`^guard ${DATE}$`)),
+        at(
+          new RegExp(
+            `^collector-cli fetch-find-a-club --districts 61 --include-undistricted --verbose --date ${DATE} --compare-snapshot-dir \\S+/snapshots/${DATE}$`
+          )
+        ),
+        at(
+          new RegExp(
+            `^storage rsync -r \\S+/find-a-club/${DATE}/ gs://${BUCKET}/raw-fac/${DATE}/$`
+          )
+        ),
+        at(/^collector-cli merge-find-a-club /),
+        at(/^collector-cli compute-analytics /),
+        at(/^validate /),
+        at(new RegExp(` gs://${BUCKET}/snapshots/${DATE}/$`)),
+      ]
+      expect(order).toEqual([...order].sort((a, b) => a - b))
+    })
+
+    it('persists the fetched FAC under raw-fac/<date>/, plain JSON, in the run manifest (#1758)', () => {
+      daily()
+      expect(objectsUnder(`raw-fac/${DATE}`)).toEqual(['district_61.json'])
+      expect(readMeta(`raw-fac/${DATE}/district_61.json`)).not.toContain(
+        'content-encoding=gzip'
+      )
+      const paths = lines(manifest).map(
+        l => (JSON.parse(l) as { path: string }).path
+      )
+      expect(paths).toEqual(
+        expect.arrayContaining([
+          `raw-fac/${DATE}/district_61.json`,
+          `raw-csv/${DATE}/district-61/club-performance.csv`,
+          `snapshots/${DATE}/district_61.json`,
+          `snapshots/${DATE}/analytics/district_61_analytics.json`,
+        ])
+      )
+      expect(summaryText()).toContain('Find-A-Club Enrichment (#430)')
+      expect(summaryText()).toContain('- **Raw FAC persisted**: 1 files')
+    })
+
+    it('publishes the per-region club shards under clubs-by-region/, gzip, in the run manifest (#1800)', () => {
+      const r = daily({ STUB_CLUBS_BY_REGION: '1' })
+      expect(r.status, r.stderr).toBe(0)
+      for (const f of ['05.json', 'world.json']) {
+        const obj = `snapshots/${DATE}/clubs-by-region/${f}`
+        expect(readMeta(obj)).toContain('content-encoding=gzip')
+        expect(readMeta(obj)).toContain(`cache-control=${CACHE_CONTROL}`)
+      }
+      const paths = lines(manifest).map(
+        l => (JSON.parse(l) as { path: string }).path
+      )
+      expect(paths).toContain(`snapshots/${DATE}/clubs-by-region/world.json`)
+    })
+
+    it('records the raw and snapshot date for the caller (DATE_RESULTS_FILE)', () => {
+      daily()
+      expect(lines(results).map(l => JSON.parse(l))).toEqual([
+        { date: DATE, actual: DATE, outcome: 'published' },
+      ])
+    })
+
+    it('writes the scrape results to the step summary', () => {
+      daily()
+      expect(summaryText()).toContain('## 📥 Scrape Results')
+      expect(summaryText()).toContain('- **Districts succeeded**: 1')
+    })
+  })
+
+  describe('raw-csv pre-sync and force (#1771, ADR-015 P7)', () => {
+    it('pulls raw-csv/<date>/ from staging before the scrape, so a re-run reuses it', () => {
+      putRaw(DATE)
+      const r = daily({ SHIM_LOG: stubLog })
+      expect(r.status, r.stderr).toBe(0)
+      const log = lines(stubLog)
+      const pull = log.findIndex(
+        l =>
+          l ===
+          `storage rsync -r gs://${BUCKET}/raw-csv/${DATE}/ ${cache}/raw-csv/${DATE}/`
+      )
+      const scrape = log.findIndex(l => l.startsWith('collector-cli scrape '))
+      expect(pull, log.join('\n')).toBeGreaterThanOrEqual(0)
+      expect(scrape).toBeGreaterThan(pull)
+    })
+
+    it('a date staging has no raw for is scraped fresh (first run)', () => {
+      const r = daily()
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    })
+
+    it("FORCE='true' re-fetches and re-derives: scrape --force, compute --force-analytics", () => {
+      const r = daily({ FORCE: 'true' })
+      expect(r.status, r.stderr).toBe(0)
+      const stubs = lines(stubLog)
+      expect(stubs).toContain(
+        `collector-cli scrape --date ${DATE} --transform --force --verbose --districts 61`
+      )
+      expect(stubs).toContain(
+        `collector-cli compute-analytics --date ${DATE} --force-analytics --verbose --districts 61`
+      )
+      expect(r.stderr).toContain(
+        "process-dates: force=true for daily (FORCE='true')"
+      )
+    })
+
+    for (const force of ['false', '']) {
+      it(`FORCE='${force}' reuses the cache: no --force anywhere`, () => {
+        const r = daily({ FORCE: force })
+        expect(r.status, r.stderr).toBe(0)
+        expect(lines(stubLog).filter(l => /--force/.test(l))).toEqual([])
+        expect(r.stderr).toContain(
+          `process-dates: force=false for daily (FORCE='${force}')`
+        )
+      })
+    }
+  })
+
+  describe('the upload guard runs in daily (D-20)', () => {
+    it('guards the date after the scrape: exit 3 is REFUSED and nothing goes up', () => {
+      const r = daily({ STUB_GUARD_REFUSE: `^${DATE}$` })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 0, refused: 1, failed: 0 })
+      expect(lines(stubLog)).toContain(`guard ${DATE}`)
+      expect(objectsUnder(`snapshots/${DATE}`)).toEqual([])
+      expect(objectsUnder(`raw-csv/${DATE}`)).toEqual([])
+      expect(objectsUnder(`raw-fac/${DATE}`)).toEqual([])
+      expect(lines(stubLog).some(l => / fetch-find-a-club /.test(l))).toBe(
+        false
+      )
+      expect(lines(results).map(l => JSON.parse(l))).toEqual([
+        { date: DATE, actual: DATE, outcome: 'refused' },
+      ])
+    })
+
+    it('any other guard exit (unreadable GCS) FAILS the date', () => {
+      const r = daily({ STUB_GUARD_ERROR: `^${DATE}$` })
+      expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+      expect(objectsUnder(`snapshots/${DATE}`)).toEqual([])
+    })
+
+    it('guards the remapped date of a closing collection, and publishes there', () => {
+      const r = daily({ STUB_REMAP: '2026-11-02=2026-10-31' }, ['2026-11-02'])
+      expect(r.status, r.stderr).toBe(0)
+      expect(lines(stubLog)).toContain('guard 2026-10-31')
+      expect(objectExists('snapshots/2026-10-31/district_61.json')).toBe(true)
+      expect(objectsUnder('raw-csv/2026-11-02')).toHaveLength(1)
+      // The FAC is fetched, persisted and merged under the snapshot date.
+      expect(lines(stubLog)).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(
+            /^collector-cli fetch-find-a-club .* --date 2026-10-31 --compare-snapshot-dir \S+\/snapshots\/2026-10-31$/
+          ),
+        ])
+      )
+      expect(objectsUnder('raw-fac/2026-10-31')).toEqual(['district_61.json'])
+      expect(lines(results).map(l => JSON.parse(l))).toEqual([
+        { date: '2026-11-02', actual: '2026-10-31', outcome: 'published' },
+      ])
+    })
+  })
+
+  describe('scrape outcomes', () => {
+    it('a partial scrape (exit 1) still publishes what it wrote, as the daily always has', () => {
+      const r = daily({ STUB_SCRAPE_FAIL: `^${DATE}$` })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(r.stderr).toMatch(/::warning::.*scrape exited 1/)
+      expect(objectExists(`snapshots/${DATE}/district_61.json`)).toBe(true)
+    })
+
+    it('a scrape that wrote no snapshot FAILS the date and uploads nothing', () => {
+      const r = daily({ STUB_SCRAPE_EMPTY: `^${DATE}$` })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+      expect(lines(uploadLog)).toEqual([])
+      expect(objectsUnder('snapshots')).toEqual([])
+      expect(lines(results).map(l => JSON.parse(l))).toEqual([
+        { date: DATE, actual: null, outcome: 'failed' },
+      ])
+    })
+  })
+
+  describe('Find-A-Club (#1770, D-10)', () => {
+    it('a failed fetch falls back to the last persisted raw-fac/ before the date; nothing is persisted for the date', () => {
+      putRawFac('2026-10-20')
+      const r = daily({ STUB_FAC_FETCH_FAIL: `^${DATE}$` })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(uploadedSnapshot(DATE).facMergedClubs).toBe(2)
+      expect(objectsUnder(`raw-fac/${DATE}`)).toEqual([])
+      expect(summaryText()).toContain(
+        '- **Fallback FAC (persisted raw-fac/2026-10-20/)**: 1'
+      )
+    })
+
+    it('a fetch that dies before creating its output folder still reports, persists nothing and falls back (#2274 N1)', () => {
+      putRawFac('2026-10-20')
+      const r = daily({ STUB_FAC_FETCH_CRASH: `^${DATE}$` })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(r.stderr).not.toMatch(/The Find-A-Club fetch for .* did not run/)
+      expect(r.stderr).toMatch(
+        /::warning::The Find-A-Club fetch created no output folder for 2026-10-23/
+      )
+      expect(summaryText()).toContain(
+        '- **Raw FAC persisted**: 0 files (the fetch wrote none)'
+      )
+      expect(objectsUnder(`raw-fac/${DATE}`)).toEqual([])
+      expect(uploadedSnapshot(DATE).facMergedClubs).toBe(2)
+    })
+
+    it('daily-fac-fetch.sh prints its result line when the output folder is missing (#2274 N1)', () => {
+      const r = spawnSync(
+        'bash',
+        [
+          path.join(REPO, 'scripts/pipeline/daily-fac-fetch.sh'),
+          BUCKET,
+          DATE,
+          '61',
+        ],
+        {
+          cwd: REPO,
+          encoding: 'utf-8',
+          env: {
+            ...process.env,
+            GCLOUD: SHIM,
+            SHIM_ROOT: root,
+            SHIM_LOG: shimLog,
+            CACHE_DIR: cache,
+            GITHUB_STEP_SUMMARY: summary,
+            COLLECTOR_CLI: path.join(STUBS, 'collector-cli'),
+            RUN_MANIFEST_FILE: manifest,
+            STUB_FAC_FETCH_CRASH: `^${DATE}$`,
+          },
+        }
+      )
+      expect(r.status, r.stderr).toBe(0)
+      expect(JSON.parse(r.stdout)).toEqual({ fetched: 0, persisted: 0 })
+      expect(lines(shimLog)).toEqual([])
+    })
+
+    it('a partial fetch persists exactly what it fetched (#1770)', () => {
+      const r = daily({ DISTRICTS: '61,62', STUB_FAC_FETCH_MISS: '62' })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(objectsUnder(`raw-fac/${DATE}`)).toEqual(['district_61.json'])
+      expect(r.stderr).toMatch(/::warning::fetch-find-a-club exited 1/)
+      expect(uploadedSnapshot(DATE).facMergedClubs).toBe(2)
+    })
+
+    it('no FAC anywhere: published unenriched, counted and flagged', () => {
+      const r = daily({ STUB_FAC_FETCH_FAIL: `^${DATE}$` })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(uploadedSnapshot(DATE).facMergedClubs).toBeUndefined()
+      expect(r.stderr).toMatch(
+        /::warning::1 district\(s\) of 2026-10-23 have no Find-A-Club/
+      )
+    })
+
+    it('a failed persist is a warning, never a failed date', () => {
+      const r = daily({ SHIM_FAIL_MATCH: `raw-fac/${DATE}/` })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(r.stderr).toMatch(
+        /::warning::Could not persist raw-fac\/2026-10-23\//
+      )
+    })
+
+    it('a failed merge FAILS the date, nothing uploaded (D7)', () => {
+      const r = daily({ STUB_MERGE_FAIL: `^${DATE}$` })
+      expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+      expect(objectsUnder(`snapshots/${DATE}`)).toEqual([])
+      expect(objectsUnder(`raw-csv/${DATE}`)).toEqual([])
+    })
+
+    it('a raw-fac/ listing error FAILS the date when the fetch missed a district', () => {
+      const r = daily({
+        STUB_FAC_FETCH_FAIL: `^${DATE}$`,
+        SHIM_FAIL_MATCH: '^ls gs://test-bucket/raw-fac/$',
+      })
+      expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+      expect(objectsUnder(`snapshots/${DATE}`)).toEqual([])
+    })
+  })
+
+  describe('compute, validate, prior year', () => {
+    it('a failed compute FAILS the date and uploads nothing, as the daily always has', () => {
+      const r = daily({ STUB_COMPUTE_FAIL: `^${DATE}$` })
+      expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+      expect(objectsUnder(`snapshots/${DATE}`)).toEqual([])
+      expect(objectsUnder(`raw-csv/${DATE}`)).toEqual([])
+    })
+
+    it('a schema violation FAILS the date and uploads nothing (#1125)', () => {
+      const r = daily({ STUB_VALIDATE_FAIL: `^${DATE}$` })
+      expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+      expect(objectsUnder(`snapshots/${DATE}`)).toEqual([])
+    })
+
+    it('pulls the prior year keyed on the snapshot date, not the raw date (#1769, D-8)', () => {
+      putObject('snapshots/2025-10-31/district_61.json', '{"districtId":"61"}')
+      putObject('snapshots/2025-11-02/district_61.json', '{"districtId":"61"}')
+      daily({ STUB_REMAP: '2026-11-02=2026-10-31' }, ['2026-11-02'])
+      const pulls = lines(shimLog).filter(l => /snapshots\/2025-/.test(l))
+      expect(pulls).toEqual([
+        `storage cp gs://${BUCKET}/snapshots/2025-10-31/district_*.json ${cache}/snapshots/2025-10-31/`,
+      ])
+      expect(summaryText()).toContain(
+        '- **Dates with a prior-year snapshot (YoY)**: 1'
+      )
+    })
+  })
+
+  describe('after the date', () => {
+    it('keeps the published snapshot and raw on disk for the post-loop steps (CDN manifests read the local latest), drops the prior year', () => {
+      putObject('snapshots/2025-10-23/district_61.json', '{"districtId":"61"}')
+      daily()
+      expect(localDateDirs('snapshots')).toEqual([DATE])
+      expect(localDateDirs('raw-csv')).toEqual([DATE])
+    })
+
+    it('leaves nothing behind for a date it did not publish', () => {
+      daily({ STUB_GUARD_REFUSE: `^${DATE}$` })
+      expect(localDateDirs('snapshots')).toEqual([])
+      expect(localDateDirs('raw-csv')).toEqual([])
+    })
+
+    it('builds the identity histories once, and never the education or reports rollups (the education-rollup job does, #2028)', () => {
+      const r = daily()
+      expect(r.status, r.stderr).toBe(0)
+      const stubs = lines(stubLog)
+      expect(stubs.filter(l => l.startsWith('identity '))).toEqual([
+        `identity ${BUCKET}`,
+      ])
+      expect(stubs.some(l => l.startsWith('education-rollup '))).toBe(false)
+      expect(stubs.some(l => l.startsWith('reports-rollups '))).toBe(false)
+      expect(summaryText()).toMatch(/- \*\*Education rollup\*\*: skipped/)
+    })
+
+    it('builds no identity history when the date did not publish', () => {
+      daily({ STUB_MERGE_FAIL: `^${DATE}$` })
+      expect(lines(stubLog).some(l => l.startsWith('identity '))).toBe(false)
+    })
+  })
+})
+
+describe('process-dates.sh: every MODE case names every mode (R17, #2274 N2)', () => {
+  const source = fs.readFileSync(SCRIPT, 'utf-8').split('\n')
+
+  /** Labels of each `case "${MODE}" in` block: lines one level deeper. */
+  function modeCases(): { line: number; labels: string[] }[] {
+    const out: { line: number; labels: string[] }[] = []
+    source.forEach((l, i) => {
+      const m = /^(\s*)case "\$\{MODE\}" in\s*$/.exec(l)
+      if (!m) return
+      const indent = m[1]!.length
+      const labels: string[] = []
+      for (let j = i + 1; j < source.length; j++) {
+        const line = source[j]!
+        const lead = /^\s*/.exec(line)![0].length
+        if (lead === indent && /^\s*esac\b/.test(line)) break
+        if (lead !== indent + 2) continue
+        const label = /^\s*([a-z*][a-z*| -]*)\)/.exec(line)
+        if (label) labels.push(...label[1]!.split('|').map(s => s.trim()))
+      }
+      out.push({ line: i + 1, labels })
+    })
+    return out
+  }
+
+  it('finds the mode cases', () => {
+    expect(modeCases().length).toBeGreaterThan(5)
+  })
+
+  it('the usage case accepts exactly the four modes', () => {
+    const [usage] = modeCases()
+    expect(usage!.labels.filter(l => l !== '*').sort()).toEqual([
+      'daily',
+      'rebuild',
+      'rescrape',
+      'rescrape-historical',
+    ])
+  })
+
+  it('no case leaves a mode implicit, the 10b remove included', () => {
+    const modes = ['daily', 'rebuild', 'rescrape', 'rescrape-historical']
+    const gaps = modeCases()
+      .map(c => ({
+        line: c.line,
+        missing: c.labels.includes('*')
+          ? []
+          : modes.filter(m => !c.labels.includes(m)),
+      }))
+      .filter(c => c.missing.length > 0)
+    expect(gaps).toEqual([])
   })
 })

@@ -613,7 +613,12 @@ describe('the ledger seed is restored before every rollup build (#2102)', () => 
 
   const cases: Array<[string, RegExp]> = [
     ['education-rollup', /scripts\/pipeline\/build-education-rollup\.sh\b/],
-    ['pipeline', /scripts\/pipeline\/process-dates\.sh\b/],
+    // The runner builds the rollup after its loop in these modes; its daily
+    // mode never does (the education-rollup job does, #2028, #1765).
+    [
+      'pipeline',
+      /scripts\/pipeline\/process-dates\.sh "\$\{GCS_BUCKET\}" (rebuild|rescrape|rescrape-historical) /,
+    ],
   ]
   for (const [jobName, builder] of cases) {
     const steps = wf.jobs[jobName]?.steps ?? []

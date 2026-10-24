@@ -9,10 +9,19 @@
 #       where <A> is D, or the date STUB_REMAP maps it to (`D=A,...`): the
 #       transform remaps a closing collection onto its month-end (#193).
 #       Like the real CLI it also logs on stdout.
-#   scrape --date D --transform --force --verbose (--districts X | --discover-districts)
-#       writes raw-csv/D, then the snapshot as transform does. With
-#       STUB_SCRAPE_FAIL it still leaves both behind and exits 1.
-#   compute-analytics --date A --force-analytics --verbose
+#   scrape --date D --transform [--force] --verbose (--districts X | --discover-districts)
+#       writes raw-csv/D, then the snapshot as transform does, and prints
+#       the summary JSON the daily reads (date, snapshotDate, districts) on
+#       stdout, logs on stderr (R4). With STUB_SCRAPE_FAIL it still leaves
+#       both behind and exits 1 (PARTIAL_FAILURE).
+#   fetch-find-a-club --districts X --include-undistricted --verbose
+#       --date D --compare-snapshot-dir S   (the daily's FAC fetch, #430)
+#       writes $CACHE_DIR/find-a-club/D/district_<id>.json for each id of X,
+#       the recorded raw shape (raw-fac/district_61.json), and prints the
+#       real summary JSON (date, outDir, totalDistricts, succeeded, failed,
+#       totalClubs, compare, results); exits 1 when a district failed
+#       (PARTIAL_FAILURE), as the real CLI does.
+#   compute-analytics --date A [--force-analytics] --verbose [--districts X]
 #       writes $CACHE_DIR/snapshots/A/analytics/district_61_analytics.json and
 #       prints the ComputeAnalyticsResult JSON (with the #1708 store counters)
 #       on stdout, logs on stderr (R4). Exits 1 on a failed compute, still
@@ -58,6 +67,17 @@
 #                        with a non-gap reason (#2232)
 #   STUB_CLUBS_BY_REGION optional: compute also rewrites
 #                        snapshots/A/clubs-by-region/{05,world}.json (#1800)
+#   STUB_SCRAPE_EMPTY    optional: ERE; a scrape of a matching date writes
+#                        no snapshot and exits 2 (COMPLETE_FAILURE: the
+#                        dashboard answered nothing usable, #1669)
+#   STUB_FAC_FETCH_FAIL  optional: ERE; a fetch-find-a-club of a matching
+#                        date fetches no district (a TI outage) and exits 1
+#   STUB_FAC_FETCH_MISS  optional: comma-separated ids the fetch fails for
+#                        (a partial fetch, exit 1)
+#   STUB_FAC_FETCH_CRASH optional: ERE; a fetch-find-a-club of a matching
+#                        date dies before it creates its output folder (an
+#                        npx or config failure), prints nothing on stdout
+#                        and exits 1 (#2274 N1)
 set -euo pipefail
 
 : "${CACHE_DIR:?CACHE_DIR must be set}"
@@ -76,6 +96,8 @@ DATE=""
 FAC_DIR=""
 FROM_DIR=""
 SNAP_DIR=""
+DISTRICTS_ARG=""
+COMPARE_DIR=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --date)
@@ -92,6 +114,14 @@ while [ "$#" -gt 0 ]; do
       ;;
     --from-dir)
       FROM_DIR="$2"
+      shift 2
+      ;;
+    --districts)
+      DISTRICTS_ARG="$2"
+      shift 2
+      ;;
+    --compare-snapshot-dir)
+      COMPARE_DIR="$2"
       shift 2
       ;;
     *) shift ;;
@@ -150,14 +180,50 @@ case "${CMD}" in
     # scrape --date D --transform --force --verbose --districts X: collects
     # raw-csv/D from the dashboard, then transforms it. A failure part way
     # (STUB_SCRAPE_FAIL) leaves what it had written, as a crash would.
-    echo "[INFO] scrape ${DATE}"
+    echo "[INFO] scrape ${DATE}" >&2
+    if matches "${STUB_SCRAPE_EMPTY:-}"; then
+      echo "[ERROR] scrape: the dashboard returned nothing for ${DATE}" >&2
+      printf '{"date":"%s","districts":{"succeeded":0,"failed":1}}\n' "${DATE}"
+      exit 2
+    fi
     mkdir -p "${CACHE_DIR}/raw-csv/${DATE}/district-61"
     printf 'Club,Goals\n' >"${CACHE_DIR}/raw-csv/${DATE}/district-61/club-performance.csv"
     write_snapshot
+    actual="$(remapped)"
     if matches "${STUB_SCRAPE_FAIL:-}"; then
       echo "[ERROR] scrape failed for ${DATE}" >&2
+      printf '{"date":"%s","snapshotDate":"%s","districts":{"succeeded":1,"failed":1}}\n' "${DATE}" "${actual}"
       exit 1
     fi
+    printf '{"date":"%s","snapshotDate":"%s","districts":{"succeeded":1,"failed":0}}\n' "${DATE}" "${actual}"
+    ;;
+  fetch-find-a-club)
+    : "${DISTRICTS_ARG:?--districts is required}"
+    : "${COMPARE_DIR:?--compare-snapshot-dir is required}"
+    if matches "${STUB_FAC_FETCH_CRASH:-}"; then
+      echo "Error: Cannot find module 'collector-cli'" >&2
+      exit 1
+    fi
+    out="${CACHE_DIR}/find-a-club/${DATE}"
+    mkdir -p "${out}"
+    fixture="$(dirname "${BASH_SOURCE[0]}")/raw-fac/district_61.json"
+    ok=0 failed=0 clubs=0 results=""
+    for id in ${DISTRICTS_ARG//,/ }; do
+      if matches "${STUB_FAC_FETCH_FAIL:-}" || [[ ",${STUB_FAC_FETCH_MISS:-}," == *",${id},"* ]]; then
+        echo "[ERROR] district ${id}: fetch failed" >&2
+        failed=$((failed + 1))
+        results+="${results:+,}{\"districtId\":\"${id}\",\"clubCount\":0,\"ok\":false,\"error\":\"HTTP 503\"}"
+        continue
+      fi
+      jq --arg id "${id}" '.district = $id' "${fixture}" >"${out}/district_${id}.json"
+      n="$(jq '.Clubs | length' "${fixture}")"
+      ok=$((ok + 1))
+      clubs=$((clubs + n))
+      results+="${results:+,}{\"districtId\":\"${id}\",\"clubCount\":${n},\"ok\":true,\"snapshotClubCount\":1,\"extraInFac\":$((n - 1))}"
+    done
+    printf '{"date":"%s","outDir":"%s","totalDistricts":%d,"succeeded":%d,"failed":%d,"totalClubs":%d,"results":[%s]}\n' \
+      "${DATE}" "${out}" "$((ok + failed))" "${ok}" "${failed}" "${clubs}" "${results}"
+    [ "${failed}" -eq 0 ] || exit 1
     ;;
   transform)
     echo "[INFO] transform ${DATE}"

@@ -92,6 +92,30 @@ describe('ClubMiniMap', () => {
     expect(screen.getByText('90 Elgin Street, Ottawa, ON')).toBeInTheDocument()
   })
 
+  // #2268 — TI sent "?" for part of the address: the readable part and
+  // the note, never the "?" text.
+  it('shows the address note beside the readable place', () => {
+    renderMap({
+      place: 'Xishiku, Xic, BJ',
+      placeNote: 'address partly not readable — see toastmasters.org',
+    })
+    expect(
+      screen.getByText(
+        'Xishiku, Xic, BJ · address partly not readable — see toastmasters.org'
+      )
+    ).toBeInTheDocument()
+  })
+
+  it('shows the address note alone when no place is readable', () => {
+    renderMap({
+      place: null,
+      placeNote: 'Address not readable — see toastmasters.org',
+    })
+    expect(
+      screen.getByText('Address not readable — see toastmasters.org')
+    ).toBeInTheDocument()
+  })
+
   it('renders nothing when the club has no coordinates', () => {
     const { container } = renderMap({ clubId: '1003' })
     expect(container).toBeEmptyDOMElement()
