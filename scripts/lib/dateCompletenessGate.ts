@@ -56,6 +56,7 @@ import {
   facBaselineDates,
   facCheckApplies,
   facCoverage,
+  FAC_HOLD_MIN_DISTRICTS,
   type FacBaseline,
   type FacCoverage,
 } from './facContinuity.js'
@@ -117,6 +118,11 @@ export interface CompletenessGateResult {
    * where `promote: false` with no named date means hold everything.
    */
   heldDates: string[]
+  /**
+   * Find-A-Club losses too narrow to hold (#2239, "warn on few, hold on
+   * many"): the date still promotes, and the runner raises them loudly.
+   */
+  warnings: Array<{ path: string; reason: string }>
   reason: string
 }
 
@@ -378,6 +384,7 @@ export function evaluateCompletenessGate(input: {
   allowValueChanges: boolean
   newDates?: string[]
   districtsSampled?: number
+  warnings?: DateRegression[]
   error?: string
 }): CompletenessGateResult {
   const failures = input.regressions.map(r => ({
@@ -390,6 +397,10 @@ export function evaluateCompletenessGate(input: {
     newDates: input.newDates ?? [],
     districtsSampled: input.districtsSampled ?? 0,
     heldDates: [] as string[],
+    warnings: (input.warnings ?? []).map(r => ({
+      path: r.path,
+      reason: r.reason,
+    })),
   }
   if (input.error) {
     return {
@@ -435,6 +446,8 @@ export function evaluateCompletenessGate(input: {
 
 const MAX_LISTED = 300
 
+const cell = (s: string) => s.replaceAll('|', '\\|')
+
 export function buildCompletenessGateSummary(
   result: CompletenessGateResult
 ): string {
@@ -451,12 +464,23 @@ export function buildCompletenessGateSummary(
     `- New in this run (no production baseline): ${result.newDates.length ? result.newDates.join(', ') : '—'}`,
     `- District files sampled per bucket: ${result.districtsSampled}`,
     '- Asserted: object count (retired analytics files excluded, #1798), `manifest`/`metadata` district counts, `global-totals` clubs and countries, district `data` keys and the most complete club record’s keys — staging ≥ production. A district staging records as a #1671 source gap counts for itself when production holds no clubs for it (#2038).',
-    '- Find-A-Club continuity (#2239), dates from 2026-05-15 on less the known-unenriched ones: each sampled district keeps the FAC merge and its coordinates / address / meeting coverage against the best of production’s copy and the 3 nearest earlier production dates (a drop of 10 points and 3 clubs holds), and at least half the sampled districts are FAC-merged.',
+    '- Find-A-Club continuity (#2239), dates from 2026-05-15 on less the known-unenriched ones: each sampled district keeps the FAC merge and its coordinates / address / meeting coverage against the best of production’s copy and the 3 nearest earlier production dates (a drop of 10 points and 3 clubs; suspended clubs left out), and at least half the sampled districts are FAC-merged. Losses in 1–2 districts warn and promote; 3 or more, or the half rule, hold.',
     '',
   ]
+  if (result.warnings.length) {
+    lines.push(
+      `### ⚠️ Find-A-Club warning: ${result.warnings.length} district loss(es) too narrow to hold — promoted anyway (#2239)`,
+      '',
+      '| Object | Loss |',
+      '| --- | --- |'
+    )
+    for (const w of result.warnings.slice(0, MAX_LISTED)) {
+      lines.push(`| ${cell(w.path)} | ${cell(w.reason)} |`)
+    }
+    lines.push('')
+  }
   if (result.failures.length) {
     lines.push('| Object | Regression |', '| --- | --- |')
-    const cell = (s: string) => s.replaceAll('|', '\\|')
     for (const f of result.failures.slice(0, MAX_LISTED)) {
       lines.push(`| ${cell(f.path)} | ${cell(f.reason)} |`)
     }
@@ -466,6 +490,33 @@ export function buildCompletenessGateSummary(
     lines.push('')
   }
   return lines.join('\n')
+}
+
+/**
+ * The `fac-loss` issue body for a run whose gate warned (#2239), null when
+ * nothing warned. The dates promoted: the issue is the loud record.
+ */
+export function buildFacWarningBody(
+  result: CompletenessGateResult
+): string | null {
+  if (result.warnings.length === 0) return null
+  const dates = [
+    ...new Set(
+      result.warnings
+        .map(w => /snapshots\/(\d{4}-\d{2}-\d{2})\//.exec(w.path)?.[1])
+        .filter((d): d is string => d !== undefined)
+    ),
+  ].sort()
+  return [
+    `## ⚠️ Find-A-Club loss on ${dates.join(', ') || 'a promoted date'} (#2239)`,
+    '',
+    `The completeness gate found ${result.warnings.length} district-level Find-A-Club loss(es), fewer than the ${FAC_HOLD_MIN_DISTRICTS} districts that hold a date, so the date was **promoted** with the loss: those districts show no map points or meeting details for it.`,
+    '',
+    ...result.warnings.map(w => `- \`${w.path}\`: ${w.reason}`),
+    '',
+    'To repair: once FAC is back for the district, re-derive the date with a `fac_prior_root` holding an enriched copy, or accept the loss. A re-derive from `raw-fac/` alone reproduces it, since the daily fallback is never persisted.',
+    '',
+  ].join('\n')
 }
 
 // ── Bucket I/O ──────────────────────────────────────────────────────────────
@@ -620,8 +671,14 @@ async function facRegressions(
   readProd: FacReader,
   prodDates: () => Promise<string[]>,
   prodHasDate: boolean
-): Promise<{ regressions: DateRegression[]; sampled: number }> {
-  if (!facCheckApplies(date)) return { regressions: [], sampled: 0 }
+): Promise<{
+  regressions: DateRegression[]
+  warnings: DateRegression[]
+  sampled: number
+}> {
+  if (!facCheckApplies(date)) {
+    return { regressions: [], warnings: [], sampled: 0 }
+  }
   const sample = sampleDistricts(stagingIds, perDate)
   const baseDates = [
     ...(prodHasDate ? [date] : []),
@@ -637,8 +694,10 @@ async function facRegressions(
       baselines[id]!.push({ date: d, coverage: covs[id] ?? null })
     }
   }
+  const found = compareFacContinuity(date, staged, baselines)
   return {
-    regressions: compareFacContinuity(date, staged, baselines),
+    regressions: found.holds,
+    warnings: found.warnings,
     sampled: sample.length,
   }
 }
@@ -653,6 +712,7 @@ export async function runCompletenessGate(
   const log = opts.log ?? (() => {})
   const perDate = perDateSampleSize(dates.length)
   const regressions: DateRegression[] = []
+  const warnings: DateRegression[] = []
   const newDates: string[] = []
   let districtsSampled = 0
   const readStagingFac = facReader(staging)
@@ -693,11 +753,12 @@ export async function runCompletenessGate(
       p !== null
     )
     regressions.push(...fac.regressions)
+    warnings.push(...fac.warnings)
     log(
       `[completeness-gate] ${date}: ${stagingList.length} staging / ${prodList.length} prod objects, ` +
         `${p ? `${sample.length} district(s) sampled, ${found.length} regression(s)` : 'new date (no production baseline)'}` +
         (fac.sampled
-          ? `; Find-A-Club continuity: ${fac.sampled} district(s), ${fac.regressions.length} regression(s)`
+          ? `; Find-A-Club continuity: ${fac.sampled} district(s), ${fac.regressions.length} regression(s), ${fac.warnings.length} warning(s)`
           : '')
     )
   }
@@ -708,5 +769,6 @@ export async function runCompletenessGate(
     allowValueChanges: opts.allowValueChanges,
     newDates,
     districtsSampled,
+    warnings,
   })
 }

@@ -20,6 +20,9 @@
  *      the merge always writes) is unmerged, or when its share of clubs with
  *      coordinates, an address or a meeting day/time/schedule drops by
  *      FAC_DROP_SHARE or more AND by FAC_MIN_CLUBS_LOST clubs or more.
+ *      Losses in 1 or 2 districts WARN and the date promotes; 3 or more
+ *      (FAC_HOLD_MIN_DISTRICTS) hold it ("warn on few, hold on many").
+ *      Suspended clubs are left out of the shares: FAC hides them (#490).
  *   2. A floor, per date. Fewer than FAC_FLOOR_MIN_MERGED_SHARE of the
  *      sampled districts FAC-merged holds the date, whatever the baselines
  *      say. This is what an already-stripped baseline cannot satisfy: the
@@ -75,6 +78,18 @@ export const FAC_BASELINE_DATES = 3
 /** A coverage share drop this large (and FAC_MIN_CLUBS_LOST) holds. */
 export const FAC_DROP_SHARE = 0.1
 export const FAC_MIN_CLUBS_LOST = 3
+/**
+ * Warn on few, hold on many (Ron, 2026-10-24): districts with a per-district
+ * FAC loss on one date below this count warn and the date promotes; this
+ * many or more hold it. A single district's FAC fetch failing twice running
+ * (the fallback reads one persisted date only) is the realistic narrow
+ * loss, and a hold of a daily's new date freezes every later daily's
+ * globals until an override, so one or two districts must not hold. A
+ * broad loss is a pipeline fault: #2237 stripped every district at once,
+ * and in 50 dailies (2026-09-02..10-23, ~4,700 district fetches) no
+ * district ever lost its FAC, so 3 at once is not chance.
+ */
+export const FAC_HOLD_MIN_DISTRICTS = 3
 /** Below this share of FAC-merged sampled districts, the date holds. */
 export const FAC_FLOOR_MIN_MERGED_SHARE = 0.5
 
@@ -87,7 +102,7 @@ function range(month: string, from: number, to: number): string[] {
 
 /** What a district file holds of the FAC merge. */
 export interface FacCoverage {
-  /** `data.clubs` rows. */
+  /** `data.clubs` rows, less Suspended clubs (FAC hides them, #490). */
   clubs: number
   /** `data.prospectiveClubs` present: the merge ran on this file. */
   merged: boolean
@@ -111,6 +126,17 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 const isFiniteNumber = (v: unknown): boolean =>
   typeof v === 'number' && Number.isFinite(v)
 
+/**
+ * TI hides a suspended club from Find-A-Club (#490), so it never has FAC
+ * fields: counting it would make a suspension look like a FAC loss.
+ */
+function isSuspended(row: Record<string, unknown>): boolean {
+  return (
+    typeof row.clubStatus === 'string' &&
+    row.clubStatus.trim().toLowerCase() === 'suspended'
+  )
+}
+
 function hasPoint(row: Record<string, unknown>): boolean {
   const c = row.coordinates
   return isRecord(c) && isFiniteNumber(c.lat) && isFiniteNumber(c.lng)
@@ -127,9 +153,9 @@ export function facCoverage(value: unknown): FacCoverage | null {
   if (!isRecord(value) || !isRecord(value.data)) return null
   const data = value.data
   if (!Array.isArray(data.clubs)) return null
-  const rows = data.clubs.filter(isRecord)
+  const rows = data.clubs.filter(isRecord).filter(r => !isSuspended(r))
   return {
-    clubs: data.clubs.length,
+    clubs: rows.length,
     merged: Array.isArray(data.prospectiveClubs),
     coordinates: rows.filter(hasPoint).length,
     address: rows.filter(r => isRecord(r.address)).length,
@@ -160,15 +186,27 @@ const FIELDS = ['coordinates', 'address', 'meeting'] as const
 const pct = (n: number, of: number) =>
   `${Math.round((n / of) * 100)}% (${n}/${of})`
 
-/** Every FAC loss on one date's sampled districts, against the baselines. */
+/** A date's FAC findings: `holds` hold it, `warnings` only alert. */
+export interface FacFindings {
+  holds: DateRegression[]
+  warnings: DateRegression[]
+}
+
+/**
+ * Every FAC loss on one date's sampled districts, against the baselines.
+ * Per-district losses in fewer than FAC_HOLD_MIN_DISTRICTS districts are
+ * warnings; that many, or the floor, hold the date with all of them.
+ */
 export function compareFacContinuity(
   date: string,
   staging: Readonly<Record<string, FacCoverage | null>>,
   baselines: Readonly<Record<string, readonly FacBaseline[]>>
-): DateRegression[] {
-  if (!facCheckApplies(date)) return []
+): FacFindings {
+  if (!facCheckApplies(date)) return { holds: [], warnings: [] }
   const dir = `snapshots/${date}/`
   const out: DateRegression[] = []
+  const lostDistricts = new Set<string>()
+  let floor: DateRegression | null = null
   const push = (path: string, reason: string) =>
     out.push({ date, path, reason: `${date}: ${reason}` })
 
@@ -190,6 +228,7 @@ export function compareFacContinuity(
 
     const wasMerged = bases.find(b => b.coverage.merged)
     if (wasMerged && !s.merged) {
+      lostDistricts.add(id)
       push(
         file,
         `Find-A-Club merge lost: no data.prospectiveClubs, which ${wasMerged.date} has (coordinates ${pct(wasMerged.coverage.coordinates, wasMerged.coverage.clubs)} there, ${pct(s.coordinates, s.clubs)} here)`
@@ -209,6 +248,7 @@ export function compareFacContinuity(
       const share = s[field] / s.clubs
       const lost = Math.round(bestShare * s.clubs) - s[field]
       if (bestShare - share >= FAC_DROP_SHARE && lost >= FAC_MIN_CLUBS_LOST) {
+        lostDistricts.add(id)
         push(
           file,
           `Find-A-Club ${field} ${pct(best.coverage[field], best.coverage.clubs)} on ${best.date} → ${pct(s[field], s.clubs)}`
@@ -218,10 +258,13 @@ export function compareFacContinuity(
   }
 
   if (sampled > 0 && merged / sampled < FAC_FLOOR_MIN_MERGED_SHARE) {
-    push(
-      dir,
-      `only ${merged} of ${sampled} sampled district(s) are Find-A-Club-merged (data.prospectiveClubs); every date from ${FAC_ENRICHED_SINCE} on is, unless it is a known-unenriched date (#2239)`
-    )
+    floor = {
+      date,
+      path: dir,
+      reason: `${date}: only ${merged} of ${sampled} sampled district(s) are Find-A-Club-merged (data.prospectiveClubs); every date from ${FAC_ENRICHED_SINCE} on is, unless it is a known-unenriched date (#2239)`,
+    }
   }
-  return out
+  const broad = floor !== null || lostDistricts.size >= FAC_HOLD_MIN_DISTRICTS
+  if (!broad) return { holds: [], warnings: out }
+  return { holds: floor ? [...out, floor] : out, warnings: [] }
 }
