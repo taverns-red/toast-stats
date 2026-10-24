@@ -280,10 +280,9 @@ describe('Recognition filter — composes with the existing pipeline', () => {
     fireEvent.click(screen.getByTestId('recognition-filter-extension'))
     await waitFor(() => expect(visibleIds()).toEqual(['102', '76']))
 
-    fireEvent.change(
-      screen.getByLabelText(/search districts by number or name/i),
-      { target: { value: '76' } }
-    )
+    fireEvent.change(screen.getByLabelText(/filter districts/i), {
+      target: { value: '76' },
+    })
     await waitFor(() => expect(visibleIds()).toEqual(['76']))
   })
 

@@ -24,21 +24,18 @@ describe('recognition legend responsive contract (#1361)', () => {
     )
   })
 
-  it('goes inline at 640px, retiring the disclosure', () => {
-    const at640 =
-      /@media\s*\(min-width:\s*640px\)\s*\{([\s\S]*?)\n\s{2}\}/.exec(css)
-    // The 640px block must both reveal the list and hide the toggle — half of
-    // that leaves either a permanently collapsed legend or a redundant button
-    // sitting above an already-visible list.
-    const blocks = css.match(
-      /@media\s*\(min-width:\s*640px\)\s*\{[\s\S]*?recognition-legend[\s\S]*?\n\s{2}\}/g
+  // #2249 — the legend is reference content between the filters and the
+  // data; it stays behind its disclosure at EVERY width now, so no
+  // breakpoint may hide the toggle or force the list open.
+  it('stays a disclosure at every width (#2249)', () => {
+    const inMedia = css.match(
+      /@media[^{]*\{[\s\S]*?recognition-legend__(?:toggle|items)[\s\S]*?\n\s{2}\}/g
     )
-    expect(at640 ?? blocks, 'no 640px block found').not.toBeNull()
-    const scoped = (blocks ?? []).join('\n')
-    expect(scoped).toMatch(
+    const scoped = (inMedia ?? []).join('\n')
+    expect(scoped).not.toMatch(
       /\.recognition-legend__toggle\s*\{[^}]*display:\s*none/
     )
-    expect(scoped).toMatch(
+    expect(scoped).not.toMatch(
       /\.recognition-legend__items\s*\{[^}]*display:\s*flex/
     )
   })

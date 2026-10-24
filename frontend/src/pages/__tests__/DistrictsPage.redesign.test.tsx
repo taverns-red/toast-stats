@@ -104,15 +104,20 @@ describe('Districts page redesign chrome (#356)', () => {
       ).toBeInTheDocument()
     })
 
-    it('renders the redesigned h1 "District Rankings" (no "Toastmasters" prefix)', async () => {
+    // #2249 — the H1 names the visitor's job, not the table: "find my
+    // district" is the primary goal, and the rankings keep their own H2.
+    it('renders the h1 "Find a district, club or region" (#2249)', async () => {
       setupWithData()
       renderWithProviders(<DistrictsPage />)
       await screen.findByText('District 1')
       expect(
         screen.getByRole('heading', {
           level: 1,
-          name: /^district rankings$/i,
+          name: /^find a district, club or region$/i,
         })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { level: 2, name: /^district rankings$/i })
       ).toBeInTheDocument()
     })
 
@@ -121,36 +126,17 @@ describe('Districts page redesign chrome (#356)', () => {
       renderWithProviders(<DistrictsPage />)
       await screen.findByText('District 1')
       expect(
-        screen.getByText(/compare district performance/i)
+        screen.getByText(/every Toastmasters district, worldwide/i)
       ).toBeInTheDocument()
     })
 
-    // #1107 — orientation copy hardcoded "117 districts" while the KPI strip
-    // (and the table) showed the real tracked count (128 in prod). Derive the
-    // count from data so the sentence can never drift from the rows below it.
-    it('derives the orientation district count from data, not a hardcoded 117', async () => {
+    // #2249 — the 4-line orientation paragraph is gone: its job (telling
+    // people to use the search) is done by the search being first.
+    it('renders no orientation paragraph', async () => {
       setupWithData()
       renderWithProviders(<DistrictsPage />)
       await screen.findByText('District 1')
-      const orientation = screen.getByTestId('districts-orientation')
-      expect(orientation).toHaveTextContent(
-        /one of the 2 Toastmasters districts worldwide/i
-      )
-      expect(orientation.textContent).not.toMatch(/117/)
-    })
-
-    // #1107 — before data loads (the shared shell renders with zero rankings)
-    // the count is dropped entirely so the sentence stays grammatical and never
-    // shows "0 districts". Driven via the error shell (rankings stay empty).
-    it('drops the count (no number) when no districts are loaded', async () => {
-      mockedFetchCdnRankings.mockRejectedValueOnce(new Error('network down'))
-      renderWithProviders(<DistrictsPage />)
-      await screen.findByText(/error loading rankings/i)
-      const orientation = screen.getByTestId('districts-orientation')
-      expect(orientation).toHaveTextContent(
-        /each row below is a Toastmasters district worldwide/i
-      )
-      expect(orientation.textContent).not.toMatch(/\d/)
+      expect(screen.queryByTestId('districts-orientation')).toBeNull()
     })
   })
 

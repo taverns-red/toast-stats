@@ -100,7 +100,13 @@ for (const width of [768, 820, 1024]) {
         m.intro!.w,
         `intro column ${Math.round(m.intro!.w)}px < ${INTRO_MIN_WIDTH}px`
       ).toBeGreaterThanOrEqual(INTRO_MIN_WIDTH)
-      expect(m.titleLines, 'title "District Rankings" wraps').toBe(1)
+      // #2249 — the H1 is "Find a district, club or region"; measured on
+      // the PR preview it fits one line at 768 (the actions wrap below the
+      // intro there, so the title has the full width).
+      expect(
+        m.titleLines,
+        'title "Find a district, club or region" wraps'
+      ).toBe(1)
 
       // Intro and actions never overlap.
       const a = m.actions!

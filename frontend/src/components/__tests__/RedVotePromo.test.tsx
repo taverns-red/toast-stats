@@ -30,7 +30,7 @@ describe('RedVotePromo (#2090)', () => {
   })
 
   it('out of season, the district surface shows the quiet card', () => {
-    renderAt(OUT_OF_SEASON, <RedVotePromo surface="district" />)
+    renderAt(OUT_OF_SEASON, <RedVotePromo />)
     expect(
       screen.getByRole('heading', { name: RED_VOTE_COPY.cardHeading })
     ).toBeInTheDocument()
@@ -39,34 +39,22 @@ describe('RedVotePromo (#2090)', () => {
     expect(screen.getByText(RED_VOTE_COPY.disclaimer)).toBeInTheDocument()
   })
 
-  it('out of season, the landing surface renders nothing', () => {
-    const { container } = renderAt(
-      OUT_OF_SEASON,
-      <RedVotePromo surface="landing" />
-    )
-    expect(container).toBeEmptyDOMElement()
-  })
-
-  it('in season, both surfaces show the dismissible banner', () => {
-    for (const surface of ['district', 'landing'] as const) {
-      const { unmount } = renderAt(
-        IN_SEASON,
-        <RedVotePromo surface={surface} />
-      )
-      expect(
-        screen.getByRole('heading', { name: RED_VOTE_COPY.bannerHeading })
-      ).toBeInTheDocument()
-      expect(medium(ctaLink())).toBe('seasonal-banner')
-      expect(screen.getByText(RED_VOTE_COPY.disclaimer)).toBeInTheDocument()
-      expect(
-        screen.getByRole('button', { name: RED_VOTE_COPY.dismissLabel })
-      ).toBeInTheDocument()
-      unmount()
-    }
+  // #2249 — the landing's Red Vote surface is now RedVoteBlock (its own
+  // test); this component is the district Overview's card/banner only.
+  it('in season, the district surface shows the dismissible banner', () => {
+    renderAt(IN_SEASON, <RedVotePromo />)
+    expect(
+      screen.getByRole('heading', { name: RED_VOTE_COPY.bannerHeading })
+    ).toBeInTheDocument()
+    expect(medium(ctaLink())).toBe('seasonal-banner')
+    expect(screen.getByText(RED_VOTE_COPY.disclaimer)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: RED_VOTE_COPY.dismissLabel })
+    ).toBeInTheDocument()
   })
 
   it('dismissing is remembered: the district falls back to the quiet card', () => {
-    const { unmount } = renderAt(IN_SEASON, <RedVotePromo surface="district" />)
+    const { unmount } = renderAt(IN_SEASON, <RedVotePromo />)
     fireEvent.click(
       screen.getByRole('button', { name: RED_VOTE_COPY.dismissLabel })
     )
@@ -75,12 +63,12 @@ describe('RedVotePromo (#2090)', () => {
     ).toBeInTheDocument()
     unmount()
 
-    // A fresh mount (another page) remembers it; the landing shows nothing.
-    const { container } = renderAt(
-      IN_SEASON,
-      <RedVotePromo surface="landing" />
-    )
-    expect(container).toBeEmptyDOMElement()
+    // A fresh mount remembers it: the quiet card, not the banner.
+    renderAt(IN_SEASON, <RedVotePromo />)
+    expect(
+      screen.getByRole('heading', { name: RED_VOTE_COPY.cardHeading })
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /dismiss/i })).toBeNull()
   })
 
   it('renders without storage (getItem/setItem throw)', () => {
@@ -90,17 +78,19 @@ describe('RedVotePromo (#2090)', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('blocked')
     })
-    renderAt(IN_SEASON, <RedVotePromo surface="landing" />)
+    renderAt(IN_SEASON, <RedVotePromo />)
     fireEvent.click(
       screen.getByRole('button', { name: RED_VOTE_COPY.dismissLabel })
     )
-    expect(screen.queryByRole('link', { name: /see red vote/i })).toBeNull()
+    expect(
+      screen.getByRole('heading', { name: RED_VOTE_COPY.cardHeading })
+    ).toBeInTheDocument()
   })
 
   it('sends a GA4 select_promotion event with the placement on click', () => {
     const gtag = vi.fn()
     window.gtag = gtag
-    renderAt(OUT_OF_SEASON, <RedVotePromo surface="district" />)
+    renderAt(OUT_OF_SEASON, <RedVotePromo />)
     fireEvent.click(ctaLink())
     expect(gtag).toHaveBeenCalledWith(
       'event',
@@ -113,12 +103,12 @@ describe('RedVotePromo (#2090)', () => {
   })
 
   it('a click without gtag (preview, localhost) does not throw', () => {
-    renderAt(OUT_OF_SEASON, <RedVotePromo surface="district" />)
+    renderAt(OUT_OF_SEASON, <RedVotePromo />)
     expect(() => fireEvent.click(ctaLink())).not.toThrow()
   })
 
   it('opens the external page in a new tab with a safe rel', () => {
-    renderAt(OUT_OF_SEASON, <RedVotePromo surface="district" />)
+    renderAt(OUT_OF_SEASON, <RedVotePromo />)
     expect(ctaLink()).toHaveAttribute('target', '_blank')
     expect(ctaLink()).toHaveAttribute('rel', 'noopener noreferrer')
   })

@@ -61,7 +61,13 @@ import {
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useScrollEdges } from '../hooks/useScrollEdges'
 import { LandingContextBar } from '../components/LandingContextBar'
-import { RedVotePromo } from '../components/RedVotePromo'
+import { LandingSearch } from '../components/LandingSearch'
+import {
+  MyDistrictCard,
+  MyDistrictCardReserve,
+} from '../components/MyDistrictCard'
+import { WorldPulse } from '../components/WorldPulse'
+import { RedVoteBlock } from '../components/RedVoteBlock'
 import { snapshotDatesFrom } from '../types/snapshotDate'
 
 // Columns in the rankings table head: District, Rank, Paid Clubs, Total
@@ -210,11 +216,12 @@ const DistrictsPage: React.FC = () => {
     }
   }, [debouncedSearch, searchQuery, qParam, setQParam])
 
+  // #2249 — the "/" shortcut goes to the hero omni-search (LandingSearch),
+  // the page's primary job; the ?q= field above only filters the rows.
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const [searchFocused, setSearchFocused] = useState<boolean>(false)
   const { myDistrictId, setMyDistrict, isMyDistrict } = useMyDistrict()
 
-  // '/' keyboard shortcut focuses the search input — but only when no
+  // '/' keyboard shortcut focuses the hero search — but only when no
   // other input is currently focused (don't steal focus while typing).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -406,51 +413,48 @@ const DistrictsPage: React.FC = () => {
   // (rules of hooks).
   const kpiTotals = React.useMemo(() => {
     let paidClubs = 0
+    let paidClubBase = 0
     let totalPayments = 0
+    let paymentBase = 0
     let distinguishedClubs = 0
     for (const r of rankings) {
       paidClubs += r.paidClubs ?? 0
+      paidClubBase += r.paidClubBase ?? 0
       totalPayments += r.totalPayments ?? 0
+      paymentBase += r.paymentBase ?? 0
       distinguishedClubs += r.distinguishedClubs ?? 0
     }
     return {
       paidClubs,
+      paidClubBase,
       totalPayments,
+      paymentBase,
       distinguishedClubs,
       tracked: rankings.length,
     }
   }, [rankings])
 
-  // #1107 — derive the orientation count from the same data the table and
-  // KPI strip render, never a hardcoded literal (it had drifted to "117"
-  // while the snapshot tracked 128), so the sentence can never contradict the
-  // rows below it.
-  //
-  // #1359 gap (b) — but a count that lands late REPHRASES the sentence
-  // mid-load ("a Toastmasters district" → "one of the 128 Toastmasters
-  // districts"), and no reserve absorbs a text substitution. While the
-  // rankings query is in flight the same sentence renders with a
-  // width-reserved empty slot, so only the digits appear when the data lands.
-  //
-  // `reserveCount` is true exactly in the loading shell. The TERMINAL error
-  // branch keeps the countless phrasing: a blank slot that never fills reads
-  // as a bug, and no user reaches a loaded page through that branch, so there
-  // is no swap left to protect.
-  const districtCountPhrase = (reserveCount: boolean): React.ReactNode => {
-    const hasCount = kpiTotals.tracked > 0
-    if (!hasCount && !reserveCount) return 'a Toastmasters district'
-    return (
-      <>
-        one of the{' '}
-        <span
-          className="districts-orientation__count"
-          data-testid="districts-orientation-count"
-        >
-          {hasCount ? kpiTotals.tracked : ''}
-        </span>{' '}
-        Toastmasters districts
-      </>
-    )
+  // #2249 — each KPI against the program-year base, from the same rows
+  // (paidClubBase / paymentBase ride on every rankings row). Payments are
+  // year-to-date against last year's full-year total, so the label says
+  // YTD (re-review S2). The loading
+  // shell holds the same line with an em dash so the strip's height is
+  // data-independent.
+  const signedDelta = (n: number) =>
+    n === 0 ? '0' : `${n > 0 ? '+' : '−'}${Math.abs(n).toLocaleString()}`
+  const kpiSub = (reserve: boolean) => {
+    if (reserve || kpiTotals.tracked === 0) {
+      return { paidClubs: '—', payments: '—', distinguished: '—' }
+    }
+    const pct =
+      kpiTotals.paidClubs > 0
+        ? Math.round((kpiTotals.distinguishedClubs / kpiTotals.paidClubs) * 100)
+        : null
+    return {
+      paidClubs: `${signedDelta(kpiTotals.paidClubs - kpiTotals.paidClubBase)} vs PY start`,
+      payments: `${signedDelta(kpiTotals.totalPayments - kpiTotals.paymentBase)} YTD vs last year's total`,
+      distinguished: pct === null ? '—' : `${pct}% of paid clubs`,
+    }
   }
 
   // Get district IDs for selected regions
@@ -580,6 +584,15 @@ const DistrictsPage: React.FC = () => {
     return row?.displayRank ?? null
   }, [rankedRankings, myDistrictId])
 
+  // #2249 — the starred district's row, for the card under the search.
+  const myDistrictRow = React.useMemo(
+    () =>
+      myDistrictId
+        ? rankedRankings.find(r => r.districtId === myDistrictId)
+        : undefined,
+    [rankedRankings, myDistrictId]
+  )
+
   const { diff: lastVisitDiff, commit: commitLastVisit } = useLastVisit({
     currentAsOfDate: data?.asOfDate ?? null,
     currentMyRank: myDistrictCurrentRank,
@@ -673,16 +686,6 @@ const DistrictsPage: React.FC = () => {
         </button>
       </div>
     ) : null
-
-  // Type-ahead suggestions for the search bar (#435). Top 5 matches.
-  const searchSuggestions = React.useMemo(() => {
-    if (!searchQuery.trim()) return []
-    return displayRankings.slice(0, 5)
-  }, [displayRankings, searchQuery])
-
-  // One source of truth for "the suggestions listbox is in the DOM" (#1360),
-  // so the input's aria-controls can never reference an id that isn't mounted.
-  const suggestionsOpen = searchFocused && searchSuggestions.length > 0
 
   // Show the right-edge scroll-cue ONLY when the rankings table actually
   // overflows to the right. A permanent fade would wash out the right-aligned
@@ -799,8 +802,9 @@ const DistrictsPage: React.FC = () => {
   }
 
   // #1846 — the phone context bar, mounted in the shell AND the loaded tree
-  // so the data landing never inserts it (CLS). The orientation copy is the
-  // desktop strip's sentence, worded for touch (no "/" shortcut, "Tap").
+  // so the data landing never inserts it (CLS). The sheet's how-to is worded
+  // for touch; since #2249 it carries no district count (the sentence that
+  // did is gone with the orientation paragraph).
   const landingContextBarProps = {
     selectedProgramYear,
     setSelectedProgramYear,
@@ -811,12 +815,80 @@ const DistrictsPage: React.FC = () => {
     effectiveDate: effectiveRankingsDate,
     asOfDate: data?.asOfDate,
     isLatestSnapshot,
-    orientation: `Each row below is ${
-      kpiTotals.tracked > 0
-        ? `one of the ${kpiTotals.tracked} Toastmasters districts`
-        : 'a Toastmasters district'
-    } worldwide. Tap a district to drill into its clubs, divisions, and trends. Use the search bar to jump to a district by number or name. Star (★) a district to keep it pinned at the top across visits.`,
+    orientation:
+      'Every Toastmasters district, ranked. Tap a district to drill into its clubs, divisions, and trends. Star (★) a district to keep it pinned at the top across visits.',
   }
+
+  // #2249 — the hero's "find anything" field, first in the hero stack in
+  // EVERY shell state. It needs no data (the index loads on focus), so the
+  // real component is its own reserve and the data landing moves nothing.
+  const heroSearch = (
+    <div className="districts-toolbar__search--hero districts-hero-search">
+      <LandingSearch inputRef={searchInputRef} />
+    </div>
+  )
+
+  // #2249 — the ?q= row filter, now a labelled field in the toolbar (the
+  // hero search navigates; this narrows the table). `reserve` renders the
+  // same box disabled in the loading shell so the toolbar's height is exact.
+  const rowFilter = (reserve: boolean) => (
+    <div className="districts-toolbar__row districts-toolbar__row--filter">
+      <span className="districts-toolbar__label" aria-hidden="true">
+        Filter:
+      </span>
+      <div className="districts-toolbar__search">
+        <div className="districts-toolbar__search-icon">
+          <svg
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 5h18M6 12h12M10 19h4"
+            />
+          </svg>
+        </div>
+        <input
+          type="text"
+          value={reserve ? '' : searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Filter by number or name…"
+          aria-label="Filter districts"
+          disabled={reserve}
+          className="districts-toolbar__search-input"
+        />
+        {!reserve && searchQuery && (
+          <button
+            type="button"
+            aria-label="Clear filter"
+            onClick={() => setSearchQuery('')}
+            className="districts-toolbar__search-clear"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
+    </div>
+  )
 
   // #826 / #488 — Shared shell: the loading skeleton, both isError
   // branches, and the loaded page all sit inside .districts-page-root
@@ -846,22 +918,12 @@ const DistrictsPage: React.FC = () => {
               Program Year {selectedProgramYear.label.replace(/-/g, '–')}
             </p>
             <h1 className="districts-page-header__title">
-              District Rankings
+              Find a district, club or region
               <ProgramYearTitleSuffix programYear={selectedProgramYear} />
             </h1>
             <p className="districts-page-header__lede districts-page-header__lede--keep">
-              Compare district performance across paid clubs, payments, and
-              distinguished clubs.
-            </p>
-            <p
-              className="districts-page-header__orientation"
-              data-testid="districts-orientation"
-            >
-              Each row below is {districtCountPhrase(reserveHeroSlots)}{' '}
-              worldwide. Click a district to drill into its clubs, divisions,
-              and trends. Use the search bar (or press <kbd>/</kbd>) to jump to
-              a district by number or name. Star (★) a district to keep it
-              pinned at the top across visits.
+              Rankings, trends and club health for every Toastmasters district,
+              worldwide.
             </p>
           </div>
           {/* #922 — reserve the mobile-stacked header-actions slot
@@ -910,13 +972,17 @@ const DistrictsPage: React.FC = () => {
             toolbar and the desktop search unreserved — a measured 452px jump
             at 1350px and 328px at 375px when the data landed. */}
         <div className="districts-hero-stack">
+          {heroSearch}
+          {/* #2249 — the my-district card is data-fed; reserve its box
+              whenever a star is set (known synchronously from storage). */}
+          {myDistrictId && <MyDistrictCardReserve />}
           <div className="districts-kpi-strip" aria-hidden="true">
             {[
-              'Paid Clubs · Global',
-              'Total Payments',
-              'Distinguished Clubs',
-              'Districts Tracked',
-            ].map((label, i) => (
+              ['Paid Clubs · Global', 'kpi-paid-clubs'],
+              ['Total Payments', 'kpi-total-payments'],
+              ['Distinguished Clubs', 'kpi-distinguished-clubs'],
+              ['Districts Tracked', 'kpi-districts-tracked'],
+            ].map(([label, id], i) => (
               <div
                 key={label}
                 className={`districts-kpi-card${i > 0 ? ' districts-kpi-card--secondary' : ''}`}
@@ -933,21 +999,28 @@ const DistrictsPage: React.FC = () => {
                   className="districts-kpi-card__value animate-pulse bg-gray-200 rounded-sm"
                   style={{ height: 30, width: '60%' }}
                 />
+                <p
+                  className="districts-kpi-card__sub"
+                  data-testid={`${id}-delta`}
+                >
+                  —
+                </p>
               </div>
             ))}
           </div>
+          {/* #2249 — World pulse, reserved with the other data-fed slots. */}
+          {reserveHeroSlots && (
+            <WorldPulse
+              rows={[]}
+              date={effectiveRankingsDate}
+              programYear={selectedProgramYear.label}
+              reserve
+            />
+          )}
+          {/* #2249 — the Red Vote block is static, so the real thing. */}
+          {reserveHeroSlots && <RedVoteBlock />}
           {reserveHeroSlots && (
             <>
-              {/* The section's own #750 skeleton — same component, so the
-                  reserve cannot drift from what it reserves for. Hidden
-                  <768px by .awards-race, where the mobile link takes over. */}
-              <AwardsRaceSection standings={null} isLoading />
-              {/* Static destination, so render the real link rather than a
-                  placeholder: it needs no data and works while loading. */}
-              <Link to="/awards" className="awards-race-mobile-link">
-                See Awards
-                <span aria-hidden="true"> →</span>
-              </Link>
               {/* Region toolbar. One chip row, and since #1359 gap (c) that
                   is EXACT below 768px too: the loaded row is a single
                   horizontally-scrolling line whatever the region count, so
@@ -980,18 +1053,10 @@ const DistrictsPage: React.FC = () => {
                   onChange={noopRecognitionChange}
                   disabled
                 />
+                {rowFilter(true)}
               </div>
             </>
           )}
-          {/* #861 — hero-search reserve, held in EVERY shell state (loading
-              and both error branches), unlike the data-dependent slots
-              above. Carries the real --hero modifier, so the stack's <768px
-              `order: -1` rule hoists this reserve above the KPI strip
-              exactly as it hoists the loaded search. */}
-          <div
-            className="districts-hero-search-skeleton districts-toolbar__search--hero"
-            aria-hidden="true"
-          />
         </div>
         {/* #1361 — the Recognition legend sits between the hero stack and the
             rankings table in the loaded tree, so the shell must hold that slot
@@ -1003,6 +1068,21 @@ const DistrictsPage: React.FC = () => {
             load explains nothing. */}
         {reserveHeroSlots && <RecognitionLegend />}
         {body}
+        {/* #2249 — the Awards Race sits below the table now (leaders-only,
+            out of the first screen). Its own #750 skeleton — same component,
+            so the reserve cannot drift from what it reserves for — is held
+            here, after the loading body, in the loaded tree's order. Hidden
+            <768px by .awards-race, where the mobile link takes over; the
+            link is static, so it is the real thing. */}
+        {reserveHeroSlots && (
+          <>
+            <AwardsRaceSection standings={null} isLoading />
+            <Link to="/awards" className="awards-race-mobile-link">
+              See Awards
+              <span aria-hidden="true"> →</span>
+            </Link>
+          </>
+        )}
       </div>
     </div>
   )
@@ -1583,23 +1663,12 @@ const DistrictsPage: React.FC = () => {
               Program Year {selectedProgramYear.label.replace(/-/g, '–')}
             </p>
             <h1 className="districts-page-header__title">
-              District Rankings
+              Find a district, club or region
               <ProgramYearTitleSuffix programYear={selectedProgramYear} />
             </h1>
             <p className="districts-page-header__lede districts-page-header__lede--keep">
-              Compare district performance across paid clubs, payments, and
-              distinguished clubs.
-            </p>
-            {/* Orientation strip (#415) — orients first-time visitors. */}
-            <p
-              className="districts-page-header__orientation"
-              data-testid="districts-orientation"
-            >
-              Each row below is {districtCountPhrase(false)} worldwide. Click a
-              district to drill into its clubs, divisions, and trends. Use the
-              search bar (or press <kbd>/</kbd>) to jump to a district by number
-              or name. Star (★) a district to keep it pinned at the top across
-              visits.
+              Rankings, trends and club health for every Toastmasters district,
+              worldwide.
             </p>
             {/* What changed since last visit (#418) — only renders when the
                 user has visited before AND the snapshot date has changed.
@@ -1702,6 +1771,21 @@ const DistrictsPage: React.FC = () => {
             (order:-1) below 768px. At ≥768px the natural source order is kept,
             so desktop is visually unchanged. */}
         <div className="districts-hero-stack">
+          {heroSearch}
+          {/* #2249 — the starred district, one tap away; rendered whenever a
+              star is set (even off this year's rankings) so the shell's
+              reserve never collapses (review S10). */}
+          {myDistrictId && (
+            <MyDistrictCard
+              districtId={myDistrictId}
+              districtName={myDistrictRow?.districtName ?? ''}
+              rank={myDistrictRow?.displayRank ?? null}
+              total={kpiTotals.tracked}
+              rankDelta={lastVisitDiff.myRankDelta}
+              previousDate={lastVisitDiff.previousDate}
+              asOfDate={data?.asOfDate ?? null}
+            />
+          )}
           {/* Global KPI strip (#356, tooltips per #413) */}
           <div className="districts-kpi-strip">
             <div className="districts-kpi-card">
@@ -1715,6 +1799,12 @@ const DistrictsPage: React.FC = () => {
               >
                 {kpiTotals.paidClubs.toLocaleString()}
               </div>
+              <p
+                className="districts-kpi-card__sub"
+                data-testid="kpi-paid-clubs-delta"
+              >
+                {kpiSub(false).paidClubs}
+              </p>
             </div>
             <div className="districts-kpi-card districts-kpi-card--secondary">
               <p className="districts-kpi-card__label">
@@ -1727,6 +1817,12 @@ const DistrictsPage: React.FC = () => {
               >
                 {kpiTotals.totalPayments.toLocaleString()}
               </div>
+              <p
+                className="districts-kpi-card__sub"
+                data-testid="kpi-total-payments-delta"
+              >
+                {kpiSub(false).payments}
+              </p>
             </div>
             <div className="districts-kpi-card districts-kpi-card--secondary">
               <p className="districts-kpi-card__label">
@@ -1739,6 +1835,12 @@ const DistrictsPage: React.FC = () => {
               >
                 {kpiTotals.distinguishedClubs.toLocaleString()}
               </div>
+              <p
+                className="districts-kpi-card__sub"
+                data-testid="kpi-distinguished-clubs-delta"
+              >
+                {kpiSub(false).distinguished}
+              </p>
             </div>
             <div className="districts-kpi-card districts-kpi-card--secondary">
               <p className="districts-kpi-card__label">
@@ -1751,25 +1853,23 @@ const DistrictsPage: React.FC = () => {
               >
                 {kpiTotals.tracked.toLocaleString()}
               </div>
+              <p
+                className="districts-kpi-card__sub"
+                data-testid="kpi-districts-tracked-delta"
+              >
+                {data?.asOfDate ? `as of ${data.asOfDate}` : '—'}
+              </p>
             </div>
           </div>
-
-          {/* Awards Race — competitive district awards (#331).
-              #862 — at <768px the heavy 3-card section is deferred behind a
-              compact "See Awards →" link to its canonical home (/awards); the
-              full section returns at ≥768px. Both stay mounted — the toggle is
-              pure CSS `display` (see .awards-race / .awards-race-mobile-link),
-              so the desktop render path and the #750 reserved-skeleton CLS
-              contract are untouched, and the mobile section never expands to
-              shift the page. */}
-          <AwardsRaceSection
-            standings={competitiveAwards ?? null}
-            isLoading={isLoadingAwards}
+          {/* #2249 — World pulse: attention figures, the membership line and
+              the regions, for international leaders and observers. */}
+          <WorldPulse
+            rows={rankings}
+            date={effectiveRankingsDate}
+            programYear={selectedProgramYear.label}
           />
-          <Link to="/awards" className="awards-race-mobile-link">
-            See Awards
-            <span aria-hidden="true"> →</span>
-          </Link>
+          {/* #2249 — Red Vote: prominent but secondary, in its own brand. */}
+          <RedVoteBlock />
 
           {/* Region Filter Toolbar — compact (#83). The dedicated "Sort by:"
             button row was retired in #851: sort now lives on the table
@@ -1880,133 +1980,9 @@ const DistrictsPage: React.FC = () => {
               filter={recognitionFilter}
               onChange={setRecognitionFilter}
             />
-          </div>
-
-          {/* Search Bar — promoted to hero prominence (#435). Larger input,
-            type-ahead suggestions, '/' keyboard shortcut. */}
-          <div
-            className="districts-toolbar__search districts-toolbar__search--hero"
-            style={{ marginBottom: 12 }}
-          >
-            <div className="districts-toolbar__search-icon">
-              <svg
-                width="20"
-                height="20"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              onFocus={() => setSearchFocused(true)}
-              onBlur={() => {
-                // Delay so click on a suggestion can register before blur hides
-                window.setTimeout(() => setSearchFocused(false), 150)
-              }}
-              /* #1846 — a phone has no "/" key to press, and the hint was
-                 what truncated the placeholder at 375. */
-              placeholder={
-                isMobile
-                  ? 'Search by district number or name…'
-                  : 'Search by district number or name… (press /)'
-              }
-              aria-label="Search districts by number or name"
-              /* Gated on the listbox actually being mounted (#1360). It only
-                 renders while focused with matches, and a dangling
-                 aria-controls is its own axe violation
-                 (`aria-valid-attr-value`) — previously masked, because axe
-                 exempts an unresolved target when aria-expanded="false" says
-                 the popup is collapsed. Same form as HeaderSearch.tsx. */
-              aria-controls={
-                suggestionsOpen ? 'district-search-suggestions' : undefined
-              }
-              /* No aria-expanded (#1360). It is not an allowed attribute on a
-                 plain textbox — axe flags it `critical` — and the only role
-                 that permits it here, `combobox`, would be a lie about this
-                 widget. WAI-ARIA's combobox contract is keyboard-owned: Down/Up
-                 move a virtual focus via aria-activedescendant, Enter selects,
-                 Escape dismisses, and the options are NOT in the tab order.
-                 This input has no onKeyDown at all, and its suggestions are
-                 <Link>s — natively focusable anchors the user tabs to. Claiming
-                 the role would promise an interaction model that does not
-                 exist. The app already ships the real thing where the semantics
-                 are earned: AppShell/HeaderSearch.tsx. aria-controls stays —
-                 it is a global attribute, valid on any role, and the
-                 input→suggestions relationship it names is genuine. */
-              className="districts-toolbar__search-input"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                aria-label="Clear search"
-                onClick={() => setSearchQuery('')}
-                style={{
-                  position: 'absolute',
-                  right: 12,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'transparent',
-                  border: 0,
-                  color: 'var(--ink-3)',
-                  cursor: 'pointer',
-                }}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            )}
-            {suggestionsOpen && (
-              <ul
-                id="district-search-suggestions"
-                role="listbox"
-                aria-label="District search suggestions"
-                className="districts-toolbar__search-suggestions"
-              >
-                {searchSuggestions.map(s => (
-                  <li key={s.districtId} role="option" aria-selected={false}>
-                    <Link
-                      to={`/district/${s.districtId}`}
-                      role="option"
-                      aria-selected={false}
-                      className="districts-toolbar__search-suggestion"
-                    >
-                      <DistrictChipAndName
-                        districtId={s.districtId}
-                        name={s.districtName}
-                        chipClassName="districts-toolbar__search-suggestion-num"
-                        nameClassName="districts-toolbar__search-suggestion-name"
-                      />
-                      <span className="districts-toolbar__search-suggestion-rank">
-                        #{s.displayRank}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {/* Row filter (#91, ?q= #978) — narrows the table; the hero
+                search above is what navigates (#2249). */}
+            {rowFilter(false)}
           </div>
           {/* /.districts-hero-stack (#861) */}
         </div>
@@ -2020,6 +1996,8 @@ const DistrictsPage: React.FC = () => {
 
         {/* Rankings Table */}
         <div className="districts-rankings-table-wrap">
+          {/* #2249 — the table keeps the name the page used to carry as H1. */}
+          <h2 className="districts-rankings-title">District Rankings</h2>
           {/* Methodology affordance — single visible "i" beside a quiet
               "About these metrics" label, replacing the four per-column
               tooltips that used to wrap the header row (#546). Kept
@@ -2100,6 +2078,24 @@ const DistrictsPage: React.FC = () => {
             }
           />
         </div>
+
+        {/* Awards Race — competitive district awards (#331), below the
+            table since #2249 (leaders-only, so out of the first screen).
+            #862 — at <768px the heavy 3-card section is deferred behind a
+            compact "See Awards →" link to its canonical home (/awards); the
+            full section returns at ≥768px. Both stay mounted — the toggle is
+            pure CSS `display` (see .awards-race / .awards-race-mobile-link),
+            so the desktop render path and the #750 reserved-skeleton CLS
+            contract are untouched, and the mobile section never expands to
+            shift the page. */}
+        <AwardsRaceSection
+          standings={competitiveAwards ?? null}
+          isLoading={isLoadingAwards}
+        />
+        <Link to="/awards" className="awards-race-mobile-link">
+          See Awards
+          <span aria-hidden="true"> →</span>
+        </Link>
 
         {/* Historical Rank Progression — collapsed by default (#83) */}
         <details className="bg-white rounded-lg shadow-md mt-4">
@@ -2204,56 +2200,12 @@ const DistrictsPage: React.FC = () => {
           </div>
         </details>
 
-        {/* Legend */}
-        <div className="bg-white rounded-lg shadow-md p-6 mt-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Scoring Methodology
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-4">
-            <div>
-              <span className="font-medium text-gray-900">Paid Clubs:</span>{' '}
-              Number of clubs with paid memberships
-            </div>
-            <div>
-              <span className="font-medium text-gray-900">Total Payments:</span>{' '}
-              Year-to-date membership payments
-            </div>
-            <div>
-              <span className="font-medium text-gray-900">
-                Distinguished Clubs:
-              </span>{' '}
-              Clubs achieving distinguished status
-            </div>
-          </div>
-          <div className="bg-tm-loyal-blue-10 border-l-4 border-tm-loyal-blue p-4 text-sm">
-            <p className="font-medium text-tm-loyal-blue mb-2 font-tm-headline">
-              Ranking Formula (Borda Count System):
-            </p>
-            <p className="text-tm-loyal-blue-80 font-tm-body">
-              Each district is ranked in three categories: Paid Clubs, Total
-              Payments, and Distinguished Clubs. Points are awarded based on
-              rank position (higher rank = more points).
-            </p>
-            <p className="text-tm-loyal-blue-70 mt-2 font-tm-body">
-              <strong>Point Allocation:</strong> If there are N districts, rank
-              #1 receives N points, rank #2 receives N-1 points, and so on. The{' '}
-              <strong>Overall Score</strong> is the sum of points from all three
-              categories (higher is better).
-            </p>
-            <p className="text-tm-loyal-blue-70 mt-2 text-xs font-tm-body">
-              Example: With 100 districts, if a district ranks #5 in Paid Clubs
-              (96 pts), #3 in Payments (98 pts), and #8 in Distinguished Clubs
-              (93 pts), their Overall Score = 96 + 98 + 93 = 287 points
-            </p>
-          </div>
-        </div>
-
-        {/* Forward-pointer to the dedicated methodology page (#356).
-            The legacy in-page Scoring Methodology block above stays as
-            the canonical explainer until #368 ships real /methodology
-            content; #369 will remove the duplication. */}
+        {/* Forward-pointer to the dedicated methodology page (#356). The
+            in-page Borda explainer that duplicated /methodology was
+            removed in #2249. */}
         <div className="districts-methodology-callout">
-          Definitions, refresh cadence, and known caveats live on the{' '}
+          Scoring (Borda count), definitions, refresh cadence, and known caveats
+          live on the{' '}
           <a
             href="/methodology"
             className="districts-methodology-callout__link"
@@ -2262,10 +2214,6 @@ const DistrictsPage: React.FC = () => {
           </a>{' '}
           page.
         </div>
-
-        {/* Red Vote seasonal banner (#2090) — in season only, last on the
-            loaded page, so it never covers data or shifts it. */}
-        <RedVotePromo surface="landing" />
       </div>
     </div>
   )

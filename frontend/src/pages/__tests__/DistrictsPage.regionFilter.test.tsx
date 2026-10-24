@@ -320,10 +320,9 @@ describe('Region filter — AND across groups', () => {
     fireEvent.click(chip('03'))
     await waitFor(() => expect(visibleIds()).toEqual(['76', '59', '99']))
 
-    fireEvent.change(
-      screen.getByLabelText(/search districts by number or name/i),
-      { target: { value: '99' } }
-    )
+    fireEvent.change(screen.getByLabelText(/filter districts/i), {
+      target: { value: '99' },
+    })
     await waitFor(() => expect(visibleIds()).toEqual(['99']))
   })
 })

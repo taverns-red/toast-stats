@@ -172,7 +172,7 @@ describe('DistrictsPage rankings priority columns below 768 (#1834)', () => {
     renderWithProviders(<DistrictsPage />)
     await screen.findAllByTestId(/^district-row-/)
     await userEvent.type(
-      screen.getByRole('textbox', { name: /search districts/i }),
+      screen.getByRole('textbox', { name: /filter districts/i }),
       'zzz-no-match'
     )
     expect(
@@ -261,7 +261,7 @@ describe('DistrictsPage phone rankings reveal (#1834)', () => {
     renderWithProviders(<DistrictsPage />)
     await screen.findAllByTestId(/^district-row-/)
     await userEvent.type(
-      screen.getByRole('textbox', { name: /search districts/i }),
+      screen.getByRole('textbox', { name: /filter districts/i }),
       'District'
     )
     expect(rowIds()).toHaveLength(60)

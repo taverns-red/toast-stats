@@ -31,10 +31,10 @@ describe('Journey 01: The Navigation Flow', () => {
   it('navigates from landing page to District 61 overview', async () => {
     render(<App />)
 
-    // Step 1: Landing page loads successfully (#356 redesign chrome)
+    // Step 1: Landing page loads successfully (#356 chrome; #2249 H1)
     const landingHeading = await screen.findByRole('heading', {
       level: 1,
-      name: /^district rankings$/i,
+      name: /^find a district, club or region$/i,
     })
     expect(landingHeading).toBeInTheDocument()
 
@@ -48,7 +48,7 @@ describe('Journey 01: The Navigation Flow', () => {
 
     // Step 3: Search for specific district (optional, since filter does it)
     const searchInput = screen.getByRole('textbox', {
-      name: /Search districts by number or name/i,
+      name: /filter districts/i,
     })
     await user.type(searchInput, '61')
 

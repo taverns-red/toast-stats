@@ -12,7 +12,7 @@ import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import App from '../../../App'
-import { clickSearchSuggestion } from './_helpers'
+import { clickDistrictRow } from './_helpers'
 
 import { setupCdnFetchMock } from '../utils/mockCdnData'
 
@@ -60,11 +60,11 @@ describe('Journey 05: The Division/Area Performance Flow', () => {
     // Step 0: Search and Navigate to District 61
     const searchInput = await screen.findByRole(
       'textbox',
-      { name: /Search districts by number or name/i },
+      { name: /filter districts/i },
       { timeout: 5000 }
     )
     await user.type(searchInput, '61')
-    await clickSearchSuggestion(user, /D61.*District 61/i)
+    await clickDistrictRow(user, '61')
 
     // Step 1: Wait for District 61 header to appear to confirm we are inside details
     const districtHeading = await screen.findByRole(

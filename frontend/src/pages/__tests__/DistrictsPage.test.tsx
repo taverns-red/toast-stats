@@ -446,8 +446,11 @@ describe('DistrictsPage - Table Cell Rendering', () => {
     await screen.findByText('District 1')
 
     // Scope to the rankings table — the KPI strip from #356 also renders
-    // these same numbers as global totals.
-    const table = within(container.querySelector('table')!)
+    // these same numbers as global totals, and the World pulse (#2249)
+    // puts a regions table before it in the DOM.
+    const table = within(
+      container.querySelector('table[aria-label="District rankings"]')!
+    )
 
     // Check paid clubs column. Per #546 the "Rank " word prefix is
     // dropped — per-metric cells show just "#N · +X.X%".
@@ -624,21 +627,20 @@ describe('DistrictsPage - Layout Order (#83)', () => {
     expect(selectRegionsButton).toHaveAttribute('aria-expanded', 'true')
   })
 
-  it('renders the redesign h1 "District Rankings" (#356)', async () => {
+  it('renders the h1 "Find a district, club or region" (#356, #2249)', async () => {
     setupWithData()
 
     renderWithProviders(<DistrictsPage />)
 
     await screen.findByText('District 1')
 
-    // The h1 was rewritten in #356 — old wording was "Toastmasters District
-    // Rankings" with a text-2xl class; the redesign uses just "District
-    // Rankings" with the .districts-page-header__title class (Montserrat
-    // 800 / 28px). The chrome contract is asserted in detail by
+    // #356 rewrote the h1 to "District Rankings"; #2249 made the page's
+    // primary job its title and moved "District Rankings" to the table's
+    // own h2. The chrome contract is asserted in detail by
     // DistrictsPage.redesign.test.tsx.
     const heading = screen.getByRole('heading', {
       level: 1,
-      name: /^district rankings$/i,
+      name: /^find a district, club or region$/i,
     })
     expect(heading).toBeInTheDocument()
   })
@@ -725,7 +727,11 @@ describe('DistrictsPage - My District sticky pin (#417)', () => {
     fireEvent.click(star2)
 
     // After click, District 2 should appear before District 1 in DOM order
-    const rows = screen.getAllByRole('row')
+    // (scoped to the rankings table: the World pulse's regions table also
+    // has rows, #2249).
+    const rows = within(
+      screen.getByRole('table', { name: 'District rankings' })
+    ).getAllByRole('row')
     const dataRows = rows.slice(1) // skip header
     const firstDistrictText =
       dataRows[0]?.querySelector('td:first-child')?.textContent || ''

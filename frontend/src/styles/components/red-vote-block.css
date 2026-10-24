@@ -1,0 +1,222 @@
+/* RedVoteBlock (#2249) — the ONE surface on the site in Red Vote's own
+   palette and type (brand v1.0 tokens from rt-brand-v1.css: --rt-vote,
+   --rt-red-dk, --rt-red-soft, --rt-paper, --rt-bg-2, --rt-ink*, Space
+   Grotesk / Inter). Allowlisted in noProductAccentUntilPhase2.test.ts; no
+   other stylesheet may use these tokens until Phase 2 (#2080).
+
+   Red Vote's own audit: brand red on a light surface is 4.16:1, so the
+   resting CTA is --rt-red-dk (ink-on-dk on it: 7.98:1) in BOTH themes, and
+   the hover is brand red with dark ink (4.62:1) — ink-on-dk on brand red
+   is 3.70:1 and fails (review B3). Fine print and eyebrow are --rt-ink-2
+   on paper (9.9:1); --rt-ink-3 was 3.07:1. RedVoteBlockContrast.test.ts
+   computes all of this from the tokens.
+   Red Vote sets every radius to 0 — square corners here too. The box is
+   static (no data), so it is its own CLS reserve; the stacks name the
+   metric-matched fallback faces (font-fallbacks.css) so the Space Grotesk /
+   Inter swap reflows nothing. */
+
+@layer components {
+  .red-vote-block {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    min-height: 220px;
+    margin-bottom: 20px;
+    padding: 20px;
+    background-color: var(--rt-paper);
+    border: 1px solid var(--rt-paper-3);
+    border-top: 4px solid var(--rt-vote);
+    border-radius: 0;
+    color: var(--rt-ink);
+    font-family: 'Inter Fallback', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .red-vote-block__brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .red-vote-block__pennant {
+    display: block;
+    flex: 0 0 auto;
+  }
+
+  /* The source SVG's fills (#E63946 flag, #F4F1EB "V") as tokens; the "V"
+     is set in the page's self-hosted Space Grotesk, as the file asks. */
+  .red-vote-block__pennant-flag {
+    fill: var(--rt-vote);
+  }
+
+  .red-vote-block__pennant-v {
+    fill: var(--rt-ink-on-dk);
+    font-family: 'Space Grotesk Fallback', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .red-vote-block__wordmark {
+    font-family: 'Space Grotesk Fallback', ui-sans-serif, system-ui, sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: var(--rt-track-snug);
+    color: var(--rt-ink);
+  }
+
+  .red-vote-block__eyebrow {
+    margin: 0 0 6px;
+    font-family: var(--rt-font-mono);
+    font-size: var(--rt-text-xs);
+    font-weight: 500;
+    letter-spacing: var(--rt-track-loose);
+    text-transform: uppercase;
+    color: var(--rt-ink-2);
+  }
+
+  .red-vote-block__heading {
+    margin: 0 0 8px;
+    font-family: 'Space Grotesk Fallback', ui-sans-serif, system-ui, sans-serif;
+    font-size: var(--rt-text-lg);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: var(--rt-track-snug);
+    color: var(--rt-ink);
+  }
+
+  .red-vote-block__body {
+    margin: 0;
+    font-size: var(--rt-text-base);
+    line-height: 1.5;
+    color: var(--rt-ink-2);
+  }
+
+  .red-vote-block__fine {
+    margin: 8px 0 0;
+    font-size: var(--rt-text-sm);
+    line-height: 1.4;
+    color: var(--rt-ink-2);
+  }
+
+  .red-vote-block__actions {
+    display: flex;
+    align-items: center;
+  }
+
+  .red-vote-block__cta {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 20px;
+    background-color: var(--rt-red-dk);
+    border: 1px solid var(--rt-red-dk);
+    border-radius: 0;
+    color: var(--rt-ink-on-dk);
+    font-family: 'Space Grotesk Fallback', ui-sans-serif, system-ui, sans-serif;
+    font-size: var(--rt-text-base);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color var(--rt-dur) var(--rt-ease);
+  }
+
+  .red-vote-block__cta:hover {
+    background-color: var(--rt-vote);
+    border-color: var(--rt-vote);
+    color: var(--rt-ink);
+  }
+
+  .red-vote-block__cta:focus-visible {
+    outline: 2px solid var(--rt-red-dk);
+    outline-offset: 3px;
+  }
+
+  @media (min-width: 768px) {
+    .red-vote-block {
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 24px;
+      min-height: 160px;
+      padding: 24px 28px;
+    }
+
+    .red-vote-block__brand {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+      padding-right: 24px;
+      border-right: 1px solid var(--rt-paper-3);
+    }
+
+    .red-vote-block__pennant {
+      width: 56px;
+      height: 40px;
+    }
+  }
+
+  /* Dark theme: Red Vote's own dark surfaces, not the app's. */
+  [data-theme='dark'] .red-vote-block {
+    background-color: var(--rt-bg-2);
+    border-color: var(--rt-bg-3);
+    border-top-color: var(--rt-vote);
+    color: var(--rt-ink-on-dk);
+  }
+
+  [data-theme='dark'] .red-vote-block__wordmark,
+  [data-theme='dark'] .red-vote-block__heading {
+    color: var(--rt-ink-on-dk);
+  }
+
+  [data-theme='dark'] .red-vote-block__body {
+    color: var(--rt-paper-2);
+  }
+
+  [data-theme='dark'] .red-vote-block__eyebrow,
+  [data-theme='dark'] .red-vote-block__fine {
+    color: var(--rt-ink-3);
+  }
+
+  [data-theme='dark'] .red-vote-block__brand {
+    border-right-color: var(--rt-bg-3);
+  }
+
+  [data-theme='dark'] .red-vote-block__cta {
+    background-color: var(--rt-red-dk);
+    border-color: var(--rt-red-dk);
+    color: var(--rt-ink-on-dk);
+  }
+
+  [data-theme='dark'] .red-vote-block__cta:hover {
+    background-color: var(--rt-vote);
+    border-color: var(--rt-vote);
+    color: var(--rt-ink);
+  }
+
+  [data-theme='dark'] .red-vote-block__cta:focus-visible {
+    outline-color: var(--rt-ink-on-dk);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .red-vote-block__cta {
+      transition: none;
+    }
+  }
+}
+
+/* Brand fonts only once the block nears the viewport (#2249, mobile
+   Lighthouse gate): the base stacks above name only the metric-matched
+   fallback faces, so no web font is fetched at first paint; RedVoteBlock
+   adds the modifier within 600px of the viewport and the swap reflows
+   nothing. */
+@layer components {
+  .red-vote-block--brand-fonts .red-vote-block__heading,
+  .red-vote-block--brand-fonts .red-vote-block__wordmark,
+  .red-vote-block--brand-fonts .red-vote-block__cta,
+  .red-vote-block--brand-fonts .red-vote-block__pennant-v {
+    font-family:
+      'Space Grotesk', 'Space Grotesk Fallback', var(--rt-font-display);
+  }
+
+  .red-vote-block--brand-fonts,
+  .red-vote-block--brand-fonts .red-vote-block__body,
+  .red-vote-block--brand-fonts .red-vote-block__fine {
+    font-family: 'Inter', 'Inter Fallback', var(--rt-font-body);
+  }
+}

@@ -11,12 +11,12 @@ import {
  * The key for the recognition badges (#1361).
  *
  * There was previously nothing anywhere on the landing page explaining what a
- * badge meant. But the legend must not eat the mobile fold (gap (c) on
- * #1359), so:
- *   - ≥640px it renders INLINE and the disclosure button is `display: none`;
- *   - below 640px it collapses behind "What do these badges mean?".
+ * badge meant. But the legend must not eat the fold (gap (c) on #1359), so
+ * it collapses behind "What do these badges mean?" — at every width since
+ * #2249 (it used to go inline at ≥640px; reference content between the
+ * filters and the data earns a disclosure, not a block).
  *
- * That switch is pure CSS (see `.recognition-legend` in app-shell.css and
+ * That is pure CSS (see `.recognition-legend` in app-shell.css and
  * `recognitionLegend.guard.test.ts`) — both branches are always in the DOM, so
  * there is no data-dependent insert and nothing for the layout to shift
  * around. The component itself needs no data, which is why the loading shell

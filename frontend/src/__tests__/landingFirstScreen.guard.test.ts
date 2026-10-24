@@ -48,10 +48,10 @@ describe('landing context bar (#1846)', () => {
     )
   })
 
-  it('hides the orientation paragraph below 768 once the bar is present', () => {
-    expect(contextBarCss).toMatch(
-      /\.context-bar\s*~\s*\.districts-page-header\s+\.districts-page-header__orientation/
-    )
+  // #2249 — the orientation paragraph is gone from the page, so the CSS
+  // that hid it below 768 has no referent and must not linger.
+  it('carries no rule for the retired orientation paragraph', () => {
+    expect(contextBarCss).not.toMatch(/districts-page-header__orientation/)
   })
 })
 

@@ -1,0 +1,172 @@
+/* LandingSearch (#2249) — the landing hero's "find anything" field.
+   Legacy palette only (#2080): --ink*, --surface*, --line, --loyal-400 /
+   --focus-ring, all remapped under [data-theme='dark']. The box is static
+   (label + 56px field) so the loading shell can render the same component
+   as its reserve and the data landing shifts nothing. */
+
+@layer components {
+  .landing-search {
+    position: relative;
+    margin-bottom: 16px;
+  }
+
+  .landing-search__label {
+    display: block;
+    margin-bottom: 8px;
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  .landing-search__field {
+    position: relative;
+  }
+
+  .landing-search__icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-4);
+    pointer-events: none;
+  }
+
+  .landing-search__input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 56px;
+    padding: 0 16px 0 48px;
+    background-color: var(--surface);
+    border: 2px solid var(--line);
+    border-radius: var(--rds-radius-md);
+    font-family: var(--sans);
+    font-size: 16px;
+    color: var(--ink);
+    transition: border-color 150ms;
+  }
+
+  .landing-search__input::placeholder {
+    color: var(--ink-4);
+  }
+
+  .landing-search__input:focus {
+    outline: none;
+    border-color: var(--loyal-400);
+  }
+
+  .landing-search__input:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* The list reuses the palette's result styles (command-palette__*), so a
+     result looks the same here, in the header and in the Cmd-K palette. */
+  .landing-search__results {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 420px;
+    overflow-y: auto;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-md);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  @media (min-width: 768px) {
+    .landing-search__label {
+      font-size: 16px;
+    }
+  }
+
+  /* The hero slot: first in .districts-hero-stack in every shell state. */
+  .districts-hero-search {
+    margin-bottom: 8px;
+  }
+
+  /* The rankings row filter (#2249) — a third toolbar row, same rhythm as
+     the Regions and Recognition rows above it. */
+  .districts-toolbar__row--filter .districts-toolbar__search {
+    max-width: 360px;
+  }
+
+  /* Touch target (WCAG 2.5.5, review B2): the shared input padding gives
+     42px; floor it at 44 here, where it is a toolbar control. */
+  .districts-toolbar__row--filter .districts-toolbar__search-input {
+    min-height: 44px;
+  }
+
+  .districts-toolbar__search-clear {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-3);
+    cursor: pointer;
+  }
+
+  .districts-toolbar__search-clear:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .districts-rankings-title {
+    margin: 0 8px 4px;
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+}
+
+/* Status line and Retry (review S4): the live region shares the palette's
+   empty-state style; Retry is a plain text button inside it. */
+@layer components {
+  .landing-search__status {
+    margin: 0;
+  }
+
+  .landing-search__retry {
+    padding: 0 4px;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    color: var(--link);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .landing-search__retry:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Landing H1 beside the header actions (#2249). Measured on the preview:
+   the intro column is 394px at 1024 (the actions share the row from ~900px)
+   and "Find a district, club or region" needs 419px at 28px, so it wrapped
+   (landing-header-tablet.smoke.ts). 25px (374px) still wrapped in the Linux
+   Chromium smoke: its classic ~15px scrollbar narrows the column to ~379px
+   and rasterisation eats the rest, so 23px (~344px, ~35px slack). From
+   1100 the column is 470px+ and 28px fits again. Landing-only. */
+@layer components {
+  @media (min-width: 900px) and (max-width: 1099px) {
+    .districts-page-root .districts-page-header__title {
+      font-size: 23px;
+    }
+  }
+}

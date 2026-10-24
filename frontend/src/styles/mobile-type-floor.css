@@ -55,8 +55,18 @@
 
   /* 4. Data, links, pills, chips, captions and prose: 14px. */
   /* Landing */
-  .districts-page-header__orientation,
-  .districts-orientation__count,
+  /* #2249: the Red Vote fine print and eyebrow, the World pulse tile
+     labels, captions and table head, the KPI sub-line and the my-district
+     eyebrow and movement line. The landing ratchets at 5% under 14px, so
+     even its uppercase labels take the floor. */
+  .red-vote-block__fine,
+  .red-vote-block__eyebrow,
+  .world-pulse__table thead th,
+  .my-district-card__eyebrow,
+  .world-pulse__tile-label,
+  .world-pulse__caption,
+  .districts-kpi-card__sub,
+  .my-district-card__move,
   .districts-methodology-callout,
   .districts-methodology-callout__link,
   .districts-toolbar__recognition-chip,

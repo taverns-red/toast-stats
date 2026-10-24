@@ -611,3 +611,35 @@ describe('closed clubs by name (#2062)', () => {
     expect(withClosedClubMatches(full, 'toast', closedIndex)).toBe(full)
   })
 })
+
+describe('site pages (#2249)', () => {
+  let index: SearchIndex
+  beforeEach(() => {
+    index = buildSearchIndex(RANKINGS, CLUBS, DIVISIONS_AREAS)
+  })
+
+  it('indexes the worldwide pages so "find anything" includes where things live', () => {
+    const pages = index.entities.filter(e => e.type === 'page')
+    expect(pages.map(p => [p.label, p.route])).toEqual([
+      ['Regions', '/regions'],
+      ['Clubs worldwide', '/clubs'],
+      ['Awards', '/awards'],
+      ['History', '/history'],
+      ['Methodology', '/methodology'],
+    ])
+  })
+
+  it('finds a page by a word of its name, in a trailing Pages group', () => {
+    const groups = searchEntities('method', index)
+    expect(groups.map(g => g.type)).toEqual(['page'])
+    expect(groups[0].entities[0].route).toBe('/methodology')
+  })
+
+  it('never lets a page outrank a district or club on a shared term', () => {
+    // "clubs" is in the "Clubs worldwide" page label and in a club name.
+    const flat = flatten(searchEntities('club', index))
+    const firstPage = flat.findIndex(e => e.type === 'page')
+    const lastNonPage = flat.map(e => e.type).lastIndexOf('club')
+    expect(firstPage).toBeGreaterThan(lastNonPage)
+  })
+})

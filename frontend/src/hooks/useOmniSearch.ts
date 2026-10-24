@@ -51,6 +51,11 @@ export interface UseOmniSearch {
   activeEntity: SearchEntity | undefined
   hasQuery: boolean
   handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void
+  /** The index fetch: `idle` while gated off, then loading → ready, or
+      `error` — which a surface must say out loud (#2249); `retryIndex`
+      refetches. */
+  indexStatus: 'idle' | 'loading' | 'ready' | 'error'
+  retryIndex: () => void
 }
 
 const INDEX_STALE_MS = 15 * 60 * 1000
@@ -60,12 +65,26 @@ export function useOmniSearch(options: UseOmniSearchOptions): UseOmniSearch {
   const [query, setQueryRaw] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
 
-  const { data: index } = useQuery({
+  const {
+    data: index,
+    isError: indexFailed,
+    refetch: refetchIndex,
+  } = useQuery({
     queryKey: ['omni-search-index'],
     queryFn: loadSearchIndex,
     staleTime: INDEX_STALE_MS,
     enabled,
   })
+  const indexStatus: UseOmniSearch['indexStatus'] = !enabled
+    ? 'idle'
+    : index
+      ? 'ready'
+      : indexFailed
+        ? 'error'
+        : 'loading'
+  const retryIndex = () => {
+    void refetchIndex()
+  }
 
   const currentGroups = useMemo(
     () => (index ? searchEntities(query, index) : []),
@@ -172,5 +191,7 @@ export function useOmniSearch(options: UseOmniSearchOptions): UseOmniSearch {
     activeEntity,
     hasQuery: query.trim().length > 0,
     handleKeyDown,
+    indexStatus,
+    retryIndex,
   }
 }
