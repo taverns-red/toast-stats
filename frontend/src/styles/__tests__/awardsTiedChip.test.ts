@@ -50,3 +50,30 @@ describe('/awards tied chip (#2264)', () => {
     expect(chip['white-space']).toBe('nowrap')
   })
 })
+
+// The 375 gate (e2e/mobile-375-gate.smoke.ts) also ratchets the share of
+// characters under 14px. The tie-note and chip only appear when there are ties,
+// and at 12px they pushed /awards to 7.2% against a 5% budget. On phones both
+// join the Awards group of the 14px floor in mobile-type-floor.css.
+describe('/awards tie labels on the phone 14px floor (#2264)', () => {
+  const floor = readFileSync(
+    resolve(__dirname, '../mobile-type-floor.css'),
+    'utf-8'
+  ).replace(/\/\*[\s\S]*?\*\//g, '')
+
+  /** The selector list of the rule that sizes `.awards-page-card__row`. */
+  const block = /([^{}]*\.awards-page-card__row,[^{}]*)\{([^}]*)\}/.exec(floor)
+
+  it('the Awards group is set to 14px', () => {
+    expect(block, 'awards rule in mobile-type-floor.css').not.toBeNull()
+    expect(block![2]).toMatch(/font-size:\s*14px/)
+  })
+
+  it.each(['.awards-page-card__tie-note', '.awards-page-card__tied'])(
+    '%s is in the 14px group',
+    sel => {
+      const selectors = block![1].split(',').map(s => s.trim())
+      expect(selectors).toContain(sel)
+    }
+  )
+})
