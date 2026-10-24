@@ -99,8 +99,16 @@ else
   echo "- ⚠️ the fetch printed no summary (exit ${status})" >>"${SUMMARY}"
 fi
 
-# 2. persist
-FETCHED="$(find "${FRESH}" -name 'district_*.json' 2>/dev/null | wc -l | tr -d ' ')"
+# 2. persist. The CLI creates ${FRESH} before it fetches, so a missing
+# folder means it died earlier (npx, config): count it as nothing fetched,
+# say so, and still print the result line (#2274). Without the check, the
+# find in the substitution fails under pipefail and aborts the script.
+if [ -d "${FRESH}" ]; then
+  FETCHED="$(find "${FRESH}" -name 'district_*.json' | wc -l | tr -d ' ')"
+else
+  echo "::warning::The Find-A-Club fetch created no output folder for ${DATE} (${FRESH}); it died before fetching"
+  FETCHED=0
+fi
 PERSISTED=0
 if [ "${FETCHED}" -eq 0 ]; then
   echo "::warning::The Find-A-Club fetch wrote nothing for ${DATE}; nothing to persist"
