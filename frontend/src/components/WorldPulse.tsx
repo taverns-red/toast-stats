@@ -21,12 +21,15 @@ import { useRegionRollups } from '../hooks/useRegionRollups'
 import { fetchCdnRegionMembershipSeries } from '../services/cdn'
 import type { SnapshotDate } from '../types/snapshotDate'
 
-/** The four fields the section reads from a rankings row. */
+/** The fields the section reads from a rankings row. */
 export interface WorldPulseRow {
   districtId: string
   region: string
   paidClubs: number
   paidClubBase: number
+  /** Year-to-date payments and last year's full-year total (#2256). */
+  totalPayments?: number
+  paymentBase?: number
 }
 
 interface WorldPulseProps {
