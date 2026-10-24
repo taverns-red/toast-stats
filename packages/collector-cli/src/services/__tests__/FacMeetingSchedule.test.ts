@@ -1004,8 +1004,16 @@ describe("parseMeetingSchedule (#2243) — '12 AM' before an afternoon end is no
     }
   )
 
+  it.each([['12-1 am'], ['12 - 1 am'], ['12 to 1:30 am']])(
+    'a bare 12 before an am end in %j is a 12 AM start → not stated, not 01:00',
+    time => {
+      expect(starts('Wednesday', time)).toEqual(['Wednesday ?'])
+    }
+  )
+
   it.each([
     ['00:30', '00:30'],
+    ['12-1 pm', '12:00'],
     ['12:00 PM', '12:00'],
     ['12 noon', '12:00'],
   ])('%j is not a 12 AM start (%s)', (time, start) => {
