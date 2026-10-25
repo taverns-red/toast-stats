@@ -107,9 +107,9 @@ describe('operator scripts resolve their bucket through it (#2286)', () => {
 
   it('the orchestrator forwards --allow-prod to every child script', () => {
     const src = read('prune-month-end-pipeline.ts')
-    const children = src.match(/npx ts-node scripts\/[\w-]+\.ts/g) ?? []
+    const children = src.match(/`npx ts-node scripts\/[\w-]+\.ts`/g) ?? []
     expect(children.length).toBe(3)
-    expect(src.match(/bucketFlag\(/g)?.length).toBe(3)
+    expect(src.match(/bucketFlag\(bucket, allowProd\)/g)?.length).toBe(3)
     expect(src).toMatch(/function bucketFlag\([\s\S]*?--allow-prod/)
   })
 

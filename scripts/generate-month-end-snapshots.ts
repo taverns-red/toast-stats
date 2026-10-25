@@ -16,6 +16,10 @@
  *   npx ts-node scripts/generate-month-end-snapshots.ts --execute
  *   npx ts-node scripts/generate-month-end-snapshots.ts --program-year 2024-2025
  *   npx ts-node scripts/generate-month-end-snapshots.ts --dry-run --json
+ *
+ * Bucket (#2286): pass --bucket <name> or set GCS_BUCKET; there is no
+ * default. Naming the prod bucket (toast-stats-data-ca) also needs
+ * --allow-prod.
  */
 
 import { execSync } from 'child_process'
@@ -28,6 +32,7 @@ import {
 } from './lib/monthEndDates.js'
 import { listRawCSVDates, readMetadataForDates } from './lib/gcsHelpers.js'
 import { selectDatesToProcess } from './lib/generateMonthEndSnapshots.js'
+import { resolveOperatorBucket } from './lib/operatorBucket.js'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -44,7 +49,11 @@ interface Args {
 
 function parseArgs(): Args {
   const args = process.argv.slice(2)
-  let bucket = process.env['GCS_BUCKET'] ?? 'toast-stats-data-ca'
+  const { bucket } = resolveOperatorBucket({
+    argv: args,
+    env: process.env,
+    writes: true,
+  })
   const projectId = process.env['GCP_PROJECT_ID']
   let cacheDir = process.env['CACHE_DIR'] ?? './cache'
   let dryRun = true
@@ -56,7 +65,7 @@ function parseArgs(): Args {
     if (arg === '--execute') dryRun = false
     else if (arg === '--dry-run') dryRun = true
     else if (arg === '--json') jsonOutput = true
-    else if (arg === '--bucket' && args[i + 1]) bucket = args[++i]!
+    else if (arg === '--bucket' && args[i + 1]) i++
     else if (arg === '--cache-dir' && args[i + 1]) cacheDir = args[++i]!
     else if (arg === '--program-year' && args[i + 1]) programYear = args[++i]!
   }
@@ -92,7 +101,8 @@ async function syncRawCSVToCache(
 
 function runCLI(
   command: string,
-  cacheDir: string
+  cacheDir: string,
+  bucket: string
 ): { ok: boolean; output: string } {
   try {
     const output = execSync(
@@ -100,7 +110,7 @@ function runCLI(
        npx ts-node packages/collector-cli/src/index.ts ${command}`,
       {
         cwd: process.cwd(),
-        env: { ...process.env, CACHE_DIR: cacheDir },
+        env: { ...process.env, CACHE_DIR: cacheDir, GCS_BUCKET: bucket },
         timeout: 300_000, // 5 min per date
       }
     ).toString()
@@ -140,7 +150,7 @@ async function processDate(
 
     // Step 2: Transform
     console.log(`  [2/4] Running transform --date ${date}...`)
-    const transformResult = runCLI(`transform --date ${date}`, cacheDir)
+    const transformResult = runCLI(`transform --date ${date}`, cacheDir, bucket)
     result.steps.transform = transformResult.ok
     if (!transformResult.ok) {
       result.error = `Transform failed: ${transformResult.output.slice(0, 200)}`
@@ -149,7 +159,11 @@ async function processDate(
 
     // Step 3: Analytics
     console.log(`  [3/4] Running compute-analytics --date ${date}...`)
-    const analyticsResult = runCLI(`compute-analytics --date ${date}`, cacheDir)
+    const analyticsResult = runCLI(
+      `compute-analytics --date ${date}`,
+      cacheDir,
+      bucket
+    )
     result.steps.analytics = analyticsResult.ok
     if (!analyticsResult.ok) {
       result.error = `Analytics failed: ${analyticsResult.output.slice(0, 200)}`
@@ -158,7 +172,7 @@ async function processDate(
 
     // Step 4: Upload
     console.log(`  [4/4] Running upload --date ${date}...`)
-    const uploadResult = runCLI(`upload --date ${date}`, cacheDir)
+    const uploadResult = runCLI(`upload --date ${date}`, cacheDir, bucket)
     result.steps.upload = uploadResult.ok
     if (!uploadResult.ok) {
       result.error = `Upload failed: ${uploadResult.output.slice(0, 200)}`

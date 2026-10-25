@@ -18,6 +18,10 @@
  *   npx ts-node scripts/prune-month-end-pipeline.ts --step 2 --execute
  *   npx ts-node scripts/prune-month-end-pipeline.ts --execute
  *   npx ts-node scripts/prune-month-end-pipeline.ts --program-year 2024-2025 --dry-run
+ *
+ * Bucket (#2286): pass --bucket <name> or set GCS_BUCKET; there is no
+ * default. Naming the prod bucket (toast-stats-data-ca) also needs
+ * --allow-prod.
  */
 
 import { execSync } from 'child_process'
@@ -28,11 +32,14 @@ import {
   getMonthsInProgramYear,
   isProgramYearComplete,
 } from './lib/monthEndDates.js'
+import { resolveOperatorBucket } from './lib/operatorBucket.js'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
 interface Args {
   bucket: string
+  /** --allow-prod was given; forwarded to every child script (#2286). */
+  allowProd: boolean
   projectId: string | undefined
   cacheDir: string
   dryRun: boolean
@@ -42,7 +49,11 @@ interface Args {
 
 function parseArgs(): Args {
   const argv = process.argv.slice(2)
-  let bucket = process.env['GCS_BUCKET'] ?? 'toast-stats-data-ca'
+  const { bucket, allowProd } = resolveOperatorBucket({
+    argv: argv,
+    env: process.env,
+    writes: true,
+  })
   const projectId = process.env['GCP_PROJECT_ID']
   let cacheDir = process.env['CACHE_DIR'] ?? './cache'
   let dryRun = true
@@ -53,13 +64,13 @@ function parseArgs(): Args {
     const arg = argv[i]
     if (arg === '--execute') dryRun = false
     else if (arg === '--dry-run') dryRun = true
-    else if (arg === '--bucket' && argv[i + 1]) bucket = argv[++i]!
+    else if (arg === '--bucket' && argv[i + 1]) i++
     else if (arg === '--cache-dir' && argv[i + 1]) cacheDir = argv[++i]!
     else if (arg === '--program-year' && argv[i + 1]) programYear = argv[++i]!
     else if (arg === '--step' && argv[i + 1]) step = parseInt(argv[++i]!, 10)
   }
 
-  return { bucket, projectId, cacheDir, dryRun, programYear, step }
+  return { bucket, allowProd, projectId, cacheDir, dryRun, programYear, step }
 }
 
 // ── Date Utilities ────────────────────────────────────────────────────────────
@@ -174,9 +185,15 @@ async function runStep1(
   return { keeperDates, missingMonths }
 }
 
+/** The child scripts' bucket arguments: a prod run stays a prod run. */
+function bucketFlag(bucket: string, allowProd: boolean): string {
+  return allowProd ? `--bucket ${bucket} --allow-prod` : `--bucket ${bucket}`
+}
+
 // ── Step 2: Raw-CSV Backfill ──────────────────────────────────────────────────
 
 function runStep2(
+  allowProd: boolean,
   dates: string[],
   bucket: string,
   projectId: string | undefined,
@@ -193,14 +210,13 @@ function runStep2(
 
   const dateList = dates.join(',')
   const flag = dryRun ? '--dry-run' : '--execute'
-  const bucketFlag = `--bucket ${bucket}`
   const projectFlag = projectId ? `GCP_PROJECT_ID=${projectId}` : ''
 
   const cmd = [
     projectFlag,
     `npx ts-node scripts/backfill-raw-csv-for-dates.ts`,
     `--dates ${dateList}`,
-    bucketFlag,
+    bucketFlag(bucket, allowProd),
     flag,
   ]
     .filter(Boolean)
@@ -218,6 +234,7 @@ function runStep2(
 // ── Step 3: Prune Raw-CSV Non-Keepers ────────────────────────────────────────
 
 function runStep3(
+  allowProd: boolean,
   keeperDates: string[],
   bucket: string,
   projectId: string | undefined,
@@ -229,7 +246,6 @@ function runStep3(
   console.log('-'.repeat(56))
 
   const flag = dryRun ? '--dry-run' : '--execute'
-  const bucketFlag = `--bucket ${bucket}`
   const pyFlag = programYear ? `--program-year ${programYear}` : ''
   const projectFlag = projectId ? `GCP_PROJECT_ID=${projectId}` : ''
 
@@ -237,7 +253,7 @@ function runStep3(
     projectFlag,
     `npx ts-node scripts/prune-daily-snapshots.ts`,
     `--target raw-csv`,
-    bucketFlag,
+    bucketFlag(bucket, allowProd),
     pyFlag,
     flag,
   ]
@@ -257,6 +273,7 @@ function runStep3(
 // ── Step 4: Snapshot Analytics Backfill ──────────────────────────────────────
 
 function runStep4(
+  allowProd: boolean,
   bucket: string,
   projectId: string | undefined,
   cacheDir: string,
@@ -268,7 +285,6 @@ function runStep4(
   console.log('-'.repeat(56))
 
   const flag = dryRun ? '--dry-run' : '--execute'
-  const bucketFlag = `--bucket ${bucket}`
   const cacheDirFlag = `--cache-dir ${cacheDir}`
   const pyFlag = programYear ? `--program-year ${programYear}` : ''
   const projectFlag = projectId ? `GCP_PROJECT_ID=${projectId}` : ''
@@ -276,7 +292,7 @@ function runStep4(
   const cmd = [
     projectFlag,
     `npx ts-node scripts/generate-month-end-snapshots.ts`,
-    bucketFlag,
+    bucketFlag(bucket, allowProd),
     cacheDirFlag,
     pyFlag,
     flag,
@@ -297,7 +313,8 @@ function runStep4(
 // ── Main ───────────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const { bucket, projectId, cacheDir, dryRun, programYear, step } = parseArgs()
+  const { bucket, allowProd, projectId, cacheDir, dryRun, programYear, step } =
+    parseArgs()
   const today = new Date()
 
   console.log('='.repeat(72))
@@ -331,15 +348,15 @@ async function main(): Promise<void> {
   }
 
   if (shouldRunStep2) {
-    runStep2(keeperDates, bucket, projectId, dryRun)
+    runStep2(allowProd, keeperDates, bucket, projectId, dryRun)
   }
 
   if (shouldRunStep3) {
-    runStep3(keeperDates, bucket, projectId, programYear, dryRun)
+    runStep3(allowProd, keeperDates, bucket, projectId, programYear, dryRun)
   }
 
   if (shouldRunStep4) {
-    runStep4(bucket, projectId, cacheDir, programYear, dryRun)
+    runStep4(allowProd, bucket, projectId, cacheDir, programYear, dryRun)
   }
 
   console.log()
