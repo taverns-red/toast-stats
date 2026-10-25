@@ -85,14 +85,74 @@ function simpleCommands(cmd: string): string[] {
  * `$GCLOUD`), followed by a write verb of `gcloud storage` (#2285).
  */
 const GCLOUD_STORAGE_WRITE =
-  /(?:gcloud|\$\{?[A-Za-z_]*GCLOUD[A-Za-z_]*\}?)["']?\s+storage\s+(cp|rsync|mv|rm|objects\s+update)\b/
+  /(?:gcloud|\$\{?[A-Za-z_]\w*\}?)["']?\s+storage\s+(cp|rsync|mv|rm|objects\s+update)\b/
+
+/** A write verb and the words after it, from one simple command. */
+interface StorageWrite {
+  verb: string
+  args: string
+}
+
+function gcloudStorageWrite(simple: string): StorageWrite | undefined {
+  const m = simple.match(GCLOUD_STORAGE_WRITE)
+  if (!m) return undefined
+  return {
+    verb: m[1].replace(/\s+/g, ' '),
+    args: simple.slice((m.index ?? 0) + m[0].length),
+  }
+}
+
+/** Shell words, quotes kept together. One char per step: linear time. */
+function shellWords(text: string): string[] {
+  return text.match(/(?:[^\s"']|"[^"]*"|'[^']*')+/g) ?? []
+}
+
+const GSUTIL_WRITE_VERBS: ReadonlySet<string> = new Set([
+  'cp',
+  'rsync',
+  'mv',
+  'rm',
+  'setmeta',
+  'compose',
+  'rewrite',
+  'acl',
+  'defacl',
+  'retention',
+])
 
 /**
  * gsutil and a write verb, past its top-level flags. `-h`, `-o`, `-u` and
- * `-i` take a value; the rest (`-m`, `-q`, …) do not (#2285).
+ * `-i` take a value; the rest (`-m`, `-q`, …) do not (#2285). A word scan,
+ * not a regex: the flag grammar is ambiguous enough that a regex for it
+ * backtracks exponentially (CodeQL js/redos).
  */
-const GSUTIL_WRITE =
-  /\bgsutil(?:\s+(?:-[hoiu]\s+(?:"[^"]*"|'[^']*'|\S+)|-[A-Za-z]+))*\s+(cp|rsync|mv|rm|setmeta|compose|rewrite|acl|defacl|retention)\b/
+function gsutilWrite(simple: string): StorageWrite | undefined {
+  // Whitespace words, so a gsutil inside `bash -c '…'` is still seen.
+  const words = simple.split(/\s+/)
+  let i = words.findIndex(w => /(?:^|[/"'(])gsutil$/.test(w))
+  if (i === -1) return undefined
+  i++
+  while (i < words.length) {
+    const w = words[i]
+    if (/^-[hoiu]$/.test(w)) {
+      i++
+      // A quoted value may span words: `-h "Cache-Control: no-store"`.
+      const q = words[i]?.[0]
+      if (
+        (q === '"' || q === "'") &&
+        !(words[i].length > 1 && words[i].endsWith(q))
+      ) {
+        i++
+        while (i < words.length && !words[i].endsWith(q)) i++
+      }
+      i++
+    } else if (/^-[A-Za-z]+$/.test(w)) i++
+    else break
+  }
+  const verb = words[i]
+  if (verb === undefined || !GSUTIL_WRITE_VERBS.has(verb)) return undefined
+  return { verb, args: words.slice(i + 1).join(' ') }
+}
 
 /** Verbs whose destination is their last argument; the others act in place. */
 const LAST_ARG_IS_TARGET: ReadonlySet<string> = new Set([
@@ -184,8 +244,11 @@ function scriptGivenProd(
  * the destination (`… gs://prod/x --no-clobber`) do not hide it (#2285).
  */
 function lastOperand(args: string): string {
-  const words = args.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) ?? []
-  return words.filter(w => !w.startsWith('-')).pop() ?? ''
+  return (
+    shellWords(args)
+      .filter(w => !w.startsWith('-'))
+      .pop() ?? ''
+  )
 }
 
 /** Why `run` writes to production; empty when it does not. */
@@ -199,20 +262,17 @@ export function prodWriteReasons(
     for (const simple of simpleCommands(cmd)) {
       const script = scriptGivenProd(simple, prodVars)
       if (script) reasons.push(`script given the production bucket: ${script}`)
-      for (const [tool, pattern] of [
-        ['gcloud storage', GCLOUD_STORAGE_WRITE],
-        ['gsutil', GSUTIL_WRITE],
+      for (const [tool, find] of [
+        ['gcloud storage', gcloudStorageWrite],
+        ['gsutil', gsutilWrite],
       ] as const) {
-        const m = simple.match(pattern)
-        if (!m) continue
-        const verb = m[1].replace(/\s+/g, ' ')
+        const w = find(simple)
+        if (!w) continue
+        const verb = w.verb
         const tokens = simple.split(/\s+/)
         const target = LAST_ARG_IS_TARGET.has(verb)
           ? isProdTarget(tokens[tokens.length - 1] ?? '', prodVars) ||
-            isProdTarget(
-              lastOperand(simple.slice((m.index ?? 0) + m[0].length)),
-              prodVars
-            )
+            isProdTarget(lastOperand(w.args), prodVars)
           : tokens.some(t => isProdTarget(t, prodVars))
         if (target) reasons.push(`${tool} ${verb} → production`)
       }

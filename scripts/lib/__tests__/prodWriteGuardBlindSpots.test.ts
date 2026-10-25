@@ -142,3 +142,15 @@ describe('prodWriteGuard runs in linear time (#2285, CodeQL js/redos)', () => {
     }
   })
 })
+
+describe('gsutil word scan keeps its reach (#2285)', () => {
+  it('still flags gsutil inside bash -c and after a spaced -h value', () => {
+    for (const run of [
+      "bash -c 'gsutil cp /tmp/a gs://toast-stats-data-ca/v1/a'",
+      'gsutil -m -h "Cache-Control: no-store" cp x gs://toast-stats-data-ca/v1/x',
+      '/usr/bin/gsutil rm gs://toast-stats-data-ca/v1/x',
+    ]) {
+      expect(prodWriteReasons(run), run).not.toEqual([])
+    }
+  })
+})
