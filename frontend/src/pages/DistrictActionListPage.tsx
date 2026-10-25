@@ -778,7 +778,16 @@ const DistrictActionListPage: React.FC = () => {
       count: sections.trainingShort.length,
       emptyText: `Every club in this scope has ${thresholdPhrase(sections.trainingThreshold)} this round.`,
       footnote: sections.trainingRound
-        ? `${sections.trainingDaysLeft} day${sections.trainingDaysLeft === 1 ? '' : 's'} left in the round, to ${formatDisplayDate(sections.trainingRound.end)}. Counts are officers trained, not which officers.`
+        ? [
+            `${sections.trainingDaysLeft} day${sections.trainingDaysLeft === 1 ? '' : 's'} left in the round, to ${formatDisplayDate(sections.trainingRound.end)}. Counts are officers trained, not which officers.`,
+            sections.trainingShortIneligibleCount > 0
+              ? sections.trainingShortIneligibleCount === 1
+                ? '1 suspended/ineligible club short of the threshold is not listed.'
+                : `${sections.trainingShortIneligibleCount} suspended/ineligible clubs short of the threshold are not listed.`
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' ')
         : undefined,
       csvRows: sections.trainingShort.map(c => [
         'Officer training',

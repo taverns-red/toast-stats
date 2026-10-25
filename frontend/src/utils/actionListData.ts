@@ -32,6 +32,7 @@ import { calculateClubProjection } from './dcpProjections'
 import { isCloseToDistinguished } from './closeToDistinguished'
 import { getAreaVisitDeadlines } from './areaRecognitionState'
 import { summarizeCspCompletion } from './cspCompletion'
+import { isIneligibleStatus } from './extractDivisionPerformance'
 import { getClubHealthStatusLabel } from './clubHealthStatus'
 import { getProgramYearForDate } from './programYear'
 import {
@@ -134,6 +135,11 @@ export interface ActionListSections {
   trainingThreshold: number
   /** In-scope clubs short of the threshold in the open round. */
   trainingShort: ShortClub[]
+  /**
+   * Suspended/ineligible clubs short of the threshold, footnoted rather than
+   * listed — the same treatment as the Club Success Plan section.
+   */
+  trainingShortIneligibleCount: number
 }
 
 export interface ActionListInput {
@@ -302,7 +308,11 @@ function trainingSection(
   programYear: string
 ): Pick<
   ActionListSections,
-  'trainingRound' | 'trainingDaysLeft' | 'trainingThreshold' | 'trainingShort'
+  | 'trainingRound'
+  | 'trainingDaysLeft'
+  | 'trainingThreshold'
+  | 'trainingShort'
+  | 'trainingShortIneligibleCount'
 > {
   const threshold = input.trainingThreshold ?? DEFAULT_TRAINING_THRESHOLD
   const none = {
@@ -310,19 +320,25 @@ function trainingSection(
     trainingDaysLeft: null,
     trainingThreshold: threshold,
     trainingShort: [],
+    trainingShortIneligibleCount: 0,
   }
   if (!input.trainingClubs || !input.snapshotDate) return none
   const context = trainingRoundContext(input.snapshotDate, programYear)
   if (!context.open) return none
+  const short = shortClubs(
+    input.trainingClubs.filter(c => inScope(c.divisionId, c.areaId, scope)),
+    context.open.round,
+    threshold
+  )
+  // Review S3: a suspended/ineligible club is no to-do — footnoted, as the
+  // Club Success Plan section does (same predicate, #1555).
+  const listed = short.filter(c => !isIneligibleStatus(c.clubStatus))
   return {
     trainingRound: context.open,
     trainingDaysLeft: context.daysLeft,
     trainingThreshold: threshold,
-    trainingShort: shortClubs(
-      input.trainingClubs.filter(c => inScope(c.divisionId, c.areaId, scope)),
-      context.open.round,
-      threshold
-    ),
+    trainingShort: listed,
+    trainingShortIneligibleCount: short.length - listed.length,
   }
 }
 
@@ -398,12 +414,15 @@ function plural(n: number, noun: string): string {
 }
 
 /** "2 members + 1 DCP goal" — the "Needs" COLUMN's value (#1577), where the
- *  header supplies the verb the sentence form spells out. */
+ *  header supplies the verb the sentence form spells out. A zero part is
+ *  omitted (#2308): "0 members + 1 DCP goal" reads as an error when the club
+ *  already meets the membership rule. A 0/0 gap is never listed — such a club
+ *  is already Distinguished — so it yields '' rather than a fake requirement. */
 export function formatCloseNeeds(item: CloseToDistinguishedItem): string {
-  return `${plural(item.membersNeeded, 'member')} + ${plural(
-    item.goalsNeeded,
-    'DCP goal'
-  )}`
+  const parts: string[] = []
+  if (item.membersNeeded > 0) parts.push(plural(item.membersNeeded, 'member'))
+  if (item.goalsNeeded > 0) parts.push(plural(item.goalsNeeded, 'DCP goal'))
+  return parts.join(' + ')
 }
 
 /** "needs 2 members + 1 DCP goal" — the SENTENCE form, still the CSV's Detail
@@ -411,7 +430,8 @@ export function formatCloseNeeds(item: CloseToDistinguishedItem): string {
  *  pluralization: a second copy of a format is a second thing to drift
  *  (lesson "a fallback alias list copied twice drifts twice"). */
 export function formatCloseGap(item: CloseToDistinguishedItem): string {
-  return `needs ${formatCloseNeeds(item)}`
+  const needs = formatCloseNeeds(item)
+  return needs ? `needs ${needs}` : ''
 }
 
 /** "1 club unvisited · Round 1, due 2025-11-30" — shared by the list row and

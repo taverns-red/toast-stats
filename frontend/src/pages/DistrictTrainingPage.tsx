@@ -28,7 +28,7 @@ import {
   parseTrainingThreshold,
   roundCurve,
   roundStatus,
-  sameDateLastYear,
+  lastYearSnapshotFor,
   thresholdOptionLabel,
   thresholdPhrase,
   trainingClubsFromSnapshot,
@@ -68,11 +68,21 @@ import ErrorBoundary from '../components/ErrorBoundary'
    `?division=`, `?area=`; program year and date come from the shared page
    controls (R3). */
 
-const TrainingCell: React.FC<{ trained: number; threshold: number }> = ({
-  trained,
-  threshold,
-}) =>
-  trained >= threshold ? (
+type RoundStatusByRound = Record<
+  'round1' | 'round2',
+  'open' | 'closed' | 'upcoming'
+>
+
+const TrainingCell: React.FC<{
+  trained: number
+  threshold: number
+  upcoming: boolean
+}> = ({ trained, threshold, upcoming }) =>
+  // A round that has not opened reads 0 for every club: "—", never
+  // "0 · needs 4" (review S1).
+  upcoming ? (
+    <span className="training-cell training-cell__need">—</span>
+  ) : trained >= threshold ? (
     <span className="training-cell training-cell--met">{trained} ✓</span>
   ) : (
     <span className="training-cell">
@@ -86,7 +96,8 @@ const TrainingCell: React.FC<{ trained: number; threshold: number }> = ({
 
 const clubColumns = (
   districtId: string,
-  threshold: number
+  threshold: number,
+  status: RoundStatusByRound
 ): ActionTableColumn<TrainingClub>[] => [
   {
     key: 'club',
@@ -110,27 +121,41 @@ const clubColumns = (
   {
     key: 'round1',
     header: 'Round 1',
-    cell: c => <TrainingCell trained={c.round1} threshold={threshold} />,
+    cell: c => (
+      <TrainingCell
+        trained={c.round1}
+        threshold={threshold}
+        upcoming={status.round1 === 'upcoming'}
+      />
+    ),
   },
   {
     key: 'round2',
     header: 'Round 2',
-    cell: c => <TrainingCell trained={c.round2} threshold={threshold} />,
+    cell: c => (
+      <TrainingCell
+        trained={c.round2}
+        threshold={threshold}
+        upcoming={status.round2 === 'upcoming'}
+      />
+    ),
   },
 ]
 
 const clubMobileRow =
-  (districtId: string, threshold: number) =>
+  (districtId: string, threshold: number, status: RoundStatusByRound) =>
   (c: TrainingClub): MobileRow => {
     // "R1 5/4 ✓ · R2 2/4": trained over the threshold, short enough not to
-    // truncate at 375.
-    const part = (label: string, n: number) =>
-      `${label} ${n}/${threshold}${n >= threshold ? ' ✓' : ''}`
+    // truncate at 375; "R2 —" for a round that has not opened.
+    const part = (label: string, n: number, upcoming: boolean) =>
+      upcoming
+        ? `${label} —`
+        : `${label} ${n}/${threshold}${n >= threshold ? ' ✓' : ''}`
     return {
       id: c.clubId,
       to: `/district/${districtId}/club/${c.clubId}`,
       title: c.clubName,
-      meta: `${c.divisionId}/${c.areaId} · ${part('R1', c.round1)} · ${part('R2', c.round2)}`,
+      meta: `${c.divisionId}/${c.areaId} · ${part('R1', c.round1, status.round1 === 'upcoming')} · ${part('R2', c.round2, status.round2 === 'upcoming')}`,
     }
   }
 
@@ -230,9 +255,11 @@ const DistrictTrainingPage: React.FC = () => {
     effectiveEndDate ?? undefined
   )
 
-  // The closest snapshot one year earlier, in the prior program year.
-  const lastYearDate = useMemo(() => {
-    if (!effectiveEndDate || !programYearLabel) return null
+  // Last year's comparison, per round (review S2): a snapshot INSIDE last
+  // year's same round — on or before the same day of it while this year's
+  // round is open, its final in-round snapshot once closed. One read each.
+  const lastYearByRound = useMemo(() => {
+    if (!effectiveEndDate || !programYearLabel) return [null, null] as const
     const priorStart = Number(programYearLabel.slice(0, 4)) - 1
     const priorDates = allCachedDates.filter(d =>
       isDateInProgramYear(d, {
@@ -242,11 +269,19 @@ const DistrictTrainingPage: React.FC = () => {
         label: `${priorStart}-${priorStart + 1}`,
       })
     )
-    return sameDateLastYear(effectiveEndDate, priorDates)
+    const [r1, r2] = getOfficerTrainingRounds(programYearLabel)
+    return [
+      lastYearSnapshotFor(r1, effectiveEndDate, priorDates),
+      lastYearSnapshotFor(r2, effectiveEndDate, priorDates),
+    ] as const
   }, [effectiveEndDate, programYearLabel, allCachedDates])
-  const { data: lastYearSnapshot } = useDistrictStatistics(
-    lastYearDate ? districtId || null : null,
-    lastYearDate ?? undefined
+  const { data: lastYearSnapshot1 } = useDistrictStatistics(
+    lastYearByRound[0] ? districtId || null : null,
+    lastYearByRound[0]?.date
+  )
+  const { data: lastYearSnapshot2 } = useDistrictStatistics(
+    lastYearByRound[1] ? districtId || null : null,
+    lastYearByRound[1]?.date
   )
 
   // Current + prior program years' series for the progress curve.
@@ -279,8 +314,12 @@ const DistrictTrainingPage: React.FC = () => {
     [snapshot]
   )
   const lastYearClubs = useMemo(
-    () => trainingClubsFromSnapshot(lastYearSnapshot),
-    [lastYearSnapshot]
+    () =>
+      [
+        trainingClubsFromSnapshot(lastYearSnapshot1),
+        trainingClubsFromSnapshot(lastYearSnapshot2),
+      ] as const,
+    [lastYearSnapshot1, lastYearSnapshot2]
   )
   const scope = useMemo(() => ({ division, area }), [division, area])
   const clubs = useMemo(
@@ -296,7 +335,7 @@ const DistrictTrainingPage: React.FC = () => {
     [allClubs, scope]
   )
   const lastYearScoped = useMemo(
-    () => (lastYearClubs ? filterTrainingClubs(lastYearClubs, scope) : null),
+    () => lastYearClubs.map(c => (c ? filterTrainingClubs(c, scope) : null)),
     [lastYearClubs, scope]
   )
 
@@ -344,10 +383,21 @@ const DistrictTrainingPage: React.FC = () => {
 
   const loading = !hasValidDates || (snapshotLoading && !snapshot)
 
+  const statusByRound = {
+    round1:
+      context && effectiveEndDate
+        ? roundStatus(context.rounds[0], effectiveEndDate)
+        : 'closed',
+    round2:
+      context && effectiveEndDate
+        ? roundStatus(context.rounds[1], effectiveEndDate)
+        : 'closed',
+  } as const
+
   const handleExport = () => {
     if (!clubs) return
     downloadCSV(
-      arrayToCSV(trainingCsvRows(clubs, threshold)),
+      arrayToCSV(trainingCsvRows(clubs, threshold, statusByRound)),
       generateFilename('officer-training', districtId)
     )
   }
@@ -546,17 +596,20 @@ const DistrictTrainingPage: React.FC = () => {
                         }
                         threshold={threshold}
                         distribution={distributionOf(clubs, window.round)}
-                        lastYear={
-                          lastYearScoped && lastYearDate
+                        lastYear={(() => {
+                          const pick = lastYearByRound[window.round - 1]
+                          const scopedClubs = lastYearScoped[window.round - 1]
+                          return pick && scopedClubs
                             ? {
-                                date: lastYearDate,
+                                date: pick.date,
+                                kind: pick.kind,
                                 distribution: distributionOf(
-                                  lastYearScoped,
+                                  scopedClubs,
                                   window.round
                                 ),
                               }
                             : null
-                        }
+                        })()}
                         curve={{
                           // The published curve is district-wide: the series
                           // carries no division/area breakdown.
@@ -574,7 +627,8 @@ const DistrictTrainingPage: React.FC = () => {
                 {scoped && (
                   <p className="training-note">
                     The progress curves are district-wide; the counts above are
-                    for {scopeLabel}.
+                    for {scopeLabel}. Last year&apos;s figures use last
+                    year&apos;s division and area assignments, which can differ.
                   </p>
                 )}
 
@@ -590,11 +644,15 @@ const DistrictTrainingPage: React.FC = () => {
                   </h3>
                   <ActionTable
                     caption={`Clubs in ${scopeLabel} by officers trained per round`}
-                    columns={clubColumns(districtId, threshold)}
+                    columns={clubColumns(districtId, threshold, statusByRound)}
                     rows={clubs}
                     rowKey={c => c.clubId}
                     testId="training-club-table"
-                    mobileRow={clubMobileRow(districtId, threshold)}
+                    mobileRow={clubMobileRow(
+                      districtId,
+                      threshold,
+                      statusByRound
+                    )}
                   />
                 </section>
               </>

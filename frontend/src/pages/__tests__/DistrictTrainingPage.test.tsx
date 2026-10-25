@@ -52,7 +52,9 @@ vi.mock('../../hooks/useDistricts', () => ({
 vi.mock('../../hooks/useDistrictData', () => ({
   useDistrictCachedDates: vi.fn(() => ({
     data: {
-      dates: ['2026-10-11', '2025-10-31'],
+      // 2025-10-31 is the nearest date a year back, but outside last year's
+      // Round 1; 2025-08-31 is that round's final in-window snapshot.
+      dates: ['2026-10-11', '2025-10-31', '2025-08-31'],
       dateRange: { startDate: '2025-10-31', endDate: '2026-10-11' },
     },
     isLoading: false,
@@ -152,7 +154,12 @@ describe('DistrictTrainingPage (#2296)', () => {
             ? undefined
             : {
                 data: {
-                  clubPerformance: date === '2025-10-31' ? lastYearRows : rows,
+                  clubPerformance:
+                    date === '2025-08-31'
+                      ? lastYearRows
+                      : date === '2025-10-31'
+                        ? []
+                        : rows,
                 },
               },
           isLoading: false,
@@ -265,11 +272,24 @@ describe('DistrictTrainingPage (#2296)', () => {
     expect(round1).toHaveTextContent('22 are 1–3 short · 19 at 0')
   })
 
-  it('compares with the closest snapshot one year earlier', async () => {
+  it('a closed round compares with last year’s final snapshot inside that round (review S2)', async () => {
     renderAt('/district/61/training')
     expect(
       await screen.findByTestId('training-round-1-lastyear')
-    ).toHaveTextContent('Last year on Oct 31, 2025: 100% at 4+ (161 of 161')
+    ).toHaveTextContent(
+      "Last year's final (Aug 31, 2025): 100% at 4+ (161 of 161"
+    )
+  })
+
+  it('a round that has not opened shows "—" in the club table, never "needs" (review S1)', async () => {
+    renderAt('/district/61/training')
+    const table = await screen.findByTestId('training-club-table')
+    const rows = within(table).getAllByRole('row').slice(1)
+    for (const row of rows.slice(0, 10)) {
+      const cells = within(row).getAllByRole('cell')
+      expect(cells[cells.length - 1]).toHaveTextContent('—')
+      expect(cells[cells.length - 1]).not.toHaveTextContent('needs')
+    }
   })
 
   it('reads ?threshold=7 as "All seven officers" and drives every count', async () => {

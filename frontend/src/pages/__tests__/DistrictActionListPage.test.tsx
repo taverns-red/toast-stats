@@ -1086,6 +1086,10 @@ describe('DistrictActionListPage — officer training (#2296)', () => {
         row('00001001', 'Short By One', 'A', '01', '4', '3'),
         row('00001002', 'None Trained', 'B', '02', '7', '0'),
         row('00001003', 'All Seven', 'A', '01', '7', '7'),
+        {
+          ...row('00001004', 'Ineligible Club', 'A', '01', '0', '0'),
+          'Club Status': 'Ineligible',
+        },
       ],
     },
   }
@@ -1122,6 +1126,12 @@ describe('DistrictActionListPage — officer training (#2296)', () => {
       ['None Trained', 'B/02', '0', '4 more officers'],
     ])
     expect(section).toHaveTextContent('106 days left in the round')
+    // Review S3: like the Club Success Plan section, a suspended/ineligible
+    // club is footnoted, not listed as a to-do.
+    expect(section).not.toHaveTextContent('Ineligible Club')
+    expect(section).toHaveTextContent(
+      '1 suspended/ineligible club short of the threshold is not listed.'
+    )
     expect(
       within(section).getByRole('link', { name: /Training page/ })
     ).toHaveAttribute('href', '/district/61/training')

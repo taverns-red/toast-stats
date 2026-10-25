@@ -20,7 +20,7 @@ import {
   formatNeeded,
   parseTrainingThreshold,
   roundCurve,
-  sameDateLastYear,
+  lastYearSnapshotFor,
   shortClubs,
   thresholdOptionLabel,
   trainingClubsFromSnapshot,
@@ -99,6 +99,53 @@ describe('trainingClubsFromSnapshot — D61 2026-10-11', () => {
       // The panel's "achieved" is 4+ in both rounds — the roll-up's
       // default threshold.
       expect(goal9.achieved).toBe(club.round1 >= 4 && club.round2 >= 4)
+    }
+  })
+
+  it('cross-check with non-zero Round 2: the panel and the roll-up agree on every pairing (review S4)', () => {
+    // The D61 date has Round 2 all zero, so "both rounds" is never true
+    // there. Every pairing of 0–7 (and blanks) makes it true for some clubs.
+    const cells = ['0', '1', '3', '4', '5', '7', '']
+    const records = cells.flatMap((a, i) =>
+      cells.map((b, j) => ({
+        'Club Number': String(1000 + i * 10 + j),
+        'Club Name': `Club ${i}-${j}`,
+        Division: 'A',
+        Area: '01',
+        'Off. Trained Round 1': a,
+        'Off. Trained Round 2': b,
+      }))
+    ) as ScrapedRecord[]
+    const rolled = trainingClubsFromSnapshot({
+      data: { clubPerformance: records },
+    })!
+    let credited = 0
+    for (const record of records) {
+      const club = rolled.find(
+        c => c.clubId === normalizeClubId(record['Club Number'])
+      )!
+      const goal9 = extractDcpGoalProgress(record).find(
+        g => g.goalNumber === 9
+      )!
+      expect([club.round1, club.round2]).toEqual(
+        goal9.subItems.map(s => s.achieved)
+      )
+      expect(goal9.achieved).toBe(club.round1 >= 4 && club.round2 >= 4)
+      if (goal9.achieved) credited += 1
+    }
+    expect(credited).toBe(9) // {4,5,7} × {4,5,7}: not vacuous
+    // And the headline count at 4+ is the panel's per-round verdict, summed.
+    for (const round of [1, 2] as const) {
+      expect(
+        figuresFromDistribution(distributionOf(rolled, round), 4).atThreshold
+      ).toBe(
+        records.filter(
+          r =>
+            extractDcpGoalProgress(r).find(g => g.goalNumber === 9)!.subItems[
+              round - 1
+            ]!.achieved >= 4
+        ).length
+      )
     }
   })
 
@@ -218,12 +265,55 @@ describe('roundCurve', () => {
   })
 })
 
-describe('sameDateLastYear', () => {
-  it('picks the closest snapshot a year earlier, within a month', () => {
-    expect(
-      sameDateLastYear('2026-10-24', ['2025-09-30', '2025-10-31', '2026-10-24'])
-    ).toBe('2025-10-31')
-    expect(sameDateLastYear('2026-10-24', ['2025-08-31'])).toBeNull()
+describe('lastYearSnapshotFor (review S2)', () => {
+  const [r1, r2] = getOfficerTrainingRounds('2026-2027')
+  const prior = [
+    '2025-07-31',
+    '2025-08-31',
+    '2025-09-30',
+    '2025-10-31',
+    '2025-11-30',
+    '2025-12-31',
+  ] as const
+
+  it('open round: the latest snapshot on or before the same day of last year’s round', () => {
+    // Dec 10 is day 39 of Round 2; last year that is Dec 10, 2025 — the
+    // nearest snapshot at or before it is Nov 30 (never Dec 31, ahead of it).
+    expect(lastYearSnapshotFor(r2!, '2026-12-10', prior)).toEqual({
+      date: '2025-11-30',
+      kind: 'earlier',
+    })
+  })
+
+  it('open round: a snapshot on the very same day is "same"', () => {
+    expect(lastYearSnapshotFor(r1!, '2026-08-31', prior)).toEqual({
+      date: '2025-08-31',
+      kind: 'same',
+    })
+  })
+
+  it('open round, early: no snapshot inside last year’s round yet → none (never one from before it opened)', () => {
+    // Nov 5: last year's only earlier snapshot is Oct 31, before Round 2
+    // opened, which would read 0%.
+    expect(lastYearSnapshotFor(r2!, '2026-11-05', prior)).toBeNull()
+  })
+
+  it('closed round: last year’s final snapshot inside the round', () => {
+    expect(lastYearSnapshotFor(r1!, '2026-10-24', prior)).toEqual({
+      date: '2025-08-31',
+      kind: 'final',
+    })
+  })
+
+  it('a round that has not opened has no comparison', () => {
+    expect(lastYearSnapshotFor(r2!, '2026-10-24', prior)).toBeNull()
+  })
+})
+
+describe('trainingClubsFromSnapshot keeps the club status (review S3)', () => {
+  it('carries Club Status so to-do lists can leave out ineligible clubs', () => {
+    const clubs = trainingClubsFromSnapshot(d61Snapshot())!
+    expect(clubs.filter(c => c.clubStatus === 'Ineligible')).toHaveLength(7)
   })
 })
 
@@ -238,9 +328,11 @@ describe('CSV and links', () => {
           areaId: '01',
           round1: 7,
           round2: 2,
+          clubStatus: 'Active',
         },
       ],
-      7
+      7,
+      { round1: 'closed', round2: 'open' }
     )
     expect(rows[1]).toEqual([
       'A',
@@ -251,6 +343,30 @@ describe('CSV and links', () => {
       'Yes',
       2,
       'No',
+    ])
+  })
+
+  it('a round that has not opened exports "not open yet", not 0 / No (review S1)', () => {
+    const rows = trainingCsvRows(
+      [
+        {
+          clubId: '3045',
+          clubName: 'Limestone City Club',
+          divisionId: 'A',
+          areaId: '01',
+          round1: 7,
+          round2: 0,
+          clubStatus: 'Active',
+        },
+      ],
+      4,
+      { round1: 'closed', round2: 'upcoming' }
+    )
+    expect(rows[1]!.slice(4)).toEqual([
+      7,
+      'Yes',
+      'not open yet',
+      'not open yet',
     ])
   })
 

@@ -65,6 +65,8 @@ export interface TrainingClub {
   areaId: string
   round1: number
   round2: number
+  /** TI's `Club Status` (Active, Low, Ineligible, Suspended …). */
+  clubStatus: string
 }
 
 const stripPrefix = (value: unknown, prefix: RegExp): string =>
@@ -110,6 +112,7 @@ export function trainingClubsFromSnapshot(
       areaId: stripPrefix(row['Area'], /^area\s+/i),
       round1: officersTrainedInRound(row, 1),
       round2: officersTrainedInRound(row, 2),
+      clubStatus: String(row['Club Status'] ?? '').trim(),
     })
   }
   return clubs
@@ -328,33 +331,73 @@ export function roundCurve(
   return out.sort((a, b) => a.day - b.day)
 }
 
-/** The date in `dates` closest to `date` one year earlier, within ±31 days. */
-export function sameDateLastYear<T extends string>(
+/** Which snapshot last year's comparison reads, and how it relates. */
+export interface LastYearSnapshot<T extends string = string> {
+  date: T
+  /**
+   * `same`: the same day of last year's round. `earlier`: the latest
+   * snapshot before that day (older years keep month-ends only). `final`:
+   * last year's last snapshot inside the round (this year's round is closed).
+   */
+  kind: 'same' | 'earlier' | 'final'
+}
+
+/**
+ * The prior-year snapshot to compare a round with (review S2). Always a
+ * date INSIDE last year's same round, and never one later than this year's
+ * point in it:
+ * - open round: the latest snapshot on or before the same day of last
+ *   year's round, so progress is compared like for like (never a later
+ *   date, which would overstate last year; never one from before the round
+ *   opened, which reads 0%);
+ * - closed round: last year's final snapshot inside the round;
+ * - a round that has not opened: no comparison.
+ */
+export function lastYearSnapshotFor<T extends string>(
+  window: OfficerTrainingRoundWindow,
   date: string,
-  dates: readonly T[]
-): T | null {
-  const target = Date.parse(
-    `${Number(date.slice(0, 4)) - 1}${date.slice(4)}T00:00:00Z`
-  )
-  if (Number.isNaN(target)) return null
-  let best: T | null = null
-  let bestDistance = Infinity
-  for (const candidate of dates) {
-    const distance = Math.abs(Date.parse(`${candidate}T00:00:00Z`) - target)
-    if (distance < bestDistance) {
-      bestDistance = distance
-      best = candidate
-    }
+  priorDates: readonly T[]
+): LastYearSnapshot<T> | null {
+  const status = roundStatus(window, date)
+  if (status === 'upcoming') return null
+  const start = Number(window.programYear.slice(0, 4)) - 1
+  const last = getOfficerTrainingRounds(`${start}-${start + 1}`)[
+    window.round - 1
+  ]!
+  const target =
+    status === 'open'
+      ? new Date(
+          Date.parse(`${last.start}T00:00:00Z`) +
+            dayOfRound(window, date) * 86_400_000
+        )
+          .toISOString()
+          .slice(0, 10)
+      : last.end
+  const bound = target < last.end ? target : last.end
+  const candidates = priorDates
+    .filter(d => d >= last.start && d <= bound)
+    .sort()
+  const pick = candidates[candidates.length - 1]
+  if (!pick) return null
+  return {
+    date: pick,
+    kind: status === 'closed' ? 'final' : pick === target ? 'same' : 'earlier',
   }
-  return bestDistance <= 31 * 24 * 60 * 60 * 1000 ? best : null
 }
 
 /** The club list as CSV rows (header first), in the given order. */
 export function trainingCsvRows(
   clubs: readonly TrainingClub[],
-  threshold: number
+  threshold: number,
+  status: Record<'round1' | 'round2', 'open' | 'closed' | 'upcoming'>
 ): (string | number)[][] {
   const meets = (n: number) => (n >= threshold ? 'Yes' : 'No')
+  // A round that has not opened reads 0 for every club: "not open yet",
+  // never "0 / No" (review S1).
+  const cells = (round: 'round1' | 'round2', n: number) =>
+    status[round] === 'upcoming'
+      ? ['not open yet', 'not open yet']
+      : [n, meets(n)]
   return [
     [
       'Division',
@@ -371,10 +414,8 @@ export function trainingCsvRows(
       c.areaId,
       c.clubId,
       c.clubName,
-      c.round1,
-      meets(c.round1),
-      c.round2,
-      meets(c.round2),
+      ...cells('round1', c.round1),
+      ...cells('round2', c.round2),
     ]),
   ]
 }
