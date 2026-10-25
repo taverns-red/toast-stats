@@ -140,6 +140,34 @@ export interface ActionListSections {
    * listed — the same treatment as the Club Success Plan section.
    */
   trainingShortIneligibleCount: number
+  /**
+   * In the last {@link TRAINING_ATTENTION_DAYS} days of the open round
+   * (Ron, N10): only then does the section count toward the Overview's
+   * Needs attention. Earlier, every club still reads low and the list is
+   * a long-range plan, not an alarm.
+   */
+  trainingFinalStretch: boolean
+}
+
+/** Days before a round closes from which officer training needs attention. */
+export const TRAINING_ATTENTION_DAYS = 30
+
+/**
+ * Whether the pinned date falls in the last {@link TRAINING_ATTENTION_DAYS}
+ * days of a round open for the page's own program year (R3: both from the
+ * page). Needs no club data, so a page can decide whether to load it.
+ */
+export function isTrainingFinalStretch(
+  snapshotDate: string,
+  programYear: string
+): boolean {
+  if (!snapshotDate) return false
+  const context = trainingRoundContext(snapshotDate, programYear)
+  return (
+    context.open !== null &&
+    context.daysLeft !== null &&
+    context.daysLeft <= TRAINING_ATTENTION_DAYS
+  )
 }
 
 export interface ActionListInput {
@@ -313,6 +341,7 @@ function trainingSection(
   | 'trainingThreshold'
   | 'trainingShort'
   | 'trainingShortIneligibleCount'
+  | 'trainingFinalStretch'
 > {
   const threshold = input.trainingThreshold ?? DEFAULT_TRAINING_THRESHOLD
   const none = {
@@ -321,6 +350,7 @@ function trainingSection(
     trainingThreshold: threshold,
     trainingShort: [],
     trainingShortIneligibleCount: 0,
+    trainingFinalStretch: false,
   }
   if (!input.trainingClubs || !input.snapshotDate) return none
   const context = trainingRoundContext(input.snapshotDate, programYear)
@@ -339,6 +369,10 @@ function trainingSection(
     trainingThreshold: threshold,
     trainingShort: listed,
     trainingShortIneligibleCount: short.length - listed.length,
+    trainingFinalStretch: isTrainingFinalStretch(
+      input.snapshotDate,
+      programYear
+    ),
   }
 }
 

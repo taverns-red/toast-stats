@@ -442,8 +442,12 @@ const trainingMobileRow =
     meta: `${areaLabel(c)} \u00b7 ${c.trained} trained \u00b7 needs ${formatNeeded(c.needed)}`,
   })
 
+/** Clubs shown before "Show all N" in the officer-training section (N10). */
+const TRAINING_LIST_PREVIEW = 10
+
 const DistrictActionListPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
+  const [showAllTraining, setShowAllTraining] = React.useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Scope is URL-seedable (typed URL, shared link, back button, select change),
@@ -671,8 +675,11 @@ const DistrictActionListPage: React.FC = () => {
   /* The default is "the FIRST section is expanded, the rest collapsed" —
      expressed against the rendered order rather than naming a section, so it
      stays correct after the seasonal reorder above. */
+  // Officer training is collapsed by default even when it leads (Ron, N10):
+  // the default-open section is the first OTHER one.
+  const defaultOpen = sectionOrder.find(id => id !== 'action-training')
   const isSectionOpen = (id: ActionSectionId) =>
-    openSections[id] ?? sectionOrder[0] === id
+    openSections[id] ?? defaultOpen === id
 
   const toggleSection = (id: ActionSectionId) => {
     const next = !isSectionOpen(id)
@@ -801,11 +808,25 @@ const DistrictActionListPage: React.FC = () => {
           <ActionTable
             caption="Clubs short of officer training this round"
             columns={trainingColumns(districtId ?? '')}
-            rows={sections.trainingShort}
+            rows={
+              showAllTraining
+                ? sections.trainingShort
+                : sections.trainingShort.slice(0, TRAINING_LIST_PREVIEW)
+            }
             rowKey={c => c.clubId}
             testId="table-training"
             mobileRow={trainingMobileRow(districtId ?? '')}
           />
+          {!showAllTraining &&
+            sections.trainingShort.length > TRAINING_LIST_PREVIEW && (
+              <button
+                type="button"
+                className="action-list-scope__clear action-list-section__show-all"
+                onClick={() => setShowAllTraining(true)}
+              >
+                Show all {sections.trainingShort.length}
+              </button>
+            )}
           <p className="action-list-section__footnote">
             <Link
               to={trainingPageUrl(districtId ?? '', {
