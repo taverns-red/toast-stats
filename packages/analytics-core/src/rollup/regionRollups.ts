@@ -82,6 +82,9 @@ export interface RegionRollupClub {
   readonly officerListOnTime?: boolean
   /** The district-performance `Charter Date/Suspend Date` cell. */
   readonly charterSuspendField?: string
+  /** `Off. Trained Round 1` / `Round 2`, 0–7 (#2296); undefined = absent. */
+  readonly officersTrainedRound1?: number
+  readonly officersTrainedRound2?: number
 }
 
 export interface RegionRollupDistrictInput {
