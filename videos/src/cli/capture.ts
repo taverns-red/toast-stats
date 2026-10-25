@@ -5,25 +5,24 @@
  */
 import { join } from 'node:path'
 import { runCapture } from '../capture/runCapture'
-import { getScenario } from '../scenarios'
-import { validateScenario } from '../scenarios/validate'
-import { captureRelDir, PUBLIC_DIR, scenarioIdFromArgs } from './paths'
+import {
+  captureRelDir,
+  loadValidScenario,
+  PUBLIC_DIR,
+  runIfMain,
+} from './paths'
 
-const scenario = getScenario(scenarioIdFromArgs(process.argv))
-const problems = validateScenario(scenario)
-if (problems.length > 0) {
-  console.error(
-    `Scenario ${scenario.id} is invalid:\n- ${problems.join('\n- ')}`
-  )
-  process.exit(1)
+export async function capture(id: string): Promise<void> {
+  const scenario = loadValidScenario(id)
+  const rel = captureRelDir(scenario.id)
+  console.error(`Capturing ${scenario.id} from ${scenario.url} …`)
+  const manifest = await runCapture(scenario, join(PUBLIC_DIR, rel), rel)
+  for (const beat of manifest.beats) {
+    console.error(
+      `  ${beat.id}: starts ${beat.videoStartSec.toFixed(2)} s in the recording, highlight ${beat.box ? 'found' : 'none'}`
+    )
+  }
+  console.error(`Wrote ${join(PUBLIC_DIR, rel)}/capture.mp4 and manifest.json`)
 }
 
-const rel = captureRelDir(scenario.id)
-console.error(`Capturing ${scenario.id} from ${scenario.url} …`)
-const manifest = await runCapture(scenario, join(PUBLIC_DIR, rel), rel)
-for (const beat of manifest.beats) {
-  console.error(
-    `  ${beat.id}: starts ${beat.videoStartSec.toFixed(2)} s in the recording, highlight ${beat.box ? 'found' : 'none'}`
-  )
-}
-console.error(`Wrote ${join(PUBLIC_DIR, rel)}/capture.mp4 and manifest.json`)
+runIfMain(import.meta.url, capture)
