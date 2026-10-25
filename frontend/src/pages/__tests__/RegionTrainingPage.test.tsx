@@ -165,6 +165,37 @@ describe('RegionTrainingPage (#2296)', () => {
     expect(within(row).getAllByText('—')).toHaveLength(2)
   })
 
+  it('district links keep the page’s py and date as well as the threshold (review S5)', async () => {
+    mocked.mockResolvedValue(withTraining())
+    renderAt('/region/05/training?py=2026&date=2026-10-15&threshold=7')
+    await screen.findByTestId('region-training-table')
+    expect(screen.getByRole('link', { name: 'District 61' })).toHaveAttribute(
+      'href',
+      '/district/61/training?threshold=7&py=2026&date=2026-10-15'
+    )
+  })
+
+  it('the default sort is a column you can see (review N5)', async () => {
+    mocked.mockResolvedValue(withTraining())
+    renderAt('/region/05/training')
+    const table = await screen.findByTestId('region-training-table')
+    const active = within(table)
+      .getAllByRole('columnheader')
+      .filter(th => th.getAttribute('aria-sort') === 'descending')
+    expect(active).toHaveLength(1)
+    expect(active[0]).toHaveTextContent('4+')
+  })
+
+  it('a round that has not opened offers no sort on its columns (review N6)', async () => {
+    mocked.mockResolvedValue(withTraining())
+    renderAt('/region/05/training')
+    const table = await screen.findByTestId('region-training-table')
+    // Round 1 keeps its two sort buttons; Round 2 (opens Nov 1) has none.
+    expect(
+      within(table).getAllByRole('button', { name: /Sort by (4\+|All 7)/ })
+    ).toHaveLength(2)
+  })
+
   it('appears in the region’s section nav', async () => {
     mocked.mockResolvedValue(withTraining())
     renderAt('/region/05/training')

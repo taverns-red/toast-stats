@@ -232,6 +232,33 @@ describe('DistrictTrainingPage (#2296)', () => {
     ).toHaveAttribute('href', '/region/05/training')
   })
 
+  it('the region link keeps the page’s py and date (review S5)', async () => {
+    vi.mocked(useRegionRollups).mockReturnValue(regionRollups(true))
+    renderAt('/district/61/training?py=2026&date=2026-10-11&threshold=7')
+    const rank = await screen.findByTestId('training-region-rank')
+    expect(
+      within(rank).getByRole('link', { name: /compare region 05/i })
+    ).toHaveAttribute(
+      'href',
+      '/region/05/training?threshold=7&py=2026&date=2026-10-11'
+    )
+  })
+
+  it('says "with figures" when some districts in the region have none (review N7)', async () => {
+    const rollups = regionRollups(true)
+    const r = rollups.rollups as unknown as {
+      regions: Record<string, { districtIds: string[] }>
+      districts: Record<string, unknown>
+    }
+    r.regions['05']!.districtIds.push('99')
+    r.districts['99'] = { clubs: 5, region: '05', officerTraining: null }
+    vi.mocked(useRegionRollups).mockReturnValue(rollups)
+    renderAt('/district/61/training')
+    expect(await screen.findByTestId('training-region-rank')).toHaveTextContent(
+      '2nd of 3 districts with figures in Region 05'
+    )
+  })
+
   it('shows no rank when the region rollup predates the figure', async () => {
     vi.mocked(useRegionRollups).mockReturnValue(regionRollups(false))
     renderAt('/district/61/training')
