@@ -203,7 +203,7 @@ describe('DistrictTrainingPage (#2296)', () => {
           ).map(([id, round1]) => [
             id,
             {
-              clubs: round1.reduce((a, b) => a + b, 0),
+              clubs: (round1 as readonly number[]).reduce((a, b) => a + b, 0),
               region: '05',
               ...(withField && {
                 officerTraining: {
