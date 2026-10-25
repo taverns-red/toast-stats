@@ -30,10 +30,12 @@ export interface WorkflowStep {
   id?: string
   if?: string
   run?: string
+  env?: Record<string, unknown>
 }
 
 export interface WorkflowJob {
   if?: string
+  env?: Record<string, unknown>
   steps?: WorkflowStep[]
 }
 
@@ -66,27 +68,214 @@ function shellCommands(run: string): string[] {
     .filter(l => l !== '' && !l.startsWith('#'))
 }
 
-/** The command up to the first `||`, `&&`, `|`, `;` or redirection. */
-function firstSimpleCommand(cmd: string): string {
-  return cmd.split(/\s(?:\|\||&&|\||;|\d?>>?)\s?/)[0].trim()
+/**
+ * The simple commands of a line, split at `||`, `&&`, `|`, `;` and
+ * redirections. Every one is checked, not only the first: a write after a
+ * pipe (`… | xargs gcloud storage rm …`) or an `&&` is still a write (#2285).
+ */
+function simpleCommands(cmd: string): string[] {
+  return cmd
+    .split(/\s(?:\|\||&&|\||;|\d?>>?)\s?/)
+    .map(c => c.trim())
+    .filter(c => c !== '')
+}
+
+/**
+ * The gcloud binary, bare, by path, or held in a variable (`"${GCLOUD}"`,
+ * `$GCLOUD`), followed by a write verb of `gcloud storage` (#2285).
+ */
+const GCLOUD_STORAGE_WRITE =
+  /(?:gcloud|\$\{?[A-Za-z_]\w*\}?)["']?\s+storage\s+(cp|rsync|mv|rm|objects\s+update)\b/
+
+/** A write verb and the words after it, from one simple command. */
+interface StorageWrite {
+  verb: string
+  args: string
+}
+
+function gcloudStorageWrite(simple: string): StorageWrite | undefined {
+  const m = simple.match(GCLOUD_STORAGE_WRITE)
+  if (!m) return undefined
+  return {
+    verb: m[1].replace(/\s+/g, ' '),
+    args: simple.slice((m.index ?? 0) + m[0].length),
+  }
+}
+
+/** Shell words, quotes kept together. One char per step: linear time. */
+function shellWords(text: string): string[] {
+  return text.match(/(?:[^\s"']|"[^"]*"|'[^']*')+/g) ?? []
+}
+
+const GSUTIL_WRITE_VERBS: ReadonlySet<string> = new Set([
+  'cp',
+  'rsync',
+  'mv',
+  'rm',
+  'setmeta',
+  'compose',
+  'rewrite',
+  'acl',
+  'defacl',
+  'retention',
+])
+
+/**
+ * gsutil and a write verb, past its top-level flags. `-h`, `-o`, `-u` and
+ * `-i` take a value; the rest (`-m`, `-q`, …) do not (#2285). A word scan,
+ * not a regex: the flag grammar is ambiguous enough that a regex for it
+ * backtracks exponentially (CodeQL js/redos).
+ */
+function gsutilWrite(simple: string): StorageWrite | undefined {
+  // Whitespace words, so a gsutil inside `bash -c '…'` is still seen.
+  const words = simple.split(/\s+/)
+  let i = words.findIndex(w => /(?:^|[/"'(])gsutil$/.test(w))
+  if (i === -1) return undefined
+  i++
+  while (i < words.length) {
+    const w = words[i]
+    if (/^-[hoiu]$/.test(w)) {
+      i++
+      // A quoted value may span words: `-h "Cache-Control: no-store"`.
+      const q = words[i]?.[0]
+      if (
+        (q === '"' || q === "'") &&
+        !(words[i].length > 1 && words[i].endsWith(q))
+      ) {
+        i++
+        while (i < words.length && !words[i].endsWith(q)) i++
+      }
+      i++
+    } else if (/^-[A-Za-z]+$/.test(w)) i++
+    else break
+  }
+  const verb = words[i]
+  if (verb === undefined || !GSUTIL_WRITE_VERBS.has(verb)) return undefined
+  return { verb, args: words.slice(i + 1).join(' ') }
+}
+
+/** Verbs whose destination is their last argument; the others act in place. */
+const LAST_ARG_IS_TARGET: ReadonlySet<string> = new Set([
+  'cp',
+  'rsync',
+  'mv',
+  'compose',
+])
+
+/**
+ * Shell variables that hold a production reference, directly or through
+ * another such variable (#2285): `DEST="gs://${GCS_BUCKET_PRODUCTION}/v1"`,
+ * then `D="${DEST}/x"`. `env` is the step's and job's `env:` map, whose
+ * entries are variables of the same kind. A value that merely mentions
+ * prod (a `$(gcloud storage cat …)` read) also counts: the guard errs
+ * towards flagging, and only a variable at the HEAD of a destination (the
+ * bucket position) makes that destination prod.
+ */
+function prodVariables(run: string, env: Record<string, unknown>): string[] {
+  const assignments: Array<[string, string]> = Object.entries(env).map(
+    ([k, v]) => [k, String(v)]
+  )
+  const assign =
+    /(?:^|[\s;&|(])(?:(?:export|local|readonly|declare(?:\s+-\w+)*)\s+)?([A-Za-z_]\w*)=("(?:[^"\\]|\\.)*"|'[^']*'|\$\([^)]*\)|[^\s;]*)/g
+  for (const m of run.matchAll(assign)) assignments.push([m[1], m[2]])
+  const vars = new Set<string>()
+  let grew = true
+  while (grew) {
+    grew = false
+    for (const [name, value] of assignments) {
+      if (vars.has(name)) continue
+      if (PROD_REF.test(value) || [...vars].some(v => refsVar(value, v))) {
+        vars.add(name)
+        grew = true
+      }
+    }
+  }
+  return [...vars]
+}
+
+function refsVar(text: string, name: string): boolean {
+  return new RegExp(`\\$\\{?${name}\\b`).test(text)
+}
+
+/** Does this destination token name prod, by name or by a prod variable? */
+function isProdTarget(token: string, prodVars: readonly string[]): boolean {
+  if (PROD_REF.test(token)) return true
+  const head = token.replace(/^["']+/, '').replace(/^gs:\/\//, '')
+  const m = head.match(/^\$\{?([A-Za-z_]\w*)/)
+  return m !== null && prodVars.includes(m[1])
+}
+
+/**
+ * Scripts that may be handed the prod bucket because they only read it,
+ * keyed by path, with what they do. The contract test checks each file has
+ * no storage write verb, so a write added to one turns the guard red.
+ */
+export const READ_ONLY_PROD_SCRIPTS: Readonly<Record<string, string>> = {
+  'scripts/pipeline/check-report-sidecars.sh':
+    'lists staging and prod report sidecars per date (#1767)',
+}
+
+const SCRIPT_FILE = /^(?:\.\/)?[^\s"'=]+\.(?:sh|bash|ts|mts|cts|js|mjs|cjs|py)$/
+
+/**
+ * A script invoked with a production reference among its words (an
+ * argument, a `--flag=value`, or a `VAR=value` prefix), unless it is on
+ * READ_ONLY_PROD_SCRIPTS. The guard cannot see inside the script, so it
+ * must assume the script writes (#2285).
+ */
+function scriptGivenProd(
+  simple: string,
+  prodVars: readonly string[]
+): string | undefined {
+  const tokens = simple.split(/\s+/)
+  const strip = (t: string) => t.replace(/^["']+|["']+$/g, '')
+  const i = tokens.findIndex(t => SCRIPT_FILE.test(strip(t)))
+  if (i === -1) return undefined
+  const script = strip(tokens[i]).replace(/^\.\//, '')
+  if (script in READ_ONLY_PROD_SCRIPTS) return undefined
+  const givenProd = tokens.some(
+    (t, j) => j !== i && (PROD_REF.test(t) || prodVars.some(v => refsVar(t, v)))
+  )
+  return givenProd ? script : undefined
+}
+
+/**
+ * The last word that is not a flag, quotes kept together, so flags after
+ * the destination (`… gs://prod/x --no-clobber`) do not hide it (#2285).
+ */
+function lastOperand(args: string): string {
+  return (
+    shellWords(args)
+      .filter(w => !w.startsWith('-'))
+      .pop() ?? ''
+  )
 }
 
 /** Why `run` writes to production; empty when it does not. */
-export function prodWriteReasons(run: string): string[] {
+export function prodWriteReasons(
+  run: string,
+  env: Record<string, unknown> = {}
+): string[] {
   const reasons: string[] = []
+  const prodVars = prodVariables(run.replace(/\\\r?\n/g, ' '), env)
   for (const cmd of shellCommands(run)) {
-    const simple = firstSimpleCommand(cmd)
-    const storage = simple.match(
-      /gcloud\s+storage\s+(cp|rsync|mv|rm|objects\s+update)\b/
-    )
-    if (storage) {
-      const verb = storage[1].replace(/\s+/g, ' ')
-      const tokens = simple.split(/\s+/)
-      const target =
-        verb === 'rm' || verb === 'objects update'
-          ? tokens.some(t => PROD_REF.test(t))
-          : PROD_REF.test(tokens[tokens.length - 1] ?? '')
-      if (target) reasons.push(`gcloud storage ${verb} → production`)
+    for (const simple of simpleCommands(cmd)) {
+      const script = scriptGivenProd(simple, prodVars)
+      if (script) reasons.push(`script given the production bucket: ${script}`)
+      for (const [tool, find] of [
+        ['gcloud storage', gcloudStorageWrite],
+        ['gsutil', gsutilWrite],
+      ] as const) {
+        const w = find(simple)
+        if (!w) continue
+        const verb = w.verb
+        const tokens = simple.split(/\s+/)
+        const target = LAST_ARG_IS_TARGET.has(verb)
+          ? isProdTarget(tokens[tokens.length - 1] ?? '', prodVars) ||
+            isProdTarget(lastOperand(w.args), prodVars)
+          : tokens.some(t => isProdTarget(t, prodVars))
+        if (target) reasons.push(`${tool} ${verb} → production`)
+      }
     }
     // The scoped promoter (#1763) writes prod through its own gcloud calls,
     // invisible to the pattern above; its dry run only reads.
@@ -136,8 +325,10 @@ export const PROD_RSYNC_EXEMPT: Readonly<Record<string, string>> = {}
  * the PROD_RSYNC_EXEMPT steps of data-pipeline.yml.
  */
 export function prodRsyncSteps(workflow: Workflow): ProdWriteStep[] {
-  return findProdWriteSteps(workflow).filter(s =>
-    s.reasons.includes('gcloud storage rsync → production')
+  return findProdWriteSteps(workflow).filter(
+    s =>
+      s.reasons.includes('gcloud storage rsync → production') ||
+      s.reasons.includes('gsutil rsync → production')
   )
 }
 
@@ -151,7 +342,10 @@ export function findProdWriteSteps(
     const clause =
       jobName === ownerJob ? SKIP_CLAUSE_SAME_JOB : SKIP_CLAUSE_DOWNSTREAM
     for (const [i, step] of (job.steps ?? []).entries()) {
-      const reasons = prodWriteReasons(step.run ?? '')
+      const reasons = prodWriteReasons(step.run ?? '', {
+        ...job.env,
+        ...step.env,
+      })
       if (reasons.length === 0) continue
       out.push({
         job: jobName,

@@ -20,6 +20,10 @@
  *   npx ts-node scripts/prune-daily-snapshots.ts
  *   npx ts-node scripts/prune-daily-snapshots.ts --execute
  *   npx ts-node scripts/prune-daily-snapshots.ts --program-year 2024-2025
+ *
+ * Bucket (#2286): pass --bucket <name> or set GCS_BUCKET; there is no
+ * default. Naming the prod bucket (toast-stats-data-ca) also needs
+ * --allow-prod.
  */
 
 import { Storage } from '@google-cloud/storage'
@@ -34,6 +38,7 @@ import {
   assertPruneDeletionScope,
   formatPruneLayerScopeNote,
 } from './lib/pruneGcsDeletions.js'
+import { resolveOperatorBucket } from './lib/operatorBucket.js'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -51,7 +56,11 @@ interface Args {
 
 function parseArgs(): Args {
   const args = process.argv.slice(2)
-  let bucket = process.env['GCS_BUCKET'] ?? 'toast-stats-data-ca'
+  const { bucket } = resolveOperatorBucket({
+    argv: args,
+    env: process.env,
+    writes: true,
+  })
   const projectId = process.env['GCP_PROJECT_ID']
   let dryRun = true
   let programYear: string | undefined
@@ -62,7 +71,7 @@ function parseArgs(): Args {
     const arg = args[i]
     if (arg === '--execute') dryRun = false
     else if (arg === '--dry-run') dryRun = true
-    else if (arg === '--bucket' && args[i + 1]) bucket = args[++i]!
+    else if (arg === '--bucket' && args[i + 1]) i++
     else if (arg === '--program-year' && args[i + 1]) programYear = args[++i]!
     else if (arg === '--target' && args[i + 1]) {
       const t = args[++i]!

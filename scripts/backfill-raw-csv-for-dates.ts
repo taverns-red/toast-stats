@@ -14,6 +14,10 @@
  *   npx ts-node scripts/backfill-raw-csv-for-dates.ts --dates-file /tmp/keeper-dates.txt
  *   npx ts-node scripts/backfill-raw-csv-for-dates.ts --dates 2024-09-03 --execute
  *   npx ts-node scripts/backfill-raw-csv-for-dates.ts --dates 2024-09-03 --dry-run
+ *
+ * Bucket (#2286): pass --bucket <name> or set GCS_BUCKET; there is no
+ * default. Naming the prod bucket (toast-stats-data-ca) also needs
+ * --allow-prod.
  */
 
 import { Storage } from '@google-cloud/storage'
@@ -32,6 +36,7 @@ import {
   buildMetadataPath,
   calculateProgramYear,
 } from '../packages/collector-cli/src/utils/CachePaths.js'
+import { resolveOperatorBucket } from './lib/operatorBucket.js'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -58,7 +63,11 @@ interface Args {
 
 function parseArgs(): Args {
   const argv = process.argv.slice(2)
-  let bucket = process.env['GCS_BUCKET'] ?? 'toast-stats-data-ca'
+  const { bucket } = resolveOperatorBucket({
+    argv: argv,
+    env: process.env,
+    writes: true,
+  })
   const projectId = process.env['GCP_PROJECT_ID']
   const dates: string[] = []
   let dryRun = true
@@ -68,7 +77,7 @@ function parseArgs(): Args {
     const arg = argv[i]
     if (arg === '--execute') dryRun = false
     else if (arg === '--dry-run') dryRun = true
-    else if (arg === '--bucket' && argv[i + 1]) bucket = argv[++i]!
+    else if (arg === '--bucket' && argv[i + 1]) i++
     else if (arg === '--rate' && argv[i + 1])
       ratePerSecond = parseFloat(argv[++i]!)
     else if (arg === '--dates' && argv[i + 1]) {

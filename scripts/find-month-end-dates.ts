@@ -2,7 +2,7 @@
 /**
  * Find Month-End Dates from raw-csv GCS Metadata (read-only)
  *
- * Scans gs://toast-stats-data-ca/raw-csv/ for all collection dates,
+ * Scans gs://<bucket>/raw-csv/ for all collection dates,
  * reads their metadata.json files, and identifies the last closing-period
  * collection date per calendar month for each completed program year.
  *
@@ -19,11 +19,16 @@
  *   lastClosingDate | The collection date to use for month-end snapshot
  *   allClosingDates | How many closing-period collections existed for this month
  *   programYear   | Toastmasters program year this month belongs to
+ *
+ * Bucket (#2286): --bucket <name> or GCS_BUCKET, else staging
+ * (toast-stats-data-staging). Naming prod (toast-stats-data-ca) needs
+ * --allow-prod.
  */
 
 import { Storage } from '@google-cloud/storage'
 import { buildMonthEndSummary } from './lib/monthEndDates.js'
 import { listRawCSVDates, readMetadataForDates } from './lib/gcsHelpers.js'
+import { resolveOperatorBucket } from './lib/operatorBucket.js'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -37,14 +42,18 @@ interface Args {
 
 function parseArgs(): Args {
   const args = process.argv.slice(2)
-  let bucket = process.env['GCS_BUCKET'] ?? 'toast-stats-data-ca'
+  const { bucket } = resolveOperatorBucket({
+    argv: args,
+    env: process.env,
+    writes: false,
+  })
   const projectId = process.env['GCP_PROJECT_ID']
   let jsonOutput = false
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (arg === '--bucket' && args[i + 1]) {
-      bucket = args[++i]!
+      i++ // resolved by resolveOperatorBucket
     } else if (arg === '--json') {
       jsonOutput = true
     }
