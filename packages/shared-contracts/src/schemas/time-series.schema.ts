@@ -31,6 +31,22 @@ export const ClubHealthCountsSchema = z.object({
   interventionRequired: z.number().int().nonnegative(),
 })
 
+/** Clubs by officers trained, index 0–7 (#2296). */
+const OfficerTrainingCountsSchema = z
+  .array(z.number().int().nonnegative())
+  .length(8)
+
+/**
+ * Zod schema for the per-round officer-training distribution (#2296).
+ * Validates OfficerTrainingDistribution interface structure.
+ */
+export const OfficerTrainingDistributionSchema = z.object({
+  /** Round 1 (Jun–Aug): clubs by officers trained, index 0–7 */
+  round1: OfficerTrainingCountsSchema,
+  /** Round 2 (Nov–Feb): clubs by officers trained, index 0–7 */
+  round2: OfficerTrainingCountsSchema,
+})
+
 /**
  * Zod schema for a single time-series data point.
  * Validates TimeSeriesDataPoint interface structure.
@@ -69,6 +85,9 @@ export const TimeSeriesDataPointSchema = z.object({
 
   /** Club health counts breakdown */
   clubCounts: ClubHealthCountsSchema,
+
+  /** Clubs by officers trained per round; absent = not measured (#2296) */
+  officerTraining: OfficerTrainingDistributionSchema.optional(),
 })
 
 /**
