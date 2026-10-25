@@ -105,6 +105,7 @@ export {
   ProgramYearSummarySchema,
   TimeSeriesIndexMetadataSchema,
   ClubHealthCountsSchema,
+  OfficerTrainingDistributionSchema,
 } from './schemas/time-series.schema.js'
 
 // Club health status Zod schemas
