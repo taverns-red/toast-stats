@@ -135,26 +135,32 @@ Each district analytics file contains:
 
 Uploads snapshots and analytics to Google Cloud Storage.
 
+A destination bucket is required (#2288): pass `--bucket <name>` or set
+`GCS_BUCKET`; with neither the command refuses to run. Uploading to the
+production bucket (`toast-stats-data-ca`, or the one `GCS_BUCKET_PRODUCTION`
+names) also needs `--allow-prod`. Production normally receives data only
+through the pipeline's gated promotion, so prefer staging.
+
 ```bash
-# Upload all available dates
-collector-cli upload
+# Upload all available dates to staging
+collector-cli upload --bucket toast-stats-data-staging
 
 # Upload a specific date
-collector-cli upload --date 2025-01-10
+collector-cli upload --bucket toast-stats-data-staging --date 2025-01-10
 
 # Incremental upload (only changed files)
-collector-cli upload --incremental
+GCS_BUCKET=toast-stats-data-staging collector-cli upload --incremental
 
 # Dry run (show what would be uploaded)
-collector-cli upload --dry-run
+collector-cli upload --bucket toast-stats-data-staging --dry-run
 
-# Enable verbose logging
-collector-cli upload --verbose
+# Deliberate production upload
+collector-cli upload --bucket toast-stats-data-ca --allow-prod --date 2025-01-10
 ```
 
 **Environment Variables:**
 
-- `GCS_BUCKET`: Target GCS bucket (default: `toast-stats-data`)
+- `GCS_BUCKET`: Target GCS bucket when `--bucket` is not given (no default)
 - `GCS_PREFIX`: Object prefix in bucket (default: `snapshots`)
 - `GCP_PROJECT_ID`: Google Cloud project ID (optional)
 
@@ -284,7 +290,7 @@ The CLI reads configuration from:
 
 - `TOASTMASTERS_DASHBOARD_URL`: Base URL for the dashboard (default: https://dashboards.toastmasters.org)
 - `CACHE_DIR`: Directory for storing cached data (default: ./cache)
-- `GCS_BUCKET`: GCS bucket for uploads (default: toast-stats-data)
+- `GCS_BUCKET`: GCS bucket for uploads (no default; `upload` refuses without it or `--bucket`)
 - `GCS_PREFIX`: GCS object prefix (default: snapshots)
 - `GCP_PROJECT_ID`: Google Cloud project ID
 
