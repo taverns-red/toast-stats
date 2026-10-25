@@ -271,3 +271,25 @@ describe('CdnClient — failure handling (not-available, never throw)', () => {
     expect(res.reason).toMatch(/not available/i)
   })
 })
+
+// CodeQL js/polynomial-redos (#2289): the base URL is caller input
+// (`CDN_BASE_URL`), and `/\/+$/` is quadratic on a long run of `/` that is
+// not at the end (~3.5 s for 50k slashes before the fix).
+describe('CdnClient base URL normalisation (#2289)', () => {
+  it('strips trailing slashes from the base URL', async () => {
+    const urls: string[] = []
+    const fetchFn = (async (input: string | URL | Request) => {
+      urls.push(String(input))
+      return new Response('not found', { status: 404 })
+    }) as typeof fetch
+    await new CdnClient({ baseUrl: `${BASE}///`, fetchFn }).getLatestDate()
+    expect(urls).toEqual([`${BASE}/v1/latest.json`])
+  })
+
+  it('normalises a pathological base URL in linear time', () => {
+    const baseUrl = `${BASE}${'/'.repeat(50_000)}x`
+    const start = performance.now()
+    new CdnClient({ baseUrl })
+    expect(performance.now() - start).toBeLessThan(200)
+  })
+})
