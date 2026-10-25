@@ -9,11 +9,14 @@ import {
   RollupSkeleton,
 } from '../components/rollups/RollupPageShell'
 import { normaliseRegionId } from '../utils/regionId'
+import { getOfficerTrainingRounds } from '@taverns-red/analytics-core'
+import { formatShortDate } from '../utils/dateFormatting'
 import {
   ALL_OFFICERS,
   DEFAULT_TRAINING_THRESHOLD,
   formatPct,
   parseTrainingThreshold,
+  roundStatus,
   thresholdOptionLabel,
   trainingPageUrl,
   type TrainingRound,
@@ -65,6 +68,11 @@ const RegionTrainingPage: React.FC = () => {
   const date = snapshotDate ?? controls.effectiveDate ?? null
   const programYear = controls.selectedProgramYear.label
   const defaultRound = date ? rankingRound(date, programYear) : 1
+  // A round that has not opened on the page's date has no figures to
+  // compare (every club reads 0): show its opening date, never 0%.
+  const windows = getOfficerTrainingRounds(programYear)
+  const upcoming = (round: TrainingRound) =>
+    date !== null && roundStatus(windows[round - 1]!, date) === 'upcoming'
 
   const { sort, toggleSort } = useUrlSort<SortField>({
     fields: SORT_FIELDS,
@@ -190,12 +198,13 @@ const RegionTrainingPage: React.FC = () => {
                   <th scope="col" rowSpan={2} className="text-right">
                     Clubs
                   </th>
-                  <th scope="colgroup" colSpan={metrics.length}>
-                    Round 1 (Jun–Aug)
-                  </th>
-                  <th scope="colgroup" colSpan={metrics.length}>
-                    Round 2 (Nov–Feb)
-                  </th>
+                  {([1, 2] as const).map(round => (
+                    <th key={round} scope="colgroup" colSpan={metrics.length}>
+                      {round === 1 ? 'Round 1 (Jun–Aug)' : 'Round 2 (Nov–Feb)'}
+                      {upcoming(round) &&
+                        ` · opens ${formatShortDate(windows[round - 1]!.start)}`}
+                    </th>
+                  ))}
                 </tr>
                 <tr>
                   {([1, 2] as const).flatMap(round =>
@@ -215,7 +224,7 @@ const RegionTrainingPage: React.FC = () => {
               <tbody>
                 {sorted.map(row => (
                   <tr key={row.districtId}>
-                    <th scope="row" className="text-left">
+                    <th scope="row" className="region-training-table__district">
                       <Link
                         to={trainingPageUrl(row.districtId, { threshold })}
                         className="clubs-name-link"
@@ -226,7 +235,7 @@ const RegionTrainingPage: React.FC = () => {
                     <td className="text-right tabular-nums">{row.clubs}</td>
                     {([1, 2] as const).flatMap(round =>
                       metrics.map(m => {
-                        const f = row.rounds[round - 1]
+                        const f = upcoming(round) ? null : row.rounds[round - 1]
                         const value = !f
                           ? null
                           : m.metric === 'dcp'
