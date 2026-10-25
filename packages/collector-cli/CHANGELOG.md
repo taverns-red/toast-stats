@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.23.3...collector-cli-v1.24.0) (2026-10-25)
+
+
+### Features
+
+* **training:** officer-training distribution in the time series and region rollups ([#2296](https://github.com/taverns-red/toast-stats/issues/2296)) ([#2311](https://github.com/taverns-red/toast-stats/issues/2311)) ([48e128f](https://github.com/taverns-red/toast-stats/commit/48e128fc701caced6dfac89e4e1379c718cc21c5))
+
 ## [1.23.3](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.23.2...collector-cli-v1.23.3) (2026-10-25)
 
 

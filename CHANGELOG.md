@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.70.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.69.0...toast-stats-v2.70.0) (2026-10-25)
+
+
+### Features
+
+* **training:** officer-training distribution in the time series and region rollups ([#2296](https://github.com/taverns-red/toast-stats/issues/2296)) ([#2311](https://github.com/taverns-red/toast-stats/issues/2311)) ([48e128f](https://github.com/taverns-red/toast-stats/commit/48e128fc701caced6dfac89e4e1379c718cc21c5))
+* **training:** officer-training Training subpage ([#2296](https://github.com/taverns-red/toast-stats/issues/2296)) ([#2312](https://github.com/taverns-red/toast-stats/issues/2312)) ([52109b7](https://github.com/taverns-red/toast-stats/commit/52109b71ee36cec578a32121cb947e8144239e6a))
+* **training:** region comparison of district officer training ([#2296](https://github.com/taverns-red/toast-stats/issues/2296)) ([#2313](https://github.com/taverns-red/toast-stats/issues/2313)) ([c132975](https://github.com/taverns-red/toast-stats/commit/c132975a239a8dd7c95b151949647c5c1f0a40be))
+
 ## [2.69.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.68.0...toast-stats-v2.69.0) (2026-10-25)
 
 
