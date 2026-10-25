@@ -63,6 +63,7 @@ const ATTENTION_TITLES: Record<ActionSectionId, string> = {
   'action-visits': 'Areas missing club visits',
   'action-intervention': 'Clubs needing intervention',
   'action-csp': 'No Club Success Plan',
+  'action-training': 'Clubs short of officer training',
 }
 
 export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
@@ -99,7 +100,9 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
           ? actionSections.closeToDistinguished.length
           : id === 'action-intervention'
             ? actionSections.interventionRequired.length
-            : actionSections.cspNotSubmitted.length
+            : id === 'action-training'
+              ? actionSections.trainingShort.length
+              : actionSections.cspNotSubmitted.length
       return {
         id,
         to: `${buildDistrictSectionUrl(districtId, 'action-list')}#${id}`,

@@ -46,6 +46,13 @@ import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { isDistrictSlotPending } from '../utils/districtSlotPending'
+import {
+  formatNeeded,
+  thresholdPhrase,
+  trainingPageUrl,
+  type ShortClub,
+} from '../utils/officerTraining'
+import { formatDisplayDate } from '../utils/dateFormatting'
 import ErrorBoundary from '../components/ErrorBoundary'
 
 /* District Action List Page (#1231, epic #1228 Sprint 3 — the epic's close).
@@ -352,6 +359,21 @@ const cspColumns = (
   },
 ]
 
+/* Officer training (#2296): clubs short of the threshold in the open round. */
+const trainingColumns = (
+  districtId: string
+): ActionTableColumn<ShortClub>[] => [
+  clubColumn(districtId),
+  areaColumn(),
+  {
+    key: 'trained',
+    header: 'Trained',
+    className: 'action-table__num',
+    cell: c => c.trained,
+  },
+  { key: 'needs', header: 'Needs', cell: c => formatNeeded(c.needed) },
+]
+
 /* Phone rows (#1833): below 768 each section is MobileRowList compact rows.
    Line 1 is the subject (club or area), line 2 carries the facts the table's
    other columns held; the whole row links to the subject's routed page. */
@@ -407,6 +429,15 @@ const cspMobileRow =
     meta: `${areaLabel(c)} \u00b7 Due ${formatCspDueDate(c.cspDueDate)}${
       c.cspOverdue ? ' \u00b7 overdue' : ''
     }`,
+  })
+
+const trainingMobileRow =
+  (districtId: string) =>
+  (c: ShortClub): MobileRow => ({
+    id: c.clubId,
+    to: clubTo(districtId, c),
+    title: c.clubName,
+    meta: `${areaLabel(c)} \u00b7 ${c.trained} trained \u00b7 needs ${formatNeeded(c.needed)}`,
   })
 
 const DistrictActionListPage: React.FC = () => {
@@ -719,6 +750,47 @@ const DistrictActionListPage: React.FC = () => {
           testId="table-intervention"
           mobileRow={interventionMobileRow(districtId ?? '')}
         />
+      ),
+    },
+    'action-training': {
+      testId: 'section-training',
+      heading: sections.trainingRound
+        ? `Clubs short of ${thresholdPhrase(sections.trainingThreshold)} · Round ${sections.trainingRound.round}`
+        : 'Clubs short of officer training',
+      count: sections.trainingShort.length,
+      emptyText: `Every club in this scope has ${thresholdPhrase(sections.trainingThreshold)} this round.`,
+      footnote: sections.trainingRound
+        ? `${sections.trainingDaysLeft} day${sections.trainingDaysLeft === 1 ? '' : 's'} left in the round, to ${formatDisplayDate(sections.trainingRound.end)}. Counts are officers trained, not which officers.`
+        : undefined,
+      csvRows: sections.trainingShort.map(c => [
+        'Officer training',
+        c.divisionId,
+        c.areaId,
+        c.clubName,
+        `${c.trained} trained, needs ${formatNeeded(c.needed)}`,
+      ]),
+      children: (
+        <>
+          <ActionTable
+            caption="Clubs short of officer training this round"
+            columns={trainingColumns(districtId ?? '')}
+            rows={sections.trainingShort}
+            rowKey={c => c.clubId}
+            testId="table-training"
+            mobileRow={trainingMobileRow(districtId ?? '')}
+          />
+          <p className="action-list-section__footnote">
+            <Link
+              to={trainingPageUrl(districtId ?? '', {
+                division,
+                area,
+                threshold: sections.trainingThreshold,
+              })}
+            >
+              See every club on the Training page
+            </Link>
+          </p>
+        </>
       ),
     },
     'action-csp': {

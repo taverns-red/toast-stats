@@ -41,6 +41,8 @@ import {
 } from './cspDeadlines'
 import type { ClubHealthStatus, ClubTrend } from '../hooks/useDistrictAnalytics'
 import type { DivisionPerformance, MissingVisitClub } from './divisionStatus'
+import type { OfficerTrainingRoundWindow } from '@taverns-red/analytics-core'
+import type { ShortClub, TrainingClub } from './officerTraining'
 
 export interface ActionListScope {
   /** Restrict to a single division id (e.g. `'A'`). Absent = all divisions. */
@@ -113,6 +115,19 @@ export interface ActionListSections {
   cspNotSubmittedAutoCreditCount: number
   /** Clubs with no CSP value on a tracked year (E2) — neither listed nor counted. */
   cspUnknownCount: number
+  /**
+   * The officer-training round open on the pinned date for the page's own
+   * program year (#2296); null between rounds, in June (the new year's
+   * Round 1 is open but the snapshot still shows the old year), or with no
+   * officer-training data. The section exists only while this is set.
+   */
+  trainingRound: OfficerTrainingRoundWindow | null
+  /** Days left in `trainingRound`, counting the pinned date. */
+  trainingDaysLeft: number | null
+  /** The threshold the list is built against (default 4, DCP goal 9). */
+  trainingThreshold: number
+  /** In-scope clubs short of the threshold in the open round. */
+  trainingShort: ShortClub[]
 }
 
 export interface ActionListInput {
@@ -129,6 +144,10 @@ export interface ActionListInput {
    * selection. Decides which recognition rungs existed (#1406).
    */
   programYear?: string | undefined
+  /** Clubs with officers trained per round (#2296); null = not measured. */
+  trainingClubs?: TrainingClub[] | null | undefined
+  /** Officer-training threshold, 1–7 (default 4). */
+  trainingThreshold?: number | undefined
 }
 
 function inScope(
@@ -260,6 +279,10 @@ export function buildActionList(
     cspNotSubmittedIneligibleCount: csp.notSubmittedIneligible.length,
     cspNotSubmittedAutoCreditCount: csp.notSubmittedAutoCredit.length,
     cspUnknownCount: csp.unknownCount,
+    trainingRound: null,
+    trainingDaysLeft: null,
+    trainingThreshold: input.trainingThreshold ?? 4,
+    trainingShort: [],
   }
 }
 
@@ -269,7 +292,11 @@ export function buildActionList(
  * id is the section's identity, not an implementation detail (#1569).
  */
 export type ActionSectionId =
-  'action-close' | 'action-visits' | 'action-intervention' | 'action-csp'
+  | 'action-close'
+  | 'action-visits'
+  | 'action-intervention'
+  | 'action-csp'
+  | 'action-training'
 
 /** The three sections that are always present, in their standing order. */
 const CORE_ACTION_SECTIONS: readonly ActionSectionId[] = [
@@ -290,7 +317,8 @@ const CORE_ACTION_SECTIONS: readonly ActionSectionId[] = [
  * still act on.
  */
 export function orderActionSections(
-  sections: Pick<ActionListSections, 'cspTracked' | 'cspActionable'>
+  sections: Pick<ActionListSections, 'cspTracked' | 'cspActionable'> &
+    Partial<Pick<ActionListSections, 'trainingRound'>>
 ): ActionSectionId[] {
   if (!sections.cspTracked) return [...CORE_ACTION_SECTIONS]
   return sections.cspActionable
@@ -304,6 +332,7 @@ const ACTION_SECTION_CLAUSES: Record<ActionSectionId, string> = {
   'action-visits': 'areas with outstanding club visits',
   'action-intervention': 'clubs that need intervention',
   'action-csp': 'clubs without a Club Success Plan',
+  'action-training': 'clubs short of officer training this round',
 }
 
 /**
