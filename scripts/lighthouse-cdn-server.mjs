@@ -56,22 +56,19 @@ const MIME = {
   '.txt': 'text/plain; charset=utf-8',
 }
 
-// Resolve a decoded request path to a file *inside* `base`, rejecting
-// traversal. `resolve()` normalises every `..`, then the result must be the
-// root itself or start with `root + sep`. A bare prefix check would let a
-// sibling dir that shares the prefix (`dist-old/`) through (#2289).
-function safeJoin(base, decodedPath) {
+// Read the file a decoded request path names *inside* `base`, or null.
+// `resolve()` normalises every `..`, then the result must start with
+// `root + sep`. A bare prefix check would let a sibling dir that shares the
+// prefix (`dist-old/`) through. The guard sits in the same function as the
+// stat/readFile it protects so CodeQL sees it dominate the sink (#2289). The
+// root itself is a directory, never a file, so it needs no special case.
+async function tryFileUnder(base, decodedPath) {
   const root = resolve(base)
   const full = resolve(root, '.' + sep + decodedPath)
-  if (full === root || full.startsWith(root + sep)) return full
-  return null
-}
-
-async function tryFile(path) {
-  if (!path) return null
+  if (!full.startsWith(root + sep)) return null
   try {
-    const s = await stat(path)
-    if (s.isFile()) return await readFile(path)
+    const s = await stat(full)
+    if (s.isFile()) return await readFile(full)
   } catch {
     /* not found */
   }
@@ -120,7 +117,7 @@ const server = createServer(async (req, res) => {
   // 1) CDN fixture? (e.g. /v1/rankings.json, /snapshots/<date>/…)
   //    Keep CORS permissive so the server also works when the build points
   //    VITE_CDN_BASE_URL at it cross-origin (Lesson 133).
-  const fixture = await tryFile(safeJoin(FIXTURE_DIR, decodedPath))
+  const fixture = await tryFileUnder(FIXTURE_DIR, decodedPath)
   if (fixture) {
     send(req, res, 200, fixture, MIME['.json'], CORS)
     return
@@ -128,7 +125,7 @@ const server = createServer(async (req, res) => {
 
   // 2) Static SPA asset?
   const assetPath = urlPath === '/' ? '/index.html' : decodedPath
-  const asset = await tryFile(safeJoin(DIST_DIR, assetPath))
+  const asset = await tryFileUnder(DIST_DIR, assetPath)
   if (asset) {
     send(
       req,
@@ -154,7 +151,7 @@ const server = createServer(async (req, res) => {
   }
 
   // 4) SPA client-side route → index.html fallback.
-  const index = await tryFile(join(DIST_DIR, 'index.html'))
+  const index = await tryFileUnder(DIST_DIR, 'index.html')
   if (index) {
     send(req, res, 200, index, MIME['.html'])
     return
