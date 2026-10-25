@@ -93,6 +93,15 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
     segment: 'meetings',
     about: 'When the clubs meet: weekday and start hour, in person and online.',
   },
+  // 'Training' (#2296) — club officer training (DCP goal 9) per round.
+  // Its own section, deliberately NOT under Education: officer training is
+  // not part of the education program (Ron, 2026-10-25).
+  {
+    label: 'Training',
+    segment: 'training',
+    about:
+      'Club officer training (DCP goal 9): clubs with 4+ or all seven officers trained in each round, and which clubs are short.',
+  },
   {
     label: 'Trends',
     segment: 'trends',
