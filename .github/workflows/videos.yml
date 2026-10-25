@@ -39,6 +39,7 @@ on:
     paths:
       - 'videos/**'
       - '.github/workflows/videos.yml'
+      - '.nvmrc' # setup-node reads it (#2005)
 
 # One render per PR at a time; a new push cancels the in-flight one.
 concurrency:
@@ -51,7 +52,7 @@ permissions:
 jobs:
   render:
     name: Capture and render
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # A capture holds each beat in real time (~35 s per format) and a 30 s
     # render takes a few minutes on a runner; 30 min leaves room for both
     # formats plus installs.
@@ -122,7 +123,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request'
       && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       contents: read

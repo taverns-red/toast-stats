@@ -54,7 +54,11 @@ describe('videos.yml (#2293)', () => {
     expect(wf.on.pull_request?.paths).toContain('videos/**')
     expect(
       wf.on.pull_request?.paths?.every(
-        p => p.startsWith('videos/') || p === '.github/workflows/videos.yml'
+        // .nvmrc: setup-node reads it, so workflowPathFilterContract requires it.
+        p =>
+          p.startsWith('videos/') ||
+          p === '.github/workflows/videos.yml' ||
+          p === '.nvmrc'
       )
     ).toBe(true)
   })
