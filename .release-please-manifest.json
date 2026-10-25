@@ -4,5 +4,6 @@
   "packages/shared-contracts": "1.22.1",
   "packages/collector-cli": "1.23.2",
   "packages/analytics-core": "1.22.1",
-  "packages/mcp-server": "0.1.10"
+  "packages/mcp-server": "0.1.10",
+  "videos": "0.1.0"
 }
