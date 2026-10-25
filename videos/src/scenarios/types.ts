@@ -29,6 +29,8 @@ export interface TimedCard {
   startSec: number
   endSec: number
   caption: string
+  /** Optional second line under a card's caption (e.g. how to read a URL). */
+  hint?: string
 }
 
 export interface Beat extends TimedCard {

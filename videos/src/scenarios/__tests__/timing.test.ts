@@ -12,6 +12,9 @@ const captionsOf = (s: Scenario): string[] => [
   s.titleCard.caption,
   ...s.beats.map(b => b.caption),
   s.closing.caption,
+  ...[s.titleCard.hint, s.closing.hint].filter(
+    (h): h is string => h !== undefined
+  ),
 ]
 
 /** A minimal valid scenario; each sentinel breaks exactly one rule. */
@@ -149,10 +152,36 @@ describe('validateScenario sentinels', () => {
     expect(problems).toMatch(/closing card must end at 14/)
   })
 
+  it(`rejects a card hint over ${MAX_CAPTION_WORDS} words`, () => {
+    const s = fixture()
+    s.closing.hint =
+      'one two three four five six seven eight nine ten eleven twelve thirteen'
+    expect(validateScenario(s).join('\n')).toMatch(/closing card hint.*13/)
+  })
+
+  it('rejects an ALL-CAPS placeholder a viewer cannot fill in', () => {
+    const s = fixture()
+    s.closing.caption = 'Go to example.test/district/YOUR-DISTRICT/page'
+    expect(validateScenario(s).join('\n')).toMatch(
+      /closing card.*placeholder "YOUR-DISTRICT"/
+    )
+  })
+
   it('requires at least one beat', () => {
     const s = fixture()
     s.beats = []
     expect(validateScenario(s).join('\n')).toMatch(/no beats/)
+  })
+})
+
+describe('V2 closing card (Ron, PR #2295 review)', () => {
+  it('shows a concrete example URL and says what the number means', () => {
+    const { closing } = getScenario('v2')
+    expect(closing.caption).toMatch(
+      /ts\.taverns\.red\/district\/86\/action-list/
+    )
+    expect(closing.caption).not.toMatch(/YOUR-/)
+    expect(closing.hint).toMatch(/86 = your district number/)
   })
 })
 
