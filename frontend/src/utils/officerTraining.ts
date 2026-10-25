@@ -329,15 +329,15 @@ export function roundCurve(
 }
 
 /** The date in `dates` closest to `date` one year earlier, within ±31 days. */
-export function sameDateLastYear(
+export function sameDateLastYear<T extends string>(
   date: string,
-  dates: readonly string[]
-): string | null {
+  dates: readonly T[]
+): T | null {
   const target = Date.parse(
     `${Number(date.slice(0, 4)) - 1}${date.slice(4)}T00:00:00Z`
   )
   if (Number.isNaN(target)) return null
-  let best: string | null = null
+  let best: T | null = null
   let bestDistance = Infinity
   for (const candidate of dates) {
     const distance = Math.abs(Date.parse(`${candidate}T00:00:00Z`) - target)
