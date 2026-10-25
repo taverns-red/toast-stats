@@ -153,6 +153,18 @@ describe('RegionTrainingPage (#2296)', () => {
     expect(screen.queryByTestId('region-training-table')).toBeNull()
   })
 
+  it('a round that has not opened shows its opening date, not 0%', async () => {
+    mocked.mockResolvedValue(withTraining())
+    renderAt('/region/05/training')
+    const table = await screen.findByTestId('region-training-table')
+    expect(
+      within(table).getByRole('columnheader', { name: /Round 2.*opens Nov 1/ })
+    ).toBeInTheDocument()
+    const row = within(table).getByRole('row', { name: /District 61/ })
+    expect(row).not.toHaveTextContent(/\b0%/)
+    expect(within(row).getAllByText('—')).toHaveLength(2)
+  })
+
   it('appears in the region’s section nav', async () => {
     mocked.mockResolvedValue(withTraining())
     renderAt('/region/05/training')
