@@ -6,6 +6,7 @@ import { KpiDeltaCard } from './KpiDeltaCard'
 import { MobileRowList, type MobileRow } from './MobileRowList'
 import type { DistrictKpiStripData } from './DistrictKpiStrip'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
+import type { TrainingClub } from '../utils/officerTraining'
 import {
   buildActionList,
   orderActionSections,
@@ -56,6 +57,11 @@ export interface DistrictOverviewHubProps {
   clubs: ClubTrend[] | null
   /** Clubs the analytics already classified intervention-required. */
   interventionClubs: ClubTrend[] | null
+  /**
+   * Officers trained per club (#2296). The page loads it only in the last
+   * 30 days of an open round — the only time it counts here (Ron, N10).
+   */
+  trainingClubs?: TrainingClub[] | null
 }
 
 const ATTENTION_TITLES: Record<ActionSectionId, string> = {
@@ -73,6 +79,7 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
   kpis,
   clubs,
   interventionClubs,
+  trainingClubs,
 }) => {
   const [openTile, setOpenTile] = useState<HubTileKey | 'net' | null>(null)
   const loading = kpis === null || clubs === null
@@ -87,12 +94,17 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
         divisions: [],
         snapshotDate: snapshotDate ?? '',
         programYear,
+        trainingClubs,
       }),
-    [clubs, interventionClubs, snapshotDate, programYear]
+    [clubs, interventionClubs, snapshotDate, programYear, trainingClubs]
   )
 
   const attentionRows: MobileRow[] = orderActionSections(actionSections)
     .filter(id => id !== 'action-visits')
+    // Officer training needs attention only in the round's final stretch.
+    .filter(
+      id => id !== 'action-training' || actionSections.trainingFinalStretch
+    )
     .slice(0, 3)
     .map(id => {
       const count =

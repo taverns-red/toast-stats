@@ -43,6 +43,9 @@ import {
   type DistrictKpiStripData,
 } from '../components/DistrictKpiStrip'
 import { DistrictOverviewHub } from '../components/DistrictOverviewHub'
+import { useDistrictStatistics } from '../hooks/useMembershipData'
+import { isTrainingFinalStretch } from '../utils/actionListData'
+import { trainingClubsFromSnapshot } from '../utils/officerTraining'
 import { DISTRICT_HUB_QUERY } from '../utils/districtHub'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { DistrictRegionMoveBanner } from '../components/DistrictRegionMoveBanner'
@@ -418,6 +421,25 @@ const DistrictDetailPageInner: React.FC = () => {
   // Overview hub; tablets and desktops keep the KPI strip and CTA row.
   const isHubLayout = useMediaQuery(DISTRICT_HUB_QUERY)
 
+  // Officer training counts toward the hub's Needs attention only in the
+  // last 30 days of an open round (#2296, Ron N10). The snapshot that holds
+  // it is read only then, and only for the hub layout — no extra request on
+  // the Overview the rest of the year.
+  const trainingFinalStretch =
+    isHubLayout &&
+    effectiveEndDate !== null &&
+    effectiveProgramYear !== null &&
+    isTrainingFinalStretch(effectiveEndDate, effectiveProgramYear.label)
+  const { data: trainingSnapshot } = useDistrictStatistics(
+    trainingFinalStretch ? (districtId ?? null) : null,
+    effectiveEndDate ?? undefined
+  )
+  const trainingClubs = useMemo(
+    () =>
+      trainingFinalStretch ? trainingClubsFromSnapshot(trainingSnapshot) : null,
+    [trainingFinalStretch, trainingSnapshot]
+  )
+
   const kpiStripData: DistrictKpiStripData | null = useMemo(() => {
     if (!analytics) return null
     // Hold the skeleton until the targets read settles (#1685). Rendering on
@@ -703,6 +725,7 @@ const DistrictDetailPageInner: React.FC = () => {
                 kpis={kpiStripData}
                 clubs={kpiStripData ? (analytics?.allClubs ?? null) : null}
                 interventionClubs={analytics?.interventionRequiredClubs ?? null}
+                trainingClubs={trainingClubs}
               />
             ) : (
               <DistrictKpiStrip kpis={kpiStripData} />
