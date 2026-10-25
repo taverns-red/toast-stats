@@ -155,9 +155,15 @@
   padding-bottom: 0.25rem;
 }
 
+.training-dist thead th:first-child {
+  width: 4.5rem;
+  padding-right: 0.75rem;
+  text-align: right;
+}
+
 .training-dist__n {
-  width: 2.5rem;
-  padding: 0.125rem 0.5rem 0.125rem 0;
+  width: 4.5rem;
+  padding: 0.125rem 0.75rem 0.125rem 0;
   font-weight: 600;
   color: var(--ink-2);
   text-align: right;
