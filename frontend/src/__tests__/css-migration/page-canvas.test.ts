@@ -105,9 +105,9 @@ describe('Page canvas follows the app theme (#1662)', () => {
 describe('Theme is applied before first paint (#1662)', () => {
   const html = readFileSync(resolve(FRONTEND_ROOT, 'index.html'), 'utf-8')
   const head = html.slice(0, html.indexOf('</head>'))
-  const scripts = [...head.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
-    m => m[1]
-  )
+  const scripts = [
+    ...head.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\b[^>]*>/gi),
+  ].map(m => m[1])
   const init = scripts.find(s => /data-theme/.test(s))
 
   it('index.html <head> has an inline theme-init script', () => {
