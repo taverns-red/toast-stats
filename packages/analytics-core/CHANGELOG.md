@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.22.1...analytics-core-v1.23.0) (2026-10-25)
+
+
+### Features
+
+* **training:** officer-training distribution in the time series and region rollups ([#2296](https://github.com/taverns-red/toast-stats/issues/2296)) ([#2311](https://github.com/taverns-red/toast-stats/issues/2311)) ([48e128f](https://github.com/taverns-red/toast-stats/commit/48e128fc701caced6dfac89e4e1379c718cc21c5))
+
 ## [1.22.1](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.22.0...analytics-core-v1.22.1) (2026-10-21)
 
 
