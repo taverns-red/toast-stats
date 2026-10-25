@@ -44,6 +44,31 @@ describe('fetchCdnRegionRollups', () => {
     expect(Object.keys(file?.regions ?? {})).toHaveLength(14)
   })
 
+  it('accepts the recorded file once the pipeline adds officerTraining to every block (#2296)', async () => {
+    // The schema is strict: until this reader is DEPLOYED, a file carrying
+    // the new key reads as "not published" on every region page. This is
+    // the forward-compatibility the writer (the pipeline PR) waits for.
+    const distribution = {
+      round1: [19, 5, 3, 14, 43, 25, 27, 25],
+      round2: [161, 0, 0, 0, 0, 0, 0, 0],
+    }
+    const withKey = structuredClone(recorded) as unknown as {
+      world: Record<string, unknown>
+      regions: Record<string, Record<string, unknown>>
+      districts: Record<string, Record<string, unknown>>
+    }
+    withKey.world['officerTraining'] = distribution
+    for (const r of Object.values(withKey.regions)) r['officerTraining'] = null
+    for (const d of Object.values(withKey.districts))
+      d['officerTraining'] = distribution
+    stubFetch({ ok: true, status: 200, body: withKey })
+    const file = await fetchCdnRegionRollups(snap('2026-10-15'))
+    expect(file).not.toBeNull()
+    expect(
+      (file?.world as Record<string, unknown> | undefined)?.['officerTraining']
+    ).toEqual(distribution)
+  })
+
   it('resolves null when the date has no file', async () => {
     stubFetch({ ok: false, status: 404 })
     await expect(fetchCdnRegionRollups(snap('2026-10-14'))).resolves.toBe(null)

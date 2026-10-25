@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-strict-cdn-contract-makes-an-additive-field-a-breaking-change-for-deployed-readers.md` — When a CDN file's zod contract is .strict(), adding an optional field is backward-compatible for new readers but breaks the readers already deployed, so the schema change must be released to prod before any pipeline run writes the field  (2026-10-25)
 - `a-findby-window-pays-for-cold-lazy-imports-and-the-suspense-throttle-preload-in-beforeall.md` — A test's first findBy window pays for Vite's cold compile of every lazily imported module and for React 19's 300 ms Suspense reveal throttle, so on a ~4x slower runner it overruns 1 s; import the lazy graph in beforeAll, and calibrate a CPU-throttle repro to the slowdown per worker, not the slowdown of the whole suite  (2026-10-24)
 - `an-absence-assertion-after-findby-passes-before-passive-effects-run.md` — An "it was never written" assertion right after findBy* passes vacuously, because the post-data passive effect has not run yet  (2026-10-24)
 - `widen-a-guard-to-its-stated-intent-only-after-inventorying-what-already-passes.md` — A guard test's regex can be narrower than its comment; before widening it to the stated intent, inventory the uses that pass today, because some of them are the house style, not leaks  (2026-10-23)
