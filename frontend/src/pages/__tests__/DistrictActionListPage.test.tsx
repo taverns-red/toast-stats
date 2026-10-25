@@ -1155,3 +1155,69 @@ describe('DistrictActionListPage — officer training (#2296)', () => {
     expect(screen.queryByTestId('section-training')).toBeNull()
   })
 })
+
+describe('DistrictActionListPage — officer training list size (#2296, N10)', () => {
+  const twelve = {
+    data: {
+      clubPerformance: Array.from({ length: 12 }, (_, i) => ({
+        'Club Number': String(2000 + i),
+        'Club Name': `Club ${String(i).padStart(2, '0')}`,
+        Division: 'A',
+        Area: '01',
+        'Off. Trained Round 1': '7',
+        // Clubs 00-01 need 1, the rest need 4: the fewest-needed lead.
+        'Off. Trained Round 2': i < 2 ? '3' : '0',
+      })),
+    },
+  }
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: {
+        dates: ['2026-11-15'],
+        dateRange: { startDate: '2026-11-15', endDate: '2026-11-15' },
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    vi.mocked(useDistrictStatistics).mockReturnValue({
+      data: twelve,
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictStatistics>)
+  })
+  afterEach(() => {
+    cleanup()
+    vi.mocked(useDistrictCachedDates).mockReturnValue(
+      DATES_2025_26 as ReturnType<typeof useDistrictCachedDates>
+    )
+    vi.mocked(useDistrictStatistics).mockReturnValue({
+      data: { asOfDate: '2025-07-15' },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictStatistics>)
+  })
+
+  it('is collapsed by default, even when it leads the page', async () => {
+    renderAt('/district/61/action-list')
+    const section = await screen.findByTestId('section-training')
+    expect(within(section).getAllByRole('button')[0]).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    )
+  })
+
+  it('shows the 10 clubs needing the fewest officers, then "Show all 12"', async () => {
+    renderAt('/district/61/action-list')
+    const section = await openSection('section-training')
+    expect(cellsOf('section-training')).toHaveLength(10)
+    expect(
+      cellsOf('section-training')
+        .slice(0, 2)
+        .map(r => r[3])
+    ).toEqual(['1 more officer', '1 more officer'])
+    await userEvent.click(
+      within(section).getByRole('button', { name: 'Show all 12' })
+    )
+    expect(cellsOf('section-training')).toHaveLength(12)
+    // The count badge and the CSV always carry all 12.
+    expect(within(section).getAllByRole('button')[0]).toHaveTextContent('12')
+  })
+})

@@ -185,3 +185,49 @@ describe('orderActionSections — officer training (#2296)', () => {
     )
   })
 })
+
+describe('officer training — Ron’s N10 rules (#2296)', () => {
+  const allZero = Array.from({ length: 12 }, (_, i) =>
+    club(String(100 + i), i % 2 ? 'B' : 'A', '01', 5, 0)
+  )
+
+  it('Nov 1: every club reads 0 — all listed, fewest needed first, not in the final stretch', () => {
+    const sections = build('2026-11-01', '2026-2027', {
+      trainingClubs: allZero,
+    })
+    expect(sections.trainingShort).toHaveLength(12)
+    expect(sections.trainingShort.every(c => c.needed === 4)).toBe(true)
+    expect(sections.trainingFinalStretch).toBe(false)
+  })
+
+  it('mid-round: fewest officers still needed first', () => {
+    const sections = build('2026-12-15', '2026-2027', {
+      trainingClubs: [
+        club('1', 'A', '01', 0, 0),
+        club('2', 'A', '01', 0, 3),
+        club('3', 'A', '01', 0, 2),
+      ],
+    })
+    expect(sections.trainingShort.map(c => c.needed)).toEqual([1, 2, 4])
+    expect(sections.trainingFinalStretch).toBe(false)
+  })
+
+  it('the last 30 days of the round are the final stretch (Jan 29 = 31 left, Jan 30 = 30 left)', () => {
+    const jan29 = build('2027-01-29', '2026-2027')
+    expect(jan29.trainingDaysLeft).toBe(31)
+    expect(jan29.trainingFinalStretch).toBe(false)
+    const jan30 = build('2027-01-30', '2026-2027')
+    expect(jan30.trainingDaysLeft).toBe(30)
+    expect(jan30.trainingFinalStretch).toBe(true)
+    expect(build('2027-02-28', '2026-2027').trainingFinalStretch).toBe(true)
+  })
+
+  it('Round 1: Aug 1 (31 left) is not, Aug 2 (30 left) is', () => {
+    expect(build('2026-08-01', '2026-2027').trainingFinalStretch).toBe(false)
+    expect(build('2026-08-02', '2026-2027').trainingFinalStretch).toBe(true)
+  })
+
+  it('no round open: never the final stretch', () => {
+    expect(build('2026-10-15', '2026-2027').trainingFinalStretch).toBe(false)
+  })
+})
