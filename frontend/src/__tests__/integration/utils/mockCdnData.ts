@@ -4,6 +4,23 @@ import { resetCdnCacheStats } from '../../../services/cdnCacheTracker'
 import { queryClient } from '../../../config/queryClient'
 
 const baseUrl = 'https://cdn.taverns.red'
+const cdnHost = new URL(baseUrl).host
+
+/**
+ * The CDN path (+ query) of `url`, or null when it is not a CDN URL. Parses
+ * the URL and compares the host exactly: a prefix check would also match
+ * `https://cdn.taverns.red.example.com` (#2289).
+ */
+function cdnPathOf(url: string): string | null {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return null
+  }
+  if (parsed.protocol !== 'https:' || parsed.host !== cdnHost) return null
+  return parsed.pathname + parsed.search
+}
 
 /**
  * DIVERGENCE-BY-DEFAULT fixture dates (#1322, epic #1319 Sprint 3).
@@ -270,9 +287,8 @@ export function setupCdnFetchMock() {
         const url = input.toString()
 
         // Check for CDN specific routes
-        if (url.startsWith(baseUrl)) {
-          const path = url.replace(baseUrl, '')
-
+        const path = cdnPathOf(url)
+        if (path !== null) {
           // Serve per-snapshot files ONLY under a date the bucket really has
           // (#1322). The route table below matches on `path.includes(filename)`
           // and is otherwise date-blind, so without this gate a consumer keying
