@@ -128,3 +128,17 @@ describe('prodWriteGuard blind spots (#2285)', () => {
     }
   })
 })
+
+describe('prodWriteGuard runs in linear time (#2285, CodeQL js/redos)', () => {
+  it('handles long adversarial gsutil flag runs quickly', () => {
+    for (const run of [
+      'gsutil' + ' -h'.repeat(25_000),
+      'gsutil -h ' + '-ab '.repeat(12_500) + 'x',
+      'gsutil' + ' -m -h -o'.repeat(6_000) + ' !',
+    ]) {
+      const start = performance.now()
+      expect(prodWriteReasons(run)).toEqual([])
+      expect(performance.now() - start).toBeLessThan(2_000)
+    }
+  })
+})
