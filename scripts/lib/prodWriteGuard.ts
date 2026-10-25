@@ -66,27 +66,58 @@ function shellCommands(run: string): string[] {
     .filter(l => l !== '' && !l.startsWith('#'))
 }
 
-/** The command up to the first `||`, `&&`, `|`, `;` or redirection. */
-function firstSimpleCommand(cmd: string): string {
-  return cmd.split(/\s(?:\|\||&&|\||;|\d?>>?)\s?/)[0].trim()
+/**
+ * The simple commands of a line, split at `||`, `&&`, `|`, `;` and
+ * redirections. Every one is checked, not only the first: a write after a
+ * pipe (`… | xargs gcloud storage rm …`) or an `&&` is still a write (#2285).
+ */
+function simpleCommands(cmd: string): string[] {
+  return cmd
+    .split(/\s(?:\|\||&&|\||;|\d?>>?)\s?/)
+    .map(c => c.trim())
+    .filter(c => c !== '')
 }
+
+/**
+ * The gcloud binary, bare, by path, or held in a variable (`"${GCLOUD}"`,
+ * `$GCLOUD`), followed by a write verb of `gcloud storage` (#2285).
+ */
+const GCLOUD_STORAGE_WRITE =
+  /(?:gcloud|\$\{?[A-Za-z_]*GCLOUD[A-Za-z_]*\}?)["']?\s+storage\s+(cp|rsync|mv|rm|objects\s+update)\b/
+
+/**
+ * gsutil and a write verb, past its top-level flags. `-h`, `-o`, `-u` and
+ * `-i` take a value; the rest (`-m`, `-q`, …) do not (#2285).
+ */
+const GSUTIL_WRITE =
+  /\bgsutil(?:\s+(?:-[hoiu]\s+(?:"[^"]*"|'[^']*'|\S+)|-[A-Za-z]+))*\s+(cp|rsync|mv|rm|setmeta|compose|rewrite|acl|defacl|retention)\b/
+
+/** Verbs whose destination is their last argument; the others act in place. */
+const LAST_ARG_IS_TARGET: ReadonlySet<string> = new Set([
+  'cp',
+  'rsync',
+  'mv',
+  'compose',
+])
 
 /** Why `run` writes to production; empty when it does not. */
 export function prodWriteReasons(run: string): string[] {
   const reasons: string[] = []
   for (const cmd of shellCommands(run)) {
-    const simple = firstSimpleCommand(cmd)
-    const storage = simple.match(
-      /gcloud\s+storage\s+(cp|rsync|mv|rm|objects\s+update)\b/
-    )
-    if (storage) {
-      const verb = storage[1].replace(/\s+/g, ' ')
-      const tokens = simple.split(/\s+/)
-      const target =
-        verb === 'rm' || verb === 'objects update'
-          ? tokens.some(t => PROD_REF.test(t))
-          : PROD_REF.test(tokens[tokens.length - 1] ?? '')
-      if (target) reasons.push(`gcloud storage ${verb} → production`)
+    for (const simple of simpleCommands(cmd)) {
+      for (const [tool, pattern] of [
+        ['gcloud storage', GCLOUD_STORAGE_WRITE],
+        ['gsutil', GSUTIL_WRITE],
+      ] as const) {
+        const m = simple.match(pattern)
+        if (!m) continue
+        const verb = m[1].replace(/\s+/g, ' ')
+        const tokens = simple.split(/\s+/)
+        const target = LAST_ARG_IS_TARGET.has(verb)
+          ? PROD_REF.test(tokens[tokens.length - 1] ?? '')
+          : tokens.some(t => PROD_REF.test(t))
+        if (target) reasons.push(`${tool} ${verb} → production`)
+      }
     }
     // The scoped promoter (#1763) writes prod through its own gcloud calls,
     // invisible to the pattern above; its dry run only reads.
@@ -136,8 +167,10 @@ export const PROD_RSYNC_EXEMPT: Readonly<Record<string, string>> = {}
  * the PROD_RSYNC_EXEMPT steps of data-pipeline.yml.
  */
 export function prodRsyncSteps(workflow: Workflow): ProdWriteStep[] {
-  return findProdWriteSteps(workflow).filter(s =>
-    s.reasons.includes('gcloud storage rsync → production')
+  return findProdWriteSteps(workflow).filter(
+    s =>
+      s.reasons.includes('gcloud storage rsync → production') ||
+      s.reasons.includes('gsutil rsync → production')
   )
 }
 
