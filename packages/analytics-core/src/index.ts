@@ -36,6 +36,15 @@ export type {
   SuspectedDcpGoalHeaderRename,
 } from './analytics/dcpGoalDefinitions.js'
 
+// Officer-training roll-up (#2296) — reads goal 9's columns
+export {
+  summarizeOfficerTraining,
+  officersTrainedInRound,
+  OFFICER_TRAINING_ROUND_COLUMNS,
+  OFFICER_TRAINING_DCP_THRESHOLD,
+  OFFICER_TRAINING_MAX_OFFICERS,
+} from './analytics/officerTraining.js'
+
 // Analytics computation
 export {
   AnalyticsComputer,

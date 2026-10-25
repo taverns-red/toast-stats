@@ -22,6 +22,7 @@ import {
   isDistinguishedStatusCode,
 } from '../analytics/ClubEligibilityUtils.js'
 import { getCurrentProgramMonth } from '../analytics/AnalyticsUtils.js'
+import { summarizeOfficerTraining } from '../analytics/officerTraining.js'
 
 /**
  * Scraped record type - represents raw CSV data with dynamic columns.
@@ -95,6 +96,12 @@ export class TimeSeriesDataPointBuilder {
     // Calculate distinguished club total
     const distinguishedTotal = this.calculateDistinguishedTotal(district)
 
+    // Clubs by officers trained per round (#2296); omitted, not zeroed,
+    // when the export carries no officer-training columns.
+    const officerTraining = summarizeOfficerTraining(
+      district.clubPerformance ?? []
+    )
+
     return {
       date: district.asOfDate,
       snapshotId,
@@ -103,6 +110,7 @@ export class TimeSeriesDataPointBuilder {
       dcpGoals,
       distinguishedTotal,
       clubCounts,
+      ...(officerTraining ? { officerTraining } : {}),
     }
   }
 
