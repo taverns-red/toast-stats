@@ -42,7 +42,13 @@ import {
 import type { ClubHealthStatus, ClubTrend } from '../hooks/useDistrictAnalytics'
 import type { DivisionPerformance, MissingVisitClub } from './divisionStatus'
 import type { OfficerTrainingRoundWindow } from '@taverns-red/analytics-core'
-import type { ShortClub, TrainingClub } from './officerTraining'
+import {
+  DEFAULT_TRAINING_THRESHOLD,
+  shortClubs,
+  trainingRoundContext,
+  type ShortClub,
+  type TrainingClub,
+} from './officerTraining'
 
 export interface ActionListScope {
   /** Restrict to a single division id (e.g. `'A'`). Absent = all divisions. */
@@ -279,10 +285,44 @@ export function buildActionList(
     cspNotSubmittedIneligibleCount: csp.notSubmittedIneligible.length,
     cspNotSubmittedAutoCreditCount: csp.notSubmittedAutoCredit.length,
     cspUnknownCount: csp.unknownCount,
+    ...trainingSection(input, scope, cspYear),
+  }
+}
+
+/**
+ * The officer-training section (#2296): only while a round is open on the
+ * pinned date for the page's own program year. A June snapshot still holds
+ * the old year's final counts while the new year's Round 1 is open, so
+ * `trainingRoundContext` reports that round as pending, not open, and no
+ * list is built from last year's numbers.
+ */
+function trainingSection(
+  input: ActionListInput,
+  scope: ActionListScope,
+  programYear: string
+): Pick<
+  ActionListSections,
+  'trainingRound' | 'trainingDaysLeft' | 'trainingThreshold' | 'trainingShort'
+> {
+  const threshold = input.trainingThreshold ?? DEFAULT_TRAINING_THRESHOLD
+  const none = {
     trainingRound: null,
     trainingDaysLeft: null,
-    trainingThreshold: input.trainingThreshold ?? 4,
+    trainingThreshold: threshold,
     trainingShort: [],
+  }
+  if (!input.trainingClubs || !input.snapshotDate) return none
+  const context = trainingRoundContext(input.snapshotDate, programYear)
+  if (!context.open) return none
+  return {
+    trainingRound: context.open,
+    trainingDaysLeft: context.daysLeft,
+    trainingThreshold: threshold,
+    trainingShort: shortClubs(
+      input.trainingClubs.filter(c => inScope(c.divisionId, c.areaId, scope)),
+      context.open.round,
+      threshold
+    ),
   }
 }
 
@@ -320,10 +360,15 @@ export function orderActionSections(
   sections: Pick<ActionListSections, 'cspTracked' | 'cspActionable'> &
     Partial<Pick<ActionListSections, 'trainingRound'>>
 ): ActionSectionId[] {
-  if (!sections.cspTracked) return [...CORE_ACTION_SECTIONS]
+  // #2296: officer training is a to-do only while its round is open; it
+  // leads the standing sections then (the round has a hard end date).
+  const core: ActionSectionId[] = sections.trainingRound
+    ? ['action-training', ...CORE_ACTION_SECTIONS]
+    : [...CORE_ACTION_SECTIONS]
+  if (!sections.cspTracked) return core
   return sections.cspActionable
-    ? ['action-csp', ...CORE_ACTION_SECTIONS]
-    : [...CORE_ACTION_SECTIONS, 'action-csp']
+    ? ['action-csp', ...core]
+    : [...core, 'action-csp']
 }
 
 /** Each section's clause in the page's intro sentence. */
