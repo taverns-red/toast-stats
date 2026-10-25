@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck -- red-commit stub for #2296, replaced by the implementation
 /**
  * Region comparison of officer training (#2296). A region's districts on
  * each round's % of clubs at 4+ (DCP goal 9), % with all seven officers
@@ -32,7 +30,26 @@ export function regionTrainingRows(
   regionId: string,
   threshold: number
 ): RegionTrainingRow[] {
-  throw new Error('not implemented (#2296)')
+  const region = rollups.regions?.[regionId]
+  if (!region) return []
+  return [...region.districtIds]
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    .flatMap(districtId => {
+      const district = rollups.districts[districtId]
+      if (!district) return []
+      const training = district.officerTraining ?? null
+      const round = (r: TrainingRound) =>
+        training
+          ? figuresFromDistribution(roundDistribution(training, r), threshold)
+          : null
+      return [
+        {
+          districtId,
+          clubs: district.clubs,
+          rounds: [round(1), round(2)] as RegionTrainingRow['rounds'],
+        },
+      ]
+    })
 }
 
 export type RegionTrainingMetric = 'threshold' | 'dcp' | 'allSeven'
@@ -57,7 +74,21 @@ export function sortRegionTrainingRows(
   by: { round: TrainingRound; metric: RegionTrainingMetric },
   direction: 'desc' | 'asc' = 'desc'
 ): RegionTrainingRow[] {
-  throw new Error('not implemented (#2296)')
+  const sign = direction === 'desc' ? -1 : 1
+  return [...rows].sort((a, b) => {
+    const va = metricValue(a, by.round, by.metric)
+    const vb = metricValue(b, by.round, by.metric)
+    if (va === null && vb === null)
+      return a.districtId.localeCompare(b.districtId, undefined, {
+        numeric: true,
+      })
+    if (va === null) return 1
+    if (vb === null) return -1
+    return (
+      sign * (va - vb) ||
+      a.districtId.localeCompare(b.districtId, undefined, { numeric: true })
+    )
+  })
 }
 
 /**
@@ -68,7 +99,10 @@ export function rankingRound(
   snapshotDate: string,
   programYear: string
 ): TrainingRound {
-  throw new Error('not implemented (#2296)')
+  const context = trainingRoundContext(snapshotDate, programYear)
+  if (context.open) return context.open.round
+  const [, round2] = getOfficerTrainingRounds(programYear)
+  return snapshotDate >= round2.start ? 2 : 1
 }
 
 /** Competition rank (ties share; the next rank skips) by % at the
@@ -78,10 +112,19 @@ export function rankInRegion(
   districtId: string,
   round: TrainingRound
 ): { rank: number; of: number } | null {
-  throw new Error('not implemented (#2296)')
+  const ranked = rows.filter(r => metricValue(r, round, 'threshold') !== null)
+  const own = ranked.find(r => r.districtId === districtId)
+  if (!own) return null
+  const value = metricValue(own, round, 'threshold')!
+  const ahead = ranked.filter(
+    r => metricValue(r, round, 'threshold')! > value
+  ).length
+  return { rank: ahead + 1, of: ranked.length }
 }
 
 /** "1st", "2nd", "3rd", "11th" … */
 export function ordinal(n: number): string {
-  throw new Error('not implemented (#2296)')
+  const tens = n % 100
+  if (tens >= 11 && tens <= 13) return `${n}th`
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
 }
