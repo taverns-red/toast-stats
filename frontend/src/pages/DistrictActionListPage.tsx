@@ -48,7 +48,9 @@ import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { isDistrictSlotPending } from '../utils/districtSlotPending'
 import {
   formatNeeded,
+  parseTrainingThreshold,
   thresholdPhrase,
+  trainingClubsFromSnapshot,
   trainingPageUrl,
   type ShortClub,
 } from '../utils/officerTraining'
@@ -449,6 +451,11 @@ const DistrictActionListPage: React.FC = () => {
   // (L124/144 / R17). An empty string is treated as "no filter".
   const division = searchParams.get('division') || undefined
   const area = searchParams.get('area') || undefined
+  // #2296: the officer-training threshold shares the Training page's
+  // `?threshold=` (1–7, default 4), so a shared incentive link carries it.
+  const trainingThreshold = parseTrainingThreshold(
+    searchParams.get('threshold')
+  )
 
   const setScope = (next: {
     division?: string | undefined
@@ -567,6 +574,12 @@ const DistrictActionListPage: React.FC = () => {
     [districtStatistics, effectiveEndDate]
   )
 
+  // #2296: officers trained per club, from the same snapshot (no new read).
+  const trainingClubs = useMemo(
+    () => trainingClubsFromSnapshot(districtStatistics),
+    [districtStatistics]
+  )
+
   const sections = useMemo<ActionListSections>(() => {
     // buildActionList already returns empty sections for empty input, so no
     // separate no-data guard is needed — the `?? []` fallbacks make it safe.
@@ -579,6 +592,8 @@ const DistrictActionListPage: React.FC = () => {
         // #1406 — the page owns the program-year selection; the recognition
         // ladder must not be re-derived downstream (R3).
         programYear: effectiveProgramYear?.label,
+        trainingClubs,
+        trainingThreshold,
       },
       { division, area }
     )
@@ -589,6 +604,8 @@ const DistrictActionListPage: React.FC = () => {
     effectiveProgramYear,
     division,
     area,
+    trainingClubs,
+    trainingThreshold,
   ])
 
   // Scope-select options come from the authoritative division/area structure.
@@ -629,6 +646,7 @@ const DistrictActionListPage: React.FC = () => {
       datesState
     )
   const totalItems =
+    sections.trainingShort.length +
     sections.closeToDistinguished.length +
     sections.visitGaps.length +
     sections.interventionRequired.length +
