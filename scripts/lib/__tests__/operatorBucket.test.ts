@@ -114,10 +114,19 @@ describe('operator scripts resolve their bucket through it (#2286)', () => {
   })
 
   it('generate-month-end-snapshots hands collector-cli its bucket', () => {
-    // collector-cli upload defaults GCS_BUCKET to prod, so an unset shell
-    // env would upload to prod whatever --bucket said.
+    // An inherited shell GCS_BUCKET must not override --bucket.
     expect(read('generate-month-end-snapshots.ts')).toMatch(
       /env: \{ \.\.\.process\.env, CACHE_DIR: cacheDir, GCS_BUCKET: bucket \}/
+    )
+  })
+
+  it('generate-month-end-snapshots forwards --allow-prod to upload (#2288)', () => {
+    // collector-cli upload refuses the prod bucket without --allow-prod, so
+    // a deliberate prod run of this script must pass it on, and only then.
+    const src = read('generate-month-end-snapshots.ts')
+    expect(src).toMatch(/const \{ bucket, allowProd \} = resolveOperatorBucket/)
+    expect(src).toMatch(
+      /runCLI\(\s*`upload --date \$\{date\}\$\{allowProd \? ' --allow-prod' : ''\}`/
     )
   })
 })
