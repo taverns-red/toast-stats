@@ -30,10 +30,12 @@ export interface WorkflowStep {
   id?: string
   if?: string
   run?: string
+  env?: Record<string, unknown>
 }
 
 export interface WorkflowJob {
   if?: string
+  env?: Record<string, unknown>
   steps?: WorkflowStep[]
 }
 
@@ -100,11 +102,94 @@ const LAST_ARG_IS_TARGET: ReadonlySet<string> = new Set([
   'compose',
 ])
 
+/**
+ * Shell variables that hold a production reference, directly or through
+ * another such variable (#2285): `DEST="gs://${GCS_BUCKET_PRODUCTION}/v1"`,
+ * then `D="${DEST}/x"`. `env` is the step's and job's `env:` map, whose
+ * entries are variables of the same kind. A value that merely mentions
+ * prod (a `$(gcloud storage cat …)` read) also counts: the guard errs
+ * towards flagging, and only a variable at the HEAD of a destination (the
+ * bucket position) makes that destination prod.
+ */
+function prodVariables(run: string, env: Record<string, unknown>): string[] {
+  const assignments: Array<[string, string]> = Object.entries(env).map(
+    ([k, v]) => [k, String(v)]
+  )
+  const assign =
+    /(?:^|[\s;&|(])(?:(?:export|local|readonly|declare(?:\s+-\w+)*)\s+)?([A-Za-z_]\w*)=("(?:[^"\\]|\\.)*"|'[^']*'|\$\([^)]*\)|[^\s;]*)/g
+  for (const m of run.matchAll(assign)) assignments.push([m[1], m[2]])
+  const vars = new Set<string>()
+  let grew = true
+  while (grew) {
+    grew = false
+    for (const [name, value] of assignments) {
+      if (vars.has(name)) continue
+      if (PROD_REF.test(value) || [...vars].some(v => refsVar(value, v))) {
+        vars.add(name)
+        grew = true
+      }
+    }
+  }
+  return [...vars]
+}
+
+function refsVar(text: string, name: string): boolean {
+  return new RegExp(`\\$\\{?${name}\\b`).test(text)
+}
+
+/** Does this destination token name prod, by name or by a prod variable? */
+function isProdTarget(token: string, prodVars: readonly string[]): boolean {
+  if (PROD_REF.test(token)) return true
+  const head = token.replace(/^["']+/, '').replace(/^gs:\/\//, '')
+  const m = head.match(/^\$\{?([A-Za-z_]\w*)/)
+  return m !== null && prodVars.includes(m[1])
+}
+
+/**
+ * Scripts that may be handed the prod bucket because they only read it,
+ * keyed by path, with what they do. The contract test checks each file has
+ * no storage write verb, so a write added to one turns the guard red.
+ */
+export const READ_ONLY_PROD_SCRIPTS: Readonly<Record<string, string>> = {
+  'scripts/pipeline/check-report-sidecars.sh':
+    'lists staging and prod report sidecars per date (#1767)',
+}
+
+const SCRIPT_FILE = /^(?:\.\/)?[^\s"'=]+\.(?:sh|bash|ts|mts|cts|js|mjs|cjs|py)$/
+
+/**
+ * A script invoked with a production reference among its words (an
+ * argument, a `--flag=value`, or a `VAR=value` prefix), unless it is on
+ * READ_ONLY_PROD_SCRIPTS. The guard cannot see inside the script, so it
+ * must assume the script writes (#2285).
+ */
+function scriptGivenProd(
+  simple: string,
+  prodVars: readonly string[]
+): string | undefined {
+  const tokens = simple.split(/\s+/)
+  const strip = (t: string) => t.replace(/^["']+|["']+$/g, '')
+  const i = tokens.findIndex(t => SCRIPT_FILE.test(strip(t)))
+  if (i === -1) return undefined
+  const script = strip(tokens[i]).replace(/^\.\//, '')
+  if (script in READ_ONLY_PROD_SCRIPTS) return undefined
+  const givenProd = tokens.some(
+    (t, j) => j !== i && (PROD_REF.test(t) || prodVars.some(v => refsVar(t, v)))
+  )
+  return givenProd ? script : undefined
+}
+
 /** Why `run` writes to production; empty when it does not. */
-export function prodWriteReasons(run: string): string[] {
+export function prodWriteReasons(
+  run: string,
+  env: Record<string, unknown> = {}
+): string[] {
   const reasons: string[] = []
+  const prodVars = prodVariables(run.replace(/\\\r?\n/g, ' '), env)
   for (const cmd of shellCommands(run)) {
     for (const simple of simpleCommands(cmd)) {
+      const script = scriptGivenProd(simple, prodVars)
+      if (script) reasons.push(`script given the production bucket: ${script}`)
       for (const [tool, pattern] of [
         ['gcloud storage', GCLOUD_STORAGE_WRITE],
         ['gsutil', GSUTIL_WRITE],
@@ -114,8 +199,8 @@ export function prodWriteReasons(run: string): string[] {
         const verb = m[1].replace(/\s+/g, ' ')
         const tokens = simple.split(/\s+/)
         const target = LAST_ARG_IS_TARGET.has(verb)
-          ? PROD_REF.test(tokens[tokens.length - 1] ?? '')
-          : tokens.some(t => PROD_REF.test(t))
+          ? isProdTarget(tokens[tokens.length - 1] ?? '', prodVars)
+          : tokens.some(t => isProdTarget(t, prodVars))
         if (target) reasons.push(`${tool} ${verb} → production`)
       }
     }
@@ -184,7 +269,10 @@ export function findProdWriteSteps(
     const clause =
       jobName === ownerJob ? SKIP_CLAUSE_SAME_JOB : SKIP_CLAUSE_DOWNSTREAM
     for (const [i, step] of (job.steps ?? []).entries()) {
-      const reasons = prodWriteReasons(step.run ?? '')
+      const reasons = prodWriteReasons(step.run ?? '', {
+        ...job.env,
+        ...step.env,
+      })
       if (reasons.length === 0) continue
       out.push({
         job: jobName,

@@ -9,7 +9,13 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { prodWriteReasons } from '../prodWriteGuard.js'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+import {
+  findProdWriteSteps,
+  prodWriteReasons,
+  READ_ONLY_PROD_SCRIPTS,
+} from '../prodWriteGuard.js'
 
 describe('prodWriteGuard blind spots (#2285)', () => {
   it('flags gsutil writes into prod', () => {
@@ -63,6 +69,51 @@ describe('prodWriteGuard blind spots (#2285)', () => {
       'PB="${GCS_BUCKET_PRODUCTION}"\nnode scripts/x.mjs "$PB"',
     ]) {
       expect(prodWriteReasons(run), run).not.toEqual([])
+    }
+  })
+
+  it('flags a write whose destination comes from a step or job env var', () => {
+    const found = findProdWriteSteps({
+      jobs: {
+        pipeline: {
+          env: { PB: '${{ env.GCS_BUCKET_PRODUCTION }}' },
+          steps: [
+            {
+              name: 'Step env',
+              env: { DEST: 'gs://toast-stats-data-ca/v1/' },
+              run: 'gcloud storage cp /tmp/a.json "$DEST"',
+            },
+            { name: 'Job env', run: 'gsutil rm "gs://${PB}/v1/a.json"' },
+          ],
+        },
+      },
+    })
+    expect(found.map(f => f.step)).toEqual(['Step env', 'Job env'])
+  })
+
+  it('does not flag staging writes, prod reads, or a prod value off the bucket position', () => {
+    for (const run of [
+      'SB="gs://${GCS_BUCKET}/v1/"\ngcloud storage cp /tmp/a.json "$SB"',
+      'PROD_LATEST=$(gcloud storage cat "gs://${GCS_BUCKET_PRODUCTION}/v1/latest.json" | jq -r .d)\ngcloud storage cp /tmp/a "gs://${GCS_BUCKET}/${PROD_LATEST}/a"',
+      'gsutil cp "gs://${GCS_BUCKET_PRODUCTION}/v1/dates.json" /tmp/d.json',
+      'gsutil ls "gs://${GCS_BUCKET_PRODUCTION}/snapshots/" | xargs -I {} echo {}',
+      'cat /tmp/p.txt | xargs -I {} gcloud storage rm "gs://${GCS_BUCKET}/{}"',
+      'bash scripts/foo.sh "${GCS_BUCKET}"',
+      'bash scripts/pipeline/check-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" "${D}"',
+    ]) {
+      expect(prodWriteReasons(run), run).toEqual([])
+    }
+  })
+
+  it('allows a script the prod bucket only if the script has no storage write', () => {
+    expect(Object.keys(READ_ONLY_PROD_SCRIPTS)).toEqual([
+      'scripts/pipeline/check-report-sidecars.sh',
+    ])
+    const write =
+      /\bstorage\s+(cp|rsync|mv|rm|objects\s+update)\b|\bgsutil\b|\.(?:delete|save|upload|copy|move)\(/
+    for (const script of Object.keys(READ_ONLY_PROD_SCRIPTS)) {
+      const text = fs.readFileSync(path.resolve(process.cwd(), script), 'utf-8')
+      expect(text, script).not.toMatch(write)
     }
   })
 })
