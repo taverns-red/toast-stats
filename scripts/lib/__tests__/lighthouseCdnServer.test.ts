@@ -61,6 +61,10 @@ beforeAll(async () => {
   writeFileSync(join(dist, 'index.html'), '<!doctype html><p>spa</p>')
   writeFileSync(join(fixtures, 'v1', 'latest.json'), '{"ok":true}')
   writeFileSync(join(tmp, 'secret.txt'), SECRET)
+  // A sibling whose name starts with the fixture root's name: a bare
+  // `startsWith(root)` check would let `/../fixtures-old/…` through.
+  mkdirSync(join(tmp, 'fixtures-old'))
+  writeFileSync(join(tmp, 'fixtures-old', 'leak.json'), SECRET)
 
   port = await freePort()
   child = spawn(process.execPath, [SERVER], {
@@ -99,6 +103,8 @@ describe('lighthouse-cdn-server path containment (#2289)', () => {
     '/..%2Fsecret.txt',
     '/v1/..%2F..%2Fsecret.txt',
     '/%2E%2E/secret.txt',
+    '/..%2Ffixtures-old%2Fleak.json',
+    '/v1/..%2F..%2Ffixtures-old%2Fleak.json',
   ])('never serves a file outside the roots: %s', async path => {
     const res = await get(path)
     expect(res.body).not.toContain(SECRET)
