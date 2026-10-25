@@ -18,7 +18,8 @@ const club = (
   divisionId: string,
   areaId: string,
   round1: number,
-  round2: number
+  round2: number,
+  clubStatus = 'Active'
 ): TrainingClub => ({
   clubId,
   clubName: `Club ${clubId}`,
@@ -26,6 +27,7 @@ const club = (
   areaId,
   round1,
   round2,
+  clubStatus,
 })
 
 const trainingClubs = [
@@ -77,6 +79,18 @@ describe('buildActionList — officer training (#2296)', () => {
       ['1', 4],
       ['2', 7],
     ])
+  })
+
+  it('leaves suspended and ineligible clubs out of the list and counts them (review S3)', () => {
+    const sections = build('2026-11-15', '2026-2027', {
+      trainingClubs: [
+        ...trainingClubs,
+        club('5', 'A', '01', 0, 0, 'Ineligible'),
+        club('6', 'A', '01', 0, 1, 'Suspended'),
+      ],
+    })
+    expect(sections.trainingShort.map(c => c.clubId)).toEqual(['1', '2'])
+    expect(sections.trainingShortIneligibleCount).toBe(2)
   })
 
   it('respects the division/area scope', () => {

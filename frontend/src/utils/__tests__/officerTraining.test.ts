@@ -20,7 +20,7 @@ import {
   formatNeeded,
   parseTrainingThreshold,
   roundCurve,
-  sameDateLastYear,
+  lastYearSnapshotFor,
   shortClubs,
   thresholdOptionLabel,
   trainingClubsFromSnapshot,
@@ -218,12 +218,55 @@ describe('roundCurve', () => {
   })
 })
 
-describe('sameDateLastYear', () => {
-  it('picks the closest snapshot a year earlier, within a month', () => {
-    expect(
-      sameDateLastYear('2026-10-24', ['2025-09-30', '2025-10-31', '2026-10-24'])
-    ).toBe('2025-10-31')
-    expect(sameDateLastYear('2026-10-24', ['2025-08-31'])).toBeNull()
+describe('lastYearSnapshotFor (review S2)', () => {
+  const [r1, r2] = getOfficerTrainingRounds('2026-2027')
+  const prior = [
+    '2025-07-31',
+    '2025-08-31',
+    '2025-09-30',
+    '2025-10-31',
+    '2025-11-30',
+    '2025-12-31',
+  ] as const
+
+  it('open round: the latest snapshot on or before the same day of last year’s round', () => {
+    // Dec 10 is day 39 of Round 2; last year that is Dec 10, 2025 — the
+    // nearest snapshot at or before it is Nov 30 (never Dec 31, ahead of it).
+    expect(lastYearSnapshotFor(r2!, '2026-12-10', prior)).toEqual({
+      date: '2025-11-30',
+      kind: 'earlier',
+    })
+  })
+
+  it('open round: a snapshot on the very same day is "same"', () => {
+    expect(lastYearSnapshotFor(r1!, '2026-08-31', prior)).toEqual({
+      date: '2025-08-31',
+      kind: 'same',
+    })
+  })
+
+  it('open round, early: no snapshot inside last year’s round yet → none (never one from before it opened)', () => {
+    // Nov 5: last year's only earlier snapshot is Oct 31, before Round 2
+    // opened, which would read 0%.
+    expect(lastYearSnapshotFor(r2!, '2026-11-05', prior)).toBeNull()
+  })
+
+  it('closed round: last year’s final snapshot inside the round', () => {
+    expect(lastYearSnapshotFor(r1!, '2026-10-24', prior)).toEqual({
+      date: '2025-08-31',
+      kind: 'final',
+    })
+  })
+
+  it('a round that has not opened has no comparison', () => {
+    expect(lastYearSnapshotFor(r2!, '2026-10-24', prior)).toBeNull()
+  })
+})
+
+describe('trainingClubsFromSnapshot keeps the club status (review S3)', () => {
+  it('carries Club Status so to-do lists can leave out ineligible clubs', () => {
+    const clubs = trainingClubsFromSnapshot(d61Snapshot())!
+    expect(clubs.filter(c => c.clubStatus === 'Ineligible')).toHaveLength(7)
   })
 })
 
@@ -238,9 +281,11 @@ describe('CSV and links', () => {
           areaId: '01',
           round1: 7,
           round2: 2,
+          clubStatus: 'Active',
         },
       ],
-      7
+      7,
+      { round1: 'closed', round2: 'open' }
     )
     expect(rows[1]).toEqual([
       'A',
@@ -251,6 +296,30 @@ describe('CSV and links', () => {
       'Yes',
       2,
       'No',
+    ])
+  })
+
+  it('a round that has not opened exports "not open yet", not 0 / No (review S1)', () => {
+    const rows = trainingCsvRows(
+      [
+        {
+          clubId: '3045',
+          clubName: 'Limestone City Club',
+          divisionId: 'A',
+          areaId: '01',
+          round1: 7,
+          round2: 0,
+          clubStatus: 'Active',
+        },
+      ],
+      4,
+      { round1: 'closed', round2: 'upcoming' }
+    )
+    expect(rows[1]!.slice(4)).toEqual([
+      7,
+      'Yes',
+      'not open yet',
+      'not open yet',
     ])
   })
 
