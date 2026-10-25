@@ -115,7 +115,7 @@ function darkOverrideExists(cls: string): boolean {
   // descendant tokens but not crossing a comma (which would scope a
   // sibling, not this class).
   const pattern = new RegExp(
-    `\\[data-theme=['"]dark['"]\\]\\s+(?:[^,{]*\\s)?\\.${cls.replace(/[-/]/g, '\\$&')}(?![\\w-])`,
+    `\\[data-theme=['"]dark['"]\\]\\s+(?:[^,{]*\\s)?\\.${cls.replace(/[.*+?^${}()|[\]\\/-]/g, '\\$&')}(?![\\w-])`,
     'm'
   )
   return pattern.test(DARK_MODE_CSS)
