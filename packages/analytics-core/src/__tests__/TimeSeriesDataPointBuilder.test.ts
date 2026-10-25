@@ -601,4 +601,41 @@ describe('TimeSeriesDataPointBuilder', () => {
       expect(result.clubCounts.total).toBeGreaterThanOrEqual(0)
     })
   })
+
+  // ---------- officer training (#2296) ----------
+  describe('build() officerTraining (#2296)', () => {
+    it('carries the per-round distribution of officers trained', () => {
+      const district: DistrictStatisticsInput = {
+        districtId: '61',
+        asOfDate: '2026-10-11',
+        clubPerformance: [
+          {
+            ...standardClub,
+            'Off. Trained Round 1': '7',
+            'Off. Trained Round 2': '0',
+          },
+          {
+            ...lowMembershipClub,
+            'Off. Trained Round 1': '3',
+            'Off. Trained Round 2': '4',
+          },
+        ],
+      }
+      const result = builder.build('2026-10-11', district)
+      expect(result.officerTraining).toEqual({
+        round1: [0, 0, 0, 1, 0, 0, 0, 1],
+        round2: [1, 0, 0, 0, 1, 0, 0, 0],
+      })
+    })
+
+    it('omits the field when the export has no officer-training columns', () => {
+      const district: DistrictStatisticsInput = {
+        districtId: '42',
+        asOfDate: '2024-06-15',
+        clubPerformance: [standardClub],
+      }
+      const result = builder.build('2024-06-15_42', district)
+      expect('officerTraining' in result).toBe(false)
+    })
+  })
 })
