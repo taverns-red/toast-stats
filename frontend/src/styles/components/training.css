@@ -1,0 +1,298 @@
+/* District Training page (#2296) — club officer training (DCP goal 9).
+   Theme-aware tokens (--ink*, --surface*, --line) remap under
+   [data-theme='dark']; the accent is the legacy --tm-loyal-blue and the
+   "1–3 short" highlight the legacy --tm-true-maroon (#2080: legacy palette
+   until Phase 2, no --rt-stats). Bars and the curve are aria-hidden: every
+   value is printed as text. Controls reuse the Action List's scope styles
+   (44px targets). Text stays ≥14px at 375. */
+
+.training-page {
+  margin-top: 1rem;
+}
+
+.training-page__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.training-page__subtitle {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  max-width: 70ch;
+}
+
+.training-page__subtitle a,
+.training-note a {
+  color: var(--link);
+  text-decoration: underline;
+}
+
+.training-page__scope {
+  margin: 0.5rem 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.training-context {
+  margin-top: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  background: var(--tm-loyal-blue-10);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+  max-width: 75ch;
+}
+
+.training-note {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  max-width: 75ch;
+}
+
+/* ── Rounds: stacked at 375, side by side from 1024 ─────────────────── */
+
+.training-rounds {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .training-rounds {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.training-round {
+  min-width: 0;
+  padding: 0.875rem 1rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+}
+
+.training-round__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+}
+
+.training-round__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.training-round__status {
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+
+.training-round__status--open {
+  color: var(--tm-loyal-blue);
+  font-weight: 600;
+}
+
+/* ── Headline tiles ─────────────────────────────────────────────────── */
+
+.training-kpis {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.5rem;
+}
+
+.training-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-sm, 6px);
+}
+
+.training-kpi--selected {
+  border-color: var(--tm-loyal-blue);
+  background: var(--tm-loyal-blue-10);
+}
+
+.training-kpi__value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.training-kpi__label {
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+/* ── Distribution: one row per officer count 0–7 ────────────────────── */
+
+.training-dist {
+  width: 100%;
+  margin-top: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.training-dist thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-align: left;
+  padding-bottom: 0.25rem;
+}
+
+.training-dist thead th:first-child {
+  width: 4.5rem;
+  padding-right: 0.75rem;
+  text-align: right;
+}
+
+.training-dist__n {
+  width: 4.5rem;
+  padding: 0.125rem 0.75rem 0.125rem 0;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-align: right;
+}
+
+.training-dist__cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.125rem 0;
+}
+
+.training-dist__bar {
+  display: block;
+  flex: 0 1 auto;
+  height: 0.875rem;
+  min-width: 2px;
+  max-width: 70%;
+  border-radius: 2px;
+  background: var(--tm-cool-gray);
+}
+
+.training-dist__row--met .training-dist__bar {
+  background: var(--tm-loyal-blue);
+}
+
+.training-dist__row--short .training-dist__bar {
+  background: var(--tm-true-maroon);
+}
+
+.training-dist__count {
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.training-dist__flag {
+  color: var(--ink-3);
+}
+
+.training-lastyear {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+
+/* ── Progress curve ─────────────────────────────────────────────────── */
+
+.training-curve-wrap {
+  margin-top: 0.875rem;
+}
+
+.training-curve__title {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.training-curve__legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.training-curve__key {
+  display: inline-block;
+  width: 1.25rem;
+  height: 0;
+  border-top: 3px solid var(--tm-loyal-blue);
+}
+
+.training-curve__key--last {
+  margin-left: 0.5rem;
+  border-top: 2px dashed var(--tm-cool-gray);
+}
+
+.training-curve {
+  margin-top: 0.25rem;
+}
+
+/* ── Club list cells ────────────────────────────────────────────────── */
+
+.training-clubs {
+  margin-top: 1.5rem;
+}
+
+.training-cell {
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.training-cell--met {
+  color: var(--tm-loyal-blue);
+  font-weight: 600;
+}
+
+.training-cell__need {
+  color: var(--ink-3);
+}
+
+/* ── Division / area count (#2296) ──────────────────────────────────── */
+
+.training-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  margin: 0 0 1.5rem;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+}
+
+.training-summary__title {
+  font-weight: 700;
+}
+
+.training-summary a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--link);
+  text-decoration: underline;
+}

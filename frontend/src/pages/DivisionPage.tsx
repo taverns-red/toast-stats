@@ -25,6 +25,7 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
 import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
+import { OfficerTrainingSummary } from '../components/training/OfficerTrainingSummary'
 
 const DivisionPage: React.FC = () => {
   const { districtId, divId } = useParams<{
@@ -272,6 +273,23 @@ const DivisionPage: React.FC = () => {
           </p>
         </article>
       )}
+
+      {/* Officer training (#2296): this scope's DCP goal 9 count per round,
+          from the same snapshot, linking to the pre-filtered Training page. */}
+      {!isBodyPending &&
+        snapshot &&
+        effectiveEndDate &&
+        effectiveProgramYear &&
+        districtId &&
+        divId && (
+          <OfficerTrainingSummary
+            districtId={districtId}
+            snapshot={snapshot}
+            snapshotDate={effectiveEndDate}
+            programYear={effectiveProgramYear.label}
+            division={divId}
+          />
+        )}
 
       {/* No analytics-club rows for this division (suspended/migrated clubs).
           The recognition card above still renders from the snapshot — don't

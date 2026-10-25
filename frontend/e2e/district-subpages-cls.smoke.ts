@@ -60,6 +60,8 @@ const SUBPAGES = [
   'education',
   // Meeting-time heatmap (#1796).
   'meetings',
+  // Officer training (#2296).
+  'training',
   // Charter cohort survival (#1817), under Growth: the loading slot is
   // reserved taller than the viewport.
   'growth/survival',

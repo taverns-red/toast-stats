@@ -68,7 +68,8 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
     // next" destination — last, since it's a task view, not a lateral data view.
     // Growth (#1794), the Club Growth funnel, follows Map; Education (#1793)
     // follows Growth; Meetings (#1796) follows Education, the last
-    // whole-district view before the time series.
+    // whole-district view before the time series. Training (#2296), club
+    // officer training, follows Meetings — its own section, not Education's.
     expect(DISTRICT_SECTIONS.map(s => s.label)).toEqual([
       'Overview',
       'What Changed',
@@ -79,6 +80,7 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
       'Growth',
       'Education',
       'Meetings',
+      'Training',
       'Trends',
       'Rankings',
       'Action List',
@@ -193,6 +195,7 @@ describe('DistrictSubnav on a phone (#1832)', () => {
       ['Growth', '/district/61/growth'],
       ['Education', '/district/61/education'],
       ['Meetings', '/district/61/meetings'],
+      ['Training', '/district/61/training'],
       ['Rankings', '/district/61/rankings'],
       ['Action List', '/district/61/action-list'],
     ])

@@ -219,3 +219,42 @@ describe('DistrictOverviewHub', () => {
     ).toHaveLength(3)
   })
 })
+
+describe('DistrictOverviewHub — officer training in Needs attention (#2296, N10)', () => {
+  const trainingClubs = [
+    {
+      clubId: '1',
+      clubName: 'Short Club',
+      divisionId: 'A',
+      areaId: '01',
+      round1: 7,
+      round2: 2,
+      clubStatus: 'Active',
+    },
+  ]
+  it('counts only in the last 30 days of the open round (Jan 30: 30 left)', () => {
+    render(
+      <DistrictOverviewHub
+        {...baseProps}
+        snapshotDate="2027-01-30"
+        trainingClubs={trainingClubs}
+      />
+    )
+    expect(screen.getByTestId('district-hub-attention')).toHaveTextContent(
+      'Clubs short of officer training'
+    )
+  })
+
+  it('does not count earlier in the round (Jan 29: 31 left)', () => {
+    render(
+      <DistrictOverviewHub
+        {...baseProps}
+        snapshotDate="2027-01-29"
+        trainingClubs={trainingClubs}
+      />
+    )
+    expect(screen.getByTestId('district-hub-attention')).not.toHaveTextContent(
+      'Clubs short of officer training'
+    )
+  })
+})

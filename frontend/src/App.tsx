@@ -67,6 +67,10 @@ const DistrictMeetingsPage = React.lazy(
 )
 
 // Code-split: DistrictTrendsPage — trends subroute (#680, epic #674 Sprint 6)
+// Officer training (#2296) — its own routed subpage, not under Education.
+const DistrictTrainingPage = React.lazy(
+  () => import('./pages/DistrictTrainingPage')
+)
 const DistrictTrendsPage = React.lazy(
   () => import('./pages/DistrictTrendsPage')
 )
@@ -286,6 +290,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictMeetingsPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'district/:districtId/training',
+          element: (
+            <Suspense fallback={<DistrictRouteFallback />}>
+              <DistrictTrainingPage />
             </Suspense>
           ),
         },
