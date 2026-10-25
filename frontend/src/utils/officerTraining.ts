@@ -1,5 +1,3 @@
-/* eslint-disable */
-// @ts-nocheck -- red-commit stub for #2296, replaced by the implementation
 /**
  * Officer-training roll-up for the Training page, the Action List section and
  * the division/area counts (#2296).
@@ -37,17 +35,26 @@ export const ALL_OFFICERS = OFFICER_TRAINING_MAX_OFFICERS
 
 /** `?threshold=` → 1–7; anything else (absent, 0, 8, "4.5", "x") → 4. */
 export function parseTrainingThreshold(raw: string | null | undefined): number {
-  throw new Error('not implemented (#2296)')
+  if (raw === null || raw === undefined || !/^\d$/.test(raw)) {
+    return DEFAULT_TRAINING_THRESHOLD
+  }
+  const n = Number(raw)
+  return n >= 1 && n <= ALL_OFFICERS ? n : DEFAULT_TRAINING_THRESHOLD
 }
 
 /** The selector's option label for a threshold. */
 export function thresholdOptionLabel(threshold: number): string {
-  throw new Error('not implemented (#2296)')
+  if (threshold === ALL_OFFICERS) return 'All seven officers'
+  if (threshold === DEFAULT_TRAINING_THRESHOLD)
+    return `${threshold}+ officers (DCP goal 9)`
+  return `${threshold}+ officer${threshold === 1 ? '' : 's'}`
 }
 
 /** "4+ officers trained" / "all seven officers trained" — inline copy. */
 export function thresholdPhrase(threshold: number): string {
-  throw new Error('not implemented (#2296)')
+  return threshold === ALL_OFFICERS
+    ? 'all seven officers trained'
+    : `${threshold}+ officer${threshold === 1 ? '' : 's'} trained`
 }
 
 /** One club's officer-training counts. */
@@ -83,7 +90,29 @@ function clubPerformanceRows(snapshot: unknown): ScrapedRecord[] | null {
 export function trainingClubsFromSnapshot(
   snapshot: unknown
 ): TrainingClub[] | null {
-  throw new Error('not implemented (#2296)')
+  const rows = clubPerformanceRows(snapshot)
+  if (!rows) return null
+  const carries = rows.some(row =>
+    OFFICER_TRAINING_ROUND_COLUMNS.some(column =>
+      column.aliases.some(alias => alias in row)
+    )
+  )
+  if (!carries) return null
+  const clubs: TrainingClub[] = []
+  for (const row of rows) {
+    const clubId = normalizeClubId(row['Club Number'])
+    const clubName = String(row['Club Name'] ?? '').trim()
+    if (!clubId || !clubName) continue
+    clubs.push({
+      clubId,
+      clubName,
+      divisionId: stripPrefix(row['Division'], /^division\s+/i),
+      areaId: stripPrefix(row['Area'], /^area\s+/i),
+      round1: officersTrainedInRound(row, 1),
+      round2: officersTrainedInRound(row, 2),
+    })
+  }
+  return clubs
 }
 
 export interface TrainingScope {
@@ -97,7 +126,13 @@ export function filterTrainingClubs(
   clubs: readonly TrainingClub[],
   scope: TrainingScope
 ): TrainingClub[] {
-  throw new Error('not implemented (#2296)')
+  const division = scope.division?.toUpperCase()
+  const area = scope.area?.toUpperCase()
+  return clubs.filter(
+    c =>
+      (!division || c.divisionId.toUpperCase() === division) &&
+      (!area || c.areaId.toUpperCase() === area)
+  )
 }
 
 const officers = (club: TrainingClub, round: TrainingRound): number =>
@@ -108,7 +143,9 @@ export function distributionOf(
   clubs: readonly TrainingClub[],
   round: TrainingRound
 ): number[] {
-  throw new Error('not implemented (#2296)')
+  const out = new Array<number>(ALL_OFFICERS + 1).fill(0)
+  for (const club of clubs) out[officers(club, round)]! += 1
+  return out
 }
 
 /** The headline figures of one round's distribution. */
@@ -140,7 +177,20 @@ export function figuresFromDistribution(
   distribution: readonly number[],
   threshold: number
 ): RoundFigures {
-  throw new Error('not implemented (#2296)')
+  const clubs = sumFrom(distribution, 0)
+  const atThreshold = sumFrom(distribution, threshold)
+  const shortOneToThree = distribution
+    .slice(Math.max(0, threshold - 3), threshold)
+    .reduce((a, b) => a + b, 0)
+  return {
+    clubs,
+    atThreshold,
+    shortOneToThree,
+    atZero: distribution[0] ?? 0,
+    pctAtThreshold: pct(atThreshold, clubs),
+    pctDcp: pct(sumFrom(distribution, DEFAULT_TRAINING_THRESHOLD), clubs),
+    pctAllSeven: pct(distribution[ALL_OFFICERS] ?? 0, clubs),
+  }
 }
 
 /** One round's distribution of a published time-series / rollup block. */
@@ -148,7 +198,7 @@ export function roundDistribution(
   block: OfficerTrainingDistribution,
   round: TrainingRound
 ): number[] {
-  throw new Error('not implemented (#2296)')
+  return round === 1 ? block.round1 : block.round2
 }
 
 /** A club below the threshold in a round, and how many more it needs. */
@@ -164,17 +214,30 @@ export function shortClubs(
   round: TrainingRound,
   threshold: number
 ): ShortClub[] {
-  throw new Error('not implemented (#2296)')
+  return clubs
+    .map(c => ({
+      ...c,
+      trained: officers(c, round),
+      needed: threshold - officers(c, round),
+    }))
+    .filter(c => c.needed > 0)
+    .sort(
+      (a, b) =>
+        a.needed - b.needed ||
+        a.divisionId.localeCompare(b.divisionId) ||
+        a.areaId.localeCompare(b.areaId, undefined, { numeric: true }) ||
+        a.clubName.localeCompare(b.clubName)
+    )
 }
 
 /** "1 more officer" / "3 more officers". */
 export function formatNeeded(needed: number): string {
-  throw new Error('not implemented (#2296)')
+  return `${needed} more officer${needed === 1 ? '' : 's'}`
 }
 
 /** "45%" / "—" — whole percent, for headline tiles and tables. */
 export function formatPct(value: number | null): string {
-  throw new Error('not implemented (#2296)')
+  return value === null ? '—' : `${Math.round(value)}%`
 }
 
 /**
@@ -204,7 +267,16 @@ export function trainingRoundContext(
   snapshotDate: string,
   programYear: string
 ): TrainingRoundContext {
-  throw new Error('not implemented (#2296)')
+  const state = officerTrainingRoundsOn(snapshotDate)
+  const rounds = getOfficerTrainingRounds(programYear)
+  const ours = state.open?.programYear === programYear ? state.open : null
+  return {
+    open: ours,
+    daysLeft: ours ? daysLeftInRound(ours, snapshotDate) : null,
+    pendingOpen: state.open && !ours ? state.open : null,
+    next: state.next,
+    rounds,
+  }
 }
 
 /** Has a round started, ended, or not yet begun on the snapshot date? */
@@ -212,7 +284,9 @@ export function roundStatus(
   window: OfficerTrainingRoundWindow,
   snapshotDate: string
 ): 'upcoming' | 'open' | 'closed' {
-  throw new Error('not implemented (#2296)')
+  if (snapshotDate < window.start) return 'upcoming'
+  if (snapshotDate > window.end) return 'closed'
+  return 'open'
 }
 
 /** One point on a round's progress curve. */
@@ -235,7 +309,23 @@ export function roundCurve(
   window: OfficerTrainingRoundWindow,
   threshold: number
 ): CurvePoint[] {
-  throw new Error('not implemented (#2296)')
+  if (!points) return []
+  const out: CurvePoint[] = []
+  for (const point of points) {
+    if (point.date < window.start || point.date > window.end) continue
+    if (!point.officerTraining) continue
+    const figures = figuresFromDistribution(
+      roundDistribution(point.officerTraining, window.round),
+      threshold
+    )
+    if (figures.pctAtThreshold === null) continue
+    out.push({
+      day: dayOfRound(window, point.date),
+      date: point.date,
+      pct: figures.pctAtThreshold,
+    })
+  }
+  return out.sort((a, b) => a.day - b.day)
 }
 
 /** The date in `dates` closest to `date` one year earlier, within ±31 days. */
@@ -243,7 +333,20 @@ export function sameDateLastYear(
   date: string,
   dates: readonly string[]
 ): string | null {
-  throw new Error('not implemented (#2296)')
+  const target = Date.parse(
+    `${Number(date.slice(0, 4)) - 1}${date.slice(4)}T00:00:00Z`
+  )
+  if (Number.isNaN(target)) return null
+  let best: string | null = null
+  let bestDistance = Infinity
+  for (const candidate of dates) {
+    const distance = Math.abs(Date.parse(`${candidate}T00:00:00Z`) - target)
+    if (distance < bestDistance) {
+      bestDistance = distance
+      best = candidate
+    }
+  }
+  return bestDistance <= 31 * 24 * 60 * 60 * 1000 ? best : null
 }
 
 /** The club list as CSV rows (header first), in the given order. */
@@ -251,7 +354,29 @@ export function trainingCsvRows(
   clubs: readonly TrainingClub[],
   threshold: number
 ): (string | number)[][] {
-  throw new Error('not implemented (#2296)')
+  const meets = (n: number) => (n >= threshold ? 'Yes' : 'No')
+  return [
+    [
+      'Division',
+      'Area',
+      'Club Number',
+      'Club Name',
+      'Officers trained Round 1 (Jun–Aug)',
+      `Round 1 at ${threshold}+`,
+      'Officers trained Round 2 (Nov–Feb)',
+      `Round 2 at ${threshold}+`,
+    ],
+    ...clubs.map(c => [
+      c.divisionId,
+      c.areaId,
+      c.clubId,
+      c.clubName,
+      c.round1,
+      meets(c.round1),
+      c.round2,
+      meets(c.round2),
+    ]),
+  ]
 }
 
 /** The Training page URL, pre-filtered (division/area/threshold). */
@@ -259,5 +384,15 @@ export function trainingPageUrl(
   districtId: string,
   scope: TrainingScope & { threshold?: number } = {}
 ): string {
-  throw new Error('not implemented (#2296)')
+  const params = new URLSearchParams()
+  if (scope.division) params.set('division', scope.division)
+  if (scope.area) params.set('area', scope.area)
+  if (
+    scope.threshold !== undefined &&
+    scope.threshold !== DEFAULT_TRAINING_THRESHOLD
+  ) {
+    params.set('threshold', String(scope.threshold))
+  }
+  const query = params.toString()
+  return `/district/${districtId}/training${query ? `?${query}` : ''}`
 }
