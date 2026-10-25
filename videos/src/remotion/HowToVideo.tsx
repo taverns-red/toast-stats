@@ -12,11 +12,13 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion'
+import { cropOffset, LAYOUTS, type Layout } from '../layout'
 import { getScenario } from '../scenarios'
 import type {
   Beat,
   CaptureManifest,
   CapturedBeat,
+  FormFactor,
   TimedCard,
 } from '../scenarios/types'
 import { THEME } from '../theme'
@@ -25,20 +27,10 @@ import { THEME } from '../theme'
 // Record<string, unknown> props constraint.
 export type HowToVideoProps = {
   scenarioId: string
+  format: FormFactor
   manifest: CaptureManifest | null
 }
 
-// 1920×1080 layout: the 1280×800 capture is shown at 1.05× in a panel, with a
-// caption band under it. Captions are 64 px semibold Inter (6 % of the frame
-// height) — about 13 pt when the 1080p frame plays full-width on a phone held
-// upright, above the ~12 pt floor for comfortable reading. Two lines fit.
-const PANEL_SCALE = 1.05
-const PANEL_W = 1280 * PANEL_SCALE
-const PANEL_H = 800 * PANEL_SCALE
-const PANEL_X = (1920 - PANEL_W) / 2
-const PANEL_Y = 24
-const CAPTION_TOP = PANEL_Y + PANEL_H
-const CAPTION_FONT_PX = 64
 const CROSSFADE_SEC = 0.4
 
 const ease = Easing.bezier(0.25, 0.1, 0.25, 1)
@@ -88,9 +80,11 @@ function fadeInOut(
 function Highlight({
   captured,
   lengthSec,
+  scale,
 }: {
   captured: CapturedBeat
   lengthSec: number
+  scale: number
 }): ReactElement | null {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
@@ -114,14 +108,14 @@ function Highlight({
     <div
       style={{
         position: 'absolute',
-        left: x * PANEL_SCALE - pad,
-        top: y * PANEL_SCALE - pad,
-        width: width * PANEL_SCALE + pad * 2,
-        height: height * PANEL_SCALE + pad * 2,
+        left: x * scale - pad,
+        top: y * scale - pad,
+        width: width * scale + pad * 2,
+        height: height * scale + pad * 2,
         borderRadius: 12,
-        border: `4px solid ${THEME.accent}`,
+        border: `${scale > 2 ? 6 : 4}px solid ${THEME.accent}`,
         // Spotlight: dim everything outside the box with ink at 30 %.
-        boxShadow: `0 0 0 4000px rgba(15, 23, 32, ${0.3 * opacity})`,
+        boxShadow: `0 0 0 6000px rgba(15, 23, 32, ${0.3 * opacity})`,
         opacity,
         transform: `scale(${interpolate(appear, [0, 1], [1.03, 1])})`,
       }}
@@ -133,10 +127,12 @@ function Caption({
   text,
   index,
   total,
+  layout,
 }: {
   text: string
   index: number
   total: number
+  layout: Layout
 }): ReactElement {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
@@ -144,14 +140,16 @@ function Caption({
     extrapolateRight: 'clamp',
     easing: ease,
   })
+  const { x, y, w, h, fontPx } = layout.caption
+  const pill = Math.round(fontPx * 1.12)
   return (
     <div
       style={{
         position: 'absolute',
-        left: PANEL_X,
-        top: CAPTION_TOP,
-        width: PANEL_W,
-        height: 1080 - CAPTION_TOP,
+        left: x,
+        top: y,
+        width: w,
+        height: h,
         display: 'flex',
         alignItems: 'center',
         gap: 32,
@@ -163,9 +161,9 @@ function Caption({
         aria-label={`Step ${index} of ${total}`}
         style={{
           flex: '0 0 auto',
-          width: 72,
-          height: 72,
-          borderRadius: 36,
+          width: pill,
+          height: pill,
+          borderRadius: pill / 2,
           background: THEME.accent,
           color: THEME.surface,
           display: 'flex',
@@ -173,7 +171,7 @@ function Caption({
           justifyContent: 'center',
           fontFamily: THEME.fontDisplay,
           fontWeight: 800,
-          fontSize: 38,
+          fontSize: Math.round(pill * 0.53),
         }}
       >
         {index}
@@ -183,7 +181,7 @@ function Caption({
           color: THEME.ink,
           fontFamily: THEME.fontBody,
           fontWeight: 600,
-          fontSize: CAPTION_FONT_PX,
+          fontSize: fontPx,
           lineHeight: 1.18,
           letterSpacing: '-0.01em',
         }}
@@ -199,24 +197,42 @@ function BeatScene({
   index,
   total,
   manifest,
+  layout,
+  fromOffset,
+  toOffset,
 }: {
   beat: Beat
   index: number
   total: number
   manifest: CaptureManifest | null
+  layout: Layout
+  /** Crop pan (CSS px) carried over from the previous beat. */
+  fromOffset: number
+  /** Crop pan (CSS px) that frames this beat's highlight. */
+  toOffset: number
 }): ReactElement {
+  const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
   const captured = manifest?.beats.find(b => b.id === beat.id)
   const lengthSec = beat.endSec - beat.startSec
+  const { panel, scale } = layout
+  // Pan while the beat's steps run, arriving as the highlight appears.
+  const panEnd = Math.max(0.6, captured?.highlightAtSec ?? 0.6) * fps
+  const offset = interpolate(frame, [0, panEnd], [fromOffset, toOffset], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+    easing: ease,
+  })
+  const viewport = manifest?.viewport ?? { width: 1280, height: 800 }
   return (
     <AbsoluteFill>
       <div
         style={{
           position: 'absolute',
-          left: PANEL_X,
-          top: PANEL_Y,
-          width: PANEL_W,
-          height: PANEL_H,
+          left: panel.x,
+          top: panel.y,
+          width: panel.w,
+          height: panel.h,
           borderRadius: 16,
           overflow: 'hidden',
           border: `1px solid ${THEME.line}`,
@@ -225,15 +241,31 @@ function BeatScene({
         }}
       >
         {manifest && captured ? (
-          <>
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: viewport.width * scale,
+              height: viewport.height * scale,
+              transform: `translateY(${-offset * scale}px)`,
+            }}
+          >
             <OffthreadVideo
               src={staticFile(manifest.video)}
               trimBefore={Math.round(captured.videoStartSec * fps)}
               muted
-              style={{ width: PANEL_W, height: PANEL_H }}
+              style={{
+                width: viewport.width * scale,
+                height: viewport.height * scale,
+              }}
             />
-            <Highlight captured={captured} lengthSec={lengthSec} />
-          </>
+            <Highlight
+              captured={captured}
+              lengthSec={lengthSec}
+              scale={scale}
+            />
+          </div>
         ) : (
           <AbsoluteFill
             style={{
@@ -247,7 +279,12 @@ function BeatScene({
           </AbsoluteFill>
         )}
       </div>
-      <Caption text={beat.caption} index={index} total={total} />
+      <Caption
+        text={beat.caption}
+        index={index}
+        total={total}
+        layout={layout}
+      />
     </AbsoluteFill>
   )
 }
@@ -257,11 +294,13 @@ function Card({
   eyebrow,
   fadeIn,
   fadeOut,
+  layout,
 }: {
   card: TimedCard
   eyebrow: string
   fadeIn: boolean
   fadeOut: boolean
+  layout: Layout
 }): ReactElement {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
@@ -277,6 +316,7 @@ function Card({
     extrapolateRight: 'clamp',
     easing: ease,
   })
+  const { padX, titlePx, bodyPx, hintPx } = layout.card
   // "Lead: rest" captions (e.g. the closing URL) set the rest on its own line.
   const split = card.caption.indexOf(': ')
   const lead = split > 0 ? card.caption.slice(0, split + 1) : card.caption
@@ -289,7 +329,7 @@ function Card({
         alignItems: 'center',
         justifyContent: 'center',
         textAlign: 'center',
-        padding: '0 160px',
+        padding: `0 ${padX}px`,
         opacity,
       }}
     >
@@ -311,7 +351,7 @@ function Card({
           style={{
             fontFamily: THEME.fontDisplay,
             fontWeight: 800,
-            fontSize: rest ? 84 : 96,
+            fontSize: rest ? Math.round(titlePx * 0.875) : titlePx,
             lineHeight: 1.12,
             letterSpacing: '-0.01em',
           }}
@@ -324,12 +364,12 @@ function Card({
               marginTop: 32,
               fontFamily: THEME.fontBody,
               fontWeight: 600,
-              fontSize: 54,
-              lineHeight: 1.2,
-              overflowWrap: 'anywhere',
+              fontSize: bodyPx,
+              lineHeight: 1.25,
             }}
           >
-            {rest}
+            {/* Let a URL wrap after its slashes rather than mid-word. */}
+            {rest.replace(/\//g, '/​')}
           </div>
         ) : null}
         {card.hint ? (
@@ -342,7 +382,7 @@ function Card({
               border: `2px solid ${THEME.surface}`,
               fontFamily: THEME.fontBody,
               fontWeight: 500,
-              fontSize: 44,
+              fontSize: hintPx,
               lineHeight: 1.2,
             }}
           >
@@ -368,13 +408,28 @@ function Card({
 
 export function HowToVideo({
   scenarioId,
+  format,
   manifest,
 }: HowToVideoProps): ReactElement {
   useAppFonts()
   const scenario = getScenario(scenarioId)
+  const layout = LAYOUTS[format]
   const { fps } = useVideoConfig()
   const f = (sec: number): number => Math.round(sec * fps)
   const { titleCard, closing, beats, durationSec } = scenario
+
+  // One crop pan per beat; desktop's window shows the whole viewport, so its
+  // offsets are all 0.
+  const viewportH = manifest?.viewport.height ?? 800
+  const windowH = layout.panel.h / layout.scale
+  const offsets = beats.map(beat =>
+    cropOffset(
+      manifest?.beats.find(b => b.id === beat.id)?.box ?? null,
+      viewportH,
+      windowH
+    )
+  )
+
   return (
     <AbsoluteFill
       style={{ background: THEME.surface2, fontFamily: THEME.fontBody }}
@@ -391,6 +446,9 @@ export function HowToVideo({
             index={i + 1}
             total={beats.length}
             manifest={manifest}
+            layout={layout}
+            fromOffset={offsets[i - 1] ?? offsets[0] ?? 0}
+            toOffset={offsets[i] ?? 0}
           />
         </Sequence>
       ))}
@@ -405,6 +463,7 @@ export function HowToVideo({
           eyebrow={`For ${scenario.role}s`}
           fadeIn={false}
           fadeOut
+          layout={layout}
         />
       </Sequence>
       <Sequence
@@ -412,7 +471,13 @@ export function HowToVideo({
         from={f(closing.startSec - CROSSFADE_SEC)}
         durationInFrames={f(closing.endSec - closing.startSec + CROSSFADE_SEC)}
       >
-        <Card card={closing} eyebrow="Try it" fadeIn fadeOut={false} />
+        <Card
+          card={closing}
+          eyebrow="Try it"
+          fadeIn
+          fadeOut={false}
+          layout={layout}
+        />
       </Sequence>
       <Html5Audio
         src={staticFile(scenario.music)}
