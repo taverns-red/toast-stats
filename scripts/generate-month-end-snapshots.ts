@@ -40,6 +40,7 @@ const RAW_CSV_PREFIX = 'raw-csv'
 
 interface Args {
   bucket: string
+  allowProd: boolean
   projectId: string | undefined
   cacheDir: string
   dryRun: boolean
@@ -49,7 +50,7 @@ interface Args {
 
 function parseArgs(): Args {
   const args = process.argv.slice(2)
-  const { bucket } = resolveOperatorBucket({
+  const { bucket, allowProd } = resolveOperatorBucket({
     argv: args,
     env: process.env,
     writes: true,
@@ -70,7 +71,15 @@ function parseArgs(): Args {
     else if (arg === '--program-year' && args[i + 1]) programYear = args[++i]!
   }
 
-  return { bucket, projectId, cacheDir, dryRun, programYear, jsonOutput }
+  return {
+    bucket,
+    allowProd,
+    projectId,
+    cacheDir,
+    dryRun,
+    programYear,
+    jsonOutput,
+  }
 }
 
 /**
@@ -132,6 +141,7 @@ interface ProcessResult {
 async function processDate(
   storage: Storage,
   bucket: string,
+  allowProd: boolean,
   date: string,
   cacheDir: string
 ): Promise<ProcessResult> {
@@ -172,7 +182,13 @@ async function processDate(
 
     // Step 4: Upload
     console.log(`  [4/4] Running upload --date ${date}...`)
-    const uploadResult = runCLI(`upload --date ${date}`, cacheDir, bucket)
+    // collector-cli upload refuses prod without --allow-prod (#2288); the
+    // operator already confirmed it to this script, so pass it on.
+    const uploadResult = runCLI(
+      `upload --date ${date}${allowProd ? ' --allow-prod' : ''}`,
+      cacheDir,
+      bucket
+    )
     result.steps.upload = uploadResult.ok
     if (!uploadResult.ok) {
       result.error = `Upload failed: ${uploadResult.output.slice(0, 200)}`
@@ -189,8 +205,15 @@ async function processDate(
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const { bucket, projectId, cacheDir, dryRun, programYear, jsonOutput } =
-    parseArgs()
+  const {
+    bucket,
+    allowProd,
+    projectId,
+    cacheDir,
+    dryRun,
+    programYear,
+    jsonOutput,
+  } = parseArgs()
   const today = new Date()
 
   if (!jsonOutput) {
@@ -257,7 +280,13 @@ async function main(): Promise<void> {
       `Processing ${dataMonth} (collectionDate: ${lastClosingDate})...`
     )
 
-    const result = await processDate(storage, bucket, lastClosingDate, cacheDir)
+    const result = await processDate(
+      storage,
+      bucket,
+      allowProd,
+      lastClosingDate,
+      cacheDir
+    )
     result.dataMonth = dataMonth
     results.push(result)
 
