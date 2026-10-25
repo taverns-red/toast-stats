@@ -1,0 +1,144 @@
+# How-to video renders (#2293)
+#
+# Captures a scenario's walkthrough from the live site (ts.taverns.red) with
+# Playwright and renders it with Remotion on the runner, then uploads the
+# MP4s as an Actions artifact. Rendered videos are build outputs: they never
+# enter the source tree, not even `.pr-assets` (Ron, PR #2295).
+#
+# Opt-in only:
+#   - workflow_dispatch -> choose the scenario and desktop / mobile / both
+#   - pull_request      -> only when videos/** (or this file) changes; renders
+#                          v2 in both formats and posts a sticky comment that
+#                          links the artifact
+# Main CI runs only the scenario unit tests (ci.yml); it never renders.
+#
+# No cloud credentials: the capture reads the public site and the output goes
+# to the artifact only. Publishing final videos is a separate, approved step
+# whose destination is not decided yet — it is not done here.
+
+name: Videos
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Scenario id (e.g. v2)'
+        required: true
+        default: 'v2'
+        type: string
+      format:
+        description: 'Form factor to render'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - desktop
+          - mobile
+          - both
+  pull_request:
+    paths:
+      - 'videos/**'
+      - '.github/workflows/videos.yml'
+
+# One render per PR at a time; a new push cancels the in-flight one.
+concurrency:
+  group: videos-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    name: Capture and render
+    runs-on: ubuntu-latest
+    # A capture holds each beat in real time (~35 s per format) and a 30 s
+    # render takes a few minutes on a runner; 30 min leaves room for both
+    # formats plus installs.
+    timeout-minutes: 30
+    outputs:
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
+      scenario: ${{ steps.args.outputs.scenario }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Resolve scenario and formats
+        id: args
+        env:
+          IN_SCENARIO: ${{ inputs.scenario || 'v2' }}
+          IN_FORMAT: ${{ inputs.format || 'both' }}
+        run: |
+          if ! printf '%s' "$IN_SCENARIO" | grep -Eq '^[a-z0-9-]+$'; then
+            echo "::error::Invalid scenario id: $IN_SCENARIO"
+            exit 1
+          fi
+          case "$IN_FORMAT" in
+            both) FORMATS="desktop mobile" ;;
+            desktop|mobile) FORMATS="$IN_FORMAT" ;;
+            *) echo "::error::Invalid format: $IN_FORMAT"; exit 1 ;;
+          esac
+          {
+            echo "scenario=$IN_SCENARIO"
+            echo "formats=$FORMATS"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install ffmpeg and Playwright Chromium
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg
+          npx playwright install --with-deps chromium
+
+      - name: Capture and render
+        env:
+          SCENARIO: ${{ steps.args.outputs.scenario }}
+          FORMATS: ${{ steps.args.outputs.formats }}
+        run: |
+          for format in $FORMATS; do
+            npm run videos:build -- "$SCENARIO" --format "$format"
+          done
+          ls -la videos/out/
+
+      - name: Upload videos artifact
+        id: upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: videos-${{ steps.args.outputs.scenario }}-${{ github.run_id }}
+          path: videos/out/*.mp4
+          if-no-files-found: error
+          retention-days: 30
+
+  comment:
+    name: Link the render on the PR
+    needs: render
+    if: >-
+      github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Post sticky PR comment with the artifact link
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: videos
+          message: |
+            ## 🎬 How-to video render
+
+            **Scenario:** `${{ needs.render.outputs.scenario }}` (desktop 16:9 and mobile 9:16)
+
+            **Download:** [videos artifact](${{ needs.render.outputs.artifact-url }})
+            (kept 30 days) ·
+            [run log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            Rendered from the live site on the runner. Renders are build outputs and are never committed.
