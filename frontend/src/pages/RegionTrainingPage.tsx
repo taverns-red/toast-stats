@@ -261,7 +261,8 @@ const RegionTrainingPage: React.FC = () => {
           <p className="training-note">
             Each round&apos;s share of the district&apos;s clubs. Counts are how
             many officers were trained, not which ones; &quot;—&quot; means the
-            figure was not recorded for that district on this date.{' '}
+            figure was not recorded for that district on this date, or the round
+            has not opened yet.{' '}
             <Link to="/methodology#officer-training">How this is counted</Link>
           </p>
         </section>
