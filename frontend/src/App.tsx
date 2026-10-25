@@ -139,6 +139,10 @@ const WorldEducationPage = React.lazy(
 const RegionGrowthPage = React.lazy(() => import('./pages/RegionGrowthPage'))
 const WorldGrowthPage = React.lazy(() => import('./pages/WorldGrowthPage'))
 // Code-split: region and world meeting-time heatmaps (#1814)
+// Officer training across a region's districts (#2296).
+const RegionTrainingPage = React.lazy(
+  () => import('./pages/RegionTrainingPage')
+)
 const RegionMeetingsPage = React.lazy(
   () => import('./pages/RegionMeetingsPage')
 )
@@ -512,6 +516,16 @@ const router = createBrowserRouter(
             <Suspense fallback={<PageLoadingFallback />}>
               <WorldGrowthPage />
             </Suspense>
+          ),
+        },
+        {
+          path: 'region/:n/training',
+          element: (
+            <CanonicalRegionRoute>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <RegionTrainingPage />
+              </Suspense>
+            </CanonicalRegionRoute>
           ),
         },
         {

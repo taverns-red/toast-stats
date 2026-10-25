@@ -296,3 +296,20 @@
   color: var(--link);
   text-decoration: underline;
 }
+
+/* ── Region comparison (#2296) ──────────────────────────────────────── */
+
+/* The rankings table styles header cells as small caps; a district row
+   header is a link to the district's Training page, so it reads as one. */
+.region-training-table tbody th.region-training-table__district {
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.region-training-table__district a {
+  color: var(--link);
+}

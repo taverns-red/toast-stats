@@ -992,6 +992,13 @@ const MethodologyPage: React.FC = () => {
               rather than drawing zeros. Older years were kept at month-ends
               only, so their curves are sparse.
             </li>
+            <li>
+              <strong>Region comparison.</strong> A region&apos;s districts are
+              compared on the same figures, from one region rollup per date; a
+              district&apos;s rank is its place among the districts with
+              figures, at the selected threshold, on the open round (or the
+              latest that has started).
+            </li>
           </ul>
           <p className="methodology-source">
             Sources:{' '}
@@ -1000,7 +1007,9 @@ const MethodologyPage: React.FC = () => {
             <code>
               time-series/district_&#123;id&#125;/&#123;program year&#125;.json
             </code>
-            , the curve).
+            , the curve) and{' '}
+            <code>snapshots/&#123;date&#125;/region-rollups.json</code> (region
+            comparisons).
           </p>
         </div>
       </CollapsibleSection>

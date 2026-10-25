@@ -39,6 +39,7 @@ import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import { useDistrictStatistics } from '../../hooks/useMembershipData'
 import { useTimeSeries } from '../../hooks/useTimeSeries'
+import { useRegionRollups } from '../../hooks/useRegionRollups'
 
 vi.mock('../../hooks/useDistricts', () => ({
   useDistricts: vi.fn(() => ({
@@ -66,6 +67,10 @@ vi.mock('../../hooks/useMembershipData', () => ({
 
 vi.mock('../../hooks/useTimeSeries', () => ({
   useTimeSeries: vi.fn(),
+}))
+
+vi.mock('../../hooks/useRegionRollups', () => ({
+  useRegionRollups: vi.fn(),
 }))
 
 const rows = (() => {
@@ -160,6 +165,11 @@ describe('DistrictTrainingPage (#2296)', () => {
           isLoading: false,
         }) as unknown as ReturnType<typeof useDistrictStatistics>
     )
+    vi.mocked(useRegionRollups).mockReturnValue({
+      rollups: null,
+      snapshotDate: null,
+      isLoading: false,
+    })
     vi.mocked(useTimeSeries).mockReturnValue({
       data: {
         years: {
@@ -177,6 +187,84 @@ describe('DistrictTrainingPage (#2296)', () => {
     } as unknown as ReturnType<typeof useTimeSeries>)
   })
   afterEach(() => cleanup())
+
+  const regionRollups = (withField: boolean) =>
+    ({
+      rollups: {
+        snapshotDate: '2026-10-11',
+        regions: { '05': { districtIds: ['60', '61', '86'] } },
+        districts: Object.fromEntries(
+          (
+            [
+              ['60', [1, 0, 0, 0, 9, 0, 0, 0]],
+              ['61', [19, 5, 3, 14, 43, 25, 27, 25]],
+              ['86', [8, 0, 0, 0, 2, 0, 0, 0]],
+            ] as const
+          ).map(([id, round1]) => [
+            id,
+            {
+              clubs: (round1 as readonly number[]).reduce((a, b) => a + b, 0),
+              region: '05',
+              ...(withField && {
+                officerTraining: {
+                  round1: [...round1],
+                  round2: [10, 0, 0, 0, 0, 0, 0, 0],
+                },
+              }),
+            },
+          ])
+        ),
+      },
+      snapshotDate: '2026-10-11',
+      isLoading: false,
+    }) as unknown as ReturnType<typeof useRegionRollups>
+
+  it('shows the district’s rank in its region, linking to the comparison', async () => {
+    vi.mocked(useRegionRollups).mockReturnValue(regionRollups(true))
+    renderAt('/district/61/training')
+    const rank = await screen.findByTestId('training-region-rank')
+    // Round 1 at 4+: District 60 90%, District 61 75%, District 86 20%.
+    expect(rank).toHaveTextContent(
+      '2nd of 3 districts in Region 05 on Round 1, 4+ officers trained'
+    )
+    expect(
+      within(rank).getByRole('link', { name: /compare region 05/i })
+    ).toHaveAttribute('href', '/region/05/training')
+  })
+
+  it('the region link keeps the page’s py and date (review S5)', async () => {
+    vi.mocked(useRegionRollups).mockReturnValue(regionRollups(true))
+    renderAt('/district/61/training?py=2026&date=2026-10-11&threshold=7')
+    const rank = await screen.findByTestId('training-region-rank')
+    expect(
+      within(rank).getByRole('link', { name: /compare region 05/i })
+    ).toHaveAttribute(
+      'href',
+      '/region/05/training?threshold=7&py=2026&date=2026-10-11'
+    )
+  })
+
+  it('says "with figures" when some districts in the region have none (review N7)', async () => {
+    const rollups = regionRollups(true)
+    const r = rollups.rollups as unknown as {
+      regions: Record<string, { districtIds: string[] }>
+      districts: Record<string, unknown>
+    }
+    r.regions['05']!.districtIds.push('99')
+    r.districts['99'] = { clubs: 5, region: '05', officerTraining: null }
+    vi.mocked(useRegionRollups).mockReturnValue(rollups)
+    renderAt('/district/61/training')
+    expect(await screen.findByTestId('training-region-rank')).toHaveTextContent(
+      '2nd of 3 districts with figures in Region 05'
+    )
+  })
+
+  it('shows no rank when the region rollup predates the figure', async () => {
+    vi.mocked(useRegionRollups).mockReturnValue(regionRollups(false))
+    renderAt('/district/61/training')
+    await screen.findByTestId('training-round-1')
+    expect(screen.queryByTestId('training-region-rank')).toBeNull()
+  })
 
   it('is a routed subpage with Training current in the section nav', async () => {
     renderAt('/district/61/training')
