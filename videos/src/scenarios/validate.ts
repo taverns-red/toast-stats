@@ -1,4 +1,4 @@
-import type { Scenario, TimedCard } from './types'
+import { FORM_FACTORS, type Scenario, type TimedCard } from './types'
 
 /** Clips are ~30 s; anything longer stops being a "30-second how-to". */
 export const MAX_DURATION_SEC = 34
@@ -95,6 +95,23 @@ export function validateScenario(scenario: Scenario): string[] {
       }
     }
     expectedStart = card.endSec
+  }
+
+  // Captions and timing are shared; each form factor scripts its own actions.
+  const beatIds = new Set(beats.map(b => b.id))
+  for (const format of FORM_FACTORS) {
+    const form = scenario.forms[format]
+    if (!form) continue
+    for (const id of beatIds) {
+      if (!form.beats[id]) {
+        problems.push(`${format} has no actions for beat "${id}"`)
+      }
+    }
+    for (const id of Object.keys(form.beats)) {
+      if (!beatIds.has(id)) {
+        problems.push(`${format} scripts unknown beat "${id}"`)
+      }
+    }
   }
 
   return problems
