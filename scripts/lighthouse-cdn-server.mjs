@@ -31,7 +31,7 @@
  */
 import { createServer } from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
-import { join, relative, isAbsolute, extname } from 'node:path'
+import { join, resolve, sep, extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
 
@@ -56,14 +56,14 @@ const MIME = {
   '.txt': 'text/plain; charset=utf-8',
 }
 
-// Resolve a request path to a file *inside* `base`, rejecting traversal.
-// Obvious-by-construction: join, then confirm the result is still under `base`
-// via `relative()` (no leading `..`, not re-absolutized) rather than a string
-// prefix that can be fooled by sibling dirs sharing a prefix.
-function safeJoin(base, urlPath) {
-  const full = join(base, decodeURIComponent(urlPath))
-  const rel = relative(base, full)
-  if (rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))) return full
+// Resolve a decoded request path to a file *inside* `base`, rejecting
+// traversal. `resolve()` normalises every `..`, then the result must be the
+// root itself or start with `root + sep`. A bare prefix check would let a
+// sibling dir that shares the prefix (`dist-old/`) through (#2289).
+function safeJoin(base, decodedPath) {
+  const root = resolve(base)
+  const full = resolve(root, '.' + sep + decodedPath)
+  if (full === root || full.startsWith(root + sep)) return full
   return null
 }
 
@@ -107,18 +107,27 @@ const CORS = { 'access-control-allow-origin': '*' }
 
 const server = createServer(async (req, res) => {
   const urlPath = (req.url || '/').split('?')[0]
+  // A malformed percent-encoding makes decodeURIComponent throw. Answer 400
+  // rather than let the rejection crash the server (#2289).
+  let decodedPath
+  try {
+    decodedPath = decodeURIComponent(urlPath)
+  } catch {
+    send(req, res, 400, 'bad request', MIME['.txt'])
+    return
+  }
 
   // 1) CDN fixture? (e.g. /v1/rankings.json, /snapshots/<date>/…)
   //    Keep CORS permissive so the server also works when the build points
   //    VITE_CDN_BASE_URL at it cross-origin (Lesson 133).
-  const fixture = await tryFile(safeJoin(FIXTURE_DIR, urlPath))
+  const fixture = await tryFile(safeJoin(FIXTURE_DIR, decodedPath))
   if (fixture) {
     send(req, res, 200, fixture, MIME['.json'], CORS)
     return
   }
 
   // 2) Static SPA asset?
-  const assetPath = urlPath === '/' ? '/index.html' : urlPath
+  const assetPath = urlPath === '/' ? '/index.html' : decodedPath
   const asset = await tryFile(safeJoin(DIST_DIR, assetPath))
   if (asset) {
     send(
