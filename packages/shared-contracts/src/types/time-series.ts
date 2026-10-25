@@ -49,6 +49,29 @@ export interface TimeSeriesDataPoint {
   distinguishedTotal: number
   /** Club health counts breakdown */
   clubCounts: ClubHealthCounts
+  /**
+   * Clubs by officers trained in each DCP goal 9 round (#2296). Absent on
+   * points written before the field existed and on exports without the
+   * `Off. Trained Round 1/2` columns — "not measured", never zeros.
+   */
+  officerTraining?: OfficerTrainingDistribution
+}
+
+/**
+ * Clubs by number of officers trained, per training round (#2296).
+ *
+ * Index `n` of each array is the number of clubs whose `Off. Trained Round
+ * 1` (Round 1, Jun–Aug) or `Off. Trained Round 2` (Round 2, Nov–Feb) reads
+ * `n`, for n = 0…7. TI reports a count of officers only, not which officers,
+ * so "all seven officers trained" is index 7. Every club on the club
+ * performance export is counted once per round, so each array sums to the
+ * club count.
+ */
+export interface OfficerTrainingDistribution {
+  /** Round 1 (Jun–Aug): clubs by officers trained, index 0–7 */
+  round1: number[]
+  /** Round 2 (Nov–Feb): clubs by officers trained, index 0–7 */
+  round2: number[]
 }
 
 /**

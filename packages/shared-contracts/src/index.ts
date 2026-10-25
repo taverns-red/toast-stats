@@ -52,6 +52,7 @@ export type {
   ProgramYearSummary,
   TimeSeriesIndexMetadata,
   ClubHealthCounts,
+  OfficerTrainingDistribution,
 } from './types/time-series.js'
 
 // Club health status types
