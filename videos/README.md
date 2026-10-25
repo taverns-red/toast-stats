@@ -6,7 +6,22 @@ card, timed captions, a spotlight on each step's element, a closing card and a
 quiet music bed. There is no narration; the captions carry the message.
 
 Rendering is **opt-in**. Nothing here runs in `npm run test`, the pre-push
-hook or CI, apart from the unit tests for the scenario configs.
+hook or main CI, apart from the unit tests for the scenario configs.
+
+## Renders are build outputs
+
+Rendered videos are **never committed** — not to the source tree and not to
+`.pr-assets` on a PR branch.
+
+- **Locally** they land in `videos/out/` (gitignored).
+- **In CI** the opt-in [`Videos` workflow](../.github/workflows/videos.yml)
+  renders them on a runner and uploads the MP4s as an Actions artifact, kept
+  30 days. It runs on manual dispatch (pick the scenario and
+  desktop / mobile / both) and on PRs that change `videos/**`, where a sticky
+  comment links the artifact. It holds no cloud credentials.
+- **Publishing** final videos (to the site, a CDN, YouTube or anywhere else)
+  is a separate step that needs approval, and its destination is not decided
+  yet. Nothing here publishes.
 
 ## Commands
 
