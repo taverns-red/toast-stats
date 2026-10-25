@@ -32,6 +32,7 @@ import { calculateClubProjection } from './dcpProjections'
 import { isCloseToDistinguished } from './closeToDistinguished'
 import { getAreaVisitDeadlines } from './areaRecognitionState'
 import { summarizeCspCompletion } from './cspCompletion'
+import { isIneligibleStatus } from './extractDivisionPerformance'
 import { getClubHealthStatusLabel } from './clubHealthStatus'
 import { getProgramYearForDate } from './programYear'
 import {
@@ -134,6 +135,11 @@ export interface ActionListSections {
   trainingThreshold: number
   /** In-scope clubs short of the threshold in the open round. */
   trainingShort: ShortClub[]
+  /**
+   * Suspended/ineligible clubs short of the threshold, footnoted rather than
+   * listed — the same treatment as the Club Success Plan section.
+   */
+  trainingShortIneligibleCount: number
 }
 
 export interface ActionListInput {
@@ -302,7 +308,11 @@ function trainingSection(
   programYear: string
 ): Pick<
   ActionListSections,
-  'trainingRound' | 'trainingDaysLeft' | 'trainingThreshold' | 'trainingShort'
+  | 'trainingRound'
+  | 'trainingDaysLeft'
+  | 'trainingThreshold'
+  | 'trainingShort'
+  | 'trainingShortIneligibleCount'
 > {
   const threshold = input.trainingThreshold ?? DEFAULT_TRAINING_THRESHOLD
   const none = {
@@ -310,19 +320,25 @@ function trainingSection(
     trainingDaysLeft: null,
     trainingThreshold: threshold,
     trainingShort: [],
+    trainingShortIneligibleCount: 0,
   }
   if (!input.trainingClubs || !input.snapshotDate) return none
   const context = trainingRoundContext(input.snapshotDate, programYear)
   if (!context.open) return none
+  const short = shortClubs(
+    input.trainingClubs.filter(c => inScope(c.divisionId, c.areaId, scope)),
+    context.open.round,
+    threshold
+  )
+  // Review S3: a suspended/ineligible club is no to-do — footnoted, as the
+  // Club Success Plan section does (same predicate, #1555).
+  const listed = short.filter(c => !isIneligibleStatus(c.clubStatus))
   return {
     trainingRound: context.open,
     trainingDaysLeft: context.daysLeft,
     trainingThreshold: threshold,
-    trainingShort: shortClubs(
-      input.trainingClubs.filter(c => inScope(c.divisionId, c.areaId, scope)),
-      context.open.round,
-      threshold
-    ),
+    trainingShort: listed,
+    trainingShortIneligibleCount: short.length - listed.length,
   }
 }
 

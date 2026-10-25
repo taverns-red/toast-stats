@@ -20,6 +20,8 @@ import { TrainingCurveChart } from './TrainingCurveChart'
 export interface RoundPanelLastYear {
   /** The snapshot date the comparison was read from. */
   date: string
+  /** How that date relates to this year's point in the round (review S2). */
+  kind: 'same' | 'earlier' | 'final'
   distribution: readonly number[]
 }
 
@@ -37,6 +39,13 @@ interface OfficerTrainingRoundPanelProps {
     thisYearLabel: string
     lastYearLabel: string
   }
+}
+
+function lastYearLabel(lastYear: RoundPanelLastYear): string {
+  const date = formatDisplayDate(lastYear.date)
+  if (lastYear.kind === 'final') return `Last year's final (${date})`
+  if (lastYear.kind === 'same') return `Last year on ${date}`
+  return `Last year, nearest earlier snapshot (${date})`
 }
 
 const roundName = (round: 1 | 2) =>
@@ -224,8 +233,8 @@ export const OfficerTrainingRoundPanel: React.FC<
             data-testid={`training-round-${window.round}-lastyear`}
           >
             {lastFigures
-              ? `Last year on ${formatDisplayDate(lastYear!.date)}: ${formatPct(lastFigures.pctAtThreshold)} at ${threshold}+ (${lastFigures.atThreshold} of ${lastFigures.clubs} clubs), ${formatPct(lastFigures.pctAllSeven)} with all seven.`
-              : 'No snapshot from this date last year to compare with.'}
+              ? `${lastYearLabel(lastYear!)}: ${formatPct(lastFigures.pctAtThreshold)} at ${threshold}+ (${lastFigures.atThreshold} of ${lastFigures.clubs} clubs), ${formatPct(lastFigures.pctAllSeven)} with all seven.`
+              : "No snapshot from this point in last year's round to compare with."}
           </p>
         </>
       )}

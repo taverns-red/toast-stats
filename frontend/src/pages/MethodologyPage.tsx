@@ -972,7 +972,10 @@ const MethodologyPage: React.FC = () => {
             <li>
               <strong>Which clubs.</strong> Every club on the club performance
               export is counted, whatever its status, so the percentages use the
-              same club list the dashboard shows.
+              same club list the dashboard shows. The Action List&apos;s to-do
+              of clubs short of training leaves out suspended and ineligible
+              clubs and counts them in a footnote, as its Club Success Plan
+              section does.
             </li>
             <li>
               <strong>The June gap.</strong> Toastmasters publishes the new
@@ -989,12 +992,6 @@ const MethodologyPage: React.FC = () => {
               rather than drawing zeros. Older years were kept at month-ends
               only, so their curves are sparse.
             </li>
-            <li>
-              <strong>Region comparison.</strong> A region&apos;s districts are
-              compared on the same figures, from one region rollup per date; a
-              district&apos;s rank is its place among them at the selected
-              threshold.
-            </li>
           </ul>
           <p className="methodology-source">
             Sources:{' '}
@@ -1003,9 +1000,7 @@ const MethodologyPage: React.FC = () => {
             <code>
               time-series/district_&#123;id&#125;/&#123;program year&#125;.json
             </code>
-            , the curve) and{' '}
-            <code>snapshots/&#123;date&#125;/region-rollups.json</code> (region
-            comparisons).
+            , the curve).
           </p>
         </div>
       </CollapsibleSection>
