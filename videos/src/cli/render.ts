@@ -1,7 +1,7 @@
 /**
- * `npm run videos:render -- <scenario>` — compose the captured walkthrough
- * into videos/out/<scenario>.mp4 (gitignored). Needs a prior
- * `npm run videos:capture -- <scenario>`. Opt-in only: never part of npm
+ * `npm run videos:render -- <scenario> [--format mobile]` — compose the
+ * captured walkthrough into videos/out/<scenario>[-<format>].mp4 (gitignored).
+ * Needs a prior capture of the same format. Opt-in only: never part of npm
  * test, the pre-push hook or CI (#2293).
  */
 import {
@@ -16,6 +16,7 @@ import { bundle } from '@remotion/bundler'
 import { renderMedia, selectComposition } from '@remotion/renderer'
 import { generatePad, measureLufs } from '../render/music'
 import { DEFAULT_MUSIC } from '../scenarios/music'
+import { outputName, type CliArgs } from '../scenarios/cliArgs'
 import type { CaptureManifest } from '../scenarios/types'
 import {
   captureRelDir,
@@ -27,17 +28,14 @@ import {
   VIDEOS_ROOT,
 } from './paths'
 
-export async function render(id: string): Promise<void> {
+export async function render({ id, format }: CliArgs): Promise<void> {
   const scenario = loadValidScenario(id)
+  const name = outputName(scenario.id, format)
 
-  const manifestPath = join(
-    PUBLIC_DIR,
-    captureRelDir(scenario.id),
-    'manifest.json'
-  )
+  const manifestPath = join(PUBLIC_DIR, captureRelDir(name), 'manifest.json')
   if (!existsSync(manifestPath)) {
     throw new Error(
-      `No capture for ${scenario.id}. Run: npm run videos:capture -- ${scenario.id}`
+      `No ${format} capture for ${scenario.id}. Run: npm run videos:capture -- ${scenario.id} --format ${format}`
     )
   }
   const manifest = JSON.parse(
@@ -64,7 +62,7 @@ export async function render(id: string): Promise<void> {
     entryPoint: join(VIDEOS_ROOT, 'src', 'remotion', 'index.ts'),
     publicDir: PUBLIC_DIR,
   })
-  const inputProps = { scenarioId: scenario.id, manifest }
+  const inputProps = { scenarioId: scenario.id, format, manifest }
   const composition = await selectComposition({
     serveUrl,
     id: 'HowTo',
@@ -72,7 +70,7 @@ export async function render(id: string): Promise<void> {
   })
 
   mkdirSync(OUT_DIR, { recursive: true })
-  const outputLocation = join(OUT_DIR, `${scenario.id}.mp4`)
+  const outputLocation = join(OUT_DIR, `${name}.mp4`)
   let lastPct = -10
   await renderMedia({
     composition,

@@ -1,6 +1,7 @@
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { getScenario } from '../scenarios'
+import { parseCliArgs, type CliArgs } from '../scenarios/cliArgs'
 import type { Scenario } from '../scenarios/types'
 import { validateScenario } from '../scenarios/validate'
 
@@ -36,23 +37,25 @@ export function loadValidScenario(id: string): Scenario {
 }
 
 /**
- * Run `command` with the id from `npm run videos:<cmd> -- <id>` when the
+ * Run `command` with the parsed `-- <id> [--format …]` arguments when the
  * module at `moduleUrl` is the process entry point (so `build` can import
  * `capture` and `render` without running them).
  */
 export function runIfMain(
   moduleUrl: string,
-  command: (id: string) => Promise<void>
+  command: (args: CliArgs) => Promise<void>
 ): void {
   const entry = process.argv[1]
   if (!entry || moduleUrl !== pathToFileURL(entry).href) return
-  const id = process.argv[2]
-  if (!id) {
-    console.error('Usage: npm run videos:<capture|render|build> -- <scenario>')
+  let args: CliArgs
+  try {
+    args = parseCliArgs(process.argv.slice(2))
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err)
     process.exitCode = 2
     return
   }
-  command(id).catch((err: unknown) => {
+  command(args).catch((err: unknown) => {
     console.error(err instanceof Error ? err.message : err)
     process.exitCode = 1
   })

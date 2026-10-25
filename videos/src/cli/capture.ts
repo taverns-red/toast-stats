@@ -1,10 +1,12 @@
 /**
- * `npm run videos:capture -- <scenario>` — record the scenario's walkthrough
- * on the live site into videos/public/captures/<scenario>/ (gitignored).
+ * `npm run videos:capture -- <scenario> [--format mobile]` — record the
+ * scenario's walkthrough on the live site into
+ * videos/public/captures/<scenario>[-<format>]/ (gitignored).
  * Opt-in only: never part of npm test, the pre-push hook or CI (#2293).
  */
 import { join } from 'node:path'
 import { runCapture } from '../capture/runCapture'
+import { outputName, type CliArgs } from '../scenarios/cliArgs'
 import {
   captureRelDir,
   loadValidScenario,
@@ -12,13 +14,13 @@ import {
   runIfMain,
 } from './paths'
 
-export async function capture(id: string): Promise<void> {
+export async function capture({ id, format }: CliArgs): Promise<void> {
   const scenario = loadValidScenario(id)
-  const rel = captureRelDir(scenario.id)
-  console.error(`Capturing ${scenario.id} from ${scenario.url} …`)
+  const rel = captureRelDir(outputName(scenario.id, format))
+  console.error(`Capturing ${scenario.id} (${format}) from ${scenario.url} …`)
   const manifest = await runCapture(
     scenario,
-    'desktop',
+    format,
     join(PUBLIC_DIR, rel),
     rel
   )
