@@ -356,10 +356,25 @@ export interface RawTable {
   rows: string[][]
 }
 
+/**
+ * Remove every tag from scraped HTML, including an unterminated one at the end
+ * (`Ottawa<script` → `Ottawa`), so no tag fragment survives into a parsed cell
+ * (#2289). Repeats until stable so a removal can never splice a new tag
+ * together from the text around it.
+ */
+function stripTags(html: string): string {
+  let text = html
+  let previous: string
+  do {
+    previous = text
+    text = text.replace(/<[^>]*(?:>|$)/g, '')
+  } while (text !== previous)
+  return text
+}
+
 /** Strip tags, decode &nbsp;, collapse whitespace from a cell's inner HTML. */
 function cellText(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, '')
+  return stripTags(html)
     .replace(/&nbsp;/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()

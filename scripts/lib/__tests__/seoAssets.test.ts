@@ -57,7 +57,7 @@ describe('buildRobotsTxt', () => {
   it('points crawlers at the absolute sitemap URL', () => {
     expect(txt).toMatch(
       new RegExp(
-        `^Sitemap: ${ORIGIN.replace(/\./g, '\\.')}/sitemap\\.xml$`,
+        `^Sitemap: ${ORIGIN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/sitemap\\.xml$`,
         'm'
       )
     )

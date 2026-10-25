@@ -610,3 +610,30 @@ describe('parseDistrictReport — edge cases', () => {
     ).toThrow(/unknown/i)
   })
 })
+
+// CodeQL js/incomplete-multi-character-sanitization (#2289): the cell text is
+// scraped from TI's HTML, so a malformed cell must never leak a tag fragment.
+// A single `<[^>]*>` pass leaves an unterminated `<script` (no closing `>`).
+describe('parseDistrictReport — adversarial cell HTML (#2289)', () => {
+  const table = (location: string): string =>
+    '<table><tr><th>Club</th><th>Division</th><th>Area</th>' +
+    '<th>Renewal Status</th><th>Name</th><th>Location</th></tr>' +
+    '<tr><td>1009147</td><td>D</td><td>33</td><td>Pending</td>' +
+    `<td>Los Amigos</td><td>${location}</td></tr></table>`
+
+  it('drops an unterminated tag at the end of a cell', () => {
+    const r = parseDistrictReport(ID.aprilDues, table('Ottawa<script'))
+    expect(r.rows[0]).toMatchObject({ location: 'Ottawa' })
+  })
+
+  it('leaves no "<" in any cell for nested or broken tag soup', () => {
+    for (const cell of [
+      '<<script>script>alert(1)</script>',
+      'a<scr<script>ipt>b',
+      'Ottawa <img src=x onerror=alert(1)',
+    ]) {
+      const r = parseDistrictReport(ID.aprilDues, table(cell))
+      expect(JSON.stringify(r.rows)).not.toContain('<')
+    }
+  })
+})

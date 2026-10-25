@@ -166,8 +166,14 @@ const DAILY_REPORTS: ReportSpec[] = [
 
 /** Strip tags + collapse whitespace from an HTML cell's inner content. */
 function cellText(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, '')
+  // Repeat until stable so a removal cannot splice a new tag together (#2289).
+  let text = html
+  let previous: string
+  do {
+    previous = text
+    text = text.replace(/<[^>]*>/g, '')
+  } while (text !== previous)
+  return text
     .replace(/&nbsp;/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
