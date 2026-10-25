@@ -46,6 +46,7 @@ import {
   UploadOptions,
 } from './types/index.js'
 import { resolveConfiguration } from './utils/config.js'
+import { resolveUploadBucket } from './utils/uploadBucket.js'
 
 // Re-export configuration utilities for external use
 export {
@@ -787,6 +788,15 @@ export function createCLI(): Command {
         return num
       }
     )
+    .option(
+      '--bucket <name>',
+      'Destination GCS bucket (overrides GCS_BUCKET; one of the two is required)'
+    )
+    .option(
+      '--allow-prod',
+      'Allow the production bucket as the destination (#2288)',
+      false
+    )
     .action(async (options: UploadOptions) => {
       // Validate mutual exclusivity: --date with --since/--until
       if (
@@ -820,8 +830,19 @@ export function createCLI(): Command {
       })
       const { cacheDir } = resolvedConfig
 
-      // Get bucket and prefix from environment variables
-      const bucket = process.env['GCS_BUCKET'] ?? 'toast-stats-data-ca'
+      // Bucket: --bucket, else GCS_BUCKET; none refuses, prod needs
+      // --allow-prod (#2288). Prefix still comes from the environment.
+      let bucket: string
+      try {
+        bucket = resolveUploadBucket({
+          bucket: options.bucket,
+          allowProd: options.allowProd === true,
+          env: process.env,
+        })
+      } catch (err) {
+        console.error(`Error: ${err instanceof Error ? err.message : err}`)
+        process.exit(ExitCode.COMPLETE_FAILURE)
+      }
       const prefix = process.env['GCS_PREFIX'] ?? 'snapshots'
       const projectId = process.env['GCP_PROJECT_ID']
 

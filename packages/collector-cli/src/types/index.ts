@@ -487,6 +487,10 @@ export interface UploadOptions {
   config?: string
   /** Maximum number of concurrent GCS uploads (default: 10) */
   concurrency?: number
+  /** Destination bucket; wins over GCS_BUCKET (#2288) */
+  bucket?: string
+  /** Required to upload to the production bucket (#2288) */
+  allowProd?: boolean
 }
 
 /**
