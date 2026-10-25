@@ -50,7 +50,7 @@ export function officersTrainedInRound(
     record,
     OFFICER_TRAINING_ROUND_COLUMNS[round - 1]!
   )
-  return Math.max(0, Math.min(OFFICER_TRAINING_MAX_OFFICERS, value))
+  return Math.max(0, Math.min(OFFICER_TRAINING_MAX_OFFICERS, Math.trunc(value)))
 }
 
 /**
