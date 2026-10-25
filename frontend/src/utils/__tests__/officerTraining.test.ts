@@ -102,6 +102,53 @@ describe('trainingClubsFromSnapshot — D61 2026-10-11', () => {
     }
   })
 
+  it('cross-check with non-zero Round 2: the panel and the roll-up agree on every pairing (review S4)', () => {
+    // The D61 date has Round 2 all zero, so "both rounds" is never true
+    // there. Every pairing of 0–7 (and blanks) makes it true for some clubs.
+    const cells = ['0', '1', '3', '4', '5', '7', '']
+    const records = cells.flatMap((a, i) =>
+      cells.map((b, j) => ({
+        'Club Number': String(1000 + i * 10 + j),
+        'Club Name': `Club ${i}-${j}`,
+        Division: 'A',
+        Area: '01',
+        'Off. Trained Round 1': a,
+        'Off. Trained Round 2': b,
+      }))
+    ) as ScrapedRecord[]
+    const rolled = trainingClubsFromSnapshot({
+      data: { clubPerformance: records },
+    })!
+    let credited = 0
+    for (const record of records) {
+      const club = rolled.find(
+        c => c.clubId === normalizeClubId(record['Club Number'])
+      )!
+      const goal9 = extractDcpGoalProgress(record).find(
+        g => g.goalNumber === 9
+      )!
+      expect([club.round1, club.round2]).toEqual(
+        goal9.subItems.map(s => s.achieved)
+      )
+      expect(goal9.achieved).toBe(club.round1 >= 4 && club.round2 >= 4)
+      if (goal9.achieved) credited += 1
+    }
+    expect(credited).toBe(9) // {4,5,7} × {4,5,7}: not vacuous
+    // And the headline count at 4+ is the panel's per-round verdict, summed.
+    for (const round of [1, 2] as const) {
+      expect(
+        figuresFromDistribution(distributionOf(rolled, round), 4).atThreshold
+      ).toBe(
+        records.filter(
+          r =>
+            extractDcpGoalProgress(r).find(g => g.goalNumber === 9)!.subItems[
+              round - 1
+            ]!.achieved >= 4
+        ).length
+      )
+    }
+  })
+
   it('headline figures: % at 4+ and % with all seven, per round', () => {
     const r1 = figuresFromDistribution(distributionOf(clubs, 1), 4)
     expect(r1.atThreshold).toBe(120)
