@@ -44,6 +44,18 @@ export {
   OFFICER_TRAINING_DCP_THRESHOLD,
   OFFICER_TRAINING_MAX_OFFICERS,
 } from './analytics/officerTraining.js'
+export {
+  OFFICER_TRAINING_ROUND_RULES,
+  getOfficerTrainingRounds,
+  officerTrainingRoundsOn,
+  daysLeftInRound,
+  dayOfRound,
+} from './analytics/officerTrainingRounds.js'
+export type {
+  OfficerTrainingRoundRule,
+  OfficerTrainingRoundWindow,
+  OfficerTrainingRoundsOn,
+} from './analytics/officerTrainingRounds.js'
 
 // Analytics computation
 export {
