@@ -60,6 +60,16 @@ export interface ResolvedClub {
   clubName: string
 }
 
+/**
+ * Drop trailing `/` characters. A scan, not `/\/+$/`: that regex is quadratic
+ * on a long run of slashes that is not at the end (#2289).
+ */
+function trimTrailingSlashes(url: string): string {
+  let end = url.length
+  while (end > 0 && url[end - 1] === '/') end--
+  return url.slice(0, end)
+}
+
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }
@@ -69,7 +79,7 @@ export class CdnClient {
   private readonly fetchFn: typeof fetch
 
   constructor(options: CdnClientOptions = {}) {
-    this.baseUrl = (options.baseUrl ?? DEFAULT_CDN_BASE_URL).replace(/\/+$/, '')
+    this.baseUrl = trimTrailingSlashes(options.baseUrl ?? DEFAULT_CDN_BASE_URL)
     this.fetchFn = options.fetchFn ?? fetch
   }
 
