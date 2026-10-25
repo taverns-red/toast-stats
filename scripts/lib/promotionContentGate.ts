@@ -843,6 +843,20 @@ function figureCounts(f: RegionRollupFigures): Array<[string, number | null]> {
       out.push([`${group}.${k}`, v as number | null])
     }
   }
+  // Officer training (#2296): absent on files written before the field, so
+  // only a block that carries it is checked; null sums like any figure.
+  if (f.officerTraining !== undefined) {
+    for (const round of ['round1', 'round2'] as const) {
+      for (let i = 0; i < 8; i++) {
+        out.push([
+          `officerTraining.${round}.${i}`,
+          f.officerTraining === null
+            ? null
+            : (f.officerTraining[round][i] ?? 0),
+        ])
+      }
+    }
+  }
   return out
 }
 

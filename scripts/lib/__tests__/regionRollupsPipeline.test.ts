@@ -116,6 +116,55 @@ describe('content gate: region-rollups (#1799)', () => {
     bad.regions!['07']!.districtIds = ['68']
     expect(check(PATH, bad)).toMatch(/region 07/)
   })
+
+  describe('officer training (#2296)', () => {
+    /** RECORDED with a consistent officer-training distribution on every
+     *  block: each district gets its own vector, regions and world the sums. */
+    const withOfficerTraining = (): RegionRollups => {
+      const r = structuredClone(RECORDED)
+      const vector = (seed: number) =>
+        Array.from({ length: 8 }, (_, i) => (seed * (i + 1)) % 5)
+      const sum = (rows: { round1: number[]; round2: number[] }[]) => ({
+        round1: Array.from({ length: 8 }, (_, i) =>
+          rows.reduce((a, row) => a + row.round1[i]!, 0)
+        ),
+        round2: Array.from({ length: 8 }, (_, i) =>
+          rows.reduce((a, row) => a + row.round2[i]!, 0)
+        ),
+      })
+      Object.values(r.districts).forEach((d, n) => {
+        d.officerTraining = { round1: vector(n + 1), round2: vector(n + 2) }
+      })
+      for (const block of Object.values(r.regions ?? {})) {
+        block.officerTraining = sum(
+          block.districtIds.map(id => r.districts[id]!.officerTraining!)
+        )
+      }
+      r.world.officerTraining = sum(
+        Object.values(r.districts).map(d => d.officerTraining!)
+      )
+      return r
+    }
+
+    it('passes blocks whose distributions are the sums of their districts', () => {
+      expect(check(PATH, withOfficerTraining())).toBeNull()
+    })
+
+    it('fails a world distribution that is not the sum of its districts', () => {
+      const bad = withOfficerTraining()
+      bad.world.officerTraining!.round1[7]! += 1
+      expect(check(PATH, bad)).toMatch(/world: officerTraining\.round1\.7/)
+    })
+
+    it('fails a region distribution that is not the sum of its districts', () => {
+      const bad = withOfficerTraining()
+      const region = Object.keys(bad.regions!)[0]!
+      bad.regions![region]!.officerTraining!.round2[0]! += 1
+      expect(check(PATH, bad)).toMatch(
+        new RegExp(`region ${region}: officerTraining\\.round2\\.0`)
+      )
+    })
+  })
 })
 
 describe('promotion: region-rollups moves with its date (#1799)', () => {

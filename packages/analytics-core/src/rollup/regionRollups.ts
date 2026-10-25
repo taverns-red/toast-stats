@@ -67,6 +67,15 @@ import {
 } from '../rankings/programYearDates.js'
 import { canonicalDistrictId, readSnapshotRankings } from './globalRollup.js'
 import { programYearForSnapshotDate } from './globalTotals.js'
+import {
+  OFFICER_TRAINING_MAX_OFFICERS,
+  OFFICER_TRAINING_ROUND_COLUMNS,
+  officersTrainedInRound,
+} from '../analytics/officerTraining.js'
+import type {
+  OfficerTrainingDistribution,
+  ScrapedRecord,
+} from '@taverns-red/shared-contracts'
 
 /** One club as the rollup reads it; `undefined` = the column is absent. */
 export interface RegionRollupClub {
@@ -82,6 +91,9 @@ export interface RegionRollupClub {
   readonly officerListOnTime?: boolean
   /** The district-performance `Charter Date/Suspend Date` cell. */
   readonly charterSuspendField?: string
+  /** `Off. Trained Round 1` / `Round 2`, 0–7 (#2296); undefined = absent. */
+  readonly officersTrainedRound1?: number
+  readonly officersTrainedRound2?: number
 }
 
 export interface RegionRollupDistrictInput {
@@ -144,6 +156,26 @@ function emptyFigures(): RegionRollupFigures {
       officerListOnTime: 0,
     },
     growth: { prospective: 0, chartered: 0, suspended: 0 },
+    officerTraining: emptyDistribution(),
+  }
+}
+
+function emptyDistribution(): OfficerTrainingDistribution {
+  const zeros = (): number[] =>
+    new Array<number>(OFFICER_TRAINING_MAX_OFFICERS + 1).fill(0)
+  return { round1: zeros(), round2: zeros() }
+}
+
+/** Index-by-index sum; null (or a pre-#2296 absent block) on either side
+ *  makes the sum null. */
+function addDistribution(
+  a: OfficerTrainingDistribution | null | undefined,
+  b: OfficerTrainingDistribution | null | undefined
+): OfficerTrainingDistribution | null {
+  if (!a || !b) return null
+  return {
+    round1: a.round1.map((n, i) => n + (b.round1[i] ?? 0)),
+    round2: a.round2.map((n, i) => n + (b.round2[i] ?? 0)),
   }
 }
 
@@ -204,6 +236,7 @@ function addFigures(
       chartered: addMaybe(a.growth.chartered, b.growth.chartered),
       suspended: addMaybe(a.growth.suspended, b.growth.suspended),
     },
+    officerTraining: addDistribution(a.officerTraining, b.officerTraining),
   }
 }
 
@@ -309,6 +342,25 @@ function districtFigures(
     officerListOnTime: has('officerListOnTime')
       ? count('officerListOnTime')
       : null,
+  }
+  // Officers trained per round (#2296): clubs whose row carries the cell;
+  // null when no club in the district does (the column was not collected).
+  const trained = facts.filter(
+    ({ club }) =>
+      club.officersTrainedRound1 !== undefined ||
+      club.officersTrainedRound2 !== undefined
+  )
+  if (trained.length === 0) {
+    f.officerTraining = null
+  } else {
+    const distribution = emptyDistribution()
+    for (const { club } of trained) {
+      if (club.officersTrainedRound1 !== undefined)
+        distribution.round1[club.officersTrainedRound1]! += 1
+      if (club.officersTrainedRound2 !== undefined)
+        distribution.round2[club.officersTrainedRound2]! += 1
+    }
+    f.officerTraining = distribution
   }
   f.growth.prospective = prospectiveClubs
   if (!ctx.charterCollected) f.growth.chartered = null
@@ -499,6 +551,7 @@ export function buildRegionRollups(
       officerListOnTime: null,
     }
     world.growth = { prospective: null, chartered: null, suspended: null }
+    world.officerTraining = null
     if (!ctx.smedley) world.distinguished.smedley = null
   }
 
@@ -551,6 +604,27 @@ function flag(
 }
 
 const num = (value: unknown): number => Number(value ?? 0) || 0
+
+/** A row's `Off. Trained Round 1/2` cells, read as goal 9 reads them and
+ *  clamped into 0–7 (#2296); a round whose column is absent is left out. */
+function officersTrained(
+  row: Record<string, unknown> | undefined
+): Pick<RegionRollupClub, 'officersTrainedRound1' | 'officersTrainedRound2'> {
+  if (!row) return {}
+  const record = row as ScrapedRecord
+  const carries = (round: 1 | 2): boolean =>
+    OFFICER_TRAINING_ROUND_COLUMNS[round - 1]!.aliases.some(
+      alias => alias in row
+    )
+  return {
+    ...(carries(1) && {
+      officersTrainedRound1: officersTrainedInRound(record, 1),
+    }),
+    ...(carries(2) && {
+      officersTrainedRound2: officersTrainedInRound(record, 2),
+    }),
+  }
+}
 
 interface SnapshotFile {
   data?: {
@@ -625,6 +699,7 @@ export function readRegionRollupInput(snapshotDir: string): {
         aprilDuesOnTime: flag(perf, 'Mem. dues on time Apr'),
         officerListOnTime: flag(perf, 'Off. List On Time'),
         charterSuspendField: statusCell.get(id),
+        ...officersTrained(perf),
       })
     }
     districts.push({

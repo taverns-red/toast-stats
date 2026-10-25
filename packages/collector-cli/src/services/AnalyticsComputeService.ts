@@ -26,6 +26,7 @@ import {
   canonicalDistrictId,
   findPreviousProgramYearDate,
   getCSPStatus,
+  OFFICER_TRAINING_ROUND_COLUMNS,
   programYearForSnapshotDate,
   readSnapshotRankings,
   readSnapshotRollupInput,
@@ -60,6 +61,7 @@ import {
   GLOBAL_TOTALS_FILE_NAME,
   DistrictRegionHistorySchema,
   MEETING_TIMES_FILE_NAME,
+  normalizeClubId,
   REGION_ROLLUPS_FILE_NAME,
   REGION_ROLLUPS_REGION_SOURCE,
   RegionMembershipSeriesSchema,
@@ -480,9 +482,31 @@ export class AnalyticsComputeService {
   private convertToDistrictStatisticsInput(
     snapshot: DistrictStatistics
   ): DistrictStatisticsInput {
+    // Officer training (#2296) has no transformed field: carry the raw
+    // goal-9 cells across from the club's own clubPerformance row. Raw rows
+    // hold TI's zero-padded number; clubs hold the canonical one (#1440).
+    const officerTrainingKeys = OFFICER_TRAINING_ROUND_COLUMNS.flatMap(
+      column => column.aliases
+    )
+    const rawOfficerTraining = new Map<string, ScrapedRecord>()
+    for (const row of snapshot.clubPerformance ?? []) {
+      const cells: ScrapedRecord = {}
+      for (const key of officerTrainingKeys) {
+        if (!(key in row)) continue
+        const value = row[key]
+        cells[key] =
+          typeof value === 'string' || typeof value === 'number' ? value : null
+      }
+      if (Object.keys(cells).length === 0) continue
+      rawOfficerTraining.set(normalizeClubId(row['Club Number']), cells)
+    }
+
     // Convert ClubStatistics[] to ScrapedRecord[] format
     // Map the transformed fields back to the raw CSV column names
     const clubPerformance: ScrapedRecord[] = snapshot.clubs.map(club => ({
+      // Officers trained per round (#2296), when the export carries them
+      ...rawOfficerTraining.get(normalizeClubId(club.clubId)),
+
       // Membership fields
       'Active Members': club.membershipCount,
       'Active Membership': club.membershipCount,
