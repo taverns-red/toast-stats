@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.68.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.67.2...toast-stats-v2.68.0) (2026-10-25)
+
+
+### Features
+
+* **pipeline:** local pipeline harness on the gcloud shim, run in CI ([#1768](https://github.com/taverns-red/toast-stats/issues/1768)) ([#2281](https://github.com/taverns-red/toast-stats/issues/2281)) ([36a0e6a](https://github.com/taverns-red/toast-stats/commit/36a0e6af247c04d166c113847ca2c45744e11da0))
+* **pipeline:** read-only staging canary for the gcloud shim ([#1768](https://github.com/taverns-red/toast-stats/issues/1768)) ([#2284](https://github.com/taverns-red/toast-stats/issues/2284)) ([cad2d9e](https://github.com/taverns-red/toast-stats/commit/cad2d9e8078d094c24c1a2320b47d308834eaa0e))
+
+
+### Bug Fixes
+
+* **pipeline:** completeness gate holds a FAC loss when prod is already stripped ([#2239](https://github.com/taverns-red/toast-stats/issues/2239)) ([#2282](https://github.com/taverns-red/toast-stats/issues/2282)) ([531f5c6](https://github.com/taverns-red/toast-stats/commit/531f5c69e2bb514c5fee0032e7ca81ded61ce73b))
+* **scripts:** guard lighthouse-cdn-server reads where they happen ([#2289](https://github.com/taverns-red/toast-stats/issues/2289)) ([#2291](https://github.com/taverns-red/toast-stats/issues/2291)) ([4da2f2c](https://github.com/taverns-red/toast-stats/commit/4da2f2cb75c3d0c24a77bf787b27d321ee190275))
+
+
+### Tests
+
+* **pipeline:** close prod-write guard blind spots; operator scripts need explicit bucket ([#2285](https://github.com/taverns-red/toast-stats/issues/2285), [#2286](https://github.com/taverns-red/toast-stats/issues/2286)) ([#2287](https://github.com/taverns-red/toast-stats/issues/2287)) ([50e6c38](https://github.com/taverns-red/toast-stats/commit/50e6c38344282b11e5890c507c89ca4ed4a4c955))
+
 ## [2.67.2](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.67.1...toast-stats-v2.67.2) (2026-10-24)
 
 
