@@ -398,12 +398,15 @@ function plural(n: number, noun: string): string {
 }
 
 /** "2 members + 1 DCP goal" — the "Needs" COLUMN's value (#1577), where the
- *  header supplies the verb the sentence form spells out. */
+ *  header supplies the verb the sentence form spells out. A zero part is
+ *  omitted (#2308): "0 members + 1 DCP goal" reads as an error when the club
+ *  already meets the membership rule. A 0/0 gap is never listed — such a club
+ *  is already Distinguished — so it yields '' rather than a fake requirement. */
 export function formatCloseNeeds(item: CloseToDistinguishedItem): string {
-  return `${plural(item.membersNeeded, 'member')} + ${plural(
-    item.goalsNeeded,
-    'DCP goal'
-  )}`
+  const parts: string[] = []
+  if (item.membersNeeded > 0) parts.push(plural(item.membersNeeded, 'member'))
+  if (item.goalsNeeded > 0) parts.push(plural(item.goalsNeeded, 'DCP goal'))
+  return parts.join(' + ')
 }
 
 /** "needs 2 members + 1 DCP goal" — the SENTENCE form, still the CSV's Detail
@@ -411,7 +414,8 @@ export function formatCloseNeeds(item: CloseToDistinguishedItem): string {
  *  pluralization: a second copy of a format is a second thing to drift
  *  (lesson "a fallback alias list copied twice drifts twice"). */
 export function formatCloseGap(item: CloseToDistinguishedItem): string {
-  return `needs ${formatCloseNeeds(item)}`
+  const needs = formatCloseNeeds(item)
+  return needs ? `needs ${needs}` : ''
 }
 
 /** "1 club unvisited · Round 1, due 2025-11-30" — shared by the list row and

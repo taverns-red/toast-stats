@@ -12,10 +12,15 @@ import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ScrapedRecord } from '@taverns-red/shared-contracts'
-import { summarizeOfficerTraining } from '../officerTraining.js'
+import {
+  OFFICER_TRAINING_DCP_THRESHOLD,
+  officersTrainedInRound,
+  summarizeOfficerTraining,
+} from '../officerTraining.js'
 import {
   DCP_GOAL_DEFINITIONS,
   isDcpGoalAchieved,
+  readDcpGoalColumn,
 } from '../dcpGoalDefinitions.js'
 
 const loadCapture = (): ScrapedRecord[] => {
@@ -59,20 +64,66 @@ describe('summarizeOfficerTraining (#2296)', () => {
     })
   })
 
-  it('agrees with goal 9 per club: clubs at 4+ in BOTH rounds = clubs achieving goal 9', () => {
-    const records = loadCapture()
+  describe('cross-check against goal 9 itself (the per-club DCP panel)', () => {
     const goal9 = DCP_GOAL_DEFINITIONS.find(d => d.goal === 9)!
-    const achieved = records.filter(r => isDcpGoalAchieved(r, goal9)).length
-    // Round 2 is all zero on this date, so no club has goal 9 yet...
-    expect(achieved).toBe(0)
-    // ...and the Round 1 roll-up at the goal-9 threshold counts the clubs
-    // whose Round 1 requirement alone is met.
-    const summary = summarizeOfficerTraining(records)!
-    const round1Required = goal9.requirements[0]!.anyOf[0]!.required
-    const atThreshold = summary.round1
-      .slice(round1Required)
-      .reduce((a, b) => a + b, 0)
-    expect(atThreshold).toBe(43 + 25 + 27 + 25)
+    /** Goal 9's own verdict for one round's requirement on one record. */
+    const requirementMet = (r: ScrapedRecord, round: 1 | 2): boolean => {
+      const column = goal9.requirements[round - 1]!.anyOf[0]!
+      return readDcpGoalColumn(r, column) >= column.required
+    }
+    /** Every pairing of round values, including non-zero Round 2, blanks,
+     *  fractions and out-of-range cells, so "both rounds" is exercised. */
+    const synthetic = (): ScrapedRecord[] => {
+      const cells = ['0', '1', '3', '4', '5', '7', '9', '', '4.5', '-2', 6]
+      return cells.flatMap(a => cells.map(b => record(a, b)))
+    }
+
+    for (const [name, load] of [
+      ['captured D61 2026-10-11', loadCapture],
+      ['synthetic, every pairing', synthetic],
+    ] as const) {
+      it(`${name}: each club's round at 4+ equals goal 9's requirement`, () => {
+        for (const r of load()) {
+          for (const round of [1, 2] as const) {
+            expect(
+              officersTrainedInRound(r, round) >=
+                OFFICER_TRAINING_DCP_THRESHOLD,
+              `${JSON.stringify(r)} round ${round}`
+            ).toBe(requirementMet(r, round))
+          }
+          expect(
+            officersTrainedInRound(r, 1) >= OFFICER_TRAINING_DCP_THRESHOLD &&
+              officersTrainedInRound(r, 2) >= OFFICER_TRAINING_DCP_THRESHOLD
+          ).toBe(isDcpGoalAchieved(r, goal9))
+        }
+      })
+
+      it(`${name}: the roll-up at 4+ counts exactly the clubs goal 9 credits, per round`, () => {
+        const records = load()
+        const summary = summarizeOfficerTraining(records)!
+        for (const round of [1, 2] as const) {
+          const atFour = (round === 1 ? summary.round1 : summary.round2)
+            .slice(OFFICER_TRAINING_DCP_THRESHOLD)
+            .reduce((a, b) => a + b, 0)
+          expect(atFour).toBe(
+            records.filter(r => requirementMet(r, round)).length
+          )
+        }
+      })
+    }
+
+    it('the synthetic set does credit goal 9 to some clubs (not vacuous)', () => {
+      expect(
+        synthetic().filter(r => isDcpGoalAchieved(r, goal9)).length
+      ).toBeGreaterThan(0)
+    })
+  })
+
+  it('reads a fractional cell as goal 9 does (4.5 → 4), never as an index', () => {
+    expect(summarizeOfficerTraining([record('4.5', 6.7)])).toEqual({
+      round1: [0, 0, 0, 0, 1, 0, 0, 0],
+      round2: [0, 0, 0, 0, 0, 0, 1, 0],
+    })
   })
 
   it('counts numbers and numeric strings alike', () => {
