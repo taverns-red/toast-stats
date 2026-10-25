@@ -332,6 +332,23 @@ function Card({
             {rest}
           </div>
         ) : null}
+        {card.hint ? (
+          <div
+            style={{
+              marginTop: 28,
+              display: 'inline-block',
+              padding: '10px 28px',
+              borderRadius: 999,
+              border: `2px solid ${THEME.surface}`,
+              fontFamily: THEME.fontBody,
+              fontWeight: 500,
+              fontSize: 44,
+              lineHeight: 1.2,
+            }}
+          >
+            {card.hint}
+          </div>
+        ) : null}
       </div>
       <div
         style={{

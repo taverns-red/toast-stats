@@ -6,6 +6,11 @@ export const MAX_DURATION_SEC = 34
 export const MAX_CAPTION_WORDS = 12
 /** Shortest beat a viewer can read a 12-word caption in. */
 export const MIN_BEAT_SEC = 3
+/**
+ * ALL-CAPS hyphenated tokens like YOUR-DISTRICT: a viewer can't tell what
+ * format to type (Ron, PR #2295). Show a real example plus a hint instead.
+ */
+const PLACEHOLDER = /\b[A-Z]{2,}(?:-[A-Z]{2,})+\b/g
 
 /**
  * Words a viewer reads: whitespace-separated tokens that contain at least one
@@ -73,6 +78,21 @@ export function validateScenario(scenario: Scenario): string[] {
       problems.push(
         `${name} caption has ${words} words; the limit is ${MAX_CAPTION_WORDS}`
       )
+    }
+    if (card.hint !== undefined) {
+      const hintWords = countWords(card.hint)
+      if (hintWords > MAX_CAPTION_WORDS) {
+        problems.push(
+          `${name} hint has ${hintWords} words; the limit is ${MAX_CAPTION_WORDS}`
+        )
+      }
+    }
+    for (const text of [card.caption, card.hint ?? '']) {
+      for (const placeholder of text.match(PLACEHOLDER) ?? []) {
+        problems.push(
+          `${name} shows placeholder "${placeholder}"; use a concrete example and a hint`
+        )
+      }
     }
     expectedStart = card.endSec
   }

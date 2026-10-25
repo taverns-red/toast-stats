@@ -123,8 +123,10 @@ export const v2: Scenario = {
   closing: {
     startSec: 27,
     endSec: 30,
-    caption:
-      'Area Directors: ts.taverns.red/district/YOUR-DISTRICT/action-list',
+    // A real URL plus what the number means (Ron, PR #2295): "YOUR-DISTRICT"
+    // left viewers guessing the format.
+    caption: 'Area Directors: ts.taverns.red/district/86/action-list',
+    hint: '86 = your district number',
   },
   music: DEFAULT_MUSIC,
 }
