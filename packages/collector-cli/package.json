@@ -1,6 +1,6 @@
 {
   "name": "@taverns-red/collector-cli",
-  "version": "1.23.2",
+  "version": "1.23.3",
   "license": "MIT",
   "private": true,
   "type": "module",
