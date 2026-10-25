@@ -180,7 +180,7 @@ export const OfficerTrainingRoundPanel: React.FC<
           >
             <thead>
               <tr>
-                <th scope="col">Officers trained</th>
+                <th scope="col">Trained</th>
                 <th scope="col">Clubs</th>
               </tr>
             </thead>

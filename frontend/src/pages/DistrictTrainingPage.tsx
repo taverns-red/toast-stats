@@ -25,7 +25,6 @@ import {
   DEFAULT_TRAINING_THRESHOLD,
   distributionOf,
   filterTrainingClubs,
-  formatNeeded,
   parseTrainingThreshold,
   roundCurve,
   roundStatus,
@@ -123,10 +122,10 @@ const clubColumns = (
 const clubMobileRow =
   (districtId: string, threshold: number) =>
   (c: TrainingClub): MobileRow => {
+    // "R1 5/4 ✓ · R2 2/4": trained over the threshold, short enough not to
+    // truncate at 375.
     const part = (label: string, n: number) =>
-      n >= threshold
-        ? `${label} ${n} ✓`
-        : `${label} ${n} (${formatNeeded(threshold - n)})`
+      `${label} ${n}/${threshold}${n >= threshold ? ' ✓' : ''}`
     return {
       id: c.clubId,
       to: `/district/${districtId}/club/${c.clubId}`,
