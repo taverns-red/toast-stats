@@ -72,6 +72,17 @@ describe('prodWriteGuard blind spots (#2285)', () => {
     }
   })
 
+  it('flags a copy into prod whose flags follow the destination', () => {
+    // The shape of basemap-build.yml's prod-copy step: the last word is a
+    // flag, not the destination.
+    for (const run of [
+      'gcloud storage cp "gs://${GCS_BUCKET}/${OBJ}" "gs://${GCS_BUCKET_PRODUCTION}/${OBJ}" \\\n  --no-clobber \\\n  --cache-control="public, max-age=86400, no-transform"',
+      'gsutil cp /tmp/a gs://toast-stats-data-ca/v1/a -n',
+    ]) {
+      expect(prodWriteReasons(run), run).not.toEqual([])
+    }
+  })
+
   it('flags a write whose destination comes from a step or job env var', () => {
     const found = findProdWriteSteps({
       jobs: {
