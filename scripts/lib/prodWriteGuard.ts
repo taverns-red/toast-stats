@@ -179,6 +179,15 @@ function scriptGivenProd(
   return givenProd ? script : undefined
 }
 
+/**
+ * The last word that is not a flag, quotes kept together, so flags after
+ * the destination (`… gs://prod/x --no-clobber`) do not hide it (#2285).
+ */
+function lastOperand(args: string): string {
+  const words = args.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) ?? []
+  return words.filter(w => !w.startsWith('-')).pop() ?? ''
+}
+
 /** Why `run` writes to production; empty when it does not. */
 export function prodWriteReasons(
   run: string,
@@ -199,7 +208,11 @@ export function prodWriteReasons(
         const verb = m[1].replace(/\s+/g, ' ')
         const tokens = simple.split(/\s+/)
         const target = LAST_ARG_IS_TARGET.has(verb)
-          ? isProdTarget(tokens[tokens.length - 1] ?? '', prodVars)
+          ? isProdTarget(tokens[tokens.length - 1] ?? '', prodVars) ||
+            isProdTarget(
+              lastOperand(simple.slice((m.index ?? 0) + m[0].length)),
+              prodVars
+            )
           : tokens.some(t => isProdTarget(t, prodVars))
         if (target) reasons.push(`${tool} ${verb} → production`)
       }
