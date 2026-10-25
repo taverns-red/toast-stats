@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getScenario, SCENARIOS } from '../index'
-import type { Scenario } from '../types'
+import type { FormConfig, Scenario } from '../types'
 import {
   countWords,
   MAX_CAPTION_WORDS,
@@ -18,22 +18,34 @@ const captionsOf = (s: Scenario): string[] => [
 ]
 
 /** A minimal valid scenario; each sentinel breaks exactly one rule. */
+function form(): FormConfig {
+  return {
+    device: {
+      viewport: { width: 1280, height: 800 },
+      deviceScaleFactor: 1,
+      isMobile: false,
+      hasTouch: false,
+    },
+    readySelector: 'main',
+    setup: [],
+    beats: { a: { steps: [] }, b: { steps: [] } },
+  }
+}
+
 function fixture(): Scenario {
   return {
     id: 'fixture',
     role: 'Tester',
     url: 'https://example.test/',
-    viewport: { width: 1280, height: 800 },
     fps: 30,
     durationSec: 14,
-    readySelector: 'main',
-    setup: [],
     titleCard: { startSec: 0, endSec: 3, caption: 'Title' },
     beats: [
-      { id: 'a', startSec: 3, endSec: 7, caption: 'One', steps: [] },
-      { id: 'b', startSec: 7, endSec: 11, caption: 'Two', steps: [] },
+      { id: 'a', startSec: 3, endSec: 7, caption: 'One' },
+      { id: 'b', startSec: 7, endSec: 11, caption: 'Two' },
     ],
     closing: { startSec: 11, endSec: 14, caption: 'Bye' },
+    forms: { desktop: form(), mobile: form() },
     music: 'music/x.wav',
   }
 }
@@ -164,6 +176,20 @@ describe('validateScenario sentinels', () => {
     s.closing.caption = 'Go to example.test/district/YOUR-DISTRICT/page'
     expect(validateScenario(s).join('\n')).toMatch(
       /closing card.*placeholder "YOUR-DISTRICT"/
+    )
+  })
+
+  it('requires every form factor to script every beat, and no others', () => {
+    const missing = fixture()
+    delete missing.forms.mobile!.beats['b']
+    expect(validateScenario(missing).join('\n')).toMatch(
+      /mobile has no actions for beat "b"/
+    )
+
+    const extra = fixture()
+    extra.forms.desktop.beats['zzz'] = { steps: [] }
+    expect(validateScenario(extra).join('\n')).toMatch(
+      /desktop scripts unknown beat "zzz"/
     )
   })
 

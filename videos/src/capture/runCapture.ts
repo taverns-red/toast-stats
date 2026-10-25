@@ -5,6 +5,7 @@ import { performance } from 'node:perf_hooks'
 import { chromium, type Page } from 'playwright'
 import type {
   CaptureManifest,
+  FormFactor,
   CapturedBeat,
   CaptureStep,
   Scenario,
@@ -93,9 +94,13 @@ function probeDurationSec(file: string): number {
  */
 export async function runCapture(
   scenario: Scenario,
+  format: FormFactor,
   outDir: string,
   publicRelDir: string
 ): Promise<CaptureManifest> {
+  const form = scenario.forms[format]
+  if (!form) throw new Error(`Scenario ${scenario.id} has no ${format} form`)
+  const { device } = form
   const rawDir = join(outDir, 'raw')
   rmSync(outDir, { recursive: true, force: true })
   mkdirSync(rawDir, { recursive: true })
@@ -104,13 +109,23 @@ export async function runCapture(
   // A fresh context per capture: no "your district" star, theme or other
   // localStorage leaks between videos. Light theme is pinned explicitly.
   const context = await browser.newContext({
-    viewport: scenario.viewport,
-    deviceScaleFactor: 1,
+    viewport: device.viewport,
+    deviceScaleFactor: device.deviceScaleFactor,
+    isMobile: device.isMobile,
+    hasTouch: device.hasTouch,
     colorScheme: 'light',
     locale: 'en-CA',
     timezoneId: 'America/Toronto',
     acceptDownloads: true,
-    recordVideo: { dir: rawDir, size: scenario.viewport },
+    // Record at device pixels so a 3× phone capture stays sharp when the
+    // composer zooms into it.
+    recordVideo: {
+      dir: rawDir,
+      size: {
+        width: device.viewport.width * device.deviceScaleFactor,
+        height: device.viewport.height * device.deviceScaleFactor,
+      },
+    },
   })
   const page = await context.newPage()
   const t0 = performance.now()
@@ -118,21 +133,23 @@ export async function runCapture(
 
   try {
     await page.goto(scenario.url, { waitUntil: 'networkidle' })
-    await page.locator(scenario.readySelector).first().waitFor()
+    await page.locator(form.readySelector).first().waitFor()
     await page.evaluate(() => document.fonts.ready)
-    for (const step of scenario.setup) await runStep(page, step)
+    for (const step of form.setup) await runStep(page, step)
     await settle(page)
 
     const beats: CapturedBeat[] = []
     for (const beat of scenario.beats) {
+      const actions = form.beats[beat.id]
+      if (!actions) throw new Error(`${format} has no actions for ${beat.id}`)
       const beatStart = elapsedSec()
-      for (const step of beat.steps) await runStep(page, step)
+      for (const step of actions.steps) await runStep(page, step)
       await settle(page)
       const highlightAtSec = elapsedSec() - beatStart
-      const box = beat.highlight
+      const box = actions.highlight
         ? clampBox(
-            await page.locator(beat.highlight).first().boundingBox(),
-            scenario.viewport
+            await page.locator(actions.highlight).first().boundingBox(),
+            device.viewport
           )
         : null
       const lengthSec = beat.endSec - beat.startSec
@@ -195,9 +212,10 @@ export async function runCapture(
 
     const manifest: CaptureManifest = {
       scenarioId: scenario.id,
+      format,
       capturedAt: new Date().toISOString(),
       url: scenario.url,
-      viewport: scenario.viewport,
+      viewport: device.viewport,
       video: `${publicRelDir}/capture.mp4`,
       beats: aligned,
     }

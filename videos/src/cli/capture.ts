@@ -16,7 +16,12 @@ export async function capture(id: string): Promise<void> {
   const scenario = loadValidScenario(id)
   const rel = captureRelDir(scenario.id)
   console.error(`Capturing ${scenario.id} from ${scenario.url} …`)
-  const manifest = await runCapture(scenario, join(PUBLIC_DIR, rel), rel)
+  const manifest = await runCapture(
+    scenario,
+    'desktop',
+    join(PUBLIC_DIR, rel),
+    rel
+  )
   for (const beat of manifest.beats) {
     console.error(
       `  ${beat.id}: starts ${beat.videoStartSec.toFixed(2)} s in the recording, highlight ${beat.box ? 'found' : 'none'}`
