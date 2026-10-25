@@ -5,9 +5,9 @@ import { performance } from 'node:perf_hooks'
 import { chromium, type Page } from 'playwright'
 import type {
   CaptureManifest,
-  FormFactor,
   CapturedBeat,
   CaptureStep,
+  FormFactor,
   Scenario,
 } from '../scenarios/types'
 
@@ -70,27 +70,113 @@ function clampBox(
   return { x, y, width: right - x, height: bottom - y }
 }
 
-function probeDurationSec(file: string): number {
-  const out = execFileSync(
-    'ffprobe',
+/**
+ * Records the page by taking device-pixel screenshots back to back (~20 fps
+ * at 3×) while the beats run, each stamped on the same clock as the beat
+ * marks.
+ *
+ * Playwright's `recordVideo` and CDP's screencast both deliver frames at CSS
+ * pixels (390×844 for a phone), which turns blurry once the composer zooms
+ * in to make phone text readable. Screenshots honour deviceScaleFactor, and
+ * the UI between actions is static, so a modest sample rate is enough.
+ */
+class FrameSampler {
+  private readonly frames: { file: string; atSec: number }[] = []
+  private running = false
+  private loop: Promise<void> = Promise.resolve()
+
+  constructor(
+    private readonly page: Page,
+    private readonly dir: string,
+    private readonly clock: () => number
+  ) {}
+
+  start(): void {
+    this.running = true
+    this.loop = (async (): Promise<void> => {
+      while (this.running) {
+        const before = this.clock()
+        const jpeg = await this.page.screenshot({
+          type: 'jpeg',
+          quality: 92,
+          scale: 'device',
+          animations: 'allow',
+        })
+        const file = join(
+          this.dir,
+          `f${String(this.frames.length).padStart(6, '0')}.jpg`
+        )
+        writeFileSync(file, jpeg)
+        // A screenshot shows the page at the moment capture began.
+        this.frames.push({ file, atSec: before })
+      }
+    })()
+  }
+
+  /** Stop sampling; returns the frames and the clock time sampling ended. */
+  async stop(): Promise<{
+    frames: { file: string; atSec: number }[]
+    endSec: number
+  }> {
+    this.running = false
+    await this.loop
+    return { frames: this.frames, endSec: this.clock() }
+  }
+}
+
+/** Assemble timestamped frames into constant-fps H.264, t=0 at the first. */
+function encodeFrames(
+  frames: { file: string; atSec: number }[],
+  endSec: number,
+  fps: number,
+  listFile: string,
+  mp4: string
+): void {
+  const first = frames[0]
+  if (!first) throw new Error('No frames were captured')
+  const lines: string[] = []
+  frames.forEach((frame, i) => {
+    const next = frames[i + 1]?.atSec ?? endSec
+    lines.push(`file '${frame.file}'`)
+    lines.push(`duration ${Math.max(0.001, next - frame.atSec).toFixed(4)}`)
+  })
+  // The concat demuxer ignores the last entry's duration unless the file is
+  // repeated.
+  lines.push(`file '${frames[frames.length - 1]?.file ?? first.file}'`)
+  writeFileSync(listFile, lines.join('\n') + '\n')
+  execFileSync(
+    'ffmpeg',
     [
-      '-v',
+      '-y',
+      '-loglevel',
       'error',
-      '-show_entries',
-      'format=duration',
-      '-of',
-      'default=noprint_wrappers=1:nokey=1',
-      file,
+      '-f',
+      'concat',
+      '-safe',
+      '0',
+      '-i',
+      listFile,
+      '-vf',
+      `fps=${fps},scale=trunc(iw/2)*2:trunc(ih/2)*2`,
+      '-c:v',
+      'libx264',
+      '-crf',
+      '14',
+      '-preset',
+      'slow',
+      '-pix_fmt',
+      'yuv420p',
+      mp4,
     ],
-    { encoding: 'utf8' }
+    { stdio: 'inherit' }
   )
-  return Number.parseFloat(out.trim())
 }
 
 /**
- * Record one scenario on the live site and write `capture.mp4` and
- * `manifest.json` to `outDir`. Each beat is held for exactly its on-screen
- * length, so the composer can cut the recording at the beat starts.
+ * Record one scenario in one form factor on the live site and write
+ * `capture.mp4` and `manifest.json` to `outDir`. Each beat is held for exactly
+ * its on-screen length, so the composer can cut the recording at the beat
+ * starts.
  */
 export async function runCapture(
   scenario: Scenario,
@@ -101,9 +187,9 @@ export async function runCapture(
   const form = scenario.forms[format]
   if (!form) throw new Error(`Scenario ${scenario.id} has no ${format} form`)
   const { device } = form
-  const rawDir = join(outDir, 'raw')
+  const framesDir = join(outDir, 'frames')
   rmSync(outDir, { recursive: true, force: true })
-  mkdirSync(rawDir, { recursive: true })
+  mkdirSync(framesDir, { recursive: true })
 
   const browser = await chromium.launch()
   // A fresh context per capture: no "your district" star, theme or other
@@ -117,19 +203,9 @@ export async function runCapture(
     locale: 'en-CA',
     timezoneId: 'America/Toronto',
     acceptDownloads: true,
-    // Record at device pixels so a 3× phone capture stays sharp when the
-    // composer zooms into it.
-    recordVideo: {
-      dir: rawDir,
-      size: {
-        width: device.viewport.width * device.deviceScaleFactor,
-        height: device.viewport.height * device.deviceScaleFactor,
-      },
-    },
   })
   const page = await context.newPage()
-  const t0 = performance.now()
-  const elapsedSec = (): number => (performance.now() - t0) / 1000
+  const clock = (): number => performance.now() / 1000
 
   try {
     await page.goto(scenario.url, { waitUntil: 'networkidle' })
@@ -138,14 +214,16 @@ export async function runCapture(
     for (const step of form.setup) await runStep(page, step)
     await settle(page)
 
-    const beats: CapturedBeat[] = []
+    const sampler = new FrameSampler(page, framesDir, clock)
+    sampler.start()
+    const marks: CapturedBeat[] = []
     for (const beat of scenario.beats) {
       const actions = form.beats[beat.id]
       if (!actions) throw new Error(`${format} has no actions for ${beat.id}`)
-      const beatStart = elapsedSec()
+      const beatStart = clock()
       for (const step of actions.steps) await runStep(page, step)
       await settle(page)
-      const highlightAtSec = elapsedSec() - beatStart
+      const highlightAtSec = clock() - beatStart
       const box = actions.highlight
         ? clampBox(
             await page.locator(actions.highlight).first().boundingBox(),
@@ -153,62 +231,25 @@ export async function runCapture(
           )
         : null
       const lengthSec = beat.endSec - beat.startSec
-      const remainingMs = (lengthSec - (elapsedSec() - beatStart)) * 1000
+      const remainingMs = (lengthSec - (clock() - beatStart)) * 1000
       if (remainingMs < 0) {
         throw new Error(
-          `beat "${beat.id}" needed ${(elapsedSec() - beatStart).toFixed(2)} s; it has ${lengthSec} s on screen`
+          `beat "${beat.id}" needed ${(clock() - beatStart).toFixed(2)} s; it has ${lengthSec} s on screen`
         )
       }
       await page.waitForTimeout(remainingMs)
-      beats.push({
-        id: beat.id,
-        videoStartSec: beatStart,
-        highlightAtSec,
-        box,
-      })
+      marks.push({ id: beat.id, videoStartSec: beatStart, highlightAtSec, box })
     }
-
     // Hold the final frame briefly so the last beat never runs off the end.
     await page.waitForTimeout(500)
-    const closedAtSec = elapsedSec()
-    const video = page.video()
-    if (!video) throw new Error('Playwright did not record a video')
+    const { frames, endSec } = await sampler.stop()
     await context.close()
-    const rawPath = await video.path()
 
-    // The recorder starts a moment before `t0`; align the beat marks to the
-    // file using its measured length.
-    const offsetSec = probeDurationSec(rawPath) - closedAtSec
-    const aligned = beats.map(b => ({
-      ...b,
-      videoStartSec: Math.max(0, b.videoStartSec + offsetSec),
-    }))
-
-    // Constant 30 fps H.264 is what the composer seeks most reliably in.
+    const t0 = frames[0]?.atSec ?? 0
     const mp4 = join(outDir, 'capture.mp4')
-    execFileSync(
-      'ffmpeg',
-      [
-        '-y',
-        '-loglevel',
-        'error',
-        '-i',
-        rawPath,
-        '-vf',
-        `fps=${scenario.fps}`,
-        '-c:v',
-        'libx264',
-        '-crf',
-        '12',
-        '-preset',
-        'slow',
-        '-pix_fmt',
-        'yuv420p',
-        mp4,
-      ],
-      { stdio: 'inherit' }
-    )
-    rmSync(rawDir, { recursive: true, force: true })
+    encodeFrames(frames, endSec, scenario.fps, join(outDir, 'frames.txt'), mp4)
+    rmSync(framesDir, { recursive: true, force: true })
+    rmSync(join(outDir, 'frames.txt'), { force: true })
 
     const manifest: CaptureManifest = {
       scenarioId: scenario.id,
@@ -217,11 +258,17 @@ export async function runCapture(
       url: scenario.url,
       viewport: device.viewport,
       video: `${publicRelDir}/capture.mp4`,
-      beats: aligned,
+      beats: marks.map(m => ({
+        ...m,
+        videoStartSec: Math.max(0, m.videoStartSec - t0),
+      })),
     }
     writeFileSync(
       join(outDir, 'manifest.json'),
       JSON.stringify(manifest, null, 2) + '\n'
+    )
+    console.error(
+      `  ${frames.length} frames over ${(endSec - t0).toFixed(1)} s (${(frames.length / (endSec - t0)).toFixed(1)} fps sampled)`
     )
     return manifest
   } finally {
