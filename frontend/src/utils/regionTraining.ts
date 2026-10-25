@@ -122,6 +122,20 @@ export function rankInRegion(
   return { rank: ahead + 1, of: ranked.length }
 }
 
+/** The region comparison URL, keeping threshold, `py` and `date` (#2296). */
+export function regionTrainingUrl(
+  regionId: string,
+  keep: { threshold?: number; py?: string | null; date?: string | null }
+): string {
+  const params = new URLSearchParams()
+  if (keep.threshold !== undefined && keep.threshold !== 4)
+    params.set('threshold', String(keep.threshold))
+  if (keep.py) params.set('py', keep.py)
+  if (keep.date) params.set('date', keep.date)
+  const query = params.toString()
+  return `/region/${regionId}/training${query ? `?${query}` : ''}`
+}
+
 /** "1st", "2nd", "3rd", "11th" … */
 export function ordinal(n: number): string {
   const tens = n % 100

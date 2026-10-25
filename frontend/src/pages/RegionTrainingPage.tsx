@@ -76,7 +76,15 @@ const RegionTrainingPage: React.FC = () => {
 
   const { sort, toggleSort } = useUrlSort<SortField>({
     fields: SORT_FIELDS,
-    defaultField: defaultRound === 1 ? 'r1-threshold' : 'r2-threshold',
+    // The default sort is a column on screen (review N5): at 4 that is
+    // "4+", at 7 "All 7", otherwise the threshold's own column.
+    defaultField: `r${defaultRound}-${
+      threshold === DEFAULT_TRAINING_THRESHOLD
+        ? 'dcp'
+        : threshold === ALL_OFFICERS
+          ? 'allSeven'
+          : 'threshold'
+    }` as SortField,
     defaultDirection: 'desc',
     newFieldDirection: 'desc',
   })
@@ -208,16 +216,28 @@ const RegionTrainingPage: React.FC = () => {
                 </tr>
                 <tr>
                   {([1, 2] as const).flatMap(round =>
-                    metrics.map(m => (
-                      <SortableHeader<SortField>
-                        key={`r${round}-${m.metric}`}
-                        field={`r${round}-${m.metric}` as SortField}
-                        label={m.label}
-                        currentSort={sort}
-                        onSort={toggleSort}
-                        numeric
-                      />
-                    ))
+                    metrics.map(m =>
+                      // A round that has not opened has nothing to sort by
+                      // (every club reads 0): a plain header (review N6).
+                      upcoming(round) ? (
+                        <th
+                          key={`r${round}-${m.metric}`}
+                          scope="col"
+                          className="text-right"
+                        >
+                          {m.label}
+                        </th>
+                      ) : (
+                        <SortableHeader<SortField>
+                          key={`r${round}-${m.metric}`}
+                          field={`r${round}-${m.metric}` as SortField}
+                          label={m.label}
+                          currentSort={sort}
+                          onSort={toggleSort}
+                          numeric
+                        />
+                      )
+                    )
                   )}
                 </tr>
               </thead>
@@ -226,7 +246,11 @@ const RegionTrainingPage: React.FC = () => {
                   <tr key={row.districtId}>
                     <th scope="row" className="region-training-table__district">
                       <Link
-                        to={trainingPageUrl(row.districtId, { threshold })}
+                        to={trainingPageUrl(row.districtId, {
+                          threshold,
+                          py: searchParams.get('py'),
+                          date: searchParams.get('date'),
+                        })}
                         className="clubs-name-link"
                       >
                         District {row.districtId}

@@ -12,6 +12,7 @@ import {
   rankInRegion,
   rankingRound,
   regionTrainingRows,
+  regionTrainingUrl,
 } from '../utils/regionTraining'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import {
@@ -306,7 +307,8 @@ const DistrictTrainingPage: React.FC = () => {
       districtId,
       round
     )
-    return rank ? { ...rank, regionId, round } : null
+    const total = regionRollups.regions?.[regionId]?.districtIds.length ?? 0
+    return rank ? { ...rank, total, regionId, round } : null
   }, [regionRollups, districtId, effectiveEndDate, programYearLabel, threshold])
 
   const allClubs = useMemo(
@@ -459,11 +461,16 @@ const DistrictTrainingPage: React.FC = () => {
                 className="training-note training-rank"
                 data-testid="training-region-rank"
               >
-                {ordinal(regionRank.rank)} of {regionRank.of} districts in
+                {ordinal(regionRank.rank)} of {regionRank.of} districts
+                {regionRank.of < regionRank.total ? ' with figures' : ''} in
                 Region {regionRank.regionId} on Round {regionRank.round},{' '}
                 {thresholdPhrase(threshold)}.{' '}
                 <Link
-                  to={`/region/${regionRank.regionId}/training${threshold === DEFAULT_TRAINING_THRESHOLD ? '' : `?threshold=${threshold}`}`}
+                  to={regionTrainingUrl(regionRank.regionId, {
+                    threshold,
+                    py: searchParams.get('py'),
+                    date: searchParams.get('date'),
+                  })}
                 >
                   Compare Region {regionRank.regionId}
                 </Link>

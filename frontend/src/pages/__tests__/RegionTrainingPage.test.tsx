@@ -123,9 +123,15 @@ describe('RegionTrainingPage (#2296)', () => {
     mocked.mockResolvedValue(withTraining())
     renderAt('/region/05/training?threshold=5')
     const table = await screen.findByTestId('region-training-table')
+    // One 5+ column per round; only the open-or-closed round sorts (N6).
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .filter(th => /^5\+/.test(th.textContent ?? ''))
+    ).toHaveLength(2)
     expect(
       within(table).getAllByRole('button', { name: /Sort by 5\+/ })
-    ).toHaveLength(2)
+    ).toHaveLength(1)
   })
 
   it('sorts by a column on click', async () => {

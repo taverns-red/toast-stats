@@ -423,7 +423,12 @@ export function trainingCsvRows(
 /** The Training page URL, pre-filtered (division/area/threshold). */
 export function trainingPageUrl(
   districtId: string,
-  scope: TrainingScope & { threshold?: number } = {}
+  scope: TrainingScope & {
+    threshold?: number
+    /** The linking page's `?py=` / `?date=`, kept across the link (#2296). */
+    py?: string | null
+    date?: string | null
+  } = {}
 ): string {
   const params = new URLSearchParams()
   if (scope.division) params.set('division', scope.division)
@@ -434,6 +439,8 @@ export function trainingPageUrl(
   ) {
     params.set('threshold', String(scope.threshold))
   }
+  if (scope.py) params.set('py', scope.py)
+  if (scope.date) params.set('date', scope.date)
   const query = params.toString()
   return `/district/${districtId}/training${query ? `?${query}` : ''}`
 }
