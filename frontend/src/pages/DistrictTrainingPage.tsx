@@ -6,6 +6,13 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { useTimeSeries } from '../hooks/useTimeSeries'
+import { useRegionRollups } from '../hooks/useRegionRollups'
+import {
+  ordinal,
+  rankInRegion,
+  rankingRound,
+  regionTrainingRows,
+} from '../utils/regionTraining'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import {
   getAvailableProgramYears,
@@ -24,6 +31,7 @@ import {
   roundStatus,
   sameDateLastYear,
   thresholdOptionLabel,
+  thresholdPhrase,
   trainingClubsFromSnapshot,
   trainingCsvRows,
   trainingRoundContext,
@@ -248,6 +256,25 @@ const DistrictTrainingPage: React.FC = () => {
     programYearLabel ?? undefined
   )
 
+  // The district's rank in its region (#2296): the date's one region
+  // rollup, the file the region pages read — never other districts' files.
+  const { rollups: regionRollups } = useRegionRollups(
+    hasValidDates ? (effectiveEndDate ?? undefined) : undefined
+  )
+  const regionRank = useMemo(() => {
+    if (!regionRollups || !districtId || !effectiveEndDate || !programYearLabel)
+      return null
+    const regionId = regionRollups.districts[districtId]?.region
+    if (!regionId) return null
+    const round = rankingRound(effectiveEndDate, programYearLabel)
+    const rank = rankInRegion(
+      regionTrainingRows(regionRollups, regionId, threshold),
+      districtId,
+      round
+    )
+    return rank ? { ...rank, regionId, round } : null
+  }, [regionRollups, districtId, effectiveEndDate, programYearLabel, threshold])
+
   const allClubs = useMemo(
     () => trainingClubsFromSnapshot(snapshot),
     [snapshot]
@@ -375,6 +402,22 @@ const DistrictTrainingPage: React.FC = () => {
                   : context.pendingOpen
                     ? `Round 1 of ${context.pendingOpen.programYear} opened ${formatDisplayDate(context.pendingOpen.start)}. Toastmasters publishes its counts after the program-year rollover in late July; this snapshot shows ${programYearLabel}'s final results.`
                     : `No round is open on ${formatDisplayDate(effectiveEndDate!)}. Round ${context.next.round}${context.next.programYear !== programYearLabel ? ` of ${context.next.programYear}` : ''} opens ${formatDisplayDate(context.next.start)}.`}
+              </p>
+            )}
+
+            {regionRank && (
+              <p
+                className="training-note training-rank"
+                data-testid="training-region-rank"
+              >
+                {ordinal(regionRank.rank)} of {regionRank.of} districts in
+                Region {regionRank.regionId} on Round {regionRank.round},{' '}
+                {thresholdPhrase(threshold)}.{' '}
+                <Link
+                  to={`/region/${regionRank.regionId}/training${threshold === DEFAULT_TRAINING_THRESHOLD ? '' : `?threshold=${threshold}`}`}
+                >
+                  Compare Region {regionRank.regionId}
+                </Link>
               </p>
             )}
 
