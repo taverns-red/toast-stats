@@ -636,7 +636,14 @@ const RegionMapPage: React.FC = () => {
                 {canvas}
               </div>
             ) : (
-              <Link className="region-map__map-fab" to={viewHref('map')}>
+              // #2318 — "Show map", not "Map": the phone bar's Map section is
+              // also a link named Map, to a different place. The visible
+              // "Map" stays inside the name (WCAG 2.5.3).
+              <Link
+                className="region-map__map-fab"
+                to={viewHref('map')}
+                aria-label="Show map"
+              >
                 Map
               </Link>
             )}

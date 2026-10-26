@@ -34,6 +34,8 @@ interface Suite {
     pick: string
     to: RegExp
     back: RegExp
+    /** The bar link that is current on the hub. */
+    hub: string
   }
   fallback: { path: string; active: string }
 }
@@ -72,6 +74,7 @@ const SUITES: readonly Suite[] = [
       pick: 'Rankings',
       to: /\/district\/61\/rankings(\?|$)/,
       back: /\/district\/61(\?|$)/,
+      hub: 'Overview',
     },
     fallback: { path: '/district/61/clubs', active: 'Clubs' },
   },
@@ -94,8 +97,39 @@ const SUITES: readonly Suite[] = [
       pick: 'Smedley',
       to: /\/clubs\/race\/smedley(\?|$)/,
       back: /\/clubs(\?|$)/,
+      hub: 'Overview',
     },
     fallback: { path: '/clubs/race/select', active: 'Select' },
+  },
+  // #2318 — the region bar held six primaries plus More. At 390 it ran off
+  // the right edge (Club map cut, Education onward unreachable by touch):
+  // the bar does not scroll, so its 4 + More contract is the fit.
+  {
+    name: 'region',
+    routes: [
+      '/region/05',
+      '/region/05/health',
+      '/region/05/growth',
+      '/region/05/growth/survival',
+      '/region/05/map',
+      '/regions/map',
+      '/region/05/education',
+      '/region/05/meetings',
+      '/region/05/training',
+    ],
+    bar: '[data-testid="region-section-bar"]',
+    subnav: '[data-testid="region-subnav"]',
+    labels: ['Rankings', 'Health', 'Growth', 'Map', 'More'],
+    contentTopMax: null,
+    more: {
+      from: '/region/05',
+      links: ['Club survival', 'Education', 'Meetings', 'Officer training'],
+      pick: 'Officer training',
+      to: /\/region\/05\/training(\?|$)/,
+      back: /\/region\/05(\?|$)/,
+      hub: 'Rankings',
+    },
+    fallback: { path: '/region/05/training', active: 'Officer training' },
   },
 ]
 
@@ -231,6 +265,13 @@ for (const s of SUITES) {
               page.locator(BAR).getByRole('link', { name, exact: true }),
               name
             ).toHaveCount(1)
+            // #2318 — and no other link on the page shares the name: two
+            // "Map" links to different places (the section and the map
+            // page's list/map switch) read the same to a screen reader.
+            await expect(
+              page.getByRole('link', { name, exact: true }),
+              `page-wide links named ${name}`
+            ).toHaveCount(1)
           }
 
           // Page content now starts under the context bar (where it exists).
@@ -294,7 +335,7 @@ for (const s of SUITES) {
     await page.goBack()
     await expect(page).toHaveURL(s.more.back)
     await expect(
-      page.locator(BAR).getByRole('link', { name: 'Overview' })
+      page.locator(BAR).getByRole('link', { name: s.more.hub, exact: true })
     ).toHaveAttribute('aria-current', 'page')
   })
 
@@ -310,9 +351,23 @@ for (const s of SUITES) {
       await load(page, s.fallback.path)
       await expect(page.locator(BAR)).toHaveCount(0)
       await expect(page.locator(SUBNAV)).toBeVisible()
-      await expect(
-        page.locator(SUBNAV).getByRole('link', { name: s.fallback.active })
-      ).toHaveAttribute('aria-current', 'page')
+      const active = page
+        .locator(SUBNAV)
+        .getByRole('link', { name: s.fallback.active })
+      await expect(active).toHaveAttribute('aria-current', 'page')
+      // #2318 — the active section is in view on load, not scrolled off
+      // the row's end (the row centres it, #1829).
+      await expect
+        .poll(async () =>
+          page.evaluate(sel => {
+            const nav = document.querySelector(sel)!.getBoundingClientRect()
+            const link = document
+              .querySelector(`${sel} [aria-current="page"]`)!
+              .getBoundingClientRect()
+            return link.left >= nav.left - 1 && link.right <= nav.right + 1
+          }, SUBNAV)
+        )
+        .toBe(true)
     })
   }
 }

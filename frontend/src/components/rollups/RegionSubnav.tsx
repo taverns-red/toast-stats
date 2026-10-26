@@ -2,6 +2,7 @@ import React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { PHONE_SECTION_BAR_QUERY } from '../../config/districtSections'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { fadeEdgeAttrs, useSubnavScroll } from '../../hooks/useSubnavScroll'
 import { SectionBar } from '../SectionBar'
 import {
   AwardIcon,
@@ -23,6 +24,15 @@ import {
 
 const KEPT_PARAMS = ['py', 'date'] as const
 
+interface RegionLink {
+  label: string
+  to: string
+  end: boolean
+  icon?: React.ReactNode
+  /** Short label when the section sits directly in the phone bar (#2318). */
+  bar?: string
+}
+
 export const RegionSubnav: React.FC<{
   /** `/regions` or `/region/07`. */
   base: string
@@ -36,16 +46,26 @@ export const RegionSubnav: React.FC<{
     if (value) kept.set(key, value)
   }
   const qs = kept.toString() ? `?${kept.toString()}` : ''
-  const links = [
-    { label: 'Rankings', to: `${base}${qs}`, end: true, icon: <TrendsIcon /> },
+  // `bar`: the short label of a section shown directly in the phone bar
+  // (#2318); the rest go under More there.
+  const links: RegionLink[] = [
+    {
+      label: 'Rankings',
+      bar: 'Rankings',
+      to: `${base}${qs}`,
+      end: true,
+      icon: <TrendsIcon />,
+    },
     {
       label: 'Health & compliance',
+      bar: 'Health',
       to: `${base}/health${qs}`,
       end: false,
       icon: <GlobeIcon />,
     },
     {
       label: 'Club growth',
+      bar: 'Growth',
       to: `${base}/growth${qs}`,
       end: true,
       icon: <ClubsIcon />,
@@ -59,6 +79,7 @@ export const RegionSubnav: React.FC<{
     // The club map: a region's (#1808) or the world's (#1809).
     {
       label: 'Club map',
+      bar: 'Map',
       to: `${base}/map${qs}`,
       end: false,
       icon: <MapIcon />,
@@ -92,23 +113,48 @@ export const RegionSubnav: React.FC<{
     : [meetings]
   const phone = useMediaQuery(PHONE_SECTION_BAR_QUERY)
   if (phone) {
+    // #2318 — the bar does not scroll: it holds four sections plus More,
+    // like the district's. Six primaries ran past the right edge at 390,
+    // so Club map was cut and Education onward could not be tapped. The
+    // bar uses short labels (the sheet and the row keep the full names);
+    // Club survival, Education, Meetings and Officer training move to More,
+    // which carries the active state when the current page is one of them.
+    const primary = links.flatMap(({ bar, ...l }) =>
+      bar ? [{ ...l, label: bar }] : []
+    )
+    const more = links.flatMap(({ bar, label: l, to, end }) =>
+      bar ? [] : [{ label: l, to, end }]
+    )
     return (
       <SectionBar
         label={label}
-        primary={links}
-        more={extra}
+        primary={primary}
+        more={[...more, ...extra]}
         testId="region-section-bar"
       />
     )
   }
+  return <RegionSectionRow label={label} links={[...links, ...extra]} />
+}
+
+/* ≥768 and landscape: the shared scroll-row. Eight links overflow a 768
+   row, so it centres the active link and draws the edge fades like the
+   district row (#1829, #2318). */
+const RegionSectionRow: React.FC<{
+  label: string
+  links: readonly RegionLink[]
+}> = ({ label, links }) => {
+  const { ref, edges } = useSubnavScroll<HTMLElement>()
   return (
     <nav
+      ref={ref}
       aria-label={label}
       className="district-subnav region-subnav"
       data-testid="region-subnav"
+      {...fadeEdgeAttrs(edges)}
     >
       <ul className="district-subnav__list">
-        {[...links, ...extra].map(l => (
+        {links.map(l => (
           <li key={l.label} className="district-subnav__item">
             <NavLink to={l.to} end={l.end} className="district-subnav__link">
               {l.label}
