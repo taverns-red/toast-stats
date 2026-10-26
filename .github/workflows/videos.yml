@@ -8,7 +8,8 @@
 # Opt-in only:
 #   - workflow_dispatch -> choose the scenario and desktop / mobile / both
 #   - pull_request      -> only when videos/** (or this file) changes; renders
-#                          v2 in both formats and posts a sticky comment that
+#                          v2 in both formats plus a short audio preview of
+#                          each music variant, and posts a sticky comment that
 #                          links the artifact
 # Main CI runs only the scenario unit tests (ci.yml); it never renders.
 #
@@ -163,6 +164,12 @@ jobs:
           fc-match 'sans\-serif:semibold' | grep -q '"SemiBold"' \
             || { echo "::error::sans-serif semibold is not Inter SemiBold"; exit 1; }
 
+      # The music generator's ffmpeg-backed tests (duration, -26 LUFS, true
+      # peak, determinism, preview encoding). Main CI has no ffmpeg, so they
+      # run here, before anything is rendered with the track (#2336).
+      - name: Test the music generator (ffmpeg)
+        run: npm run test:audio --workspace=@taverns-red/videos
+
       - name: Capture and render
         env:
           SCENARIO: ${{ steps.args.outputs.scenario }}
@@ -178,12 +185,21 @@ jobs:
       - name: Verify render encoding (ffprobe)
         run: npm run -s videos:verify -- videos/out/*.mp4
 
+      # A 20-second AAC clip of every music variant, so the track can be
+      # picked by ear; the MP4s above use the default variant (#2336).
+      - name: Render music previews
+        run: |
+          npm run -s videos:music -- --seconds 20
+          ls -la videos/out/music/
+
       - name: Upload videos artifact
         id: upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: videos-${{ steps.args.outputs.scenario }}-${{ github.run_id }}
-          path: videos/out/*.mp4
+          path: |
+            videos/out/*.mp4
+            videos/out/music/*.m4a
           if-no-files-found: error
           retention-days: 30
 
@@ -207,6 +223,11 @@ jobs:
             ## 🎬 How-to video render
 
             **Scenario:** `${{ needs.render.outputs.scenario }}` (desktop 16:9 and mobile 9:16)
+
+            **Music:** the videos use the default generated track.
+            `music/*.m4a` in the artifact holds a 20-second preview of each
+            variant (`bright-pluck`, `light-pop`, `warm-strum`); render
+            another with `--music <variant>`.
 
             **Download:** [videos artifact](${{ needs.render.outputs.artifact-url }})
             (kept 30 days) ·
