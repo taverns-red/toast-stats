@@ -655,3 +655,61 @@ describe('runContentGate manifestOnly: the report-sidecar promotion (#1767)', ()
     ).rejects.toThrow(/manifest/)
   })
 })
+
+describe('full gate lists every directory the manifest is gated under (#2322)', () => {
+  // A rebuild writes the education rollup into the main run manifest
+  // (process-dates.sh step 13). The planner gates it (#2235); the full gate
+  // must also list it, or every present object reads as "missing".
+  const ROLLUP = path.resolve(__dirname, 'fixtures/education-rollup-prod')
+  const recorded = (f: string): Stored =>
+    plain(JSON.parse(fs.readFileSync(path.join(ROLLUP, f), 'utf-8')))
+  const PY_PATH = 'derived/education-rollup/2026-2027.json'
+  const INDEX_PATH = 'derived/education-rollup/index.json'
+  const sha256 = (s: Stored) =>
+    createHash('sha256').update(s.bytes).digest('hex')
+  const entry = (p: string, s: Stored) => ({
+    path: p,
+    sha256: sha256(s),
+    date: null,
+    stage: 'education-rollup',
+  })
+
+  it('passes rollup objects the run wrote and staging has', async () => {
+    const year = recorded('2026-2027.json')
+    const index = recorded('index.json')
+    const { staging, prod } = buckets({
+      [PY_PATH]: year,
+      [INDEX_PATH]: index,
+    })
+    const result = await runContentGate(staging, prod, () => {}, {
+      manifest: [entry(PY_PATH, year), entry(INDEX_PATH, index)],
+    })
+    expect(result.failures).toEqual([])
+    expect(result.promote).toBe(true)
+    const checked = result.checked.map(c => c.path)
+    expect(checked).toContain(PY_PATH)
+    expect(checked).toContain(INDEX_PATH)
+  })
+
+  it('still holds a rollup object the manifest lists but staging lacks', async () => {
+    const year = recorded('2026-2027.json')
+    const index = recorded('index.json')
+    const { staging, prod } = buckets({ [PY_PATH]: year })
+    const result = await runContentGate(staging, prod, () => {}, {
+      manifest: [entry(PY_PATH, year), entry(INDEX_PATH, index)],
+    })
+    expect(result.promote).toBe(false)
+    expect(result.failures.map(f => f.path)).toEqual([INDEX_PATH])
+    expect(result.failures[0]?.reason).toMatch(/missing from staging/)
+  })
+
+  it('still holds a present rollup object whose bytes are not what the run wrote', async () => {
+    const year = recorded('2026-2027.json')
+    const { staging, prod } = buckets({ [PY_PATH]: year })
+    const result = await runContentGate(staging, prod, () => {}, {
+      manifest: [{ ...entry(PY_PATH, year), sha256: 'f'.repeat(64) }],
+    })
+    expect(result.promote).toBe(false)
+    expect(result.failures[0]?.reason).toMatch(/sha256/)
+  })
+})
