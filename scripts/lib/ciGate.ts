@@ -74,6 +74,10 @@ export interface ObservedCheck {
   status: string
   /** `success` | `failure` | `skipped` | `cancelled` | … | `null` if running. */
   conclusion: string | null
+  /** Check-run id; monotonic in creation order, so it breaks a `started_at` tie. */
+  id?: number
+  /** ISO timestamp (second granularity). Orders runs for the #2316 rule. */
+  started_at?: string | null
 }
 
 /**

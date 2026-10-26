@@ -258,6 +258,91 @@ describe('evaluateChecks — fail closed on absence (#1484)', () => {
     expect(v.state).toBe('fail')
   })
 
+  describe('a cancelled run superseded by a newer green run (#2316)', () => {
+    // Real shape of GET /commits/{sha}/check-runs on PR #2313's head 8bd1901
+    // (2026-10-25): overlapping `pull_request` events, concurrency cancelled
+    // the first Docs run and the second succeeded.
+    const cancelledDocs: ObservedCheck = {
+      id: 121301718074,
+      name: DOCS_CHECK,
+      status: 'completed',
+      conclusion: 'cancelled',
+      started_at: '2026-10-25T21:50:37Z',
+    }
+    const greenDocs: ObservedCheck = {
+      id: 121301721006,
+      name: DOCS_CHECK,
+      status: 'completed',
+      conclusion: 'success',
+      started_at: '2026-10-25T21:50:40Z',
+    }
+
+    it('passes when a newer run of the same check succeeded (PR #2313 shape)', () => {
+      const v = evaluateChecks([DOCS_CHECK], [cancelledDocs, greenDocs])
+      expect(v.state).toBe('pass')
+      expect(v.satisfied).toEqual([DOCS_CHECK])
+    })
+
+    it('still fails a cancelled-only check', () => {
+      const v = evaluateChecks([DOCS_CHECK], [cancelledDocs])
+      expect(v.state).toBe('fail')
+      expect(v.failed).toEqual([{ name: DOCS_CHECK, conclusion: 'cancelled' }])
+    })
+
+    it('still fails when the green run is OLDER than the cancelled one', () => {
+      const v = evaluateChecks(
+        [DOCS_CHECK],
+        [
+          { ...greenDocs, id: 1, started_at: '2026-10-25T21:50:30Z' },
+          { ...cancelledDocs, id: 2, started_at: '2026-10-25T21:50:37Z' },
+        ]
+      )
+      expect(v.state).toBe('fail')
+      expect(v.failed).toEqual([{ name: DOCS_CHECK, conclusion: 'cancelled' }])
+    })
+
+    it('breaks a same-second started_at tie by the newer check-run id', () => {
+      const t = '2026-10-25T21:50:37Z'
+      const newerGreen = evaluateChecks(
+        [DOCS_CHECK],
+        [
+          { ...cancelledDocs, id: 10, started_at: t },
+          { ...greenDocs, id: 11, started_at: t },
+        ]
+      )
+      expect(newerGreen.state).toBe('pass')
+      const olderGreen = evaluateChecks(
+        [DOCS_CHECK],
+        [
+          { ...greenDocs, id: 10, started_at: t },
+          { ...cancelledDocs, id: 11, started_at: t },
+        ]
+      )
+      expect(olderGreen.state).toBe('fail')
+    })
+
+    it('fails closed when the runs carry no ordering information', () => {
+      const v = evaluateChecks(
+        [DOCS_CHECK],
+        [completed(DOCS_CHECK, 'cancelled'), completed(DOCS_CHECK, 'success')]
+      )
+      expect(v.state).toBe('fail')
+      expect(v.failed).toEqual([{ name: DOCS_CHECK, conclusion: 'cancelled' }])
+    })
+
+    it.each(['failure', 'timed_out', 'action_required', 'startup_failure'])(
+      'a newer green run does NOT supersede conclusion=%s',
+      conclusion => {
+        const v = evaluateChecks(
+          [DOCS_CHECK],
+          [{ ...cancelledDocs, conclusion }, greenDocs]
+        )
+        expect(v.state).toBe('fail')
+        expect(v.failed).toEqual([{ name: DOCS_CHECK, conclusion }])
+      }
+    )
+  })
+
   it.each(['failure', 'cancelled', 'timed_out', 'action_required', 'neutral'])(
     'fails terminally on conclusion=%s without waiting out the clock',
     conclusion => {
