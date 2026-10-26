@@ -25,6 +25,25 @@
   font-size: clamp(18px, 5.5vw, 24px);
 }
 
+/* #2318 — at 320-375 a tile has ~59 px for its 14 px label: "Members"
+   (63 px) and "intervention" (81 px) ran out of the tile, and with a wider
+   fallback font the last one widened the page. Below 400 px the tiles trim
+   their side padding (67 px for the label), and a word that still does not
+   fit hyphenates ("inter-vention"), or breaks where no dictionary exists,
+   instead of overflowing. */
+.region-map__summary .rollup-kpi__label {
+  overflow-wrap: anywhere;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+
+@media (max-width: 399px) {
+  .region-map__summary .rollup-kpi {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
 /* Search and the metric chips stay in reach while the list scrolls. */
 .region-map__controls {
   position: sticky;
