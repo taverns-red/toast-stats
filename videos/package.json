@@ -10,8 +10,10 @@
     "render": "tsx src/cli/render.ts",
     "build": "tsx src/cli/build.ts",
     "verify": "tsx src/cli/verify.ts",
+    "music": "tsx src/cli/music.ts",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest --run",
+    "test:audio": "vitest --run --config vitest.audio.config.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },

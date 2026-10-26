@@ -98,3 +98,27 @@ export function measureLufs(file: string): number | null {
   const match = /I:\s+(-?[\d.]+) LUFS/.exec(summary)
   return match?.[1] ? Number.parseFloat(match[1]) : null
 }
+
+export interface AudioMeasure {
+  codec: string
+  durationSec: number
+  integratedLufs: number
+  samplePeakDb: number
+  truePeakDb: number
+}
+
+export function generateTrack(_variantId: string, _outFile: string): void {
+  throw new Error('not implemented (#2336 red)')
+}
+
+export function measureAudio(_file: string): AudioMeasure {
+  throw new Error('not implemented (#2336 red)')
+}
+
+export function encodeClip(
+  _wavFile: string,
+  _outFile: string,
+  _seconds: number
+): void {
+  throw new Error('not implemented (#2336 red)')
+}
