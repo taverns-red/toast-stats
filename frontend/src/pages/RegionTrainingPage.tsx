@@ -207,10 +207,23 @@ const RegionTrainingPage: React.FC = () => {
                     Clubs
                   </th>
                   {([1, 2] as const).map(round => (
+                    // #2318 — each part stays whole; the cell wraps only
+                    // between them (a phone broke "(Jun–" from "Aug)").
                     <th key={round} scope="colgroup" colSpan={metrics.length}>
-                      {round === 1 ? 'Round 1 (Jun–Aug)' : 'Round 2 (Nov–Feb)'}
-                      {upcoming(round) &&
-                        ` · opens ${formatShortDate(windows[round - 1]!.start)}`}
+                      <span className="region-training-table__round-part">
+                        Round {round}
+                      </span>{' '}
+                      <span className="region-training-table__round-part">
+                        {round === 1 ? '(Jun–Aug)' : '(Nov–Feb)'}
+                      </span>
+                      {upcoming(round) && (
+                        <>
+                          {' '}
+                          <span className="region-training-table__round-part">
+                            · opens {formatShortDate(windows[round - 1]!.start)}
+                          </span>
+                        </>
+                      )}
                     </th>
                   ))}
                 </tr>

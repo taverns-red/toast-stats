@@ -313,3 +313,9 @@
 .region-training-table__district a {
   color: var(--link);
 }
+
+/* #2318 — a round header spans narrow % columns: let it wrap between its
+   parts (round · months · opening date), never inside one. */
+.region-training-table__round-part {
+  white-space: nowrap;
+}
