@@ -231,6 +231,11 @@ jobs:
       - name: Run mcp-server tests
         run: npm run test --workspace=@taverns-red/toast-stats-mcp -- --coverage
 
+      - name: Run videos scenario-timing tests (#2293)
+        # Unit tests for the how-to video scenario configs only. Captures and
+        # renders are opt-in (`npm run videos:build`) and never run in CI.
+        run: npm run test --workspace=@taverns-red/videos -- --coverage
+
       - name: Run mcp-server npm-pack smoke (#1163)
         # Packs the publishable tarball, installs it into a clean temp dir
         # (runtime deps resolve from the registry only), and boots the

@@ -1,0 +1,215 @@
+# How-to video renders (#2293)
+#
+# Captures a scenario's walkthrough from the live site (ts.taverns.red) with
+# Playwright and renders it with Remotion on the runner, then uploads the
+# MP4s as an Actions artifact. Rendered videos are build outputs: they never
+# enter the source tree, not even `.pr-assets` (Ron, PR #2295).
+#
+# Opt-in only:
+#   - workflow_dispatch -> choose the scenario and desktop / mobile / both
+#   - pull_request      -> only when videos/** (or this file) changes; renders
+#                          v2 in both formats and posts a sticky comment that
+#                          links the artifact
+# Main CI runs only the scenario unit tests (ci.yml); it never renders.
+#
+# No cloud credentials: the capture reads the public site and the output goes
+# to the artifact only. Publishing final videos is a separate, approved step
+# whose destination is not decided yet — it is not done here.
+
+name: Videos
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Scenario id (e.g. v2)'
+        required: true
+        default: 'v2'
+        type: string
+      format:
+        description: 'Form factor to render'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - desktop
+          - mobile
+          - both
+  pull_request:
+    paths:
+      - 'videos/**'
+      - '.github/workflows/videos.yml'
+      - '.nvmrc' # setup-node reads it (#2005)
+
+# One render per PR at a time; a new push cancels the in-flight one.
+concurrency:
+  group: videos-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    name: Capture and render
+    runs-on: ubuntu-26.04
+    # A capture holds each beat in real time (~35 s per format) and a 30 s
+    # render takes a few minutes on a runner; 30 min leaves room for both
+    # formats plus installs.
+    timeout-minutes: 30
+    outputs:
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
+      scenario: ${{ steps.args.outputs.scenario }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Resolve scenario and formats
+        id: args
+        env:
+          IN_SCENARIO: ${{ inputs.scenario || 'v2' }}
+          IN_FORMAT: ${{ inputs.format || 'both' }}
+        run: |
+          if ! printf '%s' "$IN_SCENARIO" | grep -Eq '^[a-z0-9-]+$'; then
+            echo "::error::Invalid scenario id: $IN_SCENARIO"
+            exit 1
+          fi
+          case "$IN_FORMAT" in
+            both) FORMATS="desktop mobile" ;;
+            desktop|mobile) FORMATS="$IN_FORMAT" ;;
+            *) echo "::error::Invalid format: $IN_FORMAT"; exit 1 ;;
+          esac
+          {
+            echo "scenario=$IN_SCENARIO"
+            echo "formats=$FORMATS"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install ffmpeg and Playwright Chromium
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg
+          npx playwright install --with-deps chromium
+
+      # The live site's mobile rows use `system-ui, -apple-system, "Segoe UI",
+      # Arial, sans-serif` with no web font, so on a bare runner Chromium
+      # resolves them to DejaVu Sans, which is far wider than a phone's UI
+      # font and truncates club names in the mobile capture. Install Inter
+      # (Google Fonts' static 400/500/600/700 TTFs, pinned to release v20 and
+      # checked by SHA-256) and make it the runner's system-ui / sans-serif.
+      # The composition itself loads the app's own Inter and Montserrat woff2.
+      - name: Install Inter as the system UI font
+        run: |
+          set -euo pipefail
+          dir="$HOME/.local/share/fonts/inter"
+          mkdir -p "$dir"
+          base='https://fonts.gstatic.com/s/inter/v20'
+          prefix='UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVu'
+          while read -r sha suffix; do
+            file="${prefix}${suffix}.ttf"
+            curl -fsSL --retry 3 -o "$dir/$file" "$base/$file"
+            echo "$sha  $dir/$file" | sha256sum -c -
+          done <<'FONTS'
+          1b08e7fc267a5c7e1d614100f604b83e7e8a0be241f0f288faa2b3ac93a683ba LyfMZg
+          8c883f63b2c4157d997319f2c8bc6995ed4357ef371940d31ca159004a4aae63 I6fMZg
+          e7a1aaf7eda9f2fad4131725fa556265ec75ca7b2d756260173a040363e8d4f7 GKYMZg
+          b37284b5701b6b168dfc770aa1a4ac492106422fd3ba76bc7641e37434e8019c FuYMZg
+          FONTS
+          mkdir -p "$HOME/.config/fontconfig"
+          cat > "$HOME/.config/fontconfig/fonts.conf" <<'CONF'
+          <?xml version="1.0"?>
+          <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+          <fontconfig>
+            <alias binding="strong">
+              <family>system-ui</family><prefer><family>Inter</family></prefer>
+            </alias>
+            <alias binding="strong">
+              <family>sans-serif</family><prefer><family>Inter</family></prefer>
+            </alias>
+            <alias binding="strong">
+              <family>sans</family><prefer><family>Inter</family></prefer>
+            </alias>
+          </fontconfig>
+          CONF
+          fc-cache -f
+
+      - name: Check Inter is installed and is the UI font
+        run: |
+          set -euo pipefail
+          # Read fc-list once: `grep -q` closing the pipe early would fail
+          # the step under pipefail (R14).
+          fc-list : family style > "$RUNNER_TEMP/fonts.txt"
+          grep -E '^Inter' "$RUNNER_TEMP/fonts.txt" | sort
+          for weight in Regular Medium SemiBold Bold; do
+            grep -q "^Inter.*$weight" "$RUNNER_TEMP/fonts.txt" \
+              || { echo "::error::Inter $weight is not installed"; exit 1; }
+          done
+          # fc-match patterns treat '-' as a size separator, so escape it.
+          for family in 'system\-ui' 'sans\-serif' 'sans' 'sans\-serif:semibold'; do
+            match=$(fc-match "$family")
+            echo "$family -> $match"
+            case "$match" in
+              *'"Inter"'*) ;;
+              *) echo "::error::$family resolves to $match, not Inter"; exit 1 ;;
+            esac
+          done
+          fc-match 'sans\-serif:semibold' | grep -q '"SemiBold"' \
+            || { echo "::error::sans-serif semibold is not Inter SemiBold"; exit 1; }
+
+      - name: Capture and render
+        env:
+          SCENARIO: ${{ steps.args.outputs.scenario }}
+          FORMATS: ${{ steps.args.outputs.formats }}
+        run: |
+          for format in $FORMATS; do
+            npm run videos:build -- "$SCENARIO" --format "$format"
+          done
+          ls -la videos/out/
+
+      # Fails unless every MP4 is h264/yuv420p tagged bt709 (primaries,
+      # transfer and matrix) with AAC audio (videos/src/output/encoding.ts).
+      - name: Verify render encoding (ffprobe)
+        run: npm run -s videos:verify -- videos/out/*.mp4
+
+      - name: Upload videos artifact
+        id: upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: videos-${{ steps.args.outputs.scenario }}-${{ github.run_id }}
+          path: videos/out/*.mp4
+          if-no-files-found: error
+          retention-days: 30
+
+  comment:
+    name: Link the render on the PR
+    needs: render
+    if: >-
+      github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Post sticky PR comment with the artifact link
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: videos
+          message: |
+            ## 🎬 How-to video render
+
+            **Scenario:** `${{ needs.render.outputs.scenario }}` (desktop 16:9 and mobile 9:16)
+
+            **Download:** [videos artifact](${{ needs.render.outputs.artifact-url }})
+            (kept 30 days) ·
+            [run log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            Rendered from the live site on the runner. Renders are build outputs and are never committed.

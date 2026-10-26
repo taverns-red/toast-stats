@@ -1,0 +1,6 @@
+# Rendered videos and every generated input are build output (#2293).
+# Re-create them with `npm run videos:build -- <scenario>`.
+out/
+public/captures/
+public/music/
+public/fonts/

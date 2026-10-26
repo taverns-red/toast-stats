@@ -61,6 +61,17 @@
           "jsonpath": "$.packages['packages/mcp-server'].version"
         }
       ]
+    },
+    "videos": {
+      "release-type": "node",
+      "component": "videos",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "/package-lock.json",
+          "jsonpath": "$.packages['videos'].version"
+        }
+      ]
     }
   },
   "bump-minor-pre-major": true,

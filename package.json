@@ -12,7 +12,8 @@
     "packages/collector-cli",
     "packages/analytics-core",
     "packages/shared-contracts",
-    "packages/mcp-server"
+    "packages/mcp-server",
+    "videos"
   ],
   "scripts": {
     "dev:frontend": "npm run dev --workspace=frontend",
@@ -61,7 +62,11 @@
     "lessons:index": "LESSONS_DIR=tasks/lessons bash scripts/lessons-index.sh",
     "lessons:index:check": "LESSONS_DIR=tasks/lessons bash scripts/lessons-index.sh --check",
     "seo:generate": "npx tsx scripts/generate-seo-assets.ts",
-    "seo:check": "npx tsx scripts/generate-seo-assets.ts --check"
+    "seo:check": "npx tsx scripts/generate-seo-assets.ts --check",
+    "videos:capture": "npm run capture --workspace=@taverns-red/videos --",
+    "videos:render": "npm run render --workspace=@taverns-red/videos --",
+    "videos:build": "npm run build --workspace=@taverns-red/videos --",
+    "videos:verify": "npm run verify --workspace=@taverns-red/videos --"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^5.0.5",
@@ -89,6 +94,7 @@
     "flatted": "^3.3.3",
     "vite": "$vite",
     "uuid": "^11.1.1",
+    "zod": "^4.6.7",
     "@google-cloud/storage": {
       "teeny-request": {
         "http-proxy-agent": "^7.0.0"
