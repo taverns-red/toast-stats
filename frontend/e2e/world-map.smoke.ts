@@ -108,7 +108,7 @@ for (const theme of ['light', 'dark'] as const) {
       else expect(lum(m.bg)).toBeGreaterThan(180)
 
       if (width < 768)
-        await page.getByRole('link', { name: 'Map', exact: true }).click()
+        await page.getByRole('link', { name: 'Show map', exact: true }).click()
       const map = page.getByRole('region', {
         name: 'World club map, coloured by club health',
       })

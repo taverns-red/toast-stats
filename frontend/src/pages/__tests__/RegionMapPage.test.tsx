@@ -223,7 +223,7 @@ describe('RegionMapPage', () => {
     renderAt('/region/05/map?sort=dcpGoals')
     await rowsOf()
     expect(screen.queryByTestId('map-stub')).toBeNull()
-    fireEvent.click(screen.getByRole('link', { name: 'Map' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Show map' }))
     expect(await screen.findByTestId('map-stub')).toBeInTheDocument()
     expect(search()).toBe('?sort=dcpGoals&view=map')
     fireEvent.click(screen.getByRole('link', { name: 'List' }))
