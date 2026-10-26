@@ -64,6 +64,8 @@ export function ActionTable<T>({
         noun="items"
         rows={rows.map(mobileRow)}
         chipPlacement="meta"
+        flush
+        wrapTitle
       />
     )
   }

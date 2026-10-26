@@ -164,6 +164,17 @@
   margin-top: 0.75rem;
 }
 
+/* Phone rows bleed through the section's 1.25rem side padding to its border
+   (#2329, as the clubs list does through its panel, #1833), so a club name
+   gets the ~40 px the padding took. The list is `flush` (no side borders).
+   Below 768 only: the desktop card-table keeps the padding. */
+@media (max-width: 767px) {
+  .action-list-section__panel > .mobile-row-list--flush {
+    width: auto;
+    margin-inline: -1.25rem;
+  }
+}
+
 /* The only motion this component introduces is the chevron sweep; honour the
    viewer's OS preference rather than animating regardless. */
 @media (prefers-reduced-motion: reduce) {
