@@ -5,6 +5,7 @@
  * render before the artifact upload.
  */
 import { execFileSync } from 'node:child_process'
+import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import {
   checkProbe,
@@ -17,8 +18,11 @@ export function verify(files: string[]): number {
     console.error('Usage: npm run videos:verify -- <file.mp4> [...]')
     return 2
   }
+  // npm runs the workspace script from videos/, so resolve the arguments
+  // against the directory npm was invoked from (INIT_CWD), not process.cwd().
+  const base = process.env['INIT_CWD'] ?? process.cwd()
   let failed = 0
-  for (const file of files) {
+  for (const file of files.map(f => resolve(base, f))) {
     const probe = JSON.parse(
       execFileSync(
         'ffprobe',
