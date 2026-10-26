@@ -337,4 +337,10 @@
 
 .regions-training-world {
   margin: 1rem 0 0;
+  max-width: none;
+}
+
+.regions-training-world a {
+  color: var(--link);
+  text-decoration: underline;
 }
