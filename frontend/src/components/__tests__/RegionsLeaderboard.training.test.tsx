@@ -180,14 +180,20 @@ describe('RegionsLeaderboard officer training <768 (#2330)', () => {
      else the latest started — the region Training page's rankingRound),
      4+ over all seven in the cell (as Dist. clubs stacks count over %).
      Two or four chips pushed the table past the 375 first-content budget
-     (mobile-375-gate); the sheet's full table keeps both rounds. */
+     (mobile-375-gate); the sheet's full table keeps both rounds. The label
+     is "Training" (round in its title and the cell's accessible name):
+     "R1 training" ellipsized at 375 with CI's Linux fonts (priority-columns
+     smoke). */
   it('offers the current round as one column: 4+ over all seven', () => {
     mobile.value = true
     renderBoard(OCT, '/regions?cols=training,score')
     const heads = within(table())
       .getAllByRole('columnheader')
       .map(th => th.textContent?.trim())
-    expect(heads).toEqual(['Region', 'R1 training', 'Score'])
+    expect(heads).toEqual(['Region', 'Training', 'Score'])
+    expect(
+      within(table()).getByRole('columnheader', { name: /Training/ })
+    ).toBeInTheDocument()
     const link = within(rowOf('02')).getByRole('link', {
       name: /Region 02 Round 1: 75% of clubs with 4\+ officers .*50% with all seven/,
     })
@@ -200,7 +206,7 @@ describe('RegionsLeaderboard officer training <768 (#2330)', () => {
     mobile.value = true
     renderBoard(OCT, '/regions?cols=training,score')
     fireEvent.click(
-      within(table()).getByRole('button', { name: /Sort by R1 training/ })
+      within(table()).getByRole('button', { name: /Sort by Training/ })
     )
     expect(screen.getByTestId('where').textContent).toContain('sort=r1Dcp')
     expect(regionOrder()).toEqual(['/region/02', '/region/01', '/region/03'])
@@ -213,9 +219,7 @@ describe('RegionsLeaderboard officer training <768 (#2330)', () => {
       '/regions?cols=training,score'
     )
     expect(
-      within(table())
-        .getAllByRole('columnheader')
-        .map(th => th.textContent?.trim())
-    ).toContain('R2 training')
+      within(rowOf('02')).getByRole('link', { name: /^Region 02 Round 2:/ })
+    ).toBeInTheDocument()
   })
 })
