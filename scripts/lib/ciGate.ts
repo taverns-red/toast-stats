@@ -74,6 +74,10 @@ export interface ObservedCheck {
   status: string
   /** `success` | `failure` | `skipped` | `cancelled` | … | `null` if running. */
   conclusion: string | null
+  /** Check-run id; monotonic in creation order, so it breaks a `started_at` tie. */
+  id?: number
+  /** ISO timestamp (second granularity). Orders runs for the #2316 rule. */
+  started_at?: string | null
 }
 
 /**
@@ -163,6 +167,36 @@ export function expectedChecks(files: string[]): string[] {
 }
 
 /**
+ * True when `b` is a strictly newer check run than `a`: later `started_at`,
+ * or the same second and a higher check-run id (ids are creation-ordered).
+ * Runs without ordering information are never "newer" — fail closed.
+ */
+function isNewerRun(b: ObservedCheck, a: ObservedCheck): boolean {
+  const tb = b.started_at ? Date.parse(b.started_at) : NaN
+  const ta = a.started_at ? Date.parse(a.started_at) : NaN
+  if (!Number.isNaN(tb) && !Number.isNaN(ta) && tb !== ta) return tb > ta
+  if (b.id !== undefined && a.id !== undefined) return b.id > a.id
+  return false
+}
+
+/**
+ * A `cancelled` run is a superseded duplicate, not a verdict, when a NEWER run
+ * of the same check on the same head SHA succeeded: overlapping
+ * `pull_request` events let concurrency cancel the first run (PR #2313,
+ * #2316). Only `cancelled` gets this treatment; a cancel newer than every
+ * green run still fails.
+ */
+function isSupersededCancel(
+  run: ObservedCheck,
+  sameName: ObservedCheck[]
+): boolean {
+  return (
+    run.conclusion === 'cancelled' &&
+    sameName.some(r => r.conclusion === 'success' && isNewerRun(r, run))
+  )
+}
+
+/**
  * Compare the expected check names against the observed check runs.
  *
  * `pending` and `missing` are both non-terminal while the poller still has
@@ -218,7 +252,9 @@ export function evaluateChecks(
     const hasGreen = runs.some(r => r.conclusion === 'success')
     const bad = runs.filter(
       r =>
-        r.conclusion !== 'success' && !(hasGreen && r.conclusion === 'skipped')
+        r.conclusion !== 'success' &&
+        !(hasGreen && r.conclusion === 'skipped') &&
+        !isSupersededCancel(r, runs)
     )
     const skippedOnly =
       bad.length > 0 && bad.every(r => r.conclusion === 'skipped')
