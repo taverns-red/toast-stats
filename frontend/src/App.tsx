@@ -67,6 +67,10 @@ const DistrictMeetingsPage = React.lazy(
 )
 
 // Code-split: DistrictTrendsPage — trends subroute (#680, epic #674 Sprint 6)
+// Officer training (#2296) — its own routed subpage, not under Education.
+const DistrictTrainingPage = React.lazy(
+  () => import('./pages/DistrictTrainingPage')
+)
 const DistrictTrendsPage = React.lazy(
   () => import('./pages/DistrictTrendsPage')
 )
@@ -135,6 +139,10 @@ const WorldEducationPage = React.lazy(
 const RegionGrowthPage = React.lazy(() => import('./pages/RegionGrowthPage'))
 const WorldGrowthPage = React.lazy(() => import('./pages/WorldGrowthPage'))
 // Code-split: region and world meeting-time heatmaps (#1814)
+// Officer training across a region's districts (#2296).
+const RegionTrainingPage = React.lazy(
+  () => import('./pages/RegionTrainingPage')
+)
 const RegionMeetingsPage = React.lazy(
   () => import('./pages/RegionMeetingsPage')
 )
@@ -286,6 +294,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictMeetingsPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'district/:districtId/training',
+          element: (
+            <Suspense fallback={<DistrictRouteFallback />}>
+              <DistrictTrainingPage />
             </Suspense>
           ),
         },
@@ -500,6 +516,16 @@ const router = createBrowserRouter(
             <Suspense fallback={<PageLoadingFallback />}>
               <WorldGrowthPage />
             </Suspense>
+          ),
+        },
+        {
+          path: 'region/:n/training',
+          element: (
+            <CanonicalRegionRoute>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <RegionTrainingPage />
+              </Suspense>
+            </CanonicalRegionRoute>
           ),
         },
         {

@@ -46,6 +46,15 @@ import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { isDistrictSlotPending } from '../utils/districtSlotPending'
+import {
+  formatNeeded,
+  parseTrainingThreshold,
+  thresholdPhrase,
+  trainingClubsFromSnapshot,
+  trainingPageUrl,
+  type ShortClub,
+} from '../utils/officerTraining'
+import { formatDisplayDate } from '../utils/dateFormatting'
 import ErrorBoundary from '../components/ErrorBoundary'
 
 /* District Action List Page (#1231, epic #1228 Sprint 3 — the epic's close).
@@ -352,6 +361,21 @@ const cspColumns = (
   },
 ]
 
+/* Officer training (#2296): clubs short of the threshold in the open round. */
+const trainingColumns = (
+  districtId: string
+): ActionTableColumn<ShortClub>[] => [
+  clubColumn(districtId),
+  areaColumn(),
+  {
+    key: 'trained',
+    header: 'Trained',
+    className: 'action-table__num',
+    cell: c => c.trained,
+  },
+  { key: 'needs', header: 'Needs', cell: c => formatNeeded(c.needed) },
+]
+
 /* Phone rows (#1833): below 768 each section is MobileRowList compact rows.
    Line 1 is the subject (club or area), line 2 carries the facts the table's
    other columns held; the whole row links to the subject's routed page. */
@@ -409,8 +433,21 @@ const cspMobileRow =
     }`,
   })
 
+const trainingMobileRow =
+  (districtId: string) =>
+  (c: ShortClub): MobileRow => ({
+    id: c.clubId,
+    to: clubTo(districtId, c),
+    title: c.clubName,
+    meta: `${areaLabel(c)} \u00b7 ${c.trained} trained \u00b7 needs ${formatNeeded(c.needed)}`,
+  })
+
+/** Clubs shown before "Show all N" in the officer-training section (N10). */
+const TRAINING_LIST_PREVIEW = 10
+
 const DistrictActionListPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
+  const [showAllTraining, setShowAllTraining] = React.useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Scope is URL-seedable (typed URL, shared link, back button, select change),
@@ -418,6 +455,11 @@ const DistrictActionListPage: React.FC = () => {
   // (L124/144 / R17). An empty string is treated as "no filter".
   const division = searchParams.get('division') || undefined
   const area = searchParams.get('area') || undefined
+  // #2296: the officer-training threshold shares the Training page's
+  // `?threshold=` (1–7, default 4), so a shared incentive link carries it.
+  const trainingThreshold = parseTrainingThreshold(
+    searchParams.get('threshold')
+  )
 
   const setScope = (next: {
     division?: string | undefined
@@ -536,6 +578,12 @@ const DistrictActionListPage: React.FC = () => {
     [districtStatistics, effectiveEndDate]
   )
 
+  // #2296: officers trained per club, from the same snapshot (no new read).
+  const trainingClubs = useMemo(
+    () => trainingClubsFromSnapshot(districtStatistics),
+    [districtStatistics]
+  )
+
   const sections = useMemo<ActionListSections>(() => {
     // buildActionList already returns empty sections for empty input, so no
     // separate no-data guard is needed — the `?? []` fallbacks make it safe.
@@ -548,6 +596,8 @@ const DistrictActionListPage: React.FC = () => {
         // #1406 — the page owns the program-year selection; the recognition
         // ladder must not be re-derived downstream (R3).
         programYear: effectiveProgramYear?.label,
+        trainingClubs,
+        trainingThreshold,
       },
       { division, area }
     )
@@ -558,6 +608,8 @@ const DistrictActionListPage: React.FC = () => {
     effectiveProgramYear,
     division,
     area,
+    trainingClubs,
+    trainingThreshold,
   ])
 
   // Scope-select options come from the authoritative division/area structure.
@@ -598,6 +650,7 @@ const DistrictActionListPage: React.FC = () => {
       datesState
     )
   const totalItems =
+    sections.trainingShort.length +
     sections.closeToDistinguished.length +
     sections.visitGaps.length +
     sections.interventionRequired.length +
@@ -622,8 +675,11 @@ const DistrictActionListPage: React.FC = () => {
   /* The default is "the FIRST section is expanded, the rest collapsed" —
      expressed against the rendered order rather than naming a section, so it
      stays correct after the seasonal reorder above. */
+  // Officer training is collapsed by default even when it leads (Ron, N10):
+  // the default-open section is the first OTHER one.
+  const defaultOpen = sectionOrder.find(id => id !== 'action-training')
   const isSectionOpen = (id: ActionSectionId) =>
-    openSections[id] ?? sectionOrder[0] === id
+    openSections[id] ?? defaultOpen === id
 
   const toggleSection = (id: ActionSectionId) => {
     const next = !isSectionOpen(id)
@@ -719,6 +775,70 @@ const DistrictActionListPage: React.FC = () => {
           testId="table-intervention"
           mobileRow={interventionMobileRow(districtId ?? '')}
         />
+      ),
+    },
+    'action-training': {
+      testId: 'section-training',
+      heading: sections.trainingRound
+        ? `Clubs short of ${thresholdPhrase(sections.trainingThreshold)} · Round ${sections.trainingRound.round}`
+        : 'Clubs short of officer training',
+      count: sections.trainingShort.length,
+      emptyText: `Every club in this scope has ${thresholdPhrase(sections.trainingThreshold)} this round.`,
+      footnote: sections.trainingRound
+        ? [
+            `${sections.trainingDaysLeft} day${sections.trainingDaysLeft === 1 ? '' : 's'} left in the round, to ${formatDisplayDate(sections.trainingRound.end)}. Counts are officers trained, not which officers.`,
+            sections.trainingShortIneligibleCount > 0
+              ? sections.trainingShortIneligibleCount === 1
+                ? '1 suspended/ineligible club short of the threshold is not listed.'
+                : `${sections.trainingShortIneligibleCount} suspended/ineligible clubs short of the threshold are not listed.`
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' ')
+        : undefined,
+      csvRows: sections.trainingShort.map(c => [
+        'Officer training',
+        c.divisionId,
+        c.areaId,
+        c.clubName,
+        `${c.trained} trained, needs ${formatNeeded(c.needed)}`,
+      ]),
+      children: (
+        <>
+          <ActionTable
+            caption="Clubs short of officer training this round"
+            columns={trainingColumns(districtId ?? '')}
+            rows={
+              showAllTraining
+                ? sections.trainingShort
+                : sections.trainingShort.slice(0, TRAINING_LIST_PREVIEW)
+            }
+            rowKey={c => c.clubId}
+            testId="table-training"
+            mobileRow={trainingMobileRow(districtId ?? '')}
+          />
+          {!showAllTraining &&
+            sections.trainingShort.length > TRAINING_LIST_PREVIEW && (
+              <button
+                type="button"
+                className="action-list-scope__clear action-list-section__show-all"
+                onClick={() => setShowAllTraining(true)}
+              >
+                Show all {sections.trainingShort.length}
+              </button>
+            )}
+          <p className="action-list-section__footnote">
+            <Link
+              to={trainingPageUrl(districtId ?? '', {
+                division,
+                area,
+                threshold: sections.trainingThreshold,
+              })}
+            >
+              See every club on the Training page
+            </Link>
+          </p>
+        </>
       ),
     },
     'action-csp': {

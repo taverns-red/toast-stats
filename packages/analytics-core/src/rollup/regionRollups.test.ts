@@ -141,6 +141,9 @@ describe('buildRegionRollups — the 2025-26 June close (#1799)', () => {
         officerListOnTime: 108,
       },
       growth: { prospective: null, chartered: 1, suspended: 3 },
+      // The fixture's clubPerformance projection carries no officer-training
+      // column: not collected, so null (#2296), never a block of zeros.
+      officerTraining: null,
     })
     expect(rollups.districts['111']).toMatchObject({
       region: '07',
@@ -348,6 +351,7 @@ describe('buildRegionRollups — the daily feed (#1799)', () => {
       // No charter or suspension date anywhere in the date's clubs: the
       // column cannot be told from "none yet", so both read unknown (null).
       growth: { prospective: 8, chartered: null, suspended: null },
+      officerTraining: null,
     })
   })
 

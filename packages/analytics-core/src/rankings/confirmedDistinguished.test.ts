@@ -32,3 +32,39 @@ describe('countConfirmedDistinguishedClubs (#304, #2221)', () => {
     ).toBe(0)
   })
 })
+
+describe('countConfirmedDistinguishedClubs requires a Club Success Plan (#2323)', () => {
+  // D80 club 357 on 2026-08-20: 5 goals, 22 April renewals, CSP = N.
+  const base = {
+    'Club Number': '00000357',
+    'Goals Met': '5',
+    'Mem. Base': '109',
+  }
+  const renewals = [{ Club: '357', 'Apr. Ren.': '22' }]
+
+  it("does not count a club whose CSP is 'N'", () => {
+    expect(
+      countConfirmedDistinguishedClubs(
+        [{ ...base, CSP: 'N' }],
+        renewals,
+        '2026-2027'
+      )
+    ).toBe(0)
+  })
+
+  it("counts the same club when its CSP is 'Y'", () => {
+    expect(
+      countConfirmedDistinguishedClubs(
+        [{ ...base, CSP: 'Y' }],
+        renewals,
+        '2026-2027'
+      )
+    ).toBe(1)
+  })
+
+  it('treats a missing CSP column (pre-2025-2026 data) as submitted, like the club-level path', () => {
+    expect(
+      countConfirmedDistinguishedClubs([base], renewals, '2024-2025')
+    ).toBe(1)
+  })
+})

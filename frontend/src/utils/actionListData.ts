@@ -32,6 +32,7 @@ import { calculateClubProjection } from './dcpProjections'
 import { isCloseToDistinguished } from './closeToDistinguished'
 import { getAreaVisitDeadlines } from './areaRecognitionState'
 import { summarizeCspCompletion } from './cspCompletion'
+import { isIneligibleStatus } from './extractDivisionPerformance'
 import { getClubHealthStatusLabel } from './clubHealthStatus'
 import { getProgramYearForDate } from './programYear'
 import {
@@ -41,6 +42,14 @@ import {
 } from './cspDeadlines'
 import type { ClubHealthStatus, ClubTrend } from '../hooks/useDistrictAnalytics'
 import type { DivisionPerformance, MissingVisitClub } from './divisionStatus'
+import type { OfficerTrainingRoundWindow } from '@taverns-red/analytics-core'
+import {
+  DEFAULT_TRAINING_THRESHOLD,
+  shortClubs,
+  trainingRoundContext,
+  type ShortClub,
+  type TrainingClub,
+} from './officerTraining'
 
 export interface ActionListScope {
   /** Restrict to a single division id (e.g. `'A'`). Absent = all divisions. */
@@ -113,6 +122,52 @@ export interface ActionListSections {
   cspNotSubmittedAutoCreditCount: number
   /** Clubs with no CSP value on a tracked year (E2) — neither listed nor counted. */
   cspUnknownCount: number
+  /**
+   * The officer-training round open on the pinned date for the page's own
+   * program year (#2296); null between rounds, in June (the new year's
+   * Round 1 is open but the snapshot still shows the old year), or with no
+   * officer-training data. The section exists only while this is set.
+   */
+  trainingRound: OfficerTrainingRoundWindow | null
+  /** Days left in `trainingRound`, counting the pinned date. */
+  trainingDaysLeft: number | null
+  /** The threshold the list is built against (default 4, DCP goal 9). */
+  trainingThreshold: number
+  /** In-scope clubs short of the threshold in the open round. */
+  trainingShort: ShortClub[]
+  /**
+   * Suspended/ineligible clubs short of the threshold, footnoted rather than
+   * listed — the same treatment as the Club Success Plan section.
+   */
+  trainingShortIneligibleCount: number
+  /**
+   * In the last {@link TRAINING_ATTENTION_DAYS} days of the open round
+   * (Ron, N10): only then does the section count toward the Overview's
+   * Needs attention. Earlier, every club still reads low and the list is
+   * a long-range plan, not an alarm.
+   */
+  trainingFinalStretch: boolean
+}
+
+/** Days before a round closes from which officer training needs attention. */
+export const TRAINING_ATTENTION_DAYS = 30
+
+/**
+ * Whether the pinned date falls in the last {@link TRAINING_ATTENTION_DAYS}
+ * days of a round open for the page's own program year (R3: both from the
+ * page). Needs no club data, so a page can decide whether to load it.
+ */
+export function isTrainingFinalStretch(
+  snapshotDate: string,
+  programYear: string
+): boolean {
+  if (!snapshotDate) return false
+  const context = trainingRoundContext(snapshotDate, programYear)
+  return (
+    context.open !== null &&
+    context.daysLeft !== null &&
+    context.daysLeft <= TRAINING_ATTENTION_DAYS
+  )
 }
 
 export interface ActionListInput {
@@ -129,6 +184,10 @@ export interface ActionListInput {
    * selection. Decides which recognition rungs existed (#1406).
    */
   programYear?: string | undefined
+  /** Clubs with officers trained per round (#2296); null = not measured. */
+  trainingClubs?: TrainingClub[] | null | undefined
+  /** Officer-training threshold, 1–7 (default 4). */
+  trainingThreshold?: number | undefined
 }
 
 function inScope(
@@ -260,6 +319,60 @@ export function buildActionList(
     cspNotSubmittedIneligibleCount: csp.notSubmittedIneligible.length,
     cspNotSubmittedAutoCreditCount: csp.notSubmittedAutoCredit.length,
     cspUnknownCount: csp.unknownCount,
+    ...trainingSection(input, scope, cspYear),
+  }
+}
+
+/**
+ * The officer-training section (#2296): only while a round is open on the
+ * pinned date for the page's own program year. A June snapshot still holds
+ * the old year's final counts while the new year's Round 1 is open, so
+ * `trainingRoundContext` reports that round as pending, not open, and no
+ * list is built from last year's numbers.
+ */
+function trainingSection(
+  input: ActionListInput,
+  scope: ActionListScope,
+  programYear: string
+): Pick<
+  ActionListSections,
+  | 'trainingRound'
+  | 'trainingDaysLeft'
+  | 'trainingThreshold'
+  | 'trainingShort'
+  | 'trainingShortIneligibleCount'
+  | 'trainingFinalStretch'
+> {
+  const threshold = input.trainingThreshold ?? DEFAULT_TRAINING_THRESHOLD
+  const none = {
+    trainingRound: null,
+    trainingDaysLeft: null,
+    trainingThreshold: threshold,
+    trainingShort: [],
+    trainingShortIneligibleCount: 0,
+    trainingFinalStretch: false,
+  }
+  if (!input.trainingClubs || !input.snapshotDate) return none
+  const context = trainingRoundContext(input.snapshotDate, programYear)
+  if (!context.open) return none
+  const short = shortClubs(
+    input.trainingClubs.filter(c => inScope(c.divisionId, c.areaId, scope)),
+    context.open.round,
+    threshold
+  )
+  // Review S3: a suspended/ineligible club is no to-do — footnoted, as the
+  // Club Success Plan section does (same predicate, #1555).
+  const listed = short.filter(c => !isIneligibleStatus(c.clubStatus))
+  return {
+    trainingRound: context.open,
+    trainingDaysLeft: context.daysLeft,
+    trainingThreshold: threshold,
+    trainingShort: listed,
+    trainingShortIneligibleCount: short.length - listed.length,
+    trainingFinalStretch: isTrainingFinalStretch(
+      input.snapshotDate,
+      programYear
+    ),
   }
 }
 
@@ -269,7 +382,11 @@ export function buildActionList(
  * id is the section's identity, not an implementation detail (#1569).
  */
 export type ActionSectionId =
-  'action-close' | 'action-visits' | 'action-intervention' | 'action-csp'
+  | 'action-close'
+  | 'action-visits'
+  | 'action-intervention'
+  | 'action-csp'
+  | 'action-training'
 
 /** The three sections that are always present, in their standing order. */
 const CORE_ACTION_SECTIONS: readonly ActionSectionId[] = [
@@ -290,12 +407,18 @@ const CORE_ACTION_SECTIONS: readonly ActionSectionId[] = [
  * still act on.
  */
 export function orderActionSections(
-  sections: Pick<ActionListSections, 'cspTracked' | 'cspActionable'>
+  sections: Pick<ActionListSections, 'cspTracked' | 'cspActionable'> &
+    Partial<Pick<ActionListSections, 'trainingRound'>>
 ): ActionSectionId[] {
-  if (!sections.cspTracked) return [...CORE_ACTION_SECTIONS]
+  // #2296: officer training is a to-do only while its round is open; it
+  // leads the standing sections then (the round has a hard end date).
+  const core: ActionSectionId[] = sections.trainingRound
+    ? ['action-training', ...CORE_ACTION_SECTIONS]
+    : [...CORE_ACTION_SECTIONS]
+  if (!sections.cspTracked) return core
   return sections.cspActionable
-    ? ['action-csp', ...CORE_ACTION_SECTIONS]
-    : [...CORE_ACTION_SECTIONS, 'action-csp']
+    ? ['action-csp', ...core]
+    : [...core, 'action-csp']
 }
 
 /** Each section's clause in the page's intro sentence. */
@@ -304,6 +427,7 @@ const ACTION_SECTION_CLAUSES: Record<ActionSectionId, string> = {
   'action-visits': 'areas with outstanding club visits',
   'action-intervention': 'clubs that need intervention',
   'action-csp': 'clubs without a Club Success Plan',
+  'action-training': 'clubs short of officer training this round',
 }
 
 /**
@@ -324,12 +448,15 @@ function plural(n: number, noun: string): string {
 }
 
 /** "2 members + 1 DCP goal" — the "Needs" COLUMN's value (#1577), where the
- *  header supplies the verb the sentence form spells out. */
+ *  header supplies the verb the sentence form spells out. A zero part is
+ *  omitted (#2308): "0 members + 1 DCP goal" reads as an error when the club
+ *  already meets the membership rule. A 0/0 gap is never listed — such a club
+ *  is already Distinguished — so it yields '' rather than a fake requirement. */
 export function formatCloseNeeds(item: CloseToDistinguishedItem): string {
-  return `${plural(item.membersNeeded, 'member')} + ${plural(
-    item.goalsNeeded,
-    'DCP goal'
-  )}`
+  const parts: string[] = []
+  if (item.membersNeeded > 0) parts.push(plural(item.membersNeeded, 'member'))
+  if (item.goalsNeeded > 0) parts.push(plural(item.goalsNeeded, 'DCP goal'))
+  return parts.join(' + ')
 }
 
 /** "needs 2 members + 1 DCP goal" — the SENTENCE form, still the CSV's Detail
@@ -337,7 +464,8 @@ export function formatCloseNeeds(item: CloseToDistinguishedItem): string {
  *  pluralization: a second copy of a format is a second thing to drift
  *  (lesson "a fallback alias list copied twice drifts twice"). */
 export function formatCloseGap(item: CloseToDistinguishedItem): string {
-  return `needs ${formatCloseNeeds(item)}`
+  const needs = formatCloseNeeds(item)
+  return needs ? `needs ${needs}` : ''
 }
 
 /** "1 club unvisited · Round 1, due 2025-11-30" — shared by the list row and

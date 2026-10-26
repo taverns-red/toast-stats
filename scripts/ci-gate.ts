@@ -115,6 +115,8 @@ async function observedChecks(): Promise<ObservedCheck[]> {
         name: c.name,
         status: c.status,
         conclusion: c.conclusion,
+        id: c.id,
+        started_at: c.started_at,
       }))
     )
     if (body.check_runs.length < 100) return runs

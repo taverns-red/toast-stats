@@ -78,13 +78,25 @@ export const RegionSubnav: React.FC<{
     to: `${base}/meetings${qs}`,
     end: false,
   }
+  // Officer training (#2296): a region's districts compared. Region only —
+  // there is no world view of it — and under More on a phone.
+  const extra = base.startsWith('/region/')
+    ? [
+        meetings,
+        {
+          label: 'Officer training',
+          to: `${base}/training${qs}`,
+          end: false,
+        },
+      ]
+    : [meetings]
   const phone = useMediaQuery(PHONE_SECTION_BAR_QUERY)
   if (phone) {
     return (
       <SectionBar
         label={label}
         primary={links}
-        more={[meetings]}
+        more={extra}
         testId="region-section-bar"
       />
     )
@@ -96,7 +108,7 @@ export const RegionSubnav: React.FC<{
       data-testid="region-subnav"
     >
       <ul className="district-subnav__list">
-        {[...links, meetings].map(l => (
+        {[...links, ...extra].map(l => (
           <li key={l.label} className="district-subnav__item">
             <NavLink to={l.to} end={l.end} className="district-subnav__link">
               {l.label}

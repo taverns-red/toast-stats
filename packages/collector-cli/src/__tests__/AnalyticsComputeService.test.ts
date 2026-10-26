@@ -2294,6 +2294,84 @@ describe('Time-series generation integration (Requirements 4.1, 9.1, 9.2, 9.4)',
     )
   })
 
+  it('writes the officer-training distribution from the raw club rows (#2296)', async () => {
+    const date = '2026-10-11'
+    const districtId = '61'
+    const club = (
+      clubId: string,
+      clubName: string
+    ): DistrictStatistics['clubs'][number] => ({
+      clubId,
+      clubName,
+      divisionId: 'A',
+      areaId: 'A1',
+      divisionName: 'Division A',
+      areaName: 'Area A1',
+      membershipCount: 20,
+      paymentsCount: 0,
+      dcpGoals: 0,
+      status: 'Active',
+      octoberRenewals: 0,
+      aprilRenewals: 0,
+      newMembers: 0,
+      membershipBase: 20,
+      clubStatus: 'Active',
+    })
+    // Raw rows carry TI's zero-padded club number; the transformed clubs
+    // carry the canonical one (#1440). The join must still find them.
+    const raw = (number: string, round1: string, round2: string) => ({
+      'Club Number': number,
+      'Club Name': `Club ${number}`,
+      'Off. Trained Round 1': round1,
+      'Off. Trained Round 2': round2,
+    })
+    const stats: DistrictStatistics = {
+      districtId,
+      snapshotDate: date,
+      clubs: [club('3045', 'A'), club('1417584', 'B'), club('28678571', 'C')],
+      divisions: [],
+      areas: [],
+      totals: {
+        totalClubs: 3,
+        totalMembership: 60,
+        totalPayments: 0,
+        distinguishedClubs: 0,
+        selectDistinguishedClubs: 0,
+        presidentDistinguishedClubs: 0,
+      },
+      divisionPerformance: [],
+      clubPerformance: [
+        raw('00003045', '0', '0'),
+        raw('01417584', '4', '0'),
+        raw('28678571', '7', '2'),
+      ],
+      districtPerformance: [],
+    }
+
+    await writeDistrictSnapshot(testCache.path, date, districtId, stats)
+    const result = await analyticsComputeService.computeDistrictAnalytics(
+      date,
+      districtId
+    )
+    expect(result.timeSeriesWritten).toBe(true)
+
+    const indexFile = JSON.parse(
+      await fs.readFile(
+        path.join(
+          testCache.path,
+          'time-series',
+          `district_${districtId}`,
+          '2026-2027.json'
+        ),
+        'utf-8'
+      )
+    ) as { dataPoints: Array<{ officerTraining?: unknown }> }
+    expect(indexFile.dataPoints[0]?.officerTraining).toEqual({
+      round1: [1, 0, 0, 0, 1, 0, 0, 1],
+      round2: [2, 0, 1, 0, 0, 0, 0, 0],
+    })
+  })
+
   it('should use same snapshot data as other analytics (Requirement 9.2)', async () => {
     const date = '2024-01-15'
     const districtId = '1'

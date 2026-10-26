@@ -48,7 +48,8 @@ const SECTIONS: ReadonlyArray<{ id: string; num: string; title: string }> = [
   },
   { id: 'worldwide-rollup', num: '11', title: 'Worldwide rollup' },
   { id: 'club-race', num: '12', title: 'Worldwide club race' },
-  { id: 'changelog', num: '13', title: 'Changelog' },
+  { id: 'officer-training', num: '13', title: 'Officer training' },
+  { id: 'changelog', num: '14', title: 'Changelog' },
 ]
 
 // Every rule-change entry is its own deep-link target (#1400), owned by §10.
@@ -926,9 +927,96 @@ const MethodologyPage: React.FC = () => {
         </div>
       </CollapsibleSection>
 
+      {/* Officer training (#2296) — the Training page, the Action List section
+          and the division/area counts link here. Its own section: officer
+          training is not part of the education program. Asserted by
+          MethodologyPage.officerTraining.test.tsx. */}
+      <CollapsibleSection
+        id="officer-training"
+        num="13"
+        title="Officer training"
+        collapsible={isMobile}
+        open={openIds.has('officer-training')}
+        onToggle={toggle}
+      >
+        <div data-testid="methodology-officer-training">
+          <p>
+            DCP goal 9 asks each club for{' '}
+            <strong>4 or more officers trained in each round</strong>. Round 1
+            runs June 1 – August 31 (it opens a month before its program year
+            starts on July 1); Round 2 runs November 1 to the last day of
+            February (February 29 in a leap year). The round dates come from one
+            dated rules table, so a future change to the windows applies only
+            from the program year it starts in.
+          </p>
+          <ul>
+            <li>
+              <strong>Source.</strong> The club performance export&apos;s{' '}
+              <code>Off. Trained Round 1</code> and{' '}
+              <code>Off. Trained Round 2</code> columns: for each club, the
+              number of its seven officers trained in that round, 0–7. They are
+              the same cells the club page&apos;s DCP goals panel reads.
+            </li>
+            <li>
+              <strong>Count only, not which officers.</strong> Toastmasters
+              International publishes how many officers were trained, not which
+              roles. &quot;All seven officers&quot; means a count of 7; training
+              by office is not available.
+            </li>
+            <li>
+              <strong>Threshold.</strong> The default is 4 (DCP goal 9). Many
+              districts run their own incentives, so any threshold from 1 to 7
+              can be chosen; it is kept in the page address so a district&apos;s
+              view can be shared.
+            </li>
+            <li>
+              <strong>Which clubs.</strong> Every club on the club performance
+              export is counted, whatever its status, so the percentages use the
+              same club list the dashboard shows. The Action List&apos;s to-do
+              of clubs short of training leaves out suspended and ineligible
+              clubs and counts them in a footnote, as its Club Success Plan
+              section does.
+            </li>
+            <li>
+              <strong>The June gap.</strong> Toastmasters publishes the new
+              program year&apos;s counts only after its late-July rollover. In
+              June the snapshot still shows the previous year&apos;s final
+              results while the new Round 1 is already open, so no &quot;clubs
+              short&quot; list is built from it.
+            </li>
+            <li>
+              <strong>Progress curve.</strong> The share of clubs at or above
+              the threshold on each daily snapshot inside the round, this
+              program year against last. Snapshots published before the figure
+              was recorded have no point; the chart says where the record starts
+              rather than drawing zeros. Older years were kept at month-ends
+              only, so their curves are sparse.
+            </li>
+            <li>
+              <strong>Region comparison.</strong> A region&apos;s districts are
+              compared on the same figures, from one region rollup per date; a
+              district&apos;s rank is its place among the districts with
+              figures, at the selected threshold, on the open round (or the
+              latest that has started).
+            </li>
+          </ul>
+          <p className="methodology-source">
+            Sources:{' '}
+            <code>snapshots/&#123;date&#125;/district_&#123;id&#125;.json</code>{' '}
+            (the club list), the district time series (
+            <code>
+              time-series/district_&#123;id&#125;/&#123;program year&#125;.json
+            </code>
+            , the curve) and{' '}
+            <code>snapshots/&#123;date&#125;/region-rollups.json</code> (region
+            comparisons).
+          </p>
+        </div>
+      </CollapsibleSection>
+
       <CollapsibleSection
         id="changelog"
-        num="13"
+        num="14"
         title="Changelog"
         collapsible={isMobile}
         open={openIds.has('changelog')}

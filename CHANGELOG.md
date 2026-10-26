@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.70.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.69.0...toast-stats-v2.70.0) (2026-10-25)
+
+
+### Features
+
+* **training:** officer-training distribution in the time series and region rollups ([#2296](https://github.com/taverns-red/toast-stats/issues/2296)) ([#2311](https://github.com/taverns-red/toast-stats/issues/2311)) ([48e128f](https://github.com/taverns-red/toast-stats/commit/48e128fc701caced6dfac89e4e1379c718cc21c5))
+* **training:** officer-training Training subpage ([#2296](https://github.com/taverns-red/toast-stats/issues/2296)) ([#2312](https://github.com/taverns-red/toast-stats/issues/2312)) ([52109b7](https://github.com/taverns-red/toast-stats/commit/52109b71ee36cec578a32121cb947e8144239e6a))
+* **training:** region comparison of district officer training ([#2296](https://github.com/taverns-red/toast-stats/issues/2296)) ([#2313](https://github.com/taverns-red/toast-stats/issues/2313)) ([c132975](https://github.com/taverns-red/toast-stats/commit/c132975a239a8dd7c95b151949647c5c1f0a40be))
+
+## [2.69.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.68.0...toast-stats-v2.69.0) (2026-10-25)
+
+
+### Features
+
+* **training:** accept officerTraining in the region-rollups and time-series contracts ([#2296](https://github.com/taverns-red/toast-stats/issues/2296)) ([#2314](https://github.com/taverns-red/toast-stats/issues/2314)) ([611b9e1](https://github.com/taverns-red/toast-stats/commit/611b9e1253677b84329e339bd9492ad80ff40dc3))
+
+
+### Bug Fixes
+
+* **action-list:** omit zero parts from the Needs cell ([#2308](https://github.com/taverns-red/toast-stats/issues/2308)) ([#2309](https://github.com/taverns-red/toast-stats/issues/2309)) ([be7f5b7](https://github.com/taverns-red/toast-stats/commit/be7f5b7664171ba4aab8a519e68e204ba05a2c44))
+* **collector-cli:** make upload's prod destination opt-in ([#2288](https://github.com/taverns-red/toast-stats/issues/2288)) ([#2292](https://github.com/taverns-red/toast-stats/issues/2292)) ([232aa00](https://github.com/taverns-red/toast-stats/commit/232aa00ca592ea2fa9c5391ba63c34573a2c3252))
+
 ## [2.68.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.67.2...toast-stats-v2.68.0) (2026-10-25)
 
 

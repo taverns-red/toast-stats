@@ -3,6 +3,7 @@ import {
   buildActionList,
   describeActionSections,
   formatCloseGap,
+  formatCloseNeeds,
   formatCspRow,
   formatVisitGap,
   orderActionSections,
@@ -97,6 +98,28 @@ describe('buildActionList', () => {
       // gap reused from calculateClubProjection, never re-derived (R3)
       expect(item.membersNeeded).toBe(2)
       expect(item.goalsNeeded).toBe(1)
+    })
+
+    it('never lists a 0/0 gap: meeting both requirements is Distinguished (#2308)', () => {
+      const meetsBoth = makeClub({
+        clubId: 'meets-both',
+        membershipTrend: [{ date: '2026-06-01', count: 20 }],
+        dcpGoalsTrend: [{ date: '2026-06-01', goalsAchieved: 5 }],
+        membershipBase: 20,
+      })
+      const growthPath = makeClub({
+        clubId: 'growth-path',
+        membershipTrend: [{ date: '2026-06-01', count: 15 }],
+        dcpGoalsTrend: [{ date: '2026-06-01', goalsAchieved: 5 }],
+        membershipBase: 12,
+      })
+      const result = buildActionList({
+        clubs: [meetsBoth, growthPath],
+        interventionClubs: [],
+        divisions: [],
+        snapshotDate: SNAPSHOT,
+      })
+      expect(result.closeToDistinguished).toEqual([])
     })
 
     it('is empty when no club qualifies', () => {
@@ -298,6 +321,38 @@ describe('formatCloseGap / formatVisitGap (shared list + CSV strings)', () => {
         goalsNeeded: 2,
       })
     ).toBe('needs 1 member + 2 DCP goals')
+  })
+
+  /* #2308: a zero part is noise ("0 members + 1 DCP goal" reads as an
+     error), so each part appears only when something is actually needed. */
+  const gap = (membersNeeded: number, goalsNeeded: number) => ({
+    clubId: 'c',
+    clubName: 'C',
+    divisionId: 'A',
+    areaId: 'A1',
+    membersNeeded,
+    goalsNeeded,
+  })
+
+  it('omits the members part when no members are needed (0/n)', () => {
+    expect(formatCloseNeeds(gap(0, 1))).toBe('1 DCP goal')
+    expect(formatCloseNeeds(gap(0, 2))).toBe('2 DCP goals')
+    expect(formatCloseGap(gap(0, 1))).toBe('needs 1 DCP goal')
+  })
+
+  it('omits the goals part when no goals are needed (n/0)', () => {
+    expect(formatCloseNeeds(gap(1, 0))).toBe('1 member')
+    expect(formatCloseNeeds(gap(3, 0))).toBe('3 members')
+    expect(formatCloseGap(gap(3, 0))).toBe('needs 3 members')
+  })
+
+  it('keeps both parts when both are needed (n/n)', () => {
+    expect(formatCloseNeeds(gap(2, 1))).toBe('2 members + 1 DCP goal')
+  })
+
+  it('renders nothing for a 0/0 gap, never "0 members + 0 DCP goals"', () => {
+    expect(formatCloseNeeds(gap(0, 0))).toBe('')
+    expect(formatCloseGap(gap(0, 0))).toBe('')
   })
 
   it('pluralizes the visit-gap summary', () => {

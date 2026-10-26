@@ -29,6 +29,7 @@
  */
 
 import { z } from 'zod'
+import { OfficerTrainingDistributionSchema } from './time-series.schema.js'
 
 const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const ProgramYear = z.string().regex(/^\d{4}-\d{4}$/)
@@ -104,6 +105,12 @@ export const RegionRollupFiguresSchema = z
         suspended: MaybeCount,
       })
       .strict(),
+    /**
+     * Clubs by officers trained per round, index 0–7 (#2296). null = the
+     * export carried no officer-training column for some district in the
+     * block; absent = a file written before the field existed.
+     */
+    officerTraining: OfficerTrainingDistributionSchema.nullable().optional(),
   })
   .strict()
 

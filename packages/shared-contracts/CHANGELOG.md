@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.22.1...shared-contracts-v1.23.0) (2026-10-25)
+
+
+### Features
+
+* **training:** accept officerTraining in the region-rollups and time-series contracts ([#2296](https://github.com/taverns-red/toast-stats/issues/2296)) ([#2314](https://github.com/taverns-red/toast-stats/issues/2314)) ([611b9e1](https://github.com/taverns-red/toast-stats/commit/611b9e1253677b84329e339bd9492ad80ff40dc3))
+
 ## [1.22.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.22.0...shared-contracts-v1.22.1) (2026-10-24)
 
 

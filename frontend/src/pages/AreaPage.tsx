@@ -28,6 +28,7 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
 import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
+import { OfficerTrainingSummary } from '../components/training/OfficerTrainingSummary'
 
 const AreaPage: React.FC = () => {
   const { districtId, divId, areaId } = useParams<{
@@ -304,6 +305,24 @@ const AreaPage: React.FC = () => {
           </p>
         </article>
       )}
+
+      {/* Officer training (#2296): this scope's DCP goal 9 count per round,
+          from the same snapshot, linking to the pre-filtered Training page. */}
+      {!isBodyPending &&
+        snapshot &&
+        effectiveEndDate &&
+        effectiveProgramYear &&
+        districtId &&
+        divId && (
+          <OfficerTrainingSummary
+            districtId={districtId}
+            snapshot={snapshot}
+            snapshotDate={effectiveEndDate}
+            programYear={effectiveProgramYear.label}
+            division={divId}
+            area={areaId}
+          />
+        )}
 
       {/* No analytics-club rows for this area (suspended/migrated clubs, or a
           casing skew). The recognition surface above still renders from the

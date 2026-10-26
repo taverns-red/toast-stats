@@ -52,6 +52,7 @@ export type {
   ProgramYearSummary,
   TimeSeriesIndexMetadata,
   ClubHealthCounts,
+  OfficerTrainingDistribution,
 } from './types/time-series.js'
 
 // Club health status types
@@ -104,6 +105,7 @@ export {
   ProgramYearSummarySchema,
   TimeSeriesIndexMetadataSchema,
   ClubHealthCountsSchema,
+  OfficerTrainingDistributionSchema,
 } from './schemas/time-series.schema.js'
 
 // Club health status Zod schemas

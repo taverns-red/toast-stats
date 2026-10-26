@@ -288,15 +288,34 @@ export async function runContentGate(
     throw new Error('manifestOnly needs a run manifest')
   }
   const started = Date.now()
+  // The full gate also lists the manifest's directories outside the
+  // promoted prefixes (#2322). The planner reads every manifest object under
+  // MANIFEST_GATED_PREFIXES (#2235), so a rebuild's education rollup must be
+  // listed too, or each present object reads as missing from staging. Those
+  // listings feed the object lookup only; the changed-object diff stays over
+  // the promoted prefixes.
+  const beyondPromoted = opts.manifestOnly
+    ? []
+    : (opts.manifest ?? []).filter(
+        e => !PROMOTED_PREFIXES.some(prefix => e.path.startsWith(prefix))
+      )
   const list = opts.manifestOnly
     ? (b: GateBucket) => listManifestDirs(b, opts.manifest!)
     : listPromoted
-  const [stagingObjects, prodObjects] = await Promise.all([
-    list(staging),
-    list(prod),
-  ])
+  const listBeyond = (b: GateBucket) =>
+    beyondPromoted.length === 0
+      ? Promise.resolve([])
+      : listManifestDirs(b, beyondPromoted)
+  const [stagingObjects, prodObjects, stagingBeyond, prodBeyond] =
+    await Promise.all([
+      list(staging),
+      list(prod),
+      listBeyond(staging),
+      listBeyond(prod),
+    ])
   log(
-    `[content-gate] listed ${stagingObjects.length} staging / ${prodObjects.length} prod objects ` +
+    `[content-gate] listed ${stagingObjects.length + stagingBeyond.length} staging / ` +
+      `${prodObjects.length + prodBeyond.length} prod objects ` +
       `in ${Math.round((Date.now() - started) / 1000)}s`
   )
 
@@ -315,8 +334,12 @@ export async function runContentGate(
       `(${plan.sampledOut} outside the sample, ${plan.notJson} not JSON)`
   )
 
-  const stagingMeta = new Map(stagingObjects.map(o => [o.name, o]))
-  const prodMeta = new Map(prodObjects.map(o => [o.name, o]))
+  const stagingMeta = new Map(
+    [...stagingObjects, ...stagingBeyond].map(o => [o.name, o])
+  )
+  const prodMeta = new Map(
+    [...prodObjects, ...prodBeyond].map(o => [o.name, o])
+  )
   const { ctx, latest } = await readContext(
     staging,
     stagingMeta,
