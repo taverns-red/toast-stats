@@ -4,7 +4,7 @@
  * page's `?py=` / `?date=` so switching subpage keeps the selected year.
  */
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { RegionSubnav } from '../RegionSubnav'
 
@@ -122,17 +122,39 @@ describe('RegionSubnav', () => {
     expect(growth).toHaveAttribute('aria-current', 'page')
   })
 
-  it('carries Club growth into the phone section bar', () => {
+  it('carries Club growth into the phone section bar, as Growth', () => {
     phone.value = true
     render(
       <MemoryRouter initialEntries={['/regions/growth']}>
         <RegionSubnav base="/regions" label="Regions sections" />
       </MemoryRouter>
     )
-    expect(screen.getByRole('link', { name: 'Club growth' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Growth' })).toHaveAttribute(
       'href',
       '/regions/growth'
     )
+  })
+
+  // #2318 — the bar does not scroll: six primaries ran off a 390 screen.
+  it('holds four sections plus More on an upright phone', () => {
+    phone.value = true
+    render(
+      <MemoryRouter initialEntries={['/region/07/training']}>
+        <RegionSubnav base="/region/07" label="Region 07 sections" />
+      </MemoryRouter>
+    )
+    const bar = screen.getByTestId('region-section-bar')
+    expect(
+      within(bar)
+        .getAllByRole('link')
+        .map(a => a.textContent)
+    ).toEqual(['Rankings', 'Health', 'Growth', 'Map'])
+    // The current section is under More, so More is marked current.
+    expect(
+      within(bar).getByRole('button', {
+        name: 'More sections, current: Officer training',
+      })
+    ).toHaveAttribute('data-active', 'true')
   })
 
   it('links Meetings (#1814) for a region and the world, keeping py and date', () => {
