@@ -184,6 +184,8 @@ const HEADER_TH =
 // Not sortable: a plain header, sentence case like the sortable labels.
 const TREND_TH =
   'px-4 py-3 text-xs font-medium tracking-wider text-gray-500 text-left align-top'
+// Training headers (#2330): sentence case like the sortable labels.
+const TRAINING_TH = 'px-4 py-3 text-xs font-medium tracking-wider text-gray-500'
 const NUMERIC_TD =
   'px-4 py-3 text-right tabular-nums text-gray-700 theme-dark:text-gray-200'
 
@@ -308,7 +310,7 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
       key={`round-${round}`}
       scope="colgroup"
       colSpan={2}
-      className={`${HEADER_TH} text-center region-training-group`}
+      className={`${TRAINING_TH} text-center region-training-group`}
     >
       <span className="region-training-group__part">
         Round {round} training
@@ -334,7 +336,7 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
         <td
           key={`r${round}`}
           colSpan={2}
-          className={`${NUMERIC_TD} text-center region-training-cell`}
+          className="px-4 py-3 text-center region-training-cell"
         >
           {trainingCell(region, round, 'Dcp')}
         </td>
@@ -351,7 +353,9 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
 
   const fullTable = (
     <table
-      className="region-leaderboard-table w-full text-sm font-tm-body"
+      className={`region-leaderboard-table w-full text-sm font-tm-body${
+        showTraining ? ' region-leaderboard-table--training' : ''
+      }`}
       aria-label="Region rankings"
     >
       <thead className="border-b border-gray-200 theme-dark:border-gray-700">
@@ -438,7 +442,7 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
                 <th
                   key={c.field}
                   scope="col"
-                  className={`${HEADER_TH} text-right`}
+                  className={`${TRAINING_TH} text-right`}
                 >
                   {METRIC_LABEL[c.metric]}
                 </th>
@@ -460,12 +464,12 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
                 className="flex items-center gap-3 text-tm-loyal-blue hover:underline"
               >
                 <span
-                  className="inline-block px-2 py-0.5 text-xs font-mono rounded bg-tm-loyal-blue/10 text-tm-loyal-blue theme-dark:bg-tm-loyal-blue/30 theme-dark:text-blue-200"
+                  className="inline-block whitespace-nowrap px-2 py-0.5 text-xs font-mono rounded bg-tm-loyal-blue/10 text-tm-loyal-blue theme-dark:bg-tm-loyal-blue/30 theme-dark:text-blue-200"
                   aria-hidden="true"
                 >
                   Region {r.region}
                 </span>
-                <span className="text-gray-700 theme-dark:text-gray-200 text-xs">
+                <span className="whitespace-nowrap text-gray-700 theme-dark:text-gray-200 text-xs">
                   leader: {r.leadingDistrictName}
                 </span>
               </Link>

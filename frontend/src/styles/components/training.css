@@ -328,6 +328,11 @@
   white-space: nowrap;
 }
 
+/* Two header rows: every header sits on the bottom line, by its column. */
+.region-leaderboard-table--training thead th {
+  vertical-align: bottom;
+}
+
 /* "not started" / "not available" read as a state, not a number. */
 .region-training-cell__muted {
   color: var(--ink-3);
