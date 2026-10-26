@@ -112,4 +112,16 @@ describe('regionsTrainingOverview', () => {
     expect(o.forRegion('5').rounds[0].state).toBe('measured')
     expect(o.forRegion('99').rounds[0]).toEqual({ state: 'notAvailable' })
   })
+
+  it('names the round a phone shows: the open one, else the latest started', () => {
+    expect(
+      regionsTrainingOverview(rollups, '2026-10-25', '2026-2027').currentRound
+    ).toBe(1)
+    expect(
+      regionsTrainingOverview(rollups, '2026-11-15', '2026-2027').currentRound
+    ).toBe(2)
+    expect(
+      regionsTrainingOverview(rollups, '2027-04-10', '2026-2027').currentRound
+    ).toBe(2)
+  })
 })

@@ -176,12 +176,14 @@ describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
 })
 
 describe('RegionsLeaderboard officer training <768 (#2330)', () => {
-  /* One chip per round, 4+ over all seven in the cell (as Dist. clubs
-     stacks count over %), so the chips stay within the 375 first-content
-     budget (mobile-375-gate). */
-  it('offers one training column per round: 4+ over all seven', () => {
+  /* ONE training chip, for the round the date ranks on (the open round,
+     else the latest started — the region Training page's rankingRound),
+     4+ over all seven in the cell (as Dist. clubs stacks count over %).
+     Two or four chips pushed the table past the 375 first-content budget
+     (mobile-375-gate); the sheet's full table keeps both rounds. */
+  it('offers the current round as one column: 4+ over all seven', () => {
     mobile.value = true
-    renderBoard(OCT, '/regions?cols=r1Training,score')
+    renderBoard(OCT, '/regions?cols=training,score')
     const heads = within(table())
       .getAllByRole('columnheader')
       .map(th => th.textContent?.trim())
@@ -194,9 +196,9 @@ describe('RegionsLeaderboard officer training <768 (#2330)', () => {
     expect(link).toHaveTextContent('50% all 7')
   })
 
-  it('sorts the round column by 4+', () => {
+  it('sorts the column by 4+', () => {
     mobile.value = true
-    renderBoard(OCT, '/regions?cols=r1Training,score')
+    renderBoard(OCT, '/regions?cols=training,score')
     fireEvent.click(
       within(table()).getByRole('button', { name: /Sort by R1 training/ })
     )
@@ -204,9 +206,16 @@ describe('RegionsLeaderboard officer training <768 (#2330)', () => {
     expect(regionOrder()).toEqual(['/region/02', '/region/01', '/region/03'])
   })
 
-  it('a Round 2 column before November says "not started"', () => {
+  it('once Round 2 opens the column follows it', () => {
     mobile.value = true
-    renderBoard(OCT, '/regions?cols=r2Training,score')
-    expect(within(rowOf('01')).getByText('not started')).toBeInTheDocument()
+    renderBoard(
+      regionsTrainingOverview(FILE, '2026-11-20', '2026-2027'),
+      '/regions?cols=training,score'
+    )
+    expect(
+      within(table())
+        .getAllByRole('columnheader')
+        .map(th => th.textContent?.trim())
+    ).toContain('R2 training')
   })
 })
