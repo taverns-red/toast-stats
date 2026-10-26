@@ -82,6 +82,15 @@ describe('ActionTable < 768 px (#1833)', () => {
     expect(links[0]).toHaveTextContent('Area A/01')
   })
 
+  // #2329: rows bleed to the section edge and long club names wrap to two
+  // lines instead of ellipsizing.
+  it('renders a flush list whose names may wrap', () => {
+    const { container } = renderTable()
+    const list = container.querySelector('.mobile-row-list')
+    expect(list).toHaveClass('mobile-row-list--flush')
+    expect(list).toHaveClass('mobile-row-list--wrap')
+  })
+
   it('keeps the table when the section supplies no mobileRow', () => {
     renderTable(false)
     expect(screen.getByTestId('example-table').tagName).toBe('TABLE')

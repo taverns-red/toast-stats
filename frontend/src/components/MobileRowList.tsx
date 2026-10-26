@@ -4,7 +4,7 @@
  * Lesson 105): a compact row instead of a 125–140 px card or an overflowing
  * table. Each row is
  *
- *   line 1  name (ellipsizes) ............ status chip (never shrinks)   ›
+ *   line 1  name (ellipsizes, or wraps to 2 lines with `wrapTitle`) ... chip ›
  *   line 2  two or three key numbers
  *
  * and the WHOLE row is one real <Link> to the entity's routed page (ADR-005,
@@ -82,6 +82,12 @@ interface MobileRowListProps {
   chipPlacement?: 'title' | 'meta'
   /** Drop side borders/radius so the list can bleed to its panel's edges. */
   flush?: boolean
+  /**
+   * Let a long name wrap to two lines instead of ellipsizing (#2329) — for
+   * lists whose names are the point of the row (club names on the Action
+   * List). A wrapped row grows to 82 px; a one-line row is unchanged.
+   */
+  wrapTitle?: boolean
   /**
    * Row id that must be rendered even past the 50-row cap (e.g. a
    * `?highlight=` deep link) — the list reveals far enough to include it.
@@ -228,9 +234,12 @@ export const MobileRowList: React.FC<MobileRowListProps> = ({
   onToggleGroup,
   chipPlacement = 'title',
   flush = false,
+  wrapTitle = false,
   revealRowId,
 }) => {
-  const rootClass = `mobile-row-list${flush ? ' mobile-row-list--flush' : ''}`
+  const rootClass = `mobile-row-list${flush ? ' mobile-row-list--flush' : ''}${
+    wrapTitle ? ' mobile-row-list--wrap' : ''
+  }`
   const baseId = useId()
   const [localOpen, setLocalOpen] = useState<readonly string[]>([])
   const controlled = openGroupIds !== undefined

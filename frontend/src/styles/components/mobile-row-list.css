@@ -254,6 +254,25 @@
   border-radius: 0;
 }
 
+/* Wrapped names (#2329): a list that opts in (`wrapTitle`) shows a long name
+   on up to two lines at the same 16 px instead of ellipsizing it, so "Milton
+   Escarpment Toastmasters" reads in full on a 320–390 px phone whatever the
+   font. The clamp keeps a pathological third line from growing the row:
+   2 × 22 title + 2 gap + 20 meta + 2 × 8 padding = 82 px at most. One-line
+   rows keep the 56–64 px contract above. */
+.mobile-row-list--wrap .mobile-row {
+  max-height: 82px;
+}
+
+.mobile-row-list--wrap .mobile-row__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* ── Generic row chip (#1833) — for rows whose status is not the club health
    pill (e.g. division recognition). Theme-stable soft tints with dark text,
    like .clubs-status-pill, so contrast holds in both themes; always paired

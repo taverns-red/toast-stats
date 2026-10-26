@@ -153,6 +153,20 @@ describe('MobileRowList — layout options', () => {
     )
     expect(container.querySelector('.mobile-row-list--flush')).not.toBeNull()
   })
+
+  it('wrapTitle opts a list into 2-line names (#2329)', () => {
+    const { container } = render(
+      <MobileRowList label="Clubs" rows={makeRows(1)} noun="clubs" wrapTitle />
+    )
+    expect(container.querySelector('.mobile-row-list--wrap')).not.toBeNull()
+  })
+
+  it('lists wrap no names unless they opt in', () => {
+    const { container } = render(
+      <MobileRowList label="Clubs" rows={makeRows(1)} noun="clubs" />
+    )
+    expect(container.querySelector('.mobile-row-list--wrap')).toBeNull()
+  })
 })
 
 describe('MobileRowList — groups', () => {
@@ -282,5 +296,36 @@ describe('MobileRowList CSS contract (review §5.2 / §5.6)', () => {
     const title = rule('.mobile-row__title')
     expect(title).toMatch(/text-overflow:\s*ellipsis/)
     expect(title).toMatch(/min-width:\s*0/)
+  })
+})
+
+describe('MobileRowList wrapped-name contract (#2329)', () => {
+  const css = readFileSync(
+    resolve(__dirname, '../../styles/components/mobile-row-list.css'),
+    'utf-8'
+  ).replace(/\/\*[\s\S]*?\*\//g, '')
+  const rule = (sel: string): string => {
+    const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const m = new RegExp(`(^|[}\\s])${esc}\\s*\\{([^}]*)\\}`).exec(css)
+    if (!m || m[2] === undefined) throw new Error(`rule not found: ${sel}`)
+    return m[2]
+  }
+
+  // A long club name wraps to at most two lines instead of ellipsizing; the
+  // clamp keeps a third line (a pathological name) from growing the row.
+  it('a wrapped title shows up to 2 lines at the same 16 px', () => {
+    const title = rule('.mobile-row-list--wrap .mobile-row__title')
+    expect(title).toMatch(/white-space:\s*normal/)
+    expect(title).toMatch(/-webkit-line-clamp:\s*2/)
+    expect(title).not.toMatch(/font-size/)
+  })
+
+  // 2 × 22 px title + 2 px gap + 20 px meta + 2 × 8 px padding = 82 px. The
+  // row stays bounded, and a one-line row is still 56–64 px.
+  it('a wrapped row grows to 82 px at most', () => {
+    const row = rule('.mobile-row-list--wrap .mobile-row')
+    const m = /max-height:\s*(\d+)px/.exec(row)
+    expect(Number(m?.[1])).toBe(82)
+    expect(row).not.toMatch(/min-height/)
   })
 })
