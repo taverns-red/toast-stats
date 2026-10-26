@@ -128,7 +128,11 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.locator(FLAT)).toBeVisible()
         const g = await measure(page)
         expect(g.rows.map(r => r.title)).toContain(LONG)
-        expectWhole(g, theme, true)
+        // Whole at 375/390 in any font. At 320 the name box is 166 px: the
+        // name fits two lines in macOS/iOS system-ui (163 px) but not in the
+        // wider Linux fallback on CI, so 320 holds the general rule (no
+        // one-line ellipsis; the clamp only when two lines can't hold it).
+        expectWhole(g, theme, width >= 375)
       })
 
       test('every name that fits two lines reads in full', async ({ page }) => {

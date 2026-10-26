@@ -73,6 +73,12 @@ for (const theme of ['light', 'dark'] as const) {
           badgeOk: inside(badge, r) && !clipped(badge),
           chipOk: inside(chip, r) && !clipped(chip),
           height: Math.round(r.height),
+          titleLines: (() => {
+            const t = row.querySelector('.mobile-row__title')
+            if (!t) return 0
+            const lh = parseFloat(getComputedStyle(t).lineHeight)
+            return Math.round(t.getBoundingClientRect().height / lh)
+          })(),
         }
       })
       return {
@@ -92,7 +98,11 @@ for (const theme of ['light', 'dark'] as const) {
       expect(row.badgeOk, ctx).toBe(true)
       expect(row.chipOk, ctx).toBe(true)
       expect(row.name, ctx).toMatch(/, active coach,/)
-      expect(row.height, ctx).toBeLessThanOrEqual(64)
+      // #2335 (the #2331 rule): a name may wrap to 2 lines beside the badge
+      // instead of ellipsizing; only a wrapped row may grow, to 82 px.
+      expect(row.titleLines, ctx).toBeGreaterThanOrEqual(1)
+      expect(row.titleLines, ctx).toBeLessThanOrEqual(2)
+      expect(row.height, ctx).toBeLessThanOrEqual(row.titleLines > 1 ? 82 : 64)
     }
   })
 }
