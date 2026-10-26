@@ -12,6 +12,7 @@ import { DataControlsBar } from '../components/DataControlsBar'
 import { RegionSubnav } from '../components/rollups/RegionSubnav'
 import { useRegionTrends } from '../hooks/useRegionTrends'
 import { useRegionRollups } from '../hooks/useRegionRollups'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { regionsTrainingOverview } from '../utils/regionTraining'
 import { RegionsTrainingWorld } from '../components/RegionsTrainingWorld'
 
@@ -110,6 +111,9 @@ const RegionsPage: React.FC = () => {
     [regionRollups, trainingDate, selectedProgramYear.label]
   )
 
+  const isPhone = useIsMobile(768)
+  const worldTraining = training && <RegionsTrainingWorld overview={training} />
+
   // Derive (don't sync) the effective selection: a stale selection that a
   // refetch dropped self-heals to "All" at render time, so the user is never
   // stranded on an empty grid — and no setState-in-effect.
@@ -190,7 +194,11 @@ const RegionsPage: React.FC = () => {
         onSelect={setSelectedRegion}
       />
 
-      {training && <RegionsTrainingWorld overview={training} />}
+      {/* World training reference (#2330): above the table from 768,
+          below it on phones so the table stays within the 375
+          first-content budget (mobile-375-gate). Rendered in that place,
+          not moved by CSS, so reading order matches what is seen. */}
+      {!isPhone && worldTraining}
 
       <section className="my-6" aria-labelledby="regions-table-heading">
         <h2 id="regions-table-heading" className="sr-only">
@@ -202,6 +210,8 @@ const RegionsPage: React.FC = () => {
           training={rollupsLoading ? 'loading' : training}
         />
       </section>
+
+      {isPhone && worldTraining}
 
       {dnarCount > 0 && (
         <p className="text-xs text-gray-500 theme-dark:text-gray-400 mt-6 italic">

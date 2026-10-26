@@ -282,17 +282,46 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
     )
   }
 
+  /** The phone training cell (#2330): the current round, 4+ over all
+   *  seven (as Dist. clubs stacks count over %). */
+  const phoneTrainingCell = (
+    region: string,
+    round: TrainingRound
+  ): React.ReactNode => {
+    const r = overview && overview.forRegion(region).rounds[round - 1]!
+    if (!r || r.state !== 'measured') return trainingCell(region, round, 'Dcp')
+    const dcp = formatPct(r.figures.pctDcp)
+    const all = formatPct(r.figures.pctAllSeven)
+    return (
+      <Link
+        to={trainingLink(region)}
+        aria-label={`Region ${region} Round ${round}: ${dcp} of ${METRIC_PHRASE.Dcp}, ${all} with all seven`}
+        className="text-tm-loyal-blue hover:underline"
+      >
+        <span className="block">{dcp}</span>
+        <span className="block text-gray-600 theme-dark:text-gray-300">
+          {all} all 7
+        </span>
+      </Link>
+    )
+  }
+
+  /* Phones get ONE training chip (#2330), for the round the date ranks
+     on: more chips pushed the table past the 375 first-content budget
+     (mobile-375-gate). The sheet's full table keeps both rounds. */
+  const phoneRound: TrainingRound = overview ? overview.currentRound : 1
   const phoneMetrics: PriorityMetric<RegionRollup, SortField>[] = showTraining
     ? [
         ...BASE_PHONE_METRICS,
-        ...TRAINING_COLUMNS.map(c => ({
-          id: c.field,
-          label: `R${c.round} ${c.metric === 'Dcp' ? '4+' : 'all 7'}`,
-          title: `Round ${c.round} officer training: % of ${METRIC_PHRASE[c.metric]}`,
-          ...(sortable(c.round) ? { sortField: c.field } : {}),
-          render: (r: RegionRollup) =>
-            trainingCell(r.region, c.round, c.metric),
-        })),
+        {
+          id: 'training',
+          label: `R${phoneRound} training`,
+          title: `Round ${phoneRound} officer training: % of ${METRIC_PHRASE.Dcp}, and with all seven`,
+          ...(sortable(phoneRound)
+            ? { sortField: `r${phoneRound}Dcp` as SortField }
+            : {}),
+          render: (r: RegionRollup) => phoneTrainingCell(r.region, phoneRound),
+        },
       ]
     : BASE_PHONE_METRICS
 

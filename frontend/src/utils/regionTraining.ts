@@ -173,6 +173,9 @@ export interface RegionsTrainingOverview {
   round2Started: boolean
   /** Round 2's first day in the page's program year. */
   round2Opens: string
+  /** The round a single-round view shows: the open one, else the latest
+   *  started (as `rankingRound`). */
+  currentRound: TrainingRound
 }
 
 const NOT_AVAILABLE: RegionsTrainingBlock = {
@@ -223,5 +226,6 @@ export function regionsTrainingOverview(
       [...regions.values()].some(b => b !== NOT_AVAILABLE),
     round2Started: started(2),
     round2Opens: windows[1]!.start,
+    currentRound: rankingRound(snapshotDate, programYear),
   }
 }
