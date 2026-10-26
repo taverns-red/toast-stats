@@ -1920,6 +1920,13 @@
     background: linear-gradient(to right, rgba(0, 0, 0, 0), var(--surface));
   }
 
+  /* The /regions overview marks its scroller with useScrollEdges (#2334):
+     no hidden columns to the right, no fade over the last one. */
+  .region-rankings__scroll--edges:not([data-more-after])
+    + .region-rankings__scroll-cue {
+    display: none;
+  }
+
   /* #965 — sticky region-identity column for the /regions OVERVIEW leaderboard
      (RegionsLeaderboard). This is a DIFFERENT table from the /region/:n detail
      table above: it is the browser-default `border-collapse: separate` model

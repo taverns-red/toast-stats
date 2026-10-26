@@ -16,6 +16,7 @@ import {
   DEFAULT_TRAINING_THRESHOLD,
   formatPct,
   parseTrainingThreshold,
+  roundMonths,
   roundStatus,
   thresholdOptionLabel,
   trainingPageUrl,
@@ -214,7 +215,7 @@ const RegionTrainingPage: React.FC = () => {
                         Round {round}
                       </span>{' '}
                       <span className="region-training-table__round-part">
-                        {round === 1 ? '(Jun–Aug)' : '(Nov–Feb)'}
+                        {roundMonths(round)}
                       </span>
                       {upcoming(round) && (
                         <>

@@ -8,10 +8,16 @@
  * 0%.
  */
 import { getOfficerTrainingRounds } from '@taverns-red/analytics-core'
-import type { RegionRollups } from '@taverns-red/shared-contracts'
+import type {
+  OfficerTrainingDistribution,
+  RegionRollups,
+} from '@taverns-red/shared-contracts'
+import { normaliseRegionId } from './regionId'
 import {
+  DEFAULT_TRAINING_THRESHOLD,
   figuresFromDistribution,
   roundDistribution,
+  roundStatus,
   trainingRoundContext,
   type RoundFigures,
   type TrainingRound,
@@ -141,4 +147,85 @@ export function ordinal(n: number): string {
   const tens = n % 100
   if (tens >= 11 && tens <= 13) return `${n}th`
   return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
+}
+
+/** One round of a region (or the world) on the /regions overview (#2330). */
+export type RegionsTrainingRound =
+  | { state: 'measured'; figures: RoundFigures }
+  /** The round had not opened on the date: every club reads 0, so no %. */
+  | { state: 'notStarted'; opens: string }
+  /** The date's file has no officer-training figures for this block. */
+  | { state: 'notAvailable' }
+
+export interface RegionsTrainingBlock {
+  rounds: [RegionsTrainingRound, RegionsTrainingRound]
+}
+
+export interface RegionsTrainingOverview {
+  world: RegionsTrainingBlock
+  /** By two-digit region id ("01".."14"). */
+  regions: ReadonlyMap<string, RegionsTrainingBlock>
+  /** A region's block however its id is spelled; absent = not available. */
+  forRegion: (regionId: string) => RegionsTrainingBlock
+  /** Any figure at all on this date (false: a file before the field). */
+  available: boolean
+  /** Round 2 had opened on the date. */
+  round2Started: boolean
+  /** Round 2's first day in the page's program year. */
+  round2Opens: string
+  /** The round a single-round view shows: the open one, else the latest
+   *  started (as `rankingRound`). */
+  currentRound: TrainingRound
+}
+
+const NOT_AVAILABLE: RegionsTrainingBlock = {
+  rounds: [{ state: 'notAvailable' }, { state: 'notAvailable' }],
+}
+
+/**
+ * Every region's and the world's officer training for the /regions overview
+ * (#2330), at the region Training page's own default thresholds: % of clubs
+ * with 4+ officers trained (DCP goal 9) and with all seven, per round. One
+ * read of the date's `region-rollups.json`; the program year and date are
+ * the page's own (R3).
+ */
+export function regionsTrainingOverview(
+  rollups: RegionRollups | null,
+  snapshotDate: string,
+  programYear: string
+): RegionsTrainingOverview {
+  const windows = getOfficerTrainingRounds(programYear)
+  const started = (round: TrainingRound) =>
+    roundStatus(windows[round - 1]!, snapshotDate) !== 'upcoming'
+  const block = (
+    training: OfficerTrainingDistribution | null | undefined
+  ): RegionsTrainingBlock => {
+    if (!training) return NOT_AVAILABLE
+    const round = (r: TrainingRound): RegionsTrainingRound =>
+      started(r)
+        ? {
+            state: 'measured',
+            figures: figuresFromDistribution(
+              roundDistribution(training, r),
+              DEFAULT_TRAINING_THRESHOLD
+            ),
+          }
+        : { state: 'notStarted', opens: windows[r - 1]!.start }
+    return { rounds: [round(1), round(2)] }
+  }
+  const regions = new Map<string, RegionsTrainingBlock>()
+  for (const [id, region] of Object.entries(rollups?.regions ?? {}))
+    regions.set(normaliseRegionId(id), block(region.officerTraining))
+  const world = block(rollups?.world.officerTraining)
+  return {
+    world,
+    regions,
+    forRegion: id => regions.get(normaliseRegionId(id)) ?? NOT_AVAILABLE,
+    available:
+      world !== NOT_AVAILABLE ||
+      [...regions.values()].some(b => b !== NOT_AVAILABLE),
+    round2Started: started(2),
+    round2Opens: windows[1]!.start,
+    currentRound: rankingRound(snapshotDate, programYear),
+  }
 }
