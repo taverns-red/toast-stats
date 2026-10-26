@@ -112,6 +112,7 @@ const SUITES: readonly Suite[] = [
       '/region/05/growth',
       '/region/05/growth/survival',
       '/region/05/map',
+      '/regions/map',
       '/region/05/education',
       '/region/05/meetings',
       '/region/05/training',
@@ -263,6 +264,13 @@ for (const s of SUITES) {
             await expect(
               page.locator(BAR).getByRole('link', { name, exact: true }),
               name
+            ).toHaveCount(1)
+            // #2318 — and no other link on the page shares the name: two
+            // "Map" links to different places (the section and the map
+            // page's list/map switch) read the same to a screen reader.
+            await expect(
+              page.getByRole('link', { name, exact: true }),
+              `page-wide links named ${name}`
             ).toHaveCount(1)
           }
 
