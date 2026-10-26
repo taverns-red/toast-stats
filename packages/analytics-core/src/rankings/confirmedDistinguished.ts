@@ -17,7 +17,10 @@
  */
 
 import { normalizeClubId } from '@taverns-red/shared-contracts'
-import { getConfirmedDistinguishedLevel } from '../analytics/ClubEligibilityUtils.js'
+import {
+  getCSPStatusFromRecord,
+  getConfirmedDistinguishedLevel,
+} from '../analytics/ClubEligibilityUtils.js'
 
 type CsvRow = Record<string, string | number | null | undefined>
 
@@ -50,8 +53,12 @@ export function aprilRenewalsByClub(
  * membership count) is not NotDistinguished. A club with no district-
  * performance row has no known renewals and is not counted.
  *
+ * A club that has not submitted its Club Success Plan cannot be Distinguished
+ * at any rung, the same gate `determineDistinguishedLevelAtSnapshot` applies
+ * (#2323). A missing CSP column (pre-2025-2026 data) counts as submitted.
+ *
  * @param clubPerformance - club-performance.csv rows ("Club Number",
- *   "Goals Met", "Mem. Base")
+ *   "Goals Met", "Mem. Base", "CSP")
  * @param districtPerformance - district-performance.csv rows ("Club",
  *   "Apr. Ren.")
  * @param programYear - "YYYY-YYYY", so a rung that did not exist that year
@@ -67,6 +74,7 @@ export function countConfirmedDistinguishedClubs(
   for (const club of clubPerformance) {
     const clubId = normalizeClubId(club['Club Number'])
     if (!clubId) continue
+    if (!getCSPStatusFromRecord(club)) continue
     const aprilRenewals = renewals.get(clubId)
     if (aprilRenewals === undefined) continue
     const level = getConfirmedDistinguishedLevel(
