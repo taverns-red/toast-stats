@@ -176,21 +176,37 @@ describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
 })
 
 describe('RegionsLeaderboard officer training <768 (#2330)', () => {
-  it('offers the training figures as phone columns', () => {
+  /* One chip per round, 4+ over all seven in the cell (as Dist. clubs
+     stacks count over %), so the chips stay within the 375 first-content
+     budget (mobile-375-gate). */
+  it('offers one training column per round: 4+ over all seven', () => {
     mobile.value = true
-    renderBoard(OCT, '/regions?cols=r1Dcp,r1AllSeven')
+    renderBoard(OCT, '/regions?cols=r1Training,score')
     const heads = within(table())
       .getAllByRole('columnheader')
       .map(th => th.textContent?.trim())
-    expect(heads).toEqual(['Region', 'R1 4+', 'R1 all 7'])
-    expect(
-      within(rowOf('02')).getByRole('link', { name: /Region 02 Round 1: 75%/ })
-    ).toHaveAttribute('href', '/region/02/training')
+    expect(heads).toEqual(['Region', 'R1 training', 'Score'])
+    const link = within(rowOf('02')).getByRole('link', {
+      name: /Region 02 Round 1: 75% of clubs with 4\+ officers .*50% with all seven/,
+    })
+    expect(link).toHaveAttribute('href', '/region/02/training')
+    expect(link).toHaveTextContent('75%')
+    expect(link).toHaveTextContent('50% all 7')
+  })
+
+  it('sorts the round column by 4+', () => {
+    mobile.value = true
+    renderBoard(OCT, '/regions?cols=r1Training,score')
+    fireEvent.click(
+      within(table()).getByRole('button', { name: /Sort by R1 training/ })
+    )
+    expect(screen.getByTestId('where').textContent).toContain('sort=r1Dcp')
+    expect(regionOrder()).toEqual(['/region/02', '/region/01', '/region/03'])
   })
 
   it('a Round 2 column before November says "not started"', () => {
     mobile.value = true
-    renderBoard(OCT, '/regions?cols=r2Dcp,score')
+    renderBoard(OCT, '/regions?cols=r2Training,score')
     expect(within(rowOf('01')).getByText('not started')).toBeInTheDocument()
   })
 })
