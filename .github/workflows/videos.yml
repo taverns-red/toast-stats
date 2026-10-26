@@ -98,6 +98,71 @@ jobs:
           sudo apt-get install -y -q ffmpeg
           npx playwright install --with-deps chromium
 
+      # The live site's mobile rows use `system-ui, -apple-system, "Segoe UI",
+      # Arial, sans-serif` with no web font, so on a bare runner Chromium
+      # resolves them to DejaVu Sans, which is far wider than a phone's UI
+      # font and truncates club names in the mobile capture. Install Inter
+      # (Google Fonts' static 400/500/600/700 TTFs, pinned to release v20 and
+      # checked by SHA-256) and make it the runner's system-ui / sans-serif.
+      # The composition itself loads the app's own Inter and Montserrat woff2.
+      - name: Install Inter as the system UI font
+        run: |
+          set -euo pipefail
+          dir="$HOME/.local/share/fonts/inter"
+          mkdir -p "$dir"
+          base='https://fonts.gstatic.com/s/inter/v20'
+          prefix='UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVu'
+          while read -r sha suffix; do
+            file="${prefix}${suffix}.ttf"
+            curl -fsSL --retry 3 -o "$dir/$file" "$base/$file"
+            echo "$sha  $dir/$file" | sha256sum -c -
+          done <<'FONTS'
+          1b08e7fc267a5c7e1d614100f604b83e7e8a0be241f0f288faa2b3ac93a683ba LyfMZg
+          8c883f63b2c4157d997319f2c8bc6995ed4357ef371940d31ca159004a4aae63 I6fMZg
+          e7a1aaf7eda9f2fad4131725fa556265ec75ca7b2d756260173a040363e8d4f7 GKYMZg
+          b37284b5701b6b168dfc770aa1a4ac492106422fd3ba76bc7641e37434e8019c FuYMZg
+          FONTS
+          mkdir -p "$HOME/.config/fontconfig"
+          cat > "$HOME/.config/fontconfig/fonts.conf" <<'CONF'
+          <?xml version="1.0"?>
+          <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+          <fontconfig>
+            <alias binding="strong">
+              <family>system-ui</family><prefer><family>Inter</family></prefer>
+            </alias>
+            <alias binding="strong">
+              <family>sans-serif</family><prefer><family>Inter</family></prefer>
+            </alias>
+            <alias binding="strong">
+              <family>sans</family><prefer><family>Inter</family></prefer>
+            </alias>
+          </fontconfig>
+          CONF
+          fc-cache -f
+
+      - name: Check Inter is installed and is the UI font
+        run: |
+          set -euo pipefail
+          # Read fc-list once: `grep -q` closing the pipe early would fail
+          # the step under pipefail (R14).
+          fc-list : family style > "$RUNNER_TEMP/fonts.txt"
+          grep -E '^Inter' "$RUNNER_TEMP/fonts.txt" | sort
+          for weight in Regular Medium SemiBold Bold; do
+            grep -q "^Inter.*$weight" "$RUNNER_TEMP/fonts.txt" \
+              || { echo "::error::Inter $weight is not installed"; exit 1; }
+          done
+          # fc-match patterns treat '-' as a size separator, so escape it.
+          for family in 'system\-ui' 'sans\-serif' 'sans' 'sans\-serif:semibold'; do
+            match=$(fc-match "$family")
+            echo "$family -> $match"
+            case "$match" in
+              *'"Inter"'*) ;;
+              *) echo "::error::$family resolves to $match, not Inter"; exit 1 ;;
+            esac
+          done
+          fc-match 'sans\-serif:semibold' | grep -q '"SemiBold"' \
+            || { echo "::error::sans-serif semibold is not Inter SemiBold"; exit 1; }
+
       - name: Capture and render
         env:
           SCENARIO: ${{ steps.args.outputs.scenario }}
