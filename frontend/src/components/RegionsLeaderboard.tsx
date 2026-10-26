@@ -315,7 +315,9 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
         ...BASE_PHONE_METRICS,
         {
           id: 'training',
-          label: `R${phoneRound} training`,
+          // "R1 training" ellipsized at 375 with Linux fonts; the round is
+          // in the title and each cell's accessible name.
+          label: 'Training',
           title: `Round ${phoneRound} officer training: % of ${METRIC_PHRASE.Dcp}, and with all seven`,
           ...(sortable(phoneRound)
             ? { sortField: `r${phoneRound}Dcp` as SortField }

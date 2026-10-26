@@ -48,7 +48,7 @@ for (const theme of THEMES) {
       const table = page.locator('table[aria-label="Region rankings"]').first()
       await table.waitFor({ state: 'visible', timeout: 30_000 })
       if (phone) {
-        await expect(table.locator('thead')).toContainText(/R[12] training/)
+        await expect(table.locator('thead')).toContainText('Training')
       } else {
         await expect(table.locator('thead')).toContainText('Round 1 training')
         await expect(table.locator('thead')).toContainText('Round 2 training')
