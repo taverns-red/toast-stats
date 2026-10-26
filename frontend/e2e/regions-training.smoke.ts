@@ -89,7 +89,8 @@ for (const theme of THEMES) {
 /* The leaderboard fits its container at desktop widths (#2330 review): the
  * training columns once pushed the table past its scroller at 1280, clipping
  * the Round 2 "All 7" header. At 1024 and 1280 the whole table — every
- * header cell — must be visible without scrolling the table sideways. */
+ * header cell — must be visible without scrolling the table sideways, and
+ * the right-edge "more" fade must not sit over the last column. */
 for (const theme of THEMES) {
   for (const width of [1024, 1280]) {
     test(`regions leaderboard fits without side-scroll at ${width}px (${theme})`, async ({
@@ -123,6 +124,9 @@ for (const theme of THEMES) {
       const ctx = JSON.stringify(m)
       expect(m.tableWidth, ctx).toBeLessThanOrEqual(m.containerWidth)
       expect(m.clipped, ctx).toEqual([])
+      // Nothing to scroll to, so no "more to the right" fade over the last
+      // column (it read as clipping in the first 1280 screenshot).
+      await expect(page.locator('.region-rankings__scroll-cue')).toBeHidden()
     })
   }
 }
