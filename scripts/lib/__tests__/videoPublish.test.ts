@@ -36,6 +36,7 @@ import {
   assertPruneDeletionScope,
 } from '../pruneGcsDeletions.js'
 import { RUNS_PREFIX, expiredRunPrefixes } from '../runManifest.js'
+import { outputName } from '../../../videos/src/scenarios/cliArgs'
 
 const overlaps = (a: string, b: string) => a.startsWith(b) || b.startsWith(a)
 
@@ -133,17 +134,21 @@ describe('assertVideoDestination (#2310)', () => {
 })
 
 describe('planVideoPublish (#2310)', () => {
-  it('maps the artifact files to their CDN objects', () => {
+  // The names videos.yml really uploads: run 40330015998's ffprobe log and
+  // artifact hold v2.mp4 (desktop) and v2-mobile.mp4.
+  const RENDERED = ['v2.mp4', 'v2-mobile.mp4']
+
+  it('maps the real render file names to their CDN objects', () => {
     expect(
       planVideoPublish({
         scenario: 'v2',
         version: '2026-10-26',
-        files: ['v2-mobile.mp4', 'v2-desktop.mp4'],
+        files: RENDERED,
       })
     ).toEqual([
       {
         format: 'desktop',
-        file: 'v2-desktop.mp4',
+        file: 'v2.mp4',
         object: 'videos/v2/2026-10-26/v2-desktop.mp4',
         url: 'https://cdn.taverns.red/videos/v2/2026-10-26/v2-desktop.mp4',
       },
@@ -156,14 +161,28 @@ describe('planVideoPublish (#2310)', () => {
     ])
   })
 
+  it('expects the file names the render CLI writes (outputName)', () => {
+    const plan = planVideoPublish({
+      scenario: 'club-search',
+      version: 'r1',
+      files: VIDEO_FORMATS.map(f => `${outputName('club-search', f)}.mp4`),
+    })
+    for (const item of plan) {
+      expect(item.file).toBe(`${outputName('club-search', item.format)}.mp4`)
+    }
+  })
+
   it('refuses an artifact missing a format', () => {
+    expect(() =>
+      planVideoPublish({ scenario: 'v2', version: 'r1', files: ['v2.mp4'] })
+    ).toThrow(/v2-mobile\.mp4/)
     expect(() =>
       planVideoPublish({
         scenario: 'v2',
         version: 'r1',
-        files: ['v2-desktop.mp4'],
+        files: ['v2-mobile.mp4'],
       })
-    ).toThrow(/v2-mobile\.mp4/)
+    ).toThrow(/missing v2\.mp4/)
   })
 
   it('refuses an artifact holding anything else', () => {
@@ -171,14 +190,14 @@ describe('planVideoPublish (#2310)', () => {
       planVideoPublish({
         scenario: 'v2',
         version: 'r1',
-        files: ['v2-desktop.mp4', 'v2-mobile.mp4', 'v2.mp4'],
+        files: [...RENDERED, 'v2-desktop.mp4'],
       })
-    ).toThrow(/unexpected.*v2\.mp4/)
+    ).toThrow(/unexpected.*v2-desktop\.mp4/)
     expect(() =>
       planVideoPublish({
         scenario: 'v2',
         version: 'r1',
-        files: ['v2-desktop.mp4', 'v2-mobile.mp4', 'v3-desktop.mp4'],
+        files: [...RENDERED, 'v3.mp4'],
       })
     ).toThrow(/unexpected/)
   })
