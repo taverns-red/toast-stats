@@ -19,9 +19,43 @@ Rendered videos are **never committed** — not to the source tree and not to
   30 days. It runs on manual dispatch (pick the scenario and
   desktop / mobile / both) and on PRs that change `videos/**`, where a sticky
   comment links the artifact. It holds no cloud credentials.
-- **Publishing** final videos (to the site, a CDN, YouTube or anywhere else)
-  is a separate step that needs approval, and its destination is not decided
-  yet. Nothing here publishes.
+- **Publishing** a reviewed render to our CDN is a separate, manual workflow;
+  see [Publishing to the CDN](#publishing-to-the-cdn). Nothing in the render
+  workflow publishes.
+
+## Publishing to the CDN
+
+[`Videos publish (manual)`](../.github/workflows/videos-publish.yml) (#2310)
+copies a reviewed render from its Actions artifact to
+`videos/<scenario>/<version>/<scenario>-desktop.mp4` and `-mobile.mp4`,
+served at `https://cdn.taverns.red/videos/…` (prod) and
+`https://cdn-staging.taverns.red/videos/…` (PR previews). It uses the data
+buckets the CDN already serves, so it needs no new infrastructure.
+
+**Every publish needs Ron's approval for that publish.** The approval names
+the source run id and the version label. One approval covers one dispatch.
+
+1. Render and review: a `Videos` run (a PR's or a manual dispatch) uploads
+   the artifact `videos-<scenario>-<run id>`.
+2. Dispatch `Videos publish (manual)` with `run_id`, `scenario` and a new
+   `version` (e.g. `2026-10-26`), leaving `dry_run` ticked. The dry run
+   checks that the source is a successful `videos.yml` run, downloads the
+   artifact, ffprobes it (h264/yuv420p/bt709 + AAC), checks that no object
+   exists at the target, and lists the URLs it would write.
+3. With the approval, dispatch again with `dry_run` unticked. It uploads to
+   staging, copies that object to prod server side, and verifies the size,
+   MD5, headers and a `206` range response from `cdn.taverns.red`.
+
+Rules, enforced by `scripts/lib/__tests__/videoPublish*.test.ts`:
+
+- The destination is only ever `videos/…`. Promotion, the content gates,
+  prune and the GCS lifecycle rules never touch it.
+- Objects are immutable (`--no-clobber`, and an existing object fails the
+  run). A new render gets a new version label, and a page switches to it by
+  changing its URL. Headers are `video/mp4` and
+  `public, max-age=31536000, immutable, no-transform`.
+- Deleting a published video is a manual `gcloud storage rm` and needs its
+  own approval.
 
 ## Commands
 
