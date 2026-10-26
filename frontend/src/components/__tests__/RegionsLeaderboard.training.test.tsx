@@ -111,7 +111,7 @@ const regionOrder = () =>
     .filter(h => /^\/region\/\d+$/.test(h ?? ''))
 
 describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
-  it('groups Round 1 and Round 2 training columns at 4+ and All 7', () => {
+  it('Round 1 has 4+ and All 7; Round 2 before it opens is ONE column', () => {
     renderBoard(OCT)
     const heads = within(table())
       .getAllByRole('columnheader')
@@ -120,8 +120,37 @@ describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
     expect(
       heads.some(h => /^Round 2 training.*opens Nov 1/.test(h ?? ''))
     ).toBe(true)
+    // Review of #2334: two "not started" columns overflowed the table at
+    // 1024. Until it opens, Round 2 is one narrow column.
+    expect(heads.filter(h => h === '4+')).toHaveLength(1)
+    expect(heads.filter(h => h === 'All 7')).toHaveLength(1)
+    const r2 = within(table()).getByRole('columnheader', {
+      name: /^Round 2 training/,
+    })
+    expect(r2).not.toHaveAttribute('colspan', '2')
+    const cells = within(rowOf('01')).getAllByRole('cell')
+    expect(cells.filter(td => td.textContent === 'not started')).toHaveLength(1)
+    expect(
+      cells.find(td => td.textContent === 'not started')
+    ).not.toHaveAttribute('colspan')
+  })
+
+  it('once Round 2 opens it expands to 4+ and All 7', () => {
+    renderBoard(regionsTrainingOverview(FILE, '2026-11-20', '2026-2027'))
+    const heads = within(table())
+      .getAllByRole('columnheader')
+      .map(th => th.textContent?.trim())
     expect(heads.filter(h => h === '4+')).toHaveLength(2)
     expect(heads.filter(h => h === 'All 7')).toHaveLength(2)
+  })
+
+  it('a date with no figures at all: one "not available" column per round', () => {
+    renderBoard(regionsTrainingOverview(null, '2026-10-01', '2026-2027'))
+    const heads = within(table())
+      .getAllByRole('columnheader')
+      .map(th => th.textContent?.trim())
+    expect(heads.filter(h => h === '4+')).toHaveLength(0)
+    expect(within(rowOf('01')).getAllByText('not available')).toHaveLength(2)
   })
 
   it('shows each region’s Round 1 figures linking to its Training page', () => {
