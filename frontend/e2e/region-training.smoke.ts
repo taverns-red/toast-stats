@@ -37,21 +37,36 @@ for (const theme of ['light', 'dark'] as const) {
           '[data-testid="region-training-table"] th[scope="colgroup"]'
         )
         for (const th of heads) {
+          // The header's text may be split over several text nodes; map
+          // each phrase's offsets in the whole text back to nodes.
+          const nodes: Array<{ node: Text; start: number }> = []
+          let full = ''
           const walker = document.createTreeWalker(th, NodeFilter.SHOW_TEXT)
           for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-            const text = n.textContent ?? ''
-            for (const re of phrases) {
-              const m = re.exec(text)
-              if (!m) continue
-              const range = document.createRange()
-              range.setStart(n, m.index)
-              range.setEnd(n, m.index + m[0].length)
-              // One line = every fragment shares the first one's top.
-              const tops = new Set(
-                Array.from(range.getClientRects()).map(r => Math.round(r.top))
-              )
-              out.push({ text: m[0], lines: tops.size })
-            }
+            nodes.push({ node: n as Text, start: full.length })
+            full += n.textContent ?? ''
+          }
+          const at = (offset: number, isEnd: boolean) => {
+            const hit = nodes.findLast(x =>
+              isEnd ? x.start < offset : x.start <= offset
+            )!
+            return { node: hit.node, offset: offset - hit.start }
+          }
+          for (const re of phrases) {
+            const m = re.exec(full)
+            if (!m) continue
+            const a = at(m.index, false)
+            const b = at(m.index + m[0].length, true)
+            const range = document.createRange()
+            range.setStart(a.node, a.offset)
+            range.setEnd(b.node, b.offset)
+            // One line = every fragment shares the first one's top.
+            const tops = new Set(
+              Array.from(range.getClientRects())
+                .filter(r => r.width > 0)
+                .map(r => Math.round(r.top))
+            )
+            out.push({ text: m[0], lines: tops.size })
           }
         }
         return out
