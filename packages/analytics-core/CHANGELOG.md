@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.1](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.23.0...analytics-core-v1.23.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* **rankings:** confirmed-Distinguished count requires a submitted CSP ([#2323](https://github.com/taverns-red/toast-stats/issues/2323)) ([#2326](https://github.com/taverns-red/toast-stats/issues/2326)) ([8d0c1ea](https://github.com/taverns-red/toast-stats/commit/8d0c1ea73edce0ab94da8c332b0a9917345d06f6))
+
 ## [1.23.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.22.1...analytics-core-v1.23.0) (2026-10-25)
 
 
