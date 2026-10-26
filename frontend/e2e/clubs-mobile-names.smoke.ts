@@ -9,8 +9,9 @@ import { test, expect, type Page } from './fixtures/test'
  *
  * Measured on the deployed build (BASE_URL) by bounding box (Lesson 134), on
  * a flat list (a non-default sort flattens the grouped view: 50 rows) and on
- * a search for the long name: every visible title shows its whole text (no
- * horizontal clip from an ellipsis, no vertical clip from the 2-line clamp),
+ * a search for the long name: the long name shows its whole text, and in the
+ * flat list no title ellipsizes on one line and none that fits two lines is
+ * cut by the 2-line clamp,
  * titles stay 16 px on ≤ 2 lines, one-line rows stay 56–64 px and only a
  * wrapped row may grow, to ≤ 82 px. Rows sit inside the viewport and the page
  * never scrolls sideways with the `overflow-x:hidden` mask off. */
@@ -36,6 +37,8 @@ interface Geometry {
     title: string
     clipX: boolean
     clipY: boolean
+    /** The name fits two lines of this box (best word split, exact width). */
+    fitsTwoLines: boolean
     titlePx: number
     lines: number
     height: number
@@ -55,10 +58,21 @@ async function measure(page: Page): Promise<Geometry> {
         const t = row.querySelector('.mobile-row__title') as HTMLElement
         const r = row.getBoundingClientRect()
         const cs = getComputedStyle(t)
+        const ctx = document.createElement('canvas').getContext('2d')!
+        ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`
+        const words = (t.textContent ?? '').trim().split(/\s+/)
+        const w = (from: number, to: number) =>
+          ctx.measureText(words.slice(from, to).join(' ')).width
+        // Greedy line breaking fills two lines whenever some word split does.
+        let best = Infinity
+        for (let k = 1; k <= words.length; k++) {
+          best = Math.min(best, Math.max(w(0, k), w(k, words.length)))
+        }
         return {
           title: t.textContent ?? '',
           clipX: t.scrollWidth > t.clientWidth + 0.5,
           clipY: t.scrollHeight > t.clientHeight + 0.5,
+          fitsTwoLines: best <= t.getBoundingClientRect().width,
           titlePx: parseFloat(cs.fontSize),
           lines: Math.round(
             t.getBoundingClientRect().height / parseFloat(cs.lineHeight)
@@ -77,7 +91,12 @@ async function measure(page: Page): Promise<Geometry> {
   }, ROW)
 }
 
-function expectWhole(g: Geometry, theme: string): void {
+/** Row contract with wrapTitle: never an ellipsis on one line, ≤ 2 lines,
+ * 56–64 px unless wrapped (≤ 82 px). `strict` — every name must be whole;
+ * otherwise only a name too long for two lines may end in the clamp's
+ * ellipsis (about 1 in 100 at 375, e.g. "Speak With Spark PMI Lakeshore,
+ * Ontario Toastmasters Club"; more at 320). */
+function expectWhole(g: Geometry, theme: string, strict: boolean): void {
   const ctx = JSON.stringify({ ...g, rows: g.rows.length })
   expect(g.theme, ctx).toBe(theme)
   expect(g.docOverflow, ctx).toBeLessThanOrEqual(0)
@@ -85,7 +104,8 @@ function expectWhole(g: Geometry, theme: string): void {
   for (const r of g.rows) {
     const rc = JSON.stringify(r)
     expect(r.clipX, rc).toBe(false)
-    expect(r.clipY, rc).toBe(false)
+    if (strict) expect(r.fitsTwoLines, rc).toBe(true)
+    if (r.fitsTwoLines) expect(r.clipY, rc).toBe(false)
     expect(r.titlePx, rc).toBeGreaterThanOrEqual(16)
     expect(r.lines, rc).toBeLessThanOrEqual(2)
     expect(r.height, rc).toBeGreaterThanOrEqual(56)
@@ -108,14 +128,14 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.locator(FLAT)).toBeVisible()
         const g = await measure(page)
         expect(g.rows.map(r => r.title)).toContain(LONG)
-        expectWhole(g, theme)
+        expectWhole(g, theme, true)
       })
 
-      test('every name in the flat list reads in full', async ({ page }) => {
+      test('every name that fits two lines reads in full', async ({ page }) => {
         await load(page, `${CLUBS}?sort=membership&dir=desc`)
         await expect(page.locator(FLAT)).toBeVisible()
         await expect(page.locator(`${ROW}:visible`)).toHaveCount(50)
-        expectWhole(await measure(page), theme)
+        expectWhole(await measure(page), theme, false)
       })
     })
   }
