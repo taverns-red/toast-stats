@@ -53,8 +53,15 @@ const GCS_CONDITIONS = [
   'sizeBelowBytes',
 ]
 const MULTIPART_CONDITIONS = ['age', 'matchesPrefix', 'matchesSuffix']
-// Published, user-facing data and the immutable basemap are never aged out.
-const PROTECTED_PREFIXES = ['snapshots/', 'basemap/', 'config/', 'time-series/']
+// Published, user-facing data, the immutable basemap and published videos
+// (#2310) are never aged out.
+const PROTECTED_PREFIXES = [
+  'snapshots/',
+  'basemap/',
+  'config/',
+  'time-series/',
+  'videos/',
+]
 
 interface GcsRule {
   action: { type: string; storageClass?: string }

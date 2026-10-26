@@ -1,0 +1,232 @@
+# Publish a reviewed how-to video render to the CDN (#2310).
+#
+# Takes the artifact of a successful Videos run (videos.yml), re-verifies the
+# encoding with ffprobe, and publishes it to
+#   videos/<scenario>/<version>/<scenario>-desktop.mp4 and -mobile.mp4
+# on the staging bucket (cdn-staging.taverns.red, read by PR previews) and,
+# by a server-side copy of that object, the prod bucket (cdn.taverns.red).
+# No new infrastructure: the CDN already serves both buckets, the same
+# placement as the basemap (ADR-016).
+#
+# Approval: every publish is a GCS write and needs Ron's approval for that
+# publish (run id + version). Only Ron, or the orchestrator acting on that
+# approval, dispatches it. It never runs on a schedule or a push.
+# dry_run (default true) downloads and verifies but writes nothing.
+#
+# Write rules, guarded by scripts/lib/__tests__/videoPublishWorkflow.test.ts:
+# - Destinations come only from scripts/plan-video-publish.ts
+#   (scripts/lib/videoPublish.ts) and are re-checked in shell. Never a data
+#   prefix; the pipeline's promotion, gates, prune and lifecycle rules never
+#   reach videos/ (scripts/lib/__tests__/videoPublish.test.ts).
+# - Immutable: existing objects are refused up front and every copy is
+#   `--no-clobber`. A new render is a new version label.
+# - video/mp4, `public, max-age=31536000, immutable, no-transform`, no gzip.
+#   The CDN caps its own TTLs (backend maxTtl 86400, clientTtl 3600);
+#   immutability is what makes the long header safe.
+# - No parallel composite upload, so GCS keeps the MD5 the CDN validates on.
+#
+# Renders are never committed (Ron, PR #2295); they move from the Actions
+# artifact to the bucket on the runner only.
+name: Videos publish (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Videos workflow run id whose artifact was reviewed'
+        required: true
+        type: string
+      scenario:
+        description: 'Scenario id of that render (e.g. v2)'
+        required: true
+        default: 'v2'
+        type: string
+      version:
+        description: 'Version label, e.g. 2026-10-26 (lowercase, digits, . or -)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Download and verify only: write nothing. Untick to publish.'
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: videos-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read # download another run's artifact
+  id-token: write # Workload Identity Federation
+
+env:
+  GCS_BUCKET: 'toast-stats-data-staging'
+  GCS_BUCKET_PRODUCTION: 'toast-stats-data-ca'
+  CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_ENABLED: 'False'
+
+jobs:
+  publish:
+    name: Publish reviewed render
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    env:
+      RUN_ID: ${{ inputs.run_id }}
+      SCENARIO: ${{ inputs.scenario }}
+      VERSION: ${{ inputs.version }}
+      DIR: ${{ github.workspace }}/.video-publish
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the source run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo "::error::run_id must be a number"; exit 1
+          fi
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" \
+            --jq '{path, conclusion, head_branch, head_sha, event, created_at}' > /tmp/source-run.json
+          cat /tmp/source-run.json
+          jq -e '.path == ".github/workflows/videos.yml" and .conclusion == "success"' /tmp/source-run.json \
+            || { echo "::error::run ${RUN_ID} is not a successful run of .github/workflows/videos.yml"; exit 1; }
+
+      - name: Download the render artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$DIR"
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "videos-${SCENARIO}-${RUN_ID}" --dir "$DIR"
+          ls -la "$DIR"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Plan the objects
+        run: |
+          set -euo pipefail
+          npx tsx scripts/plan-video-publish.ts "$SCENARIO" "$VERSION" "$DIR" > /tmp/plan.json
+          jq . /tmp/plan.json
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg
+
+      # Same contract as the render job: h264/yuv420p tagged bt709 with AAC
+      # (videos/src/output/encoding.ts). Re-checked on the bytes we publish.
+      - name: Verify render encoding (ffprobe)
+        run: npm run -s videos:verify -- "$DIR"/*.mp4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          # Exact pin (#1720), same as data-pipeline.yml.
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        run: gcloud version
+
+      - name: Refuse to overwrite existing objects
+        run: |
+          set -euo pipefail
+          SHAPE='^videos/[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+([.-][a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*-(desktop|mobile)\.mp4$'
+          EXISTS=0
+          while IFS=$'\t' read -r _ OBJ; do
+            [[ "$OBJ" =~ $SHAPE ]] || { echo "::error::refusing '${OBJ}': not a video object"; exit 1; }
+            for URI in "gs://${GCS_BUCKET}/${OBJ}" "gs://${GCS_BUCKET_PRODUCTION}/${OBJ}"; do
+              if gcloud storage objects describe "$URI" > /dev/null 2>&1; then
+                echo "::error::${URI} already exists; published videos are immutable, use a new version"
+                EXISTS=1
+              fi
+            done
+          done < <(jq -r '.[] | [.file, .object] | @tsv' /tmp/plan.json)
+          exit "$EXISTS"
+
+      - name: Dry run — stop before writing
+        if: inputs.dry_run
+        run: |
+          {
+            echo "### Dry run: nothing written"
+            echo "Source: run ${RUN_ID} (artifact videos-${SCENARIO}-${RUN_ID}), ffprobe OK."
+            echo "Would publish:"
+            jq -r '.[] | "- \(.file) -> \(.url)"' /tmp/plan.json
+            echo ""
+            echo "Re-dispatch with dry_run=false once Ron has approved this publish."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload to staging
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          SHAPE='^videos/[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+([.-][a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*-(desktop|mobile)\.mp4$'
+          while IFS=$'\t' read -r FILE OBJ; do
+            [[ "$OBJ" =~ $SHAPE ]] || { echo "::error::refusing '${OBJ}': not a video object"; exit 1; }
+            gcloud storage cp "$DIR/$FILE" "gs://${GCS_BUCKET}/${OBJ}" \
+              --no-clobber \
+              --content-type=video/mp4 \
+              --cache-control="public, max-age=31536000, immutable, no-transform"
+          done < <(jq -r '.[] | [.file, .object] | @tsv' /tmp/plan.json)
+
+      - name: Copy the staging objects to prod (server side)
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          SHAPE='^videos/[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+([.-][a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*-(desktop|mobile)\.mp4$'
+          while IFS=$'\t' read -r _ OBJ; do
+            [[ "$OBJ" =~ $SHAPE ]] || { echo "::error::refusing '${OBJ}': not a video object"; exit 1; }
+            gcloud storage cp "gs://${GCS_BUCKET}/${OBJ}" "gs://${GCS_BUCKET_PRODUCTION}/${OBJ}" \
+              --no-clobber \
+              --content-type=video/mp4 \
+              --cache-control="public, max-age=31536000, immutable, no-transform"
+          done < <(jq -r '.[] | [.file, .object] | @tsv' /tmp/plan.json)
+
+      - name: Verify the published objects
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          CACHE='public, max-age=31536000, immutable, no-transform'
+          {
+            echo "### Videos published"
+            echo "Source: run ${RUN_ID} (artifact videos-${SCENARIO}-${RUN_ID})"
+          } >> "$GITHUB_STEP_SUMMARY"
+          while IFS=$'\t' read -r FILE OBJ; do
+            BYTES=$(stat -c %s "$DIR/$FILE")
+            SHA=$(sha256sum "$DIR/$FILE" | cut -d' ' -f1)
+            gcloud storage objects describe "gs://${GCS_BUCKET}/${OBJ}" --format=json > /tmp/src.json
+            gcloud storage objects describe "gs://${GCS_BUCKET_PRODUCTION}/${OBJ}" --format=json > /tmp/dst.json
+            jq '{size, content_type, cache_control, content_encoding, md5_hash}' /tmp/dst.json
+            for META in /tmp/src.json /tmp/dst.json; do
+              jq -e --argjson b "$BYTES" --arg c "$CACHE" '(.size|tonumber) == $b
+                and .content_type == "video/mp4"
+                and .cache_control == $c
+                and (.content_encoding // "") == ""
+                and (.md5_hash // "") != ""' "$META"
+            done
+            jq -e --slurpfile s /tmp/src.json '.md5_hash == $s[0].md5_hash' /tmp/dst.json
+            # Players seek with Range: the CDN must answer 206, uncompressed.
+            curl -fsS -o /dev/null -D /tmp/h.txt -H 'Range: bytes=0-1023' -H 'Accept-Encoding: gzip, br' \
+              "https://cdn.taverns.red/${OBJ}"
+            cat /tmp/h.txt
+            grep -qiE '^HTTP/[0-9.]+ 206' /tmp/h.txt
+            grep -qi "^content-range: bytes 0-1023/${BYTES}" /tmp/h.txt
+            grep -qi '^content-type: video/mp4' /tmp/h.txt
+            if grep -qi '^content-encoding:' /tmp/h.txt; then
+              echo "::error::CDN response for ${OBJ} carries a content-encoding"; exit 1
+            fi
+            echo "- https://cdn.taverns.red/${OBJ} (${BYTES} bytes, sha256 ${SHA})" >> "$GITHUB_STEP_SUMMARY"
+          done < <(jq -r '.[] | [.file, .object] | @tsv' /tmp/plan.json)

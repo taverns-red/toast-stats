@@ -13,8 +13,8 @@
 # Main CI runs only the scenario unit tests (ci.yml); it never renders.
 #
 # No cloud credentials: the capture reads the public site and the output goes
-# to the artifact only. Publishing final videos is a separate, approved step
-# whose destination is not decided yet — it is not done here.
+# to the artifact only. Publishing a reviewed render to the CDN is a separate,
+# per-publish-approved workflow, videos-publish.yml (#2310).
 
 name: Videos
 
