@@ -4,8 +4,9 @@
  * Thin glue around ./lib/videoPublish.js for videos-publish.yml: lists the
  * downloaded artifact directory and prints the publish plan as JSON on
  * stdout (`[{format, file, object, url}]`). It fails unless the directory
- * holds exactly `<scenario>-desktop.mp4` and `<scenario>-mobile.mp4` and the
- * scenario and version make a valid `videos/` object.
+ * holds exactly the render CLI's `<scenario>.mp4` (desktop) and
+ * `<scenario>-mobile.mp4`, and the scenario and version make a valid
+ * `videos/` object.
  *
  * Logs go to stderr (R4); stdout carries only the plan.
  *

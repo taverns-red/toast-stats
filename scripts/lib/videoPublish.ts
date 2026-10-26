@@ -26,6 +26,8 @@ import {
   PRUNE_RETAINED_LAYERS,
 } from './pruneGcsDeletions.js'
 import { RUNS_PREFIX } from './runManifest.js'
+// The render CLI's own naming, so the planner and videos.yml cannot drift.
+import { outputName } from '../../videos/src/scenarios/cliArgs'
 
 export const VIDEO_PREFIX = 'videos/'
 export const VIDEO_FORMATS = ['desktop', 'mobile'] as const
@@ -104,7 +106,7 @@ export function assertVideoDestination(object: string): void {
 
 export interface VideoPublishItem {
   format: VideoFormat
-  /** File name inside the downloaded artifact. */
+  /** File name inside the downloaded artifact (render CLI's outputName). */
   file: string
   /** Object name, bucket stripped. */
   object: string
@@ -114,8 +116,10 @@ export interface VideoPublishItem {
 
 /**
  * Map an artifact's files to their objects. The artifact must hold exactly
- * `<scenario>-desktop.mp4` and `<scenario>-mobile.mp4`: a missing format or
- * any other file fails, so a wrong or partial artifact never publishes.
+ * what the render CLI writes (`outputName`): `<scenario>.mp4` for desktop
+ * and `<scenario>-mobile.mp4`. A missing format or any other file fails, so
+ * a wrong or partial artifact never publishes. The published names always
+ * carry the format (`<scenario>-desktop.mp4`), so a URL says what it is.
  */
 export function planVideoPublish(input: {
   scenario: string
@@ -127,7 +131,7 @@ export function planVideoPublish(input: {
     const object = videoObjectPath(scenario, version, format)
     return {
       format,
-      file: `${scenario}-${format}.mp4`,
+      file: `${outputName(scenario, format)}.mp4`,
       object,
       url: `${VIDEO_CDN_BASE_URL}/${object}`,
     }
