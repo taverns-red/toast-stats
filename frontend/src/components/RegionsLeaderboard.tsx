@@ -8,6 +8,7 @@ import {
   type PriorityMetric,
 } from './PriorityColumnsTable'
 import { DistrictTrendSparkline } from './DistrictTrendSparkline'
+import { useScrollEdges } from '../hooks/useScrollEdges'
 import {
   regionTrainingUrl,
   type RegionsTrainingOverview,
@@ -197,6 +198,9 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
   training,
 }) => {
   const [searchParams] = useSearchParams()
+  // Marks the scroller `data-more-after` only while columns are hidden to
+  // the right, so the fade cue never covers a table that fits (#2334).
+  const scrollEdges = useScrollEdges<HTMLDivElement>(training)
   const showTraining = training !== undefined && training !== null
   const overview = training && training !== 'loading' ? training : null
   // A round that has not opened has nothing to compare (every club reads
@@ -602,7 +606,8 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
         // columns to the right.
         <div className="region-rankings__scroll-wrap">
           <div
-            className="overflow-x-auto region-rankings__scroll"
+            {...scrollEdges}
+            className="overflow-x-auto region-rankings__scroll region-rankings__scroll--edges"
             role="region"
             tabIndex={0}
             aria-label="Region rankings — scroll horizontally to see all metrics"
