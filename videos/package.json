@@ -9,6 +9,7 @@
     "capture": "tsx src/cli/capture.ts",
     "render": "tsx src/cli/render.ts",
     "build": "tsx src/cli/build.ts",
+    "verify": "tsx src/cli/verify.ts",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest --run",
     "test:watch": "vitest",

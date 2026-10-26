@@ -30,6 +30,7 @@ npm run videos:build -- v2                   # desktop 16:9 → videos/out/v2.mp
 npm run videos:build -- v2 --format mobile   # phone 9:16 → videos/out/v2-mobile.mp4
 npm run videos:capture -- v2 [--format mobile]   # record only → videos/public/captures/
 npm run videos:render -- v2 [--format mobile]    # compose only → videos/out/
+npm run videos:verify -- videos/out/*.mp4        # ffprobe: h264/yuv420p, bt709, AAC
 npm run test --workspace=@taverns-red/videos   # scenario timing tests
 ```
 

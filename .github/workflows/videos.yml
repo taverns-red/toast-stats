@@ -173,6 +173,11 @@ jobs:
           done
           ls -la videos/out/
 
+      # Fails unless every MP4 is h264/yuv420p tagged bt709 (primaries,
+      # transfer and matrix) with AAC audio (videos/src/output/encoding.ts).
+      - name: Verify render encoding (ffprobe)
+        run: npm run -s videos:verify -- videos/out/*.mp4
+
       - name: Upload videos artifact
         id: upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

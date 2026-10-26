@@ -16,6 +16,7 @@ import { bundle } from '@remotion/bundler'
 import { renderMedia, selectComposition } from '@remotion/renderer'
 import { generatePad, measureLufs } from '../render/music'
 import { DEFAULT_MUSIC } from '../scenarios/music'
+import { RENDER_ENCODING } from '../output/encoding'
 import { outputName, type CliArgs } from '../scenarios/cliArgs'
 import type { CaptureManifest } from '../scenarios/types'
 import {
@@ -75,9 +76,8 @@ export async function render({ id, format }: CliArgs): Promise<void> {
   await renderMedia({
     composition,
     serveUrl,
-    codec: 'h264',
+    ...RENDER_ENCODING,
     crf: 23,
-    audioCodec: 'aac',
     audioBitrate: '128k',
     outputLocation,
     inputProps,
