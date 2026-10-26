@@ -116,19 +116,19 @@ no samples, loops or third-party recordings, so it needs no licence. Each
 variant is an I–V–vi–IV loop in a major key with short plucked, mallet or
 strummed notes, a soft kick and a filtered-noise shaker:
 
-| Variant                  | Tempo   | Key     | Sound                                                |
-| ------------------------ | ------- | ------- | ---------------------------------------------------- |
-| `bright-pluck` (default) | 112 BPM | C major | Plucked-string eighth-note arpeggio, kick on 1 and 3 |
-| `light-pop`              | 120 BPM | G major | Mallet riff, bass eighths, four-on-the-floor kick    |
-| `warm-strum`             | 100 BPM | D major | Acoustic-style strummed chords, kick on 1 and 3      |
+| Variant               | Tempo   | Key     | Sound                                                |
+| --------------------- | ------- | ------- | ---------------------------------------------------- |
+| `bright-pluck`        | 112 BPM | C major | Plucked-string eighth-note arpeggio, kick on 1 and 3 |
+| `light-pop` (default) | 120 BPM | G major | Mallet riff, bass eighths, four-on-the-floor kick    |
+| `warm-strum`          | 100 BPM | D major | Acoustic-style strummed chords, kick on 1 and 3      |
 
 The mix is set to −26 LUFS with one gain (true peak at most −3 dBTP), and the
 video fades it in and out. Tracks are 36 s, longer than any allowed clip.
 
 - Listen: `npm run videos:music -- [variant…] [--seconds 20]` writes AAC
   previews to `videos/out/music/`. The PR render uploads them too.
-- Pick per render: `npm run videos:render -- v2 --music light-pop`.
-- Pick per scenario: `music: trackPath('light-pop')`. The default lives in
+- Pick per render: `npm run videos:render -- v2 --music bright-pluck`.
+- Pick per scenario: `music: trackPath('warm-strum')`. The default lives in
   `src/scenarios/music.ts` (`DEFAULT_MUSIC`).
 - Tests: `npm test` covers the score and synthesis. `npm run test:audio`
   needs ffmpeg and checks length, loudness, true peak and determinism of

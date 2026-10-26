@@ -6,8 +6,8 @@
  * kick and a filtered-noise shaker. It replaces the slow, low, echoing pad
  * Ron heard as "foreboding" (#2336).
  *
- * Pick one per scenario (`music: trackPath('light-pop')`) or per render
- * (`npm run videos:render -- v2 --music light-pop`).
+ * Pick one per scenario (`music: trackPath('warm-strum')`) or per render
+ * (`npm run videos:render -- v2 --music bright-pluck`).
  */
 
 export type Roman = 'I' | 'ii' | 'iii' | 'IV' | 'V' | 'vi'
@@ -142,7 +142,8 @@ export const MUSIC_VARIANTS: readonly MusicVariant[] = [
   },
 ]
 
-export const DEFAULT_VARIANT_ID = 'bright-pluck'
+/** Ron's pick from the PR #2337 previews. */
+export const DEFAULT_VARIANT_ID = 'light-pop'
 
 export function getVariant(id: string): MusicVariant {
   const variant = MUSIC_VARIANTS.find(v => v.id === id)
