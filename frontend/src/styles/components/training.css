@@ -333,6 +333,21 @@
   vertical-align: bottom;
 }
 
+/* With the training columns the leaderboard has up to 11 columns; a
+   tighter cell inset keeps it inside its container at 1024 once Round 2
+   opens and expands to two columns (#2334 review). */
+.region-leaderboard-table--training th,
+.region-leaderboard-table--training td {
+  padding-left: 0.625rem;
+  padding-right: 0.625rem;
+}
+
+/* A one-column round (not open yet / no figures) is as narrow as its
+   cells: its header wraps between words (#2334 review). */
+.region-training-group--single .region-training-group__part {
+  white-space: normal;
+}
+
 /* "not started" / "not available" read as a state, not a number. */
 .region-training-cell__muted {
   color: var(--ink-3);

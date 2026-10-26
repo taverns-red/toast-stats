@@ -186,6 +186,8 @@ const TREND_TH =
   'px-4 py-3 text-xs font-medium tracking-wider text-gray-500 text-left align-top'
 // Training headers (#2330): sentence case like the sortable labels.
 const TRAINING_TH = 'px-4 py-3 text-xs font-medium tracking-wider text-gray-500'
+const TRAINING_TD =
+  'px-3 py-3 tabular-nums text-gray-700 theme-dark:text-gray-200 region-training-cell'
 const NUMERIC_TD =
   'px-4 py-3 text-right tabular-nums text-gray-700 theme-dark:text-gray-200'
 
@@ -336,47 +338,71 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
   }
 
   const span = showTraining ? 2 : 1
-  const roundHeader = (round: TrainingRound) => (
-    <th
-      key={`round-${round}`}
-      scope="colgroup"
-      colSpan={2}
-      className={`${TRAINING_TH} text-center region-training-group`}
-    >
-      <span className="region-training-group__part">
-        Round {round} training
-      </span>{' '}
-      <span className="region-training-group__part">{roundMonths(round)}</span>
-      {round === 2 && overview && !overview.round2Started && (
-        <>
-          {' '}
-          <span className="region-training-group__part">
-            · opens {formatShortDate(overview.round2Opens)}
-          </span>
-        </>
-      )}
-    </th>
-  )
+  /* A round is split into 4+ and All 7 only when some region has a figure
+     for it (#2334 review): before it opens, or on a date without the
+     figures, it is ONE narrow column, so the table fits its container at
+     1024 and 1280 instead of spending two columns on "not started". */
+  const expanded = (round: TrainingRound): boolean =>
+    !!overview &&
+    [...overview.regions.values()].some(
+      b => b.rounds[round - 1]!.state === 'measured'
+    )
+  const roundHeader = (round: TrainingRound) =>
+    expanded(round) ? (
+      <th
+        key={`round-${round}`}
+        scope="colgroup"
+        colSpan={2}
+        className={`${TRAINING_TH} text-center region-training-group`}
+      >
+        <span className="region-training-group__part">
+          Round {round} training
+        </span>{' '}
+        <span className="region-training-group__part">
+          {roundMonths(round)}
+        </span>
+      </th>
+    ) : (
+      <th
+        key={`round-${round}`}
+        scope="col"
+        rowSpan={2}
+        className={`${TRAINING_TH} text-right region-training-group region-training-group--single`}
+      >
+        <span className="region-training-group__part">
+          Round {round} training
+        </span>{' '}
+        <span className="region-training-group__part">
+          {round === 2 && overview && !overview.round2Started
+            ? `opens ${formatShortDate(overview.round2Opens)}`
+            : roundMonths(round)}
+        </span>
+      </th>
+    )
 
-  /** A row's two cells for a round: one wide "why not" cell when the round
-   *  has no figure for the region, else 4+ and All 7. */
+  /** A row's cells for a round: one cell (its state in words) when the
+   *  round is a single column or the region has no figure, else 4+ and
+   *  All 7. */
   const trainingCells = (region: string, round: TrainingRound) => {
+    if (!expanded(round))
+      return (
+        <td key={`r${round}`} className={`${TRAINING_TD} text-right`}>
+          {trainingCell(region, round, 'Dcp')}
+        </td>
+      )
     const r = overview && overview.forRegion(region).rounds[round - 1]!.state
     if (r === 'notStarted' || r === 'notAvailable')
       return (
         <td
           key={`r${round}`}
           colSpan={2}
-          className="px-4 py-3 text-center region-training-cell"
+          className={`${TRAINING_TD} text-center`}
         >
           {trainingCell(region, round, 'Dcp')}
         </td>
       )
     return (['Dcp', 'AllSeven'] as const).map(metric => (
-      <td
-        key={`r${round}${metric}`}
-        className={`${NUMERIC_TD} region-training-cell`}
-      >
+      <td key={`r${round}${metric}`} className={`${TRAINING_TD} text-right`}>
         {trainingCell(region, round, metric)}
       </td>
     ))
@@ -458,7 +484,7 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
         </tr>
         {showTraining && (
           <tr>
-            {TRAINING_COLUMNS.map(c =>
+            {TRAINING_COLUMNS.filter(c => expanded(c.round)).map(c =>
               sortable(c.round) ? (
                 <SortableHeader<SortField>
                   key={c.field}
@@ -492,7 +518,7 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
               <Link
                 to={`/region/${r.region}`}
                 aria-label={`Region ${r.region} — leader ${r.leadingDistrictName}`}
-                className="flex items-center gap-3 text-tm-loyal-blue hover:underline"
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 text-tm-loyal-blue hover:underline"
               >
                 <span
                   className="inline-block whitespace-nowrap px-2 py-0.5 text-xs font-mono rounded bg-tm-loyal-blue/10 text-tm-loyal-blue theme-dark:bg-tm-loyal-blue/30 theme-dark:text-blue-200"
