@@ -1092,7 +1092,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       {!isLoading && sortedClubs.length > 0 && isMobile && (
         // Bleed the rows to the panel edge (its 18 px padding) at < 768.
         <div className="pb-4 clubs-mobile-rows">
-          {/* Sort lives in the Filter & sort sheet (#1836). */}
+          {/* Sort lives in the Filter & sort sheet (#1836). Long names wrap to
+              two lines rather than ellipsize (#2335, #2329's wrapTitle). */}
           {mobileGroups ? (
             <MobileRowList
               label="Clubs by division"
@@ -1100,6 +1101,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
               groups={mobileGroups}
               chipPlacement="meta"
               flush
+              wrapTitle
               openGroupIds={openGroupIds}
               onToggleGroup={handleToggleGroup}
             />
@@ -1110,6 +1112,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
               rows={mobileRows}
               chipPlacement="meta"
               flush
+              wrapTitle
             />
           )}
         </div>

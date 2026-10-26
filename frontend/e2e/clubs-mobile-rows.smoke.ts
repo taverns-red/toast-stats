@@ -11,7 +11,8 @@ import { test, expect, type Page } from './fixtures/test'
  * or a shared link restores the same view.
  *
  * Measured on the deployed preview (BASE_URL) by bounding box (Lesson 134):
- * every visible row 56–64 px and inside the viewport, its status chip inside
+ * every one-line row 56–64 px and a row whose name wraps to its 2 lines
+ * (#2335) at most 82 px, each inside the viewport, its status chip inside
  * the row and never ellipsized, row text ≥14 px, and zero document overflow
  * with the `body{overflow-x:hidden}` mask disabled. Rows never carry contact
  * details (privacy rule). 768 and 1280 keep the desktop table.
@@ -27,6 +28,9 @@ const ROW = '[data-testid="mobile-row"]:visible'
 /** Review §7 targets for ~160 clubs at 375. */
 const GROUPED_HEIGHT_MAX = 2_500
 const FLAT_HEIGHT_MAX = 8_000
+
+/** 2 title lines (2 × 22) + meta (20) + gap (2) + padding (16) — #2331. */
+const WRAPPED_ROW_MAX = 82
 
 async function load(page: Page, path: string): Promise<void> {
   await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
@@ -48,6 +52,8 @@ interface RowGeometry {
     left: number
     right: number
     height: number
+    /** Rendered title lines (wrapTitle, #2335): 1, or 2 for a long name. */
+    titleLines: number
     titlePx: number
     metaPx: number
     chipInside: boolean
@@ -92,6 +98,12 @@ async function measure(page: Page): Promise<RowGeometry> {
           left: Math.round(r.left),
           right: Math.round(r.right),
           height: Math.round(r.height),
+          titleLines: (() => {
+            const t = row.querySelector('.mobile-row__title')
+            if (!t) return 0
+            const lh = parseFloat(getComputedStyle(t).lineHeight)
+            return Math.round(t.getBoundingClientRect().height / lh)
+          })(),
           titlePx: px(row.querySelector('.mobile-row__title')),
           metaPx: px(row.querySelector('.mobile-row__meta')),
           chipInside: c
@@ -137,7 +149,8 @@ async function measure(page: Page): Promise<RowGeometry> {
   })
 }
 
-/** Row contract (#1833): 56–64 px, on screen, chip whole, ≥14 px, private. */
+/** Row contract (#1833): one-line rows 56–64 px, a wrapped name's row ≤ 82
+ * px (#2335, the #2331 rule), on screen, chip whole, ≥14 px, private. */
 function expectRows(g: RowGeometry, min = 1): void {
   const ctx = JSON.stringify({ ...g, rows: g.rows.slice(0, 5) })
   expect(g.docOverflow, ctx).toBeLessThanOrEqual(0)
@@ -145,7 +158,12 @@ function expectRows(g: RowGeometry, min = 1): void {
   for (const r of g.rows) {
     const rc = `${JSON.stringify(r)}`
     expect(r.height, rc).toBeGreaterThanOrEqual(56)
-    expect(r.height, rc).toBeLessThanOrEqual(64)
+    // Only a row whose name wraps (≤ 2 lines) may grow, and only to 82 px.
+    expect(r.titleLines, rc).toBeGreaterThanOrEqual(1)
+    expect(r.titleLines, rc).toBeLessThanOrEqual(2)
+    expect(r.height, rc).toBeLessThanOrEqual(
+      r.titleLines > 1 ? WRAPPED_ROW_MAX : 64
+    )
     expect(r.left, rc).toBeGreaterThanOrEqual(0)
     expect(r.right, rc).toBeLessThanOrEqual(g.width)
     expect(r.chipInside, rc).toBe(true)
