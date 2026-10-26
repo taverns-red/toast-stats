@@ -85,3 +85,44 @@ for (const theme of THEMES) {
     })
   }
 }
+
+/* The leaderboard fits its container at desktop widths (#2330 review): the
+ * training columns once pushed the table past its scroller at 1280, clipping
+ * the Round 2 "All 7" header. At 1024 and 1280 the whole table — every
+ * header cell — must be visible without scrolling the table sideways. */
+for (const theme of THEMES) {
+  for (const width of [1024, 1280]) {
+    test(`regions leaderboard fits without side-scroll at ${width}px (${theme})`, async ({
+      page,
+    }) => {
+      test.setTimeout(90_000)
+      await page.emulateMedia({ colorScheme: theme })
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto('/regions', { waitUntil: 'networkidle', timeout: 60_000 })
+      const table = page.locator('table[aria-label="Region rankings"]').first()
+      await table.waitFor({ state: 'visible', timeout: 30_000 })
+      await page.evaluate(() => document.fonts.ready)
+
+      const m = await table.evaluate(t => {
+        const box = (t.parentElement as HTMLElement).getBoundingClientRect()
+        const scroller = t.parentElement as HTMLElement
+        return {
+          tableWidth: t.scrollWidth,
+          containerWidth: scroller.clientWidth,
+          clipped: [...t.querySelectorAll('thead th')]
+            .map(th => ({
+              text: (th.textContent ?? '').trim(),
+              r: th.getBoundingClientRect(),
+            }))
+            .filter(
+              ({ r }) => r.left < box.left - 0.5 || r.right > box.right + 0.5
+            )
+            .map(({ text }) => text),
+        }
+      })
+      const ctx = JSON.stringify(m)
+      expect(m.tableWidth, ctx).toBeLessThanOrEqual(m.containerWidth)
+      expect(m.clipped, ctx).toEqual([])
+    })
+  }
+}
