@@ -32,6 +32,17 @@ describe('music variants (#2336)', () => {
     expect(variantForTrack(DEFAULT_MUSIC)?.id).toBe(DEFAULT_VARIANT_ID)
   })
 
+  it("defaults to light-pop, Ron's pick from the PR #2337 previews", () => {
+    expect(DEFAULT_VARIANT_ID).toBe('light-pop')
+    expect(DEFAULT_MUSIC).toBe('music/light-pop.wav')
+    // The other variants stay selectable.
+    expect(MUSIC_VARIANTS.map(v => v.id)).toEqual([
+      'bright-pluck',
+      'light-pop',
+      'warm-strum',
+    ])
+  })
+
   it('maps tracks to variants and leaves other files alone', () => {
     for (const v of MUSIC_VARIANTS) {
       expect(variantForTrack(trackPath(v.id))).toBe(v)
