@@ -11,6 +11,9 @@ import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { RegionSubnav } from '../components/rollups/RegionSubnav'
 import { useRegionTrends } from '../hooks/useRegionTrends'
+import { useRegionRollups } from '../hooks/useRegionRollups'
+import { regionsTrainingOverview } from '../utils/regionTraining'
+import { RegionsTrainingWorld } from '../components/RegionsTrainingWorld'
 
 /* Region selection is URL state (#979) so it survives reload, back, and shared
    links — `?region=07`. Module-level options keep a stable reference so
@@ -85,6 +88,28 @@ const RegionsPage: React.FC = () => {
     effectiveDate
   )
 
+  // Officer training per region and for the world (#2330), from ONE read
+  // of the date's region-rollups.json (the file /regions/health and
+  // /region/:n/training read, same query key), at the page's own program
+  // year and date (R3). No file or no field = "not available", never 0%.
+  const {
+    rollups: regionRollups,
+    snapshotDate: rollupsDate,
+    isLoading: rollupsLoading,
+  } = useRegionRollups(effectiveDate)
+  const trainingDate = rollupsDate ?? effectiveDate ?? null
+  const training = useMemo(
+    () =>
+      trainingDate
+        ? regionsTrainingOverview(
+            regionRollups,
+            trainingDate,
+            selectedProgramYear.label
+          )
+        : null,
+    [regionRollups, trainingDate, selectedProgramYear.label]
+  )
+
   // Derive (don't sync) the effective selection: a stale selection that a
   // refetch dropped self-heals to "All" at render time, so the user is never
   // stranded on an empty grid — and no setState-in-effect.
@@ -113,8 +138,10 @@ const RegionsPage: React.FC = () => {
   // The series file is tiny and fetched in parallel with the rankings; the
   // FIRST paint waits for its answer (file or 404) so the Trend column never
   // appears or vanishes under the reader (CLS). A later year switch keeps
-  // the page up and reserves the column while the new year loads.
-  if (isLoading || (trendsPending && !error))
+  // the page up and reserves the column while the new year loads. The
+  // region rollups (~9 KB, #2330) are waited for the same way, so the world
+  // training line above the table never pushes it down.
+  if (isLoading || ((trendsPending || rollupsLoading) && !error))
     return <LoadingSkeleton variant="card" />
   if (error || !data) {
     return (
@@ -163,11 +190,17 @@ const RegionsPage: React.FC = () => {
         onSelect={setSelectedRegion}
       />
 
+      {training && <RegionsTrainingWorld overview={training} />}
+
       <section className="my-6" aria-labelledby="regions-table-heading">
         <h2 id="regions-table-heading" className="sr-only">
           Region leaderboard
         </h2>
-        <RegionsLeaderboard rollups={displayedRollups} trends={trends} />
+        <RegionsLeaderboard
+          rollups={displayedRollups}
+          trends={trends}
+          training={rollupsLoading ? 'loading' : training}
+        />
       </section>
 
       {dnarCount > 0 && (
