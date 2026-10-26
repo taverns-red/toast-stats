@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.71.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.70.0...toast-stats-v2.71.0) (2026-10-26)
+
+
+### Features
+
+* **videos:** Remotion pilot for the Area Director how-to video ([#2293](https://github.com/taverns-red/toast-stats/issues/2293)) ([#2295](https://github.com/taverns-red/toast-stats/issues/2295)) ([5b9152d](https://github.com/taverns-red/toast-stats/commit/5b9152d8b763bfe53fcb526db7c8a1d7cae71abf))
+
+
+### Bug Fixes
+
+* **ci-gate:** a cancelled run superseded by a newer green run passes ([#2316](https://github.com/taverns-red/toast-stats/issues/2316)) ([#2319](https://github.com/taverns-red/toast-stats/issues/2319)) ([7a8f6c4](https://github.com/taverns-red/toast-stats/commit/7a8f6c4f8cace950073538ea06c022005bd9d3ee))
+* **pipeline:** full content gate lists manifest dirs beyond PROMOTED_PREFIXES ([#2322](https://github.com/taverns-red/toast-stats/issues/2322)) ([#2325](https://github.com/taverns-red/toast-stats/issues/2325)) ([5d53a17](https://github.com/taverns-red/toast-stats/commit/5d53a177b7c5360b088bb164a30523e6154570ef))
+* **rankings:** confirmed-Distinguished count requires a submitted CSP ([#2323](https://github.com/taverns-red/toast-stats/issues/2323)) ([#2326](https://github.com/taverns-red/toast-stats/issues/2326)) ([8d0c1ea](https://github.com/taverns-red/toast-stats/commit/8d0c1ea73edce0ab94da8c332b0a9917345d06f6))
+* **region:** phone bottom bar fits 4 + More; training round headers wrap cleanly ([#2318](https://github.com/taverns-red/toast-stats/issues/2318)) ([#2321](https://github.com/taverns-red/toast-stats/issues/2321)) ([86ce8a0](https://github.com/taverns-red/toast-stats/commit/86ce8a06766111ab419fa519316064eb6fb5960c))
+
 ## [2.70.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.69.0...toast-stats-v2.70.0) (2026-10-25)
 
 

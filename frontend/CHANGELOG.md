@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.49.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.49.0...frontend-v3.49.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* **region:** phone bottom bar fits 4 + More; training round headers wrap cleanly ([#2318](https://github.com/taverns-red/toast-stats/issues/2318)) ([#2321](https://github.com/taverns-red/toast-stats/issues/2321)) ([86ce8a0](https://github.com/taverns-red/toast-stats/commit/86ce8a06766111ab419fa519316064eb6fb5960c))
+
 ## [3.49.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.48.0...frontend-v3.49.0) (2026-10-25)
 
 
