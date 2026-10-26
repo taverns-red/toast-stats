@@ -319,3 +319,22 @@
 .region-training-table__round-part {
   white-space: nowrap;
 }
+
+/* ── /regions overview (#2330): training columns on the leaderboard ───── */
+
+/* Each part of a round header stays whole; the cell wraps only between
+   them (as on /region/:n/training, #2318). */
+.region-training-group__part {
+  white-space: nowrap;
+}
+
+/* "not started" / "not available" read as a state, not a number. */
+.region-training-cell__muted {
+  color: var(--ink-3);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.regions-training-world {
+  margin: 1rem 0 0;
+}

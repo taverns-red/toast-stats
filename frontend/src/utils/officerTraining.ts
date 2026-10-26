@@ -50,6 +50,11 @@ export function thresholdOptionLabel(threshold: number): string {
   return `${threshold}+ officer${threshold === 1 ? '' : 's'}`
 }
 
+/** A round's months, "(Jun–Aug)" / "(Nov–Feb)" — header copy. */
+export function roundMonths(round: TrainingRound): string {
+  return round === 1 ? '(Jun–Aug)' : '(Nov–Feb)'
+}
+
 /** "4+ officers trained" / "all seven officers trained" — inline copy. */
 export function thresholdPhrase(threshold: number): string {
   return threshold === ALL_OFFICERS

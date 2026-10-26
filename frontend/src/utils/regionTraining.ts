@@ -171,6 +171,8 @@ export interface RegionsTrainingOverview {
   available: boolean
   /** Round 2 had opened on the date. */
   round2Started: boolean
+  /** Round 2's first day in the page's program year. */
+  round2Opens: string
 }
 
 const NOT_AVAILABLE: RegionsTrainingBlock = {
@@ -220,5 +222,6 @@ export function regionsTrainingOverview(
       world !== NOT_AVAILABLE ||
       [...regions.values()].some(b => b !== NOT_AVAILABLE),
     round2Started: started(2),
+    round2Opens: windows[1]!.start,
   }
 }
