@@ -187,7 +187,7 @@ export const v3: Scenario = {
           highlight: '.gap-section',
         },
         'per-goal': {
-          steps: [{ kind: 'scrollTo', selector: GOALS, offsetTop: 96 }],
+          steps: [{ kind: 'scrollTo', selector: GOALS, offsetTop: 140 }],
           highlight: GOALS,
         },
       },

@@ -40,6 +40,21 @@ describe('privacy mask for captures (#2353)', () => {
     )
   })
 
+  it("hides the phone layout's external website row", () => {
+    expect(PRIVACY_MASK_SELECTORS).toContain(
+      '.club-more a.mobile-row[target="_blank"]'
+    )
+    const page = readFileSync(
+      join(clubs, '..', '..', 'pages', 'ClubDetailPage.tsx'),
+      'utf8'
+    )
+    expect(page).toContain('className="club-more"')
+    expect(page).toMatch(/title: 'Club website',[\s\S]{0,120}external: true/)
+    expect(
+      readFileSync(join(clubs, '..', 'MobileRowList.tsx'), 'utf8')
+    ).toContain('_blank')
+  })
+
   it('hides the address line under the club mini-map', () => {
     expect(PRIVACY_MASK_SELECTORS).toContain('.club-minimap__place')
     expect(source('ClubMiniMap.tsx')).toContain(

@@ -30,6 +30,9 @@ const TREND = 'section.club-panel:has(h2:has-text("Membership Trend"))'
 const COMPLIANCE = 'section.club-compliance'
 const STANDING = '[data-testid="worldwide-standing"]'
 const HISTORY_LINK = 'a.club-hero__history-link'
+// On a phone the hero link is hidden; the history is a row further down.
+const MOBILE_HISTORY_LINK = 'a.mobile-row[href$="/history"]'
+const SPARK = 'section.club-panel button.chart-spark__trigger'
 
 export const v4: Scenario = {
   id: 'v4',
@@ -112,11 +115,11 @@ export const v4: Scenario = {
           highlight: STATS,
         },
         trend: {
-          steps: [{ kind: 'scrollTo', selector: TREND, offsetTop: 24 }],
+          steps: [{ kind: 'scrollTo', selector: TREND, offsetTop: 72 }],
           highlight: TREND,
         },
         compliance: {
-          steps: [{ kind: 'scrollTo', selector: COMPLIANCE, offsetTop: 24 }],
+          steps: [{ kind: 'scrollTo', selector: COMPLIANCE, offsetTop: 72 }],
           highlight: COMPLIANCE,
         },
         standing: {
@@ -157,11 +160,23 @@ export const v4: Scenario = {
           highlight: STATS,
         },
         trend: {
-          steps: [{ kind: 'scrollTo', selector: TREND, offsetTop: 72 }],
-          highlight: TREND,
+          // The phone shows the trend as a sparkline; a tap opens the full
+          // chart with the prior years.
+          steps: [
+            { kind: 'scrollTo', selector: SPARK, offsetTop: 160 },
+            { kind: 'click', selector: SPARK },
+          ],
+          highlight: '[role="dialog"]',
         },
         compliance: {
-          steps: [{ kind: 'scrollTo', selector: COMPLIANCE, offsetTop: 72 }],
+          steps: [
+            {
+              kind: 'click',
+              selector: '[role="dialog"] button.chart-expand-sheet__close',
+            },
+            { kind: 'pause', ms: 300 },
+            { kind: 'scrollTo', selector: COMPLIANCE, offsetTop: 112 },
+          ],
           highlight: COMPLIANCE,
         },
         standing: {
@@ -170,9 +185,9 @@ export const v4: Scenario = {
         },
         history: {
           steps: [
-            { kind: 'click', selector: HISTORY_LINK },
+            { kind: 'click', selector: MOBILE_HISTORY_LINK },
             { kind: 'pause', ms: 300 },
-            { kind: 'scrollTo', selector: 'table', offsetTop: 96 },
+            { kind: 'scrollTo', selector: 'table', offsetTop: 140 },
           ],
           highlight: 'table',
         },

@@ -15,6 +15,9 @@ export const PRIVACY_MASK_SELECTORS: readonly string[] = [
   '.club-meets__item:has(path[d^="M8 14s"])',
   // Website and "Contact on toastmasters.org" links.
   '.club-meets__links',
+  // Phone layout: the club's own website as an external "More about this
+  // club" row.
+  '.club-more a.mobile-row[target="_blank"]',
   // Address line under the Location mini-map.
   '.club-minimap__place',
 ]
