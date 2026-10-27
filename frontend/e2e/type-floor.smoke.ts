@@ -46,6 +46,7 @@ const ROUTES = [
   '/clubs',
   '/clubs/race/distinguished',
   '/mcp',
+  '/videos', // #2310
 ]
 
 for (const path of ROUTES) {

@@ -77,6 +77,7 @@ const ROUTES: { path: string; mustRender?: string }[] = [
   { path: '/history/countries', mustRender: '.wm-table__select' }, // #1797
   { path: '/methodology' },
   { path: '/mcp' },
+  { path: '/videos', mustRender: '.videos-page__link' }, // #2310
   { path: '/awards' },
   { path: '/regions', mustRender: '.region-finder__chip' }, // family C
   { path: '/region/1' },
