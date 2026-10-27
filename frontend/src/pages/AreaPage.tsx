@@ -299,7 +299,9 @@ const AreaPage: React.FC = () => {
         )}
       </div>
 
-      {isMobile && deadlineStrip}
+      {/* Phone: mounted with the card, not under its skeleton — the card
+          is taller than the skeleton and would push the strip down (CLS). */}
+      {isMobile && !isBodyPending && deadlineStrip}
 
       {/* Scoped narrative — the same per-area progress prose the overview's
           Division and Area Progress Summary shows (#974/#976), generated from

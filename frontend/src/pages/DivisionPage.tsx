@@ -268,7 +268,9 @@ const DivisionPage: React.FC = () => {
         )}
       </div>
 
-      {isMobile && deadlineStrip}
+      {/* Phone: mounted with the card, not under its skeleton — the card
+          is taller than the skeleton and would push the strip down (CLS). */}
+      {isMobile && !isBodyPending && deadlineStrip}
 
       {/* Scoped division-level narrative (#1016 S2) — same prose as the overview
           summary, scoped to this division. */}
