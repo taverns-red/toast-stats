@@ -10,6 +10,7 @@ import { redirectLegacyDistrictTab } from '../utils/legacyTabRedirect'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
+import { NextDeadlineStrip } from '../components/NextDeadlineStrip'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useAggregatedAnalytics } from '../hooks/useAggregatedAnalytics'
@@ -676,6 +677,20 @@ const DistrictDetailPageInner: React.FC = () => {
           {/* Lateral section nav (#678, ADR-005 §3). Landing-opt-IN — renders
               on the hub and every flat sub-page (unlike the breadcrumb). */}
           {districtId && <DistrictSubnav districtId={districtId} />}
+
+          {/* Next-deadline strip (#2298), on the Overview only — the page's
+              own PY and pinned date (R3). Kept out of the shared header so
+              the subpages (the map route's JS budget) do not carry it. */}
+          {districtId && (
+            <NextDeadlineStrip
+              programYear={selectedProgramYear.label}
+              asOfDate={
+                selectedDate ??
+                cachedDatesData?.dateRange?.endDate ??
+                availableDates[0]
+              }
+            />
+          )}
 
           {/* Global Error State */}
           {overviewError && (
