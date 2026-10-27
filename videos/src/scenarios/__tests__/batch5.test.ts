@@ -45,6 +45,12 @@ describe.each(BATCH)(
       expect(validateScenario(scenario)).toEqual([])
     })
 
+    it('reads cleanly in the "For <role>s" eyebrow', () => {
+      // HowToVideo pluralises the whole role with a trailing "s", so the
+      // last role must be a countable noun ("…Relationss" was rendered).
+      expect(scenario.role).not.toMatch(/s$/)
+    })
+
     it('renders in every form factor', () => {
       for (const format of FORM_FACTORS) {
         expect(scenario.forms[format], format).toBeDefined()
