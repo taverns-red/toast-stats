@@ -217,6 +217,24 @@ All Toastmasters-specific rules are documented in [toastmasters-rules-reference.
 | Threshold + officer awards         | Club Strength, Leadership Excellence, PQD/CGD awards                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 3     | #333  | ✅ Shipped |
 | Club Growth recipients (`/awards`) | Worldwide District Club Growth Achievement recipients, one block per checkpoint (Sep 30, Mar 31). Districts are grouped by the highest tier reached (TI's 3/5 and 3/5/10) with their checkpoint count; there is no rank column because it is a threshold, not a race. Every verdict comes from **that checkpoint date's own** `all-districts-rankings.json` (`fetchCdnRankingsForDateExact`, 404 → not available) and is decided by the #1474 predicate. The page's own pinned date also gates settlement (R3): a date before the deadline shows the race as pending. Pending reads "not settled yet — no district holds it". `snapshot-missing` / `count-absent` / `count-not-collected` (#1501) each render their own reason, never 0. The section is absent before PY 2026-27 (forward-only). | 4     | #1537 | ✅ Shipped |
 
+### Product review — role research (2026-10-26)
+
+Grooming of the 11 proposals from the how-to-video role research (#2293), tested against the core value. Ron's calls; the reasoning is in each issue.
+
+| Issue | Feature                                            | Decision                                                                                                                              |
+| ----- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| #2307 | Region scoreboard: districts on track per DRP tier | Accepted, P1                                                                                                                          |
+| #2298 | Next-deadline strip on the Action List             | Accepted, P1 — **the strip only**. The opt-in per-area digest is rejected again: #257 found no demand                                 |
+| #2302 | Methodology: member-level data is out of scope     | Accepted, P1 — Methodology §14, linked from the club page                                                                             |
+| #2299 | One-page council packs (Area, Division, RA call)   | Accepted, P2                                                                                                                          |
+| #2300 | Voting clubs in good standing as of a council date | Accepted, P2 — **spike first** on TI's definition of good standing. The result is labelled derived, not the official credentials list |
+| #2306 | Members and payments by country                    | Accepted, P3                                                                                                                          |
+| #2297 | Success Plan targets vs actuals                    | Accepted, P3                                                                                                                          |
+| #2303 | In-site prospective club pages                     | Accepted, P3                                                                                                                          |
+| #2304 | Open Graph image cards                             | Accepted, P3 — **district cards only**, no per-club cards                                                                             |
+| #2305 | Embeddable district widget                         | Deferred (parked, closed) — no validated demand; adds a public support surface and cross-origin concerns                              |
+| #2301 | Projected dues allocation (Finance Manager)        | Rejected (closed) — not a TI duty, outside the core value, and an estimate of money risks being read as fact                          |
+
 ### Other
 
 | Feature                   | Description                                           | Issue |
@@ -250,10 +268,11 @@ All Toastmasters-specific rules are documented in [toastmasters-rules-reference.
 
 ## What We're NOT Building
 
-| Item                      | Reason                                                                     |
-| ------------------------- | -------------------------------------------------------------------------- |
-| User authentication       | All data is public; no user-specific features needed                       |
-| Real-time updates         | Daily pipeline is sufficient; real-time adds complexity with no user value |
-| Mobile app                | Responsive web app covers mobile use cases                                 |
-| Club-level editing        | Read-only analytics; data comes from Toastmasters dashboard                |
-| Multi-district comparison | Focus on single-district depth; global rankings serve comparison           |
+| Item                      | Reason                                                                                                                                      |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| User authentication       | All data is public; no user-specific features needed                                                                                        |
+| Real-time updates         | Daily pipeline is sufficient; real-time adds complexity with no user value                                                                  |
+| Mobile app                | Responsive web app covers mobile use cases                                                                                                  |
+| Club-level editing        | Read-only analytics; data comes from Toastmasters dashboard                                                                                 |
+| Multi-district comparison | Focus on single-district depth; global rankings serve comparison                                                                            |
+| Member-level data         | Privacy: the public dashboards are club/area/division/district aggregates. No names, contacts or per-member retention (#2302, #1614 parked) |
