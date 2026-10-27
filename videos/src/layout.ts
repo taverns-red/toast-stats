@@ -75,3 +75,8 @@ export function cropOffset(
       : box.y + box.height / 2 - windowH / 2
   return Math.min(maxOffset, Math.max(0, wanted))
 }
+
+/** Stub (#2353): replaced in the next commit. */
+export function cardUrlText(text: string): string {
+  return text
+}

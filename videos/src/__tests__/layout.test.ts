@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cropOffset, LAYOUTS } from '../layout'
+import { cardUrlText, cropOffset, LAYOUTS } from '../layout'
 
 // Mobile shows a 390×844 capture through a window ~523 CSS px tall, panned
 // per beat so the highlighted element is in view and large enough to read.
@@ -57,5 +57,20 @@ describe('LAYOUTS', () => {
   it('makes 16 px phone UI text at least 36 px tall in the 1080-wide frame', () => {
     // ≈13 pt when the 9:16 video fills a 390 pt-wide phone screen.
     expect(16 * LAYOUTS.mobile.scale).toBeGreaterThanOrEqual(36)
+  })
+})
+
+describe('cardUrlText (#2353, PR #2356 review)', () => {
+  it('lets a URL wrap after a slash or a "?", never at a hyphen', () => {
+    const text = cardUrlText(
+      'ts.taverns.red/district/86/clubs?preset=close-to-distinguished'
+    )
+    expect(text).toBe(
+      'ts.taverns.red/​district/​86/​clubs?​preset=close‑to‑distinguished'
+    )
+  })
+
+  it('leaves text without a URL alone', () => {
+    expect(cardUrlText('Club officers:')).toBe('Club officers:')
   })
 })

@@ -262,12 +262,18 @@ describe('V3 shows the way to the Close to Distinguished view (Ron, PR #2356)', 
     )
   })
 
-  it('opens on the district and clicks through to Clubs in both formats', () => {
+  it('opens on the district and points at the Clubs tab before tapping it', () => {
     expect(v3.url).toMatch(/\/district\/86\?date=/)
+    const [nav, list] = v3.beats
+    expect(nav!.caption).toMatch(/open Clubs/)
     for (const format of ['desktop', 'mobile'] as const) {
-      const first = v3.forms[format]!.beats[v3.beats[0]!.id]!.steps
+      const form = v3.forms[format]!
+      // The viewer sees where the tab is first, then the tap.
+      expect(form.beats[nav!.id]!.highlight, format).toMatch(/Clubs/)
       expect(
-        first.some(s => s.kind === 'click' && /Clubs/.test(s.selector)),
+        form.beats[list!.id]!.steps.some(
+          s => s.kind === 'click' && /Clubs/.test(s.selector)
+        ),
         format
       ).toBe(true)
     }
