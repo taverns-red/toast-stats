@@ -72,7 +72,9 @@ export const RegionRecognitionScoreboard: React.FC<Props> = ({
             <>
               On track compares each district&apos;s pace with the median of the
               districts that earned it or higher in {pace.referenceProgramYear},
-              on {pace.referenceDate}.{' '}
+              on{' '}
+              <span style={{ whiteSpace: 'nowrap' }}>{pace.referenceDate}</span>
+              .{' '}
             </>
           ) : (
             <>Last year&apos;s pace is not available for this date. </>
