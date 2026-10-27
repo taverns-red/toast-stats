@@ -122,4 +122,11 @@ describe('RegionRecognitionScoreboard (#2307)', () => {
       /last year's pace is not available for this date/i
     )
   })
+
+  it('keeps the reference date on one line', () => {
+    renderBoard(board)
+    const date = screen.getByText('2025-09-30')
+    expect(date.tagName).toBe('SPAN')
+    expect(date).toHaveStyle({ whiteSpace: 'nowrap' })
+  })
 })
