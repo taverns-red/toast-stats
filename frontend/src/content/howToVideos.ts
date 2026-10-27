@@ -54,10 +54,25 @@ function video(
 
 /** In storyboard rank order. */
 export const HOW_TO_VIDEOS: readonly HowToVideo[] = [
+  video('v1', '2026-10-27', {
+    title: 'How far from Distinguished District?',
+    roles: ['District Director'],
+    description: "Your district's gap to Distinguished, on one page.",
+  }),
   video('v2', '2026-10-26.2', {
     title: 'What should I do this week?',
     roles: ['Area Director'],
     description: "Your area's to-do list, built from the data.",
+  }),
+  video('v3', '2026-10-27', {
+    title: 'One nudge from Distinguished',
+    roles: ['Program Quality Director', 'Area Director', 'Club President'],
+    description: 'Find the clubs one nudge from Distinguished.',
+  }),
+  video('v4', '2026-10-27', {
+    title: "Your club's page",
+    roles: ['Club officers'],
+    description: 'Everything TI publishes about your club, on one page.',
   }),
 ]
 
