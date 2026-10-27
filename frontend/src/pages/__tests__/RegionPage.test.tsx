@@ -1109,3 +1109,64 @@ describe('RegionPage rank-within-region column (#515 #513)', () => {
     expect(within(rows[2]!).queryByText(/^86$/)).not.toBeInTheDocument()
   })
 })
+
+describe('RegionPage District Recognition scoreboard (#2307)', () => {
+  it('shows districts meeting each tier from the awards file', async () => {
+    mockedFetchCdnRankings.mockResolvedValueOnce({
+      rankings: [
+        mkRanking({ districtId: '61', region: '2' }),
+        mkRanking({ districtId: '86', region: '2' }),
+        mkRanking({ districtId: '1', region: '1' }),
+      ],
+      asOfDate: '2026-05-12',
+      generatedAt: '2026-05-12T00:00:00Z',
+    })
+    const prereqs = {
+      dspSubmitted: true,
+      trainingMet: true,
+      marketAnalysisSubmitted: true,
+      communicationPlanSubmitted: true,
+      regionAdvisorVisitMet: true,
+    }
+    mockedFetchCdnAwards.mockResolvedValue({
+      metadata: { snapshotId: 'x', calculatedAt: 'x', totalDistricts: 3 },
+      extensionAward: [],
+      twentyPlusAward: [],
+      retentionAward: [],
+      byDistrict: {},
+      distinguishedDistrict: {
+        '61': {
+          districtId: '61',
+          currentTier: 'Select',
+          allPrerequisitesMet: true,
+          prerequisites: prereqs,
+          nextTierGap: null,
+        },
+        '86': {
+          districtId: '86',
+          currentTier: 'NotDistinguished',
+          allPrerequisitesMet: true,
+          prerequisites: prereqs,
+          nextTierGap: null,
+        },
+        '1': {
+          districtId: '1',
+          currentTier: 'Smedley',
+          allPrerequisitesMet: true,
+          prerequisites: prereqs,
+          nextTierGap: null,
+        },
+      },
+    } as CompetitiveAwardStandings)
+    renderRegion('2')
+
+    const section = await screen.findByRole('region', {
+      name: /district recognition/i,
+    })
+    const cards = await within(section).findAllByTestId('recognition-tier')
+    expect(cards[0]).toHaveTextContent('Distinguished')
+    expect(cards[0]).toHaveTextContent('1 of 2')
+    expect(cards[0]).toHaveTextContent('District 86')
+    expect(cards[2]).toHaveTextContent('0 of 2')
+  })
+})
