@@ -16,6 +16,7 @@ import { generateAreaProgressText } from '../utils/areaProgressText'
 import { renderRecognitionBadge } from '../utils/areaRecognitionBadge'
 import { AreaPerformanceTable } from '../components/AreaPerformanceTable'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
+import { NextDeadlineStrip } from '../components/NextDeadlineStrip'
 import { ContextBar } from '../components/ContextBar'
 import { ContextSheetControls } from '../components/ContextSheetControls'
 import { formatFreshnessLine } from '../utils/contextBar'
@@ -179,6 +180,12 @@ const AreaPage: React.FC = () => {
       ? 'Area recognition standing for this program year.'
       : `${clubs.length} club${clubs.length === 1 ? '' : 's'} in this area.`
   const viewedDate = effectiveEndDate ?? latestSnapshotDate
+  const deadlineStrip = (
+    <NextDeadlineStrip
+      programYear={(effectiveProgramYear ?? selectedProgramYear).label}
+      asOfDate={viewedDate}
+    />
+  )
   const districtUrl = `/district/${districtId}`
   const divisionUrl = `/district/${districtId}/division/${divId}`
 
@@ -275,6 +282,11 @@ const AreaPage: React.FC = () => {
         </div>
       </header>
 
+      {/* Next-deadline strip (#2298): the page's own PY and date (R3).
+          Desktop and tablet: under the header. Phone: after the first
+          content block, which the 375 gate budgets to start by 110px. */}
+      {!isMobile && deadlineStrip}
+
       {/* Area recognition data, reused from the Divisions overview (#1016).
           Replaces the old ad-hoc allClubs KPI strip so the standalone page shows
           the same status / paid / distinguished / R1-R2 visit / Gap-to-D-S-P
@@ -286,6 +298,10 @@ const AreaPage: React.FC = () => {
           areaPerformance && <AreaPerformanceTable areas={[areaPerformance]} />
         )}
       </div>
+
+      {/* Phone: mounted with the card, not under its skeleton — the card
+          is taller than the skeleton and would push the strip down (CLS). */}
+      {isMobile && !isBodyPending && deadlineStrip}
 
       {/* Scoped narrative — the same per-area progress prose the overview's
           Division and Area Progress Summary shows (#974/#976), generated from

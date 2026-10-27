@@ -24,6 +24,7 @@
  * NOT re-derive deadline-blind provisional logic locally. See #832.
  */
 
+import { areaVisitDeadlines } from './programYearDeadlines'
 import {
   determineRecognitionLevel,
   type RecognitionLevel,
@@ -113,10 +114,10 @@ export function getAreaVisitDeadlines(snapshotDate: string): {
   r2: string
 } {
   const start = programYearStartYear(snapshotDate)
-  return {
-    r1: `${start}-11-30`,
-    r2: `${start + 1}-05-31`,
-  }
+  // Undated (the page's date is still loading): no deadline to hold to.
+  if (Number.isNaN(start)) return { r1: '', r2: '' }
+  // The dates live in the one deadline table (#2298), cited there.
+  return areaVisitDeadlines(`${start}-${start + 1}`)
 }
 
 /**

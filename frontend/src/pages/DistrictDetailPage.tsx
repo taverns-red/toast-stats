@@ -10,6 +10,7 @@ import { redirectLegacyDistrictTab } from '../utils/legacyTabRedirect'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
+import { NextDeadlineStrip } from '../components/NextDeadlineStrip'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useAggregatedAnalytics } from '../hooks/useAggregatedAnalytics'
@@ -421,6 +422,18 @@ const DistrictDetailPageInner: React.FC = () => {
   // Overview hub; tablets and desktops keep the KPI strip and CTA row.
   const isHubLayout = useMediaQuery(DISTRICT_HUB_QUERY)
 
+  // Next-deadline strip (#2298): the page's own PY and pinned date (R3).
+  // Kept out of the shared header so the subpages (and the map route's JS
+  // budget) do not carry it. Placed per layout in the render below.
+  const deadlineStrip = (
+    <NextDeadlineStrip
+      programYear={selectedProgramYear.label}
+      asOfDate={
+        selectedDate ?? cachedDatesData?.dateRange?.endDate ?? availableDates[0]
+      }
+    />
+  )
+
   // Officer training counts toward the hub's Needs attention only in the
   // last 30 days of an open round (#2296, Ron N10). The snapshot that holds
   // it is read only then, and only for the hub layout — no extra request on
@@ -677,6 +690,11 @@ const DistrictDetailPageInner: React.FC = () => {
               on the hub and every flat sub-page (unlike the breadcrumb). */}
           {districtId && <DistrictSubnav districtId={districtId} />}
 
+          {/* Next-deadline strip (#2298), on the Overview only. Tablet and
+              desktop: under the section nav. Phone: after the hub (below),
+              which owns the first screen (#1842). */}
+          {districtId && !isHubLayout && deadlineStrip}
+
           {/* Global Error State */}
           {overviewError && (
             <ErrorDisplay
@@ -730,6 +748,8 @@ const DistrictDetailPageInner: React.FC = () => {
             ) : (
               <DistrictKpiStrip kpis={kpiStripData} />
             ))}
+
+          {districtId && isHubLayout && deadlineStrip}
 
           {/* Narrative content. #571 retired the tab strip; #679 (ADR-005)
               trimmed the hub to a lean Overview — the inline Divisions and

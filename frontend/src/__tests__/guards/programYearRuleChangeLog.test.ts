@@ -82,6 +82,8 @@ const ACKNOWLEDGED_SITES: Record<string, string> = {
     'a storage-path example in a type comment',
   'packages/analytics-core/src/analytics/officerTrainingRounds.ts':
     'the officer-training round table (#2296) has ONE era; its `fromProgramYear` is the table floor, not a rule change. A future window change adds a row here AND a log entry',
+  'frontend/src/utils/programYearDeadlines.ts':
+    'the deadline table (#2298) has ONE era; its `fromProgramYear` floor is not a rule change, and the CSP row reuses CSP_REQUIRED_FROM_PROGRAM_YEAR from the logged CSP entry. A future TI date change adds a row here AND a log entry',
   'packages/collector-cli/src/utils/districtSetForDate.ts':
     'names the PY 2026-27 district renumbering as the DATA defect it guards against (#1465); no recognition rule differs by year here',
 }
