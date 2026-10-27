@@ -71,3 +71,31 @@ test('phone Overview: the strip follows the hub, not above it', async ({
   ])
   expect(stripBox!.y).toBeGreaterThanOrEqual(hubBox!.y + hubBox!.height)
 })
+
+/* The 375 gate (mobile-375-gate.smoke.ts) budgets where the first content
+   starts on the division and area pages, so on phones the strip follows
+   that first content block rather than sitting between header and card. */
+for (const [path, first] of [
+  ['/district/61/division/A', '.tm-card'],
+  ['/district/61/division/A/area/01', 'table'],
+] as const) {
+  test(`phone ${path}: the strip follows the first content`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
+    const strip = page.locator(
+      '[data-testid="next-deadline-strip"]:not([aria-busy="true"])'
+    )
+    await strip.waitFor({ state: 'visible', timeout: 30_000 })
+    const content = page.locator(first).locator('visible=true').first()
+    await content.waitFor({ state: 'visible', timeout: 30_000 })
+    const [contentBox, stripBox] = await Promise.all([
+      content.boundingBox(),
+      strip.boundingBox(),
+    ])
+    expect(stripBox!.y).toBeGreaterThanOrEqual(
+      contentBox!.y + contentBox!.height
+    )
+  })
+}
