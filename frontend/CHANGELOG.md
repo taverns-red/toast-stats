@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.50.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.49.1...frontend-v3.50.0) (2026-10-27)
+
+
+### Features
+
+* **regions:** officer training on the Regions page ([#2330](https://github.com/taverns-red/toast-stats/issues/2330)) ([#2334](https://github.com/taverns-red/toast-stats/issues/2334)) ([4a29984](https://github.com/taverns-red/toast-stats/commit/4a299845278eb59dfedb6280b1ebc6ee917049ad))
+
+
+### Bug Fixes
+
+* **mobile:** show long club names in full in the Clubs list ([#2335](https://github.com/taverns-red/toast-stats/issues/2335)) ([#2338](https://github.com/taverns-red/toast-stats/issues/2338)) ([5a9990f](https://github.com/taverns-red/toast-stats/commit/5a9990f4f33a8d0d73437dff8052bff1e5f8c490))
+* **mobile:** show long club names in full on phones ([#2329](https://github.com/taverns-red/toast-stats/issues/2329)) ([#2331](https://github.com/taverns-red/toast-stats/issues/2331)) ([4ddfc74](https://github.com/taverns-red/toast-stats/commit/4ddfc746c9f94b9f522be647a446a3cb89f40966))
+
 ## [3.49.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.49.0...frontend-v3.49.1) (2026-10-26)
 
 

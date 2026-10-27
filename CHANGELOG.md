@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.72.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.71.0...toast-stats-v2.72.0) (2026-10-27)
+
+
+### Features
+
+* **regions:** officer training on the Regions page ([#2330](https://github.com/taverns-red/toast-stats/issues/2330)) ([#2334](https://github.com/taverns-red/toast-stats/issues/2334)) ([4a29984](https://github.com/taverns-red/toast-stats/commit/4a299845278eb59dfedb6280b1ebc6ee917049ad))
+* **videos:** brighter upbeat background music ([#2336](https://github.com/taverns-red/toast-stats/issues/2336)) ([#2337](https://github.com/taverns-red/toast-stats/issues/2337)) ([7815c7a](https://github.com/taverns-red/toast-stats/commit/7815c7a7800c592a6133ac85df4001603e2d2f00))
+* **videos:** CDN publish workflow for reviewed renders ([#2310](https://github.com/taverns-red/toast-stats/issues/2310)) ([#2332](https://github.com/taverns-red/toast-stats/issues/2332)) ([ca9b7ef](https://github.com/taverns-red/toast-stats/commit/ca9b7efd55e2400a2347928e0980cd53b270ff72))
+
+
+### Bug Fixes
+
+* **mobile:** show long club names in full in the Clubs list ([#2335](https://github.com/taverns-red/toast-stats/issues/2335)) ([#2338](https://github.com/taverns-red/toast-stats/issues/2338)) ([5a9990f](https://github.com/taverns-red/toast-stats/commit/5a9990f4f33a8d0d73437dff8052bff1e5f8c490))
+* **mobile:** show long club names in full on phones ([#2329](https://github.com/taverns-red/toast-stats/issues/2329)) ([#2331](https://github.com/taverns-red/toast-stats/issues/2331)) ([4ddfc74](https://github.com/taverns-red/toast-stats/commit/4ddfc746c9f94b9f522be647a446a3cb89f40966))
+
+
+### Continuous Integration
+
+* **videos:** install a pinned static ffmpeg instead of apt ([#2339](https://github.com/taverns-red/toast-stats/issues/2339)) ([#2342](https://github.com/taverns-red/toast-stats/issues/2342)) ([91dcb91](https://github.com/taverns-red/toast-stats/commit/91dcb91b6674a20bbc93b3dd2af029ca00404184))
+
 ## [2.71.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.70.0...toast-stats-v2.71.0) (2026-10-26)
 
 
