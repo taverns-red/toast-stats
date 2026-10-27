@@ -179,6 +179,35 @@ describe('ClubsTable < 768 px — compact rows (#1833)', () => {
     expect(onOpenGroupsChange).toHaveBeenLastCalledWith([])
   })
 
+  // #2335: long club names wrap to two lines instead of ellipsizing, in
+  // both the grouped browse view and the flat result list (#2329's mode).
+  it('renders flush lists whose names may wrap (grouped and flat)', () => {
+    const { container, unmount } = render(
+      <ClubsTable clubs={CLUBS} districtId="61" />
+    )
+    const grouped = container.querySelector('.mobile-row-list')
+    expect(grouped).toHaveClass('mobile-row-list--flush')
+    expect(grouped).toHaveClass('mobile-row-list--wrap')
+    unmount()
+
+    const flat = render(
+      <ClubsTable
+        clubs={CLUBS}
+        districtId="61"
+        initialFilterState={{
+          name: {
+            field: 'name',
+            type: 'text',
+            value: 'a',
+            operator: 'contains',
+          },
+        }}
+      />
+    ).container.querySelector('.mobile-row-list')
+    expect(flat).toHaveClass('mobile-row-list--flush')
+    expect(flat).toHaveClass('mobile-row-list--wrap')
+  })
+
   it('shows one flat result list (no groups) while a search is active', () => {
     render(
       <ClubsTable

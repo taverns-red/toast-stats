@@ -264,6 +264,31 @@
   max-height: 82px;
 }
 
+/* The 82 px budget counts line 2 as 20 px. A status pill on line 2 (clubs,
+   `chipPlacement="meta"`) is an inline-block with 2 px padding sitting on a
+   text baseline: 25 px. Lay the chip out as a box and drop the pill's
+   vertical padding so line 2 is 20 px and a wrapped row stays at 82 (#2335). */
+.mobile-row-list--wrap .mobile-row__line2 .mobile-row__chip {
+  display: flex;
+}
+
+.mobile-row-list--wrap .mobile-row__line2 .clubs-status-pill {
+  padding-block: 0;
+}
+
+/* Clubs list (#2335): below 360 px the trend column and chevron leave the
+   name 154 px, so "Confidently Speaking" (163 px of 16/600 system-ui on
+   macOS) would need a third line. Tighter row padding and gaps give the name
+   12 px more; 375 px and up keep the shared spacing. (Here, not in
+   app-shell.css: that sheet is in `@layer brand` and loses to this unlayered
+   one.) */
+@media (max-width: 359px) {
+  .clubs-mobile-rows .mobile-row-list--wrap .mobile-row {
+    padding-inline: 8px;
+    gap: 6px;
+  }
+}
+
 .mobile-row-list--wrap .mobile-row__title {
   display: -webkit-box;
   -webkit-box-orient: vertical;
