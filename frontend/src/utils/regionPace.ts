@@ -10,7 +10,9 @@ import type { DistinguishedDistrictTier } from '../services/cdn'
      Distinguished clubs ÷ club base
    is at least the median of the districts that earned that tier or higher
    at the reference program year's end (its June 30 snapshot), measured on
-   the same day of the reference year — or the nearest earlier snapshot.
+   the same day of the reference year — or the nearest snapshot in the same
+   renewal period (paceReferenceDate). Tiers nest: on track for a tier also
+   needs on track for every lower tier (regionRecognition).
 
    Ratios to the district's own base, not raw counts: at 2025-09-30 the
    districts that went on to earn Distinguished or higher ran from 45 to 207
@@ -37,9 +39,23 @@ export interface PaceMedian extends PaceRatios {
   districts: number
 }
 
+/** The renewal period a date falls in: Jul 1–Sep 30, Oct 1–Mar 31 or
+    Apr 1–Jun 30, as [first, last] dates. Paid clubs reset when October and
+    April renewals come due, so a pace is never compared across Oct 1 or
+    Apr 1 (Ron, 2026-10-27, option b). */
+function renewalPeriod(date: string): [string, string] {
+  const y = Number(date.slice(0, 4))
+  const md = date.slice(5)
+  if (md >= '07-01' && md <= '09-30') return [`${y}-07-01`, `${y}-09-30`]
+  if (md >= '10-01') return [`${y}-10-01`, `${y + 1}-03-31`]
+  if (md <= '03-31') return [`${y - 1}-10-01`, `${y}-03-31`]
+  return [`${y}-04-01`, `${y}-06-30`]
+}
+
 /** The reference year's snapshot for `snapshotDate`'s day of the year: the
-    same calendar day a year earlier (29 Feb → 28 Feb), else the nearest
-    earlier date, never before the reference year's July 1. */
+    same calendar day a year earlier (29 Feb → 28 Feb); else the nearest
+    earlier snapshot in the same renewal period; else the nearest later one
+    in that period. Null when the period kept no snapshot. */
 export function paceReferenceDate(
   snapshotDate: string,
   referenceProgramYear: string,
@@ -49,12 +65,14 @@ export function paceReferenceDate(
   let monthDay = snapshotDate.slice(5)
   if (monthDay === '02-29') monthDay = '02-28'
   const target = `${year}-${monthDay}`
-  const start = `${referenceProgramYear.slice(0, 4)}-07-01`
-  let best: string | null = null
-  for (const d of dates) {
-    if (d >= start && d <= target && (best === null || d > best)) best = d
-  }
-  return best
+  const pyStart = `${referenceProgramYear.slice(0, 4)}-07-01`
+  const pyEnd = `${referenceProgramYear.slice(5, 9)}-06-30`
+  if (target < pyStart || target > pyEnd) return null
+  const [first, last] = renewalPeriod(target)
+  const inPeriod = dates.filter(d => d >= first && d <= last).sort()
+  const earlier = inPeriod.filter(d => d <= target)
+  if (earlier.length > 0) return earlier[earlier.length - 1]!
+  return inPeriod.find(d => d > target) ?? null
 }
 
 /** The reference year's June 30 snapshot (its year-end tiers), if published. */

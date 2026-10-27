@@ -87,6 +87,11 @@ export function buildRecognitionScoreboard(
   const tierOf = (d: RecognitionDistrict): DistinguishedDistrictTier =>
     statuses[d.districtId]!.currentTier
 
+  // On track nests (Ron, 2026-10-27): a district counts for a tier only if
+  // it is on track for every lower tier too, so a small group's lower
+  // median cannot make Select outscore Distinguished. Null once any lower
+  // tier has no pace.
+  let stillOnTrack: Set<string> | null = new Set(present.map(d => d.districtId))
   const rows = districtTiersForProgramYear(programYear).map(tier => {
     const rank = TIER_RANK[tier]
     const below = present.filter(d => TIER_RANK[tierOf(d)] < rank)
@@ -106,11 +111,21 @@ export function buildRecognitionScoreboard(
       }
     }
     const median = pace?.[tier] ?? null
+    if (median === null || stillOnTrack === null) {
+      stillOnTrack = null
+    } else {
+      const prev: Set<string> = stillOnTrack
+      stillOnTrack = new Set(
+        present
+          .filter(d => prev.has(d.districtId) && isOnTrack(d, median))
+          .map(d => d.districtId)
+      )
+    }
     return {
       tier,
       meeting: present.length - below.length,
       nearest,
-      onTrack: median ? present.filter(d => isOnTrack(d, median)).length : null,
+      onTrack: stillOnTrack === null ? null : stillOnTrack.size,
     }
   })
 

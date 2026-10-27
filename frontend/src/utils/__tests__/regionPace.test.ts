@@ -58,8 +58,8 @@ describe('paceReferenceDate', () => {
 
   it('never compares across the April 1 renewal boundary', () => {
     expect(
-      paceReferenceDate('2027-04-05', '2026-2027', ['2027-03-31', '2027-04-10'])
-    ).toBe('2027-04-10')
+      paceReferenceDate('2027-04-05', '2025-2026', ['2026-03-31', '2026-04-10'])
+    ).toBe('2026-04-10')
   })
 
   it('falls back to the nearest later snapshot in the period', () => {
