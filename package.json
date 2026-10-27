@@ -67,7 +67,8 @@
     "videos:render": "npm run render --workspace=@taverns-red/videos --",
     "videos:build": "npm run build --workspace=@taverns-red/videos --",
     "videos:verify": "npm run verify --workspace=@taverns-red/videos --",
-    "videos:music": "npm run music --workspace=@taverns-red/videos --"
+    "videos:music": "npm run music --workspace=@taverns-red/videos --",
+    "videos:check-urls": "npx tsx scripts/check-video-urls.ts"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^5.0.5",

@@ -51,6 +51,11 @@ const AppMeta: React.FC = () => {
             MCP server
           </Link>
           {' · '}
+          {/* #2310 — same placement reasoning as the /mcp link. */}
+          <Link to="/videos" className="app-shell-footer__link">
+            How-to videos
+          </Link>
+          {' · '}
           {/* The only contact path in the app (#1356). There is no backend to
               POST a form to, so this goes to the GitHub issue chooser, whose
               bug/feature templates live in .github/ISSUE_TEMPLATE/. Same

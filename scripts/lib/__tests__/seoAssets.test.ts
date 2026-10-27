@@ -26,6 +26,7 @@ const EXPECTED_PATHS = [
   '/regions',
   '/awards',
   '/mcp', // #1165 — public MCP-server install page
+  '/videos', // #2310 — how-to videos list
 ]
 
 function locs(xml: string): string[] {

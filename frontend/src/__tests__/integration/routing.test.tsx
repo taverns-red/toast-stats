@@ -19,6 +19,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import HistoryPage from '../../pages/HistoryPage'
 import MethodologyPage from '../../pages/MethodologyPage'
 import McpPage from '../../pages/McpPage'
+import VideosPage from '../../pages/VideosPage'
 
 // HistoryPage now fetches per-year summary cards (#892). This routing test
 // only asserts the synchronous scaffold (heading, year strip, TI link), so
@@ -121,6 +122,15 @@ describe('Routing scaffolding (#355)', () => {
           })
         ).toBeInTheDocument()
       })
+    })
+  })
+
+  describe('/videos page (#2310)', () => {
+    it('renders the page heading', () => {
+      renderRoute(VideosPage, '/videos')
+      expect(
+        screen.getByRole('heading', { level: 1, name: /how-to videos/i })
+      ).toBeInTheDocument()
     })
   })
 
