@@ -37,6 +37,10 @@ export {
 export {
   DistinguishedDistrictCalculator,
   requiredPrerequisitesForProgramYear,
+  districtTiersForProgramYear,
+  remainingToDistrictTier,
+  type DistrictRecognitionTier,
+  type DistrictTierCounts,
   type DistinguishedDistrictTier,
   type DistinguishedDistrictPrerequisites,
   type DistinguishedDistrictGap,

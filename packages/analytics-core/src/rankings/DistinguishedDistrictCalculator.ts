@@ -379,6 +379,81 @@ export function distinguishedClubsGoalPercent(programYear?: string): number {
   return Math.min(...tiers.map(t => t.distinguishedPercentMin))
 }
 
+/** A tier a district can earn (not the NotDistinguished/Unknown states). */
+export type DistrictRecognitionTier = Exclude<
+  DistinguishedDistrictTier,
+  'NotDistinguished' | 'Unknown'
+>
+
+/**
+ * The tiers a program year awards, lowest first (#2307). Before 2018-19
+ * there is no Smedley tier.
+ */
+export function districtTiersForProgramYear(
+  programYear?: string
+): DistrictRecognitionTier[] {
+  return rulesetForProgramYear(programYear)
+    .tiers.map(t => t.tier as DistrictRecognitionTier)
+    .reverse()
+}
+
+/** The raw counts a tier countdown needs (a rankings row has them all). */
+export interface DistrictTierCounts {
+  paidClubBase: number
+  paymentBase: number
+  paidClubs: number
+  totalPayments: number
+  distinguishedClubs: number
+}
+
+/**
+ * Units still needed for each headline metric to reach `tier` under the
+ * program year's own rules (#2307): `max(0, target − current)`. The paid
+ * clubs target is the larger of the growth target and the tier's net-club
+ * rule (no net loss / net +1), so the 2022-25 ladder's 0% club growth with
+ * "+1 net club" for Select counts down correctly. Distinguished clubs are a
+ * share of `paidClubBase` (Item 1490; lesson 60). Null when the year has no
+ * such tier (Smedley before 2018-19).
+ *
+ * A metric at 0 is met; the tier still needs every metric and the year's
+ * prerequisites, which only `calculate()` gates.
+ */
+export function remainingToDistrictTier(
+  counts: DistrictTierCounts,
+  tier: DistrictRecognitionTier,
+  programYear?: string
+): {
+  paidClubsRemaining: number
+  paymentsRemaining: number
+  distinguishedClubsRemaining: number
+} | null {
+  const t = rulesetForProgramYear(programYear).tiers.find(x => x.tier === tier)
+  if (!t) return null
+  const netRule =
+    t.netGrowthRule === 'plus-one'
+      ? 1
+      : t.netGrowthRule === 'no-loss'
+        ? 0
+        : -Infinity
+  const paidClubTarget = Math.max(
+    growthTarget(counts.paidClubBase, t.clubGrowthMin),
+    counts.paidClubBase + netRule
+  )
+  return {
+    paidClubsRemaining: Math.max(0, paidClubTarget - counts.paidClubs),
+    paymentsRemaining: Math.max(
+      0,
+      growthTarget(counts.paymentBase, t.paymentGrowthMin) -
+        counts.totalPayments
+    ),
+    distinguishedClubsRemaining: Math.max(
+      0,
+      percentageTarget(counts.paidClubBase, t.distinguishedPercentMin) -
+        counts.distinguishedClubs
+    ),
+  }
+}
+
 export class DistinguishedDistrictCalculator {
   /**
    * Calculate Distinguished District status for a single district.
