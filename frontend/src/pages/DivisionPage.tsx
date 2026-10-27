@@ -178,6 +178,12 @@ const DivisionPage: React.FC = () => {
       ? 'Division recognition standing for this program year.'
       : `${clubs.length} club${clubs.length === 1 ? '' : 's'} across ${areas.length} area${areas.length === 1 ? '' : 's'} in this division.`
   const viewedDate = effectiveEndDate ?? latestSnapshotDate
+  const deadlineStrip = (
+    <NextDeadlineStrip
+      programYear={(effectiveProgramYear ?? selectedProgramYear).label}
+      asOfDate={viewedDate}
+    />
+  )
   const districtUrl = `/district/${districtId}`
 
   return (
@@ -243,11 +249,10 @@ const DivisionPage: React.FC = () => {
         </div>
       </header>
 
-      {/* Next-deadline strip (#2298): the page's own PY and date (R3). */}
-      <NextDeadlineStrip
-        programYear={(effectiveProgramYear ?? selectedProgramYear).label}
-        asOfDate={viewedDate}
-      />
+      {/* Next-deadline strip (#2298): the page's own PY and date (R3).
+          Desktop and tablet: under the header. Phone: after the first
+          content block, which the 375 gate budgets to start by 110px. */}
+      {!isMobile && deadlineStrip}
 
       {/* Division + areas recognition data, reused from the Divisions overview
           (#1015). Replaces the old ad-hoc allClubs KPI strip so the standalone
@@ -262,6 +267,8 @@ const DivisionPage: React.FC = () => {
           )
         )}
       </div>
+
+      {isMobile && deadlineStrip}
 
       {/* Scoped division-level narrative (#1016 S2) — same prose as the overview
           summary, scoped to this division. */}
