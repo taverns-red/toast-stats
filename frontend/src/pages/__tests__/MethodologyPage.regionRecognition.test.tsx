@@ -47,4 +47,21 @@ describe('MethodologyPage — region District Recognition scoreboard (#2307)', (
     expect(txt).toMatch(/share of its base/i)
     expect(txt).toMatch(/not reported/i)
   })
+
+  it("defines on track, based on last year's pace, and its limits", () => {
+    renderPage()
+    const txt = sectionText()
+    expect(txt).toMatch(/on track, based on last year's pace/i)
+    expect(txt).toMatch(/paid clubs ÷ club base/i)
+    expect(txt).toMatch(/payments ÷ payment base/i)
+    expect(txt).toMatch(/Distinguished clubs ÷ club base/i)
+    expect(txt).toMatch(/median/i)
+    expect(txt).toMatch(/tier or higher at the end of 2025-2026/i)
+    expect(txt).toMatch(/nearest earlier snapshot/i)
+    // Why ratios, not counts — the data argument.
+    expect(txt).toMatch(/45 to 207 paid clubs/)
+    // Limits.
+    expect(txt).toMatch(/not a promise/i)
+    expect(txt).toMatch(/month-end/i)
+  })
 })
