@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.23.1...analytics-core-v1.24.0) (2026-10-27)
+
+
+### Features
+
+* **regions:** District Recognition scoreboard per region ([#2307](https://github.com/taverns-red/toast-stats/issues/2307)) ([#2349](https://github.com/taverns-red/toast-stats/issues/2349)) ([df37300](https://github.com/taverns-red/toast-stats/commit/df37300e09df1396dacb4c31bc909d72e7f84344))
+
 ## [1.23.1](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.23.0...analytics-core-v1.23.1) (2026-10-26)
 
 

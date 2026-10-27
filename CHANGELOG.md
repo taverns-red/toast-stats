@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.73.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.72.0...toast-stats-v2.73.0) (2026-10-27)
+
+
+### Features
+
+* **deadlines:** next-deadline strip from one cited PY rules table ([#2298](https://github.com/taverns-red/toast-stats/issues/2298)) ([#2351](https://github.com/taverns-red/toast-stats/issues/2351)) ([797a697](https://github.com/taverns-red/toast-stats/commit/797a697094d01a5c9433f22c6b0e5d080b0a8bd9))
+* **methodology:** member-level data is out of scope by design ([#2302](https://github.com/taverns-red/toast-stats/issues/2302)) ([#2345](https://github.com/taverns-red/toast-stats/issues/2345)) ([959bc08](https://github.com/taverns-red/toast-stats/commit/959bc082ea0a326ab657816fcfd8c6f436f73f05))
+* **regions:** District Recognition scoreboard per region ([#2307](https://github.com/taverns-red/toast-stats/issues/2307)) ([#2349](https://github.com/taverns-red/toast-stats/issues/2349)) ([df37300](https://github.com/taverns-red/toast-stats/commit/df37300e09df1396dacb4c31bc909d72e7f84344))
+* **videos:** /videos page listing the published how-to videos ([#2310](https://github.com/taverns-red/toast-stats/issues/2310)) ([#2357](https://github.com/taverns-red/toast-stats/issues/2357)) ([9a22161](https://github.com/taverns-red/toast-stats/commit/9a22161776b74195d718108e9994cfdd8eaebc0f))
+* **videos:** how-to video batch 1 - V1, V3 and V4 ([#2353](https://github.com/taverns-red/toast-stats/issues/2353)) ([#2356](https://github.com/taverns-red/toast-stats/issues/2356)) ([83f8878](https://github.com/taverns-red/toast-stats/commit/83f8878fc3707c1ad592ab4d9a4e47353e3c2614))
+* **videos:** how-to video batch 2: V5, V12, V8 ([#2354](https://github.com/taverns-red/toast-stats/issues/2354)) ([#2355](https://github.com/taverns-red/toast-stats/issues/2355)) ([527ae73](https://github.com/taverns-red/toast-stats/commit/527ae73ee8725a3edbcc3d1a7fce333647867690))
+
+
+### Bug Fixes
+
+* **mobile:** All Clubs title keeps one line above the exports on phones ([#2343](https://github.com/taverns-red/toast-stats/issues/2343)) ([#2348](https://github.com/taverns-red/toast-stats/issues/2348)) ([e900cfa](https://github.com/taverns-red/toast-stats/commit/e900cfae3b30fac0dc5e8ea082b9c6f4e628e356))
+* **mobile:** keep the DCP figure whole on 320 px Clubs rows ([#2340](https://github.com/taverns-red/toast-stats/issues/2340)) ([#2347](https://github.com/taverns-red/toast-stats/issues/2347)) ([afc9fb3](https://github.com/taverns-red/toast-stats/commit/afc9fb34c5ba72759d4027115b6eb5a5019c65a9))
+* **videos:** upload music previews as a separate artifact ([#2344](https://github.com/taverns-red/toast-stats/issues/2344)) ([#2346](https://github.com/taverns-red/toast-stats/issues/2346)) ([de5be8e](https://github.com/taverns-red/toast-stats/commit/de5be8e7335d3aaaedeca4ae2adf8093ac1556ee))
+
 ## [2.72.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.71.0...toast-stats-v2.72.0) (2026-10-27)
 
 
