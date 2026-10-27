@@ -191,4 +191,55 @@ describe('buildRecognitionScoreboard (#2307)', () => {
     )!
     expect(board.rows.every(r => r.onTrack === null)).toBe(true)
   })
+
+  it('nests on track: a district counts for a tier only if on track for every lower tier', () => {
+    const board = buildRecognitionScoreboard(
+      [
+        // Paid clubs 1.00: below the Distinguished bar (1.02) but above the
+        // Select bar (0.99), which a small group can set lower.
+        district('1', {
+          paidClubs: 100,
+          totalPayments: 600,
+          distinguishedClubs: 20,
+        }),
+        district('2', {
+          paidClubs: 103,
+          totalPayments: 600,
+          distinguishedClubs: 20,
+        }),
+      ],
+      {
+        '1': status('1', 'NotDistinguished'),
+        '2': status('2', 'NotDistinguished'),
+      },
+      '2026-2027',
+      {
+        Distinguished: {
+          clubs: 1.02,
+          payments: 0.5,
+          distinguished: 0.1,
+          districts: 9,
+        },
+        Select: {
+          clubs: 0.99,
+          payments: 0.5,
+          distinguished: 0.1,
+          districts: 4,
+        },
+        Presidents: {
+          clubs: 1.0,
+          payments: 0.7,
+          distinguished: 0.1,
+          districts: 3,
+        },
+        Smedley: null,
+      }
+    )!
+    expect(board.rows.map(r => [r.tier, r.onTrack])).toEqual([
+      ['Distinguished', 1],
+      ['Select', 1],
+      ['Presidents', 0],
+      ['Smedley', null],
+    ])
+  })
 })

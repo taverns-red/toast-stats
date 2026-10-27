@@ -41,23 +41,51 @@ describe('paceReferenceDate', () => {
     )
   })
 
-  it('falls back to the nearest earlier snapshot', () => {
-    expect(paceReferenceDate('2026-10-25', '2025-2026', DATES)).toBe(
-      '2025-09-30'
+  it('prefers the nearest earlier snapshot in the same renewal period', () => {
+    // 2025-09-29 → 2025-08-31 (earlier, Jul–Sep), not the later 2025-09-30.
+    expect(paceReferenceDate('2026-09-29', '2025-2026', DATES)).toBe(
+      '2025-08-31'
     )
+  })
+
+  it('never compares across the October 1 renewal boundary (Ron, option b)', () => {
+    // 2025-10-05 sits in Oct–Mar; 2025-09-30 is the nearest earlier date
+    // but falls before the October reset, so it is not used.
+    expect(paceReferenceDate('2026-10-05', '2025-2026', DATES)).toBe(
+      '2025-10-31'
+    )
+  })
+
+  it('never compares across the April 1 renewal boundary', () => {
+    expect(
+      paceReferenceDate('2027-04-05', '2026-2027', ['2027-03-31', '2027-04-10'])
+    ).toBe('2027-04-10')
+  })
+
+  it('falls back to the nearest later snapshot in the period', () => {
+    // Today's case: 2026-10-26 → 2025-10-26; nothing kept Oct 1–26, so the
+    // later 2025-10-31 in the same period.
+    expect(paceReferenceDate('2026-10-26', '2025-2026', DATES)).toBe(
+      '2025-10-31'
+    )
+    expect(paceReferenceDate('2026-07-26', '2025-2026', DATES)).toBe(
+      '2025-07-31'
+    )
+  })
+
+  it('is not available when the renewal period has no snapshot', () => {
+    expect(
+      paceReferenceDate('2026-10-05', '2025-2026', ['2025-09-30', '2026-04-30'])
+    ).toBeNull()
+    expect(
+      paceReferenceDate('2026-08-05', '2025-2026', ['2025-06-30'])
+    ).toBeNull()
   })
 
   it('maps 29 February to 28 February', () => {
     expect(paceReferenceDate('2028-02-29', '2026-2027', ['2027-02-28'])).toBe(
       '2027-02-28'
     )
-  })
-
-  it('never reaches before the reference year starts', () => {
-    expect(paceReferenceDate('2026-07-26', '2025-2026', DATES)).toBeNull()
-    expect(
-      paceReferenceDate('2026-08-05', '2025-2026', ['2025-06-30'])
-    ).toBeNull()
   })
 })
 

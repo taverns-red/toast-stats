@@ -52,10 +52,10 @@ afterEach(() => {
 })
 
 describe('useRegionPace (#2307)', () => {
-  it('measures 2026-27 against 2025-26 on the nearest earlier date', async () => {
+  it('measures 2026-27 against 2025-26 on the same day last year', async () => {
     ready()
     const { result } = renderHook(
-      () => useRegionPace('2026-2027', '2026-10-25'),
+      () => useRegionPace('2026-2027', '2026-09-30'),
       { wrapper }
     )
     await waitFor(() => expect(result.current.medians).not.toBeNull())

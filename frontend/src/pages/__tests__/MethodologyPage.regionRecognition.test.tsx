@@ -57,11 +57,16 @@ describe('MethodologyPage — region District Recognition scoreboard (#2307)', (
     expect(txt).toMatch(/Distinguished clubs ÷ club base/i)
     expect(txt).toMatch(/median/i)
     expect(txt).toMatch(/tier or higher at the end of 2025-2026/i)
-    expect(txt).toMatch(/nearest earlier snapshot/i)
+    expect(txt).toMatch(/same renewal period/i)
+    expect(txt).toMatch(/October 1/)
+    expect(txt).toMatch(/April 1/)
+    expect(txt).toMatch(
+      /nearest earlier snapshot.*otherwise the nearest later/i
+    )
+    expect(txt).toMatch(/every lower tier/i)
     // Why ratios, not counts — the data argument.
     expect(txt).toMatch(/45 to 207 paid clubs/)
     // Limits.
     expect(txt).toMatch(/not a promise/i)
-    expect(txt).toMatch(/month-end/i)
   })
 })
