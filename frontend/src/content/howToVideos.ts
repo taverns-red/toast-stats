@@ -74,6 +74,25 @@ export const HOW_TO_VIDEOS: readonly HowToVideo[] = [
     roles: ['Club officers'],
     description: 'Everything TI publishes about your club, on one page.',
   }),
+  video('v5', '2026-10-27', {
+    title: 'The club growth funnel',
+    roles: ['Club Growth Director'],
+    description: 'Prospective → chartered → coached → suspended. One page.',
+  }),
+  video('v8', '2026-10-27', {
+    title: 'What changed since the last meeting?',
+    roles: ['District Director', 'Administration Manager', 'Area Director'],
+    description: 'What changed since the last DEC, in one feed.',
+  }),
+  video('v12', '2026-10-27', {
+    title: 'The world and the region',
+    roles: [
+      'Region Advisor',
+      'International Directors and Officers',
+      'World Headquarters',
+    ],
+    description: 'Every district, every region, one scoreboard.',
+  }),
 ]
 
 export interface RoleGroup {

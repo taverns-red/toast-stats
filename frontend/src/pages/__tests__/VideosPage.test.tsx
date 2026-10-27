@@ -33,6 +33,11 @@ afterEach(() => {
   mobile.value = false
 })
 
+// The page shows videos grouped by primary role, so two videos for the same
+// role sit together even when the catalogue lists them apart (V1 and V8).
+const inPageOrder = () =>
+  groupByPrimaryRole(HOW_TO_VIDEOS).flatMap(g => g.videos)
+
 const videos = () =>
   Array.from(document.querySelectorAll('video')) as HTMLVideoElement[]
 
@@ -70,7 +75,7 @@ describe('VideosPage (#2310)', () => {
   it('plays the desktop cut on wider screens', () => {
     renderPage()
     expect(videos().map(el => el.getAttribute('src'))).toEqual(
-      HOW_TO_VIDEOS.map(v => v.desktopUrl)
+      inPageOrder().map(v => v.desktopUrl)
     )
   })
 
@@ -78,7 +83,7 @@ describe('VideosPage (#2310)', () => {
     mobile.value = true
     renderPage()
     expect(videos().map(el => el.getAttribute('src'))).toEqual(
-      HOW_TO_VIDEOS.map(v => v.mobileUrl)
+      inPageOrder().map(v => v.mobileUrl)
     )
   })
 
