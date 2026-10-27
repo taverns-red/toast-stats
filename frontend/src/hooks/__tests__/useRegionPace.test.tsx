@@ -11,7 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useRegionPace } from '../useRegionPace'
 import {
   fetchCdnDates,
-  fetchCdnRankingsForDate,
+  fetchCdnRankingsForDateExact,
   fetchCdnCompetitiveAwards,
   type CdnRankingsData,
   type CompetitiveAwardStandings,
@@ -20,11 +20,11 @@ import recorded from '../../__tests__/fixtures/region-pace-2025-26.recorded.json
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnDates: vi.fn(),
-  fetchCdnRankingsForDate: vi.fn(),
+  fetchCdnRankingsForDateExact: vi.fn(),
   fetchCdnCompetitiveAwards: vi.fn(),
 }))
 const mockedDates = vi.mocked(fetchCdnDates)
-const mockedRankings = vi.mocked(fetchCdnRankingsForDate)
+const mockedRankings = vi.mocked(fetchCdnRankingsForDateExact)
 const mockedAwards = vi.mocked(fetchCdnCompetitiveAwards)
 
 const DATES = ['2025-08-31', '2025-09-30', '2025-10-31', '2026-06-30']
