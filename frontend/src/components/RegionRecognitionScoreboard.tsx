@@ -69,7 +69,9 @@ export const RegionRecognitionScoreboard: React.FC<Props> = ({
       ) : (
         <>District Recognition status is not available for this date. </>
       )}
-      <Link to="/methodology#region-recognition">How this is counted</Link>
+      <Link to="/methodology#region-recognition" className="methodology-link">
+        How this is counted
+      </Link>
     </p>
     {scoreboard && (
       <>
