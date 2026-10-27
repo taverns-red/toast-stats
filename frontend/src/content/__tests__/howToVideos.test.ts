@@ -75,6 +75,17 @@ describe('HOW_TO_VIDEOS', () => {
     expect(v2?.title).toBe('What should I do this week?')
     expect(v2?.roles[0]).toBe('Area Director')
   })
+
+  it('lists the first batch (V1, V3, V4) at its 2026-10-27 publish', () => {
+    // Each URL answered 206 from the CDN on 2026-10-27
+    // (npm run videos:check-urls) before it was added here.
+    expect(HOW_TO_VIDEOS.map(v => [v.id, v.version])).toEqual([
+      ['v1', '2026-10-27'],
+      ['v2', '2026-10-26.2'],
+      ['v3', '2026-10-27'],
+      ['v4', '2026-10-27'],
+    ])
+  })
 })
 
 describe('groupByPrimaryRole', () => {
