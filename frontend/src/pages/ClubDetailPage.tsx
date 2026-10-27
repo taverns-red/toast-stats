@@ -40,6 +40,7 @@ import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { ClubDCPGoalsPanel } from '../components/ClubDCPGoalsPanel'
 import { useClubGoalTimeline } from '../hooks/useClubGoalTimeline'
 import { ClubHero, type ClubHeroSource } from '../components/clubs/ClubHero'
+import ClubMemberDataNote from '../components/clubs/ClubMemberDataNote'
 import { ClubHeroStatusChips } from '../components/clubs/ClubHeroStatusChips'
 import { useAfterPaint } from '../hooks/useAfterPaint'
 import { summarizeClubEducation } from '../utils/clubEducation'
@@ -1300,6 +1301,9 @@ const ClubDetailPage: React.FC = () => {
             meetsOnline={club.meetsOnline === true}
             when={meetingWhen(club)}
           />
+
+          {/* #2302 — why member-level data isn't on this page. */}
+          <ClubMemberDataNote />
 
           {/* Bottom back-link (#618) — the redesign reintroduces a footer
               back affordance as an anchor (reference `.back-link` <a>), so a

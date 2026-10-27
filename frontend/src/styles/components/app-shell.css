@@ -2709,6 +2709,20 @@
     color: var(--ink-4);
   }
 
+  /* #2302 — one-line pointer to Methodology §14 above the back-link. */
+  .club-member-data-note {
+    margin: 24px 0 0;
+    color: var(--ink-3);
+    font-family: var(--sans);
+    font-size: 13px;
+  }
+
+  .club-member-data-note__link {
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
   /* Bottom back-link (#618) — neutral surface chip, anchor (not button). */
   .club-back-link {
     display: inline-flex;

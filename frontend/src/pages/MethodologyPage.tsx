@@ -49,7 +49,8 @@ const SECTIONS: ReadonlyArray<{ id: string; num: string; title: string }> = [
   { id: 'worldwide-rollup', num: '11', title: 'Worldwide rollup' },
   { id: 'club-race', num: '12', title: 'Worldwide club race' },
   { id: 'officer-training', num: '13', title: 'Officer training' },
-  { id: 'changelog', num: '14', title: 'Changelog' },
+  { id: 'member-data', num: '14', title: 'Member-level data' },
+  { id: 'changelog', num: '15', title: 'Changelog' },
 ]
 
 // Every rule-change entry is its own deep-link target (#1400), owned by §10.
@@ -1014,9 +1015,58 @@ const MethodologyPage: React.FC = () => {
         </div>
       </CollapsibleSection>
 
+      {/* Member-level data (#2302) — officers ask for member retention,
+          per-member Pathways progress or officer names. None of it is here by
+          design; this says so and why. The club page links here
+          (ClubMemberDataNote). Asserted by MethodologyPage.memberData.test.tsx.
+          Promise nothing: #1614 (member retention) is parked. */}
+      <CollapsibleSection
+        id="member-data"
+        num="14"
+        title="Member-level data"
+        collapsible={isMobile}
+        open={openIds.has('member-data')}
+        onToggle={toggle}
+      >
+        <div data-testid="methodology-member-data">
+          <p>
+            Toast Stats shows clubs, areas, divisions, districts and regions. It
+            does <strong>not</strong> show individual members: no member names
+            or IDs, no contact details, no officer names, no per-member Pathways
+            progress, no guest lists and no member-by-member retention. That is{' '}
+            <strong>by design</strong>, not a gap.
+          </p>
+          <h3>Why</h3>
+          <p>
+            Privacy. Member records are personal data, and Toastmasters
+            International shares them only with the officers entitled to see
+            them. The public dashboards Toast Stats reads (§01) publish club,
+            area, division and district totals, and Toast Stats keeps to those
+            aggregates. It does not collect, infer or store anything about a
+            person.
+          </p>
+          <h3>Where to find member-level data</h3>
+          <p>
+            Club officers can see their own club&apos;s roster and member
+            records in{' '}
+            <a
+              href="https://www.toastmasters.org/my-toastmasters/profile/club-central"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="methodology-link"
+            >
+              Club Central
+            </a>{' '}
+            on toastmasters.org (sign-in required). What a club page here shows
+            is the club&apos;s totals: its member count, membership payments,
+            DCP goals and education awards.
+          </p>
+        </div>
+      </CollapsibleSection>
+
       <CollapsibleSection
         id="changelog"
-        num="14"
+        num="15"
         title="Changelog"
         collapsible={isMobile}
         open={openIds.has('changelog')}
