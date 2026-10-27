@@ -193,6 +193,25 @@ describe('validateScenario sentinels', () => {
     )
   })
 
+  it('rejects a caption that quotes a count or share that drifts (#2353)', () => {
+    const count = fixture()
+    count.beats[0]!.caption = '37 members, four goals met, CSP filed.'
+    expect(validateScenario(count).join('\n')).toMatch(
+      /beat "a" quotes "37".*say what is shown/
+    )
+
+    const share = fixture()
+    share.beats[1]!.caption = 'Top 6% worldwide.'
+    expect(validateScenario(share).join('\n')).toMatch(/beat "b" quotes "6%"/)
+  })
+
+  it('allows years, names like Round 1 and numbers inside a URL', () => {
+    const s = fixture()
+    s.beats[0]!.caption = 'Round 1 visits, every year back to 2016.'
+    s.closing.caption = 'Go to ts.taverns.red/district/86/club/2728'
+    expect(validateScenario(s)).toEqual([])
+  })
+
   it('requires at least one beat', () => {
     const s = fixture()
     s.beats = []
@@ -216,7 +235,47 @@ describe('getScenario', () => {
     expect(getScenario('v2').role).toBe('Area Director')
   })
 
+  it('registers batch 1: V1, V3 and V4 (#2353)', () => {
+    expect(getScenario('v1').role).toBe('District Director')
+    expect(getScenario('v3').role).toMatch(/Program Quality Director/)
+    expect(getScenario('v4').role).toBe('Club officers')
+  })
+
   it('names the known scenarios when the id is unknown', () => {
-    expect(() => getScenario('nope')).toThrow(/Known: v2/)
+    expect(() => getScenario('nope')).toThrow(/Known: v1, v2, v3, v4/)
+  })
+})
+
+describe.each(['v1', 'v3', 'v4'])('%s (#2353)', id => {
+  const scenario = getScenario(id)
+
+  it('renders in both form factors', () => {
+    expect(scenario.forms.desktop).toBeDefined()
+    expect(scenario.forms.mobile).toBeDefined()
+  })
+
+  it('pins its start URL to a snapshot date on the live site', () => {
+    expect(scenario.url).toMatch(
+      /^https:\/\/ts\.taverns\.red\/.*[?&]date=\d{4}-\d{2}-\d{2}/
+    )
+  })
+
+  it('uses the default light-pop track', () => {
+    expect(scenario.music).toMatch(/light-pop/)
+  })
+
+  it('never scripts a step onto a contact or website link', () => {
+    for (const format of ['desktop', 'mobile'] as const) {
+      const form = scenario.forms[format]!
+      const steps = [
+        ...form.setup,
+        ...Object.values(form.beats).flatMap(b => b.steps),
+      ]
+      for (const step of steps) {
+        if ('selector' in step) {
+          expect(step.selector).not.toMatch(/contact|website|club-meets/i)
+        }
+      }
+    }
   })
 })

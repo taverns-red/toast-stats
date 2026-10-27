@@ -9,7 +9,9 @@
  * YAML so the guard cannot drift.
  */
 import { describe, it, expect } from 'vitest'
+import { spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
+import * as os from 'node:os'
 import * as path from 'node:path'
 import { parse } from 'yaml'
 
@@ -22,6 +24,9 @@ interface Step {
   with?: Record<string, unknown>
 }
 interface Job {
+  needs?: string | string[]
+  strategy?: { 'fail-fast'?: boolean; matrix?: Record<string, unknown> }
+  outputs?: Record<string, string>
   'timeout-minutes'?: number
   permissions?: Record<string, string>
   steps: Step[]
@@ -76,8 +81,10 @@ describe('videos.yml (#2293)', () => {
       Object.values(j.permissions ?? {}).includes('write')
     )
     expect(writers).toHaveLength(1)
+    // actions: read lists this run's artifacts for the links (#2353).
     expect(writers[0]!.permissions).toEqual({
       contents: 'read',
+      actions: 'read',
       'pull-requests': 'write',
     })
     expect(writers[0]!.steps.some(s => /sticky/i.test(s.uses ?? ''))).toBe(true)
@@ -145,14 +152,129 @@ describe('videos.yml (#2293)', () => {
       expect(music!.with?.['retention-days']).toBe(30)
     })
 
-    it('links the music previews from the PR sticky comment', () => {
-      const id = (music as (Step & { id?: string }) | undefined)?.id
-      expect(id).toBeDefined()
-      expect(render.outputs?.['music-artifact-url']).toBe(
-        `\${{ steps.${id}.outputs.artifact-url }}`
+    // The render job is a matrix with one leg per scenario (#2353), so a job
+    // output would hold only the last leg's URL. The comment job lists the
+    // run's artifacts instead and links each scenario's videos and music.
+    it("links every scenario's videos and music previews from the sticky comment", () => {
+      expect(render).toBeDefined()
+      const list = comment?.steps.find(s =>
+        /actions\/runs\/.*\/artifacts/.test(s.run ?? '')
       )
-      expect(message).toContain('needs.render.outputs.music-artifact-url')
-      expect(message).toContain('needs.render.outputs.artifact-url')
+      expect(list?.run).toMatch(/videos-\$s-\$GITHUB_RUN_ID/)
+      expect(list?.run).toMatch(/videos-music-\$s-\$GITHUB_RUN_ID/)
+      expect(message).toMatch(/steps\.\w+\.outputs\.links/)
+    })
+  })
+
+  describe('renders every scenario a PR changes, one matrix leg each (#2353)', () => {
+    const plan = wf.jobs['plan']
+    const render = wf.jobs['render']
+    const step = plan?.steps.find(s => /scenario/i.test(s.name ?? '') && s.run)
+
+    it('plans the scenarios in a job the render matrix reads', () => {
+      expect(plan).toBeDefined()
+      expect(plan!.outputs?.['scenarios']).toMatch(
+        /steps\.\w+\.outputs\.scenarios/
+      )
+      expect(render!.needs).toContain('plan')
+      expect(render!.strategy?.['fail-fast']).toBe(false)
+      expect(render!.strategy?.matrix?.['scenario']).toBe(
+        '${{ fromJSON(needs.plan.outputs.scenarios) }}'
+      )
+      // The artifact name the publish workflow downloads stays per scenario.
+      const args = render!.steps.find(s =>
+        /Resolve scenario/.test(s.name ?? '')
+      )
+      expect(JSON.stringify(args)).toContain('matrix.scenario')
+    })
+
+    it("diffs against the PR base, which needs the merge commit's parent", () => {
+      const checkout = plan!.steps.find(s =>
+        (s.uses ?? '').startsWith('actions/checkout@')
+      )
+      expect(checkout?.with?.['fetch-depth']).toBe(2)
+    })
+
+    // Run the step's own script in a scratch repo: base commit, then a PR
+    // commit, so HEAD^1 is the base exactly as on a pull_request merge ref.
+    function runPlan(
+      changed: Record<string, string | null>,
+      env: Record<string, string>
+    ): string[] {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'videos-plan-'))
+      try {
+        const git = (...a: string[]) =>
+          spawnSync('git', a, { cwd: dir, encoding: 'utf-8' })
+        git('init', '-q')
+        git('config', 'user.email', 't@example.test')
+        git('config', 'user.name', 'T')
+        const write = (f: string, c: string) => {
+          fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true })
+          fs.writeFileSync(path.join(dir, f), c)
+        }
+        write('videos/src/scenarios/v2.ts', 'v2')
+        write('videos/src/scenarios/v9.ts', 'v9')
+        write('README.md', 'x')
+        git('add', '-A')
+        git('commit', '-qm', 'base')
+        for (const [f, c] of Object.entries(changed)) {
+          if (c === null) fs.rmSync(path.join(dir, f))
+          else write(f, c)
+        }
+        git('add', '-A')
+        git('commit', '-qm', 'pr', '--allow-empty')
+        const out = path.join(dir, 'out.txt')
+        const res = spawnSync('bash', ['-c', step!.run!], {
+          cwd: dir,
+          encoding: 'utf-8',
+          env: {
+            ...process.env,
+            GITHUB_OUTPUT: out,
+            RUNNER_TEMP: dir,
+            ...env,
+          },
+        })
+        expect(res.status, res.stderr).toBe(0)
+        const line = fs
+          .readFileSync(out, 'utf-8')
+          .split('\n')
+          .find(l => l.startsWith('scenarios='))
+        return JSON.parse(line!.slice('scenarios='.length)) as string[]
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true })
+      }
+    }
+
+    it('on a PR, renders each added or changed scenario file', () => {
+      expect(
+        runPlan(
+          {
+            'videos/src/scenarios/v1.ts': 'new',
+            'videos/src/scenarios/v3.ts': 'new',
+            'videos/src/scenarios/v2.ts': 'changed',
+            'videos/src/scenarios/index.ts': 'x',
+          },
+          { EVENT: 'pull_request', IN_SCENARIO: '' }
+        )
+      ).toEqual(['v1', 'v2', 'v3'])
+    })
+
+    it('on a PR that changes no scenario file, renders v2 as before', () => {
+      expect(
+        runPlan(
+          { 'videos/src/layout.ts': 'x', 'videos/src/scenarios/v9.ts': null },
+          { EVENT: 'pull_request', IN_SCENARIO: '' }
+        )
+      ).toEqual(['v2'])
+    })
+
+    it('on dispatch, renders the chosen scenario only', () => {
+      expect(
+        runPlan(
+          { 'videos/src/scenarios/v1.ts': 'new' },
+          { EVENT: 'workflow_dispatch', IN_SCENARIO: 'v4' }
+        )
+      ).toEqual(['v4'])
     })
   })
 
