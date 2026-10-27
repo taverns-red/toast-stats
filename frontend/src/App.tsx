@@ -98,6 +98,8 @@ const ClubsRacePage = React.lazy(() => import('./pages/ClubsRacePage'))
 
 // Code-split: McpPage — public MCP-server install page (#1165, epic #1162)
 const McpPage = React.lazy(() => import('./pages/McpPage'))
+// Code-split: VideosPage — published how-to videos (#2310)
+const VideosPage = React.lazy(() => import('./pages/VideosPage'))
 
 // Code-split: DistrictMapPage — the club map (#1784, epic #1781). Its chunk
 // lazy-imports MapLibre (ADR-016); the map route budget is CI-enforced.
@@ -407,6 +409,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <McpPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'videos',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <VideosPage />
             </Suspense>
           ),
         },

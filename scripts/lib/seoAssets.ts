@@ -36,6 +36,7 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   { path: '/regions' },
   { path: '/awards' },
   { path: '/mcp' }, // MCP-server install page (#1165)
+  { path: '/videos' }, // How-to videos list (#2310)
 ]
 
 /** Absolute URL for a route path (`/` → `${ORIGIN}/`). */
