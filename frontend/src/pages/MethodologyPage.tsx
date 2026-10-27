@@ -50,7 +50,12 @@ const SECTIONS: ReadonlyArray<{ id: string; num: string; title: string }> = [
   { id: 'club-race', num: '12', title: 'Worldwide club race' },
   { id: 'officer-training', num: '13', title: 'Officer training' },
   { id: 'member-data', num: '14', title: 'Member-level data' },
-  { id: 'changelog', num: '15', title: 'Changelog' },
+  {
+    id: 'region-recognition',
+    num: '15',
+    title: 'Region District Recognition',
+  },
+  { id: 'changelog', num: '16', title: 'Changelog' },
 ]
 
 // Every rule-change entry is its own deep-link target (#1400), owned by §10.
@@ -1064,9 +1069,69 @@ const MethodologyPage: React.FC = () => {
         </div>
       </CollapsibleSection>
 
+      {/* Region District Recognition scoreboard (#2307) — the Region page's
+          scoreboard links here. Asserted by
+          MethodologyPage.regionRecognition.test.tsx. */}
+      <CollapsibleSection
+        id="region-recognition"
+        num="15"
+        title="Region District Recognition"
+        collapsible={isMobile}
+        open={openIds.has('region-recognition')}
+        onToggle={toggle}
+      >
+        <div data-testid="methodology-region-recognition">
+          <p>
+            Each Region page shows, for every tier of the District Recognition
+            Program (Distinguished, Select, President&apos;s and, from 2018-19,
+            Smedley), how many of the region&apos;s districts meet it at the
+            selected snapshot.
+          </p>
+          <ul>
+            <li>
+              <strong>Meeting a tier.</strong> A district meets a tier when its
+              paid-club growth, payment growth and share of Distinguished clubs
+              reach that tier&apos;s thresholds <em>and</em> it has met every
+              prerequisite the program year requires, under that program
+              year&apos;s own rules (District Recognition Program, Item 1490 and
+              its revisions; see §10 for how the rules changed). It is the same
+              tier the district page shows. Tiers are counted at that tier or
+              higher, so a Select district also counts for Distinguished.
+            </li>
+            <li>
+              <strong>Early in the year.</strong> Payments and Distinguished
+              clubs build up through the program year, so few districts meet any
+              tier before spring. The count is what the district would earn if
+              the year closed on that snapshot, not a projection.
+            </li>
+            <li>
+              <strong>Nearest district.</strong> For each tier, the district
+              below it whose hardest metric is the smallest share of its base
+              away (payments still needed against its payment base, paid clubs
+              and Distinguished clubs against its club base), with the counts it
+              still needs. A district whose metrics are met but is short of a
+              prerequisite shows as &quot;metrics met, prerequisites
+              outstanding&quot;.
+            </li>
+            <li>
+              <strong>Unknown.</strong> A district whose metrics earn a tier but
+              that has a required prerequisite not reported in its export is not
+              counted as meeting it; the page counts these districts in a note.
+            </li>
+          </ul>
+          <p className="methodology-source">
+            Sources:{' '}
+            <code>snapshots/&#123;date&#125;/competitive-awards.json</code>{' '}
+            (each district&apos;s tier) and{' '}
+            <code>snapshots/&#123;date&#125;/all-districts-rankings.json</code>{' '}
+            (the counts and bases).
+          </p>
+        </div>
+      </CollapsibleSection>
+
       <CollapsibleSection
         id="changelog"
-        num="15"
+        num="16"
         title="Changelog"
         collapsible={isMobile}
         open={openIds.has('changelog')}
