@@ -10,7 +10,7 @@ import type {
   FormFactor,
   Scenario,
 } from '../scenarios/types'
-import { privacyMaskCss } from '../scenarios/privacy'
+import { privacyMaskScript, PRIVACY_STYLE_ID } from '../scenarios/privacy'
 
 /** How long the page gets to settle after a beat's steps (animations, refetch). */
 const SETTLE_MS = 450
@@ -221,23 +221,19 @@ export async function runCapture(
   })
   // Hide street addresses and contact links on every document, before the
   // first paint, so no frame ever shows them (#2353).
-  const maskCss = privacyMaskCss()
-  await context.addInitScript(css => {
-    const add = (): void => {
-      const style = document.createElement('style')
-      style.dataset['videoPrivacyMask'] = ''
-      style.textContent = css
-      document.head.appendChild(style)
-    }
-    if (document.head) add()
-    else document.addEventListener('DOMContentLoaded', add, { once: true })
-  }, maskCss)
+  // A source string, not a function: tsx wraps named arrow functions in a
+  // `__name` helper that does not exist in the page, which made a function
+  // init script throw silently and leave the address on screen.
+  await context.addInitScript({ content: privacyMaskScript() })
   const page = await context.newPage()
   const clock = (): number => performance.now() / 1000
 
   try {
     await page.goto(scenario.url, { waitUntil: 'networkidle' })
     await page.locator(form.readySelector).first().waitFor()
+    if ((await page.locator(`style#${PRIVACY_STYLE_ID}`).count()) !== 1) {
+      throw new Error('the privacy mask is not on the page; refusing to record')
+    }
     await page.evaluate(() => document.fonts.ready)
     for (const step of form.setup) await runStep(page, step)
     await settle(page)

@@ -23,3 +23,26 @@ export const PRIVACY_MASK_SELECTORS: readonly string[] = [
 export function privacyMaskCss(): string {
   return `${PRIVACY_MASK_SELECTORS.join(',\n')} {\n  visibility: hidden !important;\n}\n`
 }
+
+/** Id of the `<style>` element the mask script adds. */
+export const PRIVACY_STYLE_ID = 'video-privacy-mask'
+
+/**
+ * Browser init-script source that adds the mask stylesheet to every
+ * document before the app renders. It is plain source text, not a function,
+ * so no bundler helper can leak into it.
+ */
+export function privacyMaskScript(): string {
+  return `(() => {
+  const add = () => {
+    if (document.getElementById(${JSON.stringify(PRIVACY_STYLE_ID)})) return
+    const style = document.createElement('style')
+    style.id = ${JSON.stringify(PRIVACY_STYLE_ID)}
+    style.textContent = ${JSON.stringify(privacyMaskCss())}
+    ;(document.head || document.documentElement).appendChild(style)
+  }
+  if (document.head) add()
+  else document.addEventListener('DOMContentLoaded', add, { once: true })
+})()
+`
+}
