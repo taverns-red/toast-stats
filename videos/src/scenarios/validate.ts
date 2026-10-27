@@ -13,6 +13,27 @@ export const MIN_BEAT_SEC = 3
 const PLACEHOLDER = /\b[A-Z]{2,}(?:-[A-Z]{2,})+\b/g
 
 /**
+ * Counts and shares drift day to day, so a caption that quotes one is wrong
+ * by the next snapshot (#2353): say what is shown instead. A percentage or a
+ * number of two or more digits is flagged; a year (19xx/20xx), a one-digit
+ * name such as "Round 1" or "Goals 7 and 8", and anything inside a URL-like
+ * token (one containing "/" or a dotted host) are fine.
+ */
+export function driftingNumbers(caption: string): string[] {
+  const found: string[] = []
+  for (const token of caption.split(/\s+/)) {
+    if (/[/]|[a-z]\.[a-z]/i.test(token)) continue
+    for (const match of token.matchAll(/\d[\d,.]*%?/g)) {
+      const value = match[0].replace(/[.,]$/, '')
+      if (value.endsWith('%')) found.push(value)
+      else if (/^(19|20)\d\d$/.test(value)) continue
+      else if (value.replace(/\D/g, '').length >= 2) found.push(value)
+    }
+  }
+  return found
+}
+
+/**
  * Words a viewer reads: whitespace-separated tokens that contain at least one
  * letter or digit, so a dash or bullet is not a word and a URL is one.
  */
@@ -86,6 +107,11 @@ export function validateScenario(scenario: Scenario): string[] {
           `${name} hint has ${hintWords} words; the limit is ${MAX_CAPTION_WORDS}`
         )
       }
+    }
+    for (const value of driftingNumbers(card.caption)) {
+      problems.push(
+        `${name} quotes "${value}"; numbers drift, so say what is shown`
+      )
     }
     for (const text of [card.caption, card.hint ?? '']) {
       for (const placeholder of text.match(PLACEHOLDER) ?? []) {

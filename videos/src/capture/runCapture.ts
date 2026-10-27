@@ -10,16 +10,22 @@ import type {
   FormFactor,
   Scenario,
 } from '../scenarios/types'
+import { privacyMaskCss } from '../scenarios/privacy'
 
 /** How long the page gets to settle after a beat's steps (animations, refetch). */
 const SETTLE_MS = 450
 /** A smooth scroll in Chromium finishes well inside this. */
 const SCROLL_MS = 900
+/** Delay between typed keys: quick, but slow enough to read. */
+const TYPE_DELAY_MS = 110
 
 async function runStep(page: Page, step: CaptureStep): Promise<void> {
   switch (step.kind) {
     case 'click':
       await page.locator(step.selector).first().click()
+      // Park the pointer in the corner so no hover tooltip follows the
+      // scroll that comes next (#2353).
+      await page.mouse.move(0, 0)
       return
     case 'select':
       await page.locator(step.selector).selectOption(step.value)
@@ -33,6 +39,15 @@ async function runStep(page: Page, step: CaptureStep): Promise<void> {
           window.scrollTo({ top: top - offsetTop, behavior: 'smooth' })
         }, step.offsetTop)
       await page.waitForTimeout(SCROLL_MS)
+      return
+    case 'type':
+      await page
+        .locator(step.selector)
+        .first()
+        .pressSequentially(step.text, { delay: TYPE_DELAY_MS })
+      return
+    case 'press':
+      await page.keyboard.press(step.key)
       return
     case 'download': {
       const [download] = await Promise.all([
@@ -204,6 +219,19 @@ export async function runCapture(
     timezoneId: 'America/Toronto',
     acceptDownloads: true,
   })
+  // Hide street addresses and contact links on every document, before the
+  // first paint, so no frame ever shows them (#2353).
+  const maskCss = privacyMaskCss()
+  await context.addInitScript(css => {
+    const add = (): void => {
+      const style = document.createElement('style')
+      style.dataset['videoPrivacyMask'] = ''
+      style.textContent = css
+      document.head.appendChild(style)
+    }
+    if (document.head) add()
+    else document.addEventListener('DOMContentLoaded', add, { once: true })
+  }, maskCss)
   const page = await context.newPage()
   const clock = (): number => performance.now() / 1000
 
@@ -217,28 +245,40 @@ export async function runCapture(
     const sampler = new FrameSampler(page, framesDir, clock)
     sampler.start()
     const marks: CapturedBeat[] = []
-    for (const beat of scenario.beats) {
-      const actions = form.beats[beat.id]
-      if (!actions) throw new Error(`${format} has no actions for ${beat.id}`)
-      const beatStart = clock()
-      for (const step of actions.steps) await runStep(page, step)
-      await settle(page)
-      const highlightAtSec = clock() - beatStart
-      const box = actions.highlight
-        ? clampBox(
-            await page.locator(actions.highlight).first().boundingBox(),
-            device.viewport
+    try {
+      for (const beat of scenario.beats) {
+        const actions = form.beats[beat.id]
+        if (!actions) throw new Error(`${format} has no actions for ${beat.id}`)
+        const beatStart = clock()
+        for (const step of actions.steps) await runStep(page, step)
+        await settle(page)
+        const highlightAtSec = clock() - beatStart
+        const box = actions.highlight
+          ? clampBox(
+              await page.locator(actions.highlight).first().boundingBox(),
+              device.viewport
+            )
+          : null
+        const lengthSec = beat.endSec - beat.startSec
+        const remainingMs = (lengthSec - (clock() - beatStart)) * 1000
+        if (remainingMs < 0) {
+          throw new Error(
+            `beat "${beat.id}" needed ${(clock() - beatStart).toFixed(2)} s; it has ${lengthSec} s on screen`
           )
-        : null
-      const lengthSec = beat.endSec - beat.startSec
-      const remainingMs = (lengthSec - (clock() - beatStart)) * 1000
-      if (remainingMs < 0) {
-        throw new Error(
-          `beat "${beat.id}" needed ${(clock() - beatStart).toFixed(2)} s; it has ${lengthSec} s on screen`
-        )
+        }
+        await page.waitForTimeout(remainingMs)
+        marks.push({
+          id: beat.id,
+          videoStartSec: beatStart,
+          highlightAtSec,
+          box,
+        })
       }
-      await page.waitForTimeout(remainingMs)
-      marks.push({ id: beat.id, videoStartSec: beatStart, highlightAtSec, box })
+    } catch (error) {
+      // Stop sampling before the browser closes, so the step's own error is
+      // reported rather than a screenshot on a closed page (#2353).
+      await sampler.stop().catch(() => undefined)
+      throw error
     }
     // Hold the final frame briefly so the last beat never runs off the end.
     await page.waitForTimeout(500)
