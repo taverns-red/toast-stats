@@ -7,6 +7,9 @@ import { v5 } from './v5'
 import { v6 } from './v6'
 import { v7 } from './v7'
 import { v8 } from './v8'
+import { v9 } from './v9'
+import { v10 } from './v10'
+import { v14 } from './v14'
 import { v12 } from './v12'
 import { v15 } from './v15'
 
@@ -19,6 +22,9 @@ export const SCENARIOS: Readonly<Record<string, Scenario>> = {
   v6,
   v7,
   v8,
+  v9,
+  v10,
+  v14,
   v12,
   v15,
 }
