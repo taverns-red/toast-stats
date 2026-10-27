@@ -288,30 +288,18 @@
     gap: 6px;
   }
 
-  /* Line 2 at 320 px (#2340): the 166 px body held the "✕ Intervention" pill
-     (113 px in macOS system-ui, wider in CI's Linux font) and left "2/10 DCP"
-     (63 px) 45 px, so the figure ellipsized to "2/10 …". The whole row is
-     already one link, so the decorative chevron goes (22 px with its gap);
-     the trend scales to 48 px (the SVG has a viewBox and a non-scaling
-     stroke); the pill and the line-2 gap tighten. The chip still never
-     shrinks and line 2 stays one 20 px line, so the row heights hold. */
-  .clubs-mobile-rows .mobile-row-list--wrap .mobile-row__chevron {
+  /* Line 2 at 320 px (#2340): the 166 px body holds the status pill and
+     "N/10 DCP". "✕ Intervention" is 113 px in macOS system-ui and 127 px in
+     CI's Linux font, which left the figure 45–60 px of the 65 it needs, so it
+     ellipsized to "2/10 …". Tightening padding, gaps, the chevron and the
+     trend won about 30 px, not enough in the Linux font once a wide
+     "members (net)" sets the trend column. Below 360 px the pill shows its
+     glyph only (✓ / ⚠ / ✕ on its colour, the notation the division
+     headers already use for counts); the word stays in the row's
+     accessible name. The pill never shrinks, and line 2 stays one 20 px
+     line, so the row heights hold. */
+  .clubs-mobile-rows .mobile-row__line2 .status-chip__label {
     display: none;
-  }
-
-  .clubs-mobile-rows .mobile-row-list--wrap .club-trend-sparkline {
-    width: 48px;
-  }
-
-  .clubs-mobile-rows .mobile-row-list--wrap .mobile-row__line2 {
-    gap: 4px;
-  }
-
-  .clubs-mobile-rows
-    .mobile-row-list--wrap
-    .mobile-row__line2
-    .clubs-status-pill {
-    padding-inline: 6px;
   }
 }
 
