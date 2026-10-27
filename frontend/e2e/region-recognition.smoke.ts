@@ -34,12 +34,18 @@ for (const width of [390, 1280]) {
         scrollWidth: document.documentElement.scrollWidth,
         cardRights: cards.map(r => Math.round(r.right)),
         cardTops: cards.map(r => Math.round(r.top)),
+        onTrackLines: document.querySelectorAll(
+          '[data-testid="recognition-tier"] [data-testid="recognition-on-track"]'
+        ).length,
       }
     })
     const ctx = JSON.stringify(m)
     expect(m.scrollWidth, ctx).toBeLessThanOrEqual(m.vw)
     for (const right of m.cardRights)
       expect(right, ctx).toBeLessThanOrEqual(m.vw)
+    // Last year's pace (2025-26) is published, so every card carries its
+    // on-track line, apart from the "meet it today" count.
+    expect(m.onTrackLines, ctx).toBe(m.cardTops.length)
     const rows = new Set(m.cardTops).size
     if (width >= 1280) expect(rows, ctx).toBe(1)
     else expect(rows, ctx).toBe(m.cardTops.length)
