@@ -220,6 +220,15 @@ describe('AppShell (#354)', () => {
       expect(link).toHaveAttribute('href', '/mcp')
     })
 
+    it('links "How-to videos" to the /videos page (#2310)', () => {
+      // Same chrome source as the MCP link: footer on desktop, the
+      // "About" disclosure on mobile, so every page reaches the videos.
+      renderShell()
+      const footer = screen.getByRole('contentinfo')
+      const link = within(footer).getByRole('link', { name: /how-to videos/i })
+      expect(link).toHaveAttribute('href', '/videos')
+    })
+
     it('renders a non-empty version (no double-v, no bare-v)', () => {
       // Three regression guards:
       //   1. No 'vv' — VITE_APP_VERSION ships pre-prefixed with 'v', so

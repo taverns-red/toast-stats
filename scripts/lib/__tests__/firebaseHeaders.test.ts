@@ -182,6 +182,13 @@ describe('firebase.json security headers (#783)', () => {
           )
         })
 
+        it('allows the CDN to serve the how-to videos (media-src, #2310)', () => {
+          // <video> on /videos streams MP4s from cdn.taverns.red. With no
+          // media-src the policy falls back to default-src 'self' and the
+          // browser blocks every video.
+          expect(csp()).toMatch(/media-src[^;]*https:\/\/cdn\.taverns\.red/)
+        })
+
         it('allows Google Analytics origins', () => {
           // GA4 loads only on the prod hostname, but the policy must permit
           // it there: tag-manager script + analytics beacons.
