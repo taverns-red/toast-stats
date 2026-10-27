@@ -44,7 +44,11 @@ function fixture(): Scenario {
       { id: 'a', startSec: 3, endSec: 7, caption: 'One' },
       { id: 'b', startSec: 7, endSec: 11, caption: 'Two' },
     ],
-    closing: { startSec: 11, endSec: 14, caption: 'Bye' },
+    closing: {
+      startSec: 11,
+      endSec: 14,
+      caption: 'Try it: ts.taverns.red/district/86',
+    },
     forms: { desktop: form(), mobile: form() },
     music: 'music/x.wav',
   }
@@ -212,6 +216,25 @@ describe('validateScenario sentinels', () => {
     expect(validateScenario(s)).toEqual([])
   })
 
+  it('requires the closing card to give a site route to type (#2353)', () => {
+    const bare = fixture()
+    bare.closing.caption = 'Share the club link before the next visit.'
+    expect(validateScenario(bare).join('\n')).toMatch(
+      /closing card gives no route/
+    )
+
+    const hostOnly = fixture()
+    hostOnly.closing.caption = 'ts.taverns.red · free · updated daily.'
+    expect(validateScenario(hostOnly).join('\n')).toMatch(
+      /closing card gives no route/
+    )
+
+    const inHint = fixture()
+    inHint.closing.caption = 'Find your club.'
+    inHint.closing.hint = 'ts.taverns.red/club/2728'
+    expect(validateScenario(inHint)).toEqual([])
+  })
+
   it('requires at least one beat', () => {
     const s = fixture()
     s.beats = []
@@ -227,6 +250,27 @@ describe('V2 closing card (Ron, PR #2295 review)', () => {
     )
     expect(closing.caption).not.toMatch(/YOUR-/)
     expect(closing.hint).toMatch(/86 = your district number/)
+  })
+})
+
+describe('V3 shows the way to the Close to Distinguished view (Ron, PR #2356)', () => {
+  const v3 = getScenario('v3')
+
+  it('closes on the deep link to the preset', () => {
+    expect(v3.closing.caption).toContain(
+      'ts.taverns.red/district/86/clubs?preset=close-to-distinguished'
+    )
+  })
+
+  it('opens on the district and clicks through to Clubs in both formats', () => {
+    expect(v3.url).toMatch(/\/district\/86\?date=/)
+    for (const format of ['desktop', 'mobile'] as const) {
+      const first = v3.forms[format]!.beats[v3.beats[0]!.id]!.steps
+      expect(
+        first.some(s => s.kind === 'click' && /Clubs/.test(s.selector)),
+        format
+      ).toBe(true)
+    }
   })
 })
 
@@ -248,6 +292,11 @@ describe('getScenario', () => {
 
 describe.each(['v1', 'v3', 'v4'])('%s (#2353)', id => {
   const scenario = getScenario(id)
+
+  it('closes on a concrete route and says what its number means', () => {
+    expect(scenario.closing.caption).toMatch(/ts\.taverns\.red\/\S+/)
+    expect(scenario.closing.hint).toMatch(/^\d+ = your (district|club) number$/)
+  })
 
   it('renders in both form factors', () => {
     expect(scenario.forms.desktop).toBeDefined()
