@@ -127,11 +127,6 @@ describe('videos.yml (#2293)', () => {
     const comment = jobs.find(j =>
       j.steps.some(s => /sticky/i.test(s.uses ?? ''))
     )
-    const message = String(
-      comment?.steps.find(s => /sticky/i.test(s.uses ?? ''))?.with?.[
-        'message'
-      ] ?? ''
-    )
 
     it('uploads only MP4s under the name the publish workflow downloads', () => {
       expect(video).toBeDefined()
@@ -162,7 +157,9 @@ describe('videos.yml (#2293)', () => {
       )
       expect(list?.run).toMatch(/videos-\$s-\$GITHUB_RUN_ID/)
       expect(list?.run).toMatch(/videos-music-\$s-\$GITHUB_RUN_ID/)
-      expect(message).toMatch(/steps\.\w+\.outputs\.links/)
+      expect(list?.run).toContain('videos-comment.md')
+      const sticky = comment?.steps.find(s => /sticky/i.test(s.uses ?? ''))
+      expect(String(sticky?.with?.['path'])).toMatch(/videos-comment\.md$/)
     })
   })
 
