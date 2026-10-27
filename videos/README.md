@@ -80,8 +80,9 @@ capture, and Remotion downloads its own headless shell on the first render.
 Each scenario is one file in `src/scenarios/`: V1 (`v1.ts`, District
 Director), V2 (`v2.ts`, Area Director), V3 (`v3.ts`, PQD / Area Director /
 Club President), V4 (`v4.ts`, club officers), V5 (`v5.ts`, Club Growth
-Director), V8 (`v8.ts`, District Director) and V12 (`v12.ts`, Region
-Advisor). It sets the
+Director), V6 (`v6.ts`, Division / Area Director), V7 (`v7.ts`, PQD), V8
+(`v8.ts`, District Director), V12 (`v12.ts`, Region Advisor) and V15
+(`v15.ts`, PQD / Area Director). It sets the
 pinned URL (`?date=` keeps retakes identical) and, for each beat, the start
 and end time and the caption — shared by every form factor. Under
 `forms.desktop` and `forms.mobile` it sets the device, the setup steps, and
