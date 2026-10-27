@@ -1119,8 +1119,7 @@ const MethodologyPage: React.FC = () => {
               apart from &quot;meet it today&quot;. A district is on track for a
               tier when each of three ratios is at least the median of the
               districts that reached that tier or higher at the end of 2025-2026
-              (their June 30 tier), measured on the same day of 2025-2026, or
-              the nearest earlier snapshot when that day was not kept:
+              (their June 30 tier), measured on the same day of 2025-2026:
               <ul>
                 <li>paid clubs ÷ club base</li>
                 <li>payments ÷ payment base</li>
@@ -1136,19 +1135,34 @@ const MethodologyPage: React.FC = () => {
               the bar.
             </li>
             <li>
+              <strong>Same renewal period.</strong> Paid clubs drop when October
+              and April renewals come due, so last year&apos;s figures are never
+              taken from the other side of October 1 or April 1. The renewal
+              periods are July 1 – September 30, October 1 – March 31 and April
+              1 – June 30. When the same day was not kept, the page uses the
+              nearest earlier snapshot in the same renewal period, otherwise the
+              nearest later one in that period; if the period kept no snapshot,
+              on track is shown as not available.
+            </li>
+            <li>
+              <strong>Tiers nest.</strong> A district counts as on track for a
+              tier only if it is also on track for every lower tier. Each
+              tier&apos;s median comes from its own, small group of districts
+              (11 reached Smedley in 2025-2026), so a higher tier&apos;s bar can
+              sit slightly below a lower tier&apos;s; nesting keeps a higher
+              tier from counting more districts than a lower one.
+            </li>
+            <li>
               <strong>Limits of the on-track line.</strong> It is a comparison
               with one past year, not a promise: last year&apos;s pace may not
               repeat, and the prerequisites are not part of it. 2025-26 was kept
-              mostly at month-end until March, so most of the year is compared
-              with the month-end before the same day, up to a month earlier.
-              Early in the year the Distinguished clubs median is often 0, so
-              that ratio holds for every district. Each tier&apos;s bar comes
-              from its own districts, and there are few of them (11 reached
-              Smedley in 2025-2026), so a higher tier&apos;s median can sit
-              slightly below a lower tier&apos;s. It is shown only for
-              2026-2027, the first year whose previous year has been checked
-              after the Club Success Plan rule was applied to its Distinguished
-              counts; for other years the page says it is not available.
+              mostly at month-end until March, so the comparison day can be up
+              to a month away from today&apos;s. Early in the year the
+              Distinguished clubs median is often 0, so that ratio holds for
+              every district. It is shown only for 2026-2027, the first year
+              whose previous year has been checked after the Club Success Plan
+              rule was applied to its Distinguished counts; for other years the
+              page says it is not available.
             </li>
             <li>
               <strong>Unknown.</strong> A district whose metrics earn a tier but
