@@ -98,6 +98,12 @@ those drift with every snapshot, so captions say what is shown. Steps are
 `click`, `select`, `scrollTo`, `type` (typed key by key, so it reads),
 `press`, `download` and `pause`.
 
+The last storyboard batch (#2367) adds V11 (`v11.ts`, Club Growth Director /
+VP Membership / PQD), V13 (`v13.ts`, District PR Manager / VP Public
+Relations) and V16 (`v16.ts`, Webmaster / District PR Manager). The capture
+grants the page clipboard access, so a "Copy link" step shows the site's
+"Link copied" confirmation.
+
 Storyboards and the role research are in
 `.routine-tmp/video-scenarios-2026-10-25.md`.
 

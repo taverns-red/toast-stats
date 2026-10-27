@@ -12,6 +12,9 @@ import { v10 } from './v10'
 import { v14 } from './v14'
 import { v12 } from './v12'
 import { v15 } from './v15'
+import { v11 } from './v11'
+import { v13 } from './v13'
+import { v16 } from './v16'
 
 export const SCENARIOS: Readonly<Record<string, Scenario>> = {
   v1,
@@ -27,6 +30,9 @@ export const SCENARIOS: Readonly<Record<string, Scenario>> = {
   v14,
   v12,
   v15,
+  v11,
+  v13,
+  v16,
 }
 
 export function getScenario(id: string): Scenario {
