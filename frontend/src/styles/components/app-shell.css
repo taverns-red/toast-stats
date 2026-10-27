@@ -2719,6 +2719,8 @@
 
   .club-member-data-note__link {
     color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   /* Bottom back-link (#618) — neutral surface chip, anchor (not button). */
