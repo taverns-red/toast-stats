@@ -113,6 +113,25 @@ export const HOW_TO_VIDEOS: readonly HowToVideo[] = [
     roles: ['Program Quality Director'],
     description: 'Who is earning what: by level, path and area.',
   }),
+  video('v14', '2026-10-27', {
+    title: 'Clubs that need intervention',
+    roles: ['Club Growth Director', 'Division Director', 'Club coaches'],
+    description: 'Find the clubs that need help, and who is coaching.',
+  }),
+  video('v10', '2026-10-27', {
+    title: 'Realign without a spreadsheet',
+    roles: ['District Director', 'Alignment Committee'],
+    description: 'Try a new area layout. Nothing is saved.',
+  }),
+  video('v9', '2026-10-27', {
+    title: 'Trends and rank, year over year',
+    roles: [
+      'District Director',
+      'Club Growth Director',
+      'Immediate Past District Director',
+    ],
+    description: 'This year against the years before it.',
+  }),
 ]
 
 export interface RoleGroup {

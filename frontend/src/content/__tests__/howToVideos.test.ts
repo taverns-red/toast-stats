@@ -107,7 +107,7 @@ describe('HOW_TO_VIDEOS', () => {
   it('lists the third batch (V6, V15, V7) at its 2026-10-27 publish', () => {
     // Each URL answered 206 from the CDN on 2026-10-27 (npm run
     // videos:check-urls) before it was added here. Storyboard rank order.
-    expect(HOW_TO_VIDEOS.map(v => v.id)).toEqual([
+    expect(HOW_TO_VIDEOS.slice(0, 10).map(v => v.id)).toEqual([
       'v1',
       'v2',
       'v3',
@@ -120,6 +120,29 @@ describe('HOW_TO_VIDEOS', () => {
       'v7',
     ])
     for (const id of ['v6', 'v15', 'v7']) {
+      expect(HOW_TO_VIDEOS.find(v => v.id === id)?.version).toBe('2026-10-27')
+    }
+  })
+
+  it('lists the fourth batch (V14, V10, V9) at its 2026-10-27 publish', () => {
+    // Each URL answered 206 from the CDN on 2026-10-27 (npm run
+    // videos:check-urls) before it was added here. Storyboard rank order.
+    expect(HOW_TO_VIDEOS.map(v => v.id)).toEqual([
+      'v1',
+      'v2',
+      'v3',
+      'v4',
+      'v5',
+      'v8',
+      'v12',
+      'v6',
+      'v15',
+      'v7',
+      'v14',
+      'v10',
+      'v9',
+    ])
+    for (const id of ['v14', 'v10', 'v9']) {
       expect(HOW_TO_VIDEOS.find(v => v.id === id)?.version).toBe('2026-10-27')
     }
   })
