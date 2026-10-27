@@ -129,7 +129,8 @@ export const v15: Scenario = {
           steps: [
             { kind: 'scrollTo', selector: DESKTOP_MAP_TAB, offsetTop: 300 },
             { kind: 'click', selector: DESKTOP_MAP_TAB },
-            { kind: 'pause', ms: 500 },
+            // Let the basemap tiles arrive before the pins change colour.
+            { kind: 'pause', ms: 1200 },
             { kind: 'click', selector: COLOUR },
             { kind: 'pause', ms: 400 },
             { kind: 'click', selector: CSP_MODE },
@@ -186,14 +187,14 @@ export const v15: Scenario = {
             { kind: 'click', selector: MORE },
             { kind: 'pause', ms: 400 },
             { kind: 'click', selector: MOBILE_MAP_LINK },
-            { kind: 'pause', ms: 500 },
+            { kind: 'pause', ms: 1200 },
             { kind: 'click', selector: COLOUR },
             { kind: 'pause', ms: 400 },
             { kind: 'click', selector: CSP_MODE },
           ],
-          // The legend sits under the bottom bar on a phone; the Colour pill
-          // names the mode and the window pans down over the pins.
-          highlight: COLOUR,
+          // The legend sits under the bottom bar on a phone; centring the
+          // window on the map keeps the clustered pins in view.
+          highlight: '.district-map__canvas',
         },
         club: {
           steps: [
