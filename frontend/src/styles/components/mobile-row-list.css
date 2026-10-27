@@ -287,6 +287,20 @@
     padding-inline: 8px;
     gap: 6px;
   }
+
+  /* Line 2 at 320 px (#2340): the 166 px body holds the status pill and
+     "N/10 DCP". "✕ Intervention" is 113 px in macOS system-ui and 127 px in
+     CI's Linux font, which left the figure 45–60 px of the 65 it needs, so it
+     ellipsized to "2/10 …". Tightening padding, gaps, the chevron and the
+     trend won about 30 px, not enough in the Linux font once a wide
+     "members (net)" sets the trend column. Below 360 px the pill shows its
+     glyph only (✓ / ⚠ / ✕ on its colour, the notation the division
+     headers already use for counts); the word stays in the row's
+     accessible name. The pill never shrinks, and line 2 stays one 20 px
+     line, so the row heights hold. */
+  .clubs-mobile-rows .mobile-row__line2 .status-chip__label {
+    display: none;
+  }
 }
 
 .mobile-row-list--wrap .mobile-row__title {

@@ -42,7 +42,10 @@ export const StatusChip: React.FC<StatusChipProps> = ({
       }`}
     >
       <span aria-hidden="true">{getClubHealthStatusIcon(status)}</span>{' '}
-      {label ?? getClubHealthStatusLabel(status)}
+      {/* A class hook so a cramped row can show the glyph alone (#2340). */}
+      <span className="status-chip__label">
+        {label ?? getClubHealthStatusLabel(status)}
+      </span>
     </span>
   )
 }
