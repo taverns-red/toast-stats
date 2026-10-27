@@ -72,6 +72,8 @@ const ACKNOWLEDGED_SITES: Record<string, string> = {
     'says the region history starts in 2016-17, so earlier PYs have no region rollup (#1810, #1820); data availability, not a rule',
   'packages/shared-contracts/src/education/educationAwardProgram.ts':
     'tags awards by code (Legacy/Pathways); the 2003-04 → 2018-19 range only says where the vocabulary was recorded (#1802)',
+  'frontend/src/utils/regionPace.ts':
+    'names 2025-26 as the verified reference year for the on-track pace (#2307); data availability, not a recognition rule',
   'frontend/src/hooks/useTimeSeries.ts':
     'a `@param … e.g. "2021-2022"` doc example next to unrelated prose',
   'packages/collector-cli/src/services/TimeSeriesIndexWriter.ts':
