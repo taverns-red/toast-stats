@@ -93,6 +93,26 @@ export const HOW_TO_VIDEOS: readonly HowToVideo[] = [
     ],
     description: 'Every district, every region, one scoreboard.',
   }),
+  video('v6', '2026-10-27', {
+    title: 'Division and area recognition',
+    roles: ['Division Director', 'Area Director'],
+    description: 'Distinguished Area and Division, tracked club by club.',
+  }),
+  video('v15', '2026-10-27', {
+    title: "Who hasn't filed?",
+    roles: [
+      'Program Quality Director',
+      'Area Director',
+      'Club President',
+      'Club Secretary',
+    ],
+    description: 'CSP, dues, officer lists: who is missing, by when.',
+  }),
+  video('v7', '2026-10-27', {
+    title: 'Education awards, this year to date',
+    roles: ['Program Quality Director'],
+    description: 'Who is earning what: by level, path and area.',
+  }),
 ]
 
 export interface RoleGroup {
