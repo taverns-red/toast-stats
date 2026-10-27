@@ -52,7 +52,7 @@ export interface ProgramYearDeadline {
 export interface DeadlineRule {
   id: DeadlineId
   label: string
-  /** First program year the rule applies to, e.g. "2000-2001". */
+  /** First program year ("YYYY-YYYY") the rule applies to. */
   fromProgramYear: string
   source: string
   date: (programYear: string) => string
