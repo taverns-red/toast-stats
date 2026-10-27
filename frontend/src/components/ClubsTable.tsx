@@ -907,7 +907,10 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         <h3 className="sr-only">All Clubs</h3>
       ) : (
         <div className="p-6 clubs-panel-header">
-          <div className="flex items-center justify-between mb-4">
+          {/* On phones the row wraps: the title keeps its own line and the
+            exports sit below it (#2343), instead of squeezing the title to
+            "All / Clubs" beside two stacked buttons. */}
+          <div className="flex items-center justify-between mb-4 clubs-panel-header__row">
             <h3 className="text-xl font-bold clubs-panel-title">All Clubs</h3>
             {exportGroup}
           </div>
