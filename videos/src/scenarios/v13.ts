@@ -46,7 +46,7 @@ const EXTENSION_AWARD = 'section[aria-labelledby="award-extensionAward-title"]'
 
 export const v13: Scenario = {
   id: 'v13',
-  role: 'District PR Manager · VP Public Relations',
+  role: 'VP Public Relations · District PR Manager',
   url: 'https://ts.taverns.red/district/86?date=2026-10-24',
   fps: 30,
   durationSec: 33,
