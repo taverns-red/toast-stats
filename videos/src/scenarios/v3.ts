@@ -182,12 +182,14 @@ export const v3: Scenario = {
         },
         gap: {
           steps: [
-            { kind: 'scrollTo', selector: '.gap-section', offsetTop: 96 },
+            { kind: 'scrollTo', selector: '.gap-section', offsetTop: 140 },
           ],
           highlight: '.gap-section',
         },
         'per-goal': {
-          steps: [{ kind: 'scrollTo', selector: GOALS, offsetTop: 140 }],
+          // Low enough that the window's pan clamps at the viewport bottom and
+          // shows the "Per-goal status" label whole above the list.
+          steps: [{ kind: 'scrollTo', selector: GOALS, offsetTop: 360 }],
           highlight: GOALS,
         },
       },
