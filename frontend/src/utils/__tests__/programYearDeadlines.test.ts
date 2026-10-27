@@ -64,6 +64,12 @@ describe('deadlinesForProgramYear (#2298)', () => {
     )
   })
 
+  it('does not throw for an undated snapshot (page still loading)', () => {
+    // Callers pass '' while the date index is in flight; the gate must
+    // render, with no deadline to compare against.
+    expect(getAreaVisitDeadlines('')).toEqual({ r1: '', r2: '' })
+  })
+
   it('cites a TI source on every rule', () => {
     expect(PROGRAM_YEAR_DEADLINE_RULES.length).toBeGreaterThan(0)
     for (const rule of PROGRAM_YEAR_DEADLINE_RULES) {
