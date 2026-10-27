@@ -46,11 +46,14 @@ interface Props {
   scoreboard: RecognitionScoreboard | null
   /** "YYYY-YYYY", the page's selected program year (R3). */
   programYear: string
+  /** Where last year's pace was measured; null = not available. */
+  pace?: { referenceDate: string; referenceProgramYear: string } | null
 }
 
 export const RegionRecognitionScoreboard: React.FC<Props> = ({
   scoreboard,
   programYear,
+  pace = null,
 }) => (
   <section
     aria-labelledby="region-recognition-heading"
@@ -65,6 +68,15 @@ export const RegionRecognitionScoreboard: React.FC<Props> = ({
         <>
           Districts meeting each tier at this snapshot, under {programYear}{' '}
           rules.{' '}
+          {pace ? (
+            <>
+              On track compares each district&apos;s pace with the median of the
+              districts that earned it or higher in {pace.referenceProgramYear},
+              on {pace.referenceDate}.{' '}
+            </>
+          ) : (
+            <>Last year&apos;s pace is not available for this date. </>
+          )}
         </>
       ) : (
         <>District Recognition status is not available for this date. </>
@@ -87,13 +99,34 @@ export const RegionRecognitionScoreboard: React.FC<Props> = ({
                 {TIER_LABEL[row.tier]}
               </p>
               <div className="districts-kpi-card__value tabular-nums">
-                {row.meeting} of {scoreboard.districts}
+                {row.meeting} of {scoreboard.districts}{' '}
+                <span className="text-xs text-gray-500 font-normal">
+                  meet it today
+                </span>
               </div>
               <p className="text-xs text-gray-500 mt-1">
                 {row.nearest
                   ? nearestText(row.nearest)
                   : 'Every district meets this tier'}
               </p>
+              {pace && (
+                <p
+                  className="text-xs text-gray-500"
+                  data-testid="recognition-on-track"
+                  style={{
+                    marginTop: 8,
+                    paddingTop: 8,
+                    borderTop: '1px solid var(--line)',
+                  }}
+                >
+                  On track, based on last year&apos;s pace:{' '}
+                  <strong className="tabular-nums">
+                    {row.onTrack === null
+                      ? 'not available'
+                      : `${row.onTrack} of ${scoreboard.districts}`}
+                  </strong>
+                </p>
+              )}
             </div>
           ))}
         </div>
