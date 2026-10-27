@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/__tests__/**/*.test.ts'],
+    // ffmpeg-backed generator tests run in videos.yml via `npm run
+    // test:audio` (vitest.audio.config.ts); main CI has no ffmpeg (#2336).
+    exclude: ['**/node_modules/**', 'src/**/__tests__/**/*.audio.test.ts'],
     coverage: {
       provider: 'v8',
       // The denominator is the pure, testable core: scenario configs, their

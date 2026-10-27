@@ -110,16 +110,32 @@ Storyboards and the role research are in
 
 ## Music and licences
 
-**Background track.** The default track, `music/calm-pad.wav`, is
-**original**. `src/render/music.ts` synthesizes it with ffmpeg `aevalsrc`
-from sine partials: a slow Cmaj7, Am7, Fmaj7, G progression with crossfades,
-a low-pass filter and a short echo. It is normalised to −26 LUFS, and the
-video fades it in and out. It contains no samples or third-party recordings,
-so it needs no licence.
+**Background track.** Every track is **original** and generated at render
+time (#2336). `src/music/` writes a score and synthesises it in TypeScript:
+no samples, loops or third-party recordings, so it needs no licence. Each
+variant is an I–V–vi–IV loop in a major key with short plucked, mallet or
+strummed notes, a soft kick and a filtered-noise shaker:
+
+| Variant               | Tempo   | Key     | Sound                                                |
+| --------------------- | ------- | ------- | ---------------------------------------------------- |
+| `bright-pluck`        | 112 BPM | C major | Plucked-string eighth-note arpeggio, kick on 1 and 3 |
+| `light-pop` (default) | 120 BPM | G major | Mallet riff, bass eighths, four-on-the-floor kick    |
+| `warm-strum`          | 100 BPM | D major | Acoustic-style strummed chords, kick on 1 and 3      |
+
+The mix is set to −26 LUFS with one gain (true peak at most −3 dBTP), and the
+video fades it in and out. Tracks are 36 s, longer than any allowed clip.
+
+- Listen: `npm run videos:music -- [variant…] [--seconds 20]` writes AAC
+  previews to `videos/out/music/`. The PR render uploads them too.
+- Pick per render: `npm run videos:render -- v2 --music bright-pluck`.
+- Pick per scenario: `music: trackPath('warm-strum')`. The default lives in
+  `src/scenarios/music.ts` (`DEFAULT_MUSIC`).
+- Tests: `npm test` covers the score and synthesis. `npm run test:audio`
+  needs ffmpeg and checks length, loudness, true peak and determinism of
+  the written files. videos.yml runs it.
 
 **Swapping in a licensed track.** Put the file in `videos/public/music/`,
-record its licence here, and change the one line in
-`src/scenarios/music.ts` (`DEFAULT_MUSIC`).
+record its licence here, and point the scenario's `music` at it.
 
 **Remotion licence.** Remotion is source-available, not MIT. Its free licence
 covers individuals, for-profit organisations with **up to 3 employees**, and

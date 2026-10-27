@@ -1,6 +1,8 @@
 /**
- * `npm run videos:render -- <scenario> [--format mobile]` — compose the
- * captured walkthrough into videos/out/<scenario>[-<format>].mp4 (gitignored).
+ * `npm run videos:render -- <scenario> [--format mobile] [--music <variant>]`
+ * — compose the captured walkthrough into videos/out/<scenario>[-<format>].mp4
+ * (gitignored). `--music` swaps the scenario's track for another generated
+ * variant (#2336).
  * Needs a prior capture of the same format. Opt-in only: never part of npm
  * test, the pre-push hook or CI (#2293).
  */
@@ -14,8 +16,8 @@ import {
 import { join } from 'node:path'
 import { bundle } from '@remotion/bundler'
 import { renderMedia, selectComposition } from '@remotion/renderer'
-import { generatePad, measureLufs } from '../render/music'
-import { DEFAULT_MUSIC } from '../scenarios/music'
+import { trackPath, variantForTrack } from '../music/variants'
+import { generateTrack, measureLufs } from '../render/music'
 import { RENDER_ENCODING } from '../output/encoding'
 import { outputName, type CliArgs } from '../scenarios/cliArgs'
 import type { CaptureManifest } from '../scenarios/types'
@@ -29,7 +31,7 @@ import {
   VIDEOS_ROOT,
 } from './paths'
 
-export async function render({ id, format }: CliArgs): Promise<void> {
+export async function render({ id, format, music }: CliArgs): Promise<void> {
   const scenario = loadValidScenario(id)
   const name = outputName(scenario.id, format)
 
@@ -49,13 +51,16 @@ export async function render({ id, format }: CliArgs): Promise<void> {
     copyFileSync(join(FRONTEND_FONTS, file), join(PUBLIC_DIR, 'fonts', file))
   }
 
-  const musicPath = join(PUBLIC_DIR, scenario.music)
-  if (!existsSync(musicPath)) {
-    if (scenario.music !== DEFAULT_MUSIC) {
-      throw new Error(`Music track ${musicPath} is missing.`)
-    }
-    console.error('Generating the original background pad …')
-    generatePad(musicPath)
+  const track = music ? trackPath(music) : scenario.music
+  const musicPath = join(PUBLIC_DIR, track)
+  const variant = variantForTrack(track)
+  if (variant) {
+    // Always regenerate: it takes a second and is deterministic, so a cached
+    // file from an older generator can never slip into a render.
+    console.error(`Generating the original "${variant.id}" music track …`)
+    generateTrack(variant.id, musicPath)
+  } else if (!existsSync(musicPath)) {
+    throw new Error(`Music track ${musicPath} is missing.`)
   }
 
   console.error('Bundling the composition …')
@@ -63,7 +68,7 @@ export async function render({ id, format }: CliArgs): Promise<void> {
     entryPoint: join(VIDEOS_ROOT, 'src', 'remotion', 'index.ts'),
     publicDir: PUBLIC_DIR,
   })
-  const inputProps = { scenarioId: scenario.id, format, manifest }
+  const inputProps = { scenarioId: scenario.id, format, manifest, music: track }
   const composition = await selectComposition({
     serveUrl,
     id: 'HowTo',

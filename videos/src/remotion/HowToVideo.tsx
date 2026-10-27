@@ -29,6 +29,8 @@ export type HowToVideoProps = {
   scenarioId: string
   format: FormFactor
   manifest: CaptureManifest | null
+  /** Track to play instead of the scenario's, relative to `public/` (#2336). */
+  music?: string
 }
 
 const CROSSFADE_SEC = 0.4
@@ -410,6 +412,7 @@ export function HowToVideo({
   scenarioId,
   format,
   manifest,
+  music,
 }: HowToVideoProps): ReactElement {
   useAppFonts()
   const scenario = getScenario(scenarioId)
@@ -480,7 +483,7 @@ export function HowToVideo({
         />
       </Sequence>
       <Html5Audio
-        src={staticFile(scenario.music)}
+        src={staticFile(music ?? scenario.music)}
         volume={frame => fadeInOut(frame, fps, durationSec, 1.5, 2.5)}
       />
     </AbsoluteFill>
