@@ -1101,8 +1101,9 @@ const MethodologyPage: React.FC = () => {
             <li>
               <strong>Early in the year.</strong> Payments and Distinguished
               clubs build up through the program year, so few districts meet any
-              tier before spring. The count is what the district would earn if
-              the year closed on that snapshot, not a projection.
+              tier before spring. &quot;Meet it today&quot; is what the district
+              would earn if the year closed on that snapshot; the on-track line
+              below is the forward-looking measure.
             </li>
             <li>
               <strong>Nearest district.</strong> For each tier, the district
@@ -1114,6 +1115,42 @@ const MethodologyPage: React.FC = () => {
               outstanding&quot;.
             </li>
             <li>
+              <strong>On track, based on last year&apos;s pace.</strong> Shown
+              apart from &quot;meet it today&quot;. A district is on track for a
+              tier when each of three ratios is at least the median of the
+              districts that reached that tier or higher at the end of 2025-2026
+              (their June 30 tier), measured on the same day of 2025-2026, or
+              the nearest earlier snapshot when that day was not kept:
+              <ul>
+                <li>paid clubs ÷ club base</li>
+                <li>payments ÷ payment base</li>
+                <li>Distinguished clubs ÷ club base</li>
+              </ul>
+              Ratios to each district&apos;s own base, not raw counts: on
+              2025-09-30 the districts that went on to reach Distinguished or
+              higher ran from 45 to 207 paid clubs, so a median of counts
+              measures district size, not pace (Smedley districts&apos; median
+              was 86 paid clubs, below the 116.5 of all Distinguished-or-higher
+              districts). The tiers themselves are set against the same bases.
+              The median is used so that a few fast or slow districts do not set
+              the bar.
+            </li>
+            <li>
+              <strong>Limits of the on-track line.</strong> It is a comparison
+              with one past year, not a promise: last year&apos;s pace may not
+              repeat, and the prerequisites are not part of it. 2025-26 was kept
+              mostly at month-end until March, so most of the year is compared
+              with the month-end before the same day, up to a month earlier.
+              Early in the year the Distinguished clubs median is often 0, so
+              that ratio holds for every district. Each tier&apos;s bar comes
+              from its own districts, and there are few of them (11 reached
+              Smedley in 2025-2026), so a higher tier&apos;s median can sit
+              slightly below a lower tier&apos;s. It is shown only for
+              2026-2027, the first year whose previous year has been checked
+              after the Club Success Plan rule was applied to its Distinguished
+              counts; for other years the page says it is not available.
+            </li>
+            <li>
               <strong>Unknown.</strong> A district whose metrics earn a tier but
               that has a required prerequisite not reported in its export is not
               counted as meeting it; the page counts these districts in a note.
@@ -1122,9 +1159,10 @@ const MethodologyPage: React.FC = () => {
           <p className="methodology-source">
             Sources:{' '}
             <code>snapshots/&#123;date&#125;/competitive-awards.json</code>{' '}
-            (each district&apos;s tier) and{' '}
+            (each district&apos;s tier, and last year&apos;s June 30 tiers) and{' '}
             <code>snapshots/&#123;date&#125;/all-districts-rankings.json</code>{' '}
-            (the counts and bases).
+            (the counts and bases, this year&apos;s and on last year&apos;s
+            reference date).
           </p>
         </div>
       </CollapsibleSection>
