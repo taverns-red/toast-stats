@@ -97,6 +97,65 @@ describe('videos.yml (#2293)', () => {
     expect(upload?.with?.['retention-days']).toBe(30)
   })
 
+  describe('keeps the music previews out of the video artifact (#2344)', () => {
+    const uploads = steps.filter(s =>
+      (s.uses ?? '').startsWith('actions/upload-artifact@')
+    )
+    const paths = (s: Step | undefined) =>
+      String(s?.with?.['path'] ?? '')
+        .split('\n')
+        .map(p => p.trim())
+        .filter(Boolean)
+    // videos-publish.yml downloads exactly this name and refuses any file
+    // that is not one of the planned MP4s (scripts/lib/videoPublish.ts).
+    const VIDEO_NAME =
+      'videos-${{ steps.args.outputs.scenario }}-${{ github.run_id }}'
+    const video = uploads.find(s => s.with?.['name'] === VIDEO_NAME)
+    const music = uploads.find(s =>
+      paths(s).some(p => p.startsWith('videos/out/music/'))
+    )
+    const render = wf.jobs['render'] as Job & {
+      outputs?: Record<string, string>
+    }
+    const comment = jobs.find(j =>
+      j.steps.some(s => /sticky/i.test(s.uses ?? ''))
+    )
+    const message = String(
+      comment?.steps.find(s => /sticky/i.test(s.uses ?? ''))?.with?.[
+        'message'
+      ] ?? ''
+    )
+
+    it('uploads only MP4s under the name the publish workflow downloads', () => {
+      expect(video).toBeDefined()
+      expect(paths(video).length).toBeGreaterThan(0)
+      for (const p of paths(video))
+        expect(p).toMatch(/^videos\/out\/[^/]*\.mp4$/)
+    })
+
+    it('uploads the music previews as their own artifact', () => {
+      expect(music).toBeDefined()
+      expect(music).not.toBe(video)
+      expect(paths(music)).toEqual(['videos/out/music/*.m4a'])
+      expect(music!.uses).toMatch(/^actions\/upload-artifact@[0-9a-f]{40}$/)
+      expect(music!.with?.['name']).toBe(
+        'videos-music-${{ steps.args.outputs.scenario }}-${{ github.run_id }}'
+      )
+      expect(music!.with?.['if-no-files-found']).toBe('error')
+      expect(music!.with?.['retention-days']).toBe(30)
+    })
+
+    it('links the music previews from the PR sticky comment', () => {
+      const id = (music as (Step & { id?: string }) | undefined)?.id
+      expect(id).toBeDefined()
+      expect(render.outputs?.['music-artifact-url']).toBe(
+        `\${{ steps.${id}.outputs.artifact-url }}`
+      )
+      expect(message).toContain('needs.render.outputs.music-artifact-url')
+      expect(message).toContain('needs.render.outputs.artifact-url')
+    })
+  })
+
   it('never commits or pushes a render', () => {
     expect(raw).not.toMatch(/git (add|commit|push)/)
   })
