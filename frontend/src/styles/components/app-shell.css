@@ -5083,6 +5083,26 @@
     font-family: var(--serif);
   }
 
+  /* Phones (#2343): the title and the export group shared one
+     justify-between row, and "Export Clubs" + "Export Changes" (323 px) do
+     not fit beside the title in a 294 px header at 390. The buttons stacked
+     in a column that took most of the row and squeezed the title to
+     "All / Clubs". Below 768 the row wraps, so the group drops under the
+     title whenever both don't fit, and its buttons sit in a gapped,
+     wrapping row. 768 and up are unchanged (they fit on one row). */
+  @media (max-width: 767px) {
+    .clubs-panel-header__row {
+      flex-wrap: wrap;
+      row-gap: 12px;
+    }
+
+    .clubs-panel-header__row .clubs-export-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  }
+
   /* Visible name search box (#814, epic #818 Sprint 1). A prominent input at
      the top of the table — recognition over recall — wired to the existing
      `name` text filter. Token-driven so dark mode "just works" (R10). */
