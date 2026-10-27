@@ -75,7 +75,9 @@ export const v1: Scenario = {
   closing: {
     startSec: 28,
     endSec: 31,
-    caption: "ts.taverns.red · free · updated daily from TI's dashboards.",
+    // A real route plus what its number means, like V2 (Ron, PR #2356).
+    caption: 'District Directors: ts.taverns.red/district/86',
+    hint: '86 = your district number',
   },
   forms: {
     desktop: {

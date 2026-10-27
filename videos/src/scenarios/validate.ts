@@ -10,6 +10,8 @@ export const MIN_BEAT_SEC = 3
  * ALL-CAPS hyphenated tokens like YOUR-DISTRICT: a viewer can't tell what
  * format to type (Ron, PR #2295). Show a real example plus a hint instead.
  */
+/** A site URL with a path, e.g. ts.taverns.red/district/86/clubs. */
+const SITE_ROUTE = /ts\.taverns\.red\/[\w-]/
 const PLACEHOLDER = /\b[A-Z]{2,}(?:-[A-Z]{2,})+\b/g
 
 /**
@@ -121,6 +123,15 @@ export function validateScenario(scenario: Scenario): string[] {
       }
     }
     expectedStart = card.endSec
+  }
+
+  // Every clip ends on a route the viewer can type (Ron, PR #2356): a bare
+  // host or a call to action alone leaves them no way back to the view.
+  const closingText = `${closing.caption} ${closing.hint ?? ''}`
+  if (!SITE_ROUTE.test(closingText)) {
+    problems.push(
+      'closing card gives no route; show a URL such as ts.taverns.red/district/86/… and a hint'
+    )
   }
 
   // Captions and timing are shared; each form factor scripts its own actions.
