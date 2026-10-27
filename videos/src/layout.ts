@@ -75,3 +75,15 @@ export function cropOffset(
       : box.y + box.height / 2 - windowH / 2
   return Math.min(maxOffset, Math.max(0, wanted))
 }
+
+/**
+ * Card text with a URL, made to wrap cleanly: a break opportunity (zero-width
+ * space) after each "/" and "?", and non-breaking hyphens, so
+ * `close-to-distinguished` never splits across lines (#2353).
+ */
+export function cardUrlText(text: string): string {
+  return text
+    .replace(/\//g, '/\u200b')
+    .replace(/\?/g, '?\u200b')
+    .replace(/-/g, '\u2011')
+}

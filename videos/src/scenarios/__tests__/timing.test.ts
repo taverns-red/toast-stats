@@ -44,7 +44,11 @@ function fixture(): Scenario {
       { id: 'a', startSec: 3, endSec: 7, caption: 'One' },
       { id: 'b', startSec: 7, endSec: 11, caption: 'Two' },
     ],
-    closing: { startSec: 11, endSec: 14, caption: 'Bye' },
+    closing: {
+      startSec: 11,
+      endSec: 14,
+      caption: 'Try it: ts.taverns.red/district/86',
+    },
     forms: { desktop: form(), mobile: form() },
     music: 'music/x.wav',
   }
@@ -193,6 +197,44 @@ describe('validateScenario sentinels', () => {
     )
   })
 
+  it('rejects a caption that quotes a count or share that drifts (#2353)', () => {
+    const count = fixture()
+    count.beats[0]!.caption = '37 members, four goals met, CSP filed.'
+    expect(validateScenario(count).join('\n')).toMatch(
+      /beat "a" quotes "37".*say what is shown/
+    )
+
+    const share = fixture()
+    share.beats[1]!.caption = 'Top 6% worldwide.'
+    expect(validateScenario(share).join('\n')).toMatch(/beat "b" quotes "6%"/)
+  })
+
+  it('allows years, names like Round 1 and numbers inside a URL', () => {
+    const s = fixture()
+    s.beats[0]!.caption = 'Round 1 visits, every year back to 2016.'
+    s.closing.caption = 'Go to ts.taverns.red/district/86/club/2728'
+    expect(validateScenario(s)).toEqual([])
+  })
+
+  it('requires the closing card to give a site route to type (#2353)', () => {
+    const bare = fixture()
+    bare.closing.caption = 'Share the club link before the next visit.'
+    expect(validateScenario(bare).join('\n')).toMatch(
+      /closing card gives no route/
+    )
+
+    const hostOnly = fixture()
+    hostOnly.closing.caption = 'ts.taverns.red · free · updated daily.'
+    expect(validateScenario(hostOnly).join('\n')).toMatch(
+      /closing card gives no route/
+    )
+
+    const inHint = fixture()
+    inHint.closing.caption = 'Find your club.'
+    inHint.closing.hint = 'ts.taverns.red/club/2728'
+    expect(validateScenario(inHint)).toEqual([])
+  })
+
   it('requires at least one beat', () => {
     const s = fixture()
     s.beats = []
@@ -211,12 +253,84 @@ describe('V2 closing card (Ron, PR #2295 review)', () => {
   })
 })
 
+describe('V3 shows the way to the Close to Distinguished view (Ron, PR #2356)', () => {
+  const v3 = getScenario('v3')
+
+  it('closes on the deep link to the preset', () => {
+    expect(v3.closing.caption).toContain(
+      'ts.taverns.red/district/86/clubs?preset=close-to-distinguished'
+    )
+  })
+
+  it('opens on the district and points at the Clubs tab before tapping it', () => {
+    expect(v3.url).toMatch(/\/district\/86\?date=/)
+    const [nav, list] = v3.beats
+    expect(nav!.caption).toMatch(/open Clubs/)
+    for (const format of ['desktop', 'mobile'] as const) {
+      const form = v3.forms[format]!
+      // The viewer sees where the tab is first, then the tap.
+      expect(form.beats[nav!.id]!.highlight, format).toMatch(/Clubs/)
+      expect(
+        form.beats[list!.id]!.steps.some(
+          s => s.kind === 'click' && /Clubs/.test(s.selector)
+        ),
+        format
+      ).toBe(true)
+    }
+  })
+})
+
 describe('getScenario', () => {
   it('returns a registered scenario', () => {
     expect(getScenario('v2').role).toBe('Area Director')
   })
 
+  it('registers batch 1: V1, V3 and V4 (#2353)', () => {
+    expect(getScenario('v1').role).toBe('District Director')
+    expect(getScenario('v3').role).toMatch(/Program Quality Director/)
+    expect(getScenario('v4').role).toBe('Club officers')
+  })
+
   it('names the known scenarios when the id is unknown', () => {
-    expect(() => getScenario('nope')).toThrow(/Known: v2/)
+    expect(() => getScenario('nope')).toThrow(/Known: v1, v2, v3, v4/)
+  })
+})
+
+describe.each(['v1', 'v3', 'v4'])('%s (#2353)', id => {
+  const scenario = getScenario(id)
+
+  it('closes on a concrete route and says what its number means', () => {
+    expect(scenario.closing.caption).toMatch(/ts\.taverns\.red\/\S+/)
+    expect(scenario.closing.hint).toMatch(/^\d+ = your (district|club) number$/)
+  })
+
+  it('renders in both form factors', () => {
+    expect(scenario.forms.desktop).toBeDefined()
+    expect(scenario.forms.mobile).toBeDefined()
+  })
+
+  it('pins its start URL to a snapshot date on the live site', () => {
+    expect(scenario.url).toMatch(
+      /^https:\/\/ts\.taverns\.red\/.*[?&]date=\d{4}-\d{2}-\d{2}/
+    )
+  })
+
+  it('uses the default light-pop track', () => {
+    expect(scenario.music).toMatch(/light-pop/)
+  })
+
+  it('never scripts a step onto a contact or website link', () => {
+    for (const format of ['desktop', 'mobile'] as const) {
+      const form = scenario.forms[format]!
+      const steps = [
+        ...form.setup,
+        ...Object.values(form.beats).flatMap(b => b.steps),
+      ]
+      for (const step of steps) {
+        if ('selector' in step) {
+          expect(step.selector).not.toMatch(/contact|website|club-meets/i)
+        }
+      }
+    }
   })
 })

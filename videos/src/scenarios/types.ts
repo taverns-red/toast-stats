@@ -29,6 +29,10 @@ export type CaptureStep =
   | { kind: 'select'; selector: string; value: string }
   /** Smooth-scroll so the element's top sits `offsetTop` px below the viewport top. */
   | { kind: 'scrollTo'; selector: string; offsetTop: number }
+  /** Type into a field one key at a time, so the viewer sees it typed. */
+  | { kind: 'type'; selector: string; text: string }
+  /** Press one key (e.g. `Enter`) in the focused element. */
+  | { kind: 'press'; key: string }
   /** Click something that starts a file download and wait for it. */
   | { kind: 'download'; selector: string }
   | { kind: 'pause'; ms: number }

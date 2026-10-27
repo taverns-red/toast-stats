@@ -10,7 +10,30 @@ export const MIN_BEAT_SEC = 3
  * ALL-CAPS hyphenated tokens like YOUR-DISTRICT: a viewer can't tell what
  * format to type (Ron, PR #2295). Show a real example plus a hint instead.
  */
+/** A site URL with a path, e.g. ts.taverns.red/district/86/clubs. */
+const SITE_ROUTE = /ts\.taverns\.red\/[\w-]/
 const PLACEHOLDER = /\b[A-Z]{2,}(?:-[A-Z]{2,})+\b/g
+
+/**
+ * Counts and shares drift day to day, so a caption that quotes one is wrong
+ * by the next snapshot (#2353): say what is shown instead. A percentage or a
+ * number of two or more digits is flagged; a year (19xx/20xx), a one-digit
+ * name such as "Round 1" or "Goals 7 and 8", and anything inside a URL-like
+ * token (one containing "/" or a dotted host) are fine.
+ */
+export function driftingNumbers(caption: string): string[] {
+  const found: string[] = []
+  for (const token of caption.split(/\s+/)) {
+    if (/[/]|[a-z]\.[a-z]/i.test(token)) continue
+    for (const match of token.matchAll(/\d[\d,.]*%?/g)) {
+      const value = match[0].replace(/[.,]$/, '')
+      if (value.endsWith('%')) found.push(value)
+      else if (/^(19|20)\d\d$/.test(value)) continue
+      else if (value.replace(/\D/g, '').length >= 2) found.push(value)
+    }
+  }
+  return found
+}
 
 /**
  * Words a viewer reads: whitespace-separated tokens that contain at least one
@@ -87,6 +110,11 @@ export function validateScenario(scenario: Scenario): string[] {
         )
       }
     }
+    for (const value of driftingNumbers(card.caption)) {
+      problems.push(
+        `${name} quotes "${value}"; numbers drift, so say what is shown`
+      )
+    }
     for (const text of [card.caption, card.hint ?? '']) {
       for (const placeholder of text.match(PLACEHOLDER) ?? []) {
         problems.push(
@@ -95,6 +123,15 @@ export function validateScenario(scenario: Scenario): string[] {
       }
     }
     expectedStart = card.endSec
+  }
+
+  // Every clip ends on a route the viewer can type (Ron, PR #2356): a bare
+  // host or a call to action alone leaves them no way back to the view.
+  const closingText = `${closing.caption} ${closing.hint ?? ''}`
+  if (!SITE_ROUTE.test(closingText)) {
+    problems.push(
+      'closing card gives no route; show a URL such as ts.taverns.red/district/86/… and a hint'
+    )
   }
 
   // Captions and timing are shared; each form factor scripts its own actions.

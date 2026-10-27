@@ -8,9 +8,12 @@
 # Opt-in only:
 #   - workflow_dispatch -> choose the scenario and desktop / mobile / both
 #   - pull_request      -> only when videos/** (or this file) changes; renders
-#                          v2 in both formats plus a short audio preview of
+#                          every scenario file the PR adds or changes
+#                          (videos/src/scenarios/v<N>.ts), or v2 when it
+#                          changes none, in both formats, one matrix leg per
+#                          scenario (#2353), plus a short audio preview of
 #                          each music variant (a separate artifact, #2344),
-#                          and posts a sticky comment that links both
+#                          and posts a sticky comment that links them all
 # Main CI runs only the scenario unit tests (ci.yml); it never renders.
 #
 # No cloud credentials: the capture reads the public site and the output goes
@@ -51,17 +54,53 @@ permissions:
   contents: read
 
 jobs:
+  # Which scenarios to render: the dispatched one, or on a PR each scenario
+  # file it adds or changes (v2 when none). The PR checkout is the merge
+  # commit, so HEAD^1 is the base branch tip (fetch-depth 2).
+  plan:
+    name: Plan scenarios
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    outputs:
+      scenarios: ${{ steps.plan.outputs.scenarios }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Resolve the scenarios to render
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          IN_SCENARIO: ${{ inputs.scenario }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            ids="$IN_SCENARIO"
+          else
+            git diff --name-only --diff-filter=d HEAD^1 HEAD -- videos/src/scenarios \
+              > "$RUNNER_TEMP/changed.txt"
+            ids=$(sed -nE 's#^videos/src/scenarios/(v[0-9]+)\.ts$#\1#p' \
+              "$RUNNER_TEMP/changed.txt" | sort -u | tr '\n' ' ')
+            if [ -z "${ids// /}" ]; then ids="v2"; fi
+          fi
+          read -ra list <<< "$ids"
+          json=$(printf '%s\n' "${list[@]}" | jq -R . | jq -cs .)
+          echo "Scenarios: $json"
+          echo "scenarios=$json" >> "$GITHUB_OUTPUT"
+
   render:
-    name: Capture and render
+    name: Capture and render (${{ matrix.scenario }})
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: ${{ fromJSON(needs.plan.outputs.scenarios) }}
     runs-on: ubuntu-26.04
     # A capture holds each beat in real time (~35 s per format) and a 30 s
     # render takes a few minutes on a runner; 30 min leaves room for both
     # formats plus installs.
     timeout-minutes: 30
-    outputs:
-      artifact-url: ${{ steps.upload.outputs.artifact-url }}
-      music-artifact-url: ${{ steps.upload-music.outputs.artifact-url }}
-      scenario: ${{ steps.args.outputs.scenario }}
     steps:
       - uses: actions/checkout@v7
 
@@ -74,7 +113,7 @@ jobs:
       - name: Resolve scenario and formats
         id: args
         env:
-          IN_SCENARIO: ${{ inputs.scenario || 'v2' }}
+          IN_SCENARIO: ${{ matrix.scenario }}
           IN_FORMAT: ${{ inputs.format || 'both' }}
         run: |
           if ! printf '%s' "$IN_SCENARIO" | grep -Eq '^[a-z0-9-]+$'; then
@@ -269,7 +308,7 @@ jobs:
 
   comment:
     name: Link the render on the PR
-    needs: render
+    needs: [plan, render]
     if: >-
       github.event_name == 'pull_request'
       && github.event.pull_request.head.repo.full_name == github.repository
@@ -277,24 +316,55 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      actions: read # list this run's artifacts for the links (#2353)
       pull-requests: write
     steps:
-      - name: Post sticky PR comment with the artifact link
+      # One artifact pair per scenario (matrix leg), so a job output would
+      # hold only the last leg's URL: list the run's artifacts instead and
+      # write the comment body to a file.
+      - name: Link each scenario's artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SCENARIOS: ${{ needs.plan.outputs.scenarios }}
+        run: |
+          set -euo pipefail
+          gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
+            --jq '.artifacts[] | [.name, (.id | tostring)] | @tsv' \
+            > "$RUNNER_TEMP/artifacts.tsv"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          link() {
+            awk -F'\t' -v n="$1" '$1 == n { print $2 }' "$RUNNER_TEMP/artifacts.tsv"
+          }
+          body="$RUNNER_TEMP/videos-comment.md"
+          cat > "$body" <<'HEAD'
+          ## 🎬 How-to video render
+
+          Each scenario is rendered desktop 16:9 and mobile 9:16 from the live site.
+
+          HEAD
+          for s in $(jq -r '.[]' <<< "$SCENARIOS"); do
+            v=$(link "videos-$s-$GITHUB_RUN_ID")
+            m=$(link "videos-music-$s-$GITHUB_RUN_ID")
+            if [ -n "$v" ]; then
+              echo "- **$s**: [videos artifact]($run_url/artifacts/$v) (MP4s only, kept 30 days) · [music previews]($run_url/artifacts/$m)" >> "$body"
+            else
+              echo "- **$s**: render failed, see the run log" >> "$body"
+            fi
+          done
+          cat >> "$body" <<'TAIL'
+
+          **Music:** the videos use the default generated track. The music
+          previews hold a 20-second preview of each variant (`bright-pluck`,
+          `light-pop`, `warm-strum`); render another with `--music <variant>`.
+
+          Renders are build outputs and are never committed.
+          TAIL
+          echo "[Run log]($run_url)" >> "$body"
+          cat "$body"
+
+      - name: Post sticky PR comment with the artifact links
         uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: videos
-          message: |
-            ## 🎬 How-to video render
-
-            **Scenario:** `${{ needs.render.outputs.scenario }}` (desktop 16:9 and mobile 9:16)
-
-            **Music:** the videos use the default generated track.
-            The [music previews artifact](${{ needs.render.outputs.music-artifact-url }})
-            holds a 20-second preview of each variant (`bright-pluck`,
-            `light-pop`, `warm-strum`); render another with `--music <variant>`.
-
-            **Download:** [videos artifact](${{ needs.render.outputs.artifact-url }})
-            (MP4s only, kept 30 days) ·
-            [run log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-
-            Rendered from the live site on the runner. Renders are build outputs and are never committed.
+          path: ${{ runner.temp }}/videos-comment.md

@@ -17,8 +17,10 @@ Rendered videos are **never committed** — not to the source tree and not to
 - **In CI** the opt-in [`Videos` workflow](../.github/workflows/videos.yml)
   renders them on a runner and uploads the MP4s as an Actions artifact, kept
   30 days. It runs on manual dispatch (pick the scenario and
-  desktop / mobile / both) and on PRs that change `videos/**`, where a sticky
-  comment links the artifact. It holds no cloud credentials.
+  desktop / mobile / both) and on PRs that change `videos/**`. A PR renders
+  every scenario file it adds or changes (v2 if none), both formats, one
+  matrix leg and one artifact per scenario, and a sticky comment links them
+  all. It holds no cloud credentials.
 - **Publishing** a reviewed render to our CDN is a separate, manual workflow;
   see [Publishing to the CDN](#publishing-to-the-cdn). Nothing in the render
   workflow publishes.
@@ -75,7 +77,9 @@ capture, and Remotion downloads its own headless shell on the first render.
 
 ## Scenarios
 
-Each scenario is one file in `src/scenarios/` (V2: `v2.ts`). It sets the
+Each scenario is one file in `src/scenarios/`: V1 (`v1.ts`, District
+Director), V2 (`v2.ts`, Area Director), V3 (`v3.ts`, PQD / Area Director /
+Club President) and V4 (`v4.ts`, club officers). It sets the
 pinned URL (`?date=` keeps retakes identical) and, for each beat, the start
 and end time and the caption — shared by every form factor. Under
 `forms.desktop` and `forms.mobile` it sets the device, the setup steps, and
@@ -84,6 +88,10 @@ each beat's scripted steps and highlight selector, because the phone UI
 form to script every beat. The tests in `src/scenarios/__tests__/timing.test.ts` require
 every beat to fall inside the duration, beats to be contiguous and at least
 3 s long, captions to be 12 words or fewer, and the clip to be 34 s or less.
+A caption may not quote a count or a share (two or more digits, or a `%`):
+those drift with every snapshot, so captions say what is shown. Steps are
+`click`, `select`, `scrollTo`, `type` (typed key by key, so it reads),
+`press`, `download` and `pause`.
 
 Storyboards and the role research are in
 `.routine-tmp/video-scenarios-2026-10-25.md`.
@@ -107,6 +115,9 @@ Storyboards and the role research are in
   copied from `frontend/src/assets/fonts/` at render time.
 - Captures run in a fresh light-theme browser context, so no "your district"
   star or dark mode leaks in.
+- **Privacy:** every capture hides club street addresses and the website and
+  contact links (`src/scenarios/privacy.ts`), and refuses to record if the
+  mask is not on the page. A test fails if the app renames what it keys on.
 
 ## Music and licences
 
