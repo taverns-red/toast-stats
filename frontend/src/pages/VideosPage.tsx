@@ -67,7 +67,7 @@ function posterFor(title: string, cut: VideoCut): string {
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}">` +
     `<rect width="${w}" height="${h}" fill="${POSTER_BG}"/>` +
     `<g fill="${POSTER_INK}" font-family="Inter, Arial, sans-serif" font-weight="700" text-anchor="middle" dominant-baseline="middle">${tspans}</g>` +
-    `<text x="${w / 2}" y="${h - size * 1.5}" fill="${POSTER_INK}" fill-opacity="0.8" font-family="Inter, Arial, sans-serif" font-size="${size * 0.5}" text-anchor="middle">Toast Stats how-to · press play</text>` +
+    `<text x="${w / 2}" y="${size * 1.5}" fill="${POSTER_INK}" fill-opacity="0.8" font-family="Inter, Arial, sans-serif" font-size="${size * 0.5}" text-anchor="middle">Toast Stats how-to</text>` +
     `</svg>`
   return `data:image/svg+xml,${encodeURIComponent(svg)}`
 }
