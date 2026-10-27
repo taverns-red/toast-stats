@@ -50,7 +50,12 @@ const SECTIONS: ReadonlyArray<{ id: string; num: string; title: string }> = [
   { id: 'club-race', num: '12', title: 'Worldwide club race' },
   { id: 'officer-training', num: '13', title: 'Officer training' },
   { id: 'member-data', num: '14', title: 'Member-level data' },
-  { id: 'changelog', num: '15', title: 'Changelog' },
+  {
+    id: 'region-recognition',
+    num: '15',
+    title: 'Region District Recognition',
+  },
+  { id: 'changelog', num: '16', title: 'Changelog' },
 ]
 
 // Every rule-change entry is its own deep-link target (#1400), owned by §10.
@@ -1064,9 +1069,121 @@ const MethodologyPage: React.FC = () => {
         </div>
       </CollapsibleSection>
 
+      {/* Region District Recognition scoreboard (#2307) — the Region page's
+          scoreboard links here. Asserted by
+          MethodologyPage.regionRecognition.test.tsx. */}
+      <CollapsibleSection
+        id="region-recognition"
+        num="15"
+        title="Region District Recognition"
+        collapsible={isMobile}
+        open={openIds.has('region-recognition')}
+        onToggle={toggle}
+      >
+        <div data-testid="methodology-region-recognition">
+          <p>
+            Each Region page shows, for every tier of the District Recognition
+            Program (Distinguished, Select, President&apos;s and, from 2018-19,
+            Smedley), how many of the region&apos;s districts meet it at the
+            selected snapshot.
+          </p>
+          <ul>
+            <li>
+              <strong>Meeting a tier.</strong> A district meets a tier when its
+              paid-club growth, payment growth and share of Distinguished clubs
+              reach that tier&apos;s thresholds <em>and</em> it has met every
+              prerequisite the program year requires, under that program
+              year&apos;s own rules (District Recognition Program, Item 1490 and
+              its revisions; see §10 for how the rules changed). It is the same
+              tier the district page shows. Tiers are counted at that tier or
+              higher, so a Select district also counts for Distinguished.
+            </li>
+            <li>
+              <strong>Early in the year.</strong> Payments and Distinguished
+              clubs build up through the program year, so few districts meet any
+              tier before spring. &quot;Meet it today&quot; is what the district
+              would earn if the year closed on that snapshot; the on-track line
+              below is the forward-looking measure.
+            </li>
+            <li>
+              <strong>Nearest district.</strong> For each tier, the district
+              below it whose hardest metric is the smallest share of its base
+              away (payments still needed against its payment base, paid clubs
+              and Distinguished clubs against its club base), with the counts it
+              still needs. A district whose metrics are met but is short of a
+              prerequisite shows as &quot;metrics met, prerequisites
+              outstanding&quot;.
+            </li>
+            <li>
+              <strong>On track, based on last year&apos;s pace.</strong> Shown
+              apart from &quot;meet it today&quot;. A district is on track for a
+              tier when each of three ratios is at least the median of the
+              districts that reached that tier or higher at the end of 2025-2026
+              (their June 30 tier), measured on the same day of 2025-2026:
+              <ul>
+                <li>paid clubs ÷ club base</li>
+                <li>payments ÷ payment base</li>
+                <li>Distinguished clubs ÷ club base</li>
+              </ul>
+              Ratios to each district&apos;s own base, not raw counts: on
+              2025-09-30 the districts that went on to reach Distinguished or
+              higher ran from 45 to 207 paid clubs, so a median of counts
+              measures district size, not pace (Smedley districts&apos; median
+              was 86 paid clubs, below the 116.5 of all Distinguished-or-higher
+              districts). The tiers themselves are set against the same bases.
+              The median is used so that a few fast or slow districts do not set
+              the bar.
+            </li>
+            <li>
+              <strong>Same renewal period.</strong> Paid clubs drop when October
+              and April renewals come due, so last year&apos;s figures are never
+              taken from the other side of October 1 or April 1. The renewal
+              periods are July 1 – September 30, October 1 – March 31 and April
+              1 – June 30. When the same day was not kept, the page uses the
+              nearest earlier snapshot in the same renewal period, otherwise the
+              nearest later one in that period; if the period kept no snapshot,
+              on track is shown as not available.
+            </li>
+            <li>
+              <strong>Tiers nest.</strong> A district counts as on track for a
+              tier only if it is also on track for every lower tier. Each
+              tier&apos;s median comes from its own, small group of districts
+              (11 reached Smedley in 2025-2026), so a higher tier&apos;s bar can
+              sit slightly below a lower tier&apos;s; nesting keeps a higher
+              tier from counting more districts than a lower one.
+            </li>
+            <li>
+              <strong>Limits of the on-track line.</strong> It is a comparison
+              with one past year, not a promise: last year&apos;s pace may not
+              repeat, and the prerequisites are not part of it. 2025-26 was kept
+              mostly at month-end until March, so the comparison day can be up
+              to a month away from today&apos;s. Early in the year the
+              Distinguished clubs median is often 0, so that ratio holds for
+              every district. It is shown only for 2026-2027, the first year
+              whose previous year has been checked after the Club Success Plan
+              rule was applied to its Distinguished counts; for other years the
+              page says it is not available.
+            </li>
+            <li>
+              <strong>Unknown.</strong> A district whose metrics earn a tier but
+              that has a required prerequisite not reported in its export is not
+              counted as meeting it; the page counts these districts in a note.
+            </li>
+          </ul>
+          <p className="methodology-source">
+            Sources:{' '}
+            <code>snapshots/&#123;date&#125;/competitive-awards.json</code>{' '}
+            (each district&apos;s tier, and last year&apos;s June 30 tiers) and{' '}
+            <code>snapshots/&#123;date&#125;/all-districts-rankings.json</code>{' '}
+            (the counts and bases, this year&apos;s and on last year&apos;s
+            reference date).
+          </p>
+        </div>
+      </CollapsibleSection>
+
       <CollapsibleSection
         id="changelog"
-        num="15"
+        num="16"
         title="Changelog"
         collapsible={isMobile}
         open={openIds.has('changelog')}
