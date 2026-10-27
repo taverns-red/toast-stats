@@ -7,6 +7,10 @@ import { test, expect } from './fixtures/test'
  * district Overview, a division page and an area page. This guards that it
  * renders there with its data, stays inside the viewport, and adds no
  * horizontal page scroll at phone width — in light and dark.
+ *
+ * On the phone Overview the hub (tiles + Needs attention) owns the first
+ * screen (district-overview-hub-mobile.smoke.ts), so the strip sits right
+ * after the hub there, never above it.
  */
 
 const PHONE = { width: 390, height: 844 }
@@ -47,3 +51,23 @@ for (const scheme of ['light', 'dark'] as const) {
     })
   }
 }
+
+test('phone Overview: the strip follows the hub, not above it', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/district/61', { waitUntil: 'networkidle', timeout: 60_000 })
+  const strip = page.locator(
+    '[data-testid="next-deadline-strip"]:not([aria-busy="true"])'
+  )
+  await strip.waitFor({ state: 'visible', timeout: 30_000 })
+  const hub = page.locator(
+    '[data-testid="district-hub-mobile"]:not(.district-hub--loading)'
+  )
+  await hub.waitFor({ state: 'visible', timeout: 30_000 })
+  const [hubBox, stripBox] = await Promise.all([
+    hub.boundingBox(),
+    strip.boundingBox(),
+  ])
+  expect(stripBox!.y).toBeGreaterThanOrEqual(hubBox!.y + hubBox!.height)
+})
