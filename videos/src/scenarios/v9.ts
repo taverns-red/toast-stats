@@ -197,9 +197,11 @@ export const v9: Scenario = {
             { kind: 'click', selector: SHEET_CLOSE },
             { kind: 'pause', ms: 500 },
             { kind: 'click', selector: PAYMENTS_SPARK },
-            { kind: 'pause', ms: 600 },
+            { kind: 'pause', ms: 1000 },
+            // As in beat 2: bring the chart under the stat cards into view.
+            { kind: 'click', selector: SHEET_HINT },
           ],
-          highlight: SHEET,
+          highlight: SHEET_CHART,
         },
         yoy: {
           steps: [
