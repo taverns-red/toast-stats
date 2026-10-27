@@ -66,6 +66,7 @@
 @import './styles/components/education.css';
 @import './styles/components/meetings.css';
 @import './styles/components/training.css';
+@import './styles/components/deadline-strip.css';
 @import './styles/components/survival.css';
 @import './styles/components/mobile-row-list.css';
 @import './styles/components/club-trend-sparkline.css';

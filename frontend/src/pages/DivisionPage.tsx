@@ -13,6 +13,7 @@ import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import { calculateDivisionGapAnalysis } from '../utils/divisionGapAnalysis'
 import { generateDivisionProgressText } from '../utils/divisionProgressText'
 import { DivisionPerformanceCard } from '../components/DivisionPerformanceCard'
+import { NextDeadlineStrip } from '../components/NextDeadlineStrip'
 import { ContextBar } from '../components/ContextBar'
 import { ContextSheetControls } from '../components/ContextSheetControls'
 import { formatFreshnessLine } from '../utils/contextBar'
@@ -241,6 +242,12 @@ const DivisionPage: React.FC = () => {
           />
         </div>
       </header>
+
+      {/* Next-deadline strip (#2298): the page's own PY and date (R3). */}
+      <NextDeadlineStrip
+        programYear={(effectiveProgramYear ?? selectedProgramYear).label}
+        asOfDate={viewedDate}
+      />
 
       {/* Division + areas recognition data, reused from the Divisions overview
           (#1015). Replaces the old ad-hoc allClubs KPI strip so the standalone

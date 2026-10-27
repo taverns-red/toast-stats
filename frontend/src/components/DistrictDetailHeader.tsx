@@ -9,6 +9,7 @@ import { formatFreshnessLine } from '../utils/contextBar'
 import { HeaderActionsMenu } from './HeaderActionsMenu'
 import { ProgramYearTitleSuffix } from './ProgramYearTitleSuffix'
 import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
+import { NextDeadlineStrip } from './NextDeadlineStrip'
 import type { ProgramYear } from '../utils/programYear'
 import type { SnapshotDate } from '../types/snapshotDate'
 
@@ -170,6 +171,14 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
           <HeaderActionsMenu districtId={districtId} />
         </div>
       </div>
+      {/* Next-deadline strip (#2298) on the Overview hub; PY and date are
+          the page's (R3). */}
+      {!segment && (
+        <NextDeadlineStrip
+          programYear={selectedProgramYear.label}
+          asOfDate={viewedDate}
+        />
+      )}
     </>
   )
 }

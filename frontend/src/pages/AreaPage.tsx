@@ -16,6 +16,7 @@ import { generateAreaProgressText } from '../utils/areaProgressText'
 import { renderRecognitionBadge } from '../utils/areaRecognitionBadge'
 import { AreaPerformanceTable } from '../components/AreaPerformanceTable'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
+import { NextDeadlineStrip } from '../components/NextDeadlineStrip'
 import { ContextBar } from '../components/ContextBar'
 import { ContextSheetControls } from '../components/ContextSheetControls'
 import { formatFreshnessLine } from '../utils/contextBar'
@@ -274,6 +275,12 @@ const AreaPage: React.FC = () => {
           />
         </div>
       </header>
+
+      {/* Next-deadline strip (#2298): the page's own PY and date (R3). */}
+      <NextDeadlineStrip
+        programYear={(effectiveProgramYear ?? selectedProgramYear).label}
+        asOfDate={viewedDate}
+      />
 
       {/* Area recognition data, reused from the Divisions overview (#1016).
           Replaces the old ad-hoc allClubs KPI strip so the standalone page shows

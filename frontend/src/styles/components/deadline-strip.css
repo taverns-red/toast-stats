@@ -1,0 +1,69 @@
+/* Next-deadline strip (#2298) on the district, division and area pages.
+   Legacy palette only (#2080: no --rt-stats until Phase 2): a
+   --tm-loyal-blue-10 tint (remapped under [data-theme='dark'] in
+   dark-mode.css) with --line, --ink and --ink-2, which remap too.
+   Stacked at phone widths, one row from 768. Text stays ≥14px. */
+
+.deadline-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0 0 1rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--tm-loyal-blue-10);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+  min-width: 0;
+}
+
+.deadline-strip__lead {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.deadline-strip__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.deadline-strip__item,
+.deadline-strip__done,
+.deadline-strip__placeholder {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.deadline-strip__when {
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.deadline-strip__countdown {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+@media (min-width: 768px) {
+  .deadline-strip,
+  .deadline-strip__list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 1.5rem;
+  }
+
+  /* One line on desktop: the second placeholder would hold a row the
+     loaded strip does not use. */
+  .deadline-strip__placeholder + .deadline-strip__placeholder {
+    display: none;
+  }
+}
