@@ -4,6 +4,7 @@ import {
   type DistrictRecognitionTier,
   type DistrictTierCounts,
 } from '@taverns-red/analytics-core'
+import { isOnTrack, type PaceMedian } from './regionPace'
 import type {
   DistinguishedDistrictStatus,
   DistinguishedDistrictTier,
@@ -42,6 +43,9 @@ export interface ScoreboardRow {
   meeting: number
   /** The closest district below this tier; null when all meet it. */
   nearest: NearestDistrict | null
+  /** Districts on track by last year's pace (regionPace); null when there
+      is no pace for this tier. Separate from `meeting`. */
+  onTrack: number | null
 }
 
 export interface RecognitionScoreboard {
@@ -71,7 +75,8 @@ const byDistrictNumber = (a: string, b: string): number =>
 export function buildRecognitionScoreboard(
   districts: ReadonlyArray<RecognitionDistrict>,
   statuses: Record<string, DistinguishedDistrictStatus> | null | undefined,
-  programYear: string
+  programYear: string,
+  pace?: Partial<Record<DistrictRecognitionTier, PaceMedian | null>> | null
 ): RecognitionScoreboard | null {
   if (!statuses) return null
   const present = districts
@@ -100,7 +105,13 @@ export function buildRecognitionScoreboard(
         nearest = { districtId: d.districtId, ...r }
       }
     }
-    return { tier, meeting: present.length - below.length, nearest }
+    const median = pace?.[tier] ?? null
+    return {
+      tier,
+      meeting: present.length - below.length,
+      nearest,
+      onTrack: median ? present.filter(d => isOnTrack(d, median)).length : null,
+    }
   })
 
   return {
