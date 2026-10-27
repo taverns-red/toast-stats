@@ -287,6 +287,32 @@
     padding-inline: 8px;
     gap: 6px;
   }
+
+  /* Line 2 at 320 px (#2340): the 166 px body held the "✕ Intervention" pill
+     (113 px in macOS system-ui, wider in CI's Linux font) and left "2/10 DCP"
+     (63 px) 45 px, so the figure ellipsized to "2/10 …". The whole row is
+     already one link, so the decorative chevron goes (22 px with its gap);
+     the trend scales to 48 px (the SVG has a viewBox and a non-scaling
+     stroke); the pill and the line-2 gap tighten. The chip still never
+     shrinks and line 2 stays one 20 px line, so the row heights hold. */
+  .clubs-mobile-rows .mobile-row-list--wrap .mobile-row__chevron {
+    display: none;
+  }
+
+  .clubs-mobile-rows .mobile-row-list--wrap .club-trend-sparkline {
+    width: 48px;
+  }
+
+  .clubs-mobile-rows .mobile-row-list--wrap .mobile-row__line2 {
+    gap: 4px;
+  }
+
+  .clubs-mobile-rows
+    .mobile-row-list--wrap
+    .mobile-row__line2
+    .clubs-status-pill {
+    padding-inline: 6px;
+  }
 }
 
 .mobile-row-list--wrap .mobile-row__title {
