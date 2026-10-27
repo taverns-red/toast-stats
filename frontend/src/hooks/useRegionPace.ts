@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { districtTiersForProgramYear } from '@taverns-red/analytics-core'
 import {
@@ -64,25 +65,34 @@ export function useRegionPace(
     staleTime: 60 * 60 * 1000,
   })
 
-  if (!enabled || !rankings || !awards?.distinguishedDistrict) {
-    return { reference: null, medians: null }
-  }
-  return {
-    reference: {
-      referenceDate: referenceDate!,
-      referenceProgramYear: referenceProgramYear!,
-    },
-    medians: paceMedians(
-      rankings.rankings.map(r => ({
-        districtId: r.districtId,
-        paidClubBase: r.paidClubBase ?? 0,
-        paymentBase: r.paymentBase ?? 0,
-        paidClubs: r.paidClubs ?? 0,
-        totalPayments: r.totalPayments ?? 0,
-        distinguishedClubs: r.distinguishedClubs ?? 0,
-      })),
-      awards.distinguishedDistrict,
-      districtTiersForProgramYear(programYear)
-    ),
-  }
+  return useMemo<RegionPace>(() => {
+    if (!enabled || !rankings || !awards?.distinguishedDistrict) {
+      return { reference: null, medians: null }
+    }
+    return {
+      reference: {
+        referenceDate: referenceDate!,
+        referenceProgramYear: referenceProgramYear!,
+      },
+      medians: paceMedians(
+        rankings.rankings.map(r => ({
+          districtId: r.districtId,
+          paidClubBase: r.paidClubBase ?? 0,
+          paymentBase: r.paymentBase ?? 0,
+          paidClubs: r.paidClubs ?? 0,
+          totalPayments: r.totalPayments ?? 0,
+          distinguishedClubs: r.distinguishedClubs ?? 0,
+        })),
+        awards.distinguishedDistrict,
+        districtTiersForProgramYear(programYear)
+      ),
+    }
+  }, [
+    enabled,
+    rankings,
+    awards,
+    referenceDate,
+    referenceProgramYear,
+    programYear,
+  ])
 }

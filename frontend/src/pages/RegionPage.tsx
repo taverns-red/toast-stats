@@ -37,6 +37,7 @@ import { regionMembershipFor } from '../utils/regionHistory'
 import { useDistrictRegionHistory } from '../hooks/useDistrictRegionHistory'
 import { RegionRecognitionScoreboard } from '../components/RegionRecognitionScoreboard'
 import { buildRecognitionScoreboard } from '../utils/regionRecognition'
+import { useRegionPace } from '../hooks/useRegionPace'
 
 const REGION_SORT_FIELDS = [
   'aggregate',
@@ -413,6 +414,10 @@ const RegionPage: React.FC = () => {
     effectiveDate
   )
 
+  // "On track, based on last year's pace" (#2307): the reference year's
+  // medians on the same day, for the page's own PY and date (R3).
+  const pace = useRegionPace(selectedProgramYear.label, effectiveDate)
+
   // District Recognition scoreboard (#2307): the PY-gated tier each
   // district meets in the awards file, per tier of the selected PY's ladder.
   const recognition = React.useMemo(
@@ -429,9 +434,10 @@ const RegionPage: React.FC = () => {
             distinguishedClubs: r.distinguishedClubs ?? 0,
           })),
         awards?.distinguishedDistrict,
-        selectedProgramYear.label
+        selectedProgramYear.label,
+        pace.medians
       ),
-    [data, region, regionOf, awards, selectedProgramYear.label]
+    [data, region, regionOf, awards, selectedProgramYear.label, pace.medians]
   )
 
   // Region ranks are ALWAYS computed from aggregate score, regardless of
@@ -977,6 +983,7 @@ const RegionPage: React.FC = () => {
       <RegionRecognitionScoreboard
         scoreboard={recognition}
         programYear={selectedProgramYear.label}
+        pace={pace.reference}
       />
 
       <PriorityColumnsTable<DistrictRanking, RegionSortField>
