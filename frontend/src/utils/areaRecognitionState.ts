@@ -114,6 +114,8 @@ export function getAreaVisitDeadlines(snapshotDate: string): {
   r2: string
 } {
   const start = programYearStartYear(snapshotDate)
+  // Undated (the page's date is still loading): no deadline to hold to.
+  if (Number.isNaN(start)) return { r1: '', r2: '' }
   // The dates live in the one deadline table (#2298), cited there.
   return areaVisitDeadlines(`${start}-${start + 1}`)
 }
