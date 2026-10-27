@@ -116,10 +116,37 @@ jobs:
           npx tsx scripts/plan-video-publish.ts "$SCENARIO" "$VERSION" "$DIR" > /tmp/plan.json
           jq . /tmp/plan.json
 
-      - name: Install ffmpeg
+      # No apt (#2339): the same pinned static ffmpeg as videos.yml (BtbN's
+      # FFmpeg 8.1 GPL build, checked by SHA-256). Keep the two pins equal
+      # (scripts/lib/__tests__/videosFfmpegInstall.test.ts).
+      - name: Install ffmpeg (pinned static build)
+        timeout-minutes: 5
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q ffmpeg
+          set -euo pipefail
+          url='https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-30-13-08/ffmpeg-n8.1.3-9-g29e619e767-linux64-gpl-8.1.tar.xz'
+          sha='97ce978979194b5cf7e06a5e68020dbdaa7a4f3294c5452b6a1bc347100dbb79'
+          dir="$HOME/.local/ffmpeg/bin"
+          curl -fsSL --retry 3 --connect-timeout 20 -o "$RUNNER_TEMP/ffmpeg.tar.xz" "$url"
+          echo "$sha  $RUNNER_TEMP/ffmpeg.tar.xz" | sha256sum -c -
+          mkdir -p "$dir"
+          tar -xJf "$RUNNER_TEMP/ffmpeg.tar.xz" -C "$dir" --strip-components=2 \
+            --wildcards '*/bin/ffmpeg' '*/bin/ffprobe'
+          rm "$RUNNER_TEMP/ffmpeg.tar.xz"
+          echo "$dir" >> "$GITHUB_PATH"
+          export PATH="$dir:$PATH"
+          # Read each output from a file: `head` or `grep -q` closing a pipe
+          # early would fail the step under pipefail (R14).
+          ffmpeg -hide_banner -version > "$RUNNER_TEMP/ffmpeg-version.txt"
+          ffprobe -version > "$RUNNER_TEMP/ffprobe-version.txt"
+          head -n 1 "$RUNNER_TEMP/ffmpeg-version.txt" "$RUNNER_TEMP/ffprobe-version.txt"
+          ffmpeg -hide_banner -encoders > "$RUNNER_TEMP/ffmpeg-encoders.txt"
+          ffmpeg -hide_banner -filters > "$RUNNER_TEMP/ffmpeg-filters.txt"
+          for enc in libx264 aac; do
+            grep -Eq "^ [A-Z.]{6} $enc " "$RUNNER_TEMP/ffmpeg-encoders.txt" \
+              || { echo "::error::ffmpeg has no $enc encoder"; exit 1; }
+          done
+          grep -Eq '^ [A-Z.]{2,3} ebur128 ' "$RUNNER_TEMP/ffmpeg-filters.txt" \
+            || { echo "::error::ffmpeg has no ebur128 filter"; exit 1; }
 
       # Same contract as the render job: h264/yuv420p tagged bt709 with AAC
       # (videos/src/output/encoding.ts). Re-checked on the bytes we publish.
