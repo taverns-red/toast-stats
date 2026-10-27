@@ -9,13 +9,15 @@ import type { Scenario } from './types'
  * the live site as checked on 2026-10-27 (v2.72.0):
  *
  *   - Ron (PR #2356): the clip must show the way to the view. It opens on
- *     the district Overview and clicks Clubs (subnav on desktop, bottom bar
+ *     the district Overview and taps Clubs (subnav on desktop, bottom bar
  *     on a phone), and the closing card gives the preset's deep link,
  *     `/district/86/clubs?preset=close-to-distinguished`, with a hint.
  *   - Beats 2 and 3 quoted counts ("twelve clubs", "37 members, four goals")
  *     that change with every snapshot; their captions now say what is shown.
- *   - Beats 1 and 2 are 5 s: beat 1 navigates, and on a phone the preset
- *     sits in the Filter sheet (three taps). The gap beat is 5 s, not 6 s.
+ *   - A 3 s beat points at the Clubs tab before the tap, so the phone's
+ *     window pans down to the bottom bar and the viewer sees where it is.
+ *     The preset beat is 5 s: on a phone it sits in the Filter sheet
+ *     (three taps). The clip is 33 s.
  *
  * Example club: Confidently Speaking Toastmasters Club #5456 (D86, Area 42),
  * close to Distinguished on the pinned date. Its street address and contact
@@ -26,6 +28,8 @@ import type { Scenario } from './types'
  * "Filter & sort" sheet.
  */
 const CLUB = 'Confidently Speaking Toastmasters Club'
+const DESKTOP_CLUBS_TAB = '[data-testid="district-subnav"] a:has-text("Clubs")'
+const MOBILE_CLUBS_TAB = 'nav.section-bar a:has-text("Clubs")'
 const STATS = '.club-stats-grid'
 const GAP = 'section.club-panel:has(.gap-section)'
 const GOALS = '.club-dcp-goals .goals-table'
@@ -35,7 +39,7 @@ export const v3: Scenario = {
   role: 'Program Quality Director · Area Director · Club President',
   url: 'https://ts.taverns.red/district/86?date=2026-10-24',
   fps: 30,
-  durationSec: 31,
+  durationSec: 33,
   titleCard: {
     startSec: 0,
     endSec: 3,
@@ -43,39 +47,45 @@ export const v3: Scenario = {
   },
   beats: [
     {
-      id: 'all-clubs',
+      id: 'open-clubs',
       startSec: 3,
-      endSec: 8,
-      caption: 'From your district, open Clubs: every club, health and goals.',
+      endSec: 6,
+      caption: 'From your district page, open Clubs.',
+    },
+    {
+      id: 'all-clubs',
+      startSec: 6,
+      endSec: 10,
+      caption: 'Every club: health, members, renewals and DCP goals.',
     },
     {
       id: 'close-preset',
-      startSec: 8,
-      endSec: 13,
+      startSec: 10,
+      endSec: 15,
       caption: 'One tap lists the clubs within reach of Distinguished.',
     },
     {
       id: 'club-page',
-      startSec: 13,
-      endSec: 18,
+      startSec: 15,
+      endSec: 20,
       caption: 'Open a club: members, goals met and CSP at a glance.',
     },
     {
       id: 'gap',
-      startSec: 18,
-      endSec: 23,
+      startSec: 20,
+      endSec: 25,
       caption: 'The gap to each tier, counted in goals.',
     },
     {
       id: 'per-goal',
-      startSec: 23,
-      endSec: 28,
+      startSec: 25,
+      endSec: 30,
       caption: 'Which goal, and exactly what it takes.',
     },
   ],
   closing: {
-    startSec: 28,
-    endSec: 31,
+    startSec: 30,
+    endSec: 33,
     // The preset is a deep link (Ron, PR #2356: show the way to the view).
     caption:
       'Close to Distinguished: ts.taverns.red/district/86/clubs?preset=close-to-distinguished',
@@ -92,13 +102,13 @@ export const v3: Scenario = {
       readySelector: '[data-testid="district-subnav"]',
       setup: [],
       beats: {
+        'open-clubs': {
+          steps: [{ kind: 'pause', ms: 300 }],
+          highlight: DESKTOP_CLUBS_TAB,
+        },
         'all-clubs': {
           steps: [
-            { kind: 'pause', ms: 600 },
-            {
-              kind: 'click',
-              selector: '[data-testid="district-subnav"] a:has-text("Clubs")',
-            },
+            { kind: 'click', selector: DESKTOP_CLUBS_TAB },
             { kind: 'pause', ms: 300 },
             {
               kind: 'scrollTo',
@@ -148,10 +158,13 @@ export const v3: Scenario = {
       readySelector: 'nav.section-bar',
       setup: [],
       beats: {
+        'open-clubs': {
+          steps: [{ kind: 'pause', ms: 300 }],
+          highlight: MOBILE_CLUBS_TAB,
+        },
         'all-clubs': {
           steps: [
-            { kind: 'pause', ms: 500 },
-            { kind: 'click', selector: 'nav.section-bar a:has-text("Clubs")' },
+            { kind: 'click', selector: MOBILE_CLUBS_TAB },
             { kind: 'pause', ms: 400 },
             { kind: 'click', selector: 'button:has-text("Division C")' },
             { kind: 'pause', ms: 300 },

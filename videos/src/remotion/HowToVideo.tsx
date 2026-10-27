@@ -12,7 +12,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion'
-import { cropOffset, LAYOUTS, type Layout } from '../layout'
+import { cardUrlText, cropOffset, LAYOUTS, type Layout } from '../layout'
 import { getScenario } from '../scenarios'
 import type {
   Beat,
@@ -370,8 +370,8 @@ function Card({
               lineHeight: 1.25,
             }}
           >
-            {/* Let a URL wrap after its slashes rather than mid-word. */}
-            {rest.replace(/\//g, '/​')}
+            {/* Let a URL wrap after "/" or "?", never mid-word (#2353). */}
+            {cardUrlText(rest)}
           </div>
         ) : null}
         {card.hint ? (

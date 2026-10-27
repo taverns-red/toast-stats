@@ -76,7 +76,14 @@ export function cropOffset(
   return Math.min(maxOffset, Math.max(0, wanted))
 }
 
-/** Stub (#2353): replaced in the next commit. */
+/**
+ * Card text with a URL, made to wrap cleanly: a break opportunity (zero-width
+ * space) after each "/" and "?", and non-breaking hyphens, so
+ * `close-to-distinguished` never splits across lines (#2353).
+ */
 export function cardUrlText(text: string): string {
   return text
+    .replace(/\//g, '/\u200b')
+    .replace(/\?/g, '?\u200b')
+    .replace(/-/g, '\u2011')
 }
