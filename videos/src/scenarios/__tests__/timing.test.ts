@@ -235,6 +235,28 @@ describe('validateScenario sentinels', () => {
     expect(validateScenario(inHint)).toEqual([])
   })
 
+  it('rejects a step or highlight that targets a contact destination (#2354)', () => {
+    for (const selector of [
+      'a[href^="mailto:"]',
+      'a[href^="tel:"]',
+      'a:has-text("Contact on toastmasters.org")',
+      'a[href*="toastmasters.org/Find-a-Club"]',
+      '.club-hero__address',
+    ]) {
+      const step = fixture()
+      step.forms.mobile!.beats['a'] = { steps: [{ kind: 'click', selector }] }
+      expect(validateScenario(step).join('\n'), selector).toMatch(
+        /mobile beat "a".*contact or address/
+      )
+
+      const highlight = fixture()
+      highlight.forms.desktop.beats['b'] = { steps: [], highlight: selector }
+      expect(validateScenario(highlight).join('\n'), selector).toMatch(
+        /desktop beat "b".*contact or address/
+      )
+    }
+  })
+
   it('requires at least one beat', () => {
     const s = fixture()
     s.beats = []

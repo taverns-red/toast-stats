@@ -1,4 +1,9 @@
-import { FORM_FACTORS, type Scenario, type TimedCard } from './types'
+import {
+  FORM_FACTORS,
+  type BeatActions,
+  type Scenario,
+  type TimedCard,
+} from './types'
 
 /** Clips are ~30 s; anything longer stops being a "30-second how-to". */
 export const MAX_DURATION_SEC = 34
@@ -13,6 +18,13 @@ export const MIN_BEAT_SEC = 3
 /** A site URL with a path, e.g. ts.taverns.red/district/86/clubs. */
 const SITE_ROUTE = /ts\.taverns\.red\/[\w-]/
 const PLACEHOLDER = /\b[A-Z]{2,}(?:-[A-Z]{2,})+\b/g
+/**
+ * Selectors a clip must never click or spotlight: a club's contact links
+ * (mail, phone, "Contact on toastmasters.org", Find-a-Club pages) and its
+ * street address (storyboard §7, #2354). The capture also masks these
+ * (`privacy.ts`); this keeps a script from pointing at them at all.
+ */
+const CONTACT_OR_ADDRESS = /mailto:|tel:|toastmasters\.org|contact|address/i
 
 /**
  * Counts and shares drift day to day, so a caption that quotes one is wrong
@@ -147,6 +159,27 @@ export function validateScenario(scenario: Scenario): string[] {
     for (const id of Object.keys(form.beats)) {
       if (!beatIds.has(id)) {
         problems.push(`${format} scripts unknown beat "${id}"`)
+      }
+    }
+
+    const actions: [string, BeatActions][] = [
+      ['setup', { steps: form.setup }],
+      ...Object.entries(form.beats).map(([id, a]): [string, BeatActions] => [
+        `beat "${id}"`,
+        a,
+      ]),
+    ]
+    for (const [name, { steps, highlight }] of actions) {
+      const selectors = [
+        ...steps.flatMap(s => ('selector' in s ? [s.selector] : [])),
+        ...(highlight ? [highlight] : []),
+      ]
+      for (const selector of selectors) {
+        if (CONTACT_OR_ADDRESS.test(selector)) {
+          problems.push(
+            `${format} ${name} targets a contact or address: ${selector}`
+          )
+        }
       }
     }
   }
