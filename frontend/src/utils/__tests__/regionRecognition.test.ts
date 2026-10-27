@@ -147,4 +147,48 @@ describe('buildRecognitionScoreboard (#2307)', () => {
       )
     ).toBeNull()
   })
+
+  it("counts districts on track by last year's pace, apart from meeting", () => {
+    const median = {
+      clubs: 1.01,
+      payments: 0.4,
+      distinguished: 0.05,
+      districts: 3,
+    }
+    const board = buildRecognitionScoreboard(
+      [
+        district('1', {
+          paidClubs: 102,
+          totalPayments: 450,
+          distinguishedClubs: 6,
+        }),
+        district('2', {
+          paidClubs: 100,
+          totalPayments: 450,
+          distinguishedClubs: 6,
+        }),
+      ],
+      {
+        '1': status('1', 'NotDistinguished'),
+        '2': status('2', 'NotDistinguished'),
+      },
+      '2026-2027',
+      { Distinguished: median, Select: null }
+    )!
+    expect(board.rows.map(r => [r.tier, r.meeting, r.onTrack])).toEqual([
+      ['Distinguished', 0, 1],
+      ['Select', 0, null],
+      ['Presidents', 0, null],
+      ['Smedley', 0, null],
+    ])
+  })
+
+  it('has no on-track counts without a pace', () => {
+    const board = buildRecognitionScoreboard(
+      [district('1')],
+      { '1': status('1', 'Select') },
+      '2026-2027'
+    )!
+    expect(board.rows.every(r => r.onTrack === null)).toBe(true)
+  })
 })
