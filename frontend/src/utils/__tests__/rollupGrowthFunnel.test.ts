@@ -17,6 +17,7 @@ import {
 import { buildRollupGrowthFunnel } from '../rollupGrowthFunnel'
 import reportsRecorded from '../../__tests__/fixtures/reports-rollups-2026-10-15.recorded.json'
 import rollupsRecorded from '../../__tests__/fixtures/region-rollups-2026-10-15.recorded.json'
+import checklistBuilt from '../../__tests__/fixtures/reports-rollups-2026-10-27-checklist.built.json'
 
 const reports = ReportsRollupsSchema.parse(reportsRecorded)
 const rollups = RegionRollupsSchema.parse(rollupsRecorded)
@@ -242,5 +243,37 @@ describe('buildRollupGrowthFunnel — world', () => {
     expect(f.found).toBe(true)
     expect(f.stages.prospective).toEqual({ kind: 'count', value: 51 })
     expect(f.children).toEqual([])
+  })
+})
+
+/* #2388 — prospective clubs by checklist steps complete. The 1.1.0 fixture is
+   the builder's own output (scripts/lib/reportsRollups.ts) over the recorded
+   prod 2026-10-27 D25/D84 sidecars (names and location scrubbed; see
+   prospective-club-page.recorded.json) and the recorded D61 sidecar, with
+   D25/D84 placed in Region 09. The 1.0.0 file above is a past date's shape. */
+describe('buildRollupGrowthFunnel — steps complete (#2388)', () => {
+  const built = ReportsRollupsSchema.parse(checklistBuilt)
+
+  it('reads byStepsComplete when the artifact carries it', () => {
+    const f = buildRollupGrowthFunnel({
+      reports: built,
+      rollups: null,
+      scope: { kind: 'region', regionId: '09' },
+    })
+    expect(f.prospectiveByProgress).toEqual([
+      { stepsComplete: 5, clubs: 1 },
+      { stepsComplete: 3, clubs: 1 },
+      { stepsComplete: 1, clubs: 4 },
+    ])
+  })
+
+  it('a past (1.0.0) artifact has no steps-complete counts: null, by-stage kept', () => {
+    const f = buildRollupGrowthFunnel({
+      reports,
+      rollups,
+      scope: { kind: 'region', regionId: '05' },
+    })
+    expect(f.prospectiveByProgress).toBeNull()
+    expect(f.prospectiveByStage).not.toBeNull()
   })
 })
