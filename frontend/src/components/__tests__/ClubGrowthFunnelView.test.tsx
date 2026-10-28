@@ -14,6 +14,7 @@ import type {
 } from '@taverns-red/shared-contracts'
 import recorded from '../../__tests__/fixtures/d61-growth-reports.recorded.json'
 import suspendedJson from '../../__tests__/fixtures/suspended-clubs-2026-10-13.recorded.json'
+import checklistRecorded from '../../__tests__/fixtures/prospective-club-page.recorded.json'
 import sponsorsRecorded from '../../__tests__/fixtures/sponsors-mentors-2026-06-01.recorded.json'
 import { buildClubGrowthFunnel } from '../../utils/clubGrowthFunnel'
 import { ClubGrowthFunnelView } from '../ClubGrowthFunnelView'
@@ -117,10 +118,21 @@ describe('ClubGrowthFunnelView', () => {
     expect(stage).not.toHaveTextContent(/\b0\b/)
   })
 
-  it('lists prospective clubs with stage, days in stage and an in-site link (#2303)', () => {
+  it('lists prospective clubs with progress, waiting-on and an in-site link (#2303, #2388)', () => {
     renderView(2)
     const section = screen.getByRole('region', { name: /prospective clubs/i })
-    expect(section).toHaveTextContent('Application to Organize')
+    const table = within(section).getByTestId('growth-prospective-table')
+    const headers = within(table)
+      .getAllByRole('columnheader')
+      .map(h => h.textContent)
+    expect(headers).toEqual([
+      'Club',
+      'Division / Area',
+      'Progress',
+      'Waiting on',
+      'Payment',
+    ])
+    expect(section).not.toHaveTextContent(/Days in stage/)
     const link = within(section).getByRole('link', {
       name: /Parole Chrétienne et Passionné de Dieu/,
     })
@@ -129,9 +141,75 @@ describe('ClubGrowthFunnelView', () => {
       '/district/61/growth/prospective/28678700'
     )
     expect(link).not.toHaveAttribute('target')
-    expect(section).toHaveTextContent('544 days')
+    // Live D61 cells list only #1, so the next step is not listed yet.
+    expect(section).toHaveTextContent('1 of 6 steps complete')
+    expect(section).toHaveTextContent(
+      'Step #2 · Certificate & Remit · not listed yet · 544 days since the checklist last changed'
+    )
     // Live: two prospective clubs have not paid (28679937, 28680099).
     expect(within(section).getAllByText('Incomplete')).toHaveLength(2)
+  })
+
+  it('describes the checklist honestly above the table (#2388)', () => {
+    renderView(2)
+    const section = screen.getByRole('region', { name: /prospective clubs/i })
+    const note = within(section).getByTestId('growth-prospective-note')
+    expect(note).toHaveTextContent('1 of 6 steps complete: 8')
+    expect(note).toHaveTextContent(/checklist/i)
+    expect(note).toHaveTextContent(/any order/i)
+    expect(note).not.toHaveTextContent(/Stage \d/)
+  })
+
+  it('a recorded out-of-order checklist waits on the step that went back (D25, #2388)', () => {
+    const reports =
+      checklistRecorded.d25_reports as unknown as DistrictReportsDataset
+    const funnel = buildClubGrowthFunnel({
+      districtId: '25',
+      reports,
+      counts: { chartered: 0, suspended: 0 },
+      programYear: { startDate: '2026-07-01', endDate: '2027-06-30' },
+      asOfDate: '2026-10-27',
+    })
+    render(
+      <MemoryRouter>
+        <ClubGrowthFunnelView funnel={funnel} asOfDate="2026-10-27" />
+      </MemoryRouter>
+    )
+    const rows = within(
+      screen.getByTestId('growth-prospective-table')
+    ).getAllByRole('row')
+    expect(rows[1]).toHaveTextContent('5 of 6 steps complete')
+    expect(rows[1]).toHaveTextContent(
+      'Step #2 · Certificate & Remit · 74 days since it changed'
+    )
+    expect(rows[2]).toHaveTextContent('3 of 6 steps complete')
+    // No location text, ever.
+    expect(document.body).not.toHaveTextContent(/MUST-NOT-RENDER/)
+  })
+
+  it('all six steps complete says so (#2388)', () => {
+    const reports = structuredClone(
+      checklistRecorded.d25_reports
+    ) as unknown as DistrictReportsDataset
+    reports.sections.prospectiveClubs!.records[0]!.prospect =
+      '#1 Application to Organize Complete - 04/17/2026#2 Certificate & Remit Complete - 08/20/2026#3 Roster Complete - 06/30/2026#4 Officer Info Complete - 06/15/2026#5 Club Info Complete - 06/15/2026#6 Constitution & Bylaws Complete - 06/15/2026Payment Incomplete'
+    const funnel = buildClubGrowthFunnel({
+      districtId: '25',
+      reports,
+      counts: { chartered: 0, suspended: 0 },
+      programYear: { startDate: '2026-07-01', endDate: '2027-06-30' },
+      asOfDate: '2026-10-27',
+    })
+    render(
+      <MemoryRouter>
+        <ClubGrowthFunnelView funnel={funnel} asOfDate="2026-10-27" />
+      </MemoryRouter>
+    )
+    const rows = within(
+      screen.getByTestId('growth-prospective-table')
+    ).getAllByRole('row')
+    expect(rows[1]).toHaveTextContent('6 of 6 steps complete')
+    expect(rows[1]).toHaveTextContent('All 6 steps complete')
   })
 
   it('carries the page’s py and date into the prospective club link (R3, #2303)', () => {
