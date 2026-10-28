@@ -1211,11 +1211,11 @@ const MethodologyPage: React.FC = () => {
           </p>
           <ul>
             <li>
-              <strong>Membership Payments Growth</strong>: membership payments
-              this program year.
+              <strong>Club Growth</strong>: paid clubs.
             </li>
             <li>
-              <strong>Club Growth</strong>: paid clubs.
+              <strong>Membership Payments Growth</strong>: membership payments
+              this program year.
             </li>
             <li>
               <strong>Distinguished Clubs</strong>: Distinguished clubs.

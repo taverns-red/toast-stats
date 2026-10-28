@@ -7,9 +7,10 @@ import { MobileRowList, type MobileRow } from './MobileRowList'
 import type { DistrictKpiStripData } from './DistrictKpiStrip'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 import type { TrainingClub } from '../utils/officerTraining'
-import type {
-  SuccessPlanGoalKey,
-  SuccessPlanGoals,
+import {
+  TIERED_KPI_GOALS,
+  type SuccessPlanGoalKey,
+  type SuccessPlanGoals,
 } from '../utils/successPlanTargets'
 import {
   buildActionList,
@@ -71,11 +72,9 @@ export interface DistrictOverviewHubProps {
   planGoals?: SuccessPlanGoals | null
 }
 
-const TILE_GOAL: Record<HubTileKey, SuccessPlanGoalKey> = {
-  paidClubs: 'paidClubs',
-  membershipPayments: 'payments',
-  distinguishedClubs: 'distinguishedClubs',
-}
+const TILE_GOAL = Object.fromEntries(
+  TIERED_KPI_GOALS.map(g => [g.kpi, g.goal])
+) as Record<HubTileKey, SuccessPlanGoalKey>
 
 const ATTENTION_TITLES: Record<ActionSectionId, string> = {
   'action-close': 'Clubs close to Distinguished',

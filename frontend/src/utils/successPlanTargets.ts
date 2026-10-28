@@ -32,6 +32,45 @@ export interface SuccessPlanTargets {
   goals: SuccessPlanGoals
 }
 
+/**
+ * The three tiered KPIs, in the order the Overview shows their cards, with
+ * the District Success Plan goal area each one measures. The KPI strip and
+ * the targets panel both render from this one list, so the inputs can never
+ * drift out of the cards' order (Ron, 2026-10-28). The URL is keyed, so this
+ * order does not affect `?targets=`.
+ */
+export const TIERED_KPI_GOALS = [
+  {
+    kpi: 'paidClubs',
+    goal: 'paidClubs',
+    cardTitle: 'Paid Clubs',
+    goalArea: 'Club Growth',
+    measure: 'Target paid clubs',
+  },
+  {
+    kpi: 'membershipPayments',
+    goal: 'payments',
+    cardTitle: 'Membership Payments',
+    goalArea: 'Membership Payments Growth',
+    measure: 'Target membership payments',
+  },
+  {
+    kpi: 'distinguishedClubs',
+    goal: 'distinguishedClubs',
+    cardTitle: 'Distinguished Clubs',
+    goalArea: 'Distinguished Clubs',
+    measure: 'Target Distinguished clubs',
+  },
+] as const satisfies ReadonlyArray<{
+  kpi: 'paidClubs' | 'membershipPayments' | 'distinguishedClubs'
+  goal: SuccessPlanGoalKey
+  cardTitle: string
+  goalArea: string
+  measure: string
+}>
+
+export type TieredKpiKey = (typeof TIERED_KPI_GOALS)[number]['kpi']
+
 const GOAL_CODES: Record<SuccessPlanGoalKey, string> = {
   paidClubs: 'c',
   distinguishedClubs: 'd',

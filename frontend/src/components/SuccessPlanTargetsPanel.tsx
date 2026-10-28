@@ -3,6 +3,7 @@ import type { ProgramYear } from '../utils/programYear'
 import { getProgramYear } from '../utils/programYear'
 import {
   TARGETS_PARAM,
+  TIERED_KPI_GOALS,
   encodeTargets,
   goalsForProgramYear,
   parseTargetInput,
@@ -23,25 +24,12 @@ import {
    writes the URL through `onChange`. A collapsed <details> from first paint,
    so it holds one constant row and never shifts the Overview. */
 
-interface Field {
-  key: SuccessPlanGoalKey
-  label: string
-  measure: string
-}
-
-const FIELDS: Field[] = [
-  {
-    key: 'payments',
-    label: 'Membership Payments Growth',
-    measure: 'Target membership payments',
-  },
-  { key: 'paidClubs', label: 'Club Growth', measure: 'Target paid clubs' },
-  {
-    key: 'distinguishedClubs',
-    label: 'Distinguished Clubs',
-    measure: 'Target Distinguished clubs',
-  },
-]
+/* One field per tiered KPI card, in the cards' order (shared list). */
+const FIELDS = TIERED_KPI_GOALS.map(g => ({
+  key: g.goal,
+  label: g.goalArea,
+  measure: g.measure,
+}))
 
 type Drafts = Record<SuccessPlanGoalKey, string>
 

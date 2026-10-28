@@ -2,7 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { KpiBulletCard } from './KpiBulletCard'
 import { KpiDeltaCard } from './KpiDeltaCard'
 import type { MetricRankings, RecognitionTargets } from '../types/districts'
-import type { SuccessPlanGoals } from '../utils/successPlanTargets'
+import {
+  TIERED_KPI_GOALS,
+  type SuccessPlanGoals,
+  type TieredKpiKey,
+} from '../utils/successPlanTargets'
 
 /* #572 — sticky KPI strip extracted from DistrictOverview.
 
@@ -67,6 +71,15 @@ const formatSignedCompact = (n: number): string => {
 
 // Legend expanding the bullet-bar tier abbreviations (#681). Without this the
 // D/S/P/Sm ticks are cryptic — the meaning was only reachable on hover.
+const CARD_TOOLTIPS: Record<TieredKpiKey, string> = {
+  paidClubs:
+    'Paid clubs count with thresholds for each Distinguished District recognition level.',
+  membershipPayments:
+    'Total membership payments (New + April + October + Late + Charter) with thresholds for each recognition level.',
+  distinguishedClubs:
+    'Clubs achieving DCP goals + membership requirements with thresholds for each recognition level.',
+}
+
 const TIER_LEGEND: { short: string; full: string }[] = [
   { short: 'D', full: 'Distinguished' },
   { short: 'S', full: 'Select' },
@@ -170,30 +183,18 @@ const KpiExpanded: React.FC<KpiBodyProps> = ({ kpis, ghost, planGoals }) => (
     className={`district-kpi-strip__expanded${ghost ? ' district-kpi-strip__ghost' : ''}`}
   >
     <div className="district-kpi-strip__cards">
-      <KpiBulletCard
-        title="Paid Clubs"
-        current={kpis.paidClubs.current}
-        targets={kpis.paidClubs.targets}
-        rankings={kpis.paidClubs.rankings}
-        planTarget={planGoals?.paidClubs}
-        tooltipContent="Paid clubs count with thresholds for each Distinguished District recognition level."
-      />
-      <KpiBulletCard
-        title="Membership Payments"
-        current={kpis.membershipPayments.current}
-        targets={kpis.membershipPayments.targets}
-        rankings={kpis.membershipPayments.rankings}
-        planTarget={planGoals?.payments}
-        tooltipContent="Total membership payments (New + April + October + Late + Charter) with thresholds for each recognition level."
-      />
-      <KpiBulletCard
-        title="Distinguished Clubs"
-        current={kpis.distinguishedClubs.current}
-        targets={kpis.distinguishedClubs.targets}
-        rankings={kpis.distinguishedClubs.rankings}
-        planTarget={planGoals?.distinguishedClubs}
-        tooltipContent="Clubs achieving DCP goals + membership requirements with thresholds for each recognition level."
-      />
+      {/* Card order comes from the shared list the targets panel uses. */}
+      {TIERED_KPI_GOALS.map(g => (
+        <KpiBulletCard
+          key={g.kpi}
+          title={g.cardTitle}
+          current={kpis[g.kpi].current}
+          targets={kpis[g.kpi].targets}
+          rankings={kpis[g.kpi].rankings}
+          planTarget={planGoals?.[g.goal]}
+          tooltipContent={CARD_TOOLTIPS[g.kpi]}
+        />
+      ))}
       <KpiDeltaCard
         title="Net Member Change"
         current={kpis.netMemberChange.current}
