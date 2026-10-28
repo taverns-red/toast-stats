@@ -712,8 +712,13 @@ describe('DistrictClubsPage keeps filters across a snapshot-date change (#2370)'
     fireEvent.change(select!, { target: { value: date } })
     // The re-keyed query passes through its pending window…
     await screen.findByRole('status', { name: /loading table/i })
-    // …and the table comes back once the new date's data lands.
-    await screen.findByText(/alpha toastmasters/i)
+    // …and the table comes back once the new date's data lands. (Wait on the
+    // skeleton, not a row: which rows show depends on the filters under test.)
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('status', { name: /loading table/i })
+      ).toBeNull()
+    )
   }
 
   it('keeps the Close to Distinguished preset in the UI when the URL keeps it', async () => {
@@ -756,10 +761,8 @@ describe('DistrictClubsPage keeps filters across a snapshot-date change (#2370)'
     })
     await user.keyboard('{Escape}')
 
-    const [select] = screen.getAllByTestId('date-chip-select')
-    fireEvent.change(select!, { target: { value: '2025-07-01' } })
-    await screen.findByRole('status', { name: /loading table/i })
-    await screen.findByText(/beta speakers/i)
+    await changeDate('2025-07-01')
+    expect(screen.getByText(/beta speakers/i)).toBeInTheDocument()
 
     const params = new URLSearchParams(router.state.location.search)
     expect(params.get('date')).toBe('2025-07-01')
