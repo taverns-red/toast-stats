@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import type {
   CharteredRow,
   ClubGrowthFunnel,
@@ -163,14 +163,30 @@ const paymentText: Record<ProspectiveRow['payment'], string> = {
   unknown: 'Not stated',
 }
 
-const prospectiveColumns: ActionTableColumn<ProspectiveRow>[] = [
+/** The page's `py` and `date`, for links that keep them (R3). */
+function keptQuery(search: string): string {
+  const params = new URLSearchParams(search)
+  const kept = new URLSearchParams()
+  for (const key of ['py', 'date']) {
+    const value = params.get(key)
+    if (value) kept.set(key, value)
+  }
+  const qs = kept.toString()
+  return qs ? `?${qs}` : ''
+}
+
+/* A prospective club links to its page here (#2303), keeping the page's
+   program year and date. */
+const prospectiveColumns = (
+  query: string
+): ActionTableColumn<ProspectiveRow>[] => [
   {
     key: 'club',
     header: 'Club',
     className: 'action-table__subject growth-table__club',
     cell: r =>
       r.href ? (
-        <ClubLink name={r.clubName} href={r.href} external />
+        <ClubLink name={r.clubName} href={`${r.href}${query}`} />
       ) : (
         r.clubName
       ),
@@ -408,6 +424,7 @@ export const ClubGrowthFunnelView: React.FC<ClubGrowthFunnelViewProps> = ({
   asOfDate,
 }) => {
   const { prospective, chartered, coached, suspended, sponsorsMentors } = funnel
+  const query = keptQuery(useLocation().search)
   const stages: StageSpec[] = [
     {
       id: 'prospective',
@@ -467,12 +484,11 @@ export const ClubGrowthFunnelView: React.FC<ClubGrowthFunnelViewProps> = ({
                     `${g.stageNumber !== null ? `Stage ${g.stageNumber} · ` : ''}${g.stageLabel}: ${g.count}`
                 )
                 .join(' · ')}
-              . Longest-waiting first. Prospective clubs have no page here yet,
-              so each links to its page on toastmasters.org.
+              . Longest-waiting first. Each club links to its charter checklist.
             </p>
             <ActionTable
               caption="Prospective clubs"
-              columns={prospectiveColumns}
+              columns={prospectiveColumns(query)}
               rows={prospective.clubs}
               rowKey={r => r.clubId}
               testId="growth-prospective-table"

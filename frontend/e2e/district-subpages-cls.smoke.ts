@@ -67,6 +67,10 @@ const SUBPAGES = [
   // Charter cohort survival (#1817), under Growth: the loading slot is
   // reserved taller than the viewport.
   'growth/survival',
+  // One prospective club's charter checklist (#2303), under Growth. A real
+  // D61 prospective club on 2026-10-27; once it charters the page shows its
+  // "not a prospective club" state, which is measured the same way.
+  'growth/prospective/28679454',
   'trends',
   'rankings',
   'action-list',

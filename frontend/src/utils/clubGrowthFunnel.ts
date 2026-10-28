@@ -119,7 +119,7 @@ export interface ProspectiveRow {
   /** Days since the stage date, as of the displayed snapshot. */
   daysInStage: number | null
   payment: 'complete' | 'incomplete' | 'unknown'
-  /** TI's public club page — a prospective club has no page here yet. */
+  /** The club's prospective page here (#2303). */
   href: string | null
 }
 
@@ -223,7 +223,16 @@ function clubHref(districtId: string, clubId: string): string {
   return `/district/${districtId}/club/${clubId}`
 }
 
+/** A prospective club's page here (#2303), under Growth. */
+export function prospectiveClubHref(
+  districtId: string,
+  clubId: string
+): string {
+  return `/district/${districtId}/growth/prospective/${clubId}`
+}
+
 function buildProspective(
+  districtId: string,
   records: readonly ProspectiveClubRecord[],
   asOfDate: string
 ): ClubGrowthFunnel['prospective'] {
@@ -238,7 +247,7 @@ function buildProspective(
       stage,
       daysInStage: stageDate ? daysBetween(stageDate, asOfDate) : null,
       payment: stage.recognised ? stage.payment : 'unknown',
-      href: toastmastersClubPageUrl(r.club),
+      href: prospectiveClubHref(districtId, r.club),
     }
   })
   // Furthest stage first, then longest-waiting — the clubs that most need a
@@ -452,7 +461,7 @@ export function buildClubGrowthFunnel({
   const sections = reports?.sections
 
   const prospective = sections?.prospectiveClubs
-    ? buildProspective(sections.prospectiveClubs.records, asOfDate)
+    ? buildProspective(districtId, sections.prospectiveClubs.records, asOfDate)
     : {
         value: { kind: 'unknown', reason: NO_REPORT } as StageValue,
         clubs: [],
