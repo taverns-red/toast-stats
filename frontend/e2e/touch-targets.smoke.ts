@@ -86,6 +86,8 @@ const ROUTES: { path: string; mustRender?: string }[] = [
   { path: '/clubs/race/distinguished' },
   { path: '/district/61/grid', mustRender: '.club-grid-toggle__btn' },
   { path: '/district/61/action-list' },
+  // #2303: a prospective club's page (back link, TI link-out).
+  { path: '/district/61/growth/prospective/28679454' },
   { path: '/district/61/club/7238597/history' },
   // #1944: the map's ODbL credit links were 14px tall. The credit is the
   // sentinel, so the measure waits for MapLibre to mount it.

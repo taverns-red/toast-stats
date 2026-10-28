@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-pdf-page-count-passes-on-a-layout-wider-than-the-paper.md` — Chromium's print-to-PDF shrinks a page that is wider than the paper until it fits, so a PDF page-count check passes on a layout that overflows the printable width; measure the document's width at the printable box in print media as well  (2026-10-28)
 - `a-progress-scale-whose-floor-follows-the-value-shows-no-progress.md` — A progress scale whose floor follows the value can never show progress  (2026-10-28)
 - `a-fixed-bar-that-overflows-adds-no-page-scroll.md` — A position-fixed bar whose items run past the viewport adds no document scroll, so no-horizontal-scroll gates pass while the off-screen items are unreachable; assert each item's box is inside the viewport instead  (2026-10-26)
 - `a-strict-cdn-contract-makes-an-additive-field-a-breaking-change-for-deployed-readers.md` — When a CDN file's zod contract is .strict(), adding an optional field is backward-compatible for new readers but breaks the readers already deployed, so the schema change must be released to prod before any pipeline run writes the field  (2026-10-25)

@@ -6,7 +6,7 @@
    district analytics + snapshot React-Query caches. */
 
 import React from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
@@ -34,6 +34,7 @@ const DivisionPage: React.FC = () => {
     divId: string
   }>()
   const navigate = useNavigate()
+  const { search } = useLocation()
   const isMobile = useIsMobile()
 
   // PY selector state (#1302) — the page owns program year/date (R3) and threads
@@ -271,6 +272,21 @@ const DivisionPage: React.FC = () => {
       {/* Phone: mounted with the card, not under its skeleton — the card
           is taller than the skeleton and would push the strip down (CLS). */}
       {isMobile && !isBodyPending && deadlineStrip}
+
+      {/* Council print pack (#2299): the division's summary as a printable
+          document, carrying this page's ?py= / ?date= (R3). */}
+      {!isBodyPending && (
+        <p className="council-pack-link">
+          <Link to={`/district/${districtId}/division/${divId}/print${search}`}>
+            Print pack
+          </Link>
+          <span className="council-pack-link__hint">
+            {' '}
+            — Two pages: a summary of the division and its areas, then every
+            club.
+          </span>
+        </p>
+      )}
 
       {/* Scoped division-level narrative (#1016 S2) — same prose as the overview
           summary, scoped to this division. */}

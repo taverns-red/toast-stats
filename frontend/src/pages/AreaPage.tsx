@@ -7,7 +7,7 @@
    Then lists every club in that area. */
 
 import React from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
@@ -38,6 +38,7 @@ const AreaPage: React.FC = () => {
     areaId: string
   }>()
   const navigate = useNavigate()
+  const { search } = useLocation()
   const isMobile = useIsMobile()
 
   // PY selector state (#1302) — the page owns program year/date (R3) and threads
@@ -302,6 +303,23 @@ const AreaPage: React.FC = () => {
       {/* Phone: mounted with the card, not under its skeleton — the card
           is taller than the skeleton and would push the strip down (CLS). */}
       {isMobile && !isBodyPending && deadlineStrip}
+
+      {/* Council print pack (#2299): the area's summary as a printable
+          document, carrying this page's ?py= / ?date= (R3). */}
+      {!isBodyPending && (
+        <p className="council-pack-link">
+          <Link
+            to={`/district/${districtId}/division/${divId}/area/${areaId}/print${search}`}
+          >
+            Print pack
+          </Link>
+          <span className="council-pack-link__hint">
+            {' '}
+            — One page: recognition, close-to-Distinguished clubs, visits,
+            Success Plans and clubs.
+          </span>
+        </p>
+      )}
 
       {/* Scoped narrative — the same per-area progress prose the overview's
           Division and Area Progress Summary shows (#974/#976), generated from
