@@ -112,7 +112,23 @@ function Roster({
     return <p className="council-pack__empty">No clubs are listed here.</p>
   }
   return (
-    <table className="council-pack__table" data-testid="council-pack-roster">
+    <table
+      className="council-pack__table council-pack__roster-table"
+      data-testid="council-pack-roster"
+    >
+      {/* Fixed column widths in print (council-pack.css): the roster can
+          never be wider than the paper, whatever font the printer's
+          machine falls back to. */}
+      <colgroup>
+        <col className="council-pack__col-club" />
+        {showArea && <col className="council-pack__col-area" />}
+        <col className="council-pack__col-health" />
+        <col className="council-pack__col-num" />
+        <col className="council-pack__col-num" />
+        <col className="council-pack__col-tier" />
+        <col className="council-pack__col-mark" />
+        {cspTracked && <col className="council-pack__col-mark" />}
+      </colgroup>
       <thead>
         <tr>
           <th scope="col">Club</th>

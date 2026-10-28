@@ -312,8 +312,45 @@
     white-space: normal;
   }
 
+  /* Fixed layout: the table is exactly the paper's width and each cell
+     ellipses rather than widening it (CI's Linux fonts ran 30px wider
+     than macOS with an auto layout). */
+  .council-pack__roster-table {
+    table-layout: fixed;
+  }
+
+  .council-pack__roster-table th,
+  .council-pack__roster-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .council-pack__col-club {
+    width: 27%;
+  }
+
+  .council-pack__col-area {
+    width: 6%;
+  }
+
+  .council-pack__col-health {
+    width: 17%;
+  }
+
+  .council-pack__col-num {
+    width: 8.5%;
+  }
+
+  .council-pack__col-tier {
+    width: 12%;
+  }
+
+  .council-pack__col-mark {
+    width: 10.5%;
+  }
+
   .council-pack__name {
-    max-width: 1.9in;
+    max-width: none;
   }
 
   .council-pack__footer {
