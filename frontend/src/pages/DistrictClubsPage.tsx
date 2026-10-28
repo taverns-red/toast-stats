@@ -73,13 +73,15 @@ const DistrictClubsPage: React.FC = () => {
   const initialSortDir =
     (searchParams.get('dir') as SortDirection | null) || undefined
 
+  // Seeds for ClubsTable's local state, read from the CURRENT URL — not a
+  // mount-time snapshot (#2370). ClubsTable reads them only when it mounts,
+  // and it remounts whenever the page swaps it for the loading skeleton (a
+  // snapshot-date change re-keys the analytics query). A mount-time snapshot
+  // would then reseed it with stale state and drop every filter, preset and
+  // sort applied since load, while the URL still carries them.
   const initialFilterState = useMemo(
     () => paramsToFilterState(searchParams),
-    // Intentionally only computed once on mount — URL is the source of
-    // truth for INITIAL state; later updates flow through callbacks
-    // instead of re-reading.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [searchParams]
   )
 
   const handleSortChange = useCallback(
@@ -105,14 +107,10 @@ const DistrictClubsPage: React.FC = () => {
   // "Close to Distinguished" preset URL state (#979). Like sort/dir, the preset
   // is a single-writer param with its own handler — disjoint from the filter
   // reconcile's FILTER_PARAM_KEYS, so a filter change never wipes it and the two
-  // never collide in one batch (no lesson-070 race). Initial value read once on
-  // mount; later updates flow through onPresetChange. The page owns the param;
-  // ClubsTable seeds its local toggle from it (R3).
-  const initialPresetActive = useMemo(
-    () => paramsToPresetActive(searchParams),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  )
+  // never collide in one batch (no lesson-070 race). Updates flow through
+  // onPresetChange. The page owns the param; ClubsTable seeds its local toggle
+  // from the current URL on (re)mount (R3, #2370).
+  const initialPresetActive = paramsToPresetActive(searchParams)
 
   const handlePresetChange = useCallback(
     (active: boolean) => {
