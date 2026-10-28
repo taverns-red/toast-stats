@@ -225,6 +225,12 @@ export async function runCapture(
   // `__name` helper that does not exist in the page, which made a function
   // init script throw silently and leave the address on screen.
   await context.addInitScript({ content: privacyMaskScript() })
+  // "Copy link" writes the page URL to the clipboard and confirms ("Link
+  // copied") only when the write succeeds; headless Chromium refuses it
+  // without the permission (V16, #2367). Nothing reads the clipboard back.
+  await context.grantPermissions(['clipboard-write'], {
+    origin: new URL(scenario.url).origin,
+  })
   const page = await context.newPage()
   const clock = (): number => performance.now() / 1000
 
