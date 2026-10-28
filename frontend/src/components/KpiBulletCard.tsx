@@ -15,6 +15,12 @@ export interface KpiBulletCardProps {
    * that includes the card title and the Smedley scale.
    */
   barAriaLabel?: string
+  /**
+   * The leader's own District Success Plan target for this metric, from the
+   * `?targets=` link (#2297). Drawn as a Plan tick on the bar; the page owns
+   * it (R3). Absent → no tick.
+   */
+  planTarget?: number | null | undefined
 }
 
 type TierKey = keyof RecognitionTargets
@@ -53,6 +59,7 @@ interface BulletBarProps {
   targets: RecognitionTargets
   title: string
   ariaLabel: string | undefined
+  planTarget: number | null
 }
 
 const BulletBar: React.FC<BulletBarProps> = ({
@@ -60,6 +67,7 @@ const BulletBar: React.FC<BulletBarProps> = ({
   targets,
   title,
   ariaLabel,
+  planTarget,
 }) => {
   // Real data always has Smedley > Distinguished > 0. Guard for synthetic
   // zero-target rows so tick positions never become NaN%.
@@ -74,9 +82,17 @@ const BulletBar: React.FC<BulletBarProps> = ({
   // hit Smedley, maxScale collapses to `current` so the marker pins to
   // 100% (a "you've made it" signal); the 5% headroom only applies when
   // there's still tier to chase.
+  //
+  // A Success Plan target (#2297) widens the scale the same way `current`
+  // does, so its tick is always on the bar too — above Smedley or below
+  // Distinguished.
   const allAchieved = current >= targets.smedley
-  const minScale = Math.max(0, Math.min(current, 0.9 * targets.distinguished))
-  const maxScale = allAchieved ? current : 1.05 * targets.smedley
+  const top = Math.max(targets.smedley, planTarget ?? 0)
+  const minScale = Math.max(
+    0,
+    Math.min(current, 0.9 * targets.distinguished, planTarget ?? Infinity)
+  )
+  const maxScale = current >= top ? current : 1.05 * top
   const range = maxScale - minScale
   const positionAt = (v: number): number => ((v - minScale) / range) * 100
   const markerPct = positionAt(current)
@@ -141,6 +157,19 @@ const BulletBar: React.FC<BulletBarProps> = ({
             }}
           />
         ))}
+
+        {planTarget !== null && (
+          <div
+            data-testid="plan-tick"
+            aria-hidden="true"
+            className="absolute top-1 h-4 w-0.5"
+            style={{
+              left: formatPct(positionAt(planTarget)),
+              transform: 'translateX(-50%)',
+              backgroundColor: 'var(--tm-true-maroon)',
+            }}
+          />
+        )}
       </div>
 
       {/* The thresholds themselves, in normal flow. Flex + wrap means the
@@ -174,6 +203,39 @@ const BulletBar: React.FC<BulletBarProps> = ({
   )
 }
 
+/* The plan, in normal flow under the tier legend (#2297) — same reasoning as
+   the tier values: printed, not hover-only. The swatch repeats the tick's
+   colour; the word "Plan" carries the meaning, not the colour. */
+const PlanLine: React.FC<{ current: number; planTarget: number }> = ({
+  current,
+  planTarget,
+}) => {
+  const gap = planTarget - current
+  return (
+    <p
+      data-testid="plan-target"
+      className="mt-1 flex items-center gap-1.5 text-xs leading-tight text-gray-700"
+    >
+      <span
+        aria-hidden="true"
+        className="inline-block h-3 w-0.5"
+        style={{ backgroundColor: 'var(--tm-true-maroon)' }}
+      />
+      <span aria-hidden="true" className="font-medium">
+        Plan
+      </span>
+      <span className="sr-only">Success Plan target</span>{' '}
+      <span>{planTarget.toLocaleString()}</span>
+      <span aria-hidden="true" className="text-gray-400">
+        ·
+      </span>
+      <span className="text-gray-500">
+        {gap > 0 ? `${gap.toLocaleString()} to go` : 'met'}
+      </span>
+    </p>
+  )
+}
+
 const DotSep: React.FC = () => (
   <span aria-hidden="true" className="text-gray-400">
     ·
@@ -192,7 +254,9 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
   targets,
   tooltipContent,
   barAriaLabel,
+  planTarget = null,
 }) => {
+  const plan = planTarget ?? null
   const worldRankLabel =
     rankings.worldRank !== null && rankings.totalDistricts > 0
       ? `#${rankings.worldRank} of ${rankings.totalDistricts}`
@@ -262,6 +326,7 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
           targets={targets}
           title={title}
           ariaLabel={barAriaLabel}
+          planTarget={plan}
         />
       ) : (
         <div
@@ -273,6 +338,7 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
           Targets unavailable
         </div>
       )}
+      {plan !== null && <PlanLine current={current} planTarget={plan} />}
     </div>
   )
 }
