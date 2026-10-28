@@ -14,13 +14,18 @@ import {
   rendersAppRoutes,
 } from './appRouteScan'
 
+// Fixture specifiers are spliced in, so the no-page-mounts guard (which scans
+// this unit file's import strings) does not read them as real page mounts.
+const fromApp = (spec: string) => `import App from '${spec}'`
+const importOf = (spec: string) => `import('${spec}')`
+
 const journey = [
-  "import App from '../../../App'",
+  fromApp('../../../App'),
   "it('x', async () => { render(<App />) })",
 ].join('\n')
 
 const preloaded = [
-  "import App from '../../../App'",
+  fromApp('../../../App'),
   "import { preloadAppRoutes } from '../utils/preloadAppRoutes'",
   'beforeAll(async () => {',
   '  await preloadAppRoutes()',
@@ -32,7 +37,9 @@ describe('appRouteScan — fires on a journey with no route preload', () => {
   it('sees a static and a dynamic import of App', () => {
     expect(rendersAppRoutes(journey)).toBe(true)
     expect(
-      rendersAppRoutes("const { default: App } = await import('../../App')")
+      rendersAppRoutes(
+        `const { default: App } = await ${importOf('../../App')}`
+      )
     ).toBe(true)
     expect(rendersAppRoutes("import AppShell from '../AppShell'")).toBe(false)
   })
@@ -45,7 +52,7 @@ describe('appRouteScan — fires on a journey with no route preload', () => {
     const src = [
       journey,
       'beforeAll(async () => {',
-      "  await import('../../../pages/DistrictDetailPage')",
+      `  await ${importOf('../../../pages/DistrictDetailPage')}`,
       '})',
     ].join('\n')
     expect(missesRoutePreload(src)).toBe(true)
