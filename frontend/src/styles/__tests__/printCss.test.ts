@@ -123,6 +123,11 @@ describe('council-pack.css (#2299)', () => {
     const rosterRules =
       print.match(/\.council-pack__roster-table[^{]*\{[^}]*\}/g) ?? []
     expect(rosterRules.join('\n')).not.toMatch(/text-overflow:\s*ellipsis/)
+    // Short marks ("Not yet", "Filed") stay on one line: under CI's DejaVu
+    // Sans fallback they wrapped and doubled every row (1056px of 931).
+    expect(print).toMatch(
+      /td\.council-pack__nowrap[^{]*\{[^}]*white-space:\s*nowrap/
+    )
     // Screen-only controls never print.
     expect(print).toMatch(
       /\.council-pack__screen-only[^{]*\{[^}]*display:\s*none/
