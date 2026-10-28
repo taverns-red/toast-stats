@@ -7,6 +7,10 @@ import { MobileRowList, type MobileRow } from './MobileRowList'
 import type { DistrictKpiStripData } from './DistrictKpiStrip'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 import type { TrainingClub } from '../utils/officerTraining'
+import type {
+  SuccessPlanGoalKey,
+  SuccessPlanGoals,
+} from '../utils/successPlanTargets'
 import {
   buildActionList,
   orderActionSections,
@@ -62,6 +66,15 @@ export interface DistrictOverviewHubProps {
    * 30 days of an open round — the only time it counts here (Ron, N10).
    */
   trainingClubs?: TrainingClub[] | null
+  /** Success Plan goals for the year on screen, from `?targets=` (#2297);
+   *  the tile sheets' cards draw them as Plan ticks. Owned by the page. */
+  planGoals?: SuccessPlanGoals | null
+}
+
+const TILE_GOAL: Record<HubTileKey, SuccessPlanGoalKey> = {
+  paidClubs: 'paidClubs',
+  membershipPayments: 'payments',
+  distinguishedClubs: 'distinguishedClubs',
 }
 
 const ATTENTION_TITLES: Record<ActionSectionId, string> = {
@@ -80,6 +93,7 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
   clubs,
   interventionClubs,
   trainingClubs,
+  planGoals = null,
 }) => {
   const [openTile, setOpenTile] = useState<HubTileKey | 'net' | null>(null)
   const loading = kpis === null || clubs === null
@@ -185,11 +199,18 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
                   current={kpis[openTile].current}
                   targets={kpis[openTile].targets}
                   rankings={kpis[openTile].rankings}
+                  planTarget={planGoals?.[TILE_GOAL[openTile]]}
                 />
                 <p className="district-hub__sheet-legend">
                   Tier markers: <strong>D</strong> Distinguished ·{' '}
                   <strong>S</strong> Select · <strong>P</strong>{' '}
                   President&apos;s · <strong>Sm</strong> Smedley
+                  {planGoals?.[TILE_GOAL[openTile]] !== undefined && (
+                    <>
+                      {' '}
+                      · <strong>Plan</strong> Success Plan target
+                    </>
+                  )}
                 </p>
               </>
             )

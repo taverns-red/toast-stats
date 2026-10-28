@@ -18,6 +18,9 @@ import { usePerformanceTargets } from '../hooks/usePerformanceTargets'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictRankHistoryYears } from '../hooks/useDistrictRankHistoryYears'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
+import { useUrlSuccessPlanTargets } from '../hooks/useUrlSuccessPlanTargets'
+import { goalsForProgramYear } from '../utils/successPlanTargets'
+import { SuccessPlanTargetsPanel } from '../components/SuccessPlanTargetsPanel'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
 import {
   getAvailableProgramYears,
@@ -422,6 +425,21 @@ const DistrictDetailPageInner: React.FC = () => {
   // Overview hub; tablets and desktops keep the KPI strip and CTA row.
   const isHubLayout = useMediaQuery(DISTRICT_HUB_QUERY)
 
+  // District Success Plan targets (#2297): `?targets=` only, bound to the
+  // year on screen. The page resolves the goals once and passes them down
+  // (R3); the cards never read the URL.
+  const { targets: planTargets, setTargets: setPlanTargets } =
+    useUrlSuccessPlanTargets(districtId)
+  const planYear = effectiveProgramYear ?? selectedProgramYear
+  const planGoals = goalsForProgramYear(planTargets, planYear.year)
+  const planPanel = (
+    <SuccessPlanTargetsPanel
+      programYear={planYear}
+      targets={planTargets}
+      onChange={setPlanTargets}
+    />
+  )
+
   // Next-deadline strip (#2298): the page's own PY and pinned date (R3).
   // Kept out of the shared header so the subpages (and the map route's JS
   // budget) do not carry it. Placed per layout in the render below.
@@ -741,15 +759,20 @@ const DistrictDetailPageInner: React.FC = () => {
                 }
                 snapshotDate={effectiveEndDate ?? undefined}
                 kpis={kpiStripData}
+                planGoals={planGoals}
                 clubs={kpiStripData ? (analytics?.allClubs ?? null) : null}
                 interventionClubs={analytics?.interventionRequiredClubs ?? null}
                 trainingClubs={trainingClubs}
               />
             ) : (
-              <DistrictKpiStrip kpis={kpiStripData} />
+              <DistrictKpiStrip kpis={kpiStripData} planGoals={planGoals} />
             ))}
 
           {districtId && isHubLayout && deadlineStrip}
+
+          {/* Success Plan targets entry (#2297): one collapsed row under the
+              KPIs from first paint, so it reserves its own slot. */}
+          {districtId && (hasOverviewData || isLoadingOverview) && planPanel}
 
           {/* Narrative content. #571 retired the tab strip; #679 (ADR-005)
               trimmed the hub to a lean Overview — the inline Divisions and
