@@ -55,7 +55,8 @@ const SECTIONS: ReadonlyArray<{ id: string; num: string; title: string }> = [
     num: '15',
     title: 'Region District Recognition',
   },
-  { id: 'changelog', num: '16', title: 'Changelog' },
+  { id: 'success-plan-targets', num: '16', title: 'Success Plan targets' },
+  { id: 'changelog', num: '17', title: 'Changelog' },
 ]
 
 // Every rule-change entry is its own deep-link target (#1400), owned by §10.
@@ -1181,9 +1182,73 @@ const MethodologyPage: React.FC = () => {
         </div>
       </CollapsibleSection>
 
+      {/* District Success Plan targets (#2297) — the Overview panel and the
+          Trends target line. Asserted by
+          MethodologyPage.successPlanTargets.test.tsx. */}
+      <CollapsibleSection
+        id="success-plan-targets"
+        num="16"
+        title="Success Plan targets"
+        collapsible={isMobile}
+        open={openIds.has('success-plan-targets')}
+        onToggle={toggle}
+      >
+        <div data-testid="methodology-success-plan-targets">
+          <p>
+            A district&apos;s leaders can enter the targets from their District
+            Success Plan on the district Overview. They show as a{' '}
+            <strong>Plan</strong> mark on the KPI cards, next to the
+            Distinguished District thresholds, and as a dashed target line on
+            the Trends payments chart.
+          </p>
+          <h3>The goal areas</h3>
+          <p>
+            The District Success Plan is organized around three goal areas:
+            Membership Payments Growth, Club Growth and Distinguished Clubs (TI
+            Item 431, <em>District Strategies Guide</em>, Rev. 05/2025, pp.5–6).
+            Each target is a whole number the district sets for itself, measured
+            by the KPI that tracks that goal area:
+          </p>
+          <ul>
+            <li>
+              <strong>Membership Payments Growth</strong>: membership payments
+              this program year.
+            </li>
+            <li>
+              <strong>Club Growth</strong>: paid clubs.
+            </li>
+            <li>
+              <strong>Distinguished Clubs</strong>: Distinguished clubs.
+            </li>
+          </ul>
+          <h3>Where the targets live</h3>
+          <p>
+            Only in the link. The targets are encoded in the{' '}
+            <code>?targets=</code> query parameter (for example{' '}
+            <code>?targets=c-105_d-60_p-4500_py-2026</code>), so Copy link
+            shares them. There is no account and nothing is saved on a server or
+            in the browser. Within one browser tab they stay with the district
+            as you move between its pages, the same way the selected program
+            year does.
+          </p>
+          <p>
+            Targets come from whoever made the link,{' '}
+            <strong>not from Toastmasters International</strong>. Anyone can
+            make a link with any numbers. Each link is bound to one program year
+            (<code>py</code>), so an old link never marks this year&apos;s
+            cards. A malformed or unrecognized value is ignored.
+          </p>
+          <p className="methodology-source">
+            Sources: the link&apos;s <code>?targets=</code> parameter (the
+            targets) and the district&apos;s <code>performance-targets</code>{' '}
+            and time-series files (the actual values).
+          </p>
+        </div>
+      </CollapsibleSection>
+
       <CollapsibleSection
         id="changelog"
-        num="16"
+        num="17"
         title="Changelog"
         collapsible={isMobile}
         open={openIds.has('changelog')}
