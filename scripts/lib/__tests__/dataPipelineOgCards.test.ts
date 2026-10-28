@@ -102,9 +102,10 @@ describe('og-cards job (#2304)', () => {
     const check = idx(s => s.id === 'staged')
     expect(check).toBeGreaterThan(idx(s => s.id === 'upload'))
     expect(steps[check]!.run).toMatch(/npx tsx scripts\/og-cards\.ts check\b/)
-    expect(steps[check]!.run).toMatch(
-      /gs:\/\/\$\{GCS_BUCKET\}\/og\/v1\/district\//
-    )
+    const run = steps[check]!.run ?? ''
+    expect(run).toMatch(/--arg b "\$\{GCS_BUCKET\}"/)
+    expect(run).toMatch(/og\/v1\/district\//)
+    expect(run).not.toMatch(/GCS_BUCKET_PRODUCTION/)
   })
 
   it('gates, then promotes: only the promote step writes prod, after the gate passed', () => {
