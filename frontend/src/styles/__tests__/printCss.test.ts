@@ -119,6 +119,10 @@ describe('council-pack.css (#2299)', () => {
       )?.[0] ?? ''
     expect(nameRule).toMatch(/white-space:\s*normal/)
     expect(nameRule).toMatch(/text-overflow:\s*clip/)
+    // No roster cell ellipses on paper: headers and tier labels included.
+    const rosterRules =
+      print.match(/\.council-pack__roster-table[^{]*\{[^}]*\}/g) ?? []
+    expect(rosterRules.join('\n')).not.toMatch(/text-overflow:\s*ellipsis/)
     // Screen-only controls never print.
     expect(print).toMatch(
       /\.council-pack__screen-only[^{]*\{[^}]*display:\s*none/
