@@ -8,6 +8,7 @@ import { toClubHistoryCsvRows, type ClubHistoryRow } from './clubHistory'
 import { logger } from './logger'
 import type { SnapshotDate } from '../types/snapshotDate'
 import { coachFilterValue, type ClubCoach } from './clubCoach'
+import { councilStandingCsvRows, type CouncilRow } from './councilStanding'
 
 /**
  * Converts a 2D array to CSV string
@@ -799,4 +800,21 @@ export const exportSnapshotDiff = (diff: SnapshotDiff): void => {
     districtId
   )
   downloadCSV(csvContent, filename)
+}
+
+/**
+ * Export the council credentials list (#2300): the disclaimer row, then one
+ * row per club with TI status, Y/N and votes. The page passes the rows it
+ * shows, so the CSV can never disagree with the screen.
+ */
+export const exportCouncilStanding = (args: {
+  districtId: string
+  snapshotDate: string
+  councilDate: string
+  rows: readonly CouncilRow[]
+}): void => {
+  downloadCSV(
+    arrayToCSV(councilStandingCsvRows(args)),
+    `council_credentials_district_${args.districtId}_${args.councilDate}.csv`
+  )
 }
