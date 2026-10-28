@@ -222,6 +222,8 @@ export interface ProspectWaitingOn {
    * without a date), the checklist's most recent step date (Ron, 2026-10-28).
    */
   since: string | null
+  /** Where `since` came from: the step's own date, or the checklist's. */
+  sinceFrom: 'step' | 'checklist' | null
 }
 
 export type ProspectProgress =
@@ -275,6 +277,8 @@ export function prospectProgress(text: string): ProspectProgress {
         label: s.label,
         listed: s.status !== 'not-listed',
         since,
+        sinceFrom:
+          s.date !== null ? 'step' : since !== null ? 'checklist' : null,
       }
     }
   }

@@ -66,6 +66,7 @@ describe('prospectProgress (#2388)', () => {
         label: 'Certificate & Remit',
         listed: true,
         since: '2026-08-14',
+        sinceFrom: 'step',
       },
       lastChanged: '2026-08-14',
       payment: 'complete',
@@ -98,6 +99,7 @@ describe('prospectProgress (#2388)', () => {
         label: 'Certificate & Remit',
         listed: false,
         since: '2026-10-05',
+        sinceFrom: 'checklist',
       },
       lastChanged: '2026-10-05',
       payment: 'incomplete',
@@ -108,7 +110,12 @@ describe('prospectProgress (#2388)', () => {
   it('an incomplete step without a date counts from the latest step date', () => {
     expect(prospectProgress(UNDATED_2142)).toMatchObject({
       stepsComplete: 4,
-      waitingOn: { number: 2, listed: true, since: '2025-06-02' },
+      waitingOn: {
+        number: 2,
+        listed: true,
+        since: '2025-06-02',
+        sinceFrom: 'checklist',
+      },
       lastChanged: '2025-06-02',
     })
   })

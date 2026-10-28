@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { PROSPECT_CHECKLIST_STEPS } from '@taverns-red/shared-contracts'
 import type {
   CharteredRow,
   ClubGrowthFunnel,
@@ -157,6 +158,18 @@ function ClubLink({
   )
 }
 
+/** "5 of 6 steps complete: 1 · Not recognised: 1" (#2388). */
+export function progressSummary(
+  groups: readonly { stepsComplete: number | null; count: number }[]
+): string {
+  return groups
+    .map(
+      g =>
+        `${g.stepsComplete === null ? 'Not recognised' : `${g.stepsComplete} of ${PROSPECT_CHECKLIST_STEPS.length} steps complete`}: ${g.count}`
+    )
+    .join(' · ')
+}
+
 const paymentText: Record<ProspectiveRow['payment'], string> = {
   complete: 'Complete',
   incomplete: 'Incomplete',
@@ -173,6 +186,29 @@ function keptQuery(search: string): string {
   }
   const qs = kept.toString()
   return qs ? `?${qs}` : ''
+}
+
+const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`
+
+/* #2388 — the step a club has waited on longest, and for how long. A step TI
+   does not list yet (or lists without a date) counts from the checklist's
+   most recent step date (Ron, 2026-10-28). */
+export function waitingOnText(r: ProspectiveRow): string {
+  const p = r.progress
+  if (!p.recognised) return '—'
+  const w = p.waitingOn
+  if (!w) return `All ${p.stepsTotal} steps complete`
+  const parts = [`Step #${w.number}`, w.label]
+  if (!w.listed) parts.push('not listed yet')
+  else if (w.sinceFrom === 'checklist') parts.push('no date given')
+  if (r.waitingDays !== null) {
+    parts.push(
+      w.sinceFrom === 'step'
+        ? `${days(r.waitingDays)} since it changed`
+        : `${days(r.waitingDays)} since the checklist last changed`
+    )
+  }
+  return parts.join(' · ')
 }
 
 /* A prospective club links to its page here (#2303), keeping the page's
@@ -197,22 +233,14 @@ const prospectiveColumns = (
     cell: r => divisionArea(r.division, r.area),
   },
   {
-    key: 'stage',
-    header: 'Stage',
+    key: 'progress',
+    header: 'Progress',
     cell: r =>
-      r.stage.recognised
-        ? `${r.stage.stageNumber} · ${r.stage.stageLabel}`
-        : r.stage.raw || 'Not stated',
+      r.progress.recognised
+        ? `${r.progress.stepsComplete} of ${r.progress.stepsTotal} steps complete`
+        : r.progress.raw || 'Not stated',
   },
-  {
-    key: 'days',
-    header: 'Days in stage',
-    className: 'growth-table__num',
-    cell: r =>
-      r.daysInStage === null
-        ? '—'
-        : `${r.daysInStage} ${r.daysInStage === 1 ? 'day' : 'days'}`,
-  },
+  { key: 'waiting', header: 'Waiting on', cell: r => waitingOnText(r) },
   { key: 'payment', header: 'Payment', cell: r => paymentText[r.payment] },
 ]
 
@@ -477,14 +505,17 @@ export const ClubGrowthFunnelView: React.FC<ClubGrowthFunnelViewProps> = ({
           </p>
         ) : (
           <>
-            <p className="growth-stage__note">
-              {prospective.byStage
-                .map(
-                  g =>
-                    `${g.stageNumber !== null ? `Stage ${g.stageNumber} · ` : ''}${g.stageLabel}: ${g.count}`
-                )
-                .join(' · ')}
-              . Longest-waiting first. Each club links to its charter checklist.
+            <p
+              className="growth-stage__note"
+              data-testid="growth-prospective-note"
+            >
+              {progressSummary(prospective.byProgress)}. TI’s charter checklist
+              has six steps, done in any order, and a step can go back to
+              Incomplete. Each club shows how many steps are complete and the
+              step it has waited on longest: the incomplete step that changed
+              longest ago. A step TI does not list yet counts from the
+              checklist’s most recent change. Most steps complete first, then
+              longest waiting. Each club links to its charter checklist.
             </p>
             <ActionTable
               caption="Prospective clubs"
