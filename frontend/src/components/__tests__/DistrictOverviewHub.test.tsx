@@ -182,6 +182,60 @@ describe('DistrictOverviewHub', () => {
     expect(sheet).toHaveTextContent('Plan Success Plan target')
   })
 
+  describe('Success Plan entry on the phone (#2297)', () => {
+    /* The collapsed panel cost the 375px Overview 62px and broke the hub's
+       4,000px page budget. On phones its entry point is a button in the
+       Action List link's existing row, and the form opens in a sheet. */
+    const panel = <form aria-label="Targets form" />
+
+    it('puts a Success Plan targets button in the Action List row', () => {
+      render(<DistrictOverviewHub {...baseProps} planTargetsPanel={panel} />)
+      const row = screen.getByTestId('district-hub-links')
+      expect(
+        within(row).getByRole('link', { name: /Open the Action List/ })
+      ).toBeInTheDocument()
+      expect(
+        within(row).getByRole('button', { name: /Success Plan targets/ })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole('form', { name: 'Targets form' })
+      ).not.toBeInTheDocument()
+    })
+
+    it('opens the targets form in a sheet', () => {
+      render(<DistrictOverviewHub {...baseProps} planTargetsPanel={panel} />)
+      fireEvent.click(
+        screen.getByRole('button', { name: /Success Plan targets/ })
+      )
+      const sheet = screen.getByRole('dialog', {
+        name: 'Success Plan targets',
+      })
+      expect(
+        within(sheet).getByRole('form', { name: 'Targets form' })
+      ).toBeInTheDocument()
+    })
+
+    it('says how many targets are set', () => {
+      render(
+        <DistrictOverviewHub
+          {...baseProps}
+          planTargetsPanel={panel}
+          planGoals={{ payments: 9999, paidClubs: 150 }}
+        />
+      )
+      expect(
+        screen.getByRole('button', { name: /Success Plan targets/ })
+      ).toHaveTextContent('2 set')
+    })
+
+    it('shows no button without a panel', () => {
+      render(<DistrictOverviewHub {...baseProps} />)
+      expect(
+        screen.queryByRole('button', { name: /Success Plan targets/ })
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it('shows no Success Plan tick for a goal the plan did not set (#2297)', () => {
     render(
       <DistrictOverviewHub {...baseProps} planGoals={{ payments: 9999 }} />
