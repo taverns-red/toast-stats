@@ -18,6 +18,7 @@ import type {
   PackVisitMark,
 } from '../../utils/councilPack'
 import { formatCloseNeeds } from '../../utils/actionListData'
+import type { VisitStatus } from '../../utils/divisionStatus'
 import {
   CSP_LOST_ELIGIBILITY,
   formatCspDueDate,
@@ -60,6 +61,17 @@ const CSP_TEXT: Record<PackCspMark, string> = {
 function isoLocal(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+/**
+ * "5 done · 4 needed ✓". The needed count is the Distinguished Area Program
+ * gate: visit reports for at least 75% of the area's club base in each round
+ * (District Recognition Program manual, Item 1490, Distinguished Area Program;
+ * docs/toastmasters-rules-reference.md §6.1). Written out, never as "5/4",
+ * which read as visits out of clubs (review of #2385).
+ */
+function visitReports(v: VisitStatus): string {
+  return `${v.completed} done · ${v.required} needed ${v.meetsThreshold ? '✓' : '✗'}`
 }
 
 function plural(n: number, word: string): string {
@@ -307,7 +319,7 @@ export const CouncilPackDocument: React.FC<CouncilPackDocumentProps> = ({
                     Distinguished
                   </th>
                   <th scope="col" className="council-pack__num">
-                    Round {pack.visitRound} visits
+                    Round {pack.visitRound} visit reports
                   </th>
                   {pack.csp.tracked && (
                     <th scope="col" className="council-pack__num">
@@ -328,8 +340,7 @@ export const CouncilPackDocument: React.FC<CouncilPackDocumentProps> = ({
                       {a.distinguishedClubs}/{a.requiredDistinguishedClubs}
                     </td>
                     <td className="council-pack__num">
-                      {a.visits.completed}/{a.visits.required}{' '}
-                      {a.visits.meetsThreshold ? '✓' : '✗'}
+                      {visitReports(a.visits)}
                     </td>
                     {pack.csp.tracked && (
                       <td className="council-pack__num">
@@ -375,19 +386,18 @@ export const CouncilPackDocument: React.FC<CouncilPackDocumentProps> = ({
             <p>
               {visitsMissing === 0
                 ? 'Every active club has its visit for this round.'
-                : `${plural(visitsMissing, 'active club')} still to visit: ${pack.areas
+                : `${plural(visitsMissing, 'active club')} ${visitsMissing === 1 ? 'has' : 'have'} no Round ${pack.visitRound} visit report yet: ${pack.areas
                     .filter(a => a.missingVisit.length > 0)
                     .map(a => `Area ${a.areaId} ${a.missingVisit.length}`)
-                    .join(', ')}. Each club's visit is on page 2.`}
+                    .join(', ')}. Each club is on page 2.`}
             </p>
           ) : (
             pack.areas.map(a => (
               <p key={a.areaId}>
-                {a.visits.completed} of {a.clubBase} clubs visited (
-                {a.visits.required} needed){' '}
-                {a.visits.meetsThreshold ? '✓' : '✗'}.
+                Visit reports: {visitReports(a.visits)} (75% of the area&rsquo;s{' '}
+                {a.clubBase}-club base).
                 {a.missingVisit.length > 0 &&
-                  ` Still to visit: ${a.missingVisit.map(c => c.clubName).join(', ')}.`}
+                  ` No Round ${pack.visitRound} visit report yet: ${a.missingVisit.map(c => c.clubName).join(', ')}.`}
               </p>
             ))
           )}

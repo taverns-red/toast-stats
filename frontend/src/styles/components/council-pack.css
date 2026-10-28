@@ -326,31 +326,41 @@
   }
 
   .council-pack__col-club {
-    width: 27%;
+    width: 37%;
   }
 
   .council-pack__col-area {
-    width: 6%;
+    width: 5%;
   }
 
   .council-pack__col-health {
-    width: 17%;
+    width: 13%;
   }
 
   .council-pack__col-num {
-    width: 8.5%;
+    width: 7.5%;
   }
 
   .council-pack__col-tier {
-    width: 12%;
+    width: 10%;
   }
 
   .council-pack__col-mark {
-    width: 10.5%;
+    width: 10%;
   }
 
-  .council-pack__name {
+  /* Names wrap on paper: there is no hover to recover an ellipsis (review
+     of #2385). The fixed column still bounds the width. */
+  .council-pack__roster-table .council-pack__name {
     max-width: none;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  .council-pack__roster-table th[scope='row'] {
+    white-space: normal;
   }
 
   .council-pack__footer {
