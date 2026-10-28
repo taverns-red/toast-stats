@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.52.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.51.0...frontend-v3.52.0) (2026-10-28)
+
+
+### Features
+
+* **videos:** list V13, V11, V16 on the videos page ([#2367](https://github.com/taverns-red/toast-stats/issues/2367)) ([#2371](https://github.com/taverns-red/toast-stats/issues/2371)) ([48e60ea](https://github.com/taverns-red/toast-stats/commit/48e60ead9ed29559c5c76ba6e580a21d486b390a))
+* **videos:** list V14, V10, V9 on the videos page ([#2363](https://github.com/taverns-red/toast-stats/issues/2363)) ([#2368](https://github.com/taverns-red/toast-stats/issues/2368)) ([57d41e9](https://github.com/taverns-red/toast-stats/commit/57d41e9ca3e3aea2735aed5960cb3048aada586a))
+* **videos:** list V5, V8 and V12 on /videos ([#2310](https://github.com/taverns-red/toast-stats/issues/2310)) ([#2358](https://github.com/taverns-red/toast-stats/issues/2358)) ([0b5cb62](https://github.com/taverns-red/toast-stats/commit/0b5cb62cb098a90bfe6cc16a129cb277c4554b74))
+* **videos:** list V6, V15, V7 on the videos page ([#2359](https://github.com/taverns-red/toast-stats/issues/2359)) ([#2364](https://github.com/taverns-red/toast-stats/issues/2364)) ([c5d6b54](https://github.com/taverns-red/toast-stats/commit/c5d6b545b14b39104eb6e3117c6492db1fda086d))
+
+
+### Bug Fixes
+
+* **mobile:** education leaderboard names wrap at word boundaries ([#2361](https://github.com/taverns-red/toast-stats/issues/2361)) ([#2366](https://github.com/taverns-red/toast-stats/issues/2366)) ([8247233](https://github.com/taverns-red/toast-stats/commit/824723328ba5c88c0d043756e1b7adb932dc3056))
+
 ## [3.51.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.50.0...frontend-v3.51.0) (2026-10-27)
 
 

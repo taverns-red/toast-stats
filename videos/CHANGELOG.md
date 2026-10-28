@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.4](https://github.com/taverns-red/toast-stats/compare/videos-v0.1.3...videos-v0.1.4) (2026-10-28)
+
+
+### Features
+
+* **videos:** how-to video batch 3 - V6, V15, V7 ([#2359](https://github.com/taverns-red/toast-stats/issues/2359)) ([#2360](https://github.com/taverns-red/toast-stats/issues/2360)) ([d01cb0b](https://github.com/taverns-red/toast-stats/commit/d01cb0bc74fb92dd41b0e17f6ea4ecac3dff1166))
+* **videos:** how-to video batch 4 (V14, V10, V9) ([#2363](https://github.com/taverns-red/toast-stats/issues/2363)) ([#2365](https://github.com/taverns-red/toast-stats/issues/2365)) ([a17a4a1](https://github.com/taverns-red/toast-stats/commit/a17a4a1eec2a0373e04f4da682d30ee5ff5cdceb))
+* **videos:** how-to video batch 5 (V13, V11, V16) ([#2367](https://github.com/taverns-red/toast-stats/issues/2367)) ([#2369](https://github.com/taverns-red/toast-stats/issues/2369)) ([334887f](https://github.com/taverns-red/toast-stats/commit/334887f2c8ff49a8cc7ef7f9c40885ac074a308a))
+
 ## [0.1.3](https://github.com/taverns-red/toast-stats/compare/videos-v0.1.2...videos-v0.1.3) (2026-10-27)
 
 
