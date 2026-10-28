@@ -26,6 +26,7 @@ export {
   distinguishedMembershipBasis,
   getConfirmedDistinguishedLevel,
   getCSPStatus,
+  readCSPCell,
   isClubSmedleyAvailable,
   isCspRequired,
   cspDueDate,

@@ -49,11 +49,15 @@ on:
 # arrives — only the latest commit gets a deploy. A `labeled` event for any
 # label other than `preview-smoke` gets a run-unique group (and then skips),
 # so tagging a PR never cancels its in-flight smoke (#2101).
+# An event for a PR that is no longer open (e.g. `preview-smoke` added after
+# merge) also gets a run-unique group, so it cannot cancel the pending or
+# in-flight pr-preview-cleanup.yml run that shares the per-PR group (#2372).
 concurrency:
   group: >-
     pr-preview-${{ github.event.pull_request.number }}${{
-    github.event.action == 'labeled'
-    && github.event.label.name != 'preview-smoke'
+    (github.event.pull_request.state != 'open'
+    || (github.event.action == 'labeled'
+    && github.event.label.name != 'preview-smoke'))
     && format('-label-{0}', github.run_id) || '' }}
   cancel-in-progress: true
 
@@ -73,8 +77,11 @@ jobs:
     # passes) but its runs get no access to the Actions secret store, so the
     # GCP auth step would fail. Dependency bumps have no UI to preview (#733).
     # A labeled event runs only for `preview-smoke` (#2101).
+    # Never deploy for a closed PR: cleanup has already reaped `pr-<N>`, and a
+    # re-created channel would hold staging quota until its 7-day TTL (#2372).
     if: >-
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.state == 'open'
+      && github.event.pull_request.head.repo.full_name == github.repository
       && github.actor != 'dependabot[bot]'
       && (github.event.action != 'labeled' || github.event.label.name == 'preview-smoke')
     env:

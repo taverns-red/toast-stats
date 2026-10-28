@@ -1095,12 +1095,13 @@ export class TransformService {
         // (#296). The renewal COUNT is district-performance "Apr. Ren.";
         // club-performance "Mem. dues on time Apr" is a 0/1 flag (#2221).
         // Without a usable district report the renewals are unknown and no
-        // club is confirmed.
+        // club is confirmed. The ladder is the LOGICAL date's PY: a June
+        // close collected in July belongs to the closing PY (#2324, #1622).
         if (clubs && districtRows && allZeroDistinguished) {
           const confirmed = countConfirmedDistinguishedClubs(
             clubs,
             districtRows,
-            calculateProgramYear(date)
+            calculateProgramYear(logicalDate)
           )
           if (confirmed > 0) {
             metric.distinguishedClubs = confirmed
