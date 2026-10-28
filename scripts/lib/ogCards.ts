@@ -257,6 +257,21 @@ export function buildDistrictCards(
   )
 }
 
+/* The tile caption says what is still NEEDED, so "21" never reads as the
+   district's count (#2389 review): "more paid clubs", or "… met" at 0. */
+const GAP_NOUNS: Record<string, [string, string]> = {
+  'Paid Clubs': ['paid club', 'paid clubs'],
+  Payments: ['payment', 'payments'],
+  'Distinguished Clubs': ['Distinguished club', 'Distinguished clubs'],
+}
+
+function gapPhrase(g: CardGap): string {
+  const [one, many] = GAP_NOUNS[g.label] ?? [g.label, g.label]
+  if (g.count === 0)
+    return `${many.charAt(0).toUpperCase()}${many.slice(1)} met`
+  return `more ${g.count === 1 ? one : many}`
+}
+
 function esc(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -291,7 +306,7 @@ export function renderDistrictCardHtml(
   const tiles = card.gaps
     .map(g => {
       const met = g.count === 0
-      return `<div class="tile"><div class="num${met ? ' met' : ''}">${met ? '✓' : esc(g.count.toLocaleString('en-US'))}</div><div class="lbl">${esc(g.label)}</div></div>`
+      return `<div class="tile"><div class="num${met ? ' met' : ''}">${met ? '✓' : esc(g.count.toLocaleString('en-US'))}</div><div class="lbl">${esc(gapPhrase(g))}</div></div>`
     })
     .join('')
   const gapBlock = card.nextTierLabel
