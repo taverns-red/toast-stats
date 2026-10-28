@@ -3350,6 +3350,166 @@ jobs:
         run: bash scripts/pipeline/check-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" "${PROMOTED_DATES}"
 
   # ══════════════════════════════════════════════════════════
+  # DISTRICT SHARE CARDS (#2304) — staging first, then gated into prod
+  #
+  # One 1200x630 Open Graph card per district (status + gap to the next
+  # Distinguished tier + as-of date), at the STABLE path
+  # og/v1/district/<id>.png, overwritten daily. The release-built stubs
+  # (dist/district/<id>.html, scripts/generate-og-stubs.ts) point og:image
+  # at it, so the image follows the data while the stubs follow releases.
+  #
+  # Its own job and its own 10-minute cap (Ron, 2026-10-28): a render
+  # fault never touches the pipeline's budget or any other job's.
+  #   1. read staging's v1/rankings.json and that date's
+  #      competitive-awards.json, recording their MD5s;
+  #   2. render and content-check every card (scripts/og-cards.ts render:
+  #      one 1200x630 PNG per district, nothing else);
+  #   3. upload to STAGING og/v1/district/ through gcs-upload.sh, recorded
+  #      in this job's own manifest, then re-read what staging holds;
+  #   4. gate: prod must serve the exact objects the cards were drawn from
+  #      (same MD5), i.e. the pipeline's gates promoted that data. A held
+  #      date holds its cards and prod keeps yesterday's;
+  #   5. promote with the scoped promoter (--og-cards), never on
+  #      skip_promotion.
+  # og/ is outside every prefix the pipeline's own promotion, content gates
+  # and prune touch (videoPublish.ts DATA_PREFIXES); only --og-cards copies
+  # it. An hour of cache, no CDN purge.
+  # ══════════════════════════════════════════════════════════
+  og-cards:
+    name: 'district share cards (#2304)'
+    runs-on: ubuntu-26.04
+    needs: pipeline
+    if: >-
+      !cancelled()
+      && needs.pipeline.result == 'success'
+      && needs.pipeline.outputs.mode == 'daily'
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared-contracts and analytics-core
+        run: |
+          npm run build --workspace=@taverns-red/shared-contracts
+          npm run build --workspace=@taverns-red/analytics-core
+
+      - name: '[og] Install Chromium'
+        run: npx playwright install chromium
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          # Exact pin (#1720): downloads decompress gzip (#1702); the CLI
+          # also accepts stored gzip bytes.
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        run: gcloud version
+
+      - name: '[og] Fetch the card inputs from staging'
+        id: inputs
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/og-cards/in
+          md5() { gcloud storage objects describe "$1" --format='value(md5_hash)'; }
+          RANKINGS="gs://${GCS_BUCKET}/v1/rankings.json"
+          echo "rankings_md5=$(md5 "${RANKINGS}")" >> "$GITHUB_OUTPUT"
+          gcloud storage cp "${RANKINGS}" /tmp/og-cards/in/rankings.json
+          DATE="$(npx tsx scripts/og-cards.ts rankings-date /tmp/og-cards/in/rankings.json)"
+          AWARDS="gs://${GCS_BUCKET}/snapshots/${DATE}/competitive-awards.json"
+          echo "awards_md5=$(md5 "${AWARDS}")" >> "$GITHUB_OUTPUT"
+          gcloud storage cp "${AWARDS}" /tmp/og-cards/in/competitive-awards.json
+          echo "date=${DATE}" >> "$GITHUB_OUTPUT"
+
+      - name: '[og] Render and check the district cards'
+        run: |
+          npx tsx scripts/og-cards.ts render \
+            --rankings /tmp/og-cards/in/rankings.json \
+            --awards /tmp/og-cards/in/competitive-awards.json \
+            --out /tmp/og-cards/out
+
+      # Recorded in the job's OWN manifest (not the run's shared
+      # runs/<id>/written.jsonl, which other jobs seed and republish).
+      - name: '[og] Upload the cards to staging'
+        id: upload
+        env:
+          RUN_MANIFEST_FILE: /tmp/og-cards/written.jsonl
+        run: |
+          bash scripts/pipeline/gcs-upload.sh og-cards cp \
+            --cache-control="public, max-age=3600" \
+            --content-type="image/png" \
+            /tmp/og-cards/out/*.png "gs://${GCS_BUCKET}/og/v1/district/"
+
+      # The staged re-read: download exactly the planned cards back from
+      # staging and check them against what was recorded, so the promote
+      # copies only bytes this job checked.
+      - name: '[og] Check the staged cards'
+        id: staged
+        env:
+          RUN_MANIFEST_FILE: /tmp/og-cards/written.jsonl
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/og-cards/staged
+          mapfile -t SRC < <(jq -r --arg b "${GCS_BUCKET}" \
+            '.ids[] | "gs://\($b)/og/v1/district/\(.).png"' /tmp/og-cards/out/cards.json)
+          gcloud storage cp "${SRC[@]}" /tmp/og-cards/staged/
+          npx tsx scripts/og-cards.ts check \
+            --plan /tmp/og-cards/out/cards.json \
+            --manifest "${RUN_MANIFEST_FILE}" \
+            --dir /tmp/og-cards/staged
+
+      - name: '[og] Gate: prod serves the data the cards were drawn from'
+        id: gate
+        env:
+          DATE: ${{ steps.inputs.outputs.date }}
+          STAGING_RANKINGS_MD5: ${{ steps.inputs.outputs.rankings_md5 }}
+          STAGING_AWARDS_MD5: ${{ steps.inputs.outputs.awards_md5 }}
+        run: |
+          set -o pipefail
+          md5() { gcloud storage objects describe "$1" --format='value(md5_hash)' || true; }
+          PROD_RANKINGS_MD5="$(md5 "gs://${GCS_BUCKET_PRODUCTION}/v1/rankings.json")"
+          PROD_AWARDS_MD5="$(md5 "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${DATE}/competitive-awards.json")"
+          export PROD_RANKINGS_MD5 PROD_AWARDS_MD5
+          npx tsx scripts/og-cards.ts gate --verdict /tmp/og-cards/verdict.json >> "$GITHUB_OUTPUT"
+
+      # The one prod-write mechanism (#1767, #2222): the scoped promoter,
+      # on this job's manifest and verdict. --og-cards is the only promote
+      # that copies og/v1/district/; bytes and headers arrive as staged.
+      - name: '[og] Promote the cards into prod'
+        id: promote
+        if: >-
+          steps.gate.outputs.promote == 'true'
+          && needs.pipeline.outputs.skip_promotion != 'true'
+        env:
+          RUN_MANIFEST_FILE: /tmp/og-cards/written.jsonl
+          COMPLETENESS_GATE_FILE: /tmp/og-cards/verdict.json
+        run: npx tsx scripts/promote-run-manifest.ts --execute --og-cards
+
+      - name: '[og] Cards held by the gate'
+        if: steps.gate.outputs.promote == 'false'
+        env:
+          REASON: ${{ steps.gate.outputs.reason }}
+        run: |
+          echo "::warning title=District share cards::held (${REASON}); prod keeps its previous cards"
+          echo "- 🖼️ ⏸️ District share cards held (#2304): ${REASON}. Prod keeps its previous cards." >> "$GITHUB_STEP_SUMMARY"
+
+  # ══════════════════════════════════════════════════════════
   # EDUCATION LEDGER HISTORY BACKFILL (#1802) — STAGING ONLY
   #
   # Operator-dispatched (mode=backfill-education-ledger). Fetches TI's
