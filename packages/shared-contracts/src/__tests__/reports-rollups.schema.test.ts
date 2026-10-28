@@ -25,7 +25,37 @@ const RECORDED = JSON.parse(
   )
 ) as ReportsRollups
 
+/** Written before #2388: no `byStepsComplete`. Past dates keep this shape. */
+const LEGACY = JSON.parse(
+  readFileSync(
+    new URL(
+      './__fixtures__/recorded-reports-rollups-v1.0.0.json',
+      import.meta.url
+    ),
+    'utf-8'
+  )
+) as ReportsRollups
+
 describe('ReportsRollupsSchema (#2012)', () => {
+  it('still parses a v1.0.0 artifact without steps-complete counts (#2388)', () => {
+    expect(LEGACY._format.version).toBe('1.0.0')
+    expect(LEGACY.world.prospective).not.toHaveProperty('byStepsComplete')
+    expect(ReportsRollupsSchema.parse(LEGACY)).toEqual(LEGACY)
+  })
+
+  it('carries prospective clubs by steps complete (#2388)', () => {
+    expect(RECORDED._format.version).toBe('1.1.0')
+    expect(RECORDED.world.prospective?.byStepsComplete).toEqual([
+      { stepsComplete: 1, clubs: 6 },
+    ])
+  })
+
+  it('rejects a steps-complete count above the six steps', () => {
+    const bad = structuredClone(RECORDED)
+    bad.world.prospective!.byStepsComplete = [{ stepsComplete: 7, clubs: 1 }]
+    expect(ReportsRollupsSchema.safeParse(bad).success).toBe(false)
+  })
+
   it('parses the recorded artifact unchanged', () => {
     expect(ReportsRollupsSchema.parse(RECORDED)).toEqual(RECORDED)
     expect(RECORDED._format).toEqual(REPORTS_ROLLUPS_FORMAT)
