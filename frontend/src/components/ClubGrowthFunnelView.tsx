@@ -240,7 +240,12 @@ const prospectiveColumns = (
         ? `${r.progress.stepsComplete} of ${r.progress.stepsTotal} steps complete`
         : r.progress.raw || 'Not stated',
   },
-  { key: 'waiting', header: 'Waiting on', cell: r => waitingOnText(r) },
+  {
+    key: 'waiting',
+    header: 'Waiting on',
+    className: 'growth-table__waiting',
+    cell: r => waitingOnText(r),
+  },
   { key: 'payment', header: 'Payment', cell: r => paymentText[r.payment] },
 ]
 
