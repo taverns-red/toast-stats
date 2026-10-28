@@ -8,6 +8,8 @@ legacy_id: "065"
 
 # Lesson 65 — When tier thresholds cluster, zoom the scale into the band
 
+> **Superseded for the KPI bullet bar (#2387, 2026-10-28).** Because the zoom's floor followed `current`, the marker was pinned to 0% with no fill for every district below 0.9 × D, so progress was invisible. #1517 had already moved the labels into a flow legend, and the bar is now 0-based. See `a-progress-scale-whose-floor-follows-the-value-shows-no-progress.md`.
+
 **Date:** 2026-05-21
 **Issue:** #558 (KpiBulletCard tier ticks collide on D61 data)
 
