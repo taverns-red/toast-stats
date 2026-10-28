@@ -117,7 +117,7 @@ describe('ClubGrowthFunnelView', () => {
     expect(stage).not.toHaveTextContent(/\b0\b/)
   })
 
-  it('lists prospective clubs with stage, days in stage and a TI link', () => {
+  it('lists prospective clubs with stage, days in stage and an in-site link (#2303)', () => {
     renderView(2)
     const section = screen.getByRole('region', { name: /prospective clubs/i })
     expect(section).toHaveTextContent('Application to Organize')
@@ -126,11 +126,38 @@ describe('ClubGrowthFunnelView', () => {
     })
     expect(link).toHaveAttribute(
       'href',
-      'https://www.toastmasters.org/Find-a-Club/28678700'
+      '/district/61/growth/prospective/28678700'
     )
+    expect(link).not.toHaveAttribute('target')
     expect(section).toHaveTextContent('544 days')
     // Live: two prospective clubs have not paid (28679937, 28680099).
     expect(within(section).getAllByText('Incomplete')).toHaveLength(2)
+  })
+
+  it('carries the page’s py and date into the prospective club link (R3, #2303)', () => {
+    const funnel = buildClubGrowthFunnel({
+      districtId: '61',
+      reports: live,
+      counts: { chartered: 0, suspended: 0 },
+      programYear: { startDate: '2026-07-01', endDate: '2027-06-30' },
+      asOfDate: '2026-10-11',
+    })
+    render(
+      <MemoryRouter
+        initialEntries={['/district/61/growth?py=2026&date=2026-10-11&x=1']}
+      >
+        <ClubGrowthFunnelView funnel={funnel} asOfDate="2026-10-11" />
+      </MemoryRouter>
+    )
+    const section = screen.getByRole('region', { name: /prospective clubs/i })
+    expect(
+      within(section).getByRole('link', {
+        name: /Parole Chrétienne et Passionné de Dieu/,
+      })
+    ).toHaveAttribute(
+      'href',
+      '/district/61/growth/prospective/28678700?py=2026&date=2026-10-11'
+    )
   })
 
   it('links coached clubs to their club pages with status and since', () => {

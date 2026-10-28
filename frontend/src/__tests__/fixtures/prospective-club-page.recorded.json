@@ -1,0 +1,123 @@
+{
+  "_provenance": "Recorded, not hand-written (#2303). Rows copied from https://cdn.taverns.red/snapshots/2026-10-27/district_{84,25}_reports.json (section prospectiveClubs) and .../analytics/district_84_analytics.json (prospectiveClubs, Find-a-Club). division/area/club/status/prospect/sources/country/isProspective are verbatim. Scrubbed: name/clubName -> placeholders; reports `location`, Find-a-Club city/region, meetingDay/meetingTime -> placeholders. `website` was added to 28679702 (no sampled row carried one) so a test can prove it never renders. 28679424 is on the TI report but not on Find-a-Club (no place).",
+  "snapshotDate": "2026-10-27",
+  "d84_reports": {
+    "districtId": "84",
+    "programYear": "2026-2027",
+    "generatedAt": "2026-10-28T09:11:33.612Z",
+    "sections": {
+      "prospectiveClubs": {
+        "sources": [
+          {
+            "reportType": "prospective-clubs",
+            "tableId": "50630d17-1492-40c9-8244-930b1d94167b",
+            "asOf": "October 28, 2026"
+          }
+        ],
+        "records": [
+          {
+            "division": "",
+            "area": "",
+            "club": "28679424",
+            "status": "Prospective",
+            "name": "Prospective Club 84-4",
+            "location": "LOCATION-TEXT-MUST-NOT-RENDER 84-4",
+            "prospect": "#1 Application to Organize Complete - 11/03/2025Payment Complete - 11/03/2025"
+          },
+          {
+            "division": "C",
+            "area": "31",
+            "club": "28679702",
+            "status": "Prospective",
+            "name": "Prospective Club 84-3",
+            "location": "LOCATION-TEXT-MUST-NOT-RENDER 84-3",
+            "prospect": "#1 Application to Organize Complete - 01/20/2026Payment Complete - 01/22/2026"
+          },
+          {
+            "division": "",
+            "area": "",
+            "club": "28680214",
+            "status": "Prospective",
+            "name": "Prospective Club 84-1",
+            "location": "LOCATION-TEXT-MUST-NOT-RENDER 84-1",
+            "prospect": "#1 Application to Organize Complete - 05/08/2026#2 Certificate & Remit Incomplete - 05/11/2026#3 Roster Incomplete - 05/11/2026#4 Officer Info Incomplete - 05/11/2026#5 Club Info Incomplete - 05/11/2026#6 Constitution & Bylaws Incomplete - 05/11/2026Payment Complete - 05/08/2026"
+          },
+          {
+            "division": "",
+            "area": "",
+            "club": "28681056",
+            "status": "Prospective",
+            "name": "Prospective Club 84-2",
+            "location": "LOCATION-TEXT-MUST-NOT-RENDER 84-2",
+            "prospect": "#1 Application to Organize Complete - 10/05/2026Payment Incomplete"
+          }
+        ]
+      }
+    }
+  },
+  "d84_findAClub": [
+    {
+      "clubId": "28679702",
+      "clubName": "Prospective Club 84-3",
+      "city": "Cityville 3",
+      "region": "ST",
+      "country": "United States",
+      "meetingDay": "MEETING-DAY-MUST-NOT-RENDER",
+      "meetingTime": "MEETING-TIME-MUST-NOT-RENDER",
+      "isProspective": true,
+      "website": "https://example.invalid/WEBSITE-MUST-NOT-RENDER"
+    },
+    {
+      "clubId": "28680214",
+      "clubName": "Prospective Club 84-1",
+      "city": "Cityville 1",
+      "region": "ST",
+      "country": "United States",
+      "isProspective": true
+    },
+    {
+      "clubId": "28681056",
+      "clubName": "Prospective Club 84-2",
+      "city": "Cityville 2",
+      "region": "ST",
+      "country": "United States",
+      "isProspective": true
+    }
+  ],
+  "d25_reports": {
+    "districtId": "25",
+    "programYear": "2026-2027",
+    "generatedAt": "2026-10-28T09:02:05.080Z",
+    "sections": {
+      "prospectiveClubs": {
+        "sources": [
+          {
+            "reportType": "prospective-clubs",
+            "tableId": "50630d17-1492-40c9-8244-930b1d94167b",
+            "asOf": "October 28, 2026"
+          }
+        ],
+        "records": [
+          {
+            "division": "",
+            "area": "",
+            "club": "28680093",
+            "status": "Prospective",
+            "name": "Prospective Club 25-1",
+            "location": "LOCATION-TEXT-MUST-NOT-RENDER 25-1",
+            "prospect": "#1 Application to Organize Complete - 04/17/2026#2 Certificate & Remit Incomplete - 08/14/2026#3 Roster Complete - 06/30/2026#4 Officer Info Complete - 06/15/2026#5 Club Info Complete - 06/15/2026#6 Constitution & Bylaws Complete - 06/15/2026Payment Complete - 04/17/2026"
+          },
+          {
+            "division": "F",
+            "area": "63",
+            "club": "28680358",
+            "status": "Prospective",
+            "name": "Prospective Club 25-2",
+            "location": "LOCATION-TEXT-MUST-NOT-RENDER 25-2",
+            "prospect": "#1 Application to Organize Complete - 06/03/2026#2 Certificate & Remit Incomplete - 06/04/2026#3 Roster Incomplete - 06/04/2026#4 Officer Info Complete - 06/04/2026#5 Club Info Complete - 06/04/2026#6 Constitution & Bylaws Incomplete - 06/04/2026Payment Complete - 06/03/2026"
+          }
+        ]
+      }
+    }
+  }
+}

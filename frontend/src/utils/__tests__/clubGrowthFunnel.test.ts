@@ -140,9 +140,11 @@ describe('buildClubGrowthFunnel — prospective', () => {
     expect([...days].sort((a, b) => b - a)).toEqual(days)
   })
 
-  it('links prospective clubs to TI, never to an internal club page', () => {
+  it('links prospective clubs to their prospective page here (#2303)', () => {
+    // Not the chartered club page (#489: prospective clubs have no analytics
+    // row) and no longer out to toastmasters.org.
     expect(funnel.prospective.clubs[0]!.href).toBe(
-      'https://www.toastmasters.org/Find-a-Club/28678700'
+      '/district/61/growth/prospective/28678700'
     )
   })
 
