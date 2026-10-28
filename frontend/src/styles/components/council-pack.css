@@ -291,13 +291,14 @@
 
   .council-pack__table {
     font-size: 8.5pt;
+    line-height: 1.2;
   }
 
   /* print.css pads every cell 4px 8px; a pack row needs to be tighter to
      fit a 28-club roster on one page. */
   .council-pack th,
   .council-pack td {
-    padding: 1.5pt 4pt !important;
+    padding: 1pt 4pt !important;
     border: 1px solid #bbbbbb !important;
   }
 
@@ -319,34 +320,46 @@
     table-layout: fixed;
   }
 
+  /* Nothing on the printed roster ellipses (no hover on paper): cells
+     wrap inside their fixed column instead. */
   .council-pack__roster-table th,
   .council-pack__roster-table td {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+  }
+
+  /* Only a club name too long for its column breaks inside a word;
+     headers and short labels break between words only. */
+  .council-pack__roster-table tbody th,
+  .council-pack__roster-table tbody td {
+    overflow-wrap: anywhere;
   }
 
   .council-pack__col-club {
-    width: 37%;
+    width: 31%;
   }
 
   .council-pack__col-area {
-    width: 5%;
+    width: 6%;
   }
 
   .council-pack__col-health {
     width: 13%;
   }
 
-  .council-pack__col-num {
-    width: 7.5%;
+  .council-pack__col-members {
+    width: 10%;
+  }
+
+  .council-pack__col-goals {
+    width: 7%;
   }
 
   .council-pack__col-tier {
-    width: 10%;
+    width: 14%;
   }
 
   .council-pack__col-mark {
-    width: 10%;
+    width: 9.5%;
   }
 
   /* Names wrap on paper: there is no hover to recover an ellipsis (review

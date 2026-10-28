@@ -135,8 +135,8 @@ function Roster({
         <col className="council-pack__col-club" />
         {showArea && <col className="council-pack__col-area" />}
         <col className="council-pack__col-health" />
-        <col className="council-pack__col-num" />
-        <col className="council-pack__col-num" />
+        <col className="council-pack__col-members" />
+        <col className="council-pack__col-goals" />
         <col className="council-pack__col-tier" />
         <col className="council-pack__col-mark" />
         {cspTracked && <col className="council-pack__col-mark" />}
