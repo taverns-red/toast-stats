@@ -1,0 +1,119 @@
+{
+  "_provenance": "Cut 2026-10-28 from https://cdn.taverns.red/snapshots/{date}/district_{id}.json (#2300). Club fields only; clubStatus is TI's own Club Status column.",
+  "d61_2026_10_27": [
+    {
+      "clubId": "3045",
+      "clubName": "Limestone City Club",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "01",
+      "areaName": "Area 01",
+      "status": "Active",
+      "clubStatus": "Active",
+      "membershipCount": 11,
+      "paymentsCount": 19,
+      "octoberRenewals": 11,
+      "aprilRenewals": 5,
+      "newMembers": 3,
+      "charterDate": "1960-01-01"
+    },
+    {
+      "clubId": "9560",
+      "clubName": "CFB Kingston Toastmasters",
+      "divisionId": "A",
+      "divisionName": "Division A",
+      "areaId": "01",
+      "areaName": "Area 01",
+      "status": "Low",
+      "clubStatus": "Low",
+      "membershipCount": 3,
+      "paymentsCount": 3,
+      "octoberRenewals": 3,
+      "aprilRenewals": 0,
+      "newMembers": 0,
+      "charterDate": "1993-08-01"
+    },
+    {
+      "clubId": "7261",
+      "clubName": "Centretown Ottawa Toastmasters",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "20",
+      "areaName": "Area 20",
+      "status": "Ineligible",
+      "clubStatus": "Ineligible",
+      "membershipCount": 1,
+      "paymentsCount": 1,
+      "octoberRenewals": 1,
+      "aprilRenewals": 0,
+      "newMembers": 0,
+      "charterDate": "1999-06-01"
+    },
+    {
+      "clubId": "28679190",
+      "clubName": "Club Toastmasters Les Entrepreneurs de Montreal",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "62",
+      "areaName": "Area 62",
+      "status": "Active",
+      "clubStatus": "Active",
+      "membershipCount": 25,
+      "paymentsCount": 36,
+      "octoberRenewals": 20,
+      "aprilRenewals": 6,
+      "newMembers": 10,
+      "charterDate": "2026-04-15"
+    },
+    {
+      "clubId": "28678571",
+      "clubName": "Club Toastmasters de Drummondville",
+      "divisionId": "I",
+      "divisionName": "Division I",
+      "areaId": "93",
+      "areaName": "Area 93",
+      "status": "Active",
+      "clubStatus": "Active",
+      "membershipCount": 10,
+      "paymentsCount": 10,
+      "octoberRenewals": 8,
+      "aprilRenewals": 0,
+      "newMembers": 2,
+      "charterDate": "2026-04-17"
+    }
+  ],
+  "d61_2026_04_29": [
+    {
+      "clubId": "28679190",
+      "clubName": "Club Toastmasters Les Entrepreneurs de Montreal",
+      "divisionId": "G",
+      "divisionName": "Division G",
+      "areaId": "62",
+      "areaName": "Area 62",
+      "status": "Active",
+      "clubStatus": "Active",
+      "membershipCount": 20,
+      "paymentsCount": 20,
+      "octoberRenewals": 0,
+      "aprilRenewals": 0,
+      "newMembers": 0
+    }
+  ],
+  "d31_2026_10_27": [
+    {
+      "clubId": "902446",
+      "clubName": "Millyard Toastmasters",
+      "divisionId": "C",
+      "divisionName": "Division C",
+      "areaId": "35",
+      "areaName": "Area 35",
+      "status": "Suspended",
+      "clubStatus": "Suspended",
+      "membershipCount": 0,
+      "paymentsCount": 0,
+      "octoberRenewals": 0,
+      "aprilRenewals": 0,
+      "newMembers": 0
+    }
+  ]
+}
