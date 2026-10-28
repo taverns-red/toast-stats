@@ -33,6 +33,7 @@ import {
   cspDueDate,
   isCspOverdue,
   isCspRequired,
+  readCSPCell,
 } from '@taverns-red/analytics-core'
 import { getProgramYearForDate } from './programYear'
 import { logger } from './logger'
@@ -271,16 +272,6 @@ function calculateDistinguishedLevelFromCriteria(
   return level === 'President' ? 'Presidents' : level
 }
 
-/** The raw Club Success Plan cell, under any of the header spellings seen. */
-function rawCspValue(club: Record<string, unknown>): unknown {
-  return (
-    club['CSP'] ??
-    club['Club Success Plan'] ??
-    club['CSP Submitted'] ??
-    club['Club Success Plan Submitted']
-  )
-}
-
 /**
  * Whether the snapshot carries a Club Success Plan column at all (#1555).
  * The column is either on every clubPerformance row or on none (verified
@@ -292,25 +283,9 @@ function hasCspColumn(
   clubPerformance: Iterable<Record<string, unknown>>
 ): boolean {
   for (const club of clubPerformance) {
-    const v = rawCspValue(club)
-    if (v !== undefined && v !== null) return true
+    if (readCSPCell(club) !== undefined) return true
   }
   return false
-}
-
-/**
- * Reads the Club Success Plan cell as a tri-state (#1555): `undefined` when
- * the column is absent, otherwise the parsed boolean. `getCSPStatus` below
- * folds `undefined` into `true` for the Distinguished gate (pre-2025-26
- * compatibility); the completion lists must NOT, or an absent column would
- * count as "all submitted".
- */
-function readCspSubmitted(club: Record<string, unknown>): boolean | undefined {
-  const cspValue = rawCspValue(club)
-  if (cspValue === undefined || cspValue === null) {
-    return undefined
-  }
-  return parseCspValue(cspValue)
 }
 
 /**
@@ -324,39 +299,9 @@ function readCspSubmitted(club: Record<string, unknown>): boolean | undefined {
  * @returns true if CSP is submitted or field is absent (historical data), false otherwise
  */
 function getCSPStatus(club: Record<string, unknown>): boolean {
-  // Historical data compatibility: if field doesn't exist (pre-2025-2026 data), assume submitted
-  return readCspSubmitted(club) ?? true
-}
-
-/** Parse a present CSP cell. Unknown spellings default to true (historical compatibility). */
-function parseCspValue(cspValue: unknown): boolean {
-  // Parse the value
-  const cspString = String(cspValue).toLowerCase().trim()
-
-  // Check for positive indicators
-  if (
-    cspString === 'yes' ||
-    cspString === 'true' ||
-    cspString === '1' ||
-    cspString === 'submitted' ||
-    cspString === 'y'
-  ) {
-    return true
-  }
-
-  // Check for negative indicators
-  if (
-    cspString === 'no' ||
-    cspString === 'false' ||
-    cspString === '0' ||
-    cspString === 'not submitted' ||
-    cspString === 'n'
-  ) {
-    return false
-  }
-
-  // Default to true for unknown values (historical data compatibility)
-  return true
+  // Historical data compatibility: if field doesn't exist (pre-2025-2026 data), assume submitted.
+  // The cell rule is analytics-core's readCSPCell (#2327): blank = not submitted, per TI.
+  return readCSPCell(club) ?? true
 }
 
 /**
@@ -878,7 +823,8 @@ function extractAreasForDivision(
       // #1555: the CSP cell lives on the clubPerformance row (fall back to the
       // divisionPerformance row, as the Distinguished gate above does).
       if (cspTracked) {
-        const cspSubmitted = readCspSubmitted(clubPerf ?? club)
+        // Tri-state (#1555): an absent column must not count as "all submitted".
+        const cspSubmitted = readCSPCell(clubPerf ?? club)
         if (cspSubmitted !== undefined) {
           // #1565: per-club due date — null is automatic credit (chartered
           // after 1 April): such a club is never held to a date, so it is
