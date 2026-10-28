@@ -216,6 +216,7 @@ describe('a missing section is null, an empty one is 0', () => {
       clubs: 0,
       paymentComplete: 0,
       byStage: [],
+      byStepsComplete: [],
     })
     expect(out.world.prospective?.clubs).toBe(6)
   })
