@@ -313,6 +313,13 @@ export {
 export {
   usDateToIso,
   parseProspectStage,
+  parseProspectChecklist,
+  prospectProgress,
+  PROSPECT_CHECKLIST_STEPS,
+  type ProspectChecklistItem,
+  type ProspectChecklistStatus,
+  type ProspectProgress,
+  type ProspectWaitingOn,
   sponsorMentorRole,
   classifyDuesRenewal,
   type ParsedProspectStage,

@@ -124,6 +124,172 @@ export function parseProspectStage(text: string): ParsedProspectStage {
   return { recognised: true, ...current, payment, paymentDate, raw }
 }
 
+// ─── The prospect checklist (#2303, #2388) ──────────────────────────────────
+
+/** TI's charter steps, in TI's numbering (recorded vocabulary, #2142). */
+export const PROSPECT_CHECKLIST_STEPS: readonly {
+  number: number
+  label: string
+}[] = [
+  { number: 1, label: 'Application to Organize' },
+  { number: 2, label: 'Certificate & Remit' },
+  { number: 3, label: 'Roster' },
+  { number: 4, label: 'Officer Info' },
+  { number: 5, label: 'Club Info' },
+  { number: 6, label: 'Constitution & Bylaws' },
+]
+
+export type ProspectChecklistStatus = 'complete' | 'incomplete' | 'not-listed'
+
+export interface ProspectChecklistItem {
+  /** `1`–`6`, or `payment`. */
+  key: string
+  /** TI's step name. */
+  label: string
+  /** The step number TI prints (`#N`); null for Payment. */
+  number: number | null
+  status: ProspectChecklistStatus
+  /** ISO date the step last changed (not when it completed), when printed. */
+  date: string | null
+}
+
+function checklistStatus(text: string): 'complete' | 'incomplete' | null {
+  // "Incomplete" contains "complete", so test it first.
+  if (/\bIncomplete\b/.test(text)) return 'incomplete'
+  if (/\bComplete\b/.test(text)) return 'complete'
+  return null
+}
+
+function checklistItem(
+  key: string,
+  label: string,
+  number: number | null,
+  text: string | undefined
+): ProspectChecklistItem {
+  const status = text === undefined ? null : checklistStatus(text)
+  return {
+    key,
+    label,
+    number,
+    status: status ?? 'not-listed',
+    date: status && text !== undefined ? usDateToIso(text) : null,
+  }
+}
+
+/**
+ * Read TI's `Prospect` cell as the full checklist: steps #1–#6 and Payment,
+ * each Complete, Incomplete or not listed, with the date it last changed.
+ *
+ * TI's cell is a checklist, not a ladder (spike 2026-10-28, D25/D84): steps
+ * complete out of order, and a step can go back to Incomplete, so a step's
+ * date is when it last changed. Null for text that does not start with `#N`.
+ * String operations only — a backtracking regex over this cell is polynomial
+ * on whitespace runs.
+ */
+export function parseProspectChecklist(
+  text: string
+): ProspectChecklistItem[] | null {
+  const paymentAt = text.search(/Payment\b/)
+  const stepPart = (paymentAt >= 0 ? text.slice(0, paymentAt) : text).trim()
+  const paymentPart = paymentAt >= 0 ? text.slice(paymentAt) : undefined
+  if (!/^#\d+\s/.test(stepPart)) return null
+
+  const starts: number[] = []
+  for (const m of stepPart.matchAll(/#\d+\s/g)) starts.push(m.index)
+  const byNumber = new Map<number, string>()
+  for (let i = 0; i < starts.length; i++) {
+    const segment = stepPart.slice(starts[i], starts[i + 1] ?? stepPart.length)
+    const n = Number(/^#(\d+)/.exec(segment)![1])
+    if (!byNumber.has(n)) byNumber.set(n, segment)
+  }
+
+  return [
+    ...PROSPECT_CHECKLIST_STEPS.map(s =>
+      checklistItem(String(s.number), s.label, s.number, byNumber.get(s.number))
+    ),
+    checklistItem('payment', 'Payment', null, paymentPart),
+  ]
+}
+
+/** The step a prospective club is waiting on (#2388). */
+export interface ProspectWaitingOn {
+  number: number
+  label: string
+  /** false: TI does not list the step yet. */
+  listed: boolean
+  /**
+   * The step's own last-changed date; for a step TI does not list (or lists
+   * without a date), the checklist's most recent step date (Ron, 2026-10-28).
+   */
+  since: string | null
+}
+
+export type ProspectProgress =
+  | {
+      recognised: true
+      /** Steps #1–#6 TI marks Complete, in any order. */
+      stepsComplete: number
+      stepsTotal: number
+      /** The oldest incomplete step; null when all six are complete. */
+      waitingOn: ProspectWaitingOn | null
+      /** The most recent step date in the checklist (Payment excluded). */
+      lastChanged: string | null
+      payment: 'complete' | 'incomplete' | 'unknown'
+      paymentDate: string | null
+    }
+  | { recognised: false; raw: string }
+
+/**
+ * A prospective club's progress on TI's checklist (#2388): how many of the
+ * six steps are complete, and the step it has waited on longest — the
+ * incomplete step with the oldest last-changed date, ties to the lowest
+ * number. A step TI does not list yet, or lists without a date, counts from
+ * the checklist's most recent step date. One reading for the district funnel
+ * and the region/world rollups, so their totals reconcile.
+ */
+export function prospectProgress(text: string): ProspectProgress {
+  const checklist = parseProspectChecklist(text)
+  const steps = (checklist ?? []).filter(s => s.number !== null)
+  if (!checklist || steps.every(s => s.status === 'not-listed')) {
+    return { recognised: false, raw: text }
+  }
+  const pay = checklist[checklist.length - 1] as ProspectChecklistItem
+
+  let lastChanged: string | null = null
+  for (const s of steps) {
+    if (s.date !== null && (lastChanged === null || s.date > lastChanged)) {
+      lastChanged = s.date
+    }
+  }
+
+  let waitingOn: ProspectWaitingOn | null = null
+  for (const s of steps) {
+    if (s.status === 'complete') continue
+    const since = s.date ?? lastChanged
+    const older =
+      waitingOn === null ||
+      (since !== null && (waitingOn.since === null || since < waitingOn.since))
+    if (older) {
+      waitingOn = {
+        number: s.number as number,
+        label: s.label,
+        listed: s.status !== 'not-listed',
+        since,
+      }
+    }
+  }
+
+  return {
+    recognised: true,
+    stepsComplete: steps.filter(s => s.status === 'complete').length,
+    stepsTotal: steps.length,
+    waitingOn,
+    lastChanged,
+    payment: pay.status === 'not-listed' ? 'unknown' : pay.status,
+    paymentDate: pay.status === 'complete' ? pay.date : null,
+  }
+}
+
 export type SponsorMentorRole = 'sponsors' | 'mentors' | 'other'
 
 /**

@@ -113,9 +113,9 @@ describe('prospectProgress (#2388)', () => {
     })
   })
 
-  it('a dated incomplete step outranks an undated one', () => {
+  it('an older dated step outranks an undated one, which counts from the latest', () => {
     const text =
-      '#1 Application to Organize Complete - 07/01/2026#2 Certificate & Remit Incomplete #3 Roster Incomplete - 07/05/2026Payment Complete - 07/01/2026'
+      '#1 Application to Organize Complete - 07/01/2026#2 Certificate & Remit Incomplete #3 Roster Incomplete - 07/05/2026#4 Officer Info Complete - 07/09/2026Payment Complete - 07/01/2026'
     expect(prospectProgress(text)).toMatchObject({
       waitingOn: { number: 3, since: '2026-07-05' },
     })
