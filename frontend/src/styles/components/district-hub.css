@@ -190,11 +190,6 @@
     outline-offset: 2px;
   }
 
-  .district-hub__plan-count {
-    font-weight: 500;
-    color: var(--ink-2);
-  }
-
   [data-theme='dark'] .district-hub__plan-btn {
     color: var(--ink);
   }

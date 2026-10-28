@@ -190,15 +190,16 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
               type="button"
               className="district-hub__plan-btn"
               aria-haspopup="dialog"
+              aria-label={
+                planCount > 0
+                  ? `Success Plan targets, ${planCount} set`
+                  : 'Success Plan targets'
+              }
               onClick={() => setPlanOpen(true)}
             >
-              Success Plan targets
-              {planCount > 0 && (
-                <span className="district-hub__plan-count">
-                  {' '}
-                  · {planCount} set
-                </span>
-              )}
+              {/* Short visible label: "Success Plan targets" wrapped under
+                  the Action List link at 375px (+44px). */}
+              {planCount > 0 ? `Plan targets (${planCount})` : 'Plan targets'}
             </button>
           )}
         </div>
