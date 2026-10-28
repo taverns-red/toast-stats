@@ -10,8 +10,10 @@
  * They must agree on every cell value. TI's rule (Distinguished Club Program,
  * Item 1111, Rev. 06/2026, p. 5): a club must submit its Club Success Plan to
  * qualify, so only an affirmative cell counts — a blank cell means not
- * submitted. A missing CSP column (pre-2025-26 exports) still reads as
- * submitted, because the requirement did not exist then.
+ * submitted. The affirmative spellings are the union of the ones the old
+ * parsers accepted (Y, yes, true, 1, submitted). A missing CSP column
+ * (pre-2025-26 exports) still reads as submitted, because the requirement
+ * did not exist then.
  *
  * Observed real data (2026-10-28, single-object reads of 42 club-performance
  * CSVs, 2025-08-05 → 2026-10-27, D02/03/06/57/61/80/101/116): the cell is
@@ -57,9 +59,15 @@ describe('CSP cell: one rule for both paths (#2327)', () => {
     ['y', true],
     [' Y ', true],
     ['Yes', true],
+    ['true', true],
+    ['1', true],
+    ['Submitted', true],
     ['N', false],
     ['n', false],
     ['No', false],
+    ['false', false],
+    ['0', false],
+    ['Not Submitted', false],
     ['', false],
     ['   ', false],
   ]

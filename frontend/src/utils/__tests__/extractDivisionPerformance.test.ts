@@ -3166,6 +3166,21 @@ describe('determineDistinguishedLevel', () => {
       expect(determineDistinguishedLevel(club)).toBeNull()
     })
 
+    // #2327: TI requires a submitted plan (DCP Item 1111, p. 5), so a
+    // present-but-blank cell is not submitted — one rule with analytics-core.
+    it.each(['', '  ', 'pending'])(
+      'should treat CSP value %j as not submitted',
+      cell => {
+        const club = {
+          'Goals Met': '10',
+          'Active Members': '25',
+          'Mem. Base': '20',
+          CSP: cell,
+        }
+        expect(determineDistinguishedLevel(club)).toBeNull()
+      }
+    )
+
     it('should handle "Club Success Plan" field name', () => {
       const club = {
         'Goals Met': '10',
