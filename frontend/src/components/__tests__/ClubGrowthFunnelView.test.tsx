@@ -150,6 +150,13 @@ describe('ClubGrowthFunnelView', () => {
     expect(within(section).getAllByText('Incomplete')).toHaveLength(2)
   })
 
+  it('the waiting-on cell gets its own full-width line on phone cards (#2388)', () => {
+    renderView(2)
+    const table = screen.getByTestId('growth-prospective-table')
+    const cell = within(table).getAllByText(/^Step #2 · /)[0]!
+    expect(cell.closest('td')).toHaveClass('growth-table__waiting')
+  })
+
   it('describes the checklist honestly above the table (#2388)', () => {
     renderView(2)
     const section = screen.getByRole('region', { name: /prospective clubs/i })
