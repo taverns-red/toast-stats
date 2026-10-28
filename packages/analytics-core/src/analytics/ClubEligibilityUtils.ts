@@ -154,6 +154,19 @@ const CSP_COLUMN_KEYS = [
 ] as const
 
 /**
+ * Affirmative CSP cell spellings: the union of what the three former parsers
+ * (DataTransformer, getCSPStatusFromRecord, the frontend's division builder)
+ * accepted. TI's export uses `Y`; the rest are kept so no reader regresses.
+ */
+const CSP_SUBMITTED_VALUES: ReadonlySet<string> = new Set([
+  'y',
+  'yes',
+  'true',
+  '1',
+  'submitted',
+])
+
+/**
  * Read the CSP (Club Success Plan) cell of a raw club-performance record.
  * This is the ONE parser for that cell (#2327): DataTransformer stores its
  * result as `ClubStatistics.cspSubmitted`, and `getCSPStatusFromRecord` reads
@@ -161,8 +174,8 @@ const CSP_COLUMN_KEYS = [
  *
  * TI rule (Distinguished Club Program, Item 1111, Rev. 06/2026, p. 5): a club
  * must submit its Club Success Plan to qualify for any Distinguished level.
- * Only an affirmative cell (`Y` / `yes`, any case or padding) counts as
- * submitted; `N`, a blank cell, or anything else is not submitted.
+ * Only an affirmative cell counts as submitted (`CSP_SUBMITTED_VALUES`, any
+ * case or padding); `N`, a blank cell, or anything else is not submitted.
  *
  * Observed data (2026-10-28, single-object reads of 42 club-performance CSVs
  * from 2025-08-05 to 2026-10-27 across eight large districts): the cell is
@@ -178,7 +191,7 @@ export function readCSPCell(
     const value = record[key]
     if (value === undefined || value === null) continue
     const normalized = String(value).toLowerCase().trim()
-    return normalized === 'y' || normalized === 'yes'
+    return CSP_SUBMITTED_VALUES.has(normalized)
   }
   return undefined
 }
