@@ -34,7 +34,7 @@ export const RegionRankChip: React.FC<RegionRankChipProps> = ({
       {digits ? (
         <Link
           to={`/region/${digits}`}
-          className="text-tm-loyal-blue hover:underline"
+          className="inline-flex items-center text-tm-loyal-blue hover:underline"
           data-testid="region-rank"
           aria-label={`View Region ${digits} overview`}
         >
