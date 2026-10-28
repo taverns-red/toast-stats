@@ -169,6 +169,30 @@ describe('renderDistrictCardHtml', () => {
     expect(d17).toContain('Top tier reached')
   })
 
+  it('labels each tile as what is still needed, not as a count (#2389 review)', () => {
+    const html = renderDistrictCardHtml(cards.find(c => c.districtId === '11')!)
+    expect(html).toContain('Gap to Distinguished District')
+    expect(html).toContain('>more paid clubs<')
+    expect(html).toContain('>more payments<')
+    expect(html).toContain('>more Distinguished clubs<')
+    expect(html).not.toMatch(/>Paid Clubs<|>Payments<|>Distinguished Clubs</)
+  })
+
+  it('a count of one is singular, and a met metric says met', () => {
+    const one = renderDistrictCardHtml({
+      ...cards[0]!,
+      nextTierLabel: 'Distinguished District',
+      gaps: [
+        { label: 'Paid Clubs', count: 1 },
+        { label: 'Payments', count: 1 },
+        { label: 'Distinguished Clubs', count: 0 },
+      ],
+    })
+    expect(one).toContain('>more paid club<')
+    expect(one).toContain('>more payment<')
+    expect(one).toContain('>Distinguished clubs met<')
+  })
+
   it('formats counts with thousands separators', () => {
     const c = {
       ...cards[0]!,
