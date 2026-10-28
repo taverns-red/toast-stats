@@ -174,8 +174,17 @@ describe('renderDistrictCardHtml', () => {
     expect(html).toContain('Gap to Distinguished District')
     expect(html).toContain('>more paid clubs<')
     expect(html).toContain('>more payments<')
-    expect(html).toContain('>more Distinguished clubs<')
+    expect(html).toContain('>more confirmed Distinguished clubs<')
     expect(html).not.toMatch(/>Paid Clubs<|>Payments<|>Distinguished Clubs</)
+  })
+
+  it('the Distinguished clubs tile says confirmed: the gap counts confirmed clubs, like the trophy case, not the KPI strip’s current count (Ron, 2026-10-28)', () => {
+    const one = renderDistrictCardHtml({
+      ...cards[0]!,
+      nextTierLabel: 'Distinguished District',
+      gaps: [{ label: 'Distinguished Clubs', count: 1 }],
+    })
+    expect(one).toContain('>more confirmed Distinguished club<')
   })
 
   it('a count of one is singular, and a met metric says met', () => {
@@ -190,7 +199,7 @@ describe('renderDistrictCardHtml', () => {
     })
     expect(one).toContain('>more paid club<')
     expect(one).toContain('>more payment<')
-    expect(one).toContain('>Distinguished clubs met<')
+    expect(one).toContain('>Confirmed Distinguished clubs met<')
   })
 
   it('formats counts with thousands separators', () => {
