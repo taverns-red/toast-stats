@@ -40,10 +40,13 @@ function rawSnapshot(clubs: RawClub[]) {
   const areaBase = (div: string, area: string) =>
     clubs.filter(c => c.div === div && c.area === area).length
   return {
+    // The live CDN shape (D61, 2026-10-27): the division report keys a club
+    // by `Club`, the club report by `Club Number`, both zero-padded to eight
+    // digits, while the analytics rows carry the bare id ('3279').
     divisionPerformance: clubs.map(c => ({
       Division: c.div,
       Area: c.area,
-      'Club Number': c.id,
+      Club: c.id.padStart(8, '0'),
       'Club Name': c.name,
       'Division Club Base': String(divBase(c.div)),
       'Area Club Base': String(areaBase(c.div, c.area)),
@@ -51,7 +54,7 @@ function rawSnapshot(clubs: RawClub[]) {
       'May Visit award': '0',
     })),
     clubPerformance: clubs.map(c => ({
-      'Club Number': c.id,
+      'Club Number': c.id.padStart(8, '0'),
       'Club Name': c.name,
       'Club Status': c.status ?? 'Active',
       'Club Distinguished Status': '',
