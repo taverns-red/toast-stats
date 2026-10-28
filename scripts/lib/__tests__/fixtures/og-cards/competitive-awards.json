@@ -30,6 +30,31 @@
       "paidClubsRemaining": 0,
       "distinguishedClubsRemaining": 0
     },
+    "11": {
+      "districtId": "11",
+      "currentTier": "NotDistinguished",
+      "allPrerequisitesMet": true,
+      "prerequisites": {
+        "dspSubmitted": true,
+        "trainingMet": true,
+        "marketAnalysisSubmitted": true,
+        "communicationPlanSubmitted": true,
+        "regionAdvisorVisitMet": true
+      },
+      "nextTierGap": {
+        "tier": "Distinguished",
+        "paymentGrowthGap": 10.22,
+        "clubGrowthGap": 10.2,
+        "distinguishedPercentGap": 11.666666666666671,
+        "netClubGrowthGap": 8,
+        "paidClubBase": 87,
+        "paymentBase": 3288
+      },
+      "netClubGrowth": -8,
+      "paymentsRemaining": 336,
+      "paidClubsRemaining": 9,
+      "distinguishedClubsRemaining": 11
+    },
     "17": {
       "districtId": "17",
       "currentTier": "Smedley",

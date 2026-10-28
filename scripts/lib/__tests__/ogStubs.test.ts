@@ -111,7 +111,14 @@ describe('districtIdsFromRankings / districtStubPath', () => {
         'utf8'
       )
     )
-    expect(districtIdsFromRankings(r)).toEqual(['10', '17', '27', '59', '61'])
+    expect(districtIdsFromRankings(r)).toEqual([
+      '10',
+      '11',
+      '17',
+      '27',
+      '59',
+      '61',
+    ])
   })
 
   it('throws on a file with no rankings array', () => {

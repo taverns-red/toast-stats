@@ -48,6 +48,7 @@ describe('generate-og-stubs', () => {
     expect(r.status, r.stderr).toBe(0)
     expect(fs.readdirSync(path.join(dist, 'district')).sort()).toEqual([
       '10.html',
+      '11.html',
       '17.html',
       '27.html',
       '59.html',

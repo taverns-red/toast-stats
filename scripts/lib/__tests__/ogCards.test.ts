@@ -58,7 +58,14 @@ describe('buildDistrictCards', () => {
   const byId = new Map(cards.map(c => [c.districtId, c]))
 
   it('builds one card per district present in both inputs, sorted by id', () => {
-    expect(cards.map(c => c.districtId)).toEqual(['10', '17', '27', '59', '61'])
+    expect(cards.map(c => c.districtId)).toEqual([
+      '10',
+      '11',
+      '17',
+      '27',
+      '59',
+      '61',
+    ])
   })
 
   it('names the district and prints the as-of date of the rankings', () => {
@@ -70,8 +77,8 @@ describe('buildDistrictCards', () => {
   })
 
   it('a district below Distinguished counts down with the canonical *Remaining fields', () => {
-    const c = byId.get('61')!
-    const ca = awards.distinguishedDistrict['61']
+    const c = byId.get('11')!
+    const ca = awards.distinguishedDistrict['11']
     expect(c.statusLabel).toBe('Not Yet Distinguished')
     expect(c.nextTierLabel).toBe('Distinguished District')
     expect(c.gaps).toEqual([
@@ -144,10 +151,10 @@ describe('renderDistrictCardHtml', () => {
   const cards = buildDistrictCards(rankings, awards)
 
   it('is a fixed 1200x630 page with the status, gaps and as-of date', () => {
-    const html = renderDistrictCardHtml(cards.find(c => c.districtId === '61')!)
+    const html = renderDistrictCardHtml(cards.find(c => c.districtId === '11')!)
     expect(html).toContain('width: 1200px')
     expect(html).toContain('height: 630px')
-    expect(html).toContain('District 61')
+    expect(html).toContain('District 11')
     expect(html).toContain('Not Yet Distinguished')
     expect(html).toContain('Gap to Distinguished District')
     expect(html).toContain('As of Jun 30, 2026')

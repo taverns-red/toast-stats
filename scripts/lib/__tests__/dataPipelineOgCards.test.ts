@@ -86,20 +86,32 @@ describe('og-cards job (#2304)', () => {
     expect(runs).toMatch(/npx playwright install chromium/)
   })
 
-  it('uploads to staging og/v1/district/ with the hour TTL and PNG type', () => {
+  it('uploads to staging og/v1/district/ through gcs-upload.sh, recorded in its OWN manifest', () => {
     const up = steps[idx(s => s.id === 'upload')]!
+    expect(up.run).toMatch(
+      /bash scripts\/pipeline\/gcs-upload\.sh og-cards cp\b/
+    )
     expect(up.run).toMatch(/gs:\/\/\$\{GCS_BUCKET\}\/og\/v1\/district\//)
     expect(up.run).toContain('--cache-control="public, max-age=3600"')
     expect(up.run).toContain('--content-type="image/png"')
+    expect(up.env?.RUN_MANIFEST_FILE).toBe('/tmp/og-cards/written.jsonl')
     expect(prodWriteReasons(up.run ?? '')).toEqual([])
   })
 
-  it('gates, then promotes: only the copy step writes prod, after the gate passed', () => {
-    const upload = idx(s => s.id === 'upload')
+  it('re-reads what staging holds and checks it against the recorded upload', () => {
+    const check = idx(s => s.id === 'staged')
+    expect(check).toBeGreaterThan(idx(s => s.id === 'upload'))
+    expect(steps[check]!.run).toMatch(/npx tsx scripts\/og-cards\.ts check\b/)
+    expect(steps[check]!.run).toMatch(
+      /gs:\/\/\$\{GCS_BUCKET\}\/og\/v1\/district\//
+    )
+  })
+
+  it('gates, then promotes: only the promote step writes prod, after the gate passed', () => {
+    const staged = idx(s => s.id === 'staged')
     const gate = idx(s => s.id === 'gate')
     const promote = idx(s => s.id === 'promote')
-    expect(upload).toBeGreaterThan(-1)
-    expect(gate).toBeGreaterThan(upload)
+    expect(gate).toBeGreaterThan(staged)
     expect(promote).toBeGreaterThan(gate)
 
     const writers = steps
@@ -112,24 +124,24 @@ describe('og-cards job (#2304)', () => {
     expect(c).toContain(SKIP_CLAUSE_DOWNSTREAM)
   })
 
-  it('the gate compares staging and prod hashes of both inputs through the CLI', () => {
+  it('the gate compares staging and prod hashes of both inputs and writes the verdict', () => {
     const g = steps[idx(s => s.id === 'gate')]!
     expect(g.run).toMatch(/npx tsx scripts\/og-cards\.ts gate\b/)
+    expect(g.run).toMatch(/--verdict \/tmp\/og-cards\/verdict\.json/)
     expect(g.run).toMatch(/GCS_BUCKET_PRODUCTION\}\/v1\/rankings\.json/)
     expect(g.run).toMatch(/competitive-awards\.json/)
     expect(g.run).toMatch(/objects describe/)
   })
 
-  it('copies exactly the planned cards into prod, with the same TTL and type', () => {
+  it('promotes through the one prod-write mechanism: the manifest promote with --og-cards', () => {
     const p = steps[idx(s => s.id === 'promote')]!
-    expect(p.run).toContain('--cache-control="public, max-age=3600"')
-    expect(p.run).toContain('--content-type="image/png"')
-    expect(p.run).toMatch(
-      /gs:\/\/\$\{GCS_BUCKET_PRODUCTION\}\/og\/v1\/district\//
+    expect(p.run).toBe(
+      'npx tsx scripts/promote-run-manifest.ts --execute --og-cards'
     )
-    // No wildcard source: the list comes from the render's own plan.
-    expect(p.run).not.toMatch(/\*\.png/)
-    expect(p.run).toMatch(/cards\.json/)
+    expect(p.env).toMatchObject({
+      RUN_MANIFEST_FILE: '/tmp/og-cards/written.jsonl',
+      COMPLETENESS_GATE_FILE: '/tmp/og-cards/verdict.json',
+    })
   })
 
   it('a held gate is a warning, not a failed run (prod keeps yesterday’s cards)', () => {
@@ -139,8 +151,18 @@ describe('og-cards job (#2304)', () => {
     expect(held?.run).toMatch(/::warning/)
   })
 
-  it('never touches the run manifest or the CDN purge (og/ is outside the data prefixes)', () => {
-    expect(runs).not.toMatch(/RUN_MANIFEST_FILE|runs\/\$\{GITHUB_RUN_ID\}/)
-    expect(runs).not.toMatch(/invalidate-cdn-cache|promote-run-manifest/)
+  it('never touches the run’s shared manifest or the CDN purge', () => {
+    expect(runs).not.toMatch(/runs\/\$\{GITHUB_RUN_ID\}/)
+    expect(runs).not.toMatch(/invalidate-cdn-cache/)
+    for (const s of steps) {
+      if (
+        /RUN_MANIFEST_FILE/.test(s.run ?? '') ||
+        /gcs-upload|promote-run-manifest/.test(s.run ?? '')
+      ) {
+        expect(s.env?.RUN_MANIFEST_FILE, s.name).toBe(
+          '/tmp/og-cards/written.jsonl'
+        )
+      }
+    }
   })
 })
