@@ -44,6 +44,21 @@
     color: var(--ink-3);
   }
 
+  /* #2300 — the Overview card's link to the council credentials page. */
+  .red-vote-promo__council {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .red-vote-promo__council:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
   .red-vote-promo__actions {
     display: flex;
     align-items: center;
