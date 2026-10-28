@@ -215,6 +215,15 @@ describe('DistrictOverviewHub', () => {
       ).toBeInTheDocument()
     })
 
+    it('keeps the label short enough to share the row at 375px', () => {
+      // "Open the Action List →" is 172px of a 327px row; "Success Plan
+      // targets" (159px) wrapped to a second 44px line. "Plan targets" is
+      // 91px. The full name stays in the accessible name.
+      render(<DistrictOverviewHub {...baseProps} planTargetsPanel={panel} />)
+      const btn = screen.getByRole('button', { name: /Success Plan targets/ })
+      expect(btn).toHaveTextContent(/^Plan targets$/)
+    })
+
     it('says how many targets are set', () => {
       render(
         <DistrictOverviewHub
@@ -223,9 +232,10 @@ describe('DistrictOverviewHub', () => {
           planGoals={{ payments: 9999, paidClubs: 150 }}
         />
       )
-      expect(
-        screen.getByRole('button', { name: /Success Plan targets/ })
-      ).toHaveTextContent('2 set')
+      const btn = screen.getByRole('button', {
+        name: 'Success Plan targets, 2 set',
+      })
+      expect(btn).toHaveTextContent(/^Plan targets \(2\)$/)
     })
 
     it('shows no button without a panel', () => {
