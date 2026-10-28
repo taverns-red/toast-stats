@@ -48,11 +48,14 @@ export interface SuccessPlanTargetsPanelProps {
   /** The link's targets, whatever year they are for (null: none). */
   targets: SuccessPlanTargets | null
   onChange: (next: SuccessPlanTargets | null) => void
+  /** `disclosure` (default): a collapsed row. `inline`: the form itself,
+   *  for a container that already gives it a title (the hub's sheet). */
+  variant?: 'disclosure' | 'inline'
 }
 
 export const SuccessPlanTargetsPanel: React.FC<
   SuccessPlanTargetsPanelProps
-> = ({ programYear, targets, onChange }) => {
+> = ({ programYear, targets, onChange, variant = 'disclosure' }) => {
   const id = useId()
   const goals = goalsForProgramYear(targets, programYear.year)
   const [drafts, setDrafts] = useState<Drafts>(() => draftsFrom(goals))
@@ -123,6 +126,99 @@ export const SuccessPlanTargetsPanel: React.FC<
 
   const setCount = goals ? Object.keys(goals).length : 0
 
+  const body = (
+    <div className="plan-targets__body">
+      <p>
+        Enter the targets from your District Success Plan for{' '}
+        {programYear.label}. They show as a <strong>Plan</strong> mark on the
+        cards and as a target line on the Trends payments chart.
+      </p>
+      <p className="plan-targets__provenance">
+        These targets come from this link, not from Toastmasters International.
+        Nothing is saved: the link carries them.
+      </p>
+      {otherYear && (
+        <p className="plan-targets__note">
+          This link&apos;s targets are for {otherYear}, so they are not shown
+          for {programYear.label}.
+        </p>
+      )}
+      <form onSubmit={apply} noValidate>
+        <div className="plan-targets__fields">
+          {FIELDS.map(f => {
+            const inputId = `${id}-${f.key}`
+            const hintId = `${inputId}-hint`
+            const errorId = `${inputId}-error`
+            const isBad = invalid.has(f.key)
+            return (
+              <div key={f.key} className="plan-targets__field">
+                <label htmlFor={inputId} className="plan-targets__label">
+                  {f.label}
+                </label>
+                <span id={hintId} className="plan-targets__hint">
+                  {f.measure}
+                </span>
+                <input
+                  id={inputId}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  className="plan-targets__input"
+                  value={drafts[f.key]}
+                  onChange={e =>
+                    setDrafts(d => ({ ...d, [f.key]: e.target.value }))
+                  }
+                  aria-invalid={isBad ? 'true' : undefined}
+                  aria-describedby={isBad ? `${hintId} ${errorId}` : hintId}
+                />
+                {isBad && (
+                  <span id={errorId} className="plan-targets__error">
+                    Enter a whole number from 1 to 999,999.
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <div className="plan-targets__actions">
+          <button
+            type="submit"
+            className="plan-targets__btn plan-targets__btn--primary"
+          >
+            Apply
+          </button>
+          <button type="button" className="plan-targets__btn" onClick={clear}>
+            Clear
+          </button>
+          <button
+            type="button"
+            className="plan-targets__btn"
+            onClick={copyLink}
+            disabled={!goals}
+          >
+            Copy link
+          </button>
+        </div>
+      </form>
+      <p role="status" className="plan-targets__status">
+        {notice}
+      </p>
+    </div>
+  )
+
+  // On phones the hub opens this in a sheet from its own row (#2297), so
+  // there is no disclosure: the page stays inside its height budget.
+  if (variant === 'inline') {
+    return (
+      <div
+        className="plan-targets plan-targets--inline"
+        data-testid="success-plan-targets"
+      >
+        {body}
+      </div>
+    )
+  }
+
   return (
     <details
       className="plan-targets"
@@ -143,89 +239,7 @@ export const SuccessPlanTargetsPanel: React.FC<
           <span className="plan-targets__count">{setCount} set</span>
         )}
       </summary>
-      {isOpen && (
-        <div className="plan-targets__body">
-          <p>
-            Enter the targets from your District Success Plan for{' '}
-            {programYear.label}. They show as a <strong>Plan</strong> mark on
-            the cards and as a target line on the Trends payments chart.
-          </p>
-          <p className="plan-targets__provenance">
-            These targets come from this link, not from Toastmasters
-            International. Nothing is saved: the link carries them.
-          </p>
-          {otherYear && (
-            <p className="plan-targets__note">
-              This link&apos;s targets are for {otherYear}, so they are not
-              shown for {programYear.label}.
-            </p>
-          )}
-          <form onSubmit={apply} noValidate>
-            <div className="plan-targets__fields">
-              {FIELDS.map(f => {
-                const inputId = `${id}-${f.key}`
-                const hintId = `${inputId}-hint`
-                const errorId = `${inputId}-error`
-                const isBad = invalid.has(f.key)
-                return (
-                  <div key={f.key} className="plan-targets__field">
-                    <label htmlFor={inputId} className="plan-targets__label">
-                      {f.label}
-                    </label>
-                    <span id={hintId} className="plan-targets__hint">
-                      {f.measure}
-                    </span>
-                    <input
-                      id={inputId}
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      className="plan-targets__input"
-                      value={drafts[f.key]}
-                      onChange={e =>
-                        setDrafts(d => ({ ...d, [f.key]: e.target.value }))
-                      }
-                      aria-invalid={isBad ? 'true' : undefined}
-                      aria-describedby={isBad ? `${hintId} ${errorId}` : hintId}
-                    />
-                    {isBad && (
-                      <span id={errorId} className="plan-targets__error">
-                        Enter a whole number from 1 to 999,999.
-                      </span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            <div className="plan-targets__actions">
-              <button
-                type="submit"
-                className="plan-targets__btn plan-targets__btn--primary"
-              >
-                Apply
-              </button>
-              <button
-                type="button"
-                className="plan-targets__btn"
-                onClick={clear}
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                className="plan-targets__btn"
-                onClick={copyLink}
-                disabled={!goals}
-              >
-                Copy link
-              </button>
-            </div>
-          </form>
-          <p role="status" className="plan-targets__status">
-            {notice}
-          </p>
-        </div>
-      )}
+      {isOpen && body}
     </details>
   )
 }

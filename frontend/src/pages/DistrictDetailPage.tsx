@@ -760,6 +760,14 @@ const DistrictDetailPageInner: React.FC = () => {
                 snapshotDate={effectiveEndDate ?? undefined}
                 kpis={kpiStripData}
                 planGoals={planGoals}
+                planTargetsPanel={
+                  <SuccessPlanTargetsPanel
+                    programYear={planYear}
+                    targets={planTargets}
+                    onChange={setPlanTargets}
+                    variant="inline"
+                  />
+                }
                 clubs={kpiStripData ? (analytics?.allClubs ?? null) : null}
                 interventionClubs={analytics?.interventionRequiredClubs ?? null}
                 trainingClubs={trainingClubs}
@@ -771,8 +779,13 @@ const DistrictDetailPageInner: React.FC = () => {
           {districtId && isHubLayout && deadlineStrip}
 
           {/* Success Plan targets entry (#2297): one collapsed row under the
-              KPIs from first paint, so it reserves its own slot. */}
-          {districtId && (hasOverviewData || isLoadingOverview) && planPanel}
+              KPI strip from first paint, so it reserves its own slot. Phones
+              (hub layout) open it from a button in the hub's Action List row
+              instead: this row cost the 375px page 62px over its budget. */}
+          {districtId &&
+            !isHubLayout &&
+            (hasOverviewData || isLoadingOverview) &&
+            planPanel}
 
           {/* Narrative content. #571 retired the tab strip; #679 (ADR-005)
               trimmed the hub to a lean Overview — the inline Divisions and

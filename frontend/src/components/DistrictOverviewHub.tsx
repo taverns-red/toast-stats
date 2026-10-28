@@ -70,6 +70,9 @@ export interface DistrictOverviewHubProps {
   /** Success Plan goals for the year on screen, from `?targets=` (#2297);
    *  the tile sheets' cards draw them as Plan ticks. Owned by the page. */
   planGoals?: SuccessPlanGoals | null
+  /** The Success Plan targets form (inline variant), opened in a sheet from
+   *  a button in the Action List row (#2297). Absent → no button. */
+  planTargetsPanel?: React.ReactNode
 }
 
 const TILE_GOAL = Object.fromEntries(
@@ -93,8 +96,11 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
   interventionClubs,
   trainingClubs,
   planGoals = null,
+  planTargetsPanel = null,
 }) => {
   const [openTile, setOpenTile] = useState<HubTileKey | 'net' | null>(null)
+  const [planOpen, setPlanOpen] = useState(false)
+  const planCount = planGoals ? Object.keys(planGoals).length : 0
   const loading = kpis === null || clubs === null
 
   const actionSections = useMemo(
@@ -169,13 +175,44 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
           Needs attention
         </h3>
         <MobileRowList label="Needs attention" rows={attentionRows} />
-        <Link
-          to={buildDistrictSectionUrl(districtId, 'action-list')}
-          className="district-hub__more-link"
-        >
-          Open the Action List →
-        </Link>
+        {/* One row: the Success Plan entry rides beside the Action List link
+            (#2297) so the phone Overview gains no height — a separate
+            disclosure row broke the hub's 4,000px page budget. */}
+        <div className="district-hub__links" data-testid="district-hub-links">
+          <Link
+            to={buildDistrictSectionUrl(districtId, 'action-list')}
+            className="district-hub__more-link"
+          >
+            Open the Action List →
+          </Link>
+          {planTargetsPanel && (
+            <button
+              type="button"
+              className="district-hub__plan-btn"
+              aria-haspopup="dialog"
+              onClick={() => setPlanOpen(true)}
+            >
+              Success Plan targets
+              {planCount > 0 && (
+                <span className="district-hub__plan-count">
+                  {' '}
+                  · {planCount} set
+                </span>
+              )}
+            </button>
+          )}
+        </div>
       </section>
+
+      {planTargetsPanel && planOpen && (
+        <BottomSheet
+          isOpen
+          onClose={() => setPlanOpen(false)}
+          title="Success Plan targets"
+        >
+          {planTargetsPanel}
+        </BottomSheet>
+      )}
 
       {kpis && openMeta && (
         <BottomSheet

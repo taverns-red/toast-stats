@@ -175,3 +175,15 @@
 [data-theme='dark'] .plan-targets__btn--primary {
   color: var(--bg);
 }
+
+/* Inside the hub's sheet (#2297): the sheet is the frame and the title. */
+.plan-targets--inline {
+  margin: 0;
+  border: 0;
+  background: none;
+}
+
+.plan-targets--inline .plan-targets__body {
+  padding: 0;
+  border-top: 0;
+}
