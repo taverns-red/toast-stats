@@ -132,6 +132,25 @@ export const HOW_TO_VIDEOS: readonly HowToVideo[] = [
     ],
     description: 'This year against the years before it.',
   }),
+  video('v13', '2026-10-27', {
+    title: 'Stories worth telling',
+    roles: ['District PR Manager', 'VP Public Relations'],
+    description: 'Good news, with the receipts.',
+  }),
+  video('v11', '2026-10-27', {
+    title: 'When do clubs meet?',
+    roles: [
+      'Club Growth Director',
+      'VP Membership',
+      'Program Quality Director',
+    ],
+    description: 'Which evenings have no club? Which have too many?',
+  }),
+  video('v16', '2026-10-27', {
+    title: 'Everything is a link',
+    roles: ['Webmaster', 'Administration Manager', 'World Headquarters'],
+    description: 'No login. Every view is a link you can share.',
+  }),
 ]
 
 export interface RoleGroup {
