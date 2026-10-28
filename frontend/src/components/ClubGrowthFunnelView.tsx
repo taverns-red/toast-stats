@@ -159,7 +159,7 @@ function ClubLink({
 }
 
 /** "5 of 6 steps complete: 1 · Not recognised: 1" (#2388). */
-export function progressSummary(
+function progressSummary(
   groups: readonly { stepsComplete: number | null; count: number }[]
 ): string {
   return groups
@@ -193,7 +193,7 @@ const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`
 /* #2388 — the step a club has waited on longest, and for how long. A step TI
    does not list yet (or lists without a date) counts from the checklist's
    most recent step date (Ron, 2026-10-28). */
-export function waitingOnText(r: ProspectiveRow): string {
+function waitingOnText(r: ProspectiveRow): string {
   const p = r.progress
   if (!p.recognised) return '—'
   const w = p.waitingOn
