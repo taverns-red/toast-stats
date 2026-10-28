@@ -48,4 +48,17 @@
   .chart-readout__hint {
     color: var(--ink-3);
   }
+
+  /* A tap reads the chart where it was made (#2380). WebKit's touch
+     adjustment moves a tap's mouse events onto the nearest hit-testable
+     node, so a tap within ~13 px of a gridline or axis tick landed on that
+     line instead — off the plot at the left edge, where nothing pins. The
+     grid and axes are decorative and Recharts listens on the wrapper, so
+     on devices without hover they leave hit-testing. */
+  @media (hover: none) {
+    .recharts-cartesian-grid,
+    .recharts-cartesian-axis {
+      pointer-events: none;
+    }
+  }
 }
