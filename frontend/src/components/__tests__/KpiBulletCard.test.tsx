@@ -91,6 +91,23 @@ describe('KpiBulletCard', () => {
       expect(regionLink).toHaveTextContent('#3')
     })
 
+    it('centres the region rank text inside its touch-target box (#2387)', () => {
+      // The global a[href] touch-target floor makes the link a 44–48px
+      // block, which left "05: #3" floating above the rank line. The repo's
+      // fix for that floor is inline-flex + items-center on the link.
+      renderWithRouter(
+        <KpiBulletCard
+          title="Paid Clubs"
+          current={149}
+          targets={standardTargets}
+          rankings={standardRankings}
+        />
+      )
+      const link = screen.getByTestId('region-rank')
+      expect(link).toHaveClass('inline-flex')
+      expect(link).toHaveClass('items-center')
+    })
+
     it('shows "—" placeholders when rank data is missing', () => {
       renderWithRouter(
         <KpiBulletCard
