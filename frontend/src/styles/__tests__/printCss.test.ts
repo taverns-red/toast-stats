@@ -106,6 +106,11 @@ describe('council-pack.css (#2299)', () => {
     expect(print).toMatch(
       /\.council-pack__roster--own-page[^{]*\{[^}]*break-before:\s*page/
     )
+    // The roster is exactly the paper's width whatever the fallback font:
+    // an auto layout ran 30px over on CI's Linux fonts.
+    expect(print).toMatch(
+      /\.council-pack__roster-table\s*\{[^}]*table-layout:\s*fixed/
+    )
     // Screen-only controls never print.
     expect(print).toMatch(
       /\.council-pack__screen-only[^{]*\{[^}]*display:\s*none/
