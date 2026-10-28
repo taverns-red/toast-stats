@@ -1,13 +1,12 @@
 import {
   normalizeClubId,
+  parseProspectChecklist as readChecklist,
   type DistrictReportsDataset,
+  type ProspectChecklistItem,
+  type ProspectChecklistStatus,
   type ProspectiveClub,
 } from '@taverns-red/shared-contracts'
-import {
-  daysBetween,
-  prospectiveClubHref,
-  usDateToIso,
-} from './clubGrowthFunnel'
+import { daysBetween, prospectiveClubHref } from './clubGrowthFunnel'
 import { toastmastersClubPageUrl } from './toastmastersClubPageUrl'
 
 /* #2303 — the in-site prospective club page,
@@ -30,18 +29,9 @@ import { toastmastersClubPageUrl } from './toastmastersClubPageUrl'
    profile) and meeting times never enter the model, so no view can render
    them. */
 
-export type ChecklistStatus = 'complete' | 'incomplete' | 'not-listed'
+export type ChecklistStatus = ProspectChecklistStatus
 
-export interface ChecklistStep {
-  /** `1`–`6`, or `payment`. */
-  key: string
-  /** TI's step name. */
-  label: string
-  /** The step number TI prints (`#N`); null for Payment. */
-  number: number | null
-  status: ChecklistStatus
-  /** ISO date the step last changed, when TI prints one. */
-  date: string | null
+export interface ChecklistStep extends ProspectChecklistItem {
   /** Days from `date` to the displayed snapshot date. */
   daysSince: number | null
 }
@@ -73,80 +63,23 @@ export type ProspectiveClubPageModel =
       tiHref: string | null
     }
 
-/** TI's charter steps, in TI's numbering (recorded vocabulary, #2142). */
-const STEPS: readonly { number: number; label: string }[] = [
-  { number: 1, label: 'Application to Organize' },
-  { number: 2, label: 'Certificate & Remit' },
-  { number: 3, label: 'Roster' },
-  { number: 4, label: 'Officer Info' },
-  { number: 5, label: 'Club Info' },
-  { number: 6, label: 'Constitution & Bylaws' },
-]
-
 export { prospectiveClubHref }
 
-function statusOf(text: string): 'complete' | 'incomplete' | null {
-  // "Incomplete" contains "complete", so test it first.
-  if (/\bIncomplete\b/.test(text)) return 'incomplete'
-  if (/\bComplete\b/.test(text)) return 'complete'
-  return null
-}
-
-function step(
-  key: string,
-  label: string,
-  number: number | null,
-  text: string | undefined,
-  asOfDate: string
-): ChecklistStep {
-  const status = text === undefined ? null : statusOf(text)
-  const date = text === undefined ? null : usDateToIso(text)
-  return {
-    key,
-    label,
-    number,
-    status: status ?? 'not-listed',
-    date: status ? date : null,
-    daysSince: status && date ? daysBetween(date, asOfDate) : null,
-  }
-}
-
 /**
- * Read TI's `Prospect` cell as the full checklist: steps #1–#6 and Payment,
- * each Complete, Incomplete or not listed, with the date it last changed.
- * Null for text that does not start with `#N`. String operations only — a
- * backtracking regex over this cell is polynomial on whitespace runs.
+ * TI's `Prospect` cell as the full checklist — the shared reading
+ * (`parseProspectChecklist`, #2388) the funnel and the rollups also use —
+ * with each step's days since it last changed, as of the displayed date.
  */
 export function parseProspectChecklist(
   text: string,
   asOfDate: string
 ): ChecklistStep[] | null {
-  const paymentAt = text.search(/Payment\b/)
-  const stepPart = (paymentAt >= 0 ? text.slice(0, paymentAt) : text).trim()
-  const paymentPart = paymentAt >= 0 ? text.slice(paymentAt) : undefined
-  if (!/^#\d+\s/.test(stepPart)) return null
-
-  const starts: number[] = []
-  for (const m of stepPart.matchAll(/#\d+\s/g)) starts.push(m.index)
-  const byNumber = new Map<number, string>()
-  for (let i = 0; i < starts.length; i++) {
-    const segment = stepPart.slice(starts[i], starts[i + 1] ?? stepPart.length)
-    const n = Number(/^#(\d+)/.exec(segment)![1])
-    if (!byNumber.has(n)) byNumber.set(n, segment)
-  }
-
-  return [
-    ...STEPS.map(s =>
-      step(
-        String(s.number),
-        s.label,
-        s.number,
-        byNumber.get(s.number),
-        asOfDate
-      )
-    ),
-    step('payment', 'Payment', null, paymentPart, asOfDate),
-  ]
+  const checklist = readChecklist(text)
+  if (!checklist) return null
+  return checklist.map(s => ({
+    ...s,
+    daysSince: s.date ? daysBetween(s.date, asOfDate) : null,
+  }))
 }
 
 function placeOf(club: ProspectiveClub | undefined): string | null {
