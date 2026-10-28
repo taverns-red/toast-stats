@@ -176,7 +176,6 @@ const DistrictCouncilPage: React.FC = () => {
               { label: 'Council credentials' },
             ]}
           />
-          <p className="council-eyebrow">{districtName}</p>
           <h1 className="council-title">Council credentials</h1>
           <p className="council-lede">{ABOUT}</p>
 

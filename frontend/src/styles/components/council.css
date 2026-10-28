@@ -4,13 +4,6 @@
    No new colours. Tables keep three short columns so nothing scrolls
    sideways at 375px. */
 
-.council-eyebrow {
-  font-family: var(--sans);
-  font-size: 0.875rem;
-  color: var(--ink-3);
-  margin: 0;
-}
-
 .council-title {
   font-family: var(--display, var(--sans));
   font-size: 1.5rem;
