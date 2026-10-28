@@ -85,6 +85,20 @@ describe('KpiBulletCard plan target (#2297)', () => {
     expect(screen.getByTestId('plan-target')).toHaveTextContent('met')
   })
 
+  it('places the plan tick proportionally on the 0-based scale (#2387)', () => {
+    // maxScale = 1.05 × 169 = 177.45; 165 / 177.45 ≈ 92.98%
+    render(
+      <KpiBulletCard
+        title="Paid Clubs"
+        current={149}
+        targets={targets}
+        rankings={rankings}
+        planTarget={165}
+      />
+    )
+    expect(screen.getByTestId('plan-tick')).toHaveStyle({ left: '92.98%' })
+  })
+
   it('keeps a plan beyond Smedley on the bar', () => {
     render(
       <KpiBulletCard
