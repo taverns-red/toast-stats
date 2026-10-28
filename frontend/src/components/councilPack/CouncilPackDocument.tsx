@@ -166,13 +166,19 @@ function Roster({
                 {r.clubName}
               </span>
             </th>
-            {showArea && <td>{r.areaId}</td>}
+            {showArea && <td className="council-pack__nowrap">{r.areaId}</td>}
             <td>{r.health}</td>
             <td className="council-pack__num">{r.members ?? '—'}</td>
             <td className="council-pack__num">{r.goals ?? '—'}</td>
             <td>{r.distinguished}</td>
-            <td>{r.visit ? VISIT_TEXT[r.visit] : '—'}</td>
-            {cspTracked && <td>{r.csp ? CSP_TEXT[r.csp] : '—'}</td>}
+            <td className="council-pack__nowrap">
+              {r.visit ? VISIT_TEXT[r.visit] : '—'}
+            </td>
+            {cspTracked && (
+              <td className="council-pack__nowrap">
+                {r.csp ? CSP_TEXT[r.csp] : '—'}
+              </td>
+            )}
           </tr>
         ))}
       </tbody>

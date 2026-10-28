@@ -327,6 +327,14 @@
     white-space: normal;
   }
 
+  /* Short marks never wrap: a two-line "Not / yet" doubled every row
+     under CI's DejaVu Sans fallback (1056px roster against 931). */
+  .council-pack__roster-table td.council-pack__nowrap,
+  .council-pack__roster-table td.council-pack__num {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+
   /* Only a club name too long for its column breaks inside a word;
      headers and short labels break between words only. */
   .council-pack__roster-table tbody th,
@@ -335,31 +343,31 @@
   }
 
   .council-pack__col-club {
-    width: 31%;
+    width: 32.5%;
   }
 
   .council-pack__col-area {
-    width: 6%;
+    width: 5.5%;
   }
 
   .council-pack__col-health {
-    width: 13%;
+    width: 12%;
   }
 
   .council-pack__col-members {
-    width: 10%;
+    width: 9.5%;
   }
 
   .council-pack__col-goals {
-    width: 7%;
+    width: 6.5%;
   }
 
   .council-pack__col-tier {
-    width: 14%;
+    width: 13%;
   }
 
   .council-pack__col-mark {
-    width: 9.5%;
+    width: 10.5%;
   }
 
   /* Names wrap on paper: there is no hover to recover an ellipsis (review
