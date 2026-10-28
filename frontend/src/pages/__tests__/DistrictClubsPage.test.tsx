@@ -660,3 +660,114 @@ describe('DistrictClubsPage loading vs empty state (#1999)', () => {
     ).toBeInTheDocument()
   })
 })
+
+// #2370: a snapshot-date change re-keys the analytics query, so — like the real
+// useQuery (no placeholderData) — data is undefined until the new date's fetch
+// lands. The page shows its skeleton in that window, which unmounts ClubsTable;
+// the remount must seed from the CURRENT URL, or the UI drops filters the URL
+// still carries.
+describe('DistrictClubsPage keeps filters across a snapshot-date change (#2370)', () => {
+  const loadedAnalytics = {
+    data: {
+      allClubs: TEST_CLUBS,
+      prospectiveClubs: [],
+    },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }
+  const pendingAnalytics = {
+    data: undefined,
+    isLoading: true,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }
+
+  beforeEach(() => {
+    // Re-keyed-query semantics: the date the data is for lags the requested
+    // date by one effect tick, during which there is no data.
+    vi.mocked(useDistrictAnalytics).mockImplementation(((
+      _districtId: string | null,
+      _startDate?: string,
+      endDate?: string
+    ) => {
+      const [settledFor, setSettledFor] = React.useState(endDate)
+      React.useEffect(() => {
+        if (settledFor === endDate) return
+        const t = setTimeout(() => setSettledFor(endDate), 0)
+        return () => clearTimeout(t)
+      }, [endDate, settledFor])
+      return settledFor === endDate ? loadedAnalytics : pendingAnalytics
+    }) as unknown as typeof useDistrictAnalytics)
+  })
+  afterEach(() => {
+    cleanup()
+    vi.mocked(useDistrictAnalytics).mockReset()
+  })
+
+  const changeDate = async (date: string) => {
+    const [select] = screen.getAllByTestId('date-chip-select')
+    fireEvent.change(select!, { target: { value: date } })
+    // The re-keyed query passes through its pending window…
+    await screen.findByRole('status', { name: /loading table/i })
+    // …and the table comes back once the new date's data lands. (Wait on the
+    // skeleton, not a row: which rows show depends on the filters under test.)
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('status', { name: /loading table/i })
+      ).toBeNull()
+    )
+  }
+
+  it('keeps the Close to Distinguished preset in the UI when the URL keeps it', async () => {
+    const user = userEvent.setup()
+    const { router } = renderAt('/district/61/clubs')
+
+    await screen.findByText(/alpha toastmasters/i)
+    await user.click(
+      screen.getByRole('button', { name: /close to distinguished/i })
+    )
+    await waitFor(() => {
+      const params = new URLSearchParams(router.state.location.search)
+      expect(params.get('preset')).toBe('close-to-distinguished')
+    })
+
+    await changeDate('2025-07-01')
+
+    const params = new URLSearchParams(router.state.location.search)
+    expect(params.get('date')).toBe('2025-07-01')
+    expect(params.get('preset')).toBe('close-to-distinguished')
+    expect(
+      screen.getByRole('button', { name: /close to distinguished/i })
+    ).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('keeps a column filter applied after load in the UI when the URL keeps it', async () => {
+    const user = userEvent.setup()
+    const { router } = renderAt('/district/61/clubs')
+
+    await screen.findByText(/alpha toastmasters/i)
+    await user.click(screen.getByRole('button', { name: /^filters/i }))
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('checkbox', {
+        name: 'vulnerable',
+      })
+    )
+    await waitFor(() => {
+      const params = new URLSearchParams(router.state.location.search)
+      expect(params.get('status')).toBe('vulnerable')
+    })
+    await user.keyboard('{Escape}')
+
+    await changeDate('2025-07-01')
+    expect(screen.getByText(/beta speakers/i)).toBeInTheDocument()
+
+    const params = new URLSearchParams(router.state.location.search)
+    expect(params.get('date')).toBe('2025-07-01')
+    expect(params.get('status')).toBe('vulnerable')
+    // The UI agrees with the URL: only the vulnerable club is listed.
+    expect(screen.queryByText(/alpha toastmasters/i)).toBeNull()
+  })
+})

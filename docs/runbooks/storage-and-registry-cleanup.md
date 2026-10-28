@@ -8,88 +8,189 @@ Prices used below: GCS Standard at USD 0.026/GB-month (US multi-region,
 staging) and USD 0.023 (northamerica-northeast1, ca); Artifact Registry at USD
 0.10/GB-month; USD 1 = CAD 1.37. Taxes are not included.
 
-## 1. GCS inventory (read-only, 2026-10-16)
+## 1. GCS inventory (read-only, re-measured 2026-10-28)
 
-Measured with `gcloud storage du -s gs://<bucket>/<prefix>/`. Sizes are in GB
-(10^9 bytes).
+Measured with `gcloud storage du -s gs://<bucket>/<prefix>/`, one call per
+top-level prefix. Nothing was listed in full or copied. Sizes are in GB
+(10^9 bytes). The first inventory (2026-10-16, PR #2109) is in git history.
 
-| Prefix                      | staging (US)                                                                             | ca (northamerica-northeast1) |
-| --------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------- |
-| basemap/ (z0–10 + z0–14)    | 72.54 (3.78 + 68.76)                                                                     | 72.54 (3.78 + 68.76)         |
-| snapshots/                  | 3.33                                                                                     | 3.34                         |
-| club-trends/                | 1.12                                                                                     | 0.87                         |
-| raw-csv/                    | ~1.9 (estimated: Monitoring live total minus the other prefixes; `du` was still running) | 0.78                         |
-| raw-education-ledger/       | 0.18                                                                                     | n/a                          |
-| raw-fac/                    | 0.14                                                                                     | n/a                          |
-| runs/                       | 0.10                                                                                     | n/a                          |
-| club-race/                  | 0.07                                                                                     | 0.06                         |
-| \_archive/                  | 0.03                                                                                     | n/a                          |
-| derived/                    | 0.01                                                                                     | n/a                          |
-| config/                     | 0.01                                                                                     | 0.01                         |
-| time-series/, v1/, metrics/ | under 0.01                                                                               | under 0.01                   |
+| Prefix                   | staging (US)         | ca (northamerica-northeast1) | toast-stats-data (legacy, us-east1) |
+| ------------------------ | -------------------- | ---------------------------- | ----------------------------------- |
+| basemap/ (z0–10 + z0–14) | 72.54 (3.78 + 68.76) | 72.54 (3.78 + 68.76)         | n/a                                 |
+| snapshots/               | 3.39                 | 3.39                         | **48.28**                           |
+| raw-csv/                 | ~1.7 (est.)          | 0.78                         | ~1.6 (est.)                         |
+| club-trends/             | 0.88                 | 0.87                         | 0.04                                |
+| raw-fac/                 | 0.48                 | n/a                          | n/a                                 |
+| runs/                    | 0.20                 | n/a                          | n/a                                 |
+| raw-education-ledger/    | 0.18                 | n/a                          | n/a                                 |
+| videos/                  | 0.10                 | 0.10                         | n/a                                 |
+| club-race/               | 0.09                 | 0.06                         | n/a                                 |
+| \_archive/               | 0.03                 | n/a                          | n/a                                 |
+| config/, derived/, v1/   | 0.03                 | 0.02                         | under 0.01                          |
+| time-series/, metrics/   | under 0.01           | under 0.01                   | under 0.01                          |
 
-Bytes that `du` does not show, from Cloud Monitoring
-`storage.googleapis.com/storage/v2/total_bytes` grouped by `type` (2026-10-15):
+"est." marks a `du` that hadn't finished after 25 minutes. Those values are
+the Monitoring live total minus the other prefixes. The same method gives
+0.68 for ca raw-csv against a measured 0.78, so treat them as ±0.1.
 
-| Bucket                              | live      | soft-deleted  | noncurrent |
-| ----------------------------------- | --------- | ------------- | ---------- |
-| toast-stats-data-staging            | 9.93 GiB  | **19.80 GiB** | 0          |
-| toast-stats-data-ca                 | 8.46 GiB  | **8.16 GiB**  | 2.00 GiB   |
-| toast-stats-data (legacy, us-east1) | 46.47 GiB | 0             | 0          |
+Bytes by state, from Cloud Monitoring
+`storage.googleapis.com/storage/v2/total_bytes` grouped by bucket and `type`
+(daily mean, 2026-10-27 to 10-28):
 
-The live figures are from before the z0–14 upload on 10-16. Both data buckets
-have **30-day soft delete** (staging since 2026-10-04, ca since 2026-10-09).
-Every overwrite and delete is billed for 30 more days. Re-derive churn left
-soft-deleted bytes at twice the live data, not counting the basemap.
+| Bucket                              | live          | soft-deleted  | noncurrent |
+| ----------------------------------- | ------------- | ------------- | ---------- |
+| toast-stats-data-staging            | 74.12 GiB     | **34.23 GiB** | 0          |
+| toast-stats-data-ca                 | 72.32 GiB     | 9.87 GiB      | 0          |
+| toast-stats-data (legacy, us-east1) | **46.47 GiB** | 0             | 0          |
 
-### What this means for the proposed rules
+Since 10-16:
 
-Without the basemap, all data in both buckets costs under CAD 1/month. Ageing
-`runs/` to Nearline would save less than CAD 0.01/month. It would also cost
-Class A transition operations, a 30-day minimum and retrieval fees. So the
-rules below **only delete**; none of them changes storage class. The pipeline
-already expires `runs/<id>/` after `RUN_MANIFEST_RETENTION_DAYS` (90) in
-`data-pipeline.yml`, so the `runs/` rule is only a backstop.
+- The noncurrent 2.0 GiB in ca is gone; the 10-16 lifecycle rules work.
+- Staging soft-deleted bytes rose from 19.80 to 34.23 GiB. That's the
+  re-derive and backfill churn of 10-17 to 10-27, held for 30 days. None of it
+  is basemap: `--soft-deleted` matches nothing under `basemap/`.
+- The z0–14 basemap is in both buckets (two copies, by design; see §3).
 
-## 2. Proposed lifecycle rules
+**The legacy bucket `toast-stats-data` is the largest stale copy.** It holds
+46.47 GiB (49.9 GB) of `snapshots/` and `raw-csv/` from before the move to
+`toast-stats-data-ca` (#162). Its newest object
+(`config/district-snapshot-index.json`) dates from 2026-03-15. No backend
+bucket serves it: the CDN backends are `toast-stats-data-ca` and
+`toast-stats-data-staging`. No code on main names it; the only mention is
+an example in `packages/collector-cli/README.md`. It is not public, and its
+IAM bindings are the project defaults plus one service account. See §2b.
 
-- `infra/gcs-lifecycle/toast-stats-data-staging.json`:
-  - Delete `runs/` objects after 180 days, as a backstop to the 90-day pipeline expiry.
+### Estimated monthly savings (2026-10-28)
+
+Each item needs Ron's approval and is independent of the others.
+
+| Step                                             | Saving (CAD/month) |
+| ------------------------------------------------ | ------------------ |
+| §3: delete the z0–10 basemap (both buckets)      | 0.25               |
+| §2a: soft delete from 30 days to 7 days          | about 1.25         |
+| §2b: retire the legacy bucket `toast-stats-data` | 1.37               |
+| §2: `_archive/` lifecycle rule                   | under 0.01         |
+| **Total**                                        | **about 2.9**      |
+
+The largest cost that remains is the two z0–14 copies, at about CAD 4.6/month.
+Both are kept, because previews read the staging copy.
+
+## 2. Lifecycle rules
+
+### Applied on 10-16 (PR #2109)
+
+Both buckets carry these today (`gcloud storage buckets describe`, 10-28):
+
+- staging:
+  - Delete `runs/` objects after 180 days, as a backstop to the 90-day prune
+    (`RUN_MANIFEST_RETENTION_DAYS`, `scripts/expire-run-manifests.ts`).
   - Delete noncurrent generations 7 days after they become noncurrent.
   - Abort incomplete multipart uploads after 7 days.
-- `infra/gcs-lifecycle/toast-stats-data-ca.json` has the noncurrent and multipart rules only.
-  It removes the 2.0 GiB of noncurrent generations (CAD ~0.06/month).
+- ca: the noncurrent and multipart rules only.
 
-No rule touches `snapshots/`, `basemap/`, `config/` or `time-series/`; the test
-enforces this.
+Rules only delete; none changes storage class. Ageing `runs/` (0.20 GB) to
+Nearline would save under CAD 0.01/month. It would also cost Class A
+transitions, a 30-day minimum and retrieval fees.
 
-The estimated saving is **about CAD 0.06/month**. The rules are hygiene; they
-are not a cost lever.
+### Proposed on 10-28: delete staging `_archive/` after 30 days
 
-Apply them. **Ron approves.** Each command replaces the bucket's whole
-lifecycle config, and neither bucket has one today.
+`infra/gcs-lifecycle/toast-stats-data-staging.json` gains one rule:
+`Delete` with `age: 30` and `matchesPrefix: ["_archive/"]`.
+`_archive/pre-1384-backfill/` (26 MB) is a one-off copy taken before the
+#1384 backfill in July. Nothing reads it.
+
+The saving is under CAD 0.01/month; this is hygiene. The objects are older
+than 30 days, so the first lifecycle pass after the apply removes them. They
+stay restorable for the 30-day soft-delete window.
+
+#### Prefixes left alone, because something reads them
+
+Checked with `git grep` over `frontend/src`, `packages/*/src`, `scripts/` and
+`.github/workflows/` on 2026-10-28:
+
+- `snapshots/`, `v1/`, `time-series/` and `config/` are promoted to prod
+  (`PROMOTED_PREFIXES`) and read by the frontend.
+- `derived/` is read by the frontend (`cdn.ts`, the education rollup).
+- `metrics/deploys/` holds the deploy records that `deploy.yml` writes. It's
+  under 0.01 GB, so a rule would save nothing.
+- `raw-csv/` is the rebuild source: `data-pipeline.yml` discovers rebuild dates
+  from it. The ca copy (0.78 GB) is a cross-region copy of raw history,
+  and prod-bucket scripts can still read it, so it's kept.
+- `raw-fac/`, `raw-education-ledger/`, `club-trends/`, `club-race/` and
+  `district-awards-history.json` are pipeline stores (sync, upsert, push back).
+- `videos/` and `basemap/` are published and immutable.
+
+`infraCostPolicies.test.ts` enforces this:
+
+- A rule may age out live objects only under `runs/` or `_archive/`.
+- No source file outside tests may name `_archive/`. The scan fails if it
+  sees an empty tree.
+
+#### Apply (Ron approves)
+
+The command replaces the bucket's whole lifecycle config. The file holds
+the three applied rules plus the new one.
 
 ```bash
 gcloud storage buckets describe gs://toast-stats-data-staging --format="json(lifecycle_config)"
-gcloud storage buckets describe gs://toast-stats-data-ca --format="json(lifecycle_config)"
 gcloud storage buckets update gs://toast-stats-data-staging --lifecycle-file=infra/gcs-lifecycle/toast-stats-data-staging.json
-gcloud storage buckets update gs://toast-stats-data-ca --lifecycle-file=infra/gcs-lifecycle/toast-stats-data-ca.json
+gcloud storage buckets describe gs://toast-stats-data-staging --format="json(lifecycle_config)"   # expect 4 rules
 ```
 
-To undo: `gcloud storage buckets update gs://<bucket> --clear-lifecycle`.
+The ca file is unchanged, so it needs no re-apply. To undo, re-apply the file
+from PR #2109 (`git show 1098a5853:infra/gcs-lifecycle/toast-stats-data-staging.json`).
+`--clear-lifecycle` would drop all rules.
 
-### Optional, separate decision: shorten soft delete
+### 2a. Shorten soft delete to 7 days (separate decision)
 
-Reducing soft delete from 30 days to 7 is the larger storage lever. If the
-soft-deleted bytes fall in proportion, it saves about CAD 0.55/month on staging
-and CAD 0.20/month on ca. It also shortens the window in which an object
-deleted during a re-derive can be restored. Soft delete was set to 30 days
-deliberately during the #1759 batches, so leave it until those batches are
-done. To apply it:
+This is the larger lever in the data buckets. The soft-deleted bytes are:
+
+- staging: 34.23 GiB (36.8 GB), USD 0.96/month;
+- ca: 9.87 GiB (10.6 GB), USD 0.24/month.
+
+That's about CAD 1.64/month in total. In steady state, the soft-deleted bytes
+scale with the retention window, so 7 days would keep about 7/30 of them.
+That saves about **CAD 1.25/month**.
+
+The cost is the restore window: an object a re-derive deletes by mistake can
+be restored for 7 days instead of 30. The #1759 batches that set 30 days are
+done, but backfills and re-derives were still running on 10-22 and 10-27. Pick
+a quiet week.
 
 ```bash
 gcloud storage buckets update gs://toast-stats-data-staging --soft-delete-duration=7d
 gcloud storage buckets update gs://toast-stats-data-ca --soft-delete-duration=7d
+```
+
+Objects that are already soft-deleted keep the retention they had when they
+were deleted, so the saving builds up over the next 30 days.
+
+### 2b. Retire the legacy bucket `toast-stats-data` (separate decision)
+
+It holds 49.9 GB at USD 0.020/GB-month (us-east1 Standard), about USD
+1.00/month or **CAD 1.37/month**. That's the largest stale cost outside the
+basemap. A lifecycle rule is the wrong tool here: the whole bucket goes, so
+there's no JSON file for it.
+
+Read-only checks first:
+
+```bash
+gcloud compute backend-buckets list --project toast-stats-prod-6d64a --format="table(name,bucketName)"   # must not list toast-stats-data
+git grep -nE "toast-stats-data([^-a-z]|$)" origin/main -- ':!tasks/' ':!*.md'                          # expect no match
+gcloud storage buckets get-iam-policy gs://toast-stats-data                                            # no allUsers
+```
+
+GCS Data Access logs are off (the project's `auditConfigs` covers only
+Artifact Registry), so the absence of reads can't be shown from logs. The
+evidence is the absence of any reader, plus the newest write on 03-15.
+
+Delete (Ron approves). The bucket has 7-day soft delete, so its objects can be
+restored with `gcloud storage restore` for 7 days:
+
+```bash
+gcloud storage rm --recursive "gs://toast-stats-data/**"
+# after 7 days with no complaint:
+gcloud storage buckets delete gs://toast-stats-data
 ```
 
 ## 3. Delete the old z0–10 basemap (on or after 2026-10-23)
@@ -119,14 +220,48 @@ comment), `docs/runbooks/basemap.md:166` (this delete instruction) and the
 build-script usage comments. `BASEMAP_OBJECT_PATH` is
 `world-z0-14-20261015.pmtiles`, and no code path builds the z0–10 name.
 
-**Delete. Ron approves; on or after 2026-10-23.**
+**Re-check, 2026-10-28** (read-only):
+
+- **Logs.** The `http_load_balancer` logs show 7 requests for
+  `cdn.taverns.red/basemap/protomaps-v4/world-z0-10-20261011.pmtiles` from
+  2026-10-19T12:26:00Z onward. All 7 fall between 12:26:47.96Z and
+  12:26:48.28Z on 10-19, all with status 206. The last one is at
+  **2026-10-19T12:26:48.280Z**. Six came from one desktop Chrome 152 (macOS)
+  session, which had a cached pre-switch bundle; one was a Cloud CDN origin
+  fill (`Cloud-CDN-Google`). There have been **0 requests since**, which is
+  more than 9 days.
+- **The log query is live.** The same query for z0–14 returns requests on
+  10-28.
+- **Daily counts for z0–10.** 1,182 on 10-15, 805 on 10-16, 2 on 10-17, 2 on
+  10-18, 9 on 10-19, then none.
+- **The prod bundle.** `BasemapMap-*.js`, lazy-loaded from
+  `index-CIttt426.js`, names only `world-z0-14-20261015`.
+- **The source.** `git grep world-z0-10` still matches only the docs listed
+  above.
+- **Staging reads aren't logged.** The `toast-stats-cdn-staging-backend`
+  backend logged no requests in the last 3 days, and GCS Data Access logs are
+  off. Preview builds take the object name from the same
+  `BASEMAP_OBJECT_PATH`, so they read z0–14.
+
+Exact objects (from `gcloud storage ls -l gs://<bucket>/basemap/**`):
+
+| Bucket                   | Object                                              | Bytes          |
+| ------------------------ | --------------------------------------------------- | -------------- |
+| toast-stats-data-staging | `basemap/protomaps-v4/world-z0-10-20261011.pmtiles` | 3,782,079,721  |
+| toast-stats-data-staging | `basemap/protomaps-v4/world-z0-14-20261015.pmtiles` | 68,759,126,401 |
+| toast-stats-data-ca      | `basemap/protomaps-v4/world-z0-10-20261011.pmtiles` | 3,782,079,721  |
+| toast-stats-data-ca      | `basemap/protomaps-v4/world-z0-14-20261015.pmtiles` | 68,759,126,401 |
+
+**Delete. Ron approves; on or after 2026-10-23. The checks above passed on
+10-28.**
 
 ```bash
 gcloud storage rm gs://toast-stats-data-staging/basemap/protomaps-v4/world-z0-10-20261011.pmtiles
 gcloud storage rm gs://toast-stats-data-ca/basemap/protomaps-v4/world-z0-10-20261011.pmtiles
 ```
 
-This saves about CAD 0.24/month. Billing for the objects stops only after the
+This saves about CAD 0.25/month (3.78 GB in each bucket at USD 0.026 and
+0.023). Billing for the objects stops only after the
 30-day soft-delete window, and they can be restored during it
 (`gcloud storage restore`).
 
