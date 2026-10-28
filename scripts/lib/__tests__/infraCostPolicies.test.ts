@@ -63,6 +63,35 @@ const PROTECTED_PREFIXES = [
   'videos/',
 ]
 
+// The only prefixes a rule may age out live objects from. runs/ is read
+// within the run that writes it (and its rule outlives the 90-day pipeline
+// prune); _archive/ is a one-off pre-backfill copy (#1384) that nothing reads.
+// Every other prefix has a reader in the frontend or the pipeline (#2103).
+const AGEABLE_PREFIXES = ['runs/', '_archive/']
+// Prefixes that must have no reader at all before a rule may delete them.
+const UNREAD_PREFIXES = ['_archive/']
+const READER_ROOTS = [
+  'frontend/src',
+  'packages/analytics-core/src',
+  'packages/collector-cli/src',
+  'packages/shared-contracts/src',
+  'packages/mcp-server/src',
+  'scripts',
+  '.github/workflows',
+]
+
+const sourceFiles = (dir: string): string[] => {
+  if (!fs.existsSync(dir)) return []
+  const out: string[] = []
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (e.name === 'node_modules' || e.name === '__tests__') continue
+    const full = path.join(dir, e.name)
+    if (e.isDirectory()) out.push(...sourceFiles(full))
+    else if (/\.(ts|tsx|js|mjs|sh|ya?ml)$/.test(e.name)) out.push(full)
+  }
+  return out
+}
+
 interface GcsRule {
   action: { type: string; storageClass?: string }
   condition: Record<string, unknown>
@@ -124,6 +153,16 @@ describe('GCS lifecycle files (#2103)', () => {
         }
       })
 
+      it('ages out live objects only under prefixes nothing reads', () => {
+        for (const r of rules) {
+          if (r.action.type !== 'Delete' || r.condition.isLive === false)
+            continue
+          for (const p of (r.condition.matchesPrefix ?? []) as string[]) {
+            expect(AGEABLE_PREFIXES).toContain(p)
+          }
+        }
+      })
+
       it('keeps run manifests past the pipeline 90-day retention', () => {
         for (const r of rules) {
           const prefixes = (r.condition.matchesPrefix ?? []) as string[]
@@ -132,6 +171,38 @@ describe('GCS lifecycle files (#2103)', () => {
           }
         }
       })
+    })
+  }
+})
+
+describe('stale-prefix rules (#2103, 2026-10-28)', () => {
+  it('staging deletes the unread _archive/ copy after 30 days', () => {
+    const doc = readJson(
+      path.join(GCS_DIR, 'toast-stats-data-staging.json')
+    ) as { rule: GcsRule[] }
+    const archive = doc.rule.filter(r =>
+      ((r.condition.matchesPrefix ?? []) as string[]).includes('_archive/')
+    )
+    expect(archive).toEqual([
+      {
+        action: { type: 'Delete' },
+        condition: { age: 30, matchesPrefix: ['_archive/'] },
+      },
+    ])
+  })
+
+  for (const prefix of UNREAD_PREFIXES) {
+    it(`no frontend or pipeline code reads ${prefix}`, () => {
+      const files = READER_ROOTS.flatMap(r => sourceFiles(path.join(ROOT, r)))
+      // The scan must see the real tree; an empty scan would pass vacuously.
+      expect(files.length).toBeGreaterThan(100)
+      expect(
+        files.some(f => fs.readFileSync(f, 'utf8').includes('runs/'))
+      ).toBe(true)
+      const readers = files.filter(f =>
+        fs.readFileSync(f, 'utf8').includes(prefix)
+      )
+      expect(readers).toEqual([])
     })
   }
 })

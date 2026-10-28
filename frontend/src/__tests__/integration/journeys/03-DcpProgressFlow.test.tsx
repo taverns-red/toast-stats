@@ -15,11 +15,19 @@ import App from '../../../App'
 import { clickDistrictRow } from './_helpers'
 
 import { setupCdnFetchMock } from '../utils/mockCdnData'
+import { preloadAppRoutes } from '../utils/preloadAppRoutes'
 
 // Journey tests render <App /> and click through multi-step flows; the
 // full-page scope is the test. 15s recognises that category — unit
 // tests still inherit the 5s cap from vitest.config.ts (#473).
 vi.setConfig({ testTimeout: 15000 })
+
+// Compile App's lazy route graph once, up front: otherwise the first test's
+// 1 s findBy window measures Vite's cold transform of the route page it
+// opens, not the app (#2248). The set is derived from App.tsx (#2373).
+beforeAll(async () => {
+  await preloadAppRoutes()
+})
 
 // Setup Responsive defaults for jsdom
 beforeAll(() => {

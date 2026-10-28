@@ -55,8 +55,13 @@ const SECTIONS: ReadonlyArray<{ id: string; num: string; title: string }> = [
     num: '15',
     title: 'Region District Recognition',
   },
-  { id: 'success-plan-targets', num: '16', title: 'Success Plan targets' },
-  { id: 'changelog', num: '17', title: 'Changelog' },
+  {
+    id: 'council-voting-strength',
+    num: '16',
+    title: 'Council voting strength',
+  },
+  { id: 'success-plan-targets', num: '17', title: 'Success Plan targets' },
+  { id: 'changelog', num: '18', title: 'Changelog' },
 ]
 
 // Every rule-change entry is its own deep-link target (#1400), owned by §10.
@@ -1182,12 +1187,111 @@ const MethodologyPage: React.FC = () => {
         </div>
       </CollapsibleSection>
 
+      {/* Council voting strength (#2300) — the council credentials page
+          (/district/:id/council) links here. Asserted by
+          MethodologyPage.councilVoting.test.tsx. */}
+      <CollapsibleSection
+        id="council-voting-strength"
+        num="16"
+        title="Council voting strength"
+        collapsible={isMobile}
+        open={openIds.has('council-voting-strength')}
+        onToggle={toggle}
+      >
+        <div data-testid="methodology-council-voting">
+          <p>
+            Each district&apos;s council credentials page shows, for a council
+            date, the clubs in good standing, their votes and the quorum. It is
+            a pre-meeting cross-check for the Credentials Chair. It is derived
+            from TI&apos;s public dashboard and is{' '}
+            <strong>not TI&apos;s official credentials list</strong>: that is
+            the District Council report in District Central (District Leadership
+            Handbook, Item 222, p.87).
+          </p>
+          <h3>The rule</h3>
+          <ul>
+            <li>
+              <strong>Who votes.</strong> The District Council includes the
+              representatives of each Member Club in good standing, and each
+              such club is entitled to two votes (District Administrative
+              Bylaws, DAB Art. IX(a); the per-club maximum of two is DAB Art.
+              X(d)). A club not in good standing has no voting privileges until
+              it meets the requirements (DLH p.86).
+            </li>
+            <li>
+              <strong>Good standing.</strong> A club is paid and in good
+              standing when World Headquarters has received its dues for the
+              current dues period for a minimum of eight (8) members, at least
+              three (3) of whom were members during the previous renewal period
+              (Policy 2.0 §4). Dues are due April 1 and October 1.
+            </li>
+            <li>
+              <strong>Quorum.</strong> On the basis of two votes per club,
+              one-third of the Member Clubs in good standing is a quorum (DAB
+              Art. X(c)). The page shows that third rounded up to a whole club.
+            </li>
+          </ul>
+          <h3>How the page applies it</h3>
+          <ul>
+            <li>
+              <strong>TI&apos;s own status, not a recount.</strong> A club is in
+              good standing when the dashboard&apos;s Club Status is{' '}
+              <em>Active</em>. <em>Low</em> (fewer than 8 paid members this dues
+              period), <em>Ineligible</em> and <em>Suspended</em> are not in
+              good standing. The page never recomputes standing from member
+              counts: a newly chartered club is entitled to vote once its
+              charter is complete (DLH p.86), and TI shows such a club Active
+              before it has any renewing members.
+            </li>
+            <li>
+              <strong>The snapshot.</strong> The page uses the latest daily
+              snapshot on or before the council date. Between snapshots a club
+              can pay its dues and gain standing, so when the snapshot is more
+              than 7 days older than the council date the page says so.
+            </li>
+            <li>
+              <strong>The dues-period boundary.</strong> Every club&apos;s
+              standing resets when a dues period opens on April 1 and October 1.
+              If the nearest snapshot is from the previous period (for example a
+              council on October 3 with data from September 30), the page shows
+              no count and says why, rather than a count that can be 10 to 20
+              clubs off.
+            </li>
+            <li>
+              <strong>Future dates.</strong> For a council still to come, the
+              page uses the latest snapshot and says that clubs paying before
+              the meeting will gain standing.
+            </li>
+          </ul>
+          <h3>What it cannot know</h3>
+          <ul>
+            <li>
+              Dues TI posts after the snapshot, new clubs TI has not yet
+              published, and WHQ actions the dashboard does not show.
+            </li>
+            <li>
+              District Executive Committee members, who have one vote each (up
+              to three with their club&apos;s votes, DAB Art. X(d)). There is no
+              officer roster here, so the page counts club votes only.
+            </li>
+            <li>
+              Who the voting members are. Toast Stats holds no member data
+              (§14).
+            </li>
+            <li>
+              The district&apos;s own credentials deadline (DLH p.87). Pick it
+              as the council date if it differs from the meeting.
+            </li>
+          </ul>
+        </div>
+      </CollapsibleSection>
+
       {/* District Success Plan targets (#2297) — the Overview panel and the
           Trends target line. Asserted by
           MethodologyPage.successPlanTargets.test.tsx. */}
       <CollapsibleSection
         id="success-plan-targets"
-        num="16"
+        num="17"
         title="Success Plan targets"
         collapsible={isMobile}
         open={openIds.has('success-plan-targets')}
@@ -1248,7 +1352,7 @@ const MethodologyPage: React.FC = () => {
 
       <CollapsibleSection
         id="changelog"
-        num="17"
+        num="18"
         title="Changelog"
         collapsible={isMobile}
         open={openIds.has('changelog')}

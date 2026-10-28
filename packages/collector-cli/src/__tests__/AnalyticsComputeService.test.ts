@@ -673,6 +673,51 @@ describe('AnalyticsComputeService', () => {
       expect(result.districtsSucceeded).toContain(districtId)
     })
 
+    it('files the club-trends point of a June close collected in July under the CLOSING PY (#2324)', async () => {
+      // raw-csv/2025-07-20 holds the June close (snapshots/2025-06-30, PY
+      // 2024-2025). The calendar PY of the collection date is 2025-2026.
+      const requestedDate = '2025-07-20'
+      const snapshotDate = '2025-06-30'
+      const districtId = '1'
+
+      const rawCsvDir = path.join(testCache.path, 'raw-csv', requestedDate)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        JSON.stringify({
+          date: requestedDate,
+          isClosingPeriod: true,
+          dataMonth: '2025-06',
+        })
+      )
+      await writeDistrictSnapshot(
+        testCache.path,
+        snapshotDate,
+        districtId,
+        createSampleDistrictStatistics(districtId, snapshotDate)
+      )
+
+      const result = await analyticsComputeService.compute({
+        date: requestedDate,
+      })
+      expect(result.success).toBe(true)
+
+      const trendsPath = (py: string): string =>
+        path.join(
+          testCache.path,
+          'club-trends',
+          py,
+          `district_${districtId}.json`
+        )
+      const store = JSON.parse(
+        await fs.readFile(trendsPath('2024-2025'), 'utf-8')
+      ) as { programYear: string }
+      expect(store.programYear).toBe('2024-2025')
+      expect(JSON.stringify(store)).toContain(snapshotDate)
+      expect(JSON.stringify(store)).not.toContain(requestedDate)
+      await expect(fs.access(trendsPath('2025-2026'))).rejects.toThrow()
+    })
+
     it('should look for snapshot at requested date for non-closing period (Requirement 7.4)', async () => {
       // Setup: Create cache metadata indicating non-closing period
       const requestedDate = '2024-06-15'

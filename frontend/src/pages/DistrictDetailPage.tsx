@@ -951,6 +951,14 @@ const DistrictDetailPageInner: React.FC = () => {
                 >
                   Global rankings →
                 </Link>
+                {/* Council credentials (#2300) — a quiet text link, not a
+                    section: the page is not in the district subnav. */}
+                <Link
+                  to={`/district/${districtId}/council`}
+                  className="inline-flex items-center px-2 min-h-[44px] text-tm-loyal-blue font-tm-headline underline underline-offset-2"
+                >
+                  Council credentials
+                </Link>
               </nav>
             )}
 
@@ -960,7 +968,7 @@ const DistrictDetailPageInner: React.FC = () => {
                 it too since #2093 freed the hub's 4,000px page budget
                 (e2e/district-overview-hub-mobile.smoke.ts). */}
             {districtId && hasOverviewData && !isLoadingOverview && (
-              <RedVotePromo />
+              <RedVotePromo councilHref={`/district/${districtId}/council`} />
             )}
           </div>
         </div>
