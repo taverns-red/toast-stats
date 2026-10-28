@@ -1,0 +1,126 @@
+{
+  "metadata": {
+    "snapshotId": "2026-06-30",
+    "calculatedAt": "2026-10-17T17:33:46.194Z",
+    "totalDistricts": 128
+  },
+  "distinguishedDistrict": {
+    "10": {
+      "districtId": "10",
+      "currentTier": "Distinguished",
+      "allPrerequisitesMet": true,
+      "prerequisites": {
+        "dspSubmitted": true,
+        "trainingMet": true,
+        "marketAnalysisSubmitted": true,
+        "communicationPlanSubmitted": true,
+        "regionAdvisorVisitMet": true
+      },
+      "nextTierGap": {
+        "tier": "Select",
+        "paymentGrowthGap": 0,
+        "clubGrowthGap": 0,
+        "distinguishedPercentGap": 2.941176470588239,
+        "netClubGrowthGap": 0,
+        "paidClubBase": 68,
+        "paymentBase": 2305
+      },
+      "netClubGrowth": 3,
+      "paymentsRemaining": 0,
+      "paidClubsRemaining": 0,
+      "distinguishedClubsRemaining": 0
+    },
+    "17": {
+      "districtId": "17",
+      "currentTier": "Smedley",
+      "allPrerequisitesMet": true,
+      "prerequisites": {
+        "dspSubmitted": true,
+        "trainingMet": true,
+        "marketAnalysisSubmitted": true,
+        "communicationPlanSubmitted": true,
+        "regionAdvisorVisitMet": true
+      },
+      "nextTierGap": null,
+      "netClubGrowth": 5,
+      "paymentsRemaining": 0,
+      "paidClubsRemaining": 0,
+      "distinguishedClubsRemaining": 0
+    },
+    "27": {
+      "districtId": "27",
+      "currentTier": "Select",
+      "allPrerequisitesMet": true,
+      "prerequisites": {
+        "dspSubmitted": true,
+        "trainingMet": true,
+        "marketAnalysisSubmitted": true,
+        "communicationPlanSubmitted": true,
+        "regionAdvisorVisitMet": true
+      },
+      "nextTierGap": {
+        "tier": "Presidents",
+        "paymentGrowthGap": 1.1,
+        "clubGrowthGap": 0.5599999999999996,
+        "distinguishedPercentGap": 0,
+        "netClubGrowthGap": 0,
+        "paidClubBase": 90,
+        "paymentBase": 2898
+      },
+      "netClubGrowth": 4,
+      "paymentsRemaining": 0,
+      "paidClubsRemaining": 0,
+      "distinguishedClubsRemaining": 0
+    },
+    "59": {
+      "districtId": "59",
+      "currentTier": "Presidents",
+      "allPrerequisitesMet": true,
+      "prerequisites": {
+        "dspSubmitted": true,
+        "trainingMet": true,
+        "marketAnalysisSubmitted": true,
+        "communicationPlanSubmitted": true,
+        "regionAdvisorVisitMet": true
+      },
+      "nextTierGap": {
+        "tier": "Smedley",
+        "paymentGrowthGap": 2.4699999999999998,
+        "clubGrowthGap": 0.6799999999999997,
+        "distinguishedPercentGap": 0,
+        "netClubGrowthGap": 0,
+        "paidClubBase": 123,
+        "paymentBase": 6349
+      },
+      "netClubGrowth": 9,
+      "paymentsRemaining": 0,
+      "paidClubsRemaining": 0,
+      "distinguishedClubsRemaining": 0
+    },
+    "61": {
+      "districtId": "61",
+      "currentTier": "Distinguished",
+      "allPrerequisitesMet": true,
+      "prerequisites": {
+        "dspSubmitted": true,
+        "trainingMet": true,
+        "marketAnalysisSubmitted": true,
+        "communicationPlanSubmitted": true,
+        "regionAdvisorVisitMet": true
+      },
+      "nextTierGap": {
+        "tier": "Select",
+        "paymentGrowthGap": 0.41000000000000014,
+        "clubGrowthGap": 1.72,
+        "distinguishedPercentGap": 3.8461538461538467,
+        "netClubGrowthGap": 0,
+        "paidClubBase": 156,
+        "paymentBase": 5764
+      },
+      "netClubGrowth": 2,
+      "paymentsRemaining": 0,
+      "paidClubsRemaining": 0,
+      "distinguishedClubsRemaining": 0
+    }
+  }
+}
