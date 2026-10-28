@@ -90,6 +90,11 @@ describe('Journey 01: The Navigation Flow', () => {
       { name: /view all clubs/i },
       { timeout: 5000 }
     )
+    // #2300 — the Overview links the council credentials page (a routed
+    // page that is deliberately not in the district subnav).
+    expect(
+      screen.getByRole('link', { name: /^council credentials$/i })
+    ).toHaveAttribute('href', '/district/61/council')
     await user.click(clubsLink)
     await screen.findByRole(
       'heading',
