@@ -262,7 +262,13 @@ export function buildDistrictCards(
 const GAP_NOUNS: Record<string, [string, string]> = {
   'Paid Clubs': ['paid club', 'paid clubs'],
   Payments: ['payment', 'payments'],
-  'Distinguished Clubs': ['Distinguished club', 'Distinguished clubs'],
+  // Confirmed (#304/#2221): the rankings' count, as in the trophy case. The
+  // KPI strip shows the current count; the word keeps the two from reading
+  // as a contradiction (Ron, 2026-10-28).
+  'Distinguished Clubs': [
+    'confirmed Distinguished club',
+    'confirmed Distinguished clubs',
+  ],
 }
 
 function gapPhrase(g: CardGap): string {
