@@ -17,6 +17,7 @@
  * clipped, so a printed list never silently drops clubs.
  */
 
+import { normalizeClubId } from '@taverns-red/shared-contracts'
 import { buildActionList, compareId } from './actionListData'
 import type { CloseToDistinguishedItem } from './actionListData'
 import { getAreaVisitDeadlines } from './areaRecognitionState'
@@ -265,17 +266,20 @@ export function buildCouncilPack(
       )
     : []
 
-  // Per-club marks, read from the same area lists the sections print.
+  // Per-club marks, read from the same area lists the sections print. The
+  // snapshot pads club numbers to eight digits; analytics ids are bare, so
+  // both sides go through the shared normalizeClubId.
   const visitMark = new Map<string, PackVisitMark>()
   const cspMark = new Map<string, PackCspMark>()
   for (const a of areas) {
     for (const c of a.clubsMissingCurrentRoundVisit)
-      visitMark.set(c.clubNumber, 'missing')
+      visitMark.set(normalizeClubId(c.clubNumber), 'missing')
     for (const c of a.clubsMissingCurrentRoundVisitIneligible)
-      visitMark.set(c.clubNumber, 'not-held')
-    for (const c of a.clubsMissingCsp) cspMark.set(c.clubNumber, 'missing')
+      visitMark.set(normalizeClubId(c.clubNumber), 'not-held')
+    for (const c of a.clubsMissingCsp)
+      cspMark.set(normalizeClubId(c.clubNumber), 'missing')
     for (const c of a.clubsMissingCspIneligible)
-      cspMark.set(c.clubNumber, 'not-held')
+      cspMark.set(normalizeClubId(c.clubNumber), 'not-held')
   }
   const inSnapshotArea = new Set(areas.map(a => a.areaId.toUpperCase()))
 
@@ -299,10 +303,12 @@ export function buildCouncilPack(
         members: lastOf(c.membershipTrend)?.count ?? null,
         goals: lastOf(c.dcpGoalsTrend)?.goalsAchieved ?? null,
         distinguished: TIER_LABEL[c.distinguishedLevel] ?? '—',
-        visit: known ? (visitMark.get(c.clubId) ?? 'done') : null,
+        visit: known
+          ? (visitMark.get(normalizeClubId(c.clubId)) ?? 'done')
+          : null,
         csp: cspTracked
           ? known
-            ? (cspMark.get(c.clubId) ?? 'submitted')
+            ? (cspMark.get(normalizeClubId(c.clubId)) ?? 'submitted')
             : null
           : null,
       }
