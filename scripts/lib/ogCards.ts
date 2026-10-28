@@ -327,10 +327,10 @@ body { background: ${C.surface}; color: ${C.ink}; font-family: 'Source Sans 3', 
 .pill.off { background: ${C.surface2}; color: ${C.ink2}; border: 3px solid ${C.line}; }
 .gaphead { margin-top: 26px; font-size: 34px; font-weight: 600; color: ${C.ink2}; }
 .tiles { display: flex; gap: 24px; margin-top: 16px; }
-.tile { flex: 1; border: 3px solid ${C.line}; border-radius: 16px; padding: 18px 24px; background: ${C.surface2}; }
-.num { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 72px; line-height: 1; color: ${C.ink}; font-variant-numeric: tabular-nums; }
+.tile { flex: 1; border: 3px solid ${C.line}; border-radius: 16px; padding: 14px 22px; background: ${C.surface2}; }
+.num { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 64px; line-height: 1; color: ${C.ink}; font-variant-numeric: tabular-nums; }
 .num.met { color: ${C.loyalBlue}; }
-.lbl { margin-top: 10px; font-size: 32px; font-weight: 600; color: ${C.ink3}; }
+.lbl { margin-top: 8px; font-size: 29px; line-height: 1.15; font-weight: 600; color: ${C.ink3}; }
 .top { margin-top: 40px; font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 56px; color: ${C.loyalBlue}; }
 .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: baseline; font-size: 32px; color: ${C.ink2}; }
 .host { font-family: 'Montserrat', sans-serif; font-weight: 700; color: ${C.loyalBlue}; }
