@@ -1,5 +1,5 @@
 import React, { useId, useMemo, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
   RED_VOTE_COPY,
   activeRedVoteSeason,
@@ -61,7 +61,14 @@ const PromoLink: React.FC<{
   </a>
 )
 
-export const RedVotePromo: React.FC = () => {
+/**
+ * `councilHref` (#2300): on the district Overview the card also links to the
+ * council credentials page — the pre-meeting count Red Vote's audience asks
+ * for. Omitted on that page itself. A route, never club data.
+ */
+export const RedVotePromo: React.FC<{ councilHref?: string }> = ({
+  councilHref,
+}) => {
   const headingId = useId()
   const season = useRedVoteSeason()
   const [dismissed, setDismissed] = useState<string | null>(() =>
@@ -88,6 +95,13 @@ export const RedVotePromo: React.FC = () => {
         <p className="red-vote-promo__fine">
           {RED_VOTE_COPY.attribution} <span>{RED_VOTE_COPY.disclaimer}</span>
         </p>
+        {councilHref && (
+          <p className="red-vote-promo__fine">
+            <Link to={councilHref} className="red-vote-promo__council">
+              {RED_VOTE_COPY.councilLink}
+            </Link>
+          </p>
+        )}
       </div>
       <div className="red-vote-promo__actions">
         <PromoLink placement={placement} className="red-vote-promo__cta">

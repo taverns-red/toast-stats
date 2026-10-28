@@ -35,6 +35,8 @@ export const RED_VOTE_COPY = {
   dismissLabel: 'Dismiss the Red Vote banner',
   madeByPrefix: 'Free from Red Taverns · Also from us:',
   productName: 'Red Vote',
+  // #2300 — the card's link to the district's council credentials page.
+  councilLink: 'Council credentials: clubs in good standing on a council date',
 } as const
 
 /** The UTM-tagged marketing-page link for one placement. */

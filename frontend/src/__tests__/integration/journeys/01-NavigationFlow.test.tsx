@@ -18,16 +18,13 @@ import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import App from '../../../App'
 import { setupCdnFetchMock } from '../utils/mockCdnData'
+import { preloadAppRoutes } from '../utils/preloadAppRoutes'
 
-// Compile the lazy routes this journey visits once, up front: otherwise the
-// first test's 1 s findBy window measures Vite's cold transform of their
-// module graphs, not the app; on a slow CI runner that alone
-// overruns the window (#2248; same pattern as DistrictMapPage.test.tsx).
+// Compile App's lazy route graph once, up front: otherwise the first test's
+// 1 s findBy window measures Vite's cold transform of the route page it
+// opens, not the app (#2248). The set is derived from App.tsx (#2373).
 beforeAll(async () => {
-  await Promise.all([
-    import('../../../pages/DistrictDetailPage'),
-    import('../../../components/GlobalRankingsTab'),
-  ])
+  await preloadAppRoutes()
 })
 
 describe('Journey 01: The Navigation Flow', () => {
@@ -93,6 +90,11 @@ describe('Journey 01: The Navigation Flow', () => {
       { name: /view all clubs/i },
       { timeout: 5000 }
     )
+    // #2300 — the Overview links the council credentials page (a routed
+    // page that is deliberately not in the district subnav).
+    expect(
+      screen.getByRole('link', { name: /^council credentials$/i })
+    ).toHaveAttribute('href', '/district/61/council')
     await user.click(clubsLink)
     await screen.findByRole(
       'heading',

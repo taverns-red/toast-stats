@@ -47,6 +47,11 @@
  *   index verdict holds it, only a missing completeness verdict. Its years
  *   are copied in their own phase, after the globals, and its index in the
  *   entry phase, so prod never names a year it does not hold (R15).
+ * - **The district share cards (#2304).** `og/v1/district/<id>.png` is not
+ *   a promoted prefix either. Only the og-cards job passes `ogCards`, on
+ *   its own manifest and a verdict that passes only when prod serves the
+ *   exact rankings and awards the cards were drawn from. Neither dated nor
+ *   global; copied in their own phase. Anything else under `og/` throws.
  * - **Fail closed.** A malformed path (wildcard, `..`, an undated
  *   snapshots/ object) throws; a missing completeness verdict holds
  *   everything; an unreadable index or prod listing holds the globals.
@@ -55,6 +60,7 @@
 import { PROMOTED_PREFIXES } from './promotionContentGate.js'
 import { EDUCATION_ROLLUP_INDEX_PATH } from '@taverns-red/shared-contracts'
 import { isEducationRollupObject } from './educationRollupPlan.js'
+import { isOgDistrictCardPath, OG_PREFIX } from './ogCardPaths.js'
 import { assertPruneDeletionScope } from './pruneGcsDeletions.js'
 import { latestByPath, type RunManifestEntry } from './runManifest.js'
 
@@ -78,6 +84,7 @@ export type PromotionClass =
   | { kind: 'date'; date: string }
   | { kind: 'global' }
   | { kind: 'education-rollup' }
+  | { kind: 'og-card' }
   | { kind: 'excluded'; reason: string }
 
 const EDUCATION_ROLLUP_DIR = 'derived/education-rollup/'
@@ -99,6 +106,14 @@ export function classifyPromotionPath(path: string): PromotionClass {
       )
     }
     return { kind: 'education-rollup' }
+  }
+  if (path.startsWith(OG_PREFIX)) {
+    if (!isOgDistrictCardPath(path)) {
+      throw new Error(
+        `refusing to promote '${path}': under ${OG_PREFIX} only og/v1/district/<id>.png is`
+      )
+    }
+    return { kind: 'og-card' }
   }
   const prefix = PROMOTED_PREFIXES.find(p => path.startsWith(p))
   if (!prefix) {
@@ -158,9 +173,14 @@ export interface PromotionInputs {
    * only. Omitted, its objects are excluded.
    */
   educationRollup?: boolean
+  /**
+   * Promote the district share cards (#2304): the og-cards job only, on
+   * its own manifest and source-data verdict. Omitted, they are excluded.
+   */
+  ogCards?: boolean
 }
 
-export type CopyPhase = 'dates' | 'globals' | 'rollup' | 'entry'
+export type CopyPhase = 'dates' | 'globals' | 'rollup' | 'og' | 'entry'
 
 export interface CopyBatch {
   phase: CopyPhase
@@ -305,6 +325,7 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
   const dated = new Map<string, string[]>()
   const globalPaths: string[] = []
   const rollupPaths: string[] = []
+  const ogPaths: string[] = []
   for (const p of latest) {
     const c = classifyPromotionPath(p)
     if (c.kind === 'excluded') excluded.push({ path: p, reason: c.reason })
@@ -315,6 +336,14 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
           path: p,
           reason:
             'the education rollup promotes only through the report-sidecar manifest, after its reports-date check (#2222)',
+        })
+    } else if (c.kind === 'og-card') {
+      if (inputs.ogCards) ogPaths.push(p)
+      else
+        excluded.push({
+          path: p,
+          reason:
+            'district share cards promote only through the og-cards job, after its source-data gate (#2304)',
         })
     } else if (c.kind === 'global') globalPaths.push(p)
     else dated.set(c.date, [...(dated.get(c.date) ?? []), p])
@@ -335,7 +364,12 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
       heldDates: [...dated.keys()].sort(),
       heldAll: reason,
       globals: { promote: false, reason, paths: globalPaths },
-      held: [...[...dated.values()].flat(), ...globalPaths, ...rollupPaths]
+      held: [
+        ...[...dated.values()].flat(),
+        ...globalPaths,
+        ...rollupPaths,
+        ...ogPaths,
+      ]
         .sort()
         .map(path => ({ path, reason })),
       excluded,
@@ -389,7 +423,9 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
     ...batch(
       'entry',
       rollupPaths.filter(p => p === EDUCATION_ROLLUP_INDEX_PATH)
-    )
+    ),
+    // The district share cards (#2304): a flat set, no index, alone.
+    ...batch('og', ogPaths)
   )
 
   return {

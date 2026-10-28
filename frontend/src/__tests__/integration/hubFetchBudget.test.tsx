@@ -21,12 +21,28 @@
  * change outside #2027. So rankings are budgeted per URL.
  */
 import React from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeAll,
+  beforeEach,
+  afterEach,
+} from 'vitest'
 import { render, cleanup, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { setupCdnFetchMock } from './utils/mockCdnData'
+import { preloadAppRoutes } from './utils/preloadAppRoutes'
 
 vi.setConfig({ testTimeout: 15000 })
+
+// Compile App's lazy route graph once, up front: otherwise the first test's
+// 1 s findBy window measures Vite's cold transform of the route page it
+// opens, not the app (#2248). The set is derived from App.tsx (#2373).
+beforeAll(async () => {
+  await preloadAppRoutes()
+})
 
 const CDN = 'https://cdn.taverns.red'
 

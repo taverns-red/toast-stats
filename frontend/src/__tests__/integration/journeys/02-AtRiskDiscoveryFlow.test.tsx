@@ -16,16 +16,13 @@ import App from '../../../App'
 import { clickDistrictRow } from './_helpers'
 
 import { setupCdnFetchMock } from '../utils/mockCdnData'
+import { preloadAppRoutes } from '../utils/preloadAppRoutes'
 
-// Compile the lazy routes this journey visits once, up front: otherwise the
-// first test's 1 s findBy window measures Vite's cold transform of their
-// module graphs, not the app; on a slow CI runner that alone
-// overruns the window (#2248; same pattern as DistrictMapPage.test.tsx).
+// Compile App's lazy route graph once, up front: otherwise the first test's
+// 1 s findBy window measures Vite's cold transform of the route page it
+// opens, not the app (#2248). The set is derived from App.tsx (#2373).
 beforeAll(async () => {
-  await Promise.all([
-    import('../../../pages/DistrictDetailPage'),
-    import('../../../pages/DistrictClubsPage'),
-  ])
+  await preloadAppRoutes()
 })
 
 // Journey tests render <App /> and click through multi-step flows; the

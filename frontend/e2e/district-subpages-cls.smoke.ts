@@ -62,6 +62,8 @@ const SUBPAGES = [
   'meetings',
   // Officer training (#2296).
   'training',
+  // Council credentials (#2300): routed, not in the subnav.
+  'council',
   // Charter cohort survival (#1817), under Growth: the loading slot is
   // reserved taller than the viewport.
   'growth/survival',

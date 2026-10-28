@@ -61,6 +61,10 @@ const DistrictSurvivalPage = React.lazy(
 const DistrictEducationPage = React.lazy(
   () => import('./pages/DistrictEducationPage')
 )
+// Code-split: DistrictCouncilPage — council credentials as of a date (#2300)
+const DistrictCouncilPage = React.lazy(
+  () => import('./pages/DistrictCouncilPage')
+)
 // Code-split: DistrictMeetingsPage — meeting-time heatmap (#1796, epic #1781)
 const DistrictMeetingsPage = React.lazy(
   () => import('./pages/DistrictMeetingsPage')
@@ -278,6 +282,15 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<DistrictRouteFallback />}>
               <DistrictActionListPage />
+            </Suspense>
+          ),
+        },
+        {
+          // Council credentials (#2300): a routed page, not a subnav section.
+          path: 'district/:districtId/council',
+          element: (
+            <Suspense fallback={<DistrictRouteFallback />}>
+              <DistrictCouncilPage />
             </Suspense>
           ),
         },

@@ -114,6 +114,30 @@ describe('RedVotePromo (#2090)', () => {
   })
 })
 
+describe('RedVotePromo — council credentials link (#2300)', () => {
+  beforeEach(() => window.localStorage.clear())
+
+  it('links to the council page when given its href, in either form', () => {
+    for (const search of [IN_SEASON, OUT_OF_SEASON]) {
+      const { unmount } = renderAt(
+        search,
+        <RedVotePromo councilHref="/district/61/council" />
+      )
+      expect(
+        screen.getByRole('link', { name: /council credentials/i })
+      ).toHaveAttribute('href', '/district/61/council')
+      unmount()
+    }
+  })
+
+  it('has no council link without the href (the council page itself)', () => {
+    renderAt(OUT_OF_SEASON, <RedVotePromo />)
+    expect(
+      screen.queryByRole('link', { name: /council credentials/i })
+    ).toBeNull()
+  })
+})
+
 describe('RedVoteMadeByLine (#2090)', () => {
   afterEach(() => {
     delete window.gtag
