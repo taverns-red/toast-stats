@@ -19,6 +19,7 @@ import {
 import { extractDivisionPerformance } from '../extractDivisionPerformance'
 import { buildActionList } from '../actionListData'
 import { getAreaVisitDeadlines } from '../areaRecognitionState'
+import { divisionChip } from '../../components/DivisionRecognitionChip'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 
 const DATE = '2026-10-27' // PY 2026-27, round 1, after the 30 Sep CSP date
@@ -147,7 +148,10 @@ describe('buildCouncilPack (#2299)', () => {
         distinguishedClubs: division.distinguishedClubs,
         requiredDistinguishedClubs: division.requiredDistinguishedClubs,
       })
-      expect(pack.recognition.label).toBe('Not distinguished')
+      // The same chip the phone division rows show (net loss outranks the
+      // tier: the suspended club leaves paid clubs under the base here).
+      expect(pack.recognition.label).toBe(divisionChip(division).label)
+      expect(pack.recognition.label).toBe('Net loss')
     })
 
     it('lists every area of the division, in snapshot order', () => {
