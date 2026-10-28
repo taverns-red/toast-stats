@@ -115,7 +115,9 @@ describe('council-pack.css (#2299)', () => {
   it('uses the legacy palette only (no --rt-stats, no raw colours)', () => {
     expect(packCss).not.toMatch(/--rt-stats/)
     // Outside @media print, colours come from tokens, never hex literals.
-    const screen = packCss.replace(/@media print\s*\{[\s\S]*\n\}/, '')
+    const screen = packCss
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/@media print\s*\{[\s\S]*\n\}/, '')
     expect(screen).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
   })
 })

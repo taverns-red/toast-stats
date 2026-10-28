@@ -40,6 +40,15 @@ function pdfPageCount(pdf: Buffer): number {
   return (pdf.toString('latin1').match(/\/Type\s*\/Page(?!s)\b/g) ?? []).length
 }
 
+/** Horizontal overflow of the document in px (> 0: wider than the paper). */
+function printOverflow(page: Page): Promise<number> {
+  return page.evaluate(
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth
+  )
+}
+
 async function areaPackPaths(page: Page): Promise<string[]> {
   await openPack(page, `${LARGEST_DIVISION}/print`)
   const ids = await page
@@ -59,8 +68,15 @@ test.describe('council packs print to their page budget (Chromium PDF)', () => {
     test(`division pack ${division} is 2 pages on Letter and A4`, async ({
       page,
     }) => {
+      await page.setViewportSize({ width: PRINT_BOX.width, height: 1000 })
       await openPack(page, `${division}/print`)
       await page.emulateMedia({ media: 'print' })
+      // Chromium's PDF shrinks an over-wide page to fit, which would hide a
+      // roster wider than the paper; measure the width at the printable box.
+      expect(
+        await printOverflow(page),
+        `${division} width`
+      ).toBeLessThanOrEqual(0)
       for (const format of ['Letter', 'A4'] as const) {
         const pdf = await page.pdf({ format, margin: MARGIN })
         expect(pdfPageCount(pdf), `${division} on ${format}`).toBe(2)
@@ -73,9 +89,11 @@ test.describe('council packs print to their page budget (Chromium PDF)', () => {
   }) => {
     test.setTimeout(120_000)
     for (const path of await areaPackPaths(page)) {
+      await page.setViewportSize({ width: PRINT_BOX.width, height: 1000 })
       await page.emulateMedia({ media: 'screen' })
       await openPack(page, path)
       await page.emulateMedia({ media: 'print' })
+      expect(await printOverflow(page), `${path} width`).toBeLessThanOrEqual(0)
       for (const format of ['Letter', 'A4'] as const) {
         const pdf = await page.pdf({ format, margin: MARGIN })
         expect(pdfPageCount(pdf), `${path} on ${format}`).toBe(1)
