@@ -73,28 +73,23 @@ const BulletBar: React.FC<BulletBarProps> = ({
   // zero-target rows so tick positions never become NaN%.
   if (targets.smedley <= 0) return null
 
-  // Zoom scale into the tier band so the four ticks have room to spread.
-  // A [0, Smedley] scale crushed D/S/P/Sm into 93%–100% on real data —
-  // labels collided and the bar was unreadable (#558). The scale below
-  // auto-expands to include `current` whenever it lies outside the tier
-  // band, so no clamping is needed and no "below-scale" affordance is
-  // required — the marker is always on the bar. When the district has
-  // hit Smedley, maxScale collapses to `current` so the marker pins to
-  // 100% (a "you've made it" signal); the 5% headroom only applies when
-  // there's still tier to chase.
+  // A 0-based scale (#2387), so the marker and fill show real progress:
+  // 139 of a 171 Smedley reads as ~80% of the way, not as nothing. #558
+  // zoomed the scale into the tier band to stop the tier LABELS colliding,
+  // but its left edge followed `current` down, so any district below
+  // 0.9 × Distinguished got its marker pinned to 0% with an empty fill —
+  // progress was invisible exactly when it mattered. #1517 has since moved
+  // the labels into the flow legend below, so the ticks are bare 1px marks
+  // that can sit close together.
   //
-  // A Success Plan target (#2297) widens the scale the same way `current`
-  // does, so its tick is always on the bar too — above Smedley or below
-  // Distinguished.
+  // The top expands to `current` once it reaches the top mark, so the
+  // marker pins to 100% (a "you've made it" signal); the 5% headroom only
+  // applies while there is still something to chase. A Success Plan target
+  // (#2297) above Smedley raises the top so its tick stays on the bar.
   const allAchieved = current >= targets.smedley
   const top = Math.max(targets.smedley, planTarget ?? 0)
-  const minScale = Math.max(
-    0,
-    Math.min(current, 0.9 * targets.distinguished, planTarget ?? Infinity)
-  )
   const maxScale = current >= top ? current : 1.05 * top
-  const range = maxScale - minScale
-  const positionAt = (v: number): number => ((v - minScale) / range) * 100
+  const positionAt = (v: number): number => (Math.max(0, v) / maxScale) * 100
   const markerPct = positionAt(current)
 
   const tiers: TierTick[] = TIERS.map(t => ({ ...t, value: targets[t.key] }))
@@ -131,6 +126,7 @@ const BulletBar: React.FC<BulletBarProps> = ({
 
         <div className="relative h-2 rounded-full bg-gray-200">
           <div
+            data-testid="progress-fill"
             className="absolute inset-y-0 left-0 rounded-full bg-tm-loyal-blue"
             style={{ width: formatPct(markerPct) }}
           />
