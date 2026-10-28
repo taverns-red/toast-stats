@@ -266,6 +266,34 @@ describe('Division print pack (#2299)', () => {
     const areas = screen.getByTestId('council-pack-areas')
     expect(within(areas).getAllByRole('row')).toHaveLength(1 + 2)
   })
+
+  it('labels visit reports as done and needed, never as a fraction of clubs', () => {
+    renderAt(
+      '/district/61/division/A/print',
+      DIVISION_PRINT,
+      <DivisionPrintPage />
+    )
+    const areas = screen.getByTestId('council-pack-areas')
+    // Review of #2385: "5/4" read as visits out of clubs. The needed count is
+    // the Distinguished Area Program threshold (75% of the club base), so it
+    // is spelled out instead of written as a denominator.
+    expect(
+      within(areas).getByRole('columnheader', {
+        name: /round 1 visit reports/i,
+      })
+    ).toBeInTheDocument()
+    const row10 = within(areas).getByRole('row', { name: /^10\b/ })
+    expect(row10).toHaveTextContent('1 done · 2 needed')
+    expect(row10).not.toHaveTextContent(/\d+\/\d+ [✓✗]/)
+    // The sentence counts clubs, in different words from the column.
+    const visits = screen.getByRole('heading', {
+      level: 2,
+      name: /club visits/i,
+    }).parentElement!
+    expect(visits).toHaveTextContent(
+      /2 active clubs have no Round 1 visit report yet/
+    )
+  })
 })
 
 // --- Slug validation → branded 404 ------------------------------------------

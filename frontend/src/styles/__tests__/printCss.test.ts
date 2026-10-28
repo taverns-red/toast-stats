@@ -111,6 +111,14 @@ describe('council-pack.css (#2299)', () => {
     expect(print).toMatch(
       /\.council-pack__roster-table\s*\{[^}]*table-layout:\s*fixed/
     )
+    // Club names wrap on paper (no hover recovers an ellipsis), review of
+    // #2385: the roster name rule must allow wrapping and must not ellipse.
+    const nameRule =
+      print.match(
+        /\.council-pack__roster-table \.council-pack__name\s*\{[^}]*\}/
+      )?.[0] ?? ''
+    expect(nameRule).toMatch(/white-space:\s*normal/)
+    expect(nameRule).toMatch(/text-overflow:\s*clip/)
     // Screen-only controls never print.
     expect(print).toMatch(
       /\.council-pack__screen-only[^{]*\{[^}]*display:\s*none/
