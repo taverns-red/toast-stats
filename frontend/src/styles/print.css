@@ -1,7 +1,8 @@
 /* Print stylesheet (#427).
 
    Goal: when a District Director hits Cmd-P on /, /district/:id, or
-   /district/:id/club/:clubId, produce a clean letter-sized printout
+   /district/:id/club/:clubId, produce a clean printout (A4 or Letter:
+   the paper follows the printer, #2299)
    suitable for board meetings. Drop interactive chrome, force light
    colours even for dark-mode users, avoid splitting cards across
    pages, and surface the URL in the page margin.
@@ -13,7 +14,10 @@
 @media print {
   /* ----- Page setup ----- */
   @page {
-    size: letter;
+    /* auto, not letter (#2299): the council packs are laid out to the box
+       A4 and Letter share at these margins (698 x 931 CSS px), so either
+       paper prints them on their page budget. */
+    size: auto;
     margin: 0.6in 0.5in 0.7in 0.5in;
   }
 
@@ -50,18 +54,18 @@
   .tm-skip-link,
   .command-palette,
   .districts-page-header__actions,
-  .district-detail-tabs,
+  /* Routed-subpage chrome (#2299): the subnav replaced the old
+     .district-detail-tabs, and the phone context bar and bottom section
+     bar are navigation, not content. printCss.test.ts fails on a selector
+     here that no longer exists in the app. */
+  .district-subnav,
+  .context-bar,
+  .section-bar,
   /* Hide everything that's purely interactive */
   button[aria-label*='Filter'],
   button[aria-label='Toggle theme'] {
     display: none !important;
   }
-
-  /* ----- Per-page tabpanel reveal -----
-     DistrictDetailTabs only mounts the active panel; we keep that
-     behaviour for print (it represents what the user is looking at).
-     The role=tabpanel containers themselves use `hidden`, which
-     browsers respect in print. Nothing more to do. */
 
   /* ----- Page-break behaviour ----- */
   /* Avoid splitting cards / charts / table rows across pages. */
@@ -103,6 +107,13 @@
     border-top: 1px solid #cccccc;
     font-size: 9pt;
     color: #555555;
+  }
+
+  /* A council pack prints its own source footer with the as-of, snapshot
+     and printed dates (#2299); a second, undated line would only cost it
+     its page budget. */
+  .app-shell__main:has(.council-pack)::after {
+    content: none;
   }
 
   /* ----- Layout simplifications -----
