@@ -18,14 +18,20 @@ export function lazyImportTargets(source: string): string[] {
   return [...new Set([...source.matchAll(LAZY_IMPORT)].map(m => m[1]!))]
 }
 
-/** Modules a test source imports inside a top-level `beforeAll` body. */
-export function preloadedModules(source: string): Set<string> {
-  const preloaded = new Set<string>()
-  for (const start of source.matchAll(/^beforeAll\(/gm)) {
+/** The bodies of a test source's top-level `beforeAll` hooks. */
+export function beforeAllBodies(source: string): string[] {
+  return [...source.matchAll(/^beforeAll\(/gm)].map(start => {
     // A top-level hook closes on the first line that starts with `}`.
     const rest = source.slice(start.index)
     const end = rest.search(/\n\}/)
-    const body = end === -1 ? rest : rest.slice(0, end)
+    return end === -1 ? rest : rest.slice(0, end)
+  })
+}
+
+/** Modules a test source imports inside a top-level `beforeAll` body. */
+export function preloadedModules(source: string): Set<string> {
+  const preloaded = new Set<string>()
+  for (const body of beforeAllBodies(source)) {
     for (const m of body.matchAll(DYNAMIC_IMPORT)) preloaded.add(m[1]!)
   }
   return preloaded

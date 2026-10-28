@@ -18,16 +18,13 @@ import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import App from '../../../App'
 import { setupCdnFetchMock } from '../utils/mockCdnData'
+import { preloadAppRoutes } from '../utils/preloadAppRoutes'
 
-// Compile the lazy routes this journey visits once, up front: otherwise the
-// first test's 1 s findBy window measures Vite's cold transform of their
-// module graphs, not the app; on a slow CI runner that alone
-// overruns the window (#2248; same pattern as DistrictMapPage.test.tsx).
+// Compile App's lazy route graph once, up front: otherwise the first test's
+// 1 s findBy window measures Vite's cold transform of the route page it
+// opens, not the app (#2248). The set is derived from App.tsx (#2373).
 beforeAll(async () => {
-  await Promise.all([
-    import('../../../pages/DistrictDetailPage'),
-    import('../../../components/GlobalRankingsTab'),
-  ])
+  await preloadAppRoutes()
 })
 
 describe('Journey 01: The Navigation Flow', () => {
