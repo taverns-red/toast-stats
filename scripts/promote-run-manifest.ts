@@ -14,6 +14,8 @@
  *               and headers (Content-Encoding, Cache-Control) arrive as staged.
  *               Dates, then globals, then the v1/ entry points; a failed copy
  *               stops the run before the next phase and exits 1.
+ *   --og-cards  also copy `og/v1/district/<id>.png`, in its own phase: the
+ *               og-cards job's own manifest and verdict only (#2304).
  *   --assume-pass  (dry run only) preview without a completeness verdict,
  *               e.g. against a published runs/<id>/written.jsonl.
  *
