@@ -166,6 +166,12 @@ const DivisionPage = React.lazy(() => import('./pages/DivisionPage'))
 // Code-split: AreaPage — /district/:districtId/division/:divId/area/:areaId (#425)
 const AreaPage = React.lazy(() => import('./pages/AreaPage'))
 
+// Code-split: council print packs (#2299) — /district/:districtId/division/
+// :divId/print and .../area/:areaId/print. The literal `print` segment cannot
+// collide with `area/:areaId`, which needs two segments.
+const DivisionPrintPage = React.lazy(() => import('./pages/DivisionPrintPage'))
+const AreaPrintPage = React.lazy(() => import('./pages/AreaPrintPage'))
+
 // Code-split: AreaRedirectPage — flat alias /district/:districtId/area/:areaId
 // → canonical nested area route (#1017)
 const AreaRedirectPage = React.lazy(() => import('./pages/AreaRedirectPage'))
@@ -596,6 +602,22 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<DistrictRouteFallback />}>
               <AreaPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'district/:districtId/division/:divId/print',
+          element: (
+            <Suspense fallback={<DistrictRouteFallback />}>
+              <DivisionPrintPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'district/:districtId/division/:divId/area/:areaId/print',
+          element: (
+            <Suspense fallback={<DistrictRouteFallback />}>
+              <AreaPrintPage />
             </Suspense>
           ),
         },

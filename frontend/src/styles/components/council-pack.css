@@ -1,0 +1,396 @@
+/* Council print packs (#2299): the Area pack (one page) and the Division
+   pack (a summary page, then the club roster on its own page).
+
+   Legacy palette only (#2080: no product accent, no new colours before Phase 2):
+   --ink / --ink-2 / --ink-3, --surface / --surface-2, --line and
+   --tm-loyal-blue, all remapped under [data-theme='dark']. Print forces
+   black on white (print.css) and uses plain greys inside @media print.
+
+   Print layout is designed to the box A4 and Letter share at print.css's
+   margins: 698 x 931 CSS px. e2e/council-pack-print.smoke.ts counts the
+   PDF pages at both sizes. Screen text stays at 14px or more. */
+
+.council-pack-root {
+  min-height: calc(100vh - 56px);
+}
+
+.council-pack-link {
+  margin: 0 0 1.5rem;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+
+.council-pack-link a {
+  font-weight: 600;
+  color: var(--tm-loyal-blue);
+}
+
+.council-pack {
+  max-width: 52rem;
+  margin: 0 auto;
+  color: var(--ink);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.council-pack__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin: 0 0 1rem;
+}
+
+.council-pack__back {
+  font-weight: 600;
+  color: var(--tm-loyal-blue);
+}
+
+.council-pack__print {
+  min-height: 44px;
+  padding: 0 1.25rem;
+  font-weight: 700;
+  color: var(--surface);
+  background: var(--tm-loyal-blue);
+  border: 1px solid var(--tm-loyal-blue);
+  border-radius: var(--rt-radius-md, 8px);
+  cursor: pointer;
+}
+
+.council-pack__print:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.council-pack__hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+
+.council-pack__page {
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+}
+
+.council-pack__page + .council-pack__page {
+  margin-top: 1.5rem;
+}
+
+.council-pack__header {
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--tm-loyal-blue);
+}
+
+.council-pack__eyebrow {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.council-pack__title {
+  margin: 0.125rem 0;
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.council-pack__title--small {
+  font-size: 1.125rem;
+}
+
+.council-pack__dates {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+
+.council-pack__section {
+  margin: 0 0 0.875rem;
+}
+
+.council-pack__section h2 {
+  margin: 0 0 0.375rem;
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.council-pack__section p {
+  margin: 0 0 0.375rem;
+}
+
+.council-pack__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.25rem 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.council-pack__facts dt {
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+
+.council-pack__facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* Tables scroll inside their section on a phone; the page never does. */
+.council-pack__section {
+  overflow-x: auto;
+}
+
+.council-pack__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.council-pack__table th,
+.council-pack__table td {
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.council-pack__table thead th {
+  font-weight: 700;
+  color: var(--ink-2);
+  background: var(--surface-2);
+}
+
+.council-pack__table tbody th {
+  font-weight: 600;
+}
+
+.council-pack__num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.council-pack__name {
+  display: block;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.council-pack__list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.council-pack__club {
+  font-weight: 600;
+}
+
+.council-pack__more,
+.council-pack__empty,
+.council-pack__continued {
+  color: var(--ink-3);
+}
+
+.council-pack__more {
+  list-style: none;
+  margin-left: -1.25rem;
+  font-style: italic;
+}
+
+.council-pack__footer {
+  margin-top: 0.75rem;
+  padding-top: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  border-top: 1px solid var(--line);
+}
+
+.council-pack__footer p {
+  margin: 0;
+}
+
+@media print {
+  .council-pack__screen-only,
+  .council-pack-link {
+    display: none !important;
+  }
+
+  .council-pack-root,
+  .app-shell__page.council-pack-root {
+    min-height: 0 !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .council-pack {
+    max-width: none;
+    font-size: 9pt;
+    line-height: 1.3;
+    color: #000000;
+  }
+
+  .council-pack__page {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .council-pack__page + .council-pack__page {
+    margin-top: 0;
+  }
+
+  /* The division roster always starts page 2, so page 1 is the summary. */
+  .council-pack__roster--own-page {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .council-pack__section {
+    overflow: visible;
+    margin-bottom: 8pt;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .council-pack__title {
+    font-size: 15pt;
+  }
+
+  .council-pack__title--small {
+    font-size: 11pt;
+  }
+
+  .council-pack__section h2 {
+    font-size: 10.5pt;
+    margin-bottom: 3pt;
+  }
+
+  .council-pack__eyebrow,
+  .council-pack__dates,
+  .council-pack__facts dt,
+  .council-pack__footer {
+    font-size: 8.5pt;
+    color: #333333;
+  }
+
+  .council-pack__header {
+    border-bottom-color: #000000;
+    margin-bottom: 6pt;
+    padding-bottom: 4pt;
+  }
+
+  .council-pack__table {
+    font-size: 8.5pt;
+    line-height: 1.2;
+  }
+
+  /* print.css pads every cell 4px 8px; a pack row needs to be tighter to
+     fit a 28-club roster on one page. */
+  .council-pack th,
+  .council-pack td {
+    padding: 1pt 4pt !important;
+    border: 1px solid #bbbbbb !important;
+  }
+
+  .council-pack__table thead th {
+    background: #eeeeee;
+    color: #000000;
+  }
+
+  /* The roster must fit the 698px box, not lean on the browser's
+     shrink-to-fit: headers may wrap, and names cap at one ellipsed line. */
+  .council-pack__table thead th {
+    white-space: normal;
+  }
+
+  /* Fixed layout: the table is exactly the paper's width and each cell
+     ellipses rather than widening it (CI's Linux fonts ran 30px wider
+     than macOS with an auto layout). */
+  .council-pack__roster-table {
+    table-layout: fixed;
+  }
+
+  /* Nothing on the printed roster ellipses (no hover on paper): cells
+     wrap inside their fixed column instead. */
+  .council-pack__roster-table th,
+  .council-pack__roster-table td {
+    white-space: normal;
+  }
+
+  /* Short marks never wrap: a two-line "Not / yet" doubled every row
+     under CI's DejaVu Sans fallback (1056px roster against 931). */
+  .council-pack__roster-table td.council-pack__nowrap,
+  .council-pack__roster-table td.council-pack__num {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+
+  /* Only a club name too long for its column breaks inside a word;
+     headers and short labels break between words only. */
+  .council-pack__roster-table tbody th,
+  .council-pack__roster-table tbody td {
+    overflow-wrap: anywhere;
+  }
+
+  .council-pack__col-club {
+    width: 32.5%;
+  }
+
+  .council-pack__col-area {
+    width: 5.5%;
+  }
+
+  .council-pack__col-health {
+    width: 12%;
+  }
+
+  .council-pack__col-members {
+    width: 9.5%;
+  }
+
+  .council-pack__col-goals {
+    width: 6.5%;
+  }
+
+  .council-pack__col-tier {
+    width: 13%;
+  }
+
+  .council-pack__col-mark {
+    width: 10.5%;
+  }
+
+  /* Names wrap on paper: there is no hover to recover an ellipsis (review
+     of #2385). The fixed column still bounds the width. */
+  .council-pack__roster-table .council-pack__name {
+    max-width: none;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  .council-pack__roster-table th[scope='row'] {
+    white-space: normal;
+  }
+
+  .council-pack__footer {
+    margin-top: 6pt;
+    border-top-color: #999999;
+  }
+
+  /* No printed hrefs inside the document (there are no links in it). */
+  .council-pack a::after {
+    content: '' !important;
+  }
+}

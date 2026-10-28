@@ -17,7 +17,7 @@
   ],
   "scripts": {
     "dev:frontend": "npm run dev --workspace=frontend",
-    "build:frontend": "npm run build --workspace=frontend",
+    "build:frontend": "npm run build --workspace=frontend && npx tsx scripts/generate-og-stubs.ts",
     "build:collector-cli": "npm run build --workspace=@taverns-red/collector-cli",
     "build:analytics-core": "npm run build --workspace=@taverns-red/analytics-core",
     "build:shared-contracts": "npm run build --workspace=@taverns-red/shared-contracts",
