@@ -29,7 +29,10 @@ import {
   missingDcpGoalHeaders,
   suspectedDcpGoalHeaderRenames,
 } from '../analytics/dcpGoalDefinitions.js'
-import { classifyDistinguishedTier } from '../analytics/ClubEligibilityUtils.js'
+import {
+  classifyDistinguishedTier,
+  readCSPCell,
+} from '../analytics/ClubEligibilityUtils.js'
 import { ANALYTICS_SCHEMA_VERSION } from '../version.js'
 
 /**
@@ -399,11 +402,11 @@ export class DataTransformer implements IDataTransformer {
       }
 
       // Extract CSP (Club Success Plan) submission status
-      // Present from 2025-2026 program year onward; undefined for earlier CSVs
-      const cspValue = this.extractString(record, 'CSP', 'Club Success Plan')
-      if (cspValue !== undefined) {
-        const normalized = cspValue.toLowerCase().trim()
-        club.cspSubmitted = normalized === 'yes' || normalized === 'y'
+      // Present from 2025-2026 program year onward; undefined for earlier CSVs.
+      // One cell rule shared with getCSPStatusFromRecord (#2327).
+      const cspSubmitted = readCSPCell(record)
+      if (cspSubmitted !== undefined) {
+        club.cspSubmitted = cspSubmitted
       }
 
       clubs.push(club)

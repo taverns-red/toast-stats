@@ -145,32 +145,72 @@ export function classifyDistinguishedTier(
   return 'D'
 }
 
+/** Header names a club-performance CSV may use for the CSP cell, in lookup order. */
+const CSP_COLUMN_KEYS = [
+  'CSP',
+  'Club Success Plan',
+  'CSP Submitted',
+  'Club Success Plan Submitted',
+] as const
+
+/**
+ * Affirmative CSP cell spellings: the union of what the three former parsers
+ * (DataTransformer, getCSPStatusFromRecord, the frontend's division builder)
+ * accepted. TI's export uses `Y`; the rest are kept so no reader regresses.
+ */
+const CSP_SUBMITTED_VALUES: ReadonlySet<string> = new Set([
+  'y',
+  'yes',
+  'true',
+  '1',
+  'submitted',
+])
+
+/**
+ * Read the CSP (Club Success Plan) cell of a raw club-performance record.
+ * This is the ONE parser for that cell (#2327): DataTransformer stores its
+ * result as `ClubStatistics.cspSubmitted`, and `getCSPStatusFromRecord` reads
+ * it straight from the raw record, so the two can never disagree.
+ *
+ * TI rule (Distinguished Club Program, Item 1111, Rev. 06/2026, p. 5): a club
+ * must submit its Club Success Plan to qualify for any Distinguished level.
+ * Only an affirmative cell counts as submitted (`CSP_SUBMITTED_VALUES`, any
+ * case or padding); `N`, a blank cell, or anything else is not submitted.
+ *
+ * Observed data (2026-10-28, single-object reads of 42 club-performance CSVs
+ * from 2025-08-05 to 2026-10-27 across eight large districts): the cell is
+ * only ever `Y` or `N`. The blank-cell branch is defensive, not observed.
+ *
+ * @returns `undefined` when the record has no CSP value (pre-2025-26 exports
+ *   have no CSP column), otherwise whether the plan was submitted
+ */
+export function readCSPCell(
+  record: Readonly<Record<string, unknown>>
+): boolean | undefined {
+  for (const key of CSP_COLUMN_KEYS) {
+    const value = record[key]
+    if (value === undefined || value === null) continue
+    const normalized = String(value).toLowerCase().trim()
+    return CSP_SUBMITTED_VALUES.has(normalized)
+  }
+  return undefined
+}
+
 /**
  * Parse CSP (Club Success Plan) submission status from a raw scraped
  * record (string-form twin of getCSPStatus, which reads the normalized
- * boolean on ClubStatistics).
+ * boolean on ClubStatistics). The cell rule itself lives in `readCSPCell`.
  *
  * Historical compatibility: when the field is absent (pre-2025-2026
  * CSVs), CSP is treated as submitted — it was not a requirement then.
  *
  * @param record - Raw club record with dynamic CSV columns
- * @returns True unless the field is present and explicitly negative
+ * @returns True when the column is absent or the cell is affirmative
  */
 export function getCSPStatusFromRecord(
   record: Record<string, string | number | null | undefined>
 ): boolean {
-  const cspValue =
-    record['CSP'] ??
-    record['Club Success Plan'] ??
-    record['CSP Submitted'] ??
-    record['Club Success Plan Submitted']
-
-  if (cspValue === undefined || cspValue === null) {
-    return true
-  }
-
-  const cspString = String(cspValue).toLowerCase().trim()
-  return !['no', 'false', '0', 'not submitted', 'n'].includes(cspString)
+  return readCSPCell(record) ?? true
 }
 
 /**
