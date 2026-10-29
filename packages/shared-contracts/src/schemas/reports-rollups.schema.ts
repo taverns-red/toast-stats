@@ -41,9 +41,14 @@ const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const ProgramYear = z.string().regex(/^\d{4}-\d{4}$/)
 const Count = z.number().int().nonnegative()
 
-/** 1.1.0 (#2388): optional `prospective.byStepsComplete`. 1.0.0 files lack
- *  it and still parse. */
-export const REPORTS_ROLLUPS_VERSION = '1.1.0'
+/**
+ * Stays 1.0.0 until the writer emits `prospective.byStepsComplete` (#2388).
+ * This schema accepts that optional field first, because the reader deployed
+ * in prod is `.strict()`: the writer may only start once a release carrying
+ * this reader is live (Lesson: a strict CDN contract makes an additive field
+ * a breaking change for deployed readers).
+ */
+export const REPORTS_ROLLUPS_VERSION = '1.0.0'
 
 export const ReportsRollupsFormatSchema = z
   .object({
@@ -110,7 +115,7 @@ export const ReportsRollupFiguresSchema = z
         byStage: z.array(ProspectiveStageCountSchema),
         /**
          * Most steps complete first; the unrecognised group last (#2388).
-         * Absent in files written before 1.1.0.
+         * Optional: absent in every file written before the writer emits it.
          */
         byStepsComplete: z.array(ProspectiveStepsCountSchema).optional(),
       })

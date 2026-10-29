@@ -18,8 +18,7 @@
  *   one of its districts is (a partial sum is an invisible understatement).
  *   A present, empty report is a measured 0.
  * - **One reading of TI's text**: the shared vocabulary
- *   (`parseProspectStage`, `prospectProgress`, `classifyDuesRenewal`,
- *   `sponsorMentorRole`), the
+ *   (`parseProspectStage`, `classifyDuesRenewal`, `sponsorMentorRole`), the
  *   same rules the district pages apply.
  * - Counts only (Lesson 153): club ids are used to deduplicate and dropped;
  *   no club name, location or person reaches the output.
@@ -32,14 +31,12 @@ import {
   classifyDuesRenewal,
   normalizeClubId,
   parseProspectStage,
-  prospectProgress,
   sponsorMentorRole,
   type DistrictRegionHistory,
   type DistrictReportsDataset,
   type DistrictReportsSections,
   type DuesRenewalCounts,
   type ProspectiveStageCount,
-  type ProspectiveStepsCount,
   type ReportsRollupDistrict,
   type ReportsRollupDistrictStatus,
   type ReportsRollupFigures,
@@ -124,27 +121,6 @@ function addStages(
   }
 }
 
-/** Most steps complete first; the unrecognised (null) group last. */
-function sortSteps(groups: ProspectiveStepsCount[]): ProspectiveStepsCount[] {
-  return groups.sort(
-    (a, b) => (b.stepsComplete ?? -1) - (a.stepsComplete ?? -1)
-  )
-}
-
-function addSteps(
-  into: Map<number | null, ProspectiveStepsCount>,
-  groups: readonly ProspectiveStepsCount[]
-): void {
-  for (const s of groups) {
-    const g = into.get(s.stepsComplete) ?? {
-      stepsComplete: s.stepsComplete,
-      clubs: 0,
-    }
-    g.clubs += s.clubs
-    into.set(s.stepsComplete, g)
-  }
-}
-
 function duesCounts(
   records: SectionRecords<'octoberDuesRenewal'>,
   season: 'october' | 'april',
@@ -182,7 +158,6 @@ function districtFigures(
   let prospective: ReportsRollupFigures['prospective'] = null
   if (c.prospectiveClubs) {
     const stages = new Map<string, ProspectiveStageCount>()
-    const steps = new Map<number | null, ProspectiveStepsCount>()
     let paymentComplete = 0
     for (const r of c.prospectiveClubs) {
       const p = parseProspectStage(r.prospect)
@@ -192,19 +167,11 @@ function districtFigures(
           ? { stage: p.stageNumber, label: p.stageLabel, clubs: 1 }
           : { stage: null, label: UNRECOGNISED, clubs: 1 },
       ])
-      const progress = prospectProgress(r.prospect)
-      addSteps(steps, [
-        {
-          stepsComplete: progress.recognised ? progress.stepsComplete : null,
-          clubs: 1,
-        },
-      ])
     }
     prospective = {
       clubs: c.prospectiveClubs.length,
       paymentComplete,
       byStage: sortStages([...stages.values()]),
-      byStepsComplete: sortSteps([...steps.values()]),
     }
   }
 
@@ -282,27 +249,19 @@ export function sumReportsRollupFigures(
   let prospective: ReportsRollupFigures['prospective'] = null
   if (!prospects.some(p => p === null)) {
     const stages = new Map<string, ProspectiveStageCount>()
-    const steps = new Map<number | null, ProspectiveStepsCount>()
     let clubs = 0
     let paymentComplete = 0
-    const parts = prospects as NonNullable<
+    for (const p of prospects as NonNullable<
       ReportsRollupFigures['prospective']
-    >[]
-    for (const p of parts) {
+    >[]) {
       clubs += p.clubs
       paymentComplete += p.paymentComplete
       addStages(stages, p.byStage)
-      addSteps(steps, p.byStepsComplete ?? [])
     }
     prospective = {
       clubs,
       paymentComplete,
       byStage: sortStages([...stages.values()]),
-      // A 1.0.0 block has no steps-complete counts: a partial sum would be
-      // an invisible understatement, so the field is left out (#2388).
-      ...(parts.every(p => p.byStepsComplete !== undefined)
-        ? { byStepsComplete: sortSteps([...steps.values()]) }
-        : {}),
     }
   }
   return {

@@ -66,11 +66,6 @@ const SAMPLE = path.join(
 const BUCKET = 'test-bucket'
 const DATE = '2026-10-15'
 const OBJECT = `snapshots/${DATE}/reports-rollups.json`
-/** The v1.0.0 artifact, before #2388 added `byStepsComplete`. */
-const LEGACY_SAMPLE = path.join(
-  REPO,
-  'packages/shared-contracts/src/__tests__/__fixtures__/recorded-reports-rollups-v1.0.0.json'
-)
 
 let tmp: string
 let root: string
@@ -368,7 +363,6 @@ describe('content gate: reports-rollups (#2012)', () => {
       double(block.sponsorsMentors)
       double(block.prospective as unknown as Record<string, unknown>)
       for (const s of block.prospective?.byStage ?? []) s.clubs *= 2
-      for (const s of block.prospective?.byStepsComplete ?? []) s.clubs *= 2
     }
     return r
   }
@@ -395,19 +389,6 @@ describe('content gate: reports-rollups (#2012)', () => {
   it('passes the recorded artifact, and a consistent two-district one', () => {
     expect(check(OBJECT, RECORDED)).toBeNull()
     expect(check(OBJECT, twoDistricts())).toBeNull()
-  })
-
-  it('passes a v1.0.0 artifact written before byStepsComplete (#2388)', () => {
-    const legacy = JSON.parse(fs.readFileSync(LEGACY_SAMPLE, 'utf-8'))
-    expect(legacy.world.prospective).not.toHaveProperty('byStepsComplete')
-    expect(check(OBJECT, legacy)).toBeNull()
-  })
-
-  it('fails a region whose steps-complete counts are not its districts’ sum (#2388)', () => {
-    const bad = twoDistricts()
-    expect(bad.regions!['05']!.prospective!.byStepsComplete).toBeDefined()
-    bad.regions!['05']!.prospective!.byStepsComplete![0]!.clubs += 1
-    expect(check(OBJECT, bad)).toMatch(/region 05.*prospective/)
   })
 
   it('fails an artifact that breaks the shared-contracts schema', () => {

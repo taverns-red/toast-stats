@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
+import { z } from 'zod'
 import {
+  ProspectiveStageCountSchema,
   REPORTS_ROLLUPS_FILE_NAME,
   REPORTS_ROLLUPS_FORMAT,
   ReportsRollupsSchema,
@@ -25,29 +27,48 @@ const RECORDED = JSON.parse(
   )
 ) as ReportsRollups
 
-/** Written before #2388: no `byStepsComplete`. Past dates keep this shape. */
-const LEGACY = JSON.parse(
-  readFileSync(
-    new URL(
-      './__fixtures__/recorded-reports-rollups-v1.0.0.json',
-      import.meta.url
-    ),
-    'utf-8'
-  )
-) as ReportsRollups
+/** The recorded file with the #2388 field added, as the writer will emit it. */
+function withSteps(): ReportsRollups {
+  const r = structuredClone(RECORDED)
+  for (const block of [
+    r.world,
+    ...Object.values(r.regions ?? {}),
+    ...Object.values(r.districts),
+  ]) {
+    if (block.prospective) {
+      block.prospective.byStepsComplete = [
+        { stepsComplete: 1, clubs: block.prospective.clubs },
+      ]
+    }
+  }
+  return r
+}
 
 describe('ReportsRollupsSchema (#2012)', () => {
-  it('still parses a v1.0.0 artifact without steps-complete counts (#2388)', () => {
-    expect(LEGACY._format.version).toBe('1.0.0')
-    expect(LEGACY.world.prospective).not.toHaveProperty('byStepsComplete')
-    expect(ReportsRollupsSchema.parse(LEGACY)).toEqual(LEGACY)
+  it('still parses a file without steps-complete counts (#2388)', () => {
+    expect(RECORDED.world.prospective).not.toHaveProperty('byStepsComplete')
+    expect(ReportsRollupsSchema.parse(RECORDED)).toEqual(RECORDED)
   })
 
-  it('carries prospective clubs by steps complete (#2388)', () => {
-    expect(RECORDED._format.version).toBe('1.1.0')
-    expect(RECORDED.world.prospective?.byStepsComplete).toEqual([
-      { stepsComplete: 1, clubs: 6 },
-    ])
+  it('accepts prospective clubs by steps complete (#2388)', () => {
+    expect(ReportsRollupsSchema.parse(withSteps())).toEqual(withSteps())
+  })
+
+  it('the reader deployed before #2388 rejects them: the writer must wait for a release', () => {
+    // Frozen copy of main's `prospective` contract at 2.74.0 (strict, no
+    // byStepsComplete). A file carrying the new field fails it, so prod
+    // pages would read "not available" until the new reader is released.
+    const deployed = z
+      .object({
+        clubs: z.number().int().nonnegative(),
+        paymentComplete: z.number().int().nonnegative(),
+        byStage: z.array(ProspectiveStageCountSchema),
+      })
+      .strict()
+    expect(deployed.safeParse(RECORDED.world.prospective).success).toBe(true)
+    expect(deployed.safeParse(withSteps().world.prospective).success).toBe(
+      false
+    )
   })
 
   it('rejects a steps-complete count above the six steps', () => {
