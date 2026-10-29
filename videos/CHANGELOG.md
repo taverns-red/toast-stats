@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.5](https://github.com/taverns-red/toast-stats/compare/videos-v0.1.4...videos-v0.1.5) (2026-10-29)
+
+
+### Bug Fixes
+
+* **videos:** capture waits for the ready element and app data, not networkidle ([#2410](https://github.com/taverns-red/toast-stats/issues/2410)) ([#2411](https://github.com/taverns-red/toast-stats/issues/2411)) ([d0c9a11](https://github.com/taverns-red/toast-stats/commit/d0c9a1166e48071864de503daab6c5182178d4c8))
+
+
+### Dependencies
+
+* **deps:** Bump the patch-and-minor group with 11 updates ([#2407](https://github.com/taverns-red/toast-stats/issues/2407)) ([a5eb55e](https://github.com/taverns-red/toast-stats/commit/a5eb55e308d5ae84ab72b305e973c72a8c4c1dbd))
+
 ## [0.1.4](https://github.com/taverns-red/toast-stats/compare/videos-v0.1.3...videos-v0.1.4) (2026-10-28)
 
 
