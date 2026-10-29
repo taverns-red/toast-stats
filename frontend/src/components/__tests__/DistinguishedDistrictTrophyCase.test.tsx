@@ -263,7 +263,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
       // not 19 (the rounded-% derivation bug).
       expect(values[0]).toHaveTextContent(/^11 clubs?$/)
       expect(values[1]).toHaveTextContent(/^169 payments$/)
-      expect(values[2]).toHaveTextContent(/^20 clubs$/)
+      expect(values[2]).toHaveTextContent(/^20 confirmed clubs$/)
 
       // Percentages are demoted to the sub-item, no "~" prefix on either.
       expect(subitems[0]).toHaveTextContent(/^\+5\.5%$/)
@@ -290,7 +290,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
         />
       )
       const values = screen.getAllByTestId('gap-tile-value')
-      expect(values[2]).toHaveTextContent(/^22 clubs$/)
+      expect(values[2]).toHaveTextContent(/^22 confirmed clubs$/)
     })
 
     it('derives counts from the rankings row when the canonical fields are absent', () => {
@@ -315,7 +315,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
       // Same headline integers via derivation: 11 / 169 / 20.
       expect(values[0]).toHaveTextContent(/^11 clubs?$/)
       expect(values[1]).toHaveTextContent(/^169 payments$/)
-      expect(values[2]).toHaveTextContent(/^20 clubs$/)
+      expect(values[2]).toHaveTextContent(/^20 confirmed clubs$/)
     })
 
     it('uses the next-tier thresholds for districts already at Distinguished', () => {
@@ -350,7 +350,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
       const values = screen.getAllByTestId('gap-tile-value')
       expect(values[0]).toHaveTextContent(/^14 clubs$/)
       expect(values[1]).toHaveTextContent(/^281 payments$/)
-      expect(values[2]).toHaveTextContent(/^28 clubs$/)
+      expect(values[2]).toHaveTextContent(/^28 confirmed clubs$/)
     })
 
     it('singularises the unit noun when the count is exactly 1', () => {
@@ -369,7 +369,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
       const values = screen.getAllByTestId('gap-tile-value')
       expect(values[0]).toHaveTextContent(/^1 club$/)
       expect(values[1]).toHaveTextContent(/^1 payment$/)
-      expect(values[2]).toHaveTextContent(/^1 club$/)
+      expect(values[2]).toHaveTextContent(/^1 confirmed club$/)
     })
 
     it('renders ✓ when a metric minimum is met (canonical remaining = 0)', () => {

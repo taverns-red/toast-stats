@@ -309,7 +309,11 @@ describe('DistrictDetailPage — trophy-case ranking inputs follow the PY (#1396
     )
     // 6 clubs / 60 payments / 80 clubs is the CURRENT year's derivation.
     await waitFor(() =>
-      expect(tileValues()).toEqual(['3 clubs', '30 payments', '40 clubs'])
+      expect(tileValues()).toEqual([
+        '3 clubs',
+        '30 payments',
+        '40 confirmed clubs',
+      ])
     )
     expect(mockedForDate).toHaveBeenCalledWith(snap('2025-06-30'))
     // Nothing may fall back to `v1/rankings.json` while a year is displayed.
@@ -323,7 +327,11 @@ describe('DistrictDetailPage — trophy-case ranking inputs follow the PY (#1396
       expect(screen.getByTestId('distinguished-gap-tiles')).toBeInTheDocument()
     )
     await waitFor(() =>
-      expect(tileValues()).toEqual(['6 clubs', '60 payments', '80 clubs'])
+      expect(tileValues()).toEqual([
+        '6 clubs',
+        '60 payments',
+        '80 confirmed clubs',
+      ])
     )
   })
 })
