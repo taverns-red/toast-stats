@@ -8,6 +8,7 @@ import {
   cleanup,
   within,
   fireEvent,
+  act,
 } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -17,6 +18,7 @@ import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
 import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
 import { useClubHistory } from '../../hooks/useClubHistory'
+import { AFTER_PAINT_FALLBACK_MS } from '../../hooks/useAfterPaint'
 
 // Mock localStorage
 const localStorageMock = {
@@ -47,22 +49,11 @@ Object.defineProperty(window, 'matchMedia', {
   writable: true,
 })
 
-// #2403 — this file must never reach the live CDN. Two un-stubbed reads
-// (`v1/dates.json` from ProgramYearProvider, the district snapshot from
-// useDistrictStatistics) used to go out for real. When one settled mid-file —
-// a fast network, as on CI — later mounts re-rendered synchronously inside
-// render() and the mockReturnValueOnce overrides below were spent on the
-// first render. The stub rejects at once (the CI-shaped timing), and every
-// test fails if anything calls it.
-const liveFetch = vi.fn((input: string | URL | Request) =>
-  Promise.reject(
-    new Error(`live fetch in ClubDetailPage.test: ${String(input)}`)
-  )
-)
-vi.stubGlobal('fetch', liveFetch)
-afterEach(() => {
-  expect(liveFetch).not.toHaveBeenCalled()
-})
+// #2403 — this file must never reach the live CDN. Un-stubbed reads that
+// settled mid-file (as on CI) re-rendered later mounts inside render() and
+// spent their mockReturnValueOnce overrides. The integration setup's network
+// guard (#2405) fails any test that fetches; it replaced this file's own
+// fetch stub, which missed reads deferred past a test's end (#2408).
 
 // ── Mock hooks ──────────────────────────────────────────────────────────────
 
@@ -125,6 +116,21 @@ vi.mock('../../services/cdn', async importOriginal => ({
     count: 1,
     generatedAt: '2025-10-16T00:00:00Z',
   }),
+  // #2408 — the after-paint reads (#1852, #1901): the freshness pill's
+  // manifest and latest rankings, and the worldwide race. Fixtures dated to
+  // the one snapshot above, with no rankings rows and no race: none of the
+  // tests here asserts on that data.
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2025-10-15',
+    generatedAt: '2025-10-16T00:00:00Z',
+  }),
+  fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2025-10-15'),
+  fetchCdnRankings: vi.fn().mockResolvedValue({
+    rankings: [],
+    asOfDate: '2025-10-15',
+    generatedAt: '2025-10-16T00:00:00Z',
+  }),
+  fetchCdnGlobalClubRace: vi.fn().mockResolvedValue(null),
 }))
 
 // #2403 — the page's snapshot read, settled with no club record: the hero
@@ -156,6 +162,17 @@ vi.mock('../../hooks/useDistrictAnalytics', () => ({
   })),
   ClubTrend: {},
 }))
+
+// Several describes below set a lasting `mockReturnValue` on these hooks, and
+// `vi.clearAllMocks()` (setup) keeps implementations and unspent
+// `mockReturnValueOnce` values. Under a shuffled order (`--sequence.shuffle`)
+// one describe's club then leaked into another's tests. Reset both hooks to
+// their factory defaults before every test; a describe's own beforeEach runs
+// after this one and still applies (#2405).
+beforeEach(() => {
+  vi.mocked(useDistrictAnalytics).mockReset()
+  vi.mocked(useClubHistory).mockReset()
+})
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -358,6 +375,27 @@ describe('ClubDetailPage (#208)', () => {
     renderWithRoute('99999999')
 
     expect(await screen.findByText('Club Not Found')).toBeInTheDocument()
+  })
+
+  // #2408 — the breadcrumb, freshness-pill and worldwide-race reads wait for
+  // the after-paint gate (#1852, #1901). A test that awaits long enough for
+  // it to open made them for real: main went red when a slow CI poll in the
+  // not-found test let it open. Hold the test past the gate's fallback so
+  // the reads always start here; the network guard fails it if any is live.
+  it('makes its after-paint reads without reaching the live CDN', async () => {
+    renderWithRoute()
+    await act(
+      () =>
+        new Promise<void>(resolve =>
+          setTimeout(resolve, AFTER_PAINT_FALLBACK_MS + 50)
+        )
+    )
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: /St Lawrence Toastmasters/,
+      })
+    ).toBeInTheDocument()
   })
 
   // #1104 — a transient CDN fetch reject must surface a distinct, retryable
