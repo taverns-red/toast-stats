@@ -26,6 +26,7 @@
   .worldwide-standing__note a,
   .club-history-page__back a,
   [data-testid='district-csp-line'] a,
+  [data-testid='gap-tile-note'] a,
   [data-testid='education-awards-leaderboard'] td a {
     padding-block: 14px;
   }

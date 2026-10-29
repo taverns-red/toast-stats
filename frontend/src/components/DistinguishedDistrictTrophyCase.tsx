@@ -146,7 +146,15 @@ interface GapTileSpec {
   gapPercent: number
   unitSingular: string
   unitPlural: string
+  /** One-line note shown after the percentage, on the same row (#2390). */
+  note?: React.ReactNode
 }
+
+/* The Methodology entry that explains the two Distinguished-club counts
+   (#2390). A plain anchor: the trophy case renders outside a router in its
+   unit tests, the same reason MembershipTrendChart links this way. */
+const DISTINGUISHED_COUNTS_METHODOLOGY_HREF =
+  '/methodology#distinguished-club-counts'
 
 const GapTile: React.FC<GapTileSpec> = ({
   label,
@@ -154,6 +162,7 @@ const GapTile: React.FC<GapTileSpec> = ({
   gapPercent,
   unitSingular,
   unitPlural,
+  note,
 }) => {
   // `count === 0` is the canonical "met" signal (lesson 103); only the
   // un-evaluable case (no canonical, no ranking) leaves the headline blank.
@@ -178,11 +187,18 @@ const GapTile: React.FC<GapTileSpec> = ({
         {closed ? '✓' : count != null ? `${count} ${noun}` : '—'}
       </div>
       {!closed && count != null && (
-        <div
-          data-testid="gap-tile-subitem"
-          className="mt-0.5 text-[11px] text-gray-600 theme-dark:text-gray-400 font-tm-body tabular-nums"
-        >
-          +{gapPercent.toFixed(1)}%
+        /* The note rides the percentage's row, so labelling the count adds
+           no height to the 375 Overview (#2390, PAGE_MAX_H budget). */
+        <div className="mt-0.5 text-[11px] text-gray-600 theme-dark:text-gray-400 font-tm-body">
+          <span data-testid="gap-tile-subitem" className="tabular-nums">
+            +{gapPercent.toFixed(1)}%
+          </span>
+          {note && (
+            <span data-testid="gap-tile-note">
+              <span aria-hidden="true"> · </span>
+              {note}
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -482,12 +498,26 @@ export const DistinguishedDistrictTrophyCase: React.FC<
               unitSingular="payment"
               unitPlural="payments"
             />
+            {/* Confirmed clubs (#304/#2221), the share card's noun (#2304).
+                The KPI card above counts clubs qualifying today; the word
+                keeps the two from reading as a contradiction (#2390). */}
             <GapTile
               label="Distinguished Clubs"
               count={distinguishedClubsCount}
               gapPercent={nextTierGap.distinguishedPercentGap}
-              unitSingular="club"
-              unitPlural="clubs"
+              unitSingular="confirmed club"
+              unitPlural="confirmed clubs"
+              note={
+                <>
+                  confirmed only ·{' '}
+                  <a
+                    href={DISTINGUISHED_COUNTS_METHODOLOGY_HREF}
+                    className="text-tm-loyal-blue underline"
+                  >
+                    How we count
+                  </a>
+                </>
+              }
             />
           </div>
         </div>

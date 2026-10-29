@@ -33,8 +33,9 @@ export const HUB_BULLET_TILES: {
     key: 'distinguishedClubs',
     title: 'Distinguished Clubs',
     label: 'Distinguished',
+    // Same wording as the desktop card's tooltip (#2390).
     about:
-      'Clubs achieving DCP goals + membership requirements with thresholds for each Distinguished District recognition level.',
+      'Clubs qualifying today: DCP goals plus the membership requirement on current membership, with thresholds for each Distinguished District recognition level. The Distinguished District gap counts confirmed clubs only, so it can be larger.',
   },
 ]
 

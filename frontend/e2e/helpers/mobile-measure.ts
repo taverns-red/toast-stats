@@ -30,6 +30,7 @@ export const NOT_PROSE_LINKS = [
   '.club-history-page__back a', // club history "← Back to …" (17px)
   '.club-history-year-link', // club history year links (64×21)
   '[data-testid="district-csp-line"] a', // Overview "See which clubs →" (17px)
+  '[data-testid="gap-tile-note"] a', // #2390 trophy case "How we count"
   '[data-testid="division-area-heading"] a', // division page area links (22px)
   '[data-testid="education-awards-leaderboard"] td a', // analytics club link (61×37)
   '.maplibregl-ctrl-attrib a', // #1944 map ODbL credit links (14px tall)

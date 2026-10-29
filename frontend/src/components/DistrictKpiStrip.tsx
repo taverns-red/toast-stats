@@ -76,8 +76,10 @@ const CARD_TOOLTIPS: Record<TieredKpiKey, string> = {
     'Paid clubs count with thresholds for each Distinguished District recognition level.',
   membershipPayments:
     'Total membership payments (New + April + October + Late + Charter) with thresholds for each recognition level.',
+  // Qualifying today, not confirmed: the trophy case's gap counts confirmed
+  // clubs, so the two numbers differ by design (#2390).
   distinguishedClubs:
-    'Clubs achieving DCP goals + membership requirements with thresholds for each recognition level.',
+    'Clubs qualifying today: DCP goals plus the membership requirement on current membership, with thresholds for each recognition level. The Distinguished District gap counts confirmed clubs only, so it can be larger.',
 }
 
 const TIER_LEGEND: { short: string; full: string }[] = [

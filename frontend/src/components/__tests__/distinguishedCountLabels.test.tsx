@@ -162,7 +162,9 @@ describe('Trophy case gap: "confirmed" (#2390)', () => {
       /^\+47\.9%$/
     )
     const note = within(tile).getByTestId('gap-tile-note')
-    expect(note).toHaveTextContent(/confirmed clubs only/i)
+    // Short enough to share the row at 375, where the phone type floor
+    // lifts this 11px row to 14px (mobile-type-floor.css).
+    expect(note).toHaveTextContent(/^· confirmed only · How we count$/)
     expect(
       within(note).getByRole('link', { name: /how we count/i })
     ).toHaveAttribute('href', METHODOLOGY_HREF)
