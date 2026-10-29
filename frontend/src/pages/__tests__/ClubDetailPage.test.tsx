@@ -116,6 +116,21 @@ vi.mock('../../services/cdn', async importOriginal => ({
     count: 1,
     generatedAt: '2025-10-16T00:00:00Z',
   }),
+  // #2408 — the after-paint reads (#1852, #1901): the freshness pill's
+  // manifest and latest rankings, and the worldwide race. Fixtures dated to
+  // the one snapshot above, with no rankings rows and no race: none of the
+  // tests here asserts on that data.
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2025-10-15',
+    generatedAt: '2025-10-16T00:00:00Z',
+  }),
+  fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2025-10-15'),
+  fetchCdnRankings: vi.fn().mockResolvedValue({
+    rankings: [],
+    asOfDate: '2025-10-15',
+    generatedAt: '2025-10-16T00:00:00Z',
+  }),
+  fetchCdnGlobalClubRace: vi.fn().mockResolvedValue(null),
 }))
 
 // #2403 — the page's snapshot read, settled with no club record: the hero
