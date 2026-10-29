@@ -1,0 +1,271 @@
+{
+  "_format": {
+    "version": "1.1.0",
+    "type": "reports-rollups"
+  },
+  "snapshotDate": "2026-10-27",
+  "programYear": "2026-2027",
+  "generatedAt": "2026-10-28T00:00:00.000Z",
+  "regionMembership": {
+    "source": "config/district-region-history.json",
+    "asOf": "2026-10-15",
+    "programYear": "2026-2027"
+  },
+  "regionMembershipNote": null,
+  "scope": {
+    "excludedDistricts": [],
+    "unassignedDistricts": [],
+    "duplicateClubs": []
+  },
+  "world": {
+    "prospective": {
+      "clubs": 12,
+      "paymentComplete": 11,
+      "byStage": [
+        {
+          "stage": 1,
+          "label": "Application to Organize",
+          "clubs": 9
+        },
+        {
+          "stage": 6,
+          "label": "Constitution & Bylaws",
+          "clubs": 3
+        }
+      ],
+      "byStepsComplete": [
+        {
+          "stepsComplete": 5,
+          "clubs": 1
+        },
+        {
+          "stepsComplete": 3,
+          "clubs": 1
+        },
+        {
+          "stepsComplete": 1,
+          "clubs": 10
+        }
+      ]
+    },
+    "coached": null,
+    "octoberDues": null,
+    "aprilDues": null,
+    "officerList": null,
+    "sponsorsMentors": null,
+    "districts": 3,
+    "districtsWithoutReports": []
+  },
+  "regions": {
+    "05": {
+      "prospective": {
+        "clubs": 6,
+        "paymentComplete": 6,
+        "byStage": [
+          {
+            "stage": 1,
+            "label": "Application to Organize",
+            "clubs": 6
+          }
+        ],
+        "byStepsComplete": [
+          {
+            "stepsComplete": 1,
+            "clubs": 6
+          }
+        ]
+      },
+      "coached": {
+        "activeClubs": 6,
+        "completedClubs": 6
+      },
+      "octoberDues": {
+        "clubs": 161,
+        "verified": 138,
+        "notReceived": 4,
+        "low": 16,
+        "ineligible": 3,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 161,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 161,
+        "other": 0
+      },
+      "officerList": {
+        "submitted": 158,
+        "notSubmitted": 3
+      },
+      "sponsorsMentors": {
+        "clubs": 7,
+        "sponsors": 12,
+        "mentors": 13,
+        "other": 0,
+        "awarded": 9
+      },
+      "districtIds": ["61"],
+      "districtsWithoutReports": []
+    },
+    "09": {
+      "prospective": {
+        "clubs": 6,
+        "paymentComplete": 5,
+        "byStage": [
+          {
+            "stage": 1,
+            "label": "Application to Organize",
+            "clubs": 3
+          },
+          {
+            "stage": 6,
+            "label": "Constitution & Bylaws",
+            "clubs": 3
+          }
+        ],
+        "byStepsComplete": [
+          {
+            "stepsComplete": 5,
+            "clubs": 1
+          },
+          {
+            "stepsComplete": 3,
+            "clubs": 1
+          },
+          {
+            "stepsComplete": 1,
+            "clubs": 4
+          }
+        ]
+      },
+      "coached": null,
+      "octoberDues": null,
+      "aprilDues": null,
+      "officerList": null,
+      "sponsorsMentors": null,
+      "districtIds": ["25", "84"],
+      "districtsWithoutReports": []
+    }
+  },
+  "districts": {
+    "25": {
+      "prospective": {
+        "clubs": 2,
+        "paymentComplete": 2,
+        "byStage": [
+          {
+            "stage": 6,
+            "label": "Constitution & Bylaws",
+            "clubs": 2
+          }
+        ],
+        "byStepsComplete": [
+          {
+            "stepsComplete": 5,
+            "clubs": 1
+          },
+          {
+            "stepsComplete": 3,
+            "clubs": 1
+          }
+        ]
+      },
+      "coached": null,
+      "octoberDues": null,
+      "aprilDues": null,
+      "officerList": null,
+      "sponsorsMentors": null,
+      "region": "09",
+      "reports": "available"
+    },
+    "61": {
+      "prospective": {
+        "clubs": 6,
+        "paymentComplete": 6,
+        "byStage": [
+          {
+            "stage": 1,
+            "label": "Application to Organize",
+            "clubs": 6
+          }
+        ],
+        "byStepsComplete": [
+          {
+            "stepsComplete": 1,
+            "clubs": 6
+          }
+        ]
+      },
+      "coached": {
+        "activeClubs": 6,
+        "completedClubs": 6
+      },
+      "octoberDues": {
+        "clubs": 161,
+        "verified": 138,
+        "notReceived": 4,
+        "low": 16,
+        "ineligible": 3,
+        "notYetDue": 0,
+        "other": 0
+      },
+      "aprilDues": {
+        "clubs": 161,
+        "verified": 0,
+        "notReceived": 0,
+        "low": 0,
+        "ineligible": 0,
+        "notYetDue": 161,
+        "other": 0
+      },
+      "officerList": {
+        "submitted": 158,
+        "notSubmitted": 3
+      },
+      "sponsorsMentors": {
+        "clubs": 7,
+        "sponsors": 12,
+        "mentors": 13,
+        "other": 0,
+        "awarded": 9
+      },
+      "region": "05",
+      "reports": "available"
+    },
+    "84": {
+      "prospective": {
+        "clubs": 4,
+        "paymentComplete": 3,
+        "byStage": [
+          {
+            "stage": 1,
+            "label": "Application to Organize",
+            "clubs": 3
+          },
+          {
+            "stage": 6,
+            "label": "Constitution & Bylaws",
+            "clubs": 1
+          }
+        ],
+        "byStepsComplete": [
+          {
+            "stepsComplete": 1,
+            "clubs": 4
+          }
+        ]
+      },
+      "coached": null,
+      "octoberDues": null,
+      "aprilDues": null,
+      "officerList": null,
+      "sponsorsMentors": null,
+      "region": "09",
+      "reports": "available"
+    }
+  }
+}

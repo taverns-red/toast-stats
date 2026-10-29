@@ -1,5 +1,6 @@
 import type {
   ProspectiveStageCount,
+  ProspectiveStepsCount,
   RegionRollupFigures,
   RegionRollups,
   ReportsRollupFigures,
@@ -12,7 +13,8 @@ import type { StageValue } from './clubGrowthFunnel'
    funnel (#1794): Prospective → Chartered → Coached → Suspended.
 
    Two artifacts, each read for what only it has:
-   - `reports-rollups.json` (#2012): prospective clubs by stage (TI's
+   - `reports-rollups.json` (#2012): prospective clubs by checklist steps
+     complete (#2388; by stage on dates written before it) (TI's
      Prospective Clubs report — the district funnel's source), coached clubs,
      sponsors/mentors counts;
    - `region-rollups.json` (#1799): clubs chartered and suspended this program
@@ -59,6 +61,9 @@ export interface RollupGrowthFunnel {
     suspended: StageValue
   }
   prospectiveByStage: ProspectiveStageCount[] | null
+  /** By checklist steps complete (#2388); null for a date whose artifact
+   *  predates it (1.0.0) — the view then falls back to `prospectiveByStage`. */
+  prospectiveByProgress: ProspectiveStepsCount[] | null
   paymentComplete: number | null
   coachingCompleted: number | null
   sponsorsMentors: NonNullable<ReportsRollupFigures['sponsorsMentors']> | null
@@ -232,6 +237,7 @@ export function buildRollupGrowthFunnel({
       suspended: rollupStage(roll, b => b.growth.suspended),
     },
     prospectiveByStage: rep?.prospective?.byStage ?? null,
+    prospectiveByProgress: rep?.prospective?.byStepsComplete ?? null,
     paymentComplete: rep?.prospective?.paymentComplete ?? null,
     coachingCompleted: rep?.coached?.completedClubs ?? null,
     sponsorsMentors: rep?.sponsorsMentors ?? null,

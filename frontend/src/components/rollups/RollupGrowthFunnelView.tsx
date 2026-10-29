@@ -1,6 +1,10 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import type { ProspectiveStageCount } from '@taverns-red/shared-contracts'
+import {
+  PROSPECT_CHECKLIST_STEPS,
+  type ProspectiveStageCount,
+  type ProspectiveStepsCount,
+} from '@taverns-red/shared-contracts'
 import { ActionTable, type ActionTableColumn } from '../ActionTable'
 import {
   FunnelStrip,
@@ -177,6 +181,24 @@ const ladderColumns: ActionTableColumn<ProspectiveStageCount>[] = [
   },
 ]
 
+const progressColumns: ActionTableColumn<ProspectiveStepsCount>[] = [
+  {
+    key: 'progress',
+    header: 'Progress',
+    className: 'action-table__subject',
+    cell: g =>
+      g.stepsComplete === null
+        ? 'Not recognised'
+        : `${g.stepsComplete} of ${PROSPECT_CHECKLIST_STEPS.length} steps complete`,
+  },
+  {
+    key: 'clubs',
+    header: 'Clubs',
+    className: 'growth-table__num',
+    cell: g => g.clubs.toLocaleString('en-US'),
+  },
+]
+
 function StageNote({ value }: { value: StageValue }) {
   if (value.kind === 'count') return null
   return <p className="growth-stage__note">{value.reason}.</p>
@@ -270,18 +292,44 @@ export const RollupGrowthFunnelView: React.FC<RollupGrowthFunnelViewProps> = ({
             charter fee.
           </p>
         )}
-        {funnel.prospectiveByStage && funnel.prospectiveByStage.length > 0 && (
-          <>
-            <h4 className="growth-stage__subtitle">By stage</h4>
-            <ActionTable
-              caption={`Prospective clubs by stage, ${scopeLabel}`}
-              columns={ladderColumns}
-              rows={funnel.prospectiveByStage}
-              rowKey={g => `${g.stage ?? 'x'}-${g.label}`}
-              testId="rollup-growth-ladder-table"
-            />
-          </>
-        )}
+        {funnel.prospectiveByProgress
+          ? funnel.prospectiveByProgress.length > 0 && (
+              <>
+                <h4 className="growth-stage__subtitle">By progress</h4>
+                <p className="growth-stage__note">
+                  Steps complete on TI’s six-step charter checklist, done in any
+                  order — the reading each district’s funnel uses.
+                </p>
+                <ActionTable
+                  caption={`Prospective clubs by steps complete, ${scopeLabel}`}
+                  columns={progressColumns}
+                  rows={funnel.prospectiveByProgress}
+                  rowKey={g => String(g.stepsComplete ?? 'x')}
+                  testId="rollup-growth-progress-table"
+                />
+              </>
+            )
+          : funnel.prospectiveByStage &&
+            funnel.prospectiveByStage.length > 0 && (
+              <>
+                <h4 className="growth-stage__subtitle">By stage</h4>
+                <p
+                  className="growth-stage__note"
+                  data-testid="rollup-growth-ladder-note"
+                >
+                  Counts by steps complete are not available for this date: its
+                  rollup was built before them, so clubs are grouped by the
+                  highest step TI lists, complete or not.
+                </p>
+                <ActionTable
+                  caption={`Prospective clubs by stage, ${scopeLabel}`}
+                  columns={ladderColumns}
+                  rows={funnel.prospectiveByStage}
+                  rowKey={g => `${g.stage ?? 'x'}-${g.label}`}
+                  testId="rollup-growth-ladder-table"
+                />
+              </>
+            )}
         <h4 className="growth-stage__subtitle">By {childNoun.toLowerCase()}</h4>
         <StageBreakdown
           stage="prospective"

@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
+import { z } from 'zod'
 import {
+  ProspectiveStageCountSchema,
   REPORTS_ROLLUPS_FILE_NAME,
   REPORTS_ROLLUPS_FORMAT,
   ReportsRollupsSchema,
@@ -25,7 +27,56 @@ const RECORDED = JSON.parse(
   )
 ) as ReportsRollups
 
+/** The recorded file with the #2388 field added, as the writer will emit it. */
+function withSteps(): ReportsRollups {
+  const r = structuredClone(RECORDED)
+  for (const block of [
+    r.world,
+    ...Object.values(r.regions ?? {}),
+    ...Object.values(r.districts),
+  ]) {
+    if (block.prospective) {
+      block.prospective.byStepsComplete = [
+        { stepsComplete: 1, clubs: block.prospective.clubs },
+      ]
+    }
+  }
+  return r
+}
+
 describe('ReportsRollupsSchema (#2012)', () => {
+  it('still parses a file without steps-complete counts (#2388)', () => {
+    expect(RECORDED.world.prospective).not.toHaveProperty('byStepsComplete')
+    expect(ReportsRollupsSchema.parse(RECORDED)).toEqual(RECORDED)
+  })
+
+  it('accepts prospective clubs by steps complete (#2388)', () => {
+    expect(ReportsRollupsSchema.parse(withSteps())).toEqual(withSteps())
+  })
+
+  it('the reader deployed before #2388 rejects them: the writer must wait for a release', () => {
+    // Frozen copy of main's `prospective` contract at 2.74.0 (strict, no
+    // byStepsComplete). A file carrying the new field fails it, so prod
+    // pages would read "not available" until the new reader is released.
+    const deployed = z
+      .object({
+        clubs: z.number().int().nonnegative(),
+        paymentComplete: z.number().int().nonnegative(),
+        byStage: z.array(ProspectiveStageCountSchema),
+      })
+      .strict()
+    expect(deployed.safeParse(RECORDED.world.prospective).success).toBe(true)
+    expect(deployed.safeParse(withSteps().world.prospective).success).toBe(
+      false
+    )
+  })
+
+  it('rejects a steps-complete count above the six steps', () => {
+    const bad = structuredClone(RECORDED)
+    bad.world.prospective!.byStepsComplete = [{ stepsComplete: 7, clubs: 1 }]
+    expect(ReportsRollupsSchema.safeParse(bad).success).toBe(false)
+  })
+
   it('parses the recorded artifact unchanged', () => {
     expect(ReportsRollupsSchema.parse(RECORDED)).toEqual(RECORDED)
     expect(RECORDED._format).toEqual(REPORTS_ROLLUPS_FORMAT)

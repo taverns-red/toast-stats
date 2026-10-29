@@ -313,6 +313,13 @@ export {
 export {
   usDateToIso,
   parseProspectStage,
+  parseProspectChecklist,
+  prospectProgress,
+  PROSPECT_CHECKLIST_STEPS,
+  type ProspectChecklistItem,
+  type ProspectChecklistStatus,
+  type ProspectProgress,
+  type ProspectWaitingOn,
   sponsorMentorRole,
   classifyDuesRenewal,
   type ParsedProspectStage,
@@ -331,6 +338,7 @@ export {
   ReportsRollupRegionSchema,
   ReportsRollupWorldSchema,
   ProspectiveStageCountSchema,
+  ProspectiveStepsCountSchema,
   DuesRenewalCountsSchema,
   REPORTS_ROLLUPS_VERSION,
   REPORTS_ROLLUPS_FORMAT,
@@ -343,6 +351,7 @@ export {
   type ReportsRollupRegion,
   type ReportsRollupWorld,
   type ProspectiveStageCount,
+  type ProspectiveStepsCount,
   type DuesRenewalCounts,
 } from './schemas/reports-rollups.schema.js'
 

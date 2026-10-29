@@ -5,6 +5,7 @@ import type {
 } from '@taverns-red/shared-contracts'
 import recorded from '../../__tests__/fixtures/d61-growth-reports.recorded.json'
 import suspendedJson from '../../__tests__/fixtures/suspended-clubs-2026-10-13.recorded.json'
+import checklistRecorded from '../../__tests__/fixtures/prospective-club-page.recorded.json'
 import sponsorsRecorded from '../../__tests__/fixtures/sponsors-mentors-2026-06-01.recorded.json'
 import {
   buildClubGrowthFunnel,
@@ -82,6 +83,68 @@ describe('parseProspectStage (recorded D61 vocabulary)', () => {
   })
 })
 
+describe('buildClubGrowthFunnel — the checklist, not a ladder (#2388)', () => {
+  // Recorded prod cells, 2026-10-27 (D84 and D25), names scrubbed.
+  const d84 = checklistRecorded.d84_reports as unknown as DistrictReportsDataset
+  const d25 = checklistRecorded.d25_reports as unknown as DistrictReportsDataset
+  const build = (reports: DistrictReportsDataset) =>
+    buildClubGrowthFunnel({
+      districtId: reports.districtId,
+      reports,
+      counts: KNOWN_ZERO,
+      programYear: PY_2026,
+      asOfDate: '2026-10-27',
+    })
+
+  it('a club that has only finished #1 reads 1 of 6, not stage 6', () => {
+    const row = build(d84).prospective.clubs.find(c => c.clubId === '28680214')!
+    expect(row.progress).toMatchObject({
+      recognised: true,
+      stepsComplete: 1,
+      stepsTotal: 6,
+      waitingOn: { number: 2, label: 'Certificate & Remit', listed: true },
+    })
+    expect(row.waitingDays).toBe(daysBetween('2026-05-11', '2026-10-27'))
+  })
+
+  it('steps completed out of order count; it waits on the step that went back', () => {
+    const row = build(d25).prospective.clubs.find(c => c.clubId === '28680093')!
+    expect(row.progress).toMatchObject({
+      stepsComplete: 5,
+      waitingOn: { number: 2, since: '2026-08-14' },
+    })
+    expect(row.waitingDays).toBe(daysBetween('2026-08-14', '2026-10-27'))
+  })
+
+  it('sorts most steps complete first, then longest waiting', () => {
+    expect(build(d25).prospective.clubs.map(c => c.clubId)).toEqual([
+      '28680093', // 5 of 6
+      '28680358', // 3 of 6
+    ])
+    expect(build(d84).prospective.clubs.map(c => c.clubId)).toEqual([
+      '28679424', // 1 of 6, since 2025-11-03
+      '28679702', // 1 of 6, since 2026-01-20
+      '28680214', // 1 of 6, since 2026-05-11
+      '28681056', // 1 of 6, since 2026-10-05
+    ])
+  })
+
+  it('groups by steps complete, most complete first, unrecognised last', () => {
+    const odd = structuredClone(d25)
+    odd.sections.prospectiveClubs!.records.push({
+      ...odd.sections.prospectiveClubs!.records[0]!,
+      club: '99999999',
+      prospect: 'Something new from TI',
+    })
+    expect(build(odd).prospective.byProgress).toEqual([
+      { stepsComplete: 5, count: 1 },
+      { stepsComplete: 3, count: 1 },
+      { stepsComplete: null, count: 1 },
+    ])
+    expect(build(odd).prospective.clubs.at(-1)!.clubId).toBe('99999999')
+  })
+})
+
 describe('daysBetween', () => {
   it('counts whole calendar days, timezone-free', () => {
     expect(daysBetween('2026-10-01', '2026-10-11')).toBe(10)
@@ -103,40 +166,24 @@ describe('buildClubGrowthFunnel — prospective', () => {
     expect(funnel.prospective.clubs).toHaveLength(8)
   })
 
-  it('groups them by stage', () => {
-    expect(funnel.prospective.byStage).toEqual([
-      { stageNumber: 1, stageLabel: 'Application to Organize', count: 8 },
+  it('groups them by steps complete (#2388)', () => {
+    // Every live D61 cell lists only #1, Complete.
+    expect(funnel.prospective.byProgress).toEqual([
+      { stepsComplete: 1, count: 8 },
     ])
   })
 
-  it('groups a multi-step prospect under its furthest step (#2142)', () => {
-    // Recorded prod cell (district_216_reports.json, 2026-10-18).
-    const multi = structuredClone(live)
-    multi.sections.prospectiveClubs!.records[0]!.prospect =
-      '#1 Application to Organize Complete - 07/16/2025#4 Officer Info Complete - 07/16/2025Payment Complete - 07/18/2025'
-    const f = buildClubGrowthFunnel({
-      districtId: '61',
-      reports: multi,
-      counts: KNOWN_ZERO,
-      programYear: PY_2026,
-      asOfDate: '2026-10-11',
-    })
-    expect(f.prospective.byStage).toEqual(
-      expect.arrayContaining([
-        { stageNumber: 1, stageLabel: 'Application to Organize', count: 7 },
-        { stageNumber: 4, stageLabel: 'Officer Info', count: 1 },
-      ])
-    )
-    expect(f.prospective.byStage).toHaveLength(2)
-    expect(f.prospective.clubs[0]!.stage).toMatchObject({ stageNumber: 4 })
-  })
-
-  it('orders longest-waiting first, with days in stage', () => {
+  it('orders longest-waiting first; an unlisted next step counts from the checklist’s last change', () => {
     const first = funnel.prospective.clubs[0]!
     expect(first.clubId).toBe('28678700')
-    expect(first.daysInStage).toBe(daysBetween('2025-04-15', '2026-10-11'))
+    expect(first.progress).toMatchObject({
+      recognised: true,
+      stepsComplete: 1,
+      waitingOn: { number: 2, listed: false, since: '2025-04-15' },
+    })
+    expect(first.waitingDays).toBe(daysBetween('2025-04-15', '2026-10-11'))
     expect(first.payment).toBe('complete')
-    const days = funnel.prospective.clubs.map(c => c.daysInStage ?? -1)
+    const days = funnel.prospective.clubs.map(c => c.waitingDays ?? -1)
     expect([...days].sort((a, b) => b - a)).toEqual(days)
   })
 

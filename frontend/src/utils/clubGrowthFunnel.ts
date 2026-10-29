@@ -9,9 +9,11 @@ import type {
 import {
   normalizeClubId,
   parseProspectStage,
+  prospectProgress,
   sponsorMentorRole,
   usDateToIso,
   type ParsedProspectStage,
+  type ProspectProgress,
 } from '@taverns-red/shared-contracts'
 import { toastmastersClubPageUrl } from './toastmastersClubPageUrl'
 
@@ -20,7 +22,8 @@ import { toastmastersClubPageUrl } from './toastmastersClubPageUrl'
    Four stages, each from data already on the CDN — no new pipeline field:
 
    - Prospective  — the reports sidecar's `prospectiveClubs` (TI's Prospective
-     Clubs report). Its `prospect` text carries the stage and dates.
+     Clubs report). Its `prospect` text is TI's charter checklist
+     (steps #1–#6 and payment, each with the date it last changed, #2388).
    - Chartered    — the rankings row's `newCharteredClubs` (TI's dashboard
      count, the same one the Club Growth award reads); the clubs come from the
      sidecar's `newClubs` report, scoped to the program year.
@@ -115,9 +118,10 @@ export interface ProspectiveRow {
   clubName: string
   division: string
   area: string
-  stage: ParsedProspectStage
-  /** Days since the stage date, as of the displayed snapshot. */
-  daysInStage: number | null
+  /** TI's checklist read as steps complete and the step waited on (#2388). */
+  progress: ProspectProgress
+  /** Days since the waited-on step last changed, as of the displayed date. */
+  waitingDays: number | null
   payment: 'complete' | 'incomplete' | 'unknown'
   /** The club's prospective page here (#2303). */
   href: string | null
@@ -183,7 +187,8 @@ export interface ClubGrowthFunnel {
   prospective: {
     value: StageValue
     clubs: ProspectiveRow[]
-    byStage: { stageNumber: number | null; stageLabel: string; count: number }[]
+    /** Clubs by steps complete; `stepsComplete: null` = text not recognised. */
+    byProgress: { stepsComplete: number | null; count: number }[]
   }
   chartered: { value: StageValue; clubs: CharteredRow[] }
   coached: { value: StageValue; active: CoachedRow[]; completed: CoachedRow[] }
@@ -237,51 +242,42 @@ function buildProspective(
   asOfDate: string
 ): ClubGrowthFunnel['prospective'] {
   const clubs: ProspectiveRow[] = records.map(r => {
-    const stage = parseProspectStage(r.prospect)
-    const stageDate = stage.recognised ? stage.stageDate : null
+    const progress = prospectProgress(r.prospect)
+    const since = progress.recognised ? progress.waitingOn?.since : null
     return {
       clubId: r.club,
       clubName: r.name,
       division: r.division,
       area: r.area,
-      stage,
-      daysInStage: stageDate ? daysBetween(stageDate, asOfDate) : null,
-      payment: stage.recognised ? stage.payment : 'unknown',
+      progress,
+      waitingDays: since ? daysBetween(since, asOfDate) : null,
+      payment: progress.recognised ? progress.payment : 'unknown',
       href: prospectiveClubHref(districtId, r.club),
     }
   })
-  // Furthest stage first, then longest-waiting — the clubs that most need a
-  // nudge lead the list.
-  clubs.sort((a, b) => {
-    const sa = a.stage.recognised ? a.stage.stageNumber : -1
-    const sb = b.stage.recognised ? b.stage.stageNumber : -1
-    if (sa !== sb) return sb - sa
-    return (b.daysInStage ?? -1) - (a.daysInStage ?? -1)
-  })
+  // Most steps complete first, then longest waiting (Ron, 2026-10-28, #2388):
+  // the clubs closest to charter that have stalled lead the list.
+  const steps = (c: ProspectiveRow) =>
+    c.progress.recognised ? c.progress.stepsComplete : -1
+  clubs.sort(
+    (a, b) =>
+      steps(b) - steps(a) || (b.waitingDays ?? -1) - (a.waitingDays ?? -1)
+  )
 
-  const groups = new Map<
-    string,
-    { stageNumber: number | null; stageLabel: string; count: number }
-  >()
+  const groups = new Map<number | null, number>()
   for (const c of clubs) {
-    const key = c.stage.recognised
-      ? `${c.stage.stageNumber} ${c.stage.stageLabel}`
-      : 'unrecognised'
-    const g = groups.get(key) ?? {
-      stageNumber: c.stage.recognised ? c.stage.stageNumber : null,
-      stageLabel: c.stage.recognised
-        ? c.stage.stageLabel
-        : 'Stage not recognised',
-      count: 0,
-    }
-    g.count += 1
-    groups.set(key, g)
+    const key = c.progress.recognised ? c.progress.stepsComplete : null
+    groups.set(key, (groups.get(key) ?? 0) + 1)
   }
 
   return {
     value: { kind: 'count', value: clubs.length },
     clubs,
-    byStage: [...groups.values()],
+    // In `clubs` order: most complete first, unrecognised last.
+    byProgress: [...groups].map(([stepsComplete, count]) => ({
+      stepsComplete,
+      count,
+    })),
   }
 }
 
@@ -465,7 +461,7 @@ export function buildClubGrowthFunnel({
     : {
         value: { kind: 'unknown', reason: NO_REPORT } as StageValue,
         clubs: [],
-        byStage: [],
+        byProgress: [],
       }
 
   const chartered = buildChartered(
