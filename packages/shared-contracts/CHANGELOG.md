@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.24.0...shared-contracts-v1.25.0) (2026-10-29)
+
+
+### Features
+
+* **rollups:** emit prospective clubs by steps complete, schema 1.1.0, after [#2392](https://github.com/taverns-red/toast-stats/issues/2392) is released ([#2388](https://github.com/taverns-red/toast-stats/issues/2388)) ([#2393](https://github.com/taverns-red/toast-stats/issues/2393)) ([29aff2c](https://github.com/taverns-red/toast-stats/commit/29aff2c5131662ed80ffb7245e897e808feb37cd))
+
 ## [1.24.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.23.0...shared-contracts-v1.24.0) (2026-10-29)
 
 

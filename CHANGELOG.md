@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.76.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.75.0...toast-stats-v2.76.0) (2026-10-29)
+
+
+### Features
+
+* **rollups:** emit prospective clubs by steps complete, schema 1.1.0, after [#2392](https://github.com/taverns-red/toast-stats/issues/2392) is released ([#2388](https://github.com/taverns-red/toast-stats/issues/2388)) ([#2393](https://github.com/taverns-red/toast-stats/issues/2393)) ([29aff2c](https://github.com/taverns-red/toast-stats/commit/29aff2c5131662ed80ffb7245e897e808feb37cd))
+
+
+### Bug Fixes
+
+* **overview:** label the two Distinguished-club counts, qualifying today vs confirmed ([#2390](https://github.com/taverns-red/toast-stats/issues/2390)) ([#2395](https://github.com/taverns-red/toast-stats/issues/2395)) ([36bbdac](https://github.com/taverns-red/toast-stats/commit/36bbdacab24a87844154fbc028d009a66170573d))
+
 ## [2.75.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.74.0...toast-stats-v2.75.0) (2026-10-29)
 
 
