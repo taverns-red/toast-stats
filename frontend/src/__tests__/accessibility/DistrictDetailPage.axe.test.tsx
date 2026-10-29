@@ -80,6 +80,56 @@ Object.defineProperty(global, 'IntersectionObserver', {
 
 // Hook mocks — same surface as DistrictDetailPage.AnalyticsTab.test.tsx
 // so we test the page chrome + scaffolding, not the data layer.
+// #2405 — the page's own CDN reads, each settled in its 404 shape (the
+// reader's documented "absent" contract). These tests assert page structure,
+// not this data, and must never reach the live CDN.
+vi.mock('../../services/cdn', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../services/cdn')>()),
+  // v1/dates.json (ProgramYearProvider): the default PY falls back to the calendar.
+  fetchCdnDates: vi
+    .fn()
+    .mockRejectedValue(new Error('CDN dates fetch failed: 404')),
+  // v1/latest.json (freshness pill and latest-date reads).
+  fetchCdnManifest: vi
+    .fn()
+    .mockRejectedValue(new Error('CDN manifest fetch failed: 404')),
+  fetchLatestSnapshotDate: vi
+    .fn()
+    .mockRejectedValue(new Error('CDN manifest fetch failed: 404')),
+  // v1/rankings.json and snapshots/{date}/all-districts-rankings.json.
+  fetchCdnRankings: vi
+    .fn()
+    .mockRejectedValue(new Error('CDN rankings fetch failed: 404')),
+  fetchCdnRankingsForDateExact: vi.fn().mockResolvedValue(null),
+  fetchCdnRankingsForDate: vi
+    .fn()
+    .mockRejectedValue(new Error('CDN rankings fetch failed: 404')),
+  // snapshots/{date}/competitive-awards.json.
+  fetchCdnCompetitiveAwards: vi.fn().mockResolvedValue(null),
+  // config/district-snapshot-index.json (club-growth milestones).
+  fetchCdnSnapshotIndex: vi
+    .fn()
+    .mockRejectedValue(
+      new Error('CDN fetch failed: 404 for config/district-snapshot-index.json')
+    ),
+  // config/district-region-history.json: the region comes from the rankings row.
+  fetchCdnDistrictRegionHistory: vi.fn().mockResolvedValue(null),
+}))
+
+// #2405 — snapshots/{date}/analytics/district_{id}_analytics.json via the
+// aggregated reader, settled with no data (useDistrictAnalytics above feeds
+// the page).
+vi.mock('../../hooks/useAggregatedAnalytics', () => ({
+  useAggregatedAnalytics: vi.fn(() => ({
+    data: null,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+    usedFallback: false,
+  })),
+}))
+
 vi.mock('../../hooks/useDistricts', () => ({
   useDistricts: vi.fn(() => ({
     data: { districts: [{ id: '57', name: 'District 57' }] },

@@ -81,7 +81,19 @@ vi.mock('../../services/cdnClubDistrictHistory', () => ({
 
 vi.mock('../../services/cdn', async importOriginal => {
   const actual = await importOriginal<typeof import('../../services/cdn')>()
-  return { ...actual, fetchCdnClubIndex: vi.fn() }
+  return {
+    ...actual,
+    fetchCdnClubIndex: vi.fn(),
+    // #2405 — ProgramYearProvider's default-PY read. Fixture, not the live CDN.
+    fetchCdnDates: vi.fn().mockResolvedValue({
+      dates: ['2025-10-15'],
+      count: 1,
+      generatedAt: '2025-10-16T00:00:00Z',
+    }),
+    // #2405 — the club-history index, empty: these tests cover the id lookup,
+    // not the year-end history, so no per-year snapshot is ever requested.
+    fetchCdnSnapshotIndex: vi.fn().mockResolvedValue({}),
+  }
 })
 
 const CLUB_NAME = 'Leading Zero Toastmasters'

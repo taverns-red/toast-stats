@@ -65,6 +65,28 @@ vi.mock('../../hooks/useMembershipData', () => ({
   useDistrictStatistics: vi.fn(),
 }))
 
+// #2405 — the page chrome's CDN reads (program-year dates, the latest
+// manifest, the latest rankings) get fixtures; nothing reaches the live CDN.
+// Rankings carry no rows: nothing this file asserts is read from them.
+vi.mock('../../services/cdn', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../services/cdn')>()),
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2025-08-31', '2025-10-31', '2026-10-11'],
+    count: 3,
+    generatedAt: '2026-10-12T00:00:00Z',
+  }),
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2026-10-11',
+    generatedAt: '2026-10-12T00:00:00Z',
+  }),
+  fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2026-10-11'),
+  fetchCdnRankings: vi.fn().mockResolvedValue({
+    rankings: [],
+    asOfDate: '2026-10-11',
+    generatedAt: '2026-10-12T00:00:00Z',
+  }),
+}))
+
 vi.mock('../../hooks/useTimeSeries', () => ({
   useTimeSeries: vi.fn(),
 }))

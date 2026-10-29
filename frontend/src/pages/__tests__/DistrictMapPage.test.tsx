@@ -199,6 +199,13 @@ vi.mock('../../services/cdn', async importOriginal => ({
   ...(await importOriginal<typeof import('../../services/cdn')>()),
   fetchCdnDistrictSnapshot: (date: string, districtId: string) =>
     fetchSnapshot(date, districtId),
+  // #2405 — ProgramYearProvider's default-PY read (v1/dates.json): a fixture
+  // matching the district data's 2026-10-11 snapshot, not the live CDN.
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2026-10-01', '2026-10-11'],
+    count: 2,
+    generatedAt: '2026-10-12T00:00:00Z',
+  }),
 }))
 
 const DistrictMapPage = React.lazy(() => import('../DistrictMapPage'))

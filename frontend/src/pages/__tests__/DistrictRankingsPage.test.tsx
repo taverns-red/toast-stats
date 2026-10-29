@@ -88,6 +88,28 @@ vi.mock('../../hooks/useCompetitiveAwards', () => ({
   useCompetitiveAwards: vi.fn(() => ({ data: null, isLoading: false })),
 }))
 
+// #2405 — the page chrome's CDN reads, as fixtures matching the cached dates
+// above, not the live CDN: ProgramYearProvider's default PY (v1/dates.json)
+// and the freshness pill's manifest (v1/latest.json) and latest rankings
+// (v1/rankings.json, no rows — GlobalRankingsTab is faked below).
+vi.mock('../../services/cdn', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../services/cdn')>()),
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2025-07-01', '2025-07-15'],
+    count: 2,
+    generatedAt: '2025-07-16T00:00:00Z',
+  }),
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2025-07-15',
+    generatedAt: '2025-07-16T00:00:00Z',
+  }),
+  fetchCdnRankings: vi.fn().mockResolvedValue({
+    rankings: [],
+    asOfDate: '2025-07-15',
+    generatedAt: '2025-07-16T00:00:00Z',
+  }),
+}))
+
 vi.mock('../../components/LazyCharts', () => ({
   LazyMembershipTrendChart: () => null,
   LazyMembershipPaymentsChart: () => null,

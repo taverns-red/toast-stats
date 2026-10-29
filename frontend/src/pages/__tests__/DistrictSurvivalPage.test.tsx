@@ -77,6 +77,28 @@ vi.mock('../../hooks/useDistrictData', () => ({
   })),
 }))
 
+// #2405 — the page chrome's CDN reads, as fixtures matching the cached dates
+// above, not the live CDN: ProgramYearProvider's default PY (v1/dates.json)
+// and the freshness pill's manifest (v1/latest.json) and latest rankings
+// (v1/rankings.json; no rows, the page reads none).
+vi.mock('../../services/cdn', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../services/cdn')>()),
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2019-06-30', '2020-06-30', '2026-10-13'],
+    count: 3,
+    generatedAt: '2026-10-14T00:00:00Z',
+  }),
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2026-10-13',
+    generatedAt: '2026-10-14T00:00:00Z',
+  }),
+  fetchCdnRankings: vi.fn().mockResolvedValue({
+    rankings: [],
+    asOfDate: '2026-10-13',
+    generatedAt: '2026-10-14T00:00:00Z',
+  }),
+}))
+
 vi.mock('../../hooks/useClubDistrictHistory', () => ({
   useClubDistrictHistory: vi.fn(),
 }))

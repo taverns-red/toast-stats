@@ -98,8 +98,23 @@ vi.mock('../../services/cdn', async importOriginal => {
     fetchCdnRankings: vi.fn(),
     fetchCdnRankingsForDate: vi.fn(),
     fetchCdnCompetitiveAwards: vi.fn(),
+    // #2405 — the pages' other CDN reads, stubbed so no request leaves the
+    // test. The latest-date read answers the pinned snapshot date (the hooks
+    // that call it bypass the mocked manifest inside cdn.ts); the exact-date
+    // rankings are set per test below.
+    fetchLatestSnapshotDate: vi.fn(),
+    fetchCdnRankingsForDateExact: vi.fn(),
+    // Not published in this fixture: each read's own null (404) result.
+    fetchCdnDistrictRegionHistory: vi.fn().mockResolvedValue(null),
+    fetchCdnRegionRollups: vi.fn().mockResolvedValue(null),
+    fetchCdnRegionMembershipSeries: vi.fn().mockResolvedValue(null),
   }
 })
+
+// #2405 — DistrictDetailPage's targets read; not the subject here.
+vi.mock('../../hooks/usePerformanceTargets', () => ({
+  usePerformanceTargets: vi.fn(() => ({ data: null, isLoading: false })),
+}))
 
 // AwardsPage/DistrictDetailPage source the freshness pill from this shared
 // hook; it is not the subject here.
@@ -237,6 +252,19 @@ beforeEach(async () => {
     snapshotDate: SNAPSHOT_DATE,
     generatedAt: '2026-07-05T00:00:00Z',
   })
+  vi.mocked(cdn.fetchLatestSnapshotDate).mockResolvedValue(SNAPSHOT_DATE)
+  // #2405 — AwardsPage's exact-date read: the snapshot's own rankings file.
+  vi.mocked(cdn.fetchCdnRankingsForDateExact).mockImplementation(
+    async (date: string) =>
+      date === SNAPSHOT_DATE
+        ? {
+            rankings: [ranking],
+            asOfDate: AS_OF_DATE,
+            snapshotDate: SNAPSHOT_DATE,
+            generatedAt: '2026-07-05T00:00:00Z',
+          }
+        : null
+  )
   vi.mocked(cdn.fetchCdnRankings).mockResolvedValue({
     rankings: [ranking],
     asOfDate: AS_OF_DATE,
