@@ -512,7 +512,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
                   confirmed only ·{' '}
                   <a
                     href={DISTINGUISHED_COUNTS_METHODOLOGY_HREF}
-                    className="text-tm-loyal-blue underline"
+                    className="text-tm-loyal-blue underline whitespace-nowrap"
                   >
                     How we count
                   </a>

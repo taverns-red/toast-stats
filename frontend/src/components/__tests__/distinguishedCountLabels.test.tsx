@@ -114,10 +114,9 @@ describe('KPI card: "qualifying today" (#2390)', () => {
         />
       </MemoryRouter>
     )
-    const tile = screen
-      .getAllByTestId('district-hub-tile')
-      .find(t => /distinguished/i.test(t.textContent ?? ''))!
-    fireEvent.click(tile)
+    fireEvent.click(
+      screen.getByRole('button', { name: /^Distinguished Clubs/ })
+    )
     const sheet = screen.getByRole('dialog', { name: 'Distinguished Clubs' })
     expect(sheet).toHaveTextContent(/qualifying today/i)
   })
