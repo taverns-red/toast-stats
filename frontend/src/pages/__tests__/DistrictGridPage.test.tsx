@@ -46,6 +46,17 @@ vi.mock('../../hooks/useDistrictData', () => ({
   })),
 }))
 
+// #2405 — ProgramYearProvider's default-PY read (v1/dates.json): a fixture
+// matching the cached dates above, not the live CDN.
+vi.mock('../../services/cdn', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../services/cdn')>()),
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2026-05-15', '2026-06-01'],
+    count: 2,
+    generatedAt: '2026-06-02T00:00:00Z',
+  }),
+}))
+
 // Keep the heavy date/program-year chrome out of the grid-logic assertions.
 vi.mock('../../components/DistrictDetailHeader', () => ({
   DistrictDetailHeader: () => <div data-testid="district-header" />,
