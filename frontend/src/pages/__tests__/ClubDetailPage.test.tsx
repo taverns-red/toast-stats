@@ -8,6 +8,7 @@ import {
   cleanup,
   within,
   fireEvent,
+  act,
 } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -17,6 +18,7 @@ import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
 import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
 import { useClubHistory } from '../../hooks/useClubHistory'
+import { AFTER_PAINT_FALLBACK_MS } from '../../hooks/useAfterPaint'
 
 // Mock localStorage
 const localStorageMock = {
@@ -347,6 +349,27 @@ describe('ClubDetailPage (#208)', () => {
     renderWithRoute('99999999')
 
     expect(await screen.findByText('Club Not Found')).toBeInTheDocument()
+  })
+
+  // #2408 — the breadcrumb, freshness-pill and worldwide-race reads wait for
+  // the after-paint gate (#1852, #1901). A test that awaits long enough for
+  // it to open made them for real: main went red when a slow CI poll in the
+  // not-found test let it open. Hold the test past the gate's fallback so
+  // the reads always start here; the network guard fails it if any is live.
+  it('makes its after-paint reads without reaching the live CDN', async () => {
+    renderWithRoute()
+    await act(
+      () =>
+        new Promise<void>(resolve =>
+          setTimeout(resolve, AFTER_PAINT_FALLBACK_MS + 50)
+        )
+    )
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: /St Lawrence Toastmasters/,
+      })
+    ).toBeInTheDocument()
   })
 
   // #1104 — a transient CDN fetch reject must surface a distinct, retryable
