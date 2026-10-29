@@ -102,6 +102,29 @@ vi.mock('../../hooks/useCompetitiveAwards', () => ({
   useCompetitiveAwards: vi.fn(() => ({ data: null, isLoading: false })),
 }))
 
+// #2405 — the page's remaining CDN reads, stubbed so no request leaves the
+// test: the PY dates index (ProgramYearProvider), the latest-date manifest and
+// the undated rankings (the hub's rank chip). The rankings carry no row for
+// D61, so the chip stays empty, as the divisions assertions assume.
+vi.mock('../../services/cdn', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../services/cdn')>()),
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2025-07-01', '2025-07-15'],
+    count: 2,
+    generatedAt: '2025-07-16T00:00:00Z',
+  }),
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2025-07-15',
+    generatedAt: '2025-07-16T00:00:00Z',
+  }),
+  fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2025-07-15'),
+  fetchCdnRankings: vi.fn().mockResolvedValue({
+    rankings: [],
+    asOfDate: '2025-07-15',
+    generatedAt: '2025-07-16T00:00:00Z',
+  }),
+}))
+
 vi.mock('../../components/LazyCharts', () => ({
   LazyMembershipTrendChart: () => null,
   LazyMembershipPaymentsChart: () => null,

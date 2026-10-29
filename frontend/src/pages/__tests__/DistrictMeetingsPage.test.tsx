@@ -46,6 +46,29 @@ vi.mock('../../hooks/useDistrictData', () => ({
   })),
 }))
 
+// #2405 — the page's CDN reads outside the mocked hooks, stubbed so no
+// request leaves the test: the PY dates index (ProgramYearProvider), the
+// latest-date manifest and the undated rankings (district chrome). The rankings
+// carry no row for this district, so nothing rank-derived renders.
+vi.mock('../../services/cdn', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../services/cdn')>()),
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2026-10-14', '2026-10-15'],
+    count: 2,
+    generatedAt: '2026-10-15T12:00:00Z',
+  }),
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2026-10-15',
+    generatedAt: '2026-10-15T12:00:00Z',
+  }),
+  fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2026-10-15'),
+  fetchCdnRankings: vi.fn().mockResolvedValue({
+    rankings: [],
+    asOfDate: '2026-10-15',
+    generatedAt: '2026-10-15T12:00:00Z',
+  }),
+}))
+
 vi.mock('../../hooks/useDistrictAnalytics', () => ({
   useDistrictAnalytics: vi.fn(),
 }))
