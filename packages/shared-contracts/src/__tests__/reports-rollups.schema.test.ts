@@ -27,6 +27,17 @@ const RECORDED = JSON.parse(
   )
 ) as ReportsRollups
 
+/** The writer's output before #2388 — the shape every past date keeps. */
+const LEGACY = JSON.parse(
+  readFileSync(
+    new URL(
+      './__fixtures__/recorded-reports-rollups-v1.0.0.json',
+      import.meta.url
+    ),
+    'utf-8'
+  )
+) as ReportsRollups
+
 /** The recorded file with the #2388 field added, as the writer will emit it. */
 function withSteps(): ReportsRollups {
   const r = structuredClone(RECORDED)
@@ -45,9 +56,18 @@ function withSteps(): ReportsRollups {
 }
 
 describe('ReportsRollupsSchema (#2012)', () => {
-  it('still parses a file without steps-complete counts (#2388)', () => {
-    expect(RECORDED.world.prospective).not.toHaveProperty('byStepsComplete')
-    expect(ReportsRollupsSchema.parse(RECORDED)).toEqual(RECORDED)
+  it('the writer emits steps-complete counts at version 1.1.0 (#2388)', () => {
+    expect(RECORDED._format.version).toBe('1.1.0')
+    expect(RECORDED.world.prospective?.byStepsComplete).toEqual([
+      { stepsComplete: 1, clubs: 6 },
+    ])
+  })
+
+  it('still parses a 1.0.0 file written before the writer emitted them', () => {
+    const legacy = LEGACY
+    expect(legacy._format.version).toBe('1.0.0')
+    expect(legacy.world.prospective).not.toHaveProperty('byStepsComplete')
+    expect(ReportsRollupsSchema.parse(legacy)).toEqual(legacy)
   })
 
   it('accepts prospective clubs by steps complete (#2388)', () => {
@@ -65,7 +85,7 @@ describe('ReportsRollupsSchema (#2012)', () => {
         byStage: z.array(ProspectiveStageCountSchema),
       })
       .strict()
-    expect(deployed.safeParse(RECORDED.world.prospective).success).toBe(true)
+    expect(deployed.safeParse(LEGACY.world.prospective).success).toBe(true)
     expect(deployed.safeParse(withSteps().world.prospective).success).toBe(
       false
     )

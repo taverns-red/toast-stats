@@ -47,6 +47,23 @@ Object.defineProperty(window, 'matchMedia', {
   writable: true,
 })
 
+// #2403 — this file must never reach the live CDN. Two un-stubbed reads
+// (`v1/dates.json` from ProgramYearProvider, the district snapshot from
+// useDistrictStatistics) used to go out for real. When one settled mid-file —
+// a fast network, as on CI — later mounts re-rendered synchronously inside
+// render() and the mockReturnValueOnce overrides below were spent on the
+// first render. The stub rejects at once (the CI-shaped timing), and every
+// test fails if anything calls it.
+const liveFetch = vi.fn((input: string | URL | Request) =>
+  Promise.reject(
+    new Error(`live fetch in ClubDetailPage.test: ${String(input)}`)
+  )
+)
+vi.stubGlobal('fetch', liveFetch)
+afterEach(() => {
+  expect(liveFetch).not.toHaveBeenCalled()
+})
+
 // ── Mock hooks ──────────────────────────────────────────────────────────────
 
 vi.mock('../../hooks/useDistricts', () => ({
@@ -102,6 +119,18 @@ vi.mock('../../services/cdnClubDistrictHistory', () => ({
 vi.mock('../../services/cdn', async importOriginal => ({
   ...(await importOriginal<typeof import('../../services/cdn')>()),
   fetchCdnClubIndex: vi.fn().mockResolvedValue({ clubs: {} }),
+  // #2403 — ProgramYearProvider's default-PY read. Fixture, not the live CDN.
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2025-10-15'],
+    count: 1,
+    generatedAt: '2025-10-16T00:00:00Z',
+  }),
+}))
+
+// #2403 — the page's snapshot read, settled with no club record: the hero
+// and stats come from the analytics mock below, as every test here assumes.
+vi.mock('../../hooks/useMembershipData', () => ({
+  useDistrictStatistics: vi.fn(() => ({ data: null, isLoading: false })),
 }))
 
 // #1791 — the trend's prior years come from the club's year-end history.

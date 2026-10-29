@@ -66,7 +66,12 @@ const SECTIONS: ReadonlyArray<{ id: string; num: string; title: string }> = [
     title: 'Prospective clubs',
   },
   { id: 'success-plan-targets', num: '18', title: 'Success Plan targets' },
-  { id: 'changelog', num: '19', title: 'Changelog' },
+  {
+    id: 'distinguished-club-counts',
+    num: '19',
+    title: 'Distinguished club counts',
+  },
+  { id: 'changelog', num: '20', title: 'Changelog' },
 ]
 
 // Every rule-change entry is its own deep-link target (#1400), owned by §10.
@@ -1418,9 +1423,72 @@ const MethodologyPage: React.FC = () => {
         </div>
       </CollapsibleSection>
 
+      {/* The two Distinguished-club counts on the Overview (#2390). Ron kept
+          both and labelled them (2026-10-28); the trophy case's "How we
+          count" link lands here. Asserted by
+          MethodologyPage.distinguishedCounts.test.tsx. */}
+      <CollapsibleSection
+        id="distinguished-club-counts"
+        num="19"
+        title="Distinguished club counts"
+        collapsible={isMobile}
+        open={openIds.has('distinguished-club-counts')}
+        onToggle={toggle}
+      >
+        <div data-testid="methodology-distinguished-club-counts">
+          <p>
+            The district Overview shows two counts of Distinguished clubs. They
+            answer different questions, so they can differ, and the counting
+            rules are the same as before.
+          </p>
+          <h3>Qualifying today: the KPI card</h3>
+          <p>
+            The <strong>Distinguished Clubs</strong> KPI card counts the clubs
+            that meet a Distinguished Club Program rung on today&apos;s data:
+            enough DCP goals (5, 7, 9 or 10) and the membership requirement (20
+            members, or net growth of 3 or 5 over the membership base; 25
+            members for Smedley) on current membership, with a submitted Club
+            Success Plan from 2025-26 on (see §05). It moves as clubs gain and
+            lose members during the year.
+          </p>
+          <h3>Confirmed: the Gap to Distinguished District</h3>
+          <p>
+            The trophy case&apos;s{' '}
+            <strong>Gap to Distinguished District</strong> counts{' '}
+            <strong>confirmed</strong> clubs: the district rankings&apos;
+            Distinguished club count, which is what Distinguished District
+            recognition is measured by (Item 1490). Once Toastmasters
+            International reports Distinguished clubs, this is TI&apos;s own
+            count. Before that, when TI reports none, a club counts as confirmed
+            when its April renewals alone meet the membership requirement of a
+            rung it has the goals for. A club that qualifies today on members
+            who have not yet renewed is not confirmed.
+          </p>
+          <p>
+            So the gap can be larger than the KPI card&apos;s threshold minus
+            its count. The per-district share card uses the same confirmed count
+            (&ldquo;more confirmed Distinguished clubs&rdquo;).
+          </p>
+          <p className="methodology-source">
+            Source: Toastmasters International,{' '}
+            <em>Distinguished Club Program and Club Success Plan</em> (Item
+            1111, Rev. 06/2026) for the club rungs and the Club Success Plan
+            requirement; <em>District Recognition Program</em> (Item 1490) for
+            the district thresholds;{' '}
+            <code>docs/toastmasters-rules-reference.md</code> §3.2–3.4. The
+            confirmed rule lives in{' '}
+            <code>countConfirmedDistinguishedClubs</code> (analytics-core, #304,
+            #2221); the KPI count is <code>performance-targets</code>{' '}
+            <code>currentProgress.distinguished</code>, and the gap is{' '}
+            <code>competitive-awards</code>{' '}
+            <code>distinguishedClubsRemaining</code>.
+          </p>
+        </div>
+      </CollapsibleSection>
+
       <CollapsibleSection
         id="changelog"
-        num="19"
+        num="20"
         title="Changelog"
         collapsible={isMobile}
         open={openIds.has('changelog')}

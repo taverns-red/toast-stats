@@ -146,7 +146,15 @@ interface GapTileSpec {
   gapPercent: number
   unitSingular: string
   unitPlural: string
+  /** A link after the percentage, on the same row (#2390). */
+  link?: { href: string; label: string }
 }
+
+/* The Methodology entry that explains the two Distinguished-club counts
+   (#2390). A plain anchor: the trophy case renders outside a router in its
+   unit tests, the same reason MembershipTrendChart links this way. */
+const DISTINGUISHED_COUNTS_METHODOLOGY_HREF =
+  '/methodology#distinguished-club-counts'
 
 const GapTile: React.FC<GapTileSpec> = ({
   label,
@@ -154,13 +162,17 @@ const GapTile: React.FC<GapTileSpec> = ({
   gapPercent,
   unitSingular,
   unitPlural,
+  link,
 }) => {
   // `count === 0` is the canonical "met" signal (lesson 103); only the
   // un-evaluable case (no canonical, no ranking) leaves the headline blank.
   const closed = count === 0
   const noun = count === 1 ? unitSingular : unitPlural
   return (
-    <div className="rounded-md border border-gray-200 theme-dark:border-gray-700 px-3 py-2">
+    <div
+      data-testid="gap-tile"
+      className="rounded-md border border-gray-200 theme-dark:border-gray-700 px-3 py-2"
+    >
       <div
         data-testid="gap-tile-label"
         className="text-[11px] uppercase tracking-wide text-gray-600 theme-dark:text-gray-400 font-tm-body"
@@ -178,11 +190,24 @@ const GapTile: React.FC<GapTileSpec> = ({
         {closed ? '✓' : count != null ? `${count} ${noun}` : '—'}
       </div>
       {!closed && count != null && (
-        <div
-          data-testid="gap-tile-subitem"
-          className="mt-0.5 text-[11px] text-gray-600 theme-dark:text-gray-400 font-tm-body tabular-nums"
-        >
-          +{gapPercent.toFixed(1)}%
+        /* The link rides the percentage's row, so it adds no row to the
+           375 Overview (#2390, PAGE_MAX_H). Only the short link fits there
+           on the CI renderer's wider system-ui face at the 14px floor. */
+        <div className="mt-0.5 text-[11px] text-gray-600 theme-dark:text-gray-400 font-tm-body">
+          <span data-testid="gap-tile-subitem" className="tabular-nums">
+            +{gapPercent.toFixed(1)}%
+          </span>
+          {link && (
+            <span data-testid="gap-tile-link">
+              <span aria-hidden="true"> · </span>
+              <a
+                href={link.href}
+                className="text-tm-loyal-blue underline whitespace-nowrap"
+              >
+                {link.label}
+              </a>
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -289,6 +314,11 @@ const TrophyCaseSkeleton: React.FC<{ programYear: string }> = ({
           </div>
         ))}
       </div>
+      {/* The loaded panel's md+ explainer line under the tiles (#2390). */}
+      <p className="invisible hidden md:block mt-2 text-xs font-tm-body">
+        Confirmed clubs only. The Distinguished Clubs card above counts clubs
+        qualifying today, so the two can differ.
+      </p>
     </div>
   </div>
 )
@@ -482,14 +512,31 @@ export const DistinguishedDistrictTrophyCase: React.FC<
               unitSingular="payment"
               unitPlural="payments"
             />
+            {/* Confirmed clubs (#304/#2221), the share card's noun (#2304).
+                The KPI card above counts clubs qualifying today; the word
+                keeps the two from reading as a contradiction (#2390). */}
             <GapTile
               label="Distinguished Clubs"
               count={distinguishedClubsCount}
               gapPercent={nextTierGap.distinguishedPercentGap}
-              unitSingular="club"
-              unitPlural="clubs"
+              unitSingular="confirmed club"
+              unitPlural="confirmed clubs"
+              link={{
+                href: DISTINGUISHED_COUNTS_METHODOLOGY_HREF,
+                label: 'How we count',
+              }}
             />
           </div>
+          {/* One line from 768 up (#2390). Phones carry the "confirmed
+              clubs" noun and the link only: this line would cost the 375
+              page a row it does not have. */}
+          <p
+            data-testid="distinguished-gap-explainer"
+            className="hidden md:block mt-2 text-xs text-gray-600 theme-dark:text-gray-400 font-tm-body"
+          >
+            Confirmed clubs only. The Distinguished Clubs card above counts
+            clubs qualifying today, so the two can differ.
+          </p>
         </div>
       )}
 

@@ -24,6 +24,7 @@ import {
 } from '@taverns-red/shared-contracts'
 import {
   buildReportsRollups,
+  sumReportsRollupFigures,
   type ReportsRollupsInput,
 } from '../reportsRollups.js'
 
@@ -79,6 +80,8 @@ const D61_FIGURES = {
     clubs: 6,
     paymentComplete: 6,
     byStage: [{ stage: 1, label: 'Application to Organize', clubs: 6 }],
+    // Every D61 cell lists only #1, Complete (#2388).
+    byStepsComplete: [{ stepsComplete: 1, clubs: 6 }],
   },
   coached: { activeClubs: 6, completedClubs: 6 },
   octoberDues: {
@@ -213,6 +216,7 @@ describe('a missing section is null, an empty one is 0', () => {
       clubs: 0,
       paymentComplete: 0,
       byStage: [],
+      byStepsComplete: [],
     })
     expect(out.world.prospective?.clubs).toBe(6)
   })
@@ -301,6 +305,80 @@ describe('multi-step prospect text (#2142)', () => {
       { stage: 4, label: 'Officer Info', clubs: 1 },
       { stage: 6, label: 'Constitution & Bylaws', clubs: 1 },
     ])
+  })
+})
+
+describe('prospect checklist progress (#2388)', () => {
+  // Recorded prod sidecars, 2026-10-27 (prospectiveClubs only, names and
+  // location scrubbed) — the cells the district funnel's tests read.
+  const REC = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        process.cwd(),
+        'frontend/src/__tests__/fixtures/prospective-club-page.recorded.json'
+      ),
+      'utf-8'
+    )
+  ) as { d25_reports: unknown; d84_reports: unknown }
+  const D25 = DistrictReportsDatasetSchema.parse(REC.d25_reports)
+  const D84 = DistrictReportsDatasetSchema.parse(REC.d84_reports)
+  const history: DistrictRegionHistory = structuredClone(HISTORY)
+  for (const id of ['25', '84']) {
+    history.districts[id] = { byProgramYear: { '2026-2027': '09' } }
+  }
+  const out = buildReportsRollups(
+    input({
+      snapshotDate: '2026-10-27',
+      districtIds: ['25', '61', '84'],
+      reports: [D84, D61, D25],
+      regionHistory: history,
+    })
+  )
+
+  it('counts each district by steps complete, most complete first', () => {
+    // D25: one club 5 of 6 (out of order), one 3 of 6. D84: four at 1 of 6,
+    // one of which the #2142 rule called "Stage 6".
+    expect(out.districts['25']?.prospective?.byStepsComplete).toEqual([
+      { stepsComplete: 5, clubs: 1 },
+      { stepsComplete: 3, clubs: 1 },
+    ])
+    expect(out.districts['84']?.prospective?.byStepsComplete).toEqual([
+      { stepsComplete: 1, clubs: 4 },
+    ])
+  })
+
+  it('a region and the world are the sum of their districts', () => {
+    expect(out.regions?.['09']?.prospective?.byStepsComplete).toEqual([
+      { stepsComplete: 5, clubs: 1 },
+      { stepsComplete: 3, clubs: 1 },
+      { stepsComplete: 1, clubs: 4 },
+    ])
+    expect(out.world.prospective?.byStepsComplete).toEqual([
+      { stepsComplete: 5, clubs: 1 },
+      { stepsComplete: 3, clubs: 1 },
+      { stepsComplete: 1, clubs: 10 },
+    ])
+    expect(ReportsRollupsSchema.parse(out)).toEqual(out)
+  })
+
+  it('an unrecognised cell is its own group, last', () => {
+    const odd = cloneAs('86')
+    odd.sections.prospectiveClubs!.records[0]!.prospect = 'Something new'
+    const o = buildReportsRollups(
+      input({ districtIds: ['61', '86'], reports: [D61, odd] })
+    )
+    expect(o.districts['86']?.prospective?.byStepsComplete).toEqual([
+      { stepsComplete: 1, clubs: 5 },
+      { stepsComplete: null, clubs: 1 },
+    ])
+  })
+
+  it('summing a legacy block (no byStepsComplete) leaves the field out', () => {
+    const legacy = structuredClone(out.districts['25']!)
+    delete legacy.prospective!.byStepsComplete
+    const sum = sumReportsRollupFigures([out.districts['84']!, legacy])
+    expect(sum.prospective).not.toHaveProperty('byStepsComplete')
+    expect(sum.prospective?.clubs).toBe(6)
   })
 })
 

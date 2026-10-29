@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.53.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.53.0...frontend-v3.53.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **overview:** label the two Distinguished-club counts, qualifying today vs confirmed ([#2390](https://github.com/taverns-red/toast-stats/issues/2390)) ([#2395](https://github.com/taverns-red/toast-stats/issues/2395)) ([36bbdac](https://github.com/taverns-red/toast-stats/commit/36bbdacab24a87844154fbc028d009a66170573d))
+
 ## [3.53.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.52.0...frontend-v3.53.0) (2026-10-29)
 
 
