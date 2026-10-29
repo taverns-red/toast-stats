@@ -71,6 +71,10 @@ export default defineConfig({
         test: {
           name: 'integration',
           include: integrationGlobs,
+          // #2405 — hermetic: any un-mocked network fetch fails its test.
+          // `extends: true` concatenates setupFiles, so this runs after the
+          // shared ./src/__tests__/setup.ts.
+          setupFiles: ['./src/__tests__/networkGuard.ts'],
           exclude: baseExclude,
         },
       },
