@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { networkGuardFetch, takeUnmockedFetches } from '../networkGuard'
 
 // #2405 — the integration project's setup replaces `fetch` with a guard that
@@ -29,5 +29,12 @@ describe('integration network guard', () => {
       'https://cdn.example.test/v1/rankings.json',
       'https://cdn.example.test/snapshots/x.json',
     ])
+  })
+
+  it('comes back after a file stubs and unstubs fetch, not the real network', () => {
+    vi.stubGlobal('fetch', vi.fn())
+    expect(globalThis.fetch).not.toBe(networkGuardFetch)
+    vi.unstubAllGlobals()
+    expect(globalThis.fetch).toBe(networkGuardFetch)
   })
 })
