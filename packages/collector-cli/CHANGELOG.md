@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.24.0...collector-cli-v1.24.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **collector:** TransformService program year from the logical date ([#2324](https://github.com/taverns-red/toast-stats/issues/2324)) ([#2377](https://github.com/taverns-red/toast-stats/issues/2377)) ([22d9713](https://github.com/taverns-red/toast-stats/commit/22d97138426477077a68f8fe73ada73308f9d75f))
+
 ## [1.24.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.23.3...collector-cli-v1.24.0) (2026-10-25)
 
 

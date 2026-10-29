@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.75.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.74.0...toast-stats-v2.75.0) (2026-10-29)
+
+
+### Features
+
+* **council:** voting clubs in good standing as of a council date ([#2300](https://github.com/taverns-red/toast-stats/issues/2300)) ([#2382](https://github.com/taverns-red/toast-stats/issues/2382)) ([dbab768](https://github.com/taverns-red/toast-stats/commit/dbab7687034b5ddb79ea08dfc0d567747b7ae767))
+* **growth:** in-site prospective club pages ([#2303](https://github.com/taverns-red/toast-stats/issues/2303)) ([#2384](https://github.com/taverns-red/toast-stats/issues/2384)) ([c23bb2f](https://github.com/taverns-red/toast-stats/commit/c23bb2f5086a3dee25873b556087d54c29710c59))
+* **growth:** read the prospect cell as a checklist: Progress and Waiting on ([#2388](https://github.com/taverns-red/toast-stats/issues/2388)) ([#2392](https://github.com/taverns-red/toast-stats/issues/2392)) ([5419e3e](https://github.com/taverns-red/toast-stats/commit/5419e3e6cb2b3be9dd2affe4dfa3687919dc2b96))
+* **plans:** District Success Plan targets vs actuals via ?targets= ([#2297](https://github.com/taverns-red/toast-stats/issues/2297)) ([#2386](https://github.com/taverns-red/toast-stats/issues/2386)) ([bef0ec3](https://github.com/taverns-red/toast-stats/commit/bef0ec3e1f73b9e3b4cacea480fe35946b4ed50a))
+* **print:** area and division council print packs ([#2299](https://github.com/taverns-red/toast-stats/issues/2299)) ([#2385](https://github.com/taverns-red/toast-stats/issues/2385)) ([5af8f3d](https://github.com/taverns-red/toast-stats/commit/5af8f3d4172abf3a279e6715d1c02551232e9eb3))
+* **share:** per-district Open Graph cards and share stubs ([#2304](https://github.com/taverns-red/toast-stats/issues/2304)) ([#2389](https://github.com/taverns-red/toast-stats/issues/2389)) ([e4be951](https://github.com/taverns-red/toast-stats/commit/e4be95161b2f8f5035ff9674223d9669220c9063))
+
+
+### Bug Fixes
+
+* **analytics:** one rule for a blank CSP cell ([#2327](https://github.com/taverns-red/toast-stats/issues/2327)) ([#2375](https://github.com/taverns-red/toast-stats/issues/2375)) ([040166a](https://github.com/taverns-red/toast-stats/commit/040166a8e771d9bf728d5b040be67b4ab94e0b13))
+* **charts:** keep grid and axes out of touch hit-testing ([#2380](https://github.com/taverns-red/toast-stats/issues/2380)) ([#2381](https://github.com/taverns-red/toast-stats/issues/2381)) ([91243ec](https://github.com/taverns-red/toast-stats/commit/91243ec917796cdcd8e05d53c4d6e74ea284d019))
+* **ci:** skip preview deploys for closed PRs ([#2372](https://github.com/taverns-red/toast-stats/issues/2372)) ([#2376](https://github.com/taverns-red/toast-stats/issues/2376)) ([9c6edf3](https://github.com/taverns-red/toast-stats/commit/9c6edf3f1dc4bada3457785c9a2b550f5b01e9d4))
+* **clubs:** keep the preset filter when the snapshot date changes ([#2370](https://github.com/taverns-red/toast-stats/issues/2370)) ([#2374](https://github.com/taverns-red/toast-stats/issues/2374)) ([5e5d22d](https://github.com/taverns-red/toast-stats/commit/5e5d22ded182b0904b725459b10ced133d703f51))
+* **collector:** TransformService program year from the logical date ([#2324](https://github.com/taverns-red/toast-stats/issues/2324)) ([#2377](https://github.com/taverns-red/toast-stats/issues/2377)) ([22d9713](https://github.com/taverns-red/toast-stats/commit/22d97138426477077a68f8fe73ada73308f9d75f))
+
+
+### Tests
+
+* guard journey tests against unpreloaded lazy pages ([#2373](https://github.com/taverns-red/toast-stats/issues/2373)) ([#2378](https://github.com/taverns-red/toast-stats/issues/2378)) ([d671fe5](https://github.com/taverns-red/toast-stats/commit/d671fe59eed2fc283c9b735163f432d5736ccd1b))
+
 ## [2.74.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.73.0...toast-stats-v2.74.0) (2026-10-28)
 
 

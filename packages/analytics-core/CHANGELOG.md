@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.24.1](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.24.0...analytics-core-v1.24.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **analytics:** one rule for a blank CSP cell ([#2327](https://github.com/taverns-red/toast-stats/issues/2327)) ([#2375](https://github.com/taverns-red/toast-stats/issues/2375)) ([040166a](https://github.com/taverns-red/toast-stats/commit/040166a8e771d9bf728d5b040be67b4ab94e0b13))
+* **collector:** TransformService program year from the logical date ([#2324](https://github.com/taverns-red/toast-stats/issues/2324)) ([#2377](https://github.com/taverns-red/toast-stats/issues/2377)) ([22d9713](https://github.com/taverns-red/toast-stats/commit/22d97138426477077a68f8fe73ada73308f9d75f))
+
 ## [1.24.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.23.1...analytics-core-v1.24.0) (2026-10-27)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.23.0...shared-contracts-v1.24.0) (2026-10-29)
+
+
+### Features
+
+* **growth:** read the prospect cell as a checklist: Progress and Waiting on ([#2388](https://github.com/taverns-red/toast-stats/issues/2388)) ([#2392](https://github.com/taverns-red/toast-stats/issues/2392)) ([5419e3e](https://github.com/taverns-red/toast-stats/commit/5419e3e6cb2b3be9dd2affe4dfa3687919dc2b96))
+
 ## [1.23.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.22.1...shared-contracts-v1.23.0) (2026-10-25)
 
 
