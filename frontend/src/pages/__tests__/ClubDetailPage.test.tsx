@@ -47,6 +47,23 @@ Object.defineProperty(window, 'matchMedia', {
   writable: true,
 })
 
+// #2403 — this file must never reach the live CDN. Two un-stubbed reads
+// (`v1/dates.json` from ProgramYearProvider, the district snapshot from
+// useDistrictStatistics) used to go out for real. When one settled mid-file —
+// a fast network, as on CI — later mounts re-rendered synchronously inside
+// render() and the mockReturnValueOnce overrides below were spent on the
+// first render. The stub rejects at once (the CI-shaped timing), and every
+// test fails if anything calls it.
+const liveFetch = vi.fn((input: string | URL | Request) =>
+  Promise.reject(
+    new Error(`live fetch in ClubDetailPage.test: ${String(input)}`)
+  )
+)
+vi.stubGlobal('fetch', liveFetch)
+afterEach(() => {
+  expect(liveFetch).not.toHaveBeenCalled()
+})
+
 // ── Mock hooks ──────────────────────────────────────────────────────────────
 
 vi.mock('../../hooks/useDistricts', () => ({
