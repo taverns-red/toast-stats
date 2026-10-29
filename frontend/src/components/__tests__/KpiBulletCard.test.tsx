@@ -91,6 +91,23 @@ describe('KpiBulletCard', () => {
       expect(regionLink).toHaveTextContent('#3')
     })
 
+    it('centres the region rank text inside its touch-target box (#2387)', () => {
+      // The global a[href] touch-target floor makes the link a 44–48px
+      // block, which left "05: #3" floating above the rank line. The repo's
+      // fix for that floor is inline-flex + items-center on the link.
+      renderWithRouter(
+        <KpiBulletCard
+          title="Paid Clubs"
+          current={149}
+          targets={standardTargets}
+          rankings={standardRankings}
+        />
+      )
+      const link = screen.getByTestId('region-rank')
+      expect(link).toHaveClass('inline-flex')
+      expect(link).toHaveClass('items-center')
+    })
+
     it('shows "—" placeholders when rank data is missing', () => {
       renderWithRouter(
         <KpiBulletCard
@@ -203,12 +220,12 @@ describe('KpiBulletCard', () => {
       ).toHaveTextContent('169')
     })
 
-    it('positions the marker on a zoom-scale focused on the tier band', () => {
-      // Scale = [max(0, min(current, 0.9 × Distinguished)), max(current, 1.05 × Smedley)]
-      // For current=149, targets D=158/Sm=169:
-      //   minScale = min(149, 142.2) = 142.2
-      //   maxScale = max(149, 177.45) = 177.45
-      //   position(149) = (149 - 142.2) / 35.25 * 100 ≈ 19.29%
+    // 0-based scale (#2387): [0, 1.05 × Smedley], or [0, current] once
+    // current reaches Smedley. #558's zoom started the scale at `current`
+    // whenever current < 0.9 × D, pinning the marker to the left edge with
+    // no fill — progress was invisible for every district below its tiers.
+    it('positions the marker proportionally on a 0-based scale (#2387)', () => {
+      //   maxScale = 1.05 × 169 = 177.45; position(149) = 149/177.45 ≈ 83.97%
       renderWithRouter(
         <KpiBulletCard
           title="Paid Clubs"
@@ -218,15 +235,25 @@ describe('KpiBulletCard', () => {
         />
       )
       const marker = screen.getByTestId('current-marker')
-      expect(marker).toHaveStyle({ left: '19.29%' })
+      expect(marker).toHaveStyle({ left: '83.97%' })
     })
 
-    it('spreads tier ticks across the bar so labels do not collide', () => {
-      // Same scale calc; tier ticks land at:
-      //   D=158 → (158-142.2)/35.25*100 ≈ 44.82%
-      //   S=161 → ≈ 53.33%
-      //   P=164 → ≈ 61.84%
-      //   Sm=169 → (169-142.2)/35.25*100 ≈ 76.03%
+    it('fills the track up to the current value (#2387)', () => {
+      renderWithRouter(
+        <KpiBulletCard
+          title="Paid Clubs"
+          current={149}
+          targets={standardTargets}
+          rankings={standardRankings}
+        />
+      )
+      expect(screen.getByTestId('progress-fill')).toHaveStyle({
+        width: '83.97%',
+      })
+    })
+
+    it('places tier ticks at their proportional positions (#2387)', () => {
+      //   D=158 → 89.04%, S=161 → 90.73%, P=164 → 92.42%, Sm=169 → 95.24%
       renderWithRouter(
         <KpiBulletCard
           title="Paid Clubs"
@@ -237,24 +264,22 @@ describe('KpiBulletCard', () => {
       )
       const bar = screen.getByRole('progressbar')
       expect(within(bar).getByTestId('tier-tick-distinguished')).toHaveStyle({
-        left: '44.82%',
+        left: '89.04%',
       })
       expect(within(bar).getByTestId('tier-tick-select')).toHaveStyle({
-        left: '53.33%',
+        left: '90.73%',
       })
       expect(within(bar).getByTestId('tier-tick-presidents')).toHaveStyle({
-        left: '61.84%',
+        left: '92.42%',
       })
       expect(within(bar).getByTestId('tier-tick-smedley')).toHaveStyle({
-        left: '76.03%',
+        left: '95.24%',
       })
     })
 
-    it('pins marker at 0% when current is far below the tier band', () => {
-      // For Distinguished Clubs on D61 (D=71, Sm=94, current=49):
-      //   minScale = min(49, 63.9) = 49 (current < 0.9 × D)
-      //   maxScale = max(49, 98.7) = 98.7
-      //   position(49) = 0%
+    it('shows real progress when current is far below the tier band (#2387)', () => {
+      // D61 Distinguished-shaped: D=71, Sm=94, current=49.
+      //   maxScale = 98.7; position(49) = 49/98.7 ≈ 49.65% — not pinned to 0.
       renderWithRouter(
         <KpiBulletCard
           title="Distinguished Clubs"
@@ -268,15 +293,16 @@ describe('KpiBulletCard', () => {
           rankings={standardRankings}
         />
       )
-      const marker = screen.getByTestId('current-marker')
-      expect(marker).toHaveStyle({ left: '0%' })
+      expect(screen.getByTestId('current-marker')).toHaveStyle({
+        left: '49.65%',
+      })
+      expect(screen.getByTestId('progress-fill')).toHaveStyle({
+        width: '49.65%',
+      })
     })
 
     it('pins marker at 100% when current is exactly at Smedley (you-made-it signal)', () => {
-      // For current=169 (= Smedley):
-      //   allAchieved = true → maxScale = current = 169
-      //   minScale = min(169, 142.2) = 142.2
-      //   position(169) = (169-142.2)/(169-142.2) * 100 = 100%
+      // For current=169 (= Smedley): maxScale = current → position 100%
       renderWithRouter(
         <KpiBulletCard
           title="Paid Clubs"
@@ -291,10 +317,7 @@ describe('KpiBulletCard', () => {
     })
 
     it('expands maxScale to include current when current exceeds Smedley', () => {
-      // For current=200, targets D=158/Sm=169:
-      //   minScale = min(200, 142.2) = 142.2
-      //   maxScale = max(200, 177.45) = 200
-      //   position(200) = (200-142.2)/57.8*100 ≈ 100%
+      // For current=200, targets D=158/Sm=169: maxScale = 200 → 100%
       renderWithRouter(
         <KpiBulletCard
           title="Paid Clubs"
@@ -389,10 +412,9 @@ describe('KpiBulletCard', () => {
       )
 
     it('leaves the four tiers crowded into a sliver of the bar — the premise', () => {
-      // Not a bug to fix by widening: #558's zoom scale must also reach down
-      // to `current`, and a district far below Distinguished drags minScale
-      // to itself. D→Sm spans ~9.4% of the bar, which on the 2-column mobile
-      // card grid is ~12px for four ~30px labels. This test exists so the
+      // Not a bug to fix by widening: on the 0-based scale (#2387) D→Sm
+      // spans ~6% of the bar, which on the 2-column mobile card grid is a few
+      // px for four ~30px labels. This test exists so the
       // premise of the fix is asserted, not assumed.
       renderD61Payments()
       const span = tickPercent('smedley') - tickPercent('distinguished')

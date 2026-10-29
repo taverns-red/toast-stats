@@ -2,6 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { KpiBulletCard } from './KpiBulletCard'
 import { KpiDeltaCard } from './KpiDeltaCard'
 import type { MetricRankings, RecognitionTargets } from '../types/districts'
+import {
+  TIERED_KPI_GOALS,
+  type SuccessPlanGoals,
+  type TieredKpiKey,
+} from '../utils/successPlanTargets'
 
 /* #572 — sticky KPI strip extracted from DistrictOverview.
 
@@ -34,6 +39,9 @@ export interface DistrictKpiStripData {
 
 export interface DistrictKpiStripProps {
   kpis: DistrictKpiStripData | null
+  /** Success Plan goals for the year on screen, from `?targets=` (#2297).
+   *  The page resolves them (R3); each tiered card gets its own Plan tick. */
+  planGoals?: SuccessPlanGoals | null
 }
 
 const STORAGE_KEY = 'district-kpi-strip-collapsed'
@@ -63,6 +71,15 @@ const formatSignedCompact = (n: number): string => {
 
 // Legend expanding the bullet-bar tier abbreviations (#681). Without this the
 // D/S/P/Sm ticks are cryptic — the meaning was only reachable on hover.
+const CARD_TOOLTIPS: Record<TieredKpiKey, string> = {
+  paidClubs:
+    'Paid clubs count with thresholds for each Distinguished District recognition level.',
+  membershipPayments:
+    'Total membership payments (New + April + October + Late + Charter) with thresholds for each recognition level.',
+  distinguishedClubs:
+    'Clubs achieving DCP goals + membership requirements with thresholds for each recognition level.',
+}
+
 const TIER_LEGEND: { short: string; full: string }[] = [
   { short: 'D', full: 'Distinguished' },
   { short: 'S', full: 'Select' },
@@ -70,7 +87,10 @@ const TIER_LEGEND: { short: string; full: string }[] = [
   { short: 'Sm', full: 'Smedley' },
 ]
 
-export const DistrictKpiStrip: React.FC<DistrictKpiStripProps> = ({ kpis }) => {
+export const DistrictKpiStrip: React.FC<DistrictKpiStripProps> = ({
+  kpis,
+  planGoals = null,
+}) => {
   const [collapsed, setCollapsed] = useState<boolean>(readInitialCollapsed)
 
   useEffect(() => {
@@ -106,7 +126,11 @@ export const DistrictKpiStrip: React.FC<DistrictKpiStripProps> = ({ kpis }) => {
         <span aria-hidden="true">{collapsed ? '▾' : '▴'}</span>
       </button>
 
-      {collapsed ? <KpiSummary kpis={kpis} /> : <KpiExpanded kpis={kpis} />}
+      {collapsed ? (
+        <KpiSummary kpis={kpis} />
+      ) : (
+        <KpiExpanded kpis={kpis} planGoals={planGoals} />
+      )}
     </section>
   )
 }
@@ -117,6 +141,7 @@ interface KpiBodyProps {
   kpis: DistrictKpiStripData
   /** Render as the loading skeleton's invisible, inert layout ghost. */
   ghost?: boolean
+  planGoals?: SuccessPlanGoals | null
 }
 
 /* The skeleton must not reuse the live body's id/test id: a ghost is not the
@@ -152,33 +177,24 @@ const KpiSummary: React.FC<KpiBodyProps> = ({ kpis, ghost }) => (
   </div>
 )
 
-const KpiExpanded: React.FC<KpiBodyProps> = ({ kpis, ghost }) => (
+const KpiExpanded: React.FC<KpiBodyProps> = ({ kpis, ghost, planGoals }) => (
   <div
     {...ghostProps(ghost)}
     className={`district-kpi-strip__expanded${ghost ? ' district-kpi-strip__ghost' : ''}`}
   >
     <div className="district-kpi-strip__cards">
-      <KpiBulletCard
-        title="Paid Clubs"
-        current={kpis.paidClubs.current}
-        targets={kpis.paidClubs.targets}
-        rankings={kpis.paidClubs.rankings}
-        tooltipContent="Paid clubs count with thresholds for each Distinguished District recognition level."
-      />
-      <KpiBulletCard
-        title="Membership Payments"
-        current={kpis.membershipPayments.current}
-        targets={kpis.membershipPayments.targets}
-        rankings={kpis.membershipPayments.rankings}
-        tooltipContent="Total membership payments (New + April + October + Late + Charter) with thresholds for each recognition level."
-      />
-      <KpiBulletCard
-        title="Distinguished Clubs"
-        current={kpis.distinguishedClubs.current}
-        targets={kpis.distinguishedClubs.targets}
-        rankings={kpis.distinguishedClubs.rankings}
-        tooltipContent="Clubs achieving DCP goals + membership requirements with thresholds for each recognition level."
-      />
+      {/* Card order comes from the shared list the targets panel uses. */}
+      {TIERED_KPI_GOALS.map(g => (
+        <KpiBulletCard
+          key={g.kpi}
+          title={g.cardTitle}
+          current={kpis[g.kpi].current}
+          targets={kpis[g.kpi].targets}
+          rankings={kpis[g.kpi].rankings}
+          planTarget={planGoals?.[g.goal]}
+          tooltipContent={CARD_TOOLTIPS[g.kpi]}
+        />
+      ))}
       <KpiDeltaCard
         title="Net Member Change"
         current={kpis.netMemberChange.current}
@@ -201,6 +217,14 @@ const KpiExpanded: React.FC<KpiBodyProps> = ({ kpis, ghost }) => (
           <strong>{t.short}</strong> {t.full}
         </span>
       ))}
+      {planGoals && Object.keys(planGoals).length > 0 && (
+        <span className="district-kpi-strip__legend-item">
+          <span aria-hidden="true" className="district-kpi-strip__sep">
+            ·
+          </span>
+          <strong>Plan</strong> Success Plan target
+        </span>
+      )}
     </p>
   </div>
 )

@@ -15,9 +15,10 @@ import { test, expect, type Page } from './fixtures/test'
  * ticks at 83.42% / 86.10% / 88.78% / 92.78% — a 9.36% span. On the 2-column
  * mobile card grid that is ~12px of bar for four ~30px value labels.
  *
- * Do NOT "fix" this by re-tuning the scale: #558's comment in KpiBulletCard
- * explains why the scale is what it is, and widening it back towards
- * [0, Smedley] reintroduces the older bug it fixed.
+ * Do NOT "fix" this by re-tuning the scale. The bar is 0-based since #2387
+ * (the zoom pinned the marker to 0% below the band, hiding progress), so the
+ * ticks are closer still (D→Sm ~6% of the bar) and only bare marks may ride
+ * those coordinates; the readouts stay in the flow legend.
  *
  * Why this shape (lessons 108 / 134 / 138, and the #1405 tooltip guard):
  *  - Real geometry, not class names or DOM order. The markup already looks
@@ -281,8 +282,8 @@ function assertLegibleTierScale(cards: CardBoxes[], where: string): void {
 for (const theme of THEMES) {
   for (const { label, width, height } of VIEWPORTS) {
     /* The reported case: D61, every metric far below Distinguished, so the
-       zoom scale must stretch down to `current` and the four tiers crowd into
-       the top ~9% of the bar. */
+       four tiers crowd into a few percent near the top of the 0-based bar
+       (#2387). */
     test(`KPI tier readouts stay legible far below Distinguished — ${label} ${theme}`, async ({
       page,
     }) => {

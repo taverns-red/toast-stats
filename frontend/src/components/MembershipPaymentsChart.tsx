@@ -16,6 +16,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from 'recharts'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
@@ -45,7 +46,18 @@ export interface MembershipPaymentsChartProps {
   statistics: PaymentStatistics
   /** Loading state */
   isLoading?: boolean
+  /**
+   * The District Success Plan payments target from the `?targets=` link
+   * (#2297), for the year on screen. The page resolves it (R3); the chart
+   * draws it as a dashed reference line. Absent → no line.
+   */
+  planTarget?: number | null | undefined
 }
+
+/* Dashed neutral ink: distinct from the solid year lines (blue / maroon /
+   gray) and remapped under dark mode with the rest of the legacy tokens. */
+const PLAN_STROKE = 'var(--ink-2)'
+const PLAN_DASH = '6 4'
 
 /**
  * Chart data point structure for Recharts
@@ -278,7 +290,13 @@ function getYearLabels(
  */
 export const MembershipPaymentsChart: React.FC<
   MembershipPaymentsChartProps
-> = ({ paymentsTrend, multiYearData, statistics, isLoading = false }) => {
+> = ({
+  paymentsTrend,
+  multiYearData,
+  statistics,
+  isLoading = false,
+  planTarget = null,
+}) => {
   // Responsive tick interval for mobile (#237) — must be called before early returns
   const tickInterval = useResponsiveTickInterval(paymentsTrend?.length ?? 0)
   // Tap-to-pin readout on devices without hover (#1835) — before early returns.
@@ -311,6 +329,10 @@ export const MembershipPaymentsChart: React.FC<
   const chartDescription = `Line chart showing YTD membership payments over time. Current payments: ${statistics.currentPayments.toLocaleString()}${
     statistics.yearOverYearChange !== null
       ? `. Year-over-year change: ${statistics.yearOverYearChange >= 0 ? '+' : ''}${statistics.yearOverYearChange}`
+      : ''
+  }${
+    planTarget
+      ? `. Plan target: ${planTarget.toLocaleString()} payments (from this link, not from Toastmasters International)`
       : ''
   }.`
 
@@ -508,6 +530,21 @@ export const MembershipPaymentsChart: React.FC<
                   />
                 )
               })}
+              {planTarget ? (
+                <ReferenceLine
+                  y={planTarget}
+                  stroke={PLAN_STROKE}
+                  strokeWidth={2}
+                  strokeDasharray={PLAN_DASH}
+                  ifOverflow="extendDomain"
+                  label={{
+                    value: 'Plan',
+                    position: 'insideTopLeft',
+                    fill: PLAN_STROKE,
+                    fontSize: 12,
+                  }}
+                />
+              ) : null}
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -546,6 +583,27 @@ export const MembershipPaymentsChart: React.FC<
             )}
           </>
         )}
+        {planTarget ? (
+          <div
+            className="flex items-center gap-2"
+            data-testid="payments-plan-legend"
+          >
+            <svg aria-hidden="true" width="16" height="4">
+              <line
+                x1="0"
+                y1="2"
+                x2="16"
+                y2="2"
+                stroke={PLAN_STROKE}
+                strokeWidth="2"
+                strokeDasharray="4 2"
+              />
+            </svg>
+            <span className="font-tm-body">
+              Plan target {planTarget.toLocaleString()} (from this link)
+            </span>
+          </div>
+        ) : null}
       </div>
     </div>
   )

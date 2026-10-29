@@ -99,6 +99,7 @@ const mockUseAggregated = vi.mocked(useAggregatedAnalytics)
 
 // Capture props passed to the charts without rendering Recharts.
 const trendChartProps: Array<{ membershipTrend: unknown[] }> = []
+const paymentsChartProps: Array<{ planTarget?: number | null }> = []
 vi.mock('../../components/LazyCharts', () => ({
   LazyMembershipTrendChart: (props: { membershipTrend: unknown[] }) => {
     trendChartProps.push(props)
@@ -108,9 +109,10 @@ vi.mock('../../components/LazyCharts', () => ({
       </div>
     )
   },
-  LazyMembershipPaymentsChart: () => (
-    <div data-testid="membership-payments-chart" />
-  ),
+  LazyMembershipPaymentsChart: (props: { planTarget?: number | null }) => {
+    paymentsChartProps.push(props)
+    return <div data-testid="membership-payments-chart" />
+  },
   LazyYearOverYearComparison: () => (
     <div data-testid="year-over-year-comparison" />
   ),
@@ -199,6 +201,7 @@ describe('DistrictTrendsPage (#680 — ADR-005)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     trendChartProps.length = 0
+    paymentsChartProps.length = 0
     mockUseAggregated.mockReturnValue({
       data: aggregated(),
       isLoading: false,
@@ -217,6 +220,37 @@ describe('DistrictTrendsPage (#680 — ADR-005)', () => {
     ).toBeInTheDocument()
     expect(screen.getByTestId('membership-payments-chart')).toBeInTheDocument()
     expect(screen.getByTestId('year-over-year-comparison')).toBeInTheDocument()
+  })
+
+  describe('Success Plan target line (#2297)', () => {
+    const lastPlanTarget = () =>
+      paymentsChartProps[paymentsChartProps.length - 1]?.planTarget ?? null
+
+    it('passes the link’s payments target to the payments chart', async () => {
+      renderAt('/district/61/trends?targets=p-4500_py-2024')
+      await screen.findByTestId('membership-payments-chart')
+      expect(lastPlanTarget()).toBe(4500)
+    })
+
+    it('draws no line for another program year’s targets', async () => {
+      renderAt('/district/61/trends?targets=p-4500_py-2023')
+      await screen.findByTestId('membership-payments-chart')
+      expect(lastPlanTarget()).toBeNull()
+    })
+
+    it('ignores a garbled param safely', async () => {
+      renderAt('/district/61/trends?targets=p-%3Cx%3E_py-20x4')
+      await screen.findByTestId('membership-payments-chart')
+      expect(lastPlanTarget()).toBeNull()
+    })
+
+    it('keeps the targets across the section nav from the Overview', async () => {
+      renderAt('/district/61?targets=p-4500_py-2024')
+      const trends = await screen.findByRole('link', { name: 'Trends' })
+      fireEvent.click(trends)
+      await screen.findByTestId('membership-payments-chart')
+      expect(lastPlanTarget()).toBe(4500)
+    })
   })
 
   it('self-titles the document per route (#780)', async () => {

@@ -15,6 +15,12 @@ export interface KpiBulletCardProps {
    * that includes the card title and the Smedley scale.
    */
   barAriaLabel?: string
+  /**
+   * The leader's own District Success Plan target for this metric, from the
+   * `?targets=` link (#2297). Drawn as a Plan tick on the bar; the page owns
+   * it (R3). Absent → no tick.
+   */
+  planTarget?: number | null | undefined
 }
 
 type TierKey = keyof RecognitionTargets
@@ -53,6 +59,7 @@ interface BulletBarProps {
   targets: RecognitionTargets
   title: string
   ariaLabel: string | undefined
+  planTarget: number | null
 }
 
 const BulletBar: React.FC<BulletBarProps> = ({
@@ -60,25 +67,29 @@ const BulletBar: React.FC<BulletBarProps> = ({
   targets,
   title,
   ariaLabel,
+  planTarget,
 }) => {
   // Real data always has Smedley > Distinguished > 0. Guard for synthetic
   // zero-target rows so tick positions never become NaN%.
   if (targets.smedley <= 0) return null
 
-  // Zoom scale into the tier band so the four ticks have room to spread.
-  // A [0, Smedley] scale crushed D/S/P/Sm into 93%–100% on real data —
-  // labels collided and the bar was unreadable (#558). The scale below
-  // auto-expands to include `current` whenever it lies outside the tier
-  // band, so no clamping is needed and no "below-scale" affordance is
-  // required — the marker is always on the bar. When the district has
-  // hit Smedley, maxScale collapses to `current` so the marker pins to
-  // 100% (a "you've made it" signal); the 5% headroom only applies when
-  // there's still tier to chase.
+  // A 0-based scale (#2387), so the marker and fill show real progress:
+  // 139 of a 171 Smedley reads as ~80% of the way, not as nothing. #558
+  // zoomed the scale into the tier band to stop the tier LABELS colliding,
+  // but its left edge followed `current` down, so any district below
+  // 0.9 × Distinguished got its marker pinned to 0% with an empty fill —
+  // progress was invisible exactly when it mattered. #1517 has since moved
+  // the labels into the flow legend below, so the ticks are bare 1px marks
+  // that can sit close together.
+  //
+  // The top expands to `current` once it reaches the top mark, so the
+  // marker pins to 100% (a "you've made it" signal); the 5% headroom only
+  // applies while there is still something to chase. A Success Plan target
+  // (#2297) above Smedley raises the top so its tick stays on the bar.
   const allAchieved = current >= targets.smedley
-  const minScale = Math.max(0, Math.min(current, 0.9 * targets.distinguished))
-  const maxScale = allAchieved ? current : 1.05 * targets.smedley
-  const range = maxScale - minScale
-  const positionAt = (v: number): number => ((v - minScale) / range) * 100
+  const top = Math.max(targets.smedley, planTarget ?? 0)
+  const maxScale = current >= top ? current : 1.05 * top
+  const positionAt = (v: number): number => (Math.max(0, v) / maxScale) * 100
   const markerPct = positionAt(current)
 
   const tiers: TierTick[] = TIERS.map(t => ({ ...t, value: targets[t.key] }))
@@ -115,6 +126,7 @@ const BulletBar: React.FC<BulletBarProps> = ({
 
         <div className="relative h-2 rounded-full bg-gray-200">
           <div
+            data-testid="progress-fill"
             className="absolute inset-y-0 left-0 rounded-full bg-tm-loyal-blue"
             style={{ width: formatPct(markerPct) }}
           />
@@ -141,6 +153,19 @@ const BulletBar: React.FC<BulletBarProps> = ({
             }}
           />
         ))}
+
+        {planTarget !== null && (
+          <div
+            data-testid="plan-tick"
+            aria-hidden="true"
+            className="absolute top-1 h-4 w-0.5"
+            style={{
+              left: formatPct(positionAt(planTarget)),
+              transform: 'translateX(-50%)',
+              backgroundColor: 'var(--tm-true-maroon)',
+            }}
+          />
+        )}
       </div>
 
       {/* The thresholds themselves, in normal flow. Flex + wrap means the
@@ -174,6 +199,39 @@ const BulletBar: React.FC<BulletBarProps> = ({
   )
 }
 
+/* The plan, in normal flow under the tier legend (#2297) — same reasoning as
+   the tier values: printed, not hover-only. The swatch repeats the tick's
+   colour; the word "Plan" carries the meaning, not the colour. */
+const PlanLine: React.FC<{ current: number; planTarget: number }> = ({
+  current,
+  planTarget,
+}) => {
+  const gap = planTarget - current
+  return (
+    <p
+      data-testid="plan-target"
+      className="mt-1 flex items-center gap-1.5 text-xs leading-tight text-gray-700"
+    >
+      <span
+        aria-hidden="true"
+        className="inline-block h-3 w-0.5"
+        style={{ backgroundColor: 'var(--tm-true-maroon)' }}
+      />
+      <span aria-hidden="true" className="font-medium">
+        Plan
+      </span>
+      <span className="sr-only">Success Plan target</span>{' '}
+      <span>{planTarget.toLocaleString()}</span>
+      <span aria-hidden="true" className="text-gray-400">
+        ·
+      </span>
+      <span className="text-gray-500">
+        {gap > 0 ? `${gap.toLocaleString()} to go` : 'met'}
+      </span>
+    </p>
+  )
+}
+
 const DotSep: React.FC = () => (
   <span aria-hidden="true" className="text-gray-400">
     ·
@@ -192,7 +250,9 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
   targets,
   tooltipContent,
   barAriaLabel,
+  planTarget = null,
 }) => {
+  const plan = planTarget ?? null
   const worldRankLabel =
     rankings.worldRank !== null && rankings.totalDistricts > 0
       ? `#${rankings.worldRank} of ${rankings.totalDistricts}`
@@ -262,6 +322,7 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
           targets={targets}
           title={title}
           ariaLabel={barAriaLabel}
+          planTarget={plan}
         />
       ) : (
         <div
@@ -273,6 +334,7 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
           Targets unavailable
         </div>
       )}
+      {plan !== null && <PlanLine current={current} planTarget={plan} />}
     </div>
   )
 }

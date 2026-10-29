@@ -15,6 +15,8 @@ import {
   detectTimeSeriesReformationDiscontinuity,
 } from '../hooks/useTimeSeriesYoY'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
+import { useUrlSuccessPlanTargets } from '../hooks/useUrlSuccessPlanTargets'
+import { goalsForProgramYear } from '../utils/successPlanTargets'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
@@ -116,6 +118,15 @@ const DistrictTrendsPage: React.FC = () => {
 
   const hasValidDates =
     effectiveProgramYear !== null && effectiveEndDate !== null
+
+  // District Success Plan payments target (#2297), from `?targets=` (or the
+  // targets the Overview carried in this tab), bound to the year on screen.
+  // Resolved here and passed down (R3).
+  const { targets: planTargets } = useUrlSuccessPlanTargets(districtId)
+  const planGoals = goalsForProgramYear(
+    planTargets,
+    (effectiveProgramYear ?? selectedProgramYear).year
+  )
 
   const {
     data: aggregatedAnalytics,
@@ -390,6 +401,7 @@ const DistrictTrendsPage: React.FC = () => {
                       })()
                     }
                     isLoading={isLoadingPaymentsTrend}
+                    planTarget={planGoals?.payments ?? null}
                   />
                 </div>
               </ChartSparklineExpand>

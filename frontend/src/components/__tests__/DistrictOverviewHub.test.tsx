@@ -168,6 +168,99 @@ describe('DistrictOverviewHub', () => {
     expect(sheet).toHaveTextContent('Distinguished District recognition')
   })
 
+  it('shows the Success Plan tick in the tile sheet (#2297)', () => {
+    render(
+      <DistrictOverviewHub
+        {...baseProps}
+        planGoals={{ payments: 9999, distinguishedClubs: 77 }}
+      />
+    )
+    fireEvent.click(screen.getAllByTestId('district-hub-tile')[1]!)
+    const sheet = screen.getByRole('dialog', { name: 'Membership Payments' })
+    expect(within(sheet).getByTestId('plan-tick')).toBeInTheDocument()
+    expect(within(sheet).getByTestId('plan-target')).toHaveTextContent('9,999')
+    expect(sheet).toHaveTextContent('Plan Success Plan target')
+  })
+
+  describe('Success Plan entry on the phone (#2297)', () => {
+    /* No page height for the entry. A disclosure row cost the 375px page 62px.
+       A button beside the Action List link wrapped to a second 44px line on
+       the CI runners' wider fallback font (run 40791246232: pageH 4031 > 4000).
+       The entry therefore lives inside the KPI tile sheets, which add nothing
+       to the page, next to the Plan mark it sets. */
+    const panel = <form aria-label="Targets form" />
+
+    const openTile = (i: number) =>
+      fireEvent.click(screen.getAllByTestId('district-hub-tile')[i]!)
+
+    it('adds nothing to the page itself', () => {
+      render(<DistrictOverviewHub {...baseProps} planTargetsPanel={panel} />)
+      expect(
+        screen.queryByRole('button', { name: /Success Plan targets/ })
+      ).not.toBeInTheDocument()
+      expect(screen.queryByTestId('district-hub-links')).not.toBeInTheDocument()
+    })
+
+    it('offers the targets form from a tiered KPI sheet', () => {
+      render(<DistrictOverviewHub {...baseProps} planTargetsPanel={panel} />)
+      openTile(0)
+      const tileSheet = screen.getByRole('dialog', { name: 'Paid Clubs' })
+      fireEvent.click(
+        within(tileSheet).getByRole('button', {
+          name: /Set Success Plan targets/,
+        })
+      )
+      const sheet = screen.getByRole('dialog', {
+        name: 'Success Plan targets',
+      })
+      expect(
+        within(sheet).getByRole('form', { name: 'Targets form' })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole('dialog', { name: 'Paid Clubs' })
+      ).not.toBeInTheDocument()
+    })
+
+    it('says how many targets are set', () => {
+      render(
+        <DistrictOverviewHub
+          {...baseProps}
+          planTargetsPanel={panel}
+          planGoals={{ payments: 9999, paidClubs: 150 }}
+        />
+      )
+      openTile(1)
+      expect(
+        screen.getByRole('button', { name: /Success Plan targets/ })
+      ).toHaveTextContent('Edit Success Plan targets (2 set)')
+    })
+
+    it('has no entry in the Net change sheet', () => {
+      render(<DistrictOverviewHub {...baseProps} planTargetsPanel={panel} />)
+      openTile(3)
+      expect(
+        screen.queryByRole('button', { name: /Success Plan targets/ })
+      ).not.toBeInTheDocument()
+    })
+
+    it('shows no entry without a panel', () => {
+      render(<DistrictOverviewHub {...baseProps} />)
+      openTile(0)
+      expect(
+        screen.queryByRole('button', { name: /Success Plan targets/ })
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows no Success Plan tick for a goal the plan did not set (#2297)', () => {
+    render(
+      <DistrictOverviewHub {...baseProps} planGoals={{ payments: 9999 }} />
+    )
+    fireEvent.click(screen.getAllByTestId('district-hub-tile')[0]!)
+    const sheet = screen.getByRole('dialog', { name: 'Paid Clubs' })
+    expect(within(sheet).queryByTestId('plan-tick')).not.toBeInTheDocument()
+  })
+
   it('lists what needs attention, linking into the Action List sections', () => {
     render(<DistrictOverviewHub {...baseProps} />)
     const block = screen.getByRole('region', { name: 'Needs attention' })

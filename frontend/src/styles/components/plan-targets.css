@@ -1,0 +1,189 @@
+/* District Success Plan targets entry (#2297), on the district Overview.
+   Legacy palette only (#2080: no --rt-stats until Phase 2): --surface,
+   --line, --ink*, --tm-loyal-blue and --focus-ring, all remapped under
+   [data-theme='dark']. Fields stack at phone widths and sit three-up from
+   640px; text stays ≥14px and every control is ≥44px tall. No fixed widths,
+   so nothing scrolls sideways at 375px. */
+
+.plan-targets {
+  margin: 0 0 1rem;
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.plan-targets__summary {
+  list-style: none;
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0.625rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.plan-targets__summary::-webkit-details-marker {
+  display: none;
+}
+
+.plan-targets__summary::after {
+  content: '▾';
+  margin-left: auto;
+  color: var(--ink-3);
+  transition: transform 150ms ease;
+}
+
+.plan-targets[open] .plan-targets__summary::after {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-targets__summary::after {
+    transition: none;
+  }
+}
+
+.plan-targets__summary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.plan-targets__count {
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.plan-targets__body {
+  padding: 0.25rem 1rem 1rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.plan-targets__body p {
+  margin: 0.75rem 0;
+}
+
+.plan-targets__provenance,
+.plan-targets__note {
+  color: var(--ink-3);
+}
+
+.plan-targets__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .plan-targets__fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.plan-targets__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.plan-targets__label {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.plan-targets__hint {
+  color: var(--ink-3);
+}
+
+.plan-targets__input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem; /* ≥16px: iOS does not zoom on focus */
+  color: var(--ink);
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.plan-targets__input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.plan-targets__input[aria-invalid='true'] {
+  border-color: var(--tm-true-maroon);
+}
+
+.plan-targets__error {
+  color: var(--tm-true-maroon);
+}
+
+.plan-targets__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.plan-targets__btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--tm-loyal-blue);
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.plan-targets__btn--primary {
+  color: #fff;
+  background-color: var(--tm-loyal-blue);
+  border-color: var(--tm-loyal-blue);
+}
+
+.plan-targets__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.plan-targets__btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.plan-targets__status:empty {
+  display: none;
+}
+
+/* Dark remaps --tm-loyal-blue to a light blue, so a white label would drop
+   below 3:1 — use the page background instead, as .tm-btn-primary does
+   (#1839). */
+[data-theme='dark'] .plan-targets__btn--primary {
+  color: var(--bg);
+}
+
+/* Inside the hub's sheet (#2297): the sheet is the frame and the title. */
+.plan-targets--inline {
+  margin: 0;
+  border: 0;
+  background: none;
+}
+
+.plan-targets--inline .plan-targets__body {
+  padding: 0;
+  border-top: 0;
+}

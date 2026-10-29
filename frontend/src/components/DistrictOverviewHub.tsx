@@ -8,6 +8,11 @@ import type { DistrictKpiStripData } from './DistrictKpiStrip'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 import type { TrainingClub } from '../utils/officerTraining'
 import {
+  TIERED_KPI_GOALS,
+  type SuccessPlanGoalKey,
+  type SuccessPlanGoals,
+} from '../utils/successPlanTargets'
+import {
   buildActionList,
   orderActionSections,
   type ActionSectionId,
@@ -62,7 +67,17 @@ export interface DistrictOverviewHubProps {
    * 30 days of an open round — the only time it counts here (Ron, N10).
    */
   trainingClubs?: TrainingClub[] | null
+  /** Success Plan goals for the year on screen, from `?targets=` (#2297);
+   *  the tile sheets' cards draw them as Plan ticks. Owned by the page. */
+  planGoals?: SuccessPlanGoals | null
+  /** The Success Plan targets form (inline variant), opened in a sheet from
+   *  a button in the Action List row (#2297). Absent → no button. */
+  planTargetsPanel?: React.ReactNode
 }
+
+const TILE_GOAL = Object.fromEntries(
+  TIERED_KPI_GOALS.map(g => [g.kpi, g.goal])
+) as Record<HubTileKey, SuccessPlanGoalKey>
 
 const ATTENTION_TITLES: Record<ActionSectionId, string> = {
   'action-close': 'Clubs close to Distinguished',
@@ -80,8 +95,12 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
   clubs,
   interventionClubs,
   trainingClubs,
+  planGoals = null,
+  planTargetsPanel = null,
 }) => {
   const [openTile, setOpenTile] = useState<HubTileKey | 'net' | null>(null)
+  const [planOpen, setPlanOpen] = useState(false)
+  const planCount = planGoals ? Object.keys(planGoals).length : 0
   const loading = kpis === null || clubs === null
 
   const actionSections = useMemo(
@@ -164,6 +183,16 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
         </Link>
       </section>
 
+      {planTargetsPanel && planOpen && (
+        <BottomSheet
+          isOpen
+          onClose={() => setPlanOpen(false)}
+          title="Success Plan targets"
+        >
+          {planTargetsPanel}
+        </BottomSheet>
+      )}
+
       {kpis && openMeta && (
         <BottomSheet
           isOpen
@@ -185,12 +214,37 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
                   current={kpis[openTile].current}
                   targets={kpis[openTile].targets}
                   rankings={kpis[openTile].rankings}
+                  planTarget={planGoals?.[TILE_GOAL[openTile]]}
                 />
                 <p className="district-hub__sheet-legend">
                   Tier markers: <strong>D</strong> Distinguished ·{' '}
                   <strong>S</strong> Select · <strong>P</strong>{' '}
                   President&apos;s · <strong>Sm</strong> Smedley
+                  {planGoals?.[TILE_GOAL[openTile]] !== undefined && (
+                    <>
+                      {' '}
+                      · <strong>Plan</strong> Success Plan target
+                    </>
+                  )}
                 </p>
+                {/* The phone's Success Plan entry (#2297): here, beside the
+                    Plan mark it sets, so it adds no height to the page (the
+                    hub's 4,000px budget). Swaps this sheet for the form. */}
+                {planTargetsPanel && (
+                  <button
+                    type="button"
+                    className="district-hub__plan-btn"
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      setOpenTile(null)
+                      setPlanOpen(true)
+                    }}
+                  >
+                    {planCount > 0
+                      ? `Edit Success Plan targets (${planCount} set)`
+                      : 'Set Success Plan targets'}
+                  </button>
+                )}
               </>
             )
           )}
