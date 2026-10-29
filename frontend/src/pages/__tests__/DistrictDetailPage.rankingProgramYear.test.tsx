@@ -164,6 +164,26 @@ vi.mock('../../services/cdn', async importOriginal => {
     ...actual,
     fetchCdnRankings: vi.fn(),
     fetchCdnRankingsForDateExact: vi.fn(),
+    // #2405 — the club-growth milestones' availability index
+    // (config/district-snapshot-index.json). Settled as the CDN's 404, the
+    // state these tests were written against: milestones stay unresolved and
+    // no checkpoint rankings read is issued.
+    fetchCdnSnapshotIndex: vi
+      .fn()
+      .mockRejectedValue(
+        new Error(
+          'CDN fetch failed: 404 for config/district-snapshot-index.json'
+        )
+      ),
+    // #2405 — config/district-region-history.json, resolved absent (`null` is
+    // the reader's 404 contract), so the region comes from the rankings row.
+    fetchCdnDistrictRegionHistory: vi.fn().mockResolvedValue(null),
+    // #2405 — ProgramYearProvider's v1/dates.json read, settled as the CDN's
+    // 404: the default PY falls back to the calendar, as these tests assume
+    // (each one that needs a year passes ?py=).
+    fetchCdnDates: vi
+      .fn()
+      .mockRejectedValue(new Error('CDN dates fetch failed: 404')),
   }
 })
 
