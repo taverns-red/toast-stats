@@ -16,6 +16,12 @@ updates:
     commit-message:
       prefix: "deps"
       include: "scope"
+    ignore:
+      # Hold maplibre-gl at 6.14 (#2400): 6.15+ adds ~8.3 KB gzip and pushes
+      # the map routes over the 300 KB budget (#1786). Lift by trimming
+      # map-route code first, then removing this entry. Never raise the budget.
+      - dependency-name: "maplibre-gl"
+        versions: [">=6.15.0"]
     groups:
       patch-and-minor:
         applies-to: "version-updates"
