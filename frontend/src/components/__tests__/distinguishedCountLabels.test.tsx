@@ -138,7 +138,7 @@ describe('Trophy case gap: "confirmed" (#2390)', () => {
     within(screen.getByTestId('distinguished-gap-tiles'))
       .getAllByTestId('gap-tile-label')
       .find(l => l.textContent === 'Distinguished Clubs')!
-      .parentElement as HTMLElement
+      .closest('[data-testid="gap-tile"]') as HTMLElement
 
   it('names the count as confirmed clubs, the share card noun (#2304)', () => {
     renderCase()
@@ -160,20 +160,27 @@ describe('Trophy case gap: "confirmed" (#2390)', () => {
     expect(within(tile).getByTestId('gap-tile-subitem')).toHaveTextContent(
       /^\+47\.9%$/
     )
-    const note = within(tile).getByTestId('gap-tile-note')
-    // Short enough to share the row at 375, where the phone type floor
-    // lifts this 11px row to 14px (mobile-type-floor.css).
-    expect(note).toHaveTextContent(/^· confirmed only · How we count$/)
+    expect(within(tile).getByTestId('gap-tile-note')).toHaveTextContent(
+      /^· confirmed only$/
+    )
     expect(
-      within(note).getByRole('link', { name: /how we count/i })
+      within(tile).getByRole('link', { name: /how we count/i })
     ).toHaveAttribute('href', METHODOLOGY_HREF)
   })
 
-  it('puts the note on the sub-item row, not a new line (375 height budget)', () => {
+  /* Neither row may wrap at 375, where the phone type floor lifts the 11px
+     rows to 14px (mobile-type-floor.css). With the note and the link on the
+     percentage row, CI measured the row wrapping: +21px, 4008 > 4000. The
+     link rides the label row, which has room; the note stays short. */
+  it('adds no row: the note shares the percentage row, the link the label row', () => {
     renderCase()
     const tile = distTile()
-    const row = within(tile).getByTestId('gap-tile-subitem').parentElement!
-    expect(row).toContainElement(within(tile).getByTestId('gap-tile-note'))
+    const subRow = within(tile).getByTestId('gap-tile-subitem').parentElement!
+    expect(subRow).toContainElement(within(tile).getByTestId('gap-tile-note'))
+    const labelRow = within(tile).getByTestId('gap-tile-label').parentElement!
+    expect(labelRow).toContainElement(
+      within(tile).getByRole('link', { name: /how we count/i })
+    )
     // label · value · sub-item row: the tile's three rows, as before.
     expect(tile.children).toHaveLength(3)
   })
