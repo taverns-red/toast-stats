@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.76.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.76.0...toast-stats-v2.76.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **videos:** capture waits for the ready element and app data, not networkidle ([#2410](https://github.com/taverns-red/toast-stats/issues/2410)) ([#2411](https://github.com/taverns-red/toast-stats/issues/2411)) ([d0c9a11](https://github.com/taverns-red/toast-stats/commit/d0c9a1166e48071864de503daab6c5182178d4c8))
+
+
+### Tests
+
+* make the integration project hermetic, failing any un-mocked fetch ([#2405](https://github.com/taverns-red/toast-stats/issues/2405)) ([#2408](https://github.com/taverns-red/toast-stats/issues/2408)) ([d8d3fc4](https://github.com/taverns-red/toast-stats/commit/d8d3fc44d09ca98c469046fb9aa17119c119bec9))
+* **map:** await the lazy phone mode-picker sheet ([#2394](https://github.com/taverns-red/toast-stats/issues/2394)) ([#2399](https://github.com/taverns-red/toast-stats/issues/2399)) ([3782465](https://github.com/taverns-red/toast-stats/commit/37824652d5ac87b30d292cd825384c1e5c52cf5b))
+* stub ClubDetailPage after-paint reads and settle before the network guard checks ([#2405](https://github.com/taverns-red/toast-stats/issues/2405)) ([#2409](https://github.com/taverns-red/toast-stats/issues/2409)) ([45867c2](https://github.com/taverns-red/toast-stats/commit/45867c2db35114239bf088ff4d37d876470c2c23))
+* stub ClubDetailPage's live CDN reads so main goes green ([#2403](https://github.com/taverns-red/toast-stats/issues/2403)) ([#2404](https://github.com/taverns-red/toast-stats/issues/2404)) ([3267c64](https://github.com/taverns-red/toast-stats/commit/3267c647c9a11357f69cf40698ae225f2a498098))
+
+
+### Dependencies
+
+* **deps:** Bump @hono/node-server from 1.19.17 to 2.1.5 ([#2396](https://github.com/taverns-red/toast-stats/issues/2396)) ([d6d9bab](https://github.com/taverns-red/toast-stats/commit/d6d9babe89b4fd40e3474f563a75c6468f179aa2))
+* **deps:** Bump the patch-and-minor group with 11 updates ([#2407](https://github.com/taverns-red/toast-stats/issues/2407)) ([a5eb55e](https://github.com/taverns-red/toast-stats/commit/a5eb55e308d5ae84ab72b305e973c72a8c4c1dbd))
+
 ## [2.76.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.75.0...toast-stats-v2.76.0) (2026-10-29)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.25.0...shared-contracts-v1.25.1) (2026-10-29)
+
+
+### Dependencies
+
+* **deps:** Bump the patch-and-minor group with 11 updates ([#2407](https://github.com/taverns-red/toast-stats/issues/2407)) ([a5eb55e](https://github.com/taverns-red/toast-stats/commit/a5eb55e308d5ae84ab72b305e973c72a8c4c1dbd))
+
 ## [1.25.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.24.0...shared-contracts-v1.25.0) (2026-10-29)
 
 
