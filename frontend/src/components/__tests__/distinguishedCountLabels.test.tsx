@@ -154,41 +154,46 @@ describe('Trophy case gap: "confirmed" (#2390)', () => {
     )
   })
 
-  it('keeps the percentage and adds a one-line note with a Methodology link', () => {
+  it('keeps the percentage and puts a Methodology link on its row', () => {
     renderCase()
     const tile = distTile()
     expect(within(tile).getByTestId('gap-tile-subitem')).toHaveTextContent(
       /^\+47\.9%$/
     )
-    expect(within(tile).getByTestId('gap-tile-note')).toHaveTextContent(
-      /^· confirmed only$/
-    )
-    expect(
-      within(tile).getByRole('link', { name: /how we count/i })
-    ).toHaveAttribute('href', METHODOLOGY_HREF)
+    const link = within(tile).getByRole('link', { name: /how we count/i })
+    expect(link).toHaveAttribute('href', METHODOLOGY_HREF)
   })
 
-  /* Neither row may wrap at 375, where the phone type floor lifts the 11px
-     rows to 14px (mobile-type-floor.css). With the note and the link on the
-     percentage row, CI measured the row wrapping: +21px, 4008 > 4000. The
-     link rides the label row, which has room; the note stays short. */
-  it('adds no row: the note shares the percentage row, the link the label row', () => {
+  /* No row may be added or wrap at 375 (PAGE_MAX_H). The CI renderer
+     resolves the body stack (system-ui) to a wider face than macOS, and the
+     phone type floor lifts these 11px rows to 14px: "+x% · confirmed only ·
+     How we count" wrapped there (4008 > 4000), and the label row has no
+     room for the link either. So the phone gets the noun ("confirmed
+     clubs") and the link on the percentage row; the sentence is md+ only. */
+  it('adds no row on phones: the link shares the percentage row', () => {
     renderCase()
     const tile = distTile()
     const subRow = within(tile).getByTestId('gap-tile-subitem').parentElement!
-    expect(subRow).toContainElement(within(tile).getByTestId('gap-tile-note'))
-    const labelRow = within(tile).getByTestId('gap-tile-label').parentElement!
-    expect(labelRow).toContainElement(
+    expect(subRow).toContainElement(
       within(tile).getByRole('link', { name: /how we count/i })
     )
+    expect(subRow).toHaveTextContent(/^\+47\.9% · How we count$/)
     // label · value · sub-item row: the tile's three rows, as before.
     expect(tile.children).toHaveLength(3)
+  })
+
+  it('explains the count in one line from 768 up, hidden on phones', () => {
+    renderCase()
+    const line = screen.getByTestId('distinguished-gap-explainer')
+    expect(line).toHaveClass('hidden', 'md:block')
+    expect(line).toHaveTextContent(/confirmed clubs only/i)
+    expect(line).toHaveTextContent(/qualifying today/i)
   })
 
   it('paid clubs and payments tiles carry no note and keep their nouns', () => {
     renderCase()
     const tiles = screen.getByTestId('distinguished-gap-tiles')
-    expect(within(tiles).getAllByTestId('gap-tile-note')).toHaveLength(1)
+    expect(within(tiles).getAllByRole('link')).toHaveLength(1)
     const values = within(tiles).getAllByTestId('gap-tile-value')
     expect(values[0]).toHaveTextContent(/^2 clubs$/)
     expect(values[1]).toHaveTextContent(/^169 payments$/)
