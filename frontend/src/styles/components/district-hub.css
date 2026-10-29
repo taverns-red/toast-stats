@@ -161,15 +161,7 @@
     text-underline-offset: 3px;
   }
 
-  /* The Action List link and the Success Plan entry share one row (#2297);
-     they wrap only if a very narrow phone cannot fit both. */
-  .district-hub__links {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    column-gap: 24px;
-  }
-
+  /* The Success Plan entry in a KPI tile sheet (#2297). */
   .district-hub__plan-btn {
     display: inline-flex;
     align-items: center;

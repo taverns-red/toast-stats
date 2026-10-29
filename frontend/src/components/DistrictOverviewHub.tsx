@@ -175,34 +175,12 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
           Needs attention
         </h3>
         <MobileRowList label="Needs attention" rows={attentionRows} />
-        {/* One row: the Success Plan entry rides beside the Action List link
-            (#2297) so the phone Overview gains no height — a separate
-            disclosure row broke the hub's 4,000px page budget. */}
-        <div className="district-hub__links" data-testid="district-hub-links">
-          <Link
-            to={buildDistrictSectionUrl(districtId, 'action-list')}
-            className="district-hub__more-link"
-          >
-            Open the Action List →
-          </Link>
-          {planTargetsPanel && (
-            <button
-              type="button"
-              className="district-hub__plan-btn"
-              aria-haspopup="dialog"
-              aria-label={
-                planCount > 0
-                  ? `Success Plan targets, ${planCount} set`
-                  : 'Success Plan targets'
-              }
-              onClick={() => setPlanOpen(true)}
-            >
-              {/* Short visible label: "Success Plan targets" wrapped under
-                  the Action List link at 375px (+44px). */}
-              {planCount > 0 ? `Plan targets (${planCount})` : 'Plan targets'}
-            </button>
-          )}
-        </div>
+        <Link
+          to={buildDistrictSectionUrl(districtId, 'action-list')}
+          className="district-hub__more-link"
+        >
+          Open the Action List →
+        </Link>
       </section>
 
       {planTargetsPanel && planOpen && (
@@ -249,6 +227,24 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
                     </>
                   )}
                 </p>
+                {/* The phone's Success Plan entry (#2297): here, beside the
+                    Plan mark it sets, so it adds no height to the page (the
+                    hub's 4,000px budget). Swaps this sheet for the form. */}
+                {planTargetsPanel && (
+                  <button
+                    type="button"
+                    className="district-hub__plan-btn"
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      setOpenTile(null)
+                      setPlanOpen(true)
+                    }}
+                  >
+                    {planCount > 0
+                      ? `Edit Success Plan targets (${planCount} set)`
+                      : 'Set Success Plan targets'}
+                  </button>
+                )}
               </>
             )
           )}
