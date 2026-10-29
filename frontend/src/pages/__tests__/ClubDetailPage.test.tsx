@@ -119,6 +119,18 @@ vi.mock('../../services/cdnClubDistrictHistory', () => ({
 vi.mock('../../services/cdn', async importOriginal => ({
   ...(await importOriginal<typeof import('../../services/cdn')>()),
   fetchCdnClubIndex: vi.fn().mockResolvedValue({ clubs: {} }),
+  // #2403 — ProgramYearProvider's default-PY read. Fixture, not the live CDN.
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2025-10-15'],
+    count: 1,
+    generatedAt: '2025-10-16T00:00:00Z',
+  }),
+}))
+
+// #2403 — the page's snapshot read, settled with no club record: the hero
+// and stats come from the analytics mock below, as every test here assumes.
+vi.mock('../../hooks/useMembershipData', () => ({
+  useDistrictStatistics: vi.fn(() => ({ data: null, isLoading: false })),
 }))
 
 // #1791 — the trend's prior years come from the club's year-end history.
