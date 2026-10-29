@@ -163,6 +163,17 @@ vi.mock('../../hooks/useDistrictAnalytics', () => ({
   ClubTrend: {},
 }))
 
+// Several describes below set a lasting `mockReturnValue` on these hooks, and
+// `vi.clearAllMocks()` (setup) keeps implementations and unspent
+// `mockReturnValueOnce` values. Under a shuffled order (`--sequence.shuffle`)
+// one describe's club then leaked into another's tests. Reset both hooks to
+// their factory defaults before every test; a describe's own beforeEach runs
+// after this one and still applies (#2405).
+beforeEach(() => {
+  vi.mocked(useDistrictAnalytics).mockReset()
+  vi.mocked(useClubHistory).mockReset()
+})
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 })
