@@ -685,7 +685,8 @@ describe('DistrictMapPage — phone', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: /Colour: Club health/ })
     )
-    const dialog = screen.getByRole('dialog', { name: 'Colour pins by' })
+    // The sheet is a lazy chunk (#2394): await it, never assume it's in.
+    const dialog = await screen.findByRole('dialog', { name: 'Colour pins by' })
     fireEvent.click(
       within(dialog).getByRole('button', { name: /Distinguished level/ })
     )
@@ -702,7 +703,8 @@ describe('DistrictMapPage — phone', () => {
     )
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     land()
-    const dialog = screen.getByRole('dialog', { name: 'Colour pins by' })
+    // The sheet is a lazy chunk (#2394): await it, never assume it's in.
+    const dialog = await screen.findByRole('dialog', { name: 'Colour pins by' })
     fireEvent.click(
       within(dialog).getByRole('button', { name: /Distinguished level/ })
     )
