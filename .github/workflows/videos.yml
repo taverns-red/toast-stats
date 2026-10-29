@@ -13,7 +13,13 @@
 #                          changes none, in both formats, one matrix leg per
 #                          scenario (#2353), plus a short audio preview of
 #                          each music variant (a separate artifact, #2344),
-#                          and posts a sticky comment that links them all
+#                          and posts a sticky comment that links them all.
+#                          The path filter stays this wide on purpose: a
+#                          dependency bump of videos/package.json (Playwright,
+#                          Remotion) changes the capture and should render.
+#                          Live-site timing no longer fails it: the capture
+#                          waits for the scenario's ready element and the
+#                          app's own data requests, not `networkidle` (#2410).
 # Main CI runs only the scenario unit tests (ci.yml); it never renders.
 #
 # No cloud credentials: the capture reads the public site and the output goes

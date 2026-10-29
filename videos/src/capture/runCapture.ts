@@ -11,6 +11,7 @@ import type {
   Scenario,
 } from '../scenarios/types'
 import { privacyMaskScript, PRIVACY_STYLE_ID } from '../scenarios/privacy'
+import { appDataHosts, DataRequestTracker } from '../pageReady'
 
 /** How long the page gets to settle after a beat's steps (animations, refetch). */
 const SETTLE_MS = 450
@@ -18,6 +19,10 @@ const SETTLE_MS = 450
 const SCROLL_MS = 900
 /** Delay between typed keys: quick, but slow enough to read. */
 const TYPE_DELAY_MS = 110
+/** Playwright's default navigation timeout, which the old `networkidle` wait used. */
+const READY_TIMEOUT_MS = 30_000
+/** The cap the old per-beat `networkidle` wait had. */
+const SETTLE_DATA_MS = 5_000
 
 async function runStep(page: Page, step: CaptureStep): Promise<void> {
   switch (step.kind) {
@@ -64,11 +69,18 @@ async function runStep(page: Page, step: CaptureStep): Promise<void> {
   }
 }
 
-async function settle(page: Page): Promise<void> {
-  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {
-    // A long-poll or analytics beacon can keep the network busy; the fixed
-    // settle below still applies.
-  })
+/**
+ * Let the page settle after a beat's steps: wait for the app's own data
+ * requests (not analytics, #2410), then a fixed pause for animations. The
+ * beat-length check is the hard limit, so a slow request only logs here.
+ */
+async function settle(page: Page, data: DataRequestTracker): Promise<void> {
+  const result = await data.whenIdle(SETTLE_DATA_MS)
+  if (!result.idle) {
+    console.error(
+      `  data still loading after ${SETTLE_DATA_MS} ms: ${result.pending.join(', ')}`
+    )
+  }
   await page.waitForTimeout(SETTLE_MS)
 }
 
@@ -232,17 +244,34 @@ export async function runCapture(
     origin: new URL(scenario.url).origin,
   })
   const page = await context.newPage()
+  // Count the app's own data requests from the first one (#2410).
+  const data = new DataRequestTracker(appDataHosts(scenario.url))
+  page.on('request', r => data.onStart(r))
+  page.on('requestfinished', r => data.onEnd(r))
+  page.on('requestfailed', r => data.onEnd(r))
   const clock = (): number => performance.now() / 1000
 
   try {
-    await page.goto(scenario.url, { waitUntil: 'networkidle' })
-    await page.locator(form.readySelector).first().waitFor()
+    // Ready = the scenario's data-backed element is on the page and none of
+    // the app's data requests is in flight. Not `networkidle`: Google
+    // Analytics loads after the data and can keep it from settling (#2410).
+    await page.goto(scenario.url, { waitUntil: 'domcontentloaded' })
+    await page
+      .locator(form.readySelector)
+      .first()
+      .waitFor({ timeout: READY_TIMEOUT_MS })
+    const ready = await data.whenIdle(READY_TIMEOUT_MS)
+    if (!ready.idle) {
+      throw new Error(
+        `data still loading after ${READY_TIMEOUT_MS} ms: ${ready.pending.join(', ')}`
+      )
+    }
     if ((await page.locator(`style#${PRIVACY_STYLE_ID}`).count()) !== 1) {
       throw new Error('the privacy mask is not on the page; refusing to record')
     }
     await page.evaluate(() => document.fonts.ready)
     for (const step of form.setup) await runStep(page, step)
-    await settle(page)
+    await settle(page, data)
 
     const sampler = new FrameSampler(page, framesDir, clock)
     sampler.start()
@@ -253,7 +282,7 @@ export async function runCapture(
         if (!actions) throw new Error(`${format} has no actions for ${beat.id}`)
         const beatStart = clock()
         for (const step of actions.steps) await runStep(page, step)
-        await settle(page)
+        await settle(page, data)
         const highlightAtSec = clock() - beatStart
         const box = actions.highlight
           ? clampBox(
