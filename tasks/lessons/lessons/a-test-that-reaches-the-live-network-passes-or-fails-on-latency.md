@@ -1,7 +1,7 @@
 ---
 date: 2026-10-29
 tier: lesson
-summary: A page test with an un-stubbed CDN read depends on network latency; stub fetch to reject at once to reproduce the CI timing, then stub the read; the integration setup now fails any un-mocked fetch (#2405)
+summary: A page test with an un-stubbed CDN read depends on network latency; stub fetch to reject at once to reproduce the CI timing, then stub the read; the integration setup now fails any un-mocked fetch, checked after pending work settles (#2405, #2408)
 tags: [testing, flaky-tests, integration, react-query, vitest, mocks, cdn]
 ---
 
@@ -59,3 +59,22 @@ Two mechanics worth knowing:
   `vi.unstubAllGlobals()` restores whatever was there before the first stub,
   so a file that stubs and unstubs `fetch` falls back to the guard, not the
   real network.
+
+## Second follow-up — a guard checked too early misses deferred reads (#2408)
+
+Main went red right after the guard merged: `ClubDetailPage.test.tsx` had
+kept its own `fetch` stub (which bypassed the setup guard), and its
+rankings, manifest and worldwide-race reads wait for an after-paint gate
+(`useAfterPaint`: rAF, then a macrotask, 250 ms fallback). Synchronous tests
+unmount before the gate opens, so the census never saw those reads; the one
+awaiting test made them only when a slow CI poll let the gate open.
+
+- Check after the work settles. The guard now unmounts and flushes pending
+  work before it checks, and records the running test with each call, so a
+  read is pinned to the test that set it in motion.
+- To make a deferred read deterministic in a test, hold the test past the
+  gate's fallback (`AFTER_PAINT_FALLBACK_MS + 50`); that turned the CI flake
+  into a reliable red.
+- `--sequence.shuffle` found a second, unrelated leak class: a describe's
+  lasting `mockReturnValue` survives `vi.clearAllMocks()`. A file-level
+  `beforeEach` with `mockReset()` restores the `vi.mock` factory default.

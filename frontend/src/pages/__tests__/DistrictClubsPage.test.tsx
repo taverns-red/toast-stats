@@ -268,6 +268,16 @@ const renderAt = (initialUrl: string) => {
   return { ...utils, router }
 }
 
+// Later describes set a lasting `mockReturnValue`/`mockImplementation` on
+// these hooks, which `vi.clearAllMocks()` keeps. Under a shuffled order
+// (`--sequence.shuffle`) they leaked into the #570 tests. Reset both to their
+// factory defaults before every test; a describe's own beforeEach runs after
+// this one and still applies (#2405).
+beforeEach(() => {
+  vi.mocked(useDistrictAnalytics).mockReset()
+  vi.mocked(useDistrictCachedDates).mockReset()
+})
+
 describe('DistrictClubsPage (#570 — Phase 2)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
