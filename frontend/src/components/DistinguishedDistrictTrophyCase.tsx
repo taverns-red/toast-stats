@@ -147,7 +147,9 @@ interface GapTileSpec {
   unitSingular: string
   unitPlural: string
   /** One-line note shown after the percentage, on the same row (#2390). */
-  note?: React.ReactNode
+  note?: string
+  /** A link on the label row, e.g. to the Methodology entry (#2390). */
+  link?: { href: string; label: string }
 }
 
 /* The Methodology entry that explains the two Distinguished-club counts
@@ -163,18 +165,41 @@ const GapTile: React.FC<GapTileSpec> = ({
   unitSingular,
   unitPlural,
   note,
+  link,
 }) => {
   // `count === 0` is the canonical "met" signal (lesson 103); only the
   // un-evaluable case (no canonical, no ranking) leaves the headline blank.
   const closed = count === 0
   const noun = count === 1 ? unitSingular : unitPlural
   return (
-    <div className="rounded-md border border-gray-200 theme-dark:border-gray-700 px-3 py-2">
-      <div
-        data-testid="gap-tile-label"
-        className="text-[11px] uppercase tracking-wide text-gray-600 theme-dark:text-gray-400 font-tm-body"
-      >
-        {label}
+    <div
+      data-testid="gap-tile"
+      className="rounded-md border border-gray-200 theme-dark:border-gray-700 px-3 py-2"
+    >
+      {/* The link rides the label row, which has room at 375; on the
+          percentage row it wrapped and cost the phone Overview a line
+          (#2390, PAGE_MAX_H). `leading-4` keeps the 14px phone-floor link
+          from raising the row above the label's own line. */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+        <div
+          data-testid="gap-tile-label"
+          className="text-[11px] uppercase tracking-wide text-gray-600 theme-dark:text-gray-400 font-tm-body"
+        >
+          {label}
+        </div>
+        {link && (
+          <span
+            data-testid="gap-tile-link"
+            className="text-[11px] leading-4 font-tm-body"
+          >
+            <a
+              href={link.href}
+              className="text-tm-loyal-blue underline whitespace-nowrap"
+            >
+              {link.label}
+            </a>
+          </span>
+        )}
       </div>
       <div
         data-testid="gap-tile-value"
@@ -188,7 +213,7 @@ const GapTile: React.FC<GapTileSpec> = ({
       </div>
       {!closed && count != null && (
         /* The note rides the percentage's row, so labelling the count adds
-           no height to the 375 Overview (#2390, PAGE_MAX_H budget). */
+           no row to the 375 Overview (#2390, PAGE_MAX_H budget). */
         <div className="mt-0.5 text-[11px] text-gray-600 theme-dark:text-gray-400 font-tm-body">
           <span data-testid="gap-tile-subitem" className="tabular-nums">
             +{gapPercent.toFixed(1)}%
@@ -507,17 +532,11 @@ export const DistinguishedDistrictTrophyCase: React.FC<
               gapPercent={nextTierGap.distinguishedPercentGap}
               unitSingular="confirmed club"
               unitPlural="confirmed clubs"
-              note={
-                <>
-                  confirmed only ·{' '}
-                  <a
-                    href={DISTINGUISHED_COUNTS_METHODOLOGY_HREF}
-                    className="text-tm-loyal-blue underline whitespace-nowrap"
-                  >
-                    How we count
-                  </a>
-                </>
-              }
+              note="confirmed only"
+              link={{
+                href: DISTINGUISHED_COUNTS_METHODOLOGY_HREF,
+                label: 'How we count',
+              }}
             />
           </div>
         </div>

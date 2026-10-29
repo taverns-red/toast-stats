@@ -33,7 +33,7 @@
   /* The trophy case's "How we count" (#2390) sits in an 11px row. From 768
      up the phone type floor no longer lifts it to 14px, and 14px a side
      measured 41px tall at 844×390; 16px clears 44 at both sizes. */
-  [data-testid='gap-tile-note'] a {
+  [data-testid='gap-tile-link'] a {
     padding-block: 16px;
   }
 
