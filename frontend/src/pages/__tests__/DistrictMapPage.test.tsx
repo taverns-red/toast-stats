@@ -78,6 +78,22 @@ vi.mock('../../components/LocatorDots', async importOriginal => {
   }
 })
 
+// #2394: the phone sheets are their own lazy chunk, fetched on mount, while
+// the "Colour" pill is eager — so a tap can land before the chunk does.
+// Holding the chunk pending (React `use` suspends at the page's boundary
+// exactly as a still-loading lazy import does) makes that order happen on
+// demand instead of only under full-suite contention.
+let sheetsChunk: Promise<void> | null = null
+vi.mock('../../components/map/MapPhoneSheets', async importOriginal => {
+  const real =
+    await importOriginal<typeof import('../../components/map/MapPhoneSheets')>()
+  const Gated = (props: Parameters<typeof real.MapPhoneSheets>[0]) => {
+    if (sheetsChunk) React.use(sheetsChunk)
+    return <real.MapPhoneSheets {...props} />
+  }
+  return { ...real, MapPhoneSheets: Gated, default: Gated }
+})
+
 let mockIsMobile = false
 vi.mock('../../hooks/useIsMobile', () => ({
   useIsMobile: () => mockIsMobile,
@@ -183,6 +199,13 @@ vi.mock('../../services/cdn', async importOriginal => ({
   ...(await importOriginal<typeof import('../../services/cdn')>()),
   fetchCdnDistrictSnapshot: (date: string, districtId: string) =>
     fetchSnapshot(date, districtId),
+  // #2405 — ProgramYearProvider's default-PY read (v1/dates.json): a fixture
+  // matching the district data's 2026-10-11 snapshot, not the live CDN.
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2026-10-01', '2026-10-11'],
+    count: 2,
+    generatedAt: '2026-10-12T00:00:00Z',
+  }),
 }))
 
 const DistrictMapPage = React.lazy(() => import('../DistrictMapPage'))
@@ -200,7 +223,8 @@ beforeAll(async () => {
     import('../../components/map/MapPreview'),
     import('../../components/map/mapFilters'),
     import('../../components/map/MapFilterPanel'),
-    import('../../components/map/MapPhoneSheets'),
+    // Not MapPhoneSheets: it is gated above (#2394), and importing it here
+    // as well hands the page's lazy import the unmocked module.
     import('../../components/map/realign/RealignSandbox'),
   ])
 }, 60_000)
@@ -245,6 +269,7 @@ afterEach(() => {
   mockClubs = CLUBS
   mockReports = null
   mockIsMobile = false
+  sheetsChunk = null
   fetchSnapshot.mockClear()
   downloadCSV.mockClear()
 })
@@ -667,7 +692,26 @@ describe('DistrictMapPage — phone', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: /Colour: Club health/ })
     )
-    const dialog = screen.getByRole('dialog', { name: 'Colour pins by' })
+    // The sheet is a lazy chunk (#2394): await it, never assume it's in.
+    const dialog = await screen.findByRole('dialog', { name: 'Colour pins by' })
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: /Distinguished level/ })
+    )
+    expect(search()).toContain('color=tier')
+  })
+
+  it('a tap on "Colour" before the phone sheets chunk lands opens the picker once it does (#2394)', async () => {
+    mockIsMobile = true
+    let land!: () => void
+    sheetsChunk = new Promise<void>(r => (land = r))
+    renderAt('/district/61/map')
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Colour: Club health/ })
+    )
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    land()
+    // The sheet is a lazy chunk (#2394): await it, never assume it's in.
+    const dialog = await screen.findByRole('dialog', { name: 'Colour pins by' })
     fireEvent.click(
       within(dialog).getByRole('button', { name: /Distinguished level/ })
     )

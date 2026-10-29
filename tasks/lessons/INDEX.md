@@ -2,7 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
-- `a-test-that-reaches-the-live-network-passes-or-fails-on-latency.md` — A page test with an un-stubbed CDN read depends on network latency; stub fetch to reject at once to reproduce the CI timing, then stub the read  (2026-10-29)
+- `a-test-that-reaches-the-live-network-passes-or-fails-on-latency.md` — A page test with an un-stubbed CDN read depends on network latency; stub fetch to reject at once to reproduce the CI timing, then stub the read; the integration setup now fails any un-mocked fetch (#2405)  (2026-10-29)
 - `a-pdf-page-count-passes-on-a-layout-wider-than-the-paper.md` — Chromium's print-to-PDF shrinks a page that is wider than the paper until it fits, so a PDF page-count check passes on a layout that overflows the printable width; measure the document's width at the printable box in print media as well  (2026-10-28)
 - `a-progress-scale-whose-floor-follows-the-value-shows-no-progress.md` — A progress scale whose floor follows the value can never show progress  (2026-10-28)
 - `a-fixed-bar-that-overflows-adds-no-page-scroll.md` — A position-fixed bar whose items run past the viewport adds no document scroll, so no-horizontal-scroll gates pass while the off-screen items are unreachable; assert each item's box is inside the viewport instead  (2026-10-26)

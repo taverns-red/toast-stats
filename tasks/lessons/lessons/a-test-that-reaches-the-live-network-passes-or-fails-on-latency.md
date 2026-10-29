@@ -1,7 +1,7 @@
 ---
 date: 2026-10-29
 tier: lesson
-summary: A page test with an un-stubbed CDN read depends on network latency; stub fetch to reject at once to reproduce the CI timing, then stub the read
+summary: A page test with an un-stubbed CDN read depends on network latency; stub fetch to reject at once to reproduce the CI timing, then stub the read; the integration setup now fails any un-mocked fetch (#2405)
 tags: [testing, flaky-tests, integration, react-query, vitest, mocks, cdn]
 ---
 
@@ -39,3 +39,23 @@ A census of the integration project (logging `fetch` per file) found 26 more
 files that reach the live CDN. They pass at both extremes (instant 404, never
 settles) except `ClubDetailPage.programYear.test.tsx`, which needs the
 request to settle.
+
+## Follow-up — the guard moved into the integration setup (#2405)
+
+A per-file guard only protects the files someone remembered to guard. The
+integration project now loads `frontend/src/__tests__/networkGuard.ts` as an
+extra setup file: `fetch` rejects at once with the URL, and any test that
+called it fails in `afterEach` with the URL list (code under test usually
+swallows the rejection into query state, so the record, not the rejection,
+is what fails the test). Turning it on made exactly the 26 census files red,
+then each file stubbed its own reads.
+
+Two mechanics worth knowing:
+
+- In a vitest project with `extends: true`, `setupFiles` are concatenated
+  with the root's, so listing the shared `setup.ts` again runs it twice. List
+  only the extra file.
+- Assign `globalThis.fetch` directly in setup rather than `vi.stubGlobal`.
+  `vi.unstubAllGlobals()` restores whatever was there before the first stub,
+  so a file that stubs and unstubs `fetch` falls back to the guard, not the
+  real network.

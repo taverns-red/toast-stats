@@ -89,6 +89,35 @@ vi.mock('../../hooks/useCompetitiveAwards', () => ({
   useCompetitiveAwards: vi.fn(() => ({ data: null, isLoading: false })),
 }))
 
+// #2405 — the hub's remaining CDN reads get fixtures; nothing reaches the
+// live CDN. Rankings carry no rows (nothing here asserts on them); the dated
+// rankings file and the region history resolve `null`, their contract for a
+// missing file, so the latest-rankings fallback and the rankings-row region
+// are used, as with no file on the CDN.
+vi.mock('../../services/cdn', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../services/cdn')>()),
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2024-10-01', '2024-10-15'],
+    count: 2,
+    generatedAt: '2024-10-16T00:00:00Z',
+  }),
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2024-10-15',
+    generatedAt: '2024-10-16T00:00:00Z',
+  }),
+  fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2024-10-15'),
+  fetchCdnRankings: vi.fn().mockResolvedValue({
+    rankings: [],
+    asOfDate: '2024-10-15',
+    generatedAt: '2024-10-16T00:00:00Z',
+  }),
+  fetchCdnRankingsForDateExact: vi.fn().mockResolvedValue(null),
+  fetchCdnSnapshotIndex: vi
+    .fn()
+    .mockResolvedValue({ '61': ['2024-10-01', '2024-10-15'] }),
+  fetchCdnDistrictRegionHistory: vi.fn().mockResolvedValue(null),
+}))
+
 import { useAggregatedAnalytics } from '../../hooks/useAggregatedAnalytics'
 
 vi.mock('../../hooks/useAggregatedAnalytics', () => ({

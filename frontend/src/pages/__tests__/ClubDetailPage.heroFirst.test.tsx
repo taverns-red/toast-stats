@@ -83,6 +83,12 @@ vi.mock('../../services/cdn', () => ({
   fetchCdnGlobalClubRace: vi.fn().mockResolvedValue(null),
 }))
 
+// #2405 — the club's district-history shard (the moved-club lookup), settled
+// as "not available": the reader resolves null on a 404 by contract.
+vi.mock('../../services/cdnClubDistrictHistory', () => ({
+  fetchClubDistrictHistoryShard: vi.fn().mockResolvedValue(null),
+}))
+
 vi.mock('../../hooks/useMembershipData', () => ({
   useDistrictStatistics: vi.fn(),
 }))

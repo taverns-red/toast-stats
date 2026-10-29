@@ -43,8 +43,30 @@ vi.mock('../../hooks/useDistrictAnalytics', () => ({
   useDistrictAnalytics: vi.fn(),
 }))
 
-vi.mock('../../hooks/useDistrictStatistics', () => ({
+// #2405 — the page's snapshot read lives in useMembershipData (the old
+// `hooks/useDistrictStatistics` path does not exist, so that mock never
+// applied and the snapshot went to the live CDN). Settled with no record.
+vi.mock('../../hooks/useMembershipData', () => ({
   useDistrictStatistics: vi.fn(() => ({ data: undefined, isLoading: false })),
+}))
+
+vi.mock('../../services/cdn', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../services/cdn')>()),
+  // #2405 — ProgramYearProvider's default-PY read. Fixture, not the live CDN.
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2026-09-11'],
+    count: 1,
+    generatedAt: '2026-09-12T00:00:00Z',
+  }),
+  // #2405 — the club-history index, empty: these tests cover the worldwide
+  // standing, not the year-end history, so no per-year snapshot is read.
+  fetchCdnSnapshotIndex: vi.fn().mockResolvedValue({}),
+}))
+
+// #2405 — the club's district-history shard, settled as "not available":
+// the reader resolves null on a 404 by contract.
+vi.mock('../../services/cdnClubDistrictHistory', () => ({
+  fetchClubDistrictHistoryShard: vi.fn().mockResolvedValue(null),
 }))
 
 vi.mock('../../hooks/useGlobalClubRace', () => ({

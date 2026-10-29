@@ -55,7 +55,17 @@ vi.mock('../../services/cdn', async () => {
     await vi.importActual<typeof import('../../services/cdn')>(
       '../../services/cdn'
     )
-  return { ...actual, fetchCdnDistrictSnapshot: vi.fn() }
+  return {
+    ...actual,
+    fetchCdnDistrictSnapshot: vi.fn(),
+    // #2405 — ProgramYearProvider's default-PY read (v1/dates.json): a
+    // fixture matching DATES below, not the live CDN.
+    fetchCdnDates: vi.fn().mockResolvedValue({
+      dates: ['2026-09-29', '2026-09-30', '2026-10-08', '2026-10-27'],
+      count: 4,
+      generatedAt: '2026-10-28T00:00:00Z',
+    }),
+  }
 })
 
 vi.mock('../../utils/csvExport', async () => {
