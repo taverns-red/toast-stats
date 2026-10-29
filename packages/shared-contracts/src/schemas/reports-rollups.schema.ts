@@ -7,7 +7,8 @@
  * sidecars (`district_{id}_reports.json`), which `place-reports` lands after
  * that compute, so they are folded in their own artifact, written beside the
  * sidecars once they are placed:
- * - prospective clubs, by stage (TI's Prospective Clubs report);
+ * - prospective clubs, by stage and by checklist steps complete (TI's
+ *   Prospective Clubs report);
  * - coached clubs (Club Coaches; active = a PENDING assignment);
  * - October and April dues-renewal state (the renewal reports);
  * - officer lists submitted (the officer-list report);
@@ -40,6 +41,13 @@ const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const ProgramYear = z.string().regex(/^\d{4}-\d{4}$/)
 const Count = z.number().int().nonnegative()
 
+/**
+ * Stays 1.0.0 until the writer emits `prospective.byStepsComplete` (#2388).
+ * This schema accepts that optional field first, because the reader deployed
+ * in prod is `.strict()`: the writer may only start once a release carrying
+ * this reader is live (Lesson: a strict CDN contract makes an additive field
+ * a breaking change for deployed readers).
+ */
 export const REPORTS_ROLLUPS_VERSION = '1.0.0'
 
 export const ReportsRollupsFormatSchema = z
@@ -56,6 +64,18 @@ export const ProspectiveStageCountSchema = z
     stage: z.number().int().positive().nullable(),
     /** e.g. "Application to Organize"; "unrecognised" when `stage` is null. */
     label: z.string().min(1),
+    clubs: Count,
+  })
+  .strict()
+
+/**
+ * Prospective clubs with N of TI's six checklist steps complete (#2388) —
+ * the reading of `prospectProgress`, the district funnel's own.
+ */
+export const ProspectiveStepsCountSchema = z
+  .object({
+    /** Steps #1–#6 complete, in any order; null = text not recognised. */
+    stepsComplete: z.number().int().min(0).max(6).nullable(),
     clubs: Count,
   })
   .strict()
@@ -87,8 +107,17 @@ export const ReportsRollupFiguresSchema = z
         clubs: Count,
         /** Clubs whose prospect text says "Payment Complete". */
         paymentComplete: Count,
-        /** Ascending by stage; the unrecognised group last. */
+        /**
+         * Ascending by stage; the unrecognised group last. The #2142
+         * furthest-step reading, kept for readers of 1.0.0; the funnel now
+         * reads `byStepsComplete`.
+         */
         byStage: z.array(ProspectiveStageCountSchema),
+        /**
+         * Most steps complete first; the unrecognised group last (#2388).
+         * Optional: absent in every file written before the writer emits it.
+         */
+        byStepsComplete: z.array(ProspectiveStepsCountSchema).optional(),
       })
       .strict()
       .nullable(),
@@ -198,6 +227,7 @@ export const ReportsRollupsSchema = z
 
 export type ReportsRollupsFormat = z.infer<typeof ReportsRollupsFormatSchema>
 export type ProspectiveStageCount = z.infer<typeof ProspectiveStageCountSchema>
+export type ProspectiveStepsCount = z.infer<typeof ProspectiveStepsCountSchema>
 export type DuesRenewalCounts = z.infer<typeof DuesRenewalCountsSchema>
 export type ReportsRollupFigures = z.infer<typeof ReportsRollupFiguresSchema>
 export type ReportsRollupDistrictStatus = z.infer<

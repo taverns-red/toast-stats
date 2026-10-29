@@ -60,7 +60,12 @@ const SECTIONS: ReadonlyArray<{ id: string; num: string; title: string }> = [
     num: '16',
     title: 'Council voting strength',
   },
-  { id: 'changelog', num: '17', title: 'Changelog' },
+  {
+    id: 'club-growth-prospective',
+    num: '17',
+    title: 'Prospective clubs',
+  },
+  { id: 'changelog', num: '18', title: 'Changelog' },
 ]
 
 // Every rule-change entry is its own deep-link target (#1400), owned by §10.
@@ -1285,9 +1290,72 @@ const MethodologyPage: React.FC = () => {
         </div>
       </CollapsibleSection>
 
+      {/* Club Growth prospective clubs (#2388) — the district funnel's
+          Progress / Waiting on columns and the region and world "By
+          progress" table. Asserted by MethodologyPage.clubGrowth.test.tsx. */}
+      <CollapsibleSection
+        id="club-growth-prospective"
+        num="17"
+        title="Prospective clubs"
+        collapsible={isMobile}
+        open={openIds.has('club-growth-prospective')}
+        onToggle={toggle}
+      >
+        <div data-testid="methodology-club-growth-prospective">
+          <p>
+            The Club Growth funnel lists the clubs on TI&apos;s Prospective
+            Clubs report. For each club the report prints a charter checklist:
+            six steps (Application to Organize, Certificate &amp; Remit, Roster,
+            Officer Info, Club Info, Constitution &amp; Bylaws) plus Payment,
+            each marked Complete or Incomplete with a date.
+          </p>
+          <ul>
+            <li>
+              <strong>A checklist, not a ladder.</strong> Clubs do the steps in
+              any order, and a step can go back to Incomplete. A step&apos;s
+              date is when it last changed, not when it was completed. So
+              Progress counts the steps marked Complete, whatever their number:
+              &quot;5 of 6 steps complete&quot;.
+            </li>
+            <li>
+              <strong>Waiting on.</strong> The incomplete step that last changed
+              longest ago, and the days since it changed, as of the page&apos;s
+              date. Ties go to the lower step number. When all six steps are
+              complete, it says so.
+            </li>
+            <li>
+              <strong>Steps TI does not list.</strong> TI often prints only the
+              first step. A step it does not list yet is shown as &quot;not
+              listed yet&quot; and counts from the checklist&apos;s most recent
+              step date. A listed step with no date counts the same way.
+            </li>
+            <li>
+              <strong>Order.</strong> Most steps complete first, then longest
+              waiting.
+            </li>
+            <li>
+              <strong>Region and world.</strong> The region and world funnels
+              count prospective clubs by steps complete with the same reading,
+              so a region&apos;s total is the sum of its district pages. Dates
+              built before this reading show the older &quot;by stage&quot;
+              grouping (the highest step TI lists, complete or not) and say so.
+            </li>
+          </ul>
+          <p>
+            Source: the <code>prospectiveClubs</code> section of{' '}
+            <code>
+              snapshots/&#123;date&#125;/district_&#123;id&#125;_reports.json
+            </code>{' '}
+            and, for regions and the world,{' '}
+            <code>snapshots/&#123;date&#125;/reports-rollups.json</code>. The
+            report&apos;s contact and location text are never shown.
+          </p>
+        </div>
+      </CollapsibleSection>
+
       <CollapsibleSection
         id="changelog"
-        num="17"
+        num="18"
         title="Changelog"
         collapsible={isMobile}
         open={openIds.has('changelog')}

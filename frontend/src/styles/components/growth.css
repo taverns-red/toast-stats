@@ -314,3 +314,14 @@
   color: var(--ink-3);
   border-style: dashed;
 }
+
+/* #2388 — "Waiting on" is a phrase ("Step #2 · Certificate & Remit · not
+   listed yet · 358 days since the checklist last changed"). In a 4.5rem
+   auto-fit card column it wrapped to eight lines at 375 (PR preview), so on
+   card rows it takes its own full-width line, after the short cells. */
+@media (max-width: 639px) {
+  .growth-stage .action-table td.growth-table__waiting {
+    grid-column: 1 / -1;
+    order: 1;
+  }
+}
