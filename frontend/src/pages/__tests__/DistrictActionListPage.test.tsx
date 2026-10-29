@@ -211,6 +211,28 @@ vi.mock('../../hooks/useDistrictData', () => ({
   useDistrictCachedDates: vi.fn(() => DATES_2025_26),
 }))
 
+// #2405 — the page chrome's CDN reads (program-year dates, the latest
+// manifest, the latest rankings) get fixtures; nothing reaches the live CDN.
+// Rankings carry no rows: nothing on this page is read from them.
+vi.mock('../../services/cdn', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../services/cdn')>()),
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2025-07-01', '2025-07-15'],
+    count: 2,
+    generatedAt: '2025-07-16T00:00:00Z',
+  }),
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2025-07-15',
+    generatedAt: '2025-07-16T00:00:00Z',
+  }),
+  fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2025-07-15'),
+  fetchCdnRankings: vi.fn().mockResolvedValue({
+    rankings: [],
+    asOfDate: '2025-07-15',
+    generatedAt: '2025-07-16T00:00:00Z',
+  }),
+}))
+
 vi.mock('../../utils/csvExport', async () => {
   const actual = await vi.importActual<typeof import('../../utils/csvExport')>(
     '../../utils/csvExport'

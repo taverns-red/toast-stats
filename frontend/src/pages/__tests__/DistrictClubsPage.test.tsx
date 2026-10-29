@@ -186,6 +186,31 @@ vi.mock('../../hooks/useCompetitiveAwards', () => ({
   useCompetitiveAwards: vi.fn(() => ({ data: null, isLoading: false })),
 }))
 
+// #2405 — the "since the previous date" diff reads two dated district
+// snapshots. Settled with no diff (the page then renders no Changes group,
+// which nothing here asserts); `previousRecordedDate` stays real.
+vi.mock('../../hooks/useSnapshotDiff', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../hooks/useSnapshotDiff')>()),
+  useSnapshotDiff: vi.fn(() => ({ data: undefined, isLoading: false })),
+}))
+
+// #2405 — the page chrome's latest manifest and rankings reads get fixtures;
+// nothing reaches the live CDN. Rankings carry no rows: nothing this file
+// asserts is read from them.
+vi.mock('../../services/cdn', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../services/cdn')>()),
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2025-07-15',
+    generatedAt: '2025-07-16T00:00:00Z',
+  }),
+  fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2025-07-15'),
+  fetchCdnRankings: vi.fn().mockResolvedValue({
+    rankings: [],
+    asOfDate: '2025-07-15',
+    generatedAt: '2025-07-16T00:00:00Z',
+  }),
+}))
+
 vi.mock('../../components/LazyCharts', () => ({
   LazyMembershipTrendChart: () => null,
   LazyMembershipPaymentsChart: () => null,
