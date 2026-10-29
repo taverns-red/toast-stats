@@ -183,29 +183,32 @@ describe('DistrictOverviewHub', () => {
   })
 
   describe('Success Plan entry on the phone (#2297)', () => {
-    /* The collapsed panel cost the 375px Overview 62px and broke the hub's
-       4,000px page budget. On phones its entry point is a button in the
-       Action List link's existing row, and the form opens in a sheet. */
+    /* No page height for the entry. A disclosure row cost the 375px page 62px.
+       A button beside the Action List link wrapped to a second 44px line on
+       the CI runners' wider fallback font (run 40791246232: pageH 4031 > 4000).
+       The entry therefore lives inside the KPI tile sheets, which add nothing
+       to the page, next to the Plan mark it sets. */
     const panel = <form aria-label="Targets form" />
 
-    it('puts a Success Plan targets button in the Action List row', () => {
+    const openTile = (i: number) =>
+      fireEvent.click(screen.getAllByTestId('district-hub-tile')[i]!)
+
+    it('adds nothing to the page itself', () => {
       render(<DistrictOverviewHub {...baseProps} planTargetsPanel={panel} />)
-      const row = screen.getByTestId('district-hub-links')
       expect(
-        within(row).getByRole('link', { name: /Open the Action List/ })
-      ).toBeInTheDocument()
-      expect(
-        within(row).getByRole('button', { name: /Success Plan targets/ })
-      ).toBeInTheDocument()
-      expect(
-        screen.queryByRole('form', { name: 'Targets form' })
+        screen.queryByRole('button', { name: /Success Plan targets/ })
       ).not.toBeInTheDocument()
+      expect(screen.queryByTestId('district-hub-links')).not.toBeInTheDocument()
     })
 
-    it('opens the targets form in a sheet', () => {
+    it('offers the targets form from a tiered KPI sheet', () => {
       render(<DistrictOverviewHub {...baseProps} planTargetsPanel={panel} />)
+      openTile(0)
+      const tileSheet = screen.getByRole('dialog', { name: 'Paid Clubs' })
       fireEvent.click(
-        screen.getByRole('button', { name: /Success Plan targets/ })
+        within(tileSheet).getByRole('button', {
+          name: /Set Success Plan targets/,
+        })
       )
       const sheet = screen.getByRole('dialog', {
         name: 'Success Plan targets',
@@ -213,15 +216,9 @@ describe('DistrictOverviewHub', () => {
       expect(
         within(sheet).getByRole('form', { name: 'Targets form' })
       ).toBeInTheDocument()
-    })
-
-    it('keeps the label short enough to share the row at 375px', () => {
-      // "Open the Action List →" is 172px of a 327px row; "Success Plan
-      // targets" (159px) wrapped to a second 44px line. "Plan targets" is
-      // 91px. The full name stays in the accessible name.
-      render(<DistrictOverviewHub {...baseProps} planTargetsPanel={panel} />)
-      const btn = screen.getByRole('button', { name: /Success Plan targets/ })
-      expect(btn).toHaveTextContent(/^Plan targets$/)
+      expect(
+        screen.queryByRole('dialog', { name: 'Paid Clubs' })
+      ).not.toBeInTheDocument()
     })
 
     it('says how many targets are set', () => {
@@ -232,14 +229,23 @@ describe('DistrictOverviewHub', () => {
           planGoals={{ payments: 9999, paidClubs: 150 }}
         />
       )
-      const btn = screen.getByRole('button', {
-        name: 'Success Plan targets, 2 set',
-      })
-      expect(btn).toHaveTextContent(/^Plan targets \(2\)$/)
+      openTile(1)
+      expect(
+        screen.getByRole('button', { name: /Success Plan targets/ })
+      ).toHaveTextContent('Edit Success Plan targets (2 set)')
     })
 
-    it('shows no button without a panel', () => {
+    it('has no entry in the Net change sheet', () => {
+      render(<DistrictOverviewHub {...baseProps} planTargetsPanel={panel} />)
+      openTile(3)
+      expect(
+        screen.queryByRole('button', { name: /Success Plan targets/ })
+      ).not.toBeInTheDocument()
+    })
+
+    it('shows no entry without a panel', () => {
       render(<DistrictOverviewHub {...baseProps} />)
+      openTile(0)
       expect(
         screen.queryByRole('button', { name: /Success Plan targets/ })
       ).not.toBeInTheDocument()
