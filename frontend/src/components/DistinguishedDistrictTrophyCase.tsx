@@ -146,9 +146,7 @@ interface GapTileSpec {
   gapPercent: number
   unitSingular: string
   unitPlural: string
-  /** One-line note shown after the percentage, on the same row (#2390). */
-  note?: string
-  /** A link on the label row, e.g. to the Methodology entry (#2390). */
+  /** A link after the percentage, on the same row (#2390). */
   link?: { href: string; label: string }
 }
 
@@ -164,7 +162,6 @@ const GapTile: React.FC<GapTileSpec> = ({
   gapPercent,
   unitSingular,
   unitPlural,
-  note,
   link,
 }) => {
   // `count === 0` is the canonical "met" signal (lesson 103); only the
@@ -176,30 +173,11 @@ const GapTile: React.FC<GapTileSpec> = ({
       data-testid="gap-tile"
       className="rounded-md border border-gray-200 theme-dark:border-gray-700 px-3 py-2"
     >
-      {/* The link rides the label row, which has room at 375; on the
-          percentage row it wrapped and cost the phone Overview a line
-          (#2390, PAGE_MAX_H). `leading-4` keeps the 14px phone-floor link
-          from raising the row above the label's own line. */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-        <div
-          data-testid="gap-tile-label"
-          className="text-[11px] uppercase tracking-wide text-gray-600 theme-dark:text-gray-400 font-tm-body"
-        >
-          {label}
-        </div>
-        {link && (
-          <span
-            data-testid="gap-tile-link"
-            className="text-[11px] leading-4 font-tm-body"
-          >
-            <a
-              href={link.href}
-              className="text-tm-loyal-blue underline whitespace-nowrap"
-            >
-              {link.label}
-            </a>
-          </span>
-        )}
+      <div
+        data-testid="gap-tile-label"
+        className="text-[11px] uppercase tracking-wide text-gray-600 theme-dark:text-gray-400 font-tm-body"
+      >
+        {label}
       </div>
       <div
         data-testid="gap-tile-value"
@@ -212,16 +190,22 @@ const GapTile: React.FC<GapTileSpec> = ({
         {closed ? '✓' : count != null ? `${count} ${noun}` : '—'}
       </div>
       {!closed && count != null && (
-        /* The note rides the percentage's row, so labelling the count adds
-           no row to the 375 Overview (#2390, PAGE_MAX_H budget). */
+        /* The link rides the percentage's row, so it adds no row to the
+           375 Overview (#2390, PAGE_MAX_H). Only the short link fits there
+           on the CI renderer's wider system-ui face at the 14px floor. */
         <div className="mt-0.5 text-[11px] text-gray-600 theme-dark:text-gray-400 font-tm-body">
           <span data-testid="gap-tile-subitem" className="tabular-nums">
             +{gapPercent.toFixed(1)}%
           </span>
-          {note && (
-            <span data-testid="gap-tile-note">
+          {link && (
+            <span data-testid="gap-tile-link">
               <span aria-hidden="true"> · </span>
-              {note}
+              <a
+                href={link.href}
+                className="text-tm-loyal-blue underline whitespace-nowrap"
+              >
+                {link.label}
+              </a>
             </span>
           )}
         </div>
@@ -330,6 +314,11 @@ const TrophyCaseSkeleton: React.FC<{ programYear: string }> = ({
           </div>
         ))}
       </div>
+      {/* The loaded panel's md+ explainer line under the tiles (#2390). */}
+      <p className="invisible hidden md:block mt-2 text-xs font-tm-body">
+        Confirmed clubs only. The Distinguished Clubs card above counts clubs
+        qualifying today, so the two can differ.
+      </p>
     </div>
   </div>
 )
@@ -532,13 +521,22 @@ export const DistinguishedDistrictTrophyCase: React.FC<
               gapPercent={nextTierGap.distinguishedPercentGap}
               unitSingular="confirmed club"
               unitPlural="confirmed clubs"
-              note="confirmed only"
               link={{
                 href: DISTINGUISHED_COUNTS_METHODOLOGY_HREF,
                 label: 'How we count',
               }}
             />
           </div>
+          {/* One line from 768 up (#2390). Phones carry the "confirmed
+              clubs" noun and the link only: this line would cost the 375
+              page a row it does not have. */}
+          <p
+            data-testid="distinguished-gap-explainer"
+            className="hidden md:block mt-2 text-xs text-gray-600 theme-dark:text-gray-400 font-tm-body"
+          >
+            Confirmed clubs only. The Distinguished Clubs card above counts
+            clubs qualifying today, so the two can differ.
+          </p>
         </div>
       )}
 
