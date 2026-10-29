@@ -42,13 +42,11 @@ const ProgramYear = z.string().regex(/^\d{4}-\d{4}$/)
 const Count = z.number().int().nonnegative()
 
 /**
- * Stays 1.0.0 until the writer emits `prospective.byStepsComplete` (#2388).
- * This schema accepts that optional field first, because the reader deployed
- * in prod is `.strict()`: the writer may only start once a release carrying
- * this reader is live (Lesson: a strict CDN contract makes an additive field
- * a breaking change for deployed readers).
+ * 1.1.0 (#2388): the writer emits optional `prospective.byStepsComplete`.
+ * 1.0.0 files lack it and still parse. Released only after the reader that
+ * accepts it was live in prod: the deployed contract is `.strict()`.
  */
-export const REPORTS_ROLLUPS_VERSION = '1.0.0'
+export const REPORTS_ROLLUPS_VERSION = '1.1.0'
 
 export const ReportsRollupsFormatSchema = z
   .object({
