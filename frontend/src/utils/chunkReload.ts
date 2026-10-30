@@ -143,9 +143,17 @@ export function reloadTo(
   }
 }
 
+/** Stub for the red commit (#2415): behaves as today, always stale. */
+export async function isBuildStale(
+  _deps: { fetchImpl?: typeof fetch; doc?: Document } = {}
+): Promise<boolean> {
+  return true
+}
+
 /** The browser seam; tests spy on `browserNav.reloadTo`. */
 export const browserNav = {
   reloadTo: (target: string): void => reloadTo(target, window.location),
+  isBuildStale: (): Promise<boolean> => isBuildStale(),
 }
 
 /** Reload `target` once if the guard allows it. Returns whether it reloaded. */
@@ -173,6 +181,7 @@ export function installChunkReloadHandler(
   deps: ChunkReloadDeps & {
     currentHref?: () => string
     reload?: (target: string) => void
+    isBuildStale?: () => Promise<boolean>
   } = {}
 ): () => void {
   const currentHref = deps.currentHref ?? (() => window.location.href)

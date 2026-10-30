@@ -14,7 +14,13 @@
  */
 import React, { Suspense } from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, within, fireEvent } from '@testing-library/react'
+import {
+  render,
+  screen,
+  within,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react'
 import { createMemoryRouter, RouterProvider, Outlet } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ErrorPage from '../../components/ErrorPage'
@@ -281,14 +287,20 @@ describe('stale-build chunk-load failure (#2415)', () => {
   }
 
   let reloadTo: ReturnType<typeof vi.spyOn>
+  let buildStale: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
     window.sessionStorage.clear()
     reloadTo = vi.spyOn(browserNav, 'reloadTo').mockImplementation(() => {})
+    // Default: a deploy happened, the running build is stale.
+    buildStale = vi
+      .spyOn(browserNav, 'isBuildStale')
+      .mockImplementation(async () => true)
   })
 
   afterEach(() => {
     reloadTo.mockRestore()
+    buildStale.mockRestore()
     window.sessionStorage.clear()
   })
 
@@ -296,7 +308,7 @@ describe('stale-build chunk-load failure (#2415)', () => {
     renderStaleRoute()
     const page = await screen.findByTestId('error-page')
     expect(page).toHaveAttribute('data-error-variant', 'chunk-load')
-    expect(reloadTo).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(reloadTo).toHaveBeenCalledTimes(1))
     expect(reloadTo).toHaveBeenCalledWith(
       `${window.location.origin}/stale?py=2026-2027`
     )
@@ -305,11 +317,27 @@ describe('stale-build chunk-load failure (#2415)', () => {
   it('does not reload again when the chunk still fails after the reload', async () => {
     const first = renderStaleRoute()
     await screen.findByTestId('error-page')
+    await waitFor(() => expect(reloadTo).toHaveBeenCalledTimes(1))
     first.unmount()
     // The "after the reload" mount: same session, same target, still broken.
     renderStaleRoute()
     await screen.findByTestId('error-page')
+    await new Promise(r => setTimeout(r, 0))
     expect(reloadTo).toHaveBeenCalledTimes(1)
+  })
+
+  // A chunk error on the build that is still deployed is transient (WebKit
+  // aborting preloads as a navigation starts, a dropped connection). It must
+  // not reload; the page offers the manual Reload instead.
+  it('does not auto-reload when the build has not changed', async () => {
+    buildStale.mockImplementation(async () => false)
+    renderStaleRoute()
+    expect(
+      await screen.findByRole('button', { name: /^reload$/i })
+    ).toBeInTheDocument()
+    await waitFor(() => expect(buildStale).toHaveBeenCalled())
+    await new Promise(r => setTimeout(r, 0))
+    expect(reloadTo).not.toHaveBeenCalled()
   })
 
   it('leads with Reload and new-version copy', async () => {
@@ -321,6 +349,7 @@ describe('stale-build chunk-load failure (#2415)', () => {
     ).toBeInTheDocument()
     const reload = screen.getByRole('button', { name: /^reload$/i })
     expect(reload).toHaveClass('tm-btn-primary')
+    await waitFor(() => expect(reloadTo).toHaveBeenCalledTimes(1))
     reloadTo.mockClear()
     fireEvent.click(reload)
     expect(reloadTo).toHaveBeenCalledTimes(1)

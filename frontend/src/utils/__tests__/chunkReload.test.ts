@@ -14,6 +14,7 @@ import {
   reloadTo,
   CHUNK_RELOAD_WINDOW_MS,
   installChunkReloadHandler,
+  isBuildStale,
 } from '../chunkReload'
 
 /** A Storage-shaped in-memory store (the guard only needs get/set). */
@@ -170,27 +171,117 @@ describe('reloadTo (#2415)', () => {
   })
 })
 
+describe('isBuildStale (#2415)', () => {
+  /** A document whose module entry script is `src`. */
+  function docWithEntry(src: string | null): Document {
+    const doc = document.implementation.createHTMLDocument('t')
+    const inline = doc.createElement('script')
+    inline.textContent = 'window.x = 1'
+    doc.head.appendChild(inline)
+    if (src) {
+      const s = doc.createElement('script')
+      s.type = 'module'
+      s.src = src
+      doc.head.appendChild(s)
+    }
+    return doc
+  }
+  const html = (src: string) =>
+    `<!doctype html><html><head><script>1</script><script type="module" crossorigin src="${src}"></script></head><body></body></html>`
+  const fetchOk = (body: string) =>
+    vi.fn(async () => new Response(body, { status: 200 }))
+
+  it('is true when the deployed entry script differs from the running one', async () => {
+    const fetchImpl = fetchOk(html('/assets/index-NEW.js'))
+    await expect(
+      isBuildStale({ fetchImpl, doc: docWithEntry('/assets/index-OLD.js') })
+    ).resolves.toBe(true)
+    // Fresh copy of the HTML, never the HTTP cache.
+    expect(fetchImpl).toHaveBeenCalledWith(
+      '/',
+      expect.objectContaining({ cache: 'no-store' })
+    )
+  })
+
+  it('is false when the deployed build is the running build', async () => {
+    await expect(
+      isBuildStale({
+        fetchImpl: fetchOk(html('/assets/index-SAME.js')),
+        doc: docWithEntry('/assets/index-SAME.js'),
+      })
+    ).resolves.toBe(false)
+  })
+
+  it('is false when the HTML cannot be fetched', async () => {
+    await expect(
+      isBuildStale({
+        fetchImpl: vi.fn(async () => {
+          throw new TypeError('Load failed')
+        }),
+        doc: docWithEntry('/assets/index-OLD.js'),
+      })
+    ).resolves.toBe(false)
+    await expect(
+      isBuildStale({
+        fetchImpl: vi.fn(async () => new Response('', { status: 503 })),
+        doc: docWithEntry('/assets/index-OLD.js'),
+      })
+    ).resolves.toBe(false)
+  })
+
+  it('is false when either entry script is unknown', async () => {
+    await expect(
+      isBuildStale({
+        fetchImpl: fetchOk(html('/assets/index-NEW.js')),
+        doc: docWithEntry(null),
+      })
+    ).resolves.toBe(false)
+    await expect(
+      isBuildStale({
+        fetchImpl: fetchOk('<html><body>no scripts</body></html>'),
+        doc: docWithEntry('/assets/index-OLD.js'),
+      })
+    ).resolves.toBe(false)
+  })
+})
+
 describe('installChunkReloadHandler (vite:preloadError) (#2415)', () => {
   function preloadError(payload: unknown): Event {
     const e = new Event('vite:preloadError', { cancelable: true })
     ;(e as Event & { payload: unknown }).payload = payload
     return e
   }
+  const chunkErr = () =>
+    new TypeError(
+      'Failed to fetch dynamically imported module: https://ts.taverns.red/assets/a-1.js'
+    )
+  /** Let the handler's async stale-build check settle. */
+  const settle = () => new Promise(r => setTimeout(r, 0))
 
-  it('reloads the current URL once on a stale-chunk preload error, then stops', () => {
-    const target = new EventTarget()
+  function install(
+    target: EventTarget,
+    stale: boolean,
+    href = 'https://ts.taverns.red/district/61/clubs'
+  ) {
     const reload = vi.fn()
+    const isBuildStale = vi.fn(async () => stale)
     const uninstall = installChunkReloadHandler(target, {
       storage: memoryStorage(),
       now: () => 0,
-      currentHref: () => 'https://ts.taverns.red/district/61/clubs',
+      currentHref: () => href,
       reload,
+      isBuildStale,
     })
-    const err = new TypeError(
-      'Failed to fetch dynamically imported module: https://ts.taverns.red/assets/a-1.js'
-    )
-    target.dispatchEvent(preloadError(err))
-    target.dispatchEvent(preloadError(err))
+    return { reload, isBuildStale, uninstall }
+  }
+
+  it('reloads the current URL once when the build is stale, then stops', async () => {
+    const target = new EventTarget()
+    const { reload, uninstall } = install(target, true)
+    target.dispatchEvent(preloadError(chunkErr()))
+    await settle()
+    target.dispatchEvent(preloadError(chunkErr()))
+    await settle()
     expect(reload).toHaveBeenCalledTimes(1)
     expect(reload).toHaveBeenCalledWith(
       'https://ts.taverns.red/district/61/clubs'
@@ -198,16 +289,63 @@ describe('installChunkReloadHandler (vite:preloadError) (#2415)', () => {
     uninstall()
   })
 
-  it('ignores a preload error that is not a chunk-load failure', () => {
+  // WebKit aborts in-flight preloads when a navigation starts and fires their
+  // error events ("Unable to preload CSS for …"), on the SAME build. A reload
+  // of the old URL then hijacks the navigation the user just started.
+  it('does not reload a chunk error when the build has not changed', async () => {
     const target = new EventTarget()
-    const reload = vi.fn()
-    installChunkReloadHandler(target, {
-      storage: memoryStorage(),
-      now: () => 0,
-      currentHref: () => 'https://ts.taverns.red/',
-      reload,
-    })
-    target.dispatchEvent(preloadError(new Error('kaboom at module top level')))
+    const { reload, isBuildStale, uninstall } = install(target, false)
+    target.dispatchEvent(
+      preloadError(
+        new Error(
+          'Unable to preload CSS for https://ts.taverns.red/assets/pinFeatures-CLDMVitk.css'
+        )
+      )
+    )
+    await settle()
+    expect(isBuildStale).toHaveBeenCalled()
     expect(reload).not.toHaveBeenCalled()
+    uninstall()
+  })
+
+  it('does not reload once the page has started to unload', async () => {
+    const target = new EventTarget()
+    const { reload, isBuildStale, uninstall } = install(target, true)
+    target.dispatchEvent(new Event('beforeunload'))
+    target.dispatchEvent(preloadError(chunkErr()))
+    await settle()
+    expect(isBuildStale).not.toHaveBeenCalled()
+    expect(reload).not.toHaveBeenCalled()
+    uninstall()
+  })
+
+  it('does not reload when unload starts during the stale-build check', async () => {
+    const target = new EventTarget()
+    const { reload, uninstall } = install(target, true)
+    target.dispatchEvent(preloadError(chunkErr()))
+    target.dispatchEvent(new Event('pagehide'))
+    await settle()
+    expect(reload).not.toHaveBeenCalled()
+    uninstall()
+  })
+
+  it('reloads again after a back/forward-cache restore (pageshow)', async () => {
+    const target = new EventTarget()
+    const { reload, uninstall } = install(target, true)
+    target.dispatchEvent(new Event('pagehide'))
+    target.dispatchEvent(new Event('pageshow'))
+    target.dispatchEvent(preloadError(chunkErr()))
+    await settle()
+    expect(reload).toHaveBeenCalledTimes(1)
+    uninstall()
+  })
+
+  it('ignores a preload error that is not a chunk-load failure', async () => {
+    const target = new EventTarget()
+    const { reload, uninstall } = install(target, true)
+    target.dispatchEvent(preloadError(new Error('kaboom at module top level')))
+    await settle()
+    expect(reload).not.toHaveBeenCalled()
+    uninstall()
   })
 })
