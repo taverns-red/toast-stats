@@ -37,8 +37,8 @@ import {
  *
  * Stale build (#2415): after a deploy, a tab on the old build fails to load a
  * lazy route chunk that no longer exists, and that rejection lands here. For
- * a chunk-load error the page reloads the target URL once (guarded, see
- * `utils/chunkReload.ts`) and leads with Reload and "new version" copy; if
+ * a chunk-load error the page reloads the target URL once, only if a newer
+ * build is deployed (guarded, see `utils/chunkReload.ts`), and leads with Reload and "new version" copy; if
  * the guard refuses (the chunk still fails after the reload) the page stays
  * up with the manual Reload. Every variant also offers Reload.
  */
@@ -96,7 +96,7 @@ const ErrorPage: React.FC = () => {
 
   // Self-heal a stale build (#2415): one guarded full reload of the target.
   useEffect(() => {
-    if (isChunkError) recoverFromChunkError(targetHref)
+    if (isChunkError) void recoverFromChunkError(targetHref)
   }, [isChunkError, targetHref])
 
   // Move focus to the heading on mount so screen-reader and keyboard users land

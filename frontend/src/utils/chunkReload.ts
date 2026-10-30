@@ -17,7 +17,13 @@
  *   - The router's errorElement (`ErrorPage`), for a dynamic-import rejection
  *     that surfaces as a render error.
  *
- * Both go through `claimChunkReload`, a sessionStorage guard that allows one
+ * A chunk error is not proof of a stale build: WebKit aborts in-flight
+ * preloads as a navigation starts and fires their error events, on the build
+ * that is still deployed. So both paths go through `recoverFromChunkError`,
+ * which reloads only when the page is not unloading AND a fresh copy of the
+ * HTML names a different entry script than the running one (`isBuildStale`).
+ *
+ * It then claims `claimChunkReload`, a sessionStorage guard that allows one
  * automatic reload per target URL within `CHUNK_RELOAD_WINDOW_MS`. If the
  * chunk still fails after that reload, the guard refuses and the error page
  * shows a manual Reload instead of looping. If sessionStorage is unavailable
@@ -143,33 +149,95 @@ export function reloadTo(
   }
 }
 
-/** Stub for the red commit (#2415): behaves as today, always stale. */
-export async function isBuildStale(
-  _deps: { fetchImpl?: typeof fetch; doc?: Document } = {}
-): Promise<boolean> {
-  return true
+/** The entry module script's path in `doc`, or null when there is none. */
+function entryScriptPath(doc: Document): string | null {
+  const src = doc
+    .querySelector('script[type="module"][src]')
+    ?.getAttribute('src')
+  if (!src) return null
+  try {
+    return new URL(src, window.location.origin).pathname
+  } catch {
+    return null
+  }
 }
 
-/** The browser seam; tests spy on `browserNav.reloadTo`. */
+/**
+ * True only when a newer build is deployed than the one running: a fresh copy
+ * of the app's HTML (`cache: 'no-store'`) names a different entry script than
+ * this document does. Content hashes change with every build, so a different
+ * entry name means the old chunk names are gone.
+ *
+ * Anything unknown (fetch failed, non-OK status, no entry script on either
+ * side, as in dev) is "not stale": we don't reload on a guess. The error page
+ * still offers a manual Reload.
+ */
+export async function isBuildStale(
+  deps: { fetchImpl?: typeof fetch; doc?: Document } = {}
+): Promise<boolean> {
+  const fetchImpl = deps.fetchImpl ?? fetch
+  const running = entryScriptPath(deps.doc ?? document)
+  if (!running) return false
+  try {
+    // `/` rather than `/index.html`: cleanUrls redirects the latter.
+    const res = await fetchImpl('/', {
+      cache: 'no-store',
+      credentials: 'same-origin',
+    })
+    if (!res.ok) return false
+    const deployedDoc = new DOMParser().parseFromString(
+      await res.text(),
+      'text/html'
+    )
+    const deployed = entryScriptPath(deployedDoc)
+    return deployed !== null && deployed !== running
+  } catch {
+    return false
+  }
+}
+
+/** The browser seams; tests spy on these. */
 export const browserNav = {
   reloadTo: (target: string): void => reloadTo(target, window.location),
   isBuildStale: (): Promise<boolean> => isBuildStale(),
 }
 
-/** Reload `target` once if the guard allows it. Returns whether it reloaded. */
-export function recoverFromChunkError(
+/**
+ * Set from `beforeunload`/`pagehide` (and cleared on `pageshow`, a
+ * back/forward-cache restore) by `installChunkReloadHandler`. Once the page
+ * has started to unload, a chunk error is the browser aborting in-flight loads
+ * for the navigation the user just started (WebKit fires the preload's error
+ * event then); reloading the old URL would hijack that navigation.
+ */
+let leaving = false
+
+interface RecoverDeps extends ChunkReloadDeps {
+  isBuildStale?: () => Promise<boolean>
+  reload?: (target: string) => void
+}
+
+/**
+ * Reload `target` once, only if the page is not unloading, a newer build is
+ * deployed, and the guard allows it. Resolves to whether it reloaded.
+ */
+export async function recoverFromChunkError(
   target: string,
-  deps: ChunkReloadDeps = {}
-): boolean {
+  deps: RecoverDeps = {}
+): Promise<boolean> {
+  if (leaving) return false
+  const stale = await (deps.isBuildStale ?? browserNav.isBuildStale)()
+  // Re-check: an unload may have started while we fetched the HTML.
+  if (!stale || leaving) return false
   if (!claimChunkReload(target, deps)) return false
-  browserNav.reloadTo(target)
+  ;(deps.reload ?? browserNav.reloadTo)(target)
   return true
 }
 
 /**
  * Listen for `vite:preloadError` on `target` (the window in the app) and
- * reload the current URL once for a stale-chunk failure. Returns an uninstall
- * function.
+ * reload the current URL once for a stale-chunk failure, through
+ * `recoverFromChunkError`. Also tracks page unload for it. Returns an
+ * uninstall function.
  *
  * There is no hover prefetch of route chunks, so a failed route import is for
  * the page being navigated to: React Router has already pushed the new URL by
@@ -178,20 +246,29 @@ export function recoverFromChunkError(
  */
 export function installChunkReloadHandler(
   target: EventTarget,
-  deps: ChunkReloadDeps & {
-    currentHref?: () => string
-    reload?: (target: string) => void
-    isBuildStale?: () => Promise<boolean>
-  } = {}
+  deps: RecoverDeps & { currentHref?: () => string } = {}
 ): () => void {
   const currentHref = deps.currentHref ?? (() => window.location.href)
-  const reload = deps.reload ?? ((url: string) => browserNav.reloadTo(url))
   const onPreloadError = (event: Event): void => {
     const payload = (event as Event & { payload?: unknown }).payload
     if (!isChunkLoadError(payload)) return
-    const href = currentHref()
-    if (claimChunkReload(href, deps)) reload(href)
+    void recoverFromChunkError(currentHref(), deps)
+  }
+  const onLeave = (): void => {
+    leaving = true
+  }
+  const onShow = (): void => {
+    leaving = false
   }
   target.addEventListener('vite:preloadError', onPreloadError)
-  return () => target.removeEventListener('vite:preloadError', onPreloadError)
+  target.addEventListener('beforeunload', onLeave)
+  target.addEventListener('pagehide', onLeave)
+  target.addEventListener('pageshow', onShow)
+  return () => {
+    target.removeEventListener('vite:preloadError', onPreloadError)
+    target.removeEventListener('beforeunload', onLeave)
+    target.removeEventListener('pagehide', onLeave)
+    target.removeEventListener('pageshow', onShow)
+    leaving = false
+  }
 }
