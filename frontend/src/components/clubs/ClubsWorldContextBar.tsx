@@ -4,6 +4,10 @@ import { ContextSheetControls } from '../ContextSheetControls'
 import { formatFreshnessLine } from '../../utils/contextBar'
 import type { ProgramYear } from '../../utils/programYear'
 import type { SnapshotDate } from '../../types/snapshotDate'
+import type {
+  ProgramYearSetter,
+  SnapshotDateSetter,
+} from '../../hooks/useUrlProgramYear'
 
 /* Phone context bar for the clubs-worldwide pages (#1831): the overview
    (/clubs, a root page with no back crumb) and each tier's race
@@ -16,11 +20,11 @@ export interface ClubsWorldContextBarProps {
   about: string
   trail: ContextCrumb[]
   selectedProgramYear: ProgramYear
-  setSelectedProgramYear: (py: ProgramYear) => void
+  setSelectedProgramYear: ProgramYearSetter
   availableProgramYears: ProgramYear[]
   cachedDates: SnapshotDate[]
   selectedDate: SnapshotDate | undefined
-  setSelectedDate: (date: SnapshotDate | undefined) => void
+  setSelectedDate: SnapshotDateSetter
   effectiveDate: SnapshotDate | undefined
   asOfDate: string | undefined
   isLatestSnapshot: boolean

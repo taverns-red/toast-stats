@@ -2,6 +2,11 @@ import React, { useId } from 'react'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import type { ProgramYear } from '../utils/programYear'
 import type { SnapshotDate } from '../types/snapshotDate'
+import type {
+  ProgramYearSetter,
+  SnapshotDateSetter,
+} from '../hooks/useUrlProgramYear'
+import { USER_PICK } from '../hooks/useUrlProgramYear'
 
 /* Program-year + snapshot-date controls for the context sheet (#1831).
 
@@ -14,10 +19,12 @@ import type { SnapshotDate } from '../types/snapshotDate'
 export interface ContextSheetControlsProps {
   availableProgramYears: ProgramYear[]
   selectedProgramYear: ProgramYear
-  onProgramYearChange: (py: ProgramYear) => void
+  /** Called with `USER_PICK` — a pick pushes a history entry (#2412). */
+  onProgramYearChange: ProgramYearSetter
   availableDates: SnapshotDate[]
   selectedDate: SnapshotDate | undefined
-  onDateChange: (date: SnapshotDate | undefined) => void
+  /** Called with `USER_PICK` — a pick pushes a history entry (#2412). */
+  onDateChange: SnapshotDateSetter
   /** Optional freshness line ("Data fresh · Oct 10, 2026"). */
   freshness?: string | undefined
 }
@@ -57,7 +64,7 @@ export const ContextSheetControls: React.FC<ContextSheetControlsProps> = ({
           value={String(selectedProgramYear.year)}
           onChange={e => {
             const py = years.find(p => p.year === Number(e.target.value))
-            if (py) onProgramYearChange(py)
+            if (py) onProgramYearChange(py, USER_PICK)
           }}
         >
           {years.map(py => (
@@ -77,7 +84,10 @@ export const ContextSheetControls: React.FC<ContextSheetControlsProps> = ({
           data-testid="context-sheet-date"
           value={selectedDate ?? ''}
           onChange={e =>
-            onDateChange(sortedDates.find(d => d === e.target.value))
+            onDateChange(
+              sortedDates.find(d => d === e.target.value),
+              USER_PICK
+            )
           }
         >
           <option value="">Latest in PY</option>

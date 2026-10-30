@@ -10,6 +10,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { LandingContextBar } from '../LandingContextBar'
 import { getProgramYear } from '../../utils/programYear'
 import { snap } from '../../test-utils/snapshotDate'
+import { USER_PICK } from '../../hooks/useUrlProgramYear'
 
 afterEach(() => cleanup())
 
@@ -74,13 +75,14 @@ describe('LandingContextBar (#1846)', () => {
       '2025'
     )
     expect(props.setSelectedProgramYear).toHaveBeenCalledWith(
-      getProgramYear(2025)
+      getProgramYear(2025),
+      USER_PICK
     )
     await userEvent.selectOptions(
       screen.getByTestId('context-sheet-date'),
       '2026-10-09'
     )
-    expect(props.setSelectedDate).toHaveBeenCalledWith('2026-10-09')
+    expect(props.setSelectedDate).toHaveBeenCalledWith('2026-10-09', USER_PICK)
   })
 
   it('lists Export CSV and Copy link as sheet actions', async () => {

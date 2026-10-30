@@ -7,7 +7,7 @@ import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
-import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
+import { useUrlProgramYear, USER_PICK } from '../hooks/useUrlProgramYear'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useDarkMode } from '../contexts/DarkModeContext'
 import {
@@ -546,9 +546,11 @@ const DistrictMapPage: React.FC = () => {
                       onLatest={
                         availableProgramYears[0] &&
                         (() =>
+                          // A click on "Latest" is a user pick: push (#2412).
                           setProgramYearAndDate(
                             availableProgramYears[0]!,
-                            undefined
+                            undefined,
+                            USER_PICK
                           ))
                       }
                     />

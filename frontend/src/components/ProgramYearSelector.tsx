@@ -1,4 +1,6 @@
 import React from 'react'
+import type { ProgramYearSetter } from '../hooks/useUrlProgramYear'
+import { USER_PICK } from '../hooks/useUrlProgramYear'
 import {
   ProgramYear,
   formatProgramYear,
@@ -9,7 +11,8 @@ import { formatDisplayDate } from '../utils/dateFormatting'
 interface ProgramYearSelectorProps {
   availableProgramYears: ProgramYear[]
   selectedProgramYear: ProgramYear
-  onProgramYearChange: (programYear: ProgramYear) => void
+  /** Called with `USER_PICK` — a pick pushes a history entry (#2412). */
+  onProgramYearChange: ProgramYearSetter
   className?: string
   showProgress?: boolean
   /** Whether the component is in an error state (Requirement 4.3) */
@@ -37,7 +40,7 @@ export const ProgramYearSelector: React.FC<ProgramYearSelectorProps> = ({
     const year = parseInt(e.target.value)
     const programYear = availableProgramYears.find(py => py.year === year)
     if (programYear) {
-      onProgramYearChange(programYear)
+      onProgramYearChange(programYear, USER_PICK)
     }
   }
 

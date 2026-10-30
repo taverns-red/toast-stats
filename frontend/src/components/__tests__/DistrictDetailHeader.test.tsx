@@ -8,6 +8,7 @@ import { getProgramYear } from '../../utils/programYear'
 import { useLatestAsOfDate } from '../../hooks/useLatestAsOfDate'
 import { snap } from '../../test-utils/snapshotDate'
 import type { SnapshotDate } from '../../types/snapshotDate'
+import { USER_PICK } from '../../hooks/useUrlProgramYear'
 
 // Mock the global freshness source so the presentational header stays testable
 // without a QueryClientProvider. Default: no reconciliation.
@@ -259,12 +260,12 @@ describe('DistrictDetailHeader phone context bar (#1831)', () => {
       within(sheet).getByLabelText('Program year'),
       '2024'
     )
-    expect(setPy).toHaveBeenCalledWith(py2425)
+    expect(setPy).toHaveBeenCalledWith(py2425, USER_PICK)
     await userEvent.selectOptions(
       within(sheet).getByLabelText('Snapshot date'),
       '2026-04-26'
     )
-    expect(onDate).toHaveBeenCalledWith('2026-04-26')
+    expect(onDate).toHaveBeenCalledWith('2026-04-26', USER_PICK)
 
     expect(
       within(sheet).getByRole('button', { name: 'Export CSV' })

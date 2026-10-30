@@ -36,12 +36,13 @@ import {
 } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
 import { snapshotDatesFrom, type SnapshotDate } from '../types/snapshotDate'
+import type { ProgramYearSetter, SnapshotDateSetter } from './useUrlProgramYear'
 
 export interface ProgramYearControls {
   selectedProgramYear: ProgramYear
-  setSelectedProgramYear: (py: ProgramYear) => void
+  setSelectedProgramYear: ProgramYearSetter
   selectedDate: SnapshotDate | undefined
-  setSelectedDate: (date: SnapshotDate | undefined) => void
+  setSelectedDate: SnapshotDateSetter
   /** Program years that actually have snapshots, newest first. */
   availableProgramYears: ProgramYear[]
   /** Snapshot dates within the selected program year. */

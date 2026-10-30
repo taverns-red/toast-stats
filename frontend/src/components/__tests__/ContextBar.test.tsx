@@ -14,6 +14,7 @@ import { ContextSheetControls } from '../ContextSheetControls'
 import { getProgramYear } from '../../utils/programYear'
 import { snap } from '../../test-utils/snapshotDate'
 import type { SnapshotDate } from '../../types/snapshotDate'
+import { USER_PICK } from '../../hooks/useUrlProgramYear'
 
 afterEach(() => cleanup())
 
@@ -177,9 +178,9 @@ describe('ContextSheetControls (#1831)', () => {
     ).toEqual(['Latest in PY', 'Oct 10, 2026', 'Sep 30, 2026'])
 
     await userEvent.selectOptions(py, '2025')
-    expect(onPy).toHaveBeenCalledWith(py2526)
+    expect(onPy).toHaveBeenCalledWith(py2526, USER_PICK)
     await userEvent.selectOptions(date, '2026-09-30')
-    expect(onDate).toHaveBeenCalledWith('2026-09-30')
+    expect(onDate).toHaveBeenCalledWith('2026-09-30', USER_PICK)
     expect(screen.getByText('Data fresh · Oct 10, 2026')).toBeInTheDocument()
   })
 

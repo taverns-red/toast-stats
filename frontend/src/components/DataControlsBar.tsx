@@ -1,6 +1,11 @@
 import React from 'react'
 import type { ProgramYear } from '../utils/programYear'
 import type { SnapshotDate } from '../types/snapshotDate'
+import type {
+  ProgramYearSetter,
+  SnapshotDateSetter,
+} from '../hooks/useUrlProgramYear'
+import { USER_PICK } from '../hooks/useUrlProgramYear'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { computeFreshness } from '../utils/dataFreshness'
 
@@ -26,10 +31,12 @@ export interface DataControlsBarProps {
   isLatest?: boolean
   availableProgramYears: ProgramYear[]
   selectedProgramYear: ProgramYear
-  onProgramYearChange: (py: ProgramYear) => void
+  /** Called with `USER_PICK` — a pick pushes a history entry (#2412). */
+  onProgramYearChange: ProgramYearSetter
   availableDates: SnapshotDate[]
   selectedDate: SnapshotDate | undefined
-  onDateChange: (date: SnapshotDate | undefined) => void
+  /** Called with `USER_PICK` — a pick pushes a history entry (#2412). */
+  onDateChange: SnapshotDateSetter
   /** #922 — true while the query feeding latestSnapshotDate is still in
    * flight. On a cold load the rankings query usually resolves first, so
    * without this the toolbar paints 2-chip and rewraps (one row shorter on
@@ -189,7 +196,7 @@ export const DataControlsBar: React.FC<DataControlsBarProps> = ({
         value={String(selectedProgramYear.year)}
         onChange={v => {
           const py = availableProgramYears.find(p => p.year === Number(v))
-          if (py) onProgramYearChange(py)
+          if (py) onProgramYearChange(py, USER_PICK)
         }}
         display={formatPyShort(selectedProgramYear)}
         options={availableProgramYears.map(py => ({
@@ -202,7 +209,12 @@ export const DataControlsBar: React.FC<DataControlsBarProps> = ({
         testId="date-chip"
         ariaLabel="Snapshot date"
         value={selectedDate ?? ''}
-        onChange={v => onDateChange(sortedDates.find(d => d === v))}
+        onChange={v =>
+          onDateChange(
+            sortedDates.find(d => d === v),
+            USER_PICK
+          )
+        }
         display={
           selectedDate ? formatDisplayDate(selectedDate) : 'Latest in PY'
         }

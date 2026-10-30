@@ -17,7 +17,10 @@ import { useAggregatedAnalytics } from '../hooks/useAggregatedAnalytics'
 import { usePerformanceTargets } from '../hooks/usePerformanceTargets'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictRankHistoryYears } from '../hooks/useDistrictRankHistoryYears'
-import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
+import {
+  useUrlProgramYear,
+  type UrlWriteOptions,
+} from '../hooks/useUrlProgramYear'
 import { useUrlSuccessPlanTargets } from '../hooks/useUrlSuccessPlanTargets'
 import { goalsForProgramYear } from '../utils/successPlanTargets'
 import { SuccessPlanTargetsPanel } from '../components/SuccessPlanTargetsPanel'
@@ -552,9 +555,10 @@ const DistrictDetailPageInner: React.FC = () => {
   // A district with no snapshots has no in-year date to offer, so the date is
   // dropped rather than carried across.
   const handleDegradedProgramYearChange = React.useCallback(
-    (py: ProgramYear) => {
+    (py: ProgramYear, options?: UrlWriteOptions) => {
       const dateInYear = getMostRecentDateInProgramYear(allCachedDates, py)
-      setProgramYearAndDate(py, dateInYear ?? undefined)
+      // Forward the selector's USER_PICK so the pick pushes history (#2412).
+      setProgramYearAndDate(py, dateInYear ?? undefined, options)
     },
     [allCachedDates, setProgramYearAndDate]
   )

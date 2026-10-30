@@ -3,6 +3,7 @@ import { cleanup, render, screen, fireEvent } from '@testing-library/react'
 import { DataControlsBar } from '../DataControlsBar'
 import { getProgramYear } from '../../utils/programYear'
 import { snap } from '../../test-utils/snapshotDate'
+import { USER_PICK } from '../../hooks/useUrlProgramYear'
 
 afterEach(() => cleanup())
 
@@ -105,7 +106,7 @@ describe('DataControlsBar (#529 #528)', () => {
     )
     const select = screen.getByTestId('py-chip-select')
     fireEvent.change(select, { target: { value: '2024' } })
-    expect(onProgramYearChange).toHaveBeenCalledWith(py2425)
+    expect(onProgramYearChange).toHaveBeenCalledWith(py2425, USER_PICK)
   })
 
   it('renders the date chip showing "Latest in PY" when selectedDate is undefined', () => {
@@ -130,7 +131,7 @@ describe('DataControlsBar (#529 #528)', () => {
     )
     const select = screen.getByTestId('date-chip-select')
     fireEvent.change(select, { target: { value: '' } })
-    expect(onDateChange).toHaveBeenCalledWith(undefined)
+    expect(onDateChange).toHaveBeenCalledWith(undefined, USER_PICK)
   })
 
   it('fires onDateChange with the selected ISO date when a specific date is chosen', () => {
@@ -138,7 +139,7 @@ describe('DataControlsBar (#529 #528)', () => {
     render(<DataControlsBar {...baseProps} onDateChange={onDateChange} />)
     const select = screen.getByTestId('date-chip-select')
     fireEvent.change(select, { target: { value: '2026-02-01' } })
-    expect(onDateChange).toHaveBeenCalledWith('2026-02-01')
+    expect(onDateChange).toHaveBeenCalledWith('2026-02-01', USER_PICK)
   })
 
   it('hides the freshness pill when latestSnapshotDate is undefined', () => {
