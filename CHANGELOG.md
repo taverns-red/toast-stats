@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.76.2](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.76.1...toast-stats-v2.76.2) (2026-10-30)
+
+
+### Bug Fixes
+
+* push history on user PY/date picks so Back returns to the previous date ([#2412](https://github.com/taverns-red/toast-stats/issues/2412)) ([#2413](https://github.com/taverns-red/toast-stats/issues/2413)) ([27f0474](https://github.com/taverns-red/toast-stats/commit/27f047443f7408d127c7f7aa631ed04e591bac41))
+
 ## [2.76.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.76.0...toast-stats-v2.76.1) (2026-10-29)
 
 
