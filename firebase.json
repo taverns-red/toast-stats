@@ -11,6 +11,10 @@
           "destination": "/basemap/glyphs/no-such-range.pbf"
         },
         {
+          "source": "/assets/**",
+          "destination": "/assets/no-such-chunk.js"
+        },
+        {
           "source": "**",
           "destination": "/index.html"
         }
@@ -115,6 +119,10 @@
         {
           "source": "/basemap/glyphs/**",
           "destination": "/basemap/glyphs/no-such-range.pbf"
+        },
+        {
+          "source": "/assets/**",
+          "destination": "/assets/no-such-chunk.js"
         },
         {
           "source": "**",

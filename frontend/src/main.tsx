@@ -5,6 +5,12 @@ import './index.css'
 import { setupFontLoadingOptimization } from './utils/textEffectsRemover'
 import { queryClient } from './config/queryClient'
 import { prefetchRouteData } from './services/routePrefetch'
+import { installChunkReloadHandler } from './utils/chunkReload'
+
+// #2415 — after a deploy, a tab on the old build can no longer load a lazy
+// chunk (it was removed). Vite dispatches `vite:preloadError`; reload the
+// target URL once, guarded so a chunk that is still broken can't loop.
+installChunkReloadHandler(window)
 
 // Initialize font loading optimization
 setupFontLoadingOptimization()
