@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.76.3](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.76.2...toast-stats-v2.76.3) (2026-10-30)
+
+
+### Bug Fixes
+
+* reload once on a stale-build chunk error, and offer Reload on the error page ([#2415](https://github.com/taverns-red/toast-stats/issues/2415)) ([#2416](https://github.com/taverns-red/toast-stats/issues/2416)) ([565f5a8](https://github.com/taverns-red/toast-stats/commit/565f5a82b260ae95d3472009acf01d109b2fa3f5))
+
 ## [2.76.2](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.76.1...toast-stats-v2.76.2) (2026-10-30)
 
 
