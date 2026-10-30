@@ -12,13 +12,14 @@
  * RouterProvider with the real errorElement wiring (R22 spirit — router mounts
  * route off the pre-push unit gate).
  */
-import React from 'react'
-import { describe, it, expect } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import React, { Suspense } from 'react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider, Outlet } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ErrorPage from '../../components/ErrorPage'
 import type { DistrictsResponse } from '../../types/districts'
+import { browserNav } from '../../utils/chunkReload'
 
 /** A child route that always throws at render — exercises the runtime path. */
 function Boom(): React.JSX.Element {
@@ -235,5 +236,107 @@ describe('Branded error boundary (#1011)', () => {
         screen.queryByTestId('error-page-suggestions')
       ).not.toBeInTheDocument()
     })
+  })
+})
+
+// Stale build after a deploy (#2415): a lazy route whose chunk import rejects
+// reaches this errorElement. It reloads the target URL once (guarded in
+// sessionStorage), and the page leads with Reload instead of Home/Back.
+describe('stale-build chunk-load failure (#2415)', () => {
+  const chunkError = () =>
+    new TypeError(
+      'Failed to fetch dynamically imported module: http://localhost/assets/StalePage-deadbeef.js'
+    )
+
+  /** Mount a router whose /stale route is a lazy chunk that fails to load. */
+  function renderStaleRoute() {
+    const Stale = React.lazy(() => Promise.reject(chunkError()))
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/',
+          element: <Outlet />,
+          errorElement: <ErrorPage />,
+          children: [
+            { index: true, element: <div>home</div> },
+            {
+              path: 'stale',
+              element: (
+                <Suspense fallback={<div>loading</div>}>
+                  <Stale />
+                </Suspense>
+              ),
+            },
+            { path: 'boom', element: <Boom /> },
+          ],
+        },
+      ],
+      { initialEntries: ['/stale?py=2026-2027'] }
+    )
+    return render(
+      <QueryClientProvider client={makeClient(D61_DISTRICTS)}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    )
+  }
+
+  let reloadTo: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    window.sessionStorage.clear()
+    reloadTo = vi.spyOn(browserNav, 'reloadTo').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    reloadTo.mockRestore()
+    window.sessionStorage.clear()
+  })
+
+  it('reloads the URL the user was navigating to, exactly once', async () => {
+    renderStaleRoute()
+    const page = await screen.findByTestId('error-page')
+    expect(page).toHaveAttribute('data-error-variant', 'chunk-load')
+    expect(reloadTo).toHaveBeenCalledTimes(1)
+    expect(reloadTo).toHaveBeenCalledWith(
+      `${window.location.origin}/stale?py=2026-2027`
+    )
+  })
+
+  it('does not reload again when the chunk still fails after the reload', async () => {
+    const first = renderStaleRoute()
+    await screen.findByTestId('error-page')
+    first.unmount()
+    // The "after the reload" mount: same session, same target, still broken.
+    renderStaleRoute()
+    await screen.findByTestId('error-page')
+    expect(reloadTo).toHaveBeenCalledTimes(1)
+  })
+
+  it('leads with Reload and new-version copy', async () => {
+    renderStaleRoute()
+    expect(
+      await screen.findByRole('heading', {
+        name: /new version of toast stats is available/i,
+      })
+    ).toBeInTheDocument()
+    const reload = screen.getByRole('button', { name: /^reload$/i })
+    expect(reload).toHaveClass('tm-btn-primary')
+    reloadTo.mockClear()
+    fireEvent.click(reload)
+    expect(reloadTo).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the runtime-error page, plus a Reload option, and does not auto-reload', () => {
+    renderWithRouter('/boom')
+    const page = screen.getByTestId('error-page')
+    expect(page).toHaveAttribute('data-error-variant', 'error')
+    expect(
+      screen.getByRole('heading', { name: /something went wrong/i })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /^reload$/i })
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /go back/i })).toBeInTheDocument()
+    expect(reloadTo).not.toHaveBeenCalled()
   })
 })
