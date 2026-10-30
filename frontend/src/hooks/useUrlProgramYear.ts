@@ -19,6 +19,26 @@ import type { ProgramYear } from '../utils/programYear'
 import { useDefaultProgramYear } from './useDefaultProgramYear'
 import { toSnapshotDate, type SnapshotDate } from '../types/snapshotDate'
 
+/**
+ * How a setter writes the URL (#2412). A user-initiated PY/date pick is
+ * navigation — it moves the whole page to another point in time — so it
+ * PUSHES, and browser Back returns to the previous date. Everything else
+ * (self-heal, clamping an out-of-range date, defaults on mount) must REPLACE,
+ * so landing on a page never adds a phantom history entry. Replace is the
+ * default: only the user-facing PY/date controls opt in to push, via
+ * `USER_PICK`.
+ */
+export type UrlHistoryMode = 'push' | 'replace'
+
+export interface UrlWriteOptions {
+  history?: UrlHistoryMode
+}
+
+/** The options a user-facing PY/date control passes: push a history entry. */
+export const USER_PICK: Readonly<UrlWriteOptions> = Object.freeze({
+  history: 'push',
+})
+
 export function useUrlProgramYear() {
   const [searchParams, setSearchParams] = useSearchParams()
   const {
@@ -74,7 +94,7 @@ export function useUrlProgramYear() {
   }, [selectedDate, contextDate, setContextDate])
 
   const setSelectedProgramYear = useCallback(
-    (py: ProgramYear) => {
+    (py: ProgramYear, _options?: UrlWriteOptions) => {
       setSearchParams(
         prev => {
           const next = new URLSearchParams(prev)
@@ -93,7 +113,7 @@ export function useUrlProgramYear() {
   )
 
   const setSelectedDate = useCallback(
-    (date: SnapshotDate | undefined) => {
+    (date: SnapshotDate | undefined, _options?: UrlWriteOptions) => {
       setSearchParams(
         prev => {
           const next = new URLSearchParams(prev)
@@ -127,7 +147,11 @@ export function useUrlProgramYear() {
    * pair must not be reachable through this setter even by a caller mistake.
    */
   const setProgramYearAndDate = useCallback(
-    (py: ProgramYear, date: SnapshotDate | undefined) => {
+    (
+      py: ProgramYear,
+      date: SnapshotDate | undefined,
+      _options?: UrlWriteOptions
+    ) => {
       const dateInYear =
         date && isDateInProgramYear(date, py) ? date : undefined
       setSearchParams(
