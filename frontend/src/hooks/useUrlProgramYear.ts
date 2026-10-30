@@ -11,13 +11,49 @@
  * ```
  */
 
-import { useEffect, useCallback, useMemo } from 'react'
+import { useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useProgramYear } from '../contexts/ProgramYearContext'
 import { getProgramYear, isDateInProgramYear } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
 import { useDefaultProgramYear } from './useDefaultProgramYear'
 import { toSnapshotDate, type SnapshotDate } from '../types/snapshotDate'
+
+/**
+ * How a setter writes the URL (#2412). A user-initiated PY/date pick is
+ * navigation — it moves the whole page to another point in time — so it
+ * PUSHES, and browser Back returns to the previous date. Everything else
+ * (self-heal, clamping an out-of-range date, defaults on mount) must REPLACE,
+ * so landing on a page never adds a phantom history entry. Replace is the
+ * default: only the user-facing PY/date controls opt in to push, via
+ * `USER_PICK`.
+ */
+export type UrlHistoryMode = 'push' | 'replace'
+
+export interface UrlWriteOptions {
+  history?: UrlHistoryMode
+}
+
+/** The options a user-facing PY/date control passes: push a history entry. */
+export const USER_PICK: Readonly<UrlWriteOptions> = Object.freeze({
+  history: 'push',
+})
+
+/** A PY setter that a control can call with `USER_PICK` (#2412). */
+export type ProgramYearSetter = (
+  py: ProgramYear,
+  options?: UrlWriteOptions
+) => void
+
+/** A snapshot-date setter that a control can call with `USER_PICK` (#2412). */
+export type SnapshotDateSetter = (
+  date: SnapshotDate | undefined,
+  options?: UrlWriteOptions
+) => void
+
+const navigateOptions = (options?: UrlWriteOptions) => ({
+  replace: options?.history !== 'push',
+})
 
 export function useUrlProgramYear() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -66,6 +102,21 @@ export function useUrlProgramYear() {
     selectedProgramYear,
   ])
 
+  // Back/Forward onto an entry WITHOUT `?py=` (#2412). Absent `?py=` means the
+  // default PY, but the read above falls back to the in-session context year —
+  // which a pushed pick left at the year Back just walked away from. When this
+  // page instance sees `?py=` go from present to absent, the URL now says
+  // "default", so drop the context back to it. (Our own setter never trips
+  // this stale case: it deletes `?py=` only when setting the default year.)
+  const prevUrlPyRaw = useRef(urlPyRaw)
+  useEffect(() => {
+    const wasPresent = prevUrlPyRaw.current !== null
+    prevUrlPyRaw.current = urlPyRaw
+    if (wasPresent && urlPyRaw === null && contextPY.year !== defaultPY.year) {
+      setContextPY(defaultPY)
+    }
+  }, [urlPyRaw, contextPY.year, defaultPY, setContextPY])
+
   // Sync date to context when URL has a date that differs from context
   useEffect(() => {
     if (selectedDate !== contextDate) {
@@ -74,38 +125,32 @@ export function useUrlProgramYear() {
   }, [selectedDate, contextDate, setContextDate])
 
   const setSelectedProgramYear = useCallback(
-    (py: ProgramYear) => {
-      setSearchParams(
-        prev => {
-          const next = new URLSearchParams(prev)
-          if (py.year === defaultPY.year) {
-            next.delete('py')
-          } else {
-            next.set('py', py.year.toString())
-          }
-          return next
-        },
-        { replace: true }
-      )
+    (py: ProgramYear, options?: UrlWriteOptions) => {
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev)
+        if (py.year === defaultPY.year) {
+          next.delete('py')
+        } else {
+          next.set('py', py.year.toString())
+        }
+        return next
+      }, navigateOptions(options))
       setContextPY(py)
     },
     [setSearchParams, setContextPY, defaultPY.year]
   )
 
   const setSelectedDate = useCallback(
-    (date: SnapshotDate | undefined) => {
-      setSearchParams(
-        prev => {
-          const next = new URLSearchParams(prev)
-          if (!date) {
-            next.delete('date')
-          } else {
-            next.set('date', date)
-          }
-          return next
-        },
-        { replace: true }
-      )
+    (date: SnapshotDate | undefined, options?: UrlWriteOptions) => {
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev)
+        if (!date) {
+          next.delete('date')
+        } else {
+          next.set('date', date)
+        }
+        return next
+      }, navigateOptions(options))
       setContextDate(date)
     },
     [setSearchParams, setContextDate]
@@ -127,26 +172,27 @@ export function useUrlProgramYear() {
    * pair must not be reachable through this setter even by a caller mistake.
    */
   const setProgramYearAndDate = useCallback(
-    (py: ProgramYear, date: SnapshotDate | undefined) => {
+    (
+      py: ProgramYear,
+      date: SnapshotDate | undefined,
+      options?: UrlWriteOptions
+    ) => {
       const dateInYear =
         date && isDateInProgramYear(date, py) ? date : undefined
-      setSearchParams(
-        prev => {
-          const next = new URLSearchParams(prev)
-          if (py.year === defaultPY.year) {
-            next.delete('py')
-          } else {
-            next.set('py', py.year.toString())
-          }
-          if (!dateInYear) {
-            next.delete('date')
-          } else {
-            next.set('date', dateInYear)
-          }
-          return next
-        },
-        { replace: true }
-      )
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev)
+        if (py.year === defaultPY.year) {
+          next.delete('py')
+        } else {
+          next.set('py', py.year.toString())
+        }
+        if (!dateInYear) {
+          next.delete('date')
+        } else {
+          next.set('date', dateInYear)
+        }
+        return next
+      }, navigateOptions(options))
       setContextPY(py)
       setContextDate(dateInYear)
     },

@@ -17,6 +17,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ProgramYearSelector } from '../ProgramYearSelector'
 import type { ProgramYear } from '../../utils/programYear'
+import { USER_PICK } from '../../hooks/useUrlProgramYear'
 
 // Helper to create mock program years
 const createMockProgramYear = (year: number): ProgramYear => ({
@@ -387,7 +388,10 @@ describe('ProgramYearSelector Error Handling', () => {
       fireEvent.change(select, { target: { value: '2023' } })
 
       expect(onProgramYearChange).toHaveBeenCalledTimes(1)
-      expect(onProgramYearChange).toHaveBeenCalledWith(mockProgramYears[1])
+      expect(onProgramYearChange).toHaveBeenCalledWith(
+        mockProgramYears[1],
+        USER_PICK
+      )
     })
   })
 })

@@ -4,6 +4,10 @@ import { ContextSheetControls } from './ContextSheetControls'
 import { formatFreshnessLine } from '../utils/contextBar'
 import type { ProgramYear } from '../utils/programYear'
 import type { SnapshotDate } from '../types/snapshotDate'
+import type {
+  ProgramYearSetter,
+  SnapshotDateSetter,
+} from '../hooks/useUrlProgramYear'
 
 /* Phone context bar for the landing page (#1846, mobile epic #1827 Phase 2,
    review §7 item 19).
@@ -22,11 +26,11 @@ import type { SnapshotDate } from '../types/snapshotDate'
 
 export interface LandingContextBarProps {
   selectedProgramYear: ProgramYear
-  setSelectedProgramYear: (py: ProgramYear) => void
+  setSelectedProgramYear: ProgramYearSetter
   availableProgramYears: ProgramYear[]
   cachedDates: SnapshotDate[]
   selectedDate: SnapshotDate | undefined
-  setSelectedDate: (date: SnapshotDate | undefined) => void
+  setSelectedDate: SnapshotDateSetter
   effectiveDate: SnapshotDate | undefined
   asOfDate: string | undefined
   isLatestSnapshot: boolean

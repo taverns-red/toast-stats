@@ -41,14 +41,15 @@ import {
 } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
 import type { SnapshotDate } from '../types/snapshotDate'
+import type { ProgramYearSetter, SnapshotDateSetter } from './useUrlProgramYear'
 
 const EMPTY_DATES: SnapshotDate[] = []
 
 export interface DistrictProgramYearControls {
   selectedProgramYear: ProgramYear
-  setSelectedProgramYear: (py: ProgramYear) => void
+  setSelectedProgramYear: ProgramYearSetter
   selectedDate: SnapshotDate | undefined
-  setSelectedDate: (date: SnapshotDate | undefined) => void
+  setSelectedDate: SnapshotDateSetter
   /** Program years that actually have snapshots for this district, newest first. */
   availableProgramYears: ProgramYear[]
   /** Snapshot dates within the selected PY — feeds the date chip (which sorts). */

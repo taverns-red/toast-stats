@@ -11,6 +11,10 @@ import { ProgramYearTitleSuffix } from './ProgramYearTitleSuffix'
 import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
 import type { ProgramYear } from '../utils/programYear'
 import type { SnapshotDate } from '../types/snapshotDate'
+import type {
+  ProgramYearSetter,
+  SnapshotDateSetter,
+} from '../hooks/useUrlProgramYear'
 
 /* District detail page header (#358). Extracted from DistrictDetailPage so
    redesign tests can mount this small component (~50 DOM nodes) instead
@@ -25,10 +29,10 @@ interface DistrictDetailHeaderProps {
   districtId: string
   districtName: string
   selectedProgramYear: ProgramYear
-  setSelectedProgramYear: (py: ProgramYear) => void
+  setSelectedProgramYear: ProgramYearSetter
   availableProgramYears: ProgramYear[]
   selectedDate: SnapshotDate | undefined
-  onDateChange: (date: SnapshotDate | undefined) => void
+  onDateChange: SnapshotDateSetter
   availableDates: SnapshotDate[]
   latestSnapshotDate: string | undefined
   /**
