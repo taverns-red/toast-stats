@@ -9,6 +9,11 @@ import {
 import { logger } from '../utils/logger'
 import { useDistricts } from '../hooks/useDistricts'
 import { resolveRouteRecovery } from '../utils/errorRecovery'
+import {
+  browserNav,
+  isChunkLoadError,
+  recoverFromChunkError,
+} from '../utils/chunkReload'
 
 /**
  * Root `errorElement` for the router (#1011, epic #1010 Sprint 1).
@@ -29,6 +34,13 @@ import { resolveRouteRecovery } from '../utils/errorRecovery'
  * Sprint 2 (#1012) adds route-aware smart recovery: for a malformed
  * `/district/:id` 404 it suggests that district's real subpages (valid id) or
  * the districts index (unknown id). See `utils/errorRecovery.ts`.
+ *
+ * Stale build (#2415): after a deploy, a tab on the old build fails to load a
+ * lazy route chunk that no longer exists, and that rejection lands here. For
+ * a chunk-load error the page reloads the target URL once, only if a newer
+ * build is deployed (guarded, see `utils/chunkReload.ts`), and leads with Reload and "new version" copy; if
+ * the guard refuses (the chunk still fails after the reload) the page stays
+ * up with the manual Reload. Every variant also offers Reload.
  */
 const ErrorPage: React.FC = () => {
   const error = useRouteError()
@@ -48,7 +60,16 @@ const ErrorPage: React.FC = () => {
         ? error
         : null
   const is404 = errorResponse?.status === 404
-  const variant = is404 ? 'not-found' : 'error'
+  const isChunkError = !errorResponse && isChunkLoadError(error)
+  const variant = is404 ? 'not-found' : isChunkError ? 'chunk-load' : 'error'
+
+  // The URL the user was navigating to: the router's location is the target
+  // (it was pushed before the lazy route rendered). Absolute, so the reload
+  // compares cleanly with window.location.href.
+  const targetHref = new URL(
+    `${location.pathname}${location.search}${location.hash}`,
+    window.location.origin
+  ).href
 
   // Route-aware smart recovery (#1012). useRouteError exposes no attempted URL,
   // so we read the unmatched path from useLocation and validate the district id
@@ -73,16 +94,29 @@ const ErrorPage: React.FC = () => {
     }
   }, [error, is404])
 
+  // Self-heal a stale build (#2415): one guarded full reload of the target.
+  useEffect(() => {
+    if (isChunkError) void recoverFromChunkError(targetHref)
+  }, [isChunkError, targetHref])
+
   // Move focus to the heading on mount so screen-reader and keyboard users land
   // on the error context immediately rather than at the top of a replaced tree.
   useEffect(() => {
     headingRef.current?.focus()
   }, [])
 
-  const heading = is404 ? 'Page not found' : 'Something went wrong'
+  const heading = is404
+    ? 'Page not found'
+    : isChunkError
+      ? 'A new version of Toast Stats is available'
+      : 'Something went wrong'
   const message = is404
     ? "We couldn't find the page you're looking for. It may have moved, or the link you followed may be broken."
-    : 'An unexpected error stopped this page from loading. You can go back to the previous page, or head home and start again.'
+    : isChunkError
+      ? 'Toast Stats was updated while this tab was open, so this page could not load. Reload to get the latest version.'
+      : 'An unexpected error stopped this page from loading. You can reload, go back to the previous page, or head home and start again.'
+
+  const reload = (): void => browserNav.reloadTo(targetHref)
 
   // Surface technical detail only in development — never leak a stack trace or
   // framework internals to real users in production.
@@ -108,6 +142,20 @@ const ErrorPage: React.FC = () => {
           <div className="error-page__badge" aria-hidden="true">
             {is404 ? (
               <span className="error-page__code">404</span>
+            ) : isChunkError ? (
+              <svg
+                className="error-page__glyph"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
             ) : (
               <svg
                 className="error-page__glyph"
@@ -162,16 +210,40 @@ const ErrorPage: React.FC = () => {
         )}
 
         <div className="error-page__actions">
-          <Link to="/" className="tm-btn-primary error-page__action">
-            Go home
-          </Link>
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="tm-btn-secondary error-page__action"
-          >
-            Go back
-          </button>
+          {isChunkError ? (
+            <>
+              <button
+                type="button"
+                onClick={reload}
+                className="tm-btn-primary error-page__action"
+              >
+                Reload
+              </button>
+              <Link to="/" className="tm-btn-secondary error-page__action">
+                Go home
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/" className="tm-btn-primary error-page__action">
+                Go home
+              </Link>
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="tm-btn-secondary error-page__action"
+              >
+                Go back
+              </button>
+              <button
+                type="button"
+                onClick={reload}
+                className="tm-btn-secondary error-page__action"
+              >
+                Reload
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

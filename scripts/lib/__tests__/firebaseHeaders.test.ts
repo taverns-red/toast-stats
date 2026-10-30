@@ -341,3 +341,31 @@ describe('firebase.json basemap glyphs (#2081)', () => {
     })
   }
 })
+
+describe('firebase.json missing build assets (#2415)', () => {
+  // After a deploy, a tab on the old build asks for a content-hashed chunk
+  // that no longer exists. It must 404 (the import then fails fast and the app
+  // reloads once), never fall through to the SPA's index.html with a 200,
+  // which surfaces as a MIME error. Hosting serves exact-match static content
+  // before any rewrite, so real assets are unaffected; a rewrite to a missing
+  // file 404s (the #2081 glyph rule relies on the same behaviour).
+  for (const targetName of ['production', 'staging']) {
+    it(`${targetName}: rewrites missing /assets/** to a 404, ahead of the SPA`, () => {
+      const target = loadHosting().find(t => t.target === targetName) as
+        | (HostingTarget & {
+            rewrites?: { source: string; destination: string }[]
+          })
+        | undefined
+      const rewrites = target?.rewrites ?? []
+      const assets = rewrites.findIndex(r => r.source === '/assets/**')
+      const spa = rewrites.findIndex(r => r.source === '**')
+      expect(assets).toBeGreaterThan(-1)
+      expect(assets).toBeLessThan(spa)
+      // The SPA fallback for real routes stays in place.
+      expect(rewrites[spa]!.destination).toBe('/index.html')
+      const destination = rewrites[assets]!.destination
+      expect(destination).not.toBe('/index.html')
+      expect(existsSync(join(ROOT, 'frontend/public', destination))).toBe(false)
+    })
+  }
+})
