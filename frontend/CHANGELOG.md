@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.53.3](https://github.com/taverns-red/toast-stats/compare/frontend-v3.53.2...frontend-v3.53.3) (2026-10-30)
+
+
+### Bug Fixes
+
+* push history on user PY/date picks so Back returns to the previous date ([#2412](https://github.com/taverns-red/toast-stats/issues/2412)) ([#2413](https://github.com/taverns-red/toast-stats/issues/2413)) ([27f0474](https://github.com/taverns-red/toast-stats/commit/27f047443f7408d127c7f7aa631ed04e591bac41))
+
 ## [3.53.2](https://github.com/taverns-red/toast-stats/compare/frontend-v3.53.1...frontend-v3.53.2) (2026-10-29)
 
 
