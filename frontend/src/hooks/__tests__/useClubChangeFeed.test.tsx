@@ -49,6 +49,8 @@ describe('useClubChangeFeed (#2430)', () => {
     )
     expect(mockedFetch).not.toHaveBeenCalled()
     expect(result.current.feed).toBeNull()
+    // Gated off is not loading: nothing is being read (PR #2446 smoke).
+    expect(result.current.isLoading).toBe(false)
   })
 
   it('fetches the picked dates and turns a missing file into a reported gap', async () => {

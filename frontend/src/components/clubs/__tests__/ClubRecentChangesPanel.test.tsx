@@ -168,4 +168,16 @@ describe('ClubRecentChangesPanel (#2430)', () => {
       region.querySelectorAll('.club-changes__row--skeleton').length
     ).toBeGreaterThan(0)
   })
+
+  // PR #2446 smoke: the card waits, unread, until it nears the viewport.
+  // Nothing is loading then, so it must not hold the page aria-busy (the
+  // club-hero-cls smoke waits for no [aria-busy="true"] on the page).
+  it('holds its rows but is not busy while it waits to be scrolled near', () => {
+    renderPanel({ feed: null, isLoading: false })
+    const region = screen.getByRole('region', { name: /recent changes/i })
+    expect(region).not.toHaveAttribute('aria-busy')
+    expect(
+      region.querySelectorAll('.club-changes__row--skeleton').length
+    ).toBeGreaterThan(0)
+  })
 })
