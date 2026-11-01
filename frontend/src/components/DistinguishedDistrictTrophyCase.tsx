@@ -607,8 +607,24 @@ export const DistinguishedDistrictTrophyCase: React.FC<
       {nextTierGap && (
         <div className="border-t border-gray-200 pt-4">
           <div className="flex items-center justify-between gap-3 mb-2">
-            <h3 className="text-sm font-semibold text-gray-700 font-tm-body">
-              Gap to {TIER_LABELS[nextTierGap.tier]}
+            {/* Phones show the short tier name so the heading and the toggle
+                share one line: the full name wrapped beside the toggle on
+                CI's Linux fonts and cost the 375 Overview a row it does not
+                have (4007 > 4000, PAGE_MAX_H). The panel title already says
+                "Distinguished District"; the heading's name stays whole. */}
+            <h3
+              aria-label={`Gap to ${TIER_LABELS[nextTierGap.tier]}`}
+              className="text-sm font-semibold text-gray-700 font-tm-body"
+            >
+              <span aria-hidden="true" className="md:hidden">
+                Gap to{' '}
+                {nextTierGap.tier in TIER_ROW_LABELS
+                  ? TIER_ROW_LABELS[nextTierGap.tier as DistrictRecognitionTier]
+                  : TIER_LABELS[nextTierGap.tier]}
+              </span>
+              <span aria-hidden="true" className="hidden md:inline">
+                Gap to {TIER_LABELS[nextTierGap.tier]}
+              </span>
             </h3>
             {tierRows && (
               /* Phones only (#2426): the 375 Overview has no row to spare
