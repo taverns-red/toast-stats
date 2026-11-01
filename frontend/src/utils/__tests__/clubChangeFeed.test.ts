@@ -31,6 +31,12 @@ function snap(date: string): DistrictStatisticsFile {
   return structuredClone(s.data)
 }
 
+function clubOf(s: DistrictStatisticsFile, clubId: string) {
+  const club = s.clubs.find(c => c.clubId === clubId)
+  if (!club) throw new Error(`no club ${clubId} on ${s.snapshotDate}`)
+  return club
+}
+
 function points(
   clubId: string,
   dates: string[],
@@ -154,7 +160,7 @@ describe('buildClubChangeFeed (#2430)', () => {
   it('claims no reason for a drop that does not span a dues deadline', () => {
     const feed = buildClubChangeFeed(
       points(ELGIN, ['2026-10-15', '2026-10-22'], (date, s) => {
-        if (date === '2026-10-22') s.clubs[0]!.membershipCount -= 2
+        if (date === '2026-10-22') clubOf(s, ELGIN).membershipCount -= 2
         return s
       })
     )
@@ -230,7 +236,7 @@ describe('buildClubChangeFeed (#2430)', () => {
   it('reports club operational-status changes through diffClubStatus', () => {
     const feed = buildClubChangeFeed(
       points(ELGIN, ['2026-10-22', '2026-10-31'], (date, s) => {
-        if (date === '2026-10-31') s.clubs[0]!.clubStatus = 'Low'
+        if (date === '2026-10-31') clubOf(s, ELGIN).clubStatus = 'Low'
         return s
       })
     )
