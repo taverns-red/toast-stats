@@ -1,0 +1,139 @@
+﻿2026-10-29T15:28:28.8235201Z Current runner version: '2.338.0'
+2026-10-29T15:28:28.8261086Z ##[group]Runner Image Provisioner
+2026-10-29T15:28:28.8261949Z Hosted Compute Agent
+2026-10-29T15:30:09.4082661Z > frontend@3.53.1 test:no-page-mounts:check
+2026-10-29T15:30:09.4083442Z > node scripts/check-no-page-mounts.mjs
+2026-10-29T15:30:09.4083740Z 
+2026-10-29T15:30:13.7104355Z ✓ no-page-mounts-in-unit OK: no unit-project test imports a page component
+2026-10-29T15:30:13.7241003Z ##[group]Run npm run test:quarantine:check
+2026-10-29T15:30:13.7241435Z [36;1mnpm run test:quarantine:check[0m
+2026-10-29T15:30:13.7270177Z shell: /usr/bin/bash -e {0}
+2026-10-29T15:30:13.7270450Z ##[endgroup]
+2026-10-29T15:30:13.8399074Z 
+2026-10-29T15:30:13.8399722Z > toastmasters-district-visualizer@2.76.0 test:quarantine:check
+2026-10-29T15:30:13.8400306Z > npx tsx scripts/check-quarantine.ts
+2026-10-29T15:30:13.8400552Z 
+2026-10-29T15:30:14.3330655Z ✅ Test quarantine: empty — 0 tests quarantined, none bypassing the gate.
+2026-10-29T15:30:14.3687967Z ##[group]Run npm run test --workspace=frontend -- --coverage
+2026-10-29T15:30:14.3688465Z [36;1mnpm run test --workspace=frontend -- --coverage[0m
+2026-10-29T15:30:14.3717110Z shell: /usr/bin/bash -e {0}
+2026-10-29T15:30:14.3717386Z ##[endgroup]
+2026-10-29T15:30:14.5005023Z 
+2026-10-29T15:30:14.5005619Z > frontend@3.53.1 test
+2026-10-29T15:30:14.5006576Z > vitest --run --coverage
+2026-10-29T15:30:14.5006926Z 
+2026-10-29T15:30:14.8919993Z 
+2026-10-29T15:30:14.8924033Z [1m[30m[46m RUN [49m[39m[22m [36mv5.0.5 [39m[90m/home/runner/work/toast-stats/toast-stats/frontend[39m
+2026-10-29T15:30:14.8925237Z       [2mCoverage enabled with [22m[33mv8[39m
+2026-10-29T15:30:14.8925635Z 
+2026-10-29T15:30:19.8068422Z  [32m✓[39m [30m[45m integration [49m[39m src/__tests__/accessibility/GlobalRankingsAccessibility.test.tsx [2m([22m[2m53 tests[22m[2m)[22m[33m 2436[2mms[22m[39m
+2026-10-29T15:30:19.8095171Z    [32m✓[39m Global Rankings Accessibility Tests [2m(53)[22m
+2026-10-29T15:30:19.8096714Z      [32m✓[39m 9.1 axe-core Accessibility Tests [2m(16)[22m
+2026-10-29T15:30:19.8097738Z        [32m✓[39m GlobalRankingsTab [2m(4)[22m
+2026-10-29T15:30:19.8099179Z          [33m[2m✓[22m[39m should have no accessibility violations with data[33m 410[2mms[22m[39m
+2026-10-29T15:30:21.5116719Z [90mstderr[2m | src/pages/__tests__/DistrictActionListPage.test.tsx[2m > [22m[2mDistrictActionListPage — collapsible sections (#1569)[2m > [22m[2mis axe-clean with sections collapsed and after expanding one
+2026-10-29T15:30:21.5147204Z [22m[39mAn update to DistrictDetailHeader inside a test was not wrapped in act(...).
+2026-10-29T15:30:21.5176289Z 
+2026-10-29T15:30:21.5194620Z When testing, code that causes React state updates should be wrapped into act(...):
+2026-10-29T15:30:21.5206088Z 
+2026-10-29T15:30:21.5231023Z act(() => {
+2026-10-29T15:30:21.5249450Z   /* fire events that update state */
+2026-10-29T15:30:21.5281320Z });
+2026-10-29T15:30:21.5298550Z /* assert on the output */
+2026-10-29T15:30:21.5328970Z 
+2026-10-29T15:30:21.5337297Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+2026-10-29T15:40:32.7878501Z [1m  3rd vi.fn() call:
+2026-10-29T15:40:32.7878746Z 
+2026-10-29T15:40:32.7878933Z [22m    Array [
+2026-10-29T15:40:32.7879595Z       "https://cdn.taverns.red/snapshots/2025-10-15/global-club-race.json",
+2026-10-29T15:40:32.7880252Z     ]
+2026-10-29T15:40:32.7880606Z [31m[90m
+2026-10-29T15:40:32.7880800Z 
+2026-10-29T15:40:32.7881055Z Number of calls: [1m3[22m
+2026-10-29T15:40:32.7881508Z [31m[39m
+2026-10-29T15:40:32.7882117Z [36m [2m❯[22m src/pages/__tests__/ClubDetailPage.test.tsx:[2m64:25[22m[39m
+2026-10-29T15:40:32.7986898Z     [90m 62|[39m vi.stubGlobal('fetch', liveFetch)
+2026-10-29T15:40:32.7987729Z     [90m 63|[39m afterEach(() => {
+2026-10-29T15:40:32.7988573Z     [90m 64|[39m   expect(liveFetch).not.toHaveBeenCalled()
+2026-10-29T15:40:32.7989436Z     [90m   |[39m                         [31m^[39m
+2026-10-29T15:40:32.7990076Z     [90m 65|[39m })
+2026-10-29T15:40:32.7990590Z     [90m 66|[39m
+2026-10-29T15:40:32.7990894Z 
+2026-10-29T15:40:32.8006813Z [31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+2026-10-29T15:40:32.8007223Z 
+2026-10-29T15:40:32.8007329Z 
+2026-10-29T15:40:32.8027516Z [2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m671 passed[39m[22m[90m (672)[39m
+2026-10-29T15:40:32.8073364Z [2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m7526 passed[39m[22m[90m (7527)[39m
+2026-10-29T15:40:32.8074352Z [2m   Start at [22m 15:30:15
+2026-10-29T15:40:32.8087201Z [2m   Duration [22m 617.64s[2m (environment 42%, tests 32%, setup 13%, import 8%, worker 2%, transform 2%)[22m
+2026-10-29T15:40:32.8117129Z 
+2026-10-29T15:40:32.8184424Z 
+2026-10-29T15:40:32.8218969Z ##[error]AssertionError: expected "vi.fn()" to not be called at all, but actually been called 3 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      "https://cdn.taverns.red/v1/rankings.json",
+    ]
+
+  2nd vi.fn() call:
+
+    Array [
+      "https://cdn.taverns.red/v1/latest.json",
+    ]
+
+  3rd vi.fn() call:
+
+    Array [
+      "https://cdn.taverns.red/snapshots/2025-10-15/global-club-race.json",
+    ]
+
+
+Number of calls: 3
+
+ ❯ src/pages/__tests__/ClubDetailPage.test.tsx:64:25
+
+
+2026-10-29T15:40:32.9342968Z npm error Lifecycle script `test` failed with error:
+2026-10-29T15:40:32.9343681Z npm error code 1
+2026-10-29T15:40:32.9344413Z npm error path /home/runner/work/toast-stats/toast-stats/frontend
+2026-10-29T15:40:32.9346206Z npm error workspace frontend@3.53.1
+2026-10-29T15:40:32.9347556Z npm error location /home/runner/work/toast-stats/toast-stats/frontend
+2026-10-29T15:40:32.9348310Z npm error command failed
+2026-10-29T15:40:32.9348948Z npm error command sh -c vitest --run --coverage
+2026-10-29T15:40:32.9398989Z ##[error]Process completed with exit code 1.
+2026-10-29T15:40:32.9550353Z Post job cleanup.
+2026-10-29T15:40:33.0449369Z [command]/usr/bin/git version
+2026-10-29T15:40:33.0495532Z git version 2.56.0
+2026-10-29T15:40:33.0533220Z Temporarily overriding HOME='/home/runner/work/_temp/e73a002f-6eb9-4b75-aaa0-60db0adcbaab' before making global git config changes
+2026-10-29T15:40:33.0534825Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-29T15:40:33.0539783Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/toast-stats/toast-stats
+2026-10-29T15:40:33.0575095Z Removing SSH command configuration
+2026-10-29T15:40:33.0581519Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-29T15:40:33.0621836Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-29T15:40:33.0910337Z Removing HTTP extra header
+2026-10-29T15:40:33.0915452Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-29T15:40:33.0950892Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-29T15:40:33.1215693Z Removing includeIf entries pointing to credentials config files
+2026-10-29T15:40:33.1222176Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-29T15:40:33.1250481Z includeif.gitdir:/home/runner/work/toast-stats/toast-stats/.git.path
+2026-10-29T15:40:33.1251882Z includeif.gitdir:/home/runner/work/toast-stats/toast-stats/.git/worktrees/*.path
+2026-10-29T15:40:33.1253194Z includeif.gitdir:/github/workspace/.git.path
+2026-10-29T15:40:33.1254237Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-29T15:40:33.1258872Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/toast-stats/toast-stats/.git.path
+2026-10-29T15:40:33.1283931Z /home/runner/work/_temp/git-credentials-a6220e14-4639-4239-8bf9-fd5ccc823f38.config
+2026-10-29T15:40:33.1295551Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/toast-stats/toast-stats/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-a6220e14\-4639\-4239\-8bf9\-fd5ccc823f38\.config
+2026-10-29T15:40:33.1332796Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/toast-stats/toast-stats/.git/worktrees/*.path
+2026-10-29T15:40:33.1361701Z /home/runner/work/_temp/git-credentials-a6220e14-4639-4239-8bf9-fd5ccc823f38.config
+2026-10-29T15:40:33.1371559Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/toast-stats/toast-stats/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-a6220e14\-4639\-4239\-8bf9\-fd5ccc823f38\.config
+2026-10-29T15:40:33.1405145Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-10-29T15:40:33.1430087Z /github/runner_temp/git-credentials-a6220e14-4639-4239-8bf9-fd5ccc823f38.config
+2026-10-29T15:40:33.1439075Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-a6220e14\-4639\-4239\-8bf9\-fd5ccc823f38\.config
+2026-10-29T15:40:33.1475456Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-29T15:40:33.1499312Z /github/runner_temp/git-credentials-a6220e14-4639-4239-8bf9-fd5ccc823f38.config
+2026-10-29T15:40:33.1508528Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-a6220e14\-4639\-4239\-8bf9\-fd5ccc823f38\.config
+2026-10-29T15:40:33.1544004Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-29T15:40:33.1828526Z Removing credentials config '/home/runner/work/_temp/git-credentials-a6220e14-4639-4239-8bf9-fd5ccc823f38.config'
+2026-10-29T15:40:33.1974525Z Cleaning up orphan processes

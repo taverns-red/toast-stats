@@ -16,7 +16,7 @@ import {
 import { fakeRunner, fixture, ok, fail, noSleep } from './agentCliFakes.js'
 
 const JOB = JSON.parse(fixture('job-123546188905.json')) as Job
-const RAW = fixture('job-123546188905.log')
+const RAW = fixture('job-123546188905.log.txt')
 const REPO = 'taverns-red/toast-stats'
 
 describe('stripAnsi', () => {
