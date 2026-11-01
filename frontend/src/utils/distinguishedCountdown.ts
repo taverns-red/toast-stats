@@ -1,4 +1,9 @@
-import { growthTarget, percentageTarget } from '@taverns-red/analytics-core'
+import {
+  districtTiersForProgramYear,
+  growthTarget,
+  percentageTarget,
+  remainingToDistrictTier,
+} from '@taverns-red/analytics-core'
 import type {
   CompetitiveAwardStandings,
   DistinguishedDistrictTier,
@@ -195,4 +200,62 @@ export function getDistinguishedCountdown(
     educationTraining,
     clubGrowth,
   }
+}
+
+/** One tier's row in the trophy case's every-tier table (#2426). */
+export interface TierGapRow {
+  tier: DistinguishedTier
+  paidClubsRemaining: number
+  paymentsRemaining: number
+  distinguishedClubsRemaining: number
+  /** All three metrics at zero. The tier still needs the prerequisites. */
+  met: boolean
+}
+
+/** Canonical counts to the Distinguished gate (#686), when present. */
+export interface CanonicalMinimumRemaining {
+  paidClubsRemaining?: number | undefined
+  paymentsRemaining?: number | undefined
+  distinguishedClubsRemaining?: number | undefined
+}
+
+/* The gap at every tier of the program year's ladder, lowest first (#2426).
+   Thresholds are the year's own Item 1490 ruleset in analytics-core — the
+   same `remainingToDistrictTier` the Region scoreboard uses (#2307) — so a
+   past year counts down to its own ladder (net-club rules and older
+   percentages included), not today's. Under the current ladder it equals
+   `deriveRemainingToTier`. No year logic lives here: analytics-core owns
+   it. The Distinguished row prefers the canonical
+   #686 counts field by field, as the next-tier tiles do (lesson 103).
+   Null when there is no rankings row to count from. */
+export function deriveRemainingByTier(
+  programYear: string,
+  ranking: RemainingInputs | null | undefined,
+  canonicalMinimum?: CanonicalMinimumRemaining
+): TierGapRow[] | null {
+  if (!ranking) return null
+  const rows: TierGapRow[] = []
+  for (const tier of districtTiersForProgramYear(programYear)) {
+    const derived = remainingToDistrictTier(ranking, tier, programYear)
+    if (!derived) continue
+    const canonical = tier === 'Distinguished' ? canonicalMinimum : undefined
+    const paidClubsRemaining =
+      canonical?.paidClubsRemaining ?? derived.paidClubsRemaining
+    const paymentsRemaining =
+      canonical?.paymentsRemaining ?? derived.paymentsRemaining
+    const distinguishedClubsRemaining =
+      canonical?.distinguishedClubsRemaining ??
+      derived.distinguishedClubsRemaining
+    rows.push({
+      tier,
+      paidClubsRemaining,
+      paymentsRemaining,
+      distinguishedClubsRemaining,
+      met:
+        paidClubsRemaining <= 0 &&
+        paymentsRemaining <= 0 &&
+        distinguishedClubsRemaining <= 0,
+    })
+  }
+  return rows
 }

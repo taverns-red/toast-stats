@@ -1,8 +1,13 @@
 import React, { useState } from 'react'
-import { requiredPrerequisitesForProgramYear } from '@taverns-red/analytics-core'
 import {
-  deriveRemainingToTier,
+  districtTiersForProgramYear,
+  requiredPrerequisitesForProgramYear,
+  type DistrictRecognitionTier,
+} from '@taverns-red/analytics-core'
+import {
+  deriveRemainingByTier,
   type RemainingInputs,
+  type TierGapRow,
 } from '../utils/distinguishedCountdown'
 import { TIER_TITLES } from './recognition/recognitionRegistry'
 
@@ -155,6 +160,108 @@ interface GapTileSpec {
    unit tests, the same reason MembershipTrendChart links this way. */
 const DISTINGUISHED_COUNTS_METHODOLOGY_HREF =
   '/methodology#distinguished-club-counts'
+
+/* Item 1490, the District Recognition Program: the source of every tier
+   threshold (docs/investigations/1116-historical-drp-rules.md;
+   docs/toastmasters-rules-reference.md §13). */
+const ITEM_1490_HREF =
+  'https://content.toastmasters.org/image/upload/1490-district-recognition-program.pdf'
+
+/* Row labels for the every-tier table (#2426): the column header already
+   says "Tier", so the rows drop "Distinguished District". Same words as the
+   Region scoreboard's cards (#2307). */
+const TIER_ROW_LABELS: Record<DistrictRecognitionTier, string> = {
+  Distinguished: 'Distinguished',
+  Select: 'Select',
+  Presidents: "President's",
+  Smedley: 'Smedley',
+}
+
+const TIER_GAPS_ID = 'distinguished-tier-gaps'
+
+const GapCell: React.FC<{ remaining: number | null }> = ({ remaining }) => (
+  <td
+    className={`py-1.5 pl-2 text-right tabular-nums ${
+      remaining === 0
+        ? 'text-tm-loyal-blue font-semibold'
+        : 'text-gray-900 theme-dark:text-gray-100'
+    }`}
+  >
+    {remaining === null
+      ? '—'
+      : remaining === 0
+        ? '✓ met'
+        : remaining.toLocaleString('en-US')}
+  </td>
+)
+
+/* The gap at every tier (#2426): one row per tier of the year's ladder.
+   `rows === null` renders the placeholder the loading skeleton reserves —
+   the same table, so the reserved height comes from the same CSS. */
+const TierGapTable: React.FC<{
+  tiers: ReadonlyArray<DistrictRecognitionTier>
+  rows: ReadonlyArray<TierGapRow> | null
+}> = ({ tiers, rows }) => (
+  <table className="w-full text-sm font-tm-body border-collapse">
+    <caption className="sr-only">
+      Still needed for each Distinguished District tier
+    </caption>
+    <thead>
+      <tr className="text-[11px] uppercase tracking-wide text-gray-600 theme-dark:text-gray-400">
+        <th scope="col" className="py-1 pr-2 text-left font-medium">
+          Tier
+        </th>
+        <th scope="col" className="py-1 pl-2 text-right font-medium">
+          Paid clubs
+        </th>
+        <th scope="col" className="py-1 pl-2 text-right font-medium">
+          Payments
+        </th>
+        {/* "Distinguished" alone is wider than this column on a phone, so
+            the phone header abbreviates; the name stays whole for AT. */}
+        <th
+          scope="col"
+          aria-label="Distinguished clubs"
+          className="py-1 pl-2 text-right font-medium"
+        >
+          <span aria-hidden="true" className="md:hidden">
+            Dist. clubs
+          </span>
+          <span aria-hidden="true" className="hidden md:inline">
+            Distinguished clubs
+          </span>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {tiers.map(tier => {
+        const row = rows?.find(r => r.tier === tier) ?? null
+        return (
+          <tr
+            key={tier}
+            data-met={row ? String(row.met) : undefined}
+            className="border-t border-gray-200 theme-dark:border-gray-700"
+          >
+            <th
+              scope="row"
+              className="py-1.5 pr-2 text-left font-medium text-gray-900 theme-dark:text-gray-100"
+            >
+              {TIER_ROW_LABELS[tier]}
+              {row?.met && (
+                <span className="ml-1.5 text-xs font-semibold text-tm-loyal-blue">
+                  met
+                </span>
+              )}
+            </th>
+            <GapCell remaining={row ? row.paidClubsRemaining : null} />
+            <GapCell remaining={row ? row.paymentsRemaining : null} />
+            <GapCell remaining={row ? row.distinguishedClubsRemaining : null} />
+          </tr>
+        )
+      })}
+    </tbody>
+  </table>
+)
 
 const GapTile: React.FC<GapTileSpec> = ({
   label,
@@ -319,6 +426,22 @@ const TrophyCaseSkeleton: React.FC<{ programYear: string }> = ({
         Confirmed clubs only. The Distinguished Clubs card above counts clubs
         qualifying today, so the two can differ.
       </p>
+      {/* The every-tier table, shown from 768 up (#2426): the same table and
+          source line, invisible, so the panel does not grow when it lands.
+          Phones fold it behind a toggle and reserve nothing. */}
+      <div
+        data-testid="distinguished-trophy-skeleton-tiers"
+        className="invisible hidden md:block mt-3 md:max-w-2xl"
+      >
+        <TierGapTable
+          tiers={districtTiersForProgramYear(programYear)}
+          rows={null}
+        />
+        <p className="mt-1 text-xs font-tm-body">
+          Thresholds: District Recognition Program (Item 1490), {programYear}{' '}
+          rules.
+        </p>
+      </div>
     </div>
   </div>
 )
@@ -339,6 +462,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
   clubGrowthQualifies,
 }) => {
   const [userExpanded, setUserExpanded] = useState(false)
+  const [allTiersOpen, setAllTiersOpen] = useState(false)
 
   // Reserve the slot while the (separate, slower) competitive-awards query is
   // in flight so its late arrival doesn't shift the page below it (#1105 /
@@ -368,35 +492,35 @@ export const DistinguishedDistrictTrophyCase: React.FC<
     educationTrainingQualifies ||
     clubGrowthQualifies
 
-  /* Resolve the three headline integers via the SAME helper the region
-     row uses. Canonical analytics fields (#686) win when the target is
-     the Distinguished gate; otherwise (Select / Presidents / Smedley)
-     we derive from the rankings row against the appropriate tier
-     thresholds. (#840 / lessons 103, 104) */
-  let paidClubsCount: number | null = null
-  let paymentsCount: number | null = null
-  let distinguishedClubsCount: number | null = null
-  if (nextTierGap) {
-    if (nextTierGap.tier === 'Distinguished') {
-      paidClubsCount = status.paidClubsRemaining ?? null
-      paymentsCount = status.paymentsRemaining ?? null
-      distinguishedClubsCount = status.distinguishedClubsRemaining ?? null
-    }
-    if (
-      (paidClubsCount === null ||
-        paymentsCount === null ||
-        distinguishedClubsCount === null) &&
-      ranking &&
-      nextTierGap.tier !== 'NotDistinguished' &&
-      nextTierGap.tier !== 'Unknown'
-    ) {
-      const derived = deriveRemainingToTier(nextTierGap.tier, ranking)
-      paidClubsCount = paidClubsCount ?? derived.paidClubsRemaining
-      paymentsCount = paymentsCount ?? derived.paymentsRemaining
-      distinguishedClubsCount =
-        distinguishedClubsCount ?? derived.distinguishedClubsRemaining
-    }
-  }
+  /* Every tier's gap (#2426), under the year's own Item 1490 ladder. The
+     Distinguished row prefers the canonical analytics fields (#686).
+     Null without a rankings row. */
+  const tierRows = deriveRemainingByTier(programYear, ranking, {
+    paidClubsRemaining: status.paidClubsRemaining,
+    paymentsRemaining: status.paymentsRemaining,
+    distinguishedClubsRemaining: status.distinguishedClubsRemaining,
+  })
+
+  /* The three headline integers are the next tier's row, so the tiles and
+     the table agree by construction. When the next tier is Distinguished
+     the canonical fields (#686) stand alone, so the tiles still render
+     without a rankings row. (#840 / lessons 103, 104) */
+  const nextRow = nextTierGap
+    ? tierRows?.find(r => r.tier === nextTierGap.tier)
+    : undefined
+  const canonicalNext = nextTierGap?.tier === 'Distinguished'
+  const paidClubsCount =
+    (canonicalNext ? status.paidClubsRemaining : undefined) ??
+    nextRow?.paidClubsRemaining ??
+    null
+  const paymentsCount =
+    (canonicalNext ? status.paymentsRemaining : undefined) ??
+    nextRow?.paymentsRemaining ??
+    null
+  const distinguishedClubsCount =
+    (canonicalNext ? status.distinguishedClubsRemaining : undefined) ??
+    nextRow?.distinguishedClubsRemaining ??
+    null
 
   return (
     <div className="redesign-panel">
@@ -482,9 +606,45 @@ export const DistinguishedDistrictTrophyCase: React.FC<
 
       {nextTierGap && (
         <div className="border-t border-gray-200 pt-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2 font-tm-body">
-            Gap to {TIER_LABELS[nextTierGap.tier]}
-          </h3>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            {/* Phones show the short tier name so the heading and the toggle
+                share one line: the full name wrapped beside the toggle on
+                CI's Linux fonts and cost the 375 Overview a row it does not
+                have (4007 > 4000, PAGE_MAX_H). The panel title already says
+                "Distinguished District"; the heading's name stays whole. */}
+            <h3
+              aria-label={`Gap to ${TIER_LABELS[nextTierGap.tier]}`}
+              className="text-sm font-semibold text-gray-700 font-tm-body"
+            >
+              <span aria-hidden="true" className="md:hidden">
+                Gap to{' '}
+                {nextTierGap.tier in TIER_ROW_LABELS
+                  ? TIER_ROW_LABELS[nextTierGap.tier as DistrictRecognitionTier]
+                  : TIER_LABELS[nextTierGap.tier]}
+              </span>
+              <span aria-hidden="true" className="hidden md:inline">
+                Gap to {TIER_LABELS[nextTierGap.tier]}
+              </span>
+            </h3>
+            {tierRows && (
+              /* Phones only (#2426): the 375 Overview has no row to spare
+                 (PAGE_MAX_H), so the table folds behind this toggle, which
+                 shares the heading's row. -my-3 py-3 gives a 44px touch
+                 target without adding height. */
+              <button
+                type="button"
+                aria-expanded={allTiersOpen}
+                aria-controls={TIER_GAPS_ID}
+                onClick={() => setAllTiersOpen(prev => !prev)}
+                className="md:hidden -my-3 py-3 px-1 text-sm font-semibold font-tm-body text-tm-loyal-blue whitespace-nowrap hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue rounded"
+              >
+                Every tier{' '}
+                <span aria-hidden="true" className="text-xs">
+                  {allTiersOpen ? '▴' : '▾'}
+                </span>
+              </button>
+            )}
+          </div>
           {!allPrerequisitesMet && (
             <p className="text-xs text-tm-true-maroon mb-2 font-tm-body">
               ⚠ Prerequisites must be met before any tier can be earned
@@ -537,6 +697,27 @@ export const DistinguishedDistrictTrophyCase: React.FC<
             Confirmed clubs only. The Distinguished Clubs card above counts
             clubs qualifying today, so the two can differ.
           </p>
+          {tierRows && (
+            <div
+              id={TIER_GAPS_ID}
+              data-testid="distinguished-tier-gaps"
+              className={`${allTiersOpen ? '' : 'hidden'} md:block mt-3 md:max-w-2xl`}
+            >
+              <TierGapTable tiers={tierRows.map(r => r.tier)} rows={tierRows} />
+              <p className="mt-1 text-xs text-gray-600 theme-dark:text-gray-400 font-tm-body">
+                Thresholds: District Recognition Program (
+                <a
+                  href={ITEM_1490_HREF}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-tm-loyal-blue underline"
+                >
+                  Item 1490
+                </a>
+                ), {programYear} rules.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

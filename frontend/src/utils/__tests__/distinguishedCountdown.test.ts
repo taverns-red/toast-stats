@@ -3,6 +3,7 @@ import {
   getDistinguishedCountdown,
   deriveRemainingToMinimum,
   deriveRemainingToTier,
+  deriveRemainingByTier,
   type DistinguishedCountdown,
   type RemainingInputs,
 } from '../distinguishedCountdown'
@@ -346,5 +347,113 @@ describe('integer-safe tier targets (#1126, #798)', () => {
   it('Smedley payment target at base 225 is exactly 243 (8% growth)', () => {
     const r = deriveRemainingToTier('Smedley', zeroed({ paymentBase: 225 }))
     expect(r.paymentsRemaining).toBe(243)
+  })
+})
+
+/* Gap at every tier (#2426): the trophy case lists Distinguished → Smedley,
+   each with what it still needs, under the program year's own Item 1490
+   ladder (analytics-core `remainingToDistrictTier`, #2307). */
+describe('deriveRemainingByTier — every tier, not just the next (#2426)', () => {
+  // Real prod rankings row, D61 on 2026-10-31 (all-districts-rankings.json).
+  // competitive-awards.json for the same date carries the canonical
+  // Distinguished counts 21 / 2390 / 69.
+  const D61_2026_10_31: RemainingInputs = {
+    paidClubBase: 158,
+    paymentBase: 5886,
+    paidClubs: 139,
+    totalPayments: 3555,
+    distinguishedClubs: 3,
+  }
+
+  it('lists every 2026-27 tier, lowest first, with each metric still needed (real D61)', () => {
+    // Item 1490 (2025-26+): clubs and payments +1/+3/+5/+8% over base,
+    // Distinguished clubs 45/50/55/60% of the club base, targets rounded up.
+    // Clubs 160/163/166/171, payments 5945/6063/6181/6357,
+    // Distinguished clubs 72/79/87/95.
+    expect(deriveRemainingByTier('2026-2027', D61_2026_10_31)).toEqual([
+      {
+        tier: 'Distinguished',
+        paidClubsRemaining: 21,
+        paymentsRemaining: 2390,
+        distinguishedClubsRemaining: 69,
+        met: false,
+      },
+      {
+        tier: 'Select',
+        paidClubsRemaining: 24,
+        paymentsRemaining: 2508,
+        distinguishedClubsRemaining: 76,
+        met: false,
+      },
+      {
+        tier: 'Presidents',
+        paidClubsRemaining: 27,
+        paymentsRemaining: 2626,
+        distinguishedClubsRemaining: 84,
+        met: false,
+      },
+      {
+        tier: 'Smedley',
+        paidClubsRemaining: 32,
+        paymentsRemaining: 2802,
+        distinguishedClubsRemaining: 92,
+        met: false,
+      },
+    ])
+  })
+
+  it('marks a tier met only when all three metrics are at zero', () => {
+    const rows = deriveRemainingByTier('2026-2027', {
+      ...D61_2026_10_31,
+      paidClubs: 170,
+      totalPayments: 6400,
+      distinguishedClubs: 90,
+    })!
+    expect(rows.map(r => [r.tier, r.met])).toEqual([
+      ['Distinguished', true],
+      ['Select', true],
+      ['Presidents', true],
+      ['Smedley', false],
+    ])
+    const smedley = rows[3]!
+    expect(smedley.paidClubsRemaining).toBe(1)
+    expect(smedley.paymentsRemaining).toBe(0)
+    expect(smedley.distinguishedClubsRemaining).toBe(5)
+  })
+
+  it('prefers the canonical Distinguished counts for the Distinguished row only (lesson 103)', () => {
+    const rows = deriveRemainingByTier('2026-2027', D61_2026_10_31, {
+      paidClubsRemaining: 20,
+      paymentsRemaining: 2389,
+      distinguishedClubsRemaining: 68,
+    })!
+    expect(rows[0]).toMatchObject({
+      paidClubsRemaining: 20,
+      paymentsRemaining: 2389,
+      distinguishedClubsRemaining: 68,
+    })
+    expect(rows[1]).toMatchObject({ paidClubsRemaining: 24 })
+  })
+
+  it("uses the year's own ladder: 2024-25 Select is net +1 club and 45%", () => {
+    // Rev. 12/2022: Select = +3% payments, +1 net club, 45% Distinguished.
+    const rows = deriveRemainingByTier('2024-2025', D61_2026_10_31)!
+    const select = rows.find(r => r.tier === 'Select')!
+    expect(select.paidClubsRemaining).toBe(159 - 139)
+    expect(select.distinguishedClubsRemaining).toBe(72 - 3)
+  })
+
+  it('has no Smedley row before 2018-19', () => {
+    const rows = deriveRemainingByTier('2017-2018', D61_2026_10_31)!
+    expect(rows.map(r => r.tier)).toEqual([
+      'Distinguished',
+      'Select',
+      'Presidents',
+    ])
+  })
+
+  it('returns null for a district with no rankings data', () => {
+    expect(deriveRemainingByTier('2026-2027', null)).toBeNull()
+    expect(deriveRemainingByTier('2026-2027', undefined)).toBeNull()
   })
 })
