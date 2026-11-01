@@ -54,7 +54,11 @@
   margin-top: 0.125rem;
 }
 
+/* position: relative contains ChangeIndicator's absolute sr-only word inside
+   the table's scroller; without it the span's containing block is outside the
+   scroller and it widened the page by 73px at 768. */
 .clubs-since-cell {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
