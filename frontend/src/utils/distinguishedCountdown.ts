@@ -222,9 +222,10 @@ export interface CanonicalMinimumRemaining {
 /* The gap at every tier of the program year's ladder, lowest first (#2426).
    Thresholds are the year's own Item 1490 ruleset in analytics-core — the
    same `remainingToDistrictTier` the Region scoreboard uses (#2307) — so a
-   past year counts down to its own ladder (e.g. 2024-25 Select is +1 net
-   club and 45%), not today's. For 2025-26 on it equals
-   `deriveRemainingToTier`. The Distinguished row prefers the canonical
+   past year counts down to its own ladder (net-club rules and older
+   percentages included), not today's. Under the current ladder it equals
+   `deriveRemainingToTier`. No year logic lives here: analytics-core owns
+   it. The Distinguished row prefers the canonical
    #686 counts field by field, as the next-tier tiles do (lesson 103).
    Null when there is no rankings row to count from. */
 export function deriveRemainingByTier(
