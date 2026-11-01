@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.54.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.53.4...frontend-v3.54.0) (2026-11-01)
+
+
+### Features
+
+* **changes:** Active clubs tile with status sub-counts and total ([#2425](https://github.com/taverns-red/toast-stats/issues/2425)) ([#2434](https://github.com/taverns-red/toast-stats/issues/2434)) ([03a2ac7](https://github.com/taverns-red/toast-stats/commit/03a2ac73d16d54fd0b033ec240d15e0bae8a3c8a))
+* **district:** Distinguished District gap at every tier ([#2426](https://github.com/taverns-red/toast-stats/issues/2426)) ([#2435](https://github.com/taverns-red/toast-stats/issues/2435)) ([1f38079](https://github.com/taverns-red/toast-stats/commit/1f38079cb7b67db2157ad72d15ef182ec8dcc5ea))
+
+
+### Tests
+
+* **e2e:** wait on the first visible hero chip, pin the anniversary window ([#2436](https://github.com/taverns-red/toast-stats/issues/2436)) ([#2437](https://github.com/taverns-red/toast-stats/issues/2437)) ([68b44f4](https://github.com/taverns-red/toast-stats/commit/68b44f4f4025b5c903f33feb29f0d9a3d5a37332))
+
 ## [3.53.4](https://github.com/taverns-red/toast-stats/compare/frontend-v3.53.3...frontend-v3.53.4) (2026-10-30)
 
 

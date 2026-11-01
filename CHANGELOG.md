@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.77.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.76.3...toast-stats-v2.77.0) (2026-11-01)
+
+
+### Features
+
+* agent-cli first cut with six read-only subcommands ([#2418](https://github.com/taverns-red/toast-stats/issues/2418)) ([#2419](https://github.com/taverns-red/toast-stats/issues/2419)) ([59d8e53](https://github.com/taverns-red/toast-stats/commit/59d8e53f5f57c42eb715b38cdc7ee56c59f6f24c))
+* **changes:** Active clubs tile with status sub-counts and total ([#2425](https://github.com/taverns-red/toast-stats/issues/2425)) ([#2434](https://github.com/taverns-red/toast-stats/issues/2434)) ([03a2ac7](https://github.com/taverns-red/toast-stats/commit/03a2ac73d16d54fd0b033ec240d15e0bae8a3c8a))
+* **district:** Distinguished District gap at every tier ([#2426](https://github.com/taverns-red/toast-stats/issues/2426)) ([#2435](https://github.com/taverns-red/toast-stats/issues/2435)) ([1f38079](https://github.com/taverns-red/toast-stats/commit/1f38079cb7b67db2157ad72d15ef182ec8dcc5ea))
+
+
+### Bug Fixes
+
+* **deps:** override minimatch to ^11.0.1 for GHSA-g3hv-75wg-m249 ([#2421](https://github.com/taverns-red/toast-stats/issues/2421)) ([#2422](https://github.com/taverns-red/toast-stats/issues/2422)) ([7e4bb4a](https://github.com/taverns-red/toast-stats/commit/7e4bb4a3fa2f2fcf8523db34952a85d72166cc1d))
+
+
+### Documentation
+
+* competitive landscape 2026-11-01 with verified Devin Pearson gaps and re-ranked opportunities ([#2423](https://github.com/taverns-red/toast-stats/issues/2423)) ([#2424](https://github.com/taverns-red/toast-stats/issues/2424)) ([a5577fa](https://github.com/taverns-red/toast-stats/commit/a5577fa418d0243464365ee856abe0faf1c44b8b))
+
+
+### Tests
+
+* **e2e:** wait on the first visible hero chip, pin the anniversary window ([#2436](https://github.com/taverns-red/toast-stats/issues/2436)) ([#2437](https://github.com/taverns-red/toast-stats/issues/2437)) ([68b44f4](https://github.com/taverns-red/toast-stats/commit/68b44f4f4025b5c903f33feb29f0d9a3d5a37332))
+
 ## [2.76.3](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.76.2...toast-stats-v2.76.3) (2026-10-30)
 
 
