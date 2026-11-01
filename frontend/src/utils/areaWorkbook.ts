@@ -30,6 +30,7 @@ import {
   type ProgramYearDeadline,
 } from './programYearDeadlines'
 import type { MissingCspClub } from './divisionStatus'
+import { arrayToCSV } from './csvExport'
 
 export const AREA_WORKBOOK_HEADER = [
   'Club Number',
@@ -196,4 +197,26 @@ export function areaWorkbookFilename(args: {
   return `area_workbook_district_${safeId(args.districtId)}_area_${safeId(
     args.divisionId
   )}${safeId(args.areaId)}_${date}.csv`
+}
+
+/**
+ * The workbook as CSV text plus its file name, for the page to hand to
+ * `downloadCSV`. Null when the area is not in the snapshot.
+ */
+export function areaWorkbookCsv(
+  districtId: string,
+  input: CouncilPackInput,
+  scope: AreaWorkbookScope
+): { csv: string; filename: string } | null {
+  const rows = buildAreaWorkbookRows(input, scope)
+  if (!rows) return null
+  return {
+    csv: arrayToCSV(rows),
+    filename: areaWorkbookFilename({
+      districtId,
+      divisionId: scope.division,
+      areaId: scope.area,
+      snapshotDate: input.snapshotDate,
+    }),
+  }
 }

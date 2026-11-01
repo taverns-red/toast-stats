@@ -68,6 +68,12 @@
   border-radius: var(--radius-md, 8px);
 }
 
+.action-list-page__exports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .action-list-scope__clear,
 .action-list-page__export {
   min-height: 44px;
@@ -407,7 +413,10 @@
     align-items: stretch;
   }
 
+  /* Side by side, sharing the row, so the area workbook (#2428) adds no
+     row of its own at 375. */
   .action-list-page__export {
+    flex: 1 1 0;
     width: 100%;
   }
 }
