@@ -29,6 +29,12 @@ describe('deadline-strip.css toggle (#2429)', () => {
     expect(toggle).not.toMatch(/min-height:\s*0/)
   })
 
+  it('reserves the same 44px row in the loading strip', () => {
+    expect(rules('.deadline-strip__toggle-slot ').join('\n')).toMatch(
+      /min-height:\s*44px/
+    )
+  })
+
   it('does not fake the touch target with an overhanging pseudo-element', () => {
     expect(css).not.toMatch(/\.deadline-strip__toggle::(after|before)/)
   })

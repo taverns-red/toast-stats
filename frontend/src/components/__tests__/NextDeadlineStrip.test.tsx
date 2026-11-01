@@ -147,6 +147,16 @@ describe('NextDeadlineStrip — whole-year timeline (#2429)', () => {
     expect(link).toHaveAttribute('href', '/deadlines.ics')
   })
 
+  it('reserves the toggle row while the page date loads, so nothing shifts', () => {
+    render(<NextDeadlineStrip programYear="2026-2027" asOfDate={undefined} />)
+    const slot = strip().querySelector(
+      '.deadline-strip__head .deadline-strip__toggle-slot'
+    )
+    expect(slot).not.toBeNull()
+    expect(slot).toHaveAttribute('aria-hidden', 'true')
+    expect(within(strip()).queryByRole('button')).toBeNull()
+  })
+
   it('still offers the year once every deadline has passed', () => {
     render(<NextDeadlineStrip programYear="2026-2027" asOfDate="2027-06-10" />)
     fireEvent.click(toggle())
