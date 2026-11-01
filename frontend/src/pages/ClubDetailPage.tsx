@@ -1183,7 +1183,6 @@ const ClubDetailPage: React.FC = () => {
             clubId={clubId}
             asOfDate={effectiveEndDate}
             heroPainted={isHeroPainted}
-            historyHref={`/district/${districtId}/club/${clubId}/history`}
           />
 
           {/* Risk Factors */}

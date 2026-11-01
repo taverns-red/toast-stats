@@ -9,7 +9,9 @@ import {
 
 /**
  * #2430 — "Recent changes" on the club page: one dated line per change,
- * newest first, bounded, with a link to the full history. A reason shows
+ * newest first, bounded, with a link to the full history of changes for the
+ * same dates (What Changed). PR #2446: the page keeps ONE multi-year-history
+ * link (club-page-mobile smoke), so the card does not add a second. A reason shows
  * only when the feed carries one, and the panel then cites the TI rule.
  */
 const FEED: ClubChangeFeed = {
@@ -55,7 +57,7 @@ function renderPanel(
       <ClubRecentChangesPanel
         feed={FEED}
         isLoading={false}
-        historyHref="/district/61/club/7238597/history"
+        districtId="61"
         {...props}
       />
     </MemoryRouter>
@@ -123,15 +125,28 @@ describe('ClubRecentChangesPanel (#2430)', () => {
     ).toBeInTheDocument()
   })
 
-  it('is bounded: says how many changes there were and links to the full history', () => {
-    renderPanel()
+  it('is bounded: says how many changes there were and links to every change for the same dates', () => {
+    const { container } = renderPanel()
     expect(
       screen.getByText(/showing the latest 2 of 11 changes/i)
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /full history/i })).toHaveAttribute(
+    expect(
+      screen.getByRole('link', { name: /every change in the district/i })
+    ).toHaveAttribute(
       'href',
-      '/district/61/club/7238597/history'
+      '/district/61/changes?from=2026-08-11&to=2026-10-31'
     )
+    // The page's one multi-year-history link stays the only one (#1843).
+    expect(container.querySelector('a[href$="/history"]')).toBeNull()
+  })
+
+  it('offers no changes link when there is nothing to compare', () => {
+    renderPanel({
+      feed: { ...FEED, entries: [], comparable: false, totalEvents: 0 },
+    })
+    expect(
+      screen.queryByRole('link', { name: /every change in the district/i })
+    ).not.toBeInTheDocument()
   })
 
   it('says so when nothing changed', () => {

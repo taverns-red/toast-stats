@@ -15,13 +15,11 @@ export function ClubRecentChanges({
   clubId,
   asOfDate,
   heroPainted,
-  historyHref,
 }: {
   districtId: string | undefined
   clubId: string | undefined
   asOfDate: SnapshotDate | null | undefined
   heroPainted: boolean
-  historyHref: string
 }) {
   const [el, setEl] = useState<HTMLDivElement | null>(null)
   const near = useNearViewport(el)
@@ -36,7 +34,7 @@ export function ClubRecentChanges({
       <ClubRecentChangesPanel
         feed={feed}
         isLoading={isLoading}
-        historyHref={historyHref}
+        districtId={districtId}
       />
     </div>
   )

@@ -12,7 +12,10 @@ import { RENEWAL_DUES_FAQ_URL } from '../../utils/programYearDeadlines'
 /**
  * #2430 — "Recent changes" on the club page: what happened to this club, and
  * when. One dated line per change (the What Changed engine's own events),
- * newest first, bounded, then a link to the full history.
+ * newest first, bounded, then a link to every change in the district for
+ * the same dates (What Changed). The page already carries the one link to
+ * the club's multi-year history (#1843; the club-page-mobile smoke counts
+ * it), so the card does not add a second (PR #2446).
  *
  * A reason shows only where the feed carries one (a membership drop across a
  * dues renewal deadline), and the panel then cites the TI rule it rests on.
@@ -20,6 +23,9 @@ import { RENEWAL_DUES_FAQ_URL } from '../../utils/programYearDeadlines'
  *
  * While the snapshots load (or before the panel nears the viewport) the list
  * holds skeleton rows of the real row height, so nothing below it shifts.
+ * Only an in-flight read sets aria-busy: a card that has not started reading
+ * is not busy, or the page would never settle for a reader who stops above
+ * it (PR #2446, the club-hero-cls smoke).
  */
 const SKELETON_ROWS = 3
 
@@ -48,12 +54,15 @@ function plural(n: number, one: string, many: string): string {
 export function ClubRecentChangesPanel({
   feed,
   isLoading,
-  historyHref,
+  districtId,
 }: {
-  /** Null while loading. */
+  /** Null while loading, or while the card waits to be scrolled near. */
   feed: ClubChangeFeed | null
+  /** Reads in flight: the only time the card is aria-busy. A card waiting
+   *  off-screen holds its skeleton rows but is not busy (PR #2446). */
   isLoading: boolean
-  historyHref: string
+  /** The district whose What Changed page holds every change. */
+  districtId: string | undefined
 }) {
   const ready = !isLoading && feed !== null ? feed : null
 
@@ -130,7 +139,7 @@ export function ClubRecentChangesPanel({
       className="club-changes"
       icon={<ChangesIcon />}
       meta={`Last ${FEED_WINDOW_DAYS} days`}
-      busy={!ready}
+      busy={isLoading}
     >
       {body}
       {ready?.comparable && ready.truncated && (
@@ -154,9 +163,19 @@ export function ClubRecentChangesPanel({
           ; Distinguished Club Program (Item 1111), p. 8.
         </p>
       )}
-      <p className="club-changes__more">
-        <Link to={historyHref}>Full history</Link>
-      </p>
+      {ready?.comparable &&
+        districtId &&
+        ready.windowStart &&
+        ready.windowEnd && (
+          <p className="club-changes__more">
+            <Link
+              to={`/district/${districtId}/changes?from=${ready.windowStart}&to=${ready.windowEnd}`}
+            >
+              Every change in the district,{' '}
+              {formatFeedWindow(ready.windowStart, ready.windowEnd)}
+            </Link>
+          </p>
+        )}
     </ClubPanel>
   )
 }
