@@ -3,10 +3,13 @@ import { Tooltip, InfoIcon } from './Tooltip'
 
 export interface KpiDeltaCardProps {
   title: string
-  /** Signed delta (positive = increase, negative = decrease). */
-  current: number
+  /** Signed delta (positive = increase, negative = decrease). `null` means
+   *  the value cannot be computed (#2425) — rendered as a dash, never a 0. */
+  current: number | null
   tooltipContent?: string
   secondaryLabel?: string
+  /** Optional breakdown lines under the secondary label (#2425). */
+  subLines?: readonly string[]
 }
 
 /**
@@ -24,12 +27,20 @@ export const KpiDeltaCard: React.FC<KpiDeltaCardProps> = ({
   current,
   tooltipContent,
   secondaryLabel,
+  subLines,
 }) => {
-  const isUp = current > 0
-  const isDown = current < 0
-  const magnitude = Math.abs(current).toLocaleString()
+  const unavailable = current === null
+  const isUp = (current ?? 0) > 0
+  const isDown = (current ?? 0) < 0
+  const magnitude = Math.abs(current ?? 0).toLocaleString()
   // U+2212 minus for negatives; '+' for positives; bare value for zero.
-  const display = isUp ? `+${magnitude}` : isDown ? `−${magnitude}` : '0'
+  const display = unavailable
+    ? '—'
+    : isUp
+      ? `+${magnitude}`
+      : isDown
+        ? `−${magnitude}`
+        : '0'
   const colorClass = isUp
     ? 'text-green-700'
     : isDown
@@ -75,7 +86,8 @@ export const KpiDeltaCard: React.FC<KpiDeltaCardProps> = ({
             {isUp ? '▲' : '▼'}
           </span>
         )}
-        <span>{display}</span>
+        <span aria-hidden={unavailable || undefined}>{display}</span>
+        {unavailable && <span className="sr-only">not available</span>}
         {(isUp || isDown) && (
           <span className="sr-only">{isUp ? 'increase' : 'decrease'}</span>
         )}
@@ -83,6 +95,19 @@ export const KpiDeltaCard: React.FC<KpiDeltaCardProps> = ({
 
       {secondaryLabel && (
         <p className="mt-2 text-xs text-gray-600">{secondaryLabel}</p>
+      )}
+
+      {/* #2425: a breakdown under the from → to line. flex-wrap lets the
+          items reflow onto more lines on a narrow card instead of scrolling. */}
+      {subLines && subLines.length > 0 && (
+        <ul
+          data-testid="kpi-delta-sublines"
+          className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-600"
+        >
+          {subLines.map(line => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
       )}
     </div>
   )

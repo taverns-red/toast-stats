@@ -3,7 +3,10 @@ import { useParams } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
-import { useSnapshotDiff } from '../hooks/useSnapshotDiff'
+import {
+  useSnapshotDiff,
+  type SnapshotDiffView,
+} from '../hooks/useSnapshotDiff'
 import { useUrlDatePair } from '../hooks/useUrlDatePair'
 import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import { useTransferCounterparts } from '../hooks/useTransferCounterparts'
@@ -47,6 +50,66 @@ function fmtDate(iso: string): string {
 }
 
 /** "12 clubs" / "1 club" — the count is the point, so it leads. */
+/** Signed count with a U+2212 minus, matching KpiDeltaCard's headline. */
+function signed(n: number): string {
+  const m = Math.abs(n).toLocaleString()
+  return n > 0 ? `+${m}` : n < 0 ? `−${m}` : '0'
+}
+
+/** "Low 5 (+1)" — end count, plus the change only when non-zero (#2425). */
+function countLine(label: string, c: { to: number; delta: number }): string {
+  const base = `${label} ${c.to.toLocaleString()}`
+  return c.delta === 0 ? base : `${base} (${signed(c.delta)})`
+}
+
+/**
+ * Props for the "Active clubs" tile (#2425, Ron's decisions): headline is the
+ * signed change in TI status Active, then Low / Ineligible / Suspended and the
+ * full total. Counts come from `clubStatusTotals`, computed from the same
+ * status field as the Club status changes group (#1247, R3). A snapshot with
+ * no status data renders a dash and says so — never a silent 0.
+ */
+function activeClubsTile(diff: SnapshotDiffView): {
+  current: number | null
+  secondaryLabel: string
+  subLines: string[]
+} {
+  const t = diff.clubStatusTotals
+  if (!t || t.statusMissingFrom || t.statusMissingTo) {
+    const all = t?.all ?? diff.totals.clubCount
+    const missingDates = !t
+      ? []
+      : [
+          t.statusMissingFrom ? diff.from.date : null,
+          t.statusMissingTo ? diff.to.date : null,
+        ].filter((d): d is string => d !== null)
+    return {
+      current: null,
+      secondaryLabel:
+        missingDates.length > 0
+          ? `Club status not recorded on ${missingDates.map(fmtDate).join(' or ')}`
+          : 'Club status not recorded for these dates',
+      subLines: [countLine('All clubs', all)],
+    }
+  }
+  const lines: string[] = []
+  for (const status of ['Low', 'Ineligible', 'Suspended'] as const) {
+    const c = t.byStatus[status]
+    if (c.from === 0 && c.to === 0) continue
+    lines.push(countLine(status, c))
+  }
+  if (t.unrecorded.from > 0 || t.unrecorded.to > 0) {
+    lines.push(countLine('Status not recorded', t.unrecorded))
+  }
+  lines.push(countLine('All clubs', t.all))
+  const active = t.byStatus.Active
+  return {
+    current: active.delta,
+    secondaryLabel: `${active.from.toLocaleString()} → ${active.to.toLocaleString()}`,
+    subLines: lines,
+  }
+}
+
 function clubCountPhrase(count: number): string {
   return `${count} ${count === 1 ? 'club' : 'clubs'}`
 }
@@ -322,9 +385,8 @@ const DistrictChangesPage: React.FC = () => {
                     secondaryLabel={`${diff.totals.payments.from.toLocaleString()} → ${diff.totals.payments.to.toLocaleString()}`}
                   />
                   <KpiDeltaCard
-                    title="Clubs"
-                    current={diff.totals.clubCount.delta}
-                    secondaryLabel={`${diff.totals.clubCount.from.toLocaleString()} → ${diff.totals.clubCount.to.toLocaleString()}`}
+                    title="Active clubs"
+                    {...activeClubsTile(diff)}
                   />
                   <KpiDeltaCard
                     title="Distinguished clubs"

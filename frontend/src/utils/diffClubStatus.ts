@@ -112,3 +112,81 @@ export function diffClubStatus(
 
   return events
 }
+
+/** The four TI operational statuses, in the order the Changes tile lists them
+ *  (#2425): the headline status first, then the sub-lines. */
+export const CLUB_STATUSES = [
+  'Active',
+  'Low',
+  'Ineligible',
+  'Suspended',
+] as const
+export type ClubOperationalStatus = (typeof CLUB_STATUSES)[number]
+
+export interface ClubCountDelta {
+  from: number
+  to: number
+  delta: number
+}
+
+/**
+ * Per-status club counts on both snapshots (#2425). `byStatus` + `unrecorded`
+ * always sums to `all` on each side. `statusMissingFrom` / `statusMissingTo`
+ * flag a snapshot on which NO club carries a status — the tile must say so
+ * rather than show a silent 0.
+ */
+export interface ClubStatusTotals {
+  byStatus: Record<ClubOperationalStatus, ClubCountDelta>
+  /** Clubs with an empty or unrecognised status. */
+  unrecorded: ClubCountDelta
+  all: ClubCountDelta
+  statusMissingFrom: boolean
+  statusMissingTo: boolean
+}
+
+/**
+ * Count clubs by operational status on each snapshot (#2425), reading the same
+ * `clubStatus ?? status` field the `club-status` events read (#1247, R3).
+ */
+export function countClubStatusTotals(
+  from: DistrictStatisticsFile,
+  to: DistrictStatisticsFile
+): ClubStatusTotals {
+  const tally = (snap: DistrictStatisticsFile) => {
+    const byStatus: Record<ClubOperationalStatus, number> = {
+      Active: 0,
+      Low: 0,
+      Ineligible: 0,
+      Suspended: 0,
+    }
+    let unrecorded = 0
+    for (const c of snap.clubs) {
+      const status = statusOf(c)
+      if ((CLUB_STATUSES as readonly string[]).includes(status)) {
+        byStatus[status as ClubOperationalStatus] += 1
+      } else {
+        unrecorded += 1
+      }
+    }
+    return { byStatus, unrecorded, all: snap.clubs.length }
+  }
+  const f = tally(from)
+  const t = tally(to)
+  const pair = (a: number, b: number): ClubCountDelta => ({
+    from: a,
+    to: b,
+    delta: b - a,
+  })
+  return {
+    byStatus: {
+      Active: pair(f.byStatus.Active, t.byStatus.Active),
+      Low: pair(f.byStatus.Low, t.byStatus.Low),
+      Ineligible: pair(f.byStatus.Ineligible, t.byStatus.Ineligible),
+      Suspended: pair(f.byStatus.Suspended, t.byStatus.Suspended),
+    },
+    unrecorded: pair(f.unrecorded, t.unrecorded),
+    all: pair(f.all, t.all),
+    statusMissingFrom: f.all > 0 && f.unrecorded === f.all,
+    statusMissingTo: t.all > 0 && t.unrecorded === t.all,
+  }
+}

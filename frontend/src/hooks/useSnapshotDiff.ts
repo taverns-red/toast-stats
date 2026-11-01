@@ -6,7 +6,11 @@ import type {
   SnapshotDiff,
 } from '@taverns-red/shared-contracts'
 import { diffAreaDivisionStatus } from '../utils/diffAreaDivisionStatus'
-import { diffClubStatus } from '../utils/diffClubStatus'
+import {
+  diffClubStatus,
+  countClubStatusTotals,
+  type ClubStatusTotals,
+} from '../utils/diffClubStatus'
 import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
@@ -38,6 +42,15 @@ export function previousRecordedDate<T extends string>(
 }
 
 /**
+ * The engine's `SnapshotDiff` plus the frontend-computed per-status club
+ * counts (#2425) the What Changed "Active clubs" tile reads. Optional so a
+ * diff without it renders the tile's "status not recorded" state, never a 0.
+ */
+export type SnapshotDiffView = SnapshotDiff & {
+  clubStatusTotals?: ClubStatusTotals
+}
+
+/**
  * Fetch two dated district snapshots and compute the diff between them.
  *
  * Keyed by the (districtId, from, to) triple so each pair caches independently.
@@ -49,7 +62,7 @@ export function useSnapshotDiff(
   from: SnapshotDate | undefined,
   to: SnapshotDate | undefined
 ) {
-  return useQuery<SnapshotDiff, Error>({
+  return useQuery<SnapshotDiffView, Error>({
     queryKey: ['snapshot-diff', districtId, from, to],
     queryFn: async () => {
       const [fromSnap, toSnap] = await Promise.all([
@@ -63,7 +76,8 @@ export function useSnapshotDiff(
       const diff = diffSnapshots(fromSnap.data, toSnap.data)
       const areaDivision = diffAreaDivisionStatus(fromSnap.data, toSnap.data)
       const clubStatus = diffClubStatus(fromSnap.data, toSnap.data)
-      // Spread the engine's diff, override ONLY `events`. Everything else the
+      // Spread the engine's diff, override ONLY `events` (and add the
+      // #2425 status counts alongside). Everything else the
       // engine decided rides through untouched — including
       // `rosterDiscontinuity` (#1443), the district-realignment context the
       // page keys its explanatory note off. Adding another merged stream must
@@ -71,6 +85,9 @@ export function useSnapshotDiff(
       return {
         ...diff,
         events: [...diff.events, ...areaDivision, ...clubStatus],
+        // #2425 — per-status counts for the "Active clubs" tile, from the
+        // same status field the club-status events read (R3).
+        clubStatusTotals: countClubStatusTotals(fromSnap.data, toSnap.data),
       }
     },
     enabled: !!districtId && !!from && !!to,

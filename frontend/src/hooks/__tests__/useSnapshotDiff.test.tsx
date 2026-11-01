@@ -201,6 +201,28 @@ describe('useSnapshotDiff', () => {
     })
   })
 
+  it('attaches per-status club counts for the Active clubs tile (#2425)', async () => {
+    // Club 001 moves Active -> Suspended between the two snapshots.
+    mockedFetch.mockImplementation((date: string) => {
+      const snap = wrapper(date, 20)
+      snap.data.clubs[0]!.clubStatus =
+        date === '2026-05-26' ? 'Suspended' : 'Active'
+      return Promise.resolve(snap as unknown) as Promise<unknown>
+    })
+
+    const { result } = renderHook(
+      () =>
+        useSnapshotDiff('61', snapDate('2026-05-25'), snapDate('2026-05-26')),
+      { wrapper: makeWrapper() }
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    const t = result.current.data?.clubStatusTotals
+    expect(t?.byStatus.Active).toEqual({ from: 1, to: 0, delta: -1 })
+    expect(t?.byStatus.Suspended).toEqual({ from: 0, to: 1, delta: 1 })
+    expect(t?.all).toEqual({ from: 1, to: 1, delta: 0 })
+  })
+
   it('is disabled (does not fetch) when from or to is missing', () => {
     renderHook(() => useSnapshotDiff('61', undefined, snapDate('2026-05-26')), {
       wrapper: makeWrapper(),
