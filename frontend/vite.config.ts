@@ -1,9 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { deadlinesIcsPlugin } from './src/utils/deadlinesIcsPlugin'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  // #2429: deadlines.ics, built from the cited deadline table.
+  plugins: [react(), deadlinesIcsPlugin()],
   define: {
     // eslint-disable-next-line no-undef
     __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || 'dev'),
