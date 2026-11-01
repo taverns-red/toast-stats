@@ -91,7 +91,7 @@
     "node": ">=22"
   },
   "overrides": {
-    "minimatch": "^10.2.3",
+    "minimatch": "^11.0.1",
     "fast-xml-parser": "^5.5.8",
     "flatted": "^3.3.3",
     "vite": "$vite",
