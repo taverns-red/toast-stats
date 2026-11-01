@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `an-absolute-sr-only-span-escapes-a-scroller-that-is-not-its-containing-block.md` — An absolutely positioned sr-only span inside an overflow scroller is clipped only if the scroller (or something inside it) is its containing block; otherwise it sits at its static position past the scroller and widens the page  (2026-11-01)
 - `a-test-that-reaches-the-live-network-passes-or-fails-on-latency.md` — A page test with an un-stubbed CDN read depends on network latency; stub fetch to reject at once to reproduce the CI timing, then stub the read; the integration setup now fails any un-mocked fetch, checked after pending work settles (#2405, #2408)  (2026-10-29)
 - `networkidle-is-not-a-readiness-signal-on-a-site-with-deferred-analytics.md` — Playwright's networkidle counts third-party traffic, so on a site that defers analytics until after its data it is a timing race, not a readiness signal; wait for a data-backed element plus the app's own data requests  (2026-10-29)
 - `a-pdf-page-count-passes-on-a-layout-wider-than-the-paper.md` — Chromium's print-to-PDF shrinks a page that is wider than the paper until it fits, so a PDF page-count check passes on a layout that overflows the printable width; measure the document's width at the printable box in print media as well  (2026-10-28)
