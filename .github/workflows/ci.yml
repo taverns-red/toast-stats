@@ -276,6 +276,37 @@ jobs:
         # on the same label, so an image bump is proven here, pre-merge.
         run: scripts/runner-toolchain-probe.sh
 
+  # agent-cli real-repo smoke (#2418): --help plus one real read-only call
+  # per subcommand, so a CLI that drifts from the repo fails here. Kept out
+  # of Test Suite so that job's token stays as it is; this one reads only.
+  agent-cli-smoke:
+    name: Agent CLI smoke
+    runs-on: ubuntu-26.04
+    needs: quality-gates
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+      pull-requests: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run agent-cli against the real repo (#2418)
+        run: scripts/agent-cli-smoke.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   # Build Applications
   build:
     name: Build Applications

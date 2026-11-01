@@ -1,0 +1,112 @@
+[
+  {
+    "conclusion": "success",
+    "createdAt": "2026-11-01T10:00:06Z",
+    "databaseId": 41295506275,
+    "displayTitle": "Data Pipeline",
+    "event": "workflow_dispatch",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/41295506275",
+    "workflowName": "Data Pipeline"
+  },
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-31T15:31:20Z",
+    "databaseId": 41215243330,
+    "displayTitle": "CDN Schema Canary",
+    "event": "schedule",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/41215243330",
+    "workflowName": "CDN Schema Canary"
+  },
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-31T14:04:10Z",
+    "databaseId": 41208407454,
+    "displayTitle": "Pipeline Freshness Monitor",
+    "event": "schedule",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/41208407454",
+    "workflowName": "Pipeline Freshness Monitor"
+  },
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-31T09:00:04Z",
+    "databaseId": 41186839418,
+    "displayTitle": "Data Pipeline",
+    "event": "workflow_dispatch",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/41186839418",
+    "workflowName": "Data Pipeline"
+  },
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-30T15:31:25Z",
+    "databaseId": 41081485331,
+    "displayTitle": "CDN Schema Canary",
+    "event": "schedule",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/41081485331",
+    "workflowName": "CDN Schema Canary"
+  },
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-30T14:53:10Z",
+    "databaseId": 41075610944,
+    "displayTitle": "Deploy",
+    "event": "workflow_dispatch",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/41075610944",
+    "workflowName": "Deploy"
+  },
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-30T14:50:21Z",
+    "databaseId": 41075186169,
+    "displayTitle": "chore: release 2.76.3 (#2417)",
+    "event": "push",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/41075186169",
+    "workflowName": "Release Please"
+  },
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-30T14:50:21Z",
+    "databaseId": 41075186236,
+    "displayTitle": "chore: release 2.76.3 (#2417)",
+    "event": "push",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/41075186236",
+    "workflowName": "CI"
+  },
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-30T14:50:21Z",
+    "databaseId": 41075186031,
+    "displayTitle": "chore: release 2.76.3 (#2417)",
+    "event": "push",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/41075186031",
+    "workflowName": "Pipeline Harness"
+  },
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-30T14:50:21Z",
+    "databaseId": 41075186044,
+    "displayTitle": "chore: release 2.76.3 (#2417)",
+    "event": "push",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/41075186044",
+    "workflowName": "Docs"
+  },
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-30T14:50:20Z",
+    "databaseId": 41075185442,
+    "displayTitle": "Push on main",
+    "event": "dynamic",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/41075185442",
+    "workflowName": "CodeQL"
+  }
+]

@@ -1,0 +1,182 @@
+{
+  "id": 123546188905,
+  "run_id": 40901656707,
+  "workflow_name": "CI",
+  "head_branch": "main",
+  "html_url": "https://github.com/taverns-red/toast-stats/actions/runs/40901656707/job/123546188905",
+  "status": "completed",
+  "conclusion": "failure",
+  "started_at": "2026-10-29T15:28:27Z",
+  "completed_at": "2026-10-29T15:40:37Z",
+  "name": "Test Suite",
+  "steps": [
+    {
+      "name": "Set up job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 1,
+      "started_at": "2026-10-29T15:28:28Z",
+      "completed_at": "2026-10-29T15:28:29Z"
+    },
+    {
+      "name": "Checkout code",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 2,
+      "started_at": "2026-10-29T15:28:29Z",
+      "completed_at": "2026-10-29T15:28:32Z"
+    },
+    {
+      "name": "Setup Node.js",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 3,
+      "started_at": "2026-10-29T15:28:32Z",
+      "completed_at": "2026-10-29T15:28:39Z"
+    },
+    {
+      "name": "Install dependencies",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 4,
+      "started_at": "2026-10-29T15:28:39Z",
+      "completed_at": "2026-10-29T15:28:52Z"
+    },
+    {
+      "name": "Build dependency packages",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-10-29T15:28:52Z",
+      "completed_at": "2026-10-29T15:28:56Z"
+    },
+    {
+      "name": "Run shared-contracts tests",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 6,
+      "started_at": "2026-10-29T15:28:56Z",
+      "completed_at": "2026-10-29T15:29:03Z"
+    },
+    {
+      "name": "Run analytics-core tests",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 7,
+      "started_at": "2026-10-29T15:29:03Z",
+      "completed_at": "2026-10-29T15:29:12Z"
+    },
+    {
+      "name": "Run collector-cli tests",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 8,
+      "started_at": "2026-10-29T15:29:12Z",
+      "completed_at": "2026-10-29T15:29:36Z"
+    },
+    {
+      "name": "Run mcp-server tests",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 9,
+      "started_at": "2026-10-29T15:29:36Z",
+      "completed_at": "2026-10-29T15:29:38Z"
+    },
+    {
+      "name": "Run videos scenario-timing tests (#2293)",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 10,
+      "started_at": "2026-10-29T15:29:38Z",
+      "completed_at": "2026-10-29T15:29:50Z"
+    },
+    {
+      "name": "Run mcp-server npm-pack smoke (#1163)",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 11,
+      "started_at": "2026-10-29T15:29:50Z",
+      "completed_at": "2026-10-29T15:29:56Z"
+    },
+    {
+      "name": "Check vitest project partition (#482)",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 12,
+      "started_at": "2026-10-29T15:29:56Z",
+      "completed_at": "2026-10-29T15:30:09Z"
+    },
+    {
+      "name": "Check no unit test full-page-mounts (V12 / sprint 916)",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 13,
+      "started_at": "2026-10-29T15:30:09Z",
+      "completed_at": "2026-10-29T15:30:13Z"
+    },
+    {
+      "name": "Check test quarantine is justified (#913)",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 14,
+      "started_at": "2026-10-29T15:30:13Z",
+      "completed_at": "2026-10-29T15:30:14Z"
+    },
+    {
+      "name": "Run frontend tests",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 15,
+      "started_at": "2026-10-29T15:30:14Z",
+      "completed_at": "2026-10-29T15:40:32Z"
+    },
+    {
+      "name": "Check coverage denominator is exhaustive (#1536)",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 16,
+      "started_at": "2026-10-29T15:40:32Z",
+      "completed_at": "2026-10-29T15:40:32Z"
+    },
+    {
+      "name": "Run scripts/lib tests",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 17,
+      "started_at": "2026-10-29T15:40:32Z",
+      "completed_at": "2026-10-29T15:40:32Z"
+    },
+    {
+      "name": "Runner toolchain probe (#1740)",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 18,
+      "started_at": "2026-10-29T15:40:32Z",
+      "completed_at": "2026-10-29T15:40:32Z"
+    },
+    {
+      "name": "Post Setup Node.js",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 35,
+      "started_at": "2026-10-29T15:40:32Z",
+      "completed_at": "2026-10-29T15:40:32Z"
+    },
+    {
+      "name": "Post Checkout code",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 36,
+      "started_at": "2026-10-29T15:40:32Z",
+      "completed_at": "2026-10-29T15:40:33Z"
+    },
+    {
+      "name": "Complete job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 37,
+      "started_at": "2026-10-29T15:40:33Z",
+      "completed_at": "2026-10-29T15:40:33Z"
+    }
+  ]
+}

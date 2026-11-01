@@ -26,6 +26,11 @@ export interface RetryOptions {
   sleep?: (ms: number) => Promise<void>
   /** Called before each backoff wait with the error, 1-based retry #, and delay. */
   onRetry?: (err: unknown, attempt: number, delayMs: number) => void
+  /**
+   * Optional classifier (#2418): return false to fail at once on an error
+   * that retrying cannot fix (a 404, a bad flag). Default: retry everything.
+   */
+  shouldRetry?: (err: unknown) => boolean
 }
 
 const defaultSleep = (ms: number): Promise<void> =>
@@ -52,6 +57,7 @@ export async function retryAsync<T>(
       lastError = err
       const isLastAttempt = i === attempts - 1
       if (isLastAttempt) break
+      if (options.shouldRetry && !options.shouldRetry(err)) break
       const delayMs = baseDelayMs * 2 ** i
       options.onRetry?.(err, i + 1, delayMs)
       await sleep(delayMs)

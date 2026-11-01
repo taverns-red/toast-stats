@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# agent-cli (#2418): read-only / wait-only answers for agent sessions.
+# Run `./bin/agent-cli --help`. Logic: scripts/lib/agentCli/.
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+TSX="$ROOT/node_modules/.bin/tsx"
+if [ ! -x "$TSX" ]; then
+  echo "agent-cli: $TSX not found; run npm install in $ROOT" >&2
+  exit 3
+fi
+exec "$TSX" "$ROOT/scripts/agent-cli.ts" "$@"

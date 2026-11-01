@@ -1,0 +1,54 @@
+[
+  [
+    {
+      "id": 6522673134,
+      "html_url": "https://github.com/taverns-red/toast-stats/pull/2416#issuecomment-6522673134",
+      "created_at": "2026-10-30T12:18:45Z",
+      "updated_at": "2026-10-30T13:45:45Z",
+      "body": "## \ud83d\ude80 Preview deployed\n\n**Live URL:** https://staging-toast-stats--pr-2416-xaopw9hv.web.app\n\n_Channel expires: 2026-11-06T13:45:40.629469159Z_\n\nUpdated on every push to this PR. The channel is removed\nautomatically when this PR closes.\n\nThe Playwright smoke and Lighthouse mobile gate run once the\nPR is ready for review (or labeled `preview-smoke`), not on\ndraft pushes (#2101).\n<!-- Sticky Pull Request Commentpr-preview -->",
+      "user": {
+        "login": "github-actions[bot]"
+      }
+    },
+    {
+      "id": 6522679972,
+      "html_url": "https://github.com/taverns-red/toast-stats/pull/2416#issuecomment-6522679972",
+      "created_at": "2026-10-30T12:19:07Z",
+      "updated_at": "2026-10-30T12:19:07Z",
+      "body": "## \ud83c\udfe0 Lighthouse CI Results\n\n| Metric | Score |\n|--------|-------|\n| Performance | 99 |\n| Accessibility | 100 |\n| Best Practices | 96 |\n",
+      "user": {
+        "login": "github-actions[bot]"
+      }
+    },
+    {
+      "id": 6522684855,
+      "html_url": "https://github.com/taverns-red/toast-stats/pull/2416#issuecomment-6522684855",
+      "created_at": "2026-10-30T12:19:22Z",
+      "updated_at": "2026-10-30T12:19:22Z",
+      "body": "## \ud83c\udfe0 Lighthouse CI Results\n\n| Metric | Score |\n|--------|-------|\n| Performance | 86 |\n| Accessibility | 100 |\n| Best Practices | 96 |\n",
+      "user": {
+        "login": "github-actions[bot]"
+      }
+    },
+    {
+      "id": 6523601330,
+      "html_url": "https://github.com/taverns-red/toast-stats/pull/2416#issuecomment-6523601330",
+      "created_at": "2026-10-30T13:09:00Z",
+      "updated_at": "2026-10-30T13:09:00Z",
+      "body": "## \ud83c\udfe0 Lighthouse CI Results\n\n| Metric | Score |\n|--------|-------|\n| Performance | 99 |\n| Accessibility | 100 |\n| Best Practices | 96 |\n",
+      "user": {
+        "login": "github-actions[bot]"
+      }
+    },
+    {
+      "id": 6524331078,
+      "html_url": "https://github.com/taverns-red/toast-stats/pull/2416#issuecomment-6524331078",
+      "created_at": "2026-10-30T13:46:06Z",
+      "updated_at": "2026-10-30T13:46:06Z",
+      "body": "## \ud83c\udfe0 Lighthouse CI Results\n\n| Metric | Score |\n|--------|-------|\n| Performance | 99 |\n| Accessibility | 100 |\n| Best Practices | 96 |\n",
+      "user": {
+        "login": "github-actions[bot]"
+      }
+    }
+  ]
+]

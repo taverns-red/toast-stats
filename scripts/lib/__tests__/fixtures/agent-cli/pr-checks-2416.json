@@ -1,0 +1,119 @@
+[
+  {
+    "bucket": "pass",
+    "completedAt": "2026-10-30T13:47:11Z",
+    "link": "https://github.com/taverns-red/toast-stats/actions/runs/41065800046/job/124097481335",
+    "name": "Delete preview channel",
+    "startedAt": "2026-10-30T13:46:25Z",
+    "state": "SUCCESS",
+    "workflow": "PR Preview Cleanup"
+  },
+  {
+    "bucket": "pass",
+    "completedAt": "2026-10-30T13:46:09Z",
+    "link": "https://github.com/taverns-red/toast-stats/actions/runs/41065777594/job/124096655030",
+    "name": "lighthouse",
+    "startedAt": "2026-10-30T13:44:50Z",
+    "state": "SUCCESS",
+    "workflow": "Lighthouse CI"
+  },
+  {
+    "bucket": "cancel",
+    "completedAt": "2026-10-30T13:46:22Z",
+    "link": "https://github.com/taverns-red/toast-stats/actions/runs/41065777336/job/124096653591",
+    "name": "Deploy preview channel",
+    "startedAt": "2026-10-30T13:44:50Z",
+    "state": "CANCELLED",
+    "workflow": "PR Preview"
+  },
+  {
+    "bucket": "skipping",
+    "completedAt": "2026-10-30T13:44:13Z",
+    "link": "https://github.com/taverns-red/toast-stats/actions/runs/41065696025/job/124096513970",
+    "name": "Security Scan",
+    "startedAt": "2026-10-30T13:44:29Z",
+    "state": "SKIPPED",
+    "workflow": "CI"
+  },
+  {
+    "bucket": "skipping",
+    "completedAt": "2026-10-30T13:44:13Z",
+    "link": "https://github.com/taverns-red/toast-stats/actions/runs/41065696025/job/124096479442",
+    "name": "Quality Gates",
+    "startedAt": "2026-10-30T13:44:25Z",
+    "state": "SKIPPED",
+    "workflow": "CI"
+  },
+  {
+    "bucket": "skipping",
+    "completedAt": "2026-10-30T13:44:13Z",
+    "link": "https://github.com/taverns-red/toast-stats/actions/runs/41065696025/job/124096421519",
+    "name": "Test Suite",
+    "startedAt": "2026-10-30T13:44:19Z",
+    "state": "SKIPPED",
+    "workflow": "CI"
+  },
+  {
+    "bucket": "skipping",
+    "completedAt": "2026-10-30T13:44:13Z",
+    "link": "https://github.com/taverns-red/toast-stats/actions/runs/41065696025/job/124096424152",
+    "name": "Build Applications",
+    "startedAt": "2026-10-30T13:44:19Z",
+    "state": "SKIPPED",
+    "workflow": "CI"
+  },
+  {
+    "bucket": "pass",
+    "completedAt": "2026-10-30T13:44:29Z",
+    "link": "https://github.com/taverns-red/toast-stats/actions/runs/41065695942/job/124096368108",
+    "name": "CI Gate",
+    "startedAt": "2026-10-30T13:44:15Z",
+    "state": "SUCCESS",
+    "workflow": "CI Gate"
+  },
+  {
+    "bucket": "pass",
+    "completedAt": "2026-10-30T13:09:10Z",
+    "link": "https://github.com/taverns-red/toast-stats/runs/124079904205",
+    "name": "Trivy",
+    "startedAt": "2026-10-30T13:09:07Z",
+    "state": "SUCCESS",
+    "workflow": ""
+  },
+  {
+    "bucket": "pass",
+    "completedAt": "2026-10-30T13:08:03Z",
+    "link": "https://github.com/taverns-red/toast-stats/runs/124079386742",
+    "name": "CodeQL",
+    "startedAt": "2026-10-30T13:08:00Z",
+    "state": "SUCCESS",
+    "workflow": ""
+  },
+  {
+    "bucket": "pass",
+    "completedAt": "2026-10-30T13:08:09Z",
+    "link": "https://github.com/taverns-red/toast-stats/actions/runs/41060632221/job/124079162472",
+    "name": "Pipeline Harness",
+    "startedAt": "2026-10-30T13:07:32Z",
+    "state": "SUCCESS",
+    "workflow": "Pipeline Harness"
+  },
+  {
+    "bucket": "pass",
+    "completedAt": "2026-10-30T13:09:18Z",
+    "link": "https://github.com/taverns-red/toast-stats/actions/runs/41060626656/job/124079150055",
+    "name": "Analyze (javascript-typescript)",
+    "startedAt": "2026-10-30T13:07:31Z",
+    "state": "SUCCESS",
+    "workflow": "CodeQL"
+  },
+  {
+    "bucket": "pass",
+    "completedAt": "2026-10-30T13:08:09Z",
+    "link": "https://github.com/taverns-red/toast-stats/actions/runs/41060626656/job/124079150484",
+    "name": "Analyze (actions)",
+    "startedAt": "2026-10-30T13:07:31Z",
+    "state": "SUCCESS",
+    "workflow": "CodeQL"
+  }
+]
