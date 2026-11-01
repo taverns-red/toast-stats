@@ -12,10 +12,17 @@ import { useDistricts } from '../../hooks/useDistricts'
 import type { SnapshotDiff } from '@taverns-red/shared-contracts'
 import { exportSnapshotDiff } from '../../utils/csvExport'
 import { useTransferCounterparts } from '../../hooks/useTransferCounterparts'
+import { useDistrictRanking } from '../../hooks/useDistrictRanking'
 
 vi.mock('../../utils/csvExport', () => ({ exportSnapshotDiff: vi.fn() }))
 vi.mock('../../hooks/useDistrictData')
 vi.mock('../../hooks/useDistricts')
+// The confirmed Distinguished count (#2438) is read from the dated rankings
+// row; a seam here, with no row unless a test names one.
+vi.mock('../../hooks/useDistrictRanking', () => ({
+  useDistrictRanking: vi.fn(),
+}))
+const mockedRanking = vi.mocked(useDistrictRanking)
 vi.mock('../../hooks/useSnapshotDiff', async () => {
   const actual = await vi.importActual<
     typeof import('../../hooks/useSnapshotDiff')
@@ -112,6 +119,7 @@ function diffFixture(over: Partial<SnapshotDiffView> = {}): SnapshotDiffView {
 beforeEach(() => {
   vi.clearAllMocks()
   mockedCounterparts.mockReturnValue(noCounterparts())
+  mockedRanking.mockReturnValue({ ranking: null, isLoading: false })
   mockedDistricts.mockReturnValue({
     data: { districts: [{ id: '61', name: '61' }] },
   } as unknown as ReturnType<typeof useDistricts>)
@@ -1137,5 +1145,90 @@ describe('DistrictChangesPage — Active clubs tile (#2425)', () => {
     const card = renderWith(diffFixture())
     expect(within(card).getByTestId('kpi-delta-value')).toHaveTextContent('—')
     expect(card).toHaveTextContent('Club status not recorded')
+  })
+})
+
+/* #2438 — the Distinguished clubs tile keeps TI's count as its headline and
+   adds the confirmed count (#2390 wording) as a labelled sub-line. The
+   confirmed count is the rankings row's `distinguishedClubs` — the
+   `countConfirmedDistinguishedClubs` output the trophy case counts from —
+   read for each end of the pair through `useDistrictRanking`. */
+describe('DistrictChangesPage — Distinguished clubs tile (#2438)', () => {
+  const rankingRow = (distinguishedClubs: number) =>
+    ({ districtId: '61', distinguishedClubs }) as unknown as NonNullable<
+      ReturnType<typeof useDistrictRanking>['ranking']
+    >
+
+  const renderWith = (
+    byDate: Record<string, ReturnType<typeof useDistrictRanking>>
+  ) => {
+    mockedRanking.mockImplementation(
+      (_id, date) => byDate[date ?? ''] ?? { ranking: null, isLoading: false }
+    )
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-07-31', '2026-10-31'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    mockedDiff.mockReturnValue({
+      data: diffFixture({
+        from: { date: '2026-07-31' },
+        to: { date: '2026-10-31' },
+        totals: {
+          membership: ag(2716, 2742),
+          payments: ag(5723, 5749),
+          clubCount: ag(161, 162),
+          distinguished: ag(0, 0),
+        },
+      }),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+    renderPage()
+    const card = screen
+      .getAllByTestId('kpi-delta-card')
+      .find(el => within(el).queryByText('Distinguished clubs'))
+    expect(card).toBeDefined()
+    return card!
+  }
+
+  it("leads with TI's count and adds the confirmed count as a sub-line", () => {
+    const card = renderWith({
+      '2026-07-31': { ranking: rankingRow(0), isLoading: false },
+      '2026-10-31': { ranking: rankingRow(3), isLoading: false },
+    })
+    expect(within(card).getByTestId('kpi-delta-value')).toHaveTextContent('0')
+    expect(within(card).getByText('TI count 0 → 0')).toBeInTheDocument()
+    expect(
+      within(within(card).getByTestId('kpi-delta-sublines'))
+        .getAllByRole('listitem')
+        .map(i => i.textContent)
+    ).toEqual(['Confirmed clubs 3 (+3)'])
+    // Each end of the pair is read from its own dated rankings file (R3).
+    expect(mockedRanking).toHaveBeenCalledWith('61', '2026-07-31')
+    expect(mockedRanking).toHaveBeenCalledWith('61', '2026-10-31')
+  })
+
+  it('says the confirmed count is not recorded instead of a silent 0', () => {
+    const card = renderWith({
+      '2026-07-31': { ranking: null, isLoading: false },
+      '2026-10-31': { ranking: rankingRow(3), isLoading: false },
+    })
+    expect(
+      within(within(card).getByTestId('kpi-delta-sublines'))
+        .getAllByRole('listitem')
+        .map(i => i.textContent)
+    ).toEqual(['Confirmed clubs not recorded'])
+  })
+
+  it('reserves the sub-line while a rankings file is loading', () => {
+    const card = renderWith({
+      '2026-07-31': { ranking: null, isLoading: true },
+      '2026-10-31': { ranking: rankingRow(3), isLoading: false },
+    })
+    expect(
+      within(within(card).getByTestId('kpi-delta-sublines'))
+        .getAllByRole('listitem')
+        .map(i => i.textContent)
+    ).toEqual(['Confirmed clubs …'])
   })
 })
