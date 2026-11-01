@@ -147,11 +147,11 @@ export function ClubRecentChangesPanel({
       )}
       {ready?.hasReasons && (
         <p className="club-changes__note">
-          Dues are due April 1 and October 1 (
+          Dues are due April 1 and October 1. Source:{' '}
           <a href={RENEWAL_DUES_FAQ_URL} target="_blank" rel="noreferrer">
             Toastmasters Renewal Dues FAQ
           </a>
-          ; Distinguished Club Program, Item 1111, p. 8).
+          ; Distinguished Club Program (Item 1111), p. 8.
         </p>
       )}
       <p className="club-changes__more">

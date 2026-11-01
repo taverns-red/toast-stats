@@ -2965,8 +2965,7 @@
 
   /* #2430 — Recent changes: a dated row list on its own full-width card
      below the panels grid. Date column + line; reason, gap marker and notes
-     muted. Rows keep a fixed minimum height so the skeleton reserves the
-     real space. Text ≥ 14px; the remapping ink/line tokens carry dark mode
+     muted. Skeleton rows are a one-line row's height. Text ≥ 14px; the remapping ink/line tokens carry dark mode
      (legacy palette until Phase 2, #2080). */
   .club-changes {
     margin-bottom: var(--rt-space-4);
@@ -2986,9 +2985,15 @@
     grid-template-columns: 7.5rem minmax(0, 1fr);
     gap: var(--rt-space-3);
     align-items: baseline;
-    min-height: 2.75rem;
     padding: var(--rt-space-2) 0;
     border-bottom: 1px solid var(--line);
+  }
+
+  /* A skeleton row is a one-line row's height, so a loaded feed of one-line
+     changes takes the space the skeleton held. */
+  .club-changes__row--skeleton {
+    align-items: center;
+    min-height: calc(1.3125rem + 2 * var(--rt-space-2));
   }
 
   .club-changes__row:first-child {
@@ -3076,7 +3081,7 @@
 
   @media (max-width: 767px) {
     .club-changes__row {
-      grid-template-columns: 6.25rem minmax(0, 1fr);
+      grid-template-columns: 7rem minmax(0, 1fr);
       gap: var(--rt-space-2);
     }
   }
