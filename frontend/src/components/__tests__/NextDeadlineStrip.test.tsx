@@ -154,6 +154,8 @@ describe('NextDeadlineStrip — whole-year timeline (#2429)', () => {
     )
     expect(slot).not.toBeNull()
     expect(slot).toHaveAttribute('aria-hidden', 'true')
+    // A line of text gives the slot the toggle's baseline (CLS at 1280).
+    expect(slot?.textContent).not.toBe('')
     expect(within(strip()).queryByRole('button')).toBeNull()
   })
 

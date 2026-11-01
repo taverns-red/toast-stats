@@ -35,6 +35,21 @@ describe('deadline-strip.css toggle (#2429)', () => {
     )
   })
 
+  /* Run 41354022851: at 1280 the strip is one baseline-aligned row. An empty
+     slot's baseline is its bottom edge, so the loading lead sat 17px lower
+     than the loaded one (CLS 0.085 on the division page). The slot must
+     centre a line of text exactly as the toggle does. */
+  it('aligns the loading slot on a text baseline, like the toggle', () => {
+    for (const sel of [
+      '.deadline-strip__toggle ',
+      '.deadline-strip__toggle-slot ',
+    ]) {
+      const rule = rules(sel).join('\n')
+      expect(rule, sel).toMatch(/display:\s*inline-flex/)
+      expect(rule, sel).toMatch(/align-items:\s*center/)
+    }
+  })
+
   it('does not fake the touch target with an overhanging pseudo-element', () => {
     expect(css).not.toMatch(/\.deadline-strip__toggle::(after|before)/)
   })
