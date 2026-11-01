@@ -62,8 +62,11 @@ import {
 import { clubDistrictHistoryShardQuery } from './useClubDistrictHistoryEntry'
 import { getProgramYear, getProgramYearForDate } from '../utils/programYear'
 import {
+  latestDateByProgramYear,
+  snapshotIndexKeyFor,
+} from '../utils/yearEndSnapshot'
+import {
   buildClubHistoryRow,
-  sameDistrict,
   type ClubHistoryGap,
   type ClubHistoryRow,
 } from '../utils/clubHistory'
@@ -97,27 +100,6 @@ export interface UseClubHistoryResult {
 
 /** Well-formed `YYYY-MM-DD`; anything else in a remote index is ignored. */
 const ISO_DATE_PREFIX = /^\d{4}-\d{2}-\d{2}$/
-
-/**
- * Latest snapshot date within each program year, for one district.
- *
- * Generic in the date type so a branded `SnapshotDate[]` yields branded values:
- * every entry is an ELEMENT of `dates`, so it carries the caller's provenance
- * straight through to the per-snapshot fetch below (#1323).
- */
-function latestDateByProgramYear<T extends string>(
-  dates: readonly T[]
-): Map<number, T> {
-  const latestByYear = new Map<number, T>()
-  for (const d of dates) {
-    // getProgramYearForDate parses the ISO string via calendarParts (regex,
-    // timezone-safe) — not new Date() — so the Jul-1 boundary is exact.
-    const startYear = getProgramYearForDate(d).year
-    const cur = latestByYear.get(startYear)
-    if (!cur || d > cur) latestByYear.set(startYear, d)
-  }
-  return latestByYear
-}
 
 /**
  * Every program year the archive covers, across ALL districts (#1437).
@@ -198,10 +180,7 @@ export function useClubHistory(
       const history = shard ? (findClubEntry(shard.clubs, club) ?? null) : null
 
       // Index keys are the districts' own ids ("01"); match padding-blind.
-      const indexKeyFor = (id: string): string =>
-        id in index
-          ? id
-          : (Object.keys(index).find(k => sameDistrict(k, id)) ?? id)
+      const indexKeyFor = (id: string): string => snapshotIndexKeyFor(index, id)
 
       // A district's own dates are the only ones we can fetch with — they
       // carry the SnapshotDate provenance the per-snapshot fetch requires.

@@ -26,13 +26,12 @@
  * 5. **Deterministic bytes** (Lesson 158): rows and points are arrays sorted
  *    by club id, so the output is identical whatever order files arrive in.
  *
- * Pure except for {@link readClubsByRegionInput}, the one filesystem door.
+ * Pure. Its filesystem door, `readClubsByRegionInput`, lives in `snapshotReaders.ts`
+ * (node-only `./node` entry, #2447).
  *
  * @module @taverns-red/analytics-core/rollup
  */
 
-import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import {
   CLUBS_BY_REGION_DIR,
   CLUBS_BY_REGION_SHARD_FORMAT,
@@ -42,8 +41,6 @@ import {
   CLUBS_BY_REGION_WORLD_POINTS_FORMAT,
   CLUBS_BY_REGION_WORLD_POINTS_PATH,
   clubsByRegionShardFileName,
-  districtIdFromSnapshotFileName,
-  isDistrictSnapshotFile,
   normalizeClubId,
   parseCoordinates,
   scrubPlaceText,
@@ -60,7 +57,7 @@ import {
 } from '@taverns-red/shared-contracts'
 import { getCurrentProgramMonth } from '../analytics/AnalyticsUtils.js'
 import { isDistinguishedProvisional } from '../analytics/ClubEligibilityUtils.js'
-import { canonicalDistrictId, readSnapshotRankings } from './globalRollup.js'
+import { canonicalDistrictId } from './globalRollup.js'
 import { programYearForSnapshotDate } from './globalTotals.js'
 import { classifyRollupClub, resolveRegionMembership } from './regionRollups.js'
 
@@ -315,63 +312,4 @@ export function buildClubsByRegion(
   }
 
   return { world, worldPoints, shards, missingDistricts }
-}
-
-// ---------------------------------------------------------------------------
-// Filesystem door
-// ---------------------------------------------------------------------------
-
-const num = (value: unknown): number => Number(value ?? 0) || 0
-const str = (value: unknown): string =>
-  typeof value === 'string' ? value : value == null ? '' : String(value)
-
-/**
- * Read a snapshot directory: the date's rankings and every district file's
- * merged club records (`data.clubs`). Only the fields the shards carry are
- * read; contact, link and meeting fields never leave the file. A stray
- * district file is returned too; the builder excludes it by the rankings
- * scope.
- */
-export function readClubsByRegionInput(snapshotDir: string): {
-  rankings: DistrictRanking[]
-  districts: ClubsByRegionDistrictInput[]
-} {
-  const rankings = readSnapshotRankings(snapshotDir)
-  const districts: ClubsByRegionDistrictInput[] = []
-  for (const fileName of readdirSync(snapshotDir).sort()) {
-    if (!isDistrictSnapshotFile(fileName)) continue
-    const districtId = districtIdFromSnapshotFileName(fileName)
-    if (!districtId) continue
-    const parsed = JSON.parse(
-      readFileSync(join(snapshotDir, fileName), 'utf-8')
-    ) as { data?: { clubs?: Array<Record<string, unknown>> } }
-
-    const clubs: ClubsByRegionClubInput[] = []
-    for (const club of parsed.data?.clubs ?? []) {
-      const clubId = str(club['clubId']).trim()
-      if (clubId === '') continue
-      const status = club['clubStatus'] ?? club['status']
-      const csp = club['cspSubmitted']
-      const coords = parseCoordinates(club['coordinates'])
-      const address = club['address'] as { city?: unknown } | null | undefined
-      const city = typeof address?.city === 'string' ? address.city : ''
-      clubs.push({
-        clubId,
-        clubName: str(club['clubName']),
-        divisionId: str(club['divisionId']),
-        areaId: str(club['areaId']),
-        membershipCount: num(club['membershipCount']),
-        membershipBase: num(club['membershipBase']),
-        dcpGoals: num(club['dcpGoals']),
-        aprilRenewals: num(club['aprilRenewals']),
-        ...(typeof status === 'string' && { clubStatus: status }),
-        ...(typeof csp === 'boolean' && { cspSubmitted: csp }),
-        ...(coords && { coordinates: coords }),
-        ...(city.trim() !== '' && { city: city.trim() }),
-        ...(club['meetsOnline'] === true && { meetsOnline: true as const }),
-      })
-    }
-    districts.push({ districtId, clubs })
-  }
-  return { rankings, districts }
 }

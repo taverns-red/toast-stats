@@ -30,9 +30,9 @@ import {
 } from '@taverns-red/shared-contracts'
 import {
   buildClubsByRegion,
-  readClubsByRegionInput,
   type ClubsByRegionDistrictInput,
 } from './clubsByRegion.js'
+import { readClubsByRegionInput } from './snapshotReaders.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const FIX = join(HERE, '__tests__/fixtures/clubs-by-region')

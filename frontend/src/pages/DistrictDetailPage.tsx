@@ -72,6 +72,7 @@ const NULL_RANKINGS = {
 
 import ErrorBoundary from '../components/ErrorBoundary'
 import { RedVotePromo } from '../components/RedVotePromo'
+import { useAfterIdle } from '../hooks/useAfterIdle'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
 
 // Lazy (#1901): this tab renders only in the "limited data" branch for
@@ -81,6 +82,16 @@ import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
 // `routeChartsGraph.test.ts` keeps Recharts off this route's static graph.
 const GlobalRankingsTab = React.lazy(
   () => import('../components/GlobalRankingsTab')
+)
+
+// Lazy, and loaded only after the Overview has rendered and gone idle
+// (#2427): it shows on new districts only, far below the fold. Static, it put
+// ~2.4 KB gz and one more chunk on the route's pre-LCP chain, and mobile LCP
+// on /district/61 rose ~130 ms. `routeChartsGraph.test.ts` keeps it lazy.
+const PredecessorHistoryPanel = React.lazy(() =>
+  import('../components/PredecessorHistoryPanel').then(m => ({
+    default: m.PredecessorHistoryPanel,
+  }))
 )
 
 const DistrictDetailPageInner: React.FC = () => {
@@ -403,6 +414,12 @@ const DistrictDetailPageInner: React.FC = () => {
   // Determine if we have data for the overview tab
   // Use aggregated data if available, otherwise fall back to full analytics
   const hasOverviewData = overviewData !== null || analytics !== null
+
+  // The predecessor history panel (#2427) loads once the Overview has data
+  // and the page has gone idle, so it never competes with LCP.
+  const predecessorPanelReady = useAfterIdle(
+    hasOverviewData && effectiveProgramYear !== null
+  )
 
   // Loading state for overview tab - prefer aggregated, but show loading if both are loading.
   // Also loading while the date index resolves (#1647): the analytics queries
@@ -921,6 +938,25 @@ const DistrictDetailPageInner: React.FC = () => {
                 history={regionHistory}
               />
             )}
+
+            {/* Before this district existed (#2427): a new district's clubs
+                under their former districts last year. It renders nothing
+                until its slot nears the viewport and one history shard says
+                the district is new, so established districts reserve no
+                slot; it sits below the overview section for the same
+                late-mount reason as the region banner above. */}
+            {districtId &&
+              hasOverviewData &&
+              effectiveProgramYear &&
+              predecessorPanelReady && (
+                <React.Suspense fallback={null}>
+                  <PredecessorHistoryPanel
+                    districtId={districtId}
+                    programYear={effectiveProgramYear.label}
+                    clubs={allClubs}
+                  />
+                </React.Suspense>
+              )}
 
             {/* #680 (ADR-005 §1): the membership/payment trend charts moved off
                 the lean hub onto /trends. The DistrictSubnav above and the

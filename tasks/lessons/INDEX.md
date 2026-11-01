@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `an-empty-child-of-a-space-y-stack-still-costs-a-gap.md` — An empty element in a Tailwind space-y stack still adds a full gap; an IntersectionObserver marker that renders on every page must be out of flow  (2026-11-01)
 - `keep-a-sections-viewport-gate-state-in-the-section-not-the-page.md` — A callback-ref + useNearViewport gate placed in a page re-renders the whole page on mount; keep the gate's state inside the section component  (2026-11-01)
 - `a-test-that-reaches-the-live-network-passes-or-fails-on-latency.md` — A page test with an un-stubbed CDN read depends on network latency; stub fetch to reject at once to reproduce the CI timing, then stub the read; the integration setup now fails any un-mocked fetch, checked after pending work settles (#2405, #2408)  (2026-10-29)
 - `networkidle-is-not-a-readiness-signal-on-a-site-with-deferred-analytics.md` — Playwright's networkidle counts third-party traffic, so on a site that defers analytics until after its data it is a timing race, not a readiness signal; wait for a data-backed element plus the app's own data requests  (2026-10-29)
