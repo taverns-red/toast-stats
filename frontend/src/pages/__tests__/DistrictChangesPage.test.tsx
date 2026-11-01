@@ -4,7 +4,10 @@ import React from 'react'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import DistrictChangesPage from '../DistrictChangesPage'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
-import { useSnapshotDiff } from '../../hooks/useSnapshotDiff'
+import {
+  useSnapshotDiff,
+  type SnapshotDiffView,
+} from '../../hooks/useSnapshotDiff'
 import { useDistricts } from '../../hooks/useDistricts'
 import type { SnapshotDiff } from '@taverns-red/shared-contracts'
 import { exportSnapshotDiff } from '../../utils/csvExport'
@@ -54,7 +57,7 @@ function renderPage(initialEntry = '/district/61/changes') {
 
 const ag = (from: number, to: number) => ({ from, to, delta: to - from })
 
-function diffFixture(over: Partial<SnapshotDiff> = {}): SnapshotDiff {
+function diffFixture(over: Partial<SnapshotDiffView> = {}): SnapshotDiffView {
   return {
     districtId: '61',
     from: { date: '2026-05-25' },
@@ -1028,5 +1031,111 @@ describe('DistrictChangesPage net-delta headings (#1463)', () => {
     expect(screen.getByText(/Distinguished status changes/)).toBeInTheDocument()
     expect(screen.queryByTestId('changes-group-net')).not.toBeInTheDocument()
     expect(screen.getByTestId('changes-group-count')).toHaveTextContent('(2)')
+  })
+})
+
+/* #2425 — the "Clubs" tile becomes "Active clubs": the headline is the signed
+   change in TI status Active, with per-status sub-lines and the full total. */
+describe('DistrictChangesPage — Active clubs tile (#2425)', () => {
+  const c = (from: number, to: number) => ({ from, to, delta: to - from })
+  const statusTotals = (
+    over: Partial<NonNullable<SnapshotDiffView['clubStatusTotals']>> = {}
+  ): NonNullable<SnapshotDiffView['clubStatusTotals']> => ({
+    byStatus: {
+      Active: c(141, 139),
+      Low: c(4, 5),
+      Ineligible: c(2, 2),
+      Suspended: c(15, 12),
+    },
+    unrecorded: c(0, 0),
+    all: c(162, 158),
+    statusMissingFrom: false,
+    statusMissingTo: false,
+    ...over,
+  })
+
+  const renderWith = (diff: SnapshotDiffView) => {
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-05-25', '2026-05-26'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    mockedDiff.mockReturnValue({
+      data: diff,
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+    renderPage()
+    const card = screen
+      .getAllByTestId('kpi-delta-card')
+      .find(el => within(el).queryByText('Active clubs'))
+    expect(card).toBeDefined()
+    return card!
+  }
+
+  it('leads with the Active delta and from -> to, then status sub-lines and All clubs', () => {
+    const card = renderWith(diffFixture({ clubStatusTotals: statusTotals() }))
+    expect(within(card).getByTestId('kpi-delta-value')).toHaveTextContent('−2')
+    expect(within(card).getByText('141 → 139')).toBeInTheDocument()
+    const items = within(within(card).getByTestId('kpi-delta-sublines'))
+      .getAllByRole('listitem')
+      .map(i => i.textContent)
+    expect(items).toEqual([
+      'Low 5 (+1)',
+      'Ineligible 2',
+      'Suspended 12 (−3)',
+      'All clubs 158 (−4)',
+    ])
+    // The old "Clubs" title is gone; the other three tiles are unchanged.
+    expect(screen.queryByRole('heading', { name: 'Clubs' })).toBeNull()
+    expect(screen.getAllByTestId('kpi-delta-card')).toHaveLength(4)
+  })
+
+  it('omits a status with zero clubs at both ends, and shows unrecorded clubs', () => {
+    const card = renderWith(
+      diffFixture({
+        clubStatusTotals: statusTotals({
+          byStatus: {
+            Active: c(150, 151),
+            Low: c(0, 0),
+            Ineligible: c(0, 1),
+            Suspended: c(2, 0),
+          },
+          unrecorded: c(0, 1),
+          all: c(152, 153),
+        }),
+      })
+    )
+    const items = within(within(card).getByTestId('kpi-delta-sublines'))
+      .getAllByRole('listitem')
+      .map(i => i.textContent)
+    expect(items).toEqual([
+      'Ineligible 1 (+1)',
+      'Suspended 0 (−2)',
+      'Status not recorded 1 (+1)',
+      'All clubs 153 (+1)',
+    ])
+  })
+
+  it('says status is not recorded instead of showing a silent 0', () => {
+    const card = renderWith(
+      diffFixture({
+        clubStatusTotals: statusTotals({ statusMissingFrom: true }),
+      })
+    )
+    const value = within(card).getByTestId('kpi-delta-value')
+    expect(value).toHaveTextContent('—')
+    expect(value).not.toHaveTextContent(/\d/)
+    expect(card).toHaveTextContent('Club status not recorded on May 25, 2026')
+    expect(
+      within(within(card).getByTestId('kpi-delta-sublines'))
+        .getAllByRole('listitem')
+        .map(i => i.textContent)
+    ).toEqual(['All clubs 158 (−4)'])
+  })
+
+  it('treats a diff with no status counts at all as not recorded', () => {
+    const card = renderWith(diffFixture())
+    expect(within(card).getByTestId('kpi-delta-value')).toHaveTextContent('—')
+    expect(card).toHaveTextContent('Club status not recorded')
   })
 })

@@ -6,7 +6,7 @@ import type {
   SnapshotDiff,
 } from '@taverns-red/shared-contracts'
 import { diffAreaDivisionStatus } from '../utils/diffAreaDivisionStatus'
-import { diffClubStatus } from '../utils/diffClubStatus'
+import { diffClubStatus, type ClubStatusTotals } from '../utils/diffClubStatus'
 import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
@@ -38,6 +38,15 @@ export function previousRecordedDate<T extends string>(
 }
 
 /**
+ * The engine's `SnapshotDiff` plus the frontend-computed per-status club
+ * counts (#2425) the What Changed "Active clubs" tile reads. Optional so a
+ * diff without it renders the tile's "status not recorded" state, never a 0.
+ */
+export type SnapshotDiffView = SnapshotDiff & {
+  clubStatusTotals?: ClubStatusTotals
+}
+
+/**
  * Fetch two dated district snapshots and compute the diff between them.
  *
  * Keyed by the (districtId, from, to) triple so each pair caches independently.
@@ -49,7 +58,7 @@ export function useSnapshotDiff(
   from: SnapshotDate | undefined,
   to: SnapshotDate | undefined
 ) {
-  return useQuery<SnapshotDiff, Error>({
+  return useQuery<SnapshotDiffView, Error>({
     queryKey: ['snapshot-diff', districtId, from, to],
     queryFn: async () => {
       const [fromSnap, toSnap] = await Promise.all([

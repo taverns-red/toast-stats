@@ -81,4 +81,39 @@ describe('KpiDeltaCard (#681)', () => {
       within(card).getByRole('button', { name: /more info/i })
     ).toBeInTheDocument()
   })
+
+  /* #2425 — the What Changed "Active clubs" tile adds a per-status breakdown
+     under the from -> to line, and must never show a silent 0 when the value
+     cannot be computed. */
+  it('renders optional sub-lines as a list under the secondary label', () => {
+    render(
+      <KpiDeltaCard
+        title="Active clubs"
+        current={-2}
+        secondaryLabel="141 → 139"
+        subLines={['Low 5 (+1)', 'Ineligible 2', 'All clubs 158 (−2)']}
+      />
+    )
+    const list = screen.getByTestId('kpi-delta-sublines')
+    const items = within(list).getAllByRole('listitem')
+    expect(items.map(i => i.textContent)).toEqual([
+      'Low 5 (+1)',
+      'Ineligible 2',
+      'All clubs 158 (−2)',
+    ])
+  })
+
+  it('renders no sub-line list when subLines is absent', () => {
+    render(<KpiDeltaCard title="Membership" current={3} />)
+    expect(screen.queryByTestId('kpi-delta-sublines')).toBeNull()
+  })
+
+  it('renders a dash, not 0, when the value is unavailable (null)', () => {
+    render(<KpiDeltaCard title="Active clubs" current={null} />)
+    const value = screen.getByTestId('kpi-delta-value')
+    expect(value).toHaveTextContent('—')
+    expect(value).toHaveTextContent('not available')
+    expect(value).not.toHaveTextContent('0')
+    expect(screen.queryByTestId('kpi-delta-arrow')).toBeNull()
+  })
 })

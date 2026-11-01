@@ -3,10 +3,13 @@ import { Tooltip, InfoIcon } from './Tooltip'
 
 export interface KpiDeltaCardProps {
   title: string
-  /** Signed delta (positive = increase, negative = decrease). */
-  current: number
+  /** Signed delta (positive = increase, negative = decrease). `null` means
+   *  the value cannot be computed (#2425) — rendered as a dash, never a 0. */
+  current: number | null
   tooltipContent?: string
   secondaryLabel?: string
+  /** Optional breakdown lines under the secondary label (#2425). */
+  subLines?: readonly string[]
 }
 
 /**
@@ -25,9 +28,9 @@ export const KpiDeltaCard: React.FC<KpiDeltaCardProps> = ({
   tooltipContent,
   secondaryLabel,
 }) => {
-  const isUp = current > 0
-  const isDown = current < 0
-  const magnitude = Math.abs(current).toLocaleString()
+  const isUp = (current ?? 0) > 0
+  const isDown = (current ?? 0) < 0
+  const magnitude = Math.abs(current ?? 0).toLocaleString()
   // U+2212 minus for negatives; '+' for positives; bare value for zero.
   const display = isUp ? `+${magnitude}` : isDown ? `−${magnitude}` : '0'
   const colorClass = isUp

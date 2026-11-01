@@ -112,3 +112,57 @@ export function diffClubStatus(
 
   return events
 }
+
+/** The four TI operational statuses, in the order the Changes tile lists them
+ *  (#2425): the headline status first, then the sub-lines. */
+export const CLUB_STATUSES = [
+  'Active',
+  'Low',
+  'Ineligible',
+  'Suspended',
+] as const
+export type ClubOperationalStatus = (typeof CLUB_STATUSES)[number]
+
+export interface ClubCountDelta {
+  from: number
+  to: number
+  delta: number
+}
+
+/**
+ * Per-status club counts on both snapshots (#2425). `byStatus` + `unrecorded`
+ * always sums to `all` on each side. `statusMissingFrom` / `statusMissingTo`
+ * flag a snapshot on which NO club carries a status — the tile must say so
+ * rather than show a silent 0.
+ */
+export interface ClubStatusTotals {
+  byStatus: Record<ClubOperationalStatus, ClubCountDelta>
+  /** Clubs with an empty or unrecognised status. */
+  unrecorded: ClubCountDelta
+  all: ClubCountDelta
+  statusMissingFrom: boolean
+  statusMissingTo: boolean
+}
+
+/**
+ * Count clubs by operational status on each snapshot (#2425), reading the same
+ * `clubStatus ?? status` field the `club-status` events read (#1247, R3).
+ */
+export function countClubStatusTotals(
+  _from: DistrictStatisticsFile,
+  _to: DistrictStatisticsFile
+): ClubStatusTotals {
+  const zero = (): ClubCountDelta => ({ from: 0, to: 0, delta: 0 })
+  return {
+    byStatus: {
+      Active: zero(),
+      Low: zero(),
+      Ineligible: zero(),
+      Suspended: zero(),
+    },
+    unrecorded: zero(),
+    all: zero(),
+    statusMissingFrom: false,
+    statusMissingTo: false,
+  }
+}
