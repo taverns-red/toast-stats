@@ -53,7 +53,12 @@ export const NextDeadlineStrip: React.FC<NextDeadlineStripProps> = ({
         aria-busy="true"
         data-testid="next-deadline-strip"
       >
-        <span className="deadline-strip__lead">{LEAD}</span>
+        <div className="deadline-strip__head">
+          <span className="deadline-strip__lead">{LEAD}</span>
+          {/* Holds the toggle's 44px row so the strip does not grow on
+              arrival (#2429). */}
+          <span className="deadline-strip__toggle-slot" aria-hidden="true" />
+        </div>
         <span className="deadline-strip__placeholder" aria-hidden="true">
           &nbsp;
         </span>
