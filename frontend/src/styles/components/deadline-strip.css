@@ -26,8 +26,9 @@
 
 /* #2429: the lead and the "See all deadlines" toggle share one row, so the
    closed strip is no taller than before (375 Overview budget, PAGE_MAX_H).
-   The toggle's box is exactly one text line; its 44px touch target is a
-   pseudo-element that overhangs without taking layout space. */
+   The toggle's box is exactly one text line (min-height: 0 lifts the base
+   layer's 44px button floor); its 44px touch target is a pseudo-element
+   that overhangs without taking layout space. */
 .deadline-strip__head {
   display: flex;
   align-items: baseline;
@@ -38,6 +39,8 @@
 
 .deadline-strip__toggle {
   position: relative;
+  min-height: 0;
+  min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
@@ -132,6 +135,7 @@
 .deadline-timeline a {
   color: var(--link);
   text-underline-offset: 2px;
+  white-space: nowrap;
 }
 
 .deadline-timeline a:focus-visible {
@@ -182,7 +186,28 @@
     column-gap: 1.5rem;
   }
 
-  /* One row: lead, the two dates, then the toggle at the far end. */
+  /* The two dates do not fit beside the lead at tablet widths, so the lead
+     keeps its own row there — and shares it with the toggle (#2429). */
+  .deadline-strip__head {
+    flex-basis: 100%;
+  }
+
+  .deadline-timeline__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(26rem, 1fr));
+    column-gap: 1.5rem;
+  }
+
+  /* One line on desktop: the second placeholder would hold a row the
+     loaded strip does not use. */
+  .deadline-strip__placeholder + .deadline-strip__placeholder {
+    display: none;
+  }
+}
+
+/* Wide enough for one row: lead, the two dates, then the toggle at the far
+   end (#2429). */
+@media (min-width: 1280px) {
   .deadline-strip__head {
     display: contents;
   }
@@ -194,17 +219,5 @@
 
   .deadline-timeline {
     order: 2;
-  }
-
-  .deadline-timeline__list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
-    column-gap: 1.5rem;
-  }
-
-  /* One line on desktop: the second placeholder would hold a row the
-     loaded strip does not use. */
-  .deadline-strip__placeholder + .deadline-strip__placeholder {
-    display: none;
   }
 }
