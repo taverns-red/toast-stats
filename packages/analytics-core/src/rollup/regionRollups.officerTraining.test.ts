@@ -19,10 +19,10 @@ import {
 } from '@taverns-red/shared-contracts'
 import {
   buildRegionRollups,
-  readRegionRollupInput,
   type RegionRollupClub,
   type RegionRollupDistrictInput,
 } from './regionRollups.js'
+import { readRegionRollupInput } from './snapshotReaders.js'
 
 const FIX = join(
   dirname(fileURLToPath(import.meta.url)),

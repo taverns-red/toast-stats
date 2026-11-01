@@ -28,12 +28,7 @@ import {
   getCSPStatus,
   OFFICER_TRAINING_ROUND_COLUMNS,
   programYearForSnapshotDate,
-  readSnapshotRankings,
-  readSnapshotRollupInput,
-  readRegionRollupInput,
-  readClubsByRegionInput,
   buildMeetingTimes,
-  readMeetingTimesInput,
   type Logger,
   type ClubStatistics,
   type DistrictStatistics,
@@ -89,6 +84,13 @@ import {
   ClosingPeriodDetector,
   type ClosingPeriodInfo,
 } from '../utils/ClosingPeriodDetector.js'
+import {
+  readClubsByRegionInput,
+  readMeetingTimesInput,
+  readRegionRollupInput,
+  readSnapshotRankings,
+  readSnapshotRollupInput,
+} from '@taverns-red/analytics-core/node'
 
 /**
  * What folding a date into the club-race store produced (#1556): the store

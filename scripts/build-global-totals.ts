@@ -40,16 +40,16 @@
 import { existsSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { GLOBAL_TOTALS_FILE_NAME } from '@taverns-red/shared-contracts'
-import {
-  buildGlobalTotals,
-  readSnapshotRankings,
-  readSnapshotRollupInput,
-} from '../packages/analytics-core/src/rollup/index.js'
+import { buildGlobalTotals } from '../packages/analytics-core/src/rollup/index.js'
 import {
   missingDistricts as unrecordedDistricts,
   recordedFailedDistricts,
   recordedFailureReasons,
 } from '../packages/collector-cli/src/utils/dateLevelCoverage.js'
+import {
+  readSnapshotRankings,
+  readSnapshotRollupInput,
+} from '../packages/analytics-core/src/node.js'
 
 function log(msg: string): void {
   process.stderr.write(`${msg}\n`)

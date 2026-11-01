@@ -29,8 +29,9 @@
  * A rollup with no district scope is refused outright rather than allowed to
  * emit a plausible number (R17 — the case is stated, not implied).
  *
- * Purity: every computation exported here is pure. `readSnapshotRollupInput`
- * at the bottom is the only function that touches the filesystem.
+ * Purity: every computation exported here is pure. The filesystem readers
+ * (`readSnapshotRollupInput`, `readSnapshotRankings`) live in
+ * `snapshotReaders.ts`, behind the node-only `./node` entry (#2447).
  *
  * Promoted from `scripts/lib/` into analytics-core by #1498 so the collector
  * pipeline can consume it. ONE canonical module — no second copy.
@@ -38,14 +39,7 @@
  * @module @taverns-red/analytics-core/rollup
  */
 
-import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import {
-  districtIdFromSnapshotFileName,
-  isDistrictSnapshotFile,
-  normalizeClubId,
-} from '@taverns-red/shared-contracts'
-import type { DistrictRanking } from '@taverns-red/shared-contracts'
+import { normalizeClubId } from '@taverns-red/shared-contracts'
 import {
   getProgramYearStartDate,
   parseCharterDateFromStatusField,
@@ -339,91 +333,6 @@ export function rollUpGlobal(input: GlobalRollupInput): GlobalRollup {
     missingDistricts,
     duplicateClubs,
   }
-}
-
-/**
- * The date's own `all-districts-rankings.json` rows — the authoritative
- * district set, and the only surface whose tier fields are
- * distinguished-or-better plus subsets (#1124).
- */
-export function readSnapshotRankings(snapshotDir: string): DistrictRanking[] {
-  const raw = JSON.parse(
-    readFileSync(join(snapshotDir, 'all-districts-rankings.json'), 'utf-8')
-  ) as { rankings?: DistrictRanking[] }
-  return (raw.rankings ?? []).filter(
-    row => typeof row?.districtId === 'string' && row.districtId !== ''
-  )
-}
-
-/**
- * Read one snapshot directory into rollup input: every `district_*.json` file
- * it holds, plus the district set `all-districts-rankings.json` lists for that
- * date. The two are read SEPARATELY on purpose — the whole point is that the
- * directory listing is not the district set.
- */
-export function readSnapshotRollupInput(
-  snapshotDir: string,
-  snapshotDate?: string
-): GlobalRollupInput {
-  const rankingsDistrictIds = readSnapshotRankings(snapshotDir).map(
-    row => row.districtId
-  )
-
-  const districts: DistrictClubPayments[] = []
-  for (const fileName of readdirSync(snapshotDir).sort()) {
-    if (!isDistrictSnapshotFile(fileName)) continue
-    const districtId = districtIdFromSnapshotFileName(fileName)
-    if (!districtId) continue
-
-    const parsed = JSON.parse(
-      readFileSync(join(snapshotDir, fileName), 'utf-8')
-    ) as {
-      data?: {
-        districtPerformance?: Array<Record<string, unknown>>
-        clubPerformance?: Array<Record<string, unknown>>
-        clubs?: Array<{ clubId?: unknown; address?: { country?: unknown } }>
-      }
-    }
-
-    // Three arrays inside one file, joined on the canonical club id: payments
-    // and club status live on `districtPerformance`, "Active Members" on
-    // `clubPerformance`, and the Find-A-Club country on `clubs[].address`.
-    // The join happens once, here, so the rollup itself stays pure.
-    const membership = new Map<string, number>()
-    for (const row of parsed.data?.clubPerformance ?? []) {
-      const clubId = String(row['Club Number'] ?? '').trim()
-      if (clubId === '') continue
-      membership.set(
-        normalizeClubId(clubId),
-        Number(row['Active Members'] ?? 0) || 0
-      )
-    }
-    const country = new Map<string, string>()
-    for (const club of parsed.data?.clubs ?? []) {
-      const clubId = String(club?.clubId ?? '').trim()
-      const name = club?.address?.country
-      if (clubId === '' || typeof name !== 'string' || name.trim() === '')
-        continue
-      country.set(normalizeClubId(clubId), name.trim())
-    }
-
-    const clubs: ClubPaymentRow[] = []
-    for (const row of parsed.data?.districtPerformance ?? []) {
-      const clubId = String(row['Club'] ?? '').trim()
-      if (clubId === '') continue
-      const key = normalizeClubId(clubId)
-      clubs.push({
-        clubId,
-        payments: Number(row['Total to Date'] ?? 0) || 0,
-        activeMembers: membership.get(key) ?? 0,
-        clubStatusField: String(row['Charter Date/Suspend Date'] ?? ''),
-        country: country.get(key),
-      })
-    }
-    districts.push({ districtId, clubs })
-  }
-
-  return { districts, rankingsDistrictIds, snapshotDate }
 }
 
 /** Re-exported so callers use one canonical rule, not a fourth copy. */
