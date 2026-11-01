@@ -43,6 +43,7 @@ import {
   type ClubTrend,
 } from '../../hooks/useDistrictAnalytics'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
+import { usePriorYearClubGoals } from '../../hooks/usePriorYearClubGoals'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import DistrictDetailPage from '../DistrictDetailPage'
@@ -179,6 +180,16 @@ vi.mock('../../hooks/useDistrictData', () => ({
       dateRange: { startDate: '2025-07-01', endDate: '2025-07-15' },
     },
     isLoading: false,
+  })),
+}))
+
+// #2432 — last year's DCP goals for the since-last-year preset. Settled with
+// no data; the comparison itself is covered in ClubsTable.sinceLastYear.
+vi.mock('../../hooks/usePriorYearClubGoals', () => ({
+  usePriorYearClubGoals: vi.fn(() => ({
+    data: undefined,
+    isLoading: false,
+    isError: false,
   })),
 }))
 
@@ -432,6 +443,56 @@ describe('DistrictClubsPage (#570 — Phase 2)', () => {
     await waitFor(() => {
       const params = new URLSearchParams(router.state.location.search)
       expect(params.has('preset')).toBe(false)
+    })
+  })
+
+  it('honors ?since=climbed on load and asks for last year at the shown date (#2432)', async () => {
+    renderAt('/district/61/clubs?since=climbed')
+
+    const select = await screen.findByRole('combobox', {
+      name: /dcp goals since last year/i,
+    })
+    expect(select).toHaveValue('climbed')
+    expect(vi.mocked(usePriorYearClubGoals)).toHaveBeenLastCalledWith(
+      '61',
+      '2025-07-15',
+      expect.arrayContaining(['2025-07-01', '2025-07-15']),
+      true
+    )
+  })
+
+  it('does not ask for last year while the since-last-year preset is off (#2432)', async () => {
+    renderAt('/district/61/clubs')
+    await screen.findByText(/alpha toastmasters/i)
+    expect(vi.mocked(usePriorYearClubGoals)).toHaveBeenLastCalledWith(
+      '61',
+      '2025-07-15',
+      expect.any(Array),
+      false
+    )
+  })
+
+  it('writes and clears ?since= from the preset select (#2432)', async () => {
+    const user = userEvent.setup()
+    const { router } = renderAt(
+      '/district/61/clubs?preset=close-to-distinguished'
+    )
+
+    const select = await screen.findByRole('combobox', {
+      name: /dcp goals since last year/i,
+    })
+    await user.selectOptions(select, 'slipped')
+    await waitFor(() => {
+      const params = new URLSearchParams(router.state.location.search)
+      expect(params.get('since')).toBe('slipped')
+      // The other preset keeps its own key.
+      expect(params.get('preset')).toBe('close-to-distinguished')
+    })
+
+    await user.selectOptions(select, '')
+    await waitFor(() => {
+      const params = new URLSearchParams(router.state.location.search)
+      expect(params.has('since')).toBe(false)
     })
   })
 

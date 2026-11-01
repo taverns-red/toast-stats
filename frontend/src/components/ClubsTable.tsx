@@ -19,6 +19,10 @@ import { ColumnHeader } from './ColumnHeader'
 import { FiltersPanel } from './filters/FiltersPanel'
 import { FilterSheet, type FilterSheetFacet } from './filters/FilterSheet'
 import { PRESET_CLOSE_TO_DISTINGUISHED } from '../utils/clubFilterUrl'
+import type {
+  PriorYearClubGoals,
+  SinceLastYearMode,
+} from '../utils/sinceLastYear'
 import { ActiveFiltersBar } from './ActiveFiltersBar'
 import { ColumnGroupsMenu } from './ColumnGroupsMenu'
 import { describeActiveFilters } from '../utils/clubFilterDescribe'
@@ -165,6 +169,20 @@ interface ClubsTableProps {
    * Omitted (or outside short landscape) → the usual layout.
    */
   compactToolbarTarget?: HTMLElement | null | undefined
+  /**
+   * "Climbed / slipped since last year" preset (#2432). The page owns the
+   * mode (`?since=`) and last year's DCP goals; the table adds one pipeline
+   * step over them (R11). Omitted → no preset.
+   */
+  sinceLastYear?: SinceLastYearProps | undefined
+}
+
+export interface SinceLastYearProps {
+  mode: SinceLastYearMode | null
+  onModeChange: (mode: SinceLastYearMode | null) => void
+  /** Undefined while last year's snapshot is loading (or the preset is off). */
+  prior: PriorYearClubGoals | undefined
+  isError?: boolean | undefined
 }
 
 /** Signed net change with a true minus sign; `null` when the base is unknown. */

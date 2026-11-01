@@ -11,6 +11,8 @@ import {
   PRESET_PARAM,
   PRESET_CLOSE_TO_DISTINGUISHED,
   paramsToPresetActive,
+  SINCE_PARAM,
+  paramsToSinceLastYearMode,
 } from '../clubFilterUrl'
 import type { FilterState } from '../../components/filters/types'
 
@@ -249,6 +251,23 @@ describe('clubFilterUrl — "Close to Distinguished" preset (#979)', () => {
     // step (not a column filter), written by its own handler — including it here
     // would silently clear the preset on any filter change.
     expect(FILTER_PARAM_KEYS).not.toContain(PRESET_PARAM)
+  })
+})
+
+describe('clubFilterUrl — since-last-year preset (#2432)', () => {
+  it('reads each known ?since mode', () => {
+    expect(paramsToSinceLastYearMode(params('since=climbed'))).toBe('climbed')
+    expect(paramsToSinceLastYearMode(params('since=slipped'))).toBe('slipped')
+    expect(paramsToSinceLastYearMode(params('since=no-prior'))).toBe('no-prior')
+  })
+
+  it('reads an absent or unknown ?since as off', () => {
+    expect(paramsToSinceLastYearMode(params(''))).toBeNull()
+    expect(paramsToSinceLastYearMode(params('since=grew'))).toBeNull()
+  })
+
+  it('keeps `since` OUT of FILTER_PARAM_KEYS so a filter reconcile never wipes it', () => {
+    expect(FILTER_PARAM_KEYS).not.toContain(SINCE_PARAM)
   })
 })
 
