@@ -93,6 +93,7 @@ const RAW: RawClub[] = [
     id: '1003',
     name: 'Suspended Club',
     status: 'Suspended',
+    csp: 'N',
   },
   { div: 'B', area: '02', id: '2001', name: 'Charlie Club', nov: '1' },
   { div: 'C', area: '03', id: '3001', name: 'Other Division Club' },
