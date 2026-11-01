@@ -125,13 +125,17 @@ describe('NextDeadlineStrip — whole-year timeline (#2429)', () => {
       'Owner: Program Quality Director'
     )
     for (const label of [
-      'Club Success Plans due',
       'October dues renewal due',
       'April dues renewal due',
     ]) {
-      expect(item(label)).not.toHaveTextContent('Owner')
-      expect(within(item(label)).queryByRole('link')).toBeNull()
+      expect(item(label)).toHaveTextContent('Owner: Club Growth Director')
+      expect(within(item(label)).getByRole('link')).toHaveTextContent(
+        'Item 222, p. 25'
+      )
     }
+    const csp = item('Club Success Plans due')
+    expect(csp).not.toHaveTextContent('Owner')
+    expect(within(csp).queryByRole('link')).toBeNull()
   })
 
   it('marks the deadlines before the page date as passed (R3)', () => {

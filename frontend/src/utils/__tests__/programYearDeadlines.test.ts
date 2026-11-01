@@ -148,13 +148,31 @@ describe('deadline owners (#2429)', () => {
     expect(owners()).toEqual({
       'training-r1-close': ['Program Quality Director', DLH],
       csp: null,
-      'dues-october': null,
+      'dues-october': ['Club Growth Director', DLH],
       'training-r2-open': ['Program Quality Director', DLH],
       'visits-r1': ['Area Director', DRP],
       'training-r2-close': ['Program Quality Director', DLH],
-      'dues-april': null,
+      'dues-april': ['Club Growth Director', DLH],
       'visits-r2': ['Area Director', DRP],
     })
+  })
+
+  /* Ron's ruling, 2026-11-01: the CGD owns both renewal dates. DLH p. 25:
+     "The Club Growth Director is responsible for all aspects of marketing,
+     club-building, and club-retention efforts within the District." */
+  it('gives both dues renewals to the Club Growth Director, citing DLH p. 25', () => {
+    for (const id of ['dues-october', 'dues-april']) {
+      const owner = deadlinesForProgramYear('2026-2027').find(
+        d => d.id === id
+      )!.owner
+      expect(owner).toEqual({
+        role: 'Club Growth Director',
+        citation:
+          'District Leader Handbook, Item 222 Rev. 03/2026, Club Growth Director, p. 25',
+        short: 'Item 222, p. 25',
+        url: DLH,
+      })
+    }
   })
 
   it('cites the document, revision and page for every owner', () => {

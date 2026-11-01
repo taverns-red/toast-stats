@@ -255,10 +255,14 @@ describe('buildDeadlinesIcs (#2429)', () => {
       byUid('dues-october-2026-2027@ts.taverns.red'),
       'DESCRIPTION'
     )
-    expect(dues).not.toContain('Owner')
+    expect(dues).toContain('Owner: Club Growth Director')
+    expect(dues).toContain('Item 222 Rev. 03/2026, Club Growth Director, p. 25')
     // The date's own source is cited on every event, `;` and all.
     expect(dues).toContain('Item 1111')
     expect(dues).toContain('; https://www.toastmasters.org/')
+    const csp = text(byUid('csp-2026-2027@ts.taverns.red'), 'DESCRIPTION')
+    expect(csp).not.toContain('Owner')
+    expect(csp).toContain('Item 1111')
   })
 })
 
