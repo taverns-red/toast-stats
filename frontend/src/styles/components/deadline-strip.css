@@ -24,23 +24,22 @@
   color: var(--ink);
 }
 
-/* #2429: the lead and the "See all deadlines" toggle share one row, so the
-   closed strip is no taller than before (375 Overview budget, PAGE_MAX_H).
-   The toggle's box is exactly one text line (min-height: 0 lifts the base
-   layer's 44px button floor); its 44px touch target is a pseudo-element
-   that overhangs without taking layout space. */
+/* #2429: the lead and the "See all deadlines" toggle share one row. The
+   toggle's own box is 44px tall (the touch-target floor the preview smoke
+   measures), so that row is 44px rather than one text line. */
 .deadline-strip__head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   min-width: 0;
 }
 
 .deadline-strip__toggle {
-  position: relative;
-  min-height: 0;
-  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 44px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -52,12 +51,6 @@
   text-underline-offset: 2px;
   white-space: nowrap;
   cursor: pointer;
-}
-
-.deadline-strip__toggle::after {
-  content: '';
-  position: absolute;
-  inset: -12px -8px;
 }
 
 .deadline-strip__toggle:focus-visible {
