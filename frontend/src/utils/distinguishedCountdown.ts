@@ -1,4 +1,9 @@
-import { growthTarget, percentageTarget } from '@taverns-red/analytics-core'
+import {
+  districtTiersForProgramYear,
+  growthTarget,
+  percentageTarget,
+  remainingToDistrictTier,
+} from '@taverns-red/analytics-core'
 import type {
   CompetitiveAwardStandings,
   DistinguishedDistrictTier,
@@ -214,10 +219,42 @@ export interface CanonicalMinimumRemaining {
   distinguishedClubsRemaining?: number | undefined
 }
 
+/* The gap at every tier of the program year's ladder, lowest first (#2426).
+   Thresholds are the year's own Item 1490 ruleset in analytics-core — the
+   same `remainingToDistrictTier` the Region scoreboard uses (#2307) — so a
+   past year counts down to its own ladder (e.g. 2024-25 Select is +1 net
+   club and 45%), not today's. For 2025-26 on it equals
+   `deriveRemainingToTier`. The Distinguished row prefers the canonical
+   #686 counts field by field, as the next-tier tiles do (lesson 103).
+   Null when there is no rankings row to count from. */
 export function deriveRemainingByTier(
-  _programYear: string,
-  _ranking: RemainingInputs | null | undefined,
-  _canonicalMinimum?: CanonicalMinimumRemaining
+  programYear: string,
+  ranking: RemainingInputs | null | undefined,
+  canonicalMinimum?: CanonicalMinimumRemaining
 ): TierGapRow[] | null {
-  return null
+  if (!ranking) return null
+  const rows: TierGapRow[] = []
+  for (const tier of districtTiersForProgramYear(programYear)) {
+    const derived = remainingToDistrictTier(ranking, tier, programYear)
+    if (!derived) continue
+    const canonical = tier === 'Distinguished' ? canonicalMinimum : undefined
+    const paidClubsRemaining =
+      canonical?.paidClubsRemaining ?? derived.paidClubsRemaining
+    const paymentsRemaining =
+      canonical?.paymentsRemaining ?? derived.paymentsRemaining
+    const distinguishedClubsRemaining =
+      canonical?.distinguishedClubsRemaining ??
+      derived.distinguishedClubsRemaining
+    rows.push({
+      tier,
+      paidClubsRemaining,
+      paymentsRemaining,
+      distinguishedClubsRemaining,
+      met:
+        paidClubsRemaining <= 0 &&
+        paymentsRemaining <= 0 &&
+        distinguishedClubsRemaining <= 0,
+    })
+  }
+  return rows
 }
