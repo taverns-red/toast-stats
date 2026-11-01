@@ -295,9 +295,23 @@ describe('font loading (runs at boot from main.tsx)', () => {
       s => !headSnapshot.includes(s)
     )
     expect(added).toHaveLength(1)
-    expect(added[0]!.textContent).toContain('.fonts-loading')
-    expect(added[0]!.textContent).toContain('visibility: hidden')
     expect(added[0]!.textContent).toContain('body:not(.fonts-loaded)')
+  })
+
+  it('never hides the document while web fonts load (#2444)', () => {
+    // The page must paint with the metric-matched fallbacks and swap in
+    // place; hiding it until fonts.ready cost ~1.1 s of first paint on a
+    // throttled phone and pushed the mobile LCP gate to its limit.
+    stubFonts(new Promise(() => {}))
+
+    setupFontLoadingOptimization()
+
+    const added = Array.from(document.head.querySelectorAll('style')).filter(
+      s => !headSnapshot.includes(s)
+    )
+    for (const style of added) {
+      expect(style.textContent).not.toMatch(/visibility\s*:\s*hidden/)
+    }
   })
 })
 
