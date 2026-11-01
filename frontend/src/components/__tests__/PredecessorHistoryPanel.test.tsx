@@ -1,4 +1,6 @@
 import React from 'react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -168,6 +170,23 @@ describe('PredecessorHistoryPanel (#2427)', () => {
     await new Promise(r => setTimeout(r, 20))
     expect(fetchShard).not.toHaveBeenCalled()
     expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('keeps its gate marker out of the flow, so it adds no space-y gap', async () => {
+    /* The Overview stack is a space-y container: any in-flow child, even
+       an empty one, adds a 16–24px gap. At 375 the page has ~12px of
+       headroom (PAGE_MAX_H), so the marker must take no space at all. */
+    near.value = false
+    const { container } = renderPanel('61', ['6101'])
+    const slot = container.querySelector('.predecessor-history-slot')
+    expect(slot).not.toBeNull()
+    const css = readFileSync(
+      resolve(__dirname, '../../styles/components/predecessor-history.css'),
+      'utf8'
+    )
+    expect(css).toMatch(
+      /\.predecessor-history-slot\s*\{[^}]*position:\s*absolute/
+    )
   })
 
   it('renders nothing for a district that already existed last year', async () => {
