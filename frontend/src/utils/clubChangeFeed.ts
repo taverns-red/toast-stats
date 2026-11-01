@@ -296,7 +296,27 @@ export function buildClubChangeFeed(
   }
 }
 
-/** RED stub (#2430). */
-export function formatFeedWindow(_fromDate: string, _toDate: string): string {
-  return ''
+const SHORT_MONTHS = MONTHS.map(m => m.slice(0, 3))
+
+/**
+ * A feed window for display: "Oct 22–31" within a month, "Sep 30 – Oct 8"
+ * across months, with years only when the window crosses one. Parsed from
+ * the ISO string, never `new Date()` (no timezone drift).
+ */
+export function formatFeedWindow(fromDate: string, toDate: string): string {
+  const parts = (iso: string) => ({
+    y: iso.slice(0, 4),
+    m: SHORT_MONTHS[Number(iso.slice(5, 7)) - 1] ?? '',
+    d: Number(iso.slice(8, 10)),
+  })
+  const a = parts(fromDate)
+  const b = parts(toDate)
+  if (a.y !== b.y) return `${a.m} ${a.d}, ${a.y} – ${b.m} ${b.d}, ${b.y}`
+  if (a.m === b.m) return `${a.m} ${a.d}–${b.d}`
+  return `${a.m} ${a.d} – ${b.m} ${b.d}`
+}
+
+/** One date for display, e.g. "Aug 11". */
+export function formatFeedDate(iso: string): string {
+  return `${SHORT_MONTHS[Number(iso.slice(5, 7)) - 1] ?? ''} ${Number(iso.slice(8, 10))}`
 }
