@@ -12,9 +12,13 @@
  *
  * Fixtures are chosen so the two years derive visibly different integers:
  *
- *   past  (base 100 clubs / 1000 payments / 10 distinguished, tier Select)
- *         → 103-100 = 3 clubs · 1030-1000 = 30 payments · 50-10 = 40 clubs
- *   current (base 200 / 2000 / 20)
+ *   past  (PY 2024-25; base 100 clubs / 1000 payments / 10 distinguished,
+ *         tier Select). 2024-25 is counted under its own ladder (#2426):
+ *         Item 1490 Rev. 04/2024 Select = 3% payments growth, net plus one
+ *         club, 45% of club base Distinguished
+ *         → 101-100 = 1 club · 1030-1000 = 30 payments · 45-10 = 35 clubs
+ *         (before #2426 it used today's 3%/50% ladder: 3 / 30 / 40)
+ *   current (PY 2025-26 ladder: 3% / 3% / 50%; base 200 / 2000 / 20)
  *         → 206-200 = 6 clubs · 2060-2000 = 60 payments · 100-20 = 80 clubs
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
@@ -328,11 +332,13 @@ describe('DistrictDetailPage — trophy-case ranking inputs follow the PY (#1396
       expect(screen.getByTestId('distinguished-gap-tiles')).toBeInTheDocument()
     )
     // 6 clubs / 60 payments / 80 clubs is the CURRENT year's derivation.
+    // 2024-25 Select under Item 1490 Rev. 04/2024 (#2426): net plus one club
+    // (101 − 100), 3% payments (1030 − 1000), 45% of club base (45 − 10).
     await waitFor(() =>
       expect(tileValues()).toEqual([
-        '3 clubs',
+        '1 club',
         '30 payments',
-        '40 confirmed clubs',
+        '35 confirmed clubs',
       ])
     )
     expect(mockedForDate).toHaveBeenCalledWith(snap('2025-06-30'))
