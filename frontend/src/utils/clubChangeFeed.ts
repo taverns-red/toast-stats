@@ -295,3 +295,8 @@ export function buildClubChangeFeed(
     unavailableDates,
   }
 }
+
+/** RED stub (#2430). */
+export function formatFeedWindow(_fromDate: string, _toDate: string): string {
+  return ''
+}
