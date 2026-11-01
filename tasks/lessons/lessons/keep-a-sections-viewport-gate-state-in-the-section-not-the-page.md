@@ -28,3 +28,14 @@ component (`ClubRecentChanges`) that owns the ref state and the gated hook.
 The page re-renders only when its own data changes. Tests that pin one
 render keep holding, and a real user's page skips a pointless full
 re-render.
+
+## Second takeaway (PR #2446 preview smoke)
+
+A gated section that has not started reading is **idle, not loading**.
+The first cut reported `isLoading` (and so `aria-busy="true"`) whenever the
+feed was null. That included the whole time the card sat off-screen waiting
+for the gate. `club-hero-cls.smoke.ts` waits for no `[aria-busy="true"]`
+anywhere on the page, so it timed out 12 of 12 times. A reader who never
+scrolls down would also have had a page that never settled for assistive
+technology. Derive `aria-busy` from in-flight reads only. A skeleton can
+still hold the space while the section is idle.
