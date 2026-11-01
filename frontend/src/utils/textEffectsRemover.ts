@@ -269,18 +269,11 @@ export function setupFontLoadingOptimization(): void {
   // Optimize font loading
   optimizeFontLoading()
 
-  // Add font loading states to CSS
+  // The fonts-loading / fonts-loaded classes are state markers only. They
+  // must never hide the page (#2444): text paints in the metric-matched
+  // fallback and swaps in place.
   const style = document.createElement('style')
   style.textContent = `
-    /* Font Loading States */
-    .fonts-loading {
-      visibility: hidden;
-    }
-    
-    .fonts-loaded {
-      visibility: visible;
-    }
-    
     /* Fallback typography for slow connections */
     body:not(.fonts-loaded) {
       font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;

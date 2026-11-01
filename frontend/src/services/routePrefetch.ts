@@ -16,8 +16,8 @@ import { districtStatisticsQueryOptions } from '../hooks/useMembershipData'
  * that mounts later gets a cache hit — never a second download.
  *
  * Scope, deliberately narrow:
- * - Only `/district/:id/club/:clubId` (not `/history`): the route this was
- *   measured on.
+ * - `/district/:id/club/:clubId` (not `/history`): the route this was
+ *   measured on. `/district/:id` gets the index only (#2444, below).
  * - The snapshot is the district's newest date, which is what the page reads
  *   when the URL carries no `?py=` / `?date=`. A deep link may read another
  *   date, so it gets the index only — a guessed snapshot would be ~50 KB of
@@ -28,10 +28,26 @@ import { districtStatisticsQueryOptions } from '../hooks/useMembershipData'
  */
 const CLUB_ROUTE = /^\/district\/([A-Za-z0-9]+)\/club\/[^/]+\/?$/
 
+/**
+ * The district overview (#2444). Its LCP element is the next-deadline strip,
+ * whose text waits on the snapshot index (`asOfDate`). Behind the lazy route
+ * chunk and `v1/dates.json`, the index landed after the date's snapshot
+ * fetches had started, and Lighthouse charged them all to LCP. Index only:
+ * the page reads it on every visit, deep links included, so nothing is
+ * wasted.
+ */
+const DISTRICT_OVERVIEW_ROUTE = /^\/district\/([A-Za-z0-9]+)\/?$/
+
 export function prefetchRouteData(
   client: QueryClient,
   location: { pathname: string; search: string }
 ): void {
+  const overviewId = DISTRICT_OVERVIEW_ROUTE.exec(location.pathname)?.[1]
+  if (overviewId) {
+    void client.prefetchQuery(districtCachedDatesQueryOptions(overviewId))
+    return
+  }
+
   const match = CLUB_ROUTE.exec(location.pathname)
   const districtId = match?.[1]
   if (!districtId) return

@@ -149,3 +149,38 @@ describe('the map route reaches pmtiles only lazily (#2173)', () => {
     expect(staticImportersOf(resolve(SRC, file), 'pmtiles')).toEqual([])
   })
 })
+
+/** Every local module in the static closure of `entry`, relative to src. */
+function staticClosure(entry: string): Set<string> {
+  const seen = new Set<string>()
+  const stack = [entry]
+  while (stack.length) {
+    const file = stack.pop()!
+    if (seen.has(file)) continue
+    seen.add(file)
+    for (const spec of staticSpecifiers(readFileSync(file, 'utf-8'))) {
+      if (!spec.startsWith('.')) continue
+      const next = resolveLocal(file, spec)
+      if (next) stack.push(next)
+    }
+  }
+  return new Set([...seen].map(f => relative(SRC, f)))
+}
+
+// #2427 — the predecessor history panel renders on new districts only, far
+// below the fold. Reached statically, it put ~2.4 KB gz in the district
+// route chunk plus one more chunk request (yearEndSnapshot) on the critical
+// chain, and Lighthouse mobile LCP on /district/61 rose ~130 ms (local A/B
+// of 7 runs each: median 3980 → 4111 ms). It is a lazy chunk instead.
+describe('the district route reaches the predecessor panel only lazily (#2427)', () => {
+  it.each([
+    'components/PredecessorHistoryPanel.tsx',
+    'hooks/usePredecessorHistory.ts',
+    'utils/predecessorHistory.ts',
+    'utils/yearEndSnapshot.ts',
+  ])('%s', file => {
+    expect(
+      staticClosure(resolve(SRC, 'pages/DistrictDetailPage.tsx'))
+    ).not.toContain(file)
+  })
+})
