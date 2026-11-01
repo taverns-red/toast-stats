@@ -19,30 +19,26 @@
  *    written; only `meetingSchedule[]` (#1789) is read.
  * 5. **Deterministic bytes**: districts are keyed in sorted order.
  *
- * Pure except for {@link readMeetingTimesInput}, the one filesystem door.
+ * Pure. Its filesystem door, `readMeetingTimesInput`, lives in `snapshotReaders.ts`
+ * (node-only `./node` entry, #2447).
  *
  * @module @taverns-red/analytics-core/rollup
  */
 
-import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import {
   MEETING_TIMES_FORMAT,
   MEETING_TIMES_MODES,
   countMeetingSlots,
-  districtIdFromSnapshotFileName,
-  isDistrictSnapshotFile,
   normalizeClubId,
   type DistrictRanking,
   type DistrictRegionHistory,
-  type MeetingScheduleEntry,
   type MeetingSlotClub,
   type MeetingTimes,
   type MeetingTimesDistrict,
   type MeetingTimesGrid,
   type MeetingTimesMode,
 } from '@taverns-red/shared-contracts'
-import { canonicalDistrictId, readSnapshotRankings } from './globalRollup.js'
+import { canonicalDistrictId } from './globalRollup.js'
 import { programYearForSnapshotDate } from './globalTotals.js'
 import { resolveRegionMembership } from './regionRollups.js'
 
@@ -152,50 +148,4 @@ export function buildMeetingTimes(
     districts,
   }
   return { meetingTimes, missingDistricts }
-}
-
-// ---------------------------------------------------------------------------
-// Filesystem door
-// ---------------------------------------------------------------------------
-
-const isEntry = (e: unknown): e is MeetingScheduleEntry =>
-  typeof e === 'object' &&
-  e !== null &&
-  typeof (e as { day?: unknown }).day === 'string'
-
-/**
- * Read a snapshot directory: the date's rankings and, from every district
- * file's merged club records (`data.clubs`), only `clubId` and the parsed
- * `meetingSchedule[]`. A stray district file is returned too; the builder
- * excludes it by the rankings scope.
- */
-export function readMeetingTimesInput(snapshotDir: string): {
-  rankings: DistrictRanking[]
-  districts: MeetingTimesDistrictInput[]
-} {
-  const rankings = readSnapshotRankings(snapshotDir)
-  const districts: MeetingTimesDistrictInput[] = []
-  for (const fileName of readdirSync(snapshotDir).sort()) {
-    if (!isDistrictSnapshotFile(fileName)) continue
-    const districtId = districtIdFromSnapshotFileName(fileName)
-    if (!districtId) continue
-    const parsed = JSON.parse(
-      readFileSync(join(snapshotDir, fileName), 'utf-8')
-    ) as { data?: { clubs?: Array<Record<string, unknown>> } }
-
-    const clubs: MeetingSlotClub[] = []
-    for (const club of parsed.data?.clubs ?? []) {
-      const raw = club['clubId']
-      const clubId = (typeof raw === 'string' ? raw : String(raw ?? '')).trim()
-      if (clubId === '') continue
-      const schedule = club['meetingSchedule']
-      const entries = Array.isArray(schedule) ? schedule.filter(isEntry) : []
-      clubs.push({
-        clubId,
-        ...(entries.length > 0 && { meetingSchedule: entries }),
-      })
-    }
-    districts.push({ districtId, clubs })
-  }
-  return { rankings, districts }
 }
