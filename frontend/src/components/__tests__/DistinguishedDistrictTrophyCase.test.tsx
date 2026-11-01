@@ -735,6 +735,35 @@ describe('DistinguishedDistrictTrophyCase — gap at every tier (#2426)', () => 
     expect(rowCells('Select')).toEqual(['10', '281', '20'])
   })
 
+  /* The 375 Overview has no row to spare (PAGE_MAX_H): next to the toggle,
+     "Gap to Distinguished District" wrapped onto a second line on CI's
+     Linux fonts (4007 > 4000). Phones show the short tier name; the
+     heading's name stays whole for AT and from 768 up. */
+  it('shortens the gap heading on phones so the toggle shares one line', () => {
+    renderD61()
+    const heading = screen.getByRole('heading', {
+      name: 'Gap to Distinguished District',
+    })
+    const phone = within(heading).getByText('Gap to Distinguished')
+    expect(phone).toHaveClass('md:hidden')
+    const wide = within(heading).getByText('Gap to Distinguished District')
+    expect(wide).toHaveClass('hidden', 'md:inline')
+  })
+
+  it("shortens a higher tier's heading the same way", () => {
+    renderD61({
+      ...d61Status,
+      currentTier: 'Distinguished',
+      nextTierGap: { ...d61Status.nextTierGap!, tier: 'Presidents' },
+    })
+    const heading = screen.getByRole('heading', {
+      name: "Gap to President's Distinguished District",
+    })
+    expect(within(heading).getByText("Gap to President's")).toHaveClass(
+      'md:hidden'
+    )
+  })
+
   it('reserves the table from 768 up while loading', () => {
     render(
       <DistinguishedDistrictTrophyCase
