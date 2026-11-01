@@ -160,7 +160,13 @@ export const PredecessorHistoryPanel: React.FC<
   // A zero-height marker until the gate says yes: no slot is reserved on
   // the established districts, which are almost all of them.
   if (verdict !== 'candidate' || history.status === 'not-new')
-    return <div ref={setSlot} aria-hidden="true" />
+    return (
+      <div
+        ref={setSlot}
+        className="predecessor-history-slot"
+        aria-hidden="true"
+      />
+    )
 
   return (
     <section

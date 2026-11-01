@@ -6,6 +6,16 @@
    padding, so the 375 Overview stays inside its page budget. */
 
 @layer components {
+  /* The gate's marker, rendered on every district until the gate says yes.
+     Out of the flow: as an in-flow child of the Overview's space-y stack
+     it would add a 16–24px gap to every district page. */
+  .predecessor-history-slot {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+  }
+
   .predecessor-history {
     margin: 0 0 1rem;
     border-left: 3px solid var(--tm-loyal-blue);
