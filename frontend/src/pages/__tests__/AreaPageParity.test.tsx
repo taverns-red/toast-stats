@@ -14,13 +14,21 @@
  */
 import React from 'react'
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, cleanup } from '@testing-library/react'
+import { render, cleanup, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import { extractDivisionPerformance } from '../../utils/extractDivisionPerformance'
 import { generateAreaProgressText } from '../../utils/areaProgressText'
 import { calculateAreaGapAnalysis } from '../../utils/areaGapAnalysis'
 import AreaPage from '../AreaPage'
+import { downloadCSV } from '../../utils/csvExport'
+
+vi.mock('../../utils/csvExport', async () => {
+  const actual = await vi.importActual<typeof import('../../utils/csvExport')>(
+    '../../utils/csvExport'
+  )
+  return { ...actual, downloadCSV: vi.fn() }
+})
 
 vi.mock('../../hooks/useIsMobile', () => ({
   useIsMobile: () => false,
@@ -245,5 +253,21 @@ describe('AreaPage data parity with the Divisions overview (#1016)', () => {
     expect(getByTestId('area-progress-text').textContent).toMatch(
       /Area 10 \(Division A\)/
     )
+  })
+})
+
+describe('AreaPage area workbook (#2428)', () => {
+  it('downloads the area workbook: one row per club, named for district, area and date', () => {
+    const { getByRole } = renderArea()
+    fireEvent.click(getByRole('button', { name: 'Download area workbook' }))
+    expect(downloadCSV).toHaveBeenCalledTimes(1)
+    const [csv, filename] = vi.mocked(downloadCSV).mock.calls[0]!
+    expect(filename).toBe('area_workbook_district_61_area_A10_2026-03-15.csv')
+    expect(csv.split('\n')).toEqual([
+      'Club Number,Club Name,Division,Area,Health,Members,DCP Goals Met,Distinguished,Missing for Distinguished,Club Visit (Current Round),Club Success Plan,Next Deadline,Next Deadline For',
+      // 15 March 2026 is round 2 (no May visit yet); the next date that
+      // applies to a club with its plan filed is the 1 April dues renewal.
+      '123456,Ottawa Club,A,10,Thriving,25,8,Select,Achieved,Not yet,Filed,2026-04-01,April dues renewal due',
+    ])
   })
 })
