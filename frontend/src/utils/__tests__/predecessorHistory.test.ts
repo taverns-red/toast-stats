@@ -186,6 +186,7 @@ describe('aggregatePredecessor (#2427)', () => {
       net: -4,
       distinguished: 1,
       byTier: { D: 0, S: 0, P: 1, M: 0 },
+      goalsMet: 12,
       avgDcpGoals: 6,
     })
   })
