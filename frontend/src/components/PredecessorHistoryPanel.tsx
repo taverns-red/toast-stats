@@ -70,9 +70,13 @@ const Figures: React.FC<{ a: PredecessorAggregate }> = ({ a }) => (
       <dd>{signed(a.net)}</dd>
     </div>
     <div>
+      <dt>Average per club</dt>
+      <dd>{a.avgDcpGoals === null ? '—' : `${a.avgDcpGoals} DCP goals`}</dd>
+    </div>
+    <div className="predecessor-history__wide">
       <dt>Distinguished clubs</dt>
       <dd>
-        {a.distinguished} Distinguished
+        {plural(a.distinguished, 'club')}
         {a.distinguished > 0 && (
           <span className="predecessor-history__tiers">
             {' '}
@@ -80,10 +84,6 @@ const Figures: React.FC<{ a: PredecessorAggregate }> = ({ a }) => (
           </span>
         )}
       </dd>
-    </div>
-    <div>
-      <dt>Average per club</dt>
-      <dd>{a.avgDcpGoals === null ? '—' : `${a.avgDcpGoals} DCP goals`}</dd>
     </div>
   </dl>
 )

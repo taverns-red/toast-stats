@@ -190,12 +190,12 @@ describe('PredecessorHistoryPanel (#2427)', () => {
     // 20 + 12 members at year end, against a base of 20 + 18.
     expect(d01).toHaveTextContent('32 members')
     expect(d01).toHaveTextContent('−6')
-    expect(d01).toHaveTextContent('1 Distinguished')
+    expect(d01).toHaveTextContent("1 club (1 President's)")
     expect(d01).toHaveTextContent('6 DCP goals')
 
     const d52 = screen.getByTestId('predecessor-52')
     expect(d52).toHaveTextContent('1 club')
-    expect(d52).toHaveTextContent('1 Distinguished')
+    expect(d52).toHaveTextContent('1 club (1 Select)')
 
     expect(
       screen.getByText(/1 club has no 2025-2026 record/i)
