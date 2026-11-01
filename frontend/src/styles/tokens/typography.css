@@ -92,14 +92,10 @@
  * gstatic v26 Montserrat faces that used to sit here were a second, stale
  * copy that every page downloaded in addition to the current one. */
 
-/* Font Loading States */
-.fonts-loading {
-  visibility: hidden;
-}
-
-.fonts-loaded {
-  visibility: visible;
-}
+/* No font-loading visibility state (#2444). Hiding the page until
+ * document.fonts.ready undid font-display: swap and delayed first contentful
+ * paint by ~1.1 s on a throttled phone. The metric-matched fallbacks in
+ * font-fallbacks.css (#1373) make the swap a pure glyph substitution. */
 
 /* Fallback Typography for Slow Connections */
 body:not(.fonts-loaded) {
