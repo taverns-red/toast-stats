@@ -32,7 +32,9 @@ import {
 import type { SnapshotDate } from '../types/snapshotDate'
 
 export interface UseClubChangeFeedResult {
+  /** Null until the gate opens and the reads settle. */
   feed: ClubChangeFeed | null
+  /** True only while reads are in flight (never while gated off). */
   isLoading: boolean
 }
 
@@ -94,5 +96,10 @@ export function useClubChangeFeed(
     )
   }, [active, isDatesPending, points, picked])
 
-  return { feed, isLoading: !active || isDatesPending || points.pending }
+  // Gated off is NOT loading: nothing is being read, so the panel must not
+  // hold the page aria-busy while it waits off-screen (PR #2446 smoke).
+  return {
+    feed,
+    isLoading: active && (isDatesPending || points.pending),
+  }
 }
