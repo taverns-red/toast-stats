@@ -72,6 +72,7 @@ const NULL_RANKINGS = {
 
 import ErrorBoundary from '../components/ErrorBoundary'
 import { RedVotePromo } from '../components/RedVotePromo'
+import { PredecessorHistoryPanel } from '../components/PredecessorHistoryPanel'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
 
 // Lazy (#1901): this tab renders only in the "limited data" branch for
@@ -919,6 +920,20 @@ const DistrictDetailPageInner: React.FC = () => {
                   (effectiveProgramYear ?? selectedProgramYear).label
                 }
                 history={regionHistory}
+              />
+            )}
+
+            {/* Before this district existed (#2427): a new district's clubs
+                under their former districts last year. It renders nothing
+                until its slot nears the viewport and one history shard says
+                the district is new, so established districts reserve no
+                slot; it sits below the overview section for the same
+                late-mount reason as the region banner above. */}
+            {districtId && hasOverviewData && effectiveProgramYear && (
+              <PredecessorHistoryPanel
+                districtId={districtId}
+                programYear={effectiveProgramYear.label}
+                clubs={allClubs}
               />
             )}
 
