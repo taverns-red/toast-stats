@@ -107,3 +107,33 @@ describe('retryAsync', () => {
     expect(sleep.delays).toEqual([])
   })
 })
+
+describe('retryAsync shouldRetry (#2418)', () => {
+  it('fails at once, without sleeping, when shouldRetry rejects the error', async () => {
+    const sleep = recordingSleep()
+    const fn = vi.fn().mockRejectedValue(new Error('HTTP 404'))
+
+    await expect(
+      retryAsync(fn, { sleep: sleep.fn, shouldRetry: () => false })
+    ).rejects.toThrow('HTTP 404')
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(sleep.delays).toEqual([])
+  })
+
+  it('keeps retrying while shouldRetry accepts the error', async () => {
+    const sleep = recordingSleep()
+    const fn = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('HTTP 503'))
+      .mockResolvedValue('ok')
+
+    await expect(
+      retryAsync(fn, {
+        sleep: sleep.fn,
+        baseDelayMs: 10,
+        shouldRetry: e => /503/.test(String(e)),
+      })
+    ).resolves.toBe('ok')
+    expect(sleep.delays).toEqual([10])
+  })
+})

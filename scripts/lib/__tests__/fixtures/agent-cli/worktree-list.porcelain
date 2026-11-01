@@ -1,0 +1,8 @@
+worktree /Users/rservant/code/toast-stats
+HEAD f14322b68fb7d541837659e5a71cfa04e28063d4
+detached
+
+worktree /Users/rservant/code/toast-stats-2418
+HEAD 019ad7fa9b18402bfb5491afeb0c146109f267c5
+branch refs/heads/feat/2418-agent-cli
+

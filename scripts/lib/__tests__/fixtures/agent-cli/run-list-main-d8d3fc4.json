@@ -1,0 +1,52 @@
+[
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-29T15:31:05Z",
+    "databaseId": 40902367748,
+    "displayTitle": "CDN Schema Canary",
+    "event": "schedule",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/40902367748",
+    "workflowName": "CDN Schema Canary"
+  },
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-29T15:26:54Z",
+    "databaseId": 40901656737,
+    "displayTitle": "test: make the integration project hermetic, failing any un-mocked fe…",
+    "event": "push",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/40901656737",
+    "workflowName": "Docs"
+  },
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-29T15:26:54Z",
+    "databaseId": 40901657180,
+    "displayTitle": "test: make the integration project hermetic, failing any un-mocked fe…",
+    "event": "push",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/40901657180",
+    "workflowName": "Release Please"
+  },
+  {
+    "conclusion": "success",
+    "createdAt": "2026-10-29T15:26:54Z",
+    "databaseId": 40901657099,
+    "displayTitle": "Push on main",
+    "event": "dynamic",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/40901657099",
+    "workflowName": "CodeQL"
+  },
+  {
+    "conclusion": "failure",
+    "createdAt": "2026-10-29T15:26:54Z",
+    "databaseId": 40901656707,
+    "displayTitle": "test: make the integration project hermetic, failing any un-mocked fe…",
+    "event": "push",
+    "status": "completed",
+    "url": "https://github.com/taverns-red/toast-stats/actions/runs/40901656707",
+    "workflowName": "CI"
+  }
+]
