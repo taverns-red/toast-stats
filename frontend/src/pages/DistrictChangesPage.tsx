@@ -10,6 +10,7 @@ import {
 import { useUrlDatePair } from '../hooks/useUrlDatePair'
 import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import { useTransferCounterparts } from '../hooks/useTransferCounterparts'
+import { useDistrictRanking } from '../hooks/useDistrictRanking'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { ContextBar } from '../components/ContextBar'
@@ -107,6 +108,39 @@ function activeClubsTile(diff: SnapshotDiffView): {
     current: active.delta,
     secondaryLabel: `${active.from.toLocaleString()} → ${active.to.toLocaleString()}`,
     subLines: lines,
+  }
+}
+
+/** The rankings read for one end of the pair, as `useDistrictRanking` gives it. */
+type RankingRead = ReturnType<typeof useDistrictRanking>
+
+/**
+ * Props for the "Distinguished clubs" tile (#2438, Ron 2026-11-01). The
+ * headline stays the change in TI's count (per-club status in the snapshot).
+ * The sub-line is the confirmed count, the #2390 "confirmed clubs" noun the
+ * trophy case uses: the rankings row's `distinguishedClubs`, which the
+ * pipeline fills from `countConfirmedDistinguishedClubs` and the trophy case
+ * counts its gap from. Read per date, never re-derived here. A missing
+ * rankings row says so — never a silent 0.
+ */
+function distinguishedClubsTile(
+  diff: SnapshotDiffView,
+  fromRanking: RankingRead,
+  toRanking: RankingRead
+): { current: number; secondaryLabel: string; subLines: string[] } {
+  const t = diff.totals.distinguished
+  const from = fromRanking.ranking?.distinguishedClubs
+  const to = toRanking.ranking?.distinguishedClubs
+  const confirmed =
+    from !== undefined && to !== undefined
+      ? countLine('Confirmed clubs', { to, delta: to - from })
+      : fromRanking.isLoading || toRanking.isLoading
+        ? 'Confirmed clubs …'
+        : 'Confirmed clubs not recorded'
+  return {
+    current: t.delta,
+    secondaryLabel: `TI count ${t.from.toLocaleString()} → ${t.to.toLocaleString()}`,
+    subLines: [confirmed],
   }
 }
 
@@ -225,6 +259,14 @@ const DistrictChangesPage: React.FC = () => {
     deferred: deferredCounterparts,
     loadMore: loadMoreCounterparts,
   } = useTransferCounterparts(invalidPair ? undefined : diff, districtId ?? '')
+
+  // The confirmed Distinguished count at each end of the pair (#2438), from
+  // that date's own rankings file. Skipped for an invalid pair, like the diff.
+  const fromRanking = useDistrictRanking(
+    districtId,
+    invalidPair ? undefined : from
+  )
+  const toRanking = useDistrictRanking(districtId, invalidPair ? undefined : to)
 
   if (!districtId) return null
 
@@ -390,8 +432,7 @@ const DistrictChangesPage: React.FC = () => {
                   />
                   <KpiDeltaCard
                     title="Distinguished clubs"
-                    current={diff.totals.distinguished.delta}
-                    secondaryLabel={`${diff.totals.distinguished.from.toLocaleString()} → ${diff.totals.distinguished.to.toLocaleString()}`}
+                    {...distinguishedClubsTile(diff, fromRanking, toRanking)}
                   />
                 </div>
 
