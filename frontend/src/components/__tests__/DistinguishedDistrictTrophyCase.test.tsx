@@ -614,11 +614,15 @@ describe('DistinguishedDistrictTrophyCase — gap at every tier (#2426)', () => 
     const table = within(
       screen.getByTestId('distinguished-tier-gaps')
     ).getByRole('table')
+    // Accessible names: the phone header abbreviates "Distinguished".
     expect(
       within(table)
         .getAllByRole('columnheader')
-        .map(h => h.textContent)
+        .map(h => h.getAttribute('aria-label') ?? h.textContent)
     ).toEqual(['Tier', 'Paid clubs', 'Payments', 'Distinguished clubs'])
+    expect(
+      within(table).getByRole('columnheader', { name: 'Distinguished clubs' })
+    ).toBeInTheDocument()
     expect(
       within(table)
         .getAllByRole('rowheader')

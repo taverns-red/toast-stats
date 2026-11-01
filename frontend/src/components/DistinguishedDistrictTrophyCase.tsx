@@ -217,8 +217,19 @@ const TierGapTable: React.FC<{
         <th scope="col" className="py-1 pl-2 text-right font-medium">
           Payments
         </th>
-        <th scope="col" className="py-1 pl-2 text-right font-medium">
-          Distinguished clubs
+        {/* "Distinguished" alone is wider than this column on a phone, so
+            the phone header abbreviates; the name stays whole for AT. */}
+        <th
+          scope="col"
+          aria-label="Distinguished clubs"
+          className="py-1 pl-2 text-right font-medium"
+        >
+          <span aria-hidden="true" className="md:hidden">
+            Dist. clubs
+          </span>
+          <span aria-hidden="true" className="hidden md:inline">
+            Distinguished clubs
+          </span>
         </th>
       </tr>
     </thead>
@@ -420,7 +431,7 @@ const TrophyCaseSkeleton: React.FC<{ programYear: string }> = ({
           Phones fold it behind a toggle and reserve nothing. */}
       <div
         data-testid="distinguished-trophy-skeleton-tiers"
-        className="invisible hidden md:block mt-3"
+        className="invisible hidden md:block mt-3 md:max-w-2xl"
       >
         <TierGapTable
           tiers={districtTiersForProgramYear(programYear)}
@@ -674,7 +685,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
             <div
               id={TIER_GAPS_ID}
               data-testid="distinguished-tier-gaps"
-              className={`${allTiersOpen ? '' : 'hidden'} md:block mt-3`}
+              className={`${allTiersOpen ? '' : 'hidden'} md:block mt-3 md:max-w-2xl`}
             >
               <TierGapTable tiers={tierRows.map(r => r.tier)} rows={tierRows} />
               <p className="mt-1 text-xs text-gray-600 theme-dark:text-gray-400 font-tm-body">
