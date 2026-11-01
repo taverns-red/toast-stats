@@ -17,7 +17,8 @@ setupFontLoadingOptimization()
 
 // #1901 — start the club route's hero data (snapshot index, then the latest
 // district snapshot) now, while the lazy route chunk downloads, instead of
-// after it mounts. Seeds the page's own query entries; no-op on other routes.
+// after it mounts. The district overview gets the index too (#2444). Seeds the
+// page's own query entries; no-op on other routes.
 prefetchRouteData(queryClient, window.location)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

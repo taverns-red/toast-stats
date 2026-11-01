@@ -18,10 +18,10 @@ import { join } from 'node:path'
 import { readFileSync } from 'node:fs'
 import {
   rollUpGlobal,
-  readSnapshotRollupInput,
   type GlobalRollupInput,
 } from '../../../packages/analytics-core/src/rollup/globalRollup.js'
 import { CEO_REPORT_MEMBERSHIP_PAYMENTS } from '../ceoReportOracle'
+import { readSnapshotRollupInput } from '../../../packages/analytics-core/src/node.js'
 
 const FIXTURE = join(
   __dirname,

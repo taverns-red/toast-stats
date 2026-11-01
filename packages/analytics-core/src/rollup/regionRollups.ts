@@ -31,16 +31,13 @@
  * the program year's distinguished ladder (#1406) — exactly as the
  * district club-health analytics apply them to a snapshot's clubs.
  *
- * Pure except for {@link readRegionRollupInput}, the one filesystem door.
+ * Pure. Its filesystem door, `readRegionRollupInput`, lives in `snapshotReaders.ts`
+ * (node-only `./node` entry, #2447).
  *
  * @module @taverns-red/analytics-core/rollup
  */
 
-import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import {
-  districtIdFromSnapshotFileName,
-  isDistrictSnapshotFile,
   normalizeClubId,
   REGION_ROLLUPS_FORMAT,
   REGION_ROLLUPS_REGION_SOURCE,
@@ -65,17 +62,10 @@ import {
   parseDateFlexible,
   parseSuspendDateFromStatusField,
 } from '../rankings/programYearDates.js'
-import { canonicalDistrictId, readSnapshotRankings } from './globalRollup.js'
+import { canonicalDistrictId } from './globalRollup.js'
 import { programYearForSnapshotDate } from './globalTotals.js'
-import {
-  OFFICER_TRAINING_MAX_OFFICERS,
-  OFFICER_TRAINING_ROUND_COLUMNS,
-  officersTrainedInRound,
-} from '../analytics/officerTraining.js'
-import type {
-  OfficerTrainingDistribution,
-  ScrapedRecord,
-} from '@taverns-red/shared-contracts'
+import { OFFICER_TRAINING_MAX_OFFICERS } from '../analytics/officerTraining.js'
+import type { OfficerTrainingDistribution } from '@taverns-red/shared-contracts'
 
 /** One club as the rollup reads it; `undefined` = the column is absent. */
 export interface RegionRollupClub {
@@ -586,134 +576,5 @@ export function buildRegionRollups(
       districts,
     },
     missingDistricts,
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Filesystem door
-// ---------------------------------------------------------------------------
-
-/** A `0/1` flag column; undefined when the row or the column is absent. */
-function flag(
-  row: Record<string, unknown> | undefined,
-  column: string
-): boolean | undefined {
-  if (!row || !(column in row)) return undefined
-  const value = String(row[column] ?? '').trim()
-  return value !== '' && value !== '0'
-}
-
-const num = (value: unknown): number => Number(value ?? 0) || 0
-
-/** A row's `Off. Trained Round 1/2` cells, read as goal 9 reads them and
- *  clamped into 0–7 (#2296); a round whose column is absent is left out. */
-function officersTrained(
-  row: Record<string, unknown> | undefined
-): Pick<RegionRollupClub, 'officersTrainedRound1' | 'officersTrainedRound2'> {
-  if (!row) return {}
-  const record = row as ScrapedRecord
-  const carries = (round: 1 | 2): boolean =>
-    OFFICER_TRAINING_ROUND_COLUMNS[round - 1]!.aliases.some(
-      alias => alias in row
-    )
-  return {
-    ...(carries(1) && {
-      officersTrainedRound1: officersTrainedInRound(record, 1),
-    }),
-    ...(carries(2) && {
-      officersTrainedRound2: officersTrainedInRound(record, 2),
-    }),
-  }
-}
-
-interface SnapshotFile {
-  data?: {
-    clubs?: Array<Record<string, unknown>>
-    clubPerformance?: Array<Record<string, unknown>>
-    districtPerformance?: Array<Record<string, unknown>>
-    prospectiveClubs?: unknown[]
-  }
-}
-
-/**
- * Read a snapshot directory: the date's rankings and every district file's
- * clubs (`data.clubs`, the transform's merged club records), each joined to
- * its club-performance flags and district-performance charter/suspend cell
- * on the canonical club id. A stray district file is returned too; the
- * builder excludes it by the rankings scope.
- */
-export function readRegionRollupInput(snapshotDir: string): {
-  rankings: DistrictRanking[]
-  /** The rankings' own `metadata.snapshotId` (often the collection date). */
-  rankingsSnapshotId: string | null
-  districts: RegionRollupDistrictInput[]
-} {
-  const rankings = readSnapshotRankings(snapshotDir)
-  const rankingsRaw = JSON.parse(
-    readFileSync(join(snapshotDir, 'all-districts-rankings.json'), 'utf-8')
-  ) as { metadata?: { snapshotId?: unknown } }
-  const snapshotId = rankingsRaw.metadata?.snapshotId
-
-  const districts: RegionRollupDistrictInput[] = []
-  for (const fileName of readdirSync(snapshotDir).sort()) {
-    if (!isDistrictSnapshotFile(fileName)) continue
-    const districtId = districtIdFromSnapshotFileName(fileName)
-    if (!districtId) continue
-    const parsed = JSON.parse(
-      readFileSync(join(snapshotDir, fileName), 'utf-8')
-    ) as SnapshotFile
-    const data = parsed.data ?? {}
-
-    const performance = new Map<string, Record<string, unknown>>()
-    for (const row of data.clubPerformance ?? []) {
-      const id = String(row['Club Number'] ?? '').trim()
-      if (id !== '') performance.set(normalizeClubId(id), row)
-    }
-    const statusCell = new Map<string, string>()
-    for (const row of data.districtPerformance ?? []) {
-      const id = String(row['Club'] ?? '').trim()
-      if (id === '') continue
-      statusCell.set(
-        normalizeClubId(id),
-        String(row['Charter Date/Suspend Date'] ?? '')
-      )
-    }
-
-    const clubs: RegionRollupClub[] = []
-    for (const club of data.clubs ?? []) {
-      const rawId = String(club['clubId'] ?? '').trim()
-      if (rawId === '') continue
-      const id = normalizeClubId(rawId)
-      const perf = performance.get(id)
-      const status = club['clubStatus'] ?? club['status']
-      const csp = club['cspSubmitted']
-      clubs.push({
-        clubId: rawId,
-        membershipCount: num(club['membershipCount']),
-        membershipBase: num(club['membershipBase']),
-        paymentsCount: num(club['paymentsCount']),
-        dcpGoals: num(club['dcpGoals']),
-        ...(typeof status === 'string' && { clubStatus: status }),
-        ...(typeof csp === 'boolean' && { cspSubmitted: csp }),
-        octoberDuesOnTime: flag(perf, 'Mem. dues on time Oct'),
-        aprilDuesOnTime: flag(perf, 'Mem. dues on time Apr'),
-        officerListOnTime: flag(perf, 'Off. List On Time'),
-        charterSuspendField: statusCell.get(id),
-        ...officersTrained(perf),
-      })
-    }
-    districts.push({
-      districtId,
-      clubs,
-      prospectiveClubs: Array.isArray(data.prospectiveClubs)
-        ? data.prospectiveClubs.length
-        : null,
-    })
-  }
-
-  return {
-    rankings,
-    rankingsSnapshotId: typeof snapshotId === 'string' ? snapshotId : null,
-    districts,
   }
 }
