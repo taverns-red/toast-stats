@@ -17,8 +17,8 @@
  *
  * An owner role is named only where a TI document names it for that date,
  * with the citation (#2429). The role list is closed on purpose: a date no
- * TI source assigns (the Club Success Plan, the dues renewals) has no owner
- * rather than a guessed one.
+ * TI source assigns (the Club Success Plan) has no owner rather than a
+ * guessed one.
  *
  * A rule names the first program year it applies to. A future TI change is
  * a new row, never an edit of an old one, so history keeps its own dates.
@@ -44,7 +44,8 @@ export type DeadlineId =
   | 'visits-r2'
 
 /** Only the district roles a TI source names as a deadline's owner. */
-export type DeadlineOwnerRole = 'Program Quality Director' | 'Area Director'
+export type DeadlineOwnerRole =
+  'Program Quality Director' | 'Club Growth Director' | 'Area Director'
 
 /** Who owns a date, and the TI document section that says so (#2429). */
 export interface DeadlineOwner {
@@ -132,12 +133,22 @@ const AREA_DIRECTOR: DeadlineOwner = {
   url: DRP_URL,
 }
 
-/* No owner, on purpose:
-   - Club Success Plan: DCP p. 5 says "The club must submit"; no role.
-   - Dues renewals: DLH p. 60 says club officers submit them and Area
-     Directors follow up; the timeline dots the Oct 1 entry for the District
-     Director and leaves Apr 1 undotted. No source names one district owner
-     for both, so neither gets one. */
+/* Dues renewals (Oct 1, Apr 1): Ron ruled on 2026-11-01 that the Club
+   Growth Director owns both. DLH p. 25: "The Club Growth Director is
+   responsible for all aspects of marketing, club-building, and
+   club-retention efforts within the District." Club officers submit the
+   renewals, and DLH p. 60 adds: "Area Directors follow up with each club to
+   promote timely renewal submission." */
+const CLUB_GROWTH_DIRECTOR: DeadlineOwner = {
+  role: 'Club Growth Director',
+  citation:
+    'District Leader Handbook, Item 222 Rev. 03/2026, Club Growth Director, p. 25',
+  short: 'Item 222, p. 25',
+  url: DLH_URL,
+}
+
+/* No owner, on purpose: Club Success Plan. DCP p. 5 says "The club must
+   submit"; no role. */
 
 /** Earlier program years are not known to differ; a change gets a new row. */
 const ALWAYS = '2000-2001'
@@ -171,6 +182,7 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     label: 'October dues renewal due',
     fromProgramYear: ALWAYS,
     source: `${DCP}, p. 8 (goal 10); ${RENEWAL_FAQ}`,
+    owner: CLUB_GROWTH_DIRECTOR,
     date: fixed(0, '10-01'),
   },
   {
@@ -208,6 +220,7 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     label: 'April dues renewal due',
     fromProgramYear: ALWAYS,
     source: `${DCP}, p. 8 (goal 10); ${RENEWAL_FAQ}`,
+    owner: CLUB_GROWTH_DIRECTOR,
     date: fixed(1, '04-01'),
   },
   {
