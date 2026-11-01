@@ -54,3 +54,31 @@ describe('deadline-strip.css toggle (#2429)', () => {
     expect(css).not.toMatch(/\.deadline-strip__toggle::(after|before)/)
   })
 })
+
+/* Preview run 41355957532: a 44px toggle row cost the 375 Overview 23px and
+   took it to 4011 > PAGE_MAX_H. On phones the toggle sits in a right-hand
+   column beside the lead and the first deadline instead, spanning rows that
+   already exist, so the strip is no taller. */
+describe('deadline-strip.css phone layout (#2429)', () => {
+  const phone = css.slice(0, css.indexOf('@media'))
+  const phoneRule = (selector: string): string => {
+    const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return phone.match(new RegExp(`${esc}\\s*\\{[^}]*\\}`))?.[0] ?? ''
+  }
+
+  it('lays the strip out as a two-column grid', () => {
+    expect(phoneRule('.deadline-strip ')).toMatch(/display:\s*grid/)
+    expect(phoneRule('.deadline-strip__head ')).toMatch(/display:\s*contents/)
+  })
+
+  it('spans the toggle over the lead row and the list beside it', () => {
+    for (const sel of [
+      '.deadline-strip__toggle ',
+      '.deadline-strip__toggle-slot ',
+    ]) {
+      const rule = phoneRule(sel)
+      expect(rule, sel).toMatch(/grid-column:\s*2/)
+      expect(rule, sel).toMatch(/grid-row:\s*1\s*\/\s*span 2/)
+    }
+  })
+})

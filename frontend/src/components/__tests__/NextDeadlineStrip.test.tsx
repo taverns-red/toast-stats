@@ -71,6 +71,14 @@ describe('NextDeadlineStrip — whole-year timeline (#2429)', () => {
   it('is collapsed by default', () => {
     render(<NextDeadlineStrip programYear="2026-2027" asOfDate="2026-11-15" />)
     expect(toggle()).toHaveAttribute('aria-expanded', 'false')
+    // Phones show the short label; its text is part of the accessible name
+    // (WCAG 2.5.3).
+    expect(
+      toggle().querySelector('.deadline-strip__toggle-short')
+    ).toHaveTextContent('All')
+    expect(
+      toggle().querySelector('.deadline-strip__toggle-long')
+    ).toHaveTextContent('See all deadlines')
     expect(screen.queryByTestId('deadline-timeline')).toBeNull()
   })
 
