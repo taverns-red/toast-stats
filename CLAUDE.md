@@ -16,6 +16,8 @@ Toastmasters District Statistics Visualizer — a data visualization platform fo
 
 ## Commands
 
+**Agent sessions: run `./bin/agent-cli --help` first** — read-only/wait-only answers for CI waits, main status, failed job logs, live/preview version, preview URLs and worktree cleanup (#2418); use it instead of hand-written `sleep`/`gh pr checks` loops.
+
 ```bash
 # Development
 npm run dev:frontend              # Vite dev server on port 3000 (proxies /api to :5001)
