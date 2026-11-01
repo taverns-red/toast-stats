@@ -57,6 +57,7 @@ describe('preview-url', () => {
         /^gh api --paginate --slurp repos\/taverns-red\/toast-stats\/issues\/2416\/comments/,
         ok(JSON.stringify(PAGES)),
       ],
+      [/^gh pr view 2416 /, ok('{"state":"OPEN"}')],
     ])
     const p = await previewUrl(2416, {
       repo: REPO,
@@ -65,6 +66,21 @@ describe('preview-url', () => {
       now: () => 0,
     })
     expect(p?.url).toContain('pr-2416')
+  })
+
+  it('marks the channel removed once the PR is closed or merged', async () => {
+    // pr-preview-cleanup.yml deletes the channel on close; the comment stays.
+    const runner = fakeRunner([
+      [/issues\/2416\/comments/, ok(JSON.stringify(PAGES))],
+      [/^gh pr view 2416 .*--json state/, ok('{"state":"MERGED"}')],
+    ])
+    const p = await previewUrl(2416, {
+      repo: REPO,
+      runner,
+      sleep: noSleep,
+      now: () => Date.parse('2026-11-01T00:00:00Z'),
+    })
+    expect(p).toMatchObject({ prState: 'MERGED', live: false, expired: false })
   })
 })
 

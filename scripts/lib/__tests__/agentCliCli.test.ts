@@ -62,6 +62,7 @@ describe('agent-cli', () => {
     const c = capture()
     c.deps.runner = fakeRunner([
       [/issues\/2416\/comments/, ok(fixture('issue-comments-2416.json'))],
+      [/^gh pr view 2416 /, ok('{"state":"OPEN"}')],
     ])
     const code = await main(['preview-url', '2416', '--json'], {
       ...c.deps,

@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest'
 import { stripAnsi } from '../agentCli/ansi.js'
 import {
   buildJobReport,
+  errorLines,
   jobLog,
   parseJobLogTarget,
   parseLogLines,
@@ -84,6 +85,39 @@ describe('buildJobReport', () => {
     expect(lines).toEqual([
       { ts: '2026-10-29T15:40:32.1Z', text: 'first', continued: false },
       { ts: '2026-10-29T15:40:32.1Z', text: 'second', continued: true },
+    ])
+  })
+})
+
+describe('errorLines noise', () => {
+  // Real lines from the same job's full log: passing tests and vitest
+  // stderr banners that merely contain the word "error".
+  const NOISE = [
+    '2026-10-29T15:30:30.1Z      ✓ Error Handling (3)',
+    '2026-10-29T15:30:30.2Z        ✓ should handle CDN errors correctly 3012ms',
+    '2026-10-29T15:30:30.3Z stderr | src/utils/__tests__/logger.test.ts > logger > warn and error are callable without throwing',
+    '2026-10-29T15:30:30.4Z      ✓ the district page’s 7 × 24 grid, summed over the region 436ms',
+    '2026-10-29T15:30:30.5Z Error extracting division performance: Error: Extraction failed',
+  ].join('\n')
+  const SIGNAL = [
+    '2026-10-29T15:40:32.70Z ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯',
+    '2026-10-29T15:40:32.71Z  FAIL   integration  src/pages/__tests__/ClubDetailPage.test.tsx > renders not found state',
+    '2026-10-29T15:40:32.72Z ##[error]Process completed with exit code 1.',
+  ].join('\n')
+
+  it('drops passing tests and stderr banners when real failure lines exist', () => {
+    const out = errorLines(parseLogLines(`${NOISE}\n${SIGNAL}\n`))
+    expect(out).toEqual([
+      '⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯',
+      ' FAIL   integration  src/pages/__tests__/ClubDetailPage.test.tsx > renders not found state',
+      '##[error]Process completed with exit code 1.',
+    ])
+  })
+
+  it('falls back to generic error lines when nothing stronger matched', () => {
+    const out = errorLines(parseLogLines(`${NOISE}\n`))
+    expect(out).toEqual([
+      'Error extracting division performance: Error: Extraction failed',
     ])
   })
 })
