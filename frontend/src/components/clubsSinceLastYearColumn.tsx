@@ -63,3 +63,11 @@ export const buildSinceLastYearColumn = (
       )
     },
   })
+
+/** Phone-row DCP meta while the preset is on. Stub. */
+export function sinceLastYearPhoneMeta(
+  _entry: SinceLastYearEntry | undefined,
+  goals: number
+): string {
+  return `${goals}/10 DCP`
+}
