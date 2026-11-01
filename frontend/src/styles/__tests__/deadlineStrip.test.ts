@@ -15,12 +15,16 @@ const css = readFileSync(
   'utf-8'
 )
 
-const rules = (selector: string): string[] => {
-  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return [...css.matchAll(new RegExp(`${esc}\\s*\\{[^}]*\\}`, 'g'))].map(
-    m => m[0]
-  )
-}
+/** Every rule whose selector list names `selector` (media blocks included). */
+const rules = (selector: string): string[] =>
+  [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter(m =>
+      m[1]!
+        .split(',')
+        .map(part => part.replace(/\/\*[\s\S]*?\*\//g, '').trim())
+        .includes(selector.trim())
+    )
+    .map(m => `${m[1]!.trim()} {${m[2]}}`)
 
 describe('deadline-strip.css toggle (#2429)', () => {
   it('gives the toggle its own 44px-tall box', () => {
@@ -40,14 +44,20 @@ describe('deadline-strip.css toggle (#2429)', () => {
      than the loaded one (CLS 0.085 on the division page). The slot must
      centre a line of text exactly as the toggle does. */
   it('aligns the loading slot on a text baseline, like the toggle', () => {
+    const align = (sel: string) =>
+      rules(sel)
+        .map(r => /align-items:\s*([\w-]+)/.exec(r)?.[1])
+        .filter(Boolean)
+        .join(',')
     for (const sel of [
       '.deadline-strip__toggle ',
       '.deadline-strip__toggle-slot ',
     ]) {
-      const rule = rules(sel).join('\n')
-      expect(rule, sel).toMatch(/display:\s*inline-flex/)
-      expect(rule, sel).toMatch(/align-items:\s*center/)
+      expect(rules(sel).join('\n'), sel).toMatch(/display:\s*inline-flex/)
     }
+    expect(align('.deadline-strip__toggle-slot ')).toBe(
+      align('.deadline-strip__toggle ')
+    )
   })
 
   it('does not fake the touch target with an overhanging pseudo-element', () => {

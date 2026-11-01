@@ -14,9 +14,10 @@ import { DeadlineTimeline } from './DeadlineTimeline'
    placeholder lines, so the content below it does not move on arrival.
 
    "See all deadlines" (#2429) opens the whole year below the strip. It is
-   closed by default and its toggle shares the lead's row, so the closed
-   strip is no taller than before (the 375 Overview has ~12px of headroom
-   under its 4,000px budget). */
+   closed by default. Its 44px box sits beside the lead and the first date on
+   phones ("All") and in the lead's row from 768, so the closed phone strip
+   is no taller than before (the 375 Overview has ~12px of headroom under its
+   4,000px budget). */
 
 export interface NextDeadlineStripProps {
   /** "YYYY-YYYY", owned by the page (R3). */
@@ -87,8 +88,10 @@ export const NextDeadlineStrip: React.FC<NextDeadlineStripProps> = ({
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen(o => !o)}
+          aria-label="See all deadlines"
         >
-          See all deadlines
+          <span className="deadline-strip__toggle-short">All</span>
+          <span className="deadline-strip__toggle-long">See all deadlines</span>
           <span className="deadline-strip__chevron" aria-hidden="true">
             {open ? '▴' : '▾'}
           </span>

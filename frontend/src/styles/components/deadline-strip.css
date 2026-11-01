@@ -2,12 +2,18 @@
    Legacy palette only (#2080: no --rt-stats until Phase 2): a
    --tm-loyal-blue-10 tint (remapped under [data-theme='dark'] in
    dark-mode.css) with --line, --ink and --ink-2, which remap too.
-   Stacked at phone widths, one row from 768. Text stays ≥14px. */
+   Stacked at phone widths, one row from 768. Text stays ≥14px.
+
+   #2429, phones: a two-column grid. Column 1 stacks the lead and the dates;
+   column 2 holds the 44px "All" toggle beside the lead and the first date,
+   spanning rows that already exist, so the strip is no taller than before
+   (the 375 Overview has ~12px of headroom under PAGE_MAX_H). */
 
 .deadline-strip {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0.5rem;
+  row-gap: 0.25rem;
   margin: 0 0 1rem;
   padding: 0.5rem 0.875rem;
   font-size: 0.875rem;
@@ -24,20 +30,30 @@
   color: var(--ink);
 }
 
-/* #2429: the lead and the "See all deadlines" toggle share one row. The
-   toggle's own box is 44px tall (the touch-target floor the preview smoke
-   measures), so that row is 44px rather than one text line. */
+/* Phones: the head's children join the strip's grid directly. */
 .deadline-strip__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  min-width: 0;
+  display: contents;
+}
+
+.deadline-strip__lead {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.deadline-strip__list,
+.deadline-strip__done,
+.deadline-strip__placeholder {
+  grid-column: 1;
 }
 
 .deadline-strip__toggle {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: start;
   display: inline-flex;
-  align-items: center;
+  /* The label sits on the lead's line; the 44px box runs down beside the
+     first date. */
+  align-items: flex-start;
   min-height: 44px;
   min-width: 44px;
   margin: 0;
@@ -54,9 +70,18 @@
 }
 
 .deadline-strip__toggle-slot {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: start;
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   min-height: 44px;
+  min-width: 44px;
+}
+
+/* "All" on phones, "See all deadlines" from 768. */
+.deadline-strip__toggle-long {
+  display: none;
 }
 
 .deadline-strip__toggle:focus-visible {
@@ -73,6 +98,7 @@
 
 /* The whole-year timeline, open only on request. */
 .deadline-timeline {
+  grid-column: 1 / -1;
   flex-basis: 100%;
   margin-top: 0.5rem;
   padding-top: 0.5rem;
@@ -179,6 +205,7 @@
 @media (min-width: 768px) {
   .deadline-strip,
   .deadline-strip__list {
+    display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: baseline;
@@ -188,7 +215,25 @@
   /* The two dates do not fit beside the lead at tablet widths, so the lead
      keeps its own row there — and shares it with the toggle (#2429). */
   .deadline-strip__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
     flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .deadline-strip__toggle,
+  .deadline-strip__toggle-slot {
+    align-items: center;
+  }
+
+  .deadline-strip__toggle-short {
+    display: none;
+  }
+
+  .deadline-strip__toggle-long {
+    display: inline;
   }
 
   .deadline-timeline__list {
