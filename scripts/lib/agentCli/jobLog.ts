@@ -115,11 +115,37 @@ export function sliceStep(lines: LogLine[], step: JobStep): LogLine[] {
   return out
 }
 
-const ERROR_LINE =
-  /##\[error\]|\b(error|errors|failed|failure|fatal|exception)\b|AssertionError|\bFAIL\b|✗|×|exit code [1-9]/i
+/** Lines that are a failure by themselves (CI annotations, test runners, npm, tsc). */
+const STRONG_ERROR = [
+  /^##\[error\]/,
+  /^\s*FAIL\b/,
+  /\bFailed Tests \d+/,
+  /AssertionError/,
+  /^npm (ERR!|error)\b/,
+  /\berror TS\d+:/,
+  /^\s*[×✗]\s/,
+  /^\s*(Test Files|Tests)\s.*\b\d+ failed\b/,
+  /exit code [1-9]/,
+]
 
-/** Error-ish lines, with each `##[error]` message's continuation lines. */
+/** Generic wording, used only when no strong line exists. */
+const WEAK_ERROR = /\b(error|errors|failed|failure|fatal|exception)\b/i
+
+/** Never errors: passing tests and vitest's per-test stderr/stdout banners. */
+const NOISE = [/✓/, /^(stderr|stdout) \| /]
+
+/**
+ * Error lines, with each `##[error]` message's continuation lines. When any
+ * strong failure line exists only strong lines are kept, so a log full of
+ * passing "should handle errors" tests doesn't bury the real failure.
+ */
 export function errorLines(lines: LogLine[], max = 80): string[] {
+  const candidates = lines.filter(
+    l => !l.continued && !NOISE.some(p => p.test(l.text))
+  )
+  const strong = (t: string) => STRONG_ERROR.some(p => p.test(t))
+  const useStrong = candidates.some(l => strong(l.text))
+  const keep = (t: string) => (useStrong ? strong(t) : WEAK_ERROR.test(t))
   const out: string[] = []
   let inError = false
   let carried = 0
@@ -130,8 +156,8 @@ export function errorLines(lines: LogLine[], max = 80): string[] {
       continue
     }
     inError = false
-    if (l.continued) continue
-    if (ERROR_LINE.test(l.text)) {
+    if (l.continued || NOISE.some(p => p.test(l.text))) continue
+    if (keep(l.text)) {
       out.push(l.text)
       if (l.text.startsWith('##[error]')) {
         inError = true

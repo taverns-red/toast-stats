@@ -232,11 +232,11 @@ Exit: 0 ok · 1 a referenced asset is broken, or no preview found`,
           sleep: deps.sleep,
           now: deps.now,
         })
-        if (!p) {
+        if (!p || !p.live) {
           return {
             code: 1,
-            json: { error: `no preview comment on PR #${v.preview}` },
-            text: `no preview comment on PR #${v.preview}`,
+            json: { error: `no live preview for PR #${v.preview}`, preview: p },
+            text: `no live preview for PR #${v.preview}${p ? ` (${formatPreview(p)})` : ''}`,
           }
         }
         base = p.url
@@ -260,7 +260,8 @@ Exit: 0 ok · 1 a referenced asset is broken, or no preview found`,
     help: `Reads the sticky "Preview deployed" comment that pr-preview.yml posts and
 prints the channel URL and its expiry.
 
-Exit: 0 found · 1 no preview comment, or the channel has expired`,
+Exit: 0 live · 1 no preview comment, the channel expired, or the PR is closed
+(pr-preview-cleanup.yml deletes the channel when the PR closes)`,
     options: {},
     async run(pos, _v, deps, repo) {
       const pr = prNumber(pos[0])
@@ -276,7 +277,7 @@ Exit: 0 found · 1 no preview comment, or the channel has expired`,
           json: { pr, url: null },
           text: `no preview comment on PR #${pr}`,
         }
-      return { code: p.expired ? 1 : 0, json: p, text: formatPreview(p) }
+      return { code: p.live ? 0 : 1, json: p, text: formatPreview(p) }
     },
   },
   'worktree-audit': {

@@ -22,6 +22,10 @@ export interface PreviewInfo {
   url: string
   expires: string | null
   expired: boolean
+  /** OPEN, CLOSED or MERGED; pr-preview-cleanup.yml deletes the channel on close. */
+  prState: string | null
+  /** False once the channel has expired or the PR is no longer open. */
+  live: boolean
   updatedAt: string
   commentUrl: string
 }
@@ -56,6 +60,8 @@ export function findPreview(
       url: p.url,
       expires: p.expires,
       expired: !Number.isNaN(exp) && exp <= now,
+      prState: null,
+      live: Number.isNaN(exp) || exp > now,
       updatedAt: c.updated_at,
       commentUrl: c.html_url,
     }
@@ -83,12 +89,22 @@ export async function previewUrl(
     ],
     { runner: opts.runner, sleep: opts.sleep }
   )
-  return findPreview(pages, pr, (opts.now ?? Date.now)())
+  const found = findPreview(pages, pr, (opts.now ?? Date.now)())
+  if (!found) return null
+  const { state } = await runGhJson<{ state: string }>(
+    ['pr', 'view', String(pr), '--repo', opts.repo, '--json', 'state'],
+    { runner: opts.runner, sleep: opts.sleep }
+  )
+  return { ...found, prState: state, live: found.live && state === 'OPEN' }
 }
 
 export function formatPreview(p: PreviewInfo): string {
   const exp = p.expires
     ? ` (expires ${p.expires}${p.expired ? ', EXPIRED' : ''})`
     : ''
-  return `${p.url}${exp}`
+  const gone =
+    p.prState && p.prState !== 'OPEN'
+      ? ` [PR ${p.prState}: channel removed by pr-preview-cleanup]`
+      : ''
+  return `${p.url}${exp}${gone}`
 }
