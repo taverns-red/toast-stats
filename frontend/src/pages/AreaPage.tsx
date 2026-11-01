@@ -30,6 +30,8 @@ import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearC
 import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { OfficerTrainingSummary } from '../components/training/OfficerTrainingSummary'
+import { downloadCSV } from '../utils/csvExport'
+import { areaWorkbookCsv } from '../utils/areaWorkbook'
 
 const AreaPage: React.FC = () => {
   const { districtId, divId, areaId } = useParams<{
@@ -188,6 +190,23 @@ const AreaPage: React.FC = () => {
     />
   )
   const districtUrl = `/district/${districtId}`
+  // Area workbook (#2428): the same snapshot, clubs, pinned date and program
+  // year this page renders from (R3), built only when asked for.
+  const handleWorkbook = () => {
+    if (!snapshot || !effectiveEndDate || !districtId || !divId || !areaId)
+      return
+    const workbook = areaWorkbookCsv(
+      districtId,
+      {
+        divisions: extractDivisionPerformance(snapshot, effectiveEndDate),
+        clubs: data?.allClubs ?? [],
+        snapshotDate: effectiveEndDate,
+        programYear: (effectiveProgramYear ?? selectedProgramYear).label,
+      },
+      { division: divId, area: areaId }
+    )
+    if (workbook) downloadCSV(workbook.csv, workbook.filename)
+  }
   const divisionUrl = `/district/${districtId}/division/${divId}`
 
   return (
@@ -307,18 +326,30 @@ const AreaPage: React.FC = () => {
       {/* Council print pack (#2299): the area's summary as a printable
           document, carrying this page's ?py= / ?date= (R3). */}
       {!isBodyPending && (
-        <p className="council-pack-link">
-          <Link
-            to={`/district/${districtId}/division/${divId}/area/${areaId}/print${search}`}
+        <div className="area-council-tools">
+          <p className="council-pack-link">
+            <Link
+              to={`/district/${districtId}/division/${divId}/area/${areaId}/print${search}`}
+            >
+              Print pack
+            </Link>
+            <span className="council-pack-link__hint">
+              {' '}
+              — One page: recognition, close-to-Distinguished clubs, visits,
+              Success Plans and clubs.
+            </span>
+          </p>
+          {/* Area workbook (#2428): the club rows as a CSV, for the
+              director's own visit and council-call sheet. */}
+          <button
+            type="button"
+            className="area-workbook-button"
+            onClick={handleWorkbook}
+            disabled={!snapshot || !effectiveEndDate}
           >
-            Print pack
-          </Link>
-          <span className="council-pack-link__hint">
-            {' '}
-            — One page: recognition, close-to-Distinguished clubs, visits,
-            Success Plans and clubs.
-          </span>
-        </p>
+            Download area workbook
+          </button>
+        </div>
       )}
 
       {/* Scoped narrative — the same per-area progress prose the overview's

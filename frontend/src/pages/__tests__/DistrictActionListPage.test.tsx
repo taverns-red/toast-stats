@@ -130,6 +130,11 @@ function makeArea(overrides: Partial<AreaPerformance>): AreaPerformance {
     currentRound: 1,
     clubsMissingCurrentRoundVisit: [],
     clubsMissingCurrentRoundVisitIneligible: [],
+    // #2428: the area workbook reads the plan lists too.
+    cspTracked: true,
+    cspSubmittedCount: 0,
+    clubsMissingCsp: [],
+    clubsMissingCspIneligible: [],
     recognitionState: {
       level: 'distinguished',
       status: 'provisional',
@@ -1241,5 +1246,43 @@ describe('DistrictActionListPage — officer training list size (#2296, N10)', (
     expect(cellsOf('section-training')).toHaveLength(12)
     // The count badge and the CSV always carry all 12.
     expect(within(section).getAllByRole('button')[0]).toHaveTextContent('12')
+  })
+})
+
+/* #2428 — the area workbook: one CSV row per club, offered once the scope
+   names a single area (the division may be implied by the area). */
+describe('DistrictActionListPage — area workbook (#2428)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(useDistrictCachedDates).mockReturnValue(
+      DATES_2025_26 as ReturnType<typeof useDistrictCachedDates>
+    )
+  })
+  afterEach(() => cleanup())
+
+  it('is not offered until the scope is one area', async () => {
+    renderAt('/district/61/action-list?division=A')
+    await screen.findByTestId('action-list-page')
+    expect(
+      screen.queryByRole('button', { name: 'Download area workbook' })
+    ).not.toBeInTheDocument()
+  })
+
+  it('downloads one row per club in the area, named for the district, area and date', async () => {
+    renderAt('/district/61/action-list?area=A1')
+    await screen.findByTestId('action-list-page')
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Download area workbook' })
+    )
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledTimes(1))
+    const [csv, filename] = vi.mocked(downloadCSV).mock.calls[0]!
+    expect(filename).toBe('area_workbook_district_61_area_AA1_2025-07-15.csv')
+    const lines = csv.split('\n')
+    expect(lines[0]).toMatch(/^Club Number,Club Name,Division,Area,/)
+    // Area A1 holds Rising Club and Unplanned Club; nothing from B2.
+    expect(lines.slice(1).map(l => l.split(',')[1])).toEqual([
+      'Rising Club',
+      'Unplanned Club',
+    ])
   })
 })

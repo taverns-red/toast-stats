@@ -36,6 +36,7 @@ import {
   cspAutoCreditNote,
   formatCspDueDate,
 } from '../utils/cspDeadlines'
+import { areaWorkbookCsv } from '../utils/areaWorkbook'
 import { ActionTable, type ActionTableColumn } from '../components/ActionTable'
 import type { MobileRow } from '../components/MobileRowList'
 import { StatusChip } from '../components/StatusChip'
@@ -879,6 +880,32 @@ const DistrictActionListPage: React.FC = () => {
     downloadCSV(arrayToCSV(rows), generateFilename('action-list', districtId))
   }
 
+  /* Area workbook (#2428): offered once the scope names one area. `?area=`
+     alone is enough when exactly one division holds that area id. */
+  const workbookDivision = useMemo(() => {
+    if (!area) return undefined
+    if (division) return division
+    const holders = divisionPerformance.filter(d =>
+      d.areas.some(a => a.areaId === area)
+    )
+    return holders.length === 1 ? holders[0]!.divisionId : undefined
+  }, [area, division, divisionPerformance])
+
+  const handleWorkbook = () => {
+    if (!districtId || !area || !workbookDivision || !effectiveEndDate) return
+    const workbook = areaWorkbookCsv(
+      districtId,
+      {
+        divisions: divisionPerformance,
+        clubs: analytics?.allClubs ?? [],
+        snapshotDate: effectiveEndDate,
+        programYear: (effectiveProgramYear ?? selectedProgramYear).label,
+      },
+      { division: workbookDivision, area }
+    )
+    if (workbook) downloadCSV(workbook.csv, workbook.filename)
+  }
+
   if (!districtId) {
     return null
   }
@@ -977,14 +1004,26 @@ const DistrictActionListPage: React.FC = () => {
                 )}
               </div>
 
-              <button
-                type="button"
-                className="action-list-page__export"
-                onClick={handleExport}
-                disabled={totalItems === 0}
-              >
-                Export CSV
-              </button>
+              <div className="action-list-page__exports">
+                {area && workbookDivision && (
+                  <button
+                    type="button"
+                    className="action-list-page__export"
+                    onClick={handleWorkbook}
+                    disabled={!effectiveEndDate || !districtStatistics}
+                  >
+                    Download area workbook
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="action-list-page__export"
+                  onClick={handleExport}
+                  disabled={totalItems === 0}
+                >
+                  Export CSV
+                </button>
+              </div>
             </div>
 
             {showSectionsSkeleton ? (
