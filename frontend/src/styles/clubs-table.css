@@ -69,3 +69,11 @@
   color: var(--ink);
   background-color: var(--surface);
 }
+
+/* dark-mode.css paints every select --surface-card with !important; the
+   active preset keeps its loyal-blue fill, as the pressed chip does. */
+[data-theme='dark'] .clubs-since-select[data-active='true'] {
+  color: var(--surface) !important;
+  background-color: var(--tm-loyal-blue) !important;
+  border-color: var(--tm-loyal-blue) !important;
+}

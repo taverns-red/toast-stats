@@ -21,7 +21,7 @@ export const NO_PRIOR_LABELS: Record<NoPriorReason, string> = {
   'no-snapshot': 'No prior data',
 }
 
-/** Phone-row meta suffix: "(was 3)" or the no-prior label. */
+/** Last year in words for the phone row's accessible name: "was 3" or the no-prior label. */
 export function sinceLastYearMeta(
   entry: SinceLastYearEntry | undefined
 ): string | null {
@@ -64,10 +64,16 @@ export const buildSinceLastYearColumn = (
     },
   })
 
-/** Phone-row DCP meta while the preset is on. Stub. */
+/**
+ * Phone-row DCP meta while the preset is on. Line 2 is shared with the status
+ * chip at 375, so last year's value goes inside the figure ("1→4/10 DCP")
+ * rather than after it, where the row would ellipsize it away.
+ */
 export function sinceLastYearPhoneMeta(
-  _entry: SinceLastYearEntry | undefined,
+  entry: SinceLastYearEntry | undefined,
   goals: number
 ): string {
+  if (entry?.kind === 'compared') return `${entry.then}→${goals}/10 DCP`
+  if (entry?.kind === 'no-prior') return `${goals}/10 DCP · no prior yr`
   return `${goals}/10 DCP`
 }

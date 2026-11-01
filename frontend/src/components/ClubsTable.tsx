@@ -31,6 +31,7 @@ import { SinceLastYearLine, SinceLastYearSelect } from './clubsSinceLastYear'
 import {
   buildSinceLastYearColumn,
   sinceLastYearMeta,
+  sinceLastYearPhoneMeta,
 } from './clubsSinceLastYearColumn'
 import { ActiveFiltersBar } from './ActiveFiltersBar'
 import { ColumnGroupsMenu } from './ColumnGroupsMenu'
@@ -759,9 +760,10 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       const net = formatNet(club)
       // #2432 — while the since-last-year preset is on, DCP carries last
       // year's value ("was 3") or why there is none.
-      const since = sinceByClub
-        ? sinceLastYearMeta(lookupSinceLastYear(sinceByClub, club.clubId))
-        : null
+      const sinceEntry = sinceByClub
+        ? lookupSinceLastYear(sinceByClub, club.clubId)
+        : undefined
+      const since = sinceLastYearMeta(sinceEntry)
       const memberText = `${members} member${members === 1 ? '' : 's'}`
       const coached = club.coach?.status === 'active'
       return {
@@ -778,9 +780,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         // Line 2 keeps the chip and DCP; the member count rides under the
         // trend sparkline with its net (#1792) — measured at 375, the count
         // beside a 60 px trend ellipsized every row by up to 60 px.
-        meta: since
-          ? `${club.latestDcpGoals}/10 DCP (${since})`
-          : `${club.latestDcpGoals}/10 DCP`,
+        meta: sinceLastYearPhoneMeta(sinceEntry, club.latestDcpGoals),
         // Coach flag (#1968): line 2 has no room at 375 ("· Coach" clipped to
         // "· C…", #1954), so an active coach rides line 1 after the name,
         // which ellipsizes first. Completed engagements stay desktop-only.
