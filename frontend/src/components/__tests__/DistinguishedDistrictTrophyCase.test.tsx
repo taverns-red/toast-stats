@@ -548,3 +548,201 @@ describe('DistinguishedDistrictTrophyCase', () => {
     })
   })
 })
+
+/* Gap at every tier (#2426). Under the next-tier tiles, one row per tier of
+   the program year's ladder with the paid clubs, payments and Distinguished
+   clubs it still needs, or "met". Fixture: real D61, 2026-10-31 prod
+   (competitive-awards.json + all-districts-rankings.json). */
+describe('DistinguishedDistrictTrophyCase — gap at every tier (#2426)', () => {
+  const CURRENT_PY = '2026-2027'
+  const d61Status: DistinguishedDistrictStatus = {
+    districtId: '61',
+    currentTier: 'NotDistinguished',
+    allPrerequisitesMet: true,
+    prerequisites: {
+      dspSubmitted: true,
+      trainingMet: true,
+      marketAnalysisSubmitted: true,
+      communicationPlanSubmitted: true,
+      regionAdvisorVisitMet: false,
+    },
+    nextTierGap: {
+      tier: 'Distinguished',
+      paymentGrowthGap: 40.6,
+      clubGrowthGap: 13.03,
+      distinguishedPercentGap: 43.10126582278481,
+      netClubGrowthGap: 19,
+      paidClubBase: 158,
+      paymentBase: 5886,
+    },
+    paymentsRemaining: 2390,
+    paidClubsRemaining: 21,
+    distinguishedClubsRemaining: 69,
+  }
+  const d61Ranking: RemainingInputs = {
+    paidClubBase: 158,
+    paymentBase: 5886,
+    paidClubs: 139,
+    totalPayments: 3555,
+    distinguishedClubs: 3,
+  }
+
+  const renderD61 = (
+    status: DistinguishedDistrictStatus = d61Status,
+    ranking: RemainingInputs | null = d61Ranking,
+    programYear = CURRENT_PY
+  ) =>
+    render(
+      <DistinguishedDistrictTrophyCase
+        status={status}
+        ranking={ranking}
+        programYear={programYear}
+      />
+    )
+
+  const rowCells = (tier: string) =>
+    within(
+      within(screen.getByTestId('distinguished-tier-gaps')).getByRole('row', {
+        name: new RegExp(`^${tier}`),
+      })
+    )
+      .getAllByRole('cell')
+      .map(c => c.textContent)
+
+  it('renders a table with one row per tier and the three requirement columns', () => {
+    renderD61()
+    const table = within(
+      screen.getByTestId('distinguished-tier-gaps')
+    ).getByRole('table')
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map(h => h.textContent)
+    ).toEqual(['Tier', 'Paid clubs', 'Payments', 'Distinguished clubs'])
+    expect(
+      within(table)
+        .getAllByRole('rowheader')
+        .map(h => h.textContent)
+    ).toEqual(['Distinguished', 'Select', "President's", 'Smedley'])
+  })
+
+  it("shows each tier's remaining counts for real D61", () => {
+    renderD61()
+    expect(rowCells('Distinguished')).toEqual(['21', '2,390', '69'])
+    expect(rowCells('Select')).toEqual(['24', '2,508', '76'])
+    expect(rowCells("President's")).toEqual(['27', '2,626', '84'])
+    expect(rowCells('Smedley')).toEqual(['32', '2,802', '92'])
+  })
+
+  it('marks a met requirement and a met tier', () => {
+    renderD61(
+      { ...d61Status, currentTier: 'Presidents' },
+      {
+        ...d61Ranking,
+        paidClubs: 170,
+        totalPayments: 6400,
+        distinguishedClubs: 90,
+      }
+    )
+    const gaps = screen.getByTestId('distinguished-tier-gaps')
+    const select = within(gaps).getByRole('row', { name: /^Select/ })
+    expect(select).toHaveAttribute('data-met', 'true')
+    expect(
+      within(select)
+        .getAllByRole('cell')
+        .map(c => c.textContent)
+    ).toEqual(['✓ met', '✓ met', '✓ met'])
+    expect(within(select).getByRole('rowheader')).toHaveTextContent(/met/i)
+    const smedley = within(gaps).getByRole('row', { name: /^Smedley/ })
+    expect(smedley).toHaveAttribute('data-met', 'false')
+    expect(rowCells('Smedley')).toEqual(['1', '✓ met', '5'])
+  })
+
+  it('agrees with the next-tier tiles on the next tier', () => {
+    renderD61()
+    const values = within(
+      screen.getByTestId('distinguished-gap-tiles')
+    ).getAllByTestId('gap-tile-value')
+    expect(values.map(v => v.textContent)).toEqual([
+      '21 clubs',
+      '2390 payments',
+      '69 confirmed clubs',
+    ])
+    expect(rowCells('Distinguished')).toEqual(['21', '2,390', '69'])
+  })
+
+  it('cites Item 1490 for the thresholds, with a link to TI', () => {
+    renderD61()
+    const gaps = screen.getByTestId('distinguished-tier-gaps')
+    expect(gaps).toHaveTextContent(/District Recognition Program/)
+    expect(gaps).toHaveTextContent(/2026-2027 rules/)
+    const link = within(gaps).getByRole('link', { name: /Item 1490/ })
+    expect(link).toHaveAttribute(
+      'href',
+      'https://content.toastmasters.org/image/upload/1490-district-recognition-program.pdf'
+    )
+  })
+
+  it('shows no table when the district has no rankings data', () => {
+    renderD61(d61Status, null)
+    expect(
+      screen.queryByTestId('distinguished-tier-gaps')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /every tier/i })
+    ).not.toBeInTheDocument()
+  })
+
+  it('folds the table behind a toggle on phones and always shows it from 768 up', async () => {
+    renderD61()
+    const toggle = screen.getByRole('button', { name: /every tier/i })
+    expect(toggle).toHaveClass('md:hidden')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    const gaps = screen.getByTestId('distinguished-tier-gaps')
+    expect(toggle).toHaveAttribute('aria-controls', gaps.id)
+    expect(gaps).toHaveClass('hidden', 'md:block')
+    await userEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(gaps).not.toHaveClass('hidden')
+  })
+
+  it("counts the next-tier tiles down under the year's own ladder (2024-25 Select)", () => {
+    // Rev. 12/2022 Select: +3% payments, +1 net club, 45% Distinguished.
+    // baseRanking → clubs 162 − 152 = 10, payments 5774 − 5493 = 281,
+    // Distinguished clubs ceil(161 × 0.45) = 73 − 53 = 20.
+    renderD61(
+      {
+        ...baseStatus,
+        currentTier: 'Distinguished',
+        nextTierGap: { ...baseStatus.nextTierGap!, tier: 'Select' },
+        paidClubsRemaining: 0,
+        paymentsRemaining: 0,
+        distinguishedClubsRemaining: 0,
+      },
+      baseRanking,
+      '2024-2025'
+    )
+    const values = screen.getAllByTestId('gap-tile-value')
+    expect(values.map(v => v.textContent)).toEqual([
+      '10 clubs',
+      '281 payments',
+      '20 confirmed clubs',
+    ])
+    expect(rowCells('Select')).toEqual(['10', '281', '20'])
+  })
+
+  it('reserves the table from 768 up while loading', () => {
+    render(
+      <DistinguishedDistrictTrophyCase
+        status={null}
+        isLoading
+        programYear={CURRENT_PY}
+      />
+    )
+    const reserved = screen.getByTestId('distinguished-trophy-skeleton-tiers')
+    expect(reserved).toHaveClass('hidden', 'md:block', 'invisible')
+    expect(within(reserved).getAllByRole('row', { hidden: true })).toHaveLength(
+      5
+    )
+  })
+})

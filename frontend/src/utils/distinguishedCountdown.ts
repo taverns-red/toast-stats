@@ -196,3 +196,28 @@ export function getDistinguishedCountdown(
     clubGrowth,
   }
 }
+
+/** One tier's row in the trophy case's every-tier table (#2426). */
+export interface TierGapRow {
+  tier: DistinguishedTier
+  paidClubsRemaining: number
+  paymentsRemaining: number
+  distinguishedClubsRemaining: number
+  /** All three metrics at zero. The tier still needs the prerequisites. */
+  met: boolean
+}
+
+/** Canonical counts to the Distinguished gate (#686), when present. */
+export interface CanonicalMinimumRemaining {
+  paidClubsRemaining?: number | undefined
+  paymentsRemaining?: number | undefined
+  distinguishedClubsRemaining?: number | undefined
+}
+
+export function deriveRemainingByTier(
+  _programYear: string,
+  _ranking: RemainingInputs | null | undefined,
+  _canonicalMinimum?: CanonicalMinimumRemaining
+): TierGapRow[] | null {
+  return null
+}
