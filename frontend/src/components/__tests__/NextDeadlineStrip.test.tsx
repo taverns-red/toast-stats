@@ -1,5 +1,11 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, cleanup, within } from '@testing-library/react'
+import {
+  render,
+  screen,
+  cleanup,
+  within,
+  fireEvent,
+} from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { NextDeadlineStrip } from '../NextDeadlineStrip'
 
@@ -51,5 +57,101 @@ describe('NextDeadlineStrip (#2298)', () => {
     render(<NextDeadlineStrip programYear="2026-2027" asOfDate={undefined} />)
     expect(strip()).toHaveAttribute('aria-busy', 'true')
     expect(within(strip()).queryAllByRole('listitem')).toHaveLength(0)
+  })
+})
+
+/* #2429 — "See all deadlines": the whole year from the same cited table,
+   grouped by month, with an owner role only where a TI source names it (and
+   the citation), plus the .ics feed. Collapsed by default: the toggle sits
+   in the lead row, so the closed strip is no taller than before. */
+describe('NextDeadlineStrip — whole-year timeline (#2429)', () => {
+  const toggle = () =>
+    within(strip()).getByRole('button', { name: /see all deadlines/i })
+
+  it('is collapsed by default', () => {
+    render(<NextDeadlineStrip programYear="2026-2027" asOfDate="2026-11-15" />)
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByTestId('deadline-timeline')).toBeNull()
+  })
+
+  it('opens to every deadline of the year, grouped by month', () => {
+    render(<NextDeadlineStrip programYear="2026-2027" asOfDate="2026-11-15" />)
+    fireEvent.click(toggle())
+    expect(toggle()).toHaveAttribute('aria-expanded', 'true')
+    const panel = screen.getByTestId('deadline-timeline')
+    expect(toggle()).toHaveAttribute('aria-controls', panel.id)
+    const months = within(panel)
+      .getAllByRole('heading', { level: 3 })
+      .map(h => h.textContent)
+    expect(months).toEqual([
+      'August 2026',
+      'September 2026',
+      'October 2026',
+      'November 2026',
+      'February 2027',
+      'April 2027',
+      'May 2027',
+    ])
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(8)
+    fireEvent.click(toggle())
+    expect(screen.queryByTestId('deadline-timeline')).toBeNull()
+  })
+
+  it('shows a cited owner as a link to its TI source, and no owner otherwise', () => {
+    render(<NextDeadlineStrip programYear="2026-2027" asOfDate="2026-11-15" />)
+    fireEvent.click(toggle())
+    const items = within(screen.getByTestId('deadline-timeline')).getAllByRole(
+      'listitem'
+    )
+    const item = (label: string) =>
+      items.find(li => li.textContent?.includes(label))!
+    const visits = item('Round 1 club visit reports due')
+    expect(visits).toHaveTextContent('Owner: Area Director')
+    const cite = within(visits).getByRole('link')
+    expect(cite).toHaveAttribute(
+      'href',
+      'https://content.toastmasters.org/image/upload/1490-district-recognition-program.pdf'
+    )
+    expect(cite).toHaveTextContent('Item 1490, p. 11')
+    expect(item('Round 2 officer training opens')).toHaveTextContent(
+      'Owner: Program Quality Director'
+    )
+    for (const label of [
+      'Club Success Plans due',
+      'October dues renewal due',
+      'April dues renewal due',
+    ]) {
+      expect(item(label)).not.toHaveTextContent('Owner')
+      expect(within(item(label)).queryByRole('link')).toBeNull()
+    }
+  })
+
+  it('marks the deadlines before the page date as passed (R3)', () => {
+    render(<NextDeadlineStrip programYear="2026-2027" asOfDate="2026-11-15" />)
+    fireEvent.click(toggle())
+    const items = within(screen.getByTestId('deadline-timeline')).getAllByRole(
+      'listitem'
+    )
+    expect(items[0]).toHaveTextContent('passed')
+    expect(items[4]).toHaveTextContent('Round 1 club visit reports due')
+    expect(items[4]).not.toHaveTextContent('passed')
+  })
+
+  it('offers the .ics feed of the same table', () => {
+    render(<NextDeadlineStrip programYear="2026-2027" asOfDate="2026-11-15" />)
+    fireEvent.click(toggle())
+    const link = within(screen.getByTestId('deadline-timeline')).getByRole(
+      'link',
+      { name: /add to calendar/i }
+    )
+    expect(link).toHaveAttribute('href', '/deadlines.ics')
+  })
+
+  it('still offers the year once every deadline has passed', () => {
+    render(<NextDeadlineStrip programYear="2026-2027" asOfDate="2027-06-10" />)
+    fireEvent.click(toggle())
+    expect(
+      within(screen.getByTestId('deadline-timeline')).getAllByRole('listitem')
+    ).toHaveLength(8)
   })
 })
