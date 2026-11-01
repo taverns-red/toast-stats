@@ -138,6 +138,8 @@ const TD_BASE_CLASS: Record<string, string> = {
   deltaDcpGoals: 'px-2 py-3 whitespace-nowrap text-sm tabular-nums text-center',
   tierTransition: 'px-2 py-3 whitespace-nowrap text-sm text-center',
   distinguishedFlip: 'px-2 py-3 whitespace-nowrap text-sm text-center',
+  // "vs last year" (#2432): then → now plus the signed change.
+  sinceLastYear: 'px-2 py-3 whitespace-nowrap text-sm',
 }
 
 /** Exact `<td>` className for a column: base + responsive priority class. */

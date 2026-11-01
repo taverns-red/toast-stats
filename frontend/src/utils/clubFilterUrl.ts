@@ -28,7 +28,7 @@ import {
   FilterState,
   SortField,
 } from '../components/filters/types'
-import type { SinceLastYearMode } from './sinceLastYear'
+import { SINCE_LAST_YEAR_MODES, type SinceLastYearMode } from './sinceLastYear'
 
 /** name is carried by `search`, not its own key. */
 const SEARCH_PARAM = 'search'
@@ -259,7 +259,8 @@ export const SINCE_PARAM = 'since'
 
 /** Read the since-last-year mode from the URL; unknown values read as off. */
 export function paramsToSinceLastYearMode(
-  _params: URLSearchParams
+  params: URLSearchParams
 ): SinceLastYearMode | null {
-  return null
+  const raw = params.get(SINCE_PARAM)
+  return SINCE_LAST_YEAR_MODES.find(m => m === raw) ?? null
 }

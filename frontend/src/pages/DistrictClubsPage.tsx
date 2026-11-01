@@ -36,7 +36,11 @@ import {
   PRESET_PARAM,
   PRESET_CLOSE_TO_DISTINGUISHED,
   paramsToPresetActive,
+  SINCE_PARAM,
+  paramsToSinceLastYearMode,
 } from '../utils/clubFilterUrl'
+import { usePriorYearClubGoals } from '../hooks/usePriorYearClubGoals'
+import type { SinceLastYearMode } from '../utils/sinceLastYear'
 
 /* District Clubs Page (#570, epic #568 Phase 2; URL-sync generalised #817).
    Dedicated route for the clubs subview. URL params (clean spec):
@@ -119,6 +123,25 @@ const DistrictClubsPage: React.FC = () => {
           const next = new URLSearchParams(prev)
           if (active) next.set(PRESET_PARAM, PRESET_CLOSE_TO_DISTINGUISHED)
           else next.delete(PRESET_PARAM)
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
+
+  // "Climbed / slipped since last year" preset URL state (#2432). Its own key
+  // and single writer, like `preset` above. Read from the current URL each
+  // render, so the table is controlled by it.
+  const sinceMode = paramsToSinceLastYearMode(searchParams)
+  const handleSinceModeChange = useCallback(
+    (mode: SinceLastYearMode | null) => {
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          if (mode) next.set(SINCE_PARAM, mode)
+          else next.delete(SINCE_PARAM)
           return next
         },
         { replace: true }
@@ -241,6 +264,16 @@ const DistrictClubsPage: React.FC = () => {
 
   const allClubs = analytics?.allClubs || []
 
+  // Last year's DCP goals at the same date (#2432), for the since-last-year
+  // preset. The date is the one the page shows (R3); fetched only while the
+  // preset is on.
+  const priorYear = usePriorYearClubGoals(
+    districtId,
+    effectiveEndDate,
+    allCachedDates,
+    sinceMode !== null
+  )
+
   // #1999: hold the skeleton until the analytics settle — including the
   // date-index window, where the query is disabled and reports
   // `isLoading: false` with no data. Without this the table painted its
@@ -357,6 +390,12 @@ const DistrictClubsPage: React.FC = () => {
                   openGroups={openGroups}
                   onOpenGroupsChange={setOpenGroups}
                   compactToolbarTarget={contextBarTools}
+                  sinceLastYear={{
+                    mode: sinceMode,
+                    onModeChange: handleSinceModeChange,
+                    prior: priorYear.data,
+                    isError: priorYear.isError,
+                  }}
                 />
                 <ProspectiveClubsPanel clubs={analytics?.prospectiveClubs} />
               </>

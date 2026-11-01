@@ -116,7 +116,7 @@ describe('ClubsTable — since last year preset (#2432)', () => {
   it('keeps only climbers, names the comparison date, and counts the rest', () => {
     renderTable({ mode: 'climbed', prior: PRIOR })
     expect(rowNames()).toEqual([expect.stringContaining('Climber Club')])
-    const line = screen.getByText(/climbed since/i)
+    const line = screen.getByText(/clubs climbed since/i)
     expect(line).toHaveTextContent(
       '1 of 5 clubs climbed since October 31, 2025, the same date last year'
     )
@@ -139,7 +139,7 @@ describe('ClubsTable — since last year preset (#2432)', () => {
       mode: 'climbed',
       prior: { ...PRIOR, comparisonDate: '2025-10-28' },
     })
-    expect(screen.getByText(/climbed since/i)).toHaveTextContent(
+    expect(screen.getByText(/clubs climbed since/i)).toHaveTextContent(
       'climbed since October 28, 2025, the nearest snapshot before October 31, 2025'
     )
   })
