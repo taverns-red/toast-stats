@@ -6,7 +6,11 @@ import type {
   SnapshotDiff,
 } from '@taverns-red/shared-contracts'
 import { diffAreaDivisionStatus } from '../utils/diffAreaDivisionStatus'
-import { diffClubStatus, type ClubStatusTotals } from '../utils/diffClubStatus'
+import {
+  diffClubStatus,
+  countClubStatusTotals,
+  type ClubStatusTotals,
+} from '../utils/diffClubStatus'
 import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
@@ -72,7 +76,8 @@ export function useSnapshotDiff(
       const diff = diffSnapshots(fromSnap.data, toSnap.data)
       const areaDivision = diffAreaDivisionStatus(fromSnap.data, toSnap.data)
       const clubStatus = diffClubStatus(fromSnap.data, toSnap.data)
-      // Spread the engine's diff, override ONLY `events`. Everything else the
+      // Spread the engine's diff, override ONLY `events` (and add the
+      // #2425 status counts alongside). Everything else the
       // engine decided rides through untouched — including
       // `rosterDiscontinuity` (#1443), the district-realignment context the
       // page keys its explanatory note off. Adding another merged stream must
@@ -80,6 +85,9 @@ export function useSnapshotDiff(
       return {
         ...diff,
         events: [...diff.events, ...areaDivision, ...clubStatus],
+        // #2425 — per-status counts for the "Active clubs" tile, from the
+        // same status field the club-status events read (R3).
+        clubStatusTotals: countClubStatusTotals(fromSnap.data, toSnap.data),
       }
     },
     enabled: !!districtId && !!from && !!to,
