@@ -24,15 +24,24 @@ const CLUB = '/district/61/club/7238597'
 const HERO_MAX_H = 200
 const MAP_MARKUP_MAX = 30 * 1024
 
+/* The full render (analytics landed): the health pill replaces its
+ * placeholder. Wait on the first VISIBLE chip (#2436): within 30 days of a
+ * club's charter anniversary the anniversary chip renders first in the hero,
+ * and CSS hides it below 768, so a plain `.first()` resolves to a hidden
+ * element and never becomes visible. `filter({ visible: true })` (Playwright
+ * 1.51+) keeps only visible matches, so the wait holds on any date. */
+async function waitForVisibleChip(page: Page): Promise<void> {
+  await page
+    .locator('.club-hero__chip:not([data-testid="club-hero-pill-placeholder"])')
+    .filter({ visible: true })
+    .first()
+    .waitFor({ state: 'visible', timeout: 30_000 })
+}
+
 async function load(page: Page, requests: string[]): Promise<void> {
   page.on('request', r => requests.push(r.url()))
   await page.goto(CLUB, { waitUntil: 'networkidle', timeout: 60_000 })
-  // The full render (analytics landed): the health pill replaces its
-  // placeholder.
-  await page
-    .locator('.club-hero__chip:not([data-testid="club-hero-pill-placeholder"])')
-    .first()
-    .waitFor({ state: 'visible', timeout: 30_000 })
+  await waitForVisibleChip(page)
   await page.evaluate(() => document.fonts.ready.then(() => undefined))
   await page.waitForTimeout(300)
 }
@@ -270,39 +279,52 @@ for (const [width, cols, rows] of [
 // on macOS and three on the Linux runner. The hero's chrome must fit the
 // budget with a two-line name; each line past two is the name's own (an h1
 // is never truncated), so it is allowed on top.
-test(`club hero chrome ≤ ${HERO_MAX_H}px for the longest D61 club name at 375`, async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 375, height: 812 })
-  await page.goto('/district/61/club/9127', {
-    waitUntil: 'networkidle',
-    timeout: 60_000,
-  })
-  await page
-    .locator('.club-hero__chip:not([data-testid="club-hero-pill-placeholder"])')
-    .first()
-    .waitFor({ state: 'visible', timeout: 30_000 })
-  await page.evaluate(() => document.fonts.ready.then(() => undefined))
-  const { heroH, extraTitle } = await page
-    .locator('.club-hero')
-    .evaluate(el => {
-      const h1 = el.querySelector('h1')!
-      const lineH = parseFloat(getComputedStyle(h1).lineHeight)
-      const lines = Math.round(h1.getBoundingClientRect().height / lineH)
-      return {
-        heroH: Math.round(el.getBoundingClientRect().height),
-        extraTitle: Math.max(0, lines - 2) * lineH,
-      }
+//
+// #2436 — club 9127 chartered on 1992-12-01, so its anniversary chip renders
+// (first in the hero, hidden below 768) from Nov 1 to Dec 31. The clock is
+// fixed inside and outside that window, so both cases run on any date; both
+// stay in the 2026–27 program year.
+const ANNIVERSARY_CASES = [
+  { label: 'anniversary in window', now: '2026-11-15T12:00:00Z', chips: 1 },
+  { label: 'anniversary out of window', now: '2026-09-15T12:00:00Z', chips: 0 },
+] as const
+
+for (const { label, now, chips } of ANNIVERSARY_CASES) {
+  test(`club hero chrome ≤ ${HERO_MAX_H}px for the longest D61 club name at 375 (${label})`, async ({
+    page,
+  }) => {
+    await page.clock.setFixedTime(new Date(now))
+    await page.setViewportSize({ width: 375, height: 812 })
+    await page.goto('/district/61/club/9127', {
+      waitUntil: 'networkidle',
+      timeout: 60_000,
     })
-  expect(
-    heroH - extraTitle,
-    `hero height ${heroH}px, ${extraTitle}px of it a third+ title line`
-  ).toBeLessThanOrEqual(HERO_MAX_H)
-  test.info().annotations.push({
-    type: 'hero-height-long-name',
-    description: `${heroH}px`,
+    await waitForVisibleChip(page)
+    const anniversary = page.locator('.club-hero .club-hero__anniversary')
+    await expect(anniversary).toHaveCount(chips)
+    if (chips) await expect(anniversary).toBeHidden()
+    await page.evaluate(() => document.fonts.ready.then(() => undefined))
+    const { heroH, extraTitle } = await page
+      .locator('.club-hero')
+      .evaluate(el => {
+        const h1 = el.querySelector('h1')!
+        const lineH = parseFloat(getComputedStyle(h1).lineHeight)
+        const lines = Math.round(h1.getBoundingClientRect().height / lineH)
+        return {
+          heroH: Math.round(el.getBoundingClientRect().height),
+          extraTitle: Math.max(0, lines - 2) * lineH,
+        }
+      })
+    expect(
+      heroH - extraTitle,
+      `hero height ${heroH}px, ${extraTitle}px of it a third+ title line`
+    ).toBeLessThanOrEqual(HERO_MAX_H)
+    test.info().annotations.push({
+      type: 'hero-height-long-name',
+      description: `${heroH}px (${label})`,
+    })
   })
-})
+}
 
 // #1805 — a club that moved carries the lineage chip on the hero's
 // area/division/district line from 768. Club 977 (District 1 until June
@@ -317,12 +339,7 @@ for (const width of [375, 1280]) {
       waitUntil: 'networkidle',
       timeout: 60_000,
     })
-    await page
-      .locator(
-        '.club-hero__chip:not([data-testid="club-hero-pill-placeholder"])'
-      )
-      .first()
-      .waitFor({ state: 'visible', timeout: 30_000 })
+    await waitForVisibleChip(page)
     await page.evaluate(() => document.fonts.ready.then(() => undefined))
     const chip = page.locator('.club-hero .club-hero__lineage')
     if (width < 768) {
