@@ -24,6 +24,127 @@
   color: var(--ink);
 }
 
+/* #2429: the lead and the "See all deadlines" toggle share one row, so the
+   closed strip is no taller than before (375 Overview budget, PAGE_MAX_H).
+   The toggle's box is exactly one text line; its 44px touch target is a
+   pseudo-element that overhangs without taking layout space. */
+.deadline-strip__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.deadline-strip__toggle {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  line-height: inherit;
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.deadline-strip__toggle::after {
+  content: '';
+  position: absolute;
+  inset: -12px -8px;
+}
+
+.deadline-strip__toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.deadline-strip__chevron {
+  margin-left: 0.25rem;
+  text-decoration: none;
+  display: inline-block;
+}
+
+/* The whole-year timeline, open only on request. */
+.deadline-timeline {
+  flex-basis: 100%;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+
+.deadline-timeline__month + .deadline-timeline__month {
+  margin-top: 0.5rem;
+}
+
+.deadline-timeline__month-name {
+  margin: 0 0 0.125rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.deadline-timeline__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deadline-timeline__item {
+  display: grid;
+  grid-template-columns: 3.75rem minmax(0, 1fr);
+  column-gap: 0.5rem;
+  padding: 0.125rem 0;
+  min-width: 0;
+}
+
+.deadline-timeline__date {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.deadline-timeline__body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.deadline-timeline__label {
+  color: var(--ink);
+}
+
+.deadline-timeline__item--passed .deadline-timeline__label,
+.deadline-timeline__item--passed .deadline-timeline__date,
+.deadline-timeline__passed {
+  color: var(--ink-3);
+}
+
+.deadline-timeline__owner {
+  display: block;
+  color: var(--ink-2);
+}
+
+.deadline-timeline a {
+  color: var(--link);
+  text-underline-offset: 2px;
+}
+
+.deadline-timeline a:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.deadline-timeline__feed {
+  margin: 0.5rem 0 0;
+  color: var(--ink-2);
+}
+
 .deadline-strip__list {
   display: flex;
   flex-direction: column;
@@ -58,6 +179,26 @@
     flex-direction: row;
     flex-wrap: wrap;
     align-items: baseline;
+    column-gap: 1.5rem;
+  }
+
+  /* One row: lead, the two dates, then the toggle at the far end. */
+  .deadline-strip__head {
+    display: contents;
+  }
+
+  .deadline-strip__toggle {
+    order: 1;
+    margin-left: auto;
+  }
+
+  .deadline-timeline {
+    order: 2;
+  }
+
+  .deadline-timeline__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
     column-gap: 1.5rem;
   }
 
