@@ -10,11 +10,8 @@ import { describe, it, expect } from 'vitest'
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import {
-  rollUpGlobal,
-  readSnapshotRollupInput,
-  type ClubPaymentRow,
-} from './globalRollup.js'
+import { rollUpGlobal, type ClubPaymentRow } from './globalRollup.js'
+import { readSnapshotRollupInput } from './snapshotReaders.js'
 
 const district = (districtId: string, clubs: ClubPaymentRow[]) => ({
   districtId,

@@ -18,6 +18,16 @@
         "types": "./dist/types/index.d.ts",
         "default": "./dist/cjs/index.js"
       }
+    },
+    "./node": {
+      "import": {
+        "types": "./dist/types/node.d.ts",
+        "default": "./dist/esm/node.js"
+      },
+      "require": {
+        "types": "./dist/types/node.d.ts",
+        "default": "./dist/cjs/node.js"
+      }
     }
   },
   "files": [

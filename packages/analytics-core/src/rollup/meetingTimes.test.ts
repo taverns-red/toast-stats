@@ -21,9 +21,9 @@ import {
 } from '@taverns-red/shared-contracts'
 import {
   buildMeetingTimes,
-  readMeetingTimesInput,
   type MeetingTimesDistrictInput,
 } from './meetingTimes.js'
+import { readMeetingTimesInput } from './snapshotReaders.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const FIX = join(HERE, '__tests__/fixtures/meeting-times')

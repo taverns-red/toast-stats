@@ -299,8 +299,6 @@ export {
 // Worldwide rollup (#1466, promoted here by #1498, epic #1496)
 export {
   rollUpGlobal,
-  readSnapshotRollupInput,
-  readSnapshotRankings,
   canonicalDistrictId,
   type ClubPaymentRow,
   type DistrictClubPayments,
@@ -326,7 +324,6 @@ export {
 // Region and world rollups — snapshots/{date}/region-rollups.json (#1799)
 export {
   buildRegionRollups,
-  readRegionRollupInput,
   type RegionRollupClub,
   type RegionRollupDistrictInput,
   type RegionRollupsInput,
@@ -336,7 +333,6 @@ export {
 // Per-region club shards + world file — snapshots/{date}/clubs-by-region/ (#1800)
 export {
   buildClubsByRegion,
-  readClubsByRegionInput,
   type ClubsByRegionClubInput,
   type ClubsByRegionDistrictInput,
   type ClubsByRegionInput,
@@ -346,7 +342,6 @@ export {
 // Meeting times per district — snapshots/{date}/meeting-times.json (#1814)
 export {
   buildMeetingTimes,
-  readMeetingTimesInput,
   type MeetingTimesDistrictInput,
   type MeetingTimesInput,
   type MeetingTimesResult,
