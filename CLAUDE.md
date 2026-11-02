@@ -122,7 +122,7 @@ DISCIPLINE (quarantine/R1) guards below contain those root causes, so they stay.
 
 ## Learning Artifacts
 
-- `tasks/lessons/` — Per-file lessons (one discovery each, tagged frontmatter). `tasks/lessons/INDEX.md` is the always-loadable tag index (regenerate with `npm run lessons:index`).
+- `tasks/lessons/` — Per-file lessons (one discovery each, tagged frontmatter). `tasks/lessons/INDEX.md` is the always-loadable tag index — generated, gitignored (#2455); `scripts/relevant-lessons.sh` regenerates it on read, or run `npm run lessons:index`.
 - `tasks/rules.md` — Curated high-signal rules distilled from lessons. Read completely before each task.
 - `docs/product-spec.md` — Shipped features, business rules, product decisions.
 
@@ -189,7 +189,7 @@ Commit every 15–30 minutes of active work; never batch unrelated changes.
 - Failing test existed before the fix. Targeted tests now pass. No assertion pinning.
 - All tests pass. Zero regressions. CI green. Live verification passes on the **PR preview channel** — the per-PR Firebase URL posted as a sticky comment by `pr-preview.yml` — **pre-merge, not prod**. (Prod deploys are decoupled from per-sprint verification.)
 - Change is single-responsibility. Dead code and experiment files deleted.
-- **Learning captured — only if there was one.** Not every sprint yields a transferable insight, and a "no new lesson" sprint is a valid outcome. When the sprint did surface something durable, file it by kind in `tasks/lessons/` with frontmatter: **principle** (→ `category: principle`, candidate for an R-rule), **lesson** (→ `category: lesson` + `tags:` for relevance matching), or **incident** (→ `category: incident` + `auto_load: false`, reference-only). A restated commit message is not a lesson — if you cannot name the transferable takeaway in one sentence, do not file one. Regenerate `tasks/lessons/INDEX.md` (`npm run lessons:index`) when you add a lesson.
+- **Learning captured — only if there was one.** Not every sprint yields a transferable insight, and a "no new lesson" sprint is a valid outcome. When the sprint did surface something durable, file it by kind in `tasks/lessons/` with frontmatter: **principle** (→ `category: principle`, candidate for an R-rule), **lesson** (→ `category: lesson` + `tags:` for relevance matching), or **incident** (→ `category: incident` + `auto_load: false`, reference-only). A restated commit message is not a lesson — if you cannot name the transferable takeaway in one sentence, do not file one. Don't commit `tasks/lessons/INDEX.md` — it is generated on read and gitignored, so parallel lesson PRs don't conflict on it (#2455).
 
 ## Specialized Agent Personas
 
