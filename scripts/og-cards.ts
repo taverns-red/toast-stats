@@ -1,9 +1,10 @@
 /**
  * Per-district Open Graph cards (#2304) — CLI for the og-cards pipeline job.
  *
- *   npx tsx scripts/og-cards.ts rankings-date <rankings.json>
- *       print the rankings' logical date (stdout), to fetch that date's
- *       competitive-awards.json
+ *   npx tsx scripts/og-cards.ts snapshot-date <rankings.json> <latest.json>
+ *       print the snapshot date (stdout) whose competitive-awards.json the
+ *       cards read: v1/latest.json latestSnapshotDate, not the rankings'
+ *       as-of date, which runs ahead during month-end reconciliation (#2478)
  *   npx tsx scripts/og-cards.ts render --rankings <f> --awards <f> --out <dir>
  *       render <dir>/<id>.png per district plus <dir>/cards.json (the plan),
  *       then content-check the set (scripts/lib/ogCards.ts verifyCardSet);
@@ -32,6 +33,7 @@ import { parseRunManifest } from './lib/runManifest'
 import {
   buildDistrictCards,
   decideCardPromotion,
+  resolveCardInputs,
   renderDistrictCardHtml,
   verifyCardSet,
   verifyStagedCards,
@@ -168,12 +170,15 @@ function gate(): void {
 
 async function main(): Promise<void> {
   const cmd = process.argv[2]
-  if (cmd === 'rankings-date') {
-    const r = readJson(process.argv[3] ?? '') as { date?: unknown }
-    if (typeof r.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(r.date)) {
-      throw new Error('rankings: no YYYY-MM-DD date')
-    }
-    process.stdout.write(`${r.date}\n`)
+  if (cmd === 'snapshot-date') {
+    const inputs = resolveCardInputs(
+      readJson(process.argv[3] ?? ''),
+      readJson(process.argv[4] ?? '')
+    )
+    console.error(
+      `[og-cards] as of ${inputs.asOf}; awards from ${inputs.awardsObject}`
+    )
+    process.stdout.write(`${inputs.snapshotDate}\n`)
   } else if (cmd === 'render') {
     await render()
   } else if (cmd === 'check') {
@@ -182,7 +187,7 @@ async function main(): Promise<void> {
     gate()
   } else {
     throw new Error(
-      `unknown command ${JSON.stringify(cmd)} (rankings-date | render | check | gate)`
+      `unknown command ${JSON.stringify(cmd)} (snapshot-date | render | check | gate)`
     )
   }
 }

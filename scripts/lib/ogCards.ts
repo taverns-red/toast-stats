@@ -191,6 +191,35 @@ function gapsFor(status: AwardsStatus, row: RankingRow, py: string): CardGap[] {
 }
 
 /**
+ * Where the card inputs live (#2478). The cards' "as of" text is the
+ * rankings' `date`, but the awards are read from the latest SNAPSHOT dir
+ * (`v1/latest.json` `latestSnapshotDate`). During month-end reconciliation
+ * the as-of date moves into the next month while the snapshot stays at the
+ * month end, so `snapshots/<as-of>/` does not exist.
+ */
+export function resolveCardInputs(
+  rankings: unknown,
+  latest: unknown
+): { asOf: string; snapshotDate: string; awardsObject: string } {
+  if (
+    !isObj(rankings) ||
+    typeof rankings['date'] !== 'string' ||
+    !ISO_DATE.test(rankings['date'])
+  ) {
+    throw new Error('rankings: no YYYY-MM-DD date')
+  }
+  const snap = isObj(latest) ? latest['latestSnapshotDate'] : undefined
+  if (typeof snap !== 'string' || !ISO_DATE.test(snap)) {
+    throw new Error('latest: no YYYY-MM-DD latestSnapshotDate')
+  }
+  return {
+    asOf: rankings['date'],
+    snapshotDate: snap,
+    awardsObject: `snapshots/${snap}/competitive-awards.json`,
+  }
+}
+
+/**
  * One card per district present in BOTH v1/rankings.json and the date's
  * competitive-awards.json, sorted by id. A district the awards file does not
  * cover gets no card (prod keeps its previous one) rather than a made-up
