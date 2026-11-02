@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.79.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.78.0...toast-stats-v2.79.0) (2026-11-02)
+
+
+### Features
+
+* **changes:** ?club= filter on What Changed, linked from the club card ([#2452](https://github.com/taverns-red/toast-stats/issues/2452)) ([#2456](https://github.com/taverns-red/toast-stats/issues/2456)) ([fcb9702](https://github.com/taverns-red/toast-stats/commit/fcb9702a0809046e7a74e300955a46c3a023f6ea))
+* **changes:** note that a club-filtered What Changed is the net change ([#2459](https://github.com/taverns-red/toast-stats/issues/2459)) ([#2460](https://github.com/taverns-red/toast-stats/issues/2460)) ([a79ccf1](https://github.com/taverns-red/toast-stats/commit/a79ccf1b8626584a3f3e1a93ff1737c02c27083f))
+
+
+### Bug Fixes
+
+* **agent-cli:** ci-wait default timeout is 1 h, not 3.6 s ([#2463](https://github.com/taverns-red/toast-stats/issues/2463)) ([#2465](https://github.com/taverns-red/toast-stats/issues/2465)) ([ac1d7a8](https://github.com/taverns-red/toast-stats/commit/ac1d7a8d3f123f0f0b1a7016f0f82f038bc5da4e))
+* **freshness:** reconciling pill fits the reserved slot ([#2472](https://github.com/taverns-red/toast-stats/issues/2472)) ([#2473](https://github.com/taverns-red/toast-stats/issues/2473)) ([2166473](https://github.com/taverns-red/toast-stats/commit/2166473dc5593388f9e4f1bc30264a96278adb52))
+
+
+### Documentation
+
+* cloud workers don't start sessions, file issues or schedule check-ins ([#2454](https://github.com/taverns-red/toast-stats/issues/2454)) ([#2470](https://github.com/taverns-red/toast-stats/issues/2470)) ([86a91c6](https://github.com/taverns-red/toast-stats/commit/86a91c6290e8a8dcb139e1dfee7c1226fe9244a4))
+
+
+### Tests
+
+* **clubs:** no horizontal scroll with the Changes columns on ([#2451](https://github.com/taverns-red/toast-stats/issues/2451)) ([#2471](https://github.com/taverns-red/toast-stats/issues/2471)) ([6c84f3a](https://github.com/taverns-red/toast-stats/commit/6c84f3ac8fbde81d2de2d94085e1d06d524cfb8b))
+
+
+### Continuous Integration
+
+* shard PR Preview smokes into parallel jobs with one verdict ([#2453](https://github.com/taverns-red/toast-stats/issues/2453)) ([#2457](https://github.com/taverns-red/toast-stats/issues/2457)) ([f72220a](https://github.com/taverns-red/toast-stats/commit/f72220ad0ef355f43f3906b0b3093990527542f2))
+
 ## [2.78.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.77.0...toast-stats-v2.78.0) (2026-11-02)
 
 
