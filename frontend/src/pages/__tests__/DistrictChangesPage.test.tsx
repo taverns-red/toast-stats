@@ -1232,3 +1232,109 @@ describe('DistrictChangesPage — Distinguished clubs tile (#2438)', () => {
     ).toEqual(['Confirmed clubs …'])
   })
 })
+
+/* #2452 — ?club= narrows What Changed to one club's events (the club page's
+   Recent changes card links here), with a visible chip that clears it. */
+describe('DistrictChangesPage club filter (#2452)', () => {
+  let location = ''
+  const LocationProbe: React.FC = () => {
+    location = useLocation().search
+    return null
+  }
+
+  function renderClub(initialEntry: string) {
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-05-19', '2026-05-25', '2026-05-26'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    mockedDiff.mockImplementation(
+      (_districtId, from, to) =>
+        ({
+          data:
+            from && to
+              ? diffFixture({ from: { date: from }, to: { date: to } })
+              : undefined,
+          isLoading: false,
+          isError: false,
+        }) as unknown as ReturnType<typeof useSnapshotDiff>
+    )
+    return render(
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <Routes>
+          <Route
+            path="/district/:districtId/changes"
+            element={
+              <>
+                <LocationProbe />
+                <DistrictChangesPage />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    )
+  }
+
+  it('shows only the named club’s events, matched across zero-padding', () => {
+    renderClub('/district/61/changes?club=2959')
+    const list = screen.getByTestId('changes-list')
+    expect(list).toHaveTextContent('Club 00002959 became Distinguished')
+    expect(list).not.toHaveTextContent('iA Montreal Toastmasters')
+    expect(list).not.toHaveTextContent('Division G')
+    expect(list).not.toHaveTextContent('Area 2')
+  })
+
+  it('names the club in a visible filter chip', () => {
+    renderClub('/district/61/changes?club=28680300')
+    const chip = screen.getByRole('region', { name: /club filter/i })
+    expect(chip).toHaveTextContent('iA Montreal Toastmasters')
+  })
+
+  it('clears the filter from the chip and keeps the date pair', () => {
+    renderClub('/district/61/changes?from=2026-05-25&to=2026-05-26&club=2959')
+    fireEvent.click(screen.getByRole('button', { name: /remove club filter/i }))
+
+    const params = new URLSearchParams(location)
+    expect(params.get('club')).toBeNull()
+    expect(params.get('from')).toBe('2026-05-25')
+    expect(params.get('to')).toBe('2026-05-26')
+    expect(
+      screen.queryByRole('region', { name: /club filter/i })
+    ).not.toBeInTheDocument()
+    expect(screen.getByTestId('changes-list')).toHaveTextContent(
+      'iA Montreal Toastmasters'
+    )
+  })
+
+  it('keeps the club filter across a date preset', () => {
+    renderClub('/district/61/changes?club=2959')
+    fireEvent.click(screen.getByTestId('changes-preset-week'))
+    expect(new URLSearchParams(location).get('club')).toBe('2959')
+  })
+
+  it('says the club had no changes rather than showing the district’s', () => {
+    renderClub('/district/61/changes?club=999999')
+    expect(screen.queryByTestId('changes-list')).not.toBeInTheDocument()
+    expect(screen.getByTestId('changes-none')).toHaveTextContent(
+      /no recorded changes for this club/i
+    )
+    // An id the diff cannot name still gets a chip, so it can be cleared.
+    expect(
+      screen.getByRole('region', { name: /club filter/i })
+    ).toHaveTextContent('Club 999999')
+  })
+
+  it('exports only the filtered club', () => {
+    renderClub('/district/61/changes?club=28680300')
+    fireEvent.click(screen.getByRole('button', { name: /export/i }))
+    const exported = vi.mocked(exportSnapshotDiff).mock.calls[0]![0]
+    expect(exported.events.map(e => e.clubId)).toEqual(['28680300'])
+  })
+
+  it('shows no chip without a club param', () => {
+    renderClub('/district/61/changes')
+    expect(
+      screen.queryByRole('region', { name: /club filter/i })
+    ).not.toBeInTheDocument()
+  })
+})
