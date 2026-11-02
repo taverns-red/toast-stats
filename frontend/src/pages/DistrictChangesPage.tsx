@@ -496,6 +496,18 @@ const DistrictChangesPage: React.FC = () => {
                   </div>
                 )}
 
+                {/* The club card lists weekly steps; this page diffs only the
+                    two end dates, so its numbers can differ (#2459). */}
+                {clubFilter && (
+                  <p
+                    className="district-changes__club-note"
+                    data-testid="changes-club-net-note"
+                  >
+                    Net change between these two dates; the club page lists each
+                    weekly step.
+                  </p>
+                )}
+
                 {shownDiff.events.length === 0 ? (
                   <p
                     className="district-changes__empty"

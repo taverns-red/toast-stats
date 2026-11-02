@@ -284,3 +284,12 @@
 .district-changes__club-filter {
   padding: 0;
 }
+
+/* Net-change note under the ?club= chip (#2459): muted ink, wraps at 375. */
+.district-changes__club-note {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
