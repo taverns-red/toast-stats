@@ -84,6 +84,9 @@
 #                        (a partial fetch, exit 1)
 #   STUB_RECORD_REVISION_FAIL optional: ERE; a record-revision of a
 #                        matching date writes nothing and exits 2
+#   STUB_RECORD_REVISION_ZERO_FAIL optional: ERE; a record-revision of a
+#                        matching date reports revisionZero "failed" (and
+#                        still records the closing revision)
 #   STUB_RECORD_REVISION_REFUSE optional: ERE; a record-revision of a
 #                        matching date is refused (already recorded):
 #                        nothing written, exit 0
@@ -376,8 +379,13 @@ case "${CMD}" in
       '.monthEnd = $m | .dataMonth = ($m[0:7]) | .revisions = ((.revisions + $e) | sort_by(.asOf))' \
       <<<"${base}" >"${rev}/index.json"
     written+=("revisions/index.json")
-    jq -nc --arg d "${DATE}" --arg a "${AS_OF}" --arg z "${zero}" \
-      '{date: $d, asOf: $a, recorded: true, revisionZero: $z, refused: null, written: $ARGS.positional}' \
+    zero_error=""
+    if matches "${STUB_RECORD_REVISION_ZERO_FAIL:-}"; then
+      zero=failed
+      zero_error="prior district_61.json is missing"
+    fi
+    jq -nc --arg d "${DATE}" --arg a "${AS_OF}" --arg z "${zero}" --arg ze "${zero_error}" \
+      '{date: $d, asOf: $a, recorded: true, revisionZero: $z, revisionZeroError: (if $ze == "" then null else $ze end), refused: null, written: $ARGS.positional}' \
       --args "${written[@]}"
     ;;
   *)

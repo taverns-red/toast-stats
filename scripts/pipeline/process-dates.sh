@@ -504,15 +504,28 @@ record_revision() {
   fi
   if "${GCLOUD}" storage cp "${src}/metadata.json" \
     "${prior}/metadata.json" 2>"${err}"; then
-    if jq -e '.isClosingPeriodData != true' "${prior}/metadata.json" >/dev/null; then
-      if ! "${GCLOUD}" storage cp "${src}/district_*.json" "${prior}/" 2>"${err}"; then
-        cat "${err}"
-        echo "::warning::Could not read staging's in-month ${actual} for revision 0; no revision recorded for ${as_of} (#2475)"
-        rm -rf "${rev}"
-        return 0
-      fi
-      prior_args=(--prior-snapshot "${prior}")
-    fi
+    # R17 (#2483 fix 3): a metadata.json that does not parse is neither
+    # in-month nor closing. It is a lost revision 0, said out loud.
+    local prior_state
+    prior_state="$(jq -r 'if type != "object" then "unparseable"
+      elif .isClosingPeriodData == true then "closing"
+      else "in-month" end' "${prior}/metadata.json" 2>/dev/null)" ||
+      prior_state=unparseable
+    case "${prior_state}" in
+      in-month)
+        if ! "${GCLOUD}" storage cp "${src}/district_*.json" "${prior}/" 2>"${err}"; then
+          cat "${err}"
+          echo "::warning::Could not read staging's in-month ${actual} for revision 0; no revision recorded for ${as_of} (#2475)"
+          rm -rf "${rev}"
+          return 0
+        fi
+        prior_args=(--prior-snapshot "${prior}")
+        ;;
+      closing) ;; # already a close: revision 0 was the first close's to take
+      *)
+        echo "::warning::Staging's snapshots/${actual}/metadata.json is not JSON; revision 0 of ${actual} cannot be taken, recording ${as_of} alone (#2475)"
+        ;;
+    esac
   elif ! grep -q 'matched no objects' "${err}"; then
     cat "${err}"
     echo "::warning::Could not read staging's snapshots/${actual}/metadata.json; no revision recorded for ${as_of} (#2475)"
@@ -527,6 +540,9 @@ record_revision() {
     return 0
   fi
   cat "${WORK}/revision.json"
+  if jq -e '.revisionZero == "failed"' "${WORK}/revision.json" >/dev/null; then
+    echo "::warning::Revision 0 of ${actual} could not be taken: $(jq -r '.revisionZeroError' "${WORK}/revision.json") (#2475)"
+  fi
   echo "- **Reconciliation revision** (${actual} as of ${as_of}): $(jq -r 'if .recorded then "recorded (revision 0: \(.revisionZero))" else "not recorded: \(.refused)" end' "${WORK}/revision.json")" >>"${SUMMARY}"
 }
 
