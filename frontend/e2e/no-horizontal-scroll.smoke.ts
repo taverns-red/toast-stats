@@ -27,6 +27,8 @@ const ROUTES = [
   // #2432: the since-last-year column's sr-only change words escaped the
   // table scroller and widened the page by 73px at 768.
   '/district/61/clubs?since=climbed',
+  // #2452: the What Changed club-filter chip carries a full club name.
+  '/district/61/changes?club=7782',
 ]
 const THEMES = ['light', 'dark'] as const
 
