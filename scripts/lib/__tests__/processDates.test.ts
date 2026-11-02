@@ -2498,6 +2498,31 @@ describe('process-dates.sh daily: reconciliation revisions (#2475)', () => {
     })
   })
 
+  describe('a refused closing revision is a ::warning:: (PR #2483 re-review)', () => {
+    it('failed districts (a partial close): warns, naming them', () => {
+      const r = closingDaily({ STUB_RECORD_REVISION_PARTIAL: 'F' })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.stderr).toMatch(
+        /::warning::.*2026-11-02.*not recorded.*partial close: failed districts F.*#2475/
+      )
+      expect(objectsUnder(REV)).toEqual([])
+    })
+
+    it('a manual district subset: warns', () => {
+      const r = closingDaily({ DISTRICTS_SOURCE: 'manual' })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.stderr).toMatch(
+        /::warning::.*2026-11-02.*not recorded.*manual district subset.*#2475/
+      )
+    })
+
+    it('an already-recorded rerun stays a notice, not a warning', () => {
+      const r = closingDaily({ STUB_RECORD_REVISION_REFUSE: '.' })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.stderr).not.toMatch(/::warning::.*not recorded/)
+    })
+  })
+
   it('leaves no local revisions/ behind for the steps after the loop', () => {
     closingDaily()
     expect(

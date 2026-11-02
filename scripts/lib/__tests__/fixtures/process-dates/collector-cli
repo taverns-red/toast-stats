@@ -89,6 +89,9 @@
 #   STUB_RECORD_REVISION_ZERO_FAIL optional: ERE; a record-revision of a
 #                        matching date reports revisionZero "failed" (and
 #                        still records the closing revision)
+#   STUB_RECORD_REVISION_PARTIAL optional: comma-separated ids; the
+#                        snapshot records them as failed, so the closing
+#                        revision is refused as a partial close (exit 0)
 #   STUB_RECORD_REVISION_REFUSE optional: ERE; a record-revision of a
 #                        matching date is refused (already recorded):
 #                        nothing written, exit 0
@@ -354,6 +357,11 @@ case "${CMD}" in
       echo "[ERROR] record-revision: snapshots/${DATE} is not closing-period data" >&2
       printf '{"date":"%s","asOf":"%s","error":"stub failure"}\n' "${DATE}" "${AS_OF}"
       exit 2
+    fi
+    if [ -n "${STUB_RECORD_REVISION_PARTIAL:-}" ]; then
+      printf '{"date":"%s","asOf":"%s","recorded":false,"revisionZero":"no-prior","revisionZeroError":null,"refused":"partial close: failed districts %s; revision %s not recorded","written":[]}\n' \
+        "${DATE}" "${AS_OF}" "${STUB_RECORD_REVISION_PARTIAL//,/, }" "${AS_OF}"
+      exit 0
     fi
     if matches "${STUB_RECORD_REVISION_REFUSE:-}"; then
       printf '{"date":"%s","asOf":"%s","recorded":false,"revisionZero":"no-prior","refused":"revision %s is already recorded (write-once)","written":[]}\n' \
