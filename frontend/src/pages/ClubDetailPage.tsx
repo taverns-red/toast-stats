@@ -68,6 +68,7 @@ import { ClubMiniMap } from '../components/clubs/ClubMiniMap'
 import { ClubStatStrip } from '../components/clubs/ClubStatStrip'
 import { ClubMembershipTrend } from '../components/clubs/ClubMembershipTrend'
 import { MobileRowList } from '../components/MobileRowList'
+import { ClubRecentChanges } from '../components/clubs/ClubRecentChanges'
 import { buildClubMeetingInfo, meetingWhen } from '../utils/clubMeetingInfo'
 
 // ── DCP Status Card ────────────────────────────────────────────────────────
@@ -1174,6 +1175,15 @@ const ClubDetailPage: React.FC = () => {
             <ClubCompliancePanel rows={complianceRows} coach={coachSummary} />
             <ClubLifecyclePanel lifecycle={lifecycle} isLoading={!lifecycle} />
           </div>
+
+          {/* #2430 — what happened to this club, and when: one dated line per
+              What Changed event over the last 90 days, then the history. */}
+          <ClubRecentChanges
+            districtId={districtId}
+            clubId={clubId}
+            asOfDate={effectiveEndDate}
+            heroPainted={isHeroPainted}
+          />
 
           {/* Risk Factors */}
           {club.riskFactors.length > 0 && (

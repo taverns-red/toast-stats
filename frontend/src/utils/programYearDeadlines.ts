@@ -99,7 +99,10 @@ const fixed =
 
 const DCP = 'Distinguished Club Program, Item 1111 Rev. 06/2026'
 const DRP = 'District Recognition Program, Item 1490 Rev. 07/2026'
-const RENEWAL_FAQ = 'https://www.toastmasters.org/footer/faq/Renewal-Dues'
+/** TI's Renewal Dues FAQ — also cited by the club change feed (#2430). */
+export const RENEWAL_DUES_FAQ_URL =
+  'https://www.toastmasters.org/footer/faq/Renewal-Dues'
+const RENEWAL_FAQ = RENEWAL_DUES_FAQ_URL
 
 const DLH_URL =
   'https://content.toastmasters.org/image/upload/222-district-leader-handbook.pdf'

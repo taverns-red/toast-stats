@@ -131,6 +131,12 @@ vi.mock('../../services/cdn', async importOriginal => ({
     generatedAt: '2025-10-16T00:00:00Z',
   }),
   fetchCdnGlobalClubRace: vi.fn().mockResolvedValue(null),
+  // #2430 — the Recent changes feed's dated snapshot reads. None of the
+  // tests here asserts on the feed (its own tests do), so each read
+  // resolves to "unavailable", never the live CDN.
+  fetchCdnDistrictSnapshot: vi
+    .fn()
+    .mockRejectedValue(new Error('not read in this test')),
 }))
 
 // #2403 — the page's snapshot read, settled with no club record: the hero
