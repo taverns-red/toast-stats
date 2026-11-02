@@ -54,6 +54,13 @@ export interface RecordRevisionOptions {
    * district_<id>.json), for revision 0. Omitted: revision 0 is not taken.
    */
   priorSnapshotDir?: string
+  /**
+   * Record revision 0 only and refuse the closing revision: the run's
+   * district set is a manual subset, so its month end is partial
+   * (#2483 fix 4). Write-once means a partial revision could never be
+   * replaced by the full run.
+   */
+  revisionZeroOnly?: boolean
 }
 
 export type RevisionZeroOutcome =
@@ -79,6 +86,7 @@ export interface RecordRevisionResult {
 interface SnapshotMetadataView {
   createdAt: string
   successfulDistricts: string[]
+  failedDistricts?: string[]
   isClosingPeriodData?: boolean
   collectionDate?: string
   dataAsOfDate?: string
@@ -214,7 +222,7 @@ async function readIndex(
 export async function recordRevision(
   opts: RecordRevisionOptions
 ): Promise<RecordRevisionResult> {
-  const { snapshotsDir, date, asOf, priorSnapshotDir } = opts
+  const { snapshotsDir, date, asOf, priorSnapshotDir, revisionZeroOnly } = opts
   if (!ISO_DATE.test(date) || !ISO_DATE.test(asOf)) {
     throw new Error(`invalid date ${date} or as-of ${asOf} (YYYY-MM-DD)`)
   }
@@ -290,21 +298,34 @@ export async function recordRevision(
     }
   }
 
-  const closing = await planCopies(
-    dir,
-    metadata.successfulDistricts,
-    `${RECONCILIATION_REVISIONS_DIR}/${asOf}`
-  )
-  copies.push(...closing)
-  added.push({
-    asOf,
-    collectedAt: metadata.createdAt,
-    closing: true,
-    successfulDistricts: [...metadata.successfulDistricts],
-  })
+  // A partial close is not a revision (#2483 fix 4): revisions are
+  // write-once, so the full run of the day could never replace it.
+  const failed = metadata.failedDistricts ?? []
+  const partial = revisionZeroOnly
+    ? `manual district subset: revision ${asOf} not recorded (revision 0 only)`
+    : failed.length > 0
+      ? `partial close: failed districts ${failed.join(', ')}; revision ${asOf} not recorded`
+      : null
 
-  // Write-once, checked for every file before any is written.
-  await assertWriteOnce(dir, closing)
+  if (partial !== null) {
+    result.refused = partial
+    if (added.length === 0) return result
+  } else {
+    const closing = await planCopies(
+      dir,
+      metadata.successfulDistricts,
+      `${RECONCILIATION_REVISIONS_DIR}/${asOf}`
+    )
+    // Write-once, checked for every file before any is written.
+    await assertWriteOnce(dir, closing)
+    copies.push(...closing)
+    added.push({
+      asOf,
+      collectedAt: metadata.createdAt,
+      closing: true,
+      successfulDistricts: [...metadata.successfulDistricts],
+    })
+  }
 
   const next = ReconciliationRevisionIndexSchema.parse({
     ...index,
@@ -326,6 +347,6 @@ export async function recordRevision(
   result.written.push(
     `${RECONCILIATION_REVISIONS_DIR}/${RECONCILIATION_REVISION_INDEX_FILE_NAME}`
   )
-  result.recorded = true
+  result.recorded = partial === null
   return result
 }

@@ -1780,12 +1780,18 @@ export function createCLI(): Command {
       '--prior-snapshot <dir>',
       'The month end before this run (metadata.json + district_<id>.json), for revision 0'
     )
+    .option(
+      '--revision-zero-only',
+      'A manual district subset: record revision 0 only, refuse the closing revision',
+      false
+    )
     .option('-c, --config <path>', 'Alternative configuration file path')
     .action(
       async (options: {
         date: string
         asOf: string
         priorSnapshot?: string
+        revisionZeroOnly: boolean
         config?: string
       }) => {
         const { recordRevision } = await import('./services/RevisionStore.js')
@@ -1800,6 +1806,7 @@ export function createCLI(): Command {
             ...(options.priorSnapshot
               ? { priorSnapshotDir: options.priorSnapshot }
               : {}),
+            revisionZeroOnly: options.revisionZeroOnly,
           })
           if (result.refused) console.error(`[WARN] ${result.refused}`)
           emitJsonAndExit(result, ExitCode.SUCCESS)
