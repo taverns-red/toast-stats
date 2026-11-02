@@ -139,7 +139,8 @@ describe('DistrictDetailHeader freshness parity (#1310)', () => {
       latestSnapshotDate: snap('2026-06-30'),
     })
     const pill = screen.getByTestId('freshness-pill')
-    expect(pill).toHaveTextContent(/As of Jul 2, 2026/)
+    // #2472: the visible label is "Reconciling · <as-of date>".
+    expect(pill).toHaveTextContent(/Reconciling · Jul 2, 2026/)
     expect(pill).toHaveTextContent(/month-end reconciliation/i)
     expect(pill.getAttribute('data-reconciling')).toBe('true')
   })
