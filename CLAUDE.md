@@ -18,6 +18,8 @@ Cloud sessions don't load Ron's global `~/.claude/CLAUDE.md`, so the rules that 
 Setup and Ron's manual steps: [`docs/cloud-sessions.md`](docs/cloud-sessions.md). `.claude/settings.json` runs `scripts/cloud-session-setup.sh` at start and an unpushed-branch check at stop; both do nothing outside the cloud VM.
 
 - **You are a worker, not an orchestrator.** Do the one issue you were given. Ron's local session sequences, reviews and merges.
+- **Don't start sessions or file issues.** List follow-ups (env gaps, bugs you noticed) in your report comment; the local session decides what becomes an issue and who works it. A worker that did both on 2026-11-02 produced a duplicate PR (#2466 vs #2469).
+- **Don't schedule check-ins or triggers.** PR activity notifications already wake you; deleting a trigger needs a permission prompt that stalls an unattended session. Your job ends when the PR is open and your report comment is posted.
 - **Report through the PR and issue comments**, not only in chat.
 - **`gh pr` and `gh issue` use GraphQL, which the VM proxy rejects (403).** Use `gh api` REST, or the Create PR button:
   - Create a PR: `gh api repos/taverns-red/toast-stats/pulls -f title='fix: … (#42)' -f head=<branch> -f base=main -F body=@pr-body.md` (`-F` reads `@file`; `-f` does not)
