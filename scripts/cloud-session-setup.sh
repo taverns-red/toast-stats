@@ -27,6 +27,32 @@ step() {
   fi
 }
 
+fail() {
+  echo "cloud-session-setup: FAILED: $*" >&2
+  exit 1
+}
+
+# VM tooling (#2464). Bash builtins only, besides the tools themselves: the
+# tests run this on a stub-only PATH.
+#
+# A case-folding locale: the image ships only C, C.utf8 and POSIX, and the
+# lessons-index locale test (#1372) compares byte order against case folding.
+has_en_us=no
+while IFS= read -r name; do
+  case "$name" in en_US.utf8 | en_US.UTF-8) has_en_us=yes ;; esac
+done < <(locale -a 2>/dev/null || true)
+if [[ "$has_en_us" == "no" ]]; then
+  echo "cloud-session-setup: generating locale en_US.UTF-8" >&2
+  localedef -i en_US -f UTF-8 en_US.UTF-8 >&2 || fail "locale en_US.UTF-8"
+fi
+
+# yamllint: the pre-commit hook runs `npm run lint:yaml`. A user install lands
+# in ~/.local/bin, which the VM already has on PATH.
+if ! command -v yamllint >/dev/null 2>&1; then
+  echo "cloud-session-setup: installing yamllint" >&2
+  python3 -m pip install --user yamllint >&2 || fail "pip install yamllint"
+fi
+
 step ci
 step run build:shared-contracts
 step run build:analytics-core
