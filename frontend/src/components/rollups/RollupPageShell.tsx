@@ -22,7 +22,9 @@ export interface RollupPageShellProps {
   back?: { label: string; to: string }
   trail: ContextCrumb[]
   subnavBase: string
-  controls: ProgramYearControls
+  /** The PY/date controls. Omitted on a page whose window is its own
+      from/to pair (What Changed, #2476): the context chip opens About. */
+  controls?: ProgramYearControls | undefined
   children: React.ReactNode
 }
 
@@ -41,23 +43,27 @@ export const RollupPageShell: React.FC<RollupPageShellProps> = ({
       <ContextBar
         title={title}
         back={back}
-        programYear={c.selectedProgramYear}
-        date={c.effectiveDate}
-        controls={
-          <ContextSheetControls
-            availableProgramYears={c.availableProgramYears}
-            selectedProgramYear={c.selectedProgramYear}
-            onProgramYearChange={c.setSelectedProgramYear}
-            availableDates={c.cachedDates}
-            selectedDate={c.selectedDate}
-            onDateChange={c.setSelectedDate}
-            freshness={formatFreshnessLine({
-              asOfDate: undefined,
-              snapshotDate: c.effectiveDate,
-              isLatest: c.isLatestSnapshot,
-            })}
-          />
-        }
+        {...(c
+          ? {
+              programYear: c.selectedProgramYear,
+              date: c.effectiveDate,
+              controls: (
+                <ContextSheetControls
+                  availableProgramYears={c.availableProgramYears}
+                  selectedProgramYear={c.selectedProgramYear}
+                  onProgramYearChange={c.setSelectedProgramYear}
+                  availableDates={c.cachedDates}
+                  selectedDate={c.selectedDate}
+                  onDateChange={c.setSelectedDate}
+                  freshness={formatFreshnessLine({
+                    asOfDate: undefined,
+                    snapshotDate: c.effectiveDate,
+                    isLatest: c.isLatestSnapshot,
+                  })}
+                />
+              ),
+            }
+          : { chipLabel: 'About' })}
         about={lede}
         trail={trail}
       />
@@ -67,19 +73,21 @@ export const RollupPageShell: React.FC<RollupPageShellProps> = ({
           <h1 className="districts-page-header__title">{title}</h1>
           <p className="districts-page-header__lede">{lede}</p>
         </div>
-        <div className="districts-page-header__actions">
-          <DataControlsBar
-            latestSnapshotDate={c.effectiveDate}
-            isLatest={c.isLatestSnapshot}
-            availableProgramYears={c.availableProgramYears}
-            selectedProgramYear={c.selectedProgramYear}
-            onProgramYearChange={c.setSelectedProgramYear}
-            availableDates={c.cachedDates}
-            selectedDate={c.selectedDate}
-            onDateChange={c.setSelectedDate}
-            freshnessPending={c.isDatesPending}
-          />
-        </div>
+        {c && (
+          <div className="districts-page-header__actions">
+            <DataControlsBar
+              latestSnapshotDate={c.effectiveDate}
+              isLatest={c.isLatestSnapshot}
+              availableProgramYears={c.availableProgramYears}
+              selectedProgramYear={c.selectedProgramYear}
+              onProgramYearChange={c.setSelectedProgramYear}
+              availableDates={c.cachedDates}
+              selectedDate={c.selectedDate}
+              onDateChange={c.setSelectedDate}
+              freshnessPending={c.isDatesPending}
+            />
+          </div>
+        )}
       </header>
       <RegionSubnav base={subnavBase} label={`${title} sections`} />
       {children}

@@ -243,3 +243,38 @@ test.describe('division and area entity pages CLS (#1896)', () => {
     }
   }
 })
+
+/* Region and world What Changed (#2476): the date index and the two dates'
+ * rankings files resolve separately, so the controls and the result slot are
+ * reserved while they load. Same throttled cold load and budget as the
+ * district subpages. */
+const CHANGES_PAGES = ['/region/05/changes', '/regions/changes'] as const
+
+test.describe('region and world What Changed CLS (#2476)', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'layout-shift + CDP throttling are Chromium-only'
+  )
+
+  for (const vp of VIEWPORTS) {
+    for (const path of CHANGES_PAGES) {
+      test(`${path} at ${vp.width}px stays inside the 0.1 CLS budget`, async ({
+        page,
+      }) => {
+        test.setTimeout(180_000)
+        // The loaded diff, not the page chrome: proves the pair resolved.
+        const { total, breakdown } = await measureCls(
+          page,
+          path,
+          vp,
+          '[data-testid="rankings-changes"]'
+        )
+        expect(
+          total,
+          `${path} CLS at ${vp.width}px is ${total} (budget ${CLS_BUDGET}) on ${page.url()}\n` +
+            `Largest contributors — read the sources, not the total:\n${breakdown}`
+        ).toBeLessThan(CLS_BUDGET)
+      })
+    }
+  }
+})

@@ -56,6 +56,14 @@ export const RegionSubnav: React.FC<{
       end: true,
       icon: <TrendsIcon />,
     },
+    // What Changed between two dates (#2476), district grain. Under More
+    // on a phone; its ?from= / ?to= pair is its own, not carried.
+    {
+      label: 'What Changed',
+      to: `${base}/changes${qs}`,
+      end: false,
+      icon: <TrendsIcon />,
+    },
     {
       label: 'Health & compliance',
       bar: 'Health',

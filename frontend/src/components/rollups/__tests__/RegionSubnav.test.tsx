@@ -183,4 +183,20 @@ describe('RegionSubnav', () => {
     expect(screen.getByRole('button', { name: /^More/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Meetings' })).toBeNull()
   })
+  // #2476: What Changed, region and world, a routed subpage (ADR-005).
+  it('links What Changed for a region and the world, keeping py and date', () => {
+    for (const base of ['/region/07', '/regions']) {
+      render(
+        <MemoryRouter
+          initialEntries={[`${base}/changes?py=2026-2027&from=2026-10-01`]}
+        >
+          <RegionSubnav base={base} label="Sections" />
+        </MemoryRouter>
+      )
+      const link = screen.getByRole('link', { name: 'What Changed' })
+      expect(link).toHaveAttribute('href', `${base}/changes?py=2026-2027`)
+      expect(link).toHaveAttribute('aria-current', 'page')
+      cleanup()
+    }
+  })
 })

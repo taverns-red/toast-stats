@@ -293,3 +293,123 @@
   color: var(--ink-3);
   overflow-wrap: anywhere;
 }
+
+/* Region and world What Changed (#2476). The page reuses the district page's
+   controls, headline and empty states above; these are its own sections.
+   Tokens only, so light and dark remap together (Lessons 093/094). The KPI
+   row has three tiles, not four. */
+@media (min-width: 1024px) {
+  .rankings-changes__kpis {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.rankings-changes {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rankings-changes__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* The scroller is its own containing block (position: relative), so nothing
+   absolutely positioned inside the table can escape it and widen the page
+   (lesson: an absolute sr-only span escapes a scroller that is not its
+   containing block). */
+.rankings-changes__scroller {
+  position: relative;
+  overflow-x: auto;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--surface);
+}
+
+.rankings-changes__scroller:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.rankings-changes__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.rankings-changes__table th,
+.rankings-changes__table td {
+  padding: 0.25rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.rankings-changes__table thead th {
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.rankings-changes__table th[scope='row'],
+.rankings-changes__table thead th:first-child {
+  text-align: left;
+}
+
+.rankings-changes__table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.rankings-changes__table a,
+.rankings-changes__list a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--link);
+}
+
+.rankings-changes__table a:focus-visible,
+.rankings-changes__list a:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.rankings-changes__list {
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  color: var(--ink);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rankings-changes__list li {
+  border-bottom: 1px solid var(--line);
+  padding: 0.25rem 0;
+}
+
+.rankings-changes__list li:last-child {
+  border-bottom: 0;
+}
+
+.rankings-changes__meta {
+  color: var(--ink-2);
+}
+
+.rankings-changes__movers {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .rankings-changes__movers {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

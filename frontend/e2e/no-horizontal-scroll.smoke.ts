@@ -29,6 +29,10 @@ const ROUTES = [
   '/district/61/clubs?since=climbed',
   // #2452: the What Changed club-filter chip carries a full club name.
   '/district/61/changes?club=7782',
+  // #2476: region and world What Changed — a six-column district table and
+  // a five-column region table, each in its own scroller.
+  '/region/05/changes',
+  '/regions/changes',
 ]
 const THEMES = ['light', 'dark'] as const
 // #2451: the Clubs table's opt-in Changes columns render the same

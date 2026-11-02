@@ -123,7 +123,13 @@ const SUITES: readonly Suite[] = [
     contentTopMax: null,
     more: {
       from: '/region/05',
-      links: ['Club survival', 'Education', 'Meetings', 'Officer training'],
+      links: [
+        'What Changed',
+        'Club survival',
+        'Education',
+        'Meetings',
+        'Officer training',
+      ],
       pick: 'Officer training',
       to: /\/region\/05\/training(\?|$)/,
       back: /\/region\/05(\?|$)/,
