@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.78.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.77.0...toast-stats-v2.78.0) (2026-11-02)
+
+
+### Features
+
+* **area:** area workbook CSV download ([#2428](https://github.com/taverns-red/toast-stats/issues/2428)) ([#2441](https://github.com/taverns-red/toast-stats/issues/2441)) ([c1bca99](https://github.com/taverns-red/toast-stats/commit/c1bca9961db7723e1142352df62e1680db0398cb))
+* **changes:** Distinguished clubs tile shows confirmed count sub-line ([#2438](https://github.com/taverns-red/toast-stats/issues/2438)) ([#2440](https://github.com/taverns-red/toast-stats/issues/2440)) ([86dca2a](https://github.com/taverns-red/toast-stats/commit/86dca2a42ff970b6dbfd71211a213cc9ec987d21))
+* **club:** recent changes feed on the club page ([#2430](https://github.com/taverns-red/toast-stats/issues/2430)) ([#2446](https://github.com/taverns-red/toast-stats/issues/2446)) ([47f1ddf](https://github.com/taverns-red/toast-stats/commit/47f1ddfb5b9d4c3efda31b774fcc5f8f4e98e74d))
+* **clubs:** climbed / slipped since last year preset ([#2432](https://github.com/taverns-red/toast-stats/issues/2432)) ([#2450](https://github.com/taverns-red/toast-stats/issues/2450)) ([a1ef9d1](https://github.com/taverns-red/toast-stats/commit/a1ef9d1819722b5ef3a54f05b605e8a97b47fc30))
+* **district:** predecessor history panel for new 200-series districts ([#2427](https://github.com/taverns-red/toast-stats/issues/2427)) ([#2442](https://github.com/taverns-red/toast-stats/issues/2442)) ([15c2629](https://github.com/taverns-red/toast-stats/commit/15c2629ec476b7f329cb0c6c50be449362b09236))
+* **district:** whole-year deadline timeline and .ics feed ([#2429](https://github.com/taverns-red/toast-stats/issues/2429)) ([#2445](https://github.com/taverns-red/toast-stats/issues/2445)) ([918065f](https://github.com/taverns-red/toast-stats/commit/918065fb123f9249ad2de533af3d1ac64e9643a0))
+
+
+### Bug Fixes
+
+* **dev:** keep node-only analytics-core modules out of the browser graph ([#2447](https://github.com/taverns-red/toast-stats/issues/2447)) ([#2449](https://github.com/taverns-red/toast-stats/issues/2449)) ([165d147](https://github.com/taverns-red/toast-stats/commit/165d1472a69b35ff8be7dba75ab3ed217f62477a))
+
+
+### Performance
+
+* LCP headroom on landing and district pages ([#2444](https://github.com/taverns-red/toast-stats/issues/2444)) ([#2448](https://github.com/taverns-red/toast-stats/issues/2448)) ([ebe107e](https://github.com/taverns-red/toast-stats/commit/ebe107ea37514b63b9035ea0b4dc95c12f777dbf))
+
 ## [2.77.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.76.3...toast-stats-v2.77.0) (2026-11-01)
 
 
