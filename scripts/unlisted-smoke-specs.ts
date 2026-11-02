@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
- * Print the smoke specs no named pr-preview.yml step runs (#2141), one
- * `e2e/...` path per line, for the workflow's catch-all step. Logic lives in
+ * Print the smoke specs no pr-preview.yml smoke shard names (#2141, #2453), one
+ * `e2e/...` path per line, for the `@remaining` shards. Logic lives in
  * `scripts/lib/smokeSpecCoverage.ts`. R4: the note goes to stderr; stdout is
  * only the list.
  */
@@ -27,6 +27,6 @@ const specs = toSpecPaths(
 )
 const unlisted = unlistedSmokeSpecs(specs, namedSmokeSpecs(workflow))
 console.error(
-  `${specs.length} smoke specs, ${unlisted.length} without a named step`
+  `${specs.length} smoke specs, ${unlisted.length} without a named shard`
 )
 if (unlisted.length > 0) process.stdout.write(`${unlisted.join('\n')}\n`)

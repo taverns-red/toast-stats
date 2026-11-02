@@ -74,8 +74,11 @@ describe('mobile 375 gate budgets (#1841)', () => {
   })
 
   it('runs on every PR preview', () => {
-    expect(readFileSync(WORKFLOW, 'utf8')).toMatch(
-      /playwright test[^\n]*e2e\/mobile-375-gate\.smoke\.ts/
+    // A shard of pr-preview.yml's smoke matrix names it (#2453).
+    const wf = readFileSync(WORKFLOW, 'utf8')
+    expect(wf).toMatch(/^\s+specs: e2e\/mobile-375-gate\.smoke\.ts$/m)
+    expect(wf).toMatch(
+      /playwright test --config playwright\.config\.ts \$specs/
     )
   })
 })

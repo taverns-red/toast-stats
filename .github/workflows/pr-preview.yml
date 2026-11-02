@@ -23,8 +23,22 @@
 #                           draft (the manual trigger); other labels no-op
 # A re-run replays the original event payload, so re-running a draft-era run
 # still skips; mark the PR ready or apply the label instead.
-# Merge gating is unchanged: CI Gate does not require this job (see
+# Merge gating is unchanged: CI Gate does not require this workflow (see
 # scripts/lib/ciGate.ts), and prPreviewSmokeTrigger.test.ts keeps it so.
+#
+# Shape (#2453). The suite took ~40 min as ~38 sequential steps in one job,
+# though everything up to the deploy takes ~1.5 min. Now:
+#   preview    -> build, deploy, sticky URL comment (job id kept: other
+#                 contract tests and the closed-PR guard key on it)
+#   smoke      -> a matrix of Playwright shards, `fail-fast: false`
+#   lighthouse -> one job per lighthouserc.mobile.js route, same assertions
+#   verdict    -> `PR Preview verdict`: needs all of them; the ONE check to
+#                 require if PR Preview is ever made gating. It also writes
+#                 the run's wall time and per-shard durations into the
+#                 sticky comment.
+# Coverage is the same as the single job's: every spec, both engines, the
+# same thresholds and retries. smokeSpecCoverage.test.ts fails if a spec, an
+# engine or one part of a split falls out of the matrix.
 
 name: PR Preview
 
@@ -84,6 +98,11 @@ jobs:
       && github.event.pull_request.head.repo.full_name == github.repository
       && github.actor != 'dependabot[bot]'
       && (github.event.action != 'labeled' || github.event.label.name == 'preview-smoke')
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+      expires: ${{ steps.deploy.outputs.expires }}
+      # The smoke and Lighthouse jobs run only when this is 'true' (#2453).
+      heavy: ${{ steps.deploy.outputs.heavy }}
     env:
       # 'true' -> run the Playwright smoke and the Lighthouse mobile gate.
       # Drafts skip them unless labeled `preview-smoke` (#2101).
@@ -189,6 +208,7 @@ jobs:
           {
             echo "url=$URL"
             echo "expires=$EXPIRES"
+            echo "heavy=$HEAVY_SMOKE"
           } >> "$GITHUB_OUTPUT"
           echo "Preview URL: $URL"
           echo "Expires: $EXPIRES"
@@ -220,497 +240,643 @@ jobs:
           echo "::notice::$msg"
           echo "$msg" >> "$GITHUB_STEP_SUMMARY"
 
-      # Lightweight cross-engine smoke against the freshly-deployed preview
-      # (#713). #685 verified contrast in Chromium-at-rest only and missed a
-      # Safari-visible regression (#710); running the legibility smoke in BOTH
-      # the `smoke` (Chromium) and `webkit` (Safari) projects closes that blind
-      # spot for every frontend PR. A declared-but-uninstalled engine is inert,
-      # so install webkit explicitly before the run (cf. lesson 082).
+  # Playwright smoke shards against the deployed preview (#2453). Each entry
+  # below is one job: `specs` (paths, or @remaining), optional `project`
+  # (one engine), `split` (`i/N` -> `--fully-parallel --shard=i/N`, so one
+  # long spec spreads over N jobs) and `workers`. Grouping is by measured
+  # duration (run 41357506688, then rebalanced on this PR's own runs) so
+  # that no shard's tests run much past ~90 s.
+  #
+  # Cross-engine by default (#713): no --project filter runs every project,
+  # Chromium (`smoke`) and WebKit (`webkit`). A declared-but-uninstalled
+  # engine is inert, so both are installed explicitly (cf. lesson 082).
+  #
+  # The CLS budgets are Chromium-only by design (their webkit tests skip
+  # themselves). Their Chromium tests run with `workers: '1'`, one test at a
+  # time on the runner as they did in the single job, so the measurement
+  # conditions do not change; their webkit half runs in `cls-webkit`.
+  smoke:
+    name: Smoke (${{ matrix.shard }})
+    needs: preview
+    if: needs.preview.outputs.heavy == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      # Drive the actual deployed preview, not staging's default.
+      BASE_URL: ${{ needs.preview.outputs.url }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # e2e/section-bar.smoke.ts
+          # Phone bottom section bar (#1832, mobile review §5.1). At 375/390 in
+          # portrait, light and dark, on all 9 district routes: a 56px fixed bar
+          # (4 routes + More), labels inside their 44px+ items, content under the
+          # context bar by 110px and the page end clear of the bar; More opens
+          # the shared sheet. Landscape, 768 and 1280 keep the scroll-row.
+          - shard: section-bar-1
+            specs: e2e/section-bar.smoke.ts
+            split: '1/3'
+
+          - shard: section-bar-2
+            specs: e2e/section-bar.smoke.ts
+            split: '2/3'
+
+          - shard: section-bar-3
+            specs: e2e/section-bar.smoke.ts
+            split: '3/3'
+
+          # e2e/priority-columns.smoke.ts
+          # Priority-column comparison tables (#1834, mobile review §5.2). At
+          # 375/390, light and dark: identity + 2 chosen metrics, zero hidden
+          # columns and zero document overflow with the body mask off, one-line
+          # headers, 44px targets, 14px text, tier chips inside their cells by
+          # bounding box; "Full table" opens a full-screen labelled region. 768
+          # and 1280 keep the full table. Both engines.
+          - shard: priority-columns-1
+            specs: e2e/priority-columns.smoke.ts
+            split: '1/2'
+
+          - shard: priority-columns-2
+            specs: e2e/priority-columns.smoke.ts
+            split: '2/2'
+
+          # e2e/district-map.smoke.ts
+          # District club map (#1784). At 375 and 1280, light and dark, on real
+          # D61 data and the real basemap: the pin layer reports rendered pins,
+          # legend chips are >= 44px / 14px and write ?status=, tapping a pin
+          # opens the club summary (sheet at 375, side panel at 1280) with no
+          # contact details, and no CSP/worker/WebGL error. Both engines.
+          - shard: district-map-1
+            specs: e2e/district-map.smoke.ts
+            split: '1/2'
+
+          - shard: district-map-2
+            specs: e2e/district-map.smoke.ts
+            split: '2/2'
+
+          # e2e/touch-targets.smoke.ts
+          # Dual-engine 44px touch-target tripwire (#887, epic #888 Sprint 3). Locks
+          # in the #886 family-A/B/C fix: every interactive element on every routed
+          # page must keep the 44px floor in BOTH engines. WebKit ignores min-height
+          # on a native <select> without appearance:none (lesson 111), so a
+          # Chromium-only check is blind — runs both projects like the smoke above.
+          - shard: touch-targets-1
+            specs: e2e/touch-targets.smoke.ts
+            split: '1/2'
+
+          - shard: touch-targets-2
+            specs: e2e/touch-targets.smoke.ts
+            split: '2/2'
+
+          # e2e/mobile-375-gate.smoke.ts
+          # 375 mobile gate (#1841, mobile review §7). At 375x812 with touch,
+          # light and dark, on the 25 review routes, each gated on a content
+          # sentinel: no document overflow with the body overflow-x mask off, no
+          # sub-44px target outside the issue-owned allowlist, text under 14px
+          # within the route's ratchet, first content within the route's budget
+          # (110px on context-bar routes). Budgets: e2e/mobile-375-budgets.json,
+          # ratchet down only. Both engines.
+          - shard: mobile-375-gate
+            specs: e2e/mobile-375-gate.smoke.ts
+
+          # e2e/no-horizontal-scroll.smoke.ts
+          # No horizontal page scroll (#1651, #1655). The document's scrollWidth
+          # must not exceed the viewport at 375/768/1280 in both themes on the
+          # shell routes, /clubs, and /district/61 (+ Analytics) with real data, so
+          # an overflow from any component fails the PR. Both engines.
+          - shard: no-horizontal-scroll-1
+            specs: e2e/no-horizontal-scroll.smoke.ts
+            split: '1/2'
+
+          - shard: no-horizontal-scroll-2
+            specs: e2e/no-horizontal-scroll.smoke.ts
+            split: '2/2'
+
+          # e2e/ga-page-view.smoke.ts
+          # One GA page_view per load and per SPA navigation (#1946). The preview
+          # is served as ts.taverns.red so the real gtag runs; every collect
+          # request is answered locally with a 204, so no hit reaches GA.
+          # e2e/breadcrumb-alignment.smoke.ts
+          # Breadcrumb baseline-alignment tripwire (#1387). The step above proves
+          # the 44px floor is MET; this one proves the box it inflates does not
+          # wreck the layout inside it. The crumb <a> is a flex item, so the floor
+          # makes it a 48px box whose text painted at the TOP while the floor-free
+          # `›` spans centred — a row on two visual baselines that no existing gate
+          # could see (not a shift, not a contrast failure, not a sub-44 target).
+          # Both engines: Chromium and WebKit resolve the text line box differently
+          # (0.5px vs 0.0px residue), so only a cross-engine run proves the fix
+          # holds in each.
+          - shard: bundle-1
+            specs: >-
+              e2e/ga-page-view.smoke.ts
+              e2e/breadcrumb-alignment.smoke.ts
+
+          # e2e/context-bar.smoke.ts
+          # Phone context bar (#1831, mobile review §5.1). At 375/390 on all 9
+          # district routes one sticky 44px bar replaces the header stack, the H1
+          # stays in the DOM, and the section nav starts by 110px; the chip opens
+          # a bottom sheet with 16px selects and PY round-trips through ?py=. At
+          # 768/1280 the desktop header is unchanged. Both engines.
+          # e2e/regions-legibility.smoke.ts
+          # Lightweight cross-engine smoke against the freshly-deployed preview
+          # (#713). #685 verified contrast in Chromium-at-rest only and missed a
+          # Safari-visible regression (#710); running the legibility smoke in BOTH
+          # the `smoke` (Chromium) and `webkit` (Safari) projects closes that blind
+          # spot for every frontend PR.
+          # e2e/header-search-field-bg.smoke.ts
+          # Header search field surface (#2022). The blanket dark-mode input remap
+          # painted --surface-card inside the field's --surface-2, a box-in-a-box
+          # that no contrast or geometry gate sees. Computed colours at 844 touch
+          # and 1280 mouse, light and dark.
+          - shard: bundle-2
+            specs: >-
+              e2e/context-bar.smoke.ts
+              e2e/regions-legibility.smoke.ts
+              e2e/header-search-field-bg.smoke.ts
+
+          # e2e/tooltip-viewport-clip.smoke.ts
+          # Tooltip viewport-collision tripwire (#1405). The two shared tooltip
+          # components centre a fixed-width panel on their trigger with no
+          # collision handling, so a trigger in a card's leftmost column opened the
+          # panel at left −67 and the landing page's rightmost table header ran to
+          # right 1407 in a 1350px viewport. Nothing existing could see it: the
+          # panel is visible, contrasty, above 44px and causes no shift — it is
+          # simply half off-screen. Real geometry at 375/768/1350 in light and
+          # dark, both engines, and the 44px trigger floor re-asserted so the
+          # shrink-the-control "fix" cannot turn this green.
+          # e2e/landing-header-tablet.smoke.ts
+          # Landing header at tablet widths (#1917). At 768/820/1024, light and
+          # dark: the intro keeps ≥320px, the title stays on one line, intro and
+          # actions never overlap, nav links never wrap or run into the search,
+          # and the loading shell lands the KPI strip at its loaded y. Both engines.
+          # e2e/district-kpi-strip-mobile.smoke.ts
+          # District KPI strip never pinned over the Overview on a phone (#1828,
+          # mobile review S2). At 375 on /district/61 and /district/80 the strip
+          # is in flow and not under the viewport centre at scroll 1200, and no
+          # sticky/fixed element is taller than 64px; at 1280 it stays sticky
+          # (#572). Both engines: position is width-driven, not touch-driven.
+          - shard: bundle-3
+            specs: >-
+              e2e/tooltip-viewport-clip.smoke.ts
+              e2e/landing-header-tablet.smoke.ts
+              e2e/district-kpi-strip-mobile.smoke.ts
+
+          # e2e/chart-readout-touch.smoke.ts
+          # Touch-only chart probe (#1835, mobile review §4.1). Emulated as a phone
+          # (hasTouch + isMobile → hover: none), light and dark: the readout line
+          # is reserved before a tap, a tap pins a dated value with no floating
+          # tooltip, the arrow keys move it, text ≥14px inside the viewport. 1280
+          # keeps the hover tooltip and no readout. Both engines.
+          # e2e/divisions-mobile-rows.smoke.ts
+          # Phone divisions page as collapsed division rows (#1844, mobile review
+          # §3, §7 "divisions page height"). At 375 and 390, light and dark: one
+          # 56–64px row per division linking to its routed page (chip whole by
+          # bounding box, text ≥14px), no inline area table, no "N/A N/A N/A",
+          # page ≤ 6,000px (was 28,083), zero overflow with the body mask off;
+          # the progress summary starts collapsed and ?summary= round-trips. 768
+          # and 1280 keep the desktop division cards. Both engines.
+          # e2e/landing-first-screen.smoke.ts
+          # Landing first screen on phones (#1846, mobile review §7 item 19). At
+          # 375/390, light and dark: the context bar replaces the header stack,
+          # search precedes the first KPI, the first KPI starts by 300px, the
+          # orientation copy is in the sheet, and each chip row fades only the
+          # edges that still hide chips. 768/1280 keep the inline header.
+          - shard: bundle-4
+            specs: >-
+              e2e/chart-readout-touch.smoke.ts
+              e2e/divisions-mobile-rows.smoke.ts
+              e2e/landing-first-screen.smoke.ts
+
+          # e2e/type-floor.smoke.ts
+          # Phone type floor (#1840, mobile review §7). At 375 on the 23 routes
+          # the review and the 2.48.0 prod sweep measured: ≤15% of visible
+          # characters under 14px and nothing visible under 12px (12px is for
+          # uppercase eyebrows only; sr-only text excluded). Both engines.
+          # e2e/club-page-mobile.smoke.ts
+          # Club page on the mobile primitives (#1843, review §6.3). At 375 and
+          # 390, light and dark: hero ≤ 200px (was 401) with a 22px name, the
+          # PY/date chips and history link out of the hero, "Multi-year history"
+          # as a ≥56px row, stat cells ≥56px, zero overflow with the body mask
+          # off. At 375 and 1280 the static mini-map links to
+          # /district/61/map?club=, and the route requests no MapLibre, tiles or
+          # club-index.json. Both engines.
+          - shard: bundle-5
+            specs: >-
+              e2e/type-floor.smoke.ts
+              e2e/club-page-mobile.smoke.ts
+
+          # e2e/form-controls-16px.smoke.ts
+          # Form controls ≥16px below 768 (#1838). Every input/select at 375 and
+          # 767 (incl. the transparent chip-select overlays and the context-bar
+          # and Filter & sort sheets) has a computed font-size ≥16px, so iOS
+          # Safari does not zoom on focus; selects keep their 44px box. Both
+          # engines (WebKit resolves form-control fonts differently, L111).
+          # e2e/safe-area-landscape.smoke.ts
+          # Safe-area + landscape (#1847, mobile review S11 / §4.2). viewport-fit
+          # =cover; with iPhone insets emulated (Chromium CDP) the top bar clears
+          # the notch, the section bar's targets and the sheets clear the home
+          # indicator, sheets stay inside the visible viewport; at 812x375 and
+          # iPhone landscape profiles the context bar replaces the header stack,
+          # the top bar scrolls away, first data <= 200px. Light + dark, both
+          # engines (WebKit at inset 0).
+          # e2e/district-map-preview.smoke.ts
+          # District map static preview (#1943). With the maplibre chunk held
+          # back: the map box shows the clubs as dots with no MapLibre and no
+          # tile request, fills the reserved box (no shift), and fades out once
+          # the live map paints. 375 and 1280, light and dark. Both engines.
+          - shard: bundle-6
+            specs: >-
+              e2e/form-controls-16px.smoke.ts
+              e2e/safe-area-landscape.smoke.ts
+              e2e/district-map-preview.smoke.ts
+
+          # e2e/clubs-mobile-rows.smoke.ts
+          # Phone clubs list as compact rows (#1833, mobile review §4.1). At 375,
+          # light and dark: collapsed division groups with counts (page ≤ 2,500px),
+          # every row 56–64px with its chip whole by bounding box, text ≥14px, no
+          # contact details, zero overflow with the body mask off; the flat list
+          # caps at 50 + "Show 25 more" (≤ 8,000px); ?open=, the FilterSheet's
+          # status/sort and ?search= round-trip through a reload. 768 and 1280
+          # keep the desktop table. Both engines.
+          # e2e/contrast-aa.smoke.ts
+          # AA text contrast (#1839). 0 failures, light and dark, on the 404 page
+          # (amber code, dark "Go home") and the club-history table at 768
+          # (amber year links); the dark skip link is measured on both. Both
+          # engines.
+          # e2e/district-overview-hub-mobile.smoke.ts
+          # District Overview hub (#1842, mobile review §5.5). At 375, light and
+          # dark: 2x2 KPI tiles (block <= 300px, was 860px) starting at the hub's
+          # left edge (no side toggle), Needs attention above the section bar,
+          # page <= 4,000px, no info tooltips; a tile opens its sheet; landscape
+          # phones get 4x1; 1280 keeps the desktop strip. Both engines.
+          # e2e/club-grid-mobile.smoke.ts
+          # Club grid on phones (#1845). At 375, light and dark: tiles are
+          # buttons ≥44px that open the club sheet (name, status, link), the grid
+          # has 0 title-only tooltips, legend chips are ≥14px and the document
+          # does not overflow. At 1280 the tiles stay links (desktop unchanged).
+          # e2e/world-countries.smoke.ts
+          # Worldwide country choropleth (#1797). At 375 and 1280, light and dark,
+          # on real staging data: the map draws (US in the top bin) with no
+          # sideways scroll, Unknown clubs stated, theme-aware sea, a tap writes
+          # ?country=, 375 opens the all-countries sheet, 1280 sets the table
+          # beside the map, and no console (CSP) error. Both engines.
+          # e2e/landing-mobile-scroll.smoke.ts
+          # Landing scroll budget (#864, #1834). At 375/414, both engines, `/` must
+          # stay ≤ 8,000px tall with the phone rankings in their default 25-row
+          # reveal. It was a local-only smoke; running it here flags growth (more
+          # districts, a new section) before it lands instead of after.
+          # e2e/basemap-375.smoke.ts
+          # Self-hosted basemap (#1786, ADR-016). At 375, light and dark, on the
+          # district club map (/district/61/map, #1784): MapLibre draws the Protomaps archive read
+          # with HTTP range requests (served from the committed z0 fixture until
+          # the real object is uploaded), inside the viewport with no sideways
+          # scroll, ODbL credit visible and expanded, no CSP/worker error on the
+          # deployed headers. Both engines.
+          # e2e/landing-mobile-cls.smoke.ts
+          # Mobile loading/error→loaded CLS guard (#922). The Lighthouse CLS gate
+          # runs the desktop preset, where the landing header actions lay out
+          # inline — it is blind to the mobile-only stack that pushed the KPI
+          # strip down ~148px on loading→loaded at 390px. Bounding-box equality
+          # across states (Lesson 134), both engines, against the real preview.
+          - shard: bundle-7
+            specs: >-
+              e2e/clubs-mobile-rows.smoke.ts
+              e2e/contrast-aa.smoke.ts
+              e2e/district-overview-hub-mobile.smoke.ts
+              e2e/club-grid-mobile.smoke.ts
+              e2e/world-countries.smoke.ts
+              e2e/landing-mobile-scroll.smoke.ts
+              e2e/basemap-375.smoke.ts
+              e2e/landing-mobile-cls.smoke.ts
+
+          # e2e/district-subpages-cls.smoke.ts
+          # District subpages CLS budget (#1837). The Overview gate above covers
+          # /district/:id only; the eight routed subpages had none, and divisions,
+          # analytics and action-list shipped at 0.20–0.30. Lighthouse mobile
+          # throttling (150ms RTT, 1.6 Mbps, 4x CPU), cold cache, 375 and 1280,
+          # on the deployed channel. Chromium-only: the webkit project skips.
+          - shard: subpages-cls-1
+            specs: e2e/district-subpages-cls.smoke.ts
+            project: smoke
+            split: '1/3'
+            workers: '1'
+
+          - shard: subpages-cls-2
+            specs: e2e/district-subpages-cls.smoke.ts
+            project: smoke
+            split: '2/3'
+            workers: '1'
+
+          - shard: subpages-cls-3
+            specs: e2e/district-subpages-cls.smoke.ts
+            project: smoke
+            split: '3/3'
+            workers: '1'
+
+          # e2e/club-hero-cls.smoke.ts
+          # Club hero CLS at the hero-first -> full render (#2071). The snapshot
+          # paints the hero before analytics; the status chips arrive later and
+          # must not change the intro's width (which re-wrapped the h1 and moved
+          # the hero by a line). Analytics is held back so both renders paint;
+          # 375/768/1024/1280. Chromium-only: the webkit project skips.
+          # e2e/district-overview-cls.smoke.ts
+          # District overview CLS budget (#1647). lighthouserc.js only loads `/`,
+          # so /district/:id carried CLS 0.25 (desktop) / 0.44 (mobile) with every
+          # gate green: late inserts and skeleton→panel height mismatches in the
+          # Overview stack. Cold cache, pre-navigation layout-shift observer, the
+          # current and a past program year, 412px and 1350px, on the deployed
+          # channel. Chromium-only: the webkit project skips itself.
+          # e2e/landing-font-swap-cls.smoke.ts
+          # 375px CLS budget under real throttling (#1373). The guard above proves
+          # loading→loaded geometry; this one measures the Core Web Vital itself,
+          # which no existing gate can see: lighthouserc.js runs `preset: desktop`
+          # (mobile is never sampled) against localhost:4173, and Chromium does not
+          # throttle loopback — so a `display=swap` font reflow worth 0.151 at
+          # 375px on main read ~0.00 everywhere and shipped. Cold cache + CDP
+          # Fast-3G + a pre-navigation layout-shift observer, on the deployed
+          # channel. Chromium-only by design: the webkit project skips itself,
+          # because layout-shift and CDP throttling are both Chromium-only.
+          - shard: cls-chromium
+            specs: >-
+              e2e/club-hero-cls.smoke.ts
+              e2e/district-overview-cls.smoke.ts
+              e2e/landing-font-swap-cls.smoke.ts
+            project: smoke
+            workers: '1'
+
+          - shard: cls-webkit
+            specs: >-
+              e2e/district-subpages-cls.smoke.ts
+              e2e/club-hero-cls.smoke.ts
+              e2e/district-overview-cls.smoke.ts
+              e2e/landing-font-swap-cls.smoke.ts
+            project: webkit
+
+          - shard: remaining-1
+            specs: '@remaining'
+            split: '1/5'
+
+          - shard: remaining-2
+            specs: '@remaining'
+            split: '2/5'
+
+          - shard: remaining-3
+            specs: '@remaining'
+            split: '3/5'
+
+          - shard: remaining-4
+            specs: '@remaining'
+            split: '4/5'
+
+          - shard: remaining-5
+            specs: '@remaining'
+            split: '5/5'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve the Playwright version
+        id: playwright
+        run: |
+          set -euo pipefail
+          version=$(npx playwright --version)
+          [[ "$version" =~ ^Version\ [0-9]+\.[0-9]+\.[0-9]+$ ]] \
+            || { echo "::error::unexpected playwright --version: $version"; exit 1; }
+          echo "version=${version#Version }" >> "$GITHUB_OUTPUT"
+
+      # The browsers come from Playwright's CDN, cached per version (#2453:
+      # 39 s a run, uncached, in the single job). `--with-deps` still runs on
+      # a hit: the OS packages and fonts it adds are not in the cache, and
+      # the geometry smokes must render with the same fonts as before.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-webkit-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
       - name: Install Playwright browsers (chromium + webkit)
-        if: env.HEAVY_SMOKE == 'true'
         run: npx playwright install --with-deps chromium webkit
 
-      - name: Cross-engine legibility smoke against preview
-        if: env.HEAVY_SMOKE == 'true'
+      # One path per line or per space, no spaces in names (the contract
+      # test checks): word-split on purpose. If @remaining has nothing left,
+      # exit early: a bare `playwright test` would re-run every spec.
+      - name: Playwright smoke against preview
         working-directory: frontend
         env:
-          # Drive the actual deployed preview, not staging's default.
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        # No --project filter → runs every project (Chromium + WebKit). A
-        # Safari-only rendering regression fails the webkit project while
-        # Chromium stays green — exactly the #710 class.
-        run: npx playwright test --config playwright.config.ts e2e/regions-legibility.smoke.ts
-
-      # Dual-engine 44px touch-target tripwire (#887, epic #888 Sprint 3). Locks
-      # in the #886 family-A/B/C fix: every interactive element on every routed
-      # page must keep the 44px floor in BOTH engines. WebKit ignores min-height
-      # on a native <select> without appearance:none (lesson 111), so a
-      # Chromium-only check is blind — runs both projects like the smoke above.
-      - name: Cross-engine 44px touch-target tripwire against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/touch-targets.smoke.ts
-
-      # Breadcrumb baseline-alignment tripwire (#1387). The step above proves
-      # the 44px floor is MET; this one proves the box it inflates does not
-      # wreck the layout inside it. The crumb <a> is a flex item, so the floor
-      # makes it a 48px box whose text painted at the TOP while the floor-free
-      # `›` spans centred — a row on two visual baselines that no existing gate
-      # could see (not a shift, not a contrast failure, not a sub-44 target).
-      # Both engines: Chromium and WebKit resolve the text line box differently
-      # (0.5px vs 0.0px residue), so only a cross-engine run proves the fix
-      # holds in each.
-      - name: Cross-engine breadcrumb alignment tripwire against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: >-
-          npx playwright test --config playwright.config.ts
-          e2e/breadcrumb-alignment.smoke.ts
-
-      # Tooltip viewport-collision tripwire (#1405). The two shared tooltip
-      # components centre a fixed-width panel on their trigger with no
-      # collision handling, so a trigger in a card's leftmost column opened the
-      # panel at left −67 and the landing page's rightmost table header ran to
-      # right 1407 in a 1350px viewport. Nothing existing could see it: the
-      # panel is visible, contrasty, above 44px and causes no shift — it is
-      # simply half off-screen. Real geometry at 375/768/1350 in light and
-      # dark, both engines, and the 44px trigger floor re-asserted so the
-      # shrink-the-control "fix" cannot turn this green.
-      - name: Cross-engine tooltip viewport-clip tripwire against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: >-
-          npx playwright test --config playwright.config.ts
-          e2e/tooltip-viewport-clip.smoke.ts
-
-      # Header search field surface (#2022). The blanket dark-mode input remap
-      # painted --surface-card inside the field's --surface-2, a box-in-a-box
-      # that no contrast or geometry gate sees. Computed colours at 844 touch
-      # and 1280 mouse, light and dark.
-      - name: Header search field surface tripwire against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: >-
-          npx playwright test --config playwright.config.ts
-          e2e/header-search-field-bg.smoke.ts
-
-      # Mobile loading/error→loaded CLS guard (#922). The Lighthouse CLS gate
-      # runs the desktop preset, where the landing header actions lay out
-      # inline — it is blind to the mobile-only stack that pushed the KPI
-      # strip down ~148px on loading→loaded at 390px. Bounding-box equality
-      # across states (Lesson 134), both engines, against the real preview.
-      - name: Cross-engine mobile CLS guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/landing-mobile-cls.smoke.ts
-
-      # 375px CLS budget under real throttling (#1373). The guard above proves
-      # loading→loaded geometry; this one measures the Core Web Vital itself,
-      # which no existing gate can see: lighthouserc.js runs `preset: desktop`
-      # (mobile is never sampled) against localhost:4173, and Chromium does not
-      # throttle loopback — so a `display=swap` font reflow worth 0.151 at
-      # 375px on main read ~0.00 everywhere and shipped. Cold cache + CDP
-      # Fast-3G + a pre-navigation layout-shift observer, on the deployed
-      # channel. Chromium-only by design: the webkit project skips itself,
-      # because layout-shift and CDP throttling are both Chromium-only.
-      - name: Mobile font-swap CLS budget against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/landing-font-swap-cls.smoke.ts
-
-      # District overview CLS budget (#1647). lighthouserc.js only loads `/`,
-      # so /district/:id carried CLS 0.25 (desktop) / 0.44 (mobile) with every
-      # gate green: late inserts and skeleton→panel height mismatches in the
-      # Overview stack. Cold cache, pre-navigation layout-shift observer, the
-      # current and a past program year, 412px and 1350px, on the deployed
-      # channel. Chromium-only: the webkit project skips itself.
-      - name: District overview CLS budget against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/district-overview-cls.smoke.ts
-
-      # District subpages CLS budget (#1837). The Overview gate above covers
-      # /district/:id only; the eight routed subpages had none, and divisions,
-      # analytics and action-list shipped at 0.20–0.30. Lighthouse mobile
-      # throttling (150ms RTT, 1.6 Mbps, 4x CPU), cold cache, 375 and 1280,
-      # on the deployed channel. Chromium-only: the webkit project skips.
-      - name: District subpages CLS budget against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/district-subpages-cls.smoke.ts
-
-      # Club hero CLS at the hero-first -> full render (#2071). The snapshot
-      # paints the hero before analytics; the status chips arrive later and
-      # must not change the intro's width (which re-wrapped the h1 and moved
-      # the hero by a line). Analytics is held back so both renders paint;
-      # 375/768/1024/1280. Chromium-only: the webkit project skips.
-      - name: Club hero CLS at the full render against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/club-hero-cls.smoke.ts
-
-      # No horizontal page scroll (#1651, #1655). The document's scrollWidth
-      # must not exceed the viewport at 375/768/1280 in both themes on the
-      # shell routes, /clubs, and /district/61 (+ Analytics) with real data, so
-      # an overflow from any component fails the PR. Both engines.
-      - name: Cross-engine no-horizontal-scroll guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/no-horizontal-scroll.smoke.ts
-
-      # District KPI strip never pinned over the Overview on a phone (#1828,
-      # mobile review S2). At 375 on /district/61 and /district/80 the strip
-      # is in flow and not under the viewport centre at scroll 1200, and no
-      # sticky/fixed element is taller than 64px; at 1280 it stays sticky
-      # (#572). Both engines: position is width-driven, not touch-driven.
-      - name: Cross-engine district KPI strip mobile guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/district-kpi-strip-mobile.smoke.ts
-
-      # Phone context bar (#1831, mobile review §5.1). At 375/390 on all 9
-      # district routes one sticky 44px bar replaces the header stack, the H1
-      # stays in the DOM, and the section nav starts by 110px; the chip opens
-      # a bottom sheet with 16px selects and PY round-trips through ?py=. At
-      # 768/1280 the desktop header is unchanged. Both engines.
-      - name: Cross-engine phone context bar guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/context-bar.smoke.ts
-
-      # Landing first screen on phones (#1846, mobile review §7 item 19). At
-      # 375/390, light and dark: the context bar replaces the header stack,
-      # search precedes the first KPI, the first KPI starts by 300px, the
-      # orientation copy is in the sheet, and each chip row fades only the
-      # edges that still hide chips. 768/1280 keep the inline header.
-      - name: Cross-engine landing first-screen guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/landing-first-screen.smoke.ts
-
-      # Landing header at tablet widths (#1917). At 768/820/1024, light and
-      # dark: the intro keeps ≥320px, the title stays on one line, intro and
-      # actions never overlap, nav links never wrap or run into the search,
-      # and the loading shell lands the KPI strip at its loaded y. Both engines.
-      - name: Cross-engine landing tablet header guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/landing-header-tablet.smoke.ts
-
-      # One GA page_view per load and per SPA navigation (#1946). The preview
-      # is served as ts.taverns.red so the real gtag runs; every collect
-      # request is answered locally with a 204, so no hit reaches GA.
-      - name: Cross-engine GA page_view count guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/ga-page-view.smoke.ts
-
-      # Worldwide country choropleth (#1797). At 375 and 1280, light and dark,
-      # on real staging data: the map draws (US in the top bin) with no
-      # sideways scroll, Unknown clubs stated, theme-aware sea, a tap writes
-      # ?country=, 375 opens the all-countries sheet, 1280 sets the table
-      # beside the map, and no console (CSP) error. Both engines.
-      - name: Cross-engine country map guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/world-countries.smoke.ts
-
-      # Phone bottom section bar (#1832, mobile review §5.1). At 375/390 in
-      # portrait, light and dark, on all 9 district routes: a 56px fixed bar
-      # (4 routes + More), labels inside their 44px+ items, content under the
-      # context bar by 110px and the page end clear of the bar; More opens
-      # the shared sheet. Landscape, 768 and 1280 keep the scroll-row.
-      - name: Cross-engine phone section bar guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/section-bar.smoke.ts
-
-      # Self-hosted basemap (#1786, ADR-016). At 375, light and dark, on the
-      # district club map (/district/61/map, #1784): MapLibre draws the Protomaps archive read
-      # with HTTP range requests (served from the committed z0 fixture until
-      # the real object is uploaded), inside the viewport with no sideways
-      # scroll, ODbL credit visible and expanded, no CSP/worker error on the
-      # deployed headers. Both engines.
-      - name: Cross-engine basemap guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/basemap-375.smoke.ts
-
-      # District club map (#1784). At 375 and 1280, light and dark, on real
-      # D61 data and the real basemap: the pin layer reports rendered pins,
-      # legend chips are >= 44px / 14px and write ?status=, tapping a pin
-      # opens the club summary (sheet at 375, side panel at 1280) with no
-      # contact details, and no CSP/worker/WebGL error. Both engines.
-      - name: Cross-engine district map guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/district-map.smoke.ts
-
-      # District map static preview (#1943). With the maplibre chunk held
-      # back: the map box shows the clubs as dots with no MapLibre and no
-      # tile request, fills the reserved box (no shift), and fades out once
-      # the live map paints. 375 and 1280, light and dark. Both engines.
-      - name: Cross-engine district map preview guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/district-map-preview.smoke.ts
-
-      # District Overview hub (#1842, mobile review §5.5). At 375, light and
-      # dark: 2x2 KPI tiles (block <= 300px, was 860px) starting at the hub's
-      # left edge (no side toggle), Needs attention above the section bar,
-      # page <= 4,000px, no info tooltips; a tile opens its sheet; landscape
-      # phones get 4x1; 1280 keeps the desktop strip. Both engines.
-      - name: Cross-engine district Overview hub guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/district-overview-hub-mobile.smoke.ts
-
-      # Safe-area + landscape (#1847, mobile review S11 / §4.2). viewport-fit
-      # =cover; with iPhone insets emulated (Chromium CDP) the top bar clears
-      # the notch, the section bar's targets and the sheets clear the home
-      # indicator, sheets stay inside the visible viewport; at 812x375 and
-      # iPhone landscape profiles the context bar replaces the header stack,
-      # the top bar scrolls away, first data <= 200px. Light + dark, both
-      # engines (WebKit at inset 0).
-      - name: Cross-engine safe-area and landscape guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/safe-area-landscape.smoke.ts
-
-      # Priority-column comparison tables (#1834, mobile review §5.2). At
-      # 375/390, light and dark: identity + 2 chosen metrics, zero hidden
-      # columns and zero document overflow with the body mask off, one-line
-      # headers, 44px targets, 14px text, tier chips inside their cells by
-      # bounding box; "Full table" opens a full-screen labelled region. 768
-      # and 1280 keep the full table. Both engines.
-      - name: Cross-engine priority-columns guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/priority-columns.smoke.ts
-
-      # Phone clubs list as compact rows (#1833, mobile review §4.1). At 375,
-      # light and dark: collapsed division groups with counts (page ≤ 2,500px),
-      # every row 56–64px with its chip whole by bounding box, text ≥14px, no
-      # contact details, zero overflow with the body mask off; the flat list
-      # caps at 50 + "Show 25 more" (≤ 8,000px); ?open=, the FilterSheet's
-      # status/sort and ?search= round-trip through a reload. 768 and 1280
-      # keep the desktop table. Both engines.
-      - name: Cross-engine phone clubs rows guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/clubs-mobile-rows.smoke.ts
-
-      # Phone divisions page as collapsed division rows (#1844, mobile review
-      # §3, §7 "divisions page height"). At 375 and 390, light and dark: one
-      # 56–64px row per division linking to its routed page (chip whole by
-      # bounding box, text ≥14px), no inline area table, no "N/A N/A N/A",
-      # page ≤ 6,000px (was 28,083), zero overflow with the body mask off;
-      # the progress summary starts collapsed and ?summary= round-trips. 768
-      # and 1280 keep the desktop division cards. Both engines.
-      - name: Cross-engine phone divisions rows guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/divisions-mobile-rows.smoke.ts
-
-      # Touch-only chart probe (#1835, mobile review §4.1). Emulated as a phone
-      # (hasTouch + isMobile → hover: none), light and dark: the readout line
-      # is reserved before a tap, a tap pins a dated value with no floating
-      # tooltip, the arrow keys move it, text ≥14px inside the viewport. 1280
-      # keeps the hover tooltip and no readout. Both engines.
-      - name: Cross-engine touch chart readout guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/chart-readout-touch.smoke.ts
-
-      # Club page on the mobile primitives (#1843, review §6.3). At 375 and
-      # 390, light and dark: hero ≤ 200px (was 401) with a 22px name, the
-      # PY/date chips and history link out of the hero, "Multi-year history"
-      # as a ≥56px row, stat cells ≥56px, zero overflow with the body mask
-      # off. At 375 and 1280 the static mini-map links to
-      # /district/61/map?club=, and the route requests no MapLibre, tiles or
-      # club-index.json. Both engines.
-      - name: Cross-engine club page primitives guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/club-page-mobile.smoke.ts
-
-      # Club grid on phones (#1845). At 375, light and dark: tiles are
-      # buttons ≥44px that open the club sheet (name, status, link), the grid
-      # has 0 title-only tooltips, legend chips are ≥14px and the document
-      # does not overflow. At 1280 the tiles stay links (desktop unchanged).
-      - name: Cross-engine phone club grid guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/club-grid-mobile.smoke.ts
-
-      # Form controls ≥16px below 768 (#1838). Every input/select at 375 and
-      # 767 (incl. the transparent chip-select overlays and the context-bar
-      # and Filter & sort sheets) has a computed font-size ≥16px, so iOS
-      # Safari does not zoom on focus; selects keep their 44px box. Both
-      # engines (WebKit resolves form-control fonts differently, L111).
-      - name: Cross-engine form-control 16px guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/form-controls-16px.smoke.ts
-
-      # AA text contrast (#1839). 0 failures, light and dark, on the 404 page
-      # (amber code, dark "Go home") and the club-history table at 768
-      # (amber year links); the dark skip link is measured on both. Both
-      # engines.
-      - name: Cross-engine AA contrast guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/contrast-aa.smoke.ts
-
-      # Phone type floor (#1840, mobile review §7). At 375 on the 23 routes
-      # the review and the 2.48.0 prod sweep measured: ≤15% of visible
-      # characters under 14px and nothing visible under 12px (12px is for
-      # uppercase eyebrows only; sr-only text excluded). Both engines.
-      - name: Cross-engine phone type floor guard against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/type-floor.smoke.ts
-
-      # 375 mobile gate (#1841, mobile review §7). At 375x812 with touch,
-      # light and dark, on the 25 review routes, each gated on a content
-      # sentinel: no document overflow with the body overflow-x mask off, no
-      # sub-44px target outside the issue-owned allowlist, text under 14px
-      # within the route's ratchet, first content within the route's budget
-      # (110px on context-bar routes). Budgets: e2e/mobile-375-budgets.json,
-      # ratchet down only. Both engines.
-      - name: Cross-engine 375 mobile gate against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/mobile-375-gate.smoke.ts
-
-      # Landing scroll budget (#864, #1834). At 375/414, both engines, `/` must
-      # stay ≤ 8,000px tall with the phone rankings in their default 25-row
-      # reveal. It was a local-only smoke; running it here flags growth (more
-      # districts, a new section) before it lands instead of after.
-      - name: Cross-engine landing scroll budget against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
-        run: npx playwright test --config playwright.config.ts e2e/landing-mobile-scroll.smoke.ts
-
-      # Every other smoke spec (#2141). Six specs (district-growth among them)
-      # were written without a step above and ran only locally. This step runs
-      # every e2e/**/*.smoke.ts that no step above names, as
-      # scripts/unlisted-smoke-specs.ts lists them, so a new spec runs here
-      # from the day it lands. Give a spec its own step above when it needs a
-      # name or a rationale of its own. Both engines. If nothing is left, exit
-      # early: a bare `playwright test` would re-run every spec.
-      # scripts/lib/__tests__/smokeSpecCoverage.test.ts fails if a spec is
-      # in neither place.
-      - name: Remaining smoke specs against preview
-        if: env.HEAVY_SMOKE == 'true'
-        working-directory: frontend
-        env:
-          BASE_URL: ${{ steps.deploy.outputs.url }}
+          SPECS: ${{ matrix.specs }}
+          PROJECT: ${{ matrix.project }}
+          SPLIT: ${{ matrix.split }}
+          WORKERS: ${{ matrix.workers }}
         run: |
-          specs="$(npx tsx ../scripts/unlisted-smoke-specs.ts)"
+          set -euo pipefail
+          specs="$SPECS"
+          if [ "$specs" = "@remaining" ]; then
+            specs="$(npx tsx ../scripts/unlisted-smoke-specs.ts)"
+          fi
           if [ -z "$specs" ]; then
-            echo "Every smoke spec has a step of its own."
+            echo "Every smoke spec has a shard of its own."
             exit 0
           fi
           echo "$specs"
-          # One path per line, no spaces (the contract test checks): split.
+          args=()
+          if [ -n "$PROJECT" ]; then args+=("--project=$PROJECT"); fi
+          if [ -n "$SPLIT" ]; then
+            args+=(--fully-parallel "--shard=$SPLIT")
+          fi
+          if [ -n "$WORKERS" ]; then args+=("--workers=$WORKERS"); fi
           # shellcheck disable=SC2086
-          npx playwright test --config playwright.config.ts $specs
-
-      # Lighthouse MOBILE gate (#1830, mobile epic #1827). lighthouserc.js is
-      # desktop-only on `/` against localhost fixtures; this runs Lighthouse's
-      # mobile profile (simulated 150 ms RTT / 1.6 Mbps / 4x CPU) on the five
-      # #1830 routes against the deployed channel — real CSP, staging CDN data,
-      # real fonts. Assertions are `error` since 2026-10-19, after a green
-      # week at `warn` (recorded on #1830); see lighthouserc.mobile.js for
-      # the per-route budgets (final since 2026-10-21, #1856).
-      - name: Lighthouse mobile gate against preview
-        if: env.HEAVY_SMOKE == 'true'
-        uses: treosh/lighthouse-ci-action@v12
-        env:
-          LHCI_BASE_URL: ${{ steps.deploy.outputs.url }}
-        with:
-          configPath: './lighthouserc.mobile.js'
-          uploadArtifacts: true
-          temporaryPublicStorage: true
+          npx playwright test --config playwright.config.ts $specs "${args[@]}"
 
       # Failure evidence (#2248). Run 40050767724 lost the WebKit app partway
       # through (a landing-page 404) and nothing recorded which URL failed.
-      # When a smoke fails, the steps after it are skipped, so
-      # frontend/test-results/ still holds the failing run's screenshots,
+      # frontend/test-results/ holds the failing shard's screenshots,
       # first-retry traces and error-responses lists. Diagnostics only: this
-      # step runs only once the job has already failed.
+      # step runs only once the shard has already failed. Named per shard and
+      # per attempt, so parallel shards and re-runs do not collide.
       - name: Upload Playwright results on failure
-        if: failure() && env.HEAVY_SMOKE == 'true'
+        if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-results-attempt-${{ github.run_attempt }}
+          name: playwright-results-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
           path: frontend/test-results/
           retention-days: 3
           if-no-files-found: ignore
+
+  # Lighthouse MOBILE gate (#1830, mobile epic #1827). lighthouserc.js is
+  # desktop-only on `/` against localhost fixtures; this runs Lighthouse's
+  # mobile profile (simulated 150 ms RTT / 1.6 Mbps / 4x CPU) on the five
+  # #1830 routes against the deployed channel — real CSP, staging CDN data,
+  # real fonts. Assertions are `error` since 2026-10-19, after a green
+  # week at `warn` (recorded on #1830); see lighthouserc.mobile.js for
+  # the per-route budgets (final since 2026-10-21, #1856).
+  # One job per route (#2453): LHCI_ROUTE narrows the config to that route,
+  # with the same best-of-3 runs and the same assertions. The route list
+  # must equal lighthouserc.mobile.js's ROUTES (lighthouseMobileGate.test.ts).
+  lighthouse:
+    name: Lighthouse mobile (${{ matrix.route }})
+    needs: preview
+    if: needs.preview.outputs.heavy == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        route: [landing, district, clubs, club, regions]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Lighthouse mobile gate against preview
+        uses: treosh/lighthouse-ci-action@v12
+        env:
+          LHCI_BASE_URL: ${{ needs.preview.outputs.url }}
+          LHCI_ROUTE: ${{ matrix.route }}
+        with:
+          configPath: './lighthouserc.mobile.js'
+          uploadArtifacts: true
+          artifactName: lighthouse-results-${{ matrix.route }}
+          temporaryPublicStorage: true
+
+  # One verdict over every shard (#2453). A matrix reports one check per
+  # shard; this job needs them all and is the single check to require if PR
+  # Preview is ever made merge-gating (today CI Gate does not require it).
+  # It runs whatever the shards concluded (`!cancelled()`), but not when the
+  # deploy job itself was skipped (fork, Dependabot, closed PR, other label).
+  verdict:
+    name: PR Preview verdict
+    needs: [preview, smoke, lighthouse]
+    if: ${{ !cancelled() && needs.preview.result != 'skipped' }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      # Wall time from the start of this run attempt to now, and each job's
+      # own duration, against the #2453 targets (5 min, 8 min floor).
+      # Diagnostics only: a failure here cannot change the verdict.
+      - name: Time the run
+        id: timing
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          ATTEMPT: ${{ github.run_attempt }}
+          URL: ${{ needs.preview.outputs.url }}
+          EXPIRES: ${{ needs.preview.outputs.expires }}
+          DEPLOY: ${{ needs.preview.result }}
+          SMOKE: ${{ needs.smoke.result }}
+          LIGHTHOUSE: ${{ needs.lighthouse.result }}
+        run: |
+          set -euo pipefail
+          api="repos/$REPO/actions/runs/$RUN_ID/attempts/$ATTEMPT"
+          started=$(gh api "$api" --jq .run_started_at)
+          now=$(date -u +%s)
+          wall=$(( now - $(date -u -d "$started" +%s) ))
+          fmt() { printf '%dm %02ds' $(( $1 / 60 )) $(( $1 % 60 )); }
+          yes_no() { if [ "$1" -le "$2" ]; then echo yes; else echo no; fi; }
+          if [ "$DEPLOY" = success ] && [ "$SMOKE" = success ] \
+            && [ "$LIGHTHOUSE" = success ]; then
+            result=passed
+          else
+            result=failed
+          fi
+          rows=$(gh api --paginate "$api/jobs?per_page=100" --jq '
+            .jobs[]
+            | select(.completed_at != null and .started_at != null)
+            | [ .name, (.conclusion // "-"),
+                (((.completed_at | fromdateiso8601)
+                  - (.started_at | fromdateiso8601)) | tostring) ]
+            | @tsv')
+          slowest=$(printf '%s\n' "$rows" | sort -t$'\t' -k3 -n -r | head -1)
+          {
+            echo "## 🚀 Preview deployed"
+            echo
+            echo "**Live URL:** ${URL}"
+            echo
+            echo "_Channel expires: ${EXPIRES}_"
+            echo
+            echo "Updated on every push to this PR. The channel is removed"
+            echo "automatically when this PR closes."
+            echo
+            echo "### Smoke and Lighthouse: ${result}"
+            echo
+            echo "Wall time, run start to verdict: **$(fmt "$wall")**." \
+              "Under 5 min: **$(yes_no "$wall" 300)**." \
+              "Under 8 min: **$(yes_no "$wall" 480)** (#2453 targets)."
+            echo
+            echo "Slowest job: $(printf '%s' "$slowest" | cut -f1)" \
+              "($(fmt "$(printf '%s' "$slowest" | cut -f3)"))."
+            echo
+            echo "<details><summary>Per-job durations</summary>"
+            echo
+            echo "| Job | Result | Duration |"
+            echo "| --- | --- | --- |"
+            printf '%s\n' "$rows" | sort -t$'\t' -k3 -n -r \
+              | while IFS=$'\t' read -r name conclusion secs; do
+                  echo "| ${name} | ${conclusion} | $(fmt "$secs") |"
+                done
+            echo
+            echo "</details>"
+          } > "$RUNNER_TEMP/preview-comment.md"
+          cat "$RUNNER_TEMP/preview-comment.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post the verdict and timing in the sticky preview comment
+        if: needs.preview.outputs.heavy == 'true' && steps.timing.outcome == 'success'
+        continue-on-error: true
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: pr-preview
+          path: ${{ runner.temp }}/preview-comment.md
+
+      # R17: an explicit case for every value. Heavy run: the deploy and
+      # every smoke and Lighthouse shard must have succeeded. Draft run: the
+      # shards must have been skipped by design (#2101). Anything else fails.
+      - name: Verdict
+        env:
+          DEPLOY: ${{ needs.preview.result }}
+          SMOKE: ${{ needs.smoke.result }}
+          LIGHTHOUSE: ${{ needs.lighthouse.result }}
+          HEAVY: ${{ needs.preview.outputs.heavy }}
+        run: |
+          echo "deploy=$DEPLOY smoke=$SMOKE lighthouse=$LIGHTHOUSE heavy=$HEAVY"
+          if [ "$DEPLOY" != "success" ]; then
+            echo "::error::the deploy job did not succeed ($DEPLOY)"
+            exit 1
+          fi
+          case "$HEAVY" in
+            true)
+              if [ "$SMOKE" != "success" ] || [ "$LIGHTHOUSE" != "success" ]; then
+                echo "::error::smoke: $SMOKE, lighthouse: $LIGHTHOUSE"
+                exit 1
+              fi
+              echo "Every smoke shard and Lighthouse route passed."
+              ;;
+            false)
+              if [ "$SMOKE" != "skipped" ] || [ "$LIGHTHOUSE" != "skipped" ]; then
+                echo "::error::draft run, yet smoke: $SMOKE, lighthouse: $LIGHTHOUSE"
+                exit 1
+              fi
+              echo "Draft PR: heavy smoke skipped by design (#2101)."
+              ;;
+            *)
+              echo "::error::unexpected heavy output: '$HEAVY'"
+              exit 1
+              ;;
+          esac
