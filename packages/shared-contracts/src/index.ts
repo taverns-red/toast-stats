@@ -433,6 +433,20 @@ export {
   type MeetingSlotCounts,
 } from './meeting/meetingSlots.js'
 
+// Month-end reconciliation revisions —
+// snapshots/{monthEnd}/revisions/index.json (#2475)
+export {
+  ReconciliationRevisionSchema,
+  ReconciliationRevisionIndexSchema,
+  RECONCILIATION_REVISIONS_DIR,
+  RECONCILIATION_REVISION_INDEX_FILE_NAME,
+  reconciliationRevisionIndexPath,
+  reconciliationRevisionDistrictPath,
+  isReconciliationRevisionObject,
+  type ReconciliationRevision,
+  type ReconciliationRevisionIndex,
+} from './schemas/reconciliation-revisions.schema.js'
+
 // Region and world membership series — time-series/regions/{PY}.json (#2127)
 export {
   RegionMembershipSeriesSchema,
