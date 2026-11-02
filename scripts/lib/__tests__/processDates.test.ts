@@ -2194,6 +2194,7 @@ describe('process-dates.sh daily: reconciliation revisions (#2475)', () => {
     DISTRICTS: '61',
     BUILD_EDUCATION_ROLLUP: path.join(STUBS, 'build-education-rollup'),
     STUB_REMAP: `${AS_OF}=${MONTH_END}`,
+    DISTRICTS_SOURCE: 'discovered',
   }
   const closingDaily = (extra: Record<string, string> = {}) =>
     run('daily', [AS_OF], { ...env, ...extra })
@@ -2420,6 +2421,42 @@ describe('process-dates.sh daily: reconciliation revisions (#2475)', () => {
       expect(objectsUnder(REV)).toEqual([
         `${AS_OF}/district_61.json`,
         'index.json',
+      ])
+    })
+  })
+
+  describe('a manual district subset records revision 0 only (PR #2483 review, fix 4)', () => {
+    for (const [name, source] of [
+      ['DISTRICTS_SOURCE=manual', 'manual'],
+      ['DISTRICTS_SOURCE unset (fails safe)', ''],
+      ['DISTRICTS_SOURCE unknown (fails safe)', 'typo'],
+    ] as const) {
+      it(`${name}: passes --revision-zero-only, uploads no closing revision`, () => {
+        putInMonthMonthEnd()
+        const r = closingDaily({ DISTRICTS_SOURCE: source })
+        expect(r.status, r.stderr).toBe(0)
+        expect(recordCalls()).toEqual([
+          expect.stringMatching(
+            new RegExp(
+              `^collector-cli record-revision --date ${MONTH_END} --as-of ${AS_OF} --prior-snapshot \\S+ --revision-zero-only$`
+            )
+          ),
+        ])
+        expect(objectsUnder(REV)).toEqual([
+          `${MONTH_END}/district_61.json`,
+          'index.json',
+        ])
+        expect(index().revisions.map(x => x.asOf)).toEqual([MONTH_END])
+        if (source !== 'manual') {
+          expect(r.stderr).toMatch(/::warning::.*DISTRICTS_SOURCE.*#2475/)
+        }
+      })
+    }
+
+    it('DISTRICTS_SOURCE=discovered records the closing revision', () => {
+      closingDaily()
+      expect(recordCalls()).toEqual([
+        `collector-cli record-revision --date ${MONTH_END} --as-of ${AS_OF}`,
       ])
     })
   })
