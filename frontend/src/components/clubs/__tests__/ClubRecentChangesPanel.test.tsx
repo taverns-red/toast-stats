@@ -58,6 +58,7 @@ function renderPanel(
         feed={FEED}
         isLoading={false}
         districtId="61"
+        clubId="7238597"
         {...props}
       />
     </MemoryRouter>
@@ -125,16 +126,17 @@ describe('ClubRecentChangesPanel (#2430)', () => {
     ).toBeInTheDocument()
   })
 
-  it('is bounded: says how many changes there were and links to every change for the same dates', () => {
+  it("is bounded: says how many changes there were and links to this club's changes for the same dates", () => {
     const { container } = renderPanel()
     expect(
       screen.getByText(/showing the latest 2 of 11 changes/i)
     ).toBeInTheDocument()
+    // What Changed narrowed to this club (#2452), not the whole district.
     expect(
-      screen.getByRole('link', { name: /every change in the district/i })
+      screen.getByRole('link', { name: /all this club.s changes/i })
     ).toHaveAttribute(
       'href',
-      '/district/61/changes?from=2026-08-11&to=2026-10-31'
+      '/district/61/changes?from=2026-08-11&to=2026-10-31&club=7238597'
     )
     // The page's one multi-year-history link stays the only one (#1843).
     expect(container.querySelector('a[href$="/history"]')).toBeNull()
@@ -145,7 +147,7 @@ describe('ClubRecentChangesPanel (#2430)', () => {
       feed: { ...FEED, entries: [], comparable: false, totalEvents: 0 },
     })
     expect(
-      screen.queryByRole('link', { name: /every change in the district/i })
+      screen.queryByRole('link', { name: /all this club.s changes/i })
     ).not.toBeInTheDocument()
   })
 

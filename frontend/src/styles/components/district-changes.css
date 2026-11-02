@@ -277,3 +277,10 @@
   align-items: center;
   min-height: 44px;
 }
+
+/* ?club= filter chip (#2452). The chip is the Clubs table's active-filter
+   chip (app-shell.css, already dark-remapped); this only drops the bar's own
+   top/bottom padding, since the What Changed stack spaces its children. */
+.district-changes__club-filter {
+  padding: 0;
+}
