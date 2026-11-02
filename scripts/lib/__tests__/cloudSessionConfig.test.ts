@@ -170,6 +170,83 @@ describe('setup in a cloud session', () => {
   })
 })
 
+/**
+ * VM tooling (#2464). The VM image ships only byte-order locales (so the
+ * lessons-index locale test, #1372, has no case-folding locale to compare)
+ * and no yamllint (so the pre-commit `lint:yaml` exits 127).
+ *
+ * These runs use PATH = the stub dir only, so whatever is installed on the
+ * machine running the tests can't decide the outcome. The script therefore
+ * has to stick to bash builtins plus the commands stubbed here.
+ */
+describe('setup in a cloud session: VM tooling (#2464)', () => {
+  let toolLog: string
+
+  function stub(name: string, body: string) {
+    const file = join(stubBin, name)
+    writeFileSync(file, `#!/bin/bash\n${body}\n`)
+    chmodSync(file, 0o755)
+  }
+
+  /** `locale -a` printing these names; every other tool call is logged. */
+  function stubTools(locales: string[], { yamllint = false } = {}) {
+    toolLog = join(dir, 'tools.log')
+    // The shared npm stub's `#!/usr/bin/env bash` needs bash on PATH.
+    stub('npm', 'echo "npm $*" >> "$NPM_LOG"')
+    stub('locale', `printf '%s\\n' ${locales.map(l => `'${l}'`).join(' ')}`)
+    stub('localedef', `echo "localedef $*" >> "${toolLog}"`)
+    stub('python3', `echo "python3 $*" >> "${toolLog}"`)
+    if (yamllint) stub('yamllint', 'exit 0')
+  }
+
+  function runIsolated() {
+    return spawnSync('/bin/bash', [SETUP], {
+      cwd: dir,
+      env: {
+        PATH: stubBin,
+        HOME: dir,
+        NPM_LOG: npmLog,
+        CLAUDE_CODE_REMOTE: 'true',
+        CLAUDE_PROJECT_DIR: dir,
+      },
+      encoding: 'utf8',
+    })
+  }
+
+  const toolCalls = () =>
+    existsSync(toolLog) ? readFileSync(toolLog, 'utf8').trim().split('\n') : []
+
+  it('generates en_US.UTF-8 when only byte-order locales exist', () => {
+    stubTools(['C', 'C.utf8', 'POSIX'], { yamllint: true })
+    const r = runIsolated()
+    expect(r.status).toBe(0)
+    expect(toolCalls()).toEqual(['localedef -i en_US -f UTF-8 en_US.UTF-8'])
+  })
+
+  it('leaves the locales alone when en_US.UTF-8 is installed', () => {
+    stubTools(['C', 'C.utf8', 'en_US.utf8', 'POSIX'], { yamllint: true })
+    const r = runIsolated()
+    expect(r.status).toBe(0)
+    expect(toolCalls()).toEqual([])
+  })
+
+  it('installs yamllint for the user when it is missing', () => {
+    stubTools(['C', 'en_US.utf8'])
+    const r = runIsolated()
+    expect(r.status).toBe(0)
+    expect(toolCalls()).toEqual(['python3 -m pip install --user yamllint'])
+  })
+
+  it('fails loudly when a tool install fails', () => {
+    stubTools(['C'], { yamllint: true })
+    stub('localedef', 'exit 4')
+    const r = runIsolated()
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toMatch(/en_US\.UTF-8/)
+    expect(existsSync(npmLog)).toBe(false)
+  })
+})
+
 describe('stop check in a cloud session', () => {
   function cloneWithUpstream(): string {
     const bare = join(dir, 'remote.git')
