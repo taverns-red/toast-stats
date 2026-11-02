@@ -31,6 +31,14 @@ const ROUTES = [
   '/district/61/changes?club=7782',
 ]
 const THEMES = ['light', 'dark'] as const
+// #2451: the Clubs table's opt-in Changes columns render the same
+// ChangeIndicator (absolute sr-only word) as the since-last-year column. The
+// toggle is a stored preference, not URL state, so this pass stores it on
+// before loading the Clubs table.
+const CHANGES_ROUTE = '/district/61/clubs'
+const CHANGES_VISIBLE_KEY = 'toast-stats:v1:clubs-table:changes-visible'
+// ClubsTable swaps the table for phone rows below 768 (useIsMobile(768)).
+const TABLE_MIN_WIDTH = 768
 
 for (const theme of THEMES) {
   for (const width of WIDTHS) {
@@ -48,9 +56,26 @@ for (const theme of THEMES) {
       await page.emulateMedia({ colorScheme: theme })
       await page.setViewportSize({ width, height: 900 })
 
-      for (const route of ROUTES) {
+      const passes = [
+        ...ROUTES.map(route => ({ route, changes: false })),
+        { route: CHANGES_ROUTE, changes: true },
+      ]
+      for (const { route, changes } of passes) {
+        if (changes) {
+          // Same origin as the previous pass, so storage is writable here.
+          await page.evaluate(
+            key => localStorage.setItem(key, 'true'),
+            CHANGES_VISIBLE_KEY
+          )
+        }
         await page.goto(route, { waitUntil: 'networkidle', timeout: 60_000 })
         await page.locator('.app-shell-top-bar').waitFor({ state: 'visible' })
+        if (changes && width >= TABLE_MIN_WIDTH) {
+          // Guard against a vacuous pass: the Changes columns must be on.
+          await expect(
+            page.getByRole('columnheader', { name: 'Δ Members' })
+          ).toBeVisible({ timeout: 30_000 })
+        }
         // Let separately-resolving sections settle before measuring.
         await page.waitForTimeout(1_000)
 
@@ -91,7 +116,7 @@ for (const theme of THEMES) {
         )
         expect(
           scrollWidth,
-          `${route} at ${width}px (${theme}) scrolls horizontally: scrollWidth ${scrollWidth} > ${clientWidth}. Past the right edge: ${offenders.join(', ')}`
+          `${route}${changes ? ' (Changes columns on)' : ''} at ${width}px (${theme}) scrolls horizontally: scrollWidth ${scrollWidth} > ${clientWidth}. Past the right edge: ${offenders.join(', ')}`
         ).toBeLessThanOrEqual(clientWidth)
       }
     })
