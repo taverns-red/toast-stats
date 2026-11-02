@@ -37,6 +37,7 @@ interface SnapshotFixture {
   closing?: { collectionDate: string }
   districts?: Record<string, unknown>
   createdAt?: string
+  failed?: string[]
 }
 
 /** A snapshot directory as TransformService writes it (metadata + districts). */
@@ -51,7 +52,7 @@ function writeSnapshot(dir: string, f: SnapshotFixture = {}): void {
     createdAt: f.createdAt ?? '2026-11-01T13:05:00.000Z',
     dataAsOfDate: MONTH_END,
     successfulDistricts: Object.keys(districts),
-    failedDistricts: [],
+    failedDistricts: f.failed ?? [],
   }
   if (f.closing) {
     metadata['isClosingPeriodData'] = true
@@ -313,6 +314,60 @@ describe('recordRevision (#2475)', () => {
           asOf: '2026-11-01',
         })
       ).rejects.toThrow()
+    })
+  })
+
+  describe('revision 0 is independent of the closing revision (PR #2483 review, fix 2)', () => {
+    it('a prior copy missing a district file still records the closing revision', async () => {
+      writeSnapshot(prior, { districts: { '61': { v: 'in-month' } } })
+      fs.rmSync(path.join(prior, 'district_61.json'))
+      writeSnapshot(monthEndDir(), {
+        closing: { collectionDate: '2026-11-01' },
+      })
+
+      const r = await recordRevision({
+        snapshotsDir: snapshots,
+        date: MONTH_END,
+        asOf: '2026-11-01',
+        priorSnapshotDir: prior,
+      })
+
+      expect(r.recorded).toBe(true)
+      expect(r.revisionZero).toBe('failed')
+      expect(r.revisionZeroError).toMatch(/district_61\.json/)
+      expect(fs.existsSync(path.join(revDir(), MONTH_END))).toBe(false)
+      expect(readIndex().revisions.map(x => x.asOf)).toEqual(['2026-11-01'])
+    })
+
+    it('unparseable prior metadata still records the closing revision', async () => {
+      fs.mkdirSync(prior, { recursive: true })
+      fs.writeFileSync(path.join(prior, 'metadata.json'), '\x1f\x8b garbage')
+      writeSnapshot(monthEndDir(), {
+        closing: { collectionDate: '2026-11-01' },
+      })
+
+      const r = await recordRevision({
+        snapshotsDir: snapshots,
+        date: MONTH_END,
+        asOf: '2026-11-01',
+        priorSnapshotDir: prior,
+      })
+
+      expect(r.recorded).toBe(true)
+      expect(r.revisionZero).toBe('failed')
+      expect(r.revisionZeroError).toBeTruthy()
+    })
+
+    it('a clean result reports no revision 0 error', async () => {
+      writeSnapshot(monthEndDir(), {
+        closing: { collectionDate: '2026-11-01' },
+      })
+      const r = await recordRevision({
+        snapshotsDir: snapshots,
+        date: MONTH_END,
+        asOf: '2026-11-01',
+      })
+      expect(r.revisionZeroError).toBeNull()
     })
   })
 })
