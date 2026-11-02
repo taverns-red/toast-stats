@@ -14,6 +14,7 @@ import {
   useRankingsPair,
 } from '../../hooks/useRankingsChanges'
 import type { RankingsDiffRow } from '../../utils/rankingsDiff'
+import { snapshotDatesFrom } from '../../types/snapshotDate'
 
 vi.mock('../../hooks/useRankingsChanges', () => ({
   useRecordedDates: vi.fn(),
@@ -56,7 +57,9 @@ function renderAt(url: string) {
 beforeEach(() => {
   vi.clearAllMocks()
   mockedDates.mockReturnValue({
-    dates: ['2026-10-01', '2026-10-15', '2026-10-31'],
+    dates: snapshotDatesFrom({
+      dates: ['2026-10-01', '2026-10-15', '2026-10-31'],
+    }),
     isLoading: false,
   })
   mockedPair.mockReturnValue({
@@ -111,7 +114,7 @@ describe('RankingsChangesPage', () => {
       toRows: [],
       isLoading: false,
       isError: false,
-      missing: ['2026-10-15'],
+      missing: snapshotDatesFrom({ dates: ['2026-10-15'] }),
     })
     renderAt('/region/05/changes')
     expect(screen.getByTestId('changes-missing')).toHaveTextContent(
