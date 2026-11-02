@@ -1,0 +1,41 @@
+{
+  "total_count": 9,
+  "workflow_runs": [
+    {
+      "name": "PR Preview Cleanup",
+      "check_suite_id": 112450747847
+    },
+    {
+      "name": "Lighthouse CI",
+      "check_suite_id": 112450717623
+    },
+    {
+      "name": "PR Preview",
+      "check_suite_id": 112450717741
+    },
+    {
+      "name": "Docs",
+      "check_suite_id": 112441178229
+    },
+    {
+      "name": "Lighthouse CI",
+      "check_suite_id": 112441178844
+    },
+    {
+      "name": "CI",
+      "check_suite_id": 112441178195
+    },
+    {
+      "name": "CI Gate",
+      "check_suite_id": 112441178892
+    },
+    {
+      "name": "PR Preview",
+      "check_suite_id": 112441182750
+    },
+    {
+      "name": "PR #2482",
+      "check_suite_id": 112441149969
+    }
+  ]
+}
