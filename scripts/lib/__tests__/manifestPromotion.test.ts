@@ -148,6 +148,59 @@ describe('resolveHeldDates (the completeness gate verdict)', () => {
   })
 })
 
+describe('reconciliation revisions promote with their month end (#2475)', () => {
+  const REV = 'snapshots/2026-10-31/revisions'
+  const month = (over: Partial<PromotionInputs> = {}) =>
+    inputs({
+      entries: [
+        entry('snapshots/2026-10-31/district_61.json'),
+        entry(`${REV}/2026-11-02/district_61.json`),
+        entry(`${REV}/index.json`),
+      ],
+      indexDates: ['2026-10-31'],
+      prodDates: new Set(['2026-10-31']),
+      ...over,
+    })
+
+  it('are dated by the month end, not the as-of date', () => {
+    expect(classifyPromotionPath(`${REV}/2026-11-02/district_61.json`)).toEqual(
+      { kind: 'date', date: '2026-10-31' }
+    )
+    expect(classifyPromotionPath(`${REV}/index.json`)).toEqual({
+      kind: 'date',
+      date: '2026-10-31',
+    })
+  })
+
+  it('are copied to their own revisions/ directories with the month end', () => {
+    const plan = planManifestPromotion(month())
+    expect(plan.promotedDates).toEqual(['2026-10-31'])
+    const dirs = plan.batches.map(b => b.dir)
+    expect(dirs).toEqual(
+      expect.arrayContaining([
+        `${REV}/2026-11-02/`,
+        `${REV}/`,
+        'snapshots/2026-10-31/',
+      ])
+    )
+    expect(copied(plan)).toEqual(
+      expect.arrayContaining([
+        `${REV}/2026-11-02/district_61.json`,
+        `${REV}/index.json`,
+      ])
+    )
+  })
+
+  it('hold with a held month end', () => {
+    const plan = planManifestPromotion(
+      month({
+        held: resolveHeldDates({ promote: false, heldDates: ['2026-10-31'] }),
+      })
+    )
+    expect(copied(plan)).toEqual([])
+  })
+})
+
 describe('planManifestPromotion', () => {
   it('promotes every gate-read object of a clean run and nothing internal', () => {
     const plan = planManifestPromotion(inputs())
