@@ -44,7 +44,10 @@ import {
   readStored,
   type GateBucket,
 } from './promotionContentGateIo.js'
-import { isClubContactKey } from '@taverns-red/shared-contracts'
+import {
+  isClubContactKey,
+  isReconciliationRevisionObject,
+} from '@taverns-red/shared-contracts'
 import {
   decodeStoredObject,
   type GcsObjectMeta,
@@ -256,10 +259,12 @@ export function compareDateProfiles(
 
   // Retired names are dropped from both sides: prod's old copies are not
   // owed, and staging's stale copies must not pad its count (#1798).
-  const prodObjects = prod.objectNames.filter(n => !isRetiredAnalyticsFile(n))
-  const stagingObjects = staging.objectNames.filter(
-    n => !isRetiredAnalyticsFile(n)
-  )
+  // Reconciliation revisions (#2475) likewise: additive and write-once, so
+  // a missing one never holds the month end, and staging's never pad.
+  const counted = (n: string) =>
+    !isRetiredAnalyticsFile(n) && !isReconciliationRevisionObject(n)
+  const prodObjects = prod.objectNames.filter(counted)
+  const stagingObjects = staging.objectNames.filter(counted)
 
   // A district staging records as a #1671 source gap (#2038) is accounted
   // for, not lost, when production has nothing real for it: no file, or the
