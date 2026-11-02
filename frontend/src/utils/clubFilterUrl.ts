@@ -28,6 +28,7 @@ import {
   FilterState,
   SortField,
 } from '../components/filters/types'
+import { SINCE_LAST_YEAR_MODES, type SinceLastYearMode } from './sinceLastYear'
 
 /** name is carried by `search`, not its own key. */
 const SEARCH_PARAM = 'search'
@@ -248,3 +249,18 @@ export function filterStateToParams(
 }
 
 export type { ColumnFilter, FilterState }
+
+/**
+ * "Climbed / slipped since last year" preset (#2432). Its own key and its own
+ * single writer on the page, like `preset` above — kept OUT of
+ * FILTER_PARAM_KEYS so a filter reconcile never wipes it.
+ */
+export const SINCE_PARAM = 'since'
+
+/** Read the since-last-year mode from the URL; unknown values read as off. */
+export function paramsToSinceLastYearMode(
+  params: URLSearchParams
+): SinceLastYearMode | null {
+  const raw = params.get(SINCE_PARAM)
+  return SINCE_LAST_YEAR_MODES.find(m => m === raw) ?? null
+}

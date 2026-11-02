@@ -24,6 +24,9 @@ const ROUTES = [
   '/awards',
   '/history/countries', // #1797: SVG map + ranked table
   '/district/61',
+  // #2432: the since-last-year column's sr-only change words escaped the
+  // table scroller and widened the page by 73px at 768.
+  '/district/61/clubs?since=climbed',
 ]
 const THEMES = ['light', 'dark'] as const
 

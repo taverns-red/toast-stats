@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `an-absolute-sr-only-span-escapes-a-scroller-that-is-not-its-containing-block.md` — An absolutely positioned sr-only span inside an overflow scroller is clipped only if the scroller (or something inside it) is its containing block; otherwise it sits at its static position past the scroller and widens the page  (2026-11-01)
 - `an-empty-child-of-a-space-y-stack-still-costs-a-gap.md` — An empty element in a Tailwind space-y stack still adds a full gap; an IntersectionObserver marker that renders on every page must be out of flow  (2026-11-01)
 - `the-dlh-district-timeline-names-owners-by-dot-colour-not-text.md` — The District Leader Handbook's timeline names each date's owner only by a coloured dot, which text extraction drops — sample the dot's pixel colour against the page's key before citing an owner, and treat an undotted or inconsistent entry as "no owner"  (2026-11-01)
 - `a-test-that-reaches-the-live-network-passes-or-fails-on-latency.md` — A page test with an un-stubbed CDN read depends on network latency; stub fetch to reject at once to reproduce the CI timing, then stub the read; the integration setup now fails any un-mocked fetch, checked after pending work settles (#2405, #2408)  (2026-10-29)

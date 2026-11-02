@@ -19,6 +19,20 @@ import { ColumnHeader } from './ColumnHeader'
 import { FiltersPanel } from './filters/FiltersPanel'
 import { FilterSheet, type FilterSheetFacet } from './filters/FilterSheet'
 import { PRESET_CLOSE_TO_DISTINGUISHED } from '../utils/clubFilterUrl'
+import {
+  compareSinceLastYear,
+  lookupSinceLastYear,
+  matchesSinceLastYear,
+  summarizeSinceLastYear,
+  type PriorYearClubGoals,
+  type SinceLastYearMode,
+} from '../utils/sinceLastYear'
+import { SinceLastYearLine, SinceLastYearSelect } from './clubsSinceLastYear'
+import {
+  buildSinceLastYearColumn,
+  sinceLastYearMeta,
+  sinceLastYearPhoneMeta,
+} from './clubsSinceLastYearColumn'
 import { ActiveFiltersBar } from './ActiveFiltersBar'
 import { ColumnGroupsMenu } from './ColumnGroupsMenu'
 import { describeActiveFilters } from '../utils/clubFilterDescribe'
@@ -165,6 +179,20 @@ interface ClubsTableProps {
    * Omitted (or outside short landscape) → the usual layout.
    */
   compactToolbarTarget?: HTMLElement | null | undefined
+  /**
+   * "Climbed / slipped since last year" preset (#2432). The page owns the
+   * mode (`?since=`) and last year's DCP goals; the table adds one pipeline
+   * step over them (R11). Omitted → no preset.
+   */
+  sinceLastYear?: SinceLastYearProps | undefined
+}
+
+export interface SinceLastYearProps {
+  mode: SinceLastYearMode | null
+  onModeChange: (mode: SinceLastYearMode | null) => void
+  /** Undefined while last year's snapshot is loading (or the preset is off). */
+  prior: PriorYearClubGoals | undefined
+  isError?: boolean | undefined
 }
 
 /** Signed net change with a true minus sign; `null` when the base is unknown. */
@@ -224,6 +252,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   openGroups,
   onOpenGroupsChange,
   compactToolbarTarget,
+  sinceLastYear,
 }) => {
   const [sortField, setSortField] = useState<SortField>(
     initialSortField ?? 'name'
@@ -353,6 +382,55 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     )
   }, [filteredClubs, presetActive, programYear])
 
+  // "Climbed / slipped since last year" (#2432) — the next pipeline step
+  // (R11), after the Close to Distinguished preset. Until last year's
+  // snapshot has loaded (or if it fails) nothing is filtered and no club is
+  // marked: a club is only a climber against a real prior-year value.
+  const sinceMode = sinceLastYear?.mode ?? null
+  const sinceOnModeChange = sinceLastYear?.onModeChange
+  const sincePrior = sinceLastYear?.prior
+  const sinceIsError = sinceLastYear?.isError ?? false
+  const sinceByClub = useMemo(
+    () =>
+      sinceMode && sincePrior && !sinceIsError
+        ? compareSinceLastYear(
+            clubs,
+            sincePrior.clubs,
+            sincePrior.comparisonDate
+          )
+        : null,
+    [clubs, sinceMode, sincePrior, sinceIsError]
+  )
+  const sinceFilteredClubs = useMemo(() => {
+    if (!sinceMode || !sinceByClub) return presetFilteredClubs
+    return presetFilteredClubs.filter(club =>
+      matchesSinceLastYear(
+        lookupSinceLastYear(sinceByClub, club.clubId),
+        sinceMode
+      )
+    )
+  }, [presetFilteredClubs, sinceMode, sinceByClub])
+  const sinceSummary = useMemo(
+    () =>
+      sinceByClub
+        ? summarizeSinceLastYear(
+            sinceByClub,
+            presetFilteredClubs.map(c => c.clubId)
+          )
+        : null,
+    [sinceByClub, presetFilteredClubs]
+  )
+  const sinceLine = sinceMode ? (
+    <SinceLastYearLine
+      mode={sinceMode}
+      prior={sincePrior}
+      isError={sinceIsError}
+      summary={sinceSummary}
+      shown={sinceFilteredClubs.length}
+      total={presetFilteredClubs.length}
+    />
+  ) : null
+
   // ── Phone Filter & sort sheet (#1836) ─────────────────────────────────
   // Below 768 the column-filter drawer becomes the shared FilterSheet with
   // facet chips. The search is its own sticky field, so the sheet's count and
@@ -361,12 +439,16 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   const nameFilter = filterState['name'] ?? null
   // The preset is a sheet chip too, so it counts and clears with the rest.
   const sheetActiveCount =
-    activeFilterCount - (nameFilter ? 1 : 0) + (presetActive ? 1 : 0)
+    activeFilterCount -
+    (nameFilter ? 1 : 0) +
+    (presetActive ? 1 : 0) +
+    (sinceMode ? 1 : 0)
   const clearSheetFilters = useCallback(() => {
     clearAllFiltersInternal()
     if (nameFilter) setFilterInternal('name', nameFilter)
     onFilterChange?.(nameFilter ? { name: nameFilter } : {})
     if (presetActive) handlePresetToggle()
+    if (sinceMode) sinceOnModeChange?.(null)
   }, [
     clearAllFiltersInternal,
     setFilterInternal,
@@ -374,6 +456,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     onFilterChange,
     presetActive,
     handlePresetToggle,
+    sinceMode,
+    sinceOnModeChange,
   ])
 
   const sheetFacets = useMemo((): FilterSheetFacet[] => {
@@ -419,6 +503,26 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           if (next.length > 0 !== presetActive) handlePresetToggle()
         },
       },
+      ...(sinceOnModeChange
+        ? [
+            {
+              // #2432 — one mode at a time: the newly tapped chip wins.
+              id: 'since',
+              label: 'DCP since last year',
+              options: [
+                { value: 'climbed', label: '▲ Climbed' },
+                { value: 'slipped', label: '▼ Slipped' },
+                { value: 'no-prior', label: 'No prior-year data' },
+              ],
+              selected: sinceMode ? [sinceMode] : [],
+              onChange: (next: string[]) =>
+                sinceOnModeChange(
+                  (next.find(v => v !== sinceMode) ??
+                    null) as SinceLastYearMode | null
+                ),
+            },
+          ]
+        : []),
       {
         id: 'status',
         label: 'Status',
@@ -451,14 +555,22 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         onChange: setFacet('area'),
       },
     ]
-  }, [clubs, filterState, setFilter, presetActive, handlePresetToggle])
+  }, [
+    clubs,
+    filterState,
+    setFilter,
+    presetActive,
+    handlePresetToggle,
+    sinceMode,
+    sinceOnModeChange,
+  ])
 
   const nameSortedClubs = useMemo(
     () =>
-      [...presetFilteredClubs].sort((a, b) =>
+      [...sinceFilteredClubs].sort((a, b) =>
         a.clubName.toLowerCase().localeCompare(b.clubName.toLowerCase())
       ),
-    [presetFilteredClubs]
+    [sinceFilteredClubs]
   )
 
   // Sort state is CONTROLLED by sortField/sortDirection — the URL-synced source
@@ -562,13 +674,19 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   // Delta column defs (#795). Only appended when a diff is provided — absent ⇒
   // the table is byte-identical to its pre-#795 self. The 'changes' group's
   // visibility is driven by `hiddenGroups` (opt-in, default hidden).
-  const tableColumns = useMemo(
-    () =>
-      snapshotDiff
-        ? [...clubsColumns, ...buildClubsDeltaColumns(clubDiffsById)]
-        : clubsColumns,
-    [snapshotDiff, clubDiffsById]
-  )
+  const tableColumns = useMemo(() => {
+    const base = snapshotDiff
+      ? [...clubsColumns, ...buildClubsDeltaColumns(clubDiffsById)]
+      : clubsColumns
+    if (!sinceByClub) return base
+    // #2432 — "vs last year" sits right after the DCP column it compares.
+    const at = base.findIndex(c => c.id === 'dcpGoals') + 1
+    return [
+      ...base.slice(0, at),
+      buildSinceLastYearColumn(sinceByClub),
+      ...base.slice(at),
+    ]
+  }, [snapshotDiff, clubDiffsById, sinceByClub])
 
   const columnVisibility = useMemo<ColumnVisibilityState>(() => {
     const vis: ColumnVisibilityState = {}
@@ -632,6 +750,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   const isDefaultMobileView =
     !hasActiveFilters &&
     !presetActive &&
+    !sinceMode &&
     sortField === 'name' &&
     sortDirection === 'asc'
 
@@ -639,6 +758,12 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     (club: ProcessedClubTrend): MobileRow => {
       const members = club.latestMembership
       const net = formatNet(club)
+      // #2432 — while the since-last-year preset is on, DCP carries last
+      // year's value ("was 3") or why there is none.
+      const sinceEntry = sinceByClub
+        ? lookupSinceLastYear(sinceByClub, club.clubId)
+        : undefined
+      const since = sinceLastYearMeta(sinceEntry)
       const memberText = `${members} member${members === 1 ? '' : 's'}`
       const coached = club.coach?.status === 'active'
       return {
@@ -655,7 +780,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         // Line 2 keeps the chip and DCP; the member count rides under the
         // trend sparkline with its net (#1792) — measured at 375, the count
         // beside a 60 px trend ellipsized every row by up to 60 px.
-        meta: `${club.latestDcpGoals}/10 DCP`,
+        meta: sinceLastYearPhoneMeta(sinceEntry, club.latestDcpGoals),
         // Coach flag (#1968): line 2 has no room at 375 ("· Coach" clipped to
         // "· C…", #1954), so an active coach rides line 1 after the name,
         // which ellipsizes first. Completed engagements stay desktop-only.
@@ -675,10 +800,10 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           club.currentStatus
         )}${coached ? ', active coach' : ''}, ${memberText}${net ? `, net ${net}` : ''}, ${
           club.latestDcpGoals
-        } of 10 DCP goals`,
+        } of 10 DCP goals${since ? `; last year: ${since}` : ''}`,
       }
     },
-    [clubLinkTo, clubLinkState]
+    [clubLinkTo, clubLinkState, sinceByClub]
   )
 
   const mobileRows = useMemo(
@@ -956,6 +1081,14 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
               >
                 🎯 Close to Distinguished
               </button>
+              {/* Since-last-year preset (#2432) — a second pipeline step with
+              its own URL key (?since=), beside the first preset. */}
+              {sinceOnModeChange && (
+                <SinceLastYearSelect
+                  mode={sinceMode}
+                  onModeChange={sinceOnModeChange}
+                />
+              )}
             </div>
           )}
 
@@ -968,6 +1101,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
               a nudge to Distinguished
             </p>
           )}
+          {sinceLine}
 
           {/* Results Count and Quick Filters */}
           <div className="flex flex-wrap items-center gap-4 text-sm clubs-text-muted">
@@ -1133,6 +1267,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 need a nudge to Distinguished
               </p>
             )}
+            {sinceLine}
           </div>
           {exportGroup}
         </div>
