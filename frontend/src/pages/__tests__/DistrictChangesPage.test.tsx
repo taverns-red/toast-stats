@@ -1337,4 +1337,24 @@ describe('DistrictChangesPage club filter (#2452)', () => {
       screen.queryByRole('region', { name: /club filter/i })
     ).not.toBeInTheDocument()
   })
+
+  /* #2459 — the club card lists weekly steps; this page shows one net change
+     between the two end dates, so say so where the filter is named. */
+  it('notes that a club-filtered view is the net change, not weekly steps', () => {
+    renderClub('/district/61/changes?club=2959')
+    expect(screen.getByTestId('changes-club-net-note')).toHaveTextContent(
+      'Net change between these two dates; the club page lists each weekly step.'
+    )
+    // The chip itself is unchanged: the note sits beside it, not inside it.
+    expect(
+      screen.getByRole('region', { name: /club filter/i })
+    ).not.toHaveTextContent(/net change/i)
+  })
+
+  it('shows no net-change note without a club param', () => {
+    renderClub('/district/61/changes')
+    expect(
+      screen.queryByTestId('changes-club-net-note')
+    ).not.toBeInTheDocument()
+  })
 })
