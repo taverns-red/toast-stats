@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import {
   render,
   screen,
@@ -177,5 +177,75 @@ describe('NextDeadlineStrip — whole-year timeline (#2429)', () => {
     expect(
       within(screen.getByTestId('deadline-timeline')).getAllByRole('listitem')
     ).toHaveLength(8)
+  })
+})
+
+/* #2474 — during month-end reconciliation the latest snapshot stays pinned
+   at the month end, so counting from it said "tomorrow" for a deadline that
+   had already passed. On the latest data the strip counts from today's local
+   date; on an explicitly picked past date it keeps counting from that date.
+   The page decides which (R3) and passes `isLatest`. */
+describe('NextDeadlineStrip — counts from today on the latest data (#2474)', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  // Local noon on 2026-11-02, so no time zone moves it off that date.
+  const fixClock = () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 10, 2, 12))
+  }
+
+  it('counts from today, not the pinned month-end snapshot', () => {
+    fixClock()
+    render(
+      <NextDeadlineStrip
+        programYear="2026-2027"
+        asOfDate="2026-10-31"
+        isLatest
+      />
+    )
+    const items = within(strip()).getAllByRole('listitem')
+    expect(strip()).not.toHaveTextContent('tomorrow')
+    expect(items[0]).not.toHaveTextContent('Round 2 officer training opens')
+    expect(items[0]).toHaveTextContent('Round 1 club visit reports due')
+    expect(items[0]).toHaveTextContent('Nov 30')
+    expect(items[0]).toHaveTextContent('in 28 days')
+  })
+
+  it('marks a deadline that passed since the snapshot as passed in the year view', () => {
+    fixClock()
+    render(
+      <NextDeadlineStrip
+        programYear="2026-2027"
+        asOfDate="2026-10-31"
+        isLatest
+      />
+    )
+    fireEvent.click(
+      within(strip()).getByRole('button', { name: /see all deadlines/i })
+    )
+    const items = within(screen.getByTestId('deadline-timeline')).getAllByRole(
+      'listitem'
+    )
+    const r2 = items.find(li =>
+      li.textContent?.includes('Round 2 officer training opens')
+    )!
+    expect(r2).toHaveTextContent('passed')
+  })
+
+  it('keeps counting from an explicitly picked past date', () => {
+    fixClock()
+    render(
+      <NextDeadlineStrip
+        programYear="2026-2027"
+        asOfDate="2026-10-31"
+        isLatest={false}
+      />
+    )
+    const items = within(strip()).getAllByRole('listitem')
+    expect(items[0]).toHaveTextContent('Round 2 officer training opens')
+    expect(items[0]).toHaveTextContent('tomorrow')
+    expect(items[1]).toHaveTextContent('in 30 days')
   })
 })

@@ -24,6 +24,9 @@ export interface NextDeadlineStripProps {
   programYear: string
   /** The page's pinned date (`YYYY-MM-DD`); undefined while it resolves. */
   asOfDate: string | undefined
+  /** True when the page shows its latest data, with no past date picked
+   * (#2474). The page decides (R3). */
+  isLatest?: boolean
 }
 
 function countdown(daysLeft: number): string {
