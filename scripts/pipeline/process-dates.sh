@@ -95,8 +95,17 @@
 #                (#1125, D-9): the merge rewrites snapshots in place, so the
 #                final files are checked against shared-contracts. A
 #                violation FAILS the date: nothing of it is uploaded.
+#   9b. revision daily only (#2475): a closing collection (remapped onto
+#                its month end) is also kept as a write-once reconciliation
+#                revision. Staging's revisions/index.json is hydrated (R2,
+#                R9) and, while staging's month end is still the pre-close
+#                in-month view, its district files too, for revision 0;
+#                then collector-cli record-revision. Any failure here is a
+#                warning: no revision is uploaded, the month end still is.
 #  10. upload    snapshots/<date>/*.json, analytics/*.json and
-#                clubs-by-region/*.json (#1800), `-Z` with the CDN headers. An upload error aborts the loop (exit 1), as the
+#                clubs-by-region/*.json (#1800), `-Z` with the CDN headers;
+#                then the 9b revision files and revisions/index.json last
+#                (R15), and the local revisions/ is removed. An upload error aborts the loop (exit 1), as the
 #                inline loop's `set -e` did: the step fails before any store
 #                push. rescrape then rsyncs the re-collected raw-csv/<date>/
 #                up, replacing the old copy, and so does daily (raw-csv/
@@ -175,6 +184,12 @@
 #                          daily: required, an id list only: the workflow
 #                          resolves it once, with the program year (#1284),
 #                          and the FAC fetch and compute take it too
+#   DISTRICTS_SOURCE       daily: `discovered` (DISTRICTS is the date's whole
+#                          set) or `manual` (a dispatch's subset). Anything
+#                          but `discovered`, unset included, records revision
+#                          0 only, never the closing revision (#2475, #2483
+#                          fix 4): a subset month end is partial, and a
+#                          revision is write-once.
 #   DATE_RESULTS_FILE      optional: one JSON line per date is appended,
 #                          {"date":D,"actual":A|null,"outcome":O}, A the
 #                          date the transform wrote (post-remap), O one of
@@ -468,6 +483,163 @@ upload_snapshot() {
       "${shards[@]}" \
       "gs://${BUCKET}/snapshots/${actual}/clubs-by-region/"
   fi
+}
+
+# 9b (#2475): record the closing month end <actual>, collected <as_of>, as a
+# reconciliation revision. Hydrates staging's index (absent = the month's
+# first revision; any other read failure records nothing, so a fresh index
+# never overwrites staging's) and, while staging's month end is still the
+# in-month view (its metadata is not closing data), that copy for revision
+# 0. The CLI's result lists the files it wrote; upload_revisions sends them.
+record_revision() {
+  local actual="$1" as_of="$2"
+  local rev="${SNAPSHOTS}/${actual}/revisions" prior="${WORK}/revision-prior"
+  local src="gs://${BUCKET}/snapshots/${actual}" err="${WORK}/revision.err"
+  local prior_args=()
+  rm -rf "${rev}" "${prior}"
+  mkdir -p "${rev}" "${prior}"
+  if ! "${GCLOUD}" storage cp "${src}/revisions/index.json" \
+    "${rev}/index.json" 2>"${err}"; then
+    if ! grep -q 'matched no objects' "${err}"; then
+      cat "${err}"
+      echo "::warning::Could not read staging's snapshots/${actual}/revisions/index.json; no revision recorded for ${as_of} (#2475)"
+      rm -rf "${rev}"
+      return 0
+    fi
+    echo "No revision index for ${actual} in staging: ${as_of} is its first revision"
+  fi
+  if "${GCLOUD}" storage cp "${src}/metadata.json" \
+    "${prior}/metadata.json" 2>"${err}"; then
+    # R17 (#2483 fix 3): a metadata.json that does not parse is neither
+    # in-month nor closing. It is a lost revision 0, said out loud.
+    local prior_state
+    prior_state="$(jq -r 'if type != "object" then "unparseable"
+      elif .isClosingPeriodData == true then "closing"
+      else "in-month" end' "${prior}/metadata.json" 2>/dev/null)" ||
+      prior_state=unparseable
+    case "${prior_state}" in
+      in-month)
+        if ! "${GCLOUD}" storage cp "${src}/district_*.json" "${prior}/" 2>"${err}"; then
+          cat "${err}"
+          echo "::warning::Could not read staging's in-month ${actual} for revision 0; no revision recorded for ${as_of} (#2475)"
+          rm -rf "${rev}"
+          return 0
+        fi
+        prior_args=(--prior-snapshot "${prior}")
+        ;;
+      closing) ;; # already a close: revision 0 was the first close's to take
+      *)
+        echo "::warning::Staging's snapshots/${actual}/metadata.json is not JSON; revision 0 of ${actual} cannot be taken, recording ${as_of} alone (#2475)"
+        ;;
+    esac
+  elif ! grep -q 'matched no objects' "${err}"; then
+    cat "${err}"
+    echo "::warning::Could not read staging's snapshots/${actual}/metadata.json; no revision recorded for ${as_of} (#2475)"
+    rm -rf "${rev}"
+    return 0
+  fi
+  # A subset of the districts is a partial month end: revision 0 only.
+  # R17: anything but `discovered` is treated as a subset (fails safe).
+  local zero_only=()
+  case "${DISTRICTS_SOURCE:-}" in
+    discovered) ;;
+    manual)
+      echo "Manual district subset: recording revision 0 of ${actual} only, not ${as_of}"
+      zero_only=(--revision-zero-only)
+      ;;
+    *)
+      echo "::warning::DISTRICTS_SOURCE is '${DISTRICTS_SOURCE:-}', not discovered or manual; treating the districts as a subset, so ${as_of} is not recorded as a revision (#2475)"
+      zero_only=(--revision-zero-only)
+      ;;
+  esac
+  if ! "${COLLECTOR[@]}" record-revision --date "${actual}" --as-of "${as_of}" \
+    "${prior_args[@]+"${prior_args[@]}"}" "${zero_only[@]+"${zero_only[@]}"}" \
+    >"${WORK}/revision.json"; then
+    cat "${WORK}/revision.json"
+    echo "::warning::record-revision failed for ${actual} as of ${as_of}; no revision uploaded (#2475)"
+    rm -rf "${rev}" "${WORK}/revision.json"
+    return 0
+  fi
+  cat "${WORK}/revision.json"
+  # A refused closing revision (a partial close, a manual subset) is a
+  # warning, so a gap that persists across the close is seen (#2483). A
+  # rerun of an already-recorded day is expected and stays a notice.
+  if jq -e '.recorded == false and (.refused // "" | test("already recorded") | not)' \
+    "${WORK}/revision.json" >/dev/null; then
+    echo "::warning::Closing revision ${as_of} of ${actual} not recorded: $(jq -r '.refused' "${WORK}/revision.json") (#2475)"
+  fi
+  if jq -e '.revisionZero == "failed"' "${WORK}/revision.json" >/dev/null; then
+    echo "::warning::Revision 0 of ${actual} could not be taken: $(jq -r '.revisionZeroError' "${WORK}/revision.json") (#2475)"
+  fi
+  echo "- **Reconciliation revision** (${actual} as of ${as_of}): $(jq -r 'if .recorded then "recorded (revision 0: \(.revisionZero))" else "not recorded: \(.refused)" end' "${WORK}/revision.json")" >>"${SUMMARY}"
+}
+
+# Upload what record_revision wrote: each revision directory's district
+# files, then revisions/index.json last (R15: the index never names a
+# revision staging does not hold). Warn-only (#2483 fix 1): a failed
+# revision upload must not fail the daily or skip its later steps (the
+# raw-csv upload), so it is never under `set -e`; a failed file upload
+# uploads no index. Write-once in staging (#2483 fix 6): the local check
+# ran on an emptied disk, so every revisions/<asOf>/ is listed first, and a
+# directory staging already holds (or cannot list) uploads nothing at all;
+# the files then go up with --no-clobber. Then the local revisions/ goes,
+# so the steps after the loop see the month end as before.
+upload_revisions() {
+  local actual="$1" result="${WORK}/revision.json" as_of ok=1
+  local dir="${SNAPSHOTS}/${actual}" files=() dirs=()
+  local dst="gs://${BUCKET}/snapshots/${actual}/revisions"
+  local err="${WORK}/revision-ls.err"
+  if [ -s "${result}" ]; then
+    while IFS= read -r as_of; do dirs+=("${as_of}"); done < <(
+      jq -r '.written[] | select(test("^revisions/[0-9]{4}-[0-9]{2}-[0-9]{2}/")) | split("/")[1]' "${result}" | LC_ALL=C sort -u
+    )
+    for as_of in "${dirs[@]+"${dirs[@]}"}"; do
+      if "${GCLOUD}" storage ls "${dst}/${as_of}/" >/dev/null 2>"${err}"; then
+        echo "::warning::snapshots/${actual}/revisions/${as_of}/ is already in staging, though its index does not list it; revisions are write-once, so no revision of ${actual} is uploaded (#2475)"
+        ok=0
+        break
+      elif ! grep -q 'matched no objects' "${err}"; then
+        cat "${err}"
+        echo "::warning::Could not list staging's snapshots/${actual}/revisions/${as_of}/; no revision of ${actual} is uploaded (#2475)"
+        ok=0
+        break
+      fi
+    done
+    if [ "${ok}" = 1 ]; then
+      for as_of in "${dirs[@]+"${dirs[@]}"}"; do
+        files=()
+        while IFS= read -r rel; do files+=("${dir}/${rel}"); done < <(
+          jq -r --arg a "${as_of}" \
+            '.written[] | select(startswith("revisions/\($a)/"))' "${result}"
+        )
+        echo "Uploading snapshots/${actual}/revisions/${as_of}/ (${#files[@]} files)..."
+        if ! "${UPLOAD[@]}" cp \
+          --content-type="application/json" \
+          --cache-control="public, max-age=3600, must-revalidate" \
+          --no-clobber \
+          -Z \
+          "${files[@]}" \
+          "${dst}/${as_of}/"; then
+          echo "::warning::Could not upload revision ${as_of} of ${actual}; its index is not uploaded (#2475)"
+          ok=0
+          break
+        fi
+      done
+    fi
+    if [ "${ok}" = 1 ] &&
+      jq -e '.written | index("revisions/index.json")' "${result}" >/dev/null; then
+      if ! "${UPLOAD[@]}" cp \
+        --content-type="application/json" \
+        --cache-control="public, max-age=3600, must-revalidate" \
+        -Z \
+        "${dir}/revisions/index.json" \
+        "${dst}/"; then
+        echo "::warning::Could not upload the revision index of ${actual}; staging keeps its earlier index (#2475)"
+      fi
+    fi
+  fi
+  rm -rf "${dir}/revisions" "${result}"
+  return 0
 }
 
 # rebuild (#2232): remove from staging the earlier per-date objects of each
@@ -782,9 +954,23 @@ process_one() {
     return 0
   fi
 
+  # 9b. revision (#2475) — daily only (R17). A collection the transform
+  # remapped (actual != date) is a closing one; a date it kept has no
+  # revision. The other modes re-derive and must not rewrite a revision.
+  rm -f "${WORK}/revision.json"
+  case "${MODE}" in
+    daily)
+      if [ "${actual}" != "${date}" ]; then
+        record_revision "${actual}" "${date}"
+      fi
+      ;;
+    rebuild | rescrape | rescrape-historical) ;;
+  esac
+
   # 10. upload
   if [ -d "${SNAPSHOTS}/${actual}" ]; then
     upload_snapshot "${actual}"
+    upload_revisions "${actual}"
     # 10b. remove — rebuild only (#2232). R17: the other modes keep what
     # staging holds for districts they did not re-derive.
     case "${MODE}" in

@@ -147,6 +147,30 @@ describe('assertPruneDeletionScope (#1132)', () => {
   })
 })
 
+describe('prune never deletes a kept month end’s reconciliation revisions (#2475)', () => {
+  it('a revision directory is not a deletable path', () => {
+    for (const p of [
+      'snapshots/2026-10-31/revisions/2026-11-01',
+      'snapshots/2026-10-31/revisions',
+    ]) {
+      expect(() => assertPruneDeletionScope([p])).toThrow(/#1132/)
+    }
+  })
+
+  it('the month end every closing collection maps to is kept, so its revisions/ is too', () => {
+    const { snapshotDates } = computePruneGcsDeletions([
+      keep('2026-10-31', '2026-10-31'),
+      keep('2026-11-01', '2026-10-31'),
+      keep('2026-11-02', '2026-10-31'),
+      drop('2026-10-15', '2026-10-15'),
+    ])
+    expect(snapshotDates).toEqual(['2026-10-15'])
+    expect(() =>
+      assertPruneDeletionScope(snapshotDates.map(d => `snapshots/${d}`))
+    ).not.toThrow()
+  })
+})
+
 describe('parsePruneOutput', () => {
   it('extracts classifications from the prune CLI JSON output', () => {
     const json = JSON.stringify({

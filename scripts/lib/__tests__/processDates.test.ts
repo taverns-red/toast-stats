@@ -2186,6 +2186,370 @@ describe('process-dates.sh daily (#1765)', () => {
   })
 })
 
+describe('process-dates.sh daily: reconciliation revisions (#2475)', () => {
+  const MONTH_END = '2026-10-31'
+  const AS_OF = '2026-11-02'
+  const REV = `snapshots/${MONTH_END}/revisions`
+  const env = {
+    DISTRICTS: '61',
+    BUILD_EDUCATION_ROLLUP: path.join(STUBS, 'build-education-rollup'),
+    STUB_REMAP: `${AS_OF}=${MONTH_END}`,
+    DISTRICTS_SOURCE: 'discovered',
+  }
+  const closingDaily = (extra: Record<string, string> = {}) =>
+    run('daily', [AS_OF], { ...env, ...extra })
+  const gunzipped = (obj: string) =>
+    zlib.gunzipSync(fs.readFileSync(path.join(root, BUCKET, obj))).toString()
+  const index = () =>
+    JSON.parse(gunzipped(`${REV}/index.json`)) as {
+      revisions: Array<{ asOf: string; closing: boolean }>
+    }
+  const recordCalls = () =>
+    lines(stubLog).filter(l => l.startsWith('collector-cli record-revision'))
+  /** Staging's month end as it stood before the first close (in-month). */
+  const putInMonthMonthEnd = () => {
+    putObject(
+      `snapshots/${MONTH_END}/metadata.json`,
+      JSON.stringify({ snapshotId: MONTH_END, successfulDistricts: ['61'] }),
+      true
+    )
+    putObject(
+      `snapshots/${MONTH_END}/district_61.json`,
+      '{"districtId":"61","view":"in-month"}\n',
+      true
+    )
+  }
+
+  it('records the published month end as revisions/<asOf>/ and uploads it with the index last', () => {
+    const r = closingDaily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(recordCalls()).toEqual([
+      `collector-cli record-revision --date ${MONTH_END} --as-of ${AS_OF}`,
+    ])
+    expect(objectsUnder(REV)).toEqual([
+      `${AS_OF}/district_61.json`,
+      'index.json',
+    ])
+    // Byte-identical to the month end it published: after the FAC merge.
+    expect(gunzipped(`${REV}/${AS_OF}/district_61.json`)).toBe(
+      gunzipped(`snapshots/${MONTH_END}/district_61.json`)
+    )
+    expect(
+      JSON.parse(gunzipped(`${REV}/${AS_OF}/district_61.json`)).facMergedClubs
+    ).toBe(2)
+    for (const obj of [
+      `${REV}/${AS_OF}/district_61.json`,
+      `${REV}/index.json`,
+    ]) {
+      expect(readMeta(obj)).toContain('content-encoding=gzip')
+      expect(readMeta(obj)).toContain('content-type=application/json')
+      expect(readMeta(obj)).toContain(`cache-control=${CACHE_CONTROL}`)
+    }
+    const paths = lines(manifest).map(
+      l => (JSON.parse(l) as { path: string }).path
+    )
+    const at = (p: string) => paths.indexOf(p)
+    expect(at(`${REV}/${AS_OF}/district_61.json`)).toBeGreaterThan(
+      at(`snapshots/${MONTH_END}/district_61.json`)
+    )
+    expect(at(`${REV}/index.json`)).toBeGreaterThan(
+      at(`${REV}/${AS_OF}/district_61.json`)
+    )
+  })
+
+  it('records after validate and before the upload', () => {
+    closingDaily({ SHIM_LOG: stubLog })
+    const log = lines(stubLog)
+    const validate = log.findIndex(l => /^validate /.test(l))
+    const record = log.findIndex(l => /^collector-cli record-revision /.test(l))
+    const upload = log.findIndex(l =>
+      l.endsWith(` gs://${BUCKET}/snapshots/${MONTH_END}/`)
+    )
+    expect(validate).toBeGreaterThanOrEqual(0)
+    expect(record).toBeGreaterThan(validate)
+    expect(upload).toBeGreaterThan(record)
+  })
+
+  it('takes revision 0 from staging’s in-month month end before the close overwrites it', () => {
+    putInMonthMonthEnd()
+    const r = closingDaily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(recordCalls()).toEqual([
+      expect.stringMatching(
+        new RegExp(
+          `^collector-cli record-revision --date ${MONTH_END} --as-of ${AS_OF} --prior-snapshot \\S+$`
+        )
+      ),
+    ])
+    expect(gunzipped(`${REV}/${MONTH_END}/district_61.json`)).toBe(
+      '{"districtId":"61","view":"in-month"}\n'
+    )
+    expect(index().revisions.map(x => [x.asOf, x.closing])).toEqual([
+      [MONTH_END, false],
+      [AS_OF, true],
+    ])
+  })
+
+  it('passes no prior copy once staging’s month end is already a close', () => {
+    putObject(
+      `snapshots/${MONTH_END}/metadata.json`,
+      JSON.stringify({
+        isClosingPeriodData: true,
+        collectionDate: '2026-11-01',
+      }),
+      true
+    )
+    closingDaily()
+    expect(recordCalls()).toEqual([
+      `collector-cli record-revision --date ${MONTH_END} --as-of ${AS_OF}`,
+    ])
+  })
+
+  it('upserts staging’s index: earlier revisions stay listed (R2, R9)', () => {
+    putObject(
+      `${REV}/index.json`,
+      JSON.stringify({
+        schemaVersion: 1,
+        monthEnd: MONTH_END,
+        dataMonth: '2026-10',
+        revisions: [
+          {
+            asOf: '2026-11-01',
+            collectedAt: '2026-11-01T13:00:00.000Z',
+            closing: true,
+            successfulDistricts: ['61'],
+          },
+        ],
+        final: null,
+      }),
+      true
+    )
+    const r = closingDaily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(index().revisions.map(x => x.asOf)).toEqual(['2026-11-01', AS_OF])
+  })
+
+  it('records nothing when staging’s index cannot be read, and still publishes the month end', () => {
+    const r = closingDaily({ SHIM_FAIL_MATCH: 'revisions/index\\.json' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(r.stderr).toMatch(/::warning::.*revisions\/index\.json.*#2475/)
+    expect(recordCalls()).toEqual([])
+    expect(objectsUnder(REV)).toEqual([])
+    expect(objectExists(`snapshots/${MONTH_END}/district_61.json`)).toBe(true)
+  })
+
+  it('a failed record-revision uploads no revision, and still publishes the month end', () => {
+    const r = closingDaily({ STUB_RECORD_REVISION_FAIL: '.' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(r.stderr).toMatch(/::warning::.*revision.*#2475/)
+    expect(objectsUnder(REV)).toEqual([])
+    expect(objectExists(`snapshots/${MONTH_END}/district_61.json`)).toBe(true)
+  })
+
+  it('a refused (already recorded) revision uploads nothing under revisions/', () => {
+    const r = closingDaily({ STUB_RECORD_REVISION_REFUSE: '.' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(objectsUnder(REV)).toEqual([])
+  })
+
+  describe('a revision upload error only warns (PR #2483 review, fix 1)', () => {
+    it('a failed revision-file upload: warns, uploads no index, and the daily still finishes', () => {
+      const r = closingDaily({
+        SHIM_FAIL_MATCH: `^cp .* gs://${BUCKET}/${REV}/${AS_OF}/$`,
+      })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(r.stderr).toMatch(/::warning::.*upload.*revision.*#2475/i)
+      expect(objectsUnder(REV)).toEqual([])
+      expect(objectExists(`snapshots/${MONTH_END}/district_61.json`)).toBe(true)
+      // The steps after the snapshot upload still ran.
+      expect(objectsUnder(`raw-csv/${AS_OF}`)).toEqual([
+        'district-61/club-performance.csv',
+      ])
+    })
+
+    it('a failed index upload: warns, and the daily still finishes', () => {
+      const r = closingDaily({
+        SHIM_FAIL_MATCH: `^cp .*revisions/index\\.json gs://${BUCKET}/${REV}/$`,
+      })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(r.stderr).toMatch(/::warning::.*index.*#2475/i)
+      expect(objectExists(`${REV}/index.json`)).toBe(false)
+      expect(objectsUnder(`raw-csv/${AS_OF}`)).toHaveLength(1)
+    })
+  })
+
+  describe('unreadable prior metadata is never read as a close (PR #2483 review, fix 3)', () => {
+    for (const [name, bytes, extra] of [
+      ['truncated JSON', '{"snapshotId":"2026-10-31","succ', {}],
+      [
+        'gzip bytes (an old gcloud that does not inflate, #1702)',
+        zlib.gzipSync('{"snapshotId":"2026-10-31"}').toString('latin1'),
+        { SHIM_DOWNLOAD_DECOMPRESS: '0' },
+      ],
+    ] as const) {
+      it(`${name}: warns that revision 0 is lost, still records the closing revision`, () => {
+        const obj = path.join(
+          root,
+          BUCKET,
+          `snapshots/${MONTH_END}/metadata.json`
+        )
+        fs.mkdirSync(path.dirname(obj), { recursive: true })
+        fs.writeFileSync(obj, Buffer.from(bytes, 'latin1'))
+        const r = closingDaily(extra)
+        expect(r.status, r.stderr).toBe(0)
+        expect(r.stderr).toMatch(
+          /::warning::.*metadata\.json.*not.*JSON.*revision 0.*#2475/i
+        )
+        expect(recordCalls()).toEqual([
+          `collector-cli record-revision --date ${MONTH_END} --as-of ${AS_OF}`,
+        ])
+        expect(objectsUnder(REV)).toEqual([
+          `${AS_OF}/district_61.json`,
+          'index.json',
+        ])
+      })
+    }
+
+    it('a revision 0 the CLI could not take is a warning, not silence', () => {
+      const r = closingDaily({ STUB_RECORD_REVISION_ZERO_FAIL: '.' })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.stderr).toMatch(/::warning::.*revision 0.*#2475/i)
+      expect(objectsUnder(REV)).toEqual([
+        `${AS_OF}/district_61.json`,
+        'index.json',
+      ])
+    })
+  })
+
+  describe('a manual district subset records revision 0 only (PR #2483 review, fix 4)', () => {
+    for (const [name, source] of [
+      ['DISTRICTS_SOURCE=manual', 'manual'],
+      ['DISTRICTS_SOURCE unset (fails safe)', ''],
+      ['DISTRICTS_SOURCE unknown (fails safe)', 'typo'],
+    ] as const) {
+      it(`${name}: passes --revision-zero-only, uploads no closing revision`, () => {
+        putInMonthMonthEnd()
+        const r = closingDaily({ DISTRICTS_SOURCE: source })
+        expect(r.status, r.stderr).toBe(0)
+        expect(recordCalls()).toEqual([
+          expect.stringMatching(
+            new RegExp(
+              `^collector-cli record-revision --date ${MONTH_END} --as-of ${AS_OF} --prior-snapshot \\S+ --revision-zero-only$`
+            )
+          ),
+        ])
+        expect(objectsUnder(REV)).toEqual([
+          `${MONTH_END}/district_61.json`,
+          'index.json',
+        ])
+        expect(index().revisions.map(x => x.asOf)).toEqual([MONTH_END])
+        if (source !== 'manual') {
+          expect(r.stderr).toMatch(/::warning::.*DISTRICTS_SOURCE.*#2475/)
+        }
+      })
+    }
+
+    it('DISTRICTS_SOURCE=discovered records the closing revision', () => {
+      closingDaily()
+      expect(recordCalls()).toEqual([
+        `collector-cli record-revision --date ${MONTH_END} --as-of ${AS_OF}`,
+      ])
+    })
+  })
+
+  describe('write-once holds in staging, not only on local disk (PR #2483 review, fix 6)', () => {
+    it('a revision staging already holds (but its index does not list) is never overwritten', () => {
+      putObject(`${REV}/${AS_OF}/district_61.json`, '{"earlier":true}\n', true)
+      const r = closingDaily()
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(r.stderr).toMatch(
+        /::warning::.*revisions\/2026-11-02.*already.*write-once.*#2475/
+      )
+      expect(gunzipped(`${REV}/${AS_OF}/district_61.json`)).toBe(
+        '{"earlier":true}\n'
+      )
+      expect(objectExists(`${REV}/index.json`)).toBe(false)
+      expect(objectExists(`snapshots/${MONTH_END}/district_61.json`)).toBe(true)
+    })
+
+    it('an unreadable staging listing uploads no revision', () => {
+      const r = closingDaily({
+        SHIM_FAIL_MATCH: `^ls gs://${BUCKET}/${REV}/${AS_OF}/$`,
+      })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.stderr).toMatch(/::warning::.*revisions\/2026-11-02.*#2475/)
+      expect(objectsUnder(REV)).toEqual([])
+    })
+
+    it('uploads revision files with --no-clobber, never the index', () => {
+      closingDaily({ SHIM_LOG: shimLog })
+      const cps = lines(shimLog).filter(l => /^storage cp /.test(l))
+      const fileCp = cps.find(l =>
+        l.endsWith(` gs://${BUCKET}/${REV}/${AS_OF}/`)
+      )
+      const indexCp = cps.find(l => l.endsWith(` gs://${BUCKET}/${REV}/`))
+      expect(fileCp).toContain(' --no-clobber ')
+      expect(indexCp).not.toContain('--no-clobber')
+    })
+  })
+
+  describe('a refused closing revision is a ::warning:: (PR #2483 re-review)', () => {
+    it('failed districts (a partial close): warns, naming them', () => {
+      const r = closingDaily({ STUB_RECORD_REVISION_PARTIAL: 'F' })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.stderr).toMatch(
+        /::warning::.*2026-11-02.*not recorded.*partial close: failed districts F.*#2475/
+      )
+      expect(objectsUnder(REV)).toEqual([])
+    })
+
+    it('a manual district subset: warns', () => {
+      const r = closingDaily({ DISTRICTS_SOURCE: 'manual' })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.stderr).toMatch(
+        /::warning::.*2026-11-02.*not recorded.*manual district subset.*#2475/
+      )
+    })
+
+    it('an already-recorded rerun stays a notice, not a warning', () => {
+      const r = closingDaily({ STUB_RECORD_REVISION_REFUSE: '.' })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.stderr).not.toMatch(/::warning::.*not recorded/)
+    })
+  })
+
+  it('leaves no local revisions/ behind for the steps after the loop', () => {
+    closingDaily()
+    expect(
+      fs.existsSync(path.join(cache, 'snapshots', MONTH_END, 'revisions'))
+    ).toBe(false)
+  })
+
+  it('a non-closing daily records no revision', () => {
+    const r = run('daily', ['2026-10-23'], {
+      DISTRICTS: '61',
+      BUILD_EDUCATION_ROLLUP: env.BUILD_EDUCATION_ROLLUP,
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(recordCalls()).toEqual([])
+  })
+
+  it('a rebuild of a closing date records no revision (phase 1 is daily only)', () => {
+    putRaw('2026-08-02')
+    const r = run('rebuild', ['2026-08-02'], {
+      STUB_REMAP: '2026-08-02=2026-07-31',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(recordCalls()).toEqual([])
+    expect(objectsUnder('snapshots/2026-07-31/revisions')).toEqual([])
+  })
+})
+
 describe('process-dates.sh: every MODE case names every mode (R17, #2274 N2)', () => {
   const source = fs.readFileSync(SCRIPT, 'utf-8').split('\n')
 

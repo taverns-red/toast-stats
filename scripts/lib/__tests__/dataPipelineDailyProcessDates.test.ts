@@ -183,6 +183,34 @@ describe('a manual districts override with spaces is accepted (#2274 N4)', () =>
   })
 })
 
+describe('the runner is told whether the districts are a manual subset (PR #2483 fix 4)', () => {
+  // A manual `districts:` dispatch is a subset: process-dates.sh must not
+  // record its month end as a reconciliation revision (#2475, write-once).
+  const config = () => code(steps.find(s => s.id === 'daily-config')!)
+
+  it('daily-config outputs districts_source: manual on the override, discovered otherwise', () => {
+    const run = config()
+    const manual = run.indexOf(
+      'echo "districts_source=manual" >> "$GITHUB_OUTPUT"'
+    )
+    const discovered = run.indexOf(
+      'echo "districts_source=discovered" >> "$GITHUB_OUTPUT"'
+    )
+    const override = run.indexOf('Using manual district override')
+    const discover = run.indexOf('collector-cli discover-districts')
+    expect(manual, 'no manual output').toBeGreaterThan(override)
+    expect(manual).toBeLessThan(discover)
+    expect(discovered, 'no discovered output').toBeGreaterThan(discover)
+  })
+
+  it('hands it to the runner', () => {
+    const step = daily.find(s => s.id === 'daily-process')!
+    expect(step.env?.DISTRICTS_SOURCE).toBe(
+      '${{ steps.daily-config.outputs.districts_source }}'
+    )
+  })
+})
+
 describe('no Playwright in the pipeline job (D-24)', () => {
   it('installs no browser: the collector is HTTP-only', () => {
     expect(steps.filter(s => /playwright/i.test(text(s)))).toEqual([])
