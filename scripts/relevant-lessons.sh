@@ -89,8 +89,11 @@ if [[ -d "$LESSONS_DIR/lessons" ]]; then
     while IFS= read -r f; do [[ -n "$f" ]] && emit "$f"; done \
       < <(find "$LESSONS_DIR/lessons" -maxdepth 1 -name '*.md' | sort)
   elif (( count > SMALL_CORPUS )); then
-    # Large corpus: hand the session the catalog to judge from...
-    [[ -f "$LESSONS_DIR/INDEX.md" ]] && emit "$LESSONS_DIR/INDEX.md"
+    # Large corpus: hand the session the catalog to judge from. INDEX.md is
+    # gitignored (#2455) — a committed copy conflicted on every pair of
+    # lesson-adding PRs — so generate it fresh here; it is never stale.
+    LESSONS_DIR="$LESSONS_DIR" bash "$(dirname "${BASH_SOURCE[0]}")/lessons-index.sh"
+    emit "$LESSONS_DIR/INDEX.md"
     # ...plus the single newest lesson by frontmatter date (awareness floor).
     # The consumer must drain sort's output: `head -1` exits early, and once
     # sort's output outgrows the pipe buffer, pipefail turns its SIGPIPE into
