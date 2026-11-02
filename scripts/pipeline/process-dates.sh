@@ -532,10 +532,13 @@ record_revision() {
 
 # Upload what record_revision wrote: each revision directory's district
 # files, then revisions/index.json last (R15: the index never names a
-# revision staging does not hold). Then the local revisions/ goes, so the
-# steps after the loop see the month end as before.
+# revision staging does not hold). Warn-only (#2483 fix 1): a failed
+# revision upload must not fail the daily or skip its later steps (the
+# raw-csv upload), so it is never under `set -e`; a failed file upload
+# uploads no index. Then the local revisions/ goes, so the steps after the
+# loop see the month end as before.
 upload_revisions() {
-  local actual="$1" result="${WORK}/revision.json" as_of
+  local actual="$1" result="${WORK}/revision.json" as_of ok=1
   local dir="${SNAPSHOTS}/${actual}" files=()
   if [ -s "${result}" ]; then
     while IFS= read -r as_of; do
@@ -545,23 +548,31 @@ upload_revisions() {
           '.written[] | select(startswith("revisions/\($a)/"))' "${result}"
       )
       echo "Uploading snapshots/${actual}/revisions/${as_of}/ (${#files[@]} files)..."
-      "${UPLOAD[@]}" cp \
+      if ! "${UPLOAD[@]}" cp \
         --content-type="application/json" \
         --cache-control="public, max-age=3600, must-revalidate" \
         -Z \
         "${files[@]}" \
-        "gs://${BUCKET}/snapshots/${actual}/revisions/${as_of}/"
+        "gs://${BUCKET}/snapshots/${actual}/revisions/${as_of}/"; then
+        echo "::warning::Could not upload revision ${as_of} of ${actual}; its index is not uploaded (#2475)"
+        ok=0
+        break
+      fi
     done < <(jq -r '.written[] | select(test("^revisions/[0-9]{4}-[0-9]{2}-[0-9]{2}/")) | split("/")[1]' "${result}" | LC_ALL=C sort -u)
-    if jq -e '.written | index("revisions/index.json")' "${result}" >/dev/null; then
-      "${UPLOAD[@]}" cp \
+    if [ "${ok}" = 1 ] &&
+      jq -e '.written | index("revisions/index.json")' "${result}" >/dev/null; then
+      if ! "${UPLOAD[@]}" cp \
         --content-type="application/json" \
         --cache-control="public, max-age=3600, must-revalidate" \
         -Z \
         "${dir}/revisions/index.json" \
-        "gs://${BUCKET}/snapshots/${actual}/revisions/"
+        "gs://${BUCKET}/snapshots/${actual}/revisions/"; then
+        echo "::warning::Could not upload the revision index of ${actual}; staging keeps its earlier index (#2475)"
+      fi
     fi
   fi
   rm -rf "${dir}/revisions" "${result}"
+  return 0
 }
 
 # rebuild (#2232): remove from staging the earlier per-date objects of each
