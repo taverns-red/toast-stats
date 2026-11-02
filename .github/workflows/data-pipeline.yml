@@ -371,6 +371,9 @@ jobs:
           DISTRICTS="${DISTRICTS_INPUT//[[:space:]]/}"
           if [ -n "${DISTRICTS}" ]; then
             echo "Using manual district override: ${DISTRICTS}"
+            # A subset: the runner records no reconciliation revision from
+            # it (#2475, #2483 fix 4).
+            echo "districts_source=manual" >> "$GITHUB_OUTPUT"
             # Discovery — and therefore program-year resolution — never ran, so
             # there is no verdict to judge. The rollover monitor skips rather
             # than alerting on a missing reason (#1343).
@@ -400,6 +403,7 @@ jobs:
             fi
             DISTRICT_COUNT=$(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ')
             echo "Discovered ${DISTRICT_COUNT} districts for PY ${DISCOVERED_PY} (fellBack=${DISCOVERED_FELLBACK}, reason=${DISCOVERED_REASON})"
+            echo "districts_source=discovered" >> "$GITHUB_OUTPUT"
           fi
 
           echo "districts=${DISTRICTS}" >> "$GITHUB_OUTPUT"
@@ -470,6 +474,9 @@ jobs:
           TOASTMASTERS_DASHBOARD_URL: 'https://dashboards.toastmasters.org'
           TARGET_DATE: ${{ steps.daily-config.outputs.date }}
           DISTRICTS: ${{ steps.daily-config.outputs.districts }}
+          # manual | discovered: a manual subset records no reconciliation
+          # revision (#2475, #2483 fix 4).
+          DISTRICTS_SOURCE: ${{ steps.daily-config.outputs.districts_source }}
           # true: re-fetch and re-derive (scrape --force, compute
           # --force-analytics); otherwise the pre-synced raw is reused (#1771).
           FORCE: ${{ inputs.force }}

@@ -184,6 +184,12 @@
 #                          daily: required, an id list only: the workflow
 #                          resolves it once, with the program year (#1284),
 #                          and the FAC fetch and compute take it too
+#   DISTRICTS_SOURCE       daily: `discovered` (DISTRICTS is the date's whole
+#                          set) or `manual` (a dispatch's subset). Anything
+#                          but `discovered`, unset included, records revision
+#                          0 only, never the closing revision (#2475, #2483
+#                          fix 4): a subset month end is partial, and a
+#                          revision is write-once.
 #   DATE_RESULTS_FILE      optional: one JSON line per date is appended,
 #                          {"date":D,"actual":A|null,"outcome":O}, A the
 #                          date the transform wrote (post-remap), O one of
@@ -532,8 +538,23 @@ record_revision() {
     rm -rf "${rev}"
     return 0
   fi
+  # A subset of the districts is a partial month end: revision 0 only.
+  # R17: anything but `discovered` is treated as a subset (fails safe).
+  local zero_only=()
+  case "${DISTRICTS_SOURCE:-}" in
+    discovered) ;;
+    manual)
+      echo "Manual district subset: recording revision 0 of ${actual} only, not ${as_of}"
+      zero_only=(--revision-zero-only)
+      ;;
+    *)
+      echo "::warning::DISTRICTS_SOURCE is '${DISTRICTS_SOURCE:-}', not discovered or manual; treating the districts as a subset, so ${as_of} is not recorded as a revision (#2475)"
+      zero_only=(--revision-zero-only)
+      ;;
+  esac
   if ! "${COLLECTOR[@]}" record-revision --date "${actual}" --as-of "${as_of}" \
-    "${prior_args[@]+"${prior_args[@]}"}" >"${WORK}/revision.json"; then
+    "${prior_args[@]+"${prior_args[@]}"}" "${zero_only[@]+"${zero_only[@]}"}" \
+    >"${WORK}/revision.json"; then
     cat "${WORK}/revision.json"
     echo "::warning::record-revision failed for ${actual} as of ${as_of}; no revision uploaded (#2475)"
     rm -rf "${rev}" "${WORK}/revision.json"
