@@ -64,6 +64,13 @@
   gap: 0.375rem;
 }
 
+/* #2451: the same containment for the opt-in Changes columns' Δ cells. Without
+   it their sr-only words widened the page to 1108px at 768 and 1688px at
+   1280. */
+.clubs-delta-cell {
+  position: relative;
+}
+
 /* The open option list keeps normal text, not the active fill's. */
 .clubs-since-select option {
   color: var(--ink);

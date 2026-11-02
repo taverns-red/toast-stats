@@ -53,7 +53,12 @@ export const buildClubsDeltaColumns = (clubDiffsById: Map<string, ClubDiff>) =>
       cell: info => {
         const d = clubDiffsById.get(info.row.original.clubId)
         if (!d) return <MutedDash />
-        return <ChangeIndicator value={d.membership.delta} />
+        return (
+          <ChangeIndicator
+            value={d.membership.delta}
+            className="clubs-delta-cell"
+          />
+        )
       },
     }),
     colHelper.display({
@@ -62,7 +67,12 @@ export const buildClubsDeltaColumns = (clubDiffsById: Map<string, ClubDiff>) =>
       cell: info => {
         const d = clubDiffsById.get(info.row.original.clubId)
         if (!d) return <MutedDash />
-        return <ChangeIndicator value={d.payments.delta} />
+        return (
+          <ChangeIndicator
+            value={d.payments.delta}
+            className="clubs-delta-cell"
+          />
+        )
       },
     }),
     colHelper.display({
@@ -71,7 +81,12 @@ export const buildClubsDeltaColumns = (clubDiffsById: Map<string, ClubDiff>) =>
       cell: info => {
         const d = clubDiffsById.get(info.row.original.clubId)
         if (!d) return <MutedDash />
-        return <ChangeIndicator value={d.dcpGoals.delta} />
+        return (
+          <ChangeIndicator
+            value={d.dcpGoals.delta}
+            className="clubs-delta-cell"
+          />
+        )
       },
     }),
     colHelper.display({
