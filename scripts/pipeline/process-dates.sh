@@ -561,6 +561,13 @@ record_revision() {
     return 0
   fi
   cat "${WORK}/revision.json"
+  # A refused closing revision (a partial close, a manual subset) is a
+  # warning, so a gap that persists across the close is seen (#2483). A
+  # rerun of an already-recorded day is expected and stays a notice.
+  if jq -e '.recorded == false and (.refused // "" | test("already recorded") | not)' \
+    "${WORK}/revision.json" >/dev/null; then
+    echo "::warning::Closing revision ${as_of} of ${actual} not recorded: $(jq -r '.refused' "${WORK}/revision.json") (#2475)"
+  fi
   if jq -e '.revisionZero == "failed"' "${WORK}/revision.json" >/dev/null; then
     echo "::warning::Revision 0 of ${actual} could not be taken: $(jq -r '.revisionZeroError' "${WORK}/revision.json") (#2475)"
   fi
