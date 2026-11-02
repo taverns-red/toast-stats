@@ -1,5 +1,10 @@
 import React, { Suspense } from 'react'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import {
+  createBrowserRouter,
+  Navigate,
+  RouterProvider,
+  useLocation,
+} from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './config/queryClient'
 import { ProgramYearProvider } from './contexts/ProgramYearContext'
@@ -121,6 +126,11 @@ const RegionPage = React.lazy(() => import('./pages/RegionPage'))
 // Code-split: RegionsPage — /regions overview (#496, epic #492)
 const RegionsPage = React.lazy(() => import('./pages/RegionsPage'))
 
+// Code-split: region and world What Changed (#2476)
+const RankingsChangesPage = React.lazy(
+  () => import('./pages/RankingsChangesPage')
+)
+
 // Code-split: region and world rollup subpages (#1815)
 const RegionHealthPage = React.lazy(() => import('./pages/RegionHealthPage'))
 const WorldHealthPage = React.lazy(() => import('./pages/WorldHealthPage'))
@@ -206,6 +216,12 @@ function DistrictRouteFallback(): React.JSX.Element {
 }
 
 // Create router configuration (ready for v7 future flags when available)
+/** `/changes` → `/regions/changes`, keeping the from/to pair (#2476). */
+function ChangesRedirect(): React.JSX.Element {
+  const { search, hash } = useLocation()
+  return <Navigate to={`/regions/changes${search}${hash}`} replace />
+}
+
 const router = createBrowserRouter(
   [
     {
@@ -517,6 +533,28 @@ const router = createBrowserRouter(
             </Suspense>
           ),
         },
+        // What Changed, region and world (#2476). `/changes` is the
+        // issue's short world URL; the canonical one sits with the other
+        // world subpages under /regions.
+        {
+          path: 'region/:n/changes',
+          element: (
+            <CanonicalRegionRoute>
+              <Suspense fallback={<PageLoadingFallback />}>
+                <RankingsChangesPage />
+              </Suspense>
+            </CanonicalRegionRoute>
+          ),
+        },
+        {
+          path: 'regions/changes',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <RankingsChangesPage />
+            </Suspense>
+          ),
+        },
+        { path: 'changes', element: <ChangesRedirect /> },
         {
           path: 'regions/health',
           element: (

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { KpiDeltaCard } from '../KpiDeltaCard'
 import { ExportButton } from '../ExportButton'
 import { exportRankingsDiff } from '../../utils/csvExport'
+import { formatDisplayDate as fmtDate } from '../../utils/dateFormatting'
 import {
   biggestMovers,
   diffRankings,
@@ -46,16 +47,6 @@ export interface RankingsChangesViewProps {
 }
 
 const MOVERS = 5
-
-/** "Oct 1, 2026". Date-only, UTC-safe. */
-export function fmtDate(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  })
-}
 
 function dayCount(from: string, to: string): number {
   const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)
