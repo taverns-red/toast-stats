@@ -57,7 +57,7 @@ export interface RecordRevisionOptions {
 }
 
 export type RevisionZeroOutcome =
-  'recorded' | 'already-recorded' | 'prior-is-closing' | 'no-prior'
+  'recorded' | 'already-recorded' | 'prior-is-closing' | 'no-prior' | 'failed'
 
 export interface RecordRevisionResult {
   date: string
@@ -65,6 +65,11 @@ export interface RecordRevisionResult {
   /** True when the `asOf` revision was written. */
   recorded: boolean
   revisionZero: RevisionZeroOutcome
+  /**
+   * Why revision 0 could not be taken (`revisionZero: 'failed'`); null
+   * otherwise. Its failure never costs the closing revision (#2483 fix 2).
+   */
+  revisionZeroError: string | null
   /** Why nothing was written for `asOf`; null when it was. */
   refused: string | null
   /** Files written, relative to `snapshots/<date>/`; the index last. */
@@ -139,6 +144,58 @@ async function planCopies(
   return copies
 }
 
+/** Throws if any copy's target already holds different bytes. */
+async function assertWriteOnce(
+  dir: string,
+  copies: readonly Copy[]
+): Promise<void> {
+  for (const c of copies) {
+    const target = path.join(dir, c.rel)
+    if (await exists(target)) {
+      const have = await fs.readFile(target)
+      if (!have.equals(c.bytes)) {
+        throw new Error(
+          `${target} already holds different bytes; revisions are write-once`
+        )
+      }
+    }
+  }
+}
+
+/**
+ * Revision 0 from the prior copy of the month end: its copies (write-once
+ * checked) and index entry, or null when the prior copy is already a close.
+ * Throws on anything unreadable or inconsistent.
+ */
+async function planRevisionZero(
+  dir: string,
+  date: string,
+  priorSnapshotDir: string
+): Promise<{ copies: Copy[]; entry: ReconciliationRevision } | null> {
+  const prior = await readMetadata(priorSnapshotDir)
+  if (prior.isClosingPeriodData === true) return null
+  if (prior.dataAsOfDate !== undefined && prior.dataAsOfDate !== date) {
+    throw new Error(
+      `${priorSnapshotDir}: prior copy is of ${prior.dataAsOfDate}, not ${date}`
+    )
+  }
+  const copies = await planCopies(
+    priorSnapshotDir,
+    prior.successfulDistricts,
+    `${RECONCILIATION_REVISIONS_DIR}/${date}`
+  )
+  await assertWriteOnce(dir, copies)
+  return {
+    copies,
+    entry: {
+      asOf: date,
+      collectedAt: prior.createdAt,
+      closing: false,
+      successfulDistricts: [...prior.successfulDistricts],
+    },
+  }
+}
+
 async function readIndex(
   file: string
 ): Promise<ReconciliationRevisionIndex | null> {
@@ -197,6 +254,7 @@ export async function recordRevision(
     asOf,
     recorded: false,
     revisionZero: 'no-prior',
+    revisionZeroError: null,
     refused: null,
     written: [],
   }
@@ -210,43 +268,34 @@ export async function recordRevision(
   const copies: Copy[] = []
   const added: ReconciliationRevision[] = []
 
-  // Revision 0 — the pre-close month end, from the prior copy.
+  // Revision 0 — the pre-close month end, from the prior copy. Planned on
+  // its own: any problem with it is reported, and the closing revision is
+  // still recorded (the month end is about to be overwritten either way).
   if (listed(date)) {
     result.revisionZero = 'already-recorded'
   } else if (priorSnapshotDir) {
-    const prior = await readMetadata(priorSnapshotDir)
-    if (prior.isClosingPeriodData === true) {
-      result.revisionZero = 'prior-is-closing'
-    } else {
-      if (prior.dataAsOfDate !== undefined && prior.dataAsOfDate !== date) {
-        throw new Error(
-          `${priorSnapshotDir}: prior copy is of ${prior.dataAsOfDate}, not ${date}`
-        )
+    try {
+      const zero = await planRevisionZero(dir, date, priorSnapshotDir)
+      if (zero === null) {
+        result.revisionZero = 'prior-is-closing'
+      } else {
+        copies.push(...zero.copies)
+        added.push(zero.entry)
+        result.revisionZero = 'recorded'
       }
-      copies.push(
-        ...(await planCopies(
-          priorSnapshotDir,
-          prior.successfulDistricts,
-          `${RECONCILIATION_REVISIONS_DIR}/${date}`
-        ))
-      )
-      added.push({
-        asOf: date,
-        collectedAt: prior.createdAt,
-        closing: false,
-        successfulDistricts: [...prior.successfulDistricts],
-      })
-      result.revisionZero = 'recorded'
+    } catch (error) {
+      result.revisionZero = 'failed'
+      result.revisionZeroError =
+        error instanceof Error ? error.message : String(error)
     }
   }
 
-  copies.push(
-    ...(await planCopies(
-      dir,
-      metadata.successfulDistricts,
-      `${RECONCILIATION_REVISIONS_DIR}/${asOf}`
-    ))
+  const closing = await planCopies(
+    dir,
+    metadata.successfulDistricts,
+    `${RECONCILIATION_REVISIONS_DIR}/${asOf}`
   )
+  copies.push(...closing)
   added.push({
     asOf,
     collectedAt: metadata.createdAt,
@@ -255,17 +304,7 @@ export async function recordRevision(
   })
 
   // Write-once, checked for every file before any is written.
-  for (const c of copies) {
-    const target = path.join(dir, c.rel)
-    if (await exists(target)) {
-      const have = await fs.readFile(target)
-      if (!have.equals(c.bytes)) {
-        throw new Error(
-          `${target} already holds different bytes; revisions are write-once`
-        )
-      }
-    }
-  }
+  await assertWriteOnce(dir, closing)
 
   const next = ReconciliationRevisionIndexSchema.parse({
     ...index,
