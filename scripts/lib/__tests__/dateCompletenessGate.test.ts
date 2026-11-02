@@ -719,3 +719,47 @@ describe('retired analytics files are not a regression (#1798)', () => {
     expect(r.promote).toBe(true)
   })
 })
+
+describe('reconciliation revisions are optional (#2475)', () => {
+  // snapshots/<monthEnd>/revisions/ is additive and write-once: a missing
+  // revision never holds the month end, and staging's revisions never pad
+  // its count so as to hide a missing month-end file.
+  const profile = (objectNames: string[]): DateProfile => ({
+    objectNames: [...objectNames].sort(),
+    manifestDistricts: 94,
+    metadataDistricts: 94,
+    globalClubs: 14513,
+    globalCountries: 158,
+    districts: {},
+  })
+  const base = ['manifest.json', 'metadata.json', 'district_61.json']
+  const revisions = (asOf: string) => [
+    `revisions/${asOf}/district_61.json`,
+    `revisions/${asOf}/district_62.json`,
+  ]
+
+  it('a staging month end missing a revision production has passes', () => {
+    const prod = profile([
+      ...base,
+      ...revisions('2026-11-01'),
+      'revisions/index.json',
+    ])
+    const staging = profile(base)
+    expect(compareDateProfiles(DATE, prod, staging)).toEqual([])
+  })
+
+  it('staging revisions cannot mask a missing month-end file', () => {
+    const prod = profile(base)
+    const staging = profile([
+      'manifest.json',
+      'metadata.json',
+      ...revisions('2026-11-01'),
+      ...revisions('2026-11-02'),
+      'revisions/index.json',
+    ])
+    const r = compareDateProfiles(DATE, prod, staging)
+    expect(r).toHaveLength(1)
+    expect(r[0]!.reason).toContain('district_61.json')
+    expect(r[0]!.reason).not.toContain('revisions/')
+  })
+})
