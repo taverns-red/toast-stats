@@ -183,6 +183,7 @@ const DivisionPage: React.FC = () => {
     <NextDeadlineStrip
       programYear={(effectiveProgramYear ?? selectedProgramYear).label}
       asOfDate={viewedDate}
+      isLatest={isLatestSnapshot}
     />
   )
   const districtUrl = `/district/${districtId}`

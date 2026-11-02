@@ -8,7 +8,8 @@ import { DeadlineTimeline } from './DeadlineTimeline'
    renewals, Area club-visit reports — counted down from the page's own date.
    Every date comes from the one cited table in `programYearDeadlines.ts`;
    each item's title names its TI source. The program year and date are the
-   page's (R3): a past snapshot counts down from the day it shows.
+   page's (R3): a past snapshot counts down from the day it shows, while the
+   latest data counts from today (#2474) — the page says which.
 
    While the page date is still resolving the strip keeps its slot with
    placeholder lines, so the content below it does not move on arrival.
@@ -42,9 +43,17 @@ function shortProgramYear(programYear: string): string {
 
 const LEAD = 'Next deadlines'
 
+/** Today's local calendar date as `YYYY-MM-DD`. */
+function localToday(): string {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
 export const NextDeadlineStrip: React.FC<NextDeadlineStripProps> = ({
   programYear,
   asOfDate,
+  isLatest = false,
 }) => {
   const [open, setOpen] = useState(false)
   const panelId = useId()
@@ -75,7 +84,12 @@ export const NextDeadlineStrip: React.FC<NextDeadlineStripProps> = ({
     )
   }
 
-  const upcoming = nextDeadlines(programYear, asOfDate)
+  // Deadlines are calendar facts (#2474): on the latest data count from
+  // today, since the latest snapshot can sit at the month end during
+  // reconciliation. A picked past date counts from that date.
+  const today = localToday()
+  const countFrom = isLatest && today > asOfDate ? today : asOfDate
+  const upcoming = nextDeadlines(programYear, countFrom)
 
   return (
     <section
@@ -128,7 +142,7 @@ export const NextDeadlineStrip: React.FC<NextDeadlineStripProps> = ({
         <DeadlineTimeline
           id={panelId}
           programYear={programYear}
-          asOfDate={asOfDate}
+          asOfDate={countFrom}
         />
       )}
     </section>

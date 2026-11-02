@@ -463,11 +463,17 @@ const DistrictDetailPageInner: React.FC = () => {
   // Next-deadline strip (#2298): the page's own PY and pinned date (R3).
   // Kept out of the shared header so the subpages (and the map route's JS
   // budget) do not carry it. Placed per layout in the render below.
+  const deadlineAsOfDate =
+    selectedDate ?? cachedDatesData?.dateRange?.endDate ?? availableDates[0]
   const deadlineStrip = (
     <NextDeadlineStrip
       programYear={selectedProgramYear.label}
-      asOfDate={
-        selectedDate ?? cachedDatesData?.dateRange?.endDate ?? availableDates[0]
+      asOfDate={deadlineAsOfDate}
+      // The page auto-selects its newest date, so "latest" is the viewed
+      // date being the district's newest snapshot, not an unset date (#2474).
+      isLatest={
+        !!deadlineAsOfDate &&
+        deadlineAsOfDate === cachedDatesData?.dateRange?.endDate
       }
     />
   )
