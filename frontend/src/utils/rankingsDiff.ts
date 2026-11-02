@@ -33,7 +33,7 @@ export interface DiffOptions {
   regionOfFrom: RegionOf
   regionOfTo: RegionOf
   /** Two-digit region id; omitted = worldwide. */
-  region?: string
+  region?: string | undefined
 }
 
 export interface Pair {

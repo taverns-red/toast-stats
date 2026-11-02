@@ -9,6 +9,7 @@ import { logger } from './logger'
 import type { SnapshotDate } from '../types/snapshotDate'
 import { coachFilterValue, type ClubCoach } from './clubCoach'
 import { councilStandingCsvRows, type CouncilRow } from './councilStanding'
+import type { RankingsDiff } from './rankingsDiff'
 
 /**
  * Converts a 2D array to CSV string
@@ -800,6 +801,69 @@ export const exportSnapshotDiff = (diff: SnapshotDiff): void => {
     districtId
   )
   downloadCSV(csvContent, filename)
+}
+
+/**
+ * Export a region or world What Changed pair (#2476): one row per district,
+ * each metric's from / to / delta and the rank moves, exactly the diff on
+ * screen. A district on only one date leaves the other side blank.
+ */
+export const exportRankingsDiff = (args: {
+  scopeLabel: string
+  from: string
+  to: string
+  diff: RankingsDiff
+}): void => {
+  const { scopeLabel, from, to, diff } = args
+  const cell = (n: number | null) => (n === null ? '' : n)
+  const csvData: (string | number)[][] = [
+    [`What Changed: ${scopeLabel}, ${from} to ${to}`],
+    [],
+    [
+      'District ID',
+      'District Name',
+      'Region',
+      'On Both Dates',
+      'Paid Clubs From',
+      'Paid Clubs To',
+      'Δ Paid Clubs',
+      'Payments From',
+      'Payments To',
+      'Δ Payments',
+      'Distinguished From',
+      'Distinguished To',
+      'Δ Distinguished',
+      'Rank In Scope From',
+      'Rank In Scope To',
+      'Overall Rank From',
+      'Overall Rank To',
+    ],
+    ...diff.districts.map(c => [
+      c.districtId,
+      c.districtName,
+      c.region,
+      c.presence === 'both'
+        ? 'Yes'
+        : c.presence === 'from-only'
+          ? `Only ${from}`
+          : `Only ${to}`,
+      cell(c.paidClubs.from),
+      cell(c.paidClubs.to),
+      cell(c.paidClubs.delta),
+      cell(c.payments.from),
+      cell(c.payments.to),
+      cell(c.payments.delta),
+      cell(c.distinguished.from),
+      cell(c.distinguished.to),
+      cell(c.distinguished.delta),
+      cell(c.scopeRank.from),
+      cell(c.scopeRank.to),
+      cell(c.overallRank.from),
+      cell(c.overallRank.to),
+    ]),
+  ]
+  const slug = scopeLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_')
+  downloadCSV(arrayToCSV(csvData), `what_changed_${slug}_${from}_to_${to}.csv`)
 }
 
 /**
