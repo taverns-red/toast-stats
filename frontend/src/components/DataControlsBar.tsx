@@ -75,11 +75,23 @@ const FreshnessPill: React.FC<{
         aria-hidden="true"
         className={`data-controls__dot ${reconciling ? 'bg-amber-500' : 'bg-green-500'}`}
       />
+      {/* #2472 — the visible label stays as short as "Data fresh · <date>":
+          every layout reserves FRESHNESS_PILL_WIDTH for it (the landing
+          intro at 1024, the club hero's one-row toolbar at 768). The longer
+          "As of <date> · month-end reconciliation" squeezed and wrapped both
+          each reconciliation window. Screen readers get the full sentence
+          (the pill is position: relative, so the sr-only span stays inside
+          it, #2451); sighted users get it in the tooltip. */}
       <span>
         {reconciling
-          ? `As of ${formatDisplayDate(date)} · month-end reconciliation`
+          ? `Reconciling · ${formatDisplayDate(date)}`
           : `Data fresh · ${formatDisplayDate(date)}`}
       </span>
+      {reconciling && (
+        <span className="sr-only">
+          {` — ${reconcilingMonthLabel} month-end reconciliation, figures update daily until finalized`}
+        </span>
+      )}
     </div>
   )
 }
