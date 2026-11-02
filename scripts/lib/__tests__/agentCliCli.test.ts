@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { main, SUBCOMMANDS } from '../agentCli/cli.js'
-import { fakeRunner, fixture, ok, noSleep } from './agentCliFakes.js'
+import { fail, fakeRunner, fixture, ok, noSleep } from './agentCliFakes.js'
 
 function capture() {
   const out: string[] = []
@@ -72,6 +72,63 @@ describe('agent-cli', () => {
     expect(JSON.parse(c.out.join(''))).toMatchObject({
       pr: 2416,
       expired: false,
+    })
+  })
+
+  describe('ci-wait --interval/--timeout are seconds, flag or default (#2463)', () => {
+    const PENDING = JSON.stringify([
+      {
+        name: 'build',
+        state: 'IN_PROGRESS',
+        bucket: 'pending',
+        link: '',
+        workflow: 'CI',
+        startedAt: '2026-11-02T00:00:00Z',
+        completedAt: '',
+      },
+    ])
+
+    /** Run ci-wait against checks that never finish, on a fake clock. */
+    async function runPending(extra: string[]) {
+      const c = capture()
+      let clock = 0
+      const sleeps: number[] = []
+      const code = await main(['ci-wait', '123', '--json', ...extra], {
+        ...c.deps,
+        runner: fakeRunner([[/^gh pr checks 123 /, fail('', 8, PENDING)]]),
+        now: () => clock,
+        sleep: async ms => {
+          sleeps.push(ms)
+          clock += ms
+        },
+      })
+      const r = JSON.parse(c.out.join('')) as {
+        timedOut: boolean
+        waitedMs: number
+      }
+      return { code, sleeps, r }
+    }
+
+    it('with no flags polls every 30 000 ms for up to 3 600 000 ms', async () => {
+      const { code, sleeps, r } = await runPending([])
+      expect(code).toBe(2)
+      expect(r.timedOut).toBe(true)
+      // intervalMs === 30_000
+      expect(new Set(sleeps)).toEqual(new Set([30_000]))
+      // timeoutMs === 3_600_000: waits until the next sleep would overrun it.
+      expect(r.waitedMs).toBe(3_600_000)
+      expect(sleeps).toHaveLength(120)
+    })
+
+    it('converts passed --interval and --timeout from seconds to ms', async () => {
+      const { sleeps, r } = await runPending([
+        '--interval',
+        '60',
+        '--timeout',
+        '300',
+      ])
+      expect(new Set(sleeps)).toEqual(new Set([60_000]))
+      expect(r.waitedMs).toBe(300_000)
     })
   })
 
