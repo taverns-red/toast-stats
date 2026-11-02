@@ -95,8 +95,17 @@
 #                (#1125, D-9): the merge rewrites snapshots in place, so the
 #                final files are checked against shared-contracts. A
 #                violation FAILS the date: nothing of it is uploaded.
+#   9b. revision daily only (#2475): a closing collection (remapped onto
+#                its month end) is also kept as a write-once reconciliation
+#                revision. Staging's revisions/index.json is hydrated (R2,
+#                R9) and, while staging's month end is still the pre-close
+#                in-month view, its district files too, for revision 0;
+#                then collector-cli record-revision. Any failure here is a
+#                warning: no revision is uploaded, the month end still is.
 #  10. upload    snapshots/<date>/*.json, analytics/*.json and
-#                clubs-by-region/*.json (#1800), `-Z` with the CDN headers. An upload error aborts the loop (exit 1), as the
+#                clubs-by-region/*.json (#1800), `-Z` with the CDN headers;
+#                then the 9b revision files and revisions/index.json last
+#                (R15), and the local revisions/ is removed. An upload error aborts the loop (exit 1), as the
 #                inline loop's `set -e` did: the step fails before any store
 #                push. rescrape then rsyncs the re-collected raw-csv/<date>/
 #                up, replacing the old copy, and so does daily (raw-csv/
@@ -470,6 +479,91 @@ upload_snapshot() {
   fi
 }
 
+# 9b (#2475): record the closing month end <actual>, collected <as_of>, as a
+# reconciliation revision. Hydrates staging's index (absent = the month's
+# first revision; any other read failure records nothing, so a fresh index
+# never overwrites staging's) and, while staging's month end is still the
+# in-month view (its metadata is not closing data), that copy for revision
+# 0. The CLI's result lists the files it wrote; upload_revisions sends them.
+record_revision() {
+  local actual="$1" as_of="$2"
+  local rev="${SNAPSHOTS}/${actual}/revisions" prior="${WORK}/revision-prior"
+  local src="gs://${BUCKET}/snapshots/${actual}" err="${WORK}/revision.err"
+  local prior_args=()
+  rm -rf "${rev}" "${prior}"
+  mkdir -p "${rev}" "${prior}"
+  if ! "${GCLOUD}" storage cp "${src}/revisions/index.json" \
+    "${rev}/index.json" 2>"${err}"; then
+    if ! grep -q 'matched no objects' "${err}"; then
+      cat "${err}"
+      echo "::warning::Could not read staging's snapshots/${actual}/revisions/index.json; no revision recorded for ${as_of} (#2475)"
+      rm -rf "${rev}"
+      return 0
+    fi
+    echo "No revision index for ${actual} in staging: ${as_of} is its first revision"
+  fi
+  if "${GCLOUD}" storage cp "${src}/metadata.json" \
+    "${prior}/metadata.json" 2>"${err}"; then
+    if jq -e '.isClosingPeriodData != true' "${prior}/metadata.json" >/dev/null; then
+      if ! "${GCLOUD}" storage cp "${src}/district_*.json" "${prior}/" 2>"${err}"; then
+        cat "${err}"
+        echo "::warning::Could not read staging's in-month ${actual} for revision 0; no revision recorded for ${as_of} (#2475)"
+        rm -rf "${rev}"
+        return 0
+      fi
+      prior_args=(--prior-snapshot "${prior}")
+    fi
+  elif ! grep -q 'matched no objects' "${err}"; then
+    cat "${err}"
+    echo "::warning::Could not read staging's snapshots/${actual}/metadata.json; no revision recorded for ${as_of} (#2475)"
+    rm -rf "${rev}"
+    return 0
+  fi
+  if ! "${COLLECTOR[@]}" record-revision --date "${actual}" --as-of "${as_of}" \
+    "${prior_args[@]+"${prior_args[@]}"}" >"${WORK}/revision.json"; then
+    cat "${WORK}/revision.json"
+    echo "::warning::record-revision failed for ${actual} as of ${as_of}; no revision uploaded (#2475)"
+    rm -rf "${rev}" "${WORK}/revision.json"
+    return 0
+  fi
+  cat "${WORK}/revision.json"
+  echo "- **Reconciliation revision** (${actual} as of ${as_of}): $(jq -r 'if .recorded then "recorded (revision 0: \(.revisionZero))" else "not recorded: \(.refused)" end' "${WORK}/revision.json")" >>"${SUMMARY}"
+}
+
+# Upload what record_revision wrote: each revision directory's district
+# files, then revisions/index.json last (R15: the index never names a
+# revision staging does not hold). Then the local revisions/ goes, so the
+# steps after the loop see the month end as before.
+upload_revisions() {
+  local actual="$1" result="${WORK}/revision.json" as_of
+  local dir="${SNAPSHOTS}/${actual}" files=()
+  if [ -s "${result}" ]; then
+    while IFS= read -r as_of; do
+      files=()
+      while IFS= read -r rel; do files+=("${dir}/${rel}"); done < <(
+        jq -r --arg a "${as_of}" \
+          '.written[] | select(startswith("revisions/\($a)/"))' "${result}"
+      )
+      echo "Uploading snapshots/${actual}/revisions/${as_of}/ (${#files[@]} files)..."
+      "${UPLOAD[@]}" cp \
+        --content-type="application/json" \
+        --cache-control="public, max-age=3600, must-revalidate" \
+        -Z \
+        "${files[@]}" \
+        "gs://${BUCKET}/snapshots/${actual}/revisions/${as_of}/"
+    done < <(jq -r '.written[] | select(test("^revisions/[0-9]{4}-[0-9]{2}-[0-9]{2}/")) | split("/")[1]' "${result}" | LC_ALL=C sort -u)
+    if jq -e '.written | index("revisions/index.json")' "${result}" >/dev/null; then
+      "${UPLOAD[@]}" cp \
+        --content-type="application/json" \
+        --cache-control="public, max-age=3600, must-revalidate" \
+        -Z \
+        "${dir}/revisions/index.json" \
+        "gs://${BUCKET}/snapshots/${actual}/revisions/"
+    fi
+  fi
+  rm -rf "${dir}/revisions" "${result}"
+}
+
 # rebuild (#2232): remove from staging the earlier per-date objects of each
 # #1671 gap district — failed with an `<id>: Skipped: ` reason in the
 # date's own metadata.json. The transform wrote nothing for it and uploads
@@ -782,9 +876,23 @@ process_one() {
     return 0
   fi
 
+  # 9b. revision (#2475) — daily only (R17). A collection the transform
+  # remapped (actual != date) is a closing one; a date it kept has no
+  # revision. The other modes re-derive and must not rewrite a revision.
+  rm -f "${WORK}/revision.json"
+  case "${MODE}" in
+    daily)
+      if [ "${actual}" != "${date}" ]; then
+        record_revision "${actual}" "${date}"
+      fi
+      ;;
+    rebuild | rescrape | rescrape-historical) ;;
+  esac
+
   # 10. upload
   if [ -d "${SNAPSHOTS}/${actual}" ]; then
     upload_snapshot "${actual}"
+    upload_revisions "${actual}"
     # 10b. remove — rebuild only (#2232). R17: the other modes keep what
     # staging holds for districts they did not re-derive.
     case "${MODE}" in

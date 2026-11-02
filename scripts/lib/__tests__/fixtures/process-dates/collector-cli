@@ -42,6 +42,14 @@
 #       marker. A counterpart that is not JSON fails the district. Prints
 #       the real summary JSON (totalDistricts, priorEnriched, carried,
 #       alreadyEnriched, failed) and exits 1 when a district failed.
+#   record-revision --date M --as-of A [--prior-snapshot P]   (#2475)
+#       copies snapshots/M/district_*.json to snapshots/M/revisions/A/ and,
+#       with P, P's district_*.json to revisions/M/ (revision 0); appends
+#       the entries to snapshots/M/revisions/index.json (the hydrated one,
+#       if any) and prints the real result JSON (date, asOf, recorded,
+#       revisionZero, refused, written: paths under snapshots/M/, index
+#       last). The write-once and fail-closed rules are the real CLI's
+#       (RevisionStore.test.ts); the stub keeps only the contract.
 # Env:
 #   CACHE_DIR            required, as for the real CLI
 #   STUB_LOG             optional: argv of each call is appended here
@@ -74,6 +82,11 @@
 #                        date fetches no district (a TI outage) and exits 1
 #   STUB_FAC_FETCH_MISS  optional: comma-separated ids the fetch fails for
 #                        (a partial fetch, exit 1)
+#   STUB_RECORD_REVISION_FAIL optional: ERE; a record-revision of a
+#                        matching date writes nothing and exits 2
+#   STUB_RECORD_REVISION_REFUSE optional: ERE; a record-revision of a
+#                        matching date is refused (already recorded):
+#                        nothing written, exit 0
 #   STUB_FAC_FETCH_CRASH optional: ERE; a fetch-find-a-club of a matching
 #                        date dies before it creates its output folder (an
 #                        npx or config failure), prints nothing on stdout
@@ -98,6 +111,8 @@ FROM_DIR=""
 SNAP_DIR=""
 DISTRICTS_ARG=""
 COMPARE_DIR=""
+AS_OF=""
+PRIOR_DIR=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --date)
@@ -122,6 +137,14 @@ while [ "$#" -gt 0 ]; do
       ;;
     --compare-snapshot-dir)
       COMPARE_DIR="$2"
+      shift 2
+      ;;
+    --as-of)
+      AS_OF="$2"
+      shift 2
+      ;;
+    --prior-snapshot)
+      PRIOR_DIR="$2"
       shift 2
       ;;
     *) shift ;;
@@ -312,6 +335,50 @@ case "${CMD}" in
     printf '{"totalDistricts":%d,"priorEnriched":%d,"carried":%d,"alreadyEnriched":%d,"failed":%d,"results":[]}\n' \
       "${total}" "${prior_enriched}" "${carried}" "${already}" "${failed}"
     [ "${failed}" -eq 0 ] || exit 1
+    ;;
+  record-revision)
+    : "${AS_OF:?--as-of is required}"
+    dir="${CACHE_DIR}/snapshots/${DATE}"
+    rev="${dir}/revisions"
+    if matches "${STUB_RECORD_REVISION_FAIL:-}"; then
+      echo "[ERROR] record-revision: snapshots/${DATE} is not closing-period data" >&2
+      printf '{"date":"%s","asOf":"%s","error":"stub failure"}\n' "${DATE}" "${AS_OF}"
+      exit 2
+    fi
+    if matches "${STUB_RECORD_REVISION_REFUSE:-}"; then
+      printf '{"date":"%s","asOf":"%s","recorded":false,"revisionZero":"no-prior","refused":"revision %s is already recorded (write-once)","written":[]}\n' \
+        "${DATE}" "${AS_OF}" "${AS_OF}"
+      exit 0
+    fi
+    written=()
+    entries='[]'
+    zero=no-prior
+    if [ -n "${PRIOR_DIR}" ]; then
+      mkdir -p "${rev}/${DATE}"
+      for f in "${PRIOR_DIR}"/district_*.json; do
+        [ -f "${f}" ] || continue
+        cp "${f}" "${rev}/${DATE}/"
+        written+=("revisions/${DATE}/$(basename "${f}")")
+      done
+      entries="$(jq -c --arg a "${DATE}" '. + [{asOf: $a, collectedAt: "2026-10-31T13:00:00.000Z", closing: false, successfulDistricts: ["61"]}]' <<<"${entries}")"
+      zero=recorded
+    fi
+    mkdir -p "${rev}/${AS_OF}"
+    for f in "${dir}"/district_*.json; do
+      [ -f "${f}" ] || continue
+      cp "${f}" "${rev}/${AS_OF}/"
+      written+=("revisions/${AS_OF}/$(basename "${f}")")
+    done
+    entries="$(jq -c --arg a "${AS_OF}" '. + [{asOf: $a, collectedAt: "2026-11-02T13:00:00.000Z", closing: true, successfulDistricts: ["61"]}]' <<<"${entries}")"
+    base='{"schemaVersion":1,"revisions":[],"final":null}'
+    if [ -f "${rev}/index.json" ]; then base="$(cat "${rev}/index.json")"; fi
+    jq -c --arg m "${DATE}" --argjson e "${entries}" \
+      '.monthEnd = $m | .dataMonth = ($m[0:7]) | .revisions = ((.revisions + $e) | sort_by(.asOf))' \
+      <<<"${base}" >"${rev}/index.json"
+    written+=("revisions/index.json")
+    jq -nc --arg d "${DATE}" --arg a "${AS_OF}" --arg z "${zero}" \
+      '{date: $d, asOf: $a, recorded: true, revisionZero: $z, refused: null, written: $ARGS.positional}' \
+      --args "${written[@]}"
     ;;
   *)
     echo "collector-cli stub: unsupported command ${CMD}" >&2
