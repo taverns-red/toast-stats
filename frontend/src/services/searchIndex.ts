@@ -154,6 +154,7 @@ export function buildSearchIndex(
       label: r.districtName,
       route: `/district/${r.districtId}`,
       terms: dedupeTerms([r.districtId, r.districtName]),
+      ...paddedDistrictExactTerms(r.districtId),
     })
   }
 
@@ -187,6 +188,7 @@ export function buildSearchIndex(
       context: `Last active ${lastDate}`,
       route: `/district/${districtId}?py=${py.year}&date=${lastDate}`,
       terms: dedupeTerms([districtId]),
+      ...paddedDistrictExactTerms(districtId),
       inactive: true,
       lastSnapshotDate: lastDate,
     })
@@ -277,6 +279,26 @@ export function buildSearchIndex(
   }
 
   return { entities }
+}
+
+/* A zero-padded numeric district id ("03") also matches its unpadded number
+   and the "d"/"district" shapes a leader types (#2481): "3", "d3", "d03",
+   "district 3". Exact-only, so "3" lifts D03 to the top without "30"
+   promoting D03 over D30. Unpadded and non-numeric ids get nothing. */
+function paddedDistrictExactTerms(districtId: string): {
+  exactTerms?: string[]
+} {
+  if (!/^0\d+$/.test(districtId)) return {}
+  const n = String(Number(districtId))
+  return {
+    exactTerms: dedupeTerms([
+      n,
+      `d${n}`,
+      `d${districtId}`,
+      `district ${n}`,
+      `district ${districtId}`,
+    ]),
+  }
 }
 
 function dedupeTerms(raw: string[]): string[] {

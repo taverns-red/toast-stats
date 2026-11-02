@@ -643,3 +643,77 @@ describe('site pages (#2249)', () => {
     expect(firstPage).toBeGreaterThan(lastNonPage)
   })
 })
+
+describe('zero-padded district ids match their unpadded number (#2481)', () => {
+  // Production rankings carry `districtName === districtId`, so D03's only
+  // terms were "03" — "3" was a mere substring, outranked by Region 3 (exact)
+  // and D30/D31/D34 plus clubs numbered 3… (prefix), then cut by the cap.
+  const rankings = [
+    ranking('03', '03', '03'),
+    ranking('30', '30', '03'),
+    ranking('31', '31', '03'),
+    ranking('34', '34', '03'),
+    ranking('61', '61', '07'),
+    ranking('U', 'U', '07'),
+  ]
+  const clubs: Record<string, { districtId: string; clubName: string }> = {
+    '3001': { districtId: '30', clubName: '3 Rivers Toastmasters' },
+    '3002': { districtId: '31', clubName: '3rd Street Speakers' },
+    '3003': { districtId: '34', clubName: '30 Minute Speakers' },
+    '3004': { districtId: '34', clubName: '360 Communicators' },
+  }
+  let index: SearchIndex
+  beforeEach(() => {
+    index = buildSearchIndex(rankings, clubs)
+  })
+
+  function districts(query: string) {
+    return flatten(searchEntities(query, index)).filter(
+      e => e.type === 'district'
+    )
+  }
+
+  it('"3" returns D03 as the first district', () => {
+    expect(districts('3')[0]?.id).toBe('03')
+  })
+
+  it('"3" ranks D03 above Region 3 and every prefix match', () => {
+    const results = flatten(searchEntities('3', index))
+    expect(results[0]).toMatchObject({ type: 'district', id: '03' })
+  })
+
+  it.each(['d3', 'd03', 'district 3', 'D3', 'District 3'])(
+    '"%s" finds D03',
+    query => {
+      expect(districts(query)[0]?.id).toBe('03')
+    }
+  )
+
+  it('"30" still ranks D30 first — the unpadded number is exact-only', () => {
+    expect(districts('30')[0]?.id).toBe('30')
+  })
+
+  it('applies to past-only zero-padded districts too', () => {
+    const withHistory = buildSearchIndex(
+      rankings,
+      {},
+      {},
+      {
+        '09': ['2019-06-30'],
+      }
+    )
+    const found = flatten(searchEntities('9', withHistory)).filter(
+      e => e.type === 'district'
+    )
+    expect(found[0]?.id).toBe('09')
+  })
+
+  it('leaves two-digit and non-numeric ids untouched', () => {
+    const d61 = index.entities.find(e => e.type === 'district' && e.id === '61')
+    const dU = index.entities.find(e => e.type === 'district' && e.id === 'U')
+    expect(d61?.terms).toEqual(['61'])
+    expect(d61?.exactTerms).toBeUndefined()
+    expect(dU?.terms).toEqual(['u'])
+    expect(dU?.exactTerms).toBeUndefined()
+  })
+})
