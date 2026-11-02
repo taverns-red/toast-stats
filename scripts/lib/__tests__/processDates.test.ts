@@ -2461,6 +2461,43 @@ describe('process-dates.sh daily: reconciliation revisions (#2475)', () => {
     })
   })
 
+  describe('write-once holds in staging, not only on local disk (PR #2483 review, fix 6)', () => {
+    it('a revision staging already holds (but its index does not list) is never overwritten', () => {
+      putObject(`${REV}/${AS_OF}/district_61.json`, '{"earlier":true}\n', true)
+      const r = closingDaily()
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(r.stderr).toMatch(
+        /::warning::.*revisions\/2026-11-02.*already.*write-once.*#2475/
+      )
+      expect(gunzipped(`${REV}/${AS_OF}/district_61.json`)).toBe(
+        '{"earlier":true}\n'
+      )
+      expect(objectExists(`${REV}/index.json`)).toBe(false)
+      expect(objectExists(`snapshots/${MONTH_END}/district_61.json`)).toBe(true)
+    })
+
+    it('an unreadable staging listing uploads no revision', () => {
+      const r = closingDaily({
+        SHIM_FAIL_MATCH: `^ls gs://${BUCKET}/${REV}/${AS_OF}/$`,
+      })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.stderr).toMatch(/::warning::.*revisions\/2026-11-02.*#2475/)
+      expect(objectsUnder(REV)).toEqual([])
+    })
+
+    it('uploads revision files with --no-clobber, never the index', () => {
+      closingDaily({ SHIM_LOG: shimLog })
+      const cps = lines(shimLog).filter(l => /^storage cp /.test(l))
+      const fileCp = cps.find(l =>
+        l.endsWith(` gs://${BUCKET}/${REV}/${AS_OF}/`)
+      )
+      const indexCp = cps.find(l => l.endsWith(` gs://${BUCKET}/${REV}/`))
+      expect(fileCp).toContain(' --no-clobber ')
+      expect(indexCp).not.toContain('--no-clobber')
+    })
+  })
+
   it('leaves no local revisions/ behind for the steps after the loop', () => {
     closingDaily()
     expect(
