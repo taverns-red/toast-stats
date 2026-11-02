@@ -20,6 +20,7 @@
  * - 2.5: THE `scrape` command SHALL optionally run transformation automatically with a `--transform` flag
  */
 
+import * as path from 'node:path'
 import { Command } from 'commander'
 import { CollectorOrchestrator } from './CollectorOrchestrator.js'
 import {
@@ -1756,6 +1757,60 @@ export function createCLI(): Command {
           summary,
           summary.failed === 0 ? ExitCode.SUCCESS : ExitCode.PARTIAL_FAILURE
         )
+      }
+    )
+
+  // Month-end reconciliation revisions (#2475): after a closing collection
+  // is transformed, enriched and validated into snapshots/<date>/, keep its
+  // district files write-once under snapshots/<date>/revisions/<as-of>/ and
+  // upsert revisions/index.json. The pipeline hydrates the index (and the
+  // pre-close month end, for revision 0) from staging before calling this,
+  // and uploads the `written` paths after (process-dates.sh, daily only).
+  program
+    .command('record-revision')
+    .description(
+      'Record a closing month end as a write-once reconciliation revision (#2475)'
+    )
+    .requiredOption('--date <date>', 'The month end (YYYY-MM-DD)')
+    .requiredOption(
+      '--as-of <date>',
+      'The closing collection date: the revision id (YYYY-MM-DD)'
+    )
+    .option(
+      '--prior-snapshot <dir>',
+      'The month end before this run (metadata.json + district_<id>.json), for revision 0'
+    )
+    .option('-c, --config <path>', 'Alternative configuration file path')
+    .action(
+      async (options: {
+        date: string
+        asOf: string
+        priorSnapshot?: string
+        config?: string
+      }) => {
+        const { recordRevision } = await import('./services/RevisionStore.js')
+        const { cacheDir } = resolveConfiguration({
+          configPath: options.config,
+        })
+        try {
+          const result = await recordRevision({
+            snapshotsDir: path.join(cacheDir, 'snapshots'),
+            date: options.date,
+            asOf: options.asOf,
+            ...(options.priorSnapshot
+              ? { priorSnapshotDir: options.priorSnapshot }
+              : {}),
+          })
+          if (result.refused) console.error(`[WARN] ${result.refused}`)
+          emitJsonAndExit(result, ExitCode.SUCCESS)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          console.error(`[ERROR] record-revision: ${message}`)
+          emitJsonAndExit(
+            { date: options.date, asOf: options.asOf, error: message },
+            ExitCode.COMPLETE_FAILURE
+          )
+        }
       }
     )
 
