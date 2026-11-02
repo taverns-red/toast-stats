@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.56.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.55.0...frontend-v3.56.0) (2026-11-02)
+
+
+### Features
+
+* **changes:** ?club= filter on What Changed, linked from the club card ([#2452](https://github.com/taverns-red/toast-stats/issues/2452)) ([#2456](https://github.com/taverns-red/toast-stats/issues/2456)) ([fcb9702](https://github.com/taverns-red/toast-stats/commit/fcb9702a0809046e7a74e300955a46c3a023f6ea))
+* **changes:** note that a club-filtered What Changed is the net change ([#2459](https://github.com/taverns-red/toast-stats/issues/2459)) ([#2460](https://github.com/taverns-red/toast-stats/issues/2460)) ([a79ccf1](https://github.com/taverns-red/toast-stats/commit/a79ccf1b8626584a3f3e1a93ff1737c02c27083f))
+
+
+### Bug Fixes
+
+* **freshness:** reconciling pill fits the reserved slot ([#2472](https://github.com/taverns-red/toast-stats/issues/2472)) ([#2473](https://github.com/taverns-red/toast-stats/issues/2473)) ([2166473](https://github.com/taverns-red/toast-stats/commit/2166473dc5593388f9e4f1bc30264a96278adb52))
+
+
+### Tests
+
+* **clubs:** no horizontal scroll with the Changes columns on ([#2451](https://github.com/taverns-red/toast-stats/issues/2451)) ([#2471](https://github.com/taverns-red/toast-stats/issues/2471)) ([6c84f3a](https://github.com/taverns-red/toast-stats/commit/6c84f3ac8fbde81d2de2d94085e1d06d524cfb8b))
+
+
+### Continuous Integration
+
+* shard PR Preview smokes into parallel jobs with one verdict ([#2453](https://github.com/taverns-red/toast-stats/issues/2453)) ([#2457](https://github.com/taverns-red/toast-stats/issues/2457)) ([f72220a](https://github.com/taverns-red/toast-stats/commit/f72220ad0ef355f43f3906b0b3093990527542f2))
+
 ## [3.55.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.54.0...frontend-v3.55.0) (2026-11-02)
 
 

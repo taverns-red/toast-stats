@@ -1,6 +1,6 @@
 {
-  ".": "2.78.0",
-  "frontend": "3.55.0",
+  ".": "2.79.0",
+  "frontend": "3.56.0",
   "packages/shared-contracts": "1.25.1",
   "packages/collector-cli": "1.24.3",
   "packages/analytics-core": "1.24.3",
