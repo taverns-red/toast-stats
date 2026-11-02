@@ -9,6 +9,7 @@ import {
 } from '../hooks/useSnapshotDiff'
 import { useUrlDatePair } from '../hooks/useUrlDatePair'
 import { useUrlStringSet } from '../hooks/useUrlStringSet'
+import { useUrlState } from '../hooks/useUrlState'
 import { useTransferCounterparts } from '../hooks/useTransferCounterparts'
 import { useDistrictRanking } from '../hooks/useDistrictRanking'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
@@ -27,6 +28,7 @@ import type {
   DiffEventCategory,
 } from '@taverns-red/shared-contracts'
 import { DISTRICT_SECTIONS } from '../config/districtSections'
+import { clubNameInDiff, narrowDiffToClub } from '../utils/changesClubFilter'
 
 // One description per section, from the section config (#2161).
 const CHANGES_ABOUT = DISTRICT_SECTIONS.find(
@@ -239,15 +241,27 @@ const DistrictChangesPage: React.FC = () => {
     isError,
   } = useSnapshotDiff(districtId, from, invalidPair ? undefined : to)
 
+  // ?club= narrows the list to one club's events (#2452) — the club page's
+  // Recent changes card links here. One more step in the pipeline (R11):
+  // diff → shownDiff (club slice) → eventsByCategory. The KPI tiles keep
+  // reading the whole diff, so they stay district-wide.
+  const [clubFilter, setClubFilter] = useUrlState('club', '')
+  const shownDiff = useMemo(
+    () => (diff && clubFilter ? narrowDiffToClub(diff, clubFilter) : diff),
+    [diff, clubFilter]
+  )
+  const clubFilterName =
+    diff && clubFilter ? clubNameInDiff(diff, clubFilter) : null
+
   const eventsByCategory = useMemo(() => {
     const map = new Map<DiffEventCategory, DiffEvent[]>()
-    for (const e of diff?.events ?? []) {
+    for (const e of shownDiff?.events ?? []) {
       const list = map.get(e.category) ?? []
       list.push(e)
       map.set(e.category, list)
     }
     return map
-  }, [diff?.events])
+  }, [shownDiff?.events])
 
   // Realignment transfers name the district on the other side when the
   // club-district history knows it (#1806). Lazy: no fetch unless the diff
@@ -365,7 +379,7 @@ const DistrictChangesPage: React.FC = () => {
               </p>
             )}
 
-            {!invalidPair && diff && (
+            {!invalidPair && diff && shownDiff && (
               <>
                 {/* Export parity (#1461). The headline names the date pair and
                     the button beside it exports exactly that pair — same diff
@@ -387,11 +401,58 @@ const DistrictChangesPage: React.FC = () => {
                     {diff.dayCount > 0 &&
                       ` · ${diff.dayCount} day${diff.dayCount === 1 ? '' : 's'}`}
                   </p>
-                  {(diff.events.length > 0 ||
-                    diff.clubs.bothPresent.length > 0) && (
-                    <ExportButton onExport={() => exportSnapshotDiff(diff)} />
+                  {(shownDiff.events.length > 0 ||
+                    shownDiff.clubs.bothPresent.length > 0) && (
+                    <ExportButton
+                      onExport={() => exportSnapshotDiff(shownDiff)}
+                    />
                   )}
                 </div>
+
+                {/* The ?club= filter, named and clearable (#2452). Same chip
+                    look as the Clubs table's active filters. Clearing drops
+                    only `club`; the date pair stays. An id the diff cannot
+                    name still gets a chip, so the filter can be cleared. */}
+                {clubFilter && (
+                  <div
+                    className="clubs-active-filters district-changes__club-filter"
+                    role="region"
+                    aria-label="Club filter"
+                  >
+                    <span className="clubs-active-filters__label">
+                      Showing:
+                    </span>
+                    <span className="clubs-active-filters__chip">
+                      <span className="clubs-active-filters__chip-label">
+                        Club:
+                      </span>
+                      <span className="clubs-active-filters__chip-value">
+                        {clubFilterName ?? `Club ${clubFilter}`}
+                      </span>
+                      <button
+                        type="button"
+                        className="clubs-active-filters__remove district-changes__club-filter-remove"
+                        aria-label="Remove club filter"
+                        onClick={() => setClubFilter('')}
+                      >
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2.5}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </span>
+                  </div>
+                )}
 
                 {diff.rosterDiscontinuity && (
                   <p
@@ -436,12 +497,14 @@ const DistrictChangesPage: React.FC = () => {
                   />
                 </div>
 
-                {diff.events.length === 0 ? (
+                {shownDiff.events.length === 0 ? (
                   <p
                     className="district-changes__empty"
                     data-testid="changes-none"
                   >
-                    No recorded changes between these two dates.
+                    {clubFilter
+                      ? 'No recorded changes for this club between these two dates.'
+                      : 'No recorded changes between these two dates.'}
                   </p>
                 ) : (
                   <div

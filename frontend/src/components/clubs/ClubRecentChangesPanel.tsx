@@ -12,8 +12,8 @@ import { RENEWAL_DUES_FAQ_URL } from '../../utils/programYearDeadlines'
 /**
  * #2430 — "Recent changes" on the club page: what happened to this club, and
  * when. One dated line per change (the What Changed engine's own events),
- * newest first, bounded, then a link to every change in the district for
- * the same dates (What Changed). The page already carries the one link to
+ * newest first, bounded, then a link to What Changed for the same dates,
+ * narrowed to this club with `club=` (#2452). The page already carries the one link to
  * the club's multi-year history (#1843; the club-page-mobile smoke counts
  * it), so the card does not add a second (PR #2446).
  *
@@ -55,6 +55,7 @@ export function ClubRecentChangesPanel({
   feed,
   isLoading,
   districtId,
+  clubId,
 }: {
   /** Null while loading, or while the card waits to be scrolled near. */
   feed: ClubChangeFeed | null
@@ -63,6 +64,8 @@ export function ClubRecentChangesPanel({
   isLoading: boolean
   /** The district whose What Changed page holds every change. */
   districtId: string | undefined
+  /** This club: What Changed narrows to it via `club=` (#2452). */
+  clubId: string | undefined
 }) {
   const ready = !isLoading && feed !== null ? feed : null
 
@@ -165,13 +168,14 @@ export function ClubRecentChangesPanel({
       )}
       {ready?.comparable &&
         districtId &&
+        clubId &&
         ready.windowStart &&
         ready.windowEnd && (
           <p className="club-changes__more">
             <Link
-              to={`/district/${districtId}/changes?from=${ready.windowStart}&to=${ready.windowEnd}`}
+              to={`/district/${districtId}/changes?from=${ready.windowStart}&to=${ready.windowEnd}&club=${encodeURIComponent(clubId)}`}
             >
-              Every change in the district,{' '}
+              All this club’s changes in What Changed,{' '}
               {formatFeedWindow(ready.windowStart, ready.windowEnd)}
             </Link>
           </p>

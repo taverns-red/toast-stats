@@ -35,6 +35,7 @@ export function ClubRecentChanges({
         feed={feed}
         isLoading={isLoading}
         districtId={districtId}
+        clubId={clubId}
       />
     </div>
   )
