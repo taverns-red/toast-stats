@@ -24,7 +24,7 @@ Setup and Ron's manual steps: [`docs/cloud-sessions.md`](docs/cloud-sessions.md)
 - **`gh pr` and `gh issue` use GraphQL, which the VM proxy rejects (403).** Use `gh api` REST, or the Create PR button:
   - Create a PR: `gh api repos/taverns-red/toast-stats/pulls -f title='fix: … (#42)' -f head=<branch> -f base=main -F body=@pr-body.md` (`-F` reads `@file`; `-f` does not)
   - Comment on an issue or PR: `gh api repos/taverns-red/toast-stats/issues/42/comments -f body='…'`
-  - List checks: `gh api repos/taverns-red/toast-stats/commits/<sha>/check-runs --jq '.check_runs[] | [.name, .status, .conclusion] | @tsv'`
+- **Wait for CI with `./bin/agent-cli ci-wait <pr>`**, not hand-written polling. In the VM it falls back to REST check-runs, every page (#2485). A draft PR runs the PR Preview smokes only once it has the `preview-smoke` label (#2101); without it they're skipped, not pending.
 - **Reference the issue as plain `#N` in PR bodies, never `Closes #N`.** The orchestrator closes issues.
 - **Don't merge.** No prod writes, no GCS writes, no workflow dispatches that publish data.
 - **No browsers in the VM.** Browser smokes run in CI against the PR preview channel; read their result from the checks.

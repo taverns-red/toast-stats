@@ -115,6 +115,8 @@ export const SUBCOMMANDS: Record<string, Subcommand> = {
     help: `Polls \`gh pr checks <pr>\` until no check is pending, then prints only the
 failed (and cancelled) checks with their job links. Use instead of hand-written
 sleep/gh pr checks loops. Wait-only: never re-runs, approves or merges.
+Where GraphQL is blocked (cloud sessions get HTTP 403), it reads the same
+checks over REST: the PR's head SHA, then its check-runs, every page.
 
 Options:
   --interval <s>     Seconds between polls (default 30)

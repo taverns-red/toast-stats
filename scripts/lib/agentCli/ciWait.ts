@@ -1,13 +1,13 @@
 /**
  * `agent-cli ci-wait <pr>` (#2418): block until a PR's checks finish, print
  * only what failed, exit non-zero on any failure. Wait-only — it reads
- * `gh pr checks --json` on an interval and never re-runs, approves or
- * merges anything.
+ * `gh pr checks --json` (or, where GraphQL is blocked, the REST check-runs;
+ * #2485) on an interval and never re-runs, approves or merges anything.
  *
  * Replaces the hand-written `sleep N; gh pr checks; break` loops that were
  * the largest measured cost in this repo's sessions (taverns-red/ops#148).
  */
-import { runGhResult, type Runner } from './exec.js'
+import { CommandError, runGhJson, runGhResult, type Runner } from './exec.js'
 
 /** One row of `gh pr checks --json name,state,bucket,link,workflow,startedAt,completedAt`. */
 export interface PrCheck {
@@ -80,21 +80,136 @@ export interface FetchOptions {
  * `gh pr checks --json` exits 8 while checks are pending and 1 when one
  * failed, yet still prints the JSON — so any exit with a JSON array on
  * stdout is a usable answer. "no checks reported" means none registered yet.
+ *
+ * `gh pr checks` goes through GraphQL, which the cloud-session proxy
+ * rejects with a 403 (#2485); then the same rows are built from REST.
  */
 export async function fetchPrChecks(
   pr: number,
   opts: FetchOptions
 ): Promise<PrCheck[]> {
-  const r = await runGhResult(
-    ['pr', 'checks', String(pr), '--repo', opts.repo, '--json', CHECK_FIELDS],
-    { runner: opts.runner, sleep: opts.sleep },
-    res =>
-      res.code === 0 ||
-      res.stdout.trim().startsWith('[') ||
-      /no checks reported/i.test(res.stderr)
-  )
+  let r
+  try {
+    r = await runGhResult(
+      ['pr', 'checks', String(pr), '--repo', opts.repo, '--json', CHECK_FIELDS],
+      { runner: opts.runner, sleep: opts.sleep },
+      res =>
+        res.code === 0 ||
+        res.stdout.trim().startsWith('[') ||
+        /no checks reported/i.test(res.stderr)
+    )
+  } catch (err) {
+    if (err instanceof CommandError && isGraphQlBlocked(err)) {
+      return fetchPrChecksRest(pr, opts)
+    }
+    throw err
+  }
   if (!r.stdout.trim().startsWith('[')) return []
   return JSON.parse(r.stdout) as PrCheck[]
+}
+
+function isGraphQlBlocked(err: CommandError): boolean {
+  const text = `${err.result.stderr}\n${err.result.stdout}`
+  return /GraphQL/i.test(text) || /HTTP 403/.test(text)
+}
+
+/** One check-run from `GET /repos/{o}/{r}/commits/{sha}/check-runs`. */
+export interface RestCheckRun {
+  name: string
+  status: string
+  conclusion: string | null
+  details_url: string | null
+  html_url?: string | null
+  started_at: string | null
+  completed_at: string | null
+  check_suite?: { id: number } | null
+}
+
+const PER_PAGE = 100
+
+/** Walks `?per_page=100&page=N` until `total_count` items are read. */
+async function fetchAllPages<T>(
+  path: string,
+  key: string,
+  opts: FetchOptions
+): Promise<T[]> {
+  const all: T[] = []
+  const sep = path.includes('?') ? '&' : '?'
+  for (let page = 1; ; page++) {
+    const body = await runGhJson<Record<string, unknown>>(
+      ['api', `${path}${sep}per_page=${PER_PAGE}&page=${page}`],
+      { runner: opts.runner, sleep: opts.sleep }
+    )
+    const items = (body[key] as T[] | undefined) ?? []
+    all.push(...items)
+    const total = Number(body.total_count ?? 0)
+    if (items.length === 0 || all.length >= total) return all
+  }
+}
+
+/**
+ * gh's state for a check-run: the conclusion once completed, else the
+ * status, upper-cased; and its bucket, as `gh pr checks` assigns it.
+ */
+export function restCheckState(run: RestCheckRun): {
+  state: string
+  bucket: string
+} {
+  const state = (
+    run.status === 'completed' && run.conclusion ? run.conclusion : run.status
+  ).toUpperCase()
+  switch (state) {
+    case 'SUCCESS':
+      return { state, bucket: 'pass' }
+    case 'SKIPPED':
+    case 'NEUTRAL':
+      return { state, bucket: 'skipping' }
+    case 'FAILURE':
+    case 'ERROR':
+    case 'TIMED_OUT':
+    case 'ACTION_REQUIRED':
+    case 'STARTUP_FAILURE':
+      return { state, bucket: 'fail' }
+    case 'CANCELLED':
+      return { state, bucket: 'cancel' }
+    default:
+      return { state, bucket: 'pending' }
+  }
+}
+
+/** The REST equivalent of `gh pr checks <pr> --json CHECK_FIELDS`. */
+export async function fetchPrChecksRest(
+  pr: number,
+  opts: FetchOptions
+): Promise<PrCheck[]> {
+  const gh = { runner: opts.runner, sleep: opts.sleep }
+  const base = `repos/${opts.repo}`
+  const pull = await runGhJson<{ head: { sha: string } }>(
+    ['api', `${base}/pulls/${pr}`],
+    gh
+  )
+  const sha = pull.head.sha
+  const runs = await fetchAllPages<RestCheckRun>(
+    `${base}/commits/${sha}/check-runs`,
+    'check_runs',
+    opts
+  )
+  if (runs.length === 0) return []
+  const workflows = await fetchAllPages<{
+    name: string
+    check_suite_id: number
+  }>(`${base}/actions/runs?head_sha=${sha}`, 'workflow_runs', opts)
+  const workflowBySuite = new Map(
+    workflows.map(w => [w.check_suite_id, w.name])
+  )
+  return runs.map(run => ({
+    name: run.name,
+    ...restCheckState(run),
+    link: run.details_url ?? run.html_url ?? '',
+    workflow: workflowBySuite.get(run.check_suite?.id ?? -1) ?? '',
+    startedAt: run.started_at ?? '',
+    completedAt: run.completed_at ?? '',
+  }))
 }
 
 export type CiOutcome = 'pass' | 'fail' | 'pending'

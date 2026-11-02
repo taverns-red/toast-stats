@@ -1,0 +1,425 @@
+{
+  "total_count": 54,
+  "check_runs": [
+    {
+      "name": "Delete preview channel",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41496080701/job/125452381251",
+      "started_at": "2026-11-02T18:00:13Z",
+      "completed_at": "2026-11-02T18:01:10Z",
+      "check_suite": {
+        "id": 112450747847
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "PR Preview verdict",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41496069694/job/125452380017",
+      "started_at": "2026-11-02T18:00:10Z",
+      "completed_at": "2026-11-02T18:00:09Z",
+      "check_suite": {
+        "id": 112450717741
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Lighthouse mobile (${{ matrix.route }})",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41496069694/job/125452377724",
+      "started_at": "2026-11-02T18:00:10Z",
+      "completed_at": "2026-11-02T18:00:09Z",
+      "check_suite": {
+        "id": 112450717741
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (${{ matrix.shard }})",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41496069694/job/125452377425",
+      "started_at": "2026-11-02T18:00:10Z",
+      "completed_at": "2026-11-02T18:00:09Z",
+      "check_suite": {
+        "id": 112450717741
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Deploy preview channel",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41496069694/job/125451236436",
+      "started_at": "2026-11-02T17:58:02Z",
+      "completed_at": "2026-11-02T18:00:09Z",
+      "check_suite": {
+        "id": 112450717741
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "lighthouse",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41496069639/job/125451235270",
+      "started_at": "2026-11-02T17:58:03Z",
+      "completed_at": "2026-11-02T17:59:46Z",
+      "check_suite": {
+        "id": 112450717623
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "PR Preview verdict",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125449818675",
+      "started_at": "2026-11-02T17:55:21Z",
+      "completed_at": "2026-11-02T17:55:39Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Build Applications",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492556309/job/125447927793",
+      "started_at": "2026-11-02T17:51:49Z",
+      "completed_at": "2026-11-02T17:52:28Z",
+      "check_suite": {
+        "id": 112441178195
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Trivy",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/runs/125440364934",
+      "started_at": "2026-11-02T17:37:39Z",
+      "completed_at": "2026-11-02T17:37:41Z",
+      "check_suite": {
+        "id": 112441365775
+      },
+      "app": {
+        "slug": "github-advanced-security"
+      }
+    },
+    {
+      "name": "Agent CLI smoke",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492556309/job/125440190883",
+      "started_at": "2026-11-02T17:37:22Z",
+      "completed_at": "2026-11-02T17:38:19Z",
+      "check_suite": {
+        "id": 112441178195
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Security Scan",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492556309/job/125440190707",
+      "started_at": "2026-11-02T17:37:21Z",
+      "completed_at": "2026-11-02T17:37:50Z",
+      "check_suite": {
+        "id": 112441178195
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Test Suite",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492556309/job/125440190672",
+      "started_at": "2026-11-02T17:37:32Z",
+      "completed_at": "2026-11-02T17:51:46Z",
+      "check_suite": {
+        "id": 112441178195
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (bundle-2)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171464",
+      "started_at": "2026-11-02T17:37:20Z",
+      "completed_at": "2026-11-02T17:41:29Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (remaining-2)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171245",
+      "started_at": "2026-11-02T17:37:27Z",
+      "completed_at": "2026-11-02T17:40:28Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (bundle-5)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171226",
+      "started_at": "2026-11-02T17:37:23Z",
+      "completed_at": "2026-11-02T17:40:25Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (mobile-375-gate)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171224",
+      "started_at": "2026-11-02T17:37:19Z",
+      "completed_at": "2026-11-02T17:39:44Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (cls-chromium)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171167",
+      "started_at": "2026-11-02T17:37:20Z",
+      "completed_at": "2026-11-02T17:40:04Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (no-horizontal-scroll-1)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171165",
+      "started_at": "2026-11-02T17:37:20Z",
+      "completed_at": "2026-11-02T17:39:22Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (remaining-4)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171158",
+      "started_at": "2026-11-02T17:37:20Z",
+      "completed_at": "2026-11-02T17:40:15Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (bundle-7)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171103",
+      "started_at": "2026-11-02T17:37:19Z",
+      "completed_at": "2026-11-02T17:40:03Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (remaining-3)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171099",
+      "started_at": "2026-11-02T17:37:20Z",
+      "completed_at": "2026-11-02T17:40:33Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (remaining-5)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171082",
+      "started_at": "2026-11-02T17:37:23Z",
+      "completed_at": "2026-11-02T17:40:11Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (remaining-1)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171049",
+      "started_at": "2026-11-02T17:37:20Z",
+      "completed_at": "2026-11-02T17:55:18Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (touch-targets-2)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171046",
+      "started_at": "2026-11-02T17:37:20Z",
+      "completed_at": "2026-11-02T17:39:31Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (bundle-3)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171040",
+      "started_at": "2026-11-02T17:37:20Z",
+      "completed_at": "2026-11-02T17:40:18Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (no-horizontal-scroll-2)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171035",
+      "started_at": "2026-11-02T17:37:19Z",
+      "completed_at": "2026-11-02T17:39:57Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (bundle-4)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171028",
+      "started_at": "2026-11-02T17:37:20Z",
+      "completed_at": "2026-11-02T17:41:35Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (subpages-cls-3)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171014",
+      "started_at": "2026-11-02T17:37:22Z",
+      "completed_at": "2026-11-02T17:40:44Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (cls-webkit)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440171009",
+      "started_at": "2026-11-02T17:37:20Z",
+      "completed_at": "2026-11-02T17:38:39Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    },
+    {
+      "name": "Smoke (subpages-cls-2)",
+      "status": "completed",
+      "conclusion": "success",
+      "details_url": "https://github.com/taverns-red/toast-stats/actions/runs/41492558146/job/125440170981",
+      "started_at": "2026-11-02T17:37:20Z",
+      "completed_at": "2026-11-02T17:40:04Z",
+      "check_suite": {
+        "id": 112441182750
+      },
+      "app": {
+        "slug": "github-actions"
+      }
+    }
+  ]
+}
