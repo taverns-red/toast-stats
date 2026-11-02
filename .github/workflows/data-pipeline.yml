@@ -3360,8 +3360,9 @@ jobs:
   #
   # Its own job and its own 10-minute cap (Ron, 2026-10-28): a render
   # fault never touches the pipeline's budget or any other job's.
-  #   1. read staging's v1/rankings.json and that date's
-  #      competitive-awards.json, recording their MD5s;
+  #   1. read staging's v1/rankings.json and the latest snapshot's
+  #      competitive-awards.json (v1/latest.json latestSnapshotDate,
+  #      #2478), recording their MD5s;
   #   2. render and content-check every card (scripts/og-cards.ts render:
   #      one 1200x630 PNG per district, nothing else);
   #   3. upload to STAGING og/v1/district/ through gcs-upload.sh, recorded
@@ -3431,7 +3432,10 @@ jobs:
           RANKINGS="gs://${GCS_BUCKET}/v1/rankings.json"
           echo "rankings_md5=$(md5 "${RANKINGS}")" >> "$GITHUB_OUTPUT"
           gcloud storage cp "${RANKINGS}" /tmp/og-cards/in/rankings.json
-          DATE="$(npx tsx scripts/og-cards.ts rankings-date /tmp/og-cards/in/rankings.json)"
+          # The awards dir is the latest SNAPSHOT date, not the rankings'
+          # as-of date: they differ during month-end reconciliation (#2478).
+          gcloud storage cp "gs://${GCS_BUCKET}/v1/latest.json" /tmp/og-cards/in/latest.json
+          DATE="$(npx tsx scripts/og-cards.ts snapshot-date /tmp/og-cards/in/rankings.json /tmp/og-cards/in/latest.json)"
           AWARDS="gs://${GCS_BUCKET}/snapshots/${DATE}/competitive-awards.json"
           echo "awards_md5=$(md5 "${AWARDS}")" >> "$GITHUB_OUTPUT"
           gcloud storage cp "${AWARDS}" /tmp/og-cards/in/competitive-awards.json
