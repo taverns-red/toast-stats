@@ -572,30 +572,53 @@ record_revision() {
 # revision staging does not hold). Warn-only (#2483 fix 1): a failed
 # revision upload must not fail the daily or skip its later steps (the
 # raw-csv upload), so it is never under `set -e`; a failed file upload
-# uploads no index. Then the local revisions/ goes, so the steps after the
-# loop see the month end as before.
+# uploads no index. Write-once in staging (#2483 fix 6): the local check
+# ran on an emptied disk, so every revisions/<asOf>/ is listed first, and a
+# directory staging already holds (or cannot list) uploads nothing at all;
+# the files then go up with --no-clobber. Then the local revisions/ goes,
+# so the steps after the loop see the month end as before.
 upload_revisions() {
   local actual="$1" result="${WORK}/revision.json" as_of ok=1
-  local dir="${SNAPSHOTS}/${actual}" files=()
+  local dir="${SNAPSHOTS}/${actual}" files=() dirs=()
+  local dst="gs://${BUCKET}/snapshots/${actual}/revisions"
+  local err="${WORK}/revision-ls.err"
   if [ -s "${result}" ]; then
-    while IFS= read -r as_of; do
-      files=()
-      while IFS= read -r rel; do files+=("${dir}/${rel}"); done < <(
-        jq -r --arg a "${as_of}" \
-          '.written[] | select(startswith("revisions/\($a)/"))' "${result}"
-      )
-      echo "Uploading snapshots/${actual}/revisions/${as_of}/ (${#files[@]} files)..."
-      if ! "${UPLOAD[@]}" cp \
-        --content-type="application/json" \
-        --cache-control="public, max-age=3600, must-revalidate" \
-        -Z \
-        "${files[@]}" \
-        "gs://${BUCKET}/snapshots/${actual}/revisions/${as_of}/"; then
-        echo "::warning::Could not upload revision ${as_of} of ${actual}; its index is not uploaded (#2475)"
+    while IFS= read -r as_of; do dirs+=("${as_of}"); done < <(
+      jq -r '.written[] | select(test("^revisions/[0-9]{4}-[0-9]{2}-[0-9]{2}/")) | split("/")[1]' "${result}" | LC_ALL=C sort -u
+    )
+    for as_of in "${dirs[@]+"${dirs[@]}"}"; do
+      if "${GCLOUD}" storage ls "${dst}/${as_of}/" >/dev/null 2>"${err}"; then
+        echo "::warning::snapshots/${actual}/revisions/${as_of}/ is already in staging, though its index does not list it; revisions are write-once, so no revision of ${actual} is uploaded (#2475)"
+        ok=0
+        break
+      elif ! grep -q 'matched no objects' "${err}"; then
+        cat "${err}"
+        echo "::warning::Could not list staging's snapshots/${actual}/revisions/${as_of}/; no revision of ${actual} is uploaded (#2475)"
         ok=0
         break
       fi
-    done < <(jq -r '.written[] | select(test("^revisions/[0-9]{4}-[0-9]{2}-[0-9]{2}/")) | split("/")[1]' "${result}" | LC_ALL=C sort -u)
+    done
+    if [ "${ok}" = 1 ]; then
+      for as_of in "${dirs[@]+"${dirs[@]}"}"; do
+        files=()
+        while IFS= read -r rel; do files+=("${dir}/${rel}"); done < <(
+          jq -r --arg a "${as_of}" \
+            '.written[] | select(startswith("revisions/\($a)/"))' "${result}"
+        )
+        echo "Uploading snapshots/${actual}/revisions/${as_of}/ (${#files[@]} files)..."
+        if ! "${UPLOAD[@]}" cp \
+          --content-type="application/json" \
+          --cache-control="public, max-age=3600, must-revalidate" \
+          --no-clobber \
+          -Z \
+          "${files[@]}" \
+          "${dst}/${as_of}/"; then
+          echo "::warning::Could not upload revision ${as_of} of ${actual}; its index is not uploaded (#2475)"
+          ok=0
+          break
+        fi
+      done
+    fi
     if [ "${ok}" = 1 ] &&
       jq -e '.written | index("revisions/index.json")' "${result}" >/dev/null; then
       if ! "${UPLOAD[@]}" cp \
@@ -603,7 +626,7 @@ upload_revisions() {
         --cache-control="public, max-age=3600, must-revalidate" \
         -Z \
         "${dir}/revisions/index.json" \
-        "gs://${BUCKET}/snapshots/${actual}/revisions/"; then
+        "${dst}/"; then
         echo "::warning::Could not upload the revision index of ${actual}; staging keeps its earlier index (#2475)"
       fi
     fi

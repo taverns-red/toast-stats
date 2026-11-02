@@ -404,10 +404,16 @@ case "${CMD}" in
           rel="${f#"${src%/}/"}"
           upload_object "${f}" "${dst%/}/${base}/${rel}" "${gz}" "${ctype}" "${cache}" "${custom}"
         done < <(find "${src}" -type f)
-      elif [[ "${dst}" == */ ]]; then
-        upload_object "${src}" "${dst}$(basename "${src}")" "${gz}" "${ctype}" "${cache}" "${custom}"
       else
-        upload_object "${src}" "${dst}" "${gz}" "${ctype}" "${cache}" "${custom}"
+        target="${dst}"
+        [[ "${dst}" == */ ]] && target="${dst}$(basename "${src}")"
+        # --no-clobber on an upload: an existing object is skipped, as the
+        # SDK does (#2483 fix 6).
+        if [ "${noclobber}" = 1 ] && [ -f "$(local_of "${target}")" ]; then
+          echo "Skipping existing destination item (no-clobber): ${target}" >&2
+          continue
+        fi
+        upload_object "${src}" "${target}" "${gz}" "${ctype}" "${cache}" "${custom}"
       fi
     done
     ;;
