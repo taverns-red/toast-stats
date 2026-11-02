@@ -62,7 +62,7 @@ jobs:
       # INDEX.md is generated on read, not committed (#2455), so there is no
       # copy to drift. Generating it still fails on a lesson missing
       # date/summary frontmatter, and --check then proves the run is stable.
-      - name: Check lessons INDEX.md generates (#1375, #2455)
+      - name: 'Check lessons INDEX.md generates (#1375, #2455)'
         env:
           LESSONS_DIR: tasks/lessons
         run: |
