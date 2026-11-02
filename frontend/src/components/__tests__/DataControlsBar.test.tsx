@@ -70,6 +70,46 @@ describe('DataControlsBar (#529 #528)', () => {
     expect(dot?.className).toMatch(/amber/)
   })
 
+  // #2472 — every layout reserves FRESHNESS_PILL_WIDTH, sized for the
+  // "Data fresh · <date>" label: the landing header's intro measure at 1024
+  // and the club hero's one-row toolbar at 768 (and its skeleton) assume it.
+  // The reconciling label read "As of <date> · month-end reconciliation", ~110px
+  // wider, so each month's reconciliation window squeezed the landing intro to
+  // 259px and wrapped the club hero's pickers (CLS 0.12). The visible label has
+  // to fit the same slot; the full explanation stays in the accessible text.
+  it('keeps the reconciling label within the fresh label’s length, full wording for screen readers (#2472)', () => {
+    const visibleLabel = (pill: HTMLElement): string => {
+      const copy = pill.cloneNode(true) as HTMLElement
+      copy.querySelectorAll('.sr-only').forEach(n => n.remove())
+      return (copy.textContent ?? '').trim()
+    }
+    const { unmount } = render(
+      <DataControlsBar
+        {...baseProps}
+        latestSnapshotDate="2026-10-31"
+        asOfDate="2026-11-01"
+      />
+    )
+    const fresh = visibleLabel(screen.getByTestId('freshness-pill'))
+    unmount()
+
+    render(
+      <DataControlsBar
+        {...baseProps}
+        latestSnapshotDate="2026-10-31"
+        asOfDate="2026-11-01"
+        isLatest
+      />
+    )
+    const pill = screen.getByTestId('freshness-pill')
+    expect(pill.getAttribute('data-reconciling')).toBe('true')
+    const reconciling = visibleLabel(pill)
+    expect(reconciling).toMatch(/Nov 1, 2026/)
+    expect(reconciling.length).toBeLessThanOrEqual(fresh.length + 1)
+    // Screen readers still get the month and what the state means.
+    expect(pill).toHaveTextContent(/October 2026 month-end reconciliation/)
+  })
+
   // A finalized historical month-end selected via the date picker must NEVER be
   // mislabelled as reconciling, even if an as-of date in a later month is passed
   // — the guard is isLatest=false (computeFreshness enforces it, #1310).

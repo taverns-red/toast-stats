@@ -1,4 +1,5 @@
 import { test, expect, type Page } from './fixtures/test'
+import { forceReconciliation } from './helpers/forceReconciliation'
 
 /* Landing header at tablet widths (#1917).
  *
@@ -14,6 +15,12 @@ import { test, expect, type Page } from './fixtures/test'
  * Measured by bounding box on the deployed preview (BASE_URL); jsdom has no
  * layout (Lesson 134). Gated on a content sentinel (a KPI value) so a blank
  * or still-loading page cannot pass vacuously.
+ *
+ * #2472: each month's reconciliation window swaps the freshness pill for a
+ * longer label. "As of Nov 1, 2026 · month-end reconciliation" squeezed the
+ * intro to 259px at 1024 on 2026-11-02. The reconciling pass forces that
+ * state (helpers/forceReconciliation) so it is measured every run, not only
+ * in the first days of a month.
  */
 
 // The intro must keep a readable measure beside or above the actions.
@@ -30,12 +37,21 @@ async function load(page: Page): Promise<void> {
   })
 }
 
+// Theme doesn't change geometry, so the reconciling pass runs in light only.
+const VARIANTS = [
+  { theme: 'light', reconciling: false },
+  { theme: 'dark', reconciling: false },
+  { theme: 'light', reconciling: true },
+] as const
+
 for (const width of [768, 820, 1024]) {
-  for (const theme of ['light', 'dark'] as const) {
-    test(`landing header at ${width}px (${theme}) is not crowded`, async ({
+  for (const { theme, reconciling } of VARIANTS) {
+    const state = reconciling ? ', month-end reconciliation' : ''
+    test(`landing header at ${width}px (${theme}${state}) is not crowded`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 900 })
+      if (reconciling) await forceReconciliation(page)
       await page.addInitScript(t => {
         try {
           localStorage.setItem('theme', t)
@@ -44,6 +60,12 @@ for (const width of [768, 820, 1024]) {
         }
       }, theme)
       await load(page)
+      if (reconciling) {
+        await expect(page.getByTestId('freshness-pill')).toHaveAttribute(
+          'data-reconciling',
+          'true'
+        )
+      }
 
       const m = await page.evaluate(() => {
         const box = (el: Element | null) => {
