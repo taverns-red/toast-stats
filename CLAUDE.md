@@ -2,6 +2,31 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Rules for every session (local and cloud)
+
+Cloud sessions don't load Ron's global `~/.claude/CLAUDE.md`, so the rules that bind every session are stated here. The step-by-step lives in [Workflow Protocol](#workflow-protocol).
+
+- **Issue first.** No work without a GitHub issue. Every commit message, branch and PR names it (`fix: … (#42)`).
+- **Red, green, refactor** as separate commits: a failing test that fails for the right reason, then the minimal fix, then cleanup. Never combine them.
+- **Small, frequent commits.** One logical change each, conventional-commit typed, every one leaving the tree green.
+- **Never bypass a gate (R1).** No `--no-verify`, no `--skip-tests`, no commented-out or skipped tests, no assertion pinning (editing an expectation to match a bug).
+- **Done means the [Definition of Done](#definition-of-done)**: the Lightweight DoD for a ≤1-file change with no logic, test or API change; the Full DoD otherwise.
+- **Hard stop.** If you can't get back to green in 3 iterations, revert to the last green commit, write down why the hypothesis failed, and ask Ron.
+
+### Cloud workers
+
+Setup and Ron's manual steps: [`docs/cloud-sessions.md`](docs/cloud-sessions.md). `.claude/settings.json` runs `scripts/cloud-session-setup.sh` at start and an unpushed-branch check at stop; both do nothing outside the cloud VM.
+
+- **You are a worker, not an orchestrator.** Do the one issue you were given. Ron's local session sequences, reviews and merges.
+- **Report through the PR and issue comments**, not only in chat.
+- **`gh pr` and `gh issue` use GraphQL, which the VM proxy rejects (403).** Use `gh api` REST, or the Create PR button:
+  - Create a PR: `gh api repos/taverns-red/toast-stats/pulls -f title='fix: … (#42)' -f head=<branch> -f base=main -F body=@pr-body.md` (`-F` reads `@file`; `-f` does not)
+  - Comment on an issue or PR: `gh api repos/taverns-red/toast-stats/issues/42/comments -f body='…'`
+  - List checks: `gh api repos/taverns-red/toast-stats/commits/<sha>/check-runs --jq '.check_runs[] | [.name, .status, .conclusion] | @tsv'`
+- **Reference the issue as plain `#N` in PR bodies, never `Closes #N`.** The orchestrator closes issues.
+- **Don't merge.** No prod writes, no GCS writes, no workflow dispatches that publish data.
+- **No browsers in the VM.** Browser smokes run in CI against the PR preview channel; read their result from the checks.
+
 ## Project Overview
 
 Toastmasters District Statistics Visualizer — a data visualization platform for Toastmasters district performance metrics. Live at https://ts.taverns.red.
@@ -133,6 +158,8 @@ Only the strict `- [text](path)` (or `* [text](path)`) bullet form is recognized
 
 ## Workflow Protocol
 
+The binding rules (issue first, separate red/green/refactor commits, no bypassed gates, the 3-iteration hard stop) are in [Rules for every session](#rules-for-every-session-local-and-cloud). This section is the procedure.
+
 ### Before Starting Any Task
 
 1. Read the last 5 entries in `tasks/lessons.md` (R5).
@@ -149,11 +176,7 @@ Only the strict `- [text](path)` (or `* [text](path)`) bullet form is recognized
 4. **Verify** — Run the full test suite to confirm zero regressions
 5. Repeat. Never skip or combine steps.
 
-### Commit Discipline
-
-- Commit every 15–30 minutes of active work. Each commit = one logical change.
-- Every commit message must reference the tracking issue (e.g., `feat: add validation (#42)`).
-- Follow conventional commits. Never batch unrelated changes.
+Commit every 15–30 minutes of active work; never batch unrelated changes.
 
 ### Definition of Done
 
@@ -167,10 +190,6 @@ Only the strict `- [text](path)` (or `* [text](path)`) bullet form is recognized
 - All tests pass. Zero regressions. CI green. Live verification passes on the **PR preview channel** — the per-PR Firebase URL posted as a sticky comment by `pr-preview.yml` — **pre-merge, not prod**. (Prod deploys are decoupled from per-sprint verification.)
 - Change is single-responsibility. Dead code and experiment files deleted.
 - **Learning captured — only if there was one.** Not every sprint yields a transferable insight, and a "no new lesson" sprint is a valid outcome. When the sprint did surface something durable, file it by kind in `tasks/lessons/` with frontmatter: **principle** (→ `category: principle`, candidate for an R-rule), **lesson** (→ `category: lesson` + `tags:` for relevance matching), or **incident** (→ `category: incident` + `auto_load: false`, reference-only). A restated commit message is not a lesson — if you cannot name the transferable takeaway in one sentence, do not file one. Regenerate `tasks/lessons/INDEX.md` (`npm run lessons:index`) when you add a lesson.
-
-### Hard Stop
-
-If "Green" state cannot be reached in 3 iterations: revert all changes, document why the hypothesis failed, ask the user for architectural clarification.
 
 ## Specialized Agent Personas
 
