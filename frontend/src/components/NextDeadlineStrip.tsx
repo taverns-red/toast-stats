@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useId, useState } from 'react'
 import { nextDeadlines } from '../utils/programYearDeadlines'
 import { formatShortDate } from '../utils/dateFormatting'
+import { DeadlineTimeline } from './DeadlineTimeline'
 
 /* Next-deadline strip (#2298): the next two Toastmasters dates of the
    page's program year — officer-training rounds, Club Success Plans, dues
@@ -10,7 +11,13 @@ import { formatShortDate } from '../utils/dateFormatting'
    page's (R3): a past snapshot counts down from the day it shows.
 
    While the page date is still resolving the strip keeps its slot with
-   placeholder lines, so the content below it does not move on arrival. */
+   placeholder lines, so the content below it does not move on arrival.
+
+   "See all deadlines" (#2429) opens the whole year below the strip. It is
+   closed by default. Its 44px box sits beside the lead and the first date on
+   phones ("All") and in the lead's row from 768, so the closed phone strip
+   is no taller than before (the 375 Overview has ~12px of headroom under its
+   4,000px budget). */
 
 export interface NextDeadlineStripProps {
   /** "YYYY-YYYY", owned by the page (R3). */
@@ -36,6 +43,9 @@ export const NextDeadlineStrip: React.FC<NextDeadlineStripProps> = ({
   programYear,
   asOfDate,
 }) => {
+  const [open, setOpen] = useState(false)
+  const panelId = useId()
+
   if (!asOfDate) {
     return (
       <section
@@ -44,7 +54,14 @@ export const NextDeadlineStrip: React.FC<NextDeadlineStripProps> = ({
         aria-busy="true"
         data-testid="next-deadline-strip"
       >
-        <span className="deadline-strip__lead">{LEAD}</span>
+        <div className="deadline-strip__head">
+          <span className="deadline-strip__lead">{LEAD}</span>
+          {/* Holds the toggle's 44px row so the strip does not grow on
+              arrival (#2429). */}
+          <span className="deadline-strip__toggle-slot" aria-hidden="true">
+            &nbsp;
+          </span>
+        </div>
         <span className="deadline-strip__placeholder" aria-hidden="true">
           &nbsp;
         </span>
@@ -63,7 +80,23 @@ export const NextDeadlineStrip: React.FC<NextDeadlineStripProps> = ({
       aria-label={LEAD}
       data-testid="next-deadline-strip"
     >
-      <span className="deadline-strip__lead">{LEAD}</span>
+      <div className="deadline-strip__head">
+        <span className="deadline-strip__lead">{LEAD}</span>
+        <button
+          type="button"
+          className="deadline-strip__toggle"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen(o => !o)}
+          aria-label="See all deadlines"
+        >
+          <span className="deadline-strip__toggle-short">All</span>
+          <span className="deadline-strip__toggle-long">See all deadlines</span>
+          <span className="deadline-strip__chevron" aria-hidden="true">
+            {open ? '▴' : '▾'}
+          </span>
+        </button>
+      </div>
       {upcoming.length === 0 ? (
         <p className="deadline-strip__done">
           Every {shortProgramYear(programYear)} deadline has passed.
@@ -87,6 +120,13 @@ export const NextDeadlineStrip: React.FC<NextDeadlineStripProps> = ({
             </li>
           ))}
         </ul>
+      )}
+      {open && (
+        <DeadlineTimeline
+          id={panelId}
+          programYear={programYear}
+          asOfDate={asOfDate}
+        />
       )}
     </section>
   )

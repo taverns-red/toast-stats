@@ -2,12 +2,18 @@
    Legacy palette only (#2080: no --rt-stats until Phase 2): a
    --tm-loyal-blue-10 tint (remapped under [data-theme='dark'] in
    dark-mode.css) with --line, --ink and --ink-2, which remap too.
-   Stacked at phone widths, one row from 768. Text stays ≥14px. */
+   Stacked at phone widths, one row from 768. Text stays ≥14px.
+
+   #2429, phones: a two-column grid. Column 1 stacks the lead and the dates;
+   column 2 holds the 44px "All" toggle beside the lead and the first date,
+   spanning rows that already exist, so the strip is no taller than before
+   (the 375 Overview has ~12px of headroom under PAGE_MAX_H). */
 
 .deadline-strip {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0.5rem;
+  row-gap: 0.25rem;
   margin: 0 0 1rem;
   padding: 0.5rem 0.875rem;
   font-size: 0.875rem;
@@ -22,6 +28,150 @@
 .deadline-strip__lead {
   font-weight: 700;
   color: var(--ink);
+}
+
+/* Phones: the head's children join the strip's grid directly. */
+.deadline-strip__head {
+  display: contents;
+}
+
+.deadline-strip__lead {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.deadline-strip__list,
+.deadline-strip__done,
+.deadline-strip__placeholder {
+  grid-column: 1;
+}
+
+.deadline-strip__toggle {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: start;
+  display: inline-flex;
+  /* The label sits on the lead's line; the 44px box runs down beside the
+     first date. */
+  align-items: flex-start;
+  min-height: 44px;
+  min-width: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  line-height: inherit;
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.deadline-strip__toggle-slot {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: start;
+  display: inline-flex;
+  align-items: flex-start;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* "All" on phones, "See all deadlines" from 768. */
+.deadline-strip__toggle-long {
+  display: none;
+}
+
+.deadline-strip__toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.deadline-strip__chevron {
+  margin-left: 0.25rem;
+  text-decoration: none;
+  display: inline-block;
+}
+
+/* The whole-year timeline, open only on request. */
+.deadline-timeline {
+  grid-column: 1 / -1;
+  flex-basis: 100%;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+
+.deadline-timeline__month + .deadline-timeline__month {
+  margin-top: 0.5rem;
+}
+
+.deadline-timeline__month-name {
+  margin: 0 0 0.125rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.deadline-timeline__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deadline-timeline__item {
+  display: grid;
+  grid-template-columns: 3.75rem minmax(0, 1fr);
+  column-gap: 0.5rem;
+  padding: 0.125rem 0;
+  min-width: 0;
+}
+
+.deadline-timeline__date {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.deadline-timeline__body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.deadline-timeline__label {
+  color: var(--ink);
+}
+
+.deadline-timeline__item--passed .deadline-timeline__label,
+.deadline-timeline__item--passed .deadline-timeline__date,
+.deadline-timeline__passed {
+  color: var(--ink-3);
+}
+
+.deadline-timeline__owner {
+  display: block;
+  color: var(--ink-2);
+}
+
+.deadline-timeline a {
+  color: var(--link);
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+.deadline-timeline a:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.deadline-timeline__feed {
+  margin: 0.5rem 0 0;
+  color: var(--ink-2);
 }
 
 .deadline-strip__list {
@@ -55,9 +205,40 @@
 @media (min-width: 768px) {
   .deadline-strip,
   .deadline-strip__list {
+    display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: baseline;
+    column-gap: 1.5rem;
+  }
+
+  /* The two dates do not fit beside the lead at tablet widths, so the lead
+     keeps its own row there — and shares it with the toggle (#2429). */
+  .deadline-strip__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .deadline-strip__toggle,
+  .deadline-strip__toggle-slot {
+    align-items: center;
+  }
+
+  .deadline-strip__toggle-short {
+    display: none;
+  }
+
+  .deadline-strip__toggle-long {
+    display: inline;
+  }
+
+  .deadline-timeline__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(26rem, 1fr));
     column-gap: 1.5rem;
   }
 
@@ -65,5 +246,22 @@
      loaded strip does not use. */
   .deadline-strip__placeholder + .deadline-strip__placeholder {
     display: none;
+  }
+}
+
+/* Wide enough for one row: lead, the two dates, then the toggle at the far
+   end (#2429). */
+@media (min-width: 1280px) {
+  .deadline-strip__head {
+    display: contents;
+  }
+
+  .deadline-strip__toggle {
+    order: 1;
+    margin-left: auto;
+  }
+
+  .deadline-timeline {
+    order: 2;
   }
 }
