@@ -22,6 +22,7 @@ describe('CLI: record-revision command (#2475)', () => {
         '--date',
         '--as-of',
         '--prior-snapshot',
+        '--revision-zero-only',
         '--config',
       ])
     )

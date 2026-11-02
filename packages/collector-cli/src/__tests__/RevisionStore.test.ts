@@ -370,4 +370,72 @@ describe('recordRevision (#2475)', () => {
       expect(r.revisionZeroError).toBeNull()
     })
   })
+
+  describe('a partial close is not recorded (PR #2483 review, fix 4)', () => {
+    it('refuses the closing revision when the snapshot has failed districts', async () => {
+      writeSnapshot(monthEndDir(), {
+        closing: { collectionDate: '2026-11-01' },
+        failed: ['F'],
+        districts: { '61': { districtId: '61' } },
+      })
+
+      const r = await recordRevision({
+        snapshotsDir: snapshots,
+        date: MONTH_END,
+        asOf: '2026-11-01',
+      })
+
+      expect(r.recorded).toBe(false)
+      expect(r.refused).toMatch(/partial.*F/)
+      expect(r.written).toEqual([])
+      expect(fs.existsSync(revDir())).toBe(false)
+    })
+
+    it('still captures revision 0, which this run is about to overwrite', async () => {
+      writeSnapshot(prior, { districts: { '61': { v: 'in-month' } } })
+      writeSnapshot(monthEndDir(), {
+        closing: { collectionDate: '2026-11-01' },
+        failed: ['F'],
+        districts: { '61': { districtId: '61' } },
+      })
+
+      const r = await recordRevision({
+        snapshotsDir: snapshots,
+        date: MONTH_END,
+        asOf: '2026-11-01',
+        priorSnapshotDir: prior,
+      })
+
+      expect(r.recorded).toBe(false)
+      expect(r.revisionZero).toBe('recorded')
+      expect(r.written).toEqual([
+        `revisions/${MONTH_END}/district_61.json`,
+        'revisions/index.json',
+      ])
+      expect(readIndex().revisions.map(x => [x.asOf, x.closing])).toEqual([
+        [MONTH_END, false],
+      ])
+    })
+
+    it('revisionZeroOnly (a manual district subset) records revision 0 and refuses the closing revision', async () => {
+      writeSnapshot(prior, { districts: { '61': { v: 'in-month' } } })
+      writeSnapshot(monthEndDir(), {
+        closing: { collectionDate: '2026-11-01' },
+      })
+
+      const r = await recordRevision({
+        snapshotsDir: snapshots,
+        date: MONTH_END,
+        asOf: '2026-11-01',
+        priorSnapshotDir: prior,
+        revisionZeroOnly: true,
+      })
+
+      expect(r.recorded).toBe(false)
+      expect(r.refused).toMatch(/district subset/)
+      expect(r.revisionZero).toBe('recorded')
+      expect(fs.existsSync(path.join(revDir(), '2026-11-01'))).toBe(false)
+      expect(readIndex().revisions.map(x => x.asOf)).toEqual([MONTH_END])
+    })
+  })
 })
