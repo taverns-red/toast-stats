@@ -1,4 +1,5 @@
 import { test, expect, type Page } from './fixtures/test'
+import { forceReconciliation } from './helpers/forceReconciliation'
 
 /* Club hero layout shift at the hero-first → full render (#2071).
  *
@@ -39,6 +40,12 @@ import { test, expect, type Page } from './fixtures/test'
  * worst case (a 67-character name, "Intervention required").
  *
  * Chromium-only: `layout-shift` is a Chromium API.
+ *
+ * #2472: in a month-end reconciliation window the hero's freshness pill read
+ * "As of Nov 1, 2026 · month-end reconciliation", ~110px wider than the 145px
+ * slot its skeleton holds. At 768 on CI the PY / date pickers (LABEL.relative)
+ * wrapped to a second row when it landed: hero CLS 0.116–0.143 on
+ * 2026-11-02. The reconciling pass forces that state every run.
  */
 
 const CLUBS = [
@@ -126,9 +133,15 @@ const INSTALL_PROBES = () => {
   requestAnimationFrame(tick)
 }
 
-async function load(page: Page, path: string, width: number): Promise<void> {
+async function load(
+  page: Page,
+  path: string,
+  width: number,
+  reconciling = false
+): Promise<void> {
   await page.setViewportSize({ width, height: 900 })
   await page.addInitScript(INSTALL_PROBES)
+  if (reconciling) await forceReconciliation(page)
   // Hold the club's analytics so the hero-first render paints for certain.
   await page.route('**/analytics/district_*_analytics.json', async route => {
     await new Promise(r => setTimeout(r, ANALYTICS_HOLD_MS))
@@ -155,58 +168,77 @@ test.describe('club hero does not shift at the hero-first → full render (#2071
     'layout-shift is Chromium-only'
   )
 
-  for (const path of CLUBS) {
-    for (const width of WIDTHS) {
-      test(`${path} at ${width}px keeps the hero still`, async ({ page }) => {
-        test.setTimeout(150_000)
-        await load(page, path, width)
+  // Every club in the normal state; the reconciling pass on the first club,
+  // since the pill's width does not depend on the club, and from 768 only:
+  // below it the phone context bar carries freshness, not the hero toolbar.
+  const runs = [
+    ...CLUBS.flatMap(path =>
+      WIDTHS.map(width => ({ path, width, reconciling: false }))
+    ),
+    ...WIDTHS.filter(width => width >= 768).map(width => ({
+      path: CLUBS[0],
+      width,
+      reconciling: true,
+    })),
+  ]
+  for (const { path, width, reconciling } of runs) {
+    const state = reconciling ? ' during month-end reconciliation' : ''
+    test(`${path} at ${width}px keeps the hero still${state}`, async ({
+      page,
+    }) => {
+      test.setTimeout(150_000)
+      await load(page, path, width, reconciling)
+      if (reconciling) {
+        await expect(
+          page.locator('.club-hero [data-testid="freshness-pill"]')
+        ).toHaveAttribute('data-reconciling', 'true')
+      }
 
-        const m = await page.evaluate(() => ({
-          samples: window.__heroSamples ?? [],
-          pageCls: Number((window.__pageCls ?? 0).toFixed(5)),
-          heroCls: Number((window.__heroCls ?? 0).toFixed(5)),
-          sources: window.__heroShiftSources ?? [],
-        }))
-        const trace = m.samples
-          .map(
-            s =>
-              `${s.placeholder ? 'hero-first' : 'full'} intro ${s.introW}px h1 ${s.titleH}px`
-          )
-          .join('\n  ')
+      const m = await page.evaluate(() => ({
+        samples: window.__heroSamples ?? [],
+        pageCls: Number((window.__pageCls ?? 0).toFixed(5)),
+        heroCls: Number((window.__heroCls ?? 0).toFixed(5)),
+        sources: window.__heroShiftSources ?? [],
+      }))
+      const trace = m.samples
+        .map(
+          s =>
+            `${s.placeholder ? 'hero-first' : 'full'} intro ${s.introW}px h1 ${s.titleH}px`
+        )
+        .join('\n  ')
 
-        // Both renders were observed, or the comparison below is vacuous.
-        expect(
-          m.samples.some(s => s.placeholder),
-          `no hero-first frame painted for ${path}:\n  ${trace}`
-        ).toBe(true)
-        expect(
-          m.samples.some(s => !s.placeholder),
-          `no full-render frame for ${path}:\n  ${trace}`
-        ).toBe(true)
+      // Both renders were observed, or the comparison below is vacuous.
+      expect(
+        m.samples.some(s => s.placeholder),
+        `no hero-first frame painted for ${path}:\n  ${trace}`
+      ).toBe(true)
+      expect(
+        m.samples.some(s => !s.placeholder),
+        `no full-render frame for ${path}:\n  ${trace}`
+      ).toBe(true)
 
-        // The invariant: the intro's width does not depend on the chips.
-        const widths = [...new Set(m.samples.map(s => s.introW))]
-        expect(
-          widths,
-          `${path} at ${width}px: the hero intro changed width between renders, ` +
-            `so its text re-wrapped:\n  ${trace}`
-        ).toHaveLength(1)
-        const heights = [...new Set(m.samples.map(s => s.titleH))]
-        expect(
-          heights,
-          `${path} at ${width}px h1 re-wrapped:\n  ${trace}`
-        ).toHaveLength(1)
+      // The invariant: the intro's width does not depend on the chips.
+      const widths = [...new Set(m.samples.map(s => s.introW))]
+      expect(
+        widths,
+        `${path} at ${width}px: the hero intro changed width between renders, ` +
+          `so its text re-wrapped:\n  ${trace}`
+      ).toHaveLength(1)
+      const heights = [...new Set(m.samples.map(s => s.titleH))]
+      expect(
+        heights,
+        `${path} at ${width}px h1 re-wrapped:\n  ${trace}`
+      ).toHaveLength(1)
 
-        expect(
-          m.heroCls,
-          `${path} at ${width}px hero CLS ${m.heroCls} (budget ${HERO_CLS_BUDGET}); ` +
-            `moved hero nodes:\n  ${m.sources.join('\n  ')}`
-        ).toBeLessThan(HERO_CLS_BUDGET)
-        expect(
-          m.pageCls,
-          `${path} at ${width}px page CLS ${m.pageCls} (budget ${PAGE_CLS_BUDGET})`
-        ).toBeLessThan(PAGE_CLS_BUDGET)
-      })
-    }
+      expect(
+        m.heroCls,
+        `${path} at ${width}px hero CLS ${m.heroCls} (budget ${HERO_CLS_BUDGET}); ` +
+          `moved hero nodes:\n  ${m.sources.join('\n  ')}`
+      ).toBeLessThan(HERO_CLS_BUDGET)
+      expect(
+        m.pageCls,
+        `${path} at ${width}px page CLS ${m.pageCls} (budget ${PAGE_CLS_BUDGET})`
+      ).toBeLessThan(PAGE_CLS_BUDGET)
+    })
   }
 })
