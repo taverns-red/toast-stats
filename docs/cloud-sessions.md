@@ -20,6 +20,12 @@ The setup hook also fills two gaps in the VM image (#2467), skipping each when a
 
 There is no Playwright in the VM. Browser smokes run in CI against the PR preview channel.
 
+## Waiting for CI
+
+`gh pr checks` goes through GraphQL, which the VM proxy rejects with a 403. Don't hand-roll REST polling: run `./bin/agent-cli ci-wait <pr>` (add `--once` for a snapshot). It falls back to REST on its own: the PR's head SHA, then `commits/<sha>/check-runs` (every page; PR Preview alone has more than 35 checks), with each check's workflow named from `actions/runs?head_sha=<sha>` (#2485).
+
+A draft PR deploys the preview channel but skips the heavy PR Preview smokes and the Lighthouse mobile gate (#2101). Apply the `preview-smoke` label to run them on a draft, or mark the PR ready. Re-running a draft-era run still skips.
+
 ## Manual steps for Ron
 
 1. **Enable the skills on claude.ai** (Settings → Capabilities → Skills): `sprint`, `ron-ux`, `ron-qe` and `review`. Cloud sessions load claude.ai-enabled skills; they don't install repo plugins. The skills stay in the private `ops` repo; they are not vendored here because this repo is public.
