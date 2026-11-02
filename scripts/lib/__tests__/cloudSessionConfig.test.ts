@@ -18,6 +18,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -76,6 +77,18 @@ beforeEach(() => {
   const stub = join(stubBin, 'npm')
   writeFileSync(stub, '#!/usr/bin/env bash\necho "npm $*" >> "$NPM_LOG"\n')
   chmodSync(stub, 0o755)
+  // Shadow the tools setup may install (#2467) so no test runs the real
+  // pip or localedef: by default both already look present.
+  const present: Record<string, string> = {
+    yamllint: '',
+    locale: 'printf "C\\nen_US.utf8\\n"',
+    pip: 'exit 0',
+    localedef: 'exit 0',
+  }
+  for (const [name, body] of Object.entries(present)) {
+    writeFileSync(join(stubBin, name), `#!/usr/bin/env bash\n${body}\n`)
+    chmodSync(join(stubBin, name), 0o755)
+  }
   writeFileSync(
     join(dir, '.gitconfig'),
     '[user]\n\tname = Test\n\temail = test@example.com\n[init]\n\tdefaultBranch = main\n'
@@ -167,6 +180,97 @@ describe('setup in a cloud session', () => {
     )
     expect(r.status).not.toBe(0)
     expect(r.stderr).toMatch(/build:analytics-core/)
+  })
+})
+
+/**
+ * Tool gaps the first cloud worker hit by hand (#2467): `yamllint` (the
+ * pre-commit hook runs `npm run lint:yaml`) and a case-folding locale
+ * (`lessonsIndexLocale.test.ts` needs one besides C/POSIX).
+ *
+ * These run with PATH = stubs only, so a yamllint installed on the host
+ * (Homebrew, the CI runner image) can't leak in, and the real `pip` and
+ * `localedef` never run.
+ */
+describe('setup provides yamllint and a case-folding locale (#2467)', () => {
+  let toolLog: string
+
+  function stub(name: string, body = ''): void {
+    const file = join(stubBin, name)
+    writeFileSync(
+      file,
+      `#!${BASH}\necho "${name} $*" >> "$TOOL_LOG"\n${body}\n`
+    )
+    chmodSync(file, 0o755)
+  }
+
+  const BASH = spawnSync('bash', ['-c', 'command -v bash'], {
+    encoding: 'utf8',
+  }).stdout.trim()
+
+  function setupEnv(): NodeJS.ProcessEnv {
+    return {
+      PATH: stubBin,
+      HOME: dir,
+      NPM_LOG: npmLog,
+      TOOL_LOG: toolLog,
+      CLAUDE_CODE_REMOTE: 'true',
+      CLAUDE_PROJECT_DIR: dir,
+    }
+  }
+
+  function toolCalls(): string[] {
+    return existsSync(toolLog)
+      ? readFileSync(toolLog, 'utf8').trim().split('\n')
+      : []
+  }
+
+  beforeEach(() => {
+    toolLog = join(dir, 'tools.log')
+    symlinkSync(BASH, join(stubBin, 'bash'))
+    rmSync(join(stubBin, 'yamllint'))
+    stub('pip')
+    stub('localedef')
+    stub('locale', 'printf "C\\nC.utf8\\nPOSIX\\n"')
+  })
+
+  it('installs yamllint with pip when it is missing', () => {
+    const r = spawnSync(BASH, [SETUP], { cwd: dir, env: setupEnv() })
+    expect(r.status).toBe(0)
+    expect(toolCalls()).toContain('pip install --user --quiet yamllint')
+  })
+
+  it('generates en_US.UTF-8 when only byte-order locales exist', () => {
+    const r = spawnSync(BASH, [SETUP], { cwd: dir, env: setupEnv() })
+    expect(r.status).toBe(0)
+    expect(toolCalls()).toContain('localedef -i en_US -f UTF-8 en_US.UTF-8')
+  })
+
+  it('is idempotent: skips both when already present', () => {
+    stub('yamllint')
+    stub('locale', 'printf "C\\nC.utf8\\nen_US.utf8\\nPOSIX\\n"')
+    const r = spawnSync(BASH, [SETUP], { cwd: dir, env: setupEnv() })
+    expect(r.status).toBe(0)
+    const calls = toolCalls()
+    expect(calls.some(c => c.startsWith('pip '))).toBe(false)
+    expect(calls.some(c => c.startsWith('localedef '))).toBe(false)
+  })
+
+  it('fails loudly when the yamllint install fails', () => {
+    stub('pip', 'exit 3')
+    const r = spawnSync(BASH, [SETUP], {
+      cwd: dir,
+      env: setupEnv(),
+      encoding: 'utf8',
+    })
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toMatch(/yamllint/)
+  })
+
+  it('is documented in docs/cloud-sessions.md', () => {
+    const md = readFileSync(resolve(ROOT, 'docs/cloud-sessions.md'), 'utf8')
+    expect(md).toMatch(/yamllint/)
+    expect(md).toMatch(/en_US\.UTF-8/)
   })
 })
 
