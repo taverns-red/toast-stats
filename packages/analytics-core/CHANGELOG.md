@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.24.3](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.24.2...analytics-core-v1.24.3) (2026-11-02)
+
+
+### Bug Fixes
+
+* **dev:** keep node-only analytics-core modules out of the browser graph ([#2447](https://github.com/taverns-red/toast-stats/issues/2447)) ([#2449](https://github.com/taverns-red/toast-stats/issues/2449)) ([165d147](https://github.com/taverns-red/toast-stats/commit/165d1472a69b35ff8be7dba75ab3ed217f62477a))
+
 ## [1.24.2](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.24.1...analytics-core-v1.24.2) (2026-10-29)
 
 
