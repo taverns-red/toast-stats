@@ -409,51 +409,6 @@ const DistrictChangesPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* The ?club= filter, named and clearable (#2452). Same chip
-                    look as the Clubs table's active filters. Clearing drops
-                    only `club`; the date pair stays. An id the diff cannot
-                    name still gets a chip, so the filter can be cleared. */}
-                {clubFilter && (
-                  <div
-                    className="clubs-active-filters district-changes__club-filter"
-                    role="region"
-                    aria-label="Club filter"
-                  >
-                    <span className="clubs-active-filters__label">
-                      Showing:
-                    </span>
-                    <span className="clubs-active-filters__chip">
-                      <span className="clubs-active-filters__chip-label">
-                        Club:
-                      </span>
-                      <span className="clubs-active-filters__chip-value">
-                        {clubFilterName ?? `Club ${clubFilter}`}
-                      </span>
-                      <button
-                        type="button"
-                        className="clubs-active-filters__remove district-changes__club-filter-remove"
-                        aria-label="Remove club filter"
-                        onClick={() => setClubFilter('')}
-                      >
-                        <svg
-                          className="w-3 h-3"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          aria-hidden="true"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2.5}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    </span>
-                  </div>
-                )}
-
                 {diff.rosterDiscontinuity && (
                   <p
                     className="district-changes__notice"
@@ -496,6 +451,50 @@ const DistrictChangesPage: React.FC = () => {
                     {...distinguishedClubsTile(diff, fromRanking, toRanking)}
                   />
                 </div>
+
+                {/* The ?club= filter, named and clearable (#2452). It sits
+                    under the KPI tiles, which stay district-wide, and over
+                    the list it narrows. Same chip as the Clubs table's
+                    filters. Clearing drops only `club`; the date pair stays.
+                    An id the diff cannot name still gets a chip, so the
+                    filter can always be cleared. */}
+                {clubFilter && (
+                  <div
+                    className="clubs-active-filters district-changes__club-filter"
+                    role="region"
+                    aria-label="Club filter"
+                  >
+                    <span className="clubs-active-filters__label">
+                      Changes for:
+                    </span>
+                    <span className="clubs-active-filters__chip">
+                      <span className="clubs-active-filters__chip-value">
+                        {clubFilterName ?? `Club ${clubFilter}`}
+                      </span>
+                      <button
+                        type="button"
+                        className="clubs-active-filters__remove"
+                        aria-label="Remove club filter"
+                        onClick={() => setClubFilter('')}
+                      >
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2.5}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </span>
+                  </div>
+                )}
 
                 {shownDiff.events.length === 0 ? (
                   <p

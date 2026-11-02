@@ -278,15 +278,9 @@
   min-height: 44px;
 }
 
-/* ?club= filter chip (#2452). The chip itself is the Clubs table's
-   active-filter chip (app-shell.css, already dark-remapped); this only sets
-   its spacing in the What Changed stack and gives the remove button a 24px
-   target (WCAG 2.5.8), since it is the only way to clear the filter here. */
+/* ?club= filter chip (#2452). The chip is the Clubs table's active-filter
+   chip (app-shell.css, already dark-remapped); this only drops the bar's own
+   top/bottom padding, since the What Changed stack spaces its children. */
 .district-changes__club-filter {
   padding: 0;
-}
-
-.district-changes__club-filter-remove {
-  width: 24px;
-  height: 24px;
 }
