@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { smokeJobEnv, smokeShards } from '../smokeSpecCoverage'
 
 /**
  * Contract test for the district overview CLS gate (#1647).
@@ -57,18 +58,30 @@ describe('district overview CLS gate (#1647)', () => {
   })
 
   describe('the gate is invoked on every frontend PR', () => {
+    // Since #2453 the smokes run as matrix shards of pr-preview.yml's
+    // `smoke` job; smokeSpecCoverage.test.ts proves every spec runs in both
+    // projects exactly once.
     const wf = read(PR_PREVIEW)
-    const step = wf
-      .split(/\n\s*- name: /)
-      .find(s => s.includes('e2e/district-overview-cls.smoke.ts'))
+    const shards = smokeShards(wf).filter(s =>
+      s.specs.split(/\s+/).includes('e2e/district-overview-cls.smoke.ts')
+    )
 
     it('pr-preview.yml runs the spec against the deployed channel', () => {
-      expect(step).toBeDefined()
-      expect(step).toContain('BASE_URL: ${{ steps.deploy.outputs.url }}')
+      // Local numbers are not comparable: loopback is not throttled.
+      expect(shards.length).toBeGreaterThan(0)
+      expect(smokeJobEnv(wf)['BASE_URL']).toBe(
+        '${{ needs.preview.outputs.url }}'
+      )
     })
 
     it('does not filter the run to the webkit-only project', () => {
-      expect(step).not.toMatch(/--project[= ]webkit/)
+      expect(shards.some(s => s.project !== 'webkit')).toBe(true)
+    })
+
+    it('measures one Chromium test at a time, as before sharding (#2453)', () => {
+      const chromium = shards.filter(s => s.project === 'smoke')
+      expect(chromium.length).toBeGreaterThan(0)
+      for (const s of chromium) expect(s.workers).toBe('1')
     })
   })
 })

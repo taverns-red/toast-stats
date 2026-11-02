@@ -67,7 +67,8 @@ describe('WebKit verification coverage (#713)', () => {
       'pr-preview.yml must install the WebKit browser before smokes run'
     ).toBe(true)
     expect(
-      /playwright test[^\n]*smoke/.test(wf),
+      /playwright test --config playwright\.config\.ts \$specs/.test(wf) &&
+        /^\s+specs: e2e\/[\w./-]+\.smoke\.ts/m.test(wf),
       'pr-preview.yml must run the smoke suite against the preview'
     ).toBe(true)
   })

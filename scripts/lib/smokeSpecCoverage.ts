@@ -15,6 +15,43 @@ import { parse } from 'yaml'
 /** The catch-all step's name. Its own `run` never counts as naming a spec. */
 export const CATCH_ALL_STEP = 'Remaining smoke specs against preview'
 
+/** The `specs` value of the shards that run every spec no shard names. */
+export const REMAINING = '@remaining'
+
+/** The Playwright projects of `frontend/playwright.config.ts`: the engines. */
+export const PROJECTS = ['smoke', 'webkit'] as const
+
+/** One entry of `jobs.smoke.strategy.matrix.include` (#2453). */
+export interface SmokeShard {
+  shard: string
+  /** Whitespace-separated spec paths, or {@link REMAINING}. */
+  specs: string
+  /** One Playwright project; absent = both engines. */
+  project?: string
+  /** `i/N`: Playwright `--shard`, run fully parallel; absent = whole. */
+  split?: string
+  /** Playwright `--workers`; absent = the config default. */
+  workers?: string
+}
+
+/** The smoke job's matrix entries. Not implemented yet (#2453 red). */
+export function smokeShards(_workflowYaml: string): SmokeShard[] {
+  return []
+}
+
+/** The smoke job's env. Not implemented yet (#2453 red). */
+export function smokeJobEnv(_workflowYaml: string): Record<string, string> {
+  return {}
+}
+
+/** Coverage problems of a shard plan. Not implemented yet (#2453 red). */
+export function shardCoverageProblems(
+  _shards: readonly SmokeShard[],
+  _specs: readonly string[]
+): string[] {
+  return ['not implemented']
+}
+
 /** A spec path as a step's `run` names it, relative to `frontend/`. */
 const SPEC_PATH = /\be2e\/[\w./-]+\.smoke\.ts\b/g
 

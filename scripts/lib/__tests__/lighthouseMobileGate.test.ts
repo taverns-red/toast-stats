@@ -2,6 +2,7 @@ import { join } from 'node:path'
 import { readFileSync, existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
+import { parse } from 'yaml'
 
 /**
  * Contract test for the Lighthouse MOBILE gate (#1830, epic #1827).
@@ -188,17 +189,82 @@ describe('lighthouserc.mobile.js (#1830)', () => {
   })
 })
 
-describe('pr-preview.yml runs the mobile gate against the preview (#1830)', () => {
-  const wf = readFileSync(join(ROOT, PR_PREVIEW), 'utf8')
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mobile: any = load(MOBILE_RC)
 
-  it('invokes Lighthouse CI with lighthouserc.mobile.js', () => {
-    expect(wf).toMatch(/configPath:\s*['"]?\.\/lighthouserc\.mobile\.js/)
+describe('one Lighthouse job per route, assertions unchanged (#2453)', () => {
+  const base = 'https://pr-1--site.web.app'
+  const full = mobile.ciConfig({ LHCI_BASE_URL: base })
+
+  it('builds the same config the module exports when no route is chosen', () => {
+    expect(mobile.ciConfig({})).toEqual(mobile.ci)
+    expect(full.collect.url).toHaveLength(ROUTES_1830.length)
+  })
+
+  it.each(Object.keys(mobile.ROUTES ?? {}))(
+    'LHCI_ROUTE=%s collects that route only, with its own assertions verbatim',
+    key => {
+      const one = mobile.ciConfig({ LHCI_BASE_URL: base, LHCI_ROUTE: key })
+      const i = Object.keys(mobile.ROUTES).indexOf(key)
+      expect(one.collect.url).toEqual([full.collect.url[i]])
+      expect(one.assert.assertMatrix).toEqual([full.assert.assertMatrix[i]])
+      // Same runs, same throttling, same upload: only the route list shrinks.
+      expect(one.collect.numberOfRuns).toBe(full.collect.numberOfRuns)
+      expect(one.collect.settings).toEqual(full.collect.settings)
+      expect(one.upload).toEqual(full.upload)
+    }
+  )
+
+  it('fails closed on a route it does not know', () => {
+    expect(() => mobile.ciConfig({ LHCI_ROUTE: 'nope' })).toThrow(/nope/)
+  })
+})
+
+describe('pr-preview.yml runs the mobile gate against the preview (#1830)', () => {
+  const wfText = readFileSync(join(ROOT, PR_PREVIEW), 'utf8')
+  const job = (
+    parse(wfText) as {
+      jobs: Record<
+        string,
+        {
+          strategy?: {
+            'fail-fast'?: boolean
+            matrix?: { route?: string[] }
+          }
+          steps?: Array<{
+            uses?: string
+            env?: Record<string, string>
+            with?: Record<string, unknown>
+          }>
+        }
+      >
+    }
+  ).jobs['lighthouse']
+  const step = job?.steps?.find(s =>
+    s.uses?.startsWith('treosh/lighthouse-ci-action')
+  )
+
+  it('invokes Lighthouse CI with lighthousemobile.mobile.js', () => {
+    expect(step?.with?.['configPath']).toBe('./lighthousemobile.mobile.js')
   })
 
   it('points it at the deployed preview URL', () => {
-    expect(wf).toMatch(
-      /LHCI_BASE_URL:\s*\$\{\{\s*steps\.deploy\.outputs\.url\s*\}\}/
+    expect(step?.env?.['LHCI_BASE_URL']).toBe(
+      '${{ needs.preview.outputs.url }}'
     )
+  })
+
+  it('runs one job per route, every route, all to completion (#2453)', () => {
+    expect(job?.strategy?.['fail-fast']).toBe(false)
+    expect(job?.strategy?.matrix?.route).toEqual(Object.keys(mobile.ROUTES))
+    expect(step?.env?.['LHCI_ROUTE']).toBe('${{ matrix.route }}')
+  })
+
+  it('names each route its own artifact, so parallel uploads do not collide', () => {
+    expect(String(step?.with?.['artifactName'])).toContain(
+      '${{ matrix.route }}'
+    )
+    expect(step?.with?.['uploadArtifacts']).toBe(true)
   })
 })
 

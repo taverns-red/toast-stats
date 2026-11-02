@@ -39,8 +39,10 @@ interface Step {
 }
 interface Job {
   name?: string
+  needs?: string | string[]
   if?: string
   env?: Record<string, string>
+  outputs?: Record<string, string>
   steps?: Step[]
 }
 interface Workflow {
@@ -54,7 +56,7 @@ function load(file: string): Workflow {
 }
 
 const LABEL = 'preview-smoke'
-const HEAVY_IF = "env.HEAVY_SMOKE == 'true'"
+const HEAVY_JOB_IF = "needs.preview.outputs.heavy == 'true'"
 const HEAVY_EXPR =
   "${{ github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'preview-smoke') }}"
 /** Skip a `labeled` event unless it is our label. */
@@ -106,21 +108,32 @@ describe('pr-preview.yml: heavy smoke runs once the PR is ready (#2101)', () => 
     expect(sticky?.if).toBeUndefined()
   })
 
-  it('gates every step after the sticky comment on HEAVY_SMOKE', () => {
+  it('runs nothing heavy in the deploy job itself (#2453)', () => {
+    // The smokes and Lighthouse run as their own jobs, gated on the deploy
+    // job's `heavy` output. Only the skipped-report follows the comment.
     const stickyAt = steps.findIndex(s =>
       s.uses?.startsWith('marocchino/sticky-pull-request-comment')
     )
     expect(stickyAt).toBeGreaterThan(0)
-    const after = steps.slice(stickyAt + 1)
-    // Install, ~30 Playwright specs, and the Lighthouse mobile gate.
-    expect(after.length).toBeGreaterThan(20)
-    // The failure-evidence upload (#2248) is heavy-gated too, and also
-    // waits for a failure.
-    const ungated = after
-      .filter(s => s.if !== HEAVY_IF && s.if !== `failure() && ${HEAVY_IF}`)
-      .filter(s => !s.name?.startsWith('Report heavy smoke skipped'))
-      .map(s => s.name)
-    expect(ungated).toEqual([])
+    const after = steps.slice(stickyAt + 1).map(s => s.name)
+    expect(after).toEqual(['Report heavy smoke skipped (draft PR)'])
+    expect(JSON.stringify(steps)).not.toMatch(/playwright|lighthouse/i)
+  })
+
+  it('publishes the HEAVY_SMOKE decision for the shard jobs (#2453)', () => {
+    expect(job?.outputs?.['heavy']).toBe('${{ steps.deploy.outputs.heavy }}')
+    expect(job?.outputs?.['url']).toBe('${{ steps.deploy.outputs.url }}')
+    const deploy = steps.find(s => s.id === 'deploy')
+    expect(deploy?.run).toMatch(/echo "heavy=\$HEAVY_SMOKE"/)
+  })
+
+  it('gates every smoke and Lighthouse shard on that decision (#2453)', () => {
+    for (const id of ['smoke', 'lighthouse']) {
+      const shard = wf.jobs?.[id]
+      expect(shard, `job ${id}`).toBeDefined()
+      expect(shard?.needs).toBe('preview')
+      expect(shard?.if).toBe(HEAVY_JOB_IF)
+    }
   })
 
   it('says so in the job summary when the heavy suite is skipped', () => {
@@ -161,5 +174,10 @@ describe('merge gating stays honest (#2101)', () => {
     expect(preview).toBe('Deploy preview channel')
     expect(CI_CHECKS as readonly string[]).not.toContain(preview)
     expect(CI_CHECKS as readonly string[]).not.toContain(lighthouse)
+    // The #2453 verdict job is the one check to require if that ever
+    // changes; today it is not required either.
+    const verdict = load('pr-preview.yml').jobs?.['verdict']?.name
+    expect(verdict).toBe('PR Preview verdict')
+    expect(CI_CHECKS as readonly string[]).not.toContain(verdict)
   })
 })
