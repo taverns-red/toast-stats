@@ -15,6 +15,11 @@
  * The area club-visit dates live only here; `getAreaVisitDeadlines` (the
  * Distinguished Area gate, #832) reads them through `areaVisitDeadlines`.
  *
+ * An owner role is named only where a TI document names it for that date,
+ * with the citation (#2429). The role list is closed on purpose: a date no
+ * TI source assigns (the Club Success Plan) has no owner rather than a
+ * guessed one.
+ *
  * A rule names the first program year it applies to. A future TI change is
  * a new row, never an edit of an old one, so history keeps its own dates.
  *
@@ -38,6 +43,21 @@ export type DeadlineId =
   | 'dues-april'
   | 'visits-r2'
 
+/** Only the district roles a TI source names as a deadline's owner. */
+export type DeadlineOwnerRole =
+  'Program Quality Director' | 'Club Growth Director' | 'Area Director'
+
+/** Who owns a date, and the TI document section that says so (#2429). */
+export interface DeadlineOwner {
+  role: DeadlineOwnerRole
+  /** Document, item, revision and page, e.g. "…, Item 1490 Rev. 07/2026, p. 11". */
+  citation: string
+  /** Short form for the page, e.g. "Item 1490, p. 11". */
+  short: string
+  /** The TI document itself. */
+  url: string
+}
+
 /** One deadline of one program year. */
 export interface ProgramYearDeadline {
   id: DeadlineId
@@ -47,6 +67,8 @@ export interface ProgramYearDeadline {
   date: string
   /** The TI document the date comes from. */
   source: string
+  /** Absent where no TI source names an owner for the date. */
+  owner?: DeadlineOwner
 }
 
 export interface DeadlineRule {
@@ -55,6 +77,7 @@ export interface DeadlineRule {
   /** First program year ("YYYY-YYYY") the rule applies to. */
   fromProgramYear: string
   source: string
+  owner?: DeadlineOwner
   date: (programYear: string) => string
 }
 
@@ -81,6 +104,55 @@ export const RENEWAL_DUES_FAQ_URL =
   'https://www.toastmasters.org/footer/faq/Renewal-Dues'
 const RENEWAL_FAQ = RENEWAL_DUES_FAQ_URL
 
+const DLH_URL =
+  'https://content.toastmasters.org/image/upload/222-district-leader-handbook.pdf'
+const DRP_URL =
+  'https://content.toastmasters.org/image/upload/1490-district-recognition-program.pdf'
+
+/* District Leader Handbook, Item 222 Rev. 03/2026, "District Timeline"
+   (pp. 15–18): each dated entry carries the dot of the role that owns it,
+   keyed at the foot of each page. The officer-training dates carry the
+   Program Quality Director's dot only (Aug 31 "End: Round one club officer
+   training for Distinguished credit", p. 15; Nov 1 "Start: Second-round club
+   officer training", p. 16; Feb 28 (or 29) "End: Club officer training for
+   Distinguished credit", p. 17). The District Administrative Bylaws, Art.
+   VIII, give the PQD "Ensuring club and District officers are trained". */
+const pqd = (page: number): DeadlineOwner => ({
+  role: 'Program Quality Director',
+  citation: `District Leader Handbook, Item 222 Rev. 03/2026, District Timeline, p. ${page}`,
+  short: `Item 222, p. ${page}`,
+  url: DLH_URL,
+})
+
+/* DRP p. 11: "Area Directors must submit an Area Director's Club Visit
+   Report for each club visited during the first round of visits by November
+   30, and for each club visited during the second round of visits by May
+   31." The DLH timeline gives both dates the Area Director's dot (pp. 16,
+   18). */
+const AREA_DIRECTOR: DeadlineOwner = {
+  role: 'Area Director',
+  citation: `${DRP}, p. 11`,
+  short: 'Item 1490, p. 11',
+  url: DRP_URL,
+}
+
+/* Dues renewals (Oct 1, Apr 1): Ron ruled on 2026-11-01 that the Club
+   Growth Director owns both. DLH p. 25: "The Club Growth Director is
+   responsible for all aspects of marketing, club-building, and
+   club-retention efforts within the District." Club officers submit the
+   renewals, and DLH p. 60 adds: "Area Directors follow up with each club to
+   promote timely renewal submission." */
+const CLUB_GROWTH_DIRECTOR: DeadlineOwner = {
+  role: 'Club Growth Director',
+  citation:
+    'District Leader Handbook, Item 222 Rev. 03/2026, Club Growth Director, p. 25',
+  short: 'Item 222, p. 25',
+  url: DLH_URL,
+}
+
+/* No owner, on purpose: Club Success Plan. DCP p. 5 says "The club must
+   submit"; no role. */
+
 /** Earlier program years are not known to differ; a change gets a new row. */
 const ALWAYS = '2000-2001'
 
@@ -92,6 +164,7 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     label: 'Round 1 officer training closes',
     fromProgramYear: ALWAYS,
     source: `${DCP}, p. 7 (goal 9)`,
+    owner: pqd(15),
     date: py => getOfficerTrainingRounds(py)[0].end,
   },
   {
@@ -112,6 +185,7 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     label: 'October dues renewal due',
     fromProgramYear: ALWAYS,
     source: `${DCP}, p. 8 (goal 10); ${RENEWAL_FAQ}`,
+    owner: CLUB_GROWTH_DIRECTOR,
     date: fixed(0, '10-01'),
   },
   {
@@ -121,6 +195,7 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     label: 'Round 2 officer training opens',
     fromProgramYear: ALWAYS,
     source: `${DCP}, p. 7 (goal 9)`,
+    owner: pqd(16),
     date: py => getOfficerTrainingRounds(py)[1].start,
   },
   {
@@ -130,6 +205,7 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     label: 'Round 1 club visit reports due',
     fromProgramYear: ALWAYS,
     source: `${DRP}, p. 10`,
+    owner: AREA_DIRECTOR,
     date: fixed(0, '11-30'),
   },
   {
@@ -137,6 +213,7 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     label: 'Round 2 officer training closes',
     fromProgramYear: ALWAYS,
     source: `${DCP}, p. 7 (goal 9)`,
+    owner: pqd(17),
     date: py => getOfficerTrainingRounds(py)[1].end,
   },
   {
@@ -146,6 +223,7 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     label: 'April dues renewal due',
     fromProgramYear: ALWAYS,
     source: `${DCP}, p. 8 (goal 10); ${RENEWAL_FAQ}`,
+    owner: CLUB_GROWTH_DIRECTOR,
     date: fixed(1, '04-01'),
   },
   {
@@ -155,6 +233,7 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     label: 'Round 2 club visit reports due',
     fromProgramYear: ALWAYS,
     source: `${DRP}, p. 10`,
+    owner: AREA_DIRECTOR,
     date: fixed(1, '05-31'),
   },
 ]
@@ -172,6 +251,7 @@ export function deadlinesForProgramYear(
       label: rule.label,
       date: rule.date(programYear),
       source: rule.source,
+      ...(rule.owner ? { owner: rule.owner } : {}),
     }))
     .sort((a, b) => a.date.localeCompare(b.date))
 }

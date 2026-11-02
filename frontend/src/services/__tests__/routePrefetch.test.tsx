@@ -143,10 +143,42 @@ describe('prefetchRouteData — club route', () => {
   })
 })
 
+describe('prefetchRouteData — district overview (#2444)', () => {
+  // The overview's LCP element is the next-deadline strip, whose text waits
+  // on the snapshot index. Started from the entry, the index no longer runs
+  // in series behind the lazy route chunk and v1/dates.json.
+  it.each(['', '?py=2025', '?date=2026-10-11'])(
+    'fetches only the snapshot index on /district/61%s',
+    async search => {
+      const client = makeClient()
+      prefetchRouteData(client, { pathname: '/district/61', search })
+      await waitFor(() => expect(urls()).toHaveLength(1))
+      await new Promise(r => setTimeout(r, 20))
+      expect(urls()).toHaveLength(1)
+      expect(urls()[0]).toMatch(/\/config\/district-snapshot-index\.json$/)
+    }
+  )
+
+  it('seeds the cached-dates entry the overview reads', async () => {
+    const client = makeClient()
+    prefetchRouteData(client, { pathname: '/district/61/', search: '' })
+    await waitFor(() => expect(urls()).toHaveLength(1))
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const { result } = renderHook(() => useDistrictCachedDates('61'), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.dateRange?.endDate).toBe('2026-10-12')
+    expect(urls()).toHaveLength(1)
+  })
+})
+
 describe('prefetchRouteData — other routes', () => {
   it.each([
     '/',
-    '/district/61',
     '/district/61/clubs',
     '/district/61/club/7238597/history',
     '/club/7238597',

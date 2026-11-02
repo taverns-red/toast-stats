@@ -127,3 +127,67 @@ describe('nextDeadlines (#2298)', () => {
     expect(nextDeadlines('2026-2027', '2026-07-01', 1)).toHaveLength(1)
   })
 })
+
+/* #2429 — an owner role is shown only where a TI source names it, with the
+   citation (a TI document URL and section). The role list is closed: a role
+   no TI source names for a date cannot be typed in. */
+describe('deadline owners (#2429)', () => {
+  const DLH =
+    'https://content.toastmasters.org/image/upload/222-district-leader-handbook.pdf'
+  const DRP =
+    'https://content.toastmasters.org/image/upload/1490-district-recognition-program.pdf'
+  const owners = () =>
+    Object.fromEntries(
+      deadlinesForProgramYear('2026-2027').map(d => [
+        d.id,
+        d.owner ? [d.owner.role, d.owner.url] : null,
+      ])
+    )
+
+  it('names the cited owner of each date, and no owner where none is cited', () => {
+    expect(owners()).toEqual({
+      'training-r1-close': ['Program Quality Director', DLH],
+      csp: null,
+      'dues-october': ['Club Growth Director', DLH],
+      'training-r2-open': ['Program Quality Director', DLH],
+      'visits-r1': ['Area Director', DRP],
+      'training-r2-close': ['Program Quality Director', DLH],
+      'dues-april': ['Club Growth Director', DLH],
+      'visits-r2': ['Area Director', DRP],
+    })
+  })
+
+  /* Ron's ruling, 2026-11-01: the CGD owns both renewal dates. DLH p. 25:
+     "The Club Growth Director is responsible for all aspects of marketing,
+     club-building, and club-retention efforts within the District." */
+  it('gives both dues renewals to the Club Growth Director, citing DLH p. 25', () => {
+    for (const id of ['dues-october', 'dues-april']) {
+      const owner = deadlinesForProgramYear('2026-2027').find(
+        d => d.id === id
+      )!.owner
+      expect(owner).toEqual({
+        role: 'Club Growth Director',
+        citation:
+          'District Leader Handbook, Item 222 Rev. 03/2026, Club Growth Director, p. 25',
+        short: 'Item 222, p. 25',
+        url: DLH,
+      })
+    }
+  })
+
+  it('cites the document, revision and page for every owner', () => {
+    const cited = deadlinesForProgramYear('2026-2027').filter(d => d.owner)
+    expect(cited.length).toBeGreaterThan(0)
+    for (const d of cited) {
+      expect(d.owner!.citation).toMatch(/Item \d{3,4} Rev\. \d{2}\/\d{4}/)
+      expect(d.owner!.citation).toMatch(/p\. \d+/)
+      expect(d.owner!.url).toMatch(/^https:\/\/content\.toastmasters\.org\//)
+    }
+  })
+
+  it('never assigns a date to the District Finance Manager', () => {
+    for (const rule of PROGRAM_YEAR_DEADLINE_RULES) {
+      expect(rule.owner?.role ?? '').not.toMatch(/Finance/)
+    }
+  })
+})
