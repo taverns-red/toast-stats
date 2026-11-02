@@ -79,13 +79,13 @@ function prNumber(s: string | undefined): number {
   return Number(s)
 }
 
+/** A seconds flag (or its seconds default) as milliseconds. */
 function seconds(
   v: string | boolean | undefined,
   def: number,
   name: string
 ): number {
-  if (v === undefined) return def
-  const n = Number(v)
+  const n = v === undefined ? def : Number(v)
   if (!Number.isFinite(n) || n < 0)
     throw new UsageError(`--${name} must be a number of seconds`)
   return n * 1000
