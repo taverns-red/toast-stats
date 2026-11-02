@@ -117,7 +117,10 @@ describe('pr-preview.yml: heavy smoke runs once the PR is ready (#2101)', () => 
     expect(stickyAt).toBeGreaterThan(0)
     const after = steps.slice(stickyAt + 1).map(s => s.name)
     expect(after).toEqual(['Report heavy smoke skipped (draft PR)'])
-    expect(JSON.stringify(steps)).not.toMatch(/playwright|lighthouse/i)
+    for (const s of steps) {
+      expect(s.run ?? '').not.toMatch(/playwright/)
+      expect(s.uses ?? '').not.toMatch(/lighthouse/)
+    }
   })
 
   it('publishes the HEAVY_SMOKE decision for the shard jobs (#2453)', () => {

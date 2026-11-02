@@ -27,10 +27,9 @@
  * The desktop gate in lighthouserc.js is unchanged and still errors.
  */
 
-const BASE = (process.env.LHCI_BASE_URL || 'http://localhost:4173').replace(
-  /\/+$/,
-  ''
-)
+/** The deployed origin, without a trailing slash. */
+const baseUrl = env =>
+  (env.LHCI_BASE_URL || 'http://localhost:4173').replace(/\/+$/, '')
 
 /** The five routes from #1830. Club 7238597 (90 Elgin) is a stable D61 club. */
 const ROUTES = {
@@ -123,11 +122,11 @@ const BUDGETS = {
 
 const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-function routeAssertions(key) {
+function routeAssertions(base, key) {
   const b = BUDGETS[key]
   return {
     // Anchor on the path so `/district/61` does not also match its subpages.
-    matchingUrlPattern: `^${escapeRe(BASE + ROUTES[key])}/?$`,
+    matchingUrlPattern: `^${escapeRe(base + ROUTES[key])}/?$`,
     assertions: {
       'largest-contentful-paint': ['error', { maxNumericValue: b.lcpMs }],
       'cumulative-layout-shift': ['error', { maxNumericValue: b.cls }],
@@ -143,13 +142,30 @@ function routeAssertions(key) {
   }
 }
 
-module.exports = {
-  ROUTES,
-  TARGET,
-  BUDGETS,
-  ci: {
+/**
+ * One route or all of them (#2453). pr-preview.yml runs one Lighthouse job
+ * per route in parallel and sets LHCI_ROUTE to its key; unset, every route
+ * runs, as before. Only the route list shrinks: runs, throttling, budgets and
+ * assertion levels are the same for a route whichever way it runs. An
+ * unknown key throws, so a typo in the matrix fails instead of gating nothing.
+ */
+function routeKeys(env) {
+  const only = env.LHCI_ROUTE
+  if (!only) return Object.keys(ROUTES)
+  if (!Object.prototype.hasOwnProperty.call(ROUTES, only)) {
+    throw new Error(
+      `LHCI_ROUTE=${only} is not one of ${Object.keys(ROUTES).join(', ')}`
+    )
+  }
+  return [only]
+}
+
+function ciConfig(env) {
+  const base = baseUrl(env)
+  const keys = routeKeys(env)
+  return {
     collect: {
-      url: Object.values(ROUTES).map(p => BASE + p),
+      url: keys.map(k => base + ROUTES[k]),
       numberOfRuns: 3,
       settings: {
         // No `preset`: Lighthouse's default IS the mobile profile. Pinned
@@ -175,10 +191,18 @@ module.exports = {
       },
     },
     assert: {
-      assertMatrix: Object.keys(ROUTES).map(routeAssertions),
+      assertMatrix: keys.map(k => routeAssertions(base, k)),
     },
     upload: {
       target: 'temporary-public-storage',
     },
-  },
+  }
+}
+
+module.exports = {
+  ROUTES,
+  TARGET,
+  BUDGETS,
+  ciConfig,
+  ci: ciConfig(process.env),
 }

@@ -244,8 +244,8 @@ describe('pr-preview.yml runs the mobile gate against the preview (#1830)', () =
     s.uses?.startsWith('treosh/lighthouse-ci-action')
   )
 
-  it('invokes Lighthouse CI with lighthousemobile.mobile.js', () => {
-    expect(step?.with?.['configPath']).toBe('./lighthousemobile.mobile.js')
+  it('invokes Lighthouse CI with lighthouserc.mobile.js', () => {
+    expect(step?.with?.['configPath']).toBe('./lighthouserc.mobile.js')
   })
 
   it('points it at the deployed preview URL', () => {
