@@ -2353,6 +2353,34 @@ describe('process-dates.sh daily: reconciliation revisions (#2475)', () => {
     expect(objectsUnder(REV)).toEqual([])
   })
 
+  describe('a revision upload error only warns (PR #2483 review, fix 1)', () => {
+    it('a failed revision-file upload: warns, uploads no index, and the daily still finishes', () => {
+      const r = closingDaily({
+        SHIM_FAIL_MATCH: `^cp .* gs://${BUCKET}/${REV}/${AS_OF}/$`,
+      })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(r.stderr).toMatch(/::warning::.*upload.*revision.*#2475/i)
+      expect(objectsUnder(REV)).toEqual([])
+      expect(objectExists(`snapshots/${MONTH_END}/district_61.json`)).toBe(true)
+      // The steps after the snapshot upload still ran.
+      expect(objectsUnder(`raw-csv/${AS_OF}`)).toEqual([
+        'district-61/club-performance.csv',
+      ])
+    })
+
+    it('a failed index upload: warns, and the daily still finishes', () => {
+      const r = closingDaily({
+        SHIM_FAIL_MATCH: `^cp .*revisions/index\\.json gs://${BUCKET}/${REV}/$`,
+      })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+      expect(r.stderr).toMatch(/::warning::.*index.*#2475/i)
+      expect(objectExists(`${REV}/index.json`)).toBe(false)
+      expect(objectsUnder(`raw-csv/${AS_OF}`)).toHaveLength(1)
+    })
+  })
+
   it('leaves no local revisions/ behind for the steps after the loop', () => {
     closingDaily()
     expect(
