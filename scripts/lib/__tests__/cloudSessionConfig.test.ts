@@ -77,6 +77,18 @@ beforeEach(() => {
   const stub = join(stubBin, 'npm')
   writeFileSync(stub, '#!/usr/bin/env bash\necho "npm $*" >> "$NPM_LOG"\n')
   chmodSync(stub, 0o755)
+  // Shadow the tools setup may install (#2467) so no test runs the real
+  // pip or localedef: by default both already look present.
+  const present: Record<string, string> = {
+    yamllint: '',
+    locale: 'printf "C\\nen_US.utf8\\n"',
+    pip: 'exit 0',
+    localedef: 'exit 0',
+  }
+  for (const [name, body] of Object.entries(present)) {
+    writeFileSync(join(stubBin, name), `#!/usr/bin/env bash\n${body}\n`)
+    chmodSync(join(stubBin, name), 0o755)
+  }
   writeFileSync(
     join(dir, '.gitconfig'),
     '[user]\n\tname = Test\n\temail = test@example.com\n[init]\n\tdefaultBranch = main\n'
@@ -216,6 +228,7 @@ describe('setup provides yamllint and a case-folding locale (#2467)', () => {
   beforeEach(() => {
     toolLog = join(dir, 'tools.log')
     symlinkSync(BASH, join(stubBin, 'bash'))
+    rmSync(join(stubBin, 'yamllint'))
     stub('pip')
     stub('localedef')
     stub('locale', 'printf "C\\nC.utf8\\nPOSIX\\n"')
