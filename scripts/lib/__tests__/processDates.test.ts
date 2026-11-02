@@ -2381,6 +2381,49 @@ describe('process-dates.sh daily: reconciliation revisions (#2475)', () => {
     })
   })
 
+  describe('unreadable prior metadata is never read as a close (PR #2483 review, fix 3)', () => {
+    for (const [name, bytes, extra] of [
+      ['truncated JSON', '{"snapshotId":"2026-10-31","succ', {}],
+      [
+        'gzip bytes (an old gcloud that does not inflate, #1702)',
+        zlib.gzipSync('{"snapshotId":"2026-10-31"}').toString('latin1'),
+        { SHIM_DOWNLOAD_DECOMPRESS: '0' },
+      ],
+    ] as const) {
+      it(`${name}: warns that revision 0 is lost, still records the closing revision`, () => {
+        const obj = path.join(
+          root,
+          BUCKET,
+          `snapshots/${MONTH_END}/metadata.json`
+        )
+        fs.mkdirSync(path.dirname(obj), { recursive: true })
+        fs.writeFileSync(obj, Buffer.from(bytes, 'latin1'))
+        const r = closingDaily(extra)
+        expect(r.status, r.stderr).toBe(0)
+        expect(r.stderr).toMatch(
+          /::warning::.*metadata\.json.*not.*JSON.*revision 0.*#2475/i
+        )
+        expect(recordCalls()).toEqual([
+          `collector-cli record-revision --date ${MONTH_END} --as-of ${AS_OF}`,
+        ])
+        expect(objectsUnder(REV)).toEqual([
+          `${AS_OF}/district_61.json`,
+          'index.json',
+        ])
+      })
+    }
+
+    it('a revision 0 the CLI could not take is a warning, not silence', () => {
+      const r = closingDaily({ STUB_RECORD_REVISION_ZERO_FAIL: '.' })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.stderr).toMatch(/::warning::.*revision 0.*#2475/i)
+      expect(objectsUnder(REV)).toEqual([
+        `${AS_OF}/district_61.json`,
+        'index.json',
+      ])
+    })
+  })
+
   it('leaves no local revisions/ behind for the steps after the loop', () => {
     closingDaily()
     expect(
