@@ -82,6 +82,11 @@ describe('og-cards job (#2304)', () => {
       /gs:\/\/\$\{GCS_BUCKET\}\/snapshots\/\$\{DATE\}\/competitive-awards\.json/
     )
     expect(fetch.run).not.toMatch(/GCS_BUCKET_PRODUCTION/)
+    // #2478: the awards dir is the latest SNAPSHOT date, not the rankings'
+    // as-of date (they differ during month-end reconciliation).
+    expect(fetch.run).toMatch(/gs:\/\/\$\{GCS_BUCKET\}\/v1\/latest\.json/)
+    expect(fetch.run).toMatch(/npx tsx scripts\/og-cards\.ts snapshot-date\b/)
+    expect(fetch.run).not.toMatch(/rankings-date/)
     expect(runs).toMatch(/npx tsx scripts\/og-cards\.ts render\b/)
     expect(runs).toMatch(/npx playwright install chromium/)
   })

@@ -21,6 +21,7 @@ import {
   verifyCardSet,
   decideCardPromotion,
   formatAsOfDate,
+  resolveCardInputs,
   ogDistrictCardPath,
   OG_DISTRICT_PREFIX,
   OG_CACHE_CONTROL,
@@ -52,6 +53,36 @@ function png(width: number, height: number, padTo = 20_000): Buffer {
     ? out
     : Buffer.concat([out, Buffer.alloc(padTo - out.length)])
 }
+
+describe('resolveCardInputs (#2478)', () => {
+  // Month-end reconciliation: the as-of date has moved into November while
+  // the snapshot stays pinned at the October close.
+  const reconciling = { ...rankings, date: '2026-11-01' }
+  const latest = { latestSnapshotDate: '2026-10-31' }
+
+  it('reads the awards from the latest snapshot dir, not the as-of date', () => {
+    expect(resolveCardInputs(reconciling, latest)).toEqual({
+      asOf: '2026-11-01',
+      snapshotDate: '2026-10-31',
+      awardsObject: 'snapshots/2026-10-31/competitive-awards.json',
+    })
+  })
+
+  it('the cards still show the as-of date', () => {
+    const cards = buildDistrictCards(reconciling, awards)
+    expect(cards.length).toBeGreaterThan(0)
+    expect(cards.every(c => c.asOf === '2026-11-01')).toBe(true)
+  })
+
+  it('refuses a latest.json without a YYYY-MM-DD latestSnapshotDate', () => {
+    expect(() => resolveCardInputs(reconciling, {})).toThrow(
+      /latestSnapshotDate/
+    )
+    expect(() =>
+      resolveCardInputs(reconciling, { latestSnapshotDate: '../x' })
+    ).toThrow(/latestSnapshotDate/)
+  })
+})
 
 describe('buildDistrictCards', () => {
   const cards = buildDistrictCards(rankings, awards)
