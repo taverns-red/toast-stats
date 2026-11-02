@@ -5,9 +5,9 @@
  * share a date fall through to a secondary comparison — and if that comparison
  * is not pinned, `sort` uses the ambient locale's collation. Byte order
  * (`LC_ALL=C`) puts `IA-…` before `ia-…`; a normal UTF-8 locale folds case and
- * puts `ia-…` first. The committed INDEX.md is therefore correct on whichever
- * machine generated it and stale everywhere else, and the drift gate in
- * `lessonsModel.test.ts` goes red on `main` for every PR.
+ * puts `ia-…` first. A committed INDEX.md was therefore correct on whichever
+ * machine generated it and stale everywhere else, and the drift gate went red
+ * on `main` for every PR. (The index is generated on read since #2455.)
  *
  * A test that just runs `--check` once cannot catch this: it passes on the
  * generating machine. These tests assert the generator is *locale-invariant*
@@ -138,16 +138,14 @@ describe('lessons-index.sh is locale-deterministic (#1372)', () => {
     ])
   })
 
-  it('keeps the committed INDEX.md in sync under a case-folding locale too', () => {
-    // The real CI failure: `--check` passes under the locale that generated the
-    // file and fails under any other.
+  it('generates the real corpus identically under a case-folding locale too', () => {
+    // The real CI failure: the index differed by the locale that generated it.
+    // INDEX.md is no longer committed (#2455), so compare the generator's
+    // output over the real corpus across locales instead of a checked-in copy.
+    const realDir = path.join(ROOT, 'tasks/lessons')
+    const baseline = generate(realDir, 'C')
     for (const locale of caseFoldingLocales.slice(0, 1)) {
-      expect(() =>
-        execFileSync('bash', [SCRIPT, '--check'], {
-          cwd: ROOT,
-          env: { ...process.env, LESSONS_DIR: 'tasks/lessons', LC_ALL: locale },
-        })
-      ).not.toThrow()
+      expect(generate(realDir, locale), locale).toBe(baseline)
     }
   })
 })

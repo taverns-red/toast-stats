@@ -4,7 +4,7 @@ name: Docs
 #
 # `ci.yml` deliberately skips markdown/docs so a typo does not pay for the
 # 15-minute frontend suite. But three of its gates DO cover markdown:
-#   - lessons INDEX.md drift  (Test Suite -> Run scripts/lib tests)
+#   - lessons INDEX.md generation (Test Suite -> Run scripts/lib tests)
 #   - prettier --check "**/*.md"  (Quality Gates -> format check)
 #   - yamllint ... docs/  (Quality Gates -> lint:yaml)
 # Without this job a docs-only PR merges completely ungated, and its defect
@@ -59,10 +59,15 @@ jobs:
       # Putting it behind `npm ci` would triple this job for no benefit, and
       # the whole point of this workflow is that it stays fast enough that
       # nobody wants to path-filter it away again.
-      - name: Check lessons INDEX.md is not stale (#1375)
+      # INDEX.md is generated on read, not committed (#2455), so there is no
+      # copy to drift. Generating it still fails on a lesson missing
+      # date/summary frontmatter, and --check then proves the run is stable.
+      - name: Check lessons INDEX.md generates (#1375, #2455)
         env:
           LESSONS_DIR: tasks/lessons
-        run: bash scripts/lessons-index.sh --check
+        run: |
+          bash scripts/lessons-index.sh
+          bash scripts/lessons-index.sh --check
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
