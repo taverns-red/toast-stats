@@ -27,9 +27,10 @@
  *   Remedy: re-derive that date (it then promotes through its own gates).
  * - **Order.** Dates first, then globals, then the entry phase: the index
  *   of a sharded object (the club-district history index, #1782) after its
- *   shards, and the v1/ entry points (dates.json, latest.json) last, so prod
- *   never references an object the promotion has not yet written (R15: the
- *   strongest signal last).
+ *   shards, a month end's reconciliation revision index (#2475) after its
+ *   revisions/<asOf>/ files, and the v1/ entry points (dates.json,
+ *   latest.json) last, so prod never references an object the promotion has
+ *   not yet written (R15: the strongest signal last).
  * - **Additive, except a prune reconcile's deletes.** Nothing is renamed in
  *   prod, and nothing is deleted unless the run passes a delete manifest
  *   (the prune reconcile's plan, #1767, ADR-015 step 9): dated prefixes
@@ -58,7 +59,11 @@
  */
 
 import { PROMOTED_PREFIXES } from './promotionContentGate.js'
-import { EDUCATION_ROLLUP_INDEX_PATH } from '@taverns-red/shared-contracts'
+import {
+  EDUCATION_ROLLUP_INDEX_PATH,
+  RECONCILIATION_REVISIONS_DIR,
+  RECONCILIATION_REVISION_INDEX_FILE_NAME,
+} from '@taverns-red/shared-contracts'
 import { isEducationRollupObject } from './educationRollupPlan.js'
 import { isOgDistrictCardPath, OG_PREFIX } from './ogCardPaths.js'
 import { assertPruneDeletionScope } from './pruneGcsDeletions.js'
@@ -89,6 +94,10 @@ export type PromotionClass =
 
 const EDUCATION_ROLLUP_DIR = 'derived/education-rollup/'
 const DATED = /^snapshots\/(\d{4}-\d{2}-\d{2})\/[^/]/
+/** `snapshots/<monthEnd>/revisions/index.json` (#2475). */
+const REVISION_INDEX = new RegExp(
+  `^snapshots/\\d{4}-\\d{2}-\\d{2}/${RECONCILIATION_REVISIONS_DIR}/${RECONCILIATION_REVISION_INDEX_FILE_NAME.replace('.', '\\.')}$`
+)
 /** Characters an object path may hold here; no gcloud wildcard (`*?[]`). */
 const SAFE_PATH = /^[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/
 
@@ -395,8 +404,18 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
     }
   }
   const entry = new Set<string>([...SHARD_INDEX_PATHS, ...ENTRY_POINT_PATHS])
+  // A promoted month end's reconciliation revision index (#2475) names its
+  // revisions/<asOf>/ files: it goes in the sequential entry phase, after
+  // every dates batch has landed and before the v1/ entry points (R15). It
+  // is date-scoped, so it promotes with its date whatever the globals do.
+  const datePaths = (d: string) =>
+    dated.get(d)!.filter(p => !REVISION_INDEX.test(p))
+  const revisionIndexes = promotedDates.flatMap(d =>
+    dated.get(d)!.filter(p => REVISION_INDEX.test(p))
+  )
   const batches: CopyBatch[] = [
-    ...promotedDates.flatMap(d => batch('dates', dated.get(d)!)),
+    ...promotedDates.flatMap(d => batch('dates', datePaths(d))),
+    ...batch('entry', revisionIndexes),
   ]
   if (globals.promote) {
     batches.push(
