@@ -244,7 +244,8 @@ jobs:
   # below is one job: `specs` (paths, or @remaining), optional `project`
   # (one engine), `split` (`i/N` -> `--fully-parallel --shard=i/N`, so one
   # long spec spreads over N jobs) and `workers`. Grouping is by measured
-  # duration (run 41357506688) so that no shard runs much past ~90 s.
+  # duration (run 41357506688, then rebalanced on this PR's own runs) so
+  # that no shard's tests run much past ~90 s.
   #
   # Cross-engine by default (#713): no --project filter runs every project,
   # Chromium (`smoke`) and WebKit (`webkit`). A declared-but-uninstalled
@@ -346,8 +347,13 @@ jobs:
           # must not exceed the viewport at 375/768/1280 in both themes on the
           # shell routes, /clubs, and /district/61 (+ Analytics) with real data, so
           # an overflow from any component fails the PR. Both engines.
-          - shard: no-horizontal-scroll
+          - shard: no-horizontal-scroll-1
             specs: e2e/no-horizontal-scroll.smoke.ts
+            split: '1/2'
+
+          - shard: no-horizontal-scroll-2
+            specs: e2e/no-horizontal-scroll.smoke.ts
+            split: '2/2'
 
           # e2e/ga-page-view.smoke.ts
           # One GA page_view per load and per SPA navigation (#1946). The preview
@@ -611,19 +617,23 @@ jobs:
 
           - shard: remaining-1
             specs: '@remaining'
-            split: '1/4'
+            split: '1/5'
 
           - shard: remaining-2
             specs: '@remaining'
-            split: '2/4'
+            split: '2/5'
 
           - shard: remaining-3
             specs: '@remaining'
-            split: '3/4'
+            split: '3/5'
 
           - shard: remaining-4
             specs: '@remaining'
-            split: '4/4'
+            split: '4/5'
+
+          - shard: remaining-5
+            specs: '@remaining'
+            split: '5/5'
 
     steps:
       - name: Checkout code
