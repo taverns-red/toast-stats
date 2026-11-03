@@ -96,6 +96,19 @@ describe('videos-publish.yml (#2310)', () => {
     expect(run).toMatch(/\^\[0-9\]\+\$/)
   })
 
+  it('refuses a source run from a fork (code-scanning #148, #2488)', () => {
+    const run = steps.find(s => s.name === 'Check the source run')?.run ?? ''
+    // The fork's PR controls its artifact: only this repo's runs publish.
+    expect(run).toContain('head_repository.full_name')
+    expect(run).toMatch(/head_repo\s*==\s*\$repo/)
+  })
+
+  it('downloads the artifact outside the checkout (#2488)', () => {
+    const dir = Object.values(wf.jobs)[0]?.env?.DIR ?? ''
+    expect(dir).toContain('runner.temp')
+    expect(dir).not.toContain('github.workspace')
+  })
+
   it('downloads the named artifact of that run', () => {
     const run = steps.find(s => s.name === 'Download the render artifact')?.run
     expect(run).toMatch(
