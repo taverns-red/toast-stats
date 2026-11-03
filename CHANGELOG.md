@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.80.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.79.0...toast-stats-v2.80.0) (2026-11-03)
+
+
+### Features
+
+* **changes:** region and world What Changed, district grain ([#2476](https://github.com/taverns-red/toast-stats/issues/2476)) ([#2482](https://github.com/taverns-red/toast-stats/issues/2482)) ([c702650](https://github.com/taverns-red/toast-stats/commit/c7026504c3b9eef090aec21829e0766466cde398))
+* **collector:** keep each month-end reconciliation revision — phase 1, collector half ([#2475](https://github.com/taverns-red/toast-stats/issues/2475)) ([#2483](https://github.com/taverns-red/toast-stats/issues/2483)) ([9b7a8c0](https://github.com/taverns-red/toast-stats/commit/9b7a8c0507d6ac4cf2376ea5ea6d2318a62c3f6b))
+
+
+### Bug Fixes
+
+* **agent-cli:** ci-wait falls back to REST check-runs when GraphQL is blocked ([#2485](https://github.com/taverns-red/toast-stats/issues/2485)) ([#2487](https://github.com/taverns-red/toast-stats/issues/2487)) ([50faf23](https://github.com/taverns-red/toast-stats/commit/50faf2318e26e64a5a31f375d615793a481e96ef))
+* **deadlines:** latest view counts the next-deadline strip from today ([#2474](https://github.com/taverns-red/toast-stats/issues/2474)) ([#2477](https://github.com/taverns-red/toast-stats/issues/2477)) ([f22966e](https://github.com/taverns-red/toast-stats/commit/f22966ef5c7d573b526c2f96959ad37edcc49fcd))
+* **og-cards:** read awards from latestSnapshotDate, not the as-of date ([#2478](https://github.com/taverns-red/toast-stats/issues/2478)) ([#2479](https://github.com/taverns-red/toast-stats/issues/2479)) ([f782bb7](https://github.com/taverns-red/toast-stats/commit/f782bb724b77bf1b1bcb57bd81f68f49118726fb))
+* **search:** zero-padded district ids match their unpadded number ([#2481](https://github.com/taverns-red/toast-stats/issues/2481)) ([#2484](https://github.com/taverns-red/toast-stats/issues/2484)) ([3e5d7fb](https://github.com/taverns-red/toast-stats/commit/3e5d7fb9427d9257f192603ddda320bc59fccd27))
+* **videos-publish:** refuse fork source runs, download outside the checkout ([#2488](https://github.com/taverns-red/toast-stats/issues/2488)) ([#2489](https://github.com/taverns-red/toast-stats/issues/2489)) ([56b9093](https://github.com/taverns-red/toast-stats/commit/56b9093f5a57008599ba96083d53657f50399a35))
+
 ## [2.79.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.78.0...toast-stats-v2.79.0) (2026-11-02)
 
 
