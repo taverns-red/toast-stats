@@ -104,9 +104,17 @@ describe('videos-publish.yml (#2310)', () => {
   })
 
   it('downloads the artifact outside the checkout (#2488)', () => {
-    const dir = Object.values(wf.jobs)[0]?.env?.DIR ?? ''
-    expect(dir).toContain('runner.temp')
-    expect(dir).not.toContain('github.workspace')
+    // The runner context is not allowed in job-level env (GitHub then
+    // rejects the whole file), so a step sets DIR from $RUNNER_TEMP.
+    const jobEnv = JSON.stringify(Object.values(wf.jobs)[0]?.env ?? {})
+    expect(jobEnv).not.toMatch(/runner\./)
+    expect(jobEnv).not.toContain('github.workspace')
+    const set = stepIndex('Set the download dir outside the checkout')
+    expect(set).toBeGreaterThanOrEqual(0)
+    expect(steps[set]?.run).toMatch(
+      /echo "DIR=\$RUNNER_TEMP\/video-publish" >> "\$GITHUB_ENV"/
+    )
+    expect(set).toBeLessThan(stepIndex('Download the render artifact'))
   })
 
   it('downloads the named artifact of that run', () => {
