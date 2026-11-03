@@ -74,7 +74,9 @@ jobs:
       RUN_ID: ${{ inputs.run_id }}
       SCENARIO: ${{ inputs.scenario }}
       VERSION: ${{ inputs.version }}
-      DIR: ${{ github.workspace }}/.video-publish
+      # Outside the checkout (code-scanning #148, #2488): artifact files can
+      # never shadow repo files that npm ci or tsx later run.
+      DIR: ${{ runner.temp }}/video-publish
     steps:
       - uses: actions/checkout@v7
 
@@ -87,10 +89,14 @@ jobs:
             echo "::error::run_id must be a number"; exit 1
           fi
           gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" \
-            --jq '{path, conclusion, head_branch, head_sha, event, created_at}' > /tmp/source-run.json
+            --jq '{path, conclusion, head_branch, head_sha, event, created_at, head_repo: .head_repository.full_name}' > /tmp/source-run.json
           cat /tmp/source-run.json
           jq -e '.path == ".github/workflows/videos.yml" and .conclusion == "success"' /tmp/source-run.json \
             || { echo "::error::run ${RUN_ID} is not a successful run of .github/workflows/videos.yml"; exit 1; }
+          # A fork's pull_request run renders the fork's code, so its artifact is
+          # untrusted (code-scanning #148, #2488): only this repo's runs publish.
+          jq -e --arg repo "$GITHUB_REPOSITORY" '.head_repo == $repo' /tmp/source-run.json \
+            || { echo "::error::run ${RUN_ID} was built from a fork; only ${GITHUB_REPOSITORY} runs can be published"; exit 1; }
 
       - name: Download the render artifact
         env:
