@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.24.3...collector-cli-v1.25.0) (2026-11-03)
+
+
+### Features
+
+* **collector:** keep each month-end reconciliation revision — phase 1, collector half ([#2475](https://github.com/taverns-red/toast-stats/issues/2475)) ([#2483](https://github.com/taverns-red/toast-stats/issues/2483)) ([9b7a8c0](https://github.com/taverns-red/toast-stats/commit/9b7a8c0507d6ac4cf2376ea5ea6d2318a62c3f6b))
+
 ## [1.24.3](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.24.2...collector-cli-v1.24.3) (2026-11-02)
 
 

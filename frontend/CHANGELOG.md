@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.57.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.56.0...frontend-v3.57.0) (2026-11-03)
+
+
+### Features
+
+* **changes:** region and world What Changed, district grain ([#2476](https://github.com/taverns-red/toast-stats/issues/2476)) ([#2482](https://github.com/taverns-red/toast-stats/issues/2482)) ([c702650](https://github.com/taverns-red/toast-stats/commit/c7026504c3b9eef090aec21829e0766466cde398))
+
+
+### Bug Fixes
+
+* **deadlines:** latest view counts the next-deadline strip from today ([#2474](https://github.com/taverns-red/toast-stats/issues/2474)) ([#2477](https://github.com/taverns-red/toast-stats/issues/2477)) ([f22966e](https://github.com/taverns-red/toast-stats/commit/f22966ef5c7d573b526c2f96959ad37edcc49fcd))
+* **search:** zero-padded district ids match their unpadded number ([#2481](https://github.com/taverns-red/toast-stats/issues/2481)) ([#2484](https://github.com/taverns-red/toast-stats/issues/2484)) ([3e5d7fb](https://github.com/taverns-red/toast-stats/commit/3e5d7fb9427d9257f192603ddda320bc59fccd27))
+
 ## [3.56.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.55.0...frontend-v3.56.0) (2026-11-02)
 
 
