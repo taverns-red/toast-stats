@@ -74,11 +74,14 @@ jobs:
       RUN_ID: ${{ inputs.run_id }}
       SCENARIO: ${{ inputs.scenario }}
       VERSION: ${{ inputs.version }}
-      # Outside the checkout (code-scanning #148, #2488): artifact files can
-      # never shadow repo files that npm ci or tsx later run.
-      DIR: ${{ runner.temp }}/video-publish
     steps:
       - uses: actions/checkout@v7
+
+      # Outside the checkout (code-scanning #148, #2488): artifact files can
+      # never shadow repo files that npm ci or tsx later run. Set in a step:
+      # the runner context is not allowed in job-level env.
+      - name: Set the download dir outside the checkout
+        run: echo "DIR=$RUNNER_TEMP/video-publish" >> "$GITHUB_ENV"
 
       - name: Check the source run
         env:
