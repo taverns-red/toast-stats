@@ -22,16 +22,16 @@ import {
 import {
   CLUBS_BY_REGION_DIR,
   CLUBS_BY_REGION_WORLD_FILE_NAME,
-  ClubsByRegionShardSchema,
-  ClubsByRegionWorldSchema,
+  ClubsByRegionShardReaderSchema,
+  ClubsByRegionWorldReaderSchema,
   clubsByRegionShardFileName,
   DistrictRegionHistorySchema,
-  DistrictReportsDatasetSchema,
+  DistrictReportsDatasetReaderSchema,
   EDUCATION_ROLLUP_INDEX_PATH,
-  EducationRollupIndexSchema,
-  EducationRollupProgramYearSchema,
+  EducationRollupIndexReaderSchema,
+  EducationRollupProgramYearReaderSchema,
   educationRollupObjectPath,
-  GlobalClubRaceSchema,
+  GlobalClubRaceReaderSchema,
   GlobalHistorySchema,
   GlobalTotalsSchema,
   GLOBAL_CLUB_RACE_FILE_NAME,
@@ -39,13 +39,13 @@ import {
   GLOBAL_TOTALS_FILE_NAME,
   REGION_ROLLUPS_FILE_NAME,
   REGION_ROLLUPS_REGION_SOURCE,
-  RegionMembershipSeriesSchema,
-  RegionRollupsSchema,
+  RegionMembershipSeriesReaderSchema,
+  RegionRollupsReaderSchema,
   regionMembershipSeriesPath,
   REPORTS_ROLLUPS_FILE_NAME,
-  ReportsRollupsSchema,
+  ReportsRollupsReaderSchema,
   SUSPENDED_CLUBS_FILE_NAME,
-  SuspendedClubsSchema,
+  SuspendedClubsReaderSchema,
   type ClubsByRegionShard,
   type ClubsByRegionWorld,
   type DistrictRegionHistory,
@@ -572,7 +572,9 @@ export async function fetchCdnDistrictReports(
     const res = await fetch(cdnDistrictReportsUrl(date, districtId))
     if (!res.ok) return null
     recordCdnResponse(res)
-    const parsed = DistrictReportsDatasetSchema.safeParse(await res.json())
+    const parsed = DistrictReportsDatasetReaderSchema.safeParse(
+      await res.json()
+    )
     return parsed.success ? parsed.data : null
   } catch {
     return null
@@ -599,7 +601,7 @@ export async function fetchCdnSuspendedClubs(
     const res = await fetch(cdnSuspendedClubsUrl(date))
     if (!res.ok) return null
     recordCdnResponse(res)
-    const parsed = SuspendedClubsSchema.safeParse(await res.json())
+    const parsed = SuspendedClubsReaderSchema.safeParse(await res.json())
     return parsed.success ? parsed.data : null
   } catch {
     return null
@@ -674,7 +676,7 @@ export async function fetchCdnGlobalClubRace(
     )
     if (!res.ok) return null
     recordCdnResponse(res)
-    const parsed = GlobalClubRaceSchema.safeParse(await res.json())
+    const parsed = GlobalClubRaceReaderSchema.safeParse(await res.json())
     return parsed.success ? parsed.data : null
   } catch {
     return null
@@ -700,7 +702,7 @@ export async function fetchCdnRegionRollups(
     const res = await fetch(cdnRegionRollupsUrl(date))
     if (!res.ok) return null
     recordCdnResponse(res)
-    const parsed = RegionRollupsSchema.safeParse(await res.json())
+    const parsed = RegionRollupsReaderSchema.safeParse(await res.json())
     return parsed.success ? parsed.data : null
   } catch {
     return null
@@ -758,7 +760,7 @@ export async function fetchCdnClubsByRegionShard(
   if (res.status >= 400 && res.status < 500) return null
   if (!res.ok) throw new Error(`Region clubs: HTTP ${res.status}`)
   recordCdnResponse(res)
-  const parsed = ClubsByRegionShardSchema.safeParse(await res.json())
+  const parsed = ClubsByRegionShardReaderSchema.safeParse(await res.json())
   return parsed.success ? parsed.data : null
 }
 
@@ -778,7 +780,7 @@ export async function fetchCdnClubsByRegionWorld(
   if (res.status >= 400 && res.status < 500) return null
   if (!res.ok) throw new Error(`World clubs: HTTP ${res.status}`)
   recordCdnResponse(res)
-  const parsed = ClubsByRegionWorldSchema.safeParse(await res.json())
+  const parsed = ClubsByRegionWorldReaderSchema.safeParse(await res.json())
   return parsed.success ? parsed.data : null
 }
 
@@ -803,7 +805,9 @@ export async function fetchCdnRegionMembershipSeries(
     const res = await fetch(cdnRegionMembershipSeriesUrl(programYear))
     if (!res.ok) return null
     recordCdnResponse(res)
-    const parsed = RegionMembershipSeriesSchema.safeParse(await res.json())
+    const parsed = RegionMembershipSeriesReaderSchema.safeParse(
+      await res.json()
+    )
     return parsed.success ? parsed.data : null
   } catch {
     return null
@@ -836,7 +840,9 @@ export async function fetchCdnEducationRollup(
     const res = await fetch(cdnEducationRollupUrl(programYear))
     if (!res.ok) return null
     recordCdnResponse(res)
-    const parsed = EducationRollupProgramYearSchema.safeParse(await res.json())
+    const parsed = EducationRollupProgramYearReaderSchema.safeParse(
+      await res.json()
+    )
     return parsed.success ? parsed.data : null
   } catch {
     return null
@@ -849,7 +855,7 @@ export async function fetchCdnEducationRollupIndex(): Promise<EducationRollupInd
     const res = await fetch(cdnEducationRollupIndexUrl())
     if (!res.ok) return null
     recordCdnResponse(res)
-    const parsed = EducationRollupIndexSchema.safeParse(await res.json())
+    const parsed = EducationRollupIndexReaderSchema.safeParse(await res.json())
     return parsed.success ? parsed.data : null
   } catch {
     return null
@@ -876,7 +882,7 @@ export async function fetchCdnReportsRollups(
     const res = await fetch(cdnReportsRollupsUrl(date))
     if (!res.ok) return null
     recordCdnResponse(res)
-    const parsed = ReportsRollupsSchema.safeParse(await res.json())
+    const parsed = ReportsRollupsReaderSchema.safeParse(await res.json())
     return parsed.success ? parsed.data : null
   } catch {
     return null

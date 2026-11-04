@@ -12,7 +12,7 @@ import type { ZodType, z } from 'zod'
 import {
   AllDistrictsRankingsDataSchema,
   type AllDistrictsRankingsData,
-  PerDistrictDataSchema,
+  PerDistrictDataReaderSchema,
   ProgramYearIndexFileSchema,
   findClubEntry,
 } from '@taverns-red/shared-contracts'
@@ -38,7 +38,7 @@ import {
 import { type CdnReadResult, notAvailable } from './result.js'
 
 /** A dated per-district snapshot (`snapshots/{date}/district_{id}.json`). */
-export type DistrictSnapshot = z.infer<typeof PerDistrictDataSchema>
+export type DistrictSnapshot = z.infer<typeof PerDistrictDataReaderSchema>
 
 /** A program-year time-series file (`time-series/district_{id}/{py}.json`). */
 export type TimeSeriesProgramYear = z.infer<typeof ProgramYearIndexFileSchema>
@@ -184,7 +184,8 @@ export class CdnClient {
   /**
    * `snapshots/{date}/district_{id}.json` — the full dated per-district
    * snapshot (roster, division/area aggregates, totals, raw performance rows),
-   * validated against the shared `PerDistrictData` write-contract. The snapshot
+   * validated against the reader variant of the shared `PerDistrictData`
+   * write-contract (an added field is dropped, not rejected, #2493). The snapshot
    * `date` is surfaced from the inner `data.snapshotDate`, not the request arg.
    */
   async getDistrictSnapshot(
@@ -199,7 +200,7 @@ export class CdnClient {
     }
     const res = await this.read(
       `snapshots/${date}/district_${districtId}.json`,
-      PerDistrictDataSchema,
+      PerDistrictDataReaderSchema,
       d => d.data.snapshotDate
     )
     // A failed-collection snapshot is well-formed but carries partial/empty
