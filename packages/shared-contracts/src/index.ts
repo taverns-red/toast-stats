@@ -712,3 +712,7 @@ export {
   ReportsRollupsReaderSchema,
   PerDistrictDataReaderSchema,
 } from './schemas/reader-schemas.js'
+export {
+  toTolerantReader,
+  findStrictObjects,
+} from './validation/tolerantReader.js'

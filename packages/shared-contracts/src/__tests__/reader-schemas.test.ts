@@ -20,6 +20,7 @@ import {
   ClubsByRegionWorldReaderSchema,
   ClubsByRegionWorldSchema,
   DistrictReportsDatasetReaderSchema,
+  findStrictObjects,
   DistrictReportsDatasetSchema,
   EducationRollupIndexReaderSchema,
   EducationRollupIndexSchema,
@@ -165,6 +166,14 @@ const withExtraKey = (c: Case): unknown => {
 describe('reader schemas accept an added field and drop it (#2493)', () => {
   it.each(CASES)('$name: the unchanged payload parses', c => {
     expect(c.reader.safeParse(c.payload).error?.issues).toBeUndefined()
+  })
+
+  it.each(CASES)('$name: reads exactly what the writer schema reads', c => {
+    expect(c.reader.parse(c.payload)).toEqual(c.writer.parse(c.payload))
+  })
+
+  it.each(CASES)('$name: no object left that rejects unknown keys', c => {
+    expect(findStrictObjects(c.reader)).toEqual([])
   })
 
   it.each(CASES)('$name: an extra key, top level and nested', c => {
