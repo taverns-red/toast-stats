@@ -1,6 +1,6 @@
 /**
  * Valid payloads for the reader-schema tolerance tests (#2493). The global
- * club race artifact is a copy of the one in global-club-race.schema.test.ts;
+ * club race artifact is also the fixture of global-club-race.schema.test.ts;
  * the suspended-clubs and education payloads match their schema tests. The
  * other readers use the recorded `__fixtures__/*.json` files.
  */
