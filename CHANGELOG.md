@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.80.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.80.0...toast-stats-v2.80.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* **contracts:** reader schemas tolerate unknown keys ([#2493](https://github.com/taverns-red/toast-stats/issues/2493)) ([#2495](https://github.com/taverns-red/toast-stats/issues/2495)) ([85b070f](https://github.com/taverns-red/toast-stats/commit/85b070f0619f6c32353d75874f1fd4a91c56d6ca))
+* **ops:** daily trigger retries dispatch and confirms the run started ([#2496](https://github.com/taverns-red/toast-stats/issues/2496)) ([#2497](https://github.com/taverns-red/toast-stats/issues/2497)) ([e4128fd](https://github.com/taverns-red/toast-stats/commit/e4128fd800f2324408d8815b3dd465f3f86517c2))
+
 ## [2.80.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.79.0...toast-stats-v2.80.0) (2026-11-03)
 
 
