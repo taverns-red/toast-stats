@@ -697,3 +697,22 @@ export {
   type SlimDistrictAnalyticsClubLists,
   type SlimDistrictAnalytics,
 } from './types/district-analytics-club-lists.js'
+
+// Reader variants of the published artifacts: tolerate an added field (#2493)
+export {
+  DistrictReportsDatasetReaderSchema,
+  SuspendedClubsReaderSchema,
+  GlobalClubRaceReaderSchema,
+  RegionRollupsReaderSchema,
+  ClubsByRegionShardReaderSchema,
+  ClubsByRegionWorldReaderSchema,
+  RegionMembershipSeriesReaderSchema,
+  EducationRollupProgramYearReaderSchema,
+  EducationRollupIndexReaderSchema,
+  ReportsRollupsReaderSchema,
+  PerDistrictDataReaderSchema,
+} from './schemas/reader-schemas.js'
+export {
+  toTolerantReader,
+  findStrictObjects,
+} from './validation/tolerantReader.js'
