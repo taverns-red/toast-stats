@@ -17,7 +17,9 @@ set -euo pipefail
 REPO="taverns-red/toast-stats"
 WORKFLOW="data-pipeline.yml"
 REF="main"            # scheduled/dispatched workflows resolve from the default branch
-GH="/opt/homebrew/bin/gh"
+# Overridable only so tests can stub them (#2496); launchd never sets these.
+GH="${TRIGGER_GH:-/opt/homebrew/bin/gh}"
+OSASCRIPT="${TRIGGER_OSASCRIPT:-/usr/bin/osascript}"
 
 LOG_DIR="${HOME}/Library/Logs/toast-stats"
 mkdir -p "${LOG_DIR}"
@@ -28,7 +30,7 @@ log() { echo "[$(ts)] $*" | tee -a "${LOG}"; }
 
 fail() {
   log "ERROR: $*"
-  /usr/bin/osascript -e "display notification \"Daily pipeline trigger FAILED: $* (see ${LOG})\" with title \"Toast Stats\"" 2>/dev/null || true
+  "${OSASCRIPT}" -e "display notification \"Daily pipeline trigger FAILED: $* (see ${LOG})\" with title \"Toast Stats\"" 2>/dev/null || true
   exit 1
 }
 
