@@ -54,6 +54,34 @@ tail -n 20 "$HOME/Library/Logs/toast-stats/daily-pipeline-trigger.log"
 gh run list --workflow data-pipeline.yml --limit 3
 ```
 
+## Retry and run confirmation (#2496)
+
+On 2026-11-04 the dispatch API returned one `HTTP 500`, the script exited, and
+no daily run happened. The script now:
+
+1. Dispatches up to **5 times**, waiting 60s, 120s, 240s, then 480s between
+   attempts (about 15 minutes in all).
+2. After an accepted dispatch, polls
+   `gh run list --workflow data-pipeline.yml --event workflow_dispatch`
+   (6 polls, 10s apart) until a run created at or after the trigger time
+   (minus 60s for clock skew) appears, and logs `Run <id> started.`
+3. Before every retry, checks for such a run first. A 500 can arrive after
+   GitHub accepted the dispatch; if a run exists it logs
+   `Run <id> started after an earlier attempt; not dispatching again.` and
+   exits 0, so there is never a double run.
+4. If no run started after the last attempt, logs
+   `ERROR: no data-pipeline run started after 5 dispatch attempts`, posts the
+   macOS notification, and exits 1.
+
+Each attempt is logged as `Dispatch attempt N/5`. Tests
+(`scripts/lib/__tests__/triggerDailyPipeline.test.ts`) run the real script
+against a stubbed `gh`; the env vars `TRIGGER_GH`, `TRIGGER_OSASCRIPT`,
+`TRIGGER_RETRY_DELAYS`, `TRIGGER_CONFIRM_POLLS` and `TRIGGER_CONFIRM_INTERVAL`
+exist for those tests only. launchd sets none of them.
+
+**Ron: re-install after this change merges** (the live copy is not updated by
+the merge). Run the Update step below from an up-to-date `main` checkout.
+
 ## Update (after editing the repo script)
 
 ```bash
