@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.26.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.26.0...shared-contracts-v1.26.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* **contracts:** reader schemas tolerate unknown keys ([#2493](https://github.com/taverns-red/toast-stats/issues/2493)) ([#2495](https://github.com/taverns-red/toast-stats/issues/2495)) ([85b070f](https://github.com/taverns-red/toast-stats/commit/85b070f0619f6c32353d75874f1fd4a91c56d6ca))
+
 ## [1.26.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.25.1...shared-contracts-v1.26.0) (2026-11-03)
 
 
