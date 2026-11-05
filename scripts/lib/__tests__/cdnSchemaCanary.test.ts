@@ -196,13 +196,16 @@ const metadata = {
   totalDataPoints: 247,
 }
 
-function programYearFile(lastDate: string) {
+function programYearFile(
+  lastDate: string,
+  lastUpdated = '2026-10-09T12:12:11.676Z'
+) {
   return {
     districtId: '61',
     programYear: '2026-2027',
     startDate: '2026-07-01',
     endDate: '2027-06-30',
-    lastUpdated: '2026-10-09T12:12:11.676Z',
+    lastUpdated,
     dataPoints: [
       {
         date: lastDate,
@@ -336,6 +339,69 @@ describe('checkTimeSeriesProgramYear', () => {
     const body = gzipSync(JSON.stringify(programYearFile('2026-10-08')))
     expect(checkTimeSeriesProgramYear(obj(PY_PATH, body), AGE)).toMatch(/gzip/i)
   })
+
+  // Month-end closing period (#2500): the pipeline files each daily
+  // collection under the closed month's last day, so the last point stays
+  // at 10-31 while `lastUpdated` advances. Modelled on D61, 2026-11-04.
+  describe('during the month-end closing period (#2500)', () => {
+    const CLOSING = { now: new Date('2026-11-04T15:30:00Z'), maxAgeDays: 3 }
+    const pyFile = (lastDate: string, lastUpdated: string) =>
+      obj(PY_PATH, enc(JSON.stringify(programYearFile(lastDate, lastUpdated))))
+
+    it('passes a closed-month last point when lastUpdated is fresh', () => {
+      expect(
+        checkTimeSeriesProgramYear(
+          pyFile('2026-10-31', '2026-11-03T10:04:01.446Z'),
+          CLOSING
+        )
+      ).toBeNull()
+    })
+
+    it('fails a closed-month last point when lastUpdated is also stale', () => {
+      expect(
+        checkTimeSeriesProgramYear(
+          pyFile('2026-10-31', '2026-10-31T10:04:01.446Z'),
+          CLOSING
+        )
+      ).toMatch(/2026-10-31.*days old/)
+    })
+
+    it('fails a stale point that is not a month end, even with a fresh lastUpdated', () => {
+      expect(
+        checkTimeSeriesProgramYear(
+          pyFile('2026-10-30', '2026-11-03T10:04:01.446Z'),
+          CLOSING
+        )
+      ).toMatch(/2026-10-30.*days old/)
+    })
+
+    it('fails a month-end point checked two months later, even with a fresh lastUpdated', () => {
+      expect(
+        checkTimeSeriesProgramYear(
+          pyFile('2026-09-30', '2026-11-03T10:04:01.446Z'),
+          CLOSING
+        )
+      ).toMatch(/2026-09-30.*days old/)
+    })
+
+    it('fails a stale point outside a closing period when lastUpdated is stale too', () => {
+      expect(
+        checkTimeSeriesProgramYear(
+          pyFile('2026-10-05', '2026-10-05T10:00:00.000Z'),
+          AGE
+        )
+      ).toMatch(/2026-10-05.*days/)
+    })
+
+    it('passes across a year boundary (12-31 checked in January)', () => {
+      expect(
+        checkTimeSeriesProgramYear(
+          pyFile('2026-12-31', '2027-01-05T10:00:00.000Z'),
+          { now: new Date('2027-01-06T08:00:00Z'), maxAgeDays: 3 }
+        )
+      ).toBeNull()
+    })
+  })
 })
 
 describe('checkDistrictSnapshotIndex', () => {
@@ -415,6 +481,22 @@ describe('club-district history (#1782)', () => {
     expect(
       checkClubDistrictHistoryIndex(json(index('2026-10-01')), AGE).failure
     ).toMatch(/2026-10-01.*days old/)
+  })
+
+  it('passes a closed-month asOf during closing when sourcesUpdatedAt is fresh (#2500)', () => {
+    const closing = { now: new Date('2026-11-04T15:30:00Z'), maxAgeDays: 3 }
+    expect(
+      checkClubDistrictHistoryIndex(
+        json(
+          index('2026-10-31', { sourcesUpdatedAt: '2026-11-03T10:04:04.737Z' })
+        ),
+        closing
+      ).failure
+    ).toBeNull()
+    // A stopped identity build keeps an old sourcesUpdatedAt: still stale.
+    expect(
+      checkClubDistrictHistoryIndex(json(index('2026-10-31')), closing).failure
+    ).toMatch(/2026-10-31.*days old/)
   })
 
   it('fails an index that breaks the schema or folded nothing', () => {
