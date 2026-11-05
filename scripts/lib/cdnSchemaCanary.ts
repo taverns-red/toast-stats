@@ -223,7 +223,12 @@ export function checkTimeSeriesProgramYear(
   const last = points[points.length - 1]
   if (last === undefined) return 'no data points — the file has no last point'
 
-  return checkFresh(`last data point`, last.date, opts)
+  return checkFreshOrClosing(
+    'last data point',
+    last.date,
+    { what: 'lastUpdated', at: parsed.data.lastUpdated },
+    opts
+  )
 }
 
 /** `<what> <date>` must be a real date, not in the future, at most N days old. */
@@ -245,8 +250,57 @@ function checkFresh(
 }
 
 /**
+ * Freshness that survives the month-end closing period (#2500).
+ *
+ * While Toastmasters closes a month, the pipeline files each daily
+ * collection under the closed month's last day (#309, #1609), so the last
+ * logical date sits at e.g. 10-31 for several days of November while the
+ * data is refreshed daily. The logical date then says nothing about
+ * freshness; the collection time does.
+ *
+ * Rule: the logical date passes the usual check, OR it is the last day of
+ * its month, the check date falls in the following month (the closing
+ * period), and the collection time passes the same check. A stopped
+ * pipeline leaves the collection time old too, so it still fails.
+ */
+function checkFreshOrClosing(
+  what: string,
+  date: string,
+  collected: { what: string; at: string },
+  opts: { now: Date; maxAgeDays: number }
+): string | null {
+  const failure = checkFresh(what, date, opts)
+  if (failure === null || !isClosingPeriod(date, opts.now)) return failure
+
+  const atMs = Date.parse(collected.at)
+  const collectedFailure = Number.isNaN(atMs)
+    ? `${collected.what} has an invalid timestamp: ${JSON.stringify(collected.at)}`
+    : checkFresh(
+        collected.what,
+        new Date(atMs).toISOString().slice(0, 10),
+        opts
+      )
+  return collectedFailure === null
+    ? null
+    : `${failure}; month-end closing period, but ${collectedFailure}`
+}
+
+/** `date` is a month's last day and `now` (UTC) is in the following month. */
+function isClosingPeriod(date: string, now: Date): boolean {
+  const ms = parseCalendarDate(date)
+  if (ms === null) return false
+  const nextDay = new Date(ms + DAY_MS)
+  return (
+    nextDay.getUTCDate() === 1 &&
+    nextDay.getUTCFullYear() === now.getUTCFullYear() &&
+    nextDay.getUTCMonth() === now.getUTCMonth()
+  )
+}
+
+/**
  * `config/club-district-history/index.json` (#1782): decode, validate, at
- * least one club, and an `asOf` no older than `maxAgeDays` — the identity
+ * least one club, and an `asOf` no older than `maxAgeDays` (or, in the
+ * month-end closing period, a fresh `sourcesUpdatedAt`, #2500) — the identity
  * build is a warning, not a failed run, so a stopped build shows here. The
  * shard keys are returned for the shard checks.
  */
@@ -264,11 +318,19 @@ export function checkClubDistrictHistoryIndex(
       shards: [],
     }
   }
-  const { asOf, totalClubs, shards } = parsed.data
+  const { asOf, sourcesUpdatedAt, totalClubs, shards } = parsed.data
   if (totalClubs === 0 || shards.length === 0) {
     return { failure: 'no clubs or no shards in the index', shards }
   }
-  return { failure: checkFresh('asOf', asOf, opts), shards }
+  return {
+    failure: checkFreshOrClosing(
+      'asOf',
+      asOf,
+      { what: 'sourcesUpdatedAt', at: sourcesUpdatedAt },
+      opts
+    ),
+    shards,
+  }
 }
 
 /**
