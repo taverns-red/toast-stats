@@ -11,9 +11,11 @@
  *      random published districts, `time-series/district_{id}/index-metadata.json`
  *      and the current-PY file; decode each exactly as a browser does (one
  *      Content-Encoding layer), parse, validate, and require a fresh last
- *      point (#1710 — the #1702 nested-gzip outage class),
+ *      point (#1710 — the #1702 nested-gzip outage class); during the
+ *      month-end closing period a closed-month last point counts as fresh
+ *      when `lastUpdated` is (#2500),
  *   5. fetch `config/club-district-history/index.json` (#1782), require a
- *      fresh `asOf`, and check the anchor shard 77 (club 977) plus one
+ *      fresh `asOf` (or, in closing, a fresh `sourcesUpdatedAt`), and check the anchor shard 77 (club 977) plus one
  *      random listed shard,
  *   6. emit a healthy/unhealthy decision + alert body for the workflow.
  *
@@ -28,7 +30,8 @@
  *                   non-numeric means ALL; skipped districts are logged
  *                   loudly (no silent caps)
  *   MAX_TIME_SERIES_AGE_DAYS — max age of the current-PY last data point
- *                   (default 3; plan S1-5)
+ *                   (default 3; plan S1-5), or of its collection time
+ *                   during the month-end closing period (#2500)
  *
  * The process always exits 0; the workflow decides whether to open an
  * issue (and mark the run red) based on the `unhealthy` output. This

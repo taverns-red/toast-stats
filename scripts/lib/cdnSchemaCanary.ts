@@ -572,6 +572,8 @@ export function buildCanaryIssueBody(
     '  guard in the data pipeline.',
     '- Stale last point: the time-series store stopped advancing; check',
     '  `compute-analytics` in the latest data-pipeline run.',
+    '  In a month-end closing period the last point stays on the closed',
+    "  month's last day; then it is the collection time that is stale.",
     '- This issue self-clears: the next healthy canary run closes it.',
     ''
   )
