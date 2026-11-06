@@ -38,3 +38,14 @@ A draft PR deploys the preview channel but skips the heavy PR Preview smokes and
    > Work issue #NNNN. Follow CLAUDE.md. Branch from `origin/main`, TDD with separate red and green commits, then open a PR with `gh api` that references #NNNN plainly. Don't merge.
 3. Wait for the setup hook to finish (a few minutes on a fresh VM) before the first test run.
 4. The worker reports through the PR and issue comments. Review and merge from the local session as usual.
+
+## Archiving a finished worker
+
+Archive a worker's session once its PR is merged or closed. There is no CLI command or public API for this (checked against Claude Code 2.1.316), so the local session does it in the browser with Claude in Chrome:
+
+1. **Needs:** the Claude in Chrome extension connected to the local session, with Chrome signed in to claude.ai as Ron. No token or API key is involved. Check with `list_connected_browsers`; if it returns nothing, ask Ron to connect the extension.
+2. Open `claude.ai/code`, find the session under the repo's section of the sidebar, hover its row and click **More options** (⋯).
+3. Click **Archive**. **Delete** is the red item just below it. Never click Delete: it can't be undone, and it loses the session transcript.
+4. If a "Got it" or environment popover covers the sidebar, close it with Escape first.
+
+Archiving is reversible and only changes the sidebar. No permission prompt has fired in practice. Whether one does depends on the Chrome extension's per-site permission for claude.ai.
