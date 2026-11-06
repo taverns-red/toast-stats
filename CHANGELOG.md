@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.80.2](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.80.1...toast-stats-v2.80.2) (2026-11-06)
+
+
+### Bug Fixes
+
+* **canary:** judge closing-period freshness by collection time ([#2500](https://github.com/taverns-red/toast-stats/issues/2500)) ([#2501](https://github.com/taverns-red/toast-stats/issues/2501)) ([97a8ebe](https://github.com/taverns-red/toast-stats/commit/97a8ebe48a0b10b29faf276a3407181d81539d8a))
+
+
+### Documentation
+
+* **cloud:** how to archive a finished cloud worker session ([#2454](https://github.com/taverns-red/toast-stats/issues/2454)) ([#2506](https://github.com/taverns-red/toast-stats/issues/2506)) ([cc919d2](https://github.com/taverns-red/toast-stats/commit/cc919d2874f738f595f0fba4d91f1a36f5731c3c))
+
 ## [2.80.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.80.0...toast-stats-v2.80.1) (2026-11-05)
 
 
