@@ -17,7 +17,8 @@
  * failed override, never a skip. A rejection passes only when its fixture's
  * content hash is grandfathered (a name alone never matches), or when the PR
  * carries `db-breaking-approved` and the latest `labeled` event for it, from
- * the issues events API, was by rservant.
+ * the issues events API, was by rservant with `performed_via_github_app`
+ * null (not through an app, #2520).
  *
  * The runner, `scripts/check-cdn-json-compat.ts`, builds the release's
  * shared-contracts and does the I/O; everything decided is here.
@@ -152,6 +153,12 @@ export interface IssueEvent {
   actor?: { login?: string } | null
   label?: { name?: string } | null
   created_at?: string
+  /**
+   * `null` when a person acted in the web UI; the app object when a GitHub
+   * app acted (a cloud session acts as rservant through the Claude app).
+   * Typed `unknown` so the check below has to handle any shape.
+   */
+  performed_via_github_app?: unknown
 }
 
 export interface OverrideResult {
@@ -331,10 +338,22 @@ export function applyGrandfather(
   return { breaking, grandfathered }
 }
 
+/** How a non-null `performed_via_github_app` reads in a refusal. */
+const viaApp = (app: unknown): string => {
+  if (app === undefined) return 'with no `performed_via_github_app` field'
+  const slug = (app as { slug?: unknown } | null)?.slug
+  return typeof slug === 'string'
+    ? `via the ${slug} GitHub app`
+    : `with an unexpected \`performed_via_github_app\` (${JSON.stringify(app)})`
+}
+
 /**
  * The label must be on the PR now, and the latest `labeled` event for it
- * (events arrive oldest first) must be by the approver. A removal and re-add
- * by anyone else therefore fails.
+ * (events arrive oldest first) must be by the approver, acting directly:
+ * `performed_via_github_app` must be exactly `null` (#2520). A cloud session
+ * acts as rservant but its events carry the Claude app there, so the actor
+ * alone can't tell Ron from an agent. A missing field or any other value
+ * fails closed. A removal and re-add by anyone else therefore fails.
  */
 export function verifyOverride(
   labels: string[],
@@ -360,6 +379,13 @@ export function verifyOverride(
     return {
       approved: false,
       reason: `\`${OVERRIDE_LABEL}\` was last applied by ${by}, not ${OVERRIDE_APPROVER}`,
+    }
+  }
+  const app = last.performed_via_github_app
+  if (app !== null) {
+    return {
+      approved: false,
+      reason: `\`${OVERRIDE_LABEL}\` was last applied by ${by} ${viaApp(app)}, not by ${OVERRIDE_APPROVER} directly`,
     }
   }
   return {
