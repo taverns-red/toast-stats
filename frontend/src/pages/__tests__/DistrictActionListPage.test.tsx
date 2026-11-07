@@ -1084,6 +1084,31 @@ describe('DistrictActionListPage — date index in flight (#1837)', () => {
     ).toBeInTheDocument()
     expect(screen.queryByTestId('section-close')).toBeNull()
   })
+
+  /* #2511 — the intro sentence names the sections in render order, and that
+   * order is not final until the program year and pinned date resolve: it
+   * started as four clauses (two lines at 1280px, 63px), then gained the
+   * officer-training clause (three lines, 84px) and shoved the controls row
+   * and every section down 21px. CLS 0.142 on /district/61/action-list. While
+   * the date index is in flight the paragraph must already hold the longest
+   * possible sentence — hidden from sight and from assistive tech, so no
+   * clause is claimed that may not apply. */
+  it('reserves the intro at its longest while the section order is unresolved', async () => {
+    renderAt('/district/61/action-list')
+    await screen.findByTestId('action-list-page')
+    const intro = document.querySelector('.action-list-page__subtitle')
+    expect(intro).not.toBeNull()
+    for (const clause of [
+      'clubs short of officer training this round',
+      'clubs within reach of Distinguished',
+      'areas with outstanding club visits',
+      'clubs that need intervention',
+      'clubs without a Club Success Plan',
+    ]) {
+      expect(intro).toHaveTextContent(clause)
+    }
+    expect(intro).toHaveAttribute('aria-hidden', 'true')
+  })
 })
 
 describe('DistrictActionListPage — officer training (#2296)', () => {
