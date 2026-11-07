@@ -390,7 +390,7 @@ export function verifyOverride(
   }
   return {
     approved: true,
-    reason: `\`${OVERRIDE_LABEL}\` applied by ${OVERRIDE_APPROVER}`,
+    reason: `\`${OVERRIDE_LABEL}\` applied by ${OVERRIDE_APPROVER} directly, not through an app`,
   }
 }
 

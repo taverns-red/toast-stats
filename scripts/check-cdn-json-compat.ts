@@ -12,7 +12,8 @@
  *      build (packages/shared-contracts/dist, built by the workflow first);
  *   4. load the compat fixtures from both trees and compare both ways;
  *   5. on a breaking finding not grandfathered by content hash, verify the
- *      `db-breaking-approved` label through the REST API.
+ *      `db-breaking-approved` label through the REST API (last applied by
+ *      rservant, with `performed_via_github_app` null, #2520).
  *
  * Every error is a failure: exit 1. Logs go to stderr (R4); the verdict is
  * also written to $GITHUB_STEP_SUMMARY.
@@ -129,7 +130,8 @@ function report(args: {
   if (args.breaking.length > 0 && !args.verdict.pass) {
     lines.push(
       '',
-      'A deliberate break needs `db-breaking-approved` applied by rservant. ' +
+      'A deliberate break needs `db-breaking-approved` applied by rservant ' +
+        'directly (web UI), not through an app such as a cloud session. ' +
         'See docs/runbooks/cdn-json-compat.md.'
     )
   }
