@@ -13,6 +13,7 @@ permissions:
   contents: write # release-please tags + deploy version tags
   pull-requests: write # release-please PR
   id-token: write # WIF auth in deploy.yml
+  issues: write # hosting-rollback alert in deploy.yml (#2492)
   packages: write # required by deploy chain
   security-events: write # required by deploy chain
 
