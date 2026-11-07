@@ -427,6 +427,10 @@ export function decide(args: {
   }
 }
 
+export function markdownCell(_text: string): string {
+  return _text
+}
+
 const walk = (value: unknown, keys: string[]): unknown => {
   let v = value
   for (const k of keys) {

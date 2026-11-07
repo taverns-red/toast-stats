@@ -26,6 +26,7 @@ import {
   fetchOverride,
   fixtureHash,
   loadFixtures,
+  markdownCell,
   readerSchemasOf,
   verifyOverride,
   type Finding,
@@ -409,5 +410,19 @@ describe('the real reader schemas and fixtures', () => {
     } finally {
       rmSync(empty, { recursive: true, force: true })
     }
+  })
+})
+
+describe('markdownCell (CodeQL js/incomplete-sanitization on #2510)', () => {
+  it('escapes a pipe so it cannot end the cell', () => {
+    expect(markdownCell('a|b')).toBe('a\\|b')
+  })
+
+  it('escapes a backslash first, so a \\| in the input stays literal', () => {
+    expect(markdownCell('a\\|b')).toBe('a\\\\\\|b')
+  })
+
+  it('flattens newlines so a detail stays on its row', () => {
+    expect(markdownCell('a\nb')).toBe('a b')
   })
 })
