@@ -108,42 +108,49 @@ function dynamic(s) {
 const LABEL_MUTATION =
   /(add|remove|clear)labels?(to|from)labelable|(create|update|delete)label\b/
 
-/**
- * Returns a reason to refuse, or null. Exported for reuse; tests drive the
- * CLI. For file contents (`{ file: true }`) only the rules that name the
- * label, or a GraphQL label mutation, apply: source files are full of `$`,
- * `label` and `delete`, and the shape rules would block ordinary edits.
- */
-export function checkText(raw, { file = false } = {}) {
-  const s = normalize(raw)
-  const mentions = s.replace(/[^a-z0-9]/g, '').includes('dbbreakingapproved')
-  const segments = s.split(/\|\||&&|[;&|\n()]/)
-  const writes = segments.some(segmentWrites)
-  // `-l` is the short form of --label on gh issue/pr create.
-  const labelish =
+/** Names the label, whatever the separators: db_breaking approved, etc. */
+function namesLabel(s) {
+  return s.replace(/[^a-z0-9]/g, '').includes('dbbreakingapproved')
+}
+
+/** Touches labels. `-l` is the short form of --label on gh issue/pr create. */
+function labelish(s) {
+  return (
     /label/.test(s) ||
     /\bgh\s+(issue|pr)\s+(create|edit)\b[^;&|\n]*\s-[a-z]*l(\s|=|$)/.test(s)
+  )
+}
+
+/**
+ * Text a Write or Edit puts in a file. Only the rules that name the label,
+ * or a GraphQL label mutation, apply: source files are full of `$`, `label`
+ * and `delete`, and the shape rules would block ordinary edits. Checked line
+ * by line, so a doc that mentions the label in one place and a `gh api` call
+ * in another is not a label write. Returns a reason to refuse, or null.
+ */
+export function checkFileText(raw) {
+  const s = normalize(raw)
+  if (/graphql/.test(s) && LABEL_MUTATION.test(s))
+    return 'a GraphQL label mutation (it takes label IDs, so the name is not visible)'
+  for (const line of String(raw)
+    .replace(/\\\r?\n/g, ' ')
+    .split('\n')) {
+    const l = normalize(line)
+    if (labelish(l) && segmentWrites(l, { prose: true }) && namesLabel(l))
+      return `a write naming ${LABEL}`
+  }
+  return null
+}
+
+/** A Bash command. Returns a reason to refuse, or null. */
+export function checkCommand(raw) {
+  const s = normalize(raw)
+  const mentions = namesLabel(s)
+  const writes = s.split(/\|\||&&|[;&|\n()]/).some(seg => segmentWrites(seg))
+  const labels = labelish(s)
   const opaque = opaqueBody(s)
   const dyn = dynamic(s)
 
-  if (file) {
-    if (/graphql/.test(s) && LABEL_MUTATION.test(s))
-      return 'a GraphQL label mutation (it takes label IDs, so the name is not visible)'
-    // Line by line: a doc that mentions the label in one place and a
-    // `gh api` call in another is not a label write.
-    for (const line of String(raw)
-      .replace(/\\\r?\n/g, ' ')
-      .split('\n')) {
-      const l = normalize(line)
-      if (
-        /label/.test(l) &&
-        segmentWrites(l, { prose: true }) &&
-        l.replace(/[^a-z0-9]/g, '').includes('dbbreakingapproved')
-      )
-        return `a write naming ${LABEL}`
-    }
-    return null
-  }
   if (/\bgh\s+label\s+clone\b/.test(s))
     return '`gh label clone` copies every label, this one included'
   if (
@@ -157,17 +164,17 @@ export function checkText(raw, { file = false } = {}) {
   )
     return 'running decoded text hides what the command does'
   if (/graphql/.test(s) && writes) {
-    if (LABEL_MUTATION.test(s) || (labelish && /mutation/.test(s)))
+    if (LABEL_MUTATION.test(s) || (labels && /mutation/.test(s)))
       return 'a GraphQL label mutation (it takes label IDs, so the name is not visible)'
     if (opaque || dyn)
       return 'a GraphQL request whose query comes from a file, stdin or the shell'
   }
-  if (/\bgh\s+alias\s+(set|import)\b/.test(s) && (labelish || dyn || opaque))
+  if (/\bgh\s+alias\s+(set|import)\b/.test(s) && (labels || dyn || opaque))
     return 'a gh alias that could write labels'
-  if (labelish && writes && mentions) return `a write naming ${LABEL}`
-  if (labelish && writes && dyn)
+  if (labels && writes && mentions) return `a write naming ${LABEL}`
+  if (labels && writes && dyn)
     return 'a label write whose label name is built at run time'
-  if (labelish && writes && opaque)
+  if (labels && writes && opaque)
     return 'a label write whose payload comes from a file or stdin'
   if (writes && opaque) {
     const commentsOnly = /\/comments\b/.test(s) && !/\.\./.test(s)
@@ -206,7 +213,7 @@ function main() {
   if (tool === 'Bash') {
     const cmd = String(ti.command ?? '')
     if (tampers(cmd)) refuse('a change to the cloud session guard or settings')
-    const reason = checkText(cmd)
+    const reason = checkCommand(cmd)
     if (reason) refuse(reason)
     process.exit(0)
   }
@@ -223,7 +230,7 @@ function main() {
     ]
       .filter(t => typeof t === 'string')
       .join('\n')
-    const reason = text ? checkText(text, { file: true }) : null
+    const reason = text ? checkFileText(text) : null
     if (reason) refuse(`a file that would run ${reason}`)
   }
   process.exit(0)
