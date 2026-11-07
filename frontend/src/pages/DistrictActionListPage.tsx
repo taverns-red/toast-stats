@@ -21,6 +21,7 @@ import {
   formatCloseNeeds,
   formatCspRow,
   formatVisitGap,
+  LONGEST_ACTION_SECTION_ORDER,
   orderActionSections,
   type ActionListSections,
   type ActionSectionId,
@@ -937,13 +938,31 @@ const DistrictActionListPage: React.FC = () => {
           <div className="action-list-page" data-testid="action-list-page">
             <header className="action-list-page__intro">
               <h2 className="action-list-page__title">Area Director Actions</h2>
-              <p className="action-list-page__subtitle">
+              {/* #2511 — the section order is not final until the dates AND
+                  the statistics snapshot have landed (the officer-training
+                  clause needs its club rows): the sentence grew from two
+                  lines to three mid-load and pushed the controls and every
+                  section down 21px. While the sections skeleton is up, hold
+                  the longest sentence, invisible and out of the accessibility
+                  tree, so no clause is claimed that may not apply. */}
+              <p
+                className={`action-list-page__subtitle${
+                  showSectionsSkeleton
+                    ? ' action-list-page__subtitle--reserved'
+                    : ''
+                }`}
+                aria-hidden={showSectionsSkeleton || undefined}
+              >
                 {/* The clause order tracks the rendered order in both seasonal
                     windows, and drops the Club Success Plan clause with the
                     section (#1569). */}
                 Prioritized to-dos for this district:{' '}
-                {describeActionSections(sectionOrder)}. Filter to your division
-                or area and share the link.
+                {describeActionSections(
+                  showSectionsSkeleton
+                    ? LONGEST_ACTION_SECTION_ORDER
+                    : sectionOrder
+                )}
+                . Filter to your division or area and share the link.
               </p>
             </header>
 

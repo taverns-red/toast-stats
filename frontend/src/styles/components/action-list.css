@@ -21,6 +21,12 @@
   max-width: 60ch;
 }
 
+/* #2511 — holds the longest intro sentence's lines while the section order is
+   unresolved; occupies the space, paints nothing. */
+.action-list-page__subtitle--reserved {
+  visibility: hidden;
+}
+
 /* ── Controls: scope filter + export ───────────────────────────────────── */
 
 .action-list-page__controls {

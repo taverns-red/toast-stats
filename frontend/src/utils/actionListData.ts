@@ -421,6 +421,17 @@ export function orderActionSections(
     : [...core, 'action-csp']
 }
 
+/**
+ * Every section at once: the longest the intro sentence can get (#2511). A
+ * page whose section order is not final yet reserves the intro at this length
+ * so the final sentence can only fit inside it, never push the page down.
+ */
+export const LONGEST_ACTION_SECTION_ORDER: readonly ActionSectionId[] = [
+  'action-training',
+  'action-csp',
+  ...CORE_ACTION_SECTIONS,
+]
+
 /** Each section's clause in the page's intro sentence. */
 const ACTION_SECTION_CLAUSES: Record<ActionSectionId, string> = {
   'action-close': 'clubs within reach of Distinguished',
