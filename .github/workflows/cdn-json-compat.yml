@@ -7,8 +7,9 @@
 #
 # It fails closed: a tag it cannot build, a missing fixture or a GitHub API
 # error is a failure. A deliberate break passes only with the
-# db-breaking-approved label, last applied by rservant, checked through the
-# issues events API at run time. Runbook: docs/runbooks/cdn-json-compat.md.
+# db-breaking-approved label, last applied by rservant directly
+# (performed_via_github_app null, not through an app; #2520), checked through
+# the issues events API at run time. Runbook: docs/runbooks/cdn-json-compat.md.
 #
 # No path filter, so it can be a required check without sitting "Expected"
 # on a PR it skipped. labeled/unlabeled re-decide it when the label moves.

@@ -38,9 +38,17 @@ Without `GITHUB_TOKEN`, `GITHUB_REPOSITORY` and `PR_NUMBER` the override can't b
 A breaking finding passes only when both hold at check time:
 
 - the PR has the `db-breaking-approved` label, read live from the REST API (not the event payload);
-- the latest `labeled` event for that label, from `GET /repos/{owner}/{repo}/issues/{pr}/events` (every page), was by `rservant`.
+- the latest `labeled` event for that label, from `GET /repos/{owner}/{repo}/issues/{pr}/events` (every page), has `actor.login` equal to `rservant` **and** `performed_via_github_app` equal to `null` (#2520).
 
-Only Ron applies it, after reading the summary. Adding or removing the label re-runs the check. If anyone else removes the label and adds it back, the latest `labeled` event is theirs, and the check fails until Ron applies it again. Each new push re-runs the check and re-verifies the label. The label doesn't carry over to another PR.
+### Why `performed_via_github_app` must be `null`
+
+Cloud sessions act as `rservant`, so the actor alone can't tell Ron from an agent. The events API records which GitHub app, if any, performed each event ([Labeled Issue Event schema](https://docs.github.com/en/rest/issues/events?apiVersion=2022-11-28#list-issue-events): `performed_via_github_app` is required, `null` or a GitHub app object). Ron applying the label in the web UI gives `null`. A cloud session's event carries the Claude app object. So only a direct labeling counts.
+
+The check fails closed on anything else: an app object, a missing field, or a value of any other type (a string, `false`, `{}`). The job summary names the app when the event has a `slug`.
+
+This closes the cloud path. A local agent session using Ron's own `gh` token still records `null`; the agent GitHub App (ops#242) closes that path by giving local agents their own app identity.
+
+Only Ron applies it, in the GitHub web UI, after reading the summary. Applying it from a cloud session, or asking one to, doesn't count. Adding or removing the label re-runs the check. If anyone else removes the label and adds it back, the latest `labeled` event is theirs, and the check fails until Ron applies it again. Each new push re-runs the check and re-verifies the label. The label doesn't carry over to another PR.
 
 The label must exist in the repo before Ron can apply it (Settings → Labels, or `gh api repos/taverns-red/toast-stats/labels -f name=db-breaking-approved -f color=B60205 -f description='ADR 0019: rservant-approved breaking CDN JSON change'`).
 
