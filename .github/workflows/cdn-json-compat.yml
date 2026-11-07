@@ -1,0 +1,60 @@
+# CDN JSON compat guard (#2494, ADR 0019 steps 1 and 3 in taverns-red/ops).
+#
+# The previous release must read the data this PR's code publishes, and this
+# PR's code must read what the previous release published. The guard builds
+# the latest toast-stats-v* release's shared-contracts, then parses each
+# reader schema's fixture both ways (scripts/lib/cdnJsonCompat.ts).
+#
+# It fails closed: a tag it cannot build, a missing fixture or a GitHub API
+# error is a failure. A deliberate break passes only with the
+# db-breaking-approved label, last applied by rservant, checked through the
+# issues events API at run time. Runbook: docs/runbooks/cdn-json-compat.md.
+#
+# No path filter, so it can be a required check without sitting "Expected"
+# on a PR it skipped. labeled/unlabeled re-decide it when the label moves.
+name: CDN JSON Compat
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: cdn-json-compat-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  compat:
+    name: CDN JSON Compat
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          # git describe needs the release tags and the history they sit on.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the PR shared-contracts
+        run: npm run build:shared-contracts
+
+      - name: Check both directions against the latest release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: npx tsx scripts/check-cdn-json-compat.ts
