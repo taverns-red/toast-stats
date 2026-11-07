@@ -35,6 +35,7 @@ import {
   decide,
   fetchOverride,
   loadFixtures,
+  markdownCell,
   readerSchemasOf,
   type Finding,
   type GrandfatherEntry,
@@ -95,7 +96,7 @@ function readGrandfathered(path: string): GrandfatherEntry[] {
 }
 
 const row = (f: Finding) =>
-  `| ${f.direction} | ${f.reader} | ${f.kind} | ${f.detail.replace(/\|/g, '\\|')} | ${f.hash ? `\`${f.hash}\`` : ''} |`
+  `| ${f.direction} | ${f.reader} | ${f.kind} | ${markdownCell(f.detail)} | ${f.hash ? `\`${f.hash}\`` : ''} |`
 
 function report(args: {
   tag: string

@@ -427,8 +427,16 @@ export function decide(args: {
   }
 }
 
-export function markdownCell(_text: string): string {
-  return _text
+/**
+ * Text safe inside one Markdown table cell: backslashes first, then pipes,
+ * so an escape already in the text cannot unescape a pipe; newlines become
+ * spaces so the cell stays on its row.
+ */
+export function markdownCell(text: string): string {
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/\|/g, '\\|')
+    .replace(/\r?\n/g, ' ')
 }
 
 const walk = (value: unknown, keys: string[]): unknown => {
