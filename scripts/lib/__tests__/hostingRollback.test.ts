@@ -16,6 +16,7 @@ import {
   checkHome,
   checkRender,
   chooseRestoreVersion,
+  decideOutcome,
   decideSmoke,
   extractEntryAsset,
   liveVersionFromChannelList,
@@ -351,5 +352,40 @@ describe('buildRollbackIssueBody', () => {
     })
     expect(body).toMatch(/not rolled back/i)
     expect(body).toMatch(/no previous/i)
+  })
+})
+
+describe('decideOutcome', () => {
+  const base = {
+    autoRollback: 'on',
+    rollbackOutcome: '',
+    rolledBack: false,
+    restoredHealthy: false,
+  }
+  it('is skipped-override when the override is on', () => {
+    expect(decideOutcome({ ...base, autoRollback: 'off' })).toBe(
+      'skipped-override'
+    )
+  })
+  it('is restored when the rollback ran and the restored smoke passed', () => {
+    expect(
+      decideOutcome({ ...base, rolledBack: true, restoredHealthy: true })
+    ).toBe('restored')
+  })
+  it('is restore-failed-smoke when the restored release also fails', () => {
+    expect(decideOutcome({ ...base, rolledBack: true })).toBe(
+      'restore-failed-smoke'
+    )
+  })
+  it('is no-previous-version when the runner chose not to roll back', () => {
+    expect(
+      decideOutcome({ ...base, rollbackOutcome: 'no-previous-version' })
+    ).toBe('no-previous-version')
+  })
+  it('is rollback-error when the rollback did not run or crashed', () => {
+    expect(decideOutcome(base)).toBe('rollback-error')
+    expect(decideOutcome({ ...base, rollbackOutcome: 'garbage' })).toBe(
+      'rollback-error'
+    )
   })
 })

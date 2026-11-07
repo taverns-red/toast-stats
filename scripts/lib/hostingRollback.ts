@@ -30,3 +30,4 @@ export const checkCdnLatest = (..._a: unknown[]): ProbeResult => todo()
 export const decideSmoke = (..._a: unknown[]): 'pass' | 'fail' | 'continue' =>
   todo()
 export const buildRollbackIssueBody = (..._a: unknown[]): string => todo()
+export const decideOutcome = (..._a: unknown[]): string => todo()
