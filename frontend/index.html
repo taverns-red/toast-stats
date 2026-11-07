@@ -2,9 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- #1906: 16/32/48 px tab icon (5 KB; was 410 KB) + home-screen icon. -->
+    <!-- RT red pennant icon set (#2507, taverns-red/ops#267), vendored
+         unedited from https://taverns.red/brand/icons/ on 2026-11-07:
+         favicon.svg, favicon.ico, apple-touch-icon.png, icon-192.png,
+         icon-512.png. Re-fetch from there to update; never redraw.
+         SVG is the primary tab icon; the 16/32/48 px ICO (#1906) is the
+         fallback. site.webmanifest keeps the app's name and takes only its
+         icon entries from the brand's manifest. -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Toast Stats — Toastmasters District Performance</title>
     <meta
