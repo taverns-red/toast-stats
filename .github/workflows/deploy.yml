@@ -10,6 +10,13 @@
 # Prerequisites:
 #   1. Run scripts/setup-wif.sh (one-time)
 #   2. Add GitHub secrets: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
+#
+# Auto-rollback (#2492): the job records the live Hosting version before
+# `firebase deploy`, smokes the core path for ~10 minutes after it, and on a
+# failed smoke re-releases the recorded version, smokes that, files or
+# updates a `hosting-rollback` issue and fails. Override: the
+# skip_auto_rollback input, or the repo variable HOSTING_AUTO_ROLLBACK=off.
+# Runbook: docs/runbooks/hosting-auto-rollback.md
 
 name: Deploy
 
@@ -17,8 +24,20 @@ on:
   # Invoked by release-please.yml when a release is published. Secrets are
   # passed via `secrets: inherit` from the caller.
   workflow_call:
+    inputs:
+      skip_auto_rollback:
+        description: 'Skip the automatic Hosting rollback after a failed smoke'
+        required: false
+        type: boolean
+        default: false
   # Manual / emergency hotfix deploy from any state.
   workflow_dispatch:
+    inputs:
+      skip_auto_rollback:
+        description: 'Skip the automatic Hosting rollback after a failed smoke'
+        required: false
+        type: boolean
+        default: false
 
 # Prevent concurrent deployments
 concurrency:
@@ -37,6 +56,7 @@ env:
 permissions:
   contents: write # version tags / git metadata
   id-token: write # Workload Identity Federation (GCP auth)
+  issues: write # hosting-rollback alert issue (#2492)
 
 jobs:
   # ──────────────────────────────────────────────
@@ -47,6 +67,12 @@ jobs:
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-26.04
+    # Build + deploy + ~10 min smoke + rollback + restored smoke (#2492).
+    timeout-minutes: 45
+    env:
+      # 'off' skips the auto-rollback (the issue is still filed and the job
+      # still fails). See docs/runbooks/hosting-auto-rollback.md.
+      AUTO_ROLLBACK: ${{ (inputs.skip_auto_rollback || vars.HOSTING_AUTO_ROLLBACK == 'off') && 'off' || 'on' }}
 
     steps:
       - name: Checkout code
@@ -96,6 +122,11 @@ jobs:
       - name: Install firebase-tools
         run: npm install -g firebase-tools
 
+      # Before the deploy: if the browser cannot be installed, nothing is
+      # released, so a release is never left live without its smoke (#2492).
+      - name: Install Chromium for the post-deploy smoke
+        run: npx playwright install --with-deps chromium
+
       # Fail fast with an actionable error if the production site is missing
       # (new projects get no default Hosting site since 2026-10-15). Checks
       # only — never creates a site from CI (#1585).
@@ -104,7 +135,15 @@ jobs:
         env:
           PROJECT: ${{ secrets.GCP_PROJECT_ID }}
 
+      # The version to restore if the new release fails its smoke (#2492).
+      - name: Record the live Hosting version
+        id: record
+        run: npx tsx scripts/hosting-release.ts record production
+        env:
+          PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+
       - name: Build and deploy production
+        id: deploy
         run: |
           set -o pipefail
           npm run build:frontend
@@ -121,8 +160,91 @@ jobs:
             echo "::error::firebase deploy failed"
             exit 1
           fi
+          echo "deployed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
         env:
           VITE_APP_VERSION: v${{ steps.pkg.outputs.version }}
+
+      # ── Auto-rollback (#2492) ──────────────────────
+      # Decisions live in scripts/lib/hostingRollback.ts (unit-tested); the
+      # step order is pinned by hostingRollbackWorkflow.test.ts.
+      - name: Smoke the new release
+        id: smoke
+        run: npx tsx scripts/hosting-smoke.ts
+        env:
+          BASE_URL: https://ts.taverns.red
+          CDN_BASE_URL: https://cdn.taverns.red
+          EXPECTED_INDEX_HTML: frontend/dist/index.html
+          SMOKE_WINDOW_SECONDS: '600'
+
+      # Runs when the smoke failed OR crashed (no `healthy` output).
+      - name: Roll back to the recorded version
+        id: rollback
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.smoke.outputs.healthy != 'true' && env.AUTO_ROLLBACK == 'on' }}
+        run: npx tsx scripts/hosting-release.ts rollback production
+        env:
+          PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+          PREVIOUS_VERSION: ${{ steps.record.outputs.version }}
+
+      - name: Smoke the restored release
+        id: restored_smoke
+        if: ${{ !cancelled() && steps.rollback.outputs.rolled_back == 'true' }}
+        run: npx tsx scripts/hosting-smoke.ts
+        env:
+          BASE_URL: https://ts.taverns.red
+          CDN_BASE_URL: https://cdn.taverns.red
+          SMOKE_WINDOW_SECONDS: '120'
+
+      - name: Build the rollback report
+        id: report
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.smoke.outputs.healthy != 'true' }}
+        run: npx tsx scripts/hosting-release.ts report
+        env:
+          SITE: ${{ steps.record.outputs.site }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          PREVIOUS_VERSION: ${{ steps.record.outputs.version }}
+          BAD_VERSION: ${{ steps.rollback.outputs.bad_version }}
+          ROLLBACK_OUTCOME: ${{ steps.rollback.outputs.outcome }}
+          ROLLED_BACK: ${{ steps.rollback.outputs.rolled_back }}
+          RESTORED_HEALTHY: ${{ steps.restored_smoke.outputs.healthy }}
+          SMOKE_RESULT_FILE: ${{ steps.smoke.outputs.result_file }}
+          DEPLOYED_AT: ${{ steps.deploy.outputs.deployed_at }}
+          SMOKE_FINISHED_AT: ${{ steps.smoke.outputs.finished_at }}
+          ROLLBACK_STARTED_AT: ${{ steps.rollback.outputs.started_at }}
+          ROLLBACK_FINISHED_AT: ${{ steps.rollback.outputs.finished_at }}
+          RESTORED_FINISHED_AT: ${{ steps.restored_smoke.outputs.finished_at }}
+
+      - name: Open or update the rollback issue
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.smoke.outputs.healthy != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ steps.report.outputs.title || 'Hosting release failed its smoke (auto-rollback)' }}
+          BODY_FILE: ${{ steps.report.outputs.body_file }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create hosting-rollback --color B60205 \
+            --description "A production Hosting release failed its post-deploy smoke" \
+            2>/dev/null || echo "Label already exists"
+          if [ -z "${BODY_FILE}" ] || [ ! -f "${BODY_FILE}" ]; then
+            BODY_FILE="${RUNNER_TEMP}/hosting-rollback-fallback.md"
+            echo "Post-deploy smoke failed and the report step did not run: ${RUN_URL}" > "${BODY_FILE}"
+          fi
+          # One open alert at a time: comment on it rather than open another.
+          EXISTING=$(gh issue list --label hosting-rollback --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "${EXISTING}" ]; then
+            gh issue comment "${EXISTING}" --body-file "${BODY_FILE}"
+          else
+            gh issue create --title "${TITLE}" --label hosting-rollback \
+              --body-file "${BODY_FILE}"
+          fi
+
+      - name: Fail the deploy when the smoke failed
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.smoke.outputs.healthy != 'true' }}
+        env:
+          OUTCOME: ${{ steps.report.outputs.outcome || 'unknown' }}
+        run: |
+          echo "::error::Post-deploy smoke failed (rollback outcome: ${OUTCOME}). A hosting-rollback issue has been filed. See docs/runbooks/hosting-auto-rollback.md"
+          exit 1
 
       - name: Record DORA deploy metrics
         if: success()
