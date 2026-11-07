@@ -27,6 +27,7 @@ Setup and Ron's manual steps: [`docs/cloud-sessions.md`](docs/cloud-sessions.md)
 - **Wait for CI with `./bin/agent-cli ci-wait <pr>`**, not hand-written polling. In the VM it falls back to REST check-runs, every page (#2485). A draft PR runs the PR Preview smokes only once it has the `preview-smoke` label (#2101); without it they're skipped, not pending.
 - **Reference the issue as plain `#N` in PR bodies, never `Closes #N`.** The orchestrator closes issues.
 - **Don't merge.** No prod writes, no GCS writes, no workflow dispatches that publish data.
+- **Never apply, create, edit or remove the `db-breaking-approved` label (#2519).** It is Ron's ADR 0019 approval, and a worker acts as `rservant`, so the guard can't tell you apart. `scripts/cloud-session-guard.sh` refuses it by any path it can see (REST, GraphQL label mutations, payloads from a file or stdin, and edits to the guard itself); if it blocks you, ask Ron.
 - **No browsers in the VM.** Browser smokes run in CI against the PR preview channel; read their result from the checks.
 
 ## Project Overview
