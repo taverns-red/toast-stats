@@ -872,7 +872,10 @@ jobs:
       - name: Every built file is deployed
         run: node scripts/check-deployed-files.mjs
 
+      # Runs even when the file check failed, so one run shows every
+      # channel-side failure, not just the first.
       - name: Playwright smoke against the deployed channel
+        if: ${{ !cancelled() }}
         working-directory: frontend
         run: npx playwright test --config playwright.config.ts e2e/staging.smoke.ts --project=smoke
 
