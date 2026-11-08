@@ -38,7 +38,18 @@
       "Bash(gh api *-XPUT*)",
       "Bash(gh api *-X PATCH*)",
       "Bash(gh api *--method PATCH*)",
-      "Bash(gh api *-XPATCH*)"
+      "Bash(gh api *-XPATCH*)",
+      "Bash(gh api *-X=*)",
+      "Bash(gh api *--method=*)",
+      "Bash(gh api *-X put*)",
+      "Bash(gh api *-Xput*)",
+      "Bash(gh api *--method put*)",
+      "Bash(gh api *-X patch*)",
+      "Bash(gh api *-Xpatch*)",
+      "Bash(gh api *--method patch*)",
+      "Bash(gh api *-X delete*)",
+      "Bash(gh api *-Xdelete*)",
+      "Bash(gh api *--method delete*)"
     ]
   },
   "hooks": {
