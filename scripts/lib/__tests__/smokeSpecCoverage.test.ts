@@ -275,8 +275,10 @@ describe('the smoke shard job (#2453)', () => {
     expect(smoke?.strategy?.['fail-fast']).toBe(false)
   })
 
-  it('drives the deployed preview, not a default', () => {
-    expect(smoke?.env?.['BASE_URL']).toBe('${{ needs.preview.outputs.url }}')
+  it("drives the preview job's build served locally, not a default (#2544)", () => {
+    // The same build the channel gets; prPreviewLocalBuild.test.ts proves
+    // it is downloaded and served before the shards run.
+    expect(smoke?.env?.['BASE_URL']).toBe('http://127.0.0.1:4173')
   })
 
   it('hands the matrix entry to the step through env, not inline', () => {

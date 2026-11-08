@@ -53,9 +53,14 @@ function runVerdict(env: Record<string, string>): number {
 }
 
 describe('pr-preview.yml: one verdict over every shard (#2453)', () => {
-  it('is named for branch protection and needs deploy, smoke and lighthouse', () => {
+  it('is named for branch protection and needs deploy, smoke, lighthouse and the real-preview smoke', () => {
     expect(verdict?.name).toBe('PR Preview verdict')
-    expect(verdict?.needs).toEqual(['preview', 'smoke', 'lighthouse'])
+    expect(verdict?.needs).toEqual([
+      'preview',
+      'smoke',
+      'lighthouse',
+      'preview-smoke', // #2544
+    ])
   })
 
   it('runs whatever the shards concluded, but not for a cancelled or skipped run', () => {
@@ -69,6 +74,7 @@ describe('pr-preview.yml: one verdict over every shard (#2453)', () => {
       DEPLOY: '${{ needs.preview.result }}',
       SMOKE: '${{ needs.smoke.result }}',
       LIGHTHOUSE: '${{ needs.lighthouse.result }}',
+      PREVIEW_SMOKE: '${{ needs.preview-smoke.result }}',
       HEAVY: '${{ needs.preview.outputs.heavy }}',
     })
     expect(decide?.if).toBeUndefined()
@@ -84,6 +90,7 @@ describe('pr-preview.yml: one verdict over every shard (#2453)', () => {
       DEPLOY: 'success',
       SMOKE: 'success',
       LIGHTHOUSE: 'success',
+      PREVIEW_SMOKE: 'success',
       HEAVY: 'true',
     }
 
@@ -97,6 +104,11 @@ describe('pr-preview.yml: one verdict over every shard (#2453)', () => {
       ['the smoke shards were cancelled', { SMOKE: 'cancelled' }],
       ['the smoke shards were skipped on a heavy run', { SMOKE: 'skipped' }],
       ['Lighthouse was skipped on a heavy run', { LIGHTHOUSE: 'skipped' }],
+      ['the real-preview smoke failed (#2544)', { PREVIEW_SMOKE: 'failure' }],
+      [
+        'the real-preview smoke was skipped on a heavy run',
+        { PREVIEW_SMOKE: 'skipped' },
+      ],
       ['the deploy failed', { DEPLOY: 'failure' }],
       ['heavy is missing', { HEAVY: '' }],
     ])('fails when %s', (_label, over) => {
@@ -109,6 +121,7 @@ describe('pr-preview.yml: one verdict over every shard (#2453)', () => {
           DEPLOY: 'success',
           SMOKE: 'skipped',
           LIGHTHOUSE: 'skipped',
+          PREVIEW_SMOKE: 'skipped',
           HEAVY: 'false',
         })
       ).toBe(0)
@@ -120,6 +133,19 @@ describe('pr-preview.yml: one verdict over every shard (#2453)', () => {
           DEPLOY: 'success',
           SMOKE: 'success',
           LIGHTHOUSE: 'skipped',
+          PREVIEW_SMOKE: 'skipped',
+          HEAVY: 'false',
+        })
+      ).not.toBe(0)
+    })
+
+    it('fails a draft whose real-preview smoke ran anyway (#2544)', () => {
+      expect(
+        runVerdict({
+          DEPLOY: 'success',
+          SMOKE: 'skipped',
+          LIGHTHOUSE: 'skipped',
+          PREVIEW_SMOKE: 'success',
           HEAVY: 'false',
         })
       ).not.toBe(0)
