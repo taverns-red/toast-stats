@@ -12,6 +12,14 @@ Phase 1 of #2454: a Claude Code cloud session can pick up one issue, work it und
 | `scripts/cloud-session-stop-check.sh` | `Stop`. In the VM: warns when the branch has no upstream, has unpushed commits, or is behind. Same messages as Ron's global Stop hook.                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `CLAUDE.md`                           | "Rules for every session (local and cloud)" states the rules from the global `~/.claude/CLAUDE.md`, which cloud sessions don't load, plus the cloud-worker rules.                                                                                                                                                                                                                                                                                                                                                                       |
 
+**The guard is also an allow list (#2528).** In the VM, anything in these families that isn't listed is refused, and so is anything it can't parse:
+
+- **gh:** `gh api` (below), `gh <group> view|list`, `gh pr diff|checks|status`, `gh issue status`, `gh run watch|download`, `gh auth status`, `gh search`, `gh help`, `gh --version`. `-R`/`--repo`/`--hostname` are read wherever they sit (#2526).
+- **`gh api`, and curl or wget to GitHub:** GET on any path except `graphql`; POST `repos/{o}/{r}/pulls`, `…/issues/{n}/comments` and `…/pulls/{n}/comments`; POST `…/pulls/{n}/reviews` only with `event=COMMENT`; PATCH `…/pulls/{n}` only with `title`, `body` or `draft`; POST `…/issues/{n}/labels` only with `preview-smoke`. The method is inferred as gh does (GET, or POST once `-f`/`-F`/`--input` is given); `-X`/`--method` override it.
+- **`git push`:** only to the session's own branch (`git push`, `git push -u origin <branch>`, `HEAD`, `HEAD:<branch>`, `--force-with-lease`), never from `main` or the default branch, and never `--force`, `--no-verify`, `--all`, `--mirror`, `--tags`, deletions or another destination.
+
+It is defence in depth. The real control is GitHub-side: a `pull_request` rule on `main`, or a separate agent identity (ops#242). Commands run from a script file (`bash x.sh`, `npm run`, `node x.mjs`) are out of its sight. **A blocked call means ask Ron**; don't reword the command to get past it.
+
 All three hooks exit 0 at once unless `CLAUDE_CODE_REMOTE=true`, so local sessions only gain the allow rules. `scripts/lib/__tests__/cloudSessionConfig.test.ts` and `cloudSessionGuard.test.ts` pin that.
 
 The setup hook also fills two gaps in the VM image (#2467), skipping each when already present:
