@@ -251,8 +251,11 @@ export function availableSnapshotDates(
 
 export function useClubGrowthMilestones(
   districtId: string | undefined,
-  programYear: ProgramYear
+  programYear: ProgramYear,
+  /** `enabled: false` holds the rankings reads (#2513). */
+  options: { enabled?: boolean } = {}
 ): UseClubGrowthMilestonesResult {
+  const enabled = options.enabled ?? true
   const checkpoints = useMemo(
     () => clubGrowthCheckpointDates(programYear),
     [programYear]
@@ -296,7 +299,7 @@ export function useClubGrowthMilestones(
       return {
         // Shared with the page's own dated rankings read (#2027).
         ...exactRankingsQueryOptions(date),
-        enabled: Boolean(districtId),
+        enabled: Boolean(districtId) && enabled,
       }
     }),
   })
