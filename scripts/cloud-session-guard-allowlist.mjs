@@ -88,9 +88,12 @@ export function tokenize(src) {
   let w = null
   let i = 0
   const word = () => (w ??= new Word())
+  let redirect = null
   const endWord = () => {
-    if (w) words.push(w)
+    if (w && redirect === null) words.push(w)
+    else if (w && (redirect === '<' || redirect === '<>')) inputs.push(w)
     w = null
+    redirect = null
   }
   const endSegment = () => {
     endWord()
@@ -209,32 +212,11 @@ export function tokenize(src) {
       }
       const opStart = i
       while (/[<>&|-]/.test(s[i] ?? '')) i++
-      const op = s.slice(opStart, i)
       while (s[i] === ' ' || s[i] === '\t') i++
-      // The target is not an argument. A `<` target is a file the
-      // command reads (#2547), so keep it.
-      const target = new Word()
-      while (i < s.length && !/[\s;&|()<>]/.test(s[i])) {
-        if (s[i] === "'" || s[i] === '"') {
-          const q = s[i]
-          const j = s.indexOf(q, i + 1)
-          if (j < 0) throw new Error('unbalanced quote')
-          const inner = s.slice(i + 1, j)
-          if (q === '"' && /[$`]/.test(inner)) target.dynamic = true
-          target.text += inner
-          target.quoted = true
-          i = j + 1
-        } else if (s[i] === '$' && s[i + 1] === '(') {
-          i += 2
-          nested.push(readParens())
-          target.dynamic = true
-          target.text += '\u0000'
-        } else {
-          if (s[i] === '$' || s[i] === '`') target.dynamic = true
-          target.text += s[i++]
-        }
-      }
-      if (op === '<' || op === '<>') inputs.push(target)
+      // The target is not an argument, but it is parsed as a word, so
+      // substitutions in it (`<<<"$(cat x)"`) are checked too (#2547). A
+      // `<` target is a file the command reads, so it is kept.
+      redirect = s.slice(opStart, i).trim()
     } else if (/[;&|\n()]/.test(c)) {
       endSegment()
       i++
@@ -355,9 +337,8 @@ function checkLine(src, ctx, depth = 0) {
   try {
     parsed = tokenize(src)
   } catch (e) {
-    if (mentionsGuarded(src))
-      no(`the command could not be parsed (${e.message})`)
-    return
+    // #2547: an unbalanced substitution hides what runs, whatever it is.
+    no(`the command could not be parsed (${e.message})`)
   }
   for (const inner of parsed.nested) {
     const cwd = ctx.cwd
