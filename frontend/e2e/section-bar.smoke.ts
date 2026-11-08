@@ -1,4 +1,5 @@
 import { test, expect, type Page } from './fixtures/test'
+import { scrollUntilStable } from './helpers/scrollUntilStable'
 
 /* Phone bottom section bar (#1832, mobile epic #1827 Phase 1, review §5.1).
  *
@@ -288,20 +289,10 @@ for (const s of SUITES) {
           }
           expect(m.docOverflow, ctx).toBeLessThanOrEqual(0)
 
-          // Nothing at the end of the page sits under the bar. `html` has
-          // scroll-behavior: smooth (index.css), so scroll instantly and wait
-          // until the page is at its end before measuring (WebKit animates).
-          await page.evaluate(() =>
-            window.scrollTo({
-              top: document.documentElement.scrollHeight,
-              behavior: 'instant',
-            })
-          )
-          await page.waitForFunction(
-            () =>
-              Math.ceil(window.scrollY + window.innerHeight) >=
-              document.documentElement.scrollHeight - 1
-          )
+          // Nothing at the end of the page sits under the bar. The district
+          // hub's cards load as they near the viewport (#2513), so the page
+          // changes height after the first scroll: scroll until it settles.
+          await scrollUntilStable(page)
           const end = await page.evaluate(bar => {
             const root = document
               .getElementById('root')!
