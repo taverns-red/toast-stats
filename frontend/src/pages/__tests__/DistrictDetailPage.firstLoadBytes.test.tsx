@@ -18,6 +18,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import React from 'react'
 import DistrictDetailPage from '../DistrictDetailPage'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
+import { snap } from '../../test-utils/snapshotDate'
 import { exactRankingsQueryOptions } from '../../hooks/districtRankingsQuery'
 
 // ---------------------------------------------------------------------------
@@ -37,6 +38,7 @@ Object.defineProperty(global, 'localStorage', {
   writable: true,
 })
 
+import type { CdnRankingsData } from '../../services/cdn'
 import {
   fetchCdnCompetitiveAwards,
   fetchCdnRankingsForDateExact,
@@ -311,13 +313,14 @@ describe('DistrictDetailPage — first-load bytes (#2513)', () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     })
+    const checkpointFile: CdnRankingsData = {
+      rankings: [],
+      asOfDate: '2026-10-10',
+      generatedAt: '2026-10-10T00:00:00Z',
+    }
     client.setQueryData(
-      exactRankingsQueryOptions('2026-09-30' as never).queryKey,
-      {
-        rankings: [],
-        asOfDate: '2026-10-10',
-        generatedAt: '2026-10-10T00:00:00Z',
-      }
+      exactRankingsQueryOptions(snap('2026-09-30')).queryKey,
+      checkpointFile
     )
     renderHub(client)
     await settle()
