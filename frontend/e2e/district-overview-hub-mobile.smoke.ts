@@ -164,6 +164,42 @@ for (const [scheme, season] of [
   })
 }
 
+/* The Distinguished tile draws "N +M provisional" in one nowrap row (#2554).
+ * The number never shrinks; the provisional part must stay fully readable
+ * for the widest realistic pair (two-digit confirmed and provisional), not
+ * just today's D61 figures. */
+for (const width of [375, 360]) {
+  test(`Distinguished tile keeps "+N provisional" readable with a two-digit pair at ${width}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 812 })
+    await loadHub(page)
+    const m = await page.evaluate(() => {
+      const row = [
+        ...document.querySelectorAll('.district-hub__tile-value'),
+      ].find(e => e.querySelector('[data-testid="distinguished-confirmed"]'))
+      if (!row) return null
+      // Mirror DistinguishedCount's markup, so the check does not depend on
+      // whether D61 has provisional clubs today.
+      row.innerHTML =
+        '<span data-testid="distinguished-confirmed">88</span> ' +
+        '<span data-testid="distinguished-provisional" ' +
+        'class="distinguished-count__provisional">+88 provisional</span>'
+      const conf = row.querySelector('[data-testid="distinguished-confirmed"]')!
+      const prov = row.querySelector(
+        '[data-testid="distinguished-provisional"]'
+      )!
+      return {
+        clipped: prov.scrollWidth > prov.clientWidth + 1,
+        confClipped: conf.scrollWidth > conf.clientWidth + 1,
+      }
+    })
+    expect(m, 'the Distinguished tile row is missing').not.toBeNull()
+    expect(m!.clipped, '"+88 provisional" is clipped').toBe(false)
+    expect(m!.confClipped, 'the number is clipped').toBe(false)
+  })
+}
+
 test('a tile opens its detail sheet', async ({ page }) => {
   await page.setViewportSize(PHONE)
   await loadHub(page)
