@@ -1,6 +1,8 @@
 import {
   test as base,
   expect,
+  type Browser,
+  type BrowserContext,
   type Request,
   type Response,
 } from '@playwright/test'
@@ -45,6 +47,11 @@ export function isGaCollect(url: URL): boolean {
   return url.pathname.endsWith('/g/collect')
 }
 
+/** `browser.newContext()` with the CDN fixture on the new context. */
+export type NewFixtureContext = (
+  options?: Parameters<Browser['newContext']>[0]
+) => Promise<BrowserContext>
+
 interface GaFixtures {
   /** GA collect requests the stub answered, in arrival order. */
   gaCollect: Request[]
@@ -52,6 +59,15 @@ interface GaFixtures {
   errorResponses: string[]
   /** The CDN fixture's tally, or null when it is off (#2545). */
   cdnFixtures: CdnFixtureTally | null
+  /** `browser.newContext()` with the CDN fixture on it (#2545). */
+  newFixtureContext: NewFixtureContext
+}
+
+/** The fixture's env: a directory to read, or a file to record into. */
+function fixtureEnv() {
+  const dir = process.env['SMOKE_FIXTURES_DIR']
+  const recordFile = process.env['SMOKE_FIXTURES_RECORD_FILE']
+  return { dir, recordFile, on: Boolean(dir || recordFile) }
 }
 
 export const test = base.extend<GaFixtures>({
@@ -64,9 +80,8 @@ export const test = base.extend<GaFixtures>({
    * the test at teardown. */
   cdnFixtures: [
     async ({ context }, use, testInfo) => {
-      const dir = process.env['SMOKE_FIXTURES_DIR']
-      const recordFile = process.env['SMOKE_FIXTURES_RECORD_FILE']
-      if (!dir && !recordFile) {
+      const { dir, recordFile, on } = fixtureEnv()
+      if (!on) {
         await use(null)
         return
       }
@@ -84,6 +99,32 @@ export const test = base.extend<GaFixtures>({
     },
     { auto: true },
   ],
+  /* A spec that needs a context of its own (a colour scheme, a device, safe
+   * area insets) calls this, not `browser.newContext()`: a context made by
+   * hand never meets the auto fixture above, so its CDN reads would go live
+   * and unchecked (#2545). Same install and same teardown check; with the
+   * fixture off it is `browser.newContext()`. The lint test
+   * smokes-do-not-bypass-cdn-fixtures.test.ts fails a bare newContext. */
+  newFixtureContext: async ({ browser }, use, testInfo) => {
+    const { dir, recordFile, on } = fixtureEnv()
+    const made: CdnFixtureTally[] = []
+    await use(async options => {
+      const ctx = await browser.newContext(options)
+      if (on) made.push(await installCdnFixtures(ctx, { dir, recordFile }))
+      return ctx
+    })
+    for (const tally of made) {
+      await settled(tally)
+      const problems = describeFixtureProblems(tally)
+      if (problems) {
+        await testInfo.attach('cdn-fixture-problems', {
+          body: problems,
+          contentType: 'text/plain',
+        })
+      }
+      expect(problems, 'CDN fixtures (#2545)').toBeNull()
+    }
+  },
   /* Diagnostics only (#2248): record every response with status >= 400 and
    * attach the list to the test result, so a failure names the URL that
    * failed (the reporter prints a text attachment under the failing test).

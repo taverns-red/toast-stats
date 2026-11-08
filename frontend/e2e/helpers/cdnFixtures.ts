@@ -16,7 +16,13 @@
  */
 import { appendFileSync, existsSync, readFileSync } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
-import type { BrowserContext, Request, Response, Route } from '@playwright/test'
+import type {
+  BrowserContext,
+  Page,
+  Request,
+  Response,
+  Route,
+} from '@playwright/test'
 
 export const CDN_STAGING_ORIGIN = 'https://cdn-staging.taverns.red'
 
@@ -255,13 +261,40 @@ export interface FixtureResponse {
   json(): Promise<unknown>
 }
 
-/** Stub: always the network. */
+/**
+ * Read one CDN file for a helper: the fixture when SMOKE_FIXTURES_DIR is set
+ * (it throws for a path with none, which fails the test), `live()` when it is
+ * not. For a read made without a route, such as `page.request.get()`, which
+ * goes to the network past the fixture.
+ */
 export async function fixtureGet(
-  _url: string,
+  url: string,
   live: () => Promise<FixtureResponse>,
-  _env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = process.env
 ): Promise<FixtureResponse> {
-  return live()
+  const dir = env['SMOKE_FIXTURES_DIR']
+  if (!dir) return live()
+  const root = resolve(dir)
+  const path = fixturePath(url)
+  const entry = path ? readIndex(root)[path] : undefined
+  const file = path ? resolve(root, path) : ''
+  if (!path || !entry || !file.startsWith(root + sep)) {
+    throw new Error(`No CDN fixture for ${path ?? url}`)
+  }
+  const body = readFileSync(file)
+  return {
+    status: () => entry.status,
+    json: async () => JSON.parse(body.toString('utf8')),
+  }
+}
+
+/** `page.request.get(url)` for a helper, answered from the fixture when on. */
+export async function fixtureRequestGet(
+  page: Page,
+  url: string,
+  env: Record<string, string | undefined> = process.env
+): Promise<FixtureResponse> {
+  return fixtureGet(url, () => page.request.get(url), env)
 }
 
 /**
@@ -274,19 +307,5 @@ export async function fixtureFetch(
   route: Route,
   env: Record<string, string | undefined> = process.env
 ): Promise<FixtureResponse> {
-  const dir = env['SMOKE_FIXTURES_DIR']
-  if (!dir) return route.fetch()
-  const root = resolve(dir)
-  const url = route.request().url()
-  const path = fixturePath(url)
-  const entry = path ? readIndex(root)[path] : undefined
-  const file = path ? resolve(root, path) : ''
-  if (!path || !entry || !file.startsWith(root + sep)) {
-    throw new Error(`No CDN fixture for ${path ?? url}`)
-  }
-  const body = readFileSync(file)
-  return {
-    status: () => entry.status,
-    json: async () => JSON.parse(body.toString('utf8')),
-  }
+  return fixtureGet(route.request().url(), () => route.fetch(), env)
 }

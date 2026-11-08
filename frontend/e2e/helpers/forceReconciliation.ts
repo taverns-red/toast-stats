@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test'
+import { fixtureFetch, fixtureRequestGet } from './cdnFixtures'
 
 /* Force the month-end reconciliation state on the deployed preview (#2472).
  *
@@ -14,6 +15,10 @@ import type { Page } from '@playwright/test'
  *  - `snapshots/<date>/all-districts-rankings.json` `metadata.sourceCsvDate`
  *    (the landing page's as-of), moved to the 1st of the month after <date>.
  *
+ * The reads go through `fixtureFetch` / `fixtureGet`: the PR Preview shards
+ * answer the CDN from recorded fixtures, and a bare `route.fetch()` or
+ * `page.request.get()` would read live staging past them (#2545).
+ *
  * Register before `page.goto`. Callers should assert the pill rendered
  * `data-reconciling="true"`, or a change in the read path makes them vacuous.
  */
@@ -24,21 +29,26 @@ const firstOfNextMonth = (isoDate: string): string => {
   return next.toISOString().slice(0, 10)
 }
 
+// A page route answers a cross-origin fetch itself, so it carries CORS.
+const CORS = { 'access-control-allow-origin': '*' }
+
 export async function forceReconciliation(page: Page): Promise<void> {
   await page.route('**/v1/rankings.json', async route => {
-    const res = await route.fetch()
+    const res = await fixtureFetch(route)
     const body = (await res.json()) as { date: string }
     const latestUrl = new URL('latest.json', route.request().url()).toString()
-    const latest = (await (await page.request.get(latestUrl)).json()) as {
+    const latest = (await (
+      await fixtureRequestGet(page, latestUrl)
+    ).json()) as {
       latestSnapshotDate: string
     }
     body.date = firstOfNextMonth(latest.latestSnapshotDate)
-    await route.fulfill({ response: res, json: body })
+    await route.fulfill({ status: res.status(), json: body, headers: CORS })
   })
   await page.route(
     '**/snapshots/*/all-districts-rankings.json',
     async route => {
-      const res = await route.fetch()
+      const res = await fixtureFetch(route)
       const body = (await res.json()) as {
         metadata?: { sourceCsvDate?: string }
       }
@@ -48,7 +58,7 @@ export async function forceReconciliation(page: Page): Promise<void> {
       if (body.metadata && date) {
         body.metadata.sourceCsvDate = firstOfNextMonth(date)
       }
-      await route.fulfill({ response: res, json: body })
+      await route.fulfill({ status: res.status(), json: body, headers: CORS })
     }
   )
 }

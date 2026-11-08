@@ -96,8 +96,10 @@ async function sampleRowContrasts(page: Page, hover: boolean) {
 
 for (const q of QUADRANTS) {
   const label = `app-${q.store}_OS-${q.os}`
-  test(`regions leaderboard is AA-legible (${label})`, async ({ browser }) => {
-    const ctx = await browser.newContext({ colorScheme: q.os })
+  test(`regions leaderboard is AA-legible (${label})`, async ({
+    newFixtureContext,
+  }) => {
+    const ctx = await newFixtureContext({ colorScheme: q.os })
     const page = await ctx.newPage()
     await page.addInitScript(store => {
       window.localStorage.setItem('theme', store as string)

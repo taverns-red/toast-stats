@@ -36,8 +36,14 @@ const helpers = readdirSync(HELPERS_DIR)
   .filter(f => f.endsWith('.ts') && f !== 'cdnFixtures.ts')
   .map(f => ({ name: `helpers/${f}`, path: resolve(HELPERS_DIR, f) }))
 const scanned = [...smokes, ...helpers]
+// Comments are not calls: a doc comment may name `route.fetch()` to say why
+// it is not used.
+const stripComments = (code: string) =>
+  code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 const source = (f: string) =>
-  readFileSync(scanned.find(s => s.name === f)?.path ?? f, 'utf8')
+  stripComments(
+    readFileSync(scanned.find(s => s.name === f)?.path ?? f, 'utf8')
+  )
 
 // Any identifier. `window`/`globalThis`/`self` are the page's own fetch.
 const CONTINUE = /\b\w+\.continue\(/
