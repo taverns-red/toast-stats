@@ -273,6 +273,52 @@ describe('videos.yml (#2293)', () => {
         )
       ).toEqual(['v4'])
     })
+
+    // #2534: a git hook exports GIT_DIR (and GIT_WORK_TREE, GIT_INDEX_FILE).
+    // Inherited, the scratch repo's init, config and commits land in the
+    // shared repo instead; red-vote's got core.bare=true that way.
+    it('leaves a hook-exported GIT_DIR untouched', () => {
+      const decoy = fs.mkdtempSync(path.join(os.tmpdir(), 'videos-decoy-'))
+      const cleanGit = (...a: string[]) =>
+        spawnSync('git', a, {
+          cwd: decoy,
+          encoding: 'utf-8',
+          env: { PATH: process.env.PATH ?? '', HOME: decoy },
+        })
+      const saved = {
+        GIT_DIR: process.env.GIT_DIR,
+        GIT_WORK_TREE: process.env.GIT_WORK_TREE,
+      }
+      let planError: unknown
+      try {
+        cleanGit('init', '-q')
+        process.env.GIT_DIR = path.join(decoy, '.git')
+        process.env.GIT_WORK_TREE = decoy
+        try {
+          runPlan(
+            { 'videos/src/scenarios/v1.ts': 'new' },
+            { EVENT: 'pull_request', IN_SCENARIO: '' }
+          )
+        } catch (e) {
+          planError = e
+        }
+      } finally {
+        for (const [k, v] of Object.entries(saved)) {
+          if (v === undefined) delete process.env[k]
+          else process.env[k] = v
+        }
+      }
+      try {
+        expect(cleanGit('rev-parse', '--verify', '-q', 'HEAD').status).not.toBe(
+          0
+        )
+        expect(cleanGit('config', '--local', 'user.email').stdout).toBe('')
+        expect(cleanGit('config', 'core.bare').stdout.trim()).toBe('false')
+        expect(planError).toBeUndefined()
+      } finally {
+        fs.rmSync(decoy, { recursive: true, force: true })
+      }
+    })
   })
 
   it('never commits or pushes a render', () => {
