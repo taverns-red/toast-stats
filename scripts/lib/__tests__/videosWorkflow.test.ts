@@ -199,9 +199,13 @@ describe('videos.yml (#2293)', () => {
       env: Record<string, string>
     ): string[] {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'videos-plan-'))
+      // #2534: never inherit a hook's GIT_DIR, GIT_WORK_TREE or GIT_INDEX_FILE.
+      const baseEnv = Object.fromEntries(
+        Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_'))
+      )
       try {
         const git = (...a: string[]) =>
-          spawnSync('git', a, { cwd: dir, encoding: 'utf-8' })
+          spawnSync('git', a, { cwd: dir, encoding: 'utf-8', env: baseEnv })
         git('init', '-q')
         git('config', 'user.email', 't@example.test')
         git('config', 'user.name', 'T')
@@ -225,7 +229,7 @@ describe('videos.yml (#2293)', () => {
           cwd: dir,
           encoding: 'utf-8',
           env: {
-            ...process.env,
+            ...baseEnv,
             GITHUB_OUTPUT: out,
             RUNNER_TEMP: dir,
             ...env,
@@ -272,6 +276,52 @@ describe('videos.yml (#2293)', () => {
           { EVENT: 'workflow_dispatch', IN_SCENARIO: 'v4' }
         )
       ).toEqual(['v4'])
+    })
+
+    // #2534: a git hook exports GIT_DIR (and GIT_WORK_TREE, GIT_INDEX_FILE).
+    // Inherited, the scratch repo's init, config and commits land in the
+    // shared repo instead; red-vote's got core.bare=true that way.
+    it('leaves a hook-exported GIT_DIR untouched', () => {
+      const decoy = fs.mkdtempSync(path.join(os.tmpdir(), 'videos-decoy-'))
+      const cleanGit = (...a: string[]) =>
+        spawnSync('git', a, {
+          cwd: decoy,
+          encoding: 'utf-8',
+          env: { PATH: process.env.PATH ?? '', HOME: decoy },
+        })
+      const saved = {
+        GIT_DIR: process.env.GIT_DIR,
+        GIT_WORK_TREE: process.env.GIT_WORK_TREE,
+      }
+      let planError: unknown
+      try {
+        cleanGit('init', '-q')
+        process.env.GIT_DIR = path.join(decoy, '.git')
+        process.env.GIT_WORK_TREE = decoy
+        try {
+          runPlan(
+            { 'videos/src/scenarios/v1.ts': 'new' },
+            { EVENT: 'pull_request', IN_SCENARIO: '' }
+          )
+        } catch (e) {
+          planError = e
+        }
+      } finally {
+        for (const [k, v] of Object.entries(saved)) {
+          if (v === undefined) delete process.env[k]
+          else process.env[k] = v
+        }
+      }
+      try {
+        expect(cleanGit('rev-parse', '--verify', '-q', 'HEAD').status).not.toBe(
+          0
+        )
+        expect(cleanGit('config', '--local', 'user.email').stdout).toBe('')
+        expect(cleanGit('config', 'core.bare').stdout.trim()).toBe('false')
+        expect(planError).toBeUndefined()
+      } finally {
+        fs.rmSync(decoy, { recursive: true, force: true })
+      }
     })
   })
 
