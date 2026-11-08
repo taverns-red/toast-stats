@@ -33,6 +33,7 @@
  *             (firebase.json `emulators.hosting`).
  * Logs "ready" once listening.
  */
+import { createHash } from 'node:crypto'
 import { createServer, request } from 'node:http'
 import { brotliCompress, constants } from 'node:zlib'
 import { promisify } from 'node:util'
@@ -45,7 +46,10 @@ const brotli = promisify(brotliCompress)
 const COMPRESSIBLE =
   /^(text\/|application\/(javascript|json|manifest\+json|xml|wasm)|image\/svg\+xml|[^;]*\+(json|xml)\b)/i
 
-/** Quality-11 output per URL and ETag: the build never changes mid-run. */
+/**
+ * Quality-11 output by content hash. Not by ETag: the emulator keeps
+ * index.html's ETag across rebuilds, so a rebuild would serve stale bytes.
+ */
 const cache = new Map()
 
 const acceptsBr = header => /\bbr\b/.test(String(header ?? ''))
@@ -98,10 +102,11 @@ const server = createServer((req, res) => {
       upRes.on('data', c => chunks.push(c))
       upRes.on('end', async () => {
         try {
-          const key = `${req.url}\n${upRes.headers['etag'] ?? ''}`
+          const raw = Buffer.concat(chunks)
+          const key = createHash('sha256').update(raw).digest('hex')
           let body = cache.get(key)
           if (!body) {
-            body = await brotli(Buffer.concat(chunks), {
+            body = await brotli(raw, {
               params: { [constants.BROTLI_PARAM_QUALITY]: 11 },
             })
             cache.set(key, body)
