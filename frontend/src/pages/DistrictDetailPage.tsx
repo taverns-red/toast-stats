@@ -41,6 +41,7 @@ import { LongestServingClubsLeaderboard } from '../components/LongestServingClub
 import { MobileDisclosure } from '../components/MobileDisclosure'
 import { DistinguishedDistrictTrophyCase } from '../components/DistinguishedDistrictTrophyCase'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
+import { useNearViewport } from '../hooks/useNearViewport'
 import { useDistrictRanking } from '../hooks/useDistrictRanking'
 import { ClubGrowthAchievementCard } from '../components/ClubGrowthAchievementCard'
 import { useClubGrowthMilestones } from '../hooks/useClubGrowthMilestones'
@@ -327,14 +328,23 @@ const DistrictDetailPageInner: React.FC = () => {
   // after (#2027). Settled includes "resolved empty" and "failed": both leave
   // `effectiveEndDate` null, and the read falls back to `latest`.
   const snapshotDateSettled = !isPendingCachedDates || !districtId
+  // The file (~17 KB on the wire) feeds only the trophy case, which sits
+  // below the first screen: hold the read until its slot nears the viewport
+  // (#2513), the latch the predecessor panel uses. The slot stays reserved
+  // while held (below), so nothing shifts. Without IntersectionObserver the
+  // read is never held.
+  const [trophySlot, setTrophySlot] = React.useState<HTMLElement | null>(null)
+  const trophyNearViewport = useNearViewport(trophySlot)
+  const awardsWanted =
+    trophyNearViewport || typeof IntersectionObserver !== 'function'
   const competitiveAwardsQuery = useCompetitiveAwards(
     effectiveEndDate ?? undefined,
-    { enabled: snapshotDateSettled }
+    { enabled: snapshotDateSettled && awardsWanted }
   )
   const competitiveAwards = competitiveAwardsQuery.data
   // Held (disabled) counts as loading, so the trophy-case slot stays reserved.
   const isLoadingCompetitiveAwards =
-    competitiveAwardsQuery.isLoading || !snapshotDateSettled
+    competitiveAwardsQuery.isLoading || !snapshotDateSettled || !awardsWanted
   const distinguishedDistrictStatus = React.useMemo(() => {
     if (!districtId || !competitiveAwards?.distinguishedDistrict) return null
     return competitiveAwards.distinguishedDistrict[districtId] ?? null
@@ -861,31 +871,33 @@ const DistrictDetailPageInner: React.FC = () => {
                     back to the URL-synced selection keeps the checklist honest
                     about the year being DISPLAYED rather than reverting to the
                     legacy five-gate shape by omission. */}
-                <DistinguishedDistrictTrophyCase
-                  status={distinguishedDistrictStatus}
-                  isLoading={isLoadingCompetitiveAwards}
-                  programYear={
-                    (effectiveProgramYear ?? selectedProgramYear).label
-                  }
-                  ranking={distinguishedRankingInputs}
-                  clubStrengthQualifies={clubStrengthResult?.qualifies}
-                  clubStrengthGrowth={clubStrengthResult?.growthPercent}
-                  leadershipExcellenceQualifies={
-                    leadershipExcellenceResult?.qualifies
-                  }
-                  leadershipExcellenceYears={
-                    leadershipExcellenceResult?.consecutiveYears
-                  }
-                  leadershipExcellenceOnTrack={
-                    leadershipExcellenceResult?.onTrack
-                  }
-                  educationTrainingQualifies={
-                    officerAwardsResult?.educationTraining?.qualifies
-                  }
-                  clubGrowthQualifies={
-                    officerAwardsResult?.clubGrowth?.qualifies
-                  }
-                />
+                <div ref={setTrophySlot} data-testid="trophy-case-slot">
+                  <DistinguishedDistrictTrophyCase
+                    status={distinguishedDistrictStatus}
+                    isLoading={isLoadingCompetitiveAwards}
+                    programYear={
+                      (effectiveProgramYear ?? selectedProgramYear).label
+                    }
+                    ranking={distinguishedRankingInputs}
+                    clubStrengthQualifies={clubStrengthResult?.qualifies}
+                    clubStrengthGrowth={clubStrengthResult?.growthPercent}
+                    leadershipExcellenceQualifies={
+                      leadershipExcellenceResult?.qualifies
+                    }
+                    leadershipExcellenceYears={
+                      leadershipExcellenceResult?.consecutiveYears
+                    }
+                    leadershipExcellenceOnTrack={
+                      leadershipExcellenceResult?.onTrack
+                    }
+                    educationTrainingQualifies={
+                      officerAwardsResult?.educationTraining?.qualifies
+                    }
+                    clubGrowthQualifies={
+                      officerAwardsResult?.clubGrowth?.qualifies
+                    }
+                  />
+                </div>
 
                 {/* District Club Growth Achievement (#1476). The card owns the
                     effective-year gate — `clubGrowthAchievement.ts` holds the
