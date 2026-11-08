@@ -338,6 +338,14 @@ export function applyGrandfather(
   return { breaking, grandfathered }
 }
 
+/**
+ * GitHub label names are case-insensitive, and an event keeps the spelling
+ * used when it happened, so compare lower-cased (#2520, red-table#911).
+ */
+const isOverrideLabel = (name: unknown): boolean =>
+  typeof name === 'string' &&
+  name.toLowerCase() === OVERRIDE_LABEL.toLowerCase()
+
 /** How a non-null `performed_via_github_app` reads in a refusal. */
 const viaApp = (app: unknown): string => {
   if (app === undefined) return 'with no `performed_via_github_app` field'
@@ -353,25 +361,38 @@ const viaApp = (app: unknown): string => {
  * `performed_via_github_app` must be exactly `null` (#2520). A cloud session
  * acts as rservant but its events carry the Claude app there, so the actor
  * alone can't tell Ron from an agent. A missing field or any other value
- * fails closed. A removal and re-add by anyone else therefore fails.
+ * fails closed. Label names compare case-insensitively, and an `unlabeled`
+ * event counts too: if the latest event for the label is a removal, the
+ * override is revoked even if the labels read still lists it. A removal and
+ * re-add by anyone else therefore fails.
  */
 export function verifyOverride(
   labels: string[],
   events: IssueEvent[]
 ): OverrideResult {
-  if (!labels.includes(OVERRIDE_LABEL)) {
+  if (!labels.some(isOverrideLabel)) {
     return {
       approved: false,
       reason: `\`${OVERRIDE_LABEL}\` is not on the PR`,
     }
   }
   const last = events
-    .filter(e => e.event === 'labeled' && e.label?.name === OVERRIDE_LABEL)
+    .filter(
+      e =>
+        (e.event === 'labeled' || e.event === 'unlabeled') &&
+        isOverrideLabel(e.label?.name)
+    )
     .at(-1)
   if (!last) {
     return {
       approved: false,
       reason: `no \`labeled\` event for \`${OVERRIDE_LABEL}\``,
+    }
+  }
+  if (last.event !== 'labeled') {
+    return {
+      approved: false,
+      reason: `\`${OVERRIDE_LABEL}\` was last removed, by ${last.actor?.login ?? '<unknown>'}`,
     }
   }
   const by = last.actor?.login ?? '<unknown>'
