@@ -440,8 +440,8 @@ const TrophyCaseSkeleton: React.FC<{ programYear: string; held?: boolean }> = ({
         </div>
         {/* The loaded panel's md+ explainer line under the tiles (#2390). */}
         <p className="invisible hidden md:block mt-2 text-xs font-tm-body">
-          Confirmed clubs only. The Distinguished Clubs card above counts clubs
-          qualifying today, so the two can differ.
+          Confirmed clubs only. The Distinguished Clubs card above shows the
+          same confirmed count, with provisional clubs beside it.
         </p>
         {/* The every-tier table, shown from 768 up (#2426): the same table and
           source line, invisible, so the panel does not grow when it lands.
@@ -693,8 +693,8 @@ export const DistinguishedDistrictTrophyCase: React.FC<
               unitPlural="payments"
             />
             {/* Confirmed clubs (#304/#2221), the share card's noun (#2304).
-                The KPI card above counts clubs qualifying today; the word
-                keeps the two from reading as a contradiction (#2390). */}
+                The KPI card above shows the same confirmed count (#2554), with
+                provisional beside it. */}
             <GapTile
               label="Distinguished Clubs"
               count={distinguishedClubsCount}
@@ -714,8 +714,8 @@ export const DistinguishedDistrictTrophyCase: React.FC<
             data-testid="distinguished-gap-explainer"
             className="hidden md:block mt-2 text-xs text-gray-600 theme-dark:text-gray-400 font-tm-body"
           >
-            Confirmed clubs only. The Distinguished Clubs card above counts
-            clubs qualifying today, so the two can differ.
+            Confirmed clubs only. The Distinguished Clubs card above shows the
+            same confirmed count, with provisional clubs beside it.
           </p>
           {tierRows && (
             <div

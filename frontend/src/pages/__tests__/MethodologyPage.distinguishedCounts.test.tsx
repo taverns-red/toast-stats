@@ -63,12 +63,11 @@ describe('MethodologyPage — Distinguished club counts (#2390)', () => {
     renderPage()
     const txt = sectionText()
     // Every club on TI's report, paid or not: the base of TI's own count
-    // and the rankings. The KPI card counts paid clubs only.
+    // and the rankings. The KPI card shares that base (#2554).
     expect(txt).toMatch(
       /every club on Toastmasters International.s club report/i
     )
     expect(txt).toMatch(/paid or not/i)
-    expect(txt).toMatch(/KPI card counts paid clubs only/i)
     // Provisional is shown beside confirmed, never added to it.
     expect(txt).toMatch(/provisional/i)
     expect(txt).toMatch(/never added/i)

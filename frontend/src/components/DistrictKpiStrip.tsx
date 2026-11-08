@@ -174,7 +174,11 @@ const KpiSummary: React.FC<KpiBodyProps> = ({ kpis, ghost }) => (
     <span aria-hidden="true" className="district-kpi-strip__sep">
       ·
     </span>
-    <span>{formatCompact(kpis.distinguishedClubs.current)} dist.</span>
+    <span>
+      {formatCompact(kpis.distinguishedClubs.current)} dist.
+      {(kpis.distinguishedClubs.provisional ?? 0) > 0 &&
+        ` +${formatCompact(kpis.distinguishedClubs.provisional ?? 0)} prov.`}
+    </span>
     <span aria-hidden="true" className="district-kpi-strip__sep">
       ·
     </span>
