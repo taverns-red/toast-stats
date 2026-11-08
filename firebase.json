@@ -114,13 +114,7 @@
       "target": "staging",
       "public": "frontend/dist",
       "cleanUrls": true,
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**",
-        "og-image.png",
-        "basemap/glyphs/**"
-      ],
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [
         {
           "source": "/basemap/glyphs/**",
