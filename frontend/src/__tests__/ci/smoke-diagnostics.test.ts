@@ -37,9 +37,11 @@ function steps(wf: string): string[] {
 describe('preview smoke failure diagnostics (#2248)', () => {
   const wf = readFileSync(repoFile('.github/workflows/pr-preview.yml'), 'utf8')
   const all = steps(wf)
-  const uploadIdx = all.findIndex(s =>
-    /uses: actions\/upload-artifact@/.test(s)
-  )
+  // The diagnostics uploads, not the build hand-over upload (#2544).
+  const isDiagnostics = (s: string) =>
+    /uses: actions\/upload-artifact@/.test(s) &&
+    /\n\s+path: frontend\/test-results\/?\n/.test(s)
+  const uploadIdx = all.findIndex(isDiagnostics)
   const upload = all[uploadIdx] ?? ''
 
   it('uploads the Playwright results only when the job fails', () => {
@@ -56,12 +58,25 @@ describe('preview smoke failure diagnostics (#2248)', () => {
   })
 
   it('runs after every Playwright step, so it sees the failing one', () => {
-    const lastPlaywright = all.reduce(
-      (last, s, i) => (/playwright test/.test(s) ? i : last),
-      -1
+    // One per Playwright job since #2544 (the shards and the real-preview
+    // smoke): each Playwright step is followed by a diagnostics upload in
+    // its own job, i.e. before the next job's checkout.
+    const playwright = all.flatMap((s, i) =>
+      /npx playwright test/.test(s) ? [i] : []
     )
-    expect(lastPlaywright).toBeGreaterThan(-1)
-    expect(uploadIdx).toBeGreaterThan(lastPlaywright)
+    expect(playwright.length).toBeGreaterThan(0)
+    playwright.forEach(at => {
+      const checkout = all.findIndex(
+        (s, i) => i > at && /^ {6}- name: Checkout code\n/.test(s)
+      )
+      const next = checkout === -1 ? all.length : checkout
+      const diag = all.findIndex((s, i) => i > at && isDiagnostics(s))
+      expect(diag, `no diagnostics upload after step ${at}`).toBeGreaterThan(at)
+      expect(diag).toBeLessThan(next)
+      const block = all[diag] ?? ''
+      expect(block).toMatch(/\n\s+if: failure\(\)/)
+      expect(block).toMatch(/\n\s+name: [^\n]*\$\{\{ github\.run_attempt \}\}/)
+    })
   })
 
   it('names the artifact per attempt, so a re-run does not collide', () => {

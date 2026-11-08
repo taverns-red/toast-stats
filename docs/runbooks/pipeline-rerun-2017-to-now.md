@@ -214,6 +214,13 @@ against it explicitly.
 | **GitHub Actions compute** | ~2–4 h of one `ubuntu-latest` runner. Negligible $ on this plan.                                                                                 |
 | **GCS egress / ops**       | rebuild reads raw-csv once + writes staging; value-gate reads small JSON; promote rsync writes only deltas. Bounded, single-digit-GB class.      |
 
+**A full-range rebuild is a large backfill (#2546).** The October 2026
+backfills cost CA$56.7 in staging-bucket egress and multi-region writes, so the
+"single-digit-GB" row above understates a campaign. Before dispatching, follow
+[backfills-in-region.md](backfills-in-region.md): estimate the download and
+writes (§2), use the in-region path once it exists (§4), and until then apply
+the interim rule for runners (§5).
+
 **If the rebuild risks exceeding 240 min:** split into ranges via the `dates`
 input (e.g. 2017–2020, 2021–2023, 2024–now) across sequential dispatches. Each
 writes to the same staging bucket additively; run the diff/promote only after the

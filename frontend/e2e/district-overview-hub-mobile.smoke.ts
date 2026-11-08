@@ -41,6 +41,24 @@ async function loadHub(page: Page, path = '/district/61'): Promise<void> {
   await page.waitForTimeout(500)
 }
 
+/* The trophy case and growth card hold their reads (and show a still
+ * placeholder) until they near the viewport (#2513), so the page reaches its
+ * real length only as a reader scrolls. Scroll to the bottom until the height
+ * stops changing, then measure: the cap below is for the whole page. */
+async function scrollUntilStable(page: Page): Promise<void> {
+  let last = -1
+  for (let i = 0; i < 10; i++) {
+    const height = await page.evaluate(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight)
+      return document.documentElement.scrollHeight
+    })
+    if (height === last) break
+    last = height
+    await page.waitForTimeout(700)
+  }
+  await page.evaluate(() => window.scrollTo(0, 0))
+}
+
 for (const [scheme, season] of [
   ['light', 'out'],
   ['dark', 'in'],
@@ -56,6 +74,8 @@ for (const [scheme, season] of [
     await page
       .locator('[data-testid="red-vote-promo"]')
       .waitFor({ state: 'visible', timeout: 30_000 })
+
+    await scrollUntilStable(page)
 
     const m = await page.evaluate(() => {
       const box = (el: Element | null) => {
