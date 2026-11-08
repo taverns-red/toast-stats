@@ -22,6 +22,9 @@ export interface DistrictKpiCardData {
   current: number
   targets: RecognitionTargets | null
   rankings: MetricRankings
+  /** Distinguished only (#2554): clubs that qualify on current membership but
+   *  are not yet confirmed. `current` is then the confirmed count. */
+  provisional?: number
 }
 
 /** Net Member Change is a signed delta with no Distinguished tiers, so it
