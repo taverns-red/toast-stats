@@ -20,6 +20,17 @@ Phase 1 of #2454: a Claude Code cloud session can pick up one issue, work it und
 - **Reads:** `cat`, `head`, `tail`, `wc`, `ls`, `diff`, `grep`, `rg`, `jq`, `sed -n <N[,M]p>`, `echo`, `pwd`, `node -v`, and `cd <dir>` inside the repository. Every path they read, every `-F body=@file` and `--input` file, and every git pathspec must resolve inside the repository root. Resolution uses the realpath of the nearest existing parent, against the cwd that the command's own `cd` sets. Paths may not be secret-shaped (`.env*`, `*.pem`, `*.key`, anything under `.git`) or gitignored, except `node_modules`, `dist`, `coverage`, `.vite`, `playwright-report` and `test-results`. `grep -r` over a directory holding `.git`, a secret-shaped file or other ignored files is refused. `rg` may not use `--hidden`, `-u`, `--no-ignore` or `-L`. `jq` may not read `env`, `$ENV`, `input` or `input_filename`.
 - **File tools** (Write, Edit, MultiEdit, NotebookEdit) refuse secret-shaped paths and config that other tools act on: `.npmrc`, `.yarnrc*`, `.gitattributes`, `.gitmodules`, `.gitconfig`, `.envrc`, `.husky/`, `.githooks/`, `.claude/` and `.github/`. The check uses the real path, so a symlink into `.git` counts.
 
+Writes outside the repository are allowed only under `$TMPDIR`. Inside it, `node_modules/`, `.vscode/`, `.yarn/` and `.config/` are refused as well.
+
+**Other tools: written, but not active yet (#2547).** Today `.claude/settings.json` routes only Bash and Edit/Write/MultiEdit/NotebookEdit to the guard. The guard also judges every other tool by name, but that handling stays dormant until a PreToolUse matcher sending those tools to the same wrapper is approved:
+
+- **Read, Grep and Glob** take the read rules above. Grep over a directory is treated like `grep -r`, and a Glob pattern may not contain `..` or an absolute path.
+- **WebFetch, WebSearch, any `mcp__*` tool and unknown tools** are denied.
+- **Tools with no I/O of their own** are allowed: `TodoWrite`, `ExitPlanMode`, `EnterPlanMode`, `ToolSearch`, `AskUserQuestion`, the `Task*` list tools, `SubagentHandback`, `SendMessage`, `ListAgents` and `Skill`.
+- **`Agent`/`Task`** are allowed too, because a subagent's tool calls fire the same PreToolUse hooks ([hooks reference](https://code.claude.com/docs/en/hooks)).
+
+The activation step is that matcher; the tests already feed the guard each tool's payload directly.
+
 Write PR and comment bodies to a repo path that isn't gitignored, such as `pr-body.md`. Push with `git push -u origin <branch>` in the foreground, because `nohup … &` is shell syntax.
 
 It is defence in depth. The real control is GitHub-side: a `pull_request` rule on `main`, or a separate agent identity (ops#242). Commands run from a script file (`bash x.sh`, `npm run`, `node x.mjs`) are out of its sight. **A blocked call means ask Ron**; don't reword the command to get past it.
