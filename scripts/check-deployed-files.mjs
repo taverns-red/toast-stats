@@ -11,7 +11,10 @@
  * (the same build the channel got) on BASE_URL and requires 200, with an HTML
  * type for pages only. cleanUrls: `x.html` is checked at `/x`, `index.html`
  * at its directory. Dotfiles are skipped: firebase.json ignores `**\/.*`.
- * HEAD sends no bodies, so the check costs headers, not bytes.
+ * HEAD sends no bodies, so the check costs headers, not bytes. It asks for
+ * `identity`: Hosting labels a gzipped .pbf glyph text/html (the body is the
+ * real glyph; seen on ts.taverns.red and pr-* channels, 2026-11-08), while
+ * the SPA rewrite's index.html is text/html at any encoding.
  *
  * Env:
  *   BASE_URL     The deployed origin (required).
@@ -54,6 +57,7 @@ async function head(path) {
       const res = await fetch(BASE + path, {
         method: 'HEAD',
         redirect: 'manual',
+        headers: { 'accept-encoding': 'identity' },
       })
       if (res.status >= 500 && attempt < 3) continue
       return { status: res.status, type: res.headers.get('content-type') ?? '' }
