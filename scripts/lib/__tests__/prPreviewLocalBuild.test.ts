@@ -1,6 +1,6 @@
 /**
- * Workflow contract: PR Preview tests a local build, plus one real-preview
- * smoke (#2544).
+ * Workflow contract: PR Preview's smoke shards test a local build; what
+ * measures the wire stays on the deployed channel (#2544).
  *
  * In October 2026, 275 of the 282 GiB Firebase Hosting served went to the
  * `pr-*` preview channels, because every Playwright shard and every
@@ -12,9 +12,16 @@
  * scripts/preview-local-server.mjs, which compresses like Hosting (brotli
  * quality 11) so the Lighthouse byte budgets measure the same bytes.
  *
- * Exactly one job still drives the deployed channel, so a Hosting- or
- * deploy-only breakage still fails the run, and it gates the verdict like
- * every shard. Sourced from the YAML so the contract cannot drift.
+ * Three things stay on the deployed channel and gate the verdict:
+ *   - Lighthouse mobile: Lantern models the transport, and the local server
+ *     is HTTP/1.1 where Hosting is h2/h3, so LCP read 15-25% high locally
+ *     (run 42494094590);
+ *   - the one test that measures wire bytes, header compression included
+ *     (district-survival's "fixed wire cost"): the shards skip it by title
+ *     and the real-preview job runs it, in both engines;
+ *   - e2e/staging.smoke.ts, so a Hosting- or deploy-only breakage still
+ *     fails the run.
+ * Sourced from the YAML so the contract cannot drift.
  */
 import { describe, it, expect } from 'vitest'
 import * as fs from 'node:fs'
@@ -27,6 +34,7 @@ const PREVIEW_URL = '${{ needs.preview.outputs.url }}'
 const LOCAL_URL = 'http://127.0.0.1:4173'
 const ARTIFACT = 'preview-dist-${{ github.run_id }}-${{ github.run_attempt }}'
 const HEAVY_IF = "needs.preview.outputs.heavy == 'true'"
+const WIRE_SPEC = 'frontend/e2e/district-survival.smoke.ts'
 
 interface Step {
   id?: string
@@ -83,30 +91,61 @@ describe('the preview job hands its build to the test jobs (#2544)', () => {
   })
 })
 
-describe.each([
-  ['smoke', isPlaywright],
-  ['lighthouse', isLighthouse],
-] as const)('the %s job runs on the local build (#2544)', (id, isTest) => {
-  const job = jobs[id] as Job
+describe('the smoke shards run on the local build (#2544)', () => {
+  const job = jobs['smoke'] as Job
 
   it('downloads the same build, then serves it, then tests it', () => {
-    const download = indexOf(id, isDownload)
-    const serve = indexOf(id, isServe)
-    const test = indexOf(id, isTest)
+    const download = indexOf('smoke', isDownload)
+    const serve = indexOf('smoke', isServe)
+    const test = indexOf('smoke', isPlaywright)
     expect(download).toBeGreaterThan(-1)
-    expect(steps(id)[download]?.with?.['name']).toBe(ARTIFACT)
-    expect(steps(id)[download]?.with?.['path']).toBe('frontend/dist')
+    expect(steps('smoke')[download]?.with?.['name']).toBe(ARTIFACT)
+    expect(steps('smoke')[download]?.with?.['path']).toBe('frontend/dist')
     expect(serve).toBeGreaterThan(download)
     expect(test).toBeGreaterThan(serve)
   })
 
   it('points the tests at the local server, never the channel', () => {
     expect(envValues(job)).not.toContain(PREVIEW_URL)
-    const target =
-      id === 'smoke'
-        ? job.env?.['BASE_URL']
-        : steps(id).find(isLighthouse)?.env?.['LHCI_BASE_URL']
-    expect(target).toBe(LOCAL_URL)
+    expect(job.env?.['BASE_URL']).toBe(LOCAL_URL)
+  })
+
+  it('skips only the wire-cost test, which runs on the channel', () => {
+    const run = steps('smoke').find(isPlaywright)?.run ?? ''
+    expect(run).toMatch(/--grep-invert "\$PREVIEW_ONLY_GREP"/)
+  })
+})
+
+describe('the wire-cost test is named by one pattern (#2544)', () => {
+  const pattern = String(
+    (wf as { env?: Record<string, string> }).env?.['PREVIEW_ONLY_GREP'] ?? ''
+  )
+  const titles = fs
+    .readdirSync(path.join(ROOT, 'frontend/e2e'))
+    .filter(f => f.endsWith('.smoke.ts'))
+    .flatMap(f =>
+      [
+        ...fs
+          .readFileSync(path.join(ROOT, 'frontend/e2e', f), 'utf-8')
+          .matchAll(/\btest\(\s*['`"](.+?)['`"],/g),
+      ].map(m => `${f}: ${m[1]}`)
+    )
+
+  it('matches exactly the district-survival wire-cost test', () => {
+    expect(pattern).not.toBe('')
+    const hits = titles.filter(t => new RegExp(pattern).test(t))
+    expect(hits).toHaveLength(1)
+    expect(hits[0]).toMatch(/^district-survival\.smoke\.ts: .*wire cost/)
+    expect(fs.existsSync(path.join(ROOT, WIRE_SPEC))).toBe(true)
+  })
+})
+
+describe('Lighthouse stays on the deployed channel (#2544)', () => {
+  it('points LHCI at the channel URL and serves nothing locally', () => {
+    const lh = steps('lighthouse').find(isLighthouse)
+    expect(lh?.env?.['LHCI_BASE_URL']).toBe(PREVIEW_URL)
+    expect(steps('lighthouse').some(isDownload)).toBe(false)
+    expect(steps('lighthouse').some(isServe)).toBe(false)
   })
 })
 
@@ -132,7 +171,7 @@ describe('the local server is Hosting on firebase.json (#2544)', () => {
   })
 })
 
-describe('exactly one job drives the deployed channel (#2544)', () => {
+describe('what runs on the deployed channel (#2544)', () => {
   const onChannel = Object.entries(jobs).filter(
     ([id, job]) =>
       id !== 'verdict' &&
@@ -140,8 +179,11 @@ describe('exactly one job drives the deployed channel (#2544)', () => {
       (job.steps ?? []).some(s => isPlaywright(s) || isLighthouse(s))
   )
 
-  it('is the real-preview smoke', () => {
-    expect(onChannel.map(([id]) => id)).toEqual(['preview-smoke'])
+  it('is Lighthouse and the real-preview smoke, nothing else', () => {
+    expect(onChannel.map(([id]) => id).sort()).toEqual([
+      'lighthouse',
+      'preview-smoke',
+    ])
   })
 
   const job = jobs['preview-smoke'] as Job
@@ -150,10 +192,21 @@ describe('exactly one job drives the deployed channel (#2544)', () => {
     expect(job.env?.['BASE_URL']).toBe(PREVIEW_URL)
     expect(job.needs).toBe('preview')
     expect(job.if).toBe(HEAVY_IF)
-    const run = steps('preview-smoke').find(isPlaywright)?.run ?? ''
-    expect(run).toMatch(
+    const runs = steps('preview-smoke')
+      .filter(isPlaywright)
+      .map(s => s.run ?? '')
+    expect(runs.join('\n')).toMatch(
       /playwright test --config playwright\.config\.ts e2e\/staging\.smoke\.ts/
     )
+  })
+
+  it('runs the wire-cost test there, in both engines', () => {
+    const wire = steps('preview-smoke')
+      .filter(isPlaywright)
+      .map(s => s.run ?? '')
+      .find(r => r.includes('e2e/district-survival.smoke.ts'))
+    expect(wire).toMatch(/--grep "\$PREVIEW_ONLY_GREP"/)
+    expect(wire).not.toMatch(/--project/)
   })
 
   it('needs no build and no local server of its own', () => {
@@ -162,7 +215,9 @@ describe('exactly one job drives the deployed channel (#2544)', () => {
   })
 
   it('gates the verdict like the shards and Lighthouse', () => {
-    expect(jobs['verdict']?.needs).toContain('preview-smoke')
+    expect(jobs['verdict']?.needs).toEqual(
+      expect.arrayContaining(['smoke', 'lighthouse', 'preview-smoke'])
+    )
     const verdict = steps('verdict').find(s => s.name === 'Verdict')
     expect(verdict?.env?.['PREVIEW_SMOKE']).toBe(
       '${{ needs.preview-smoke.result }}'
