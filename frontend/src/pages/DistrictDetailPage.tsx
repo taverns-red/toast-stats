@@ -382,14 +382,13 @@ const DistrictDetailPageInner: React.FC = () => {
   // screen, so they wait for its slot to near the viewport (#2513).
   const [growthSlot, setGrowthSlot] = React.useState<HTMLElement | null>(null)
   const growthNearViewport = useNearViewport(growthSlot)
+  const growthWanted =
+    growthNearViewport || typeof IntersectionObserver !== 'function'
   const { checkpoints: clubGrowthCheckpoints, isLoading: isLoadingClubGrowth } =
     useClubGrowthMilestones(
       districtId,
       effectiveProgramYear ?? selectedProgramYear,
-      {
-        enabled:
-          growthNearViewport || typeof IntersectionObserver !== 'function',
-      }
+      { enabled: growthWanted }
     )
 
   // District → region history (#1821): drives the moved-region banner.
@@ -879,7 +878,13 @@ const DistrictDetailPageInner: React.FC = () => {
                     back to the URL-synced selection keeps the checklist honest
                     about the year being DISPLAYED rather than reverting to the
                     legacy five-gate shape by omission. */}
-                <div ref={setTrophySlot} data-testid="trophy-case-slot">
+                <div
+                  ref={setTrophySlot}
+                  data-testid="trophy-case-slot"
+                  /* Held: keep the reserved height but paint nothing, so a
+                     pulsing placeholder never waits below the fold (#2513). */
+                  style={awardsWanted ? undefined : { visibility: 'hidden' }}
+                >
                   <DistinguishedDistrictTrophyCase
                     status={distinguishedDistrictStatus}
                     isLoading={isLoadingCompetitiveAwards}
@@ -915,7 +920,10 @@ const DistrictDetailPageInner: React.FC = () => {
                     total comes from the rankings row already fetched above;
                     each settled checkpoint comes from its own dated snapshot
                     via the hook. */}
-                <div ref={setGrowthSlot}>
+                <div
+                  ref={setGrowthSlot}
+                  style={growthWanted ? undefined : { visibility: 'hidden' }}
+                >
                   <ClubGrowthAchievementCard
                     programYear={
                       (effectiveProgramYear ?? selectedProgramYear).label

@@ -146,9 +146,24 @@ vi.mock('../../hooks/useDistrictData', () => ({
   })),
 }))
 
+// The trophy case sits in the Overview section and its awards read waits for
+// that slot to near the viewport (#2513), so the page needs analytics data to
+// render the section the read belongs to.
 vi.mock('../../hooks/useDistrictAnalytics', () => ({
   useDistrictAnalytics: vi.fn(() => ({
-    data: null,
+    data: {
+      allClubs: [],
+      interventionRequiredClubs: [],
+      vulnerableClubs: [],
+      distinguishedClubs: { total: 0 },
+      distinguishedProjection: null,
+      thrivingClubs: [],
+      topGrowthClubs: [],
+      membershipTrend: [],
+      divisionRankings: [],
+      topPerformingAreas: [],
+      totalMembership: 0,
+    },
     isLoading: false,
     error: null,
     refetch: vi.fn(),
