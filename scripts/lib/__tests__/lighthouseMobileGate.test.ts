@@ -248,10 +248,10 @@ describe('pr-preview.yml runs the mobile gate against the preview (#1830)', () =
     expect(step?.with?.['configPath']).toBe('./lighthouserc.mobile.js')
   })
 
-  it("points it at the preview job's build served locally (#2544)", () => {
-    // Served like the channel (firebase.json headers, Hosting's brotli);
-    // prPreviewLocalBuild.test.ts proves the build is the deployed one.
-    expect(step?.env?.['LHCI_BASE_URL']).toBe('http://127.0.0.1:4173')
+  it('points it at the deployed preview URL', () => {
+    expect(step?.env?.['LHCI_BASE_URL']).toBe(
+      '${{ needs.preview.outputs.url }}'
+    )
   })
 
   it('runs one job per route, every route, all to completion (#2453)', () => {

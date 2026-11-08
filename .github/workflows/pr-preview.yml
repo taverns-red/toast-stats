@@ -40,20 +40,21 @@
 # same thresholds and retries. smokeSpecCoverage.test.ts fails if a spec, an
 # engine or one part of a split falls out of the matrix.
 #
-# Local build, one real-preview smoke (#2544). In October 2026, 275 of the
-# 282 GiB Hosting served went to pr-* channels, because every shard and
-# Lighthouse route loaded the app from the channel. Now:
+# Shards on a local build, the wire on the channel (#2544). In October 2026,
+# 275 of the 282 GiB Hosting served went to pr-* channels, mostly the smoke
+# shards loading the app from the channel. Now:
 #   preview        -> also uploads the frontend/dist it deploys, as an artifact
-#   smoke          -> the same shards, on that build served inside the runner
-#   lighthouse     -> the same routes and budgets, on that build
-#   preview-smoke  -> the ONLY job on the deployed channel: e2e/staging.smoke.ts,
-#                     so a Hosting- or deploy-only breakage still fails the run
+#   smoke          -> the same shards, on that build served inside the runner,
+#                     less the one test that measures wire bytes
+#   lighthouse     -> unchanged: on the channel (Lantern models the transport;
+#                     the local server is HTTP/1.1, Hosting is h2/h3)
+#   preview-smoke  -> on the channel: e2e/staging.smoke.ts (a Hosting- or
+#                     deploy-only breakage fails here) and the wire-cost test
 # The local server (scripts/serve-preview-locally.sh) is the Firebase Hosting
 # emulator on firebase.json's staging target, i.e. the channel's own headers,
 # rewrites and clean URLs, behind scripts/preview-local-server.mjs, which
-# compresses like Hosting (brotli quality 11) so Lighthouse measures the same
-# bytes. Data still comes from cdn-staging. prPreviewLocalBuild.test.ts keeps
-# this shape.
+# compresses like Hosting (brotli quality 11). Data still comes from
+# cdn-staging. prPreviewLocalBuild.test.ts keeps this shape.
 
 name: PR Preview
 
@@ -92,6 +93,12 @@ concurrency:
     && github.event.label.name != 'preview-smoke'))
     && format('-label-{0}', github.run_id) || '' }}
   cancel-in-progress: true
+
+# The one smoke test that measures real wire bytes, header compression
+# included (district-survival's "fixed wire cost", #2061). The local shards
+# skip it by title; the real-preview job runs it (#2544).
+env:
+  PREVIEW_ONLY_GREP: fixed wire cost
 
 permissions:
   contents: read
@@ -739,6 +746,8 @@ jobs:
             args+=(--fully-parallel "--shard=$SPLIT")
           fi
           if [ -n "$WORKERS" ]; then args+=("--workers=$WORKERS"); fi
+          # The wire-cost test runs on the channel instead (#2544).
+          args+=(--grep-invert "$PREVIEW_ONLY_GREP")
           # shellcheck disable=SC2086
           npx playwright test --config playwright.config.ts $specs "${args[@]}"
 
@@ -760,9 +769,9 @@ jobs:
   # Lighthouse MOBILE gate (#1830, mobile epic #1827). lighthouserc.js is
   # desktop-only on `/` against localhost fixtures; this runs Lighthouse's
   # mobile profile (simulated 150 ms RTT / 1.6 Mbps / 4x CPU) on the five
-  # #1830 routes, on the preview job's build served like the channel (#2544):
-  # firebase.json's CSP and headers, Hosting's brotli, staging CDN data, real
-  # fonts. Assertions are `error` since 2026-10-19, after a green
+  # #1830 routes against the deployed channel — real CSP, staging CDN data,
+  # real fonts. It stays there (#2544): the local server is HTTP/1.1, and
+  # Lantern's HTTP/1.1 model read LCP 15-25% high (run 42494094590). Assertions are `error` since 2026-10-19, after a green
   # week at `warn` (recorded on #1830); see lighthouserc.mobile.js for
   # the per-route budgets (final since 2026-10-21, #1856).
   # One job per route (#2453): LHCI_ROUTE narrows the config to that route,
@@ -784,27 +793,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: '.nvmrc'
-
-      - name: Download the preview build
-        uses: actions/download-artifact@v8
-        with:
-          name: preview-dist-${{ github.run_id }}-${{ github.run_attempt }}
-          path: frontend/dist
-
-      - name: Install firebase-tools
-        run: npm install -g firebase-tools
-
-      - name: Serve the build like its preview channel
-        run: scripts/serve-preview-locally.sh
-
-      - name: Lighthouse mobile gate against the local build
+      - name: Lighthouse mobile gate against preview
         uses: treosh/lighthouse-ci-action@v12
         env:
-          LHCI_BASE_URL: http://127.0.0.1:4173
+          LHCI_BASE_URL: ${{ needs.preview.outputs.url }}
           LHCI_ROUTE: ${{ matrix.route }}
         with:
           configPath: './lighthouserc.mobile.js'
@@ -812,12 +804,13 @@ jobs:
           artifactName: lighthouse-results-${{ matrix.route }}
           temporaryPublicStorage: true
 
-  # The one job on the deployed channel (#2544). Everything else runs on the
+  # The Playwright job on the deployed channel (#2544). The shards run on the
   # same build served locally; this proves the channel itself serves it: the
   # deploy uploaded every file, Hosting applies firebase.json, deep links
   # rewrite, the CSP lets the app read cdn-staging, and no console error.
   # e2e/staging.smoke.ts is the deployed-site smoke (it also runs against
-  # prod), Chromium only, a few MB of egress instead of ~150-200 MB.
+  # prod), Chromium only. The wire-cost test runs here too, in both engines
+  # as before, because it counts real header bytes.
   preview-smoke:
     name: Smoke (real preview channel)
     needs: preview
@@ -856,12 +849,17 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-webkit-${{ runner.os }}-${{ steps.playwright.outputs.version }}
 
-      - name: Install Playwright browser (chromium)
-        run: npx playwright install --with-deps chromium
+      - name: Install Playwright browsers (chromium + webkit)
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Playwright smoke against the deployed channel
         working-directory: frontend
         run: npx playwright test --config playwright.config.ts e2e/staging.smoke.ts --project=smoke
+
+      - name: Playwright wire-cost test against the deployed channel
+        if: ${{ !cancelled() }}
+        working-directory: frontend
+        run: npx playwright test --config playwright.config.ts e2e/district-survival.smoke.ts --grep "$PREVIEW_ONLY_GREP"
 
       - name: Upload Playwright results on failure
         if: failure()

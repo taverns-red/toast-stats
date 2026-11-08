@@ -59,14 +59,17 @@ describe('preview smoke failure diagnostics (#2248)', () => {
 
   it('runs after every Playwright step, so it sees the failing one', () => {
     // One per Playwright job since #2544 (the shards and the real-preview
-    // smoke): each Playwright step is followed by a diagnostics upload
-    // before the next Playwright step.
+    // smoke): each Playwright step is followed by a diagnostics upload in
+    // its own job, i.e. before the next job's checkout.
     const playwright = all.flatMap((s, i) =>
       /npx playwright test/.test(s) ? [i] : []
     )
     expect(playwright.length).toBeGreaterThan(0)
-    playwright.forEach((at, k) => {
-      const next = playwright[k + 1] ?? all.length
+    playwright.forEach(at => {
+      const checkout = all.findIndex(
+        (s, i) => i > at && /^ {6}- name: Checkout code\n/.test(s)
+      )
+      const next = checkout === -1 ? all.length : checkout
       const diag = all.findIndex((s, i) => i > at && isDiagnostics(s))
       expect(diag, `no diagnostics upload after step ${at}`).toBeGreaterThan(at)
       expect(diag).toBeLessThan(next)
