@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.58.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.57.1...frontend-v3.58.0) (2026-11-08)
+
+
+### Features
+
+* **pipeline:** one confirmed/provisional Distinguished count per level ([#2553](https://github.com/taverns-red/toast-stats/issues/2553)) ([#2559](https://github.com/taverns-red/toast-stats/issues/2559)) ([160944b](https://github.com/taverns-red/toast-stats/commit/160944bdb03591f646934ea799d0e76f18643034))
+
+
+### Bug Fixes
+
+* action-list intro reserves its height, CLS over budget at 1280 ([#2511](https://github.com/taverns-red/toast-stats/issues/2511)) ([#2518](https://github.com/taverns-red/toast-stats/issues/2518)) ([f496eb5](https://github.com/taverns-red/toast-stats/commit/f496eb514d89695f397b0de7578c8c63827697b8))
+* **search:** tapping a landing-search result navigates on iOS/Safari ([#2556](https://github.com/taverns-red/toast-stats/issues/2556)) ([#2557](https://github.com/taverns-red/toast-stats/issues/2557)) ([4802ca1](https://github.com/taverns-red/toast-stats/commit/4802ca1abc29752a3300dc23b015af4169b7f4f8))
+
+
+### Performance
+
+* **ci:** PR Preview shards read run-scoped fixtures ([#2545](https://github.com/taverns-red/toast-stats/issues/2545)) ([#2573](https://github.com/taverns-red/toast-stats/issues/2573)) ([49382e0](https://github.com/taverns-red/toast-stats/commit/49382e00e9fbbf81303c7dc1fe1ecad978bd233b))
+* **ci:** PR Preview tests on a local build, one real-preview smoke ([#2544](https://github.com/taverns-red/toast-stats/issues/2544)) ([#2549](https://github.com/taverns-red/toast-stats/issues/2549)) ([4f141d8](https://github.com/taverns-red/toast-stats/commit/4f141d8eec04fe540ec55a56d1503f6d0cc17e67))
+* **district:** cut first-load bytes under the Lighthouse budget ([#2513](https://github.com/taverns-red/toast-stats/issues/2513)) ([#2564](https://github.com/taverns-red/toast-stats/issues/2564)) ([1c8237f](https://github.com/taverns-red/toast-stats/commit/1c8237fda5fd00e80247b04a20576da2fd462fbc))
+
+
+### Tests
+
+* **e2e:** section-bar end-of-page check scrolls until the page settles ([#2576](https://github.com/taverns-red/toast-stats/issues/2576)) ([#2577](https://github.com/taverns-red/toast-stats/issues/2577)) ([371afb5](https://github.com/taverns-red/toast-stats/commit/371afb50c4a55b011c6c335b864c33e9337bc4d6))
+
 ## [3.57.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.57.0...frontend-v3.57.1) (2026-11-05)
 
 

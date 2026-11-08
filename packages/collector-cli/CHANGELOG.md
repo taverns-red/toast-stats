@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.26.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.25.0...collector-cli-v1.26.0) (2026-11-08)
+
+
+### Features
+
+* **pipeline:** one confirmed/provisional Distinguished count per level ([#2553](https://github.com/taverns-red/toast-stats/issues/2553)) ([#2559](https://github.com/taverns-red/toast-stats/issues/2559)) ([160944b](https://github.com/taverns-red/toast-stats/commit/160944bdb03591f646934ea799d0e76f18643034))
+
 ## [1.25.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.24.3...collector-cli-v1.25.0) (2026-11-03)
 
 
