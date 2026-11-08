@@ -5,6 +5,11 @@ import {
   type Response,
 } from '@playwright/test'
 import { describeErrorResponse } from '../helpers/errorResponses'
+import {
+  describeFixtureProblems,
+  installCdnFixtures,
+  type CdnFixtureTally,
+} from '../helpers/cdnFixtures'
 
 /* Shared smoke fixture (#1979): no smoke may send a real GA hit.
  *
@@ -44,9 +49,39 @@ interface GaFixtures {
   gaCollect: Request[]
   /** Responses with status >= 400, as `status host/path` (#2248). */
   errorResponses: string[]
+  /** The CDN fixture's tally, or null when it is off (#2545). */
+  cdnFixtures: CdnFixtureTally | null
 }
 
 export const test = base.extend<GaFixtures>({
+  /* PR Preview shards read recorded CDN fixtures, not live cdn-staging
+   * (#2545). Off unless SMOKE_FIXTURES_DIR is set (only the shard step sets
+   * it), so staging.smoke on the real channel, the wire-cost test and prod
+   * sweeps stay live. SMOKE_FIXTURES_RECORD_FILE instead records every CDN
+   * path a run requests (scripts/smoke-fixtures-uncovered.ts reads it).
+   * A path with no fixture, or any response that came off the network, fails
+   * the test at teardown. */
+  cdnFixtures: [
+    async ({ context }, use, testInfo) => {
+      const dir = process.env['SMOKE_FIXTURES_DIR']
+      const recordFile = process.env['SMOKE_FIXTURES_RECORD_FILE']
+      if (!dir && !recordFile) {
+        await use(null)
+        return
+      }
+      const tally = await installCdnFixtures(context, { dir, recordFile })
+      await use(tally)
+      const problems = describeFixtureProblems(tally)
+      if (problems) {
+        await testInfo.attach('cdn-fixture-problems', {
+          body: problems,
+          contentType: 'text/plain',
+        })
+      }
+      expect(problems, 'CDN fixtures (#2545)').toBeNull()
+    },
+    { auto: true },
+  ],
   /* Diagnostics only (#2248): record every response with status >= 400 and
    * attach the list to the test result, so a failure names the URL that
    * failed (the reporter prints a text attachment under the failing test).

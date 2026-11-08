@@ -107,7 +107,9 @@ describe('fixturePath', () => {
     expect(
       fixturePath(`${CDN_STAGING_ORIGIN}/a/..%2F..%2Fetc/passwd`)
     ).toBeNull()
-    expect(fixturePath(`${CDN_STAGING_ORIGIN}/a/%2e%2e/b.json`)).toBeNull()
+    // The URL parser itself resolves a dot segment, escaped or not, so this
+    // one never leaves the directory: it names b.json.
+    expect(fixturePath(`${CDN_STAGING_ORIGIN}/a/%2e%2e/b.json`)).toBe('b.json')
   })
 })
 
