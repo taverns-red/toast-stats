@@ -17,7 +17,7 @@ import { parse } from 'yaml'
 export const REMAINING = '@remaining'
 
 /** Specs that run only on the real preview channel, never in a shard (#2545). */
-export const PREVIEW_ONLY_SPECS: readonly string[] = []
+export const PREVIEW_ONLY_SPECS: readonly string[] = ['e2e/staging.smoke.ts']
 
 /** The Playwright projects of `frontend/playwright.config.ts`: the engines. */
 export const PROJECTS = ['smoke', 'webkit'] as const
@@ -100,7 +100,9 @@ export function shardCoverageProblems(
   specs: readonly string[]
 ): string[] {
   const problems: string[] = []
-  const all = new Set(specs)
+  // A preview-only spec is not the shards' to run; a shard naming one is the
+  // fault (it would read the deployed CDN live, past the fixture).
+  const all = new Set(specs.filter(s => !PREVIEW_ONLY_SPECS.includes(s)))
   const projects: readonly string[] = PROJECTS
 
   const names = new Map<string, number>()
@@ -112,8 +114,11 @@ export function shardCoverageProblems(
   for (const s of shards)
     for (const spec of specList(s.specs))
       if (spec !== REMAINING) named.add(spec)
-  for (const spec of [...named].sort())
-    if (!all.has(spec)) problems.push(`${spec} does not exist`)
+  for (const spec of [...named].sort()) {
+    if (PREVIEW_ONLY_SPECS.includes(spec))
+      problems.push(`${spec} runs only on the real preview, not in a shard`)
+    else if (!all.has(spec)) problems.push(`${spec} does not exist`)
+  }
   const remaining = unlistedSmokeSpecs(specs, [...named])
 
   // One Playwright run = the same spec list in the same project(s).
@@ -190,7 +195,7 @@ export function unlistedSmokeSpecs(
   specs: readonly string[],
   named: readonly string[]
 ): string[] {
-  const done = new Set(named)
+  const done = new Set([...named, ...PREVIEW_ONLY_SPECS])
   return [...new Set(specs)].filter(s => !done.has(s)).sort()
 }
 
