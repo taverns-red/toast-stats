@@ -81,6 +81,32 @@ describe('DistrictKpiStrip (#572)', () => {
     ).toBeInTheDocument()
   })
 
+  it('collapsed summary shows confirmed with +N prov. when provisional > 0 (#2554)', () => {
+    window.sessionStorage.setItem('district-kpi-strip-collapsed', 'true')
+    renderStrip(
+      <DistrictKpiStrip
+        kpis={{
+          ...sampleKpis,
+          distinguishedClubs: {
+            ...sampleKpis.distinguishedClubs,
+            provisional: 3,
+          },
+        }}
+      />
+    )
+    expect(screen.getByTestId('district-kpi-strip-summary')).toHaveTextContent(
+      '84 dist. +3 prov.'
+    )
+  })
+
+  it('collapsed summary has no provisional part when there is none', () => {
+    window.sessionStorage.setItem('district-kpi-strip-collapsed', 'true')
+    renderStrip(<DistrictKpiStrip kpis={sampleKpis} />)
+    expect(
+      screen.getByTestId('district-kpi-strip-summary')
+    ).not.toHaveTextContent(/prov\./)
+  })
+
   it('persists the collapsed state in sessionStorage', () => {
     renderStrip(<DistrictKpiStrip kpis={sampleKpis} />)
     fireEvent.click(screen.getByRole('button', { name: /collapse kpi/i }))
