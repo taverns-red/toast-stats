@@ -48,8 +48,9 @@
 #                     less the one test that measures wire bytes
 #   lighthouse     -> unchanged: on the channel (Lantern models the transport;
 #                     the local server is HTTP/1.1, Hosting is h2/h3)
-#   preview-smoke  -> on the channel: e2e/staging.smoke.ts (a Hosting- or
-#                     deploy-only breakage fails here) and the wire-cost test
+#   preview-smoke  -> on the channel: every built file HEADed (a missing
+#                     chunk, font or glyph fails here), e2e/staging.smoke.ts
+#                     and the wire-cost test
 # The local server (scripts/serve-preview-locally.sh) is the Firebase Hosting
 # emulator on firebase.json's staging target, i.e. the channel's own headers,
 # rewrites and clean URLs, behind scripts/preview-local-server.mjs, which
@@ -77,6 +78,7 @@ on:
       # the shards and Lighthouse serve the build with them (#2544)
       - 'scripts/serve-preview-locally.sh'
       - 'scripts/preview-local-server.mjs'
+      - 'scripts/check-deployed-files.mjs'
 
 # Cancel an in-flight preview build when a new push to the same PR
 # arrives — only the latest commit gets a deploy. A `labeled` event for any
@@ -128,6 +130,8 @@ jobs:
       expires: ${{ steps.deploy.outputs.expires }}
       # The smoke and Lighthouse jobs run only when this is 'true' (#2453).
       heavy: ${{ steps.deploy.outputs.heavy }}
+      # The build the channel got, by id (#2544).
+      dist-artifact-id: ${{ steps.dist.outputs.artifact-id }}
     env:
       # 'true' -> run the Playwright smoke and the Lighthouse mobile gate.
       # Drafts skip them unless labeled `preview-smoke` (#2101).
@@ -162,10 +166,12 @@ jobs:
           # (still allowed in the CSP connect-src).
           VITE_CDN_BASE_URL: https://cdn-staging.taverns.red
 
-      # The exact bytes the channel gets, for the smoke and Lighthouse jobs
-      # to serve locally (#2544). Unique per run attempt, so a re-run never
-      # tests an older build.
+      # The exact bytes the channel gets (#2544): the smoke shards serve them
+      # locally, and the real-preview job checks each file is deployed. Read
+      # back by id (the `dist-artifact-id` output), so "Re-run failed jobs"
+      # on a shard, which does not re-run this job, still finds it.
       - name: Upload the build for the local-build jobs
+        id: dist
         uses: actions/upload-artifact@v7
         with:
           name: preview-dist-${{ github.run_id }}-${{ github.run_attempt }}
@@ -710,8 +716,9 @@ jobs:
       - name: Download the preview build
         uses: actions/download-artifact@v8
         with:
-          name: preview-dist-${{ github.run_id }}-${{ github.run_attempt }}
+          artifact-ids: ${{ needs.preview.outputs.dist-artifact-id }}
           path: frontend/dist
+          merge-multiple: true
 
       - name: Install firebase-tools
         run: npm install -g firebase-tools
@@ -851,6 +858,19 @@ jobs:
 
       - name: Install Playwright browsers (chromium + webkit)
         run: npx playwright install --with-deps chromium webkit
+
+      # Every file of the deployed build, HEAD only (#2544): a font, glyph or
+      # lazy chunk missing from the deploy would pass staging.smoke.ts, since
+      # the SPA rewrite answers it with index.html.
+      - name: Download the preview build
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.preview.outputs.dist-artifact-id }}
+          path: frontend/dist
+          merge-multiple: true
+
+      - name: Every built file is deployed
+        run: node scripts/check-deployed-files.mjs
 
       - name: Playwright smoke against the deployed channel
         working-directory: frontend

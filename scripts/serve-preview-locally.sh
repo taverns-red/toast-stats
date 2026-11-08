@@ -2,14 +2,15 @@
 # Serve frontend/dist the way its PR preview channel serves it, on
 # http://127.0.0.1:4173, from inside the runner (#2544).
 #
-# PR Preview's Playwright shards and Lighthouse routes load this instead of
-# the deployed pr-<N> channel, which cut Hosting egress by ~97%. Two layers:
+# PR Preview's Playwright smoke shards load this instead of the deployed
+# pr-<N> channel (Lighthouse and the wire-cost smoke stay on the channel:
+# this server is HTTP/1.1, Hosting is h2/h3). Two layers:
 #   - the Firebase Hosting emulator on firebase.json's `staging` target, the
 #     very config the channel deploys (headers, rewrites, clean URLs), on
 #     firebase.json's `emulators.hosting` address;
 #   - scripts/preview-local-server.mjs in front of it, which compresses like
-#     Hosting (brotli quality 11) so the Lighthouse byte budgets measure the
-#     same bytes, and drops upgrade-insecure-requests for WebKit on http.
+#     Hosting (brotli quality 11), and drops upgrade-insecure-requests for
+#     WebKit on http.
 # The build must already be in frontend/dist and `firebase` on PATH. No
 # credentials: the emulator serves files only. Both processes keep running in
 # the background for the rest of the job. Exits non-zero, with both logs, if

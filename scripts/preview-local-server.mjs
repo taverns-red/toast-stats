@@ -4,18 +4,19 @@
  * the Hosting emulator, so a local build is served the way its PR preview
  * channel would serve it (#2544).
  *
- * PR Preview's Playwright shards and Lighthouse routes load the build from
- * inside the runner instead of the deployed `pr-<N>` channel: in October 2026
- * those loads were 275 of the 282 GiB Hosting served. The Hosting emulator
+ * PR Preview's Playwright smoke shards load the build from inside the runner
+ * instead of the deployed `pr-<N>` channel: in October 2026 the channel
+ * loads were 275 of the 282 GiB Hosting served. (Lighthouse and the one
+ * wire-cost smoke stay on the channel: this server is HTTP/1.1, Hosting is
+ * h2/h3.) The Hosting emulator
  * (`firebase emulators:start --only hosting:staging`, started by
  * scripts/serve-preview-locally.sh) applies firebase.json itself: headers,
  * rewrites, clean URLs. Two things differ, and this proxy evens them out:
  *
  *   1. Compression. The emulator's brotli is quality ~4; Hosting serves
  *      brotli quality 11 (an index chunk from ts.taverns.red is 44,748 bytes;
- *      quality 11 gives 44,746, quality 4 gives 52,724). The Lighthouse
- *      mobile gate asserts transfer sizes, so the emulator alone would add
- *      ~18% to every script byte. For a client that accepts br, the proxy
+ *      quality 11 gives 44,746, quality 4 gives 52,724), so the emulator
+ *      alone would add ~18% to every script byte the smokes load. For a client that accepts br, the proxy
  *      asks the emulator for the raw bytes and re-encodes compressible 200s
  *      at quality 11. Anything else (ranges, images, errors, a client with
  *      no br) passes through as the emulator sent it.
