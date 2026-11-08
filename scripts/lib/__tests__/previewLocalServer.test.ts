@@ -35,6 +35,7 @@ const JS = Buffer.from(
   )
 )
 const PNG = Buffer.from('not really a png, but not compressible either')
+let page = '<!doctype html><title>build one</title>'.repeat(50)
 const CSP = "default-src 'self'; object-src 'none'"
 const CSP_UPGRADE = `${CSP}; upgrade-insecure-requests`
 
@@ -97,6 +98,13 @@ beforeAll(async () => {
         'content-security-policy': CSP_UPGRADE,
       })
       res.end(JS)
+    } else if (req.url === '/') {
+      // The emulator's ETag does not change when a rebuild changes the file.
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        etag: 'same-etag-every-build',
+      })
+      res.end(page)
     } else if (req.url === '/icon.png') {
       res.writeHead(200, { 'content-type': 'image/png' })
       res.end(PNG)
@@ -193,6 +201,16 @@ describe('preview-local-server.mjs (#2544)', () => {
     const r = await get('/icon.png', { 'accept-encoding': 'br' })
     expect(r.headers['content-encoding']).toBeUndefined()
     expect(r.body.equals(PNG)).toBe(true)
+  })
+
+  it('serves a rebuilt file, not the last build from its cache', async () => {
+    const decode = async () =>
+      brotliDecompressSync(
+        (await get('/', { 'accept-encoding': 'br' })).body
+      ).toString()
+    expect(await decode()).toContain('build one')
+    page = '<!doctype html><title>build two</title>'.repeat(50)
+    expect(await decode()).toContain('build two')
   })
 
   it("passes the emulator's 404 through", async () => {
