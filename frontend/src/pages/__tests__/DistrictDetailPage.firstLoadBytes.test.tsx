@@ -18,6 +18,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import React from 'react'
 import DistrictDetailPage from '../DistrictDetailPage'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
+import { exactRankingsQueryOptions } from '../../hooks/districtRankingsQuery'
 
 // ---------------------------------------------------------------------------
 // Global mocks
@@ -286,4 +287,46 @@ describe('DistrictDetailPage — first-load bytes (#2513)', () => {
       expect(slot.querySelector('[aria-label^="Loading"]')).toBeNull()
     }
   )
+
+  it('shows a cached trophy case at once, with no viewport signal', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    // Back from a club page: the file is in the cache, so there is nothing
+    // to hold and nothing to wait for.
+    client.setQueryData(['competitive-awards', '2026-11-07'], {
+      distinguishedDistrict: {},
+    })
+    renderHub(client)
+    await settle()
+    expect(screen.getByTestId('trophy-case-slot')).toBeInTheDocument()
+    expect(
+      screen
+        .getByTestId('trophy-case-slot')
+        .querySelector('[data-testid="distinguished-trophy-held"]')
+    ).toBeNull()
+  })
+
+  it('shows a cached club growth card at once, with no viewport signal', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    client.setQueryData(
+      exactRankingsQueryOptions('2026-09-30' as never).queryKey,
+      {
+        rankings: [],
+        asOfDate: '2026-10-10',
+        generatedAt: '2026-10-10T00:00:00Z',
+      }
+    )
+    renderHub(client)
+    await settle()
+    await waitFor(() =>
+      expect(
+        screen
+          .getByTestId('growth-slot')
+          .querySelector('[data-testid="club-growth-held"]')
+      ).toBeNull()
+    )
+  })
 })
