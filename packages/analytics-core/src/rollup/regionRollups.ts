@@ -65,6 +65,14 @@ import {
 import { canonicalDistrictId } from './globalRollup.js'
 import { programYearForSnapshotDate } from './globalTotals.js'
 import { OFFICER_TRAINING_MAX_OFFICERS } from '../analytics/officerTraining.js'
+import {
+  addDistinguishedCounts,
+  classifyClubDistinguished,
+  distinguishedCountBasis,
+  emptyDistinguishedCounts,
+  tallyDistinguished,
+  type DistinguishedCountBasis,
+} from '../analytics/distinguishedCounts.js'
 import type { OfficerTrainingDistribution } from '@taverns-red/shared-contracts'
 
 /** One club as the rollup reads it; `undefined` = the column is absent. */
@@ -151,6 +159,7 @@ function emptyFigures(): RegionRollupFigures {
     },
     growth: { prospective: 0, chartered: 0, suspended: 0 },
     officerTraining: emptyDistribution(),
+    distinguishedCounts: emptyDistinguishedCounts(),
   }
 }
 
@@ -175,6 +184,14 @@ function addDistribution(
 
 const addMaybe = (a: number | null, b: number | null): number | null =>
   a === null || b === null ? null : a + b
+
+type MaybeDistinguishedCounts = RegionRollupFigures['distinguishedCounts']
+
+/** Sum of two blocks' counts; null (or absent) on either side is null. */
+const addMaybeCounts = (
+  a: MaybeDistinguishedCounts,
+  b: MaybeDistinguishedCounts
+): MaybeDistinguishedCounts => (a && b ? addDistinguishedCounts(a, b) : null)
 
 /** Figure-by-figure sum; a null in either side makes that figure null. */
 function addFigures(
@@ -231,12 +248,23 @@ function addFigures(
       suspended: addMaybe(a.growth.suspended, b.growth.suspended),
     },
     officerTraining: addDistribution(a.officerTraining, b.officerTraining),
+    distinguishedCounts: addMaybeCounts(
+      a.distinguishedCounts,
+      b.distinguishedCounts
+    ),
   }
 }
 
 interface DateContext {
+  readonly snapshotDate: string
   readonly month: number
   readonly programYear: string
+  /**
+   * Date-wide (#2553): TI recognises clubs once any in-scope club carries a
+   * Distinguished letter. The rankings switch on the whole date too
+   * (`allZeroDistinguished`), so a district with no letter confirms none.
+   */
+  readonly distinguishedBasis: DistinguishedCountBasis
   readonly smedley: boolean
   /** Date-wide: some in-scope club carries a parseable charter date. */
   readonly charterCollected: boolean
@@ -356,6 +384,23 @@ function districtFigures(
     }
     f.officerTraining = distribution
   }
+  // Confirmed / provisional Distinguished (#2553): null when no club
+  // carried TI's status or an April renewal count (not collected).
+  const distinguishedCollected = facts.some(
+    ({ club }) =>
+      club.aprilRenewals !== undefined || club.distinguishedStatus !== undefined
+  )
+  f.distinguishedCounts = distinguishedCollected
+    ? tallyDistinguished(
+        facts.map(({ club }) =>
+          classifyClubDistinguished(club, {
+            snapshotDate: ctx.snapshotDate,
+            programYear: ctx.programYear,
+            basis: ctx.distinguishedBasis,
+          })
+        )
+      )
+    : null
   f.growth.prospective = prospectiveClubs
   if (!ctx.charterCollected) f.growth.chartered = null
   if (!ctx.suspendCollected) f.growth.suspended = null
@@ -502,6 +547,8 @@ export function buildRegionRollups(
 
   const allFacts = perDistrict.flatMap(d => d.facts)
   const ctx: DateContext = {
+    snapshotDate,
+    distinguishedBasis: distinguishedCountBasis(allFacts.map(f => f.club)),
     month: getCurrentProgramMonth(snapshotDate),
     programYear,
     smedley: isClubSmedleyAvailable(programYear),

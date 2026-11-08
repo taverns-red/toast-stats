@@ -147,6 +147,20 @@ describe('buildRegionRollups — the 2025-26 June close (#1799)', () => {
       // The fixture's clubPerformance projection carries no officer-training
       // column: not collected, so null (#2296), never a block of zeros.
       officerTraining: null,
+      // #2553, worked by an independent Python pass over the fixture bytes.
+      // The projection also dropped TI's 'Club Distinguished Status', so
+      // these are the April-renewals rung (a live June close reads TI's
+      // letters). June is after April: nothing is provisional.
+      distinguishedCounts: {
+        confirmed: 17,
+        provisional: 0,
+        byTier: {
+          distinguished: { confirmed: 9, provisional: 0 },
+          select: { confirmed: 1, provisional: 0 },
+          presidents: { confirmed: 3, provisional: 0 },
+          smedley: { confirmed: 4, provisional: 0 },
+        },
+      },
     })
     expect(rollups.districts['111']).toMatchObject({
       region: '07',
