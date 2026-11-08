@@ -22,6 +22,7 @@ import { readFileSync } from 'node:fs'
 import { checkAllowList } from './cloud-session-guard-allowlist.mjs'
 
 const LABEL = 'db-breaking-approved'
+const MAX_INPUT = 65536 // bytes of hook JSON (#2547)
 
 function refuse(reason) {
   process.stderr.write(
@@ -34,17 +35,18 @@ function refuse(reason) {
   process.exit(2)
 }
 
-/** #2528: a call outside the cloud allow list. */
+/** #2528, #2547: a call outside the cloud allow list. */
 function refuseAllowList(reason) {
   process.stderr.write(
-    `cloud-session-guard (#2528): refused: ${reason}.\n` +
-      'Cloud sessions run gh, gh api, curl or wget to GitHub, and git push ' +
-      'from an allow list: gh view/list reads, gh api GET, creating a PR, ' +
-      'commenting, COMMENT reviews, PR title/body edits, the preview-smoke ' +
-      'label, and pushes to this session\u2019s own branch. Anything else, ' +
-      'such as merging, approving, workflow or repository changes, or a ' +
-      'push to another branch, is Ron\u2019s to do. Ask Ron; do not reword ' +
-      'the command to get past the guard.\n'
+    `cloud-session-guard (#2547): refused: ${reason}.\n` +
+      'Cloud sessions run Bash from a whole-command allow list: one plain ' +
+      'command, or an && chain of them, with no other shell syntax; npm ' +
+      'test/run <script>, npx vitest/tsc/eslint/prettier, ./bin/agent-cli, ' +
+      'git status/diff/log/show/add/commit and a push of this session\u2019s ' +
+      'branch, gh view/list/comment and gh api on this repository, and ' +
+      'reads (cat, grep, rg, sed -n, …) inside the repository away from ' +
+      'secret-shaped and gitignored files. Anything else is Ron\u2019s to ' +
+      'allow. Ask Ron; do not reword the command to get past the guard.\n'
   )
   process.exit(2)
 }
@@ -243,7 +245,13 @@ function tampers(raw) {
 function main() {
   let input
   try {
-    input = JSON.parse(readFileSync(0, 'utf8'))
+    const text = readFileSync(0, 'utf8')
+    // #2547, template cap: a call too large to read is not let through.
+    if (text.length > MAX_INPUT)
+      refuseAllowList(
+        `the tool call is over ${MAX_INPUT} bytes, so the guard does not read it`
+      )
+    input = JSON.parse(text)
   } catch {
     refuse('the hook input could not be read, so the call was not checked')
   }
@@ -257,7 +265,10 @@ function main() {
     if (reason) refuse(reason)
     let denied
     try {
-      denied = checkAllowList(cmd, { cwd: input?.cwd })
+      denied = checkAllowList(cmd, {
+        cwd: input?.cwd,
+        root: process.env.CLAUDE_PROJECT_DIR || input?.cwd,
+      })
     } catch (e) {
       denied = `the guard failed while checking the command (${e?.message})`
     }

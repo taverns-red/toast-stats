@@ -1,504 +1,619 @@
-// Allow list for Claude Code cloud sessions (#2528, after red-district#1572).
-// Loaded by scripts/cloud-session-guard.mjs, so it runs only when
-// CLAUDE_CODE_REMOTE=true. Plain Node, no dependencies.
+// Whole-command allow list for Claude Code cloud sessions (#2547), ported
+// from the red-rostrum#75 template (d34b15a). It replaces the #2528 allow
+// list, which policed only gh, curl, wget and git push inside an otherwise
+// open shell. Loaded by scripts/cloud-session-guard.mjs, so it runs only
+// when CLAUDE_CODE_REMOTE=true. Plain Node, no dependencies.
 //
-// Why: cloud workers act as rservant, and main's ruleset has no
-// pull_request rule, so a worker could merge a green PR, disable a
-// workflow or push to main. This file refuses everything in these
-// families that a worker does not need:
+// Why: a blocklist over shell cannot be sound. Shell keywords, grouping,
+// brace expansion and substitutions each voided a rule of the old guard
+// (`{cat,/etc/passwd}`, `if true; then …; fi`, `-F body="$(</etc/passwd)"`).
+// So a Bash call is allowed only when:
+//   1. It tokenises, in one linear pass, into literal words: any shell
+//      metacharacter outside quotes, `$`, a backtick or a backslash inside
+//      double quotes, a leading VAR=value, a reserved word, an unterminated
+//      quote, control characters, or more than MAX_COMMAND characters is
+//      refused. The one exception is `&&` between commands: an `&&` chain
+//      of allowed commands is allowed, so `cd <dir> && <cmd>` works.
+//   2. Each command matches one of the exact shapes in judge(). Anything
+//      else, including every unknown program, is refused.
+//   3. Every path it reads (reader arguments, `-F body=@file`, `--input`,
+//      git pathspecs and `<rev>:<path>`) resolves, by the realpath of its
+//      nearest existing parent and against the command's own cwd (`cd`
+//      tracked), inside the repository root, and is not secret-shaped
+//      (.env*, *.pem, *.key, anything under .git) or gitignored (build and
+//      dependency output excepted). A `cd` may not leave the root.
 //
-//   gh        `gh api` (below), `gh <group> view|list`, and a few reads.
-//   gh api,   GET anywhere but graphql; POST pulls, issues/N/comments,
-//   curl,     pulls/N/comments; POST pulls/N/reviews only with
-//   wget      event=COMMENT; PATCH pulls/N only with title/body/draft;
-//             POST issues/N/labels only with preview-smoke.
-//   git push  only the session's own branch, never from main or the
-//             default branch.
-//
-// Anything in those families it cannot parse is refused. It is defence in
-// depth: the real control is GitHub-side (a pull_request rule on main, or
-// a separate agent identity, ops#242). Commands run from a script file
-// (`bash x.sh`, `npm run`, `node x.mjs`) are out of its sight.
+// Defence in depth: the real controls are GitHub-side (branch protection,
+// a separate agent identity, ops#242). A worker that needs a new shape asks
+// Ron for it in its PR.
 
-import { execFileSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { isAbsolute, join, resolve } from 'node:path'
+import { spawnSync } from 'node:child_process'
+import { lstatSync, readlinkSync, realpathSync, statSync } from 'node:fs'
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from 'node:path'
 
-// ---------------------------------------------------------------- shell --
-
-/**
- * A word of a shell command. `text` is the word after quote removal;
- * `dynamic` is true when the shell would build any of it at run time
- * ($VAR, $(...), backticks, $'...'), in which case `text` is unreliable.
- */
-class Word {
-  constructor(text = '', dynamic = false) {
-    this.text = text
-    this.dynamic = dynamic
-    this.quoted = false
-  }
-}
-
-/** The value glued to a flag (`--x=v`, `-Xv`), as a Word of its own. */
-const glued = (from, text) => new Word(text, from.dynamic)
-
-const HEREDOC = /<<-?\s*(['"]?)([A-Za-z_][\w.-]*)\1/g
-
-/** Drop heredoc bodies: they are data fed to a command, not commands. */
-function stripHeredocs(src) {
-  const out = []
-  const pending = []
-  for (const line of src.split('\n')) {
-    if (pending.length) {
-      const { word, dash } = pending[0]
-      if ((dash ? line.replace(/^\t+/, '') : line) === word) pending.shift()
-      continue
-    }
-    out.push(line)
-    for (const m of line.matchAll(HEREDOC))
-      pending.push({ word: m[2], dash: m[0].startsWith('<<-') })
-  }
-  return out.join('\n')
-}
-
-/**
- * Split a command line into simple commands (arrays of Words). Command
- * substitutions found anywhere are returned in `nested`, to be checked as
- * commands of their own. Throws on text it cannot tokenize.
- */
-export function tokenize(src) {
-  const s = stripHeredocs(String(src).replace(/\\\r?\n/g, ' '))
-  const segments = []
-  const nested = []
-  let words = []
-  let w = null
-  let i = 0
-  const word = () => (w ??= new Word())
-  const endWord = () => {
-    if (w) words.push(w)
-    w = null
-  }
-  const endSegment = () => {
-    endWord()
-    if (words.length) segments.push(words)
-    words = []
-  }
-  /** Read a balanced $( ... ) or ( ... ) body starting after the opener. */
-  const readParens = () => {
-    let depth = 1
-    const start = i
-    while (i < s.length && depth) {
-      const c = s[i]
-      if (c === '\\') i += 2
-      else if (c === '"') {
-        i++
-        while (i < s.length && s[i] !== '"') i += s[i] === '\\' ? 2 : 1
-        if (i >= s.length) throw new Error('unbalanced quote')
-        i++
-      } else if (c === "'") {
-        const j = s.indexOf("'", i + 1)
-        if (j < 0) throw new Error('unbalanced quote')
-        i = j + 1
-      } else {
-        if (c === '(') depth++
-        else if (c === ')') depth--
-        i++
-      }
-    }
-    if (depth) throw new Error('unbalanced parenthesis')
-    return s.slice(start, i - 1)
-  }
-  const readBackticks = () => {
-    const j = s.indexOf('`', i)
-    if (j < 0) throw new Error('unbalanced backtick')
-    const body = s.slice(i, j)
-    i = j + 1
-    return body
-  }
-  /** $... outside single quotes. Marks the word dynamic. */
-  const readDollar = () => {
-    const cur = word()
-    cur.dynamic = true
-    i++ // past $
-    if (s[i] === '(') {
-      i++
-      nested.push(readParens())
-    } else if (s[i] === '{') {
-      const j = s.indexOf('}', i)
-      if (j < 0) throw new Error('unbalanced brace')
-      i = j + 1
-    } else if (s[i] === "'") {
-      // $'...' ANSI-C quoting: backslash escapes; treat as unknown text
-      i++
-      while (i < s.length && s[i] !== "'") i += s[i] === '\\' ? 2 : 1
-      if (i >= s.length) throw new Error('unbalanced quote')
-      i++
-    } else if (/[@*#?$!0-9-]/.test(s[i] ?? '')) {
-      i++
-    } else {
-      while (i < s.length && /\w/.test(s[i])) i++
-    }
-    cur.text += '\u0000'
-  }
-
-  while (i < s.length) {
-    const c = s[i]
-    if (c === "'") {
-      const j = s.indexOf("'", i + 1)
-      if (j < 0) throw new Error('unbalanced quote')
-      word().text += s.slice(i + 1, j)
-      word().quoted = true
-      i = j + 1
-    } else if (c === '"') {
-      word().quoted = true
-      i++
-      while (i < s.length && s[i] !== '"') {
-        if (s[i] === '\\' && /["\\$`\n]/.test(s[i + 1] ?? '')) {
-          word().text += s[i + 1]
-          i += 2
-        } else if (s[i] === '$' && /[\w({@*#?!$-]/.test(s[i + 1] ?? '')) {
-          readDollar()
-        } else if (s[i] === '`') {
-          i++
-          word().dynamic = true
-          word().text += '\u0000'
-          nested.push(readBackticks())
-        } else word().text += s[i++]
-      }
-      if (i >= s.length) throw new Error('unbalanced quote')
-      i++
-    } else if (c === '\\') {
-      if (i + 1 < s.length) word().text += s[i + 1]
-      i += 2
-    } else if (c === '$' && /[\w({@*#?!$'-]/.test(s[i + 1] ?? '')) {
-      readDollar()
-    } else if (c === '`') {
-      i++
-      word().dynamic = true
-      word().text += '\u0000'
-      nested.push(readBackticks())
-    } else if (c === '#' && !w) {
-      while (i < s.length && s[i] !== '\n') i++
-    } else if (/[<>]/.test(c)) {
-      // A redirection: an fd number before it is not a word, and its
-      // target is not an argument. <(...) and >(...) run a command.
-      if (w && /^\d+$/.test(w.text) && !w.quoted && !w.dynamic) w = null
-      endWord()
-      if (s[i + 1] === '(') {
-        i += 2
-        nested.push(readParens())
-        continue
-      }
-      while (/[<>&|-]/.test(s[i] ?? '')) i++
-      while (s[i] === ' ' || s[i] === '\t') i++
-      // the target word is consumed into a throwaway Word
-      const saved = words
-      words = []
-      while (i < s.length && !/[\s;&|()<>]/.test(s[i])) {
-        if (s[i] === "'" || s[i] === '"') {
-          const q = s[i]
-          const j = s.indexOf(q, i + 1)
-          if (j < 0) throw new Error('unbalanced quote')
-          i = j + 1
-        } else if (s[i] === '$' && s[i + 1] === '(') {
-          i += 2
-          nested.push(readParens())
-        } else i++
-      }
-      words = saved
-    } else if (/[;&|\n()]/.test(c)) {
-      endSegment()
-      i++
-    } else if (c === ' ' || c === '\t' || c === '\r') {
-      endWord()
-      i++
-    } else {
-      word().text += c
-      i++
-    }
-  }
-  endSegment()
-  return { segments, nested }
-}
-
-// ------------------------------------------------------------ commands --
-
-const GUARDED = new Set(['gh', 'git', 'curl', 'wget'])
-const KEYWORDS = new Set([
-  '!',
-  '{',
-  '}',
-  'if',
-  'then',
-  'else',
-  'elif',
-  'fi',
-  'do',
-  'done',
-  'while',
-  'until',
-  'time',
-])
-const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ksh'])
-const INTERPRETERS = new Set([
-  'python',
-  'python3',
-  'node',
-  'perl',
-  'ruby',
-  'deno',
-  'bun',
-  'php',
-])
-/** Wrappers that run their arguments as a command, with value-taking flags. */
-const WRAPPERS = {
-  env: new Set(['-u', '--unset', '-C', '--chdir', '-S', '--split-string']),
-  command: new Set(),
-  builtin: new Set(),
-  exec: new Set(['-a']),
-  nohup: new Set(),
-  nice: new Set(['-n', '--adjustment']),
-  sudo: new Set(['-u', '-g', '-C', '-h', '-p', '-U']),
-  stdbuf: new Set(['-i', '-o', '-e']),
-  timeout: new Set(['-s', '--signal', '-k', '--kill-after']),
-}
-const FANOUT = new Set(['xargs', 'parallel', 'find', 'watch'])
-const OTHER_HTTP = new Set(['http', 'https', 'httpie', 'xh', 'xhs'])
-
-const base = t => t.slice(t.lastIndexOf('/') + 1)
-const mentionsGuarded = t =>
-  /(^|[^\w-])(gh|git|curl|wget)([^\w-]|$)|github\.com/i.test(t)
+export const MAX_COMMAND = 4096 // characters of one Bash command
+export const REPO_SLUG = 'taverns-red/toast-stats'
 
 class Refusal extends Error {}
 const no = reason => {
   throw new Refusal(reason)
 }
 
+// ------------------------------------------------------------ tokenizer --
+
+/** Characters that make the shell do something other than pass a word. */
+const META = new Set([
+  ';',
+  '&',
+  '|',
+  '`',
+  '$',
+  '(',
+  ')',
+  '{',
+  '}',
+  '<',
+  '>',
+  '!',
+  '*',
+  '?',
+  '[',
+  ']',
+  '\\',
+  '\n',
+  '\r',
+])
+const RESERVED = new Set([
+  'if',
+  'then',
+  'elif',
+  'else',
+  'fi',
+  'while',
+  'until',
+  'do',
+  'done',
+  'case',
+  'esac',
+  'function',
+  'select',
+  'coproc',
+  '[[',
+  ']]',
+  '{',
+  '}',
+  '!',
+  'for',
+  'in',
+  'time',
+])
+
 /**
- * The program a simple command runs and its arguments, past assignments,
- * keywords and wrappers. Returns null for an empty command.
+ * The commands of a line: arrays of literal words, split only on `&&`
+ * outside quotes. Refuses everything else the shell would interpret.
  */
-function resolveCommand(words) {
-  let k = 0
-  let gitEnv = false
-  for (;;) {
-    while (k < words.length && !words[k].quoted && KEYWORDS.has(words[k].text))
-      k++
-    while (
-      k < words.length &&
-      !words[k].quoted &&
-      /^[A-Za-z_]\w*=/.test(words[k].text)
-    ) {
-      if (/^GIT_/i.test(words[k].text)) gitEnv = true
-      k++
-    }
-    if (k >= words.length) return null
-    const head = words[k]
-    if (head.dynamic) {
-      const name = base(head.text)
-      if (!name || name.includes('\u0000'))
-        no('a command name built at run time cannot be checked')
-    }
-    const name = base(head.text).toLowerCase()
-    const flags = WRAPPERS[name]
-    if (!flags || head.quoted) return { name, args: words.slice(k + 1), gitEnv }
-    k++
-    while (k < words.length && words[k].text.startsWith('-')) {
-      if (/^(-S|--split-string)/.test(words[k].text))
-        no('env -S runs a command the guard cannot read')
-      if (flags.has(words[k].text)) k++
-      k++
-    }
-    if (name === 'timeout' && k < words.length) k++ // the duration
-    if (name === 'env') continue // assignments again
-  }
-}
-
-/** Check one command line; recurse into nested and wrapped commands. */
-function checkLine(src, ctx, depth = 0) {
-  if (depth > 6) no('commands nested too deeply to check')
-  let parsed
-  try {
-    parsed = tokenize(src)
-  } catch (e) {
-    if (mentionsGuarded(src))
-      no(`the command could not be parsed (${e.message})`)
-    return
-  }
-  for (const inner of parsed.nested) {
-    const cwd = ctx.cwd
-    checkLine(inner, ctx, depth + 1)
-    ctx.cwd = cwd
-  }
-  for (const seg of parsed.segments) checkSegment(seg, ctx, depth)
-}
-
-function checkSegment(words, ctx, depth) {
-  const cmd = resolveCommand(words)
-  if (!cmd) return
-  const { name, args, gitEnv } = cmd
-  const texts = args.map(a => a.text)
-
-  if (name === 'cd' || name === 'pushd') {
-    const target = args.find(a => !a.text.startsWith('-'))
-    if (!target) ctx.cwd = ctx.home ?? null
-    else if (target.dynamic || target.text === '-' || ctx.cwd === null)
-      ctx.cwd = null
-    else
-      ctx.cwd = resolve(
-        ctx.cwd,
-        target.text.replace(/^~(?=\/|$)/, ctx.home ?? '~')
-      )
-    return
-  }
-  if (SHELLS.has(name)) {
-    const c = args.findIndex(a => /^-[a-z]*c$/.test(a.text))
-    if (c >= 0 && args[c + 1]) {
-      if (args[c + 1].dynamic && mentionsGuarded(args[c + 1].text))
-        no('a shell command built at run time cannot be checked')
-      checkLine(args[c + 1].text, ctx, depth + 1)
-    } else if (readsStdin(args) && mentionsGuarded(ctx.raw))
-      no(`${name} reading commands from stdin cannot be checked`)
-    return
-  }
-  if (name === 'eval') {
-    if (args.some(a => a.dynamic)) no('eval of text built at run time')
-    checkLine(texts.join(' '), ctx, depth + 1)
-    return
-  }
-  if (name === 'alias') {
-    if (texts.some(mentionsGuarded))
-      no('an alias for gh, git, curl or wget hides what runs')
-    return
-  }
-  if (FANOUT.has(name)) {
-    if (args.some(a => GUARDED.has(base(a.text))))
-      no(`${name} builds the arguments of gh, git, curl or wget at run time`)
-    return
-  }
-  if (INTERPRETERS.has(name)) {
-    const e = args.findIndex(a =>
-      /^(-[a-zA-Z]*[ce]|--eval|-p|--print)$/.test(a.text)
+export function tokenize(line) {
+  if (line.length > MAX_COMMAND)
+    no(
+      `the command is over ${MAX_COMMAND} characters, so the guard does not read it`
     )
-    if (e >= 0 && args[e + 1] && mentionsGuarded(args[e + 1].text))
-      no(`inline ${name} code that runs gh, git, curl or calls GitHub`)
-    if (e < 0 && readsStdin(args) && mentionsGuarded(ctx.raw))
-      no(`${name} reading code from stdin cannot be checked`)
-    return
+  if (/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(line))
+    no('the command has control characters')
+  const commands = []
+  let words = []
+  let cur = ''
+  let has = false
+  const push = () => {
+    if (has) words.push(cur)
+    cur = ''
+    has = false
   }
-  if (OTHER_HTTP.has(name) && texts.some(t => /github\.com/i.test(t)))
-    no(`${name} to GitHub is not on the cloud allow list; use gh api`)
-  if (name === 'gh') return checkGh(args)
-  if (name === 'curl') return checkCurl(args, ctx)
-  if (name === 'wget') return checkWget(args, ctx)
-  if (name === 'git') return checkGit(args, ctx, gitEnv)
+  const endCommand = () => {
+    push()
+    if (!words.length) no('an empty command')
+    commands.push(words)
+    words = []
+  }
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i]
+    if (c === "'") {
+      const j = line.indexOf("'", i + 1)
+      if (j === -1) no('an unterminated quote')
+      cur += line.slice(i + 1, j)
+      has = true
+      i = j
+    } else if (c === '"') {
+      let j = i + 1
+      for (; j < line.length && line[j] !== '"'; j++) {
+        if (line[j] === '$' || line[j] === '`' || line[j] === '\\')
+          no('an expansion or backslash inside double quotes')
+        cur += line[j]
+      }
+      if (j >= line.length) no('an unterminated quote')
+      has = true
+      i = j
+    } else if (c === ' ' || c === '\t') {
+      push()
+    } else if (c === '&' && line[i + 1] === '&' && line[i + 2] !== '&') {
+      endCommand()
+      i++
+    } else if (META.has(c)) {
+      no(
+        `the shell metacharacter ${JSON.stringify(c)} is not allowed outside quotes`
+      )
+    } else if ((c === '#' || c === '~') && !has) {
+      no(`a word may not start with ${c} (comment or home expansion)`)
+    } else {
+      cur += c
+      has = true
+    }
+  }
+  endCommand()
+  for (const w of commands) {
+    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(w[0]))
+      no('a leading variable assignment')
+    if (RESERVED.has(w[0])) no('a shell reserved word')
+  }
+  return commands
 }
 
-/** No script operand, or an explicit `-`/`-s`: the program reads stdin. */
-function readsStdin(args) {
+// ---------------------------------------------------------------- paths --
+
+/** Gitignored, but build and dependency output a worker reads. */
+const IGNORED_OK = new Set([
+  'node_modules',
+  'dist',
+  'coverage',
+  '.vite',
+  'playwright-report',
+  'test-results',
+])
+const SECRET_NAME = /^\.env(\..*)?$|\.(pem|key)$/i
+
+/** Real path of p through the nearest existing parent, dangling links included. */
+function realish(p, depth = 0) {
+  if (depth > 20) no('too many symbolic links to resolve')
+  let cur = resolve(p)
+  const rest = []
+  for (;;) {
+    try {
+      return join(realpathSync(cur), ...rest)
+    } catch {
+      let link = null
+      try {
+        if (lstatSync(cur).isSymbolicLink()) link = readlinkSync(cur)
+      } catch {
+        // does not exist
+      }
+      if (link !== null)
+        return realish(join(resolve(dirname(cur), link), ...rest), depth + 1)
+      const parent = dirname(cur)
+      if (parent === cur) return resolve(p)
+      rest.unshift(basename(cur))
+      cur = parent
+    }
+  }
+}
+
+const within = (root, p) => p === root || p.startsWith(root + sep)
+
+/** GIT_* from the session would point git elsewhere (#2534). */
+function cleanGitEnv() {
+  const env = { ...process.env }
+  for (const k of Object.keys(env)) if (/^GIT_/i.test(k)) delete env[k]
+  return env
+}
+
+function git(dir, args) {
+  const r = spawnSync('git', ['-C', dir, ...args], {
+    encoding: 'utf8',
+    env: cleanGitEnv(),
+    stdio: ['ignore', 'pipe', 'ignore'],
+    timeout: 3000,
+  })
+  return r
+}
+function gitOut(dir, ...args) {
+  const r = git(dir, args)
+  return r.status === 0 ? r.stdout.trim() : null
+}
+
+const secretShaped = rel =>
+  rel.split(sep).some(p => p === '.git' || SECRET_NAME.test(p))
+const ignoredOk = rel => rel.split(sep).some(p => IGNORED_OK.has(p))
+
+/** One path a command reads. Refuses, or returns its real path. */
+function checkRead(p, ctx, how) {
+  if (p === '') return null
+  const abs = resolve(ctx.cwd, p)
+  const real = realish(abs)
+  const show = JSON.stringify(p.slice(0, 60))
+  if (!within(ctx.root, real))
+    no(`${how} reads ${show}, outside the repository`)
+  for (const q of [abs, real])
+    if (within(ctx.root, q) && secretShaped(relative(ctx.root, q)))
+      no(`${how} reads ${show}, a secret-shaped file`)
+  const rel = relative(ctx.root, real)
+  if (
+    rel &&
+    !ignoredOk(rel) &&
+    git(ctx.root, ['check-ignore', '-q', '--', rel]).status === 0
+  )
+    no(`${how} reads ${show}, a gitignored file`)
+  return real
+}
+
+/** A directory read recursively: nothing secret or ignored inside it. */
+function checkReadDir(real, ctx, how) {
+  let dir = false
+  try {
+    dir = statSync(real).isDirectory()
+  } catch {
+    return
+  }
+  if (!dir) return
+  if (within(real, ctx.root))
+    no(`${how} -r over the repository root reaches .git`)
+  const rel = relative(ctx.root, real)
+  if (ignoredOk(rel)) return
+  const list = args => {
+    const r = git(ctx.root, ['ls-files', '-z', ...args, '--', rel])
+    if (r.status !== 0) no(`${how} -r over a directory the guard cannot list`)
+    return r.stdout.split('\u0000').filter(Boolean)
+  }
+  if (list(['-co', '--exclude-standard']).some(secretShaped))
+    no(`${how} -r over a directory with secret-shaped files`)
+  if (
+    list(['-o', '-i', '--exclude-standard', '--directory']).some(
+      f => !ignoredOk(f.replace(/\/$/, ''))
+    )
+  )
+    no(`${how} -r over a directory with gitignored files`)
+}
+
+/**
+ * Template rule: every non-option word may be a path (patterns and numbers
+ * too), and so is the value of an --option=value.
+ */
+function confineReads(args, ctx, how) {
+  const reals = []
+  for (const a of args) {
+    let word = a
+    if (a.startsWith('-')) {
+      const eq = a.indexOf('=')
+      if (eq === -1) continue
+      word = a.slice(eq + 1)
+    }
+    reals.push(checkRead(word, ctx, how))
+  }
+  return reals.filter(Boolean)
+}
+
+// --------------------------------------------------------------- shapes --
+
+const PLAIN = /^[A-Za-z0-9_.,=@%+~^/:-]+$/
+const plain = w => PLAIN.test(w)
+const plainAll = (ws, what) => {
+  for (const w of ws)
+    if (!plain(w))
+      no(
+        `${what} takes plain words only, not ${JSON.stringify(w.slice(0, 40))}`
+      )
+}
+const TOOL_FLAGS =
+  /^(-c|--config|--root|-r|--plugin|--parser|--rulesdir|--resolve-plugins-relative-to|--env-file|--require|--import|--loader|--setupFiles|--globalSetup|--pre|--exec|--ignore-path|--plugin-search-dir|-p|--project)(=|$)/
+const noToolFlags = ws => {
+  for (const w of ws)
+    if (TOOL_FLAGS.test(w)) no(`the option ${w} can load or run other code`)
+}
+
+/** Root package.json scripts a worker runs (CLAUDE.md, Commands). */
+const NPM_SCRIPTS = new Set(
+  (
+    'test test:frontend test:collector-cli test:analytics-core ' +
+    'test:shared-contracts test:mcp-server test:unit test:integration ' +
+    'test:projects:check test:no-page-mounts:check test:coverage ' +
+    'test:coverage:denominator-check test:scripts test:pipeline-harness ' +
+    'test:quarantine:check lint lint:yaml format format:check typecheck ' +
+    'typecheck:frontend typecheck:tests typecheck:count quality:check ' +
+    'quality:fix pre-commit build:frontend build:collector-cli ' +
+    'build:analytics-core build:shared-contracts build:mcp-server ' +
+    'build:verify-emit lessons:index lessons:index:check seo:check'
+  ).split(' ')
+)
+
+function judgeNpm(w) {
+  const [, sub, ...rest] = w
+  if ((sub === 'ci' || sub === 'install') && rest.length === 0) return
+  let args
+  if (sub === 'test') args = rest
+  else if (sub === 'run' && NPM_SCRIPTS.has(rest[0])) args = rest.slice(1)
+  else
+    no(
+      `npm ${sub ?? ''} ${sub === 'run' ? (rest[0] ?? '') : ''} is not on the cloud allow list`
+    )
+  if (args.length === 0) return
+  if (args[0] !== '--') no('npm takes extra arguments only after --')
+  plainAll(args.slice(1), 'npm')
+  noToolFlags(args.slice(1))
+}
+
+function judgeNpx(w, ctx) {
+  const [, tool, ...rest] = w
+  if (tool === 'vitest' && (rest[0] === 'run' || rest[0] === '--run')) {
+    plainAll(rest.slice(1), 'vitest')
+    return noToolFlags(rest.slice(1))
+  }
+  if (tool === 'tsc' && rest[0] === '--noEmit') {
+    if (rest.slice(1).every(a => a === '--skipLibCheck' || a === '--pretty'))
+      return
+  }
+  if (tool === 'eslint' || tool === 'prettier') {
+    plainAll(rest, tool)
+    noToolFlags(rest)
+    if (
+      rest.some(a =>
+        /^--(stdin|cache-location|output-file|log-file)|^-o$/.test(a)
+      )
+    )
+      no(`${tool} with that option is not on the cloud allow list`)
+    return void confineReads(rest, ctx, tool)
+  }
+  no(`npx ${tool ?? ''} with these arguments is not on the cloud allow list`)
+}
+
+// ------------------------------------------------------------------ git --
+
+const GIT_READ = new Set([
+  'status',
+  'diff',
+  'log',
+  'show',
+  'fetch',
+  'rev-parse',
+  'blame',
+  'grep',
+])
+const GIT_BAD_OPTS =
+  /^(--output|--ext-diff|--textconv|--upload-pack|--receive-pack|--exec|--git-dir|--work-tree|--config-env|--namespace|--open-files-in-pager|--exec-path|--no-index|--contents|-O|-c)(=|$)|^-O./
+const MAIN = /^(refs\/heads\/)?(main|master)$/
+
+/** The protected paths a worker may not stage (template list, our names). */
+const PROTECTED_DIRS = new Set(['.claude', '.githooks', '.husky', '.github'])
+const PROTECTED_FILES = new Set([
+  'claude.md',
+  'package.json',
+  'package-lock.json',
+])
+function isProtected(rel) {
+  const segs = rel.toLowerCase().split(sep).filter(Boolean)
+  if (!segs.length) return false
+  if (PROTECTED_DIRS.has(segs[0])) return true
+  if (segs.length === 1 && PROTECTED_FILES.has(segs[0])) return true
+  if (segs[0] === 'scripts' && segs[1]?.startsWith('cloud-session-'))
+    return true
+  return /^scripts\/lib\/__tests__\/cloudsessionguard/.test(segs.join('/'))
+}
+/** Staging one of these would stage protected files with it. */
+const holdsProtected = rel =>
+  [
+    '',
+    'scripts',
+    join('scripts', 'lib'),
+    join('scripts', 'lib', '__tests__'),
+  ].includes(rel)
+
+function judgeGit(w, ctx) {
+  // No option before the subcommand: -c, --git-dir, --work-tree, -C and
+  // --config-env all change what git runs or where.
+  const sub = w[1]
+  if (sub === undefined || sub.startsWith('-'))
+    no('git options before the subcommand can change config or location')
+  const rest = w.slice(2)
+  for (const a of rest)
+    if (GIT_BAD_OPTS.test(a))
+      no(
+        `git ${sub} ${a} can write files, run other code or read outside the repository`
+      )
+  if (GIT_READ.has(sub)) {
+    plainAll(rest, `git ${sub}`)
+    if (sub === 'fetch') {
+      if (rest.some(a => a.includes(':') || /^(https?|git|ssh|file)$/i.test(a)))
+        no('git fetch only fetches a named remote')
+      return
+    }
+    // Pathspecs and <rev>:<path> are reads: every word may be one, and so
+    // is an --option=value. A <rev>:<path> path is relative to the root.
+    for (const a of rest) {
+      if (a === '--') continue
+      let word = a
+      if (a.startsWith('-')) {
+        const eq = a.indexOf('=')
+        if (eq === -1) continue
+        word = a.slice(eq + 1)
+      }
+      const colon = word.indexOf(':')
+      if (!a.startsWith('-') && colon >= 0)
+        checkRead(
+          word.slice(colon + 1),
+          { ...ctx, cwd: ctx.root },
+          `git ${sub}`
+        )
+      else checkRead(word, ctx, `git ${sub}`)
+    }
+    return
+  }
+  if (sub === 'branch' && rest.length === 1 && rest[0] === '--show-current')
+    return
+  if (sub === 'add') return judgeAdd(rest, ctx)
+  if (sub === 'commit') return judgeCommit(rest, ctx)
+  if (sub === 'push') return judgePush(rest, ctx)
+  no(`git ${sub} is not on the cloud allow list`)
+}
+
+function repoRoot(ctx) {
   return (
-    !args.some(a => !a.text.startsWith('-')) ||
-    args.some(a => a.text === '-' || a.text === '-s')
+    gitOut(ctx.cwd, 'rev-parse', '--show-toplevel') ??
+    no('git cannot find a repository here')
   )
 }
 
-// ------------------------------------------------------------------ gh --
-
-/** gh's repo and host flags, valid anywhere (#2526). Returns words used. */
-function ghRepoFlag(words, k) {
-  const t = words[k].text
-  if (/^(-R|--repo|--hostname)$/.test(t)) return 2
-  if (/^(-R.+|--repo=.*|--hostname=.*)$/.test(t)) return 1
-  return 0
+function stageable(p, ctx, what) {
+  if (!plain(p) || p.startsWith('-'))
+    no(
+      `${what} takes plain path words only, not ${JSON.stringify(p.slice(0, 40))}`
+    )
+  const real = checkRead(p, ctx, what)
+  const rel = relative(realish(repoRoot(ctx)), real)
+  if (rel.startsWith('..') || isAbsolute(rel))
+    no(`${what} path is outside the repository`)
+  if (isProtected(rel) || holdsProtected(rel))
+    no(
+      `${what} ${p}: the guard, the settings, the git hooks, CI, CLAUDE.md and package.json are Ron's to change`
+    )
 }
 
-/** Reads beyond view/list that a worker uses, by group. */
-const GH_READS = {
-  pr: new Set(['diff', 'checks', 'status']),
-  issue: new Set(['status']),
-  run: new Set(['watch', 'download']),
-  auth: new Set(['status']),
+function judgeAdd(rest, ctx) {
+  const paths = rest[0] === '--' ? rest.slice(1) : rest
+  if (!paths.length) no('git add needs explicit paths')
+  for (const p of paths) stageable(p, ctx, 'git add')
 }
 
-function checkGh(args) {
-  const words = args
-  let k = 0
-  /** Next word that is not a repo/host flag; refuses other flags. */
-  const next = () => {
-    while (k < words.length) {
-      const w = words[k]
-      if (w.dynamic) no('a gh command built at run time cannot be checked')
-      const n = ghRepoFlag(words, k)
-      if (n) {
-        k += n
-        continue
-      }
-      if (/^(-h|--help|--version)$/.test(w.text)) return { help: true }
-      if (w.text.startsWith('-'))
-        no(`gh flag ${w.text} before the command cannot be placed`)
-      return { word: w.text.toLowerCase(), at: k++ }
-    }
-    return {}
+function judgeCommit(rest, ctx) {
+  if (
+    rest.length >= 2 &&
+    rest.length % 2 === 0 &&
+    rest.every((a, i) => (i % 2 === 0 ? a === '-m' : true))
+  )
+    return
+  if (rest.length === 2 && rest[0] === '-F')
+    return stageable(rest[1], ctx, 'git commit -F')
+  no('git commit is allowed only as -m <message> (repeatable) or -F <file>')
+}
+
+/** `git push [-u] origin <ref>` to the checked-out branch, from the root. */
+function judgePush(rest, ctx) {
+  const args = rest.filter(a => a !== '-u' && a !== '--set-upstream')
+  if (args.length !== 2 || args[0] !== 'origin')
+    no('a cloud worker pushes only `git push [-u] origin <session branch>`')
+  const root = repoRoot(ctx)
+  if (realish(ctx.cwd) !== realish(root))
+    no('git push must run from the repository root')
+  const branch = gitOut(root, 'rev-parse', '--abbrev-ref', 'HEAD')
+  const defaultBranch = gitOut(
+    root,
+    'symbolic-ref',
+    '--short',
+    'refs/remotes/origin/HEAD'
+  )?.replace(/^origin\//, '')
+  if (
+    !branch ||
+    branch === 'HEAD' ||
+    MAIN.test(branch) ||
+    branch === defaultBranch
+  )
+    no(
+      'never push from main, the default branch or a detached HEAD; push only your session branch'
+    )
+  const own = new Set([branch, `refs/heads/${branch}`, 'HEAD'])
+  const spec = args[1]
+  const colon = spec.indexOf(':')
+  const ok =
+    colon < 0
+      ? own.has(spec)
+      : own.has(spec.slice(0, colon)) &&
+        [branch, `refs/heads/${branch}`].includes(spec.slice(colon + 1))
+  if (!ok)
+    no(`a cloud worker pushes only its session branch (${branch}), not ${spec}`)
+  if (gitOut(root, 'config', '--get-all', 'remote.origin.push') !== null)
+    no('remote.origin.push is configured, so the destination is not plain')
+  if (gitOut(root, 'config', '--get', 'remote.origin.mirror') !== null)
+    no('remote.origin.mirror is configured')
+}
+
+// ------------------------------------------------------------------- gh --
+
+const GH_ALLOWED = {
+  pr: ['create', 'view', 'list', 'checks', 'diff', 'comment', 'status'],
+  issue: ['view', 'list', 'comment'],
+  run: ['view', 'list'],
+}
+// Labels are Ron's, PRs do not retarget, --body-file/-F/--template read a
+// file into a PR or comment, --web opens a browser, --log prints CI logs
+// that can hold secrets masked only in the UI.
+const GH_BAD_FLAGS =
+  /^(--label|--add-label|--remove-label|-l|--base|-B|--editor|-e|--body-file|--template|--recover|--web)(=|$)|^-[FTw]/
+const GH_TEXT_FLAGS = new Set([
+  '--body',
+  '-b',
+  '--title',
+  '-t',
+  '--jq',
+  '-q',
+  '--json',
+])
+const SLUG_URL = new RegExp(`^https://github\\.com/${REPO_SLUG}(/|$)`, 'i')
+
+function judgeRepoOption(value) {
+  const v = (value ?? '').toLowerCase().replace(/^https:\/\/github\.com\//, '')
+  if (v !== REPO_SLUG)
+    no(`gh may only act on ${REPO_SLUG}, not ${value ?? '(missing)'}`)
+}
+
+function judgeGh(w, ctx) {
+  const args = []
+  for (let j = 1; j < w.length; j++) {
+    const a = w[j]
+    if (a === '-R' || a === '--repo') judgeRepoOption(w[++j])
+    else if (a.startsWith('--repo=')) judgeRepoOption(a.slice(7))
+    else if (/^-R./.test(a)) judgeRepoOption(a.slice(2))
+    else args.push(a)
   }
-  const g = next()
-  if (g.help) return
-  if (!g.word) no('bare gh is not on the cloud allow list')
-  const group = g.word
-  if (group === 'help' || group === 'version') return
-  if (group === 'api') return checkGhApi(words.slice(k))
-  if (group === 'search') return
-  const v = next()
-  if (v.help) return
-  if (!v.word) no(`gh ${group} with no subcommand is not on the allow list`)
-  const verb = v.word
-  if (verb === 'view' || verb === 'list') return
-  if (GH_READS[group]?.has(verb)) return
-  no(`gh ${group} ${verb} is not on the cloud allow list`)
+  const [group, sub, ...rest] = args
+  if (group === 'api') return judgeApi(args.slice(1), ctx)
+  if (!GH_ALLOWED[group]?.includes(sub))
+    no(`gh ${group ?? ''} ${sub ?? ''} is not on the cloud allow list`)
+  for (let j = 0; j < rest.length; j++) {
+    const a = rest[j]
+    if (GH_BAD_FLAGS.test(a))
+      no(`gh ${group} ${sub} ${a} is not for cloud workers`)
+    if (GH_TEXT_FLAGS.has(a)) {
+      j++
+      continue
+    }
+    if (/^--(body|title|jq|json)=/.test(a)) continue
+    if (/:\/\/|^github\.com|^git@/i.test(a) && !SLUG_URL.test(a))
+      no(`gh may only act on ${REPO_SLUG}, not ${a}`)
+  }
 }
 
-// --------------------------------------------------- method + path rules --
+// gh api: GET anywhere under this repo; POST and PATCH only on the routes a
+// worker uses (CLAUDE.md, docs/cloud-sessions.md).
 
 const VALUE_OPAQUE = Symbol('opaque')
-
-/**
- * A request body as field -> values. `opaque` means it comes from a file,
- * stdin or the shell, so its fields cannot be read.
- */
-function body() {
-  return { opaque: false, fields: new Map() }
-}
+const body = () => ({ opaque: false, fields: new Map() })
 function addField(b, key, value) {
   const k = String(key).replace(/\[.*$/, '').toLowerCase()
   if (!b.fields.has(k)) b.fields.set(k, [])
   b.fields.get(k).push(value)
 }
-function jsonBody(text) {
-  const b = body()
-  let obj
-  try {
-    obj = JSON.parse(text)
-  } catch {
-    b.opaque = true
-    return b
-  }
-  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-    b.opaque = true
-    return b
-  }
-  for (const [k, v] of Object.entries(obj))
-    for (const x of Array.isArray(v) ? v : [v])
-      addField(b, k, typeof x === 'string' ? x : JSON.stringify(x))
-  return b
-}
 
-const REPO = 'repos/[^/]+/[^/]+'
+const RP = 'repos/[^/]+/[^/]+'
 const ROUTES = [
-  ['POST', new RegExp(`^${REPO}/pulls$`), () => null],
-  ['POST', new RegExp(`^${REPO}/issues/\\d+/comments$`), () => null],
-  ['POST', new RegExp(`^${REPO}/pulls/\\d+/comments$`), () => null],
+  ['POST', new RegExp(`^${RP}/pulls$`), () => null],
+  ['POST', new RegExp(`^${RP}/issues/\\d+/comments$`), () => null],
+  ['POST', new RegExp(`^${RP}/pulls/\\d+/comments$`), () => null],
   [
     'POST',
-    new RegExp(`^${REPO}/pulls/\\d+/reviews$`),
+    new RegExp(`^${RP}/pulls/\\d+/reviews$`),
     b => {
       const ev = b.fields.get('event')
       if (b.opaque || !ev || ev.length !== 1 || ev[0] === VALUE_OPAQUE)
@@ -508,9 +623,9 @@ const ROUTES = [
   ],
   [
     'PATCH',
-    new RegExp(`^${REPO}/pulls/\\d+$`),
+    new RegExp(`^${RP}/pulls/\\d+$`),
     b => {
-      if (b.opaque) return 'a PR update whose fields come from a file or stdin'
+      if (b.opaque) return 'a PR update whose fields come from a file'
       const keys = [...b.fields.keys()]
       const bad = keys.filter(x => !['title', 'body', 'draft'].includes(x))
       if (!keys.length) return 'a PR update with no visible fields'
@@ -519,7 +634,7 @@ const ROUTES = [
   ],
   [
     'POST',
-    new RegExp(`^${REPO}/issues/\\d+/labels$`),
+    new RegExp(`^${RP}/issues/\\d+/labels$`),
     b => {
       const keys = [...b.fields.keys()]
       const vals = b.fields.get('labels') ?? []
@@ -536,582 +651,227 @@ const ROUTES = [
   ],
 ]
 
-/** Decode %xx until stable, strip host and query, and sanity-check. */
-function normalizePath(raw) {
-  let p = raw
-  for (let n = 0; n < 4; n++) {
-    let d
-    try {
-      d = decodeURIComponent(p)
-    } catch {
-      no(`the path ${raw} could not be decoded`)
-    }
-    if (d === p) break
-    p = d
-  }
-  if (p.includes('..')) no(`the path ${raw} climbs with ..`)
-  let host = 'api.github.com'
-  const m = /^https?:\/\/([^/]+)(\/.*)?$/i.exec(p)
-  if (m) {
-    host = m[1].toLowerCase()
-    p = m[2] ?? '/'
-  }
-  p = p.replace(/[?#].*$/s, '').replace(/^\/+/, '')
-  if (/(^|\/)\.(\/|$)|\/\/|\\|\s|[*%\u0000]/.test(p))
-    no(`the path ${raw} is not a plain API path`)
-  return { host, path: p.toLowerCase() }
+const API_FLAGS = {
+  '--paginate': 0,
+  '--slurp': 0,
+  '-i': 0,
+  '--include': 0,
+  '--silent': 0,
+  '--verbose': 0,
+  '-q': 1,
+  '--jq': 1,
+  '-t': 1,
+  '--template': 1,
+  '--cache': 1,
+  '-X': 1,
+  '--method': 1,
+  '-f': 1,
+  '--raw-field': 1,
+  '-F': 1,
+  '--field': 1,
+  '--input': 1,
 }
+const API_PATH = new RegExp(
+  `^repos/${REPO_SLUG}(/[A-Za-z0-9_./-]*)?(\\?[A-Za-z0-9_.,:=&/%-]*)?$`,
+  'i'
+)
 
-/** The verdict for one GitHub API request. Refuses, or returns. */
-function checkRoute(method, rawPath, b, how) {
-  const m = method.toUpperCase()
-  const { host, path } = normalizePath(rawPath)
-  if (path === 'graphql' || path.endsWith('/graphql'))
-    no(`${how} to graphql is not on the cloud allow list`)
-  if (m === 'GET' || m === 'HEAD') return
-  if (host !== 'api.github.com')
-    no(`${how} ${m} to ${host} is not on the cloud allow list`)
-  for (const [rm, re, fieldCheck] of ROUTES) {
-    if (rm !== m || !re.test(path)) continue
-    const why = fieldCheck(b)
-    if (why) no(`${how} ${m} ${path}: ${why}`)
-    return
-  }
-  no(`${how} ${m} ${path} is not on the cloud allow list`)
-}
-
-const METHOD_OVERRIDE = /x-http-method-override|x-method-override/i
-
-// -------------------------------------------------------------- gh api --
-
-const API_VALUE = new Set([
-  '-X',
-  '--method',
-  '-f',
-  '--raw-field',
-  '-F',
-  '--field',
-  '--input',
-  '-H',
-  '--header',
-  '-p',
-  '--preview',
-  '-q',
-  '--jq',
-  '-t',
-  '--template',
-  '--cache',
-  '--hostname',
-  '-R',
-  '--repo',
-])
-const API_BOOL = new Set([
-  '--paginate',
-  '--slurp',
-  '--silent',
-  '-i',
-  '--include',
-  '--verbose',
-  '-h',
-  '--help',
-])
-const API_SHORT_VALUE = new Set(['X', 'f', 'F', 'H', 'p', 'q', 't', 'R'])
-const API_SHORT_BOOL = new Set(['i', 'h'])
-
-function checkGhApi(words) {
+function judgeApi(args, ctx) {
   let method = null
   const b = body()
   let hasFields = false
-  let hasInput = false
-  const positional = []
-  const take = (flag, value) => {
-    if (value === undefined) no(`gh api ${flag} needs a value`)
-    const v = value
-    if (flag === '-X' || flag === '--method') {
-      if (v.dynamic) no('gh api with a method built at run time')
-      method = v.text
-    } else if (/^(-f|--raw-field|-F|--field)$/.test(flag)) {
-      hasFields = true
-      const eq = v.text.indexOf('=')
-      if (eq < 0) addField(b, v.text, VALUE_OPAQUE)
-      else {
-        const key = v.text.slice(0, eq)
-        const val = v.text.slice(eq + 1)
-        const fromFile = /^(-F|--field)$/.test(flag) && val.startsWith('@')
-        addField(b, key, v.dynamic || fromFile ? VALUE_OPAQUE : val)
-      }
-    } else if (flag === '--input') {
-      hasInput = true
-      b.opaque = true
-    } else if (flag === '-H' || flag === '--header') {
-      if (v.dynamic || METHOD_OVERRIDE.test(v.text))
-        no('gh api with a method-override or run-time header')
-    }
-  }
-  for (let k = 0; k < words.length; k++) {
-    const w = words[k]
-    const t = w.text
-    if (t === '--') {
-      positional.push(...words.slice(k + 1))
-      break
-    }
-    if (!t.startsWith('-') || t === '-') {
-      positional.push(w)
-      continue
-    }
-    if (t.startsWith('--')) {
-      const eq = t.indexOf('=')
-      const flag = eq < 0 ? t : t.slice(0, eq)
-      if (API_BOOL.has(flag)) continue
-      if (!API_VALUE.has(flag)) no(`gh api flag ${flag} is not understood`)
-      if (eq >= 0) {
-        take(flag, glued(w, t.slice(eq + 1)))
-      } else take(flag, words[++k])
-      continue
-    }
-    // short flags, possibly combined: -iX POST, -XPUT, -fkey=v
-    for (let j = 1; j < t.length; j++) {
-      const ch = t[j]
-      if (API_SHORT_BOOL.has(ch)) continue
-      if (!API_SHORT_VALUE.has(ch)) no(`gh api flag -${ch} is not understood`)
-      const rest = t.slice(j + 1)
-      if (rest) {
-        take(`-${ch}`, glued(w, rest))
-      } else take(`-${ch}`, words[++k])
-      break
-    }
-  }
-  if (positional.length !== 1)
-    no('gh api needs exactly one endpoint the guard can read')
-  const ep = positional[0]
-  if (ep.dynamic) no('gh api with an endpoint built at run time')
-  const m = method ?? (hasFields || hasInput ? 'POST' : 'GET')
-  if (hasInput && /^(GET|HEAD)$/i.test(m)) b.opaque = true
-  checkRoute(m, ep.text, b, 'gh api')
-}
-
-// ---------------------------------------------------------- curl, wget --
-
-const CURL_VALUE_SHORT = new Set([...'XdFTHuoAebcwKxmrEDYyzCUQ'.split('')])
-const CURL_DATA = new Set([
-  '-d',
-  '--data',
-  '--data-raw',
-  '--data-binary',
-  '--data-ascii',
-  '--data-urlencode',
-  '--json',
-])
-const CURL_FORM = new Set(['-F', '--form', '--form-string'])
-const CURL_VALUE_LONG = new Set([
-  '--request',
-  ...CURL_DATA,
-  ...CURL_FORM,
-  '--upload-file',
-  '--header',
-  '--user',
-  '--output',
-  '--user-agent',
-  '--referer',
-  '--cookie',
-  '--cookie-jar',
-  '--write-out',
-  '--url',
-  '--config',
-  '--proxy',
-  '--connect-timeout',
-  '--max-time',
-  '--retry',
-  '--range',
-  '--cert',
-  '--cacert',
-  '--resolve',
-  '--connect-to',
-  '--dump-header',
-  '--oauth2-bearer',
-  '--limit-rate',
-  '--proxy-user',
-  '--variable',
-  '--quote',
-])
-const LONG_OF = {
-  X: '--request',
-  d: '--data',
-  F: '--form',
-  T: '--upload-file',
-  H: '--header',
-  K: '--config',
-  Q: '--quote',
-}
-
-const rcExists = names => names.some(n => n && existsSync(n))
-
-/** curl/wget to a GitHub host: apply the route rules. */
-function checkHttp(tool, method, urls, b, rcFiles) {
-  const m = method.toUpperCase()
-  for (const u of urls) {
-    if (u.dynamic) {
-      if (m === 'GET' || m === 'HEAD') continue
-      no(`${tool} ${m} to a URL built at run time`)
-    }
-    const host = (
-      /^(?:https?:\/\/)?([^/:?#]+)/i.exec(u.text)?.[1] ?? ''
-    ).toLowerCase()
-    const github = /(^|\.)github\.com$|(^|\.)githubusercontent\.com$/.test(host)
-    if (!github) continue
-    if (rcExists(rcFiles))
-      no(`${tool} to GitHub with a ${tool}rc that could change the request`)
-    if (tool === 'curl' && /[{}[\]]/.test(u.text) && !/^(GET|HEAD)$/.test(m))
-      no('curl URL globbing turns one URL into several')
-    if (host !== 'api.github.com') {
-      if (m === 'GET' || m === 'HEAD') continue
-      no(`${tool} ${m} to ${host} is not on the cloud allow list`)
-    }
-    checkRoute(m, u.text, b, tool)
-  }
-}
-
-function checkCurl(args, ctx) {
-  let method = null
-  let get = false
-  let head = false
-  let upload = false
-  const data = []
-  let form = false
-  const urls = []
+  const paths = []
   const take = (flag, v) => {
-    if (!v) no(`curl ${flag} needs a value`)
-    if (flag === '--request') {
-      if (v.dynamic) no('curl with a method built at run time')
-      method = v.text
-    } else if (CURL_DATA.has(flag)) data.push({ flag, v })
-    else if (CURL_FORM.has(flag)) form = true
-    else if (flag === '--upload-file') upload = true
-    else if (flag === '--url') urls.push(v)
-    else if (flag === '--header') {
-      if (
-        METHOD_OVERRIDE.test(v.text) ||
-        (v.dynamic && /override/i.test(v.text))
-      )
-        no('curl with a method-override header')
-    } else if (/^--(config|variable|quote)$/.test(flag))
-      no(`curl ${flag} can change the request out of sight`)
-  }
-  for (let k = 0; k < args.length; k++) {
-    const w = args[k]
-    const t = w.text
-    if (t === '--') {
-      urls.push(...args.slice(k + 1))
-      break
-    }
-    if (!t.startsWith('-') || t === '-') {
-      urls.push(w)
-      continue
-    }
-    if (t.startsWith('--')) {
-      const eq = t.indexOf('=')
-      const flag = eq < 0 ? t : t.slice(0, eq)
-      if (flag === '--next' || flag === '--request-target')
-        no(`curl ${flag} sends a request the guard cannot match to its URL`)
-      if (flag === '--get') get = true
-      else if (flag === '--head') head = true
-      else if (/^--expand-/.test(flag))
-        no(`curl ${flag} expands variables out of sight`)
-      if (!CURL_VALUE_LONG.has(flag) && !/^--expand-/.test(flag)) continue
-      if (eq >= 0) {
-        take(flag, glued(w, t.slice(eq + 1)))
-      } else take(flag, args[++k])
-      continue
-    }
-    for (let j = 1; j < t.length; j++) {
-      const ch = t[j]
-      if (ch === ':') no('curl -: starts a request with its own method')
-      if (ch === 'G') get = true
-      if (ch === 'I') head = true
-      if (!CURL_VALUE_SHORT.has(ch)) continue
-      const rest = t.slice(j + 1)
-      take(LONG_OF[ch] ?? `-${ch}`, rest ? glued(w, rest) : args[++k])
-      break
-    }
-  }
-  let m = method
-  if (!m) {
-    if (head) m = 'HEAD'
-    else if (upload) m = 'PUT'
-    else if ((data.length || form) && !get) m = 'POST'
-    else m = 'GET'
-  }
-  let b = body()
-  if (form || upload || data.length > 1) b.opaque = true
-  else if (data.length === 1) {
-    const { flag, v } = data[0]
-    if (
-      v.dynamic ||
-      flag === '--data-urlencode' ||
-      (flag !== '--data-raw' && v.text.startsWith('@'))
-    )
+    if (v === undefined) no(`gh api ${flag} needs a value`)
+    if (flag === '-X' || flag === '--method') method = v.toUpperCase()
+    else if (/^(-f|--raw-field|-F|--field)$/.test(flag)) {
+      hasFields = true
+      const eq = v.indexOf('=')
+      if (eq < 0) return addField(b, v, VALUE_OPAQUE)
+      const key = v.slice(0, eq)
+      const val = v.slice(eq + 1)
+      if (/^(-F|--field)$/.test(flag) && val.startsWith('@')) {
+        if (val === '@-') no('gh api -F with stdin')
+        checkRead(val.slice(1), ctx, 'gh api -F')
+        return addField(b, key, VALUE_OPAQUE)
+      }
+      addField(b, key, val)
+    } else if (flag === '--input') {
+      hasFields = true
       b.opaque = true
-    else b = jsonBody(v.text)
+      if (v === '-') no('gh api --input from stdin')
+      checkRead(v, ctx, 'gh api --input')
+    }
   }
-  const home = ctx.home
-  checkHttp('curl', m, urls, b, [
-    home && join(home, '.curlrc'),
-    process.env.CURL_HOME && join(process.env.CURL_HOME, '.curlrc'),
-    process.env.XDG_CONFIG_HOME && join(process.env.XDG_CONFIG_HOME, '.curlrc'),
-  ])
-}
-
-const WGET_VALUE_SHORT = new Set([...'OoaieTtwPUQlADIRX'.split('')])
-/** Options that change the method, body or target. */
-const WGET_RISKY = [
-  'method',
-  'post-data',
-  'post-file',
-  'body-data',
-  'body-file',
-  'header',
-  'execute',
-  'input-file',
-]
-const WGET_VALUE_LONG = new Set([
-  ...WGET_RISKY,
-  'output-document',
-  'output-file',
-  'user-agent',
-  'tries',
-  'timeout',
-  'wait',
-])
-
-function checkWget(args, ctx) {
-  let method = null
-  const urls = []
-  let b = body()
-  let posted = false
-  for (let k = 0; k < args.length; k++) {
-    const w = args[k]
-    const t = w.text
-    if (!t.startsWith('-') || t === '-') {
-      urls.push(w)
+  for (let j = 0; j < args.length; j++) {
+    const a = args[j]
+    if (!a.startsWith('-')) {
+      paths.push(a)
       continue
     }
-    if (t.startsWith('--')) {
-      const eq = t.indexOf('=')
-      const flag = eq < 0 ? t : t.slice(0, eq)
-      const valued = WGET_VALUE_LONG.has(flag.slice(2))
-      if (!valued && WGET_RISKY.some(n => n.startsWith(flag.slice(2))))
-        no(`wget ${flag} abbreviates an option that changes the request`)
-      if (!valued) continue
-      const v = eq >= 0 ? glued(w, t.slice(eq + 1)) : args[++k]
-      if (!v) no(`wget ${flag} needs a value`)
-      if (flag === '--method') {
-        if (v.dynamic) no('wget with a method built at run time')
-        method = v.text
-      } else if (flag === '--post-data' || flag === '--body-data') {
-        posted = true
-        b = v.dynamic ? { opaque: true, fields: new Map() } : jsonBody(v.text)
-      } else if (flag === '--post-file' || flag === '--body-file') {
-        posted = true
-        b.opaque = true
-      } else if (flag === '--execute' || flag === '--input-file')
-        no(`wget ${flag} can change the request out of sight`)
-      else if (flag === '--header' && METHOD_OVERRIDE.test(v.text))
-        no('wget with a method-override header')
-      continue
+    let name
+    let value
+    if (a.startsWith('--')) {
+      const eq = a.indexOf('=')
+      name = eq < 0 ? a : a.slice(0, eq)
+      value = eq < 0 ? undefined : a.slice(eq + 1)
+    } else {
+      name = a.slice(0, 2)
+      value = a.length > 2 ? a.slice(2) : undefined
     }
-    for (let j = 1; j < t.length; j++) {
-      const ch = t[j]
-      if (!WGET_VALUE_SHORT.has(ch)) continue
-      if (ch === 'e' || ch === 'i')
-        no(`wget -${ch} can change the request out of sight`)
-      if (!t.slice(j + 1)) k++
-      break
-    }
+    if (!(name in API_FLAGS))
+      no(`gh api ${a} is not allowed (no headers, previews or other hosts)`)
+    if (API_FLAGS[name] === 1) take(name, value ?? args[++j])
   }
-  const m = method ?? (posted ? 'POST' : 'GET')
-  checkHttp('wget', m, urls, b, [
-    ctx.home && join(ctx.home, '.wgetrc'),
-    process.env.WGETRC,
-  ])
-}
-
-// ------------------------------------------------------------- git push --
-
-const GIT_BUILTINS = new Set(
-  (
-    'add am apply bisect blame branch bundle cat-file check-ignore checkout ' +
-    'cherry cherry-pick clean clone commit config describe diff fetch ' +
-    'for-each-ref format-patch fsck gc grep help init log ls-files ' +
-    'ls-remote ls-tree merge merge-base mv notes pull push range-diff ' +
-    'rebase reflog remote reset restore rev-list rev-parse revert rm ' +
-    'shortlog show show-ref sparse-checkout stash status submodule switch ' +
-    'symbolic-ref tag update-index version worktree'
-  ).split(' ')
-)
-const RISKY_CONFIG =
-  /^(alias\..+|remote\..+\.(push|mirror|pushurl)|push\..+|branch\..+\.(pushremote|merge|remote)|remote\.pushdefault|url\..+)$/i
-
-function gitIn(dir, ...a) {
-  try {
-    return execFileSync('git', ['-C', dir, ...a], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      timeout: 3000,
-    }).trim()
-  } catch {
-    return null
-  }
-}
-
-function checkGit(args, ctx, gitEnv) {
-  let k = 0
-  let dir = ctx.cwd
-  let flagged = gitEnv
-  for (; k < args.length; k++) {
-    const t = args[k].text
-    if (!t.startsWith('-')) break
-    if (t === '-C') {
-      const v = args[++k]
-      if (!v || v.dynamic || dir === null) dir = null
-      else dir = isAbsolute(v.text) ? v.text : resolve(dir, v.text)
-    } else if (t === '-c' || t.startsWith('--config-env')) {
-      flagged = true
-      if (t === '-c') k++
-    } else if (/^--(git-dir|work-tree|namespace|exec-path)/.test(t)) {
-      flagged = true
-      if (!t.includes('=')) k++
-    }
-  }
-  const subW = args[k]
-  if (!subW) return
-  if (subW.dynamic) no('a git subcommand built at run time')
-  const sub = subW.text
-  const rest = args.slice(k + 1)
-
-  if (sub === 'config') {
-    const reading = rest.some(a =>
-      /^(--get|--get-all|--get-regexp|--list|-l|get|list)$/.test(a.text)
-    )
-    if (!reading && rest.some(a => RISKY_CONFIG.test(a.text)))
-      ctx.pushConfigWrite = true
-    return
-  }
-  if (sub === 'send-pack' || sub === 'http-push')
-    no(`git ${sub} pushes refs past the push rules`)
-  if (sub === 'subtree' && rest.some(a => a.text === 'push'))
-    no('git subtree push is not on the cloud allow list')
-  if (!GIT_BUILTINS.has(sub)) {
-    if (ctx.pushConfigWrite)
-      no(`git ${sub} after a git config change in the same command`)
-    if (dir === null) no(`git ${sub} in a directory the guard cannot tell`)
-    if (gitIn(dir, 'config', '--get', `alias.${sub}`) !== null)
-      no(`git ${sub} is an alias, which hides what it runs`)
-    return
-  }
-  if (sub === 'push') checkPush(rest, dir, ctx, flagged)
-}
-
-const PUSH_OK_LONG =
-  /^--(set-upstream|quiet|verbose|progress|no-progress|porcelain|dry-run|force-with-lease(=.*)?|force-if-includes|no-force-if-includes|atomic|no-atomic|ipv4|ipv6)$/
-const PUSH_OK_SHORT = new Set(['u', 'q', 'v', 'n', '4', '6'])
-
-function checkPush(args, dir, ctx, flagged) {
-  if (ctx.pushConfigWrite || ctx.gitConfigTouched)
-    no('a push in the same command as a git config change')
-  if (flagged) no('a push with git -c, --git-dir or GIT_* settings')
-  if (dir === null) no('a push from a directory the guard cannot tell')
-
-  const positional = []
-  let ended = false
-  for (const w of args) {
-    const t = w.text
-    if (w.dynamic) no('a push whose arguments are built at run time')
-    if (!ended && t === '--') {
-      ended = true
-      continue
-    }
-    if (ended || !t.startsWith('-')) {
-      positional.push(t)
-      continue
-    }
-    if (t.startsWith('--')) {
-      if (!PUSH_OK_LONG.test(t)) no(`git push ${t} is not on the allow list`)
-      continue
-    }
-    for (const ch of t.slice(1))
-      if (!PUSH_OK_SHORT.has(ch)) no(`git push -${ch} is not on the allow list`)
-  }
-
-  const cur = gitIn(dir, 'rev-parse', '--abbrev-ref', 'HEAD')
-  if (!cur) no('a push outside a git repository the guard can read')
-  if (cur === 'HEAD') no('a push from a detached HEAD')
-  const [remoteArg, ...refspecs] = positional
-  const remote =
-    remoteArg ??
-    gitIn(dir, 'config', '--get', `branch.${cur}.pushremote`) ??
-    gitIn(dir, 'config', '--get', 'remote.pushdefault') ??
-    gitIn(dir, 'config', '--get', `branch.${cur}.remote`) ??
-    'origin'
-  if (!/^[\w.-]+$/.test(remote))
-    no(`a push to ${remote}, which is not a configured remote name`)
-  const defaultRef = gitIn(
-    dir,
-    'symbolic-ref',
-    '--short',
-    `refs/remotes/${remote}/HEAD`
+  if (paths.length !== 1) no('gh api takes exactly one endpoint')
+  const p = paths[0]
+  if (
+    /(^|\/)([\w-]*-)?(secrets|variables)(\/|\?|$)|(registration|remove)-token/i.test(
+      p
+    ) ||
+    p.split('?')[0].includes('%')
   )
-  const defaultBranch = defaultRef?.slice(remote.length + 1)
-  if (['main', 'master', defaultBranch].includes(cur))
-    no(`a push from ${cur}, the default branch`)
-  if (gitIn(dir, 'config', '--get-all', `remote.${remote}.push`) !== null)
-    no(`remote.${remote}.push is configured, so the destination is not plain`)
-  if (gitIn(dir, 'config', '--get', `remote.${remote}.mirror`) !== null)
-    no(`remote.${remote}.mirror is configured`)
-
-  const ownRefs = [cur, `refs/heads/${cur}`]
-  if (!refspecs.length) {
-    const mode = gitIn(dir, 'config', '--get', 'push.default') ?? 'simple'
-    if (mode === 'matching') no('push.default=matching pushes every branch')
-    if (mode === 'upstream' || mode === 'tracking') {
-      const merge = gitIn(dir, 'config', '--get', `branch.${cur}.merge`)
-      if (merge && merge !== `refs/heads/${cur}`)
-        no(`push.default=${mode} sends ${cur} to ${merge}`)
-    }
+    no('gh api may not read secrets, variables or runner tokens')
+  if (
+    !API_PATH.test(p) ||
+    p.includes('..') ||
+    p.split(/[?/&=]/).some(s => s === '.') ||
+    /%2[ef]/i.test(p)
+  )
+    no(`gh api may only call repos/${REPO_SLUG}/...`)
+  const m = method ?? (hasFields ? 'POST' : 'GET')
+  if (m === 'GET' || m === 'HEAD') return
+  const path = p.split('?')[0].toLowerCase()
+  for (const [rm, re, check] of ROUTES) {
+    if (rm !== m || !re.test(path)) continue
+    const why = check(b)
+    if (why) no(`gh api ${m} ${path}: ${why}`)
     return
   }
-  for (const spec of refspecs) {
-    if (spec.startsWith('+')) no(`the forced refspec ${spec}`)
-    if (spec.includes('*')) no(`the wildcard refspec ${spec}`)
-    const colon = spec.indexOf(':')
-    if (colon < 0) {
-      if (spec === 'HEAD' || spec === '@' || ownRefs.includes(spec)) continue
-      no(`a push of ${spec}, not this session's branch ${cur}`)
-    }
-    const src = spec.slice(0, colon)
-    const dst = spec.slice(colon + 1)
-    if (!src) no(`the refspec ${spec} deletes ${dst}`)
-    if (!ownRefs.includes(dst))
-      no(`a push to ${dst}, not this session's branch ${cur}`)
+  no(`gh api ${m} ${path} is not on the cloud allow list`)
+}
+
+// -------------------------------------------------------------- readers --
+
+const SED_SCRIPT = /^(\d+|\$)(,(\d+|\$))?p$/
+
+function judgeReader(prog, args, ctx) {
+  if (prog === 'grep' || prog === 'rg') {
+    if (
+      args.some(a =>
+        /^--(pre|pre-glob|hostname-bin|file|exclude-from|ignore-file|ignore-file-case-insensitive|hidden|no-ignore[\w-]*|follow|unrestricted)(=|$)|^-[A-Za-z]*[fLu.]/.test(
+          a
+        )
+      )
+    )
+      no(
+        `${prog} with an option that runs a program, reads a pattern file or reaches hidden or ignored files`
+      )
   }
+  if (
+    prog === 'jq' &&
+    args.some(a =>
+      /^(-f|--from-file|--rawfile|--slurpfile|--argfile|-L|--library-path)(=|$)/.test(
+        a
+      )
+    )
+  )
+    no('jq may not read other files')
+  const reals = confineReads(args, ctx, prog)
+  const recursive =
+    (prog === 'grep' &&
+      args.some(a =>
+        /^(-[A-Za-z]*[rR][A-Za-z]*|--recursive|--dereference-recursive)$/.test(
+          a
+        )
+      )) ||
+    (prog === 'diff' &&
+      args.some(a => /^(-[A-Za-z]*r[A-Za-z]*|--recursive)$/.test(a)))
+  if (!recursive) return
+  const operands = args.filter(a => !a.startsWith('-'))
+  // grep -r with only a pattern searches the cwd
+  if (prog === 'grep' && operands.length <= 1) reals.push(ctx.cwd)
+  for (const r of reals) checkReadDir(r, ctx, prog)
+}
+
+function judgeCd(args, ctx) {
+  if (args.length !== 1 || args[0].startsWith('-'))
+    no('cd takes one directory inside the repository')
+  const dir = realish(resolve(ctx.cwd, args[0]))
+  if (!within(ctx.root, dir)) no(`cd ${args[0]} leaves the repository`)
+  ctx.cwd = dir
+}
+
+function judgeAgentCli(prog, args, ctx) {
+  if (realish(resolve(ctx.cwd, prog)) !== join(ctx.root, 'bin', 'agent-cli'))
+    no(`${prog} is not on the cloud allow list`)
+  plainAll(args, 'agent-cli')
+}
+
+function judge(w, ctx) {
+  const prog = w[0]
+  const args = w.slice(1)
+  switch (prog) {
+    case 'cd':
+      return judgeCd(args, ctx)
+    case 'npm':
+      return judgeNpm(w)
+    case 'npx':
+      return judgeNpx(w, ctx)
+    case 'git':
+      return judgeGit(w, ctx)
+    case 'gh':
+      return judgeGh(w, ctx)
+    case 'ls':
+    case 'cat':
+    case 'head':
+    case 'tail':
+    case 'wc':
+    case 'diff':
+      plainAll(args, prog)
+      return judgeReader(prog, args, ctx)
+    case 'grep':
+    case 'rg':
+    case 'jq':
+      return judgeReader(prog, args, ctx)
+    case 'echo':
+      return
+    case 'pwd':
+      if (args.length === 0) return
+      break
+    case 'node':
+      if (args.length === 1 && (args[0] === '-v' || args[0] === '--version'))
+        return
+      break
+    case 'sed':
+      if (args[0] === '-n' && SED_SCRIPT.test(args[1] ?? '')) {
+        plainAll(args.slice(2), 'sed')
+        if (args.slice(2).some(a => a.startsWith('-')))
+          no('sed -n takes file names only')
+        return void confineReads(args.slice(2), ctx, 'sed')
+      }
+      no('sed is allowed only as `sed -n <N[,M]p> <files>`')
+  }
+  if (/(^|\/)agent-cli$/.test(prog)) return judgeAgentCli(prog, args, ctx)
+  no(
+    `${JSON.stringify(prog.slice(0, 40))} with these arguments is not on the cloud allow list`
+  )
 }
 
 // ------------------------------------------------------------------ api --
 
 /**
- * Check a Bash command against the allow list. `cwd` is the session's
- * directory (hook input). Returns a reason to refuse, or null.
+ * Check a Bash command against the allow list. `cwd` is the hook's cwd,
+ * `root` the repository root (CLAUDE_PROJECT_DIR). Returns a reason to
+ * refuse, or null.
  */
-export function checkAllowList(command, { cwd, home } = {}) {
-  const raw = String(command).normalize('NFKC')
-  const ctx = {
-    raw,
-    cwd: cwd ?? process.cwd(),
-    home: home ?? process.env.HOME ?? null,
-    gitConfigTouched:
-      /\.git\/config\b/.test(raw) && /(^|[^\w-])git\s/.test(raw),
-  }
+export function checkAllowList(command, { cwd, root } = {}) {
   try {
-    checkLine(raw, ctx)
+    const start = realish(resolve(cwd ?? process.cwd()))
+    const ctx = { cwd: start, root: realish(resolve(root ?? start)) }
+    if (!within(ctx.root, ctx.cwd))
+      no('the session is outside the repository root')
+    for (const words of tokenize(String(command))) judge(words, ctx)
   } catch (e) {
     if (e instanceof Refusal) return e.message
     throw e
