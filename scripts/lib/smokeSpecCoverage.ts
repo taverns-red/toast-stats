@@ -16,6 +16,9 @@ import { parse } from 'yaml'
 /** The `specs` value of the shards that run every spec no shard names. */
 export const REMAINING = '@remaining'
 
+/** Specs that run only on the real preview channel, never in a shard (#2545). */
+export const PREVIEW_ONLY_SPECS: readonly string[] = []
+
 /** The Playwright projects of `frontend/playwright.config.ts`: the engines. */
 export const PROJECTS = ['smoke', 'webkit'] as const
 
