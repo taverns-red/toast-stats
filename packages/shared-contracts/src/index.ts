@@ -355,6 +355,13 @@ export {
   type DuesRenewalCounts,
 } from './schemas/reports-rollups.schema.js'
 
+// Confirmed / provisional Distinguished counts per level (#2553)
+export {
+  DistinguishedCountsSchema,
+  type DistinguishedCounts,
+  type DistinguishedTierCount,
+} from './schemas/distinguished-counts.schema.js'
+
 // Region and world rollups — snapshots/{date}/region-rollups.json (#1799)
 export {
   RegionRollupsSchema,
