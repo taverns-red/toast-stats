@@ -19,7 +19,10 @@
 // tool call and stderr is shown to the model; exit 0 allows it.
 
 import { readFileSync } from 'node:fs'
-import { checkAllowList } from './cloud-session-guard-allowlist.mjs'
+import {
+  checkAllowList,
+  writeProtected,
+} from './cloud-session-guard-allowlist.mjs'
 
 const LABEL = 'db-breaking-approved'
 const MAX_INPUT = 65536 // bytes of hook JSON (#2547)
@@ -280,6 +283,14 @@ function main() {
     const path = String(ti.file_path ?? ti.notebook_path ?? '')
     if (PROTECTED_PATH.test(path))
       refuse(`an edit of ${path}, which enforces this rule`)
+    // #2547: secret-shaped files (.env*, *.pem, *.key, .git/**) and config
+    // other tools act on (.npmrc, .gitattributes, .husky, .github, …), by
+    // real path, so a symlink into .git counts.
+    const root = process.env.CLAUDE_PROJECT_DIR || input?.cwd || process.cwd()
+    if (writeProtected(path, root))
+      refuseAllowList(
+        `${tool} of ${path}: secret-shaped files and config other tools act on are Ron\u2019s to change`
+      )
     const text = [
       ti.content,
       ti.new_string,

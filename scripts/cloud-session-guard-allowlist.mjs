@@ -226,8 +226,31 @@ function gitOut(dir, ...args) {
   return r.status === 0 ? r.stdout.trim() : null
 }
 
-const secretShaped = rel =>
+/** Secret-shaped: never read, never written (#2547). */
+export const secretShaped = rel =>
   rel.split(sep).some(p => p === '.git' || SECRET_NAME.test(p))
+
+/** Config other tools act on: never written. Secret-shaped is a subset. */
+const CONFIG_NAME =
+  /^(\.npmrc|\.yarnrc.*|\.gitattributes|\.gitmodules|\.gitconfig|\.envrc)$/i
+const CONFIG_DIR = new Set(['.husky', '.githooks', '.claude', '.github'])
+
+/** A path the file tools may not write, by its name and its real path. */
+export function writeProtected(path, root) {
+  const r = realish(resolve(root))
+  const rels = [resolve(path), realish(resolve(path))].map(p =>
+    within(r, p) ? relative(r, p) : p
+  )
+  for (const rel of rels) {
+    const segs = rel.split(sep).filter(Boolean)
+    if (secretShaped(rel)) return true
+    if (segs.some(s => CONFIG_NAME.test(s))) return true
+    // .claude anywhere (user settings and hooks too); the others in the repo
+    if (segs.some(s => s.toLowerCase() === '.claude')) return true
+    if (!isAbsolute(rel) && CONFIG_DIR.has(segs[0]?.toLowerCase())) return true
+  }
+  return false
+}
 const ignoredOk = rel => rel.split(sep).some(p => IGNORED_OK.has(p))
 
 /** One path a command reads. Refuses, or returns its real path. */
@@ -382,6 +405,32 @@ const GIT_READ = new Set([
   'blame',
   'grep',
 ])
+/** Long options denied here; git takes any unique prefix, so those too. */
+const GIT_BAD_LONG = [
+  '--output',
+  '--ext-diff',
+  '--textconv',
+  '--upload-pack',
+  '--receive-pack',
+  '--exec',
+  '--git-dir',
+  '--work-tree',
+  '--config-env',
+  '--namespace',
+  '--open-files-in-pager',
+  '--exec-path',
+  '--no-index',
+  '--contents',
+]
+const badGitOption = a => {
+  if (GIT_BAD_OPTS.test(a)) return true
+  const name = a.split('=')[0]
+  return (
+    name.startsWith('--') &&
+    name.length > 2 &&
+    GIT_BAD_LONG.some(o => o.startsWith(name))
+  )
+}
 const GIT_BAD_OPTS =
   /^(--output|--ext-diff|--textconv|--upload-pack|--receive-pack|--exec|--git-dir|--work-tree|--config-env|--namespace|--open-files-in-pager|--exec-path|--no-index|--contents|-O|-c)(=|$)|^-O./
 const MAIN = /^(refs\/heads\/)?(main|master)$/
@@ -419,15 +468,19 @@ function judgeGit(w, ctx) {
     no('git options before the subcommand can change config or location')
   const rest = w.slice(2)
   for (const a of rest)
-    if (GIT_BAD_OPTS.test(a))
+    if (badGitOption(a))
       no(
         `git ${sub} ${a} can write files, run other code or read outside the repository`
       )
   if (GIT_READ.has(sub)) {
     plainAll(rest, `git ${sub}`)
     if (sub === 'fetch') {
-      if (rest.some(a => a.includes(':') || /^(https?|git|ssh|file)$/i.test(a)))
-        no('git fetch only fetches a named remote')
+      if (
+        rest[0] !== 'origin' ||
+        rest.length > 2 ||
+        (rest[1] !== undefined && !/^[\w.][\w./-]*$/.test(rest[1]))
+      )
+        no('git fetch is allowed only as `git fetch origin [<branch>]`')
       return
     }
     // Pathspecs and <rev>:<path> are reads: every word may be one, and so
@@ -768,6 +821,15 @@ function judgeReader(prog, args, ctx) {
         `${prog} with an option that runs a program, reads a pattern file or reaches hidden or ignored files`
       )
   }
+  if (
+    prog === 'jq' &&
+    args.some(a =>
+      /\benv\b|\$ENV|\$__loc__|\$__prog|\binput(s|_filename|_line_number)?\b|\bget_search_list\b/.test(
+        a
+      )
+    )
+  )
+    no('jq may not read the environment or other input')
   if (
     prog === 'jq' &&
     args.some(a =>
