@@ -51,10 +51,34 @@ export function normalize(raw) {
       .replace(/\\([0-7]{3})/g, (_, o) => String.fromCharCode(parseInt(o, 8)))
     if (s === before) break
   }
-  return s
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/["'\\]/g, '')
+  return ghCommandFirst(
+    s
+      .normalize('NFKC')
+      .toLowerCase()
+      .replace(/["'\\]/g, '')
+  )
+}
+
+// One flag with its value, as cobra skips it while finding the command:
+// --help and --version take none, `--x=v` and `-xv` carry theirs, and any
+// other flag takes the next word.
+const GH_FLAG =
+  '(?:--(?:help|version)(?=\\s|$)|--[a-z][\\w-]*=\\S*|--[a-z][\\w-]*\\s+\\S+|-[a-z]\\S+|-[a-z]\\s+\\S+)'
+const GH_PATH = new RegExp(
+  `\\bgh((?:\\s+${GH_FLAG})*)\\s+([a-z][\\w-]*)((?:\\s+${GH_FLAG})*)(\\s+[^\\s-]\\S*)?`,
+  'g'
+)
+
+/**
+ * gh accepts flags before its command path (`gh -R x issue edit`, `gh issue
+ * -R x edit`, #2526). Move them after it, so the rules below read the
+ * command, without dropping any text they also check.
+ */
+function ghCommandFirst(s) {
+  return s.replace(
+    GH_PATH,
+    (_, before, cmd, after, verb = '') => `gh ${cmd}${verb}${before}${after}`
+  )
 }
 
 const METHOD = '(post|put|patch|delete)'
