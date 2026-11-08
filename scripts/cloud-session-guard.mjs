@@ -20,7 +20,9 @@
 
 import { readFileSync } from 'node:fs'
 import {
+  NO_IO_TOOLS,
   checkAllowList,
+  checkReadTool,
   writeProtected,
 } from './cloud-session-guard-allowlist.mjs'
 
@@ -301,8 +303,29 @@ function main() {
       .join('\n')
     const reason = text ? checkFileText(text) : null
     if (reason) refuse(`a file that would run ${reason}`)
+    process.exit(0)
   }
-  process.exit(0)
+
+  // #2547: every other tool, by name. Dormant until a PreToolUse matcher
+  // routes these tools here; today settings.json sends only Bash and the
+  // edit tools.
+  if (['Read', 'Grep', 'Glob'].includes(tool)) {
+    let denied
+    try {
+      denied = checkReadTool(tool, ti, {
+        cwd: input?.cwd,
+        root: process.env.CLAUDE_PROJECT_DIR || input?.cwd,
+      })
+    } catch (e) {
+      denied = `the guard failed while checking the call (${e?.message})`
+    }
+    if (denied) refuseAllowList(denied)
+    process.exit(0)
+  }
+  if (NO_IO_TOOLS.has(tool)) process.exit(0)
+  refuseAllowList(
+    `the tool ${JSON.stringify(String(tool).slice(0, 60))} is not on the cloud allow list (web, MCP and unknown tools are denied)`
+  )
 }
 
 main()

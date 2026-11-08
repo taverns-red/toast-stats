@@ -29,6 +29,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { lstatSync, readlinkSync, realpathSync, statSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import {
   basename,
   dirname,
@@ -234,6 +235,8 @@ export const secretShaped = rel =>
 const CONFIG_NAME =
   /^(\.npmrc|\.yarnrc.*|\.gitattributes|\.gitmodules|\.gitconfig|\.envrc)$/i
 const CONFIG_DIR = new Set(['.husky', '.githooks', '.claude', '.github'])
+/** Directories other tools load code or settings from, at any depth. */
+const TOOL_DIR = new Set(['node_modules', '.vscode', '.yarn', '.config'])
 
 /** A path the file tools may not write, by its name and its real path. */
 export function writeProtected(path, root) {
@@ -248,6 +251,14 @@ export function writeProtected(path, root) {
     // .claude anywhere (user settings and hooks too); the others in the repo
     if (segs.some(s => s.toLowerCase() === '.claude')) return true
     if (!isAbsolute(rel) && CONFIG_DIR.has(segs[0]?.toLowerCase())) return true
+    if (!isAbsolute(rel) && segs.some(s => TOOL_DIR.has(s.toLowerCase())))
+      return true
+  }
+  // Outside the repository, only under $TMPDIR (#2547).
+  const real = realish(resolve(path))
+  if (!within(r, real)) {
+    const tmp = realish(resolve(process.env.TMPDIR || tmpdir()))
+    if (!within(tmp, real)) return true
   }
   return false
 }
@@ -918,6 +929,73 @@ function judge(w, ctx) {
   no(
     `${JSON.stringify(prog.slice(0, 40))} with these arguments is not on the cloud allow list`
   )
+}
+
+// ----------------------------------------------------- other tools (#2547) --
+//
+// Dormant until a PreToolUse matcher routes these tools to the guard: today
+// .claude/settings.json sends only Bash and the edit tools. Subagents' tool
+// calls fire the same PreToolUse hooks, with agent_id and agent_type in the
+// input (code.claude.com/docs/en/hooks, "Hooks ... also run inside
+// subagents"), so Agent itself is allowed.
+
+/** Tools with no file or network I/O of their own (tools reference). */
+export const NO_IO_TOOLS = new Set([
+  'TodoWrite',
+  'ExitPlanMode',
+  'EnterPlanMode',
+  'ToolSearch',
+  'AskUserQuestion',
+  'TaskCreate',
+  'TaskGet',
+  'TaskList',
+  'TaskUpdate',
+  'TaskStop',
+  'SubagentHandback',
+  'SendMessage',
+  'ListAgents',
+  'Skill',
+  'Agent',
+  'Task',
+])
+
+/** Read, Grep and Glob take the Bash read rules. Returns a reason or null. */
+export function checkReadTool(tool, ti, { cwd, root } = {}) {
+  try {
+    const start = realish(resolve(cwd ?? process.cwd()))
+    const ctx = { cwd: start, root: realish(resolve(root ?? start)) }
+    const str = (v, what) => {
+      if (v === undefined || v === null) return undefined
+      if (typeof v !== 'string') no(`${tool} ${what} is not a string`)
+      return v
+    }
+    if (tool === 'Read') {
+      const p = str(ti?.file_path, 'file_path')
+      if (!p) no('Read needs a file_path')
+      checkRead(p, ctx, 'Read')
+    } else if (tool === 'Grep') {
+      const p = str(ti?.path, 'path') || ctx.cwd
+      const glob = str(ti?.glob, 'glob') ?? ''
+      if (glob.includes('..') || isAbsolute(glob))
+        no('Grep glob leaves the path')
+      const real = checkRead(p, ctx, 'Grep')
+      checkReadDir(real ?? ctx.cwd, ctx, 'Grep')
+    } else if (tool === 'Glob') {
+      const p = str(ti?.path, 'path') || ctx.cwd
+      const pattern = str(ti?.pattern, 'pattern') ?? ''
+      if (
+        pattern.includes('..') ||
+        isAbsolute(pattern) ||
+        pattern.startsWith('~')
+      )
+        no('Glob pattern leaves the path')
+      checkRead(p, ctx, 'Glob')
+    } else no(`${tool} is not a read tool`)
+  } catch (e) {
+    if (e instanceof Refusal) return e.message
+    throw e
+  }
+  return null
 }
 
 // ------------------------------------------------------------------ api --

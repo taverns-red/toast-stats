@@ -844,7 +844,7 @@
     {
       "tool_name": "Write",
       "tool_input": {
-        "file_path": "{{ROOT}}/../outside.txt",
+        "file_path": "/usr/guard-outside.txt",
         "content": "x"
       }
     },
