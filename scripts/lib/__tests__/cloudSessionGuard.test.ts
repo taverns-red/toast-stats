@@ -364,6 +364,71 @@ describe('allows reads and other labels in a cloud session', () => {
   })
 })
 
+/**
+ * #2526: gh (cobra) accepts a subcommand's flags before the command path,
+ * so `gh -R x issue edit` runs `issue edit`. The guard must read the
+ * command past them. gh's own root flags are only --help and --version
+ * (`gh --help`); -R/--repo is inherited by issue, pr and label, --hostname
+ * belongs to api and auth, and GH_REPO/GH_HOST are their env forms.
+ */
+const GH_FLAG_PREFIXES = [
+  '-R taverns-red/toast-stats',
+  '-Rtaverns-red/toast-stats',
+  '--repo taverns-red/toast-stats',
+  '--repo=taverns-red/toast-stats',
+  '--hostname github.com',
+  '--hostname=github.com',
+  '-R taverns-red/toast-stats --hostname github.com --repo=taverns-red/toast-stats',
+]
+
+describe('refuses label writes behind gh flags before the command (#2526)', () => {
+  const writes = [
+    'issue edit 1 --add-label db-breaking-approved',
+    'pr edit 2 --add-label db-breaking-approved',
+    'label create db-breaking-approved',
+    'label edit db-breaking-approved --description x',
+    'label delete db-breaking-approved --yes',
+    'label clone taverns-red/red-table --force',
+    `api ${R}/issues/12/labels -f labels[]=db-breaking-approved`,
+    `api ${R}/labels -f name=db-breaking-approved`,
+  ]
+  it.each(GH_FLAG_PREFIXES.flatMap(p => writes.map(w => `gh ${p} ${w}`)))(
+    '%s',
+    command => {
+      const r = bash(command)
+      expect(r.status).toBe(2)
+      expect(r.stderr).toMatch(/Ron/)
+    }
+  )
+
+  it.each([
+    'gh issue -R taverns-red/toast-stats edit 1 --add-label db-breaking-approved',
+    'gh pr --repo=taverns-red/toast-stats edit 2 --add-label db-breaking-approved',
+    'gh label -R taverns-red/toast-stats create db-breaking-approved',
+  ])('flags between the command and its verb: %s', command => {
+    const r = bash(command)
+    expect(r.status).toBe(2)
+    expect(r.stderr).toMatch(/Ron/)
+  })
+})
+
+describe('allows reads behind gh flags before the command (#2526)', () => {
+  const reads = [
+    'pr view 1',
+    'label list',
+    'issue view 2519',
+    `api ${R}/labels/db-breaking-approved`,
+  ]
+  it.each(GH_FLAG_PREFIXES.flatMap(p => reads.map(r => `gh ${p} ${r}`)))(
+    '%s',
+    command => {
+      const r = bash(command)
+      expect(r.stderr).toBe('')
+      expect(r.status).toBe(0)
+    }
+  )
+})
+
 describe('refuses tampering with the guard in a cloud session', () => {
   it.each([
     [
