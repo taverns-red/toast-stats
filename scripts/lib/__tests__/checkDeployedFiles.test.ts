@@ -48,6 +48,7 @@ const ALL_GOOD: Record<string, [number, string]> = {
   '/assets/app-abc.js': [200, 'text/javascript; charset=utf-8'],
   '/assets/inter-latin.woff2': [200, 'font/woff2'],
   '/robots.txt': [200, 'text/plain; charset=utf-8'],
+  '/basemap/glyphs/0-255.pbf': [200, 'application/octet-stream'],
 }
 
 beforeAll(async () => {
@@ -59,11 +60,20 @@ beforeAll(async () => {
   writeFileSync(join(dist, 'assets', 'app-abc.js'), 'export {}')
   writeFileSync(join(dist, 'assets', 'inter-latin.woff2'), 'font')
   writeFileSync(join(dist, 'robots.txt'), 'User-agent: *')
+  mkdirSync(join(dist, 'basemap', 'glyphs'), { recursive: true })
+  writeFileSync(join(dist, 'basemap', 'glyphs', '0-255.pbf'), 'glyph')
   writeFileSync(join(dist, '.DS_Store'), 'not deployed (firebase ignore)')
   server = http.createServer((req, res) => {
     seen.push(`${req.method} ${req.url}`)
     const hit = served[req.url ?? '']
-    const [status, type] = hit ?? [200, 'text/html; charset=utf-8']
+    let [status, type] = hit ?? [200, 'text/html; charset=utf-8']
+    // Hosting labels a gzipped .pbf glyph text/html (seen on ts.taverns.red
+    // and the channel, 2026-11-08); uncompressed it is octet-stream.
+    if (
+      req.url?.endsWith('.pbf') &&
+      /gzip|br/.test(String(req.headers['accept-encoding']))
+    )
+      type = 'text/html; charset=UTF-8'
     res.writeHead(status, { 'content-type': type })
     res.end()
   })
@@ -81,7 +91,7 @@ describe('check-deployed-files.mjs (#2544)', () => {
     served = { ...ALL_GOOD }
     seen.length = 0
     const r = await run()
-    expect(r.out).toMatch(/5 files/)
+    expect(r.out).toMatch(/6 files/)
     expect(r.code).toBe(0)
     expect(seen.sort()).toEqual(
       Object.keys(ALL_GOOD)
