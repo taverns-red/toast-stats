@@ -378,10 +378,18 @@ const DistrictDetailPageInner: React.FC = () => {
   // the credit with them), so recomputing a September verdict from today's
   // numbers would silently rewrite history. Program year and as-of date are
   // passed down as props (R3); the card owns the PY-2026-2027 gate.
+  // The checkpoint rankings files (~7 KB each) feed a card below the first
+  // screen, so they wait for its slot to near the viewport (#2513).
+  const [growthSlot, setGrowthSlot] = React.useState<HTMLElement | null>(null)
+  const growthNearViewport = useNearViewport(growthSlot)
   const { checkpoints: clubGrowthCheckpoints, isLoading: isLoadingClubGrowth } =
     useClubGrowthMilestones(
       districtId,
-      effectiveProgramYear ?? selectedProgramYear
+      effectiveProgramYear ?? selectedProgramYear,
+      {
+        enabled:
+          growthNearViewport || typeof IntersectionObserver !== 'function',
+      }
     )
 
   // District → region history (#1821): drives the moved-region banner.
@@ -907,15 +915,17 @@ const DistrictDetailPageInner: React.FC = () => {
                     total comes from the rankings row already fetched above;
                     each settled checkpoint comes from its own dated snapshot
                     via the hook. */}
-                <ClubGrowthAchievementCard
-                  programYear={
-                    (effectiveProgramYear ?? selectedProgramYear).label
-                  }
-                  asOfDate={effectiveEndDate ?? undefined}
-                  checkpointReads={clubGrowthCheckpoints}
-                  isLoading={isLoadingClubGrowth}
-                  toDateCount={districtRanking?.newCharteredClubs ?? null}
-                />
+                <div ref={setGrowthSlot}>
+                  <ClubGrowthAchievementCard
+                    programYear={
+                      (effectiveProgramYear ?? selectedProgramYear).label
+                    }
+                    asOfDate={effectiveEndDate ?? undefined}
+                    checkpointReads={clubGrowthCheckpoints}
+                    isLoading={isLoadingClubGrowth}
+                    toDateCount={districtRanking?.newCharteredClubs ?? null}
+                  />
+                </div>
 
                 {/* Notable dates (#551) */}
                 <NotableDatesSection
