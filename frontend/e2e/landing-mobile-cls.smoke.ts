@@ -54,7 +54,7 @@ test('landing / loading shell holds the KPI strip at the loaded y (390px)', asyn
   const gate = new Promise<void>(r => (release = r))
   await page.route(RANKINGS_GLOB, async route => {
     await gate
-    await route.continue()
+    await route.fallback()
   })
 
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60_000 })

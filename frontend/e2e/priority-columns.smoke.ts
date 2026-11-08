@@ -1,4 +1,5 @@
 import { test, expect, type Page } from './fixtures/test'
+import { fixtureFetch } from './helpers/cdnFixtures'
 
 /* Priority-column comparison tables (#1834, mobile epic #1827 Phase 1,
  * review §5.2).
@@ -82,7 +83,7 @@ const TIERS = ['Distinguished', 'Select', 'Presidents', 'Smedley']
 
 const forceTiers = (page: Page) =>
   page.route('**/competitive-awards.json', async route => {
-    const res = await route.fetch()
+    const res = await fixtureFetch(route)
     const body = await res.json()
     Object.values(
       (body.distinguishedDistrict ?? {}) as Record<

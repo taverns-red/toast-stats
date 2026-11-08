@@ -116,7 +116,7 @@ test.describe('district overview CLS on a cold load (#1647)', () => {
           if (order.lagTargets) {
             await page.route('**/*_performance-targets.json', async route => {
               await new Promise(resolve => setTimeout(resolve, TARGETS_LAG_MS))
-              await route.continue()
+              await route.fallback()
             })
           }
 

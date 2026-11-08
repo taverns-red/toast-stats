@@ -1,4 +1,5 @@
 import { test, expect, type Page } from './fixtures/test'
+import { fixtureFetch } from './helpers/cdnFixtures'
 
 /* World club explorer (#1809) at /regions/map on the deployed preview
  * (BASE_URL): the real staging clubs-by-region files and the real basemap.
@@ -155,7 +156,7 @@ test('world map: online-only clubs get the online clubs chip', async ({
   await page.route(
     url => SHARD_RE.test(url.pathname),
     async route => {
-      const res = await route.fetch()
+      const res = await fixtureFetch(route)
       const body = (await res.json()) as { clubs: Record<string, unknown>[] }
       const flag = new URL(route.request().url()).pathname.endsWith('/05.json')
       body.clubs = body.clubs.map((c, i) => {
@@ -163,7 +164,11 @@ test('world map: online-only clubs get the online clubs chip', async ({
         return flag && i < 3 ? { ...rest, meetsOnline: true } : rest
       })
       routed.push(route.request().url())
-      await route.fulfill({ response: res, json: body })
+      await route.fulfill({
+        status: res.status(),
+        json: body,
+        headers: { 'access-control-allow-origin': '*' },
+      })
     }
   )
   const { shards } = await open(page, WORLD, 'light', 1280)

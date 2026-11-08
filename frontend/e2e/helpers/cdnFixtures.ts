@@ -2,7 +2,7 @@
  *
  * The preview build reads https://cdn-staging.taverns.red. Left alone, every
  * shard page load hits that CDN, and staging was 73% of the project's CDN
- * cache lookups. A `fixtures` job in pr-preview.yml fetches the objects the
+ * cache lookups. The preview job in pr-preview.yml fetches the objects the
  * shards need ONCE per run (scripts/refresh-smoke-fixtures.ts) and the shards
  * answer from that directory instead.
  *
@@ -185,7 +185,8 @@ export async function installCdnFixtures(
       const headers = {
         ...CORS,
         'content-type': entry.contentType,
-        'cache-control': 'no-store',
+        // No cache-control: a fulfilled response with no-store never fires
+        // `requestfinished` in Chromium, so networkidle never settles.
         'accept-ranges': 'bytes',
         'access-control-expose-headers':
           'Content-Range, Accept-Ranges, Content-Length',
@@ -230,9 +231,29 @@ export interface FixtureResponse {
   json(): Promise<unknown>
 }
 
+/**
+ * `route.fetch()` for a spec that rewrites a CDN response. `route.fetch()`
+ * reads the network, past the fixture; with SMOKE_FIXTURES_DIR set this reads
+ * the fixture instead (and throws for a path with none, which fails the
+ * test), and with it unset it is `route.fetch()`.
+ */
 export async function fixtureFetch(
-  _route: Route,
-  _env: Record<string, string | undefined> = process.env
+  route: Route,
+  env: Record<string, string | undefined> = process.env
 ): Promise<FixtureResponse> {
-  throw new Error('not implemented')
+  const dir = env['SMOKE_FIXTURES_DIR']
+  if (!dir) return route.fetch()
+  const root = resolve(dir)
+  const url = route.request().url()
+  const path = fixturePath(url)
+  const entry = path ? readIndex(root)[path] : undefined
+  const file = path ? resolve(root, path) : ''
+  if (!path || !entry || !file.startsWith(root + sep)) {
+    throw new Error(`No CDN fixture for ${path ?? url}`)
+  }
+  const body = readFileSync(file)
+  return {
+    status: () => entry.status,
+    json: async () => JSON.parse(body.toString('utf8')),
+  }
 }
