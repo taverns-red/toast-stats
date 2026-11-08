@@ -76,12 +76,13 @@ describe('mobile CLS gate (#1373)', () => {
       s.specs.split(/\s+/).includes('e2e/landing-font-swap-cls.smoke.ts')
     )
 
-    it('pr-preview.yml runs the spec against the deployed channel', () => {
-      // Local numbers are not comparable: loopback is not throttled.
+    it("pr-preview.yml runs the spec on the preview job's build (#2544)", () => {
+      // Served inside the runner like the channel (firebase.json headers,
+      // Hosting's brotli; prPreviewLocalBuild.test.ts). CDP network
+      // emulation does throttle loopback: on 2026-11-08 a 200 KB fetch took
+      // 5.0 s throttled on 127.0.0.1, localhost and a LAN address alike.
       expect(shards.length).toBeGreaterThan(0)
-      expect(smokeJobEnv(wf)['BASE_URL']).toBe(
-        '${{ needs.preview.outputs.url }}'
-      )
+      expect(smokeJobEnv(wf)['BASE_URL']).toBe('http://127.0.0.1:4173')
     })
 
     it('does not filter the run to the webkit-only project', () => {
