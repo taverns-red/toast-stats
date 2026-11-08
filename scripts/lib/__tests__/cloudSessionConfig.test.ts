@@ -149,6 +149,14 @@ describe('.claude/settings.json', () => {
       expect(ask).toContain(`Bash(gh api *--method ${method}*)`)
       expect(ask).toContain(`Bash(gh api *-X${method}*)`)
     }
+    // gh takes the method in any case and with `=` (red-table, red-rostrum#32).
+    for (const method of ['delete', 'put', 'patch']) {
+      expect(ask).toContain(`Bash(gh api *-X ${method}*)`)
+      expect(ask).toContain(`Bash(gh api *--method ${method}*)`)
+      expect(ask).toContain(`Bash(gh api *-X${method}*)`)
+    }
+    expect(ask).toContain('Bash(gh api *-X=*)')
+    expect(ask).toContain('Bash(gh api *--method=*)')
   })
 
   it('points at scripts that exist and are executable', () => {
