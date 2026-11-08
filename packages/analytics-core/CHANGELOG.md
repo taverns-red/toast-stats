@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.24.3...analytics-core-v1.25.0) (2026-11-08)
+
+
+### Features
+
+* **pipeline:** one confirmed/provisional Distinguished count per level ([#2553](https://github.com/taverns-red/toast-stats/issues/2553)) ([#2559](https://github.com/taverns-red/toast-stats/issues/2559)) ([160944b](https://github.com/taverns-red/toast-stats/commit/160944bdb03591f646934ea799d0e76f18643034))
+
 ## [1.24.3](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.24.2...analytics-core-v1.24.3) (2026-11-02)
 
 

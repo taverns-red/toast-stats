@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.27.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.26.1...shared-contracts-v1.27.0) (2026-11-08)
+
+
+### Features
+
+* **pipeline:** one confirmed/provisional Distinguished count per level ([#2553](https://github.com/taverns-red/toast-stats/issues/2553)) ([#2559](https://github.com/taverns-red/toast-stats/issues/2559)) ([160944b](https://github.com/taverns-red/toast-stats/commit/160944bdb03591f646934ea799d0e76f18643034))
+
 ## [1.26.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.26.0...shared-contracts-v1.26.1) (2026-11-05)
 
 

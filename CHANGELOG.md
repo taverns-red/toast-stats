@@ -1,5 +1,46 @@
 # Changelog
 
+## [2.81.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.80.1...toast-stats-v2.81.0) (2026-11-08)
+
+
+### Features
+
+* **ci:** CDN JSON compat guard, both directions, label-gated override ([#2494](https://github.com/taverns-red/toast-stats/issues/2494)) ([#2510](https://github.com/taverns-red/toast-stats/issues/2510)) ([486255d](https://github.com/taverns-red/toast-stats/commit/486255d8998f733398820d4fbaf3b1df569b00b7))
+* **deploy:** auto-roll back a Hosting release that fails its smoke ([#2492](https://github.com/taverns-red/toast-stats/issues/2492)) ([#2509](https://github.com/taverns-red/toast-stats/issues/2509)) ([dbe8465](https://github.com/taverns-red/toast-stats/commit/dbe8465a5b59d75a0412d859cc2a3b10d1872966))
+* **pipeline:** one confirmed/provisional Distinguished count per level ([#2553](https://github.com/taverns-red/toast-stats/issues/2553)) ([#2559](https://github.com/taverns-red/toast-stats/issues/2559)) ([160944b](https://github.com/taverns-red/toast-stats/commit/160944bdb03591f646934ea799d0e76f18643034))
+
+
+### Bug Fixes
+
+* action-list intro reserves its height, CLS over budget at 1280 ([#2511](https://github.com/taverns-red/toast-stats/issues/2511)) ([#2518](https://github.com/taverns-red/toast-stats/issues/2518)) ([f496eb5](https://github.com/taverns-red/toast-stats/commit/f496eb514d89695f397b0de7578c8c63827697b8))
+* **canary:** judge closing-period freshness by collection time ([#2500](https://github.com/taverns-red/toast-stats/issues/2500)) ([#2501](https://github.com/taverns-red/toast-stats/issues/2501)) ([97a8ebe](https://github.com/taverns-red/toast-stats/commit/97a8ebe48a0b10b29faf276a3407181d81539d8a))
+* **ci:** db-breaking-approved also requires performed_via_github_app null ([#2520](https://github.com/taverns-red/toast-stats/issues/2520)) ([#2521](https://github.com/taverns-red/toast-stats/issues/2521)) ([6dd697c](https://github.com/taverns-red/toast-stats/commit/6dd697c92ae9fca3159e4cffdb99284b218be01b))
+* **cloud:** guard hook refuses db-breaking-approved label writes in cloud sessions ([#2519](https://github.com/taverns-red/toast-stats/issues/2519)) ([#2522](https://github.com/taverns-red/toast-stats/issues/2522)) ([618adb5](https://github.com/taverns-red/toast-stats/commit/618adb51c674975b5ae22036f23b5af2644e8856))
+* **cloud:** guard is an allow list for gh, gh api, curl and pushes ([#2528](https://github.com/taverns-red/toast-stats/issues/2528)) ([#2531](https://github.com/taverns-red/toast-stats/issues/2531)) ([fb954fe](https://github.com/taverns-red/toast-stats/commit/fb954fe325e370327e3f410d900210f5e1fc336c))
+* **cloud:** guard wrapper fails closed on any checker failure ([#2542](https://github.com/taverns-red/toast-stats/issues/2542)) ([#2543](https://github.com/taverns-red/toast-stats/issues/2543)) ([0866f36](https://github.com/taverns-red/toast-stats/commit/0866f3667edd94aa36613afb1fedf24d8c9d6ec7))
+* **cloud:** label guard reads gh's command past flags placed before it ([#2526](https://github.com/taverns-red/toast-stats/issues/2526)) ([#2527](https://github.com/taverns-red/toast-stats/issues/2527)) ([cd59cbd](https://github.com/taverns-red/toast-stats/commit/cd59cbdba1153d23f90cd5e5dac6c2fe3235e439))
+* **search:** tapping a landing-search result navigates on iOS/Safari ([#2556](https://github.com/taverns-red/toast-stats/issues/2556)) ([#2557](https://github.com/taverns-red/toast-stats/issues/2557)) ([4802ca1](https://github.com/taverns-red/toast-stats/commit/4802ca1abc29752a3300dc23b015af4169b7f4f8))
+* **videos:** scratch-repo test git ignores inherited GIT_* ([#2534](https://github.com/taverns-red/toast-stats/issues/2534)) ([#2535](https://github.com/taverns-red/toast-stats/issues/2535)) ([c9d3458](https://github.com/taverns-red/toast-stats/commit/c9d3458bcaf13d37e7202d53566b36787974d1be))
+
+
+### Performance
+
+* **ci:** PR Preview shards read run-scoped fixtures ([#2545](https://github.com/taverns-red/toast-stats/issues/2545)) ([#2573](https://github.com/taverns-red/toast-stats/issues/2573)) ([49382e0](https://github.com/taverns-red/toast-stats/commit/49382e00e9fbbf81303c7dc1fe1ecad978bd233b))
+* **ci:** PR Preview tests on a local build, one real-preview smoke ([#2544](https://github.com/taverns-red/toast-stats/issues/2544)) ([#2549](https://github.com/taverns-red/toast-stats/issues/2549)) ([4f141d8](https://github.com/taverns-red/toast-stats/commit/4f141d8eec04fe540ec55a56d1503f6d0cc17e67))
+* **district:** cut first-load bytes under the Lighthouse budget ([#2513](https://github.com/taverns-red/toast-stats/issues/2513)) ([#2564](https://github.com/taverns-red/toast-stats/issues/2564)) ([1c8237f](https://github.com/taverns-red/toast-stats/commit/1c8237fda5fd00e80247b04a20576da2fd462fbc))
+
+
+### Documentation
+
+* **cloud:** how to archive a finished cloud worker session ([#2454](https://github.com/taverns-red/toast-stats/issues/2454)) ([#2506](https://github.com/taverns-red/toast-stats/issues/2506)) ([cc919d2](https://github.com/taverns-red/toast-stats/commit/cc919d2874f738f595f0fba4d91f1a36f5731c3c))
+* **runbook:** data-restore after a bad publish ([#2492](https://github.com/taverns-red/toast-stats/issues/2492)) ([#2536](https://github.com/taverns-red/toast-stats/issues/2536)) ([5a37b27](https://github.com/taverns-red/toast-stats/commit/5a37b27aeab7519e2eb05369be58ae39fc4b5833))
+* **runbook:** run large backfills in-region ([#2546](https://github.com/taverns-red/toast-stats/issues/2546)) ([#2565](https://github.com/taverns-red/toast-stats/issues/2565)) ([8b4966b](https://github.com/taverns-red/toast-stats/commit/8b4966b8f8e01172608b9811fd9396766a0a5f56))
+
+
+### Tests
+
+* **e2e:** section-bar end-of-page check scrolls until the page settles ([#2576](https://github.com/taverns-red/toast-stats/issues/2576)) ([#2577](https://github.com/taverns-red/toast-stats/issues/2577)) ([371afb5](https://github.com/taverns-red/toast-stats/commit/371afb50c4a55b011c6c335b864c33e9337bc4d6))
+
 ## [2.80.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.80.0...toast-stats-v2.80.1) (2026-11-05)
 
 
