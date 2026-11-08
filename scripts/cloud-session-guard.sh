@@ -16,4 +16,13 @@ if ! command -v node >/dev/null 2>&1; then
   echo "cloud-session-guard: node not found, refusing the tool call. Ask Ron." >&2
   exit 2
 fi
-exec node "$(dirname "${BASH_SOURCE[0]}")/cloud-session-guard.mjs"
+# Not exec: Claude Code blocks only on exit 2, so a checker that cannot run
+# (missing file, syntax error, a throw, a kill) must not let the call through
+# with its own status (#2542). 0 allows, 2 blocks, anything else blocks too.
+node "$(dirname "${BASH_SOURCE[0]}")/cloud-session-guard.mjs"
+status=$?
+case "$status" in
+  0 | 2) exit "$status" ;;
+esac
+echo "cloud-session-guard: the checker could not run (exit $status), so the tool call is refused. Ask Ron." >&2
+exit 2
