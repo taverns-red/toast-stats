@@ -33,6 +33,10 @@ const FILE = path.join(ROOT, '.github/workflows/pr-preview.yml')
 const PREVIEW_URL = '${{ needs.preview.outputs.url }}'
 const LOCAL_URL = 'http://127.0.0.1:4173'
 const ARTIFACT = 'preview-dist-${{ github.run_id }}-${{ github.run_attempt }}'
+// Downloaded by id, not name: "Re-run failed jobs" re-runs a shard as attempt
+// N+1 without re-running `preview`, so a name built from run_attempt would
+// not exist. The id is the preview job's output, the same on every attempt.
+const ARTIFACT_ID = '${{ needs.preview.outputs.dist-artifact-id }}'
 const HEAVY_IF = "needs.preview.outputs.heavy == 'true'"
 const WIRE_SPEC = 'frontend/e2e/district-survival.smoke.ts'
 
@@ -46,6 +50,7 @@ interface Step {
 }
 interface Job {
   name?: string
+  outputs?: Record<string, string>
   needs?: string | string[]
   if?: string
   env?: Record<string, string>
@@ -65,6 +70,14 @@ const envValues = (job: Job): string[] => [
   ...Object.values(job.env ?? {}),
   ...(job.steps ?? []).flatMap(s => Object.values(s.env ?? {})),
 ]
+
+/** By id (re-run safe), unpacked straight into frontend/dist. */
+function expectDownloadsById(step: Step | undefined): void {
+  expect(step?.with?.['artifact-ids']).toBe(ARTIFACT_ID)
+  expect(step?.with?.['name']).toBeUndefined()
+  expect(step?.with?.['path']).toBe('frontend/dist')
+  expect(step?.with?.['merge-multiple']).toBe(true)
+}
 
 const isDownload = (s: Step) =>
   (s.uses ?? '').startsWith('actions/download-artifact@')
@@ -86,6 +99,10 @@ describe('the preview job hands its build to the test jobs (#2544)', () => {
     expect(upload).toBeLessThan(deploy)
     const up = steps('preview')[upload]
     expect(up?.with?.['name']).toBe(ARTIFACT)
+    expect(up?.id).toBe('dist')
+    expect(jobs['preview']?.outputs?.['dist-artifact-id']).toBe(
+      '${{ steps.dist.outputs.artifact-id }}'
+    )
     expect(up?.with?.['path']).toBe('frontend/dist')
     expect(up?.with?.['if-no-files-found']).toBe('error')
   })
@@ -99,8 +116,7 @@ describe('the smoke shards run on the local build (#2544)', () => {
     const serve = indexOf('smoke', isServe)
     const test = indexOf('smoke', isPlaywright)
     expect(download).toBeGreaterThan(-1)
-    expect(steps('smoke')[download]?.with?.['name']).toBe(ARTIFACT)
-    expect(steps('smoke')[download]?.with?.['path']).toBe('frontend/dist')
+    expectDownloadsById(steps('smoke')[download])
     expect(serve).toBeGreaterThan(download)
     expect(test).toBeGreaterThan(serve)
   })
@@ -209,9 +225,23 @@ describe('what runs on the deployed channel (#2544)', () => {
     expect(wire).not.toMatch(/--project/)
   })
 
-  it('needs no build and no local server of its own', () => {
-    expect(steps('preview-smoke').some(isDownload)).toBe(false)
+  it('serves nothing locally', () => {
     expect(steps('preview-smoke').some(isServe)).toBe(false)
+  })
+
+  it('checks every built file is deployed, before the smokes', () => {
+    // staging.smoke.ts loads a few routes; a chunk, font or glyph missing
+    // from the deploy (that the SPA rewrite answers with index.html) would
+    // pass it. The check HEADs every file of the same build on the channel.
+    const download = indexOf('preview-smoke', isDownload)
+    const check = indexOf('preview-smoke', s =>
+      /node scripts\/check-deployed-files\.mjs/.test(s.run ?? '')
+    )
+    const firstSmoke = indexOf('preview-smoke', isPlaywright)
+    expectDownloadsById(steps('preview-smoke')[download])
+    expect(check).toBeGreaterThan(download)
+    expect(check).toBeLessThan(firstSmoke)
+    expect(jobs['preview-smoke']?.env?.['BASE_URL']).toBe(PREVIEW_URL)
   })
 
   it('gates the verdict like the shards and Lighthouse', () => {
