@@ -35,7 +35,12 @@ const corpus = JSON.parse(
     resolve(ROOT, 'scripts/fixtures/guard-bypass-corpus.json'),
     'utf8'
   )
-) as { deny: string[]; allow: string[] }
+) as {
+  deny: string[]
+  allow: string[]
+  writeDeny: string[]
+  writeAllow: string[]
+}
 
 const fill = (s: string) =>
   s.replaceAll('{{REPO}}', REPO).replaceAll('{{BRANCH}}', BRANCH)
@@ -112,6 +117,7 @@ beforeAll(() => {
     put(p)
   symlinkSync('/etc/passwd', join(F, 'link'))
   symlinkSync(homedir(), join(F, 'homelink'))
+  symlinkSync(join(F, '.git'), join(F, 'gitlink'))
 })
 
 afterAll(() => rmSync(F, { recursive: true, force: true }))
@@ -137,6 +143,50 @@ describe('the bypass corpus (scripts/fixtures/guard-bypass-corpus.json)', () => 
       const r = run(fill(command))
       expect(r.stderr, command).toBe('')
       expect(r.status, command).toBe(0)
+    }
+  )
+})
+
+function fileTool(tool: string, path: string) {
+  return spawnSync('bash', [GUARD], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: tool,
+      tool_input: {
+        file_path: join(F, path),
+        content: 'x',
+        old_string: 'a',
+        new_string: 'b',
+      },
+      cwd: F,
+    }),
+    cwd: F,
+    env: {
+      PATH: process.env.PATH ?? '/usr/bin:/bin',
+      HOME: homedir(),
+      CLAUDE_PROJECT_DIR: F,
+      CLAUDE_CODE_REMOTE: 'true',
+    },
+    encoding: 'utf8',
+  })
+}
+
+describe('file tools: secret-shaped files and config other tools act on', () => {
+  const tools = ['Write', 'Edit', 'MultiEdit']
+  it.each(corpus.writeDeny.flatMap(p => tools.map(t => [t, p])))(
+    'refuses %s of %s',
+    (tool, path) => {
+      const r = fileTool(tool, path)
+      expect(r.status, `${tool} ${path}\n${r.stderr}`).toBe(2)
+      expect(r.stderr).toMatch(/Ron/)
+    }
+  )
+  it.each(corpus.writeAllow.flatMap(p => tools.map(t => [t, p])))(
+    'allows %s of %s',
+    (tool, path) => {
+      const r = fileTool(tool, path)
+      expect(r.stderr, `${tool} ${path}`).toBe('')
+      expect(r.status).toBe(0)
     }
   )
 })
