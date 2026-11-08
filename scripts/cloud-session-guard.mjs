@@ -19,6 +19,7 @@
 // tool call and stderr is shown to the model; exit 0 allows it.
 
 import { readFileSync } from 'node:fs'
+import { checkAllowList } from './cloud-session-guard-allowlist.mjs'
 
 const LABEL = 'db-breaking-approved'
 
@@ -29,6 +30,21 @@ function refuse(reason) {
       'label by any path: it is Ron\u2019s ADR 0019 approval and cloud ' +
       'workers act as rservant on GitHub. Ask Ron to do it himself. If this ' +
       'is a false positive, ask Ron rather than rewording the command.\n'
+  )
+  process.exit(2)
+}
+
+/** #2528: a call outside the cloud allow list. */
+function refuseAllowList(reason) {
+  process.stderr.write(
+    `cloud-session-guard (#2528): refused: ${reason}.\n` +
+      'Cloud sessions run gh, gh api, curl or wget to GitHub, and git push ' +
+      'from an allow list: gh view/list reads, gh api GET, creating a PR, ' +
+      'commenting, COMMENT reviews, PR title/body edits, the preview-smoke ' +
+      'label, and pushes to this session\u2019s own branch. Anything else, ' +
+      'such as merging, approving, workflow or repository changes, or a ' +
+      'push to another branch, is Ron\u2019s to do. Ask Ron; do not reword ' +
+      'the command to get past the guard.\n'
   )
   process.exit(2)
 }
@@ -210,7 +226,7 @@ export function checkCommand(raw) {
 }
 
 const PROTECTED_PATH =
-  /(^|\/)scripts\/cloud-session-guard\.(sh|mjs)$|(^|\/)scripts\/lib\/__tests__\/cloudSessionGuard\.test\.ts$|(^|\/)\.claude\/settings(\.local)?\.json$/
+  /(^|\/)scripts\/cloud-session-guard[\w-]*\.(sh|mjs)$|(^|\/)scripts\/lib\/__tests__\/cloudSessionGuard\w*\.test\.ts$|(^|\/)\.claude\/settings(\.local)?\.json$/
 
 /** A Bash command that would change the guard or the settings that load it. */
 function tampers(raw) {
@@ -239,6 +255,13 @@ function main() {
     if (tampers(cmd)) refuse('a change to the cloud session guard or settings')
     const reason = checkCommand(cmd)
     if (reason) refuse(reason)
+    let denied
+    try {
+      denied = checkAllowList(cmd, { cwd: input?.cwd })
+    } catch (e) {
+      denied = `the guard failed while checking the command (${e?.message})`
+    }
+    if (denied) refuseAllowList(denied)
     process.exit(0)
   }
 

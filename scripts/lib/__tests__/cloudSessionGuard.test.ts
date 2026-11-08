@@ -327,6 +327,9 @@ describe('refuses label writes a name check cannot see', () => {
 })
 
 describe('allows reads and other labels in a cloud session', () => {
+  // #2528 moved the other-label writes (gh pr/issue edit, gh label create,
+  // DELETE issues/N/labels/x), graphql and pushes to the allow-list tests
+  // in cloudSessionGuardAllowList.test.ts.
   it.each([
     'gh label list',
     'gh label list --search db-breaking-approved',
@@ -337,13 +340,7 @@ describe('allows reads and other labels in a cloud session', () => {
     `curl -s ${API}/labels/db-breaking-approved`,
     'gh pr view 12',
     'gh issue view 2519',
-    'gh pr edit 12 --add-label bug',
-    'gh issue edit 12 --remove-label preview-smoke',
-    'gh pr edit 12 --add-label preview-smoke',
     `gh api ${R}/issues/12/labels -f 'labels[]=preview-smoke'`,
-    `gh api -X DELETE ${R}/issues/12/labels/preview-smoke`,
-    'gh label create my-new-label --color 00ff00',
-    `gh api graphql -f query='query { viewer { login } }'`,
     // the CLAUDE.md patterns a worker uses
     `gh api ${R}/pulls -f title='fix: x (#42)' -f head=b -f base=main -F body=@pr-body.md`,
     `gh api ${R}/issues/42/comments -f body='done'`,
@@ -352,7 +349,6 @@ describe('allows reads and other labels in a cloud session', () => {
     `gh api ${R}/pulls --input pr.json`,
     // everyday work
     'npm run test:scripts',
-    'git push -u origin fix/2519-x',
     'git commit -m "docs: mention db-breaking-approved (#2519)"',
     'grep -rn db-breaking-approved scripts/',
     'cat scripts/cloud-session-guard.sh',

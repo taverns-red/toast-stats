@@ -28,6 +28,7 @@ Setup and Ron's manual steps: [`docs/cloud-sessions.md`](docs/cloud-sessions.md)
 - **Reference the issue as plain `#N` in PR bodies, never `Closes #N`.** The orchestrator closes issues.
 - **Don't merge.** No prod writes, no GCS writes, no workflow dispatches that publish data.
 - **Never apply, create, edit or remove the `db-breaking-approved` label (#2519).** It is Ron's ADR 0019 approval, and a worker acts as `rservant`, so the guard can't tell you apart. `scripts/cloud-session-guard.sh` refuses it by any path it can see (REST, GraphQL label mutations, payloads from a file or stdin, and edits to the guard itself); if it blocks you, ask Ron.
+- **The guard is an allow list (#2528).** For gh, `gh api`, curl/wget to GitHub and `git push` it lets through only `view`/`list` reads, GETs, the two patterns above (plus COMMENT reviews, PR title/body edits and the `preview-smoke` label) and pushes to your own branch; a blocked call means ask Ron, not reword it.
 - **No browsers in the VM.** Browser smokes run in CI against the PR preview channel; read their result from the checks.
 
 ## Project Overview
