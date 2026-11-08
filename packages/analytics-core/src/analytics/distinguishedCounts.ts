@@ -33,10 +33,12 @@
  * @module distinguishedCounts
  */
 
-import type {
-  DistinguishedCounts,
-  DistinguishedTierCount,
+import {
+  normalizeClubId,
+  type DistinguishedCounts,
+  type DistinguishedTierCount,
 } from '@taverns-red/shared-contracts'
+import type { DistrictStatistics } from '../interfaces.js'
 import type { DistinguishedLevel } from '../types.js'
 import { programYearForDate } from './AnalyticsUtils.js'
 import {
@@ -289,4 +291,34 @@ export function computeDistinguishedCounts(
   })
 
   return { district: tallyDistinguished(all), divisions }
+}
+
+/**
+ * A snapshot's counts (district, divisions, areas).
+ *
+ * TI's letter is read from `clubs[].distinguishedStatus`, and for a snapshot
+ * transformed before that field was kept (#1120), from the raw
+ * club-performance row's 'Club Distinguished Status', so an old snapshot
+ * reads the same letters the rankings did.
+ */
+export function computeSnapshotDistinguishedCounts(
+  snapshot: Pick<DistrictStatistics, 'clubs' | 'snapshotDate'> & {
+    clubPerformance?: DistrictStatistics['clubPerformance']
+  }
+): { district: DistinguishedCounts; divisions: DivisionDistinguishedCounts[] } {
+  const rawStatus = new Map<string, string>()
+  for (const row of snapshot.clubPerformance ?? []) {
+    const id = normalizeClubId(row['Club Number'])
+    const status = row['Club Distinguished Status']
+    if (id && typeof status === 'string') rawStatus.set(id, status)
+  }
+  const clubs = snapshot.clubs.map(club =>
+    club.distinguishedStatus !== undefined
+      ? club
+      : {
+          ...club,
+          distinguishedStatus: rawStatus.get(normalizeClubId(club.clubId)),
+        }
+  )
+  return computeDistinguishedCounts(clubs, snapshot.snapshotDate)
 }

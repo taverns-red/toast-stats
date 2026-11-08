@@ -49,6 +49,7 @@ import { DistinguishedClubAnalyticsModule } from './DistinguishedClubAnalyticsMo
 import { DivisionAreaAnalyticsModule } from './DivisionAreaAnalyticsModule.js'
 import { LeadershipAnalyticsModule } from './LeadershipAnalyticsModule.js'
 import { AreaDivisionRecognitionModule } from './AreaDivisionRecognitionModule.js'
+import { computeSnapshotDistinguishedCounts } from './distinguishedCounts.js'
 import {
   findPreviousProgramYearDate,
   calculatePercentageChange,
@@ -224,6 +225,12 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       omitClubContactFields
     )
 
+    // One confirmed / provisional Distinguished count per level (#2553):
+    // the latest snapshot's clubs, the shared rule.
+    const latestDistinguishedCounts = latestSnapshot
+      ? computeSnapshotDistinguishedCounts(latestSnapshot)
+      : undefined
+
     // Build district analytics (base result)
     const districtAnalytics: DistrictAnalytics = {
       districtId,
@@ -238,6 +245,10 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       thrivingClubs: clubHealth.thrivingClubs,
       interventionRequiredClubs: clubHealth.interventionRequiredClubs,
       distinguishedClubs,
+      ...(latestDistinguishedCounts && {
+        distinguishedCounts: latestDistinguishedCounts.district,
+        distinguishedCountsByDivision: latestDistinguishedCounts.divisions,
+      }),
       distinguishedClubsList,
       distinguishedProjection,
       divisionRankings,

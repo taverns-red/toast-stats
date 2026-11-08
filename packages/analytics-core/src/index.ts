@@ -116,6 +116,7 @@ export type {
 export {
   classifyClubDistinguished,
   computeDistinguishedCounts,
+  computeSnapshotDistinguishedCounts,
   distinguishedCountBasis,
   tallyDistinguished,
   addDistinguishedCounts,
