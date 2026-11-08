@@ -14,6 +14,10 @@
 //             POST issues/N/labels only with preview-smoke.
 //   git push  only the session's own branch, never from main or the
 //             default branch.
+//   reads     (#2547) reader arguments, < redirects and payload files
+//             resolve inside the root and are not secret-shaped or
+//             gitignored; a cd may not leave the root; no secrets or
+//             variables endpoints, no environment dumps.
 //
 // Anything in those families it cannot parse is refused. It is defence in
 // depth: the real control is GitHub-side (a pull_request rule on main, or

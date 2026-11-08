@@ -34,10 +34,13 @@ function refuse(reason) {
   process.exit(2)
 }
 
-/** #2528: a call outside the cloud allow list. */
+/** #2528, #2547: a call outside the cloud allow list. */
 function refuseAllowList(reason) {
   process.stderr.write(
-    `cloud-session-guard (#2528): refused: ${reason}.\n` +
+    `cloud-session-guard (#2528, #2547): refused: ${reason}.\n` +
+      'Reads (cat, grep, sed, < redirects, -F body=@file) stay inside the ' +
+      'repository and away from .env*, *.pem, *.key, .git and gitignored ' +
+      'files; secrets, variables and the environment stay out of sight. ' +
       'Cloud sessions run gh, gh api, curl or wget to GitHub, and git push ' +
       'from an allow list: gh view/list reads, gh api GET, creating a PR, ' +
       'commenting, COMMENT reviews, PR title/body edits, the preview-smoke ' +

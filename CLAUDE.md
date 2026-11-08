@@ -30,6 +30,7 @@ Setup and Ron's manual steps: [`docs/cloud-sessions.md`](docs/cloud-sessions.md)
 - **Don't merge.** No prod writes, no GCS writes, no workflow dispatches that publish data.
 - **Never apply, create, edit or remove the `db-breaking-approved` label (#2519).** It is Ron's ADR 0019 approval, and a worker acts as `rservant`, so the guard can't tell you apart. `scripts/cloud-session-guard.sh` refuses it by any path it can see (REST, GraphQL label mutations, payloads from a file or stdin, and edits to the guard itself); if it blocks you, ask Ron.
 - **The guard is an allow list (#2528).** For gh, `gh api`, curl/wget to GitHub and `git push` it lets through only `view`/`list` reads, GETs, the two patterns above (plus COMMENT reviews, PR title/body edits and the `preview-smoke` label) and pushes to your own branch; a blocked call means ask Ron, not reword it.
+- **Reads stay in the repo (#2547).** In the VM the guard refuses reads outside the repository root, of `.env*`/`*.pem`/`*.key`/`.git`/gitignored files (build output excepted), `cd` out of the root, secrets/variables endpoints and environment dumps. Keep body files like `pr-body.md` in the repo.
 - **No browsers in the VM.** Browser smokes run in CI against the PR preview channel; read their result from the checks.
 
 ## Project Overview
