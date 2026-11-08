@@ -258,11 +258,13 @@ const labeled = (
   }
   return e
 }
-const unlabeled = (login: string): IssueEvent => ({
+const unlabeled = (login: string, name = OVERRIDE_LABEL): IssueEvent => ({
   event: 'unlabeled',
   actor: { login },
-  label: { name: OVERRIDE_LABEL },
+  label: { name },
 })
+/** GitHub label names are case-insensitive; events keep the spelling used. */
+const MIXED_CASE = 'DB-Breaking-Approved'
 /** The shape GitHub returns in `performed_via_github_app` for an app. */
 const CLAUDE_APP = {
   id: 1236702,
@@ -368,6 +370,34 @@ describe('the db-breaking-approved override', () => {
       7
     )
     expect(r.approved).toBe(false)
+  })
+
+  it('a mixed-case removal, then a re-add by someone else, fails (#2520)', () => {
+    const r = verifyOverride(
+      [OVERRIDE_LABEL],
+      [
+        labeled('rservant'),
+        unlabeled('x', MIXED_CASE),
+        labeled('someone-else', MIXED_CASE),
+      ]
+    )
+    expect(r.approved).toBe(false)
+    expect(r.reason).toContain('someone-else')
+  })
+
+  it('a mixed-case removal as the last event revokes (#2520)', () => {
+    expect(
+      verifyOverride(
+        [OVERRIDE_LABEL],
+        [labeled('rservant'), unlabeled('x', MIXED_CASE)]
+      ).approved
+    ).toBe(false)
+  })
+
+  it('the current label matches case-insensitively (#2520)', () => {
+    expect(
+      verifyOverride([MIXED_CASE], [labeled('rservant', MIXED_CASE)]).approved
+    ).toBe(true)
   })
 
   it('the label applied by another user fails', () => {
