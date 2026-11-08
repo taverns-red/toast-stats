@@ -62,11 +62,19 @@ export interface DateRoles {
   ago14: string | null
   /** Every June 30 the CDN has (program-year closes). */
   yearEnds: string[]
+  /** Every month-end the CDN has within the last 26 months. */
+  monthEnds: string[]
 }
 
 export interface ExpandVars extends DateRoles {
   /** Program years, e.g. 2025-2026. */
   py: string[]
+  /** Every district id (from v1/rankings.json). */
+  allDistrict?: string[]
+  /** Every club-district-history shard (from its index). */
+  shard?: string[]
+  /** Every clubs-by-region file name (from region-rollups.json). */
+  region?: string[]
 }
 
 export interface ResolvedEntry {
@@ -160,13 +168,28 @@ export function dateRoles(latest: string, dates: string[]): DateRoles {
   const valid = dates.filter(d => calendarMs(d) !== null).sort()
   const earlier = valid.filter(d => d < latest)
   const cutoff = new Date(latestMs - 14 * DAY_MS).toISOString().slice(0, 10)
+  const monthsBack = monthsBackFrom(latestMs)
   const ago = valid.filter(d => d <= cutoff)
   return {
     date: latest,
     prev: earlier[earlier.length - 1] ?? null,
     ago14: ago[ago.length - 1] ?? null,
     yearEnds: valid.filter(d => d.endsWith('-06-30')),
+    monthEnds: valid.filter(d => d >= monthsBack && isMonthEnd(d)),
   }
+}
+
+/** The first day of the month 26 months before `ms`, as YYYY-MM-DD. */
+function monthsBackFrom(ms: number): string {
+  const d = new Date(ms)
+  d.setUTCDate(1)
+  d.setUTCMonth(d.getUTCMonth() - 26)
+  return d.toISOString().slice(0, 10)
+}
+
+function isMonthEnd(date: string): boolean {
+  const ms = calendarMs(date)
+  return ms !== null && new Date(ms + DAY_MS).getUTCDate() === 1
 }
 
 /** The newest `count` program years a district's time-series lists. */
@@ -206,8 +229,23 @@ export function expandManifest(
         case 'yearEnd':
           values = vars.yearEnds
           break
+        case 'monthEnd':
+          values = vars.monthEnds
+          break
         case 'py':
           values = vars.py
+          break
+        case 'pyCurrent':
+          values = vars.py.slice(-1)
+          break
+        case 'allDistrict':
+          values = vars.allDistrict ?? []
+          break
+        case 'shard':
+          values = vars.shard ?? []
+          break
+        case 'region':
+          values = vars.region ?? []
           break
         case 'district':
           values = entry.districts ?? manifest.districts
@@ -358,6 +396,54 @@ export function validateObject(
   }
 }
 
+/**
+ * Resolve every placeholder the manifest uses from the CDN itself: the dates
+ * by role, the program years, and only the id lists an entry asks for.
+ * Shared by the refresh and by smoke-fixtures-uncovered.ts.
+ */
+export async function loadExpandVars(
+  manifest: Manifest,
+  getJson: (path: string) => Promise<unknown>
+): Promise<ExpandVars> {
+  const latest = (await getJson('v1/latest.json')) as {
+    latestSnapshotDate?: unknown
+  }
+  const date = String(latest.latestSnapshotDate ?? '')
+  const datesFile = (await getJson('v1/dates.json')) as { dates?: unknown }
+  const dates = Array.isArray(datesFile.dates)
+    ? (datesFile.dates as unknown[]).map(String)
+    : []
+  const anchor = manifest.districts[0] ?? '61'
+  const meta = await getJson(
+    `time-series/district_${anchor}/index-metadata.json`
+  )
+  const vars: ExpandVars = {
+    ...dateRoles(date, dates),
+    py: programYearsFrom(meta),
+  }
+  const used = (name: string) =>
+    manifest.paths.some(e => e.path.includes(`{${name}}`))
+  if (used('allDistrict')) {
+    const r = (await getJson('v1/rankings.json')) as {
+      rankings?: Array<{ districtId?: unknown }>
+    }
+    vars.allDistrict = (r.rankings ?? []).map(x => String(x.districtId))
+  }
+  if (used('shard')) {
+    const r = (await getJson('config/club-district-history/index.json')) as {
+      shards?: unknown[]
+    }
+    vars.shard = (r.shards ?? []).map(String)
+  }
+  if (used('region')) {
+    const r = (await getJson(`snapshots/${date}/region-rollups.json`)) as {
+      regions?: Record<string, unknown>
+    }
+    vars.region = [...Object.keys(r.regions ?? {}), 'unassigned']
+  }
+  return vars
+}
+
 const CONCURRENCY = 8
 
 async function inBatches<T, R>(
@@ -423,27 +509,15 @@ export async function refreshFixtures(options: {
   }
 
   let vars: ExpandVars
-  let date = ''
   try {
-    const latest = (await getJson('v1/latest.json')) as {
-      latestSnapshotDate?: unknown
-    }
-    date = String(latest.latestSnapshotDate ?? '')
-    const datesFile = (await getJson('v1/dates.json')) as { dates?: unknown }
-    const dates = Array.isArray(datesFile.dates)
-      ? (datesFile.dates as unknown[]).map(String)
-      : []
-    const anchor = manifest.districts[0] ?? '61'
-    const meta = await getJson(
-      `time-series/district_${anchor}/index-metadata.json`
-    )
-    vars = { ...dateRoles(date, dates), py: programYearsFrom(meta) }
+    vars = await loadExpandVars(manifest, getJson)
   } catch (err) {
     failures.push(
-      `cannot resolve the dates (v1/latest.json, v1/dates.json, time-series metadata): ${err instanceof Error ? err.message : String(err)}`
+      `cannot resolve the dates and id lists (v1/latest.json, v1/dates.json, time-series metadata, rankings, shard and region indexes): ${err instanceof Error ? err.message : String(err)}`
     )
-    return report(date)
+    return report('')
   }
+  const date = vars.date
 
   const entries = expandManifest(manifest, vars)
   const index: Record<string, { status: number; contentType: string }> = {}
