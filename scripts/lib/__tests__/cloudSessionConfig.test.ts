@@ -39,7 +39,7 @@ interface HookGroup {
   hooks: HookCommand[]
 }
 interface Settings {
-  permissions?: { allow?: string[]; deny?: string[] }
+  permissions?: { allow?: string[]; ask?: string[]; deny?: string[] }
   hooks?: Record<string, HookGroup[]>
   env?: unknown
 }
@@ -119,11 +119,36 @@ describe('.claude/settings.json', () => {
     expect(stop[0]?.hooks[0]?.timeout).toBe(5)
   })
 
-  it('only adds allow rules: no deny, no env block', () => {
+  it('adds allow and ask rules only: no deny, no env block', () => {
     const settings = JSON.parse(readFileSync(SETTINGS, 'utf8')) as Settings
     expect(settings.permissions?.allow).toContain('Bash(gh api *)')
     expect(settings.permissions?.deny).toBeUndefined()
     expect(settings.env).toBeUndefined()
+  })
+
+  // #2532: `gh api *` is allowed, so without these a local agent could edit
+  // the ruleset, protection, collaborators, secrets, variables, webhooks or
+  // deploy keys with no prompt. ask beats allow (deny > ask > allow).
+  it('asks before gh api admin paths and every PUT, PATCH and DELETE', () => {
+    const settings = JSON.parse(readFileSync(SETTINGS, 'utf8')) as Settings
+    const ask = settings.permissions?.ask ?? []
+    const paths = [
+      'protection',
+      'rulesets',
+      'collaborators',
+      'actions/secrets',
+      'actions/variables',
+      'hooks',
+      'keys',
+    ]
+    for (const path of paths) {
+      expect(ask).toContain(`Bash(gh api *${path}*)`)
+    }
+    for (const method of ['DELETE', 'PUT', 'PATCH']) {
+      expect(ask).toContain(`Bash(gh api *-X ${method}*)`)
+      expect(ask).toContain(`Bash(gh api *--method ${method}*)`)
+      expect(ask).toContain(`Bash(gh api *-X${method}*)`)
+    }
   })
 
   it('points at scripts that exist and are executable', () => {
