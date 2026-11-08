@@ -255,6 +255,15 @@ export interface FixtureResponse {
   json(): Promise<unknown>
 }
 
+/** Stub: always the network. */
+export async function fixtureGet(
+  _url: string,
+  live: () => Promise<FixtureResponse>,
+  _env: Record<string, string | undefined> = process.env
+): Promise<FixtureResponse> {
+  return live()
+}
+
 /**
  * `route.fetch()` for a spec that rewrites a CDN response. `route.fetch()`
  * reads the network, past the fixture; with SMOKE_FIXTURES_DIR set this reads

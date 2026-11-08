@@ -13,6 +13,7 @@ import {
   CDN_STAGING_ORIGIN,
   describeFixtureProblems,
   fixtureFetch,
+  fixtureGet,
   fixturePath,
   installCdnFixtures,
   settled,
@@ -364,6 +365,45 @@ describe('installCdnFixtures: record mode', () => {
       'v1/dates.json',
     ])
     expect(describeFixtureProblems(tally)).toBeNull()
+  })
+})
+
+describe('fixtureGet', () => {
+  // A helper that reads a CDN file itself (page.request.get) must read the
+  // fixture when one is on, like fixtureFetch does for a route.
+  const live = () => ({
+    status: () => 200,
+    json: async () => ({ live: true }),
+  })
+
+  it('reads the fixture and never the network when a directory is on', async () => {
+    const liveFn = vi.fn(async () => live())
+    const res = await fixtureGet(
+      `${CDN_STAGING_ORIGIN}/v1/latest.json?cb=1`,
+      liveFn,
+      { SMOKE_FIXTURES_DIR: dir }
+    )
+    expect(await res.json()).toEqual({ latestSnapshotDate: 'd' })
+    expect(liveFn).not.toHaveBeenCalled()
+  })
+
+  it('throws for a path with no fixture, naming it', async () => {
+    await expect(
+      fixtureGet(`${CDN_STAGING_ORIGIN}/v1/unknown.json`, async () => live(), {
+        SMOKE_FIXTURES_DIR: dir,
+      })
+    ).rejects.toThrow(/v1\/unknown\.json/)
+  })
+
+  it('reads the network when no directory is on', async () => {
+    const liveFn = vi.fn(async () => live())
+    const res = await fixtureGet(
+      `${CDN_STAGING_ORIGIN}/v1/latest.json`,
+      liveFn,
+      {}
+    )
+    expect(liveFn).toHaveBeenCalledTimes(1)
+    expect(await res.json()).toEqual({ live: true })
   })
 })
 
