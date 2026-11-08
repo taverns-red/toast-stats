@@ -6,7 +6,7 @@ agent or human action. This runbook covers how that works, how to turn it
 off, how to roll back by hand, and the staging drill.
 
 The data half (restoring `toast-stats-data-ca` objects after a bad publish)
-is separate and not covered here.
+is separate: see [data-restore.md](data-restore.md).
 
 ## How it works
 
