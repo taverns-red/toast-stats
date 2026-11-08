@@ -20,9 +20,18 @@
 // a separate agent identity, ops#242). Commands run from a script file
 // (`bash x.sh`, `npm run`, `node x.mjs`) are out of its sight.
 
-import { execFileSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { isAbsolute, join, resolve } from 'node:path'
+import { execFileSync, spawnSync } from 'node:child_process'
+import * as fs from 'node:fs'
+import { existsSync, realpathSync, statSync } from 'node:fs'
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from 'node:path'
 
 // ---------------------------------------------------------------- shell --
 
@@ -71,6 +80,7 @@ export function tokenize(src) {
   const segments = []
   const nested = []
   let words = []
+  let inputs = []
   let w = null
   let i = 0
   const word = () => (w ??= new Word())
@@ -80,8 +90,12 @@ export function tokenize(src) {
   }
   const endSegment = () => {
     endWord()
-    if (words.length) segments.push(words)
+    if (words.length || inputs.length) {
+      words.inputs = inputs
+      segments.push(words)
+    }
     words = []
+    inputs = []
   }
   /** Read a balanced $( ... ) or ( ... ) body starting after the opener. */
   const readParens = () => {
@@ -189,23 +203,34 @@ export function tokenize(src) {
         nested.push(readParens())
         continue
       }
+      const opStart = i
       while (/[<>&|-]/.test(s[i] ?? '')) i++
+      const op = s.slice(opStart, i)
       while (s[i] === ' ' || s[i] === '\t') i++
-      // the target word is consumed into a throwaway Word
-      const saved = words
-      words = []
+      // The target is not an argument. A `<` target is a file the
+      // command reads (#2547), so keep it.
+      const target = new Word()
       while (i < s.length && !/[\s;&|()<>]/.test(s[i])) {
         if (s[i] === "'" || s[i] === '"') {
           const q = s[i]
           const j = s.indexOf(q, i + 1)
           if (j < 0) throw new Error('unbalanced quote')
+          const inner = s.slice(i + 1, j)
+          if (q === '"' && /[$`]/.test(inner)) target.dynamic = true
+          target.text += inner
+          target.quoted = true
           i = j + 1
         } else if (s[i] === '$' && s[i + 1] === '(') {
           i += 2
           nested.push(readParens())
-        } else i++
+          target.dynamic = true
+          target.text += '\u0000'
+        } else {
+          if (s[i] === '$' || s[i] === '`') target.dynamic = true
+          target.text += s[i++]
+        }
       }
-      words = saved
+      if (op === '<' || op === '<>') inputs.push(target)
     } else if (/[;&|\n()]/.test(c)) {
       endSegment()
       i++
@@ -281,6 +306,7 @@ const no = reason => {
 function resolveCommand(words) {
   let k = 0
   let gitEnv = false
+  let lastWrapper = null
   for (;;) {
     while (k < words.length && !words[k].quoted && KEYWORDS.has(words[k].text))
       k++
@@ -292,7 +318,10 @@ function resolveCommand(words) {
       if (/^GIT_/i.test(words[k].text)) gitEnv = true
       k++
     }
-    if (k >= words.length) return null
+    if (k >= words.length)
+      return lastWrapper === 'env'
+        ? { name: 'env', args: [], gitEnv, bare: true }
+        : null
     const head = words[k]
     if (head.dynamic) {
       const name = base(head.text)
@@ -302,6 +331,7 @@ function resolveCommand(words) {
     const name = base(head.text).toLowerCase()
     const flags = WRAPPERS[name]
     if (!flags || head.quoted) return { name, args: words.slice(k + 1), gitEnv }
+    lastWrapper = name
     k++
     while (k < words.length && words[k].text.startsWith('-')) {
       if (/^(-S|--split-string)/.test(words[k].text))
@@ -334,23 +364,33 @@ function checkLine(src, ctx, depth = 0) {
 }
 
 function checkSegment(words, ctx, depth) {
+  for (const w of words.inputs ?? []) checkReadPath(w, ctx, 'a < redirect')
   const cmd = resolveCommand(words)
   if (!cmd) return
   const { name, args, gitEnv } = cmd
   const texts = args.map(a => a.text)
 
+  checkEnvDump(name, cmd, args)
   if (name === 'cd' || name === 'pushd') {
-    const target = args.find(a => !a.text.startsWith('-'))
-    if (!target) ctx.cwd = ctx.home ?? null
-    else if (target.dynamic || target.text === '-' || ctx.cwd === null)
-      ctx.cwd = null
-    else
-      ctx.cwd = resolve(
-        ctx.cwd,
-        target.text.replace(/^~(?=\/|$)/, ctx.home ?? '~')
+    const target = args.find(a => !a.text.startsWith('-') || a.text === '-')
+    if (!target)
+      no(`${name} with no directory goes to HOME, outside the repository`)
+    if (target.dynamic || target.text === '-' || target.text.startsWith('~'))
+      no(
+        `${name} ${target.text.replace(/\u0000/g, '$…')} cannot be resolved inside the repository`
       )
+    if (ctx.cwd === null) no(`${name} from a directory the guard cannot tell`)
+    const dir = realish(resolve(ctx.cwd, target.text))
+    if (!within(ctx.root, dir))
+      no(`${name} ${target.text} leaves the repository`)
+    ctx.cwd = dir
     return
   }
+  if (name === 'popd') {
+    ctx.cwd = null
+    return
+  }
+  if (READERS.has(name)) checkReader(name, args, ctx)
   if (SHELLS.has(name)) {
     const c = args.findIndex(a => /^-[a-z]*c$/.test(a.text))
     if (c >= 0 && args[c + 1]) {
@@ -374,6 +414,8 @@ function checkSegment(words, ctx, depth) {
   if (FANOUT.has(name)) {
     if (args.some(a => GUARDED.has(base(a.text))))
       no(`${name} builds the arguments of gh, git, curl or wget at run time`)
+    if (args.some(a => READERS.has(base(a.text))))
+      no(`${name} hands a reader paths the guard cannot see`)
     return
   }
   if (INTERPRETERS.has(name)) {
@@ -388,7 +430,7 @@ function checkSegment(words, ctx, depth) {
   }
   if (OTHER_HTTP.has(name) && texts.some(t => /github\.com/i.test(t)))
     no(`${name} to GitHub is not on the cloud allow list; use gh api`)
-  if (name === 'gh') return checkGh(args)
+  if (name === 'gh') return checkGh(args, ctx)
   if (name === 'curl') return checkCurl(args, ctx)
   if (name === 'wget') return checkWget(args, ctx)
   if (name === 'git') return checkGit(args, ctx, gitEnv)
@@ -420,7 +462,7 @@ const GH_READS = {
   auth: new Set(['status']),
 }
 
-function checkGh(args) {
+function checkGh(args, ctx) {
   const words = args
   let k = 0
   /** Next word that is not a repo/host flag; refuses other flags. */
@@ -445,8 +487,10 @@ function checkGh(args) {
   if (!g.word) no('bare gh is not on the cloud allow list')
   const group = g.word
   if (group === 'help' || group === 'version') return
-  if (group === 'api') return checkGhApi(words.slice(k))
+  if (group === 'api') return checkGhApi(words.slice(k), ctx)
   if (group === 'search') return
+  if (group === 'secret' || group === 'variable')
+    no(`gh ${group} is not on the cloud allow list`)
   const v = next()
   if (v.help) return
   if (!v.word) no(`gh ${group} with no subcommand is not on the allow list`)
@@ -568,6 +612,8 @@ function checkRoute(method, rawPath, b, how) {
   const { host, path } = normalizePath(rawPath)
   if (path === 'graphql' || path.endsWith('/graphql'))
     no(`${how} to graphql is not on the cloud allow list`)
+  if (/(^|\/)([\w-]*-)?(secrets|variables)(\/|$)/.test(path))
+    no(`${how} ${path} reads secrets or variables`)
   if (m === 'GET' || m === 'HEAD') return
   if (host !== 'api.github.com')
     no(`${how} ${m} to ${host} is not on the cloud allow list`)
@@ -618,7 +664,7 @@ const API_BOOL = new Set([
 const API_SHORT_VALUE = new Set(['X', 'f', 'F', 'H', 'p', 'q', 't', 'R'])
 const API_SHORT_BOOL = new Set(['i', 'h'])
 
-function checkGhApi(words) {
+function checkGhApi(words, ctx) {
   let method = null
   const b = body()
   let hasFields = false
@@ -638,11 +684,14 @@ function checkGhApi(words) {
         const key = v.text.slice(0, eq)
         const val = v.text.slice(eq + 1)
         const fromFile = /^(-F|--field)$/.test(flag) && val.startsWith('@')
+        if (fromFile && val !== '@-')
+          checkReadPath(glued(v, val.slice(1)), ctx, 'gh api -F')
         addField(b, key, v.dynamic || fromFile ? VALUE_OPAQUE : val)
       }
     } else if (flag === '--input') {
       hasInput = true
       b.opaque = true
+      if (v.text !== '-') checkReadPath(v, ctx, 'gh api --input')
     } else if (flag === '-H' || flag === '--header') {
       if (v.dynamic || METHOD_OVERRIDE.test(v.text))
         no('gh api with a method-override or run-time header')
@@ -784,10 +833,25 @@ function checkCurl(args, ctx) {
     if (flag === '--request') {
       if (v.dynamic) no('curl with a method built at run time')
       method = v.text
-    } else if (CURL_DATA.has(flag)) data.push({ flag, v })
-    else if (CURL_FORM.has(flag)) form = true
-    else if (flag === '--upload-file') upload = true
-    else if (flag === '--url') urls.push(v)
+    } else if (CURL_DATA.has(flag)) {
+      data.push({ flag, v })
+      const at = v.text.indexOf('@')
+      if (
+        flag !== '--data-raw' &&
+        at >= 0 &&
+        (at === 0 || flag === '--data-urlencode') &&
+        v.text.slice(at + 1) !== '-'
+      )
+        checkReadPath(glued(v, v.text.slice(at + 1)), ctx, `curl ${flag}`)
+    } else if (CURL_FORM.has(flag)) {
+      form = true
+      const m = /^[^=]*=[@<](.*?)(;.*)?$/s.exec(v.text)
+      if (flag !== '--form-string' && m && m[1] !== '-')
+        checkReadPath(glued(v, m[1]), ctx, `curl ${flag}`)
+    } else if (flag === '--upload-file') {
+      upload = true
+      if (v.text !== '-') checkReadPath(v, ctx, 'curl --upload-file')
+    } else if (flag === '--url') urls.push(v)
     else if (flag === '--header') {
       if (
         METHOD_OVERRIDE.test(v.text) ||
@@ -913,6 +977,7 @@ function checkWget(args, ctx) {
       } else if (flag === '--post-file' || flag === '--body-file') {
         posted = true
         b.opaque = true
+        checkReadPath(v, ctx, `wget ${flag}`)
       } else if (flag === '--execute' || flag === '--input-file')
         no(`wget ${flag} can change the request out of sight`)
       else if (flag === '--header' && METHOD_OVERRIDE.test(v.text))
@@ -996,6 +1061,8 @@ function checkGit(args, ctx, gitEnv) {
       ctx.pushConfigWrite = true
     return
   }
+  if (sub === 'credential' || sub.startsWith('credential-'))
+    no(`git ${sub} prints stored credentials`)
   if (sub === 'send-pack' || sub === 'http-push')
     no(`git ${sub} pushes refs past the push rules`)
   if (sub === 'subtree' && rest.some(a => a.text === 'push'))
@@ -1095,22 +1162,267 @@ function checkPush(args, dir, ctx, flagged) {
   }
 }
 
+// --------------------------------------------------------------- reads --
+//
+// #2547: a worker could read a file outside the repository, or a secret
+// inside it, and post it through an allowed route (`-F body=@/etc/passwd`,
+// `env > body.md` then `-F body=@body.md`). Reads by the common readers,
+// `<` redirects and request payload files must resolve (realpath of the
+// nearest existing parent, against the command's own cwd) inside the
+// root, and must not be secret-shaped or gitignored.
+
+const READERS = new Set(
+  (
+    'cat head tail less more grep egrep fgrep rg sed awk gawk xxd od ' +
+    'strings base64 cp tac nl hexdump'
+  ).split(' ')
+)
+/** Their first operand is a pattern or script unless -e/-f gives one. */
+const PATTERN_FIRST = new Set([
+  'grep',
+  'egrep',
+  'fgrep',
+  'rg',
+  'sed',
+  'awk',
+  'gawk',
+])
+/** Gitignored, but build and dependency output a worker reads. */
+const IGNORED_OK = new Set([
+  'node_modules',
+  'dist',
+  'coverage',
+  '.vite',
+  'playwright-report',
+  'test-results',
+])
+const SECRET_NAME = /^\.env(\..*)?$|\.(pem|key)$/i
+
+/** realpath of the nearest existing parent, with the rest appended. */
+function realish(p) {
+  const rest = []
+  let cur = p
+  for (;;) {
+    try {
+      return join(realpathSync(cur), ...rest)
+    } catch {
+      const parent = dirname(cur)
+      if (parent === cur) return p
+      rest.unshift(basename(cur))
+      cur = parent
+    }
+  }
+}
+
+const within = (root, p) => p === root || p.startsWith(root + sep)
+
+/** GIT_* from the session would point git elsewhere (#2534). */
+function cleanGitEnv() {
+  const env = { ...process.env }
+  for (const k of Object.keys(env)) if (/^GIT_/i.test(k)) delete env[k]
+  return env
+}
+
+function gitAt(root, args) {
+  return spawnSync('git', ['-C', root, ...args], {
+    encoding: 'utf8',
+    env: cleanGitEnv(),
+    stdio: ['ignore', 'pipe', 'ignore'],
+    timeout: 3000,
+  })
+}
+
+const secretShaped = rel =>
+  rel.split(sep).some(p => p === '.git' || SECRET_NAME.test(p))
+const ignoredOk = rel => rel.split(sep).some(p => IGNORED_OK.has(p))
+const shown = t => t.replace(/\u0000/g, '$…')
+
+/**
+ * One path a command reads. Refuses, or returns the real paths it names
+ * (several for a glob).
+ */
+function checkReadPath(word, ctx, how) {
+  const t = word.text
+  if (t === '/dev/null') return []
+  if (word.dynamic || t.includes('\u0000'))
+    no(`${how} reads ${shown(t)}, a path built at run time`)
+  if (t.startsWith('~')) no(`${how} reads ${t}, outside the repository`)
+  if (/\{[^}]*(,|\.\.)[^}]*\}/.test(t))
+    no(`${how} reads ${t}, a brace expansion`)
+  if (ctx.cwd === null && !isAbsolute(t))
+    no(`${how} reads ${t} from a directory the guard cannot tell`)
+  if (/[*?[]/.test(t)) {
+    if (/(^|\/)[.[][^/]*[*?[]/.test(t))
+      no(`${how} reads ${t}, a glob that can match ..`)
+    if (typeof fs.globSync !== 'function')
+      no(`${how} reads ${t}, a glob the guard cannot expand`)
+    const matches = fs.globSync(t, { cwd: ctx.cwd })
+    if (matches.length) return matches.map(m => checkOnePath(m, t, ctx, how))
+  }
+  return [checkOnePath(t, t, ctx, how)]
+}
+
+function checkOnePath(p, shownAs, ctx, how) {
+  const abs = resolve(ctx.cwd ?? ctx.root, p)
+  const real = realish(abs)
+  if (!within(ctx.root, real))
+    no(`${how} reads ${shownAs}, outside the repository`)
+  for (const q of [abs, real])
+    if (within(ctx.root, q) && secretShaped(relative(ctx.root, q)))
+      no(`${how} reads ${shownAs}, a secret-shaped file`)
+  const rel = relative(ctx.root, real)
+  if (
+    rel &&
+    !ignoredOk(rel) &&
+    gitAt(ctx.root, ['check-ignore', '-q', '--', rel]).status === 0
+  )
+    no(`${how} reads ${shownAs}, a gitignored file`)
+  return real
+}
+
+/** A directory read recursively: nothing secret or ignored inside it. */
+function checkReadDir(real, shownAs, ctx, how) {
+  let isDir = false
+  try {
+    isDir = statSync(real).isDirectory()
+  } catch {
+    return
+  }
+  if (!isDir) return
+  if (within(real, ctx.root))
+    no(`${how} reads ${shownAs} recursively, which includes .git`)
+  const rel = relative(ctx.root, real)
+  if (ignoredOk(rel)) return
+  const list = args => {
+    const r = gitAt(ctx.root, ['ls-files', '-z', ...args, '--', rel])
+    if (r.status !== 0)
+      no(`${how} reads ${shownAs}, which the guard cannot list`)
+    return r.stdout.split('\u0000').filter(Boolean)
+  }
+  if (list(['-co', '--exclude-standard']).some(f => secretShaped(f)))
+    no(`${how} reads ${shownAs} recursively, which holds a secret-shaped file`)
+  const ignored = list(['-o', '-i', '--exclude-standard', '--directory'])
+  if (ignored.some(f => !ignoredOk(f.replace(/\/$/, ''))))
+    no(`${how} reads ${shownAs} recursively, which holds gitignored files`)
+}
+
+/** The files a reader reads, by its flags. */
+function checkReader(name, args, ctx) {
+  const how = name
+  const patterned = PATTERN_FIRST.has(name)
+  const grepLike = /^(e|f)?grep$/.test(name)
+  let recursive = name === 'rg'
+  let patternGiven = false
+  const files = []
+  const positional = []
+  for (let k = 0; k < args.length; k++) {
+    const w = args[k]
+    const t = w.text
+    if (t === '--') {
+      positional.push(...args.slice(k + 1))
+      break
+    }
+    if (!t.startsWith('-') || t === '-') {
+      positional.push(w)
+      continue
+    }
+    if (t.startsWith('--')) {
+      const eq = t.indexOf('=')
+      const flag = eq < 0 ? t : t.slice(0, eq)
+      const val = eq < 0 ? null : glued(w, t.slice(eq + 1))
+      if (patterned && /^--(regexp|expression)$/.test(flag)) {
+        patternGiven = true
+        if (!val) k++
+      } else if (patterned && flag === '--file') {
+        patternGiven = true
+        const v = val ?? args[++k]
+        if (v) files.push(v)
+      } else {
+        if (/^--(recursive|dereference-recursive)$/.test(flag)) recursive = true
+        if (val && /[/~\u0000]|^\./.test(val.text)) files.push(val)
+      }
+      continue
+    }
+    for (let j = 1; j < t.length; j++) {
+      const ch = t[j]
+      if ((grepLike && /[rR]/.test(ch)) || (name === 'cp' && /[rRa]/.test(ch)))
+        recursive = true
+      if (patterned && (ch === 'e' || ch === 'f')) {
+        patternGiven = true
+        const rest = t.slice(j + 1)
+        const v = rest ? glued(w, rest) : args[++k]
+        if (ch === 'f' && v) files.push(v)
+        break
+      }
+      if (j === 1 && /[/~\u0000]|^\./.test(t.slice(2))) {
+        files.push(glued(w, t.slice(2)))
+        break
+      }
+    }
+  }
+  let operands = positional
+  if (patterned && !patternGiven) operands = positional.slice(1)
+  if (name === 'cp' && operands.length > 1) operands = operands.slice(0, -1)
+  files.push(...operands)
+  if (recursive && !operands.length && (name === 'rg' || grepLike))
+    files.push(new Word('.'))
+  for (const f of files) {
+    const reals = checkReadPath(f, ctx, how)
+    if (recursive) for (const r of reals) checkReadDir(r, f.text, ctx, how)
+  }
+}
+
+// ---------------------------------------------------------- environment --
+
+const SECRET_VAR =
+  /\$\{?[A-Za-z_]*(TOKEN|KEY|SECRET|PASSWORD|PASSWD|CREDENTIALS?)\w*\}?|\$\{!/i
+
+/** Text-level: secret-shaped variables and /proc environ. */
+function checkEnvText(raw) {
+  if (/\/proc\/\S*environ/.test(raw))
+    no('reading /proc/*/environ prints the environment')
+  const m = SECRET_VAR.exec(raw)
+  if (m) no(`${m[0]} expands a secret-shaped variable`)
+}
+
+/** Commands that print the environment. */
+function checkEnvDump(name, cmd, args) {
+  const texts = args.map(a => a.text)
+  const flagsOnly = texts.every(t => t.startsWith('-') || t.startsWith('+'))
+  if (name === 'env' && cmd.bare)
+    no('env with no command prints the environment')
+  if (name === 'printenv') no('printenv prints the environment')
+  if (name === 'set' && !texts.length) no('bare set prints every variable')
+  if (name === 'export' && (flagsOnly || texts.includes('-p')))
+    no('export -p prints the environment')
+  if (
+    (name === 'declare' || name === 'typeset') &&
+    (flagsOnly || texts.some(t => /^-\w*p/.test(t)))
+  )
+    no(`${name} -p prints variables`)
+  if (name === 'compgen' && texts.some(t => /^-(\w*[ve]|A)/.test(t)))
+    no('compgen lists variables')
+}
+
 // ------------------------------------------------------------------ api --
 
 /**
  * Check a Bash command against the allow list. `cwd` is the session's
  * directory (hook input). Returns a reason to refuse, or null.
  */
-export function checkAllowList(command, { cwd, home } = {}) {
+export function checkAllowList(command, { cwd, home, root } = {}) {
   const raw = String(command).normalize('NFKC')
+  const start = realish(resolve(cwd ?? process.cwd()))
   const ctx = {
     raw,
-    cwd: cwd ?? process.cwd(),
+    cwd: start,
+    root: realish(resolve(root ?? start)),
     home: home ?? process.env.HOME ?? null,
     gitConfigTouched:
       /\.git\/config\b/.test(raw) && /(^|[^\w-])git\s/.test(raw),
   }
   try {
+    checkEnvText(raw)
     checkLine(raw, ctx)
   } catch (e) {
     if (e instanceof Refusal) return e.message

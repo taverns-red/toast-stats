@@ -257,7 +257,10 @@ function main() {
     if (reason) refuse(reason)
     let denied
     try {
-      denied = checkAllowList(cmd, { cwd: input?.cwd })
+      denied = checkAllowList(cmd, {
+        cwd: input?.cwd,
+        root: process.env.CLAUDE_PROJECT_DIR || input?.cwd,
+      })
     } catch (e) {
       denied = `the guard failed while checking the command (${e?.message})`
     }
