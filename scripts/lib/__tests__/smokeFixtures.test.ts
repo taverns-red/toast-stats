@@ -69,7 +69,19 @@ describe('dateRoles', () => {
       prev: '2026-11-06',
       ago14: '2026-10-24',
       yearEnds: ['2025-06-30', '2026-06-30'],
+      monthEnds: ['2025-06-30', '2026-06-30'],
     })
+  })
+
+  it('keeps only month-ends within the last 26 months', () => {
+    const r = dateRoles('2026-11-07', [
+      '2024-08-31',
+      '2024-09-30',
+      '2026-09-30',
+      '2026-10-15',
+      '2026-11-07',
+    ])
+    expect(r.monthEnds).toEqual(['2024-09-30', '2026-09-30'])
   })
 
   it('takes the newest date on or before 14 days back', () => {
@@ -115,7 +127,11 @@ describe('expandManifest', () => {
     prev: '2026-11-06',
     ago14: null,
     yearEnds: ['2025-06-30', '2026-06-30'],
+    monthEnds: ['2026-09-30'],
     py: ['2025-2026', '2026-2027'],
+    allDistrict: ['02', '61'],
+    shard: ['00', '01'],
+    region: ['05', 'unassigned'],
   }
   const manifest = (paths: Manifest['paths']): Manifest => ({
     origin: ORIGIN,
@@ -175,6 +191,27 @@ describe('expandManifest', () => {
         optional: false,
         copyFrom: 'frontend/e2e/fixtures/b.pmtiles',
       },
+    ])
+  })
+
+  it('expands the rest of the placeholders the shards need', () => {
+    const out = expandManifest(
+      manifest([
+        { path: 'time-series/district_{allDistrict}/{pyCurrent}.json' },
+        { path: 'config/club-district-history/{shard}.json' },
+        { path: 'snapshots/{date}/clubs-by-region/{region}.json' },
+        { path: 'snapshots/{monthEnd}/all-districts-rankings.json' },
+      ]),
+      vars
+    )
+    expect(out.map(e => e.path)).toEqual([
+      'time-series/district_02/2026-2027.json',
+      'time-series/district_61/2026-2027.json',
+      'config/club-district-history/00.json',
+      'config/club-district-history/01.json',
+      'snapshots/2026-11-07/clubs-by-region/05.json',
+      'snapshots/2026-11-07/clubs-by-region/unassigned.json',
+      'snapshots/2026-09-30/all-districts-rankings.json',
     ])
   })
 
@@ -384,6 +421,60 @@ describe('refreshFixtures', () => {
     })
     expect(report.ok).toBe(false)
     expect(report.failures.join('\n')).toMatch(/things\/a\.json.*ECONNRESET/)
+  })
+
+  it('resolves {allDistrict}, {shard} and {region} from the CDN, and only when used', async () => {
+    const calls: string[] = []
+    const objects = {
+      ...world,
+      'v1/rankings.json': json({
+        rankings: [{ districtId: '02' }, { districtId: '61' }],
+      }),
+      'config/club-district-history/index.json': json({
+        shards: ['00', '01'],
+      }),
+      'snapshots/2026-11-07/region-rollups.json': json({
+        regions: { '05': {}, '06': {} },
+      }),
+      'time-series/district_02/2026-2027.json': json({ n: 1 }),
+      'time-series/district_61/2026-2027.json': json({ n: 1 }),
+      'config/club-district-history/00.json': json({ n: 1 }),
+      'config/club-district-history/01.json': json({ n: 1 }),
+      'snapshots/2026-11-07/clubs-by-region/05.json': json({ n: 1 }),
+      'snapshots/2026-11-07/clubs-by-region/06.json': json({ n: 1 }),
+      'snapshots/2026-11-07/clubs-by-region/unassigned.json': json({ n: 1 }),
+    }
+    const without = await refreshFixtures({
+      manifest: manifest([{ path: 'things/a.json' }]),
+      outDir: out,
+      fetchFn: fetchFrom(world, calls),
+      rules,
+    })
+    expect(without.ok).toBe(true)
+    expect(calls).not.toContain('v1/rankings.json')
+
+    const report = await refreshFixtures({
+      manifest: manifest([
+        { path: 'v1/rankings.json' },
+        { path: 'config/club-district-history/index.json' },
+        { path: 'snapshots/{date}/region-rollups.json' },
+        { path: 'time-series/district_{allDistrict}/{pyCurrent}.json' },
+        { path: 'config/club-district-history/{shard}.json' },
+        { path: 'snapshots/{date}/clubs-by-region/{region}.json' },
+      ]),
+      outDir: out,
+      fetchFn: fetchFrom(objects),
+      rules,
+    })
+    expect(report.failures).toEqual([])
+    const index = JSON.parse(readFileSync(join(out, '_index.json'), 'utf8'))
+    expect(Object.keys(index)).toEqual(
+      expect.arrayContaining([
+        'time-series/district_02/2026-2027.json',
+        'config/club-district-history/01.json',
+        'snapshots/2026-11-07/clubs-by-region/unassigned.json',
+      ])
+    )
   })
 
   it('lists a path with no schema as unvalidated, not as a failure', async () => {
