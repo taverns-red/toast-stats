@@ -3,8 +3,11 @@
  * the total transfer of `/district/:id` and sits ~7 KB over it. The trophy
  * case's `competitive-awards.json` (~17 KB) feeds a card below the first
  * screen, so it must not be requested until that card nears the viewport
- * (the same latch the predecessor panel uses, #2427). The slot stays
- * reserved while held (#1105), so layout does not move.
+ * (the same latch the predecessor panel uses, #2427). While held, each slot
+ * shows a static placeholder at the skeleton's geometry (no pulse, no
+ * "Loading" label, aria-hidden), so layout does not move and the page's
+ * "nothing pending" gates stay honest. A card whose data is already cached
+ * is wanted at once, with no viewport signal.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -33,7 +36,10 @@ Object.defineProperty(global, 'localStorage', {
   writable: true,
 })
 
-import { fetchCdnCompetitiveAwards } from '../../services/cdn'
+import {
+  fetchCdnCompetitiveAwards,
+  fetchCdnRankingsForDateExact,
+} from '../../services/cdn'
 
 type IoCallback = ConstructorParameters<typeof IntersectionObserver>[0]
 
@@ -105,11 +111,9 @@ vi.mock('../../services/cdn', async importOriginal => ({
   // snapshots/{date}/competitive-awards.json.
   fetchCdnCompetitiveAwards: vi.fn().mockResolvedValue(null),
   // config/district-snapshot-index.json (club-growth milestones).
-  fetchCdnSnapshotIndex: vi
-    .fn()
-    .mockRejectedValue(
-      new Error('CDN fetch failed: 404 for config/district-snapshot-index.json')
-    ),
+  fetchCdnSnapshotIndex: vi.fn().mockResolvedValue({
+    D42: ['2026-09-30', '2026-11-01', '2026-11-07'],
+  }),
   // config/district-region-history.json: the region comes from the rankings row.
   fetchCdnDistrictRegionHistory: vi.fn().mockResolvedValue(null),
 }))
@@ -130,7 +134,7 @@ vi.mock('../../hooks/useDistricts', () => ({
 
 vi.mock('../../hooks/useDistrictData', () => ({
   useDistrictCachedDates: vi.fn(() => ({
-    data: { dates: ['2024-10-15', '2024-10-01'] },
+    data: { dates: ['2026-11-07', '2026-11-01'] },
     isLoading: false,
     error: null,
   })),
@@ -198,10 +202,11 @@ vi.mock('../../components/YearOverYearComparison', () => ({
   YearOverYearComparison: () => <div data-testid="year-over-year-comparison" />,
 }))
 
-function renderHub() {
-  const queryClient = new QueryClient({
+function renderHub(
+  queryClient: QueryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
+) {
   return render(
     <QueryClientProvider client={queryClient}>
       <ProgramYearProvider>
@@ -240,4 +245,45 @@ describe('DistrictDetailPage — first-load bytes (#2513)', () => {
     await act(async () => fireNear('trophy-case-slot'))
     await waitFor(() => expect(fetchCdnCompetitiveAwards).toHaveBeenCalled())
   })
+
+  async function settle() {
+    await waitFor(() => {
+      expect(
+        screen.getByRole('navigation', { name: /district subviews/i })
+      ).toBeInTheDocument()
+    })
+    // Let every first-load query settle before asserting the absence.
+    await new Promise(r => setTimeout(r, 50))
+  }
+
+  const checkpointCalls = () =>
+    vi
+      .mocked(fetchCdnRankingsForDateExact)
+      .mock.calls.filter(([d]) => d === '2026-09-30')
+
+  it('holds the club growth checkpoint files until its card nears the viewport', async () => {
+    renderHub()
+    await settle()
+    expect(checkpointCalls()).toHaveLength(0)
+
+    await act(async () => fireNear('growth-slot'))
+    await waitFor(() => expect(checkpointCalls().length).toBeGreaterThan(0))
+  })
+
+  it.each([
+    ['trophy-case-slot', 'distinguished-trophy-held'],
+    ['growth-slot', 'club-growth-held'],
+  ])(
+    'holds %s with a static placeholder: aria-hidden, no pulse, no Loading label',
+    async (slotId, heldId) => {
+      renderHub()
+      await settle()
+      const slot = screen.getByTestId(slotId)
+      const held = slot.querySelector(`[data-testid="${heldId}"]`)
+      expect(held).not.toBeNull()
+      expect(held).toHaveAttribute('aria-hidden', 'true')
+      expect(slot.querySelector('.animate-pulse')).toBeNull()
+      expect(slot.querySelector('[aria-label^="Loading"]')).toBeNull()
+    }
+  )
 })
