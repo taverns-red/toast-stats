@@ -357,6 +357,20 @@ describe('curl and wget to GitHub: same rules (#2528)', () => {
     `wget --post-data='{"ref":"main"}' ${API}/actions/workflows/x/dispatches`,
     `wget --method=PATCH --body-data='{"base":"main"}' ${API}/pulls/1`,
     `wget -e method=PUT ${API}/pulls/1/merge`,
+    // adversarial review: one curl, several requests, each with its method
+    `curl -X PUT ${API}/pulls/1/merge --next -X GET ${API}/pulls/1`,
+    `curl -X PUT ${API}/pulls/1/merge -: ${API}/pulls/1`,
+    // a request line whose path is not the URL's
+    `curl -X POST --request-target /${R}/actions/workflows/x/dispatches ${API}/pulls -d '{"ref":"main"}'`,
+    // URL globbing expands to several paths
+    `curl -X POST '${API}/{pulls,actions/workflows/x/dispatches}' -d '{"ref":"main"}'`,
+    `curl -X POST '${API}/issues/[1-2]/comments' -d '{"body":"x"}'`,
+    // wget takes unambiguous abbreviations of long options
+    `wget --meth=PUT ${API}/pulls/1/merge`,
+    `wget --post-d='{"ref":"main"}' ${API}/actions/workflows/x/dispatches`,
+    // other HTTP clients to GitHub
+    `http PUT ${API}/pulls/1/merge`,
+    `xh put ${API}/pulls/1/merge`,
   ])('refuses %s', command => expectRefused(command))
 
   it.each([
@@ -467,6 +481,14 @@ describe('git push: only the session’s own branch (#2528)', () => {
     expectRefused(`git -C ${onMain.dir} push origin HEAD`, repo.dir)
     expectRefused(`cd ${onMain.dir} && git push`, repo.dir)
     expectRefused(`cd "$D" && git push`, repo.dir)
+  })
+
+  it('does not let a cd inside $(...) move the outer command', () => {
+    expectAllowed(
+      `echo $(cd ${onMain.dir}) && git push -u origin ${BRANCH}`,
+      repo.dir
+    )
+    expectRefused(`echo $(cd ${repo.dir}) && git push`, onMain.dir)
   })
 
   it('refuses any push outside a git repository', () => {
