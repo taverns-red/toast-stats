@@ -26,7 +26,11 @@ import {
 type Handler = (route: FakeRoute) => Promise<void>
 
 interface FakeRoute {
-  request: () => { url: () => string; method: () => string }
+  request: () => {
+    url: () => string
+    method: () => string
+    headers: () => Record<string, string>
+  }
   fulfill: ReturnType<typeof vi.fn>
   abort: ReturnType<typeof vi.fn>
   continue: ReturnType<typeof vi.fn>
@@ -34,8 +38,16 @@ interface FakeRoute {
   fallback: ReturnType<typeof vi.fn>
 }
 
-const route = (url: string, method = 'GET'): FakeRoute => ({
-  request: () => ({ url: () => url, method: () => method }),
+const route = (
+  url: string,
+  method = 'GET',
+  headers: Record<string, string> = {}
+): FakeRoute => ({
+  request: () => ({
+    url: () => url,
+    method: () => method,
+    headers: () => headers,
+  }),
   fulfill: vi.fn().mockResolvedValue(undefined),
   abort: vi.fn().mockResolvedValue(undefined),
   continue: vi.fn().mockResolvedValue(undefined),
@@ -67,9 +79,10 @@ function fakeContext(): { ctx: BrowserContext; state: FakeContext } {
 async function request(
   state: FakeContext,
   url: string,
-  method = 'GET'
+  method = 'GET',
+  headers: Record<string, string> = {}
 ): Promise<FakeRoute> {
-  const r = route(url, method)
+  const r = route(url, method, headers)
   const i = state.matchers.findIndex(m => m(new URL(url)))
   if (i >= 0) await state.handlers[i]?.(r)
   return r
@@ -160,6 +173,69 @@ describe('installCdnFixtures: serving', () => {
     const r = await request(state, 'https://cdn.taverns.red/v1/latest.json')
     expect(r.fulfill).not.toHaveBeenCalled()
     expect(r.abort).not.toHaveBeenCalled()
+  })
+})
+
+describe('installCdnFixtures: range requests', () => {
+  // The basemap archive is read with Range requests (MapLibre + PMTiles).
+  const fulfilled = (r: FakeRoute) =>
+    r.fulfill.mock.calls[0]?.[0] as {
+      status: number
+      body: Buffer
+      headers: Record<string, string>
+    }
+
+  it('answers a byte range with a 206 and a content-range', async () => {
+    const { ctx, state } = fakeContext()
+    await installCdnFixtures(ctx, { dir })
+    const r = await request(
+      state,
+      `${CDN_STAGING_ORIGIN}/v1/latest.json`,
+      'GET',
+      { range: 'bytes=2-5' }
+    )
+    const arg = fulfilled(r)
+    expect(arg.status).toBe(206)
+    expect(arg.body.toString()).toBe('late')
+    expect(arg.headers['content-range']).toBe('bytes 2-5/26')
+    expect(arg.headers['accept-ranges']).toBe('bytes')
+  })
+
+  it('reads an open-ended range to the end and clamps one past it', async () => {
+    const { ctx, state } = fakeContext()
+    await installCdnFixtures(ctx, { dir })
+    const open = fulfilled(
+      await request(state, `${CDN_STAGING_ORIGIN}/v1/latest.json`, 'GET', {
+        range: 'bytes=20-',
+      })
+    )
+    expect(open.body.toString()).toBe('":"d"}')
+    const past = fulfilled(
+      await request(state, `${CDN_STAGING_ORIGIN}/v1/latest.json`, 'GET', {
+        range: 'bytes=20-9999',
+      })
+    )
+    expect(past.headers['content-range']).toBe('bytes 20-25/26')
+  })
+
+  it('answers 416 for a range that starts past the end', async () => {
+    const { ctx, state } = fakeContext()
+    await installCdnFixtures(ctx, { dir })
+    const r = await request(
+      state,
+      `${CDN_STAGING_ORIGIN}/v1/latest.json`,
+      'GET',
+      { range: 'bytes=500-600' }
+    )
+    expect(fulfilled(r).status).toBe(416)
+  })
+
+  it('serves the whole body when the request has no range', async () => {
+    const { ctx, state } = fakeContext()
+    await installCdnFixtures(ctx, { dir })
+    const r = await request(state, `${CDN_STAGING_ORIGIN}/v1/latest.json`)
+    expect(fulfilled(r).status).toBe(200)
+    expect(fulfilled(r).headers['accept-ranges']).toBe('bytes')
   })
 })
 
