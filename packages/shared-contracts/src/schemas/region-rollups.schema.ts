@@ -29,6 +29,7 @@
  */
 
 import { z } from 'zod'
+import { DistinguishedCountsSchema } from './distinguished-counts.schema.js'
 import { OfficerTrainingDistributionSchema } from './time-series.schema.js'
 
 const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -84,6 +85,14 @@ export const RegionRollupFiguresSchema = z
         notDistinguished: Count,
       })
       .strict(),
+    /**
+     * Confirmed / provisional Distinguished clubs (#2553): confirmed is the
+     * headline, provisional is never added in. See
+     * `distinguished-counts.schema.ts`. null = a district in the block
+     * carried neither TI's 'Club Distinguished Status' nor an April renewal
+     * count; absent = a file written before the field existed.
+     */
+    distinguishedCounts: DistinguishedCountsSchema.nullable().optional(),
     /** Clubs meeting each requirement; null = column not collected. */
     compliance: z
       .object({

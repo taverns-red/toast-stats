@@ -358,6 +358,7 @@ export {
 // Confirmed / provisional Distinguished counts per level (#2553)
 export {
   DistinguishedCountsSchema,
+  DistinguishedTierCountSchema,
   type DistinguishedCounts,
   type DistinguishedTierCount,
 } from './schemas/distinguished-counts.schema.js'
