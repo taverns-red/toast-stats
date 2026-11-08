@@ -2,8 +2,8 @@ import {
   test,
   expect,
   devices,
-  type Browser,
   type BrowserContext,
+  type NewFixtureContext,
   type Page,
 } from './fixtures/test'
 
@@ -101,12 +101,12 @@ const LANDSCAPE_ROUTES = [
 const FIRST_DATA_MAX = 200
 
 async function open(
-  browser: Browser,
+  newContext: NewFixtureContext,
   browserName: string,
   p: Profile,
   theme: 'light' | 'dark'
 ): Promise<{ ctx: BrowserContext; page: Page; insets: Insets }> {
-  const ctx = await browser.newContext({
+  const ctx = await newContext({
     viewport: p.viewport,
     userAgent: p.ua,
     deviceScaleFactor: 2,
@@ -170,10 +170,15 @@ test('the viewport opts in to safe-area insets (viewport-fit=cover)', async ({
 for (const theme of ['light', 'dark'] as const) {
   for (const p of PORTRAIT_PROFILES) {
     test(`portrait ${p.name} (${theme}): bars and sheet clear the notch and home indicator`, async ({
-      browser,
+      newFixtureContext,
       browserName,
     }) => {
-      const { ctx, page, insets } = await open(browser, browserName, p, theme)
+      const { ctx, page, insets } = await open(
+        newFixtureContext,
+        browserName,
+        p,
+        theme
+      )
       try {
         await load(page, '/district/61')
         const vh = await page.evaluate(() => window.innerHeight)
@@ -222,10 +227,15 @@ for (const theme of ['light', 'dark'] as const) {
   for (const p of LANDSCAPE_PROFILES) {
     for (const r of LANDSCAPE_ROUTES) {
       test(`landscape ${p.name} ${r.path} (${theme}): phone chrome, clear of the notch, first data ≤ ${FIRST_DATA_MAX}px`, async ({
-        browser,
+        newFixtureContext,
         browserName,
       }) => {
-        const { ctx, page, insets } = await open(browser, browserName, p, theme)
+        const { ctx, page, insets } = await open(
+          newFixtureContext,
+          browserName,
+          p,
+          theme
+        )
         try {
           await load(page, r.path)
           const { vw, vh, scrollW } = await page.evaluate(() => ({

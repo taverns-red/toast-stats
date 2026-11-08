@@ -1,4 +1,5 @@
 import { test, expect, type Page } from './fixtures/test'
+import { fixtureFetch } from './helpers/cdnFixtures'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -192,7 +193,7 @@ const SPONSORS_FIXTURE = JSON.parse(
 
 const injectSponsors = (page: Page) =>
   page.route('**/district_61_reports.json', async route => {
-    const res = await route.fetch()
+    const res = await fixtureFetch(route)
     const body = await res.json()
     body.sections = {
       ...(body.sections ?? {}),

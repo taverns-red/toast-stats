@@ -79,6 +79,12 @@ on:
       - 'scripts/serve-preview-locally.sh'
       - 'scripts/preview-local-server.mjs'
       - 'scripts/check-deployed-files.mjs'
+      # the fixtures the shards read instead of live cdn-staging (#2545)
+      - 'scripts/refresh-smoke-fixtures.ts'
+      - 'scripts/lib/smokeFixtures.ts'
+      - 'scripts/lib/cdnSchemaCanary.ts' # its schema pass reuses these
+      - 'scripts/lib/zodIssueSummary.ts'
+      - 'scripts/smoke-fixtures.manifest.json'
 
 # Cancel an in-flight preview build when a new push to the same PR
 # arrives — only the latest commit gets a deploy. A `labeled` event for any
@@ -132,6 +138,8 @@ jobs:
       heavy: ${{ steps.deploy.outputs.heavy }}
       # The build the channel got, by id (#2544).
       dist-artifact-id: ${{ steps.dist.outputs.artifact-id }}
+      # The CDN objects the shards read, recorded once this run (#2545).
+      fixtures-artifact-id: ${{ steps.fixtures.outputs.artifact-id }}
     env:
       # 'true' -> run the Playwright smoke and the Lighthouse mobile gate.
       # Drafts skip them unless labeled `preview-smoke` (#2101).
@@ -281,6 +289,26 @@ jobs:
           msg="$msg preview-smoke label to run it (#2101)."
           echo "::notice::$msg"
           echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+
+      # The shards read these instead of live cdn-staging (#2545): staging was
+      # 73% of the project's CDN cache lookups, mostly previews and CI. One
+      # read per run replaces every shard page load. The same read checks
+      # each object against the schema the app parses it with, so staging
+      # drift fails here, with the path, before any shard starts. After the
+      # deploy, so a drift never costs the channel.
+      - name: Record the CDN fixtures the shards read, and schema-check them
+        if: env.HEAVY_SMOKE == 'true'
+        run: npx tsx scripts/refresh-smoke-fixtures.ts --out "$RUNNER_TEMP/smoke-fixtures"
+
+      - name: Hand the CDN fixtures to the shards
+        if: env.HEAVY_SMOKE == 'true'
+        id: fixtures
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-fixtures-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/smoke-fixtures
+          retention-days: 2
+          if-no-files-found: error
 
   # Playwright smoke shards (#2453), on the preview job's build served inside
   # the runner (#2544), not the deployed channel. Each entry
@@ -720,6 +748,15 @@ jobs:
           path: frontend/dist
           merge-multiple: true
 
+      # By id, like the build: "Re-run failed jobs" re-runs a shard without
+      # re-running `preview` (#2545).
+      - name: Download the CDN fixtures
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.preview.outputs.fixtures-artifact-id }}
+          path: ${{ runner.temp }}/smoke-fixtures
+          merge-multiple: true
+
       - name: Install firebase-tools
         run: npm install -g firebase-tools
 
@@ -736,6 +773,10 @@ jobs:
           PROJECT: ${{ matrix.project }}
           SPLIT: ${{ matrix.split }}
           WORKERS: ${{ matrix.workers }}
+          # The CDN answers from here, never from cdn-staging: a path with no
+          # fixture, or a request that reaches the network, fails the test
+          # (frontend/e2e/helpers/cdnFixtures.ts, #2545).
+          SMOKE_FIXTURES_DIR: ${{ runner.temp }}/smoke-fixtures
         run: |
           set -euo pipefail
           specs="$SPECS"

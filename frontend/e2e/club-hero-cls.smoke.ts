@@ -145,7 +145,7 @@ async function load(
   // Hold the club's analytics so the hero-first render paints for certain.
   await page.route('**/analytics/district_*_analytics.json', async route => {
     await new Promise(r => setTimeout(r, ANALYTICS_HOLD_MS))
-    await route.continue()
+    await route.fallback()
   })
   await page.goto(path, { waitUntil: 'networkidle', timeout: 90_000 })
   // The full render: the status chips replaced their placeholder.

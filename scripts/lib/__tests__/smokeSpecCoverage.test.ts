@@ -26,6 +26,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { parse } from 'yaml'
 import {
+  PREVIEW_ONLY_SPECS,
   PROJECTS,
   REMAINING,
   namedSmokeSpecs,
@@ -105,6 +106,59 @@ jobs:
         ['e2e/one.smoke.ts']
       )
     ).toEqual(['e2e/a.smoke.ts', 'e2e/z.smoke.ts'])
+  })
+
+  describe('preview-only specs (#2545)', () => {
+    // staging.smoke.ts reads the deployed CDN live with request.get: in a
+    // shard, where the CDN is a fixture, that read would go unguarded.
+    it('names staging.smoke as the spec that runs only on the real channel', () => {
+      expect(PREVIEW_ONLY_SPECS).toEqual(['e2e/staging.smoke.ts'])
+    })
+
+    it('keeps them out of what the @remaining shards run', () => {
+      expect(
+        unlistedSmokeSpecs(['e2e/a.smoke.ts', 'e2e/staging.smoke.ts'], [])
+      ).toEqual(['e2e/a.smoke.ts'])
+    })
+
+    it('does not ask a shard to run them', () => {
+      const shards: SmokeShard[] = [{ shard: 'rest', specs: REMAINING }]
+      expect(
+        shardCoverageProblems(shards, [
+          'e2e/a.smoke.ts',
+          'e2e/staging.smoke.ts',
+        ])
+      ).toEqual([])
+    })
+
+    it('fails when a shard names one', () => {
+      const shards: SmokeShard[] = [
+        { shard: 'one', specs: 'e2e/staging.smoke.ts' },
+        { shard: 'rest', specs: REMAINING },
+      ]
+      expect(
+        shardCoverageProblems(shards, [
+          'e2e/a.smoke.ts',
+          'e2e/staging.smoke.ts',
+        ]).join('\n')
+      ).toMatch(/staging\.smoke\.ts.*only on the real preview/)
+    })
+
+    it('is run by the real-preview job and by no shard of the real workflow', () => {
+      const text = fs.readFileSync(PR_PREVIEW, 'utf8')
+      const shardSpecs = smokeShards(text).flatMap(s => s.specs.split(/\s+/))
+      const remaining = unlistedSmokeSpecs(
+        toSpecPaths(
+          fs.readdirSync(E2E, { recursive: true, encoding: 'utf-8' })
+        ),
+        namedSmokeSpecs(text)
+      )
+      for (const spec of PREVIEW_ONLY_SPECS) {
+        expect(shardSpecs).not.toContain(spec)
+        expect(remaining).not.toContain(spec)
+        expect(text).toContain(spec)
+      }
+    })
   })
 
   it('maps e2e-relative files to spec paths, smoke specs only', () => {
@@ -289,6 +343,8 @@ describe('the smoke shard job (#2453)', () => {
       PROJECT: '${{ matrix.project }}',
       SPLIT: '${{ matrix.split }}',
       WORKERS: '${{ matrix.workers }}',
+      // The CDN fixtures the shards read instead of live staging (#2545).
+      SMOKE_FIXTURES_DIR: '${{ runner.temp }}/smoke-fixtures',
     })
     expect(run?.run ?? '').not.toContain('${{')
   })

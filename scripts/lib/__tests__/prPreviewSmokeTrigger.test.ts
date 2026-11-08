@@ -110,13 +110,18 @@ describe('pr-preview.yml: heavy smoke runs once the PR is ready (#2101)', () => 
 
   it('runs nothing heavy in the deploy job itself (#2453)', () => {
     // The smokes and Lighthouse run as their own jobs, gated on the deploy
-    // job's `heavy` output. Only the skipped-report follows the comment.
+    // job's `heavy` output. Only the skipped-report and the CDN fixtures the
+    // shards read (#2545, no browser) follow the comment.
     const stickyAt = steps.findIndex(s =>
       s.uses?.startsWith('marocchino/sticky-pull-request-comment')
     )
     expect(stickyAt).toBeGreaterThan(0)
     const after = steps.slice(stickyAt + 1).map(s => s.name)
-    expect(after).toEqual(['Report heavy smoke skipped (draft PR)'])
+    expect(after).toEqual([
+      'Report heavy smoke skipped (draft PR)',
+      'Record the CDN fixtures the shards read, and schema-check them',
+      'Hand the CDN fixtures to the shards',
+    ])
     for (const s of steps) {
       expect(s.run ?? '').not.toMatch(/playwright/)
       expect(s.uses ?? '').not.toMatch(/lighthouse/)

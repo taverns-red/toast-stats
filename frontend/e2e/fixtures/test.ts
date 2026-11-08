@@ -1,10 +1,18 @@
 import {
   test as base,
   expect,
+  type Browser,
+  type BrowserContext,
   type Request,
   type Response,
 } from '@playwright/test'
 import { describeErrorResponse } from '../helpers/errorResponses'
+import {
+  describeFixtureProblems,
+  installCdnFixtures,
+  settled,
+  type CdnFixtureTally,
+} from '../helpers/cdnFixtures'
 
 /* Shared smoke fixture (#1979): no smoke may send a real GA hit.
  *
@@ -39,14 +47,84 @@ export function isGaCollect(url: URL): boolean {
   return url.pathname.endsWith('/g/collect')
 }
 
+/** `browser.newContext()` with the CDN fixture on the new context. */
+export type NewFixtureContext = (
+  options?: Parameters<Browser['newContext']>[0]
+) => Promise<BrowserContext>
+
 interface GaFixtures {
   /** GA collect requests the stub answered, in arrival order. */
   gaCollect: Request[]
   /** Responses with status >= 400, as `status host/path` (#2248). */
   errorResponses: string[]
+  /** The CDN fixture's tally, or null when it is off (#2545). */
+  cdnFixtures: CdnFixtureTally | null
+  /** `browser.newContext()` with the CDN fixture on it (#2545). */
+  newFixtureContext: NewFixtureContext
+}
+
+/** The fixture's env: a directory to read, or a file to record into. */
+function fixtureEnv() {
+  const dir = process.env['SMOKE_FIXTURES_DIR']
+  const recordFile = process.env['SMOKE_FIXTURES_RECORD_FILE']
+  return { dir, recordFile, on: Boolean(dir || recordFile) }
 }
 
 export const test = base.extend<GaFixtures>({
+  /* PR Preview shards read recorded CDN fixtures, not live cdn-staging
+   * (#2545). Off unless SMOKE_FIXTURES_DIR is set (only the shard step sets
+   * it), so staging.smoke on the real channel, the wire-cost test and prod
+   * sweeps stay live. SMOKE_FIXTURES_RECORD_FILE instead records every CDN
+   * path a run requests (scripts/smoke-fixtures-uncovered.ts reads it).
+   * A path with no fixture, or any response that came off the network, fails
+   * the test at teardown. */
+  cdnFixtures: [
+    async ({ context }, use, testInfo) => {
+      const { dir, recordFile, on } = fixtureEnv()
+      if (!on) {
+        await use(null)
+        return
+      }
+      const tally = await installCdnFixtures(context, { dir, recordFile })
+      await use(tally)
+      await settled(tally)
+      const problems = describeFixtureProblems(tally)
+      if (problems) {
+        await testInfo.attach('cdn-fixture-problems', {
+          body: problems,
+          contentType: 'text/plain',
+        })
+      }
+      expect(problems, 'CDN fixtures (#2545)').toBeNull()
+    },
+    { auto: true },
+  ],
+  /* A spec that needs a context of its own (a colour scheme, a device, safe
+   * area insets) calls this, not `browser.newContext()`: a context made by
+   * hand never meets the auto fixture above, so its CDN reads would go live
+   * and unchecked (#2545). Same install and same teardown check; with the
+   * fixture off it is `browser.newContext()`. The lint test
+   * smokes-do-not-bypass-cdn-fixtures.test.ts fails a bare newContext. */
+  newFixtureContext: async ({ browser }, use, testInfo) => {
+    const { dir, recordFile, on } = fixtureEnv()
+    const made: CdnFixtureTally[] = []
+    await use(async options => {
+      const ctx = await browser.newContext(options)
+      if (on) made.push(await installCdnFixtures(ctx, { dir, recordFile }))
+      return ctx
+    })
+    for (const tally of made) {
+      await settled(tally)
+      const problems = describeFixtureProblems(tally)
+      if (problems) {
+        await testInfo.attach('cdn-fixture-problems', {
+          body: problems,
+          contentType: 'text/plain',
+        })
+      }
+      expect(problems, 'CDN fixtures (#2545)').toBeNull()
+    }
+  },
   /* Diagnostics only (#2248): record every response with status >= 400 and
    * attach the list to the test result, so a failure names the URL that
    * failed (the reporter prints a text attachment under the failing test).
