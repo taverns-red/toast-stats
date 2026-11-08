@@ -15,6 +15,7 @@ import {
   fixtureFetch,
   fixturePath,
   installCdnFixtures,
+  settled,
   type CdnFixtureTally,
 } from '../../../e2e/helpers/cdnFixtures'
 
@@ -292,6 +293,31 @@ describe('installCdnFixtures: misses and the zero-live guarantee', () => {
       await cb(stubbed)
     }
     expect(tally.leaks).toEqual(['v1/dates.json'])
+  })
+
+  it('records a leak whose server address is still pending when the test ends (settled)', async () => {
+    const { ctx, state } = fakeContext()
+    const tally = await installCdnFixtures(ctx, { dir })
+    let answer: (v: { ipAddress: string; port: number }) => void = () => {}
+    const slow = {
+      url: () => `${CDN_STAGING_ORIGIN}/v1/dates.json`,
+      serverAddr: () =>
+        new Promise<{ ipAddress: string; port: number }>(r => (answer = r)),
+    }
+    // Playwright does not await an event handler: fire it and move on.
+    for (const cb of state.listeners['response'] ?? []) void cb(slow)
+    expect(tally.leaks).toEqual([])
+
+    const done = settled(tally)
+    setTimeout(() => answer({ ipAddress: '34.1.1.1', port: 443 }), 20)
+    await done
+    expect(tally.leaks).toEqual(['v1/dates.json'])
+  })
+
+  it('settles at once when nothing is pending', async () => {
+    const { ctx } = fakeContext()
+    const tally = await installCdnFixtures(ctx, { dir })
+    await expect(settled(tally)).resolves.toBeUndefined()
   })
 })
 

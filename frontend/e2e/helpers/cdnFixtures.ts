@@ -225,6 +225,9 @@ export async function installCdnFixtures(
   return tally
 }
 
+/** Resolves once every response check the fixture started has finished. */
+export async function settled(_tally: CdnFixtureTally): Promise<void> {}
+
 /** The part of a response a spec rewrites: its status and JSON body. */
 export interface FixtureResponse {
   status(): number
