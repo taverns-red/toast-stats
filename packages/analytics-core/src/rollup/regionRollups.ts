@@ -81,6 +81,10 @@ export interface RegionRollupClub {
   readonly officerListOnTime?: boolean
   /** The district-performance `Charter Date/Suspend Date` cell. */
   readonly charterSuspendField?: string
+  /** District-performance "Apr. Ren." count (#2553); undefined = absent. */
+  readonly aprilRenewals?: number
+  /** TI's 'Club Distinguished Status' (#2553); undefined = absent. */
+  readonly distinguishedStatus?: string
   /** `Off. Trained Round 1` / `Round 2`, 0–7 (#2296); undefined = absent. */
   readonly officersTrainedRound1?: number
   readonly officersTrainedRound2?: number
