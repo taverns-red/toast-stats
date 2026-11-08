@@ -1,0 +1,195 @@
+{
+  "origin": "https://cdn-staging.taverns.red",
+  "districts": ["61", "86", "201", "113", "80", "83", "122"],
+  "paths": [
+    {
+      "path": "v1/latest.json"
+    },
+    {
+      "path": "v1/dates.json"
+    },
+    {
+      "path": "v1/rankings.json"
+    },
+    {
+      "path": "v1/global-history.json"
+    },
+    {
+      "path": "v1/rank-history/{district}.json",
+      "optional": true
+    },
+    {
+      "path": "snapshots/{date}/all-districts-rankings.json"
+    },
+    {
+      "path": "snapshots/{prev}/all-districts-rankings.json",
+      "optional": true
+    },
+    {
+      "path": "snapshots/{yearEnd}/all-districts-rankings.json",
+      "optional": true
+    },
+    {
+      "path": "snapshots/{monthEnd}/all-districts-rankings.json",
+      "optional": true
+    },
+    {
+      "path": "snapshots/{date}/competitive-awards.json"
+    },
+    {
+      "path": "snapshots/{yearEnd}/competitive-awards.json",
+      "optional": true
+    },
+    {
+      "path": "snapshots/{date}/district_{district}.json",
+      "districts": ["61", "86"]
+    },
+    {
+      "path": "snapshots/{date}/district_{district}.json",
+      "optional": true
+    },
+    {
+      "path": "snapshots/{prev}/district_{district}.json",
+      "districts": ["61", "80", "86"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/{ago14}/district_{district}.json",
+      "districts": ["86"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/{yearEnd}/district_{district}.json",
+      "districts": ["01", "52", "61", "100", "113"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/{monthEnd}/district_{district}.json",
+      "districts": ["61"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/{date}/analytics/district_{district}_analytics.json",
+      "districts": ["61", "86"]
+    },
+    {
+      "path": "snapshots/{date}/analytics/district_{district}_analytics.json",
+      "optional": true
+    },
+    {
+      "path": "snapshots/{ago14}/analytics/district_{district}_analytics.json",
+      "districts": ["86"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/{yearEnd}/analytics/district_{district}_analytics.json",
+      "districts": ["61", "122"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/2026-03-31/analytics/district_{district}_analytics.json",
+      "districts": ["61"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/{date}/analytics/district_{district}_performance-targets.json",
+      "optional": true
+    },
+    {
+      "path": "snapshots/{yearEnd}/analytics/district_{district}_performance-targets.json",
+      "districts": ["61", "122"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/{date}/district_{district}_reports.json",
+      "optional": true
+    },
+    {
+      "path": "snapshots/{ago14}/district_{district}_reports.json",
+      "districts": ["86"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/{yearEnd}/district_{district}_reports.json",
+      "districts": ["61", "122"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/2026-03-31/district_{district}_reports.json",
+      "districts": ["61"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/{date}/global-totals.json"
+    },
+    {
+      "path": "snapshots/{date}/global-club-race.json"
+    },
+    {
+      "path": "snapshots/{date}/region-rollups.json"
+    },
+    {
+      "path": "snapshots/{date}/reports-rollups.json"
+    },
+    {
+      "path": "snapshots/{date}/suspended-clubs.json"
+    },
+    {
+      "path": "snapshots/{date}/meeting-times.json"
+    },
+    {
+      "path": "snapshots/{date}/clubs-by-region/world.json"
+    },
+    {
+      "path": "snapshots/{date}/clubs-by-region/{region}.json"
+    },
+    {
+      "path": "time-series/district_{district}/index-metadata.json"
+    },
+    {
+      "path": "time-series/district_{district}/{py}.json",
+      "optional": true
+    },
+    {
+      "path": "time-series/district_{allDistrict}/{pyCurrent}.json",
+      "optional": true
+    },
+    {
+      "path": "time-series/regions/{pyCurrent}.json",
+      "optional": true
+    },
+    {
+      "path": "config/district-snapshot-index.json"
+    },
+    {
+      "path": "config/district-region-history.json",
+      "optional": true
+    },
+    {
+      "path": "config/club-district-history/index.json"
+    },
+    {
+      "path": "config/club-district-history/{shard}.json"
+    },
+    {
+      "path": "config/charter-cohort-survival/district_{district}.json",
+      "optional": true
+    },
+    {
+      "path": "config/charter-cohort-survival/region_{region}.json",
+      "optional": true
+    },
+    {
+      "path": "derived/education-rollup/index.json",
+      "optional": true
+    },
+    {
+      "path": "derived/education-rollup/{pyCurrent}.json",
+      "optional": true
+    },
+    {
+      "path": "basemap/protomaps-v4/world-z0-14-20261015.pmtiles",
+      "copyFrom": "frontend/e2e/fixtures/basemap-z0.pmtiles"
+    }
+  ]
+}
