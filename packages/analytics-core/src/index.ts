@@ -112,6 +112,23 @@ export type {
   MultiYearTrendDirection,
 } from './analytics/index.js'
 
+// Confirmed / provisional Distinguished counts per level (#2553)
+export {
+  classifyClubDistinguished,
+  computeDistinguishedCounts,
+  distinguishedCountBasis,
+  tallyDistinguished,
+  addDistinguishedCounts,
+  emptyDistinguishedCounts,
+  type AreaDistinguishedCounts,
+  type ClubDistinguishedClassification,
+  type CountedDistinguishedLevel,
+  type DistinguishedClassificationInput,
+  type DistinguishedClassificationOptions,
+  type DistinguishedCountBasis,
+  type DivisionDistinguishedCounts,
+} from './analytics/distinguishedCounts.js'
+
 // Goal Achievement Timeline primitive (#621)
 export {
   goalsMetAtDate,
