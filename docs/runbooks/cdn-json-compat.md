@@ -40,6 +40,8 @@ A breaking finding passes only when both hold at check time:
 - the PR has the `db-breaking-approved` label, read live from the REST API (not the event payload);
 - the latest `labeled` event for that label, from `GET /repos/{owner}/{repo}/issues/{pr}/events` (every page), has `actor.login` equal to `rservant` **and** `performed_via_github_app` equal to `null` (#2520).
 
+Label names compare case-insensitively everywhere: the current labels and both `labeled` and `unlabeled` events, with both sides lower-cased. GitHub treats label names that way, but an event keeps the spelling used when it happened. The latest `labeled` or `unlabeled` event for the label decides. If it's a removal, the override is revoked, so a removal spelled `DB-Breaking-Approved` can't be skipped in favour of an earlier approval (red-table#911).
+
 ### Why `performed_via_github_app` must be `null`
 
 Cloud sessions act as `rservant`, so the actor alone can't tell Ron from an agent. The events API records which GitHub app, if any, performed each event ([Labeled Issue Event schema](https://docs.github.com/en/rest/issues/events?apiVersion=2022-11-28#list-issue-events): `performed_via_github_app` is required, `null` or a GitHub app object). Ron applying the label in the web UI gives `null`. A cloud session's event carries the Claude app object. So only a direct labeling counts.
