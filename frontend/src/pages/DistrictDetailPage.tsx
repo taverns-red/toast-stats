@@ -330,9 +330,10 @@ const DistrictDetailPageInner: React.FC = () => {
   const snapshotDateSettled = !isPendingCachedDates || !districtId
   // The file (~17 KB on the wire) feeds only the trophy case, which sits
   // below the first screen: hold the read until its slot nears the viewport
-  // (#2513), the latch the predecessor panel uses. The slot stays reserved
-  // while held (below), so nothing shifts. Without IntersectionObserver the
-  // read is never held.
+  // (#2513), the latch the predecessor panel uses. While held the slot is an
+  // empty marker (no placeholder), the way that panel's is; the section
+  // grows once it nears, 600px before it can be seen, so no visible content
+  // moves. Without IntersectionObserver the read is never held.
   const [trophySlot, setTrophySlot] = React.useState<HTMLElement | null>(null)
   const trophyNearViewport = useNearViewport(trophySlot)
   const awardsWanted =
@@ -344,7 +345,7 @@ const DistrictDetailPageInner: React.FC = () => {
   const competitiveAwards = competitiveAwardsQuery.data
   // Held (disabled) counts as loading, so the trophy-case slot stays reserved.
   const isLoadingCompetitiveAwards =
-    competitiveAwardsQuery.isLoading || !snapshotDateSettled || !awardsWanted
+    competitiveAwardsQuery.isLoading || !snapshotDateSettled
   const distinguishedDistrictStatus = React.useMemo(() => {
     if (!districtId || !competitiveAwards?.distinguishedDistrict) return null
     return competitiveAwards.distinguishedDistrict[districtId] ?? null
@@ -878,38 +879,34 @@ const DistrictDetailPageInner: React.FC = () => {
                     back to the URL-synced selection keeps the checklist honest
                     about the year being DISPLAYED rather than reverting to the
                     legacy five-gate shape by omission. */}
-                <div
-                  ref={setTrophySlot}
-                  data-testid="trophy-case-slot"
-                  /* Held: keep the reserved height but paint nothing, so a
-                     pulsing placeholder never waits below the fold (#2513). */
-                  style={awardsWanted ? undefined : { visibility: 'hidden' }}
-                >
-                  <DistinguishedDistrictTrophyCase
-                    status={distinguishedDistrictStatus}
-                    isLoading={isLoadingCompetitiveAwards}
-                    programYear={
-                      (effectiveProgramYear ?? selectedProgramYear).label
-                    }
-                    ranking={distinguishedRankingInputs}
-                    clubStrengthQualifies={clubStrengthResult?.qualifies}
-                    clubStrengthGrowth={clubStrengthResult?.growthPercent}
-                    leadershipExcellenceQualifies={
-                      leadershipExcellenceResult?.qualifies
-                    }
-                    leadershipExcellenceYears={
-                      leadershipExcellenceResult?.consecutiveYears
-                    }
-                    leadershipExcellenceOnTrack={
-                      leadershipExcellenceResult?.onTrack
-                    }
-                    educationTrainingQualifies={
-                      officerAwardsResult?.educationTraining?.qualifies
-                    }
-                    clubGrowthQualifies={
-                      officerAwardsResult?.clubGrowth?.qualifies
-                    }
-                  />
+                <div ref={setTrophySlot} data-testid="trophy-case-slot">
+                  {awardsWanted && (
+                    <DistinguishedDistrictTrophyCase
+                      status={distinguishedDistrictStatus}
+                      isLoading={isLoadingCompetitiveAwards}
+                      programYear={
+                        (effectiveProgramYear ?? selectedProgramYear).label
+                      }
+                      ranking={distinguishedRankingInputs}
+                      clubStrengthQualifies={clubStrengthResult?.qualifies}
+                      clubStrengthGrowth={clubStrengthResult?.growthPercent}
+                      leadershipExcellenceQualifies={
+                        leadershipExcellenceResult?.qualifies
+                      }
+                      leadershipExcellenceYears={
+                        leadershipExcellenceResult?.consecutiveYears
+                      }
+                      leadershipExcellenceOnTrack={
+                        leadershipExcellenceResult?.onTrack
+                      }
+                      educationTrainingQualifies={
+                        officerAwardsResult?.educationTraining?.qualifies
+                      }
+                      clubGrowthQualifies={
+                        officerAwardsResult?.clubGrowth?.qualifies
+                      }
+                    />
+                  )}
                 </div>
 
                 {/* District Club Growth Achievement (#1476). The card owns the
@@ -920,19 +917,18 @@ const DistrictDetailPageInner: React.FC = () => {
                     total comes from the rankings row already fetched above;
                     each settled checkpoint comes from its own dated snapshot
                     via the hook. */}
-                <div
-                  ref={setGrowthSlot}
-                  style={growthWanted ? undefined : { visibility: 'hidden' }}
-                >
-                  <ClubGrowthAchievementCard
-                    programYear={
-                      (effectiveProgramYear ?? selectedProgramYear).label
-                    }
-                    asOfDate={effectiveEndDate ?? undefined}
-                    checkpointReads={clubGrowthCheckpoints}
-                    isLoading={isLoadingClubGrowth}
-                    toDateCount={districtRanking?.newCharteredClubs ?? null}
-                  />
+                <div ref={setGrowthSlot}>
+                  {growthWanted && (
+                    <ClubGrowthAchievementCard
+                      programYear={
+                        (effectiveProgramYear ?? selectedProgramYear).label
+                      }
+                      asOfDate={effectiveEndDate ?? undefined}
+                      checkpointReads={clubGrowthCheckpoints}
+                      isLoading={isLoadingClubGrowth}
+                      toDateCount={districtRanking?.newCharteredClubs ?? null}
+                    />
+                  )}
                 </div>
 
                 {/* Notable dates (#551) */}
