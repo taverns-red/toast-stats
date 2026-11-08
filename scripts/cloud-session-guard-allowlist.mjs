@@ -260,6 +260,7 @@ const WRAPPERS = {
   timeout: new Set(['-s', '--signal', '-k', '--kill-after']),
 }
 const FANOUT = new Set(['xargs', 'parallel', 'find', 'watch'])
+const OTHER_HTTP = new Set(['http', 'https', 'httpie', 'xh', 'xhs'])
 
 const base = t => t.slice(t.lastIndexOf('/') + 1)
 const mentionsGuarded = t =>
@@ -321,7 +322,11 @@ function checkLine(src, ctx, depth = 0) {
       no(`the command could not be parsed (${e.message})`)
     return
   }
-  for (const inner of parsed.nested) checkLine(inner, ctx, depth + 1)
+  for (const inner of parsed.nested) {
+    const cwd = ctx.cwd
+    checkLine(inner, ctx, depth + 1)
+    ctx.cwd = cwd
+  }
   for (const seg of parsed.segments) checkSegment(seg, ctx, depth)
 }
 
@@ -378,6 +383,8 @@ function checkSegment(words, ctx, depth) {
       no(`${name} reading code from stdin cannot be checked`)
     return
   }
+  if (OTHER_HTTP.has(name) && texts.some(t => /github\.com/i.test(t)))
+    no(`${name} to GitHub is not on the cloud allow list; use gh api`)
   if (name === 'gh') return checkGh(args)
   if (name === 'curl') return checkCurl(args, ctx)
   if (name === 'wget') return checkWget(args, ctx)
@@ -759,6 +766,8 @@ function checkHttp(tool, method, urls, b, ctx, rcFiles) {
     if (!github) continue
     if (rcExists(ctx, rcFiles))
       no(`${tool} to GitHub with a ${tool}rc that could change the request`)
+    if (tool === 'curl' && /[{}[\]]/.test(u.text) && !/^(GET|HEAD)$/.test(m))
+      no('curl URL globbing turns one URL into several')
     if (host !== 'api.github.com') {
       if (m === 'GET' || m === 'HEAD') continue
       no(`${tool} ${m} to ${host} is not on the cloud allow list`)
@@ -804,6 +813,8 @@ function checkCurl(args, ctx) {
     if (t.startsWith('--')) {
       const eq = t.indexOf('=')
       const flag = eq < 0 ? t : t.slice(0, eq)
+      if (flag === '--next' || flag === '--request-target')
+        no(`curl ${flag} sends a request the guard cannot match to its URL`)
       if (flag === '--get') get = true
       else if (flag === '--head') head = true
       else if (/^--expand-/.test(flag))
@@ -819,6 +830,7 @@ function checkCurl(args, ctx) {
     }
     for (let j = 1; j < t.length; j++) {
       const ch = t[j]
+      if (ch === ':') no('curl -: starts a request with its own method')
       if (ch === 'G') get = true
       if (ch === 'I') head = true
       if (!CURL_VALUE_SHORT.has(ch)) continue
@@ -861,6 +873,26 @@ function checkCurl(args, ctx) {
 }
 
 const WGET_VALUE_SHORT = new Set([...'OoaieTtwPUQlADIRX'.split('')])
+/** Options that change the method, body or target. */
+const WGET_RISKY = [
+  'method',
+  'post-data',
+  'post-file',
+  'body-data',
+  'body-file',
+  'header',
+  'execute',
+  'input-file',
+]
+const WGET_VALUE_LONG = new Set([
+  ...WGET_RISKY,
+  'output-document',
+  'output-file',
+  'user-agent',
+  'tries',
+  'timeout',
+  'wait',
+])
 
 function checkWget(args, ctx) {
   let method = null
@@ -877,10 +909,9 @@ function checkWget(args, ctx) {
     if (t.startsWith('--')) {
       const eq = t.indexOf('=')
       const flag = eq < 0 ? t : t.slice(0, eq)
-      const valued =
-        /^--(method|post-data|post-file|body-data|body-file|header|execute|input-file|output-document|output-file|user-agent|tries|timeout|wait)$/.test(
-          flag
-        )
+      const valued = WGET_VALUE_LONG.has(flag.slice(2))
+      if (!valued && WGET_RISKY.some(n => n.startsWith(flag.slice(2))))
+        no(`wget ${flag} abbreviates an option that changes the request`)
       if (!valued) continue
       let v
       if (eq >= 0) {
