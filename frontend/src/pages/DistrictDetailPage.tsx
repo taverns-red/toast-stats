@@ -320,8 +320,10 @@ const DistrictDetailPageInner: React.FC = () => {
 
   // Fetch competitive awards / Distinguished District status (#332). This
   // query resolves separately from (and later than) the page-analytics query;
-  // its loading flag reserves the trophy-case slot to avoid the late-insert
-  // CLS shift (#1105 / Lesson 107).
+  // once it is read, its loading flag keeps the trophy-case skeleton in the
+  // slot to avoid the late-insert CLS shift (#1105 / Lesson 107). Before it is
+  // read at all (held, below) a still placeholder of the same height holds
+  // the slot.
   //
   // It waits for the date index to settle, so it reads the file once under
   // the date the page displays rather than `latest` first and the dated file
@@ -330,10 +332,10 @@ const DistrictDetailPageInner: React.FC = () => {
   const snapshotDateSettled = !isPendingCachedDates || !districtId
   // The file (~17 KB on the wire) feeds only the trophy case, which sits
   // below the first screen: hold the read until its slot nears the viewport
-  // (#2513), the latch the predecessor panel uses. While held the slot is an
-  // empty marker (no placeholder), the way that panel's is; the section
-  // grows once it nears, 600px before it can be seen, so no visible content
-  // moves. Without IntersectionObserver the read is never held.
+  // (#2513), the latch the predecessor panel uses. While held the card shows
+  // a still placeholder at the skeleton's height (no pulse, no "Loading"
+  // label, aria-hidden), so the page keeps its length and nothing shifts
+  // when the read lands. Without IntersectionObserver the read is never held.
   const [trophySlot, setTrophySlot] = React.useState<HTMLElement | null>(null)
   const trophyNearViewport = useNearViewport(trophySlot)
   const awardsWanted =
@@ -343,7 +345,8 @@ const DistrictDetailPageInner: React.FC = () => {
     { enabled: snapshotDateSettled && awardsWanted }
   )
   const competitiveAwards = competitiveAwardsQuery.data
-  // Held (disabled) counts as loading, so the trophy-case slot stays reserved.
+  // `isLoading` is false while the query is held (disabled); the card's own
+  // `held` prop covers that stretch.
   const isLoadingCompetitiveAwards =
     competitiveAwardsQuery.isLoading || !snapshotDateSettled
   const distinguishedDistrictStatus = React.useMemo(() => {
@@ -880,33 +883,32 @@ const DistrictDetailPageInner: React.FC = () => {
                     about the year being DISPLAYED rather than reverting to the
                     legacy five-gate shape by omission. */}
                 <div ref={setTrophySlot} data-testid="trophy-case-slot">
-                  {awardsWanted && (
-                    <DistinguishedDistrictTrophyCase
-                      status={distinguishedDistrictStatus}
-                      isLoading={isLoadingCompetitiveAwards}
-                      programYear={
-                        (effectiveProgramYear ?? selectedProgramYear).label
-                      }
-                      ranking={distinguishedRankingInputs}
-                      clubStrengthQualifies={clubStrengthResult?.qualifies}
-                      clubStrengthGrowth={clubStrengthResult?.growthPercent}
-                      leadershipExcellenceQualifies={
-                        leadershipExcellenceResult?.qualifies
-                      }
-                      leadershipExcellenceYears={
-                        leadershipExcellenceResult?.consecutiveYears
-                      }
-                      leadershipExcellenceOnTrack={
-                        leadershipExcellenceResult?.onTrack
-                      }
-                      educationTrainingQualifies={
-                        officerAwardsResult?.educationTraining?.qualifies
-                      }
-                      clubGrowthQualifies={
-                        officerAwardsResult?.clubGrowth?.qualifies
-                      }
-                    />
-                  )}
+                  <DistinguishedDistrictTrophyCase
+                    held={!awardsWanted}
+                    status={distinguishedDistrictStatus}
+                    isLoading={isLoadingCompetitiveAwards}
+                    programYear={
+                      (effectiveProgramYear ?? selectedProgramYear).label
+                    }
+                    ranking={distinguishedRankingInputs}
+                    clubStrengthQualifies={clubStrengthResult?.qualifies}
+                    clubStrengthGrowth={clubStrengthResult?.growthPercent}
+                    leadershipExcellenceQualifies={
+                      leadershipExcellenceResult?.qualifies
+                    }
+                    leadershipExcellenceYears={
+                      leadershipExcellenceResult?.consecutiveYears
+                    }
+                    leadershipExcellenceOnTrack={
+                      leadershipExcellenceResult?.onTrack
+                    }
+                    educationTrainingQualifies={
+                      officerAwardsResult?.educationTraining?.qualifies
+                    }
+                    clubGrowthQualifies={
+                      officerAwardsResult?.clubGrowth?.qualifies
+                    }
+                  />
                 </div>
 
                 {/* District Club Growth Achievement (#1476). The card owns the
@@ -917,18 +919,17 @@ const DistrictDetailPageInner: React.FC = () => {
                     total comes from the rankings row already fetched above;
                     each settled checkpoint comes from its own dated snapshot
                     via the hook. */}
-                <div ref={setGrowthSlot}>
-                  {growthWanted && (
-                    <ClubGrowthAchievementCard
-                      programYear={
-                        (effectiveProgramYear ?? selectedProgramYear).label
-                      }
-                      asOfDate={effectiveEndDate ?? undefined}
-                      checkpointReads={clubGrowthCheckpoints}
-                      isLoading={isLoadingClubGrowth}
-                      toDateCount={districtRanking?.newCharteredClubs ?? null}
-                    />
-                  )}
+                <div ref={setGrowthSlot} data-testid="growth-slot">
+                  <ClubGrowthAchievementCard
+                    held={!growthWanted}
+                    programYear={
+                      (effectiveProgramYear ?? selectedProgramYear).label
+                    }
+                    asOfDate={effectiveEndDate ?? undefined}
+                    checkpointReads={clubGrowthCheckpoints}
+                    isLoading={isLoadingClubGrowth}
+                    toDateCount={districtRanking?.newCharteredClubs ?? null}
+                  />
                 </div>
 
                 {/* Notable dates (#551) */}
