@@ -66,6 +66,8 @@ interface DistinguishedDistrictTrophyCaseProps {
    * slot in place.
    */
   isLoading?: boolean
+  /** The awards read is waiting for this card to near the viewport (#2513): show the still placeholder. */
+  held?: boolean
   /**
    * Program year ("YYYY-YYYY") the status belongs to. Drives which
    * prerequisite rows the checklist renders — TI's required gates change
@@ -329,34 +331,49 @@ const GapTile: React.FC<GapTileSpec> = ({
    that drifts the day a label changes. Only the data rows (pill, summary,
    per-tile label/value) become skeleton bars. `aria-hidden` keeps it out of
    the AT tree and the gap-tile test queries. */
-const SkeletonBar: React.FC<{ className: string }> = ({ className }) => (
-  <span
-    className={`block animate-pulse rounded bg-gray-200 theme-dark:bg-gray-700 ${className}`}
-  />
-)
+/** False inside a held placeholder (#2513): same geometry, no pulse. */
+const PulseContext = React.createContext(true)
 
-const TrophyCaseSkeleton: React.FC<{ programYear: string }> = ({
+const SkeletonBar: React.FC<{ className: string }> = ({ className }) => {
+  const pulse = React.useContext(PulseContext)
+  return (
+    <span
+      className={`block ${pulse ? 'animate-pulse ' : ''}rounded bg-gray-200 theme-dark:bg-gray-700 ${className}`}
+    />
+  )
+}
+
+/**
+ * The skeleton, also used still (`held`) while the awards read waits for the
+ * card to near the viewport (#2513): identical geometry so nothing shifts
+ * when it fills, but no pulse (nothing is loading yet) and its own test id.
+ */
+const TrophyCaseSkeleton: React.FC<{ programYear: string; held?: boolean }> = ({
   programYear,
+  held = false,
 }) => (
-  <div
-    className="redesign-panel"
-    aria-hidden="true"
-    data-testid="distinguished-trophy-skeleton"
-  >
-    <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-      <div>
-        <h2 className="text-lg font-bold text-gray-900 font-tm-headline">
-          Distinguished District Status
-        </h2>
-        <p className="mt-0.5 text-xs uppercase tracking-wide text-gray-500 font-tm-body">
-          Program Item 1490
-        </p>
+  <PulseContext.Provider value={!held}>
+    <div
+      className="redesign-panel"
+      aria-hidden="true"
+      data-testid={
+        held ? 'distinguished-trophy-held' : 'distinguished-trophy-skeleton'
+      }
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 font-tm-headline">
+            Distinguished District Status
+          </h2>
+          <p className="mt-0.5 text-xs uppercase tracking-wide text-gray-500 font-tm-body">
+            Program Item 1490
+          </p>
+        </div>
+        {/* Status pill placeholder — matches the px-4 py-2 text-base pill box. */}
+        <SkeletonBar className="h-10 w-48 rounded-full" />
       </div>
-      {/* Status pill placeholder — matches the px-4 py-2 text-base pill box. */}
-      <SkeletonBar className="h-10 w-48 rounded-full" />
-    </div>
 
-    {/* Prerequisite summary line — 44px touch-target floor like the real
+      {/* Prerequisite summary line — 44px touch-target floor like the real
         toggle/status row, so the reserved height tracks it — and the
         checklist below it (#1647). The loaded list is expanded whenever a
         prerequisite is unmet, the common case for most of the year, and its
@@ -365,27 +382,27 @@ const TrophyCaseSkeleton: React.FC<{ programYear: string }> = ({
         exactly like the loaded row at every column count. A district with
         every prerequisite met renders the list collapsed and settles upward —
         the same bounded, accepted residual as the gap tiles below. */}
-    <div className="mb-4">
-      <div className="flex items-center min-h-11">
-        <SkeletonBar className="h-4 w-44" />
+      <div className="mb-4">
+        <div className="flex items-center min-h-11">
+          <SkeletonBar className="h-4 w-44" />
+        </div>
+        <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
+          {requiredPrerequisitesForProgramYear(programYear).map(key => (
+            <li
+              key={key}
+              data-testid="distinguished-trophy-skeleton-prereq"
+              className="flex items-center gap-2 text-sm font-tm-body"
+            >
+              <span className="invisible font-bold">✗</span>
+              <span className="invisible font-medium">
+                {PREREQUISITE_LABELS[key]}
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
-      <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
-        {requiredPrerequisitesForProgramYear(programYear).map(key => (
-          <li
-            key={key}
-            data-testid="distinguished-trophy-skeleton-prereq"
-            className="flex items-center gap-2 text-sm font-tm-body"
-          >
-            <span className="invisible font-bold">✗</span>
-            <span className="invisible font-medium">
-              {PREREQUISITE_LABELS[key]}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
 
-    {/* Gap-to-next-tier: the dominant slot. Reuse the real section border +
+      {/* Gap-to-next-tier: the dominant slot. Reuse the real section border +
         3-up grid so the tiles land in place. We always reserve this block
         because it's the common loaded shape (any district below its top tier
         shows a gap). Districts that resolve with `nextTierGap == null` (already
@@ -393,57 +410,58 @@ const TrophyCaseSkeleton: React.FC<{ programYear: string }> = ({
         rare residual, far smaller than the original 0→full downward pop, and
         unknowable before the query lands. Same accepted-collapse tradeoff as
         AwardsRaceSection (#750). */}
-    <div className="border-t border-gray-200 pt-4">
-      <SkeletonBar className="h-4 w-40 mb-2" />
-      {/* The "prerequisites must be met" line the loaded panel shows above
+      <div className="border-t border-gray-200 pt-4">
+        <SkeletonBar className="h-4 w-40 mb-2" />
+        {/* The "prerequisites must be met" line the loaded panel shows above
           the tiles while any prerequisite is unmet (#1647). */}
-      <p
-        data-testid="distinguished-trophy-skeleton-warning"
-        className="invisible text-xs mb-2 font-tm-body"
-      >
-        ⚠ Prerequisites must be met before any tier can be earned
-      </p>
-      <div
-        data-testid="distinguished-trophy-skeleton-tiles"
-        className="grid grid-cols-1 md:grid-cols-3 gap-2"
-      >
-        {[0, 1, 2].map(i => (
-          <div
-            key={i}
-            className="rounded-md border border-gray-200 theme-dark:border-gray-700 px-3 py-2"
-          >
-            {/* label · value · "+x%" sub-item — the three rows a populated
+        <p
+          data-testid="distinguished-trophy-skeleton-warning"
+          className="invisible text-xs mb-2 font-tm-body"
+        >
+          ⚠ Prerequisites must be met before any tier can be earned
+        </p>
+        <div
+          data-testid="distinguished-trophy-skeleton-tiles"
+          className="grid grid-cols-1 md:grid-cols-3 gap-2"
+        >
+          {[0, 1, 2].map(i => (
+            <div
+              key={i}
+              className="rounded-md border border-gray-200 theme-dark:border-gray-700 px-3 py-2"
+            >
+              {/* label · value · "+x%" sub-item — the three rows a populated
                 GapTile renders in the common (count present, gate open)
                 case, so the tile height matches the loaded one. */}
-            <SkeletonBar className="h-3 w-20" />
-            <SkeletonBar className="mt-1.5 h-5 w-16" />
-            <SkeletonBar className="mt-1.5 h-3 w-10" />
-          </div>
-        ))}
-      </div>
-      {/* The loaded panel's md+ explainer line under the tiles (#2390). */}
-      <p className="invisible hidden md:block mt-2 text-xs font-tm-body">
-        Confirmed clubs only. The Distinguished Clubs card above counts clubs
-        qualifying today, so the two can differ.
-      </p>
-      {/* The every-tier table, shown from 768 up (#2426): the same table and
+              <SkeletonBar className="h-3 w-20" />
+              <SkeletonBar className="mt-1.5 h-5 w-16" />
+              <SkeletonBar className="mt-1.5 h-3 w-10" />
+            </div>
+          ))}
+        </div>
+        {/* The loaded panel's md+ explainer line under the tiles (#2390). */}
+        <p className="invisible hidden md:block mt-2 text-xs font-tm-body">
+          Confirmed clubs only. The Distinguished Clubs card above counts clubs
+          qualifying today, so the two can differ.
+        </p>
+        {/* The every-tier table, shown from 768 up (#2426): the same table and
           source line, invisible, so the panel does not grow when it lands.
           Phones fold it behind a toggle and reserve nothing. */}
-      <div
-        data-testid="distinguished-trophy-skeleton-tiers"
-        className="invisible hidden md:block mt-3 md:max-w-2xl"
-      >
-        <TierGapTable
-          tiers={districtTiersForProgramYear(programYear)}
-          rows={null}
-        />
-        <p className="mt-1 text-xs font-tm-body">
-          Thresholds: District Recognition Program (Item 1490), {programYear}{' '}
-          rules.
-        </p>
+        <div
+          data-testid="distinguished-trophy-skeleton-tiers"
+          className="invisible hidden md:block mt-3 md:max-w-2xl"
+        >
+          <TierGapTable
+            tiers={districtTiersForProgramYear(programYear)}
+            rows={null}
+          />
+          <p className="mt-1 text-xs font-tm-body">
+            Thresholds: District Recognition Program (Item 1490), {programYear}{' '}
+            rules.
+          </p>
+        </div>
       </div>
     </div>
-  </div>
+  </PulseContext.Provider>
 )
 
 export const DistinguishedDistrictTrophyCase: React.FC<
@@ -451,6 +469,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
 > = ({
   status,
   isLoading = false,
+  held = false,
   programYear,
   ranking,
   clubStrengthQualifies,
@@ -467,6 +486,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
   // Reserve the slot while the (separate, slower) competitive-awards query is
   // in flight so its late arrival doesn't shift the page below it (#1105 /
   // Lesson 107). Once it settles with genuinely no status, collapse to null.
+  if (held) return <TrophyCaseSkeleton programYear={programYear} held />
   if (!status)
     return isLoading ? <TrophyCaseSkeleton programYear={programYear} /> : null
 

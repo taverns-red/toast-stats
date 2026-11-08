@@ -142,14 +142,15 @@ function makeClient() {
 
 function renderMilestones(
   client: QueryClient = makeClient(),
-  districtId: string | undefined = '61'
+  districtId: string | undefined = '61',
+  options?: { enabled?: boolean }
 ) {
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
   return {
     client,
-    ...renderHook(() => useClubGrowthMilestones(districtId, PY_2026), {
+    ...renderHook(() => useClubGrowthMilestones(districtId, PY_2026, options), {
       wrapper,
     }),
   }
@@ -164,6 +165,29 @@ const marchOf = (
   result: ReturnType<typeof useClubGrowthMilestones>
 ): (typeof result.checkpoints)[number] =>
   result.checkpoints.find(c => c.id === 'march')!
+
+describe('useClubGrowthMilestones — held read (#2513)', () => {
+  it('requests no rankings file while enabled is false, then reads once enabled', async () => {
+    const client = makeClient()
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    const { result, rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) =>
+        useClubGrowthMilestones('61', PY_2026, { enabled }),
+      { wrapper, initialProps: { enabled: false } }
+    )
+
+    await waitFor(() => expect(mockedIndex).toHaveBeenCalled())
+    await new Promise(r => setTimeout(r, 30))
+    expect(mockedExact).not.toHaveBeenCalled()
+    expect(septemberOf(result.current).status).toBe('loading')
+
+    rerender({ enabled: true })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(mockedExact).toHaveBeenCalled()
+  })
+})
 
 describe('useClubGrowthMilestones — the checkpoint read (#1475)', () => {
   it('reads each checkpoint from the nearest-prior snapshot and surfaces its provenance', async () => {

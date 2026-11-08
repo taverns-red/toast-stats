@@ -19,10 +19,20 @@ async function loadAndScroll(page: Page, path: string): Promise<void> {
     .locator('[data-testid="district-hub-mobile"]:not(.district-hub--loading)')
     .waitFor({ state: 'visible', timeout: 30_000 })
   await page.evaluate(() => document.fonts.ready.then(() => undefined))
-  // The panel's gate runs when its slot nears the viewport.
-  await page.evaluate(() =>
-    window.scrollTo(0, document.documentElement.scrollHeight)
-  )
+  // The panel's gate runs when its slot nears the viewport. The trophy case
+  // and growth card above it hold their reads until they near the viewport
+  // too (#2513), so the page grows as the reader scrolls: keep going to the
+  // bottom until its height stops changing, as a reader's scroll would.
+  let lastHeight = -1
+  for (let i = 0; i < 10; i++) {
+    const height = await page.evaluate(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight)
+      return document.documentElement.scrollHeight
+    })
+    if (height === lastHeight) break
+    lastHeight = height
+    await page.waitForTimeout(700)
+  }
 }
 
 for (const scheme of ['light', 'dark'] as const) {

@@ -39,6 +39,23 @@
 # Coverage is the same as the single job's: every spec, both engines, the
 # same thresholds and retries. smokeSpecCoverage.test.ts fails if a spec, an
 # engine or one part of a split falls out of the matrix.
+#
+# Shards on a local build, the wire on the channel (#2544). In October 2026,
+# 275 of the 282 GiB Hosting served went to pr-* channels, mostly the smoke
+# shards loading the app from the channel. Now:
+#   preview        -> also uploads the frontend/dist it deploys, as an artifact
+#   smoke          -> the same shards, on that build served inside the runner,
+#                     less the one test that measures wire bytes
+#   lighthouse     -> unchanged: on the channel (Lantern models the transport;
+#                     the local server is HTTP/1.1, Hosting is h2/h3)
+#   preview-smoke  -> on the channel: every built file HEADed (a missing
+#                     chunk, font or glyph fails here), e2e/staging.smoke.ts
+#                     and the wire-cost test
+# The local server (scripts/serve-preview-locally.sh) is the Firebase Hosting
+# emulator on firebase.json's staging target, i.e. the channel's own headers,
+# rewrites and clean URLs, behind scripts/preview-local-server.mjs, which
+# compresses like Hosting (brotli quality 11). Data still comes from
+# cdn-staging. prPreviewLocalBuild.test.ts keeps this shape.
 
 name: PR Preview
 
@@ -58,6 +75,10 @@ on:
       # the catch-all smoke step runs them (#2141)
       - 'scripts/unlisted-smoke-specs.ts'
       - 'scripts/lib/smokeSpecCoverage.ts'
+      # the shards and Lighthouse serve the build with them (#2544)
+      - 'scripts/serve-preview-locally.sh'
+      - 'scripts/preview-local-server.mjs'
+      - 'scripts/check-deployed-files.mjs'
 
 # Cancel an in-flight preview build when a new push to the same PR
 # arrives — only the latest commit gets a deploy. A `labeled` event for any
@@ -74,6 +95,12 @@ concurrency:
     && github.event.label.name != 'preview-smoke'))
     && format('-label-{0}', github.run_id) || '' }}
   cancel-in-progress: true
+
+# The one smoke test that measures real wire bytes, header compression
+# included (district-survival's "fixed wire cost", #2061). The local shards
+# skip it by title; the real-preview job runs it (#2544).
+env:
+  PREVIEW_ONLY_GREP: fixed wire cost
 
 permissions:
   contents: read
@@ -103,6 +130,8 @@ jobs:
       expires: ${{ steps.deploy.outputs.expires }}
       # The smoke and Lighthouse jobs run only when this is 'true' (#2453).
       heavy: ${{ steps.deploy.outputs.heavy }}
+      # The build the channel got, by id (#2544).
+      dist-artifact-id: ${{ steps.dist.outputs.artifact-id }}
     env:
       # 'true' -> run the Playwright smoke and the Lighthouse mobile gate.
       # Drafts skip them unless labeled `preview-smoke` (#2101).
@@ -136,6 +165,19 @@ jobs:
           # back at https://storage.googleapis.com/toast-stats-data-staging
           # (still allowed in the CSP connect-src).
           VITE_CDN_BASE_URL: https://cdn-staging.taverns.red
+
+      # The exact bytes the channel gets (#2544): the smoke shards serve them
+      # locally, and the real-preview job checks each file is deployed. Read
+      # back by id (the `dist-artifact-id` output), so "Re-run failed jobs"
+      # on a shard, which does not re-run this job, still finds it.
+      - name: Upload the build for the local-build jobs
+        id: dist
+        uses: actions/upload-artifact@v7
+        with:
+          name: preview-dist-${{ github.run_id }}-${{ github.run_attempt }}
+          path: frontend/dist
+          retention-days: 1
+          if-no-files-found: error
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3
@@ -240,7 +282,8 @@ jobs:
           echo "::notice::$msg"
           echo "$msg" >> "$GITHUB_STEP_SUMMARY"
 
-  # Playwright smoke shards against the deployed preview (#2453). Each entry
+  # Playwright smoke shards (#2453), on the preview job's build served inside
+  # the runner (#2544), not the deployed channel. Each entry
   # below is one job: `specs` (paths, or @remaining), optional `project`
   # (one engine), `split` (`i/N` -> `--fully-parallel --shard=i/N`, so one
   # long spec spreads over N jobs) and `workers`. Grouping is by measured
@@ -264,8 +307,8 @@ jobs:
     permissions:
       contents: read
     env:
-      # Drive the actual deployed preview, not staging's default.
-      BASE_URL: ${{ needs.preview.outputs.url }}
+      # The deployed build, served by scripts/serve-preview-locally.sh (#2544).
+      BASE_URL: http://127.0.0.1:4173
     strategy:
       fail-fast: false
       matrix:
@@ -670,10 +713,23 @@ jobs:
       - name: Install Playwright browsers (chromium + webkit)
         run: npx playwright install --with-deps chromium webkit
 
+      - name: Download the preview build
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.preview.outputs.dist-artifact-id }}
+          path: frontend/dist
+          merge-multiple: true
+
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools
+
+      - name: Serve the build like its preview channel
+        run: scripts/serve-preview-locally.sh
+
       # One path per line or per space, no spaces in names (the contract
       # test checks): word-split on purpose. If @remaining has nothing left,
       # exit early: a bare `playwright test` would re-run every spec.
-      - name: Playwright smoke against preview
+      - name: Playwright smoke against the local build
         working-directory: frontend
         env:
           SPECS: ${{ matrix.specs }}
@@ -697,6 +753,8 @@ jobs:
             args+=(--fully-parallel "--shard=$SPLIT")
           fi
           if [ -n "$WORKERS" ]; then args+=("--workers=$WORKERS"); fi
+          # The wire-cost test runs on the channel instead (#2544).
+          args+=(--grep-invert "$PREVIEW_ONLY_GREP")
           # shellcheck disable=SC2086
           npx playwright test --config playwright.config.ts $specs "${args[@]}"
 
@@ -719,7 +777,8 @@ jobs:
   # desktop-only on `/` against localhost fixtures; this runs Lighthouse's
   # mobile profile (simulated 150 ms RTT / 1.6 Mbps / 4x CPU) on the five
   # #1830 routes against the deployed channel — real CSP, staging CDN data,
-  # real fonts. Assertions are `error` since 2026-10-19, after a green
+  # real fonts. It stays there (#2544): the local server is HTTP/1.1, and
+  # Lantern's HTTP/1.1 model read LCP 15-25% high (run 42494094590). Assertions are `error` since 2026-10-19, after a green
   # week at `warn` (recorded on #1830); see lighthouserc.mobile.js for
   # the per-route budgets (final since 2026-10-21, #1856).
   # One job per route (#2453): LHCI_ROUTE narrows the config to that route,
@@ -752,6 +811,88 @@ jobs:
           artifactName: lighthouse-results-${{ matrix.route }}
           temporaryPublicStorage: true
 
+  # The Playwright job on the deployed channel (#2544). The shards run on the
+  # same build served locally; this proves the channel itself serves it: the
+  # deploy uploaded every file, Hosting applies firebase.json, deep links
+  # rewrite, the CSP lets the app read cdn-staging, and no console error.
+  # e2e/staging.smoke.ts is the deployed-site smoke (it also runs against
+  # prod), Chromium only. The wire-cost test runs here too, in both engines
+  # as before, because it counts real header bytes.
+  preview-smoke:
+    name: Smoke (real preview channel)
+    needs: preview
+    if: needs.preview.outputs.heavy == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      BASE_URL: ${{ needs.preview.outputs.url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve the Playwright version
+        id: playwright
+        run: |
+          set -euo pipefail
+          version=$(npx playwright --version)
+          [[ "$version" =~ ^Version\ [0-9]+\.[0-9]+\.[0-9]+$ ]] \
+            || { echo "::error::unexpected playwright --version: $version"; exit 1; }
+          echo "version=${version#Version }" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-webkit-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install Playwright browsers (chromium + webkit)
+        run: npx playwright install --with-deps chromium webkit
+
+      # Every file of the deployed build, HEAD only (#2544): a font, glyph or
+      # lazy chunk missing from the deploy would pass staging.smoke.ts, since
+      # the SPA rewrite answers it with index.html.
+      - name: Download the preview build
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.preview.outputs.dist-artifact-id }}
+          path: frontend/dist
+          merge-multiple: true
+
+      - name: Every built file is deployed
+        run: node scripts/check-deployed-files.mjs
+
+      # Runs even when the file check failed, so one run shows every
+      # channel-side failure, not just the first.
+      - name: Playwright smoke against the deployed channel
+        if: ${{ !cancelled() }}
+        working-directory: frontend
+        run: npx playwright test --config playwright.config.ts e2e/staging.smoke.ts --project=smoke
+
+      - name: Playwright wire-cost test against the deployed channel
+        if: ${{ !cancelled() }}
+        working-directory: frontend
+        run: npx playwright test --config playwright.config.ts e2e/district-survival.smoke.ts --grep "$PREVIEW_ONLY_GREP"
+
+      - name: Upload Playwright results on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-results-preview-smoke-attempt-${{ github.run_attempt }}
+          path: frontend/test-results/
+          retention-days: 3
+          if-no-files-found: ignore
+
   # One verdict over every shard (#2453). A matrix reports one check per
   # shard; this job needs them all and is the single check to require if PR
   # Preview is ever made merge-gating (today CI Gate does not require it).
@@ -759,7 +900,7 @@ jobs:
   # deploy job itself was skipped (fork, Dependabot, closed PR, other label).
   verdict:
     name: PR Preview verdict
-    needs: [preview, smoke, lighthouse]
+    needs: [preview, smoke, lighthouse, preview-smoke]
     if: ${{ !cancelled() && needs.preview.result != 'skipped' }}
     runs-on: ubuntu-26.04
     timeout-minutes: 5
@@ -783,6 +924,7 @@ jobs:
           DEPLOY: ${{ needs.preview.result }}
           SMOKE: ${{ needs.smoke.result }}
           LIGHTHOUSE: ${{ needs.lighthouse.result }}
+          PREVIEW_SMOKE: ${{ needs.preview-smoke.result }}
         run: |
           set -euo pipefail
           api="repos/$REPO/actions/runs/$RUN_ID/attempts/$ATTEMPT"
@@ -792,7 +934,7 @@ jobs:
           fmt() { printf '%dm %02ds' $(( $1 / 60 )) $(( $1 % 60 )); }
           yes_no() { if [ "$1" -le "$2" ]; then echo yes; else echo no; fi; }
           if [ "$DEPLOY" = success ] && [ "$SMOKE" = success ] \
-            && [ "$LIGHTHOUSE" = success ]; then
+            && [ "$LIGHTHOUSE" = success ] && [ "$PREVIEW_SMOKE" = success ]; then
             result=passed
           else
             result=failed
@@ -845,32 +987,37 @@ jobs:
           header: pr-preview
           path: ${{ runner.temp }}/preview-comment.md
 
-      # R17: an explicit case for every value. Heavy run: the deploy and
-      # every smoke and Lighthouse shard must have succeeded. Draft run: the
-      # shards must have been skipped by design (#2101). Anything else fails.
+      # R17: an explicit case for every value. Heavy run: the deploy, every
+      # smoke and Lighthouse shard and the real-preview smoke must have
+      # succeeded. Draft run: all of them must have been skipped by design
+      # (#2101). Anything else fails.
       - name: Verdict
         env:
           DEPLOY: ${{ needs.preview.result }}
           SMOKE: ${{ needs.smoke.result }}
           LIGHTHOUSE: ${{ needs.lighthouse.result }}
+          PREVIEW_SMOKE: ${{ needs.preview-smoke.result }}
           HEAVY: ${{ needs.preview.outputs.heavy }}
         run: |
-          echo "deploy=$DEPLOY smoke=$SMOKE lighthouse=$LIGHTHOUSE heavy=$HEAVY"
+          echo "deploy=$DEPLOY smoke=$SMOKE lighthouse=$LIGHTHOUSE" \
+            "preview_smoke=$PREVIEW_SMOKE heavy=$HEAVY"
           if [ "$DEPLOY" != "success" ]; then
             echo "::error::the deploy job did not succeed ($DEPLOY)"
             exit 1
           fi
           case "$HEAVY" in
             true)
-              if [ "$SMOKE" != "success" ] || [ "$LIGHTHOUSE" != "success" ]; then
-                echo "::error::smoke: $SMOKE, lighthouse: $LIGHTHOUSE"
+              if [ "$SMOKE" != "success" ] || [ "$LIGHTHOUSE" != "success" ] \
+                || [ "$PREVIEW_SMOKE" != "success" ]; then
+                echo "::error::smoke: $SMOKE, lighthouse: $LIGHTHOUSE, real-preview smoke: $PREVIEW_SMOKE"
                 exit 1
               fi
-              echo "Every smoke shard and Lighthouse route passed."
+              echo "Every smoke shard, Lighthouse route and the real-preview smoke passed."
               ;;
             false)
-              if [ "$SMOKE" != "skipped" ] || [ "$LIGHTHOUSE" != "skipped" ]; then
-                echo "::error::draft run, yet smoke: $SMOKE, lighthouse: $LIGHTHOUSE"
+              if [ "$SMOKE" != "skipped" ] || [ "$LIGHTHOUSE" != "skipped" ] \
+                || [ "$PREVIEW_SMOKE" != "skipped" ]; then
+                echo "::error::draft run, yet smoke: $SMOKE, lighthouse: $LIGHTHOUSE, real-preview smoke: $PREVIEW_SMOKE"
                 exit 1
               fi
               echo "Draft PR: heavy smoke skipped by design (#2101)."

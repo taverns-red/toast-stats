@@ -73,6 +73,11 @@ export interface ClubGrowthAchievementCardProps {
    * `null`/`undefined` means "not available", never "chartered nothing".
    */
   toDateCount?: number | null
+  /**
+   * The checkpoint reads wait for this card to near the viewport (#2513):
+   * show the still placeholder at the skeleton's geometry.
+   */
+  held?: boolean
 }
 
 /**
@@ -398,13 +403,21 @@ const RuleCopy: React.FC = () => (
   </>
 )
 
+/** False inside a held placeholder (#2513): same geometry, no pulse. */
+const PulseContext = React.createContext(true)
+
 /** A text-shaped placeholder: the text is laid out (so it wraps like the
  *  loaded copy) but painted as a pulsing bar. */
-const GhostText: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span className="animate-pulse rounded bg-gray-200 theme-dark:bg-gray-700 text-transparent">
-    {children}
-  </span>
-)
+const GhostText: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const pulse = React.useContext(PulseContext)
+  return (
+    <span
+      className={`${pulse ? 'animate-pulse ' : ''}rounded bg-gray-200 theme-dark:bg-gray-700 text-transparent`}
+    >
+      {children}
+    </span>
+  )
+}
 
 /**
  * Structural skeleton (Lessons 107, 158): reuse the real chrome — the
@@ -419,82 +432,96 @@ const GhostText: React.FC<{ children: React.ReactNode }> = ({ children }) => (
  */
 const ClubGrowthAchievementCardSkeleton: React.FC<{
   checkpoints: readonly ClubGrowthCheckpointState[]
-}> = ({ checkpoints }) => (
-  <div
-    className="redesign-panel"
-    aria-hidden="true"
-    data-testid="club-growth-achievement-skeleton"
-  >
-    <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-      <div>
-        <h2 className="text-lg font-bold text-gray-900 font-tm-headline">
-          <AchievementGlyph />
-          Club Growth Achievement
-        </h2>
-        <p className="mt-0.5 text-xs uppercase tracking-wide text-gray-500 font-tm-body">
-          New clubs chartered
-        </p>
-      </div>
-      <span
-        data-testid="club-growth-skeleton-link"
-        className="inline-flex min-h-11 items-center text-xs font-semibold font-tm-body"
-      >
-        <GhostText>How this is measured</GhostText>
-      </span>
-    </div>
-    <RuleCopy />
-    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-      {checkpoints.map(state => (
-        <div
-          key={state.id}
-          data-testid="club-growth-skeleton-checkpoint"
-          className="rounded-md border border-gray-200 px-3 py-3"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <h3 className="text-sm font-semibold font-tm-body">
-              <GhostText>By {formatFullDate(state.date)}</GhostText>
-            </h3>
-            <span className="inline-flex items-center rounded-full border border-gray-200 px-2.5 py-1 text-xs font-semibold font-tm-body">
-              <GhostText>In progress</GhostText>
-            </span>
-          </div>
-          <div className="mt-2 min-h-11">
-            <p className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold font-tm-headline tabular-nums">
-                <GhostText>0</GhostText>
-              </span>
-              <span className="text-xs font-tm-body">
-                <GhostText>new clubs chartered so far</GhostText>
-              </span>
-            </p>
-            <p className="mt-1 text-sm font-tm-body">
-              <GhostText>
-                {state.milestones[0] ?? 3} more by {formatMonthDay(state.date)}{' '}
-                to reach the {state.milestones[0] ?? 3}-club milestone
-              </GhostText>
-            </p>
-          </div>
-          <ul className="mt-3 flex flex-wrap items-center gap-1.5">
-            {state.milestones.map(milestone => (
-              <li
-                key={milestone}
-                className="inline-flex min-w-8 items-center justify-center rounded-full border border-gray-200 px-2.5 py-1 text-xs tabular-nums font-tm-body"
-              >
-                <GhostText>{milestone}</GhostText>
-              </li>
-            ))}
-          </ul>
+  /** Still (no pulse) while the checkpoint reads wait for the viewport (#2513). */
+  held?: boolean
+}> = ({ checkpoints, held = false }) => (
+  <PulseContext.Provider value={!held}>
+    <div
+      className="redesign-panel"
+      aria-hidden="true"
+      data-testid={
+        held ? 'club-growth-held' : 'club-growth-achievement-skeleton'
+      }
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 font-tm-headline">
+            <AchievementGlyph />
+            Club Growth Achievement
+          </h2>
+          <p className="mt-0.5 text-xs uppercase tracking-wide text-gray-500 font-tm-body">
+            New clubs chartered
+          </p>
         </div>
-      ))}
+        <span
+          data-testid="club-growth-skeleton-link"
+          className="inline-flex min-h-11 items-center text-xs font-semibold font-tm-body"
+        >
+          <GhostText>How this is measured</GhostText>
+        </span>
+      </div>
+      <RuleCopy />
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {checkpoints.map(state => (
+          <div
+            key={state.id}
+            data-testid="club-growth-skeleton-checkpoint"
+            className="rounded-md border border-gray-200 px-3 py-3"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <h3 className="text-sm font-semibold font-tm-body">
+                <GhostText>By {formatFullDate(state.date)}</GhostText>
+              </h3>
+              <span className="inline-flex items-center rounded-full border border-gray-200 px-2.5 py-1 text-xs font-semibold font-tm-body">
+                <GhostText>In progress</GhostText>
+              </span>
+            </div>
+            <div className="mt-2 min-h-11">
+              <p className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold font-tm-headline tabular-nums">
+                  <GhostText>0</GhostText>
+                </span>
+                <span className="text-xs font-tm-body">
+                  <GhostText>new clubs chartered so far</GhostText>
+                </span>
+              </p>
+              <p className="mt-1 text-sm font-tm-body">
+                <GhostText>
+                  {state.milestones[0] ?? 3} more by{' '}
+                  {formatMonthDay(state.date)} to reach the{' '}
+                  {state.milestones[0] ?? 3}-club milestone
+                </GhostText>
+              </p>
+            </div>
+            <ul className="mt-3 flex flex-wrap items-center gap-1.5">
+              {state.milestones.map(milestone => (
+                <li
+                  key={milestone}
+                  className="inline-flex min-w-8 items-center justify-center rounded-full border border-gray-200 px-2.5 py-1 text-xs tabular-nums font-tm-body"
+                >
+                  <GhostText>{milestone}</GhostText>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
+  </PulseContext.Provider>
 )
 
 /* ── The card ────────────────────────────────────────────────────────────── */
 
 export const ClubGrowthAchievementCard: React.FC<
   ClubGrowthAchievementCardProps
-> = ({ programYear, asOfDate, checkpointReads, isLoading, toDateCount }) => {
+> = ({
+  programYear,
+  asOfDate,
+  checkpointReads,
+  isLoading,
+  toDateCount,
+  held = false,
+}) => {
   const readFor = (id: ClubGrowthCheckpointRead['id']) =>
     checkpointReads.find(r => r.id === id)
 
@@ -531,9 +558,12 @@ export const ClubGrowthAchievementCard: React.FC<
     checkpointReads.length === 0 ||
     checkpointReads.some(r => r.status === 'loading')
 
-  if (loading)
+  if (loading || held)
     return (
-      <ClubGrowthAchievementCardSkeleton checkpoints={result.checkpoints} />
+      <ClubGrowthAchievementCardSkeleton
+        checkpoints={result.checkpoints}
+        held={held}
+      />
     )
 
   // Past this point the card never returns null: every remaining state —
