@@ -12,6 +12,7 @@ import type { BrowserContext } from '@playwright/test'
 import {
   CDN_STAGING_ORIGIN,
   describeFixtureProblems,
+  fixtureFetch,
   fixturePath,
   installCdnFixtures,
   type CdnFixtureTally,
@@ -142,6 +143,21 @@ describe('installCdnFixtures: serving', () => {
     expect(arg.headers['content-type']).toBe('application/json')
     expect(arg.headers['access-control-allow-origin']).toBe('*')
     expect(tally.hits).toEqual(['v1/latest.json'])
+  })
+
+  it('never sends cache-control: no-store, which stops Chromium finishing the request', async () => {
+    // Found running the shards on fixtures: a fulfilled 404 carrying no-store
+    // never fired `requestfinished`, so a page that read one never reached
+    // `networkidle` and the test timed out.
+    const { ctx, state } = fakeContext()
+    await installCdnFixtures(ctx, { dir })
+    for (const p of ['v1/latest.json', 'v1/gone.json']) {
+      const r = await request(state, `${CDN_STAGING_ORIGIN}/${p}`)
+      const headers = (
+        r.fulfill.mock.calls[0]?.[0] as { headers: Record<string, string> }
+      ).headers
+      expect(headers['cache-control']).toBeUndefined()
+    }
   })
 
   it('replays a recorded 404 as a 404, not a miss', async () => {
@@ -321,5 +337,53 @@ describe('installCdnFixtures: record mode', () => {
       'v1/dates.json',
     ])
     expect(describeFixtureProblems(tally)).toBeNull()
+  })
+})
+
+describe('fixtureFetch', () => {
+  // A spec that rewrites a CDN response (`page.route` + fetch + fulfill) must
+  // read the fixture, not the network, when the fixture is on.
+  const asRoute = (url: string, fetchFn = vi.fn()) =>
+    ({
+      request: () => ({ url: () => url }),
+      fetch: fetchFn,
+    }) as unknown as Parameters<typeof fixtureFetch>[0]
+
+  it('reads the fixture, with its status, and never the network', async () => {
+    const fetchFn = vi.fn()
+    const res = await fixtureFetch(
+      asRoute(`${CDN_STAGING_ORIGIN}/v1/latest.json`, fetchFn),
+      { SMOKE_FIXTURES_DIR: dir }
+    )
+    expect(res.status()).toBe(200)
+    expect(await res.json()).toEqual({ latestSnapshotDate: 'd' })
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
+
+  it('replays a recorded 404 as a 404', async () => {
+    const res = await fixtureFetch(
+      asRoute(`${CDN_STAGING_ORIGIN}/v1/gone.json`),
+      { SMOKE_FIXTURES_DIR: dir }
+    )
+    expect(res.status()).toBe(404)
+  })
+
+  it('throws for a path with no fixture, naming it', async () => {
+    await expect(
+      fixtureFetch(asRoute(`${CDN_STAGING_ORIGIN}/v1/unknown.json`), {
+        SMOKE_FIXTURES_DIR: dir,
+      })
+    ).rejects.toThrow(/v1\/unknown\.json/)
+  })
+
+  it('reads the network when no fixture directory is on', async () => {
+    const live = { status: () => 200, json: async () => ({ live: true }) }
+    const fetchFn = vi.fn().mockResolvedValue(live)
+    const res = await fixtureFetch(
+      asRoute(`${CDN_STAGING_ORIGIN}/v1/latest.json`, fetchFn),
+      {}
+    )
+    expect(fetchFn).toHaveBeenCalledTimes(1)
+    expect(await res.json()).toEqual({ live: true })
   })
 })

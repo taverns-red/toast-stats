@@ -16,7 +16,7 @@
  */
 import { appendFileSync, existsSync, readFileSync } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
-import type { BrowserContext, Response, Route } from '@playwright/test'
+import type { BrowserContext, Request, Response, Route } from '@playwright/test'
 
 export const CDN_STAGING_ORIGIN = 'https://cdn-staging.taverns.red'
 
@@ -90,6 +90,31 @@ function readIndex(dir: string): FixtureIndex {
   return JSON.parse(readFileSync(file, 'utf8')) as FixtureIndex
 }
 
+/**
+ * The single byte range a request asks for (`bytes=a-b`, `bytes=a-`,
+ * `bytes=-n`), clamped to the body; 'unsatisfiable' when it starts past the
+ * end; null when there is no Range header. The basemap archive is read this
+ * way (MapLibre + PMTiles).
+ */
+function byteRange(
+  request: Request,
+  size: number
+): { start: number; end: number } | 'unsatisfiable' | null {
+  const header = request.headers()['range']
+  const m = header ? /^bytes=(\d*)-(\d*)$/.exec(header.trim()) : null
+  if (!m || (m[1] === '' && m[2] === '')) return null
+  let start: number
+  let end: number
+  if (m[1] === '') {
+    start = Math.max(size - Number(m[2]), 0)
+    end = size - 1
+  } else {
+    start = Number(m[1])
+    end = m[2] === '' ? size - 1 : Math.min(Number(m[2]), size - 1)
+  }
+  return start >= size || start > end ? 'unsatisfiable' : { start, end }
+}
+
 /** A failure message for a run that missed a fixture or reached the CDN. */
 export function describeFixtureProblems(tally: CdnFixtureTally): string | null {
   const lines: string[] = []
@@ -156,15 +181,34 @@ export async function installCdnFixtures(
         return
       }
       if (!tally.hits.includes(path)) tally.hits.push(path)
-      await route.fulfill({
-        status: entry.status,
-        body: readFileSync(file),
-        headers: {
-          ...CORS,
-          'content-type': entry.contentType,
-          'cache-control': 'no-store',
-        },
-      })
+      const body = readFileSync(file)
+      const headers = {
+        ...CORS,
+        'content-type': entry.contentType,
+        'cache-control': 'no-store',
+        'accept-ranges': 'bytes',
+        'access-control-expose-headers':
+          'Content-Range, Accept-Ranges, Content-Length',
+      }
+      const range =
+        entry.status === 200 ? byteRange(request, body.length) : null
+      if (range === 'unsatisfiable') {
+        await route.fulfill({
+          status: 416,
+          headers: { ...headers, 'content-range': `bytes */${body.length}` },
+        })
+      } else if (range) {
+        await route.fulfill({
+          status: 206,
+          body: body.subarray(range.start, range.end + 1),
+          headers: {
+            ...headers,
+            'content-range': `bytes ${range.start}-${range.end}/${body.length}`,
+          },
+        })
+      } else {
+        await route.fulfill({ status: entry.status, body, headers })
+      }
     }
   )
 
@@ -178,4 +222,17 @@ export async function installCdnFixtures(
     })
   }
   return tally
+}
+
+/** The part of a response a spec rewrites: its status and JSON body. */
+export interface FixtureResponse {
+  status(): number
+  json(): Promise<unknown>
+}
+
+export async function fixtureFetch(
+  _route: Route,
+  _env: Record<string, string | undefined> = process.env
+): Promise<FixtureResponse> {
+  throw new Error('not implemented')
 }
