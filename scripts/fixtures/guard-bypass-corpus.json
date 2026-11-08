@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "about": "Cloud-session guard corpus, ported from red-rostrum#75 (d34b15a) for toast-stats (#2547). Every deny entry must make the PreToolUse guard exit 2 under CLAUDE_CODE_REMOTE=true; every allow entry must exit 0. {{REPO}} is taverns-red/toast-stats and {{BRANCH}} is the session branch checked out in the fixture repo the guard runs in (cloudSessionGuardCorpus.test.ts plants link, homelink, .env, key.pem, notes-private.txt and the rest). Differences from the template: the documented toast-stats worker patterns (gh api POST comments/pulls, PATCH pulls, push -u origin <branch> and HEAD) are allowed; grep -r over the root is denied (it reaches .git and .env); the rest are added cases. writeDeny/writeAllow are repo-relative paths for Write and Edit: the secret-shaped list (read and write) plus config other tools act on (write only); gitlink is a planted symlink to .git.",
+  "about": "Cloud-session guard corpus, ported from red-rostrum#75 (d34b15a) for toast-stats (#2547). Every deny entry must make the PreToolUse guard exit 2 under CLAUDE_CODE_REMOTE=true; every allow entry must exit 0. {{REPO}} is taverns-red/toast-stats and {{BRANCH}} is the session branch checked out in the fixture repo the guard runs in (cloudSessionGuardCorpus.test.ts plants link, homelink, .env, key.pem, notes-private.txt and the rest). Differences from the template: the documented toast-stats worker patterns (gh api POST comments/pulls, PATCH pulls, push -u origin <branch> and HEAD) are allowed; grep -r over the root is denied (it reaches .git and .env); the rest are added cases. writeDeny/writeAllow are repo-relative paths for Write and Edit: the secret-shaped list (read and write) plus config other tools act on (write only); gitlink is a planted symlink to .git. toolDeny/toolAllow are whole hook inputs for the other tools ({{ROOT}} the fixture root, {{HOME}} and {{TMP}} the test process's): Read/Grep/Glob take the Bash read rules; web, MCP and unknown tools are denied; tools without I/O and Agent (its subagents' calls fire PreToolUse too) are allowed; file-tool writes outside the root only under $TMPDIR.",
   "deny": [
     "{ git push -f origin HEAD:main; }",
     "if true; then git push -f origin HEAD:main; fi",
@@ -580,5 +580,426 @@
     "docs/x.md",
     "README.md",
     "src/new-file.ts"
+  ],
+  "toolDeny": [
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "{{ROOT}}/.env"
+      }
+    },
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": ".env.local"
+      }
+    },
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "/proc/self/environ"
+      }
+    },
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "/etc/passwd"
+      }
+    },
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "{{ROOT}}/link"
+      }
+    },
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "{{ROOT}}/homelink/.ssh/id_ed25519"
+      }
+    },
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "{{ROOT}}/.git/config"
+      }
+    },
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "{{ROOT}}/notes-private.txt"
+      }
+    },
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "{{ROOT}}/key.pem"
+      }
+    },
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "{{ROOT}}/../outside.txt"
+      }
+    },
+    {
+      "tool_name": "Read",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "Grep",
+      "tool_input": {
+        "pattern": "TOKEN",
+        "path": "/"
+      }
+    },
+    {
+      "tool_name": "Grep",
+      "tool_input": {
+        "pattern": "x",
+        "path": "{{ROOT}}/.env"
+      }
+    },
+    {
+      "tool_name": "Grep",
+      "tool_input": {
+        "pattern": "x"
+      }
+    },
+    {
+      "tool_name": "Grep",
+      "tool_input": {
+        "pattern": "x",
+        "path": "{{ROOT}}"
+      }
+    },
+    {
+      "tool_name": "Grep",
+      "tool_input": {
+        "pattern": "x",
+        "path": "{{ROOT}}/sub"
+      }
+    },
+    {
+      "tool_name": "Grep",
+      "tool_input": {
+        "pattern": "x",
+        "path": "{{ROOT}}/homelink"
+      }
+    },
+    {
+      "tool_name": "Glob",
+      "tool_input": {
+        "pattern": "**/*",
+        "path": "/etc"
+      }
+    },
+    {
+      "tool_name": "Glob",
+      "tool_input": {
+        "pattern": "/etc/*"
+      }
+    },
+    {
+      "tool_name": "Glob",
+      "tool_input": {
+        "pattern": "../*"
+      }
+    },
+    {
+      "tool_name": "Glob",
+      "tool_input": {
+        "pattern": "*",
+        "path": "{{ROOT}}/homelink"
+      }
+    },
+    {
+      "tool_name": "WebFetch",
+      "tool_input": {
+        "url": "https://example.com",
+        "prompt": "x"
+      }
+    },
+    {
+      "tool_name": "WebSearch",
+      "tool_input": {
+        "query": "x"
+      }
+    },
+    {
+      "tool_name": "mcp__claude_ai_Gmail__send_message",
+      "tool_input": {
+        "to": "x"
+      }
+    },
+    {
+      "tool_name": "mcp__any__read",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "Monitor",
+      "tool_input": {
+        "command": "cat /etc/passwd"
+      }
+    },
+    {
+      "tool_name": "PowerShell",
+      "tool_input": {
+        "command": "Get-Content /etc/passwd"
+      }
+    },
+    {
+      "tool_name": "LSP",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "Artifact",
+      "tool_input": {
+        "file_path": "/etc/passwd"
+      }
+    },
+    {
+      "tool_name": "CronCreate",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "RemoteTrigger",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "EnterWorktree",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "Workflow",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "SendUserFile",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "PushNotification",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "ReadMcpResourceTool",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "ListMcpResourcesTool",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "SomeFutureTool",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "{{ROOT}}/node_modules/pkg/index.js",
+        "content": "x"
+      }
+    },
+    {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "{{ROOT}}/frontend/node_modules/x.js",
+        "content": "x"
+      }
+    },
+    {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "{{ROOT}}/.vscode/settings.json",
+        "content": "x"
+      }
+    },
+    {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "{{ROOT}}/.yarn/x",
+        "content": "x"
+      }
+    },
+    {
+      "tool_name": "Edit",
+      "tool_input": {
+        "file_path": "{{ROOT}}/.config/x",
+        "old_string": "a",
+        "new_string": "b"
+      }
+    },
+    {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "{{HOME}}/.bashrc",
+        "content": "x"
+      }
+    },
+    {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "{{ROOT}}/../outside.txt",
+        "content": "x"
+      }
+    },
+    {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "/etc/guard-x",
+        "content": "x"
+      }
+    },
+    {
+      "tool_name": "NotebookEdit",
+      "tool_input": {
+        "notebook_path": "{{HOME}}/x.ipynb",
+        "new_source": "x"
+      }
+    }
+  ],
+  "toolAllow": [
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "{{ROOT}}/README.md"
+      }
+    },
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "{{ROOT}}/src/a.ts"
+      }
+    },
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "{{ROOT}}/node_modules/pkg/index.js"
+      }
+    },
+    {
+      "tool_name": "Read",
+      "tool_input": {
+        "file_path": "{{ROOT}}/dist/a.js"
+      }
+    },
+    {
+      "tool_name": "Grep",
+      "tool_input": {
+        "pattern": "x",
+        "path": "{{ROOT}}/src"
+      }
+    },
+    {
+      "tool_name": "Grep",
+      "tool_input": {
+        "pattern": "x",
+        "path": "{{ROOT}}/src/a.ts"
+      }
+    },
+    {
+      "tool_name": "Glob",
+      "tool_input": {
+        "pattern": "**/*.ts"
+      }
+    },
+    {
+      "tool_name": "Glob",
+      "tool_input": {
+        "pattern": "*.md",
+        "path": "{{ROOT}}/docs"
+      }
+    },
+    {
+      "tool_name": "TodoWrite",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "ExitPlanMode",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "EnterPlanMode",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "ToolSearch",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "AskUserQuestion",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "TaskCreate",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "TaskGet",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "TaskList",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "TaskUpdate",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "TaskStop",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "SubagentHandback",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "SendMessage",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "ListAgents",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "Skill",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "Agent",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "Task",
+      "tool_input": {}
+    },
+    {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "{{TMP}}/guard-2547-x.txt",
+        "content": "x"
+      }
+    },
+    {
+      "tool_name": "Write",
+      "tool_input": {
+        "file_path": "{{ROOT}}/src/new.ts",
+        "content": "x"
+      }
+    },
+    {
+      "tool_name": "Edit",
+      "tool_input": {
+        "file_path": "{{ROOT}}/frontend/src/x.ts",
+        "old_string": "a",
+        "new_string": "b"
+      }
+    }
   ]
 }

@@ -80,4 +80,34 @@ describe('cloud-session-guard.sh fails closed (#2542)', () => {
   it('does nothing outside the cloud, even with no checker', () => {
     expect(run('').status).toBe(0)
   })
+
+  // #2547: the remote check is the wrapper's first line, so outside the
+  // cloud it exits 0 before it looks for node or the checker at all. An
+  // empty PATH proves no external command (node included) runs.
+  it('exits 0 outside the cloud before starting node', () => {
+    checker('process.exit(2)\n')
+    const noPath = mkdtempSync(join(tmpdir(), 'guard-nopath-'))
+    try {
+      for (const remote of [undefined, '', 'false', 'TRUE']) {
+        const env: NodeJS.ProcessEnv = { PATH: noPath }
+        if (remote !== undefined) env.CLAUDE_CODE_REMOTE = remote
+        const r = spawnSync('/bin/bash', [wrapper], {
+          input:
+            '{"tool_name":"Read","tool_input":{"file_path":"/etc/passwd"}}',
+          encoding: 'utf8',
+          env,
+        })
+        expect(r.status, String(remote)).toBe(0)
+        expect(r.stderr).toBe('')
+      }
+      const cloud = spawnSync('/bin/bash', [wrapper], {
+        input: '{}',
+        encoding: 'utf8',
+        env: { PATH: noPath, CLAUDE_CODE_REMOTE: 'true' },
+      })
+      expect(cloud.status).toBe(2)
+    } finally {
+      rmSync(noPath, { recursive: true, force: true })
+    }
+  })
 })

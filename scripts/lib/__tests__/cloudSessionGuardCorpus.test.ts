@@ -30,6 +30,8 @@ const GUARD = resolve(ROOT, 'scripts/cloud-session-guard.sh')
 const REPO = 'taverns-red/toast-stats'
 const BRANCH = 'feat/2547-session'
 
+type ToolCall = { tool_name: string; tool_input: Record<string, unknown> }
+
 const corpus = JSON.parse(
   readFileSync(
     resolve(ROOT, 'scripts/fixtures/guard-bypass-corpus.json'),
@@ -40,6 +42,8 @@ const corpus = JSON.parse(
   allow: string[]
   writeDeny: string[]
   writeAllow: string[]
+  toolDeny: ToolCall[]
+  toolAllow: ToolCall[]
 }
 
 const fill = (s: string) =>
@@ -189,6 +193,51 @@ describe('file tools: secret-shaped files and config other tools act on', () => 
       expect(r.status).toBe(0)
     }
   )
+})
+
+/** Every tool, as a catch-all PreToolUse matcher would route it. */
+function anyTool(call: ToolCall) {
+  const sub = (v: unknown): unknown =>
+    typeof v === 'string'
+      ? v
+          .replaceAll('{{ROOT}}', F)
+          .replaceAll('{{HOME}}', homedir())
+          .replaceAll('{{TMP}}', realpathSync(tmpdir()))
+      : v
+  const input = Object.fromEntries(
+    Object.entries(call.tool_input).map(([k, v]) => [k, sub(v)])
+  )
+  return spawnSync('bash', [GUARD], {
+    input: JSON.stringify({
+      hook_event_name: 'PreToolUse',
+      tool_name: call.tool_name,
+      tool_input: input,
+      cwd: F,
+    }),
+    cwd: F,
+    env: {
+      PATH: process.env.PATH ?? '/usr/bin:/bin',
+      HOME: homedir(),
+      TMPDIR: tmpdir(),
+      CLAUDE_PROJECT_DIR: F,
+      CLAUDE_CODE_REMOTE: 'true',
+    },
+    encoding: 'utf8',
+  })
+}
+
+describe('every other tool, dispatched by name', () => {
+  const label = (c: ToolCall) =>
+    `${c.tool_name} ${JSON.stringify(c.tool_input)}`
+  it.each(corpus.toolDeny.map(c => [label(c), c]))('denies %s', (_l, call) => {
+    const r = anyTool(call as ToolCall)
+    expect(r.status, `${_l}\n${r.stderr}`).toBe(2)
+  })
+  it.each(corpus.toolAllow.map(c => [label(c), c]))('allows %s', (_l, call) => {
+    const r = anyTool(call as ToolCall)
+    expect(r.stderr, _l as string).toBe('')
+    expect(r.status).toBe(0)
+  })
 })
 
 describe('around the corpus', () => {
