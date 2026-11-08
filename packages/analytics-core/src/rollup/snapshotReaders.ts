@@ -171,6 +171,25 @@ function officersTrained(
   }
 }
 
+/**
+ * The confirmed / provisional Distinguished inputs (#2553): the transform's
+ * April renewal count, and TI's 'Club Distinguished Status' (the club
+ * record's, else the raw row's, for a snapshot transformed before #1120).
+ * Each is left out when absent.
+ */
+function distinguishedInputs(
+  club: Record<string, unknown>,
+  perf: Record<string, unknown> | undefined
+): Pick<RegionRollupClub, 'aprilRenewals' | 'distinguishedStatus'> {
+  const renewals = club['aprilRenewals']
+  const status =
+    club['distinguishedStatus'] ?? perf?.['Club Distinguished Status']
+  return {
+    ...(typeof renewals === 'number' && { aprilRenewals: renewals }),
+    ...(typeof status === 'string' && { distinguishedStatus: status }),
+  }
+}
+
 interface SnapshotFile {
   data?: {
     clubs?: Array<Record<string, unknown>>
@@ -245,6 +264,7 @@ export function readRegionRollupInput(snapshotDir: string): {
         officerListOnTime: flag(perf, 'Off. List On Time'),
         charterSuspendField: statusCell.get(id),
         ...officersTrained(perf),
+        ...distinguishedInputs(club, perf),
       })
     }
     districts.push({

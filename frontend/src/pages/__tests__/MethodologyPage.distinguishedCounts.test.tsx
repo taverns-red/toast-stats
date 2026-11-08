@@ -54,6 +54,21 @@ describe('MethodologyPage — Distinguished club counts (#2390)', () => {
     expect(txt).toMatch(/share card/i)
   })
 
+  it('states the club base of the confirmed and provisional counts (#2553)', () => {
+    renderPage()
+    const txt = sectionText()
+    // Every club on TI's report, paid or not: the base of TI's own count
+    // and the rankings. The KPI card counts paid clubs only.
+    expect(txt).toMatch(
+      /every club on Toastmasters International.s club report/i
+    )
+    expect(txt).toMatch(/paid or not/i)
+    expect(txt).toMatch(/KPI card counts paid clubs only/i)
+    // Provisional is shown beside confirmed, never added to it.
+    expect(txt).toMatch(/provisional/i)
+    expect(txt).toMatch(/never added/i)
+  })
+
   it('cites the TI Distinguished Club Program source', () => {
     renderPage()
     expect(sectionText()).toMatch(/Distinguished Club Program.*Item 1111/)

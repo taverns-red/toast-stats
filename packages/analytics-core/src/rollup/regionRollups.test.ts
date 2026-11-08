@@ -147,6 +147,20 @@ describe('buildRegionRollups — the 2025-26 June close (#1799)', () => {
       // The fixture's clubPerformance projection carries no officer-training
       // column: not collected, so null (#2296), never a block of zeros.
       officerTraining: null,
+      // #2553, worked by an independent Python pass over the fixture bytes.
+      // The projection also dropped TI's 'Club Distinguished Status', so
+      // these are the April-renewals rung (a live June close reads TI's
+      // letters). June is after April: nothing is provisional.
+      distinguishedCounts: {
+        confirmed: 17,
+        provisional: 0,
+        byTier: {
+          distinguished: { confirmed: 9, provisional: 0 },
+          select: { confirmed: 1, provisional: 0 },
+          presidents: { confirmed: 3, provisional: 0 },
+          smedley: { confirmed: 4, provisional: 0 },
+        },
+      },
     })
     expect(rollups.districts['111']).toMatchObject({
       region: '07',
@@ -355,6 +369,19 @@ describe('buildRegionRollups — the daily feed (#1799)', () => {
       // column cannot be told from "none yet", so both read unknown (null).
       growth: { prospective: 8, chartered: null, suspended: null },
       officerTraining: null,
+      // #2553: worked by an independent Python pass over the fixture bytes.
+      // No TI letters yet, so confirmed is the April-renewals rung; the
+      // fixture's rankings row predates #2221 and reads 0.
+      distinguishedCounts: {
+        confirmed: 3,
+        provisional: 2,
+        byTier: {
+          distinguished: { confirmed: 3, provisional: 2 },
+          select: { confirmed: 0, provisional: 0 },
+          presidents: { confirmed: 0, provisional: 0 },
+          smedley: { confirmed: 0, provisional: 0 },
+        },
+      },
     })
   })
 
@@ -369,5 +396,134 @@ describe('buildRegionRollups — the daily feed (#1799)', () => {
     })
     expect(rollups.programYear).toBe('2024-2025')
     expect(rollups.world.distinguished.smedley).toBeNull()
+  })
+})
+
+describe('buildRegionRollups — distinguishedCounts (#2553)', () => {
+  const rollupClub = (
+    clubId: string,
+    over: Partial<RegionRollupDistrictInput['clubs'][number]>
+  ): RegionRollupDistrictInput['clubs'][number] => ({
+    clubId,
+    membershipCount: 0,
+    membershipBase: 0,
+    paymentsCount: 0,
+    dcpGoals: 0,
+    cspSubmitted: true,
+    aprilRenewals: 0,
+    ...over,
+  })
+
+  // District 1: TI's Select letter on one club. District 2: no letter, but
+  // a club whose renewals alone meet President's (9 goals, 25 renewals) and
+  // a club provisional at Select before April (7 goals, 22 members, 10
+  // renewals).
+  const districts = (letters: boolean): RegionRollupDistrictInput[] => [
+    {
+      districtId: '1',
+      prospectiveClubs: null,
+      clubs: [
+        rollupClub('101', {
+          dcpGoals: 7,
+          membershipCount: 21,
+          membershipBase: 15,
+          aprilRenewals: 21,
+          distinguishedStatus: letters ? 'S' : '',
+        }),
+        rollupClub('102', { distinguishedStatus: '' }),
+      ],
+    },
+    {
+      districtId: '2',
+      prospectiveClubs: null,
+      clubs: [
+        rollupClub('201', {
+          dcpGoals: 9,
+          membershipCount: 26,
+          membershipBase: 20,
+          aprilRenewals: 25,
+        }),
+        rollupClub('202', {
+          dcpGoals: 7,
+          membershipCount: 22,
+          membershipBase: 20,
+          aprilRenewals: 10,
+        }),
+      ],
+    },
+  ]
+
+  const rollup = (snapshotDate: string, d: RegionRollupDistrictInput[]) =>
+    buildRegionRollups({
+      snapshotDate,
+      rankings: [{ districtId: '1' }, { districtId: '2' }],
+      districts: d,
+      regionHistory: null,
+      generatedAt: GENERATED_AT,
+    }).rollups
+
+  it('before TI recognises anyone: each district counts on April renewals, the world sums them', () => {
+    const r = rollup('2025-11-15', districts(false))
+    // 101: 7 goals, 21 renewals, growth 6 → confirmed Select.
+    expect(r.districts['1']!.distinguishedCounts?.confirmed).toBe(1)
+    expect(r.districts['1']!.distinguishedCounts?.byTier.select.confirmed).toBe(
+      1
+    )
+    // 201 confirmed President's; 202 provisional Select.
+    expect(r.districts['2']!.distinguishedCounts).toEqual({
+      confirmed: 1,
+      provisional: 1,
+      byTier: {
+        distinguished: { confirmed: 0, provisional: 0 },
+        select: { confirmed: 0, provisional: 1 },
+        presidents: { confirmed: 1, provisional: 0 },
+        smedley: { confirmed: 0, provisional: 0 },
+      },
+    })
+    expect(r.world.distinguishedCounts?.confirmed).toBe(2)
+    expect(r.world.distinguishedCounts?.provisional).toBe(1)
+    expect(RegionRollupsSchema.safeParse(r).success).toBe(true)
+  })
+
+  it('once TI recognises clubs anywhere, the basis is date-wide: a district without letters confirms none', () => {
+    // The rankings switch on the whole date (TransformService's
+    // allZeroDistinguished): once any district reports TI counts, a
+    // district reporting none keeps 0.
+    const r = rollup('2026-05-31', districts(true))
+    expect(r.districts['1']!.distinguishedCounts?.confirmed).toBe(1)
+    expect(r.districts['2']!.distinguishedCounts?.confirmed).toBe(0)
+    expect(r.districts['2']!.distinguishedCounts?.provisional).toBe(0)
+    expect(r.world.distinguishedCounts?.confirmed).toBe(1)
+  })
+
+  it('reads null for a district that carried neither TI status nor renewals, and for every block above it', () => {
+    const d = districts(false)
+    d[1] = {
+      ...d[1]!,
+      clubs: d[1]!.clubs.map(c => ({
+        ...c,
+        aprilRenewals: undefined,
+        distinguishedStatus: undefined,
+      })),
+    }
+    const r = rollup('2025-11-15', d)
+    expect(r.districts['2']!.distinguishedCounts).toBeNull()
+    expect(r.districts['1']!.distinguishedCounts?.confirmed).toBe(1)
+    expect(r.world.distinguishedCounts).toBeNull()
+  })
+
+  it('keeps the existing qualifying-today distinguished block unchanged', () => {
+    const r = rollup('2025-11-15', districts(false))
+    expect(r.world.distinguished.president).toBe(1)
+    expect(r.world.distinguished.select).toBe(2)
+  })
+})
+
+describe('readRegionRollupInput — distinguished inputs (#2553)', () => {
+  it("carries each club's April renewals from the snapshot", () => {
+    const { districts } = input(DAILY)
+    const d61 = districts.find(d => d.districtId === '61')!
+    const club = d61.clubs.find(c => c.clubId === '9750')!
+    expect(club.aprilRenewals).toBe(39)
   })
 })

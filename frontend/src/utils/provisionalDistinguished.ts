@@ -19,6 +19,7 @@
 import {
   getConfirmedDistinguishedLevel,
   getCSPStatus,
+  isDistinguishedProvisional,
 } from '@taverns-red/analytics-core'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 import type { DistinguishedLevel } from '@taverns-red/analytics-core'
@@ -57,33 +58,15 @@ export function isProvisionallyDistinguished(
   if (!effectiveDate) return false
   const month = new Date(effectiveDate).getUTCMonth() + 1
 
-  // Post-April (Apr=4, May=5, Jun=6): membership is confirmed
-  if (month >= 4 && month <= 6) return false
-
-  // Pre-April: check if aprilRenewals alone qualify for THIS level (#296)
-  const renewals = club.aprilRenewals ?? 0
-  const base = club.membershipBase ?? 0
-  const confirmedNetGrowth = renewals - base
-
-  let qualifiesOnConfirmed: boolean
-  switch (club.distinguishedLevel) {
-    case 'Smedley':
-      qualifiesOnConfirmed = renewals >= 25
-      break
-    case 'President':
-      qualifiesOnConfirmed = renewals >= 20
-      break
-    case 'Select':
-      qualifiesOnConfirmed = renewals >= 20 || confirmedNetGrowth >= 5
-      break
-    case 'Distinguished':
-      qualifiesOnConfirmed = renewals >= 20 || confirmedNetGrowth >= 3
-      break
-    default:
-      qualifiesOnConfirmed = false
-  }
-
-  return !qualifiesOnConfirmed
+  // The rule itself (post-April confirmed; pre-April, do April renewals
+  // alone hold THIS level, #296) lives in analytics-core, the same rule the
+  // pipeline's distinguishedCounts use (#2553).
+  return isDistinguishedProvisional(
+    club.distinguishedLevel,
+    club.aprilRenewals ?? 0,
+    club.membershipBase ?? 0,
+    month
+  )
 }
 
 // Distinguished level thresholds for display (#297)

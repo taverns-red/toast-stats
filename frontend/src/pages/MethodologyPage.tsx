@@ -1469,6 +1469,18 @@ const MethodologyPage: React.FC = () => {
             its count. The per-district share card uses the same confirmed count
             (&ldquo;more confirmed Distinguished clubs&rdquo;).
           </p>
+          <h3>Which clubs are counted</h3>
+          <p>
+            The confirmed count, and the <strong>provisional</strong> count
+            beside it, are over every club on Toastmasters International&apos;s
+            club report, paid or not. That is the base TI&apos;s own count and
+            the district rankings use. A provisional club qualifies on current
+            membership before April, but its April renewals do not yet hold that
+            level; a club already confirmed at any level is not also
+            provisional, and provisional is never added to confirmed. From
+            April, nothing is provisional. The KPI card counts paid clubs only,
+            on current membership.
+          </p>
           <p className="methodology-source">
             Source: Toastmasters International,{' '}
             <em>Distinguished Club Program and Club Success Plan</em> (Item
@@ -1481,7 +1493,10 @@ const MethodologyPage: React.FC = () => {
             #2221); the KPI count is <code>performance-targets</code>{' '}
             <code>currentProgress.distinguished</code>, and the gap is{' '}
             <code>competitive-awards</code>{' '}
-            <code>distinguishedClubsRemaining</code>.
+            <code>distinguishedClubsRemaining</code>. The confirmed and
+            provisional counts for every level are{' '}
+            <code>distinguishedCounts</code> (analytics-core{' '}
+            <code>classifyClubDistinguished</code>, #2553).
           </p>
         </div>
       </CollapsibleSection>

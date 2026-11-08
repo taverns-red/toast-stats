@@ -28,7 +28,11 @@ import type { DateRange } from './metadata.js'
 import type { LeadershipInsightsData } from './leadership.js'
 import type { YearOverYearData } from './yearOverYear.js'
 import type { PerformanceTargetsData } from './performanceTargets.js'
-import type { ProspectiveClub } from '@taverns-red/shared-contracts'
+import type {
+  DistinguishedCounts,
+  ProspectiveClub,
+} from '@taverns-red/shared-contracts'
+import type { DivisionDistinguishedCounts } from '../analytics/distinguishedCounts.js'
 
 /**
  * Complete district analytics structure.
@@ -49,6 +53,14 @@ export interface DistrictAnalytics {
   interventionRequiredClubs: ClubTrend[]
   /** Summary counts of distinguished clubs by level */
   distinguishedClubs: DistinguishedClubCounts
+  /**
+   * Confirmed / provisional Distinguished clubs for the district (#2553):
+   * the headline count, equal to the rankings' `distinguishedClubs`.
+   * Optional: files written before the field existed lack it.
+   */
+  distinguishedCounts?: DistinguishedCounts
+  /** The same count for each division, and each area within it (#2553). */
+  distinguishedCountsByDivision?: DivisionDistinguishedCounts[]
   /** Detailed list of distinguished clubs */
   distinguishedClubsList: DistinguishedClubSummary[]
   distinguishedProjection: DistinguishedProjection
