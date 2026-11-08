@@ -172,6 +172,25 @@ describe('LandingSearch (#2249)', () => {
     )
   })
 
+  // #2556: Safari (iOS and macOS) doesn't focus a tapped link, so the
+  // input's blur arrives with relatedTarget null. If the press doesn't keep
+  // focus in the input, the list unmounts before the click lands.
+  it('a tap on a result navigates in Safari, where the blur has no relatedTarget (#2556)', async () => {
+    renderSearch()
+    fireEvent.focus(input())
+    fireEvent.change(input(), { target: { value: '61' } })
+    const listbox = await screen.findByRole('listbox')
+    const row = within(listbox).getAllByRole('link')[0]
+    const pressKeptFocus = !fireEvent.mouseDown(row)
+    if (!pressKeptFocus) fireEvent.blur(input(), { relatedTarget: null })
+    // Safari's click lands on whatever is still mounted under the finger.
+    const target = row.isConnected ? row : document.body
+    fireEvent.click(target)
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/district/61')
+    )
+  })
+
   it('Enter on a single exact match navigates', async () => {
     renderSearch()
     fireEvent.focus(input())
