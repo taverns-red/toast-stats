@@ -208,7 +208,14 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
         />
       </div>
       {showResults && (
-        <div className="landing-search__results">
+        // A press inside the list keeps focus in the input (#2556). Safari
+        // doesn't focus a tapped link, so without this the input's blur has
+        // no relatedTarget, onBlur closes the list, and the tap lands on
+        // nothing. Same pattern as the Retry button.
+        <div
+          className="landing-search__results"
+          onMouseDown={e => e.preventDefault()}
+        >
           {status === 'error' ? (
             <p
               role="status"
