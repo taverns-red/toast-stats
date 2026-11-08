@@ -289,6 +289,8 @@ describe('the smoke shard job (#2453)', () => {
       PROJECT: '${{ matrix.project }}',
       SPLIT: '${{ matrix.split }}',
       WORKERS: '${{ matrix.workers }}',
+      // The CDN fixtures the shards read instead of live staging (#2545).
+      SMOKE_FIXTURES_DIR: '${{ runner.temp }}/smoke-fixtures',
     })
     expect(run?.run ?? '').not.toContain('${{')
   })
