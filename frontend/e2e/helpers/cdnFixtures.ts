@@ -217,16 +217,37 @@ export async function installCdnFixtures(
     // A fulfilled response has no server address; one that came off the
     // network does. The handler above never forwards, so this should stay
     // empty: it is the guard that proves it.
-    context.on('response', async (res: Response) => {
+    // Playwright does not await an event handler, so the checks in flight
+    // are kept here for `settled` to await before the tally is read.
+    const inFlight: Promise<void>[] = []
+    pending.set(tally, inFlight)
+    context.on('response', (res: Response) => {
       const path = fixturePath(res.url(), origin)
-      if (path && (await res.serverAddr()) !== null) tally.leaks.push(path)
+      if (!path) return
+      inFlight.push(
+        res.serverAddr().then(
+          addr => {
+            if (addr !== null) tally.leaks.push(path)
+          },
+          // The page closed before the address came back: nothing to read.
+          () => undefined
+        )
+      )
     })
   }
   return tally
 }
 
-/** Resolves once every response check the fixture started has finished. */
-export async function settled(_tally: CdnFixtureTally): Promise<void> {}
+/** Response checks in flight, per tally. */
+const pending = new WeakMap<CdnFixtureTally, Promise<void>[]>()
+
+/**
+ * Resolves once every response check the fixture has started has finished.
+ * Await it before reading `leaks`, or a leak can land after the verdict.
+ */
+export async function settled(tally: CdnFixtureTally): Promise<void> {
+  await Promise.all(pending.get(tally) ?? [])
+}
 
 /** The part of a response a spec rewrites: its status and JSON body. */
 export interface FixtureResponse {

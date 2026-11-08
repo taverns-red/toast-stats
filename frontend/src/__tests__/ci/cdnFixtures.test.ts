@@ -289,9 +289,10 @@ describe('installCdnFixtures: misses and the zero-live guarantee', () => {
       serverAddr: async () => null,
     }
     for (const cb of state.listeners['response'] ?? []) {
-      await cb(live)
-      await cb(stubbed)
+      void cb(live)
+      void cb(stubbed)
     }
+    await settled(tally)
     expect(tally.leaks).toEqual(['v1/dates.json'])
   })
 

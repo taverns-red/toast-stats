@@ -8,6 +8,7 @@ import { describeErrorResponse } from '../helpers/errorResponses'
 import {
   describeFixtureProblems,
   installCdnFixtures,
+  settled,
   type CdnFixtureTally,
 } from '../helpers/cdnFixtures'
 
@@ -71,6 +72,7 @@ export const test = base.extend<GaFixtures>({
       }
       const tally = await installCdnFixtures(context, { dir, recordFile })
       await use(tally)
+      await settled(tally)
       const problems = describeFixtureProblems(tally)
       if (problems) {
         await testInfo.attach('cdn-fixture-problems', {
