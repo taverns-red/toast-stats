@@ -239,16 +239,39 @@ describe('grandfathering is by content hash, not by name', () => {
   })
 })
 
-const labeled = (login: string, name = OVERRIDE_LABEL): IssueEvent => ({
-  event: 'labeled',
+/**
+ * A `labeled` event as the issues events API returns it. `app` is the
+ * event's `performed_via_github_app`: `null` for a person in the web UI, the
+ * app object when an app acted (a cloud session acts as rservant through the
+ * Claude app, #2520).
+ */
+const labeled = (
+  login: string,
+  name = OVERRIDE_LABEL,
+  app: unknown = null
+): IssueEvent => {
+  const e = {
+    event: 'labeled',
+    actor: { login },
+    label: { name },
+    performed_via_github_app: app,
+  }
+  return e
+}
+const unlabeled = (login: string, name = OVERRIDE_LABEL): IssueEvent => ({
+  event: 'unlabeled',
   actor: { login },
   label: { name },
 })
-const unlabeled = (login: string): IssueEvent => ({
-  event: 'unlabeled',
-  actor: { login },
-  label: { name: OVERRIDE_LABEL },
-})
+/** GitHub label names are case-insensitive; events keep the spelling used. */
+const MIXED_CASE = 'DB-Breaking-Approved'
+/** The shape GitHub returns in `performed_via_github_app` for an app. */
+const CLAUDE_APP = {
+  id: 1236702,
+  slug: 'claude',
+  name: 'Claude',
+  owner: { login: 'anthropics' },
+}
 
 describe('the db-breaking-approved override', () => {
   it('is the label and approver ADR 0019 names', () => {
@@ -259,6 +282,121 @@ describe('the db-breaking-approved override', () => {
   it('the label applied by rservant passes', () => {
     expect(
       verifyOverride([OVERRIDE_LABEL], [labeled('rservant')]).approved
+    ).toBe(true)
+  })
+
+  it('rservant through a GitHub app (a cloud session) fails (#2520)', () => {
+    const r = verifyOverride(
+      [OVERRIDE_LABEL],
+      [labeled('rservant', OVERRIDE_LABEL, CLAUDE_APP)]
+    )
+    expect(r.approved).toBe(false)
+    expect(r.reason).toContain('claude')
+  })
+
+  it('rservant with performed_via_github_app null passes (#2520)', () => {
+    expect(
+      verifyOverride(
+        [OVERRIDE_LABEL],
+        [labeled('rservant', OVERRIDE_LABEL, null)]
+      ).approved
+    ).toBe(true)
+  })
+
+  it('rservant with performed_via_github_app missing fails closed (#2520)', () => {
+    const event: IssueEvent = {
+      event: 'labeled',
+      actor: { login: 'rservant' },
+      label: { name: OVERRIDE_LABEL },
+    }
+    expect(verifyOverride([OVERRIDE_LABEL], [event]).approved).toBe(false)
+  })
+
+  it.each([
+    ['a string', 'claude'],
+    ['a number', 0],
+    ['false', false],
+    ['an empty object', {}],
+  ])(
+    'rservant with performed_via_github_app %s fails closed (#2520)',
+    (_, app) => {
+      expect(
+        verifyOverride(
+          [OVERRIDE_LABEL],
+          [labeled('rservant', OVERRIDE_LABEL, app)]
+        ).approved
+      ).toBe(false)
+    }
+  )
+
+  it('an earlier web-UI labeling does not cover a later app labeling (#2520)', () => {
+    expect(
+      verifyOverride(
+        [OVERRIDE_LABEL],
+        [
+          labeled('rservant'),
+          unlabeled('rservant'),
+          labeled('rservant', OVERRIDE_LABEL, CLAUDE_APP),
+        ]
+      ).approved
+    ).toBe(false)
+  })
+
+  it('another actor with performed_via_github_app null fails (#2520)', () => {
+    expect(
+      verifyOverride(
+        [OVERRIDE_LABEL],
+        [labeled('someone-else', OVERRIDE_LABEL, null)]
+      ).approved
+    ).toBe(false)
+  })
+
+  it('the label removed after a web-UI labeling by rservant fails (#2520)', () => {
+    expect(
+      verifyOverride(
+        [],
+        [labeled('rservant', OVERRIDE_LABEL, null), unlabeled('rservant')]
+      ).approved
+    ).toBe(false)
+  })
+
+  it('an app labeling read through the API is refused (#2520)', async () => {
+    const r = await fetchOverride(
+      async path =>
+        path.includes('/labels')
+          ? [{ name: OVERRIDE_LABEL }]
+          : [labeled('rservant', OVERRIDE_LABEL, CLAUDE_APP)],
+      'taverns-red/toast-stats',
+      7
+    )
+    expect(r.approved).toBe(false)
+  })
+
+  it('a mixed-case removal, then a re-add by someone else, fails (#2520)', () => {
+    const r = verifyOverride(
+      [OVERRIDE_LABEL],
+      [
+        labeled('rservant'),
+        unlabeled('x', MIXED_CASE),
+        labeled('someone-else', MIXED_CASE),
+      ]
+    )
+    expect(r.approved).toBe(false)
+    expect(r.reason).toContain('someone-else')
+  })
+
+  it('a mixed-case removal as the last event revokes (#2520)', () => {
+    expect(
+      verifyOverride(
+        [OVERRIDE_LABEL],
+        [labeled('rservant'), unlabeled('x', MIXED_CASE)]
+      ).approved
+    ).toBe(false)
+  })
+
+  it('the current label matches case-insensitively (#2520)', () => {
+    expect(
+      verifyOverride([MIXED_CASE], [labeled('rservant', MIXED_CASE)]).approved
     ).toBe(true)
   })
 
