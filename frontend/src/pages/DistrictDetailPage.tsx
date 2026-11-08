@@ -15,6 +15,7 @@ import { DistrictSubnav } from '../components/DistrictSubnav'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useAggregatedAnalytics } from '../hooks/useAggregatedAnalytics'
 import { usePerformanceTargets } from '../hooks/usePerformanceTargets'
+import { resolveDistinguishedCounts } from '../utils/distinguishedCounts'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictRankHistoryYears } from '../hooks/useDistrictRankHistoryYears'
 import {
@@ -364,10 +365,8 @@ const DistrictDetailPageInner: React.FC = () => {
   // `effectiveEndDate` like `useCompetitiveAwards` above — counting a past
   // year's `nextTierGap` down against the CURRENT year's paidClubs/payments
   // is the second half of #1396.
-  const { ranking: districtRanking } = useDistrictRanking(
-    districtId,
-    effectiveEndDate ?? undefined
-  )
+  const { ranking: districtRanking, isLoading: isLoadingRanking } =
+    useDistrictRanking(districtId, effectiveEndDate ?? undefined)
   const distinguishedRankingInputs = React.useMemo(() => {
     if (!districtRanking) return null
     return {
@@ -539,6 +538,18 @@ const DistrictDetailPageInner: React.FC = () => {
     // skeleton.
     if (isLoadingPerformanceTargets) return null
     const pt = performanceTargets ?? analytics.performanceTargets
+    // The Distinguished card is the confirmed count with the provisional
+    // clubs beside it, never summed (#2554). The pipeline's pair wins; until
+    // it publishes, the rankings row is confirmed and performance-targets is
+    // qualifying-today. Hold the skeleton while the fallback's rankings row
+    // is still loading, so the tile never flashes the summed figure.
+    if (!analytics.distinguishedCounts && isLoadingRanking) return null
+    const distinguished = resolveDistinguishedCounts({
+      counts: analytics.distinguishedCounts,
+      rankingConfirmed: districtRanking?.distinguishedClubs,
+      qualifyingToday:
+        pt?.distinguishedClubs.current ?? analytics.distinguishedClubs.total,
+    })
     return {
       paidClubs: {
         current: pt?.paidClubs.current ?? analytics.allClubs.length,
@@ -551,8 +562,8 @@ const DistrictDetailPageInner: React.FC = () => {
         rankings: pt?.membershipPayments.rankings ?? NULL_RANKINGS,
       },
       distinguishedClubs: {
-        current:
-          pt?.distinguishedClubs.current ?? analytics.distinguishedClubs.total,
+        current: distinguished.confirmed,
+        provisional: distinguished.provisional,
         targets: pt?.distinguishedClubs.targets ?? null,
         rankings: pt?.distinguishedClubs.rankings ?? NULL_RANKINGS,
       },
@@ -567,7 +578,13 @@ const DistrictDetailPageInner: React.FC = () => {
         current: analytics.membershipChange ?? 0,
       },
     }
-  }, [analytics, performanceTargets, isLoadingPerformanceTargets])
+  }, [
+    analytics,
+    performanceTargets,
+    isLoadingPerformanceTargets,
+    districtRanking,
+    isLoadingRanking,
+  ])
 
   // ── Degraded "limited data" view: program-year controls (#1436) ────────────
   //

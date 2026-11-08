@@ -36,13 +36,16 @@ describe('DistinguishedCount (#2554)', () => {
     )
   })
 
-  it('explains provisional for screen readers and as a title', () => {
+  it('explains provisional in a tooltip title', () => {
     render(<DistinguishedCount confirmed={3} provisional={2} />)
     const prov = screen.getByTestId('distinguished-provisional')
     expect(prov).toHaveAttribute(
       'title',
+      expect.stringMatching(/qualify on current membership/i)
+    )
+    expect(prov).toHaveAttribute(
+      'title',
       expect.stringMatching(/April renewals/i)
     )
-    expect(prov).toHaveTextContent(/qualify on current membership/i)
   })
 })

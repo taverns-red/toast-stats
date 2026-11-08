@@ -1,4 +1,5 @@
 import React from 'react'
+import { DistinguishedCount } from './DistinguishedCount'
 import type { DistrictKpiStripData } from './DistrictKpiStrip'
 import { formatSigned, nextTierText, worldRankText } from '../utils/districtHub'
 import {
@@ -26,6 +27,9 @@ interface TileProps {
   title: string
   label: string
   value: string
+  /** Distinguished tile only (#2554): drawn through `DistinguishedCount`
+   *  (confirmed headline, "+N provisional" beside it) instead of `value`. */
+  distinguished?: { confirmed: number; provisional: number } | undefined
   delta: string | null
   rank: string | null
   tone?: 'up' | 'down' | undefined
@@ -37,6 +41,7 @@ const Tile: React.FC<TileProps> = ({
   title,
   label,
   value,
+  distinguished,
   delta,
   rank,
   tone,
@@ -61,7 +66,14 @@ const Tile: React.FC<TileProps> = ({
           tone ? ` district-hub__tile-value--${tone}` : ''
         }`}
       >
-        {value}
+        {distinguished ? (
+          <DistinguishedCount
+            confirmed={distinguished.confirmed}
+            provisional={distinguished.provisional}
+          />
+        ) : (
+          value
+        )}
       </span>
       <span className="district-hub__tile-line district-hub__tile-line--delta">
         {delta ?? HUB_DASH}
@@ -98,6 +110,11 @@ export const DistrictHubTiles: React.FC<DistrictHubTilesProps> = ({
             title={t.title}
             label={t.label}
             value={card ? card.current.toLocaleString() : HUB_DASH}
+            distinguished={
+              card && card.provisional !== undefined
+                ? { confirmed: card.current, provisional: card.provisional }
+                : undefined
+            }
             delta={card ? nextTierText(card.current, card.targets) : null}
             rank={card ? worldRankText(card.rankings) : null}
             onOpen={() => onOpen(t.key)}

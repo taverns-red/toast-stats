@@ -1,6 +1,7 @@
 import React from 'react'
 import { Tooltip, InfoIcon } from './Tooltip'
 import { RegionRankChip } from './RegionRankChip'
+import { DistinguishedCount } from './DistinguishedCount'
 import { toOrdinal } from '../utils/ordinal'
 import type { MetricRankings, RecognitionTargets } from '../types/districts'
 
@@ -21,6 +22,13 @@ export interface KpiBulletCardProps {
    * it (R3). Absent → no tick.
    */
   planTarget?: number | null | undefined
+  /**
+   * Distinguished card only (#2554): clubs that qualify on current membership
+   * but are not yet confirmed. Present → `current` is the confirmed count and
+   * the card draws it through `DistinguishedCount` ("3 +3 provisional"). The
+   * rank, percentile and bar all sit on the confirmed basis.
+   */
+  provisional?: number | undefined
 }
 
 type TierKey = keyof RecognitionTargets
@@ -251,6 +259,7 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
   tooltipContent,
   barAriaLabel,
   planTarget = null,
+  provisional,
 }) => {
   const plan = planTarget ?? null
   const worldRankLabel =
@@ -292,7 +301,11 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
         data-testid="kpi-value"
         className="mt-1 text-xl sm:text-3xl font-bold text-gray-900"
       >
-        {current.toLocaleString()}
+        {provisional !== undefined ? (
+          <DistinguishedCount confirmed={current} provisional={provisional} />
+        ) : (
+          current.toLocaleString()
+        )}
       </p>
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-gray-600">

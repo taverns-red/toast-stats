@@ -70,6 +70,9 @@ describe('district Distinguished KPI: confirmed headline (#2554)', () => {
     const tile = screen
       .getAllByTestId('district-hub-tile')
       .find(t => /Distinguished/.test(t.textContent ?? ''))!
-    expect(tile).toHaveTextContent(/^Distinguished\s*3\s*\+3 provisional/)
+    const value = tile.querySelector('.district-hub__tile-value')
+    expect(value).toHaveTextContent(/^3\s*\+3 provisional$/)
+    // Rank sits on the same confirmed basis.
+    expect(tile).toHaveTextContent('#30 of 128')
   })
 })

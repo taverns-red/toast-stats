@@ -89,6 +89,33 @@
     color: var(--ink);
   }
 
+  /* The Distinguished tile carries "N +M provisional" (#2554): the confirmed
+     count stays the 24px headline and never shrinks; the provisional part
+     is the muted 14px companion and is the one that ellipsizes if a
+     two-digit count leaves it too little room. The row is one line either
+     way, so every tile keeps the same height. */
+  .district-hub__tile-value:has(.distinguished-count__provisional) {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    max-width: 100%;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .district-hub__tile-value [data-testid='distinguished-confirmed'] {
+    flex: none;
+  }
+
+  .district-hub__tile-value .distinguished-count__provisional {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
+  }
+
   .district-hub__tile-value--up {
     color: var(--green-600);
   }
@@ -202,5 +229,15 @@
     font-size: 14px;
     line-height: 20px;
     color: var(--ink-3);
+  }
+
+  /* "+N provisional" beside a Distinguished count (#2554), wherever
+     DistinguishedCount is drawn: the muted companion to the headline, never
+     colour alone (the words carry the meaning). */
+  .distinguished-count__provisional {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-3);
+    white-space: nowrap;
   }
 }
