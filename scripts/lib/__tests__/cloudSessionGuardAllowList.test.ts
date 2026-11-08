@@ -34,9 +34,10 @@ const R = 'repos/taverns-red/toast-stats'
 const API = `https://api.github.com/${R}`
 const BRANCH = 'fix/2528-x'
 
-function run(command: string, cwd = ROOT, remote = 'true') {
+function run(command: string, cwd = ROOT, remote = 'true', root = '') {
   const env: NodeJS.ProcessEnv = { PATH: process.env.PATH ?? '' }
   if (remote !== '') env.CLAUDE_CODE_REMOTE = remote
+  if (root) env.CLAUDE_PROJECT_DIR = root
   return spawnSync('bash', [GUARD], {
     input: JSON.stringify({
       tool_name: 'Bash',
@@ -49,21 +50,21 @@ function run(command: string, cwd = ROOT, remote = 'true') {
   })
 }
 
-function expectRefused(command: string, cwd = ROOT) {
-  const r = run(command, cwd)
+function expectRefused(command: string, cwd = ROOT, root = '') {
+  const r = run(command, cwd, 'true', root)
   expect(r.status, `${command}\n${r.stderr}`).toBe(2)
   expect(r.stderr).toMatch(/Ron/)
 }
 
-function expectAllowed(command: string, cwd = ROOT) {
-  const r = run(command, cwd)
+function expectAllowed(command: string, cwd = ROOT, root = '') {
+  const r = run(command, cwd, 'true', root)
   expect(r.stderr, command).toBe('')
   expect(r.status, command).toBe(0)
 }
 
 /** A throwaway repo on a feature branch, with origin pointing at GitHub. */
-function makeRepo(branch = BRANCH) {
-  const dir = mkdtempSync(join(tmpdir(), 'guard-2528-'))
+function makeRepo(branch = BRANCH, parent = tmpdir()) {
+  const dir = mkdtempSync(join(parent, 'guard-2528-'))
   const git = (...a: string[]) =>
     execFileSync('git', ['-C', dir, ...a], { stdio: 'pipe' })
   git('init', '-q', '-b', 'main')
@@ -391,14 +392,17 @@ describe('git push: only the session’s own branch (#2528)', () => {
   let repo: ReturnType<typeof makeRepo>
   let onMain: ReturnType<typeof makeRepo>
   let other: string
+  // #2547: a cd may not leave the session's root, so the repos that the
+  // cd tests move between share one root.
+  let base: string
   beforeAll(() => {
-    repo = makeRepo()
-    onMain = makeRepo('main')
-    other = mkdtempSync(join(tmpdir(), 'guard-2528-other-'))
+    base = mkdtempSync(join(tmpdir(), 'guard-2528-base-'))
+    repo = makeRepo(BRANCH, base)
+    onMain = makeRepo('main', base)
+    other = mkdtempSync(join(base, 'guard-2528-other-'))
   })
   afterAll(() => {
-    for (const d of [repo.dir, onMain.dir, other])
-      rmSync(d, { recursive: true, force: true })
+    rmSync(base, { recursive: true, force: true })
   })
 
   it.each([
@@ -474,21 +478,22 @@ describe('git push: only the session’s own branch (#2528)', () => {
   ])('allows %s', command => expectAllowed(command, repo.dir))
 
   it('reads the branch of the directory git -C or cd names', () => {
-    expectAllowed(`git -C ${repo.dir} push -u origin ${BRANCH}`, other)
-    expectAllowed(`cd ${repo.dir} && git push -u origin ${BRANCH}`, other)
-    expectRefused(`git -C ${repo.dir} push origin HEAD:main`, other)
-    expectRefused(`cd ${repo.dir} && git push origin HEAD:main`, other)
-    expectRefused(`git -C ${onMain.dir} push origin HEAD`, repo.dir)
-    expectRefused(`cd ${onMain.dir} && git push`, repo.dir)
-    expectRefused(`cd "$D" && git push`, repo.dir)
+    expectAllowed(`git -C ${repo.dir} push -u origin ${BRANCH}`, other, base)
+    expectAllowed(`cd ${repo.dir} && git push -u origin ${BRANCH}`, other, base)
+    expectRefused(`git -C ${repo.dir} push origin HEAD:main`, other, base)
+    expectRefused(`cd ${repo.dir} && git push origin HEAD:main`, other, base)
+    expectRefused(`git -C ${onMain.dir} push origin HEAD`, repo.dir, base)
+    expectRefused(`cd ${onMain.dir} && git push`, repo.dir, base)
+    expectRefused(`cd "$D" && git push`, repo.dir, base)
   })
 
   it('does not let a cd inside $(...) move the outer command', () => {
     expectAllowed(
       `echo $(cd ${onMain.dir}) && git push -u origin ${BRANCH}`,
-      repo.dir
+      repo.dir,
+      base
     )
-    expectRefused(`echo $(cd ${repo.dir}) && git push`, onMain.dir)
+    expectRefused(`echo $(cd ${repo.dir}) && git push`, onMain.dir, base)
   })
 
   it('refuses any push outside a git repository', () => {
