@@ -199,9 +199,13 @@ describe('videos.yml (#2293)', () => {
       env: Record<string, string>
     ): string[] {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'videos-plan-'))
+      // #2534: never inherit a hook's GIT_DIR, GIT_WORK_TREE or GIT_INDEX_FILE.
+      const baseEnv = Object.fromEntries(
+        Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_'))
+      )
       try {
         const git = (...a: string[]) =>
-          spawnSync('git', a, { cwd: dir, encoding: 'utf-8' })
+          spawnSync('git', a, { cwd: dir, encoding: 'utf-8', env: baseEnv })
         git('init', '-q')
         git('config', 'user.email', 't@example.test')
         git('config', 'user.name', 'T')
@@ -225,7 +229,7 @@ describe('videos.yml (#2293)', () => {
           cwd: dir,
           encoding: 'utf-8',
           env: {
-            ...process.env,
+            ...baseEnv,
             GITHUB_OUTPUT: out,
             RUNNER_TEMP: dir,
             ...env,
