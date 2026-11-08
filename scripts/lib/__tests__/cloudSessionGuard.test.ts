@@ -410,6 +410,35 @@ describe('refuses label writes behind gh flags before the command (#2526)', () =
     expect(r.status).toBe(2)
     expect(r.stderr).toMatch(/Ron/)
   })
+
+  // red-district review: the same flags anywhere in the argv
+  const middle = [
+    ['issue', 'edit 1 --add-label db-breaking-approved'],
+    ['pr', 'edit 2 --add-label db-breaking-approved'],
+    ['label', 'create db-breaking-approved'],
+    ['label', 'edit db-breaking-approved --description x'],
+  ]
+  it.each(
+    GH_FLAG_PREFIXES.flatMap(p =>
+      middle.map(([group, rest]) => `gh ${group} ${p} ${rest}`)
+    )
+  )('flag in the middle: %s', command => {
+    const r = bash(command)
+    expect(r.status).toBe(2)
+    expect(r.stderr).toMatch(/Ron/)
+  })
+  const after = [
+    'issue edit FLAG 1 --add-label db-breaking-approved',
+    'pr edit 2 FLAG --add-label db-breaking-approved',
+    'label create FLAG db-breaking-approved',
+  ]
+  it.each(
+    GH_FLAG_PREFIXES.flatMap(p => after.map(a => `gh ${a.replace('FLAG', p)}`))
+  )('flag after the subcommand: %s', command => {
+    const r = bash(command)
+    expect(r.status).toBe(2)
+    expect(r.stderr).toMatch(/Ron/)
+  })
 })
 
 describe('allows reads behind gh flags before the command (#2526)', () => {
