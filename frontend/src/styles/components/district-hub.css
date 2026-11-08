@@ -91,13 +91,14 @@
 
   /* The Distinguished tile carries "N +M provisional" (#2554): the confirmed
      count stays the 24px headline and never shrinks; the provisional part
-     is the muted 14px companion and is the one that ellipsizes if a
-     two-digit count leaves it too little room. The row is one line either
+     is the muted 12px companion (the type floor's minimum; at 375 a
+     "88 +88 provisional" row is ~125px of a ~133px tile, where 14px
+     would not fit) and is the one that ellipsizes only as a last resort. The row is one line either
      way, so every tile keeps the same height. */
   .district-hub__tile-value:has(.distinguished-count__provisional) {
     display: flex;
     align-items: baseline;
-    gap: 6px;
+    gap: 4px;
     max-width: 100%;
     min-width: 0;
     white-space: nowrap;
@@ -111,7 +112,7 @@
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 14px;
+    font-size: 12px;
     line-height: 20px;
     font-weight: 500;
   }
