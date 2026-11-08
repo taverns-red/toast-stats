@@ -338,13 +338,17 @@ const DistrictDetailPageInner: React.FC = () => {
   // when the read lands. Without IntersectionObserver the read is never held.
   const [trophySlot, setTrophySlot] = React.useState<HTMLElement | null>(null)
   const trophyNearViewport = useNearViewport(trophySlot)
-  const awardsWanted =
+  const awardsReadWanted =
     trophyNearViewport || typeof IntersectionObserver !== 'function'
   const competitiveAwardsQuery = useCompetitiveAwards(
     effectiveEndDate ?? undefined,
-    { enabled: snapshotDateSettled && awardsWanted }
+    { enabled: snapshotDateSettled && awardsReadWanted }
   )
   const competitiveAwards = competitiveAwardsQuery.data
+  // A held query still returns what the cache holds, and cached data costs no
+  // bytes: the card is wanted at once, so Back from a club page restores the
+  // full page instead of landing on held placeholders (#2513).
+  const awardsWanted = awardsReadWanted || competitiveAwards !== undefined
   // `isLoading` is false while the query is held (disabled); the card's own
   // `held` prop covers that stretch.
   const isLoadingCompetitiveAwards =
@@ -386,14 +390,20 @@ const DistrictDetailPageInner: React.FC = () => {
   // screen, so they wait for its slot to near the viewport (#2513).
   const [growthSlot, setGrowthSlot] = React.useState<HTMLElement | null>(null)
   const growthNearViewport = useNearViewport(growthSlot)
-  const growthWanted =
+  const growthReadWanted =
     growthNearViewport || typeof IntersectionObserver !== 'function'
   const { checkpoints: clubGrowthCheckpoints, isLoading: isLoadingClubGrowth } =
     useClubGrowthMilestones(
       districtId,
       effectiveProgramYear ?? selectedProgramYear,
-      { enabled: growthWanted }
+      { enabled: growthReadWanted }
     )
+  // Same rule as the awards: checkpoints already settled from the cache (or
+  // needing no read) show the card at once (#2513).
+  const growthWanted =
+    growthReadWanted ||
+    (clubGrowthCheckpoints.length > 0 &&
+      clubGrowthCheckpoints.every(c => c.status !== 'loading'))
 
   // District → region history (#1821): drives the moved-region banner.
   const { history: regionHistory } = useDistrictRegionHistory()
