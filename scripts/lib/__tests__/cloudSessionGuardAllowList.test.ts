@@ -117,15 +117,12 @@ describe('gh subcommands: refused unless allow-listed (#2528)', () => {
     'gh pr edit 12 --add-label bug',
     'gh pr edit 12 --add-label preview-smoke',
     'gh issue edit 12 --remove-label preview-smoke',
-    'gh pr create --title t --body b',
-    'gh pr comment 1 --body x',
     'gh pr close 1',
     'gh pr reopen 1',
     'gh pr ready 1',
     'gh pr checkout 1',
     'gh issue create --title t --body b',
     'gh issue close 1',
-    'gh issue comment 1 --body x',
     'gh issue delete 1 --yes',
     'gh alias set m "pr merge"',
     'gh auth logout',
@@ -182,31 +179,11 @@ describe('gh subcommands: reads stay allowed (#2528)', () => {
     'gh pr checks 12',
     'gh pr status',
     'gh issue view 2528 --comments',
-    'gh issue list --label bug',
     'gh run view 123 --log-failed',
     'gh run list --limit 5',
-    'gh run watch 123',
-    'gh workflow list',
-    'gh workflow view ci.yml',
-    'gh repo view taverns-red/toast-stats',
-    'gh release list',
-    'gh release view v2.80.0',
-    'gh label list',
-    'gh cache list',
-    'gh ruleset list',
-    'gh ruleset view 11350451',
-    'gh auth status',
-    'gh search issues guard --repo taverns-red/toast-stats',
-    'gh --version',
-    'gh help',
-    'gh pr --help',
     // red-district#1572 reference read
-    'gh issue view 1572 --repo taverns-red/red-district',
-    'gh -R taverns-red/red-district issue view 1572',
     'gh pr view 12 -R taverns-red/toast-stats',
     'gh issue --repo=taverns-red/toast-stats list',
-    'gh pr view 12 | head -20',
-    'gh pr view 12 2>&1 | tail -5',
   ])('%s', command => expectAllowed(command))
 })
 
@@ -305,7 +282,6 @@ describe('gh api: the worker patterns stay allowed (#2528)', () => {
     `gh api ${R}/issues/42/comments -F body=@report.md`,
     `gh api ${R}/issues/42/comments --input comment.json`,
     `gh api ${R}/pulls --input pr.json`,
-    `gh api repos/{owner}/{repo}/issues/42/comments -f body=done`,
     // docs/cloud-sessions.md: preview-smoke on a draft
     `gh api ${R}/issues/12/labels -f 'labels[]=preview-smoke'`,
     // reads
@@ -313,10 +289,7 @@ describe('gh api: the worker patterns stay allowed (#2528)', () => {
     `gh api ${R}/pulls/1/merge`,
     `gh api "${R}/actions/runs?head_sha=abc&per_page=100"`,
     `gh api -X GET ${R}/commits/abc/check-runs --paginate`,
-    `gh api --method GET search/issues -f q=guard`,
     `gh api ${R}/issues/12/events --paginate --jq '.[].event'`,
-    `gh api -H 'Accept: application/vnd.github+json' ${R}/pulls/1/files`,
-    `gh api ${API}/pulls/1`,
     // review comments and COMMENT reviews
     `gh api ${R}/pulls/1/comments -f body=x -f commit_id=abc -f path=a.ts -F line=3`,
     `gh api ${R}/pulls/1/reviews -f event=COMMENT -f body=x`,
@@ -328,7 +301,6 @@ describe('gh api: the worker patterns stay allowed (#2528)', () => {
     `gh api -X PATCH ${R}/pulls/1 -F draft=true`,
     // with gh's repo and host flags
     `gh -R taverns-red/toast-stats api ${R}/issues/42/comments -f body=x`,
-    `gh api --hostname github.com ${R}/pulls/1`,
   ])('%s', command => expectAllowed(command))
 })
 
@@ -384,7 +356,9 @@ describe('curl and wget to GitHub: same rules (#2528)', () => {
     `curl -X POST ${API}/issues/1/labels -d '{"labels":["preview-smoke"]}'`,
     `curl -X POST https://example.com/hook -d x`,
     `wget -qO- ${API}/pulls/1`,
-  ])('allows %s', command => expectAllowed(command))
+  ])('refuses %s (#2547: no curl or wget at all)', command =>
+    expectRefused(command)
+  )
 })
 
 describe('git push: only the session’s own branch (#2528)', () => {
@@ -456,8 +430,6 @@ describe('git push: only the session’s own branch (#2528)', () => {
   ])('refuses %s', command => expectRefused(command, repo.dir))
 
   it.each([
-    'git push',
-    'git push origin',
     `git push -u origin ${BRANCH}`,
     `git push --set-upstream origin ${BRANCH}`,
     'git push origin HEAD',
@@ -465,30 +437,32 @@ describe('git push: only the session’s own branch (#2528)', () => {
     `git push origin HEAD:${BRANCH}`,
     `git push origin HEAD:refs/heads/${BRANCH}`,
     `git push origin refs/heads/${BRANCH}:refs/heads/${BRANCH}`,
+    `git push -u origin ${BRANCH} && git log --oneline -1`,
+    'git status && git commit -m "x (#2528)" && git push -u origin HEAD',
+  ])('allows %s', command => expectAllowed(command, repo.dir))
+
+  it.each([
+    'git push',
+    'git push origin',
     `git push --force-with-lease origin ${BRANCH}`,
     `git push --force-with-lease=${BRANCH}:abc origin ${BRANCH}`,
     `git push -u origin ${BRANCH} 2>&1 | tail -5`,
     `nohup git push -u origin ${BRANCH} > push.log 2>&1 &`,
-    `git push -q -u origin ${BRANCH} && git log --oneline -1`,
-    'git status && git commit -m "x (#2528)" && git push',
-  ])('allows %s', command => expectAllowed(command, repo.dir))
+    `git push -q -u origin ${BRANCH}`,
+  ])('refuses %s (#2547: one exact push shape)', command =>
+    expectRefused(command, repo.dir)
+  )
 
-  it('reads the branch of the directory git -C or cd names', () => {
-    expectAllowed(`git -C ${repo.dir} push -u origin ${BRANCH}`, other)
-    expectAllowed(`cd ${repo.dir} && git push -u origin ${BRANCH}`, other)
-    expectRefused(`git -C ${repo.dir} push origin HEAD:main`, other)
-    expectRefused(`cd ${repo.dir} && git push origin HEAD:main`, other)
+  it('refuses git -C, and a cd out of the session root (#2547)', () => {
+    expectRefused(`git -C ${repo.dir} push -u origin ${BRANCH}`, other)
+    expectRefused(`cd ${repo.dir} && git push -u origin ${BRANCH}`, other)
     expectRefused(`git -C ${onMain.dir} push origin HEAD`, repo.dir)
-    expectRefused(`cd ${onMain.dir} && git push`, repo.dir)
-    expectRefused(`cd "$D" && git push`, repo.dir)
-  })
-
-  it('does not let a cd inside $(...) move the outer command', () => {
-    expectAllowed(
+    expectRefused(`cd ${onMain.dir} && git push origin HEAD`, repo.dir)
+    expectRefused(`cd "$D" && git push origin HEAD`, repo.dir)
+    expectRefused(
       `echo $(cd ${onMain.dir}) && git push -u origin ${BRANCH}`,
       repo.dir
     )
-    expectRefused(`echo $(cd ${repo.dir}) && git push`, onMain.dir)
   })
 
   it('refuses any push outside a git repository', () => {
@@ -569,11 +543,15 @@ describe('git push: only the session’s own branch (#2528)', () => {
       'git log --oneline -5',
       'git fetch origin main',
       'git commit -m "test: x (#2528)"',
+    ])
+      expectAllowed(c, repo.dir)
+    // #2547: checkout and config are not on the whole-command allow list
+    for (const c of [
       'git checkout -b fix/2528-y',
       'git config user.name x',
       'git config --get remote.origin.push',
     ])
-      expectAllowed(c, repo.dir)
+      expectRefused(c, repo.dir)
   })
 })
 
@@ -585,9 +563,9 @@ describe('inline code that drives GitHub is refused (#2528)', () => {
     `node -e "fetch('${API}/pulls/1/merge',{method:'PUT'})"`,
   ])('%s', command => expectRefused(command))
 
-  it('allows inline code that does not', () => {
-    expectAllowed(`node -e "console.log(1 + 1)"`)
-    expectAllowed(`python3 -c "print('ok')"`)
+  it('refuses inline code that does not, too (#2547)', () => {
+    expectRefused(`node -e "console.log(1 + 1)"`)
+    expectRefused(`python3 -c "print('ok')"`)
   })
 })
 
@@ -598,9 +576,7 @@ describe('commands that are not gh, curl, wget or git push', () => {
     'grep -rn gh scripts/',
     'git commit -m "docs: gh pr merge is refused (#2528)"',
     'echo "git push origin HEAD:main is refused"',
-    `cat > /tmp/notes.txt <<'EOF'\ngh pr merge 1\ngit push origin HEAD:main\nEOF`,
     './bin/agent-cli ci-wait 2530',
-    'ls -la && echo $HOME',
   ])('allows %s', command => expectAllowed(command))
 })
 
@@ -645,4 +621,46 @@ describe('the allow list is tamper-protected and documented (#2528)', () => {
       expect(md, f).toMatch(/#2528/)
     }
   })
+})
+
+describe('refused by the whole-command allow list (#2547)', () => {
+  // Allowed under #2528; the red-rostrum template allows none of them:
+  // pipes, redirects, $ and other hosts are shell syntax or out of scope,
+  // and these gh groups are not on its list.
+  it.each([
+    'gh run watch 123',
+    'gh workflow list',
+    'gh workflow view ci.yml',
+    'gh repo view taverns-red/toast-stats',
+    'gh release list',
+    'gh release view v2.80.0',
+    'gh label list',
+    'gh cache list',
+    'gh ruleset list',
+    'gh ruleset view 11350451',
+    'gh auth status',
+    'gh search issues guard --repo taverns-red/toast-stats',
+    'gh --version',
+    'gh help',
+    'gh pr --help',
+    'gh issue view 1572 --repo taverns-red/red-district',
+    'gh -R taverns-red/red-district issue view 1572',
+    'gh pr view 12 | head -20',
+    'gh pr view 12 2>&1 | tail -5',
+    'gh issue list --label bug',
+    `gh api repos/{owner}/{repo}/issues/42/comments -f body=done`,
+    `gh api --method GET search/issues -f q=guard`,
+    `gh api -H 'Accept: application/vnd.github+json' ${R}/pulls/1/files`,
+    `gh api ${API}/pulls/1`,
+    `gh api --hostname github.com ${R}/pulls/1`,
+    `cat > /tmp/notes.txt <<'EOF'\ngh pr merge 1\ngit push origin HEAD:main\nEOF`,
+    'ls -la && echo $HOME',
+  ])('%s', command => expectRefused(command))
+
+  // The template allows inline --body text on these.
+  it.each([
+    'gh pr create --title t --body b',
+    'gh pr comment 1 --body x',
+    'gh issue comment 1 --body x',
+  ])('allows %s', command => expectAllowed(command))
 })

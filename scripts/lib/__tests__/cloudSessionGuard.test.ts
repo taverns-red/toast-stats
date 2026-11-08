@@ -331,13 +331,10 @@ describe('allows reads and other labels in a cloud session', () => {
   // DELETE issues/N/labels/x), graphql and pushes to the allow-list tests
   // in cloudSessionGuardAllowList.test.ts.
   it.each([
-    'gh label list',
-    'gh label list --search db-breaking-approved',
     `gh api ${R}/labels`,
     `gh api ${R}/labels/db-breaking-approved`,
     `gh api ${R}/issues/12/labels`,
     `gh api ${R}/issues/12/events --paginate`,
-    `curl -s ${API}/labels/db-breaking-approved`,
     'gh pr view 12',
     'gh issue view 2519',
     `gh api ${R}/issues/12/labels -f 'labels[]=preview-smoke'`,
@@ -352,7 +349,6 @@ describe('allows reads and other labels in a cloud session', () => {
     'git commit -m "docs: mention db-breaking-approved (#2519)"',
     'grep -rn db-breaking-approved scripts/',
     'cat scripts/cloud-session-guard.sh',
-    'echo $HOME && ls',
   ])('%s', command => {
     const r = bash(command)
     expect(r.stderr).toBe('')
@@ -444,14 +440,30 @@ describe('allows reads behind gh flags before the command (#2526)', () => {
     'issue view 2519',
     `api ${R}/labels/db-breaking-approved`,
   ]
-  it.each(GH_FLAG_PREFIXES.flatMap(p => reads.map(r => `gh ${p} ${r}`)))(
-    '%s',
-    command => {
-      const r = bash(command)
-      expect(r.stderr).toBe('')
-      expect(r.status).toBe(0)
-    }
-  )
+  // #2547: --hostname and gh label are not on the whole-command allow list.
+  const refused = (c: string) => /hostname| label /.test(c)
+  const all = GH_FLAG_PREFIXES.flatMap(p => reads.map(r => `gh ${p} ${r}`))
+  it.each(all.filter(c => !refused(c)))('%s', command => {
+    const r = bash(command)
+    expect(r.stderr).toBe('')
+    expect(r.status).toBe(0)
+  })
+  it.each(all.filter(refused))('refuses %s (#2547)', command => {
+    expect(bash(command).status).toBe(2)
+  })
+})
+
+describe('refused by the whole-command allow list (#2547)', () => {
+  it.each([
+    'gh label list',
+    'gh label list --search db-breaking-approved',
+    `curl -s ${API}/labels/db-breaking-approved`,
+    'echo $HOME && ls',
+  ])('%s', command => {
+    const r = bash(command)
+    expect(r.status).toBe(2)
+    expect(r.stderr).toMatch(/Ron/)
+  })
 })
 
 describe('refuses tampering with the guard in a cloud session', () => {
