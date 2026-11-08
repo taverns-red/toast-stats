@@ -32,12 +32,15 @@ import { isAbsolute, join, resolve } from 'node:path'
  * ($VAR, $(...), backticks, $'...'), in which case `text` is unreliable.
  */
 class Word {
-  constructor() {
-    this.text = ''
-    this.dynamic = false
+  constructor(text = '', dynamic = false) {
+    this.text = text
+    this.dynamic = dynamic
     this.quoted = false
   }
 }
+
+/** The value glued to a flag (`--x=v`, `-Xv`), as a Word of its own. */
+const glued = (from, text) => new Word(text, from.dynamic)
 
 const HEREDOC = /<<-?\s*(['"]?)([A-Za-z_][\w.-]*)\1/g
 
@@ -662,10 +665,7 @@ function checkGhApi(words) {
       if (API_BOOL.has(flag)) continue
       if (!API_VALUE.has(flag)) no(`gh api flag ${flag} is not understood`)
       if (eq >= 0) {
-        const v = new Word()
-        v.text = t.slice(eq + 1)
-        v.dynamic = w.dynamic
-        take(flag, v)
+        take(flag, glued(w, t.slice(eq + 1)))
       } else take(flag, words[++k])
       continue
     }
@@ -676,10 +676,7 @@ function checkGhApi(words) {
       if (!API_SHORT_VALUE.has(ch)) no(`gh api flag -${ch} is not understood`)
       const rest = t.slice(j + 1)
       if (rest) {
-        const v = new Word()
-        v.text = rest
-        v.dynamic = w.dynamic
-        take(`-${ch}`, v)
+        take(`-${ch}`, glued(w, rest))
       } else take(`-${ch}`, words[++k])
       break
     }
@@ -747,12 +744,10 @@ const LONG_OF = {
   Q: '--quote',
 }
 
-function rcExists(ctx, names) {
-  return names.some(n => n && existsSync(n))
-}
+const rcExists = names => names.some(n => n && existsSync(n))
 
 /** curl/wget to a GitHub host: apply the route rules. */
-function checkHttp(tool, method, urls, b, ctx, rcFiles) {
+function checkHttp(tool, method, urls, b, rcFiles) {
   const m = method.toUpperCase()
   for (const u of urls) {
     if (u.dynamic) {
@@ -764,7 +759,7 @@ function checkHttp(tool, method, urls, b, ctx, rcFiles) {
     ).toLowerCase()
     const github = /(^|\.)github\.com$|(^|\.)githubusercontent\.com$/.test(host)
     if (!github) continue
-    if (rcExists(ctx, rcFiles))
+    if (rcExists(rcFiles))
       no(`${tool} to GitHub with a ${tool}rc that could change the request`)
     if (tool === 'curl' && /[{}[\]]/.test(u.text) && !/^(GET|HEAD)$/.test(m))
       no('curl URL globbing turns one URL into several')
@@ -794,8 +789,11 @@ function checkCurl(args, ctx) {
     else if (flag === '--upload-file') upload = true
     else if (flag === '--url') urls.push(v)
     else if (flag === '--header') {
-      if (v.dynamic && /override/i.test(v.text)) no('curl override header')
-      if (METHOD_OVERRIDE.test(v.text)) no('curl with a method-override header')
+      if (
+        METHOD_OVERRIDE.test(v.text) ||
+        (v.dynamic && /override/i.test(v.text))
+      )
+        no('curl with a method-override header')
     } else if (/^--(config|variable|quote)$/.test(flag))
       no(`curl ${flag} can change the request out of sight`)
   }
@@ -821,10 +819,7 @@ function checkCurl(args, ctx) {
         no(`curl ${flag} expands variables out of sight`)
       if (!CURL_VALUE_LONG.has(flag) && !/^--expand-/.test(flag)) continue
       if (eq >= 0) {
-        const v = new Word()
-        v.text = t.slice(eq + 1)
-        v.dynamic = w.dynamic
-        take(flag, v)
+        take(flag, glued(w, t.slice(eq + 1)))
       } else take(flag, args[++k])
       continue
     }
@@ -835,13 +830,7 @@ function checkCurl(args, ctx) {
       if (ch === 'I') head = true
       if (!CURL_VALUE_SHORT.has(ch)) continue
       const rest = t.slice(j + 1)
-      let v
-      if (rest) {
-        v = new Word()
-        v.text = rest
-        v.dynamic = w.dynamic
-      } else v = args[++k]
-      take(LONG_OF[ch] ?? `-${ch}`, v)
+      take(LONG_OF[ch] ?? `-${ch}`, rest ? glued(w, rest) : args[++k])
       break
     }
   }
@@ -865,7 +854,7 @@ function checkCurl(args, ctx) {
     else b = jsonBody(v.text)
   }
   const home = ctx.home
-  checkHttp('curl', m, urls, b, ctx, [
+  checkHttp('curl', m, urls, b, [
     home && join(home, '.curlrc'),
     process.env.CURL_HOME && join(process.env.CURL_HOME, '.curlrc'),
     process.env.XDG_CONFIG_HOME && join(process.env.XDG_CONFIG_HOME, '.curlrc'),
@@ -913,12 +902,7 @@ function checkWget(args, ctx) {
       if (!valued && WGET_RISKY.some(n => n.startsWith(flag.slice(2))))
         no(`wget ${flag} abbreviates an option that changes the request`)
       if (!valued) continue
-      let v
-      if (eq >= 0) {
-        v = new Word()
-        v.text = t.slice(eq + 1)
-        v.dynamic = w.dynamic
-      } else v = args[++k]
+      const v = eq >= 0 ? glued(w, t.slice(eq + 1)) : args[++k]
       if (!v) no(`wget ${flag} needs a value`)
       if (flag === '--method') {
         if (v.dynamic) no('wget with a method built at run time')
@@ -945,7 +929,7 @@ function checkWget(args, ctx) {
     }
   }
   const m = method ?? (posted ? 'POST' : 'GET')
-  checkHttp('wget', m, urls, b, ctx, [
+  checkHttp('wget', m, urls, b, [
     ctx.home && join(ctx.home, '.wgetrc'),
     process.env.WGETRC,
   ])
