@@ -30,6 +30,7 @@ import { runPromoteRunManifest } from '../promoteRunManifestRunner.js'
 import { planManifestPromotion } from '../manifestPromotion.js'
 import {
   planEducationRollup,
+  refuseInconsistentTimelines,
   timelinePrefixes,
 } from '../educationRollupPlan.js'
 import {
@@ -68,6 +69,9 @@ const D26 = `${P26}/district-49.json`
 const P25 = `${TL}2025-2026`
 const W25 = `${P25}/world.json`
 const META = 'content-type=application/json\n'
+/** A stand-in entity file: distinct bytes, and the `asOf` the gate reads. */
+const body = (kind: string, asOf = '2026-10-12') =>
+  JSON.stringify({ kind, asOf })
 const sha = (b: Buffer | string) => createHash('sha256').update(b).digest('hex')
 const entry = (p: string): RunManifestEntry => ({
   path: p,
@@ -76,7 +80,11 @@ const entry = (p: string): RunManifestEntry => ({
   stage: 'education-rollup',
 })
 
-const index = (asOf: string | null, prefixes: string[]) =>
+const index = (
+  asOf: string | null,
+  prefixes: string[],
+  rowAsOf: string | null = asOf
+) =>
   JSON.stringify({
     _format: { version: '1.0.0', type: 'education-rollup-index' },
     asOf,
@@ -84,6 +92,7 @@ const index = (asOf: string | null, prefixes: string[]) =>
     timelines: prefixes.map(prefix => ({
       programYear: prefix.slice(-9),
       prefix,
+      asOf: rowAsOf,
     })),
   })
 
@@ -148,6 +157,53 @@ describe('planEducationRollup — the timeline files under the named prefixes (#
   })
 })
 
+describe('refuseInconsistentTimelines — a mixed set is never promoted (review fix 3)', () => {
+  const idx = index('2026-10-12', [P26])
+  const files = (m: Record<string, string | null>) => new Map(Object.entries(m))
+  it('passes a set whose world matches the row and no file is newer', () => {
+    expect(
+      refuseInconsistentTimelines(
+        idx,
+        files({ [W26]: '2026-10-12', [D26]: '2026-10-11', [R26]: '2026-10-12' })
+      ).size
+    ).toBe(0)
+  })
+  it('refuses a set with a file newer than the index row', () => {
+    const r = refuseInconsistentTimelines(
+      idx,
+      files({ [W26]: '2026-10-12', [D26]: '2026-10-13' })
+    )
+    expect([...r.keys()]).toEqual(['2026-2027'])
+    expect(r.get('2026-2027')).toMatch(/district-49\.json.*2026-10-13/)
+  })
+  it('refuses a set whose world.json is not at the row asOf', () => {
+    const r = refuseInconsistentTimelines(
+      idx,
+      files({ [W26]: '2026-10-11', [D26]: '2026-10-11' })
+    )
+    expect(r.get('2026-2027')).toMatch(/world\.json.*2026-10-11/)
+  })
+  it('refuses a set with no world.json, or a file with no readable asOf', () => {
+    expect(
+      refuseInconsistentTimelines(idx, files({ [D26]: '2026-10-12' })).size
+    ).toBe(1)
+    expect(
+      refuseInconsistentTimelines(
+        idx,
+        files({ [W26]: '2026-10-12', [D26]: null })
+      ).size
+    ).toBe(1)
+  })
+  it('judges each PY on its own; a PY with nothing to promote is not mentioned', () => {
+    const two = index('2026-10-12', [P25, P26])
+    const r = refuseInconsistentTimelines(
+      two,
+      files({ [W26]: '2026-10-12', [D26]: '2026-10-12' })
+    )
+    expect(r.size).toBe(0)
+  })
+})
+
 describe('planManifestPromotion — the education timeline (#2591)', () => {
   const base = {
     entries: [entry(Y26), entry(W26), entry(D26), entry(INDEX)],
@@ -192,6 +248,18 @@ describe('planManifestPromotion — the education timeline (#2591)', () => {
         bad
       ).toThrow(/derived\/education-timeline/)
     }
+  })
+
+  it('the refusal names the layout it accepts (review fix 5)', () => {
+    expect(() =>
+      planManifestPromotion({
+        ...base,
+        entries: [entry(`${P26}/scratch.json`)],
+        educationRollup: true,
+      })
+    ).toThrow(
+      /derived\/education-timeline\/<PY>\/\{world,region-<n>,district-<id>\}\.json/
+    )
   })
 })
 
@@ -324,9 +392,9 @@ describe('plan + promote with a timeline (shim)', () => {
     put(PROD, 'v1/dates.json', JSON.stringify({ dates: ['2026-10-12'] }))
     // Different bytes in every object, so a mix-up cannot pass.
     put(STG, Y26, '{"kind":"rollup-year"}')
-    put(STG, W26, '{"kind":"world"}')
-    put(STG, D26, '{"kind":"district-49"}')
-    put(STG, R26, '{"kind":"region-01"}')
+    put(STG, W26, body('world'))
+    put(STG, D26, body('district-49'))
+    put(STG, R26, body('region-01'))
     put(STG, INDEX, index('2026-10-12', [P26]))
     // Strays under the named prefix are never promoted; neither is a PY the
     // index does not name.
@@ -372,6 +440,19 @@ describe('plan + promote with a timeline (shim)', () => {
     return { planned, promoted, err }
   }
 
+  it('a partial upload (world.json behind the index row) holds the PY timeline set; the rest promotes (review fix 3)', async () => {
+    put(STG, W26, body('world', '2026-10-11'))
+    const r = await planAndPromote()
+    expect(r.planned, r.err).toBe(0)
+    expect(r.err).toMatch(/2026-2027.*world\.json/)
+    const rows = parseRunManifest(fs.readFileSync(rollupManifest, 'utf-8'))
+    expect(rows.map(e => e.path).sort()).toEqual([Y26, INDEX].sort())
+    expect(r.promoted, r.err).toBe(0)
+    expect(read(PROD, Y26)).toBe('{"kind":"rollup-year"}')
+    expect(read(PROD, INDEX)).toBe(read(STG, INDEX))
+    for (const p of [W26, D26, R26]) expect(read(PROD, p), p).toBeNull()
+  })
+
   it('plans the named entity files with their own bytes and promotes them before the index', async () => {
     const r = await planAndPromote()
     expect(r.planned, r.err).toBe(0)
@@ -379,14 +460,14 @@ describe('plan + promote with a timeline (shim)', () => {
     expect(rows.map(e => e.path).sort()).toEqual(
       [Y26, D26, R26, W26, INDEX].sort()
     )
-    expect(rows.find(e => e.path === W26)?.sha256).toBe(sha('{"kind":"world"}'))
+    expect(rows.find(e => e.path === W26)?.sha256).toBe(sha(body('world')))
     expect(rows.find(e => e.path === Y26)?.sha256).toBe(
       sha('{"kind":"rollup-year"}')
     )
     expect(r.promoted, r.err).toBe(0)
-    expect(read(PROD, W26)).toBe('{"kind":"world"}')
-    expect(read(PROD, D26)).toBe('{"kind":"district-49"}')
-    expect(read(PROD, R26)).toBe('{"kind":"region-01"}')
+    expect(read(PROD, W26)).toBe(body('world'))
+    expect(read(PROD, D26)).toBe(body('district-49'))
+    expect(read(PROD, R26)).toBe(body('region-01'))
     expect(read(PROD, Y26)).toBe('{"kind":"rollup-year"}')
     expect(read(PROD, INDEX)).toBe(read(STG, INDEX))
     expect(read(PROD, `${P26}/scratch.json`)).toBeNull()
