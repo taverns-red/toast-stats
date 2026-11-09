@@ -175,21 +175,30 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
         prodIndexedDates: indexed,
       })
       if (rollup.paths.length > 0) {
-        const dir = path.join(work, 'education-rollup')
-        mkdirSync(dir, { recursive: true })
-        read(
-          [
-            'storage',
-            'cp',
-            ...rollup.paths.map(p => `gs://${staging}/${p}`),
-            `${dir}/`,
-          ],
-          `could not download the ${rollup.paths.length} education rollup object(s)`
-        )
+        // One download directory per source directory: the rollup year and
+        // the timeline of a program year share a file name (#2591).
+        const base = path.join(work, 'education-rollup')
+        const dirOf = (p: string) => path.join(base, path.dirname(p))
+        const byDir = new Map<string, string[]>()
+        for (const p of rollup.paths) {
+          byDir.set(dirOf(p), [...(byDir.get(dirOf(p)) ?? []), p])
+        }
+        for (const [dir, paths] of byDir) {
+          mkdirSync(dir, { recursive: true })
+          read(
+            [
+              'storage',
+              'cp',
+              ...paths.map(p => `gs://${staging}/${p}`),
+              `${dir}/`,
+            ],
+            `could not download the ${paths.length} education rollup object(s)`
+          )
+        }
         entries = rollup.paths.map(p => ({
           path: p,
           sha256: createHash('sha256')
-            .update(readFileSync(path.join(dir, path.basename(p))))
+            .update(readFileSync(path.join(dirOf(p), path.basename(p))))
             .digest('hex'),
           date: null,
           stage: EDUCATION_ROLLUP_STAGE,

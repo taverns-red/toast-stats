@@ -15,6 +15,9 @@
  *   A stray object under the prefix is never promoted. The promoter copies
  *   the years first and the index LAST, so prod never names a year it does
  *   not hold (R15).
+ * - **The timelines it names too** (#2591): `timelines[].path` of the index,
+ *   each `derived/education-timeline/<PY>.json`, between the years and the
+ *   index. An index without `timelines` plans exactly as before.
  * - **Held until its reports date is in prod**: a rollup whose `asOf` (the
  *   reports date it was read from) is not a date prod's v1/dates.json
  *   indexes, or that has none, is held: a rollup of a held day's reports
@@ -31,6 +34,7 @@
 import {
   EDUCATION_ROLLUP_INDEX_PATH,
   EDUCATION_ROLLUP_PREFIX,
+  EDUCATION_TIMELINE_PREFIX,
 } from '@taverns-red/shared-contracts'
 
 export const EDUCATION_ROLLUP_STAGE = 'education-rollup'
@@ -40,10 +44,23 @@ export const EDUCATION_ROLLUP_YEAR_PATH = new RegExp(
   `^${EDUCATION_ROLLUP_PREFIX}/\\d{4}-\\d{4}\\.json$`
 )
 
+/**
+ * A timeline (#2591): `derived/education-timeline/<PY>.json`. It promotes
+ * with the rollup, under the rollup's rules, because the rollup index names it.
+ */
+export const EDUCATION_TIMELINE_YEAR_PATH = new RegExp(
+  `^${EDUCATION_TIMELINE_PREFIX}/\\d{4}-\\d{4}\\.json$`
+)
+
+export function isEducationTimelineObject(path: string): boolean {
+  return EDUCATION_TIMELINE_YEAR_PATH.test(path)
+}
+
 export function isEducationRollupObject(path: string): boolean {
   return (
     path === EDUCATION_ROLLUP_INDEX_PATH ||
-    EDUCATION_ROLLUP_YEAR_PATH.test(path)
+    EDUCATION_ROLLUP_YEAR_PATH.test(path) ||
+    isEducationTimelineObject(path)
   )
 }
 
@@ -79,6 +96,7 @@ export function planEducationRollup(
   const index = JSON.parse(inputs.stagingIndex) as {
     asOf?: unknown
     programYears?: unknown
+    timelines?: unknown
   }
   if (!Array.isArray(index?.programYears)) {
     throw new Error(
@@ -94,6 +112,23 @@ export function planEducationRollup(
       )
     }
     years.push(p)
+  }
+  const timelines: string[] = []
+  if (index.timelines !== undefined) {
+    if (!Array.isArray(index.timelines)) {
+      throw new Error(
+        `staging ${EDUCATION_ROLLUP_INDEX_PATH} timelines is not an array`
+      )
+    }
+    for (const row of index.timelines as Array<{ path?: unknown }>) {
+      const p = row?.path
+      if (typeof p !== 'string' || !EDUCATION_TIMELINE_YEAR_PATH.test(p)) {
+        throw new Error(
+          `staging ${EDUCATION_ROLLUP_INDEX_PATH} names timeline '${String(p)}', outside ${EDUCATION_TIMELINE_PREFIX}/<PY>.json; refusing`
+        )
+      }
+      timelines.push(p)
+    }
   }
   const asOf = typeof index.asOf === 'string' ? index.asOf : null
   if (asOf === null || !inputs.prodIndexedDates.includes(asOf)) {
@@ -115,8 +150,10 @@ export function planEducationRollup(
   return {
     action: 'promote',
     asOf,
-    paths: [...new Set(years)].sort().concat(EDUCATION_ROLLUP_INDEX_PATH),
-    reason: `${new Set(years).size} program year(s) + index, reports as of ${asOf}`,
+    paths: [...new Set(years)]
+      .sort()
+      .concat([...new Set(timelines)].sort(), EDUCATION_ROLLUP_INDEX_PATH),
+    reason: `${new Set(years).size} program year(s) + ${new Set(timelines).size} timeline(s) + index, reports as of ${asOf}`,
   }
 }
 
