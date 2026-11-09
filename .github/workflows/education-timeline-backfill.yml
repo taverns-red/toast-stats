@@ -1,0 +1,128 @@
+# Education timeline backfill (#2591, epic #2590): manual dispatch only.
+#
+# The daily run only appends the day's date to a program year's education
+# timeline (build-education-rollup.sh). This builds the whole year from the
+# per-date district_<id>_reports.json in staging and sets the prior-year
+# ghost, via scripts/pipeline/backfill-education-timeline.sh.
+#
+# STAGING ONLY. The bucket is a literal below, not an input, and the job has
+# no prod credentials or environment. Uploads go through gcs-upload.sh, which
+# refuses the prod bucket and records every object in RUN_MANIFEST_FILE
+# (#1755). derived/ is never a promoted prefix: the next daily rollup run
+# finds the objects and the promote-reports job carries them to prod with the
+# rollup, behind its content gate. Nothing here promotes.
+#
+# Dry run is the default: without `upload` the bucket is only read and the
+# built files are not kept. It shares the data-pipeline concurrency group, so
+# it never overlaps a pipeline run or the daily rollup step. The manifest is
+# always uploaded as an artifact.
+
+name: Education Timeline Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      program_year:
+        description: 'Program year to build, e.g. 2026-2027'
+        required: true
+        type: string
+      upload:
+        description: 'Upload the built timeline to STAGING (default: build only, write nothing)'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: data-pipeline
+  cancel-in-progress: false
+
+env:
+  GCS_BUCKET: 'toast-stats-data-staging'
+  RUN_MANIFEST_FILE: '/tmp/run-manifest/written.jsonl'
+
+jobs:
+  backfill:
+    name: Build the education timeline
+    runs-on: ubuntu-26.04
+    timeout-minutes: 120
+    steps:
+      # Before anything is installed or authenticated.
+      - name: Validate the program year
+        env:
+          PROGRAM_YEAR: ${{ inputs.program_year }}
+        run: |
+          if ! [[ "${PROGRAM_YEAR}" =~ ^[0-9]{4}-[0-9]{4}$ ]]; then
+            echo "::error::program_year must look like 2026-2027, got '${PROGRAM_YEAR}'"
+            exit 1
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The folding CLI imports the workspace packages' built dist/ (R2: the
+      # runner starts empty).
+      - name: Build shared contracts
+        run: npm run build:shared-contracts
+
+      - name: Build analytics core
+        run: npm run build:analytics-core
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          # Exact pin (#1720): same as the data pipeline.
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        run: gcloud version
+
+      - name: Build the education timeline
+        id: backfill
+        env:
+          PROGRAM_YEAR: ${{ inputs.program_year }}
+          # A boolean input reaches the shell as the string true/false (#1133).
+          UPLOAD: ${{ inputs.upload }}
+        run: |
+          mkdir -p "$(dirname "${RUN_MANIFEST_FILE}")"
+          : > "${RUN_MANIFEST_FILE}"
+          ARGS=("${GCS_BUCKET}" "${PROGRAM_YEAR}")
+          if [ "${UPLOAD}" = "true" ]; then
+            ARGS+=(--upload)
+          fi
+          bash scripts/pipeline/backfill-education-timeline.sh "${ARGS[@]}"
+          COUNT="$(wc -l < "${RUN_MANIFEST_FILE}" | tr -d ' ')"
+          {
+            echo "## Education timeline backfill (#2591)"
+            echo "- bucket: ${GCS_BUCKET} (staging only)"
+            echo "- program year: ${PROGRAM_YEAR}"
+            echo "- upload: ${UPLOAD}"
+            echo "- objects written: ${COUNT}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload run manifest
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: education-timeline-manifest-${{ github.run_id }}
+          path: /tmp/run-manifest/written.jsonl
+          if-no-files-found: warn
+          retention-days: 90
