@@ -166,78 +166,87 @@
   color: var(--ink-2);
 }
 
-/* The chart block (heading, headline, plot, legend, note, table toggle) holds
-   its height from first paint -- skeleton, then chart -- so the content below
-   never moves (CLS). It exists only while a chart is loading or showing: with
-   no timeline for the PY the state is a compact note and nothing is reserved.
-   The program notes sit OUTSIDE the block (they do not need the file), so
-   only the legend and the note, which wrap per font stack, change its height.
+/* Height is reserved by construction, not by a measured pixel floor. The
+   chart block (heading, headline, plot, readout, legend, note, table toggle)
+   is the same stack of boxes while loading (the skeleton) and once loaded:
+   the headline, plot, readout and toggle have fixed heights, and the only
+   parts whose height depends on the font and the data -- the legend and the
+   note, which wrap -- each reserve a fixed number of LINES, in the chart and
+   in the skeleton alike (a line is a fixed height whatever the font). The
+   reservation exists only while a chart is loading or showing: with no
+   timeline for the PY the state is a compact note and nothing is reserved,
+   and the program notes sit outside the block.
 
-   Measured on the District 61 fixture with default By level / By path
-   grouping, hover devices (macOS fonts; the CI runner's Linux fonts run up to
-   ~15px taller): 320 -> 764 / 821, 375-539 -> 707 / 821, 540-767 -> 595 / 652,
-   768 -> 595 / 623, 1024 -> 544 / 572, 1280 -> 524 / 553. A device without
-   hover adds the 56px tap-to-read line (#1835). Each floor is the measured
-   worst case plus about 35-40px, so a font that wraps a line more still fits:
-   a little white space under the chart beats a shift. */
+   Line counts are the worst case per width (phone, 540, 768, 1100) and
+   grouping: By level has at most 9 legend items, By path up to 8 with long
+   names. A wrap beyond them is at most a line, never a font-dependent guess. */
 .edu-tl-section--reserved {
-  --edu-tl-h: 745px;
   --edu-tl-touch: 0px;
-  min-height: calc(var(--edu-tl-h) + var(--edu-tl-touch));
+  --edu-tl-legend-rows: 5;
+  --edu-tl-note-lines: 5;
+  --edu-tl-head-h: 2rem;
 }
 .edu-tl-section--path {
-  --edu-tl-h: 860px;
+  --edu-tl-legend-rows: 9;
 }
 @media (hover: none) {
   .edu-tl-section--reserved {
-    --edu-tl-touch: 56px;
+    --edu-tl-touch: 48px;
   }
 }
 @media (max-width: 359px) {
   .edu-tl-section--reserved {
-    --edu-tl-h: 800px;
-  }
-  .edu-tl-section--path {
-    --edu-tl-h: 860px;
+    --edu-tl-head-h: 4rem;
+    --edu-tl-note-lines: 6;
   }
 }
 @media (min-width: 540px) {
   .edu-tl-section--reserved {
-    --edu-tl-h: 635px;
+    --edu-tl-legend-rows: 3;
+    --edu-tl-note-lines: 3;
   }
   .edu-tl-section--path {
-    --edu-tl-h: 690px;
+    --edu-tl-legend-rows: 5;
   }
 }
 @media (min-width: 768px) {
   .edu-tl-section--reserved {
-    --edu-tl-h: 635px;
+    --edu-tl-note-lines: 3;
   }
   .edu-tl-section--path {
-    --edu-tl-h: 660px;
+    --edu-tl-legend-rows: 4;
   }
 }
 @media (min-width: 1100px) {
   .edu-tl-section--reserved {
-    --edu-tl-h: 565px;
+    --edu-tl-legend-rows: 2;
+    --edu-tl-note-lines: 2;
   }
   .edu-tl-section--path {
-    --edu-tl-h: 595px;
+    --edu-tl-legend-rows: 3;
   }
 }
 
 .edu-tl__headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.3em;
   margin: 0.25rem 0 0.5rem;
+  min-height: var(--edu-tl-head-h, 2rem);
+  line-height: 2rem;
   color: var(--ink);
 }
 .edu-tl__headline-value {
   font-size: 1.5rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  line-height: 2rem;
 }
 .edu-tl__headline-date {
   font-size: 1rem;
   color: var(--ink-2);
+  line-height: 2rem;
 }
 
 .edu-tl__mismatch {
@@ -262,6 +271,10 @@
 /* ── Legend ──────────────────────────────────────────────────────────── */
 .edu-tl__legend {
   list-style: none;
+  min-height: calc(
+    var(--edu-tl-legend-rows, 1) * 1.5rem + (var(--edu-tl-legend-rows, 1) - 1) *
+      0.375rem
+  );
   margin: 0.75rem 0 0;
   padding: 0;
   display: flex;
@@ -274,6 +287,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
+  min-height: 1.5rem;
+  line-height: 1.4;
 }
 .edu-tl__swatch {
   display: inline-block;
@@ -298,8 +313,9 @@
 
 .edu-tl__note {
   margin: 0.75rem 0 0;
+  min-height: calc(var(--edu-tl-note-lines, 1) * 1.225rem);
   font-size: 0.875rem;
-  line-height: 1.4;
+  line-height: 1.225rem;
   color: var(--ink-3);
 }
 
@@ -308,9 +324,10 @@
   margin-top: 0.75rem;
 }
 .edu-tl__data-toggle {
-  display: inline-flex;
+  display: flex;
+  width: fit-content;
   align-items: center;
-  min-height: 44px;
+  height: 44px;
   padding: 0 0.25rem;
   font-size: 0.9375rem;
   font-weight: 600;
@@ -363,12 +380,38 @@
   opacity: 0.5;
 }
 .edu-tl__skeleton-line {
-  height: 2rem;
+  height: var(--edu-tl-head-h, 2rem);
   width: 55%;
   margin: 0.25rem 0 0.5rem;
 }
 .edu-tl__skeleton-plot {
   height: 280px;
+}
+/* The same slots the loaded chart reserves, drawn empty. */
+.edu-tl__skeleton-readout {
+  display: none;
+}
+@media (hover: none) {
+  .edu-tl__skeleton-readout {
+    display: block;
+    min-height: var(--edu-tl-touch);
+    margin: 8px 0 0;
+  }
+}
+.edu-tl__skeleton-legend {
+  min-height: calc(
+    var(--edu-tl-legend-rows, 1) * 1.5rem + (var(--edu-tl-legend-rows, 1) - 1) *
+      0.375rem
+  );
+  margin: 0.75rem 0 0;
+}
+.edu-tl__skeleton-note {
+  min-height: calc(var(--edu-tl-note-lines, 1) * 1.225rem);
+  margin: 0.75rem 0 0;
+}
+.edu-tl__skeleton-toggle {
+  height: 44px;
+  margin-top: 0.75rem;
 }
 @media (prefers-reduced-motion: no-preference) {
   .edu-tl__skeleton-line,

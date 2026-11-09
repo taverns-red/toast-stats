@@ -102,10 +102,49 @@ const TIMELINE_ROW = {
   priorGrain: 'day',
 }
 
+/** The KPI tiles' awards figure and the snapshot date the page is pinned to. */
+interface Tiles {
+  awards: number
+  date: string
+}
+
+/** The fixture ending exactly where the tiles do (same total, same date), so
+ *  the chart has no "different report dates" note: that note is the one part
+ *  of the block that legitimately changes the layout, and it is exceptional. */
+function endAtTiles(body: unknown, tiles: Tiles): unknown {
+  const b = body as {
+    points: {
+      date: string
+      levels: number[]
+      dtm: number
+      legacy: number
+      other: number
+      byPath: Record<string, number>
+    }[]
+    [k: string]: unknown
+  }
+  const points = b.points.map(p => ({
+    ...p,
+    levels: [...p.levels],
+    byPath: { ...p.byPath },
+  }))
+  const last = points[points.length - 1]!
+  const total =
+    last.levels.reduce((a, n) => a + n, 0) + last.dtm + last.legacy + last.other
+  // Level 1 and one path take the difference, so byPath still sums to levels.
+  const delta = tiles.awards - total
+  const firstPath = Object.keys(last.byPath)[0]!
+  last.date = tiles.date
+  last.levels[0] = last.levels[0]! + delta
+  last.byPath[firstPath] = last.byPath[firstPath]! + delta
+  return { ...b, points, asOf: tiles.date }
+}
+
 async function serveTimeline(
   page: Page,
   serve: Serve,
-  delayMs = 0
+  delayMs = 0,
+  tiles?: Tiles
 ): Promise<void> {
   // The pages gate the fetch on the index's timelines[] row; staging's index
   // gets its row from the daily run, so this spec says what the row is.
@@ -140,7 +179,12 @@ async function serveTimeline(
         headers: CORS,
         contentType: 'application/json',
         body: JSON.stringify(
-          withYearEnd(bodyFor(route.request().url()), serve === 'yearend')
+          withYearEnd(
+            tiles
+              ? endAtTiles(bodyFor(route.request().url()), tiles)
+              : bodyFor(route.request().url()),
+            serve === 'yearend'
+          )
         ),
       })
     }
@@ -350,8 +394,25 @@ test.describe('education timeline layout', () => {
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 812 })
+    // Read what the tiles say, so the chart can end where they do.
+    await serveTimeline(page, 'unlisted')
+    await load(page, '/district/61/education')
+    const awards = Number(
+      (
+        await page
+          .locator('.education-kpi', { hasText: 'Awards this year' })
+          .locator('.education-kpi__value')
+          .textContent()
+      )?.replace(/,/g, '')
+    )
+    const date = (
+      await page.getByTestId('education-provenance').textContent()
+    )?.match(/snapshot (\d{4}-\d{2}-\d{2})/)?.[1]
+    expect(date).toBeTruthy()
     // Hold the timeline so the skeleton is on screen, then release it.
-    await serveTimeline(page, 'fixture', 1_500)
+    await page.unroute('**/derived/education-timeline/**')
+    await page.unroute('**/derived/education-rollup/index.json')
+    await serveTimeline(page, 'fixture', 1_500, { awards, date: date! })
     await page.goto('/district/61/education', {
       waitUntil: 'domcontentloaded',
       timeout: 60_000,

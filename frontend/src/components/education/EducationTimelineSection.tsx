@@ -13,9 +13,10 @@ import { ProgramBar, ProgramNotes } from './EducationBreakdown'
    - The page passes its own program year (R3), entity and, for the district
      page, its selected date; this never reads them out of the response.
    - The chart is a lazy chunk so Recharts stays off the page's critical
-     path; the section reserves the chart's height (`edu-tl-section--reserved`)
-     while the file and the chunk load, and the "not available" state holds
-     the same height, so nothing below moves (CLS).
+     path. While the file and the chunk load, the skeleton draws the loaded
+     chart's own boxes (fixed heights, plus line-count slots for the legend
+     and note; education-timeline.css), so nothing below moves (CLS). Only a
+     PY the index lists reserves anything: with no row the state is compact.
    - The file may be absent even when the rollup index names the program
      year (a first PY whose set promotion refused, or before the backfill).
      Absent, 404 and schema drift all read "not available yet" -- never a
@@ -50,6 +51,13 @@ const Skeleton: React.FC = () => (
   >
     <div className="edu-tl__skeleton-line" />
     <div className="edu-tl__skeleton-plot" />
+    {/* The loaded chart's variable-height parts, as empty slots of the same
+        size: the legend and the note wrap per font, so each reserves a fixed
+        number of lines (education-timeline.css), here and in the chart. */}
+    <div className="edu-tl__skeleton-readout" />
+    <div className="edu-tl__skeleton-legend" />
+    <div className="edu-tl__skeleton-note" />
+    <div className="edu-tl__skeleton-toggle" />
     <span className="sr-only">Loading the awards timeline…</span>
   </div>
 )
