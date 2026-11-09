@@ -50,7 +50,7 @@ const timeline = (
   districts: { '49': [point('2026-10-11'), point('2026-10-12')] },
   prior: {
     programYear: '2025-2026',
-    source: 'reports',
+    source: 'timeline',
     grain: 'day',
     world: [{ at: '2025-10-12', total: 5 }],
     regions: { '01': [{ at: '2025-10-12', total: 2 }] },

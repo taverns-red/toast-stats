@@ -222,11 +222,9 @@ export function ghostFromTimeline(
   }
 }
 
-/** Ghost points from a list of (key → total) folds, ascending by `at`. */
-function ghostFromFolds(
+/** Ledger ghost points from one fold per month, ascending by `at`. */
+function ghostFromMonthFolds(
   programYear: string,
-  source: EducationTimelinePrior['source'],
-  grain: EducationTimelinePrior['grain'],
   folds: readonly { at: string; rollup: EducationRollupProgramYear }[]
 ): EducationTimelinePrior | null {
   const world: EducationTimelineGhostPoint[] = []
@@ -255,25 +253,12 @@ function ghostFromFolds(
   if (world.length === 0) return null
   return {
     programYear,
-    source,
-    grain,
+    source: 'ledger-history',
+    grain: 'month',
     world,
     regions: regions && sortedRecord(regions),
     districts: sortedRecord(districts),
   }
-}
-
-/** The previous year's ghost from its per-date reports folds (day grain). */
-export function ghostFromRollups(
-  programYear: string,
-  entries: readonly { date: string; rollup: EducationRollupProgramYear }[]
-): EducationTimelinePrior | null {
-  return ghostFromFolds(
-    programYear,
-    'reports',
-    'day',
-    entries.map(e => ({ at: e.date, rollup: e.rollup }))
-  )
 }
 
 /** The program year's twelve months, July first, as YYYY-MM. */
@@ -313,7 +298,7 @@ export function ghostFromLedger(
       regionHistory,
     }),
   }))
-  return ghostFromFolds(programYear, 'ledger-history', 'month', folds)
+  return ghostFromMonthFolds(programYear, folds)
 }
 
 export function timelineIndexRow(

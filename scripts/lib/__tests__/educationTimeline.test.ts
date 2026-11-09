@@ -24,7 +24,6 @@ import { rollUpEducationProgramYear } from '../educationRollup.js'
 import {
   foldReportsDate,
   ghostFromLedger,
-  ghostFromRollups,
   ghostFromTimeline,
   planTimelineUpdates,
   timelineIndexRow,
@@ -280,28 +279,6 @@ describe('prior-year ghost', () => {
       rawTotal(81) + rawTotal(40) + rawTotal(15),
     ])
     expect(g.districts['85']?.map(x => x.at)).toEqual([D1, D3])
-  })
-
-  it('from the prior year per-date reports: day grain', () => {
-    const entries = [D1, D3].map(date => ({
-      date,
-      rollup: foldReportsDate({
-        programYear: PY,
-        date,
-        reports: STATES[date] ?? [],
-        regionHistory,
-      }),
-    }))
-    const g = ghostFromRollups(PY, entries)
-    expect(g?.source).toBe('reports')
-    expect(g?.grain).toBe('day')
-    expect(g?.world.at(-1)?.total).toBe(
-      rawTotal(81) + rawTotal(40) + rawTotal(15)
-    )
-  })
-
-  it('no per-date reports: null, not a zero line', () => {
-    expect(ghostFromRollups(PY, [])).toBeNull()
   })
 
   describe('from the ledger history: month grain', () => {

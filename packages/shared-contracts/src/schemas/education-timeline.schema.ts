@@ -108,11 +108,9 @@ export type EducationTimelineGhostPoint = z.infer<typeof GhostPointSchema>
 
 export const EducationTimelineGrainSchema = z.enum(['day', 'month'])
 export const EducationTimelinePriorSourceSchema = z.enum([
-  /** The prior PY's per-date reports snapshots. */
-  'reports',
   /** The staging-only education ledger history (month precision). */
   'ledger-history',
-  /** The prior PY's own timeline (it was built from reports). */
+  /** The prior PY's own timeline (built from its per-date reports). */
   'timeline',
 ])
 
