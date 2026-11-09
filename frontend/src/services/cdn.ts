@@ -52,6 +52,8 @@ import {
   type DistrictReportsDataset,
   type EducationRollupIndex,
   type EducationRollupProgramYear,
+  type EducationTimelineEntity,
+  type EducationTimelineEntityKind,
   type GlobalClubRace,
   type GlobalHistory,
   type GlobalTotals,
@@ -860,6 +862,23 @@ export async function fetchCdnEducationRollupIndex(): Promise<EducationRollupInd
   } catch {
     return null
   }
+}
+
+// RED stubs (#2592): replaced in the next commit.
+export function cdnEducationTimelineUrl(
+  _programYear: string,
+  _kind: EducationTimelineEntityKind,
+  _id: string | null
+): string {
+  throw new Error('not implemented')
+}
+
+export async function fetchCdnEducationTimeline(
+  _programYear: string,
+  _kind: EducationTimelineEntityKind,
+  _id: string | null
+): Promise<EducationTimelineEntity | null> {
+  throw new Error('not implemented')
 }
 
 /** `snapshots/{date}/reports-rollups.json` (#2012) — region and world

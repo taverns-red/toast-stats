@@ -1,0 +1,169 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "education-timeline-entity"
+  },
+  "programYear": "2026-2027",
+  "asOf": "2026-10-11",
+  "entity": {
+    "kind": "district",
+    "id": "61"
+  },
+  "points": [
+    {
+      "date": "2026-07-12",
+      "levels": [3, 1, 0, 0, 0],
+      "dtm": 0,
+      "legacy": 1,
+      "other": 0,
+      "byPath": {
+        "PM": 1,
+        "DL": 1,
+        "EH": 0,
+        "LD": 0,
+        "MS": 2
+      }
+    },
+    {
+      "date": "2026-07-19",
+      "levels": [5, 2, 1, 0, 0],
+      "dtm": 0,
+      "legacy": 1,
+      "other": 0,
+      "byPath": {
+        "PM": 2,
+        "DL": 2,
+        "EH": 1,
+        "LD": 1,
+        "MS": 2
+      }
+    },
+    {
+      "date": "2026-08-02",
+      "levels": [9, 4, 2, 1, 0],
+      "dtm": 1,
+      "legacy": 1,
+      "other": 0,
+      "byPath": {
+        "PM": 5,
+        "DL": 4,
+        "EH": 2,
+        "LD": 2,
+        "MS": 3
+      }
+    },
+    {
+      "date": "2026-08-09",
+      "levels": [12, 5, 3, 1, 0],
+      "dtm": 1,
+      "legacy": 2,
+      "other": 0,
+      "byPath": {
+        "PM": 7,
+        "DL": 5,
+        "EH": 3,
+        "LD": 2,
+        "MS": 4
+      }
+    },
+    {
+      "date": "2026-09-06",
+      "levels": [18, 8, 5, 2, 1],
+      "dtm": 1,
+      "legacy": 2,
+      "other": 0,
+      "byPath": {
+        "PM": 11,
+        "DL": 8,
+        "EH": 5,
+        "LD": 4,
+        "MS": 6
+      }
+    },
+    {
+      "date": "2026-09-13",
+      "levels": [22, 10, 6, 3, 1],
+      "dtm": 2,
+      "legacy": 2,
+      "other": 0,
+      "byPath": {
+        "PM": 14,
+        "DL": 10,
+        "EH": 7,
+        "LD": 5,
+        "MS": 6
+      }
+    },
+    {
+      "date": "2026-10-04",
+      "levels": [30, 14, 8, 4, 2],
+      "dtm": 2,
+      "legacy": 2,
+      "other": 0,
+      "byPath": {
+        "PM": 19,
+        "DL": 14,
+        "EH": 9,
+        "LD": 7,
+        "MS": 9
+      }
+    },
+    {
+      "date": "2026-10-11",
+      "levels": [34, 16, 9, 5, 2],
+      "dtm": 3,
+      "legacy": 2,
+      "other": 0,
+      "byPath": {
+        "PM": 22,
+        "DL": 16,
+        "EH": 11,
+        "LD": 8,
+        "MS": 9
+      }
+    }
+  ],
+  "prior": {
+    "programYear": "2025-2026",
+    "source": "timeline",
+    "grain": "day",
+    "points": [
+      {
+        "at": "2025-07-13",
+        "total": 4
+      },
+      {
+        "at": "2025-07-20",
+        "total": 6
+      },
+      {
+        "at": "2025-08-03",
+        "total": 10
+      },
+      {
+        "at": "2025-08-10",
+        "total": 14
+      },
+      {
+        "at": "2025-09-07",
+        "total": 22
+      },
+      {
+        "at": "2025-09-14",
+        "total": 27
+      },
+      {
+        "at": "2025-10-05",
+        "total": 36
+      },
+      {
+        "at": "2025-10-12",
+        "total": 41
+      },
+      {
+        "at": "2025-11-02",
+        "total": 55
+      }
+    ]
+  }
+}
