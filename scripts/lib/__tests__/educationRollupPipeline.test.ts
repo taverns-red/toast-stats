@@ -500,10 +500,13 @@ describe('build-education-rollup.sh: the education timeline (#2591)', () => {
     putFiles('2025-2026', filesAt('2025-2026', '2025-10-11'))
     expect(runScript().status).toBe(0)
     const reads = timelineReads()
-    expect(reads).toHaveLength(2)
+    // The current PY's files, last year's world.json, and (review fix 1) the
+    // prior-year files of entities that have no ghost yet, fetched by name.
+    expect(reads).toHaveLength(3)
     expect(reads.some(l => l.includes('/2026-2027/*.json'))).toBe(true)
     expect(reads.some(l => l.includes('/2025-2026/world.json'))).toBe(true)
-    expect(reads.join('\n')).not.toContain('district-')
+    expect(reads.join('\n')).not.toContain('/2025-2026/*.json')
+    expect(reads.join('\n')).not.toContain('/2026-2027/district-')
     const index = EducationRollupIndexSchema.parse(
       readObject(`${PREFIX}index.json`)
     )
@@ -556,7 +559,7 @@ describe('build-education-rollup.sh: the education timeline (#2591)', () => {
     putJson(WORLD, { not: 'a timeline' })
     const r = runScript()
     expect(r.status, r.stderr).toBe(0)
-    expect(r.stderr).toMatch(/::warning::.*education timeline/)
+    expect(r.stderr).toMatch(/::error::.*education timeline/)
     expect(readObject(WORLD)).toEqual({ not: 'a timeline' })
     expect(rollupObjects()).toContain(`${PREFIX}2026-2027.json`)
     const index = EducationRollupIndexSchema.parse(

@@ -29,9 +29,11 @@
 #     timeline, one small object per entity (world, region-<n>, district-<id>).
 #     The CURRENT PY's files are read (about 150 objects) so the day's reports
 #     date is APPENDED to each; only the files whose data changed are written.
-#     The previous PY's files are read too, but only while the current PY has
-#     none (seeding its prior-year ghost). Every other PY contributes just its
-#     world.json, to be named in the index. No history scan.
+#     An entity file with no prior-year ghost takes the ONE prior-year file of
+#     the same name (fetched by name, a second build). Every PY contributes
+#     just its world.json, to be named in the index, and the last published
+#     index is read so a PY with an unreadable file keeps its row. No history
+#     scan.
 # Missing inputs degrade per row (a PY without reports is omitted and named
 # in the index; no ledger or no region history is a warning); a listing or
 # transfer ERROR fails closed with nothing uploaded.
@@ -92,6 +94,19 @@ list() {
   fi
   cat "${WORK}/ls.err" >&2
   echo "::error::build-education-rollup: could not list $1" >&2
+  exit 1
+}
+
+# `cp`, telling "no such object" (return 3) from a real error (exit 1).
+copy_tolerant() {
+  if "${GCLOUD}" storage cp "$@" 2>"${WORK}/cp.err"; then
+    return 0
+  fi
+  if grep -Eq "${NO_MATCH}" "${WORK}/cp.err"; then
+    return 3
+  fi
+  cat "${WORK}/cp.err" >&2
+  echo "::error::build-education-rollup: could not copy $1" >&2
   exit 1
 }
 
@@ -200,32 +215,62 @@ if [ -n "${CURRENT}" ]; then
     sed -n -E "s#^gs://[^/]+/${TIMELINE_ROOT}/([0-9]{4}-[0-9]{4})/[^/]+\.json\$#\1#p" \
       "${WORK}/ls.out" | LC_ALL=C sort | uniq -c >"${WORK}/timeline.names"
   fi
+  cp "${WORK}/ls.out" "${WORK}/timeline.ls"
   mkdir -p "${TL_IN}/${CURRENT}"
-  if ! grep -q " ${CURRENT}\$" "${WORK}/timeline.names"; then
-    # First run of the current PY: its prior-year ghost comes from last year's.
-    if grep -q " ${PRIOR}\$" "${WORK}/timeline.names"; then
-      mkdir -p "${TL_IN}/${PRIOR}"
-      "${GCLOUD}" storage cp "gs://${BUCKET}/${TIMELINE_ROOT}/${PRIOR}/*.json" "${TL_IN}/${PRIOR}/"
-    fi
-  else
+  if grep -q " ${CURRENT}\$" "${WORK}/timeline.names"; then
     "${GCLOUD}" storage cp "gs://${BUCKET}/${TIMELINE_ROOT}/${CURRENT}/*.json" "${TL_IN}/${CURRENT}/"
   fi
+  # Every other PY contributes its world.json (its row in the index). Only
+  # "no such object" is tolerated; any other transfer error fails closed.
   while read -r _ other; do
     [ -n "${other}" ] || continue
     [ "${other}" != "${CURRENT}" ] || continue
-    [ ! -d "${TL_IN}/${other}" ] || continue
     mkdir -p "${TL_IN}/${other}"
-    "${GCLOUD}" storage cp "gs://${BUCKET}/${TIMELINE_ROOT}/${other}/world.json" "${TL_IN}/${other}/" 2>/dev/null || true
+    set +e
+    copy_tolerant "gs://${BUCKET}/${TIMELINE_ROOT}/${other}/world.json" "${TL_IN}/${other}/"
+    set -e
   done <"${WORK}/timeline.names"
+  # The last published index: a PY whose files cannot be read keeps its row.
+  set +e
+  copy_tolerant "${DEST}index.json" "${WORK}/previous-index.json"
+  rc=$?
+  set -e
   TL_ARGS=(--timeline-in "${TL_IN}" --timeline-current "${CURRENT}")
+  if [ "${rc}" -eq 0 ]; then
+    TL_ARGS+=(--previous-index "${WORK}/previous-index.json")
+  fi
 fi
 
-"${TSX}" "${BUILDER}" build \
-  ${TL_ARGS[@]+"${TL_ARGS[@]}"} \
-  --ledger "${LEDGER}" \
-  --inputs "${WORK}/inputs" \
-  --region-history "${WORK}/district-region-history.json" \
-  --out "${WORK}/out" >"${WORK}/summary.json"
+run_builder() {
+  "${TSX}" "${BUILDER}" build \
+    ${TL_ARGS[@]+"${TL_ARGS[@]}"} \
+    --ledger "${LEDGER}" \
+    --inputs "${WORK}/inputs" \
+    --region-history "${WORK}/district-region-history.json" \
+    --out "${WORK}/out" >"${WORK}/summary.json"
+}
+run_builder
+
+# 5b. An entity file with no prior-year ghost (it first reported after the
+#     year was seeded, or last year's file appeared later) takes the ONE
+#     prior-year file of the same name. The builder names those files; fetch
+#     the ones the prior year's prefix holds, in one transfer, and build again.
+if [ -n "${CURRENT}" ] && [ -s "${WORK}/out/needs-prior.txt" ]; then
+  sed -n -E "s#^gs://[^/]+/${TIMELINE_ROOT}/${PRIOR}/([^/]+\\.json)\$#\\1#p" \
+    "${WORK}/timeline.ls" | LC_ALL=C sort >"${WORK}/prior.has"
+  LC_ALL=C sort "${WORK}/out/needs-prior.txt" >"${WORK}/prior.want"
+  FETCH=()
+  while IFS= read -r name; do
+    [ -f "${TL_IN}/${PRIOR}/${name}" ] && continue
+    FETCH+=("gs://${BUCKET}/${TIMELINE_ROOT}/${PRIOR}/${name}")
+  done < <(LC_ALL=C comm -12 "${WORK}/prior.has" "${WORK}/prior.want")
+  if [ "${#FETCH[@]}" -gt 0 ]; then
+    mkdir -p "${TL_IN}/${PRIOR}"
+    "${GCLOUD}" storage cp "${FETCH[@]}" "${TL_IN}/${PRIOR}/"
+    rm -rf "${WORK}/out"
+    run_builder
+  fi
+fi
 
 # 6. Upload through the wrapper, so every object lands in the run manifest
 #    (#1762, ADR-015 P5). Program years first, the index (which names them)

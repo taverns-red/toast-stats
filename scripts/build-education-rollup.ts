@@ -52,6 +52,7 @@ import {
   type DistrictRegionHistory,
   type DistrictReportsDataset,
   type EducationLedgerHistoryFile,
+  type EducationRollupIndex,
   type EducationRollupProgramYear,
   type EducationTimelineEntity,
 } from '@taverns-red/shared-contracts'
@@ -180,7 +181,7 @@ function readExistingTimelines(): {
       else {
         blocked.add(py)
         log(
-          `::warning::education timeline ${py}/${name} is unreadable (${why}): ${py} is left as it is, not updated or named`
+          `::error::education timeline ${py}/${name} is unreadable (${why}): ${py} is left as it is, not updated; its row in the previous index is kept`
         )
         break
       }
@@ -202,16 +203,41 @@ function readJsonOrNull(file: string): unknown {
   }
 }
 
+/** The `timelines` rows of the last published index (`--previous-index`). */
+function previousTimelineRows(): NonNullable<
+  EducationRollupIndex['timelines']
+> {
+  const file = optArg('previous-index')
+  if (!file || !fs.existsSync(file)) return []
+  const parsed = EducationRollupIndexSchema.safeParse(readJsonOrNull(file))
+  if (!parsed.success) {
+    log(
+      `::warning::the previous rollup index is unreadable (${summarizeZodIssues(parsed.error.issues)}): no timeline row is carried forward`
+    )
+    return []
+  }
+  return parsed.data.timelines ?? []
+}
+
 /** Fold today's reports date into the current PY's entity files; validate. */
 function foldTimelines(rollups: readonly EducationRollupProgramYear[]) {
   const current = optArg('timeline-current')
   if (!current) {
-    return { written: [], rows: [], skipped: [] } as ReturnType<
-      typeof planTimelineUpdates
-    >
+    return {
+      written: [],
+      rows: [],
+      skipped: [],
+      needsPrior: [],
+    } as ReturnType<typeof planTimelineUpdates>
   }
   const { existing, blocked } = readExistingTimelines()
-  const plan = planTimelineUpdates(rollups, existing, current, blocked)
+  const plan = planTimelineUpdates(
+    rollups,
+    existing,
+    current,
+    blocked,
+    previousTimelineRows()
+  )
   for (const s of plan.skipped) {
     log(
       `::warning::education timeline ${s.programYear} not updated: ${s.reason}`
@@ -317,7 +343,7 @@ function build(): void {
 
   if (rollups.length === 0) fail('no program year could be rolled up')
 
-  const { written, rows } = foldTimelines(rollups)
+  const { written, rows, needsPrior } = foldTimelines(rollups)
   const index = buildEducationRollupIndex(rollups, omitted, rows)
   const checkedIndex = EducationRollupIndexSchema.safeParse(index)
   if (!checkedIndex.success) {
@@ -348,6 +374,12 @@ function build(): void {
     }
   }
   write('index.json', index)
+  // Not an upload: the entity files still without a ghost, for the caller to
+  // fetch from the prior year's prefix (those that exist there) and rebuild.
+  fs.writeFileSync(
+    path.join(outDir, 'needs-prior.txt'),
+    needsPrior.map(n => `${n}\n`).join('')
+  )
 
   for (const r of rollups) {
     log(

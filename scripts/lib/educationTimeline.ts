@@ -460,6 +460,28 @@ export interface TimelineUpdatePlan {
   /** Every timeline named in the index (changed or not). */
   rows: NonNullable<EducationRollupIndex['timelines']>
   skipped: { programYear: string; reason: string }[]
+  /**
+   * Files of the current PY still without a ghost and with no prior-year file
+   * of the same name among those read. The caller may fetch those names from
+   * the prior year's prefix (if they exist there) and plan again.
+   */
+  needsPrior: string[]
+}
+
+/** One entity's prior-year series, from that entity's own prior-year file. */
+function ghostOfEntityFile(
+  file: EducationTimelineEntity | undefined
+): NonNullable<EducationTimelineEntity['prior']> | null {
+  if (!file || file.points.length === 0) return null
+  return {
+    programYear: file.programYear,
+    source: 'timeline',
+    grain: 'day',
+    points: (file.points as EducationTimelinePoint[]).map(p => ({
+      at: p.date,
+      total: awardsOf(p),
+    })),
+  }
 }
 
 /**
@@ -475,14 +497,16 @@ export interface TimelineUpdatePlan {
  * - Only files whose content changed are returned (the reporting districts,
  *   their regions, the world), so an unchanged entity is not rewritten.
  * - A new timeline takes its ghost from the previous year's files, if read.
- * - `blocked`: PYs whose stored files could not be read: left as they are
- *   and not named.
+ * - `blocked`: PYs whose stored files could not be read: left as they are.
+ *   Their row in `previousRows` (the last published index) is carried
+ *   forward; with none, they are not named.
  */
 export function planTimelineUpdates(
   rollups: readonly EducationRollupProgramYear[],
   existing: ReadonlyMap<string, TimelineFiles>,
   current: string,
-  blocked: ReadonlySet<string> = new Set()
+  blocked: ReadonlySet<string> = new Set(),
+  previousRows: NonNullable<EducationRollupIndex['timelines']> = []
 ): TimelineUpdatePlan {
   const bundles = new Map<string, EducationTimeline>()
   for (const [py, files] of existing) {
@@ -492,6 +516,7 @@ export function planTimelineUpdates(
   }
   const written: TimelineUpdatePlan['written'] = []
   const skipped: TimelineUpdatePlan['skipped'] = []
+  const needsPrior: string[] = []
 
   const rollup = rollups.find(
     r =>
@@ -508,23 +533,34 @@ export function planTimelineUpdates(
       })
     } else {
       try {
-        let next = upsertTimelineDate(
+        const next = upsertTimelineDate(
           bundles.get(current) ?? null,
           current,
           rollup.sourceDate as string,
           rollup
         )
-        if (next.prior === null) {
-          const before = bundles.get(previousProgramYear(current))
-          if (before) next = withPrior(next, ghostFromTimeline(before))
-        }
+        const priorYear = previousProgramYear(current)
+        const priorFiles = blocked.has(priorYear)
+          ? undefined
+          : existing.get(priorYear)
         const changed = new Map<string, EducationTimelineEntity>()
+        const finalFiles = new Map<string, EducationTimelineEntity>()
         for (const [name, file] of splitTimeline(next)) {
-          if (!isDeepStrictEqual(stored.get(name), file)) {
-            changed.set(name, file)
+          // An entity with no ghost (it first reported after the year was
+          // seeded, or the prior year's file appeared later) takes the one
+          // prior-year file of the same name, if it was read.
+          let out = file
+          if (out.prior === null) {
+            const ghost = ghostOfEntityFile(priorFiles?.get(name))
+            if (ghost) out = { ...out, prior: ghost } as EducationTimelineEntity
+            else needsPrior.push(name)
+          }
+          finalFiles.set(name, out)
+          if (!isDeepStrictEqual(stored.get(name), out)) {
+            changed.set(name, out)
           }
         }
-        bundles.set(current, next)
+        bundles.set(current, joinTimeline(finalFiles) ?? next)
         if (changed.size > 0)
           written.push({ programYear: current, files: changed })
       } catch (err) {
@@ -533,12 +569,18 @@ export function planTimelineUpdates(
     }
   }
 
+  // A PY whose files could not be read keeps the row the last index gave it,
+  // so one bad file does not drop its timeline from the index.
+  const carried = previousRows.filter(
+    r => blocked.has(r.programYear) && !bundles.has(r.programYear)
+  )
   return {
     written,
-    rows: [...bundles.values()]
-      .sort((a, b) => byString(a.programYear, b.programYear))
-      .map(timelineIndexRow),
+    rows: [...[...bundles.values()].map(timelineIndexRow), ...carried].sort(
+      (a, b) => byString(a.programYear, b.programYear)
+    ),
     skipped,
+    needsPrior: needsPrior.sort(byString),
   }
 }
 
