@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   closeConsentSettings,
   getConsentState,
+  restoreFocusAfterConsent,
   setConsent,
   subscribeConsent,
   type ConsentLevel,
@@ -69,6 +70,19 @@ export const ConsentBanner: React.FC<{ immediate?: boolean }> = ({
     if (reopened) headingRef.current?.focus()
   }, [reopened])
 
+  // Escape closes a reopened banner and keeps the current choice. The first
+  // visit has no choice to keep, so Escape does nothing there.
+  useEffect(() => {
+    if (!reopened) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      closeConsentSettings()
+      restoreFocusAfterConsent()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [reopened])
+
   if (!visible) return null
 
   return (
@@ -107,7 +121,10 @@ export const ConsentBanner: React.FC<{ immediate?: boolean }> = ({
             key={level}
             type="button"
             className="consent-banner__button"
-            onClick={() => setConsent(level)}
+            onClick={() => {
+              setConsent(level)
+              restoreFocusAfterConsent()
+            }}
           >
             {label}
           </button>
@@ -117,7 +134,10 @@ export const ConsentBanner: React.FC<{ immediate?: boolean }> = ({
         <button
           type="button"
           className="consent-banner__close"
-          onClick={closeConsentSettings}
+          onClick={() => {
+            closeConsentSettings()
+            restoreFocusAfterConsent()
+          }}
         >
           Close
         </button>

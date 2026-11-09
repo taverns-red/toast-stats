@@ -23,7 +23,7 @@ export const CONSENT_VERSION = 1
 const MAX_AGE_SECONDS = 31_536_000 // ~12 months
 const SHARED_DOMAIN = '.taverns.red'
 
-const LEVELS: readonly ConsentLevel[] = ['all', 'minimal', 'none']
+const CONSENT_VALUE = new RegExp(`^v${CONSENT_VERSION}\\.(all|minimal|none)$`)
 
 export interface ConsentState {
   level: ConsentLevel | null
@@ -88,11 +88,10 @@ function readCookie(name: string): string | null {
 /** The stored choice, or null when undecided, unreadable or out of date. */
 export function getConsent(): ConsentLevel | null {
   const raw = readCookie(CONSENT_COOKIE)
-  const m = raw ? /^v(\d+)\.(\w+)$/.exec(raw) : null
-  if (!m || Number(m[1]) !== CONSENT_VERSION) return null
-  return (LEVELS as readonly string[]).includes(m[2] ?? '')
-    ? (m[2] as ConsentLevel)
-    : null
+  // Exactly `v<CONSENT_VERSION>.<level>`: no padding, case or trailing text.
+  // index.html's gate compares the same literal (`v1.all`).
+  const m = raw ? CONSENT_VALUE.exec(raw) : null
+  return m ? (m[1] as ConsentLevel) : null
 }
 
 let state: ConsentState = { level: getConsent(), settingsOpen: false }
@@ -117,12 +116,39 @@ export function subscribeConsent(cb: () => void): () => void {
   }
 }
 
+/** The control that had focus when the choice was reopened, so the banner can
+ *  hand focus back when it closes. */
+let returnFocusTo: HTMLElement | null = null
+
 export function openConsentSettings(): void {
+  if (!getConsentState().settingsOpen) {
+    const active = document.activeElement
+    returnFocusTo =
+      active instanceof HTMLElement && active !== document.body ? active : null
+  }
   publish({ ...getConsentState(), settingsOpen: true })
 }
 
 export function closeConsentSettings(): void {
   publish({ ...getConsentState(), settingsOpen: false })
+}
+
+/** Give focus back after the banner closes: to the control that reopened it,
+ *  else (first visit) to the main content, the skip link's target. */
+export function restoreFocusAfterConsent(): void {
+  const target =
+    returnFocusTo && document.contains(returnFocusTo)
+      ? returnFocusTo
+      : document.getElementById('main-content')
+  returnFocusTo = null
+  if (!target) return
+  if (
+    !target.hasAttribute('tabindex') &&
+    !/^(A|BUTTON|INPUT)$/.test(target.tagName)
+  ) {
+    target.setAttribute('tabindex', '-1')
+  }
+  target.focus()
 }
 
 function gaHook(): GaHook | undefined {
