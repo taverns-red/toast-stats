@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { RedVoteMadeByLine } from '../RedVotePromo'
+import { openConsentSettings } from '../../utils/consent'
 
 declare const __APP_VERSION__: string
 
@@ -55,6 +56,16 @@ const AppMeta: React.FC = () => {
           <Link to="/videos" className="app-shell-footer__link">
             How-to videos
           </Link>
+          {' · '}
+          {/* #2584 — reopens the cookie and analytics choice. Same placement
+              reasoning: AppMeta reaches the footer and the mobile About menu. */}
+          <button
+            type="button"
+            className="consent-reopen app-shell-footer__link"
+            onClick={openConsentSettings}
+          >
+            Privacy &amp; cookies
+          </button>
           {' · '}
           {/* The only contact path in the app (#1356). There is no backend to
               POST a form to, so this goes to the GitHub issue chooser, whose

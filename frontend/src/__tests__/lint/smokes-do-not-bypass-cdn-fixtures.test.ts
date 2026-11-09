@@ -57,6 +57,7 @@ const MAY_CONTINUE: Record<string, string> = {
 }
 const MAY_FETCH: Record<string, string> = {
   'ga-page-view.smoke.ts': 'rewrites the prod origin onto BASE_URL',
+  'consent-banner.smoke.ts': 'rewrites the prod origin onto BASE_URL (#2584)',
   'priority-columns.smoke.ts':
     'relays cdn.taverns.red (prod) when run on a local build',
 }

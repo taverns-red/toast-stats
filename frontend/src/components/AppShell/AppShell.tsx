@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import AppShellTopBar from './AppShellTopBar'
 import AppShellFooter from './AppShellFooter'
 import CommandPalette from './CommandPalette'
+import { ConsentBanner } from '../consent/ConsentBanner'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { useScrollRestoration } from '../../hooks/useScrollRestoration'
 
@@ -51,6 +52,7 @@ const AppShell: React.FC = () => {
         <Outlet />
       </main>
       {!isMobile && <AppShellFooter />}
+      <ConsentBanner />
       <CommandPalette isOpen={paletteOpen} onClose={closePalette} />
     </div>
   )
