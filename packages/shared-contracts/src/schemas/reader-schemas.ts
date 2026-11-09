@@ -61,8 +61,9 @@ export const EducationRollupProgramYearReaderSchema = toTolerantReader(
 export const EducationRollupIndexReaderSchema = toTolerantReader(
   EducationRollupIndexSchema
 )
-// RED stub (#2592): strict on purpose until the tolerance tests are green.
-export const EducationTimelineEntityReaderSchema = EducationTimelineEntitySchema
+export const EducationTimelineEntityReaderSchema = toTolerantReader(
+  EducationTimelineEntitySchema
+)
 export const ReportsRollupsReaderSchema = toTolerantReader(ReportsRollupsSchema)
 export const PerDistrictDataReaderSchema = toTolerantReader(
   PerDistrictDataSchema
