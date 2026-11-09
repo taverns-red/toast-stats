@@ -67,7 +67,9 @@ vi.mock('recharts', () => ({
       data-animated={isAnimationActive ? 'true' : 'false'}
     />
   ),
-  XAxis: () => <div data-testid="x-axis" />,
+  XAxis: ({ type, scale }: { type?: string; scale?: string }) => (
+    <div data-testid="x-axis" data-type={type} data-scale={scale} />
+  ),
   YAxis: () => <div data-testid="y-axis" />,
   CartesianGrid: () => <div data-testid="grid" />,
   Tooltip: () => <div data-testid="tooltip" />,
@@ -93,8 +95,11 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-const data = (): Array<Record<string, number | string | null>> =>
+type Row = Record<string, number | string | boolean | null>
+const data = (): Row[] =>
   JSON.parse(screen.getByTestId('chart').getAttribute('data-series') || '')
+/** The artifact's own points: the display-only tail is not one. */
+const points = (): Row[] => data().filter(r => r['tail'] !== true)
 
 const baseProps = {
   timeline: DISTRICT_61_TIMELINE,
@@ -133,7 +138,7 @@ describe('EducationTimelineChart — the critical number', () => {
 
   it('stops at the page-selected date, so the last point is the tile date', () => {
     render(<EducationTimelineChart {...baseProps} through="2026-09-13" />)
-    expect(data().at(-1)?.['date']).toBe('2026-09-13')
+    expect(points().at(-1)?.['date']).toBe('2026-09-13')
     // 22+10+6+3+1 levels, 2 DTM, 2 legacy
     expect(screen.getByTestId('education-timeline-headline')).toHaveTextContent(
       '46 awards'
@@ -162,7 +167,7 @@ describe('EducationTimelineChart — stacked step bands', () => {
     for (const a of screen.getAllByTestId('area')) {
       expect(a).toHaveAttribute('data-type', 'stepAfter')
     }
-    expect(data()).toHaveLength(DISTRICT_61_TIMELINE.points.length)
+    expect(points()).toHaveLength(DISTRICT_61_TIMELINE.points.length)
   })
 
   it('binds each band to its entity colour hook, not its position', () => {
@@ -177,6 +182,36 @@ describe('EducationTimelineChart — stacked step bands', () => {
       .getAllByTestId('area')
       .map(a => a.getAttribute('data-key'))
     expect(keys).toEqual(['PM', 'DL', 'EH', 'MS', 'LD', 'rest'])
+  })
+})
+
+describe('EducationTimelineChart — time axis and the latest step', () => {
+  it('lays snapshots out on a time scale, so a gap looks like a gap', () => {
+    render(<EducationTimelineChart {...baseProps} />)
+    const axis = screen.getByTestId('x-axis')
+    expect(axis).toHaveAttribute('data-type', 'number')
+    expect(axis).toHaveAttribute('data-scale', 'time')
+    const t = points().map(r => r['t'] as number)
+    const DAY = 86_400_000
+    // 07-12 -> 07-19 is 7 days; 07-19 -> 08-02 is 14.
+    expect((t[1]! - t[0]!) / DAY).toBe(7)
+    expect((t[2]! - t[1]!) / DAY).toBe(14)
+  })
+
+  it('draws the latest step: one display-only tail row holds the final values', () => {
+    render(<EducationTimelineChart {...baseProps} />)
+    const rows = data()
+    const tails = rows.filter(r => r['tail'] === true)
+    expect(tails).toHaveLength(1)
+    const tail = rows.at(-1)!
+    const last = points().at(-1)!
+    expect(tail['tail']).toBe(true)
+    // Same date and values as the final point; only its x is further right.
+    expect(tail['date']).toBe(last['date'])
+    expect(tail['total']).toBe(last['total'])
+    expect(tail['L1']).toBe(last['L1'])
+    expect(tail['ghost']).toBe(last['ghost'])
+    expect(tail['t'] as number).toBeGreaterThan(last['t'] as number)
   })
 })
 
@@ -221,7 +256,7 @@ describe('EducationTimelineChart — prior-year ghost', () => {
 
   it('carries the aligned value on each row, null before last year had any', () => {
     render(<EducationTimelineChart {...baseProps} />)
-    const rows = data()
+    const rows = points()
     expect(rows[0]?.['ghost']).toBeNull() // 2026-07-12 -> 2025-07-12
     expect(rows.at(-1)?.['ghost']).toBe(36) // 2026-10-11 -> 2025-10-05
   })
