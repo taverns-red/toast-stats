@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.82.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.81.1...toast-stats-v2.82.0) (2026-11-09)
+
+
+### Features
+
+* **privacy:** cookie and analytics consent with All / Minimal / None ([#2584](https://github.com/taverns-red/toast-stats/issues/2584)) ([#2585](https://github.com/taverns-red/toast-stats/issues/2585)) ([043ea83](https://github.com/taverns-red/toast-stats/commit/043ea83bcf6480d0fd3cac6950671b69dcfa86dd))
+
 ## [2.81.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.81.0...toast-stats-v2.81.1) (2026-11-09)
 
 

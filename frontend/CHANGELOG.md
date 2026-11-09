@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.59.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.58.1...frontend-v3.59.0) (2026-11-09)
+
+
+### Features
+
+* **privacy:** cookie and analytics consent with All / Minimal / None ([#2584](https://github.com/taverns-red/toast-stats/issues/2584)) ([#2585](https://github.com/taverns-red/toast-stats/issues/2585)) ([043ea83](https://github.com/taverns-red/toast-stats/commit/043ea83bcf6480d0fd3cac6950671b69dcfa86dd))
+
 ## [3.58.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.58.0...frontend-v3.58.1) (2026-11-09)
 
 
