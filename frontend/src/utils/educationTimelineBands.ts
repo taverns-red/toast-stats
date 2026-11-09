@@ -68,6 +68,9 @@ export const TOP_PATHS = 6
 
 const LEVEL_KEYS = ['L1', 'L2', 'L3', 'L4', 'L5'] as const
 const REST_KEY = 'rest'
+/** The rest band is the total minus the top paths, so it holds DTMs and
+ *  legacy awards too; the label says so. */
+const REST_LABEL = 'All other awards (incl. DTM)'
 
 const sum = (xs: readonly number[]): number => xs.reduce((a, b) => a + b, 0)
 const totalOf = (p: TimelineSourcePoint): number =>
@@ -161,6 +164,31 @@ export function ghostPlan(prior: TimelinePrior): {
   return { kind: 'target', target: { total: last.total, at: last.at } }
 }
 
+/**
+ * A y-axis ceiling and ticks that read as round numbers: at least 8% above
+ * `max`, 3 to 5 equal steps from zero, each step 1, 2, 2.5 or 5 times a power
+ * of ten (whole numbers only: these are counts). The smallest such ceiling.
+ */
+export function niceScale(max: number): { max: number; ticks: number[] } {
+  const need = Math.max(max, 1) * 1.08
+  const exp = Math.floor(Math.log10(need))
+  let best = { hi: Infinity, step: 1, n: 3 }
+  for (let k = Math.max(0, exp - 2); k <= exp + 1; k++) {
+    for (const m of [1, 2, 2.5, 5]) {
+      const step = m * 10 ** k
+      if (!Number.isInteger(step)) continue
+      for (const n of [3, 4, 5]) {
+        const hi = step * n
+        if (hi >= need && hi < best.hi) best = { hi, step, n }
+      }
+    }
+  }
+  return {
+    max: best.hi,
+    ticks: Array.from({ length: best.n + 1 }, (_, i) => i * best.step),
+  }
+}
+
 /* ── Bands ───────────────────────────────────────────────────────────── */
 
 const levelBands = (points: readonly TimelineSourcePoint[]): TimelineBand[] => [
@@ -241,7 +269,9 @@ export function deriveTimeline(args: {
     const hasRest = points.some(p => pathValues(p, top)[REST_KEY]! > 0)
     bands = [
       ...pathBands,
-      ...(hasRest ? [{ key: REST_KEY, label: 'Other', colour: REST_KEY }] : []),
+      ...(hasRest
+        ? [{ key: REST_KEY, label: REST_LABEL, colour: REST_KEY }]
+        : []),
     ]
     valuesOf = p => pathValues(p, top)
   }

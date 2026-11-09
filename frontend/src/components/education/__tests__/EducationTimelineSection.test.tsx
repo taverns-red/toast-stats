@@ -26,7 +26,10 @@ vi.mock('recharts', () => ({
   Area: ({ dataKey }: { dataKey: string }) => (
     <div data-testid="area" data-key={dataKey} />
   ),
-  Line: () => <div data-testid="line" />,
+  Line: ({ dataKey }: { dataKey: string }) => (
+    <div data-testid="line" data-key={dataKey} />
+  ),
+  ReferenceLine: () => <div data-testid="reference-line" />,
   XAxis: () => null,
   YAxis: () => null,
   CartesianGrid: () => null,
@@ -109,7 +112,11 @@ describe('EducationTimelineSection', () => {
     })
     renderSection()
     expect(await screen.findByTestId('chart')).toBeInTheDocument()
-    expect(screen.getByTestId('line')).toBeInTheDocument()
+    expect(
+      screen
+        .getAllByTestId('line')
+        .some(l => l.getAttribute('data-key') === 'ghost')
+    ).toBe(true)
   })
 
   it('works for a world file (aggregate points)', async () => {

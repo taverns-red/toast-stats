@@ -146,7 +146,7 @@ describe('path bands', () => {
       'rest',
     ])
     expect(bands.map(b => b.label)).toContain('Presentation Mastery')
-    expect(bands[bands.length - 1]?.label).toBe('Other')
+    expect(bands[bands.length - 1]?.label).toBe('All other awards (incl. DTM)')
   })
 
   it('fold the remaining paths, DTMs and legacy into Other, so the stack is the tile total', () => {

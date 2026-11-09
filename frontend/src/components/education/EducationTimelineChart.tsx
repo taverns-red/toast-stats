@@ -4,6 +4,7 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -12,6 +13,7 @@ import {
 import type { EducationTimelineEntity } from '@taverns-red/shared-contracts'
 import {
   deriveTimeline,
+  niceScale,
   timelineDate,
   timelineT,
   TIMELINE_DAY_MS,
@@ -139,7 +141,16 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
     }
   }, [rows])
 
-  const ticks = useMemo(() => monthStarts(tFirst, tLast), [tFirst, tLast])
+  // Last year's year-end total is a whole-year figure, so its chart spans the
+  // whole program year: Jul 1 to Jun 30, this year's steps climbing toward it.
+  const isTargetMode = ghostKind === 'target' && target !== null
+  const pyStart = Number(timeline.programYear.slice(0, 4))
+  const xFrom = isTargetMode ? Date.UTC(pyStart, 6, 1) : tFirst
+  const xTo = isTargetMode ? Date.UTC(pyStart + 1, 5, 30) : tEnd
+  const ticks = useMemo(
+    () => (isTargetMode ? monthStarts(xFrom, xTo) : monthStarts(tFirst, tLast)),
+    [isTargetMode, xFrom, xTo, tFirst, tLast]
+  )
   const byMonth = ticks.length >= 2
   const axisTick = (t: number): string =>
     byMonth ? monthName(t) : axisDate(timelineDate(t))
@@ -149,12 +160,10 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
 
   const final = rows[rows.length - 1]
   const peak = Math.max(0, ...rows.map(r => Math.max(r.total, r.ghost ?? 0)))
-  const floor = Math.min(
-    ...rows.map(r => Math.min(r.total, r.ghost ?? Infinity))
-  )
-  // Symmetric padding when flat, so the axis never inverts (tripwire).
-  const domain: [number, number] =
-    peak === floor ? [Math.max(0, floor - 1), peak + 1] : [0, peak]
+  // A round ceiling with headroom over the peak and the target, ticks at
+  // round steps from zero (never inverted: the floor is always 0).
+  const scale = niceScale(Math.max(peak, target?.total ?? 0))
+  const domain: [number, number] = [0, scale.max]
   // 13px digits are ~8px wide: room for the widest label plus a tick gap, so
   // six-digit world totals ("102,757") are not clipped at the left edge.
   const yAxisWidth = Math.max(48, fmt(domain[1]).length * 8 + 14)
@@ -215,7 +224,7 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
               dataKey="t"
               type="number"
               scale="time"
-              domain={[tFirst, tEnd]}
+              domain={[xFrom, xTo]}
               ticks={byMonth ? ticks : [tFirst, tLast]}
               tickFormatter={axisTick}
               minTickGap={16}
@@ -223,6 +232,7 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
             />
             <YAxis
               domain={domain}
+              ticks={scale.ticks}
               allowDecimals={false}
               width={yAxisWidth}
               tick={{ fontSize: 13 }}
@@ -251,12 +261,12 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
                 isAnimationActive={animate}
               />
             ))}
-            {ghostName && (
+            {ghostKind === 'curve' && ghostName && (
               <Line
                 className="edu-tl__ghost"
-                type={isTarget ? 'linear' : 'stepAfter'}
+                type="stepAfter"
                 dataKey={GHOST_KEY}
-                name={ghostName ?? 'Last year'}
+                name={ghostName}
                 stroke="currentColor"
                 strokeWidth={2}
                 strokeDasharray="6 4"
@@ -266,6 +276,32 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
                 isAnimationActive={animate}
               />
             )}
+            {isTarget && (
+              <ReferenceLine
+                className="edu-tl__ref"
+                y={target.total}
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeDasharray="6 4"
+                label={{
+                  value: `${ghostName}: ${fmt(target.total)}`,
+                  position: 'insideTopLeft',
+                  fontSize: 13,
+                }}
+              />
+            )}
+            {/* Invisible: it only puts a Total row, after the bands, in the
+                tooltip and the tap readout. */}
+            <Line
+              dataKey="total"
+              name="Total"
+              type="stepAfter"
+              stroke="none"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+              isAnimationActive={false}
+            />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -281,9 +317,8 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
               className={`edu-tl__swatch edu-tl-c--${b.colour}`}
               aria-hidden="true"
             />
-            <span className="edu-tl__legend-label">{b.label}</span>
-            <span className="edu-tl__legend-value">
-              {fmt(final.values[b.key] ?? 0)}
+            <span className="edu-tl__legend-label">
+              {`${b.label}: ${fmt(final.values[b.key] ?? 0)}`}
             </span>
           </li>
         ))}
@@ -293,27 +328,20 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
               className="edu-tl__swatch edu-tl__swatch--ghost"
               aria-hidden="true"
             />
-            {isTarget ? (
-              <span className="edu-tl__legend-label">
-                {`${ghostName}: ${fmt(target.total)}`}
-              </span>
-            ) : (
-              <>
-                <span className="edu-tl__legend-label">{ghostName}</span>
-                {final.ghost !== null && (
-                  <span className="edu-tl__legend-value">
-                    {fmt(final.ghost)}
-                  </span>
-                )}
-              </>
-            )}
+            <span className="edu-tl__legend-label">
+              {isTarget
+                ? `${ghostName}: ${fmt(target.total)}`
+                : final.ghost !== null
+                  ? `${ghostName}: ${fmt(final.ghost)}`
+                  : ghostName}
+            </span>
           </li>
         )}
       </ul>
 
       <p className="edu-tl__note" data-testid="education-timeline-ghost-note">
         {isTarget
-          ? `The dashed line is last year’s year-end total, ${fmt(target.total)}: the final total to beat, not a same-date comparison. `
+          ? `The dashed line is last year’s total for the whole year; this year counts up toward it by June 30. `
           : ghostKind === 'curve' && prior
             ? `The dashed line is last year’s total at the same point in the program year (${GHOST_GRAIN_NOTE[prior.grain]}). `
             : 'Last year is not available for this view. '}
