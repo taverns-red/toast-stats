@@ -151,10 +151,19 @@ describe('backfill-education-timeline.sh', () => {
     expect(r.status, r.stderr).toBe(0)
     const t = readOut('2026-2027')
     expect(t.dates).toEqual(['2026-10-10', '2026-10-11', '2026-10-12'])
-    expect(t.prior).toBeNull()
-    expect(r.stderr).toMatch(/no prior-year source/)
+    // The other program year's date is its ghost, not a point.
+    expect(t.prior?.world.map(p => p.at)).toEqual(['2026-06-30'])
     expect(bucketObjects()).toEqual(before)
     expect(fs.existsSync(manifest)).toBe(false)
+  })
+
+  it('no prior-year source at all: the ghost is null, with a warning', () => {
+    seedCommon()
+    stage('2026-10-12', 81)
+    const r = run(['2026-2027'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(readOut('2026-2027').prior).toBeNull()
+    expect(r.stderr).toMatch(/no prior-year source/)
   })
 
   it('a date with no reports is absent, never zero', () => {
