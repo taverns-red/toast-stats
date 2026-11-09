@@ -15,6 +15,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react'
+import { readPreference, writePreference } from '../utils/preferenceStorage'
 
 type Theme = 'light' | 'dark'
 
@@ -33,19 +34,13 @@ const STORAGE_KEY = 'theme'
    SecurityError. Every access is guarded so a blocked store degrades to an
    unpersisted, session-only theme instead of blanking the app (#1646). */
 function readStoredTheme(): string | null {
-  try {
-    return window.localStorage.getItem(STORAGE_KEY)
-  } catch {
-    return null
-  }
+  return readPreference(STORAGE_KEY)
 }
 
 function persistTheme(theme: Theme): void {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, theme)
-  } catch {
-    // Storage unavailable: the theme still applies for this session.
-  }
+  // Storage unavailable or consent "none": the theme still applies for this
+  // session (#2584).
+  writePreference(STORAGE_KEY, theme)
 }
 
 function getInitialTheme(): Theme {

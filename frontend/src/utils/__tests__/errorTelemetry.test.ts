@@ -31,6 +31,8 @@ describe('errorTelemetry (#225)', () => {
   let storageMock: ReturnType<typeof createLocalStorageMock>
 
   beforeEach(() => {
+    // Saved on the device only once the visitor chose all or minimal (#2584).
+    document.cookie = 'rt_consent=v1.minimal; Path=/'
     storageMock = createLocalStorageMock()
     vi.stubGlobal('localStorage', storageMock)
   })

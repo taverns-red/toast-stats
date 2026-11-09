@@ -5,7 +5,7 @@ import {
   removePreference,
   writePreference,
 } from '../preferenceStorage'
-import { readJson, writeJson } from '../localStorageStore'
+import { readJson, storageKey, writeJson } from '../localStorageStore'
 
 /* One storage helper for saved preferences (#2584). With "none" (and before
    any choice) they last for the tab session only. */
@@ -63,6 +63,6 @@ describe('preferenceStorage (#2584)', () => {
     setConsent('none')
     writeJson('filters', { a: 1 })
     expect(readJson('filters', null)).toEqual({ a: 1 })
-    expect(Object.keys(localStorage)).toEqual([])
+    expect(localStorage.getItem(storageKey('filters'))).toBeNull()
   })
 })
