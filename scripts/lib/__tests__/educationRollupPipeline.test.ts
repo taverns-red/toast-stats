@@ -565,6 +565,50 @@ describe('build-education-rollup.sh: the education timeline (#2591)', () => {
     expect(index.timelines ?? []).toEqual([])
   })
 
+  it('an entity of the current PY without a ghost takes the prior-year file of the same name (review fix 1)', () => {
+    seedAll()
+    putFiles('2026-2027', filesAt('2026-2027', '2026-10-11'))
+    putFiles('2025-2026', filesAt('2025-2026', '2025-10-12'))
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    expect(readEntity(DISTRICT).prior).toMatchObject({
+      programYear: '2025-2026',
+      source: 'timeline',
+      grain: 'day',
+    })
+    expect(readEntity(WORLD).prior?.programYear).toBe('2025-2026')
+    // Fetched by name, not the whole prior prefix.
+    expect(timelineReads().join('\n')).not.toContain('/2025-2026/*.json')
+  })
+
+  it('a bad file keeps the previous index row for its PY and says ::error:: (review fix 2)', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    const before = EducationRollupIndexSchema.parse(
+      readObject(`${PREFIX}index.json`)
+    ).timelines
+    expect(before).toHaveLength(1)
+    putJson(WORLD, { not: 'a timeline' })
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toMatch(/::error::.*education timeline.*2026-2027/)
+    expect(
+      EducationRollupIndexSchema.parse(readObject(`${PREFIX}index.json`))
+        .timelines
+    ).toEqual(before)
+    expect(readObject(WORLD)).toEqual({ not: 'a timeline' })
+  })
+
+  it('a transfer error on another PY world.json fails closed with nothing uploaded (review fix 2)', () => {
+    seedAll()
+    putFiles('2026-2027', filesAt('2026-2027', '2026-10-11'))
+    putFiles('2025-2026', filesAt('2025-2026', '2025-10-11'), ['world.json'])
+    const r = runScript({ SHIM_FAIL_MATCH: '^cp .*2025-2026/world\\.json' })
+    expect(r.status).toBe(1)
+    expect(rollupObjects()).toEqual([])
+    expect(timelineUploads()).toEqual([])
+  })
+
   it('a listing error on the timeline prefix fails closed with nothing uploaded', () => {
     seedAll()
     const r = runScript({ SHIM_FAIL_MATCH: '^ls .*education-timeline' })

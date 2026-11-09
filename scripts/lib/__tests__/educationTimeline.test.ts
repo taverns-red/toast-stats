@@ -706,6 +706,49 @@ describe('planTimelineUpdates (the daily, incremental step)', () => {
     })
   })
 
+  describe('a blocked PY keeps its index row (review fix 2)', () => {
+    const row = {
+      programYear: PY,
+      prefix: `derived/education-timeline/${PY}`,
+      asOf: D1,
+      dates: 1,
+      priorGrain: null,
+    }
+    it('carries the previous index row forward and writes nothing', () => {
+      const r = planTimelineUpdates(
+        [rollupAt(PY, D3)],
+        new Map([[PY, filesOf([D1])]]),
+        PY,
+        new Set([PY]),
+        [row]
+      )
+      expect(r.written).toEqual([])
+      expect(r.rows).toEqual([row])
+    })
+    it('carries only the blocked PY row; other PYs are named from their own files', () => {
+      const other = {
+        ...row,
+        programYear: '2025-2026',
+        prefix: 'derived/education-timeline/2025-2026',
+      }
+      const r = planTimelineUpdates(
+        [],
+        new Map([
+          [PY, filesOf([D1])],
+          [
+            '2025-2026',
+            new Map([['world.json', filesOf([D1]).get('world.json') as never]]),
+          ],
+        ]),
+        PY,
+        new Set(['2025-2026']),
+        [row, other]
+      )
+      expect(r.rows.map(x => x.programYear)).toEqual(['2025-2026', PY])
+      expect(r.rows[0]).toEqual(other)
+    })
+  })
+
   describe('rollover and region moves (review fix 4)', () => {
     const NEXT = '2027-2028'
     const at = (programYear: string, date: string, n: number) =>
