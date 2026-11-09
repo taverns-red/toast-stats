@@ -384,7 +384,7 @@ describe('planTimelineUpdates (the daily, incremental step)', () => {
     foldReportsDate({
       programYear,
       date,
-      reports: [dataset('49', n)],
+      reports: [{ ...dataset('49', n), programYear }],
       regionHistory,
     })
   const ledgerRollup = rollUpEducationProgramYear({

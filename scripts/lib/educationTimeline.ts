@@ -329,15 +329,69 @@ export function timelineIndexRow(
 }
 
 export interface TimelineUpdatePlan {
+  /** The timelines this run changed: the only ones to upload. */
   written: EducationTimeline[]
+  /** Every timeline, changed or not, for the rollup index to name. */
   rows: NonNullable<EducationRollupIndex['timelines']>
   skipped: { programYear: string; reason: string }[]
 }
 
-/** Stub (red): lands in the next commit (#2591). */
+/**
+ * The daily step (and the rollup rebuild): fold each reports rollup's date
+ * into its program year's timeline.
+ *
+ * - A ledger PY has no per-date reports, so never a timeline.
+ * - A timeline is SEEDED only for the newest reports PY; an older PY gets
+ *   one from the backfill, and is updated here only if it already has one.
+ * - A new timeline takes its ghost from the previous year's timeline when
+ *   that exists; otherwise it has none until the backfill sets one.
+ * - Only `existing` timelines and today's rollups are read: no history scan.
+ */
 export function planTimelineUpdates(
-  _rollups: readonly EducationRollupProgramYear[],
-  _existing: ReadonlyMap<string, EducationTimeline>
+  rollups: readonly EducationRollupProgramYear[],
+  existing: ReadonlyMap<string, EducationTimeline>
 ): TimelineUpdatePlan {
-  throw new Error('not implemented')
+  const reportsRollups = rollups
+    .filter(r => r.source === 'reports' && r.sourceDate !== null)
+    .sort((a, b) => byString(a.programYear, b.programYear))
+  const newest = reportsRollups.at(-1)?.programYear
+  const all = new Map(existing)
+  const written = new Map<string, EducationTimeline>()
+  const skipped: TimelineUpdatePlan['skipped'] = []
+
+  for (const rollup of reportsRollups) {
+    const py = rollup.programYear
+    const current = existing.get(py) ?? null
+    if (current === null && py !== newest) continue
+    try {
+      let next = upsertTimelineDate(
+        current,
+        py,
+        rollup.sourceDate as string,
+        rollup
+      )
+      if (next.prior === null) {
+        const before = existing.get(previousProgramYear(py))
+        if (before) next = withPrior(next, ghostFromTimeline(before))
+      }
+      written.set(py, next)
+      all.set(py, next)
+    } catch (err) {
+      skipped.push({ programYear: py, reason: (err as Error).message })
+    }
+  }
+
+  return {
+    written: [...written.values()],
+    rows: [...all.values()]
+      .sort((a, b) => byString(a.programYear, b.programYear))
+      .map(timelineIndexRow),
+    skipped,
+  }
+}
+
+/** '2026-2027' → '2025-2026'. */
+export function previousProgramYear(programYear: string): string {
+  const y = Number(programYear.slice(0, 4))
+  return `${y - 1}-${y}`
 }
