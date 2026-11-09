@@ -10,11 +10,25 @@ import { describe, expect, it } from 'vitest'
    against a fake window, so the test exercises the shipped bytes. */
 
 const html = readFileSync(join(__dirname, '../../../index.html'), 'utf8')
+/** Inline <script> bodies, found by scanning case-insensitively (no regex
+ *  HTML filtering: it misses `<SCRIPT>` and `</script >`). */
+function inlineScripts(source: string): string[] {
+  const lower = source.toLowerCase()
+  const out: string[] = []
+  let from = 0
+  for (;;) {
+    const open = lower.indexOf('<script', from)
+    if (open === -1) return out
+    const bodyStart = lower.indexOf('>', open) + 1
+    const close = lower.indexOf('</script', bodyStart)
+    if (bodyStart === 0 || close === -1) return out
+    out.push(source.slice(bodyStart, close))
+    from = close + 1
+  }
+}
+
 const gaScript = (() => {
-  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
-    m => m[1] ?? ''
-  )
-  const found = scripts.find(s => s.includes('G-CDWQYHC2Z3'))
+  const found = inlineScripts(html).find(s => s.includes('G-CDWQYHC2Z3'))
   if (!found) throw new Error('GA script not found in index.html')
   return found
 })()
