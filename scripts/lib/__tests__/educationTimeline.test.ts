@@ -18,6 +18,7 @@ import {
   EducationTimelineEntitySchema,
   type DistrictReportsDataset,
   type EducationLedgerHistoryFile,
+  type EducationTimelineEntity,
 } from '@taverns-red/shared-contracts'
 import { rollUpEducationProgramYear } from '../educationRollup.js'
 import {
@@ -589,5 +590,185 @@ describe('planTimelineUpdates (the daily, incremental step)', () => {
     )
     expect(r.written).toEqual([])
     expect(r.rows).toEqual([])
+  })
+
+  describe('a ghost for every entity, whenever its prior-year file exists (review fix 1)', () => {
+    const PRIOR = '2025-2026'
+    const multi = (
+      programYear: string,
+      date: string,
+      ns: Record<string, number>
+    ) =>
+      foldReportsDate({
+        programYear,
+        date,
+        reports: Object.entries(ns).map(([id, n]) => ({
+          ...dataset(id, n),
+          programYear,
+        })),
+        regionHistory,
+      })
+    const priorFiles = (): TimelineFiles =>
+      splitTimeline(
+        upsertTimelineDate(
+          null,
+          PRIOR,
+          '2025-10-12',
+          multi(PRIOR, '2025-10-12', { '49': 30, '61': 10, '85': 5 })
+        )
+      )
+    const merged = (
+      base: TimelineFiles,
+      written: Map<string, EducationTimelineEntity> | undefined
+    ): TimelineFiles => new Map([...base, ...(written ?? [])])
+
+    it('a district that first reports on day 10 gets its prior-year series', () => {
+      const day1 = planTimelineUpdates(
+        [multi(PY, D1, { '49': 20 })],
+        new Map([
+          [PY, new Map()],
+          [PRIOR, priorFiles()],
+        ]),
+        PY
+      )
+      const stored = merged(new Map(), day1.written[0]?.files)
+      expect(stored.get('district-49.json')?.prior).not.toBeNull()
+      expect(stored.has('district-61.json')).toBe(false)
+      const day10 = planTimelineUpdates(
+        [multi(PY, D2, { '49': 50, '61': 30 })],
+        new Map([
+          [PY, stored],
+          [PRIOR, priorFiles()],
+        ]),
+        PY
+      )
+      const fresh = day10.written[0]?.files.get('district-61.json')
+      expect(fresh?.prior).toMatchObject({
+        programYear: PRIOR,
+        source: 'timeline',
+        grain: 'day',
+      })
+      expect(fresh?.prior?.points).toEqual(
+        priorFiles()
+          .get('district-61.json')
+          ?.points.map(p => ({ at: p.date, total: awardsAt(p) }))
+      )
+    })
+
+    it('a prior-year timeline that appears after seeding is attached, even to an entity not reporting today', () => {
+      const seeded = planTimelineUpdates(
+        [multi(PY, D1, { '49': 20, '85': 5 })],
+        new Map([[PY, new Map()]]),
+        PY
+      )
+      const stored = merged(new Map(), seeded.written[0]?.files)
+      expect(stored.get('district-85.json')?.prior).toBeNull()
+      // Next day only D49 reports; the prior year's files have since appeared.
+      const next = planTimelineUpdates(
+        [multi(PY, D2, { '49': 50 })],
+        new Map([
+          [PY, stored],
+          [PRIOR, priorFiles()],
+        ]),
+        PY
+      )
+      const w = next.written[0]?.files
+      expect(w?.get('district-85.json')?.prior?.programYear).toBe(PRIOR)
+      expect(w?.get('district-49.json')?.prior?.programYear).toBe(PRIOR)
+    })
+
+    it('names the entity files still without a ghost and without a prior-year file read', () => {
+      const r = planTimelineUpdates(
+        [multi(PY, D1, { '49': 20, '85': 5 })],
+        new Map([[PY, new Map()]]),
+        PY
+      )
+      expect(r.needsPrior).toEqual([
+        'district-49.json',
+        'district-85.json',
+        'region-01.json',
+        'region-14.json',
+        'world.json',
+      ])
+    })
+
+    it('does not name an entity whose prior-year file was read', () => {
+      const r = planTimelineUpdates(
+        [multi(PY, D1, { '49': 20, '85': 5 })],
+        new Map([
+          [PY, new Map()],
+          [PRIOR, priorFiles()],
+        ]),
+        PY
+      )
+      // The prior year has no region-01 file (D49 was in region 02 then).
+      expect(r.needsPrior).toEqual(['region-01.json'])
+    })
+  })
+
+  describe('rollover and region moves (review fix 4)', () => {
+    const NEXT = '2027-2028'
+    const at = (programYear: string, date: string, n: number) =>
+      foldReportsDate({
+        programYear,
+        date,
+        reports: [{ ...dataset('49', n), programYear }],
+        regionHistory,
+      })
+
+    it('when the current PY switches, the old PY stays frozen and the new one is seeded with its ghost', () => {
+      const old = splitTimeline(
+        upsertTimelineDate(null, PY, '2027-06-30', at(PY, '2027-06-30', 81))
+      )
+      const r = planTimelineUpdates(
+        // The ended year still rolls up (its June close), the new one has its first date.
+        [at(PY, '2027-06-30', 81), at(NEXT, '2027-07-31', 10)],
+        new Map([
+          [NEXT, new Map()],
+          [PY, old],
+        ]),
+        NEXT
+      )
+      expect(r.written.map(w => w.programYear)).toEqual([NEXT])
+      expect(r.rows.map(x => x.programYear)).toEqual([PY, NEXT])
+      expect(r.rows[0]?.asOf).toBe('2027-06-30')
+      const first = r.written[0]?.files.get('district-49.json')
+      expect(first?.prior?.programYear).toBe(PY)
+      expect(first?.prior?.points.at(-1)?.total).toBe(rawTotal(81))
+    })
+
+    it('a district that moves region between dates leaves each region only the dates it was in', () => {
+      const moved = {
+        ...regionHistory,
+        districts: {
+          ...regionHistory.districts,
+          '49': {
+            ...regionHistory.districts['49'],
+            byProgramYear: {
+              ...regionHistory.districts['49']?.byProgramYear,
+              [PY]: '05',
+            },
+          },
+        },
+      } as typeof regionHistory
+      const fold = (date: string, h: typeof regionHistory) =>
+        foldReportsDate({
+          programYear: PY,
+          date,
+          reports: [dataset('49', date === D1 ? 20 : 50)],
+          regionHistory: h,
+        })
+      const day1 = upsertTimelineDate(null, PY, D1, fold(D1, regionHistory))
+      const day2 = upsertTimelineDate(day1, PY, D2, fold(D2, moved))
+      const files = splitTimeline(day2)
+      expect(files.get('region-01.json')?.points.map(p => p.date)).toEqual([D1])
+      expect(files.get('region-05.json')?.points.map(p => p.date)).toEqual([D2])
+      expect(files.get('district-49.json')?.points.map(p => p.date)).toEqual([
+        D1,
+        D2,
+      ])
+      expect(files.get('world.json')?.points.map(p => p.date)).toEqual([D1, D2])
+      expect(valid(day2)).toBe(true)
+    })
   })
 })
