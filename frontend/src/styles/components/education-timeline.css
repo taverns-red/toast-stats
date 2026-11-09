@@ -153,7 +153,9 @@
   stroke: var(--ink-2);
   stroke-opacity: 0.8;
 }
-.edu-tl__ref .recharts-label {
+/* Recharts portals the label out of the reference line's group, so it is
+   styled from the plot, not from .edu-tl__ref; its fill attribute is grey. */
+.edu-tl__plot .recharts-label {
   fill: var(--ink);
   font-weight: 600;
 }
@@ -164,33 +166,55 @@
   color: var(--ink-2);
 }
 
-/* The section holds the chart's height from first paint (skeleton, chart or
-   the "not available" state), so the content below never moves (CLS).
+/* The chart block (heading, headline, plot, legend, note, table toggle) holds
+   its height from first paint -- skeleton, then chart -- so the content below
+   never moves (CLS). It exists only while a chart is loading or showing: with
+   no timeline for the PY the state is a compact note and nothing is reserved.
+   The program notes sit OUTSIDE the block (they do not need the file), so
+   only the legend and the note, which wrap per font stack, change its height.
 
-   Only the legend and the note wrap, so only they change the loaded block's
-   height, and they wrap differently per font stack. Measured with the default
-   By level grouping: 375/390 -> 707 (macOS) and ~727 (the CI runner's Linux
-   fonts), 768 -> 595, 1024 -> 544, 1280 -> 524; By path adds up to 86px on a
-   phone. A device without hover also shows the 56px tap-to-read line (#1835).
-   Each floor is the measured worst case plus about 35px, so a font that wraps
-   a line more still fits: a little white space under the chart beats a shift. */
+   Measured on the District 61 fixture with default By level / By path
+   grouping, hover devices (macOS fonts; the CI runner's Linux fonts run up to
+   ~15px taller): 320 -> 764 / 821, 375-539 -> 707 / 821, 540-767 -> 595 / 652,
+   768 -> 595 / 623, 1024 -> 544 / 572, 1280 -> 524 / 553. A device without
+   hover adds the 56px tap-to-read line (#1835). Each floor is the measured
+   worst case plus about 35-40px, so a font that wraps a line more still fits:
+   a little white space under the chart beats a shift. */
 .edu-tl-section--reserved {
-  --edu-tl-h: 760px;
+  --edu-tl-h: 745px;
   --edu-tl-touch: 0px;
   min-height: calc(var(--edu-tl-h) + var(--edu-tl-touch));
 }
 .edu-tl-section--path {
-  --edu-tl-h: 850px;
+  --edu-tl-h: 860px;
 }
 @media (hover: none) {
   .edu-tl-section--reserved {
     --edu-tl-touch: 56px;
   }
 }
-@media (min-width: 768px) {
-  .edu-tl-section--reserved,
+@media (max-width: 359px) {
+  .edu-tl-section--reserved {
+    --edu-tl-h: 800px;
+  }
   .edu-tl-section--path {
-    --edu-tl-h: 640px;
+    --edu-tl-h: 860px;
+  }
+}
+@media (min-width: 540px) {
+  .edu-tl-section--reserved {
+    --edu-tl-h: 635px;
+  }
+  .edu-tl-section--path {
+    --edu-tl-h: 690px;
+  }
+}
+@media (min-width: 768px) {
+  .edu-tl-section--reserved {
+    --edu-tl-h: 635px;
+  }
+  .edu-tl-section--path {
+    --edu-tl-h: 660px;
   }
 }
 @media (min-width: 1100px) {

@@ -1,5 +1,6 @@
 import { test, expect, type Page, type Route } from './fixtures/test'
 import { readFileSync } from 'node:fs'
+import { fixtureFetch } from './helpers/cdnFixtures'
 import { resolve } from 'node:path'
 
 /* Education timeline chart (#2592, epic #2590) on the District, Region and
@@ -88,13 +89,40 @@ function withYearEnd(body: unknown, yearEnd: boolean): unknown {
   }
 }
 
-type Serve = 'fixture' | 'yearend' | 'absent' | 'drift'
+/** `unlisted`: the rollup index has no timelines[] row for the PY, so the page
+ *  must not fetch at all and shows the compact not-available state. */
+type Serve = 'fixture' | 'yearend' | 'absent' | 'drift' | 'unlisted'
+
+/** The index row the real pipeline writes for a PY with timelines (#2593). */
+const TIMELINE_ROW = {
+  programYear: '2026-2027',
+  prefix: 'derived/education-timeline/2026-2027',
+  asOf: '2026-11-08',
+  dates: 8,
+  priorGrain: 'day',
+}
 
 async function serveTimeline(
   page: Page,
   serve: Serve,
   delayMs = 0
 ): Promise<void> {
+  // The pages gate the fetch on the index's timelines[] row; staging's index
+  // gets its row from the daily run, so this spec says what the row is.
+  await page.route(
+    '**/derived/education-rollup/index.json',
+    async (route: Route) => {
+      const res = await fixtureFetch(route)
+      const body = (await res.json()) as Record<string, unknown>
+      body['timelines'] = serve === 'unlisted' ? [] : [TIMELINE_ROW]
+      await route.fulfill({
+        status: res.status(),
+        headers: CORS,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      })
+    }
+  )
   await page.route('**/derived/education-timeline/**', async (route: Route) => {
     if (delayMs) await new Promise(r => setTimeout(r, delayMs))
     if (serve === 'absent') {
@@ -173,9 +201,9 @@ for (const vp of [
 
         // The legend carries the old bar's names and values.
         const legend = page.getByRole('list', { name: 'Chart legend' })
-        await expect(legend.getByText('Level 1')).toBeVisible()
-        await expect(legend.getByText('DTM')).toBeVisible()
-        await expect(legend.getByText(/Last year/)).toBeVisible()
+        await expect(legend.getByText(/^Level 1: \d/)).toBeVisible()
+        await expect(legend.getByText(/^DTM: \d/)).toBeVisible()
+        await expect(legend.getByText(/^Last year/)).toBeVisible()
         await expect(
           page.getByTestId('education-timeline-ghost-note')
         ).toContainText(/daily/i)
@@ -191,10 +219,14 @@ for (const vp of [
       await expect(legend.getByText('Last year’s total: 412')).toBeVisible({
         timeout: 30_000,
       })
-      await expect(page.locator(`${SECTION} .edu-tl__ghost`)).toHaveCount(1)
+      // One full-width reference line, labelled on the line.
+      await expect(page.locator(`${SECTION} .edu-tl__ref`)).toHaveCount(1)
+      await expect(
+        page.locator(`${SECTION} .edu-tl__plot text.recharts-label`)
+      ).toContainText('Last year’s total: 412')
       await expect(
         page.getByTestId('education-timeline-ghost-note')
-      ).toContainText(/year-end total, 412/)
+      ).toContainText(/last year’s total for the whole year/i)
       await page.getByText('Show as a table').click()
       await expect(
         page.getByRole('columnheader', { name: 'Last year’s total' })
@@ -207,11 +239,13 @@ for (const vp of [
       await serveTimeline(page, 'fixture')
       await load(page, '/district/61/education?by=path')
       const legend = page.getByRole('list', { name: 'Chart legend' })
-      await expect(legend.getByText('Presentation Mastery')).toBeVisible({
+      await expect(legend.getByText(/^Presentation Mastery: \d/)).toBeVisible({
         timeout: 30_000,
       })
-      await expect(legend.getByText('Other', { exact: true })).toBeVisible()
-      await expect(legend.getByText('Level 1')).toHaveCount(0)
+      await expect(
+        legend.getByText(/^All other awards \(incl\. DTM\): \d/)
+      ).toBeVisible()
+      await expect(legend.getByText(/^Level 1/)).toHaveCount(0)
       await expect(page).toHaveURL(/\/district\/61\/education\?by=path/)
     })
 
@@ -225,10 +259,30 @@ for (const vp of [
       await expect(rows).toHaveCount(FIXTURE.points.length)
     })
 
+    test('no timelines[] row for the PY: no request, a compact note, no blank block', async ({
+      page,
+    }) => {
+      const requested: string[] = []
+      page.on('request', r => {
+        if (r.url().includes('/derived/education-timeline/'))
+          requested.push(r.url())
+      })
+      await serveTimeline(page, 'unlisted')
+      await load(page, '/district/61/education')
+      const note = page.getByTestId('education-timeline-unavailable')
+      await expect(note).toBeVisible({ timeout: 30_000 })
+      expect(requested).toEqual([])
+      // Compact: no reserved block under the heading.
+      const reserved = await page
+        .locator(`${SECTION} .edu-tl-section--reserved`)
+        .count()
+      expect(reserved).toBe(0)
+    })
+
     test('"not available yet" when the file is absent or off-contract', async ({
       page,
     }) => {
-      for (const serve of ['absent', 'drift'] as const) {
+      for (const serve of ['absent', 'drift', 'unlisted'] as const) {
         await page.unroute('**/derived/education-timeline/**').catch(() => {})
         await serveTimeline(page, serve)
         await load(page, '/district/61/education')

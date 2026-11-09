@@ -285,7 +285,7 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
                 strokeDasharray="6 4"
                 label={{
                   value: `${ghostName}: ${fmt(target.total)}`,
-                  position: 'insideTopLeft',
+                  position: 'insideBottomLeft',
                   fontSize: 13,
                 }}
               />
