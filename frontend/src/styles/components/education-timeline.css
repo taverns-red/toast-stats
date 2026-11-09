@@ -1,9 +1,13 @@
 /* #2592 (epic #2590) — "Awards over time" on the Education pages
    (EducationTimelineChart / EducationTimelineSection).
 
-   #2080: the LEGACY palette only (loyal blue, green, maroon, red, gold and
-   the neutrals the app already uses); no product-accent amber, no new brand
-   colour. Text wears ink tokens, which remap at [data-theme='dark']; colour
+   #2080: the LEGACY palette (loyal blue, green, maroon, red, gold and the
+   neutrals the app already uses); no product-accent amber, no brand colour.
+   #2080 exception for the education timeline path colours, Ron 2026-11-09:
+   this chart alone may keep teal, pink, green and gold for the 11 paths,
+   since eleven paths cannot be told apart on the legacy hues. The
+   noProductAccentUntilPhase2 guard still passes: none of these is the
+   product accent or its amber, so it needs no allow-list entry. Text wears ink tokens, which remap at [data-theme='dark']; colour
    is only a swatch or a fill, and every band is named in the legend with its
    value, so colour is never the only signal.
 
@@ -15,37 +19,39 @@
 
 /* ── Colours: the light set ──────────────────────────────────────────── */
 .edu-tl {
-  /* Levels: one hue, lighter = earlier level (loyal blue ramp). */
-  --edu-tl-l1: #cbdde7;
-  --edu-tl-l2: #9ebccb;
-  --edu-tl-l3: #5f93ad;
-  --edu-tl-l4: #2c6e90;
-  --edu-tl-l5: #004165;
+  /* Levels: one hue, lighter = earlier level (loyal blue ramp). Every fill
+     is at least 3:1 against the page and surface (WCAG 1.4.11); the ramp is
+     steeper than a pastel one because even level 1 must stay visible. */
+  --edu-tl-l1: #5f93ad;
+  --edu-tl-l2: #3f7ea3;
+  --edu-tl-l3: #2a6a8f;
+  --edu-tl-l4: #16547a;
+  --edu-tl-l5: #00304f;
   --edu-tl-dtm: #7b1828;
   --edu-tl-legacy: #6b7280;
-  --edu-tl-other: #a9b2b1;
-  --edu-tl-rest: #a9b2b1;
+  --edu-tl-other: #868d8c;
+  --edu-tl-rest: #868d8c;
   /* The 11 Pathways paths: a fixed colour per path, whatever its rank. */
   --edu-tl-p-dl: #004165;
   --edu-tl-p-ec: #15803d;
   --edu-tl-p-eh: #7b1828;
-  --edu-tl-p-ip: #7fb3cf;
-  --edu-tl-p-ld: #86c99a;
+  --edu-tl-p-ip: #6791a8;
+  --edu-tl-p-ld: #639572;
   --edu-tl-p-ms: #dc2626;
-  --edu-tl-p-pi: #e9a0a8;
+  --edu-tl-p-pi: #b37b81;
   --edu-tl-p-pm: #4b5563;
-  --edu-tl-p-sr: #ca8a04;
+  --edu-tl-p-sr: #ba7f04;
   --edu-tl-p-tc: #0f766e;
-  --edu-tl-p-vc: #94a3b8;
+  --edu-tl-p-vc: #7f8c9e;
 }
 
 /* ── Colours: the dark set ───────────────────────────────────────────── */
 [data-theme='dark'] .edu-tl {
-  --edu-tl-l1: #1c4866;
-  --edu-tl-l2: #2a6a96;
-  --edu-tl-l3: #3d8bcc;
-  --edu-tl-l4: #6fb0e0;
-  --edu-tl-l5: #aed6f1;
+  --edu-tl-l1: #4a7a9c;
+  --edu-tl-l2: #5f94bb;
+  --edu-tl-l3: #7aaed2;
+  --edu-tl-l4: #9cc6e3;
+  --edu-tl-l5: #c4e0f3;
   --edu-tl-dtm: #e0707f;
   --edu-tl-legacy: #9ca3af;
   --edu-tl-other: #6b7280;
@@ -53,14 +59,14 @@
   --edu-tl-p-dl: #5dade2;
   --edu-tl-p-ec: #4ade80;
   --edu-tl-p-eh: #e0707f;
-  --edu-tl-p-ip: #2a6a96;
-  --edu-tl-p-ld: #1f6b3a;
+  --edu-tl-p-ip: #2e6d98;
+  --edu-tl-p-ld: #2f7548;
   --edu-tl-p-ms: #f87171;
-  --edu-tl-p-pi: #8f2a3a;
+  --edu-tl-p-pi: #a24e5b;
   --edu-tl-p-pm: #9ca3af;
   --edu-tl-p-sr: #facc15;
   --edu-tl-p-tc: #5eead4;
-  --edu-tl-p-vc: #475569;
+  --edu-tl-p-vc: #5d697b;
 }
 
 /* The hook -> colour binding, shared by the band layer and the swatch. */
@@ -129,16 +135,27 @@
   fill: var(--edu-tl-c);
   fill-opacity: 1;
 }
-/* A hairline of the surface between bands keeps neighbours apart. */
+/* A 2px gap of the surface between bands keeps neighbours apart. */
 .edu-tl__band .recharts-area-curve {
   stroke: var(--surface);
-  stroke-width: 1;
+  stroke-width: 2;
 }
 
 /* ── The ghost: last year, faint and dashed ─────────────────────────── */
 .edu-tl__ghost .recharts-line-curve {
   stroke: var(--ink-2);
   stroke-opacity: 0.7;
+}
+
+/* Last year's year-end total: a full-width reference line, labelled on the
+   line in ink (colour is never the only signal). */
+.edu-tl__ref .recharts-reference-line-line {
+  stroke: var(--ink-2);
+  stroke-opacity: 0.8;
+}
+.edu-tl__ref .recharts-label {
+  fill: var(--ink);
+  font-weight: 600;
 }
 
 /* ── Frame ───────────────────────────────────────────────────────────── */
