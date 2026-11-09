@@ -81,10 +81,16 @@ export const ConsentBanner: React.FC<{ immediate?: boolean }> = ({
       <h2 className="consent-banner__title" tabIndex={-1} ref={headingRef}>
         Privacy and cookies
       </h2>
+      {/* One short line of copy, with the link in its own block: the largest
+          text block here must stay smaller than the page's own first-screen
+          text, or the banner becomes the LCP element (#2584: it did, 2.0 s to
+          3.6 s on landing at 375). */}
       <p className="consent-banner__text">
         {state.level === null
-          ? 'We would like to count visits with Google Analytics. Choose what you are happy with.'
-          : `Your choice is ${LABEL[state.level]}. You can change it here.`}{' '}
+          ? 'May we count visits with Google Analytics?'
+          : `Your choice is ${LABEL[state.level]}. You can change it here.`}
+      </p>
+      <p className="consent-banner__more">
         <Link to="/privacy" className="consent-banner__link">
           What each choice stores
         </Link>
