@@ -10,9 +10,9 @@ import { SortableHeader } from './SortableHeader'
 import {
   ByLevelOrPathSection,
   MatrixSection,
-  ProgramBar,
   SwitchLinks,
 } from './education/EducationBreakdown'
+import { EducationTimelineSection } from './education/EducationTimelineSection'
 import {
   PriorityColumnsTable,
   type PriorityMetric,
@@ -23,7 +23,9 @@ import {
 
    - KPI strip: awards, members with an award, DTMs, Triple Crown, awards per
      base member. A figure the dataset does not carry reads "Not measured".
-   - All-awards bar: Pathways, Legacy, DTM and Other stacked, values as text.
+   - Awards over time (#2592): the cumulative levels / paths step chart,
+     last year as a ghost line; its legend carries the old all-awards bar's
+     names and values. "Not available yet" keeps that bar.
    - Level rows (default) or path rows (`?by=path`): same route, URL state,
      plain links — no tabs (ADR-005). A level row expands into path chips.
    - Level × path matrix, Pathways only: inline at ≥768, behind "Open
@@ -39,6 +41,9 @@ export interface DistrictEducationViewProps {
   snapshotDate: string
   /** The viewed PY is older than the district's newest one (page-decided). */
   isPriorProgramYear: boolean
+  /** The page's selected PY label (R3), e.g. `2026-2027`. */
+  programYear: string
+  districtId: string
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -289,6 +294,8 @@ export const DistrictEducationView: React.FC<DistrictEducationViewProps> = ({
   education,
   snapshotDate,
   isPriorProgramYear,
+  programYear,
+  districtId,
 }) => {
   if (education.status !== 'available') {
     return (
@@ -319,7 +326,15 @@ export const DistrictEducationView: React.FC<DistrictEducationViewProps> = ({
       </p>
 
       <KpiStrip e={e} />
-      <ProgramBar e={e} />
+      <EducationTimelineSection
+        programYear={programYear}
+        kind="district"
+        id={districtId}
+        through={snapshotDate}
+        tilesTotal={e.kpis.awards}
+        tilesAsOf={snapshotDate}
+        summary={e}
+      />
 
       <ByLevelOrPathSection e={e} />
 

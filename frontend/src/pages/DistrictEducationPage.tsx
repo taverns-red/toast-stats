@@ -271,6 +271,8 @@ const DistrictEducationPage: React.FC = () => {
                 education={education}
                 snapshotDate={effectiveEndDate}
                 isPriorProgramYear={isPriorProgramYear}
+                programYear={effectiveProgramYear.label}
+                districtId={districtId}
               />
               {csvEducationLevels && csvEducationLevels.total > 0 && (
                 <section

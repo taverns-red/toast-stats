@@ -14,14 +14,14 @@ import {
 import {
   ByLevelOrPathSection,
   MatrixSection,
-  ProgramBar,
 } from './education/EducationBreakdown'
+import { EducationTimelineSection } from './education/EducationTimelineSection'
 import { EducationYearBars } from './education/EducationYearBars'
 import { KpiStrip } from './RegionEducationView'
 
 /* World Education page body (#1811, epic #1781) — the #1801 rollup's world
    block for one program year. The region page's sections (#1810): KPI
-   strip, all-awards bar, level or path rows (`?by=path`), the Pathways-only
+   strip, awards over time (#2592), level or path rows (`?by=path`), the Pathways-only
    matrix, the years; then one row per region linking to its own education
    page, with how many of its districts had a ledger. A region with none is
    a row that says "Not available", never zeros. Program year comes from
@@ -323,7 +323,15 @@ export const WorldEducationView: React.FC<WorldEducationViewProps> = ({
         ledger
       </p>
       <KpiStrip e={e} />
-      <ProgramBar e={e.summary} />
+      <EducationTimelineSection
+        programYear={programYear}
+        kind="world"
+        id={null}
+        through={e.source.sourceDate}
+        tilesTotal={e.kpis.awards}
+        tilesAsOf={e.source.sourceDate}
+        summary={e.summary}
+      />
       <ByLevelOrPathSection e={e.summary} />
       <MatrixSection e={e.summary} />
       {trend.length > 0 && (

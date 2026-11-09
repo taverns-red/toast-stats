@@ -14,13 +14,13 @@ import {
 import {
   ByLevelOrPathSection,
   MatrixSection,
-  ProgramBar,
 } from './education/EducationBreakdown'
+import { EducationTimelineSection } from './education/EducationTimelineSection'
 import { EducationYearBars } from './education/EducationYearBars'
 
 /* Region Education page body (#1810, epic #1781) — the #1801 rollup for
    one region and program year. Same sections as the district page (#1793):
-   KPI strip, all-awards bar (Pathways, Legacy, DTM, Other stacked), level
+   KPI strip, awards over time (#2592; replaced the all-awards bar), level
    or path rows (`?by=path`), the Pathways-only level × path matrix. Then
    the years (multi-year bars, Legacy and Pathways stacked) and one row per
    district linking to its own education page; a district without a ledger
@@ -323,7 +323,15 @@ export const RegionEducationView: React.FC<RegionEducationViewProps> = ({
         ledger
       </p>
       <KpiStrip e={e} />
-      <ProgramBar e={e.summary} />
+      <EducationTimelineSection
+        programYear={programYear}
+        kind="region"
+        id={region}
+        through={e.source.sourceDate}
+        tilesTotal={e.kpis.awards}
+        tilesAsOf={e.source.sourceDate}
+        summary={e.summary}
+      />
       <ByLevelOrPathSection e={e.summary} />
       <MatrixSection e={e.summary} />
       {trend.length > 0 && (
