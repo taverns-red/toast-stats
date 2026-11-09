@@ -730,6 +730,7 @@ export {
   RegionMembershipSeriesReaderSchema,
   EducationRollupProgramYearReaderSchema,
   EducationRollupIndexReaderSchema,
+  EducationTimelineEntityReaderSchema,
   ReportsRollupsReaderSchema,
   PerDistrictDataReaderSchema,
 } from './schemas/reader-schemas.js'

@@ -26,6 +26,8 @@ import {
   EducationRollupIndexSchema,
   EducationRollupProgramYearReaderSchema,
   EducationRollupProgramYearSchema,
+  EducationTimelineEntityReaderSchema,
+  EducationTimelineEntitySchema,
   GlobalClubRaceReaderSchema,
   GlobalClubRaceSchema,
   PerDistrictDataReaderSchema,
@@ -42,6 +44,7 @@ import {
 import {
   EDUCATION_ROLLUP,
   EDUCATION_ROLLUP_INDEX,
+  EDUCATION_TIMELINE_ENTITY,
   GLOBAL_CLUB_RACE,
   SUSPENDED_CLUBS,
 } from './__fixtures__/reader-payloads.js'
@@ -129,6 +132,13 @@ const CASES: Case[] = [
     writer: EducationRollupIndexSchema,
     payload: EDUCATION_ROLLUP_INDEX,
     at: [[], ['programYears', 0]],
+  },
+  {
+    name: 'EducationTimelineEntity',
+    reader: EducationTimelineEntityReaderSchema,
+    writer: EducationTimelineEntitySchema,
+    payload: EDUCATION_TIMELINE_ENTITY,
+    at: [[], ['entity'], ['points', 0], ['prior'], ['prior', 'points', 0]],
   },
   {
     name: 'ReportsRollups',

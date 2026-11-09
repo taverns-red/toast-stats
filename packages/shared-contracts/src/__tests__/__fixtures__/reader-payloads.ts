@@ -9,6 +9,7 @@ import {
   SUSPENDED_CLUBS_FORMAT,
   type EducationAwardsBlock,
   type EducationRollupProgramYear,
+  type EducationTimelineEntity,
   type GlobalClubRace,
   type SuspendedClubs,
 } from '../../index.js'
@@ -260,4 +261,40 @@ export const GLOBAL_CLUB_RACE: GlobalClubRace = {
       worldwideFirsts: 0,
     },
   ],
+}
+
+/** A district's education-timeline file (#2592): two points and a day-grain
+ *  prior-year ghost. `byPath` sums to `levels` (the writer's invariant). */
+export const EDUCATION_TIMELINE_ENTITY: EducationTimelineEntity = {
+  _format: { version: '1.0.0', type: 'education-timeline-entity' },
+  programYear: '2026-2027',
+  asOf: '2026-10-12',
+  entity: { kind: 'district', id: '61' },
+  points: [
+    {
+      date: '2026-10-05',
+      levels: [4, 2, 1, 0, 0],
+      dtm: 1,
+      legacy: 0,
+      other: 0,
+      byPath: { PM: 5, DL: 2 },
+    },
+    {
+      date: '2026-10-12',
+      levels: [5, 2, 1, 1, 0],
+      dtm: 1,
+      legacy: 0,
+      other: 0,
+      byPath: { PM: 6, DL: 3 },
+    },
+  ],
+  prior: {
+    programYear: '2025-2026',
+    source: 'timeline',
+    grain: 'day',
+    points: [
+      { at: '2025-10-05', total: 7 },
+      { at: '2025-10-12', total: 9 },
+    ],
+  },
 }
