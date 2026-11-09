@@ -81,13 +81,21 @@ const renderSection = (
 
 describe('EducationTimelineSection', () => {
   it('reads the timeline for the PY, entity and id the page passes (R3)', () => {
-    useTimeline.mockReturnValue({ timeline: null, isLoading: true })
+    useTimeline.mockReturnValue({
+      timeline: null,
+      isLoading: true,
+      listed: true,
+    })
     renderSection({ programYear: '2025-2026', kind: 'region', id: '09' })
     expect(useTimeline).toHaveBeenCalledWith('2025-2026', 'region', '09')
   })
 
   it('reserves the chart height while loading (no layout shift)', () => {
-    useTimeline.mockReturnValue({ timeline: null, isLoading: true })
+    useTimeline.mockReturnValue({
+      timeline: null,
+      isLoading: true,
+      listed: true,
+    })
     const { container } = renderSection()
     expect(screen.getByRole('status', { name: /loading/i })).toBeVisible()
     expect(container.querySelector('.edu-tl-section--reserved')).not.toBeNull()
@@ -97,6 +105,7 @@ describe('EducationTimelineSection', () => {
     useTimeline.mockReturnValue({
       timeline: DISTRICT_61_TIMELINE,
       isLoading: false,
+      listed: true,
     })
     renderSection()
     expect(await screen.findByTestId('chart')).toBeInTheDocument()
@@ -104,7 +113,11 @@ describe('EducationTimelineSection', () => {
   })
 
   it('works for a world file (aggregate points)', async () => {
-    useTimeline.mockReturnValue({ timeline: WORLD_TIMELINE, isLoading: false })
+    useTimeline.mockReturnValue({
+      timeline: WORLD_TIMELINE,
+      isLoading: false,
+      listed: true,
+    })
     renderSection({ kind: 'world', id: null })
     expect(await screen.findByTestId('chart')).toBeInTheDocument()
   })
@@ -113,6 +126,7 @@ describe('EducationTimelineSection', () => {
     useTimeline.mockReturnValue({
       timeline: DISTRICT_61_TIMELINE,
       isLoading: false,
+      listed: true,
     })
     const { container } = renderSection({}, '/district/61/education?by=path')
     await screen.findByTestId('chart')
@@ -125,7 +139,11 @@ describe('EducationTimelineSection', () => {
 
   describe('when the file is absent', () => {
     beforeEach(() => {
-      useTimeline.mockReturnValue({ timeline: null, isLoading: false })
+      useTimeline.mockReturnValue({
+        timeline: null,
+        isLoading: false,
+        listed: true,
+      })
     })
 
     it('says so honestly: not available yet, not zero, not an error', () => {
@@ -145,11 +163,81 @@ describe('EducationTimelineSection', () => {
       expect(within(legend).getByText('Legacy')).toBeVisible()
     })
 
-    it('holds the same reserved height as the chart', () => {
+    it('collapses to a compact note once the load fails: no blank block', () => {
+      const { container } = renderSection()
+      expect(container.querySelector('.edu-tl-section--reserved')).toBeNull()
+    })
+  })
+
+  describe('when the index has no timeline row for the PY (no fetch)', () => {
+    beforeEach(() => {
+      useTimeline.mockReturnValue({
+        timeline: null,
+        isLoading: false,
+        listed: false,
+      })
+    })
+
+    it('is a compact not-available state: no reserved height', () => {
       const { container } = renderSection()
       expect(
-        container.querySelector('.edu-tl-section--reserved')
-      ).not.toBeNull()
+        screen.getByTestId('education-timeline-unavailable')
+      ).toHaveTextContent(/not available yet/i)
+      expect(container.querySelector('.edu-tl-section--reserved')).toBeNull()
+      expect(screen.queryByTestId('chart')).toBeNull()
+    })
+
+    it('still shows the program bar legend', () => {
+      renderSection()
+      expect(
+        screen.getByRole('list', { name: 'Awards by program' })
+      ).toBeVisible()
+    })
+  })
+
+  describe('when the selected date is before the first point', () => {
+    it('is not available for this date, keeps the bar, and is not blank', () => {
+      useTimeline.mockReturnValue({
+        timeline: DISTRICT_61_TIMELINE,
+        isLoading: false,
+        listed: true,
+      })
+      const { container } = renderSection({ through: '2026-01-01' })
+      const note = screen.getByTestId('education-timeline-unavailable')
+      expect(note).toHaveTextContent(/not available for this date/i)
+      expect(screen.queryByTestId('chart')).toBeNull()
+      expect(
+        screen.getByRole('list', { name: 'Awards by program' })
+      ).toBeVisible()
+      expect(container.querySelector('.edu-tl-section--reserved')).toBeNull()
+    })
+
+    it('is the same for a file with no points at all', () => {
+      useTimeline.mockReturnValue({
+        timeline: { ...DISTRICT_61_TIMELINE, points: [] },
+        isLoading: false,
+        listed: true,
+      })
+      renderSection({ through: undefined })
+      expect(screen.getByTestId('education-timeline-unavailable')).toBeVisible()
+      expect(screen.queryByTestId('chart')).toBeNull()
+    })
+  })
+
+  describe('program notes', () => {
+    it('are on the page while the chart loads, outside the reserved block', () => {
+      useTimeline.mockReturnValue({
+        timeline: null,
+        isLoading: true,
+        listed: true,
+      })
+      const { container } = renderSection({
+        summary: { ...summary, legacyByCode: [{ code: 'CC', count: 2 }] },
+      })
+      const notes = screen.getByText(/Legacy awards by code: CC 2/)
+      expect(notes).toBeVisible()
+      expect(notes.closest('.edu-tl-section__block')).toBeNull()
+      expect(container.querySelector('.edu-tl-section__block')).not.toBeNull()
     })
   })
 })

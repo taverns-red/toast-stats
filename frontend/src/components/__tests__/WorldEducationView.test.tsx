@@ -26,7 +26,11 @@ import { WorldEducationView } from '../WorldEducationView'
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }))
 // The awards timeline section (#2592) has its own tests; here it is absent.
 vi.mock('../../hooks/useEducationTimeline', () => ({
-  useEducationTimeline: () => ({ timeline: null, isLoading: false }),
+  useEducationTimeline: () => ({
+    timeline: null,
+    isLoading: false,
+    listed: true,
+  }),
 }))
 
 const py2627 = EducationRollupProgramYearSchema.parse(current)

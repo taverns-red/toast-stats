@@ -26,7 +26,11 @@ import recordedIndex from '../../__tests__/fixtures/education-rollup-index.recor
 
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }))
 vi.mock('../../hooks/useEducationTimeline', () => ({
-  useEducationTimeline: vi.fn(() => ({ timeline: null, isLoading: false })),
+  useEducationTimeline: vi.fn(() => ({
+    timeline: null,
+    isLoading: false,
+    listed: true,
+  })),
 }))
 
 vi.mock('../../services/cdn', () => ({
@@ -127,6 +131,7 @@ describe('WorldEducationPage — awards over time (#2592)', () => {
     vi.mocked(useEducationTimeline).mockReturnValue({
       timeline: WORLD_TIMELINE,
       isLoading: false,
+      listed: true,
     })
     renderAt('/regions/education')
     await screen.findByTestId('education-timeline-headline')
@@ -142,6 +147,7 @@ describe('WorldEducationPage — awards over time (#2592)', () => {
     vi.mocked(useEducationTimeline).mockReturnValue({
       timeline: WORLD_TIMELINE,
       isLoading: false,
+      listed: true,
     })
     renderAt('/regions/education')
     const kpis = await screen.findByRole('list', {
@@ -159,6 +165,7 @@ describe('WorldEducationPage — awards over time (#2592)', () => {
     vi.mocked(useEducationTimeline).mockReturnValue({
       timeline: null,
       isLoading: false,
+      listed: true,
     })
     renderAt('/regions/education')
     expect(

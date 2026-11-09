@@ -123,7 +123,11 @@ vi.mock('../../services/cdn', async importOriginal => ({
   }),
 }))
 vi.mock('../../hooks/useEducationTimeline', () => ({
-  useEducationTimeline: vi.fn(() => ({ timeline: null, isLoading: false })),
+  useEducationTimeline: vi.fn(() => ({
+    timeline: null,
+    isLoading: false,
+    listed: true,
+  })),
 }))
 vi.mock('../../hooks/useEducationRollup', () => ({
   useEducationRollupIndex: vi.fn(() => ({ index: null, isLoading: false })),
@@ -475,6 +479,7 @@ describe('DistrictEducationPage — awards over time (#2592)', () => {
     vi.mocked(useEducationTimeline).mockReturnValue({
       timeline: DISTRICT_61_TIMELINE,
       isLoading: false,
+      listed: true,
     })
   })
   afterEach(() => cleanup())
@@ -511,6 +516,7 @@ describe('DistrictEducationPage — awards over time (#2592)', () => {
     vi.mocked(useEducationTimeline).mockReturnValue({
       timeline: null,
       isLoading: false,
+      listed: true,
     })
     renderAt('/district/61/education')
     expect(

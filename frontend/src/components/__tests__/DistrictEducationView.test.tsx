@@ -26,7 +26,11 @@ import { DistrictEducationView } from '../DistrictEducationView'
 
 // The awards timeline section (#2592) has its own tests; here it is absent.
 vi.mock('../../hooks/useEducationTimeline', () => ({
-  useEducationTimeline: () => ({ timeline: null, isLoading: false }),
+  useEducationTimeline: () => ({
+    timeline: null,
+    isLoading: false,
+    listed: true,
+  }),
 }))
 
 const d61 = recordedD61 as unknown as DistrictReportsDataset
