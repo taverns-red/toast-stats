@@ -198,6 +198,35 @@ for (const width of [375, 360]) {
     expect(m!.clipped, '"+88 provisional" is clipped').toBe(false)
     expect(m!.confClipped, 'the number is clipped').toBe(false)
   })
+
+  /* When the pair fits on one line, the Distinguished tile is exactly as
+   * tall as its neighbours. The page has no height to spare (D201 sits at
+   * the 4,000px cap, #2575), and the global span line-height once made this
+   * row 6px taller. */
+  test(`a one-line "+N provisional" leaves the Distinguished row as tall as the others at ${width}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 812 })
+    await loadHub(page)
+    const m = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll('.district-hub__tile-value')]
+      const dist = rows.find(e =>
+        e.querySelector('[data-testid="distinguished-confirmed"]')
+      )
+      const plain = rows.find(e => e !== dist)
+      if (!dist || !plain) return null
+      dist.innerHTML =
+        '<span data-testid="distinguished-confirmed">3</span> ' +
+        '<span data-testid="distinguished-provisional" ' +
+        'class="distinguished-count__provisional">+5 provisional</span>'
+      return {
+        dist: dist.getBoundingClientRect().height,
+        plain: plain.getBoundingClientRect().height,
+      }
+    })
+    expect(m, 'the hub tile rows are missing').not.toBeNull()
+    expect(m!.dist, JSON.stringify(m)).toBeLessThanOrEqual(m!.plain + 0.5)
+  })
 }
 
 test('a tile opens its detail sheet', async ({ page }) => {
