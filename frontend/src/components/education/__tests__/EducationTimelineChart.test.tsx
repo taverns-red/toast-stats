@@ -70,7 +70,9 @@ vi.mock('recharts', () => ({
   XAxis: ({ type, scale }: { type?: string; scale?: string }) => (
     <div data-testid="x-axis" data-type={type} data-scale={scale} />
   ),
-  YAxis: () => <div data-testid="y-axis" />,
+  YAxis: ({ width }: { width?: number }) => (
+    <div data-testid="y-axis" data-width={width} />
+  ),
   CartesianGrid: () => <div data-testid="grid" />,
   Tooltip: () => <div data-testid="tooltip" />,
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
@@ -331,6 +333,32 @@ describe('EducationTimelineChart — last year as a year-end target', () => {
     for (const row of within(table).getAllByRole('row').slice(1)) {
       expect(row).toHaveTextContent('412')
     }
+  })
+})
+
+describe('EducationTimelineChart — y-axis label room', () => {
+  it('widens the axis for six-digit totals so labels are not clipped', () => {
+    const big = {
+      ...DISTRICT_61_TIMELINE,
+      prior: {
+        programYear: '2025-2026',
+        source: 'timeline' as const,
+        grain: 'day' as const,
+        points: [{ at: '2026-06-30', total: 102757 }],
+      },
+    }
+    render(<EducationTimelineChart {...baseProps} timeline={big} />)
+    // "102,757" at 13px needs ~ 7 chars * 8px + tick gap.
+    expect(
+      Number(screen.getByTestId('y-axis').getAttribute('data-width'))
+    ).toBeGreaterThanOrEqual(68)
+  })
+
+  it('keeps the narrow axis for small totals', () => {
+    render(<EducationTimelineChart {...baseProps} />)
+    expect(
+      Number(screen.getByTestId('y-axis').getAttribute('data-width'))
+    ).toBeLessThanOrEqual(56)
   })
 })
 
