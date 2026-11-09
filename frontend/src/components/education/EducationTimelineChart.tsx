@@ -48,8 +48,6 @@ export interface EducationTimelineChartProps {
   /** The KPI tiles' awards figure and the date they are as of. */
   tilesTotal: number
   tilesAsOf: string | null
-  /** Notes printed under the legend (legacy / other award codes). */
-  notes?: React.ReactNode
 }
 
 const GHOST_KEY = 'ghost'
@@ -95,7 +93,6 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
   through,
   tilesTotal,
   tilesAsOf,
-  notes,
 }) => {
   // Tap-to-pin readout on devices without hover (#1835) — before early returns.
   const readout = useChartReadout()
@@ -322,7 +319,6 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
             : 'Last year is not available for this view. '}
         Each step is a snapshot date; nothing is drawn between snapshots.
       </p>
-      {notes}
 
       <details className="edu-tl__data">
         <summary className="edu-tl__data-toggle">Show as a table</summary>

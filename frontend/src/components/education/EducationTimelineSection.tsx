@@ -61,41 +61,57 @@ export const EducationTimelineSection: React.FC<
   const mode: 'level' | 'path' = params.get('by') === 'path' ? 'path' : 'level'
   const { timeline, isLoading } = useEducationTimeline(programYear, kind, id)
 
+  // The selected date can sit before the file's first point (or the file can
+  // hold none): zero rows is "not available for this date", never a blank.
+  const hasRows =
+    !!timeline && timeline.points.some(p => !through || p.date <= through)
+  const chartTimeline = !isLoading && hasRows ? timeline : null
+  // Height is reserved only while there is, or is about to be, a chart.
+  const reserved = isLoading || chartTimeline !== null
+
   return (
     <section
-      className={`education-section edu-tl-section edu-tl-section--reserved${mode === 'path' ? ' edu-tl-section--path' : ''}`}
+      className="education-section edu-tl-section"
       aria-label="Awards over time"
     >
-      <h2 className="education-section__title">
-        Awards over time, by {mode === 'path' ? 'path' : 'level'}
-      </h2>
-      {isLoading ? (
-        <Skeleton />
-      ) : timeline ? (
-        <Suspense fallback={<Skeleton />}>
-          <EducationTimelineChart
-            timeline={timeline}
-            mode={mode}
-            through={through ?? undefined}
-            tilesTotal={tilesTotal}
-            tilesAsOf={tilesAsOf}
-            notes={<ProgramNotes e={summary} />}
-          />
-        </Suspense>
-      ) : (
-        <div className="edu-tl__unavailable">
-          <p
-            role="status"
-            className="education-empty"
-            data-testid="education-timeline-unavailable"
-          >
-            The awards timeline for {programYear} is not available yet. It is
-            built from the daily education reports, so this is not zero awards.
-            The figures on this page are unaffected.
-          </p>
-          <ProgramBar e={summary} />
-        </div>
-      )}
+      <div
+        className={`edu-tl-section__block${reserved ? ' edu-tl-section--reserved' : ''}${reserved && mode === 'path' ? ' edu-tl-section--path' : ''}`}
+      >
+        <h2 className="education-section__title">
+          Awards over time, by {mode === 'path' ? 'path' : 'level'}
+        </h2>
+        {isLoading ? (
+          <Skeleton />
+        ) : chartTimeline ? (
+          <Suspense fallback={<Skeleton />}>
+            <EducationTimelineChart
+              timeline={chartTimeline}
+              mode={mode}
+              through={through ?? undefined}
+              tilesTotal={tilesTotal}
+              tilesAsOf={tilesAsOf}
+            />
+          </Suspense>
+        ) : (
+          <div className="edu-tl__unavailable">
+            <p
+              role="status"
+              className="education-empty"
+              data-testid="education-timeline-unavailable"
+            >
+              {timeline
+                ? 'The awards timeline is not available for this date: it starts after the date selected. '
+                : `The awards timeline for ${programYear} is not available yet. It is built from the daily education reports, so this is not zero awards. `}
+              The figures on this page are unaffected.
+            </p>
+            <ProgramBar e={summary} />
+          </div>
+        )}
+      </div>
+      {/* Known without the file, so it is on the page from the first paint
+          and never changes the height of the reserved block above. The
+          program bar of the unavailable state carries its own copy. */}
+      {reserved && <ProgramNotes e={summary} />}
     </section>
   )
 }
