@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.81.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.81.0...toast-stats-v2.81.1) (2026-11-09)
+
+
+### Bug Fixes
+
+* **district:** Distinguished KPI shows confirmed headline plus provisional ([#2554](https://github.com/taverns-red/toast-stats/issues/2554), part) ([#2579](https://github.com/taverns-red/toast-stats/issues/2579)) ([b61bacf](https://github.com/taverns-red/toast-stats/commit/b61bacf59b200a43d2e879ee6984101e0ae59b24))
+
 ## [2.81.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.80.1...toast-stats-v2.81.0) (2026-11-08)
 
 
