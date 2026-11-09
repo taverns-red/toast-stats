@@ -37,6 +37,7 @@ export const PUBLIC_ROUTES: readonly PublicRoute[] = [
   { path: '/awards' },
   { path: '/mcp' }, // MCP-server install page (#1165)
   { path: '/videos' }, // How-to videos list (#2310)
+  { path: '/privacy' }, // What each cookie choice stores (#2584)
 ]
 
 /** Absolute URL for a route path (`/` → `${ORIGIN}/`). */
