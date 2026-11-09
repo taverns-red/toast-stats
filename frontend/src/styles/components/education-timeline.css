@@ -148,13 +148,36 @@
 }
 
 /* The section holds the chart's height from first paint (skeleton, chart or
-   the "not available" state), so the content below never moves (CLS). */
+   the "not available" state), so the content below never moves (CLS). The
+   floor is the loaded chart block's measured height, which only the legend's
+   wrapping changes (#2592: 375/390 -> 707, 768 -> 595, 1024 -> 544, 1280 ->
+   524 with the default By level grouping; By path wraps more on a phone). A
+   device without hover also shows the 56px tap-to-read line (#1835). */
 .edu-tl-section--reserved {
-  min-height: 640px;
+  --edu-tl-h: 712px;
+  --edu-tl-touch: 0px;
+  min-height: calc(var(--edu-tl-h) + var(--edu-tl-touch));
+}
+.edu-tl-section--path {
+  --edu-tl-h: 800px;
+}
+@media (hover: none) {
+  .edu-tl-section--reserved {
+    --edu-tl-touch: 56px;
+  }
 }
 @media (min-width: 768px) {
+  .edu-tl-section--reserved,
+  .edu-tl-section--path {
+    --edu-tl-h: 600px;
+  }
+}
+@media (min-width: 1100px) {
   .edu-tl-section--reserved {
-    min-height: 520px;
+    --edu-tl-h: 535px;
+  }
+  .edu-tl-section--path {
+    --edu-tl-h: 560px;
   }
 }
 

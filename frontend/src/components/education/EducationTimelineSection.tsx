@@ -63,7 +63,7 @@ export const EducationTimelineSection: React.FC<
 
   return (
     <section
-      className="education-section edu-tl-section edu-tl-section--reserved"
+      className={`education-section edu-tl-section edu-tl-section--reserved${mode === 'path' ? ' edu-tl-section--path' : ''}`}
       aria-label="Awards over time"
     >
       <h2 className="education-section__title">

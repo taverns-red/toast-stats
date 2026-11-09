@@ -114,8 +114,10 @@ describe('EducationTimelineSection', () => {
       timeline: DISTRICT_61_TIMELINE,
       isLoading: false,
     })
-    renderSection({}, '/district/61/education?by=path')
+    const { container } = renderSection({}, '/district/61/education?by=path')
     await screen.findByTestId('chart')
+    // The path legend wraps taller on a phone, so it reserves more.
+    expect(container.querySelector('.edu-tl-section--path')).not.toBeNull()
     expect(
       screen.getAllByTestId('area').map(a => a.getAttribute('data-key'))
     ).toContain('rest')
