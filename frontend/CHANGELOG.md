@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.60.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.59.0...frontend-v3.60.0) (2026-11-09)
+
+
+### Features
+
+* **education:** cumulative levels/paths timeline chart ([#2592](https://github.com/taverns-red/toast-stats/issues/2592)) ([#2599](https://github.com/taverns-red/toast-stats/issues/2599)) ([e0577ab](https://github.com/taverns-red/toast-stats/commit/e0577abc5b550852bfccbb07212e38a15746e03f))
+
+
+### Bug Fixes
+
+* **e2e:** pin action-list smoke's date in the fixture manifest ([#2595](https://github.com/taverns-red/toast-stats/issues/2595)) ([#2596](https://github.com/taverns-red/toast-stats/issues/2596)) ([ae3ae92](https://github.com/taverns-red/toast-stats/commit/ae3ae92b30eb29f36921c55db434437de2873bf1))
+
 ## [3.59.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.58.1...frontend-v3.59.0) (2026-11-09)
 
 
