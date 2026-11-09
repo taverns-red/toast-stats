@@ -71,6 +71,17 @@ describe('ConsentBanner (#2584)', () => {
     expect(region()).toBeNull()
   })
 
+  /* LCP guard (#2584): the banner's first version was the LCP element on
+     landing (2.0 s to 3.6 s on mobile) because its paragraph was bigger than
+     the page's own lede. Keep each text block short and the link out of the
+     copy paragraph; Lighthouse and the preview smokes confirm the result. */
+  it('keeps every text block small so it cannot become the LCP element', () => {
+    renderBanner()
+    const text = region()!.querySelector('.consent-banner__text')!
+    expect(text.textContent!.length).toBeLessThanOrEqual(45)
+    expect(text.querySelector('a')).toBeNull()
+  })
+
   it('has no Close while undecided (a choice is needed to stop asking)', () => {
     renderBanner()
     expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
