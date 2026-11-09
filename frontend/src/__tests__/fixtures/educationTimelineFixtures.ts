@@ -21,6 +21,14 @@ export const WORLD_TIMELINE: EducationTimelineEntity =
     points: district61.points.map((p, i) => ({ ...p, districts: 70 + i })),
   })
 
+/** The same series as a region file (Region 01). */
+export const REGION_01_TIMELINE: EducationTimelineEntity =
+  EducationTimelineEntitySchema.parse({
+    ...district61,
+    entity: { kind: 'region', id: '01' },
+    points: district61.points.map((p, i) => ({ ...p, districts: 9 + i })),
+  })
+
 /** A district file whose ghost is month-grain (the education ledger history). */
 export const MONTH_GRAIN_TIMELINE: EducationTimelineEntity =
   EducationTimelineEntitySchema.parse({

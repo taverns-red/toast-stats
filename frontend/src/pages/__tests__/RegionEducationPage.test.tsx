@@ -16,7 +16,7 @@ import {
 } from '@taverns-red/shared-contracts'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { useEducationTimeline } from '../../hooks/useEducationTimeline'
-import { WORLD_TIMELINE } from '../../__tests__/fixtures/educationTimelineFixtures'
+import { REGION_01_TIMELINE } from '../../__tests__/fixtures/educationTimelineFixtures'
 import RegionEducationPage from '../RegionEducationPage'
 import {
   fetchCdnEducationRollup,
@@ -189,7 +189,7 @@ describe('RegionEducationPage — awards over time (#2592)', () => {
   it('asks for this region’s timeline of the page-selected PY (R3)', async () => {
     serveRecorded()
     vi.mocked(useEducationTimeline).mockReturnValue({
-      timeline: { ...WORLD_TIMELINE, entity: { kind: 'region', id: '01' } },
+      timeline: REGION_01_TIMELINE,
       isLoading: false,
     })
     renderAt('/region/1/education')
@@ -204,7 +204,7 @@ describe('RegionEducationPage — awards over time (#2592)', () => {
   it('sits directly under the KPI tiles and replaces the program bar', async () => {
     serveRecorded()
     vi.mocked(useEducationTimeline).mockReturnValue({
-      timeline: { ...WORLD_TIMELINE, entity: { kind: 'region', id: '01' } },
+      timeline: REGION_01_TIMELINE,
       isLoading: false,
     })
     renderAt('/region/01/education')
