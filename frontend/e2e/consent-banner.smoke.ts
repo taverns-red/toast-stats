@@ -32,10 +32,17 @@ async function serveAsProd(page: Page): Promise<string[]> {
       url => url.origin === PROD_ORIGIN,
       async route => {
         const u = new URL(route.request().url())
-        const response = await route.fetch({
-          url: `${BASE}${u.pathname}${u.search}`,
-        })
-        await route.fulfill({ response })
+        try {
+          const response = await route.fetch({
+            url: `${BASE}${u.pathname}${u.search}`,
+          })
+          await route.fulfill({ response })
+        } catch {
+          // The page or context closed or navigated while the response was
+          // in flight ("Fetch response has been disposed"): nothing is left
+          // to fulfil, so drop the request instead of failing the test.
+          await route.abort().catch(() => {})
+        }
       }
     )
   }
@@ -133,9 +140,6 @@ test('banner is a fixed overlay: no shift, no extra page height', async ({
     }).observe({ type: 'layout-shift', buffered: true })
   })
   await page.goto(`${BASE}/`, { waitUntil: 'load' })
-  const heightBefore = await page.evaluate(
-    () => document.documentElement.scrollHeight
-  )
   await expect(banner(page)).toBeVisible({ timeout: 20_000 })
   const box = (await banner(page).boundingBox())!
   expect(box.y).toBeGreaterThanOrEqual(0)
@@ -146,10 +150,18 @@ test('banner is a fixed overlay: no shift, no extra page height', async ({
     el => getComputedStyle(el).position
   )
   expect(position).toBe('fixed')
-  const heightAfter = await page.evaluate(
-    () => document.documentElement.scrollHeight
-  )
-  expect(heightAfter).toBe(heightBefore)
+  // One synchronous moment, so data still loading cannot grow the page
+  // between the two reads: height with the banner, then with it hidden.
+  const heights = await banner(page).evaluate(el => {
+    const root = document.documentElement
+    const withBanner = root.scrollHeight
+    const prev = (el as HTMLElement).style.display
+    ;(el as HTMLElement).style.display = 'none'
+    const withoutBanner = root.scrollHeight
+    ;(el as HTMLElement).style.display = prev
+    return { withBanner, withoutBanner }
+  })
+  expect(heights.withBanner).toBe(heights.withoutBanner)
   await page.waitForTimeout(500)
   const shift = await page.evaluate(
     () => (window as unknown as { __cls: number }).__cls
