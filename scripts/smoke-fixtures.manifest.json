@@ -59,6 +59,21 @@
       "optional": true
     },
     {
+      "path": "snapshots/2026-10-24/district_{district}.json",
+      "districts": ["86"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/2026-10-24/analytics/district_{district}_analytics.json",
+      "districts": ["86"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/2026-10-24/district_{district}_reports.json",
+      "districts": ["86"],
+      "optional": true
+    },
+    {
       "path": "snapshots/{yearEnd}/district_{district}.json",
       "districts": ["01", "52", "61", "100", "113"],
       "optional": true
