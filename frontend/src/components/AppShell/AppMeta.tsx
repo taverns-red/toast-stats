@@ -27,6 +27,19 @@ const AppMeta: React.FC = () => {
           Red Taverns
         </a>{' '}
         production
+        {' · '}
+        {/* #2584 — reopens the cookie and analytics choice. On the first
+            line, not the meta strip: one more item there wraps the strip to
+            another line, and the taller footer pushes /regions/changes over
+            its CLS budget. AppMeta reaches the footer and the mobile About
+            menu alike. */}
+        <button
+          type="button"
+          className="consent-reopen app-shell-footer__link"
+          onClick={openConsentSettings}
+        >
+          Privacy &amp; cookies
+        </button>
       </div>
       {/* #2090 — the Red Vote made-by line, in the footer on desktop and in
           the "About ▾" disclosure on mobile. */}
@@ -56,16 +69,6 @@ const AppMeta: React.FC = () => {
           <Link to="/videos" className="app-shell-footer__link">
             How-to videos
           </Link>
-          {' · '}
-          {/* #2584 — reopens the cookie and analytics choice. Same placement
-              reasoning: AppMeta reaches the footer and the mobile About menu. */}
-          <button
-            type="button"
-            className="consent-reopen app-shell-footer__link"
-            onClick={openConsentSettings}
-          >
-            Privacy &amp; cookies
-          </button>
           {' · '}
           {/* The only contact path in the app (#1356). There is no backend to
               POST a form to, so this goes to the GitHub issue chooser, whose
