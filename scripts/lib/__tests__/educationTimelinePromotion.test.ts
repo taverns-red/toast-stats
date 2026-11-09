@@ -2,16 +2,20 @@
  * The education timeline reaches prod the way the rollup does (#2591, epic
  * #2590; the rollup's path is #1810 / #2222).
  *
- * `derived/education-timeline/<PY>.json` is built beside the rollup, in the
- * same job, and named by the rollup index's additive `timelines` rows. The
- * `promote-reports` job then:
+ * `derived/education-timeline/<PY>/{world,region-<n>,district-<id>}.json` is
+ * built beside the rollup, in the same job, and named by the rollup index's
+ * additive `timelines` rows (a PY prefix each). The `promote-reports` job
+ * then:
  *
- *   1. plans it with the rollup (only the timelines the index names, under
- *      the same reports-date hold), downloading it without clashing with the
- *      rollup year of the same name (`2026-2027.json` is in both prefixes);
- *   2. content-gates it (schema, the program year its path names);
- *   3. promotes it with `--education-rollup`: years and timelines, then the
- *      index LAST (R15), so prod never names a timeline it does not hold.
+ *   1. plans it with the rollup: it lists the entity files under each named
+ *      prefix and takes only those matching the three name patterns, under
+ *      the same reports-date hold, downloading them without clashing with
+ *      the rollup year of the same name (`2026-2027.json` is in the rollup
+ *      prefix, `2026-2027/` here);
+ *   2. content-gates each file (schema, and the PY and entity its path names);
+ *   3. promotes them with `--education-rollup`: years and timeline files,
+ *      then the index LAST (R15), so prod never names a timeline it does not
+ *      hold.
  *
  * The sample is the build script's own output (education-rollup-output/).
  */
@@ -24,7 +28,10 @@ import * as path from 'node:path'
 import { runPlanReportSidecars } from '../reportSidecarPlanRunner.js'
 import { runPromoteRunManifest } from '../promoteRunManifestRunner.js'
 import { planManifestPromotion } from '../manifestPromotion.js'
-import { planEducationRollup } from '../educationRollupPlan.js'
+import {
+  planEducationRollup,
+  timelinePrefixes,
+} from '../educationRollupPlan.js'
 import {
   checkObject,
   classifyObject,
@@ -54,7 +61,12 @@ const RU = 'derived/education-rollup/'
 const TL = 'derived/education-timeline/'
 const INDEX = `${RU}index.json`
 const Y26 = `${RU}2026-2027.json`
-const T26 = `${TL}2026-2027.json`
+const P26 = `${TL}2026-2027`
+const W26 = `${P26}/world.json`
+const R26 = `${P26}/region-01.json`
+const D26 = `${P26}/district-49.json`
+const P25 = `${TL}2025-2026`
+const W25 = `${P25}/world.json`
 const META = 'content-type=application/json\n'
 const sha = (b: Buffer | string) => createHash('sha256').update(b).digest('hex')
 const entry = (p: string): RunManifestEntry => ({
@@ -64,30 +76,47 @@ const entry = (p: string): RunManifestEntry => ({
   stage: 'education-rollup',
 })
 
-const index = (asOf: string | null, timelines: string[]) =>
+const index = (asOf: string | null, prefixes: string[]) =>
   JSON.stringify({
     _format: { version: '1.0.0', type: 'education-rollup-index' },
     asOf,
     programYears: [{ programYear: '2026-2027', path: Y26 }],
-    timelines: timelines.map(py => ({
-      programYear: py,
-      path: `${TL}${py}.json`,
+    timelines: prefixes.map(prefix => ({
+      programYear: prefix.slice(-9),
+      prefix,
     })),
   })
 
-describe('planEducationRollup — the timelines the index names (#2591)', () => {
+describe('planEducationRollup — the timeline files under the named prefixes (#2591)', () => {
   const dates = ['2026-10-12']
-  it('promotes years, then the named timelines, then the index', () => {
+  it('promotes years, then the matching entity files, then the index', () => {
     expect(
       planEducationRollup({
-        stagingIndex: index('2026-10-12', ['2025-2026', '2026-2027']),
+        stagingIndex: index('2026-10-12', [P25, P26]),
         prodIndex: null,
         prodIndexedDates: dates,
+        timelineObjects: [D26, W26, R26, W25],
       })
     ).toMatchObject({
       action: 'promote',
-      paths: [Y26, `${TL}2025-2026.json`, T26, INDEX],
+      paths: [Y26, W25, D26, R26, W26, INDEX].map(p => p),
     })
+  })
+
+  it('takes only the three name patterns, and only under a named prefix', () => {
+    const plan = planEducationRollup({
+      stagingIndex: index('2026-10-12', [P26]),
+      prodIndex: null,
+      prodIndexedDates: dates,
+      timelineObjects: [
+        W26,
+        `${P26}/scratch.json`,
+        `${P26}/district-.json`,
+        `${P26}/world.json.bak`,
+        W25, // a PY the index does not name
+      ],
+    })
+    expect(plan.paths).toEqual([Y26, W26, INDEX])
   })
 
   it('an index with no timelines is the previous release’s plan', () => {
@@ -100,15 +129,17 @@ describe('planEducationRollup — the timelines the index names (#2591)', () => 
     ).toEqual([Y26, INDEX])
   })
 
-  it('refuses a timeline path outside derived/education-timeline/<PY>.json', () => {
-    for (const bad of ['v1/dates.json', `${RU}2026-2027.json`, `${TL}x.json`]) {
+  it('refuses a timelines row that is not derived/education-timeline/<PY>', () => {
+    for (const bad of ['v1', `${RU}2026-2027`, `${TL}2026-2027/`, `${TL}x`]) {
+      const stagingIndex = JSON.stringify({
+        asOf: '2026-10-12',
+        programYears: [{ path: Y26 }],
+        timelines: [{ prefix: bad }],
+      })
+      expect(() => timelinePrefixes(stagingIndex), bad).toThrow()
       expect(() =>
         planEducationRollup({
-          stagingIndex: JSON.stringify({
-            asOf: '2026-10-12',
-            programYears: [{ path: Y26 }],
-            timelines: [{ path: bad }],
-          }),
+          stagingIndex,
           prodIndex: null,
           prodIndexedDates: dates,
         })
@@ -119,7 +150,7 @@ describe('planEducationRollup — the timelines the index names (#2591)', () => 
 
 describe('planManifestPromotion — the education timeline (#2591)', () => {
   const base = {
-    entries: [entry(Y26), entry(T26), entry(INDEX)],
+    entries: [entry(Y26), entry(W26), entry(D26), entry(INDEX)],
     held: { all: false, dates: [] },
     indexDates: null,
     prodDates: null,
@@ -127,26 +158,38 @@ describe('planManifestPromotion — the education timeline (#2591)', () => {
   it('is never promoted from the pipeline’s own run manifest', () => {
     const plan = planManifestPromotion(base)
     expect(plan.objectCount).toBe(0)
-    expect(plan.excluded.map(e => e.path)).toEqual([Y26, T26, INDEX].sort())
+    expect(plan.excluded.map(e => e.path).sort()).toEqual(
+      [Y26, W26, D26, INDEX].sort()
+    )
   })
 
-  it('with educationRollup: years and timelines in the rollup phase, the index last', () => {
+  it('with educationRollup: years and timeline files in the rollup phase, the index last', () => {
     const plan = planManifestPromotion({ ...base, educationRollup: true })
     expect(plan.batches).toEqual([
       { phase: 'rollup', dir: RU, paths: [Y26] },
-      { phase: 'rollup', dir: TL, paths: [T26] },
+      { phase: 'rollup', dir: `${P26}/`, paths: [D26, W26] },
       { phase: 'entry', dir: RU, paths: [INDEX] },
     ])
   })
 
-  it('refuses any other object under derived/education-timeline/', () => {
-    for (const bad of [`${TL}scratch.json`, `${TL}2026-2027/x.json`]) {
-      expect(() =>
-        planManifestPromotion({
-          ...base,
-          entries: [entry(bad)],
-          educationRollup: true,
-        })
+  it('refuses anything under derived/education-timeline/ that is not an entity file', () => {
+    for (const bad of [
+      `${TL}scratch.json`,
+      `${TL}2026-2027.json`,
+      `${P26}/scratch.json`,
+      `${P26}/district-.json`,
+      `${P26}/district-1/2.json`,
+      `${P26}/world.json.bak`,
+      `${TL}2026-2028/world.json`,
+    ]) {
+      expect(
+        () =>
+          planManifestPromotion({
+            ...base,
+            entries: [entry(bad)],
+            educationRollup: true,
+          }),
+        bad
       ).toThrow(/derived\/education-timeline/)
     }
   })
@@ -163,38 +206,57 @@ describe('content gate — the education timeline (#2591)', () => {
   })
   const check = (kind: ObjectKind, value: unknown, p: string) =>
     checkObject({ path: p, kind }, stored(value), null, ctx)
+  const entity = (name: string) => sample(`timeline/2026-2027/${name}`)
 
   it('has its own kind; other objects under the prefix are plain json', () => {
-    expect(classifyObject(T26)).toBe('education-timeline')
-    expect(classifyObject(`${TL}scratch.json`)).toBe('json')
+    for (const p of [W26, R26, D26])
+      expect(classifyObject(p)).toBe('education-timeline')
+    expect(classifyObject(`${P26}/scratch.json`)).toBe('json')
   })
 
-  it('passes the build’s own timeline', () => {
+  it('passes the build’s own entity files', () => {
+    expect(check('education-timeline', entity('world.json'), W26)).toBeNull()
     expect(
-      check('education-timeline', sample('timeline/2026-2027.json'), T26)
+      check('education-timeline', entity('region-01.json'), R26)
+    ).toBeNull()
+    expect(
+      check('education-timeline', entity('district-49.json'), D26)
     ).toBeNull()
   })
 
-  it('holds a timeline that fails the schema, or carries a stray field', () => {
-    const v = sample('timeline/2026-2027.json')
-    delete v.world
-    expect(check('education-timeline', v, T26)).toMatch(
+  it('holds a file that fails the schema, or carries a stray field', () => {
+    const v = entity('world.json')
+    delete v.points
+    expect(check('education-timeline', v, W26)).toMatch(
       /schema validation failed/
     )
-    const w = { ...sample('timeline/2026-2027.json'), clubs: [] }
-    expect(check('education-timeline', w, T26)).toMatch(
+    const w = { ...entity('world.json'), clubs: [] }
+    expect(check('education-timeline', w, W26)).toMatch(
       /schema validation failed/
     )
   })
 
-  it('holds a timeline served under another program year’s path', () => {
+  it('holds a file served under another program year’s path', () => {
     expect(
       check(
         'education-timeline',
-        sample('timeline/2026-2027.json'),
-        `${TL}2025-2026.json`
+        entity('world.json'),
+        `${TL}2025-2026/world.json`
       )
     ).toMatch(/programYear is "2026-2027", but its path names 2025-2026/)
+  })
+
+  it('holds a file served under another entity’s path', () => {
+    expect(
+      check(
+        'education-timeline',
+        entity('district-49.json'),
+        `${P26}/district-61.json`
+      )
+    ).toMatch(/entity is district 49, but its path names district 61/)
+    expect(
+      check('education-timeline', entity('district-49.json'), W26)
+    ).toMatch(/entity is district 49, but its path names world/)
   })
 
   it('the rollup index: passes with timelines, holds a row pointing elsewhere or twice', () => {
@@ -202,7 +264,7 @@ describe('content gate — the education timeline (#2591)', () => {
     const run = (v: unknown) => check('education-rollup-index', v, INDEX)
     expect(run(idx())).toBeNull()
     const moved = idx()
-    ;(moved.timelines as Array<Record<string, unknown>>)[0]!.path =
+    ;(moved.timelines as Array<Record<string, unknown>>)[0]!.prefix =
       'v1/dates.json'
     expect(run(moved)).toMatch(/timelines\[0\] \(2026-2027\) points at/)
     const twice = idx()
@@ -260,11 +322,16 @@ describe('plan + promote with a timeline (shim)', () => {
     fs.mkdirSync(path.join(root, STG), { recursive: true })
     fs.mkdirSync(path.join(root, PROD), { recursive: true })
     put(PROD, 'v1/dates.json', JSON.stringify({ dates: ['2026-10-12'] }))
-    // Same file name in both prefixes, different bytes.
+    // Different bytes in every object, so a mix-up cannot pass.
     put(STG, Y26, '{"kind":"rollup-year"}')
-    put(STG, T26, '{"kind":"timeline"}')
-    put(STG, INDEX, index('2026-10-12', ['2026-2027']))
-    put(STG, `${TL}scratch.json`, '{}')
+    put(STG, W26, '{"kind":"world"}')
+    put(STG, D26, '{"kind":"district-49"}')
+    put(STG, R26, '{"kind":"region-01"}')
+    put(STG, INDEX, index('2026-10-12', [P26]))
+    // Strays under the named prefix are never promoted; neither is a PY the
+    // index does not name.
+    put(STG, `${P26}/scratch.json`, '{}')
+    put(STG, W25, '{"kind":"unnamed-year"}')
     // The run's own lines: a sidecar this run placed (the plan needs a run).
     fs.writeFileSync(
       runManifest,
@@ -305,22 +372,24 @@ describe('plan + promote with a timeline (shim)', () => {
     return { planned, promoted, err }
   }
 
-  it('plans the timeline with its own bytes (not the same-named year’s) and promotes it before the index', async () => {
+  it('plans the named entity files with their own bytes and promotes them before the index', async () => {
     const r = await planAndPromote()
     expect(r.planned, r.err).toBe(0)
     const rows = parseRunManifest(fs.readFileSync(rollupManifest, 'utf-8'))
-    expect(rows.map(e => e.path)).toEqual([Y26, T26, INDEX])
-    expect(rows.find(e => e.path === T26)?.sha256).toBe(
-      sha('{"kind":"timeline"}')
+    expect(rows.map(e => e.path).sort()).toEqual(
+      [Y26, D26, R26, W26, INDEX].sort()
     )
+    expect(rows.find(e => e.path === W26)?.sha256).toBe(sha('{"kind":"world"}'))
     expect(rows.find(e => e.path === Y26)?.sha256).toBe(
       sha('{"kind":"rollup-year"}')
     )
     expect(r.promoted, r.err).toBe(0)
-    expect(read(PROD, T26)).toBe('{"kind":"timeline"}')
+    expect(read(PROD, W26)).toBe('{"kind":"world"}')
+    expect(read(PROD, D26)).toBe('{"kind":"district-49"}')
+    expect(read(PROD, R26)).toBe('{"kind":"region-01"}')
     expect(read(PROD, Y26)).toBe('{"kind":"rollup-year"}')
     expect(read(PROD, INDEX)).toBe(read(STG, INDEX))
-    // The stray object the index does not name is never promoted.
-    expect(read(PROD, `${TL}scratch.json`)).toBeNull()
+    expect(read(PROD, `${P26}/scratch.json`)).toBeNull()
+    expect(read(PROD, W25)).toBeNull()
   })
 })

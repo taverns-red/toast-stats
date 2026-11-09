@@ -4,8 +4,9 @@
  * per-date `district_<id>_reports.json`, and its prior-year ghost.
  *
  * Run here against the gcloud shim (D10), never a real bucket. By default it
- * builds locally and WRITES NOTHING to the bucket; `--upload` adds one object,
- * `derived/education-timeline/<PY>.json`, recorded in the run manifest.
+ * builds locally and WRITES NOTHING to the bucket; `--upload` adds the PY's
+ * entity files, `derived/education-timeline/<PY>/{world,region-<n>,
+ * district-<id>}.json`, recorded in the run manifest.
  * The ghost is the prior year's own timeline if staging has it, else the
  * prior year's per-date reports, else the ledger history (month grain), else
  * none.
@@ -19,9 +20,10 @@ import * as path from 'node:path'
 import * as zlib from 'node:zlib'
 import {
   DistrictReportsDatasetSchema,
-  EducationTimelineSchema,
-  type EducationTimeline,
+  EducationTimelineEntitySchema,
+  type EducationTimelineEntity,
 } from '@taverns-red/shared-contracts'
+import { joinTimeline, type EducationTimeline } from '../educationTimeline.js'
 
 const REPO = process.cwd()
 const SCRIPT = path.join(
@@ -122,10 +124,21 @@ function seedCommon(): void {
     fixture('config/district-region-history.json')
   )
 }
-const readOut = (py: string): EducationTimeline =>
-  EducationTimelineSchema.parse(
-    JSON.parse(fs.readFileSync(path.join(out, `${py}.json`), 'utf-8'))
-  )
+/** The PY's entity files the script wrote, validated, joined. */
+const readOut = (py: string): EducationTimeline => {
+  const files = new Map<string, EducationTimelineEntity>()
+  for (const f of fs.readdirSync(path.join(out, py))) {
+    files.set(
+      f,
+      EducationTimelineEntitySchema.parse(
+        JSON.parse(fs.readFileSync(path.join(out, py, f), 'utf-8'))
+      )
+    )
+  }
+  const t = joinTimeline(files)
+  if (!t) throw new Error('no world.json')
+  return t
+}
 const bucketObjects = () =>
   fs
     .readdirSync(path.join(root, BUCKET), {
@@ -179,36 +192,37 @@ describe('backfill-education-timeline.sh', () => {
     expect(readOut('2026-2027').dates).toEqual(['2026-10-10', '2026-10-12'])
   })
 
-  it('with --upload: one object under derived/education-timeline/, recorded in the manifest', () => {
+  it('with --upload: the entity files under derived/education-timeline/<PY>/, recorded in the manifest', () => {
     seedCommon()
     stage('2026-10-12', 81)
     const before = bucketObjects()
     const r = run(['2026-2027', '--upload'])
     expect(r.status, r.stderr).toBe(0)
-    expect(bucketObjects().filter(o => !before.includes(o))).toEqual([
-      `${TL}2026-2027.json`,
-    ])
+    const want = [
+      `${TL}2026-2027/district-49.json`,
+      `${TL}2026-2027/region-01.json`,
+      `${TL}2026-2027/world.json`,
+    ]
+    expect(bucketObjects().filter(o => !before.includes(o))).toEqual(want)
     const rows = fs
       .readFileSync(manifest, 'utf-8')
       .split('\n')
       .filter(Boolean)
       .map(l => JSON.parse(l) as { path: string; stage: string })
-    expect(rows).toEqual([
-      expect.objectContaining({
-        path: `${TL}2026-2027.json`,
-        stage: 'education-rollup',
-      }),
-    ])
-    expect(
-      EducationTimelineSchema.safeParse(
-        JSON.parse(
-          fs.readFileSync(
-            path.join(root, BUCKET, TL, '2026-2027.json'),
-            'utf-8'
-          )
-        )
-      ).success
-    ).toBe(true)
+    expect(rows.map(x => x.path).sort()).toEqual(want)
+    expect(rows.every(x => x.stage === 'education-rollup')).toBe(true)
+    for (const o of want) {
+      expect(
+        EducationTimelineEntitySchema.safeParse(
+          JSON.parse(fs.readFileSync(path.join(root, BUCKET, o), 'utf-8'))
+        ).success,
+        o
+      ).toBe(true)
+    }
+    expect(JSON.parse(r.stdout.trim())).toMatchObject({
+      uploaded: true,
+      files: 3,
+    })
   })
 
   it('ghost: the prior year timeline in staging, when there is one (day grain)', () => {
@@ -272,7 +286,7 @@ describe('backfill-education-timeline.sh', () => {
       SHIM_FAIL_MATCH: '^ls .*snapshots',
     })
     expect(r.status).toBe(1)
-    expect(fs.existsSync(path.join(out, '2026-2027.json'))).toBe(false)
+    expect(fs.existsSync(path.join(out, '2026-2027'))).toBe(false)
     expect(bucketObjects().some(o => o.startsWith(TL))).toBe(false)
   })
 

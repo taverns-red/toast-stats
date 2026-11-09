@@ -15,9 +15,11 @@
  *   A stray object under the prefix is never promoted. The promoter copies
  *   the years first and the index LAST, so prod never names a year it does
  *   not hold (R15).
- * - **The timelines it names too** (#2591): `timelines[].path` of the index,
- *   each `derived/education-timeline/<PY>.json`, between the years and the
- *   index. An index without `timelines` plans exactly as before.
+ * - **The timelines it names too** (#2591): the index's `timelines[].prefix`
+ *   rows name PY prefixes; the entity files staging holds under them
+ *   (`world.json`, `region-<n>.json`, `district-<id>.json`, nothing else)
+ *   go between the years and the index. An index without `timelines` plans
+ *   exactly as before.
  * - **Held until its reports date is in prod**: a rollup whose `asOf` (the
  *   reports date it was read from) is not a date prod's v1/dates.json
  *   indexes, or that has none, is held: a rollup of a held day's reports
@@ -35,6 +37,7 @@ import {
   EDUCATION_ROLLUP_INDEX_PATH,
   EDUCATION_ROLLUP_PREFIX,
   EDUCATION_TIMELINE_PREFIX,
+  parseEducationTimelinePath,
 } from '@taverns-red/shared-contracts'
 
 export const EDUCATION_ROLLUP_STAGE = 'education-rollup'
@@ -45,16 +48,19 @@ export const EDUCATION_ROLLUP_YEAR_PATH = new RegExp(
 )
 
 /**
- * A timeline (#2591): `derived/education-timeline/<PY>.json`. It promotes
- * with the rollup, under the rollup's rules, because the rollup index names it.
+ * A timeline entity file (#2591): `derived/education-timeline/<PY>/world.json`,
+ * `region-<n>.json` or `district-<id>.json`. It promotes with the rollup,
+ * under the rollup's rules, because the rollup index names its PY prefix.
+ * Anything else under the prefix is not one.
  */
-export const EDUCATION_TIMELINE_YEAR_PATH = new RegExp(
-  `^${EDUCATION_TIMELINE_PREFIX}/\\d{4}-\\d{4}\\.json$`
-)
-
 export function isEducationTimelineObject(path: string): boolean {
-  return EDUCATION_TIMELINE_YEAR_PATH.test(path)
+  return parseEducationTimelinePath(path) !== null
 }
+
+/** `derived/education-timeline/<PY>`: the prefix an index row names. */
+const TIMELINE_PREFIX_ROW = new RegExp(
+  `^${EDUCATION_TIMELINE_PREFIX}/(\\d{4}-\\d{4})$`
+)
 
 export function isEducationRollupObject(path: string): boolean {
   return (
@@ -71,6 +77,12 @@ export interface EducationRollupInputs {
   prodIndex: string | null
   /** The dates prod's v1/dates.json indexes. */
   prodIndexedDates: readonly string[]
+  /**
+   * Every object staging holds under the PY prefixes the index names (the
+   * caller lists `timelinePrefixes(stagingIndex)`). Only those matching the
+   * three entity name patterns, under a named prefix, are promoted.
+   */
+  timelineObjects?: readonly string[]
 }
 
 export interface EducationRollupPlan {
@@ -79,6 +91,31 @@ export interface EducationRollupPlan {
   /** The objects to promote, the index last; empty unless `promote`. */
   paths: string[]
   reason: string
+}
+
+/**
+ * The timeline PY prefixes an index names (`timelines[].prefix`), sorted.
+ * Throws on a row that names anything but `derived/education-timeline/<PY>`.
+ */
+export function timelinePrefixes(indexText: string): string[] {
+  const index = JSON.parse(indexText) as { timelines?: unknown }
+  if (index?.timelines === undefined) return []
+  if (!Array.isArray(index.timelines)) {
+    throw new Error(
+      `staging ${EDUCATION_ROLLUP_INDEX_PATH} timelines is not an array`
+    )
+  }
+  const out = new Set<string>()
+  for (const row of index.timelines as Array<{ prefix?: unknown }>) {
+    const p = row?.prefix
+    if (typeof p !== 'string' || !TIMELINE_PREFIX_ROW.test(p)) {
+      throw new Error(
+        `staging ${EDUCATION_ROLLUP_INDEX_PATH} names timeline '${String(p)}', not ${EDUCATION_TIMELINE_PREFIX}/<PY>; refusing`
+      )
+    }
+    out.add(p)
+  }
+  return [...out].sort()
 }
 
 /** Throws on an index that is not JSON or names anything off the prefix. */
@@ -96,7 +133,6 @@ export function planEducationRollup(
   const index = JSON.parse(inputs.stagingIndex) as {
     asOf?: unknown
     programYears?: unknown
-    timelines?: unknown
   }
   if (!Array.isArray(index?.programYears)) {
     throw new Error(
@@ -113,23 +149,15 @@ export function planEducationRollup(
     }
     years.push(p)
   }
-  const timelines: string[] = []
-  if (index.timelines !== undefined) {
-    if (!Array.isArray(index.timelines)) {
-      throw new Error(
-        `staging ${EDUCATION_ROLLUP_INDEX_PATH} timelines is not an array`
-      )
-    }
-    for (const row of index.timelines as Array<{ path?: unknown }>) {
-      const p = row?.path
-      if (typeof p !== 'string' || !EDUCATION_TIMELINE_YEAR_PATH.test(p)) {
-        throw new Error(
-          `staging ${EDUCATION_ROLLUP_INDEX_PATH} names timeline '${String(p)}', outside ${EDUCATION_TIMELINE_PREFIX}/<PY>.json; refusing`
-        )
-      }
-      timelines.push(p)
-    }
-  }
+  // The timelines it names (#2591): the entity files staging holds under the
+  // named PY prefixes, and only those matching the three name patterns.
+  const named = new Set(timelinePrefixes(inputs.stagingIndex))
+  const timelines = (inputs.timelineObjects ?? []).filter(p => {
+    const e = parseEducationTimelinePath(p)
+    return (
+      e !== null && named.has(`${EDUCATION_TIMELINE_PREFIX}/${e.programYear}`)
+    )
+  })
   const asOf = typeof index.asOf === 'string' ? index.asOf : null
   if (asOf === null || !inputs.prodIndexedDates.includes(asOf)) {
     return {
@@ -153,7 +181,7 @@ export function planEducationRollup(
     paths: [...new Set(years)]
       .sort()
       .concat([...new Set(timelines)].sort(), EDUCATION_ROLLUP_INDEX_PATH),
-    reason: `${new Set(years).size} program year(s) + ${new Set(timelines).size} timeline(s) + index, reports as of ${asOf}`,
+    reason: `${new Set(years).size} program year(s) + ${new Set(timelines).size} timeline file(s) + index, reports as of ${asOf}`,
   }
 }
 

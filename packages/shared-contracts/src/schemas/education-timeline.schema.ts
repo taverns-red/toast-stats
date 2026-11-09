@@ -1,11 +1,16 @@
 /**
  * Zod contract for the education timeline (#2591, epic #2590).
  *
- * One object per program year, `derived/education-timeline/<PY>.json`: the
- * cumulative education-awards count at each snapshot date of the PY, for the
- * world, each region and each district, plus a prior-year "ghost". It feeds
- * the stacked step chart on the Education pages (#2592), modelled on the
- * Clubs RaceChart.
+ * One object per ENTITY per program year, so a district page downloads its
+ * own series and nothing else:
+ *
+ *   derived/education-timeline/<PY>/world.json
+ *   derived/education-timeline/<PY>/region-<n>.json
+ *   derived/education-timeline/<PY>/district-<id>.json
+ *
+ * Each holds that entity's cumulative education-awards count at each snapshot
+ * date of the PY plus its own prior-year "ghost". It feeds the stacked step
+ * chart on the Education pages (#2592), modelled on the Clubs RaceChart.
  *
  * Each point is the education rollup's block for that date, reduced to what
  * the chart stacks (#1801): `levels` L1..L5 (Pathways), `dtm`, `legacy`,
@@ -14,14 +19,14 @@
  * same fold of the same reports.
  *
  * - **Absent, never zero.** A date a district has no reports for has no
- *   point in that district's series. Region and world points are summed over
+ *   point in that district's file. World and region points are summed over
  *   the districts present that date only; `districts` is that coverage.
- * - **Steps, never interpolated.** `dates` lists every snapshot date that has
- *   a point somewhere; a gap in the dates stays a gap.
+ * - **Steps, never interpolated.** Points are strictly ascending; a gap in
+ *   the dates stays a gap.
  * - **Prior-year ghost** (`prior`): the previous PY's cumulative total at
- *   each of its points, per entity. `grain` says how fine it is: `day` (the
- *   prior PY's per-date reports, or its own timeline) keys `at` as
- *   YYYY-MM-DD; `month` (the staging-only education ledger history, month
+ *   each of its points for this entity. `grain` says how fine it is: `day`
+ *   (the prior PY's own timeline, built from its per-date reports) keys `at`
+ *   as YYYY-MM-DD; `month` (the staging-only education ledger history, month
  *   precision) keys `at` as YYYY-MM, the month-end cumulative. `null` where
  *   neither exists: "not available", not a zero line.
  * - **Privacy:** counts only. Every object is strict (Lesson 153).
@@ -116,107 +121,6 @@ export const EducationTimelinePriorSourceSchema = z.enum([
 
 const ascendingUnique = (keys: readonly string[]): boolean =>
   keys.every((k, i) => i === 0 || (keys[i - 1] as string) < k)
-
-export const EducationTimelinePriorSchema = z
-  .object({
-    programYear: ProgramYear,
-    source: EducationTimelinePriorSourceSchema,
-    grain: EducationTimelineGrainSchema,
-    world: z.array(GhostPointSchema),
-    /** `null`: the prior PY had no region membership. */
-    regions: z.record(z.string(), z.array(GhostPointSchema)).nullable(),
-    districts: z.record(DistrictId, z.array(GhostPointSchema)),
-  })
-  .strict()
-  .superRefine((p, ctx) => {
-    const keyOk = p.grain === 'day' ? IsoDate : YearMonth
-    const series = [
-      p.world,
-      ...Object.values(p.regions ?? {}),
-      ...Object.values(p.districts),
-    ]
-    for (const s of series) {
-      if (!s.every(g => keyOk.safeParse(g.at).success)) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `every ghost point's \`at\` must match grain ${p.grain}`,
-        })
-        return
-      }
-      if (!ascendingUnique(s.map(g => g.at))) {
-        ctx.addIssue({
-          code: 'custom',
-          message: 'ghost points must be strictly ascending by `at`',
-        })
-        return
-      }
-    }
-  })
-export type EducationTimelinePrior = z.infer<
-  typeof EducationTimelinePriorSchema
->
-
-export const EducationTimelineSchema = z
-  .object({
-    _format: z
-      .object({
-        version: z.literal(EDUCATION_TIMELINE_VERSION),
-        type: z.literal('education-timeline'),
-      })
-      .strict(),
-    programYear: ProgramYear,
-    /** The newest date with a point: the last of `dates`. */
-    asOf: IsoDate,
-    /** Every date with a point anywhere, ascending. */
-    dates: z.array(IsoDate).min(1),
-    world: z.array(EducationTimelineAggregatePointSchema),
-    /** `null`: no region membership for this PY. */
-    regions: z
-      .record(z.string(), z.array(EducationTimelineAggregatePointSchema))
-      .nullable(),
-    districts: z.record(DistrictId, z.array(EducationTimelinePointSchema)),
-    prior: EducationTimelinePriorSchema.nullable(),
-  })
-  .strict()
-  .superRefine((t, ctx) => {
-    const issue = (message: string): void =>
-      ctx.addIssue({ code: 'custom', message })
-    if (!ascendingUnique(t.dates)) issue('dates must be strictly ascending')
-    if (t.asOf !== t.dates[t.dates.length - 1]) {
-      issue('asOf must be the last of dates')
-    }
-    const listed = new Set(t.dates)
-    const series = [
-      t.world,
-      ...Object.values(t.regions ?? {}),
-      ...Object.values(t.districts),
-    ]
-    for (const s of series) {
-      const ds = s.map(p => p.date)
-      if (!ascendingUnique(ds)) {
-        issue('points must be strictly ascending by date, one per date')
-        return
-      }
-      if (ds.some(d => !listed.has(d))) {
-        issue('every point must be on a listed date')
-        return
-      }
-    }
-    if (
-      t.prior &&
-      Number(t.prior.programYear.slice(0, 4)) !==
-        Number(t.programYear.slice(0, 4)) - 1
-    ) {
-      issue('prior must be the previous program year')
-    }
-  })
-export type EducationTimeline = z.infer<typeof EducationTimelineSchema>
-
-/** `derived/education-timeline/<PY>.json` — validated, never raw input. */
-export function educationTimelineObjectPath(programYear: string): string {
-  ProgramYear.parse(programYear)
-  return `${EDUCATION_TIMELINE_PREFIX}/${programYear}.json`
-}
 
 // ---------------------------------------------------------------------------
 // Per-entity files (the published layout): one object per world / region /

@@ -18,7 +18,8 @@
 
 import {
   EDUCATION_TIMELINE_VERSION,
-  educationTimelineObjectPath,
+  educationTimelineEntityFile,
+  educationTimelinePrefix,
   ledgerRecordsThroughMonth,
   type DistrictRegionHistory,
   type DistrictReportsDataset,
@@ -26,14 +27,45 @@ import {
   type EducationLedgerHistoryFile,
   type EducationRollupIndex,
   type EducationRollupProgramYear,
-  type EducationTimeline,
   type EducationTimelineAggregatePoint,
+  type EducationTimelineEntity,
   type EducationTimelineGhostPoint,
   type EducationTimelinePoint,
-  type EducationTimelinePrior,
 } from '@taverns-red/shared-contracts'
+import { isDeepStrictEqual } from 'node:util'
 import { rollUpEducationProgramYear } from './educationRollup.js'
 import { programYearForSnapshotDate } from './ceoReportSnapshotDates.js'
+
+/**
+ * The previous year's cumulative totals, per entity. Published split into
+ * each entity's own file (`prior` of the entity file).
+ */
+export interface GhostSet {
+  programYear: string
+  source: 'timeline' | 'ledger-history'
+  grain: 'day' | 'month'
+  world: EducationTimelineGhostPoint[]
+  /** `null`: the prior PY had no region membership. */
+  regions: Record<string, EducationTimelineGhostPoint[]> | null
+  districts: Record<string, EducationTimelineGhostPoint[]>
+}
+
+/**
+ * A program year's whole timeline, in memory: the working shape the fold
+ * upserts into. It is never published as one object; `splitTimeline` turns it
+ * into one file per entity and `joinTimeline` reads those files back.
+ */
+export interface EducationTimeline {
+  programYear: string
+  /** The newest date with a point: the last of `dates`. */
+  asOf: string
+  /** Every date with a world point, ascending. */
+  dates: string[]
+  world: EducationTimelineAggregatePoint[]
+  regions: Record<string, EducationTimelineAggregatePoint[]> | null
+  districts: Record<string, EducationTimelinePoint[]>
+  prior: GhostSet | null
+}
 
 const byString = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
 
@@ -163,10 +195,6 @@ export function upsertTimelineDate(
     throw new Error(`no district has education awards on ${date}`)
   }
   return {
-    _format: {
-      version: EDUCATION_TIMELINE_VERSION,
-      type: 'education-timeline',
-    },
     programYear,
     asOf: dates[dates.length - 1] as string,
     dates,
@@ -179,7 +207,7 @@ export function upsertTimelineDate(
 
 export function withPrior(
   t: EducationTimeline,
-  prior: EducationTimelinePrior | null
+  prior: GhostSet | null
 ): EducationTimeline {
   return { ...t, prior }
 }
@@ -196,9 +224,7 @@ function pushGhost(
 }
 
 /** The previous year's ghost, read from that year's own timeline. */
-export function ghostFromTimeline(
-  prior: EducationTimeline
-): EducationTimelinePrior {
+export function ghostFromTimeline(prior: EducationTimeline): GhostSet {
   const world: EducationTimelineGhostPoint[] = prior.world.map(p => ({
     at: p.date,
     total: awardsOf(p),
@@ -226,7 +252,7 @@ export function ghostFromTimeline(
 function ghostFromMonthFolds(
   programYear: string,
   folds: readonly { at: string; rollup: EducationRollupProgramYear }[]
-): EducationTimelinePrior | null {
+): GhostSet | null {
   const world: EducationTimelineGhostPoint[] = []
   let regions: GhostSeries | null = null
   const districts: GhostSeries = {}
@@ -282,7 +308,7 @@ export function ghostFromLedger(
   programYear: string,
   files: readonly EducationLedgerHistoryFile[],
   regionHistory: DistrictRegionHistory | null
-): EducationTimelinePrior | null {
+): GhostSet | null {
   const folds = monthsOf(programYear).map(month => ({
     at: month,
     rollup: rollUpEducationProgramYear({
@@ -306,73 +332,210 @@ export function timelineIndexRow(
 ): NonNullable<EducationRollupIndex['timelines']>[number] {
   return {
     programYear: t.programYear,
-    path: educationTimelineObjectPath(t.programYear),
+    prefix: educationTimelinePrefix(t.programYear),
     asOf: t.asOf,
     dates: t.dates.length,
     priorGrain: t.prior?.grain ?? null,
   }
 }
 
+/** A program year's published files, keyed by file name inside its prefix. */
+export type TimelineFiles = ReadonlyMap<string, EducationTimelineEntity>
+
+function entityFile(
+  programYear: string,
+  kind: 'world' | 'region' | 'district',
+  id: string | null,
+  points: EducationTimelineEntity['points'],
+  ghost: GhostSet | null,
+  ghostPoints: EducationTimelineGhostPoint[] | undefined
+): EducationTimelineEntity {
+  return {
+    _format: {
+      version: EDUCATION_TIMELINE_VERSION,
+      type: 'education-timeline-entity',
+    },
+    programYear,
+    entity: { kind, id },
+    asOf: points[points.length - 1]?.date,
+    points,
+    prior:
+      ghost && ghostPoints && ghostPoints.length > 0
+        ? {
+            programYear: ghost.programYear,
+            source: ghost.source,
+            grain: ghost.grain,
+            points: ghostPoints,
+          }
+        : null,
+  } as EducationTimelineEntity
+}
+
+/** One file per entity: the world, each region, each district. */
+export function splitTimeline(
+  t: EducationTimeline
+): Map<string, EducationTimelineEntity> {
+  const out = new Map<string, EducationTimelineEntity>()
+  const add = (e: EducationTimelineEntity): void => {
+    out.set(
+      educationTimelineEntityFile(e.entity.kind, e.entity.id as string | null),
+      e
+    )
+  }
+  const g = t.prior
+  add(entityFile(t.programYear, 'world', null, t.world, g, g?.world))
+  for (const [id, pts] of Object.entries(t.regions ?? {})) {
+    add(entityFile(t.programYear, 'region', id, pts, g, g?.regions?.[id]))
+  }
+  for (const [id, pts] of Object.entries(t.districts)) {
+    add(entityFile(t.programYear, 'district', id, pts, g, g?.districts[id]))
+  }
+  return out
+}
+
+/** The inverse of `splitTimeline`; null when there is no world file. */
+export function joinTimeline(files: TimelineFiles): EducationTimeline | null {
+  const world = files.get('world.json')
+  if (!world || world.entity.kind !== 'world') return null
+  const regionEntries: [string, EducationTimelineAggregatePoint[]][] = []
+  const districts: Record<string, EducationTimelinePoint[]> = {}
+  let ghost: GhostSet | null = null
+  const ghostSeries = (
+    e: EducationTimelineEntity
+  ): EducationTimelineGhostPoint[] | null => {
+    if (!e.prior) return null
+    ghost ??= {
+      programYear: e.prior.programYear,
+      source: e.prior.source,
+      grain: e.prior.grain,
+      world: [],
+      regions: null,
+      districts: {},
+    }
+    return e.prior.points
+  }
+  const worldGhost = ghostSeries(world)
+  const regionGhosts: Record<string, EducationTimelineGhostPoint[]> = {}
+  const districtGhosts: Record<string, EducationTimelineGhostPoint[]> = {}
+  for (const name of [...files.keys()].sort(byString)) {
+    const e = files.get(name) as EducationTimelineEntity
+    if (e.entity.kind === 'region') {
+      regionEntries.push([
+        e.entity.id,
+        e.points as EducationTimelineAggregatePoint[],
+      ])
+      const gp = ghostSeries(e)
+      if (gp) regionGhosts[e.entity.id] = gp
+    } else if (e.entity.kind === 'district') {
+      districts[e.entity.id] = e.points as EducationTimelinePoint[]
+      const gp = ghostSeries(e)
+      if (gp) districtGhosts[e.entity.id] = gp
+    }
+  }
+  const worldPoints = world.points as EducationTimelineAggregatePoint[]
+  const prior = ghost as GhostSet | null
+  if (prior) {
+    prior.world = worldGhost ?? []
+    prior.regions = regionEntries.length > 0 ? regionGhosts : null
+    prior.districts = districtGhosts
+  }
+  return {
+    programYear: world.programYear,
+    asOf: world.asOf,
+    dates: worldPoints.map(p => p.date),
+    world: worldPoints,
+    regions:
+      regionEntries.length > 0 ? Object.fromEntries(regionEntries) : null,
+    districts,
+    prior,
+  }
+}
+
 export interface TimelineUpdatePlan {
-  /** The timelines this run changed: the only ones to upload. */
-  written: EducationTimeline[]
-  /** Every timeline, changed or not, for the rollup index to name. */
+  /** Per program year, ONLY the entity files whose data changed. */
+  written: {
+    programYear: string
+    files: Map<string, EducationTimelineEntity>
+  }[]
+  /** Every timeline named in the index (changed or not). */
   rows: NonNullable<EducationRollupIndex['timelines']>
   skipped: { programYear: string; reason: string }[]
 }
 
 /**
- * The daily step (and the rollup rebuild): fold each reports rollup's date
- * into its program year's timeline.
+ * The daily step (and the rollup rebuild): fold the CURRENT program year's
+ * reports date into its per-entity files.
  *
- * - A ledger PY has no per-date reports, so never a timeline.
- * - A timeline is SEEDED only for the newest reports PY; an older PY gets
- *   one from the backfill, and is updated here only if it already has one.
- * - A new timeline takes its ghost from the previous year's timeline when
- *   that exists; otherwise it has none until the backfill sets one.
- * - Only `existing` timelines and today's rollups are read: no history scan.
+ * - `existing`: the files the caller read, per program year. The current PY
+ *   must be present (an empty map = its prefix was read and is empty, so seed
+ *   it); a PY the caller did not consult is never seeded, because seeding
+ *   over unread history would drop it. Other PYs may be present as a lone
+ *   `world.json`, only to be named in the index.
+ * - Only the current PY is ever written; older ones come from the backfill.
+ * - Only files whose content changed are returned (the reporting districts,
+ *   their regions, the world), so an unchanged entity is not rewritten.
+ * - A new timeline takes its ghost from the previous year's files, if read.
+ * - `blocked`: PYs whose stored files could not be read: left as they are
+ *   and not named.
  */
 export function planTimelineUpdates(
   rollups: readonly EducationRollupProgramYear[],
-  existing: ReadonlyMap<string, EducationTimeline>,
+  existing: ReadonlyMap<string, TimelineFiles>,
+  current: string,
   blocked: ReadonlySet<string> = new Set()
 ): TimelineUpdatePlan {
-  const reportsRollups = rollups
-    .filter(r => r.source === 'reports' && r.sourceDate !== null)
-    .sort((a, b) => byString(a.programYear, b.programYear))
-  const newest = reportsRollups.at(-1)?.programYear
-  const all = new Map(existing)
-  const written = new Map<string, EducationTimeline>()
+  const bundles = new Map<string, EducationTimeline>()
+  for (const [py, files] of existing) {
+    if (blocked.has(py)) continue
+    const b = joinTimeline(files)
+    if (b) bundles.set(py, b)
+  }
+  const written: TimelineUpdatePlan['written'] = []
   const skipped: TimelineUpdatePlan['skipped'] = []
 
-  for (const rollup of reportsRollups) {
-    const py = rollup.programYear
-    // A year whose stored timeline could not be read is left as it is:
-    // seeding over it would drop its history.
-    if (blocked.has(py)) continue
-    const current = existing.get(py) ?? null
-    if (current === null && py !== newest) continue
-    try {
-      let next = upsertTimelineDate(
-        current,
-        py,
-        rollup.sourceDate as string,
-        rollup
-      )
-      if (next.prior === null) {
-        const before = existing.get(previousProgramYear(py))
-        if (before) next = withPrior(next, ghostFromTimeline(before))
+  const rollup = rollups.find(
+    r =>
+      r.programYear === current &&
+      r.source === 'reports' &&
+      r.sourceDate !== null
+  )
+  if (rollup && !blocked.has(current)) {
+    const stored = existing.get(current)
+    if (!stored) {
+      skipped.push({
+        programYear: current,
+        reason: `its stored files were not read, so it is not updated (seeding would drop history)`,
+      })
+    } else {
+      try {
+        let next = upsertTimelineDate(
+          bundles.get(current) ?? null,
+          current,
+          rollup.sourceDate as string,
+          rollup
+        )
+        if (next.prior === null) {
+          const before = bundles.get(previousProgramYear(current))
+          if (before) next = withPrior(next, ghostFromTimeline(before))
+        }
+        const changed = new Map<string, EducationTimelineEntity>()
+        for (const [name, file] of splitTimeline(next)) {
+          if (!isDeepStrictEqual(stored.get(name), file)) {
+            changed.set(name, file)
+          }
+        }
+        bundles.set(current, next)
+        if (changed.size > 0)
+          written.push({ programYear: current, files: changed })
+      } catch (err) {
+        skipped.push({ programYear: current, reason: (err as Error).message })
       }
-      written.set(py, next)
-      all.set(py, next)
-    } catch (err) {
-      skipped.push({ programYear: py, reason: (err as Error).message })
     }
   }
 
   return {
-    written: [...written.values()],
-    rows: [...all.values()]
+    written,
+    rows: [...bundles.values()]
       .sort((a, b) => byString(a.programYear, b.programYear))
       .map(timelineIndexRow),
     skipped,

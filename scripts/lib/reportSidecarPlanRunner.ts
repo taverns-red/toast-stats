@@ -46,6 +46,7 @@ import {
   EDUCATION_ROLLUP_STAGE,
   educationRollupDateHold,
   planEducationRollup,
+  timelinePrefixes,
   type EducationRollupPlan,
   type SidecarHoldState,
 } from './educationRollupPlan.js'
@@ -169,10 +170,27 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
     let entries: RunManifestEntry[] = []
     let asOf: string | null = null
     try {
+      const stagingIndex = catOrNull(staging, EDUCATION_ROLLUP_INDEX_PATH)
+      // The entity files of each timeline PY the index names (#2591): one
+      // listing per named prefix, never a recursive listing of derived/.
+      const timelineObjects: string[] = []
+      for (const prefix of stagingIndex ? timelinePrefixes(stagingIndex) : []) {
+        const r = run(['storage', 'ls', `gs://${staging}/${prefix}/`])
+        if (r.status !== 0) {
+          throw new Error(
+            `could not list gs://${staging}/${prefix}/: ${(r.stderr ?? '').trim()}`
+          )
+        }
+        for (const line of r.stdout.split('\n')) {
+          const m = /^gs:\/\/[^/]+\/(.+)$/.exec(line.trim())
+          if (m) timelineObjects.push(m[1] as string)
+        }
+      }
       const rollup = planEducationRollup({
-        stagingIndex: catOrNull(staging, EDUCATION_ROLLUP_INDEX_PATH),
+        stagingIndex,
         prodIndex: catOrNull(prod, EDUCATION_ROLLUP_INDEX_PATH),
         prodIndexedDates: indexed,
+        timelineObjects,
       })
       if (rollup.paths.length > 0) {
         // One download directory per source directory: the rollup year and

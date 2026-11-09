@@ -9,18 +9,20 @@
  * from staging, runs `fold` on each, and uploads the result.
  *
  *   fold  --py <PY> --region-history <file> --reports-root <dir>
- *         [--existing <timeline.json>] --out <timeline.json>
+ *         [--existing <dir>] --out <dir>
  *     <dir>/<date>/district_*_reports.json, any number of dates (a date dir
  *     with no reports is skipped: absent, never zero). Each date is folded
  *     with the rollup's own fold and upserted, so re-folding a date replaces
- *     it. A date outside <PY> is an error (exit 1, nothing written).
+ *     it. --existing / --out are directories of the PY's entity files
+ *     (world.json, region-<n>.json, district-<id>.json: the published
+ *     layout). A date outside <PY> is an error (exit 1, nothing written).
  *     A missing region-history file ⇒ no region series.
  *
- *   ghost --py <PY> --region-history <file> --existing <timeline.json>
- *         --out <timeline.json>
- *         [--prior-timeline <file> | --prior-ledger <dir>]
- *     Sets `prior` (the previous program year's cumulative totals):
- *       --prior-timeline  that year's own timeline (day grain);
+ *   ghost --py <PY> --region-history <file> --existing <dir> --out <dir>
+ *         [--prior-timeline <dir> | --prior-ledger <dir>]
+ *     Sets each entity file's `prior` (the previous program year's
+ *     cumulative totals):
+ *       --prior-timeline  that year's entity-file directory (day grain);
  *       --prior-ledger    a directory of its raw-education-ledger
  *                         district_<id>.json files (month grain);
  *       neither           the ghost stays null (not available, not zero).
@@ -38,20 +40,23 @@ import {
   DistrictRegionHistorySchema,
   DistrictReportsDatasetSchema,
   EducationLedgerHistoryFileSchema,
-  EducationTimelineSchema,
+  EducationTimelineEntitySchema,
   type DistrictRegionHistory,
   type DistrictReportsDataset,
   type EducationLedgerHistoryFile,
-  type EducationTimeline,
+  type EducationTimelineEntity,
 } from '@taverns-red/shared-contracts'
 import type { z } from 'zod'
 import {
   foldReportsDate,
   ghostFromLedger,
   ghostFromTimeline,
+  joinTimeline,
   previousProgramYear,
+  splitTimeline,
   upsertTimelineDate,
   withPrior,
+  type EducationTimeline,
 } from './lib/educationTimeline.js'
 import { summarizeZodIssues } from './lib/zodIssueSummary.js'
 
@@ -124,25 +129,47 @@ function names(dir: string, pattern: RegExp): string[] {
     : []
 }
 
-function write(timeline: EducationTimeline): void {
-  const checked = EducationTimelineSchema.safeParse(timeline)
-  if (!checked.success) {
-    fail(
-      `the ${timeline.programYear} timeline violates its contract: ${summarizeZodIssues(checked.error.issues)}`
+const ENTITY_FILE = /^(world|region-[A-Za-z0-9]+|district-[A-Za-z0-9]+)\.json$/
+
+/** A directory of entity files, validated, joined into one timeline. */
+function readTimelineDir(dir: string, what: string): EducationTimeline | null {
+  const files = new Map<string, EducationTimelineEntity>()
+  for (const f of names(dir, ENTITY_FILE)) {
+    files.set(
+      f,
+      readValid(path.join(dir, f), EducationTimelineEntitySchema, what)
     )
   }
+  return joinTimeline(files)
+}
+
+function write(timeline: EducationTimeline): void {
   const out = arg('out')
-  fs.mkdirSync(path.dirname(path.resolve(out)), { recursive: true })
-  const body = JSON.stringify(timeline)
-  fs.writeFileSync(out, body)
+  const files = splitTimeline(timeline)
+  for (const [name, file] of files) {
+    const checked = EducationTimelineEntitySchema.safeParse(file)
+    if (!checked.success) {
+      fail(
+        `${timeline.programYear}/${name} violates its contract: ${summarizeZodIssues(checked.error.issues)}`
+      )
+    }
+  }
+  fs.mkdirSync(out, { recursive: true })
+  // The directory is the PY's whole set: drop entity files it no longer has.
+  for (const f of names(out, ENTITY_FILE)) {
+    if (!files.has(f)) fs.rmSync(path.join(out, f))
+  }
+  for (const [name, file] of files) {
+    fs.writeFileSync(path.join(out, name), JSON.stringify(file))
+  }
 }
 
 function existingTimeline(py: string): EducationTimeline | null {
-  const file = optArg('existing')
-  if (!file) return null
-  const t = readValid(file, EducationTimelineSchema, 'education-timeline')
-  if (t.programYear !== py) {
-    fail(`${file} is the ${t.programYear} timeline, not ${py}`)
+  const dir = optArg('existing')
+  if (!dir) return null
+  const t = readTimelineDir(dir, 'education-timeline-entity')
+  if (t && t.programYear !== py) {
+    fail(`${dir} is the ${t.programYear} timeline, not ${py}`)
   }
   return t
 }
@@ -213,11 +240,8 @@ function ghost(): void {
 
   let prior = null
   if (priorTimelineFile) {
-    const t = readValid(
-      priorTimelineFile,
-      EducationTimelineSchema,
-      'education-timeline'
-    )
+    const t = readTimelineDir(priorTimelineFile, 'education-timeline-entity')
+    if (!t) return fail(`${priorTimelineFile} holds no world.json`)
     if (t.programYear !== priorPy) {
       fail(
         `${priorTimelineFile} is the ${t.programYear} timeline, not ${priorPy}`

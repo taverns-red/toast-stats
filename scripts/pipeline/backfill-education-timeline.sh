@@ -14,7 +14,7 @@
 #     and deleted, so local disk holds one date (a few MB), not a year;
 #   - config/district-region-history.json — that PY's own regions;
 #   - the prior-year ghost, in this order (first that exists):
-#       1. derived/education-timeline/<PY-1>.json  (day grain);
+#       1. derived/education-timeline/<PY-1>/*.json  (day grain);
 #       2. the prior PY's own per-date reports, folded the same way into a
 #          scratch timeline (day grain);
 #       3. raw-education-ledger/<PY-1>/district_*.json (month grain; the
@@ -22,13 +22,14 @@
 #       4. none: `prior` stays null (not available, never a zero line).
 # A date with no reports is absent, never zero.
 #
-# Writes: <OUT_DIR>/<PY>.json (default ./.routine-tmp/education-timeline).
-# WITHOUT --upload the bucket is only read. With --upload, one object is
+# Writes: <OUT_DIR>/<PY>/<entity>.json, one file per entity: world.json,
+# region-<n>.json, district-<id>.json (default ./.routine-tmp/education-timeline).
+# WITHOUT --upload the bucket is only read. With --upload, those files are
 # written to STAGING through gcs-upload.sh (recorded in RUN_MANIFEST_FILE,
-# which --upload requires):
-#   gs://<bucket>/derived/education-timeline/<PY>.json
-# The next daily build-education-rollup.sh run finds it, names it in the
-# rollup index and the promote-reports job promotes it with the rollup.
+# which --upload requires), in one `cp` (about 150 small objects):
+#   gs://<bucket>/derived/education-timeline/<PY>/<entity>.json
+# The next daily build-education-rollup.sh run finds them, names the PY in the
+# rollup index and the promote-reports job promotes them with the rollup.
 # derived/ is never a promoted prefix: this script cannot write prod (#1755).
 #
 # Env:   GCLOUD   the gcloud binary (default `gcloud`; tests use a shim, D10)
@@ -120,8 +121,9 @@ if ! "${GCLOUD}" storage cp "gs://${BUCKET}/config/district-region-history.json"
   echo "::warning::backfill-education-timeline: no config/district-region-history.json; no region series" >&2
 fi
 
-# fold_year <PY> <out.json>: fold the PY's dates, a batch at a time. Returns
-# 1 when no date of the PY had reports (nothing is written).
+# fold_year <PY> <outdir>: fold the PY's dates, a batch at a time, into the
+# directory of entity files. Returns 1 when no date of the PY had reports
+# (nothing is written).
 fold_year() {
   local py="$1" out="$2" start lo hi date n=0 pending=0
   start="${py%-*}"
@@ -130,16 +132,15 @@ fold_year() {
   local root="${WORK}/reports-${py}"
   rm -rf "${root}"
   mkdir -p "${root}"
-  local cur=""
+  local started=0
+  rm -rf "${out}"
   flush() {
     [ "${pending}" -gt 0 ] || return 0
-    local next="${WORK}/fold-${py}.next.json"
     local existing=()
-    [ -z "${cur}" ] || existing=(--existing "${cur}")
+    [ "${started}" -eq 0 ] || existing=(--existing "${out}")
     "${TSX}" "${CLI}" fold --py "${py}" --region-history "${REGIONS}" \
-      --reports-root "${root}" ${existing[@]+"${existing[@]}"} --out "${next}" >/dev/null
-    mv "${next}" "${out}"
-    cur="${out}"
+      --reports-root "${root}" ${existing[@]+"${existing[@]}"} --out "${out}" >/dev/null
+    started=1
     rm -rf "${root}"
     mkdir -p "${root}"
     pending=0
@@ -168,9 +169,9 @@ fold_year() {
   return 0
 }
 
+RESULT="${OUT_DIR}/${PY}"
+BUILT="${WORK}/built-${PY}"
 mkdir -p "${OUT_DIR}"
-RESULT="${OUT_DIR}/${PY}.json"
-BUILT="${WORK}/${PY}.json"
 if ! fold_year "${PY}" "${BUILT}"; then
   echo "::error::backfill-education-timeline: no snapshot date in ${PY} has reports; nothing to build" >&2
   exit 1
@@ -179,14 +180,15 @@ fi
 # 3. The prior-year ghost: the first source that exists.
 PRIOR_ARGS=()
 set +e
-list "gs://${BUCKET}/derived/education-timeline/${PRIOR}.json"
+list "gs://${BUCKET}/derived/education-timeline/${PRIOR}/*.json"
 rc=$?
 set -e
 if [ "${rc}" -eq 0 ]; then
-  "${GCLOUD}" storage cp "gs://${BUCKET}/derived/education-timeline/${PRIOR}.json" "${WORK}/prior.json"
-  PRIOR_ARGS=(--prior-timeline "${WORK}/prior.json")
-elif fold_year "${PRIOR}" "${WORK}/prior.json"; then
-  PRIOR_ARGS=(--prior-timeline "${WORK}/prior.json")
+  mkdir -p "${WORK}/prior"
+  "${GCLOUD}" storage cp "gs://${BUCKET}/derived/education-timeline/${PRIOR}/*.json" "${WORK}/prior/"
+  PRIOR_ARGS=(--prior-timeline "${WORK}/prior")
+elif fold_year "${PRIOR}" "${WORK}/prior"; then
+  PRIOR_ARGS=(--prior-timeline "${WORK}/prior")
 else
   set +e
   list "gs://${BUCKET}/raw-education-ledger/${PRIOR}/*"
@@ -199,21 +201,24 @@ else
     PRIOR_ARGS=(--prior-ledger "${WORK}/ledger")
   fi
 fi
+rm -rf "${RESULT}"
 "${TSX}" "${CLI}" ghost --py "${PY}" --region-history "${REGIONS}" \
   --existing "${BUILT}" ${PRIOR_ARGS[@]+"${PRIOR_ARGS[@]}"} --out "${RESULT}" \
   >"${WORK}/ghost.json"
 
-# 4. Upload only when asked: one object, to staging, recorded in the manifest.
+# 4. Upload only when asked: the entity files, to staging, recorded in the
+#    manifest.
 if [ "${UPLOAD}" -eq 1 ]; then
   export GCLOUD
   bash "${REPO}/scripts/pipeline/gcs-upload.sh" education-rollup cp \
-    --content-type="application/json" "${RESULT}" \
-    "gs://${BUCKET}/derived/education-timeline/"
+    --content-type="application/json" "${RESULT}"/*.json \
+    "gs://${BUCKET}/derived/education-timeline/${PY}/"
 fi
 
-jq -c --argjson uploaded "${UPLOAD}" --arg out "${RESULT}" \
-  '. + {uploaded: ($uploaded == 1), out: $out}' "${WORK}/ghost.json" |
+FILES="$(find "${RESULT}" -maxdepth 1 -type f -name '*.json' | wc -l | tr -d ' ')"
+jq -c --argjson uploaded "${UPLOAD}" --arg out "${RESULT}" --argjson files "${FILES}" \
+  '. + {uploaded: ($uploaded == 1), out: $out, files: $files}' "${WORK}/ghost.json" |
   tee "${WORK}/summary.json"
 jq -r '"- **Education timeline backfill** (#2591): \(.programYear), ghost \(.grain // "none") (\(.source // "n/a")), " +
-  (if .uploaded then "uploaded to staging derived/education-timeline/" else "built locally, nothing uploaded" end)' \
+  (if .uploaded then "uploaded \(.files) file(s) to staging derived/education-timeline/<PY>/" else "built locally, nothing uploaded" end)' \
   "${WORK}/summary.json" >>"${SUMMARY}"

@@ -22,13 +22,16 @@
  *     gzip layers are peeled (gcloud 568 hands back `-Z` bytes as stored).
  *     A missing region-history file ⇒ no region rollups. Writes
  *     <out>/<PY>.json and <out>/index.json (compact JSON), each validated.
- *     Optional --timeline-in <dir> (#2591): the education timelines already
- *     published (<dir>/<PY>.json). Each reports rollup's date is folded into
- *     its PY's timeline (scripts/lib/educationTimeline.ts: the newest reports
- *     PY is seeded, an older one only if it has a timeline) and written to
- *     <out>/timeline/<PY>.json; the index names every readable timeline. A
- *     timeline that fails its contract is warned about, left as it is and not
- *     named: it never stops the rollup.
+ *     Optional --timeline-in <dir> --timeline-current <PY> (#2591): the
+ *     education timeline files already published, <dir>/<PY>/<entity>.json
+ *     (world.json, region-<n>.json, district-<id>.json). <PY> = the current
+ *     PY: every entity's point for its reports date is appended, and ONLY the
+ *     files whose data changed are written, to <out>/timeline/<PY>/<file>
+ *     (scripts/lib/educationTimeline.ts). The current PY is seeded only if its
+ *     <dir>/<PY>/ exists (the caller read the bucket; empty = first run).
+ *     Other PYs in <dir> may hold just world.json, to be named in the index
+ *     (`timelines`, by PY prefix). A PY whose files fail their contract is
+ *     warned about, left as it is and not named: it never stops the rollup.
  *
  * Logs go to stderr; stdout is ONE JSON line (R4).
  * Exit codes: 0 written · 1 a missing or invalid input, or a fold error
@@ -44,12 +47,13 @@ import {
   EducationLedgerHistoryFileSchema,
   EducationRollupIndexSchema,
   EducationRollupProgramYearSchema,
-  EducationTimelineSchema,
+  EducationTimelineEntitySchema,
+  educationTimelineEntityFile,
   type DistrictRegionHistory,
   type DistrictReportsDataset,
   type EducationLedgerHistoryFile,
   type EducationRollupProgramYear,
-  type EducationTimeline,
+  type EducationTimelineEntity,
 } from '@taverns-red/shared-contracts'
 import type { z } from 'zod'
 import {
@@ -145,26 +149,43 @@ function plan(): void {
   }
 }
 
-/** The timelines already published, and which of them cannot be read. */
+/** The timeline files already published, per PY; PYs that cannot be read. */
 function readExistingTimelines(): {
-  existing: Map<string, EducationTimeline>
+  existing: Map<string, Map<string, EducationTimelineEntity>>
   blocked: Set<string>
 } {
-  const existing = new Map<string, EducationTimeline>()
+  const existing = new Map<string, Map<string, EducationTimelineEntity>>()
   const blocked = new Set<string>()
   const dir = optArg('timeline-in')
   if (!dir) return { existing, blocked }
-  for (const f of jsonFiles(dir, /^\d{4}-\d{4}\.json$/)) {
-    const py = path.basename(f, '.json')
-    const parsed = EducationTimelineSchema.safeParse(readJsonOrNull(f))
-    if (parsed.success && parsed.data.programYear === py) {
-      existing.set(py, parsed.data)
-    } else {
-      blocked.add(py)
-      log(
-        `::warning::education timeline ${py} is unreadable (${parsed.success ? 'names another program year' : summarizeZodIssues(parsed.error.issues)}): left as it is, not updated or named`
-      )
+  for (const py of programYearDirs(dir)) {
+    const files = new Map<string, EducationTimelineEntity>()
+    for (const f of jsonFiles(
+      path.join(dir, py),
+      /^(world|region-[A-Za-z0-9]+|district-[A-Za-z0-9]+)\.json$/
+    )) {
+      const name = path.basename(f)
+      const parsed = EducationTimelineEntitySchema.safeParse(readJsonOrNull(f))
+      const why = !parsed.success
+        ? summarizeZodIssues(parsed.error.issues)
+        : parsed.data.programYear !== py
+          ? `names program year ${parsed.data.programYear}`
+          : educationTimelineEntityFile(
+                parsed.data.entity.kind,
+                parsed.data.entity.id
+              ) !== name
+            ? `holds ${parsed.data.entity.kind} ${parsed.data.entity.id ?? ''}, not what its name says`
+            : null
+      if (parsed.success && why === null) files.set(name, parsed.data)
+      else {
+        blocked.add(py)
+        log(
+          `::warning::education timeline ${py}/${name} is unreadable (${why}): ${py} is left as it is, not updated or named`
+        )
+        break
+      }
     }
+    existing.set(py, files)
   }
   return { existing, blocked }
 }
@@ -181,21 +202,29 @@ function readJsonOrNull(file: string): unknown {
   }
 }
 
-/** Fold today's reports dates into the timelines; validate what it wrote. */
+/** Fold today's reports date into the current PY's entity files; validate. */
 function foldTimelines(rollups: readonly EducationRollupProgramYear[]) {
+  const current = optArg('timeline-current')
+  if (!current) {
+    return { written: [], rows: [], skipped: [] } as ReturnType<
+      typeof planTimelineUpdates
+    >
+  }
   const { existing, blocked } = readExistingTimelines()
-  const plan = planTimelineUpdates(rollups, existing, blocked)
+  const plan = planTimelineUpdates(rollups, existing, current, blocked)
   for (const s of plan.skipped) {
     log(
       `::warning::education timeline ${s.programYear} not updated: ${s.reason}`
     )
   }
-  for (const t of plan.written) {
-    const checked = EducationTimelineSchema.safeParse(t)
-    if (!checked.success) {
-      fail(
-        `${t.programYear} timeline violates its contract: ${summarizeZodIssues(checked.error.issues)}`
-      )
+  for (const w of plan.written) {
+    for (const [name, file] of w.files) {
+      const checked = EducationTimelineEntitySchema.safeParse(file)
+      if (!checked.success) {
+        fail(
+          `${w.programYear}/${name} violates its contract: ${summarizeZodIssues(checked.error.issues)}`
+        )
+      }
     }
   }
   return plan
@@ -310,8 +339,14 @@ function build(): void {
     maxGzipBytes = Math.max(maxGzipBytes, gz)
   }
   for (const r of rollups) write(`${r.programYear}.json`, r)
-  fs.mkdirSync(path.join(outDir, 'timeline'), { recursive: true })
-  for (const t of written) write(`timeline/${t.programYear}.json`, t)
+  for (const w of written) {
+    fs.mkdirSync(path.join(outDir, 'timeline', w.programYear), {
+      recursive: true,
+    })
+    for (const [name, file] of w.files) {
+      write(`timeline/${w.programYear}/${name}`, file)
+    }
+  }
   write('index.json', index)
 
   for (const r of rollups) {
@@ -326,7 +361,7 @@ function build(): void {
     `${JSON.stringify({
       programYears: rollups.length,
       omitted: omitted.length,
-      timelinesWritten: written.length,
+      timelinesWritten: written.reduce((n, w) => n + w.files.size, 0),
       first: rollups[0]?.programYear,
       last: rollups.at(-1)?.programYear,
       asOf: index.asOf,

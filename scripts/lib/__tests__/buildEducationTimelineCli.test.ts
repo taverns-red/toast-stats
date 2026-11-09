@@ -2,15 +2,17 @@
  * The education timeline backfill CLI (#2591, epic #2590).
  *
  * scripts/build-education-timeline.ts folds a program year's per-date
- * `district_<id>_reports.json` snapshots into `derived/education-timeline/
- * <PY>.json`, one date at a time, and sets the prior-year ghost. It does no
- * network I/O: scripts/pipeline/backfill-education-timeline.sh feeds it
- * batches of dates from staging and uploads the result. Two commands:
+ * `district_<id>_reports.json` snapshots into the PY's entity files
+ * (`derived/education-timeline/<PY>/{world,region-<n>,district-<id>}.json`),
+ * one date at a time, and sets the prior-year ghost. It does no network
+ * I/O: scripts/pipeline/backfill-education-timeline.sh feeds it batches of
+ * dates from staging and uploads the result. Two commands, whose
+ * --existing / --out / --prior-timeline are DIRECTORIES of entity files:
  *
  *   fold  --py --region-history --reports-root <dir/<date>/district_*_reports.json>
- *         [--existing <timeline.json>] --out <timeline.json>
- *   ghost --py --region-history --existing <timeline.json> --out <file>
- *         [--prior-timeline <file> | --prior-ledger <dir of district_*.json>]
+ *         [--existing <dir>] --out <dir>
+ *   ghost --py --region-history --existing <dir> --out <dir>
+ *         [--prior-timeline <dir> | --prior-ledger <dir of district_*.json>]
  *
  * Fixtures: the recorded D49 daily dataset and D111 2018-19 ledger
  * (fixtures/education-rollup/), as in educationTimeline.test.ts.
@@ -22,10 +24,11 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as zlib from 'node:zlib'
+import { joinTimeline, type EducationTimeline } from '../educationTimeline.js'
 import {
   DistrictReportsDatasetSchema,
-  EducationTimelineSchema,
-  type EducationTimeline,
+  EducationTimelineEntitySchema,
+  type EducationTimelineEntity,
 } from '@taverns-red/shared-contracts'
 
 const REPO = process.cwd()
@@ -88,8 +91,21 @@ function stage(
 function cli(args: string[]) {
   return spawnSync(TSX, [CLI, ...args], { cwd: REPO, encoding: 'utf-8' })
 }
-const readTimeline = (f: string): EducationTimeline =>
-  EducationTimelineSchema.parse(JSON.parse(fs.readFileSync(f, 'utf-8')))
+/** The entity files in a directory, each validated, joined into one timeline. */
+const readTimeline = (dir: string): EducationTimeline => {
+  const files = new Map<string, EducationTimelineEntity>()
+  for (const f of fs.readdirSync(dir).filter(n => n.endsWith('.json'))) {
+    files.set(
+      f,
+      EducationTimelineEntitySchema.parse(
+        JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8'))
+      )
+    )
+  }
+  const t = joinTimeline(files)
+  if (!t) throw new Error(`no world.json in ${dir}`)
+  return t
+}
 
 describe('fold', () => {
   it('folds each date dir into a schema-valid timeline, ascending', () => {

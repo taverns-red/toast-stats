@@ -256,8 +256,9 @@ export const EducationRollupIndexSchema = z
     ),
     /**
      * The education timelines that sit beside the rollup (#2591), ascending
-     * by program year: what the promotion plan promotes, so a stray object
-     * under `derived/education-timeline/` never is. Optional and additive
+     * by program year, each named by its PY prefix: the promotion plan
+     * promotes the entity files (world / region-<n> / district-<id>) under
+     * the named prefixes and nothing else. Optional and additive
      * (ADR 0019): an index without it is the previous release's.
      */
     timelines: z
@@ -265,8 +266,8 @@ export const EducationRollupIndexSchema = z
         z
           .object({
             programYear: ProgramYear,
-            /** `derived/education-timeline/<PY>.json`. */
-            path: z.string(),
+            /** `derived/education-timeline/<PY>`: the PY's entity files. */
+            prefix: z.string(),
             /** The timeline's newest date. */
             asOf: IsoDate,
             /** How many dates it holds. */

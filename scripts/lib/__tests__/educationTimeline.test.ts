@@ -15,20 +15,23 @@ import {
   DistrictRegionHistorySchema,
   DistrictReportsDatasetSchema,
   EducationLedgerHistoryFileSchema,
-  EducationTimelineSchema,
+  EducationTimelineEntitySchema,
   type DistrictReportsDataset,
   type EducationLedgerHistoryFile,
-  type EducationTimeline,
 } from '@taverns-red/shared-contracts'
 import { rollUpEducationProgramYear } from '../educationRollup.js'
 import {
   foldReportsDate,
   ghostFromLedger,
   ghostFromTimeline,
+  joinTimeline,
   planTimelineUpdates,
+  splitTimeline,
   timelineIndexRow,
   upsertTimelineDate,
   withPrior,
+  type EducationTimeline,
+  type TimelineFiles,
 } from '../educationTimeline.js'
 
 const FIX = path.join(
@@ -43,6 +46,12 @@ const regionHistory = DistrictRegionHistorySchema.parse(
 const d49 = DistrictReportsDatasetSchema.parse(
   json('snapshots/2026-10-12/district_49_reports.json')
 )
+
+/** Every published file of a timeline satisfies the entity contract. */
+const valid = (t: EducationTimeline): boolean =>
+  [...splitTimeline(t).values()].every(
+    f => EducationTimelineEntitySchema.safeParse(f).success
+  )
 
 const PY = '2026-2027'
 const D1 = '2026-10-10'
@@ -103,7 +112,7 @@ const awardsAt = (p: {
 describe('consistency with the education rollup across 3 dates', () => {
   const t = build([D1, D2, D3])
   it('validates against the contract', () => {
-    expect(EducationTimelineSchema.safeParse(t).success).toBe(true)
+    expect(t && valid(t)).toBe(true)
     expect(t?.dates).toEqual([D1, D2, D3])
     expect(t?.asOf).toBe(D3)
   })
@@ -188,7 +197,7 @@ describe('upsertTimelineDate', () => {
     expect(p && awardsAt(p)).toBe(rawTotal(60))
     // D61 vanished on the replaced date: absent, not stale.
     expect(replaced.districts['61']?.map(x => x.date)).toEqual([D1, D3])
-    expect(EducationTimelineSchema.safeParse(replaced).success).toBe(true)
+    expect(valid(replaced)).toBe(true)
   })
 
   it('is idempotent for the same date', () => {
@@ -337,22 +346,94 @@ describe('prior-year ghost', () => {
       districts: {},
       prior,
     }
-    expect(EducationTimelineSchema.safeParse(next).success).toBe(true)
+    expect(valid(next)).toBe(true)
   })
 })
 
 describe('timelineIndexRow', () => {
-  it('names the path, asOf, date count and the ghost grain', () => {
+  it('names the PY prefix, asOf, date count and the ghost grain', () => {
     const t = build([D1, D3]) as EducationTimeline
     expect(timelineIndexRow(t)).toEqual({
       programYear: PY,
-      path: 'derived/education-timeline/2026-2027.json',
+      prefix: 'derived/education-timeline/2026-2027',
       asOf: D3,
       dates: 2,
       priorGrain: null,
     })
     const g = withPrior(t, ghostFromTimeline(t))
     expect(timelineIndexRow(g).priorGrain).toBe('day')
+  })
+})
+
+describe('one object per entity (split and join)', () => {
+  const t = build([D1, D2, D3]) as EducationTimeline
+  it('splits into the world, each region and each district', () => {
+    const files = splitTimeline(t)
+    expect([...files.keys()].sort()).toEqual([
+      'district-49.json',
+      'district-61.json',
+      'district-85.json',
+      'region-01.json',
+      'region-05.json',
+      'region-14.json',
+      'world.json',
+    ])
+    for (const f of files.values()) {
+      expect(EducationTimelineEntitySchema.safeParse(f).success).toBe(true)
+    }
+  })
+
+  it('a file holds only its own entity: absent dates stay absent', () => {
+    const files = splitTimeline(t)
+    expect(files.get('district-85.json')?.points.map(p => p.date)).toEqual([
+      D1,
+      D3,
+    ])
+    expect(files.get('district-85.json')?.asOf).toBe(D3)
+    expect(files.get('world.json')?.points.map(p => p.date)).toEqual([
+      D1,
+      D2,
+      D3,
+    ])
+    expect(files.get('region-01.json')?.entity).toEqual({
+      kind: 'region',
+      id: '01',
+    })
+  })
+
+  it('join(split(t)) is t, with and without a prior year', () => {
+    expect(joinTimeline(splitTimeline(t))).toEqual(t)
+    const g = withPrior(t, ghostFromTimeline(t))
+    expect(joinTimeline(splitTimeline(g))).toEqual(g)
+  })
+
+  it('each file carries its own ghost series; an entity the prior lacked has none', () => {
+    const prior = ghostFromTimeline(build([D1]) as EducationTimeline)
+    const files = splitTimeline(withPrior(t, prior))
+    expect(files.get('district-49.json')?.prior).toMatchObject({
+      programYear: PY,
+      source: 'timeline',
+      grain: 'day',
+      points: [{ at: D1 }],
+    })
+    expect(files.get('world.json')?.prior?.points).toHaveLength(1)
+    // D61 and D85 reported on D1 too; make a prior without D85.
+    const noD85 = ghostFromTimeline(build([D2]) as EducationTimeline)
+    expect(
+      splitTimeline(withPrior(t, noD85)).get('district-85.json')?.prior
+    ).toBeNull()
+  })
+
+  it('a world-only set (an index-row stub) joins to a bundle', () => {
+    const world = splitTimeline(t).get('world.json')
+    if (!world) throw new Error('world file')
+    const j = joinTimeline(new Map([['world.json', world]]))
+    expect(j?.dates).toEqual([D1, D2, D3])
+    expect(j?.districts).toEqual({})
+  })
+
+  it('an empty set joins to null', () => {
+    expect(joinTimeline(new Map())).toBeNull()
   })
 })
 
@@ -373,60 +454,116 @@ describe('planTimelineUpdates (the daily, incremental step)', () => {
     districtIds: ['111'],
     regionHistory,
   })
+  const filesOf = (dates: string[]): TimelineFiles =>
+    splitTimeline(build(dates) as EducationTimeline)
 
-  it('seeds the newest reports PY and never a ledger PY', () => {
-    const r = planTimelineUpdates([ledgerRollup, rollupAt(PY, D3)], new Map())
-    expect(r.written.map(t => t.programYear)).toEqual([PY])
-    expect(r.written[0]?.dates).toEqual([D3])
+  it('seeds the current PY (its prefix was consulted, empty), never a ledger PY', () => {
+    const r = planTimelineUpdates(
+      [ledgerRollup, rollupAt(PY, D3)],
+      new Map([[PY, new Map()]]),
+      PY
+    )
+    expect(r.written.map(w => w.programYear)).toEqual([PY])
+    expect([...(r.written[0]?.files.keys() ?? [])].sort()).toEqual([
+      'district-49.json',
+      'region-01.json',
+      'world.json',
+    ])
     expect(r.rows.map(x => x.programYear)).toEqual([PY])
   })
 
-  it('appends today to the existing timeline, reading nothing else', () => {
-    const existing = build([D1, D2]) as EducationTimeline
+  it('does nothing for a PY whose prefix was never consulted (no seeding over history)', () => {
+    const r = planTimelineUpdates([rollupAt(PY, D3)], new Map(), PY)
+    expect(r.written).toEqual([])
+    expect(r.skipped).toEqual([{ programYear: PY, reason: expect.any(String) }])
+  })
+
+  it('appends today and writes only the files whose data changed', () => {
+    const existing = filesOf([D1, D2])
+    // Only D49 reports on D3: D61, D85 and their regions are untouched.
     const r = planTimelineUpdates(
       [rollupAt(PY, D3, 81)],
-      new Map([[PY, existing]])
+      new Map([[PY, existing]]),
+      PY
     )
-    expect(r.written[0]?.dates).toEqual([D1, D2, D3])
-    expect(r.written[0]?.world.slice(0, 2)).toEqual(existing.world)
+    const w = r.written[0]
+    expect([...(w?.files.keys() ?? [])].sort()).toEqual([
+      'district-49.json',
+      'region-01.json',
+      'world.json',
+    ])
+    expect(w?.files.get('district-49.json')?.points.map(p => p.date)).toEqual([
+      D1,
+      D2,
+      D3,
+    ])
+    expect(w?.files.get('district-49.json')?.points.slice(0, 2)).toEqual(
+      existing.get('district-49.json')?.points
+    )
   })
 
-  it('does not seed an older reports PY, but updates one that has a timeline', () => {
+  it('re-running the same day writes nothing', () => {
+    const existing = filesOf([D1, D2, D3])
+    const r = planTimelineUpdates(
+      [
+        foldReportsDate({
+          programYear: PY,
+          date: D3,
+          reports: STATES[D3] ?? [],
+          regionHistory,
+        }),
+      ],
+      new Map([[PY, existing]]),
+      PY
+    )
+    expect(r.written).toEqual([])
+  })
+
+  it('touches only the current PY, even if an older reports PY rolled up', () => {
     const old = rollupAt('2025-2026', '2026-06-30')
-    expect(
-      planTimelineUpdates([old, rollupAt(PY, D3)], new Map()).written.map(
-        t => t.programYear
-      )
-    ).toEqual([PY])
-    const seeded = upsertTimelineDate(null, '2025-2026', '2026-06-29', old)
     const r = planTimelineUpdates(
       [old, rollupAt(PY, D3)],
-      new Map([['2025-2026', seeded]])
+      new Map([[PY, new Map()]]),
+      PY
     )
-    expect(r.written.map(t => t.programYear)).toEqual(['2025-2026', PY])
-    expect(r.written[0]?.dates).toEqual(['2026-06-29', '2026-06-30'])
+    expect(r.written.map(w => w.programYear)).toEqual([PY])
   })
 
-  it('a seeded year takes its ghost from the prior year timeline', () => {
-    const prior = upsertTimelineDate(
-      null,
-      '2025-2026',
-      '2025-10-12',
-      rollupAt('2025-2026', '2025-10-12')
+  it('a seeded year takes its ghost from the prior year files', () => {
+    const prior = splitTimeline(
+      upsertTimelineDate(
+        null,
+        '2025-2026',
+        '2025-10-12',
+        rollupAt('2025-2026', '2025-10-12')
+      )
     )
     const r = planTimelineUpdates(
       [rollupAt(PY, D3)],
-      new Map([['2025-2026', prior]])
+      new Map([
+        [PY, new Map()],
+        ['2025-2026', prior],
+      ]),
+      PY
     )
-    expect(r.written[0]?.prior?.programYear).toBe('2025-2026')
-    expect(r.written[0]?.prior?.grain).toBe('day')
+    expect(r.written[0]?.files.get('world.json')?.prior).toMatchObject({
+      programYear: '2025-2026',
+      grain: 'day',
+    })
     expect(r.rows.map(x => x.programYear)).toEqual(['2025-2026', PY])
     expect(r.rows[1]?.priorGrain).toBe('day')
   })
 
-  it('names an existing timeline it did not touch, in the index rows', () => {
-    const existing = build([D1]) as EducationTimeline
-    const r = planTimelineUpdates([], new Map([[PY, existing]]))
+  it('names a PY known only by its world file in the index rows', () => {
+    const world = splitTimeline(build([D1]) as EducationTimeline).get(
+      'world.json'
+    )
+    if (!world) throw new Error('world file')
+    const r = planTimelineUpdates(
+      [],
+      new Map([['2025-2026', new Map([['world.json', world]])]]),
+      PY
+    )
     expect(r.written).toEqual([])
     expect(r.rows.map(x => x.asOf)).toEqual([D1])
   })
@@ -438,8 +575,19 @@ describe('planTimelineUpdates (the daily, incremental step)', () => {
       reports: [],
       regionHistory,
     })
-    const r = planTimelineUpdates([none], new Map())
+    const r = planTimelineUpdates([none], new Map([[PY, new Map()]]), PY)
     expect(r.written).toEqual([])
     expect(r.skipped).toEqual([{ programYear: PY, reason: expect.any(String) }])
+  })
+
+  it('a blocked (unreadable) PY is left alone and not named', () => {
+    const r = planTimelineUpdates(
+      [rollupAt(PY, D3)],
+      new Map([[PY, filesOf([D1])]]),
+      PY,
+      new Set([PY])
+    )
+    expect(r.written).toEqual([])
+    expect(r.rows).toEqual([])
   })
 })

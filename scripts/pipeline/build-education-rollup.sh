@@ -25,9 +25,13 @@
 #   - snapshots/<date>/all-districts-rankings.json — each PY's last date,
 #     which names the PY's districts so a missing file reads "not available";
 #   - config/district-region-history.json (#1820) — each PY's own regions;
-#   - derived/education-timeline/*.json (#2591) — the timelines already
-#     published (one small object per PY): the day's reports date is APPENDED
-#     to its PY's timeline, so the run never re-reads a PY's history.
+#   - derived/education-timeline/<PY>/*.json (#2591) — the education
+#     timeline, one small object per entity (world, region-<n>, district-<id>).
+#     The CURRENT PY's files are read (about 150 objects) so the day's reports
+#     date is APPENDED to each; only the files whose data changed are written.
+#     The previous PY's files are read too, but only while the current PY has
+#     none (seeding its prior-year ghost). Every other PY contributes just its
+#     world.json, to be named in the index. No history scan.
 # Missing inputs degrade per row (a PY without reports is omitted and named
 # in the index; no ledger or no region history is a warning); a listing or
 # transfer ERROR fails closed with nothing uploaded.
@@ -35,9 +39,9 @@
 # Output (plain JSON, no -Z; /region/:n/education reads it via the CDN):
 #   gs://<bucket>/derived/education-rollup/<PY>.json   one per program year
 #   gs://<bucket>/derived/education-rollup/index.json  last: it names them
-#   gs://<bucket>/derived/education-timeline/<PY>.json the timelines this run
-#                                      changed (#2591), before the index,
-#                                      which names every timeline
+#   gs://<bucket>/derived/education-timeline/<PY>/<entity>.json  the entity
+#                                      files that changed (#2591), before the
+#                                      index, which names every timeline PY
 # derived/ is NOT a promoted prefix: this script only ever writes to
 # <bucket> (the #1755 prod-write guard checks it). Prod gets the result from
 # the promote-reports job, through the report-sidecar manifest and the
@@ -68,7 +72,7 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TSX="${TSX:-${REPO}/node_modules/.bin/tsx}"
 BUILDER="${REPO}/scripts/build-education-rollup.ts"
 DEST="gs://${BUCKET}/derived/education-rollup/"
-DEST_TIMELINE="gs://${BUCKET}/derived/education-timeline/"
+TIMELINE_ROOT="derived/education-timeline"
 NO_MATCH='matched no objects|Did not find existing container'
 
 WORK="$(mktemp -d)"
@@ -172,20 +176,52 @@ if ! "${GCLOUD}" storage cp "gs://${BUCKET}/config/district-region-history.json"
   echo "::warning::build-education-rollup: no config/district-region-history.json; region rollups are null this run" >&2
 fi
 
-# 5. The timelines already published, if any (a few small objects). A real
-#    listing error fails closed; "none yet" is the first run (#2591).
-mkdir -p "${WORK}/timeline-in"
-set +e
-list "gs://${BUCKET}/derived/education-timeline/*.json"
-rc=$?
-set -e
-if [ "${rc}" -eq 0 ]; then
-  "${GCLOUD}" storage cp "gs://${BUCKET}/derived/education-timeline/*.json" \
-    "${WORK}/timeline-in/"
+# 5. The education timeline files already published (#2591). The current PY
+#    is the newest reports PY that had reports. A real listing error fails
+#    closed; "none yet" is the first run. Read: the current PY's files; the
+#    previous PY's while the current has none; any other PY's world.json.
+CURRENT=""
+for d in "${WORK}"/inputs/*/; do
+  [ -f "${d}reports-date" ] || continue
+  CURRENT="$(basename "${d}")"
+done
+TL_IN="${WORK}/timeline-in"
+mkdir -p "${TL_IN}"
+TL_ARGS=()
+if [ -n "${CURRENT}" ]; then
+  START="${CURRENT%-*}"
+  PRIOR="$((START - 1))-${START}"
+  set +e
+  list "gs://${BUCKET}/${TIMELINE_ROOT}/**"
+  rc=$?
+  set -e
+  : >"${WORK}/timeline.names"
+  if [ "${rc}" -eq 0 ]; then
+    sed -n -E "s#^gs://[^/]+/${TIMELINE_ROOT}/([0-9]{4}-[0-9]{4})/[^/]+\.json\$#\1#p" \
+      "${WORK}/ls.out" | LC_ALL=C sort | uniq -c >"${WORK}/timeline.names"
+  fi
+  mkdir -p "${TL_IN}/${CURRENT}"
+  if ! grep -q " ${CURRENT}\$" "${WORK}/timeline.names"; then
+    # First run of the current PY: its prior-year ghost comes from last year's.
+    if grep -q " ${PRIOR}\$" "${WORK}/timeline.names"; then
+      mkdir -p "${TL_IN}/${PRIOR}"
+      "${GCLOUD}" storage cp "gs://${BUCKET}/${TIMELINE_ROOT}/${PRIOR}/*.json" "${TL_IN}/${PRIOR}/"
+    fi
+  else
+    "${GCLOUD}" storage cp "gs://${BUCKET}/${TIMELINE_ROOT}/${CURRENT}/*.json" "${TL_IN}/${CURRENT}/"
+  fi
+  while read -r _ other; do
+    [ -n "${other}" ] || continue
+    [ "${other}" != "${CURRENT}" ] || continue
+    [ ! -d "${TL_IN}/${other}" ] || continue
+    mkdir -p "${TL_IN}/${other}"
+    "${GCLOUD}" storage cp "gs://${BUCKET}/${TIMELINE_ROOT}/${other}/world.json" "${TL_IN}/${other}/" 2>/dev/null || true
+  done <"${WORK}/timeline.names"
+  TL_ARGS=(--timeline-in "${TL_IN}" --timeline-current "${CURRENT}")
 fi
 
 "${TSX}" "${BUILDER}" build \
-  --timeline-in "${WORK}/timeline-in" \
+  ${TL_ARGS[@]+"${TL_ARGS[@]}"} \
   --ledger "${LEDGER}" \
   --inputs "${WORK}/inputs" \
   --region-history "${WORK}/district-region-history.json" \
@@ -201,19 +237,24 @@ while IFS= read -r f; do
   years+=("${f}")
 done < <(find "${WORK}/out" -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9].json' | LC_ALL=C sort)
 "${UPLOAD[@]}" "${years[@]}" "${DEST}"
-# The timelines this run changed, before the index that names them.
-timelines=()
-while IFS= read -r f; do
-  timelines+=("${f}")
-done < <(find "${WORK}/out/timeline" -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9].json' 2>/dev/null | LC_ALL=C sort)
-if [ "${#timelines[@]}" -gt 0 ]; then
-  "${UPLOAD[@]}" "${timelines[@]}" "${DEST_TIMELINE}"
+# The timeline entity files this run changed (a PY prefix at a time), before
+# the index that names them.
+if [ -d "${WORK}/out/timeline" ]; then
+  for pydir in "${WORK}"/out/timeline/*/; do
+    [ -d "${pydir}" ] || continue
+    entities=()
+    while IFS= read -r f; do
+      entities+=("${f}")
+    done < <(find "${pydir}" -maxdepth 1 -type f -name '*.json' | LC_ALL=C sort)
+    [ "${#entities[@]}" -gt 0 ] || continue
+    "${UPLOAD[@]}" "${entities[@]}" "gs://${BUCKET}/${TIMELINE_ROOT}/$(basename "${pydir}")/"
+  done
 fi
 "${UPLOAD[@]}" "${WORK}/out/index.json" "${DEST}"
 
 jq -r '
   "- **Education rollup** (staging derived/, #1801): \(.programYears) program years (\(.first) → \(.last)), " +
-  "\(.omitted) omitted, reports as of \(.asOf // "none"); \(.timelinesWritten // 0) timeline(s) updated (#2591); \(.rawBytes) B raw, \(.gzipBytes) B gzip " +
+  "\(.omitted) omitted, reports as of \(.asOf // "none"); \(.timelinesWritten // 0) timeline file(s) written (#2591); \(.rawBytes) B raw, \(.gzipBytes) B gzip " +
   "(largest object \(.maxGzipBytes) B gzip)"' \
   "${WORK}/summary.json" >>"${SUMMARY}"
 cat "${WORK}/summary.json"

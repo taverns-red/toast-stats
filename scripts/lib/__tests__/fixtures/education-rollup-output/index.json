@@ -75,7 +75,7 @@
   "timelines": [
     {
       "programYear": "2026-2027",
-      "path": "derived/education-timeline/2026-2027.json",
+      "prefix": "derived/education-timeline/2026-2027",
       "asOf": "2026-10-12",
       "dates": 1,
       "priorGrain": null
