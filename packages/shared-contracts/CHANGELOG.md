@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.28.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.27.0...shared-contracts-v1.28.0) (2026-11-09)
+
+
+### Features
+
+* **education:** cumulative levels/paths timeline chart ([#2592](https://github.com/taverns-red/toast-stats/issues/2592)) ([#2599](https://github.com/taverns-red/toast-stats/issues/2599)) ([e0577ab](https://github.com/taverns-red/toast-stats/commit/e0577abc5b550852bfccbb07212e38a15746e03f))
+* **pipeline:** education timeline artifact ([#2591](https://github.com/taverns-red/toast-stats/issues/2591)) ([#2593](https://github.com/taverns-red/toast-stats/issues/2593)) ([ed45906](https://github.com/taverns-red/toast-stats/commit/ed45906a9f1f9818494ed46bd1c7b7883aa3032e))
+
 ## [1.27.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.26.1...shared-contracts-v1.27.0) (2026-11-08)
 
 

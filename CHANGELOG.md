@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.83.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.82.0...toast-stats-v2.83.0) (2026-11-09)
+
+
+### Features
+
+* **education:** cumulative levels/paths timeline chart ([#2592](https://github.com/taverns-red/toast-stats/issues/2592)) ([#2599](https://github.com/taverns-red/toast-stats/issues/2599)) ([e0577ab](https://github.com/taverns-red/toast-stats/commit/e0577abc5b550852bfccbb07212e38a15746e03f))
+* **pipeline:** education timeline artifact ([#2591](https://github.com/taverns-red/toast-stats/issues/2591)) ([#2593](https://github.com/taverns-red/toast-stats/issues/2593)) ([ed45906](https://github.com/taverns-red/toast-stats/commit/ed45906a9f1f9818494ed46bd1c7b7883aa3032e))
+
+
+### Bug Fixes
+
+* **e2e:** pin action-list smoke's date in the fixture manifest ([#2595](https://github.com/taverns-red/toast-stats/issues/2595)) ([#2596](https://github.com/taverns-red/toast-stats/issues/2596)) ([ae3ae92](https://github.com/taverns-red/toast-stats/commit/ae3ae92b30eb29f36921c55db434437de2873bf1))
+
+
+### Continuous Integration
+
+* dispatchable education-timeline backfill, staging only ([#2591](https://github.com/taverns-red/toast-stats/issues/2591)) ([#2598](https://github.com/taverns-red/toast-stats/issues/2598)) ([7b43d11](https://github.com/taverns-red/toast-stats/commit/7b43d11458984ef97d2aab6ae494ff9697eb61da))
+
 ## [2.82.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.81.1...toast-stats-v2.82.0) (2026-11-09)
 
 
