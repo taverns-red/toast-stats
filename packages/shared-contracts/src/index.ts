@@ -742,3 +742,11 @@ export {
   toTolerantReader,
   findStrictObjects,
 } from './validation/tolerantReader.js'
+
+export {
+  EducationTimelineEntitySchema,
+  educationTimelinePrefix,
+  educationTimelineEntityPath,
+  parseEducationTimelinePath,
+  type EducationTimelineEntity,
+} from './schemas/education-timeline.schema.js'

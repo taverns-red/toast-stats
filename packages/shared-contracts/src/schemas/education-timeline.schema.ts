@@ -217,3 +217,27 @@ export function educationTimelineObjectPath(programYear: string): string {
   ProgramYear.parse(programYear)
   return `${EDUCATION_TIMELINE_PREFIX}/${programYear}.json`
 }
+
+// ---- Stub (red): the per-entity contract lands in the next commit (#2591) ----
+export type EducationTimelineEntity = {
+  _format: { version: '1.0.0'; type: 'education-timeline-entity' }
+  programYear: string
+}
+export const EducationTimelineEntitySchema = z.never()
+export function educationTimelinePrefix(_py: string): string {
+  throw new Error('not implemented')
+}
+export function educationTimelineEntityPath(
+  _py: string,
+  _kind: 'world' | 'region' | 'district',
+  _id: string | null
+): string {
+  throw new Error('not implemented')
+}
+export function parseEducationTimelinePath(_path: string): {
+  programYear: string
+  kind: 'world' | 'region' | 'district'
+  id: string | null
+} | null {
+  throw new Error('not implemented')
+}
