@@ -22,6 +22,9 @@ export interface DistrictKpiCardData {
   current: number
   targets: RecognitionTargets | null
   rankings: MetricRankings
+  /** Distinguished only (#2554): clubs that qualify on current membership but
+   *  are not yet confirmed. `current` is then the confirmed count. */
+  provisional?: number
 }
 
 /** Net Member Change is a signed delta with no Distinguished tiers, so it
@@ -79,7 +82,7 @@ const CARD_TOOLTIPS: Record<TieredKpiKey, string> = {
   // Qualifying today, not confirmed: the trophy case's gap counts confirmed
   // clubs, so the two numbers differ by design (#2390).
   distinguishedClubs:
-    'Clubs qualifying today: DCP goals plus the membership requirement on current membership, with thresholds for each recognition level. The Distinguished District gap counts confirmed clubs only, so it can be larger.',
+    'Confirmed Distinguished clubs, with the thresholds for each Distinguished District recognition level. The rank and the Distinguished District gap use this same confirmed count. +N provisional: clubs qualifying today on current membership whose April renewals do not yet confirm the level; they are shown beside the count, never added to it.',
 }
 
 const TIER_LEGEND: { short: string; full: string }[] = [
@@ -171,7 +174,11 @@ const KpiSummary: React.FC<KpiBodyProps> = ({ kpis, ghost }) => (
     <span aria-hidden="true" className="district-kpi-strip__sep">
       ·
     </span>
-    <span>{formatCompact(kpis.distinguishedClubs.current)} dist.</span>
+    <span>
+      {formatCompact(kpis.distinguishedClubs.current)} dist.
+      {(kpis.distinguishedClubs.provisional ?? 0) > 0 &&
+        ` +${formatCompact(kpis.distinguishedClubs.provisional ?? 0)} prov.`}
+    </span>
     <span aria-hidden="true" className="district-kpi-strip__sep">
       ·
     </span>
@@ -194,6 +201,7 @@ const KpiExpanded: React.FC<KpiBodyProps> = ({ kpis, ghost, planGoals }) => (
           targets={kpis[g.kpi].targets}
           rankings={kpis[g.kpi].rankings}
           planTarget={planGoals?.[g.goal]}
+          provisional={kpis[g.kpi].provisional}
           tooltipContent={CARD_TOOLTIPS[g.kpi]}
         />
       ))}

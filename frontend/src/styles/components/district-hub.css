@@ -89,6 +89,36 @@
     color: var(--ink);
   }
 
+  /* The Distinguished tile carries "N +M provisional" (#2554): the confirmed
+     count stays the 24px headline and never shrinks; the provisional part
+     is the muted 12px companion (the type floor's minimum). It stays on the
+     number's line while it fits; when it does not (a two-digit pair at 360,
+     or a wider font in the CI renderer) the whole "+M provisional" drops to
+     a second line rather than clipping, so both stay readable. */
+  .district-hub__tile-value:has(.distinguished-count__provisional) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 4px;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  /* As a flex item this span is blockified, so the global span line-height
+     (1.5 × 24px = 36px) would set the row height. Keep the tile's 30px. */
+  .district-hub__tile-value [data-testid='distinguished-confirmed'] {
+    flex: none;
+    line-height: inherit;
+  }
+
+  .district-hub__tile-value .distinguished-count__provisional {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 12px;
+    line-height: 20px;
+    font-weight: 500;
+  }
+
   .district-hub__tile-value--up {
     color: var(--green-600);
   }
@@ -202,5 +232,15 @@
     font-size: 14px;
     line-height: 20px;
     color: var(--ink-3);
+  }
+
+  /* "+N provisional" beside a Distinguished count (#2554), wherever
+     DistinguishedCount is drawn: the muted companion to the headline, never
+     colour alone (the words carry the meaning). */
+  .distinguished-count__provisional {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-3);
+    white-space: nowrap;
   }
 }

@@ -69,6 +69,7 @@ import {
 import { WorldPulse } from '../components/WorldPulse'
 import { RedVoteBlock } from '../components/RedVoteBlock'
 import { snapshotDatesFrom } from '../types/snapshotDate'
+import { DistinguishedCount } from '../components/DistinguishedCount'
 
 // Columns in the rankings table head: District, Rank, Paid Clubs, Total
 // Payments, Distinguished, Score. Only the empty-state row needs the number
@@ -1822,7 +1823,7 @@ const DistrictsPage: React.FC = () => {
                 className="districts-kpi-card__value"
                 data-testid="kpi-distinguished-clubs"
               >
-                {kpiTotals.distinguishedClubs.toLocaleString()}
+                <DistinguishedCount confirmed={kpiTotals.distinguishedClubs} />
               </div>
               <p
                 className="districts-kpi-card__sub"

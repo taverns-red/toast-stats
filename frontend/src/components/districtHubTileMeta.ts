@@ -35,7 +35,7 @@ export const HUB_BULLET_TILES: {
     label: 'Distinguished',
     // Same wording as the desktop card's tooltip (#2390).
     about:
-      'Clubs qualifying today: DCP goals plus the membership requirement on current membership, with thresholds for each Distinguished District recognition level. The Distinguished District gap counts confirmed clubs only, so it can be larger.',
+      'Confirmed Distinguished clubs, with the thresholds for each Distinguished District recognition level. The rank and the Distinguished District gap use this same confirmed count. +N provisional: clubs qualifying today on current membership whose April renewals do not yet confirm the level; they are shown beside the count, never added to it.',
   },
 ]
 

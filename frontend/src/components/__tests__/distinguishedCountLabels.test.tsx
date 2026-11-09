@@ -187,7 +187,12 @@ describe('Trophy case gap: "confirmed" (#2390)', () => {
     const line = screen.getByTestId('distinguished-gap-explainer')
     expect(line).toHaveClass('hidden', 'md:block')
     expect(line).toHaveTextContent(/confirmed clubs only/i)
-    expect(line).toHaveTextContent(/qualifying today/i)
+    // Spec change (#2554, Ron 2026-11-08): the KPI card is now the confirmed
+    // count too, with provisional beside it, so the line no longer says the
+    // card counts clubs "qualifying today".
+    expect(line).toHaveTextContent(/same confirmed/i)
+    expect(line).toHaveTextContent(/provisional/i)
+    expect(line).not.toHaveTextContent(/qualifying today/i)
   })
 
   it('paid clubs and payments tiles carry no note and keep their nouns', () => {

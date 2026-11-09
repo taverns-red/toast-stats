@@ -149,6 +149,12 @@ export interface DistrictAnalytics {
     total: number
   }
   /**
+   * The pipeline's one confirmed / provisional Distinguished count for the
+   * district (#2553). Optional: files written before the daily run that
+   * publishes it do not carry it (ADR 0019).
+   */
+  distinguishedCounts?: { confirmed: number; provisional: number }
+  /**
    * Distinguished projection - can be a number (from analytics-summary)
    * or an object (from full analytics endpoint)
    */

@@ -38,11 +38,16 @@ describe('MethodologyPage — Distinguished club counts (#2390)', () => {
     ])
   })
 
-  it('explains the KPI count as clubs qualifying today', () => {
+  // Spec change (#2554, Ron 2026-11-08): the KPI card shows the confirmed
+  // count with "+N provisional" beside it, not clubs qualifying today.
+  it('explains the KPI card as the confirmed count with provisional beside it', () => {
     renderPage()
     const txt = sectionText()
-    expect(txt).toMatch(/qualifying today/i)
     expect(txt).toMatch(/KPI card/i)
+    expect(txt).toMatch(/\+N provisional/)
+    expect(txt).not.toMatch(/KPI card counts the clubs/i)
+    expect(txt).not.toMatch(/KPI card counts paid clubs only/i)
+    expect(txt).not.toMatch(/gap can be larger than the KPI card/i)
   })
 
   it('explains the trophy-case gap as confirmed clubs, on April renewals before TI reports', () => {
@@ -58,12 +63,11 @@ describe('MethodologyPage — Distinguished club counts (#2390)', () => {
     renderPage()
     const txt = sectionText()
     // Every club on TI's report, paid or not: the base of TI's own count
-    // and the rankings. The KPI card counts paid clubs only.
+    // and the rankings. The KPI card shares that base (#2554).
     expect(txt).toMatch(
       /every club on Toastmasters International.s club report/i
     )
     expect(txt).toMatch(/paid or not/i)
-    expect(txt).toMatch(/KPI card counts paid clubs only/i)
     // Provisional is shown beside confirmed, never added to it.
     expect(txt).toMatch(/provisional/i)
     expect(txt).toMatch(/never added/i)

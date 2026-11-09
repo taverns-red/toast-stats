@@ -1437,19 +1437,22 @@ const MethodologyPage: React.FC = () => {
       >
         <div data-testid="methodology-distinguished-club-counts">
           <p>
-            The district Overview shows two counts of Distinguished clubs. They
-            answer different questions, so they can differ, and the counting
-            rules are the same as before.
+            The district Overview shows one Distinguished-club count: the{' '}
+            <strong>confirmed</strong> clubs, with the{' '}
+            <strong>provisional</strong> clubs shown beside it as &ldquo;+N
+            provisional&rdquo;. The two are never added together, and the rank
+            and percentage beside the count use the confirmed count.
           </p>
-          <h3>Qualifying today: the KPI card</h3>
+          <h3>The KPI card</h3>
           <p>
-            The <strong>Distinguished Clubs</strong> KPI card counts the clubs
-            that meet a Distinguished Club Program rung on today&apos;s data:
-            enough DCP goals (5, 7, 9 or 10) and the membership requirement (20
-            members, or net growth of 3 or 5 over the membership base; 25
-            members for Smedley) on current membership, with a submitted Club
-            Success Plan from 2025-26 on (see §05). It moves as clubs gain and
-            lose members during the year.
+            The <strong>Distinguished Clubs</strong> KPI card shows the
+            confirmed count (below) as its headline. Provisional clubs are the
+            ones that meet a Distinguished Club Program rung on today&apos;s
+            data (enough DCP goals of 5, 7, 9 or 10, and the membership
+            requirement of 20 members, or net growth of 3 or 5 over the
+            membership base; 25 members for Smedley; with a submitted Club
+            Success Plan from 2025-26 on, see §05) but whose April renewals do
+            not yet hold that level.
           </p>
           <h3>Confirmed: the Gap to Distinguished District</h3>
           <p>
@@ -1465,9 +1468,9 @@ const MethodologyPage: React.FC = () => {
             who have not yet renewed is not confirmed.
           </p>
           <p>
-            So the gap can be larger than the KPI card&apos;s threshold minus
-            its count. The per-district share card uses the same confirmed count
-            (&ldquo;more confirmed Distinguished clubs&rdquo;).
+            The KPI card and the gap use the same confirmed count, so the gap is
+            the threshold minus the card&apos;s headline. The per-district share
+            card uses it too (&ldquo;more confirmed Distinguished clubs&rdquo;).
           </p>
           <h3>Which clubs are counted</h3>
           <p>
@@ -1478,8 +1481,7 @@ const MethodologyPage: React.FC = () => {
             membership before April, but its April renewals do not yet hold that
             level; a club already confirmed at any level is not also
             provisional, and provisional is never added to confirmed. From
-            April, nothing is provisional. The KPI card counts paid clubs only,
-            on current membership.
+            April, nothing is provisional.
           </p>
           <p className="methodology-source">
             Source: Toastmasters International,{' '}
@@ -1490,9 +1492,9 @@ const MethodologyPage: React.FC = () => {
             <code>docs/toastmasters-rules-reference.md</code> §3.2–3.4. The
             confirmed rule lives in{' '}
             <code>countConfirmedDistinguishedClubs</code> (analytics-core, #304,
-            #2221); the KPI count is <code>performance-targets</code>{' '}
-            <code>currentProgress.distinguished</code>, and the gap is{' '}
-            <code>competitive-awards</code>{' '}
+            #2221); the KPI card's confirmed headline is{' '}
+            <code>distinguishedCounts</code> on the district analytics file, and
+            the gap is <code>competitive-awards</code>{' '}
             <code>distinguishedClubsRemaining</code>. The confirmed and
             provisional counts for every level are{' '}
             <code>distinguishedCounts</code> (analytics-core{' '}
