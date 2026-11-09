@@ -293,6 +293,47 @@ describe('EducationTimelineChart — prior-year ghost', () => {
   })
 })
 
+describe('EducationTimelineChart — last year as a year-end target', () => {
+  const oneYearEnd = {
+    ...DISTRICT_61_TIMELINE,
+    prior: {
+      programYear: '2025-2026',
+      source: 'timeline' as const,
+      grain: 'day' as const,
+      points: [{ at: '2026-06-30', total: 412 }],
+    },
+  }
+  const props = { ...baseProps, timeline: oneYearEnd }
+
+  it('draws one faint flat line and labels it with the total', () => {
+    render(<EducationTimelineChart {...props} />)
+    expect(screen.getByTestId('line')).toHaveAttribute('data-key', 'ghost')
+    expect(points().every(r => r['ghost'] === 412)).toBe(true)
+    const legend = screen.getByRole('list', { name: 'Chart legend' })
+    expect(within(legend).getByText(/Last year’s total: 412/)).toBeVisible()
+  })
+
+  it('explains it is the year-end total, not a same-date curve', () => {
+    render(<EducationTimelineChart {...props} />)
+    expect(
+      screen.getByTestId('education-timeline-ghost-note')
+    ).toHaveTextContent(/year-end|final total/i)
+  })
+
+  it('puts last year’s total in the table on every row', () => {
+    render(<EducationTimelineChart {...props} />)
+    const table = screen.getByRole('table', {
+      name: 'Education awards by snapshot date',
+    })
+    expect(
+      within(table).getByRole('columnheader', { name: 'Last year’s total' })
+    ).toBeInTheDocument()
+    for (const row of within(table).getAllByRole('row').slice(1)) {
+      expect(row).toHaveTextContent('412')
+    }
+  })
+})
+
 describe('EducationTimelineChart — motion and readout', () => {
   it('animates by default', () => {
     render(<EducationTimelineChart {...baseProps} />)

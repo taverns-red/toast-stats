@@ -51,9 +51,16 @@ export interface TimelineRow {
   values: Record<string, number>
 }
 
+/** How last year is drawn: not at all, as a same-date curve, or as one
+ *  horizontal line at last year's (year-end) total. */
+export type GhostKind = 'none' | 'curve' | 'target'
+
 export interface DerivedTimeline {
   bands: TimelineBand[]
   rows: TimelineRow[]
+  ghostKind: GhostKind
+  /** The target line's total and the date it was observed (`target` only). */
+  target: { total: number; at: string } | null
 }
 
 /** Paths shown by name in path mode; the rest fold into "Other". */
@@ -130,6 +137,28 @@ export function priorGhostAt(
     value = g.total
   }
   return value
+}
+
+/**
+ * How last year is drawn. More than one observation inside the prior program
+ * year: the same-date curve. Otherwise (usually just the 06-30 close): one
+ * flat target line at the latest prior total. Nothing prior: none.
+ */
+export function ghostPlan(prior: TimelinePrior): {
+  kind: GhostKind
+  target: { total: number; at: string } | null
+} {
+  if (!prior || prior.points.length === 0) return { kind: 'none', target: null }
+  const start = Number(prior.programYear.slice(0, 4))
+  const lo = isoOf(Date.UTC(start, 6, 1))
+  const hi = isoOf(Date.UTC(start + 1, 5, 30))
+  const inWindow = prior.points.filter(g => {
+    const at = prior.grain === 'month' ? monthEnd(g.at) : g.at
+    return at >= lo && at <= hi
+  })
+  if (inWindow.length > 1) return { kind: 'curve', target: null }
+  const last = prior.points[prior.points.length - 1]!
+  return { kind: 'target', target: { total: last.total, at: last.at } }
 }
 
 /* ── Bands ───────────────────────────────────────────────────────────── */
@@ -217,11 +246,23 @@ export function deriveTimeline(args: {
     valuesOf = p => pathValues(p, top)
   }
 
+  const plan = ghostPlan(prior)
+  const ghostOf = (date: string): number | null =>
+    plan.kind === 'curve' && prior
+      ? priorGhostAt(prior, date)
+      : plan.kind === 'target'
+        ? plan.target!.total
+        : null
   const rows = points.map(p => ({
     date: p.date,
     total: totalOf(p),
-    ghost: prior ? priorGhostAt(prior, p.date) : null,
+    ghost: ghostOf(p.date),
     values: valuesOf(p),
   }))
-  return { bands, rows }
+  return {
+    bands,
+    rows,
+    ghostKind: plan.kind,
+    target: plan.target,
+  }
 }

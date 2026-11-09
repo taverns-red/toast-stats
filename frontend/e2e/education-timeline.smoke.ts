@@ -73,7 +73,22 @@ function bodyFor(url: string): unknown {
   return FIXTURE
 }
 
-type Serve = 'fixture' | 'absent' | 'drift'
+/** `yearend`: the staging reality in 2026-27, where last year has only its
+ *  06-30 close (one prior point), so the ghost becomes a target line. */
+function withYearEnd(body: unknown, yearEnd: boolean): unknown {
+  if (!yearEnd) return body
+  return {
+    ...(body as Record<string, unknown>),
+    prior: {
+      programYear: '2025-2026',
+      source: 'timeline',
+      grain: 'day',
+      points: [{ at: '2026-06-30', total: 412 }],
+    },
+  }
+}
+
+type Serve = 'fixture' | 'yearend' | 'absent' | 'drift'
 
 async function serveTimeline(
   page: Page,
@@ -96,7 +111,9 @@ async function serveTimeline(
         status: 200,
         headers: CORS,
         contentType: 'application/json',
-        body: JSON.stringify(bodyFor(route.request().url())),
+        body: JSON.stringify(
+          withYearEnd(bodyFor(route.request().url()), serve === 'yearend')
+        ),
       })
     }
   })
@@ -164,6 +181,25 @@ for (const vp of [
         ).toContainText(/daily/i)
       })
     }
+
+    test('one prior point (the 06-30 close) draws last year as a labelled target line', async ({
+      page,
+    }) => {
+      await serveTimeline(page, 'yearend')
+      await load(page, '/district/61/education')
+      const legend = page.getByRole('list', { name: 'Chart legend' })
+      await expect(legend.getByText('Last year’s total: 412')).toBeVisible({
+        timeout: 30_000,
+      })
+      await expect(page.locator(`${SECTION} .edu-tl__ghost`)).toHaveCount(1)
+      await expect(
+        page.getByTestId('education-timeline-ghost-note')
+      ).toContainText(/year-end total, 412/)
+      await page.getByText('Show as a table').click()
+      await expect(
+        page.getByRole('columnheader', { name: 'Last year’s total' })
+      ).toBeVisible()
+    })
 
     test('?by=path regroups to named paths plus Other on the same route', async ({
       page,

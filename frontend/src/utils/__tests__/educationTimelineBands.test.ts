@@ -369,3 +369,66 @@ describe('the ghost on each row', () => {
     expect(byDate['2026-10-04']).toBe(27)
   })
 })
+
+describe('the ghost as a year-end target line (staging has one prior point)', () => {
+  const pts = DISTRICT_61_TIMELINE.points
+
+  it('one prior point: a flat line at that total on every row', () => {
+    const d = deriveTimeline({
+      points: pts,
+      mode: 'level',
+      prior: dayPrior([['2026-06-30', 412]]),
+    })
+    expect(d.ghostKind).toBe('target')
+    expect(d.target).toEqual({ total: 412, at: '2026-06-30' })
+    expect(d.rows.every(r => r.ghost === 412)).toBe(true)
+  })
+
+  it('none inside the prior PY window: the latest prior total is the target', () => {
+    const d = deriveTimeline({
+      points: pts,
+      mode: 'level',
+      prior: dayPrior([['2026-07-02', 415]]),
+    })
+    expect(d.ghostKind).toBe('target')
+    expect(d.target?.total).toBe(415)
+  })
+
+  it('a month-grain prior with one month-end is a target too', () => {
+    const d = deriveTimeline({
+      points: pts,
+      mode: 'level',
+      prior: monthPrior([['2026-06', 412]]),
+    })
+    expect(d.ghostKind).toBe('target')
+    expect(d.target?.total).toBe(412)
+  })
+
+  it('more than one point inside the window: the aligned curve, no target', () => {
+    const d = deriveTimeline({
+      points: pts,
+      mode: 'level',
+      prior: DISTRICT_61_TIMELINE.prior,
+    })
+    expect(d.ghostKind).toBe('curve')
+    expect(d.target).toBeNull()
+    expect(d.rows.at(-1)?.ghost).toBe(36)
+  })
+
+  it('no prior: no line at all', () => {
+    const d = deriveTimeline({ points: pts, mode: 'level', prior: null })
+    expect(d.ghostKind).toBe('none')
+    expect(d.target).toBeNull()
+    expect(d.rows.every(r => r.ghost === null)).toBe(true)
+  })
+
+  it('a prior with no points at all is no line, not a zero', () => {
+    const d = deriveTimeline({
+      points: pts,
+      mode: 'level',
+      prior: dayPrior([]),
+    })
+    expect(d.ghostKind).toBe('none')
+    expect(d.rows.every(r => r.ghost === null)).toBe(true)
+  })
+})

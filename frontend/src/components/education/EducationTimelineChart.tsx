@@ -100,7 +100,7 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
   // Tap-to-pin readout on devices without hover (#1835) — before early returns.
   const readout = useChartReadout()
   const { prior } = timeline
-  const { bands, rows } = useMemo(
+  const { bands, rows, ghostKind, target } = useMemo(
     () =>
       deriveTimeline({
         points: timeline.points,
@@ -165,7 +165,12 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
   const matches =
     final.total === tilesTotal &&
     (tilesAsOf === null || final.date === tilesAsOf)
-  const ghostName = prior ? `Last year (${shortPy(prior.programYear)})` : null
+  const isTarget = ghostKind === 'target' && target !== null
+  const ghostName = isTarget
+    ? 'Last year’s total'
+    : ghostKind === 'curve' && prior
+      ? `Last year (${shortPy(prior.programYear)})`
+      : null
 
   return (
     <figure
@@ -246,10 +251,10 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
                 isAnimationActive={animate}
               />
             ))}
-            {prior && (
+            {ghostName && (
               <Line
                 className="edu-tl__ghost"
-                type="stepAfter"
+                type={isTarget ? 'linear' : 'stepAfter'}
                 dataKey={GHOST_KEY}
                 name={ghostName ?? 'Last year'}
                 stroke="currentColor"
@@ -288,18 +293,30 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
               className="edu-tl__swatch edu-tl__swatch--ghost"
               aria-hidden="true"
             />
-            <span className="edu-tl__legend-label">{ghostName}</span>
-            {final.ghost !== null && (
-              <span className="edu-tl__legend-value">{fmt(final.ghost)}</span>
+            {isTarget ? (
+              <span className="edu-tl__legend-label">
+                {`${ghostName}: ${fmt(target.total)}`}
+              </span>
+            ) : (
+              <>
+                <span className="edu-tl__legend-label">{ghostName}</span>
+                {final.ghost !== null && (
+                  <span className="edu-tl__legend-value">
+                    {fmt(final.ghost)}
+                  </span>
+                )}
+              </>
             )}
           </li>
         )}
       </ul>
 
       <p className="edu-tl__note" data-testid="education-timeline-ghost-note">
-        {prior
-          ? `The dashed line is last year’s total at the same point in the program year (${GHOST_GRAIN_NOTE[prior.grain]}). `
-          : 'Last year is not available for this view. '}
+        {isTarget
+          ? `The dashed line is last year’s year-end total, ${fmt(target.total)}: the final total to beat, not a same-date comparison. `
+          : ghostKind === 'curve' && prior
+            ? `The dashed line is last year’s total at the same point in the program year (${GHOST_GRAIN_NOTE[prior.grain]}). `
+            : 'Last year is not available for this view. '}
         Each step is a snapshot date; nothing is drawn between snapshots.
       </p>
       {notes}
@@ -325,7 +342,11 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
                   </th>
                 ))}
                 <th scope="col">Total</th>
-                {prior && <th scope="col">Last year</th>}
+                {ghostName && (
+                  <th scope="col">
+                    {isTarget ? 'Last year’s total' : 'Last year'}
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -336,7 +357,9 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
                     <td key={b.key}>{fmt(r.values[b.key] ?? 0)}</td>
                   ))}
                   <td className="edu-tl__table-total">{fmt(r.total)}</td>
-                  {prior && <td>{r.ghost === null ? '—' : fmt(r.ghost)}</td>}
+                  {ghostName && (
+                    <td>{r.ghost === null ? '—' : fmt(r.ghost)}</td>
+                  )}
                 </tr>
               ))}
             </tbody>
