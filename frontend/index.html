@@ -9,11 +9,19 @@
          SVG is the primary tab icon; the 16/32/48 px ICO (#1906) is the
          fallback. site.webmanifest keeps the app's name and takes only its
          icon entries from the brand's manifest. -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="/favicon.ico"
+      sizes="16x16 32x32 48x48"
+    />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Toast Stats — Toastmasters District Performance</title>
     <meta
       name="description"
@@ -25,7 +33,10 @@
          and the og:image is a static asset shipped from public/ (F-SEC4),
          so there is no injection vector. Absolute https URLs on the
          canonical host are required for Open Graph / Twitter cards. -->
-    <meta property="og:title" content="Toast Stats — Toastmasters District Performance" />
+    <meta
+      property="og:title"
+      content="Toast Stats — Toastmasters District Performance"
+    />
     <meta
       property="og:description"
       content="Explore Toastmasters district performance: club health, DCP goals, membership trends, and Distinguished status — visualized across program years."
@@ -37,7 +48,10 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:site_name" content="Toast Stats" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Toast Stats — Toastmasters District Performance" />
+    <meta
+      name="twitter:title"
+      content="Toast Stats — Toastmasters District Performance"
+    />
     <meta
       name="twitter:description"
       content="Explore Toastmasters district performance: club health, DCP goals, membership trends, and Distinguished status — visualized across program years."
@@ -60,15 +74,18 @@
          redesign --mono token has 8 live consumers in app-shell.css with no
          metric-matched fallback. A late JetBrains Mono swap took CLS from
          0.012 to 0.199 on PR #595. Phase 2 (ops#37) adds it with a fallback. -->
-    
+
     <!-- Theme init (#1662): set data-theme before first paint so the canvas
          never flashes the wrong theme. Mirrors DarkModeContext.getInitialTheme;
          storage access is guarded (#1646). -->
     <script>
-      (function () {
+      ;(function () {
         var theme = null
         try {
-          theme = window.localStorage.getItem('theme')
+          // #2584: with consent "none" the theme is in sessionStorage.
+          theme =
+            window.sessionStorage.getItem('theme') ||
+            window.localStorage.getItem('theme')
         } catch (e) {}
         if (theme !== 'dark' && theme !== 'light') {
           theme =
@@ -85,8 +102,8 @@
       // Optimize font loading with font-display: swap fallback
       if ('fonts' in document) {
         document.fonts.ready.then(() => {
-          document.documentElement.classList.add('fonts-loaded');
-        });
+          document.documentElement.classList.add('fonts-loaded')
+        })
       }
     </script>
 
@@ -106,77 +123,119 @@
          It always loads: CAP_MS after `load`, the first pointer/key input
          (LCP is final after input), or the tab going hidden. -->
     <script>
-      // Only load GA on production hostname (not localhost / preview)
+      // #2584: opt-in. GA starts only when the shared `rt_consent` cookie
+      // (utils/consent.ts) says "all" at the current version; "minimal",
+      // "none" and "undecided" never queue a config or request the library.
+      // Choosing "all" later calls window.__tsGa.enable() (the banner), which
+      // starts the same loader without the quiet-window wait; lowering the
+      // choice calls disable(). Only on the production hostname (not
+      // localhost / preview), where __tsGa does not exist.
       if (window.location.hostname === 'ts.taverns.red') {
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { window.dataLayer.push(arguments); }
-        window.gtag = gtag;
-        gtag('js', new Date());
-        gtag('config', 'G-CDWQYHC2Z3', {
-          anonymize_ip: true,
-          allow_google_signals: false,
-          allow_ad_personalization_signals: false
-        });
-        (function () {
-          var QUIET_MS = 2000;
-          var CAP_MS = 10000;
-          var loaded = false;
-          var afterLoad = false;
-          var quietTimer = 0;
-          var loadGa = function () {
-            if (loaded) return;
-            loaded = true;
-            window.clearTimeout(quietTimer);
-            var gaScript = document.createElement('script');
-            gaScript.async = true;
-            gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-CDWQYHC2Z3';
-            document.head.appendChild(gaScript);
-          };
-          var loadGaWhenIdle = function () {
-            if ('requestIdleCallback' in window) {
-              window.requestIdleCallback(loadGa, { timeout: 2000 });
-            } else {
-              loadGa();
-            }
-          };
-          // (Re)start the quiet window. A no-op before `load`: the window
-          // starts at `load`.
-          var rearm = function () {
-            if (loaded || !afterLoad) return;
-            window.clearTimeout(quietTimer);
-            quietTimer = window.setTimeout(loadGaWhenIdle, QUIET_MS);
-          };
-          try {
-            new window.PerformanceObserver(rearm).observe({
-              type: 'largest-contentful-paint',
-              buffered: true
-            });
-            new window.PerformanceObserver(function (list) {
-              var entries = list.getEntries();
-              for (var i = 0; i < entries.length; i++) {
-                var t = entries[i].initiatorType;
-                if (t === 'fetch' || t === 'xmlhttprequest') return rearm();
-              }
-            }).observe({ type: 'resource' });
-          } catch (e) {}
-          var onLoad = function () {
-            afterLoad = true;
-            rearm();
-            window.setTimeout(loadGa, CAP_MS);
-          };
-          if (document.readyState === 'complete') {
-            onLoad();
-          } else {
-            window.addEventListener('load', onLoad);
+        var GA_ID = 'G-CDWQYHC2Z3'
+        var gaStarted = false
+        var gaLoadNow = function () {}
+        var gaConsented = function () {
+          var m = /(?:^|;\s*)rt_consent=([^;]*)/.exec(document.cookie || '')
+          return !!m && m[1] === 'v1.all'
+        }
+        var startGa = function (immediate) {
+          if (gaStarted) return
+          gaStarted = true
+          window['ga-disable-' + GA_ID] = false
+          window.dataLayer = window.dataLayer || []
+          function gtag() {
+            window.dataLayer.push(arguments)
           }
-          // Backstop in case `load` never fires (a hung subresource).
-          window.setTimeout(loadGa, 2 * CAP_MS);
-          window.addEventListener('pointerdown', loadGa, { once: true, passive: true, capture: true });
-          window.addEventListener('keydown', loadGa, { once: true, capture: true });
-          document.addEventListener('visibilitychange', function () {
-            if (document.visibilityState === 'hidden') loadGa();
-          });
-        })();
+          window.gtag = gtag
+          gtag('js', new Date())
+          gtag('config', 'G-CDWQYHC2Z3', {
+            anonymize_ip: true,
+            allow_google_signals: false,
+            allow_ad_personalization_signals: false,
+          })
+          ;(function () {
+            var QUIET_MS = 2000
+            var CAP_MS = 10000
+            var loaded = false
+            var afterLoad = false
+            var quietTimer = 0
+            var loadGa = function () {
+              if (loaded) return
+              loaded = true
+              window.clearTimeout(quietTimer)
+              var gaScript = document.createElement('script')
+              gaScript.async = true
+              gaScript.src =
+                'https://www.googletagmanager.com/gtag/js?id=G-CDWQYHC2Z3'
+              document.head.appendChild(gaScript)
+            }
+            gaLoadNow = loadGa
+            var loadGaWhenIdle = function () {
+              if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(loadGa, { timeout: 2000 })
+              } else {
+                loadGa()
+              }
+            }
+            // (Re)start the quiet window. A no-op before `load`: the window
+            // starts at `load`.
+            var rearm = function () {
+              if (loaded || !afterLoad) return
+              window.clearTimeout(quietTimer)
+              quietTimer = window.setTimeout(loadGaWhenIdle, QUIET_MS)
+            }
+            try {
+              new window.PerformanceObserver(rearm).observe({
+                type: 'largest-contentful-paint',
+                buffered: true,
+              })
+              new window.PerformanceObserver(function (list) {
+                var entries = list.getEntries()
+                for (var i = 0; i < entries.length; i++) {
+                  var t = entries[i].initiatorType
+                  if (t === 'fetch' || t === 'xmlhttprequest') return rearm()
+                }
+              }).observe({ type: 'resource' })
+            } catch (e) {}
+            var onLoad = function () {
+              afterLoad = true
+              rearm()
+              window.setTimeout(loadGa, CAP_MS)
+            }
+            if (document.readyState === 'complete') {
+              onLoad()
+            } else {
+              window.addEventListener('load', onLoad)
+            }
+            // Backstop in case `load` never fires (a hung subresource).
+            window.setTimeout(loadGa, 2 * CAP_MS)
+            window.addEventListener('pointerdown', loadGa, {
+              once: true,
+              passive: true,
+              capture: true,
+            })
+            window.addEventListener('keydown', loadGa, {
+              once: true,
+              capture: true,
+            })
+            document.addEventListener('visibilitychange', function () {
+              if (document.visibilityState === 'hidden') loadGa()
+            })
+          })()
+          // A mid-session "all": the visitor just clicked, so there is no
+          // first screen left to protect.
+          if (immediate) gaLoadNow()
+        }
+        window.__tsGa = {
+          enable: function () {
+            window['ga-disable-' + GA_ID] = false
+            startGa(true)
+          },
+          disable: function () {
+            window['ga-disable-' + GA_ID] = true
+          },
+        }
+        if (gaConsented()) startGa(false)
       }
     </script>
   </head>

@@ -83,6 +83,12 @@ Object.defineProperty(window, 'localStorage', {
     clear: vi.fn(() => {
       Object.keys(store).forEach(k => delete store[k])
     }),
+    // The Storage enumeration API, so code that walks keys (consent "none"
+    // moving saved preferences to the session, #2584) works under test.
+    key: (i: number) => Object.keys(store)[i] ?? null,
+    get length() {
+      return Object.keys(store).length
+    },
   },
 })
 
@@ -92,6 +98,15 @@ Object.defineProperty(window, 'localStorage', {
 // localStorage on the Districts page.
 beforeEach(() => {
   Object.keys(store).forEach(k => delete store[k])
+  // Saved preferences persist only after the visitor chose "all" or "minimal"
+  // (#2584, utils/preferenceStorage). Tests of persistence start from that
+  // state; tests of consent itself clear the cookie in their own beforeEach.
+  document.cookie = 'rt_consent=v1.minimal; Path=/'
+  try {
+    window.sessionStorage.clear()
+  } catch {
+    // sessionStorage unavailable in this environment
+  }
 })
 
 // Global mock-reset safety net (V5, #914, epic #917 S3). Clear every mock's

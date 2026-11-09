@@ -79,6 +79,10 @@ function makeEnv(
   const observers: Array<{ type: string; cb: (list: unknown) => void }> = []
 
   const document: FakeEnv['document'] = {
+    // The loader only starts once the visitor chose "all" (#2584, the gate
+    // itself is covered by guards/gaConsentGate.test.ts); these tests are
+    // about its deferral, so they start from that choice.
+    cookie: 'rt_consent=v1.all',
     readyState,
     visibilityState: 'visible',
     createElement: () => ({ src: '', async: false }),

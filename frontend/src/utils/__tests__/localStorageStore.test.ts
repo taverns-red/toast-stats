@@ -10,6 +10,9 @@ import {
 describe('localStorageStore — versioned localStorage primitive (#420)', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
+    // Saved on the device only once the visitor chose all or minimal (#2584).
+    document.cookie = 'rt_consent=v1.minimal; Path=/'
     vi.restoreAllMocks()
   })
 

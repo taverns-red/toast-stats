@@ -18,6 +18,9 @@ import { resolveBaseUrl } from './helpers/baseUrl'
  * the requests that fixture stubbed.
  */
 
+// GA only loads once the visitor has chosen "all" (#2584): seed that choice.
+test.use({ consent: 'all' })
+
 const PROD_ORIGIN = 'https://ts.taverns.red'
 const BASE = resolveBaseUrl(process.env).replace(/\/$/, '')
 // GA4 sends the first hit at once and batches later events (~5 s): wait past

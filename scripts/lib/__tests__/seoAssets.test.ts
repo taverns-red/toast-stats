@@ -27,6 +27,7 @@ const EXPECTED_PATHS = [
   '/awards',
   '/mcp', // #1165 — public MCP-server install page
   '/videos', // #2310 — how-to videos list
+  '/privacy', // #2584 — what each cookie choice stores
 ]
 
 function locs(xml: string): string[] {

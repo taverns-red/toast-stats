@@ -6,6 +6,12 @@
  * FIFO eviction at 50 entries.
  */
 
+import {
+  readPreference,
+  removePreference,
+  writePreference,
+} from './preferenceStorage'
+
 const STORAGE_KEY = 'toast-stats-error-telemetry'
 const MAX_ENTRIES = 50
 
@@ -44,7 +50,7 @@ export function recordError(
 
     // FIFO eviction — keep only the last MAX_ENTRIES
     const trimmed = existing.slice(-MAX_ENTRIES)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed))
+    if (!writePreference(STORAGE_KEY, JSON.stringify(trimmed))) return null
     return record
   } catch {
     // localStorage unavailable or full — silently ignore
@@ -57,7 +63,7 @@ export function recordError(
  */
 export function getStoredErrors(): ErrorRecord[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = readPreference(STORAGE_KEY)
     if (!raw) return []
     return JSON.parse(raw) as ErrorRecord[]
   } catch {
@@ -76,11 +82,7 @@ export function getErrorCount(): number {
  * Clear all stored errors.
  */
 export function clearErrors(): void {
-  try {
-    localStorage.removeItem(STORAGE_KEY)
-  } catch {
-    // ignore
-  }
+  removePreference(STORAGE_KEY)
 }
 
 // --- Remote Reporting (#254) ---

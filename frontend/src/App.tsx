@@ -116,6 +116,9 @@ const McpPage = React.lazy(() => import('./pages/McpPage'))
 // Code-split: VideosPage — published how-to videos (#2310)
 const VideosPage = React.lazy(() => import('./pages/VideosPage'))
 
+// Code-split: PrivacyPage — what each cookie choice stores (#2584)
+const PrivacyPage = React.lazy(() => import('./pages/PrivacyPage'))
+
 // Code-split: DistrictMapPage — the club map (#1784, epic #1781). Its chunk
 // lazy-imports MapLibre (ADR-016); the map route budget is CI-enforced.
 const DistrictMapPage = React.lazy(() => import('./pages/DistrictMapPage'))
@@ -458,6 +461,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
               <McpPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: 'privacy',
+          element: (
+            <Suspense fallback={<PageLoadingFallback />}>
+              <PrivacyPage />
             </Suspense>
           ),
         },

@@ -4696,6 +4696,17 @@
     min-height: calc(100vh - 56px);
   }
 
+  /* #2584: the region and world rollup pages get the same reserve as
+     #1837. Their loading states are short, so at 1280px the footer painted
+     inside the viewport and was pushed off when the date index and rankings
+     landed; /regions/changes scored 0.081 of its 0.1 CLS budget from the
+     footer alone, and any growth of the footer (the Privacy & cookies link)
+     tipped it over. Filling the area under the top bar keeps the footer just
+     below the fold from first paint. */
+  .rollup-page {
+    min-height: calc(100vh - 56px);
+  }
+
   .district-detail-page {
     /* Data-table page (clubs): wide cap (#810, ADR-006 §1). */
     max-width: var(--page-max-wide);

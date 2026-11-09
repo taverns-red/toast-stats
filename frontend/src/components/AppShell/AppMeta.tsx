@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { RedVoteMadeByLine } from '../RedVotePromo'
+import { openConsentSettings } from '../../utils/consent'
 
 declare const __APP_VERSION__: string
 
@@ -26,6 +27,19 @@ const AppMeta: React.FC = () => {
           Red Taverns
         </a>{' '}
         production
+        {' · '}
+        {/* #2584 — reopens the cookie and analytics choice. On the first
+            line, not the meta strip: one more item there wraps the strip to
+            another line, and the taller footer pushes /regions/changes over
+            its CLS budget. AppMeta reaches the footer and the mobile About
+            menu alike. */}
+        <button
+          type="button"
+          className="consent-reopen app-shell-footer__link"
+          onClick={openConsentSettings}
+        >
+          Privacy &amp; cookies
+        </button>
       </div>
       {/* #2090 — the Red Vote made-by line, in the footer on desktop and in
           the "About ▾" disclosure on mobile. */}
