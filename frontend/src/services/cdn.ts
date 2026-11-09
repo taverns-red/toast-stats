@@ -31,6 +31,8 @@ import {
   EducationRollupIndexReaderSchema,
   EducationRollupProgramYearReaderSchema,
   educationRollupObjectPath,
+  EducationTimelineEntityReaderSchema,
+  educationTimelineEntityPath,
   GlobalClubRaceReaderSchema,
   GlobalHistorySchema,
   GlobalTotalsSchema,
@@ -864,21 +866,41 @@ export async function fetchCdnEducationRollupIndex(): Promise<EducationRollupInd
   }
 }
 
-// RED stubs (#2592): replaced in the next commit.
+/** `derived/education-timeline/<PY>/{world,region-<n>,district-<id>}.json`
+ *  (#2592, from #2591) — one entity's cumulative education awards at each
+ *  snapshot date of a program year, plus its prior-year ghost. Same path in
+ *  both buckets. Throws on a program year or id that is not one. */
 export function cdnEducationTimelineUrl(
-  _programYear: string,
-  _kind: EducationTimelineEntityKind,
-  _id: string | null
+  programYear: string,
+  kind: EducationTimelineEntityKind,
+  id: string | null
 ): string {
-  throw new Error('not implemented')
+  return `${cdnBaseUrl()}/${educationTimelineEntityPath(programYear, kind, id)}`
 }
 
+/**
+ * One entity's education timeline (#2592), **tolerantly**: the file may be
+ * absent even when the rollup index names the program year (a first PY whose
+ * set promotion refused, or before the backfill), so a 404, an off-contract
+ * body or a network error is `null` -- "not available yet" -- never a zero
+ * line and never a thrown error.
+ */
 export async function fetchCdnEducationTimeline(
-  _programYear: string,
-  _kind: EducationTimelineEntityKind,
-  _id: string | null
+  programYear: string,
+  kind: EducationTimelineEntityKind,
+  id: string | null
 ): Promise<EducationTimelineEntity | null> {
-  throw new Error('not implemented')
+  try {
+    const res = await fetch(cdnEducationTimelineUrl(programYear, kind, id))
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    const parsed = EducationTimelineEntityReaderSchema.safeParse(
+      await res.json()
+    )
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
 }
 
 /** `snapshots/{date}/reports-rollups.json` (#2012) — region and world
