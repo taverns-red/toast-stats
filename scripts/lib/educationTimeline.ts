@@ -327,3 +327,17 @@ export function timelineIndexRow(
     priorGrain: t.prior?.grain ?? null,
   }
 }
+
+export interface TimelineUpdatePlan {
+  written: EducationTimeline[]
+  rows: NonNullable<EducationRollupIndex['timelines']>
+  skipped: { programYear: string; reason: string }[]
+}
+
+/** Stub (red): lands in the next commit (#2591). */
+export function planTimelineUpdates(
+  _rollups: readonly EducationRollupProgramYear[],
+  _existing: ReadonlyMap<string, EducationTimeline>
+): TimelineUpdatePlan {
+  throw new Error('not implemented')
+}

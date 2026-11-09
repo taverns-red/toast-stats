@@ -26,6 +26,7 @@ import {
   ghostFromLedger,
   ghostFromRollups,
   ghostFromTimeline,
+  planTimelineUpdates,
   timelineIndexRow,
   upsertTimelineDate,
   withPrior,
@@ -375,5 +376,93 @@ describe('timelineIndexRow', () => {
     })
     const g = withPrior(t, ghostFromTimeline(t))
     expect(timelineIndexRow(g).priorGrain).toBe('day')
+  })
+})
+
+describe('planTimelineUpdates (the daily, incremental step)', () => {
+  const rollupAt = (programYear: string, date: string, n = 20) =>
+    foldReportsDate({
+      programYear,
+      date,
+      reports: [dataset('49', n)],
+      regionHistory,
+    })
+  const ledgerRollup = rollUpEducationProgramYear({
+    programYear: '2018-2019',
+    source: 'ledger-history',
+    sourceDate: null,
+    ledgerFiles: [],
+    reports: [],
+    districtIds: ['111'],
+    regionHistory,
+  })
+
+  it('seeds the newest reports PY and never a ledger PY', () => {
+    const r = planTimelineUpdates([ledgerRollup, rollupAt(PY, D3)], new Map())
+    expect(r.written.map(t => t.programYear)).toEqual([PY])
+    expect(r.written[0]?.dates).toEqual([D3])
+    expect(r.rows.map(x => x.programYear)).toEqual([PY])
+  })
+
+  it('appends today to the existing timeline, reading nothing else', () => {
+    const existing = build([D1, D2]) as EducationTimeline
+    const r = planTimelineUpdates(
+      [rollupAt(PY, D3, 81)],
+      new Map([[PY, existing]])
+    )
+    expect(r.written[0]?.dates).toEqual([D1, D2, D3])
+    expect(r.written[0]?.world.slice(0, 2)).toEqual(existing.world)
+  })
+
+  it('does not seed an older reports PY, but updates one that has a timeline', () => {
+    const old = rollupAt('2025-2026', '2026-06-30')
+    expect(
+      planTimelineUpdates([old, rollupAt(PY, D3)], new Map()).written.map(
+        t => t.programYear
+      )
+    ).toEqual([PY])
+    const seeded = upsertTimelineDate(null, '2025-2026', '2026-06-29', old)
+    const r = planTimelineUpdates(
+      [old, rollupAt(PY, D3)],
+      new Map([['2025-2026', seeded]])
+    )
+    expect(r.written.map(t => t.programYear)).toEqual(['2025-2026', PY])
+    expect(r.written[0]?.dates).toEqual(['2026-06-29', '2026-06-30'])
+  })
+
+  it('a seeded year takes its ghost from the prior year timeline', () => {
+    const prior = upsertTimelineDate(
+      null,
+      '2025-2026',
+      '2025-10-12',
+      rollupAt('2025-2026', '2025-10-12')
+    )
+    const r = planTimelineUpdates(
+      [rollupAt(PY, D3)],
+      new Map([['2025-2026', prior]])
+    )
+    expect(r.written[0]?.prior?.programYear).toBe('2025-2026')
+    expect(r.written[0]?.prior?.grain).toBe('day')
+    expect(r.rows.map(x => x.programYear)).toEqual(['2025-2026', PY])
+    expect(r.rows[1]?.priorGrain).toBe('day')
+  })
+
+  it('names an existing timeline it did not touch, in the index rows', () => {
+    const existing = build([D1]) as EducationTimeline
+    const r = planTimelineUpdates([], new Map([[PY, existing]]))
+    expect(r.written).toEqual([])
+    expect(r.rows.map(x => x.asOf)).toEqual([D1])
+  })
+
+  it('a date with no available district is skipped and named, never fatal', () => {
+    const none = foldReportsDate({
+      programYear: PY,
+      date: D3,
+      reports: [],
+      regionHistory,
+    })
+    const r = planTimelineUpdates([none], new Map())
+    expect(r.written).toEqual([])
+    expect(r.skipped).toEqual([{ programYear: PY, reason: expect.any(String) }])
   })
 })
