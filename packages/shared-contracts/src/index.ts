@@ -747,6 +747,9 @@ export {
   EducationTimelineEntitySchema,
   educationTimelinePrefix,
   educationTimelineEntityPath,
+  educationTimelineEntityFile,
+  EducationTimelineEntityKindSchema,
+  type EducationTimelineEntityKind,
   parseEducationTimelinePath,
   type EducationTimelineEntity,
 } from './schemas/education-timeline.schema.js'

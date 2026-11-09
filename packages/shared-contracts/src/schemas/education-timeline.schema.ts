@@ -218,26 +218,170 @@ export function educationTimelineObjectPath(programYear: string): string {
   return `${EDUCATION_TIMELINE_PREFIX}/${programYear}.json`
 }
 
-// ---- Stub (red): the per-entity contract lands in the next commit (#2591) ----
-export type EducationTimelineEntity = {
-  _format: { version: '1.0.0'; type: 'education-timeline-entity' }
-  programYear: string
+// ---------------------------------------------------------------------------
+// Per-entity files (the published layout): one object per world / region /
+// district, so a district page downloads its own series and nothing else.
+//
+//   derived/education-timeline/<PY>/world.json
+//   derived/education-timeline/<PY>/region-<n>.json
+//   derived/education-timeline/<PY>/district-<id>.json
+//
+// Each holds that entity's cumulative points and its own prior-year ghost.
+// ---------------------------------------------------------------------------
+
+export const EDUCATION_TIMELINE_ENTITY_VERSION = EDUCATION_TIMELINE_VERSION
+export const EducationTimelineEntityKindSchema = z.enum([
+  'world',
+  'region',
+  'district',
+])
+export type EducationTimelineEntityKind = z.infer<
+  typeof EducationTimelineEntityKindSchema
+>
+
+const RegionId = z.string().regex(/^[A-Za-z0-9]+$/)
+
+const EntityPriorSchema = z
+  .object({
+    programYear: ProgramYear,
+    source: EducationTimelinePriorSourceSchema,
+    grain: EducationTimelineGrainSchema,
+    points: z.array(GhostPointSchema),
+  })
+  .strict()
+  .superRefine((p, ctx) => {
+    const keyOk = p.grain === 'day' ? IsoDate : YearMonth
+    if (!p.points.every(g => keyOk.safeParse(g.at).success)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `every ghost point's \`at\` must match grain ${p.grain}`,
+      })
+    } else if (!ascendingUnique(p.points.map(g => g.at))) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'ghost points must be strictly ascending by `at`',
+      })
+    }
+  })
+export type EducationTimelineEntityPrior = z.infer<typeof EntityPriorSchema>
+
+const entityBase = {
+  _format: z
+    .object({
+      version: z.literal(EDUCATION_TIMELINE_VERSION),
+      type: z.literal('education-timeline-entity'),
+    })
+    .strict(),
+  programYear: ProgramYear,
+  /** The newest date with a point: the last of `points`. */
+  asOf: IsoDate,
+  prior: EntityPriorSchema.nullable(),
 }
-export const EducationTimelineEntitySchema = z.never()
-export function educationTimelinePrefix(_py: string): string {
-  throw new Error('not implemented')
+
+const worldRef = z.object({ kind: z.literal('world'), id: z.null() }).strict()
+const regionRef = z.object({ kind: z.literal('region'), id: RegionId }).strict()
+const districtRef = z
+  .object({ kind: z.literal('district'), id: DistrictId })
+  .strict()
+
+export const EducationTimelineEntitySchema = z
+  .union([
+    z
+      .object({
+        ...entityBase,
+        entity: worldRef,
+        points: z.array(EducationTimelineAggregatePointSchema).min(1),
+      })
+      .strict(),
+    z
+      .object({
+        ...entityBase,
+        entity: regionRef,
+        points: z.array(EducationTimelineAggregatePointSchema).min(1),
+      })
+      .strict(),
+    z
+      .object({
+        ...entityBase,
+        entity: districtRef,
+        points: z.array(EducationTimelinePointSchema).min(1),
+      })
+      .strict(),
+  ])
+  .superRefine((t, ctx) => {
+    const issue = (message: string): void =>
+      ctx.addIssue({ code: 'custom', message })
+    if (!ascendingUnique(t.points.map(p => p.date))) {
+      issue('points must be strictly ascending by date, one per date')
+    }
+    if (t.asOf !== t.points[t.points.length - 1]?.date) {
+      issue('asOf must be the date of the last point')
+    }
+    if (
+      t.prior &&
+      Number(t.prior.programYear.slice(0, 4)) !==
+        Number(t.programYear.slice(0, 4)) - 1
+    ) {
+      issue('prior must be the previous program year')
+    }
+  })
+export type EducationTimelineEntity = z.infer<
+  typeof EducationTimelineEntitySchema
+>
+
+const ENTITY_FILE =
+  /^(world|region-([A-Za-z0-9]+)|district-([A-Za-z0-9]+))\.json$/
+
+/** `derived/education-timeline/<PY>` (no trailing slash): a PY's prefix. */
+export function educationTimelinePrefix(programYear: string): string {
+  ProgramYear.parse(programYear)
+  return `${EDUCATION_TIMELINE_PREFIX}/${programYear}`
 }
-export function educationTimelineEntityPath(
-  _py: string,
-  _kind: 'world' | 'region' | 'district',
-  _id: string | null
+
+/** The file name an entity is published under, inside its PY prefix. */
+export function educationTimelineEntityFile(
+  kind: EducationTimelineEntityKind,
+  id: string | null
 ): string {
-  throw new Error('not implemented')
+  if (kind === 'world') {
+    if (id !== null) throw new Error('the world has no id')
+    return 'world.json'
+  }
+  if (id === null) throw new Error(`a ${kind} needs an id`)
+  RegionId.parse(id)
+  return `${kind}-${id}.json`
 }
-export function parseEducationTimelinePath(_path: string): {
+
+/** `derived/education-timeline/<PY>/<file>` — validated, never raw input. */
+export function educationTimelineEntityPath(
+  programYear: string,
+  kind: EducationTimelineEntityKind,
+  id: string | null
+): string {
+  return `${educationTimelinePrefix(programYear)}/${educationTimelineEntityFile(kind, id)}`
+}
+
+const ENTITY_PATH = new RegExp(
+  `^${EDUCATION_TIMELINE_PREFIX}/(\\d{4}-\\d{4})/([^/]+)$`
+)
+
+/**
+ * The entity a published path names, or null for anything that is not one of
+ * the three name patterns (so a stray object under the prefix is never read
+ * as part of the timeline).
+ */
+export function parseEducationTimelinePath(path: string): {
   programYear: string
-  kind: 'world' | 'region' | 'district'
+  kind: EducationTimelineEntityKind
   id: string | null
 } | null {
-  throw new Error('not implemented')
+  const m = ENTITY_PATH.exec(path)
+  if (!m) return null
+  const programYear = m[1] as string
+  if (!ProgramYear.safeParse(programYear).success) return null
+  const f = ENTITY_FILE.exec(m[2] as string)
+  if (!f) return null
+  if (f[1] === 'world') return { programYear, kind: 'world', id: null }
+  if (f[2] !== undefined) return { programYear, kind: 'region', id: f[2] }
+  return { programYear, kind: 'district', id: f[3] as string }
 }
