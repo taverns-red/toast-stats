@@ -87,8 +87,26 @@ describe('education-timeline.css', () => {
     expect(new Set(lights).size).toBe(PATHWAYS_PATHS.length)
   })
 
-  it('reserves the chart height with a floor, for the skeleton and the empty state', () => {
-    expect(css).toMatch(/\.edu-tl-section--reserved\s*\{[^}]*min-height:/s)
+  it("reserves height by construction: the skeleton shares the loaded chart's slots (#2592)", () => {
+    // No guessed pixel floor: the legend and note have line-count slots, and
+    // the skeleton draws the same slots, so the blocks are the same height.
+    expect(css).not.toMatch(
+      /\.edu-tl-section--reserved\s*\{[^}]*min-height:\s*calc\(var\(--edu-tl-h\)/s
+    )
+    for (const slot of ['legend', 'note']) {
+      expect(css).toMatch(
+        new RegExp(
+          `\\.edu-tl__${slot}[^{]*\\{[^}]*min-height:[^;]*var\\(--edu-tl-${slot}-`,
+          's'
+        )
+      )
+      expect(css).toMatch(
+        new RegExp(
+          `\\.edu-tl__skeleton-${slot}[^{]*\\{[^}]*min-height:[^;]*var\\(--edu-tl-${slot}-`,
+          's'
+        )
+      )
+    }
   })
 })
 

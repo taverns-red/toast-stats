@@ -104,6 +104,20 @@ describe('EducationTimelineSection', () => {
     expect(container.querySelector('.edu-tl-section--reserved')).not.toBeNull()
   })
 
+  it("draws the loaded chart's slots while loading, so both are the same height", () => {
+    useTimeline.mockReturnValue({
+      timeline: null,
+      isLoading: true,
+      listed: true,
+    })
+    const { container } = renderSection()
+    for (const slot of ['legend', 'note', 'toggle']) {
+      expect(
+        container.querySelector(`.edu-tl__skeleton-${slot}`)
+      ).not.toBeNull()
+    }
+  })
+
   it('renders the chart once the file is there', async () => {
     useTimeline.mockReturnValue({
       timeline: DISTRICT_61_TIMELINE,
