@@ -104,8 +104,11 @@
     min-width: 0;
   }
 
+  /* As a flex item this span is blockified, so the global span line-height
+     (1.5 × 24px = 36px) would set the row height. Keep the tile's 30px. */
   .district-hub__tile-value [data-testid='distinguished-confirmed'] {
     flex: none;
+    line-height: inherit;
   }
 
   .district-hub__tile-value .distinguished-count__provisional {
