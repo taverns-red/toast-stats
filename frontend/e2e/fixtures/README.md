@@ -32,3 +32,13 @@ BASE_URL=http://127.0.0.1:4173 SMOKE_FIXTURES_DIR=/tmp/fx npx playwright test e2
 ```
 
 A fixture miss names the path. Add it to the manifest. To find what a run requests, set `SMOKE_FIXTURES_RECORD_FILE=rec.txt` (it passes through to the live CDN and logs each path), then run `npx tsx scripts/smoke-fixtures-uncovered.ts rec.txt`.
+
+## Seeded cookie consent (#2584)
+
+Toast Stats asks visitors to choose All, Minimal or None before it saves
+anything or loads Google Analytics. A fresh browser has no `rt_consent` cookie,
+so every page would open with the consent banner. The shared fixture
+(`test.ts`) therefore seeds `rt_consent=v1.minimal` in every context by
+default: the banner stays closed, preferences persist and GA does not load.
+Override per file with `test.use({ consent: 'all' | 'minimal' | 'none' | 'unset' })`.
+`ga-page-view.smoke.ts` uses `all`; `consent-banner.smoke.ts` uses `unset`.

@@ -36,6 +36,34 @@ import {
  * the page_view count.
  */
 
+/* Seeded cookie consent (#2584). A fresh browser has no `rt_consent` cookie,
+ * so every page would open with the consent banner (a fixed overlay at the
+ * bottom) and no analytics. Smokes measure page height and first-screen
+ * content, so by default this fixture seeds the visitor's choice as
+ * 'minimal': the banner stays closed, saved preferences work as before, and
+ * GA does not load. A smoke that needs something else states it:
+ *   test.use({ consent: 'all' })    GA loads (ga-page-view.smoke.ts)
+ *   test.use({ consent: 'none' })   preferences are session-only
+ *   test.use({ consent: 'unset' })  nothing seeded; the banner shows
+ *                                   (consent-banner.smoke.ts)
+ * The cookie value mirrors utils/consent.ts: `v<CONSENT_VERSION>.<level>`;
+ * it is only written when no consent cookie exists yet, so a smoke that
+ * changes the choice keeps it across navigations. */
+export type SeededConsent = 'all' | 'minimal' | 'none' | 'unset'
+
+/** Seed the consent cookie on every page of `context` (before any script). */
+async function seedConsent(
+  context: BrowserContext,
+  consent: SeededConsent
+): Promise<void> {
+  if (consent === 'unset') return
+  await context.addInitScript(level => {
+    if (!document.cookie.includes('rt_consent=')) {
+      document.cookie = `rt_consent=v1.${level}; Path=/; Max-Age=31536000; SameSite=Lax`
+    }
+  }, consent)
+}
+
 const GA_HOST_RE = /(^|\.)(google-analytics\.com|analytics\.google\.com)$/
 const GTM_HOST_RE = /(^|\.)googletagmanager\.com$/
 
@@ -53,6 +81,8 @@ export type NewFixtureContext = (
 ) => Promise<BrowserContext>
 
 interface GaFixtures {
+  /** The consent choice seeded into every context (#2584); default minimal. */
+  consent: SeededConsent
   /** GA collect requests the stub answered, in arrival order. */
   gaCollect: Request[]
   /** Responses with status >= 400, as `status host/path` (#2248). */
@@ -61,6 +91,8 @@ interface GaFixtures {
   cdnFixtures: CdnFixtureTally | null
   /** `browser.newContext()` with the CDN fixture on it (#2545). */
   newFixtureContext: NewFixtureContext
+  /** Internal: seeds the consent cookie (#2584). */
+  consentSeed: undefined
 }
 
 /** The fixture's env: a directory to read, or a file to record into. */
@@ -71,6 +103,15 @@ function fixtureEnv() {
 }
 
 export const test = base.extend<GaFixtures>({
+  consent: ['minimal', { option: true }],
+  /* Seeds the consent cookie on the default context (#2584, see above). */
+  consentSeed: [
+    async ({ context, consent }, use) => {
+      await seedConsent(context, consent)
+      await use(undefined)
+    },
+    { auto: true },
+  ],
   /* PR Preview shards read recorded CDN fixtures, not live cdn-staging
    * (#2545). Off unless SMOKE_FIXTURES_DIR is set (only the shard step sets
    * it), so staging.smoke on the real channel, the wire-cost test and prod
@@ -105,11 +146,12 @@ export const test = base.extend<GaFixtures>({
    * and unchecked (#2545). Same install and same teardown check; with the
    * fixture off it is `browser.newContext()`. The lint test
    * smokes-do-not-bypass-cdn-fixtures.test.ts fails a bare newContext. */
-  newFixtureContext: async ({ browser }, use, testInfo) => {
+  newFixtureContext: async ({ browser, consent }, use, testInfo) => {
     const { dir, recordFile, on } = fixtureEnv()
     const made: CdnFixtureTally[] = []
     await use(async options => {
       const ctx = await browser.newContext(options)
+      await seedConsent(ctx, consent)
       if (on) made.push(await installCdnFixtures(ctx, { dir, recordFile }))
       return ctx
     })
