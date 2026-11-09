@@ -45,11 +45,17 @@ import { parseRunManifest, type RunManifestEntry } from './runManifest.js'
 import {
   EDUCATION_ROLLUP_STAGE,
   educationRollupDateHold,
+  isEducationTimelineObject,
   planEducationRollup,
+  refuseInconsistentTimelines,
+  timelinePrefixes,
   type EducationRollupPlan,
   type SidecarHoldState,
 } from './educationRollupPlan.js'
-import { EDUCATION_ROLLUP_INDEX_PATH } from '@taverns-red/shared-contracts'
+import {
+  EDUCATION_ROLLUP_INDEX_PATH,
+  parseEducationTimelinePath,
+} from '@taverns-red/shared-contracts'
 
 export const DEFAULT_SIDECAR_MANIFEST_FILE =
   '/tmp/report-sidecars/written.jsonl'
@@ -169,27 +175,80 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
     let entries: RunManifestEntry[] = []
     let asOf: string | null = null
     try {
+      const stagingIndex = catOrNull(staging, EDUCATION_ROLLUP_INDEX_PATH)
+      // The entity files of each timeline PY the index names (#2591): one
+      // listing per named prefix, never a recursive listing of derived/.
+      const timelineObjects: string[] = []
+      for (const prefix of stagingIndex ? timelinePrefixes(stagingIndex) : []) {
+        const r = run(['storage', 'ls', `gs://${staging}/${prefix}/`])
+        if (r.status !== 0) {
+          throw new Error(
+            `could not list gs://${staging}/${prefix}/: ${(r.stderr ?? '').trim()}`
+          )
+        }
+        for (const line of r.stdout.split('\n')) {
+          const m = /^gs:\/\/[^/]+\/(.+)$/.exec(line.trim())
+          if (m) timelineObjects.push(m[1] as string)
+        }
+      }
       const rollup = planEducationRollup({
-        stagingIndex: catOrNull(staging, EDUCATION_ROLLUP_INDEX_PATH),
+        stagingIndex,
         prodIndex: catOrNull(prod, EDUCATION_ROLLUP_INDEX_PATH),
         prodIndexedDates: indexed,
+        timelineObjects,
       })
       if (rollup.paths.length > 0) {
-        const dir = path.join(work, 'education-rollup')
-        mkdirSync(dir, { recursive: true })
-        read(
-          [
-            'storage',
-            'cp',
-            ...rollup.paths.map(p => `gs://${staging}/${p}`),
-            `${dir}/`,
-          ],
-          `could not download the ${rollup.paths.length} education rollup object(s)`
+        // One download directory per source directory: the rollup year and
+        // the timeline of a program year share a file name (#2591).
+        const base = path.join(work, 'education-rollup')
+        const dirOf = (p: string) => path.join(base, path.dirname(p))
+        const byDir = new Map<string, string[]>()
+        for (const p of rollup.paths) {
+          byDir.set(dirOf(p), [...(byDir.get(dirOf(p)) ?? []), p])
+        }
+        for (const [dir, paths] of byDir) {
+          mkdirSync(dir, { recursive: true })
+          read(
+            [
+              'storage',
+              'cp',
+              ...paths.map(p => `gs://${staging}/${p}`),
+              `${dir}/`,
+            ],
+            `could not download the ${paths.length} education rollup object(s)`
+          )
+        }
+        // A timeline PY whose files disagree with the index row (a partial
+        // upload) is dropped whole; the years and the index still promote.
+        const asOfByPath = new Map<string, string | null>()
+        for (const p of rollup.paths) {
+          if (!isEducationTimelineObject(p)) continue
+          try {
+            const v = JSON.parse(
+              readFileSync(path.join(dirOf(p), path.basename(p)), 'utf-8')
+            ) as { asOf?: unknown }
+            asOfByPath.set(p, typeof v.asOf === 'string' ? v.asOf : null)
+          } catch {
+            asOfByPath.set(p, null)
+          }
+        }
+        const refused = refuseInconsistentTimelines(
+          stagingIndex as string,
+          asOfByPath
         )
-        entries = rollup.paths.map(p => ({
+        for (const [py, why] of refused) {
+          log(
+            `::warning title=Education timeline::${py} timeline files are not promoted: ${why}`
+          )
+        }
+        const kept = rollup.paths.filter(p => {
+          const e = parseEducationTimelinePath(p)
+          return !(e && refused.has(e.programYear))
+        })
+        entries = kept.map(p => ({
           path: p,
           sha256: createHash('sha256')
-            .update(readFileSync(path.join(dir, path.basename(p))))
+            .update(readFileSync(path.join(dirOf(p), path.basename(p))))
             .digest('hex'),
           date: null,
           stage: EDUCATION_ROLLUP_STAGE,

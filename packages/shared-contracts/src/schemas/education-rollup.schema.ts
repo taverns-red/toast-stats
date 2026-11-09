@@ -254,6 +254,30 @@ export const EducationRollupIndexSchema = z
     omittedProgramYears: z.array(
       z.object({ programYear: ProgramYear, reason: z.string() }).strict()
     ),
+    /**
+     * The education timelines that sit beside the rollup (#2591), ascending
+     * by program year, each named by its PY prefix: the promotion plan
+     * promotes the entity files (world / region-<n> / district-<id>) under
+     * the named prefixes and nothing else. Optional and additive
+     * (ADR 0019): an index without it is the previous release's.
+     */
+    timelines: z
+      .array(
+        z
+          .object({
+            programYear: ProgramYear,
+            /** `derived/education-timeline/<PY>`: the PY's entity files. */
+            prefix: z.string(),
+            /** The timeline's newest date. */
+            asOf: IsoDate,
+            /** How many dates it holds. */
+            dates: Count,
+            /** The prior-year ghost's grain; null = no ghost. */
+            priorGrain: z.enum(['day', 'month']).nullable(),
+          })
+          .strict()
+      )
+      .optional(),
     trend: z
       .object({
         /** District → PY → totals; null = not available that PY. A PY the

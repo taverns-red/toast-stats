@@ -1,0 +1,37 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "education-timeline-entity"
+  },
+  "programYear": "2026-2027",
+  "entity": {
+    "kind": "region",
+    "id": "01"
+  },
+  "asOf": "2026-10-12",
+  "points": [
+    {
+      "date": "2026-10-12",
+      "levels": [32, 11, 15, 12, 15],
+      "dtm": 1,
+      "legacy": 0,
+      "other": 0,
+      "byPath": {
+        "CES": 1,
+        "DL": 5,
+        "EC": 2,
+        "EH": 4,
+        "IP": 5,
+        "LD": 8,
+        "MS": 9,
+        "PI": 10,
+        "PM": 26,
+        "SR": 1,
+        "TC": 6,
+        "VC": 8
+      },
+      "districts": 1
+    }
+  ],
+  "prior": null
+}

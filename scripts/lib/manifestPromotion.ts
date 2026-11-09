@@ -93,6 +93,8 @@ export type PromotionClass =
   | { kind: 'excluded'; reason: string }
 
 const EDUCATION_ROLLUP_DIR = 'derived/education-rollup/'
+/** The timelines (#2591) promote with the rollup, from the same plan. */
+const EDUCATION_TIMELINE_DIR = 'derived/education-timeline/'
 const DATED = /^snapshots\/(\d{4}-\d{2}-\d{2})\/[^/]/
 /** `snapshots/<monthEnd>/revisions/index.json` (#2475). */
 const REVISION_INDEX = new RegExp(
@@ -108,10 +110,13 @@ export function classifyPromotionPath(path: string): PromotionClass {
   ) {
     throw new Error(`refusing to promote '${path}': not a plain object path`)
   }
-  if (path.startsWith(EDUCATION_ROLLUP_DIR)) {
+  if (
+    path.startsWith(EDUCATION_ROLLUP_DIR) ||
+    path.startsWith(EDUCATION_TIMELINE_DIR)
+  ) {
     if (!isEducationRollupObject(path)) {
       throw new Error(
-        `refusing to promote '${path}': under ${EDUCATION_ROLLUP_DIR} only <PY>.json and index.json are`
+        `refusing to promote '${path}': under ${EDUCATION_ROLLUP_DIR} only <PY>.json and index.json are, and under ${EDUCATION_TIMELINE_DIR} only <PY>/{world,region-<n>,district-<id>}.json`
       )
     }
     return { kind: 'education-rollup' }

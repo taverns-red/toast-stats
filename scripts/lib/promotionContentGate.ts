@@ -39,9 +39,13 @@ import {
   CharterCohortSurvivalRollupFileSchema,
   DistrictRegionHistorySchema,
   EDUCATION_ROLLUP_PREFIX,
+  EDUCATION_TIMELINE_PREFIX,
   EducationRollupIndexSchema,
   EducationRollupProgramYearSchema,
+  EducationTimelineEntitySchema,
   educationRollupObjectPath,
+  educationTimelinePrefix,
+  parseEducationTimelinePath,
   findClubContactField,
   MEETING_TIMES_FILE_NAME,
   MEETING_TIMES_MODES,
@@ -115,6 +119,7 @@ export type ObjectKind =
   | 'district-reports'
   | 'education-rollup-program-year'
   | 'education-rollup-index'
+  | 'education-timeline'
   | 'meeting-times'
   | 'latest'
   | 'json'
@@ -201,11 +206,14 @@ export const PROMOTED_PREFIXES = [
  * --education-rollup`). Every manifest object under it is read.
  */
 export const EDUCATION_ROLLUP_GATED_PREFIX = `${EDUCATION_ROLLUP_PREFIX}/`
+/** The timelines (#2591) ride the same promotion: gated the same way. */
+export const EDUCATION_TIMELINE_GATED_PREFIX = `${EDUCATION_TIMELINE_PREFIX}/`
 
 /** The prefixes a run manifest's objects are content-checked under. */
 export const MANIFEST_GATED_PREFIXES = [
   ...PROMOTED_PREFIXES,
   EDUCATION_ROLLUP_GATED_PREFIX,
+  EDUCATION_TIMELINE_GATED_PREFIX,
 ] as const
 
 export const LATEST_PATH = 'v1/latest.json'
@@ -254,6 +262,7 @@ export function classifyObject(path: string): ObjectKind | null {
   if (MEETING_TIMES.test(path)) return 'meeting-times'
   if (EDUCATION_ROLLUP_YEAR.test(path)) return 'education-rollup-program-year'
   if (path === EDUCATION_ROLLUP_INDEX) return 'education-rollup-index'
+  if (parseEducationTimelinePath(path)) return 'education-timeline'
   if (path === SNAPSHOT_INDEX_PATH) return 'snapshot-index'
   if (path === REGION_HISTORY_PATH) return 'district-region-history'
   if (path === CLUB_HISTORY_INDEX_PATH) return 'club-district-history-index'
@@ -1219,6 +1228,40 @@ function checkEducationRollupIndex(value: unknown): string | null {
     }
     seen.add(row.programYear)
   }
+  // The timelines it names (#2591): each at its own PY prefix, once.
+  const seenTimelines = new Set<string>()
+  for (const [i, row] of (parsed.data.timelines ?? []).entries()) {
+    const want = educationTimelinePrefix(row.programYear)
+    if (row.prefix !== want) {
+      return `timelines[${i}] (${row.programYear}) points at "${row.prefix}", not "${want}"`
+    }
+    if (seenTimelines.has(row.programYear)) {
+      return `timelines names ${row.programYear} twice`
+    }
+    seenTimelines.add(row.programYear)
+  }
+  return null
+}
+
+/**
+ * derived/education-timeline/<PY>/{world,region-<n>,district-<id>}.json
+ * (#2591): the shared-contracts schema the Education page reads it by (strict:
+ * counts only), and the program year and entity its path names.
+ */
+function checkEducationTimeline(path: string, value: unknown): string | null {
+  const parsed = EducationTimelineEntitySchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const named = parseEducationTimelinePath(path)
+  if (!named) return `"${path}" is not an education timeline entity path`
+  if (parsed.data.programYear !== named.programYear) {
+    return `programYear is "${parsed.data.programYear}", but its path names ${named.programYear}`
+  }
+  const { kind, id } = parsed.data.entity
+  if (kind !== named.kind || id !== named.id) {
+    return `entity is ${kind}${id === null ? '' : ` ${id}`}, but its path names ${named.kind}${named.id === null ? '' : ` ${named.id}`}`
+  }
   return null
 }
 
@@ -1393,6 +1436,8 @@ export function checkObject(
       return checkEducationRollupYear(check.path, value)
     case 'education-rollup-index':
       return checkEducationRollupIndex(value)
+    case 'education-timeline':
+      return checkEducationTimeline(check.path, value)
     case 'latest':
       return checkLatest(value)
     case 'json':
@@ -1512,6 +1557,8 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
     'decoded, EducationRollupProgramYearSchema (what the frontend reads), the program year its path names (#2222)',
   'education-rollup-index':
     'decoded, EducationRollupIndexSchema, every program year once, each row at derived/education-rollup/<PY>.json (#2222)',
+  'education-timeline':
+    'decoded, EducationTimelineEntitySchema (strict: counts only), the program year and entity its path names (#2591)',
   'meeting-times':
     'decoded, MeetingTimesSchema, served under its snapshotDate with that date’s program year, totals = Σ districts, each district’s counts within its clubs and every mode cell within the all-meetings cell (#1814)',
   latest: 'decoded, latestSnapshotDate is a real date',

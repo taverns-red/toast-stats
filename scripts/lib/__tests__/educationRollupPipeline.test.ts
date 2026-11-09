@@ -29,9 +29,17 @@ import * as path from 'node:path'
 import * as zlib from 'node:zlib'
 import { parse } from 'yaml'
 import {
+  DistrictRegionHistorySchema,
+  DistrictReportsDatasetSchema,
   EducationRollupIndexSchema,
   EducationRollupProgramYearSchema,
+  EducationTimelineEntitySchema,
 } from '@taverns-red/shared-contracts'
+import {
+  foldReportsDate,
+  splitTimeline,
+  upsertTimelineDate,
+} from '../educationTimeline.js'
 import { prodWriteReasons, type Workflow } from '../prodWriteGuard.js'
 import { PROMOTED_PREFIXES } from '../promotionContentGate.js'
 
@@ -130,6 +138,10 @@ function allObjects(): string[] {
     .sort()
 }
 const rollupObjects = () => allObjects().filter(o => o.startsWith(PREFIX))
+// The timeline sits beside the rollup (#2591), under its own prefix.
+const TL_PREFIX = 'derived/education-timeline/'
+const timelineObjects = () => allObjects().filter(o => o.startsWith(TL_PREFIX))
+const isDerived = (o: string) => o.startsWith(PREFIX) || o.startsWith(TL_PREFIX)
 
 function readObject(objectPath: string): unknown {
   return JSON.parse(
@@ -214,7 +226,9 @@ describe('build-education-rollup.sh: staging derived/education-rollup/', () => {
     const recorded = lines(manifest).map(
       l => JSON.parse(l) as { path: string; sha256: string; stage: string }
     )
-    expect(recorded.map(e => e.path).sort()).toEqual(rollupObjects())
+    expect(recorded.map(e => e.path).sort()).toEqual(
+      [...rollupObjects(), ...timelineObjects()].sort()
+    )
     for (const e of recorded) {
       expect(e.stage).toBe('education-rollup')
       const bytes = fs.readFileSync(path.join(root, BUCKET, e.path))
@@ -224,11 +238,11 @@ describe('build-education-rollup.sh: staging derived/education-rollup/', () => {
     }
   })
 
-  it('writes nothing outside derived/education-rollup/', () => {
+  it('writes nothing outside derived/education-rollup/ and derived/education-timeline/', () => {
     seedAll()
-    const before = allObjects().filter(o => !o.startsWith(PREFIX))
+    const before = allObjects().filter(o => !isDerived(o))
     expect(runScript().status).toBe(0)
-    expect(allObjects().filter(o => !o.startsWith(PREFIX))).toEqual(before)
+    expect(allObjects().filter(o => !isDerived(o))).toEqual(before)
   })
 
   it('reads each reports PY at its newest date only, and only one rankings file per PY', () => {
@@ -307,6 +321,303 @@ describe('build-education-rollup.sh: staging derived/education-rollup/', () => {
   it('usage: exactly one bucket argument (exit 2)', () => {
     const r = spawnSync('bash', [SCRIPT], { cwd: REPO, encoding: 'utf-8' })
     expect(r.status).toBe(2)
+  })
+})
+
+// #2591: the education timeline is built beside the rollup, incrementally,
+// one object per entity (world, region, district).
+describe('build-education-rollup.sh: the education timeline (#2591)', () => {
+  const TLP = 'derived/education-timeline'
+  const WORLD = `${TLP}/2026-2027/world.json`
+  const REGION = `${TLP}/2026-2027/region-01.json`
+  const DISTRICT = `${TLP}/2026-2027/district-49.json`
+  const d49 = DistrictReportsDatasetSchema.parse(
+    JSON.parse(
+      fs.readFileSync(
+        path.join(FIX, 'snapshots/2026-10-12/district_49_reports.json'),
+        'utf-8'
+      )
+    )
+  )
+  const history = DistrictRegionHistorySchema.parse(
+    JSON.parse(
+      fs.readFileSync(
+        path.join(FIX, 'config/district-region-history.json'),
+        'utf-8'
+      )
+    )
+  )
+  /** What an earlier day's run left in the bucket: the PY's entity files. */
+  const filesAt = (programYear: string, date: string) => {
+    const ach = d49.sections.educationAchievements
+    const earlier = {
+      ...d49,
+      programYear,
+      sections: {
+        ...d49.sections,
+        educationAchievements: ach && {
+          ...ach,
+          records: ach.records.slice(0, 30),
+        },
+      },
+    }
+    return splitTimeline(
+      upsertTimelineDate(
+        null,
+        programYear,
+        date,
+        foldReportsDate({
+          programYear,
+          date,
+          reports: [earlier],
+          regionHistory: history,
+        })
+      )
+    )
+  }
+  const putJson = (objectPath: string, value: unknown): void => {
+    const dest = path.join(root, BUCKET, objectPath)
+    fs.mkdirSync(path.dirname(dest), { recursive: true })
+    fs.writeFileSync(dest, JSON.stringify(value))
+    const meta = path.join(root, '.meta', BUCKET, objectPath)
+    fs.mkdirSync(path.dirname(meta), { recursive: true })
+    fs.writeFileSync(meta, 'content-type=application/json\n')
+  }
+  const putFiles = (
+    programYear: string,
+    files: ReadonlyMap<string, unknown>,
+    only?: string[]
+  ): void => {
+    for (const [name, f] of files) {
+      if (only && !only.includes(name)) continue
+      putJson(`${TLP}/${programYear}/${name}`, f)
+    }
+  }
+  const readEntity = (o: string) =>
+    EducationTimelineEntitySchema.parse(readObject(o))
+  const timelineUploads = () =>
+    lines(shimLog).filter(l =>
+      /^storage cp .*gs:\/\/\S+\/derived\/education-timeline\/\S+\/$/.test(l)
+    )
+  const timelineReads = () =>
+    lines(shimLog).filter(l =>
+      /^storage cp gs:\/\/\S+\/derived\/education-timeline\//.test(l)
+    )
+
+  it('seeds the current PY only: one schema-valid file per entity, last point = the rollup', () => {
+    seedAll()
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    expect(timelineObjects()).toEqual([DISTRICT, REGION, WORLD].sort())
+    const y = EducationRollupProgramYearSchema.parse(
+      readObject(`${PREFIX}2026-2027.json`)
+    )
+    const w = readEntity(WORLD)
+    expect(w.entity).toEqual({ kind: 'world', id: null })
+    expect(w.points.map(p => p.date)).toEqual(['2026-10-12'])
+    const p = w.points.at(-1)
+    expect(p).toBeDefined()
+    if (!p) return
+    expect(
+      p.levels.reduce((a, b) => a + b, 0) + p.dtm + p.legacy + p.other
+    ).toBe(y.world.totals.awards)
+    expect(readEntity(DISTRICT).entity).toEqual({ kind: 'district', id: '49' })
+    expect(readEntity(REGION).entity).toEqual({ kind: 'region', id: '01' })
+  })
+
+  it('names the PY prefix in the rollup index (additively)', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    const index = EducationRollupIndexSchema.parse(
+      readObject(`${PREFIX}index.json`)
+    )
+    expect(index.timelines).toEqual([
+      {
+        programYear: '2026-2027',
+        prefix: `${TLP}/2026-2027`,
+        asOf: '2026-10-12',
+        dates: 1,
+        priorGrain: null,
+      },
+    ])
+  })
+
+  it('appends today to every entity file and keeps the earlier points', () => {
+    seedAll()
+    const earlier = filesAt('2026-2027', '2026-10-11')
+    putFiles('2026-2027', earlier)
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    for (const [obj, name] of [
+      [WORLD, 'world.json'],
+      [DISTRICT, 'district-49.json'],
+      [REGION, 'region-01.json'],
+    ] as const) {
+      const e = readEntity(obj)
+      expect(
+        e.points.map(p => p.date),
+        obj
+      ).toEqual(['2026-10-11', '2026-10-12'])
+      expect(e.points[0]).toEqual(earlier.get(name)?.points[0])
+    }
+  })
+
+  it('re-running the same day writes no timeline file at all', () => {
+    seedAll()
+    putFiles('2026-2027', filesAt('2026-2027', '2026-10-11'))
+    expect(runScript().status).toBe(0)
+    const once = timelineObjects().map(o =>
+      fs.readFileSync(path.join(root, BUCKET, o), 'utf-8')
+    )
+    fs.rmSync(shimLog, { force: true })
+    expect(runScript().status).toBe(0)
+    expect(timelineUploads()).toEqual([])
+    expect(
+      timelineObjects().map(o =>
+        fs.readFileSync(path.join(root, BUCKET, o), 'utf-8')
+      )
+    ).toEqual(once)
+  })
+
+  it('an entity that did not report today is not rewritten', () => {
+    seedAll()
+    const earlier = filesAt('2026-2027', '2026-10-11')
+    putFiles('2026-2027', earlier)
+    const d = earlier.get('district-49.json')
+    if (!d) throw new Error('district file')
+    const D61 = `${TLP}/2026-2027/district-61.json`
+    putJson(D61, { ...d, entity: { kind: 'district', id: '61' } })
+    const before = fs.readFileSync(path.join(root, BUCKET, D61), 'utf-8')
+    expect(runScript().status).toBe(0)
+    expect(fs.readFileSync(path.join(root, BUCKET, D61), 'utf-8')).toBe(before)
+    expect(timelineUploads().join('\n')).not.toContain('district-61.json')
+    expect(timelineUploads().join('\n')).toContain('district-49.json')
+  })
+
+  it('reads the current PY once, and only the world.json of any other PY', () => {
+    seedAll()
+    putFiles('2026-2027', filesAt('2026-2027', '2026-10-11'))
+    putFiles('2025-2026', filesAt('2025-2026', '2025-10-11'))
+    expect(runScript().status).toBe(0)
+    const reads = timelineReads()
+    // The current PY's files, last year's world.json, and (review fix 1) the
+    // prior-year files of entities that have no ghost yet, fetched by name.
+    expect(reads).toHaveLength(3)
+    expect(reads.some(l => l.includes('/2026-2027/*.json'))).toBe(true)
+    expect(reads.some(l => l.includes('/2025-2026/world.json'))).toBe(true)
+    expect(reads.join('\n')).not.toContain('/2025-2026/*.json')
+    expect(reads.join('\n')).not.toContain('/2026-2027/district-')
+    const index = EducationRollupIndexSchema.parse(
+      readObject(`${PREFIX}index.json`)
+    )
+    expect(index.timelines?.map(t => t.programYear)).toEqual([
+      '2025-2026',
+      '2026-2027',
+    ])
+  })
+
+  it('the first run of a PY takes its ghost from last year’s files', () => {
+    seedAll()
+    putFiles('2025-2026', filesAt('2025-2026', '2025-10-12'))
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    expect(readEntity(WORLD).prior).toMatchObject({
+      programYear: '2025-2026',
+      source: 'timeline',
+      grain: 'day',
+    })
+    expect(readEntity(DISTRICT).prior?.points).toHaveLength(1)
+    const index = EducationRollupIndexSchema.parse(
+      readObject(`${PREFIX}index.json`)
+    )
+    expect(
+      index.timelines?.find(t => t.programYear === '2026-2027')
+    ).toMatchObject({
+      priorGrain: 'day',
+    })
+  })
+
+  it('uploads the entity files before the rollup index, recorded in the manifest', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    const ups = lines(shimLog).filter(l =>
+      /^storage cp .*gs:\/\/\S+\/derived\//.test(l)
+    )
+    const tl = ups.findIndex(l => l.includes('derived/education-timeline/'))
+    const idx = ups.findIndex(l => /index\.json gs:/.test(l))
+    expect(tl).toBeGreaterThanOrEqual(0)
+    expect(tl).toBeLessThan(idx)
+    const recorded = lines(manifest).map(
+      l => (JSON.parse(l) as { path: string }).path
+    )
+    for (const o of [WORLD, REGION, DISTRICT]) expect(recorded).toContain(o)
+  })
+
+  it('an unreadable existing file leaves its PY alone and unnamed; the rollup still builds', () => {
+    seedAll()
+    putFiles('2026-2027', filesAt('2026-2027', '2026-10-11'))
+    putJson(WORLD, { not: 'a timeline' })
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toMatch(/::error::.*education timeline/)
+    expect(readObject(WORLD)).toEqual({ not: 'a timeline' })
+    expect(rollupObjects()).toContain(`${PREFIX}2026-2027.json`)
+    const index = EducationRollupIndexSchema.parse(
+      readObject(`${PREFIX}index.json`)
+    )
+    expect(index.timelines ?? []).toEqual([])
+  })
+
+  it('an entity of the current PY without a ghost takes the prior-year file of the same name (review fix 1)', () => {
+    seedAll()
+    putFiles('2026-2027', filesAt('2026-2027', '2026-10-11'))
+    putFiles('2025-2026', filesAt('2025-2026', '2025-10-12'))
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    expect(readEntity(DISTRICT).prior).toMatchObject({
+      programYear: '2025-2026',
+      source: 'timeline',
+      grain: 'day',
+    })
+    expect(readEntity(WORLD).prior?.programYear).toBe('2025-2026')
+    // Fetched by name, not the whole prior prefix.
+    expect(timelineReads().join('\n')).not.toContain('/2025-2026/*.json')
+  })
+
+  it('a bad file keeps the previous index row for its PY and says ::error:: (review fix 2)', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    const before = EducationRollupIndexSchema.parse(
+      readObject(`${PREFIX}index.json`)
+    ).timelines
+    expect(before).toHaveLength(1)
+    putJson(WORLD, { not: 'a timeline' })
+    const r = runScript()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toMatch(/::error::.*education timeline.*2026-2027/)
+    expect(
+      EducationRollupIndexSchema.parse(readObject(`${PREFIX}index.json`))
+        .timelines
+    ).toEqual(before)
+    expect(readObject(WORLD)).toEqual({ not: 'a timeline' })
+  })
+
+  it('a transfer error on another PY world.json fails closed with nothing uploaded (review fix 2)', () => {
+    seedAll()
+    putFiles('2026-2027', filesAt('2026-2027', '2026-10-11'))
+    putFiles('2025-2026', filesAt('2025-2026', '2025-10-11'), ['world.json'])
+    const r = runScript({ SHIM_FAIL_MATCH: '^cp .*2025-2026/world\\.json' })
+    expect(r.status).toBe(1)
+    expect(rollupObjects()).toEqual([])
+    expect(timelineUploads()).toEqual([])
+  })
+
+  it('a listing error on the timeline prefix fails closed with nothing uploaded', () => {
+    seedAll()
+    const r = runScript({ SHIM_FAIL_MATCH: '^ls .*education-timeline' })
+    expect(r.status).toBe(1)
+    expect(rollupObjects()).toEqual([])
+    expect(timelineObjects()).toEqual([])
   })
 })
 
@@ -574,6 +885,20 @@ describe('sample output for consumers (#1793, #1807, #1810, #1811)', () => {
       const file = path.join(SAMPLE, path.basename(obj))
       if (process.env['UPDATE_EDUCATION_ROLLUP_SAMPLE'] === '1') {
         fs.mkdirSync(SAMPLE, { recursive: true })
+        fs.writeFileSync(file, `${JSON.stringify(built, null, 2)}\n`)
+      }
+      expect(built, obj).toEqual(JSON.parse(fs.readFileSync(file, 'utf-8')))
+    }
+    // The timeline sample sits in its own directory: same file names (#2591).
+    for (const obj of timelineObjects()) {
+      const built = readObject(obj)
+      const file = path.join(
+        SAMPLE,
+        'timeline',
+        obj.slice('derived/education-timeline/'.length)
+      )
+      if (process.env['UPDATE_EDUCATION_ROLLUP_SAMPLE'] === '1') {
+        fs.mkdirSync(path.dirname(file), { recursive: true })
         fs.writeFileSync(file, `${JSON.stringify(built, null, 2)}\n`)
       }
       expect(built, obj).toEqual(JSON.parse(fs.readFileSync(file, 'utf-8')))

@@ -663,6 +663,19 @@ export {
   type EducationRollupIndex,
 } from './schemas/education-rollup.schema.js'
 
+// Education timeline — derived/education-timeline/<PY>.json (#2591):
+// cumulative education awards per snapshot date per district / region / world.
+export {
+  EDUCATION_TIMELINE_VERSION,
+  EDUCATION_TIMELINE_PREFIX,
+  EducationTimelinePointSchema,
+  EducationTimelineAggregatePointSchema,
+  EducationTimelineGrainSchema,
+  type EducationTimelinePoint,
+  type EducationTimelineAggregatePoint,
+  type EducationTimelineGhostPoint,
+} from './schemas/education-timeline.schema.js'
+
 // Club contact fields never reach a promoted artifact (#2026)
 export {
   CLUB_CONTACT_KEYS,
@@ -724,3 +737,14 @@ export {
   toTolerantReader,
   findStrictObjects,
 } from './validation/tolerantReader.js'
+
+export {
+  EducationTimelineEntitySchema,
+  educationTimelinePrefix,
+  educationTimelineEntityPath,
+  educationTimelineEntityFile,
+  EducationTimelineEntityKindSchema,
+  type EducationTimelineEntityKind,
+  parseEducationTimelinePath,
+  type EducationTimelineEntity,
+} from './schemas/education-timeline.schema.js'

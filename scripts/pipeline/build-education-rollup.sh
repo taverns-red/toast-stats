@@ -24,7 +24,16 @@
 #     current PY). A PY's dates come from its logical (directory) date;
 #   - snapshots/<date>/all-districts-rankings.json — each PY's last date,
 #     which names the PY's districts so a missing file reads "not available";
-#   - config/district-region-history.json (#1820) — each PY's own regions.
+#   - config/district-region-history.json (#1820) — each PY's own regions;
+#   - derived/education-timeline/<PY>/*.json (#2591) — the education
+#     timeline, one small object per entity (world, region-<n>, district-<id>).
+#     The CURRENT PY's files are read (about 150 objects) so the day's reports
+#     date is APPENDED to each; only the files whose data changed are written.
+#     An entity file with no prior-year ghost takes the ONE prior-year file of
+#     the same name (fetched by name, a second build). Every PY contributes
+#     just its world.json, to be named in the index, and the last published
+#     index is read so a PY with an unreadable file keeps its row. No history
+#     scan.
 # Missing inputs degrade per row (a PY without reports is omitted and named
 # in the index; no ledger or no region history is a warning); a listing or
 # transfer ERROR fails closed with nothing uploaded.
@@ -32,6 +41,9 @@
 # Output (plain JSON, no -Z; /region/:n/education reads it via the CDN):
 #   gs://<bucket>/derived/education-rollup/<PY>.json   one per program year
 #   gs://<bucket>/derived/education-rollup/index.json  last: it names them
+#   gs://<bucket>/derived/education-timeline/<PY>/<entity>.json  the entity
+#                                      files that changed (#2591), before the
+#                                      index, which names every timeline PY
 # derived/ is NOT a promoted prefix: this script only ever writes to
 # <bucket> (the #1755 prod-write guard checks it). Prod gets the result from
 # the promote-reports job, through the report-sidecar manifest and the
@@ -62,6 +74,7 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TSX="${TSX:-${REPO}/node_modules/.bin/tsx}"
 BUILDER="${REPO}/scripts/build-education-rollup.ts"
 DEST="gs://${BUCKET}/derived/education-rollup/"
+TIMELINE_ROOT="derived/education-timeline"
 NO_MATCH='matched no objects|Did not find existing container'
 
 WORK="$(mktemp -d)"
@@ -81,6 +94,19 @@ list() {
   fi
   cat "${WORK}/ls.err" >&2
   echo "::error::build-education-rollup: could not list $1" >&2
+  exit 1
+}
+
+# `cp`, telling "no such object" (return 3) from a real error (exit 1).
+copy_tolerant() {
+  if "${GCLOUD}" storage cp "$@" 2>"${WORK}/cp.err"; then
+    return 0
+  fi
+  if grep -Eq "${NO_MATCH}" "${WORK}/cp.err"; then
+    return 3
+  fi
+  cat "${WORK}/cp.err" >&2
+  echo "::error::build-education-rollup: could not copy $1" >&2
   exit 1
 }
 
@@ -165,13 +191,88 @@ if ! "${GCLOUD}" storage cp "gs://${BUCKET}/config/district-region-history.json"
   echo "::warning::build-education-rollup: no config/district-region-history.json; region rollups are null this run" >&2
 fi
 
-"${TSX}" "${BUILDER}" build \
-  --ledger "${LEDGER}" \
-  --inputs "${WORK}/inputs" \
-  --region-history "${WORK}/district-region-history.json" \
-  --out "${WORK}/out" >"${WORK}/summary.json"
+# 5. The education timeline files already published (#2591). The current PY
+#    is the newest reports PY that had reports. A real listing error fails
+#    closed; "none yet" is the first run. Read: the current PY's files; the
+#    previous PY's while the current has none; any other PY's world.json.
+CURRENT=""
+for d in "${WORK}"/inputs/*/; do
+  [ -f "${d}reports-date" ] || continue
+  CURRENT="$(basename "${d}")"
+done
+TL_IN="${WORK}/timeline-in"
+mkdir -p "${TL_IN}"
+TL_ARGS=()
+if [ -n "${CURRENT}" ]; then
+  START="${CURRENT%-*}"
+  PRIOR="$((START - 1))-${START}"
+  set +e
+  list "gs://${BUCKET}/${TIMELINE_ROOT}/**"
+  rc=$?
+  set -e
+  : >"${WORK}/timeline.names"
+  if [ "${rc}" -eq 0 ]; then
+    sed -n -E "s#^gs://[^/]+/${TIMELINE_ROOT}/([0-9]{4}-[0-9]{4})/[^/]+\.json\$#\1#p" \
+      "${WORK}/ls.out" | LC_ALL=C sort | uniq -c >"${WORK}/timeline.names"
+  fi
+  cp "${WORK}/ls.out" "${WORK}/timeline.ls"
+  mkdir -p "${TL_IN}/${CURRENT}"
+  if grep -q " ${CURRENT}\$" "${WORK}/timeline.names"; then
+    "${GCLOUD}" storage cp "gs://${BUCKET}/${TIMELINE_ROOT}/${CURRENT}/*.json" "${TL_IN}/${CURRENT}/"
+  fi
+  # Every other PY contributes its world.json (its row in the index). Only
+  # "no such object" is tolerated; any other transfer error fails closed.
+  while read -r _ other; do
+    [ -n "${other}" ] || continue
+    [ "${other}" != "${CURRENT}" ] || continue
+    mkdir -p "${TL_IN}/${other}"
+    set +e
+    copy_tolerant "gs://${BUCKET}/${TIMELINE_ROOT}/${other}/world.json" "${TL_IN}/${other}/"
+    set -e
+  done <"${WORK}/timeline.names"
+  # The last published index: a PY whose files cannot be read keeps its row.
+  set +e
+  copy_tolerant "${DEST}index.json" "${WORK}/previous-index.json"
+  rc=$?
+  set -e
+  TL_ARGS=(--timeline-in "${TL_IN}" --timeline-current "${CURRENT}")
+  if [ "${rc}" -eq 0 ]; then
+    TL_ARGS+=(--previous-index "${WORK}/previous-index.json")
+  fi
+fi
 
-# 5. Upload through the wrapper, so every object lands in the run manifest
+run_builder() {
+  "${TSX}" "${BUILDER}" build \
+    ${TL_ARGS[@]+"${TL_ARGS[@]}"} \
+    --ledger "${LEDGER}" \
+    --inputs "${WORK}/inputs" \
+    --region-history "${WORK}/district-region-history.json" \
+    --out "${WORK}/out" >"${WORK}/summary.json"
+}
+run_builder
+
+# 5b. An entity file with no prior-year ghost (it first reported after the
+#     year was seeded, or last year's file appeared later) takes the ONE
+#     prior-year file of the same name. The builder names those files; fetch
+#     the ones the prior year's prefix holds, in one transfer, and build again.
+if [ -n "${CURRENT}" ] && [ -s "${WORK}/out/needs-prior.txt" ]; then
+  sed -n -E "s#^gs://[^/]+/${TIMELINE_ROOT}/${PRIOR}/([^/]+\\.json)\$#\\1#p" \
+    "${WORK}/timeline.ls" | LC_ALL=C sort >"${WORK}/prior.has"
+  LC_ALL=C sort "${WORK}/out/needs-prior.txt" >"${WORK}/prior.want"
+  FETCH=()
+  while IFS= read -r name; do
+    [ -f "${TL_IN}/${PRIOR}/${name}" ] && continue
+    FETCH+=("gs://${BUCKET}/${TIMELINE_ROOT}/${PRIOR}/${name}")
+  done < <(LC_ALL=C comm -12 "${WORK}/prior.has" "${WORK}/prior.want")
+  if [ "${#FETCH[@]}" -gt 0 ]; then
+    mkdir -p "${TL_IN}/${PRIOR}"
+    "${GCLOUD}" storage cp "${FETCH[@]}" "${TL_IN}/${PRIOR}/"
+    rm -rf "${WORK}/out"
+    run_builder
+  fi
+fi
+
+# 6. Upload through the wrapper, so every object lands in the run manifest
 #    (#1762, ADR-015 P5). Program years first, the index (which names them)
 #    last. derived/ is outside PROMOTED_PREFIXES: recorded, never promoted.
 export GCLOUD
@@ -181,11 +282,24 @@ while IFS= read -r f; do
   years+=("${f}")
 done < <(find "${WORK}/out" -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9].json' | LC_ALL=C sort)
 "${UPLOAD[@]}" "${years[@]}" "${DEST}"
+# The timeline entity files this run changed (a PY prefix at a time), before
+# the index that names them.
+if [ -d "${WORK}/out/timeline" ]; then
+  for pydir in "${WORK}"/out/timeline/*/; do
+    [ -d "${pydir}" ] || continue
+    entities=()
+    while IFS= read -r f; do
+      entities+=("${f}")
+    done < <(find "${pydir}" -maxdepth 1 -type f -name '*.json' | LC_ALL=C sort)
+    [ "${#entities[@]}" -gt 0 ] || continue
+    "${UPLOAD[@]}" "${entities[@]}" "gs://${BUCKET}/${TIMELINE_ROOT}/$(basename "${pydir}")/"
+  done
+fi
 "${UPLOAD[@]}" "${WORK}/out/index.json" "${DEST}"
 
 jq -r '
   "- **Education rollup** (staging derived/, #1801): \(.programYears) program years (\(.first) → \(.last)), " +
-  "\(.omitted) omitted, reports as of \(.asOf // "none"); \(.rawBytes) B raw, \(.gzipBytes) B gzip " +
+  "\(.omitted) omitted, reports as of \(.asOf // "none"); \(.timelinesWritten // 0) timeline file(s) written (#2591); \(.rawBytes) B raw, \(.gzipBytes) B gzip " +
   "(largest object \(.maxGzipBytes) B gzip)"' \
   "${WORK}/summary.json" >>"${SUMMARY}"
 cat "${WORK}/summary.json"
