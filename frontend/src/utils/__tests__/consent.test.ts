@@ -53,6 +53,14 @@ describe('consent store (#2584)', () => {
     expect(getConsent()).toBeNull()
   })
 
+  it.each(['v01.all', 'v1.ALL', 'V1.all', 'v1.all.x', 'v10.all'])(
+    'accepts only the exact value: %j is undecided',
+    value => {
+      document.cookie = `rt_consent=${value}; Path=/`
+      expect(getConsent()).toBeNull()
+    }
+  )
+
   it('treats a corrupt or unknown value as undecided', () => {
     document.cookie = 'rt_consent=garbage; Path=/'
     expect(getConsent()).toBeNull()

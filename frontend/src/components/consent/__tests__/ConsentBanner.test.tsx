@@ -82,6 +82,67 @@ describe('ConsentBanner (#2584)', () => {
     expect(text.querySelector('a')).toBeNull()
   })
 
+  describe('focus and Escape (#2584 review)', () => {
+    function renderWithPage() {
+      return render(
+        <MemoryRouter>
+          <a href="#main-content">Skip</a>
+          <button type="button">Privacy &amp; cookies</button>
+          <main id="main-content">content</main>
+          <ConsentBanner immediate />
+        </MemoryRouter>
+      )
+    }
+
+    it('reopened: choosing returns focus to the control that opened it', async () => {
+      document.cookie = 'rt_consent=v1.minimal; Path=/'
+      renderWithPage()
+      const opener = screen.getByRole('button', { name: 'Privacy & cookies' })
+      opener.focus()
+      act(() => openConsentSettings())
+      await userEvent.click(screen.getByRole('button', { name: 'Keep all' }))
+      expect(opener).toHaveFocus()
+    })
+
+    it('reopened: Close returns focus to the control that opened it', async () => {
+      document.cookie = 'rt_consent=v1.minimal; Path=/'
+      renderWithPage()
+      const opener = screen.getByRole('button', { name: 'Privacy & cookies' })
+      opener.focus()
+      act(() => openConsentSettings())
+      await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+      expect(opener).toHaveFocus()
+    })
+
+    it('reopened: Escape closes it and returns focus', async () => {
+      document.cookie = 'rt_consent=v1.minimal; Path=/'
+      renderWithPage()
+      const opener = screen.getByRole('button', { name: 'Privacy & cookies' })
+      opener.focus()
+      act(() => openConsentSettings())
+      await userEvent.keyboard('{Escape}')
+      expect(region()).toBeNull()
+      expect(getConsent()).toBe('minimal')
+      expect(opener).toHaveFocus()
+    })
+
+    it('first visit: choosing moves focus to the main content', async () => {
+      renderWithPage()
+      await userEvent.click(screen.getByRole('button', { name: 'Keep none' }))
+      expect(document.activeElement).toBe(
+        document.getElementById('main-content')
+      )
+    })
+
+    it('first visit: Escape does not close it (a choice is needed)', async () => {
+      renderWithPage()
+      screen.getByRole('button', { name: 'Keep all' }).focus()
+      await userEvent.keyboard('{Escape}')
+      expect(region()).not.toBeNull()
+      expect(getConsent()).toBeNull()
+    })
+  })
+
   it('has no Close while undecided (a choice is needed to stop asking)', () => {
     renderBanner()
     expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()

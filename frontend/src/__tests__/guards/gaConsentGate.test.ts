@@ -82,6 +82,8 @@ describe('GA consent gate (#2584)', () => {
     ['none', 'a=b; rt_consent=v1.none'],
     ['a stale version', 'rt_consent=v0.all'],
     ['a garbled value', 'rt_consent=all'],
+    ['a zero-padded version', 'rt_consent=v01.all'],
+    ['trailing text', 'rt_consent=v1.all.x'],
   ])('%s: no GA request, no dataLayer config', (_n, cookie) => {
     const r = run({ cookie })
     expect(r.appended).toEqual([])
