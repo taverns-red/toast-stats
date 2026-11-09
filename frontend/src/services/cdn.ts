@@ -875,7 +875,8 @@ export function cdnEducationTimelineUrl(
   kind: EducationTimelineEntityKind,
   id: string | null
 ): string {
-  return `${cdnBaseUrl()}/${educationTimelineEntityPath(programYear, kind, id)}`
+  const objectPath = educationTimelineEntityPath(programYear, kind, id)
+  return `${cdnBaseUrl()}/${objectPath}`
 }
 
 /**

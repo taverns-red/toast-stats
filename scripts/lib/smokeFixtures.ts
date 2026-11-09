@@ -21,6 +21,7 @@ import {
   DistrictReportsDatasetReaderSchema,
   EducationRollupIndexReaderSchema,
   EducationRollupProgramYearReaderSchema,
+  EducationTimelineEntityReaderSchema,
   GlobalClubRaceReaderSchema,
   GlobalHistorySchema,
   GlobalTotalsSchema,
@@ -354,6 +355,11 @@ export const SCHEMA_RULES: SchemaRule[] = [
     'EducationRollupProgramYear',
     /^derived\/education-rollup\/\d{4}-\d{4}\.json$/,
     EducationRollupProgramYearReaderSchema
+  ),
+  rule(
+    'EducationTimelineEntity',
+    /^derived\/education-timeline\/\d{4}-\d{4}\/(?:world|region-[A-Za-z0-9]+|district-[A-Za-z0-9]+)\.json$/,
+    EducationTimelineEntityReaderSchema
   ),
   rule(
     'ClubDistrictHistoryIndex',
