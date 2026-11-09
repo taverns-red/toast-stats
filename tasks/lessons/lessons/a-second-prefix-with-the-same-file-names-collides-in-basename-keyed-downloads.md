@@ -10,14 +10,17 @@ tags: [data-pipeline, promotion, derived]
 **Issue:** #2591 (education timeline, epic #2590)
 
 ## What happened
-`derived/education-timeline/<PY>.json` sits beside `derived/education-rollup/<PY>.json`, so
-`2026-2027.json` exists in both prefixes. The report-sidecar planner downloaded every object
+The first cut of the education timeline published one object per program year,
+`derived/education-timeline/<PY>.json`, next to `derived/education-rollup/<PY>.json`, so
+`2026-2027.json` existed in both prefixes. The report-sidecar planner downloaded every object
 the rollup index names into one directory and hashed `path.basename(p)`, so the timeline would
 have overwritten the rollup year (or the reverse) and been hashed from the wrong bytes. The gate
 and the promoter key by full path and were fine; only the plan's scratch directory collided.
+The planner now downloads into one directory per source directory, which also holds for the
+published per-entity layout (`<PY>/world.json`, `<PY>/district-<id>.json`).
 
 ## Takeaway
 When a new artifact family reuses an existing family's file names, grep for `basename` in
 every step that downloads or hashes a mixed list, and download into one directory per source
-directory. The shim test that proved it stages different bytes under the same name in both
-prefixes (`educationTimelinePromotion.test.ts`).
+directory. The shim test stages different bytes under colliding names in both prefixes
+(`educationTimelinePromotion.test.ts`).
