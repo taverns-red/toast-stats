@@ -739,6 +739,16 @@ describe('sample output for consumers (#1793, #1807, #1810, #1811)', () => {
       }
       expect(built, obj).toEqual(JSON.parse(fs.readFileSync(file, 'utf-8')))
     }
+    // The timeline sample sits in its own directory: same file names (#2591).
+    for (const obj of timelineObjects()) {
+      const built = readObject(obj)
+      const file = path.join(SAMPLE, 'timeline', path.basename(obj))
+      if (process.env['UPDATE_EDUCATION_ROLLUP_SAMPLE'] === '1') {
+        fs.mkdirSync(path.dirname(file), { recursive: true })
+        fs.writeFileSync(file, `${JSON.stringify(built, null, 2)}\n`)
+      }
+      expect(built, obj).toEqual(JSON.parse(fs.readFileSync(file, 'utf-8')))
+    }
   })
 })
 

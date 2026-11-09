@@ -349,7 +349,8 @@ export interface TimelineUpdatePlan {
  */
 export function planTimelineUpdates(
   rollups: readonly EducationRollupProgramYear[],
-  existing: ReadonlyMap<string, EducationTimeline>
+  existing: ReadonlyMap<string, EducationTimeline>,
+  blocked: ReadonlySet<string> = new Set()
 ): TimelineUpdatePlan {
   const reportsRollups = rollups
     .filter(r => r.source === 'reports' && r.sourceDate !== null)
@@ -361,6 +362,9 @@ export function planTimelineUpdates(
 
   for (const rollup of reportsRollups) {
     const py = rollup.programYear
+    // A year whose stored timeline could not be read is left as it is:
+    // seeding over it would drop its history.
+    if (blocked.has(py)) continue
     const current = existing.get(py) ?? null
     if (current === null && py !== newest) continue
     try {

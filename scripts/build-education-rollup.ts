@@ -22,6 +22,13 @@
  *     gzip layers are peeled (gcloud 568 hands back `-Z` bytes as stored).
  *     A missing region-history file ⇒ no region rollups. Writes
  *     <out>/<PY>.json and <out>/index.json (compact JSON), each validated.
+ *     Optional --timeline-in <dir> (#2591): the education timelines already
+ *     published (<dir>/<PY>.json). Each reports rollup's date is folded into
+ *     its PY's timeline (scripts/lib/educationTimeline.ts: the newest reports
+ *     PY is seeded, an older one only if it has a timeline) and written to
+ *     <out>/timeline/<PY>.json; the index names every readable timeline. A
+ *     timeline that fails its contract is warned about, left as it is and not
+ *     named: it never stops the rollup.
  *
  * Logs go to stderr; stdout is ONE JSON line (R4).
  * Exit codes: 0 written · 1 a missing or invalid input, or a fold error
@@ -37,10 +44,12 @@ import {
   EducationLedgerHistoryFileSchema,
   EducationRollupIndexSchema,
   EducationRollupProgramYearSchema,
+  EducationTimelineSchema,
   type DistrictRegionHistory,
   type DistrictReportsDataset,
   type EducationLedgerHistoryFile,
   type EducationRollupProgramYear,
+  type EducationTimeline,
 } from '@taverns-red/shared-contracts'
 import type { z } from 'zod'
 import {
@@ -50,6 +59,7 @@ import {
   rollUpEducationProgramYear,
   type OmittedProgramYear,
 } from './lib/educationRollup.js'
+import { planTimelineUpdates } from './lib/educationTimeline.js'
 import { summarizeZodIssues } from './lib/zodIssueSummary.js'
 
 const PROGRAM_YEAR = /^\d{4}-\d{4}$/
@@ -69,6 +79,11 @@ function arg(name: string): string {
   const value = i >= 0 ? process.argv[i + 1] : undefined
   if (!value) fail(`missing required argument --${name}`)
   return value
+}
+
+function optArg(name: string): string | null {
+  const i = process.argv.indexOf(`--${name}`)
+  return i >= 0 ? (process.argv[i + 1] ?? null) : null
 }
 
 /** Read a JSON file, peeling every gzip layer first. */
@@ -128,6 +143,62 @@ function plan(): void {
       ].join('\t') + '\n'
     )
   }
+}
+
+/** The timelines already published, and which of them cannot be read. */
+function readExistingTimelines(): {
+  existing: Map<string, EducationTimeline>
+  blocked: Set<string>
+} {
+  const existing = new Map<string, EducationTimeline>()
+  const blocked = new Set<string>()
+  const dir = optArg('timeline-in')
+  if (!dir) return { existing, blocked }
+  for (const f of jsonFiles(dir, /^\d{4}-\d{4}\.json$/)) {
+    const py = path.basename(f, '.json')
+    const parsed = EducationTimelineSchema.safeParse(readJsonOrNull(f))
+    if (parsed.success && parsed.data.programYear === py) {
+      existing.set(py, parsed.data)
+    } else {
+      blocked.add(py)
+      log(
+        `::warning::education timeline ${py} is unreadable (${parsed.success ? 'names another program year' : summarizeZodIssues(parsed.error.issues)}): left as it is, not updated or named`
+      )
+    }
+  }
+  return { existing, blocked }
+}
+
+function readJsonOrNull(file: string): unknown {
+  try {
+    let bytes = fs.readFileSync(file)
+    while (bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b) {
+      bytes = gunzipSync(bytes)
+    }
+    return JSON.parse(bytes.toString('utf-8'))
+  } catch {
+    return null
+  }
+}
+
+/** Fold today's reports dates into the timelines; validate what it wrote. */
+function foldTimelines(rollups: readonly EducationRollupProgramYear[]) {
+  const { existing, blocked } = readExistingTimelines()
+  const plan = planTimelineUpdates(rollups, existing, blocked)
+  for (const s of plan.skipped) {
+    log(
+      `::warning::education timeline ${s.programYear} not updated: ${s.reason}`
+    )
+  }
+  for (const t of plan.written) {
+    const checked = EducationTimelineSchema.safeParse(t)
+    if (!checked.success) {
+      fail(
+        `${t.programYear} timeline violates its contract: ${summarizeZodIssues(checked.error.issues)}`
+      )
+    }
+  }
+  return plan
 }
 
 function build(): void {
@@ -217,7 +288,8 @@ function build(): void {
 
   if (rollups.length === 0) fail('no program year could be rolled up')
 
-  const index = buildEducationRollupIndex(rollups, omitted)
+  const { written, rows } = foldTimelines(rollups)
+  const index = buildEducationRollupIndex(rollups, omitted, rows)
   const checkedIndex = EducationRollupIndexSchema.safeParse(index)
   if (!checkedIndex.success) {
     fail(
@@ -238,6 +310,8 @@ function build(): void {
     maxGzipBytes = Math.max(maxGzipBytes, gz)
   }
   for (const r of rollups) write(`${r.programYear}.json`, r)
+  fs.mkdirSync(path.join(outDir, 'timeline'), { recursive: true })
+  for (const t of written) write(`timeline/${t.programYear}.json`, t)
   write('index.json', index)
 
   for (const r of rollups) {
@@ -252,6 +326,7 @@ function build(): void {
     `${JSON.stringify({
       programYears: rollups.length,
       omitted: omitted.length,
+      timelinesWritten: written.length,
       first: rollups[0]?.programYear,
       last: rollups.at(-1)?.programYear,
       asOf: index.asOf,

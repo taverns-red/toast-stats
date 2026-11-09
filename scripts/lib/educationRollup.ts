@@ -374,7 +374,8 @@ export function rollUpEducationProgramYear(
 /** The index: one row per PY, ascending, and the multi-year trend. */
 export function buildEducationRollupIndex(
   rollups: readonly EducationRollupProgramYear[],
-  omitted: readonly OmittedProgramYear[] = []
+  omitted: readonly OmittedProgramYear[] = [],
+  timelines: EducationRollupIndex['timelines'] = []
 ): EducationRollupIndex {
   const sorted = [...rollups].sort((a, b) =>
     byString(a.programYear, b.programYear)
@@ -415,6 +416,15 @@ export function buildEducationRollupIndex(
     omittedProgramYears: [...omitted].sort((a, b) =>
       byString(a.programYear, b.programYear)
     ),
+    // Additive (#2591, ADR 0019): absent when no timeline exists, so an
+    // index without timelines is byte-identical to the previous release's.
+    ...(timelines && timelines.length > 0
+      ? {
+          timelines: [...timelines].sort((a, b) =>
+            byString(a.programYear, b.programYear)
+          ),
+        }
+      : {}),
     trend: {
       districts: sortedRecord(districtTrend),
       regions: sortedRecord(regionTrend),

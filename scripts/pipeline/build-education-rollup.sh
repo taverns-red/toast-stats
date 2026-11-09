@@ -24,7 +24,10 @@
 #     current PY). A PY's dates come from its logical (directory) date;
 #   - snapshots/<date>/all-districts-rankings.json — each PY's last date,
 #     which names the PY's districts so a missing file reads "not available";
-#   - config/district-region-history.json (#1820) — each PY's own regions.
+#   - config/district-region-history.json (#1820) — each PY's own regions;
+#   - derived/education-timeline/*.json (#2591) — the timelines already
+#     published (one small object per PY): the day's reports date is APPENDED
+#     to its PY's timeline, so the run never re-reads a PY's history.
 # Missing inputs degrade per row (a PY without reports is omitted and named
 # in the index; no ledger or no region history is a warning); a listing or
 # transfer ERROR fails closed with nothing uploaded.
@@ -32,6 +35,9 @@
 # Output (plain JSON, no -Z; /region/:n/education reads it via the CDN):
 #   gs://<bucket>/derived/education-rollup/<PY>.json   one per program year
 #   gs://<bucket>/derived/education-rollup/index.json  last: it names them
+#   gs://<bucket>/derived/education-timeline/<PY>.json the timelines this run
+#                                      changed (#2591), before the index,
+#                                      which names every timeline
 # derived/ is NOT a promoted prefix: this script only ever writes to
 # <bucket> (the #1755 prod-write guard checks it). Prod gets the result from
 # the promote-reports job, through the report-sidecar manifest and the
@@ -62,6 +68,7 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TSX="${TSX:-${REPO}/node_modules/.bin/tsx}"
 BUILDER="${REPO}/scripts/build-education-rollup.ts"
 DEST="gs://${BUCKET}/derived/education-rollup/"
+DEST_TIMELINE="gs://${BUCKET}/derived/education-timeline/"
 NO_MATCH='matched no objects|Did not find existing container'
 
 WORK="$(mktemp -d)"
@@ -165,13 +172,26 @@ if ! "${GCLOUD}" storage cp "gs://${BUCKET}/config/district-region-history.json"
   echo "::warning::build-education-rollup: no config/district-region-history.json; region rollups are null this run" >&2
 fi
 
+# 5. The timelines already published, if any (a few small objects). A real
+#    listing error fails closed; "none yet" is the first run (#2591).
+mkdir -p "${WORK}/timeline-in"
+set +e
+list "gs://${BUCKET}/derived/education-timeline/*.json"
+rc=$?
+set -e
+if [ "${rc}" -eq 0 ]; then
+  "${GCLOUD}" storage cp "gs://${BUCKET}/derived/education-timeline/*.json" \
+    "${WORK}/timeline-in/"
+fi
+
 "${TSX}" "${BUILDER}" build \
+  --timeline-in "${WORK}/timeline-in" \
   --ledger "${LEDGER}" \
   --inputs "${WORK}/inputs" \
   --region-history "${WORK}/district-region-history.json" \
   --out "${WORK}/out" >"${WORK}/summary.json"
 
-# 5. Upload through the wrapper, so every object lands in the run manifest
+# 6. Upload through the wrapper, so every object lands in the run manifest
 #    (#1762, ADR-015 P5). Program years first, the index (which names them)
 #    last. derived/ is outside PROMOTED_PREFIXES: recorded, never promoted.
 export GCLOUD
@@ -181,11 +201,19 @@ while IFS= read -r f; do
   years+=("${f}")
 done < <(find "${WORK}/out" -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9].json' | LC_ALL=C sort)
 "${UPLOAD[@]}" "${years[@]}" "${DEST}"
+# The timelines this run changed, before the index that names them.
+timelines=()
+while IFS= read -r f; do
+  timelines+=("${f}")
+done < <(find "${WORK}/out/timeline" -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9].json' 2>/dev/null | LC_ALL=C sort)
+if [ "${#timelines[@]}" -gt 0 ]; then
+  "${UPLOAD[@]}" "${timelines[@]}" "${DEST_TIMELINE}"
+fi
 "${UPLOAD[@]}" "${WORK}/out/index.json" "${DEST}"
 
 jq -r '
   "- **Education rollup** (staging derived/, #1801): \(.programYears) program years (\(.first) → \(.last)), " +
-  "\(.omitted) omitted, reports as of \(.asOf // "none"); \(.rawBytes) B raw, \(.gzipBytes) B gzip " +
+  "\(.omitted) omitted, reports as of \(.asOf // "none"); \(.timelinesWritten // 0) timeline(s) updated (#2591); \(.rawBytes) B raw, \(.gzipBytes) B gzip " +
   "(largest object \(.maxGzipBytes) B gzip)"' \
   "${WORK}/summary.json" >>"${SUMMARY}"
 cat "${WORK}/summary.json"

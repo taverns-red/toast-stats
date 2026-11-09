@@ -72,6 +72,15 @@
       "reason": "no reports at any of the program year's last 6 snapshot dates"
     }
   ],
+  "timelines": [
+    {
+      "programYear": "2026-2027",
+      "path": "derived/education-timeline/2026-2027.json",
+      "asOf": "2026-10-12",
+      "dates": 1,
+      "priorGrain": null
+    }
+  ],
   "trend": {
     "districts": {
       "17": {
