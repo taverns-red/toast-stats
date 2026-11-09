@@ -50,11 +50,13 @@ vi.mock('recharts', () => ({
   ),
   Line: ({
     dataKey,
+    name,
     type,
     connectNulls,
     isAnimationActive,
   }: {
     dataKey: string
+    name?: string
     type?: string
     connectNulls?: boolean
     isAnimationActive?: boolean
@@ -62,16 +64,62 @@ vi.mock('recharts', () => ({
     <div
       data-testid="line"
       data-key={dataKey}
+      data-name={name}
       data-type={type}
       data-connect-nulls={String(connectNulls === true)}
       data-animated={isAnimationActive ? 'true' : 'false'}
     />
   ),
-  XAxis: ({ type, scale }: { type?: string; scale?: string }) => (
-    <div data-testid="x-axis" data-type={type} data-scale={scale} />
+  XAxis: ({
+    type,
+    scale,
+    domain,
+    ticks,
+  }: {
+    type?: string
+    scale?: string
+    domain?: unknown
+    ticks?: unknown
+  }) => (
+    <div
+      data-testid="x-axis"
+      data-type={type}
+      data-scale={scale}
+      data-domain={JSON.stringify(domain)}
+      data-ticks={JSON.stringify(ticks)}
+    />
   ),
-  YAxis: ({ width }: { width?: number }) => (
-    <div data-testid="y-axis" data-width={width} />
+  YAxis: ({
+    width,
+    domain,
+    ticks,
+  }: {
+    width?: number
+    domain?: unknown
+    ticks?: unknown
+  }) => (
+    <div
+      data-testid="y-axis"
+      data-width={width}
+      data-domain={JSON.stringify(domain)}
+      data-ticks={JSON.stringify(ticks)}
+    />
+  ),
+  ReferenceLine: ({
+    y,
+    className,
+    label,
+  }: {
+    y?: number
+    className?: string
+    label?: { value?: string } | string
+  }) => (
+    <div
+      data-testid="reference-line"
+      data-y={y}
+      className={className}
+      data-label={typeof label === 'string' ? label : label?.value}
+    />
   ),
   CartesianGrid: () => <div data-testid="grid" />,
   Tooltip: () => <div data-testid="tooltip" />,
@@ -102,6 +150,14 @@ const data = (): Row[] =>
   JSON.parse(screen.getByTestId('chart').getAttribute('data-series') || '')
 /** The artifact's own points: the display-only tail is not one. */
 const points = (): Row[] => data().filter(r => r['tail'] !== true)
+
+const lines = (): HTMLElement[] => screen.queryAllByTestId('line')
+const ghostLine = (): HTMLElement | undefined =>
+  lines().find(l => l.getAttribute('data-key') === 'ghost')
+const domainOf = (id: string): number[] =>
+  JSON.parse(screen.getByTestId(id).getAttribute('data-domain') || '[]')
+const ticksOf = (id: string): number[] =>
+  JSON.parse(screen.getByTestId(id).getAttribute('data-ticks') || '[]')
 
 const baseProps = {
   timeline: DISTRICT_61_TIMELINE,
@@ -221,36 +277,30 @@ describe('EducationTimelineChart — legend', () => {
   it('names each band with its final value (the old bar legend, kept)', () => {
     render(<EducationTimelineChart {...baseProps} />)
     const legend = screen.getByRole('list', { name: 'Chart legend' })
-    const level1 = within(legend).getByText('Level 1').closest('li')!
-    expect(level1).toHaveTextContent('34')
-    expect(within(legend).getByText('Legacy').closest('li')).toHaveTextContent(
-      '2'
-    )
-    expect(within(legend).getByText('DTM').closest('li')).toHaveTextContent('3')
+    // "Name: value" reads as one phrase, plain for a 95-year-old reader.
+    expect(within(legend).getByText('Level 1: 34')).toBeVisible()
+    expect(within(legend).getByText('Legacy: 2')).toBeVisible()
+    expect(within(legend).getByText('DTM: 3')).toBeVisible()
   })
 
   it('names paths in full in path mode', () => {
     render(<EducationTimelineChart {...baseProps} mode="path" />)
     const legend = screen.getByRole('list', { name: 'Chart legend' })
-    expect(within(legend).getByText('Presentation Mastery')).toBeVisible()
-    expect(within(legend).getByText('Other')).toBeVisible()
-  })
-
-  it('prints the notes handed in (legacy codes)', () => {
-    render(
-      <EducationTimelineChart
-        {...baseProps}
-        notes={<p>Legacy awards by code: CC 2</p>}
-      />
-    )
-    expect(screen.getByText('Legacy awards by code: CC 2')).toBeVisible()
+    expect(
+      within(legend).getByText(/^Presentation Mastery: \d+$/)
+    ).toBeVisible()
+    // The rest band folds in DTM and legacy, and says so.
+    expect(
+      within(legend).getByText(/^All other awards \(incl\. DTM\): \d+$/)
+    ).toBeVisible()
+    expect(within(legend).queryByText(/^Other: /)).toBeNull()
   })
 })
 
 describe('EducationTimelineChart — prior-year ghost', () => {
   it('draws last year as a faint stepped line, never joined across a gap', () => {
     render(<EducationTimelineChart {...baseProps} />)
-    const line = screen.getByTestId('line')
+    const line = ghostLine()!
     expect(line).toHaveAttribute('data-key', 'ghost')
     expect(line).toHaveAttribute('data-type', 'stepAfter')
     expect(line).toHaveAttribute('data-connect-nulls', 'false')
@@ -288,7 +338,8 @@ describe('EducationTimelineChart — prior-year ghost', () => {
     render(
       <EducationTimelineChart {...baseProps} timeline={NO_PRIOR_TIMELINE} />
     )
-    expect(screen.queryByTestId('line')).toBeNull()
+    expect(ghostLine()).toBeUndefined()
+    expect(screen.queryByTestId('reference-line')).toBeNull()
     expect(
       screen.getByTestId('education-timeline-ghost-note')
     ).toHaveTextContent('Last year is not available')
@@ -307,19 +358,47 @@ describe('EducationTimelineChart — last year as a year-end target', () => {
   }
   const props = { ...baseProps, timeline: oneYearEnd }
 
-  it('draws one faint flat line and labels it with the total', () => {
+  it('draws the target as one full-width reference line, labelled on the line', () => {
     render(<EducationTimelineChart {...props} />)
-    expect(screen.getByTestId('line')).toHaveAttribute('data-key', 'ghost')
-    expect(points().every(r => r['ghost'] === 412)).toBe(true)
-    const legend = screen.getByRole('list', { name: 'Chart legend' })
-    expect(within(legend).getByText(/Last year’s total: 412/)).toBeVisible()
+    const ref = screen.getByTestId('reference-line')
+    expect(ref).toHaveAttribute('data-y', '412')
+    expect(ref).toHaveAttribute('data-label', 'Last year’s total: 412')
+    // The reference line is the line: no stepped ghost curve alongside it.
+    expect(ghostLine()).toBeUndefined()
   })
 
-  it('explains it is the year-end total, not a same-date curve', () => {
+  it('spans the whole program year on the x-axis: Jul 1 to Jun 30', () => {
     render(<EducationTimelineChart {...props} />)
-    expect(
-      screen.getByTestId('education-timeline-ghost-note')
-    ).toHaveTextContent(/year-end|final total/i)
+    expect(domainOf('x-axis')).toEqual([
+      Date.UTC(2026, 6, 1),
+      Date.UTC(2027, 5, 30),
+    ])
+    expect(ticksOf('x-axis')).toHaveLength(12)
+  })
+
+  it('leaves the x-axis on the data when there is a same-date curve', () => {
+    render(<EducationTimelineChart {...baseProps} />)
+    expect(domainOf('x-axis')[1]).toBeLessThan(Date.UTC(2026, 11, 1))
+  })
+
+  it('does not make the target a y-axis tick, so ticks never collide with it', () => {
+    render(<EducationTimelineChart {...props} />)
+    expect(ticksOf('y-axis')).not.toContain(412)
+  })
+
+  it('explains it is the whole-year total this year counts up toward', () => {
+    render(<EducationTimelineChart {...props} />)
+    const note = screen.getByTestId('education-timeline-ghost-note')
+    expect(note).toHaveTextContent(
+      'last year’s total for the whole year; this year counts up toward it by June 30'
+    )
+    expect(note).not.toHaveTextContent(/same-date comparison/i)
+  })
+
+  it('names it in the legend with its total', () => {
+    render(<EducationTimelineChart {...props} />)
+    const legend = screen.getByRole('list', { name: 'Chart legend' })
+    expect(within(legend).getByText('Last year’s total: 412')).toBeVisible()
   })
 
   it('puts last year’s total in the table on every row', () => {
@@ -333,6 +412,39 @@ describe('EducationTimelineChart — last year as a year-end target', () => {
     for (const row of within(table).getAllByRole('row').slice(1)) {
       expect(row).toHaveTextContent('412')
     }
+  })
+})
+
+describe('EducationTimelineChart — y-axis scale', () => {
+  it('rounds up to a nice value with headroom over the peak and the target', () => {
+    const t = {
+      ...DISTRICT_61_TIMELINE,
+      prior: {
+        programYear: '2025-2026',
+        source: 'timeline' as const,
+        grain: 'day' as const,
+        points: [{ at: '2026-06-30', total: 1246 }],
+      },
+    }
+    render(<EducationTimelineChart {...baseProps} timeline={t} />)
+    const [lo, hi] = domainOf('y-axis')
+    expect(lo).toBe(0)
+    expect(hi).toBeGreaterThanOrEqual(1246 * 1.08)
+    expect(hi).toBeLessThanOrEqual(1246 * 1.4)
+    const ticks = ticksOf('y-axis')
+    expect(ticks[0]).toBe(0)
+    expect(ticks.at(-1)).toBe(hi)
+    // Round numbers only: every tick is a multiple of the step.
+    const step = ticks[1]! - ticks[0]!
+    expect(ticks.every((v, i) => v === i * step)).toBe(true)
+    expect(step % 25).toBe(0)
+  })
+
+  it('gives the plain stack 8% headroom too', () => {
+    render(<EducationTimelineChart {...baseProps} />)
+    const [, hi] = domainOf('y-axis')
+    expect(hi).toBeGreaterThanOrEqual(71 * 1.08)
+    expect(hi).toBeLessThanOrEqual(71 * 1.5)
   })
 })
 
@@ -377,7 +489,22 @@ describe('EducationTimelineChart — motion and readout', () => {
     for (const a of screen.getAllByTestId('area')) {
       expect(a).toHaveAttribute('data-animated', 'false')
     }
-    expect(screen.getByTestId('line')).toHaveAttribute('data-animated', 'false')
+    for (const l of lines()) {
+      expect(l).toHaveAttribute('data-animated', 'false')
+    }
+  })
+})
+
+describe('EducationTimelineChart — tooltip and readout total', () => {
+  it('carries a Total series so the tooltip and the readout end with a Total row', () => {
+    render(<EducationTimelineChart {...baseProps} />)
+    const total = lines().find(l => l.getAttribute('data-key') === 'total')!
+    expect(total).toHaveAttribute('data-name', 'Total')
+    // Its rows come after every band in the payload.
+    const order = [...screen.getByTestId('chart').children].map(c =>
+      c.getAttribute('data-key')
+    )
+    expect(order.indexOf('total')).toBeGreaterThan(order.indexOf('Legacy'))
   })
 })
 
