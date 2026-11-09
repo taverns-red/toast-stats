@@ -12,6 +12,9 @@ import {
 import type { EducationTimelineEntity } from '@taverns-red/shared-contracts'
 import {
   deriveTimeline,
+  timelineDate,
+  timelineT,
+  TIMELINE_DAY_MS,
   type TimelineMode,
 } from '../../utils/educationTimelineBands'
 import {
@@ -65,6 +68,22 @@ const shortPy = (py: string): string => `${py.slice(0, 4)}-${py.slice(7)}`
 const axisDate = (iso: string): string =>
   formatReadoutDate(iso).replace(/, \d{4}$/, '')
 
+const monthName = (t: number): string =>
+  new Date(t).toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })
+
+/** The first of every month inside [from, to], as time-axis values. */
+function monthStarts(from: number, to: number): number[] {
+  const out: number[] = []
+  const d = new Date(from)
+  let y = d.getUTCFullYear()
+  let m = d.getUTCMonth()
+  if (d.getUTCDate() > 1) m += 1
+  for (let t = Date.UTC(y, m, 1); t <= to; t = Date.UTC(y, ++m, 1)) {
+    out.push(t)
+  }
+  return out
+}
+
 const GHOST_GRAIN_NOTE = {
   day: 'a daily step from last year’s own timeline',
   month: 'a month-end step from the education ledger history',
@@ -92,16 +111,44 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
     [timeline.points, mode, prior, through]
   )
 
-  const data = useMemo(
-    () =>
-      rows.map(r => ({
-        date: r.date,
-        total: r.total,
-        [GHOST_KEY]: r.ghost,
-        ...r.values,
-      })),
-    [rows]
-  )
+  /* A TIME axis, so a three-week gap between snapshots looks like one. Each
+     row is a snapshot; one display-only TAIL row repeats the final values a
+     little further right, because a step holds its value AFTER its date and
+     the latest snapshot would otherwise have no width to be seen in. The tail
+     keeps the final date, so a tooltip over it still reads that snapshot. */
+  const { data, tFirst, tLast, tEnd } = useMemo(() => {
+    const base = rows.map(r => ({
+      date: r.date,
+      t: timelineT(r.date),
+      total: r.total,
+      [GHOST_KEY]: r.ghost,
+      ...r.values,
+    }))
+    const first = base[0]?.t ?? 0
+    const last = base[base.length - 1]?.t ?? 0
+    const span = last - first
+    const pad = Math.max(
+      2 * TIMELINE_DAY_MS,
+      Math.round((span * 0.04) / TIMELINE_DAY_MS) * TIMELINE_DAY_MS
+    )
+    const tail = base.length
+      ? [{ ...base[base.length - 1]!, t: last + pad, tail: true }]
+      : []
+    return {
+      data: [...base, ...tail],
+      tFirst: first,
+      tLast: last,
+      tEnd: last + pad,
+    }
+  }, [rows])
+
+  const ticks = useMemo(() => monthStarts(tFirst, tLast), [tFirst, tLast])
+  const byMonth = ticks.length >= 2
+  const axisTick = (t: number): string =>
+    byMonth ? monthName(t) : axisDate(timelineDate(t))
+  /** The snapshot a time-axis position reads: the tail reads the final one. */
+  const snapshotLabel = (t: number | string): string =>
+    formatReadoutDate(timelineDate(Math.min(Number(t), tLast)))
 
   const final = rows[rows.length - 1]
   const peak = Math.max(0, ...rows.map(r => Math.max(r.total, r.ghost ?? 0)))
@@ -160,9 +207,13 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
               opacity={0.15}
             />
             <XAxis
-              dataKey="date"
-              tickFormatter={axisDate}
-              minTickGap={32}
+              dataKey="t"
+              type="number"
+              scale="time"
+              domain={[tFirst, tEnd]}
+              ticks={byMonth ? ticks : [tFirst, tLast]}
+              tickFormatter={axisTick}
+              minTickGap={16}
               tick={{ fontSize: 13 }}
             />
             <YAxis
@@ -174,7 +225,7 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
             />
             <Tooltip
               labelFormatter={label =>
-                `Snapshot ${formatReadoutDate(String(label))}`
+                `Snapshot ${snapshotLabel(String(label))}`
               }
               formatter={value => fmt(Number(value))}
               {...readout.tooltipProps}
@@ -215,7 +266,7 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
       </div>
       <ChartReadout
         readout={readout}
-        labelFormatter={iso => `Snapshot ${formatReadoutDate(iso)}`}
+        labelFormatter={t => `Snapshot ${snapshotLabel(t)}`}
       />
 
       <ul className="edu-tl__legend" aria-label="Chart legend">

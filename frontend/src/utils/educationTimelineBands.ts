@@ -80,6 +80,12 @@ const utc = (iso: string): number => {
 
 const isoOf = (ms: number): string => new Date(ms).toISOString().slice(0, 10)
 
+/** Midnight UTC of a `YYYY-MM-DD`, in ms: the chart's time-axis value. */
+export const timelineT = utc
+/** The `YYYY-MM-DD` of a time-axis value (UTC midnight). */
+export const timelineDate = isoOf
+export const TIMELINE_DAY_MS = DAY_MS
+
 /** The calendar year a program year starting in July of that year begins. */
 const programYearStart = (iso: string): number => {
   const [y, m] = iso.split('-').map(Number) as [number, number]
