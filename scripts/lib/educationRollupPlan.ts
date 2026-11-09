@@ -118,6 +118,64 @@ export function timelinePrefixes(indexText: string): string[] {
   return [...out].sort()
 }
 
+/**
+ * Which timeline sets are not safe to promote (#2591 review). A partial or
+ * interrupted upload can leave one PY's files at different dates; promoting
+ * them would show the chart a mix. For each PY the index names, whose files
+ * are being promoted (`asOfByPath`: path → the file's `asOf`, null when it
+ * could not be read):
+ *   - every file's asOf must be ≤ the row's asOf, and
+ *   - world.json must be there with asOf == the row's asOf.
+ * Returns PY → why it is refused. The caller drops that PY's timeline files
+ * and carries on with the rest of the promotion.
+ */
+export function refuseInconsistentTimelines(
+  indexText: string,
+  asOfByPath: ReadonlyMap<string, string | null>
+): Map<string, string> {
+  const refused = new Map<string, string>()
+  const index = JSON.parse(indexText) as {
+    timelines?: Array<{
+      programYear?: unknown
+      prefix?: unknown
+      asOf?: unknown
+    }>
+  }
+  for (const row of index.timelines ?? []) {
+    const py = typeof row.programYear === 'string' ? row.programYear : null
+    if (py === null) continue
+    const mine = [...asOfByPath].filter(
+      ([p]) => parseEducationTimelinePath(p)?.programYear === py
+    )
+    if (mine.length === 0) continue
+    const rowAsOf = typeof row.asOf === 'string' ? row.asOf : null
+    const world = `${EDUCATION_TIMELINE_PREFIX}/${py}/world.json`
+    let why: string | null = null
+    if (rowAsOf === null) {
+      why = `the index row for ${py} has no asOf`
+    } else {
+      for (const [p, asOf] of mine.sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
+        const name = p.slice(p.lastIndexOf('/') + 1)
+        if (asOf === null) {
+          why = `${name} has no readable asOf`
+        } else if (asOf > rowAsOf) {
+          why = `${name} is as of ${asOf}, after the index row (${rowAsOf})`
+        }
+        if (why) break
+      }
+      if (why === null) {
+        const w = asOfByPath.get(world)
+        if (w === undefined) why = `world.json is missing`
+        else if (w !== rowAsOf) {
+          why = `world.json is as of ${w ?? 'unknown'}, not the index row's ${rowAsOf}`
+        }
+      }
+    }
+    if (why) refused.set(py, why)
+  }
+  return refused
+}
+
 /** Throws on an index that is not JSON or names anything off the prefix. */
 export function planEducationRollup(
   inputs: EducationRollupInputs

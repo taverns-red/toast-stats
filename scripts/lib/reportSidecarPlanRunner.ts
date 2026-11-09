@@ -45,12 +45,17 @@ import { parseRunManifest, type RunManifestEntry } from './runManifest.js'
 import {
   EDUCATION_ROLLUP_STAGE,
   educationRollupDateHold,
+  isEducationTimelineObject,
   planEducationRollup,
+  refuseInconsistentTimelines,
   timelinePrefixes,
   type EducationRollupPlan,
   type SidecarHoldState,
 } from './educationRollupPlan.js'
-import { EDUCATION_ROLLUP_INDEX_PATH } from '@taverns-red/shared-contracts'
+import {
+  EDUCATION_ROLLUP_INDEX_PATH,
+  parseEducationTimelinePath,
+} from '@taverns-red/shared-contracts'
 
 export const DEFAULT_SIDECAR_MANIFEST_FILE =
   '/tmp/report-sidecars/written.jsonl'
@@ -213,7 +218,34 @@ export async function runPlanReportSidecars(io: PlanIo): Promise<number> {
             `could not download the ${paths.length} education rollup object(s)`
           )
         }
-        entries = rollup.paths.map(p => ({
+        // A timeline PY whose files disagree with the index row (a partial
+        // upload) is dropped whole; the years and the index still promote.
+        const asOfByPath = new Map<string, string | null>()
+        for (const p of rollup.paths) {
+          if (!isEducationTimelineObject(p)) continue
+          try {
+            const v = JSON.parse(
+              readFileSync(path.join(dirOf(p), path.basename(p)), 'utf-8')
+            ) as { asOf?: unknown }
+            asOfByPath.set(p, typeof v.asOf === 'string' ? v.asOf : null)
+          } catch {
+            asOfByPath.set(p, null)
+          }
+        }
+        const refused = refuseInconsistentTimelines(
+          stagingIndex as string,
+          asOfByPath
+        )
+        for (const [py, why] of refused) {
+          log(
+            `::warning title=Education timeline::${py} timeline files are not promoted: ${why}`
+          )
+        }
+        const kept = rollup.paths.filter(p => {
+          const e = parseEducationTimelinePath(p)
+          return !(e && refused.has(e.programYear))
+        })
+        entries = kept.map(p => ({
           path: p,
           sha256: createHash('sha256')
             .update(readFileSync(path.join(dirOf(p), path.basename(p))))

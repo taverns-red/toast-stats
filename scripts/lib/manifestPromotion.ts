@@ -116,7 +116,7 @@ export function classifyPromotionPath(path: string): PromotionClass {
   ) {
     if (!isEducationRollupObject(path)) {
       throw new Error(
-        `refusing to promote '${path}': under ${EDUCATION_ROLLUP_DIR} only <PY>.json and index.json are, and under ${EDUCATION_TIMELINE_DIR} only <PY>.json`
+        `refusing to promote '${path}': under ${EDUCATION_ROLLUP_DIR} only <PY>.json and index.json are, and under ${EDUCATION_TIMELINE_DIR} only <PY>/{world,region-<n>,district-<id>}.json`
       )
     }
     return { kind: 'education-rollup' }

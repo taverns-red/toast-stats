@@ -257,9 +257,7 @@ describe('planManifestPromotion — the education timeline (#2591)', () => {
         entries: [entry(`${P26}/scratch.json`)],
         educationRollup: true,
       })
-    ).toThrow(
-      /derived\/education-timeline\/<PY>\/\{world,region-<n>,district-<id>\}\.json/
-    )
+    ).toThrow(/only <PY>\/\{world,region-<n>,district-<id>\}\.json/)
   })
 })
 
