@@ -13,6 +13,8 @@ import {
   EducationRollupProgramYearSchema,
 } from '@taverns-red/shared-contracts'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
+import { useEducationTimeline } from '../../hooks/useEducationTimeline'
+import { WORLD_TIMELINE } from '../../__tests__/fixtures/educationTimelineFixtures'
 import WorldEducationPage from '../WorldEducationPage'
 import {
   fetchCdnEducationRollup,
@@ -23,6 +25,9 @@ import older from '../../__tests__/fixtures/education-rollup-2022-2023.recorded.
 import recordedIndex from '../../__tests__/fixtures/education-rollup-index.recorded.json'
 
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }))
+vi.mock('../../hooks/useEducationTimeline', () => ({
+  useEducationTimeline: vi.fn(() => ({ timeline: null, isLoading: false })),
+}))
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnDates: vi.fn().mockResolvedValue({
@@ -113,5 +118,54 @@ describe('WorldEducationPage', () => {
     expect(
       screen.queryByRole('list', { name: 'Education at a glance' })
     ).not.toBeInTheDocument()
+  })
+})
+
+describe('WorldEducationPage — awards over time (#2592)', () => {
+  it('asks for the world timeline of the page-selected PY (R3)', async () => {
+    serveRecorded()
+    vi.mocked(useEducationTimeline).mockReturnValue({
+      timeline: WORLD_TIMELINE,
+      isLoading: false,
+    })
+    renderAt('/regions/education')
+    await screen.findByTestId('education-timeline-headline')
+    expect(vi.mocked(useEducationTimeline)).toHaveBeenCalledWith(
+      '2026-2027',
+      'world',
+      null
+    )
+  })
+
+  it('sits directly under the KPI tiles and replaces the program bar', async () => {
+    serveRecorded()
+    vi.mocked(useEducationTimeline).mockReturnValue({
+      timeline: WORLD_TIMELINE,
+      isLoading: false,
+    })
+    renderAt('/regions/education')
+    const kpis = await screen.findByRole('list', {
+      name: 'Education at a glance',
+    })
+    const chart = await screen.findByRole('region', {
+      name: 'Awards over time',
+    })
+    expect(kpis.nextElementSibling).toBe(chart)
+    expect(screen.queryByRole('list', { name: 'Awards by program' })).toBeNull()
+  })
+
+  it('says not available yet, and keeps the program bar, when the file is absent', async () => {
+    serveRecorded()
+    vi.mocked(useEducationTimeline).mockReturnValue({
+      timeline: null,
+      isLoading: false,
+    })
+    renderAt('/regions/education')
+    expect(
+      await screen.findByTestId('education-timeline-unavailable')
+    ).toHaveTextContent(/not available yet/i)
+    expect(
+      screen.getByRole('list', { name: 'Awards by program' })
+    ).toBeVisible()
   })
 })
