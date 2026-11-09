@@ -24,6 +24,15 @@ import {
 } from '../../utils/districtEducation'
 import { DistrictEducationView } from '../DistrictEducationView'
 
+// The awards timeline section (#2592) has its own tests; here it is absent.
+vi.mock('../../hooks/useEducationTimeline', () => ({
+  useEducationTimeline: () => ({
+    timeline: null,
+    isLoading: false,
+    listed: true,
+  }),
+}))
+
 const d61 = recordedD61 as unknown as DistrictReportsDataset
 const archive = recordedArchive as unknown as DistrictReportsDataset
 const clubs = (recordedClubs as { clubs: EducationClub[] }).clubs
@@ -78,6 +87,8 @@ function renderView({
                 education={education}
                 snapshotDate="2026-10-13"
                 isPriorProgramYear={isPriorProgramYear}
+                programYear={programYear}
+                districtId="61"
               />
               <LocationProbe />
             </>

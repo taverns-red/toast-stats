@@ -40,6 +40,8 @@ import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 import { useDistrictStatistics } from '../../hooks/useMembershipData'
 import { useEducationRollupIndex } from '../../hooks/useEducationRollup'
+import { useEducationTimeline } from '../../hooks/useEducationTimeline'
+import { DISTRICT_61_TIMELINE } from '../../__tests__/fixtures/educationTimelineFixtures'
 import recordedD61 from '../../__tests__/fixtures/d61-education-reports.recorded.json'
 import recordedClubs from '../../__tests__/fixtures/d61-education-clubs.recorded.json'
 import recordedIndex from '../../__tests__/fixtures/education-rollup-index.recorded.json'
@@ -120,6 +122,13 @@ vi.mock('../../services/cdn', async importOriginal => ({
     generatedAt: '2026-10-14T00:00:00Z',
   }),
 }))
+vi.mock('../../hooks/useEducationTimeline', () => ({
+  useEducationTimeline: vi.fn(() => ({
+    timeline: null,
+    isLoading: false,
+    listed: true,
+  })),
+}))
 vi.mock('../../hooks/useEducationRollup', () => ({
   useEducationRollupIndex: vi.fn(() => ({ index: null, isLoading: false })),
 }))
@@ -132,8 +141,11 @@ const csvSnapshot = {
   ],
 }
 
-const viewProps: Array<{ snapshotDate: string; isPriorProgramYear: boolean }> =
-  []
+const viewProps: Array<{
+  snapshotDate: string
+  isPriorProgramYear: boolean
+  programYear: string
+}> = []
 vi.mock('../../components/DistrictEducationView', async () => {
   const actual = await vi.importActual<
     typeof import('../../components/DistrictEducationView')
@@ -455,5 +467,63 @@ describe('DistrictEducationPage (#1793)', () => {
         screen.queryByRole('list', { name: 'Awards by program year' })
       ).toBeNull()
     })
+  })
+})
+
+describe('DistrictEducationPage — awards over time (#2592)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    viewProps.length = 0
+    leaderboardProps.length = 0
+    vi.mocked(useDistrictAnalytics).mockReturnValue(analyticsWith(d61))
+    vi.mocked(useEducationTimeline).mockReturnValue({
+      timeline: DISTRICT_61_TIMELINE,
+      isLoading: false,
+      listed: true,
+    })
+  })
+  afterEach(() => cleanup())
+
+  it('asks for the timeline of the page-selected PY, this district, up to the selected date (R3)', async () => {
+    renderAt('/district/61/education?date=2026-10-12')
+    await screen.findByTestId('education-timeline-headline')
+    expect(vi.mocked(useEducationTimeline)).toHaveBeenCalledWith(
+      '2026-2027',
+      'district',
+      '61'
+    )
+    expect(viewProps.at(-1)!.programYear).toBe('2026-2027')
+  })
+
+  it('sits directly under the KPI tiles and replaces the program bar', async () => {
+    renderAt('/district/61/education')
+    const kpis = await screen.findByRole('list', {
+      name: /education at a glance/i,
+    })
+    const chart = await screen.findByRole('region', {
+      name: 'Awards over time',
+    })
+    expect(
+      kpis.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    // Directly under: nothing but the chart between the tiles and "By level".
+    expect(kpis.nextElementSibling).toBe(chart)
+    expect(screen.queryByRole('list', { name: 'Awards by program' })).toBeNull()
+    expect(screen.getByRole('list', { name: 'Chart legend' })).toBeVisible()
+  })
+
+  it('says not available yet, and keeps the program bar, when the file is absent', async () => {
+    vi.mocked(useEducationTimeline).mockReturnValue({
+      timeline: null,
+      isLoading: false,
+      listed: true,
+    })
+    renderAt('/district/61/education')
+    expect(
+      await screen.findByTestId('education-timeline-unavailable')
+    ).toHaveTextContent(/not available yet/i)
+    expect(
+      screen.getByRole('list', { name: 'Awards by program' })
+    ).toBeVisible()
   })
 })

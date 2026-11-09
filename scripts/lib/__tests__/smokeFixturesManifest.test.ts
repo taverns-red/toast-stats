@@ -89,6 +89,7 @@ describe('families read through a path helper are named in the manifest (#2545)'
   it.each([
     'time-series/regions/',
     'derived/education-rollup/',
+    'derived/education-timeline/',
     'config/charter-cohort-survival/',
     'snapshots/{date}/clubs-by-region/',
     'config/club-district-history/',
@@ -117,5 +118,23 @@ describe('the basemap archive is served from the committed extract (#2545)', () 
 describe('the live checks the fixtures never replace (#2545)', () => {
   it('lists no path under another origin', () => {
     expect(manifest.origin).toBe('https://cdn-staging.taverns.red')
+  })
+})
+
+describe('the education timeline objects (#2592)', () => {
+  const timelines = manifest.paths.filter(e =>
+    e.path.startsWith('derived/education-timeline/')
+  )
+
+  it('names the world, region and district files', () => {
+    const paths = timelines.map(e => e.path)
+    expect(paths.some(p => p.endsWith('/world.json'))).toBe(true)
+    expect(paths.some(p => /\/region-[^/]+\.json$/.test(p))).toBe(true)
+    expect(paths.some(p => /\/district-[^/]+\.json$/.test(p))).toBe(true)
+  })
+
+  it('records every one as optional: staging has none until the backfill runs', () => {
+    expect(timelines.length).toBeGreaterThan(0)
+    for (const e of timelines) expect(e.optional).toBe(true)
   })
 })

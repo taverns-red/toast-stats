@@ -1,0 +1,430 @@
+/* #2592 (epic #2590) — "Awards over time" on the Education pages
+   (EducationTimelineChart / EducationTimelineSection).
+
+   #2080: the LEGACY palette (loyal blue, green, maroon, red, gold and the
+   neutrals the app already uses); no product-accent amber, no brand colour.
+   #2080 exception for the education timeline path colours, Ron 2026-11-09:
+   this chart alone may keep teal, pink, green and gold for the 11 paths,
+   since eleven paths cannot be told apart on the legacy hues. The
+   noProductAccentUntilPhase2 guard still passes: none of these is the
+   product accent or its amber, so it needs no allow-list entry. Text wears ink tokens, which remap at [data-theme='dark']; colour
+   is only a swatch or a fill, and every band is named in the legend with its
+   value, so colour is never the only signal.
+
+   Recharts writes `fill` / `stroke` as SVG attributes, where var() does not
+   resolve, and a CSS property outranks a presentation attribute. So each band
+   carries a hook (`edu-tl-c--<hook>`) that names the ENTITY -- a level or a
+   path, never a rank -- and the rules below paint it. The same hook paints
+   the legend swatch. Dark values sit under [data-theme='dark'] (R10). */
+
+/* ── Colours: the light set ──────────────────────────────────────────── */
+.edu-tl {
+  /* Levels: one hue, lighter = earlier level (loyal blue ramp). Every fill
+     is at least 3:1 against the page and surface (WCAG 1.4.11); the ramp is
+     steeper than a pastel one because even level 1 must stay visible. */
+  --edu-tl-l1: #5f93ad;
+  --edu-tl-l2: #3f7ea3;
+  --edu-tl-l3: #2a6a8f;
+  --edu-tl-l4: #16547a;
+  --edu-tl-l5: #00304f;
+  --edu-tl-dtm: #7b1828;
+  --edu-tl-legacy: #6b7280;
+  --edu-tl-other: #868d8c;
+  --edu-tl-rest: #868d8c;
+  /* The 11 Pathways paths: a fixed colour per path, whatever its rank. */
+  --edu-tl-p-dl: #004165;
+  --edu-tl-p-ec: #15803d;
+  --edu-tl-p-eh: #7b1828;
+  --edu-tl-p-ip: #6791a8;
+  --edu-tl-p-ld: #639572;
+  --edu-tl-p-ms: #dc2626;
+  --edu-tl-p-pi: #b37b81;
+  --edu-tl-p-pm: #4b5563;
+  --edu-tl-p-sr: #ba7f04;
+  --edu-tl-p-tc: #0f766e;
+  --edu-tl-p-vc: #7f8c9e;
+}
+
+/* ── Colours: the dark set ───────────────────────────────────────────── */
+[data-theme='dark'] .edu-tl {
+  --edu-tl-l1: #4a7a9c;
+  --edu-tl-l2: #5f94bb;
+  --edu-tl-l3: #7aaed2;
+  --edu-tl-l4: #9cc6e3;
+  --edu-tl-l5: #c4e0f3;
+  --edu-tl-dtm: #e0707f;
+  --edu-tl-legacy: #9ca3af;
+  --edu-tl-other: #6b7280;
+  --edu-tl-rest: #6b7280;
+  --edu-tl-p-dl: #5dade2;
+  --edu-tl-p-ec: #4ade80;
+  --edu-tl-p-eh: #e0707f;
+  --edu-tl-p-ip: #2e6d98;
+  --edu-tl-p-ld: #2f7548;
+  --edu-tl-p-ms: #f87171;
+  --edu-tl-p-pi: #a24e5b;
+  --edu-tl-p-pm: #9ca3af;
+  --edu-tl-p-sr: #facc15;
+  --edu-tl-p-tc: #5eead4;
+  --edu-tl-p-vc: #5d697b;
+}
+
+/* The hook -> colour binding, shared by the band layer and the swatch. */
+.edu-tl-c--l1 {
+  --edu-tl-c: var(--edu-tl-l1);
+}
+.edu-tl-c--l2 {
+  --edu-tl-c: var(--edu-tl-l2);
+}
+.edu-tl-c--l3 {
+  --edu-tl-c: var(--edu-tl-l3);
+}
+.edu-tl-c--l4 {
+  --edu-tl-c: var(--edu-tl-l4);
+}
+.edu-tl-c--l5 {
+  --edu-tl-c: var(--edu-tl-l5);
+}
+.edu-tl-c--dtm {
+  --edu-tl-c: var(--edu-tl-dtm);
+}
+.edu-tl-c--legacy {
+  --edu-tl-c: var(--edu-tl-legacy);
+}
+.edu-tl-c--other {
+  --edu-tl-c: var(--edu-tl-other);
+}
+.edu-tl-c--rest {
+  --edu-tl-c: var(--edu-tl-rest);
+}
+.edu-tl-c--p-dl {
+  --edu-tl-c: var(--edu-tl-p-dl);
+}
+.edu-tl-c--p-ec {
+  --edu-tl-c: var(--edu-tl-p-ec);
+}
+.edu-tl-c--p-eh {
+  --edu-tl-c: var(--edu-tl-p-eh);
+}
+.edu-tl-c--p-ip {
+  --edu-tl-c: var(--edu-tl-p-ip);
+}
+.edu-tl-c--p-ld {
+  --edu-tl-c: var(--edu-tl-p-ld);
+}
+.edu-tl-c--p-ms {
+  --edu-tl-c: var(--edu-tl-p-ms);
+}
+.edu-tl-c--p-pi {
+  --edu-tl-c: var(--edu-tl-p-pi);
+}
+.edu-tl-c--p-pm {
+  --edu-tl-c: var(--edu-tl-p-pm);
+}
+.edu-tl-c--p-sr {
+  --edu-tl-c: var(--edu-tl-p-sr);
+}
+.edu-tl-c--p-tc {
+  --edu-tl-c: var(--edu-tl-p-tc);
+}
+.edu-tl-c--p-vc {
+  --edu-tl-c: var(--edu-tl-p-vc);
+}
+
+.edu-tl__band .recharts-area-area {
+  fill: var(--edu-tl-c);
+  fill-opacity: 1;
+}
+/* A 2px gap of the surface between bands keeps neighbours apart. */
+.edu-tl__band .recharts-area-curve {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+/* ── The ghost: last year, faint and dashed ─────────────────────────── */
+.edu-tl__ghost .recharts-line-curve {
+  stroke: var(--ink-2);
+  stroke-opacity: 0.7;
+}
+
+/* Last year's year-end total: a full-width reference line, labelled on the
+   line in ink (colour is never the only signal). */
+.edu-tl__ref .recharts-reference-line-line {
+  stroke: var(--ink-2);
+  stroke-opacity: 0.8;
+}
+/* Recharts portals the label out of the reference line's group, so it is
+   styled from the plot, not from .edu-tl__ref; its fill attribute is grey. */
+.edu-tl__plot .recharts-label {
+  fill: var(--ink);
+  font-weight: 600;
+}
+
+/* ── Frame ───────────────────────────────────────────────────────────── */
+.edu-tl {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+/* Height is reserved by construction, not by a measured pixel floor. The
+   chart block (heading, headline, plot, readout, legend, note, table toggle)
+   is the same stack of boxes while loading (the skeleton) and once loaded:
+   the headline, plot, readout and toggle have fixed heights, and the only
+   parts whose height depends on the font and the data -- the legend and the
+   note, which wrap -- each reserve a fixed number of LINES, in the chart and
+   in the skeleton alike (a line is a fixed height whatever the font). The
+   reservation exists only while a chart is loading or showing: with no
+   timeline for the PY the state is a compact note and nothing is reserved,
+   and the program notes sit outside the block.
+
+   Line counts are the worst case per width (phone, 540, 768, 1100) and
+   grouping: By level has at most 9 legend items, By path up to 8 with long
+   names. A wrap beyond them is at most a line, never a font-dependent guess. */
+.edu-tl-section--reserved {
+  --edu-tl-touch: 0px;
+  --edu-tl-legend-rows: 5;
+  --edu-tl-note-lines: 5;
+  --edu-tl-head-h: 2rem;
+}
+.edu-tl-section--path {
+  --edu-tl-legend-rows: 9;
+}
+@media (hover: none) {
+  .edu-tl-section--reserved {
+    --edu-tl-touch: 48px;
+  }
+}
+@media (max-width: 359px) {
+  .edu-tl-section--reserved {
+    --edu-tl-head-h: 4rem;
+    --edu-tl-note-lines: 6;
+  }
+}
+@media (min-width: 540px) {
+  .edu-tl-section--reserved {
+    --edu-tl-legend-rows: 3;
+    --edu-tl-note-lines: 3;
+  }
+  .edu-tl-section--path {
+    --edu-tl-legend-rows: 5;
+  }
+}
+@media (min-width: 768px) {
+  .edu-tl-section--reserved {
+    --edu-tl-note-lines: 3;
+  }
+  .edu-tl-section--path {
+    --edu-tl-legend-rows: 4;
+  }
+}
+@media (min-width: 1100px) {
+  .edu-tl-section--reserved {
+    --edu-tl-legend-rows: 2;
+    --edu-tl-note-lines: 2;
+  }
+  .edu-tl-section--path {
+    --edu-tl-legend-rows: 3;
+  }
+}
+
+.edu-tl__headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.3em;
+  margin: 0.25rem 0 0.5rem;
+  min-height: var(--edu-tl-head-h, 2rem);
+  line-height: 2rem;
+  color: var(--ink);
+}
+.edu-tl__headline-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 2rem;
+}
+.edu-tl__headline-date {
+  font-size: 1rem;
+  color: var(--ink-2);
+  line-height: 2rem;
+}
+
+.edu-tl__mismatch {
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--link);
+  border-radius: var(--rt-radius-md, 8px);
+}
+
+/* The plot's own height is fixed: the chart never resizes after it draws. */
+.edu-tl__plot {
+  height: 280px;
+}
+.edu-tl__plot .recharts-cartesian-axis-tick-value {
+  fill: var(--ink-2);
+}
+
+/* ── Legend ──────────────────────────────────────────────────────────── */
+.edu-tl__legend {
+  list-style: none;
+  min-height: calc(
+    var(--edu-tl-legend-rows, 1) * 1.5rem + (var(--edu-tl-legend-rows, 1) - 1) *
+      0.375rem
+  );
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+}
+.edu-tl__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 1.5rem;
+  line-height: 1.4;
+}
+.edu-tl__swatch {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--edu-tl-c);
+}
+.edu-tl__swatch--ghost {
+  height: 0;
+  border-radius: 0;
+  background: none;
+  border-top: 2px dashed var(--ink-2);
+  opacity: 0.7;
+}
+.edu-tl__legend-value {
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.edu-tl__note {
+  margin: 0.75rem 0 0;
+  min-height: calc(var(--edu-tl-note-lines, 1) * 1.225rem);
+  font-size: 0.875rem;
+  line-height: 1.225rem;
+  color: var(--ink-3);
+}
+
+/* ── Table view ──────────────────────────────────────────────────────── */
+.edu-tl__data {
+  margin-top: 0.75rem;
+}
+.edu-tl__data-toggle {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  height: 44px;
+  padding: 0 0.25rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--link);
+  cursor: pointer;
+}
+.edu-tl__table-scroll {
+  max-height: 22rem;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+}
+.edu-tl__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.edu-tl__table th,
+.edu-tl__table td {
+  padding: 0.375rem 0.625rem;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+.edu-tl__table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.edu-tl__table tbody th {
+  text-align: left;
+  font-weight: 600;
+}
+.edu-tl__table-total {
+  font-weight: 700;
+}
+
+/* ── Loading skeleton: the same footprint as the chart block ─────────── */
+.edu-tl__skeleton {
+  display: block;
+}
+.edu-tl__skeleton-line,
+.edu-tl__skeleton-plot {
+  background: var(--line);
+  border-radius: var(--rt-radius-md, 8px);
+  opacity: 0.5;
+}
+.edu-tl__skeleton-line {
+  height: var(--edu-tl-head-h, 2rem);
+  width: 55%;
+  margin: 0.25rem 0 0.5rem;
+}
+.edu-tl__skeleton-plot {
+  height: 280px;
+}
+/* The same slots the loaded chart reserves, drawn empty. */
+.edu-tl__skeleton-readout {
+  display: none;
+}
+@media (hover: none) {
+  .edu-tl__skeleton-readout {
+    display: block;
+    min-height: var(--edu-tl-touch);
+    margin: 8px 0 0;
+  }
+}
+.edu-tl__skeleton-legend {
+  min-height: calc(
+    var(--edu-tl-legend-rows, 1) * 1.5rem + (var(--edu-tl-legend-rows, 1) - 1) *
+      0.375rem
+  );
+  margin: 0.75rem 0 0;
+}
+.edu-tl__skeleton-note {
+  min-height: calc(var(--edu-tl-note-lines, 1) * 1.225rem);
+  margin: 0.75rem 0 0;
+}
+.edu-tl__skeleton-toggle {
+  height: 44px;
+  margin-top: 0.75rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .edu-tl__skeleton-line,
+  .edu-tl__skeleton-plot {
+    animation: edu-tl-pulse 1.4s ease-in-out infinite;
+  }
+}
+@keyframes edu-tl-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.edu-tl__unavailable .education-empty {
+  margin-top: 0.25rem;
+}

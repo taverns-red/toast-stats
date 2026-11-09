@@ -121,6 +121,11 @@ export const COMPAT_FIXTURES: FixtureSpec[] = [
     exportName: 'EDUCATION_ROLLUP_INDEX',
   },
   {
+    reader: 'EducationTimelineEntity',
+    file: '__fixtures__/reader-payloads.ts',
+    exportName: 'EDUCATION_TIMELINE_ENTITY',
+  },
+  {
     reader: 'ReportsRollups',
     file: '__fixtures__/recorded-reports-rollups.json',
   },

@@ -77,23 +77,31 @@ export const ProgramBar: React.FC<{ e: EducationSummary }> = ({ e }) => {
           </li>
         ))}
       </ul>
-      {e.legacyByCode.length > 0 && (
-        <p className="education-note">
-          Legacy awards by code:{' '}
-          {e.legacyByCode.map(c => `${c.code} ${fmt(c.count)}`).join(' · ')}
-        </p>
-      )}
-      {e.otherByCode.length > 0 && (
-        <p className="education-note">
-          Other awards (not a Pathways level, legacy award or DTM):{' '}
-          {e.otherByCode
-            .map(c => `${c.code || 'blank code'} ${fmt(c.count)}`)
-            .join(' · ')}
-        </p>
-      )}
+      <ProgramNotes e={e} />
     </div>
   )
 }
+
+/** The legacy / other award codes behind the program totals. Printed under
+ *  the all-awards bar, and under the timeline chart that replaces it (#2592). */
+export const ProgramNotes: React.FC<{ e: EducationSummary }> = ({ e }) => (
+  <>
+    {e.legacyByCode.length > 0 && (
+      <p className="education-note">
+        Legacy awards by code:{' '}
+        {e.legacyByCode.map(c => `${c.code} ${fmt(c.count)}`).join(' · ')}
+      </p>
+    )}
+    {e.otherByCode.length > 0 && (
+      <p className="education-note">
+        Other awards (not a Pathways level, legacy award or DTM):{' '}
+        {e.otherByCode
+          .map(c => `${c.code || 'blank code'} ${fmt(c.count)}`)
+          .join(' · ')}
+      </p>
+    )}
+  </>
+)
 
 /* ── Level rows / path rows ──────────────────────────────────────────── */
 

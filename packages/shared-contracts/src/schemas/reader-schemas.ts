@@ -32,6 +32,7 @@ import {
   EducationRollupIndexSchema,
   EducationRollupProgramYearSchema,
 } from './education-rollup.schema.js'
+import { EducationTimelineEntitySchema } from './education-timeline.schema.js'
 import { GlobalClubRaceSchema } from './global-club-race.schema.js'
 import { PerDistrictDataSchema } from './per-district-data.schema.js'
 import { RegionMembershipSeriesSchema } from './region-membership-series.schema.js'
@@ -59,6 +60,9 @@ export const EducationRollupProgramYearReaderSchema = toTolerantReader(
 )
 export const EducationRollupIndexReaderSchema = toTolerantReader(
   EducationRollupIndexSchema
+)
+export const EducationTimelineEntityReaderSchema = toTolerantReader(
+  EducationTimelineEntitySchema
 )
 export const ReportsRollupsReaderSchema = toTolerantReader(ReportsRollupsSchema)
 export const PerDistrictDataReaderSchema = toTolerantReader(

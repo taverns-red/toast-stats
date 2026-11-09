@@ -203,6 +203,27 @@
       "optional": true
     },
     {
+      "path": "derived/education-timeline/{pyCurrent}/world.json",
+      "optional": true
+    },
+    {
+      "path": "derived/education-timeline/{pyCurrent}/region-{region}.json",
+      "optional": true
+    },
+    {
+      "path": "derived/education-timeline/{pyCurrent}/region-05.json",
+      "optional": true
+    },
+    {
+      "path": "derived/education-timeline/{pyCurrent}/district-{district}.json",
+      "optional": true
+    },
+    {
+      "path": "derived/education-timeline/{py}/district-{district}.json",
+      "districts": ["61"],
+      "optional": true
+    },
+    {
       "path": "basemap/protomaps-v4/world-z0-14-20261015.pmtiles",
       "copyFrom": "frontend/e2e/fixtures/basemap-z0.pmtiles"
     }
