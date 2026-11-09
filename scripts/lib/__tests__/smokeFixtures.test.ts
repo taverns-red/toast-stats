@@ -20,6 +20,7 @@ import {
   refreshFixtures,
   uncoveredPaths,
   validateObject,
+  SCHEMA_RULES,
   type FetchFn,
   type Manifest,
   type SchemaRule,
@@ -524,5 +525,40 @@ describe('formatReport', () => {
     expect(text).toMatch(/^FAILED/)
     expect(text).toContain('things/a.json')
     expect(text).toContain('unvalidated')
+  })
+})
+
+describe('the education timeline schema rule (#2592)', () => {
+  const path = 'derived/education-timeline/2026-2027/district-61.json'
+  const body = (o: unknown) => text(JSON.stringify(o))
+  const file = JSON.parse(
+    readFileSync(
+      new URL(
+        '../../../frontend/src/__tests__/fixtures/education-timeline-district-61.json',
+        import.meta.url
+      ),
+      'utf-8'
+    )
+  )
+
+  it('validates an entity file with the reader the frontend parses with', () => {
+    expect(validateObject(path, body(file), SCHEMA_RULES)).toEqual({
+      kind: 'ok',
+      schema: 'EducationTimelineEntity',
+    })
+  })
+
+  it('covers the world and region files too', () => {
+    for (const p of [
+      'derived/education-timeline/2026-2027/world.json',
+      'derived/education-timeline/2026-2027/region-09.json',
+    ]) {
+      expect(validateObject(p, body({}), SCHEMA_RULES).kind).toBe('invalid')
+    }
+  })
+
+  it('fails on drift, so a staging change fails before any shard starts', () => {
+    const v = validateObject(path, body({ ...file, points: [] }), SCHEMA_RULES)
+    expect(v.kind).toBe('invalid')
   })
 })
