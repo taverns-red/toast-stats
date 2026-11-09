@@ -44,7 +44,9 @@ const PrivacyPage: React.FC = () => {
           anonymised address and the page you viewed to Google. Ad
           personalisation is off. The site also remembers your preferences on
           this device, such as light or dark theme, your district and table
-          filters.
+          filters. It also keeps a short log of recent errors on this device (up
+          to 50: the message, where in the page it happened and the address),
+          which is never sent anywhere.
         </p>
       </section>
 
@@ -59,7 +61,9 @@ const PrivacyPage: React.FC = () => {
         <p>
           The site remembers your preferences on this device (theme, your
           district, table filters). Google Analytics never loads, and nothing is
-          sent to Google.
+          sent to Google. It also keeps a short log of recent errors on this
+          device (up to 50: the message, where in the page it happened and the
+          address), which is never sent anywhere.
         </p>
       </section>
 
@@ -72,8 +76,9 @@ const PrivacyPage: React.FC = () => {
           Keep none
         </h2>
         <p>
-          No analytics and no saved preferences. Your theme and filters last
-          only while this tab is open, then they are forgotten.
+          No analytics and nothing saved on your device. Your theme and filters,
+          and the short error log, last only while this tab is open (they use
+          the tab&rsquo;s session storage), then they are forgotten.
         </p>
       </section>
 
@@ -87,8 +92,8 @@ const PrivacyPage: React.FC = () => {
         </h2>
         <p>
           Every choice, including none, stores one small cookie so we do not ask
-          again on every page. It is strictly necessary, and it is the only
-          thing stored under &ldquo;none&rdquo;.
+          again on every page. It is strictly necessary, and under
+          &ldquo;none&rdquo; it is the only thing kept after the tab closes.
         </p>
         <ul>
           <li>
