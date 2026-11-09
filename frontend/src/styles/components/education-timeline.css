@@ -148,18 +148,22 @@
 }
 
 /* The section holds the chart's height from first paint (skeleton, chart or
-   the "not available" state), so the content below never moves (CLS). The
-   floor is the loaded chart block's measured height, which only the legend's
-   wrapping changes (#2592: 375/390 -> 707, 768 -> 595, 1024 -> 544, 1280 ->
-   524 with the default By level grouping; By path wraps more on a phone). A
-   device without hover also shows the 56px tap-to-read line (#1835). */
+   the "not available" state), so the content below never moves (CLS).
+
+   Only the legend and the note wrap, so only they change the loaded block's
+   height, and they wrap differently per font stack. Measured with the default
+   By level grouping: 375/390 -> 707 (macOS) and ~727 (the CI runner's Linux
+   fonts), 768 -> 595, 1024 -> 544, 1280 -> 524; By path adds up to 86px on a
+   phone. A device without hover also shows the 56px tap-to-read line (#1835).
+   Each floor is the measured worst case plus about 35px, so a font that wraps
+   a line more still fits: a little white space under the chart beats a shift. */
 .edu-tl-section--reserved {
-  --edu-tl-h: 712px;
+  --edu-tl-h: 760px;
   --edu-tl-touch: 0px;
   min-height: calc(var(--edu-tl-h) + var(--edu-tl-touch));
 }
 .edu-tl-section--path {
-  --edu-tl-h: 800px;
+  --edu-tl-h: 850px;
 }
 @media (hover: none) {
   .edu-tl-section--reserved {
@@ -169,15 +173,15 @@
 @media (min-width: 768px) {
   .edu-tl-section--reserved,
   .edu-tl-section--path {
-    --edu-tl-h: 600px;
+    --edu-tl-h: 640px;
   }
 }
 @media (min-width: 1100px) {
   .edu-tl-section--reserved {
-    --edu-tl-h: 535px;
+    --edu-tl-h: 565px;
   }
   .edu-tl-section--path {
-    --edu-tl-h: 560px;
+    --edu-tl-h: 595px;
   }
 }
 
