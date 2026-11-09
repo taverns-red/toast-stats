@@ -158,6 +158,9 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
   // Symmetric padding when flat, so the axis never inverts (tripwire).
   const domain: [number, number] =
     peak === floor ? [Math.max(0, floor - 1), peak + 1] : [0, peak]
+  // 13px digits are ~8px wide: room for the widest label plus a tick gap, so
+  // six-digit world totals ("102,757") are not clipped at the left edge.
+  const yAxisWidth = Math.max(48, fmt(domain[1]).length * 8 + 14)
   const animate = !prefersReducedMotion()
 
   if (!final) return null
@@ -224,7 +227,7 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
             <YAxis
               domain={domain}
               allowDecimals={false}
-              width={48}
+              width={yAxisWidth}
               tick={{ fontSize: 13 }}
               tickFormatter={fmt}
             />
