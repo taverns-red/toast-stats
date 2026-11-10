@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.60.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.60.0...frontend-v3.60.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* **changes:** What Changed Distinguished tile leads with confirmed change plus provisional ([#2601](https://github.com/taverns-red/toast-stats/issues/2601)) ([#2602](https://github.com/taverns-red/toast-stats/issues/2602)) ([d155741](https://github.com/taverns-red/toast-stats/commit/d155741b37ffd995e19709072b5f3fc13cbb8413))
+
 ## [3.60.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.59.0...frontend-v3.60.0) (2026-11-09)
 
 

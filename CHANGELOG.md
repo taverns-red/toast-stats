@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.83.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.83.0...toast-stats-v2.83.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* **changes:** What Changed Distinguished tile leads with confirmed change plus provisional ([#2601](https://github.com/taverns-red/toast-stats/issues/2601)) ([#2602](https://github.com/taverns-red/toast-stats/issues/2602)) ([d155741](https://github.com/taverns-red/toast-stats/commit/d155741b37ffd995e19709072b5f3fc13cbb8413))
+
 ## [2.83.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.82.0...toast-stats-v2.83.0) (2026-11-09)
 
 
