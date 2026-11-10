@@ -12,6 +12,7 @@ import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import { useUrlState } from '../hooks/useUrlState'
 import { useTransferCounterparts } from '../hooks/useTransferCounterparts'
 import { useDistrictRanking } from '../hooks/useDistrictRanking'
+import { useDistinguishedCountsAt } from '../hooks/useDistinguishedCountsAt'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { ContextBar } from '../components/ContextBar'
@@ -115,34 +116,68 @@ function activeClubsTile(diff: SnapshotDiffView): {
 
 /** The rankings read for one end of the pair, as `useDistrictRanking` gives it. */
 type RankingRead = ReturnType<typeof useDistrictRanking>
+/** The analytics `distinguishedCounts` read for one end of the pair. */
+type CountsRead = ReturnType<typeof useDistinguishedCountsAt>
 
 /**
- * Props for the "Distinguished clubs" tile (#2438, Ron 2026-11-01). The
- * headline stays the change in TI's count (per-club status in the snapshot).
- * The sub-line is the confirmed count, the #2390 "confirmed clubs" noun the
- * trophy case uses: the rankings row's `distinguishedClubs`, which the
- * pipeline fills from `countConfirmedDistinguishedClubs` and the trophy case
- * counts its gap from. Read per date, never re-derived here. A missing
- * rankings row says so — never a silent 0.
+ * Props for the "Distinguished clubs" tile (#2601, Ron 2026-11-09; supersedes
+ * the TI-count headline of #2438). Confirmed is the headline everywhere, with
+ * provisional beside it and never summed in (#2554):
+ *
+ *   0                     signed change in CONFIRMED clubs (to - from)
+ *   Confirmed 3 → 3
+ *   +5 provisional (+2)   provisional at the "to" date; change only if != 0
+ *
+ * Per date, confirmed is the analytics file's `distinguishedCounts`, falling
+ * back to the dated rankings row's `distinguishedClubs` (the #2579 source
+ * order). Provisional only exists in `distinguishedCounts`, so a file written
+ * before it says "Provisional not recorded". A missing confirmed value on
+ * either date renders a dash and says so - never a silent 0.
  */
 function distinguishedClubsTile(
-  diff: SnapshotDiffView,
   fromRanking: RankingRead,
-  toRanking: RankingRead
-): { current: number; secondaryLabel: string; subLines: string[] } {
-  const t = diff.totals.distinguished
-  const from = fromRanking.ranking?.distinguishedClubs
-  const to = toRanking.ranking?.distinguishedClubs
-  const confirmed =
-    from !== undefined && to !== undefined
-      ? countLine('Confirmed clubs', { to, delta: to - from })
-      : fromRanking.isLoading || toRanking.isLoading
+  toRanking: RankingRead,
+  fromCounts: CountsRead,
+  toCounts: CountsRead
+): { current: number | null; secondaryLabel: string; subLines: string[] } {
+  const loading =
+    fromRanking.isLoading ||
+    toRanking.isLoading ||
+    fromCounts.isLoading ||
+    toCounts.isLoading
+  const from =
+    fromCounts.counts?.confirmed ?? fromRanking.ranking?.distinguishedClubs
+  const to = toCounts.counts?.confirmed ?? toRanking.ranking?.distinguishedClubs
+
+  let provisional: string
+  if (toCounts.counts) {
+    const base = `+${toCounts.counts.provisional.toLocaleString()} provisional`
+    if (fromCounts.counts) {
+      const delta = toCounts.counts.provisional - fromCounts.counts.provisional
+      provisional = delta === 0 ? base : `${base} (${signed(delta)})`
+    } else {
+      // No provisional at "from": a bare "+5" would read as unchanged.
+      provisional = fromCounts.isLoading
+        ? base
+        : `${base} (change not recorded)`
+    }
+  } else {
+    provisional = loading ? 'Provisional …' : 'Provisional not recorded'
+  }
+
+  if (from === undefined || to === undefined) {
+    return {
+      current: null,
+      secondaryLabel: loading
         ? 'Confirmed clubs …'
-        : 'Confirmed clubs not recorded'
+        : 'Confirmed clubs not recorded',
+      subLines: [provisional],
+    }
+  }
   return {
-    current: t.delta,
-    secondaryLabel: `TI count ${t.from.toLocaleString()} → ${t.to.toLocaleString()}`,
-    subLines: [confirmed],
+    current: to - from,
+    secondaryLabel: `Confirmed ${from.toLocaleString()} → ${to.toLocaleString()}`,
+    subLines: [provisional],
   }
 }
 
@@ -281,6 +316,16 @@ const DistrictChangesPage: React.FC = () => {
     invalidPair ? undefined : from
   )
   const toRanking = useDistrictRanking(districtId, invalidPair ? undefined : to)
+  // The same two dates' analytics `distinguishedCounts` (#2601): confirmed
+  // first, and the only source of provisional.
+  const fromCounts = useDistinguishedCountsAt(
+    districtId,
+    invalidPair ? undefined : from
+  )
+  const toCounts = useDistinguishedCountsAt(
+    districtId,
+    invalidPair ? undefined : to
+  )
 
   if (!districtId) return null
 
@@ -448,7 +493,12 @@ const DistrictChangesPage: React.FC = () => {
                   />
                   <KpiDeltaCard
                     title="Distinguished clubs"
-                    {...distinguishedClubsTile(diff, fromRanking, toRanking)}
+                    {...distinguishedClubsTile(
+                      fromRanking,
+                      toRanking,
+                      fromCounts,
+                      toCounts
+                    )}
                   />
                 </div>
 

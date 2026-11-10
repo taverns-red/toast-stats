@@ -92,6 +92,11 @@
       "optional": true
     },
     {
+      "path": "snapshots/{prev}/analytics/district_{district}_analytics.json",
+      "districts": ["61", "80", "86"],
+      "optional": true
+    },
+    {
       "path": "snapshots/{ago14}/analytics/district_{district}_analytics.json",
       "districts": ["86"],
       "optional": true
