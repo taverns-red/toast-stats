@@ -1248,12 +1248,38 @@ describe('DistrictChangesPage — Distinguished clubs tile (#2601)', () => {
     expect(subLines(card)).toEqual(['Provisional not recorded'])
   })
 
-  it('shows the provisional count without a change when the from date has none', () => {
+  it('says the provisional change is not recorded when the from date has no counts', () => {
     const card = renderWith(
       { '2026-07-31': { ranking: rankingRow(1), isLoading: false } },
       { '2026-10-31': counts(3, 2) }
     )
-    expect(subLines(card)).toEqual(['+2 provisional'])
+    expect(subLines(card)).toEqual(['+2 provisional (change not recorded)'])
+  })
+
+  it('keeps a recorded provisional 0 at both ends distinct from not recorded', () => {
+    const card = renderWith(
+      {},
+      { '2026-07-31': counts(2, 0), '2026-10-31': counts(2, 0) }
+    )
+    expect(subLines(card)).toEqual(['+0 provisional'])
+  })
+
+  it('mixes sources for the headline: from on rankings, to on analytics', () => {
+    const card = renderWith(
+      { '2026-07-31': { ranking: rankingRow(1), isLoading: false } },
+      { '2026-10-31': counts(4, 2) }
+    )
+    expect(within(card).getByTestId('kpi-delta-value')).toHaveTextContent('+3')
+    expect(within(card).getByText('Confirmed 1 → 4')).toBeInTheDocument()
+  })
+
+  it('says provisional is not recorded when the to date has no counts but from does', () => {
+    const card = renderWith(
+      { '2026-10-31': { ranking: rankingRow(3), isLoading: false } },
+      { '2026-07-31': counts(1, 4) }
+    )
+    expect(within(card).getByTestId('kpi-delta-value')).toHaveTextContent('+2')
+    expect(subLines(card)).toEqual(['Provisional not recorded'])
   })
 
   it('says confirmed is not recorded instead of a silent 0', () => {
