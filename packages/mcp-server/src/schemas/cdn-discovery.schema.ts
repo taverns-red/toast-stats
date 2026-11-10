@@ -59,12 +59,15 @@ export type ClubIndex = z.infer<typeof ClubIndexSchema>
 const CountSchema = z.number().int().nonnegative()
 export const AnalyticsDistinguishedSchema = z
   .object({
-    distinguishedCounts: z
-      .object({ confirmed: CountSchema, provisional: CountSchema })
-      .nullable()
-      .optional(),
+    // The file is a `{ metadata, data }` envelope; the counts live in `data`.
+    data: z.object({
+      distinguishedCounts: z
+        .object({ confirmed: CountSchema, provisional: CountSchema })
+        .nullable()
+        .optional(),
+    }),
   })
-  .transform(d => ({ counts: d.distinguishedCounts ?? null }))
+  .transform(d => ({ counts: d.data.distinguishedCounts ?? null }))
 export type AnalyticsDistinguished = z.infer<
   typeof AnalyticsDistinguishedSchema
 >
