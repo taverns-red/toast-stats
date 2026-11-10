@@ -1,13 +1,16 @@
 {
-  "districtId": "61",
-  "distinguishedCounts": {
-    "confirmed": 3,
-    "provisional": 2,
-    "byTier": {
-      "distinguished": { "confirmed": 2, "provisional": 1 },
-      "select": { "confirmed": 1, "provisional": 1 },
-      "presidents": { "confirmed": 0, "provisional": 0 },
-      "smedley": { "confirmed": 0, "provisional": 0 }
+  "metadata": { "schemaVersion": "1" },
+  "data": {
+    "districtId": "61",
+    "distinguishedCounts": {
+      "confirmed": 3,
+      "provisional": 2,
+      "byTier": {
+        "distinguished": { "confirmed": 2, "provisional": 1 },
+        "select": { "confirmed": 1, "provisional": 1 },
+        "presidents": { "confirmed": 0, "provisional": 0 },
+        "smedley": { "confirmed": 0, "provisional": 0 }
+      }
     }
   }
 }
