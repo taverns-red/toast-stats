@@ -85,7 +85,7 @@ describe('installed bin boots over real stdio (offline, fixture-backed)', () => 
     await new Promise<void>(resolve => cdn?.server.close(() => resolve()))
   })
 
-  it('lists all 8 read-only tools to a real stdio client', async () => {
+  it('lists all 9 read-only tools to a real stdio client', async () => {
     const { tools } = await client.listTools()
     expect(tools.map(t => t.name).sort()).toEqual(
       [
@@ -97,6 +97,7 @@ describe('installed bin boots over real stdio (offline, fixture-backed)', () => 
         'list-districts',
         'query-rankings',
         'resolve-club',
+        'show-district-card',
       ].sort()
     )
   })

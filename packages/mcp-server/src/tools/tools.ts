@@ -52,7 +52,7 @@ function defineTool<Shape extends ZodRawShape>(def: {
  * `latest.json` date. Returns the not-available envelope verbatim if the
  * latest-date discovery read itself fails (never guesses a date).
  */
-async function resolveDate(
+export async function resolveDate(
   client: CdnClient,
   date: string | undefined
 ): Promise<{ ok: true; date: string } | { ok: false; error: ToolTextResult }> {
