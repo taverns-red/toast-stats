@@ -152,10 +152,15 @@ function distinguishedClubsTile(
   let provisional: string
   if (toCounts.counts) {
     const base = `+${toCounts.counts.provisional.toLocaleString()} provisional`
-    const delta = fromCounts.counts
-      ? toCounts.counts.provisional - fromCounts.counts.provisional
-      : 0
-    provisional = delta === 0 ? base : `${base} (${signed(delta)})`
+    if (fromCounts.counts) {
+      const delta = toCounts.counts.provisional - fromCounts.counts.provisional
+      provisional = delta === 0 ? base : `${base} (${signed(delta)})`
+    } else {
+      // No provisional at "from": a bare "+5" would read as unchanged.
+      provisional = fromCounts.isLoading
+        ? base
+        : `${base} (change not recorded)`
+    }
   } else {
     provisional = loading ? 'Provisional …' : 'Provisional not recorded'
   }
