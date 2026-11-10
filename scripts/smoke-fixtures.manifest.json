@@ -93,6 +93,7 @@
     },
     {
       "path": "snapshots/{prev}/analytics/district_{district}_analytics.json",
+      "districts": ["61", "80", "86"],
       "optional": true
     },
     {
