@@ -195,6 +195,39 @@ describe('DistrictKpiStrip (#572)', () => {
 
   // #1023 — disambiguate the Overview "Net Member Change" (payments vs. payment
   // base) from the Trends "Net Change" (member counts vs. first PY snapshot).
+  // #2580 (#2579 review): with no confirmed source the card holds the
+  // qualifying-today figure. It must say so beside a confirmed-basis rank.
+  describe('qualifying-today basis (#2580)', () => {
+    const kpis = {
+      ...sampleKpis,
+      distinguishedClubs: {
+        ...sampleKpis.distinguishedClubs,
+        current: 6,
+        basis: 'qualifying-today' as const,
+      },
+    }
+
+    it('labels the Distinguished value as qualifying today', () => {
+      renderStrip(<DistrictKpiStrip kpis={kpis} />)
+      expect(screen.getByTestId('distinguished-basis')).toHaveTextContent(
+        'qualifying today'
+      )
+    })
+
+    it('labels it in the collapsed summary too', () => {
+      window.sessionStorage.setItem('district-kpi-strip-collapsed', 'true')
+      renderStrip(<DistrictKpiStrip kpis={kpis} />)
+      expect(
+        screen.getByTestId('district-kpi-strip-summary')
+      ).toHaveTextContent(/6 dist\. qualifying today/)
+    })
+
+    it('draws no basis label for a confirmed count', () => {
+      renderStrip(<DistrictKpiStrip kpis={sampleKpis} />)
+      expect(screen.queryByTestId('distinguished-basis')).toBeNull()
+    })
+  })
+
   describe('net-change disambiguation (#1023)', () => {
     it('names the metric AND baseline in the secondary line (payments vs. program-year base)', () => {
       renderStrip(<DistrictKpiStrip kpis={sampleKpis} />)

@@ -18,6 +18,8 @@ export const PROVISIONAL_TOOLTIP =
 export interface DistinguishedCountProps {
   confirmed: number
   provisional?: number | null | undefined
+  /** `qualifying-today` when no confirmed source exists (#2580). */
+  basis?: 'confirmed' | 'qualifying-today' | undefined
 }
 
 export const DistinguishedCount: React.FC<DistinguishedCountProps> = ({
