@@ -287,6 +287,53 @@ describe('gcs-upload.sh: skips unchanged objects, still records them (#2566)', (
     )
   })
 
+  it('several sources to a destination without a trailing slash: never narrowed to one source', () => {
+    // One source left to a `gs://b/dir` destination could be written to an
+    // object NAMED dir; with several it is a directory. So no skipping here.
+    const a = writeLocal('s/district_61.json', '{"a":1}')
+    const b = writeLocal('s/district_62.json', '{"b":2}')
+    expect(upload([a, b]).status).toBe(0)
+    fs.writeFileSync(b, '{"b":3}')
+    const log = path.join(tmp, 'shim.log')
+    const r = run(
+      [
+        'process-dates:rebuild',
+        'cp',
+        '--content-type=application/json',
+        `--cache-control=${CC}`,
+        '-Z',
+        a,
+        b,
+        `gs://${BUCKET}/snapshots/2026-10-10`,
+      ],
+      { ...SKIP, SHIM_LOG: log }
+    )
+    expect(r.status, r.stderr).toBe(0)
+    const cps = fs
+      .readFileSync(log, 'utf-8')
+      .split('\n')
+      .filter(l => l.startsWith('storage cp '))
+    expect(cps.length).toBeGreaterThan(0)
+    for (const l of cps) {
+      expect(l).toContain('district_61.json')
+      expect(l).toContain('district_62.json')
+    }
+  })
+
+  it('the shim -Z writes a new gzip header each time, like the SDK: -Z bytes never repeat', () => {
+    // gzip_util.get_temporary_gzipped_file writes the current time into the
+    // header, so the same content stores as different bytes. If the shim
+    // repeated them, a code path that went back to -Z would still "skip".
+    const a = writeLocal('s/district_61.json', '{"a":1}')
+    const obj = path.join(root, BUCKET, 'snapshots/2026-10-10/district_61.json')
+    expect(upload([a], {}).status).toBe(0)
+    const first = fs.readFileSync(obj)
+    expect(upload([a], {}).status).toBe(0)
+    const second = fs.readFileSync(obj)
+    expect(second.equals(first)).toBe(false)
+    expect(zlib.gunzipSync(second).toString()).toBe('{"a":1}')
+  })
+
   it('uploads only the file whose bytes changed', () => {
     const a = writeLocal('s/district_61.json', '{"a":1}')
     const b = writeLocal('s/district_62.json', '{"b":2}')
