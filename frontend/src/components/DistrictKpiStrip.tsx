@@ -25,6 +25,9 @@ export interface DistrictKpiCardData {
   /** Distinguished only (#2554): clubs that qualify on current membership but
    *  are not yet confirmed. `current` is then the confirmed count. */
   provisional?: number
+  /** Distinguished only (#2580): `qualifying-today` when `current` is not a
+   *  confirmed count (no confirmed source was available). */
+  basis?: 'confirmed' | 'qualifying-today'
 }
 
 /** Net Member Change is a signed delta with no Distinguished tiers, so it
@@ -176,6 +179,8 @@ const KpiSummary: React.FC<KpiBodyProps> = ({ kpis, ghost }) => (
     </span>
     <span>
       {formatCompact(kpis.distinguishedClubs.current)} dist.
+      {kpis.distinguishedClubs.basis === 'qualifying-today' &&
+        ' qualifying today'}
       {(kpis.distinguishedClubs.provisional ?? 0) > 0 &&
         ` +${formatCompact(kpis.distinguishedClubs.provisional ?? 0)} prov.`}
     </span>
@@ -202,6 +207,7 @@ const KpiExpanded: React.FC<KpiBodyProps> = ({ kpis, ghost, planGoals }) => (
           rankings={kpis[g.kpi].rankings}
           planTarget={planGoals?.[g.goal]}
           provisional={kpis[g.kpi].provisional}
+          basis={kpis[g.kpi].basis}
           tooltipContent={CARD_TOOLTIPS[g.kpi]}
         />
       ))}

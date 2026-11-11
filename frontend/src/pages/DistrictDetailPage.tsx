@@ -564,6 +564,11 @@ const DistrictDetailPageInner: React.FC = () => {
       distinguishedClubs: {
         current: distinguished.confirmed,
         provisional: distinguished.provisional,
+        // Step 3 has no confirmed source: label the figure (#2580).
+        basis:
+          distinguished.source === 'qualifying-today'
+            ? ('qualifying-today' as const)
+            : ('confirmed' as const),
         targets: pt?.distinguishedClubs.targets ?? null,
         rankings: pt?.distinguishedClubs.rankings ?? NULL_RANKINGS,
       },

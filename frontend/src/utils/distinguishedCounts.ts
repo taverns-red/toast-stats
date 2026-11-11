@@ -15,31 +15,75 @@
         qualifying-today count (confirmed + provisional).
       Provisional is then their difference, floored at 0 because the two
       files count slightly different club bases (paid-only vs all clubs).
-   3. With no confirmed source at all, the qualifying-today figure is shown
-      alone, with no provisional part. */
+   3. With no confirmed source at all, the qualifying-today figure is all
+      there is, with no provisional part. `source: 'qualifying-today'` tells
+      the caller it is NOT a confirmed number: label it, never show it
+      unlabelled beside a confirmed-basis rank (#2579 review).
+
+   `source` names which step produced the figures (#2580). A caller with no
+   qualifying-today figure (the What Changed tile) omits it: provisional is
+   then unknown (null) unless the pipeline pair is present, and with no
+   source at all everything is null / 'none'. */
 
 export interface DistinguishedCountPair {
   confirmed: number
   provisional: number
 }
 
-export function resolveDistinguishedCounts(input: {
+/** Which source the resolved figures came from (#2580). */
+export type DistinguishedSource = 'analytics' | 'rankings' | 'qualifying-today'
+
+export interface ResolvedDistinguishedCounts extends DistinguishedCountPair {
+  source: DistinguishedSource
+}
+
+/** Without a qualifying-today figure, provisional is unknown unless the
+ *  pipeline pair is present, and with no source at all nothing resolves. */
+export interface PartialDistinguishedCounts {
+  confirmed: number | null
+  provisional: number | null
+  source: DistinguishedSource | 'none'
+}
+
+interface ResolveInput {
   /** `distinguishedCounts` from the district analytics file, when present. */
   counts?: DistinguishedCountPair | null | undefined
   /** The rankings row's `distinguishedClubs` (confirmed), when loaded. */
   rankingConfirmed?: number | null | undefined
-  /** performance-targets `currentProgress.distinguished`. */
-  qualifyingToday: number
-}): DistinguishedCountPair {
+}
+
+export function resolveDistinguishedCounts<
+  Q extends number | null | undefined = undefined,
+>(
+  input: ResolveInput & { qualifyingToday?: Q }
+): Q extends number ? ResolvedDistinguishedCounts : PartialDistinguishedCounts {
+  type Out = Q extends number
+    ? ResolvedDistinguishedCounts
+    : PartialDistinguishedCounts
   const { counts, rankingConfirmed, qualifyingToday } = input
   if (counts) {
-    return { confirmed: counts.confirmed, provisional: counts.provisional }
+    return {
+      confirmed: counts.confirmed,
+      provisional: counts.provisional,
+      source: 'analytics',
+    } as Out
   }
+  const hasToday = qualifyingToday !== null && qualifyingToday !== undefined
   if (rankingConfirmed !== null && rankingConfirmed !== undefined) {
     return {
       confirmed: rankingConfirmed,
-      provisional: Math.max(0, qualifyingToday - rankingConfirmed),
-    }
+      provisional: hasToday
+        ? Math.max(0, qualifyingToday - rankingConfirmed)
+        : null,
+      source: 'rankings',
+    } as Out
   }
-  return { confirmed: qualifyingToday, provisional: 0 }
+  if (hasToday) {
+    return {
+      confirmed: qualifyingToday,
+      provisional: 0,
+      source: 'qualifying-today',
+    } as Out
+  }
+  return { confirmed: null, provisional: null, source: 'none' } as Out
 }

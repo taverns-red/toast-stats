@@ -73,6 +73,27 @@ describe('MethodologyPage — Distinguished club counts (#2390)', () => {
     expect(txt).toMatch(/never added/i)
   })
 
+  // #2580 (#2579 review): the source note must say what stands in until the
+  // daily run publishes distinguishedCounts, or a reader cannot reconcile a
+  // number that moves when it lands.
+  it('names the rankings-row fallback used until distinguishedCounts is published (#2580)', () => {
+    renderPage()
+    const txt = sectionText()
+    expect(txt).toMatch(/until the daily run publishes/i)
+    expect(txt).toMatch(/rankings row/i)
+    expect(txt).toMatch(/distinguishedClubs/)
+  })
+
+  // The fallback differs by surface: the district Overview derives provisional
+  // from the performance-targets count, What Changed has no such figure.
+  it('says per surface what the fallback does for provisional (#2580)', () => {
+    renderPage()
+    const txt = sectionText()
+    expect(txt).toMatch(/On the district Overview/i)
+    expect(txt).toMatch(/What Changed/)
+    expect(txt).toMatch(/Provisional not recorded/)
+  })
+
   it('cites the TI Distinguished Club Program source', () => {
     renderPage()
     expect(sectionText()).toMatch(/Distinguished Club Program.*Item 1111/)

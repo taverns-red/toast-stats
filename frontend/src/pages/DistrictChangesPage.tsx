@@ -13,6 +13,7 @@ import { useUrlState } from '../hooks/useUrlState'
 import { useTransferCounterparts } from '../hooks/useTransferCounterparts'
 import { useDistrictRanking } from '../hooks/useDistrictRanking'
 import { useDistinguishedCountsAt } from '../hooks/useDistinguishedCountsAt'
+import { resolveDistinguishedCounts } from '../utils/distinguishedCounts'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { ContextBar } from '../components/ContextBar'
@@ -145,15 +146,27 @@ function distinguishedClubsTile(
     toRanking.isLoading ||
     fromCounts.isLoading ||
     toCounts.isLoading
-  const from =
-    fromCounts.counts?.confirmed ?? fromRanking.ranking?.distinguishedClubs
-  const to = toCounts.counts?.confirmed ?? toRanking.ranking?.distinguishedClubs
+  // One resolver for the source order (#2580); this tile has no
+  // qualifying-today figure, so a rankings-only date has no provisional.
+  const fromResolved = resolveDistinguishedCounts({
+    counts: fromCounts.counts,
+    rankingConfirmed: fromRanking.ranking?.distinguishedClubs,
+  })
+  const toResolved = resolveDistinguishedCounts({
+    counts: toCounts.counts,
+    rankingConfirmed: toRanking.ranking?.distinguishedClubs,
+  })
+  const from = fromResolved.confirmed ?? undefined
+  const to = toResolved.confirmed ?? undefined
 
   let provisional: string
-  if (toCounts.counts) {
-    const base = `+${toCounts.counts.provisional.toLocaleString()} provisional`
-    if (fromCounts.counts) {
-      const delta = toCounts.counts.provisional - fromCounts.counts.provisional
+  if (toResolved.source === 'analytics' && toResolved.provisional !== null) {
+    const base = `+${toResolved.provisional.toLocaleString()} provisional`
+    if (
+      fromResolved.source === 'analytics' &&
+      fromResolved.provisional !== null
+    ) {
+      const delta = toResolved.provisional - fromResolved.provisional
       provisional = delta === 0 ? base : `${base} (${signed(delta)})`
     } else {
       // No provisional at "from": a bare "+5" would read as unchanged.
