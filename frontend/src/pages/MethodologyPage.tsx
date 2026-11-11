@@ -583,6 +583,14 @@ const MethodologyPage: React.FC = () => {
             the paid clubs at the start of the program year (Item 1490), not the
             current paid-club count.
           </dd>
+          <dt>Percentile (KPI cards)</dt>
+          <dd>
+            The share of districts worldwide that a district outperforms on that
+            metric, so <strong>higher is better</strong>: rank #1 of 100 is the
+            99th percentile, and a district at the 87th percentile is ahead of
+            87% of districts (that is, in the top 13%). Computed as (districts −
+            rank) ÷ districts.
+          </dd>
           <dt>Aggregate Score</dt>
           <dd>
             Sum of Borda points across paid clubs, payments, and distinguished.

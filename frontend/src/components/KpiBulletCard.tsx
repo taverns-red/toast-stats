@@ -53,8 +53,9 @@ const TIERS: Omit<TierTick, 'value'>[] = [
 
 function formatPercentile(percentile: number | null): string {
   if (percentile === null) return '—'
-  const rankPercent = Math.round(100 - percentile)
-  return `${toOrdinal(rankPercent)} percentile`
+  // worldPercentile is already "percent of districts outperformed"
+  // (higher = better); show it as-is (#2581).
+  return `${toOrdinal(Math.round(percentile))} percentile`
 }
 
 function formatPct(n: number): string {
