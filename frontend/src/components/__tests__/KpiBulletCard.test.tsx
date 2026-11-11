@@ -17,7 +17,7 @@ const standardTargets: RecognitionTargets = {
 
 const standardRankings: MetricRankings = {
   worldRank: 30,
-  worldPercentile: 77, // (128-30)/128 * 100 ≈ 77 → "23rd percentile"
+  worldPercentile: 77, // (128-30)/128 * 100 ≈ 77 → "77th percentile"
   regionRank: 3,
   totalDistricts: 128,
   totalInRegion: 11,
@@ -73,6 +73,28 @@ describe('KpiBulletCard', () => {
     })
   })
 
+  // #2581: worldPercentile = (total - rank) / total * 100 in analytics-core
+  // (MetricRankingsCalculator.calculateWorldPercentile), so HIGHER IS BETTER:
+  // 87.2 = outperforms 87.2% of districts. The label must show it as-is,
+  // never as "100 - x" (which rendered 87.2 as "13th").
+  describe('percentile label meaning (#2581)', () => {
+    it.each([
+      [87.2, /87th percentile/],
+      [55.3, /55th percentile/],
+      [99.1, /99th percentile/],
+    ])('worldPercentile %s renders as the same number', (value, pattern) => {
+      renderWithRouter(
+        <KpiBulletCard
+          title="Paid Clubs"
+          current={149}
+          targets={standardTargets}
+          rankings={{ ...standardRankings, worldPercentile: value }}
+        />
+      )
+      expect(screen.getByTestId('world-percentile')).toHaveTextContent(pattern)
+    })
+  })
+
   describe('inline rank line', () => {
     it('renders #rank of total, percentile, and region rank chips', () => {
       renderWithRouter(
@@ -84,7 +106,7 @@ describe('KpiBulletCard', () => {
         />
       )
       expect(screen.getByText(/#30 of 128/)).toBeInTheDocument()
-      expect(screen.getByText(/23rd percentile/)).toBeInTheDocument()
+      expect(screen.getByText(/77th percentile/)).toBeInTheDocument()
       // Region chip — links to /region/05 when numeric
       const regionLink = screen.getByTestId('region-rank')
       expect(regionLink).toHaveTextContent('05')
