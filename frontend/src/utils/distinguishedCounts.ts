@@ -15,8 +15,15 @@
         qualifying-today count (confirmed + provisional).
       Provisional is then their difference, floored at 0 because the two
       files count slightly different club bases (paid-only vs all clubs).
-   3. With no confirmed source at all, the qualifying-today figure is shown
-      alone, with no provisional part. */
+   3. With no confirmed source at all, the qualifying-today figure is all
+      there is, with no provisional part. `source: 'qualifying-today'` tells
+      the caller it is NOT a confirmed number: label it, never show it
+      unlabelled beside a confirmed-basis rank (#2579 review).
+
+   `source` names which step produced the figures (#2580). A caller with no
+   qualifying-today figure (the What Changed tile) omits it: provisional is
+   then unknown (null) unless the pipeline pair is present, and with no
+   source at all everything is null / 'none'. */
 
 export interface DistinguishedCountPair {
   confirmed: number
@@ -58,16 +65,25 @@ export function resolveDistinguishedCounts<
     return {
       confirmed: counts.confirmed,
       provisional: counts.provisional,
-    } as unknown as Out
+      source: 'analytics',
+    } as Out
   }
+  const hasToday = qualifyingToday !== null && qualifyingToday !== undefined
   if (rankingConfirmed !== null && rankingConfirmed !== undefined) {
     return {
       confirmed: rankingConfirmed,
-      provisional: Math.max(0, (qualifyingToday ?? 0) - rankingConfirmed),
-    } as unknown as Out
+      provisional: hasToday
+        ? Math.max(0, qualifyingToday - rankingConfirmed)
+        : null,
+      source: 'rankings',
+    } as Out
   }
-  return {
-    confirmed: qualifyingToday ?? undefined,
-    provisional: 0,
-  } as unknown as Out
+  if (hasToday) {
+    return {
+      confirmed: qualifyingToday,
+      provisional: 0,
+      source: 'qualifying-today',
+    } as Out
+  }
+  return { confirmed: null, provisional: null, source: 'none' } as Out
 }
