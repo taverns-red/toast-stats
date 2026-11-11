@@ -1,12 +1,13 @@
-// "+N provisional" must not push the Distinguished card's rank line down
+// The Distinguished card's rank line must line up with its neighbours
 // (#2580, from the #2579 review).
 //
-// The card value is `text-3xl` (a fixed-length line-height), and the 12px
-// provisional span inherits that length. Its inline box is then as tall as
-// the headline's, baseline-aligned, and the line box grows by ~11px: the
-// Distinguished card's rank line sat lower than its neighbours'. jsdom does
-// no layout, so the contract is pinned on the stylesheet: the span sets its
-// own unitless line-height so it can never be taller than its 12px text.
+// `responsive.css` gives every span `line-height: max(1.4, ...)`. The card
+// value is a text-3xl block (30px, unitless 1.2 = 36px strut), but the
+// CONFIRMED span DistinguishedCount draws inside it is a span too, so it got
+// 30px x 1.5 = 45px and made the line ~9px taller; the rank line below sat
+// low. The phone hub solved the same case with `line-height: inherit` on the
+// confirmed span. jsdom does no layout, so the contract is pinned on the
+// stylesheet and the markup; the preview smoke measures the rendered gap.
 
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
@@ -35,16 +36,16 @@ function standaloneRule(sel: string): Record<string, string> {
   )
 }
 
-describe('.distinguished-count__provisional alignment (#2580)', () => {
-  const rule = standaloneRule('.distinguished-count__provisional')
-
-  it('sets its own unitless line-height of at most 1.25, not the inherited one', () => {
-    const lh = Number(rule['line-height'])
-    expect(Number.isFinite(lh)).toBe(true)
-    expect(lh).toBeLessThanOrEqual(1.25)
+describe('.distinguished-count__confirmed alignment (#2580)', () => {
+  it('inherits the card value line-height instead of the global span 1.5', () => {
+    expect(
+      standaloneRule('.distinguished-count__confirmed')['line-height']
+    ).toBe('inherit')
   })
 
-  it('stays baseline-aligned with the headline', () => {
-    expect(rule['vertical-align'] ?? 'baseline').toBe('baseline')
+  it('leaves the provisional span on the global line-height (it was never the cause)', () => {
+    expect(
+      standaloneRule('.distinguished-count__provisional')['line-height']
+    ).toBeUndefined()
   })
 })

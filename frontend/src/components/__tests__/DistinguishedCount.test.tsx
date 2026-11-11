@@ -2,7 +2,7 @@
  * the district tiles and the landing KPI cannot drift apart again. */
 import { describe, it, expect, afterEach } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
-import { DistinguishedCount } from '../DistinguishedCount'
+import { DistinguishedCount, PROVISIONAL_NOTE } from '../DistinguishedCount'
 
 afterEach(() => cleanup())
 
@@ -58,6 +58,15 @@ describe('DistinguishedCount (#2554)', () => {
     const note = within(prov).getByTestId('distinguished-provisional-note')
     expect(note).toHaveTextContent(/not yet confirmed/i)
     expect(note).toHaveClass('sr-only')
+    // It lengthens the accessible name of the hub tile button: keep it short.
+    expect(PROVISIONAL_NOTE.split(/\s+/).length).toBeLessThanOrEqual(8)
+  })
+
+  it('marks the confirmed span so its line-height can follow the card value', () => {
+    render(<DistinguishedCount confirmed={3} provisional={0} />)
+    expect(screen.getByTestId('distinguished-confirmed')).toHaveClass(
+      'distinguished-count__confirmed'
+    )
   })
 
   // #2580 (#2579 review): step 3 of the source order has no confirmed source.
