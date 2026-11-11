@@ -354,12 +354,15 @@ const TrophyCaseSkeleton: React.FC<{ programYear: string; held?: boolean }> = ({
 }) => (
   <PulseContext.Provider value={!held}>
     <div
-      className="redesign-panel"
+      className="redesign-panel print-held-card"
       aria-hidden="true"
       data-testid={
         held ? 'distinguished-trophy-held' : 'distinguished-trophy-skeleton'
       }
     >
+      <p className="print-held-note font-tm-body">
+        Still loading. Print again in a moment to include this card.
+      </p>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <h2 className="text-lg font-bold text-gray-900 font-tm-headline">
