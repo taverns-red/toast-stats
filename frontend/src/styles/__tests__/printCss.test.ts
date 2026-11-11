@@ -78,6 +78,18 @@ describe('print.css (#427, #2299)', () => {
     }
   })
 
+  it('shows the "print again" note and collapses the held skeleton in print only (#2571)', () => {
+    // Hidden on screen, outside the print block...
+    const screenPart = printCss.slice(0, printCss.indexOf('@media print'))
+    expect(screenPart).toMatch(/\.print-held-note\s*\{[^}]*display:\s*none/)
+    // ...shown in print, with the skeleton's own children collapsed.
+    const printPart = printCss.slice(printCss.indexOf('@media print'))
+    expect(printPart).toMatch(/\.print-held-note\s*\{[^}]*display:\s*block/)
+    expect(printPart).toMatch(
+      /\.print-held-card\s*>\s*:not\(\.print-held-note\)\s*\{[^}]*display:\s*none/
+    )
+  })
+
   it('lets the paper size follow the printer (A4 or Letter)', () => {
     expect(printCss).toMatch(/@page\s*\{[^}]*size:\s*auto/)
     expect(printCss).not.toMatch(/size:\s*letter/)

@@ -415,6 +415,33 @@ describe('ClubGrowthAchievementCard', () => {
       ).toHaveLength(2)
     })
 
+    // #2571 — see the trophy case: a cold Cmd-P can print a placeholder, which
+    // says (print only) to print again.
+    it.each([
+      ['loading', { isLoading: true }, 'club-growth-achievement-skeleton'],
+      ['held', { held: true }, 'club-growth-held'],
+    ])(
+      'carries a print-only "print again" note while %s (#2571)',
+      (_name, props, testId) => {
+        render(
+          <ClubGrowthAchievementCard
+            programYear={PY}
+            asOfDate="2026-08-31"
+            checkpointReads={[
+              read('september', { status: 'loading' }),
+              read('march', { status: 'loading' }),
+            ]}
+            {...props}
+          />
+        )
+        const note = within(screen.getByTestId(testId)).getByText(
+          /print again in a moment/i
+        )
+        expect(note).toHaveClass('print-held-note')
+        expect(screen.getByTestId(testId)).toHaveClass('print-held-card')
+      }
+    )
+
     // #1647 — the skeleton drew the static rule text as two short bars and
     // omitted the 44px methodology link, so the loaded card was 47px (desktop)
     // to 223px (mobile) taller. Static content is rendered verbatim (Lesson
