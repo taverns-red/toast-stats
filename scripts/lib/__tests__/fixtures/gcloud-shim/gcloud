@@ -165,7 +165,7 @@ upload_object() {
     cp "${src}" "${obj}"
   fi
   {
-    [ "${gz}" = "1" ] && echo 'content-encoding=gzip'
+    [ "${gz}" != "0" ] && echo 'content-encoding=gzip'
     [ -n "${ctype}" ] && echo "content-type=${ctype}"
     [ -n "${cache}" ] && echo "cache-control=${cache}"
     if [ -n "${custom}" ]; then
@@ -178,7 +178,10 @@ upload_object() {
   stamp_generation "${meta}"
   if [ -n "${SHIM_UPLOAD_LOG:-}" ]; then
     local sum rel="${url#gs://}"
-    sum="$({ sha256sum "${src}" 2>/dev/null || shasum -a 256 "${src}"; } | awk '{print $1}')"
+    # gz=2 (--content-encoding=gzip) sends already-gzipped bytes: the log
+    # holds the hash of what a browser decodes, as it does for -Z.
+    sum="$({ if [ "${gz}" = "2" ]; then gzip -dc <"${src}"; else cat "${src}"; fi; } |
+      { sha256sum 2>/dev/null || shasum -a 256; } | awk '{print $1}')"
     printf '%s\t%s\n' "${rel#*/}" "${sum}" >>"${SHIM_UPLOAD_LOG}"
   fi
 }
@@ -313,6 +316,7 @@ case "${CMD}" in
         -r) recursive=1 ;;
         -n | --no-clobber) noclobber=1 ;;
         -Z) gz=1 ;;
+        --content-encoding=gzip) gz=2 ;;
         --content-type=*) ctype="${a#--content-type=}" ;;
         --cache-control=*) cache="${a#--cache-control=}" ;;
         --custom-metadata=*) custom="${a#--custom-metadata=}" ;;

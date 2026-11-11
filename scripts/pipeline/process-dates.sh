@@ -339,6 +339,13 @@ read -r -a FAC_MERGE <<<"${DAILY_FAC_MERGE:-bash ${REPO}/scripts/pipeline/daily-
 # Every upload goes through the wrapper, so it lands in the run manifest.
 export GCLOUD
 UPLOAD=(bash "${REPO}/scripts/pipeline/gcs-upload.sh" "process-dates:${MODE}")
+# rebuild re-derives dates staging already holds: skip the objects whose
+# stored md5 and headers already match (#2566, scripts/pipeline/gcs-upload.sh).
+# Still recorded in the manifest. Other modes upload what they just collected.
+case "${MODE}" in
+  rebuild) export GCS_UPLOAD_SKIP_UNCHANGED=true ;;
+  daily | rescrape | rescrape-historical) ;;
+esac
 # Every removal goes through its twin, so it lands in the removals file (#2232).
 REMOVE=(bash "${REPO}/scripts/pipeline/gcs-remove.sh" "process-dates:${MODE}")
 
