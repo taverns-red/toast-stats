@@ -35,6 +35,7 @@
     "lint": "eslint . --ext .ts --max-warnings 0",
     "test": "vitest --run",
     "test:watch": "vitest",
+    "serve:http": "npm run build:bin && node dist/bin.js --http",
     "smoke": "npm run build && vitest run src/__tests__/stdio-boot.smoke.test.ts",
     "typecheck": "tsc --noEmit --skipLibCheck",
     "smoke:pack": "bash scripts/pack-smoke.sh"

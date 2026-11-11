@@ -49,3 +49,25 @@ export const ClubIndexSchema = z.object({
   clubs: z.record(z.string(), ClubIndexEntrySchema),
 })
 export type ClubIndex = z.infer<typeof ClubIndexSchema>
+
+/**
+ * `snapshots/{date}/analytics/district_{id}_analytics.json` — only the
+ * published `distinguishedCounts` pair is read (spike #2605). Tolerant: the
+ * shared `DistinguishedCountsSchema` is strict, so the reader takes the two
+ * counts it shows and drops everything else (#2493).
+ */
+const CountSchema = z.number().int().nonnegative()
+export const AnalyticsDistinguishedSchema = z
+  .object({
+    // The file is a `{ metadata, data }` envelope; the counts live in `data`.
+    data: z.object({
+      distinguishedCounts: z
+        .object({ confirmed: CountSchema, provisional: CountSchema })
+        .nullable()
+        .optional(),
+    }),
+  })
+  .transform(d => ({ counts: d.data.distinguishedCounts ?? null }))
+export type AnalyticsDistinguished = z.infer<
+  typeof AnalyticsDistinguishedSchema
+>

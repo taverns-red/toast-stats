@@ -25,6 +25,8 @@ import {
   type DistrictSnapshotIndex,
   ClubIndexSchema,
   type ClubIndex,
+  AnalyticsDistinguishedSchema,
+  type AnalyticsDistinguished,
 } from '../schemas/cdn-discovery.schema.js'
 import {
   CdnRankingsSchema,
@@ -243,6 +245,28 @@ export class CdnClient {
         d.dataPoints.length > 0
           ? d.dataPoints[d.dataPoints.length - 1]!.date
           : null
+    )
+  }
+
+  /**
+   * `snapshots/{date}/analytics/district_{id}_analytics.json` — only the
+   * pre-computed `distinguishedCounts` ({confirmed, provisional}) field is
+   * read; absent or null is a valid "not published" (`counts: null`).
+   */
+  async getDistrictDistinguishedCounts(
+    districtId: string,
+    date: string
+  ): Promise<CdnReadResult<AnalyticsDistinguished>> {
+    if (!DISTRICT_ID_RE.test(districtId) || !ISO_DATE_RE.test(date)) {
+      return notAvailable(
+        `${this.baseUrl}/snapshots/${encodeURIComponent(date)}/analytics/district_${encodeURIComponent(districtId)}_analytics.json`,
+        `not available — "${districtId}"/"${date}" is not a valid district id / YYYY-MM-DD date`
+      )
+    }
+    return this.read(
+      `snapshots/${date}/analytics/district_${districtId}_analytics.json`,
+      AnalyticsDistinguishedSchema,
+      () => date
     )
   }
 

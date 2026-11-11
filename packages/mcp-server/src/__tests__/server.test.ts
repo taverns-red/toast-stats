@@ -20,7 +20,7 @@ async function connectedClient(): Promise<Client> {
 }
 
 describe('MCP server (end-to-end over in-memory transport)', () => {
-  it('lists all 8 read-only tools to a connected client', async () => {
+  it('lists all 9 read-only tools to a connected client', async () => {
     const client = await connectedClient()
     const { tools } = await client.listTools()
     const names = tools.map(t => t.name).sort()
@@ -34,6 +34,7 @@ describe('MCP server (end-to-end over in-memory transport)', () => {
         'list-districts',
         'query-rankings',
         'resolve-club',
+        'show-district-card',
       ].sort()
     )
     // each advertises an input schema (JSON Schema object) and is read-only
