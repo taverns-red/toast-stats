@@ -158,6 +158,16 @@ upload_object() {
   mkdir -p "$(dirname "${obj}")" "$(dirname "${meta}")"
   if [ "${gz}" = "1" ]; then
     gzip -c -n <"${src}" >"${obj}"
+    # The SDK writes the current time into the gzip header (gzip_util.
+    # get_temporary_gzipped_file: gzip.open), so -Z bytes never repeat. Do
+    # the same: a counter in the 4 mtime bytes (offset 4), little-endian.
+    local gzc="${SHIM_ROOT}/.gz-counter" gzn=0
+    [ -f "${gzc}" ] && gzn="$(cat "${gzc}")"
+    gzn=$((gzn + 1))
+    echo "${gzn}" >"${gzc}"
+    printf "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' \
+      $((gzn & 255)) $(((gzn >> 8) & 255)) $(((gzn >> 16) & 255)) $(((gzn >> 24) & 255)))" |
+      dd of="${obj}" bs=1 seek=4 conv=notrunc 2>/dev/null
     # -Z appends no-transform to the Cache-Control it is given
     # (metadata_util.get_cache_control, SDK 583).
     cache="${cache:+${cache}, }no-transform"
@@ -329,6 +339,8 @@ case "${CMD}" in
     done
     dst="${args[${#args[@]}-1]}"
     unset 'args[${#args[@]}-1]'
+    # Several sources make the destination a directory, slash or not.
+    if [ "${#args[@]}" -gt 1 ] && [[ "${dst}" != */ ]]; then dst="${dst}/"; fi
     for src in "${args[@]}"; do
       if is_gs "${src}"; then
         require_bucket "${src}"

@@ -196,6 +196,14 @@ skip_unchanged() {
     fi
   done
 
+  # Several sources to a destination without a trailing slash: the destination
+  # is a directory only because there are several. Skipping down to one source
+  # could turn it into an object NAMED like the destination. Upload everything.
+  if [ "$(wc -l <"${WORK}/plan.tsv" | tr -d ' ')" -gt 1 ] &&
+    [[ "${ARGS[${n}]}" != */ ]]; then
+    return 0
+  fi
+
   want_cache="${cache}"
   if [ "${gz}" = 1 ]; then want_cache="${cache:+${cache}, }no-transform"; fi
 
