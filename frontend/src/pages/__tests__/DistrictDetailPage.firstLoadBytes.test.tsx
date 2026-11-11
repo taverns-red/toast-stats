@@ -273,6 +273,33 @@ describe('DistrictDetailPage — first-load bytes (#2513)', () => {
     await waitFor(() => expect(checkpointCalls().length).toBeGreaterThan(0))
   })
 
+  // #2571 — Cmd-P on an unscrolled page: neither card has neared the viewport,
+  // but print.css puts both in the printout, so printing releases the reads.
+  it('releases both held reads when the page is printed without a scroll', async () => {
+    renderHub()
+    await settle()
+    expect(fetchCdnCompetitiveAwards).not.toHaveBeenCalled()
+    expect(checkpointCalls()).toHaveLength(0)
+
+    await act(async () => {
+      window.dispatchEvent(new Event('beforeprint'))
+    })
+    await waitFor(() => expect(fetchCdnCompetitiveAwards).toHaveBeenCalled())
+    await waitFor(() => expect(checkpointCalls().length).toBeGreaterThan(0))
+    await waitFor(() =>
+      expect(
+        screen
+          .getByTestId('trophy-case-slot')
+          .querySelector('[data-testid="distinguished-trophy-held"]')
+      ).toBeNull()
+    )
+    expect(
+      screen
+        .getByTestId('growth-slot')
+        .querySelector('[data-testid="club-growth-held"]')
+    ).toBeNull()
+  })
+
   it.each([
     ['trophy-case-slot', 'distinguished-trophy-held'],
     ['growth-slot', 'club-growth-held'],
