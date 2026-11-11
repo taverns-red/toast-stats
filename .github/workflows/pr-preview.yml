@@ -744,24 +744,27 @@ jobs:
       # timeout here before the browser download began (run 42686172298).
       - name: Install Playwright OS packages (chromium + webkit)
         id: pw-deps
-        timeout-minutes: 5
+        timeout-minutes: 3
         continue-on-error: true
         run: npx playwright install-deps chromium webkit
 
+      # A timeout can kill dpkg mid-install; repair it before the retry.
       - name: Install Playwright OS packages (one retry)
         if: steps.pw-deps.outcome == 'failure' || steps.pw-deps.outcome == 'cancelled'
-        timeout-minutes: 5
-        run: npx playwright install-deps chromium webkit
+        timeout-minutes: 3
+        run: |
+          sudo dpkg --configure -a
+          npx playwright install-deps chromium webkit
 
       - name: Download Playwright browsers (chromium + webkit)
         id: pw-browsers
-        timeout-minutes: 5
+        timeout-minutes: 2
         continue-on-error: true
         run: npx playwright install chromium webkit
 
       - name: Download Playwright browsers (one retry)
         if: steps.pw-browsers.outcome == 'failure' || steps.pw-browsers.outcome == 'cancelled'
-        timeout-minutes: 5
+        timeout-minutes: 2
         run: npx playwright install chromium webkit
 
       - name: Download the preview build
@@ -923,24 +926,27 @@ jobs:
       # Split with one retry each, like the smoke shards (#2600).
       - name: Install Playwright OS packages (chromium + webkit)
         id: pw-deps
-        timeout-minutes: 5
+        timeout-minutes: 3
         continue-on-error: true
         run: npx playwright install-deps chromium webkit
 
+      # A timeout can kill dpkg mid-install; repair it before the retry.
       - name: Install Playwright OS packages (one retry)
         if: steps.pw-deps.outcome == 'failure' || steps.pw-deps.outcome == 'cancelled'
-        timeout-minutes: 5
-        run: npx playwright install-deps chromium webkit
+        timeout-minutes: 3
+        run: |
+          sudo dpkg --configure -a
+          npx playwright install-deps chromium webkit
 
       - name: Download Playwright browsers (chromium + webkit)
         id: pw-browsers
-        timeout-minutes: 5
+        timeout-minutes: 2
         continue-on-error: true
         run: npx playwright install chromium webkit
 
       - name: Download Playwright browsers (one retry)
         if: steps.pw-browsers.outcome == 'failure' || steps.pw-browsers.outcome == 'cancelled'
-        timeout-minutes: 5
+        timeout-minutes: 2
         run: npx playwright install chromium webkit
 
       # Every file of the deployed build, HEAD only (#2544): a font, glyph or
