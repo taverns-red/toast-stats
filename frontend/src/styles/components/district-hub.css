@@ -238,6 +238,10 @@
      DistinguishedCount is drawn: the muted companion to the headline, never
      colour alone (the words carry the meaning). */
   .distinguished-count__provisional {
+    /* Its own line-height (#2580): inheriting the card value's fixed
+       text-3xl length made this inline box as tall as the headline and
+       pushed the rank line ~11px low. */
+    line-height: 1;
     font-size: 12px;
     font-weight: 500;
     color: var(--ink-3);

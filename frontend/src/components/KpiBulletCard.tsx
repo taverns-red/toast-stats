@@ -29,6 +29,12 @@ export interface KpiBulletCardProps {
    * rank, percentile and bar all sit on the confirmed basis.
    */
   provisional?: number | undefined
+  /**
+   * Distinguished card only (#2580): `qualifying-today` when `current` is not
+   * a confirmed count (no confirmed source was available). The value is then
+   * labelled, so it is not read as confirmed beside the confirmed-basis rank.
+   */
+  basis?: 'confirmed' | 'qualifying-today' | undefined
 }
 
 type TierKey = keyof RecognitionTargets
@@ -260,6 +266,7 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
   barAriaLabel,
   planTarget = null,
   provisional,
+  basis,
 }) => {
   const plan = planTarget ?? null
   const worldRankLabel =
@@ -301,8 +308,12 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
         data-testid="kpi-value"
         className="mt-1 text-xl sm:text-3xl font-bold text-gray-900"
       >
-        {provisional !== undefined ? (
-          <DistinguishedCount confirmed={current} provisional={provisional} />
+        {provisional !== undefined || basis === 'qualifying-today' ? (
+          <DistinguishedCount
+            confirmed={current}
+            provisional={provisional}
+            basis={basis}
+          />
         ) : (
           current.toLocaleString()
         )}

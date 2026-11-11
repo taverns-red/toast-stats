@@ -1498,7 +1498,13 @@ const MethodologyPage: React.FC = () => {
             <code>distinguishedClubsRemaining</code>. The confirmed and
             provisional counts for every level are{' '}
             <code>distinguishedCounts</code> (analytics-core{' '}
-            <code>classifyClubDistinguished</code>, #2553).
+            <code>classifyClubDistinguished</code>, #2553). Until the daily run
+            publishes <code>distinguishedCounts</code> for a date, the confirmed
+            figure is the dated rankings row&rsquo;s{' '}
+            <code>distinguishedClubs</code> and provisional is the
+            performance-targets &ldquo;qualifying today&rdquo; count minus it
+            (never below zero); with neither, the page shows the
+            qualifying-today figure labelled as such, not as confirmed.
           </p>
         </div>
       </CollapsibleSection>

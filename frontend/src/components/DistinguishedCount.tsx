@@ -15,6 +15,11 @@ import React from 'react'
 export const PROVISIONAL_TOOLTIP =
   'Provisional: clubs that qualify on current membership but whose April renewals do not yet confirm the level. Not counted in the confirmed total or in the rank.'
 
+/** The same explanation as the tooltip, in the text itself (no digits, so it
+ *  never reads as a second count). */
+export const PROVISIONAL_NOTE =
+  'clubs that qualify on current membership but are not yet confirmed. Not counted in the confirmed total or in the rank.'
+
 export interface DistinguishedCountProps {
   confirmed: number
   provisional?: number | null | undefined
@@ -25,12 +30,26 @@ export interface DistinguishedCountProps {
 export const DistinguishedCount: React.FC<DistinguishedCountProps> = ({
   confirmed,
   provisional,
+  basis = 'confirmed',
 }) => (
   <>
     <span data-testid="distinguished-confirmed">
       {confirmed.toLocaleString()}
     </span>
-    {provisional != null && provisional > 0 && (
+    {basis === 'qualifying-today' && (
+      <>
+        {' '}
+        {/* No confirmed source exists, so this is clubs qualifying today. Say
+            so beside a rank that is on the confirmed basis (#2580). */}
+        <span
+          data-testid="distinguished-basis"
+          className="distinguished-count__provisional"
+        >
+          qualifying today
+        </span>
+      </>
+    )}
+    {basis === 'confirmed' && provisional != null && provisional > 0 && (
       <>
         {' '}
         <span
@@ -39,6 +58,14 @@ export const DistinguishedCount: React.FC<DistinguishedCountProps> = ({
           title={PROVISIONAL_TOOLTIP}
         >
           +{provisional.toLocaleString()} provisional
+          {/* `title` does not reach touch or most screen readers (#2580). */}
+          <span
+            data-testid="distinguished-provisional-note"
+            className="sr-only"
+          >
+            {' '}
+            {PROVISIONAL_NOTE}
+          </span>
         </span>
       </>
     )}
