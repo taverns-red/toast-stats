@@ -158,6 +158,9 @@ upload_object() {
   mkdir -p "$(dirname "${obj}")" "$(dirname "${meta}")"
   if [ "${gz}" = "1" ]; then
     gzip -c -n <"${src}" >"${obj}"
+    # -Z appends no-transform to the Cache-Control it is given
+    # (metadata_util.get_cache_control, SDK 583).
+    cache="${cache:+${cache}, }no-transform"
   else
     cp "${src}" "${obj}"
   fi

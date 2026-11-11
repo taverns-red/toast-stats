@@ -238,6 +238,152 @@ describe('gcs-upload.sh: the manifest is exactly what went up (#1762)', () => {
   })
 })
 
+// #2566: a rebuild re-sent ~1,160 unchanged objects per date (class-A write
+// cost). With GCS_UPLOAD_SKIP_UNCHANGED=true the wrapper lists the
+// destination once per directory (`objects list`, which carries md5_hash,
+// not a per-object download) and uploads only what differs. The manifest
+// still lists every object the call covered: promotion copies exactly the
+// manifest, and the objects staging already holds are byte-identical to
+// what the call would have written.
+describe('gcs-upload.sh: skips unchanged objects, still records them (#2566)', () => {
+  const SKIP = {
+    GCS_UPLOAD_SKIP_UNCHANGED: 'true',
+    // md5_hash appears in the shim's listing only with generations on, as in
+    // the real one (the SDK prints it for every non-composite object).
+    SHIM_GENERATIONS: '1',
+  }
+  const CC = 'public, max-age=3600, must-revalidate'
+  const DST = `gs://${BUCKET}/snapshots/2026-10-10/`
+
+  const upload = (files: string[], env: Record<string, string> = SKIP) =>
+    run(
+      [
+        'process-dates:rebuild',
+        'cp',
+        '--content-type=application/json',
+        `--cache-control=${CC}`,
+        '-Z',
+        ...files,
+        DST,
+      ],
+      env
+    )
+  const resetUploadLog = () => fs.rmSync(uploadLog, { force: true })
+
+  it('a second identical call uploads nothing, and the manifest still has every object twice-recorded', () => {
+    const a = writeLocal('s/district_61.json', '{"a":1}')
+    const b = writeLocal('s/district_62.json', '{"b":2}')
+    expect(upload([a, b]).status).toBe(0)
+    expect(uploaded()).toHaveLength(2)
+    resetUploadLog()
+    const r = upload([a, b])
+    expect(r.status, r.stderr).toBe(0)
+    expect(uploaded()).toEqual([])
+    // 2 + 2: every call records everything it covered, uploaded or not.
+    expect(manifestEntries()).toHaveLength(4)
+    const last = manifestEntries().slice(2)
+    expect(last.map(e => e.sha256).sort()).toEqual(
+      [sha('{"a":1}'), sha('{"b":2}')].sort()
+    )
+  })
+
+  it('uploads only the file whose bytes changed', () => {
+    const a = writeLocal('s/district_61.json', '{"a":1}')
+    const b = writeLocal('s/district_62.json', '{"b":2}')
+    expect(upload([a, b]).status).toBe(0)
+    resetUploadLog()
+    fs.writeFileSync(b, '{"b":3}')
+    expect(upload([a, b]).status).toBe(0)
+    expect(uploaded()).toEqual([
+      `snapshots/2026-10-10/district_62.json ${sha('{"b":3}')}`,
+    ])
+    const stored = fs.readFileSync(
+      path.join(root, BUCKET, 'snapshots/2026-10-10/district_62.json')
+    )
+    expect(zlib.gunzipSync(stored).toString()).toBe('{"b":3}')
+  })
+
+  it('re-uploads when the stored headers differ (Cache-Control), though the bytes match', () => {
+    const a = writeLocal('s/district_61.json', '{"a":1}')
+    expect(upload([a]).status).toBe(0)
+    resetUploadLog()
+    const r = run(
+      [
+        'process-dates:rebuild',
+        'cp',
+        '--content-type=application/json',
+        '--cache-control=public, max-age=60',
+        '-Z',
+        a,
+        DST,
+      ],
+      SKIP
+    )
+    expect(r.status, r.stderr).toBe(0)
+    expect(uploaded()).toHaveLength(1)
+  })
+
+  it('re-uploads an object stored without gzip, though the decoded bytes match', () => {
+    const a = writeLocal('s/district_61.json', '{"a":1}')
+    const obj = path.join(root, BUCKET, 'snapshots/2026-10-10/district_61.json')
+    fs.mkdirSync(path.dirname(obj), { recursive: true })
+    fs.writeFileSync(obj, '{"a":1}')
+    const meta = path.join(
+      root,
+      '.meta',
+      BUCKET,
+      'snapshots/2026-10-10/district_61.json'
+    )
+    fs.mkdirSync(path.dirname(meta), { recursive: true })
+    fs.writeFileSync(
+      meta,
+      `content-type=application/json\ncache-control=${CC}, no-transform\ngeneration=1\n`
+    )
+    expect(upload([a]).status).toBe(0)
+    expect(uploaded()).toHaveLength(1)
+  })
+
+  it('uploads everything when the listing carries no md5_hash (a composite object has none)', () => {
+    const a = writeLocal('s/district_61.json', '{"a":1}')
+    // No generations: the shim lists no md5_hash, like a composite object.
+    const env = { GCS_UPLOAD_SKIP_UNCHANGED: 'true' }
+    expect(upload([a], env).status).toBe(0)
+    resetUploadLog()
+    expect(upload([a], env).status).toBe(0)
+    expect(uploaded()).toHaveLength(1)
+  })
+
+  it('uploads everything when the listing fails: a skip needs positive evidence', () => {
+    const a = writeLocal('s/district_61.json', '{"a":1}')
+    expect(upload([a]).status).toBe(0)
+    resetUploadLog()
+    const r = upload([a], { ...SKIP, SHIM_FAIL_MATCH: '^objects list' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(uploaded()).toHaveLength(1)
+  })
+
+  it('does nothing different without the env: every call uploads (the default)', () => {
+    const a = writeLocal('s/district_61.json', '{"a":1}')
+    const env = { SHIM_GENERATIONS: '1' }
+    expect(upload([a], env).status).toBe(0)
+    resetUploadLog()
+    expect(upload([a], env).status).toBe(0)
+    expect(uploaded()).toHaveLength(1)
+  })
+
+  it('keeps the stored result the same as -Z: gzip, Cache-Control with no-transform', () => {
+    const a = writeLocal('s/district_61.json', '{"a":1}')
+    expect(upload([a]).status).toBe(0)
+    const meta = fs.readFileSync(
+      path.join(root, '.meta', BUCKET, 'snapshots/2026-10-10/district_61.json'),
+      'utf-8'
+    )
+    expect(meta).toContain('content-encoding=gzip')
+    expect(meta).toContain(`cache-control=${CC}, no-transform`)
+    expect(meta).toContain('content-type=application/json')
+  })
+})
+
 // #1852: v1/ and config/ are stored identity and compressed at the edge by
 // Cloud CDN dynamic compression (compression-mode AUTOMATIC on the backend
 // bucket). The CDN skips any response that already has a Content-Encoding

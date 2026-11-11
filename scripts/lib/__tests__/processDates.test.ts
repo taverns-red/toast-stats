@@ -501,6 +501,31 @@ describe('process-dates.sh: run manifest (#1762, ADR-015 P5)', () => {
     )
   })
 
+  // #2566: a rebuild of a date staging already holds, byte for byte, sends
+  // nothing (class-A writes), yet the manifest lists every object, so the
+  // gates and the scoped promotion see the date exactly as before.
+  it('rebuild twice: the second run uploads no snapshot object, and the manifest still lists them all', () => {
+    putRaw('2026-09-10')
+    const env = { SHIM_GENERATIONS: '1' }
+    expect(run('rebuild', ['2026-09-10'], env).status).toBe(0)
+    const first = recorded()
+    const firstPaths = entries()
+      .map(e => e.path)
+      .sort()
+    expect(first.length).toBeGreaterThan(0)
+    fs.rmSync(uploadLog, { force: true })
+    fs.rmSync(manifest, { force: true })
+    const r = run('rebuild', ['2026-09-10'], env)
+    expect(r.status, r.stderr).toBe(0)
+    expect(uploaded().filter(l => l.startsWith('snapshots/'))).toEqual([])
+    expect(
+      entries()
+        .map(e => e.path)
+        .sort()
+    ).toEqual(firstPaths)
+    expect(recorded()).toEqual(first)
+  })
+
   it('rescrape: the re-collected raw and the re-derived snapshots are recorded; hydrated files left unchanged are not', () => {
     const DATE = '2026-10-10'
     putObject(`raw-csv/${DATE}/all-districts.csv`, 'REGION,DISTRICT\n')
