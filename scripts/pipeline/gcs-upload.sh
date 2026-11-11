@@ -106,7 +106,6 @@ case "${DST_PATH}" in
 esac
 
 GCLOUD="${GCLOUD:-gcloud}"
-"${GCLOUD}" storage "${VERB}" "${ARGS[@]}"
 
 # `<file>\t<object path>` for every object the call wrote.
 plan() {
@@ -144,11 +143,138 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# One hashing pass and one jq for the whole call: a historical program year
-# uploads ~13 000 objects.
 SHA256=(sha256sum)
 command -v sha256sum >/dev/null 2>&1 || SHA256=(shasum -a 256)
 plan >"${WORK}/plan.tsv"
+
+# Skip what staging already holds (#2566). Opt-in: GCS_UPLOAD_SKIP_UNCHANGED=true.
+# A rebuild re-sent ~1,160 objects per date though most were unchanged, and
+# every upload is a class-A write. For `cp` of files, list each destination
+# directory ONCE (`gcloud storage objects list <dir>/*`: one request per
+# 1,000 objects, no per-object download) and send only the objects whose
+# stored md5, Content-Encoding, Cache-Control (and Content-Type, when given)
+# differ from what this call would write. The manifest below is written from
+# the FULL plan whatever is skipped: promotion copies exactly the manifest,
+# and the content gate checks staging's served bytes against its sha256, both
+# of which hold for an object that is already there byte for byte.
+#
+# `-Z` gzips with the current time in the gzip header, so its stored bytes
+# never repeat and their md5 is no use. So that the bytes repeat, a `-Z`
+# call is made as the SDK does it, by hand: `gzip -n` locally (no name, no
+# time) and `--content-encoding=gzip` with `no-transform` appended to
+# Cache-Control (metadata_util.get_cache_control). The stored object is the
+# same as `-Z`'s; only its bytes are now reproducible. The first run after
+# this change finds no md5 match and sends everything once. A listing entry
+# without md5_hash (a composite object), a listing that fails, or any flag
+# this does not understand: everything in question is uploaded.
+UPLOAD_ARGS=("${ARGS[@]}")
+NOTHING_TO_UPLOAD=0
+
+skip_unchanged() {
+  local a s f d i=0 gz=0 ctype="" cache="" want_cache
+  local flags=() dirs=() changed=() total skipped
+  local n=$((${#ARGS[@]} - 1))
+  for a in "${ARGS[@]:0:${n}}"; do
+    case "${a}" in
+      -Z) gz=1 ;;
+      -r | -R) flags+=("${a}") ;;
+      --content-type=*)
+        ctype="${a#--content-type=}"
+        flags+=("${a}")
+        ;;
+      --cache-control=*) cache="${a#--cache-control=}" ;;
+      -*) return 0 ;; # a flag this does not model: upload everything
+    esac
+  done
+  for s in "${SRCS[@]}"; do
+    if [[ "${s}" == *'*'* ]]; then
+      while IFS= read -r f; do
+        [ -d "${f}" ] && return 0
+      done < <(compgen -G "${s}")
+    elif [ -d "${s}" ]; then
+      return 0
+    fi
+  done
+
+  # Several sources to a destination without a trailing slash: the destination
+  # is a directory only because there are several. Skipping down to one source
+  # could turn it into an object NAMED like the destination. Upload everything.
+  if [ "$(wc -l <"${WORK}/plan.tsv" | tr -d ' ')" -gt 1 ] &&
+    [[ "${ARGS[${n}]}" != */ ]]; then
+    return 0
+  fi
+
+  want_cache="${cache}"
+  if [ "${gz}" = 1 ]; then want_cache="${cache:+${cache}, }no-transform"; fi
+
+  # One listing per destination directory.
+  while IFS= read -r d; do dirs+=("${d}"); done < <(
+    cut -f2 "${WORK}/plan.tsv" | sed 's|[^/]*$||; s|/$||' | LC_ALL=C sort -u
+  )
+  : >"${WORK}/remote.tsv"
+  for d in "${dirs[@]}"; do
+    if "${GCLOUD}" storage objects list "gs://${DST_BUCKET}/${d:+${d}/}*" \
+      --format=json >"${WORK}/listing.json" 2>"${WORK}/listing.err"; then
+      jq -r '.[] | [.name, (.md5_hash // ""), (.content_encoding // ""),
+        (.cache_control // ""), (.content_type // "")] | @tsv' \
+        "${WORK}/listing.json" >>"${WORK}/remote.tsv" || true
+    else
+      echo "gcs-upload: could not list gs://${DST_BUCKET}/${d}/ ($(head -n 1 "${WORK}/listing.err")); uploading all of it" >&2
+    fi
+  done
+
+  # `<object>\t<local md5>\t<file to send>` for every planned object.
+  : >"${WORK}/local.tsv"
+  mkdir -p "${WORK}/gz"
+  while IFS=$'\t' read -r f d; do
+    i=$((i + 1))
+    if [ "${gz}" = 1 ]; then
+      mkdir -p "${WORK}/gz/${i}"
+      gzip -n -9 -c <"${f}" >"${WORK}/gz/${i}/$(basename "${f}")"
+      f="${WORK}/gz/${i}/$(basename "${f}")"
+    fi
+    printf '%s\t%s\t%s\n' "${d}" \
+      "$(openssl dgst -md5 -binary <"${f}" | base64)" "${f}" >>"${WORK}/local.tsv"
+  done <"${WORK}/plan.tsv"
+
+  local enc=""
+  if [ "${gz}" = 1 ]; then enc=gzip; fi
+  while IFS= read -r f; do changed+=("${f}"); done < <(
+    awk -F'\t' -v enc="${enc}" -v cache="${want_cache}" -v ctype="${ctype}" \
+      -v remote="${WORK}/remote.tsv" '
+      # (FILENAME, not NR == FNR: an empty remote listing makes that true for
+      # the local file too.)
+      FILENAME == remote { r[$1] = $2 "\t" $3 "\t" $4 "\t" $5; next }
+      {
+        split(r[$1], v, "\t")
+        if ($2 != "" && v[1] == $2 && v[2] == enc && v[3] == cache &&
+            (ctype == "" || v[4] == ctype)) next
+        print $3
+      }' "${WORK}/remote.tsv" "${WORK}/local.tsv"
+  )
+  total="$(wc -l <"${WORK}/local.tsv" | tr -d ' ')"
+  skipped=$((total - ${#changed[@]}))
+  echo "gcs-upload: skip-unchanged: ${skipped} of ${total} object(s) already in gs://${DST_BUCKET}/ byte for byte, uploading ${#changed[@]} (#2566)" >&2
+
+  if [ "${#changed[@]}" -eq 0 ]; then
+    NOTHING_TO_UPLOAD=1
+    return 0
+  fi
+  if [ "${gz}" = 1 ]; then flags+=("--content-encoding=gzip"); fi
+  if [ -n "${want_cache}" ]; then flags+=("--cache-control=${want_cache}"); fi
+  UPLOAD_ARGS=("${flags[@]+"${flags[@]}"}" "${changed[@]}" "${ARGS[${n}]}")
+}
+
+if [ "${GCS_UPLOAD_SKIP_UNCHANGED:-}" = true ] && [ "${VERB}" = cp ] &&
+  [ -s "${WORK}/plan.tsv" ]; then
+  skip_unchanged
+fi
+if [ "${NOTHING_TO_UPLOAD}" = 0 ]; then
+  "${GCLOUD}" storage "${VERB}" "${UPLOAD_ARGS[@]}"
+fi
+
+# One hashing pass and one jq for the whole call: a historical program year
+# uploads ~13 000 objects.
 [ -s "${WORK}/plan.tsv" ] || exit 0
 cut -f1 "${WORK}/plan.tsv" | tr '\n' '\0' | xargs -0 "${SHA256[@]}" |
   awk '{print $1}' >"${WORK}/sha.txt"
