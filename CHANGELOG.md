@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.84.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.83.1...toast-stats-v2.84.0) (2026-11-11)
+
+
+### Features
+
+* **ui:** shared Distinguished resolver + [#2579](https://github.com/taverns-red/toast-stats/issues/2579) review fixes ([#2580](https://github.com/taverns-red/toast-stats/issues/2580), part) ([#2609](https://github.com/taverns-red/toast-stats/issues/2609)) ([132b852](https://github.com/taverns-red/toast-stats/commit/132b852c36d248ed465a2d1e23dfc855678fa87f))
+
+
+### Bug Fixes
+
+* **ci:** split Playwright OS packages from browser download, one retry each ([#2600](https://github.com/taverns-red/toast-stats/issues/2600)) ([#2612](https://github.com/taverns-red/toast-stats/issues/2612)) ([e08f708](https://github.com/taverns-red/toast-stats/commit/e08f70823878cefb9a34f93bd436d0fa1775191a))
+* **district:** print loads held cards; hub height smoke measures fully loaded page ([#2571](https://github.com/taverns-red/toast-stats/issues/2571), [#2578](https://github.com/taverns-red/toast-stats/issues/2578)) ([#2610](https://github.com/taverns-red/toast-stats/issues/2610)) ([f57a4e9](https://github.com/taverns-red/toast-stats/commit/f57a4e94ba5bd03e1bd4eee1e6e740b53c92f341))
+* **ui:** KPI percentile labels match worldPercentile meaning ([#2581](https://github.com/taverns-red/toast-stats/issues/2581)) ([#2608](https://github.com/taverns-red/toast-stats/issues/2608)) ([e3e4fcb](https://github.com/taverns-red/toast-stats/commit/e3e4fcb0472a3687405db0a8f83cb852d459336e))
+
+
+### Performance
+
+* **pipeline:** skip uploading unchanged objects ([#2566](https://github.com/taverns-red/toast-stats/issues/2566)) ([#2611](https://github.com/taverns-red/toast-stats/issues/2611)) ([0efec2d](https://github.com/taverns-red/toast-stats/commit/0efec2d068d4a7b9f010491d62fabf90dbd13c82))
+
 ## [2.83.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.83.0...toast-stats-v2.83.1) (2026-11-10)
 
 
