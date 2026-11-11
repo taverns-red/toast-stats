@@ -21,6 +21,8 @@ import { parse } from 'yaml'
 
 const FILE = path.join(process.cwd(), '.github/workflows/pr-preview.yml')
 const STEP_TIMEOUT_MAX = 5
+/** Minutes the rest of the job (npm ci, the tests) keeps in the worst case. */
+const JOB_HEADROOM = 5
 
 interface Step {
   id?: string
@@ -77,7 +79,24 @@ describe('PR Preview Playwright install (#2600)', () => {
         expect(first.id).toBeTruthy()
         expect(retry['continue-on-error']).toBeUndefined()
         expect(retry.if).toContain(`steps.${first.id}.outcome == 'failure'`)
+        // No always(): a cancelled job must not start the retry.
+        expect(retry.if).not.toMatch(/always\(\)/)
       })
     }
+
+    it(`${name}: worst-case install time leaves the job ${JOB_HEADROOM} minutes`, () => {
+      const total = steps
+        .filter(s => /npx playwright install/.test(s.run ?? ''))
+        .reduce((sum, s) => sum + (s['timeout-minutes'] ?? Infinity), 0)
+      expect(job['timeout-minutes']).toBeGreaterThan(0)
+      expect(total).toBeLessThanOrEqual(
+        (job['timeout-minutes'] as number) - JOB_HEADROOM
+      )
+    })
+
+    it(`${name}: the OS-package retry repairs an interrupted dpkg first`, () => {
+      const [, retry] = attempts(steps, /npx playwright install-deps/)
+      expect(retry?.run).toMatch(/sudo dpkg --configure -a/)
+    })
   }
 })
