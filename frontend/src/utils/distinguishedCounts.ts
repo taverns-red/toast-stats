@@ -23,23 +23,51 @@ export interface DistinguishedCountPair {
   provisional: number
 }
 
-export function resolveDistinguishedCounts(input: {
+/** Which source the resolved figures came from (#2580). */
+export type DistinguishedSource = 'analytics' | 'rankings' | 'qualifying-today'
+
+export interface ResolvedDistinguishedCounts extends DistinguishedCountPair {
+  source: DistinguishedSource
+}
+
+/** Without a qualifying-today figure, provisional is unknown unless the
+ *  pipeline pair is present, and with no source at all nothing resolves. */
+export interface PartialDistinguishedCounts {
+  confirmed: number | null
+  provisional: number | null
+  source: DistinguishedSource | 'none'
+}
+
+interface ResolveInput {
   /** `distinguishedCounts` from the district analytics file, when present. */
   counts?: DistinguishedCountPair | null | undefined
   /** The rankings row's `distinguishedClubs` (confirmed), when loaded. */
   rankingConfirmed?: number | null | undefined
-  /** performance-targets `currentProgress.distinguished`. */
-  qualifyingToday: number
-}): DistinguishedCountPair {
+}
+
+export function resolveDistinguishedCounts<
+  Q extends number | null | undefined = undefined,
+>(
+  input: ResolveInput & { qualifyingToday?: Q }
+): Q extends number ? ResolvedDistinguishedCounts : PartialDistinguishedCounts {
+  type Out = Q extends number
+    ? ResolvedDistinguishedCounts
+    : PartialDistinguishedCounts
   const { counts, rankingConfirmed, qualifyingToday } = input
   if (counts) {
-    return { confirmed: counts.confirmed, provisional: counts.provisional }
+    return {
+      confirmed: counts.confirmed,
+      provisional: counts.provisional,
+    } as unknown as Out
   }
   if (rankingConfirmed !== null && rankingConfirmed !== undefined) {
     return {
       confirmed: rankingConfirmed,
-      provisional: Math.max(0, qualifyingToday - rankingConfirmed),
-    }
+      provisional: Math.max(0, (qualifyingToday ?? 0) - rankingConfirmed),
+    } as unknown as Out
   }
-  return { confirmed: qualifyingToday, provisional: 0 }
+  return {
+    confirmed: qualifyingToday ?? undefined,
+    provisional: 0,
+  } as unknown as Out
 }
