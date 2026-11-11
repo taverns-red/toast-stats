@@ -290,8 +290,10 @@ for (const s of SUITES) {
           expect(m.docOverflow, ctx).toBeLessThanOrEqual(0)
 
           // Nothing at the end of the page sits under the bar. The district
-          // hub's cards load as they near the viewport (#2513), so the page
-          // changes height after the first scroll: scroll until it settles.
+          // hub's cards load as the scroll reaches them (#2513), so the page
+          // can change height after the first scroll: scroll until it
+          // settles. (A card higher up the page may stay held; this only
+          // checks the end of the page.)
           await scrollUntilStable(page)
           const end = await page.evaluate(bar => {
             const root = document

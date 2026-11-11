@@ -1,6 +1,7 @@
 ---
 date: 2026-11-11
 tier: lesson
+category: lesson
 summary: Scrolling to the end of a page does not load near-viewport-held cards higher up, so a height cap measured there reads a partial page
 tags: [tests, e2e, performance, mobile]
 ---
