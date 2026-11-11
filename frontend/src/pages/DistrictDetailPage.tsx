@@ -43,6 +43,7 @@ import { MobileDisclosure } from '../components/MobileDisclosure'
 import { DistinguishedDistrictTrophyCase } from '../components/DistinguishedDistrictTrophyCase'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 import { useNearViewport } from '../hooks/useNearViewport'
+import { usePrintRequested } from '../hooks/usePrintRequested'
 import { useDistrictRanking } from '../hooks/useDistrictRanking'
 import { ClubGrowthAchievementCard } from '../components/ClubGrowthAchievementCard'
 import { useClubGrowthMilestones } from '../hooks/useClubGrowthMilestones'
@@ -338,7 +339,9 @@ const DistrictDetailPageInner: React.FC = () => {
   // label, aria-hidden), so the page keeps its length and nothing shifts
   // when the read lands. Without IntersectionObserver the read is never held.
   const [trophySlot, setTrophySlot] = React.useState<HTMLElement | null>(null)
-  const trophyNearViewport = useNearViewport(trophySlot)
+  // Printing releases both held reads: print.css prints both cards (#2571).
+  const printRequested = usePrintRequested()
+  const trophyNearViewport = useNearViewport(trophySlot) || printRequested
   const awardsReadWanted =
     trophyNearViewport || typeof IntersectionObserver !== 'function'
   const competitiveAwardsQuery = useCompetitiveAwards(
@@ -388,7 +391,7 @@ const DistrictDetailPageInner: React.FC = () => {
   // The checkpoint rankings files (~7 KB each) feed a card below the first
   // screen, so they wait for its slot to near the viewport (#2513).
   const [growthSlot, setGrowthSlot] = React.useState<HTMLElement | null>(null)
-  const growthNearViewport = useNearViewport(growthSlot)
+  const growthNearViewport = useNearViewport(growthSlot) || printRequested
   const growthReadWanted =
     growthNearViewport || typeof IntersectionObserver !== 'function'
   const { checkpoints: clubGrowthCheckpoints, isLoading: isLoadingClubGrowth } =

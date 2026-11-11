@@ -428,6 +428,30 @@ describe('DistinguishedDistrictTrophyCase', () => {
       ).toBeInTheDocument()
     })
 
+    // #2571 — the print copy is laid out right after `beforeprint`, so a cold
+    // Cmd-P can still hold a placeholder: it says so (print only, print.css)
+    // and a second print has the data.
+    it.each([
+      ['loading', { isLoading: true }, 'distinguished-trophy-skeleton'],
+      ['held', { held: true }, 'distinguished-trophy-held'],
+    ])(
+      'carries a print-only "print again" note while %s (#2571)',
+      (_name, props, testId) => {
+        render(
+          <DistinguishedDistrictTrophyCase
+            status={null}
+            programYear={LEGACY_PY}
+            {...props}
+          />
+        )
+        const note = within(screen.getByTestId(testId)).getByText(
+          /print again in a moment/i
+        )
+        expect(note).toHaveClass('print-held-note')
+        expect(screen.getByTestId(testId)).toHaveClass('print-held-card')
+      }
+    )
+
     // #1647 — the loaded panel lists every required prerequisite (expanded
     // whenever one is unmet, the common case) plus the "must be met" warning;
     // the skeleton reserved neither, so the swap grew the panel 64-144px.

@@ -11,6 +11,13 @@
    light-mode forced, page margins set, URL in footer, no page breaks
    inside cards. */
 
+/* A card that is still held or loading prints a one-line note instead of its
+   skeleton (#2571). The print copy is laid out right after `beforeprint`, so a
+   cold Cmd-P can still hold the placeholder; a second print has the data. */
+.print-held-note {
+  display: none;
+}
+
 @media print {
   /* ----- Page setup ----- */
   @page {
@@ -19,6 +26,18 @@
        paper prints them on their page budget. */
     size: auto;
     margin: 0.6in 0.5in 0.7in 0.5in;
+  }
+
+  /* ----- Held / loading cards (#2571) ----- */
+  .print-held-note {
+    display: block;
+    margin: 0;
+    font-size: 12px;
+    color: var(--ink, #000000);
+  }
+
+  .print-held-card > :not(.print-held-note) {
+    display: none !important;
   }
 
   /* ----- Force light mode regardless of theme attribute ----- */
