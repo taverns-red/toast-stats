@@ -29,7 +29,13 @@ interface TileProps {
   value: string
   /** Distinguished tile only (#2554): drawn through `DistinguishedCount`
    *  (confirmed headline, "+N provisional" beside it) instead of `value`. */
-  distinguished?: { confirmed: number; provisional: number } | undefined
+  distinguished?:
+    | {
+        confirmed: number
+        provisional: number
+        basis?: 'confirmed' | 'qualifying-today' | undefined
+      }
+    | undefined
   delta: string | null
   rank: string | null
   tone?: 'up' | 'down' | undefined
@@ -70,6 +76,7 @@ const Tile: React.FC<TileProps> = ({
           <DistinguishedCount
             confirmed={distinguished.confirmed}
             provisional={distinguished.provisional}
+            basis={distinguished.basis}
           />
         ) : (
           value
@@ -112,7 +119,11 @@ export const DistrictHubTiles: React.FC<DistrictHubTilesProps> = ({
             value={card ? card.current.toLocaleString() : HUB_DASH}
             distinguished={
               card && card.provisional !== undefined
-                ? { confirmed: card.current, provisional: card.provisional }
+                ? {
+                    confirmed: card.current,
+                    provisional: card.provisional,
+                    basis: card.basis,
+                  }
                 : undefined
             }
             delta={card ? nextTierText(card.current, card.targets) : null}

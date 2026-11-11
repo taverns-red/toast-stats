@@ -214,6 +214,8 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
                   current={kpis[openTile].current}
                   targets={kpis[openTile].targets}
                   rankings={kpis[openTile].rankings}
+                  provisional={kpis[openTile].provisional}
+                  basis={kpis[openTile].basis}
                   planTarget={planGoals?.[TILE_GOAL[openTile]]}
                 />
                 <p className="district-hub__sheet-legend">

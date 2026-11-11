@@ -237,11 +237,14 @@
   /* "+N provisional" beside a Distinguished count (#2554), wherever
      DistinguishedCount is drawn: the muted companion to the headline, never
      colour alone (the words carry the meaning). */
+  /* The confirmed count follows the card value's line-height (#2580). The
+     global span rule (1.5) would make a 30px span 45px tall against the
+     36px text-3xl line and push the card's rank line ~9px low. */
+  .distinguished-count__confirmed {
+    line-height: inherit;
+  }
+
   .distinguished-count__provisional {
-    /* Its own line-height (#2580): inheriting the card value's fixed
-       text-3xl length made this inline box as tall as the headline and
-       pushed the rank line ~11px low. */
-    line-height: 1;
     font-size: 12px;
     font-weight: 500;
     color: var(--ink-3);

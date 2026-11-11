@@ -17,8 +17,7 @@ export const PROVISIONAL_TOOLTIP =
 
 /** The same explanation as the tooltip, in the text itself (no digits, so it
  *  never reads as a second count). */
-export const PROVISIONAL_NOTE =
-  'clubs that qualify on current membership but are not yet confirmed. Not counted in the confirmed total or in the rank.'
+export const PROVISIONAL_NOTE = 'clubs qualifying today, not yet confirmed'
 
 export interface DistinguishedCountProps {
   confirmed: number
@@ -33,7 +32,10 @@ export const DistinguishedCount: React.FC<DistinguishedCountProps> = ({
   basis = 'confirmed',
 }) => (
   <>
-    <span data-testid="distinguished-confirmed">
+    <span
+      data-testid="distinguished-confirmed"
+      className="distinguished-count__confirmed"
+    >
       {confirmed.toLocaleString()}
     </span>
     {basis === 'qualifying-today' && (
