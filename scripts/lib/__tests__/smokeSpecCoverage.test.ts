@@ -382,11 +382,15 @@ describe('the smoke shard job (#2453)', () => {
     expect(String(cache?.with?.['key'])).toContain(
       'steps.playwright.outputs.version'
     )
-    const install = steps.findIndex(s =>
-      /playwright install --with-deps chromium webkit/.test(s.run ?? '')
-    )
-    expect(install).toBeGreaterThan(steps.indexOf(cache as Step))
-    expect(steps.indexOf(run as Step)).toBeGreaterThan(install)
+    // OS packages and browsers install in separate steps since #2600.
+    for (const command of [
+      /playwright install-deps chromium webkit/,
+      /playwright install chromium webkit/,
+    ]) {
+      const install = steps.findIndex(s => command.test(s.run ?? ''))
+      expect(install).toBeGreaterThan(steps.indexOf(cache as Step))
+      expect(steps.indexOf(run as Step)).toBeGreaterThan(install)
+    }
   })
 
   it('uploads the failing shard results under a per-shard, per-attempt name', () => {

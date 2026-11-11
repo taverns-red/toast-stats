@@ -729,7 +729,7 @@ jobs:
           echo "version=${version#Version }" >> "$GITHUB_OUTPUT"
 
       # The browsers come from Playwright's CDN, cached per version (#2453:
-      # 39 s a run, uncached, in the single job). `--with-deps` still runs on
+      # 39 s a run, uncached, in the single job). `install-deps` still runs on
       # a hit: the OS packages and fonts it adds are not in the cache, and
       # the geometry smokes must render with the same fonts as before.
       - name: Cache Playwright browsers
@@ -738,8 +738,34 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-webkit-${{ runner.os }}-${{ steps.playwright.outputs.version }}
 
-      - name: Install Playwright browsers (chromium + webkit)
-        run: npx playwright install --with-deps chromium webkit
+      # OS packages and browsers install in separate steps, each with a short
+      # timeout and one retry of that step only (#2600). On 2026-11-09 apt
+      # fetched 139 MB at 100-300 kB/s and five jobs hit the 20-minute job
+      # timeout here before the browser download began (run 42686172298).
+      - name: Install Playwright OS packages (chromium + webkit)
+        id: pw-deps
+        timeout-minutes: 3
+        continue-on-error: true
+        run: npx playwright install-deps chromium webkit
+
+      # A timeout can kill dpkg mid-install; repair it before the retry.
+      - name: Install Playwright OS packages (one retry)
+        if: steps.pw-deps.outcome == 'failure' || steps.pw-deps.outcome == 'cancelled'
+        timeout-minutes: 3
+        run: |
+          sudo dpkg --configure -a
+          npx playwright install-deps chromium webkit
+
+      - name: Download Playwright browsers (chromium + webkit)
+        id: pw-browsers
+        timeout-minutes: 2
+        continue-on-error: true
+        run: npx playwright install chromium webkit
+
+      - name: Download Playwright browsers (one retry)
+        if: steps.pw-browsers.outcome == 'failure' || steps.pw-browsers.outcome == 'cancelled'
+        timeout-minutes: 2
+        run: npx playwright install chromium webkit
 
       - name: Download the preview build
         uses: actions/download-artifact@v8
@@ -897,8 +923,31 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-webkit-${{ runner.os }}-${{ steps.playwright.outputs.version }}
 
-      - name: Install Playwright browsers (chromium + webkit)
-        run: npx playwright install --with-deps chromium webkit
+      # Split with one retry each, like the smoke shards (#2600).
+      - name: Install Playwright OS packages (chromium + webkit)
+        id: pw-deps
+        timeout-minutes: 3
+        continue-on-error: true
+        run: npx playwright install-deps chromium webkit
+
+      # A timeout can kill dpkg mid-install; repair it before the retry.
+      - name: Install Playwright OS packages (one retry)
+        if: steps.pw-deps.outcome == 'failure' || steps.pw-deps.outcome == 'cancelled'
+        timeout-minutes: 3
+        run: |
+          sudo dpkg --configure -a
+          npx playwright install-deps chromium webkit
+
+      - name: Download Playwright browsers (chromium + webkit)
+        id: pw-browsers
+        timeout-minutes: 2
+        continue-on-error: true
+        run: npx playwright install chromium webkit
+
+      - name: Download Playwright browsers (one retry)
+        if: steps.pw-browsers.outcome == 'failure' || steps.pw-browsers.outcome == 'cancelled'
+        timeout-minutes: 2
+        run: npx playwright install chromium webkit
 
       # Every file of the deployed build, HEAD only (#2544): a font, glyph or
       # lazy chunk missing from the deploy would pass staging.smoke.ts, since
