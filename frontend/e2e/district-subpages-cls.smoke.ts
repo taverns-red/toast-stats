@@ -143,7 +143,7 @@ const INSTALL_OBSERVER = () => {
 async function measureCls(
   page: Page,
   path: string,
-  vp: (typeof VIEWPORTS)[number],
+  vp: { width: number; height: number },
   ready: string
 ): Promise<{ total: number; breakdown: string }> {
   await page.setViewportSize({ width: vp.width, height: vp.height })
@@ -212,6 +212,41 @@ test.describe('district subpages CLS on a throttled cold load (#1837)', () => {
         ).toBeLessThan(CLS_BUDGET)
       })
     }
+  }
+})
+
+/* The Clubs table picks its columns from the width tier (#2676, risk R-4:
+ * CLS <= 0.1 at 768, 1024 and 1280). 1280 is covered by the `clubs` entry in
+ * SUBPAGES above; 375 renders the phone list instead. This adds the tablet
+ * and laptop tiers, gated on the table itself having rendered rows. */
+const CLUBS_TIER_VIEWPORTS = [
+  { name: 'tablet', width: 768, height: 1024 },
+  { name: 'laptop', width: 1024, height: 768 },
+] as const
+
+test.describe('Clubs table CLS at the tablet and laptop tiers (#2676)', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'layout-shift + CDP throttling are Chromium-only'
+  )
+
+  for (const vp of CLUBS_TIER_VIEWPORTS) {
+    test(`/district/61/clubs at ${vp.width}px stays inside the 0.1 CLS budget`, async ({
+      page,
+    }) => {
+      test.setTimeout(180_000)
+      const { total, breakdown } = await measureCls(
+        page,
+        '/district/61/clubs',
+        vp,
+        '#clubs-table tbody tr'
+      )
+      expect(
+        total,
+        `Clubs table CLS at ${vp.width}px is ${total} (budget ${CLS_BUDGET}) on ${page.url()}\n` +
+          `Largest contributors — read the sources, not the total:\n${breakdown}`
+      ).toBeLessThan(CLS_BUDGET)
+    })
   }
 })
 

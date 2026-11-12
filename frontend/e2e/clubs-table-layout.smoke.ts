@@ -35,7 +35,10 @@ async function openClubs(page: Page, width: number, height = 900) {
 
 for (const theme of ['light', 'dark'] as const) {
   for (const { width, shown } of TIERS) {
-    test(`default columns fit at ${width} (${theme})`, async ({ page }) => {
+    test(`default columns fit at ${width} (${theme})`, async ({
+      page,
+      browserName,
+    }) => {
       test.setTimeout(90_000)
       await page.emulateMedia({ colorScheme: theme })
       if (width === 1280) {
@@ -76,13 +79,15 @@ for (const theme of ['light', 'dark'] as const) {
       // WebKit leaves a classic scrollbar out of the media-query width, so a
       // 1280 window with a 17px bar is the laptop tier there. The tier is the
       // browser's own answer; what this test pins is that it fits.
-      const tierShown = await page.evaluate(
-        ([w, full]) =>
-          w === 1280 && !window.matchMedia('(min-width: 1280px)').matches
-            ? 9
-            : full,
-        [width, shown] as const
-      )
+      // Chromium keeps asserting the full desktop count.
+      const tierShown =
+        browserName === 'webkit' &&
+        width === 1280 &&
+        !(await page.evaluate(
+          () => window.matchMedia('(min-width: 1280px)').matches
+        ))
+          ? 9
+          : shown
       const ctx = JSON.stringify(m)
       expect(m.scrollWidth, ctx).toBeLessThanOrEqual(m.vw)
       expect(m.overflow, ctx).not.toBe('true')
@@ -107,13 +112,20 @@ test('the header sticks to the page and nothing around the table scrolls', async
     .locator('#clubs-table')
     .evaluate(t => t.getBoundingClientRect().height)
   const dy = Math.min(2000, Math.floor(tableHeight / 2))
-  await page.evaluate(y => window.scrollTo(0, y), dy)
-  await page.waitForTimeout(300)
+  // index.css sets `html { scroll-behavior: smooth }`, so a plain scrollTo
+  // animates and a fixed wait can sample mid-scroll (a WebKit flake in CI).
+  // Jump instantly, then wait on the position itself, never on a timer.
+  await page.evaluate(
+    y => window.scrollTo({ top: y, left: 0, behavior: 'instant' }),
+    dy
+  )
+  await page.waitForFunction(y => Math.abs(window.scrollY - y) < 1, dy)
   const m = await page.evaluate(() => {
     const th = document.querySelector<HTMLElement>(
       '#clubs-table thead th'
     ) as HTMLElement
     const r = th.getBoundingClientRect()
+    const topBar = document.querySelector<HTMLElement>('.app-shell-top-bar')
     const scrollers: string[] = []
     for (
       let el: HTMLElement | null = document.getElementById('clubs-table');
@@ -127,14 +139,17 @@ test('the header sticks to the page and nothing around the table scrolls', async
     }
     return {
       top: r.top,
-      stickyTop: parseFloat(getComputedStyle(th).top),
+      // Measured, not read back from the header's own `top`: a wrong
+      // --table-sticky-top must fail here.
+      barBottom: topBar ? topBar.getBoundingClientRect().bottom : NaN,
       inViewport: r.bottom > 0 && r.top < window.innerHeight,
       scrollers,
     }
   })
   const ctx = JSON.stringify(m)
   expect(m.inViewport, ctx).toBe(true)
-  expect(Math.abs(m.top - m.stickyTop), ctx).toBeLessThanOrEqual(1)
+  expect(Number.isFinite(m.barBottom), ctx).toBe(true)
+  expect(Math.abs(m.top - m.barBottom), ctx).toBeLessThanOrEqual(1)
   expect(m.scrollers, ctx).toEqual([])
 })
 
