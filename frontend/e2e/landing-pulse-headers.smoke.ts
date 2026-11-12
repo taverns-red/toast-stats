@@ -111,6 +111,30 @@ for (const width of [375, 1280]) {
   }
 }
 
+// #2618 — the attention tile's label was a link, which the 48px link floor
+// made tall, so its value sat ~32px lower than the other two tiles' values.
+for (const width of [375, 1280]) {
+  test(`World pulse tile values share one top at ${width}px`, async ({
+    page,
+  }) => {
+    await load(page, width, 'light')
+    const offsets = await page.evaluate(() =>
+      ['pulse-attention', 'pulse-chartered', 'pulse-suspended'].map(id => {
+        const value = document.querySelector(`[data-testid="${id}"]`)!
+        const tile = value.closest('.world-pulse__tile')!
+        return (
+          value.getBoundingClientRect().top - tile.getBoundingClientRect().top
+        )
+      })
+    )
+    const spread = Math.max(...offsets) - Math.min(...offsets)
+    expect(
+      spread,
+      `value tops differ by ${spread}px (offsets ${offsets.join(', ')})`
+    ).toBeLessThanOrEqual(1)
+  })
+}
+
 for (const width of [375, 768, 1280]) {
   test(`payments delta says YTD and stays on one line at ${width}px`, async ({
     page,
