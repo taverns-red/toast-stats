@@ -125,6 +125,28 @@ describe('DataControlsBar (#529 #528)', () => {
     const pill = screen.getByTestId('freshness-pill')
     expect(pill).not.toHaveTextContent(/month-end reconciliation/i)
     expect(pill.getAttribute('data-reconciling')).toBeNull()
+  })
+
+  // #2635 — "Data fresh" on a snapshot that is not the latest told visitors old
+  // figures were current (REF-27: "● Data fresh · Jan 15, 2019").
+  it('says "Data as of" with a neutral dot when the snapshot is not the latest (#2635)', () => {
+    render(
+      <DataControlsBar
+        {...baseProps}
+        latestSnapshotDate="2026-03-15"
+        isLatest={false}
+      />
+    )
+    const pill = screen.getByTestId('freshness-pill')
+    expect(pill).toHaveTextContent(/Data as of · Mar 15, 2026/)
+    expect(pill).not.toHaveTextContent(/Data fresh/i)
+    const dot = pill.querySelector('[data-testid="freshness-dot"]')
+    expect(dot?.className).not.toMatch(/green|amber/)
+  })
+
+  it('keeps "Data fresh" with a green dot on the latest snapshot (#2635)', () => {
+    render(<DataControlsBar {...baseProps} isLatest />)
+    const pill = screen.getByTestId('freshness-pill')
     expect(pill).toHaveTextContent(/Data fresh/i)
     const dot = pill.querySelector('[data-testid="freshness-dot"]')
     expect(dot?.className).toMatch(/green/)

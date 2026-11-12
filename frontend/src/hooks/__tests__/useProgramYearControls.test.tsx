@@ -103,6 +103,25 @@ describe('useProgramYearControls (#1301)', () => {
     ])
   })
 
+  it('isLatestSnapshot is false for a prior program year, true for the newest (#2635)', async () => {
+    const prior = renderHook(() => useProgramYearControls(), {
+      wrapper: createWrapper(['/?py=2025']),
+    })
+    await waitFor(() =>
+      expect(prior.result.current.effectiveDate).toBe('2026-05-01')
+    )
+    expect(prior.result.current.isLatestSnapshot).toBe(false)
+    prior.unmount()
+
+    const newest = renderHook(() => useProgramYearControls(), {
+      wrapper: createWrapper(),
+    })
+    await waitFor(() =>
+      expect(newest.result.current.effectiveDate).toBe('2026-09-15')
+    )
+    expect(newest.result.current.isLatestSnapshot).toBe(true)
+  })
+
   it('honors an explicit ?date= over the PY latest', async () => {
     const { result } = renderHook(() => useProgramYearControls(), {
       wrapper: createWrapper(['/?py=2025&date=2025-08-01']),
