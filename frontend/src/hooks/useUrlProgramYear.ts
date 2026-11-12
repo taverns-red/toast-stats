@@ -140,9 +140,13 @@ export function useUrlProgramYear() {
         } else {
           next.set('py', py.year.toString())
         }
+        // An explicit year pick wins: a `?date=` from the year being left
+        // would otherwise resolve back to that year and undo the pick (#2635).
+        next.delete('date')
         return next
       }, navigateOptions(options))
       setContextPY(py)
+      setContextDate(undefined)
     },
     [setSearchParams, setContextPY, defaultPY.year]
   )
