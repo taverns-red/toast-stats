@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.63.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.62.0...frontend-v3.63.0) (2026-11-12)
+
+
+### Features
+
+* **clubs:** DataTable shell, column sizing, sticky header, no row click ([#2676](https://github.com/taverns-red/toast-stats/issues/2676)) ([#2684](https://github.com/taverns-red/toast-stats/issues/2684)) ([e7cc3bc](https://github.com/taverns-red/toast-stats/commit/e7cc3bca55a94420f2114d4bd03e09e020b35346))
+* **clubs:** Health marker plus text, plain-text tier, 14px table type, no row tints ([#2676](https://github.com/taverns-red/toast-stats/issues/2676)) ([#2681](https://github.com/taverns-red/toast-stats/issues/2681)) ([9f7ad9a](https://github.com/taverns-red/toast-stats/commit/9f7ad9a109c197851ca05d5d217c6de4a5f98c83))
+* **clubs:** tier-driven column visibility and the Columns menu ([#2676](https://github.com/taverns-red/toast-stats/issues/2676)) ([#2683](https://github.com/taverns-red/toast-stats/issues/2683)) ([31002bd](https://github.com/taverns-red/toast-stats/commit/31002bdf550307862efedbe24449d1e63cc88f9a))
+
+
+### Bug Fixes
+
+* **data-controls:** dates with no snapshot show a clear no-data state ([#2635](https://github.com/taverns-red/toast-stats/issues/2635)) ([#2668](https://github.com/taverns-red/toast-stats/issues/2668)) ([480b225](https://github.com/taverns-red/toast-stats/commit/480b2254999376f4f9ecea71b532c8d30218bb88))
+* **ui:** failed loads show an error with Retry ([#2636](https://github.com/taverns-red/toast-stats/issues/2636)) ([#2670](https://github.com/taverns-red/toast-stats/issues/2670)) ([9a4e026](https://github.com/taverns-red/toast-stats/commit/9a4e026c9f570da91618ab1aabfbde0df39bc1a8))
+
 ## [3.62.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.61.0...frontend-v3.62.0) (2026-11-12)
 
 
