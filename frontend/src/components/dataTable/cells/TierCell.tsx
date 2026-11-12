@@ -36,7 +36,13 @@ export const TierCell: React.FC<TierCellProps> = ({ level, provisional }) => {
   }
   return (
     <span className="dt-tier">
-      <span className="dt-tier__name">{TIER_LABEL[level]}</span>
+      <span className="dt-tier__name">
+        {TIER_LABEL[level]}
+        {/* The full tier name for assistive tech ("Select Distinguished"). */}
+        {level !== 'Distinguished' && (
+          <span className="sr-only"> Distinguished</span>
+        )}
+      </span>
       {provisional && (
         <span className="dt-tier__provisional">
           <span className="sr-only">, </span>

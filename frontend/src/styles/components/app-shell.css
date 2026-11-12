@@ -5207,7 +5207,7 @@
 
   /* Per-column responsive priority. The detail columns are hidden by default
      (tablet tier, 768–1279) and revealed at desktop (≥1280). The core set
-     (Club sticky, Status, Members, Needed, DCP, Tier) is always shown when the
+     (Club sticky, Health, Members, Needed, DCP, Tier) is always shown when the
      table renders. The card view carries the full record below 768. */
   .clubs-table__col--desktop {
     display: none;
