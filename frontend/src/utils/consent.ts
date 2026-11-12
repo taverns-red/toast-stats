@@ -148,7 +148,8 @@ export function restoreFocusAfterConsent(): void {
   ) {
     target.setAttribute('tabindex', '-1')
   }
-  target.focus()
+  // preventScroll: moving focus must not shift the page (#2637).
+  target.focus({ preventScroll: true })
 }
 
 function gaHook(): GaHook | undefined {
