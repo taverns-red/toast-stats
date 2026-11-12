@@ -27,7 +27,9 @@ const css = readFileSync(
 
 const ruleBody = (sel: string): string => {
   const m = new RegExp(
-    '(?:^|\\n)\\s*' + sel.replace(/\./g, '\\.') + '\\s*\\{([^}]*)\\}'
+    '(?:^|\\n)\\s*' +
+      sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+      '\\s*\\{([^}]*)\\}'
   ).exec(css)
   if (!m) throw new Error(`rule ${sel} not found`)
   return m[1]
