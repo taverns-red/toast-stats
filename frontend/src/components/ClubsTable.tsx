@@ -809,10 +809,19 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         const summary = [g.x ? `\u2717 ${g.x}` : '', g.v ? `\u26a0 ${g.v}` : '']
           .filter(Boolean)
           .join(' \u00b7 ')
+        const n = g.rows.length
+        const accessibleName = [
+          `${g.label}, ${n} ${n === 1 ? 'club' : 'clubs'}`,
+          g.x ? `${g.x} need intervention` : '',
+          g.v ? `${g.v} vulnerable` : '',
+        ]
+          .filter(Boolean)
+          .join(', ')
         return {
           id,
           label: g.label,
           rows: g.rows,
+          accessibleName,
           ...(summary ? { summary } : {}),
         }
       })
