@@ -15,7 +15,11 @@ const src = (rel: string): string =>
 
 const TABLE_FILE = 'components/DistrictRankingsTable.tsx'
 /** Everything that renders a cell of the rankings table. */
-const TABLE_SOURCES = [TABLE_FILE, 'components/rankingsColumns.tsx']
+const TABLE_SOURCES = [
+  TABLE_FILE,
+  'components/rankingsColumns.tsx',
+  'components/rankingsCells.tsx',
+]
 
 describe('landing rankings table: no CSS-hidden columns (Ron, 2026-11-12)', () => {
   it('lives in its own component on the DataTable foundation', () => {
