@@ -1208,7 +1208,11 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
 
       {/* One always-visible legend for the Health markers and "provisional"
           (#2676, HUB-20/HUB-30), above both the table and the phone list. */}
-      {!isLoading && sortedClubs.length > 0 && <HealthLegend />}
+      {/* Short landscape keeps the first row within 200px (#1912), so there
+          the legend rides in the compact footer instead. */}
+      {!isLoading && sortedClubs.length > 0 && !compactToolbar && (
+        <HealthLegend />
+      )}
 
       {/* Phone rows (#1833) — replaces the #217 ClubCard stack. */}
       {!isLoading && sortedClubs.length > 0 && isMobile && (
@@ -1244,6 +1248,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           CSV exports, below the rows so the first row leads the screen. */}
       {compactToolbar && !isLoading && clubs.length > 0 && (
         <div className="clubs-panel-footer">
+          <HealthLegend />
           <div className="clubs-panel-footer__count text-sm clubs-text-muted">
             {resultCount}
             {presetActive && (
