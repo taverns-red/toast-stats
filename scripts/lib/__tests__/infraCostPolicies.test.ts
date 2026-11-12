@@ -32,6 +32,9 @@ const jsonFiles = (dir: string): string[] =>
 // --- GCS lifecycle -------------------------------------------------------
 
 const GCS_BUCKETS = ['toast-stats-data-ca', 'toast-stats-data-staging']
+// Prod restore backups (#2541). Holds only point-in-time copies taken before a
+// restore, so a whole-bucket age rule is allowed here and nowhere else.
+const BACKUP_BUCKET = 'toast-stats-backups-ca'
 const GCS_ACTIONS = [
   'Delete',
   'SetStorageClass',
@@ -98,8 +101,10 @@ interface GcsRule {
 }
 
 describe('GCS lifecycle files (#2103)', () => {
-  it('has exactly one file per data bucket', () => {
-    expect(jsonFiles(GCS_DIR)).toEqual(GCS_BUCKETS.map(b => `${b}.json`))
+  it('has exactly one file per data bucket plus the backup bucket', () => {
+    expect(jsonFiles(GCS_DIR)).toEqual(
+      [...GCS_BUCKETS, BACKUP_BUCKET].sort().map(b => `${b}.json`)
+    )
   })
 
   for (const bucket of GCS_BUCKETS) {
@@ -173,6 +178,31 @@ describe('GCS lifecycle files (#2103)', () => {
       })
     })
   }
+})
+
+describe('backup bucket lifecycle (#2541)', () => {
+  const file = path.join(GCS_DIR, `${BACKUP_BUCKET}.json`)
+
+  it('exists', () => {
+    expect(fs.existsSync(file)).toBe(true)
+  })
+
+  it('deletes backups after 90 days, bucket-wide, and aborts stale uploads', () => {
+    const doc = readJson(file) as { rule: GcsRule[] }
+    expect(Object.keys(doc)).toEqual(['rule'])
+    const live = doc.rule.filter(
+      r => r.action.type === 'Delete' && r.condition.isLive !== false
+    )
+    expect(live).toHaveLength(1)
+    expect(live[0].condition.matchesPrefix).toBeUndefined()
+    expect(live[0].condition.age as number).toBeGreaterThanOrEqual(90)
+    for (const r of doc.rule) {
+      expect(GCS_ACTIONS).toContain(r.action.type)
+      for (const k of Object.keys(r.condition)) {
+        expect(GCS_CONDITIONS).toContain(k)
+      }
+    }
+  })
 })
 
 describe('stale-prefix rules (#2103, 2026-10-28)', () => {
