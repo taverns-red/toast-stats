@@ -113,24 +113,34 @@ for (const width of [375, 1280]) {
 
 // #2618 — the attention tile's label was a link, which the 48px link floor
 // made tall, so its value sat ~32px lower than the other two tiles' values.
-for (const width of [375, 1280]) {
+for (const width of [375, 768, 1280]) {
   test(`World pulse tile values share one top at ${width}px`, async ({
     page,
   }) => {
     await load(page, width, 'light')
-    const offsets = await page.evaluate(() =>
+    const m = await page.evaluate(() =>
       ['pulse-attention', 'pulse-chartered', 'pulse-suspended'].map(id => {
         const value = document.querySelector(`[data-testid="${id}"]`)!
         const tile = value.closest('.world-pulse__tile')!
-        return (
-          value.getBoundingClientRect().top - tile.getBoundingClientRect().top
-        )
+        const t = tile.getBoundingClientRect()
+        return {
+          offset: value.getBoundingClientRect().top - t.top,
+          height: t.height,
+        }
       })
     )
-    const spread = Math.max(...offsets) - Math.min(...offsets)
+    const spread = (xs: number[]) => Math.max(...xs) - Math.min(...xs)
+    const offsets = m.map(x => x.offset)
+    const heights = m.map(x => x.height)
     expect(
-      spread,
-      `value tops differ by ${spread}px (offsets ${offsets.join(', ')})`
+      spread(offsets),
+      `value tops differ by ${spread(offsets)}px (offsets ${offsets.join(', ')})`
+    ).toBeLessThanOrEqual(1)
+    // Same label box in every tile, so a link label that wraps differently
+    // would also change the tile (and shift the page when the data lands).
+    expect(
+      spread(heights),
+      `tile heights differ by ${spread(heights)}px (${heights.join(', ')})`
     ).toBeLessThanOrEqual(1)
   })
 }
