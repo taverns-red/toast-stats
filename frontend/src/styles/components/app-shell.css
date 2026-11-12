@@ -132,7 +132,7 @@
     padding: 8px;
     /* Taller than the viewport (About expanded at 360x640): scroll inside the
        panel instead of running off-screen (#2638). */
-    max-height: calc(100dvh - 56px);
+    max-height: calc(100dvh - var(--app-top-bar-h, 56px));
     overflow-y: auto;
     overscroll-behavior: contain;
     background-color: var(--surface);

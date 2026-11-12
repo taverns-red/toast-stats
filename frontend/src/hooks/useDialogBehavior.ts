@@ -8,8 +8,27 @@ import { lockScroll as lockPageScroll } from '../utils/scrollLock'
    had focus when the dialog opened, or `returnFocusRef` when given (WebKit
    never focuses a <button> on tap, #1920). */
 
-const FOCUSABLE =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea, [tabindex]:not([tabindex="-1"])'
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]'
+
+/** Elements Tab can reach: not tabindex=-1, disabled, [hidden] or hidden by
+ *  display or visibility (no layout needed, so it also holds in jsdom). */
+function tabbable(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+    el => {
+      if (el.getAttribute('tabindex') === '-1') return false
+      if (el.matches(':disabled') || el.closest('[hidden]')) return false
+      for (
+        let n: HTMLElement | null = el;
+        n && n !== container;
+        n = n.parentElement
+      ) {
+        const s = getComputedStyle(n)
+        if (s.display === 'none' || s.visibility === 'hidden') return false
+      }
+      return true
+    }
+  )
+}
 
 export interface DialogBehaviorOptions {
   /** Only active while true. */
@@ -50,7 +69,7 @@ export function useDialogBehavior({
       if (e.key !== 'Tab') return
       const container = containerRef?.current
       if (!container) return
-      const focusables = container.querySelectorAll<HTMLElement>(FOCUSABLE)
+      const focusables = tabbable(container)
       const first = focusables[0]
       const last = focusables[focusables.length - 1]
       if (!first || !last) return
