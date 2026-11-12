@@ -127,9 +127,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
             d="M4 6h16M4 6v12M10 6v12M16 6v12M4 18h16"
           />
         </svg>
-        <span>
-          Columns · {shownCount} of {totalCount}
-        </span>
+        <span>{`Columns · ${shownCount} of ${totalCount}`}</span>
         {isCustom && (
           <span className="clubs-columns-menu__custom">
             <span aria-hidden="true" className="clubs-columns-menu__dot" />

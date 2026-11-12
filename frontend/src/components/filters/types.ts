@@ -30,41 +30,10 @@ export type SortField =
 export type SortDirection = 'asc' | 'desc'
 
 /**
- * Column groups for the show/hide model (ADR-006 §4, #819 epic #821 Sprint 2).
- *
- * A growing column set (#688, #687, and #795's delta columns) overflows when
- * every column is always-on. Each column declares a `group`; the user shows or
- * hides whole groups (Identity / Membership / Renewals / Recognition /
- * Changes). `changes` is reserved for #795's opt-in delta columns (Sprint 3)
- * and is empty until then — `ColumnGroupsMenu` filters empty groups out of the
- * popover, so there's no dead toggle.
- */
-export type ColumnGroup =
-  'identity' | 'membership' | 'renewals' | 'recognition' | 'changes'
-
-/** Canonical group ids, in display order. */
-export const COLUMN_GROUP_IDS: readonly ColumnGroup[] = [
-  'identity',
-  'membership',
-  'renewals',
-  'recognition',
-  'changes',
-] as const
-
-/** Group id + human label for the show/hide control, in display order. */
-export const COLUMN_GROUPS: readonly { id: ColumnGroup; label: string }[] = [
-  { id: 'identity', label: 'Identity' },
-  { id: 'membership', label: 'Membership' },
-  { id: 'renewals', label: 'Renewals' },
-  { id: 'recognition', label: 'Recognition' },
-  { id: 'changes', label: 'Changes' },
-] as const
-
-/**
- * The sticky key column. It is the row's own label, so the group show/hide
- * control never hides it (ADR-006 §3 — key column never hidden), even when its
- * group (Identity) is hidden. Wired to TanStack `columnVisibility` in
- * ClubsTable so the table model agrees with the CSS-level sticky behaviour.
+ * The sticky key column. It is the row's own label, so the Columns menu never
+ * hides it (ADR-006 §3 — key column never hidden). Wired to TanStack
+ * `columnPinning` in ClubsTable. Which columns show at a width lives in
+ * `clubsColumnMeta.ts` (#2676).
  */
 export const STICKY_COLUMN_FIELD: SortField = 'name'
 
@@ -105,8 +74,6 @@ export interface ColumnConfig {
    *  name the order on its own (e.g. "Trend" sorts by "Net change"). */
   sortLabel?: string
   sortCustom?: (a: unknown, b: unknown) => number
-  /** Show/hide group this column belongs to (ADR-006 §4, #819). */
-  group: ColumnGroup
 }
 
 /**
@@ -192,7 +159,6 @@ export interface ProcessedClubTrend extends ClubTrend {
 export const COLUMN_CONFIGS: ColumnConfig[] = [
   {
     field: 'name',
-    group: 'identity',
     label: 'Club',
     sortable: true,
     filterable: true,
@@ -200,7 +166,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   },
   {
     field: 'division',
-    group: 'identity',
     label: 'Div',
     sortable: true,
     filterable: true,
@@ -208,7 +173,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   },
   {
     field: 'area',
-    group: 'identity',
     label: 'Area',
     sortable: true,
     filterable: true,
@@ -216,7 +180,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   },
   {
     field: 'status',
-    group: 'recognition',
     label: 'Status',
     sortable: true,
     filterable: true,
@@ -225,7 +188,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   },
   {
     field: 'membership',
-    group: 'membership',
     label: 'Members',
     sortable: true,
     filterable: true,
@@ -235,7 +197,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
     // Membership-trend sparkline (#1792). Sorts by the signed net change; the
     // sparkline itself is not a filter.
     field: 'netChange',
-    group: 'membership',
     label: 'Trend',
     sortLabel: 'Net change',
     sortable: true,
@@ -244,7 +205,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   },
   {
     field: 'membersNeeded',
-    group: 'membership',
     label: 'Needed',
     sortable: true,
     filterable: true,
@@ -252,7 +212,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   },
   {
     field: 'newMembers',
-    group: 'membership',
     label: 'New',
     sortable: true,
     filterable: true,
@@ -260,7 +219,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   },
   {
     field: 'octoberRenewals',
-    group: 'renewals',
     label: 'Oct Renew',
     sortable: true,
     filterable: true,
@@ -268,7 +226,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   },
   {
     field: 'aprilRenewals',
-    group: 'renewals',
     label: 'Apr Renew',
     sortable: true,
     filterable: true,
@@ -276,7 +233,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   },
   {
     field: 'dcpGoals',
-    group: 'recognition',
     label: 'DCP',
     sortable: true,
     filterable: true,
@@ -284,7 +240,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   },
   {
     field: 'distinguished',
-    group: 'recognition',
     label: 'Tier',
     sortable: true,
     filterable: true,
@@ -311,7 +266,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   },
   {
     field: 'clubStatus',
-    group: 'identity',
     label: 'Club Status',
     sortable: true,
     filterable: true,
@@ -321,7 +275,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   {
     // Coach status from the daily Coaches report (#1954). Status only.
     field: 'coach',
-    group: 'identity',
     label: 'Coach',
     sortable: true,
     filterable: true,
@@ -330,7 +283,6 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
   },
   {
     field: 'yearsChartered',
-    group: 'identity',
     label: 'Years',
     sortable: true,
     filterable: false,
