@@ -208,8 +208,18 @@
     position: relative;
   }
 
-  .world-pulse__tile-link .world-pulse__tile-label {
+  /* Room for the cue. On the tile, not the link, so the reserve (which has
+     no link) wraps the label in exactly the same width. Dropped below 360,
+     where "attention" (~60px) would not fit beside it; the cue sits on the
+     first line, which "Clubs needing" never fits on at that width. */
+  .world-pulse__tile:first-child .world-pulse__tile-label {
     padding-right: 16px;
+  }
+
+  @media (max-width: 359px) {
+    .world-pulse__tile:first-child .world-pulse__tile-label {
+      padding-right: 0;
+    }
   }
 
   .world-pulse__tile-link .world-pulse__tile-label span {
@@ -219,13 +229,16 @@
     color: var(--link);
   }
 
-  a.world-pulse__tile-link:hover {
-    background-color: var(--tm-loyal-blue-10);
-  }
+  /* Hover only where hover exists, so the tint does not stick after a tap. */
+  @media (hover: hover) {
+    a.world-pulse__tile-link:hover {
+      background-color: var(--tm-loyal-blue-10);
+    }
 
-  a.world-pulse__tile-link:hover .world-pulse__tile-label {
-    color: var(--link);
-    text-decoration: underline;
+    a.world-pulse__tile-link:hover .world-pulse__tile-label {
+      color: var(--link);
+      text-decoration: underline;
+    }
   }
 
   a.world-pulse__tile-link:focus-visible {
