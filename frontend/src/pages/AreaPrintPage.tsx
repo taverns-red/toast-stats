@@ -1,5 +1,5 @@
 /* AreaPrintPage (#2299) — /district/:districtId/division/:divId/area/:areaId/print.
-   The one-page Area print pack: recognition, close-to-Distinguished clubs,
+   The one-page Area Print Pack: recognition, close-to-Distinguished clubs,
    club visits, Club Success Plans and the area's clubs, dated. A real routed
    leaf inside the app shell (no tabs, no ?print=1 toggle): print.css and
    council-pack.css hide the shell when printing. */
@@ -18,7 +18,7 @@ const AreaPrintPage: React.FC = () => {
   }>()
   const { search } = useLocation()
   useDocumentTitle(
-    `Area ${areaId} print pack — Division ${divId?.toUpperCase()} — District ${districtId}`
+    `Area ${areaId} Print Pack — Division ${divId?.toUpperCase()} — District ${districtId}`
   )
   const data = useCouncilPack(districtId, {
     division: divId ?? '',

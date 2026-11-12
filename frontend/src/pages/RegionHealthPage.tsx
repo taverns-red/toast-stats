@@ -32,7 +32,7 @@ const RegionHealthPage: React.FC = () => {
     [rollups, region]
   )
   const title = `Region ${region}`
-  useDocumentTitle(`${title} health & compliance`)
+  useDocumentTitle(`${title} Health & Compliance`)
 
   return (
     <RollupPageShell

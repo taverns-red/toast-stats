@@ -1,5 +1,5 @@
 /* DivisionPrintPage (#2299) — /district/:districtId/division/:divId/print.
-   The Division print pack: a one-page summary (recognition and each area's
+   The Division Print Pack: a one-page summary (recognition and each area's
    standing, close-to-Distinguished clubs, club visits, Club Success Plans),
    then the full club roster on a forced second page. A real routed leaf
    inside the app shell; print CSS hides the shell. */
@@ -17,7 +17,7 @@ const DivisionPrintPage: React.FC = () => {
   }>()
   const { search } = useLocation()
   useDocumentTitle(
-    `Division ${divId?.toUpperCase()} print pack — District ${districtId}`
+    `Division ${divId?.toUpperCase()} Print Pack — District ${districtId}`
   )
   const data = useCouncilPack(districtId, { division: divId ?? '' })
   if (data.isNotFound) {

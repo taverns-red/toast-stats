@@ -61,7 +61,7 @@ const parseField = (
 const RegionTrainingPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
   const region = normaliseRegionId(n)
-  useDocumentTitle(`Region ${region} officer training`)
+  useDocumentTitle(`Region ${region} Officer Training`)
   const controls = useProgramYearControls()
   const [searchParams, setSearchParams] = useSearchParams()
   const threshold = parseTrainingThreshold(searchParams.get('threshold'))

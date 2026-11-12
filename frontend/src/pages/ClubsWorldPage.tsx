@@ -77,7 +77,7 @@ const KpiSkeleton: React.FC = () => (
 )
 
 const ClubsWorldPage: React.FC = () => {
-  useDocumentTitle('Clubs worldwide')
+  useDocumentTitle('Clubs Worldwide')
   const {
     selectedProgramYear,
     setSelectedProgramYear,
@@ -109,7 +109,7 @@ const ClubsWorldPage: React.FC = () => {
       <ClubsWorldContextBar
         title="Clubs worldwide"
         about="The race to Distinguished: which clubs in the world reached each tier first, and when. Only clubs that have reached a line appear here."
-        trail={[{ label: 'Clubs worldwide' }]}
+        trail={[{ label: 'Clubs Worldwide' }]}
         selectedProgramYear={selectedProgramYear}
         setSelectedProgramYear={setSelectedProgramYear}
         availableProgramYears={availableProgramYears}

@@ -30,7 +30,9 @@ const RankingsChangesPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
   const region = n === undefined ? undefined : normaliseRegionId(n)
   const title = region ? `Region ${region}` : 'All regions'
-  useDocumentTitle(`${title} — What Changed`)
+  // The tab says "Worldwide" like its siblings; the on-page scope stays
+  // "All regions".
+  useDocumentTitle(`${region ? title : 'Worldwide'} — What Changed`)
 
   const { dates, isLoading: datesLoading } = useRecordedDates()
   const { from, to, setFrom, setTo, setPair } = useUrlDatePair(dates)

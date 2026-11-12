@@ -20,7 +20,7 @@ import { needsAttention, worldBreakdown } from '../utils/regionRollupView'
    renders and the region table is replaced by the artifact's own note. */
 
 const WorldHealthPage: React.FC = () => {
-  useDocumentTitle('Worldwide health & compliance')
+  useDocumentTitle('Worldwide Health & Compliance')
   const controls = useProgramYearControls()
   const { rollups, snapshotDate, isLoading } = useRegionRollups(
     controls.effectiveDate
