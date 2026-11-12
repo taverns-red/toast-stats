@@ -40,6 +40,19 @@ async function loadOverview(page: Page, path: string): Promise<void> {
   await page.waitForTimeout(500)
 }
 
+/* index.css sets `html { scroll-behavior: smooth }`, so a plain
+ * `scrollTo(0, y)` animates, and on a loaded WebKit runner it had not moved
+ * 400 ms later: the probe then read the unscrolled page (stripTop 108) on
+ * #2672 and #2684 (#2685). Jump instantly, then wait on the position itself,
+ * never on a timer. */
+async function scrollInstantly(page: Page, y: number): Promise<void> {
+  await page.evaluate(
+    top => window.scrollTo({ top, left: 0, behavior: 'instant' }),
+    y
+  )
+  await page.waitForFunction(top => Math.abs(window.scrollY - top) < 1, y)
+}
+
 for (const path of PATHS) {
   test(`KPI strip is not under the viewport centre at scroll ${SCROLL_Y} on ${path} at 375px`, async ({
     page,
@@ -54,8 +67,7 @@ for (const path of PATHS) {
     )
     expect(scrollHeight).toBeGreaterThan(SCROLL_Y + 812)
 
-    await page.evaluate(y => window.scrollTo(0, y), SCROLL_Y)
-    await page.waitForTimeout(400)
+    await scrollInstantly(page, SCROLL_Y)
 
     const probe = await page.evaluate(sel => {
       const strip = document.querySelector(sel)
@@ -85,8 +97,7 @@ for (const path of PATHS) {
   }) => {
     await page.setViewportSize({ width: 375, height: 812 })
     await loadOverview(page, path)
-    await page.evaluate(y => window.scrollTo(0, y), SCROLL_Y)
-    await page.waitForTimeout(400)
+    await scrollInstantly(page, SCROLL_Y)
 
     const tall = await page.evaluate(max => {
       const out: string[] = []
@@ -123,8 +134,7 @@ test('no vertically sticky element taller than 64px on /district/61 at 768px', a
 }) => {
   await page.setViewportSize({ width: 768, height: 1024 })
   await loadOverview(page, '/district/61')
-  await page.evaluate(y => window.scrollTo(0, y), SCROLL_Y)
-  await page.waitForTimeout(400)
+  await scrollInstantly(page, SCROLL_Y)
 
   const tall = await page.evaluate(max => {
     const out: string[] = []
