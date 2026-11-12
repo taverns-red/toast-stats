@@ -48,7 +48,7 @@ const AppShell: React.FC = () => {
         Skip to main content
       </a>
       <AppShellTopBar onOpenSearch={openPalette} />
-      <main id="main-content" className="app-shell__main">
+      <main id="main-content" className="app-shell__main" tabIndex={-1}>
         <Outlet />
       </main>
       {!isMobile && <AppShellFooter />}

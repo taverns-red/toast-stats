@@ -13,6 +13,9 @@
 
   .app-shell__main {
     flex: 1;
+    /* Skip-link and programmatic jumps land clear of the 56px sticky bar
+       (#2637). The margin sits on the element that holds the id. */
+    scroll-margin-top: 56px;
   }
 
   /* Top bar: 3-column flex (brand | nav with flex:1 | tools) per design.
