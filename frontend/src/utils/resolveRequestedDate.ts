@@ -12,8 +12,9 @@
  *  - no param            → the PY's latest snapshot ('none')
  *  - a snapshot in the PY → used as-is ('valid')
  *  - a snapshot in another PY → that PY is selected ('switched-py')
- *  - anything else        → the nearest earlier snapshot in the PY, else the
- *    PY's latest ('fallback'); the caller shows a notice and drops the param
+ *  - anything else        → the nearest earlier snapshot (in the date's own
+ *    PY first, then any PY; the PY follows it), else the selected PY's latest
+ *    ('fallback'); the caller shows a notice and drops the param
  */
 
 import {
@@ -69,15 +70,25 @@ export function resolveRequestedDate(params: {
     }
   }
 
-  const earlier = ISO_DATE.test(requested)
-    ? filterDatesByProgramYear([...dates], programYear)
-        .filter(d => d < requested)
-        .sort((a, b) => b.localeCompare(a))[0]
-    : undefined
+  // No snapshot for the requested date: take the nearest EARLIER one, looking
+  // first inside the date's own program year, then across every year — and the
+  // program year follows the date that is shown (#2635).
+  if (!ISO_DATE.test(requested)) {
+    return { status: 'fallback', programYear, date: latestInPy, requested }
+  }
+  const nearestEarlier = (candidates: readonly SnapshotDate[]) =>
+    candidates.filter(d => d < requested).sort((a, b) => b.localeCompare(a))[0]
+  const inOwnYear = nearestEarlier(
+    filterDatesByProgramYear([...dates], getProgramYearForDate(requested))
+  )
+  const earlier = inOwnYear ?? nearestEarlier(dates)
+  if (!earlier) {
+    return { status: 'fallback', programYear, date: latestInPy, requested }
+  }
   return {
     status: 'fallback',
-    programYear,
-    date: earlier ?? latestInPy,
+    programYear: getProgramYearForDate(earlier),
+    date: earlier,
     requested,
   }
 }

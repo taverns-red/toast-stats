@@ -201,10 +201,14 @@ describe('useProgramYearControls (#1301)', () => {
         wrapper: createWrapper(['/?date=2026-07-10']),
       })
       await waitFor(() =>
-        expect(result.current.selectedProgramYear.year).toBe(2025)
+        expect(result.current.effectiveDate).toBe('2026-05-01')
       )
+      expect(result.current.selectedProgramYear.year).toBe(2025)
+      // The repaired URL carries ?py=2025 and no date (2026-05-01 is that
+      // PY's latest), and the selection must hold, not bounce back.
+      await new Promise(resolve => setTimeout(resolve, 50))
+      expect(result.current.selectedProgramYear.year).toBe(2025)
       expect(result.current.effectiveDate).toBe('2026-05-01')
-      expect(result.current.selectedDate).toBe('2026-05-01')
     })
 
     it('picking a program year wins over the ?date= from the one it left', async () => {

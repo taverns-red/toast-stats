@@ -97,7 +97,7 @@ export function useProgramYearControls(): ProgramYearControls {
     setProgramYearAndDate,
   })
   const selectedProgramYear =
-    resolution?.status === 'switched-py'
+    resolution && resolution.programYear.year !== urlProgramYear.year
       ? resolution.programYear
       : urlProgramYear
 

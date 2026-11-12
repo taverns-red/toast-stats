@@ -160,8 +160,13 @@ export function useDistrictProgramYearControls(
     setProgramYearAndDate,
   })
   const effectiveProgramYear = resolution?.programYear ?? null
+  // The resolution moves the year when the date it shows lives in another one
+  // (a snapshot from that year, or the nearest earlier snapshot across a year
+  // boundary); otherwise the URL's year stands, healed or not.
   const selectedProgramYear =
-    resolution?.status === 'switched-py'
+    resolution &&
+    healedProgramYear &&
+    resolution.programYear.year !== healedProgramYear.year
       ? resolution.programYear
       : urlProgramYear
   const effectiveEndDate = resolution?.date ?? null
