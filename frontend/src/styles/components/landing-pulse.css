@@ -281,7 +281,9 @@
 
   .world-pulse__payments-delta {
     font-size: 14px;
-    line-height: 1.3;
+    /* Tight so the baseline-aligned delta stays inside the total's line box in
+       Source Sans 3 (#2631); a taller box hung 2px below it. */
+    line-height: 1;
     color: var(--ink-2);
     font-variant-numeric: tabular-nums;
   }
