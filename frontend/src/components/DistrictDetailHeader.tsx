@@ -66,6 +66,7 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
   setSelectedProgramYear,
   availableProgramYears,
   selectedDate,
+  effectiveDate,
   onDateChange,
   availableDates,
   latestSnapshotDate,
@@ -80,9 +81,10 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
   // snapshot lags the global scrape never mislabels reconciliation.
   const { asOfDate: globalAsOfDate, latestSnapshotDate: globalLatestSnapshot } =
     useLatestAsOfDate()
-  const viewedDate = selectedDate ?? latestSnapshotDate
+  const viewedDate = effectiveDate ?? selectedDate ?? latestSnapshotDate
+  const atNewest = viewedDate === latestSnapshotDate
   const isLatest =
-    (!selectedDate || selectedDate === latestSnapshotDate) &&
+    atNewest &&
     !!latestSnapshotDate &&
     latestSnapshotDate === globalLatestSnapshot
 
@@ -169,10 +171,7 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
             latestSnapshotDate={viewedDate}
             asOfDate={isLatest ? globalAsOfDate : undefined}
             isLatest={isLatest}
-            isNewestSnapshot={
-              !!latestSnapshotDate &&
-              (!selectedDate || selectedDate === latestSnapshotDate)
-            }
+            isNewestSnapshot={!!latestSnapshotDate && atNewest}
             availableProgramYears={availableProgramYears}
             selectedProgramYear={selectedProgramYear}
             onProgramYearChange={setSelectedProgramYear}

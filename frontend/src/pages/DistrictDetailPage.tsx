@@ -115,9 +115,9 @@ const DistrictDetailPageInner: React.FC = () => {
     availableProgramYears,
     effectiveProgramYear,
     effectiveEndDate,
+    selectedDate,
     hasValidDates,
   } = useDistrictProgramYearControls(districtId)
-  const selectedDate = effectiveEndDate ?? undefined
 
   // Fetch cached dates for date selector
   const {
@@ -414,7 +414,7 @@ const DistrictDetailPageInner: React.FC = () => {
   // Kept out of the shared header so the subpages (and the map route's JS
   // budget) do not carry it. Placed per layout in the render below.
   const deadlineAsOfDate =
-    selectedDate ?? cachedDatesData?.dateRange?.endDate ?? availableDates[0]
+    effectiveEndDate ?? cachedDatesData?.dateRange?.endDate ?? availableDates[0]
   const deadlineStrip = (
     <NextDeadlineStrip
       programYear={selectedProgramYear.label}
@@ -693,6 +693,7 @@ const DistrictDetailPageInner: React.FC = () => {
               setSelectedProgramYear={setSelectedProgramYear}
               availableProgramYears={availableProgramYears}
               selectedDate={selectedDate}
+              effectiveDate={effectiveEndDate ?? undefined}
               onDateChange={setSelectedDate}
               availableDates={availableDates}
               latestSnapshotDate={

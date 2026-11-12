@@ -184,9 +184,9 @@ const DistrictClubsPage: React.FC = () => {
     availableDates: cachedDatesInProgramYear,
     effectiveProgramYear,
     effectiveEndDate,
+    selectedDate,
     hasValidDates,
   } = useDistrictProgramYearControls(districtId)
-  const selectedDate = effectiveEndDate ?? undefined
 
   const { data: districtsData } = useDistricts()
   const selectedDistrict = districtsData?.districts?.find(
@@ -290,6 +290,7 @@ const DistrictClubsPage: React.FC = () => {
             setSelectedProgramYear={setSelectedProgramYear}
             availableProgramYears={availableProgramYears}
             selectedDate={selectedDate}
+            effectiveDate={effectiveEndDate ?? undefined}
             onDateChange={setSelectedDate}
             availableDates={availableDates}
             latestSnapshotDate={
