@@ -595,6 +595,11 @@ export const exportClubPerformance = (
     newMembers?: number | undefined
     clubStatus?: string | undefined
     coach?: ClubCoach | undefined
+    membershipBase?: number | undefined
+    membersNeeded?: number | undefined
+    netChange?: number | null | undefined
+    yearsChartered?: number | null | undefined
+    isProvisionallyDistinguished?: boolean | undefined
   }>,
   districtId: string
 ): void => {
@@ -613,6 +618,13 @@ export const exportClubPerformance = (
     'Apr Ren',
     'New',
     'Risk Factors',
+    // Appended (#2676, spec §9) so the file carries every column the table
+    // shows, without moving the positions above.
+    'Members Base',
+    'Members Needed',
+    'Net Change',
+    'Years Chartered',
+    'Distinguished Confirmed',
   ]
 
   const rows = clubs.map(club => {
@@ -638,6 +650,16 @@ export const exportClubPerformance = (
       club.aprilRenewals ?? '',
       club.newMembers ?? '',
       riskFactors,
+      club.membershipBase ?? '',
+      club.membersNeeded ?? '',
+      club.netChange ?? '',
+      club.yearsChartered ?? '',
+      // A provisional tier qualifies today but is not yet confirmed.
+      club.distinguishedLevel &&
+      club.distinguishedLevel !== 'NotDistinguished' &&
+      !club.isProvisionallyDistinguished
+        ? 'Yes'
+        : 'No',
     ]
   })
 
