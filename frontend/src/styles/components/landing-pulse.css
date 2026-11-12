@@ -198,8 +198,33 @@
     min-height: calc(2 * 1.3em);
   }
 
+  /* At 375 the label is 14px (mobile type floor) in ~88px of text width, so
+     "Clubs needing attention" takes three lines; hold three on phones. */
+  @media (max-width: 767px) {
+    .world-pulse__tiles .world-pulse__tile-label {
+      min-height: calc(3 * 1.3em);
+    }
+  }
+
   .world-pulse__tile-label span {
     line-height: inherit;
+  }
+
+  /* The link cue sits in the tile's corner, out of the text flow, so it can
+     never wrap onto a line of its own and push the value down. */
+  .world-pulse__tile-link {
+    position: relative;
+  }
+
+  .world-pulse__tile-link .world-pulse__tile-label {
+    padding-right: 16px;
+  }
+
+  .world-pulse__tile-link .world-pulse__tile-label span {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    color: var(--link);
   }
 
   a.world-pulse__tile-link:hover {
