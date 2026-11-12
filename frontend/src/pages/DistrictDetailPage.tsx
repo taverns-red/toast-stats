@@ -390,7 +390,12 @@ const DistrictDetailPageInner: React.FC = () => {
       ? aggregatedError
       : (datesError as Error | null)
   const retryOverview = () => {
-    if (datesError) refetchDates()
+    // The dated queries are disabled while the date index is down; refetching
+    // a disabled query ignores `enabled` and throws (#2636).
+    if (datesError) {
+      refetchDates()
+      return
+    }
     refetchAggregated()
     refetchAnalytics()
   }

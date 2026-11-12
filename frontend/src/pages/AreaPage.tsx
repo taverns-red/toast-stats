@@ -86,7 +86,7 @@ const AreaPage: React.FC = () => {
     undefined,
     effectiveEndDate ?? undefined
   )
-  const error = analyticsError ?? datesError
+  const error = datesError ?? analyticsError
 
   // Recognition / gap / visit data come from the same raw snapshot the Divisions
   // overview reads — one source of truth (R6/R8, #1016). We reuse the overview's
@@ -174,8 +174,11 @@ const AreaPage: React.FC = () => {
           title="Could not load area"
           subject="area"
           onRetry={() => {
-            refetchAnalytics()
-            refetchDates()
+            // Only the query that failed: with the date index down the
+            // analytics query is disabled, and refetching it ignores
+            // `enabled` and throws, replacing this copy (#2636).
+            if (datesError) refetchDates()
+            else refetchAnalytics()
           }}
         />
       </div>
