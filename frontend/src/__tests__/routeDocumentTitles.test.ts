@@ -55,6 +55,22 @@ describe('every route sets a specific document title (#2640)', () => {
     }
   )
 
+  // The new titles match their Region/World siblings ("Club Growth",
+  // "Meeting Times"): Title Case suffixes, and "Worldwide", never "World".
+  it.each([
+    ['RegionHealthPage', '${title} Health & Compliance'],
+    ['WorldHealthPage', 'Worldwide Health & Compliance'],
+    ['RegionTrainingPage', 'Officer Training'],
+    ['DivisionPrintPage', 'Print Pack'],
+    ['AreaPrintPage', 'Print Pack'],
+    ['AwardsPage', 'District Awards'],
+    ['ClubsWorldPage', 'Clubs Worldwide'],
+    ['WorldMapPage', 'Worldwide Club Map'],
+    ['RankingsChangesPage', "'Worldwide'"],
+  ])('%s title reads in Title Case / Worldwide: %s', (name, expected) => {
+    expect(sourceOf(name)).toContain(expected)
+  })
+
   it('lists no exemption that has since been titled', () => {
     for (const name of Object.keys(KEEPS_DEFAULT_TITLE)) {
       expect(sourceOf(name), name).not.toMatch(/\buseDocumentTitle\(/)
