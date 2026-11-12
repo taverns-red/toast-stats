@@ -198,14 +198,6 @@
     min-height: calc(2 * 1.3em);
   }
 
-  /* At 375 the label is 14px (mobile type floor) in ~88px of text width, so
-     "Clubs needing attention" takes three lines; hold three on phones. */
-  @media (max-width: 767px) {
-    .world-pulse__tiles .world-pulse__tile-label {
-      min-height: calc(3 * 1.3em);
-    }
-  }
-
   .world-pulse__tile-label span {
     line-height: inherit;
   }
@@ -366,6 +358,12 @@
        for ~52px of text. */
     .world-pulse__table thead th {
       letter-spacing: 0.02em;
+    }
+    /* #2618 — at 375 the tile label is 14px (mobile type floor) in ~88px of
+       text width, so "Clubs needing attention" takes three lines; hold
+       three so the three values share one top. */
+    .world-pulse__tiles .world-pulse__tile-label {
+      min-height: calc(3 * 1.3em);
     }
     .world-pulse__table .world-pulse__num {
       padding-left: 4px;
