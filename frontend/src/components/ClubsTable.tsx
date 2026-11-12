@@ -66,6 +66,7 @@ import {
   type MobileRowGroup,
 } from './MobileRowList'
 import { StatusChip } from './StatusChip'
+import { HealthLegend } from './dataTable/cells/HealthLegend'
 import { ClubTrendSparkline, formatSignedNet } from './ClubTrendSparkline'
 import {
   getClubHealthStatusLabel,
@@ -98,19 +99,6 @@ const sanitizeHiddenGroups = (raw: unknown): ColumnGroup[] =>
   Array.isArray(raw)
     ? raw.filter((g): g is ColumnGroup => VALID_GROUPS.has(g as ColumnGroup))
     : []
-
-/** Row-tint key for the sticky cell, so it can repaint OPAQUE per row status
- *  (a sticky cell must be opaque or scrolled columns bleed through it). Mirrors
- *  the row bg set by getRowColor: intervention → red-50, vulnerable → yellow-50,
- *  everything else → the themed --surface (no repaint needed). */
-const rowTint = (
-  status: 'thriving' | 'vulnerable' | 'intervention-required'
-): 'intervention' | 'vulnerable' | 'none' =>
-  status === 'intervention-required'
-    ? 'intervention'
-    : status === 'vulnerable'
-      ? 'vulnerable'
-      : 'none'
 
 /**
  * Props for the ClubsTable component
@@ -333,22 +321,6 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     },
     [setFilter]
   )
-
-  // Get row background color based on status
-  const getRowColor = (
-    status: 'thriving' | 'vulnerable' | 'intervention-required'
-  ) => {
-    switch (status) {
-      case 'intervention-required':
-        return 'bg-red-50 hover:bg-red-100'
-      case 'vulnerable':
-        return 'bg-yellow-50 hover:bg-yellow-100'
-      default:
-        // Default (non-status) row — token-driven surface + hover (#668).
-        // Status rows above keep their semantic red/yellow bg (Sprint 3 #669).
-        return 'clubs-table-row'
-    }
-  }
 
   // TanStack Table owns sort / sizing / pinning / visibility (#835, epic #821
   // Sprint 1). The filter pipeline (useColumnFilters → filteredClubs) and its
@@ -837,10 +809,19 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         const summary = [g.x ? `\u2717 ${g.x}` : '', g.v ? `\u26a0 ${g.v}` : '']
           .filter(Boolean)
           .join(' \u00b7 ')
+        const n = g.rows.length
+        const accessibleName = [
+          `${g.label}, ${n} ${n === 1 ? 'club' : 'clubs'}`,
+          g.x ? `${g.x} need intervention` : '',
+          g.v ? `${g.v} vulnerable` : '',
+        ]
+          .filter(Boolean)
+          .join(', ')
         return {
           id,
           label: g.label,
           rows: g.rows,
+          accessibleName,
           ...(summary ? { summary } : {}),
         }
       })
@@ -1225,6 +1206,14 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         </div>
       )}
 
+      {/* One always-visible legend for the Health markers and "provisional"
+          (#2676, HUB-20/HUB-30), above both the table and the phone list. */}
+      {/* Short landscape keeps the first row within 200px (#1912), so there
+          the legend rides in the compact footer instead. */}
+      {!isLoading && sortedClubs.length > 0 && !compactToolbar && (
+        <HealthLegend />
+      )}
+
       {/* Phone rows (#1833) — replaces the #217 ClubCard stack. */}
       {!isLoading && sortedClubs.length > 0 && isMobile && (
         // Bleed the rows to the panel edge (its 18 px padding) at < 768.
@@ -1259,6 +1248,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           CSV exports, below the rows so the first row leads the screen. */}
       {compactToolbar && !isLoading && clubs.length > 0 && (
         <div className="clubs-panel-footer">
+          <HealthLegend />
           <div className="clubs-panel-footer__count text-sm clubs-text-muted">
             {resultCount}
             {presetActive && (
@@ -1327,26 +1317,21 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
               <tbody>
                 {rowModel.rows.map(row => {
                   const club = row.original
-                  const tint = rowTint(club.currentStatus)
                   return (
                     <tr
                       key={club.clubId}
                       onClick={() => onClubClick?.(club)}
-                      className={`${getRowColor(club.currentStatus)} cursor-pointer transition-colors`}
+                      className="clubs-table-row cursor-pointer transition-colors"
                     >
                       {/* Cells render in the column-model order (clubsColumns.tsx):
-                      Club, Div, Area, Status, Members, Needed, New, Oct Renew,
+                      Club, Div, Area, Health, Members, Needed, New, Oct Renew,
                       Apr Renew, DCP, Tier, Club Status, Years. Each td's class
-                      (base + responsive priority) comes from clubColumnTdClass;
-                      only the sticky key column ('name') carries data-row-tint so
-                      the CSS repaints it opaque to the row status bg (Lesson 105). */}
+                      (base + responsive priority) comes from clubColumnTdClass.
+                      No row tint (#2676): status is a marker plus text. */}
                       {row.getVisibleCells().map(cell => (
                         <td
                           key={cell.id}
                           className={clubColumnTdClass(cell.column.id)}
-                          data-row-tint={
-                            cell.column.id === 'name' ? tint : undefined
-                          }
                         >
                           {flexRender(
                             cell.column.columnDef.cell,

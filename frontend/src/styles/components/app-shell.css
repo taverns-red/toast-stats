@@ -5198,41 +5198,16 @@
     z-index: 3;
   }
 
-  /* Keep the sticky cell in sync with the row-hover swap — only for untinted
-     (default-status) rows, which hover to --surface-3 (matching
-     .clubs-table-row:hover). Tinted rows handle their own hover below. */
-  #clubs-table tbody tr:hover .clubs-table__sticky-col[data-row-tint='none'] {
+  /* Keep the sticky cell in sync with the row-hover swap: every row hovers to
+     --surface-3 (matching .clubs-table-row:hover). Rows carry no status tint
+     (#2676), so there is one rule for all of them. */
+  #clubs-table tbody tr:hover .clubs-table__sticky-col {
     background-color: var(--surface-3);
-  }
-
-  /* Tinted rows (vulnerable / intervention) repaint the sticky cell opaque to
-     match the row's status bg (the <tr> carries bg-yellow-50 / bg-red-50 on its
-     transparent cells; the pinned cell carries no Tailwind bg, so it needs the
-     literal here). Light literals = Tailwind yellow-50 / red-50; the hover
-     literals = yellow-100 / red-100, matching the row's hover:bg-*-100. Dark
-     variants live in dark-mode.css (Lesson 096). */
-  .clubs-table__sticky-col[data-row-tint='vulnerable'] {
-    background-color: #fefce8;
-  }
-  .clubs-table__sticky-col[data-row-tint='intervention'] {
-    background-color: #fef2f2;
-  }
-  #clubs-table
-    tbody
-    tr:hover
-    .clubs-table__sticky-col[data-row-tint='vulnerable'] {
-    background-color: #fef9c3;
-  }
-  #clubs-table
-    tbody
-    tr:hover
-    .clubs-table__sticky-col[data-row-tint='intervention'] {
-    background-color: #fee2e2;
   }
 
   /* Per-column responsive priority. The detail columns are hidden by default
      (tablet tier, 768–1279) and revealed at desktop (≥1280). The core set
-     (Club sticky, Status, Members, Needed, DCP, Tier) is always shown when the
+     (Club sticky, Health, Members, Needed, DCP, Tier) is always shown when the
      table renders. The card view carries the full record below 768. */
   .clubs-table__col--desktop {
     display: none;
@@ -5754,7 +5729,7 @@
   /* Column-header sort handle (ColumnHeader.tsx) resting chrome — was
      text-gray-700 + hover:bg-gray-100 / hover:text-gray-900. */
   .clubs-col-header {
-    color: var(--ink-3);
+    color: var(--ink-2);
   }
 
   .clubs-col-header:hover,
@@ -5793,6 +5768,7 @@
   /* Primary cell text — was text-gray-900. */
   #clubs-table td {
     color: var(--ink);
+    font-size: var(--dt-font);
   }
 
   /* De-emphasised cell text: division/area labels, zero values, and the "—"
@@ -5839,14 +5815,11 @@
     color: var(--ink);
   }
 
-  /* ── Clubs table column model: pills + DCP bar (#669, epic #665 Sprint 3) ──
-     Two deliberately distinct pill families (lesson 062 — distinct families
-     get distinct treatment so the eye disambiguates them):
-       • Status (health) — soft tint + saturated text, matching the shipped
-         ClubCard mobile pills so the same datum reads identically on both
-         surfaces. Opaque chips, theme-stable.
-       • Tier (DCP recognition) — solid HANDOFF §256 tier color + white text.
-     Both carry a text label, so meaning never rests on color alone (WCAG). */
+  /* ── Clubs table column model: phone status chip + DCP bar (#669) ──
+     The desktop table no longer uses pills (#2676): Health is a shape marker
+     plus text and Tier is plain text, both styled in data-table.css. The
+     status pill below survives only for the phone StatusChip (out of scope),
+     soft tint + saturated text, theme-stable. */
 
   .clubs-status-pill {
     display: inline-block;
@@ -5873,60 +5846,6 @@
     color: #991b1b;
   }
 
-  /* Tier pill — solid fill, white text. maroon-500 / loyal-500 / loyal-400
-     have no dark remap and hold white text in both themes; --green-600
-     lightens in dark (tuned for text-on-surface), so the distinguished pill
-     pins the light green below (lesson 095 — size the value for the surface
-     it actually lands on: white text on the fill). */
-  .clubs-tier-pill {
-    display: inline-block;
-    padding: 2px 8px;
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1.4;
-    border-radius: var(--radius-sm);
-    color: #fff;
-    white-space: nowrap;
-  }
-
-  .clubs-tier-pill--smedley {
-    background-color: var(--maroon-500);
-  }
-
-  .clubs-tier-pill--presidents {
-    background-color: var(--loyal-500);
-  }
-
-  .clubs-tier-pill--select {
-    background-color: var(--loyal-400);
-  }
-
-  .clubs-tier-pill--distinguished {
-    background-color: var(--green-600);
-  }
-
-  /* Projected/provisional — striped yellow with dark text (the "not yet
-     confirmed" state, HANDOFF §256). Yellow tokens have no dark remap, so
-     dark text on the stripe stays legible in both themes. */
-  .clubs-tier-pill--projected {
-    /* #672: darkened #5a4a14 → #534213 so the dark text clears AA (4.5:1) on
-       the DARKER stripe band (--yellow-600 #c9b748) too — the worst case as
-       text crosses the 6px stripe (was 4.27:1 on that band). */
-    color: #534213;
-    /* #1904: a solid base under the stripes. Without it the pill's own
-       background is transparent, so wherever the gradient is not painted
-       (forced colours, an images-off mode, or any check that reads the
-       background colour) the dark text sits on the dark-mode row: 1.82:1. */
-    background-color: var(--yellow-500);
-    background-image: repeating-linear-gradient(
-      45deg,
-      var(--yellow-500) 0,
-      var(--yellow-500) 6px,
-      var(--yellow-600) 6px,
-      var(--yellow-600) 12px
-    );
-  }
-
   /* Read-time club-status overlay affordance (#1069, epic #1062 Sprint 4).
      When the daily Dues Renewal report promotes a frozen-base club to Active
      during closing, the cell shows the augmented status above a subtle
@@ -5948,7 +5867,7 @@
   }
 
   .club-status-overlay__mark {
-    font-size: 10px;
+    font-size: var(--dt-font);
     color: var(--ink-3);
     white-space: nowrap;
   }
@@ -5970,7 +5889,7 @@
   }
 
   .clubs-dcp-cell__val {
-    font-size: 11px;
+    font-size: var(--dt-font);
     color: var(--ink-3);
   }
 
@@ -5990,16 +5909,9 @@
     border-radius: 4px;
   }
 
-  /* Dark-mode fixups for the column-model pills/bar (#669):
-     - --green-600 lightens to #22c55e in dark (tuned for text-on-surface),
-       which fails white text on a fill; pin the distinguished pill to the
-       light-mode green so the chip keeps ~5:1 (lesson 095).
-     - The DCP fill follows the established .dcp-progress-fill dark value
-       (#8ec5e8) so both bars match across surfaces (lesson 093/096). */
-  [data-theme='dark'] .clubs-tier-pill--distinguished {
-    background-color: #15803d;
-  }
-
+  /* Dark-mode fixup for the DCP bar (#669): the fill follows the established
+     .dcp-progress-fill dark value (#8ec5e8) so both bars match across
+     surfaces (lesson 093/096). */
   [data-theme='dark'] .clubs-dcp-bar__fill {
     background-color: #8ec5e8;
   }

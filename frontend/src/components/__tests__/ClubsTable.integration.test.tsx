@@ -128,7 +128,7 @@ describe('ClubsTable Integration Tests', () => {
       expect(screen.getByText('Members')).toBeInTheDocument()
       expect(screen.getByText('DCP')).toBeInTheDocument()
       expect(screen.getByText('Tier')).toBeInTheDocument()
-      expect(screen.getByText('Status')).toBeInTheDocument()
+      expect(screen.getByText('Health')).toBeInTheDocument()
 
       // Should show club data
       expect(screen.getByText('Alpha Toastmasters')).toBeInTheDocument()
@@ -177,9 +177,9 @@ describe('ClubsTable Integration Tests', () => {
       const distinguishedHeader = screen.getByRole('button', {
         name: /Sort by Tier/i,
       })
-      // Match "Sort by Status" but not "Sort by Club Status".
+      // The health column is "Health" (#2676), distinct from "Club Status".
       const statusHeader = screen.getByRole('button', {
-        name: /Sort by Status\b/i,
+        name: /Sort by Health\b/i,
       })
 
       expect(clubNameHeader).toBeInTheDocument()

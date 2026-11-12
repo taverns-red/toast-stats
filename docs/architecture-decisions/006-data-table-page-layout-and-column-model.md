@@ -218,7 +218,7 @@ rankings table = bespoke".
   pill: a maroon x circle for Intervention, an outlined warning triangle for
   Vulnerable, a grey tick for Thriving. Markers reach 3:1 non-text contrast in
   light and dark. Tier is plain text with "provisional" on a second line. Only
-  legacy palette tokens are used.
+  legacy palette tokens are used, plus `--rt-red` and `--rt-red-dk`.
 - **Correction.** The Addendum 1 text says TanStack "v8"; the code moved to v9 in
   #1530 (`useTable`, `tableFeatures`, `sortFn`, pinning `start`/`end`).
 - **Bundle.** No new dependency. `columnSizingFeature` ships in the installed

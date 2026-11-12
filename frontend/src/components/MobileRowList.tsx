@@ -59,6 +59,10 @@ export interface MobileRowGroup {
   rows: MobileRow[]
   /** Short status summary shown beside the count (e.g. "✗ 2 · ⚠ 3"). */
   summary?: string
+  /** Accessible name for the group's toggle, e.g. "Division A, 18 clubs, 10
+   *  need intervention, 5 vulnerable". The glyph summary reads as symbols to a
+   *  screen reader, so a group that has one should also give this (#2676). */
+  accessibleName?: string
 }
 
 interface MobileRowListProps {
@@ -286,6 +290,7 @@ export const MobileRowList: React.FC<MobileRowListProps> = ({
                 className="mobile-row-group__toggle"
                 aria-expanded={isOpen}
                 aria-controls={panelId}
+                aria-label={group.accessibleName}
                 onClick={() => toggle(group.id)}
               >
                 <Chevron

@@ -2,13 +2,12 @@
  * Column-model guard for ClubsTable (#669, epic #665 Sprint 3).
  *
  * Reconciles the column set/order to the HANDOFF spec and renders the
- * Status + Tier columns as token-driven pills, Members as current/base,
- * and DCP as an inline progress bar. Falsifiable DOM checks:
+ * Health + Tier columns, Members as current/base, and DCP as an inline
+ * progress bar. Falsifiable DOM checks:
  *
  *   1. Header order matches the spec exactly (extras appended).
- *   2. Tier renders as a pill whose modifier class encodes the DCP tier
- *      color map (HANDOFF §256); provisional → striped-yellow "projected".
- *   3. Status renders as a token-driven pill (not legacy `*-N` Tailwind).
+ *   2. Tier renders as plain text (#2676; no longer a coloured pill).
+ *   3. (Health cells: see ClubsTable.healthTier.test.tsx.)
  *   4. DCP renders as an accessible progressbar reading the canonical
  *      goalsAchieved count (no Goals-1-N inference).
  *   5. Members shows current / base when base is present; current-only
@@ -57,7 +56,7 @@ const EXPECTED_HEADERS = [
   'Club',
   'Div',
   'Area',
-  'Status',
+  'Health',
   'Members',
   'Trend',
   'Needed',
@@ -96,80 +95,34 @@ describe('ClubsTable column model (#669)', () => {
     expect(headerLabelsInOrder(container)).toEqual(EXPECTED_HEADERS)
   })
 
+  // Tier and Health are no longer pills (#2676); their cells are covered by
+  // ClubsTable.healthTier.test.tsx. The tier names still render as plain text.
   it.each([
-    ['Smedley', 'clubs-tier-pill--smedley'],
-    ['President', 'clubs-tier-pill--presidents'],
-    ['Select', 'clubs-tier-pill--select'],
-    ['Distinguished', 'clubs-tier-pill--distinguished'],
-  ] as const)(
-    'renders %s tier as a pill with the %s modifier class',
-    (level, modifier) => {
-      const { container } = render(
-        <ClubsTable
-          clubs={[
-            createMockClub({
-              clubId: `c-${level}`,
-              distinguishedLevel: level,
-              // Post-April snapshot → confirmed (not provisional), so the
-              // tier color shows rather than the projected stripe.
-              aprilRenewals: 30,
-              membershipBase: 25,
-              membershipTrend: [
-                { date: '2026-05-01T00:00:00.000Z', count: 30 },
-              ],
-            }),
-          ]}
-          districtId="61"
-          isLoading={false}
-        />
-      )
-      const pill = container.querySelector('.clubs-tier-pill')
-      expect(pill).not.toBeNull()
-      expect(pill?.className).toContain(modifier)
-    }
-  )
-
-  it('renders a provisional Distinguished tier with the projected stripe', () => {
-    const { container } = render(
+    ['Smedley', 'Smedley'],
+    ['President', "President's"],
+    ['Select', 'Select'],
+    ['Distinguished', 'Distinguished'],
+  ] as const)('renders %s tier as the plain text %s', (level, text) => {
+    render(
       <ClubsTable
         clubs={[
           createMockClub({
-            distinguishedLevel: 'Distinguished',
-            isProvisionallyDistinguished: true,
+            clubId: `c-${level}`,
+            clubName: 'Tier Club',
+            distinguishedLevel: level,
+            // Post-April snapshot → confirmed (not provisional).
+            aprilRenewals: 30,
+            membershipBase: 25,
+            membershipTrend: [{ date: '2026-05-01T00:00:00.000Z', count: 30 }],
           }),
         ]}
         districtId="61"
         isLoading={false}
       />
     )
-    const pill = container.querySelector('.clubs-tier-pill')
-    expect(pill?.className).toContain('clubs-tier-pill--projected')
-  })
-
-  it('renders NotDistinguished as a muted placeholder, not a tier pill', () => {
-    const { container } = render(
-      <ClubsTable
-        clubs={[createMockClub({ distinguishedLevel: 'NotDistinguished' })]}
-        districtId="61"
-        isLoading={false}
-      />
-    )
-    expect(container.querySelector('.clubs-tier-pill')).toBeNull()
-  })
-
-  it('renders Status as a token-driven pill', () => {
-    const { container } = render(
-      <ClubsTable
-        clubs={[createMockClub({ currentStatus: 'vulnerable' })]}
-        districtId="61"
-        isLoading={false}
-      />
-    )
-    const pill = container.querySelector('.clubs-status-pill')
-    expect(pill).not.toBeNull()
-    expect(pill?.className).toContain('clubs-status-pill--vulnerable')
-    // No legacy Tailwind color utilities on the pill.
-    expect(pill?.className).not.toMatch(/bg-(?:red|yellow|green)-\d/)
+    const row = screen.getByText('Tier Club').closest('tr') as HTMLElement
+    expect(within(row).getByText(text)).toBeInTheDocument()
+    expect(within(row).queryByText(/provisional/i)).toBeNull()
   })
 
   it('renders DCP as an accessible progressbar reading the canonical goal count', () => {

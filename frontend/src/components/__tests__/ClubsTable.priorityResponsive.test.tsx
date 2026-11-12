@@ -92,43 +92,10 @@ describe('ClubsTable priority-column responsive model (#812)', () => {
     expect(within(firstCell as HTMLElement).getByText('Alpha')).toBeTruthy()
   })
 
-  it('tags the sticky cell with data-row-tint so it repaints opaque per row status', () => {
-    stubDesktopMatchMedia()
-    const { container } = render(
-      <ClubsTable
-        clubs={[
-          makeClub({
-            clubId: 't',
-            clubName: 'Thrive',
-            currentStatus: 'thriving',
-          }),
-          makeClub({
-            clubId: 'v',
-            clubName: 'Vuln',
-            currentStatus: 'vulnerable',
-          }),
-          makeClub({
-            clubId: 'i',
-            clubName: 'Inter',
-            currentStatus: 'intervention-required',
-          }),
-        ]}
-        districtId="61"
-        isLoading={false}
-      />
-    )
-    const tintOf = (name: string) => {
-      const cell = within(
-        container.querySelector('#clubs-table tbody') as HTMLElement
-      )
-        .getByText(name)
-        .closest('td')
-      return cell?.getAttribute('data-row-tint')
-    }
-    expect(tintOf('Thrive')).toBe('none')
-    expect(tintOf('Vuln')).toBe('vulnerable')
-    expect(tintOf('Inter')).toBe('intervention')
-  })
+  // The old test here pinned `data-row-tint` on the sticky cell so it could
+  // repaint opaque per status tint. Rows carry no status tint now (#2676), so
+  // the attribute is gone and one hover rule covers every row; the absence is
+  // asserted in ClubsTable.healthTier.test.tsx.
 
   it('hides the detail columns at tablet via clubs-table__col--desktop, keeps the core set always shown', () => {
     stubDesktopMatchMedia()

@@ -29,7 +29,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   if (!sortable) {
     return (
       <div
-        className={`clubs-col-header flex items-center gap-1 px-2 py-2 text-left text-[9px] font-medium uppercase tracking-wider ${className}`.trim()}
+        className={`clubs-col-header dt-col-header flex items-center gap-1 px-2 py-2 text-left ${className}`.trim()}
       >
         <span className="flex-1">{label}</span>
       </div>
@@ -48,7 +48,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
       <button
         type="button"
         onClick={() => onSort(field)}
-        className={`clubs-col-header group flex items-center gap-1 px-2 py-2 text-left text-[9px] font-medium uppercase tracking-wider hover:shadow-xs focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue focus:ring-inset transition-all duration-200 w-full cursor-pointer${
+        className={`clubs-col-header dt-col-header group flex items-center gap-1 px-2 py-2 text-left hover:shadow-xs focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue focus:ring-inset transition-all duration-200 w-full cursor-pointer${
           isActive ? ' clubs-col-header--active' : ''
         }`}
         aria-label={ariaLabel}

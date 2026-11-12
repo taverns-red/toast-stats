@@ -316,16 +316,14 @@ describe('ClubsTable', () => {
       )
 
       // Header is now "Tier" (#669), so "Distinguished" appears once — the
-      // tier pill in the data row.
+      // plain-text tier in the data row (#2676: no longer a pill).
       const distinguishedElements = screen.getAllByText('Distinguished')
       expect(distinguishedElements.length).toBeGreaterThanOrEqual(1)
 
-      // Verify the tier pill specifically exists in the data row
+      // Verify the tier text specifically exists in the data row
       const dataRow = screen.getAllByRole('row')[1]
       expect(dataRow).toHaveTextContent('Distinguished')
-      expect(
-        dataRow.querySelector('.clubs-tier-pill--distinguished')
-      ).not.toBeNull()
+      expect(dataRow.querySelector('.dt-tier')).not.toBeNull()
     })
 
     it('should display dash for NotDistinguished clubs', () => {
@@ -832,7 +830,7 @@ describe('ClubsTable', () => {
       expect(tbody!.textContent).toMatch(/Vulnerable/)
     })
 
-    it('should display "Intervention Required" status badge for intervention-required clubs', () => {
+    it('should display "Intervention Required" status for intervention-required clubs', () => {
       const clubs = [
         createMockClub({
           clubId: 'club-1',
@@ -841,7 +839,7 @@ describe('ClubsTable', () => {
         }),
       ]
 
-      render(
+      const { container } = render(
         <ClubsTable
           clubs={clubs}
           districtId="test-district"
@@ -849,7 +847,10 @@ describe('ClubsTable', () => {
         />
       )
 
-      expect(screen.getByText('Intervention Required')).toBeInTheDocument()
+      // The visible label is "Intervention"; " Required" is sr-only (#2676),
+      // so the cell's full text still reads "Intervention Required".
+      const tbody = container.querySelector('tbody')
+      expect(tbody!.textContent).toMatch(/Intervention Required/)
     })
   })
 

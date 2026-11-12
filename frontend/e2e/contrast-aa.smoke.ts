@@ -114,13 +114,14 @@ const CASES: { path: string; width: number; ready: string }[] = [
     width: 768,
     ready: '.club-history-year-link',
   },
-  // #1904: the projected tier pill (dark) and the chart legend text, at the
-  // tablet and desktop widths #1839's 375 gate did not cover.
+  // #1904: the provisional tier text (dark; was the projected pill, now plain
+  // text with "provisional" on a second line, #2676) and the chart legend
+  // text, at the tablet and desktop widths #1839's 375 gate did not cover.
   ...[768, 1280].flatMap(width => [
     {
       path: '/district/61/clubs',
       width,
-      ready: '.clubs-tier-pill--projected',
+      ready: '.dt-tier__provisional',
     },
     {
       path: '/district/61/trends',
