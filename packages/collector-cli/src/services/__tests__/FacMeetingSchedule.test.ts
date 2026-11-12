@@ -1512,6 +1512,62 @@ describe('parseMeetingSchedule (#2617) — noon start, smaller hour end', () => 
   })
 })
 
+describe('parseMeetingSchedule (#2617) — review: noon start guesses', () => {
+  it.each([
+    ['12:00 - 11:00', undefined],
+    ['12:00 - 9:00', undefined],
+    ['12:00 - 1:00', '13:00'],
+    ['12:00 - 3:30', '15:30'],
+  ])('%j ends at %s', (meetingTime, endTime) => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime })?.[0]
+        ?.endTime
+    ).toBe(endTime)
+  })
+})
+
+describe('parseMeetingSchedule (#2617) — review: "every second week"', () => {
+  it.each(['Every second week Monday', 'Every second week, Monday'])(
+    '%j is biweekly',
+    meetingDay => {
+      expect(parseMeetingSchedule({ meetingDay, meetingTime: '7 pm' })).toEqual(
+        [{ day: 'Monday', cadence: 'biweekly', startTime: '19:00' }]
+      )
+    }
+  )
+
+  it('"Every Second Monday" still has no cadence', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Every Second Monday',
+        meetingTime: '7 pm',
+      })
+    ).toEqual([{ day: 'Monday', startTime: '19:00' }])
+  })
+})
+
+describe('parseMeetingSchedule (#2617) — review: "last" only before a weekday', () => {
+  it.each([
+    ['Thursday (last updated 2024)', 'Thursday'],
+    ['Jeudi (dernière mise à jour 2024)', 'Thursday'],
+  ])('%j stays weekly', (meetingDay, day) => {
+    expect(parseMeetingSchedule({ meetingDay, meetingTime: '7 pm' })).toEqual([
+      { day, cadence: 'weekly', startTime: '19:00' },
+    ])
+  })
+
+  it.each([
+    ['Last Thursday', 'Thursday'],
+    ['dernier jeudi', 'Thursday'],
+    ['Thursday, last of the month', 'Thursday'],
+    ['Jeudi, le dernier du mois', 'Thursday'],
+  ])('%j still has no cadence', (meetingDay, day) => {
+    expect(parseMeetingSchedule({ meetingDay, meetingTime: '7 pm' })).toEqual([
+      { day, startTime: '19:00' },
+    ])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
