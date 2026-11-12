@@ -1,8 +1,35 @@
 import { render, fireEvent, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
-import { ColumnHeader } from '../ColumnHeader'
 import { FiltersPanel } from '../filters/FiltersPanel'
 import type { SortField, SortDirection, ColumnFilter } from '../filters/types'
+
+import type { FC } from 'react'
+import { SortableHeader } from '../SortableHeader'
+
+/** The Clubs header cell as DataTable renders it: a SortableHeader (APG
+ *  contract) inside a table, replacing the deleted ColumnHeader (#2676). */
+const ColumnHeader: FC<{
+  field: SortField
+  label: string
+  sortable?: boolean
+  currentSort: { field: SortField | null; direction: SortDirection }
+  onSort: (field: SortField) => void
+}> = ({ field, label, currentSort, onSort }) => (
+  <table>
+    <thead>
+      <tr>
+        <SortableHeader
+          apg
+          field={field}
+          label={label}
+          currentSort={currentSort}
+          onSort={onSort}
+          buttonClassName="dt-sort-btn"
+        />
+      </tr>
+    </thead>
+  </table>
+)
 
 /**
  * Focus-management tests for the clubs filtering UI.

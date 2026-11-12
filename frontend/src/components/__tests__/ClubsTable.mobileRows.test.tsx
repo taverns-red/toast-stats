@@ -275,8 +275,8 @@ describe('ClubsTable < 768 px — compact rows (#1833)', () => {
     render(<ClubsTable clubs={CLUBS} districtId="61" />)
     expect(screen.queryAllByTestId('mobile-row')).toHaveLength(0)
     expect(screen.queryByRole('button', { name: /Division A/ })).toBeNull()
-    expect(
-      screen.getByRole('region', { name: 'All clubs table' })
-    ).toBeVisible()
+    // The scroll region is only a region while the columns overflow (spec 5.2),
+    // which jsdom (no layout) never reports; the table itself is the check.
+    expect(screen.getByRole('table')).toBeVisible()
   })
 })

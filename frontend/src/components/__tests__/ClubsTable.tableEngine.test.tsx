@@ -86,7 +86,7 @@ const CLUBS: ClubTrend[] = [
 /** Body row order by club name, read straight from the DOM. */
 const rowNames = (container: HTMLElement): string[] =>
   Array.from(container.querySelectorAll('tbody tr')).map(
-    tr => tr.querySelector('td')?.textContent?.trim() ?? ''
+    tr => tr.querySelector('th, td')?.textContent?.trim() ?? ''
   )
 
 /** Column index of a header by its visible label. */
@@ -100,7 +100,7 @@ const columnValues = (container: HTMLElement, label: string): string[] => {
   const idx = headerIndex(container, label)
   expect(idx).toBeGreaterThanOrEqual(0)
   return Array.from(container.querySelectorAll('tbody tr')).map(
-    tr => tr.querySelectorAll('td')[idx]?.textContent?.trim() ?? ''
+    tr => tr.querySelectorAll('th, td')[idx]?.textContent?.trim() ?? ''
   )
 }
 
@@ -121,9 +121,7 @@ describe('ClubsTable — TanStack sorting through the DOM (#1530)', () => {
     ])
 
     // ASCENDING by Members — a different order from the incoming name-asc one.
-    await user.click(
-      screen.getByRole('button', { name: /^Sort by Members\.$/ })
-    )
+    await user.click(screen.getByRole('button', { name: 'Members' }))
     expect(rowNames(container)).toEqual([
       'Beta Club',
       'Gamma Club',
@@ -134,9 +132,7 @@ describe('ClubsTable — TanStack sorting through the DOM (#1530)', () => {
     expect(columnValues(container, 'Members')).toEqual(['7', '19', '31'])
 
     // DESCENDING — a second click on the active column flips direction.
-    await user.click(
-      screen.getByRole('button', { name: /Sort by Members, currently sorted/ })
-    )
+    await user.click(screen.getByRole('button', { name: 'Members' }))
     expect(rowNames(container)).toEqual([
       'Alpha Club',
       'Gamma Club',
@@ -146,7 +142,7 @@ describe('ClubsTable — TanStack sorting through the DOM (#1530)', () => {
 
     // RESET — sorting by another column starts that column ascending again and
     // the membership figures follow their rows back.
-    await user.click(screen.getByRole('button', { name: /^Sort by Club\.$/ }))
+    await user.click(screen.getByRole('button', { name: 'Club' }))
     expect(rowNames(container)).toEqual([
       'Alpha Club',
       'Beta Club',
@@ -165,18 +161,15 @@ describe('ClubsTable — TanStack sorting through the DOM (#1530)', () => {
       container.querySelectorAll('thead th')[headerIndex(container, label)]
 
     expect(headerAt('Club')).toHaveAttribute('aria-sort', 'ascending')
-    expect(headerAt('Members')).toHaveAttribute('aria-sort', 'none')
+    // Spec section 11 (APG sortable table): aria-sort only on the sorted column.
+    expect(headerAt('Members')).not.toHaveAttribute('aria-sort')
 
-    await user.click(
-      screen.getByRole('button', { name: /^Sort by Members\.$/ })
-    )
+    await user.click(screen.getByRole('button', { name: 'Members' }))
     expect(headerAt('Members')).toHaveAttribute('aria-sort', 'ascending')
 
-    await user.click(
-      screen.getByRole('button', { name: /Sort by Members, currently sorted/ })
-    )
+    await user.click(screen.getByRole('button', { name: 'Members' }))
     expect(headerAt('Members')).toHaveAttribute('aria-sort', 'descending')
-    expect(headerAt('Club')).toHaveAttribute('aria-sort', 'none')
+    expect(headerAt('Club')).not.toHaveAttribute('aria-sort')
   })
 })
 

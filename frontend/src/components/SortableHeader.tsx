@@ -21,6 +21,14 @@ export interface SortableHeaderProps<F extends string> {
   rowSpan?: number
   /** Pass-through scope (default 'col'; use 'colgroup' for spanning groups). */
   scope?: 'col' | 'colgroup'
+  /**
+   * The APG sortable-table contract (#2676, spec §11): the button's accessible
+   * name is its visible label, and `aria-sort` is set only on the sorted
+   * column's header. Off, the header keeps its descriptive "Sort by X" name and
+   * `aria-sort="none"` on the others, which the older tables' tests pin; they
+   * adopt this as they migrate onto the shared DataTable.
+   */
+  apg?: boolean
 }
 
 /**
@@ -41,6 +49,7 @@ export function SortableHeader<F extends string>({
   colSpan,
   rowSpan,
   scope = 'col',
+  apg = false,
 }: SortableHeaderProps<F>): React.JSX.Element {
   const isActive = currentSort.field === field
   const direction = isActive ? currentSort.direction : null
@@ -49,11 +58,15 @@ export function SortableHeader<F extends string>({
       ? 'ascending'
       : direction === 'desc'
         ? 'descending'
-        : 'none'
+        : apg
+          ? undefined
+          : 'none'
 
-  const ariaLabel = isActive
-    ? `Sort by ${label}, currently ${direction === 'asc' ? 'ascending' : 'descending'}. Click to flip direction.`
-    : `Sort by ${label}.`
+  const ariaLabel = apg
+    ? undefined
+    : isActive
+      ? `Sort by ${label}, currently ${direction === 'asc' ? 'ascending' : 'descending'}. Click to flip direction.`
+      : `Sort by ${label}.`
 
   return (
     <th

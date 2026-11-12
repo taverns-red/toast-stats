@@ -1,8 +1,7 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import React, { useState, useMemo, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import {
   useTable,
-  flexRender,
   type SortingState,
   type ColumnPinningState,
   type ColumnVisibilityState,
@@ -15,7 +14,6 @@ import { ExportButton } from './ExportButton'
 import { exportClubPerformance, exportSnapshotDiff } from '../utils/csvExport'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { useColumnFilters } from '../hooks/useColumnFilters'
-import { ColumnHeader } from './ColumnHeader'
 import { FiltersPanel } from './filters/FiltersPanel'
 import { FilterSheet, type FilterSheetFacet } from './filters/FilterSheet'
 import { PRESET_CLOSE_TO_DISTINGUISHED } from '../utils/clubFilterUrl'
@@ -51,6 +49,8 @@ import {
   clubColumnStickyClass,
   clubColumnTdClass,
 } from './clubsColumns'
+import { COLUMN_SIZING } from './clubsColumnMeta'
+import { DataTable } from './dataTable/DataTable'
 import {
   clubsTableFeatures,
   type ClubsTableFeatures,
@@ -88,9 +88,6 @@ interface ClubsTableProps {
   districtId: string
   /** Whether the data is currently loading */
   isLoading?: boolean
-  /** Optional callback when a club row is clicked (whole-row mouse convenience;
-   *  the club name itself is a real <Link> regardless — CC-7, #872). */
-  onClubClick?: (club: ClubTrend) => void
   /** Router location state to attach to every club link (CC-7, #872). The
    *  clubs page passes `{ fromClubsSearch }` so the club page's breadcrumb can
    *  round-trip back to the exact filtered list (#577). */
@@ -200,7 +197,6 @@ function formatNet(club: ProcessedClubTrend): string | null {
  *   clubs={allClubs}
  *   districtId="123"
  *   isLoading={false}
- *   onClubClick={(club) => showClubDetails(club)}
  * />
  * ```
  */
@@ -208,7 +204,6 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   clubs,
   districtId,
   isLoading = false,
-  onClubClick,
   clubLinkState,
   initialSortField,
   initialSortDirection,
@@ -224,6 +219,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   onOpenGroupsChange,
   compactToolbarTarget,
   sinceLastYear,
+  dataDate,
 }) => {
   const [sortField, setSortField] = useState<SortField>(
     initialSortField ?? 'name'
@@ -557,10 +553,23 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   // per-browser view preference, kept out of the URL (lessons 070/130). The
   // tier is read synchronously, so the first frame is already the right set.
   const tier = useBreakpointTier()
+  // A column the URL sorts or filters by is shown while that is active, even
+  // if this width hides it, so the order or the narrowing is never invisible.
+  // Transient: it is never written to the saved overrides (PR2 review).
+  const revealIds = useMemo(
+    () => [
+      sortField,
+      ...Object.entries(filterState)
+        .filter(([, filter]) => filter)
+        .map(([field]) => field),
+    ],
+    [sortField, filterState]
+  )
   const columns = useColumnVisibility({
     tier,
     changesAvailable: !!snapshotDiff,
     sinceActive: !!sinceByClub,
+    reveal: revealIds,
   })
   // The Changes group is named for the pair it compares (spec §4.3).
   const changesLabel = snapshotDiff
@@ -616,7 +625,14 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     features: clubsTableFeatures,
     data: nameSortedClubs,
     columns: tableColumns,
-    state: { sorting, columnPinning, columnVisibility },
+    // Stable row identity across re-sorts: the DOM row follows the club.
+    getRowId: club => club.clubId,
+    state: {
+      sorting,
+      columnPinning,
+      columnVisibility,
+      columnSizing: COLUMN_SIZING,
+    },
     meta: { clubLinkTo, clubLinkState },
     // Every slice above is fully controlled by this component's own state —
     // TanStack never writes them back, so the on*Change callbacks are
@@ -795,36 +811,6 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     onSortChange?.(field as SortField, direction)
   }
 
-  // Show the right-edge scroll-cue ONLY when the table actually overflows to
-  // the right. A permanent fade would wash out the right-aligned numeric
-  // columns on a wide desktop where the full set fits and nothing scrolls — a
-  // false affordance. Toggled imperatively via a data-attr on the scroll-wrap
-  // (gated in CSS) so scroll/resize don't re-render the whole table. Mirrors
-  // the landing rankings table (#811).
-  const tableScrollRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = tableScrollRef.current
-    if (!el) return
-    const update = () => {
-      const moreToRight = el.scrollWidth - el.clientWidth - el.scrollLeft > 1
-      el.parentElement?.setAttribute(
-        'data-scrollable-right',
-        String(moreToRight)
-      )
-    }
-    update()
-    el.addEventListener('scroll', update, { passive: true })
-    let ro: ResizeObserver | undefined
-    if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(update)
-      ro.observe(el)
-    }
-    return () => {
-      el.removeEventListener('scroll', update)
-      ro?.disconnect()
-    }
-  }, [sortedClubs, isMobile])
-
   // Discoverable entry to the Filters drawer (#816) / phone Filter & sort
   // sheet (#1836). One button, placed by viewport: in the toolbar from 768
   // up, in the sticky search row below it, so the phone toolbar is one row.
@@ -916,7 +902,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   )
 
   const resultCount = (
-    <div>
+    <div aria-live="polite">
       {sortedClubs.length === clubs.length ? (
         <>Total: {clubs.length} clubs</>
       ) : (
@@ -933,14 +919,14 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           the title stays as a visually hidden heading; the total and the
           exports move below the rows (the compact footer). */}
       {compactToolbar ? (
-        <h3 className="sr-only">All Clubs</h3>
+        <h2 className="sr-only">All clubs</h2>
       ) : (
-        <div className="p-6 clubs-panel-header">
+        <div className="p-6 md:p-0 md:pb-3 clubs-panel-header">
           {/* On phones the row wraps: the title keeps its own line and the
             exports sit below it (#2343), instead of squeezing the title to
             "All / Clubs" beside two stacked buttons. */}
           <div className="flex items-center justify-between mb-4 clubs-panel-header__row">
-            <h3 className="text-xl font-bold clubs-panel-title">All Clubs</h3>
+            <h2 className="text-xl font-bold clubs-panel-title">All clubs</h2>
             {exportGroup}
           </div>
 
@@ -1015,7 +1001,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       {/* Active-filters summary bar (#817). Visible, removable summary of the
           full filter set — including drawer-only filters the preset chips
           don't surface. Same filter state, another entry point (R11). */}
-      <div className="px-6">
+      <div className="px-6 md:px-0 clubs-active-filters-wrap">
         <ActiveFiltersBar
           filterState={filterState}
           setFilter={setFilter}
@@ -1130,7 +1116,11 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       {/* One always-visible legend for the Health markers and "provisional"
           (#2676, HUB-20/HUB-30), above both the table and the phone list. */}
       {/* Short landscape keeps the first row within 200px (#1912), so there
-          the legend rides in the compact footer instead. */}
+          the legend rides in the compact footer instead. That placement
+          stands after the PR 3 layout (#2676): the rows there are phone rows
+          whose chips spell the status out in text, so the marker key is not
+          needed above them, and a two-line legend above would push the first
+          row past the 200px budget. */}
       {!isLoading && sortedClubs.length > 0 && !compactToolbar && (
         <HealthLegend />
       )}
@@ -1184,93 +1174,26 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         </div>
       )}
 
-      {/* Desktop Table — all clubs in one capped-height scroll container
-          with a sticky header (#667). The container is keyboard-operable
-          (role/tabindex/aria-label) so keyboard-only users can scroll it
-          (WCAG 2.1.1; axe scrollable-region-focusable). */}
+      {/* Desktop table (#2676, spec §5): the DataTable shell. The page scrolls,
+          not a box around the table (no inner vertical scroller), and the
+          header sticks to the page. The club link is the only row action
+          (Q4): there is no whole-row click. */}
       {!isLoading && sortedClubs.length > 0 && !isMobile && (
-        <div className="clubs-table__scroll-wrap">
-          <div
-            ref={tableScrollRef}
-            className="clubs-table-scroll overflow-x-auto"
-            role="region"
-            aria-label="All clubs table"
-            tabIndex={0}
-          >
-            <table id="clubs-table" className="w-full table-auto">
-              <thead className="clubs-table-sticky-head">
-                {table.getHeaderGroups().map(headerGroup => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map(header => {
-                      const isSortable = header.column.getCanSort()
-                      const isActiveSort = sortField === header.column.id
-                      const ariaSort: React.AriaAttributes['aria-sort'] =
-                        !isSortable
-                          ? undefined
-                          : isActiveSort
-                            ? sortDirection === 'asc'
-                              ? 'ascending'
-                              : 'descending'
-                            : 'none'
-                      return (
-                        <th
-                          key={header.id}
-                          scope="col"
-                          aria-sort={ariaSort}
-                          className={`p-0 ${clubColumnStickyClass(header.column.id)}`.trim()}
-                        >
-                          <ColumnHeader
-                            field={header.column.id as SortField}
-                            label={header.column.columnDef.header as string}
-                            sortable={isSortable}
-                            currentSort={{
-                              field: sortField,
-                              direction: sortDirection,
-                            }}
-                            onSort={handleSort}
-                          />
-                        </th>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {rowModel.rows.map(row => {
-                  const club = row.original
-                  return (
-                    <tr
-                      key={club.clubId}
-                      onClick={() => onClubClick?.(club)}
-                      className="clubs-table-row cursor-pointer transition-colors"
-                    >
-                      {/* Cells render in the column-model order (clubsColumns.tsx):
-                      Club, Div, Area, Health, Members, Needed, New, Oct Renew,
-                      Apr Renew, DCP, Tier, Club Status, Years. Each td's class
-                      (base + responsive priority) comes from clubColumnTdClass.
-                      No row tint (#2676): status is a marker plus text. */}
-                      {row.getVisibleCells().map(cell => (
-                        <td
-                          key={cell.id}
-                          className={clubColumnTdClass(cell.column.id)}
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-          {/* Right-edge fade cue: "there's more →". Shown only when the table
-              overflows right (data-scrollable-right, set by the effect above);
-              pointer-events:none so it never blocks taps/scroll (#812). */}
-          <div className="clubs-table__scroll-cue" aria-hidden="true" />
-        </div>
+        <DataTable
+          table={table}
+          id="clubs-table"
+          label="All clubs table"
+          caption={`All clubs in District ${districtId}${
+            dataDate ? ` as of ${formatDisplayDate(dataDate)}` : ''
+          }, ${clubs.length} ${clubs.length === 1 ? 'club' : 'clubs'}. Column headers with buttons are sortable.`}
+          sort={{ field: sortField, direction: sortDirection }}
+          onSort={field => handleSort(field as SortField)}
+          rowHeaderColumnId={STICKY_COLUMN_FIELD}
+          headerClassName={clubColumnStickyClass}
+          cellClassName={clubColumnTdClass}
+          rowClassName="clubs-table-row"
+          overflowHint={`Scroll sideways for more columns · ${columns.shownCount} of ${columns.totalCount} shown`}
+        />
       )}
 
       {/* Dedicated Filters drawer (#816). Instant-apply over the SAME filter

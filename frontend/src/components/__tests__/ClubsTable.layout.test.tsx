@@ -76,6 +76,7 @@ afterEach(() => {
   cleanup()
   localStorage.clear()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 describe('sizing and colgroup (#2676, spec §5.3)', () => {
@@ -199,7 +200,7 @@ describe('no inner scroller, no row click (#2676, spec §5.1, Q4)', () => {
 
 describe('overflow mode (#2676, spec §5.2)', () => {
   const stubWrapperWidth = (width: number) => {
-    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(width)
+    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(width)
   }
 
   it('when the columns fit: no overflow flag, no region role, no tab stop', () => {

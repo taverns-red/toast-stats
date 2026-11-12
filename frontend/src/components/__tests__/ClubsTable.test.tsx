@@ -16,6 +16,7 @@ import {
   cleanup,
   fireEvent,
   act,
+  within,
 } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { ClubsTable } from '../ClubsTable'
@@ -617,7 +618,7 @@ describe('ClubsTable', () => {
       )
 
       const dataRow = screen.getAllByRole('row')[1]
-      const cells = dataRow.querySelectorAll('td')
+      const cells = dataRow.querySelectorAll('th, td')
       // New column order (#669): New=6, Oct Renew=7, Apr Renew=8 (0-indexed).
       expect(cells[7]).toHaveTextContent('0')
       expect(cells[8]).toHaveTextContent('0')
@@ -644,7 +645,7 @@ describe('ClubsTable', () => {
       )
 
       const dataRow = screen.getAllByRole('row')[1]
-      const cells = dataRow.querySelectorAll('td')
+      const cells = dataRow.querySelectorAll('th, td')
       // New column order (#669): New=6, Oct Renew=7, Apr Renew=8 (0-indexed).
       expect(cells[7]).toHaveTextContent('—')
       expect(cells[8]).toHaveTextContent('—')
@@ -671,7 +672,7 @@ describe('ClubsTable', () => {
       )
 
       const dataRow = screen.getAllByRole('row')[1]
-      const cells = dataRow.querySelectorAll('td')
+      const cells = dataRow.querySelectorAll('th, td')
       // New column order (#669): New=6, Oct Renew=7, Apr Renew=8 (0-indexed).
       // octoberRenewals=10, aprilRenewals=undefined, newMembers=0.
       expect(cells[7]).toHaveTextContent('0')
@@ -711,7 +712,7 @@ describe('ClubsTable', () => {
       )
 
       const dataRow = screen.getAllByRole('row')[1]
-      const cells = dataRow.querySelectorAll('td')
+      const cells = dataRow.querySelectorAll('th, td')
       expect(cells.length).toBe(15) // + Coach (#1954)
     })
   })
@@ -1098,9 +1099,11 @@ describe('ClubsTable', () => {
     })
   })
 
-  describe('Row Click Handler', () => {
-    it('should call onClubClick when a row is clicked', () => {
-      const onClubClick = vi.fn()
+  describe('Row action (#2676, spec Q4)', () => {
+    // Spec Q4 / section 11: "Rows are not tab stops and have no onClick (Q4).
+    // The name link is the row action; Tab moves link to link." This replaces
+    // the old "should call onClubClick when a row is clicked".
+    it('has no whole-row click: the club name link is the only row action', () => {
       const clubs = [
         createMockClub({ clubId: 'club-1', clubName: 'Clickable Club' }),
       ]
@@ -1110,20 +1113,14 @@ describe('ClubsTable', () => {
           clubs={clubs}
           districtId="test-district"
           isLoading={false}
-          onClubClick={onClubClick}
         />
       )
 
-      const dataRow = screen.getAllByRole('row')[1]
-      fireEvent.click(dataRow)
-
-      expect(onClubClick).toHaveBeenCalledTimes(1)
-      expect(onClubClick).toHaveBeenCalledWith(
-        expect.objectContaining({
-          clubId: 'club-1',
-          clubName: 'Clickable Club',
-        })
-      )
+      const dataRow = screen.getAllByRole('row')[1]!
+      expect(dataRow.className).not.toContain('cursor-pointer')
+      const links = within(dataRow).getAllByRole('link')
+      expect(links).toHaveLength(1)
+      expect(links[0]).toHaveTextContent('Clickable Club')
     })
   })
 

@@ -350,16 +350,16 @@ for (const width of [768, 1280]) {
   test(`clubs at ${width}px keep the desktop table`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
     await load(page, CLUBS)
-    await expect(
-      page.getByRole('region', { name: 'All clubs table' })
-    ).toBeVisible()
+    // The scroll region exists only while the columns overflow (#2676, spec
+    // 5.2); the table itself is the check that the desktop layout is on.
+    await expect(page.getByRole('table')).toBeVisible()
     await expect(page.locator(ROW)).toHaveCount(0)
     await expect(page.locator(GROUPED)).toHaveCount(0)
     // The Columns control is offered at every width (#2676) ...
     await expect(
       page.getByRole('button', { name: /^Columns, \d+ of \d+ shown/ })
     ).toBeVisible()
-    const trend = page.getByRole('button', { name: /^Sort by Trend/ })
+    const trend = page.getByRole('button', { name: 'Trend', exact: true })
     if (width < 1024) {
       // ... and Trend (#1792) is off by default at 768, one click away.
       await expect(trend).toHaveCount(0)

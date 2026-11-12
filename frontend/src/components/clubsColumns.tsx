@@ -62,7 +62,8 @@ export const clubColumnStickyClass = (id: string): string =>
 // Per-column `<td>` class WITHOUT the sticky class (`clubColumnTdClass` adds
 // it), reproducing the original cell classes exactly.
 const TD_BASE_CLASS: Record<string, string> = {
-  name: 'px-2 py-3 whitespace-nowrap',
+  // Long names wrap at spaces instead of widening the column (spec §4.1).
+  name: 'px-2 py-3',
   division: 'px-2 py-3 whitespace-nowrap text-sm clubs-cell-muted text-center',
   area: 'px-2 py-3 whitespace-nowrap text-sm clubs-cell-muted text-center',
   // Start-aligned (#2676): markers share one left edge whatever the label width.
@@ -122,15 +123,13 @@ export const clubsColumns = colHelper.columns([
       const meta = info.table.options.meta as ClubsTableMeta | undefined
       const to = meta?.clubLinkTo?.(club)
       // CC-7 (#872): a real <Link> on the club name restores middle-click /
-      // ⌘-click / open-in-new-tab and announces the destination to AT. The row
-      // itself is also clickable (mouse convenience), so stop the click from
-      // bubbling — otherwise a name-click would navigate twice.
+      // ⌘-click / open-in-new-tab and announces the destination to AT. It is
+      // the only row action: the row itself is not clickable (spec Q4, #2676).
       return to ? (
         <Link
           to={to}
           state={meta?.clubLinkState}
           className="clubs-name-link font-medium text-sm"
-          onClick={e => e.stopPropagation()}
         >
           {club.clubName}
         </Link>

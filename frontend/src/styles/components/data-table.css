@@ -18,13 +18,179 @@
     --dt-pad-x: 8px;
   }
 
-  /* ── Column header: 14px, 600, sentence case (replaces 9px caps) ─────── */
-  .dt-col-header {
+  /* ── The table: fixed layout, sized by the colgroup ───────────────────
+     Widths come from TanStack's column sizing (a <col> each); the row-header
+     column has no width and takes the rest. min-width is the sum of the sizes
+     (set inline), so a table that cannot fit goes into overflow mode rather
+     than squeezing its columns. */
+  .dt {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+  }
+
+  .dt td,
+  .dt tbody th {
+    vertical-align: middle;
+    overflow-wrap: break-word;
+  }
+
+  /* The row header (<th scope="row">) reads as a cell, not a bold heading. */
+  .dt tbody th {
+    text-align: left;
+    font-weight: inherit;
+  }
+
+  /* ── Scroll wrapper ───────────────────────────────────────────────────
+     R-1: while the columns fit, the wrapper is NOT a scroll container
+     (overflow: visible), or the sticky header would stick inside it instead
+     of to the page. Only overflow mode scrolls sideways, and only there is
+     the wrapper a labelled, focusable region (set by DataTable). */
+  .dt-scroll-wrap {
+    position: relative;
+  }
+
+  .dt-scroll {
+    position: relative;
+  }
+
+  .dt-scroll[data-overflow='true'] {
+    overflow-x: auto;
+  }
+
+  .dt-scroll:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .dt-scroll-hint {
+    margin: 0 0 8px;
+    font-size: var(--dt-font);
+    line-height: 1.4;
+    color: var(--ink-2);
+  }
+
+  /* Edge cues: fade toward the surface on each side that has more to scroll
+     to. Shown only in overflow mode (a permanent fade would wash out the last
+     column of a table that fits); pointer-events: none so they never block a
+     tap or a scroll. */
+  .dt-scroll__cue {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .dt-scroll__cue--start {
+    left: 0;
+    background: linear-gradient(to left, rgba(0, 0, 0, 0), var(--surface));
+  }
+
+  .dt-scroll__cue--end {
+    right: 0;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0), var(--surface));
+  }
+
+  .dt-scroll-wrap[data-scrollable-start='true'] .dt-scroll__cue--start,
+  .dt-scroll-wrap[data-scrollable-end='true'] .dt-scroll__cue--end {
+    opacity: 1;
+  }
+
+  /* ── Column header: 14px, 600, sentence case ──────────────────────────
+     Pinned to the PAGE at --table-sticky-top (set on .app-shell) with an
+     opaque token background, so rows do not bleed through (lesson 092). */
+  .dt thead th {
+    position: sticky;
+    top: var(--table-sticky-top, 56px);
+    z-index: 1;
+    padding: 0;
+    text-align: left;
+    vertical-align: bottom;
+    background-color: var(--surface-2);
+    border-bottom: 1px solid var(--line);
     font-size: var(--dt-header-font);
     font-weight: var(--dt-header-weight);
     line-height: 1.3;
     letter-spacing: normal;
     text-transform: none;
+    color: var(--ink-2);
+  }
+
+  /* Overflow mode: the header scrolls away with the page (no synced clone,
+     Q2). Only the pinned key column keeps its horizontal stickiness. */
+  .dt-scroll[data-overflow='true'] .dt thead th {
+    top: auto;
+  }
+
+  .dt-sort-btn {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    font: inherit;
+    text-align: left;
+  }
+
+  button.dt-sort-btn {
+    cursor: pointer;
+  }
+
+  button.dt-sort-btn:hover {
+    background-color: var(--surface-3);
+    color: var(--ink);
+  }
+
+  button.dt-sort-btn:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .dt-sort-btn--active {
+    color: var(--ink);
+  }
+
+  .dt-sort-btn .sortable-header__label {
+    flex: 1;
+  }
+
+  /* Sort-direction caret: graphical 3:1 on the header in both themes. */
+  .dt-sort-btn .sortable-header__indicator {
+    display: inline-flex;
+    padding-bottom: 3px;
+    color: var(--ink-3);
+  }
+
+  .dt-sort-btn--active .sortable-header__indicator {
+    color: var(--ink);
+  }
+
+  /* ── Touch targets (spec §6) ──────────────────────────────────────────
+     Under a coarse pointer the club link is a 44px target and rows are at
+     least 48px; the row-header cell drops its vertical padding so the 44px
+     link does not make the row taller than it has to be. */
+  @media (pointer: coarse) {
+    .dt .clubs-name-link {
+      display: flex;
+      align-items: center;
+      min-height: 44px;
+    }
+
+    .dt tbody tr {
+      height: var(--dt-row-min-coarse);
+    }
+
+    .dt tbody th {
+      padding-top: 2px;
+      padding-bottom: 2px;
+    }
   }
 
   /* ── Health status marker ──────────────────────────────────────────────

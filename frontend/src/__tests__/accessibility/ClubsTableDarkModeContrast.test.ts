@@ -40,6 +40,7 @@ const read = (p: string) =>
 const redesignCss = read('tokens/redesign.css')
 const darkModeCss = read('dark-mode.css')
 const appShellCss = read('components/app-shell.css')
+const dataTableCss = read('components/data-table.css')
 
 /** Parse `--name: value;` from the first rule matching `selectorLiteral`
  *  exactly, anchored to a real rule start (lesson 093). */
@@ -149,11 +150,13 @@ describe('Clubs-table column-model contrast (#672)', () => {
     name: string
     fg: [string, string]
     bgToken: string
+    css?: string
   }> = [
     {
-      name: 'sticky column header label (--ink-3 on --surface-2)',
-      fg: ['.clubs-col-header', 'color'],
+      name: 'sticky column header label (--ink-2 on --surface-2)',
+      fg: ['.dt thead th', 'color'],
       bgToken: 'var(--surface-2)',
+      css: dataTableCss,
     },
     {
       name: 'primary cell text (--ink on --surface)',
@@ -182,8 +185,8 @@ describe('Clubs-table column-model contrast (#672)', () => {
     },
   ]
 
-  it.each(TEXT)('$name clears AA in both themes', ({ fg, bgToken }) => {
-    const fgToken = ruleProp(appShellCss, fg[0], fg[1])
+  it.each(TEXT)('$name clears AA in both themes', ({ fg, bgToken, css }) => {
+    const fgToken = ruleProp(css ?? appShellCss, fg[0], fg[1])
     for (const theme of ['light', 'dark'] as const) {
       const fgHex = resolveVar(fgToken, theme)
       const bgHex = resolveVar(bgToken, theme)
@@ -233,7 +236,11 @@ describe('Clubs-table column-model contrast (#672)', () => {
 
   // ── Sort-direction caret: a graphical state indicator (3:1) ──────────────
   it('column-header sort caret clears graphical 3:1 on the sticky header both themes', () => {
-    const fgToken = ruleProp(appShellCss, '.clubs-col-header__arrow', 'color')
+    const fgToken = ruleProp(
+      dataTableCss,
+      '.dt-sort-btn .sortable-header__indicator',
+      'color'
+    )
     for (const theme of ['light', 'dark'] as const) {
       const fg = resolveVar(fgToken, theme)
       const bg = resolveVar('var(--surface-2)', theme)

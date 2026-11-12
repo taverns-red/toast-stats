@@ -136,19 +136,24 @@ describe('ClubsTable axe scan (#672)', () => {
     })
   })
 
-  // The keyboard-scrollable container must be a focusable, named region
-  // (WCAG 2.1.1 / axe scrollable-region-focusable). Assert the contract the
-  // axe scan relies on, independently of the engine.
-  it('scroll container is a focusable, labelled region', () => {
+  // In overflow mode the wrapper scrolls sideways, so it must be a focusable,
+  // named region (WCAG 2.1.1 / axe scrollable-region-focusable). While the
+  // columns fit it is not a scroll container, so it is neither a region nor a
+  // tab stop (spec 5.2, #2676). jsdom has no layout: a stubbed width stands in.
+  it('scroll container is a focusable, labelled region only when it overflows', () => {
+    const width = vi
+      .spyOn(Element.prototype, 'clientWidth', 'get')
+      .mockReturnValue(300)
     const { container } = render(
       <ClubsTable clubs={CLUBS} districtId="61" isLoading={false} />
     )
-    const region = container.querySelector('.clubs-table-scroll')
+    const region = container.querySelector('.dt-scroll')
     expect(region).not.toBeNull()
     expect(region).toHaveAttribute('role', 'region')
     expect(region).toHaveAttribute('tabindex', '0')
     expect(region?.getAttribute('aria-label')?.length ?? 0).toBeGreaterThan(0)
     // sanity: the table itself is inside the region
     expect(within(region as HTMLElement).getByRole('table')).toBeTruthy()
+    width.mockRestore()
   })
 })

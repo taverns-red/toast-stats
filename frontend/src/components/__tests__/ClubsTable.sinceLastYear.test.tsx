@@ -86,7 +86,7 @@ const rowNames = () =>
   screen
     .getAllByRole('row')
     .slice(1)
-    .map(r => within(r).getAllByRole('cell')[0]?.textContent ?? '')
+    .map(r => within(r).getAllByRole('rowheader')[0]?.textContent ?? '')
 
 describe('ClubsTable — since last year preset (#2432)', () => {
   afterEach(() => cleanup())

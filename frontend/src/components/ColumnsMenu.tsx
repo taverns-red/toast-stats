@@ -65,7 +65,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
 
   const close = useCallback(() => {
     setIsOpen(false)
-    triggerRef.current?.focus()
+    triggerRef.current?.focus({ preventScroll: true })
   }, [])
 
   useEffect(() => {
@@ -110,7 +110,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
         className="clubs-filters-trigger"
         onClick={() => setIsOpen(o => !o)}
         aria-expanded={isOpen}
-        aria-controls={popoverId}
+        aria-controls={isOpen ? popoverId : undefined}
         aria-label={accessibleName}
       >
         <svg
@@ -161,8 +161,11 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
                 {ids.map(id => {
                   const meta = columnMeta[id]
                   if (!meta) return null
+                  const isRevealed = columns.revealed.has(id)
                   const locked =
-                    id === ALWAYS_SHOWN_COLUMN_ID || id === SINCE_COLUMN_ID
+                    id === ALWAYS_SHOWN_COLUMN_ID ||
+                    id === SINCE_COLUMN_ID ||
+                    isRevealed
                   const hintId = `${baseId}-hint-${id}`
                   return (
                     <div key={id} className="clubs-columns-menu__row">
@@ -182,6 +185,11 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
                       {id === ALWAYS_SHOWN_COLUMN_ID && (
                         <span className="clubs-columns-menu__note">
                           Always shown
+                        </span>
+                      )}
+                      {isRevealed && (
+                        <span className="clubs-columns-menu__note">
+                          Shown while sorted or filtered by it
                         </span>
                       )}
                       {id === SINCE_COLUMN_ID && (

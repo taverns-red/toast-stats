@@ -10,6 +10,10 @@
     /* Where a page's own sticky row pins: under the top bar and the 44px
        phone context bar (#2638, CHR-11). */
     --mobile-sticky-top: calc(var(--app-top-offset, 56px) + 44px);
+    /* Where a data table's header sticks to the page (#2676, spec 5.2): under
+       the 56px top bar. The phone context bar is hidden from 768, where the
+       table renders, so it adds nothing here. */
+    --table-sticky-top: var(--app-top-offset, 56px);
     background-color: var(--bg);
     color: var(--ink);
   }
@@ -5147,26 +5151,11 @@
     margin-top: 8px;
   }
 
-  /* Clubs table single-scroll container (#667, epic #665). Pagination was
-     removed; the full sorted+filtered set renders in one capped-height
-     container so the header stays in view while the body scrolls. The
-     container is keyboard-operable (role/tabindex/aria-label on the element)
-     per WCAG 2.1.1. */
-  .clubs-table-scroll {
-    max-height: 70vh;
-    overflow-y: auto;
-  }
-
   /* ── Club table: priority columns + sticky key column + scroll-cue (#812,
      epic #813 Sprint 4, ADR-006 §2–3) ──
      Mirrors the landing rankings table (#811) for the club table. The card
      view is true-mobile only (< 768px, ClubsTable useIsMobile); the table
      renders at the tablet tier and up. */
-
-  /* Positioning context for the right-edge scroll-cue overlay. */
-  .clubs-table__scroll-wrap {
-    position: relative;
-  }
 
   /* Single sticky key column (Club) pinned at left:0 — a robust sticky, no
      hardcoded px offset. Themed background (var(--surface)) so it converges on
@@ -5189,12 +5178,11 @@
       inset 0 -1px 0 var(--line);
   }
 
-  /* The Club header cell is the corner: it pins both top (via
-     .clubs-table-sticky-head th) AND left (here), so it must layer above both
-     the other sticky headers and the body sticky cells. It keeps the header
-     surface (--surface-2 from .clubs-table-sticky-head th wins on specificity);
-     only the stacking order needs raising. */
-  .clubs-table-sticky-head th.clubs-table__sticky-col {
+  /* The Club header cell is the corner: it pins left (here) and, in fit mode,
+     top (via .dt thead th), so it layers above the other headers and the
+     body sticky cells. It keeps the header surface (--surface-2 from
+     .dt thead th wins on specificity); only the stacking order is raised. */
+  .dt thead th.clubs-table__sticky-col {
     z-index: 3;
   }
 
@@ -5208,27 +5196,6 @@
   /* Which columns show at a width is not CSS (#2676): useColumnVisibility
      drives TanStack columnVisibility, so a hidden column is absent from the
      DOM. The Columns menu offers every column at every width. */
-
-  /* Right-edge fade discoverability cue. Themed (transparent → --surface, so it
-     remaps in dark); pointer-events:none so it never blocks taps/scroll. Shown
-     ONLY when the table overflows to the right (data-scrollable-right, set by
-     ClubsTable) — a permanent fade would wash out the right-most column on a
-     wide desktop where nothing scrolls. */
-  .clubs-table__scroll-cue {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 40px;
-    pointer-events: none;
-    background: linear-gradient(to right, rgba(0, 0, 0, 0), var(--surface));
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-  .clubs-table__scroll-wrap[data-scrollable-right='true']
-    .clubs-table__scroll-cue {
-    opacity: 1;
-  }
 
   /* ── Clubs table chrome re-skin (#668, epic #665 Sprint 2) ──
      Replaces the legacy gray Tailwind utilities (text-gray-*, bg-gray-50,
@@ -5789,40 +5756,6 @@
     color: var(--ink-3);
   }
 
-  /* Sticky header: pin the th cells (more robust than a sticky <thead>
-     under border-collapse) with an opaque themed background so scrolling
-     rows don't bleed through (lesson 092 — the bg must be a token, not a
-     literal, or dark mode shows a light cell). --surface-2 per the scope. */
-  .clubs-table-sticky-head th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background-color: var(--surface-2);
-    border-bottom: 1px solid var(--line);
-  }
-
-  /* Column-header sort handle (ColumnHeader.tsx) resting chrome — was
-     text-gray-700 + hover:bg-gray-100 / hover:text-gray-900. */
-  .clubs-col-header {
-    color: var(--ink-2);
-  }
-
-  .clubs-col-header:hover,
-  .clubs-col-header:focus {
-    background-color: var(--surface-3);
-    color: var(--ink);
-  }
-
-  /* Sort-direction caret — was text-gray-400 group-hover:text-gray-700.
-     (The active-state accent stays --tm-loyal-blue in the component.) */
-  .clubs-col-header__arrow {
-    color: var(--ink-4);
-  }
-
-  .clubs-col-header:hover .clubs-col-header__arrow {
-    color: var(--ink-3);
-  }
-
   /* Row rules replace divide-y divide-gray-200. Applies to every row
      (default + status-colored) so the hairline is consistent. */
   #clubs-table tbody tr {
@@ -5842,6 +5775,12 @@
 
   /* Primary cell text — was text-gray-900. */
   #clubs-table td {
+    color: var(--ink);
+    font-size: var(--dt-font);
+  }
+
+  /* The Club cell is the row header (<th scope="row">), same text as a td. */
+  #clubs-table tbody th {
     color: var(--ink);
     font-size: var(--dt-font);
   }

@@ -13,7 +13,6 @@ export type {
   ColumnFilter,
   FilterState,
   ColumnConfig,
-  ColumnHeaderProps,
   BaseFilterProps,
   TextFilterProps,
   NumericFilterProps,

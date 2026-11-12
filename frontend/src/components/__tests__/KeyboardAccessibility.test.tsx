@@ -1,10 +1,37 @@
 import { render, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
-import { ColumnHeader } from '../ColumnHeader'
 import { TextFilter } from '../filters/TextFilter'
 import { NumericFilter } from '../filters/NumericFilter'
 import { CategoricalFilter } from '../filters/CategoricalFilter'
 import type { SortField, SortDirection } from '../filters/types'
+
+import type { FC } from 'react'
+import { SortableHeader } from '../SortableHeader'
+
+/** The Clubs header cell as DataTable renders it: a SortableHeader (APG
+ *  contract) inside a table, replacing the deleted ColumnHeader (#2676). */
+const ColumnHeader: FC<{
+  field: SortField
+  label: string
+  sortable?: boolean
+  currentSort: { field: SortField | null; direction: SortDirection }
+  onSort: (field: SortField) => void
+}> = ({ field, label, currentSort, onSort }) => (
+  <table>
+    <thead>
+      <tr>
+        <SortableHeader
+          apg
+          field={field}
+          label={label}
+          currentSort={currentSort}
+          onSort={onSort}
+          buttonClassName="dt-sort-btn"
+        />
+      </tr>
+    </thead>
+  </table>
+)
 
 /**
  * Unit tests for keyboard accessibility
@@ -40,7 +67,7 @@ describe('Keyboard Accessibility', () => {
       expect(headerButton?.tagName).toBe('BUTTON')
     })
 
-    it('has a descriptive aria-label naming the column', () => {
+    it('is named by its visible label (APG sortable table)', () => {
       const { container } = render(
         <ColumnHeader
           field="division"
@@ -52,9 +79,7 @@ describe('Keyboard Accessibility', () => {
       )
 
       const headerButton = container.querySelector('button')
-      expect(headerButton?.getAttribute('aria-label')).toMatch(
-        /Sort by Division/i
-      )
+      expect(headerButton).toHaveAccessibleName('Division')
     })
 
     it('Enter triggers the native button click → onSort fires', () => {

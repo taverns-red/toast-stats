@@ -64,7 +64,7 @@ const getClubStatusColumnValues = (): (string | null)[] => {
   const rows = screen.getAllByRole('row')
   // Skip header row (index 0)
   return rows.slice(1).map(row => {
-    const cells = row.querySelectorAll('td')
+    const cells = row.querySelectorAll('th, td')
     // Club Status is column index 12 (0-indexed): Club, Div, Area, Status,
     // Members, Trend (#1792), Needed, New, Oct Renew, Apr Renew, DCP, Tier,
     // Club Status, Years.
@@ -82,7 +82,7 @@ const getClubNamesInOrder = (): string[] => {
   const rows = screen.getAllByRole('row')
   // Skip header row (index 0)
   return rows.slice(1).map(row => {
-    const cells = row.querySelectorAll('td')
+    const cells = row.querySelectorAll('th, td')
     return cells[0]?.textContent?.trim() ?? ''
   })
 }
@@ -93,7 +93,7 @@ const getClubNamesInOrder = (): string[] => {
  */
 const clickClubStatusHeader = () => {
   const btn = screen.getByRole('button', {
-    name: /Sort by Club Status/i,
+    name: 'Club Status',
   })
   fireEvent.click(btn)
 }
@@ -449,7 +449,7 @@ describe('ClubsTable Club Status Sorting', () => {
       )
 
       const dataRow = screen.getAllByRole('row')[1]
-      const cells = dataRow.querySelectorAll('td')
+      const cells = dataRow.querySelectorAll('th, td')
       // Club Status is column index 11 after the #669 column reconcile.
       expect(cells[12]).toHaveTextContent('—')
     })

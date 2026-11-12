@@ -338,3 +338,66 @@ describe('column prefs: v1 migration (#2676, spec §4.4)', () => {
     expect(seen[0]).toBe(false)
   })
 })
+
+describe('useColumnVisibility: reveal (#2676, PR3)', () => {
+  it('shows a hidden column while it is revealed, and counts it', () => {
+    const { result } = renderHook(() =>
+      useColumnVisibility(opts('tablet', { reveal: ['newMembers'] }))
+    )
+    expect(result.current.visibility['newMembers']).toBe(true)
+    expect(result.current.revealed.has('newMembers')).toBe(true)
+    expect(result.current.shownCount).toBe(6)
+  })
+
+  it('never writes a reveal to the saved overrides', () => {
+    renderHook(() =>
+      useColumnVisibility(opts('tablet', { reveal: ['newMembers'] }))
+    )
+    expect(stored()).toBeNull()
+  })
+
+  it('is not "custom": a view of the URL is not a choice', () => {
+    const { result } = renderHook(() =>
+      useColumnVisibility(opts('tablet', { reveal: ['newMembers'] }))
+    )
+    expect(result.current.isCustom).toBe(false)
+  })
+
+  it('ignores a column that is already shown, Club, and unknown ids', () => {
+    const { result } = renderHook(() =>
+      useColumnVisibility(
+        opts('tablet', { reveal: ['membership', 'name', 'nope'] })
+      )
+    )
+    expect(result.current.revealed.size).toBe(0)
+    expect(result.current.shownCount).toBe(5)
+  })
+
+  it('does not reveal a Changes column when no diff is loaded', () => {
+    const { result } = renderHook(() =>
+      useColumnVisibility(opts('tablet', { reveal: ['deltaMembership'] }))
+    )
+    expect(result.current.revealed.size).toBe(0)
+    expect(result.current.visibility['deltaMembership']).toBe(false)
+  })
+
+  it('cannot be toggled off while revealed', () => {
+    const { result } = renderHook(() =>
+      useColumnVisibility(opts('tablet', { reveal: ['newMembers'] }))
+    )
+    act(() => result.current.toggle('newMembers'))
+    expect(result.current.visibility['newMembers']).toBe(true)
+    expect(stored()).toBeNull()
+  })
+
+  it('hides the column again when the reveal ends', () => {
+    const { result, rerender } = renderHook(
+      ({ reveal }: { reveal: string[] }) =>
+        useColumnVisibility(opts('tablet', { reveal })),
+      { initialProps: { reveal: ['newMembers'] } }
+    )
+    expect(result.current.visibility['newMembers']).toBe(true)
+    rerender({ reveal: [] })
+    expect(result.current.visibility['newMembers']).toBe(false)
+  })
+})
