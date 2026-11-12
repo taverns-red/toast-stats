@@ -50,6 +50,30 @@ describe('arrayToCSV formula neutralisation (#2687)', () => {
     expect(one('+5')).toBe("'+5")
   })
 
+  it('quotes a cell containing a semicolon (European-locale separator)', () => {
+    expect(one('a;b')).toBe('"a;b"')
+    // Without quoting, a ;-separating Excel would split this into a new cell
+    // that starts with `=`.
+    expect(one('Foo;=1+1')).toBe('"Foo;=1+1"')
+    expect(one('Foo;=HYPERLINK("http://evil","x")')).toBe(
+      '"Foo;=HYPERLINK(""http://evil"",""x"")"'
+    )
+  })
+
+  it('neutralises a DDE payload', () => {
+    expect(one("=cmd|' /C calc'!A0")).toBe("'=cmd|' /C calc'!A0")
+  })
+
+  it('neutralises and quotes a cell that starts with a line feed', () => {
+    expect(one('\nfoo')).toBe('"\'\nfoo"')
+  })
+
+  it('leaves a leading-space formula unprefixed (intentional)', () => {
+    // Spreadsheets do not evaluate a cell whose first character is a space,
+    // so OWASP's leading-character list does not cover it.
+    expect(one(' =1+1')).toBe(' =1+1')
+  })
+
   it('leaves ordinary text and empty cells unchanged', () => {
     expect(arrayToCSV([['Plain Club', '', 'a-b', 'x=y']])).toBe(
       'Plain Club,,a-b,x=y'
