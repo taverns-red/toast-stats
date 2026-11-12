@@ -5219,12 +5219,18 @@
   }
 
   /* Phones (#2343): the title and the export group shared one
-     justify-between row, and "Export Clubs" + "Export Changes" (323 px) do
+     justify-between row, and "Export CSV (all columns)" + "Export Changes" do
      not fit beside the title in a 294 px header at 390. The buttons stacked
      in a column that took most of the row and squeezed the title to
      "All / Clubs". Below 768 the row wraps, so the group drops under the
      title whenever both don't fit, and its buttons sit in a gapped,
      wrapping row. 768 and up are unchanged (they fit on one row). */
+  /* The export buttons sit 8px apart at every width (#2676, spec §9). */
+  .clubs-export-group {
+    display: flex;
+    gap: 8px;
+  }
+
   @media (max-width: 767px) {
     .clubs-panel-header__row {
       flex-wrap: wrap;

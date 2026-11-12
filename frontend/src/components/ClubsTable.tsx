@@ -35,6 +35,7 @@ import { ActiveFiltersBar } from './ActiveFiltersBar'
 import { ColumnsMenu } from './ColumnsMenu'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { describeActiveFilters } from '../utils/clubFilterDescribe'
+import { isProvisionallyDistinguished } from '../utils/provisionalDistinguished'
 import {
   SortField,
   SortDirection,
@@ -856,6 +857,10 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     </button>
   )
 
+  // Export (#2676, spec §9): the rows the user is looking at (filters, presets
+  // and sort applied) but EVERY column, whatever the Columns menu shows. Column
+  // choice is a per-browser view preference that is not in the URL, so tying
+  // the file to it would hand two people with one link different files.
   const exportGroup = (
     <div className="clubs-export-group">
       <ExportButton
@@ -876,11 +881,16 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
               newMembers: club.newMembers,
               clubStatus: club.clubStatus,
               coach: club.coach,
+              membershipBase: club.membershipBase,
+              membersNeeded: club.membersNeeded,
+              netChange: club.netChange,
+              yearsChartered: club.yearsChartered,
+              isProvisionallyDistinguished: isProvisionallyDistinguished(club),
             })),
             districtId
           )
         }
-        label="Export Clubs"
+        label="Export CSV (all columns)"
         disabled={sortedClubs.length === 0}
       />
       {/* Diff CSV export (#795). A SIBLING of the clubs export — the diff

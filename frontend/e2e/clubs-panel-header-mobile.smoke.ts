@@ -2,7 +2,7 @@ import { test, expect, type Page } from './fixtures/test'
 
 /* The "All clubs" panel header on phones (#2343).
  *
- * The header row is the title and the export group ("Export Clubs", plus
+ * The header row is the title and the export group ("Export CSV (all columns)", plus
  * "Export Changes" when a snapshot diff is loaded) side by side with
  * `justify-between`. On a phone the two buttons do not fit beside the title,
  * so they stacked in a column that took most of the width and squeezed the
