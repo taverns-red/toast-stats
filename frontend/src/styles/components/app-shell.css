@@ -7,6 +7,9 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    /* Where a page's own sticky row pins: under the top bar and the 44px
+       phone context bar (#2638, CHR-11). */
+    --mobile-sticky-top: calc(var(--app-top-offset, 56px) + 44px);
     background-color: var(--bg);
     color: var(--ink);
   }
@@ -26,7 +29,7 @@
   .app-shell-top-bar {
     position: sticky;
     top: 0;
-    z-index: 40;
+    z-index: var(--z-header);
     height: 56px;
     border-bottom: 1px solid var(--line);
     padding: 0 16px;
@@ -121,12 +124,17 @@
     top: 100%;
     left: 0;
     right: 0;
-    z-index: 39;
+    z-index: calc(var(--z-header) - 1);
     display: none;
     flex-direction: column;
     align-items: stretch;
     gap: 2px;
     padding: 8px;
+    /* Taller than the viewport (About expanded at 360x640): scroll inside the
+       panel instead of running off-screen (#2638). */
+    max-height: calc(100dvh - var(--app-top-bar-h, 56px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
     background-color: var(--surface);
     border-bottom: 1px solid var(--line);
     box-shadow: var(--rds-shadow-lg);
@@ -242,7 +250,7 @@
     gap: 6px;
     padding: 8px 12px 12px;
     font-family: var(--sans);
-    font-size: 12px;
+    font-size: 14px;
     color: var(--ink-3);
   }
 
@@ -301,6 +309,8 @@
       align-items: center;
       gap: 4px;
       flex: 1;
+      max-height: none;
+      overflow-y: visible;
       padding: 0;
       background-color: transparent;
       border-bottom: none;
@@ -5344,8 +5354,8 @@
      offset is a var so the context bar (#1831) can raise it without a fork. */
   .clubs-mobile-sticky-search {
     position: sticky;
-    top: var(--mobile-sticky-top, 56px);
-    z-index: 5;
+    top: var(--mobile-sticky-top);
+    z-index: var(--z-sticky-search);
     padding: 8px 16px;
     margin-bottom: 8px;
     background-color: var(--surface);
@@ -7056,7 +7066,7 @@
   .command-palette__backdrop {
     position: fixed;
     inset: 0;
-    z-index: 90;
+    z-index: var(--z-modal);
     background-color: rgba(0, 0, 0, 0.45);
     display: flex;
     align-items: flex-start;
@@ -7111,6 +7121,25 @@
     border: 1px solid var(--line);
     border-radius: 3px;
     padding: 1px 5px;
+  }
+
+  .command-palette__close {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: -8px -8px -8px 0;
+    border: 0;
+    border-radius: var(--rds-radius-sm);
+    background: transparent;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+
+  .command-palette__close:hover {
+    background-color: var(--surface-2);
   }
 
   .command-palette__results {
@@ -7210,6 +7239,15 @@
     border-radius: 3px;
     padding: 0 4px;
     margin: 0 1px;
+  }
+
+  /* Touch has no Esc or arrow keys: hide the key hints (CHR-39). After the
+     footer and hint rules above so equal specificity resolves to this. */
+  @media (pointer: coarse) {
+    .command-palette__hint,
+    .command-palette__footer {
+      display: none;
+    }
   }
 
   /* Branded root error boundary (#1011, epic #1010). Replaces RR's raw

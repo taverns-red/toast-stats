@@ -4,6 +4,7 @@ import ThemeToggle from '../ThemeToggle'
 import AppMeta from './AppMeta'
 import HeaderSearch from './HeaderSearch'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { lockScroll } from '../../utils/scrollLock'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Districts', end: true },
@@ -28,6 +29,7 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
   const [navOpen, setNavOpen] = useState(false)
   const closeNav = useCallback(() => setNavOpen(false), [])
   const headerRef = useRef<HTMLElement>(null)
+  const toggleRef = useRef<HTMLButtonElement>(null)
   const location = useLocation()
 
   // <768px the footer chrome is dropped (#889); its version/license meta
@@ -50,7 +52,11 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
   useEffect(() => {
     if (!navOpen) return
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setNavOpen(false)
+      if (e.key === 'Escape') {
+        setNavOpen(false)
+        // Focus would otherwise fall to <body> as the link it was on hides.
+        toggleRef.current?.focus({ preventScroll: true })
+      }
     }
     const onPointerDown = (e: MouseEvent) => {
       if (!headerRef.current?.contains(e.target as Node)) setNavOpen(false)
@@ -63,9 +69,24 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
     }
   }, [navOpen])
 
+  // Lock page scroll while the phone menu is open (#2638): it scrolls inside
+  // itself when taller than the viewport, and the page must not move behind.
+  useEffect(() => {
+    if (!navOpen || !isMobile) return
+    return lockScroll()
+  }, [navOpen, isMobile])
+
+  // The Search button sits inside the header, so tapping it would leave the
+  // menu open under the palette: close the menu as the palette opens.
+  const openSearch = useCallback(() => {
+    setNavOpen(false)
+    onOpenSearch()
+  }, [onOpenSearch])
+
   return (
     <header className="app-shell-top-bar" ref={headerRef}>
       <button
+        ref={toggleRef}
         type="button"
         className="app-shell-nav-toggle"
         aria-label={navOpen ? 'Close menu' : 'Open menu'}
@@ -162,7 +183,7 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
       <div className="app-shell-tools">
         {/* Omni-search (#1058): inline combobox on desktop, icon→modal on
             mobile. Cmd-K opens the same modal everywhere (AppShell). */}
-        <HeaderSearch onOpenSearch={onOpenSearch} />
+        <HeaderSearch onOpenSearch={openSearch} />
         {/* Bell stub removed per #411 — a non-functional icon erodes
             trust. Re-add when there's real notification content. */}
         <Link
