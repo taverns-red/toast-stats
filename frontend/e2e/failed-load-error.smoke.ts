@@ -46,3 +46,42 @@ for (const route of ROUTES) {
     })
   }
 }
+
+// One failure, one alert: on a phone the hub renders its own error state and
+// the page-level panel used to render too.
+test('district hub at 375: a failed load shows exactly one alert (10s)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.route(
+    url => url.origin === CDN_STAGING_ORIGIN,
+    r => r.abort()
+  )
+  await page.goto('/district/61', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByRole('alert').first()).toBeVisible({
+    timeout: 10_000,
+  })
+  await expect(page.getByRole('alert')).toHaveCount(1)
+})
+
+// Try again recovers once the CDN is reachable. Dropping the aborting route
+// lets the fixture route serve the retry (route.continue() is banned by the
+// smokes-use-CDN-fixtures lint, and would reach the live CDN).
+test('district clubs: Try again recovers once the CDN is reachable (10s)', async ({
+  page,
+}) => {
+  const isCdn = (url: URL): boolean => url.origin === CDN_STAGING_ORIGIN
+  const abort = (r: { abort: () => Promise<void> }): Promise<void> => r.abort()
+  await page.route(isCdn, abort)
+  await page.goto('/district/61/clubs', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByRole('alert').first()).toBeVisible({
+    timeout: 10_000,
+  })
+
+  await page.unroute(isCdn, abort)
+  await page
+    .getByRole('button', { name: /try again/i })
+    .first()
+    .click()
+  await expect(page.getByRole('alert')).toHaveCount(0, { timeout: 10_000 })
+})
