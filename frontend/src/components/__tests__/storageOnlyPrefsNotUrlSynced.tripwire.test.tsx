@@ -9,7 +9,7 @@
  *
  *   1. My-district star       — localStorage `my-district-id`      (useMyDistrict)
  *   2. KPI-strip collapse      — sessionStorage `district-kpi-strip-collapsed`
- *   3. Column-group visibility — localStorage `clubs-table:hidden-groups`
+ *   3. Column visibility       — localStorage `clubs-table:columns` (#2676)
  *
  * This guard locks that decision. For each control it asserts BOTH halves of
  * "storage-only":
@@ -51,7 +51,7 @@ import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import { storageKey } from '../../utils/localStorageStore'
 import type { MetricRankings, RecognitionTargets } from '../../types/districts'
 
-const HIDDEN_GROUPS_STORAGE_KEY = storageKey('clubs-table:hidden-groups')
+const COLUMNS_STORAGE_KEY = storageKey('clubs-table:columns')
 
 // A probe that renders the live router search string into the DOM so we can
 // assert no control ever wrote to the URL — rendered, not stored in a module
@@ -165,18 +165,31 @@ const makeClub = (over: Partial<ClubTrend> = {}): ClubTrend => ({
   ...over,
 })
 
-describe('column-group visibility stays localStorage-only (#982)', () => {
-  it('ignores a ?hiddenGroups= seed in the URL (all groups visible)', () => {
+describe('column visibility stays localStorage-only (#982, #2676)', () => {
+  it('ignores a ?hiddenGroups= / ?columns= seed in the URL', () => {
     renderAt(
       <ClubsTable clubs={[makeClub()]} districtId="61" isLoading={false} />,
-      '/?hiddenGroups=membership'
+      '/?hiddenGroups=membership&columns=membership'
     )
-    // URL inert → the persisted hidden-groups is the empty default (all
-    // groups visible), NOT the URL's `membership`. usePersistedState mirrors
-    // its initial `[]` to storage on mount; the param never reaches it.
-    const stored = window.localStorage.getItem(HIDDEN_GROUPS_STORAGE_KEY)
-    expect(stored).not.toContain('membership')
-    expect(JSON.parse(stored ?? '[]')).toEqual([])
-    expect(probedSearch()).toBe('?hiddenGroups=membership') // probe sees it; table ignores it
+    // URL inert: the Members column is still shown and nothing was stored. The
+    // stored key only appears once the user toggles a column.
+    expect(
+      screen.getByRole('columnheader', { name: /members/i })
+    ).toBeInTheDocument()
+    expect(window.localStorage.getItem(COLUMNS_STORAGE_KEY)).toBeNull()
+    expect(probedSearch()).toBe('?hiddenGroups=membership&columns=membership') // probe sees it; table ignores it
+  })
+
+  it('writes localStorage, not the URL, when a column is toggled', () => {
+    renderAt(
+      <ClubsTable clubs={[makeClub()]} districtId="61" isLoading={false} />,
+      '/'
+    )
+    fireEvent.click(screen.getByRole('button', { name: /^columns/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /years/i }))
+    expect(
+      JSON.parse(window.localStorage.getItem(COLUMNS_STORAGE_KEY) ?? 'null')
+    ).toEqual({ schema: 2, overrides: { yearsChartered: true } })
+    expect(probedSearch()).toBe('') // no URL write
   })
 })

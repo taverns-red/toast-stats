@@ -18,7 +18,7 @@
 import { describe, it, expect } from 'vitest'
 import { useTable, type SortingState } from '@tanstack/react-table'
 import { renderHook } from '@testing-library/react'
-import { clubsColumns, clubColumnPriority } from '../clubsColumns'
+import { clubsColumns, clubColumnStickyClass } from '../clubsColumns'
 import {
   clubsTableFeatures,
   type ClubsTableFeatures,
@@ -86,32 +86,12 @@ describe('clubsColumns — TanStack column model (#835)', () => {
     expect(clubsColumns.map(c => c.id)).toEqual(EXPECTED_ID_ORDER)
   })
 
-  it('declares the responsive priority for each column (ADR-006 §3)', () => {
-    const priority = Object.fromEntries(
-      clubsColumns.map(c => [c.id, clubColumnPriority(c.id as string)])
-    )
-    expect(priority.name).toBe('sticky')
-    for (const id of [
-      'division',
-      'area',
-      'newMembers',
-      'octoberRenewals',
-      'aprilRenewals',
-      'clubStatus',
-      'coach',
-      'yearsChartered',
-    ]) {
-      expect(priority[id]).toBe('desktop')
-    }
-    for (const id of [
-      'status',
-      'membership',
-      'membersNeeded',
-      'dcpGoals',
-      'distinguished',
-    ]) {
-      expect(priority[id]).toBe('core')
-    }
+  it('pins only the Club column (sticky); which columns show is clubsColumnMeta (#2676)', () => {
+    const sticky = clubsColumns
+      .map(c => c.id as string)
+      .filter(id => clubColumnStickyClass(id) !== '')
+    expect(sticky).toEqual(['name'])
+    expect(clubColumnStickyClass('name')).toBe('clubs-table__sticky-col')
   })
 
   it('sorts by name ascending by default', () => {

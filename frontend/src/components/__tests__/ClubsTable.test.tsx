@@ -19,6 +19,7 @@ import {
 } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { ClubsTable } from '../ClubsTable'
+import { stubViewportWidth } from '../../test-utils/viewportMatchMedia'
 import { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import * as csvExport from '../../utils/csvExport'
 import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
@@ -58,12 +59,15 @@ describe('ClubsTable', () => {
     // tiers deterministically across the program-year rollover (#1285).
     vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.setSystemTime(new Date('2026-05-15T00:00:00Z'))
+    // These tests assert the full column set, which shows at >=1600 (#2676).
+    stubViewportWidth(1600)
   })
 
   afterEach(() => {
     vi.useRealTimers()
     cleanup()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   describe('Filters drawer (#816)', () => {
