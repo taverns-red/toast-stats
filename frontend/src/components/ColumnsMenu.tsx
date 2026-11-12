@@ -96,9 +96,26 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
     isCustom ? ', customised' : ''
   }`
 
-  const onToggle = (id: string) => {
+  const onToggle = (id: string, input: HTMLInputElement) => {
     const label = columnMeta[id]?.label ?? id
-    setAnnouncement(`${label} ${columns.isVisible(id) ? 'hidden' : 'shown'}`)
+    if (columns.isVisible(id) && columns.needed.has(id)) {
+      // The table is sorted or filtered by this column, so unchecking saves
+      // the choice but hides nothing yet, and the box turns into a locked one.
+      // Move focus to an enabled neighbour first so it is not dropped.
+      const all = Array.from(
+        popoverRef.current?.querySelectorAll<HTMLInputElement>(
+          'input[type="checkbox"]'
+        ) ?? []
+      )
+      const enabled = all.filter(b => b !== input && !b.disabled)
+      const next =
+        enabled.find(b => all.indexOf(b) > all.indexOf(input)) ??
+        enabled[enabled.length - 1]
+      next?.focus({ preventScroll: true })
+      setAnnouncement(`${label} stays shown while sorted or filtered by it`)
+    } else {
+      setAnnouncement(`${label} ${columns.isVisible(id) ? 'hidden' : 'shown'}`)
+    }
     columns.toggle(id)
   }
 
@@ -167,6 +184,11 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
                     id === SINCE_COLUMN_ID ||
                     isRevealed
                   const hintId = `${baseId}-hint-${id}`
+                  const noteId = `${baseId}-note-${id}`
+                  const hasNote =
+                    id === ALWAYS_SHOWN_COLUMN_ID ||
+                    id === SINCE_COLUMN_ID ||
+                    isRevealed
                   return (
                     <div key={id} className="clubs-columns-menu__row">
                       <label className="clubs-columns-menu__item">
@@ -174,8 +196,10 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
                           type="checkbox"
                           checked={columns.isVisible(id)}
                           disabled={locked}
-                          aria-describedby={hintId}
-                          onChange={() => onToggle(id)}
+                          aria-describedby={
+                            hasNote ? `${hintId} ${noteId}` : hintId
+                          }
+                          onChange={e => onToggle(id, e.currentTarget)}
                         />
                         <span>{meta.label}</span>
                       </label>
@@ -183,17 +207,17 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
                         {meta.hint}
                       </span>
                       {id === ALWAYS_SHOWN_COLUMN_ID && (
-                        <span className="clubs-columns-menu__note">
+                        <span id={noteId} className="clubs-columns-menu__note">
                           Always shown
                         </span>
                       )}
                       {isRevealed && (
-                        <span className="clubs-columns-menu__note">
+                        <span id={noteId} className="clubs-columns-menu__note">
                           Shown while sorted or filtered by it
                         </span>
                       )}
                       {id === SINCE_COLUMN_ID && (
-                        <span className="clubs-columns-menu__note">
+                        <span id={noteId} className="clubs-columns-menu__note">
                           Shown while &lsquo;DCP since last year&rsquo; is set
                         </span>
                       )}

@@ -74,6 +74,9 @@ export interface ColumnVisibilityApi {
   /** Columns shown only because the sort or a filter needs them (transient,
    *  not saved). */
   revealed: ReadonlySet<string>
+  /** Columns the sort or a filter needs on screen, whether or not the user
+   *  also chose to show them. Unchecking one of these hides nothing yet. */
+  needed: ReadonlySet<string>
   /** The shown set differs from this width's default. */
   isCustom: boolean
   shownCount: number
@@ -177,6 +180,15 @@ export function useColumnVisibility({
     return out
   }, [revealKey, offeredIds, overrides, defaults])
 
+  /** Offered, toggleable columns the sort or a filter needs, shown or not. */
+  const needed = useMemo(() => {
+    const out = new Set<string>()
+    for (const id of revealKey ? revealKey.split('|') : []) {
+      if (isToggleable(id) && offeredIds.includes(id)) out.add(id)
+    }
+    return out
+  }, [revealKey, offeredIds])
+
   const visibility = useMemo(() => {
     const out: Record<string, boolean> = {}
     for (const id of Object.keys(columnMeta)) {
@@ -244,6 +256,7 @@ export function useColumnVisibility({
     showAll,
     reset,
     revealed,
+    needed,
     isCustom,
     shownCount,
     totalCount: offeredIds.length,

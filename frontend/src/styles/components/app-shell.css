@@ -5997,6 +5997,16 @@
     border-radius: 2px;
   }
 
+  /* The Clubs table's name link is a 44px touch target under a coarse pointer
+     (#2676, spec §6). Lives here, not in the shared data-table.css. */
+  @media (pointer: coarse) {
+    #clubs-table .clubs-name-link {
+      display: flex;
+      align-items: center;
+      min-height: 44px;
+    }
+  }
+
   .clubs-card__stat-val {
     font-size: 18px;
     font-weight: 700;

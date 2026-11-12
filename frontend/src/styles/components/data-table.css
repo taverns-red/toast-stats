@@ -177,12 +177,6 @@
      least 48px; the row-header cell drops its vertical padding so the 44px
      link does not make the row taller than it has to be. */
   @media (pointer: coarse) {
-    .dt .clubs-name-link {
-      display: flex;
-      align-items: center;
-      min-height: 44px;
-    }
-
     .dt tbody tr {
       height: var(--dt-row-min-coarse);
     }
