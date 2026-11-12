@@ -16,8 +16,13 @@ import { dirname, resolve } from 'node:path'
    race, hence a failure that passes on retry.
 
    A measure that must not move with the font is stated in em, which tracks
-   font-size only. 70 x 0.4375em (Source Sans 3's "0") keeps the loaded
-   layout exactly as it was. */
+   font-size only. 70 x 0.497em (Source Sans 3's "0", 497/1000) is the 70ch
+   measure of the loaded font: 487px at the 14px these notes use, against the
+   490px (hinted to 7px a digit) it rendered before. */
+
+const SOURCE_SANS_3_ZERO_EM = 0.497
+const MEASURE_EM = 70 * SOURCE_SANS_3_ZERO_EM
+const TOLERANCE_EM = 0.05
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -33,7 +38,12 @@ describe('council.css widths do not depend on the loaded font (#2685)', () => {
   })
 
   it('keeps the 70ch measure of Source Sans 3 as an em width', () => {
-    const measures = css.match(/max-width:\s*30\.625em/g) ?? []
+    const measures = [...css.matchAll(/max-width:\s*([\d.]+)em/g)].map(m =>
+      Number(m[1])
+    )
     expect(measures).toHaveLength(2)
+    for (const em of measures) {
+      expect(Math.abs(em - MEASURE_EM)).toBeLessThanOrEqual(TOLERANCE_EM)
+    }
   })
 })
