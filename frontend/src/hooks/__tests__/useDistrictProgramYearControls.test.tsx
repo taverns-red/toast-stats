@@ -124,4 +124,68 @@ describe('useDistrictProgramYearControls (#1302)', () => {
     expect(result.current.selectedProgramYear.year).toBe(2019)
     expect(result.current.effectiveEndDate).toBe('2026-08-01')
   })
+
+  // #2635 — a ?date= that is not one of the district's snapshots must never
+  // reach a fetch, the chip, or the freshness pill as if it were loaded.
+  describe('a ?date= with no snapshot (#2635)', () => {
+    it('never returns an end date outside the district snapshot list', async () => {
+      for (const date of [
+        '2020-01-01',
+        '2027-05-01',
+        '2026-03-15',
+        'notadate',
+      ]) {
+        const { result, unmount } = renderHook(
+          () => useDistrictProgramYearControls('61'),
+          { wrapper: wrapperFor(`/district/61?date=${date}`) }
+        )
+        await waitFor(() => expect(result.current.hasValidDates).toBe(true))
+        expect(['2025-08-01', '2026-05-01', '2026-08-01']).toContain(
+          result.current.effectiveEndDate
+        )
+        unmount()
+      }
+    })
+
+    it('a date before all data falls back to the PY latest and the selection names the date on screen', async () => {
+      const { result } = renderHook(
+        () => useDistrictProgramYearControls('61'),
+        {
+          wrapper: wrapperFor('/district/61?py=2019&date=2020-01-01'),
+        }
+      )
+      await waitFor(() =>
+        expect(result.current.effectiveEndDate).toBe('2026-08-01')
+      )
+      // The chip must never name the requested (absent) date.
+      expect(result.current.selectedDate).not.toBe('2020-01-01')
+    })
+
+    it('a missing date inside the PY resolves to the nearest earlier snapshot', async () => {
+      const { result } = renderHook(
+        () => useDistrictProgramYearControls('61'),
+        {
+          wrapper: wrapperFor('/district/61?py=2025&date=2026-02-10'),
+        }
+      )
+      await waitFor(() => expect(result.current.hasValidDates).toBe(true))
+      expect(result.current.effectiveEndDate).toBe('2025-08-01')
+      expect(result.current.selectedDate).toBe('2025-08-01')
+    })
+
+    it('a snapshot date from another PY switches the PY', async () => {
+      const { result } = renderHook(
+        () => useDistrictProgramYearControls('61'),
+        {
+          wrapper: wrapperFor('/district/61?date=2026-05-01'),
+        }
+      )
+      await waitFor(() =>
+        expect(result.current.effectiveProgramYear?.year).toBe(2025)
+      )
+      expect(result.current.effectiveEndDate).toBe('2026-05-01')
+      expect(result.current.selectedDate).toBe('2026-05-01')
+      expect(result.current.selectedProgramYear.year).toBe(2025)
+    })
+  })
 })

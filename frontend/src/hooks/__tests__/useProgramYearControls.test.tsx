@@ -121,6 +121,63 @@ describe('useProgramYearControls (#1301)', () => {
     )
   })
 
+  // #2635 — a ?date= that is not a snapshot must never be returned as the date
+  // to fetch, nor labelled as the date on screen.
+  describe('a ?date= with no snapshot (#2635)', () => {
+    const list = [
+      '2024-08-01',
+      '2025-03-01',
+      '2025-08-01',
+      '2026-05-01',
+      '2026-08-01',
+      '2026-09-15',
+    ]
+
+    it('never returns an effectiveDate outside the snapshot list', async () => {
+      for (const date of [
+        '2019-01-01',
+        '2027-05-01',
+        '2026-09-01',
+        'notadate',
+      ]) {
+        const { result, unmount } = renderHook(() => useProgramYearControls(), {
+          wrapper: createWrapper([`/?date=${date}`]),
+        })
+        await waitFor(() => expect(result.current.cachedDates.length).toBe(2))
+        expect(list).toContain(result.current.effectiveDate)
+        unmount()
+      }
+    })
+
+    it('a missing date inside the PY resolves to the nearest earlier snapshot, and selectedDate names it', async () => {
+      const { result } = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(['/?date=2026-09-01']),
+      })
+      await waitFor(() => expect(result.current.cachedDates.length).toBe(2))
+      expect(result.current.effectiveDate).toBe('2026-08-01')
+      expect(result.current.selectedDate).toBe('2026-08-01')
+    })
+
+    it('a date before all data falls back to the PY latest, never the requested date', async () => {
+      const { result } = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(['/?date=2019-01-01']),
+      })
+      await waitFor(() => expect(result.current.cachedDates.length).toBe(2))
+      expect(result.current.effectiveDate).toBe('2026-09-15')
+      expect(result.current.selectedDate).not.toBe('2019-01-01')
+    })
+
+    it('a snapshot date from another PY switches the PY', async () => {
+      const { result } = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(['/?date=2025-03-01']),
+      })
+      await waitFor(() =>
+        expect(result.current.selectedProgramYear.year).toBe(2024)
+      )
+      expect(result.current.effectiveDate).toBe('2025-03-01')
+    })
+  })
+
   // #1618 — /clubs and /awards opened on PY 2025-26 while the data's newest PY
   // was 2026-27: a year persisted to localStorage by an EARLIER session
   // outranked the data-resolved default on every later visit.
