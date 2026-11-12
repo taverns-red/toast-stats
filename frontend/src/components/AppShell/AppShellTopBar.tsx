@@ -100,7 +100,22 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
 
       <Link to="/" aria-label="Toast Stats home" className="app-shell-brand">
         <span aria-hidden="true" className="app-shell-brand__mark">
-          TS
+          {/* Red Taverns pennant (taverns-red/ops docs/brand/pennant.svg, RT
+              outlined as in favicon.svg). Brand colours stay inside the mark. */}
+          <svg
+            data-testid="brand-pennant"
+            aria-hidden="true"
+            focusable="false"
+            viewBox="0 0 140 100"
+            width="24"
+            height="17"
+          >
+            <path d="M0 0 H120 L140 50 L120 100 H0 Z" fill="#E63946" />
+            <path
+              d="M27.64 74V30.6H46.49Q50.58 30.6 53.62 32.03Q56.66 33.45 58.33 36.06Q60.01 38.66 60.01 42.19V42.94Q60.01 46.84 58.15 49.26Q56.29 51.68 53.56 52.8V53.91Q56.04 54.04 57.4 55.62Q58.77 57.2 58.77 59.8V74H50.58V60.98Q50.58 59.49 49.81 58.56Q49.03 57.63 47.24 57.63H35.83V74ZM35.83 50.19H45.62Q48.54 50.19 50.18 48.61Q51.82 47.03 51.82 44.43V43.81Q51.82 41.2 50.21 39.62Q48.6 38.04 45.62 38.04H35.83ZM73.13 74V38.04H60.48V30.6H93.96V38.04H81.31V74Z"
+              fill="#F4F1EB"
+            />
+          </svg>
         </span>
         <span className="app-shell-brand__name">Toast Stats</span>
       </Link>

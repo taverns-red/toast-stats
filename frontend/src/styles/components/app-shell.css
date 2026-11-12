@@ -64,12 +64,14 @@
     justify-content: center;
     width: 24px;
     height: 24px;
-    border-radius: 5px;
-    background-color: var(--loyal-500);
-    color: #ffffff;
-    font-family: var(--serif);
-    font-weight: 800;
-    font-size: 12px;
+  }
+
+  /* The pennant keeps its own brand colours; it fills the 24px mark box so
+     the header geometry is unchanged (#2515). */
+  .app-shell-brand__mark > svg {
+    display: block;
+    width: 24px;
+    height: auto;
   }
 
   .app-shell-brand__name {
@@ -269,7 +271,7 @@
 
   /* Tablet (768–1023px): the six inline nav links plus the search combobox
      still don't fit beside the full wordmark, so the brand collapses to its
-     "TS" mark. The link keeps its accessible name ("Toast Stats home"). */
+     pennant mark. The link keeps its accessible name ("Toast Stats home"). */
   @media (min-width: 768px) and (max-width: 1023.98px) {
     .app-shell-brand > .app-shell-brand__name {
       display: none;
