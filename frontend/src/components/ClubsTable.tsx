@@ -1178,8 +1178,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           </svg>
           <p className="clubs-text-muted font-medium">No Clubs Found</p>
           <p className="clubs-text-muted text-sm mt-1 max-w-lg mx-auto">
-            No club data is available for this district. This may be because no
-            data has been cached yet.
+            No club data is available for this district on this date. Try
+            another date from the date picker above.
           </p>
         </div>
       )}

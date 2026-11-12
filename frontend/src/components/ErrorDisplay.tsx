@@ -4,6 +4,11 @@ interface ErrorDisplayProps {
   error: Error | string | null
   onRetry?: () => void
   title?: string
+  /**
+   * What failed to load, as a noun phrase with its determiner ("this
+   * division", "the regions"): used in the copy, so plurals read as English.
+   */
+  subject?: string
   showDetails?: boolean
   variant?: 'inline' | 'card' | 'full'
   className?: string
@@ -17,6 +22,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   error,
   onRetry,
   title = 'Error Loading Data',
+  subject = 'this data',
   showDetails = false,
   variant = 'card',
   className = '',
@@ -29,6 +35,8 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   const isNetworkError =
     errorMessage.toLowerCase().includes('network') ||
     errorMessage.toLowerCase().includes('fetch') ||
+    // Safari's wording for a failed fetch.
+    errorMessage.toLowerCase().includes('load failed') ||
     errorMessage.toLowerCase().includes('connection')
 
   // Determine if this is a not found error
@@ -73,10 +81,10 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
 
   const getUserFriendlyMessage = () => {
     if (isNetworkError) {
-      return 'Unable to connect to the server. Please check your internet connection and try again.'
+      return `We couldn't load ${subject}. Check your connection and try again.`
     }
     if (isNotFoundError) {
-      return 'The requested data could not be found. It may not have been cached yet.'
+      return `${subject.charAt(0).toUpperCase()}${subject.slice(1)} could not be found.`
     }
     return errorMessage
   }
@@ -156,23 +164,25 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
 
   // card variant (default)
   return (
-    <div className={`tm-card ${className}`} role="alert">
+    <div
+      className={`redesign-panel p-4 ${className}`}
+      style={{ color: 'var(--ink)' }}
+      role="alert"
+    >
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 text-red-600 mt-0.5">
+        <div className="flex-shrink-0 mt-0.5" aria-hidden="true">
           {getErrorIcon()}
         </div>
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-red-900 mb-1">{title}</h3>
-          <p className="text-sm text-red-800 mb-3">
-            {getUserFriendlyMessage()}
-          </p>
+          <h3 className="text-sm font-semibold mb-1">{title}</h3>
+          <p className="text-sm mb-3">{getUserFriendlyMessage()}</p>
 
           {showDetails && errorMessage && (
             <details className="mb-3">
-              <summary className="text-xs text-red-700 cursor-pointer hover:text-red-900 font-medium">
+              <summary className="text-xs cursor-pointer font-medium">
                 Technical Details
               </summary>
-              <p className="mt-2 text-xs text-red-700 font-mono bg-red-100 p-2 rounded break-words">
+              <p className="mt-2 text-xs font-mono p-2 rounded break-words">
                 {errorMessage}
               </p>
             </details>
@@ -182,9 +192,9 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
             <button
               onClick={onRetry}
               className="tm-btn-secondary text-sm"
-              aria-label="Retry loading data"
+              aria-label="Try again: retry loading data"
             >
-              Try Again
+              Try again
             </button>
           )}
         </div>

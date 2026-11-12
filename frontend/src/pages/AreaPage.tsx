@@ -24,7 +24,7 @@ import { formatFreshnessLine } from '../utils/contextBar'
 import type { AreaWithDivision } from '../components/DivisionAreaProgressSummary'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { isDistrictSlotPending } from '../utils/districtSlotPending'
-import { EmptyState } from '../components/ErrorDisplay'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import { ClubMiniList } from '../components/ClubMiniList'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
@@ -62,6 +62,8 @@ const AreaPage: React.FC = () => {
     effectiveEndDate,
     hasValidDates,
     isDatesPending,
+    datesError,
+    refetchDates,
     latestSnapshotDate,
     isLatestSnapshot,
   } = useDistrictProgramYearControls(districtId)
@@ -75,11 +77,16 @@ const AreaPage: React.FC = () => {
       isLatestSnapshot,
     })
 
-  const { data, error } = useDistrictAnalytics(
+  const {
+    data,
+    error: analyticsError,
+    refetch: refetchAnalytics,
+  } = useDistrictAnalytics(
     hasValidDates ? (districtId ?? null) : null,
     undefined,
     effectiveEndDate ?? undefined
   )
+  const error = datesError ?? analyticsError
 
   // Recognition / gap / visit data come from the same raw snapshot the Divisions
   // overview reads — one source of truth (R6/R8, #1016). We reuse the overview's
@@ -149,12 +156,32 @@ const AreaPage: React.FC = () => {
   const isBodyPending = isPending || isLoadingSnapshot
 
   if (!isPending && (error || !data)) {
+    // #2636 — keep the page frame and offer Try again.
     return (
-      <EmptyState
-        title="Could not load area"
-        message="The district analytics file is unavailable. Try again in a moment."
-        icon="data"
-      />
+      <div className="app-shell__page district-detail-page-root">
+        <SubpageBreadcrumb
+          crumbs={[
+            { label: `District ${districtId}`, to: `/district/${districtId}` },
+            {
+              label: `Division ${divId}`,
+              to: `/district/${districtId}/division/${divId}`,
+            },
+            { label: `Area ${areaId}` },
+          ]}
+        />
+        <ErrorDisplay
+          error={error ?? 'Failed to fetch'}
+          title="Could not load area"
+          subject="this area"
+          onRetry={() => {
+            // Only the query that failed: with the date index down the
+            // analytics query is disabled, and refetching it ignores
+            // `enabled` and throws, replacing this copy (#2636).
+            if (datesError) refetchDates()
+            else refetchAnalytics()
+          }}
+        />
+      </div>
     )
   }
 

@@ -193,8 +193,12 @@ const DistrictClubsPage: React.FC = () => {
     d => d.id === districtId
   )
 
-  const { data: cachedDatesData, isPending: isDatesPending = false } =
-    useDistrictCachedDates(districtId || '')
+  const {
+    data: cachedDatesData,
+    isPending: isDatesPending = false,
+    error: datesError,
+    refetch: refetchDates,
+  } = useDistrictCachedDates(districtId || '')
   const allCachedDates = useMemo(
     () => cachedDatesData?.dates || [],
     [cachedDatesData?.dates]
@@ -306,7 +310,18 @@ const DistrictClubsPage: React.FC = () => {
           <DistrictSubnav districtId={districtId} />
 
           <div className="space-y-4 sm:space-y-6">
-            {isError && allClubs.length === 0 ? (
+            {datesError ? (
+              // #2636 — the date index failed to load, so the clubs query
+              // never ran. That is a failed request, not "no clubs".
+              <ErrorDisplay
+                error={datesError as Error}
+                title="Failed to Load Clubs"
+                subject="the clubs list"
+                onRetry={() => {
+                  refetchDates()
+                }}
+              />
+            ) : isError && allClubs.length === 0 ? (
               // #1104 — a fetch reject must surface a retryable error state,
               // not silently render an empty ClubsTable (`allClubs` falls back
               // to `[]` on error). Gated on emptiness so a background refetch
@@ -314,6 +329,7 @@ const DistrictClubsPage: React.FC = () => {
               <ErrorDisplay
                 error={error ?? 'Failed to load clubs data'}
                 title="Failed to Load Clubs"
+                subject="the clubs list"
                 onRetry={() => {
                   refetch()
                 }}

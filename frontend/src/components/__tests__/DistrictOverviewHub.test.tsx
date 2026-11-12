@@ -9,7 +9,7 @@
  * deployed preview by `e2e/district-overview-hub-mobile.smoke.ts`.
  */
 import type { ReactElement } from 'react'
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import {
   render as rtlRender,
   screen,
@@ -296,6 +296,26 @@ describe('DistrictOverviewHub', () => {
       screen.queryByRole('navigation', { name: 'District sections list' })
     ).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Sections' })).toBeNull()
+  })
+
+  // #2636 — a failed load left the dashes up forever with no message.
+  it('shows an alert with Try again when the load failed, instead of dashes', () => {
+    const onRetry = vi.fn()
+    render(
+      <DistrictOverviewHub
+        {...baseProps}
+        kpis={null}
+        clubs={null}
+        loadError={new Error('Failed to fetch')}
+        onRetry={onRetry}
+      />
+    )
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent(/couldn.t load/i)
+    expect(screen.getByRole('button', { name: /try again/i })).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: /try again/i }))
+    expect(onRetry).toHaveBeenCalledTimes(1)
+    expect(screen.queryAllByTestId('district-hub-tile')).toHaveLength(0)
   })
 
   it('holds the same structure while loading (structural skeleton)', () => {

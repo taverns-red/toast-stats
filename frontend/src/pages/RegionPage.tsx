@@ -9,7 +9,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnRankings, fetchCdnRankingsForDate } from '../services/cdn'
 import { RegionPageLoadingShell } from '../components/RegionLoadingShells'
-import { EmptyState } from '../components/ErrorDisplay'
+import { EmptyState, ErrorDisplay } from '../components/ErrorDisplay'
 import type { DistrictRanking } from '../types/districts'
 import { computeTiedRanks } from '../utils/tieRankingUtils'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
@@ -373,7 +373,7 @@ const RegionPage: React.FC = () => {
     isDatesPending,
   } = useProgramYearControls()
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['district-rankings', effectiveDate ?? 'latest'],
     queryFn: async () => {
       if (effectiveDate) return fetchCdnRankingsForDate(effectiveDate)
@@ -504,16 +504,26 @@ const RegionPage: React.FC = () => {
   }
 
   if (error || !data) {
+    // #2636 — one error state with Try again; "browse all regions" stays as
+    // the way out.
     return (
-      <EmptyState
-        title="Could not load region"
-        message="The rankings file is unavailable. Try again in a moment, or browse all regions."
-        icon="data"
-        action={{
-          label: 'View all regions',
-          onClick: () => navigate('/regions'),
-        }}
-      />
+      <div className="app-shell__page">
+        <ErrorDisplay
+          error={error ?? 'Failed to fetch'}
+          title="Could not load region"
+          subject="this region"
+          onRetry={() => {
+            refetch()
+          }}
+        />
+        <button
+          type="button"
+          className="tm-btn-secondary mt-3"
+          onClick={() => navigate('/regions')}
+        >
+          View all regions
+        </button>
+      </div>
     )
   }
 
