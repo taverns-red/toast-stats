@@ -47,7 +47,7 @@ test.describe('Landing Page', () => {
 
     // Rankings table lists the districts (by its label — since #2249 the
     // World pulse regions table precedes it in the DOM).
-    const rows = page.locator('table[aria-label="District rankings"] tbody tr')
+    const rows = page.locator('#district-rankings-table tbody tr')
     await expect(rows.first()).toBeVisible({ timeout: 10_000 })
     const count = await rows.count()
     expect(count).toBeGreaterThanOrEqual(MIN_DISTRICTS)
@@ -57,7 +57,7 @@ test.describe('Landing Page', () => {
     await page.goto('/')
     // Wait for data to load
     const firstScore = page
-      .locator('table[aria-label="District rankings"] tbody tr td:last-child')
+      .locator('#district-rankings-table tbody tr td:last-child')
       .first()
     await expect(firstScore).toBeVisible({ timeout: 10_000 })
     const text = await firstScore.textContent()
