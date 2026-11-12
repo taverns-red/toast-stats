@@ -258,15 +258,22 @@ const WEEKDAY_PATTERNS = (
   Object.entries(WEEKDAY_WORDS) as [MeetingWeekday, string][]
 ).map(([day, words]) => [day, new RegExp(`\\b(?:${words})\\b`, 'g')] as const)
 
-/** Weekdays in order of first mention, each once. */
+/** Weekdays in order of first mention, each once. A range ("Mon-Fri",
+ *  "Tuesday to Thursday") also covers the days between (#2617). */
 function weekdaysIn(folded: string): MeetingWeekday[] {
-  const found: { day: MeetingWeekday; at: number }[] = []
-  for (const [day, pattern] of WEEKDAY_PATTERNS) {
-    pattern.lastIndex = 0
-    const match = pattern.exec(folded)
-    if (match) found.push({ day, at: match.index })
+  const found: MeetingWeekday[] = []
+  const add = (day: MeetingWeekday): void => {
+    if (!found.includes(day)) found.push(day)
   }
-  return found.sort((a, b) => a.at - b.at).map(f => f.day)
+  let previous: DayMention | undefined
+  for (const mention of dayMentionsIn(folded)) {
+    if (previous && DAY_RANGE.test(folded.slice(previous.end, mention.start))) {
+      daysBetween(previous.day, mention.day).forEach(add)
+    }
+    add(mention.day)
+    previous = mention
+  }
+  return found
 }
 
 const BIWEEKLY =
