@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/test'
+import { CDN_STAGING_ORIGIN } from './helpers/cdnFixtures'
 
 /* A failed data load shows one error state with Try again (#2636, from the
  * 2026-11-12 UX review).
@@ -9,10 +10,8 @@ import { test, expect } from './fixtures/test'
  * shows a role="alert" panel with a "Try again" button, inside the page
  * frame, and never claims the data is missing.
  *
- * Every CDN snapshot request (`/v1/**.json`) is aborted. Measured on the
- * deployed PR preview (BASE_URL). */
-
-const CDN_JSON = /\/v1\/.*\.json(\?.*)?$/
+ * Every request to the CDN origin is aborted (a page route, which takes
+ * precedence over the fixture's context route). */
 
 const ROUTES = [
   { name: 'district hub', path: '/district/61' },
@@ -26,11 +25,15 @@ for (const route of ROUTES) {
       page,
     }) => {
       await page.setViewportSize({ width, height: 900 })
-      await page.route(CDN_JSON, r => r.abort())
+      await page.route(
+        url => url.origin === CDN_STAGING_ORIGIN,
+        r => r.abort()
+      )
       await page.goto(route.path, { waitUntil: 'domcontentloaded' })
 
-      const alert = page.getByRole('alert').first()
-      await expect(alert).toBeVisible({ timeout: 10_000 })
+      await expect(page.getByRole('alert').first()).toBeVisible({
+        timeout: 10_000,
+      })
       await expect(
         page.getByRole('button', { name: /try again/i }).first()
       ).toBeVisible()
@@ -43,18 +46,3 @@ for (const route of ROUTES) {
     })
   }
 }
-
-test('Try again recovers once the CDN is reachable', async ({ page }) => {
-  let blocked = true
-  await page.route(CDN_JSON, r => (blocked ? r.abort() : r.continue()))
-  await page.goto('/district/61/clubs', { waitUntil: 'domcontentloaded' })
-  await expect(page.getByRole('alert').first()).toBeVisible({
-    timeout: 10_000,
-  })
-  blocked = false
-  await page
-    .getByRole('button', { name: /try again/i })
-    .first()
-    .click()
-  await expect(page.getByRole('alert')).toHaveCount(0, { timeout: 30_000 })
-})

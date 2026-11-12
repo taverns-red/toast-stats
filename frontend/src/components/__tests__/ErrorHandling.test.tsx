@@ -131,7 +131,7 @@ describe('ErrorDisplay', () => {
       props: { error: new Error('Network connection failed') },
       customAssertion: () => {
         expect(
-          screen.getByText(/unable to connect to the server/i)
+          screen.getByText(/couldn.t load this data.*check your connection/i)
         ).toBeInTheDocument()
       },
     },

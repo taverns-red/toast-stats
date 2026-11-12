@@ -7,6 +7,7 @@ import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { ClubGrowthRecipientsSection } from '../components/ClubGrowthRecipientsSection'
 import { useClubGrowthRecipients } from '../hooks/useClubGrowthRecipients'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import { tiedWinnerIds, TIE_BREAK_UNPUBLISHED } from '../utils/awardTies'
 import type {
   CompetitiveAwardRanking,
@@ -72,7 +73,12 @@ const AwardsPage: React.FC = () => {
     isDatesPending,
   } = useProgramYearControls()
 
-  const { data: standings, isLoading } = useCompetitiveAwards(effectiveDate)
+  const {
+    data: standings,
+    isLoading,
+    error: standingsError,
+    refetch: refetchStandings,
+  } = useCompetitiveAwards(effectiveDate)
 
   // District Club Growth Achievement recipients (#1537). Program year and the
   // pinned date are the page's own (R3); each checkpoint is judged on that
@@ -132,9 +138,22 @@ const AwardsPage: React.FC = () => {
         <p className="awards-page__empty">Loading award standings…</p>
       )}
 
-      {!isLoading && !standings && (
+      {standingsError && !standings && (
+        // #2636 — a failed request is not "no standings for this snapshot".
+        <ErrorDisplay
+          error={standingsError}
+          title="Could not load award standings"
+          subject="award standings"
+          onRetry={() => {
+            refetchStandings()
+          }}
+        />
+      )}
+
+      {!isLoading && !standings && !standingsError && (
         <p className="awards-page__empty">
-          No award standings available for the current snapshot.
+          No award standings are published for this date. Pick another date
+          above.
         </p>
       )}
 

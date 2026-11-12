@@ -6,7 +6,7 @@ import { aggregateRegions } from '../utils/aggregateRegions'
 import { RegionsLeaderboard } from '../components/RegionsLeaderboard'
 import { RegionFinder } from '../components/RegionFinder'
 import { RegionsPageLoadingShell } from '../components/RegionLoadingShells'
-import { EmptyState } from '../components/ErrorDisplay'
+import { EmptyState, ErrorDisplay } from '../components/ErrorDisplay'
 import { useUrlState } from '../hooks/useUrlState'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { DataControlsBar } from '../components/DataControlsBar'
@@ -54,7 +54,7 @@ const RegionsPage: React.FC = () => {
     isDatesPending,
   } = useProgramYearControls()
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['district-rankings', effectiveDate ?? 'latest'],
     queryFn: async () => {
       if (effectiveDate) return fetchCdnRankingsForDate(effectiveDate)
@@ -151,11 +151,16 @@ const RegionsPage: React.FC = () => {
     return <RegionsPageLoadingShell />
   if (error || !data) {
     return (
-      <EmptyState
-        title="Could not load regions"
-        message="The rankings file is unavailable. Try again in a moment."
-        icon="data"
-      />
+      <div className="app-shell__page">
+        <ErrorDisplay
+          error={error ?? 'Failed to fetch'}
+          title="Could not load regions"
+          subject="regions"
+          onRetry={() => {
+            refetch()
+          }}
+        />
+      </div>
     )
   }
 

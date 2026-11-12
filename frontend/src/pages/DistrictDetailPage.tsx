@@ -124,6 +124,8 @@ const DistrictDetailPageInner: React.FC = () => {
     data: cachedDatesData,
     isLoading: isLoadingCachedDates,
     isPending: isPendingCachedDates,
+    error: datesError,
+    refetch: refetchDates,
   } = useDistrictCachedDates(districtId || '')
 
   // Get all cached dates
@@ -379,9 +381,19 @@ const DistrictDetailPageInner: React.FC = () => {
   const isLoadingOverview =
     (isLoadingAggregated && isLoadingAnalytics) || isLoadingCachedDates
 
-  // Error state for overview - only show error if both fail
+  // Error state for overview - only show error if both fail, or if the date
+  // index itself failed (#2636): the dated queries then stay disabled for ever
+  // and the page sat on dashes/skeletons, or blamed the data ("no cached
+  // data"), for what is a failed request.
   const overviewError =
-    aggregatedError && analyticsError ? aggregatedError : null
+    aggregatedError && analyticsError
+      ? aggregatedError
+      : (datesError as Error | null)
+  const retryOverview = () => {
+    if (datesError) refetchDates()
+    refetchAggregated()
+    refetchAnalytics()
+  }
 
   // Get available dates sorted in descending order (filtered by program year)
   const availableDates = cachedDatesInProgramYear.sort((a, b) =>
@@ -719,10 +731,8 @@ const DistrictDetailPageInner: React.FC = () => {
             <ErrorDisplay
               error={overviewError}
               title="Failed to Load District Data"
-              onRetry={() => {
-                refetchAggregated()
-                refetchAnalytics()
-              }}
+              subject="district"
+              onRetry={retryOverview}
               showDetails={true}
             />
           )}
@@ -772,6 +782,8 @@ const DistrictDetailPageInner: React.FC = () => {
                 clubs={kpiStripData ? (analytics?.allClubs ?? null) : null}
                 interventionClubs={analytics?.interventionRequiredClubs ?? null}
                 trainingClubs={trainingClubs}
+                loadError={overviewError}
+                onRetry={retryOverview}
               />
             ) : (
               <DistrictKpiStrip kpis={kpiStripData} planGoals={planGoals} />

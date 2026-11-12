@@ -59,6 +59,7 @@ import {
 } from '../components/MyDistrictCard'
 import { WorldPulse } from '../components/WorldPulse'
 import { RedVoteBlock } from '../components/RedVoteBlock'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import { DistinguishedCount } from '../components/DistinguishedCount'
 
 // Columns in the rankings table head: District, Rank, Paid Clubs, Total
@@ -1109,20 +1110,14 @@ const DistrictsPage: React.FC = () => {
     // #826 — Same shared shell as loading + loaded states.
     return renderShell(
       <div className="districts-page__state-card">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h2 className="text-xl font-bold text-red-800 mb-2">
-            Error Loading Rankings
-          </h2>
-          <p className="text-red-600">
-            {(error as Error)?.message || 'Failed to load district rankings'}
-          </p>
-          <button
-            onClick={() => refetch()}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-sm hover:bg-red-700 transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
+        <ErrorDisplay
+          error={(error as Error) || 'Failed to load district rankings'}
+          title="Error Loading Rankings"
+          subject="district rankings"
+          onRetry={() => {
+            refetch()
+          }}
+        />
       </div>
     )
   }

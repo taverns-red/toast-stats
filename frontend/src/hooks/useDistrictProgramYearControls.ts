@@ -73,6 +73,10 @@ export interface DistrictProgramYearControls {
    * error). Lets a page tell "dates still loading" apart from "this district
    * has no dates" — both read `hasValidDates: false` (#1830). */
   isDatesPending: boolean
+  /** The date index failed to load (#2636): the dated queries stay disabled,
+   * so a page must show a failure with `refetchDates`, not "no data". */
+  datesError: Error | null
+  refetchDates: () => void
   /** The district's overall most-recent snapshot date (for the freshness pill). */
   latestSnapshotDate: SnapshotDate | undefined
   /** True when the effective end date is the district's newest snapshot — the
@@ -93,8 +97,12 @@ export function useDistrictProgramYearControls(
     requestedDate,
   } = useUrlProgramYear()
 
-  const { data: cachedDatesData, isPending: isDatesPending = false } =
-    useDistrictCachedDates(districtId || '')
+  const {
+    data: cachedDatesData,
+    isPending: isDatesPending = false,
+    error: datesError = null,
+    refetch: refetchDates,
+  } = useDistrictCachedDates(districtId || '')
   const allCachedDates = useMemo(
     () => cachedDatesData?.dates || EMPTY_DATES,
     [cachedDatesData?.dates]
@@ -207,6 +215,8 @@ export function useDistrictProgramYearControls(
     effectiveEndDate,
     hasValidDates,
     isDatesPending,
+    datesError,
+    refetchDates,
     latestSnapshotDate,
     isLatestSnapshot,
   }

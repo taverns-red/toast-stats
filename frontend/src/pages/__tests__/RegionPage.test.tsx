@@ -141,16 +141,17 @@ describe('RegionPage empty & error recovery affordances (#883)', () => {
     expect(await screen.findByTestId('regions-overview')).toBeInTheDocument()
   })
 
-  it('renders a card EmptyState with a recovery CTA when the rankings fetch fails', async () => {
+  it('renders the shared error panel with Try again and a way out when the rankings fetch fails (#2636)', async () => {
     mockedFetchCdnRankings.mockRejectedValueOnce(new Error('boom'))
     renderRegionWithRegionsRoute('2')
 
     const heading = await screen.findByText(/could not load region/i)
-    const card = heading.closest('.tm-card')!
+    const card = heading.closest('[role="alert"]')!
     expect(card).not.toBeNull()
-    const cta = within(card as HTMLElement).getByRole('button', {
-      name: /view all regions/i,
-    })
+    expect(
+      within(card as HTMLElement).getByRole('button', { name: /try again/i })
+    ).toBeVisible()
+    const cta = screen.getByRole('button', { name: /view all regions/i })
     fireEvent.click(cta)
     expect(await screen.findByTestId('regions-overview')).toBeInTheDocument()
   })

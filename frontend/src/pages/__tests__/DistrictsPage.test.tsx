@@ -241,7 +241,9 @@ describe('DistrictsPage - Error Handling', () => {
     expect(screen.getByText('Something went wrong')).toBeInTheDocument()
 
     // Check for "Try Again" button
-    expect(screen.getByText('Try Again')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /try again/i })
+    ).toBeInTheDocument()
 
     // Should NOT show the welcome message
     expect(

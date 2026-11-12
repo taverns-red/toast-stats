@@ -19,6 +19,7 @@ import {
 } from '../utils/actionListData'
 import { buildDistrictSectionUrl } from '../config/districtSections'
 import { DistrictHubTiles } from './DistrictHubTiles'
+import { ErrorDisplay } from './ErrorDisplay'
 import {
   HUB_BULLET_TILES,
   HUB_DASH as DASH,
@@ -102,6 +103,8 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
   trainingClubs,
   planGoals = null,
   planTargetsPanel = null,
+  loadError = null,
+  onRetry,
 }) => {
   const [openTile, setOpenTile] = useState<HubTileKey | 'net' | null>(null)
   const [planOpen, setPlanOpen] = useState(false)
@@ -155,6 +158,25 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
     openTile === 'net'
       ? { title: HUB_NET_TITLE, about: HUB_NET_ABOUT }
       : (HUB_BULLET_TILES.find(t => t.key === openTile) ?? null)
+
+  // A failed load replaces the dashes with one error state (#2636): without
+  // this the tiles sat on "—" for ever with no message and no way to retry.
+  if (loadError && loading) {
+    return (
+      <section
+        aria-label="Key district metrics"
+        className="district-hub"
+        data-testid="district-hub-mobile"
+      >
+        <ErrorDisplay
+          error={loadError}
+          subject="district overview"
+          title="Couldn't load this district"
+          {...(onRetry ? { onRetry } : {})}
+        />
+      </section>
+    )
+  }
 
   return (
     <section
