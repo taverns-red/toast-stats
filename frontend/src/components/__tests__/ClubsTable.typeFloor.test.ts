@@ -76,6 +76,23 @@ describe('Clubs table type floor (#2676)', () => {
     expect(css).toMatch(/--dt-header-font\s*:\s*14px/)
   })
 
+  // The sr-only words inside Health and Tier are absolutely positioned; if the
+  // cell wrapper is not their containing block they escape the table scroller
+  // and widen the page (#2432, caught by the no-horizontal-scroll smoke).
+  it.each(['.dt-health', '.dt-tier'])(
+    '%s contains its sr-only text (position: relative)',
+    sel => {
+      const css = stripComments(
+        readFileSync(resolve(src, 'styles/components/data-table.css'), 'utf8')
+      )
+      const m = new RegExp(
+        '(?:^|\\n)\\s*' + sel.replace('.', '\\.') + '\\s*\\{([^}]*)\\}'
+      ).exec(css)
+      expect(m, `${sel} rule`).not.toBeNull()
+      expect(m![1]).toMatch(/position\s*:\s*relative/)
+    }
+  )
+
   const tsxFiles = [
     'components/ColumnHeader.tsx',
     'components/clubsColumns.tsx',
