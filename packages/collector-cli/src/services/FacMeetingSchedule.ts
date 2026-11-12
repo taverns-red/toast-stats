@@ -277,7 +277,7 @@ function weekdaysIn(folded: string): MeetingWeekday[] {
 }
 
 const BIWEEKLY =
-  /\bevery\s+other\b|\bbi-?weekly\b|\bfortnightly\b|\balternat\w*|\bsur\s+deux\b|\baux?\s+(?:2|deux)\s+semaines?\b|\bevery\s+(?:2|two)\s+weeks\b/
+  /\bevery\s+other\b|\bevery\s+(?:second|2nd)\s+weeks?\b|\bbi-?weekly\b|\bfortnightly\b|\balternat\w*|\bsur\s+deux\b|\baux?\s+(?:2|deux)\s+semaines?\b|\bevery\s+(?:2|two)\s+weeks\b/
 /** "Every second Monday": every other week, or the 2nd Monday of each
  *  month? Canadian English says both, so alone it gives no cadence
  *  (#2617). "Every 2nd and 4th Tuesday" names two weeks: monthly. */
@@ -295,7 +295,9 @@ const ORDINAL_WORDS: [number, string][] = [
 ]
 /** "Last Thursday", "dernier jeudi": the schema cannot say "last week of
  *  the month" (1-5 only), and weekly would be wrong, so no cadence (#2617). */
-const LAST_WEEK = /\b(?:last|dernier|derniere)\b/
+const LAST_WEEK = new RegExp(
+  `\\b(?:last|dernier|derniere)\\s+(?:${Object.values(WEEKDAY_WORDS).join('|')})\\b|\\b(?:last|dernier|derniere)\\b.*\\b(?:of the month|du mois)\\b`
+)
 const MODE_WORDS: [MeetingMode, string][] = [
   ['hybrid', 'hybri\\w*'],
   ['in-person', 'in[\\s-]?person|en personne|presentiel\\w*'],
@@ -542,7 +544,7 @@ function inherited(
     partner.hour === 12 &&
     !partner.twentyFour &&
     !bare.twentyFour &&
-    bare.hour < 12
+    bare.hour <= 3
   ) {
     return 'pm'
   }
