@@ -390,6 +390,11 @@ const HHMM_RANGE_MERIDIEM =
 /** 12-hour only: "2026 pm" is a year, not 20:26. */
 const HHMM_MERIDIEM = /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
 const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
+/** A label before the first time that says it is an arrival, not the
+ *  start: "Doors open 6:45 pm, meeting 7:00 pm", "Zoom opens at 6:45"
+ *  (#2617). Treated like "6:45 for 7:00". */
+const ARRIVE_LABEL =
+  /(?:doors?\s+open\w*|\bopens?|\barriv\w*|log[\s-]?in|check[\s-]?in)\s*(?:at|:|@)?\s*$/
 /** "UTC-5", "GMT + 6", "-4DT": the number after is an offset, not a time.
  *  A dash after a word and a space ("Saturday- 7-9 pm") is not a sign. */
 const OFFSET_BEFORE = /(?:utc|gmt)\s*(?:[+\-−]\s*)?$|[+\-−]$/
@@ -621,7 +626,9 @@ function slotsFrom(found: readonly TimeToken[], text: string): Slot[] {
     // Only for a short lead: "6:00 pm for 2:00 hrs" is a duration.
     if (
       next &&
-      ARRIVE_FOR.test(between(start, next)) &&
+      (ARRIVE_FOR.test(between(start, next)) ||
+        (ARRIVE_LABEL.test(text.slice(0, start.start)) &&
+          !RANGE_SEPARATOR.test(between(start, next)))) &&
       arrivalLead(start, next)
     ) {
       // "7:15pm for a 7.30 start": B takes A's am/pm when it has none.
