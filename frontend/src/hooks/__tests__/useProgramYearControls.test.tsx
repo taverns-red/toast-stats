@@ -196,6 +196,17 @@ describe('useProgramYearControls (#1301)', () => {
       expect(result.current.effectiveDate).toBe('2025-03-01')
     })
 
+    it('a non-snapshot date before the PY first snapshot follows the nearest earlier one into the prior PY', async () => {
+      const { result } = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(['/?date=2026-07-10']),
+      })
+      await waitFor(() =>
+        expect(result.current.selectedProgramYear.year).toBe(2025)
+      )
+      expect(result.current.effectiveDate).toBe('2026-05-01')
+      expect(result.current.selectedDate).toBe('2026-05-01')
+    })
+
     it('picking a program year wins over the ?date= from the one it left', async () => {
       const { result } = renderHook(() => useProgramYearControls(), {
         wrapper: createWrapper(['/?py=2025&date=2025-08-01']),

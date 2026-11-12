@@ -104,6 +104,59 @@ describe('resolveRequestedDate (#2635)', () => {
     }
   })
 
+  describe('a non-snapshot date across a program-year boundary', () => {
+    // Jul 1 starts PY2026; nothing in PY2026 is earlier than these, so the
+    // nearest earlier snapshot is 2026-05-01 in PY2025, and the PY follows it.
+    it.each(['2026-07-10', '2026-07-01'])(
+      '%s (PY2026, before its first snapshot) resolves to the prior PY',
+      requested => {
+        const r = resolveRequestedDate({
+          requested,
+          dates,
+          programYear: py2026,
+        })
+        expect(r).toMatchObject({ status: 'fallback', date: '2026-05-01' })
+        expect(r.programYear.year).toBe(2025)
+      }
+    )
+
+    // Jun 29/30 belong to PY2025, which has data: take its nearest earlier
+    // snapshot even though PY2026 is the selected year.
+    it.each(['2026-06-30', '2026-06-29'])(
+      '%s (PY2025) resolves inside PY2025 when PY2026 is selected',
+      requested => {
+        const r = resolveRequestedDate({
+          requested,
+          dates,
+          programYear: py2026,
+        })
+        expect(r).toMatchObject({ status: 'fallback', date: '2026-05-01' })
+        expect(r.programYear.year).toBe(2025)
+      }
+    )
+
+    it('a date before every snapshot anywhere falls back to the selected PY latest', () => {
+      const r = resolveRequestedDate({
+        requested: '2020-01-01',
+        dates,
+        programYear: py2026,
+      })
+      expect(r).toMatchObject({ status: 'fallback', date: '2026-11-11' })
+      expect(r.programYear.year).toBe(2026)
+    })
+
+    it('a date in a PY with no data takes the nearest earlier snapshot overall', () => {
+      // 2028-01-01 is PY2027, which has no snapshots.
+      const r = resolveRequestedDate({
+        requested: '2028-01-01',
+        dates,
+        programYear: py2025,
+      })
+      expect(r).toMatchObject({ status: 'fallback', date: '2026-11-11' })
+      expect(r.programYear.year).toBe(2026)
+    })
+  })
+
   it('a PY with no snapshots resolves to a null date', () => {
     const r = resolveRequestedDate({
       requested: '2026-10-01',
