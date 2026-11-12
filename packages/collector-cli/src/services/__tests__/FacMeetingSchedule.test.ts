@@ -1494,6 +1494,24 @@ describe('parseMeetingSchedule (#2617) — an arrival lead before the time', () 
   })
 })
 
+describe('parseMeetingSchedule (#2617) — noon start, smaller hour end', () => {
+  it('"12:00 - 1:00" ends at 13:00', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Every Thursday except holidays',
+        meetingTime: '12:00 - 1:00',
+      })
+    ).toEqual([
+      {
+        day: 'Thursday',
+        cadence: 'weekly',
+        startTime: '12:00',
+        endTime: '13:00',
+      },
+    ])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
