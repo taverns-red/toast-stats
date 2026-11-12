@@ -67,11 +67,16 @@ describe('AppShell (#354)', () => {
   beforeEach(() => vi.mocked(useIsMobile).mockReturnValue(false))
 
   describe('top bar', () => {
-    it('renders the brand mark with "TS" text', () => {
+    it('renders the Red Taverns pennant as the brand mark (#2515)', () => {
       renderShell()
       const brand = screen.getByLabelText(/toast stats home/i)
       expect(brand).toBeInTheDocument()
-      expect(brand).toHaveTextContent('TS')
+      const pennant = within(brand).getByTestId('brand-pennant')
+      expect(pennant.tagName.toLowerCase()).toBe('svg')
+      expect(pennant).toHaveAttribute('aria-hidden', 'true')
+      // The old "TS" letter tile is gone; the site name text is unchanged.
+      expect(brand).not.toHaveTextContent(/^TS/)
+      expect(brand).toHaveTextContent('Toast Stats')
     })
 
     it('links the brand mark to the home route', () => {
