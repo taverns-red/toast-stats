@@ -1,0 +1,93 @@
+/* Structural loading shells (#2634, Lesson 158). Every shell uses ONE fill,
+   var(--surface-2), which remaps under [data-theme='dark'] with the other
+   neutrals. A shell either reuses the loaded block's own classes with its text
+   hidden (`shell-ghost`) or reserves a height measured on the loaded page
+   (`shell-block`), so what arrives later does not move what is on screen. */
+
+@layer brand {
+  .shell-ghost,
+  .shell-block {
+    background: var(--surface-2);
+    border-radius: var(--rds-radius-md);
+    animation: shell-pulse 1.5s ease-in-out infinite;
+    color: transparent;
+    border-color: transparent;
+  }
+
+  /* The block keeps its box; nothing in it is readable or focusable. */
+  .shell-ghost > * {
+    visibility: hidden;
+  }
+
+  .shell-ghost-text {
+    visibility: hidden;
+  }
+
+  .shell-block {
+    margin-bottom: 16px;
+  }
+
+  @keyframes shell-pulse {
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shell-ghost,
+    .shell-block {
+      animation: none;
+    }
+  }
+
+  /* DataControlsBar slot in a page header (hidden by the header on phones). */
+  .shell-block--controls {
+    width: 280px;
+    max-width: 100%;
+    height: 44px;
+    margin-bottom: 0;
+  }
+
+  /* Region page: recognition scoreboard and district table, as measured on
+     /region/04 loaded at 375 / 768 / 1280. */
+  .shell-block--recognition {
+    min-height: 817px;
+  }
+
+  .shell-block--table {
+    min-height: 797px;
+  }
+
+  /* Regions index: the finder chips and the 14-row leaderboard. */
+  .shell-block--finder {
+    min-height: 168px;
+  }
+
+  .shell-block--regions-table {
+    min-height: 1100px;
+  }
+
+  @media (min-width: 768px) {
+    .shell-block--recognition {
+      min-height: 391px;
+    }
+
+    .shell-block--table {
+      min-height: 520px;
+    }
+
+    .shell-block--finder {
+      min-height: 60px;
+    }
+
+    .shell-block--regions-table {
+      min-height: 1000px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .shell-block--recognition {
+      min-height: 227px;
+    }
+  }
+}

@@ -26,6 +26,8 @@ import type { DistrictRecognitionTier } from '@taverns-red/analytics-core'
 export interface RegionPace {
   reference: { referenceDate: string; referenceProgramYear: string } | null
   medians: Partial<Record<DistrictRecognitionTier, PaceMedian | null>> | null
+  /** The reads that decide the pace line are still in flight (#2634). */
+  isPending: boolean
 }
 
 export function useRegionPace(
@@ -33,7 +35,7 @@ export function useRegionPace(
   snapshotDate: string | undefined
 ): RegionPace {
   const referenceProgramYear = PACE_REFERENCE_YEARS[programYear] ?? null
-  const { data: index } = useQuery({
+  const { data: index, isPending: indexPending } = useQuery({
     queryKey: ['available-dates'],
     queryFn: fetchCdnDates,
     staleTime: 5 * 60 * 1000,
@@ -52,28 +54,33 @@ export function useRegionPace(
     : null
   const enabled = referenceDate !== null && yearEndDate !== null
 
-  const { data: rankings } = useQuery({
+  const { data: rankings, isPending: rankingsPending } = useQuery({
     queryKey: ['district-rankings-exact', referenceDate],
     queryFn: () => fetchCdnRankingsForDateExact(referenceDate!),
     enabled,
     staleTime: 60 * 60 * 1000,
   })
-  const { data: awards } = useQuery({
+  const { data: awards, isPending: awardsPending } = useQuery({
     queryKey: ['competitive-awards', yearEndDate],
     queryFn: () => fetchCdnCompetitiveAwards(yearEndDate!),
     enabled,
     staleTime: 60 * 60 * 1000,
   })
 
+  // A disabled query stays "pending" forever, so only an enabled read counts.
+  const isPending =
+    indexPending || (enabled && (rankingsPending || awardsPending))
+
   return useMemo<RegionPace>(() => {
     if (!enabled || !rankings || !awards?.distinguishedDistrict) {
-      return { reference: null, medians: null }
+      return { reference: null, medians: null, isPending }
     }
     return {
       reference: {
         referenceDate: referenceDate!,
         referenceProgramYear: referenceProgramYear!,
       },
+      isPending,
       medians: paceMedians(
         rankings.rankings.map(r => ({
           districtId: r.districtId,
@@ -94,5 +101,6 @@ export function useRegionPace(
     referenceDate,
     referenceProgramYear,
     programYear,
+    isPending,
   ])
 }

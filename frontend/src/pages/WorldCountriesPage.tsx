@@ -29,7 +29,9 @@ import '../components/worldmap/worldmap.css'
    both surfaces agree. Clubs Find-A-Club could not match to a country are
    stated up front, never folded into a country. */
 
-const PHONE = '(max-width: 767px)'
+/* Stacked layout (map above list): the list is capped at the top ten plus a
+   sheet button, so it is a short, known box while loading (#2634). */
+const PHONE = '(max-width: 1023px)'
 const PHONE_TOP = 10
 const PCT = (n: number, whole: number) =>
   whole > 0 ? Math.round((n / whole) * 1000) / 10 : 0
@@ -131,6 +133,21 @@ const WorldCountriesPage: React.FC = () => {
         </p>
       )}
 
+      {!view && !unavailable && (
+        // The summary's box before its numbers arrive (#2634): same sentence,
+        // placeholder figures, hidden.
+        <p
+          className="long-text-lede shell-ghost-text"
+          aria-hidden="true"
+          data-testid="wm-summary-pending"
+        >
+          Clubs in <strong>000 countries</strong> at the 0000-00-00 snapshot.
+          00,000 clubs (0.0%) were not matched to a country by Find-A-Club, so
+          they aren’t on the map; they’re the <strong>Unknown</strong> row of
+          the table.
+        </p>
+      )}
+
       {unavailable && (
         <div className="wm-unavailable" role="status">
           Clubs by country isn’t available for the latest snapshot right now.
@@ -162,6 +179,13 @@ const WorldCountriesPage: React.FC = () => {
           </div>
 
           <div className="wm-layout__list">
+            {!view && (
+              <div
+                className="shell-block wm-list-skeleton"
+                data-testid="wm-list-skeleton"
+                aria-hidden="true"
+              />
+            )}
             {view && (
               <>
                 <div

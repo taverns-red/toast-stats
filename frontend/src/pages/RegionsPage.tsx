@@ -5,7 +5,7 @@ import { fetchCdnRankings, fetchCdnRankingsForDate } from '../services/cdn'
 import { aggregateRegions } from '../utils/aggregateRegions'
 import { RegionsLeaderboard } from '../components/RegionsLeaderboard'
 import { RegionFinder } from '../components/RegionFinder'
-import { LoadingSkeleton } from '../components/LoadingSkeleton'
+import { RegionsPageLoadingShell } from '../components/RegionLoadingShells'
 import { EmptyState } from '../components/ErrorDisplay'
 import { useUrlState } from '../hooks/useUrlState'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
@@ -148,7 +148,7 @@ const RegionsPage: React.FC = () => {
   // region rollups (~9 KB, #2330) are waited for the same way, so the world
   // training line above the table never pushes it down.
   if (isLoading || ((trendsPending || rollupsLoading) && !error))
-    return <LoadingSkeleton variant="card" />
+    return <RegionsPageLoadingShell />
   if (error || !data) {
     return (
       <EmptyState

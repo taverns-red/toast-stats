@@ -16,7 +16,6 @@ import { useClubHistory } from '../hooks/useClubHistory'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { ContextBar } from '../components/ContextBar'
 import { ClubHistoryTable } from '../components/ClubHistoryTable'
-import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState, ErrorDisplay } from '../components/ErrorDisplay'
 import { exportClubHistory } from '../utils/csvExport'
 import { sameDistrict, summarizeClubHistoryGaps } from '../utils/clubHistory'
@@ -108,7 +107,14 @@ export default function ClubHistoryPage() {
 
       <header className="club-history-page__header">
         <div>
-          <h1 className="club-history-page__title">{heading} — History</h1>
+          <h1
+            className={
+              'club-history-page__title' +
+              (isLoading ? ' club-history-page__title--pending' : '')
+            }
+          >
+            {heading} — History
+          </h1>
           <p className="club-history-page__sub">
             Multi-year performance by program year. Each row is the club&rsquo;s
             settled value at the close of that program year; the year in
@@ -124,10 +130,29 @@ export default function ClubHistoryPage() {
             Export CSV
           </button>
         )}
+        {isLoading && (
+          // The export button's box before the rows arrive (#2634): at tablet
+          // widths it sits on its own line and added ~60px under the title.
+          <button
+            type="button"
+            className="club-history-page__export shell-ghost-text"
+            aria-hidden="true"
+            tabIndex={-1}
+            disabled
+          >
+            Export CSV
+          </button>
+        )}
       </header>
 
       {isLoading ? (
-        <LoadingSkeleton />
+        // The table's box (#2634): the loaded table is ~620px (table and gap note) for a club with
+        // a full history, so the back link and the footer do not jump.
+        <div
+          className="shell-block club-history-page__table-skeleton"
+          role="status"
+          aria-label="Loading history"
+        />
       ) : isError ? (
         <ErrorDisplay error="Could not load this club's history. Please try again." />
       ) : rows.length === 0 ? (

@@ -8,7 +8,7 @@ import React from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnRankings, fetchCdnRankingsForDate } from '../services/cdn'
-import { LoadingSkeleton } from '../components/LoadingSkeleton'
+import { RegionPageLoadingShell } from '../components/RegionLoadingShells'
 import { EmptyState } from '../components/ErrorDisplay'
 import type { DistrictRanking } from '../types/districts'
 import { computeTiedRanks } from '../utils/tieRankingUtils'
@@ -388,13 +388,15 @@ const RegionPage: React.FC = () => {
   // competitive-awards file is stored under the snapshot date; during
   // month-end reconciliation the sourceCsvDate advances past it, so keying on
   // the as-of date 404s and blanks the countdown/tier columns (#1315).
-  const { data: awards } = useCompetitiveAwards(effectiveDate)
+  const { data: awards, isPending: awardsPending } =
+    useCompetitiveAwards(effectiveDate)
 
   // Membership is the SELECTED PY's own (#1821): the district → region
   // history for the year the controls name (R3), not whatever region the
   // rankings row carries. The row's region is the fallback when the history
   // is absent or has no entry for that district and year.
-  const { history: regionHistory } = useDistrictRegionHistory()
+  const { history: regionHistory, isPending: historyPending } =
+    useDistrictRegionHistory()
   const regionOf = React.useMemo(
     () => regionMembershipFor(regionHistory, selectedProgramYear.label),
     [regionHistory, selectedProgramYear.label]
@@ -490,8 +492,15 @@ const RegionPage: React.FC = () => {
     }
   })()
 
-  if (isLoading) {
-    return <LoadingSkeleton variant="card" />
+  // One transition from the structural shell to the page (#2634): the
+  // membership (region history), the awards and the pace decide the KPI
+  // strip, the recognition cards and the rows, so the page is not drawn
+  // until they have answered (a missing file answers too).
+  if (
+    isLoading ||
+    (!error && (awardsPending || historyPending || pace.isPending))
+  ) {
+    return <RegionPageLoadingShell region={region} />
   }
 
   if (error || !data) {

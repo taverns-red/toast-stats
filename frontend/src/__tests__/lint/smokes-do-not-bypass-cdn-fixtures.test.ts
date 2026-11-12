@@ -60,6 +60,8 @@ const MAY_FETCH: Record<string, string> = {
   'consent-banner.smoke.ts': 'rewrites the prod origin onto BASE_URL (#2584)',
   'priority-columns.smoke.ts':
     'relays cdn.taverns.red (prod) when run on a local build',
+  'loading-shells-cls.smoke.ts':
+    'relays cdn.taverns.red (prod) only when run on a local build (#2634)',
 }
 const MAY_REQUEST: Record<string, string> = {}
 const MAY_NEW_CONTEXT: Record<string, string> = {

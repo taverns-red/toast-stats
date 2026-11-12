@@ -372,3 +372,16 @@
     padding: 0 var(--rt-space-2);
   }
 }
+
+/* The list's box before the table arrives (#2634): the top ten plus Unknown
+   below 1024 (the stacked layout caps the table there), the table's own
+   scroll height beside the map from 1024. */
+.wm-list-skeleton {
+  min-height: 540px;
+}
+
+@media (min-width: 1024px) {
+  .wm-list-skeleton {
+    min-height: 586px;
+  }
+}
