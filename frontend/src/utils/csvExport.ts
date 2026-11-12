@@ -12,7 +12,7 @@ import { councilStandingCsvRows, type CouncilRow } from './councilStanding'
 import type { RankingsDiff } from './rankingsDiff'
 
 /** Characters that make a spreadsheet read a cell as a formula (OWASP). */
-const FORMULA_LEADERS = /^[=+\-@\t\r]/
+const FORMULA_LEADERS = /^[=+\-@\t\r\n]/
 
 /**
  * A plain decimal number, optionally negative (`-3`, `-0.5`, `12`). Numeric
@@ -37,7 +37,11 @@ export const encodeCsvCell = (cell: string | number | null | undefined) => {
   ) {
     cellStr = `'${cellStr}`
   }
-  if (/[,"\r\n]/.test(cellStr)) {
+  // `;` is the field separator in European-locale Excel, so an unquoted
+  // `Foo;=HYPERLINK(...)` would split into a new cell starting with `=`.
+  // A leading space is deliberately NOT neutralised: spreadsheets do not
+  // evaluate a cell whose first character is a space.
+  if (/[,"\r\n;]/.test(cellStr)) {
     return `"${cellStr.replace(/"/g, '""')}"`
   }
   return cellStr
