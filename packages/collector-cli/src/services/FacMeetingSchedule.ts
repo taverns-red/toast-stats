@@ -270,7 +270,11 @@ function weekdaysIn(folded: string): MeetingWeekday[] {
 }
 
 const BIWEEKLY =
-  /\bevery\s+(?:other|second|2nd)\b|\bbi-?weekly\b|\bfortnightly\b|\balternat\w*|\bsur\s+deux\b|\baux?\s+(?:2|deux)\s+semaines?\b|\bevery\s+(?:2|two)\s+weeks\b/
+  /\bevery\s+other\b|\bbi-?weekly\b|\bfortnightly\b|\balternat\w*|\bsur\s+deux\b|\baux?\s+(?:2|deux)\s+semaines?\b|\bevery\s+(?:2|two)\s+weeks\b/
+/** "Every second Monday": every other week, or the 2nd Monday of each
+ *  month? Canadian English says both, so alone it gives no cadence
+ *  (#2617). "Every 2nd and 4th Tuesday" names two weeks: monthly. */
+const EVERY_SECOND = /\bevery\s+(?:second|2nd)\b/
 /** The day is named but how often is not. */
 const UNCERTAIN_CADENCE =
   /\btwice\b|\bmost\b|\bcheck\b|\brefer\b|\bcontact\b|\bvar(?:y|ies)\b|\boccasional\w*/
@@ -872,8 +876,10 @@ export function parseMeetingSchedule(
   const { groups, loose } = weekGroupsIn(dayText)
   let cadence: Cadence | undefined
   if (BIWEEKLY.test(dayText)) cadence = 'biweekly'
-  else if (groups.length > 0) cadence = 'monthly'
-  else if (!UNCERTAIN_CADENCE.test(dayText)) cadence = 'weekly'
+  else if (groups.length > 0) {
+    const weeks = new Set(groups.flatMap(g => g.weeks))
+    if (!EVERY_SECOND.test(dayText) || weeks.size > 1) cadence = 'monthly'
+  } else if (!UNCERTAIN_CADENCE.test(dayText)) cadence = 'weekly'
 
   const timeText =
     typeof source.meetingTime === 'string' ? fold(source.meetingTime) : ''

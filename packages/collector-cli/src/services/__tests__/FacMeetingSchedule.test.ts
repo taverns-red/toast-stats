@@ -479,7 +479,6 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
       [
         {
           day: 'Monday',
-          cadence: 'biweekly',
           startTime: '12:00',
           endTime: '12:40',
         },
