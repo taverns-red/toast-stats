@@ -280,12 +280,15 @@ const UNCERTAIN_CADENCE =
   /\btwice\b|\bmost\b|\bcheck\b|\brefer\b|\bcontact\b|\bvar(?:y|ies)\b|\boccasional\w*/
 
 const ORDINAL_WORDS: [number, string][] = [
-  [1, '1st|first|1er|1re|1ere|1ro|1o|primero?'],
-  [2, '2nd|second|2e|2eme|2do|2o|segundo'],
-  [3, '3rd|third|3e|3eme|3ro|3o|3er|tercero?'],
-  [4, '4th|fourth|4e|4eme|4to|4o|cuarto'],
-  [5, '5th|fifth|5e|5eme|5to|5o|quinto'],
+  [1, '1st|first|1er|1re|1ere|1ro|1o|primero?|premier|premiere'],
+  [2, '2nd|second|2e|2eme|2do|2o|segundo|deuxieme'],
+  [3, '3rd|third|3e|3eme|3ro|3o|3er|tercero?|troisieme'],
+  [4, '4th|fourth|4e|4eme|4to|4o|cuarto|quatrieme'],
+  [5, '5th|fifth|5e|5eme|5to|5o|quinto|cinquieme'],
 ]
+/** "Last Thursday", "dernier jeudi": the schema cannot say "last week of
+ *  the month" (1-5 only), and weekly would be wrong, so no cadence (#2617). */
+const LAST_WEEK = /\b(?:last|dernier|derniere)\b/
 const MODE_WORDS: [MeetingMode, string][] = [
   ['hybrid', 'hybri\\w*'],
   ['in-person', 'in[\\s-]?person|en personne|presentiel\\w*'],
@@ -875,7 +878,8 @@ export function parseMeetingSchedule(
 
   const { groups, loose } = weekGroupsIn(dayText)
   let cadence: Cadence | undefined
-  if (BIWEEKLY.test(dayText)) cadence = 'biweekly'
+  if (LAST_WEEK.test(dayText)) cadence = undefined
+  else if (BIWEEKLY.test(dayText)) cadence = 'biweekly'
   else if (groups.length > 0) {
     const weeks = new Set(groups.flatMap(g => g.weeks))
     if (!EVERY_SECOND.test(dayText) || weeks.size > 1) cadence = 'monthly'
