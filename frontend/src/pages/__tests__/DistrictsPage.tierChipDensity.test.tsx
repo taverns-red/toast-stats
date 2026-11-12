@@ -12,6 +12,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import DistrictsPage from '../DistrictsPage'
+import '../../__tests__/preloadRankingsTable'
 import { fetchCdnRankings, fetchCdnCompetitiveAwards } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
 

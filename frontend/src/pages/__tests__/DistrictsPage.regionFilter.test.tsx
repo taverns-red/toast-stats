@@ -27,6 +27,7 @@ import { screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { useLocation } from 'react-router-dom'
 import DistrictsPage from '../DistrictsPage'
+import '../../__tests__/preloadRankingsTable'
 import { fetchCdnRankings, fetchCdnCompetitiveAwards } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
 
