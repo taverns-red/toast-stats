@@ -47,7 +47,7 @@
   }
 
   .tm-btn-primary:focus-visible {
-    outline: 2px solid var(--tm-white);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 
@@ -108,7 +108,7 @@
   }
 
   .tm-button-primary:focus-visible {
-    outline: 2px solid var(--tm-white);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 

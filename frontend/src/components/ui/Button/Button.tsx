@@ -56,7 +56,7 @@ const Button: React.FC<ButtonProps> = ({
     primary: `
       bg-tm-loyal-blue text-white
       hover:bg-opacity-90 active:bg-opacity-80
-      focus-visible:outline-white
+      focus-visible:outline-[var(--focus-ring)]
       disabled:hover:bg-opacity-100
     `,
     secondary: `

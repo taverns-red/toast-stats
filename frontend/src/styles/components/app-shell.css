@@ -2323,7 +2323,7 @@
   }
 
   .club-minimap__link:focus-visible {
-    outline: 2px solid var(--loyal-600);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 
@@ -3502,7 +3502,7 @@
   }
 
   .club-trend__plot:focus-visible {
-    outline: 2px solid var(--loyal-600);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 
@@ -5971,7 +5971,7 @@
   }
 
   .clubs-card:focus-visible {
-    outline: 2px solid var(--loyal-600);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 
@@ -6000,7 +6000,7 @@
 
   .clubs-name-link:focus-visible,
   .division-heading-link:focus-visible {
-    outline: 2px solid var(--loyal-600);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
     border-radius: 2px;
   }
