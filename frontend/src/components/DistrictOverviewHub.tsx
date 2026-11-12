@@ -73,6 +73,11 @@ export interface DistrictOverviewHubProps {
   /** The Success Plan targets form (inline variant), opened in a sheet from
    *  a button in the Action List row (#2297). Absent → no button. */
   planTargetsPanel?: React.ReactNode
+  /** The load failed (#2636): shown as an alert with Try again in place of
+   *  the dashes. Null/absent while loading or loaded. */
+  loadError?: Error | string | null
+  /** Retry for `loadError`. */
+  onRetry?: () => void
 }
 
 const TILE_GOAL = Object.fromEntries(

@@ -180,6 +180,24 @@ describe('ErrorDisplay', () => {
     fireEvent.click(retryButton)
     expect(onRetry).toHaveBeenCalledTimes(1)
   })
+
+  // #2636 — one error state: plain copy naming what failed, the shared panel
+  // surface (not grey/red Tailwind), a "Try again" button.
+  it('card variant: names the subject, uses the panel surface, offers Try again', () => {
+    const { container } = render(
+      <ErrorDisplay
+        error={new Error('Failed to fetch')}
+        subject="division"
+        onRetry={vi.fn()}
+      />
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "We couldn't load this division. Check your connection and try again."
+    )
+    expect(container.querySelector('.redesign-panel')).toBeInTheDocument()
+    expect(container.querySelector('.tm-card')).toBeNull()
+    expect(screen.getByRole('button', { name: /try again/i })).toBeVisible()
+  })
 })
 
 describe('EmptyState', () => {

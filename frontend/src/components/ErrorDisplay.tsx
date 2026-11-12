@@ -4,6 +4,8 @@ interface ErrorDisplayProps {
   error: Error | string | null
   onRetry?: () => void
   title?: string
+  /** What failed to load, in plain words ("division"): used in the copy. */
+  subject?: string
   showDetails?: boolean
   variant?: 'inline' | 'card' | 'full'
   className?: string

@@ -716,6 +716,30 @@ describe('DistrictClubsPage loading vs empty state (#1999)', () => {
     expect(screen.queryByText(/no club data is available/i)).toBeNull()
   })
 
+  // #2636 — a failed date-index fetch used to fall through to "No Clubs
+  // Found… no data has been cached yet", blaming the data for a network error.
+  it('shows a retryable error, not the empty state, when the dates query fails', async () => {
+    const refetchDates = vi.fn()
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: undefined,
+      isPending: false,
+      isLoading: false,
+      isError: true,
+      error: new Error('Failed to fetch'),
+      refetch: refetchDates,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    vi.mocked(useDistrictAnalytics).mockReturnValue(disabledAnalytics)
+
+    renderAt('/district/61/clubs')
+
+    const retry = await screen.findByRole('button', { name: /try again/i })
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.queryByText(/no clubs found/i)).toBeNull()
+    expect(screen.queryByText(/cached/i)).toBeNull()
+    fireEvent.click(retry)
+    expect(refetchDates).toHaveBeenCalledTimes(1)
+  })
+
   it('shows the loading skeleton while dates are known but analytics has no data yet', async () => {
     vi.mocked(useDistrictAnalytics).mockReturnValue(disabledAnalytics)
 
