@@ -195,53 +195,13 @@ describe('Clubs-table column-model contrast (#672)', () => {
     }
   })
 
-  // ── Tier pills: white text on a solid fill, both themes ──────────────────
-  // Distinguished pins to the light-mode green in dark (the dark --green-600
-  // #22c55e fails white text — lesson 095); the others carry no dark remap.
-  const TIER_PILLS = [
-    '.clubs-tier-pill--smedley',
-    '.clubs-tier-pill--presidents',
-    '.clubs-tier-pill--select',
-    '.clubs-tier-pill--distinguished',
-  ] as const
+  // Tier pills were removed from the desktop table (#2676): tier is plain text
+  // and the Health markers are audited in DataTableMarkerContrast.test.ts.
 
-  it('tier pills carry white text', () => {
-    expect(ruleProp(appShellCss, '.clubs-tier-pill', 'color')).toBe('#fff')
-  })
-
-  it.each(TIER_PILLS)(
-    '%s: white text clears AA on its fill both themes',
-    sel => {
-      for (const theme of ['light', 'dark'] as const) {
-        const bg = bgFor(sel, theme)
-        const ratio = calculateContrastRatio('#ffffff', bg)
-        expect(
-          ratio,
-          `${sel} #ffffff on ${bg} (${theme}) = ${ratio.toFixed(2)}:1`
-        ).toBeGreaterThanOrEqual(AA)
-      }
-    }
-  )
-
-  // Projected/provisional: dark text on a yellow stripe. Yellow tokens have no
-  // dark remap, so worst case is the darker stripe band (--yellow-600) in
-  // either theme.
-  it('projected tier pill: dark text clears AA on the darker stripe band', () => {
-    const fg = resolveVar(
-      ruleProp(appShellCss, '.clubs-tier-pill--projected', 'color'),
-      'light'
-    )
-    const darkerBand = resolveVar('var(--yellow-600)', 'light')
-    const ratio = calculateContrastRatio(fg, darkerBand)
-    expect(
-      ratio,
-      `projected ${fg} on --yellow-600 ${darkerBand} = ${ratio.toFixed(2)}:1`
-    ).toBeGreaterThanOrEqual(AA)
-  })
-
-  // ── Status (health) pills: soft tint + saturated text, theme-invariant ───
-  // Literal hex pairs (matching the mobile ClubCard so the datum reads
-  // identically). No dark override by design, so the pair is self-contained.
+  // ── Status (health) pills: phone StatusChip only, theme-invariant ────────
+  // Soft tint + saturated text as literal hex pairs (the desktop table no
+  // longer uses them, #2676). No dark override by design, so the pair is
+  // self-contained.
   const STATUS_PILLS = [
     '.clubs-status-pill--thriving',
     '.clubs-status-pill--vulnerable',

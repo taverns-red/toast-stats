@@ -121,20 +121,18 @@ describe('ClubsTable axe scan (#672)', () => {
     expect(await axe(container)).toHaveNoViolations()
   })
 
-  // WCAG 1.4.1 (Use of Color): status + tier are conveyed by a TEXT label, not
-  // colour alone. Assert every status/tier pill carries non-empty text — the
-  // CSS comments claim it, this proves it so a future "icon-only pill" refactor
-  // can't silently make status colour-only.
-  it('status and tier pills carry a text label (not colour alone)', () => {
+  // WCAG 1.4.1 (Use of Color): health + tier are conveyed by a TEXT label, not
+  // colour or a marker alone. Assert every health and tier cell carries
+  // non-empty text — this proves it so a future "marker-only" refactor can't
+  // silently make status colour- or shape-only.
+  it('health and tier cells carry a text label (not colour alone)', () => {
     const { container } = render(
       <ClubsTable clubs={CLUBS} districtId="61" isLoading={false} />
     )
-    const pills = container.querySelectorAll(
-      '[class*="clubs-status-pill--"], [class*="clubs-tier-pill--"]'
-    )
-    expect(pills.length).toBeGreaterThan(0)
-    pills.forEach(pill => {
-      expect(pill.textContent?.trim().length ?? 0).toBeGreaterThan(0)
+    const cells = container.querySelectorAll('.dt-health, .dt-tier')
+    expect(cells.length).toBeGreaterThan(0)
+    cells.forEach(cell => {
+      expect(cell.textContent?.trim().length ?? 0).toBeGreaterThan(0)
     })
   })
 

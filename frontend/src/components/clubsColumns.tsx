@@ -26,37 +26,16 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import { clubsColumnHelper as colHelper } from './clubsTableFeatures'
 import type { ClubsTableMeta } from './clubsTableFeatures'
-import type { ClubTrend, ClubHealthStatus } from '../hooks/useDistrictAnalytics'
+import type { ClubHealthStatus } from '../hooks/useDistrictAnalytics'
 import { isProvisionallyDistinguished } from '../utils/provisionalDistinguished'
 import { coachFilterValue, coachSortRank } from '../utils/clubCoach'
 import { ClubStatusCell } from './ClubStatusCell'
 import { ClubTrendSparkline, formatSignedNet } from './ClubTrendSparkline'
-import {
-  getClubHealthStatusLabel,
-  getClubHealthStatusPillModifier,
-} from '../utils/clubHealthStatus'
+import { HealthStatusCell } from './dataTable/cells/HealthStatusCell'
+import { TierCell } from './dataTable/cells/TierCell'
 
-// DCP tier pill maps (#669): confirmed tiers carry their HANDOFF §256 color; a
-// provisional tier shows the striped-yellow "projected" stripe; NotDistinguished
-// has no pill (a muted em-dash). Module-scope constants — no per-render realloc.
-type ConfirmedTier = Exclude<
-  ClubTrend['distinguishedLevel'],
-  'NotDistinguished'
->
-
-const TIER_DISPLAY: Record<ConfirmedTier, string> = {
-  Distinguished: 'Distinguished',
-  Select: 'Select',
-  President: "President's",
-  Smedley: 'Smedley',
-}
-
-const TIER_MODIFIER: Record<ConfirmedTier, string> = {
-  Distinguished: 'clubs-tier-pill--distinguished',
-  Select: 'clubs-tier-pill--select',
-  President: 'clubs-tier-pill--presidents',
-  Smedley: 'clubs-tier-pill--smedley',
-}
+// Health and Tier render through the shared dataTable cells (#2676): a shape
+// marker plus text, and plain-text tier. No pills, fills or row tints.
 
 const STATUS_RANK: Record<ClubHealthStatus, number> = {
   'intervention-required': 0,
@@ -201,18 +180,9 @@ export const clubsColumns = colHelper.columns([
   }),
   colHelper.accessor(c => STATUS_RANK[c.currentStatus], {
     id: 'status',
-    header: 'Status',
+    header: 'Health',
     sortFn: 'basic',
-    cell: info => {
-      const status = info.row.original.currentStatus
-      return (
-        <span
-          className={`clubs-status-pill ${getClubHealthStatusPillModifier(status)}`}
-        >
-          {getClubHealthStatusLabel(status)}
-        </span>
-      )
-    },
+    cell: info => <HealthStatusCell status={info.row.original.currentStatus} />,
   }),
   colHelper.accessor(c => c.latestMembership, {
     id: 'membership',
@@ -322,25 +292,11 @@ export const clubsColumns = colHelper.columns([
     sortFn: 'basic',
     cell: info => {
       const club = info.row.original
-      if (club.distinguishedLevel === 'NotDistinguished') {
-        return <span className="text-sm clubs-cell-muted">—</span>
-      }
-      const provisional = isProvisionallyDistinguished(club)
-      const modifier = provisional
-        ? 'clubs-tier-pill--projected'
-        : TIER_MODIFIER[club.distinguishedLevel]
       return (
-        <span
-          className={`clubs-tier-pill ${modifier}`}
-          title={
-            provisional
-              ? 'Provisional — membership not yet confirmed by April renewals'
-              : 'Confirmed — April renewals recorded'
-          }
-        >
-          {TIER_DISPLAY[club.distinguishedLevel]}
-          {provisional ? '*' : ''}
-        </span>
+        <TierCell
+          level={club.distinguishedLevel}
+          provisional={isProvisionallyDistinguished(club)}
+        />
       )
     },
   }),
