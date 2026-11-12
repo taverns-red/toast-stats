@@ -1,6 +1,7 @@
 ---
 date: 2026-11-12
 tier: lesson
+category: lesson
 summary: A `ch` measure is font-dependent, so a font swap that races content paint rewraps text; reproduce a swap-timing CLS flake by holding the fonts past the content, in the Linux Playwright image
 tags: [cls, fonts, flaky-tests, css, playwright, debugging]
 ---
@@ -39,7 +40,11 @@ fonts finish within ~100ms of each other and the order flips run to run.
 ## The rule
 
 - A width that must not move with the font is stated in `em` (tracks font-size
-  only), not `ch`. `70ch` of Source Sans 3 is `30.625em` (70 x 0.4375).
+  only), not `ch`. `70ch` of Source Sans 3 is `34.79em` (70 x 0.497, the
+  font's "0"). The first fix used 0.4375em, a figure back-computed from a
+  14px note as if it were 16px; it narrowed every note by ~58px. Take the
+  glyph width from the font (or measure `100ch` in the loaded state), then
+  read the element's own font-size before dividing.
 - To reproduce a "passes on retry" CLS flake, force the losing order instead of
   repeating the race: hold the fonts (or the data) until the other side has
   painted.
