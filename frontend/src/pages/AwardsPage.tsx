@@ -1,4 +1,5 @@
 import React from 'react'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { Link } from 'react-router-dom'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
@@ -55,6 +56,7 @@ const AWARDS: ReadonlyArray<AwardSpec> = [
 ]
 
 const AwardsPage: React.FC = () => {
+  useDocumentTitle('District awards')
   // PY selector state (#1301) — the page owns program year/date (R3) and
   // fetches the awards snapshot for the SELECTED program year, so switching
   // the year re-queries (was hardcoded "latest").

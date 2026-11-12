@@ -4,6 +4,7 @@
    then the full club roster on a forced second page. A real routed leaf
    inside the app shell; print CSS hides the shell. */
 
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { useCouncilPack } from '../hooks/useCouncilPack'
@@ -15,6 +16,9 @@ const DivisionPrintPage: React.FC = () => {
     divId: string
   }>()
   const { search } = useLocation()
+  useDocumentTitle(
+    `Division ${divId?.toUpperCase()} print pack — District ${districtId}`
+  )
   const data = useCouncilPack(districtId, { division: divId ?? '' })
   if (data.isNotFound) {
     throw new Response(null, { status: 404, statusText: 'Division not found' })

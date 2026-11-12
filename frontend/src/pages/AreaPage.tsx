@@ -6,6 +6,7 @@
    the #974/#976 per-area progress prose) — one source of truth (R6/R8, #1016).
    Then lists every club in that area. */
 
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
@@ -41,6 +42,9 @@ const AreaPage: React.FC = () => {
     areaId: string
   }>()
   const navigate = useNavigate()
+  useDocumentTitle(
+    `Area ${areaId} — Division ${divId?.toUpperCase()} — District ${districtId}`
+  )
   const { search } = useLocation()
   const isMobile = useIsMobile()
 

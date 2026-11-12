@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useRegionRollups } from '../hooks/useRegionRollups'
@@ -60,6 +61,7 @@ const parseField = (
 const RegionTrainingPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
   const region = normaliseRegionId(n)
+  useDocumentTitle(`Region ${region} officer training`)
   const controls = useProgramYearControls()
   const [searchParams, setSearchParams] = useSearchParams()
   const threshold = parseTrainingThreshold(searchParams.get('threshold'))

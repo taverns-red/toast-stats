@@ -1,4 +1,5 @@
 import React from 'react'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { Link } from 'react-router-dom'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
@@ -76,6 +77,7 @@ const KpiSkeleton: React.FC = () => (
 )
 
 const ClubsWorldPage: React.FC = () => {
+  useDocumentTitle('Clubs worldwide')
   const {
     selectedProgramYear,
     setSelectedProgramYear,

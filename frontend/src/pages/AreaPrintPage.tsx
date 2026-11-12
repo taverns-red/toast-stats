@@ -4,6 +4,7 @@
    leaf inside the app shell (no tabs, no ?print=1 toggle): print.css and
    council-pack.css hide the shell when printing. */
 
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { useCouncilPack } from '../hooks/useCouncilPack'
@@ -16,6 +17,9 @@ const AreaPrintPage: React.FC = () => {
     areaId: string
   }>()
   const { search } = useLocation()
+  useDocumentTitle(
+    `Area ${areaId} print pack — Division ${divId?.toUpperCase()} — District ${districtId}`
+  )
   const data = useCouncilPack(districtId, {
     division: divId ?? '',
     area: areaId ?? '',

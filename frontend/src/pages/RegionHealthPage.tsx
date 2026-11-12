@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useParams } from 'react-router-dom'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useRegionRollups } from '../hooks/useRegionRollups'
@@ -31,6 +32,7 @@ const RegionHealthPage: React.FC = () => {
     [rollups, region]
   )
   const title = `Region ${region}`
+  useDocumentTitle(`${title} health & compliance`)
 
   return (
     <RollupPageShell

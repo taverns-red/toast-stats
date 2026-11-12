@@ -8,6 +8,7 @@ import {
 } from 'react-router-dom'
 import { logger } from '../utils/logger'
 import { useDistricts } from '../hooks/useDistricts'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { resolveRouteRecovery } from '../utils/errorRecovery'
 import {
   browserNav,
@@ -115,6 +116,14 @@ const ErrorPage: React.FC = () => {
     : isChunkError
       ? 'Toast Stats was updated while this tab was open, so this page could not load. Reload to get the latest version.'
       : 'An unexpected error stopped this page from loading. You can reload, go back to the previous page, or head home and start again.'
+
+  useDocumentTitle(
+    is404
+      ? 'Page not found'
+      : isChunkError
+        ? 'New version available'
+        : 'Something went wrong'
+  )
 
   const reload = (): void => browserNav.reloadTo(targetHref)
 
