@@ -479,7 +479,6 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
       [
         {
           day: 'Monday',
-          cadence: 'biweekly',
           startTime: '12:00',
           endTime: '12:40',
         },
@@ -1347,6 +1346,226 @@ describe('parseMeetingSchedule (#2246) — a bare range after a mode or zone wor
       expect(starts('Tuesday', t)).toEqual([`Tuesday ${s}`])
     }
   )
+})
+
+describe('parseMeetingSchedule (#2617) — an hrs range keeps its end', () => {
+  it('"1000hrs - 1200hrs" is 10:00-12:00, not an offset', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: '2nd & 4th Friday',
+        meetingTime: '1000hrs - 1200hrs',
+      })
+    ).toEqual([
+      {
+        day: 'Friday',
+        cadence: 'monthly',
+        weeksOfMonth: [2, 4],
+        startTime: '10:00',
+        endTime: '12:00',
+      },
+    ])
+  })
+
+  it('a signed offset before an hrs number is still not a time', () => {
+    expect(starts('Monday', '7 pm GMT - 0600 hrs')).toEqual(['Monday 19:00'])
+  })
+})
+
+describe('parseMeetingSchedule (#2617) — "every 2nd and 4th" is monthly', () => {
+  it('"Every 2nd and 4th Tuesday" is monthly [2,4], not biweekly', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Every 2nd and 4th Tuesday',
+        meetingTime: '7.30pm',
+      })
+    ).toEqual([
+      {
+        day: 'Tuesday',
+        cadence: 'monthly',
+        weeksOfMonth: [2, 4],
+        startTime: '19:30',
+      },
+    ])
+  })
+
+  it('"Every Second Monday" is ambiguous: no cadence, not biweekly', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Every Second Monday',
+        meetingTime: '12:00 - 12:40 PM',
+      })
+    ).toEqual([{ day: 'Monday', startTime: '12:00', endTime: '12:40' }])
+  })
+
+  it('"Every other Tuesday" stays biweekly', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Every other Tuesday',
+        meetingTime: '7 pm',
+      })
+    ).toEqual([{ day: 'Tuesday', cadence: 'biweekly', startTime: '19:00' }])
+  })
+})
+
+describe('parseMeetingSchedule (#2617) — spelled-out French ordinals', () => {
+  it.each([
+    ['Le premier et troisième jeudi', '19h', 'Thursday', [1, 3], '19:00'],
+    ['Deuxième et quatrième mardi', '18 h 30', 'Tuesday', [2, 4], '18:30'],
+    ['Premiere et Troisieme Jeudi', '19h', 'Thursday', [1, 3], '19:00'],
+    ['LE PREMIER ET TROISIÈME JEUDI', '19h', 'Thursday', [1, 3], '19:00'],
+    ['le quatrième lundi', '7 pm', 'Monday', [4], '19:00'],
+  ])(
+    '%j is monthly',
+    (meetingDay, meetingTime, day, weeksOfMonth, startTime) => {
+      expect(parseMeetingSchedule({ meetingDay, meetingTime })).toEqual([
+        { day, cadence: 'monthly', weeksOfMonth, startTime },
+      ])
+    }
+  )
+})
+
+describe('parseMeetingSchedule (#2617) — "last" has no cadence', () => {
+  it.each([
+    ['Last Thursday', '7 pm', 'Thursday', '19:00'],
+    ['Last Thursday of the month', '7 pm', 'Thursday', '19:00'],
+    ['dernier jeudi', '19h', 'Thursday', '19:00'],
+    ['Le dernier jeudi du mois', '19h', 'Thursday', '19:00'],
+  ])('%j leaves the cadence out', (meetingDay, meetingTime, day, startTime) => {
+    expect(parseMeetingSchedule({ meetingDay, meetingTime })).toEqual([
+      { day, startTime },
+    ])
+  })
+})
+
+describe('parseMeetingSchedule (#2617) — a day range in MeetingDay', () => {
+  it('"Mon-Fri" covers all five weekdays', () => {
+    const entries = parseMeetingSchedule({
+      meetingDay: 'Mon-Fri',
+      meetingTime: '12:15',
+    })
+    expect(entries?.map(e => e.day)).toEqual([
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+    ])
+    expect(entries?.every(e => e.startTime === '12:15')).toBe(true)
+  })
+
+  it('"Tuesday to Thursday" covers the day between', () => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Tuesday to Thursday' })?.map(
+        e => e.day
+      )
+    ).toEqual(['Tuesday', 'Wednesday', 'Thursday'])
+  })
+
+  it('two separate days are not a range', () => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Monday, Friday' })?.map(e => e.day)
+    ).toEqual(['Monday', 'Friday'])
+  })
+})
+
+describe('parseMeetingSchedule (#2617) — an arrival lead before the time', () => {
+  it.each([
+    ['Doors open 6:45 pm, meeting 7:00 pm', '19:00'],
+    ['Zoom opens at 6:45pm, meeting at 7pm', '19:00'],
+    ['Arrive 6:45 pm, start 7:00 pm', '19:00'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
+  })
+
+  it('"Open 6:30 - 7:30 pm" is still a range', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Wednesday',
+        meetingTime: 'Open 6:30 - 7:30 pm',
+      })
+    ).toEqual([
+      {
+        day: 'Wednesday',
+        cadence: 'weekly',
+        startTime: '18:30',
+        endTime: '19:30',
+      },
+    ])
+  })
+})
+
+describe('parseMeetingSchedule (#2617) — noon start, smaller hour end', () => {
+  it('"12:00 - 1:00" ends at 13:00', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Every Thursday except holidays',
+        meetingTime: '12:00 - 1:00',
+      })
+    ).toEqual([
+      {
+        day: 'Thursday',
+        cadence: 'weekly',
+        startTime: '12:00',
+        endTime: '13:00',
+      },
+    ])
+  })
+})
+
+describe('parseMeetingSchedule (#2617) — review: noon start guesses', () => {
+  it.each([
+    ['12:00 - 11:00', undefined],
+    ['12:00 - 9:00', undefined],
+    ['12:00 - 1:00', '13:00'],
+    ['12:00 - 3:30', '15:30'],
+  ])('%j ends at %s', (meetingTime, endTime) => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime })?.[0]
+        ?.endTime
+    ).toBe(endTime)
+  })
+})
+
+describe('parseMeetingSchedule (#2617) — review: "every second week"', () => {
+  it.each(['Every second week Monday', 'Every second week, Monday'])(
+    '%j is biweekly',
+    meetingDay => {
+      expect(parseMeetingSchedule({ meetingDay, meetingTime: '7 pm' })).toEqual(
+        [{ day: 'Monday', cadence: 'biweekly', startTime: '19:00' }]
+      )
+    }
+  )
+
+  it('"Every Second Monday" still has no cadence', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Every Second Monday',
+        meetingTime: '7 pm',
+      })
+    ).toEqual([{ day: 'Monday', startTime: '19:00' }])
+  })
+})
+
+describe('parseMeetingSchedule (#2617) — review: "last" only before a weekday', () => {
+  it.each([
+    ['Thursday (last updated 2024)', 'Thursday'],
+    ['Jeudi (dernière mise à jour 2024)', 'Thursday'],
+  ])('%j stays weekly', (meetingDay, day) => {
+    expect(parseMeetingSchedule({ meetingDay, meetingTime: '7 pm' })).toEqual([
+      { day, cadence: 'weekly', startTime: '19:00' },
+    ])
+  })
+
+  it.each([
+    ['Last Thursday', 'Thursday'],
+    ['dernier jeudi', 'Thursday'],
+    ['Thursday, last of the month', 'Thursday'],
+    ['Jeudi, le dernier du mois', 'Thursday'],
+  ])('%j still has no cadence', (meetingDay, day) => {
+    expect(parseMeetingSchedule({ meetingDay, meetingTime: '7 pm' })).toEqual([
+      { day, startTime: '19:00' },
+    ])
+  })
 })
 
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {

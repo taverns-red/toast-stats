@@ -258,30 +258,46 @@ const WEEKDAY_PATTERNS = (
   Object.entries(WEEKDAY_WORDS) as [MeetingWeekday, string][]
 ).map(([day, words]) => [day, new RegExp(`\\b(?:${words})\\b`, 'g')] as const)
 
-/** Weekdays in order of first mention, each once. */
+/** Weekdays in order of first mention, each once. A range ("Mon-Fri",
+ *  "Tuesday to Thursday") also covers the days between (#2617). */
 function weekdaysIn(folded: string): MeetingWeekday[] {
-  const found: { day: MeetingWeekday; at: number }[] = []
-  for (const [day, pattern] of WEEKDAY_PATTERNS) {
-    pattern.lastIndex = 0
-    const match = pattern.exec(folded)
-    if (match) found.push({ day, at: match.index })
+  const found: MeetingWeekday[] = []
+  const add = (day: MeetingWeekday): void => {
+    if (!found.includes(day)) found.push(day)
   }
-  return found.sort((a, b) => a.at - b.at).map(f => f.day)
+  let previous: DayMention | undefined
+  for (const mention of dayMentionsIn(folded)) {
+    if (previous && DAY_RANGE.test(folded.slice(previous.end, mention.start))) {
+      daysBetween(previous.day, mention.day).forEach(add)
+    }
+    add(mention.day)
+    previous = mention
+  }
+  return found
 }
 
 const BIWEEKLY =
-  /\bevery\s+(?:other|second|2nd)\b|\bbi-?weekly\b|\bfortnightly\b|\balternat\w*|\bsur\s+deux\b|\baux?\s+(?:2|deux)\s+semaines?\b|\bevery\s+(?:2|two)\s+weeks\b/
+  /\bevery\s+other\b|\bevery\s+(?:second|2nd)\s+weeks?\b|\bbi-?weekly\b|\bfortnightly\b|\balternat\w*|\bsur\s+deux\b|\baux?\s+(?:2|deux)\s+semaines?\b|\bevery\s+(?:2|two)\s+weeks\b/
+/** "Every second Monday": every other week, or the 2nd Monday of each
+ *  month? Canadian English says both, so alone it gives no cadence
+ *  (#2617). "Every 2nd and 4th Tuesday" names two weeks: monthly. */
+const EVERY_SECOND = /\bevery\s+(?:second|2nd)\b/
 /** The day is named but how often is not. */
 const UNCERTAIN_CADENCE =
   /\btwice\b|\bmost\b|\bcheck\b|\brefer\b|\bcontact\b|\bvar(?:y|ies)\b|\boccasional\w*/
 
 const ORDINAL_WORDS: [number, string][] = [
-  [1, '1st|first|1er|1re|1ere|1ro|1o|primero?'],
-  [2, '2nd|second|2e|2eme|2do|2o|segundo'],
-  [3, '3rd|third|3e|3eme|3ro|3o|3er|tercero?'],
-  [4, '4th|fourth|4e|4eme|4to|4o|cuarto'],
-  [5, '5th|fifth|5e|5eme|5to|5o|quinto'],
+  [1, '1st|first|1er|1re|1ere|1ro|1o|primero?|premier|premiere'],
+  [2, '2nd|second|2e|2eme|2do|2o|segundo|deuxieme'],
+  [3, '3rd|third|3e|3eme|3ro|3o|3er|tercero?|troisieme'],
+  [4, '4th|fourth|4e|4eme|4to|4o|cuarto|quatrieme'],
+  [5, '5th|fifth|5e|5eme|5to|5o|quinto|cinquieme'],
 ]
+/** "Last Thursday", "dernier jeudi": the schema cannot say "last week of
+ *  the month" (1-5 only), and weekly would be wrong, so no cadence (#2617). */
+const LAST_WEEK = new RegExp(
+  `\\b(?:last|dernier|derniere)\\s+(?:${Object.values(WEEKDAY_WORDS).join('|')})\\b|\\b(?:last|dernier|derniere)\\b.*\\b(?:of the month|du mois)\\b`
+)
 const MODE_WORDS: [MeetingMode, string][] = [
   ['hybrid', 'hybri\\w*'],
   ['in-person', 'in[\\s-]?person|en personne|presentiel\\w*'],
@@ -366,15 +382,21 @@ const TIME_TOKEN =
 const RANGE_SEPARATOR = /^\s*(?:-+|–|—|~|〜|～|to|a|until|jusqu'?a)\s*$/
 /** A two-digit hour before hrs/hours ("1600 hrs", "11:00 hours") is a
  *  24-hour clock; "1:30 hours" is a duration. The lookbehinds keep an
- *  offset ("+0530 hrs", "- 0600 hrs") out. */
+ *  offset ("+0530 hrs", "- 0600 hrs") out, but a spaced dash after another
+ *  hrs value is a range ("1000hrs - 1200hrs", #2617). */
 const HHMM_HRS =
-  /(?<![\d:.+\-−])(?<![+\-−]\s)(\d{2})[:.]?(\d{2})\s*(?:hrs?|hours?)\b\.?/g
+  /(?<![\d:.+\-−])(?<!(?<!(?:hrs?|hours?)\s*)[+\-−]\s)(\d{2})[:.]?(\d{2})\s*(?:hrs?|hours?)\b\.?/g
 /** Both ends of "730-930 pm", so the start is not lost (#2243). */
 const HHMM_RANGE_MERIDIEM =
   /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(\s*(?:-|–|to)\s*)(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
 /** 12-hour only: "2026 pm" is a year, not 20:26. */
 const HHMM_MERIDIEM = /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
 const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
+/** A label before the first time that says it is an arrival, not the
+ *  start: "Doors open 6:45 pm, meeting 7:00 pm", "Zoom opens at 6:45"
+ *  (#2617). Treated like "6:45 for 7:00". */
+const ARRIVE_LABEL =
+  /(?:doors?\s+open\w*|\bopens?|\barriv\w*|log[\s-]?in|check[\s-]?in)\s*(?:at|:|@)?\s*$/
 /** "UTC-5", "GMT + 6", "-4DT": the number after is an offset, not a time.
  *  A dash after a word and a space ("Saturday- 7-9 pm") is not a sign. */
 const OFFSET_BEFORE = /(?:utc|gmt)\s*(?:[+\-−]\s*)?$|[+\-−]$/
@@ -514,6 +536,18 @@ function inherited(
   ) {
     return 'am'
   }
+  // "12:00 - 1:00": a noon start followed by a smaller hour ends in the
+  // afternoon (#2617).
+  if (
+    !suffix &&
+    !bareIsStart &&
+    partner.hour === 12 &&
+    !partner.twentyFour &&
+    !bare.twentyFour &&
+    bare.hour <= 3
+  ) {
+    return 'pm'
+  }
   if (!suffix || bare.twentyFour || bare.hour === 12) return undefined
   if (partner.hour === 12) return bareIsStart ? 'am' : 'pm'
   const wraps = bareIsStart
@@ -606,7 +640,9 @@ function slotsFrom(found: readonly TimeToken[], text: string): Slot[] {
     // Only for a short lead: "6:00 pm for 2:00 hrs" is a duration.
     if (
       next &&
-      ARRIVE_FOR.test(between(start, next)) &&
+      (ARRIVE_FOR.test(between(start, next)) ||
+        (ARRIVE_LABEL.test(text.slice(0, start.start)) &&
+          !RANGE_SEPARATOR.test(between(start, next)))) &&
       arrivalLead(start, next)
     ) {
       // "7:15pm for a 7.30 start": B takes A's am/pm when it has none.
@@ -870,9 +906,12 @@ export function parseMeetingSchedule(
 
   const { groups, loose } = weekGroupsIn(dayText)
   let cadence: Cadence | undefined
-  if (BIWEEKLY.test(dayText)) cadence = 'biweekly'
-  else if (groups.length > 0) cadence = 'monthly'
-  else if (!UNCERTAIN_CADENCE.test(dayText)) cadence = 'weekly'
+  if (LAST_WEEK.test(dayText)) cadence = undefined
+  else if (BIWEEKLY.test(dayText)) cadence = 'biweekly'
+  else if (groups.length > 0) {
+    const weeks = new Set(groups.flatMap(g => g.weeks))
+    if (!EVERY_SECOND.test(dayText) || weeks.size > 1) cadence = 'monthly'
+  } else if (!UNCERTAIN_CADENCE.test(dayText)) cadence = 'weekly'
 
   const timeText =
     typeof source.meetingTime === 'string' ? fold(source.meetingTime) : ''
