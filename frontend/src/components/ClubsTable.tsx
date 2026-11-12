@@ -151,6 +151,11 @@ interface ClubsTableProps {
    * step over them (R11). Omitted → no preset.
    */
   sinceLastYear?: SinceLastYearProps | undefined
+  /**
+   * The date the data is FROM ("YYYY-MM-DD"), for the table caption (#2676,
+   * spec §7). The page passes its effective date, never the requested one.
+   */
+  dataDate?: string | undefined
 }
 
 export interface SinceLastYearProps {
