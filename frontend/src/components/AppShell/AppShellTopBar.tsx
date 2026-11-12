@@ -28,6 +28,7 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
   const [navOpen, setNavOpen] = useState(false)
   const closeNav = useCallback(() => setNavOpen(false), [])
   const headerRef = useRef<HTMLElement>(null)
+  const toggleRef = useRef<HTMLButtonElement>(null)
   const location = useLocation()
 
   // <768px the footer chrome is dropped (#889); its version/license meta
@@ -50,7 +51,11 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
   useEffect(() => {
     if (!navOpen) return
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setNavOpen(false)
+      if (e.key === 'Escape') {
+        setNavOpen(false)
+        // Focus would otherwise fall to <body> as the link it was on hides.
+        toggleRef.current?.focus({ preventScroll: true })
+      }
     }
     const onPointerDown = (e: MouseEvent) => {
       if (!headerRef.current?.contains(e.target as Node)) setNavOpen(false)
@@ -63,9 +68,21 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
     }
   }, [navOpen])
 
+  // Lock page scroll while the phone menu is open (#2638): it scrolls inside
+  // itself when taller than the viewport, and the page must not move behind.
+  useEffect(() => {
+    if (!navOpen || !isMobile) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [navOpen, isMobile])
+
   return (
     <header className="app-shell-top-bar" ref={headerRef}>
       <button
+        ref={toggleRef}
         type="button"
         className="app-shell-nav-toggle"
         aria-label={navOpen ? 'Close menu' : 'Open menu'}

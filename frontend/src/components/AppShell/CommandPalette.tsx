@@ -12,8 +12,9 @@
    only mounts when open, so the ~1MB club index is fetched on first open (never
    at app boot) and closing + reopening resets state via unmount/remount. */
 
-import React, { useCallback } from 'react'
+import React, { useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useDialogBehavior } from '../../hooks/useDialogBehavior'
 import { useOmniSearch } from '../../hooks/useOmniSearch'
 import OmniSearchResults from './OmniSearchResults'
 import { type SearchEntity } from '../../services/searchIndex'
@@ -59,6 +60,11 @@ const OpenPalette: React.FC<OpenPaletteProps> = ({ onClose }) => {
     handleKeyDown,
   } = useOmniSearch({ onSelect: selectEntity, onDismiss: onClose })
 
+  // Dialog contract (#2638): Tab wraps, Escape works from anywhere, page
+  // scroll is locked, focus returns to the opener. Mounted only while open.
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useDialogBehavior({ active: true, onClose, containerRef: dialogRef })
+
   // Auto-focus the input on mount. Callback ref avoids the
   // setState-in-effect pattern; React calls it once when the input attaches.
   const inputAttachRef = useCallback((el: HTMLInputElement | null) => {
@@ -80,6 +86,7 @@ const OpenPalette: React.FC<OpenPaletteProps> = ({ onClose }) => {
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         className="command-palette"
         role="dialog"
         aria-modal="true"
@@ -118,6 +125,27 @@ const OpenPalette: React.FC<OpenPaletteProps> = ({ onClose }) => {
             className="command-palette__input"
           />
           <kbd className="command-palette__hint">esc</kbd>
+          <button
+            type="button"
+            className="command-palette__close"
+            aria-label="Close search"
+            onClick={onClose}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M5 5l10 10M15 5L5 15"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
         </div>
 
         {!hasQuery ? (
