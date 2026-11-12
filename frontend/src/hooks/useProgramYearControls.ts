@@ -17,8 +17,8 @@
  * and derives:
  *   - `availableProgramYears` — newest first, only years that have snapshots.
  *   - `cachedDates` — snapshot dates within the selected PY.
- *   - `effectiveDate` — the explicit `?date=` selection, else the latest date
- *     within the selected PY (what the page should fetch).
+ *   - `effectiveDate` — the `?date=` selection when it names a snapshot, else
+ *     the nearest earlier one / the PY's latest (#2635); always in the list.
  *
  * Self-healing (L124): if a hand-edited / shared `?py=` names a year with no
  * data, it falls back to the newest available PY so the user is never stranded
@@ -29,10 +29,10 @@ import { useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnDates } from '../services/cdn'
 import { useUrlProgramYear } from './useUrlProgramYear'
+import { useResolvedDateSelection } from './useResolvedDateSelection'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
-  getMostRecentDateInProgramYear,
 } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
 import { snapshotDatesFrom, type SnapshotDate } from '../types/snapshotDate'
@@ -59,10 +59,11 @@ export interface ProgramYearControls {
 
 export function useProgramYearControls(): ProgramYearControls {
   const {
-    selectedProgramYear,
+    selectedProgramYear: urlProgramYear,
     setSelectedProgramYear,
-    selectedDate,
     setSelectedDate,
+    setProgramYearAndDate,
+    requestedDate,
   } = useUrlProgramYear()
 
   // Shares the ['available-dates'] cache with useDefaultProgramYear and the
@@ -84,6 +85,21 @@ export function useProgramYearControls(): ProgramYearControls {
     () => getAvailableProgramYears(allCachedDates),
     [allCachedDates]
   )
+
+  // Validate `?date=` against the snapshot list ONCE, here (#2635). Everything
+  // below — the PY, the dates, the date to fetch, the chip — derives from the
+  // resolution, so none of them can name a date that has no snapshot.
+  const resolution = useResolvedDateSelection({
+    requested: requestedDate,
+    dates: allCachedDates,
+    programYear: urlProgramYear,
+    writeUrl: true,
+    setProgramYearAndDate,
+  })
+  const selectedProgramYear =
+    resolution?.status === 'switched-py'
+      ? resolution.programYear
+      : urlProgramYear
 
   // Self-heal a selected PY that has no data (e.g. a hand-edited ?py=) to the
   // newest available year — never strand the user on an empty grid (L124).
@@ -107,13 +123,14 @@ export function useProgramYearControls(): ProgramYearControls {
     [allCachedDates, selectedProgramYear]
   )
 
-  const effectiveDate = useMemo(() => {
-    if (selectedDate) return selectedDate
-    return (
-      getMostRecentDateInProgramYear(allCachedDates, selectedProgramYear) ??
-      undefined
-    )
-  }, [selectedDate, allCachedDates, selectedProgramYear])
+  // Always an element of the snapshot list (or undefined while it loads).
+  const effectiveDate = resolution?.date ?? undefined
+  // The explicit selection, as the chip should name it: the date whose data is
+  // on screen — never the requested one when it has no snapshot.
+  const selectedDate =
+    resolution && resolution.status !== 'none'
+      ? (resolution.date ?? undefined)
+      : undefined
 
   // Whether the selection is the newest snapshot in the PY — the freshness
   // pill only flags month-end reconciliation for the latest snapshot (#1296).

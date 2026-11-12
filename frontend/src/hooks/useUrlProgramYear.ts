@@ -18,6 +18,7 @@ import { getProgramYear, isDateInProgramYear } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
 import { useDefaultProgramYear } from './useDefaultProgramYear'
 import { toSnapshotDate, type SnapshotDate } from '../types/snapshotDate'
+import { setDateNotice } from './dateNoticeStore'
 
 /**
  * How a setter writes the URL (#2412). A user-initiated PY/date pick is
@@ -51,9 +52,12 @@ export type SnapshotDateSetter = (
   options?: UrlWriteOptions
 ) => void
 
-const navigateOptions = (options?: UrlWriteOptions) => ({
-  replace: options?.history !== 'push',
-})
+const navigateOptions = (options?: UrlWriteOptions) => {
+  // A deliberate pick supersedes the "No snapshot for …" notice (#2635); the
+  // repair write itself is a replace and keeps it.
+  if (options?.history === 'push') setDateNotice(null)
+  return { replace: options?.history !== 'push' }
+}
 
 export function useUrlProgramYear() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -89,6 +93,9 @@ export function useUrlProgramYear() {
   // latest snapshot, rather than keying a fetch on garbage and rendering blank.
   const urlDate = searchParams.get('date')
   const selectedDate = toSnapshotDate(urlDate)
+  // The raw value, for the controls hooks to resolve against the snapshots that
+  // exist (#2635). Minting only checks the SHAPE; it cannot know a snapshot.
+  const requestedDate = urlDate
 
   // Sync program year to context when URL differs
   useEffect(() => {
@@ -205,5 +212,6 @@ export function useUrlProgramYear() {
     selectedDate,
     setSelectedDate,
     setProgramYearAndDate,
+    requestedDate,
   }
 }
