@@ -383,3 +383,16 @@
     border: 0;
   }
 }
+
+/* Loading shell (#2634). The club's name arrives with the history, and below
+   1024 it wraps to two lines, pushing the lede down 34px: hold two lines until
+   it is known. The table's box is reserved at its loaded height. */
+.club-history-page__table-skeleton {
+  min-height: 622px;
+}
+
+@media (max-width: 1023px) {
+  .club-history-page__title--pending {
+    min-height: 3em;
+  }
+}
