@@ -129,6 +129,24 @@ describe('WorldPulse (#2249)', () => {
     ).toHaveAttribute('href', '/regions/health')
   })
 
+  // #2618 — the label was itself a <Link>, which the global 48px link floor
+  // made 48px tall, pushing its value 32px below the other tiles' values.
+  // The whole tile is the link now; the label is a plain span like the rest.
+  it('makes the whole attention tile one link, not the label (#2618)', () => {
+    renderPulse()
+    const link = screen.getByRole('link', {
+      name: /clubs needing attention.*1,204/i,
+    })
+    expect(link).toHaveAttribute('href', '/regions/health')
+    const label = screen.getByText('Clubs needing attention')
+    expect(label.tagName).not.toBe('A')
+    expect(label).toHaveClass('world-pulse__tile-label')
+    expect(link).toContainElement(label)
+    expect(link).toContainElement(screen.getByTestId('pulse-attention'))
+    // Valid list semantics: the link sits inside the <li>, not around it.
+    expect(link.parentElement?.tagName).toBe('LI')
+  })
+
   it('reads "Not available", never 0, when the rollups file is absent', () => {
     mockedRollups.mockReturnValue({
       rollups: null,
