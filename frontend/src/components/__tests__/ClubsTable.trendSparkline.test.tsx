@@ -117,7 +117,7 @@ describe('ClubsTable ≥ 768 — Trend column (#1792)', () => {
     const { container } = render(<ClubsTable clubs={CLUBS} districtId="61" />)
     const headers = Array.from(
       container.querySelectorAll(
-        '#clubs-table thead th .clubs-col-header span.flex-1'
+        '#clubs-table thead th .sortable-header__label'
       )
     ).map(el => el.textContent?.trim())
     expect(headers.indexOf('Trend')).toBe(headers.indexOf('Members') + 1)
@@ -197,7 +197,7 @@ describe('ClubsTable ≥ 768 — Trend column (#1792)', () => {
     const { container } = render(
       <ClubsTable clubs={CLUBS} districtId="61" onSortChange={onSortChange} />
     )
-    fireEvent.click(screen.getByRole('button', { name: /sort by trend/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Trend' }))
     expect(onSortChange).toHaveBeenLastCalledWith('netChange', 'asc')
     expect(rowNames(container)).toEqual([
       'Bravo Talkers',
@@ -205,7 +205,7 @@ describe('ClubsTable ≥ 768 — Trend column (#1792)', () => {
       'Charlie Orators',
       'Delta Debaters',
     ])
-    fireEvent.click(screen.getByRole('button', { name: /sort by trend/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Trend' }))
     expect(rowNames(container)).toEqual([
       'Charlie Orators',
       'Alpha Speakers',

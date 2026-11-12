@@ -1,10 +1,39 @@
 import { render } from '@testing-library/react'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 import { describe, it, expect, vi } from 'vitest'
-import { ColumnHeader } from '../ColumnHeader'
 import { TextFilter } from '../filters/TextFilter'
 import { NumericFilter } from '../filters/NumericFilter'
 import { CategoricalFilter } from '../filters/CategoricalFilter'
 import type { SortField, SortDirection } from '../filters/types'
+
+import type { FC } from 'react'
+import { SortableHeader } from '../SortableHeader'
+
+/** The Clubs header cell as DataTable renders it: a SortableHeader (APG
+ *  contract) inside a table, replacing the deleted ColumnHeader (#2676). */
+const ColumnHeader: FC<{
+  field: SortField
+  label: string
+  sortable?: boolean
+  currentSort: { field: SortField | null; direction: SortDirection }
+  onSort: (field: SortField) => void
+}> = ({ field, label, currentSort, onSort }) => (
+  <table>
+    <thead>
+      <tr>
+        <SortableHeader
+          apg
+          field={field}
+          label={label}
+          currentSort={currentSort}
+          onSort={onSort}
+          buttonClassName="dt-sort-btn"
+        />
+      </tr>
+    </thead>
+  </table>
+)
 
 /**
  * Unit tests for focus indicators on column headers and filter components
@@ -23,24 +52,14 @@ describe('Focus Indicators', () => {
       direction: 'asc' as SortDirection,
     }
 
-    it('should have focus ring classes on the header button', () => {
-      const { container } = render(
-        <ColumnHeader
-          field="name"
-          label="Club Name"
-          sortable={true}
-          currentSort={defaultSort}
-          onSort={vi.fn()}
-        />
+    it('draws a focus ring on the header button (CSS, --focus-ring)', () => {
+      const css = readFileSync(
+        resolve(__dirname, '../../styles/components/data-table.css'),
+        'utf-8'
       )
-
-      const headerButton = container.querySelector('button')
-      expect(headerButton).toBeTruthy()
-
-      const buttonClasses = headerButton?.className || ''
-      expect(buttonClasses).toContain('focus:outline-hidden')
-      expect(buttonClasses).toContain('focus:ring-2')
-      expect(buttonClasses).toMatch(/focus:ring-(blue-500|tm-loyal-blue)/)
+      const rule = css.match(/button\.dt-sort-btn:focus-visible\s*\{([^}]*)\}/)
+      expect(rule).toBeTruthy()
+      expect(rule?.[1]).toMatch(/outline:\s*2px solid var\(--focus-ring\)/)
     })
 
     it('should be a keyboard-reachable native button', () => {

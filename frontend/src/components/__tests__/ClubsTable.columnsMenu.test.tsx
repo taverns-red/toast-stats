@@ -45,11 +45,13 @@ const renderTable = () =>
 const headerLabels = () =>
   Array.from(
     document.querySelectorAll<HTMLElement>(
-      '#clubs-table thead th .clubs-col-header span.flex-1'
+      '#clubs-table thead th .sortable-header__label'
     )
   ).map(el => el.textContent?.trim() ?? '')
 const firstRowCellCount = () =>
-  document.querySelectorAll('#clubs-table tbody tr:first-child td').length
+  document.querySelectorAll(
+    '#clubs-table tbody tr:first-child th, #clubs-table tbody tr:first-child td'
+  ).length
 const trigger = () => screen.getByRole('button', { name: /^columns/i })
 
 const TABLET = ['Club', 'Health', 'Members', 'DCP', 'Tier']
@@ -121,7 +123,7 @@ describe('ClubsTable default columns per tier (#2676)', () => {
       document.querySelectorAll('#clubs-table thead th.clubs-table__sticky-col')
     ).toHaveLength(1)
     expect(
-      document.querySelector('#clubs-table tbody td.clubs-table__sticky-col')
+      document.querySelector('#clubs-table tbody th.clubs-table__sticky-col')
     ).not.toBeNull()
   })
 })

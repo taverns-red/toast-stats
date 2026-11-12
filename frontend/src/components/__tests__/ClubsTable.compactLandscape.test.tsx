@@ -101,12 +101,12 @@ describe('ClubsTable in short landscape (#1912)', () => {
     expect(screen.queryByRole('table')).toBeNull()
   })
 
-  it('keeps "All Clubs" as a heading and puts total + export after the rows', () => {
+  it('keeps "All clubs" as a heading and puts total + export after the rows', () => {
     stubShortLandscape(true)
     render(
       <ClubsTable clubs={CLUBS} districtId="61" compactToolbarTarget={slot()} />
     )
-    expect(screen.getByRole('heading', { name: 'All Clubs' })).toHaveClass(
+    expect(screen.getByRole('heading', { name: 'All clubs' })).toHaveClass(
       'sr-only'
     )
     const rows = screen.getByRole('button', { name: /Division A/ })
@@ -131,7 +131,7 @@ describe('ClubsTable in short landscape (#1912)', () => {
     )
     expect(target).toBeEmptyDOMElement()
     expect(screen.getByRole('table')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'All Clubs' })).not.toHaveClass(
+    expect(screen.getByRole('heading', { name: 'All clubs' })).not.toHaveClass(
       'sr-only'
     )
   })

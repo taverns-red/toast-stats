@@ -1,13 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react'
-import {
-  useLocation,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from 'react-router-dom'
+import { useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
-import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
+import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { previousRecordedDate, useSnapshotDiff } from '../hooks/useSnapshotDiff'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
@@ -53,7 +48,6 @@ import type { SinceLastYearMode } from '../utils/sinceLastYear'
 
 const DistrictClubsPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
-  const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   // The context bar's toolbar slot (#1912): in short landscape ClubsTable
@@ -268,17 +262,6 @@ const DistrictClubsPage: React.FC = () => {
     b.localeCompare(a)
   )
 
-  const handleClubClick = useCallback(
-    (club: ClubTrend) => {
-      // #577 — carry the current filter/search so the club page's "Clubs"
-      // breadcrumb can round-trip back to this exact filtered list.
-      navigate(`/district/${districtId}/club/${club.clubId}`, {
-        state: { fromClubsSearch: location.search },
-      })
-    },
-    [navigate, districtId, location.search]
-  )
-
   if (!districtId) {
     return null
   }
@@ -343,7 +326,7 @@ const DistrictClubsPage: React.FC = () => {
                   clubs={allClubs}
                   districtId={districtId}
                   isLoading={isLoading}
-                  onClubClick={handleClubClick}
+                  dataDate={effectiveEndDate ?? undefined}
                   clubLinkState={{ fromClubsSearch: location.search }}
                   initialSortField={initialSortField}
                   initialSortDirection={initialSortDir}

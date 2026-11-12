@@ -1,6 +1,6 @@
 import { test, expect, type Page } from './fixtures/test'
 
-/* The "All Clubs" panel header on phones (#2343).
+/* The "All clubs" panel header on phones (#2343).
  *
  * The header row is the title and the export group ("Export Clubs", plus
  * "Export Changes" when a snapshot diff is loaded) side by side with
@@ -61,7 +61,7 @@ async function measure(page: Page) {
 
 for (const theme of ['light', 'dark'] as const) {
   for (const width of [320, 375, 390]) {
-    test(`All Clubs title is one line above the exports at ${width}px (${theme})`, async ({
+    test(`All clubs title is one line above the exports at ${width}px (${theme})`, async ({
       page,
     }) => {
       await page.emulateMedia({ colorScheme: theme })
@@ -71,7 +71,7 @@ for (const theme of ['light', 'dark'] as const) {
       const g = await measure(page)
       const ctx = JSON.stringify(g)
       expect(g.theme, ctx).toBe(theme)
-      expect(g.title.text, ctx).toBe('All Clubs')
+      expect(g.title.text, ctx).toBe('All clubs')
       expect(g.title.lines, ctx).toBe(1)
       expect(g.docOverflow, ctx).toBeLessThanOrEqual(0)
       expect(g.buttons.length, ctx).toBeGreaterThan(0)

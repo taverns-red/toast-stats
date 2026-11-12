@@ -277,3 +277,15 @@ export const tierDefaults = (tier: BreakpointTier): Record<string, boolean> =>
   Object.fromEntries(
     Object.entries(columnMeta).map(([id, m]) => [id, m.defaultVisible[tier]])
   )
+
+/**
+ * Every column's width as TanStack's `columnSizing` state (#2676, spec §5.3).
+ * The table's `getSize()` reads it, so the colgroup and the table's min-width
+ * use the figures in spec §4.1 without touching any column def. Club is
+ * flexible: its entry is its minimum, and the colgroup leaves its `<col>`
+ * unsized so it takes the rest.
+ */
+export const COLUMN_SIZING: Readonly<Record<string, number>> =
+  Object.fromEntries(
+    Object.entries(columnMeta).map(([id, meta]) => [id, meta.size])
+  )

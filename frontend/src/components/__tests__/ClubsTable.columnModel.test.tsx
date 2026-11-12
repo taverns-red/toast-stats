@@ -74,7 +74,7 @@ const EXPECTED_HEADERS = [
 function headerLabelsInOrder(container: HTMLElement): string[] {
   return Array.from(
     container.querySelectorAll<HTMLElement>(
-      '#clubs-table thead th .clubs-col-header span.flex-1'
+      '#clubs-table thead th .sortable-header__label'
     )
   ).map(el => el.textContent?.trim() ?? '')
 }

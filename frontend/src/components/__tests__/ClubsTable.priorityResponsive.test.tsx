@@ -85,7 +85,8 @@ describe('ClubsTable priority-column responsive model (#812)', () => {
     expect(stickyHeaders).toHaveLength(1)
 
     const bodyRow = container.querySelector('#clubs-table tbody tr')!
-    const firstCell = bodyRow.querySelector('td')!
+    // The Club cell is the row header (th scope=row, #2676).
+    const firstCell = bodyRow.querySelector('th')!
     expect(firstCell.className).toContain('clubs-table__sticky-col')
     // The pinned cell carries the club name (the row's identity).
     expect(within(firstCell as HTMLElement).getByText('Alpha')).toBeTruthy()
@@ -101,16 +102,18 @@ describe('ClubsTable priority-column responsive model (#812)', () => {
   // (#2676), so a hidden column is absent from the DOM: asserted per tier in
   // ClubsTable.columnsMenu.test.tsx and, for the model, clubsColumnMeta.test.ts.
 
-  it('wraps the scroller and renders a right-edge scroll-cue affordance', () => {
+  it('wraps the scroller and renders an edge-cue affordance on each side', () => {
     stubDesktopMatchMedia()
     const { container } = render(
       <ClubsTable clubs={[makeClub()]} districtId="61" isLoading={false} />
     )
-    const wrap = container.querySelector('.clubs-table__scroll-wrap')
+    const wrap = container.querySelector('.dt-scroll-wrap')
     expect(wrap).not.toBeNull()
-    // The scroller (the overflow container) lives inside the wrap.
-    expect(wrap!.querySelector('.clubs-table-scroll')).not.toBeNull()
-    // The cue is a sibling overlay inside the wrap.
-    expect(wrap!.querySelector('.clubs-table__scroll-cue')).not.toBeNull()
+    // The scroller lives inside the wrap; it is not a vertical scroller.
+    expect(wrap!.querySelector('.dt-scroll')).not.toBeNull()
+    expect(container.querySelector('.clubs-table-scroll')).toBeNull()
+    // The cues are sibling overlays inside the wrap, one per side (#2676).
+    expect(wrap!.querySelector('.dt-scroll__cue--start')).not.toBeNull()
+    expect(wrap!.querySelector('.dt-scroll__cue--end')).not.toBeNull()
   })
 })

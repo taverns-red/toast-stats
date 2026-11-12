@@ -77,23 +77,6 @@ export interface ColumnConfig {
 }
 
 /**
- * Props for column header component.
- *
- * Sort-only since #816 (epic #818 Sprint 3): filtering moved out of the hidden
- * per-column header dropdown into the dedicated FiltersPanel drawer, so the
- * header no longer carries `filterable`/`filterType`/`currentFilter`/`onFilter`/
- * `options`. The header is now exclusively a sort control.
- */
-export interface ColumnHeaderProps {
-  field: SortField
-  label: string
-  sortable: boolean
-  currentSort: { field: SortField | null; direction: SortDirection }
-  onSort: (field: SortField) => void
-  className?: string
-}
-
-/**
  * Base props for all filter components
  */
 export interface BaseFilterProps {

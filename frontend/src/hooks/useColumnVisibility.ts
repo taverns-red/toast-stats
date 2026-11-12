@@ -16,6 +16,11 @@
  *
  * "vs last year" follows the `?since=` preset and is never stored. The Changes
  * columns are counted and offered only while a snapshot diff is loaded.
+ *
+ * A column the URL sorts or filters by is revealed while that is active
+ * (`reveal`), even if the width or the user hides it: otherwise the table is
+ * ordered or narrowed by something nobody can see. The reveal is transient and
+ * never written to the saved overrides.
  */
 
 import { useCallback, useMemo, useState } from 'react'
@@ -52,6 +57,8 @@ export interface UseColumnVisibilityOptions {
   changesAvailable: boolean
   /** The `?since=` preset is on, so "vs last year" is present. */
   sinceActive: boolean
+  /** Column ids to show while active, e.g. the sorted and filtered columns. */
+  reveal?: readonly string[]
 }
 
 export interface ColumnVisibilityApi {
@@ -64,6 +71,12 @@ export interface ColumnVisibilityApi {
   toggle: (id: string) => void
   showAll: () => void
   reset: () => void
+  /** Columns shown only because the sort or a filter needs them (transient,
+   *  not saved). */
+  revealed: ReadonlySet<string>
+  /** Columns the sort or a filter needs on screen, whether or not the user
+   *  also chose to show them. Unchecking one of these hides nothing yet. */
+  needed: ReadonlySet<string>
   /** The shown set differs from this width's default. */
   isCustom: boolean
   shownCount: number
@@ -134,6 +147,7 @@ export function useColumnVisibility({
   tier,
   changesAvailable,
   sinceActive,
+  reveal,
 }: UseColumnVisibilityOptions): ColumnVisibilityApi {
   const [overrides, setOverrides] =
     useState<ColumnOverrides>(loadColumnOverrides)
@@ -149,6 +163,32 @@ export function useColumnVisibility({
     [changesAvailable, sinceActive]
   )
 
+  const revealKey = (reveal ?? []).join('|')
+
+  /** Offered, toggleable columns the sort or a filter needs but that are off. */
+  const revealed = useMemo(() => {
+    const out = new Set<string>()
+    for (const id of revealKey ? revealKey.split('|') : []) {
+      if (
+        isToggleable(id) &&
+        offeredIds.includes(id) &&
+        !(overrides[id] ?? defaults[id] ?? false)
+      ) {
+        out.add(id)
+      }
+    }
+    return out
+  }, [revealKey, offeredIds, overrides, defaults])
+
+  /** Offered, toggleable columns the sort or a filter needs, shown or not. */
+  const needed = useMemo(() => {
+    const out = new Set<string>()
+    for (const id of revealKey ? revealKey.split('|') : []) {
+      if (isToggleable(id) && offeredIds.includes(id)) out.add(id)
+    }
+    return out
+  }, [revealKey, offeredIds])
+
   const visibility = useMemo(() => {
     const out: Record<string, boolean> = {}
     for (const id of Object.keys(columnMeta)) {
@@ -157,9 +197,10 @@ export function useColumnVisibility({
       else if ((CHANGES_COLUMN_IDS as readonly string[]).includes(id))
         out[id] = changesAvailable && (overrides[id] ?? defaults[id] ?? false)
       else out[id] = overrides[id] ?? defaults[id] ?? false
+      if (revealed.has(id)) out[id] = true
     }
     return out
-  }, [overrides, defaults, changesAvailable, sinceActive])
+  }, [overrides, defaults, changesAvailable, sinceActive, revealed])
 
   const commit = useCallback((next: ColumnOverrides) => {
     setOverrides(next)
@@ -168,13 +209,13 @@ export function useColumnVisibility({
 
   const setVisible = useCallback(
     (id: string, next: boolean) => {
-      if (!isToggleable(id)) return
+      if (!isToggleable(id) || revealed.has(id)) return
       const updated = { ...overrides }
       if (next === defaults[id]) delete updated[id]
       else updated[id] = next
       commit(updated)
     },
-    [overrides, defaults, commit]
+    [overrides, defaults, revealed, commit]
   )
 
   const toggle = useCallback(
@@ -199,8 +240,10 @@ export function useColumnVisibility({
     [visibility]
   )
 
+  // A revealed column is a view of the URL, not a choice: it is not "custom".
   const isCustom = offeredIds.some(
-    id => isToggleable(id) && visibility[id] !== defaults[id]
+    id =>
+      isToggleable(id) && !revealed.has(id) && visibility[id] !== defaults[id]
   )
   const shownCount = offeredIds.filter(id => visibility[id]).length
 
@@ -212,6 +255,8 @@ export function useColumnVisibility({
     toggle,
     showAll,
     reset,
+    revealed,
+    needed,
     isCustom,
     shownCount,
     totalCount: offeredIds.length,

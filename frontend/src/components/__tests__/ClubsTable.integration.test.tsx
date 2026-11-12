@@ -167,26 +167,26 @@ describe('ClubsTable Integration Tests', () => {
       // All column headers should be clickable sort buttons (#851). Labels
       // reconciled to the HANDOFF column set (#669): Club, Div, …, DCP, Tier.
       const clubNameHeader = screen.getByRole('button', {
-        name: /Sort by Club[.,]/i,
+        name: 'Club',
       })
       const divisionHeader = screen.getByRole('button', {
-        name: /Sort by Div\b/i,
+        name: 'Div',
       })
       const areaHeader = screen.getByRole('button', {
-        name: /Sort by Area/i,
+        name: 'Area',
       })
       const membersHeader = screen.getByRole('button', {
-        name: /Sort by Members/i,
+        name: 'Members',
       })
       const dcpGoalsHeader = screen.getByRole('button', {
-        name: /Sort by DCP/i,
+        name: 'DCP',
       })
       const distinguishedHeader = screen.getByRole('button', {
-        name: /Sort by Tier/i,
+        name: 'Tier',
       })
       // The health column is "Health" (#2676), distinct from "Club Status".
       const statusHeader = screen.getByRole('button', {
-        name: /Sort by Health\b/i,
+        name: 'Health',
       })
 
       expect(clubNameHeader).toBeInTheDocument()
@@ -216,7 +216,7 @@ describe('ClubsTable Integration Tests', () => {
 
       // Click on Members column to sort
       const membersHeader = screen.getByRole('button', {
-        name: /Sort by Members/i,
+        name: 'Members',
       })
       fireEvent.click(membersHeader)
 
@@ -342,10 +342,10 @@ describe('ClubsTable Integration Tests', () => {
 
       // Click on different column headers to test interaction
       const clubNameHeader = screen.getByRole('button', {
-        name: /Sort by Club[.,]/i,
+        name: 'Club',
       })
       const membersHeader = screen.getByRole('button', {
-        name: /Sort by Members/i,
+        name: 'Members',
       })
 
       fireEvent.click(clubNameHeader)

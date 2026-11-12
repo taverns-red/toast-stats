@@ -12,7 +12,10 @@
  *   - `columnPinningFeature` — the controlled `columnPinning` slice that makes
  *     the sticky key column the model of record (ADR-006 §3).
  *   - `columnVisibilityFeature` — the controlled `columnVisibility` slice the
- *     column-groups menu drives (#819, ADR-006 §4).
+ *     Columns menu drives (#819, ADR-006 §4).
+ *   - `columnSizingFeature` — `size` per column, `getSize()` for the colgroup
+ *     and `getTotalSize()` for the table's min-width and the overflow test
+ *     (#2676, spec §5.3). The widths live in `clubsColumnMeta.ts`.
  *
  * The core row model is automatic in v9; `getCoreRowModel()` is gone.
  *
@@ -31,6 +34,7 @@
 
 import {
   columnPinningFeature,
+  columnSizingFeature,
   columnVisibilityFeature,
   createColumnHelper,
   createSortedRowModel,
@@ -56,6 +60,7 @@ export interface ClubsTableMeta {
 export const clubsTableFeatures = tableFeatures({
   rowSortingFeature,
   columnPinningFeature,
+  columnSizingFeature,
   columnVisibilityFeature,
   sortedRowModel: createSortedRowModel(),
   sortFns: { basic: sortFn_basic },

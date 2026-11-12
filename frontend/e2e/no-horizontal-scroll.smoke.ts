@@ -40,7 +40,18 @@ const THEMES = ['light', 'dark'] as const
 // toggle is a stored preference, not URL state, so this pass stores it on
 // before loading the Clubs table.
 const CHANGES_ROUTE = '/district/61/clubs'
-const CHANGES_VISIBLE_KEY = 'toast-stats:v1:clubs-table:changes-visible'
+// The v2 column preference (#2676): an explicit show override per Changes column.
+const CHANGES_VISIBLE_KEY = 'toast-stats:v1:clubs-table:columns'
+const CHANGES_VISIBLE_VALUE = JSON.stringify({
+  schema: 2,
+  overrides: {
+    deltaMembership: true,
+    deltaPayments: true,
+    deltaDcpGoals: true,
+    tierTransition: true,
+    distinguishedFlip: true,
+  },
+})
 // ClubsTable swaps the table for phone rows below 768 (useIsMobile(768)).
 const TABLE_MIN_WIDTH = 768
 
@@ -68,8 +79,8 @@ for (const theme of THEMES) {
         if (changes) {
           // Same origin as the previous pass, so storage is writable here.
           await page.evaluate(
-            key => localStorage.setItem(key, 'true'),
-            CHANGES_VISIBLE_KEY
+            ([key, value]) => localStorage.setItem(key, value),
+            [CHANGES_VISIBLE_KEY, CHANGES_VISIBLE_VALUE]
           )
         }
         await page.goto(route, { waitUntil: 'networkidle', timeout: 60_000 })

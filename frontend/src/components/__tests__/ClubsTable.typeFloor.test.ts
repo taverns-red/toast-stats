@@ -7,7 +7,7 @@
  *   1. No CSS rule on a table surface declares a font-size under 14px.
  *   2. The table's TSX uses no 9/10/11px or `text-xs` utility and no uppercase
  *      header treatment.
- * On main: ColumnHeader is `text-[9px] ... uppercase`, the DCP numeral is 11px
+ * On main (before PR 1): ColumnHeader was `text-[9px] ... uppercase`, the DCP numeral is 11px
  * and the overlay provenance line is 10px.
  */
 
@@ -94,7 +94,7 @@ describe('Clubs table type floor (#2676)', () => {
   )
 
   const tsxFiles = [
-    'components/ColumnHeader.tsx',
+    'components/dataTable/DataTable.tsx',
     'components/clubsColumns.tsx',
     'components/dataTable/cells/StatusMarker.tsx',
     'components/dataTable/cells/HealthStatusCell.tsx',
