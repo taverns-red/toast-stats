@@ -14,18 +14,20 @@ export const HealthLegend: React.FC = () => (
     <span className="dt-legend__item">
       <StatusMarker status="intervention-required" /> Intervention
     </span>
+    {/* Flex items: spacing comes from the column-gap in data-table.css, since
+        whitespace between or inside flex items collapses away. */}
     <span className="dt-legend__sep" aria-hidden="true">
-      {' · '}
+      {'·'}
     </span>
     <span className="dt-legend__item">
       <StatusMarker status="vulnerable" /> Vulnerable
     </span>
     <span className="dt-legend__sep" aria-hidden="true">
-      {' · '}
+      {'·'}
     </span>
     <span className="dt-legend__item">
       <StatusMarker status="thriving" /> Thriving.
-    </span>{' '}
+    </span>
     <span className="dt-legend__note">
       <em>Provisional:</em> qualifies today; confirmed once April renewals are
       recorded.

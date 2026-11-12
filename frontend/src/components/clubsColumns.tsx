@@ -93,7 +93,8 @@ const TD_BASE_CLASS: Record<string, string> = {
   name: 'px-2 py-3 whitespace-nowrap',
   division: 'px-2 py-3 whitespace-nowrap text-sm clubs-cell-muted text-center',
   area: 'px-2 py-3 whitespace-nowrap text-sm clubs-cell-muted text-center',
-  status: 'px-2 py-3 whitespace-nowrap text-center',
+  // Start-aligned (#2676): markers share one left edge whatever the label width.
+  status: 'px-2 py-3 whitespace-nowrap text-left',
   membership:
     'px-2 py-3 whitespace-nowrap text-sm text-center clubs-members-cell',
   netChange: 'px-2 py-3 whitespace-nowrap text-sm',

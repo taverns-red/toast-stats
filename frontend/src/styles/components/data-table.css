@@ -32,6 +32,10 @@
      colour. Contrast vs --surface is at least 3:1 in both themes (WCAG
      1.4.11): maroon 10.1 / 7.1, --ink-2 10.5 / 11.5, --ink-3 5.8 / 5.9. */
   .dt-marker {
+    /* Fixed box so all three shapes occupy identical space and line up. */
+    display: block;
+    width: 1em;
+    height: 1em;
     flex: none;
   }
 
@@ -92,7 +96,8 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 2px 0;
+    row-gap: 2px;
+    column-gap: 8px;
     margin: 0 0 12px;
     font-size: var(--dt-font);
     line-height: 1.4;
