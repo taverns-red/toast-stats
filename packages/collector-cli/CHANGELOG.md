@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.26.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.26.0...collector-cli-v1.26.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* **collector:** FAC meeting-schedule parser edge cases ([#2617](https://github.com/taverns-red/toast-stats/issues/2617)) ([#2624](https://github.com/taverns-red/toast-stats/issues/2624)) ([9b43109](https://github.com/taverns-red/toast-stats/commit/9b43109555c3a76484861a34ce27d3b3bd91984e))
+
 ## [1.26.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.25.0...collector-cli-v1.26.0) (2026-11-08)
 
 

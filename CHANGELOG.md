@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.85.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.84.0...toast-stats-v2.85.0) (2026-11-12)
+
+
+### Features
+
+* **brand:** header mark is the Red Taverns pennant ([#2515](https://github.com/taverns-red/toast-stats/issues/2515)) ([#2622](https://github.com/taverns-red/toast-stats/issues/2622)) ([d332087](https://github.com/taverns-red/toast-stats/commit/d33208732e6c439062b5fd2ca5991dd851ca5855))
+
+
+### Bug Fixes
+
+* **a11y:** command palette and phone menu follow the dialog pattern ([#2638](https://github.com/taverns-red/toast-stats/issues/2638)) ([#2664](https://github.com/taverns-red/toast-stats/issues/2664)) ([7dea700](https://github.com/taverns-red/toast-stats/commit/7dea7002d6ea575c66bf2eb8e9711e218c096592))
+* **a11y:** every page has its own document title ([#2640](https://github.com/taverns-red/toast-stats/issues/2640)) ([#2666](https://github.com/taverns-red/toast-stats/issues/2666)) ([6319442](https://github.com/taverns-red/toast-stats/commit/63194424a011c5ecef07c7eb492ddd59118fe902))
+* **a11y:** visible focus rings in light and dark ([#2632](https://github.com/taverns-red/toast-stats/issues/2632)) ([#2662](https://github.com/taverns-red/toast-stats/issues/2662)) ([ce6c0b8](https://github.com/taverns-red/toast-stats/commit/ce6c0b82083762ca4d1e115eb85dda4aef12a421))
+* **club:** club pages state suspension and status in words ([#2639](https://github.com/taverns-red/toast-stats/issues/2639)) ([#2663](https://github.com/taverns-red/toast-stats/issues/2663)) ([cd337ed](https://github.com/taverns-red/toast-stats/commit/cd337ed40e6a3c355e8dbaf563ea0664d3ebf52c))
+* **collector:** FAC meeting-schedule parser edge cases ([#2617](https://github.com/taverns-red/toast-stats/issues/2617)) ([#2624](https://github.com/taverns-red/toast-stats/issues/2624)) ([9b43109](https://github.com/taverns-red/toast-stats/commit/9b43109555c3a76484861a34ce27d3b3bd91984e))
+* **consent:** choosing a cookie option no longer scrolls the page ([#2637](https://github.com/taverns-red/toast-stats/issues/2637)) ([#2660](https://github.com/taverns-red/toast-stats/issues/2660)) ([e2f5081](https://github.com/taverns-red/toast-stats/commit/e2f5081a98822a1d01006b081b2acf8b3fea6159))
+* **landing:** World pulse attention tile aligns with the others ([#2618](https://github.com/taverns-red/toast-stats/issues/2618)) ([#2619](https://github.com/taverns-red/toast-stats/issues/2619)) ([e0f97c2](https://github.com/taverns-red/toast-stats/commit/e0f97c2ef74283855d5fd3aa49c5c6755db94c87))
+* **perf:** loading shells match the loaded layout ([#2634](https://github.com/taverns-red/toast-stats/issues/2634)) ([#2672](https://github.com/taverns-red/toast-stats/issues/2672)) ([435b5f9](https://github.com/taverns-red/toast-stats/commit/435b5f97b99db0af773e9d8b2269b8b7d299dfa9))
+* **shell:** route fallback reserves the page so the footer doesn't jump ([#2633](https://github.com/taverns-red/toast-stats/issues/2633)) ([#2665](https://github.com/taverns-red/toast-stats/issues/2665)) ([904a69a](https://github.com/taverns-red/toast-stats/commit/904a69a06d46c48ba5b5b62c10e31d428a4fb8ee))
+* **ui:** body text uses Source Sans 3, not the system font ([#2631](https://github.com/taverns-red/toast-stats/issues/2631)) ([#2661](https://github.com/taverns-red/toast-stats/issues/2661)) ([69df479](https://github.com/taverns-red/toast-stats/commit/69df479470f56893443e491254194a7c66c76579))
+
+
+### Documentation
+
+* CLAUDE.md brand section — no rename, Phase 2 abandoned ([#2628](https://github.com/taverns-red/toast-stats/issues/2628)) ([#2629](https://github.com/taverns-red/toast-stats/issues/2629)) ([f80fb87](https://github.com/taverns-red/toast-stats/commit/f80fb87ea7c6f99a504453510d05722064e14354))
+* **data:** prod restore backups go to the dedicated backup bucket ([#2541](https://github.com/taverns-red/toast-stats/issues/2541)) ([#2623](https://github.com/taverns-red/toast-stats/issues/2623)) ([792edd6](https://github.com/taverns-red/toast-stats/commit/792edd6ea922b93b5063354c43769b384618b1b2))
+
 ## [2.84.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.83.1...toast-stats-v2.84.0) (2026-11-11)
 
 
