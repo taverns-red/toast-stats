@@ -670,11 +670,17 @@ jobs:
           # Fast-3G + a pre-navigation layout-shift observer, on the deployed
           # channel. Chromium-only by design: the webkit project skips itself,
           # because layout-shift and CDP throttling are both Chromium-only.
+          # e2e/loading-shells-cls.smoke.ts
+          # Loading shells match the loaded layout (#2634): region, regions,
+          # countries, club history and /history under Lighthouse throttling
+          # with every CDN read held. 4x CPU throttle, so one worker, as the
+          # other CLS smokes; in @remaining it ran beside a second worker.
           - shard: cls-chromium
             specs: >-
               e2e/club-hero-cls.smoke.ts
               e2e/district-overview-cls.smoke.ts
               e2e/landing-font-swap-cls.smoke.ts
+              e2e/loading-shells-cls.smoke.ts
             project: smoke
             workers: '1'
 
@@ -684,6 +690,7 @@ jobs:
               e2e/club-hero-cls.smoke.ts
               e2e/district-overview-cls.smoke.ts
               e2e/landing-font-swap-cls.smoke.ts
+              e2e/loading-shells-cls.smoke.ts
             project: webkit
 
           - shard: remaining-1
