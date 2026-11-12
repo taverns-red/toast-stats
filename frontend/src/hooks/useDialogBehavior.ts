@@ -1,4 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react'
+import { lockScroll as lockPageScroll } from '../utils/scrollLock'
 
 /* WAI-ARIA dialog behaviour for a surface that is not a BottomSheet (#2638):
    Tab wraps inside the container, Escape closes from anywhere (document-level,
@@ -72,10 +73,6 @@ export function useDialogBehavior({
 
   useEffect(() => {
     if (!active || !lockScroll) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    return lockPageScroll()
   }, [active, lockScroll])
 }

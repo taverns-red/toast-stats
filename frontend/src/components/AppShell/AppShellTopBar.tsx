@@ -4,6 +4,7 @@ import ThemeToggle from '../ThemeToggle'
 import AppMeta from './AppMeta'
 import HeaderSearch from './HeaderSearch'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { lockScroll } from '../../utils/scrollLock'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Districts', end: true },
@@ -72,12 +73,15 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
   // itself when taller than the viewport, and the page must not move behind.
   useEffect(() => {
     if (!navOpen || !isMobile) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
+    return lockScroll()
   }, [navOpen, isMobile])
+
+  // The Search button sits inside the header, so tapping it would leave the
+  // menu open under the palette: close the menu as the palette opens.
+  const openSearch = useCallback(() => {
+    setNavOpen(false)
+    onOpenSearch()
+  }, [onOpenSearch])
 
   return (
     <header className="app-shell-top-bar" ref={headerRef}>
@@ -179,7 +183,7 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
       <div className="app-shell-tools">
         {/* Omni-search (#1058): inline combobox on desktop, icon→modal on
             mobile. Cmd-K opens the same modal everywhere (AppShell). */}
-        <HeaderSearch onOpenSearch={onOpenSearch} />
+        <HeaderSearch onOpenSearch={openSearch} />
         {/* Bell stub removed per #411 — a non-functional icon erodes
             trust. Re-add when there's real notification content. */}
         <Link
