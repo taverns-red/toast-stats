@@ -27,6 +27,8 @@ vi.mock('../../services/cdn', async importOriginal => {
     }),
     fetchCdnRankings: vi.fn().mockResolvedValue(rankings),
     fetchCdnRankingsForDate: vi.fn().mockResolvedValue(rankings),
+    fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2026-11-11'),
+    fetchCdnRankingsForDateExact: vi.fn().mockResolvedValue(rankings),
     fetchCdnRegionRollups: vi.fn().mockResolvedValue(null),
     fetchCdnCompetitiveAwards: vi.fn().mockResolvedValue(null),
     fetchCdnRegionMembershipSeries: vi.fn().mockResolvedValue(null),

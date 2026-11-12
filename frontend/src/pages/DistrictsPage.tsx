@@ -1,11 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import {
-  fetchCdnDates,
-  fetchCdnRankings,
-  fetchCdnRankingsForDate,
-} from '../services/cdn'
+import { fetchCdnRankings, fetchCdnRankingsForDate } from '../services/cdn'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 import {
   clubGrowthHoldings,
@@ -15,7 +11,7 @@ import {
 import { AwardsRaceSection } from '../components/AwardsRaceSection'
 import { LazyHistoricalRankChart as HistoricalRankChart } from '../components/LazyCharts'
 import { ChartSparklineExpand } from '../components/ChartSparklineExpand'
-import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
+import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import {
   DataControlsBar,
   FRESHNESS_PILL_WIDTH,
@@ -45,11 +41,6 @@ import { useUrlBoolean } from '../hooks/useUrlBoolean'
 import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import { useDebounce } from '../hooks/useDebounce'
 import { SortableHeader } from '../components/SortableHeader'
-import {
-  getAvailableProgramYears,
-  filterDatesByProgramYear,
-  getMostRecentDateInProgramYear,
-} from '../utils/programYear'
 import { ProgramYearTitleSuffix } from '../components/ProgramYearTitleSuffix'
 import { rankingsScrollLabel } from '../utils/rankingsScrollLabel'
 import { DistrictRanking } from '../types/districts'
@@ -68,7 +59,6 @@ import {
 } from '../components/MyDistrictCard'
 import { WorldPulse } from '../components/WorldPulse'
 import { RedVoteBlock } from '../components/RedVoteBlock'
-import { snapshotDatesFrom } from '../types/snapshotDate'
 import { DistinguishedCount } from '../components/DistinguishedCount'
 
 // Columns in the rankings table head: District, Rank, Paid Clubs, Total
@@ -271,13 +261,20 @@ const DistrictsPage: React.FC = () => {
     [setRecognitionFilter]
   )
 
-  // Use URL-synced program year and date (#272)
+  // URL-synced program year and date, with `?date=` validated against the
+  // snapshots that exist (#2635) — one resolver shared with the other
+  // aggregate pages instead of a hand-rolled derivation (#272).
   const {
     selectedProgramYear,
     setSelectedProgramYear,
     selectedDate,
     setSelectedDate,
-  } = useUrlProgramYear()
+    availableProgramYears,
+    cachedDates,
+    effectiveDate: effectiveRankingsDate,
+    isLatestSnapshot,
+    isDatesPending,
+  } = useProgramYearControls()
 
   // Historical rank tracking state — URL-synced so a shared/reloaded link
   // restores the selection and its disclosure (#980, R3: the page owns it).
@@ -286,80 +283,6 @@ const DistrictsPage: React.FC = () => {
   // Mobile-friendly collapsible region filters
   const [isHistoryRegionExpanded, setIsHistoryRegionExpanded] =
     useUrlBoolean('historyExpanded')
-
-  // Every snapshot date (#233). This page needs only the UNION across
-  // districts, which is exactly `v1/dates.json` (~4 KB); it used to fetch the
-  // 473 KB per-district `config/district-snapshot-index.json` and union it back
-  // down on every landing visit (#1830). Shares the app-wide ['available-dates']
-  // cache that useUrlProgramYear's default program year already reads.
-  const { data: cachedDatesData, isPending: isDatesPending } = useQuery({
-    queryKey: ['available-dates'],
-    queryFn: fetchCdnDates,
-    staleTime: 15 * 60 * 1000,
-  })
-
-  // Every snapshot date the pipeline published — this page's mint for the
-  // brand (#1323). It hand-rolls the PY derivation that useProgramYearControls
-  // packages for the other aggregate pages, so it mints here rather than
-  // inheriting one.
-  const allCachedDates = React.useMemo(
-    () => snapshotDatesFrom(cachedDatesData),
-    [cachedDatesData]
-  )
-
-  // Get available program years from cached dates
-  const availableProgramYears = React.useMemo(() => {
-    return getAvailableProgramYears(allCachedDates)
-  }, [allCachedDates])
-
-  // Auto-select a valid program year if current selection is not in available list
-  React.useEffect(() => {
-    if (availableProgramYears.length > 0) {
-      const isCurrentYearAvailable = availableProgramYears.some(
-        py => py.year === selectedProgramYear.year
-      )
-      if (!isCurrentYearAvailable) {
-        // Select the most recent available program year
-        const mostRecentYear = availableProgramYears[0]
-        if (mostRecentYear) {
-          setSelectedProgramYear(mostRecentYear)
-        }
-      }
-    }
-  }, [availableProgramYears, selectedProgramYear.year, setSelectedProgramYear])
-
-  // Filter cached dates by selected program year
-  const cachedDates = React.useMemo(() => {
-    return filterDatesByProgramYear(allCachedDates, selectedProgramYear)
-  }, [allCachedDates, selectedProgramYear])
-
-  // Auto-select most recent date in program year when program year changes
-  React.useEffect(() => {
-    if (cachedDates.length > 0 && !selectedDate) {
-      const mostRecent = getMostRecentDateInProgramYear(
-        allCachedDates,
-        selectedProgramYear
-      )
-      if (mostRecent) {
-        setSelectedDate(mostRecent)
-      }
-    }
-  }, [
-    selectedProgramYear,
-    cachedDates,
-    allCachedDates,
-    selectedDate,
-    setSelectedDate,
-  ])
-
-  // Effective date for rankings — most recent date in selected PY (#301)
-  const effectiveRankingsDate = React.useMemo(() => {
-    if (selectedDate) return selectedDate
-    if (cachedDates.length > 0) {
-      return [...cachedDates].sort((a, b) => b.localeCompare(a))[0]
-    }
-    return undefined
-  }, [selectedDate, cachedDates])
 
   // Fetch rankings from CDN — date-aware (#301)
   const { data, isLoading, isError, error, refetch } = useQuery({
@@ -375,12 +298,7 @@ const DistrictsPage: React.FC = () => {
   })
 
   // Freshness pill: DataControlsBar derives the "as of" date + month-end
-  // reconciliation state itself from these raw facts (#1310). isLatestSnapshot
-  // gates reconciliation to the live snapshot only.
-  const isLatestSnapshot =
-    !selectedDate ||
-    (cachedDates.length > 0 &&
-      selectedDate === [...cachedDates].sort((a, b) => b.localeCompare(a))[0])
+  // reconciliation state itself from the controls' raw facts (#1310).
 
   // Fetch competitive award standings for the same snapshot (#331).
   // isLoading reserves the AwardsRaceSection slot so its late arrival (this
