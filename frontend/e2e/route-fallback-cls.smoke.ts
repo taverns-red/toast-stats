@@ -88,10 +88,12 @@ async function measure(
   await page.goto(path, { waitUntil: 'load', timeout: 60_000 })
   // The fallback must have painted first, or this proves nothing: if no page
   // chunk was held, the route mounts straight away and CLS reads 0.
+  // By label, attached: the old fallback was an empty unstyled div (zero
+  // height, so never "visible"), and this must read the same on it.
   await page
-    .getByRole('status', { name: 'Loading page…' })
+    .locator('[aria-label="Loading page…"]')
     .first()
-    .waitFor({ state: 'visible', timeout: 10_000 })
+    .waitFor({ state: 'attached', timeout: 10_000 })
   expect(
     await page.locator('main h1').count(),
     'the route mounted before the fallback was seen: no chunk was held'
