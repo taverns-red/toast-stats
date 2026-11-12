@@ -9,14 +9,16 @@ import { test, expect } from './fixtures/test'
  * hooks. The page shows data for the closest date we have, says so in one
  * dismissible line, and the date chip names the date whose data is on screen.
  *
- * The date is earlier than any snapshot, so the closest one is the PY's
- * latest (which the fixture CDN serves). The freshness-pill wording and the
+ * The date is earlier than any snapshot the pipeline has ever written (the
+ * real index reaches back to 2017), so the closest one is the selected PY's
+ * latest (which the fixture CDN serves). A date inside the real history would
+ * resolve to an old snapshot the fixture CDN does not hold. The freshness-pill wording and the
  * switch to another program year are covered by unit tests: the fixture CDN
  * holds only the current program year's files. */
 
 /* A date with NO snapshot, on purpose: it is not a pinned fixture date, so it
  * is built here rather than written into the URL literal (#2595). */
-const NO_SNAPSHOT = '2018-01-01'
+const NO_SNAPSHOT = '2000-01-01'
 
 test('a division page with a date before all data shows data and a notice (5s)', async ({
   page,
@@ -26,13 +28,13 @@ test('a division page with a date before all data shows data and a notice (5s)',
   })
   const notice = page.getByTestId('date-notice')
   await expect(notice).toBeVisible({ timeout: 5_000 })
-  await expect(notice).toContainText('No data for Jan 1, 2018')
+  await expect(notice).toContainText('No data for Jan 1, 2000')
   // Data, not skeletons: the page title resolves.
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible({
     timeout: 5_000,
   })
   // The chip never names the requested date.
-  await expect(page.getByTestId('date-chip')).not.toContainText('Jan 1, 2018')
+  await expect(page.getByTestId('date-chip')).not.toContainText('Jan 1, 2000')
 })
 
 test('the notice can be dismissed', async ({ page }) => {
@@ -48,9 +50,11 @@ test('the notice can be dismissed', async ({ page }) => {
 test('/awards with a far-past date names the date on screen, not the requested one', async ({
   page,
 }) => {
-  await page.goto('/awards?date=2019-01-15', { waitUntil: 'domcontentloaded' })
+  await page.goto(`/awards?date=${NO_SNAPSHOT}`, {
+    waitUntil: 'domcontentloaded',
+  })
   await expect(page.getByTestId('date-notice')).toBeVisible({
     timeout: 10_000,
   })
-  await expect(page.getByTestId('date-chip')).not.toContainText('Jan 15, 2019')
+  await expect(page.getByTestId('date-chip')).not.toContainText('Jan 1, 2000')
 })
