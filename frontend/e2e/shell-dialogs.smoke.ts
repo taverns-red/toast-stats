@@ -17,6 +17,27 @@ async function load(page: Page, path: string): Promise<void> {
   await page.evaluate(() => document.fonts.ready)
 }
 
+/** Opening the palette fetches the club and division indexes, which have no
+ *  recorded CDN fixture (#2545). These tests check the dialog, not search
+ *  results, so an empty index is enough; a page-level route runs before the
+ *  context-level fixture and keeps the fetch off the network. */
+async function stubSearchIndexes(page: Page): Promise<void> {
+  await page.route('**/config/club-index.json', route =>
+    route.fulfill({ json: { clubs: {} } })
+  )
+  await page.route('**/config/divisions-areas-index.json', route =>
+    route.fulfill({
+      json: {
+        generatedAt: '2026-11-12T00:00:00Z',
+        snapshotDate: '2026-11-12',
+        totalDivisions: 0,
+        totalAreas: 0,
+        districts: {},
+      },
+    })
+  )
+}
+
 test.describe('phone menu at 360x640 (CHR-06)', () => {
   test.use({ viewport: { width: 360, height: 640 }, hasTouch: true })
 
@@ -49,13 +70,18 @@ test.describe('phone menu at 360x640 (CHR-06)', () => {
 })
 
 test.describe('command palette on a phone (CHR-05)', () => {
-  test.use({ viewport: { width: 375, height: 667 }, hasTouch: true })
+  test.use({
+    viewport: { width: 375, height: 667 },
+    hasTouch: true,
+    isMobile: true,
+  })
 
   test('Tab stays inside, Escape works from anywhere, focus returns', async ({
     page,
   }) => {
+    await stubSearchIndexes(page)
     await load(page, '/')
-    const search = page.getByRole('button', { name: 'Search' })
+    const search = page.getByRole('button', { name: 'Search', exact: true })
     await search.click()
     const dialog = page.getByRole('dialog', { name: 'Universal search' })
     await expect(dialog).toBeVisible()
@@ -76,22 +102,29 @@ test.describe('command palette on a phone (CHR-05)', () => {
     }
     await page.keyboard.press('Escape')
     await expect(dialog).toBeHidden()
-    await expect(page.getByRole('button', { name: 'Search' })).toBeFocused()
+    await expect(
+      page.getByRole('button', { name: 'Search', exact: true })
+    ).toBeFocused()
     expect(
       await page.evaluate(() => getComputedStyle(document.body).overflow)
     ).not.toBe('hidden')
   })
 
   test('keyboard hints are hidden on touch', async ({ page }) => {
+    await stubSearchIndexes(page)
     await load(page, '/')
-    await page.getByRole('button', { name: 'Search' }).click()
+    await page.getByRole('button', { name: 'Search', exact: true }).click()
     await expect(page.locator('.command-palette__hint')).toBeHidden()
     await expect(page.locator('.command-palette__footer')).toBeHidden()
   })
 })
 
 test.describe('clubs sticky search at 375 (CHR-11)', () => {
-  test.use({ viewport: { width: 375, height: 667 }, hasTouch: true })
+  test.use({
+    viewport: { width: 375, height: 667 },
+    hasTouch: true,
+    isMobile: true,
+  })
 
   test('sits at or below the context bar, not under it', async ({ page }) => {
     await load(page, '/district/61/clubs')
