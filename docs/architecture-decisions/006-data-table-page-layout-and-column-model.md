@@ -183,6 +183,47 @@ Bundle cost: `@tanstack/react-table` adds **+12.0 KB gzip** to the frontend
 (351,974 → 364,249 bytes gzip total JS, measured at adoption; same vendor org as
 the TanStack Query already shipped). Recorded in the #835 PR.
 
+## Addendum 2 (2026-11-12, #2676): column visibility, sticky header and a shared `DataTable` foundation
+
+Source: the Clubs table rework spec (2026-11-12). Decided by Ron the same day.
+This addendum amends §2, §3 and §6 and **reverses** Addendum 1's "landing
+rankings table = bespoke".
+
+- **§2/§3 — columns are chosen, not CSS-hidden.** The tablet tier chooses the
+  **default** visible set. Columns are hidden only through TanStack
+  `columnVisibility`, with a user override through **one Columns control**
+  ("Columns · N of M", same at every width from 768 up, with a reset). They are
+  **never** hidden with CSS `display:none`. "Low-priority columns hidden" becomes
+  "off by default, one click to show". Width never hides a column the user turned
+  on.
+- **§2 — sticky key column stands, with two additions.** "Sticky key column +
+  visible scroll-cue" is unchanged. Added: there is **no inner vertical
+  scroller** (the page scrolls), and the header sticks to the **page**, not to a
+  box. `overflow-x: auto` makes a wrapper a scroll container on both axes, so the
+  wrapper has no overflow while the table fits and gains `overflow-x: auto` (with
+  a labelled, focusable region) only when it truly overflows. In overflow mode the
+  header scrolls away with the table; there is no synced header clone.
+- **§6 and Addendum 1 — evaluate-then-extract is met; extract.** Clubs, the
+  landing rankings table and the region table share column hiding, sorting, a
+  sticky key column and the overflow cue. A thin `DataTable` foundation
+  (`frontend/src/components/dataTable/`) is extracted over TanStack v9. This
+  **reverses** Addendum 1's "landing rankings table stays bespoke": that table
+  has the same CSS-hiding defect and will migrate onto the foundation after
+  Clubs. The foundation is a thin recipe (shared features, column meta, Columns
+  menu, shell, state, cells), not a new abstraction layer.
+- **Text and density.** Data text is 14px minimum (12px is the absolute floor).
+  Table headers are 14px, 600, sentence case (replacing 9px uppercase).
+  Shared `--dt-*` tokens carry type, row height and padding.
+- **Status and tier.** Health is text plus a shape marker, never a tinted row or
+  pill: a maroon x circle for Intervention, an outlined warning triangle for
+  Vulnerable, a grey tick for Thriving. Markers reach 3:1 non-text contrast in
+  light and dark. Tier is plain text with "provisional" on a second line. Only
+  legacy palette tokens are used.
+- **Correction.** The Addendum 1 text says TanStack "v8"; the code moved to v9 in
+  #1530 (`useTable`, `tableFeatures`, `sortFn`, pinning `start`/`end`).
+- **Bundle.** No new dependency. `columnSizingFeature` ships in the installed
+  `@tanstack/react-table` 9.3.1; the gzip delta is recorded in the layout PR.
+
 ## Consequences
 
 **Easier:**

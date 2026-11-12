@@ -251,6 +251,30 @@ Grooming of the 11 proposals from the how-to-video role research (#2293), tested
 | #2305 | Embeddable district widget                         | Deferred (parked, closed) — no validated demand; adds a public support surface and cross-origin concerns                                                               |
 | #2301 | Projected dues allocation (Finance Manager)        | Rejected (closed) — not a TI duty, outside the core value, and an estimate of money risks being read as fact                                                           |
 
+### Clubs table rework and shared DataTable foundation (#2676, Ron 2026-11-12)
+
+Decided, not yet shipped. Spec in the Clubs table rework (ADR-006 Addendum 2).
+
+- **Health column.** The Clubs "Status" column is renamed **Health**. Each cell is
+  text plus a shape marker: maroon x circle for "Intervention required" (visible
+  label "Intervention"), outlined warning triangle for Vulnerable (outline only, not
+  yellow-filled), grey tick for Thriving. No row tint anywhere. Markers reach 3:1
+  non-text contrast in light and dark; legacy palette only.
+- **Tier** is plain text, with "provisional" on a second line (no asterisk, stripe
+  or tooltip-only meaning).
+- **Text size.** 14px floor for data; table headers are 14px sentence case
+  (replacing 9px caps); 12px is the absolute minimum.
+- **Columns** are chosen through one Columns control, never hidden with CSS.
+  Width only sets the default set.
+- **Overflow mode (Q2).** If the user adds more columns than fit, the table
+  scrolls sideways and its header scrolls away with it; there is no synced header
+  clone.
+- **Whole-row click removed (Q4).** The club-name link is the only row action.
+- **CSV export (Q6).** All columns, for the filtered and sorted rows, independent
+  of which columns are visible. The Distinguished-confirmed flag is included.
+- **Landing rankings (T3)** will later move onto the shared foundation, reversing
+  ADR-006 Addendum 1's "bespoke" decision.
+
 ### Other
 
 | Feature                   | Description                                           | Issue |
