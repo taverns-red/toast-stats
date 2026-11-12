@@ -366,9 +366,10 @@ const TIME_TOKEN =
 const RANGE_SEPARATOR = /^\s*(?:-+|–|—|~|〜|～|to|a|until|jusqu'?a)\s*$/
 /** A two-digit hour before hrs/hours ("1600 hrs", "11:00 hours") is a
  *  24-hour clock; "1:30 hours" is a duration. The lookbehinds keep an
- *  offset ("+0530 hrs", "- 0600 hrs") out. */
+ *  offset ("+0530 hrs", "- 0600 hrs") out, but a spaced dash after another
+ *  hrs value is a range ("1000hrs - 1200hrs", #2617). */
 const HHMM_HRS =
-  /(?<![\d:.+\-−])(?<![+\-−]\s)(\d{2})[:.]?(\d{2})\s*(?:hrs?|hours?)\b\.?/g
+  /(?<![\d:.+\-−])(?<!(?<!(?:hrs?|hours?)\s*)[+\-−]\s)(\d{2})[:.]?(\d{2})\s*(?:hrs?|hours?)\b\.?/g
 /** Both ends of "730-930 pm", so the start is not lost (#2243). */
 const HHMM_RANGE_MERIDIEM =
   /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(\s*(?:-|–|to)\s*)(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
