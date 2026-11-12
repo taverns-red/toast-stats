@@ -195,6 +195,30 @@ describe('useProgramYearControls (#1301)', () => {
       )
       expect(result.current.effectiveDate).toBe('2025-03-01')
     })
+
+    it('picking a program year wins over the ?date= from the one it left', async () => {
+      const { result } = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(['/?py=2025&date=2025-08-01']),
+      })
+      await waitFor(() =>
+        expect(result.current.effectiveDate).toBe('2025-08-01')
+      )
+      expect(result.current.selectedProgramYear.year).toBe(2025)
+
+      act(() => {
+        result.current.setSelectedProgramYear(
+          result.current.availableProgramYears[0]!
+        )
+      })
+
+      await waitFor(() =>
+        expect(result.current.selectedProgramYear.year).toBe(2026)
+      )
+      // Give a snap-back a chance to happen, then assert it did not.
+      await new Promise(resolve => setTimeout(resolve, 50))
+      expect(result.current.selectedProgramYear.year).toBe(2026)
+      expect(result.current.effectiveDate).toBe('2026-09-15')
+    })
   })
 
   // #1618 — /clubs and /awards opened on PY 2025-26 while the data's newest PY
