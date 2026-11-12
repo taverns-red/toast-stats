@@ -1349,6 +1349,29 @@ describe('parseMeetingSchedule (#2246) — a bare range after a mode or zone wor
   )
 })
 
+describe('parseMeetingSchedule (#2617) — an hrs range keeps its end', () => {
+  it('"1000hrs - 1200hrs" is 10:00-12:00, not an offset', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: '2nd & 4th Friday',
+        meetingTime: '1000hrs - 1200hrs',
+      })
+    ).toEqual([
+      {
+        day: 'Friday',
+        cadence: 'monthly',
+        weeksOfMonth: [2, 4],
+        startTime: '10:00',
+        endTime: '12:00',
+      },
+    ])
+  })
+
+  it('a signed offset before an hrs number is still not a time', () => {
+    expect(starts('Monday', '7 pm GMT - 0600 hrs')).toEqual(['Monday 19:00'])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
