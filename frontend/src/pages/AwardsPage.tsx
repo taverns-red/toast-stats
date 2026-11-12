@@ -143,7 +143,7 @@ const AwardsPage: React.FC = () => {
         <ErrorDisplay
           error={standingsError}
           title="Could not load award standings"
-          subject="award standings"
+          subject="the award standings"
           onRetry={() => {
             refetchStandings()
           }}

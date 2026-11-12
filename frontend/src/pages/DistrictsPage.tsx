@@ -1113,7 +1113,7 @@ const DistrictsPage: React.FC = () => {
         <ErrorDisplay
           error={(error as Error) || 'Failed to load district rankings'}
           title="Error Loading Rankings"
-          subject="district rankings"
+          subject="the district rankings"
           onRetry={() => {
             refetch()
           }}

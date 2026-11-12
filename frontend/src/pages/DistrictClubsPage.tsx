@@ -316,7 +316,7 @@ const DistrictClubsPage: React.FC = () => {
               <ErrorDisplay
                 error={datesError as Error}
                 title="Failed to Load Clubs"
-                subject="clubs list"
+                subject="the clubs list"
                 onRetry={() => {
                   refetchDates()
                 }}
@@ -329,7 +329,7 @@ const DistrictClubsPage: React.FC = () => {
               <ErrorDisplay
                 error={error ?? 'Failed to load clubs data'}
                 title="Failed to Load Clubs"
-                subject="clubs list"
+                subject="the clubs list"
                 onRetry={() => {
                   refetch()
                 }}

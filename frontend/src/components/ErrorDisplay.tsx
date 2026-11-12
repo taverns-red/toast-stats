@@ -4,7 +4,10 @@ interface ErrorDisplayProps {
   error: Error | string | null
   onRetry?: () => void
   title?: string
-  /** What failed to load, in plain words ("division"): used in the copy. */
+  /**
+   * What failed to load, as a noun phrase with its determiner ("this
+   * division", "the regions"): used in the copy, so plurals read as English.
+   */
   subject?: string
   showDetails?: boolean
   variant?: 'inline' | 'card' | 'full'
@@ -19,7 +22,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   error,
   onRetry,
   title = 'Error Loading Data',
-  subject = 'data',
+  subject = 'this data',
   showDetails = false,
   variant = 'card',
   className = '',
@@ -32,6 +35,8 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   const isNetworkError =
     errorMessage.toLowerCase().includes('network') ||
     errorMessage.toLowerCase().includes('fetch') ||
+    // Safari's wording for a failed fetch.
+    errorMessage.toLowerCase().includes('load failed') ||
     errorMessage.toLowerCase().includes('connection')
 
   // Determine if this is a not found error
@@ -76,10 +81,10 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
 
   const getUserFriendlyMessage = () => {
     if (isNetworkError) {
-      return `We couldn't load this ${subject}. Check your connection and try again.`
+      return `We couldn't load ${subject}. Check your connection and try again.`
     }
     if (isNotFoundError) {
-      return `This ${subject} could not be found.`
+      return `${subject.charAt(0).toUpperCase()}${subject.slice(1)} could not be found.`
     }
     return errorMessage
   }

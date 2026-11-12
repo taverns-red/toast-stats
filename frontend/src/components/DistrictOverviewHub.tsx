@@ -170,7 +170,7 @@ export const DistrictOverviewHub: React.FC<DistrictOverviewHubProps> = ({
       >
         <ErrorDisplay
           error={loadError}
-          subject="district overview"
+          subject="this district overview"
           title="Couldn't load this district"
           {...(onRetry ? { onRetry } : {})}
         />

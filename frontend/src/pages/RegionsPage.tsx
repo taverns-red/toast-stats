@@ -155,7 +155,7 @@ const RegionsPage: React.FC = () => {
         <ErrorDisplay
           error={error ?? 'Failed to fetch'}
           title="Could not load regions"
-          subject="regions"
+          subject="the regions"
           onRetry={() => {
             refetch()
           }}

@@ -172,7 +172,7 @@ const AreaPage: React.FC = () => {
         <ErrorDisplay
           error={error ?? 'Failed to fetch'}
           title="Could not load area"
-          subject="area"
+          subject="this area"
           onRetry={() => {
             // Only the query that failed: with the date index down the
             // analytics query is disabled, and refetching it ignores

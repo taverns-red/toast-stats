@@ -150,7 +150,7 @@ const DivisionPage: React.FC = () => {
         <ErrorDisplay
           error={error ?? 'Failed to fetch'}
           title="Could not load division"
-          subject="division"
+          subject="this division"
           onRetry={() => {
             // Only the query that failed: with the date index down the
             // analytics query is disabled, and refetching it ignores

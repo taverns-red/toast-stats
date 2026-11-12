@@ -511,7 +511,7 @@ const RegionPage: React.FC = () => {
         <ErrorDisplay
           error={error ?? 'Failed to fetch'}
           title="Could not load region"
-          subject="region"
+          subject="this region"
           onRetry={() => {
             refetch()
           }}

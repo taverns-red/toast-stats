@@ -736,7 +736,7 @@ const DistrictDetailPageInner: React.FC = () => {
             <ErrorDisplay
               error={overviewError}
               title="Failed to Load District Data"
-              subject="district"
+              subject="this district"
               onRetry={retryOverview}
               showDetails={true}
             />
