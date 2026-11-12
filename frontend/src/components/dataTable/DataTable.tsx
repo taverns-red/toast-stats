@@ -84,6 +84,9 @@ interface DataTableProps {
   caption: React.ReactNode
   /** Short name for the scroll region, e.g. "All clubs table". */
   label: string
+  /** A short accessible name for the `<table>` itself (the caption keeps the
+   *  detail). Without it the caption is the name. */
+  tableLabel?: string
   sort: DataTableSort
   onSort: (field: string) => void
   /** The column that labels each row: rendered as `<th scope="row">` and left
@@ -122,6 +125,7 @@ export function DataTable({
   id,
   caption,
   label,
+  tableLabel,
   sort,
   onSort,
   rowHeaderColumnId,
@@ -201,7 +205,12 @@ export function DataTable({
           data-overflow={overflow ? 'true' : 'false'}
           {...regionProps}
         >
-          <table id={id} className="dt" style={{ minWidth: totalSize }}>
+          <table
+            id={id}
+            className="dt"
+            style={{ minWidth: totalSize }}
+            aria-label={tableLabel}
+          >
             <caption className="sr-only">{caption}</caption>
             <colgroup>
               {table.getVisibleLeafColumns().map(column => (

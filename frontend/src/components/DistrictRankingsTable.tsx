@@ -163,6 +163,7 @@ export const DistrictRankingsTable: React.FC<DistrictRankingsTableProps> = ({
           isSheet ? 'district-rankings-sheet-table' : 'district-rankings-table'
         }
         label="District rankings"
+        tableLabel="District rankings"
         caption={caption}
         sort={{
           field: rankingsColumnForSortField(sort.field),
