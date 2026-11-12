@@ -7142,14 +7142,6 @@
     background-color: var(--surface-2);
   }
 
-  /* Touch has no Esc or arrow keys: hide the key hints (CHR-39). */
-  @media (pointer: coarse) {
-    .command-palette__hint,
-    .command-palette__footer {
-      display: none;
-    }
-  }
-
   .command-palette__results {
     list-style: none;
     margin: 0;
@@ -7247,6 +7239,15 @@
     border-radius: 3px;
     padding: 0 4px;
     margin: 0 1px;
+  }
+
+  /* Touch has no Esc or arrow keys: hide the key hints (CHR-39). After the
+     footer and hint rules above so equal specificity resolves to this. */
+  @media (pointer: coarse) {
+    .command-palette__hint,
+    .command-palette__footer {
+      display: none;
+    }
   }
 
   /* Branded root error boundary (#1011, epic #1010). Replaces RR's raw
