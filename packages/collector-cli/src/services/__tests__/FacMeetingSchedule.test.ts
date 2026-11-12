@@ -1437,6 +1437,63 @@ describe('parseMeetingSchedule (#2617) — "last" has no cadence', () => {
   })
 })
 
+describe('parseMeetingSchedule (#2617) — a day range in MeetingDay', () => {
+  it('"Mon-Fri" covers all five weekdays', () => {
+    const entries = parseMeetingSchedule({
+      meetingDay: 'Mon-Fri',
+      meetingTime: '12:15',
+    })
+    expect(entries?.map(e => e.day)).toEqual([
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+    ])
+    expect(entries?.every(e => e.startTime === '12:15')).toBe(true)
+  })
+
+  it('"Tuesday to Thursday" covers the day between', () => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Tuesday to Thursday' })?.map(
+        e => e.day
+      )
+    ).toEqual(['Tuesday', 'Wednesday', 'Thursday'])
+  })
+
+  it('two separate days are not a range', () => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Monday, Friday' })?.map(e => e.day)
+    ).toEqual(['Monday', 'Friday'])
+  })
+})
+
+describe('parseMeetingSchedule (#2617) — an arrival lead before the time', () => {
+  it.each([
+    ['Doors open 6:45 pm, meeting 7:00 pm', '19:00'],
+    ['Zoom opens at 6:45pm, meeting at 7pm', '19:00'],
+    ['Arrive 6:45 pm, start 7:00 pm', '19:00'],
+  ])('%j starts at %s', (time, start) => {
+    expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
+  })
+
+  it('"Open 6:30 - 7:30 pm" is still a range', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Wednesday',
+        meetingTime: 'Open 6:30 - 7:30 pm',
+      })
+    ).toEqual([
+      {
+        day: 'Wednesday',
+        cadence: 'weekly',
+        startTime: '18:30',
+        endTime: '19:30',
+      },
+    ])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
