@@ -22,8 +22,6 @@ const sources = import.meta.glob(
 /** Pages that deliberately keep the branded default title. */
 const KEEPS_DEFAULT_TITLE: Record<string, string> = {
   DistrictsPage: 'the landing page: the default title is its title',
-  AreaRedirectPage: 'redirects at once; the target page sets the title',
-  ClubRedirectPage: 'redirects at once; the target page sets the title',
 }
 
 /** Every page module App.tsx imports, plus the router's errorElement. */
