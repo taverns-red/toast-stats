@@ -1407,6 +1407,36 @@ describe('parseMeetingSchedule (#2617) — "every 2nd and 4th" is monthly', () =
   })
 })
 
+describe('parseMeetingSchedule (#2617) — spelled-out French ordinals', () => {
+  it.each([
+    ['Le premier et troisième jeudi', '19h', 'Thursday', [1, 3], '19:00'],
+    ['Deuxième et quatrième mardi', '18 h 30', 'Tuesday', [2, 4], '18:30'],
+    ['Premiere et Troisieme Jeudi', '19h', 'Thursday', [1, 3], '19:00'],
+    ['LE PREMIER ET TROISIÈME JEUDI', '19h', 'Thursday', [1, 3], '19:00'],
+    ['le quatrième lundi', '7 pm', 'Monday', [4], '19:00'],
+  ])(
+    '%j is monthly',
+    (meetingDay, meetingTime, day, weeksOfMonth, startTime) => {
+      expect(parseMeetingSchedule({ meetingDay, meetingTime })).toEqual([
+        { day, cadence: 'monthly', weeksOfMonth, startTime },
+      ])
+    }
+  )
+})
+
+describe('parseMeetingSchedule (#2617) — "last" has no cadence', () => {
+  it.each([
+    ['Last Thursday', '7 pm', 'Thursday', '19:00'],
+    ['Last Thursday of the month', '7 pm', 'Thursday', '19:00'],
+    ['dernier jeudi', '19h', 'Thursday', '19:00'],
+    ['Le dernier jeudi du mois', '19h', 'Thursday', '19:00'],
+  ])('%j leaves the cadence out', (meetingDay, meetingTime, day, startTime) => {
+    expect(parseMeetingSchedule({ meetingDay, meetingTime })).toEqual([
+      { day, startTime },
+    ])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
