@@ -45,6 +45,7 @@ const baseProps = {
   setSelectedProgramYear: vi.fn(),
   availableProgramYears: [py2526],
   selectedDate: noDate(),
+  effectiveDate: noDate(),
   onDateChange: vi.fn(),
   availableDates: [snap('2026-04-26')],
   latestSnapshotDate: latestDate(),
@@ -176,7 +177,36 @@ describe('DistrictDetailHeader freshness parity (#1310)', () => {
     const pill = screen.getByTestId('freshness-pill')
     expect(pill).not.toHaveTextContent(/month-end reconciliation/i)
     expect(pill.getAttribute('data-reconciling')).toBeNull()
-    expect(pill).toHaveTextContent(/Data fresh · May 31, 2026/)
+    // #2635: a finalized past date is not the newest snapshot, so the pill
+    // reads "Data as of", never "Data fresh".
+    expect(pill).toHaveTextContent(/Data as of · May 31, 2026/)
+    expect(pill).not.toHaveTextContent(/Data fresh/)
+  })
+
+  // #2635 — the pages hand the header the date on screen as `effectiveDate`
+  // while `selectedDate` stays undefined at the PY's latest, so the chip can
+  // still say "Latest in PY" and the pill still knows when it is not newest.
+  it('the PY latest (no explicit date) on the newest snapshot reads "Data fresh" and "Latest in PY"', () => {
+    renderHeader({
+      selectedDate: undefined,
+      effectiveDate: snap('2026-04-26'),
+      latestSnapshotDate: snap('2026-04-26'),
+    })
+    expect(screen.getByTestId('freshness-pill')).toHaveTextContent(
+      /Data fresh · Apr 26, 2026/
+    )
+    expect(screen.getAllByText('Latest in PY').length).toBeGreaterThan(0)
+  })
+
+  it('a prior PY latest (no explicit date) reads "Data as of", not "Data fresh"', () => {
+    renderHeader({
+      selectedDate: undefined,
+      effectiveDate: snap('2026-03-15'),
+      latestSnapshotDate: snap('2026-04-26'),
+    })
+    const pill = screen.getByTestId('freshness-pill')
+    expect(pill).toHaveTextContent(/Data as of · Mar 15, 2026/)
+    expect(pill).not.toHaveTextContent(/Data fresh/)
   })
 
   // #1647 — at 412px the toolbar laid out on one row while the date index

@@ -18,19 +18,15 @@ import { usePerformanceTargets } from '../hooks/usePerformanceTargets'
 import { resolveDistinguishedCounts } from '../utils/distinguishedCounts'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictRankHistoryYears } from '../hooks/useDistrictRankHistoryYears'
-import {
-  useUrlProgramYear,
-  type UrlWriteOptions,
-} from '../hooks/useUrlProgramYear'
+import { type UrlWriteOptions } from '../hooks/useUrlProgramYear'
+import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
 import { useUrlSuccessPlanTargets } from '../hooks/useUrlSuccessPlanTargets'
 import { goalsForProgramYear } from '../utils/successPlanTargets'
 import { SuccessPlanTargetsPanel } from '../components/SuccessPlanTargetsPanel'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
 import {
-  getAvailableProgramYears,
   filterDatesByProgramYear,
   getMostRecentDateInProgramYear,
-  isDateInProgramYear,
 } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
 import {
@@ -106,14 +102,22 @@ const DistrictDetailPageInner: React.FC = () => {
   // each live at their own route and the legacy `?tab=` URLs redirect
   // there via the outer DistrictDetailPage wrapper.
 
-  // Use URL-synced program year and date (#272)
+  // URL-synced program year and date (#272), validated against this district's
+  // snapshots ONCE in the shared hook (#2635): a `?date=` with no snapshot
+  // resolves to the closest one (with a notice), a date in another year
+  // switches the year. `effectiveProgramYear` / `effectiveEndDate` are what
+  // this page shows and fetches; the chip is told the same date.
   const {
     selectedProgramYear,
     setSelectedProgramYear,
-    selectedDate,
     setSelectedDate,
     setProgramYearAndDate,
-  } = useUrlProgramYear()
+    availableProgramYears,
+    effectiveProgramYear,
+    effectiveEndDate,
+    selectedDate,
+    hasValidDates,
+  } = useDistrictProgramYearControls(districtId)
 
   // Fetch cached dates for date selector
   const {
@@ -127,11 +131,6 @@ const DistrictDetailPageInner: React.FC = () => {
     () => cachedDatesData?.dates || [],
     [cachedDatesData?.dates]
   )
-
-  // Get available program years from cached dates
-  const availableProgramYears = React.useMemo(() => {
-    return getAvailableProgramYears(allCachedDates)
-  }, [allCachedDates])
 
   // #1436 — the degraded "limited data" view's year source.
   //
@@ -151,62 +150,15 @@ const DistrictDetailPageInner: React.FC = () => {
     isLoading: isLoadingRankHistoryYears,
   } = useDistrictRankHistoryYears(districtId, needsRankHistoryYears)
 
-  // Auto-select a valid program year if current selection is not in available list
-  React.useEffect(() => {
-    if (availableProgramYears.length > 0) {
-      const isCurrentYearAvailable = availableProgramYears.some(
-        py => py.year === selectedProgramYear.year
-      )
-      if (!isCurrentYearAvailable) {
-        // Select the most recent available program year
-        const mostRecentYear = availableProgramYears[0]
-        if (mostRecentYear) {
-          setSelectedProgramYear(mostRecentYear)
-        }
-      }
-    }
-  }, [availableProgramYears, selectedProgramYear.year, setSelectedProgramYear])
-
-  // Filter cached dates by selected program year
-  const cachedDatesInProgramYear = React.useMemo(() => {
-    return filterDatesByProgramYear(allCachedDates, selectedProgramYear)
-  }, [allCachedDates, selectedProgramYear])
-
-  // Compute effective program year - use selected if available, otherwise most recent available
-  // This prevents API calls with invalid date ranges during the transition period
-  const effectiveProgramYear = React.useMemo(() => {
-    if (availableProgramYears.length === 0) {
-      return null // No data yet, don't make API calls
-    }
-    const isCurrentYearAvailable = availableProgramYears.some(
-      py => py.year === selectedProgramYear.year
-    )
-    if (isCurrentYearAvailable) {
-      return selectedProgramYear
-    }
-    // Fall back to most recent available
-    return availableProgramYears[0] ?? null
-  }, [availableProgramYears, selectedProgramYear])
-
-  // Compute effective end date - must be within the effective program year
-  const effectiveEndDate = React.useMemo(() => {
-    if (!effectiveProgramYear) return null
-    if (
-      selectedDate &&
-      isDateInProgramYear(selectedDate, effectiveProgramYear)
-    ) {
-      return selectedDate
-    }
-    // Use the most recent date in the effective program year, or the program year end date
-    const mostRecent = getMostRecentDateInProgramYear(
-      allCachedDates,
-      effectiveProgramYear
-    )
-    // null is unreachable here — effectiveProgramYear comes from
-    // getAvailableProgramYears(allCachedDates). See getMostRecentDateInProgramYear
-    // for why, and why a `|| endDate` fallback must not come back (#1323).
-    return mostRecent
-  }, [selectedDate, effectiveProgramYear, allCachedDates])
+  // The snapshot dates inside the program year on screen.
+  const cachedDatesInProgramYear = React.useMemo(
+    () =>
+      filterDatesByProgramYear(
+        allCachedDates,
+        effectiveProgramYear ?? selectedProgramYear
+      ),
+    [allCachedDates, effectiveProgramYear, selectedProgramYear]
+  )
 
   // Fetch district info. Scoped to the snapshot this page is DISPLAYING: the
   // roster below is an existence gate (see the `!selectedDistrict` branch), and
@@ -218,41 +170,6 @@ const DistrictDetailPageInner: React.FC = () => {
   const selectedDistrict = districtsData?.districts?.find(
     d => d.id === districtId
   )
-
-  // Determine if we have valid dates for API calls
-  const hasValidDates =
-    effectiveProgramYear !== null && effectiveEndDate !== null
-
-  // Reset selectedDate when it's outside the selected program year
-  // This prevents invalid date ranges where startDate > endDate
-  React.useEffect(() => {
-    if (
-      selectedDate &&
-      !isDateInProgramYear(selectedDate, selectedProgramYear)
-    ) {
-      // Clear the date so the next effect can pick a valid one
-      setSelectedDate(undefined)
-    }
-  }, [selectedDate, selectedProgramYear, setSelectedDate])
-
-  // Auto-select most recent date in program year when program year changes
-  React.useEffect(() => {
-    if (cachedDatesInProgramYear.length > 0 && !selectedDate) {
-      const mostRecent = getMostRecentDateInProgramYear(
-        allCachedDates,
-        selectedProgramYear
-      )
-      if (mostRecent) {
-        setSelectedDate(mostRecent)
-      }
-    }
-  }, [
-    selectedProgramYear,
-    cachedDatesInProgramYear,
-    allCachedDates,
-    selectedDate,
-    setSelectedDate,
-  ])
 
   // Fetch aggregated analytics for overview tab (summary, trends, yearOverYear)
   // CDN-only: fetches pre-computed analytics from Cloud CDN (#173)
@@ -497,7 +414,7 @@ const DistrictDetailPageInner: React.FC = () => {
   // Kept out of the shared header so the subpages (and the map route's JS
   // budget) do not carry it. Placed per layout in the render below.
   const deadlineAsOfDate =
-    selectedDate ?? cachedDatesData?.dateRange?.endDate ?? availableDates[0]
+    effectiveEndDate ?? cachedDatesData?.dateRange?.endDate ?? availableDates[0]
   const deadlineStrip = (
     <NextDeadlineStrip
       programYear={selectedProgramYear.label}
@@ -776,6 +693,7 @@ const DistrictDetailPageInner: React.FC = () => {
               setSelectedProgramYear={setSelectedProgramYear}
               availableProgramYears={availableProgramYears}
               selectedDate={selectedDate}
+              effectiveDate={effectiveEndDate ?? undefined}
               onDateChange={setSelectedDate}
               availableDates={availableDates}
               latestSnapshotDate={

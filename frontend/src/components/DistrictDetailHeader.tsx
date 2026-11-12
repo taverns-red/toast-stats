@@ -32,6 +32,12 @@ interface DistrictDetailHeaderProps {
   setSelectedProgramYear: ProgramYearSetter
   availableProgramYears: ProgramYear[]
   selectedDate: SnapshotDate | undefined
+  /**
+   * The snapshot date whose data is on screen. With no explicit
+   * `selectedDate` (the PY's latest) it still tells the freshness pill when
+   * the page is showing a snapshot older than the newest one (#2635).
+   */
+  effectiveDate?: SnapshotDate | undefined
   onDateChange: SnapshotDateSetter
   availableDates: SnapshotDate[]
   latestSnapshotDate: string | undefined
@@ -60,6 +66,7 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
   setSelectedProgramYear,
   availableProgramYears,
   selectedDate,
+  effectiveDate,
   onDateChange,
   availableDates,
   latestSnapshotDate,
@@ -74,9 +81,10 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
   // snapshot lags the global scrape never mislabels reconciliation.
   const { asOfDate: globalAsOfDate, latestSnapshotDate: globalLatestSnapshot } =
     useLatestAsOfDate()
-  const viewedDate = selectedDate ?? latestSnapshotDate
+  const viewedDate = effectiveDate ?? selectedDate ?? latestSnapshotDate
+  const atNewest = viewedDate === latestSnapshotDate
   const isLatest =
-    (!selectedDate || selectedDate === latestSnapshotDate) &&
+    atNewest &&
     !!latestSnapshotDate &&
     latestSnapshotDate === globalLatestSnapshot
 
@@ -163,6 +171,7 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
             latestSnapshotDate={viewedDate}
             asOfDate={isLatest ? globalAsOfDate : undefined}
             isLatest={isLatest}
+            isNewestSnapshot={!!latestSnapshotDate && atNewest}
             availableProgramYears={availableProgramYears}
             selectedProgramYear={selectedProgramYear}
             onProgramYearChange={setSelectedProgramYear}

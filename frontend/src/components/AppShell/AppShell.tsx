@@ -4,6 +4,7 @@ import AppShellTopBar from './AppShellTopBar'
 import AppShellFooter from './AppShellFooter'
 import CommandPalette from './CommandPalette'
 import { ConsentBanner } from '../consent/ConsentBanner'
+import { DateNotice } from '../DateNotice'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { useScrollRestoration } from '../../hooks/useScrollRestoration'
 
@@ -49,6 +50,7 @@ const AppShell: React.FC = () => {
       </a>
       <AppShellTopBar onOpenSearch={openPalette} />
       <main id="main-content" className="app-shell__main" tabIndex={-1}>
+        <DateNotice />
         <Outlet />
       </main>
       {!isMobile && <AppShellFooter />}

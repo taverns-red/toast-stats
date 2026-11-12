@@ -103,6 +103,25 @@ describe('useProgramYearControls (#1301)', () => {
     ])
   })
 
+  it('isLatestSnapshot is false for a prior program year, true for the newest (#2635)', async () => {
+    const prior = renderHook(() => useProgramYearControls(), {
+      wrapper: createWrapper(['/?py=2025']),
+    })
+    await waitFor(() =>
+      expect(prior.result.current.effectiveDate).toBe('2026-05-01')
+    )
+    expect(prior.result.current.isLatestSnapshot).toBe(false)
+    prior.unmount()
+
+    const newest = renderHook(() => useProgramYearControls(), {
+      wrapper: createWrapper(),
+    })
+    await waitFor(() =>
+      expect(newest.result.current.effectiveDate).toBe('2026-09-15')
+    )
+    expect(newest.result.current.isLatestSnapshot).toBe(true)
+  })
+
   it('honors an explicit ?date= over the PY latest', async () => {
     const { result } = renderHook(() => useProgramYearControls(), {
       wrapper: createWrapper(['/?py=2025&date=2025-08-01']),
@@ -119,6 +138,102 @@ describe('useProgramYearControls (#1301)', () => {
     await waitFor(() =>
       expect(result.current.selectedProgramYear.year).toBe(2026)
     )
+  })
+
+  // #2635 — a ?date= that is not a snapshot must never be returned as the date
+  // to fetch, nor labelled as the date on screen.
+  describe('a ?date= with no snapshot (#2635)', () => {
+    const list = [
+      '2024-08-01',
+      '2025-03-01',
+      '2025-08-01',
+      '2026-05-01',
+      '2026-08-01',
+      '2026-09-15',
+    ]
+
+    it('never returns an effectiveDate outside the snapshot list', async () => {
+      for (const date of [
+        '2019-01-01',
+        '2027-05-01',
+        '2026-09-01',
+        'notadate',
+      ]) {
+        const { result, unmount } = renderHook(() => useProgramYearControls(), {
+          wrapper: createWrapper([`/?date=${date}`]),
+        })
+        await waitFor(() => expect(result.current.cachedDates.length).toBe(2))
+        expect(list).toContain(result.current.effectiveDate)
+        unmount()
+      }
+    })
+
+    it('a missing date inside the PY resolves to the nearest earlier snapshot, and selectedDate names it', async () => {
+      const { result } = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(['/?date=2026-09-01']),
+      })
+      await waitFor(() => expect(result.current.cachedDates.length).toBe(2))
+      expect(result.current.effectiveDate).toBe('2026-08-01')
+      expect(result.current.selectedDate).toBe('2026-08-01')
+    })
+
+    it('a date before all data falls back to the PY latest, never the requested date', async () => {
+      const { result } = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(['/?date=2019-01-01']),
+      })
+      await waitFor(() => expect(result.current.cachedDates.length).toBe(2))
+      expect(result.current.effectiveDate).toBe('2026-09-15')
+      expect(result.current.selectedDate).not.toBe('2019-01-01')
+    })
+
+    it('a snapshot date from another PY switches the PY', async () => {
+      const { result } = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(['/?date=2025-03-01']),
+      })
+      await waitFor(() =>
+        expect(result.current.selectedProgramYear.year).toBe(2024)
+      )
+      expect(result.current.effectiveDate).toBe('2025-03-01')
+    })
+
+    it('a non-snapshot date before the PY first snapshot follows the nearest earlier one into the prior PY', async () => {
+      const { result } = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(['/?date=2026-07-10']),
+      })
+      await waitFor(() =>
+        expect(result.current.effectiveDate).toBe('2026-05-01')
+      )
+      expect(result.current.selectedProgramYear.year).toBe(2025)
+      // The repaired URL carries ?py=2025 and no date (2026-05-01 is that
+      // PY's latest), and the selection must hold, not bounce back.
+      await new Promise(resolve => setTimeout(resolve, 50))
+      expect(result.current.selectedProgramYear.year).toBe(2025)
+      expect(result.current.effectiveDate).toBe('2026-05-01')
+    })
+
+    it('picking a program year wins over the ?date= from the one it left', async () => {
+      const { result } = renderHook(() => useProgramYearControls(), {
+        wrapper: createWrapper(['/?py=2025&date=2025-08-01']),
+      })
+      await waitFor(() =>
+        expect(result.current.effectiveDate).toBe('2025-08-01')
+      )
+      expect(result.current.selectedProgramYear.year).toBe(2025)
+
+      act(() => {
+        result.current.setSelectedProgramYear(
+          result.current.availableProgramYears[0]!
+        )
+      })
+
+      await waitFor(() =>
+        expect(result.current.selectedProgramYear.year).toBe(2026)
+      )
+      // Give a snap-back a chance to happen, then assert it did not.
+      await new Promise(resolve => setTimeout(resolve, 50))
+      expect(result.current.selectedProgramYear.year).toBe(2026)
+      expect(result.current.effectiveDate).toBe('2026-09-15')
+    })
   })
 
   // #1618 — /clubs and /awards opened on PY 2025-26 while the data's newest PY

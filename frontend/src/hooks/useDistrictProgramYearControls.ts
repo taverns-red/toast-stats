@@ -33,15 +33,18 @@
 import { useEffect, useMemo } from 'react'
 import { useDistrictCachedDates } from './useDistrictData'
 import { useUrlProgramYear } from './useUrlProgramYear'
+import { useResolvedDateSelection } from './useResolvedDateSelection'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
-  getMostRecentDateInProgramYear,
-  isDateInProgramYear,
 } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
 import type { SnapshotDate } from '../types/snapshotDate'
-import type { ProgramYearSetter, SnapshotDateSetter } from './useUrlProgramYear'
+import type {
+  ProgramYearSetter,
+  SnapshotDateSetter,
+  UrlWriteOptions,
+} from './useUrlProgramYear'
 
 const EMPTY_DATES: SnapshotDate[] = []
 
@@ -50,6 +53,12 @@ export interface DistrictProgramYearControls {
   setSelectedProgramYear: ProgramYearSetter
   selectedDate: SnapshotDate | undefined
   setSelectedDate: SnapshotDateSetter
+  /** Move the year and the date together in one URL write (#1436). */
+  setProgramYearAndDate: (
+    py: ProgramYear,
+    date: SnapshotDate | undefined,
+    options?: UrlWriteOptions
+  ) => void
   /** Program years that actually have snapshots for this district, newest first. */
   availableProgramYears: ProgramYear[]
   /** Snapshot dates within the selected PY — feeds the date chip (which sorts). */
@@ -77,10 +86,11 @@ export function useDistrictProgramYearControls(
   { selfHeal = true }: { selfHeal?: boolean } = {}
 ): DistrictProgramYearControls {
   const {
-    selectedProgramYear,
+    selectedProgramYear: urlProgramYear,
     setSelectedProgramYear,
-    selectedDate,
     setSelectedDate,
+    setProgramYearAndDate,
+    requestedDate,
   } = useUrlProgramYear()
 
   const { data: cachedDatesData, isPending: isDatesPending = false } =
@@ -112,7 +122,7 @@ export function useDistrictProgramYearControls(
     if (!selfHeal) return
     if (availableProgramYears.length === 0) return
     const has = availableProgramYears.some(
-      py => py.year === selectedProgramYear.year
+      py => py.year === urlProgramYear.year
     )
     if (!has) {
       const newest = availableProgramYears[0]
@@ -121,34 +131,51 @@ export function useDistrictProgramYearControls(
   }, [
     selfHeal,
     availableProgramYears,
-    selectedProgramYear.year,
+    urlProgramYear.year,
     setSelectedProgramYear,
   ])
 
   // Derive (don't sync) the reconciled selection so the fetched date can never
   // lag a render behind the self-heal effect above.
-  const effectiveProgramYear = useMemo(() => {
+  const healedProgramYear = useMemo(() => {
     if (availableProgramYears.length === 0) return null
     const has = availableProgramYears.some(
-      py => py.year === selectedProgramYear.year
+      py => py.year === urlProgramYear.year
     )
-    if (has) return selectedProgramYear
+    if (has) return urlProgramYear
     return availableProgramYears[0] ?? null
-  }, [availableProgramYears, selectedProgramYear])
+  }, [availableProgramYears, urlProgramYear])
 
-  const effectiveEndDate = useMemo(() => {
-    if (!effectiveProgramYear) return null
-    if (
-      selectedDate &&
-      isDateInProgramYear(selectedDate, effectiveProgramYear)
-    ) {
-      return selectedDate
-    }
-    // null is unreachable here — effectiveProgramYear comes from
-    // getAvailableProgramYears(allCachedDates). See getMostRecentDateInProgramYear
-    // for why, and why a `|| endDate` fallback must not come back (#1323).
-    return getMostRecentDateInProgramYear(allCachedDates, effectiveProgramYear)
-  }, [selectedDate, effectiveProgramYear, allCachedDates])
+  // Validate `?date=` against the district's snapshots ONCE, here (#2635): a
+  // snapshot from another year switches the year; a date with no snapshot
+  // resolves to the nearest earlier one. The end date is therefore always an
+  // element of the list — null is unreachable once a year has resolved (see
+  // getMostRecentDateInProgramYear for why a `|| endDate` fallback must not
+  // come back, #1323).
+  const resolution = useResolvedDateSelection({
+    requested: requestedDate,
+    dates: allCachedDates,
+    programYear: healedProgramYear,
+    writeUrl: selfHeal,
+    setProgramYearAndDate,
+  })
+  const effectiveProgramYear = resolution?.programYear ?? null
+  // The resolution moves the year when the date it shows lives in another one
+  // (a snapshot from that year, or the nearest earlier snapshot across a year
+  // boundary); otherwise the URL's year stands, healed or not.
+  const selectedProgramYear =
+    resolution &&
+    healedProgramYear &&
+    resolution.programYear.year !== healedProgramYear.year
+      ? resolution.programYear
+      : urlProgramYear
+  const effectiveEndDate = resolution?.date ?? null
+  // The explicit selection as the chip should name it: the date on screen,
+  // never a requested date that has no snapshot.
+  const selectedDate =
+    resolution && resolution.status !== 'none'
+      ? (resolution.date ?? undefined)
+      : undefined
 
   const hasValidDates =
     effectiveProgramYear !== null && effectiveEndDate !== null
@@ -173,6 +200,7 @@ export function useDistrictProgramYearControls(
     setSelectedProgramYear,
     selectedDate,
     setSelectedDate,
+    setProgramYearAndDate,
     availableProgramYears,
     availableDates,
     effectiveProgramYear,
