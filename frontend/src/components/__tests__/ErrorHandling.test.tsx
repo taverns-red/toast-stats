@@ -187,7 +187,7 @@ describe('ErrorDisplay', () => {
     const { container } = render(
       <ErrorDisplay
         error={new Error('Failed to fetch')}
-        subject="division"
+        subject="this division"
         onRetry={vi.fn()}
       />
     )
@@ -197,6 +197,35 @@ describe('ErrorDisplay', () => {
     expect(container.querySelector('.redesign-panel')).toBeInTheDocument()
     expect(container.querySelector('.tm-card')).toBeNull()
     expect(screen.getByRole('button', { name: /try again/i })).toBeVisible()
+  })
+
+  // The subject carries its own determiner, so plural and uncountable nouns
+  // read as English ("this regions" / "This award standings" did not).
+  it('the subject carries its own article, in both the network and not-found copy', () => {
+    const { rerender } = render(
+      <ErrorDisplay
+        error={new Error('Failed to fetch')}
+        subject="the regions"
+      />
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "We couldn't load the regions. Check your connection and try again."
+    )
+    rerender(
+      <ErrorDisplay error={new Error('404 not found')} subject="the regions" />
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'The regions could not be found.'
+    )
+  })
+
+  it("treats Safari's 'Load failed' as a network error", () => {
+    render(
+      <ErrorDisplay error={new TypeError('Load failed')} subject="this area" />
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "We couldn't load this area. Check your connection and try again."
+    )
   })
 })
 
