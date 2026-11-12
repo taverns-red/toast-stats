@@ -15,7 +15,9 @@
 .council-lede {
   color: var(--ink-2);
   margin: 0 0 0.75rem;
-  max-width: 70ch;
+  /* 70 x 0.4375em, the "0" of Source Sans 3: em, not ch, so the measure does
+     not move when the web font replaces the fallback (#2685). */
+  max-width: 30.625em;
 }
 
 .council {
@@ -55,7 +57,7 @@
 .council-note {
   color: var(--ink-2);
   margin: 0;
-  max-width: 70ch;
+  max-width: 30.625em; /* as .council-lede (#2685) */
 }
 
 /* A notice is a note with a rule on its leading edge: no fill colour, so it
