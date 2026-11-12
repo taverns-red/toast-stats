@@ -270,16 +270,8 @@ export function setupFontLoadingOptimization(): void {
   optimizeFontLoading()
 
   // The fonts-loading / fonts-loaded classes are state markers only. They
-  // must never hide the page (#2444): text paints in the metric-matched
-  // fallback and swaps in place.
-  const style = document.createElement('style')
-  style.textContent = `
-    /* Fallback typography for slow connections */
-    body:not(.fonts-loaded) {
-      font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-    }
-  `
-  document.head.appendChild(style)
+  // must never hide the page (#2444) or change the body font (#2631): text
+  // paints in the metric-matched fallback and swaps in place.
 }
 
 // Helper functions

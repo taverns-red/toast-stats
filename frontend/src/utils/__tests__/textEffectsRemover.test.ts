@@ -285,7 +285,12 @@ describe('font loading (runs at boot from main.tsx)', () => {
     expect(html.classList.contains('fonts-loading')).toBe(false)
   })
 
-  it('setupFontLoadingOptimization starts the loading cycle and injects the loading-state CSS', () => {
+  it('setupFontLoadingOptimization starts the loading cycle without overriding the body font (#2631)', () => {
+    // Spec change, not a pin: the old assertion required the injected
+    // `body:not(.fonts-loaded) { font-family: system-ui… }` rule. The class is
+    // set on <html>, so that rule never stopped matching <body> and beat the
+    // brand body font permanently. font-display: swap + the metric-matched
+    // fallbacks (#1373) already cover slow connections.
     stubFonts(new Promise(() => {}))
 
     setupFontLoadingOptimization()
@@ -294,8 +299,10 @@ describe('font loading (runs at boot from main.tsx)', () => {
     const added = Array.from(document.head.querySelectorAll('style')).filter(
       s => !headSnapshot.includes(s)
     )
-    expect(added).toHaveLength(1)
-    expect(added[0]!.textContent).toContain('body:not(.fonts-loaded)')
+    for (const style of added) {
+      expect(style.textContent).not.toMatch(/fonts-loaded/)
+      expect(style.textContent).not.toMatch(/font-family/)
+    }
   })
 
   it('never hides the document while web fonts load (#2444)', () => {

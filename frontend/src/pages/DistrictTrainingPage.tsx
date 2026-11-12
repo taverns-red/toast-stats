@@ -293,9 +293,10 @@ const DistrictTrainingPage: React.FC = () => {
 
   // The district's rank in its region (#2296): the date's one region
   // rollup, the file the region pages read — never other districts' files.
-  const { rollups: regionRollups } = useRegionRollups(
-    hasValidDates ? (effectiveEndDate ?? undefined) : undefined
-  )
+  const { rollups: regionRollups, isLoading: regionRollupsLoading } =
+    useRegionRollups(
+      hasValidDates ? (effectiveEndDate ?? undefined) : undefined
+    )
   const regionRank = useMemo(() => {
     if (!regionRollups || !districtId || !effectiveEndDate || !programYearLabel)
       return null
@@ -442,9 +443,19 @@ const DistrictTrainingPage: React.FC = () => {
               </p>
             </header>
 
+            {/* #2631 — both paragraphs arrive after first paint; an empty
+                box of the same class holds their space until they do. */}
+            {!context && !cachedDatesData && (
+              <p
+                className="training-context training-context--reserve training-context--pending"
+                aria-hidden="true"
+                data-testid="training-context-reserve"
+              />
+            )}
+
             {context && (
               <p
-                className="training-context"
+                className="training-context training-context--reserve"
                 role="status"
                 data-testid="training-context"
               >
@@ -456,9 +467,17 @@ const DistrictTrainingPage: React.FC = () => {
               </p>
             )}
 
+            {!regionRank && regionRollupsLoading && (
+              <p
+                className="training-note training-rank training-rank--reserve"
+                aria-hidden="true"
+                data-testid="training-region-rank-reserve"
+              />
+            )}
+
             {regionRank && (
               <p
-                className="training-note training-rank"
+                className="training-note training-rank training-rank--reserve"
                 data-testid="training-region-rank"
               >
                 {ordinal(regionRank.rank)} of {regionRank.of} districts

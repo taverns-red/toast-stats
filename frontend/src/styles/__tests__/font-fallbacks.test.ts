@@ -154,4 +154,19 @@ describe('metric-matched font fallbacks (#1373)', () => {
       /--sans:\s*'Source Sans 3',\s*'Source Sans 3 Fallback',\s*system-ui/
     )
   })
+
+  it('renders the Δ and Σ symbols locally so body text does not fetch the Greek subset (#2631)', () => {
+    // Body text now inherits Source Sans 3 (#2631). The UI uses Δ and Σ as
+    // symbols, which sit in the Greek subset (15 KB) and pushed the club page
+    // past its Lighthouse byte budget. A later local-only face for just those
+    // two codepoints wins over the generated one and downloads nothing.
+    const blocks = (fallbacks.match(/@font-face\s*\{[^}]*\}/g) ?? []).filter(
+      b => /font-family:\s*['"]Source Sans 3['"]/.test(b)
+    )
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0]).toMatch(/src:\s*local\(/)
+    expect(blocks[0]).not.toMatch(/url\(/)
+    expect(blocks[0]).toMatch(/U\+0394/)
+    expect(blocks[0]).toMatch(/U\+03A3/)
+  })
 })
