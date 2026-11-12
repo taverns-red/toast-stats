@@ -233,6 +233,9 @@ sed "s#^$PROD/##; s/#.*//" "$WORK/restore.txt" "$WORK/remove.txt" \
 gcloud storage ls -r "$BACKUP/**" | wc -l   # equals the two lists' total
 ```
 
+Record `$BACKUP` in the incident issue: `$STAMP` is empty in a new shell,
+and the put-back below needs it.
+
 To put the backup back:
 `gcloud storage cp "$BACKUPS/restore-2492-$STAMP/prod/<path>" "$PROD/<path>"`
 per object (WRITE).
@@ -408,7 +411,9 @@ A prod drill reuses steps 1–8 on `toast-stats-data-ca`, the prod URL map and
 `https://cdn.taverns.red`, breaking only one non-entry object of an old
 date (not `v1/latest.json`), under a separate approval and in the same
 window. Its step 2 copies to the backup bucket instead of staging's
-`_archive/`: `gs://toast-stats-backups-ca/drill-2492-$STAMP/$P`.
+`_archive/`: `gs://toast-stats-backups-ca/drill-2492-$STAMP/$P`. That
+backup expires under the backup bucket's 90-day rule; step 8's "expires with
+`_archive/` (30 days)" applies to the staging drill only.
 
 ## Open questions
 
