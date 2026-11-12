@@ -160,6 +160,21 @@
     U+A720-A7FF, U+FEFF, U+FFFD;
 }
 
+/* ── Δ and Σ as symbols in body text (#2631) ──────────────────────────────
+   Body text inherits Source Sans 3, whose Greek subset (15 KB) the UI would
+   fetch only for the Δ / Σ symbols (club deltas, totals). Declared after
+   web-fonts.css, this local-only face wins for exactly those two codepoints,
+   so nothing downloads. Real Greek text still reaches the generated subset. */
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 400 700;
+  src:
+    local('Arial'), local('ArialMT'), local('Helvetica'),
+    local('Liberation Sans'), local('Arimo');
+  unicode-range: U+0394, U+03A3;
+}
+
 /* ── Space Grotesk (brand display) and Inter (brand body) ──────────────────
    #2249 — first live consumer: the landing's Red Vote block, whose stacks
    name these faces explicitly ('Space Grotesk', 'Space Grotesk Fallback',

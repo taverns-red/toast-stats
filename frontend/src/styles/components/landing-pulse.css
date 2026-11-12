@@ -286,6 +286,13 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* #2631 — responsive.css gives every phone `span` a 1.4 line-height; the
+     delta's inner spans took it, stretching the delta's line box past the
+     total's and hanging it below under baseline alignment. */
+  .world-pulse__payments-delta span {
+    line-height: inherit;
+  }
+
   .world-pulse__sparkline {
     display: flex;
     flex-direction: column;

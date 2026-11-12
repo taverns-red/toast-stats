@@ -97,7 +97,7 @@
  * paint by ~1.1 s on a throttled phone. The metric-matched fallbacks in
  * font-fallbacks.css (#1373) make the swap a pure glyph substitution. */
 
-/* Fallback Typography for Slow Connections */
-body:not(.fonts-loaded) {
-  font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-}
+/* No body font-family override while fonts load (#2631). `fonts-loaded` is
+ * set on <html>, so a body-scoped "not loaded" rule matched forever and put
+ * every inheriting element in system-ui. --tm-font-body already ends in the
+ * system stack and leads with the metric-matched fallback. */

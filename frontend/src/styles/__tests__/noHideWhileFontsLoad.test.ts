@@ -38,4 +38,18 @@ describe('no hiding the page while web fonts load (#2444)', () => {
       expect(body).not.toMatch(/visibility\s*:/)
     }
   })
+
+  it('typography.css sets no font-family keyed to a fonts-loaded state (#2631)', () => {
+    // `fonts-loaded` goes on <html>, so `body:not(.fonts-loaded)` always
+    // matched and its system-ui stack beat `body { font-family }` in index.css.
+    const re = /([^{}]+)\{([^}]*)\}/g
+    const offenders: string[] = []
+    let m: RegExpExecArray | null
+    while ((m = re.exec(typography))) {
+      if (/\.fonts-load(ing|ed)/.test(m[1]!) && /font-family/.test(m[2]!)) {
+        offenders.push(m[1]!.trim())
+      }
+    }
+    expect(offenders).toEqual([])
+  })
 })

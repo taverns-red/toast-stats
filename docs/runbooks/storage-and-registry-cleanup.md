@@ -193,6 +193,16 @@ gcloud storage rm --recursive "gs://toast-stats-data/**"
 gcloud storage buckets delete gs://toast-stats-data
 ```
 
+### 2c. The prod restore backup bucket (#2541)
+
+`toast-stats-backups-ca` (`NORTHAMERICA-NORTHEAST1`, private, 7-day soft
+delete) holds only the point-in-time copies taken before a prod data restore
+([data-restore.md](data-restore.md)). Its lifecycle file,
+`infra/gcs-lifecycle/toast-stats-backups-ca.json`, deletes every object after
+90 days and aborts incomplete uploads after 7. It's the one bucket where a
+whole-bucket age rule is allowed; the shape test still limits the data buckets
+to `runs/` and `_archive/`.
+
 ## 3. Delete the old z0–10 basemap (on or after 2026-10-23)
 
 The object is `basemap/protomaps-v4/world-z0-10-20261011.pmtiles`, 3,782,079,721

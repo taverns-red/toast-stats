@@ -40,6 +40,7 @@ import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import { useDistrictStatistics } from '../../hooks/useMembershipData'
 import { useTimeSeries } from '../../hooks/useTimeSeries'
 import { useRegionRollups } from '../../hooks/useRegionRollups'
+import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 
 vi.mock('../../hooks/useDistricts', () => ({
   useDistricts: vi.fn(() => ({
@@ -187,6 +188,13 @@ describe('DistrictTrainingPage (#2296)', () => {
           isLoading: false,
         }) as unknown as ReturnType<typeof useDistrictStatistics>
     )
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: {
+        dates: ['2026-10-11', '2025-10-31', '2025-08-31'],
+        dateRange: { startDate: '2025-10-31', endDate: '2026-10-11' },
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
     vi.mocked(useRegionRollups).mockReturnValue({
       rollups: null,
       snapshotDate: null,
@@ -279,6 +287,33 @@ describe('DistrictTrainingPage (#2296)', () => {
     expect(await screen.findByTestId('training-region-rank')).toHaveTextContent(
       '2nd of 3 districts with figures in Region 05'
     )
+  })
+
+  // #2631 — the context and rank paragraphs arrive late (date index, region
+  // rollup); with no reserved box they pushed the page down (CLS 0.115 at 375).
+  it('reserves the rank slot while the region rollup loads, then fills it', async () => {
+    vi.mocked(useRegionRollups).mockReturnValue({
+      rollups: null,
+      snapshotDate: null,
+      isLoading: true,
+    })
+    renderAt('/district/61/training')
+    const reserve = await screen.findByTestId('training-region-rank-reserve')
+    expect(reserve).toHaveAttribute('aria-hidden', 'true')
+    expect(reserve).toHaveTextContent('')
+    expect(screen.queryByTestId('training-region-rank')).toBeNull()
+  })
+
+  it('reserves the context slot while the date index loads', async () => {
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    renderAt('/district/61/training')
+    const reserve = await screen.findByTestId('training-context-reserve')
+    expect(reserve).toHaveAttribute('aria-hidden', 'true')
+    expect(reserve).toHaveTextContent('')
+    expect(screen.queryByTestId('training-context')).toBeNull()
   })
 
   it('shows no rank when the region rollup predates the figure', async () => {

@@ -79,6 +79,78 @@ const renderPalette = (isOpen: boolean) => {
   )
 }
 
+/* Dialog contract (#2638, UX review CHR-05): aria-modal means Tab stays
+   inside, Escape works from anywhere, page scroll is locked, there is a
+   visible close button, and focus returns to the opener. */
+const Harness: React.FC = () => {
+  const [open, setOpen] = React.useState(false)
+  return (
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <button type="button" onClick={() => setOpen(true)}>
+          Open search
+        </button>
+        <CommandPalette isOpen={open} onClose={() => setOpen(false)} />
+      </MemoryRouter>
+    </QueryClientProvider>
+  )
+}
+
+describe('CommandPalette dialog contract (#2638)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setupCdn()
+    document.body.style.overflow = ''
+  })
+
+  const openFromTrigger = () => {
+    render(<Harness />)
+    const trigger = screen.getByRole('button', { name: 'Open search' })
+    trigger.focus()
+    fireEvent.click(trigger)
+    return trigger
+  }
+
+  it('has a visible close button that closes it', () => {
+    openFromTrigger()
+    fireEvent.click(screen.getByRole('button', { name: /close search/i }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('Tab from the last element wraps to the first, Shift+Tab the reverse', () => {
+    openFromTrigger()
+    const dialog = screen.getByRole('dialog')
+    const input = screen.getByLabelText(/universal search input/i)
+    const close = screen.getByRole('button', { name: /close search/i })
+    close.focus()
+    fireEvent.keyDown(close, { key: 'Tab' })
+    expect(document.activeElement).toBe(input)
+    fireEvent.keyDown(input, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(close)
+    expect(dialog.contains(document.activeElement)).toBe(true)
+  })
+
+  it('Escape after one Tab closes it and returns focus to the opener', () => {
+    const trigger = openFromTrigger()
+    const close = screen.getByRole('button', { name: /close search/i })
+    close.focus() // focus is off the input, as after a Tab
+    fireEvent.keyDown(close, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('locks page scroll while open and restores it on close', () => {
+    openFromTrigger()
+    expect(document.body.style.overflow).toBe('hidden')
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(document.body.style.overflow).not.toBe('hidden')
+  })
+})
+
 describe('CommandPalette omni-search (#1057)', () => {
   beforeEach(() => {
     vi.clearAllMocks()

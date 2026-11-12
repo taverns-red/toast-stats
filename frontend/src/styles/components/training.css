@@ -54,6 +54,34 @@
   max-width: 75ch;
 }
 
+/* #2631 — the context and region-rank paragraphs arrive after first paint
+   (date index, region rollup). Their boxes are reserved so the page below
+   does not jump: one line everywhere, about three lines on phones where the
+   text wraps. min-height only grows a short paragraph; it never clips. The
+   pending context box paints nothing. 1.4 is responsive.css's line-height. */
+.training-context--reserve {
+  min-height: calc(1.4 * 0.9375rem + 1.25rem + 2px);
+}
+
+.training-rank--reserve {
+  min-height: calc(1.4 * 0.875rem);
+}
+
+.training-context--pending {
+  background: transparent;
+  border-color: transparent;
+}
+
+@media (max-width: 767px) {
+  .training-context--reserve {
+    min-height: calc(3 * 1.4 * 0.9375rem + 1.25rem + 2px);
+  }
+
+  .training-rank--reserve {
+    min-height: calc(3 * 1.4 * 0.875rem);
+  }
+}
+
 /* ── Rounds: stacked at 375, side by side from 1024 ─────────────────── */
 
 .training-rounds {

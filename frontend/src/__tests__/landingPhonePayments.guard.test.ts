@@ -36,6 +36,15 @@ describe('World pulse phone payments row (#2256)', () => {
     expect(rule('.world-pulse__payments-line')).toMatch(/white-space:\s*nowrap/)
   })
 
+  it('keeps nested delta spans on the delta line box, not responsive.css span line-height (#2631)', () => {
+    // responsive.css sets `span { line-height: max(1.4, …) }` on phones. The
+    // delta's inner spans match it, so their taller line box stretched the
+    // delta and, under baseline alignment, hung it below the total's line.
+    expect(rule('.world-pulse__payments-delta span')).toMatch(
+      /line-height:\s*inherit/
+    )
+  })
+
   it('reserves a fixed height: tile padding + label + value line boxes', () => {
     // 8px + 18.2px label (14px floor × 1.3) + 4px gap + 24px value + 8px.
     expect(rule('.world-pulse__payments')).toMatch(/min-height:\s*64px/)

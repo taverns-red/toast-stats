@@ -22,7 +22,7 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({ text }) => {
       <button
         type="button"
         aria-label="info"
-        className="text-gray-400 hover:text-gray-600 transition-colors focus:outline-hidden"
+        className="text-gray-400 hover:text-gray-600 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
         onFocus={() => setIsVisible(true)}

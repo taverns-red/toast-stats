@@ -142,12 +142,26 @@ describe('Division/Area status chip at <768px (#871 CC-4)', () => {
     expect(container.textContent).not.toContain('vulnerable')
   })
 
-  it('DivisionPage leaves the desktop rendering unchanged (table, raw text, no pill)', () => {
+  it('DivisionPage desktop table states health in words, never a raw slug (#2639)', () => {
     mockUseIsMobile.mockReturnValue(false)
     const { container } = renderDivision()
     expect(container.querySelector('table')).not.toBeNull()
     expect(container.querySelector('.clubs-status-pill')).toBeNull()
-    expect(container.textContent).toContain('vulnerable')
+    expect(container.textContent).toContain('Vulnerable')
+    for (const cell of container.querySelectorAll('td')) {
+      expect(cell.textContent ?? '').not.toMatch(/^[a-z]+(-[a-z]+)+$/)
+      expect(cell.textContent ?? '').not.toBe('vulnerable')
+    }
+  })
+
+  it('DivisionPage desktop table names the column "Health" and scopes every header (#2639)', () => {
+    mockUseIsMobile.mockReturnValue(false)
+    const { container } = renderDivision()
+    const heads = [...container.querySelectorAll('th')]
+    expect(heads.map(h => h.textContent?.trim())).toContain('Health')
+    expect(heads.map(h => h.textContent?.trim())).not.toContain('Status')
+    for (const th of heads) expect(th).toHaveAttribute('scope', 'col')
+    expect(container.querySelector('table')).toHaveAttribute('aria-label')
   })
 
   it('AreaPage de-tables to compact rows (#1833) with a status chip on mobile', () => {
@@ -162,11 +176,25 @@ describe('Division/Area status chip at <768px (#871 CC-4)', () => {
     ).toBeInTheDocument()
   })
 
-  it('AreaPage leaves the desktop rendering unchanged (table, raw text, no pill)', () => {
+  it('AreaPage desktop table states health in words, never a raw slug (#2639)', () => {
     mockUseIsMobile.mockReturnValue(false)
     const { container } = renderArea()
     expect(container.querySelector('table')).not.toBeNull()
     expect(container.querySelector('.clubs-status-pill')).toBeNull()
-    expect(container.textContent).toContain('vulnerable')
+    expect(container.textContent).toContain('Vulnerable')
+    for (const cell of container.querySelectorAll('td')) {
+      expect(cell.textContent ?? '').not.toMatch(/^[a-z]+(-[a-z]+)+$/)
+      expect(cell.textContent ?? '').not.toBe('vulnerable')
+    }
+  })
+
+  it('AreaPage desktop table names the column "Health" and scopes every header (#2639)', () => {
+    mockUseIsMobile.mockReturnValue(false)
+    const { container } = renderArea()
+    const heads = [...container.querySelectorAll('th')]
+    expect(heads.map(h => h.textContent?.trim())).toContain('Health')
+    expect(heads.map(h => h.textContent?.trim())).not.toContain('Status')
+    for (const th of heads) expect(th).toHaveAttribute('scope', 'col')
+    expect(container.querySelector('table')).toHaveAttribute('aria-label')
   })
 })

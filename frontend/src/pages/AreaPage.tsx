@@ -6,6 +6,7 @@
    the #974/#976 per-area progress prose) — one source of truth (R6/R8, #1016).
    Then lists every club in that area. */
 
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
@@ -31,6 +32,7 @@ import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { OfficerTrainingSummary } from '../components/training/OfficerTrainingSummary'
 import { downloadCSV } from '../utils/csvExport'
+import { getClubHealthStatusLabel } from '../utils/clubHealthStatus'
 import { areaWorkbookCsv } from '../utils/areaWorkbook'
 
 const AreaPage: React.FC = () => {
@@ -40,6 +42,9 @@ const AreaPage: React.FC = () => {
     areaId: string
   }>()
   const navigate = useNavigate()
+  useDocumentTitle(
+    `Area ${areaId} — Division ${divId?.toUpperCase()} — District ${districtId}`
+  )
   const { search } = useLocation()
   const isMobile = useIsMobile()
 
@@ -419,19 +424,34 @@ const AreaPage: React.FC = () => {
         ) : (
           <div className="districts-rankings-table-wrap">
             <div className="overflow-x-auto">
-              <table className="districts-rankings-table">
+              <table
+                className="districts-rankings-table"
+                aria-label="Clubs and their health status"
+              >
                 <thead>
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Club
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Health
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Members
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Distinguished
                     </th>
                   </tr>
@@ -460,7 +480,7 @@ const AreaPage: React.FC = () => {
                           </Link>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {c.currentStatus}
+                          {getClubHealthStatusLabel(c.currentStatus)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
                           {last?.count ?? '—'}

@@ -271,7 +271,12 @@ describe('the data pipeline never reaches videos/ (#2310)', () => {
 
   it('no GCS lifecycle rule can age out videos/', () => {
     const dir = path.resolve(process.cwd(), 'infra/gcs-lifecycle')
-    const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'))
+    // The restore backup bucket (#2541) never receives videos/ (they are
+    // published to the data buckets only), so its whole-bucket age rule
+    // cannot reach them. Every data bucket stays checked.
+    const files = fs
+      .readdirSync(dir)
+      .filter(f => f.endsWith('.json') && f !== 'toast-stats-backups-ca.json')
     expect(files.length).toBeGreaterThan(0)
     for (const f of files) {
       const doc = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8')) as {
@@ -290,6 +295,14 @@ describe('the data pipeline never reaches videos/ (#2310)', () => {
         }
       }
     }
+  })
+
+  it('the video publish workflow never names the backup bucket (#2541)', () => {
+    const text = fs.readFileSync(
+      path.resolve(process.cwd(), '.github/workflows/videos-publish.yml'),
+      'utf-8'
+    )
+    expect(text).not.toContain('toast-stats-backups-ca')
   })
 
   it('data-pipeline.yml and the prune workflow never name videos/', () => {

@@ -211,17 +211,21 @@ removals** (shape 4) there is no live object: list them with
 `gcloud storage ls "$PROD/snapshots/<date>/**" --soft-deleted` and restore
 by generation, or use the bulk restore with the promote's time window.
 
-### 3. Back up the live state (WRITE, staging bucket)
+### 3. Back up the live state (WRITE, backup bucket)
 
 Soft delete already keeps what a restore displaces for 14 days. The backup
 is a second, independent copy that survives a mistaken purge and needs no
 soft-delete knowledge to read back. Copy the objects about to change into
-staging's `_archive/` prefix (lifecycle deletes `_archive/` after 30 days).
-Server-side copy keeps `Content-Encoding` and `Cache-Control`.
+the dedicated backup bucket `gs://toast-stats-backups-ca` (#2541): same
+region as prod, private, 7-day soft delete, and a lifecycle rule that
+deletes every object after 90 days
+(`infra/gcs-lifecycle/toast-stats-backups-ca.json`). Server-side copy keeps
+`Content-Encoding` and `Cache-Control`.
 
 ```bash
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
-BACKUP="$STAGING/_archive/restore-2492-$STAMP/prod"
+BACKUPS=gs://toast-stats-backups-ca
+BACKUP="$BACKUPS/restore-2492-$STAMP/prod"
 # WRITE — needs approval
 sed "s#^$PROD/##; s/#.*//" "$WORK/restore.txt" "$WORK/remove.txt" \
   | while read -r P; do echo "$PROD/$P $BACKUP/$P"; done \
@@ -229,8 +233,16 @@ sed "s#^$PROD/##; s/#.*//" "$WORK/restore.txt" "$WORK/remove.txt" \
 gcloud storage ls -r "$BACKUP/**" | wc -l   # equals the two lists' total
 ```
 
-To put the backup back: `gcloud storage cp "$BACKUP/<path>" "$PROD/<path>"`
+Record `$BACKUP` in the incident issue: `$STAMP` is empty in a new shell,
+and the put-back below needs it.
+
+To put the backup back:
+`gcloud storage cp "$BACKUPS/restore-2492-$STAMP/prod/<path>" "$PROD/<path>"`
 per object (WRITE).
+
+Backups are taken by hand by a project owner, who already has write access
+to the bucket. Doing it from CI would need a new IAM grant for the CI
+identity, which is Ron's call (see Follow-ups).
 
 ### 4. Restore (WRITE, production)
 
@@ -398,13 +410,18 @@ matched step 1.
 A prod drill reuses steps 1–8 on `toast-stats-data-ca`, the prod URL map and
 `https://cdn.taverns.red`, breaking only one non-entry object of an old
 date (not `v1/latest.json`), under a separate approval and in the same
-window.
+window. Its step 2 copies to the backup bucket instead of staging's
+`_archive/`: `gs://toast-stats-backups-ca/drill-2492-$STAMP/$P`. That
+backup expires under the backup bucket's 90-day rule; step 8's "expires with
+`_archive/` (30 days)" applies to the staging drill only.
 
 ## Open questions
 
-- Is a staging `_archive/` copy enough as the backup, or should prod backups
-  go to a dedicated bucket in the prod region (`NORTHAMERICA-NORTHEAST1`;
-  staging is `US`)?
+- ~~Is a staging `_archive/` copy enough as the backup, or a dedicated
+  bucket?~~ Resolved 2026-11-12 (#2541): dedicated bucket
+  `toast-stats-backups-ca` in `NORTHAMERICA-NORTHEAST1`, 90-day retention,
+  7-day soft delete. Cost is estimated under CAD 0.05/month for sub-GB
+  backups. Ron approved the spend.
 - Should the restore plan be a script (`scripts/plan-data-restore.ts`) with
   tests, rather than the shell loop above, before it is used in anger?
 - 14 days of prod soft delete is the whole restore window. Enough, given the
@@ -416,4 +433,7 @@ window.
   schema check against prod; on failure, restore the run's manifest objects
   by generation on the CI identity (it already has the permissions) and file
   a `data-rollback` issue, mirroring `deploy.yml`.
+- If the restore is automated, the CI identity needs a write grant on
+  `toast-stats-backups-ca` for the backup step. That is an IAM change for
+  Ron; none is made here.
 - Smoke the data after every promote, not only after a Hosting deploy.
