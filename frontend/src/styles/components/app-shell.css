@@ -19,6 +19,59 @@
     /* Skip-link and programmatic jumps land clear of the 56px sticky bar
        (#2637). The margin sits on the element that holds the id. */
     scroll-margin-top: 56px;
+    /* #2633: reserve the area under the 56px top bar, so a route's loading
+       shell (a lazy chunk, a date index) never leaves the footer painted
+       inside the viewport to be pushed off when the page mounts. Same
+       reserve as .district-detail-page-root and .rollup-page, now for every
+       route. The 100vh line is the fallback for engines without svh. */
+    min-height: calc(100vh - var(--app-top-bar-h, 56px));
+    min-height: calc(100svh - var(--app-top-bar-h, 56px));
+  }
+
+  /* Lazy-route Suspense fallback (#2633): a page-shaped frame in the one
+     skeleton fill (--surface-2), inside the same gutters as a loaded page. */
+  .route-fallback {
+    max-width: var(--page-max-wide);
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  .route-fallback__bar,
+  .route-fallback__panel {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-md);
+    animation: route-fallback-pulse 1.5s ease-in-out infinite;
+  }
+
+  .route-fallback__bar--title {
+    height: 36px;
+    width: min(320px, 70%);
+    margin-bottom: 12px;
+  }
+
+  .route-fallback__bar--lede {
+    height: 20px;
+    width: min(560px, 90%);
+    margin-bottom: 24px;
+  }
+
+  .route-fallback__panel {
+    height: 240px;
+    margin-bottom: 16px;
+  }
+
+  @keyframes route-fallback-pulse {
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .route-fallback__bar,
+    .route-fallback__panel {
+      animation: none;
+    }
   }
 
   /* Top bar: 3-column flex (brand | nav with flex:1 | tools) per design.

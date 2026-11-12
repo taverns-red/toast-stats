@@ -193,12 +193,16 @@ const AreaRedirectPage = React.lazy(() => import('./pages/AreaRedirectPage'))
 function PageLoadingFallback(): React.JSX.Element {
   // AppShell owns the <main id="main-content"> landmark; this fallback
   // renders inside it during route-transition Suspense boundaries.
+  // The area under the top bar is reserved by `.app-shell__main` (#2633), so
+  // the footer stays below the fold until the page mounts. The skeleton is a
+  // page-shaped frame (title, lede, two panels) in the token fill.
   return (
-    <div
-      className="tm-container"
-      style={{ padding: '2rem', textAlign: 'center' }}
-    >
-      <div className="tm-loading-spinner" aria-label="Loading page…" />
+    <div className="route-fallback" role="status" aria-label="Loading page…">
+      <div className="route-fallback__bar route-fallback__bar--title" />
+      <div className="route-fallback__bar route-fallback__bar--lede" />
+      <div className="route-fallback__panel" />
+      <div className="route-fallback__panel" />
+      <span className="sr-only">Loading page…</span>
     </div>
   )
 }

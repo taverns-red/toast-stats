@@ -141,6 +141,8 @@
   .app-shell__main {
     padding: 0 !important;
     margin: 0 !important;
+    /* The screen reserve under the top bar (#2633) is blank paper. */
+    min-height: 0 !important;
   }
 
   /* Recharts SVGs can fall off the right edge on letter — clamp. */
