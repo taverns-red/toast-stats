@@ -355,10 +355,18 @@ for (const width of [768, 1280]) {
     ).toBeVisible()
     await expect(page.locator(ROW)).toHaveCount(0)
     await expect(page.locator(GROUPED)).toHaveCount(0)
-    // Trend column (#1792) at every width: a header, and a named sparkline.
+    // The Columns control is offered at every width (#2676) ...
     await expect(
-      page.getByRole('button', { name: /^Sort by Trend/ })
+      page.getByRole('button', { name: /^Columns, \d+ of \d+ shown/ })
     ).toBeVisible()
+    const trend = page.getByRole('button', { name: /^Sort by Trend/ })
+    if (width < 1024) {
+      // ... and Trend (#1792) is off by default at 768, one click away.
+      await expect(trend).toHaveCount(0)
+      return
+    }
+    // From 1024 up: a Trend header, and a named sparkline.
+    await expect(trend).toBeVisible()
     await expect(
       page
         .locator('#clubs-table tbody tr')
