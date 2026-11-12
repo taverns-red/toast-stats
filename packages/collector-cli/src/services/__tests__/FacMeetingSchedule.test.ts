@@ -1372,6 +1372,42 @@ describe('parseMeetingSchedule (#2617) — an hrs range keeps its end', () => {
   })
 })
 
+describe('parseMeetingSchedule (#2617) — "every 2nd and 4th" is monthly', () => {
+  it('"Every 2nd and 4th Tuesday" is monthly [2,4], not biweekly', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Every 2nd and 4th Tuesday',
+        meetingTime: '7.30pm',
+      })
+    ).toEqual([
+      {
+        day: 'Tuesday',
+        cadence: 'monthly',
+        weeksOfMonth: [2, 4],
+        startTime: '19:30',
+      },
+    ])
+  })
+
+  it('"Every Second Monday" is ambiguous: no cadence, not biweekly', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Every Second Monday',
+        meetingTime: '12:00 - 12:40 PM',
+      })
+    ).toEqual([{ day: 'Monday', startTime: '12:00', endTime: '12:40' }])
+  })
+
+  it('"Every other Tuesday" stays biweekly', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Every other Tuesday',
+        meetingTime: '7 pm',
+      })
+    ).toEqual([{ day: 'Tuesday', cadence: 'biweekly', startTime: '19:00' }])
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
