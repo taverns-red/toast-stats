@@ -732,15 +732,22 @@ const DistrictDetailPageInner: React.FC = () => {
           {districtId && !isHubLayout && deadlineStrip}
 
           {/* Global Error State */}
-          {overviewError && (
-            <ErrorDisplay
-              error={overviewError}
-              title="Failed to Load District Data"
-              subject="this district"
-              onRetry={retryOverview}
-              showDetails={true}
-            />
-          )}
+          {/* On a phone the hub renders its own error state while it loads
+              (#2636): one failure, one alert. */}
+          {overviewError &&
+            !(
+              isHubLayout &&
+              (hasOverviewData || isLoadingOverview) &&
+              (!kpiStripData || !analytics?.allClubs)
+            ) && (
+              <ErrorDisplay
+                error={overviewError}
+                title="Failed to Load District Data"
+                subject="this district"
+                onRetry={retryOverview}
+                showDetails={true}
+              />
+            )}
 
           {/* No Data Prompt */}
           {!isLoadingOverview &&
