@@ -240,40 +240,65 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
 
       <div className="world-pulse__grid">
         <ul className="world-pulse__tiles" aria-label="Clubs this program year">
+          {/* #2618 — the whole first tile is the link, so its label is a
+              plain span like the others (a link label took the 48px link
+              floor and pushed its value 32px lower). Every tile has the same
+              body box; the reserve renders it without the link. */}
           <li className="world-pulse__tile">
             {reserve ? (
-              <span className="world-pulse__tile-label">
-                Clubs needing attention
-              </span>
+              <div className="world-pulse__tile-body">
+                <span className="world-pulse__tile-label">
+                  Clubs needing attention
+                </span>
+                <span
+                  className="world-pulse__tile-value"
+                  data-testid="pulse-attention"
+                >
+                  {figure(world?.health.interventionRequired)}
+                </span>
+              </div>
             ) : (
-              <Link to="/regions/health" className="world-pulse__tile-label">
-                Clubs needing attention
+              <Link
+                to="/regions/health"
+                className="world-pulse__tile-body world-pulse__tile-link"
+              >
+                <span className="world-pulse__tile-label">
+                  Clubs needing attention <span aria-hidden="true">→</span>
+                </span>
+                <span
+                  className="world-pulse__tile-value"
+                  data-testid="pulse-attention"
+                >
+                  {figure(world?.health.interventionRequired)}
+                </span>
               </Link>
             )}
-            <span
-              className="world-pulse__tile-value"
-              data-testid="pulse-attention"
-            >
-              {figure(world?.health.interventionRequired)}
-            </span>
           </li>
           <li className="world-pulse__tile">
-            <span className="world-pulse__tile-label">Chartered this year</span>
-            <span
-              className="world-pulse__tile-value"
-              data-testid="pulse-chartered"
-            >
-              {figure(world?.growth.chartered)}
-            </span>
+            <div className="world-pulse__tile-body">
+              <span className="world-pulse__tile-label">
+                Chartered this year
+              </span>
+              <span
+                className="world-pulse__tile-value"
+                data-testid="pulse-chartered"
+              >
+                {figure(world?.growth.chartered)}
+              </span>
+            </div>
           </li>
           <li className="world-pulse__tile">
-            <span className="world-pulse__tile-label">Suspended this year</span>
-            <span
-              className="world-pulse__tile-value"
-              data-testid="pulse-suspended"
-            >
-              {figure(world?.growth.suspended)}
-            </span>
+            <div className="world-pulse__tile-body">
+              <span className="world-pulse__tile-label">
+                Suspended this year
+              </span>
+              <span
+                className="world-pulse__tile-value"
+                data-testid="pulse-suspended"
+              >
+                {figure(world?.growth.suspended)}
+              </span>
+            </div>
           </li>
         </ul>
 

@@ -165,11 +165,23 @@
   .world-pulse__tile {
     display: flex;
     flex-direction: column;
-    gap: 4px;
     min-height: 64px;
-    padding: 8px 10px;
     background-color: var(--surface-2);
     border-radius: var(--rds-radius-sm);
+  }
+
+  /* #2618 — the padded box inside every tile. The attention tile's body is
+     the link, so the whole tile is the tap target and the label is a span
+     like the others (no 48px link floor on the label). */
+  .world-pulse__tile-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    border-radius: inherit;
+    color: inherit;
+    text-decoration: none;
   }
 
   .world-pulse__tile-label {
@@ -179,12 +191,29 @@
     text-decoration: none;
   }
 
-  a.world-pulse__tile-label {
-    color: var(--link);
+  /* Two label lines held in every tile, so values share one top whether
+     or not a label wraps (at 375 each tile is ~88px of text width). The
+     arrow span is nested, so it must not pick up the global span line-height. */
+  .world-pulse__tiles .world-pulse__tile-label {
+    min-height: calc(2 * 1.3em);
   }
 
-  a.world-pulse__tile-label:hover {
+  .world-pulse__tile-label span {
+    line-height: inherit;
+  }
+
+  a.world-pulse__tile-link:hover {
+    background-color: var(--tm-loyal-blue-10);
+  }
+
+  a.world-pulse__tile-link:hover .world-pulse__tile-label {
+    color: var(--link);
     text-decoration: underline;
+  }
+
+  a.world-pulse__tile-link:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
   }
 
   .world-pulse__tile-value {
