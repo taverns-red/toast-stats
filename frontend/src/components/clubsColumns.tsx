@@ -43,11 +43,6 @@ const STATUS_RANK: Record<ClubHealthStatus, number> = {
   thriving: 2,
 }
 
-/** Responsive priority per column (ADR-006 §3). `sticky` = the pinned key
- *  column (never hidden); `desktop` = revealed only ≥1280px (hidden at the
- *  768–1279 tablet tier); `core` = always shown when the table renders. */
-export type ClubColumnPriority = 'sticky' | 'desktop' | 'core'
-
 // `ClubsTableMeta` moved to ./clubsTableFeatures in the v9 migration (#1530):
 // v9 types `table.options.meta` from the `tableMeta` slot on the feature set,
 // so the interface has to live beside `tableFeatures(...)`. Re-exported here so
@@ -57,38 +52,15 @@ export type ClubColumnPriority = 'sticky' | 'desktop' | 'core'
 export type { ClubsTableMeta }
 
 const STICKY_FIELD = 'name'
-const DESKTOP_ONLY_FIELDS: ReadonlySet<string> = new Set([
-  'division',
-  'area',
-  'newMembers',
-  'octoberRenewals',
-  'aprilRenewals',
-  'clubStatus',
-  'coach',
-  'yearsChartered',
-])
 
-export const clubColumnPriority = (id: string): ClubColumnPriority =>
-  id === STICKY_FIELD
-    ? 'sticky'
-    : DESKTOP_ONLY_FIELDS.has(id)
-      ? 'desktop'
-      : 'core'
+/** The pinned key column's class (sticky left). Which columns appear at a
+ *  width is not CSS: `useColumnVisibility` drives TanStack `columnVisibility`,
+ *  so a hidden column is absent from the DOM (#2676). */
+export const clubColumnStickyClass = (id: string): string =>
+  id === STICKY_FIELD ? 'clubs-table__sticky-col' : ''
 
-/** Responsive priority CSS class for a header/cell — matches the pre-migration
- *  `colPriorityClass` exactly so the existing CSS (sticky + @media hide) and
- *  the parity tests keep working unchanged. */
-export const clubColumnPriorityClass = (id: string): string => {
-  const p = clubColumnPriority(id)
-  return p === 'sticky'
-    ? 'clubs-table__sticky-col'
-    : p === 'desktop'
-      ? 'clubs-table__col--desktop'
-      : ''
-}
-
-// Per-column `<td>` class WITHOUT the priority class (ClubsTable appends
-// `clubColumnPriorityClass(id)`), reproducing the original cell classes exactly.
+// Per-column `<td>` class WITHOUT the sticky class (`clubColumnTdClass` adds
+// it), reproducing the original cell classes exactly.
 const TD_BASE_CLASS: Record<string, string> = {
   name: 'px-2 py-3 whitespace-nowrap',
   division: 'px-2 py-3 whitespace-nowrap text-sm clubs-cell-muted text-center',
@@ -122,9 +94,9 @@ const TD_BASE_CLASS: Record<string, string> = {
   sinceLastYear: 'px-2 py-3 whitespace-nowrap text-sm',
 }
 
-/** Exact `<td>` className for a column: base + responsive priority class. */
+/** Exact `<td>` className for a column: base + sticky class. */
 export const clubColumnTdClass = (id: string): string =>
-  `${TD_BASE_CLASS[id] ?? 'px-2 py-3 whitespace-nowrap'} ${clubColumnPriorityClass(id)}`.trim()
+  `${TD_BASE_CLASS[id] ?? 'px-2 py-3 whitespace-nowrap'} ${clubColumnStickyClass(id)}`.trim()
 
 /** A muted em-dash placeholder, shared by the optional numeric/text columns. */
 const Dash: React.FC = () => <span className="clubs-cell-muted">—</span>

@@ -34,32 +34,28 @@ import {
   sinceLastYearPhoneMeta,
 } from './clubsSinceLastYearColumn'
 import { ActiveFiltersBar } from './ActiveFiltersBar'
-import { ColumnGroupsMenu } from './ColumnGroupsMenu'
+import { ColumnsMenu } from './ColumnsMenu'
+import { formatDisplayDate } from '../utils/dateFormatting'
 import { describeActiveFilters } from '../utils/clubFilterDescribe'
 import {
   SortField,
   SortDirection,
   COLUMN_CONFIGS,
-  COLUMN_GROUPS,
-  COLUMN_GROUP_IDS,
   STICKY_COLUMN_FIELD,
-  type ColumnGroup,
   type ProcessedClubTrend,
 } from './filters/types'
-import { usePersistedState } from '../hooks/usePersistedState'
+import { useBreakpointTier } from '../hooks/useBreakpointTier'
+import { useColumnVisibility } from '../hooks/useColumnVisibility'
 import {
   clubsColumns,
-  clubColumnPriorityClass,
+  clubColumnStickyClass,
   clubColumnTdClass,
 } from './clubsColumns'
 import {
   clubsTableFeatures,
   type ClubsTableFeatures,
 } from './clubsTableFeatures'
-import {
-  buildClubsDeltaColumns,
-  CLUBS_DELTA_COLUMN_IDS,
-} from './clubsDeltaColumns'
+import { buildClubsDeltaColumns } from './clubsDeltaColumns'
 import {
   MobileRowList,
   type MobileRow,
@@ -77,28 +73,10 @@ import { useMediaQuery } from '../hooks/useMediaQuery'
 import { SHORT_LANDSCAPE_QUERY } from '../utils/contextBar'
 import { ClubSearchBox } from './ClubSearchBox'
 
-// The column model — order, headers, responsive priority (sticky key column +
-// tablet-tier hiding), per-cell render, and the sort fns — lives in
-// `clubsColumns.tsx` (the TanStack migration, #835). The DCP tier pill maps,
-// status-rank sort key, and sticky/desktop priority that ClubsTable used to own
-// inline moved there. ClubsTable keeps only the row-level concerns below.
-
-/** Persisted-store name for the club table's hidden column groups (#819).
- *  Passed to the versioned localStorage primitive (#420), which prefixes it
- *  with `toast-stats:v<N>:` so it migrates with every other persisted key. */
-const HIDDEN_GROUPS_STORAGE_NAME = 'clubs-table:hidden-groups'
-/** Persisted opt-in toggle for the Changes group (#795). Stored independently
- *  of HIDDEN_GROUPS so the default (off) is honoured even for users whose
- *  hidden-groups store predates the group's existence. */
-const CHANGES_VISIBLE_STORAGE_NAME = 'clubs-table:changes-visible'
-
-const VALID_GROUPS = new Set<ColumnGroup>(COLUMN_GROUP_IDS)
-/** A stale/corrupt store must never hide phantom groups or wedge the table
- *  into an unusable column set — keep only known group ids. */
-const sanitizeHiddenGroups = (raw: unknown): ColumnGroup[] =>
-  Array.isArray(raw)
-    ? raw.filter((g): g is ColumnGroup => VALID_GROUPS.has(g as ColumnGroup))
-    : []
+// The column model — order, headers, per-cell render and the sort fns — lives in
+// `clubsColumns.tsx` (the TanStack migration, #835); which columns show at which
+// width lives in `clubsColumnMeta.ts` and `useColumnVisibility` (#2676).
+// ClubsTable keeps only the row-level concerns below.
 
 /**
  * Props for the ClubsTable component
@@ -467,7 +445,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         options: [
           {
             value: PRESET_CLOSE_TO_DISTINGUISHED,
-            label: '🎯 Close to Distinguished',
+            label: 'Close to Distinguished',
           },
         ],
         selected: presetActive ? [PRESET_CLOSE_TO_DISTINGUISHED] : [],
@@ -567,67 +545,22 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     []
   )
 
-  // Column-group show/hide (#819, ADR-006 §4). Persisted to localStorage so the
-  // selection survives reload. Group visibility is a durable per-user VIEW
-  // preference (like dark mode), not shareable filter data — keeping it out of
-  // the URL avoids the filter↔URL reconcile race surface (lessons 070/130).
-  // The hidden set is the source of truth (default empty = all visible, so the
-  // table is unchanged until the user opts in). Drives TanStack's native
-  // `columnVisibility` state — no parallel responsive logic, no hand-rolled
-  // filter on the body (TanStack's row.getVisibleCells keeps header/body in
-  // lockstep automatically). The sticky 'name' column is forced visible so
-  // hiding the Identity group can't strip the row's own label (ADR-006 §3).
-  const [storedHiddenGroups, setStoredHiddenGroups] = usePersistedState<
-    ColumnGroup[]
-  >(HIDDEN_GROUPS_STORAGE_NAME, [])
-  // Opt-in show for the Changes group (#795). Stored as a boolean (default
-  // false) so the Changes columns stay hidden until the user toggles them on,
-  // independently of the hide-on-toggle behaviour the other groups use. The
-  // pre-existing `hiddenGroups` store can be `[]` for users who saved it before
-  // 'changes' existed — without a separate flag, they'd be opted IN by default.
-  const [changesVisible, setChangesVisible] = usePersistedState<boolean>(
-    CHANGES_VISIBLE_STORAGE_NAME,
-    false
-  )
-  const hiddenGroups = useMemo(() => {
-    const s = new Set(sanitizeHiddenGroups(storedHiddenGroups))
-    if (!changesVisible) s.add('changes')
-    return s
-  }, [storedHiddenGroups, changesVisible])
-  const isGroupHidden = useCallback(
-    (group: ColumnGroup) => hiddenGroups.has(group),
-    [hiddenGroups]
-  )
-  const toggleGroup = useCallback(
-    (group: ColumnGroup) => {
-      if (group === 'changes') {
-        setChangesVisible(v => !v)
-        return
-      }
-      setStoredHiddenGroups(prev => {
-        const next = new Set(sanitizeHiddenGroups(prev))
-        if (next.has(group)) next.delete(group)
-        else next.add(group)
-        return [...next]
-      })
-    },
-    [setStoredHiddenGroups, setChangesVisible]
-  )
-
-  // The 'changes' group is offered ONLY when a snapshot diff is provided —
-  // toggling a column set with nothing in it would be a dead control. The other
-  // groups are offered when at least one column claims them (so 'identity',
-  // 'membership', 'renewals', 'recognition' are always offered today; this
-  // shape is forward-compatible if any of them ever empties out).
-  const availableColumnGroups = useMemo(
-    () =>
-      COLUMN_GROUPS.filter(
-        g =>
-          (g.id === 'changes' && !!snapshotDiff) ||
-          (g.id !== 'changes' && COLUMN_CONFIGS.some(c => c.group === g.id))
-      ),
-    [snapshotDiff]
-  )
+  // Which columns show (#2676, spec §4). The width tier picks the defaults and
+  // the user's sparse overrides ride on top; the result drives TanStack's
+  // native `columnVisibility`, so a column the width hides is absent from the
+  // DOM (header and body stay in lockstep via row.getVisibleCells). It is a
+  // per-browser view preference, kept out of the URL (lessons 070/130). The
+  // tier is read synchronously, so the first frame is already the right set.
+  const tier = useBreakpointTier()
+  const columns = useColumnVisibility({
+    tier,
+    changesAvailable: !!snapshotDiff,
+    sinceActive: !!sinceByClub,
+  })
+  // The Changes group is named for the pair it compares (spec §4.3).
+  const changesLabel = snapshotDiff
+    ? `Changes since ${formatDisplayDate(snapshotDiff.from.date)}`
+    : undefined
 
   // ClubDiff lookup keyed by clubId, recomputed only when the diff changes.
   // The delta column defs close over this Map so each cell can render its
@@ -644,8 +577,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   }, [snapshotDiff])
 
   // Delta column defs (#795). Only appended when a diff is provided — absent ⇒
-  // the table is byte-identical to its pre-#795 self. The 'changes' group's
-  // visibility is driven by `hiddenGroups` (opt-in, default hidden).
+  // the table is byte-identical to its pre-#795 self. They are opt-in: off by
+  // default at every width and switched on from the Columns menu.
   const tableColumns = useMemo(() => {
     const base = snapshotDiff
       ? [...clubsColumns, ...buildClubsDeltaColumns(clubDiffsById)]
@@ -660,22 +593,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     ]
   }, [snapshotDiff, clubDiffsById, sinceByClub])
 
-  const columnVisibility = useMemo<ColumnVisibilityState>(() => {
-    const vis: ColumnVisibilityState = {}
-    for (const c of COLUMN_CONFIGS) {
-      // The sticky key column is the row's label — never hidden by a group.
-      if (c.field === STICKY_COLUMN_FIELD) continue
-      if (hiddenGroups.has(c.group)) vis[c.field] = false
-    }
-    // Delta columns belong to the 'changes' group; hide the whole set when the
-    // group is hidden. They live outside COLUMN_CONFIGS (they're display-only
-    // columns, no filter or sort metadata to register) so the loop above
-    // doesn't reach them.
-    if (hiddenGroups.has('changes')) {
-      for (const id of CLUBS_DELTA_COLUMN_IDS) vis[id] = false
-    }
-    return vis
-  }, [hiddenGroups])
+  const columnVisibility: ColumnVisibilityState = columns.visibility
 
   // CC-7 (#872): build the club-detail href once; the sticky name cell renders
   // it as a real <Link> (via table.meta), and the phone rows (#1833) reuse it.
@@ -1037,16 +955,14 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 onSearchChange={handleSearchChange}
               />
               {filtersTrigger}
-              {/* Column-group show/hide (#819, ADR-006 §4). Same toolbar slot as
-              the Filters trigger so the two table-shape controls live together;
-              uses the same .clubs-filters-trigger styling for a single visual
-              language. */}
-              {/* Column groups shape the table; the phone rows have no columns
-              (#1833), so the control would be dead there. */}
-              <ColumnGroupsMenu
-                groups={availableColumnGroups}
-                isGroupHidden={isGroupHidden}
-                onToggle={toggleGroup}
+              {/* Columns (#2676, spec §4.2): one control at every width from
+              768 up, so a column the width hides is one click away. The phone
+              rows have no columns (#1833), so it is not offered there. */}
+              <ColumnsMenu
+                columns={columns}
+                changesAvailable={!!snapshotDiff}
+                changesLabel={changesLabel}
+                sinceActive={!!sinceByClub}
               />
               {/* Close-to-Distinguished preset (#903) — moved into the toolbar
               cluster, directly after Columns (#967). One action-oriented toggle
@@ -1060,7 +976,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 aria-pressed={presetActive}
                 onClick={handlePresetToggle}
               >
-                🎯 Close to Distinguished
+                Close to Distinguished
               </button>
               {/* Since-last-year preset (#2432) — a second pipeline step with
               its own URL key (?since=), beside the first preset. */}
@@ -1296,7 +1212,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                           key={header.id}
                           scope="col"
                           aria-sort={ariaSort}
-                          className={`p-0 ${clubColumnPriorityClass(header.column.id)}`.trim()}
+                          className={`p-0 ${clubColumnStickyClass(header.column.id)}`.trim()}
                         >
                           <ColumnHeader
                             field={header.column.id as SortField}

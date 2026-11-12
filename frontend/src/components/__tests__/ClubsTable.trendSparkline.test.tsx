@@ -13,7 +13,7 @@
  *   the Filter & sort sheet offers "Net change".
  */
 import type { ReactElement } from 'react'
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   render as rtlRender,
   screen,
@@ -24,6 +24,7 @@ import {
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom'
 import { ClubsTable } from '../ClubsTable'
+import { stubViewportWidth } from '../../test-utils/viewportMatchMedia'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import { processClubs } from '../../utils/columnFilterUtils'
 
@@ -86,6 +87,11 @@ function stubMobile(matches: boolean) {
     }))
   )
 }
+
+// The Trend column shows from 1024 up (#2676); the phone tests re-stub below.
+beforeEach(() => {
+  stubViewportWidth(1280)
+})
 
 afterEach(() => {
   cleanup()

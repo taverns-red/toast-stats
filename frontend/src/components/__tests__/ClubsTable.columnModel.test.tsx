@@ -18,7 +18,7 @@
  * not assertion pinning — the new labels encode the HANDOFF column set.
  */
 
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   render as rtlRender,
   cleanup,
@@ -33,6 +33,7 @@ import { MemoryRouter } from 'react-router-dom'
 const render = (ui: ReactElement, options?: Parameters<typeof rtlRender>[1]) =>
   rtlRender(ui, { wrapper: MemoryRouter, ...options })
 import { ClubsTable } from '../ClubsTable'
+import { stubViewportWidth } from '../../test-utils/viewportMatchMedia'
 import { ClubTrend } from '../../hooks/useDistrictAnalytics'
 
 const createMockClub = (overrides: Partial<ClubTrend> = {}): ClubTrend => ({
@@ -79,9 +80,15 @@ function headerLabelsInOrder(container: HTMLElement): string[] {
 }
 
 describe('ClubsTable column model (#669)', () => {
+  beforeEach(() => {
+    // These tests assert the full column set, which shows at >=1600 (#2676).
+    stubViewportWidth(1600)
+  })
+
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('renders the spec column order with extras appended', () => {

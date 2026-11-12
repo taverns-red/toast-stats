@@ -36,6 +36,7 @@ import { MemoryRouter } from 'react-router-dom'
 const render = (ui: ReactElement, options?: Parameters<typeof rtlRender>[1]) =>
   rtlRender(ui, { wrapper: MemoryRouter, ...options })
 import { ClubsTable } from '../ClubsTable'
+import { stubViewportWidth } from '../../test-utils/viewportMatchMedia'
 import { ClubTrend } from '../../hooks/useDistrictAnalytics'
 
 /**
@@ -109,11 +110,14 @@ const clickSortAscending = () => {
 describe('ClubsTable Club Status Sorting', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // These tests assert the full column set, which shows at >=1600 (#2676).
+    stubViewportWidth(1600)
   })
 
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   describe('Alphabetical Sorting (Ascending)', () => {

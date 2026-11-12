@@ -11,9 +11,8 @@
  *       not the old 640px cliff (asserted in ClubsTable.responsive.test.tsx);
  *   (2) the table (rendered at tablet ≥768 and up) has ONE sticky key column
  *       (Club) pinned at left:0 — a robust sticky, no hardcoded px offset;
- *   (3) a per-column priority model hides the low-priority "detail" columns at
- *       the tablet tier (768–1279) and reveals them at desktop (≥1280) via the
- *       `clubs-table__col--desktop` class;
+ *   (3) which columns show per width is the visibility model (#2676), not a
+ *       CSS class: see ClubsTable.columnsMenu.test.tsx;
  *   (4) a right-edge scroll-cue affordance signals clipped columns.
  *
  * jsdom has no layout and can't evaluate media queries (Lesson 66), so this
@@ -97,59 +96,10 @@ describe('ClubsTable priority-column responsive model (#812)', () => {
   // the attribute is gone and one hover rule covers every row; the absence is
   // asserted in ClubsTable.healthTier.test.tsx.
 
-  it('hides the detail columns at tablet via clubs-table__col--desktop, keeps the core set always shown', () => {
-    stubDesktopMatchMedia()
-    const { container } = render(
-      <ClubsTable clubs={[makeClub()]} districtId="61" isLoading={false} />
-    )
-    // Map header label → its th, so the assertion reads off the spec column set.
-    const headerByLabel = new Map<string, Element>()
-    container.querySelectorAll('#clubs-table thead th').forEach(th => {
-      const label = th.textContent?.trim() ?? ''
-      // ColumnHeader wraps the label in a button; first non-empty token is it.
-      headerByLabel.set(label.split(/\s+/)[0] ?? '', th)
-    })
-
-    // Detail columns hidden at the tablet tier (revealed ≥1280).
-    const desktopOnly = ['Div', 'Area', 'New', 'Oct', 'Apr', 'Club', 'Years']
-    // NB: 'Club' here matches the "Club Status" header's first token, NOT the
-    // sticky "Club" column (column 0), which is asserted separately below.
-    const headers = Array.from(
-      container.querySelectorAll('#clubs-table thead th')
-    )
-    // Index-based: the desktop-only columns are 1,2,7,8,9,12,13 (0-based) in the
-    // COLUMN_CONFIGS order: Club, Div, Area, Status, Members, Trend (#1792),
-    // Needed, New, Oct, Apr, DCP, Tier, ClubStatus, Years. Trend is core — the
-    // sparkline shows at every width.
-    const desktopOnlyIdx = [1, 2, 7, 8, 9, 12, 13]
-    const coreIdx = [0, 3, 4, 5, 6, 10, 11]
-    desktopOnlyIdx.forEach(i => {
-      expect(headers[i].className).toContain('clubs-table__col--desktop')
-    })
-    coreIdx.forEach(i => {
-      expect(headers[i].className).not.toContain('clubs-table__col--desktop')
-    })
-    // The sticky column (Club, col 0) is core, never a desktop-only hide.
-    expect(headers[0].className).toContain('clubs-table__sticky-col')
-    expect(headers[0].className).not.toContain('clubs-table__col--desktop')
-    void desktopOnly
-    void headerByLabel
-  })
-
-  it('applies the same priority classes to body cells in column order', () => {
-    stubDesktopMatchMedia()
-    const { container } = render(
-      <ClubsTable clubs={[makeClub()]} districtId="61" isLoading={false} />
-    )
-    const cells = Array.from(
-      container.querySelectorAll('#clubs-table tbody tr:first-child td')
-    )
-    const desktopOnlyIdx = [1, 2, 7, 8, 9, 12, 13]
-    desktopOnlyIdx.forEach(i => {
-      expect(cells[i].className).toContain('clubs-table__col--desktop')
-    })
-    expect(cells[0].className).toContain('clubs-table__sticky-col')
-  })
+  // The old tests here pinned a `clubs-table__col--desktop` CSS class that hid
+  // the detail columns at 768-1279. Hiding is TanStack `columnVisibility` now
+  // (#2676), so a hidden column is absent from the DOM: asserted per tier in
+  // ClubsTable.columnsMenu.test.tsx and, for the model, clubsColumnMeta.test.ts.
 
   it('wraps the scroller and renders a right-edge scroll-cue affordance', () => {
     stubDesktopMatchMedia()

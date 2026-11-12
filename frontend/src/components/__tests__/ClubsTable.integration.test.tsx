@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   render as rtlRender,
   screen,
@@ -13,6 +13,7 @@ import { MemoryRouter } from 'react-router-dom'
 const render = (ui: ReactElement, options?: Parameters<typeof rtlRender>[1]) =>
   rtlRender(ui, { wrapper: MemoryRouter, ...options })
 import { ClubsTable } from '../ClubsTable'
+import { stubViewportWidth } from '../../test-utils/viewportMatchMedia'
 import { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import * as csvExport from '../../utils/csvExport'
 
@@ -96,9 +97,15 @@ const createTestClubs = (): ClubTrend[] => [
 ]
 
 describe('ClubsTable Integration Tests', () => {
+  beforeEach(() => {
+    // These tests assert the full column set, which shows at >=1600 (#2676).
+    stubViewportWidth(1600)
+  })
+
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   describe('Basic Integration Tests', () => {

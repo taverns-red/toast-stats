@@ -257,6 +257,31 @@ describe('Columns menu (#2676)', () => {
     expect(headerLabels()).toEqual(WIDE)
   })
 
+  it('keeps the Club column when every other column is hidden', async () => {
+    const user = userEvent.setup()
+    stubViewportWidth(1024)
+    renderTable()
+    await user.click(trigger())
+    for (const name of [
+      /^Division/,
+      /^Area/,
+      /^Health/,
+      /^Members/,
+      /^Trend/,
+      /^Needed/,
+      /^DCP/,
+      /^Tier/,
+    ]) {
+      await user.click(screen.getByRole('checkbox', { name }))
+    }
+    expect(headerLabels()).toEqual(['Club'])
+    expect(firstRowCellCount()).toBe(1)
+    const firstRow = document.querySelector(
+      '#clubs-table tbody tr:first-child'
+    ) as HTMLElement
+    expect(within(firstRow).getByText('Alpha Club')).toBeInTheDocument()
+  })
+
   it('can hide a default column and keeps the table in lockstep', async () => {
     const user = userEvent.setup()
     stubViewportWidth(1024)
