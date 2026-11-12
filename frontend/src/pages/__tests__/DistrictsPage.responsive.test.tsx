@@ -1,23 +1,24 @@
 /**
- * DistrictsPage landing rankings table — priority-column responsive model +
- * sticky fix (#811, epic #813 Sprint 3).
+ * DistrictsPage landing rankings table: responsive + sticky (#811, epic #813
+ * Sprint 3), as amended by the shared DataTable migration (#2689, #2676 M1).
  *
  * The landing rankings table is a LEADERBOARD: its value is comparing
- * districts across rows. Per Lesson 105 (#689) a ranking table keeps the
- * table and makes the horizontal scroll non-trap — it must NOT card-collapse
- * (which destroys the cross-row comparison). So the responsive contract is:
- *   (1) the scroll container is a focusable, labelled region (WCAG 2.1.1, the
- *       axe "scrollable-region-focusable" rule) with a right-edge scroll-cue;
- *   (2) ONE sticky key column (District) pinned at left:0 — no hardcoded
- *       second sticky (the old `left-[200px]` px seam, AC #2);
- *   (3) a per-column priority model that hides low-priority columns at tablet
- *       / mobile via CSS (verified for real at each breakpoint in Playwright —
- *       jsdom has no layout, Lesson 66);
- *   (4) ≥44px touch targets on the row action buttons (Lesson 111).
+ * districts across rows, so it keeps the table (no card collapse, Lesson 105).
+ * The responsive contract is now:
+ *   (1) while the chosen columns fit, the table is NOT a scroll container
+ *       (the header sticks to the page); only when they cannot fit does the
+ *       wrapper become a focusable, labelled region with edge cues (spec 5.2,
+ *       11: "the scroll region is focusable and labelled only when it actually
+ *       overflows");
+ *   (2) ONE sticky key column (District), no hardcoded second sticky (AC #2);
+ *   (3) which columns show is TanStack column visibility with a Columns menu,
+ *       "never CSS display:none" (ADR-006 Addendum 2): no per-column priority
+ *       classes (Ron, 2026-11-12);
+ *   (4) >=44px touch targets on the row action buttons (Lesson 111).
  *
  * jsdom can't evaluate media queries or measure px, so these assert the
- * structural hooks (roles, classes, testids) the CSS keys off; the live
- * per-breakpoint behaviour is proven on the PR preview channel.
+ * structural hooks; the live per-breakpoint behaviour is proven on the PR
+ * preview channel (e2e/rankings-data-table.smoke.ts).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
@@ -136,24 +137,26 @@ describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {
     vi.clearAllMocks()
   })
 
-  it('wraps the table in a focusable, labelled scroll region with a scroll-cue', async () => {
+  it('is not a scroll region while the columns fit, and carries edge cues for when they do not', async () => {
     setupSingleRow()
     const { container } = renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 7')
 
-    // Matched on the region's stable name, not on the word "scroll": the
-    // label is now derived from real overflow (#1358), and jsdom has no
-    // layout engine, so scrollWidth/clientWidth are both 0 and nothing
-    // "scrolls" here. The assertion under test is that the region is
-    // focusable and LABELLED, which still holds either way.
-    const scroller = screen.getByRole('region', { name: /district rankings/i })
-    expect(scroller).toHaveAttribute('tabindex', '0')
-    expect(scroller.className).toMatch(/overflow-x-auto/)
-
-    // Right-edge discoverability cue (Lesson 105 — non-trap move #3).
+    // jsdom has no layout (width 0), so nothing overflows: the wrapper must
+    // not be a focusable region (an unlabelled scroll region is an a11y
+    // failure) and must not scroll, or the header could not stick to the page.
+    const wrap = container.querySelector('.dt-scroll')!
+    expect(wrap).toHaveAttribute('data-overflow', 'false')
+    expect(wrap).not.toHaveAttribute('tabindex')
+    expect(wrap).not.toHaveAttribute('role')
+    expect(wrap.className).not.toMatch(/overflow-x-auto/)
     expect(
-      container.querySelector('.districts-rankings-table__scroll-cue')
-    ).not.toBeNull()
+      screen.queryByRole('region', { name: /district rankings/i })
+    ).toBeNull()
+
+    // Edge cues (Lesson 105, non-trap move #3), shown only when there is more
+    // to scroll to in that direction.
+    expect(container.querySelector('.dt-scroll__cue--end')).not.toBeNull()
   })
 
   it('makes District the single sticky key column (no hardcoded second sticky)', async () => {
@@ -162,9 +165,7 @@ describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {
     await screen.findByText('District 7')
 
     const districtCell = screen.getByTestId('district-cell-7')
-    expect(districtCell.className).toMatch(
-      /districts-rankings-table__sticky-col/
-    )
+    expect(districtCell.className).toMatch(/rankings-sticky-col/)
 
     // AC #2: the Rank column must NOT be a second hardcoded sticky column —
     // that `left-[200px]` magic-number seam is exactly what this sprint removes.
@@ -174,44 +175,32 @@ describe('DistrictsPage rankings table — responsive + sticky (#811)', () => {
     expect(rankCell.className).not.toMatch(/\bsticky\b/)
   })
 
-  it('keeps the sticky District cell tint-aware (data-row-tint hook)', async () => {
+  it('keeps the sticky District cell on themed tokens, with no tint hook or bg-white', async () => {
     setupSingleRow()
     renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 7')
 
-    // Default (untinted) row: the sticky cell must NOT hardcode bg-white
-    // (Lesson 116 — that routes to the lighter dark scale). It carries an
-    // explicit tint hook so the my-district row repaints opaquely instead.
+    // Lesson 116: a hardcoded bg-white routes to the lighter dark scale. The
+    // cell's surface comes from CSS tokens, and the my-district marker is a
+    // bar plus words on the row (data-mine), not a tint on the cell.
     const districtCell = screen.getByTestId('district-cell-7')
     expect(districtCell.className).not.toMatch(/bg-white/)
-    expect(districtCell).toHaveAttribute('data-row-tint')
+    expect(districtCell).not.toHaveAttribute('data-row-tint')
   })
 
-  it('assigns responsive priority classes per column', async () => {
+  it('has no per-column priority classes: the width picks defaults, the Columns menu overrides', async () => {
     setupSingleRow()
-    renderWithProviders(<DistrictsPage />)
+    const { container } = renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 7')
 
-    // Always-visible (mobile 375): District (sticky), Rank, Score.
-    for (const re of [/^rank$/i, /^score$/i]) {
-      const th = headerByText(re)
-      expect(th.className).not.toMatch(/__col--compact/)
-      expect(th.className).not.toMatch(/__col--tablet/)
-      expect(th.className).not.toMatch(/__col--desktop/)
+    // Always shown: District, Rank, Score.
+    for (const re of [/^district$/i, /^rank$/i, /^score$/i]) {
+      expect(headerByText(re)).toBeInTheDocument()
     }
-    // Compact+ (≥600): Paid Clubs / Payments. Promoted from the tablet rung
-    // in #1358 — a 360x640 phone is 640px in landscape, so the old 768
-    // threshold left that whole device class with no metric columns at any
-    // orientation.
-    for (const re of [/paid clubs/i, /total payments/i]) {
-      expect(headerByText(re).className).toMatch(/__col--compact/)
-    }
-    // Tablet+ (≥768): Distinguished.
-    expect(headerByText(/distinguished/i).className).toMatch(/__col--tablet/)
+    expect(container.querySelector('[class*="__col--"]')).toBeNull()
     // The desktop-only rung used to hold Tier. #1361 pulled that column — it
-    // was `—` for the majority of districts (every district at the start of a
-    // program year) — and moved the tier badge into the District cell. The
-    // ladder's third rung is intentionally unoccupied, not deleted.
+    // was `—` for the majority of districts — and moved the tier badge into the
+    // District cell.
     expect(() => headerByText(/^tier$/i)).toThrow()
   })
 

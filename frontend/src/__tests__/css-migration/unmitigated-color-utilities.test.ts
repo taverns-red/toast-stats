@@ -77,7 +77,8 @@ const EXPECTED_FAILURES = new Set<string>([
   // dark surface; needs a per-callsite check before override.
   'bg-red-500',
   'bg-green-500',
-  'bg-yellow-500',
+  // bg-yellow-500 left the list in #2689: its last use was the rank-badge
+  // gold medal, now a legacy token (rank-badge[data-medal]).
   // Already-light foreground; bleeds into the dark surface.
   'text-gray-200',
   // Matches the dark surface tone — invisible border.

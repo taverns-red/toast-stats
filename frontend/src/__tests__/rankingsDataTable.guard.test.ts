@@ -14,6 +14,8 @@ const src = (rel: string): string =>
   readFileSync(join(__dirname, '..', rel), 'utf-8')
 
 const TABLE_FILE = 'components/DistrictRankingsTable.tsx'
+/** Everything that renders a cell of the rankings table. */
+const TABLE_SOURCES = [TABLE_FILE, 'components/rankingsColumns.tsx']
 
 describe('landing rankings table: no CSS-hidden columns (Ron, 2026-11-12)', () => {
   it('lives in its own component on the DataTable foundation', () => {
@@ -40,7 +42,7 @@ describe('landing rankings table: no CSS-hidden columns (Ron, 2026-11-12)', () =
 })
 
 describe('landing rankings table: legacy palette and the 14px floor', () => {
-  const table = (): string => src(TABLE_FILE)
+  const table = (): string => TABLE_SOURCES.map(src).join('\n')
 
   it('uses no raw yellow or amber utility (rank badges, star, my-district)', () => {
     expect(table()).not.toMatch(/\b(?:bg|text|border)-(?:yellow|amber)-\d/)
@@ -53,5 +55,25 @@ describe('landing rankings table: legacy palette and the 14px floor', () => {
   it('marks my district with a left bar token and visible text, not a tint', () => {
     expect(table()).toMatch(/Your district/)
     expect(table()).not.toMatch(/data-row-tint/)
+  })
+
+  // #1361: award chips WERE icon-only below the compact breakpoint, with the
+  // label sr-only; all three carried the same trophy, so two wins were
+  // indistinguishable on a phone. Badges are self-describing at every width.
+  it('does not hide award badge labels on narrow screens', () => {
+    for (const rel of ['pages/DistrictsPage.tsx', ...TABLE_SOURCES]) {
+      expect(
+        src(rel).match(/className="sr-only sm:not-sr-only[^"]*"/g)
+      ).toBeNull()
+    }
+  })
+
+  // The sticky District column on the phone sheet is subtracted from the
+  // viewport before a metric renders: it must not be wider than the design's
+  // column size (a fixed, small size), never content-sized.
+  it('sizes the District column from the column meta, not its content', () => {
+    expect(src('components/rankingsColumnMeta.ts')).toMatch(
+      /DISTRICT_MIN_SIZE = 180/
+    )
   })
 })

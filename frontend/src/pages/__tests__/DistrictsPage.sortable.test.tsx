@@ -100,7 +100,7 @@ const rankings = [
 ]
 
 const getRowOrder = (): string[] => {
-  const table = document.querySelector('.districts-rankings-table')
+  const table = document.querySelector('#district-rankings-table')
   const rows = table?.querySelectorAll('tbody tr[data-testid^="district-row-"]')
   return Array.from(rows ?? []).map(
     r => r.getAttribute('data-testid')?.replace('district-row-', '') ?? ''
@@ -130,7 +130,7 @@ describe('DistrictsPage — click-header sort (#851)', () => {
     await screen.findByTestId('district-row-86')
 
     const clubsHeader = screen.getByRole('button', {
-      name: /Sort by Paid Clubs/i,
+      name: /^Paid clubs$/i,
     })
     fireEvent.click(clubsHeader)
 
@@ -145,7 +145,7 @@ describe('DistrictsPage — click-header sort (#851)', () => {
     await screen.findByTestId('district-row-86')
 
     const clubsHeader = screen.getByRole('button', {
-      name: /Sort by Paid Clubs/i,
+      name: /^Paid clubs$/i,
     })
     fireEvent.click(clubsHeader) // asc by clubsRank
     fireEvent.click(clubsHeader) // desc
@@ -159,9 +159,10 @@ describe('DistrictsPage — click-header sort (#851)', () => {
     renderWithProviders(<DistrictsPage />)
     await screen.findByTestId('district-row-86')
 
-    const btn = screen.getByRole('button', { name: /Sort by Paid Clubs/i })
+    const btn = screen.getByRole('button', { name: /^Paid clubs$/i })
     const th = btn.closest('th')
-    expect(th?.getAttribute('aria-sort')).toBe('none')
+    // APG sortable table (spec 11): aria-sort only on the sorted column.
+    expect(th?.hasAttribute('aria-sort')).toBe(false)
 
     fireEvent.click(btn)
     await waitFor(() => {
@@ -186,7 +187,7 @@ describe('DistrictsPage — click-header sort (#851)', () => {
     await screen.findByTestId('district-row-86')
 
     const clubsHeader = screen
-      .getByRole('button', { name: /Sort by Paid Clubs/i })
+      .getByRole('button', { name: /^Paid clubs$/i })
       .closest('th')
     expect(clubsHeader?.getAttribute('aria-sort')).toBe('descending')
   })
@@ -196,7 +197,7 @@ describe('DistrictsPage — click-header sort (#851)', () => {
     await screen.findByTestId('district-row-86')
 
     // Score is the default sort — toggling it should flip to ascending
-    const scoreBtn = screen.getByRole('button', { name: /Sort by Score/i })
+    const scoreBtn = screen.getByRole('button', { name: /^Score$/i })
     fireEvent.click(scoreBtn)
     await waitFor(() => {
       expect(getRowOrder()).toEqual(['60', '74', '86'])

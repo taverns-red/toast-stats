@@ -49,13 +49,16 @@ describe('Issue #86 — Tab bar scroll fade indicator', () => {
 // labelled, scroll-stable identity column) is preserved by the single sticky
 // column; the rendered-DOM contract is covered in DistrictsPage.responsive.test.
 
+// #2689 moved the landing table onto the shared DataTable: the pinned class is
+// now `rankings-sticky-col`, set by the table component.
+
 describe('Issue #85 → #811 — single sticky key column', () => {
-  it('DistrictsPage marks District as the sticky key column (not inline px sticky)', () => {
+  it('the rankings table marks District as the sticky key column (not inline px sticky)', () => {
     const source = fs.readFileSync(
-      path.join(SRC_DIR, 'pages', 'DistrictsPage.tsx'),
+      path.join(SRC_DIR, 'components', 'DistrictRankingsTable.tsx'),
       'utf-8'
     )
-    expect(source).toContain('districts-rankings-table__sticky-col')
+    expect(source).toContain('rankings-sticky-col')
   })
 
   it('app-shell.css pins the key column with position:sticky, no hardcoded left offset', () => {
@@ -65,12 +68,8 @@ describe('Issue #85 → #811 — single sticky key column', () => {
     )
     // The sticky key-column rule resolves position:sticky + left:0 (a token-
     // free, offset-free pin — no `left: 120px/200px` magic number seam).
-    expect(css).toMatch(
-      /\.districts-rankings-table__sticky-col\s*\{[\s\S]*?position:\s*sticky/
-    )
-    expect(css).toMatch(
-      /\.districts-rankings-table__sticky-col\s*\{[\s\S]*?left:\s*0/
-    )
+    expect(css).toMatch(/\.rankings-sticky-col\s*\{[\s\S]*?position:\s*sticky/)
+    expect(css).toMatch(/\.rankings-sticky-col\s*\{[\s\S]*?left:\s*0/)
   })
 
   it('index.css should define .sticky-column-shadow class', () => {

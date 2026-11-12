@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnRankings, fetchCdnRankingsForDate } from '../services/cdn'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
@@ -18,14 +18,8 @@ import {
 } from '../components/DataControlsBar'
 import { useRankHistory } from '../hooks/useRankHistory'
 import InfoTooltip from '../components/InfoTooltip'
-import DistrictTierChip from '../components/DistrictTierChip'
-import { RecognitionBadge } from '../components/recognition/RecognitionBadge'
 import { RecognitionLegend } from '../components/recognition/RecognitionLegend'
 import { RecognitionFilterBar } from '../components/recognition/RecognitionFilterBar'
-import {
-  AWARD_RECOGNITION,
-  CLUB_GROWTH_RECOGNITION,
-} from '../components/recognition/recognitionRegistry'
 import {
   EMPTY_RECOGNITION_FILTER,
   districtMatchesRecognition,
@@ -40,10 +34,16 @@ import { useUrlState } from '../hooks/useUrlState'
 import { useUrlBoolean } from '../hooks/useUrlBoolean'
 import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import { useDebounce } from '../hooks/useDebounce'
-import { SortableHeader } from '../components/SortableHeader'
 import { ProgramYearTitleSuffix } from '../components/ProgramYearTitleSuffix'
-import { rankingsScrollLabel } from '../utils/rankingsScrollLabel'
 import { DistrictRanking } from '../types/districts'
+import { DistrictRankingsTable } from '../components/DistrictRankingsTable'
+import type { RankedDistrict } from '../components/rankingsTableFeatures'
+import {
+  formatNumber,
+  formatPercentage,
+  medalOf,
+  rankBadgeClassName,
+} from '../utils/rankingsFormat'
 import { arrayToCSV, downloadCSV } from '../utils/csvExport'
 import {
   PriorityColumnsTable,
@@ -61,13 +61,6 @@ import { WorldPulse } from '../components/WorldPulse'
 import { RedVoteBlock } from '../components/RedVoteBlock'
 import { ErrorDisplay } from '../components/ErrorDisplay'
 import { DistinguishedCount } from '../components/DistinguishedCount'
-
-// Columns in the rankings table head: District, Rank, Paid Clubs, Total
-// Payments, Distinguished, Score. Only the empty-state row needs the number
-// (as its colSpan), and a stale colSpan is invisible until someone squints at
-// a filtered table — so `rankingsColumnPriority.guard` pins it against the
-// actual `<th>` count rather than trusting this comment.
-const RANKINGS_COLUMN_COUNT = 6
 
 // #922 — pinned widths for the renderShell header-actions skeleton, one per
 // loaded-toolbar item (measured at 390px, both engines). The widths only
@@ -105,9 +98,6 @@ const noopRecognitionChange = () => {}
 
 /** Phone rankings reveal step — the MobileRowList "show more" rhythm. */
 const PHONE_ROWS_STEP = 25
-
-/** A ranking row with its global display rank (see displayRankings). */
-type RankedDistrict = DistrictRanking & { displayRank: number }
 
 /* Phone identity cell (#1834): the my-district star (a 44px button, same
    labels as the full table's) beside the district chip, which links to the
@@ -169,7 +159,6 @@ const PhoneDistrictIdentity: React.FC<{
 )
 
 const DistrictsPage: React.FC = () => {
-  const navigate = useNavigate()
   // URL-synced click-header sort (#851). Replaces the prior persisted
   // 4-option sortBy enum + dedicated toolbar buttons — sort now lives on
   // the table headers and round-trips through the URL so reload, back/
@@ -594,109 +583,6 @@ const DistrictsPage: React.FC = () => {
         </button>
       </div>
     ) : null
-
-  // Show the right-edge scroll-cue ONLY when the rankings table actually
-  // overflows to the right. A permanent fade would wash out the right-aligned
-  // Score column on desktop, where the full set fits and nothing scrolls — a
-  // false affordance over the headline metric. Toggled imperatively (a
-  // data-attr on the scroll-wrap, gated in CSS) so scroll/resize don't
-  // re-render the whole table. Unlike the regions leaderboard's always-on cue
-  // (#689, 19 cols that always scroll), this one is conditional.
-  const rankingsScrollRef = useRef<HTMLDivElement>(null)
-  React.useEffect(() => {
-    const el = rankingsScrollRef.current
-    if (!el) return
-    const update = () => {
-      const moreToRight = el.scrollWidth - el.clientWidth - el.scrollLeft > 1
-      el.parentElement?.setAttribute(
-        'data-scrollable-right',
-        String(moreToRight)
-      )
-      // Keep the region's accessible name honest (#1358). Derived from total
-      // overflow, NOT moreToRight: the latter goes false once the user hits
-      // the right edge, which would strip the affordance mid-scroll. Below the
-      // priority breakpoints nothing overflows because the shed columns are
-      // `display: none`, so the label must stop telling people to scroll for
-      // metrics that scrolling cannot reach.
-      el.setAttribute(
-        'aria-label',
-        rankingsScrollLabel(el.scrollWidth - el.clientWidth > 1)
-      )
-    }
-    update()
-    el.addEventListener('scroll', update, { passive: true })
-    let ro: ResizeObserver | undefined
-    if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(update)
-      ro.observe(el)
-    }
-    return () => {
-      el.removeEventListener('scroll', update)
-      ro?.disconnect()
-    }
-  }, [displayRankings])
-
-  const handleDistrictClick = (districtId: string) => {
-    navigate(`/district/${districtId}`)
-  }
-
-  // Rank badge weight (#1363). The circle is the PODIUM's, not every row's:
-  // ranks 1–3 keep a 28px filled medal, everyone else is a plain bold
-  // numeral. The old `rank <= 10` blue and `bg-gray-200` fallback fills are
-  // retired — a grey circle on 90% of rows added weight without adding
-  // information the numeral inside it didn't already carry.
-  // Dark ink, not white: white on these fills is 1.9 / 2.5 / 3.2:1 against a
-  // 4.5:1 floor (14px bold is not WCAG "large text"). The fills themselves are
-  // unchanged. See __tests__/accessibility/RankBadgeContrast.test.ts, and
-  // dark-mode.css for the gold/bronze dark-theme ink pin (silver's fill IS
-  // remapped dark, so it flips light correctly on its own).
-  const MEDAL_FILLS: Record<number, string> = {
-    1: 'bg-yellow-500 text-gray-900',
-    2: 'bg-gray-400 text-gray-900',
-    3: 'bg-amber-600 text-gray-900',
-  }
-  // Semantic hook for that dark-theme pin. Keying the override off the
-  // Tailwind pair (`.bg-yellow-500.text-gray-900`) would ALSO read as a
-  // blanket dark-mode override of `bg-yellow-500` to the #564 unmitigated-
-  // utility guard — marking a utility mitigated everywhere on the strength of
-  // one scoped fix, and quietly discharging real debt (two colour swatches
-  // still use the bare utility).
-  const MEDAL_NAMES: Record<number, string> = {
-    1: 'gold',
-    2: 'silver',
-    3: 'bronze',
-  }
-  const rankBadgeClassName = (rank: number) => {
-    const medal = MEDAL_FILLS[rank]
-    return medal
-      ? `rank-badge inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-bold ${medal}`
-      : 'rank-badge text-sm font-bold text-gray-900'
-  }
-
-  const formatNumber = (num: number) => {
-    return num.toLocaleString()
-  }
-
-  const formatPercentage = (
-    percent: number
-  ): { text: string; color: string } => {
-    if (percent > 0) {
-      return {
-        text: `+${percent.toFixed(1)}%`,
-        color: 'text-green-600',
-      }
-    } else if (percent < 0) {
-      return {
-        text: `${percent.toFixed(1)}%`,
-        color: 'text-red-600',
-      }
-    } else {
-      return {
-        text: '0.0%',
-        color: 'text-gray-600',
-      }
-    }
-  }
 
   // Handle region selection for historical tracking
   const handleRegionSelection = (region: string) => {
@@ -1143,7 +1029,7 @@ const DistrictsPage: React.FC = () => {
       title: 'Global rank',
       render: d => (
         <span
-          data-medal={MEDAL_NAMES[d.displayRank]}
+          data-medal={medalOf(d.displayRank)}
           className={rankBadgeClassName(d.displayRank)}
         >
           {d.displayRank}
@@ -1193,306 +1079,6 @@ const DistrictsPage: React.FC = () => {
     },
   ]
 
-  // The rankings table as rendered at >=768 and inside the phone's
-  // full-table sheet (#1834).
-  const rankingsTable = (
-    <table className="districts-rankings-table" aria-label="District rankings">
-      <caption className="sr-only">
-        District rankings by Paid Clubs, Total Payments, Distinguished club
-        count, and Borda-count Score.
-      </caption>
-      <thead>
-        <tr>
-          <th className="districts-rankings-table__sticky-col text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            District
-          </th>
-          {/* Right-aligned to match the numerals below it (#1363):
-              off-podium ranks are plain figures now, not circles. */}
-          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Rank
-          </th>
-          {/* The Tier column was pulled in #1361: `—` for the
-              majority of districts, and "Tier" was not the
-              vocabulary the program uses. The badge lives in the
-              District cell now, under the Recognition umbrella. */}
-          <SortableHeader<SortFieldT>
-            field="clubs"
-            label="Paid Clubs"
-            currentSort={sort}
-            onSort={toggleSort}
-            thClassName="districts-rankings-table__col--compact text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-            numeric
-          />
-          <SortableHeader<SortFieldT>
-            field="payments"
-            label="Total Payments"
-            currentSort={sort}
-            onSort={toggleSort}
-            thClassName="districts-rankings-table__col--compact text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-            numeric
-          />
-          <SortableHeader<SortFieldT>
-            field="distinguished"
-            label="Distinguished"
-            currentSort={sort}
-            onSort={toggleSort}
-            thClassName="districts-rankings-table__col--tablet text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-            numeric
-          />
-          <SortableHeader<SortFieldT>
-            field="aggregate"
-            label="Score"
-            currentSort={sort}
-            onSort={toggleSort}
-            thClassName="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-            numeric
-          />
-        </tr>
-      </thead>
-      <tbody>
-        {/* #1362 — a filter that matches nothing must SAY so. A
-          table that renders its headers and then nothing reads as a
-          load failure, and leaves the user no clue that their own
-          selection caused it. Inside the table so the message sits
-          under the headers it belongs to, with a way back out. */}
-        {visibleRankings.length === 0 && (
-          <tr>
-            <td
-              colSpan={RANKINGS_COLUMN_COUNT}
-              data-testid="rankings-empty-state"
-              className="districts-rankings-table__empty"
-            >
-              No districts match the current filters.
-              <span className="districts-rankings-table__empty-hint">
-                Try removing a Recognition chip, widening the region selection,
-                or clearing the search.
-              </span>
-              <button
-                type="button"
-                data-testid="rankings-empty-state-clear"
-                className="districts-rankings-table__empty-clear"
-                onClick={() => {
-                  clearRecognitionFilter()
-                  setSearchQuery('')
-                }}
-              >
-                Clear filters
-              </button>
-            </td>
-          </tr>
-        )}
-        {visibleRankings.map(district => {
-          const rank = district.displayRank
-          const isMine = isMyDistrict(district.districtId)
-          const rawTier =
-            competitiveAwards?.distinguishedDistrict?.[district.districtId]
-              ?.currentTier ?? null
-          // The row-level data-tier hook is only meaningful for
-          // ACHIEVED tiers; CSS rules like [data-tier="Smedley"]
-          // never want to match NotDistinguished. So absence is
-          // the signal there too — same convention as the chip.
-          const ddpTier =
-            rawTier && rawTier !== 'NotDistinguished' ? rawTier : null
-          return (
-            <tr
-              key={district.districtId}
-              data-testid={`district-row-${district.districtId}`}
-              data-tier={ddpTier ?? undefined}
-              onClick={() => handleDistrictClick(district.districtId)}
-              className={`cursor-pointer ${
-                isMine ? 'bg-yellow-50 border-l-4 border-l-tm-loyal-blue' : ''
-              }`}
-            >
-              {/* District cell first (#436) — primary entity, and the
-                single sticky key column (#811). The number is a
-                standalone chip so the click affordance reads as
-                interactive. (#417) Star toggles 'my district'.
-                The sticky cell needs an opaque themed background so
-                scrolled columns don't bleed through; data-row-tint
-                lets the CSS repaint the isMine tint (token-based,
-                dark-safe — replaces the old hardcoded bg-white that
-                routed to the lighter dark scale, Lesson 116). */}
-              <td
-                data-testid={`district-cell-${district.districtId}`}
-                data-row-tint={isMine ? 'mine' : 'none'}
-                className="districts-rankings-table__sticky-col"
-              >
-                <div className="flex items-center gap-3 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={e => {
-                      e.stopPropagation()
-                      setMyDistrict(isMine ? null : district.districtId)
-                    }}
-                    aria-label={
-                      isMine
-                        ? `Unset District ${district.districtId} as my district`
-                        : `Set District ${district.districtId} as my district`
-                    }
-                    aria-pressed={isMine}
-                    title={
-                      isMine
-                        ? 'Click to clear · this district pins to top across visits'
-                        : 'Click to mark as my district · pins to top across visits'
-                    }
-                    className={`districts-rankings-table__touch-btn flex-shrink-0 inline-flex items-center justify-center rounded transition-colors ${
-                      isMine
-                        ? 'text-yellow-500 hover:text-gray-400'
-                        : 'text-gray-300 hover:text-yellow-500'
-                    }`}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill={isMine ? 'currentColor' : 'none'}
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                      />
-                    </svg>
-                  </button>
-                  <DistrictChipAndName
-                    districtId={district.districtId}
-                    name={district.districtName}
-                    nameClassName="text-sm font-medium text-gray-900"
-                    ariaHidden
-                  />
-                  {/* Recognition (#1361). The Distinguished tier
-                    badge moved here from its own desktop column,
-                    which was `—` for the majority of districts, and
-                    sits beside the competitive-award badges (#331)
-                    because both answer the same question: what has
-                    this district earned? Driven entirely by the
-                    shared registry, so the glyphs, labels, accents
-                    and CDN keys have one definition. */}
-                  <DistrictTierChip
-                    districtId={district.districtId}
-                    tier={ddpTier}
-                  />
-                  {AWARD_RECOGNITION.map(award =>
-                    competitiveAwards?.byDistrict?.[district.districtId]?.[
-                      award.winnerFlagKey
-                    ] ? (
-                      <RecognitionBadge
-                        key={award.id}
-                        item={award}
-                        testId={`recognition-${award.id}-${district.districtId}`}
-                      />
-                    ) : null
-                  )}
-                  {(() => {
-                    const held = clubGrowthHeld.get(district.districtId)
-                    return held ? (
-                      <RecognitionBadge
-                        item={CLUB_GROWTH_RECOGNITION}
-                        detail={String(held.milestone)}
-                        detailDescription={held.description}
-                        testId={`recognition-${CLUB_GROWTH_RECOGNITION.id}-${district.districtId}`}
-                      />
-                    ) : null
-                  })()}
-                  {/* Region collapses into the District cell as
-                    a quiet "· R<n>" suffix (#546) — saves the
-                    standalone Region column's width. */}
-                  {district.region && (
-                    <span
-                      data-testid={`district-region-suffix-${district.districtId}`}
-                      className="text-xs text-gray-500"
-                    >
-                      · R{district.region}
-                    </span>
-                  )}
-                </div>
-              </td>
-              {/* Rank cell — second column (#436). No longer a second
-                sticky column (#811): the old `left-[200px]` magic
-                offset was a fragile px seam (AC #2) and the sticky
-                pair (~380px) alone overflowed a 375px phone. Only the
-                District identity column sticks now; this cell scrolls
-                and inherits the row tint through its transparent bg. */}
-              <td
-                data-testid={`rank-cell-${district.districtId}`}
-                className="px-6 py-4 whitespace-nowrap text-right"
-              >
-                <span
-                  data-testid={`rank-badge-${district.districtId}`}
-                  data-medal={MEDAL_NAMES[rank]}
-                  className={rankBadgeClassName(rank)}
-                >
-                  {rank}
-                </span>
-              </td>
-              <td className="districts-rankings-table__col--compact text-right">
-                <div className="text-sm font-medium text-gray-900">
-                  {formatNumber(district.paidClubs)}
-                </div>
-                <div className="text-xs flex items-center justify-end gap-1">
-                  <span className="text-tm-loyal-blue font-tm-body">
-                    #{district.clubsRank}
-                  </span>
-                  <span className="text-gray-400">•</span>
-                  <span
-                    className={
-                      formatPercentage(district.clubGrowthPercent).color
-                    }
-                  >
-                    {formatPercentage(district.clubGrowthPercent).text}
-                  </span>
-                </div>
-              </td>
-              <td className="districts-rankings-table__col--compact text-right">
-                <div className="text-sm font-medium text-gray-900">
-                  {formatNumber(district.totalPayments)}
-                </div>
-                <div className="text-xs flex items-center justify-end gap-1">
-                  <span className="text-tm-loyal-blue font-tm-body">
-                    #{district.paymentsRank}
-                  </span>
-                  <span className="text-gray-400">•</span>
-                  <span
-                    className={
-                      formatPercentage(district.paymentGrowthPercent).color
-                    }
-                  >
-                    {formatPercentage(district.paymentGrowthPercent).text}
-                  </span>
-                </div>
-              </td>
-              <td className="districts-rankings-table__col--tablet text-right">
-                <div className="text-sm font-medium text-gray-900">
-                  {formatNumber(district.distinguishedClubs)}
-                </div>
-                <div className="text-xs flex items-center justify-end gap-1">
-                  <span className="text-tm-loyal-blue font-tm-body">
-                    #{district.distinguishedRank}
-                  </span>
-                  <span className="text-gray-400">•</span>
-                  <span
-                    className={
-                      formatPercentage(district.distinguishedPercent).color
-                    }
-                  >
-                    {formatPercentage(district.distinguishedPercent).text}
-                  </span>
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right">
-                <div className="text-sm font-bold text-tm-loyal-blue font-tm-headline">
-                  {formatNumber(Math.round(district.aggregateScore))}
-                </div>
-              </td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
-  )
-
   // #1362 on the phone view: a filter that matches nothing must say so.
   const rankingsEmptyState = (
     <div
@@ -1516,6 +1102,38 @@ const DistrictsPage: React.FC = () => {
         Clear filters
       </button>
     </div>
+  )
+
+  // "About these metrics" (#546): one visible "i" beside a quiet label. Sits in
+  // the table toolbar beside the Columns menu at >=768, above the phone list
+  // below that.
+  const aboutMetrics = (
+    <span
+      data-testid="rankings-table-methodology-affordance"
+      className="text-sm text-gray-500 inline-flex items-center"
+    >
+      About these metrics
+      <InfoTooltip text="Paid Clubs = clubs that have met renewal obligations for the program year. Total Payments = year-to-date membership payment count. Distinguished = clubs achieving Distinguished status or higher. Score = Borda-count composite of the three rankings. Higher is better on all four." />
+    </span>
+  )
+
+  // The rankings table as rendered at >=768 and, with every column, inside the
+  // phone's full-table sheet (#1834). #2689: the shared DataTable; which
+  // columns show is a choice (one Columns menu), never CSS.
+  const rankingsTable = (variant: 'page' | 'sheet') => (
+    <DistrictRankingsTable
+      variant={variant}
+      rows={visibleRankings}
+      sort={sort}
+      onSort={toggleSort as (field: string) => void}
+      asOfDate={data?.asOfDate}
+      toolbarLead={variant === 'page' ? aboutMetrics : undefined}
+      emptyState={rankingsEmptyState}
+      isMyDistrict={isMyDistrict}
+      setMyDistrict={setMyDistrict}
+      competitiveAwards={competitiveAwards}
+      clubGrowthHeld={clubGrowthHeld}
+    />
   )
 
   // Shared by the desktop Export button and the phone sheet (#1846).
@@ -1897,7 +1515,7 @@ const DistrictsPage: React.FC = () => {
         <RecognitionLegend />
 
         {/* Rankings Table */}
-        <div className="districts-rankings-table-wrap">
+        <div className="districts-rankings-table-wrap districts-rankings-table-wrap--dt">
           {/* #2249 — the table keeps the name the page used to carry as H1. */}
           <h2 className="districts-rankings-title">District Rankings</h2>
           {/* Methodology affordance — single visible "i" beside a quiet
@@ -1905,31 +1523,17 @@ const DistrictsPage: React.FC = () => {
               tooltips that used to wrap the header row (#546). Kept
               outside the table so its focus ring is visible to keyboard
               users (Lesson 58 / WCAG 2.4.7). */}
-          <div className="flex items-center justify-end mb-2 px-2">
-            <span
-              data-testid="rankings-table-methodology-affordance"
-              className="text-xs text-gray-500 inline-flex items-center"
-            >
-              About these metrics
-              <InfoTooltip text="Paid Clubs = clubs that have met renewal obligations for the program year. Total Payments = year-to-date membership payment count. Distinguished = clubs achieving Distinguished status or higher. Score = Borda-count composite of the three rankings. Higher is better on all four." />
-            </span>
-          </div>
-          {/* Non-trap horizontal scroll (Lesson 105). This is a LEADERBOARD —
-              its value is comparing districts across rows — so it keeps the
-              table and makes the scroll non-trap rather than card-collapsing
-              (which would destroy the comparison; that pattern is right for
-              the club table, not this one). Three moves: (1) the scroller is a
-              focusable, labelled region (WCAG 2.1.1 / axe
-              scrollable-region-focusable); (2) the District identity column is
-              the single sticky key column (no hardcoded second-sticky px seam);
-              (3) the right-edge scroll-cue signals more columns. Low-priority
-              columns hide at mobile via the __col--compact/--tablet/--desktop
-              priority classes so a phone shows a sensible set. Don't "fix" this
-              into a card collapse.
-              The --compact rung (≥600px) exists because 375/768/1280 left a
-              dead zone: a 360x640 phone is 640px in LANDSCAPE, so it got the
-              375px treatment and no orientation could reveal a metric
-              (#1358). */}
+          {isMobile && (
+            <div className="flex items-center justify-end mb-2 px-2">
+              {aboutMetrics}
+            </div>
+          )}
+          {/* A LEADERBOARD keeps the table (its value is comparing districts
+              across rows; a card collapse would destroy that). Which columns
+              show is a choice, not CSS (#2689): the width picks the default
+              set, one Columns menu changes it, and the header sticks to the
+              page. Below 768 the PriorityColumnsTable phone view takes over
+              (#1834) and its full-table sheet shows every column. */}
           <PriorityColumnsTable<RankedDistrict, SortFieldT>
             label="District rankings"
             rows={phoneRows}
@@ -1957,27 +1561,9 @@ const DistrictsPage: React.FC = () => {
             onSort={toggleSort}
             empty={rankingsEmptyState}
             fullTableTitle="District rankings — all columns"
-            sheetTable={rankingsTable}
+            sheetTable={rankingsTable('sheet')}
             sheetRegionClassName="districts-rankings-table__sheet"
-            fullTable={
-              <div className="districts-rankings-table__scroll-wrap">
-                <div
-                  ref={rankingsScrollRef}
-                  className="overflow-x-auto"
-                  role="region"
-                  tabIndex={0}
-                  aria-label={rankingsScrollLabel(false)}
-                >
-                  {rankingsTable}
-                </div>
-                {/* Right-edge fade cue — themed (transparent → --surface, remaps in
-                    dark); pointer-events:none so it never blocks taps/scroll. */}
-                <div
-                  className="districts-rankings-table__scroll-cue"
-                  aria-hidden="true"
-                />
-              </div>
-            }
+            fullTable={rankingsTable('page')}
           />
         </div>
 
