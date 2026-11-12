@@ -32,6 +32,12 @@ interface DistrictDetailHeaderProps {
   setSelectedProgramYear: ProgramYearSetter
   availableProgramYears: ProgramYear[]
   selectedDate: SnapshotDate | undefined
+  /**
+   * The snapshot date whose data is on screen. With no explicit
+   * `selectedDate` (the PY's latest) it still tells the freshness pill when
+   * the page is showing a snapshot older than the newest one (#2635).
+   */
+  effectiveDate?: SnapshotDate | undefined
   onDateChange: SnapshotDateSetter
   availableDates: SnapshotDate[]
   latestSnapshotDate: string | undefined
