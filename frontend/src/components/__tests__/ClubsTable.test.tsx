@@ -18,7 +18,7 @@ import {
   act,
   within,
 } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { ClubsTable } from '../ClubsTable'
 import { stubViewportWidth } from '../../test-utils/viewportMatchMedia'
 import { ClubTrend } from '../../hooks/useDistrictAnalytics'
@@ -1121,6 +1121,37 @@ describe('ClubsTable', () => {
       const links = within(dataRow).getAllByRole('link')
       expect(links).toHaveLength(1)
       expect(links[0]).toHaveTextContent('Clickable Club')
+    })
+
+    it('clicking a cell that is not the link does not navigate or run a row handler', () => {
+      const LocationProbe = () => (
+        <span data-testid="where">{useLocation().pathname}</span>
+      )
+      render(
+        <>
+          <ClubsTable
+            clubs={[createMockClub({ clubId: 'club-1', clubName: 'Solo' })]}
+            districtId="test-district"
+            isLoading={false}
+          />
+          <LocationProbe />
+        </>
+      )
+      const dataRow = screen.getAllByRole('row')[1]!
+      const cells = within(dataRow).getAllByRole('cell')
+      expect(cells.length).toBeGreaterThan(0)
+      for (const target of [...cells, within(dataRow).getByRole('rowheader')]) {
+        fireEvent.click(target)
+      }
+      expect(screen.getByTestId('where')).toHaveTextContent('/')
+      // No React click handler on the row at all (the link is the action).
+      const propsKey = Object.keys(dataRow).find(k =>
+        k.startsWith('__reactProps')
+      )!
+      expect(
+        (dataRow as unknown as Record<string, { onClick?: unknown }>)[propsKey]!
+          .onClick
+      ).toBeUndefined()
     })
   })
 

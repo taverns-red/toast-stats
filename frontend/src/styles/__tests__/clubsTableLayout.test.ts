@@ -140,9 +140,13 @@ describe('no scroll container above the table (R-1)', () => {
 })
 
 describe('club name link target (spec §6)', () => {
+  it('the shared data-table.css names no Clubs class (it lives in Clubs CSS)', () => {
+    expect(dataTableCss).not.toMatch(/clubs-/)
+  })
+
   it('is a 44px-tall block under a coarse pointer', () => {
     const blocks = [
-      ...dataTableCss.matchAll(
+      ...appShellCss.matchAll(
         /@media\s*\(pointer:\s*coarse\)\s*\{([\s\S]*?\n {2}\})/g
       ),
     ].map(m => m[1]!)

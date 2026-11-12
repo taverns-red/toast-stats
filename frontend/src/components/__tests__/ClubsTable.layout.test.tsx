@@ -315,6 +315,40 @@ describe('Columns menu a11y fixes (#2676, PR2 review)', () => {
   })
 })
 
+describe('unchecking the column the table is sorted by (#2676, PR3 review)', () => {
+  const seedShown = () =>
+    localStorage.setItem(
+      COLUMNS_KEY,
+      JSON.stringify({ schema: 2, overrides: { newMembers: true } })
+    )
+
+  it('does not announce "hidden", and keeps focus on an enabled control', async () => {
+    const user = userEvent.setup()
+    stubViewportWidth(768)
+    seedShown()
+    renderTable({ initialSortField: 'newMembers', initialSortDirection: 'asc' })
+    await user.click(screen.getByRole('button', { name: /^columns/i }))
+    await user.click(screen.getByRole('checkbox', { name: /^New members/ }))
+    // Still sorted by it, so it is still on screen: the announcement says so.
+    expect(headerLabels().some(h => h.startsWith('New'))).toBe(true)
+    const live = screen.getByTestId('columns-live')
+    expect(live).not.toHaveTextContent(/hidden/i)
+    expect(live).toHaveTextContent(/stays shown while sorted or filtered/i)
+    const active = document.activeElement as HTMLInputElement
+    expect(active.type).toBe('checkbox')
+    expect(active.disabled).toBe(false)
+  })
+
+  it('describes the locked column with the "Shown while sorted" note', async () => {
+    const user = userEvent.setup()
+    stubViewportWidth(768)
+    renderTable({ initialSortField: 'newMembers', initialSortDirection: 'asc' })
+    await user.click(screen.getByRole('button', { name: /^columns/i }))
+    const box = screen.getByRole('checkbox', { name: /^New members/ })
+    expect(box).toHaveAccessibleDescription(/shown while sorted or filtered/i)
+  })
+})
+
 describe('legend placement (#2676, PR1 review)', () => {
   it('sits above the table at 768 and up', () => {
     renderTable()
