@@ -188,3 +188,26 @@ test('"Privacy & cookies" reopens the choice and keeps the current one', async (
   await banner(page).getByRole('button', { name: 'Close' }).click()
   await expect(banner(page)).toBeHidden()
 })
+
+test('choosing an option does not scroll the page (#2637)', async ({
+  page,
+}) => {
+  await page.goto(`${BASE}/awards`, { waitUntil: 'load' })
+  await expect(banner(page)).toBeVisible({ timeout: 20_000 })
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+  await banner(page).getByRole('button', { name: 'Keep none' }).click()
+  await expect(banner(page)).toBeHidden()
+  // Focus moves to <main>, the skip link's target, but the page stays put.
+  await expect(page.locator('main#main-content')).toBeFocused()
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+})
+
+test('<main> is a programmatic focus target for the skip link (#2637)', async ({
+  page,
+}) => {
+  await page.goto(`${BASE}/awards`, { waitUntil: 'load' })
+  await expect(page.locator('main#main-content')).toHaveAttribute(
+    'tabindex',
+    '-1'
+  )
+})

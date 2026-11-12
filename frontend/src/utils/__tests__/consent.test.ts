@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   CONSENT_COOKIE,
   CONSENT_VERSION,
@@ -8,6 +8,7 @@ import {
   getConsent,
   getConsentState,
   openConsentSettings,
+  restoreFocusAfterConsent,
   setConsent,
   subscribeConsent,
 } from '../consent'
@@ -131,6 +132,35 @@ describe('consent store (#2584)', () => {
     cb.mockClear()
     openConsentSettings()
     expect(cb).not.toHaveBeenCalled()
+  })
+})
+
+describe('restoreFocusAfterConsent (#2637)', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('focuses main content without scrolling the page', () => {
+    document.body.innerHTML = '<main id="main-content"></main>'
+    const main = document.getElementById('main-content')!
+    const focus = vi.spyOn(main, 'focus')
+    restoreFocusAfterConsent()
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+    expect(document.activeElement).toBe(main)
+  })
+
+  it('returns focus to the control that reopened the banner, without scrolling', () => {
+    document.body.innerHTML =
+      '<button id="reopen">Privacy</button><main id="main-content"></main>'
+    const reopen = document.getElementById('reopen')!
+    reopen.focus()
+    closeConsentSettings() // module state: earlier tests may leave it open
+    openConsentSettings()
+    const focus = vi.spyOn(reopen, 'focus')
+    reopen.blur()
+    restoreFocusAfterConsent()
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+    expect(document.activeElement).toBe(reopen)
   })
 })
 
