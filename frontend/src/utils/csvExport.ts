@@ -11,29 +11,48 @@ import { coachFilterValue, type ClubCoach } from './clubCoach'
 import { councilStandingCsvRows, type CouncilRow } from './councilStanding'
 import type { RankingsDiff } from './rankingsDiff'
 
+/** Characters that make a spreadsheet read a cell as a formula (OWASP). */
+const FORMULA_LEADERS = /^[=+\-@\t\r\n]/
+
 /**
- * Converts a 2D array to CSV string
+ * A plain decimal number, optionally negative (`-3`, `-0.5`, `12`). Numeric
+ * means `typeof cell === 'number'`, or a string matching this strict pattern.
+ * Those are data, not formulas, so they stay unprefixed and sortable. Anything
+ * else that starts with a formula character (`+5`, `-3 clubs`, `-x`) is text
+ * and gets neutralised.
+ */
+const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/
+
+/**
+ * Encodes one CSV cell: neutralises formula injection (#2687) by prefixing a
+ * non-numeric string that starts with `= + - @ \t \r` with `'`, then quotes
+ * the cell if it holds `,` `"` `\n` or `\r`, doubling embedded quotes.
+ */
+export const encodeCsvCell = (cell: string | number | null | undefined) => {
+  let cellStr = String(cell ?? '')
+  if (
+    typeof cell !== 'number' &&
+    FORMULA_LEADERS.test(cellStr) &&
+    !PLAIN_NUMBER.test(cellStr)
+  ) {
+    cellStr = `'${cellStr}`
+  }
+  // `;` is the field separator in European-locale Excel, so an unquoted
+  // `Foo;=HYPERLINK(...)` would split into a new cell starting with `=`.
+  // A leading space is deliberately NOT neutralised: spreadsheets do not
+  // evaluate a cell whose first character is a space.
+  if (/[,"\r\n;]/.test(cellStr)) {
+    return `"${cellStr.replace(/"/g, '""')}"`
+  }
+  return cellStr
+}
+
+/**
+ * Converts a 2D array to CSV string. Every CSV export goes through this, so
+ * it is the one place cells are made safe to open in a spreadsheet.
  */
 export const arrayToCSV = (data: (string | number)[][]): string => {
-  return data
-    .map(row =>
-      row
-        .map(cell => {
-          // Convert to string and escape quotes
-          const cellStr = String(cell ?? '')
-          // If cell contains comma, quote, or newline, wrap in quotes and escape quotes
-          if (
-            cellStr.includes(',') ||
-            cellStr.includes('"') ||
-            cellStr.includes('\n')
-          ) {
-            return `"${cellStr.replace(/"/g, '""')}"`
-          }
-          return cellStr
-        })
-        .join(',')
-    )
-    .join('\n')
+  return data.map(row => row.map(encodeCsvCell).join(',')).join('\n')
 }
 
 /**
