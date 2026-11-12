@@ -15,6 +15,7 @@
 import React from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { findClubEntry } from '@taverns-red/shared-contracts'
 import { fetchCdnClubIndex } from '../services/cdn'
 import { useClubDistrictHistoryEntry } from '../hooks/useClubDistrictHistoryEntry'
@@ -80,6 +81,11 @@ const ClubRedirectPage: React.FC = () => {
 
   const isLoading =
     isLoadingHistory || (needsIndex && isLoadingIndex) || !!historyDistrict
+
+  const notFound =
+    !isLoading &&
+    (isError || !data || (data && clubId && !findClubEntry(data.clubs, clubId)))
+  useDocumentTitle(notFound ? 'Club not found' : `Looking up club ${clubId}`)
 
   if (isLoading) {
     return (
