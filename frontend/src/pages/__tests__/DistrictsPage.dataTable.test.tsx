@@ -194,4 +194,15 @@ describe('DistrictsPage rankings on the DataTable (#2689)', () => {
     fireEvent.click(within(rowEl).getByRole('link', { name: /57/ }))
     expect(screen.getByTestId('location')).toHaveTextContent('/district/57')
   })
+
+  it('gives the table a short accessible name and keeps the detail in the caption', async () => {
+    setup()
+    const table = await screen.findByRole('table', {
+      name: 'District rankings',
+    })
+    expect(table).toHaveAttribute('aria-label', 'District rankings')
+    expect(table.querySelector('caption')?.textContent).toMatch(
+      /as of .*districts/i
+    )
+  })
 })
