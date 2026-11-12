@@ -297,6 +297,14 @@ describe('the data pipeline never reaches videos/ (#2310)', () => {
     }
   })
 
+  it('the video publish workflow never names the backup bucket (#2541)', () => {
+    const text = fs.readFileSync(
+      path.resolve(process.cwd(), '.github/workflows/videos-publish.yml'),
+      'utf-8'
+    )
+    expect(text).not.toContain('toast-stats-backups-ca')
+  })
+
   it('data-pipeline.yml and the prune workflow never name videos/', () => {
     for (const wf of ['data-pipeline.yml', 'gap-district-prune.yml']) {
       const text = fs.readFileSync(

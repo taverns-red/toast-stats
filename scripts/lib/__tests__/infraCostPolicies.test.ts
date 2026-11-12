@@ -195,7 +195,7 @@ describe('backup bucket lifecycle (#2541)', () => {
     )
     expect(live).toHaveLength(1)
     expect(live[0].condition.matchesPrefix).toBeUndefined()
-    expect(live[0].condition.age as number).toBeGreaterThanOrEqual(90)
+    expect(live[0].condition.age).toEqual(90)
     for (const r of doc.rule) {
       expect(GCS_ACTIONS).toContain(r.action.type)
       for (const k of Object.keys(r.condition)) {
