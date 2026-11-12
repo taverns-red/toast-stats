@@ -82,7 +82,8 @@ async function measure(
   // Hold the lazy page chunk so the Suspense fallback is what paints.
   await page.route(/\/assets\/[^/]*Page-[^/]*\.js(\?.*)?$/, async route => {
     await new Promise(resolve => setTimeout(resolve, CHUNK_DELAY_MS))
-    await route.continue()
+    // fallback, not continue: the request still meets the CDN fixture route.
+    await route.fallback()
   })
   await page.goto(path, { waitUntil: 'load', timeout: 60_000 })
   // The page mounted: the fallback is gone and the route's own h1 is there.
