@@ -966,6 +966,14 @@ describe('DistrictClubsPage states (#2676)', () => {
 
   it('names the date the data is from, not the date asked for', async () => {
     vi.mocked(useDistrictAnalytics).mockReturnValue(loaded)
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: {
+        dates: ['2025-07-15', '2025-07-01'],
+        dateRange: { startDate: '2025-07-01', endDate: '2025-07-15' },
+      },
+      isPending: false,
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
 
     // 2025-07-10 has no snapshot; the page resolves to one that does (#2635).
     renderAt('/district/61/clubs?date=2025-07-10')
