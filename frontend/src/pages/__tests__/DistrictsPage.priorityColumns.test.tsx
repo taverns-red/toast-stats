@@ -162,7 +162,9 @@ describe('DistrictsPage rankings priority columns below 768 (#1834)', () => {
     await screen.findAllByTestId(/^district-row-/)
     await userEvent.click(screen.getByRole('button', { name: /full table/i }))
     const dialog = screen.getByRole('dialog', { name: /District rankings/ })
-    const full = within(within(dialog).getByRole('region')).getByRole('table')
+    const full = await within(within(dialog).getByRole('region')).findByRole(
+      'table'
+    )
     expect(full.querySelectorAll('thead th')).toHaveLength(6)
   })
 

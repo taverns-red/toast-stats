@@ -59,7 +59,7 @@ describe('landing rankings table: only the landing route pays for its code', () 
   })
 
   it('the lazy wrapper imports the table dynamically', () => {
-    expect(src('components/lazy/LazyDistrictRankingsTable.tsx')).toMatch(
+    expect(src('components/lazy/districtRankingsTableChunk.ts')).toMatch(
       /import\(\s*'\.\.\/DistrictRankingsTable'\s*\)/
     )
   })

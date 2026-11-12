@@ -36,7 +36,8 @@ import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import { useDebounce } from '../hooks/useDebounce'
 import { ProgramYearTitleSuffix } from '../components/ProgramYearTitleSuffix'
 import { DistrictRanking } from '../types/districts'
-import { DistrictRankingsTable } from '../components/DistrictRankingsTable'
+import { LazyDistrictRankingsTable } from '../components/lazy/LazyDistrictRankingsTable'
+import { preloadDistrictRankingsTable } from '../components/lazy/districtRankingsTableChunk'
 import type { RankedDistrict } from '../components/rankingsTableFeatures'
 import {
   formatNumber,
@@ -190,6 +191,10 @@ const DistrictsPage: React.FC = () => {
     setTrackedQParam(qParam)
     setSearchQuery(qParam)
   }
+  // #2689: the table is its own chunk; fetch it now so it lands with the data.
+  useEffect(() => {
+    preloadDistrictRankingsTable()
+  }, [])
   const debouncedSearch = useDebounce(searchQuery, 300)
   useEffect(() => {
     if (debouncedSearch === searchQuery && debouncedSearch !== qParam) {
@@ -1121,7 +1126,7 @@ const DistrictsPage: React.FC = () => {
   // phone's full-table sheet (#1834). #2689: the shared DataTable; which
   // columns show is a choice (one Columns menu), never CSS.
   const rankingsTable = (variant: 'page' | 'sheet') => (
-    <DistrictRankingsTable
+    <LazyDistrictRankingsTable
       variant={variant}
       rows={visibleRankings}
       sort={sort}
