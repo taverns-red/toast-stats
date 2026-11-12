@@ -78,15 +78,33 @@ const HistoryPage: React.FC = () => {
           {formatProgramYearShort(currentPY.year)}
           <span className="history-page-year-chip__live">· LIVE</span>
         </span>
-        {summaries.map(s => (
-          <span
-            key={s.startYear}
-            role="listitem"
-            className="history-page-year-chip"
-          >
-            {s.label}
-          </span>
-        ))}
+        {isLoading
+          ? // The strip's boxes before the years arrive (#2634): one hidden
+            // chip per expected year, so it does not grow 2 -> 12 chips.
+            Array.from({
+              length: Math.max(
+                0,
+                currentPY.year - EARLIEST_ARCHIVED_PROGRAM_YEAR
+              ),
+            }).map((_, i) => (
+              <span
+                key={i}
+                role="listitem"
+                aria-hidden="true"
+                className="history-page-year-chip shell-ghost"
+              >
+                {formatProgramYearShort(currentPY.year - 1 - i)}
+              </span>
+            ))
+          : summaries.map(s => (
+              <span
+                key={s.startYear}
+                role="listitem"
+                className="history-page-year-chip"
+              >
+                {s.label}
+              </span>
+            ))}
         <span
           className="history-page-year-chip history-page-year-chip--gap"
           role="listitem"
