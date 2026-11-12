@@ -157,8 +157,11 @@ describe('ClubsTable', () => {
         <ClubsTable clubs={[]} districtId="test-district" isLoading={false} />
       )
 
-      // Empty state should be shown instead of the count
-      expect(screen.getByText('No Clubs Found')).toBeInTheDocument()
+      // Empty state should be shown instead of the count. Spec §7: "No clubs
+      // recorded for District 61 on Nov 11, 2026." replaces "No Clubs Found".
+      expect(
+        screen.getByText('No clubs recorded for District test-district.')
+      ).toBeInTheDocument()
     })
   })
 
@@ -418,7 +421,9 @@ describe('ClubsTable', () => {
           />
         )
         act(() => {
-          fireEvent.click(screen.getByRole('button', { name: /export clubs/i }))
+          fireEvent.click(
+            screen.getByRole('button', { name: /export csv \(all columns\)/i })
+          )
         })
         const lines = captured!.split('\n')
         const header = lines.find(l => l.startsWith('Club ID'))!.split(',')
@@ -474,7 +479,9 @@ describe('ClubsTable', () => {
         />
       )
 
-      const exportButton = screen.getByRole('button', { name: /export clubs/i })
+      const exportButton = screen.getByRole('button', {
+        name: /export csv \(all columns\)/i,
+      })
       act(() => {
         fireEvent.click(exportButton)
       })
@@ -516,7 +523,9 @@ describe('ClubsTable', () => {
         />
       )
 
-      const exportButton = screen.getByRole('button', { name: /export clubs/i })
+      const exportButton = screen.getByRole('button', {
+        name: /export csv \(all columns\)/i,
+      })
       act(() => {
         fireEvent.click(exportButton)
       })
@@ -542,7 +551,9 @@ describe('ClubsTable', () => {
       )
 
       // Export button should be disabled when there are no clubs
-      const exportButton = screen.getByRole('button', { name: /export clubs/i })
+      const exportButton = screen.getByRole('button', {
+        name: /export csv \(all columns\)/i,
+      })
       expect(exportButton).toBeDisabled()
     })
   })
@@ -781,9 +792,9 @@ describe('ClubsTable', () => {
         <ClubsTable clubs={[]} districtId="test-district" isLoading={false} />
       )
 
-      expect(screen.getByText('No Clubs Found')).toBeInTheDocument()
+      // Spec §7: honest copy with no "cached" wording.
       expect(
-        screen.getByText(/No club data is available for this district/i)
+        screen.getByText('No clubs recorded for District test-district.')
       ).toBeInTheDocument()
     })
   })
@@ -994,7 +1005,7 @@ describe('ClubsTable', () => {
       // …and that standalone presets row is gone entirely.
       expect(container.querySelector('.clubs-preset-bar')).toBeNull()
       // Order within the toolbar: Columns, then the preset directly after it.
-      const columnsBtn = screen.getByRole('button', { name: /columns/i })
+      const columnsBtn = screen.getByRole('button', { name: /^columns/i })
       const buttons = Array.from(
         toolbar!.querySelectorAll<HTMLElement>('button')
       )

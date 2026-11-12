@@ -40,7 +40,7 @@ for (const route of ROUTES) {
 
       // A network failure is not "no data".
       const body = page.locator('main')
-      await expect(body).not.toContainText(/No Clubs Found/i)
+      await expect(body).not.toContainText(/No Clubs Found|No clubs recorded/i)
       await expect(body).not.toContainText(/not been cached|not cached/i)
       await expect(body).not.toContainText(/not available for this date/i)
     })

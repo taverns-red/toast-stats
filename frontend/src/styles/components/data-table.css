@@ -273,4 +273,28 @@
   .dt-legend__note {
     color: var(--ink-3);
   }
+
+  /* ── Loading skeleton (#2676, spec §7) ────────────────────────────────
+     Same colgroup, header labels and 44px rows as the real table, so the
+     swap on load shifts nothing. The bar is a token fill; it pulses only
+     when the reader has not asked for reduced motion. */
+  .dt-skeleton__bar {
+    display: block;
+    height: 20px;
+    width: 60%;
+    border-radius: 4px;
+    background-color: var(--surface-3);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .dt-skeleton__bar {
+      animation: dt-skeleton-pulse 1.6s ease-in-out infinite;
+    }
+  }
+
+  @keyframes dt-skeleton-pulse {
+    50% {
+      opacity: 0.5;
+    }
+  }
 }
