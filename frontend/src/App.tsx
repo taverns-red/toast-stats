@@ -202,6 +202,7 @@ function PageLoadingFallback(): React.JSX.Element {
       <div className="route-fallback__bar route-fallback__bar--lede" />
       <div className="route-fallback__panel" />
       <div className="route-fallback__panel" />
+      <span className="sr-only">Loading page…</span>
     </div>
   )
 }

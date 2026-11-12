@@ -36,7 +36,9 @@ describe('route fallback reserve (#2633)', () => {
   })
 
   it('reserves the area under the 56px top bar so the footer starts below the fold', () => {
-    expect(mainRule).toMatch(/min-height:\s*calc\(100d?vh - 56px\)/)
+    expect(mainRule).toMatch(
+      /min-height:\s*calc\(100s?vh - var\(--app-top-bar-h, 56px\)\)/
+    )
   })
 
   it('does not reserve that height on paper', () => {

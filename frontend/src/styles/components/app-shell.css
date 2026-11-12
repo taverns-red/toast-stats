@@ -23,9 +23,9 @@
        shell (a lazy chunk, a date index) never leaves the footer painted
        inside the viewport to be pushed off when the page mounts. Same
        reserve as .district-detail-page-root and .rollup-page, now for every
-       route. The 100vh line is the fallback for engines without dvh. */
-    min-height: calc(100vh - 56px);
-    min-height: calc(100dvh - 56px);
+       route. The 100vh line is the fallback for engines without svh. */
+    min-height: calc(100vh - var(--app-top-bar-h, 56px));
+    min-height: calc(100svh - var(--app-top-bar-h, 56px));
   }
 
   /* Lazy-route Suspense fallback (#2633): a page-shaped frame in the one
@@ -39,6 +39,7 @@
   .route-fallback__bar,
   .route-fallback__panel {
     background: var(--surface-2);
+    border: 1px solid var(--line);
     border-radius: var(--rds-radius-md);
     animation: route-fallback-pulse 1.5s ease-in-out infinite;
   }
