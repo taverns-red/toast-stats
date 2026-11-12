@@ -52,6 +52,7 @@
 @import './styles/components/chart-readout.css';
 @import './styles/components/chart-legend.css';
 @import './styles/components/district-narrative.css';
+@import './styles/components/loading-shells.css';
 @import './styles/components/district-subnav.css';
 @import './styles/components/region-history.css';
 @import './styles/components/predecessor-history.css';

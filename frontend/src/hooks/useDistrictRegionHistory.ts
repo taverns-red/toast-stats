@@ -14,6 +14,8 @@ export const DISTRICT_REGION_HISTORY_QUERY_KEY = [
 
 export function useDistrictRegionHistory(): {
   history: DistrictRegionHistory | null
+  /** The read is in flight: region membership is not settled yet (#2634). */
+  isPending: boolean
 } {
   const query = useQuery({
     queryKey: DISTRICT_REGION_HISTORY_QUERY_KEY,
@@ -21,5 +23,5 @@ export function useDistrictRegionHistory(): {
     // Rebuilt by the daily pipeline; the mapping changes once a year.
     staleTime: 60 * 60 * 1000,
   })
-  return { history: query.data ?? null }
+  return { history: query.data ?? null, isPending: query.isPending }
 }
