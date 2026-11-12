@@ -107,6 +107,7 @@ describe("RegionPage on track, based on last year's pace (#2307)", () => {
         },
         Select: null,
       },
+      isPending: false,
     })
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [
@@ -143,7 +144,11 @@ describe("RegionPage on track, based on last year's pace (#2307)", () => {
   })
 
   it("says when last year's pace is not available", async () => {
-    mockedPace.mockReturnValue({ reference: null, medians: null })
+    mockedPace.mockReturnValue({
+      reference: null,
+      medians: null,
+      isPending: false,
+    })
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
