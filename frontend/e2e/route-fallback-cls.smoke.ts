@@ -86,6 +86,16 @@ async function measure(
     await route.fallback()
   })
   await page.goto(path, { waitUntil: 'load', timeout: 60_000 })
+  // The fallback must have painted first, or this proves nothing: if no page
+  // chunk was held, the route mounts straight away and CLS reads 0.
+  await page
+    .getByRole('status', { name: 'Loading page…' })
+    .first()
+    .waitFor({ state: 'visible', timeout: 10_000 })
+  expect(
+    await page.locator('main h1').count(),
+    'the route mounted before the fallback was seen: no chunk was held'
+  ).toBe(0)
   // The page mounted: the fallback is gone and the route's own h1 is there.
   await page.locator('main h1').first().waitFor({ timeout: 60_000 })
   await page.evaluate(() => document.fonts.ready.then(() => undefined))
