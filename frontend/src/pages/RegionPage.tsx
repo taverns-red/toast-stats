@@ -3,6 +3,7 @@
    table. Reuses the same rankings data as DistrictsPage (shared
    React-Query cache). */
 
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -347,6 +348,7 @@ const RegionPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
   const navigate = useNavigate()
   const region = normaliseRegionId(n) // "1" → "01", as rankings key it (#2130)
+  useDocumentTitle(`Region ${region}`)
 
   // URL-synced click-header sort (#851). Default keeps the historical
   // behaviour — aggregate score, highest first.

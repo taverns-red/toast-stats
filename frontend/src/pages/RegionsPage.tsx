@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnRankings, fetchCdnRankingsForDate } from '../services/cdn'
 import { aggregateRegions } from '../utils/aggregateRegions'
@@ -37,6 +38,7 @@ const REGION_URL_OPTIONS = {
    count is visible without polluting the leaderboard. */
 
 const RegionsPage: React.FC = () => {
+  useDocumentTitle('Regions')
   // PY selector state (#1301) — the page owns program year/date (R3) and
   // threads the selected snapshot date into its own rankings query so
   // switching the year re-queries.

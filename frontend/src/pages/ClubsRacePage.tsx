@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
@@ -41,6 +42,7 @@ const ClubsRacePage: React.FC = () => {
   const { race, snapshotDate, isLoading } = useGlobalClubRace(effectiveDate)
 
   const title = raceTierTitle(tier)
+  useDocumentTitle(title)
   const rows = race ? race.reached.filter(r => r.tiers[tier]) : []
   const tierExists = race
     ? race.ruleset.smedleyAvailable || tier !== 'Smedley'

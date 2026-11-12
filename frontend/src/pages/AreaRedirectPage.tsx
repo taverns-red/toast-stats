@@ -17,6 +17,7 @@ import {
   extractDivisionPerformance,
   resolveSnapshotDate,
 } from '../utils/extractDivisionPerformance'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState } from '../components/ErrorDisplay'
 
@@ -56,6 +57,14 @@ const AreaRedirectPage: React.FC = () => {
       ? { divId: division.divisionId, areaId: area.areaId }
       : undefined
   }, [snapshot, normalizedAreaId, snapshotDate])
+
+  // The page waits for data and can stop on a state of its own, so each state
+  // is titled; a bad slug throws and takes ErrorPage's "Page not found".
+  useDocumentTitle(
+    error || (snapshot && !snapshotDate)
+      ? 'Could not load area'
+      : `Area ${normalizedAreaId} — District ${districtId}`
+  )
 
   React.useEffect(() => {
     if (target && districtId) {

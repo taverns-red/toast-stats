@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useRegionRollups } from '../hooks/useRegionRollups'
 import {
@@ -19,6 +20,7 @@ import { needsAttention, worldBreakdown } from '../utils/regionRollupView'
    renders and the region table is replaced by the artifact's own note. */
 
 const WorldHealthPage: React.FC = () => {
+  useDocumentTitle('Worldwide Health & Compliance')
   const controls = useProgramYearControls()
   const { rollups, snapshotDate, isLoading } = useRegionRollups(
     controls.effectiveDate

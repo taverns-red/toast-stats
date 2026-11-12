@@ -157,7 +157,7 @@ const WorldMapPage: React.FC = () => {
   const date = controls.effectiveDate
   const isPhone = useIsMobile()
   const theme = useDarkMode().isDark ? 'dark' : 'light'
-  useDocumentTitle('World Club Map')
+  useDocumentTitle('Worldwide Club Map')
 
   const mode = parseWorldColorMode(searchParams.get('color'))
   const metric = parseRegionMetric(searchParams.get('sort'))

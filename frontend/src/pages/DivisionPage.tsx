@@ -5,6 +5,7 @@
    every club in the division by area with health status. Reuses the shared
    district analytics + snapshot React-Query caches. */
 
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
@@ -35,6 +36,7 @@ const DivisionPage: React.FC = () => {
     divId: string
   }>()
   const navigate = useNavigate()
+  useDocumentTitle(`Division ${divId?.toUpperCase()} — District ${districtId}`)
   const { search } = useLocation()
   const isMobile = useIsMobile()
 
