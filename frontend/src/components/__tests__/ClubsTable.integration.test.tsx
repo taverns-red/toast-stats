@@ -257,7 +257,9 @@ describe('ClubsTable Integration Tests', () => {
       )
 
       // Export without applying any filters
-      const exportButton = screen.getByRole('button', { name: /export clubs/i })
+      const exportButton = screen.getByRole('button', {
+        name: /export csv \(all columns\)/i,
+      })
       fireEvent.click(exportButton)
 
       // Verify export was called with all data
@@ -303,7 +305,9 @@ describe('ClubsTable Integration Tests', () => {
       )
 
       // Export button should be enabled with clubs
-      const exportButton = screen.getByRole('button', { name: /export clubs/i })
+      const exportButton = screen.getByRole('button', {
+        name: /export csv \(all columns\)/i,
+      })
       expect(exportButton).not.toBeDisabled()
 
       // Test with empty clubs array
@@ -313,7 +317,7 @@ describe('ClubsTable Integration Tests', () => {
 
       // Export button should be disabled with no clubs
       const exportButtonEmpty = screen.getByRole('button', {
-        name: /export clubs/i,
+        name: /export csv \(all columns\)/i,
       })
       expect(exportButtonEmpty).toBeDisabled()
     })
@@ -442,9 +446,9 @@ describe('ClubsTable Integration Tests', () => {
       )
 
       // Should show empty state message
-      expect(screen.getByText('No Clubs Found')).toBeInTheDocument()
+      // Spec §7: "No clubs recorded for District 61 on <date>." (no date here).
       expect(
-        screen.getByText(/No club data is available for this district/)
+        screen.getByText('No clubs recorded for District test-district.')
       ).toBeInTheDocument()
 
       // Test with data
@@ -459,7 +463,7 @@ describe('ClubsTable Integration Tests', () => {
 
       // Should show normal state
       expect(screen.getByText('Total: 5 clubs')).toBeInTheDocument()
-      expect(screen.queryByText('No Clubs Found')).not.toBeInTheDocument()
+      expect(screen.queryByText(/No clubs recorded/)).not.toBeInTheDocument()
     })
   })
 })

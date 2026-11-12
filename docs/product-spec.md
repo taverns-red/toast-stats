@@ -272,6 +272,18 @@ Decided, not yet shipped. Spec in the Clubs table rework (ADR-006 Addendum 2).
 - **Whole-row click removed (Q4).** The club-name link is the only row action.
 - **CSV export (Q6).** All columns, for the filtered and sorted rows, independent
   of which columns are visible. The Distinguished-confirmed flag is included.
+  The button reads "Export CSV (all columns)"; Members Base, Members Needed, Net
+  Change, Years Chartered and Distinguished Confirmed are appended after the
+  existing columns.
+- **States (spec §7).** Loading is a skeleton with the columns the table will
+  show at that width (same colgroup widths, header labels and 44px rows), inside
+  the already-rendered panel, so nothing shifts. A date with no clubs reads "No
+  clubs recorded for District N on <date>." (never "cached"); filters or a preset
+  that exclude everything read "No clubs match your filters" with Clear all
+  filters. A failed date index with no rows is the error panel with Try again; a
+  failed refresh with rows on screen keeps the rows and shows a dismissible
+  "Couldn't refresh" note with Retry. "Clubs as of <date>" names the date the data
+  is from, not the date asked for.
 - **Landing rankings (T3)** will later move onto the shared foundation, reversing
   ADR-006 Addendum 1's "bespoke" decision.
 

@@ -11,8 +11,8 @@ import { ClubTrend } from '../hooks/useDistrictAnalytics'
 import { calculateClubProjection } from '../utils/dcpProjections'
 import { isCloseToDistinguished } from '../utils/closeToDistinguished'
 import { ExportButton } from './ExportButton'
-import { exportClubPerformance, exportSnapshotDiff } from '../utils/csvExport'
 import { LoadingSkeleton } from './LoadingSkeleton'
+import { exportClubPerformance, exportSnapshotDiff } from '../utils/csvExport'
 import { useColumnFilters } from '../hooks/useColumnFilters'
 import { FiltersPanel } from './filters/FiltersPanel'
 import { FilterSheet, type FilterSheetFacet } from './filters/FilterSheet'
@@ -35,6 +35,7 @@ import { ActiveFiltersBar } from './ActiveFiltersBar'
 import { ColumnsMenu } from './ColumnsMenu'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { describeActiveFilters } from '../utils/clubFilterDescribe'
+import { isProvisionallyDistinguished } from '../utils/provisionalDistinguished'
 import {
   SortField,
   SortDirection,
@@ -51,6 +52,7 @@ import {
 } from './clubsColumns'
 import { COLUMN_SIZING } from './clubsColumnMeta'
 import { DataTable } from './dataTable/DataTable'
+import { DataTableSkeleton } from './dataTable/DataTableSkeleton'
 import {
   clubsTableFeatures,
   type ClubsTableFeatures,
@@ -856,6 +858,10 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     </button>
   )
 
+  // Export (#2676, spec §9): the rows the user is looking at (filters, presets
+  // and sort applied) but EVERY column, whatever the Columns menu shows. Column
+  // choice is a per-browser view preference that is not in the URL, so tying
+  // the file to it would hand two people with one link different files.
   const exportGroup = (
     <div className="clubs-export-group">
       <ExportButton
@@ -876,11 +882,16 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
               newMembers: club.newMembers,
               clubStatus: club.clubStatus,
               coach: club.coach,
+              membershipBase: club.membershipBase,
+              membersNeeded: club.membersNeeded,
+              netChange: club.netChange,
+              yearsChartered: club.yearsChartered,
+              isProvisionallyDistinguished: isProvisionallyDistinguished(club),
             })),
             districtId
           )
         }
-        label="Export Clubs"
+        label="Export CSV (all columns)"
         disabled={sortedClubs.length === 0}
       />
       {/* Diff CSV export (#795). A SIBLING of the clubs export — the diff
@@ -901,9 +912,13 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     </div>
   )
 
+  // While loading there is no count yet: hold the line's height with a space
+  // rather than claim "Total: 0 clubs".
   const resultCount = (
     <div aria-live="polite">
-      {sortedClubs.length === clubs.length ? (
+      {isLoading ? (
+        <>&nbsp;</>
+      ) : sortedClubs.length === clubs.length ? (
         <>Total: {clubs.length} clubs</>
       ) : (
         <>
@@ -912,6 +927,27 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       )}
     </div>
   )
+
+  // The date the data is FROM (the page passes the date it resolved, #2635),
+  // never the date that was asked for.
+  const asOfLine = dataDate ? (
+    <p className="clubs-as-of">{`Clubs as of ${formatDisplayDate(dataDate)}`}</p>
+  ) : null
+
+  // Clear everything that narrows the list: the filters and the preset (the
+  // since-last-year preset too). The way out of a table that shows no clubs.
+  const clearNarrowing = useCallback(() => {
+    clearAllFilters()
+    if (presetActive) handlePresetToggle()
+    if (sinceMode) sinceOnModeChange?.(null)
+  }, [
+    clearAllFilters,
+    presetActive,
+    handlePresetToggle,
+    sinceMode,
+    sinceOnModeChange,
+  ])
+  const isNarrowed = hasActiveFilters || presetActive || sinceMode !== null
 
   return (
     <div className="redesign-panel">
@@ -994,6 +1030,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           {/* Results Count and Quick Filters */}
           <div className="flex flex-wrap items-center gap-4 text-sm clubs-text-muted">
             {resultCount}
+            {asOfLine}
           </div>
         </div>
       )}
@@ -1042,12 +1079,23 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         ))}
 
       {/* Loading State */}
-      {isLoading && <LoadingSkeleton variant="table" count={5} />}
+      {/* Sized to the columns shown at this width (spec §7), so the table
+          lands on it without a shift. Phone widths have no table to match. */}
+      {isLoading &&
+        (isMobile ? (
+          <LoadingSkeleton variant="table" count={5} />
+        ) : (
+          <DataTableSkeleton
+            testId="clubs-table-skeleton"
+            columns={table.getVisibleLeafColumns()}
+            rowHeaderColumnId={STICKY_COLUMN_FIELD}
+          />
+        ))}
 
-      {/* No Results — no data at all. Token-driven inline markup mirroring
-          the filter-empty state below (#672), so the clubs table is gray-free
-          in every state it renders. Distinct copy from the filter-empty case:
-          this is "nothing cached yet", not "your filters excluded everything". */}
+      {/* No Results — the date has no clubs at all. Token-driven inline markup
+          mirroring the filter-empty state below (#672). Honest about what it
+          is: nothing recorded for this date (spec §7), not "nothing cached",
+          and not "your filters excluded everything". */}
       {!isLoading && sortedClubs.length === 0 && clubs.length === 0 && (
         <div className="p-12 text-center" role="status">
           <svg
@@ -1064,10 +1112,13 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
               d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
             />
           </svg>
-          <p className="clubs-text-muted font-medium">No Clubs Found</p>
+          <p className="clubs-text-muted font-medium">
+            {`No clubs recorded for District ${districtId}${
+              dataDate ? ` on ${formatDisplayDate(dataDate)}` : ''
+            }.`}
+          </p>
           <p className="clubs-text-muted text-sm mt-1 max-w-lg mx-auto">
-            No club data is available for this district on this date. Try
-            another date from the date picker above.
+            Try another date from the date picker above.
           </p>
         </div>
       )}
@@ -1093,18 +1144,21 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           </p>
           {/* Name the filters doing the excluding (#817) — a dead "adjust your
               filters" leaves the user guessing which one to loosen. */}
-          {describeActiveFilters(filterState).length > 0 && (
+          {(describeActiveFilters(filterState).length > 0 || presetActive) && (
             <p className="clubs-text-muted text-sm mt-1">
               Active:{' '}
-              {describeActiveFilters(filterState)
-                .map(d => `${d.label} ${d.value}`)
-                .join(' · ')}
+              {[
+                ...describeActiveFilters(filterState).map(
+                  d => `${d.label} ${d.value}`
+                ),
+                ...(presetActive ? ['Close to Distinguished'] : []),
+              ].join(' · ')}
             </p>
           )}
-          {hasActiveFilters && (
+          {isNarrowed && (
             <button
               type="button"
-              onClick={clearAllFilters}
+              onClick={clearNarrowing}
               className="clubs-clear-filters-btn mt-4 mx-auto"
             >
               Clear all filters

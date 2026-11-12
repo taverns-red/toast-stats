@@ -713,7 +713,7 @@ describe('DistrictClubsPage loading vs empty state (#1999)', () => {
     expect(
       await screen.findByRole('status', { name: /loading table/i })
     ).toBeInTheDocument()
-    expect(screen.queryByText(/no club data is available/i)).toBeNull()
+    expect(screen.queryByText(/no clubs recorded/i)).toBeNull()
   })
 
   // #2636 — a failed date-index fetch used to fall through to "No Clubs
@@ -748,7 +748,7 @@ describe('DistrictClubsPage loading vs empty state (#1999)', () => {
     expect(
       await screen.findByRole('status', { name: /loading table/i })
     ).toBeInTheDocument()
-    expect(screen.queryByText(/no club data is available/i)).toBeNull()
+    expect(screen.queryByText(/no clubs recorded/i)).toBeNull()
   })
 
   it('shows the empty state once loading has finished with zero clubs', async () => {
@@ -759,8 +759,9 @@ describe('DistrictClubsPage loading vs empty state (#1999)', () => {
 
     renderAt('/district/61/clubs')
 
+    // Spec §7 (#2676): "No clubs recorded for District 61 on <date>."
     expect(
-      await screen.findByText(/no club data is available/i)
+      await screen.findByText(/no clubs recorded for district 61/i)
     ).toBeInTheDocument()
     expect(screen.queryByRole('status', { name: /loading table/i })).toBeNull()
   })
@@ -776,7 +777,7 @@ describe('DistrictClubsPage loading vs empty state (#1999)', () => {
     renderAt('/district/61/clubs')
 
     expect(
-      await screen.findByText(/no club data is available/i)
+      await screen.findByText(/no clubs recorded for district 61/i)
     ).toBeInTheDocument()
   })
 })
@@ -889,5 +890,96 @@ describe('DistrictClubsPage keeps filters across a snapshot-date change (#2370)'
     expect(params.get('status')).toBe('vulnerable')
     // The UI agrees with the URL: only the vulnerable club is listed.
     expect(screen.queryByText(/alpha toastmasters/i)).toBeNull()
+  })
+})
+
+// #2676 (spec §7): the states the page owns. A pending load keeps the panel
+// (so the toolbar does not appear later) with a table-shaped skeleton; a failed
+// background refresh never wipes the rows already on screen; and the table says
+// which date its data is from.
+describe('DistrictClubsPage states (#2676)', () => {
+  const loaded = {
+    data: { allClubs: TEST_CLUBS, prospectiveClubs: [] },
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  } as unknown as ReturnType<typeof useDistrictAnalytics>
+
+  beforeEach(() => {
+    vi.mocked(useDistrictAnalytics).mockReset()
+    vi.mocked(useDistrictCachedDates).mockReset()
+  })
+  afterEach(() => {
+    cleanup()
+    vi.mocked(useDistrictAnalytics).mockReset()
+    vi.mocked(useDistrictCachedDates).mockReset()
+  })
+
+  it('holds the panel and a column-sized skeleton while the analytics load', async () => {
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+
+    renderAt('/district/61/clubs')
+
+    expect(await screen.findByTestId('clubs-table-skeleton')).toBeVisible()
+    // The toolbar is already there, so it does not arrive later and push the
+    // table down (CLS).
+    expect(screen.getByRole('heading', { name: 'All clubs' })).toBeVisible()
+    expect(screen.getByRole('searchbox')).toBeVisible()
+  })
+
+  it('keeps the rows and offers a retry when a refresh of the date index fails', async () => {
+    const refetchDates = vi.fn()
+    vi.mocked(useDistrictAnalytics).mockReturnValue(loaded)
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: {
+        dates: ['2025-07-15', '2025-07-01'],
+        dateRange: { startDate: '2025-07-01', endDate: '2025-07-15' },
+      },
+      isPending: false,
+      isLoading: false,
+      isError: true,
+      error: new Error('Failed to fetch'),
+      refetch: refetchDates,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    const user = userEvent.setup()
+
+    renderAt('/district/61/clubs')
+
+    expect(await screen.findByText(/alpha toastmasters/i)).toBeVisible()
+    expect(screen.queryByRole('alert')).toBeNull()
+    const note = screen.getByRole('status', { name: /couldn.t refresh/i })
+    await user.click(within(note).getByRole('button', { name: /retry/i }))
+    expect(refetchDates).toHaveBeenCalledTimes(1)
+    await user.click(within(note).getByRole('button', { name: /dismiss/i }))
+    expect(
+      screen.queryByRole('status', { name: /couldn.t refresh/i })
+    ).toBeNull()
+    expect(screen.getByText(/alpha toastmasters/i)).toBeVisible()
+  })
+
+  it('names the date the data is from, not the date asked for', async () => {
+    vi.mocked(useDistrictAnalytics).mockReturnValue(loaded)
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: {
+        dates: ['2025-07-15', '2025-07-01'],
+        dateRange: { startDate: '2025-07-01', endDate: '2025-07-15' },
+      },
+      isPending: false,
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+
+    // 2025-07-10 has no snapshot; the page resolves to one that does (#2635).
+    renderAt('/district/61/clubs?date=2025-07-10')
+
+    await screen.findByText(/alpha toastmasters/i)
+    const line = screen.getByText(/^Clubs as of /)
+    expect(line.textContent).toMatch(/^Clubs as of Jul (1|15), 2025$/)
   })
 })

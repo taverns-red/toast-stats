@@ -14,7 +14,6 @@ import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import { ProspectiveClubsPanel } from '../components/ProspectiveClubsPanel'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay } from '../components/ErrorDisplay'
-import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { isDistrictSlotPending } from '../utils/districtSlotPending'
 import type { SortDirection, SortField } from '../components/filters/types'
 import type { FilterState } from '../components/filters/types'
@@ -254,6 +253,12 @@ const DistrictClubsPage: React.FC = () => {
     defaultDiffPair?.to
   )
 
+  // A refresh that fails while clubs are on screen keeps them (spec §7) and
+  // says so inline, once per failure: dismissing hides that error, not the next.
+  const refreshError: unknown = datesError ?? (isError ? error : null)
+  const [dismissedRefreshError, setDismissedRefreshError] =
+    useState<unknown>(null)
+
   const rawName = selectedDistrict?.name || districtId || ''
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
   useDocumentTitle(districtName ? `${districtName} Clubs` : null)
@@ -293,9 +298,11 @@ const DistrictClubsPage: React.FC = () => {
           <DistrictSubnav districtId={districtId} />
 
           <div className="space-y-4 sm:space-y-6">
-            {datesError ? (
+            {datesError && allClubs.length === 0 ? (
               // #2636 — the date index failed to load, so the clubs query
-              // never ran. That is a failed request, not "no clubs".
+              // never ran. That is a failed request, not "no clubs". Gated on
+              // emptiness (spec §7) so a failed REFRESH never wipes rows that
+              // are already on screen; that case is the inline note below.
               <ErrorDisplay
                 error={datesError as Error}
                 title="Failed to Load Clubs"
@@ -318,14 +325,45 @@ const DistrictClubsPage: React.FC = () => {
                 }}
                 showDetails={true}
               />
-            ) : isClubsPending ? (
-              <LoadingSkeleton variant="table" count={6} />
             ) : (
               <>
+                {refreshError != null &&
+                  refreshError !== dismissedRefreshError &&
+                  allClubs.length > 0 && (
+                    <div
+                      className="dt-refresh-note"
+                      role="status"
+                      aria-label="Couldn't refresh"
+                    >
+                      <span>
+                        Couldn&apos;t refresh. The clubs shown may be out of
+                        date.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (datesError) refetchDates()
+                          else refetch()
+                        }}
+                      >
+                        Retry
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDismissedRefreshError(refreshError)}
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
+                {/* While the date index or the analytics are pending the panel
+                    is already here, with a skeleton sized to the columns, so
+                    the toolbar does not arrive later and push the table down
+                    (spec §7, CLS). */}
                 <ClubsTable
                   clubs={allClubs}
                   districtId={districtId}
-                  isLoading={isLoading}
+                  isLoading={isLoading || isClubsPending}
                   dataDate={effectiveEndDate ?? undefined}
                   clubLinkState={{ fromClubsSearch: location.search }}
                   initialSortField={initialSortField}
@@ -347,7 +385,9 @@ const DistrictClubsPage: React.FC = () => {
                     isError: priorYear.isError,
                   }}
                 />
-                <ProspectiveClubsPanel clubs={analytics?.prospectiveClubs} />
+                {!isClubsPending && (
+                  <ProspectiveClubsPanel clubs={analytics?.prospectiveClubs} />
+                )}
               </>
             )}
           </div>

@@ -190,7 +190,7 @@ describe('ClubsTable Performance Tests', () => {
 
         // Find the export button
         const exportButton = screen.getByRole('button', {
-          name: /export clubs/i,
+          name: /export csv \(all columns\)/i,
         })
         expect(exportButton).toBeInTheDocument()
 

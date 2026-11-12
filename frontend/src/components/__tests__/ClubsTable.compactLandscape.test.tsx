@@ -110,7 +110,9 @@ describe('ClubsTable in short landscape (#1912)', () => {
       'sr-only'
     )
     const rows = screen.getByRole('button', { name: /Division A/ })
-    const exportBtn = screen.getByRole('button', { name: /Export Clubs/ })
+    const exportBtn = screen.getByRole('button', {
+      name: /Export CSV \(all columns\)/,
+    })
     expect(
       rows.compareDocumentPosition(exportBtn) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy()

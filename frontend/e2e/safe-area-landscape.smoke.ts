@@ -288,7 +288,9 @@ for (const theme of ['light', 'dark'] as const) {
                 vh
               )
             }
-            await expect(vis('button:has-text("Export Clubs")')).toBeAttached()
+            await expect(
+              vis('button:has-text("Export CSV (all columns)")')
+            ).toBeAttached()
           }
 
           // The top bar scrolls away; only the 44px context bar sticks.
