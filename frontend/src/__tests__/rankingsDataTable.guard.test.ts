@@ -7,7 +7,7 @@
  * and a mount is the contention cost Lesson 51 warns about.
  */
 import { describe, it, expect } from 'vitest'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const src = (rel: string): string =>
@@ -62,6 +62,33 @@ describe('landing rankings table: only the landing route pays for its code', () 
     expect(src('components/lazy/districtRankingsTableChunk.ts')).toMatch(
       /import\(\s*'\.\.\/DistrictRankingsTable'\s*\)/
     )
+  })
+})
+
+// A test that mounts DistrictsPage waits on the table's chunk, and the first
+// dynamic import of it costs a module transform: 1155 ms in CI under load,
+// against findBy's 1000 ms (run 43328115244). Warming it at import time puts
+// that cost in collection, which has its own budget, so no test timeout moves.
+describe('landing rankings table: page tests warm the lazy chunk', () => {
+  const dir = join(__dirname, '..', 'pages', '__tests__')
+  const mounts = readdirSync(dir).filter(
+    f =>
+      /\.test\.tsx$/.test(f) &&
+      /from '\.\.\/DistrictsPage'/.test(readFileSync(join(dir, f), 'utf-8'))
+  )
+
+  it('finds the DistrictsPage mounting tests', () => {
+    expect(mounts.length).toBeGreaterThan(15)
+  })
+
+  it('each imports the preload helper', () => {
+    const missing = mounts.filter(
+      f =>
+        !/from '\.\.\/\.\.\/__tests__\/preloadRankingsTable'|import '\.\.\/\.\.\/__tests__\/preloadRankingsTable'/.test(
+          readFileSync(join(dir, f), 'utf-8')
+        )
+    )
+    expect(missing).toEqual([])
   })
 })
 
