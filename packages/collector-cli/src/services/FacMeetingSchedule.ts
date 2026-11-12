@@ -534,6 +534,18 @@ function inherited(
   ) {
     return 'am'
   }
+  // "12:00 - 1:00": a noon start followed by a smaller hour ends in the
+  // afternoon (#2617).
+  if (
+    !suffix &&
+    !bareIsStart &&
+    partner.hour === 12 &&
+    !partner.twentyFour &&
+    !bare.twentyFour &&
+    bare.hour < 12
+  ) {
+    return 'pm'
+  }
   if (!suffix || bare.twentyFour || bare.hour === 12) return undefined
   if (partner.hour === 12) return bareIsStart ? 'am' : 'pm'
   const wraps = bareIsStart
