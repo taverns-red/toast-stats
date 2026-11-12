@@ -27,8 +27,15 @@ export interface DataControlsBarProps {
    * derives the month-end reconciliation state itself via computeFreshness
    * (#1310) — a single source of truth so no consumer can render the pill in a
    * different freshness state than another. A finalized historical month-end
-   * (isLatest=false) is never flagged as reconciling. */
+   * (isLatest=false) is never flagged as reconciling, and the pill then reads
+   * "Data as of" with a neutral dot rather than "Data fresh" (#2635). Left
+   * undefined, the pill keeps its "fresh" reading. */
   isLatest?: boolean
+  /** True when the date on screen is the newest snapshot there is (for the
+   * viewed scope), which is what earns "Data fresh". Defaults to `isLatest`
+   * when omitted; a district whose newest snapshot lags the global scrape
+   * passes true here while `isLatest` stays false (no reconciliation). */
+  isNewestSnapshot?: boolean
   availableProgramYears: ProgramYear[]
   selectedProgramYear: ProgramYear
   /** Called with `USER_PICK` — a pick pushes a history entry (#2412). */
@@ -57,7 +64,10 @@ const FreshnessPill: React.FC<{
   date: string
   /** When set, the pill shows a month-end reconciliation state (#1296). */
   reconcilingMonthLabel?: string | undefined
-}> = ({ date, reconcilingMonthLabel }) => {
+  /** False when the date on screen is not the latest snapshot (#2635): the
+   * pill then says "Data as of" with a neutral dot, never "fresh". */
+  isCurrent?: boolean
+}> = ({ date, reconcilingMonthLabel, isCurrent = true }) => {
   const reconciling = Boolean(reconcilingMonthLabel)
   return (
     <div
@@ -67,13 +77,21 @@ const FreshnessPill: React.FC<{
       title={
         reconciling
           ? `${reconcilingMonthLabel} month-end reconciliation — figures update daily until finalized. As of ${formatDisplayDate(date)}.`
-          : `Latest snapshot: ${date}`
+          : isCurrent
+            ? `Latest snapshot: ${date}`
+            : `Snapshot of ${date}, not the latest`
       }
     >
       <span
         data-testid="freshness-dot"
         aria-hidden="true"
-        className={`data-controls__dot ${reconciling ? 'bg-amber-500' : 'bg-green-500'}`}
+        className={`data-controls__dot ${
+          reconciling
+            ? 'bg-amber-500'
+            : isCurrent
+              ? 'bg-green-500'
+              : 'bg-gray-400'
+        }`}
       />
       {/* #2472 — the visible label stays as short as "Data fresh · <date>":
           every layout reserves FRESHNESS_PILL_WIDTH for it (the landing
@@ -85,7 +103,9 @@ const FreshnessPill: React.FC<{
       <span>
         {reconciling
           ? `Reconciling · ${formatDisplayDate(date)}`
-          : `Data fresh · ${formatDisplayDate(date)}`}
+          : isCurrent
+            ? `Data fresh · ${formatDisplayDate(date)}`
+            : `Data as of · ${formatDisplayDate(date)}`}
       </span>
       {reconciling && (
         <span className="sr-only">
@@ -166,7 +186,8 @@ const formatPyShort = (py: ProgramYear): string =>
 export const DataControlsBar: React.FC<DataControlsBarProps> = ({
   latestSnapshotDate,
   asOfDate,
-  isLatest = false,
+  isLatest,
+  isNewestSnapshot,
   availableProgramYears,
   selectedProgramYear,
   onProgramYearChange,
@@ -182,7 +203,7 @@ export const DataControlsBar: React.FC<DataControlsBarProps> = ({
   const freshness = computeFreshness({
     asOfDate,
     snapshotDate: latestSnapshotDate,
-    isLatest,
+    isLatest: isLatest ?? false,
   })
   const pillDate = freshness.displayDate
   const reconcilingMonthLabel = freshness.reconcilingMonthLabel
@@ -197,6 +218,7 @@ export const DataControlsBar: React.FC<DataControlsBarProps> = ({
         <FreshnessPill
           date={pillDate}
           reconcilingMonthLabel={reconcilingMonthLabel}
+          isCurrent={isNewestSnapshot ?? isLatest !== false}
         />
       ) : (
         freshnessPending && <FreshnessPillSkeleton />

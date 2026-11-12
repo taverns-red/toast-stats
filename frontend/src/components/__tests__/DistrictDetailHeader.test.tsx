@@ -176,7 +176,10 @@ describe('DistrictDetailHeader freshness parity (#1310)', () => {
     const pill = screen.getByTestId('freshness-pill')
     expect(pill).not.toHaveTextContent(/month-end reconciliation/i)
     expect(pill.getAttribute('data-reconciling')).toBeNull()
-    expect(pill).toHaveTextContent(/Data fresh · May 31, 2026/)
+    // #2635: a finalized past date is not the newest snapshot, so the pill
+    // reads "Data as of", never "Data fresh".
+    expect(pill).toHaveTextContent(/Data as of · May 31, 2026/)
+    expect(pill).not.toHaveTextContent(/Data fresh/)
   })
 
   // #1647 — at 412px the toolbar laid out on one row while the date index

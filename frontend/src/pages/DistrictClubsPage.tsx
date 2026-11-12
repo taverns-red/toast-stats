@@ -10,13 +10,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { previousRecordedDate, useSnapshotDiff } from '../hooks/useSnapshotDiff'
-import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
-import {
-  getAvailableProgramYears,
-  filterDatesByProgramYear,
-  getMostRecentDateInProgramYear,
-  isDateInProgramYear,
-} from '../utils/programYear'
+import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
@@ -180,12 +174,19 @@ const DistrictClubsPage: React.FC = () => {
 
   // Program-year + date wiring (matches DistrictDetailPage so the header
   // controls behave the same way across the two routes).
+  // Validated against this district's snapshots once, in the shared hook
+  // (#2635); the chip is told the date whose data is on screen.
   const {
     selectedProgramYear,
     setSelectedProgramYear,
-    selectedDate,
     setSelectedDate,
-  } = useUrlProgramYear()
+    availableProgramYears,
+    availableDates: cachedDatesInProgramYear,
+    effectiveProgramYear,
+    effectiveEndDate,
+    hasValidDates,
+  } = useDistrictProgramYearControls(districtId)
+  const selectedDate = effectiveEndDate ?? undefined
 
   const { data: districtsData } = useDistricts()
   const selectedDistrict = districtsData?.districts?.find(
@@ -198,57 +199,6 @@ const DistrictClubsPage: React.FC = () => {
     () => cachedDatesData?.dates || [],
     [cachedDatesData?.dates]
   )
-  const availableProgramYears = useMemo(
-    () => getAvailableProgramYears(allCachedDates),
-    [allCachedDates]
-  )
-
-  React.useEffect(() => {
-    if (availableProgramYears.length > 0) {
-      const has = availableProgramYears.some(
-        py => py.year === selectedProgramYear.year
-      )
-      if (!has) {
-        const mostRecent = availableProgramYears[0]
-        if (mostRecent) setSelectedProgramYear(mostRecent)
-      }
-    }
-  }, [availableProgramYears, selectedProgramYear.year, setSelectedProgramYear])
-
-  const cachedDatesInProgramYear = useMemo(
-    () => filterDatesByProgramYear(allCachedDates, selectedProgramYear),
-    [allCachedDates, selectedProgramYear]
-  )
-
-  const effectiveProgramYear = useMemo(() => {
-    if (availableProgramYears.length === 0) return null
-    const has = availableProgramYears.some(
-      py => py.year === selectedProgramYear.year
-    )
-    if (has) return selectedProgramYear
-    return availableProgramYears[0] ?? null
-  }, [availableProgramYears, selectedProgramYear])
-
-  const effectiveEndDate = useMemo(() => {
-    if (!effectiveProgramYear) return null
-    if (
-      selectedDate &&
-      isDateInProgramYear(selectedDate, effectiveProgramYear)
-    ) {
-      return selectedDate
-    }
-    const mostRecent = getMostRecentDateInProgramYear(
-      allCachedDates,
-      effectiveProgramYear
-    )
-    // null is unreachable here — effectiveProgramYear comes from
-    // getAvailableProgramYears(allCachedDates). See getMostRecentDateInProgramYear
-    // for why, and why a `|| endDate` fallback must not come back (#1323).
-    return mostRecent
-  }, [selectedDate, effectiveProgramYear, allCachedDates])
-
-  const hasValidDates =
-    effectiveProgramYear !== null && effectiveEndDate !== null
 
   const {
     data: analytics,
@@ -310,7 +260,7 @@ const DistrictClubsPage: React.FC = () => {
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
   useDocumentTitle(districtName ? `${districtName} Clubs` : null)
 
-  const availableDates = cachedDatesInProgramYear.sort((a, b) =>
+  const availableDates = [...cachedDatesInProgramYear].sort((a, b) =>
     b.localeCompare(a)
   )
 

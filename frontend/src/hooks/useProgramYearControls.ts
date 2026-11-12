@@ -135,12 +135,15 @@ export function useProgramYearControls(): ProgramYearControls {
   // Whether the selection is the newest snapshot in the PY — the freshness
   // pill only flags month-end reconciliation for the latest snapshot (#1296).
   // Memoized once here so every consuming page skips the per-render re-sort.
+  // A prior program year's newest snapshot is history, not the latest (#2635).
   const isLatestSnapshot = useMemo(() => {
+    const newestYear = availableProgramYears[0]
+    if (newestYear && newestYear.year !== selectedProgramYear.year) return false
     if (!selectedDate) return true
     if (cachedDates.length === 0) return false
     const latest = [...cachedDates].sort((a, b) => b.localeCompare(a))[0]
     return selectedDate === latest
-  }, [selectedDate, cachedDates])
+  }, [selectedDate, cachedDates, availableProgramYears, selectedProgramYear])
 
   return {
     selectedProgramYear,

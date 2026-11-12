@@ -163,6 +163,10 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
             latestSnapshotDate={viewedDate}
             asOfDate={isLatest ? globalAsOfDate : undefined}
             isLatest={isLatest}
+            isNewestSnapshot={
+              !!latestSnapshotDate &&
+              (!selectedDate || selectedDate === latestSnapshotDate)
+            }
             availableProgramYears={availableProgramYears}
             selectedProgramYear={selectedProgramYear}
             onProgramYearChange={setSelectedProgramYear}
