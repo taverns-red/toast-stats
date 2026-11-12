@@ -849,6 +849,10 @@ const ClubDetailPage: React.FC = () => {
             <ClubHeroStatusChips
               status={club.currentStatus}
               distinguishedLevel={club.distinguishedLevel}
+              clubStatus={club.clubStatus}
+              statusSince={
+                lifecycle?.events.find(e => e.kind === 'suspended')?.when
+              }
               provisionalTitle={
                 isProvisionallyDistinguished(club)
                   ? getProvisionalTooltip(club, programYear.label)
@@ -1023,6 +1027,7 @@ const ClubDetailPage: React.FC = () => {
                 isProvisional={isProvisionallyDistinguished(club)}
                 confirmedLevel={getConfirmedLevel(club, programYear.label)}
                 programYear={programYear.label}
+                suspended={isSuspended}
               />
             )}
           </div>

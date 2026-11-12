@@ -33,16 +33,31 @@ export const ClubHeroStatusChips: React.FC<ClubHeroStatusChipsProps> = ({
   status,
   distinguishedLevel,
   provisionalTitle,
+  clubStatus,
+  statusSince,
 }) => {
   const { label, modifier } = STATUS[status] ?? STATUS.thriving
   const showTier =
     Boolean(distinguishedLevel) && distinguishedLevel !== 'NotDistinguished'
+  // Suspended, Low and Ineligible change what the club can do, so the first
+  // screen says so in words (#2639); Active adds nothing.
+  const operational =
+    clubStatus && clubStatus !== 'Active'
+      ? statusSince && clubStatus === 'Suspended'
+        ? `${clubStatus} since ${statusSince}`
+        : clubStatus
+      : null
   return (
     <>
       <span className={`club-hero__chip ${modifier}`}>
         <span aria-hidden="true" className="club-hero__chip-dot" />
         {label}
       </span>
+      {operational && (
+        <span className="club-hero__chip club-hero__chip--at-risk">
+          {operational}
+        </span>
+      )}
       {showTier && (
         <span className="club-hero__chip" title={provisionalTitle}>
           {distinguishedLevel === 'President'

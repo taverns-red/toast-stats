@@ -27,6 +27,7 @@ import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearC
 import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { OfficerTrainingSummary } from '../components/training/OfficerTrainingSummary'
+import { getClubHealthStatusLabel } from '../utils/clubHealthStatus'
 
 const DivisionPage: React.FC = () => {
   const { districtId, divId } = useParams<{
@@ -381,19 +382,34 @@ const DivisionPage: React.FC = () => {
             ) : (
               <div className="districts-rankings-table-wrap">
                 <div className="overflow-x-auto">
-                  <table className="districts-rankings-table">
+                  <table
+                    className="districts-rankings-table"
+                    aria-label="Clubs and their health status"
+                  >
                     <thead>
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
                           Club
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Health
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
                           Members
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th
+                          scope="col"
+                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
                           Distinguished
                         </th>
                       </tr>
@@ -426,7 +442,7 @@ const DivisionPage: React.FC = () => {
                               </Link>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {c.currentStatus}
+                              {getClubHealthStatusLabel(c.currentStatus)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
                               {last?.count ?? '—'}

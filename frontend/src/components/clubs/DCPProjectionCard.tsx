@@ -1,3 +1,4 @@
+import { isClubSmedleyAvailable } from '@taverns-red/analytics-core'
 import type {
   ClubDCPProjection,
   DistinguishedLevel,
@@ -26,6 +27,8 @@ export function DCPProjectionCard({
   healthStatus,
   isProvisional,
   confirmedLevel,
+  programYear,
+  suspended = false,
 }: {
   projection: ClubDCPProjection
   healthStatus: string
@@ -41,7 +44,11 @@ export function DCPProjectionCard({
     { tier: 'Distinguished', gap: projection.gapToDistinguished },
     { tier: 'Select', gap: projection.gapToSelect },
     { tier: "President's", gap: projection.gapToPresident },
-    { tier: 'Smedley', gap: projection.gapToSmedley },
+    // A rung that did not exist that year is a 0/0 gap, which would read as
+    // "✓ Met"; leave it out, as getClosestTierLabel does (#2639, #1406).
+    ...(isClubSmedleyAvailable(programYear)
+      ? [{ tier: 'Smedley', gap: projection.gapToSmedley }]
+      : []),
   ]
 
   const outlook =
@@ -106,38 +113,44 @@ export function DCPProjectionCard({
         </div>
 
         {/* Per-tier gap list */}
-        <div className="gap-section">
-          <h3>Gap to Each Tier</h3>
-          {gaps.map(({ tier, gap }) => {
-            const met = gap.goals === 0 && gap.members === 0
-            const tierLevel = tier === "President's" ? 'President' : tier
-            const isCurrentTier = tierLevel === projection.currentLevel
-            const tierProvisional = isProvisional && isCurrentTier && met
-            const rowClass = met
-              ? tierProvisional
-                ? 'gap-row gap-row--provisional'
-                : 'gap-row gap-row--met'
-              : 'gap-row'
-            return (
-              <div key={tier} className={rowClass}>
-                <span className="gap-row__tier">{tier}</span>
-                {met ? (
-                  <span className="gap-row__val">
-                    {tierProvisional ? '⚠ Provisional' : '✓ Met'}
-                  </span>
-                ) : (
-                  <span className="gap-row__val tabular-nums">
-                    {gap.goals > 0 &&
-                      `${gap.goals} goal${gap.goals > 1 ? 's' : ''}`}
-                    {gap.goals > 0 && gap.members > 0 && ' + '}
-                    {gap.members > 0 &&
-                      `${gap.members} member${gap.members > 1 ? 's' : ''}`}
-                  </span>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        {suspended ? (
+          <p className="gap-section">
+            Suspended clubs aren't eligible for recognition
+          </p>
+        ) : (
+          <div className="gap-section">
+            <h3>Gap to Each Tier</h3>
+            {gaps.map(({ tier, gap }) => {
+              const met = gap.goals === 0 && gap.members === 0
+              const tierLevel = tier === "President's" ? 'President' : tier
+              const isCurrentTier = tierLevel === projection.currentLevel
+              const tierProvisional = isProvisional && isCurrentTier && met
+              const rowClass = met
+                ? tierProvisional
+                  ? 'gap-row gap-row--provisional'
+                  : 'gap-row gap-row--met'
+                : 'gap-row'
+              return (
+                <div key={tier} className={rowClass}>
+                  <span className="gap-row__tier">{tier}</span>
+                  {met ? (
+                    <span className="gap-row__val">
+                      {tierProvisional ? '⚠ Provisional' : '✓ Met'}
+                    </span>
+                  ) : (
+                    <span className="gap-row__val tabular-nums">
+                      {gap.goals > 0 &&
+                        `${gap.goals} goal${gap.goals > 1 ? 's' : ''}`}
+                      {gap.goals > 0 && gap.members > 0 && ' + '}
+                      {gap.members > 0 &&
+                        `${gap.members} member${gap.members > 1 ? 's' : ''}`}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </section>
   )
