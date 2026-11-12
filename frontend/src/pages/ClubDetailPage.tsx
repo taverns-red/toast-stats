@@ -29,7 +29,6 @@ import {
 import {
   calculateClubProjection,
   type ClubDCPProjection,
-  type DistinguishedLevel,
 } from '../utils/dcpProjections'
 import { isCloseToDistinguished } from '../utils/closeToDistinguished'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
@@ -42,6 +41,7 @@ import { useClubGoalTimeline } from '../hooks/useClubGoalTimeline'
 import { ClubHero, type ClubHeroSource } from '../components/clubs/ClubHero'
 import ClubMemberDataNote from '../components/clubs/ClubMemberDataNote'
 import { ClubHeroStatusChips } from '../components/clubs/ClubHeroStatusChips'
+import { DCPProjectionCard } from '../components/clubs/DCPProjectionCard'
 import { useAfterPaint } from '../hooks/useAfterPaint'
 import { summarizeClubEducation } from '../utils/clubEducation'
 import { ClubEducationPanel } from '../components/clubs/ClubEducationPanel'
@@ -70,141 +70,6 @@ import { ClubMembershipTrend } from '../components/clubs/ClubMembershipTrend'
 import { MobileRowList } from '../components/MobileRowList'
 import { ClubRecentChanges } from '../components/clubs/ClubRecentChanges'
 import { buildClubMeetingInfo, meetingWhen } from '../utils/clubMeetingInfo'
-
-// ── DCP Status Card ────────────────────────────────────────────────────────
-// Re-skinned to club-reference.html (#619): a `.club-panel` with a bordered
-// header, a 2-cell tier row (Current Level + Outlook), and a per-tier gap list.
-// Health-based outlook (#231) and provisional-distinguished handling (#239)
-// are preserved — the reference only depicts the on-track/confirmed case.
-
-const OUTLOOK = {
-  thriving: { label: 'On Track', icon: '✓', cell: 'dcp-cell--pos' },
-  vulnerable: { label: 'At Risk', icon: '⚠', cell: 'dcp-cell--warn' },
-  default: { label: 'Unlikely', icon: '✗', cell: 'dcp-cell--bad' },
-} as const
-
-function levelLabel(level: DistinguishedLevel): string {
-  if (level === 'President') return "President's"
-  if (level === 'NotDistinguished') return 'Not Distinguished'
-  return level
-}
-
-function DCPProjectionCard({
-  projection,
-  healthStatus,
-  isProvisional,
-  confirmedLevel,
-}: {
-  projection: ClubDCPProjection
-  healthStatus: string
-  isProvisional?: boolean
-  confirmedLevel?: DistinguishedLevel
-}) {
-  const gaps = [
-    { tier: 'Distinguished', gap: projection.gapToDistinguished },
-    { tier: 'Select', gap: projection.gapToSelect },
-    { tier: "President's", gap: projection.gapToPresident },
-    { tier: 'Smedley', gap: projection.gapToSmedley },
-  ]
-
-  const outlook =
-    healthStatus === 'thriving'
-      ? OUTLOOK.thriving
-      : healthStatus === 'vulnerable'
-        ? OUTLOOK.vulnerable
-        : OUTLOOK.default
-
-  const isAchieved = projection.currentLevel !== 'NotDistinguished'
-
-  return (
-    <section className="club-panel">
-      <div className="club-panel__head">
-        <h2>
-          <svg
-            className="club-panel__ico"
-            width="16"
-            height="16"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.6}
-            aria-hidden="true"
-          >
-            <path d="M3 13V8M8 13V3M13 13v-7" />
-          </svg>
-          DCP Status
-        </h2>
-      </div>
-      <div className="club-panel__body">
-        {/* Tier row: Current Level + Outlook */}
-        <div className="dcp-tier-row">
-          <div className="dcp-cell">
-            <div className="dcp-cell__lab">Current Level</div>
-            <div
-              className={
-                'dcp-cell__val' +
-                (isAchieved ? ' dcp-cell__val--distinguished' : '')
-              }
-            >
-              {levelLabel(projection.currentLevel)}
-            </div>
-            {isProvisional && (
-              <div className="dcp-cell__provisional">
-                Provisional
-                {confirmedLevel && confirmedLevel !== 'NotDistinguished' && (
-                  <span className="dcp-cell__provisional-confirmed">
-                    {' '}
-                    — Confirmed: {levelLabel(confirmedLevel)}
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-          <div className={`dcp-cell ${outlook.cell}`}>
-            <div className="dcp-cell__lab">Outlook</div>
-            <div className="dcp-cell__val">
-              {outlook.icon} {outlook.label}
-            </div>
-          </div>
-        </div>
-
-        {/* Per-tier gap list */}
-        <div className="gap-section">
-          <h3>Gap to Each Tier</h3>
-          {gaps.map(({ tier, gap }) => {
-            const met = gap.goals === 0 && gap.members === 0
-            const tierLevel = tier === "President's" ? 'President' : tier
-            const isCurrentTier = tierLevel === projection.currentLevel
-            const tierProvisional = isProvisional && isCurrentTier && met
-            const rowClass = met
-              ? tierProvisional
-                ? 'gap-row gap-row--provisional'
-                : 'gap-row gap-row--met'
-              : 'gap-row'
-            return (
-              <div key={tier} className={rowClass}>
-                <span className="gap-row__tier">{tier}</span>
-                {met ? (
-                  <span className="gap-row__val">
-                    {tierProvisional ? '⚠ Provisional' : '✓ Met'}
-                  </span>
-                ) : (
-                  <span className="gap-row__val tabular-nums">
-                    {gap.goals > 0 &&
-                      `${gap.goals} goal${gap.goals > 1 ? 's' : ''}`}
-                    {gap.goals > 0 && gap.members > 0 && ' + '}
-                    {gap.members > 0 &&
-                      `${gap.members} member${gap.members > 1 ? 's' : ''}`}
-                  </span>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </section>
-  )
-}
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 
@@ -984,6 +849,10 @@ const ClubDetailPage: React.FC = () => {
             <ClubHeroStatusChips
               status={club.currentStatus}
               distinguishedLevel={club.distinguishedLevel}
+              clubStatus={club.clubStatus}
+              statusSince={
+                lifecycle?.events.find(e => e.kind === 'suspended')?.when
+              }
               provisionalTitle={
                 isProvisionallyDistinguished(club)
                   ? getProvisionalTooltip(club, programYear.label)
@@ -1157,6 +1026,8 @@ const ClubDetailPage: React.FC = () => {
                 healthStatus={club.currentStatus}
                 isProvisional={isProvisionallyDistinguished(club)}
                 confirmedLevel={getConfirmedLevel(club, programYear.label)}
+                programYear={programYear.label}
+                suspended={isSuspended}
               />
             )}
           </div>
