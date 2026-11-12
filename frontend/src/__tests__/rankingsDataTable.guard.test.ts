@@ -45,6 +45,26 @@ describe('landing rankings table: no CSS-hidden columns (Ron, 2026-11-12)', () =
   })
 })
 
+// #2689: DistrictsPage is in the entry chunk (the landing route is eager). A
+// static import of the table pulls TanStack Table and the DataTable into that
+// chunk, so every route (the club page's Lighthouse budget failed by 2.1 KB)
+// pays for a table only the landing page shows. It loads on its own chunk.
+describe('landing rankings table: only the landing route pays for its code', () => {
+  it('DistrictsPage reaches the table through the lazy wrapper, not a static import', () => {
+    const page = src('pages/DistrictsPage.tsx')
+    expect(page).not.toMatch(
+      /^import\s+(?!type\b)[^;]*from\s+'\.\.\/components\/DistrictRankingsTable'/m
+    )
+    expect(page).toMatch(/LazyDistrictRankingsTable/)
+  })
+
+  it('the lazy wrapper imports the table dynamically', () => {
+    expect(src('components/lazy/LazyDistrictRankingsTable.tsx')).toMatch(
+      /import\(\s*'\.\.\/DistrictRankingsTable'\s*\)/
+    )
+  })
+})
+
 describe('landing rankings table: legacy palette and the 14px floor', () => {
   const table = (): string => TABLE_SOURCES.map(src).join('\n')
 
