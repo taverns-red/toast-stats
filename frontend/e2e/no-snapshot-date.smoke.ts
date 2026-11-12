@@ -14,10 +14,14 @@ import { test, expect } from './fixtures/test'
  * switch to another program year are covered by unit tests: the fixture CDN
  * holds only the current program year's files. */
 
+/* A date with NO snapshot, on purpose: it is not a pinned fixture date, so it
+ * is built here rather than written into the URL literal (#2595). */
+const NO_SNAPSHOT = '2018-01-01'
+
 test('a division page with a date before all data shows data and a notice (5s)', async ({
   page,
 }) => {
-  await page.goto('/district/61/division/A?date=2018-01-01', {
+  await page.goto(`/district/61/division/A?date=${NO_SNAPSHOT}`, {
     waitUntil: 'domcontentloaded',
   })
   const notice = page.getByTestId('date-notice')
@@ -32,7 +36,7 @@ test('a division page with a date before all data shows data and a notice (5s)',
 })
 
 test('the notice can be dismissed', async ({ page }) => {
-  await page.goto('/district/61/clubs?date=2018-01-01', {
+  await page.goto(`/district/61/clubs?date=${NO_SNAPSHOT}`, {
     waitUntil: 'domcontentloaded',
   })
   const notice = page.getByTestId('date-notice')
