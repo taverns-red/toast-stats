@@ -98,6 +98,18 @@ describe('AppShellTopBar mobile nav disclosure (#735)', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 
+  it('Escape from a nav link returns focus to the menu button (#2638)', () => {
+    renderBar()
+    const toggle = getToggle()
+    fireEvent.click(toggle)
+    const nav = screen.getByRole('navigation', { name: /primary/i })
+    const link = within(nav).getByRole('link', { name: 'Regions' })
+    link.focus()
+    fireEvent.keyDown(link, { key: 'Escape' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(document.activeElement).toBe(toggle)
+  })
+
   it('closes the nav when a click lands outside the bar', () => {
     renderBar()
     const toggle = getToggle()
