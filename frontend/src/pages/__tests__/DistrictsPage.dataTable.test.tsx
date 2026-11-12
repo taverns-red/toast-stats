@@ -10,6 +10,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, screen, within } from '@testing-library/react'
+import { useLocation } from 'react-router-dom'
 import '@testing-library/jest-dom'
 import DistrictsPage from '../DistrictsPage'
 import { fetchCdnRankings } from '../../services/cdn'
@@ -67,13 +68,25 @@ const row = (districtId: string, overallRank: number) => ({
   overallRank,
 })
 
+/** Shows where the router is, so a click that navigates can be seen. */
+const LocationProbe = () => {
+  const { pathname } = useLocation()
+  return <output data-testid="location">{pathname}</output>
+}
+
 const setup = (entries: string[] = ['/']) => {
   mockedFetchCdnRankings.mockResolvedValue({
     rankings: [row('57', 1), row('61', 2), row('83', 3)],
     asOfDate: '2025-11-22',
     generatedAt: '2025-01-01T00:00:00Z',
   })
-  return renderWithProviders(<DistrictsPage />, { initialEntries: entries })
+  return renderWithProviders(
+    <>
+      <DistrictsPage />
+      <LocationProbe />
+    </>,
+    { initialEntries: entries }
+  )
 }
 
 const headerTexts = (table: HTMLElement): string[] =>
@@ -169,9 +182,16 @@ describe('DistrictsPage rankings on the DataTable (#2689)', () => {
     ).toBeNull()
   })
 
-  it('has no whole-row click affordance: the link is the only way in', async () => {
+  it('has no whole-row click: clicking a row (not its link) goes nowhere', async () => {
     setup()
     const rowEl = await screen.findByTestId('district-row-57')
     expect(rowEl.className).not.toMatch(/cursor-pointer/)
+    expect(screen.getByTestId('location')).toHaveTextContent('/')
+    fireEvent.click(within(rowEl).getByTestId('rank-cell-57'))
+    fireEvent.click(rowEl)
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/$/)
+    // The district link is the way in.
+    fireEvent.click(within(rowEl).getByRole('link', { name: /57/ }))
+    expect(screen.getByTestId('location')).toHaveTextContent('/district/57')
   })
 })
