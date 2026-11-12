@@ -30,6 +30,35 @@ describe('ClubHeroStatusChips (#2171)', () => {
     expect(screen.getByText(label).closest('.club-hero__chip')).toHaveClass(cls)
   })
 
+  describe('club status (#2639)', () => {
+    it('names a Suspended club, with the date when known', () => {
+      render(
+        <ClubHeroStatusChips
+          status="intervention-required"
+          clubStatus="Suspended"
+          statusSince="Sep 30, 2026"
+        />
+      )
+      const chip = screen.getByText(/^Suspended/).closest('.club-hero__chip')
+      expect(chip).toHaveClass('club-hero__chip--at-risk')
+      expect(chip).toHaveTextContent('Suspended since Sep 30, 2026')
+    })
+
+    it.each(['Low', 'Ineligible'])('names a %s club', clubStatus => {
+      render(
+        <ClubHeroStatusChips status="vulnerable" clubStatus={clubStatus} />
+      )
+      expect(screen.getByText(clubStatus)).toBeInTheDocument()
+    })
+
+    it.each(['Active', undefined])('adds no chip for %s', clubStatus => {
+      const { container } = render(
+        <ClubHeroStatusChips status="thriving" clubStatus={clubStatus} />
+      )
+      expect(container.querySelectorAll('.club-hero__chip')).toHaveLength(1)
+    })
+  })
+
   it('renders the tier in the same chip style, without a dot', () => {
     render(
       <ClubHeroStatusChips status="thriving" distinguishedLevel="President" />

@@ -31,6 +31,11 @@ export function DCPProjectionCard({
   healthStatus: string
   isProvisional?: boolean
   confirmedLevel?: DistinguishedLevel
+  /** The selected program year label ("2019-2020"): decides which tiers
+   *  existed (#2639). */
+  programYear: string
+  /** A suspended club is not eligible for recognition (#2639). */
+  suspended?: boolean
 }) {
   const gaps = [
     { tier: 'Distinguished', gap: projection.gapToDistinguished },

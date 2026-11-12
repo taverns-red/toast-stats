@@ -8,6 +8,11 @@ export interface ClubHeroStatusChipsProps {
   /** Set when the tier is provisional: the chip reads "(provisional)" and
    *  carries this as its tooltip. */
   provisionalTitle?: string | undefined
+  /** The operational status from Toastmasters ("Active", "Suspended", "Low",
+   *  "Ineligible"). Anything but Active/absent gets its own chip (#2639). */
+  clubStatus?: string | undefined
+  /** A pre-formatted date for the status chip ("Sep 30, 2026"), when known. */
+  statusSince?: string | undefined
 }
 
 const STATUS: Record<ClubHealthStatus, { label: string; modifier: string }> = {

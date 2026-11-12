@@ -1022,6 +1022,7 @@ const ClubDetailPage: React.FC = () => {
                 healthStatus={club.currentStatus}
                 isProvisional={isProvisionallyDistinguished(club)}
                 confirmedLevel={getConfirmedLevel(club, programYear.label)}
+                programYear={programYear.label}
               />
             )}
           </div>
