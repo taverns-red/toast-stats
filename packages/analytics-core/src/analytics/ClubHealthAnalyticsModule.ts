@@ -35,6 +35,7 @@ import {
   getCSPStatus,
   isDistinguishedProvisional,
 } from './ClubEligibilityUtils.js'
+import { RISK_FACTOR_MESSAGES } from './riskFactorMessages.js'
 
 /**
  * Simple logger interface for compatibility.
@@ -360,15 +361,13 @@ export class ClubHealthAnalyticsModule {
 
     // Build risk-factor messages from the classification breakdown
     if (status === 'intervention-required') {
-      riskFactors.push('Membership below 12 (critical)')
-      riskFactors.push(
-        `Net growth since July: ${netGrowth} (need 3+ to override)`
-      )
+      riskFactors.push(RISK_FACTOR_MESSAGES.membershipCritical())
+      riskFactors.push(RISK_FACTOR_MESSAGES.netGrowthOverride(netGrowth))
     } else if (status === 'vulnerable') {
       // Requirement 4.2: Add specific reason for membership requirement not met
       if (!membershipRequirementMet) {
         riskFactors.push(
-          `Membership below threshold (${currentMembership} members, need 20+ or net growth 3+)`
+          RISK_FACTOR_MESSAGES.membershipBelowThreshold(currentMembership)
         )
       }
 
@@ -376,13 +375,17 @@ export class ClubHealthAnalyticsModule {
       if (!dcpCheckpointMet) {
         const monthName = getMonthName(currentMonth)
         riskFactors.push(
-          `DCP checkpoint not met: ${currentDcpGoals} goal${currentDcpGoals !== 1 ? 's' : ''} achieved, ${requiredDcpCheckpoint} required for ${monthName}`
+          RISK_FACTOR_MESSAGES.dcpCheckpointNotMet(
+            currentDcpGoals,
+            requiredDcpCheckpoint,
+            monthName
+          )
         )
       }
 
       // Requirement 4.4: Add specific reason for CSP not submitted
       if (!cspRequirementMet) {
-        riskFactors.push('CSP not submitted')
+        riskFactors.push(RISK_FACTOR_MESSAGES.cspNotSubmitted())
       }
     }
     // Requirement 4.5: riskFactors stay empty for Thriving clubs

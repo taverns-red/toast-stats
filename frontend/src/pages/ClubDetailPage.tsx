@@ -72,6 +72,7 @@ import { ClubStatStrip } from '../components/clubs/ClubStatStrip'
 import { ClubMembershipTrend } from '../components/clubs/ClubMembershipTrend'
 import { MobileRowList } from '../components/MobileRowList'
 import { ClubRecentChanges } from '../components/clubs/ClubRecentChanges'
+import { ClubRiskFactors } from '../components/clubs/ClubRiskFactors'
 import { buildClubMeetingInfo, meetingWhen } from '../utils/clubMeetingInfo'
 
 // ── Main Page ──────────────────────────────────────────────────────────────
@@ -1047,21 +1048,7 @@ const ClubDetailPage: React.FC = () => {
           />
 
           {/* Risk Factors */}
-          {club.riskFactors.length > 0 && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg shadow-sm p-6">
-              <h2 className="font-semibold text-red-900 mb-3 flex items-center gap-2 font-tm-headline">
-                ⚠️ Risk Factors
-              </h2>
-              <div className="space-y-2">
-                {club.riskFactors.map((factor, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    <span className="text-red-600 mt-0.5">•</span>
-                    <span className="text-red-900 font-tm-body">{factor}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <ClubRiskFactors factors={club.riskFactors} />
 
           {/* Close-to-Distinguished call-out (#366, #433; repositioned #620).
               club-reference.html places it directly below the 2/3 + 1/3 trend

@@ -35,6 +35,9 @@ export interface ContextCrumb {
 export interface ContextBarProps {
   /** Entity name shown in the bar (e.g. "District 61"). */
   title: string
+  /** Trailing words (e.g. " — History") the sheet title keeps but the bar
+   * hides on a phone, so a long entity name gets the whole line (#2655). */
+  titleSuffix?: string
   /** One level up. Omitted on a root page. */
   back?: { label: string; to: string } | undefined
   /** The selected program year (R3: a prop, owned by the page). Omit on a
@@ -63,6 +66,7 @@ export const ContextBar: React.FC<ContextBarProps> = ({
   back,
   programYear,
   date,
+  titleSuffix,
   chipLabel = 'Page info',
   controls,
   actions,
@@ -95,6 +99,9 @@ export const ContextBar: React.FC<ContextBarProps> = ({
       )}
       <span className="context-bar__title" aria-hidden="true">
         {title}
+        {titleSuffix ? (
+          <span className="context-bar__title-suffix">{titleSuffix}</span>
+        ) : null}
       </span>
       {toolsRef && (
         <div
@@ -128,7 +135,7 @@ export const ContextBar: React.FC<ContextBarProps> = ({
         id={sheetId}
         isOpen={open}
         onClose={close}
-        title={title}
+        title={`${title}${titleSuffix ?? ''}`}
         closeLabel="Close page options"
         returnFocusRef={chipRef}
       >

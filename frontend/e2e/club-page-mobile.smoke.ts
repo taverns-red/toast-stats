@@ -231,10 +231,10 @@ for (const [width, cols, rows] of [
     const lifecycle = m.panels[2]!
     expect(lifecycle.rows, 'lifecycle rows').toBeGreaterThanOrEqual(2)
     expect(lifecycle.rowTextMin).toBeGreaterThanOrEqual(14)
-    // Ron's layout decision on PR #2057: Education and Compliance side by
-    // side from 768, the timeline on its own full-width row below them,
-    // laid out horizontally and hugging its content (no stretched empty
-    // space). Below 768 it stays a vertical timeline.
+    // Education and Compliance side by side from 768, the timeline
+    // (#2057) on its own full-width row below them, laid out horizontally
+    // and hugging its content (no stretched empty space). Below 768 it stays
+    // a vertical timeline.
     const [edu, compliance] = m.panels
     expect(
       lifecycle.slackBelowList,
@@ -251,6 +251,9 @@ for (const [width, cols, rows] of [
         edu!.top
       )
       expect(compliance!.left).toBeGreaterThan(edu!.left)
+      // Ron's #2057 decision stands (the review's UNIT-23 asked to pair
+      // Education with Lifecycle; Ron can choose that later): the timeline
+      // spans both columns on the row below them.
       expect(
         lifecycle.top,
         'timeline below both panels'
@@ -368,14 +371,32 @@ for (const width of [375, 1280]) {
       heroH: Math.round(
         document.querySelector('.club-hero')!.getBoundingClientRect().height
       ),
+      // #2655 UNIT-15: the meeting line wraps instead of being cut, so a
+      // club with a long schedule and address owns ONE line past two (a
+      // fourth line is never excluded, and fails the line count below).
+      factLines: (() => {
+        const facts = document.querySelector('.club-meets__facts')!
+        const lineH = parseFloat(getComputedStyle(facts).lineHeight)
+        return Math.round(facts.getBoundingClientRect().height / lineH)
+      })(),
+      factLineH: (() => {
+        const facts = document.querySelector('.club-meets__facts')!
+        return parseFloat(getComputedStyle(facts).lineHeight)
+      })(),
       docOverflow:
         document.documentElement.scrollWidth -
         document.documentElement.clientWidth,
     }))
     if (width < 768) {
-      expect(m.heroH, `hero height ${m.heroH}px`).toBeLessThanOrEqual(
-        HERO_MAX_H
-      )
+      const extraFacts = m.factLines >= 3 ? m.factLineH : 0
+      expect(
+        m.factLines,
+        'meeting lines on the phone hero'
+      ).toBeLessThanOrEqual(3)
+      expect(
+        m.heroH - extraFacts,
+        `hero height ${m.heroH}px, ${extraFacts}px of it a third meeting line`
+      ).toBeLessThanOrEqual(HERO_MAX_H)
     }
     expect(m.docOverflow).toBe(0)
     test.info().annotations.push({

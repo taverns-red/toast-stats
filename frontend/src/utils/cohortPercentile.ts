@@ -26,6 +26,11 @@ export interface CohortPercentile {
   topPercentOverall: number | null
   /** Top Y % within the club's membership band; null when the band is empty. */
   topPercentInBand: number | null
+  /** Share (%) of all clubs scanned at exactly the club's goals met, the
+   *  club itself counted (#2655: the line for a club at the bottom). */
+  samePercentOverall: number | null
+  /** The same within the club's membership band. */
+  samePercentInBand: number | null
 }
 
 /** Same boundaries the artifact buckets on (12, 20, 25). */
@@ -62,6 +67,21 @@ function topPercent(
   return Math.min(100, Math.ceil((Math.max(1, atOrAbove) / total) * 100))
 }
 
+/** Share (%) of `histogram` at exactly `goalsMet`, rounded up, the club
+ *  itself counted. */
+function samePercent(
+  histogram: readonly number[],
+  goalsMet: number
+): number | null {
+  const total = histogram.reduce((a, b) => a + b, 0)
+  if (total === 0) return null
+  const bucket = Math.min(10, Math.max(0, Math.trunc(goalsMet)))
+  return Math.min(
+    100,
+    Math.ceil((Math.max(1, histogram[bucket] ?? 0) / total) * 100)
+  )
+}
+
 export function cohortPercentile(
   distribution: GlobalClubRaceDistribution,
   goalsMet: number,
@@ -74,5 +94,7 @@ export function cohortPercentile(
     cohortSize: cohort.reduce((a, b) => a + b, 0),
     topPercentOverall: topPercent(distribution.goalsMet, goalsMet),
     topPercentInBand: topPercent(cohort, goalsMet),
+    samePercentOverall: samePercent(distribution.goalsMet, goalsMet),
+    samePercentInBand: samePercent(cohort, goalsMet),
   }
 }

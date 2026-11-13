@@ -65,6 +65,8 @@ export interface DateRoles {
   yearEnds: string[]
   /** Every month-end the CDN has within the last 26 months. */
   monthEnds: string[]
+  /** The weekly dates the club page's Recent changes card reads. */
+  feed?: string[]
 }
 
 export interface ExpandVars extends DateRoles {
@@ -177,7 +179,34 @@ export function dateRoles(latest: string, dates: string[]): DateRoles {
     ago14: ago[ago.length - 1] ?? null,
     yearEnds: valid.filter(d => d.endsWith('-06-30')),
     monthEnds: valid.filter(d => d >= monthsBack && isMonthEnd(d)),
+    feed: feedDates(valid, latest),
   }
+}
+
+/** Mirror of `pickFeedDates` (frontend/src/utils/clubChangeFeed.ts, 90-day
+ *  window, 7-day step): the newest date, then the newest at least a week
+ *  before each pick; the oldest in-window date closes the window. Ascending. */
+function feedDates(valid: string[], latest: string): string[] {
+  const shift = (iso: string, days: number): string =>
+    new Date(calendarMs(iso)! + days * DAY_MS).toISOString().slice(0, 10)
+  const start = shift(latest, -90)
+  const inWindow = valid
+    .filter(d => d <= latest && d >= start)
+    .sort((a, b) => (a < b ? 1 : a > b ? -1 : 0))
+  if (inWindow.length === 0) return []
+  const picked = [inWindow[0]!]
+  for (;;) {
+    const last = picked[picked.length - 1]!
+    const next = inWindow.find(d => d <= shift(last, -7))
+    if (next) {
+      picked.push(next)
+      continue
+    }
+    const oldest = inWindow[inWindow.length - 1]!
+    if (oldest < last) picked.push(oldest)
+    break
+  }
+  return picked.reverse()
 }
 
 /** The first day of the month 26 months before `ms`, as YYYY-MM-DD. */
@@ -232,6 +261,9 @@ export function expandManifest(
           break
         case 'monthEnd':
           values = vars.monthEnds
+          break
+        case 'feed':
+          values = vars.feed ?? []
           break
         case 'py':
           values = vars.py
