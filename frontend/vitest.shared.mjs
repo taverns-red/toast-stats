@@ -53,7 +53,6 @@ export const integrationGlobs = [
   // Legacy axe-on-component scans that predate the naming convention above.
   // New axe tests should use a *.accessibility.test.tsx name or the
   // accessibility/ directory; these are grandfathered in explicitly.
-  'src/__tests__/Accessibility.test.tsx',
   'src/components/__tests__/ChartAccessibility.test.tsx',
   'src/components/__tests__/KeyboardAccessibility.test.tsx',
   'src/__tests__/utils/examples/AccessibilityTestingExamples.test.tsx',

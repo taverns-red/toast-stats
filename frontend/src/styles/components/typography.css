@@ -80,13 +80,12 @@
     -webkit-text-stroke: none !important;
   }
 
-  /* .tm-h2 sets the full brand h2 (size included) on a non-heading element,
-     e.g. a stat value in StatCard / RankingCard (#2642). */
-  .tm-h2 {
+  /* RankingCard's rank number: a figure, not a heading. 24px sits between the
+     28px page title and the 18px section heading of the #2650 ramp. */
+  .ranking-card__rank {
     font-family: var(--tm-font-headline);
-    font-size: var(--tm-h2-font-size);
-    font-weight: var(--tm-h2-font-weight);
-    line-height: var(--tm-h2-line-height);
+    font-size: 24px;
+    line-height: var(--heading-line-height);
   }
 
   .h2 {
