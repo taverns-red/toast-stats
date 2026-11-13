@@ -175,4 +175,53 @@ describe('DCPProjectionsTable (#6)', () => {
       expect(screen.getByText('✓ Max')).toBeInTheDocument()
     })
   })
+
+  describe('"No value" dashes carry an accessible label (#2643, #2774)', () => {
+    it('labels the April renewals dash for a club with no reported value', () => {
+      render(
+        <DCPProjectionsTable
+          clubs={[makeClub('9', 4, 20, { clubName: 'No Renewals Club' })]}
+        />
+      )
+
+      const label = screen.getByText('No April renewals')
+      expect(label).toHaveClass('sr-only')
+      // The visible dash is hidden from assistive tech; the label speaks.
+      expect(
+        label.parentElement?.querySelector('[aria-hidden="true"]')
+      ).toHaveTextContent('—')
+    })
+
+    it('does not add the label when the club reports a value', () => {
+      render(
+        <DCPProjectionsTable
+          clubs={[
+            makeClub('9', 4, 20, {
+              clubName: 'Renewed Club',
+              aprilRenewals: 3,
+            }),
+          ]}
+        />
+      )
+
+      expect(screen.queryByText('No April renewals')).not.toBeInTheDocument()
+    })
+
+    it('labels the tier dash for a Not distinguished club', () => {
+      render(
+        <DCPProjectionsTable
+          clubs={[makeClub('9', 0, 8, { clubName: 'Plain Club' })]}
+        />
+      )
+
+      const labels = screen.getAllByText('Not distinguished')
+      expect(labels.length).toBeGreaterThan(0)
+      for (const label of labels) {
+        expect(label).toHaveClass('sr-only')
+        expect(
+          label.parentElement?.querySelector('[aria-hidden="true"]')
+        ).toHaveTextContent('—')
+      }
+    })
+  })
 })

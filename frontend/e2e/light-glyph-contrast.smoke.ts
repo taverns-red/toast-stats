@@ -6,7 +6,8 @@ import { test, expect, type Page } from './fixtures/test'
  * The 2026-11-12 UX review found grey-300/400 glyphs (1.47-2.54:1), input
  * borders on --line (1.15-1.24:1) and --ink-4 placeholders (3.29-3.44:1).
  * Icons and input borders need 3:1 (WCAG 1.4.11); placeholder text needs
- * 4.5:1 (1.4.3). Dark already passes, so this runs light only at 1280.
+ * 4.5:1 (1.4.3). Dark already passes, so this runs light only, at 1280 and
+ * (for the phone star, which is a separate element) 375.
  *
  * `LightModeGlyphContrast.test.ts` pins the source; this proves what the
  * cascade actually paints. */
@@ -17,7 +18,7 @@ interface Sample {
   need: number
 }
 
-async function measure(page: Page, path: string, ready: string) {
+async function measure(page: Page, path: string, ready: string, width = 1280) {
   await page.emulateMedia({ colorScheme: 'light' })
   await page.addInitScript(() => {
     try {
@@ -26,7 +27,7 @@ async function measure(page: Page, path: string, ready: string) {
       /* storage blocked: colorScheme still drives the theme */
     }
   })
-  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.setViewportSize({ width, height: 900 })
   await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
   await page.locator(ready).first().waitFor({ timeout: 30_000 })
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
@@ -67,7 +68,13 @@ async function samples(
     const behind = (el: Element): C => bgOf(el.parentElement)
     const out: { what: string; ratio: number; need: number }[] = []
     for (const p of ps) {
-      const el = document.querySelector(p.selector)
+      // The first *rendered* match: at phone width the desktop table's star
+      // is display:none and shares the selector with the phone row's star.
+      const all = Array.from(document.querySelectorAll(p.selector))
+      const el =
+        all.find(e => (e as HTMLElement).getClientRects().length > 0) ??
+        all[0] ??
+        null
       if (!el) {
         out.push({ what: `${p.what} (missing)`, ratio: 0, need: p.need })
         continue
@@ -145,6 +152,30 @@ test('Landing glyphs, icons, borders and placeholders meet contrast (light, 1280
     },
     {
       what: 'set-as-my-district star',
+      selector: 'button[aria-label^="Set District"]',
+      prop: 'color',
+      need: 3,
+    },
+  ])
+  const bad = got.filter(s => s.ratio < s.need)
+  expect(
+    bad,
+    bad.map(s => `${s.what} ${s.ratio}:1 < ${s.need}:1`).join('; ')
+  ).toEqual([])
+})
+
+test('Phone set-as-my-district star meets contrast (light, 375)', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  await measure(page, '/', '.landing-search__input', 375)
+  await page
+    .locator('button[aria-label^="Set District"]:visible')
+    .first()
+    .waitFor({ timeout: 30_000 })
+  const got = await samples(page, [
+    {
+      what: 'phone set-as-my-district star',
       selector: 'button[aria-label^="Set District"]',
       prop: 'color',
       need: 3,

@@ -48,6 +48,7 @@ describe('no text-gray-300/400 on glyph spans in the touched components (#2643)'
     'components/ProgramYearSelector.tsx',
     'components/DCPProjectionsTable.tsx',
     'components/MilestonesCallout.tsx',
+    'components/MembershipTrendChart.tsx',
     'pages/RegionPage.tsx',
     'pages/DistrictsPage.tsx',
   ]
@@ -65,6 +66,20 @@ describe('no text-gray-300/400 on glyph spans in the touched components (#2643)'
 
   it('the "Set as my district" star is not off-palette yellow', () => {
     expect(read('pages/DistrictsPage.tsx')).not.toMatch(/text-yellow-500/)
+  })
+
+  it('the InfoTooltip hover colour is a visible step from --ink-3 (#2774)', () => {
+    // --ink-3 -> gray-600 was ~#5b6675 -> #4b5563, barely visible. --ink-2
+    // is the next step up the ink ramp and re-maps in dark mode.
+    const src = read('components/InfoTooltip.tsx')
+    expect(src).toMatch(/hover:text-\[var\(--ink-2\)\]/)
+    expect(src).not.toMatch(/hover:text-gray-/)
+  })
+
+  it('the chart info link hover is not a gray utility either (#2774)', () => {
+    expect(read('components/MembershipTrendChart.tsx')).not.toMatch(
+      /hover:text-gray-600/
+    )
   })
 
   it('a "no value" dash in the region tier cell has an accessible label', () => {
