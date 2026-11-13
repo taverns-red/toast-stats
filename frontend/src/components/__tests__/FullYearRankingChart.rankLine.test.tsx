@@ -78,7 +78,7 @@ describe('FullYearRankingChart rank line (#2659)', () => {
     render(
       <FullYearRankingChart
         data={DATA}
-        selectedMetric="overall"
+        selectedMetric="aggregate"
         onMetricChange={() => {}}
         isLoading={false}
         programYear={PY}
@@ -92,7 +92,7 @@ describe('FullYearRankingChart rank line (#2659)', () => {
     render(
       <FullYearRankingChart
         data={DATA}
-        selectedMetric="overall"
+        selectedMetric="aggregate"
         onMetricChange={() => {}}
         isLoading={false}
         programYear={PY}
@@ -107,7 +107,7 @@ describe('FullYearRankingChart rank line (#2659)', () => {
     render(
       <FullYearRankingChart
         data={DATA}
-        selectedMetric="overall"
+        selectedMetric="aggregate"
         onMetricChange={() => {}}
         isLoading={false}
         programYear={PY}
