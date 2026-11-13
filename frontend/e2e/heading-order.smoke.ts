@@ -20,6 +20,8 @@ const ROUTES = [
   '/district/61/map',
   '/district/61/divisions',
   '/district/61/education',
+  '/region/4/education',
+  '/regions/education',
   '/regions/changes',
   '/region/4/changes',
   '/region/4',
