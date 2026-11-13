@@ -31,6 +31,7 @@
 
 import React, { useState } from 'react'
 import { Card } from './ui/Card/Card'
+import { StaticTableScroll } from './dataTable/StaticTableScroll'
 import { useUrlBoolean } from '../hooks/useUrlBoolean'
 
 /**
@@ -381,37 +382,22 @@ const CriteriaExplanationView: React.FC<{
           </div>
 
           {/* Recognition levels table - Requirement 4.5: ascending order */}
-          <div className="overflow-x-auto">
-            <table
-              className="w-full border-collapse"
-              aria-label="Recognition level requirements"
-            >
+          <StaticTableScroll label="Recognition level requirements">
+            <table className="dt entity-table entity-table--criteria">
+              <caption className="sr-only">
+                Recognition level requirements
+              </caption>
               <thead>
-                <tr className="bg-tm-loyal-blue text-white">
-                  <th
-                    scope="col"
-                    className="px-4 py-3 text-left font-semibold font-tm-headline rounded-tl-lg"
-                  >
-                    Recognition level
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-4 py-3 text-center font-semibold font-tm-headline"
-                  >
-                    Paid clubs required
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-4 py-3 text-center font-semibold font-tm-headline rounded-tr-lg"
-                  >
-                    Distinguished clubs required
-                  </th>
+                <tr>
+                  <th scope="col">Recognition level</th>
+                  <th scope="col">Paid clubs required</th>
+                  <th scope="col">Distinguished clubs required</th>
                 </tr>
               </thead>
               <tbody>
                 {/* Distinguished Area - Requirement 4.1 */}
-                <tr className="border-b border-gray-200 bg-white hover:bg-gray-50">
-                  <td className="px-4 py-3">
+                <tr>
+                  <th scope="row">
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-tm-happy-yellow text-gray-900">
                         <svg
@@ -427,11 +413,9 @@ const CriteriaExplanationView: React.FC<{
                         Distinguished Area
                       </span>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-center font-tm-body text-gray-700">
-                    ≥ Club Base
-                  </td>
-                  <td className="px-4 py-3 text-center">
+                  </th>
+                  <td className="entity-table__c">≥ Club Base</td>
+                  <td className="entity-table__c">
                     <span className="inline-flex items-center px-3 py-1 rounded-full bg-tm-happy-yellow-20 text-gray-900 font-semibold font-tm-body">
                       ≥ 50% of Club Base
                     </span>
@@ -439,8 +423,8 @@ const CriteriaExplanationView: React.FC<{
                 </tr>
 
                 {/* Select Distinguished Area - Requirement 4.2 */}
-                <tr className="border-b border-gray-200 bg-white hover:bg-gray-50">
-                  <td className="px-4 py-3">
+                <tr>
+                  <th scope="row">
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-tm-cool-gray text-gray-900">
                         <svg
@@ -456,11 +440,9 @@ const CriteriaExplanationView: React.FC<{
                         Select Distinguished Area
                       </span>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-center font-tm-body text-gray-700">
-                    ≥ Club Base
-                  </td>
-                  <td className="px-4 py-3 text-center">
+                  </th>
+                  <td className="entity-table__c">≥ Club Base</td>
+                  <td className="entity-table__c">
                     <span className="inline-flex items-center px-3 py-1 rounded-full bg-tm-cool-gray-30 text-gray-900 font-semibold font-tm-body">
                       ≥ 50% of Club Base + 1
                     </span>
@@ -468,8 +450,8 @@ const CriteriaExplanationView: React.FC<{
                 </tr>
 
                 {/* President's Distinguished Area - Requirement 4.3 */}
-                <tr className="bg-white hover:bg-gray-50">
-                  <td className="px-4 py-3 rounded-bl-lg">
+                <tr>
+                  <th scope="row">
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-tm-loyal-blue text-white">
                         <svg
@@ -485,11 +467,9 @@ const CriteriaExplanationView: React.FC<{
                         President&apos;s Distinguished Area
                       </span>
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-center font-tm-body text-gray-700">
-                    ≥ Club Base + 1
-                  </td>
-                  <td className="px-4 py-3 text-center rounded-br-lg">
+                  </th>
+                  <td className="entity-table__c">≥ Club Base + 1</td>
+                  <td className="entity-table__c">
                     <span className="inline-flex items-center px-3 py-1 rounded-full bg-tm-loyal-blue-20 text-tm-loyal-blue font-semibold font-tm-body">
                       ≥ 50% of Club Base + 1
                     </span>
@@ -497,7 +477,7 @@ const CriteriaExplanationView: React.FC<{
                 </tr>
               </tbody>
             </table>
-          </div>
+          </StaticTableScroll>
 
           {/* Additional explanation */}
           <p className="mt-4 text-sm text-gray-600 font-tm-body">

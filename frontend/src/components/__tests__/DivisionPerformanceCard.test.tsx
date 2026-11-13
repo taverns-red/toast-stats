@@ -102,10 +102,10 @@ describe('DivisionPerformanceCard', () => {
       // Header includes additional context text
       expect(headerTexts.some(h => h?.includes('Paid'))).toBe(true)
       expect(headerTexts.some(h => h?.includes('Distinguished'))).toBe(true)
-      expect(headerTexts.some(h => h?.includes('First Round Visits'))).toBe(
+      expect(headerTexts.some(h => h?.includes('First round visits'))).toBe(
         true
       )
-      expect(headerTexts.some(h => h?.includes('Second Round Visits'))).toBe(
+      expect(headerTexts.some(h => h?.includes('Second round visits'))).toBe(
         true
       )
       expect(headerTexts).toContain('Recognition')

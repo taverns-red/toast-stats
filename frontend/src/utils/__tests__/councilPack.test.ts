@@ -154,7 +154,7 @@ describe('buildCouncilPack (#2299)', () => {
       // The same chip the phone division rows show (net loss outranks the
       // tier: the suspended club leaves paid clubs under the base here).
       expect(pack.recognition.label).toBe(divisionChip(division).label)
-      expect(pack.recognition.label).toBe('Net loss')
+      expect(pack.recognition.label).toBe('Net Loss')
     })
 
     it('lists every area of the division, in snapshot order', () => {

@@ -74,6 +74,9 @@ export interface PriorityColumnsTableProps<Row, F extends string> {
   empty?: React.ReactNode
   /** Rendered under the table, above "Full table" (e.g. a show-more step). */
   footer?: React.ReactNode
+  /** The width below which the compact layout replaces `fullTable`. Default
+   *  768; a table whose full form does not fit a tablet raises it. */
+  breakpoint?: number
 }
 
 /** Resolve `?cols=` to exactly two known, distinct metric ids, topping up
@@ -102,7 +105,7 @@ function resolveColumns(
 export function PriorityColumnsTable<Row, F extends string>(
   props: PriorityColumnsTableProps<Row, F>
 ): React.JSX.Element {
-  const isMobile = useIsMobile(768)
+  const isMobile = useIsMobile(props.breakpoint ?? 768)
   if (!isMobile) return <>{props.fullTable}</>
   return <PhonePriorityColumns<Row, F> {...props} />
 }

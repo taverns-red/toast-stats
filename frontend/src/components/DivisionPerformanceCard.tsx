@@ -97,7 +97,10 @@ export const DivisionPerformanceCard: React.FC<
       />
 
       {/* Area Performance Table - displays detailed area metrics */}
-      <div className="p-6">
+      {/* 24px of inset only where there is room: on a phone the card's own
+          padding is enough, and a second 24px left the table 261px wide
+          (#2718, UNIT-28). */}
+      <div className="entity-card-body">
         <AreaPerformanceTable
           areas={division.areas}
           label={`Division ${division.divisionId} area performance`}

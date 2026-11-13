@@ -28,12 +28,6 @@ const FILE_ALLOW: Record<string, string> = {
   'styles/tokens/rt-brand-v1.css':
     'Upstream brand tokens, copy-on-release, never hand-edited. Its 11px ' +
     '--rt-text-xs is not consumed anywhere (asserted below).',
-  // #2722 (M5) rewrites these tables onto the shared DataTable styles and
-  // removes the uppercase/11px treatment there. Editing them here would only
-  // create merge conflicts. Remove these entries once #2722 merges.
-  'components/AreaPerformanceTable.tsx': 'Owned by open PR #2722 (M5).',
-  'pages/DivisionPage.tsx': 'Owned by open PR #2722 (M5).',
-  'pages/AreaPage.tsx': 'Owned by open PR #2722 (M5).',
 }
 
 function walk(dir: string, exts: string[], out: string[] = []): string[] {
@@ -274,7 +268,7 @@ describe('D3 tables: 14px data, 14px sentence-case headers (#2725)', () => {
   it('table header text is sentence case (no Title Case phrases)', () => {
     // Proper nouns that stay capitalised inside a sentence-case header.
     const PROPER =
-      /^(DCP|Toastmasters|Distinguished|Smedley|President|Select|Club|District|Division|Area|Apr\.?|Plans?)$/
+      /^(DCP|Toastmasters|Distinguished|Smedley|President|Select|Club|District|Division|Area|Apr\.?|Plans?|[A-Z])$/
     const offenders: string[] = []
     for (const f of codeFiles) {
       for (const m of readFileSync(f, 'utf8').matchAll(

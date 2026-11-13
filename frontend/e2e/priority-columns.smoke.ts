@@ -22,6 +22,8 @@ interface Route {
   wideTable?: string | RegExp
   /** Or: the name of the full table's scroll region at ≥768. */
   wideRegion?: RegExp
+  /** The area table runs its compact layout below 1024 (#2718). */
+  compactBelow1024?: boolean
   /** The chip to end on (the screenshot state); default: the last chip. */
   swapChip?: string
   /** Rewrite the live competitive-awards.json so every district holds a
@@ -53,12 +55,14 @@ const ROUTES: readonly Route[] = [
   {
     path: '/district/61/division/A',
     table: /Division A area performance/,
-    wideRegion: /area performance — scroll/,
+    wideRegion: /area performance, scrolls sideways/,
+    compactBelow1024: true,
   },
   {
     path: '/district/61/division/A/area/01',
     table: 'Area performance',
-    wideRegion: /Area performance — scroll/,
+    wideRegion: /Area performance, scrolls sideways/,
+    compactBelow1024: true,
   },
   {
     // The landing rankings: was a column-shedding scroll + top-20 cap.
@@ -317,6 +321,7 @@ for (const theme of THEMES) {
       test.setTimeout(120_000)
       await prep(page, theme, width)
       for (const r of ROUTES) {
+        if (r.compactBelow1024 && width < 1024) continue
         await page.goto(r.path, { waitUntil: 'networkidle', timeout: 60_000 })
         await page
           .getByRole(r.wideRegion ? 'region' : 'table', {
