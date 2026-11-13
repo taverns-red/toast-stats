@@ -3,15 +3,10 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 // One shared definition of "the same club" (#1440) — this file used to hold
 // two comparisons that disagreed with each other sixteen lines apart.
-import {
-  clubIdsMatch,
-  findClubEntry,
-  normalizeClubId,
-} from '@taverns-red/shared-contracts'
+import { clubIdsMatch, findClubEntry } from '@taverns-red/shared-contracts'
 import { fetchCdnClubIndex } from '../services/cdn'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
-import { useGlobalClubRace } from '../hooks/useGlobalClubRace'
-import { WorldwideStandingCard } from '../components/clubs/WorldwideStandingCard'
+import { LazyWorldwideStanding } from '../components/clubs/LazyWorldwideStanding'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
@@ -251,16 +246,6 @@ const ClubDetailPage: React.FC = () => {
     const found = clubs.find(c => clubIdsMatch(c.clubId, clubId))
     return found && typeof found.clubName === 'string' ? found : null
   }, [districtStats, clubId])
-
-  // Worldwide standing (#1556): the race artifact for the SAME pinned date
-  // this page reads (Lesson 59). Absent artifact → no card, never an error.
-  // #1843 — the card is at the bottom of the page, so its read waits for the
-  // same after-paint gate as analytics: before, it started with the hero's
-  // snapshot read (twice — "latest" and then the pinned date).
-  const { race: globalRace, reachedById: raceReachedById } = useGlobalClubRace(
-    effectiveEndDate ?? undefined,
-    { enabled: analyticsReady && !!effectiveEndDate }
-  )
 
   // ── Moved-club lookup (#1441) ─────────────────────────────────────────────
   // The 2026-07-01 reformation moved clubs between districts, so every link
@@ -1131,15 +1116,19 @@ const ClubDetailPage: React.FC = () => {
               the DCP goals grid per the §3.2 layout: the club's own numbers
               first, the worldwide comparison last. The mini-map (#1843)
               follows it. */}
-          <WorldwideStandingCard
-            race={globalRace}
-            clubId={normalizeClubId(club.clubId)}
+          {/* Worldwide standing (#1556): the race artifact for the SAME pinned
+              date this page reads (Lesson 59); absent artifact → no card,
+              never an error. #1843 — its read waits for the after-paint gate;
+              #2759 — and for the slot to come near the viewport. */}
+          <LazyWorldwideStanding
+            date={effectiveEndDate ?? undefined}
+            enabled={analyticsReady}
+            clubId={club.clubId}
             goalsMet={
               club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]
                 ?.goalsAchieved ?? 0
             }
             members={latestMembership}
-            reached={raceReachedById.get(normalizeClubId(club.clubId)) ?? null}
           />
 
           {/* #1843 — "View multi-year history" leaves the phone hero and
