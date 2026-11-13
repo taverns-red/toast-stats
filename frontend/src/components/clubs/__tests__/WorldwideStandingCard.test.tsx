@@ -136,6 +136,35 @@ describe('WorldwideStandingCard (#1556)', () => {
     expect(card).not.toHaveTextContent(/Top 100%/)
   })
 
+  it('never says "Ahead of 0%": a club with no goals reads neutrally (#2655)', () => {
+    renderCard({ goalsMet: 0 })
+    const card = screen.getByRole('region', { name: 'Worldwide standing' })
+    expect(card).toHaveTextContent(
+      'No goals met yet, like 50% of clubs worldwide'
+    )
+    expect(card).toHaveTextContent('like 5% among clubs with 20–24 members')
+    expect(card).not.toHaveTextContent(/Ahead of 0%/i)
+    expect(card).not.toHaveTextContent(/Top 100%/)
+  })
+
+  it('reads a tie at the bottom as a tie, not "Ahead of 0%" (#2655)', () => {
+    const race: GlobalClubRace = {
+      ...RACE,
+      distribution: {
+        ...RACE.distribution,
+        goalsMet: hist([2, 40], [5, 60]),
+        cohorts: {
+          ...RACE.distribution.cohorts,
+          from20to24: hist([2, 4], [5, 6]),
+        },
+      },
+    }
+    renderCard({ race, goalsMet: 2 })
+    const card = screen.getByRole('region', { name: 'Worldwide standing' })
+    expect(card).toHaveTextContent('2 goals met, like 40% of clubs worldwide')
+    expect(card).not.toHaveTextContent(/Ahead of 0%/i)
+  })
+
   it('keeps "Top X%" at or above the median', () => {
     renderCard({ goalsMet: 3 })
     const card = screen.getByRole('region', { name: 'Worldwide standing' })
