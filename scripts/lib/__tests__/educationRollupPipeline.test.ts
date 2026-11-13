@@ -299,6 +299,21 @@ describe('build-education-rollup.sh: staging derived/education-rollup/', () => {
     expect(rollupObjects()).not.toContain(`${PREFIX}2003-2004.json`)
   })
 
+  it('an empty ledger listing while the previous index names ledger years fails, and the previous copy stands (#2695)', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    const indexPath = path.join(root, BUCKET, `${PREFIX}index.json`)
+    const before = fs.readFileSync(indexPath, 'utf-8')
+    expect(before).toContain('ledger-history')
+    fs.rmSync(path.join(root, BUCKET, 'raw-education-ledger'), {
+      recursive: true,
+    })
+    const r = runScript()
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/::error::.*raw-education-ledger.*previous/)
+    expect(fs.readFileSync(indexPath, 'utf-8')).toBe(before)
+  })
+
   it('without a region history, every region block is null; districts and world still build', () => {
     seedAll()
     fs.rmSync(path.join(root, BUCKET, 'config/district-region-history.json'))
