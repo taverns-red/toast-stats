@@ -7,7 +7,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
+  ReferenceArea,
 } from 'recharts'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
@@ -29,7 +29,15 @@ import {
   useSeriesVisibility,
 } from './charts/ChartLegendChips'
 import { compactTicks } from './charts/compactAxis'
+import { AXIS_TICK, AXIS_LABEL_STYLE } from './charts/chartAxis'
 import { useIsMobile } from '../hooks/useIsMobile'
+
+/** Shaded growth/decline band colour and legend name (#2659). */
+const PERIOD_STYLE = {
+  growth: { color: 'var(--tm-loyal-blue)', label: 'Growth period' },
+  decline: { color: 'var(--tm-true-maroon)', label: 'Decline period' },
+} as const
+const PERIOD_BAND_OPACITY = 0.15
 
 /** A named set of data points for one program year */
 export interface YearTrendData {
@@ -502,16 +510,16 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 tickFormatter={monthLabel}
                 interval="preserveStartEnd"
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '12px' }}
+                tick={AXIS_TICK}
               />
               <YAxis
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '12px' }}
+                tick={AXIS_TICK}
                 label={{
                   value: 'Total Members',
                   angle: -90,
                   position: 'insideLeft',
-                  style: { fontSize: '12px' },
+                  style: AXIS_LABEL_STYLE,
                 }}
               />
               <Tooltip
@@ -565,30 +573,22 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 isAnimationActive={false}
               />
 
-              {/* Growth / decline period bounds on the current year. */}
+              {/* Growth / decline periods on the current year: one shaded band
+                  each, named by the legend chips below (#2659). */}
               {periods.map((period, index) => {
                 const startPoint = sortedData[period.start]
                 const endPoint = sortedData[period.end]
                 if (!startPoint || !endPoint) return null
-                const stroke =
-                  period.type === 'growth'
-                    ? 'var(--tm-loyal-blue)'
-                    : 'var(--tm-true-maroon)'
                 return (
-                  <React.Fragment key={`${period.type}-${index}`}>
-                    <ReferenceLine
-                      x={startPoint.day}
-                      stroke={stroke}
-                      strokeWidth={2}
-                      strokeOpacity={0.3}
-                    />
-                    <ReferenceLine
-                      x={endPoint.day}
-                      stroke={stroke}
-                      strokeWidth={2}
-                      strokeOpacity={0.3}
-                    />
-                  </React.Fragment>
+                  <ReferenceArea
+                    key={`${period.type}-${index}`}
+                    x1={startPoint.day}
+                    x2={endPoint.day}
+                    fill={PERIOD_STYLE[period.type].color}
+                    fillOpacity={PERIOD_BAND_OPACITY}
+                    stroke="none"
+                    ifOverflow="hidden"
+                  />
                 )
               })}
             </LineChart>
@@ -605,21 +605,24 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
         }
       />
 
-      {/* Legend for highlights */}
+      {/* Legend for the shaded periods: same colour and name as the band. */}
       {periods.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-4 text-xs text-gray-600">
-          {periods.some(p => p.type === 'growth') && (
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-0.5 bg-green-500"></div>
-              <span className="font-tm-body">Growth Period</span>
-            </div>
-          )}
-          {periods.some(p => p.type === 'decline') && (
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-0.5 bg-red-500"></div>
-              <span className="font-tm-body">Decline Period</span>
-            </div>
-          )}
+          {(['growth', 'decline'] as const)
+            .filter(type => periods.some(p => p.type === type))
+            .map(type => (
+              <div key={type} className="flex items-center gap-2">
+                <div
+                  className="w-4 h-3 rounded-sm"
+                  style={{
+                    background: PERIOD_STYLE[type].color,
+                    opacity: PERIOD_BAND_OPACITY * 2,
+                  }}
+                  aria-hidden="true"
+                />
+                <span className="font-tm-body">{PERIOD_STYLE[type].label}</span>
+              </div>
+            ))}
         </div>
       )}
     </div>
