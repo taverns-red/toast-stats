@@ -25,8 +25,10 @@ export function nextTierText(
   return `${(targets[next.key] - current).toLocaleString()} to ${next.label}`
 }
 
-/** "#36 of 94" — world rank only; percentile and region live in the sheet. */
+/** "#36 of 94" — world rank only; percentile and region live in the sheet.
+ *  "Tied" when every district has the same value (#2613). */
 export function worldRankText(rankings: MetricRankings): string | null {
+  if (rankings.worldTied === true) return 'Tied'
   return rankings.worldRank !== null && rankings.totalDistricts > 0
     ? `#${rankings.worldRank} of ${rankings.totalDistricts}`
     : null
