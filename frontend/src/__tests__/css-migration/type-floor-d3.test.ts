@@ -238,4 +238,53 @@ describe('D3 tables: 14px data, 14px sentence-case headers (#2725)', () => {
     }
     expect(offenders).toEqual([])
   })
+  it('classes used inside header cells are not uppercased or under 14px', () => {
+    const classes = new Set<string>()
+    for (const f of codeFiles)
+      for (const th of readFileSync(f, 'utf8').matchAll(
+        /<th\b[^>]*>([\s\S]*?)<\/th>/g
+      ))
+        for (const c of th[1].matchAll(/className="([^"]+)"/g))
+          for (const name of c[1].split(/\s+/))
+            if (
+              /^[a-z][\w-]*__[\w-]+$/.test(name) &&
+              !/tag|badge|chip/.test(name)
+            )
+              classes.add(name)
+    const offenders: string[] = []
+    for (const f of cssFiles)
+      for (const r of rules(readFileSync(f, 'utf8'))) {
+        const hit = [...classes].find(c =>
+          new RegExp('\\.' + c + '(?![\\w-])').test(r.selector)
+        )
+        if (!hit) continue
+        if (/text-transform\s*:\s*uppercase/.test(r.body))
+          offenders.push(`${rel(f)}: .${hit} uppercase`)
+        for (const d of r.body.matchAll(
+          /(?:^|[;\s])font-size\s*:\s*([^;]+)/g
+        )) {
+          const px = pxOf(d[1])
+          if (px !== null && px < DATA_PX)
+            offenders.push(`${rel(f)}: .${hit} ${d[1].trim()}`)
+        }
+      }
+    expect(offenders).toEqual([])
+  })
+
+  it('table header text is sentence case (no Title Case phrases)', () => {
+    // Proper nouns that stay capitalised inside a sentence-case header.
+    const PROPER =
+      /^(DCP|Toastmasters|Distinguished|Smedley|President|Select|Club|District|Division|Area|Apr\.?|Plans?)$/
+    const offenders: string[] = []
+    for (const f of codeFiles) {
+      for (const m of readFileSync(f, 'utf8').matchAll(
+        /<th\b(?:[^>]|=>)*>\s*([A-Z][a-z]+(?: [A-Za-z][a-z.]*)+)\s*(?:<|\{)/g
+      )) {
+        const words = m[1].split(' ').slice(1)
+        if (words.some(w => /^[A-Z]/.test(w) && !PROPER.test(w)))
+          offenders.push(`${rel(f)}: ${m[1]}`)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
 })
