@@ -177,6 +177,15 @@
     flex: 1;
   }
 
+  /* Any span in a header (sort labels, sub-labels such as "(of club base)")
+     takes the header's line-height. The base layer sets
+     `span { line-height: max(1.4, ...) }`, which beats inheritance: a span
+     measured 21px a line against 18.2px for a plain header's text, so its
+     bottom sat 1.8px off in the same row (#2651). */
+  .dt thead th span {
+    line-height: inherit;
+  }
+
   /* Sort-direction caret: graphical 3:1 on the header in both themes. */
   .dt-sort-btn .sortable-header__indicator {
     display: inline-flex;

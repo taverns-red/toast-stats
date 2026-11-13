@@ -364,6 +364,7 @@
   }
 
   .world-pulse__table thead th {
+    vertical-align: bottom; /* text bottoms line up across the row (#2651) */
     white-space: normal;
     overflow-wrap: normal;
     font-size: var(--tm-font-size-sm);
