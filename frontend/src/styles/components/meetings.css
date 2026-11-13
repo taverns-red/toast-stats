@@ -41,14 +41,18 @@
   }
 }
 
+/* The figure is a link on the district page. Its 44px tap target is padding
+   pulled back out with a negative margin, so the text keeps the figure's own
+   line box and sits level with the neighbouring figures (#2649). */
 .meetings-kpi__link {
   display: inline-flex;
   align-items: center;
-  align-self: flex-start;
+  box-sizing: border-box;
   min-height: 44px;
   min-width: 44px;
+  margin-block: calc((1.5rem * 1.25 - 44px) / 2);
+  padding-block: calc((44px - 1.5rem * 1.25) / 2);
   text-decoration: underline;
-  color: var(--link);
 }
 
 /* ── Mode switch ───────────────────────────────────────────────────── */
