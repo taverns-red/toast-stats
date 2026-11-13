@@ -6,7 +6,7 @@ Not touched: `dark-mode.css`, `buttons.css`, `index.css`, `tokens/rt-brand-v1.cs
 
 ## frontend/src/styles/components/typography.css (34 rules)
 
-Every `.tm-typography`/`.tm-headline-*`/`.tm-text-*`/`.tm-font-*`/`.tm-leading-*` class. No literal use anywhere; no template prefix `tm-text-${`, `tm-font-${` or `tm-leading-${` exists (grep of `tm-(text|font|leading|headline)-` hits only CSS and the guard test); the live `.tm-body` and `.tm-h2` rules are kept.
+The `.tm-text-{xs..6xl}`, `.tm-font-{regular..black}` and `.tm-leading-*` scale classes, the `.tm-headline-h*`/`.tm-body-large`/`.tm-caption` per-element and media-query rules, and `.tm-nav-text`. None has a literal use, and no template prefix `tm-text-${`, `tm-font-${` or `tm-leading-${` exists (the live `tm-text-black`, `font-tm-headline` and `tm-body` are different names and stay). The grouped rule `.tm-typography, .tm-headline, .tm-headline-h1, ...` is kept whole because `.tm-headline` is live (Alert.tsx): partial selector pruning is out of scope.
 
 - `.tm-typography`
 - `.tm-headline-h1`

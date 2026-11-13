@@ -20,13 +20,9 @@ const FILES = [
 ]
 
 const REMOVED_CLASSES = [
-  'tm-typography',
-  'tm-headline-h1',
-  'tm-headline-h2',
-  'tm-headline-h3',
-  'tm-nav-text',
-  'tm-body-large',
-  'tm-caption',
+  // `.tm-typography, .tm-headline, .tm-headline-h1, ...` (typography.css) is a
+  // mixed group kept whole because `.tm-headline` is live (Alert.tsx), so the
+  // group-only classes are intentionally not listed here.
   'tm-text-xs',
   'tm-text-6xl',
   'tm-font-regular',
