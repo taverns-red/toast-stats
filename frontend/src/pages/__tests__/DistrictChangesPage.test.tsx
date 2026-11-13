@@ -182,7 +182,7 @@ describe('DistrictChangesPage', () => {
       container.querySelector('.district-detail-page-header h1')
     ).not.toBeNull()
     expect(screen.getByTestId('district-detail-lede')).toHaveTextContent(
-      /what changed/i
+      /changes between two dates/i
     )
   })
 
