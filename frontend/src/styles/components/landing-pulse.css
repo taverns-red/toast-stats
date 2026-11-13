@@ -364,11 +364,18 @@
   }
 
   .world-pulse__table thead th {
+    vertical-align: bottom; /* text bottoms line up across the row (#2651) */
     white-space: normal;
     overflow-wrap: normal;
     font-size: var(--tm-font-size-sm);
     font-weight: 700;
     color: var(--ink-3);
+  }
+
+  /* The base layer's span line-height would make the short/long labels taller
+     than a plain header's text; inherit the th's so the bottoms match. */
+  .world-pulse__table thead th span {
+    line-height: inherit;
   }
 
   /* Re-review R1: when words could break anywhere, with ~48px numeric columns
