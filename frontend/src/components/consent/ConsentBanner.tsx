@@ -25,6 +25,13 @@ const LABEL: Record<ConsentLevel, string> = {
   none: 'none',
 }
 
+// Decline first, at every width (D10).
+const CHOICES = [
+  ['none', 'Keep none'],
+  ['minimal', 'Keep minimal'],
+  ['all', 'Keep all'],
+] as const
+
 function useAfterLoadAndIdle(immediate: boolean): boolean {
   const [ready, setReady] = useState(immediate)
   useEffect(() => {
@@ -110,6 +117,39 @@ export const ConsentBanner: React.FC<{ immediate?: boolean }> = ({
           ? 'May we count visits with Google Analytics?'
           : `Your choice is ${LABEL[state.level]}. You can change it here.`}
       </p>
+      <div className="consent-banner__actions">
+        {CHOICES.map(([level, label], i) => (
+          <React.Fragment key={level}>
+            <button
+              id={level === 'minimal' ? 'consent-banner-minimal' : undefined}
+              type="button"
+              className="consent-banner__button"
+              data-detail={level === 'minimal' ? '' : undefined}
+              onClick={() => {
+                setConsent(level)
+                restoreFocusAfterConsent()
+              }}
+            >
+              {label}
+            </button>
+            {/* Details sits right after the decline option and before
+                everything it reveals (Keep minimal, the link), so keyboard
+                and screen-reader users reach the revealed content going
+                forward from it. */}
+            {i === 0 && !reopened && (
+              <button
+                type="button"
+                className="consent-banner__details"
+                aria-expanded={expanded}
+                aria-controls="consent-banner-more consent-banner-minimal"
+                onClick={() => setDetailsOpen(open => !open)}
+              >
+                Details
+              </button>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
       <p
         id="consent-banner-more"
         className="consent-banner__more consent-banner__detail"
@@ -118,40 +158,6 @@ export const ConsentBanner: React.FC<{ immediate?: boolean }> = ({
           What each choice stores
         </Link>
       </p>
-      <div className="consent-banner__actions">
-        {(
-          [
-            ['none', 'Keep none'],
-            ['minimal', 'Keep minimal'],
-            ['all', 'Keep all'],
-          ] as const
-        ).map(([level, label]) => (
-          <button
-            key={level}
-            id={level === 'minimal' ? 'consent-banner-minimal' : undefined}
-            type="button"
-            className="consent-banner__button"
-            data-detail={level === 'minimal' ? '' : undefined}
-            onClick={() => {
-              setConsent(level)
-              restoreFocusAfterConsent()
-            }}
-          >
-            {label}
-          </button>
-        ))}
-        {!reopened && (
-          <button
-            type="button"
-            className="consent-banner__details"
-            aria-expanded={expanded}
-            aria-controls="consent-banner-more consent-banner-minimal"
-            onClick={() => setDetailsOpen(open => !open)}
-          >
-            Details
-          </button>
-        )}
-      </div>
       {reopened && (
         <button
           type="button"
