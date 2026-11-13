@@ -1,5 +1,5 @@
 /* DivisionRecognitionChip (#1833, #1862) — a division's recognition status as
- * glyph + text + tone, so it never rests on colour (WCAG 1.4.1). Net loss
+ * glyph + text + tone, so it never rests on colour (WCAG 1.4.1). Net Loss
  * outranks the tier, matching the desktop DivisionSummary badge. Shared by the
  * phone division rows and the phone progress-summary disclosures so the same
  * datum reads identically on one page (lesson 052). Styled by `.mobile-chip`
@@ -22,7 +22,7 @@ export function divisionChip(division: DivisionPerformance): DivisionChipInfo {
     distinguishedClubs: division.distinguishedClubs,
   })
   if (!gap.meetsNoNetLossRequirement)
-    return { glyph: '✗', label: 'Net loss', tone: 'bad' }
+    return { glyph: '✗', label: 'Net Loss', tone: 'bad' }
   switch (division.status) {
     case 'presidents-distinguished':
       return { glyph: '★', label: "President's", tone: 'good' }

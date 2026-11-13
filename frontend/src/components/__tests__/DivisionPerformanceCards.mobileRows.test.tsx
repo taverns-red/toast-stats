@@ -109,7 +109,7 @@ describe('DivisionPerformanceCards < 768 px — division rows (#1833)', () => {
     renderCards()
     const [a, b, c] = screen.getAllByTestId('mobile-row')
     expect(a).toHaveTextContent('★ Distinguished')
-    expect(b).toHaveTextContent('✗ Net loss')
+    expect(b).toHaveTextContent('✗ Net Loss')
     expect(b).toHaveTextContent('−2')
     expect(c).toHaveTextContent("★ President's")
   })

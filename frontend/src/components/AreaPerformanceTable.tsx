@@ -6,6 +6,8 @@ import {
   calculateDistinguishedPercentage,
 } from '../utils/areaGapAnalysis'
 import { renderRecognitionBadge } from '../utils/areaRecognitionBadge'
+import { CriterionCell } from './dataTable/cells/CriterionCell'
+import { StaticTableScroll } from './dataTable/StaticTableScroll'
 import {
   PriorityColumnsTable,
   type PriorityMetric,
@@ -20,25 +22,6 @@ interface AreaPerformanceTableProps {
   /** Accessible name of the scroll region. Must be unique per page when
    *  several tables render (axe landmark-unique), e.g. one per division. */
   label?: string
-}
-
-/**
- * Get styling for visit status indicator
- * Meets threshold: TM Loyal Blue, does not meet: TM True Maroon
- */
-const getVisitStatusStyle = (meetsThreshold: boolean): string => {
-  return meetsThreshold ? 'text-tm-loyal-blue' : 'text-tm-true-maroon'
-}
-
-/**
- * Format visit status display
- */
-const formatVisitStatus = (
-  completed: number,
-  required: number,
-  meetsThreshold: boolean
-): string => {
-  return `${completed}/${required} ${meetsThreshold ? '✓' : '✗'}`
 }
 
 /**
@@ -78,10 +61,12 @@ const gapCell = (gap: {
   achievable: boolean
 }) => formatGap(gap.distinguishedClubsNeeded, gap.achieved, gap.achievable)
 
+/** Visits completed of required, then marker plus "Met" / "Not met" (#2718):
+ *  the outcome never rests on colour or a tick/cross glyph. */
 const visitCell = (v: AreaPerformance['firstRoundVisits']) => (
-  <span className={`font-medium ${getVisitStatusStyle(v.meetsThreshold)}`}>
-    {formatVisitStatus(v.completed, v.required, v.meetsThreshold)}
-  </span>
+  <CriterionCell met={v.meetsThreshold}>
+    {v.completed}/{v.required}
+  </CriterionCell>
 )
 
 const PHONE_METRICS: PriorityMetric<AreaPerformance, never>[] = [
@@ -248,179 +233,48 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
   )
 
   const fullTable = (
-    <table className="w-full table-auto border-collapse">
-      <thead className="bg-tm-cool-gray-10 border-b-2 border-tm-loyal-blue">
+    <table className="dt entity-table entity-table--areas">
+      <caption className="sr-only">Recognition by area</caption>
+      <thead>
         <tr>
-          {/* Area column header */}
-          <th
-            scope="col"
-            className="px-4 py-3 text-left font-semibold text-gray-900 font-tm-headline"
-            style={{ fontSize: '14px', minHeight: '44px' }}
-          >
-            Area
+          <th scope="col">Area</th>
+          <th scope="col" className="entity-table__c">
+            Paid / Base
+            <span className="entity-table__sub">(≥ club base required)</span>
           </th>
-
-          {/* Paid/Base column header - Requirement 9.2 */}
-          <th
-            scope="col"
-            className="px-4 py-3 text-center font-tm-headline"
-            style={{ minHeight: '44px' }}
-          >
-            <div
-              className="font-semibold text-gray-900"
-              style={{ fontSize: '14px' }}
-            >
-              Paid / Base
-            </div>
-            <div
-              className="font-normal text-gray-500"
-              style={{ fontSize: '11px' }}
-            >
-              (≥ club base required)
-            </div>
+          <th scope="col" className="entity-table__c">
+            Distinguished
+            <span className="entity-table__sub">(of club base)</span>
           </th>
-
-          {/* Distinguished column header - Requirement 9.3 */}
-          <th
-            scope="col"
-            className="px-4 py-3 text-center font-tm-headline"
-            style={{ minHeight: '44px' }}
-          >
-            <div
-              className="font-semibold text-gray-900"
-              style={{ fontSize: '14px' }}
-            >
-              Distinguished
-            </div>
-            <div
-              className="font-normal text-gray-500"
-              style={{ fontSize: '11px' }}
-            >
-              (of club base)
-            </div>
+          <th scope="col" className="entity-table__c">
+            First Round Visits
+            <span className="entity-table__sub">(75% of club base)</span>
           </th>
-
-          {/* First Round Visits column header */}
-          <th
-            scope="col"
-            className="px-4 py-3 text-center font-tm-headline"
-            style={{ minHeight: '44px' }}
-          >
-            <div
-              className="font-semibold text-gray-900"
-              style={{ fontSize: '14px' }}
-            >
-              First Round Visits
-            </div>
-            <div
-              className="font-normal text-gray-500"
-              style={{ fontSize: '11px' }}
-            >
-              (75% of club base)
-            </div>
+          <th scope="col" className="entity-table__c">
+            Second Round Visits
+            <span className="entity-table__sub">(75% of club base)</span>
           </th>
-
-          {/* Second Round Visits column header */}
-          <th
-            scope="col"
-            className="px-4 py-3 text-center font-tm-headline"
-            style={{ minHeight: '44px' }}
-          >
-            <div
-              className="font-semibold text-gray-900"
-              style={{ fontSize: '14px' }}
-            >
-              Second Round Visits
-            </div>
-            <div
-              className="font-normal text-gray-500"
-              style={{ fontSize: '11px' }}
-            >
-              (75% of club base)
-            </div>
-          </th>
-
-          {/* Recognition column header - Requirement 9.5 */}
-          <th
-            scope="col"
-            className="px-4 py-3 text-center font-semibold text-gray-900 font-tm-headline"
-            style={{ fontSize: '14px', minHeight: '44px' }}
-          >
+          <th scope="col" className="entity-table__c">
             Recognition
           </th>
-
-          {/* Gap to D column header - Requirement 9.6 */}
-          <th
-            scope="col"
-            className="px-4 py-3 text-center font-tm-headline"
-            style={{ minHeight: '44px' }}
-          >
-            <div
-              className="font-semibold text-gray-900"
-              style={{ fontSize: '14px' }}
-            >
-              Gap to D
-            </div>
-            <div
-              className="font-normal text-gray-500"
-              style={{ fontSize: '11px' }}
-            >
-              (50% of base)
-            </div>
+          <th scope="col" className="entity-table__c">
+            Gap to D<span className="entity-table__sub">(50% of base)</span>
           </th>
-
-          {/* Gap to S column header - Requirement 9.6 */}
-          <th
-            scope="col"
-            className="px-4 py-3 text-center font-tm-headline"
-            style={{ minHeight: '44px' }}
-          >
-            <div
-              className="font-semibold text-gray-900"
-              style={{ fontSize: '14px' }}
-            >
-              Gap to S
-            </div>
-            <div
-              className="font-normal text-gray-500"
-              style={{ fontSize: '11px' }}
-            >
-              (50% + 1)
-            </div>
+          <th scope="col" className="entity-table__c">
+            Gap to S<span className="entity-table__sub">(50% + 1)</span>
           </th>
-
-          {/* Gap to P column header - Requirement 9.6 */}
-          <th
-            scope="col"
-            className="px-4 py-3 text-center font-tm-headline"
-            style={{ minHeight: '44px' }}
-          >
-            <div
-              className="font-semibold text-gray-900"
-              style={{ fontSize: '14px' }}
-            >
-              Gap to P
-            </div>
-            <div
-              className="font-normal text-gray-500"
-              style={{ fontSize: '11px' }}
-            >
-              (base+1, 50%+1)
-            </div>
+          <th scope="col" className="entity-table__c">
+            Gap to P<span className="entity-table__sub">(base+1, 50%+1)</span>
           </th>
         </tr>
       </thead>
-      <tbody className="bg-white divide-y divide-gray-200">
-        {/* Render row for each area */}
+      <tbody>
         {sortedAreas.map(area => {
-          // Calculate gap analysis for this area
           const gapAnalysis = calculateAreaGapAnalysis({
             clubBase: area.clubBase,
             paidClubs: area.paidClubs,
             distinguishedClubs: area.distinguishedClubs,
           })
-
-          // Calculate percentages
           const paidPercentage = calculatePaidClubsPercentage(
             area.clubBase,
             area.paidClubs
@@ -435,124 +289,38 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
           const badge = renderRecognitionBadge(area.recognitionState)
 
           return (
-            <tr
-              key={area.areaId}
-              className="hover:bg-gray-50 transition-colors"
-            >
-              {/* Area Identifier */}
-              <td className="px-4 py-3 whitespace-nowrap">
-                <div
-                  className="font-medium text-gray-900 font-tm-body"
-                  style={{ fontSize: '14px' }}
-                >
-                  {area.areaId}
-                </div>
+            <tr key={area.areaId}>
+              <th scope="row">{area.areaId}</th>
+              <td className="entity-table__c tabular">
+                {area.paidClubs}/{area.clubBase} {paidPercentage}%
               </td>
-
-              {/* Paid/Base with percentage - Requirement 9.2 */}
-              <td
-                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                style={{ fontSize: '14px' }}
-              >
-                <span className="text-gray-900 tabular-nums">
-                  {area.paidClubs}/{area.clubBase} {paidPercentage}%
-                </span>
+              <td className="entity-table__c tabular">
+                {area.distinguishedClubs}/{area.clubBase}{' '}
+                {distinguishedPercentage}%
               </td>
-
-              {/* Distinguished with percentage - Requirement 9.3 */}
-              <td
-                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                style={{ fontSize: '14px' }}
-              >
-                <span className="text-gray-900 tabular-nums">
-                  {area.distinguishedClubs}/{area.clubBase}{' '}
-                  {distinguishedPercentage}%
-                </span>
+              <td className="entity-table__c">
+                {visitCell(area.firstRoundVisits)}
               </td>
-
-              {/* First Round Visit Status */}
-              <td
-                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                style={{ fontSize: '14px' }}
-              >
+              <td className="entity-table__c">
+                {visitCell(area.secondRoundVisits)}
+              </td>
+              <td className="entity-table__c">
                 <span
-                  className={`font-medium tabular-nums ${getVisitStatusStyle(area.firstRoundVisits.meetsThreshold)}`}
-                >
-                  {formatVisitStatus(
-                    area.firstRoundVisits.completed,
-                    area.firstRoundVisits.required,
-                    area.firstRoundVisits.meetsThreshold
-                  )}
-                </span>
-              </td>
-
-              {/* Second Round Visit Status */}
-              <td
-                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                style={{ fontSize: '14px' }}
-              >
-                <span
-                  className={`font-medium tabular-nums ${getVisitStatusStyle(area.secondRoundVisits.meetsThreshold)}`}
-                >
-                  {formatVisitStatus(
-                    area.secondRoundVisits.completed,
-                    area.secondRoundVisits.required,
-                    area.secondRoundVisits.meetsThreshold
-                  )}
-                </span>
-              </td>
-
-              {/* Recognition Badge - Requirement 9.5 */}
-              <td className="px-4 py-3 whitespace-nowrap text-center">
-                <span
-                  className={`px-2 py-1 text-xs font-medium rounded-full border ${badge.className}`}
+                  className={`px-2 py-1 text-sm font-medium rounded-full border ${badge.className}`}
                   aria-label={`Recognition status: ${badge.label}`}
                   title={badge.tooltip}
                 >
                   {badge.label}
                 </span>
               </td>
-
-              {/* Gap to D - Requirement 9.6 */}
-              <td
-                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                style={{ fontSize: '14px' }}
-              >
-                <span className="text-gray-900 tabular-nums">
-                  {formatGap(
-                    gapAnalysis.distinguishedGap.distinguishedClubsNeeded,
-                    gapAnalysis.distinguishedGap.achieved,
-                    gapAnalysis.distinguishedGap.achievable
-                  )}
-                </span>
+              <td className="entity-table__c tabular">
+                {gapCell(gapAnalysis.distinguishedGap)}
               </td>
-
-              {/* Gap to S - Requirement 9.6 */}
-              <td
-                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                style={{ fontSize: '14px' }}
-              >
-                <span className="text-gray-900 tabular-nums">
-                  {formatGap(
-                    gapAnalysis.selectGap.distinguishedClubsNeeded,
-                    gapAnalysis.selectGap.achieved,
-                    gapAnalysis.selectGap.achievable
-                  )}
-                </span>
+              <td className="entity-table__c tabular">
+                {gapCell(gapAnalysis.selectGap)}
               </td>
-
-              {/* Gap to P - Requirement 9.6 */}
-              <td
-                className="px-4 py-3 whitespace-nowrap text-center font-tm-body"
-                style={{ fontSize: '14px' }}
-              >
-                <span className="text-gray-900 tabular-nums">
-                  {formatGap(
-                    gapAnalysis.presidentsGap.distinguishedClubsNeeded,
-                    gapAnalysis.presidentsGap.achieved,
-                    gapAnalysis.presidentsGap.achievable
-                  )}
-                </span>
+              <td className="entity-table__c tabular">
+                {gapCell(gapAnalysis.presidentsGap)}
               </td>
             </tr>
           )
@@ -561,8 +329,8 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
     </table>
   )
 
-  // Below 768 (#1834): area + 2 chosen metrics, no side-scroll; the complete
-  // 9-column table moves into the full-screen sheet. ≥768 is unchanged.
+  // Below 1024 (#1834, #2718): area + 2 chosen metrics, no side-scroll; the
+  // complete 9-column table moves into the full-screen sheet.
   return (
     <PriorityColumnsTable<AreaPerformance, never>
       label={label}
@@ -573,19 +341,12 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
       metrics={PHONE_METRICS}
       defaultMetricIds={['paid', 'award']}
       fullTableTitle={`${label} — all columns`}
+      // The nine-column table needs about 730px, which the 654px content box
+      // of a 768px tablet cannot hold: the phone layout runs to 1024 (UNIT-16).
+      breakpoint={1024}
       sheetTable={fullTable}
       fullTable={
-        // role=region + tabIndex + aria-label make the horizontal scroll
-        // keyboard-operable (WCAG 2.1.1, axe scrollable-region-focusable,
-        // #1660), as RegionsLeaderboard's does (#689).
-        <div
-          className="overflow-x-auto"
-          role="region"
-          tabIndex={0}
-          aria-label={`${label} — scroll horizontally to see all columns`}
-        >
-          {fullTable}
-        </div>
+        <StaticTableScroll label={label}>{fullTable}</StaticTableScroll>
       }
     />
   )

@@ -228,33 +228,29 @@ describe('AreaPerformanceTable', () => {
   })
 
   describe('Requirement 8.7: Apply responsive table styling', () => {
-    it('should wrap table in overflow-x-auto container for horizontal scrolling', () => {
+    it('should wrap table in a sideways scroll region', () => {
       const { container } = render(<AreaPerformanceTable areas={[mockArea1]} />)
 
-      const wrapper = container.querySelector('.overflow-x-auto')
+      const wrapper = container.querySelector('.dt-scroll')
       expect(wrapper).toBeInTheDocument()
     })
 
-    it('should apply table-auto class for responsive column sizing', () => {
+    // #2718: sizing and width come from the shared .dt / .entity-table styles
+    // (auto layout, 100% width), not Tailwind utilities.
+    it('should use the shared table styles for sizing', () => {
       const { container } = render(<AreaPerformanceTable areas={[mockArea1]} />)
 
       const table = container.querySelector('table')
-      expect(table?.classList.contains('table-auto')).toBe(true)
-    })
-
-    it('should apply w-full class for full width table', () => {
-      const { container } = render(<AreaPerformanceTable areas={[mockArea1]} />)
-
-      const table = container.querySelector('table')
-      expect(table?.classList.contains('w-full')).toBe(true)
+      expect(table?.classList.contains('dt')).toBe(true)
+      expect(table?.classList.contains('entity-table')).toBe(true)
     })
   })
 
   describe('Requirement 9.3: Maintain table accessibility', () => {
-    it('should enable horizontal scrolling on mobile through overflow-x-auto', () => {
+    it('should enable horizontal scrolling through the scroll region', () => {
       const { container } = render(<AreaPerformanceTable areas={[mockArea1]} />)
 
-      const wrapper = container.querySelector('.overflow-x-auto')
+      const wrapper = container.querySelector('.dt-scroll')
       expect(wrapper).toBeInTheDocument()
 
       // Verify the wrapper contains the table
@@ -268,7 +264,7 @@ describe('AreaPerformanceTable', () => {
     it('makes the horizontal scroll region keyboard-focusable and named', () => {
       const { container } = render(<AreaPerformanceTable areas={[mockArea1]} />)
 
-      const wrapper = container.querySelector('.overflow-x-auto')!
+      const wrapper = container.querySelector('.dt-scroll')!
       expect(wrapper).toHaveAttribute('tabindex', '0')
       expect(wrapper).toHaveAttribute('role', 'region')
       expect(wrapper.getAttribute('aria-label')).toMatch(/area performance/i)
@@ -285,7 +281,7 @@ describe('AreaPerformanceTable', () => {
       )
 
       expect(
-        container.querySelector('.overflow-x-auto')!.getAttribute('aria-label')
+        container.querySelector('.dt-scroll')!.getAttribute('aria-label')
       ).toMatch(/^Division A area performance/)
     })
 
@@ -358,21 +354,14 @@ describe('AreaPerformanceTable', () => {
   })
 
   describe('Brand compliance', () => {
-    it('should use Toastmasters brand colors for header', () => {
+    // #2718: headers take the shared 14px/600 token styles (data-table.css),
+    // so no per-header font or colour utility classes remain.
+    it('should take header type and colour from the shared table tokens', () => {
       const { container } = render(<AreaPerformanceTable areas={[mockArea1]} />)
 
-      const thead = container.querySelector('thead')
-      expect(thead?.classList.contains('bg-tm-cool-gray-10')).toBe(true)
-      expect(thead?.classList.contains('border-tm-loyal-blue')).toBe(true)
-    })
-
-    it('should use Montserrat font for column headers', () => {
-      const { container } = render(<AreaPerformanceTable areas={[mockArea1]} />)
-
-      const headers = container.querySelectorAll('th')
-      headers.forEach(header => {
-        expect(header.classList.contains('font-tm-headline')).toBe(true)
-      })
+      for (const th of container.querySelectorAll('th')) {
+        expect(th.className).not.toMatch(/\b(text-gray|font-tm|text-xs)/)
+      }
     })
   })
 

@@ -246,6 +246,32 @@
     white-space: nowrap;
   }
 
+  /* ── Criterion cell: figure, then marker + "Met" / "Not met" ───────────
+     Reuses the health shapes (tick, circle with a cross), so the outcome is
+     never colour alone. May wrap: a phone metric column is narrow. */
+  .dt-criterion {
+    position: relative; /* contains any sr-only text, as for .dt-health */
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 6px;
+    font-size: var(--dt-font);
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  .dt-criterion__figure {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dt-criterion__outcome {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
   /* ── Tier cell: plain text, "provisional" on its own line ─────────────── */
   .dt-tier {
     position: relative; /* contains the sr-only text, as for .dt-health */

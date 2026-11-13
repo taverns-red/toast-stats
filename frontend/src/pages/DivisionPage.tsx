@@ -7,7 +7,7 @@
 
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
@@ -28,16 +28,15 @@ import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearC
 import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { OfficerTrainingSummary } from '../components/training/OfficerTrainingSummary'
-import { HealthStatusCell } from '../components/dataTable/cells/HealthStatusCell'
-import { TierCell } from '../components/dataTable/cells/TierCell'
-import { isProvisionallyDistinguished } from '../utils/provisionalDistinguished'
+import { ClubHealthTable } from '../components/ClubHealthTable'
+import { HealthLegend } from '../components/dataTable/cells/HealthLegend'
+import { areaHeadingLabel } from '../utils/areaHeading'
 
 const DivisionPage: React.FC = () => {
   const { districtId, divId } = useParams<{
     districtId: string
     divId: string
   }>()
-  const navigate = useNavigate()
   useDocumentTitle(`Division ${divId?.toUpperCase()} — District ${districtId}`)
   const { search } = useLocation()
   const isMobile = useIsMobile()
@@ -142,7 +141,7 @@ const DivisionPage: React.FC = () => {
     // offers Try again; the old card had neither and touched both screen
     // edges at 375.
     return (
-      <div className="app-shell__page district-detail-page-root">
+      <div className="app-shell__page entity-page district-detail-page-root">
         <SubpageBreadcrumb
           crumbs={[
             { label: `District ${districtId}`, to: `/district/${districtId}` },
@@ -219,7 +218,7 @@ const DivisionPage: React.FC = () => {
   const districtUrl = `/district/${districtId}`
 
   return (
-    <div className="app-shell__page district-detail-page-root">
+    <div className="app-shell__page entity-page district-detail-page-root">
       {/* Phone context bar (#1831): below 768 it replaces the breadcrumb and
           the header below; PY/date are this page's own state (R3). */}
       <ContextBar
@@ -295,7 +294,10 @@ const DivisionPage: React.FC = () => {
           <LoadingSkeleton variant="table" count={3} />
         ) : (
           divisionPerformance && (
-            <DivisionPerformanceCard division={divisionPerformance} />
+            <>
+              <h2 className="entity-section-heading">Recognition</h2>
+              <DivisionPerformanceCard division={divisionPerformance} />
+            </>
           )
         )}
       </div>
@@ -370,128 +372,63 @@ const DivisionPage: React.FC = () => {
         </p>
       )}
 
-      {!isBodyPending &&
-        areas.map(area => (
-          <section key={area.areaId} style={{ marginBottom: 32 }}>
-            <h2
-              data-testid="division-area-heading"
-              style={{
-                fontFamily: 'var(--serif)',
-                fontSize: 18,
-                fontWeight: 700,
-                margin: '0 0 12px',
-              }}
-            >
-              <Link
-                to={`/district/${districtId}/division/${divId}/area/${area.areaId}`}
-              >
-                Area {area.areaId} — {area.areaName}
-              </Link>
-              <span
-                style={{
-                  fontFamily: 'var(--sans)',
-                  fontSize: 13,
-                  fontWeight: 400,
-                  color: 'var(--ink-3)',
-                  marginLeft: 8,
-                }}
-              >
-                {area.clubs.length} club{area.clubs.length === 1 ? '' : 's'}
-              </span>
-            </h2>
+      {/* One health-shape legend for every area table below (#2707). */}
+      {!isBodyPending && clubs.length > 0 && <HealthLegend />}
 
-            {/* CC-4 (#871): the 4-col table overflows 375px and clips the
-              Status chip, so mobile de-tables to a stacked card list; desktop
-              keeps the table unchanged. */}
-            {isMobile ? (
-              <ClubMiniList
-                clubs={area.clubs}
-                clubTo={c => `/district/${districtId}/club/${c.clubId}`}
-              />
-            ) : (
-              <div className="districts-rankings-table-wrap">
-                <div className="overflow-x-auto">
-                  <table
-                    className="districts-rankings-table"
-                    aria-label="Clubs and their health status"
+      {!isBodyPending &&
+        areas.map(area => {
+          const areaLabel = areaHeadingLabel(area.areaId, area.areaName)
+          return (
+            <section key={area.areaId} style={{ marginBottom: 32 }}>
+              <h2
+                data-testid="division-area-heading"
+                className="entity-section-heading"
+              >
+                {/* The area name prints once; the chevron says it is a link,
+                    which a phone has no hover to show (UNIT-11). */}
+                <Link
+                  className="entity-heading-link"
+                  to={`/district/${districtId}/division/${divId}/area/${area.areaId}`}
+                >
+                  {areaLabel}
+                  <svg
+                    className="entity-heading-link__chevron"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
                   >
-                    <thead>
-                      <tr>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Club
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Health
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Members
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Distinguished
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {area.clubs.map(c => {
-                        const last =
-                          c.membershipTrend[c.membershipTrend.length - 1]
-                        return (
-                          <tr
-                            key={c.clubId}
-                            className="cursor-pointer"
-                            onClick={() =>
-                              navigate(
-                                `/district/${districtId}/club/${c.clubId}`
-                              )
-                            }
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {/* CC-7 (#872): a real <Link> on the club name —
-                                middle-click / open-in-new-tab work; whole-row
-                                click stays as a mouse convenience (stop the
-                                bubble so a name-click navigates once). */}
-                              <Link
-                                to={`/district/${districtId}/club/${c.clubId}`}
-                                onClick={e => e.stopPropagation()}
-                                className="clubs-name-link text-sm font-medium text-gray-900"
-                              >
-                                {c.clubName}
-                              </Link>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              <HealthStatusCell status={c.currentStatus} />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
-                              {last?.count ?? '—'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <TierCell
-                                level={c.distinguishedLevel}
-                                provisional={isProvisionallyDistinguished(c)}
-                              />
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </section>
-        ))}
+                    <path d="M6 3 L11 8 L6 13" />
+                  </svg>
+                </Link>
+                <span className="entity-section__count">
+                  {area.clubs.length} club{area.clubs.length === 1 ? '' : 's'}
+                </span>
+              </h2>
+
+              {/* CC-4 (#871): the table is wider than a phone, so mobile
+                  de-tables to a stacked card list. */}
+              {isMobile ? (
+                <ClubMiniList
+                  clubs={area.clubs}
+                  clubTo={c => `/district/${districtId}/club/${c.clubId}`}
+                />
+              ) : (
+                <ClubHealthTable
+                  clubs={area.clubs}
+                  districtId={districtId ?? ''}
+                  label={`Clubs in ${areaLabel}`}
+                />
+              )}
+            </section>
+          )
+        })}
     </div>
   )
 }

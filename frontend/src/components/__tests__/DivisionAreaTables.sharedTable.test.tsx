@@ -240,7 +240,8 @@ describe('ClubHealthTable, the division and area club table (#2718)', () => {
     renderTable()
     const html = screen.getByRole('table').innerHTML
     expect(html).not.toMatch(/\btext-xs\b/)
-    expect(html).not.toMatch(/\bhidden\b|\bmax-md:hidden\b/)
+    // A hiding utility class (hidden, md:hidden, max-md:hidden), not aria-hidden.
+    expect(html).not.toMatch(/class="(?:[^"]*[\s:])?hidden\b/)
   })
 })
 

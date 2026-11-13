@@ -365,7 +365,7 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
 
       // Tables should be in scrollable containers
       tables.forEach(table => {
-        const scrollContainer = table.closest('.overflow-x-auto')
+        const scrollContainer = table.closest('.dt-scroll')
         expect(scrollContainer).toBeInTheDocument()
       })
     })
