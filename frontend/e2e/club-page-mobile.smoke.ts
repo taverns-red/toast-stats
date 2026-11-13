@@ -372,21 +372,30 @@ for (const width of [375, 1280]) {
         document.querySelector('.club-hero')!.getBoundingClientRect().height
       ),
       // #2655 UNIT-15: the meeting line wraps instead of being cut, so a
-      // club with a long schedule and address owns the lines past two.
-      extraFacts: (() => {
+      // club with a long schedule and address owns ONE line past two (a
+      // fourth line is never excluded, and fails the line count below).
+      factLines: (() => {
         const facts = document.querySelector('.club-meets__facts')!
         const lineH = parseFloat(getComputedStyle(facts).lineHeight)
-        const lines = Math.round(facts.getBoundingClientRect().height / lineH)
-        return Math.max(0, lines - 2) * lineH
+        return Math.round(facts.getBoundingClientRect().height / lineH)
+      })(),
+      factLineH: (() => {
+        const facts = document.querySelector('.club-meets__facts')!
+        return parseFloat(getComputedStyle(facts).lineHeight)
       })(),
       docOverflow:
         document.documentElement.scrollWidth -
         document.documentElement.clientWidth,
     }))
     if (width < 768) {
+      const extraFacts = m.factLines >= 3 ? m.factLineH : 0
       expect(
-        m.heroH - m.extraFacts,
-        `hero height ${m.heroH}px, ${m.extraFacts}px of it a third+ meeting line`
+        m.factLines,
+        'meeting lines on the phone hero'
+      ).toBeLessThanOrEqual(3)
+      expect(
+        m.heroH - extraFacts,
+        `hero height ${m.heroH}px, ${extraFacts}px of it a third meeting line`
       ).toBeLessThanOrEqual(HERO_MAX_H)
     }
     expect(m.docOverflow).toBe(0)
