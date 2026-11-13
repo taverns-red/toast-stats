@@ -65,16 +65,69 @@ describe('DistrictKpiStickyLine (#2708)', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('is one line of the four headline figures, labelled and compact', () => {
+  it('names the four headline figures in whole words', () => {
     render(<DistrictKpiStickyLine kpis={kpis} />)
     const items = line().querySelectorAll('.district-kpi-stuck__item')
     expect(items).toHaveLength(4)
-    expect(line().textContent).toContain('Paid')
-    expect(line().textContent).toContain('888')
-    expect(line().textContent).toContain('8.9K')
-    expect(line().textContent).toContain('120')
-    expect(line().textContent).toContain('+12')
-    expect(line().textContent).toContain('−1.2K')
+    const text = line().textContent ?? ''
+    expect(text).toContain('Paid clubs')
+    expect(text).toContain('Payments')
+    expect(text).toContain('Distinguished')
+    expect(text).toContain('888')
+    expect(text).toContain('8.9K')
+    expect(text).toContain('120')
+    expect(text).not.toMatch(/\bPmts\b|\bDist\b/)
+  })
+
+  it('writes the provisional extra as the strip does, never a bare +N (#2554, D5)', () => {
+    render(<DistrictKpiStickyLine kpis={kpis} />)
+    const dist = line().querySelectorAll('.district-kpi-stuck__item')[2]
+    expect(dist?.textContent).toContain('120')
+    expect(dist?.textContent).toContain('+12 provisional')
+  })
+
+  it('says qualifying today when the Distinguished count is not confirmed (#2580, D5)', () => {
+    render(
+      <DistrictKpiStickyLine
+        kpis={{
+          ...kpis,
+          distinguishedClubs: {
+            ...kpis.distinguishedClubs,
+            provisional: undefined,
+            basis: 'qualifying-today',
+          },
+        }}
+      />
+    )
+    const dist = line().querySelectorAll('.district-kpi-stuck__item')[2]
+    expect(dist?.textContent).toContain('qualifying today')
+    expect(dist?.textContent).not.toMatch(/provisional/)
+  })
+
+  it('shows no extra when nothing is provisional', () => {
+    render(
+      <DistrictKpiStickyLine
+        kpis={{
+          ...kpis,
+          distinguishedClubs: { ...kpis.distinguishedClubs, provisional: 0 },
+        }}
+      />
+    )
+    const dist = line().querySelectorAll('.district-kpi-stuck__item')[2]
+    expect(dist?.textContent).not.toMatch(/\+\d|provisional|qualifying/)
+  })
+
+  it('names the basis of Net: payments against the program-year base (D9)', () => {
+    render(<DistrictKpiStickyLine kpis={kpis} />)
+    const net = line().querySelectorAll('.district-kpi-stuck__item')[3]
+    expect(net?.textContent).toContain('−1.2K')
+    expect(net?.textContent).toContain('payments vs. program-year base')
+  })
+
+  it('marks Payments as the item dropped whole at narrow widths', () => {
+    render(<DistrictKpiStickyLine kpis={kpis} />)
+    const pay = line().querySelectorAll('.district-kpi-stuck__item')[1]
+    expect(pay).toHaveClass('district-kpi-stuck__item--optional')
   })
 
   it('is hidden from assistive tech: the same figures sit in the strip above', () => {

@@ -160,7 +160,7 @@ test('no vertically sticky element taller than 64px on /district/61 at 768px', a
   expect(tall, tall.join('\n')).toEqual([])
 })
 
-/* #2708 (D4): once the KPI block has scrolled away, one opaque line of at most
+/* #2708 (D4): once the KPI block has scrolled away, an opaque line of at most
  * 64px pins under the top bar, at every width. The full strip itself is never
  * sticky (it was 312px tall and translucent at 1280). */
 const STUCK_LINE = '[data-testid="district-kpi-stuck-line"]'
@@ -170,7 +170,7 @@ for (const [width, height] of [
   [768, 1024],
   [1280, 900],
 ] as const) {
-  test(`stuck KPI line is one opaque line of at most ${MAX_STICKY_HEIGHT}px at ${width}px (#2708)`, async ({
+  test(`stuck KPI line is an opaque line of at most ${MAX_STICKY_HEIGHT}px at ${width}px (#2708)`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height })
@@ -197,6 +197,19 @@ for (const [width, height] of [
         background: cs.backgroundColor,
         backdrop: cs.backdropFilter,
         rowTops: Array.from(new Set(kids.map(k => Math.round(k.top)))).length,
+        // Nothing clipped: the box holds its content, and every item that is
+        // drawn sits inside it.
+        overflowX: el.scrollWidth - el.clientWidth,
+        overflowY: el.scrollHeight - el.clientHeight,
+        escaped: Array.from(el.children).filter(c => {
+          const b = c.getBoundingClientRect()
+          return (
+            b.width > 0 &&
+            (b.left < r.left - 0.5 ||
+              b.right > r.right + 0.5 ||
+              b.bottom > r.bottom + 0.5)
+          )
+        }).length,
         hit: !!probe && el.contains(probe),
         smallestFont: smallest,
         top: Math.round(r.top),
@@ -207,7 +220,11 @@ for (const [width, height] of [
     expect(m, msg).not.toBeNull()
     expect(m?.visibility, msg).toBe('visible')
     expect(m?.height, msg).toBeLessThanOrEqual(MAX_STICKY_HEIGHT)
-    expect(m?.rowTops, msg).toBe(1)
+    // One row from 600 up; at most two compact rows on a phone (no clipping).
+    expect(m?.rowTops, msg).toBeLessThanOrEqual(width >= 600 ? 1 : 2)
+    expect(m?.overflowX, msg).toBeLessThanOrEqual(0)
+    expect(m?.overflowY, msg).toBeLessThanOrEqual(0)
+    expect(m?.escaped, msg).toBe(0)
     // Opaque: an rgb() colour, or rgba() with alpha 1; and no blur.
     expect(m?.background, msg).not.toMatch(/rgba\(.*,\s*0?\.\d+\)$/)
     expect(m?.background, msg).not.toBe('rgba(0, 0, 0, 0)')

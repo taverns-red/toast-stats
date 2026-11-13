@@ -19,12 +19,18 @@ const block = (selector: string): string => {
 }
 
 describe('stuck KPI line CSS (#2708)', () => {
+  it('drops the optional item whole at narrow widths, never clips it', () => {
+    expect(code).toMatch(
+      /@media\s*\(max-width:\s*599px\)\s*\{\s*\.district-kpi-stuck__item--optional\s*\{[^}]*display:\s*none/
+    )
+  })
+
   it('is a zero-height sticky wrapper under the top bar (takes no layout, no CLS)', () => {
     const b = block('.district-kpi-stuck')
     expect(b).toMatch(/position:\s*sticky/)
     expect(b).toMatch(/top:\s*var\(--app-top-offset,\s*56px\)/)
     expect(b).toMatch(/height:\s*0/)
-    expect(b).toMatch(/z-index:\s*30/)
+    expect(b).toMatch(/z-index:\s*var\(--z-sub-bar,\s*35\)/)
   })
 
   it('clears the phone context bar below 768', () => {
@@ -33,14 +39,16 @@ describe('stuck KPI line CSS (#2708)', () => {
     )
   })
 
-  it('draws one line of at most 64px', () => {
+  it('draws at most two compact rows within 64px', () => {
     const b = block('.district-kpi-stuck__line')
     const h = b.match(/height:\s*(\d+)px/)
     expect(h).not.toBeNull()
     expect(Number(h?.[1])).toBeLessThanOrEqual(64)
     expect(b).toMatch(/position:\s*absolute/)
-    expect(b).toMatch(/flex-wrap:\s*nowrap/)
-    expect(b).toMatch(/overflow:\s*hidden/)
+    // At most two compact rows inside the cap; nothing is clipped or elided.
+    expect(b).toMatch(/flex-wrap:\s*wrap/)
+    expect(b).not.toMatch(/overflow:\s*hidden/)
+    expect(b).not.toMatch(/text-overflow/)
   })
 
   it('is opaque: the legacy surface token, no alpha, no blur', () => {
