@@ -33,7 +33,8 @@ describe('ConsentBanner (#2584)', () => {
 
   it('shows three equal buttons and none is pre-selected', () => {
     renderBanner()
-    const buttons = region()!.querySelectorAll('button')
+    // The three choices; Details (phone) is not a choice.
+    const buttons = region()!.querySelectorAll('.consent-banner__button')
     expect([...buttons].map(b => b.textContent)).toEqual([
       'Keep all',
       'Keep minimal',

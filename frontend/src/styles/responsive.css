@@ -584,7 +584,7 @@
     width: 1px;
     height: 1px;
     overflow: hidden;
-    z-index: 1000;
+    z-index: var(--z-skip-link);
     background: var(--tm-loyal-blue);
     color: var(--tm-white);
     padding: 12px 24px;
