@@ -49,9 +49,7 @@ export interface RankingCardProps {
   /** Percentile (0-100, (districts - rank) / districts: higher is better, so
    *  rank 1 is the highest). Same formula as the KPI cards (#2613). */
   percentile: number
-  /** Every district has the same value, so every district is rank 1. Shows
-   *  "Tied" instead of a rank and percentile (#2613). */
-  tied?: boolean
+
   /** Icon to display for this metric */
   icon: React.ReactNode
   /** Color scheme for the card accent */
@@ -79,7 +77,6 @@ const RankingCard: React.FC<RankingCardProps> = ({
   rank,
   totalDistricts,
   percentile,
-  tied = false,
   icon,
   colorScheme,
   previousYearRank,
@@ -94,9 +91,7 @@ const RankingCard: React.FC<RankingCardProps> = ({
   // Format percentile as ordinal (e.g., "12th percentile") (#305)
   const rounded = Math.round(percentile)
   const percentileDisplay = `${toOrdinal(rounded)} percentile`
-  const ariaSummary = tied
-    ? `${title}: Tied, every district has the same value`
-    : `${title}: Rank ${rank} of ${totalDistricts}, ${percentileDisplay}`
+  const ariaSummary = `${title}: Rank ${rank} of ${totalDistricts}, ${percentileDisplay}`
 
   if (isLoading) {
     return (
@@ -149,37 +144,27 @@ const RankingCard: React.FC<RankingCardProps> = ({
           </h3>
 
           {/* Rank display */}
-          {tied ? (
-            <div className="mb-1">
-              <span className="ranking-card__rank tm-text-black font-bold">
-                Tied
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-baseline gap-2 mb-1">
-              <span
-                className="ranking-card__rank tm-text-black font-bold"
-                aria-label={`Rank ${rank}`}
-              >
-                {rank}
-              </span>
-              <span className="tm-body-small tm-text-cool-gray">
-                of {totalDistricts}
-              </span>
-            </div>
-          )}
+          <div className="flex items-baseline gap-2 mb-1">
+            <span
+              className="ranking-card__rank tm-text-black font-bold"
+              aria-label={`Rank ${rank}`}
+            >
+              {rank}
+            </span>
+            <span className="tm-body-small tm-text-cool-gray">
+              of {totalDistricts}
+            </span>
+          </div>
 
           {/* Percentile badge */}
           <div className="flex items-center gap-2 flex-wrap">
-            {!tied && (
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 tm-rounded-lg tm-body-small font-medium ${colors.iconBg} ${colors.iconText}`}
-                role="status"
-                aria-label={percentileDisplay}
-              >
-                {percentileDisplay}
-              </span>
-            )}
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 tm-rounded-lg tm-body-small font-medium ${colors.iconBg} ${colors.iconText}`}
+              role="status"
+              aria-label={percentileDisplay}
+            >
+              {percentileDisplay}
+            </span>
 
             {/* Year-over-year change indicator */}
             {yearOverYearChange !== null && (
