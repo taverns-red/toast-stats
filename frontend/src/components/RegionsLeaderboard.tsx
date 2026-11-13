@@ -64,6 +64,12 @@ export interface RegionsLeaderboardProps {
    * an overview, so the cells say "not available".
    */
   training?: RegionsTrainingOverview | 'loading' | null
+  /**
+   * Clubs qualifying today but not yet confirmed, per region (#2580), from
+   * the date's region-rollups `distinguishedCounts`. Omitted or a region
+   * absent from the map = no extra beside that region's confirmed count.
+   */
+  provisionalByRegion?: ReadonlyMap<string, number> | undefined
 }
 
 export type RegionTrends =
