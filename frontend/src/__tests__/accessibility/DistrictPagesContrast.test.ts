@@ -9,7 +9,7 @@
  *  - dark  Divisions "Distinguished Program criteria" tier names, 1.78–3.82:1
  *  - light rank-change chip "+N": --green-600 on --loyal-50, 4.27:1
  *  - dark  rank-change chip "-N": --red-600 on the 8% red tint, 4.45:1
- *  - dark  "limited data" banner: light ink on the gold callout, 1.44–1.72:1
+ *  - dark  "limited data" banner: light ink on the gold callout, 1.44–1.72:1 (since #2642 a tint, ink stays light)
  *  - dark  Smedley/Select club badge: true-maroon on happy-yellow-30, 4.07:1
  *  - dark  Trends "Overall Improvement": text-green-900 kept #14532d, 1.65:1
  *  - light Trends "-N" deltas: text-red-600 on bg-red-50, 4.41:1
@@ -194,25 +194,23 @@ describe('district page contrast (#1660)', () => {
     )
   })
 
-  it('dark limited-data banner keeps dark ink on its gold fill', () => {
-    const gold = fillOver(
+  // The banner is a bg-tm-happy-yellow/20 tint since #2642 (it was a solid gold
+  // fill with dark ink): the dark tint is a dim wash, so the ink stays light.
+  // Its full pairing is pinned in styles/__tests__/brandUtilityContrast.test.ts.
+  it('dark limited-data banner ink clears AA on its dark tint', () => {
+    const tint = fillOver(
       prop(
-        declsFor(darkCss, "[data-theme='dark'] .bg-tm-happy-yellow"),
+        declsFor(darkCss, "[data-theme='dark'] .bg-tm-happy-yellow\\/20"),
         'background-color'
       ),
       dark.get('--bg')!,
       dark
     )
-    for (const sel of ['.text-tm-black', '.text-gray-600']) {
-      const fg = resolveColor(
-        prop(
-          declsFor(darkCss, `[data-theme='dark'] .bg-tm-happy-yellow ${sel}`),
-          'color'
-        ),
-        dark
-      )
-      expectAA(fg, gold, `banner ${sel}`)
-    }
+    // dark-mode.css maps .text-tm-black to --text-heading, which aliases --ink.
+    expect(
+      prop(declsFor(darkCss, "[data-theme='dark'] .text-tm-black"), 'color')
+    ).toMatch(/^var\(--text-heading\)/)
+    expectAA(resolveColor('var(--ink)', dark), tint, 'banner text-tm-black')
   })
 
   it('dark true-maroon badge text clears AA on the happy-yellow-30 tint', () => {
