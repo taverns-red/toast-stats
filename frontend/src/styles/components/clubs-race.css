@@ -296,6 +296,17 @@
     vertical-align: middle;
   }
 
+  /* #2645 — under a coarse pointer the cell's links are 44px boxes
+     (tap-targets.css), so the cell's own 10px vertical padding would grow
+     the row to ~65px. Drop it from the body cells; the link is the padding. */
+  @media (pointer: coarse) {
+    .race-table tbody th,
+    .race-table tbody td {
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+  }
+
   .race-table thead th {
     font-family: var(--serif);
     font-weight: 700;

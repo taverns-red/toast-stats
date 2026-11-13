@@ -5,7 +5,7 @@ import { test, expect, type Page } from './fixtures/test'
  * Before: at 375 each numeric header had ~48px for 14px bold uppercase text
  * and `overflow-wrap: anywhere`, so the preview rendered "DISTR/ICTS",
  * "PAID/CLUB/S" and "VS PY/STAR/T" — on the first screen — and the 3-line
- * head overran the `.world-pulse__regions` reserve (6 × 32px + 44px).
+ * head overran the `.world-pulse__regions` reserve (32px + 5 × 45px + 44px).
  *
  * After: phones show short labels ("Dist." / "Clubs" / "± PY"), the full
  * label stays the header's accessible name, and headers can only wrap at
@@ -96,7 +96,8 @@ for (const width of [375, 1280]) {
         ).toHaveCount(1)
       }
 
-      // The head plus five rows fit the reserve (6 × 32px + 44px link).
+      // The head plus five rows fit the reserve (32px head + 5 × 45px rows
+      // + 44px link, #2645).
       const regions = await page
         .locator('.world-pulse__regions')
         .evaluate(el => ({

@@ -156,14 +156,21 @@ describe('World pulse headers never split a word (#2249 R1)', () => {
   /* Measured on the preview after the swap: the short label picked up a
      21px line-height from a global span rule, so the 375 head was 33.5px
      (not 30.7) and the block measured 233.9px against a 230px reserve. The
-     row pitch is 31.2px (14px x 1.3 + 12px padding + 1px border), so the
-     reserve uses 32px per row. */
-  it('keeps the short label on the cell line box and reserves a 32px row pitch', () => {
+     head pitch is 31.2px (14px x 1.3 + 12px padding + 1px border), so the
+     reserve uses 32px for it. #2645: on a phone or coarse pointer the body
+     rows hold a 44px region link, so they are 45px (link + border) and the
+     reserve is head + 5 rows + link; a desktop mouse keeps 32px rows. */
+  it('keeps the short label on the cell line box and reserves a 32px head and 45px rows', () => {
     expect(pulse).toMatch(
       /\.world-pulse__th-short\s*\{[^}]*line-height:\s*inherit/
     )
+    // Desktop mouse: the original 32px pitch.
     expect(pulse).toMatch(
       /\.world-pulse__regions\s*\{[^}]*min-height:\s*calc\(6 \* 32px \+ 44px\)/
+    )
+    // Phone or coarse pointer: 45px body rows.
+    expect(pulse).toMatch(
+      /\.world-pulse__regions\s*\{[^}]*min-height:\s*calc\(32px \+ 5 \* 45px \+ 44px\)/
     )
   })
 })
