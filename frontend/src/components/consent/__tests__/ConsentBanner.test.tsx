@@ -202,6 +202,25 @@ describe('ConsentBanner (#2584)', () => {
       ).toEqual(['Keep none', 'Keep minimal', 'Keep all'])
     })
 
+    /* Focus order (D10 review): what Details reveals must follow the Details
+       button in the DOM, so keyboard and screen-reader users reach it going
+       forward from the control that opened it. Keep none stays first. */
+    it('puts everything Details reveals after the Details button', () => {
+      renderBanner()
+      const details = screen.getByRole('button', { name: 'Details' })
+      const follows = (el: Element) =>
+        Boolean(
+          details.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING
+        )
+      for (const id of details.getAttribute('aria-controls')!.split(' ')) {
+        expect(follows(document.getElementById(id)!)).toBe(true)
+      }
+      expect(
+        follows(screen.getByRole('link', { name: /what each choice/i }))
+      ).toBe(true)
+      expect(region()!.querySelector('button')).toHaveTextContent('Keep none')
+    })
+
     it('CSS: below 768 the title, link and Keep minimal wait behind Details', () => {
       expect(phone).toBeDefined()
       expect(phone).toMatch(
