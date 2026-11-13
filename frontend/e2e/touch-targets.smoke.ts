@@ -157,3 +157,63 @@ function defineRouteTest(
     ).toEqual([])
   })
 }
+
+/* #2645: tablet-width touch. At 768-1023 a touch device gets the desktop table
+ * chrome, whose name links were 17px tall (clubs 147x17, action list 164x17,
+ * race-table district links 23x21). The same link families must clear the
+ * floor under a coarse pointer at 768x1024. */
+const TABLET = { width: 768, height: 1024 }
+const TABLE_LINKS = 'table :is(th, td) > a[href]'
+const TABLET_ROUTES: { path: string; mustRender: string }[] = [
+  { path: '/district/61/clubs', mustRender: TABLE_LINKS },
+  { path: '/district/61/action-list', mustRender: TABLE_LINKS },
+  { path: '/clubs/race/distinguished', mustRender: TABLE_LINKS },
+]
+
+test.describe('768×1024 touch tablet (#2645)', () => {
+  test.use({ viewport: TABLET, hasTouch: true })
+  for (const { path, mustRender } of TABLET_ROUTES) {
+    test(`table links clear ${FLOOR}px tall at 768×1024 touch — ${path}`, async ({
+      page,
+    }) => {
+      test.setTimeout(90_000)
+      await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
+      await page
+        .locator(mustRender)
+        .first()
+        .waitFor({ state: 'visible', timeout: 30_000 })
+      await page.evaluate(() => document.fonts.ready)
+      await page.waitForTimeout(500)
+      const found = await measureInteractiveTargets(
+        page,
+        [TABLE_LINKS],
+        [TABLE_LINKS]
+      )
+      expect(found.length).toBeGreaterThan(0)
+      const failing = found.filter(f => f.h < FLOOR)
+      expect(
+        failing.slice(0, 10).map(describeTarget),
+        `${path}: ${failing.length} table link(s) under ${FLOOR}px tall`
+      ).toEqual([])
+    })
+  }
+})
+
+test.describe('375px World pulse links (#2645)', () => {
+  test.use({ viewport: VIEWPORT, hasTouch: false })
+  test('region links in the World pulse clear the floor at 375', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000)
+    const sel = '.world-pulse__table tbody th a'
+    await page.goto('/', { waitUntil: 'networkidle', timeout: 60_000 })
+    await page
+      .locator(sel)
+      .first()
+      .waitFor({ state: 'visible', timeout: 30_000 })
+    await page.evaluate(() => document.fonts.ready)
+    const found = await measureInteractiveTargets(page, [sel], [sel])
+    expect(found.length).toBeGreaterThan(0)
+    expect(found.filter(f => f.h < FLOOR).map(describeTarget)).toEqual([])
+  })
+})
