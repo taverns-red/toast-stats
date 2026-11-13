@@ -264,8 +264,13 @@ test('the tooltip triggers keep their 44px floor', async ({ page }) => {
       const r = el.getBoundingClientRect()
       if (r.width <= 1 || r.height <= 1) continue // collapsed, not a target
       counted++
-      if (r.width < floor || r.height < floor) {
-        undersized.push(`${Math.round(r.width)}×${Math.round(r.height)}`)
+      // #2644: the hit area is the ::after that overflows the 14px icon.
+      const after = getComputedStyle(el, '::after')
+      const hit = after.position === 'absolute'
+      const w = Math.max(r.width, hit ? parseFloat(after.width) || 0 : 0)
+      const h = Math.max(r.height, hit ? parseFloat(after.height) || 0 : 0)
+      if (w < floor || h < floor) {
+        undersized.push(`${Math.round(w)}×${Math.round(h)}`)
       }
     }
     return { undersized, counted }
