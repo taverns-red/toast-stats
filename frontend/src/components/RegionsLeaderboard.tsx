@@ -156,7 +156,9 @@ const isTrainingField = (field: SortField): field is TrainingField =>
 /* Phone priority columns (#1834): the metrics a visitor can pick 2 of.
    Same fields as the full table's cells. Distinguished stacks count over
    percent so the cell fits a third of a phone. */
-const BASE_PHONE_METRICS: PriorityMetric<RegionRollup, SortField>[] = [
+const buildPhoneMetrics = (
+  provisional: ReadonlyMap<string, number> | undefined
+): PriorityMetric<RegionRollup, SortField>[] => [
   {
     id: 'districts',
     label: 'Districts',
@@ -182,7 +184,13 @@ const BASE_PHONE_METRICS: PriorityMetric<RegionRollup, SortField>[] = [
     sortField: 'distinguished',
     render: r => (
       <>
-        <span className="block">{r.distinguishedClubs.toLocaleString()}</span>
+        <span className="block">
+          <DistinguishedCount
+            confirmed={r.distinguishedClubs}
+            provisional={provisional?.get(r.region)}
+            stacked
+          />
+        </span>
         <span className="block text-gray-600 theme-dark:text-gray-300">
           {Math.round(r.distinguishedPercent)}%
         </span>
@@ -416,7 +424,7 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
   const basePhoneMetrics: PriorityMetric<RegionRollup, SortField>[] =
     showTraining
       ? [
-          ...BASE_PHONE_METRICS,
+          ...buildPhoneMetrics(provisionalByRegion),
           {
             id: 'training',
             // "R1 training" ellipsized at 375 with Linux fonts; the round is
@@ -430,10 +438,9 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
               phoneTrainingCell(r.region, phoneRound),
           },
         ]
-      : BASE_PHONE_METRICS
-  // The phone chip stays the plain confirmed count and share: the 12px
-  // "+N qualifying today" would break the phone smoke's 14px floor, so the
-  // full table in the sheet carries it (#2580).
+      : buildPhoneMetrics(provisionalByRegion)
+  // The phone chip stacks confirmed, "+N qualifying today" (14px), then the
+  // share (#2580).
   const phoneMetrics = basePhoneMetrics
 
   if (rollups.length === 0) {

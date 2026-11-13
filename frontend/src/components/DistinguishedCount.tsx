@@ -40,12 +40,16 @@ export interface DistinguishedCountProps {
   provisional?: number | null | undefined
   /** `qualifying-today` when no confirmed source exists (#2580). */
   basis?: 'confirmed' | 'qualifying-today' | undefined
+  /** Compact phone table (#2580): the extra sits on its own line under the
+   *  confirmed count, at the 14px data size rather than the desktop 12px. */
+  stacked?: boolean | undefined
 }
 
 export const DistinguishedCount: React.FC<DistinguishedCountProps> = ({
   confirmed,
   provisional,
   basis = 'confirmed',
+  stacked = false,
 }) => (
   <>
     <span
@@ -72,7 +76,11 @@ export const DistinguishedCount: React.FC<DistinguishedCountProps> = ({
         {' '}
         <span
           data-testid="distinguished-provisional"
-          className="distinguished-count__provisional"
+          className={
+            stacked
+              ? 'distinguished-count__provisional distinguished-count__provisional--stacked'
+              : 'distinguished-count__provisional'
+          }
           title={PROVISIONAL_TOOLTIP}
         >
           +{provisional.toLocaleString()} qualifying today

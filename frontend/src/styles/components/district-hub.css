@@ -250,4 +250,13 @@
     color: var(--ink-3);
     white-space: nowrap;
   }
+
+  /* Compact phone table (#2580): own line under the confirmed count, at the
+     14px data size (D3), so the priority-columns smoke's floor holds. */
+  .distinguished-count__provisional--stacked {
+    display: block;
+    font-size: 14px;
+    line-height: 1.25;
+    white-space: normal;
+  }
 }
