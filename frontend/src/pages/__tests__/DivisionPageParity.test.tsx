@@ -17,7 +17,6 @@ import { render, cleanup } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import { extractDivisionPerformance } from '../../utils/extractDivisionPerformance'
-import { withProvisionalDistinguished } from '../../utils/divisionAreaDistinguished'
 import { generateDivisionProgressText } from '../../utils/divisionProgressText'
 import { calculateDivisionGapAnalysis } from '../../utils/divisionGapAnalysis'
 import DivisionPage from '../DivisionPage'
@@ -213,13 +212,9 @@ describe('DivisionPage data parity with the Divisions overview (#1015)', () => {
     // Parity by construction: same derived division row, same generator as
     // the Divisions overview, so the count-only CSP clause lands here with no
     // page-specific logic.
-    // The page splits the count into confirmed + qualifying today from the
-    // club rows (#2580); the overview path does the same, so parity holds.
-    const division = withProvisionalDistinguished(
-      extractDivisionPerformance(SNAPSHOT, '2026-03-15'),
-      [CLUB],
-      '2026-03-15'
-    ).find(d => d.divisionId === 'A')!
+    const division = extractDivisionPerformance(SNAPSHOT, '2026-03-15').find(
+      d => d.divisionId === 'A'
+    )!
     const expected = generateDivisionProgressText(
       division,
       calculateDivisionGapAnalysis({

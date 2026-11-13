@@ -28,6 +28,7 @@ import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import DistrictDetailPage from '../DistrictDetailPage'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 import { useDistrictStatistics } from '../../hooks/useMembershipData'
+import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
 
 vi.mock('../../hooks/useDistricts', () => ({
   useDistricts: vi.fn(() => ({
@@ -213,6 +214,27 @@ describe('DistrictDivisionsPage (#571 — Phase 3)', () => {
     expect(
       screen.getByTestId('division-area-recognition-panel')
     ).toBeInTheDocument()
+  })
+
+  // #1901, #2580: the confirmed/qualifying-today split comes from the district
+  // analytics read. The cards render from the statistics alone and do not wait
+  // for it; the extra arrives into a reserved slot.
+  it('does not hold the division cards for the analytics read', async () => {
+    const pending = {
+      data: undefined,
+      isLoading: true,
+      error: null,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useDistrictAnalytics>
+    const fallback = vi.mocked(useDistrictAnalytics).getMockImplementation()
+    vi.mocked(useDistrictAnalytics).mockImplementation(() => pending)
+    try {
+      renderAt('/district/61/divisions')
+      const cards = await screen.findByTestId('division-performance-cards')
+      expect(cards).toHaveAttribute('data-loading', 'false')
+    } finally {
+      if (fallback) vi.mocked(useDistrictAnalytics).mockImplementation(fallback)
+    }
   })
 
   it('self-titles the document per route (#780)', async () => {

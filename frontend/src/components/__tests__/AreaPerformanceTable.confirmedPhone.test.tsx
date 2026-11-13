@@ -30,7 +30,7 @@ const AREA: AreaPerformance = {
       clubBase: 10,
       paidClubs: 10,
       netGrowth: 0,
-      distinguishedClubs: 6,
+      distinguishedClubs: 4,
       requiredDistinguishedClubs: 5,
       firstRoundVisits: visits,
       secondRoundVisits: visits,

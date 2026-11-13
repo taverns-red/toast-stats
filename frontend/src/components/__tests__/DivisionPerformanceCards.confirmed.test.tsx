@@ -1,7 +1,7 @@
 /**
  * Divisions list: confirmed Distinguished headline (#2580, part). The list
- * gets the district's club rows (`clubs`) and splits each division's and area's
- * qualifying-today count into confirmed + "+N qualifying today".
+ * gets the published `distinguishedCountsByDivision` and shows each division's
+ * and area's confirmed count with "+N qualifying today".
  */
 import type { ReactElement } from 'react'
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
@@ -10,7 +10,7 @@ import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom'
 import { DivisionPerformanceCards } from '../DivisionPerformanceCards'
 import type { DivisionPerformance } from '../../utils/divisionStatus'
-import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
+import type { DivisionDistinguishedCountsRow } from '../../hooks/useDistrictAnalytics'
 import { withRecognitionState } from '../../test-utils/areaFixture'
 
 vi.mock('../../utils/extractDivisionPerformance', () => ({
@@ -59,24 +59,17 @@ const DIVISIONS: DivisionPerformance[] = [
   },
 ]
 
-function club(id: string, provisional: boolean): ClubTrend {
-  return {
-    clubId: id,
-    clubName: `Club ${id}`,
+// The published field: the division is 4 confirmed + 2 qualifying today, and
+// so is its one area. The snapshot says 6 hold a level today.
+const BY_DIVISION: DivisionDistinguishedCountsRow[] = [
+  {
     divisionId: 'A',
-    divisionName: 'Division A',
-    areaId: 'A1',
-    areaName: 'Area A1',
-    membershipTrend: [],
-    dcpGoalsTrend: [],
-    currentStatus: 'thriving',
-    riskFactors: [],
-    distinguishedLevel: 'Distinguished',
-    isProvisionallyDistinguished: provisional,
-  }
-}
-
-const CLUBS = [club('1', true), club('2', true), club('3', false)]
+    distinguishedCounts: { confirmed: 4, provisional: 2 },
+    areas: [
+      { areaId: 'A1', distinguishedCounts: { confirmed: 4, provisional: 2 } },
+    ],
+  },
+]
 
 function stubMobile(matches: boolean) {
   vi.stubGlobal(
@@ -94,13 +87,13 @@ function stubMobile(matches: boolean) {
   )
 }
 
-const renderCards = (clubs?: ClubTrend[]) =>
+const renderCards = (by?: DivisionDistinguishedCountsRow[]) =>
   render(
     <DivisionPerformanceCards
       districtSnapshot={{ divisionPerformance: [] }}
       snapshotTimestamp="2026-03-15"
       districtId="61"
-      clubs={clubs}
+      distinguishedCountsByDivision={by}
     />
   )
 
@@ -115,7 +108,7 @@ afterEach(() => {
 describe('DivisionPerformanceCards confirmed Distinguished (#2580)', () => {
   it('desktop: the card summary and the area row use the confirmed count', () => {
     stubMobile(false)
-    renderCards(CLUBS)
+    renderCards(BY_DIVISION)
     const card = screen.getByLabelText('Division A performance card')
     expect(
       card.querySelector('[aria-label^="Distinguished clubs:"]')
@@ -128,18 +121,50 @@ describe('DivisionPerformanceCards confirmed Distinguished (#2580)', () => {
 
   it('phone: the row meta shows confirmed over required, then the extra', () => {
     stubMobile(true)
-    renderCards(CLUBS)
+    renderCards(BY_DIVISION)
     const row = screen.getByTestId('mobile-row')
     expect(row).toHaveTextContent('4/5 distinguished')
     expect(row).toHaveTextContent('+2 qualifying today')
     expect(row).not.toHaveTextContent('6/5')
   })
 
-  it('without club rows the snapshot count stands, with no extra', () => {
+  it('without the published field the snapshot count stands, with no extra', () => {
     stubMobile(true)
     renderCards(undefined)
     const row = screen.getByTestId('mobile-row')
     expect(row).toHaveTextContent('6/5 distinguished')
     expect(row).not.toHaveTextContent('qualifying today')
+  })
+
+  it('status badges follow the confirmed count: no Distinguished beside 4/5', () => {
+    // 6 qualify today (status distinguished in the snapshot), 4 are confirmed
+    // against a requirement of 5.
+    stubMobile(false)
+    renderCards(BY_DIVISION)
+    const card = screen.getByLabelText('Division A performance card')
+    expect(
+      card.querySelector('[aria-label^="Distinguished clubs:"]')
+    ).toHaveTextContent('4/5')
+    expect(
+      screen.getByRole('status', { name: /^Division status:/ })
+    ).toHaveAccessibleName('Division status: Not Distinguished')
+    const areaBadge = screen.getByLabelText(/^Recognition status:/)
+    expect(areaBadge.textContent).not.toMatch(/^Distinguished$/)
+  })
+
+  it('phone row chip follows the confirmed count too', () => {
+    stubMobile(true)
+    renderCards(BY_DIVISION)
+    expect(screen.getByTestId('mobile-row')).not.toHaveTextContent(
+      '★ Distinguished'
+    )
+  })
+
+  it('reserves the extra slot on the desktop cards', () => {
+    stubMobile(false)
+    renderCards(undefined)
+    expect(
+      screen.getAllByTestId('distinguished-extra-slot').length
+    ).toBeGreaterThanOrEqual(2)
   })
 })

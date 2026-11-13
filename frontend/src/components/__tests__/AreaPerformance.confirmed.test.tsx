@@ -30,7 +30,7 @@ function makeArea(over: Partial<AreaPerformance> = {}): AreaPerformance {
         clubBase: 10,
         paidClubs: 10,
         netGrowth: 0,
-        distinguishedClubs: 6,
+        distinguishedClubs: 4,
         requiredDistinguishedClubs: 5,
         firstRoundVisits: visits,
         secondRoundVisits: visits,
@@ -69,7 +69,7 @@ describe('AreaPerformanceTable confirmed Distinguished count', () => {
       />
     )
     expect(screen.queryByTestId('distinguished-provisional')).toBeNull()
-    expect(screen.getByText('A2').closest('tr')).toHaveTextContent('6/10 60%')
+    expect(screen.getByText('A2').closest('tr')).toHaveTextContent('4/10 40%')
   })
 })
 
@@ -89,5 +89,28 @@ describe('AreaPerformanceRow confirmed Distinguished count', () => {
     expect(
       within(row).getByTestId('distinguished-provisional')
     ).toHaveTextContent('+2 qualifying today')
+  })
+})
+
+describe('AreaPerformanceTable reserved extra slot', () => {
+  it('reserves an empty slot per row when asked, none otherwise', () => {
+    const { rerender } = render(
+      <AreaPerformanceTable areas={[makeArea()]} reserveExtra />
+    )
+    expect(screen.getByTestId('distinguished-extra-slot')).toBeEmptyDOMElement()
+    rerender(<AreaPerformanceTable areas={[makeArea()]} />)
+    expect(screen.queryByTestId('distinguished-extra-slot')).toBeNull()
+  })
+
+  it('keeps the extra inside the slot when there is one', () => {
+    render(
+      <AreaPerformanceTable
+        areas={[makeArea({ provisionalDistinguishedClubs: 2 })]}
+        reserveExtra
+      />
+    )
+    expect(screen.getByTestId('distinguished-extra-slot')).toContainElement(
+      screen.getByTestId('distinguished-provisional')
+    )
   })
 })

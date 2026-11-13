@@ -1,10 +1,9 @@
 /**
  * Division summary: confirmed Distinguished headline (#2580, part).
  *
- * `distinguishedClubs` is the qualifying-today count the snapshot reports. When
- * `provisionalDistinguishedClubs` says part of it is not yet confirmed by April
- * renewals, the progress pill shows the confirmed count (and meets its
- * threshold on that basis) with the rest beside it as "+N qualifying today".
+ * On these surfaces `distinguishedClubs` is the confirmed count (the overlay in
+ * `applyPipelineDistinguished` puts it there), and
+ * `provisionalDistinguishedClubs` is the "+N qualifying today" beside it.
  */
 import { describe, it, expect, afterEach } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
@@ -15,7 +14,7 @@ afterEach(() => cleanup())
 
 const base = {
   divisionId: 'A',
-  status: 'distinguished' as const,
+  status: 'not-distinguished' as const,
   paidClubs: 10,
   clubBase: 10,
   netGrowth: 0,
@@ -27,13 +26,12 @@ describe('DivisionSummary confirmed Distinguished count', () => {
     render(
       <DivisionSummary
         {...base}
-        distinguishedClubs={5}
+        distinguishedClubs={3}
         provisionalDistinguishedClubs={2}
       />
     )
     const pill = screen.getByLabelText(/^Distinguished clubs:/)
     expect(pill).toHaveTextContent('3/5')
-    expect(pill).not.toHaveTextContent('5/5')
     expect(screen.getByTestId('distinguished-provisional')).toHaveTextContent(
       '+2 qualifying today'
     )
@@ -43,7 +41,7 @@ describe('DivisionSummary confirmed Distinguished count', () => {
     render(
       <DivisionSummary
         {...base}
-        distinguishedClubs={5}
+        distinguishedClubs={3}
         provisionalDistinguishedClubs={2}
       />
     )
@@ -56,7 +54,8 @@ describe('DivisionSummary confirmed Distinguished count', () => {
     render(
       <DivisionSummary
         {...base}
-        distinguishedClubs={7}
+        status="distinguished"
+        distinguishedClubs={5}
         provisionalDistinguishedClubs={2}
       />
     )
@@ -65,8 +64,8 @@ describe('DivisionSummary confirmed Distinguished count', () => {
     expect(pill.getAttribute('aria-label')).toMatch(/threshold met/)
   })
 
-  it('shows no extra when nothing is provisional', () => {
-    render(
+  it('shows no extra when nothing is provisional or it is unknown', () => {
+    const { rerender } = render(
       <DivisionSummary
         {...base}
         distinguishedClubs={5}
@@ -74,13 +73,31 @@ describe('DivisionSummary confirmed Distinguished count', () => {
       />
     )
     expect(screen.queryByTestId('distinguished-provisional')).toBeNull()
-    expect(screen.getByLabelText(/^Distinguished clubs:/)).toHaveTextContent(
-      '5/5'
+    rerender(<DivisionSummary {...base} distinguishedClubs={5} />)
+    expect(screen.queryByTestId('distinguished-provisional')).toBeNull()
+  })
+
+  it('reserves the extra slot when asked, empty when there is no extra', () => {
+    const { rerender } = render(
+      <DivisionSummary {...base} distinguishedClubs={5} reserveExtra />
+    )
+    const slot = screen.getByTestId('distinguished-extra-slot')
+    expect(slot).toBeEmptyDOMElement()
+    rerender(
+      <DivisionSummary
+        {...base}
+        distinguishedClubs={3}
+        provisionalDistinguishedClubs={2}
+        reserveExtra
+      />
+    )
+    expect(screen.getByTestId('distinguished-extra-slot')).toContainElement(
+      screen.getByTestId('distinguished-provisional')
     )
   })
 
-  it('shows no extra when the provisional part is unknown', () => {
+  it('has no slot unless asked', () => {
     render(<DivisionSummary {...base} distinguishedClubs={5} />)
-    expect(screen.queryByTestId('distinguished-provisional')).toBeNull()
+    expect(screen.queryByTestId('distinguished-extra-slot')).toBeNull()
   })
 })

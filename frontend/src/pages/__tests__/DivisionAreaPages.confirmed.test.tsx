@@ -1,9 +1,8 @@
 /**
  * Division and Area pages: confirmed Distinguished headline (#2580, part).
  *
- * The fixture's one Select club is provisional (pre-April, no confirming
- * renewals), so the snapshot's count of 1 is qualifying today, not confirmed:
- * the pages headline 0 and show "+1 qualifying today" beside it, in the
+ * The snapshot says one club holds a level today, but the published
+ * `distinguishedCountsByDivision` has it unconfirmed: the pages headline 0 and show "+1 qualifying today" beside it, in the
  * summary pill, the area table and the narrative.
  */
 import React from 'react'
@@ -131,12 +130,27 @@ const CLUB: ClubTrend = {
   areaId: '10',
   areaName: 'Area 10',
   distinguishedLevel: 'Select',
-  isProvisionallyDistinguished: true,
+  // The club rows disagree with the published counts on purpose: the pages
+  // must read the published field, not derive from rows.
+  isProvisionallyDistinguished: false,
   currentStatus: 'thriving',
   riskFactors: [],
   membershipTrend: [{ date: '2026-03-15', count: 25 }],
   dcpGoalsTrend: [{ date: '2026-03-15', goalsAchieved: 8 }],
 }
+
+// As the pipeline publishes it: the Select club is not yet confirmed, so
+// division A and area 10 are 0 confirmed + 1 qualifying today.
+const PUBLISHED = [
+  {
+    divisionId: 'A',
+    distinguishedCounts: { confirmed: 0, provisional: 1 },
+    areas: [
+      { areaId: '10', distinguishedCounts: { confirmed: 0, provisional: 1 } },
+      { areaId: '11', distinguishedCounts: { confirmed: 0, provisional: 0 } },
+    ],
+  },
+]
 
 vi.mock('../../hooks/useDistrictAnalytics', async () => {
   const actual = await vi.importActual<
@@ -145,7 +159,7 @@ vi.mock('../../hooks/useDistrictAnalytics', async () => {
   return {
     ...actual,
     useDistrictAnalytics: vi.fn(() => ({
-      data: { allClubs: [CLUB] },
+      data: { allClubs: [CLUB], distinguishedCountsByDivision: PUBLISHED },
       isLoading: false,
       error: null,
       refetch: vi.fn(),

@@ -1,7 +1,7 @@
 /**
  * Division and area narratives name the confirmed Distinguished count, with
- * the clubs still to be confirmed beside it (#2580, part). The gap sentences
- * stay on the qualifying-today count the recognition status uses.
+ * the clubs still to be confirmed beside it (#2580, part). `distinguishedClubs`
+ * is the confirmed count on these surfaces, so the gap sentences follow it.
  */
 import { describe, it, expect } from 'vitest'
 import { generateDivisionProgressText } from '../divisionProgressText'
@@ -22,7 +22,7 @@ function division(provisional?: number): DivisionPerformance {
     clubBase: 10,
     paidClubs: 10,
     netGrowth: 0,
-    distinguishedClubs: 5,
+    distinguishedClubs: 3,
     provisionalDistinguishedClubs: provisional,
     requiredDistinguishedClubs: 5,
     areas: [],
@@ -37,7 +37,7 @@ function area(provisional?: number) {
   const base = {
     clubBase: 10,
     paidClubs: 10,
-    distinguishedClubs: 5,
+    distinguishedClubs: 3,
   }
   return {
     areaId: 'A1',
@@ -106,7 +106,7 @@ describe('progress text, confirmed Distinguished count (#2580)', () => {
       areaText(area(0)),
       areaText(area()),
     ]) {
-      expect(text).toContain('5 of 10 distinguished')
+      expect(text).toContain('3 of 10 distinguished')
       expect(text).not.toContain('qualifying today')
     }
   })
