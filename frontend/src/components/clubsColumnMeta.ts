@@ -13,6 +13,8 @@
  * `clubsColumnMeta.test.ts` keeps this record in step with `clubsColumns`.
  */
 
+import { PROGRAM_YEAR_START_BASIS } from '../utils/netChangeBasis'
+
 export type BreakpointTier = 'tablet' | 'laptop' | 'desktop' | 'wide'
 
 /** Tiers from narrowest to widest. */
@@ -126,7 +128,7 @@ export const columnMeta: Readonly<Record<string, ClubColumnMeta>> = {
   netChange: {
     group: 'membership',
     label: 'Trend',
-    hint: 'Change in members since the base, with a sparkline',
+    hint: `Change in members ${PROGRAM_YEAR_START_BASIS}, with a sparkline`,
     size: 104,
     defaultVisible: from('laptop'),
   },

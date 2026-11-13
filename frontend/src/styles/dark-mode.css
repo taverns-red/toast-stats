@@ -394,8 +394,8 @@
   color: #fbbf24 !important;
 }
 
-/* #1660: -900 joins the group — Trends "Overall Improvement" kept #14532d on
-   the dark green tint (1.65:1). */
+/* #1660: -900 joins the group — it kept #14532d on the dark green tint
+   (1.65:1). */
 [data-theme='dark'] .text-green-700,
 [data-theme='dark'] .text-green-800,
 [data-theme='dark'] .text-green-900 {

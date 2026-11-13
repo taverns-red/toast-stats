@@ -91,7 +91,7 @@ const CustomTooltip = ({
               {comparisonItem.change.toFixed(
                 metric === 'Thriving Clubs %' ? 1 : 0
               )}{' '}
-              ({comparisonItem.percentChange}%)
+              ({comparisonItem.percentChange}%) since this time last year
             </p>
           </div>
         </div>
@@ -231,11 +231,11 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
               </div>
               <div>
                 <p className="text-lg font-semibold text-green-900">
-                  Overall Improvement
+                  Up on last year
                 </p>
                 <p className="text-sm text-green-700">
-                  {improvements} of {comparisonData.length} metrics showing
-                  positive growth
+                  {improvements} of {comparisonData.length} measures are higher
+                  than at this time last program year
                 </p>
               </div>
             </>
@@ -259,11 +259,11 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
               </div>
               <div>
                 <p className="text-lg font-semibold text-red-900">
-                  Overall Decline
+                  Down on last year
                 </p>
                 <p className="text-sm text-red-700">
-                  {declines} of {comparisonData.length} metrics showing negative
-                  trends
+                  {declines} of {comparisonData.length} measures are lower than
+                  at this time last program year
                 </p>
               </div>
             </>
@@ -287,10 +287,10 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
               </div>
               <div>
                 <p className="text-lg font-semibold text-gray-900">
-                  Stable Performance
+                  About the same as last year
                 </p>
                 <p className="text-sm text-gray-700">
-                  Mixed results across metrics
+                  Mixed results compared with this time last program year
                 </p>
               </div>
             </>
@@ -344,7 +344,7 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
                 <div className="pt-2 border-t border-gray-300">
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-medium text-gray-700">
-                      Change:
+                      Change since this time last year:
                     </span>
                     <div className="flex items-center gap-2">
                       {isImprovement && (
@@ -520,7 +520,8 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
                   by{' '}
                   <span className="font-semibold">
                     {Math.abs(parseFloat(item.percentChange as string))}%
-                  </span>
+                  </span>{' '}
+                  since this time last year
                   {isSignificant && ' (significant change)'}
                 </li>
               )

@@ -19,6 +19,7 @@ import {
   type ClubsByRegionShard,
 } from '@taverns-red/shared-contracts'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
+import { PROGRAM_YEAR_START_BASIS } from './netChangeBasis'
 import {
   EXTENDED_FACET_PARAMS,
   applyFacets,
@@ -105,21 +106,46 @@ export function parseRegionMetric(raw: string | null): RegionMetric {
     : 'membership'
 }
 
-export function regionClubMetric(c: RegionClub, metric: RegionMetric): number {
-  if (metric === 'netGrowth') return membersOf(c) - (c.membershipBase ?? 0)
+/** The ranked metric, or null when it cannot be known: net growth needs the
+ *  club's base, and without one it is not "total members" (#2712). */
+export function regionClubMetric(
+  c: RegionClub,
+  metric: RegionMetric
+): number | null {
+  if (metric === 'netGrowth') {
+    return c.membershipBase == null ? null : membersOf(c) - c.membershipBase
+  }
   if (metric === 'dcpGoals') return c.dcpGoalsTrend[0]?.goalsAchieved ?? 0
   return membersOf(c)
 }
 
+const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0')
+
+/** The ranked metric as the region list's second line reads it. */
+export function regionClubMetricText(
+  c: RegionClub,
+  metric: RegionMetric
+): string {
+  const v = regionClubMetric(c, metric)
+  if (metric === 'netGrowth') {
+    return v === null
+      ? 'no base recorded'
+      : `${signed(v)} ${PROGRAM_YEAR_START_BASIS}`
+  }
+  if (metric === 'dcpGoals') return `${v} DCP goal${v === 1 ? '' : 's'}`
+  return `${v} member${v === 1 ? '' : 's'}`
+}
+
 /** Highest first, ties by club id — the order of the pipeline's own top-N
- *  seed lists (world.json `top`). */
+ *  seed lists (world.json `top`). Clubs with no value for the metric sort last. */
 export function sortRegionClubs(
   clubs: readonly RegionClub[],
   metric: RegionMetric
 ): RegionClub[] {
   return [...clubs].sort(
     (a, b) =>
-      regionClubMetric(b, metric) - regionClubMetric(a, metric) ||
+      (regionClubMetric(b, metric) ?? -Infinity) -
+        (regionClubMetric(a, metric) ?? -Infinity) ||
       compareLabel(a.clubId, b.clubId)
   )
 }
