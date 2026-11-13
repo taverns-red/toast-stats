@@ -190,8 +190,8 @@ describe('DivisionPage data parity with the Divisions overview (#1015)', () => {
 
   it('renders the per-area First/Second Round Visit columns', () => {
     const { getByText } = renderDivision()
-    expect(getByText('First Round Visits')).toBeInTheDocument()
-    expect(getByText('Second Round Visits')).toBeInTheDocument()
+    expect(getByText('First round visits')).toBeInTheDocument()
+    expect(getByText('Second round visits')).toBeInTheDocument()
   })
 
   it('renders a per-area recognition badge (source-of-truth #832 gate)', () => {

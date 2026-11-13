@@ -376,7 +376,7 @@ const CheckpointBlock: React.FC<{
       {provenance && (
         <p
           data-testid={`${base}-provenance`}
-          className="mt-2 text-[11px] text-gray-600 font-tm-body"
+          className="mt-2 text-xs text-gray-600 font-tm-body"
         >
           {provenance}
         </p>

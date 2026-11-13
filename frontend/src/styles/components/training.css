@@ -176,7 +176,7 @@
 }
 
 .training-dist thead th {
-  font-size: 0.75rem;
+  font-size: var(--tm-font-size-sm);
   font-weight: 600;
   color: var(--ink-3);
   text-align: left;

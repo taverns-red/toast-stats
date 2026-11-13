@@ -164,7 +164,7 @@
 }
 
 .council-table th {
-  font-size: 0.8125rem;
+  font-size: var(--tm-font-size-sm);
   font-weight: 600;
   color: var(--ink-3);
 }

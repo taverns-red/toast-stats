@@ -247,7 +247,7 @@
   .app-shell-nav__link--soon::after {
     content: 'soon';
     font-family: var(--mono, ui-monospace, SFMono-Regular, monospace);
-    font-size: 9px;
+    font-size: var(--tm-font-size-xs);
     font-weight: 500;
     background-color: var(--surface-3);
     color: var(--ink-4);
@@ -598,7 +598,7 @@
     margin: 0;
     font-family: var(--serif);
     font-weight: 700;
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--maroon-500);
@@ -715,7 +715,7 @@
     margin: 0;
     font-family: var(--serif);
     font-weight: 700;
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--maroon-500);
@@ -747,7 +747,7 @@
      suffix borrows the same #e8879a. */
   .page-header__title-py {
     display: none;
-    font-size: 0.6em;
+    font-size: max(0.6em, var(--tm-font-size-xs));
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--maroon-500);
@@ -805,7 +805,7 @@
     padding: 0 5px;
     margin: 0 1px;
     font-family: var(--mono, ui-monospace, SFMono-Regular, monospace);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-2);
     background-color: var(--surface-2);
     border: 1px solid var(--line);
@@ -927,7 +927,7 @@
     margin: 0 0 6px;
     font-family: var(--serif);
     font-weight: 700;
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--ink-3);
@@ -1174,7 +1174,7 @@
     background-color: var(--surface);
     color: var(--ink-2);
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     font-weight: 500;
     padding: 4px 10px;
     border-radius: 999px;
@@ -1610,7 +1610,7 @@
     border-radius: 999px;
     background-color: var(--surface-2);
     color: var(--ink-2);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     font-weight: 600;
     line-height: 1.6;
     /* The badge stays on ONE line and the CELL wraps around it. The reverse —
@@ -1691,7 +1691,7 @@
   }
 
   .recognition-legend__title {
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     font-weight: 700;
     color: var(--ink);
     text-transform: uppercase;
@@ -2052,9 +2052,7 @@
     text-align: left;
     font-family: var(--serif);
     font-weight: 700;
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: var(--tm-font-size-sm);
     color: var(--ink-3);
   }
 
@@ -2137,7 +2135,7 @@
     margin: 0;
     font-family: var(--serif);
     font-weight: 700;
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: rgba(255, 255, 255, 0.7);
@@ -3615,7 +3613,7 @@
   }
 
   .dcp-cell__lab {
-    font-size: 10.5px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
     font-weight: 600;
     text-transform: uppercase;
@@ -3638,7 +3636,7 @@
   /* Provisional annotation under the Current Level value (#239). */
   .dcp-cell__provisional {
     margin-top: 4px;
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     font-weight: 600;
     color: #854d0e;
   }
@@ -3712,7 +3710,7 @@
   .gap-section h3 {
     margin: 0 0 8px;
     font-family: var(--sans);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
     font-weight: 600;
     text-transform: uppercase;
@@ -3826,7 +3824,7 @@
 
   /* Per-Goal Status sub-heading (reference .dcp-timeline-h). */
   .dcp-subhead {
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -3868,7 +3866,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     line-height: 1;
     color: transparent;
   }
@@ -3882,7 +3880,7 @@
   .goal-row .goal-num {
     font-family: var(--mono);
     color: var(--ink-3);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     flex-shrink: 0;
     min-width: 16px;
   }
@@ -3912,7 +3910,7 @@
      #670 filter-error precedent); --red-600 was 4.42:1, just under (L116/L112). */
   .goal-row .goal-gap {
     color: var(--red-500);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     line-height: 1.35;
   }
 
@@ -4017,7 +4015,7 @@
      --surface ~6:1). The token already remaps under [data-theme='dark']. */
   .goal-timeline__note {
     margin: 10px 0 0;
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
   }
 
@@ -4644,7 +4642,7 @@
     gap: 6px;
     margin-top: 4px;
     font-family: var(--sans);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
   }
 
@@ -4821,7 +4819,7 @@
     margin: 0;
     font-family: var(--serif);
     font-weight: 700;
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--maroon-500);
@@ -5050,7 +5048,7 @@
     color: var(--ink-3);
     font-family: var(--mono);
     font-weight: 500;
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     line-height: 1;
   }
 
@@ -5817,7 +5815,7 @@
   .clubs-status-pill {
     display: inline-block;
     padding: 2px 8px;
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     font-weight: 600;
     line-height: 1.4;
     border-radius: var(--radius-sm);
@@ -5999,7 +5997,7 @@
   }
 
   .clubs-card__stat-label {
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
   }
 
@@ -6042,7 +6040,7 @@
 
   .history-page-year-chip__live {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: var(--tm-font-size-xs);
     letter-spacing: 0.06em;
     /* #1839: --green-700, the ink for text on a tinted surface (#1660) —
        --green-600 is 4.27:1 on the active chip's tint. */
@@ -6150,7 +6148,7 @@
   }
 
   .history-year-card__frozen {
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
     white-space: nowrap;
   }
@@ -6169,7 +6167,7 @@
   }
 
   .history-year-card__metric-label {
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--ink-3);
@@ -6191,7 +6189,7 @@
   }
 
   .history-year-card__top-label {
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--ink-3);
@@ -6233,7 +6231,7 @@
 
   .history-year-card__top-region {
     margin-left: auto;
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
     white-space: nowrap;
   }
@@ -6265,7 +6263,7 @@
     margin: 0 0 12px;
     font-family: var(--serif);
     font-weight: 700;
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--ink-3);
@@ -6345,7 +6343,7 @@
 
   .methodology-toc__num {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
     min-width: 22px;
   }
@@ -6542,7 +6540,7 @@
   }
 
   .jump-to-chip__caret {
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
     line-height: 1;
   }
@@ -6784,7 +6782,7 @@
   .rule-change__label {
     display: block;
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: var(--tm-font-size-xs);
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -6957,7 +6955,7 @@
 
   .awards-page-card__rank {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
   }
 
@@ -6973,7 +6971,7 @@
 
   .awards-page-card__region {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
   }
 
@@ -7015,7 +7013,7 @@
 
   .club-growth-recipients__py {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
   }
 
@@ -7064,7 +7062,7 @@
     margin: 0;
     padding: 8px 18px 4px;
     font-family: var(--sans);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -7079,7 +7077,7 @@
     margin: 0;
     padding: 8px 18px 14px;
     font-family: var(--sans);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
   }
 
@@ -7141,7 +7139,7 @@
 
   .command-palette__hint {
     font-family: var(--mono, ui-monospace, SFMono-Regular, monospace);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
     background-color: var(--surface-2);
     border: 1px solid var(--line);
@@ -7184,7 +7182,7 @@
   .command-palette__group-heading {
     padding: 8px 12px 4px;
     font-family: var(--sans);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -7249,7 +7247,7 @@
     border-top: 1px solid var(--line);
     padding: 6px 12px;
     font-family: var(--sans);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-3);
     display: flex;
     justify-content: flex-end;
@@ -7258,7 +7256,7 @@
 
   .command-palette__footer kbd {
     font-family: var(--mono, ui-monospace, SFMono-Regular, monospace);
-    font-size: 10px;
+    font-size: var(--tm-font-size-xs);
     color: var(--ink-2);
     background-color: var(--surface-2);
     border: 1px solid var(--line);

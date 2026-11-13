@@ -108,7 +108,7 @@
     margin: 0 0 6px;
     font-family: var(--serif);
     font-weight: 700;
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--ink-3);
@@ -304,9 +304,7 @@
   .race-table th {
     font-family: var(--serif);
     font-weight: 700;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-size: var(--tm-font-size-sm);
     color: var(--ink-3);
   }
 
@@ -329,7 +327,7 @@
 
   .race-table__unconfirmed {
     margin-left: 0.5rem;
-    font-size: 0.7rem;
+    font-size: var(--tm-font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--ink-3);
@@ -405,9 +403,7 @@
       display: block;
       font-family: var(--serif);
       font-weight: 700;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+      font-size: var(--tm-font-size-sm);
       color: var(--ink-3);
     }
 

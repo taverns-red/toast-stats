@@ -265,7 +265,7 @@
   padding: 0 6px;
   border: 1px solid var(--tm-loyal-blue);
   border-radius: var(--rt-radius-sm);
-  font-size: var(--rt-text-xs);
+  font-size: var(--tm-font-size-xs);
   font-weight: 600;
   line-height: 1.5;
   color: var(--ink-2);

@@ -111,7 +111,7 @@ export const LongestServingClubsLeaderboard: React.FC<
         >
           Longest-serving clubs
         </h3>
-        <span className="text-[11px] uppercase tracking-wider text-gray-600 theme-dark:text-gray-400 font-tm-body">
+        <span className="text-xs uppercase tracking-wider text-gray-600 theme-dark:text-gray-400 font-tm-body">
           Top {rows.length}
         </span>
       </div>
@@ -134,7 +134,7 @@ export const LongestServingClubsLeaderboard: React.FC<
             <span className="shrink-0 tabular-nums text-xs font-semibold text-gray-700 theme-dark:text-gray-200">
               {row.years}y
             </span>
-            <span className="shrink-0 tabular-nums text-[11px] text-gray-600 theme-dark:text-gray-400">
+            <span className="shrink-0 tabular-nums text-xs text-gray-600 theme-dark:text-gray-400">
               {row.charterLabel}
             </span>
           </li>
