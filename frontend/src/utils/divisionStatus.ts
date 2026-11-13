@@ -112,6 +112,13 @@ export interface AreaPerformance {
   netGrowth: number
   /** Current number of clubs that have achieved Distinguished status */
   distinguishedClubs: number
+  /**
+   * How many of `distinguishedClubs` are not yet confirmed by April renewals
+   * ("qualifying today", #2580). Set by `withProvisionalDistinguished`; absent
+   * when the club rows were not available. The confirmed count is
+   * `distinguishedClubs` minus this.
+   */
+  provisionalDistinguishedClubs?: number | undefined
   /** Required number of distinguished clubs (50% of club base, rounded up) */
   requiredDistinguishedClubs: number
   /** First round visit completion status (Nov Visit award) */
@@ -198,6 +205,8 @@ export interface DivisionPerformance {
   netGrowth: number
   /** Current number of clubs that have achieved Distinguished status */
   distinguishedClubs: number
+  /** The part of `distinguishedClubs` not yet confirmed (see AreaPerformance). */
+  provisionalDistinguishedClubs?: number | undefined
   /**
    * Required distinguished clubs for the division's Distinguished tier — DDP
    * 45% of club base, rounded up (NOT the 50% area/DAP rule). Sourced from
