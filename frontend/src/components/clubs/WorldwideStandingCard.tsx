@@ -61,6 +61,14 @@ function standing(topPercent: number, capital: boolean): string {
   return `${capital ? 'Top' : 'top'} ${topPercent}%`
 }
 
+/** A club at the very bottom is not "ahead of 0%": it is level with the clubs
+ *  that have the same goals (#2655). */
+function tiedGoals(goalsMet: number): string {
+  const n = Math.max(0, Math.trunc(goalsMet))
+  if (n === 0) return 'No goals met yet'
+  return `${n} ${n === 1 ? 'goal' : 'goals'} met`
+}
+
 export const WorldwideStandingCard: React.FC<WorldwideStandingCardProps> = ({
   race,
   clubId,
@@ -98,12 +106,18 @@ export const WorldwideStandingCard: React.FC<WorldwideStandingCardProps> = ({
         <p className="worldwide-standing__cohort">
           {cohort.topPercentOverall === null
             ? 'No worldwide comparison is available for this date.'
-            : `${standing(cohort.topPercentOverall, true)} of clubs worldwide by goals met`}
+            : cohort.topPercentOverall === 100 &&
+                cohort.samePercentOverall !== null
+              ? `${tiedGoals(goalsMet)}, like ${cohort.samePercentOverall}% of clubs worldwide`
+              : `${standing(cohort.topPercentOverall, true)} of clubs worldwide by goals met`}
           {cohort.topPercentInBand !== null && (
             <>
               {' · '}
-              {standing(cohort.topPercentInBand, false)} among clubs with{' '}
-              {membershipBandLabel(cohort.band)}
+              {cohort.topPercentInBand === 100 &&
+              cohort.samePercentInBand !== null
+                ? `like ${cohort.samePercentInBand}%`
+                : standing(cohort.topPercentInBand, false)}{' '}
+              among clubs with {membershipBandLabel(cohort.band)}
             </>
           )}
         </p>

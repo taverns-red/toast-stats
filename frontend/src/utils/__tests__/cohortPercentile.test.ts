@@ -45,7 +45,17 @@ describe('cohortPercentile (#1556)', () => {
       cohortSize: 20,
       topPercentOverall: 20,
       topPercentInBand: 50,
+      // 15 of 100 sit at exactly 5 goals; 8 of 20 in the band.
+      samePercentOverall: 15,
+      samePercentInBand: 40,
     })
+  })
+
+  it('counts the club itself in its own tie share (#2655)', () => {
+    // 0 goals, 22 members: nobody in the 20-24 band is at 0, so the club
+    // is 1 of 20 → 5 %, never 0 %.
+    expect(cohortPercentile(distribution, 0, 22).samePercentInBand).toBe(5)
+    expect(cohortPercentile(distribution, 0, 22).samePercentOverall).toBe(50)
   })
 
   it('rounds UP so a club is never told it is better than it is', () => {
