@@ -158,7 +158,7 @@ describe('DistrictsPage — confirmed headline + qualifying today (#2580)', () =
     const csv = vi.mocked(downloadCSV).mock.calls[0]![0]
     const [header, ...rows] = csv.split('\n')
     expect(header).toBe(
-      'Rank,District,Region,Paid Clubs,Total Payments,Distinguished Clubs,Distinguished Qualifying Today,Aggregate Score'
+      'Rank,District,Region,Paid Clubs,Total Payments,Distinguished Clubs,Distinguished Qualifying Today (Not Yet Confirmed),Aggregate Score'
     )
     const d57 = rows.find(r => r.includes('D57'))!.split(',')
     expect(d57[5]).toBe('25')
