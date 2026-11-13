@@ -112,6 +112,44 @@ describe('WorldwideStandingCard (#1556)', () => {
     expect(card).not.toHaveTextContent(/th club in the world/)
   })
 
+  it('says "Ahead of N%" below the median, never "Top 100%" (#2655)', () => {
+    const race: GlobalClubRace = {
+      ...RACE,
+      distribution: {
+        ...RACE.distribution,
+        goalsMet: hist([0, 20], [1, 60], [5, 20]),
+        cohorts: {
+          ...RACE.distribution.cohorts,
+          from20to24: hist([0, 10], [1, 30], [5, 10]),
+        },
+      },
+    }
+    renderCard({ race, goalsMet: 1 })
+    const card = screen.getByRole('region', { name: 'Worldwide standing' })
+    expect(card).toHaveTextContent(
+      'Ahead of 20% of clubs worldwide by goals met'
+    )
+    expect(card).toHaveTextContent(
+      'ahead of 20% among clubs with 20–24 members'
+    )
+    expect(card).not.toHaveTextContent(/Top 80%/)
+    expect(card).not.toHaveTextContent(/Top 100%/)
+  })
+
+  it('keeps "Top X%" at or above the median', () => {
+    renderCard({ goalsMet: 3 })
+    const card = screen.getByRole('region', { name: 'Worldwide standing' })
+    expect(card).toHaveTextContent('Top 50% of clubs worldwide by goals met')
+    expect(card).not.toHaveTextContent(/Ahead of/)
+  })
+
+  it('writes the comparison date as a date, not ISO (#2655)', () => {
+    renderCard()
+    const card = screen.getByRole('region', { name: 'Worldwide standing' })
+    expect(card).toHaveTextContent('on Sep 11, 2026')
+    expect(card).not.toHaveTextContent('2026-09-11')
+  })
+
   it('shows the highest reached tier, its rank, window and a deep link', () => {
     renderCard({ reached: REACHED, goalsMet: 7 })
     const card = screen.getByRole('region', { name: 'Worldwide standing' })
