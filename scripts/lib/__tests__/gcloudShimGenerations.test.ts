@@ -64,5 +64,5 @@ describe('gcloud shim next_gen under parallel writers (#2800)', () => {
     }
     for (const g of gens) expect(g).toMatch(/^\d+$/)
     expect(new Set(gens).size).toBe(WRITES)
-  }, 120_000)
+  })
 })
