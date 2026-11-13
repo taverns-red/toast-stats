@@ -7,6 +7,7 @@ import {
   type SuccessPlanGoals,
   type TieredKpiKey,
 } from '../utils/successPlanTargets'
+import { formatCompact, formatSignedCompact } from '../utils/formatCompact'
 
 /* #572 — sticky KPI strip extracted from DistrictOverview.
 
@@ -58,21 +59,6 @@ const readInitialCollapsed = (): boolean => {
   } catch {
     return false
   }
-}
-
-const formatCompact = (n: number): string => {
-  if (Math.abs(n) >= 1000) {
-    const k = n / 1000
-    return `${k.toFixed(k >= 10 ? 0 : 1)}K`
-  }
-  return String(n)
-}
-
-// Signed compact form for the collapsed summary: +312 / −1.2K / 0.
-const formatSignedCompact = (n: number): string => {
-  if (n === 0) return '0'
-  const sign = n > 0 ? '+' : '−'
-  return `${sign}${formatCompact(Math.abs(n))}`
 }
 
 // Legend expanding the bullet-bar tier abbreviations (#681). Without this the

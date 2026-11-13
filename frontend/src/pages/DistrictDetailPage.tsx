@@ -48,6 +48,7 @@ import {
   DistrictKpiStrip,
   type DistrictKpiStripData,
 } from '../components/DistrictKpiStrip'
+import { DistrictKpiStickyLine } from '../components/DistrictKpiStickyLine'
 import { DistrictOverviewHub } from '../components/DistrictOverviewHub'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { isTrainingFinalStretch } from '../utils/actionListData'
@@ -800,6 +801,12 @@ const DistrictDetailPageInner: React.FC = () => {
             ) : (
               <DistrictKpiStrip kpis={kpiStripData} planGoals={planGoals} />
             ))}
+
+          {/* One opaque line of the same figures, pinned once the block above
+              has scrolled away (#2708, D4). Takes no layout space. */}
+          {districtId && (hasOverviewData || isLoadingOverview) && (
+            <DistrictKpiStickyLine kpis={kpiStripData} />
+          )}
 
           {districtId && isHubLayout && deadlineStrip}
 
