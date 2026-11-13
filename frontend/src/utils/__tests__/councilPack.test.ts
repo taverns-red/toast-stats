@@ -244,6 +244,22 @@ describe('buildCouncilPack (#2299)', () => {
       })
     })
 
+    it('spells the intervention label out in full, one casing (#2669)', () => {
+      const raw = input()
+      const clubs = raw.clubs.map(c =>
+        c.clubId === '2002'
+          ? { ...c, currentStatus: 'intervention-required' as const }
+          : c
+      )
+      const p = buildCouncilPack(
+        { ...raw, clubs },
+        { division: 'B', area: '02' }
+      )!
+      expect(p.roster.find(r => r.clubId === '2002')?.health).toBe(
+        'Intervention required'
+      )
+    })
+
     it('never carries contact details or meeting links onto the pack', () => {
       const keys = new Set(pack.roster.flatMap(r => Object.keys(r)))
       expect([...keys].sort()).toEqual(

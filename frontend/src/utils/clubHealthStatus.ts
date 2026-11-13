@@ -14,7 +14,7 @@ import type { ClubHealthStatus } from '../hooks/useDistrictAnalytics'
 export function getClubHealthStatusLabel(status: ClubHealthStatus): string {
   switch (status) {
     case 'intervention-required':
-      return 'Intervention Required'
+      return 'Intervention required'
     case 'vulnerable':
       return 'Vulnerable'
     default:
@@ -24,7 +24,7 @@ export function getClubHealthStatusLabel(status: ClubHealthStatus): string {
 
 /**
  * One-word label for space-constrained surfaces (#1833): the compact mobile
- * row has ~300 px for name + chip at 375 px, and "Intervention Required" would
+ * row has ~300 px for name + chip at 375 px, and "Intervention required" would
  * leave the club name ~90 px. Always rendered with the status glyph, so the
  * meaning never rests on colour (WCAG 1.4.1); the full label stays the default.
  */

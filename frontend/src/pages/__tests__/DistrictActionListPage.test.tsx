@@ -958,7 +958,7 @@ describe('DistrictActionListPage — compact tables (#1577)', () => {
     expect(cellsOf('section-intervention')[0]).toEqual([
       'Struggling Club',
       'B/B2',
-      'Intervention Required',
+      'Intervention required',
     ])
   })
 

@@ -10,7 +10,7 @@
  *   - Close-to-Distinguished is `buildActionList(...).closeToDistinguished`
  *     for the same scope, the Action List's list.
  *   - Labels reuse `renderRecognitionBadge` (area), `divisionChip` (division)
- *     and `getClubHealthStatusShortLabel` (club health).
+ *     and `getClubHealthStatusLabel` (club health).
  *
  * The page owns the program year and the pinned snapshot date and passes them
  * in (R3). Long lists are capped with an explicit "+K more" count rather than
@@ -25,7 +25,7 @@ import { renderRecognitionBadge } from './areaRecognitionBadge'
 import { calculateAreaGapAnalysis } from './areaGapAnalysis'
 import { calculateDivisionGapAnalysis } from './divisionGapAnalysis'
 import { divisionChip } from '../components/DivisionRecognitionChip'
-import { getClubHealthStatusShortLabel } from './clubHealthStatus'
+import { getClubHealthStatusLabel } from './clubHealthStatus'
 import type {
   AreaPerformance,
   DivisionPerformance,
@@ -299,8 +299,9 @@ export function buildCouncilPack(
         clubId: c.clubId,
         clubName: c.clubName,
         areaId: c.areaId,
-        // The one-word label (#1833) so the club name gets the width on paper.
-        health: getClubHealthStatusShortLabel(c.currentStatus),
+        // The full label, one casing everywhere (#2669): paper has no
+        // screen-reader-only text to carry the rest of a short label.
+        health: getClubHealthStatusLabel(c.currentStatus),
         members: lastOf(c.membershipTrend)?.count ?? null,
         goals: lastOf(c.dcpGoalsTrend)?.goalsAchieved ?? null,
         distinguished: TIER_LABEL[c.distinguishedLevel] ?? '—',

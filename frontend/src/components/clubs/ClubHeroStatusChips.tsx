@@ -26,8 +26,9 @@ const STATUS: Record<ClubHealthStatus, { label: string; modifier: string }> = {
 
 /**
  * The club hero's health and DCP tier badges (#2171). Both use the hero's
- * one quiet outline chip (`.club-hero__chip`); only the health chip carries
- * a coloured dot, because only there does the colour mean something.
+ * one quiet outline chip (`.club-hero__chip`); the health chip and a
+ * non-Active club-status chip carry a coloured dot (Low is amber, Suspended
+ * and Ineligible red), because only there does the colour mean something.
  */
 export const ClubHeroStatusChips: React.FC<ClubHeroStatusChipsProps> = ({
   status,
@@ -54,7 +55,15 @@ export const ClubHeroStatusChips: React.FC<ClubHeroStatusChipsProps> = ({
         {label}
       </span>
       {operational && (
-        <span className="club-hero__chip club-hero__chip--at-risk">
+        <span
+          className={`club-hero__chip ${
+            clubStatus === 'Low'
+              ? 'club-hero__chip--watch'
+              : 'club-hero__chip--at-risk'
+          }`}
+          title="Club status"
+        >
+          <span aria-hidden="true" className="club-hero__chip-dot" />
           {operational}
         </span>
       )}

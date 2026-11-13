@@ -18,7 +18,7 @@ describe('clubHealthStatus', () => {
     ['vulnerable', 'Vulnerable', 'clubs-status-pill--vulnerable'],
     [
       'intervention-required',
-      'Intervention Required',
+      'Intervention required',
       'clubs-status-pill--intervention',
     ],
   ]

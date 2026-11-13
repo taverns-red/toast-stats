@@ -846,7 +846,7 @@ describe('ClubsTable', () => {
       expect(tbody!.textContent).toMatch(/Vulnerable/)
     })
 
-    it('should display "Intervention Required" status for intervention-required clubs', () => {
+    it('should display "Intervention required" status for intervention-required clubs', () => {
       const clubs = [
         createMockClub({
           clubId: 'club-1',
@@ -864,9 +864,9 @@ describe('ClubsTable', () => {
       )
 
       // The visible label is "Intervention"; " Required" is sr-only (#2676),
-      // so the cell's full text still reads "Intervention Required".
+      // so the cell's full text still reads "Intervention required".
       const tbody = container.querySelector('tbody')
-      expect(tbody!.textContent).toMatch(/Intervention Required/)
+      expect(tbody!.textContent).toMatch(/Intervention required/)
     })
   })
 

@@ -452,7 +452,7 @@ const MethodologyPage: React.FC = () => {
             crossed the intervention threshold below.
           </li>
           <li>
-            <strong>Intervention Required</strong> (
+            <strong>Intervention required</strong> (
             <code>intervention-required</code>) — paid members &lt; 12 AND net
             growth &lt; 3 since program-year base. This rule overrides all other
             criteria.
