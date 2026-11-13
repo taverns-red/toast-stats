@@ -200,7 +200,7 @@ describe('Landing page contrast, both themes (#1360)', () => {
     // surface or a tint moves, the ratios below stop being about the real page.
     it.each([
       ['light', '#e6ecf0'],
-      ['dark', '#212635'],
+      ['dark', '#192835'], // #2641: card is slate --surface now, was plum #1a1722
     ] as Array<[Theme, string]>)(
       '%s: the tint stack resolves to %s',
       (theme, expected) => expect(backdrop(theme)).toBe(expected)
