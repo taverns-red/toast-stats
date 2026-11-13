@@ -2986,30 +2986,16 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .club-panels-grid > .club-lifecycle {
+      grid-column: 1 / -1;
+    }
+
     /* #2655 UNIT-23 — Education (about 150px of content) was stretched to
-       Compliance's height. Lifecycle now sits under Education in the left
-       column and Compliance runs the full height of both on the right, so
-       neither column leaves a hole. */
+       Compliance's height, an empty box. Panels keep their own height. The
+       review's pairing of Education with Lifecycle is not applied: Ron's
+       #2057 layout (Lifecycle full width below) stands. */
     .club-panels-grid {
       align-items: start;
-      /* Spare height from the taller Compliance goes below Lifecycle, not
-         between it and Education. */
-      grid-template-rows: auto 1fr;
-    }
-
-    .club-panels-grid > .club-edu {
-      grid-column: 1;
-      grid-row: 1;
-    }
-
-    .club-panels-grid > .club-lifecycle {
-      grid-column: 1;
-      grid-row: 2;
-    }
-
-    .club-panels-grid > .club-compliance {
-      grid-column: 2;
-      grid-row: 1 / span 2;
     }
   }
 
