@@ -13,7 +13,8 @@
 #              historical dates, one date at a time (#1498)
 #   backfill-education-ledger
 #            — fetch the dated education ledger history (TI archive, 2003-04 →
-#              2018-19 by default) into STAGING raw-education-ledger/ only, in
+#              2018-19 by default) into the private raw-source bucket's
+#              raw-education-ledger/ only (#2695), in
 #              its own job; the pipeline job, gates and promotion do not run (#1802)
 #
 # Prerequisites:
@@ -164,6 +165,9 @@ env:
   # Daily pipeline writes to staging first; promotion copies to production (#316)
   GCS_BUCKET: 'toast-stats-data-staging'
   GCS_BUCKET_PRODUCTION: 'toast-stats-data-ca'
+  # Raw sources (raw-fac/, raw-education-ledger/) live in a private bucket,
+  # never in staging (#2695). Matches scripts/pipeline/raw-source-config.sh.
+  RAW_SOURCE_BUCKET: 'toast-stats-raw-private'
   # The run manifest (#1762, ADR-015 P5): one JSON line per object this run
   # uploaded to staging, appended by scripts/pipeline/gcs-upload.sh (every
   # staging upload goes through it) and publish-stores.sh; published to
@@ -728,7 +732,7 @@ jobs:
         id: ledger-key
         run: |
           set -o pipefail
-          if LISTING="$(gcloud storage ls -l "gs://${GCS_BUCKET}/raw-education-ledger/**")"; then
+          if LISTING="$(gcloud storage ls -l "gs://${RAW_SOURCE_BUCKET}/raw-education-ledger/**")"; then
             echo "key=education-ledger-v1-$(sha256sum <<<"${LISTING}" | cut -c1-32)" >> "$GITHUB_OUTPUT"
           else
             echo "::warning::Could not list raw-education-ledger/; the newest seed is restored and re-verified"
@@ -3038,7 +3042,7 @@ jobs:
         id: ledger-key
         run: |
           set -o pipefail
-          if LISTING="$(gcloud storage ls -l "gs://${GCS_BUCKET}/raw-education-ledger/**")"; then
+          if LISTING="$(gcloud storage ls -l "gs://${RAW_SOURCE_BUCKET}/raw-education-ledger/**")"; then
             echo "key=education-ledger-v1-$(sha256sum <<<"${LISTING}" | cut -c1-32)" >> "$GITHUB_OUTPUT"
           else
             echo "::warning::Could not list raw-education-ledger/; the newest seed is restored and re-verified"
@@ -3587,11 +3591,11 @@ jobs:
       - name: '[ledger] Resume from staging'
         run: |
           mkdir -p ./cache/raw-education-ledger
-          if gcloud storage ls "gs://${GCS_BUCKET}/raw-education-ledger/" > /dev/null 2>&1; then
-            gcloud storage rsync -r "gs://${GCS_BUCKET}/raw-education-ledger/" ./cache/raw-education-ledger/
-            echo "Resumed $(find ./cache/raw-education-ledger -name 'district_*.json' | wc -l | tr -d ' ') ledger files from staging"
+          if gcloud storage ls "gs://${RAW_SOURCE_BUCKET}/raw-education-ledger/" > /dev/null 2>&1; then
+            gcloud storage rsync -r "gs://${RAW_SOURCE_BUCKET}/raw-education-ledger/" ./cache/raw-education-ledger/
+            echo "Resumed $(find ./cache/raw-education-ledger -name 'district_*.json' | wc -l | tr -d ' ') ledger files from the raw-source bucket"
           else
-            echo "No raw-education-ledger/ in staging yet; starting fresh"
+            echo "No raw-education-ledger/ in the raw-source bucket yet; starting fresh"
           fi
 
       - name: '[ledger] Fetch, parse and upload one program year at a time'
@@ -3636,7 +3640,7 @@ jobs:
             # resumes from it. Recorded in the run manifest (ADR-015 P5).
             if [ -d "./cache/raw-education-ledger/${PY}" ]; then
               bash scripts/pipeline/gcs-upload.sh education-ledger-history rsync -r \
-                "./cache/raw-education-ledger/${PY}/" "gs://${GCS_BUCKET}/raw-education-ledger/${PY}/"
+                "./cache/raw-education-ledger/${PY}/" "gs://${RAW_SOURCE_BUCKET}/raw-education-ledger/${PY}/"
             fi
 
             jq -r '.programYears[] | "| \(.programYear) | \(.candidates) | \(.districtSource // "-") | \(.written) | \(.noData) | \(.skippedExisting) | \(.failed) | \(.achievements) | \(.otherAwardCodes | join(", ")) |"' \
