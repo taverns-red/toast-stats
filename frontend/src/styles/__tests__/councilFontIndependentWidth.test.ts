@@ -41,7 +41,9 @@ describe('council.css widths do not depend on the loaded font (#2685)', () => {
     const measures = [...css.matchAll(/max-width:\s*([\d.]+)em/g)].map(m =>
       Number(m[1])
     )
-    expect(measures).toHaveLength(2)
+    // One: the notes. The lede moved to the shared section header (#2646),
+    // whose own rule is in app-shell.css.
+    expect(measures).toHaveLength(1)
     for (const em of measures) {
       expect(Math.abs(em - MEASURE_EM)).toBeLessThanOrEqual(TOLERANCE_EM)
     }

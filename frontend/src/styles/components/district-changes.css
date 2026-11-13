@@ -3,14 +3,6 @@
    together (Lessons 093/094). The KPI cards themselves are KpiDeltaCard
    (#681), which carries its own dark-mode overrides in dark-mode.css. */
 
-.district-changes__title {
-  font-family: var(--display, var(--sans));
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--ink);
-  margin-bottom: 0.5rem;
-}
-
 .district-changes {
   display: flex;
   flex-direction: column;
