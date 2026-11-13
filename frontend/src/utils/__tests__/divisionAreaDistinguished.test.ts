@@ -1,31 +1,37 @@
+/**
+ * Division and area Distinguished counts come from the pipeline's
+ * `distinguishedCountsByDivision` (#2553, #2580). Expected values here are
+ * hand-written fixture numbers, never computed with the helper under test.
+ */
 import { describe, it, expect } from 'vitest'
-import {
-  confirmedDistinguished,
-  withProvisionalDistinguished,
-} from '../divisionAreaDistinguished'
-import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
+import { applyPipelineDistinguished } from '../divisionAreaDistinguished'
+import type { DivisionDistinguishedCountsRow } from '../../hooks/useDistrictAnalytics'
 import type { DivisionPerformance } from '../divisionStatus'
+import { withRecognitionState } from '../../test-utils/areaFixture'
 
-function club(overrides: Partial<ClubTrend> = {}): ClubTrend {
-  return {
-    clubId: '1',
-    clubName: 'Club',
-    divisionId: 'A',
-    divisionName: 'Division A',
-    areaId: 'A1',
-    areaName: 'Area A1',
-    membershipTrend: [],
-    dcpGoalsTrend: [],
-    currentStatus: 'thriving',
-    riskFactors: [],
-    distinguishedLevel: 'Distinguished',
-    isProvisionallyDistinguished: false,
-    ...overrides,
-  }
+const visits = {
+  completed: 8,
+  required: 8,
+  percentage: 100,
+  meetsThreshold: true,
 }
 
 function area(areaId: string, distinguishedClubs: number) {
-  return { areaId, distinguishedClubs } as DivisionPerformance['areas'][number]
+  return withRecognitionState(
+    {
+      areaId,
+      status: 'distinguished',
+      clubBase: 10,
+      paidClubs: 10,
+      netGrowth: 0,
+      distinguishedClubs,
+      requiredDistinguishedClubs: 5,
+      firstRoundVisits: visits,
+      secondRoundVisits: visits,
+      isQualified: true,
+    },
+    '2026-03-15'
+  )
 }
 
 function division(
@@ -33,84 +39,150 @@ function division(
   distinguishedClubs: number,
   areas: DivisionPerformance['areas']
 ): DivisionPerformance {
-  return { divisionId, distinguishedClubs, areas } as DivisionPerformance
+  return {
+    divisionId,
+    status: 'distinguished',
+    clubBase: 10,
+    paidClubs: 10,
+    netGrowth: 0,
+    distinguishedClubs,
+    requiredDistinguishedClubs: 5,
+    areas,
+    cspTracked: false,
+    cspSubmittedCount: 0,
+    clubsMissingCsp: [],
+  }
 }
 
-describe('confirmedDistinguished', () => {
-  it('is the count itself when no provisional part is recorded', () => {
-    expect(confirmedDistinguished({ distinguishedClubs: 5 })).toBe(5)
-  })
-
-  it('removes the provisional part', () => {
-    expect(
-      confirmedDistinguished({
-        distinguishedClubs: 5,
-        provisionalDistinguishedClubs: 2,
-      })
-    ).toBe(3)
-  })
-
-  it('never goes below zero', () => {
-    expect(
-      confirmedDistinguished({
-        distinguishedClubs: 1,
-        provisionalDistinguishedClubs: 4,
-      })
-    ).toBe(0)
-  })
+const counts = (confirmed: number, provisional: number) => ({
+  confirmed,
+  provisional,
 })
 
-describe('withProvisionalDistinguished', () => {
-  const clubs = [
-    club({ clubId: '1', areaId: 'A1', isProvisionallyDistinguished: true }),
-    club({ clubId: '2', areaId: 'A1', isProvisionallyDistinguished: false }),
-    club({ clubId: '3', areaId: 'A2', isProvisionallyDistinguished: true }),
-    club({
-      clubId: '4',
-      divisionId: 'B',
-      areaId: 'B1',
-      isProvisionallyDistinguished: true,
-    }),
-    club({
-      clubId: '5',
-      areaId: 'A2',
-      distinguishedLevel: 'NotDistinguished',
-      isProvisionallyDistinguished: true,
-    }),
-  ]
-  const divisions = [
-    division('A', 3, [area('A1', 2), area('A2', 1)]),
-    division('B', 1, [area('B1', 1)]),
-  ]
+// D61 on 2026-11-12, as published: A=(1,0) B=(0,1) F=(1,1) H=(0,2).
+const D61_BY_DIVISION: DivisionDistinguishedCountsRow[] = [
+  {
+    divisionId: 'A',
+    distinguishedCounts: counts(1, 0),
+    areas: [{ areaId: 'A1', distinguishedCounts: counts(1, 0) }],
+  },
+  {
+    divisionId: 'B',
+    distinguishedCounts: counts(0, 1),
+    areas: [{ areaId: 'B1', distinguishedCounts: counts(0, 1) }],
+  },
+  {
+    divisionId: 'F',
+    distinguishedCounts: counts(1, 1),
+    areas: [
+      { areaId: 'F1', distinguishedCounts: counts(1, 0) },
+      { areaId: 'F2', distinguishedCounts: counts(0, 1) },
+    ],
+  },
+  {
+    divisionId: 'H',
+    distinguishedCounts: counts(0, 2),
+    areas: [{ areaId: 'H1', distinguishedCounts: counts(0, 2) }],
+  },
+]
+const D61_DISTRICT_KPI = { confirmed: 2, provisional: 4 }
 
-  it('counts the provisional clubs per area and per division', () => {
-    const [a, b] = withProvisionalDistinguished(divisions, clubs, '2026-03-15')
-    expect(a?.provisionalDistinguishedClubs).toBe(2)
-    expect(a?.areas.map(x => x.provisionalDistinguishedClubs)).toEqual([1, 1])
-    expect(b?.provisionalDistinguishedClubs).toBe(1)
-    expect(b?.areas[0]?.provisionalDistinguishedClubs).toBe(1)
-  })
+const D61 = [
+  division('A', 1, [area('A1', 1)]),
+  division('B', 1, [area('B1', 1)]),
+  division('F', 2, [area('F1', 1), area('F2', 1)]),
+  division('H', 2, [area('H1', 2)]),
+]
 
-  it('leaves the qualifying-today count and the input untouched', () => {
-    const out = withProvisionalDistinguished(divisions, clubs, '2026-03-15')
-    expect(out[0]?.distinguishedClubs).toBe(3)
-    expect(out[0]?.areas[0]?.distinguishedClubs).toBe(2)
-    expect(divisions[0]?.provisionalDistinguishedClubs).toBeUndefined()
-  })
-
-  it('caps the provisional part at the qualifying-today count', () => {
-    const [a] = withProvisionalDistinguished(
-      [division('A', 1, [area('A1', 0), area('A2', 1)])],
-      clubs,
+describe('applyPipelineDistinguished', () => {
+  it('takes the headline from the confirmed count and the extra from provisional', () => {
+    const [a, b, f, h] = applyPipelineDistinguished(
+      D61,
+      D61_BY_DIVISION,
       '2026-03-15'
     )
-    expect(a?.provisionalDistinguishedClubs).toBe(1)
-    expect(a?.areas[0]?.provisionalDistinguishedClubs).toBe(0)
+    expect([a, b, f, h].map(d => d?.distinguishedClubs)).toEqual([1, 0, 1, 0])
+    expect([a, b, f, h].map(d => d?.provisionalDistinguishedClubs)).toEqual([
+      0, 1, 1, 2,
+    ])
+    expect(f?.areas.map(x => x.distinguishedClubs)).toEqual([1, 0])
+    expect(f?.areas.map(x => x.provisionalDistinguishedClubs)).toEqual([0, 1])
   })
 
-  it('returns the divisions unchanged when the club list is unavailable', () => {
-    expect(
-      withProvisionalDistinguished(divisions, undefined, '2026-03-15')
-    ).toBe(divisions)
+  it('division sums equal the district KPI', () => {
+    const out = applyPipelineDistinguished(D61, D61_BY_DIVISION, '2026-03-15')
+    const sum = (pick: (d: DivisionPerformance) => number | undefined) =>
+      out.reduce((n, d) => n + (pick(d) ?? 0), 0)
+    expect(sum(d => d.distinguishedClubs)).toBe(D61_DISTRICT_KPI.confirmed)
+    expect(sum(d => d.provisionalDistinguishedClubs)).toBe(
+      D61_DISTRICT_KPI.provisional
+    )
+  })
+
+  it('does not cap the pipeline count at the snapshot count', () => {
+    // A club confirmed at a lower tier than the snapshot shows still counts.
+    const [a] = applyPipelineDistinguished(
+      [division('A', 1, [area('A1', 1)])],
+      [
+        {
+          divisionId: 'A',
+          distinguishedCounts: counts(3, 0),
+          areas: [{ areaId: 'A1', distinguishedCounts: counts(3, 0) }],
+        },
+      ],
+      '2026-03-15'
+    )
+    expect(a?.distinguishedClubs).toBe(3)
+    expect(a?.areas[0]?.distinguishedClubs).toBe(3)
+  })
+
+  it('puts status and recognition on the confirmed count too', () => {
+    // required 5; the snapshot says 5 qualify today, 2 of them unconfirmed.
+    const input = [division('A', 5, [area('A1', 5)])]
+    const [a] = applyPipelineDistinguished(
+      input,
+      [
+        {
+          divisionId: 'A',
+          distinguishedCounts: counts(3, 2),
+          areas: [{ areaId: 'A1', distinguishedCounts: counts(3, 2) }],
+        },
+      ],
+      '2026-03-15'
+    )
+    expect(a?.status).toBe('not-distinguished')
+    expect(a?.areas[0]?.status).not.toBe('distinguished')
+    expect(a?.areas[0]?.recognitionState).not.toEqual(
+      input[0]?.areas[0]?.recognitionState
+    )
+  })
+
+  it('leaves the input untouched', () => {
+    applyPipelineDistinguished(D61, D61_BY_DIVISION, '2026-03-15')
+    expect(D61[1]?.distinguishedClubs).toBe(1)
+    expect(D61[1]?.provisionalDistinguishedClubs).toBeUndefined()
+  })
+
+  it('returns the divisions unchanged when the field is absent (old snapshots)', () => {
+    expect(applyPipelineDistinguished(D61, undefined, '2026-03-15')).toBe(D61)
+  })
+
+  it('leaves a division or area the field does not list as it was', () => {
+    const [a, b] = applyPipelineDistinguished(
+      [division('A', 1, [area('A1', 1)]), division('B', 1, [area('B1', 1)])],
+      [
+        {
+          divisionId: 'A',
+          distinguishedCounts: counts(0, 1),
+          areas: [],
+        },
+      ],
+      '2026-03-15'
+    )
+    expect(a?.distinguishedClubs).toBe(0)
+    expect(a?.areas[0]?.distinguishedClubs).toBe(1)
+    expect(a?.areas[0]?.provisionalDistinguishedClubs).toBeUndefined()
+    expect(b?.distinguishedClubs).toBe(1)
+    expect(b?.provisionalDistinguishedClubs).toBeUndefined()
   })
 })
