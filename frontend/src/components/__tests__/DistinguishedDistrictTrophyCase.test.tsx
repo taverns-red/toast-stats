@@ -425,6 +425,22 @@ describe('DistinguishedDistrictTrophyCase', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  it('reserves the plain-text badge line height (h-6) in the skeleton, not the old pill height (#2766)', () => {
+    render(
+      <DistinguishedDistrictTrophyCase
+        status={null}
+        isLoading
+        programYear={LEGACY_PY}
+      />
+    )
+    const skeleton = screen.getByTestId('distinguished-trophy-skeleton')
+    const bar = skeleton.querySelector('.w-48')
+    expect(bar).not.toBeNull()
+    // text-base line-height is 24px = h-6; h-10 was the px-4 py-2 pill.
+    expect(bar).toHaveClass('h-6')
+    expect(bar).not.toHaveClass('h-10')
+  })
+
   describe('loading slot reservation (#1105 — Lesson 107 CLS pattern)', () => {
     /* The competitive-awards query resolves separately from and later than
        the page analytics query that paints DistrictDetailPage. Without a
