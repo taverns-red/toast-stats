@@ -134,7 +134,7 @@ type CountsRead = ReturnType<typeof useDistinguishedCountsAt>
  * Per date, confirmed is the analytics file's `distinguishedCounts`, falling
  * back to the dated rankings row's `distinguishedClubs` (the #2579 source
  * order). Provisional only exists in `distinguishedCounts`, so a file written
- * before it says "Provisional not recorded". A missing confirmed value on
+ * before it says "Qualifying today not recorded". A missing confirmed value on
  * either date renders a dash and says so - never a silent 0.
  */
 function distinguishedClubsTile(
