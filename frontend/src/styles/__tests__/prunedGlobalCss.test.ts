@@ -58,6 +58,12 @@ const REMOVED_CLASSES = [
   'tm-hide-desktop',
   'tm-responsive-grid',
   'tm-hide-print',
+  'tm-header-content',
+  'tm-btn-responsive',
+  'tm-btn-primary-responsive',
+  'tm-btn-secondary-responsive',
+  'tm-card-responsive',
+  'tm-nav-responsive',
 ]
 
 const stripComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '')
@@ -70,8 +76,8 @@ describe('pruned global CSS (#2738)', () => {
     expect(hit).toEqual([])
   })
 
-  it('the five pruned stylesheets total under 30 KB (was 40.9 KB)', () => {
+  it('the five pruned stylesheets total under 25 KB (was 40.9 KB)', () => {
     const bytes = FILES.reduce((n, f) => n + Buffer.byteLength(read(f)), 0)
-    expect(bytes).toBeLessThan(30_000)
+    expect(bytes).toBeLessThan(25_000)
   })
 })
