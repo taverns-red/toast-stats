@@ -103,7 +103,7 @@ describe('CSV Export - all table columns (#2676)', () => {
     expect(headers.slice(14)).toEqual([
       'Members Base',
       'Members Needed',
-      'Net Change',
+      'Net Change Since July 1',
       'Years Chartered',
       'Distinguished Confirmed',
     ])
@@ -125,7 +125,7 @@ describe('CSV Export - all table columns (#2676)', () => {
     const at = (name: string): string => rows[0][headers.indexOf(name)]
     expect(at('Members Base')).toBe('20')
     expect(at('Members Needed')).toBe('3')
-    expect(at('Net Change')).toBe('-2')
+    expect(at('Net Change Since July 1')).toBe('-2')
     expect(at('Years Chartered')).toBe('12')
   })
 
@@ -134,7 +134,7 @@ describe('CSV Export - all table columns (#2676)', () => {
     const { headers, rows } = table()
     const at = (name: string): string => rows[0][headers.indexOf(name)]
     expect(at('Members Base')).toBe('')
-    expect(at('Net Change')).toBe('')
+    expect(at('Net Change Since July 1')).toBe('')
     expect(at('Years Chartered')).toBe('')
   })
 

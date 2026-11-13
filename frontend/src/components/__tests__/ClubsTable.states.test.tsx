@@ -274,7 +274,7 @@ describe('CSV export (#2676, spec §9)', () => {
         'Coach',
         'Members Base',
         'Members Needed',
-        'Net Change',
+        'Net Change Since July 1',
         'Years Chartered',
         'Distinguished Confirmed',
       ])

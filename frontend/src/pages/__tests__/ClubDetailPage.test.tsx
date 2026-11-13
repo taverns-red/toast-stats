@@ -367,7 +367,7 @@ describe('ClubDetailPage (#208)', () => {
     expect(grid).toBeTruthy()
     const inGrid = within(grid as HTMLElement)
     expect(inGrid.getByText('Current')).toBeInTheDocument()
-    expect(inGrid.getByText('Net Δ')).toBeInTheDocument()
+    expect(inGrid.getByText('Change since July 1')).toBeInTheDocument()
     expect(inGrid.getByText('DCP Goals')).toBeInTheDocument()
 
     // Net Δ = -5 (appears in stats grid + chart)
@@ -723,7 +723,7 @@ describe('ClubDetailPage (#208)', () => {
     ).toEqual([
       'Base',
       'Current',
-      'Net Δ',
+      'Change since July 1',
       'DCP Goals',
       'Oct Renewals',
       'Apr Renewals',
