@@ -19,11 +19,22 @@ describe('resolveRouteRecovery', () => {
       expect(r.districtId).toBe('61')
       // Every suggestion is a REAL route built from the canonical section list
       // (no invented destinations — same single source DistrictSubnav uses).
-      const expected = DISTRICT_SECTIONS.map(({ label, segment }) => ({
+      const expected = DISTRICT_SECTIONS.filter(
+        s => s.suggestOnNotFound !== false
+      ).map(({ label, segment }) => ({
         label,
         to: segment ? `/district/61/${segment}` : '/district/61',
       }))
       expect(r.suggestions).toEqual(expected)
+    })
+
+    // #2646: Council joined the sections, and a 14th chip on the 404 page
+    // wrapped to a new row and took its CLS from under to 0.114 at 375px
+    // (budget 0.1, e2e/loading-shells-cls.smoke.ts). The 13 it had stay.
+    it('does not suggest Council, which would push the page over its CLS budget', () => {
+      const r = resolveRouteRecovery('/district/61/dude', D61)
+      expect(r.suggestions.map(s => s.label)).not.toContain('Council')
+      expect(r.suggestions).toHaveLength(DISTRICT_SECTIONS.length - 1)
     })
 
     it('points the Overview suggestion at the bare hub URL', () => {

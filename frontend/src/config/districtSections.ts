@@ -15,6 +15,12 @@ export interface DistrictSection {
    * cannot fall back to another page's description.
    */
   about: string
+  /**
+   * `false` keeps the section out of the 404 page's "did you mean" chips
+   * (#2646): a chip past the 13th wraps to a new row, and the late-arriving
+   * list then shifts the page past its CLS budget. Omit for every other use.
+   */
+  suggestOnNotFound?: false
 }
 
 /* ADR-005 §2 + epic #674 AC1 require every item to be a REAL route — a
@@ -133,6 +139,7 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
     segment: 'council',
     about:
       'Clubs in good standing and their votes as of a District Council date, derived from TI’s club status. Not TI’s official credentials list.',
+    suggestOnNotFound: false,
   },
 ]
 

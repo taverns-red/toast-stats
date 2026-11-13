@@ -75,11 +75,11 @@ export function resolveRouteRecovery(
     return DISTRICTS_INDEX
   }
 
-  const suggestions: RecoverySuggestion[] = DISTRICT_SECTIONS.map(
-    ({ label, segment }) => ({
-      label,
-      to: buildDistrictSectionUrl(districtId, segment),
-    })
-  )
+  const suggestions: RecoverySuggestion[] = DISTRICT_SECTIONS.filter(
+    s => s.suggestOnNotFound !== false
+  ).map(({ label, segment }) => ({
+    label,
+    to: buildDistrictSectionUrl(districtId, segment),
+  }))
   return { kind: 'district-subpages', districtId, suggestions }
 }
