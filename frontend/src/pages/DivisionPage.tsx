@@ -11,6 +11,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
+import { applyPipelineDistinguished } from '../utils/divisionAreaDistinguished'
 import { calculateDivisionGapAnalysis } from '../utils/divisionGapAnalysis'
 import { generateDivisionProgressText } from '../utils/divisionProgressText'
 import { DivisionPerformanceCard } from '../components/DivisionPerformanceCard'
@@ -99,10 +100,19 @@ const DivisionPage: React.FC = () => {
   // disabled unless `hasValidDates`), but guard rather than assert.
   const divisionPerformance = React.useMemo(() => {
     if (!snapshot || !normalizedDivId || !effectiveEndDate) return undefined
-    return extractDivisionPerformance(snapshot, effectiveEndDate).find(
-      d => d.divisionId.toUpperCase() === normalizedDivId
-    )
-  }, [snapshot, normalizedDivId, effectiveEndDate])
+    // The published confirmed / provisional counts (#2580); without them
+    // (old files) the count stands as the snapshot has it.
+    return applyPipelineDistinguished(
+      extractDivisionPerformance(snapshot, effectiveEndDate),
+      data?.distinguishedCountsByDivision,
+      effectiveEndDate
+    ).find(d => d.divisionId.toUpperCase() === normalizedDivId)
+  }, [
+    snapshot,
+    normalizedDivId,
+    effectiveEndDate,
+    data?.distinguishedCountsByDivision,
+  ])
 
   // Scoped division-level narrative — the same prose the overview's Division and
   // Area Progress Summary shows, scoped to this division (#1016 S2 refactor).

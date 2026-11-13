@@ -4,6 +4,7 @@ import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
+import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import {
@@ -13,6 +14,7 @@ import {
   isDateInProgramYear,
 } from '../utils/programYear'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
+import { applyPipelineDistinguished } from '../utils/divisionAreaDistinguished'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { DivisionPerformanceCards } from '../components/DivisionPerformanceCards'
@@ -110,6 +112,19 @@ const DistrictDivisionsPage: React.FC = () => {
     'divisions'
   )
 
+  // The published confirmed / provisional counts per division and area
+  // (#2580), from the district analytics read the other district pages share
+  // through the query cache. Nothing waits for it (#1901): the cards render
+  // their snapshot-only columns at once and placeholders hold the status and
+  // counts until the published ones land, so nothing flips. If
+  // it fails or the file predates the field, the snapshot's count stands.
+  const { data: analytics, isLoading: isLoadingCounts } = useDistrictAnalytics(
+    hasValidDates ? districtId || null : null,
+    undefined,
+    effectiveEndDate ?? undefined
+  )
+  const publishedCounts = analytics?.distinguishedCountsByDivision
+
   // #1837: reserve both data slots from first paint until the statistics
   // settle — including the date-index window, where the query is disabled and
   // reports `isLoading: false`. Rendering nothing there put the static DDP
@@ -161,8 +176,10 @@ const DistrictDivisionsPage: React.FC = () => {
               <DivisionPerformanceCards
                 districtSnapshot={districtStatistics}
                 isLoading={isLoadingStatistics}
+                countsPending={isLoadingCounts}
                 snapshotTimestamp={effectiveEndDate}
                 districtId={districtId}
+                distinguishedCountsByDivision={publishedCounts}
               />
             ) : isSlotPending ? (
               <DivisionPerformanceCards
@@ -187,11 +204,15 @@ const DistrictDivisionsPage: React.FC = () => {
 
             {districtStatistics && effectiveEndDate ? (
               <DivisionAreaRecognitionPanel
-                divisions={extractDivisionPerformance(
-                  districtStatistics,
+                divisions={applyPipelineDistinguished(
+                  extractDivisionPerformance(
+                    districtStatistics,
+                    effectiveEndDate
+                  ),
+                  publishedCounts,
                   effectiveEndDate
                 )}
-                isLoading={isLoadingStatistics}
+                isLoading={isLoadingStatistics || isLoadingCounts}
                 openDivisions={openSummaryDivisions}
                 onOpenDivisionsChange={setOpenSummaryDivisions}
               />

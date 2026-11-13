@@ -26,6 +26,7 @@ import { Link } from 'react-router-dom'
 import { signedDelta } from '../utils/displayFormat'
 import type { DistinguishedStatus } from '../utils/divisionStatus'
 import type { DivisionGapAnalysis } from '../utils/divisionGapAnalysis'
+import { CountPending, QualifyingTodayExtra } from './DistinguishedCount'
 
 export interface DivisionSummaryProps {
   /** Division identifier (e.g., "A", "B", "C") */
@@ -40,6 +41,14 @@ export interface DivisionSummaryProps {
   netGrowth: number
   /** Current number of clubs that have achieved Distinguished status */
   distinguishedClubs: number
+  /** Clubs that qualify today but are not yet confirmed (#2580), shown beside
+   *  the pill as "+N qualifying today". `distinguishedClubs` is the confirmed
+   *  count, and the status and gaps are derived from it. */
+  provisionalDistinguishedClubs?: number | undefined
+  /** The published counts are still loading: show fixed-size placeholders for
+   *  the status badge, the pill and the gaps instead of the snapshot's
+   *  qualifying-today values (#2580). */
+  countsPending?: boolean | undefined
   /** Required number of distinguished clubs (45% of club base for Distinguished) */
   requiredDistinguishedClubs: number
   /** Gap analysis for recognition levels (optional) */
@@ -269,6 +278,8 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
   clubBase,
   netGrowth,
   distinguishedClubs,
+  provisionalDistinguishedClubs,
+  countsPending,
   requiredDistinguishedClubs,
   gapAnalysis,
   to,
@@ -311,14 +322,18 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
             <>Division {divisionId}</>
           )}
         </h2>
-        <div
-          className={statusBadgeClasses}
-          role="status"
-          aria-label={`Division status: ${statusLabel}`}
-          style={{ minHeight: '44px', minWidth: '44px' }}
-        >
-          {statusLabel}
-        </div>
+        {countsPending ? (
+          <CountPending width="11rem" height="44px" />
+        ) : (
+          <div
+            className={statusBadgeClasses}
+            role="status"
+            aria-label={`Division status: ${statusLabel}`}
+            style={{ minHeight: '44px', minWidth: '44px' }}
+          >
+            {statusLabel}
+          </div>
+        )}
       </div>
 
       {/* Single Line Metrics */}
@@ -343,21 +358,38 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
           <span className="tm-body-small tm-text-cool-gray">
             Distinguished:
           </span>
-          <div
-            className={distinguishedBadgeClasses}
-            aria-label={`Distinguished clubs: ${distinguishedClubs} of ${requiredDistinguishedClubs}${distinguishedClubs >= requiredDistinguishedClubs ? ', threshold met' : ''}`}
-          >
-            {distinguishedClubs}/{requiredDistinguishedClubs}
-            {distinguishedClubs >= requiredDistinguishedClubs && (
-              <span className="ml-1" aria-hidden="true">
-                ✓
-              </span>
-            )}
-          </div>
+          {countsPending ? (
+            <CountPending width="12rem" height="33px" />
+          ) : (
+            <>
+              <div
+                className={distinguishedBadgeClasses}
+                aria-label={`Distinguished clubs: ${distinguishedClubs} of ${requiredDistinguishedClubs}${distinguishedClubs >= requiredDistinguishedClubs ? ', threshold met' : ''}`}
+              >
+                {distinguishedClubs}/{requiredDistinguishedClubs}
+                {distinguishedClubs >= requiredDistinguishedClubs && (
+                  <span className="ml-1" aria-hidden="true">
+                    ✓
+                  </span>
+                )}
+              </div>
+              <QualifyingTodayExtra
+                provisional={provisionalDistinguishedClubs}
+              />
+            </>
+          )}
         </div>
 
         {/* Gap Indicators - Inline when gapAnalysis is provided */}
-        {gapAnalysis && gapToD && gapToS && gapToP && (
+        {countsPending && gapAnalysis && (
+          <div className="flex items-center gap-2" aria-hidden="true">
+            <span className="tm-body-small tm-text-cool-gray">Gap:</span>
+            <CountPending width="37px" height="45px" />
+            <CountPending width="37px" height="45px" />
+            <CountPending width="37px" height="45px" />
+          </div>
+        )}
+        {!countsPending && gapAnalysis && gapToD && gapToS && gapToP && (
           <div
             className="flex items-center gap-2"
             role="group"

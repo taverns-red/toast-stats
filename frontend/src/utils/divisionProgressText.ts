@@ -20,6 +20,7 @@
  */
 
 import { DivisionPerformance } from './divisionStatus'
+import { describeDistinguished } from './divisionAreaDistinguished'
 import {
   CSP_LOST_ELIGIBILITY,
   describeCspDueDates,
@@ -79,7 +80,7 @@ function generateDivisionLabel(division: DivisionPerformance): string {
  * @returns Metrics string (e.g., "52 of 50 clubs paid, 24 of 50 distinguished")
  */
 function generateMetricsDescription(division: DivisionPerformance): string {
-  return `${division.paidClubs} of ${division.clubBase} clubs paid, ${division.distinguishedClubs} of ${division.clubBase} distinguished`
+  return `${division.paidClubs} of ${division.clubBase} clubs paid, ${describeDistinguished(division, division.clubBase)}`
 }
 
 /**

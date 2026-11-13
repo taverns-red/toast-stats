@@ -18,6 +18,7 @@
 import { AreaWithDivision } from '../components/DivisionAreaProgressSummary'
 import { GapAnalysis, RecognitionLevel } from './areaGapAnalysis'
 import type { MissingVisitClub } from './divisionStatus'
+import { describeDistinguished } from './divisionAreaDistinguished'
 import {
   CSP_LOST_ELIGIBILITY,
   cspAutoCreditNote,
@@ -74,7 +75,7 @@ function generateAreaLabel(area: AreaWithDivision): string {
  * @returns Metrics string (e.g., "4 of 4 clubs paid, 2 of 4 distinguished")
  */
 function generateMetricsDescription(area: AreaWithDivision): string {
-  return `${area.paidClubs} of ${area.clubBase} clubs paid, ${area.distinguishedClubs} of ${area.clubBase} distinguished`
+  return `${area.paidClubs} of ${area.clubBase} clubs paid, ${describeDistinguished(area, area.clubBase)}`
 }
 
 /**
