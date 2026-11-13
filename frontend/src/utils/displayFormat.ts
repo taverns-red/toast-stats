@@ -8,12 +8,13 @@ const MINUS = '−'
 /** "+312", "−2,501", "0": true minus sign, thousands separators. `zero` lets a
  *  caller choose how no change reads (the club trend uses "±0"). */
 export function signedDelta(n: number, zero = '0'): string {
-  if (n === 0) return zero
+  if (!Number.isFinite(n) || n === 0) return zero
   return `${n > 0 ? '+' : MINUS}${Math.abs(n).toLocaleString()}`
 }
 
 /** "+3.0%", "−2.0%", "0.0%": one decimal, true minus sign. */
 export function signedPercent(percent: number): string {
+  if (!Number.isFinite(percent)) return '0.0%'
   const text = Math.abs(percent).toFixed(1)
   if (Number(text) === 0) return '0.0%'
   return `${percent > 0 ? '+' : MINUS}${text}%`
@@ -37,17 +38,6 @@ export function formatPY(
   const end = String((start + 1) % 100).padStart(2, '0')
   const from = style === 'short' ? String(start % 100).padStart(2, '0') : start
   return `PY ${from}–${end}`
-}
-
-/** "Region 4" in prose and headings, "R4" as the compact tag. Ids arrive
- *  zero-padded ("04") or bare; the padding never reaches the reader. */
-export function formatRegion(
-  id: string | number,
-  style: 'long' | 'compact' = 'long'
-): string {
-  const raw = String(id).trim()
-  const n = /^\d+$/.test(raw) ? String(Number(raw)) : raw
-  return style === 'compact' ? `R${n}` : `Region ${n}`
 }
 
 const isNumericId = (id: string) => /^\d+$/.test(id.trim())
