@@ -147,7 +147,7 @@ describe('toClubHistoryCsvRows', () => {
       'Distinguished',
       'Membership Base',
       'Membership End',
-      'Membership Net Since Base',
+      'Membership Change This Program Year',
       'October Renewals',
       'April Renewals',
       'Status',

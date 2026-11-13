@@ -267,7 +267,9 @@ describe('ClubsTable < 768 — row sparkline (#1792)', () => {
     fireEvent.click(screen.getByRole('button', { name: /filter & sort/i }))
     const select = screen.getByLabelText('Sort by')
     expect(
-      within(select).getByRole('option', { name: 'Net change since July 1' })
+      within(select).getByRole('option', {
+        name: 'Net change since the start of the program year',
+      })
     ).toHaveValue('netChange')
     fireEvent.change(select, { target: { value: 'netChange' } })
     expect(onSortChange).toHaveBeenCalledWith('netChange', 'asc')

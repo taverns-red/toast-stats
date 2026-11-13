@@ -367,7 +367,9 @@ describe('ClubDetailPage (#208)', () => {
     expect(grid).toBeTruthy()
     const inGrid = within(grid as HTMLElement)
     expect(inGrid.getByText('Current')).toBeInTheDocument()
-    expect(inGrid.getByText('Change since July 1')).toBeInTheDocument()
+    expect(
+      inGrid.getByText('Change since the start of the program year')
+    ).toBeInTheDocument()
     expect(inGrid.getByText('DCP Goals')).toBeInTheDocument()
 
     // Net Δ = -5 (appears in stats grid + chart)
@@ -723,7 +725,7 @@ describe('ClubDetailPage (#208)', () => {
     ).toEqual([
       'Base',
       'Current',
-      'Change since July 1',
+      'Change since the start of the program year',
       'DCP Goals',
       'Oct Renewals',
       'Apr Renewals',
@@ -774,6 +776,35 @@ describe('Provisional Distinguished Badge — ClubDetailPage', () => {
       // no hand-built mock satisfies; matches the existing cast at l.298 (#1368).
     } as unknown as ReturnType<typeof useDistrictAnalytics>)
   }
+
+  it('names the first snapshot date as the basis when the club has no base (#2712)', () => {
+    setClubOverrides({
+      membershipBase: undefined,
+      membershipTrend: [
+        { date: '2025-07-23', count: 20 },
+        { date: '2025-10-31', count: 25 },
+      ],
+    })
+    renderWithRoute()
+
+    expect(screen.getAllByText('Change since Jul 23').length).toBeGreaterThan(0)
+    expect(screen.queryByText(/since the start of the program year/)).toBeNull()
+  })
+
+  it('puts the basis on the membership headline and the Change row (#2712)', () => {
+    setClubOverrides({
+      membershipBase: 46,
+      membershipTrend: [
+        { date: '2025-07-31', count: 46 },
+        { date: '2025-10-31', count: 41 },
+      ],
+    })
+    renderWithRoute()
+
+    expect(
+      screen.getAllByText(/-5 since the start of the program year/).length
+    ).toBeGreaterThan(0)
+  })
 
   it('shows "Provisional" when Distinguished and pre-April with low renewals', () => {
     setClubOverrides({
