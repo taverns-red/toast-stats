@@ -177,10 +177,10 @@ describe('RankingCard', () => {
 
     it('displays percentile for top performer', () => {
       renderWithProviders(
-        <RankingCard {...baseProps} rank={1} percentile={0.8} />
+        <RankingCard {...baseProps} rank={1} percentile={99.2} />
       )
 
-      expect(screen.getByText('1st percentile')).toBeInTheDocument()
+      expect(screen.getByText('99th percentile')).toBeInTheDocument()
     })
 
     it('displays percentile for lower ranked district', () => {

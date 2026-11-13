@@ -46,8 +46,10 @@ export interface RankingCardProps {
   rank: number
   /** Total number of districts being ranked */
   totalDistricts: number
-  /** Percentile position (0-100, where lower is better for rankings) */
+  /** Percentile (0-100, (districts - rank) / districts: higher is better, so
+   *  rank 1 is the highest). Same formula as the KPI cards (#2613). */
   percentile: number
+
   /** Icon to display for this metric */
   icon: React.ReactNode
   /** Color scheme for the card accent */
@@ -89,6 +91,7 @@ const RankingCard: React.FC<RankingCardProps> = ({
   // Format percentile as ordinal (e.g., "12th percentile") (#305)
   const rounded = Math.round(percentile)
   const percentileDisplay = `${toOrdinal(rounded)} percentile`
+  const ariaSummary = `${title}: Rank ${rank} of ${totalDistricts}, ${percentileDisplay}`
 
   if (isLoading) {
     return (
@@ -123,7 +126,7 @@ const RankingCard: React.FC<RankingCardProps> = ({
   return (
     <Card
       className={`border-l-4 ${colors.accentBorder} hover:shadow-lg transition-shadow duration-200`}
-      aria-label={`${title}: Rank ${rank} of ${totalDistricts}, ${percentileDisplay}${yearOverYearChange !== null ? `, ${yearOverYearChange > 0 ? 'improved' : yearOverYearChange < 0 ? 'declined' : 'unchanged'} by ${Math.abs(yearOverYearChange)} positions` : ''}`}
+      aria-label={`${ariaSummary}${yearOverYearChange !== null ? `, ${yearOverYearChange > 0 ? 'improved' : yearOverYearChange < 0 ? 'declined' : 'unchanged'} by ${Math.abs(yearOverYearChange)} positions` : ''}`}
     >
       <div className="flex items-start gap-4">
         {/* Icon container with color scheme background */}

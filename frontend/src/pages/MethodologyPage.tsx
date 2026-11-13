@@ -1574,7 +1574,14 @@ const MethodologyPage: React.FC = () => {
               that metric, so <strong>higher is better</strong>: rank #1 of 100
               is the 99th percentile, and a district at the 87th percentile is
               ahead of 87% of districts (that is, in the top 13%). Computed as
-              (districts − rank) ÷ districts.
+              (districts − rank) ÷ districts. The Rankings page uses the same
+              formula. The rank behind each card is not by the figure the card
+              prints: Paid Clubs is ranked by club growth %, Membership Payments
+              by membership payments growth %, and Distinguished Clubs by
+              distinguished % of the club base. When every district has the same
+              value, as when all are at 0% early in the year, every district
+              would be rank 1, so the card shows <strong>Tied</strong> instead
+              of a rank and percentile.
             </dd>
             <dt>Aggregate Score</dt>
             <dd>

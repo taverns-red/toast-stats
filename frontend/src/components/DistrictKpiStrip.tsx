@@ -66,13 +66,22 @@ const readInitialCollapsed = (): boolean => {
 // D/S/P/Sm ticks are cryptic — the meaning was only reachable on hover.
 const CARD_TOOLTIPS: Record<TieredKpiKey, string> = {
   paidClubs:
-    'Paid clubs count with thresholds for each Distinguished District recognition level.',
+    'Paid clubs count with thresholds for each Distinguished District recognition level. The world rank and percentile are ranked by club growth %, not by this count.',
   membershipPayments:
-    'Total membership payments (New + April + October + Late + Charter) with thresholds for each recognition level.',
+    'Total membership payments (New + April + October + Late + Charter) with thresholds for each recognition level. The world rank and percentile are ranked by payments growth %, not by this total.',
   // Qualifying today, not confirmed: the trophy case's gap counts confirmed
   // clubs, so the two numbers differ by design (#2390).
   distinguishedClubs:
-    'Confirmed Distinguished clubs, with the thresholds for each Distinguished District recognition level. The rank and the Distinguished District gap use this same confirmed count. +N qualifying today: clubs that qualify on current membership whose April renewals do not yet confirm the level; they are shown beside the count, never added to it.',
+    'Confirmed Distinguished clubs, with the thresholds for each Distinguished District recognition level. The Distinguished District gap uses this confirmed count; the world rank and percentile are ranked by distinguished % of the club base. +N qualifying today: clubs that qualify on current membership whose April renewals do not yet confirm the level; they are shown beside the count, never added to it.',
+}
+
+// The measure each card's world rank is actually based on. It is not the
+// figure the card prints (analytics-core MetricRankingsCalculator ranks by the
+// growth or share fields), so the card names it (#2613).
+const RANKED_BY: Record<TieredKpiKey, string> = {
+  paidClubs: 'club growth %',
+  membershipPayments: 'payments growth %',
+  distinguishedClubs: 'distinguished % of the club base',
 }
 
 const TIER_LEGEND: { short: string; full: string }[] = [
@@ -207,6 +216,7 @@ const KpiExpanded: React.FC<KpiBodyProps> = ({ kpis, ghost, planGoals }) => (
           provisional={kpis[g.kpi].provisional}
           basis={kpis[g.kpi].basis}
           tooltipContent={CARD_TOOLTIPS[g.kpi]}
+          rankedBy={RANKED_BY[g.kpi]}
         />
       ))}
       <KpiDeltaCard

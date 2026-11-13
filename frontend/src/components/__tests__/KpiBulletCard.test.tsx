@@ -95,6 +95,91 @@ describe('KpiBulletCard', () => {
     })
   })
 
+  // #2613: when every district has the same value, everyone is rank 1.
+  // That is a tie, not a lead: no "#1 of N", no "99th percentile".
+  describe('fully tied category (#2613)', () => {
+    const tiedRankings: MetricRankings = {
+      ...standardRankings,
+      worldRank: 1,
+      worldPercentile: 98.9,
+      totalDistricts: 94,
+      worldTied: true,
+    }
+
+    it('shows Tied instead of #1 of N and a percentile', () => {
+      renderWithRouter(
+        <KpiBulletCard
+          title="Distinguished Clubs"
+          current={0}
+          targets={standardTargets}
+          rankings={tiedRankings}
+        />
+      )
+      expect(screen.getByTestId('world-rank')).toHaveTextContent(/^Tied$/)
+      expect(screen.queryByTestId('world-percentile')).not.toBeInTheDocument()
+      expect(screen.queryByText(/#1 of 94/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/percentile/i)).not.toBeInTheDocument()
+    })
+
+    it('hides the region rank chip: a tied world is tied in every region', () => {
+      renderWithRouter(
+        <KpiBulletCard
+          title="Distinguished Clubs"
+          current={0}
+          targets={standardTargets}
+          rankings={tiedRankings}
+        />
+      )
+      expect(screen.queryByText(/#1/)).not.toBeInTheDocument()
+      expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    })
+
+    it('still shows rank and percentile when worldTied is false or absent', () => {
+      renderWithRouter(
+        <KpiBulletCard
+          title="Distinguished Clubs"
+          current={0}
+          targets={standardTargets}
+          rankings={{ ...tiedRankings, worldTied: false }}
+        />
+      )
+      expect(screen.getByTestId('world-rank')).toHaveTextContent('#1 of 94')
+      expect(screen.getByTestId('world-percentile')).toHaveTextContent(
+        /99th percentile/
+      )
+    })
+  })
+
+  // #2613: the rank is by a different measure than the figure on the card.
+  describe('ranked measure is named (#2613)', () => {
+    it('names the measure beside the rank and percentile', () => {
+      renderWithRouter(
+        <KpiBulletCard
+          title="Paid Clubs"
+          current={149}
+          targets={standardTargets}
+          rankings={standardRankings}
+          rankedBy="club growth %"
+        />
+      )
+      expect(screen.getByTestId('ranked-by')).toHaveTextContent(
+        /ranked by club growth %/i
+      )
+    })
+
+    it('says nothing about a measure when none is given', () => {
+      renderWithRouter(
+        <KpiBulletCard
+          title="Paid Clubs"
+          current={149}
+          targets={standardTargets}
+          rankings={standardRankings}
+        />
+      )
+      expect(screen.queryByTestId('ranked-by')).not.toBeInTheDocument()
+    })
+  })
+
   describe('inline rank line', () => {
     it('renders #rank of total, percentile, and region rank chips', () => {
       renderWithRouter(

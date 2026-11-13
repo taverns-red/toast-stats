@@ -459,4 +459,52 @@ describe('MetricRankingsCalculator', () => {
       expect(result4.region).toBe('Region 11')
     })
   })
+
+  // #2613: when every district has the same value for the ranked measure,
+  // every district is rank 1 — that is a tie, not a lead.
+  describe('worldTied (#2613)', () => {
+    it('is true when every district has the same ranked value', () => {
+      const rankings = createRankingsData([
+        { districtId: '1', distinguishedPercent: 0, distinguishedRank: 1 },
+        { districtId: '2', distinguishedPercent: 0, distinguishedRank: 1 },
+        { districtId: '3', distinguishedPercent: 0, distinguishedRank: 1 },
+      ])
+      const result = calculator.calculateMetricRankings(
+        '1',
+        'distinguished',
+        rankings
+      )
+      expect(result.worldTied).toBe(true)
+    })
+
+    it('is false when at least two distinct values exist', () => {
+      const rankings = createRankingsData([
+        { districtId: '1', distinguishedPercent: 10, distinguishedRank: 1 },
+        { districtId: '2', distinguishedPercent: 0, distinguishedRank: 2 },
+        { districtId: '3', distinguishedPercent: 0, distinguishedRank: 2 },
+      ])
+      const result = calculator.calculateMetricRankings(
+        '1',
+        'distinguished',
+        rankings
+      )
+      expect(result.worldTied).toBe(false)
+    })
+
+    it('checks the measure the metric is ranked by, not another one', () => {
+      // clubs are ranked by clubGrowthPercent; distinguishedPercent ties
+      // here but must not make the clubs category look tied.
+      const rankings = createRankingsData([
+        { districtId: '1', clubGrowthPercent: 9, distinguishedPercent: 5 },
+        { districtId: '2', clubGrowthPercent: 3, distinguishedPercent: 5 },
+      ])
+      expect(
+        calculator.calculateMetricRankings('1', 'clubs', rankings).worldTied
+      ).toBe(false)
+      expect(
+        calculator.calculateMetricRankings('1', 'distinguished', rankings)
+          .worldTied
+      ).toBe(true)
+    })
+  })
 })
