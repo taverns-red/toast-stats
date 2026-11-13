@@ -126,7 +126,9 @@ for (const theme of THEMES) {
       expect(m.clipped, ctx).toEqual([])
       // Nothing to scroll to, so no "more to the right" fade over the last
       // column (it read as clipping in the first 1280 screenshot).
-      await expect(page.locator('.region-rankings__scroll-cue')).toBeHidden()
+      await expect(
+        page.locator('.dt-scroll-wrap[data-scrollable-end="true"]')
+      ).toHaveCount(0)
     })
   }
 }
