@@ -8,21 +8,23 @@
  * (`--ink*`, `--surface*`, `--line`, `--tm-*`), which dark mode already remaps.
  *
  * Counted, in `frontend/src`, test files and `styles/tokens/` excluded,
- * comments stripped:
- *   - tsxHex   hex colours (#rgb, #rgba, #rrggbb, #rrggbbaa) in .tsx
- *   - tsxRgba  rgb() / rgba() values in .tsx
- *   - tsxGray  `gray-NNN` classes in .tsx
+ * comments stripped (the tsx* names cover .ts and .tsx):
+ *   - tsxHex   hex colours (#rgb, #rgba, #rrggbb, #rrggbbaa), including
+ *              Tailwind arbitrary values such as `bg-[#123456]`
+ *   - tsxRgba  rgb() / rgba() values
+ *   - tsxGray  `gray-NNN`, `slate-NNN`, `zinc-NNN`, `neutral-NNN` classes
  *   - cssHex   hex colours in .css
  *
  * The baseline lives in rawValueRatchet.baseline.json. When a count drops
  * (good), the test passes and says so: lower the baseline with
  *   UPDATE_RAW_VALUE_BASELINE=1 npx vitest --run src/styles/__tests__/rawValueRatchet.test.ts
- * from frontend/. Never raise it; use a token.
+ * from frontend/. That only ever lowers a count; raising one means hand-editing
+ * the JSON, which a reviewer will see. Use a token instead.
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const srcDir = resolve(here, '../..')
@@ -35,21 +37,35 @@ type Counts = {
   cssHex: number
 }
 
-/** Preceded by a quote, space, bracket, comma or colon, so `a#b` and `&#x27;`
-    are not read as colours. */
-const HEX =
-  /(?<=^|[\s'"`(,:])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\w-])/gm
+/** In code a colour starts a string, an argument, a value or a Tailwind
+    arbitrary value (`bg-[#123456]`): preceded by a quote, backtick, `(`, `,`,
+    `:` or `[`, never by whitespace, so "see #2651" in JSX text is not a colour.
+    CSS values follow whitespace too (`color: #fff`). Neither matches `a#b` or
+    `&#x27;`. */
+const HEX_BODY = '#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\\w-])'
+const HEX_CODE = new RegExp(`(?<=^|['"\`(,:\\[])${HEX_BODY}`, 'gm')
+const HEX_CSS = new RegExp(`(?<=^|[\\s'"\`(,:\\[])${HEX_BODY}`, 'gm')
 const RGBA = /\brgba?\(/g
-const GRAY = /\bgray-\d{2,3}\b/g
+const GRAY = /\b(?:gray|slate|zinc|neutral)-\d{2,3}\b/g
+
+/** Only the brand token files may hold raw values; no other directory that
+    happens to be called "tokens". */
+const TOKENS_DIR = 'styles/tokens/'
+
+/** `rel` is relative to src with forward slashes. */
+const isScanned = (rel: string) =>
+  /\.(css|tsx?)$/.test(rel) &&
+  !/\.(test|spec)\.tsx?$/.test(rel) &&
+  !rel.endsWith('.d.ts') &&
+  !rel.startsWith(TOKENS_DIR)
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
     const p = join(dir, name)
     if (statSync(p).isDirectory()) {
-      if (name === '__tests__' || name === 'node_modules' || name === 'tokens')
-        continue
+      if (name === '__tests__' || name === 'node_modules') continue
       walk(p, out)
-    } else if (/\.(css|tsx)$/.test(name) && !/\.test\.tsx$/.test(name)) {
+    } else if (isScanned(relative(srcDir, p).split(sep).join('/'))) {
       out.push(p)
     }
   }
@@ -62,22 +78,29 @@ const stripComments = (src: string) =>
 const count = (src: string, re: RegExp) => src.match(re)?.length ?? 0
 
 type Kind = 'code' | 'css'
-const countHex = (src: string, _kind: Kind) => count(src, HEX)
+const countHex = (src: string, kind: Kind) =>
+  count(src, kind === 'css' ? HEX_CSS : HEX_CODE)
 const countGray = (src: string) => count(src, GRAY)
-const isScanned = (rel: string) =>
-  /\.(css|tsx)$/.test(rel) && !rel.includes('tokens/')
-const nextBaseline = (current: Counts, _baseline: Counts): Counts => current
+
+/** The update path may only lower a count. Raising a baseline is a
+    hand-edit of the JSON, which a reviewer sees in the diff. */
+const nextBaseline = (current: Counts, baseline: Counts): Counts => ({
+  tsxHex: Math.min(current.tsxHex, baseline.tsxHex),
+  tsxRgba: Math.min(current.tsxRgba, baseline.tsxRgba),
+  tsxGray: Math.min(current.tsxGray, baseline.tsxGray),
+  cssHex: Math.min(current.cssHex, baseline.cssHex),
+})
 
 function measure(): Counts {
   const totals: Counts = { tsxHex: 0, tsxRgba: 0, tsxGray: 0, cssHex: 0 }
   for (const file of walk(srcDir)) {
     const src = stripComments(readFileSync(file, 'utf8'))
     if (file.endsWith('.css')) {
-      totals.cssHex += count(src, HEX)
+      totals.cssHex += countHex(src, 'css')
     } else {
-      totals.tsxHex += count(src, HEX)
+      totals.tsxHex += countHex(src, 'code')
       totals.tsxRgba += count(src, RGBA)
-      totals.tsxGray += count(src, GRAY)
+      totals.tsxGray += countGray(src)
     }
   }
   return totals
@@ -91,7 +114,10 @@ describe('raw-value ratchet (#2651)', () => {
   const current = measure()
 
   if (process.env.UPDATE_RAW_VALUE_BASELINE === '1') {
-    writeFileSync(baselinePath, JSON.stringify(current, null, 2) + '\n')
+    writeFileSync(
+      baselinePath,
+      JSON.stringify(nextBaseline(current, readBaseline()), null, 2) + '\n'
+    )
   }
 
   it('finds the source tree (guards a vacuous pass)', () => {
@@ -122,13 +148,13 @@ describe('raw-value ratchet (#2651)', () => {
   )
 
   it('is self-testing: the scanners see a planted raw value', () => {
-    expect(count(`<div style={{ color: '#a1b2c3' }} />`, HEX)).toBe(1)
-    expect(count(`color: #fff;`, HEX)).toBe(1)
-    expect(count(`<a href="#main">`, HEX)).toBe(0)
-    expect(count(`&#x27;`, HEX)).toBe(0)
+    expect(countHex(`<div style={{ color: '#a1b2c3' }} />`, 'code')).toBe(1)
+    expect(countHex(`color: #fff;`, 'css')).toBe(1)
+    expect(countHex(`<a href="#main">`, 'code')).toBe(0)
+    expect(countHex(`&#x27;`, 'code')).toBe(0)
     expect(count(`fill: rgba(0, 0, 0, .1)`, RGBA)).toBe(1)
-    expect(count(`className="text-gray-500 bg-gray-100"`, GRAY)).toBe(2)
-    expect(count(`className="text-ink-2"`, GRAY)).toBe(0)
+    expect(countGray(`className="text-gray-500 bg-gray-100"`)).toBe(2)
+    expect(countGray(`className="text-ink-2"`)).toBe(0)
   })
 
   it('counts Tailwind arbitrary values and ignores issue numbers in text', () => {
