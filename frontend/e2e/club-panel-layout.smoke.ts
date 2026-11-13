@@ -113,8 +113,20 @@ test('the club history page prints the club name on a phone', async ({
     clipped: el.scrollWidth > el.clientWidth + 1,
     nowrap: getComputedStyle(el).whiteSpace === 'nowrap',
     barH: el.closest('.context-bar')!.getBoundingClientRect().height,
+    // The title's own box must sit inside the bar, not spill over its
+    // borders (3 lines of 15px text are 54px in a 44px bar).
+    titleTop: el.getBoundingClientRect().top,
+    titleBottom: el.getBoundingClientRect().bottom,
+    barTop: el.closest('.context-bar')!.getBoundingClientRect().top,
+    barBottom: el.closest('.context-bar')!.getBoundingClientRect().bottom,
   }))
   expect(m.nowrap).toBe(false)
   expect(m.clipped).toBe(false)
   expect(m.barH).toBeLessThanOrEqual(60)
+  expect(m.titleTop, 'title top inside the bar').toBeGreaterThanOrEqual(
+    m.barTop
+  )
+  expect(m.titleBottom, 'title bottom inside the bar').toBeLessThanOrEqual(
+    m.barBottom
+  )
 })
