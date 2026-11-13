@@ -157,6 +157,9 @@ export const AllDistrictsRankingsMetadataSchema = z.object({
 
   /** Whether data came from cache */
   fromCache: z.boolean(),
+
+  /** Date-level "TI publishes club statuses" decision (#2560); additive */
+  distinguishedBasis: z.enum(['ti-recognised', 'april-renewals']).optional(),
 })
 
 /**

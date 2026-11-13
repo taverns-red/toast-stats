@@ -300,11 +300,15 @@ export function computeDistinguishedCounts(
  * transformed before that field was kept (#1120), from the raw
  * club-performance row's 'Club Distinguished Status', so an old snapshot
  * reads the same letters the rankings did.
+ *
+ * @param basis - The date-level decision the rankings made (#2560). Absent,
+ *   the snapshot's own clubs decide.
  */
 export function computeSnapshotDistinguishedCounts(
   snapshot: Pick<DistrictStatistics, 'clubs' | 'snapshotDate'> & {
     clubPerformance?: DistrictStatistics['clubPerformance']
-  }
+  },
+  basis?: DistinguishedCountBasis
 ): { district: DistinguishedCounts; divisions: DivisionDistinguishedCounts[] } {
   const rawStatus = new Map<string, string>()
   for (const row of snapshot.clubPerformance ?? []) {
@@ -320,5 +324,5 @@ export function computeSnapshotDistinguishedCounts(
           distinguishedStatus: rawStatus.get(normalizeClubId(club.clubId)),
         }
   )
-  return computeDistinguishedCounts(clubs, snapshot.snapshotDate)
+  return computeDistinguishedCounts(clubs, snapshot.snapshotDate, basis)
 }

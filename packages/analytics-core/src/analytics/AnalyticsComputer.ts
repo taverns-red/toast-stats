@@ -226,9 +226,14 @@ export class AnalyticsComputer implements IAnalyticsComputer {
     )
 
     // One confirmed / provisional Distinguished count per level (#2553):
-    // the latest snapshot's clubs, the shared rule.
+    // the latest snapshot's clubs, the shared rule. The basis is the date's
+    // single decision, made with the rankings (#2560); rankings written
+    // before that carry none, and the district's own clubs decide.
     const latestDistinguishedCounts = latestSnapshot
-      ? computeSnapshotDistinguishedCounts(latestSnapshot)
+      ? computeSnapshotDistinguishedCounts(
+          latestSnapshot,
+          options?.allDistrictsRankings?.metadata.distinguishedBasis
+        )
       : undefined
 
     // Build district analytics (base result)
