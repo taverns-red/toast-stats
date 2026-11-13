@@ -46,7 +46,7 @@ export const RaceBasisBlock: React.FC<{
       {officialRecognitionFrom}; a club shown here may precede that stamp. The
       rosette marks clubs TI has already recognised. Dates are snapshot dates —
       "between A and B" means no snapshot was collected in between.{' '}
-      <Link to="/methodology#club-race">Methodology</Link>
+      <Link to="/methodology#club-race">How it works</Link>
     </p>
   </aside>
 )

@@ -190,7 +190,7 @@ const MethodologyPage: React.FC = () => {
   }, [hash, expand])
 
   return (
-    <div className="methodology-page">
+    <div className="methodology-page methodology-page--how-it-works">
       <header className="methodology-page__header">
         <p className="placeholder-page__eyebrow">Reference · Updated 2026-08</p>
         <h1 className="placeholder-page__title">How it works</h1>

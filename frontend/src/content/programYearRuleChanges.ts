@@ -6,7 +6,7 @@
  * told a *reader*. A district leader comparing 2025-26 to 2026-27 education
  * numbers had no way to know the goals were not like-for-like.
  *
- * Rendered by `/methodology` §10; each entry is deep-linkable as
+ * Rendered by `/methodology` §19; each entry is deep-linkable as
  * `/methodology#<id>` so a chart, card or tooltip can point at the exact rule
  * that makes two years incomparable.
  */

@@ -2861,7 +2861,7 @@
     color: var(--ink-4);
   }
 
-  /* #2302 — one-line pointer to Methodology §14 above the back-link. */
+  /* #2302 — one-line pointer to Methodology §03 above the back-link. */
   .club-member-data-note {
     margin: 24px 0 0;
     color: var(--ink-3);
@@ -6415,7 +6415,7 @@
   /* Wide screens: text column on the left, jump list pinned on the right so
      section 01 starts above the fold and the list stays in reach. */
   @media (min-width: 1024px) {
-    .methodology-page {
+    .methodology-page--how-it-works {
       display: grid;
       grid-template-columns: minmax(0, 70ch) 300px;
       column-gap: 48px;
@@ -6423,11 +6423,11 @@
       align-items: start;
     }
 
-    .methodology-page__header {
+    .methodology-page--how-it-works .methodology-page__header {
       grid-column: 1 / -1;
     }
 
-    .methodology-toc {
+    .methodology-page--how-it-works .methodology-toc {
       grid-column: 2;
       grid-row: 2 / span 12;
       position: sticky;
@@ -6437,8 +6437,8 @@
       margin-bottom: 0;
     }
 
-    .methodology-group,
-    .methodology-page__made-by {
+    .methodology-page--how-it-works .methodology-group,
+    .methodology-page--how-it-works .methodology-page__made-by {
       grid-column: 1;
     }
   }
@@ -6797,7 +6797,7 @@
     color: var(--ink-2);
   }
 
-  /* Program-year rule-change log (#1400) — §10 of /methodology.
+  /* Program-year rule-change log (#1400) — §19 of /methodology.
 
      Static content inside an already-static section: no async data, no
      conditional slot, so it reserves its own height at first paint and adds
