@@ -814,11 +814,8 @@ const DistrictsPage: React.FC = () => {
               >
                 <p className="districts-kpi-card__label">
                   {label}
-                  {/* The loaded label carries an InfoTooltip whose trigger is a
-                    <button>, floored at 44px by styles/layers/base.css — so
-                    the loaded label box is 50px against this one's 17px, and
-                    every card under-reserved by 33px (#1359). */}
-                  <span className="tooltip-reserve" aria-hidden="true" />
+                  {/* The loaded label's InfoTooltip trigger no longer floors
+                    the line at 44px (#2644), so no reserve is needed. */}
                 </p>
                 <div
                   className="districts-kpi-card__value animate-pulse bg-gray-200 rounded-sm"
@@ -1151,7 +1148,10 @@ const DistrictsPage: React.FC = () => {
       className="text-sm text-gray-500 inline-flex items-center"
     >
       About these metrics
-      <InfoTooltip text="Paid Clubs = clubs that have met renewal obligations for the program year. Total Payments = year-to-date membership payment count. Distinguished = clubs achieving Distinguished status or higher. Score = Borda-count composite of the three rankings. Higher is better on all four." />
+      <InfoTooltip
+        label="the rankings table metrics"
+        text="Paid Clubs =clubs that have met renewal obligations for the program year. Total Payments = year-to-date membership payment count. Distinguished = clubs achieving Distinguished status or higher. Score = Borda-count composite of the three rankings. Higher is better on all four."
+      />
     </span>
   )
 
@@ -1354,7 +1354,10 @@ const DistrictsPage: React.FC = () => {
             <div className="districts-kpi-card">
               <p className="districts-kpi-card__label">
                 Paid Clubs · Global
-                <InfoTooltip text="Sum of paid clubs across every tracked district worldwide. A 'paid club' has met its renewal obligations for the program year." />
+                <InfoTooltip
+                  label="paid clubs"
+                  text="Sum of paid clubs across every tracked district worldwide. A 'paid club' has met its renewal obligations for the program year."
+                />
               </p>
               <div
                 className="districts-kpi-card__value"
@@ -1372,7 +1375,10 @@ const DistrictsPage: React.FC = () => {
             <div className="districts-kpi-card districts-kpi-card--secondary">
               <p className="districts-kpi-card__label">
                 Total Payments
-                <InfoTooltip text="Year-to-date membership payment count summed across every tracked district. Members typically pay twice/year so this approximately doubles total membership over a full program year." />
+                <InfoTooltip
+                  label="total payments"
+                  text="Year-to-date membership payment count summed across every tracked district. Members typically pay twice/year so this approximately doubles total membership over a full program year."
+                />
               </p>
               <div
                 className="districts-kpi-card__value"
@@ -1390,7 +1396,10 @@ const DistrictsPage: React.FC = () => {
             <div className="districts-kpi-card districts-kpi-card--secondary">
               <p className="districts-kpi-card__label">
                 Distinguished Clubs
-                <InfoTooltip text="Clubs at Distinguished tier or higher (Distinguished / Select / President's / Smedley). See How it works for tier definitions." />
+                <InfoTooltip
+                  label="Distinguished clubs"
+                  text="Clubs at Distinguished tier or higher (Distinguished / Select / President's / Smedley). See How it works for tier definitions."
+                />
               </p>
               <div
                 className="districts-kpi-card__value"
@@ -1419,7 +1428,10 @@ const DistrictsPage: React.FC = () => {
             <div className="districts-kpi-card districts-kpi-card--secondary">
               <p className="districts-kpi-card__label">
                 Districts Tracked
-                <InfoTooltip text="Number of districts with usable data in the most recent rankings file." />
+                <InfoTooltip
+                  label="districts tracked"
+                  text="Number of districts with usable data in the most recent rankings file."
+                />
               </p>
               <div
                 className="districts-kpi-card__value"

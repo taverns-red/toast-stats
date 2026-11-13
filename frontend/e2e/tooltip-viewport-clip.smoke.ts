@@ -72,8 +72,8 @@ const PINNABLE = [
   {
     what: 'InfoTooltip (w-56)',
     route: '/',
-    trigger: 'button[aria-label="info"]',
-    sentinel: 'button[aria-label="info"]',
+    trigger: 'button.info-tooltip__trigger',
+    sentinel: 'button.info-tooltip__trigger',
   },
 ]
 
@@ -250,7 +250,7 @@ test('the tooltip triggers keep their 44px floor', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   await load(page, '/', 'light')
   await page
-    .locator('button[aria-label="info"]')
+    .locator('button.info-tooltip__trigger')
     .first()
     .waitFor({ state: 'visible', timeout: 30_000 })
   await page.waitForTimeout(500)
@@ -259,7 +259,7 @@ test('the tooltip triggers keep their 44px floor', async ({ page }) => {
     const undersized: string[] = []
     let counted = 0
     for (const el of Array.from(
-      document.querySelectorAll('button[aria-label="info"]')
+      document.querySelectorAll('button.info-tooltip__trigger')
     )) {
       const r = el.getBoundingClientRect()
       if (r.width <= 1 || r.height <= 1) continue // collapsed, not a target

@@ -74,13 +74,27 @@ export async function measureInteractiveTargets(
           el.getAttribute('role') !== 'button' &&
           !notProseSels.some(s => el.matches(s))
         if (inlineProseLink) continue
+        // #2644: a control may keep its 44px hit area in an absolutely
+        // positioned ::after that overflows its (smaller) visible box, so the
+        // icon adds no line height (InfoTooltip). The tappable area is the
+        // larger of the two; read the pseudo's resolved size from its
+        // computed style, since getBoundingClientRect cannot see it.
+        const after = getComputedStyle(el, '::after')
+        const hitW =
+          after.position === 'absolute' && after.content !== 'none'
+            ? parseFloat(after.width) || 0
+            : 0
+        const hitH =
+          after.position === 'absolute' && after.content !== 'none'
+            ? parseFloat(after.height) || 0
+            : 0
         out.push({
           tag,
           testid: el.getAttribute('data-testid'),
           aria: el.getAttribute('aria-label'),
           cls: (el.getAttribute('class') || '').slice(0, 90),
-          w: Math.round(rect.width),
-          h: Math.round(rect.height),
+          w: Math.round(Math.max(rect.width, hitW)),
+          h: Math.round(Math.max(rect.height, hitH)),
           allowedBy: allowSels.find(s => el.matches(s)),
         })
       }

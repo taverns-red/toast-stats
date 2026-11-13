@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import React from 'react'
 import InfoTooltip from '../InfoTooltip'
@@ -73,7 +73,7 @@ describe('InfoTooltip (#92, #2644)', () => {
   it('closes on Escape without moving focus', () => {
     render(<InfoTooltip label="paid clubs" text="Dismiss me" />)
 
-    trigger().focus()
+    act(() => trigger().focus())
     expect(screen.getByText('Dismiss me')).toBeVisible()
 
     fireEvent.keyDown(trigger(), { key: 'Escape' })

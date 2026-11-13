@@ -47,4 +47,32 @@
   .tooltip-arrow--side {
     translate: var(--tooltip-arrow-shift) -50%;
   }
+
+  /* #2644 — a dark panel on a dark page had no visible edge. */
+  .tooltip-panel--bordered {
+    border: 1px solid var(--line);
+  }
+
+  /* #2644 — the InfoTooltip trigger is a 14px icon inside a line of text.
+     base.css floors every <button> at 44px, which inflated a 17px KPI label to
+     49px (and the Awards Race heading to 50px). The icon drops that floor and
+     keeps its 44px hit area as an invisible ::after that overflows the line
+     box instead: 14px + 2 x 15px = 44px, so it adds no height (R10: one rule
+     for every consumer). `line-height: 0` stops the inline-flex box adding a
+     strut. */
+  .info-tooltip__trigger {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    width: 14px;
+    height: 14px;
+    line-height: 0;
+    flex: none;
+  }
+
+  .info-tooltip__trigger::after {
+    content: '';
+    position: absolute;
+    inset: -15px;
+  }
 }

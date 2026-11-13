@@ -148,30 +148,42 @@ describe('Tooltip panel stays inside the viewport (#1405)', () => {
 describe('InfoTooltip panel stays inside the viewport (#1405)', () => {
   it('shifts a left-clipped panel back into view', () => {
     installPanelLayout(-90, INFO_PANEL_W)
-    render(<InfoTooltip text="Paid Clubs = clubs that have met renewal…" />)
+    render(
+      <InfoTooltip
+        label="paid clubs"
+        text="Paid Clubs = clubs that have met renewal…"
+      />
+    )
 
-    fireEvent.mouseEnter(screen.getByRole('button', { name: /info/i }))
+    fireEvent.mouseEnter(screen.getByRole('button', { name: /^About / }))
 
     expectInsideViewport('InfoTooltip left edge')
   })
 
   it('pulls a right-clipped panel back inside (landing table header)', () => {
     installPanelLayout(VIEWPORT_W - 24, INFO_PANEL_W)
-    render(<InfoTooltip text="Paid Clubs = clubs that have met renewal…" />)
+    render(
+      <InfoTooltip
+        label="paid clubs"
+        text="Paid Clubs = clubs that have met renewal…"
+      />
+    )
 
-    fireEvent.mouseEnter(screen.getByRole('button', { name: /info/i }))
+    fireEvent.mouseEnter(screen.getByRole('button', { name: /^About / }))
 
     expectInsideViewport('InfoTooltip right edge')
   })
 
-  it('keeps the 44px WCAG 2.5.5 trigger floor untouched', () => {
+  it('keeps a 44px WCAG 2.5.5 hit area without a width/height cap (#2644)', () => {
     // The forbidden "fix" is to shrink the control until the panel fits. The
-    // trigger must remain a plain <button>, which base.css floors at 44px —
-    // no width/height utility may cap it (guarded live by
-    // e2e/touch-targets.smoke.ts).
-    render(<InfoTooltip text="Anything" />)
-    const button = screen.getByRole('button', { name: /info/i })
+    // trigger is still a plain <button>; its 14px box opts out of the base.css
+    // floor through .info-tooltip__trigger, which restores the 44px target as
+    // an ::after (asserted in accessibility/infoTooltipLayout.test.ts and
+    // measured live by e2e/touch-targets.smoke.ts). No utility may cap it.
+    render(<InfoTooltip label="anything" text="Anything" />)
+    const button = screen.getByRole('button', { name: /^About / })
     expect(button.tagName).toBe('BUTTON')
+    expect(button).toHaveClass('info-tooltip__trigger')
     expect(button.className).not.toMatch(/\b(w|h|max-w|max-h)-\d/)
   })
 })
