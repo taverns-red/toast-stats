@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.1](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.25.0...analytics-core-v1.25.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* **club:** panel gaps, hero wrap, risk card, timeline and standing wording ([#2655](https://github.com/taverns-red/toast-stats/issues/2655), part) ([#2778](https://github.com/taverns-red/toast-stats/issues/2778)) ([1cb5aaf](https://github.com/taverns-red/toast-stats/commit/1cb5aaf1750eea65b6ac7ac6e44c7afa7b07e340))
+
 ## [1.25.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.24.3...analytics-core-v1.25.0) (2026-11-08)
 
 
