@@ -13,6 +13,7 @@ import {
   type RankingsTableMeta,
 } from './rankingsTableFeatures'
 import { DistrictCell, Metric } from './rankingsCells'
+import { DistinguishedCount } from './DistinguishedCount'
 import { rankingsColumnMeta } from './rankingsColumnMeta'
 import {
   formatNumber,
@@ -92,6 +93,12 @@ export const rankingsColumns = colHelper.columns([
       return (
         <Metric
           value={d.distinguishedClubs}
+          valueNode={
+            <DistinguishedCount
+              confirmed={d.distinguishedClubs}
+              provisional={d.distinguishedProvisional}
+            />
+          }
           rank={d.distinguishedRank}
           pct={d.distinguishedPercent}
         />

@@ -22,6 +22,9 @@ import type { CompetitiveAwardStandings } from '../services/cdn'
 export type RegionRankedDistrict = DistrictRanking & {
   regionRank: number
   regionRankTied: boolean
+  /** Clubs qualifying today but not yet confirmed (region-rollups
+   *  `distinguishedCounts`, #2580); undefined = not published. */
+  distinguishedProvisional?: number | undefined
 }
 
 /** Page context the cells read through `table.options.meta`. */

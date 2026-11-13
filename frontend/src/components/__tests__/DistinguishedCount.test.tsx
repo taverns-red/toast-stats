@@ -2,7 +2,11 @@
  * the district tiles and the landing KPI cannot drift apart again. */
 import { describe, it, expect, afterEach } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
-import { DistinguishedCount, PROVISIONAL_NOTE } from '../DistinguishedCount'
+import {
+  DistinguishedCount,
+  DistinguishedBasisNote,
+  PROVISIONAL_NOTE,
+} from '../DistinguishedCount'
 
 afterEach(() => cleanup())
 
@@ -13,7 +17,7 @@ describe('DistinguishedCount (#2554)', () => {
       /^3$/
     )
     expect(screen.getByTestId('distinguished-provisional')).toHaveTextContent(
-      '+3 provisional'
+      '+3 qualifying today'
     )
   })
 
@@ -54,7 +58,7 @@ describe('DistinguishedCount (#2554)', () => {
   it('explains provisional without relying on the title attribute', () => {
     render(<DistinguishedCount confirmed={3} provisional={2} />)
     const prov = screen.getByTestId('distinguished-provisional')
-    expect(prov).toHaveTextContent('+2 provisional')
+    expect(prov).toHaveTextContent('+2 qualifying today')
     const note = within(prov).getByTestId('distinguished-provisional-note')
     expect(note).toHaveTextContent(/not yet confirmed/i)
     expect(note).toHaveClass('sr-only')
@@ -85,5 +89,20 @@ describe('DistinguishedCount (#2554)', () => {
   it('draws no basis label for a confirmed count', () => {
     render(<DistinguishedCount confirmed={6} />)
     expect(screen.queryByTestId('distinguished-basis')).toBeNull()
+  })
+})
+
+// Ron D5 (2026-11-12): the explanation must work on touch, so it is visible
+// text on the page, not a title tooltip and not screen-reader-only.
+describe('DistinguishedBasisNote (#2580, D5)', () => {
+  it('explains confirmed and qualifying today in visible text', () => {
+    render(<DistinguishedBasisNote />)
+    const note = screen.getByTestId('distinguished-basis-note')
+    expect(note).toHaveTextContent(/confirmed/i)
+    expect(note).toHaveTextContent(/qualifying today/i)
+    expect(note).toHaveTextContent(/April renewals/i)
+    expect(note).toHaveTextContent(/rank/i)
+    expect(note).not.toHaveClass('sr-only')
+    expect(note).not.toHaveAttribute('title')
   })
 })

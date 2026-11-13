@@ -83,7 +83,7 @@ describe('DistrictKpiStickyLine (#2708)', () => {
     render(<DistrictKpiStickyLine kpis={kpis} />)
     const dist = line().querySelectorAll('.district-kpi-stuck__item')[2]
     expect(dist?.textContent).toContain('120')
-    expect(dist?.textContent).toContain('+12 provisional')
+    expect(dist?.textContent).toContain('+12 qualifying today')
   })
 
   it('says qualifying today when the Distinguished count is not confirmed (#2580, D5)', () => {

@@ -31,6 +31,15 @@ import type { RegionRankedDistrict } from '../components/regionRankingsTableFeat
 import { RegionSubnav } from '../components/rollups/RegionSubnav'
 import { useDistrictTrends } from '../hooks/useDistrictTrends'
 import { normaliseRegionId } from '../utils/regionId'
+import {
+  DistinguishedBasisNote,
+  DistinguishedCount,
+} from '../components/DistinguishedCount'
+import { useRegionRollups } from '../hooks/useRegionRollups'
+import {
+  districtProvisionalMap,
+  regionDistinguishedCounts,
+} from '../utils/rollupDistinguished'
 import { regionMembershipFor } from '../utils/regionHistory'
 import { useDistrictRegionHistory } from '../hooks/useDistrictRegionHistory'
 import { RegionRecognitionScoreboard } from '../components/RegionRecognitionScoreboard'
@@ -51,12 +60,20 @@ interface KpiCardProps {
   label: string
   base: number
   current: number
+  /** Clubs qualifying today but not yet confirmed (#2580): when set, the
+   *  value is drawn as the confirmed headline with "+N qualifying today". */
+  provisional?: number | undefined
 }
 
 /** KPI card with a base → current → Δ → ±% rhythm. Negative deltas
  *  render in maroon. Percent is omitted when base is 0 (avoid /0; the
  *  Distinguished case in particular relies on this). */
-const KpiCard: React.FC<KpiCardProps> = ({ label, base, current }) => {
+const KpiCard: React.FC<KpiCardProps> = ({
+  label,
+  base,
+  current,
+  provisional,
+}) => {
   const delta = current - base
   const percent = base === 0 ? null : ((current - base) / base) * 100
   const sign = delta >= 0 ? '+' : ''
@@ -65,7 +82,11 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, base, current }) => {
     <div className="districts-kpi-card" aria-label={`${label} KPI`}>
       <p className="districts-kpi-card__label">{label}</p>
       <div className="districts-kpi-card__value">
-        {current.toLocaleString()}
+        {provisional !== undefined ? (
+          <DistinguishedCount confirmed={current} provisional={provisional} />
+        ) : (
+          current.toLocaleString()
+        )}
       </div>
       <p className="text-xs text-gray-500 tabular-nums mt-1">
         <span data-testid="kpi-base">Base {base.toLocaleString()}</span> ·{' '}
@@ -271,6 +292,16 @@ const RegionPage: React.FC = () => {
   // medians on the same day, for the page's own PY and date (R3).
   const pace = useRegionPace(selectedProgramYear.label, effectiveDate)
 
+  // The pipeline's confirmed / qualifying-today pairs (#2553, #2580) for this
+  // region and its districts, from the page's pinned date (R3). Absent until
+  // the daily run publishes them: then no extra is shown.
+  const { rollups } = useRegionRollups(effectiveDate)
+  const regionCounts = regionDistinguishedCounts(rollups, region)
+  const provisionalByDistrict = React.useMemo(
+    () => districtProvisionalMap(rollups),
+    [rollups]
+  )
+
   // Phones (#2653): District Recognition opens collapsed to a one-line
   // summary, so the rankings table starts within two screens.
   const isPhone = useIsMobile(768)
@@ -468,6 +499,8 @@ const RegionPage: React.FC = () => {
       label: 'Dist. clubs',
       title: 'Distinguished clubs',
       sortField: 'distinguished',
+      // Plain count: the 12px extra would break the phone smoke's 14px
+      // floor; the KPI card and the full table carry it (#2580).
       render: d => (d.distinguishedClubs ?? 0).toLocaleString(),
     },
     {
@@ -490,7 +523,12 @@ const RegionPage: React.FC = () => {
   // columns show is a choice (one Columns menu), never CSS.
   const rankedDistricts: RegionRankedDistrict[] = regionDistricts.map(d => {
     const rank = rankByDistrictId.get(d.districtId)!
-    return { ...d, regionRank: rank.rank, regionRankTied: rank.isTied }
+    return {
+      ...d,
+      regionRank: rank.rank,
+      regionRankTied: rank.isTied,
+      distinguishedProvisional: provisionalByDistrict.get(d.districtId),
+    }
   })
   const rankingsTable = (variant: 'page' | 'sheet') => (
     <RegionDistrictRankingsTable
@@ -598,9 +636,11 @@ const RegionPage: React.FC = () => {
         <KpiCard
           label="Distinguished Clubs"
           base={0}
-          current={totals.distinguishedClubs}
+          current={regionCounts?.confirmed ?? totals.distinguishedClubs}
+          provisional={regionCounts?.provisional ?? 0}
         />
       </div>
+      {regionCounts && <DistinguishedBasisNote className="text-sm mb-3" />}
 
       <RegionRecognitionScoreboard
         scoreboard={recognition}

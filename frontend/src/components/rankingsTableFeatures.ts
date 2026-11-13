@@ -20,7 +20,12 @@ import type { CompetitiveAwardStandings } from '../services/cdn'
 import type { ClubGrowthHolding } from '../hooks/useClubGrowthRecipients'
 
 /** A ranking row with its global display rank. */
-export type RankedDistrict = DistrictRanking & { displayRank: number }
+export type RankedDistrict = DistrictRanking & {
+  displayRank: number
+  /** Clubs qualifying today but not yet confirmed (region-rollups
+   *  `distinguishedCounts`, #2580); undefined = not published. */
+  distinguishedProvisional?: number | undefined
+}
 
 /** Page context the cells read through `table.options.meta`. */
 export interface RankingsTableMeta {

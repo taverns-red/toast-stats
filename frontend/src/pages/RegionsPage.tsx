@@ -13,6 +13,8 @@ import { DataControlsBar } from '../components/DataControlsBar'
 import { RegionSubnav } from '../components/rollups/RegionSubnav'
 import { useRegionTrends } from '../hooks/useRegionTrends'
 import { useRegionRollups } from '../hooks/useRegionRollups'
+import { DistinguishedBasisNote } from '../components/DistinguishedCount'
+import { regionProvisionalMap } from '../utils/rollupDistinguished'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { regionsTrainingOverview } from '../utils/regionTraining'
 import { RegionsTrainingWorld } from '../components/RegionsTrainingWorld'
@@ -107,6 +109,10 @@ const RegionsPage: React.FC = () => {
     snapshotDate: rollupsDate,
     isLoading: rollupsLoading,
   } = useRegionRollups(effectiveDate)
+  const provisionalByRegion = useMemo(
+    () => regionProvisionalMap(regionRollups),
+    [regionRollups]
+  )
   const trainingDate = rollupsDate ?? effectiveDate ?? null
   const training = useMemo(
     () =>
@@ -244,7 +250,11 @@ const RegionsPage: React.FC = () => {
           rollups={displayedRollups}
           trends={trends}
           training={rollupsLoading ? 'loading' : training}
+          provisionalByRegion={provisionalByRegion}
         />
+        {provisionalByRegion.size > 0 && (
+          <DistinguishedBasisNote className="text-sm mt-2" />
+        )}
       </section>
 
       {isPhone && worldTraining}

@@ -108,15 +108,20 @@ export const DistrictCell: React.FC<{
   )
 }
 
-export const Metric: React.FC<{ value: number; rank: number; pct: number }> = ({
-  value,
-  rank,
-  pct,
-}) => {
+export const Metric: React.FC<{
+  value: number
+  rank: number
+  pct: number
+  /** Replaces the plain number (the Distinguished column's confirmed count
+   *  with "+N qualifying today", #2580). */
+  valueNode?: React.ReactNode
+}> = ({ value, rank, pct, valueNode }) => {
   const growth = formatPercentage(pct)
   return (
     <div className="rankings-metric">
-      <div className="rankings-metric__value">{formatNumber(value)}</div>
+      <div className="rankings-metric__value">
+        {valueNode ?? formatNumber(value)}
+      </div>
       <div className="rankings-metric__sub">
         <span className="rankings-metric__rank text-tm-loyal-blue">
           #{rank}

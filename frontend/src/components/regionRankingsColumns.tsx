@@ -24,6 +24,7 @@ import {
   netClubGrowth,
 } from './regionRankingsCells'
 import { regionRankingsColumnMeta as meta } from './regionRankingsColumnMeta'
+import { DistinguishedCount } from './DistinguishedCount'
 
 const SORT_FIELD_BY_COLUMN: Readonly<Record<string, string>> = {
   score: 'aggregate',
@@ -129,7 +130,10 @@ export const regionRankingsColumns = colHelper.columns([
     id: 'distinguished',
     header: meta.distinguished.label,
     cell: info => (
-      <CountCell value={info.row.original.distinguishedClubs ?? 0} />
+      <DistinguishedCount
+        confirmed={info.row.original.distinguishedClubs ?? 0}
+        provisional={info.row.original.distinguishedProvisional}
+      />
     ),
   }),
   colHelper.display({

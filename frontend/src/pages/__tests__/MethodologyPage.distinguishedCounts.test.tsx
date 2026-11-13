@@ -44,7 +44,7 @@ describe('MethodologyPage — Distinguished club counts (#2390)', () => {
     renderPage()
     const txt = sectionText()
     expect(txt).toMatch(/KPI card/i)
-    expect(txt).toMatch(/\+N provisional/)
+    expect(txt).toMatch(/\+N qualifying today/)
     expect(txt).not.toMatch(/KPI card counts the clubs/i)
     expect(txt).not.toMatch(/KPI card counts paid clubs only/i)
     expect(txt).not.toMatch(/gap can be larger than the KPI card/i)

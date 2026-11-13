@@ -15,6 +15,7 @@ import {
   type PriorityMetric,
 } from './PriorityColumnsTable'
 import { DistrictTrendSparkline } from './DistrictTrendSparkline'
+import { DistinguishedCount } from './DistinguishedCount'
 import { DataTable } from './dataTable/DataTable'
 import {
   LEADERBOARD_SIZES,
@@ -64,6 +65,12 @@ export interface RegionsLeaderboardProps {
    * an overview, so the cells say "not available".
    */
   training?: RegionsTrainingOverview | 'loading' | null
+  /**
+   * Clubs qualifying today but not yet confirmed, per region (#2580), from
+   * the date's region-rollups `distinguishedCounts`. Omitted or a region
+   * absent from the map = no extra beside that region's confirmed count.
+   */
+  provisionalByRegion?: ReadonlyMap<string, number> | undefined
 }
 
 export type RegionTrends =
@@ -276,6 +283,7 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
   rollups,
   trends,
   training,
+  provisionalByRegion,
 }) => {
   const [searchParams] = useSearchParams()
   const showTraining = training !== undefined && training !== null
@@ -405,22 +413,28 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
      on: more chips pushed the table past the 375 first-content budget
      (mobile-375-gate). The sheet's full table keeps both rounds. */
   const phoneRound: TrainingRound = overview ? overview.currentRound : 1
-  const phoneMetrics: PriorityMetric<RegionRollup, SortField>[] = showTraining
-    ? [
-        ...BASE_PHONE_METRICS,
-        {
-          id: 'training',
-          // "R1 training" ellipsized at 375 with Linux fonts; the round is
-          // in the title and each cell's accessible name.
-          label: 'Training',
-          title: `Round ${phoneRound} officer training: % of ${METRIC_PHRASE.Dcp}, and with all seven`,
-          ...(sortable(phoneRound)
-            ? { sortField: `r${phoneRound}Dcp` as SortField }
-            : {}),
-          render: (r: RegionRollup) => phoneTrainingCell(r.region, phoneRound),
-        },
-      ]
-    : BASE_PHONE_METRICS
+  const basePhoneMetrics: PriorityMetric<RegionRollup, SortField>[] =
+    showTraining
+      ? [
+          ...BASE_PHONE_METRICS,
+          {
+            id: 'training',
+            // "R1 training" ellipsized at 375 with Linux fonts; the round is
+            // in the title and each cell's accessible name.
+            label: 'Training',
+            title: `Round ${phoneRound} officer training: % of ${METRIC_PHRASE.Dcp}, and with all seven`,
+            ...(sortable(phoneRound)
+              ? { sortField: `r${phoneRound}Dcp` as SortField }
+              : {}),
+            render: (r: RegionRollup) =>
+              phoneTrainingCell(r.region, phoneRound),
+          },
+        ]
+      : BASE_PHONE_METRICS
+  // The phone chip stays the plain confirmed count and share: the 12px
+  // "+N qualifying today" would break the phone smoke's 14px floor, so the
+  // full table in the sheet carries it (#2580).
+  const phoneMetrics = basePhoneMetrics
 
   if (rollups.length === 0) {
     return (
@@ -549,7 +563,10 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
       header: 'Distinguished',
       cell: info => (
         <>
-          {info.row.original.distinguishedClubs.toLocaleString()}
+          <DistinguishedCount
+            confirmed={info.row.original.distinguishedClubs}
+            provisional={provisionalByRegion?.get(info.row.original.region)}
+          />
           <span className="text-gray-600 theme-dark:text-gray-300 ml-1">
             {'\u00b7'} {Math.round(info.row.original.distinguishedPercent)}%
           </span>
