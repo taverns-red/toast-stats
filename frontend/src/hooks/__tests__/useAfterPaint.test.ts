@@ -162,6 +162,21 @@ describe('useAfterPaint with LCP entries (#2777)', () => {
     expect(result.current).toBe(true)
   })
 
+  it('skips the LCP wait when the browser recorded a first-input before mount', () => {
+    // A click from another route happens before this lazy chunk's input
+    // listeners exist; the browser's buffered first-input entry still shows it.
+    vi.spyOn(performance, 'getEntriesByType').mockImplementation(type =>
+      type === 'first-input'
+        ? ([{}] as unknown as ReturnType<Performance['getEntriesByType']>)
+        : []
+    )
+    const { result } = renderHook(() => useAfterPaint(true))
+    act(() => vi.advanceTimersByTime(17))
+    act(() => vi.advanceTimersByTime(0))
+    expect(result.current).toBe(true)
+    expect(observers).toHaveLength(0)
+  })
+
   it('caps the LCP wait at 400 ms or less', () => {
     expect(LCP_WAIT_CAP_MS).toBeLessThanOrEqual(400)
   })
