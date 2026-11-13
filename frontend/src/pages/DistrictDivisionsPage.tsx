@@ -115,9 +115,10 @@ const DistrictDivisionsPage: React.FC = () => {
   // The published confirmed / provisional counts per division and area
   // (#2580), from the district analytics read the other district pages share
   // through the query cache. Nothing waits for it (#1901): the cards render
-  // from the statistics alone and the extra arrives into a reserved slot. If
+  // their snapshot-only columns at once and placeholders hold the status and
+  // counts until the published ones land, so nothing flips. If
   // it fails or the file predates the field, the snapshot's count stands.
-  const { data: analytics } = useDistrictAnalytics(
+  const { data: analytics, isLoading: isLoadingCounts } = useDistrictAnalytics(
     hasValidDates ? districtId || null : null,
     undefined,
     effectiveEndDate ?? undefined
@@ -175,6 +176,7 @@ const DistrictDivisionsPage: React.FC = () => {
               <DivisionPerformanceCards
                 districtSnapshot={districtStatistics}
                 isLoading={isLoadingStatistics}
+                countsPending={isLoadingCounts}
                 snapshotTimestamp={effectiveEndDate}
                 districtId={districtId}
                 distinguishedCountsByDivision={publishedCounts}
@@ -210,7 +212,7 @@ const DistrictDivisionsPage: React.FC = () => {
                   publishedCounts,
                   effectiveEndDate
                 )}
-                isLoading={isLoadingStatistics}
+                isLoading={isLoadingStatistics || isLoadingCounts}
                 openDivisions={openSummaryDivisions}
                 onOpenDivisionsChange={setOpenSummaryDivisions}
               />

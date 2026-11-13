@@ -30,6 +30,7 @@ import {
   DivisionRecognitionChip,
   divisionChip,
 } from './DivisionRecognitionChip'
+import { CountPending } from './DistinguishedCount'
 import type { DivisionPerformance } from '../utils/divisionStatus'
 import type { DivisionDistinguishedCountsRow } from '../hooks/useDistrictAnalytics'
 import {
@@ -45,7 +46,8 @@ function signed(n: number): string {
 
 function toDivisionRow(
   division: DivisionPerformance,
-  districtId: string
+  districtId: string,
+  countsPending: boolean
 ): MobileRow {
   const chip = divisionChip(division)
   const paid = `${division.paidClubs}/${division.clubBase} paid`
@@ -56,6 +58,18 @@ function toDivisionRow(
     provisionalOf(division) > 0
       ? `+${provisionalOf(division)} qualifying today`
       : undefined
+  if (countsPending) {
+    // Paid and net come from the snapshot and stay; the status and the
+    // distinguished count wait for the published counts (#2580).
+    return {
+      id: division.divisionId,
+      to: `/district/${districtId}/division/${division.divisionId}`,
+      title: `Division ${division.divisionId}`,
+      chip: <CountPending width="5rem" height="20px" />,
+      meta: [paid, net].join(' \u00b7 '),
+      ariaLabel: `Division ${division.divisionId} — ${paid}, net ${net}`,
+    }
+  }
   return {
     id: division.divisionId,
     to: `/district/${districtId}/division/${division.divisionId}`,
@@ -158,6 +172,9 @@ export interface DivisionPerformanceCardsProps {
   districtSnapshot: unknown
   /** Optional loading state indicator */
   isLoading?: boolean
+  /** The published counts are still loading: status, distinguished counts and
+   *  gaps show placeholders instead of the qualifying-today values (#2580). */
+  countsPending?: boolean | undefined
   /**
    * The date (`YYYY-MM-DD`) the snapshot is PINNED to. Required (#1321): it
    * gates the area visit round/deadlines, so it is load-bearing, not display —
@@ -172,7 +189,7 @@ export interface DivisionPerformanceCardsProps {
    *  (#2580). With them each count is the confirmed one with "+N qualifying
    *  today" beside it, and status and gaps follow; without them (old files,
    *  still loading) the snapshot's count stands. The cards never wait for it:
-   *  the extra arrives into a reserved slot. */
+   *  while it loads, placeholders stand in (`countsPending`). */
   distinguishedCountsByDivision?:
     readonly DivisionDistinguishedCountsRow[] | undefined
 }
@@ -204,6 +221,7 @@ export const DivisionPerformanceCards: React.FC<
 > = ({
   districtSnapshot,
   isLoading = false,
+  countsPending = false,
   snapshotTimestamp,
   districtId,
   distinguishedCountsByDivision,
@@ -332,7 +350,7 @@ export const DivisionPerformanceCards: React.FC<
         <MobileRowList
           label="Divisions"
           noun="divisions"
-          rows={divisions.map(d => toDivisionRow(d, districtId))}
+          rows={divisions.map(d => toDivisionRow(d, districtId, countsPending))}
         />
       ) : (
         <>
@@ -347,7 +365,7 @@ export const DivisionPerformanceCards: React.FC<
                 key={division.divisionId}
                 division={division}
                 districtId={districtId}
-                reserveExtra
+                countsPending={countsPending}
               />
             ))}
           </div>

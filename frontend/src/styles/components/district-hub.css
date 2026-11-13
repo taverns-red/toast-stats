@@ -244,17 +244,6 @@
     line-height: inherit;
   }
 
-  /* The extra's reserved box (#2580): the published counts arrive after first
-     paint on the Divisions page, and a slot of the extra's size keeps its
-     arrival from moving anything. */
-  .distinguished-count__slot {
-    display: inline-block;
-    min-width: 10.5em;
-    min-height: 1.5em;
-    font-size: 12px;
-    vertical-align: top;
-  }
-
   .distinguished-count__provisional {
     font-size: 12px;
     font-weight: 500;

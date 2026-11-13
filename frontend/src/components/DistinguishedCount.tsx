@@ -40,45 +40,45 @@ export const DistinguishedBasisNote: React.FC<{ className?: string }> = ({
 export const QualifyingTodayExtra: React.FC<{
   provisional?: number | null | undefined
   stacked?: boolean | undefined
-  /** Draw a fixed-size slot even when there is no extra, so one arriving after
-   *  first paint (the published counts load on their own) shifts nothing. */
-  reserve?: boolean | undefined
-}> = ({ provisional, stacked = false, reserve = false }) => {
-  const extra =
-    provisional != null && provisional > 0 ? (
-      <>
-        {' '}
-        <span
-          data-testid="distinguished-provisional"
-          className={
-            stacked
-              ? 'distinguished-count__provisional distinguished-count__provisional--stacked'
-              : 'distinguished-count__provisional'
-          }
-          title={PROVISIONAL_TOOLTIP}
-        >
-          +{provisional.toLocaleString()} qualifying today
-          {/* `title` does not reach touch or most screen readers (#2580). */}
-          <span
-            data-testid="distinguished-provisional-note"
-            className="sr-only"
-          >
-            {' '}
-            {PROVISIONAL_NOTE}
-          </span>
+}> = ({ provisional, stacked = false }) =>
+  provisional != null && provisional > 0 ? (
+    <>
+      {' '}
+      <span
+        data-testid="distinguished-provisional"
+        className={
+          stacked
+            ? 'distinguished-count__provisional distinguished-count__provisional--stacked'
+            : 'distinguished-count__provisional'
+        }
+        title={PROVISIONAL_TOOLTIP}
+      >
+        +{provisional.toLocaleString()} qualifying today
+        {/* `title` does not reach touch or most screen readers (#2580). */}
+        <span data-testid="distinguished-provisional-note" className="sr-only">
+          {' '}
+          {PROVISIONAL_NOTE}
         </span>
-      </>
-    ) : null
-  if (!reserve) return extra
-  return (
-    <span
-      data-testid="distinguished-extra-slot"
-      className="distinguished-count__slot"
-    >
-      {extra}
-    </span>
-  )
-}
+      </span>
+    </>
+  ) : null
+
+/** A fixed-size placeholder for a value the published counts decide while they
+ *  load (#2580): nothing is drawn on the qualifying-today basis first and then
+ *  flipped. Sized to the real content so its arrival moves nothing; not read
+ *  out (the page is loading). Same pulse as the list skeletons. */
+export const CountPending: React.FC<{
+  width: string
+  height: string
+  className?: string
+}> = ({ width, height, className }) => (
+  <span
+    data-testid="distinguished-pending"
+    aria-hidden="true"
+    className={`animate-pulse bg-gray-200 rounded-sm inline-block align-middle ${className ?? ''}`}
+    style={{ width, height }}
+  />
+)
 
 export interface DistinguishedCountProps {
   confirmed: number

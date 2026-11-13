@@ -7,7 +7,7 @@ import {
   calculateDistinguishedPercentage,
 } from '../utils/areaGapAnalysis'
 import { renderRecognitionBadge } from '../utils/areaRecognitionBadge'
-import { QualifyingTodayExtra } from './DistinguishedCount'
+import { CountPending, QualifyingTodayExtra } from './DistinguishedCount'
 import { CriterionCell } from './dataTable/cells/CriterionCell'
 import { StaticTableScroll } from './dataTable/StaticTableScroll'
 import {
@@ -24,9 +24,10 @@ interface AreaPerformanceTableProps {
   /** Accessible name of the scroll region. Must be unique per page when
    *  several tables render (axe landmark-unique), e.g. one per division. */
   label?: string
-  /** Reserve the "+N qualifying today" slot in each row (the counts arrive
-   *  after first paint on the Divisions page). */
-  reserveExtra?: boolean | undefined
+  /** The published counts are still loading: the Dist., Recognition and Gap
+   *  cells show fixed-size placeholders instead of the snapshot's
+   *  qualifying-today values (#2580). */
+  countsPending?: boolean | undefined
 }
 
 /**
@@ -74,9 +75,7 @@ const visitCell = (v: AreaPerformance['firstRoundVisits']) => (
   </CriterionCell>
 )
 
-const phoneMetrics = (
-  reserveExtra?: boolean
-): PriorityMetric<AreaPerformance, never>[] => [
+const PHONE_METRICS: PriorityMetric<AreaPerformance, never>[] = [
   {
     id: 'paid',
     label: 'Paid',
@@ -107,7 +106,6 @@ const phoneMetrics = (
         <QualifyingTodayExtra
           provisional={a.provisionalDistinguishedClubs}
           stacked
-          reserve={reserveExtra}
         />
       </>
     ),
@@ -184,6 +182,17 @@ const phoneMetrics = (
   },
 ]
 
+/** The phone columns the counts decide, as placeholders while they load. */
+const COUNT_DRIVEN = new Set(['dist', 'award', 'gapD', 'gapS', 'gapP'])
+const pendingMetrics = (
+  metrics: PriorityMetric<AreaPerformance, never>[]
+): PriorityMetric<AreaPerformance, never>[] =>
+  metrics.map(m =>
+    COUNT_DRIVEN.has(m.id)
+      ? { ...m, render: () => <CountPending width="4rem" height="20px" /> }
+      : m
+  )
+
 /**
  * AreaPerformanceTable Component
  *
@@ -238,7 +247,7 @@ const phoneMetrics = (
 export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
   areas,
   label = 'Area performance',
-  reserveExtra,
+  countsPending,
 }) => {
   // Sort areas by area identifier (Requirement 6.8)
   const sortedAreas = [...areas].sort((a, b) =>
@@ -310,11 +319,16 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
                 {area.paidClubs}/{area.clubBase} {paidPercentage}%
               </td>
               <td className="entity-table__c tabular">
-                {confirmedClubs}/{area.clubBase} {distinguishedPercentage}%
-                <QualifyingTodayExtra
-                  provisional={area.provisionalDistinguishedClubs}
-                  reserve={reserveExtra}
-                />
+                {countsPending ? (
+                  <CountPending width="8rem" height="20px" />
+                ) : (
+                  <>
+                    {confirmedClubs}/{area.clubBase} {distinguishedPercentage}%
+                    <QualifyingTodayExtra
+                      provisional={area.provisionalDistinguishedClubs}
+                    />
+                  </>
+                )}
               </td>
               <td className="entity-table__c">
                 {visitCell(area.firstRoundVisits)}
@@ -322,31 +336,46 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
               <td className="entity-table__c">
                 {visitCell(area.secondRoundVisits)}
               </td>
-              <td className="entity-table__c">
-                <span
-                  className={`px-2 py-1 text-sm font-medium rounded-full border ${badge.className}`}
-                  aria-label={`Recognition status: ${badge.label}`}
-                >
-                  {badge.label}
-                </span>
-                {/* The meaning was a `title`: touch and keyboard now open it
-                    (#2644). */}
-                {badge.tooltip && (
-                  <InfoTooltip
-                    label={`area ${area.areaId} recognition`}
-                    text={badge.tooltip}
-                  />
-                )}
-              </td>
-              <td className="entity-table__c tabular">
-                {gapCell(gapAnalysis.distinguishedGap)}
-              </td>
-              <td className="entity-table__c tabular">
-                {gapCell(gapAnalysis.selectGap)}
-              </td>
-              <td className="entity-table__c tabular">
-                {gapCell(gapAnalysis.presidentsGap)}
-              </td>
+              {countsPending ? (
+                <>
+                  <td className="entity-table__c">
+                    <CountPending width="5rem" height="20px" />
+                  </td>
+                  {[0, 1, 2].map(i => (
+                    <td key={i} className="entity-table__c tabular">
+                      <CountPending width="2rem" height="20px" />
+                    </td>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <td className="entity-table__c">
+                    <span
+                      className={`px-2 py-1 text-sm font-medium rounded-full border ${badge.className}`}
+                      aria-label={`Recognition status: ${badge.label}`}
+                    >
+                      {badge.label}
+                    </span>
+                    {/* The meaning was a `title`: touch and keyboard now open it
+                      (#2644). */}
+                    {badge.tooltip && (
+                      <InfoTooltip
+                        label={`area ${area.areaId} recognition`}
+                        text={badge.tooltip}
+                      />
+                    )}
+                  </td>
+                  <td className="entity-table__c tabular">
+                    {gapCell(gapAnalysis.distinguishedGap)}
+                  </td>
+                  <td className="entity-table__c tabular">
+                    {gapCell(gapAnalysis.selectGap)}
+                  </td>
+                  <td className="entity-table__c tabular">
+                    {gapCell(gapAnalysis.presidentsGap)}
+                  </td>
+                </>
+              )}
             </tr>
           )
         })}
@@ -363,7 +392,7 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
       rowKey={a => a.areaId}
       identityHeader="Area"
       renderIdentity={a => <span className="font-semibold">{a.areaId}</span>}
-      metrics={phoneMetrics(reserveExtra)}
+      metrics={countsPending ? pendingMetrics(PHONE_METRICS) : PHONE_METRICS}
       defaultMetricIds={['paid', 'award']}
       fullTableTitle={`${label} — all columns`}
       // The nine-column table needs about 730px, which the 654px content box
