@@ -95,7 +95,7 @@ export const Alert: React.FC<AlertProps> = ({
           <button
             onClick={onClose}
             className={cn(
-              'flex-shrink-0 tm-touch-target rounded-xs hover:bg-black hover:bg-opacity-10 focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue',
+              'flex-shrink-0 tm-touch-target rounded-xs hover:bg-black/10 focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue',
               'flex items-center justify-center w-6 h-6 text-lg font-bold',
               iconClasses[variant]
             )}

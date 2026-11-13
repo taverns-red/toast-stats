@@ -21,10 +21,7 @@ export const FormInput: React.FC<FormInputProps> = ({
     md: 'tm-form-input--md',
     lg: 'tm-form-input--lg',
   }
-  const stateClasses = [
-    error && 'tm-form-input--error',
-    props.disabled && 'tm-form-input--disabled',
-  ]
+  const stateClasses = [error && 'tm-form-input--error']
     .filter(Boolean)
     .join(' ')
 

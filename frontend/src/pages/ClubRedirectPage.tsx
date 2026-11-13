@@ -90,10 +90,10 @@ const ClubRedirectPage: React.FC = () => {
   if (isLoading) {
     return (
       <div
-        className="tm-container"
-        style={{ padding: '2rem', textAlign: 'center' }}
+        role="status"
+        aria-label="Looking up club..."
+        className="p-8 text-center"
       >
-        <div className="tm-loading-spinner" aria-label="Looking up club..." />
         <p className="text-gray-500 mt-4 font-tm-body">Looking up club...</p>
       </div>
     )
@@ -105,7 +105,7 @@ const ClubRedirectPage: React.FC = () => {
     (data && clubId && !findClubEntry(data.clubs, clubId))
   ) {
     return (
-      <div className="tm-container p-8">
+      <div className="p-8">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-lg mx-auto text-center">
           <h2 className="text-xl font-semibold text-red-800 mb-2">
             Club Not Found

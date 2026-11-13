@@ -18,10 +18,7 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
 }) => {
   const generatedId = useId()
   const baseClasses = 'tm-form-checkbox'
-  const stateClasses = [
-    error && 'tm-form-checkbox--error',
-    props.disabled && 'tm-form-checkbox--disabled',
-  ]
+  const stateClasses = [error && 'tm-form-checkbox--error']
     .filter(Boolean)
     .join(' ')
 

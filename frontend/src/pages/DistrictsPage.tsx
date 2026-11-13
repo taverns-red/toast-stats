@@ -961,7 +961,7 @@ const DistrictsPage: React.FC = () => {
       return renderShell(
         <div className="districts-page__state-card">
           <div
-            className="bg-tm-happy-yellow bg-opacity-20 border border-tm-happy-yellow rounded-lg p-8 mx-auto"
+            className="bg-tm-happy-yellow/20 border border-tm-happy-yellow rounded-lg p-8 mx-auto"
             style={{ width: '100%', maxWidth: '42rem' }}
           >
             <div className="text-center">
@@ -1010,7 +1010,7 @@ const DistrictsPage: React.FC = () => {
               <div className="flex justify-center">
                 <button
                   onClick={() => refetch()}
-                  className="px-6 py-3 text-lg bg-tm-loyal-blue text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium"
+                  className="px-6 py-3 text-lg bg-tm-loyal-blue text-white rounded-lg hover:bg-tm-loyal-blue/90 transition-colors font-medium"
                 >
                   Check Again
                 </button>

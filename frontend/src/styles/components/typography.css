@@ -80,6 +80,14 @@
     -webkit-text-stroke: none !important;
   }
 
+  /* RankingCard's rank number: a figure, not a heading. 24px sits between the
+     28px page title and the 18px section heading of the #2650 ramp. */
+  .ranking-card__rank {
+    font-family: var(--tm-font-headline);
+    font-size: 24px;
+    line-height: var(--heading-line-height);
+  }
+
   .h2 {
     font-family: var(--tm-font-headline);
     font-weight: var(--tm-h2-font-weight);

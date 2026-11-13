@@ -34,7 +34,7 @@
   color: var(--ink-2);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--rt-radius-md, 8px);
+  border-radius: var(--rt-radius-md, 4px);
 }
 
 /* Taller than any viewport the CLS gate uses (812 / 900): the loaded page
@@ -63,7 +63,7 @@
   padding: 0.625rem 0.75rem;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--rt-radius-md, 8px);
+  border-radius: var(--rt-radius-md, 4px);
 }
 
 .survival-kpi__label {
@@ -133,7 +133,7 @@
   padding: 0.75rem;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--rt-radius-md, 8px);
+  border-radius: var(--rt-radius-md, 4px);
 }
 
 .survival-legend {
@@ -189,7 +189,7 @@
   color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--rt-radius-md, 8px);
+  border-radius: var(--rt-radius-md, 4px);
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
 }
 

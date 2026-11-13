@@ -143,7 +143,7 @@ const RankingCard: React.FC<RankingCardProps> = ({
           {/* Rank display */}
           <div className="flex items-baseline gap-2 mb-1">
             <span
-              className="tm-h2 tm-text-black font-bold"
+              className="ranking-card__rank tm-text-black font-bold"
               aria-label={`Rank ${rank}`}
             >
               {rank}

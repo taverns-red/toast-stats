@@ -257,7 +257,7 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-left: 4px solid var(--link);
-  border-radius: var(--rt-radius-md, 8px);
+  border-radius: var(--rt-radius-md, 4px);
 }
 
 /* The plot's own height is fixed: the chart never resizes after it draws. */
@@ -338,7 +338,7 @@
   max-height: 22rem;
   overflow: auto;
   border: 1px solid var(--line);
-  border-radius: var(--rt-radius-md, 8px);
+  border-radius: var(--rt-radius-md, 4px);
 }
 .edu-tl__table {
   width: 100%;
@@ -379,7 +379,7 @@
 .edu-tl__skeleton-line,
 .edu-tl__skeleton-plot {
   background: var(--line);
-  border-radius: var(--rt-radius-md, 8px);
+  border-radius: var(--rt-radius-md, 4px);
   opacity: 0.5;
 }
 .edu-tl__skeleton-line {

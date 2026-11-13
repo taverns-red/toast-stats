@@ -67,6 +67,12 @@
   --tm-true-maroon-70: rgba(232, 135, 154, 0.7);
   --tm-true-maroon-60: rgba(232, 135, 154, 0.6);
   --tm-true-maroon-50: rgba(232, 135, 154, 0.5);
+  --tm-true-maroon-10: rgba(232, 135, 154, 0.1);
+  /* Tints that .tm-bg-* paint (#2642): same values as the .bg-tm-* twins in
+     the tint section below, so the two spellings agree in dark mode. */
+  --tm-cool-gray-30: rgba(192, 200, 199, 0.2);
+  --tm-happy-yellow-20: rgba(247, 209, 100, 0.15);
+  --tm-happy-yellow-30: rgba(247, 209, 100, 0.22);
   --tm-cool-gray: #c0c8c7;
   --tm-cool-gray-80: rgba(192, 200, 199, 0.8);
   --tm-cool-gray-60: rgba(192, 200, 199, 0.6);
@@ -968,13 +974,10 @@
    Each pair below is a foreground whose surface remaps (or doesn't) without
    it — Lesson 94: fg and bg must remap together. */
 
-/* "Limited data" banner (DistrictDetailPage): the gold callout stays a light
-   fill in dark, so its text must stay dark — the #609 chip fix, extended to
-   the banner's descendants (was #f0ecf5 / #9b95a5 on gold, 1.72 / 1.44:1). */
-[data-theme='dark'] .bg-tm-happy-yellow .text-tm-black,
-[data-theme='dark'] .bg-tm-happy-yellow .text-gray-600 {
-  color: #111827 !important;
-}
+/* "Limited data" banner (DistrictDetailPage) and the Districts welcome card
+   are bg-tm-happy-yellow/20 tints (#2642), not solid gold, so their text stays
+   the theme ink. The tint gets an explicit rgba per theme below; the old rule
+   that forced dark ink on a solid `.bg-tm-happy-yellow` banner is retired. */
 
 /* Smedley/Select club badges (TopGrowthClubs): dark
    true-maroon on the happy-yellow-30 tint is 4.07:1. Light ink is 9.13:1. */
@@ -997,6 +1000,32 @@
 
 [data-theme='dark'] .bg-tm-loyal-blue\/10 {
   background-color: rgba(93, 173, 226, 0.1) !important;
+}
+
+/* The /20 tints that replaced `bg-tm-x bg-opacity-20` (#2642): the solid base
+   class used to carry the dark overrides, the /N class does not. Dark values
+   are the ones their -20 twins use. */
+[data-theme='light'] .bg-tm-happy-yellow\/20 {
+  background-color: rgba(242, 223, 116, 0.2);
+}
+
+[data-theme='dark'] .bg-tm-happy-yellow\/20 {
+  background-color: rgba(247, 209, 100, 0.15) !important;
+}
+
+/* The limited-data banner's body copy is text-gray-600, which dark maps to the
+   muted ink (--ink-3): 4.2:1 on this tint over a raised surface. Use the
+   secondary ink inside the tint. */
+[data-theme='dark'] .bg-tm-happy-yellow\/20 .text-gray-600 {
+  color: var(--ink-2) !important;
+}
+
+[data-theme='light'] .bg-tm-cool-gray\/20 {
+  background-color: rgba(169, 178, 177, 0.2);
+}
+
+[data-theme='dark'] .bg-tm-cool-gray\/20 {
+  background-color: rgba(192, 200, 199, 0.12) !important;
 }
 
 /* ─── Transition for Theme Switch ─── */

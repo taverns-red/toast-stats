@@ -9,7 +9,7 @@
   margin: 0 0 1rem;
   background-color: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--rt-radius-md, 8px);
+  border-radius: var(--rt-radius-md, 4px);
   min-width: 0;
   overflow: hidden;
 }

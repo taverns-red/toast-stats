@@ -1,0 +1,74 @@
+/* Brand utility classes the TSX actually uses (#2642).
+
+   These lived in styles/brand.css, which production never imported but the
+   unit-test setup did, so tests rendered classes the app lacked. brand.css is
+   gone; only the rules with a live use remain, here, imported by index.css.
+   The colour tokens remap under [data-theme='dark'] (dark-mode.css), so these
+   follow the theme; the two dark pairings that would lose contrast are
+   re-paired at the bottom of this file.
+
+   tests: styles/__tests__/classesAndVarsResolve.test.ts fails when TSX uses a
+   tm-* class that nothing here or in the other imported files defines. */
+
+@layer brand {
+  /* Text colours */
+  .tm-text-loyal-blue { color: var(--tm-loyal-blue); }
+  .tm-text-true-maroon { color: var(--tm-true-maroon); }
+  /* Secondary text, not the cool-gray swatch: #A9B2B1 on white is 2.0:1, and
+     these classes carry words (labels, "of N", neutral badges). --ink-2 is the
+     legacy secondary ink and remaps with the theme. */
+  .tm-text-cool-gray { color: var(--ink-2); }
+  .tm-text-black { color: var(--tm-black); }
+  .tm-text-white { color: var(--tm-white); }
+
+  /* Fills, solid */
+  .tm-bg-loyal-blue { background-color: var(--tm-loyal-blue); }
+  .tm-bg-cool-gray { background-color: var(--tm-cool-gray); }
+  .tm-bg-happy-yellow { background-color: var(--tm-happy-yellow); }
+
+  /* Fills, tinted (the --tm-*-NN tokens are the colour at NN% alpha) */
+  .tm-bg-loyal-blue-10 { background-color: var(--tm-loyal-blue-10); }
+  .tm-bg-loyal-blue-20 { background-color: var(--tm-loyal-blue-20); }
+  .tm-bg-loyal-blue-60 { background-color: var(--tm-loyal-blue-60); }
+  .tm-bg-true-maroon-10 { background-color: var(--tm-true-maroon-10); }
+  .tm-bg-cool-gray-20 { background-color: var(--tm-cool-gray-20); }
+  .tm-bg-cool-gray-30 { background-color: var(--tm-cool-gray-30); }
+  .tm-bg-cool-gray-40 { background-color: var(--tm-cool-gray-40); }
+  .tm-bg-happy-yellow-20 { background-color: var(--tm-happy-yellow-20); }
+  .tm-bg-happy-yellow-30 { background-color: var(--tm-happy-yellow-30); }
+
+  /* Touch target */
+  .tm-touch-target {
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+  }
+
+  /* Border radius */
+  .tm-rounded-sm { border-radius: var(--tm-radius-sm); }
+  .tm-rounded-md { border-radius: var(--tm-radius-md); }
+  .tm-rounded-lg { border-radius: var(--tm-radius-lg); }
+
+  /* Marker class for brand-compliant components; carries no styles. */
+  .tm-brand-compliant {
+    --tm-brand-compliant: 1;
+  }
+}
+
+/* White on the 60% navy tint is 3.7:1 in light. The tint is a mid-tone, so its
+   label is black there (6:1) and white in dark, where the same tint sits on a
+   dark surface and white is 5:1. */
+.tm-bg-loyal-blue-60.tm-text-white {
+  color: var(--tm-black);
+}
+
+[data-theme='dark'] .tm-bg-loyal-blue-60.tm-text-white {
+  color: var(--tm-white);
+}
+
+/* Dark mode: --tm-black remaps to the light ink and --tm-loyal-blue to a light
+   blue, so a fixed white / black label on those two fills would drop to ~2:1.
+   Pair them with the page background colour, as .tm-btn-primary does. */
+[data-theme='dark'] .tm-bg-loyal-blue.tm-text-white,
+[data-theme='dark'] .tm-bg-happy-yellow.tm-text-black {
+  color: var(--bg);
+}

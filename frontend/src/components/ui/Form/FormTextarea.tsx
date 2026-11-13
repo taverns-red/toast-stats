@@ -22,10 +22,7 @@ export const FormTextarea: React.FC<FormTextareaProps> = ({
     horizontal: 'tm-form-textarea--resize-horizontal',
     both: 'tm-form-textarea--resize-both',
   }
-  const stateClasses = [
-    error && 'tm-form-textarea--error',
-    props.disabled && 'tm-form-textarea--disabled',
-  ]
+  const stateClasses = [error && 'tm-form-textarea--error']
     .filter(Boolean)
     .join(' ')
 
