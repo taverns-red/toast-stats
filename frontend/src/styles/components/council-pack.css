@@ -382,6 +382,9 @@
   .council-pack__table thead th {
     background: #eeeeee;
     color: #000000;
+    /* The layered .dt rule sets the header size on the cells (14px), so the
+       table's 8.5pt never reaches them; take it back (#2676). */
+    font-size: inherit;
   }
 
   /* The roster must fit the 698px box, not lean on the browser's
