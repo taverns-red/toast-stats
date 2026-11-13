@@ -9,7 +9,7 @@ const PATTERNS: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [
     /^Net growth since July: (-?\d+) \(need 3\+ to override\)$/,
     m =>
-      `Net membership change since July is ${m[1]}. A gain of 3 or more would lift the club out of this status.`,
+      `Net membership change since July is ${m[1]}. It needs to reach +3 to lift the club out of this status.`,
   ],
   [
     /^Membership below threshold \((\d+) members?, need 20\+ or net growth 3\+\)$/,
