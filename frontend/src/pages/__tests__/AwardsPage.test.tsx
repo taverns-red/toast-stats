@@ -173,8 +173,12 @@ describe('AwardsPage (#371-#373)', () => {
 
     it('a district whose name is the bare number still reads "District 102" to a screen reader (#2648)', () => {
       renderPage()
-      const link = screen.getByRole('link', { name: 'District 102' })
+      // jsdom trims the hidden span's trailing space when it computes the
+      // name (browsers keep it), so match the word break loosely here and
+      // assert the exact text below.
+      const link = screen.getByRole('link', { name: /^District\s?102$/ })
       expect(link).toHaveAttribute('href', '/district/102')
+      expect(link.textContent).toBe('District 102')
       // WCAG 2.5.3 (#2648): the accessible name contains the visible label
       // ("D102"), so voice control can say what it sees. No aria-label
       // override; the hidden letters complete the word instead.

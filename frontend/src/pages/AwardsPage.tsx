@@ -1,5 +1,4 @@
 import React from 'react'
-import { districtAriaLabel, formatDistrict } from '../utils/displayFormat'
 import { hasDescriptiveName } from '../utils/districtName'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { Link } from 'react-router-dom'
@@ -20,14 +19,30 @@ import type {
    — the deeper view that the Districts page's Awards Race summary
    defers to. Uses the existing useCompetitiveAwards hook for data. */
 
-/** The link's accessible name always says "District" (#2648): the bare
- *  number alone, or a name that omits the word, is read as just "93". */
-const districtLinkLabel = (id: string, name: string): string =>
-  !hasDescriptiveName(name)
-    ? districtAriaLabel(id)
-    : /district/i.test(name)
-      ? name
-      : `${districtAriaLabel(id)}, ${name}`
+/** Link text whose accessible name always says "District" and contains the
+ *  visible label (WCAG 2.5.3, #2648): "D<hidden>istrict </hidden>93". */
+const DistrictLinkText: React.FC<{ id: string; name: string }> = ({
+  id,
+  name,
+}) => {
+  if (hasDescriptiveName(name)) {
+    return /district/i.test(name) ? (
+      <>{name}</>
+    ) : (
+      <>
+        <span className="sr-only">District {id}, </span>
+        {name}
+      </>
+    )
+  }
+  if (id === 'U') return <>Undistricted</>
+  return (
+    <>
+      D<span className="sr-only">istrict </span>
+      {/^\d+$/.test(id) ? Number(id) : id}
+    </>
+  )
+}
 
 interface AwardSpec {
   key: keyof Pick<
@@ -253,14 +268,11 @@ const AwardLeaderboard: React.FC<AwardLeaderboardProps> = ({
                 <Link
                   to={`/district/${entry.districtId}`}
                   className="awards-page-card__district"
-                  aria-label={districtLinkLabel(
-                    entry.districtId,
-                    entry.districtName
-                  )}
                 >
-                  {hasDescriptiveName(entry.districtName)
-                    ? entry.districtName
-                    : formatDistrict(entry.districtId)}
+                  <DistrictLinkText
+                    id={entry.districtId}
+                    name={entry.districtName}
+                  />
                 </Link>
                 {tiedIds.has(entry.districtId) && (
                   <>
