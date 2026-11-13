@@ -184,7 +184,7 @@
 }
 
 .wm-readout__name {
-  font-family: var(--rt-font-display);
+  font-family: var(--serif);
   font-size: 18px;
 }
 
@@ -252,7 +252,7 @@
 .wm-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: var(--rt-font-body);
+  font-family: var(--sans);
   font-size: 15px;
   color: var(--wm-text);
 }
