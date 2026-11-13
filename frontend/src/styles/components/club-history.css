@@ -121,111 +121,9 @@
   }
 }
 
-.club-history-scroll {
-  position: relative;
-  overflow-x: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--rds-radius-md);
-  background: var(--surface);
-}
-
-.club-history-scroll:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--focus-ring);
-}
-
-/* Right-edge fade cue — "there's more →" when the table overflows (Lesson 105). */
-.club-history-scroll::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 24px;
-  pointer-events: none;
-  background: linear-gradient(to right, transparent, var(--surface));
-  opacity: 0.9;
-}
-
-.club-history-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: var(--sans);
-  font-size: 0.9rem;
-  color: var(--ink);
-}
-
-.club-history-th {
-  text-align: left;
-  padding: 0.6rem 0.85rem;
-  font-weight: 600;
-  font-size: 0.8rem;
-  color: var(--ink-2);
-  white-space: nowrap;
-  border-bottom: 2px solid var(--line);
-  background: var(--surface);
-}
-
-.club-history-th--num {
-  text-align: right;
-}
-
-/* Button reset for the shared SortableHeader (it owns the SVG sort indicator). */
-.club-history-sort {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-/* Right-aligned numeric headers put the indicator before the label. */
-.club-history-sort--num {
-  flex-direction: row-reverse;
-}
-
-.club-history-sort:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--focus-ring);
-  border-radius: 3px;
-}
-
-.club-history-sort .sortable-header__indicator {
-  display: inline-flex;
-  color: var(--ink-4);
-}
-
-.club-history-td {
-  padding: 0.6rem 0.85rem;
-  border-bottom: 1px solid var(--line-2);
-  white-space: nowrap;
-  vertical-align: middle;
-}
-
-.club-history-td--num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.club-history-td--year {
-  font-weight: 600;
-  text-align: left;
-}
-
-/* #1839: a linked year cell's 44px link is the row's height, so the cell
-   drops its block padding — the row stays ~44px instead of growing to 64. */
-.club-history-td--year:has(.club-history-year-link) {
-  padding-block: 0;
-}
-
 /* #1302 — the year label deep-links into ClubDetailPage for that program year.
    Reads as a link (link colour, underline on hover/focus) without disturbing
-   the sticky identity column's weight/alignment.
+   the pinned year column's weight/alignment.
    #1839: --link, not the amber brand accent. The retired amber (#D4873F) was 2.86:1
    on white — a fill/accent colour, never text; --link remaps for dark mode.
    The row is the target: an inline-flex 44px box (the year cell grows to fit). */
@@ -243,15 +141,6 @@
   text-decoration: underline;
 }
 
-/* Sticky identity column — keeps the program year visible while metrics scroll. */
-.club-history-table thead th:first-child,
-.club-history-table tbody th:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--surface);
-}
-
 .club-history-muted {
   color: var(--ink-3);
 }
@@ -265,20 +154,13 @@
   padding: 0 6px;
   border: 1px solid var(--tm-loyal-blue);
   border-radius: var(--rt-radius-sm);
-  font-size: var(--tm-font-size-xs);
+  /* Sits in a table row: the 14px data floor at every width (#2733). */
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.5;
   color: var(--ink-2);
   white-space: nowrap;
   vertical-align: middle;
-}
-
-/* Phones keep the 14px type floor in tables (#1834 priority-columns gate):
-   the tag and the district line are body-size there. */
-@media (max-width: 767.98px) {
-  .club-history-in-progress {
-    font-size: 14px;
-  }
 }
 
 /* #1803 — on phones, the year's district sits under the year in the

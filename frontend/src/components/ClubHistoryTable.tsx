@@ -4,21 +4,32 @@
  * status).
  *
  * Comparison-across-rows table: its value is reading years against each other
- * ("declining / recovering / stable"), so per Lesson 105 it stays a TABLE and
- * uses a keyboard-operable horizontal-scroll region rather than card-collapse.
- * The program-year column is sticky so rows stay labelled while metrics scroll.
+ * ("declining / recovering / stable"), so per Lesson 105 it stays a TABLE
+ * rather than card-collapse. From 768 up it is the shared DataTable (#2733,
+ * #2676 M6): sort only, a caption, the program year as the row header (pinned
+ * while metrics scroll sideways), and a keyboard-operable scroll region only
+ * when the columns cannot fit.
  *
- * Tier badge colours and dark-mode are owned by `club-history.css` themed
- * variables (R10 — CSS-level overrides), NOT Tailwind prefers-color-scheme
- * variants (which misfire under this app's manual `[data-theme='dark']`
- * toggle — Lesson 107). Dark styling is scoped to that toggle in the CSS.
+ * The phone chips' tier colours and dark mode are owned by `club-history.css`
+ * themed variables (R10 — CSS-level overrides), NOT Tailwind
+ * prefers-color-scheme variants (which misfire under this app's manual
+ * `[data-theme='dark']` toggle — Lesson 107). The desktop table shows the tier
+ * as plain text.
  */
 
-import { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
+import {
+  columnSizingFeature,
+  columnVisibilityFeature,
+  createColumnHelper,
+  rowSortingFeature,
+  tableFeatures,
+  useTable,
+} from '@tanstack/react-table'
 import { Link } from 'react-router-dom'
 import type { ClubHistoryRow, ClubTierCode } from '../utils/clubHistory'
 import { EM_DASH } from '../utils/clubHistory'
-import { SortableHeader } from './SortableHeader'
+import { DataTable } from './dataTable/DataTable'
 import type { SortDirection } from '../hooks/useUrlSort'
 import {
   PriorityColumnsTable,
@@ -158,6 +169,90 @@ function yearHref(clubId: string, row: ClubHistoryRow): string {
     : `/club/${clubId}?py=${row.startYear}`
 }
 
+/* The history on the shared DataTable (#2733, #2676 M6). Sort only: eight
+   columns at most, all shown. A column id is the sort field it sorts by; the
+   District and Renewals columns have no sort. The component owns the order
+   (manualSorting), as the regions leaderboard does. */
+const historyFeatures = tableFeatures({
+  rowSortingFeature,
+  columnSizingFeature,
+  columnVisibilityFeature,
+})
+type HistoryFeatures = typeof historyFeatures
+const colHelper = createColumnHelper<HistoryFeatures, ClubHistoryRow>()
+type HistoryColumns = ReturnType<typeof colHelper.columns>
+
+/** Widths in px (8px padding per side included). The year takes the rest. */
+const HISTORY_SIZES: Readonly<Record<string, number>> = {
+  year: 130,
+  district: 110,
+  dcpGoals: 100,
+  tier: 160,
+  membershipNet: 190,
+  renewals: 130,
+  status: 100,
+}
+
+const TEXT_COLUMNS: ReadonlySet<string> = new Set([
+  'year',
+  'district',
+  'tier',
+  'status',
+])
+
+const headerClass = (id: string): string =>
+  [
+    id === 'year' ? 'rankings-sticky-col' : '',
+    TEXT_COLUMNS.has(id) ? '' : 'dt-num',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+const cellClass = (id: string): string =>
+  [
+    'rankings-cell',
+    id === 'year' ? 'rankings-sticky-col' : '',
+    TEXT_COLUMNS.has(id) ? '' : 'rankings-cell--num',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+const HistoryDataTable: React.FC<{
+  rows: readonly ClubHistoryRow[]
+  columns: HistoryColumns
+  clubName: string
+  sort: { field: SortField; direction: SortDirection }
+  onSort: (field: SortField) => void
+  inScroller: boolean
+}> = ({ rows, columns, clubName, sort, onSort, inScroller }) => {
+  const table = useTable<HistoryFeatures, ClubHistoryRow>({
+    features: historyFeatures,
+    data: rows as ClubHistoryRow[],
+    columns,
+    getRowId: r => String(r.startYear),
+    state: { columnSizing: HISTORY_SIZES },
+    manualSorting: true,
+  })
+  return (
+    <DataTable
+      table={table}
+      id={inScroller ? 'club-history-sheet-table' : 'club-history-table'}
+      label={`${clubName} program-year history`}
+      caption={`${clubName} performance by program year, ${rows.length} ${
+        rows.length === 1 ? 'program year' : 'program years'
+      }. Column headers with buttons are sortable.`}
+      sort={sort}
+      onSort={id => onSort(id as SortField)}
+      rowHeaderColumnId="year"
+      headerClassName={headerClass}
+      cellClassName={cellClass}
+      rowClassName="rankings-row"
+      inScroller={inScroller}
+      overflowHint="Scroll sideways for more columns"
+    />
+  )
+}
+
 export function ClubHistoryTable({
   rows,
   clubName,
@@ -205,128 +300,108 @@ export function ClubHistoryTable({
     })
   }, [rows, sortField, sortDirection])
 
-  const fullTable = (
-    <table className="club-history-table">
-      <caption className="sr-only">
-        {clubName} performance by program year
-      </caption>
-      <thead>
-        <tr>
-          <SortableHeader<SortField>
-            field="year"
-            label="Program Year"
-            currentSort={currentSort}
-            onSort={handleSort}
-            thClassName="club-history-th"
-            buttonClassName="club-history-sort"
-          />
-          {showDistrict && (
-            <th scope="col" className="club-history-th">
-              District
-            </th>
-          )}
-          <SortableHeader<SortField>
-            field="dcpGoals"
-            label="DCP Goals"
-            currentSort={currentSort}
-            onSort={handleSort}
-            thClassName="club-history-th club-history-th--num"
-            buttonClassName="club-history-sort club-history-sort--num"
-            numeric
-          />
-          <SortableHeader<SortField>
-            field="tier"
-            label="Distinguished"
-            currentSort={currentSort}
-            onSort={handleSort}
-            thClassName="club-history-th"
-            buttonClassName="club-history-sort"
-          />
-          <SortableHeader<SortField>
-            field="membershipNet"
-            label="Membership (base → end)"
-            currentSort={currentSort}
-            onSort={handleSort}
-            thClassName="club-history-th club-history-th--num"
-            buttonClassName="club-history-sort club-history-sort--num"
-            numeric
-          />
-          <th scope="col" className="club-history-th club-history-th--num">
-            Renewals (Oct / Apr)
-          </th>
-          <SortableHeader<SortField>
-            field="status"
-            label="Status"
-            currentSort={currentSort}
-            onSort={handleSort}
-            thClassName="club-history-th"
-            buttonClassName="club-history-sort"
-          />
-        </tr>
-      </thead>
-      <tbody>
-        {sortedRows.map(row => (
-          <tr key={row.startYear}>
-            <th scope="row" className="club-history-td club-history-td--year">
-              {clubId ? (
-                <Link
-                  to={yearHref(clubId, row)}
-                  className="club-history-year-link"
-                >
-                  {row.label}
-                </Link>
-              ) : (
-                row.label
-              )}
-              {row.inProgress && <InProgressTag />}
-            </th>
-            {showDistrict && (
-              <td className="club-history-td">
-                {row.districtId
-                  ? lifecycleDistrictLabel(row.districtId)
-                  : EM_DASH}
-              </td>
+  const columns = colHelper.columns([
+    colHelper.accessor(r => r.startYear, {
+      id: 'year',
+      header: 'Program year',
+      cell: info => {
+        const row = info.row.original
+        return (
+          <>
+            {clubId ? (
+              <Link
+                to={yearHref(clubId, row)}
+                className="club-history-year-link"
+              >
+                {row.label}
+              </Link>
+            ) : (
+              row.label
             )}
-            <td className="club-history-td club-history-td--num">
-              {row.dcpGoals == null ? EM_DASH : `${row.dcpGoals} / 10`}
-            </td>
-            <td className="club-history-td">
-              {row.tierCode ? (
-                <span
-                  className={`club-history-tier ${TIER_MODIFIER[row.tierCode]}`}
-                >
-                  {row.tierLabel}
-                </span>
-              ) : (
-                <span className="club-history-muted">{EM_DASH}</span>
-              )}
-            </td>
-            <td className="club-history-td club-history-td--num">
-              {row.membershipBase == null && row.membershipEnd == null ? (
-                EM_DASH
-              ) : (
-                <>
-                  {num(row.membershipBase)} → {num(row.membershipEnd)}{' '}
-                  <span
-                    className={
-                      row.membershipNet != null && row.membershipNet < 0
-                        ? 'club-history-net club-history-net--neg'
-                        : 'club-history-net club-history-net--pos'
-                    }
-                  >
-                    ({signedNet(row.membershipNet)})
-                  </span>
-                </>
-              )}
-            </td>
-            <td className="club-history-td club-history-td--num">
-              {num(row.octoberRenewals)} / {num(row.aprilRenewals)}
-            </td>
-            <td className="club-history-td">{row.clubStatus ?? EM_DASH}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+            {row.inProgress && <InProgressTag />}
+          </>
+        )
+      },
+    }),
+    ...(showDistrict
+      ? [
+          colHelper.display({
+            id: 'district',
+            header: 'District',
+            cell: info =>
+              info.row.original.districtId
+                ? lifecycleDistrictLabel(info.row.original.districtId)
+                : EM_DASH,
+          }),
+        ]
+      : []),
+    colHelper.accessor(r => r.dcpGoals ?? -1, {
+      id: 'dcpGoals',
+      header: 'DCP goals',
+      cell: info => {
+        const goals = info.row.original.dcpGoals
+        return goals == null ? EM_DASH : `${goals} / 10`
+      },
+    }),
+    colHelper.accessor(r => tierRank(r.tierCode), {
+      id: 'tier',
+      header: 'Distinguished',
+      cell: info =>
+        // The tier is plain text (no pill, #2676 spec §3.2).
+        info.row.original.tierCode ? (
+          <span className="dt-tier">{info.row.original.tierLabel}</span>
+        ) : (
+          <span className="dt-tier dt-tier--none">
+            <span aria-hidden="true">{EM_DASH}</span>
+            <span className="sr-only">Not distinguished</span>
+          </span>
+        ),
+    }),
+    colHelper.accessor(r => r.membershipNet ?? Number.NEGATIVE_INFINITY, {
+      id: 'membershipNet',
+      header: 'Membership (base → end)',
+      cell: info => {
+        const row = info.row.original
+        return row.membershipBase == null && row.membershipEnd == null ? (
+          EM_DASH
+        ) : (
+          <>
+            {num(row.membershipBase)} → {num(row.membershipEnd)}{' '}
+            <span
+              className={
+                row.membershipNet != null && row.membershipNet < 0
+                  ? 'club-history-net club-history-net--neg'
+                  : 'club-history-net club-history-net--pos'
+              }
+            >
+              ({signedNet(row.membershipNet)})
+            </span>
+          </>
+        )
+      },
+    }),
+    colHelper.display({
+      id: 'renewals',
+      header: 'Renewals (Oct / Apr)',
+      cell: info =>
+        `${num(info.row.original.octoberRenewals)} / ${num(info.row.original.aprilRenewals)}`,
+    }),
+    colHelper.accessor(r => r.clubStatus ?? '', {
+      id: 'status',
+      header: 'Status',
+      cell: info => info.row.original.clubStatus ?? EM_DASH,
+    }),
+  ])
+
+  const historyTable = (variant: 'page' | 'sheet') => (
+    <HistoryDataTable
+      rows={sortedRows}
+      columns={columns}
+      clubName={clubName}
+      sort={currentSort}
+      onSort={handleSort}
+      inScroller={variant === 'sheet'}
+    />
   )
 
   // Below 768 (#1834): year + 2 chosen metrics, no side-scroll, the tier as
@@ -356,15 +431,13 @@ export function ClubHistoryTable({
       sort={currentSort}
       onSort={handleSort}
       fullTableTitle={`${clubName} — all columns`}
-      sheetTable={fullTable}
+      sheetTable={historyTable('sheet')}
       fullTable={
-        <div
-          role="region"
-          aria-label={`${clubName} program-year history`}
-          tabIndex={0}
-          className="club-history-scroll"
-        >
-          {fullTable}
+        // >=768: the shared DataTable. The header sticks to the page while the
+        // columns fit; only when they cannot does it scroll sideways, as a
+        // labelled, focusable region with edge cues (WCAG 2.1.1).
+        <div className="districts-rankings-table-wrap districts-rankings-table-wrap--dt">
+          {historyTable('page')}
         </div>
       }
     />

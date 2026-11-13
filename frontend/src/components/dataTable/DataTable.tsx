@@ -87,6 +87,8 @@ interface DataTableProps {
   /** A short accessible name for the `<table>` itself (the caption keeps the
    *  detail). Without it the caption is the name. */
   tableLabel?: string
+  /** `data-testid` on the `<table>`. */
+  testId?: string
   sort: DataTableSort
   onSort: (field: string) => void
   /** The column that labels each row: rendered as `<th scope="row">` and left
@@ -126,6 +128,7 @@ export function DataTable({
   caption,
   label,
   tableLabel,
+  testId,
   sort,
   onSort,
   rowHeaderColumnId,
@@ -210,6 +213,7 @@ export function DataTable({
             className="dt"
             style={{ minWidth: totalSize }}
             aria-label={tableLabel}
+            data-testid={testId}
           >
             <caption className="sr-only">{caption}</caption>
             <colgroup>
