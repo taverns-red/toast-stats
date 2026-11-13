@@ -123,6 +123,52 @@ for (const width of [768, 1280]) {
   })
 }
 
+/* Footer row regression on wide desktops. The first group is sized to its
+ * content minus the 14px gutter it clips, so its list is exactly as wide as
+ * its items: zero slack. Any sub-pixel difference in how a browser lays out
+ * the text wraps the last item ("Privacy & cookies") onto a second line and
+ * leaves a "·" at the end of the first. The slack, not the wrap itself, is
+ * what fails here, because the wrap depends on the browser's rounding. */
+for (const width of [1280, 1440, 1920]) {
+  test(`footer first group fits on one line with room to spare at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await load(page, '/regions')
+    await page.locator('footer').waitFor({ state: 'visible' })
+    const m = await page.evaluate(() => {
+      const group = document.querySelector('.app-shell-footer__group')!
+      const list = group.querySelector('.app-shell-footer__list')!
+      const items = [...list.children] as HTMLElement[]
+      const sum = items.reduce((a, i) => a + i.getBoundingClientRect().width, 0)
+      const tops = new Set(
+        items.map(i => Math.round(i.getBoundingClientRect().top))
+      )
+      const gb = group.getBoundingClientRect()
+      const made = document.querySelector('[data-testid="red-vote-made-by"]')
+      const rb = made?.getBoundingClientRect()
+      return {
+        lines: tops.size,
+        slack: list.getBoundingClientRect().width - sum,
+        madeByFound: !!rb,
+        centreGap: rb
+          ? Math.abs(rb.top + rb.height / 2 - (gb.top + gb.height / 2))
+          : null,
+      }
+    })
+    expect(m.lines, 'first footer group wraps onto a second line').toBe(1)
+    expect(
+      m.slack,
+      'first footer group has no slack: a rounding difference wraps its last item'
+    ).toBeGreaterThanOrEqual(2)
+    expect(m.madeByFound, 'Red Vote made-by line not found').toBe(true)
+    expect(
+      m.centreGap,
+      'right group is not vertically aligned with the first group'
+    ).toBeLessThanOrEqual(2)
+  })
+}
+
 test('World pulse with no rollups file has no horizontal overflow at 375px', async ({
   page,
 }) => {
