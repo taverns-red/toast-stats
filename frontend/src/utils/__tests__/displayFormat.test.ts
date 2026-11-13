@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import {
   signedDelta,
   signedPercent,
@@ -25,6 +25,22 @@ describe('formatDateText', () => {
 
   it('does not shift the day for users west of UTC', () => {
     expect(formatDateText('2026-01-01')).toBe('Jan 1, 2026')
+  })
+
+  describe('in a timezone behind UTC', () => {
+    const original = process.env.TZ
+    beforeAll(() => {
+      process.env.TZ = 'America/New_York'
+    })
+    afterAll(() => {
+      if (original === undefined) delete process.env.TZ
+      else process.env.TZ = original
+    })
+
+    it('a UTC timestamp keeps its own calendar date', () => {
+      // 01:00Z is still Nov 10 in New York; the date shown is the stamp's.
+      expect(formatDateText('2026-11-11T01:00:00Z')).toBe('Nov 11, 2026')
+    })
   })
 
   it('a full timestamp keeps its own calendar date, whatever the timezone', () => {
