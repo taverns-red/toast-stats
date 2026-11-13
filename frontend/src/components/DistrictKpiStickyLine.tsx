@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import type { DistrictKpiStripData } from './DistrictKpiStrip'
+import { formatCompact, formatSignedCompact } from '../utils/formatCompact'
 
 /* #2708 (D4) — the KPI block (strip or phone hub) is tall, so it scrolls away.
    Once it has, this one opaque line of the four headline figures pins under
@@ -8,19 +9,6 @@ import type { DistrictKpiStripData } from './DistrictKpiStrip'
    aria-hidden: the same figures are in the block above. */
 
 const PIN_FALLBACK_PX = 56
-
-const formatCompact = (n: number): string => {
-  if (Math.abs(n) >= 1000) {
-    const k = n / 1000
-    return `${k.toFixed(k >= 10 ? 0 : 1)}K`
-  }
-  return String(n)
-}
-
-const formatSignedCompact = (n: number): string => {
-  if (n === 0) return '0'
-  return `${n > 0 ? '+' : '−'}${formatCompact(Math.abs(n))}`
-}
 
 /** True once `sentinel` has scrolled above the wrapper's pin line. */
 function useStuck(
