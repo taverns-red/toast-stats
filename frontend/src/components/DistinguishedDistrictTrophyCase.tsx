@@ -210,13 +210,22 @@ const TierGapTable: React.FC<{
     </caption>
     <thead>
       <tr className="text-sm text-gray-600 theme-dark:text-gray-400">
-        <th scope="col" className="py-1 pr-2 text-left font-medium">
+        <th
+          scope="col"
+          className="py-1 pr-2 text-left font-medium text-gray-600 theme-dark:text-gray-400"
+        >
           Tier
         </th>
-        <th scope="col" className="py-1 pl-2 text-right font-medium">
+        <th
+          scope="col"
+          className="py-1 pl-2 text-right font-medium text-gray-600 theme-dark:text-gray-400"
+        >
           Paid clubs
         </th>
-        <th scope="col" className="py-1 pl-2 text-right font-medium">
+        <th
+          scope="col"
+          className="py-1 pl-2 text-right font-medium text-gray-600 theme-dark:text-gray-400"
+        >
           Payments
         </th>
         {/* "Distinguished" alone is wider than this column on a phone, so
@@ -224,7 +233,7 @@ const TierGapTable: React.FC<{
         <th
           scope="col"
           aria-label="Distinguished clubs"
-          className="py-1 pl-2 text-right font-medium"
+          className="py-1 pl-2 text-right font-medium text-gray-600 theme-dark:text-gray-400"
         >
           <span aria-hidden="true" className="md:hidden">
             Dist. clubs
