@@ -77,7 +77,7 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({ label, text }) => {
         aria-label={`About ${label}`}
         aria-expanded={isVisible}
         aria-describedby={isVisible ? panelId : undefined}
-        className="info-tooltip__trigger text-[var(--ink-3)] hover:text-gray-600 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+        className="info-tooltip__trigger text-[var(--ink-3)] hover:text-[var(--ink-2)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
         onMouseEnter={() => {
           setDismissed(false)
           setHovered(true)
