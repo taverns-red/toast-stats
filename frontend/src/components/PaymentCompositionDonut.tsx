@@ -78,7 +78,7 @@ const PaymentCompositionDonut: React.FC<PaymentCompositionDonutProps> = ({
             cy="60"
             r={RADIUS}
             fill="none"
-            stroke="rgba(0,0,0,0.05)"
+            stroke="var(--line)"
             strokeWidth="18"
           />
           {/* Segments */}
@@ -117,7 +117,7 @@ const PaymentCompositionDonut: React.FC<PaymentCompositionDonutProps> = ({
             y="74"
             textAnchor="middle"
             fontSize="12"
-            fill="rgba(0,0,0,0.5)"
+            fill="var(--ink-3)"
           >
             payments
           </text>

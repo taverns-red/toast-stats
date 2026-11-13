@@ -13,6 +13,7 @@ import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
 import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { dateAxisLayout } from './charts/compactAxis'
+import { AXIS_TICK, AXIS_LABEL_STYLE } from './charts/chartAxis'
 import {
   HistoricalRankChartEmpty,
   HistoricalRankChartError,
@@ -244,7 +245,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
               <XAxis
                 dataKey="date"
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '12px' }}
+                tick={AXIS_TICK}
                 {...dateAxisLayout(
                   compact,
                   sortedDates,
@@ -260,7 +261,8 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
               />
               <YAxis
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '12px' }}
+                tick={AXIS_TICK}
+                allowDecimals={false}
                 width={50}
                 reversed={selectedMetric !== 'aggregate'}
                 label={
@@ -269,13 +271,13 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                         value: 'Score (lower is better)',
                         angle: -90,
                         position: 'insideLeft',
-                        style: { fontSize: '12px' },
+                        style: AXIS_LABEL_STYLE,
                       }
                     : {
                         value: 'Rank (lower is better)',
                         angle: -90,
                         position: 'insideLeft',
-                        style: { fontSize: '12px' },
+                        style: AXIS_LABEL_STYLE,
                       }
                 }
               />
@@ -292,7 +294,8 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 return (
                   <Line
                     key={district.districtId}
-                    type="monotone"
+                    // Integer ranks: a spline would draw dips that never happened.
+                    type="linear"
                     dataKey={district.districtId}
                     stroke={color}
                     strokeWidth={2}

@@ -23,6 +23,7 @@ import { EmptyState } from './ErrorDisplay'
 import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { dateAxisLayout } from './charts/compactAxis'
+import { AXIS_TICK, AXIS_LABEL_STYLE } from './charts/chartAxis'
 import type { PaymentTrendDataPoint } from '../utils/paymentTrend'
 import type {
   MultiYearPaymentData,
@@ -484,7 +485,7 @@ export const MembershipPaymentsChart: React.FC<
               <XAxis
                 dataKey="programYearDay"
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '12px' }}
+                tick={AXIS_TICK}
                 {...dateAxisLayout(
                   compact,
                   chartData.map(d => d.programYearDay),
@@ -497,17 +498,17 @@ export const MembershipPaymentsChart: React.FC<
                   value: 'Program Year Month',
                   position: 'insideBottom',
                   offset: -10,
-                  style: { fontSize: '12px' },
+                  style: AXIS_LABEL_STYLE,
                 }}
               />
               <YAxis
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '12px' }}
+                tick={AXIS_TICK}
                 label={{
                   value: 'YTD Payments',
                   angle: -90,
                   position: 'insideLeft',
-                  style: { fontSize: '12px' },
+                  style: AXIS_LABEL_STYLE,
                 }}
               />
               <Tooltip content={<CustomTooltip />} {...readout.tooltipProps} />

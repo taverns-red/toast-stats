@@ -3455,7 +3455,9 @@
   }
 
   .club-panel__head .club-panel__ico {
-    color: var(--loyal-500);
+    /* --link, not --loyal-500: --loyal-500 has no dark remap (1.64:1 on the
+       dark card, #2641); --link is the same colour in light. */
+    color: var(--link);
     flex-shrink: 0;
   }
 
@@ -5921,7 +5923,7 @@
      The desktop table no longer uses pills (#2676): Health is a shape marker
      plus text and Tier is plain text, both styled in data-table.css. The
      status pill below survives only for the phone StatusChip (out of scope),
-     soft tint + saturated text, theme-stable. */
+     soft tint + saturated text; dark remap below (#2641). */
 
   .clubs-status-pill {
     display: inline-block;
@@ -5946,6 +5948,24 @@
   .clubs-status-pill--intervention {
     background-color: #fee2e2;
     color: #991b1b;
+  }
+
+  /* Dark (#2641, D8): darker steps of the same tint hues with light text,
+     reusing the dark .dcp-cell--pos/warn/bad pairs. The light pastels glared
+     on the dark card (Not Distinguished pill was 1.05:1 against it). */
+  [data-theme='dark'] .clubs-status-pill--thriving {
+    background-color: rgba(22, 163, 74, 0.1);
+    color: #4ade80;
+  }
+
+  [data-theme='dark'] .clubs-status-pill--vulnerable {
+    background-color: rgba(202, 138, 4, 0.12);
+    color: #fcd34d;
+  }
+
+  [data-theme='dark'] .clubs-status-pill--intervention {
+    background-color: rgba(220, 38, 38, 0.12);
+    color: #fca5a5;
   }
 
   /* Read-time club-status overlay affordance (#1069, epic #1062 Sprint 4).

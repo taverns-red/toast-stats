@@ -26,6 +26,12 @@ interface ColumnsMenuProps {
   columns: ColumnVisibilityApi
   /** The Changes columns are offered (a snapshot diff is loaded). */
   changesAvailable?: boolean
+  /** The Changes diff is being fetched; the group says so (#2740). */
+  changesLoading?: boolean
+  /** The Changes diff failed to load; the group says so and is disabled. */
+  changesFailed?: boolean
+  /** Called when the menu opens (starts the on-demand diff read, #2740). */
+  onOpen?: (() => void) | undefined
   /** Heading for the Changes group, e.g. "Changes since Nov 10". */
   changesLabel?: string | undefined
   /** The `?since=` preset is on, so "vs last year" is listed. */
@@ -61,6 +67,9 @@ const idsFor = (
 export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
   columns,
   changesAvailable = false,
+  changesLoading = false,
+  changesFailed = false,
+  onOpen,
   changesLabel,
   sinceActive = false,
   spec,
@@ -77,6 +86,10 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
   const [announcement, setAnnouncement] = useState('')
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
+  const onOpenRef = useRef(onOpen)
+  useEffect(() => {
+    onOpenRef.current = onOpen
+  })
   const baseId = useId()
   const popoverId = `${baseId}-columns-popover`
 
@@ -93,6 +106,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
 
   useEffect(() => {
     if (!isOpen) return
+    onOpenRef.current?.()
     focusFirstCheckbox()
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') close()
@@ -198,12 +212,32 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
             return (
               <fieldset key={group.id} className="clubs-columns-menu__group">
                 <legend className="clubs-columns-menu__legend">{legend}</legend>
+                {group.id === 'changes' && (
+                  <span
+                    className="clubs-columns-menu__note"
+                    role="status"
+                    aria-live="polite"
+                    data-testid="columns-changes-status"
+                  >
+                    {changesFailed
+                      ? 'Changes could not be loaded. Close and reopen this menu to try again.'
+                      : changesLoading
+                        ? 'Loading changes…'
+                        : ''}
+                  </span>
+                )}
                 {ids.map(id => {
                   const meta = metaOf(id)
                   if (!meta) return null
                   const isRevealed = columns.revealed.has(id)
                   const always = isAlwaysShown(id)
-                  const locked = always || id === SINCE_COLUMN_ID || isRevealed
+                  const changesBusy =
+                    group.id === 'changes' && (changesLoading || changesFailed)
+                  const locked =
+                    always ||
+                    id === SINCE_COLUMN_ID ||
+                    isRevealed ||
+                    changesBusy
                   const hintId = `${baseId}-hint-${id}`
                   const noteId = `${baseId}-note-${id}`
                   const hasNote = always || id === SINCE_COLUMN_ID || isRevealed
