@@ -54,9 +54,9 @@ async function sampleRowContrasts(page: Page, hover: boolean) {
     const row = rows.nth(i)
     if (hover) await row.hover()
     // region chip (translucent tint), the leader label, a numeric metric value
-    const chip = row.locator('td:first-child span.font-mono').first()
-    const leader = row.locator('td:first-child span').last()
-    const num = row.locator('td.tabular-nums').first()
+    const chip = row.locator('th:first-child span.font-mono').first()
+    const leader = row.locator('th:first-child span').last()
+    const num = row.locator('td.rankings-cell--num').first()
     for (const [label, loc] of [
       ['chip', chip],
       ['leader', leader],

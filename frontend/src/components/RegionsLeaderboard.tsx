@@ -203,17 +203,17 @@ type LeaderboardColumns = ReturnType<typeof colHelper.columns>
 
 /** Fixed widths in px (8px padding per side included); Region takes the rest. */
 const LEADERBOARD_SIZES: Readonly<Record<string, number>> = {
-  region: 240,
-  trend: 88,
-  districts: 96,
-  paidClubs: 96,
-  payments: 104,
-  distinguished: 128,
-  score: 88,
-  r1Dcp: 112,
-  r1AllSeven: 112,
-  r2Dcp: 112,
-  r2AllSeven: 112,
+  region: 176,
+  trend: 80,
+  districts: 88,
+  paidClubs: 80,
+  payments: 88,
+  distinguished: 112,
+  score: 72,
+  r1Dcp: 96,
+  r1AllSeven: 96,
+  r2Dcp: 96,
+  r2AllSeven: 96,
   r1: 128,
   r2: 128,
 }

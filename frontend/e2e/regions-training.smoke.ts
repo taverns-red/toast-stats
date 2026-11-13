@@ -50,8 +50,11 @@ for (const theme of THEMES) {
       if (phone) {
         await expect(table.locator('thead')).toContainText('Training')
       } else {
-        await expect(table.locator('thead')).toContainText('Round 1 training')
-        await expect(table.locator('thead')).toContainText('Round 2 training')
+        // One header row (#2702): a round is "Round 1: 4+ officers trained" and
+        // "Round 1: All 7 officers trained", or one "Round 1 training, ..."
+        // column before it has figures.
+        await expect(table.locator('thead')).toContainText(/Round 1/)
+        await expect(table.locator('thead')).toContainText(/Round 2/)
       }
 
       // Each region's figure links to its Training page — unless the date
@@ -86,14 +89,15 @@ for (const theme of THEMES) {
   }
 }
 
-/* The leaderboard fits its container at desktop widths (#2330 review): the
- * training columns once pushed the table past its scroller at 1280, clipping
- * the Round 2 "All 7" header. At 1024 and 1280 the whole table — every
- * header cell — must be visible without scrolling the table sideways, and
- * the right-edge "more" fade must not sit over the last column. */
+/* The leaderboard on the shared DataTable (#2330 review, #2702): at 1280 every
+ * header cell must be visible without scrolling the table sideways. At 1024
+ * the 14px floor and the four training columns can need more room than the
+ * page has once Round 2 expands; then the table scrolls INSIDE its own
+ * labelled, focusable region (never the page), with the edge cue on the side
+ * that has more, and the Region column stays pinned. */
 for (const theme of THEMES) {
   for (const width of [1024, 1280]) {
-    test(`regions leaderboard fits without side-scroll at ${width}px (${theme})`, async ({
+    test(`regions leaderboard fits or scrolls in its own region at ${width}px (${theme})`, async ({
       page,
     }) => {
       test.setTimeout(90_000)
@@ -105,11 +109,13 @@ for (const theme of THEMES) {
       await page.evaluate(() => document.fonts.ready)
 
       const m = await table.evaluate(t => {
-        const box = (t.parentElement as HTMLElement).getBoundingClientRect()
         const scroller = t.parentElement as HTMLElement
+        const box = scroller.getBoundingClientRect()
         return {
           tableWidth: t.scrollWidth,
           containerWidth: scroller.clientWidth,
+          region: scroller.getAttribute('role'),
+          tabindex: scroller.getAttribute('tabindex'),
           clipped: [...t.querySelectorAll('thead th')]
             .map(th => ({
               text: (th.textContent ?? '').trim(),
@@ -122,13 +128,22 @@ for (const theme of THEMES) {
         }
       })
       const ctx = JSON.stringify(m)
-      expect(m.tableWidth, ctx).toBeLessThanOrEqual(m.containerWidth)
-      expect(m.clipped, ctx).toEqual([])
-      // Nothing to scroll to, so no "more to the right" fade over the last
-      // column (it read as clipping in the first 1280 screenshot).
-      await expect(
-        page.locator('.dt-scroll-wrap[data-scrollable-end="true"]')
-      ).toHaveCount(0)
+      if (m.tableWidth <= m.containerWidth) {
+        expect(m.clipped, ctx).toEqual([])
+        // Nothing to scroll to, so no "more to the right" cue.
+        await expect(
+          page.locator('.dt-scroll-wrap[data-scrollable-end="true"]')
+        ).toHaveCount(0)
+      } else {
+        expect(width, `overflows at ${width}px: ${ctx}`).toBeLessThan(1280)
+        expect(m.region, ctx).toBe('region')
+        expect(m.tabindex, ctx).toBe('0')
+      }
+      const page_ = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }))
+      expect(page_.scrollWidth, ctx).toBeLessThanOrEqual(page_.clientWidth)
     })
   }
 }
