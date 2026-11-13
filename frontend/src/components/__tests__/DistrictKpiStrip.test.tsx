@@ -62,7 +62,7 @@ describe('DistrictKpiStrip (#572)', () => {
   // shows (analytics-core MetricRankingsCalculator.getMetricValue).
   it.each([
     ['Paid Clubs', /ranked by club growth %/i],
-    ['Membership Payments', /ranked by membership payments growth %/i],
+    ['Membership Payments', /ranked by payments growth %/i],
     ['Distinguished Clubs', /ranked by distinguished % of the club base/i],
   ])('%s names the measure its rank is based on (#2613)', (title, pattern) => {
     renderStrip(<DistrictKpiStrip kpis={sampleKpis} />)

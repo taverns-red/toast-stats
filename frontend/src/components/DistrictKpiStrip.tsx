@@ -68,7 +68,7 @@ const CARD_TOOLTIPS: Record<TieredKpiKey, string> = {
   paidClubs:
     'Paid clubs count with thresholds for each Distinguished District recognition level. The world rank and percentile are ranked by club growth %, not by this count.',
   membershipPayments:
-    'Total membership payments (New + April + October + Late + Charter) with thresholds for each recognition level. The world rank and percentile are ranked by membership payments growth %, not by this total.',
+    'Total membership payments (New + April + October + Late + Charter) with thresholds for each recognition level. The world rank and percentile are ranked by payments growth %, not by this total.',
   // Qualifying today, not confirmed: the trophy case's gap counts confirmed
   // clubs, so the two numbers differ by design (#2390).
   distinguishedClubs:
@@ -80,7 +80,7 @@ const CARD_TOOLTIPS: Record<TieredKpiKey, string> = {
 // growth or share fields), so the card names it (#2613).
 const RANKED_BY: Record<TieredKpiKey, string> = {
   paidClubs: 'club growth %',
-  membershipPayments: 'membership payments growth %',
+  membershipPayments: 'payments growth %',
   distinguishedClubs: 'distinguished % of the club base',
 }
 
