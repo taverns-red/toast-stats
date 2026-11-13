@@ -116,7 +116,7 @@
 }
 
 /* Right-edge fade cue — "there's more →" when the table overflows, matching
-   `.club-history-scroll` (Lesson 105). Ten program-year columns overflow every
+   the shared DataTable's scroll cue (Lesson 105). Ten program-year columns overflow every
    viewport, so the cue is always earned here. */
 .wws__scroll::after {
   content: '';

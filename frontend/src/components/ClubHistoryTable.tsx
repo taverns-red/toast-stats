@@ -184,7 +184,7 @@ type HistoryColumns = ReturnType<typeof colHelper.columns>
 
 /** Widths in px (8px padding per side included). The year takes the rest. */
 const HISTORY_SIZES: Readonly<Record<string, number>> = {
-  year: 130,
+  year: 200,
   district: 110,
   dcpGoals: 100,
   tier: 160,

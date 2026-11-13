@@ -59,6 +59,7 @@ describe('the retired hand-rolled table styles are gone', () => {
 
   it('training.css has no region-training table header or cell rules', () => {
     const css = src('styles/components/training.css')
-    expect(css).not.toMatch(/\.region-training-table\b/)
+    // Only the nowrap header part (#2318) remains.
+    expect(css).not.toMatch(/\.region-training-table(?!__round-part)/)
   })
 })

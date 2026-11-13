@@ -105,9 +105,27 @@ export const RegionTrainingTable: React.FC<RegionTrainingTableProps> = ({
     ...([1, 2] as const).flatMap(round => {
       const upcoming = opens(round)
       return metrics.map(m => {
-        const header = `Round ${round} ${roundMonths(round)}${
-          upcoming ? `, ${upcoming}` : ''
-        }: ${m.label}`
+        // Each part stays whole; the header wraps only between them (#2318: a
+        // phone broke "(Nov–" from "Feb)"). Reads as one phrase to AT.
+        const header = () => (
+          <>
+            <span className="region-training-table__round-part">
+              Round {round}
+            </span>{' '}
+            <span className="region-training-table__round-part">
+              {roundMonths(round)}
+            </span>
+            {upcoming ? (
+              <>
+                ,{' '}
+                <span className="region-training-table__round-part">
+                  {upcoming}
+                </span>
+              </>
+            ) : null}
+            : {m.label}
+          </>
+        )
         const cell = (row: RegionTrainingRow) =>
           formatPct(upcoming ? null : figureOf(row, round, m.metric))
         const id = `r${round}-${m.metric}`

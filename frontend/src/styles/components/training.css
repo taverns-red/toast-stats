@@ -343,3 +343,9 @@
   color: var(--link);
   text-decoration: underline;
 }
+
+/* #2318 — a round header sits in a narrow % column: let it wrap between its
+   parts (round, months, opening date), never inside one. */
+.region-training-table__round-part {
+  white-space: nowrap;
+}

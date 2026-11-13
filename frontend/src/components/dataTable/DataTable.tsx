@@ -231,7 +231,13 @@ export function DataTable({
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => {
                     const column = header.column
-                    const text = column.columnDef.header as string
+                    // A string, or a function returning a node when a header
+                    // needs parts that must not wrap (#2318).
+                    const raw = column.columnDef.header
+                    const text: React.ReactNode =
+                      typeof raw === 'function'
+                        ? (raw as () => React.ReactNode)()
+                        : (raw as string)
                     const thClassName = headerClassName?.(column.id) ?? ''
                     if (!column.getCanSort()) {
                       return (
