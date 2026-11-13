@@ -38,7 +38,7 @@ export const ProspectiveClubsPanel: React.FC<ProspectiveClubsPanelProps> = ({
         >
           Prospective clubs ({clubs.length})
         </h3>
-        <span className="text-[11px] uppercase tracking-wider text-gray-600 theme-dark:text-gray-400 font-tm-body">
+        <span className="text-xs uppercase tracking-wider text-gray-600 theme-dark:text-gray-400 font-tm-body">
           FAC registry
         </span>
       </div>

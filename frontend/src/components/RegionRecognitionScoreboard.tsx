@@ -48,99 +48,136 @@ interface Props {
   programYear: string
   /** Where last year's pace was measured; null = not available. */
   pace?: { referenceDate: string; referenceProgramYear: string } | null
+  /** Phones (#2653): closed behind a one-line summary, opened by a tap. The
+   *  caller passes it (R3: it owns the breakpoint); false renders it open. */
+  collapsible?: boolean
+}
+
+/** The collapsed line: how many districts meet the lowest tier today. */
+function glance(scoreboard: RecognitionScoreboard | null): string {
+  const first = scoreboard?.rows[0]
+  if (!scoreboard || !first) return 'Not available for this date'
+  return `${first.meeting} of ${scoreboard.districts} districts ${TIER_LABEL[first.tier]} or higher`
 }
 
 export const RegionRecognitionScoreboard: React.FC<Props> = ({
   scoreboard,
   programYear,
   pace = null,
-}) => (
-  <section
-    aria-labelledby="region-recognition-heading"
-    data-testid="region-recognition"
-    style={{ marginBottom: 24 }}
-  >
+  collapsible = false,
+}) => {
+  const heading = (
     <h2 id="region-recognition-heading" className="districts-kpi-card__label">
       District Recognition
     </h2>
-    <p className="text-sm text-gray-500" style={{ margin: '0 0 12px' }}>
-      {scoreboard ? (
+  )
+  const body = (
+    <>
+      <p className="text-sm text-gray-500" style={{ margin: '0 0 12px' }}>
+        {scoreboard ? (
+          <>
+            Districts meeting each tier at this snapshot, under {programYear}{' '}
+            rules.{' '}
+            {pace ? (
+              <>
+                On track compares each district&apos;s pace with the median of
+                the districts that earned it or higher in{' '}
+                {pace.referenceProgramYear}, on{' '}
+                <span style={{ whiteSpace: 'nowrap' }}>
+                  {pace.referenceDate}
+                </span>
+                .{' '}
+              </>
+            ) : (
+              <>Last year&apos;s pace is not available for this date. </>
+            )}
+          </>
+        ) : (
+          <>District Recognition status is not available for this date. </>
+        )}
+        <Link to="/methodology#region-recognition" className="methodology-link">
+          How this is counted
+        </Link>
+      </p>
+      {scoreboard && (
         <>
-          Districts meeting each tier at this snapshot, under {programYear}{' '}
-          rules.{' '}
-          {pace ? (
-            <>
-              On track compares each district&apos;s pace with the median of the
-              districts that earned it or higher in {pace.referenceProgramYear},
-              on{' '}
-              <span style={{ whiteSpace: 'nowrap' }}>{pace.referenceDate}</span>
-              .{' '}
-            </>
-          ) : (
-            <>Last year&apos;s pace is not available for this date. </>
+          <div className="districts-kpi-strip" style={{ marginBottom: 0 }}>
+            {scoreboard.rows.map(row => (
+              <div
+                key={row.tier}
+                className="districts-kpi-card"
+                data-testid="recognition-tier"
+                data-tier={row.tier}
+              >
+                <p className="districts-kpi-card__label">
+                  {TIER_LABEL[row.tier]}
+                </p>
+                <div className="districts-kpi-card__value tabular-nums">
+                  {row.meeting} of {scoreboard.districts}{' '}
+                  <span className="text-xs text-gray-500 font-normal">
+                    meet it today
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {row.nearest
+                    ? nearestText(row.nearest)
+                    : 'Every district meets this tier'}
+                </p>
+                {pace && (
+                  <p
+                    className="text-xs text-gray-500"
+                    data-testid="recognition-on-track"
+                    style={{
+                      marginTop: 8,
+                      paddingTop: 8,
+                      borderTop: '1px solid var(--line)',
+                    }}
+                  >
+                    On track, based on last year&apos;s pace:{' '}
+                    <strong className="tabular-nums">
+                      {row.onTrack === null
+                        ? 'not available'
+                        : `${row.onTrack} of ${scoreboard.districts}`}
+                    </strong>
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+          {scoreboard.unknown > 0 && (
+            <p className="text-xs text-gray-500" style={{ marginTop: 8 }}>
+              {plural(scoreboard.unknown, 'district earns', 'districts earn')} a
+              tier on the metrics, but a required prerequisite is not reported
+              yet; {scoreboard.unknown === 1 ? 'it is' : 'they are'} not counted
+              as meeting it.
+            </p>
           )}
         </>
-      ) : (
-        <>District Recognition status is not available for this date. </>
       )}
-      <Link to="/methodology#region-recognition" className="methodology-link">
-        How this is counted
-      </Link>
-    </p>
-    {scoreboard && (
-      <>
-        <div className="districts-kpi-strip" style={{ marginBottom: 0 }}>
-          {scoreboard.rows.map(row => (
-            <div
-              key={row.tier}
-              className="districts-kpi-card"
-              data-testid="recognition-tier"
-              data-tier={row.tier}
-            >
-              <p className="districts-kpi-card__label">
-                {TIER_LABEL[row.tier]}
-              </p>
-              <div className="districts-kpi-card__value tabular-nums">
-                {row.meeting} of {scoreboard.districts}{' '}
-                <span className="text-xs text-gray-500 font-normal">
-                  meet it today
-                </span>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {row.nearest
-                  ? nearestText(row.nearest)
-                  : 'Every district meets this tier'}
-              </p>
-              {pace && (
-                <p
-                  className="text-xs text-gray-500"
-                  data-testid="recognition-on-track"
-                  style={{
-                    marginTop: 8,
-                    paddingTop: 8,
-                    borderTop: '1px solid var(--line)',
-                  }}
-                >
-                  On track, based on last year&apos;s pace:{' '}
-                  <strong className="tabular-nums">
-                    {row.onTrack === null
-                      ? 'not available'
-                      : `${row.onTrack} of ${scoreboard.districts}`}
-                  </strong>
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-        {scoreboard.unknown > 0 && (
-          <p className="text-xs text-gray-500" style={{ marginTop: 8 }}>
-            {plural(scoreboard.unknown, 'district earns', 'districts earn')} a
-            tier on the metrics, but a required prerequisite is not reported
-            yet; {scoreboard.unknown === 1 ? 'it is' : 'they are'} not counted
-            as meeting it.
-          </p>
-        )}
-      </>
-    )}
-  </section>
-)
+    </>
+  )
+  return (
+    <section
+      aria-labelledby="region-recognition-heading"
+      data-testid="region-recognition"
+      style={{ marginBottom: 24 }}
+    >
+      {collapsible ? (
+        <details className="region-recognition__details">
+          <summary className="region-recognition__summary">
+            {heading}
+            <span className="region-recognition__glance">
+              {glance(scoreboard)}
+            </span>
+          </summary>
+          {body}
+        </details>
+      ) : (
+        <>
+          {heading}
+          {body}
+        </>
+      )}
+    </section>
+  )
+}

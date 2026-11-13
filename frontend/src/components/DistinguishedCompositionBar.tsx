@@ -117,7 +117,7 @@ const DistinguishedCompositionBar: React.FC<
           return (
             <div
               key={seg.key}
-              className={`${seg.bgClassName} ${seg.tierClassName ?? ''} flex items-center justify-center text-[11px] font-medium text-white`}
+              className={`${seg.bgClassName} ${seg.tierClassName ?? ''} flex items-center justify-center text-xs font-medium text-white`}
               style={{ width: `${widthPct}%`, minWidth: 0 }}
               title={`${seg.label}: ${seg.count}`}
             >

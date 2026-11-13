@@ -106,3 +106,32 @@ describe('AppMeta — current page (#2646)', () => {
     ).not.toHaveAttribute('aria-current')
   })
 })
+
+// #2653 (CHR-28): the footer wrapped mid-phrase and left a "·" dangling at a
+// line end. Each item is now one unbreakable box and each separator a
+// decorative element of its own, so a line break can only fall between items.
+describe('AppMeta — footer items do not break mid-phrase (#2653)', () => {
+  it('wraps every meta link in an unbreakable item', () => {
+    renderMeta()
+
+    for (const name of [
+      /MCP server/i,
+      /How-to videos/i,
+      /report an issue/i,
+      /MIT License/i,
+    ]) {
+      const item = screen
+        .getByRole('link', { name })
+        .closest('.app-shell-footer__item')
+      expect(item, String(name)).not.toBeNull()
+    }
+  })
+
+  it('keeps every "·" separator decorative', () => {
+    const { container } = renderMeta()
+
+    const seps = container.querySelectorAll('.app-shell-footer__sep')
+    expect(seps.length).toBeGreaterThanOrEqual(5)
+    seps.forEach(s => expect(s).toHaveAttribute('aria-hidden', 'true'))
+  })
+})

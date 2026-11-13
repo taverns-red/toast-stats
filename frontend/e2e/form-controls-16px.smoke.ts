@@ -91,9 +91,13 @@ async function open(page: Page, path: string, ready: string) {
 // Each route names the control it must mount (anti-vacuous-green): a page
 // whose content failed to load would otherwise pass with zero controls.
 const CHIP_SELECT = '[data-testid$="-chip-select"]'
-const ROUTES: { path: string; ready: string }[] = [
+// `sheet`: below 768 (and in short landscape) the page's PY/date selects live
+// in the context bar's sheet, not the header (#2653 gave /regions the bar), so
+// the test opens the sheet and measures the selects inside it. The guard is
+// the same 16px floor, on the controls a phone visitor can actually focus.
+const ROUTES: { path: string; ready: string; sheet?: boolean }[] = [
   { path: '/', ready: CHIP_SELECT },
-  { path: '/regions', ready: CHIP_SELECT },
+  { path: '/regions', ready: CHIP_SELECT, sheet: true },
   { path: '/awards', ready: CHIP_SELECT },
   { path: '/district/61/changes', ready: CHIP_SELECT },
   { path: '/district/61/action-list', ready: 'select' },
@@ -103,12 +107,19 @@ const ROUTES: { path: string; ready: string }[] = [
 for (const { label, viewport, hasTouch } of VIEWPORTS) {
   test.describe(label, () => {
     test.use({ viewport, hasTouch })
-    for (const { path, ready } of ROUTES) {
+    for (const { path, ready, sheet } of ROUTES) {
       test(`every input/select is ≥${MIN_PX}px at ${label} — ${path}`, async ({
         page,
       }) => {
         await open(page, path, ready)
-        const controls = await measureControls(page)
+        if (sheet) {
+          await page.getByTestId('context-bar-chip').click()
+          await page.getByRole('dialog').waitFor({ state: 'visible' })
+        }
+        const controls = await measureControls(
+          page,
+          sheet ? '[role="dialog"]' : 'body'
+        )
         expect(
           controls.length,
           `${path}: no form controls measured`

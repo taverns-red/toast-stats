@@ -369,9 +369,9 @@ const DivisionCriteriaExplanationView: React.FC<{
               </caption>
               <thead>
                 <tr>
-                  <th scope="col">Recognition Level</th>
-                  <th scope="col">Paid Clubs Required</th>
-                  <th scope="col">Distinguished Clubs Required</th>
+                  <th scope="col">Recognition level</th>
+                  <th scope="col">Paid clubs required</th>
+                  <th scope="col">Distinguished clubs required</th>
                 </tr>
               </thead>
               <tbody>

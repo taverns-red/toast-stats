@@ -123,6 +123,49 @@ describe('RegionRecognitionScoreboard (#2307)', () => {
     )
   })
 
+  // #2653 — phones: closed behind a one-line summary so the rankings table
+  // starts within two screens; the caller (which owns the breakpoint) opts in.
+  it('is closed behind a one-line summary when collapsible', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <RegionRecognitionScoreboard
+          scoreboard={board}
+          programYear="2026-2027"
+          pace={PACE}
+          collapsible
+        />
+      </MemoryRouter>
+    )
+    const details = container.querySelector('details')!
+    expect(details).not.toHaveAttribute('open')
+    expect(details.querySelector('summary')).toHaveTextContent(
+      'District Recognition2 of 7 districts Distinguished or higher'
+    )
+    expect(
+      screen.getByRole('region', { name: /district recognition/i })
+    ).toBeInTheDocument()
+  })
+
+  it('is not a disclosure by default', () => {
+    const { container } = renderBoard(board)
+    expect(container.querySelector('details')).toBeNull()
+  })
+
+  it('says in the summary when the scoreboard is not available', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <RegionRecognitionScoreboard
+          scoreboard={null}
+          programYear="2026-2027"
+          collapsible
+        />
+      </MemoryRouter>
+    )
+    expect(container.querySelector('summary')).toHaveTextContent(
+      /not available for this date/i
+    )
+  })
+
   it('keeps the reference date on one line', () => {
     renderBoard(board)
     const date = screen.getByText('2025-09-30')

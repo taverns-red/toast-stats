@@ -156,6 +156,15 @@ describe('context-bar.css (#1831)', () => {
     expect(css).toMatch(/\.context-sheet__select\s*\{[^}]*font-size:\s*16px/)
   })
 
+  // #2653: WebKit ignores min-height on a native select with default chrome
+  // (lesson 111), so the sheet selects were 16px tall boxes there.
+  it('opts the sheet selects out of native appearance so 44px holds in WebKit', () => {
+    const rule = css.match(/\.context-sheet__select\s*\{[^}]*\}/)?.[0] ?? ''
+    expect(rule).toMatch(/(?<!-webkit-)appearance:\s*none/)
+    expect(rule).toMatch(/-webkit-appearance:\s*none/)
+    expect(rule).toMatch(/min-height:\s*44px/)
+  })
+
   it('pads the sheet for the bottom safe-area inset', () => {
     expect(css).toMatch(/\.bottom-sheet\s*\{[^}]*env\(safe-area-inset-bottom/)
   })

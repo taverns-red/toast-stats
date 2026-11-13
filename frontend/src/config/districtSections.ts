@@ -44,7 +44,7 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
     about:
       // Two lines at 1280px, no more (#2646): a third line moves the section
       // bar under the pointer between tabs.
-      'What changed between two snapshot dates: membership, payments, DCP goals, distinguished status and clubs added, removed or moved.',
+      'Changes between two dates: membership, payments, DCP goals, distinguished status, clubs added, removed or moved.',
   },
   {
     label: 'Clubs',
