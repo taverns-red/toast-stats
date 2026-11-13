@@ -3,7 +3,7 @@ import { MobileRowList, type MobileRow } from '../MobileRowList'
 import { PinSwatch } from './PinSwatch'
 import type { ModeModel } from './pinModes'
 import {
-  regionClubMetric,
+  regionClubMetricText,
   type RegionClub,
   type RegionMetric,
 } from '../../utils/regionClubs'
@@ -15,15 +15,6 @@ import {
    control. The chip is the club's pin in the current colour mode (shape +
    words, never colour alone); line 2 is the district and the ranked
    metric. An on-demand chunk the page fetches on mount, with the shard. */
-
-const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0')
-
-function metricText(c: RegionClub, metric: RegionMetric): string {
-  const v = regionClubMetric(c, metric)
-  if (metric === 'netGrowth') return `net ${signed(v)}`
-  if (metric === 'dcpGoals') return `${v} DCP goal${v === 1 ? '' : 's'}`
-  return `${v} member${v === 1 ? '' : 's'}`
-}
 
 export const RegionClubList: React.FC<{
   clubs: readonly RegionClub[]
@@ -43,7 +34,7 @@ export const RegionClubList: React.FC<{
           {cat.label}
         </span>
       ),
-      meta: `D${c.districtId} · ${metricText(c, metric)}`,
+      meta: `D${c.districtId} · ${regionClubMetricText(c, metric)}`,
     }
   })
   return (

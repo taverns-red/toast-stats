@@ -111,6 +111,19 @@ export function regionClubMetric(c: RegionClub, metric: RegionMetric): number {
   return membersOf(c)
 }
 
+const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0')
+
+/** The ranked metric as the region list's second line reads it. */
+export function regionClubMetricText(
+  c: RegionClub,
+  metric: RegionMetric
+): string {
+  const v = regionClubMetric(c, metric)
+  if (metric === 'netGrowth') return `net ${signed(v)}`
+  if (metric === 'dcpGoals') return `${v} DCP goal${v === 1 ? '' : 's'}`
+  return `${v} member${v === 1 ? '' : 's'}`
+}
+
 /** Highest first, ties by club id — the order of the pipeline's own top-N
  *  seed lists (world.json `top`). */
 export function sortRegionClubs(
