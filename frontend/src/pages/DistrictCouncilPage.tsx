@@ -82,8 +82,12 @@ const ClubGroup: React.FC<{
               {division.divisionName}
             </h3>
             <table
-              className={`council-table${good ? ' council-table--good' : ''}`}
+              className={`dt dt-static council-table${good ? ' council-table--good' : ''}`}
             >
+              <caption className="sr-only">
+                {division.divisionName},{' '}
+                {good ? 'in good standing' : 'not in good standing'}
+              </caption>
               <thead>
                 <tr>
                   <th scope="col">Club</th>
@@ -94,7 +98,7 @@ const ClubGroup: React.FC<{
               <tbody>
                 {division.rows.map(r => (
                   <tr key={r.clubId}>
-                    <td>
+                    <th scope="row">
                       <Link
                         to={`/district/${districtId}/club/${r.clubId}`}
                         className="council-table__club"
@@ -102,7 +106,7 @@ const ClubGroup: React.FC<{
                         {r.clubName}
                       </Link>
                       <span className="council-table__num">#{r.clubId}</span>
-                    </td>
+                    </th>
                     <td>{r.areaId}</td>
                     <td>{good ? r.votes : r.reason}</td>
                   </tr>

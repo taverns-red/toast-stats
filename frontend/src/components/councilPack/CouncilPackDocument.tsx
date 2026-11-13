@@ -136,7 +136,9 @@ function Roster({
   showArea,
   round,
   cspTracked,
+  title,
 }: {
+  title: string
   rows: PackClubRow[]
   showArea: boolean
   round: 1 | 2
@@ -148,9 +150,10 @@ function Roster({
   return (
     <ScrollRegion label="Club roster">
       <table
-        className="council-pack__table council-pack__roster-table"
+        className="dt dt-static council-pack__table council-pack__roster-table"
         data-testid="council-pack-roster"
       >
+        <caption className="sr-only">Clubs in {title}</caption>
         {/* Fixed column widths in print (council-pack.css): the roster can
           never be wider than the paper, whatever font the printer's
           machine falls back to. */}
@@ -190,7 +193,7 @@ function Roster({
                 </span>
               </th>
               {showArea && <td className="council-pack__nowrap">{r.areaId}</td>}
-              <td>{r.health}</td>
+              <td className="council-pack__nowrap">{r.health}</td>
               <td className="council-pack__num">{r.members ?? '—'}</td>
               <td className="council-pack__num">{r.goals ?? '—'}</td>
               <td>{r.distinguished}</td>
@@ -252,6 +255,7 @@ export const CouncilPackDocument: React.FC<CouncilPackDocumentProps> = ({
         showArea={isDivision}
         round={pack.visitRound}
         cspTracked={pack.csp.tracked}
+        title={title}
       />
     </section>
   )
@@ -336,9 +340,10 @@ export const CouncilPackDocument: React.FC<CouncilPackDocumentProps> = ({
           {isDivision && (
             <ScrollRegion label="Areas in this division">
               <table
-                className="council-pack__table"
+                className="dt dt-static council-pack__table"
                 data-testid="council-pack-areas"
               >
+                <caption className="sr-only">Areas in {title}</caption>
                 <thead>
                   <tr>
                     <th scope="col">Area</th>

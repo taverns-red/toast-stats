@@ -14,15 +14,39 @@
   min-height: calc(100vh - 56px);
 }
 
+/* "Print pack" is a secondary button (a bordered 44px box, like the area
+   workbook button beside it), then the one-line hint (#2754, #2676 M8). */
 .council-pack-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
   margin: 0 0 1.5rem;
   font-size: 0.9375rem;
   color: var(--ink-2);
 }
 
 .council-pack-link a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: var(--tm-loyal-blue);
+  color: var(--ink);
+  text-decoration: none;
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 8px);
+}
+
+.council-pack-link a:hover {
+  border-color: var(--ink-3);
+}
+
+.council-pack-link a:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 /* Area page (#2428): the print-pack link and the area workbook download. */
@@ -138,9 +162,9 @@
 .council-pack__title {
   margin: 0.125rem 0;
   font-family: var(--serif);
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.2;
+  font-size: var(--heading-page-size);
+  font-weight: var(--heading-page-weight);
+  line-height: var(--heading-line-height);
 }
 
 .council-pack__title--small {
@@ -160,8 +184,8 @@
 .council-pack__section h2 {
   margin: 0 0 0.375rem;
   font-family: var(--serif);
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: var(--heading-section-size);
+  font-weight: var(--heading-section-weight);
 }
 
 .council-pack__section p {
@@ -396,19 +420,21 @@
   }
 
   .council-pack__col-club {
-    width: 32.5%;
+    width: 28%;
   }
 
   .council-pack__col-area {
     width: 5.5%;
   }
 
+  /* "Intervention required" is about 110px at 8.5pt and never wraps
+     (#2707): 18% of the 698px box is 126px before cell padding. */
   .council-pack__col-health {
-    width: 12%;
+    width: 18%;
   }
 
   .council-pack__col-members {
-    width: 9.5%;
+    width: 9%;
   }
 
   .council-pack__col-goals {
@@ -420,7 +446,7 @@
   }
 
   .council-pack__col-mark {
-    width: 10.5%;
+    width: 10%;
   }
 
   /* Names wrap on paper: there is no hover to recover an ellipsis (review
