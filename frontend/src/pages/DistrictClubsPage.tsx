@@ -246,10 +246,18 @@ const DistrictClubsPage: React.FC = () => {
     () => previousRecordedDate(sortedRecordedDates),
     [sortedRecordedDates]
   )
-  const { data: snapshotDiff } = useSnapshotDiff(
+  // #2740: the pair is two full district files (~104 KB for District 61), so
+  // it is read only once the diff is needed: the Columns menu opens, a Changes
+  // column is saved or sorted/filtered by, or "Export Changes" is clicked. The
+  // Changes group and the export button are offered meanwhile (a previous
+  // recorded date exists), so nothing is hidden, only fetched later.
+  const [diffWanted, setDiffWanted] = useState(false)
+  const requestChanges = useCallback(() => setDiffWanted(true), [])
+  const { data: snapshotDiff, isLoading: isDiffLoading } = useSnapshotDiff(
     districtId,
     defaultDiffPair?.from,
-    defaultDiffPair?.to
+    defaultDiffPair?.to,
+    { enabled: diffWanted }
   )
 
   // A refresh that fails while clubs are on screen keeps them (spec §7) and
@@ -369,6 +377,11 @@ const DistrictClubsPage: React.FC = () => {
                   initialPresetActive={initialPresetActive}
                   onPresetChange={handlePresetChange}
                   snapshotDiff={snapshotDiff}
+                  deferredChanges={{
+                    available: !!defaultDiffPair,
+                    isLoading: diffWanted && !!isDiffLoading,
+                    onRequest: requestChanges,
+                  }}
                   programYear={effectiveProgramYear?.label}
                   openGroups={openGroups}
                   onOpenGroupsChange={setOpenGroups}

@@ -26,6 +26,10 @@ interface ColumnsMenuProps {
   columns: ColumnVisibilityApi
   /** The Changes columns are offered (a snapshot diff is loaded). */
   changesAvailable?: boolean
+  /** The Changes diff is being fetched; the group says so (#2740). */
+  changesLoading?: boolean
+  /** Called when the menu opens (starts the on-demand diff read, #2740). */
+  onOpen?: (() => void) | undefined
   /** Heading for the Changes group, e.g. "Changes since Nov 10". */
   changesLabel?: string | undefined
   /** The `?since=` preset is on, so "vs last year" is listed. */
@@ -61,6 +65,8 @@ const idsFor = (
 export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
   columns,
   changesAvailable = false,
+  changesLoading = false,
+  onOpen,
   changesLabel,
   sinceActive = false,
   spec,
@@ -93,6 +99,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
 
   useEffect(() => {
     if (!isOpen) return
+    onOpen?.()
     focusFirstCheckbox()
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') close()
@@ -112,7 +119,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
       document.removeEventListener('keydown', onKey)
       document.removeEventListener('mousedown', onPointerDown)
     }
-  }, [isOpen, close, focusFirstCheckbox])
+  }, [isOpen, close, focusFirstCheckbox, onOpen])
 
   const { shownCount, totalCount, isCustom } = columns
   const accessibleName = `Columns, ${shownCount} of ${totalCount} shown${
@@ -198,6 +205,15 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
             return (
               <fieldset key={group.id} className="clubs-columns-menu__group">
                 <legend className="clubs-columns-menu__legend">{legend}</legend>
+                {group.id === 'changes' && changesLoading && (
+                  <span
+                    className="clubs-columns-menu__note"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    Loading changes…
+                  </span>
+                )}
                 {ids.map(id => {
                   const meta = metaOf(id)
                   if (!meta) return null
