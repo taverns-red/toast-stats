@@ -38,6 +38,8 @@ test.describe('district section bar position (#2646)', () => {
   test('the bar top is identical across every district section', async ({
     page,
   }) => {
+    // Fourteen cold page loads, each held until the bar stops moving.
+    test.setTimeout(240_000)
     const tops: Record<string, number> = {}
     for (const path of TABS) {
       await page.goto(path)
