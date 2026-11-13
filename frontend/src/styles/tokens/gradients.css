@@ -2,75 +2,113 @@
 
 :root {
   /* Primary Brand Gradients */
-  --tm-gradient-loyal-blue: linear-gradient(135deg, var(--tm-loyal-blue-start) 0%, var(--tm-loyal-blue-end) 100%);
-  --tm-gradient-loyal-blue-radial: radial-gradient(circle, var(--tm-loyal-blue-start) 0%, var(--tm-loyal-blue-end) 100%);
-  --tm-gradient-loyal-blue-vertical: linear-gradient(180deg, var(--tm-loyal-blue-start) 0%, var(--tm-loyal-blue-end) 100%);
-  --tm-gradient-loyal-blue-horizontal: linear-gradient(90deg, var(--tm-loyal-blue-start) 0%, var(--tm-loyal-blue-end) 100%);
-  
-  --tm-gradient-true-maroon: linear-gradient(135deg, var(--tm-true-maroon-start) 0%, var(--tm-true-maroon-end) 100%);
-  --tm-gradient-true-maroon-radial: radial-gradient(circle, var(--tm-true-maroon-start) 0%, var(--tm-true-maroon-end) 100%);
-  --tm-gradient-true-maroon-vertical: linear-gradient(180deg, var(--tm-true-maroon-start) 0%, var(--tm-true-maroon-end) 100%);
-  --tm-gradient-true-maroon-horizontal: linear-gradient(90deg, var(--tm-true-maroon-start) 0%, var(--tm-true-maroon-end) 100%);
-  
-  --tm-gradient-cool-gray: linear-gradient(135deg, var(--tm-cool-gray-start) 0%, var(--tm-cool-gray-end) 100%);
-  --tm-gradient-cool-gray-radial: radial-gradient(circle, var(--tm-cool-gray-start) 0%, var(--tm-cool-gray-end) 100%);
-  --tm-gradient-cool-gray-vertical: linear-gradient(180deg, var(--tm-cool-gray-start) 0%, var(--tm-cool-gray-end) 100%);
-  --tm-gradient-cool-gray-horizontal: linear-gradient(90deg, var(--tm-cool-gray-start) 0%, var(--tm-cool-gray-end) 100%);
-  
+  --tm-gradient-loyal-blue: linear-gradient(
+    135deg,
+    var(--tm-loyal-blue-start) 0%,
+    var(--tm-loyal-blue-end) 100%
+  );
+  --tm-gradient-loyal-blue-radial: radial-gradient(
+    circle,
+    var(--tm-loyal-blue-start) 0%,
+    var(--tm-loyal-blue-end) 100%
+  );
+  --tm-gradient-loyal-blue-vertical: linear-gradient(
+    180deg,
+    var(--tm-loyal-blue-start) 0%,
+    var(--tm-loyal-blue-end) 100%
+  );
+  --tm-gradient-loyal-blue-horizontal: linear-gradient(
+    90deg,
+    var(--tm-loyal-blue-start) 0%,
+    var(--tm-loyal-blue-end) 100%
+  );
+
+  --tm-gradient-true-maroon: linear-gradient(
+    135deg,
+    var(--tm-true-maroon-start) 0%,
+    var(--tm-true-maroon-end) 100%
+  );
+  --tm-gradient-true-maroon-radial: radial-gradient(
+    circle,
+    var(--tm-true-maroon-start) 0%,
+    var(--tm-true-maroon-end) 100%
+  );
+  --tm-gradient-true-maroon-vertical: linear-gradient(
+    180deg,
+    var(--tm-true-maroon-start) 0%,
+    var(--tm-true-maroon-end) 100%
+  );
+  --tm-gradient-true-maroon-horizontal: linear-gradient(
+    90deg,
+    var(--tm-true-maroon-start) 0%,
+    var(--tm-true-maroon-end) 100%
+  );
+
+  --tm-gradient-cool-gray: linear-gradient(
+    135deg,
+    var(--tm-cool-gray-start) 0%,
+    var(--tm-cool-gray-end) 100%
+  );
+  --tm-gradient-cool-gray-radial: radial-gradient(
+    circle,
+    var(--tm-cool-gray-start) 0%,
+    var(--tm-cool-gray-end) 100%
+  );
+  --tm-gradient-cool-gray-vertical: linear-gradient(
+    180deg,
+    var(--tm-cool-gray-start) 0%,
+    var(--tm-cool-gray-end) 100%
+  );
+  --tm-gradient-cool-gray-horizontal: linear-gradient(
+    90deg,
+    var(--tm-cool-gray-start) 0%,
+    var(--tm-cool-gray-end) 100%
+  );
+
   /* Gradient Opacity Variations (20% increments as per brand guidelines) */
-  --tm-gradient-cool-gray-80: linear-gradient(135deg, rgba(169, 178, 177, 0.8) 0%, rgba(245, 245, 245, 0.8) 100%);
-  --tm-gradient-cool-gray-60: linear-gradient(135deg, rgba(169, 178, 177, 0.6) 0%, rgba(245, 245, 245, 0.6) 100%);
-  --tm-gradient-cool-gray-40: linear-gradient(135deg, rgba(169, 178, 177, 0.4) 0%, rgba(245, 245, 245, 0.4) 100%);
-  --tm-gradient-cool-gray-20: linear-gradient(135deg, rgba(169, 178, 177, 0.2) 0%, rgba(245, 245, 245, 0.2) 100%);
-  
+  --tm-gradient-cool-gray-80: linear-gradient(
+    135deg,
+    rgba(169, 178, 177, 0.8) 0%,
+    rgba(245, 245, 245, 0.8) 100%
+  );
+  --tm-gradient-cool-gray-60: linear-gradient(
+    135deg,
+    rgba(169, 178, 177, 0.6) 0%,
+    rgba(245, 245, 245, 0.6) 100%
+  );
+  --tm-gradient-cool-gray-40: linear-gradient(
+    135deg,
+    rgba(169, 178, 177, 0.4) 0%,
+    rgba(245, 245, 245, 0.4) 100%
+  );
+  --tm-gradient-cool-gray-20: linear-gradient(
+    135deg,
+    rgba(169, 178, 177, 0.2) 0%,
+    rgba(245, 245, 245, 0.2) 100%
+  );
+
   /* Subtle Overlay Gradients for Text Contrast */
-  --tm-gradient-overlay-dark: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.3) 100%);
-  --tm-gradient-overlay-light: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%);
-  
+  --tm-gradient-overlay-dark: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.6) 0%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+  --tm-gradient-overlay-light: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+
   /* Gradient Stops for Custom Implementation */
   --tm-loyal-blue-start: #004165;
   --tm-loyal-blue-end: #006094;
-  --tm-true-maroon-start: #3B0104;
+  --tm-true-maroon-start: #3b0104;
   --tm-true-maroon-end: #781327;
-  --tm-cool-gray-start: #A9B2B1;
-  --tm-cool-gray-end: #F5F5F5;
+  --tm-cool-gray-start: #a9b2b1;
+  --tm-cool-gray-end: #f5f5f5;
 }
 
 /* Gradient Utility Classes
  * Note: These classes are wrapped in @layer brand to ensure proper cascade ordering
  * per CSS Layer Architecture spec. All .tm-* classes must be in the brand layer.
  */
-@layer brand {
-  .tm-gradient-loyal-blue {
-    background: var(--tm-gradient-loyal-blue);
-  }
-
-  .tm-gradient-true-maroon {
-    background: var(--tm-gradient-true-maroon);
-  }
-
-  .tm-gradient-cool-gray {
-    background: var(--tm-gradient-cool-gray);
-  }
-
-  /* Gradient Text Overlay Utilities */
-  .tm-gradient-text-overlay {
-    position: relative;
-  }
-
-  .tm-gradient-text-overlay::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--tm-gradient-overlay-dark);
-    z-index: 1;
-  }
-
-  .tm-gradient-text-overlay > * {
-    position: relative;
-    z-index: 2;
-  }
-}

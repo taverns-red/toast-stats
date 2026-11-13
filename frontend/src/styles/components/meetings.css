@@ -185,30 +185,6 @@
   text-decoration: none;
 }
 
-.meeting-cell--l0 {
-  background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--line-2);
-}
-.meeting-cell--l1 {
-  background:
-    linear-gradient(var(--tm-loyal-blue-10), var(--tm-loyal-blue-10)),
-    var(--surface);
-}
-.meeting-cell--l2 {
-  background:
-    linear-gradient(var(--tm-loyal-blue-30), var(--tm-loyal-blue-30)),
-    var(--surface);
-}
-.meeting-cell--l3 {
-  background:
-    linear-gradient(var(--tm-loyal-blue-50), var(--tm-loyal-blue-50)),
-    var(--surface);
-}
-.meeting-cell--l4 {
-  background: var(--tm-loyal-blue);
-  color: var(--surface);
-}
-
 a.meeting-cell:hover {
   box-shadow: inset 0 0 0 2px var(--ink-3);
 }

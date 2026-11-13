@@ -53,18 +53,4 @@
   }
 
   /* Size variants ensure minimum touch targets */
-  .tm-status-indicator.tm-status-sm {
-    min-width: 24px;
-    min-height: 24px;
-  }
-
-  .tm-status-indicator.tm-status-md {
-    min-width: 32px;
-    min-height: 32px;
-  }
-
-  .tm-status-indicator.tm-status-lg {
-    min-width: var(--tm-touch-target);
-    min-height: var(--tm-touch-target);
-  }
 }
