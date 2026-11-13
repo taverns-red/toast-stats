@@ -83,9 +83,9 @@ describe(`data-pipeline ${MODE} mode (#1802)`, () => {
     expect(setup).toBeDefined()
   })
 
-  it('resumes from staging before fetching (R2: the runner starts empty)', () => {
+  it('resumes from the raw-source bucket before fetching (R2: the runner starts empty; #2695)', () => {
     const resumeIdx = steps.findIndex(s =>
-      /gcloud storage rsync -r "gs:\/\/\$\{GCS_BUCKET\}\/raw-education-ledger\/"/.test(
+      /gcloud storage rsync -r "gs:\/\/\$\{RAW_SOURCE_BUCKET\}\/raw-education-ledger\/"/.test(
         s.run ?? ''
       )
     )
@@ -96,7 +96,7 @@ describe(`data-pipeline ${MODE} mode (#1802)`, () => {
     expect(fetchIdx).toBeGreaterThan(resumeIdx)
   })
 
-  it('fetches one program year at a time and uploads each through gcs-upload.sh to staging', () => {
+  it('fetches one program year at a time and uploads each through gcs-upload.sh to the raw-source bucket (#2695)', () => {
     const [fetch] = runOf(s =>
       (s.run ?? '').includes('backfill-education-ledger-history')
     )
@@ -105,7 +105,9 @@ describe(`data-pipeline ${MODE} mode (#1802)`, () => {
     expect(fetch).toContain(
       'bash scripts/pipeline/gcs-upload.sh education-ledger-history rsync -r'
     )
-    expect(fetch).toContain('"gs://${GCS_BUCKET}/raw-education-ledger/${PY}/"')
+    expect(fetch).toContain(
+      '"gs://${RAW_SOURCE_BUCKET}/raw-education-ledger/${PY}/"'
+    )
   })
 
   it('never uploads with a raw gcloud call, never -Z, never to prod', () => {

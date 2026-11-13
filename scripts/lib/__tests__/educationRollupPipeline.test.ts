@@ -946,10 +946,14 @@ describe('the ledger seed is restored before every rollup build (#2102)', () => 
     jobs: Record<string, { steps?: Step[] }>
   }
   const DIR = '${{ env.EDUCATION_LEDGER_DIR }}'
-  const LISTING = '"gs://${GCS_BUCKET}/raw-education-ledger/**"'
+  const LISTING = '"gs://${RAW_SOURCE_BUCKET}/raw-education-ledger/**"'
 
   it('the seed directory is one workflow-level path', () => {
     expect(wf.env?.EDUCATION_LEDGER_DIR).toBe('/tmp/education-ledger')
+  })
+
+  it('raw sources come from the private raw-source bucket, not staging (#2695)', () => {
+    expect(wf.env?.RAW_SOURCE_BUCKET).toBe('toast-stats-raw-private')
   })
 
   const cases: Array<[string, RegExp]> = [
