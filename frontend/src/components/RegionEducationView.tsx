@@ -320,6 +320,7 @@ export const RegionEducationView: React.FC<RegionEducationViewProps> = ({
       </p>
       <KpiStrip e={e} />
       <EducationTimelineSection
+        headingLevel={2}
         programYear={programYear}
         kind="region"
         id={region}
@@ -328,10 +329,11 @@ export const RegionEducationView: React.FC<RegionEducationViewProps> = ({
         tilesAsOf={e.source.sourceDate}
         summary={e.summary}
       />
-      <ByLevelOrPathSection e={e.summary} />
-      <MatrixSection e={e.summary} />
+      <ByLevelOrPathSection e={e.summary} headingLevel={2} />
+      <MatrixSection e={e.summary} headingLevel={2} />
       {trend.length > 0 && (
         <EducationYearBars
+          headingLevel={2}
           years={trend}
           programYear={programYear}
           note={

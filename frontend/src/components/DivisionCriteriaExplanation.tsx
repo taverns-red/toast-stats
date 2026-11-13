@@ -132,7 +132,7 @@ const DivisionCriteriaExplanationView: React.FC<{
         >
           <h4
             id="division-eligibility-heading"
-            className="text-lg font-semibold text-tm-loyal-blue font-tm-headline mb-3 flex items-center gap-2"
+            className="heading-sub text-tm-loyal-blue mb-3 flex items-center gap-2"
           >
             <svg
               className="w-5 h-5"
@@ -211,7 +211,7 @@ const DivisionCriteriaExplanationView: React.FC<{
         >
           <h4
             id="division-no-net-loss-heading"
-            className="text-lg font-semibold text-tm-loyal-blue font-tm-headline mb-3 flex items-center gap-2"
+            className="heading-sub text-tm-loyal-blue mb-3 flex items-center gap-2"
           >
             <svg
               className="w-5 h-5"
@@ -325,7 +325,7 @@ const DivisionCriteriaExplanationView: React.FC<{
         <section aria-labelledby="division-recognition-levels-heading">
           <h4
             id="division-recognition-levels-heading"
-            className="text-lg font-semibold text-tm-loyal-blue font-tm-headline mb-3 flex items-center gap-2"
+            className="heading-sub text-tm-loyal-blue mb-3 flex items-center gap-2"
           >
             <svg
               className="w-5 h-5"

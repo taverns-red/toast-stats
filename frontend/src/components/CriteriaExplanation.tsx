@@ -127,7 +127,7 @@ const CriteriaExplanationView: React.FC<{
         <section className="mb-6" aria-labelledby="eligibility-heading">
           <h4
             id="eligibility-heading"
-            className="text-lg font-semibold text-tm-loyal-blue font-tm-headline mb-3 flex items-center gap-2"
+            className="heading-sub text-tm-loyal-blue mb-3 flex items-center gap-2"
           >
             <svg
               className="w-5 h-5"
@@ -231,7 +231,7 @@ const CriteriaExplanationView: React.FC<{
         <section className="mb-6" aria-labelledby="no-net-loss-heading">
           <h4
             id="no-net-loss-heading"
-            className="text-lg font-semibold text-tm-loyal-blue font-tm-headline mb-3 flex items-center gap-2"
+            className="heading-sub text-tm-loyal-blue mb-3 flex items-center gap-2"
           >
             <svg
               className="w-5 h-5"
@@ -345,7 +345,7 @@ const CriteriaExplanationView: React.FC<{
         <section aria-labelledby="recognition-levels-heading">
           <h4
             id="recognition-levels-heading"
-            className="text-lg font-semibold text-tm-loyal-blue font-tm-headline mb-3 flex items-center gap-2"
+            className="heading-sub text-tm-loyal-blue mb-3 flex items-center gap-2"
           >
             <svg
               className="w-5 h-5"

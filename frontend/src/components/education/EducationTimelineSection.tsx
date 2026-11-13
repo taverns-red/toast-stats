@@ -41,6 +41,8 @@ export interface EducationTimelineSectionProps {
   tilesAsOf: string | null
   /** The program breakdown: the bar's legend, kept when there is no chart. */
   summary: EducationSummary
+  /** Heading level of the section title; 2 on pages whose h1 has no h2 above. */
+  headingLevel?: 2 | 3
 }
 
 const Skeleton: React.FC = () => (
@@ -64,7 +66,17 @@ const Skeleton: React.FC = () => (
 
 export const EducationTimelineSection: React.FC<
   EducationTimelineSectionProps
-> = ({ programYear, kind, id, through, tilesTotal, tilesAsOf, summary }) => {
+> = ({
+  programYear,
+  kind,
+  id,
+  through,
+  tilesTotal,
+  tilesAsOf,
+  summary,
+  headingLevel = 3,
+}) => {
+  const Heading = `h${headingLevel}` as 'h2' | 'h3'
   const [params] = useSearchParams()
   const mode: 'level' | 'path' = params.get('by') === 'path' ? 'path' : 'level'
   const { timeline, isLoading } = useEducationTimeline(programYear, kind, id)
@@ -85,9 +97,9 @@ export const EducationTimelineSection: React.FC<
       <div
         className={`edu-tl-section__block${reserved ? ' edu-tl-section--reserved' : ''}${reserved && mode === 'path' ? ' edu-tl-section--path' : ''}`}
       >
-        <h3 className="education-section__title">
+        <Heading className="education-section__title">
           Awards over time, by {mode === 'path' ? 'path' : 'level'}
-        </h3>
+        </Heading>
         {isLoading ? (
           <Skeleton />
         ) : chartTimeline ? (
