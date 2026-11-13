@@ -68,11 +68,86 @@ describe('coarse-pointer row and table links (#2645)', () => {
     expect(r['min-height']).toBe('44px')
   })
 
-  it('World pulse region links are a 44px box at every width', () => {
+  describe('World pulse rows', () => {
     const pulse = load('landing-pulse.css')
-    const r = decls(pulse, '.world-pulse__table tbody th a')
-    expect(r['display']).toBe('inline-flex')
-    expect(r['align-items']).toBe('center')
-    expect(r['min-height']).toBe('44px')
+    const QUERY = '@media (max-width: 767.98px), (pointer: coarse)'
+    const touch = mediaBlock(pulse, QUERY)
+
+    it('are 44px link boxes on a phone or coarse pointer only', () => {
+      const r = decls(touch, '.world-pulse__table tbody th a')
+      expect(r['min-height']).toBe('44px')
+      expect(r['line-height']).toBe('44px')
+      expect(decls(touch, '.world-pulse__table tbody tr')['height']).toBe(
+        '45px'
+      )
+      expect(decls(touch, '.world-pulse__regions')['min-height']).toBe(
+        'calc(32px + 5 * 45px + 44px)'
+      )
+    })
+
+    it('keep the compact 32px rows for a desktop mouse', () => {
+      const outside = withoutMedia(pulse, QUERY)
+      expect(decls(outside, '.world-pulse__regions')['min-height']).toBe(
+        'calc(6 * 32px + 44px)'
+      )
+      expect(outside).not.toMatch(/tbody tr\s*\{[^}]*height:\s*45px/)
+      expect(outside).not.toMatch(/tbody th a\s*\{[^}]*min-height/)
+    })
+
+    it('truncate a long region label with an ellipsis', () => {
+      const r = decls(touch, '.world-pulse__table tbody th a')
+      expect(r['display']).toBe('block')
+      expect(r['overflow']).toBe('hidden')
+      expect(r['white-space']).toBe('nowrap')
+      expect(r['text-overflow']).toBe('ellipsis')
+    })
+  })
+
+  it('race-table body cells drop vertical padding under a coarse pointer', () => {
+    const race = load('clubs-race.css')
+    const r = decls(coarseBlock(race), '.race-table tbody th')
+    expect(r['padding-top']).toBe('0')
+    expect(r['padding-bottom']).toBe('0')
   })
 })
+
+/** [start, end) spans of every block whose at-rule header equals `query`. */
+function spans(css: string, query: string): [number, number][] {
+  const out: [number, number][] = []
+  let from = 0
+  for (;;) {
+    const start = css.indexOf(query, from)
+    if (start < 0) break
+    const open = css.indexOf('{', start)
+    let depth = 0
+    let end = -1
+    for (let i = open; i < css.length; i++) {
+      if (css[i] === '{') depth++
+      if (css[i] === '}' && --depth === 0) {
+        end = i + 1
+        break
+      }
+    }
+    if (end < 0) throw new Error('unbalanced')
+    out.push([open + 1, end - 1])
+    from = end
+  }
+  if (out.length === 0) throw new Error(`no ${query}`)
+  return out
+}
+
+/** Inner text of every block with this at-rule header, joined. */
+function mediaBlock(css: string, query: string): string {
+  return spans(css, query)
+    .map(([a, b]) => css.slice(a, b))
+    .join('\n')
+}
+
+/** The stylesheet with every block of this at-rule removed. */
+function withoutMedia(css: string, query: string): string {
+  let out = css
+  for (const [a, b] of [...spans(css, query)].reverse()) {
+    out = out.slice(0, a) + out.slice(b)
+  }
+  return out
+}

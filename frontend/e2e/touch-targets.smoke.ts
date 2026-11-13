@@ -163,7 +163,9 @@ function defineRouteTest(
  * race-table district links 23x21). The same link families must clear the
  * floor under a coarse pointer at 768x1024. */
 const TABLET = { width: 768, height: 1024 }
-const TABLE_LINKS = 'table :is(th, td) > a[href]'
+// The four table families tap-targets.css covers.
+const TABLE_LINKS =
+  ':is(.dt, .entity-table, .action-table, .race-table) :is(th, td) > a[href]'
 const TABLET_ROUTES: { path: string; mustRender: string }[] = [
   { path: '/district/61/clubs', mustRender: TABLE_LINKS },
   { path: '/district/61/action-list', mustRender: TABLE_LINKS },
@@ -180,6 +182,7 @@ test.describe('768×1024 touch tablet (#2645)', () => {
       await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
       await page
         .locator(mustRender)
+        .and(page.locator(':visible'))
         .first()
         .waitFor({ state: 'visible', timeout: 30_000 })
       await page.evaluate(() => document.fonts.ready)
@@ -195,8 +198,58 @@ test.describe('768×1024 touch tablet (#2645)', () => {
         failing.slice(0, 10).map(describeTarget),
         `${path}: ${failing.length} table link(s) under ${FLOOR}px tall`
       ).toEqual([])
+
+      // The race table must not grow to ~65px rows (link + cell padding).
+      if (path.includes('/clubs/race/')) {
+        const rows = await page
+          .locator('.race-table tbody tr')
+          .evaluateAll(trs =>
+            trs.map(tr => Math.round(tr.getBoundingClientRect().height))
+          )
+        expect(rows.length).toBeGreaterThan(0)
+        expect(
+          rows.filter(h => h < FLOOR || h > 52),
+          'race-table rows should be about 45-48px on touch'
+        ).toEqual([])
+      }
     })
   }
+
+  test('World pulse region links clear the floor at 768×1024 touch', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000)
+    const sel = '.world-pulse__table tbody th a'
+    await page.goto('/', { waitUntil: 'networkidle', timeout: 60_000 })
+    await page
+      .locator(sel)
+      .first()
+      .waitFor({ state: 'visible', timeout: 30_000 })
+    await page.evaluate(() => document.fonts.ready)
+    const found = await measureInteractiveTargets(page, [sel], [sel])
+    expect(found.length).toBeGreaterThan(0)
+    expect(found.filter(f => f.h < FLOOR).map(describeTarget)).toEqual([])
+  })
+})
+
+test.describe('1280 mouse World pulse (#2645)', () => {
+  test.use({ viewport: { width: 1280, height: 800 }, hasTouch: false })
+  test('region rows keep the compact 32px pitch', async ({ page }) => {
+    test.setTimeout(90_000)
+    await page.goto('/', { waitUntil: 'networkidle', timeout: 60_000 })
+    await page
+      .locator('.world-pulse__table tbody tr')
+      .first()
+      .waitFor({ state: 'visible', timeout: 30_000 })
+    await page.evaluate(() => document.fonts.ready)
+    const rows = await page
+      .locator('.world-pulse__table tbody tr')
+      .evaluateAll(trs =>
+        trs.map(tr => Math.round(tr.getBoundingClientRect().height))
+      )
+    expect(rows.length).toBeGreaterThan(0)
+    expect(rows.filter(h => h > 33)).toEqual([])
+  })
 })
 
 test.describe('375px World pulse links (#2645)', () => {
