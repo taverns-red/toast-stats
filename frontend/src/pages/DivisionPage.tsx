@@ -28,7 +28,9 @@ import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearC
 import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { OfficerTrainingSummary } from '../components/training/OfficerTrainingSummary'
-import { getClubHealthStatusLabel } from '../utils/clubHealthStatus'
+import { HealthStatusCell } from '../components/dataTable/cells/HealthStatusCell'
+import { TierCell } from '../components/dataTable/cells/TierCell'
+import { isProvisionallyDistinguished } from '../utils/provisionalDistinguished'
 
 const DivisionPage: React.FC = () => {
   const { districtId, divId } = useParams<{
@@ -469,15 +471,16 @@ const DivisionPage: React.FC = () => {
                               </Link>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              {getClubHealthStatusLabel(c.currentStatus)}
+                              <HealthStatusCell status={c.currentStatus} />
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
                               {last?.count ?? '—'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {c.distinguishedLevel === 'NotDistinguished'
-                                ? '—'
-                                : c.distinguishedLevel}
+                              <TierCell
+                                level={c.distinguishedLevel}
+                                provisional={isProvisionallyDistinguished(c)}
+                              />
                             </td>
                           </tr>
                         )

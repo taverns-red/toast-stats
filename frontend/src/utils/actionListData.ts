@@ -91,7 +91,7 @@ export interface CspNotSubmittedItem extends CspDeadlineFields {
   clubName: string
   divisionId: string
   areaId: string
-  /** Health classification, so the row can say "Vulnerable" / "Intervention Required". */
+  /** Health classification, so the row can say "Vulnerable" / "Intervention required". */
   currentStatus: ClubHealthStatus
 }
 
