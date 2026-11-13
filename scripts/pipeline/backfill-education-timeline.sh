@@ -44,6 +44,10 @@
 #             2 usage
 set -euo pipefail
 
+# #2695: raw-education-ledger/ is read from the private raw-source bucket.
+# shellcheck source=raw-source-config.sh
+source "$(dirname "${BASH_SOURCE[0]}")/raw-source-config.sh"
+
 BUCKET="${1:-}"
 PY="${2:-}"
 UPLOAD=0
@@ -191,13 +195,13 @@ elif fold_year "${PRIOR}" "${WORK}/prior"; then
   PRIOR_ARGS=(--prior-timeline "${WORK}/prior")
 else
   set +e
-  list "gs://${BUCKET}/raw-education-ledger/${PRIOR}/*"
+  list "gs://${RAW_SOURCE_BUCKET}/raw-education-ledger/${PRIOR}/*"
   rc=$?
   set -e
   if [ "${rc}" -eq 0 ]; then
     mkdir -p "${WORK}/ledger"
     "${GCLOUD}" storage cp \
-      "gs://${BUCKET}/raw-education-ledger/${PRIOR}/district_*.json" "${WORK}/ledger/"
+      "gs://${RAW_SOURCE_BUCKET}/raw-education-ledger/${PRIOR}/district_*.json" "${WORK}/ledger/"
     PRIOR_ARGS=(--prior-ledger "${WORK}/ledger")
   fi
 fi

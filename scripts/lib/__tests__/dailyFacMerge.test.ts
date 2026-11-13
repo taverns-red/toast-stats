@@ -62,6 +62,7 @@ function run(env: Record<string, string> = {}): Result {
       ...process.env,
       GCLOUD: SHIM,
       SHIM_ROOT: root,
+      RAW_SOURCE_BUCKET: BUCKET,
       SHIM_LOG: shimLog,
       SHIM_DOWNLOAD_DECOMPRESS: '1',
       CACHE_DIR: cache,

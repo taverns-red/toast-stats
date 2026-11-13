@@ -13,7 +13,8 @@
 #               the districts it fetched, and the merge fills the rest from
 #               the last persisted raw-fac/ (#1770). The counts and the top
 #               five districts by ATO/prospective surplus go to the summary.
-#   2. persist  $CACHE_DIR/find-a-club/<date>/ to staging raw-fac/<date>/
+#   2. persist  $CACHE_DIR/find-a-club/<date>/ to raw-fac/<date>/ in the private
+#               raw-source bucket (raw-source-config.sh, #2695; was staging)
 #               (ADR-015 P2, #1758), so a re-derivation of the date can merge
 #               it back. Plain JSON (no -Z), staging only, never promoted,
 #               through gcs-upload.sh so it is in the run manifest. Persists
@@ -46,6 +47,8 @@ fi
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CACHE_DIR="${CACHE_DIR:-./cache}"
+# shellcheck source=raw-source-config.sh
+source "${REPO}/scripts/pipeline/raw-source-config.sh"
 SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/null}"
 export CACHE_DIR
 read -r -a COLLECTOR <<<"${COLLECTOR_CLI:-npx collector-cli}"
@@ -114,7 +117,7 @@ if [ "${FETCHED}" -eq 0 ]; then
   echo "::warning::The Find-A-Club fetch wrote nothing for ${DATE}; nothing to persist"
   echo "- **Raw FAC persisted**: 0 files (the fetch wrote none)" >>"${SUMMARY}"
 elif bash "${REPO}/scripts/pipeline/gcs-upload.sh" daily-raw-fac rsync -r \
-  "${FRESH}/" "gs://${BUCKET}/raw-fac/${DATE}/"; then
+  "${FRESH}/" "gs://${RAW_SOURCE_BUCKET}/raw-fac/${DATE}/"; then
   PERSISTED="${FETCHED}"
   echo "- **Raw FAC persisted**: ${FETCHED} files → raw-fac/${DATE}/" >>"${SUMMARY}"
 else

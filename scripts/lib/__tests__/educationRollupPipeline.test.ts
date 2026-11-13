@@ -81,6 +81,7 @@ function shimEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
     ...process.env,
     GCLOUD: SHIM,
     SHIM_ROOT: root,
+    RAW_SOURCE_BUCKET: BUCKET,
     SHIM_LOG: shimLog,
     SHIM_DOWNLOAD_DECOMPRESS: '1',
     CACHE_DIR: path.join(tmp, 'cache'),
@@ -296,6 +297,21 @@ describe('build-education-rollup.sh: staging derived/education-rollup/', () => {
     expect(r.stderr).toMatch(/::warning::.*raw-education-ledger/)
     expect(rollupObjects()).toContain(`${PREFIX}2026-2027.json`)
     expect(rollupObjects()).not.toContain(`${PREFIX}2003-2004.json`)
+  })
+
+  it('an empty ledger listing while the previous index names ledger years fails, and the previous copy stands (#2695)', () => {
+    seedAll()
+    expect(runScript().status).toBe(0)
+    const indexPath = path.join(root, BUCKET, `${PREFIX}index.json`)
+    const before = fs.readFileSync(indexPath, 'utf-8')
+    expect(before).toContain('ledger-history')
+    fs.rmSync(path.join(root, BUCKET, 'raw-education-ledger'), {
+      recursive: true,
+    })
+    const r = runScript()
+    expect(r.status).toBe(1)
+    expect(r.stderr).toMatch(/::error::.*raw-education-ledger.*previous/)
+    expect(fs.readFileSync(indexPath, 'utf-8')).toBe(before)
   })
 
   it('without a region history, every region block is null; districts and world still build', () => {
@@ -930,10 +946,14 @@ describe('the ledger seed is restored before every rollup build (#2102)', () => 
     jobs: Record<string, { steps?: Step[] }>
   }
   const DIR = '${{ env.EDUCATION_LEDGER_DIR }}'
-  const LISTING = '"gs://${GCS_BUCKET}/raw-education-ledger/**"'
+  const LISTING = '"gs://${RAW_SOURCE_BUCKET}/raw-education-ledger/**"'
 
   it('the seed directory is one workflow-level path', () => {
     expect(wf.env?.EDUCATION_LEDGER_DIR).toBe('/tmp/education-ledger')
+  })
+
+  it('raw sources come from the private raw-source bucket, not staging (#2695)', () => {
+    expect(wf.env?.RAW_SOURCE_BUCKET).toBe('toast-stats-raw-private')
   })
 
   const cases: Array<[string, RegExp]> = [

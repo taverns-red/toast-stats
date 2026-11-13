@@ -61,6 +61,7 @@ function run(args: string[], extra: Record<string, string> = {}) {
       ...process.env,
       GCLOUD: SHIM,
       SHIM_ROOT: root,
+      RAW_SOURCE_BUCKET: BUCKET,
       SHIM_DOWNLOAD_DECOMPRESS: '1',
       CACHE_DIR: path.join(tmp, 'cache'),
       RUN_MANIFEST_FILE: manifest,

@@ -62,6 +62,10 @@
 #             2 usage
 set -euo pipefail
 
+# #2695: raw-education-ledger/ is read from the private raw-source bucket.
+# shellcheck source=raw-source-config.sh
+source "$(dirname "${BASH_SOURCE[0]}")/raw-source-config.sh"
+
 BUCKET="${1:-}"
 if [ -z "${BUCKET}" ] || [ "$#" -ne 1 ]; then
   echo "usage: build-education-rollup.sh <bucket>" >&2
@@ -114,14 +118,14 @@ copy_tolerant() {
 LEDGER="${EDUCATION_LEDGER_DIR:-${WORK}/ledger}"
 mkdir -p "${LEDGER}"
 set +e
-list "gs://${BUCKET}/raw-education-ledger/**"
+list "gs://${RAW_SOURCE_BUCKET}/raw-education-ledger/**"
 rc=$?
 set -e
 if [ "${rc}" -eq 0 ]; then
   sed -n -E 's#^gs://[^/]+/raw-education-ledger/(.*[^/])$#\1#p' "${WORK}/ls.out" |
     LC_ALL=C sort >"${WORK}/ledger.expected"
   "${GCLOUD}" storage rsync -r --checksums-only \
-    "gs://${BUCKET}/raw-education-ledger/" "${LEDGER}/"
+    "gs://${RAW_SOURCE_BUCKET}/raw-education-ledger/" "${LEDGER}/"
   # A seeded file with no object (a ledger file deleted or renamed since the
   # seed was saved) would be rolled up as if it were current: remove it.
   (cd "${LEDGER}" && find . -type f | sed 's#^\./##' | LC_ALL=C sort) >"${WORK}/ledger.local"
@@ -137,7 +141,17 @@ if [ "${rc}" -eq 0 ]; then
 else
   # No ledger in the bucket: a seed from an earlier one must not stand in.
   find "${LEDGER}" -mindepth 1 -delete
-  echo "::warning::build-education-rollup: no raw-education-ledger/ in ${BUCKET}; the ledger years (2003-04 → 2018-19) are not rolled up" >&2
+  # #2695: but if the previous rollup already names ledger years, a rebuild
+  # without them would shrink the index. Fail, so the previous copy stands.
+  set +e
+  copy_tolerant "gs://${BUCKET}/derived/education-rollup/index.json" "${WORK}/prev-index.json"
+  prev_rc=$?
+  set -e
+  if [ "${prev_rc}" -eq 0 ] && grep -q '"ledger-history"' "${WORK}/prev-index.json"; then
+    echo "::error::build-education-rollup: no raw-education-ledger/ in ${RAW_SOURCE_BUCKET}, but the previous index names ledger years; not rebuilding without them, the previous copy stands" >&2
+    exit 1
+  fi
+  echo "::warning::build-education-rollup: no raw-education-ledger/ in ${RAW_SOURCE_BUCKET}; the ledger years (2003-04 → 2018-19) are not rolled up" >&2
 fi
 
 # 2. The staged snapshot dates (every date has rankings), then the plan.

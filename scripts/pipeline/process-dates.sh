@@ -325,6 +325,9 @@ CACHE_DIR="${CACHE_DIR:-./cache}"
 SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/null}"
 export CACHE_DIR
 export GCS_BUCKET="${BUCKET}"
+# #2695: raw-fac/ is read from the private raw-source bucket, not staging.
+# shellcheck source=raw-source-config.sh
+source "${REPO}/scripts/pipeline/raw-source-config.sh"
 
 read -r -a COLLECTOR <<<"${COLLECTOR_CLI:-npx collector-cli}"
 read -r -a RESOLVE <<<"${RESOLVE_REBUILD_SOURCE:-${TSX} ${REPO}/scripts/resolve-rebuild-source.ts}"
@@ -766,7 +769,7 @@ enrich_daily() {
 enrich_snapshot() {
   local actual="$1" fac="${WORK}/raw-fac/$1" err="${WORK}/raw-fac-ls.err"
   ENRICH=failed
-  if ! "${GCLOUD}" storage ls "gs://${BUCKET}/raw-fac/${actual}/**" \
+  if ! "${GCLOUD}" storage ls "gs://${RAW_SOURCE_BUCKET}/raw-fac/${actual}/**" \
     >/dev/null 2>"${err}"; then
     if grep -q 'matched no objects' "${err}"; then
       carry_forward_fac "${actual}"
@@ -777,7 +780,7 @@ enrich_snapshot() {
     return 0
   fi
   mkdir -p "${fac}"
-  if ! "${GCLOUD}" storage rsync -r "gs://${BUCKET}/raw-fac/${actual}/" "${fac}/"; then
+  if ! "${GCLOUD}" storage rsync -r "gs://${RAW_SOURCE_BUCKET}/raw-fac/${actual}/" "${fac}/"; then
     echo "::warning::Could not download raw-fac/${actual}/; not publishing ${actual} unenriched"
     rm -rf "${fac}"
     return 0
