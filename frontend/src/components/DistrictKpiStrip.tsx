@@ -168,7 +168,7 @@ const KpiSummary: React.FC<KpiBodyProps> = ({ kpis, ghost }) => (
       {kpis.distinguishedClubs.basis === 'qualifying-today' &&
         ' qualifying today'}
       {(kpis.distinguishedClubs.provisional ?? 0) > 0 &&
-        ` +${formatCompact(kpis.distinguishedClubs.provisional ?? 0)} prov.`}
+        ` +${formatCompact(kpis.distinguishedClubs.provisional ?? 0)} qualifying today`}
     </span>
     <span aria-hidden="true" className="district-kpi-strip__sep">
       ·

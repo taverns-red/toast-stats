@@ -81,7 +81,7 @@ describe('DistrictKpiStrip (#572)', () => {
     ).toBeInTheDocument()
   })
 
-  it('collapsed summary shows confirmed with +N prov. when provisional > 0 (#2554)', () => {
+  it('collapsed summary shows confirmed with +N qualifying today when provisional > 0 (#2554)', () => {
     window.sessionStorage.setItem('district-kpi-strip-collapsed', 'true')
     renderStrip(
       <DistrictKpiStrip
@@ -95,7 +95,7 @@ describe('DistrictKpiStrip (#572)', () => {
       />
     )
     expect(screen.getByTestId('district-kpi-strip-summary')).toHaveTextContent(
-      '84 dist. +3 prov.'
+      '84 dist. +3 qualifying today'
     )
   })
 
@@ -104,7 +104,7 @@ describe('DistrictKpiStrip (#572)', () => {
     renderStrip(<DistrictKpiStrip kpis={sampleKpis} />)
     expect(
       screen.getByTestId('district-kpi-strip-summary')
-    ).not.toHaveTextContent(/prov\./)
+    ).not.toHaveTextContent(/prov\.|qualifying today/)
   })
 
   it('persists the collapsed state in sessionStorage', () => {
