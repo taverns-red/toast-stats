@@ -237,7 +237,7 @@ test.describe('phone, 375 wide (D10, #2674)', () => {
     await page.goto(`${BASE}/`, { waitUntil: 'load' })
     await expect(banner(page)).toBeVisible({ timeout: 20_000 })
     const controls = banner(page).getByRole('button')
-    await expect(controls).toHaveText(['Keep all', 'Keep none', 'Details'])
+    await expect(controls).toHaveText(['Keep none', 'Keep all', 'Details'])
     for (const btn of await controls.all()) {
       expect((await btn.boundingBox())!.height).toBeGreaterThanOrEqual(43.5)
     }

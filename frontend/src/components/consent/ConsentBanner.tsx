@@ -121,9 +121,9 @@ export const ConsentBanner: React.FC<{ immediate?: boolean }> = ({
       <div className="consent-banner__actions">
         {(
           [
-            ['all', 'Keep all'],
-            ['minimal', 'Keep minimal'],
             ['none', 'Keep none'],
+            ['minimal', 'Keep minimal'],
+            ['all', 'Keep all'],
           ] as const
         ).map(([level, label]) => (
           <button
