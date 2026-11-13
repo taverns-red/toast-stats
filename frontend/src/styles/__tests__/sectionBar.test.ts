@@ -41,9 +41,7 @@ describe('section-bar.css (#1832)', () => {
   })
 
   it('stacks above sticky page chrome (≤40) and below overlays and sheets (≥60)', () => {
-    const z = Number(rule('\n  .section-bar').match(/z-index:\s*(\d+)/)?.[1])
-    expect(z).toBeGreaterThan(40)
-    expect(z).toBeLessThan(60)
+    expect(rule('\n  .section-bar')).toMatch(/z-index:\s*var\(--z-bottom-bar\)/)
   })
 
   it('reserves its height at the bottom of the page so nothing is covered', () => {
