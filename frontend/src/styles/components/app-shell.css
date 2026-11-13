@@ -2276,8 +2276,10 @@
 
   /* #2646 (UNIT-07): Area and Division are links to their pages. On the fixed
      loyal-blue hero (same in both themes): the sub-line's white, underlined
-     so a link reads as one. The 44px touch floor (base.css) stays; the line
-     centres its text in it. */
+     so a link reads as one. The 44px touch floor (base.css) stays: the box
+     is 44px tall, and the 12px negative margins give back the 24px it would
+     add to the line, which keeps the phone hero inside its 200px chrome
+     budget (e2e/club-page-mobile.smoke.ts). */
   .club-hero__sub {
     align-items: center;
   }
@@ -2288,6 +2290,7 @@
     color: #ffffff;
     text-decoration: underline;
     text-underline-offset: 3px;
+    margin-block: -12px;
   }
 
   .club-hero__sub-link:hover {

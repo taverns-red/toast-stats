@@ -311,8 +311,9 @@ for (const width of [768, 1280]) {
     await expect(
       page.getByRole('toolbar', { name: 'Data controls' })
     ).toBeVisible()
+    // #2646: no breadcrumb under the title; the Overview tab is the way up.
     await expect(
       page.locator('[data-testid="subpage-breadcrumb"]')
-    ).toBeVisible()
+    ).toHaveCount(0)
   })
 }
