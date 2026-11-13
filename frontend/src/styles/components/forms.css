@@ -48,9 +48,7 @@
     font-weight: var(--tm-body-medium-font-weight);
     line-height: var(--tm-body-medium-line-height);
     color: var(--tm-black);
-    background-color: var(
-      --tm-cool-gray-20
-    ); /* Light TM Cool Gray background */
+    background-color: var(--tm-cool-gray-20); /* Light TM Cool Gray background */
     border: var(--tm-border-2) solid var(--tm-cool-gray);
     border-radius: var(--tm-radius-md);
     transition: all 0.2s ease-in-out;
@@ -383,7 +381,8 @@
   /* Responsive Adjustments */
   @media (max-width: 768px) {
     .tm-form-input--lg {
-      padding: var(--tm-space-3) var(--tm-space-4); /* Reduce padding on mobile */
+      padding: var(--tm-space-3)
+        var(--tm-space-4); /* Reduce padding on mobile */
       font-size: var(
         --tm-body-medium-font-size
       ); /* Use medium font size on mobile */

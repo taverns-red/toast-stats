@@ -72,18 +72,18 @@
   }
 
   /* Close button styling */
-  .tm-alert button[aria-label='Close alert'] {
+  .tm-alert button[aria-label="Close alert"] {
     min-width: var(--tm-touch-target);
     min-height: var(--tm-touch-target);
     border-radius: var(--tm-radius-sm);
     transition: background-color 0.2s ease-in-out;
   }
 
-  .tm-alert button[aria-label='Close alert']:hover {
+  .tm-alert button[aria-label="Close alert"]:hover {
     background-color: rgba(0, 0, 0, 0.1);
   }
 
-  .tm-alert button[aria-label='Close alert']:focus-visible {
+  .tm-alert button[aria-label="Close alert"]:focus-visible {
     outline: 2px solid var(--tm-loyal-blue);
     outline-offset: 2px;
   }
@@ -93,11 +93,11 @@
     .tm-alert {
       padding: 12px;
     }
-
+    
     .tm-alert h4 {
       font-size: 14px;
     }
-
+    
     .tm-alert .tm-body-medium {
       font-size: 14px;
     }

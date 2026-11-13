@@ -73,18 +73,18 @@
     .tm-header {
       padding: 12px 16px;
     }
-
+    
     .tm-header-content {
       flex-direction: column;
       gap: 12px;
       align-items: flex-start;
     }
-
+    
     .tm-header-actions {
       width: 100%;
       justify-content: flex-start;
     }
-
+    
     .tm-header-title {
       font-size: 1.5rem;
     }
@@ -97,7 +97,7 @@
   }
 
   /* Header Accessibility */
-  .tm-header [role='banner'] {
+  .tm-header [role="banner"] {
     /* Ensure proper landmark identification */
   }
 

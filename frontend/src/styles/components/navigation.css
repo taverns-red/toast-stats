@@ -48,7 +48,7 @@
     outline-offset: 2px;
   }
 
-  .tm-nav-item[aria-current='page'],
+  .tm-nav-item[aria-current="page"],
   .tm-nav-item.active {
     background-color: rgba(255, 255, 255, 0.2);
     font-weight: 700;
