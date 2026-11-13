@@ -103,4 +103,33 @@ describe('InfoTooltip (#92, #2644)', () => {
 
     expect(screen.getByText('Pinned text')).toBeVisible()
   })
+
+  // Safari does not focus a button on click, so onBlur never fires there.
+  it('closes a pinned tooltip on a pointer press outside it', () => {
+    render(
+      <div>
+        <InfoTooltip label="paid clubs" text="Outside text" />
+        <p>elsewhere</p>
+      </div>
+    )
+
+    fireEvent.mouseEnter(trigger())
+    fireEvent.click(trigger())
+    fireEvent.mouseLeave(trigger())
+    expect(screen.getByText('Outside text')).toBeVisible()
+
+    fireEvent.pointerDown(screen.getByText('elsewhere'))
+
+    expect(screen.queryByText('Outside text')).not.toBeInTheDocument()
+  })
+
+  it('keeps a pinned tooltip open on a press inside the panel or trigger', () => {
+    render(<InfoTooltip label="paid clubs" text="Inside text" />)
+
+    fireEvent.click(trigger())
+    fireEvent.pointerDown(screen.getByText('Inside text'))
+    fireEvent.pointerDown(trigger())
+
+    expect(screen.getByText('Inside text')).toBeVisible()
+  })
 })
