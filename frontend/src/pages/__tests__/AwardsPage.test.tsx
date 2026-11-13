@@ -83,7 +83,7 @@ const mockStandings: CompetitiveAwardStandings = {
   retentionAward: [
     {
       districtId: '102',
-      districtName: 'District 102',
+      districtName: '102',
       region: '14',
       rank: 1,
       value: 94.1,
@@ -169,6 +169,13 @@ describe('AwardsPage (#371-#373)', () => {
       renderPage()
       const link = screen.getByRole('link', { name: /district 17/i })
       expect(link).toHaveAttribute('href', '/district/17')
+    })
+
+    it('a district whose name is the bare number still reads "District 102" to a screen reader (#2648)', () => {
+      renderPage()
+      const link = screen.getByRole('link', { name: 'District 102' })
+      expect(link).toHaveAttribute('href', '/district/102')
+      expect(link).toHaveTextContent('D102')
     })
   })
 })
