@@ -5,6 +5,7 @@ import {
 } from '../utils/programYearDeadlines'
 import { DEADLINES_ICS_PATH } from '../utils/deadlinesIcs'
 import { formatShortDate } from '../utils/dateFormatting'
+import InfoTooltip from './InfoTooltip'
 
 /* Whole-year deadline timeline (#2429): every date of the page's program
    year from the one cited table in `programYearDeadlines.ts`, grouped by
@@ -70,7 +71,6 @@ export const DeadlineTimeline: React.FC<DeadlineTimelineProps> = ({
                       ? 'deadline-timeline__item deadline-timeline__item--passed'
                       : 'deadline-timeline__item'
                   }
-                  title={`Source: ${d.source}`}
                 >
                   <time className="deadline-timeline__date" dateTime={d.date}>
                     {formatShortDate(d.date)}
@@ -83,9 +83,12 @@ export const DeadlineTimeline: React.FC<DeadlineTimelineProps> = ({
                         · passed
                       </span>
                     )}
-                    {/* `title` does not reach touch or most screen readers
-                        (#2644): the source is also text. */}
-                    <span className="sr-only"> Source: {d.source}</span>
+                    {/* The source and the citation were `title`s: touch and
+                        keyboard now open them (#2644). */}
+                    <InfoTooltip
+                      label={`${d.label} source`}
+                      text={`Source: ${d.source}`}
+                    />
                     {d.owner && (
                       <span className="deadline-timeline__owner">
                         Owner: {d.owner.role} (
@@ -93,11 +96,14 @@ export const DeadlineTimeline: React.FC<DeadlineTimelineProps> = ({
                           href={d.owner.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          title={d.owner.citation}
                         >
                           {d.owner.short}
                         </a>
-                        <span className="sr-only"> {d.owner.citation}</span>)
+                        )
+                        <InfoTooltip
+                          label={`${d.owner.short} citation`}
+                          text={d.owner.citation}
+                        />
                       </span>
                     )}
                   </span>

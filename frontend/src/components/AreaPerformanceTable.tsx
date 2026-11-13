@@ -1,4 +1,5 @@
 import React from 'react'
+import InfoTooltip from './InfoTooltip'
 import { AreaPerformance } from '../utils/divisionStatus'
 import {
   calculateAreaGapAnalysis,
@@ -308,22 +309,16 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
                 <span
                   className={`px-2 py-1 text-sm font-medium rounded-full border ${badge.className}`}
                   aria-label={`Recognition status: ${badge.label}`}
-                  aria-describedby={
-                    badge.tooltip ? `area-badge-tip-${area.areaId}` : undefined
-                  }
-                  title={badge.tooltip}
                 >
                   {badge.label}
                 </span>
-                {/* `title` does not reach touch or most screen readers
+                {/* The meaning was a `title`: touch and keyboard now open it
                     (#2644). */}
                 {badge.tooltip && (
-                  <span
-                    id={`area-badge-tip-${area.areaId}`}
-                    className="sr-only"
-                  >
-                    {badge.tooltip}
-                  </span>
+                  <InfoTooltip
+                    label={`area ${area.areaId} recognition`}
+                    text={badge.tooltip}
+                  />
                 )}
               </td>
               <td className="entity-table__c tabular">

@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useState } from 'react'
+import React, { useEffect, useId, useRef, useState } from 'react'
 import { useViewportClampedTooltip } from '../hooks/useViewportClampedTooltip'
 
 interface InfoTooltipProps {
@@ -30,6 +30,7 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({ label, text }) => {
   const [dismissed, setDismissed] = useState(false)
   const isVisible = (hovered || focused || pinned) && !dismissed
   const panelId = useId()
+  const rootRef = useRef<HTMLSpanElement>(null)
   // Keeps the panel inside the viewport when the trigger sits near an edge
   // (#1405) — the rightmost table-header tooltip overflowed at every width.
   const { panelRef, style: clampStyle } =
@@ -46,6 +47,19 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({ label, text }) => {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [isVisible])
 
+  // Safari does not focus a button on click, so onBlur never fires and a
+  // pinned tooltip would stay open: close it on any press outside it.
+  useEffect(() => {
+    if (!pinned) return
+    const onPointerDown = (e: PointerEvent) => {
+      if (rootRef.current?.contains(e.target as Node)) return
+      setPinned(false)
+      setHovered(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [pinned])
+
   const handleClick = () => {
     if (isVisible && pinned) {
       setPinned(false)
@@ -57,7 +71,7 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({ label, text }) => {
   }
 
   return (
-    <span className="relative inline-flex items-center ml-1">
+    <span ref={rootRef} className="relative inline-flex items-center ml-1">
       <button
         type="button"
         aria-label={`About ${label}`}

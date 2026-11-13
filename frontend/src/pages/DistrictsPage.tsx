@@ -1150,7 +1150,7 @@ const DistrictsPage: React.FC = () => {
       About these metrics
       <InfoTooltip
         label="the rankings table metrics"
-        text="Paid Clubs =clubs that have met renewal obligations for the program year. Total Payments = year-to-date membership payment count. Distinguished = clubs achieving Distinguished status or higher. Score = Borda-count composite of the three rankings. Higher is better on all four."
+        text="Paid Clubs = clubs that have met renewal obligations for the program year. Total Payments = year-to-date membership payment count. Distinguished = clubs achieving Distinguished status or higher. Score = Borda-count composite of the three rankings. Higher is better on all four."
       />
     </span>
   )

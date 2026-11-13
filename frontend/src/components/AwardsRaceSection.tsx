@@ -234,15 +234,16 @@ const AwardCard: React.FC<AwardCardProps> = ({ spec, entries }) => {
       >
         <span aria-hidden="true" className="awards-race-card__status-dot" />
         {isAchieved ? (
-          <span title={tiedCount > 0 ? TIE_BREAK_UNPUBLISHED : undefined}>
+          <span>
             ✓ Achieved
             {tiedCount > 0
               ? ` · ${tiedCount} districts tied`
               : winners.length > 1 &&
                 ` · ${winners.length} districts qualifying`}
-            {/* `title` does not reach touch or most screen readers (#2644). */}
+            {/* The tie-break note was a `title`: touch and keyboard now open
+                it (#2644). */}
             {tiedCount > 0 && (
-              <span className="sr-only">. {TIE_BREAK_UNPUBLISHED}</span>
+              <InfoTooltip label="the tie-break" text={TIE_BREAK_UNPUBLISHED} />
             )}
           </span>
         ) : (

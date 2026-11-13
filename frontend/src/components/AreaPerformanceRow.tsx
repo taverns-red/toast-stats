@@ -1,4 +1,5 @@
-import React, { useId } from 'react'
+import React from 'react'
+import InfoTooltip from './InfoTooltip'
 import { AreaPerformance } from '../utils/divisionStatus'
 import {
   calculateAreaGapAnalysis,
@@ -102,7 +103,6 @@ const formatGap = (
 export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
   area,
 }) => {
-  const badgeTipId = useId()
   // Calculate gap analysis for this area
   const gapAnalysis = calculateAreaGapAnalysis({
     clubBase: area.clubBase,
@@ -193,16 +193,15 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
         <span
           className={`px-2 py-1 text-xs font-medium rounded-full border ${badge.className}`}
           aria-label={`Recognition status: ${badge.label}`}
-          aria-describedby={badge.tooltip ? badgeTipId : undefined}
-          title={badge.tooltip}
         >
           {badge.label}
         </span>
-        {/* `title` does not reach touch or most screen readers (#2644). */}
+        {/* The meaning was a `title`: touch and keyboard now open it (#2644). */}
         {badge.tooltip && (
-          <span id={badgeTipId} className="sr-only">
-            {badge.tooltip}
-          </span>
+          <InfoTooltip
+            label={`area ${area.areaId} recognition`}
+            text={badge.tooltip}
+          />
         )}
       </td>
 

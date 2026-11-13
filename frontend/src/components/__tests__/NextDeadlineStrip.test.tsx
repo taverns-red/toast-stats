@@ -47,10 +47,16 @@ describe('NextDeadlineStrip (#2298)', () => {
     expect(strip()).toHaveTextContent('Every 2026–27 deadline has passed.')
   })
 
-  it('cites each deadline’s TI source in its title', () => {
+  // The source was a `title`, unreachable by touch; it opens from a button
+  // now (#2644).
+  it('cites each deadline’s TI source in a tooltip button', () => {
     render(<NextDeadlineStrip programYear="2026-2027" asOfDate="2026-11-15" />)
     const [first] = within(strip()).getAllByRole('listitem')
-    expect(first).toHaveAttribute('title', expect.stringContaining('Item 1490'))
+    expect(first).not.toHaveAttribute('title')
+    fireEvent.click(
+      within(first!).getByRole('button', { name: /^About .* source$/i })
+    )
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Item 1490')
   })
 
   it('reserves its slot while the page date is still loading', () => {

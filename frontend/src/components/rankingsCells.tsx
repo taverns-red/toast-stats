@@ -68,7 +68,11 @@ export const DistrictCell: React.FC<{
         </svg>
       </button>
       {/* `title` does not reach touch or most screen readers (#2644). */}
-      <span id={`rankings-star-tip-${id}`} className="sr-only">
+      <span
+        id={`rankings-star-tip-${id}`}
+        className="sr-only"
+        aria-hidden="true"
+      >
         {starHelper}
       </span>
       <Link to={`/district/${id}`} className="rankings-district__link">

@@ -3,7 +3,7 @@
 
 import React from 'react'
 import { describe, it, expect } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { AwardsRaceSection } from '../AwardsRaceSection'
 import type { CompetitiveAwardStandings } from '../../services/cdn'
@@ -336,8 +336,10 @@ describe('AwardsRaceSection — 3-card redesign (#357)', () => {
     const ret = findCard(/retention/i)
     expect(within(ret).getByText(/5 districts tied/i)).toBeInTheDocument()
     expect(within(ret).queryByText(/qualifying/i)).not.toBeInTheDocument()
+    // The note opens from a button (it was a `title`, #2644).
+    fireEvent.click(within(ret).getByRole('button', { name: /tie-break/i }))
     expect(
-      within(ret).getByTitle(/tie-break isn.t published/i)
+      within(ret).getByText(/tie-break isn.t published/i)
     ).toBeInTheDocument()
   })
 })

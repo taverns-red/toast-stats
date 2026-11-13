@@ -180,7 +180,6 @@ describe('meanings are reachable by touch and not announced twice (#2644)', () =
     })
     expect(openAndRead(trigger).length).toBeGreaterThan(10)
     expect(container.querySelectorAll('[title]')).toHaveLength(0)
-    expect(container.querySelectorAll('[aria-describedby]')).toHaveLength(0)
     expect(srOnlyText(container)).toBe('')
   })
 

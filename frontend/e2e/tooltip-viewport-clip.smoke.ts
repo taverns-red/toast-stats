@@ -264,11 +264,39 @@ test('the tooltip triggers keep their 44px floor', async ({ page }) => {
       const r = el.getBoundingClientRect()
       if (r.width <= 1 || r.height <= 1) continue // collapsed, not a target
       counted++
-      // #2644: the hit area is the ::after that overflows the 14px icon.
+      // #2644: the hit area is the ::after that overflows the 14px icon. It
+      // counts only if it is not pointer-events:none and all four corners of
+      // it resolve, through elementFromPoint, to the trigger itself.
+      let hitW = 0
+      let hitH = 0
       const after = getComputedStyle(el, '::after')
-      const hit = after.position === 'absolute'
-      const w = Math.max(r.width, hit ? parseFloat(after.width) || 0 : 0)
-      const h = Math.max(r.height, hit ? parseFloat(after.height) || 0 : 0)
+      if (
+        after.position === 'absolute' &&
+        after.content !== 'none' &&
+        after.pointerEvents !== 'none'
+      ) {
+        el.scrollIntoView({ block: 'center', inline: 'center' })
+        const b = el.getBoundingClientRect()
+        const aw = parseFloat(after.width) || 0
+        const ah = parseFloat(after.height) || 0
+        const cx = b.left + b.width / 2
+        const cy = b.top + b.height / 2
+        const tappable = [
+          [cx - aw / 2 + 1, cy - ah / 2 + 1],
+          [cx + aw / 2 - 1, cy - ah / 2 + 1],
+          [cx - aw / 2 + 1, cy + ah / 2 - 1],
+          [cx + aw / 2 - 1, cy + ah / 2 - 1],
+        ].every(([x, y]) => {
+          const hit = document.elementFromPoint(x!, y!)
+          return hit === el || (hit !== null && el.contains(hit))
+        })
+        if (tappable) {
+          hitW = aw
+          hitH = ah
+        }
+      }
+      const w = Math.max(r.width, hitW)
+      const h = Math.max(r.height, hitH)
       if (w < floor || h < floor) {
         undersized.push(`${Math.round(w)}×${Math.round(h)}`)
       }

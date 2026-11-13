@@ -74,20 +74,44 @@ export async function measureInteractiveTargets(
           el.getAttribute('role') !== 'button' &&
           !notProseSels.some(s => el.matches(s))
         if (inlineProseLink) continue
-        // #2644: a control may keep its 44px hit area in an absolutely
-        // positioned ::after that overflows its (smaller) visible box, so the
-        // icon adds no line height (InfoTooltip). The tappable area is the
-        // larger of the two; read the pseudo's resolved size from its
-        // computed style, since getBoundingClientRect cannot see it.
-        const after = getComputedStyle(el, '::after')
-        const hitW =
-          after.position === 'absolute' && after.content !== 'none'
-            ? parseFloat(after.width) || 0
-            : 0
-        const hitH =
-          after.position === 'absolute' && after.content !== 'none'
-            ? parseFloat(after.height) || 0
-            : 0
+        // #2644: the InfoTooltip trigger keeps its 44px hit area in an
+        // absolutely positioned ::after that overflows its 14px icon, so the
+        // icon adds no line height. Only that trigger is credited, and only
+        // when the area is provably tappable: the pseudo is not
+        // pointer-events:none and all four corners of it resolve, through
+        // elementFromPoint, to the trigger itself. An arbitrary decorative
+        // ::after therefore never counts.
+        let hitW = 0
+        let hitH = 0
+        if (el.matches('.info-tooltip__trigger')) {
+          const after = getComputedStyle(el, '::after')
+          if (
+            after.position === 'absolute' &&
+            after.content !== 'none' &&
+            after.pointerEvents !== 'none'
+          ) {
+            el.scrollIntoView({ block: 'center', inline: 'center' })
+            const r = el.getBoundingClientRect()
+            const w = parseFloat(after.width) || 0
+            const h = parseFloat(after.height) || 0
+            const cx = r.left + r.width / 2
+            const cy = r.top + r.height / 2
+            const corners = [
+              [cx - w / 2 + 1, cy - h / 2 + 1],
+              [cx + w / 2 - 1, cy - h / 2 + 1],
+              [cx - w / 2 + 1, cy + h / 2 - 1],
+              [cx + w / 2 - 1, cy + h / 2 - 1],
+            ]
+            const tappable = corners.every(([x, y]) => {
+              const hit = document.elementFromPoint(x!, y!)
+              return hit === el || (hit !== null && el.contains(hit))
+            })
+            if (tappable) {
+              hitW = w
+              hitH = h
+            }
+          }
+        }
         out.push({
           tag,
           testid: el.getAttribute('data-testid'),

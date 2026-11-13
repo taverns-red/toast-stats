@@ -91,9 +91,13 @@ describe('InfoTooltip trigger does not inflate its line (#2644)', () => {
       resolve(srcDir, '../e2e/tooltip-viewport-clip.smoke.ts'),
       'utf8'
     )
+    // The helper scopes by selector match; the smoke only ever iterates the
+    // trigger class. Both must prove the area is tappable.
+    expect(helper).toMatch(/matches\('\.info-tooltip__trigger'\)/)
+    expect(smoke).toMatch(/querySelectorAll\('button\.info-tooltip__trigger'\)/)
     for (const src of [helper, smoke]) {
-      expect(src).toMatch(/matches\('\.info-tooltip__trigger'\)/)
       expect(src).toMatch(/elementFromPoint/)
+      expect(src).toMatch(/pointerEvents !== 'none'/)
     }
   })
 })
