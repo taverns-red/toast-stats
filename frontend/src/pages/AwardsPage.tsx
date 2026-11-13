@@ -1,4 +1,6 @@
 import React from 'react'
+import { districtAriaLabel, formatDistrict } from '../utils/displayFormat'
+import { hasDescriptiveName } from '../utils/districtName'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { Link } from 'react-router-dom'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
@@ -17,6 +19,15 @@ import type {
 /* /awards page (#371-#373). Full top-10 leaderboards per district award
    — the deeper view that the Districts page's Awards Race summary
    defers to. Uses the existing useCompetitiveAwards hook for data. */
+
+/** The link's accessible name always says "District" (#2648): the bare
+ *  number alone, or a name that omits the word, is read as just "93". */
+const districtLinkLabel = (id: string, name: string): string =>
+  !hasDescriptiveName(name)
+    ? districtAriaLabel(id)
+    : /district/i.test(name)
+      ? name
+      : `${districtAriaLabel(id)}, ${name}`
 
 interface AwardSpec {
   key: keyof Pick<
@@ -242,8 +253,14 @@ const AwardLeaderboard: React.FC<AwardLeaderboardProps> = ({
                 <Link
                   to={`/district/${entry.districtId}`}
                   className="awards-page-card__district"
+                  aria-label={districtLinkLabel(
+                    entry.districtId,
+                    entry.districtName
+                  )}
                 >
-                  {entry.districtName}
+                  {hasDescriptiveName(entry.districtName)
+                    ? entry.districtName
+                    : formatDistrict(entry.districtId)}
                 </Link>
                 {tiedIds.has(entry.districtId) && (
                   <>
