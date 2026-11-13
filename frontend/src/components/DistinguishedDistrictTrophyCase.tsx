@@ -371,8 +371,9 @@ const TrophyCaseSkeleton: React.FC<{ programYear: string; held?: boolean }> = ({
             Program Item 1490
           </p>
         </div>
-        {/* Status pill placeholder — matches the px-4 py-2 text-base pill box. */}
-        <SkeletonBar className="h-10 w-48 rounded-full" />
+        {/* Status badge placeholder — the loaded badge is plain text-base
+            (24px line height, G1 #2766), so reserve h-6, not the old pill. */}
+        <SkeletonBar className="h-6 w-48 rounded-full" />
       </div>
 
       {/* Prerequisite summary line — 44px touch-target floor like the real

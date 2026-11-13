@@ -665,15 +665,17 @@
    District Detail surface — #564 Phase 1
    ═══════════════════════════════════════════
 
-   Covers tier-badge backgrounds (TIER_BADGE_STYLES) and the
+   Covers the legacy tier-chip remaps (the trophy case tier itself is
+   plain text since G1, #2766; these still serve other badge/chip
+   consumers such as DCPProjectionsTable) and the
    Additional Awards chips in DistinguishedDistrictTrophyCase, plus
    adjacent brand-utility gaps. Phase 2 will sweep opacity-variant
    utilities (bg-tm-*-N) and Phase 3 will tighten light-mode small-text
    contrast; both tracked under #564. */
 
-/* ─── Tier badge backgrounds ─── */
+/* ─── Tier chip backgrounds (legacy remaps, still in use) ─── */
 
-/* Distinguished tier — base uses `bg-tm-true-maroon text-white`.
+/* Distinguished chip — base uses `bg-tm-true-maroon text-white`.
    In dark mode the white text stays; tone the maroon down slightly so
    the pill doesn't burn against the dark surface. */
 [data-theme='dark'] .bg-tm-true-maroon {
@@ -684,13 +686,13 @@
   border-color: #8b2d3c !important;
 }
 
-/* Select tier — base uses `bg-tm-cool-gray text-gray-900`. In dark
+/* Select chip — base uses `bg-tm-cool-gray text-gray-900`. In dark
    mode swap to a translucent gray with light text. */
 [data-theme='dark'] .bg-tm-cool-gray {
   background-color: rgba(192, 200, 199, 0.18) !important;
 }
 
-/* Presidents tier — base uses `bg-tm-happy-yellow text-gray-900`.
+/* Presidents chip — base uses `bg-tm-happy-yellow text-gray-900`.
    Dark-mode: muted golden bg + dark text stays readable. */
 [data-theme='dark'] .bg-tm-happy-yellow {
   background-color: rgba(247, 209, 100, 0.85) !important;
@@ -712,7 +714,7 @@
   border-color: rgba(247, 209, 100, 0.65) !important;
 }
 
-/* Smedley tier — base uses `bg-purple-100 text-purple-900
+/* Smedley chip — base uses `bg-purple-100 text-purple-900
    border-purple-400`. Dark-mode: translucent purple + light text. */
 [data-theme='dark'] .bg-purple-100 {
   background-color: rgba(168, 85, 247, 0.2) !important;
