@@ -387,7 +387,7 @@ export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
                   className="px-3 py-3 text-center text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('gapToNext')}
                 >
-                  Gap to Next{' '}
+                  Gap to next{' '}
                   <SortIcon
                     field="gapToNext"
                     activeSortField={sortField}

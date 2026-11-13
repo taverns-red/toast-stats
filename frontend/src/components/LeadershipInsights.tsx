@@ -395,10 +395,10 @@ export const LeadershipInsights: React.FC<LeadershipInsightsProps> = ({
                   Division
                 </th>
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-500">
-                  Performance Score
+                  Performance score
                 </th>
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-500">
-                  Activity Level
+                  Activity level
                 </th>
                 <th className="px-4 py-3 text-center text-sm font-medium text-gray-500">
                   Correlation

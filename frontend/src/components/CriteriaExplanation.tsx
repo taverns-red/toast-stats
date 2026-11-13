@@ -392,19 +392,19 @@ const CriteriaExplanationView: React.FC<{
                     scope="col"
                     className="px-4 py-3 text-left font-semibold font-tm-headline rounded-tl-lg"
                   >
-                    Recognition Level
+                    Recognition level
                   </th>
                   <th
                     scope="col"
                     className="px-4 py-3 text-center font-semibold font-tm-headline"
                   >
-                    Paid Clubs Required
+                    Paid clubs required
                   </th>
                   <th
                     scope="col"
                     className="px-4 py-3 text-center font-semibold font-tm-headline rounded-tr-lg"
                   >
-                    Distinguished Clubs Required
+                    Distinguished clubs required
                   </th>
                 </tr>
               </thead>
