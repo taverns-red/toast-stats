@@ -14,7 +14,10 @@
   /* Text colours */
   .tm-text-loyal-blue { color: var(--tm-loyal-blue); }
   .tm-text-true-maroon { color: var(--tm-true-maroon); }
-  .tm-text-cool-gray { color: var(--tm-cool-gray); }
+  /* Secondary text, not the cool-gray swatch: #A9B2B1 on white is 2.0:1, and
+     these classes carry words (labels, "of N", neutral badges). --ink-2 is the
+     legacy secondary ink and remaps with the theme. */
+  .tm-text-cool-gray { color: var(--ink-2); }
   .tm-text-black { color: var(--tm-black); }
   .tm-text-white { color: var(--tm-white); }
 
