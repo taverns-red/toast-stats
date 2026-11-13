@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { normalizeClubId } from '@taverns-red/shared-contracts'
 import { useGlobalClubRace } from '../../hooks/useGlobalClubRace'
 import { useNearViewport } from '../../hooks/useNearViewport'
+import { usePrintRequested } from '../../hooks/usePrintRequested'
 import type { SnapshotDate } from '../../types/snapshotDate'
 import { WorldwideStandingCard } from './WorldwideStandingCard'
 
@@ -31,7 +32,12 @@ export const LazyWorldwideStanding: React.FC<LazyWorldwideStandingProps> = ({
   members,
 }) => {
   const [slot, setSlot] = useState<HTMLDivElement | null>(null)
-  const isNear = useNearViewport(slot)
+  const isNearViewport = useNearViewport(slot)
+  // An unscrolled Cmd-P still prints the card (#2571 pattern), and a browser
+  // without IntersectionObserver never reports "near", so it reads eagerly.
+  const printRequested = usePrintRequested()
+  const canObserve = typeof IntersectionObserver === 'function'
+  const isNear = isNearViewport || printRequested || !canObserve
   const { race, reachedById } = useGlobalClubRace(date, {
     enabled: enabled && !!date && isNear,
   })
