@@ -146,6 +146,16 @@ describe('council-pack.css (#2299)', () => {
     )
   })
 
+  it('print header cells take the pack table size, not .dt header size (#2676)', () => {
+    // `.dt thead th { font-size: var(--dt-header-font) }` (layered, 14px)
+    // sets the size on the cells, so the 8.5pt on .council-pack__table
+    // never reaches them; the print header rule must reset it.
+    const print = packCss.match(/@media print\s*\{[\s\S]*\n\}/)?.[0] ?? ''
+    const headRules =
+      print.match(/\.council-pack__table thead th\s*\{[^}]*\}/g) ?? []
+    expect(headRules.join('\n')).toMatch(/font-size:\s*(inherit|8\.5pt)/)
+  })
+
   it('uses the legacy palette only (no --rt-stats, no raw colours)', () => {
     expect(packCss).not.toMatch(/--rt-stats/)
     // Outside @media print, colours come from tokens, never hex literals.
