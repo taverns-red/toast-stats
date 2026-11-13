@@ -79,6 +79,14 @@ describe('RegionRecognitionScoreboard (#2307)', () => {
     expect(pres).toHaveTextContent(/every district meets this tier/i)
   })
 
+  it('says Distinguished clubs are counted as confirmed (#2580)', () => {
+    renderBoard(board)
+    const note = screen.getByTestId('recognition-basis')
+    expect(note).toHaveTextContent(/confirmed by April renewals/i)
+    expect(note).toHaveTextContent(/qualifying today/i)
+    expect(note).toHaveTextContent(/not counted/i)
+  })
+
   it('links to the methodology entry and notes Unknown districts', () => {
     renderBoard(board)
     expect(

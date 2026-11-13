@@ -31,6 +31,11 @@ import {
   divisionChip,
 } from './DivisionRecognitionChip'
 import type { DivisionPerformance } from '../utils/divisionStatus'
+import type { DivisionDistinguishedCountsRow } from '../hooks/useDistrictAnalytics'
+import {
+  applyPipelineDistinguished,
+  provisionalOf,
+} from '../utils/divisionAreaDistinguished'
 
 function signed(n: number): string {
   if (n > 0) return `+${n}`
@@ -40,19 +45,45 @@ function signed(n: number): string {
 
 function toDivisionRow(
   division: DivisionPerformance,
-  districtId: string
+  districtId: string,
+  countsPending: boolean
 ): MobileRow {
   const chip = divisionChip(division)
   const paid = `${division.paidClubs}/${division.clubBase} paid`
   const net = signed(division.netGrowth)
+  // Confirmed over required, then the extra as its own meta part (#2580).
   const dist = `${division.distinguishedClubs}/${division.requiredDistinguishedClubs} distinguished`
+  const extra =
+    provisionalOf(division) > 0
+      ? `+${provisionalOf(division)} qualifying today`
+      : undefined
+  if (countsPending) {
+    // Paid and net come from the snapshot and stay; the status and the
+    // distinguished count wait for the published counts (#2580).
+    return {
+      id: division.divisionId,
+      to: `/district/${districtId}/division/${division.divisionId}`,
+      title: `Division ${division.divisionId}`,
+      // A real chip's own box, so the row is the height it will be.
+      chip: (
+        <span
+          data-testid="distinguished-pending"
+          aria-hidden="true"
+          className="mobile-chip animate-pulse bg-gray-200"
+          style={{ display: 'block', width: '81px', height: '26px' }}
+        />
+      ),
+      meta: [paid, net].join(' \u00b7 '),
+      ariaLabel: `Division ${division.divisionId} — ${paid}, net ${net}`,
+    }
+  }
   return {
     id: division.divisionId,
     to: `/district/${districtId}/division/${division.divisionId}`,
     title: `Division ${division.divisionId}`,
     chip: <DivisionRecognitionChip division={division} />,
-    meta: [paid, net, dist].join(' \u00b7 '),
-    ariaLabel: `Division ${division.divisionId} — ${chip.label}, ${paid}, net ${net}, ${dist}`,
+    meta: [paid, net, dist, extra].filter(Boolean).join(' \u00b7 '),
+    ariaLabel: `Division ${division.divisionId} — ${chip.label}, ${paid}, net ${net}, ${dist}${extra ? `, ${extra}` : ''}`,
   }
 }
 
@@ -148,6 +179,9 @@ export interface DivisionPerformanceCardsProps {
   districtSnapshot: unknown
   /** Optional loading state indicator */
   isLoading?: boolean
+  /** The published counts are still loading: status, distinguished counts and
+   *  gaps show placeholders instead of the qualifying-today values (#2580). */
+  countsPending?: boolean | undefined
   /**
    * The date (`YYYY-MM-DD`) the snapshot is PINNED to. Required (#1321): it
    * gates the area visit round/deadlines, so it is load-bearing, not display —
@@ -158,6 +192,13 @@ export interface DivisionPerformanceCardsProps {
   /** District id — threaded to each card so its heading links to the division
    *  page (CC-7, #872). */
   districtId?: string | undefined
+  /** The published confirmed / provisional counts per division and area
+   *  (#2580). With them each count is the confirmed one with "+N qualifying
+   *  today" beside it, and status and gaps follow; without them (old files,
+   *  still loading) the snapshot's count stands. The cards never wait for it:
+   *  while it loads, placeholders stand in (`countsPending`). */
+  distinguishedCountsByDivision?:
+    readonly DivisionDistinguishedCountsRow[] | undefined
 }
 
 /**
@@ -187,8 +228,10 @@ export const DivisionPerformanceCards: React.FC<
 > = ({
   districtSnapshot,
   isLoading = false,
+  countsPending = false,
   snapshotTimestamp,
   districtId,
+  distinguishedCountsByDivision,
 }) => {
   // Below 768 the divisions list is compact rows (#1833); the inline area
   // tables live on each routed division page instead.
@@ -199,12 +242,21 @@ export const DivisionPerformanceCards: React.FC<
       return []
     }
     try {
-      return extractDivisionPerformance(districtSnapshot, snapshotTimestamp)
+      return applyPipelineDistinguished(
+        extractDivisionPerformance(districtSnapshot, snapshotTimestamp),
+        distinguishedCountsByDivision,
+        snapshotTimestamp
+      )
     } catch (error) {
       logger.error('Error extracting division performance:', error)
       return []
     }
-  }, [districtSnapshot, isLoading, snapshotTimestamp])
+  }, [
+    districtSnapshot,
+    isLoading,
+    snapshotTimestamp,
+    distinguishedCountsByDivision,
+  ])
 
   // Loading state
   if (isLoading) {
@@ -305,7 +357,7 @@ export const DivisionPerformanceCards: React.FC<
         <MobileRowList
           label="Divisions"
           noun="divisions"
-          rows={divisions.map(d => toDivisionRow(d, districtId))}
+          rows={divisions.map(d => toDivisionRow(d, districtId, countsPending))}
         />
       ) : (
         <>
@@ -320,6 +372,7 @@ export const DivisionPerformanceCards: React.FC<
                 key={division.divisionId}
                 division={division}
                 districtId={districtId}
+                countsPending={countsPending}
               />
             ))}
           </div>

@@ -106,6 +106,16 @@ export interface ClubTrend {
   meetsOnline?: true
 }
 
+/** One division's published Distinguished counts, and its areas' (#2553). */
+export interface DivisionDistinguishedCountsRow {
+  divisionId: string
+  distinguishedCounts: { confirmed: number; provisional: number }
+  areas: {
+    areaId: string
+    distinguishedCounts: { confirmed: number; provisional: number }
+  }[]
+}
+
 export interface DivisionAnalytics {
   divisionId: string
   divisionName: string
@@ -154,6 +164,12 @@ export interface DistrictAnalytics {
    * publishes it do not carry it (ADR 0019).
    */
   distinguishedCounts?: { confirmed: number; provisional: number }
+  /**
+   * The same count for each division, and each area within it (#2553,
+   * PR #2559). The divisions sum to `distinguishedCounts`. Optional: files
+   * written before the field existed lack it (ADR 0019).
+   */
+  distinguishedCountsByDivision?: DivisionDistinguishedCountsRow[]
   /**
    * Distinguished projection - can be a number (from analytics-summary)
    * or an object (from full analytics endpoint)

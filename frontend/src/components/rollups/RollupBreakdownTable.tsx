@@ -15,6 +15,7 @@ import {
   PriorityColumnsTable,
   type PriorityMetric,
 } from '../PriorityColumnsTable'
+import { DistinguishedCount } from '../DistinguishedCount'
 import { formatShare, type RollupChild } from '../../utils/regionRollupView'
 
 /* RollupBreakdownTable (#1815) — the children of a rollup block (a region's
@@ -75,8 +76,15 @@ const COLUMNS: readonly Column[] = [
   {
     field: 'distinguished',
     label: 'Dist.',
-    title: 'Clubs at any Distinguished level',
-    count: f => f.clubs - f.distinguished.notDistinguished,
+    title:
+      'Confirmed Distinguished clubs; clubs that qualify today but are not yet confirmed are shown beside',
+    // The published confirmed count is the headline, the share and the sort
+    // key (#2580). With none published, the qualifying-today count stands,
+    // labelled; never derived from it.
+    count: f =>
+      f.distinguishedCounts
+        ? f.distinguishedCounts.confirmed
+        : f.clubs - f.distinguished.notDistinguished,
     asShare: true,
   },
   {
@@ -128,7 +136,18 @@ const Cell: React.FC<{ col: Column; f: RegionRollupFigures }> = ({
       <span className="block">
         {formatShare(f.clubs > 0 ? n / f.clubs : null)}
       </span>
-      <span className="rollup-breakdown__sub">{n.toLocaleString('en-US')}</span>
+      <span className="rollup-breakdown__sub">
+        {col.field === 'distinguished' ? (
+          <DistinguishedCount
+            confirmed={n}
+            provisional={f.distinguishedCounts?.provisional}
+            basis={f.distinguishedCounts ? 'confirmed' : 'qualifying-today'}
+            stacked
+          />
+        ) : (
+          n.toLocaleString('en-US')
+        )}
+      </span>
     </>
   )
 }
@@ -150,7 +169,7 @@ const BREAKDOWN_SIZES: Readonly<Record<string, number>> = {
   clubs: 80,
   thriving: 104,
   intervention: 120,
-  distinguished: 88,
+  distinguished: 104,
   csp: 80,
   october: 104,
   officer: 104,

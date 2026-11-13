@@ -12,6 +12,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
+import { applyPipelineDistinguished } from '../utils/divisionAreaDistinguished'
 import { calculateAreaGapAnalysis } from '../utils/areaGapAnalysis'
 import { generateAreaProgressText } from '../utils/areaProgressText'
 import { renderRecognitionBadge } from '../utils/areaRecognitionBadge'
@@ -110,15 +111,23 @@ const AreaPage: React.FC = () => {
     // (#1321), never the wall clock — the snapshot carries no as-of date of its
     // own (the old `snapshot.asOfDate` was a phantom, absent from the live CDN
     // envelope, so this silently fell back to `today`).
-    const division = extractDivisionPerformance(
-      snapshot,
+    // The published confirmed / provisional counts (#2580).
+    const division = applyPipelineDistinguished(
+      extractDivisionPerformance(snapshot, effectiveEndDate),
+      data?.distinguishedCountsByDivision,
       effectiveEndDate
     ).find(d => d.divisionId.toUpperCase() === normalizedDivId)
     const area = division?.areas.find(
       a => a.areaId.toUpperCase() === normalizedAreaId
     )
     return area ? { area, divisionId: division!.divisionId } : undefined
-  }, [snapshot, normalizedDivId, normalizedAreaId, effectiveEndDate])
+  }, [
+    snapshot,
+    normalizedDivId,
+    normalizedAreaId,
+    effectiveEndDate,
+    data?.distinguishedCountsByDivision,
+  ])
   const areaPerformance = matched?.area
 
   const areaNarrative = React.useMemo(() => {

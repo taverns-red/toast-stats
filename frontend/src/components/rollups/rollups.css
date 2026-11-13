@@ -55,6 +55,16 @@
     color: var(--ink);
   }
 
+  /* The "+N qualifying today" extra (#2580) sits on its own 14px line under
+     the confirmed count, so a two-column phone tile never overflows. */
+  .rollup-kpi__value .distinguished-count__provisional {
+    display: block;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
+    white-space: normal;
+  }
+
   .rollup-sections {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
@@ -243,6 +253,15 @@
   .rollup-breakdown__sub {
     display: block;
     color: var(--ink-3);
+  }
+
+  /* The Dist. column's "+N qualifying today" / "qualifying today" label
+     (#2580): its own 14px line, wrapping inside the column. */
+  .rollup-breakdown__sub .distinguished-count__provisional {
+    display: block;
+    font-size: 14px;
+    line-height: 1.25;
+    white-space: normal;
   }
 
   .rollup-breakdown__na {

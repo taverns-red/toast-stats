@@ -89,11 +89,11 @@
     color: var(--ink);
   }
 
-  /* The Distinguished tile carries "N +M provisional" (#2554): the confirmed
-     count stays the 24px headline and never shrinks; the provisional part
+  /* The Distinguished tile carries "N +M qualifying today" (#2554): the
+     confirmed count stays the 24px headline and never shrinks; the extra
      is the muted 12px companion (the type floor's minimum). It stays on the
      number's line while it fits; when it does not (a two-digit pair at 360,
-     or a wider font in the CI renderer) the whole "+M provisional" drops to
+     or a wider font in the CI renderer) the whole "+M qualifying today" drops to
      a second line rather than clipping, so both stay readable. */
   .district-hub__tile-value:has(.distinguished-count__provisional) {
     display: flex;
@@ -234,7 +234,7 @@
     color: var(--ink-3);
   }
 
-  /* "+N provisional" beside a Distinguished count (#2554), wherever
+  /* "+N qualifying today" beside a Distinguished count (#2554), wherever
      DistinguishedCount is drawn: the muted companion to the headline, never
      colour alone (the words carry the meaning). */
   /* The confirmed count follows the card value's line-height (#2580). The
