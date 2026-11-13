@@ -70,3 +70,20 @@ export function formatLongDate(dateStr: string): string {
     day: 'numeric',
   })
 }
+
+const ISO_DATE_SHAPE = /^\d{4}-\d{2}-\d{2}(?:$|[T ])/
+
+/**
+ * The one way a snapshot or as-of date appears in visible text (#2648):
+ * "Nov 11, 2026" ('long', the default) or "Nov 11" ('short'). Text that is
+ * not ISO-shaped (a report's own "October 14, 2026") is passed through
+ * untouched, and a missing date renders as nothing.
+ */
+export function formatDateText(
+  value: string | null | undefined,
+  style: 'long' | 'short' = 'long'
+): string {
+  if (!value) return ''
+  if (!ISO_DATE_SHAPE.test(value)) return value
+  return style === 'short' ? formatShortDate(value) : formatDisplayDate(value)
+}

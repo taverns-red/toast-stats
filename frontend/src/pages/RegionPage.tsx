@@ -31,6 +31,7 @@ import type { RegionRankedDistrict } from '../components/regionRankingsTableFeat
 import { RegionSubnav } from '../components/rollups/RegionSubnav'
 import { useDistrictTrends } from '../hooks/useDistrictTrends'
 import { normaliseRegionId } from '../utils/regionId'
+import { signedDelta, signedPercent } from '../utils/displayFormat'
 import {
   DistinguishedBasisNote,
   DistinguishedCount,
@@ -76,7 +77,6 @@ const KpiCard: React.FC<KpiCardProps> = ({
 }) => {
   const delta = current - base
   const percent = base === 0 ? null : ((current - base) / base) * 100
-  const sign = delta >= 0 ? '+' : ''
   const deltaTone = delta >= 0 ? 'text-green-700' : 'text-tm-true-maroon'
   return (
     <div className="districts-kpi-card" aria-label={`${label} KPI`}>
@@ -91,8 +91,7 @@ const KpiCard: React.FC<KpiCardProps> = ({
       <p className="text-xs text-gray-500 tabular-nums mt-1">
         <span data-testid="kpi-base">Base {base.toLocaleString()}</span> ·{' '}
         <span data-testid="kpi-delta" className={`font-semibold ${deltaTone}`}>
-          {sign}
-          {delta.toLocaleString()}
+          {signedDelta(delta)}
         </span>
         {percent !== null && (
           <>
@@ -102,8 +101,7 @@ const KpiCard: React.FC<KpiCardProps> = ({
               data-testid="kpi-percent"
               className={`font-semibold ${deltaTone}`}
             >
-              {sign}
-              {percent.toFixed(1)}%
+              {signedPercent(percent)}
             </span>
           </>
         )}
@@ -153,8 +151,7 @@ const ValueWithDelta: React.FC<{ value: number; delta: number }> = ({
         delta >= 0 ? 'text-green-700' : 'text-tm-true-maroon'
       }`}
     >
-      {delta >= 0 ? '+' : ''}
-      {delta.toLocaleString()}
+      {signedDelta(delta)}
     </span>
   </>
 )

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { formatDateText } from '../utils/dateFormatting'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
@@ -79,7 +80,7 @@ const ClubsRacePage: React.FC = () => {
         <div className="districts-page-header__intro">
           <p className="placeholder-page__eyebrow">
             Program year {race?.programYear ?? selectedProgramYear.label}
-            {snapshotDate ? ` · as of ${snapshotDate}` : ''}
+            {snapshotDate ? ` · as of ${formatDateText(snapshotDate)}` : ''}
           </p>
           <h1 className="placeholder-page__title">First to {title}</h1>
           <p className="placeholder-page__body">

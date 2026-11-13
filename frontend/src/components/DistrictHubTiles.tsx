@@ -1,7 +1,8 @@
 import React from 'react'
 import { DistinguishedCount } from './DistinguishedCount'
 import type { DistrictKpiStripData } from './DistrictKpiStrip'
-import { formatSigned, nextTierText, worldRankText } from '../utils/districtHub'
+import { nextTierText, worldRankText } from '../utils/districtHub'
+import { signedDelta } from '../utils/displayFormat'
 import {
   HUB_BULLET_TILES,
   HUB_DASH,
@@ -136,7 +137,7 @@ export const DistrictHubTiles: React.FC<DistrictHubTilesProps> = ({
       <Tile
         title={HUB_NET_TITLE}
         label={HUB_NET_LABEL}
-        value={net !== null ? formatSigned(net) : HUB_DASH}
+        value={net !== null ? signedDelta(net) : HUB_DASH}
         delta={HUB_NET_CAPTION}
         rank=""
         tone={

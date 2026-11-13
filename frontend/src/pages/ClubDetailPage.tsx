@@ -15,6 +15,7 @@ import {
   sinceSnapshotBasis,
 } from '../utils/netChangeBasis'
 import { formatShortDate } from '../utils/dateFormatting'
+import { signedDelta, signedPercent } from '../utils/displayFormat'
 import { MembershipHeadline } from '../components/clubs/MembershipHeadline'
 import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
@@ -861,7 +862,7 @@ const ClubDetailPage: React.FC = () => {
               { label: 'Current', value: latestMembership },
               {
                 label: `Change ${membershipBasis}`,
-                value: `${membershipChange > 0 ? '+' : ''}${membershipChange}`,
+                value: signedDelta(membershipChange),
                 valClass:
                   membershipChange > 0
                     ? 'pos'
@@ -981,10 +982,9 @@ const ClubDetailPage: React.FC = () => {
                                   : '')
                             }
                           >
-                            {membershipChange >= 0 ? '+' : ''}
-                            {membershipChange}
+                            {signedDelta(membershipChange)}
                             {membershipChangePct !== null &&
-                              ` (${membershipChangePct >= 0 ? '+' : ''}${membershipChangePct.toFixed(1)}%)`}
+                              ` (${signedPercent(membershipChangePct)})`}
                           </span>
                         </div>
                       </div>

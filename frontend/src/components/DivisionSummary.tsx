@@ -23,6 +23,7 @@
 
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { signedDelta } from '../utils/displayFormat'
 import type { DistinguishedStatus } from '../utils/divisionStatus'
 import type { DivisionGapAnalysis } from '../utils/divisionGapAnalysis'
 
@@ -333,8 +334,7 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
             aria-label={`Net growth: ${netGrowth > 0 ? 'positive' : netGrowth < 0 ? 'negative' : 'neutral'} ${Math.abs(netGrowth)}`}
           >
             <span aria-hidden="true">{netGrowthIcon}</span>
-            {netGrowth > 0 ? '+' : ''}
-            {netGrowth}
+            {signedDelta(netGrowth)}
           </span>
         </div>
 

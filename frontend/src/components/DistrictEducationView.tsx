@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { formatDateText } from '../utils/dateFormatting'
 import { useSearchParams } from 'react-router-dom'
 import type {
   DistrictEducation,
@@ -315,8 +316,8 @@ export const DistrictEducationView: React.FC<DistrictEducationViewProps> = ({
       </p>
       <p className="education-provenance" data-testid="education-provenance">
         Source: {sourceLabel}
-        {e.source.asOf ? `, as of ${e.source.asOf}` : ''} · snapshot{' '}
-        {snapshotDate}
+        {e.source.asOf ? `, as of ${formatDateText(e.source.asOf)}` : ''} ·
+        snapshot {formatDateText(snapshotDate)}
       </p>
 
       <KpiStrip e={e} />
