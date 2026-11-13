@@ -350,11 +350,19 @@
 
   /* 16px: below this iOS Safari zooms the page on focus. */
   .context-sheet__select {
+    /* appearance:none so the 44px min-height is honoured in WebKit, which
+       ignores it on a native select with default chrome (lesson 111); the
+       caret is drawn back in, as on .action-list-scope__select. */
+    appearance: none;
+    -webkit-appearance: none;
     min-height: 44px;
-    padding: 0 12px;
+    padding: 0 32px 0 12px;
     border: 1px solid var(--line);
     border-radius: 8px;
     background-color: var(--surface);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23888' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
     color: var(--ink);
     font-size: 16px;
   }
