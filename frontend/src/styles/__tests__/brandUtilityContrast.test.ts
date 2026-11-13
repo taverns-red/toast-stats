@@ -6,6 +6,7 @@ import {
   parseColor,
   prop,
   readSrcCss,
+  sourceTexts,
   surfaces,
   tokens,
   type Theme,
@@ -53,4 +54,67 @@ describe('.tm-text-cool-gray is readable text, not a decorative tint (#2642)', (
       }
     }
   )
+})
+
+describe('tinted /N fills carry an explicit rule per theme (#2642)', () => {
+  // `bg-tm-x/N` compiles to an oklab() color-mix that axe cannot resolve and
+  // that ignores the dark palette; dark-mode.css pins an rgba per theme (the
+  // `bg-tm-loyal-blue\/10` pattern). These two replaced `bg-tm-x bg-opacity-20`
+  // pairs, whose solid base class used to match the dark overrides.
+  const fills = ['bg-tm-happy-yellow/20', 'bg-tm-cool-gray/20']
+
+  it('are still the fills the source uses', () => {
+    const all = sourceTexts().join('\n')
+    for (const cls of fills) expect(all).toContain(cls)
+  })
+
+  it.each(fills)('%s has a light and a dark rule', cls => {
+    const esc = cls.replace('/', '\\/')
+    for (const theme of THEMES) {
+      const decls = declsFor(darkCss, `[data-theme='${theme}'] .${esc}`)
+      expect(
+        prop(decls, 'background-color'),
+        `${theme} rule for ${cls}`
+      ).toMatch(/^rgba\(/)
+    }
+  })
+
+  // DistrictDetailPage limited-data banner: bg-tm-happy-yellow/20 with
+  // text-tm-black copy and a text-tm-loyal-blue icon, on the page surfaces.
+  it.each(THEMES)('limited-data banner text clears AA (%s)', theme => {
+    const toks = tokens(theme)
+    const fill = parseColor(
+      prop(
+        declsFor(darkCss, `[data-theme='${theme}'] .bg-tm-happy-yellow\\/20`),
+        'background-color'
+      )!,
+      toks
+    )
+    const ink =
+      theme === 'dark'
+        ? parseColor(
+            prop(
+              declsFor(darkCss, "[data-theme='dark'] .text-tm-black"),
+              'color'
+            )!,
+            toks
+          )
+        : parseColor('#000000', toks)
+    const accent =
+      theme === 'dark'
+        ? parseColor('#5dade2', toks)
+        : parseColor('#004165', toks)
+    for (const surface of surfaces(theme)) {
+      const bg = over(fill, surface)
+      expect(contrast(ink, bg), 'copy').toBeGreaterThanOrEqual(AA)
+      expect(contrast(accent, bg), 'icon').toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it('retires the descendant-ink rule the old solid banner needed', () => {
+    // The banner is a tint now, so dark ink on it would be wrong; nothing else
+    // nests text-tm-black / text-gray-600 inside a solid happy-yellow fill.
+    expect(darkCss).not.toMatch(/\.bg-tm-happy-yellow \.text-tm-black/)
+    expect(darkCss).not.toMatch(/\.bg-tm-happy-yellow \.text-gray-600/)
+  })
 })

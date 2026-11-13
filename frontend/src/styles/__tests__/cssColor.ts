@@ -3,7 +3,7 @@
    jsdom does no cascade, so contrast contracts are pinned on the CSS text:
    read the tokens a theme defines, read the rule a class resolves to, and
    compute the WCAG ratio of the pairing. Not a test file (no *.test.*). */
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
@@ -154,4 +154,24 @@ export function surfaces(theme: Theme): Rgba[] {
   return ['--bg', '--surface', '--surface-2'].map(k =>
     parseColor(`var(${k})`, t)
   )
+}
+
+/** Text of every non-test .ts/.tsx source file under src/. */
+export function sourceTexts(): string[] {
+  const out: string[] = []
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      const full = resolve(dir, name)
+      if (name === '__tests__' || name === 'node_modules') continue
+      if (statSync(full).isDirectory()) walk(full)
+      else if (
+        /\.tsx?$/.test(name) &&
+        !/\.(test|spec)\.[tj]sx?$/.test(name) &&
+        !name.endsWith('.stories.tsx')
+      )
+        out.push(readFileSync(full, 'utf-8'))
+    }
+  }
+  walk(srcDir)
+  return out
 }
