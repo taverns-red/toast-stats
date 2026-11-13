@@ -40,13 +40,13 @@
 
   /* A zero-height sticky wrapper: it takes no layout space, so it appearing or
      disappearing cannot shift the page (no CLS). The line is drawn absolutely
-     from it. z-index 30 is the existing value shared with .context-bar and
-     .jump-to-bar, below the top bar (40); the z-index tokens are #2674. */
+     from it. z-index is the shared sub-bar token (redesign.css), above
+     .context-bar and the table headers, below the top bar. */
   .district-kpi-stuck {
     position: sticky;
     top: var(--app-top-offset, 56px); /* under .app-shell-top-bar */
     height: 0;
-    z-index: 30;
+    z-index: var(--z-sub-bar, 35);
   }
 
   /* Below 768 the 44px phone context bar sits under the top bar. */
@@ -56,28 +56,40 @@
     }
   }
 
-  /* One opaque row, at most 64px: the legacy surface token with no alpha and
-     no blur, so nothing shows through in light or dark. */
+  /* One opaque box, at most 64px: the legacy surface token with no alpha and no
+     blur, so nothing shows through in light or dark. Items wrap whole (never
+     clipped or elided) to at most two compact rows; the optional item is
+     dropped whole below 600px so a phone needs no more than two. */
   .district-kpi-stuck__line {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     box-sizing: border-box;
-    height: 48px;
+    height: 56px;
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    align-content: center;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    column-gap: 16px;
+    row-gap: 0;
     padding: 0 16px;
-    overflow: hidden;
-    white-space: nowrap;
     background-color: var(--surface);
     border-bottom: 1px solid var(--line);
     border-radius: 0 0 12px 12px;
     font-family: var(--sans);
+    line-height: 20px;
     color: var(--ink-2);
+  }
+
+  .district-kpi-stuck__item {
+    white-space: nowrap;
+  }
+
+  @media (max-width: 599px) {
+    .district-kpi-stuck__item--optional {
+      display: none;
+    }
   }
 
   .district-kpi-stuck[data-stuck='false'] .district-kpi-stuck__line {
@@ -100,12 +112,12 @@
      bar plus the line while it is stuck, and keep sticky table headers below
      it rather than under it. */
   html:has(.district-kpi-stuck[data-stuck='true']) {
-    scroll-padding-top: calc(var(--app-top-offset, 56px) + 48px + 8px);
+    scroll-padding-top: calc(var(--app-top-offset, 56px) + 56px + 8px);
   }
 
   @media (max-width: 767px) {
     html:has(.district-kpi-stuck[data-stuck='true']) {
-      scroll-padding-top: calc(var(--app-top-offset, 56px) + 44px + 48px + 8px);
+      scroll-padding-top: calc(var(--app-top-offset, 56px) + 44px + 56px + 8px);
     }
   }
 
@@ -116,7 +128,7 @@
   }
 
   .app-shell:has(.district-kpi-stuck[data-stuck='true']) {
-    --table-sticky-top: calc(var(--app-top-offset, 56px) + 48px);
+    --table-sticky-top: calc(var(--app-top-offset, 56px) + 56px);
   }
 
   .district-kpi-strip__expanded {

@@ -185,7 +185,9 @@ for (const [width, height] of [
       if (!el) return null
       const cs = getComputedStyle(el)
       const r = el.getBoundingClientRect()
-      const kids = Array.from(el.children).map(c => c.getBoundingClientRect())
+      const kids = Array.from(el.children)
+        .map(c => c.getBoundingClientRect())
+        .filter(b => b.width > 0)
       const probe = document.elementFromPoint(r.left + 8, r.top + r.height / 2)
       const smallest = Array.from(el.querySelectorAll('*')).reduce(
         (min, n) => Math.min(min, parseFloat(getComputedStyle(n).fontSize)),

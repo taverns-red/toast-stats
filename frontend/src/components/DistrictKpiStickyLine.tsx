@@ -65,6 +65,7 @@ export const DistrictKpiStickyLine: React.FC<DistrictKpiStickyLineProps> = ({
   if (!kpis) return null
 
   const provisional = kpis.distinguishedClubs.provisional ?? 0
+  const qualifyingToday = kpis.distinguishedClubs.basis === 'qualifying-today'
 
   return (
     <>
@@ -85,26 +86,39 @@ export const DistrictKpiStickyLine: React.FC<DistrictKpiStickyLineProps> = ({
           aria-hidden="true"
         >
           <span className="district-kpi-stuck__item">
-            <span className="district-kpi-stuck__label">Paid</span>{' '}
+            <span className="district-kpi-stuck__label">Paid clubs</span>{' '}
             <strong>{formatCompact(kpis.paidClubs.current)}</strong>
           </span>
-          <span className="district-kpi-stuck__item">
-            <span className="district-kpi-stuck__label">Pmts</span>{' '}
+          <span className="district-kpi-stuck__item district-kpi-stuck__item--optional">
+            <span className="district-kpi-stuck__label">Payments</span>{' '}
             <strong>{formatCompact(kpis.membershipPayments.current)}</strong>
           </span>
           <span className="district-kpi-stuck__item">
-            <span className="district-kpi-stuck__label">Dist</span>{' '}
+            <span className="district-kpi-stuck__label">Distinguished</span>{' '}
             <strong>{formatCompact(kpis.distinguishedClubs.current)}</strong>
-            {provisional > 0 && (
+            {/* The strip's own wording (#2554, #2580): the count is confirmed
+                unless it says "qualifying today"; the extra is "+N
+                provisional", never a bare "+N". */}
+            {qualifyingToday ? (
               <span className="district-kpi-stuck__label">
                 {' '}
-                +{formatCompact(provisional)}
+                qualifying today
               </span>
+            ) : (
+              provisional > 0 && (
+                <span className="district-kpi-stuck__label">
+                  {' '}
+                  +{formatCompact(provisional)} provisional
+                </span>
+              )
             )}
           </span>
           <span className="district-kpi-stuck__item">
             <span className="district-kpi-stuck__label">Net</span>{' '}
-            <strong>{formatSignedCompact(kpis.netMemberChange.current)}</strong>
+            <strong>{formatSignedCompact(kpis.netMemberChange.current)}</strong>{' '}
+            <span className="district-kpi-stuck__label">
+              payments vs. program-year base
+            </span>
           </span>
         </div>
       </div>
