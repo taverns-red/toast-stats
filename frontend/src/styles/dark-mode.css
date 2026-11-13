@@ -101,7 +101,7 @@
 }
 
 [data-theme='dark'] .bg-gray-200 {
-  background-color: var(--line-2) !important;
+  background-color: var(--line) !important;
 }
 
 [data-theme='dark'] .bg-gray-300 {
@@ -270,7 +270,7 @@
 }
 
 [data-theme='dark'] .hover\:bg-gray-100:hover {
-  background-color: var(--line-2) !important;
+  background-color: var(--line) !important;
 }
 
 [data-theme='dark'] .hover\:bg-gray-200:hover {
