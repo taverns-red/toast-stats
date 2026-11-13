@@ -14,6 +14,7 @@ import {
   type SearchResultGroup,
 } from '../../services/searchIndex'
 import { DistrictChipAndName } from '../DistrictChipAndName'
+import { hasDescriptiveName } from '../../utils/districtName'
 
 // Human-readable group headings, in the index's canonical group order.
 const GROUP_LABEL: Record<SearchEntityType, string> = {
@@ -36,6 +37,9 @@ interface OmniSearchResultsProps {
   listboxId: string
   /** Prefix for each option's element id (must be unique per mount). */
   idPrefix: string
+  /** The typed query, so a row can say why it matched (a club found by its
+      number shows "Club 61", #2652). */
+  query?: string
 }
 
 const OmniSearchResults: React.FC<OmniSearchResultsProps> = ({
@@ -45,6 +49,7 @@ const OmniSearchResults: React.FC<OmniSearchResultsProps> = ({
   onSelect,
   listboxId,
   idPrefix,
+  query = '',
 }) => {
   const optionId = (e: SearchEntity) => `${idPrefix}-${e.type}-${e.id}`
   return (
@@ -91,7 +96,7 @@ const OmniSearchResults: React.FC<OmniSearchResultsProps> = ({
                       onClick={onSelect}
                       className="command-palette__result-link"
                     >
-                      {renderEntity(entity)}
+                      {renderEntity(entity, query)}
                     </Link>
                   </li>
                 )
@@ -104,6 +109,20 @@ const OmniSearchResults: React.FC<OmniSearchResultsProps> = ({
   )
 }
 
+// A numeric query that matched a club on its number: the number is never
+// otherwise shown, so "61" listing clubs from other districts looked random
+// (#2652). Digits only, leading zeros ignored (club ids are zero-padded).
+function clubNumberContext(entity: SearchEntity, query: string) {
+  if (entity.type !== 'club') return entity.context
+  const q = query.trim().replace(/^0+(?=\d)/, '')
+  if (!/^\d+$/.test(q)) return entity.context
+  const number = entity.id.replace(/^0+(?=\d)/, '')
+  if (!number.includes(q)) return entity.context
+  return entity.context
+    ? `Club ${number} · ${entity.context}`
+    : `Club ${number}`
+}
+
 // District results reuse the chip+name treatment (and its #522 no-duplicate
 // guard); regions and clubs render their label plus disambiguation context.
 //
@@ -114,7 +133,7 @@ const OmniSearchResults: React.FC<OmniSearchResultsProps> = ({
 // from reading as "exists", so nobody is surprised that D27 ends at
 // 2026-06-30. It is real text inside the option, so it is announced with the
 // row rather than hidden behind a visual-only cue.
-function renderEntity(entity: SearchEntity) {
+function renderEntity(entity: SearchEntity, query: string) {
   if (entity.type === 'district') {
     return (
       <>
@@ -124,6 +143,13 @@ function renderEntity(entity: SearchEntity) {
           chipClassName="command-palette__result-num"
           nameClassName="command-palette__result-name"
         />
+        {/* Most districts are named by their bare number, so the chip alone
+            reads as a code: say "District 61" (#2652). */}
+        {!hasDescriptiveName(entity.label) && (
+          <span className="command-palette__result-name">
+            District {entity.id}
+          </span>
+        )}
         {entity.inactive && entity.context && (
           <span className="command-palette__result-region">
             {entity.context}
@@ -132,11 +158,12 @@ function renderEntity(entity: SearchEntity) {
       </>
     )
   }
+  const context = clubNumberContext(entity, query)
   return (
     <>
       <span className="command-palette__result-name">{entity.label}</span>
-      {entity.context && (
-        <span className="command-palette__result-region">{entity.context}</span>
+      {context && (
+        <span className="command-palette__result-region">{context}</span>
       )}
     </>
   )

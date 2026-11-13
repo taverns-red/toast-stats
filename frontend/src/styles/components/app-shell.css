@@ -7312,8 +7312,11 @@
     border-radius: var(--rds-radius-sm);
   }
 
+  /* Tint plus a 3px inset bar: the bar is the >=3:1 non-colour cue (#2652;
+     the old --surface-2 tint was 1.04:1 on white). */
   .command-palette__result--active {
-    background-color: var(--surface-2);
+    background-color: var(--tm-loyal-blue-10);
+    box-shadow: inset 3px 0 0 var(--tm-loyal-blue);
   }
 
   .command-palette__result-link {

@@ -33,6 +33,9 @@ const INPUT_ID = 'landing-search-input'
 // what to type, so a screen reader hears each once.
 export const LANDING_SEARCH_LABEL = 'District number, club name or region'
 
+const EMPTY_STATE =
+  'No matches. Try a district number such as 61, or part of a club name.'
+
 interface LandingSearchProps {
   /** The page's "/" shortcut focuses this input. */
   inputRef?: React.RefObject<HTMLInputElement | null>
@@ -130,7 +133,13 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
   // highlighted with the arrow keys; otherwise the list stays open.
   const [armed, setArmed] = useState(false)
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') setArmed(true)
+    // The first arrow key only reveals the highlight (LAND-42): until then
+    // no row is active, so what Enter does is never a hidden choice.
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !armed) {
+      e.preventDefault()
+      setArmed(true)
+      return
+    }
     if (e.key === 'Enter' && !armed) {
       const target = enterTarget(query, flat)
       e.preventDefault()
@@ -155,7 +164,7 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
         ? 'error'
         : !index
           ? 'Searching…'
-          : 'No matches.'
+          : EMPTY_STATE
 
   return (
     <div className="landing-search" ref={containerRef}>
@@ -196,16 +205,44 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
           }}
           onBlur={onBlur}
           onKeyDown={onKeyDown}
-          placeholder="District number, club name or number, region…"
+          placeholder="e.g. 61 or Rock On"
           aria-autocomplete="list"
           aria-expanded={listboxOpen}
           aria-controls={listboxOpen ? LISTBOX_ID : undefined}
           aria-activedescendant={
-            listboxOpen && activeEntity ? optionId(activeEntity) : undefined
+            listboxOpen && armed && activeEntity
+              ? optionId(activeEntity)
+              : undefined
           }
           autoComplete="off"
           className="landing-search__input"
         />
+        {hasQuery && (
+          <button
+            type="button"
+            className="landing-search__clear"
+            aria-label="Clear search"
+            onMouseDown={e => e.preventDefault()}
+            onClick={() => {
+              setArmed(false)
+              setQuery('')
+              ref.current?.focus()
+            }}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        )}
       </div>
       {showResults && (
         // A press inside the list keeps focus in the input (#2556). Safari
@@ -243,8 +280,12 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
           ) : (
             <OmniSearchResults
               groups={groups}
-              activeIndex={activeIndex}
-              onActivate={setActiveIndex}
+              activeIndex={armed ? activeIndex : -1}
+              onActivate={i => {
+                setArmed(true)
+                setActiveIndex(i)
+              }}
+              query={query}
               onSelect={dismiss}
               listboxId={LISTBOX_ID}
               idPrefix={OPTION_PREFIX}
