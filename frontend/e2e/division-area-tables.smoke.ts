@@ -12,7 +12,7 @@ import { test, expect, type Page } from './fixtures/test'
  */
 
 const DIVISION = '/district/61/division/B'
-const AREA = '/district/61/division/B/area/B1'
+const AREA = '/district/61/division/A/area/01'
 
 async function open(page: Page, path: string, ready: string): Promise<void> {
   await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
@@ -116,7 +116,13 @@ test('division page at 1024: area table headers stay short and 14px or more', as
         const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.3
         return {
           size: parseFloat(cs.fontSize),
-          lines: Math.round(th.getBoundingClientRect().height / lh),
+          // Text lines only: the cell's own padding is not a line.
+          lines: Math.round(
+            (th.getBoundingClientRect().height -
+              parseFloat(cs.paddingTop) -
+              parseFloat(cs.paddingBottom)) /
+              lh
+          ),
         }
       })
     )

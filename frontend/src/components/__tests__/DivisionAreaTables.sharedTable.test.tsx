@@ -276,6 +276,12 @@ describe('entity-tables stylesheet (#2718)', () => {
     expect(tooSmall.map(m => m[0])).toEqual([])
   })
 
+  it('keeps area-table cells on one line so the recognition badge stays a pill', () => {
+    expect(css).toMatch(
+      /\.entity-table--areas td\s*\{[^}]*white-space:\s*nowrap/
+    )
+  })
+
   it('gives name links a 44px hit area', () => {
     expect(css).toMatch(
       /\.entity-table__link\s*\{[^}]*min-height:\s*44px[^}]*\}/

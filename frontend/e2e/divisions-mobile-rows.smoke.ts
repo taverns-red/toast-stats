@@ -78,8 +78,15 @@ async function measure(page: Page): Promise<Geometry> {
       areaTables: Array.from(document.querySelectorAll('table'))
         .filter(visible)
         .filter(t => !t.closest('.ddp-criteria'))
+        // The criteria tables are named by their caption (#2718), not an
+        // aria-label.
         .filter(
-          t => !/level requirements$/.test(t.getAttribute('aria-label') ?? '')
+          t =>
+            !/level requirements$/.test(
+              t.getAttribute('aria-label') ??
+                t.querySelector('caption')?.textContent ??
+                ''
+            )
         ).length,
       naRuns: (document.body.innerText.match(/N\/A\s+N\/A\s+N\/A/g) ?? [])
         .length,

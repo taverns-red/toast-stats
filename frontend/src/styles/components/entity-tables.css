@@ -137,6 +137,12 @@
   white-space: nowrap;
 }
 
+/* Area table: cells hold one line (the recognition badge wrapped to a
+   two-line pill); only the headers wrap. */
+.entity-table--areas td {
+  white-space: nowrap;
+}
+
 /* ── Criteria reference tables ───────────────────────────────────────────── */
 .entity-table--criteria tbody td {
   vertical-align: middle;
