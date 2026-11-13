@@ -1,5 +1,39 @@
 # Changelog
 
+## [3.67.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.66.1...frontend-v3.67.0) (2026-11-13)
+
+
+### Features
+
+* **tables:** M8 council and print-pack tables on shared styles ([#2676](https://github.com/taverns-red/toast-stats/issues/2676)) ([#2788](https://github.com/taverns-red/toast-stats/issues/2788)) ([60e983e](https://github.com/taverns-red/toast-stats/commit/60e983e0bfe654cda2e942366cc516488b1c4015))
+* **ui:** +N qualifying today on the collapsed strip and What Changed tile ([#2580](https://github.com/taverns-red/toast-stats/issues/2580), part) ([#2775](https://github.com/taverns-red/toast-stats/issues/2775)) ([0821302](https://github.com/taverns-red/toast-stats/commit/08213021ea0d5ed2730c3f6046c6075cd373e681))
+* **ui:** aligned table headers + raw-value ratchet ([#2651](https://github.com/taverns-red/toast-stats/issues/2651), part) ([#2792](https://github.com/taverns-red/toast-stats/issues/2792)) ([b9c9372](https://github.com/taverns-red/toast-stats/commit/b9c9372907eb7267482222816e58a1c02a36798f))
+* **ui:** confirmed Distinguished headline on division and area ([#2580](https://github.com/taverns-red/toast-stats/issues/2580), part) ([#2783](https://github.com/taverns-red/toast-stats/issues/2783)) ([12f5295](https://github.com/taverns-red/toast-stats/commit/12f529519d362c8b02eca35e7aaae0a026b4d000))
+* **ui:** confirmed Distinguished headline on region scoreboard and health rollups ([#2580](https://github.com/taverns-red/toast-stats/issues/2580), part) ([#2794](https://github.com/taverns-red/toast-stats/issues/2794)) ([0373baf](https://github.com/taverns-red/toast-stats/commit/0373baf8a7af75bc2bb06d6b8faed8bf8779d798))
+* **ui:** shared formatters for dates, PYs, signed numbers, regions, districts ([#2648](https://github.com/taverns-red/toast-stats/issues/2648)) ([#2772](https://github.com/taverns-red/toast-stats/issues/2772)) ([249b39d](https://github.com/taverns-red/toast-stats/commit/249b39d628a8f744958d4d50dc0848d6c6a9ef73))
+
+
+### Bug Fixes
+
+* **a11y:** [#2643](https://github.com/taverns-red/toast-stats/issues/2643) contrast follow-ups ([#2774](https://github.com/taverns-red/toast-stats/issues/2774)) ([#2781](https://github.com/taverns-red/toast-stats/issues/2781)) ([fccf7b1](https://github.com/taverns-red/toast-stats/commit/fccf7b1bbc08d840deae27d4d7776bd52e277198))
+* **a11y:** name InfoTooltip, stop it inflating its line, no title-only meanings ([#2644](https://github.com/taverns-red/toast-stats/issues/2644)) ([#2755](https://github.com/taverns-red/toast-stats/issues/2755)) ([0555749](https://github.com/taverns-red/toast-stats/commit/0555749023f0cdab05b1dc440ada719a1ac6e69e))
+* **a11y:** raise light-mode glyph, icon, placeholder and border contrast ([#2643](https://github.com/taverns-red/toast-stats/issues/2643)) ([#2771](https://github.com/taverns-red/toast-stats/issues/2771)) ([2467fff](https://github.com/taverns-red/toast-stats/commit/2467fffad1917bb911f26cd1eb28dddcc8b33bb6))
+* **club:** panel gaps, hero wrap, risk card, timeline and standing wording ([#2655](https://github.com/taverns-red/toast-stats/issues/2655), part) ([#2778](https://github.com/taverns-red/toast-stats/issues/2778)) ([1cb5aaf](https://github.com/taverns-red/toast-stats/commit/1cb5aaf1750eea65b6ac7ac6e44c7afa7b07e340))
+* **css:** make dead font keys, tm-h2, --display and Button resolve ([#2642](https://github.com/taverns-red/toast-stats/issues/2642)) ([#2773](https://github.com/taverns-red/toast-stats/issues/2773)) ([4f87dfa](https://github.com/taverns-red/toast-stats/commit/4f87dfa98e279964d70989f1e8dfc4c71bf09539))
+* **hosting:** revalidate unhashed public assets; version icon URLs ([#2785](https://github.com/taverns-red/toast-stats/issues/2785)) ([#2786](https://github.com/taverns-red/toast-stats/issues/2786)) ([1caefcd](https://github.com/taverns-red/toast-stats/commit/1caefcd1c00cf52f01b311ed36e8edab6f715f49))
+* **ui:** trophy case tier as plain text, no fill (G1) ([#2766](https://github.com/taverns-red/toast-stats/issues/2766)) ([#2767](https://github.com/taverns-red/toast-stats/issues/2767)) ([b3947d8](https://github.com/taverns-red/toast-stats/commit/b3947d85f27cc88d99baa2d7f558f9d6b481f2bf))
+
+
+### Refactors
+
+* **ui:** one StatTile for KPI tile families; aligned figure baselines ([#2649](https://github.com/taverns-red/toast-stats/issues/2649)) ([#2787](https://github.com/taverns-red/toast-stats/issues/2787)) ([a9e7859](https://github.com/taverns-red/toast-stats/commit/a9e78593e40e91a8e483c11bce37b6fbcf19e9e6))
+
+
+### Performance
+
+* **club:** cut club-route LCP ([#2777](https://github.com/taverns-red/toast-stats/issues/2777)) ([#2789](https://github.com/taverns-red/toast-stats/issues/2789)) ([45fbd66](https://github.com/taverns-red/toast-stats/commit/45fbd66354fdcc4c9c5482b882a52f828431cb95))
+* **fonts:** move club panels and world map to the legacy fonts ([#2765](https://github.com/taverns-red/toast-stats/issues/2765)) ([#2768](https://github.com/taverns-red/toast-stats/issues/2768)) ([cc6cfe6](https://github.com/taverns-red/toast-stats/commit/cc6cfe68a89272cf600bf141193154d4f8d05d08))
+
 ## [3.66.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.66.0...frontend-v3.66.1) (2026-11-13)
 
 
