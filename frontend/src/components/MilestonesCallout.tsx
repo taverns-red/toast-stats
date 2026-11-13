@@ -257,7 +257,10 @@ export const MilestonesCallout: React.FC<MilestonesCalloutProps> = ({
                     {formatShortDate(entry.anniversaryDate)}
                   </span>
                   {i < group.entries.length - 1 && (
-                    <span aria-hidden="true" className="shrink-0 text-gray-300">
+                    <span
+                      aria-hidden="true"
+                      className="shrink-0 text-[var(--ink-3)]"
+                    >
                       ·
                     </span>
                   )}
