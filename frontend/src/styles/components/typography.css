@@ -80,6 +80,15 @@
     -webkit-text-stroke: none !important;
   }
 
+  /* .tm-h2 sets the full brand h2 (size included) on a non-heading element,
+     e.g. a stat value in StatCard / RankingCard (#2642). */
+  .tm-h2 {
+    font-family: var(--tm-font-headline);
+    font-size: var(--tm-h2-font-size);
+    font-weight: var(--tm-h2-font-weight);
+    line-height: var(--tm-h2-line-height);
+  }
+
   .h2 {
     font-family: var(--tm-font-headline);
     font-weight: var(--tm-h2-font-weight);

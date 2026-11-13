@@ -624,7 +624,7 @@ const DistrictDetailPageInner: React.FC = () => {
             {/* Limited data banner */}
             <div
               data-testid="limited-data-banner"
-              className="bg-tm-happy-yellow bg-opacity-20 border border-tm-happy-yellow rounded-lg p-4 mb-6 flex items-start gap-3"
+              className="bg-tm-happy-yellow/20 border border-tm-happy-yellow rounded-lg p-4 mb-6 flex items-start gap-3"
             >
               <svg
                 className="w-5 h-5 text-tm-loyal-blue mt-0.5 flex-shrink-0"

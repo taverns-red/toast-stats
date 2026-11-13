@@ -17,10 +17,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   ...props
 }) => {
   const baseClasses = 'tm-form-select tm-body'
-  const stateClasses = [
-    error && 'tm-form-select--error',
-    props.disabled && 'tm-form-select--disabled',
-  ]
+  const stateClasses = [error && 'tm-form-select--error']
     .filter(Boolean)
     .join(' ')
 

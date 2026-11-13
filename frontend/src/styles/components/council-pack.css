@@ -95,7 +95,7 @@
   color: var(--surface);
   background: var(--tm-loyal-blue);
   border: 1px solid var(--tm-loyal-blue);
-  border-radius: var(--rt-radius-md, 8px);
+  border-radius: var(--rt-radius-md, 4px);
   cursor: pointer;
 }
 
@@ -115,7 +115,7 @@
   padding: 1.25rem;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--rt-radius-md, 8px);
+  border-radius: var(--rt-radius-md, 4px);
 }
 
 .council-pack__page + .council-pack__page {

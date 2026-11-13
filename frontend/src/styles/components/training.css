@@ -43,7 +43,7 @@
   color: var(--ink);
   background: var(--tm-loyal-blue-10);
   border: 1px solid var(--line);
-  border-radius: var(--rt-radius-md, 8px);
+  border-radius: var(--rt-radius-md, 4px);
   max-width: 75ch;
 }
 
@@ -101,7 +101,7 @@
   padding: 0.875rem 1rem 1rem;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--rt-radius-md, 8px);
+  border-radius: var(--rt-radius-md, 4px);
 }
 
 .training-round__head {
@@ -146,7 +146,7 @@
   min-width: 0;
   padding: 0.5rem 0.625rem;
   border: 1px solid var(--line);
-  border-radius: var(--rt-radius-sm, 6px);
+  border-radius: var(--rt-radius-sm, 3px);
 }
 
 .training-kpi--selected {
@@ -310,7 +310,7 @@
   color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--rt-radius-md, 8px);
+  border-radius: var(--rt-radius-md, 4px);
 }
 
 .training-summary__title {

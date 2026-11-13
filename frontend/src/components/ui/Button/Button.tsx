@@ -39,7 +39,7 @@ const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseClasses = `
-    font-family: var(--tm-font-headline)
+    font-tm-headline
     tm-touch-target
     inline-flex items-center justify-center
     font-semibold
@@ -55,9 +55,9 @@ const Button: React.FC<ButtonProps> = ({
   const variantClasses = {
     primary: `
       bg-tm-loyal-blue text-white
-      hover:bg-opacity-90 active:bg-opacity-80
+      hover:bg-tm-loyal-blue/90 active:bg-tm-loyal-blue/80
       focus-visible:outline-[var(--focus-ring)]
-      disabled:hover:bg-opacity-100
+      disabled:hover:bg-tm-loyal-blue
     `,
     secondary: `
       bg-transparent text-tm-loyal-blue
@@ -68,13 +68,13 @@ const Button: React.FC<ButtonProps> = ({
     `,
     accent: `
       bg-tm-happy-yellow text-tm-black
-      hover:bg-opacity-90 active:bg-opacity-80
+      hover:bg-tm-happy-yellow/90 active:bg-tm-happy-yellow/80
       focus-visible:outline-tm-black
-      disabled:hover:bg-opacity-100
+      disabled:hover:bg-tm-happy-yellow
     `,
     ghost: `
       bg-transparent text-tm-loyal-blue
-      hover:bg-tm-loyal-blue hover:bg-opacity-10
+      hover:bg-tm-loyal-blue/10
       focus-visible:outline-tm-loyal-blue
       disabled:hover:bg-transparent
     `,

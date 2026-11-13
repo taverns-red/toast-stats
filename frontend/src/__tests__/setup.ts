@@ -2,8 +2,11 @@ import '@testing-library/jest-dom'
 import 'jest-axe/extend-expect'
 import { afterEach, beforeEach, vi } from 'vitest'
 
-// Import brand CSS to make design tokens available in tests
-import '../styles/brand.css'
+// No stylesheet is imported here: jsdom tests assert on class names and
+// attributes, and a test-only import of CSS the app never loads is how
+// production-dead `tm-*` classes went unnoticed (#2642). The resolver test in
+// styles/__tests__/classesAndVarsResolve.test.ts checks classes against the
+// CSS that index.css really ships.
 
 // Mock ResizeObserver for Recharts components
 const ResizeObserverMock = class ResizeObserver {

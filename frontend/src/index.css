@@ -45,6 +45,7 @@
 @import './styles/components/cards.css';
 @import './styles/components/status-indicators.css';
 @import './styles/components/alerts.css';
+@import './styles/components/brand-utilities.css';
 @import './styles/components/app-shell.css';
 @import './styles/components/data-controls.css';
 @import './styles/clubs-table.css';
@@ -317,15 +318,12 @@
    * Per Toastmasters Brand Guidelines
    * ======================================== */
 
-  /* Font Families */
-  --font-family-tm-headline:
-    'Montserrat', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial,
-    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-    'Segoe UI Symbol', 'Noto Color Emoji';
-  --font-family-tm-body:
-    'Source Sans 3', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue',
-    Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-    'Segoe UI Symbol', 'Noto Color Emoji';
+  /* Font Families. Tailwind 4 reads `--font-<name>` to generate `font-<name>`
+   * (the v3-style `--font-family-*` keys generated nothing, #2642), and the
+   * legacy pair is permanent. They alias the token stacks so the
+   * metric-matched "* Fallback" faces (#1373) apply to these utilities too. */
+  --font-tm-headline: var(--tm-font-headline);
+  --font-tm-body: var(--tm-font-body);
 
   /* Font Sizes with Line Heights
    * Tailwind v4 format: --text-{name}: {size}; generates text-{name} utility
@@ -521,7 +519,7 @@
  * BRAND UTILITY CLASSES
  * Note: .tm-* classes are now defined in their authoritative locations:
  * - Typography classes: styles/components/typography.css
- * - Color, spacing, radius, touch target utilities: styles/brand.css
+ * - Color, radius, touch target utilities: styles/components/brand-utilities.css
  * - Button classes: styles/components/buttons.css
  * - Navigation classes: styles/components/navigation.css
  * - Form classes: styles/components/forms.css

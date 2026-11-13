@@ -87,7 +87,7 @@
 }
 
 .council-stat__value {
-  font-family: var(--display, var(--sans));
+  font-family: var(--tm-font-headline);
   font-size: 2rem;
   font-weight: 700;
   line-height: 1.1;
@@ -119,7 +119,7 @@
 }
 
 .council-group__heading {
-  font-family: var(--display, var(--sans));
+  font-family: var(--tm-font-headline);
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--ink);

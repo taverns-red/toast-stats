@@ -2742,7 +2742,7 @@
 
   .club-close-to-distinguished__title {
     margin: 0;
-    font-family: var(--display);
+    font-family: var(--tm-font-headline);
     font-size: 16px;
     font-weight: 700;
     color: var(--ink);
@@ -6278,7 +6278,7 @@
   }
 
   .history-year-card__year {
-    font-family: var(--display, var(--sans));
+    font-family: var(--tm-font-headline);
     font-size: 20px;
     font-weight: 700;
     color: var(--ink);

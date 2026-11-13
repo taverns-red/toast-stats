@@ -341,7 +341,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
 
       {/* Current Selection Indicator */}
       {selectedMonth && selectedDay && (
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-tm-cool-gray bg-opacity-20 border border-tm-cool-gray rounded-lg">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-tm-cool-gray/20 border border-tm-cool-gray rounded-lg">
           <svg
             className="w-4 h-4 text-tm-loyal-blue"
             fill="currentColor"

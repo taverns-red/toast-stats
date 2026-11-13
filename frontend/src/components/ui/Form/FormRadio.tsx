@@ -18,10 +18,7 @@ export const FormRadio: React.FC<FormRadioProps> = ({
 }) => {
   const generatedId = useId()
   const baseClasses = 'tm-form-radio'
-  const stateClasses = [
-    error && 'tm-form-radio--error',
-    props.disabled && 'tm-form-radio--disabled',
-  ]
+  const stateClasses = [error && 'tm-form-radio--error']
     .filter(Boolean)
     .join(' ')
 
