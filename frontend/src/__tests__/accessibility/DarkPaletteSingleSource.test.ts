@@ -31,6 +31,7 @@ const read = (p: string) => strip(readFileSync(resolve(srcDir, p), 'utf8'))
 const redesignCss = read('styles/tokens/redesign.css')
 const darkModeCss = read('styles/dark-mode.css')
 const appShellCss = read('styles/components/app-shell.css')
+const clubGridCss = read('styles/components/club-grid.css')
 const donutSrc = readFileSync(
   resolve(srcDir, 'components/PaymentCompositionDonut.tsx'),
   'utf8'
@@ -163,5 +164,42 @@ describe('one dark palette (#2641)', () => {
     expect(
       calculateContrastRatio(resolveDark(value), resolveDark('var(--surface)'))
     ).toBeGreaterThanOrEqual(3)
+  })
+
+  describe.each(['thriving', 'vulnerable', 'intervention'])(
+    'club-grid-tile--%s in dark',
+    tone => {
+      const tile = `.club-grid-tile--${tone}`
+      const pill = `.clubs-status-pill--${tone}`
+      it('has a dark text/tint pair at >= 4.5:1 matching the status pill', () => {
+        const surface = resolveDark('var(--surface)')
+        const bg = darkProp(clubGridCss, tile, 'background-color')
+        const fg = darkProp(clubGridCss, tile, 'color')
+        expect(
+          calculateContrastRatio(fg, over(bg, surface))
+        ).toBeGreaterThanOrEqual(4.5)
+        expect(bg).toBe(darkProp(appShellCss, pill, 'background-color'))
+        expect(fg).toBe(darkProp(appShellCss, pill, 'color'))
+      })
+    }
+  )
+
+  it.each([
+    ['.bg-gray-200', 'dark .bg-gray-200'],
+    ['.hover\\:bg-gray-100:hover', 'dark hover:bg-gray-100'],
+  ])('--text-muted on %s stays >= 4.5:1 (%s)', sel => {
+    const re = new RegExp(
+      esc(DARK) +
+        '\\s*' +
+        esc(sel) +
+        '\\s*\\{[^}]*background-color:\\s*([^;!]+)'
+    )
+    const m = re.exec(darkModeCss)
+    expect(m).not.toBeNull()
+    const bg = resolveDark((m as RegExpExecArray)[1])
+    const fg = resolveDark(
+      blockDecls(darkModeCss, DARK).get('--text-muted') as string
+    )
+    expect(calculateContrastRatio(fg, bg)).toBeGreaterThanOrEqual(4.5)
   })
 })
