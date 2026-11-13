@@ -25,6 +25,17 @@ export function regionDistinguishedCounts(
   return pair(rollups?.regions?.[regionId]?.distinguishedCounts)
 }
 
+/** region id → provisional (qualifying-today, unconfirmed) count. */
+export function regionProvisionalMap(
+  rollups: RegionRollups | null | undefined
+): ReadonlyMap<string, number> {
+  const out = new Map<string, number>()
+  for (const [id, r] of Object.entries(rollups?.regions ?? {})) {
+    if (r.distinguishedCounts) out.set(id, r.distinguishedCounts.provisional)
+  }
+  return out
+}
+
 /** district id → provisional (qualifying-today, unconfirmed) count. */
 export function districtProvisionalMap(
   rollups: RegionRollups | null | undefined
