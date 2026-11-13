@@ -87,6 +87,8 @@ describe('useAfterPaint with LCP entries (#2777)', () => {
   type Rec = { cb: LcpCallback; disconnected: boolean }
   let observers: Rec[]
   let now: number
+  // Entries the browser recorded before observe(); replayed only if buffered.
+  let recorded: { startTime: number }[]
 
   const emitLcp = (startTime: number) =>
     observers
@@ -97,6 +99,7 @@ describe('useAfterPaint with LCP entries (#2777)', () => {
     resetAfterPaintStateForTests()
     vi.useFakeTimers()
     observers = []
+    recorded = []
     now = 1000
     vi.spyOn(performance, 'now').mockImplementation(() => now)
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => {
@@ -111,7 +114,15 @@ describe('useAfterPaint with LCP entries (#2777)', () => {
         this.rec = { cb, disconnected: false }
         observers.push(this.rec)
       }
-      observe() {}
+      observe(options?: { buffered?: boolean }) {
+        if (options?.buffered && recorded.length > 0) {
+          const replay = [...recorded]
+          const rec = this.rec
+          window.setTimeout(() => {
+            if (!rec.disconnected) rec.cb({ getEntries: () => replay })
+          }, 0)
+        }
+      }
       disconnect() {
         this.rec.disconnected = true
       }
@@ -136,9 +147,17 @@ describe('useAfterPaint with LCP entries (#2777)', () => {
     expect(result.current).toBe(true)
   })
 
-  it('accepts an LCP entry painted before readiness (slow device)', () => {
+  it('ignores an LCP entry recorded before readiness (not buffered, not accepted)', () => {
+    // The browser already recorded an early candidate before the hero
+    // rendered; replaying it would open the gate ahead of the real LCP.
+    recorded = [{ startTime: 400 }]
     const { result } = renderHook(() => useAfterPaint(true))
-    act(() => emitLcp(400))
+    act(() => vi.advanceTimersByTime(0))
+    expect(result.current).toBe(false)
+    act(() => emitLcp(300))
+    act(() => vi.advanceTimersByTime(0))
+    expect(result.current).toBe(false)
+    act(() => emitLcp(1100))
     act(() => vi.advanceTimersByTime(0))
     expect(result.current).toBe(true)
   })
