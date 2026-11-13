@@ -328,7 +328,7 @@ const headersOf = (testId: string): string[] =>
 /** A section's body rows, each as its cells' text, left to right. */
 const cellsOf = (testId: string): string[][] =>
   Array.from(screen.getByTestId(testId).querySelectorAll('tbody tr')).map(tr =>
-    Array.from(tr.querySelectorAll('td')).map(td =>
+    Array.from(tr.querySelectorAll('th, td')).map(td =>
       (td.textContent ?? '').trim()
     )
   )
@@ -913,7 +913,7 @@ describe('DistrictActionListPage — compact tables (#1577)', () => {
       const headers = headersOf(testId)
       for (const tr of section.querySelectorAll('tbody tr')) {
         expect(
-          Array.from(tr.querySelectorAll('td')).map(td =>
+          Array.from(tr.querySelectorAll('th, td')).map(td =>
             td.getAttribute('data-label')
           )
         ).toEqual(headers)
@@ -929,7 +929,7 @@ describe('DistrictActionListPage — compact tables (#1577)', () => {
     expect(cellsOf('section-intervention')).toHaveLength(1)
     const firstCell = screen
       .getByTestId('section-csp')
-      .querySelector('tbody tr td') as HTMLElement
+      .querySelector('tbody tr th') as HTMLElement
     const link = within(firstCell).getByRole('link')
     expect(link).toHaveAttribute('href', '/district/61/club/csp-1')
     expect(link).toHaveTextContent('Unplanned Club')
@@ -940,7 +940,7 @@ describe('DistrictActionListPage — compact tables (#1577)', () => {
     await openSection('section-visits')
     const firstCell = screen
       .getByTestId('section-visits')
-      .querySelector('tbody tr td') as HTMLElement
+      .querySelector('tbody tr th') as HTMLElement
     const link = within(firstCell).getByRole('link')
     expect(link).toHaveTextContent('Area A1')
     expect(link).toHaveAttribute('href', '/district/61/division/A/area/A1')
