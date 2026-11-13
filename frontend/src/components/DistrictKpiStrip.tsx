@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { KpiBulletCard } from './KpiBulletCard'
+import { PROVISIONAL_NOTE } from './DistinguishedCount'
 import { KpiDeltaCard } from './KpiDeltaCard'
 import type { MetricRankings, RecognitionTargets } from '../types/districts'
 import {
@@ -167,8 +168,19 @@ const KpiSummary: React.FC<KpiBodyProps> = ({ kpis, ghost }) => (
       {formatCompact(kpis.distinguishedClubs.current)} dist.
       {kpis.distinguishedClubs.basis === 'qualifying-today' &&
         ' qualifying today'}
-      {(kpis.distinguishedClubs.provisional ?? 0) > 0 &&
-        ` +${formatCompact(kpis.distinguishedClubs.provisional ?? 0)} qualifying today`}
+      {(kpis.distinguishedClubs.basis ?? 'confirmed') === 'confirmed' &&
+        (kpis.distinguishedClubs.provisional ?? 0) > 0 && (
+          <>
+            {` +${formatCompact(kpis.distinguishedClubs.provisional ?? 0)} qualifying today`}
+            <span
+              data-testid="distinguished-provisional-note"
+              className="sr-only"
+            >
+              {' '}
+              {PROVISIONAL_NOTE}
+            </span>
+          </>
+        )}
     </span>
     <span aria-hidden="true" className="district-kpi-strip__sep">
       ·

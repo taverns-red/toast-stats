@@ -29,7 +29,7 @@ interface TileProps {
   label: string
   value: string
   /** Distinguished tile only (#2554): drawn through `DistinguishedCount`
-   *  (confirmed headline, "+N provisional" beside it) instead of `value`. */
+   *  (confirmed headline, "+N qualifying today" beside it) instead of `value`. */
   distinguished?:
     | {
         confirmed: number

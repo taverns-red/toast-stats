@@ -25,7 +25,7 @@ export interface KpiBulletCardProps {
   /**
    * Distinguished card only (#2554): clubs that qualify on current membership
    * but are not yet confirmed. Present → `current` is the confirmed count and
-   * the card draws it through `DistinguishedCount` ("3 +3 provisional"). The
+   * the card draws it through `DistinguishedCount` ("3 +3 qualifying today"). The
    * rank, percentile and bar all sit on the confirmed basis.
    */
   provisional?: number | undefined
