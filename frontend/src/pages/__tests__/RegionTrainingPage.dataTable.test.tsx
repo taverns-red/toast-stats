@@ -98,6 +98,45 @@ describe('RegionTrainingPage table on the DataTable (#2733)', () => {
     for (const text of figureHeaders) expect(text).toMatch(/^Round [12]/)
   })
 
+  it('keeps each header part whole: the months and opening date are nowrap parts (#2318)', async () => {
+    mocked.mockResolvedValue(withTraining())
+    renderPage()
+    const table = await screen.findByTestId('region-training-table')
+    const headers = within(table)
+      .getAllByRole('columnheader')
+      .filter(th => /^Round/.test(th.textContent ?? ''))
+    expect(headers).toHaveLength(4)
+    for (const th of headers) {
+      const parts = Array.from(
+        th.querySelectorAll('.region-training-table__round-part')
+      ).map(p => p.textContent)
+      expect(parts[0]).toMatch(/^Round [12]$/)
+      expect(parts[1]).toMatch(/^\([A-Z][a-z]{2}–[A-Z][a-z]{2}\)$/)
+    }
+    expect(headers[2]!.textContent).toMatch(/opens Nov 1/)
+    expect(
+      headers[2]!.querySelectorAll('.region-training-table__round-part')
+    ).toHaveLength(3)
+    // The accessible name still reads as plain words.
+    expect(
+      within(table).getAllByRole('button', {
+        name: /^Round 1 \(Jun–Aug\): 4\+$/,
+      })
+    ).toHaveLength(1)
+  })
+
+  it('styles the round part as nowrap', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const css = readFileSync(
+      join(__dirname, '../../styles/components/training.css'),
+      'utf-8'
+    )
+    expect(css).toMatch(
+      /\.region-training-table__round-part\s*\{[^}]*white-space:\s*nowrap/
+    )
+  })
+
   it('hides no column with CSS and sets no text below the 14px floor', async () => {
     mocked.mockResolvedValue(withTraining())
     renderPage()
