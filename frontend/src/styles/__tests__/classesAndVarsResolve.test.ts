@@ -137,3 +137,24 @@ describe('every var(--x) without a fallback is defined (#2642)', () => {
     expect(undefinedVars).toEqual([])
   })
 })
+
+describe('no Tailwind 3 opacity utilities or literal CSS in class strings (#2642)', () => {
+  // Tailwind 4 removed bg-opacity-N / text-opacity-N / border-opacity-N; use
+  // the colour modifier (bg-black/10). Without it the colour renders at full
+  // strength. A `font-family: ...` declaration inside a className string is
+  // plain text to the browser, not a style.
+  const offenders = (re: RegExp) =>
+    tsxSources.flatMap(text => text.match(re) ?? [])
+
+  it('uses no *-opacity-N utility', () => {
+    expect(
+      offenders(
+        /(?<![\w-])(?:bg|text|border|ring|divide|placeholder)-opacity-\d+/g
+      )
+    ).toEqual([])
+  })
+
+  it('has no CSS declaration written into a class string', () => {
+    expect(offenders(/^\s*font-family:\s*var\(--[\w-]+\)\s*$/gm)).toEqual([])
+  })
+})
