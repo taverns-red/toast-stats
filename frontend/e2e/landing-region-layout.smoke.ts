@@ -123,13 +123,26 @@ for (const width of [768, 1280]) {
   })
 }
 
-test('World pulse on a past date has no horizontal overflow at 375px', async ({
+test('World pulse with no rollups file has no horizontal overflow at 375px', async ({
   page,
 }) => {
+  // A date with no region-rollups.json reads "Not available" in every tile.
+  // The CDN fixtures hold no snapshot for an arbitrary past date, so rather
+  // than pin one, answer the rollups read with a 404 (a page route wins over
+  // the fixture's context route and nothing reaches the network).
+  await page.route('**/region-rollups.json', route =>
+    route.fulfill({
+      status: 404,
+      headers: { 'access-control-allow-origin': '*' },
+      body: '',
+    })
+  )
   await page.setViewportSize({ width: 375, height: 812 })
-  await load(page, '/?date=2020-01-01')
+  await load(page, '/')
   const pulse = page.locator('.world-pulse')
   await expect(pulse).toBeVisible({ timeout: 30_000 })
+  // Not vacuous: the tiles really are in the absent-figure state.
+  await expect(pulse.getByText('Not available')).toHaveCount(3)
   const m = await page.evaluate(() => {
     const vw = document.documentElement.clientWidth
     const card = document.querySelector('.world-pulse') as HTMLElement
