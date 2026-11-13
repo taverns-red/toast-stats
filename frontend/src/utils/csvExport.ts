@@ -252,7 +252,7 @@ export const exportDailyReports = (
     'Renewals',
     'Club Changes',
     'Awards',
-    'Net Change',
+    'New Plus Renewed Members',
   ]
 
   const rows = reports.map(report => [

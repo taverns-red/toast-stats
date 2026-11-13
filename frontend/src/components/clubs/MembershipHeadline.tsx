@@ -18,6 +18,11 @@ export const MembershipHeadline: React.FC<{
 }> = ({ latest, change, basis }) => (
   <>
     {latest} members
-    {change !== 0 && ` (${change > 0 ? '+' : ''}${change} ${basis})`}
+    {change !== 0 && (
+      <>
+        {` (${change > 0 ? '+' : ''}${change})`}
+        <span className="sr-only"> {basis}</span>
+      </>
+    )}
   </>
 )
