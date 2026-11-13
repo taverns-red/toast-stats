@@ -1,0 +1,85 @@
+/* One KPI tile (#2649): label, figure, hint. Used by every tile family that
+   goes through components/StatTile.tsx. Legacy palette only (#2080); the
+   tokens remap under [data-theme='dark'].
+
+   Alignment: each tile spans three rows of the strip's grid (label, figure,
+   hint) and takes them as a subgrid. A row's label track is as tall as its
+   tallest label, so when one label wraps ("Members with an award") the
+   figures in that row still start at the same height, and a row whose labels
+   are all one line reserves nothing extra. A family sets its own column
+   counts on its strip class, and the row gap through --stat-tile-gap (rows
+   are spaced by the tiles' bottom margin, because the strip's own row gap
+   would also open up inside a tile). */
+
+@layer brand {
+  .stat-tiles {
+    --stat-tile-gap: 0.5rem;
+    list-style: none;
+    /* The last tile row's bottom margin is not space after the strip. */
+    margin: 1rem 0 calc(-1 * var(--stat-tile-gap));
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--stat-tile-gap);
+    row-gap: 0;
+  }
+
+  .stat-tile {
+    display: grid;
+    grid-template-rows: subgrid;
+    grid-row: span 3;
+    row-gap: 0;
+    min-width: 0;
+    margin-bottom: var(--stat-tile-gap);
+    padding: 0.625rem 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-md, 8px);
+  }
+
+  .stat-tile__label {
+    font-size: 0.875rem;
+    line-height: 1.25;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+
+  .stat-tile__value {
+    margin-top: 0.125rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .stat-tile__hint {
+    margin-top: 0.125rem;
+    font-size: 0.875rem;
+    color: var(--ink-3);
+    overflow-wrap: anywhere;
+  }
+
+  /* No subgrid (before Chrome 117 / Safari 16 / Firefox 71): stack the three
+     parts and reserve two label lines, so figures still line up. */
+  @supports not (grid-template-rows: subgrid) {
+    .stat-tiles {
+      margin-bottom: 0;
+      row-gap: var(--stat-tile-gap);
+    }
+    .stat-tile {
+      display: flex;
+      flex-direction: column;
+      grid-row: auto;
+      margin-bottom: 0;
+      gap: 0.125rem;
+    }
+    .stat-tile__label {
+      min-height: 2.5em;
+    }
+    .stat-tile__value,
+    .stat-tile__hint {
+      margin-top: 0;
+    }
+  }
+}

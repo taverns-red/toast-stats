@@ -44,50 +44,15 @@
   margin-top: 1rem;
 }
 
-/* ── Headline: three tiles, one row at every width ─────────────────── */
+/* ── Headline: three tiles, one row at every width ───────────────────
+   Tile look and label/figure alignment: stat-tile.css (#2649). */
 
 .survival-kpis {
-  list-style: none;
-  margin: 1rem 0 0;
-  padding: 0;
-  display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.survival-kpi {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-  padding: 0.625rem 0.75rem;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--rt-radius-md, 4px);
-}
-
-.survival-kpi__label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--ink-2);
-}
-
-.survival-kpi__value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
 }
 
 .survival-kpi__value--na {
   color: var(--ink-3);
-}
-
-.survival-kpi__hint {
-  font-size: 0.875rem;
-  color: var(--ink-3);
-  overflow-wrap: anywhere;
 }
 
 /* ── Cohort links ──────────────────────────────────────────────────── */

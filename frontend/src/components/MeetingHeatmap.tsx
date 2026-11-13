@@ -83,13 +83,13 @@ export const MeetingHeatmap: React.FC<MeetingHeatmapProps> = ({
               to={href('slot', 'unknown')}
               replace
               preventScrollReset
-              className="meetings-kpi__value meetings-kpi__link"
+              className="meetings-kpi__link"
               aria-label={`${clubsText(map.unknown.length)}: schedule not stated`}
             >
               {map.unknown.length.toLocaleString()}
             </Link>
           ) : (
-            <span className="meetings-kpi__value">0</span>
+            <>0</>
           )
         }
       />
