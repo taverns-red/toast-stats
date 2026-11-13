@@ -56,6 +56,57 @@ describe('.tm-text-cool-gray is readable text, not a decorative tint (#2642)', (
   )
 })
 
+describe('every tm-bg-* + tm-text-* pairing in source clears AA (#2642)', () => {
+  // Pairs written side by side in a class string, plus the RankingCard colour
+  // table, which splits fill and text into separate fields.
+  const pairs = new Set<string>([
+    'tm-bg-loyal-blue-10|tm-text-loyal-blue',
+    'tm-bg-loyal-blue-20|tm-text-loyal-blue',
+    'tm-bg-true-maroon-10|tm-text-true-maroon',
+    'tm-bg-happy-yellow-30|tm-text-black',
+    'tm-bg-cool-gray-20|tm-text-cool-gray',
+  ])
+  for (const text of sourceTexts()) {
+    for (const m of text.matchAll(
+      /(tm-bg-[a-z0-9-]+)\s+(?:[\w-]+\s+)*?(tm-text-[a-z-]+)/g
+    ))
+      pairs.add(`${m[1]}|${m[2]}`)
+    for (const m of text.matchAll(
+      /(tm-text-[a-z-]+)\s+(?:[\w-]+\s+)*?(tm-bg-[a-z0-9-]+)/g
+    ))
+      pairs.add(`${m[2]}|${m[1]}`)
+  }
+
+  it('finds the DivisionSummary badge pairings', () => {
+    expect([...pairs]).toContain('tm-bg-loyal-blue-60|tm-text-white')
+  })
+
+  it.each([...pairs].sort().flatMap(p => THEMES.map(t => [p, t] as const)))(
+    '%s clears AA (%s)',
+    (pair, theme) => {
+      const [bgCls, fgCls] = pair.split('|')
+      const toks = tokens(theme)
+      const bg = parseColor(
+        prop(classDecls(bgCls, theme), 'background-color')!,
+        toks
+      )
+      // A compound `.bg.fg` rule (more specific) re-pairs the label.
+      const compound = classDecls(`${bgCls}.${fgCls}`, theme)
+      const fg = parseColor(
+        prop(compound, 'color') ?? prop(classDecls(fgCls, theme), 'color')!,
+        toks
+      )
+      for (const surface of surfaces(theme)) {
+        const fill = over(bg, surface)
+        expect(
+          contrast(fg, fill),
+          `${fgCls} on ${bgCls} over ${JSON.stringify(surface)}`
+        ).toBeGreaterThanOrEqual(AA)
+      }
+    }
+  )
+})
+
 describe('dark remaps of the tint tokens match their Tailwind twins (#2642)', () => {
   // .tm-bg-<c>-N paint var(--tm-<c>-N); the Tailwind twin .bg-tm-<c>-N already
   // has a dark rgba. A token left at its light value would paint a bright wash
