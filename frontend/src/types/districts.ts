@@ -258,6 +258,9 @@ export interface MetricRankings {
   worldRank: number | null
   /** World percentile (0-100, rounded to 1 decimal, null if unavailable) */
   worldPercentile: number | null
+  /** Every district has the same value for the ranked measure (#2613).
+   *  Absent on older snapshots, which means not tied. */
+  worldTied?: boolean
   /** District's rank within its region (1 = best, null if unavailable) */
   regionRank: number | null
   /** Total number of districts worldwide */

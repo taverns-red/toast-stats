@@ -62,6 +62,7 @@ interface CdnPerformanceTargetsData {
 interface CdnRankings {
   worldRank: number
   worldPercentile: number
+  worldTied?: boolean
   regionRank: number
   totalDistricts: number
   totalInRegion: number
@@ -79,6 +80,7 @@ function toMetricRankings(cdn: CdnRankings): MetricRankings {
   return {
     worldRank: cdn.worldRank,
     worldPercentile: cdn.worldPercentile,
+    ...(cdn.worldTied !== undefined && { worldTied: cdn.worldTied }),
     regionRank: cdn.regionRank,
     totalDistricts: cdn.totalDistricts,
     totalInRegion: cdn.totalInRegion,

@@ -237,6 +237,8 @@ export interface RecognitionTargets {
 export interface MetricRankings {
   worldRank: number | null
   worldPercentile: number | null
+  /** Every district has the same value for the ranked measure (#2613). */
+  worldTied?: boolean
   regionRank: number | null
   totalDistricts: number
   totalInRegion: number

@@ -11,6 +11,7 @@ import type {
   HistoricalRankPoint,
 } from '../types/districts'
 import type { ProgramYear } from '../utils/programYear'
+import { MetricRankingsCalculator } from '@taverns-red/analytics-core'
 
 // ========== Type Definitions ==========
 
@@ -127,6 +128,8 @@ export interface UseGlobalRankingsResult {
 
 // ========== Helper Functions ==========
 
+const calculator = new MetricRankingsCalculator()
+
 /**
  * Convert ProgramYearWithData to ProgramYear format
  */
@@ -174,11 +177,9 @@ export function extractEndOfYearRankings(
   // Use totalDistricts from the data point itself
   const totalDistricts = latestPoint.totalDistricts
 
-  // Calculate percentile: (totalDistricts - rank + 1) / totalDistricts * 100
-  const calculatePercentile = (rank: number): number => {
-    const percentile = ((totalDistricts - rank + 1) / totalDistricts) * 100
-    return Math.round(percentile * 10) / 10 // Round to 1 decimal place
-  }
+  // One formula everywhere, (n - r) / n, shared with the KPI cards (#2613).
+  const calculatePercentile = (rank: number): number =>
+    calculator.calculateWorldPercentile(rank, totalDistricts) ?? 0
 
   // Use overallRank from API if available (based on aggregateScore position)
   // Fall back to averaging category ranks for legacy data without overallRank

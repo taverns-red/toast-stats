@@ -146,6 +146,22 @@ export class MetricRankingsCalculator {
   }
 
   /**
+   * True when every district has the same value for the measure this metric
+   * is ranked by (e.g. every district at 0% Distinguished early in the year).
+   * Every district is then rank 1, which says nothing about any of them (#2613).
+   */
+  isWorldTied(
+    metric: MetricType,
+    allDistrictsRankings: AllDistrictsRankingsData
+  ): boolean {
+    const rankings = allDistrictsRankings.rankings
+    const first = rankings[0]
+    if (!first || rankings.length < 2) return false
+    const value = getMetricValue(first, metric)
+    return rankings.every(r => getMetricValue(r, metric) === value)
+  }
+
+  /**
    * Calculate region rank for a district within its region.
    *
    * Districts are ranked from highest to lowest metric value (1 = best).
@@ -289,6 +305,7 @@ export class MetricRankingsCalculator {
     return {
       worldRank,
       worldPercentile,
+      worldTied: this.isWorldTied(metric, allDistrictsRankings),
       regionRank: regionRankResult.regionRank,
       totalDistricts,
       totalInRegion: regionRankResult.totalInRegion,

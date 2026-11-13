@@ -35,6 +35,12 @@ export interface KpiBulletCardProps {
    * labelled, so it is not read as confirmed beside the confirmed-basis rank.
    */
   basis?: 'confirmed' | 'qualifying-today' | undefined
+  /**
+   * The measure the world rank is actually based on, when it is not the
+   * figure on the card (#2613): Paid Clubs ranks by club growth %, not by the
+   * paid-club count. Named beside the rank so the two are not read as one.
+   */
+  rankedBy?: string | undefined
 }
 
 type TierKey = keyof RecognitionTargets
@@ -268,19 +274,24 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
   planTarget = null,
   provisional,
   basis,
+  rankedBy,
 }) => {
+  const tied = rankings.worldTied === true
   const plan = planTarget ?? null
-  const worldRankLabel =
-    rankings.worldRank !== null && rankings.totalDistricts > 0
+  const worldRankLabel = tied
+    ? 'Tied'
+    : rankings.worldRank !== null && rankings.totalDistricts > 0
       ? `#${rankings.worldRank} of ${rankings.totalDistricts}`
       : '—'
-  const worldRankTooltip =
-    rankings.worldRank !== null
-      ? "District's rank among all districts worldwide (1 = best)"
+  const byMeasure = rankedBy ? ` by ${rankedBy}` : ''
+  const worldRankTooltip = tied
+    ? `Every district has the same value${byMeasure}, so no district is ahead`
+    : rankings.worldRank !== null
+      ? `District's rank among all districts worldwide${byMeasure} (1 = best)`
       : 'Ranking data unavailable - district may not have sufficient data for ranking'
   const percentileTooltip =
     rankings.worldPercentile !== null
-      ? 'Percentage of districts this district outperforms worldwide'
+      ? `Percentage of districts this district outperforms worldwide${byMeasure}`
       : 'Percentile data unavailable - requires world rank data'
 
   return (
@@ -324,12 +335,21 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
         <Tooltip content={worldRankTooltip}>
           <span data-testid="world-rank">{worldRankLabel}</span>
         </Tooltip>
-        <DotSep />
-        <Tooltip content={percentileTooltip}>
-          <span data-testid="world-percentile">
-            {formatPercentile(rankings.worldPercentile)}
+        {!tied && (
+          <>
+            <DotSep />
+            <Tooltip content={percentileTooltip}>
+              <span data-testid="world-percentile">
+                {formatPercentile(rankings.worldPercentile)}
+              </span>
+            </Tooltip>
+          </>
+        )}
+        {rankedBy && (
+          <span data-testid="ranked-by" className="sr-only">
+            ranked by {rankedBy}
           </span>
-        </Tooltip>
+        )}
         {rankings.region && (
           <>
             <DotSep />
