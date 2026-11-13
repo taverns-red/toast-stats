@@ -71,7 +71,7 @@ const CARD_TOOLTIPS: Record<TieredKpiKey, string> = {
   // Qualifying today, not confirmed: the trophy case's gap counts confirmed
   // clubs, so the two numbers differ by design (#2390).
   distinguishedClubs:
-    'Confirmed Distinguished clubs, with the thresholds for each Distinguished District recognition level. The rank and the Distinguished District gap use this same confirmed count. +N provisional: clubs qualifying today on current membership whose April renewals do not yet confirm the level; they are shown beside the count, never added to it.',
+    'Confirmed Distinguished clubs, with the thresholds for each Distinguished District recognition level. The rank and the Distinguished District gap use this same confirmed count. +N qualifying today: clubs that qualify on current membership whose April renewals do not yet confirm the level; they are shown beside the count, never added to it.',
 }
 
 const TIER_LEGEND: { short: string; full: string }[] = [

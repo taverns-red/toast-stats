@@ -98,7 +98,7 @@ export const DistrictKpiStickyLine: React.FC<DistrictKpiStickyLineProps> = ({
             <strong>{formatCompact(kpis.distinguishedClubs.current)}</strong>
             {/* The strip's own wording (#2554, #2580): the count is confirmed
                 unless it says "qualifying today"; the extra is "+N
-                provisional", never a bare "+N". */}
+                qualifying today", never a bare "+N". */}
             {qualifyingToday ? (
               <span className="district-kpi-stuck__label">
                 {' '}
@@ -108,7 +108,7 @@ export const DistrictKpiStickyLine: React.FC<DistrictKpiStickyLineProps> = ({
               provisional > 0 && (
                 <span className="district-kpi-stuck__label">
                   {' '}
-                  +{formatCompact(provisional)} provisional
+                  +{formatCompact(provisional)} qualifying today
                 </span>
               )
             )}

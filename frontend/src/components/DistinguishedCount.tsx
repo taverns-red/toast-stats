@@ -2,7 +2,8 @@ import React from 'react'
 
 /* The one place a Distinguished-club count is drawn (#2554, epic #2555).
 
-   Confirmed is the headline; provisional follows as "+N provisional" and is
+   Confirmed is the headline; the rest follows as "+N qualifying today" (Ron's
+   D5, 2026-11-12; the pipeline still calls it provisional) and is
    never added in. Every surface that shows the count goes through this, so
    they cannot drift apart again. Plain spans only (no block elements, no
    focus stop), so it sits inside a <p>, a <div> or a tile <button> without
@@ -13,14 +14,22 @@ import React from 'react'
    the provisional part is the muted ink, never colour alone. */
 
 export const PROVISIONAL_TOOLTIP =
-  'Provisional: clubs that qualify on current membership but whose April renewals do not yet confirm the level. Not counted in the confirmed total or in the rank.'
+  'Qualifying today: clubs that qualify on current membership but whose April renewals do not yet confirm the level. Not counted in the confirmed total or in the rank.'
 
 /** The same explanation as the tooltip, in the text itself (no digits, so it
  *  never reads as a second count). */
-export const PROVISIONAL_NOTE = 'clubs qualifying today, not yet confirmed'
+export const PROVISIONAL_NOTE = 'not yet confirmed by April renewals'
 
 /** Visible one-line key to the confirmed / qualifying-today pair (#2580). */
-export const DistinguishedBasisNote: React.FC = () => null
+export const DistinguishedBasisNote: React.FC<{ className?: string }> = ({
+  className,
+}) => (
+  <p data-testid="distinguished-basis-note" className={className}>
+    Distinguished clubs: the headline is confirmed by April renewals, and rank
+    and % use it. &quot;+N qualifying today&quot; counts clubs that meet a level
+    on current membership but are not yet confirmed; it is never added in.
+  </p>
+)
 
 export interface DistinguishedCountProps {
   confirmed: number
@@ -62,7 +71,7 @@ export const DistinguishedCount: React.FC<DistinguishedCountProps> = ({
           className="distinguished-count__provisional"
           title={PROVISIONAL_TOOLTIP}
         >
-          +{provisional.toLocaleString()} provisional
+          +{provisional.toLocaleString()} qualifying today
           {/* `title` does not reach touch or most screen readers (#2580). */}
           <span
             data-testid="distinguished-provisional-note"
