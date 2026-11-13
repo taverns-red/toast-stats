@@ -18,6 +18,7 @@ import { render, cleanup, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import { extractDivisionPerformance } from '../../utils/extractDivisionPerformance'
+import { withProvisionalDistinguished } from '../../utils/divisionAreaDistinguished'
 import { generateAreaProgressText } from '../../utils/areaProgressText'
 import { calculateAreaGapAnalysis } from '../../utils/areaGapAnalysis'
 import AreaPage from '../AreaPage'
@@ -214,7 +215,13 @@ describe('AreaPage data parity with the Divisions overview (#1016)', () => {
     // the SAME generator the Divisions overview uses, so the CSP clause (raw
     // path, `cspTracked` gated on the pinned date's program year) lands here
     // with no page-specific logic.
-    const area = extractDivisionPerformance(SNAPSHOT, '2026-03-15')
+    // The page splits the count into confirmed + qualifying today from the
+    // club rows (#2580); the overview path does the same, so parity holds.
+    const area = withProvisionalDistinguished(
+      extractDivisionPerformance(SNAPSHOT, '2026-03-15'),
+      [CLUB],
+      '2026-03-15'
+    )
       .find(d => d.divisionId === 'A')!
       .areas.find(a => a.areaId === '10')!
     const expected = generateAreaProgressText(
