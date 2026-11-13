@@ -168,6 +168,16 @@ describe('DistrictsPage — confirmed headline + qualifying today (#2580)', () =
     expect(d83[6]).toBe('')
   })
 
+  it('KPI links to the basis note, which carries the target id', async () => {
+    renderWithProviders(<DistrictsPage />)
+    const note = await screen.findByTestId('distinguished-basis-note')
+    expect(note).toHaveAttribute('id', 'distinguished-basis-note')
+    const kpi = screen.getByTestId('kpi-distinguished-clubs-delta')
+    expect(
+      within(kpi).getByRole('link', { name: /what do these mean/i })
+    ).toHaveAttribute('href', '#distinguished-basis-note')
+  })
+
   it('shows the visible basis note once the figures are on the page', async () => {
     renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 57')
