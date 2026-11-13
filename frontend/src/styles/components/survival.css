@@ -225,6 +225,7 @@
 }
 
 .survival-table {
+  width: auto; /* sizes to its columns; `.dt` would stretch it to 100% */
   border-collapse: collapse;
   font-size: 0.875rem;
   color: var(--ink);

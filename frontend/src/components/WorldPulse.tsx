@@ -399,7 +399,8 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
       </div>
 
       <div className="world-pulse__regions">
-        <table className="world-pulse__table" aria-label="Regions">
+        <table className="dt dt-static world-pulse__table">
+          <caption className="sr-only">Regions</caption>
           <colgroup>
             <col />
             <col />

@@ -182,7 +182,7 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
   const colCount = model.years.length + 1
 
   const yearTable = (
-    <table className="wws__table">
+    <table className="dt dt-static wws__table">
       <caption className="sr-only">
         Worldwide totals for each completed program year, newest first.
         Membership is the June-30 basis unless a row says otherwise. Cells
@@ -386,7 +386,7 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
               aria-label="Clubs by country for the latest snapshot"
               tabIndex={0}
             >
-              <table className="wws__table wws__table--country">
+              <table className="dt dt-static wws__table wws__table--country">
                 <caption className="sr-only">
                   Clubs by country at the latest snapshot, ranked, with an
                   explicit Unknown bucket. The rows sum to the clubs counted.

@@ -204,7 +204,7 @@ const TierGapTable: React.FC<{
   tiers: ReadonlyArray<DistrictRecognitionTier>
   rows: ReadonlyArray<TierGapRow> | null
 }> = ({ tiers, rows }) => (
-  <table className="w-full text-sm font-tm-body border-collapse">
+  <table className="dt dt-static w-full text-sm font-tm-body border-collapse">
     <caption className="sr-only">
       Still needed for each Distinguished District tier
     </caption>
@@ -250,7 +250,7 @@ const TierGapTable: React.FC<{
             >
               {TIER_ROW_LABELS[tier]}
               {row?.met && (
-                <span className="ml-1.5 text-xs font-semibold text-tm-loyal-blue">
+                <span className="ml-1.5 text-sm font-semibold text-tm-loyal-blue">
                   met
                 </span>
               )}

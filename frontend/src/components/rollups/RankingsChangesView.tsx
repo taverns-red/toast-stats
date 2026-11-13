@@ -178,10 +178,8 @@ export const RankingsChangesView: React.FC<RankingsChangesViewProps> = ({
               role="region"
               aria-label={`${scopeLabel} districts, scrollable`}
             >
-              <table
-                className="rankings-changes__table"
-                aria-label={`${scopeLabel} districts`}
-              >
+              <table className="dt dt-static rankings-changes__table">
+                <caption className="sr-only">{`${scopeLabel} districts`}</caption>
                 <thead>
                   <tr>
                     <th scope="col">District</th>
@@ -256,10 +254,8 @@ export const RankingsChangesView: React.FC<RankingsChangesViewProps> = ({
               role="region"
               aria-label="Changes by region, scrollable"
             >
-              <table
-                className="rankings-changes__table"
-                aria-label="Changes by region"
-              >
+              <table className="dt dt-static rankings-changes__table">
+                <caption className="sr-only">Changes by region</caption>
                 <thead>
                   <tr>
                     <th scope="col">Region</th>

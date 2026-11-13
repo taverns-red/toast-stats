@@ -193,3 +193,16 @@
 .entity-recognition__label {
   font-weight: 400;
 }
+
+/* ── Small tables that keep their own geometry (#2734, M7 of #2676) ──────────
+   `.dt-static` goes with `.dt` on a hand-written table whose columns size to
+   their content and whose header scrolls with the table (or sits in a short
+   card): it turns off the foundation's fixed layout and page-pinned header,
+   and leaves padding, size and colour to the table's own stylesheet. */
+.dt.dt-static {
+  table-layout: auto;
+}
+
+.dt.dt-static thead th {
+  position: static;
+}

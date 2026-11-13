@@ -436,7 +436,7 @@ const SurvivalTable: React.FC<{
       aria-label="Survival table, scrolls sideways"
       tabIndex={0}
     >
-      <table className="survival-table">
+      <table className="dt dt-static survival-table">
         <caption className="survival-table__caption">
           Survival by charter year — share of each cohort still active after
           each year

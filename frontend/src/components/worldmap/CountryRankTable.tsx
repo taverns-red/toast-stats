@@ -34,7 +34,7 @@ export const CountryRankTable: React.FC<CountryRankTableProps> = ({
   const rows = limit === undefined ? view.rows : view.rows.slice(0, limit)
 
   return (
-    <table className="wm-table" id={id}>
+    <table className="dt dt-static wm-table" id={id}>
       <caption className="wm-table__caption">
         Clubs by country, ranked
         {limit !== undefined && limit < view.rows.length

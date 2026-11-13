@@ -51,7 +51,8 @@ const RowValue: React.FC<{ row: RollupRow }> = ({ row }) =>
   )
 
 const SectionTable: React.FC<{ section: RollupSection }> = ({ section }) => (
-  <table className="rollup-table" aria-label={section.title}>
+  <table className="dt dt-static rollup-table">
+    <caption className="sr-only">{section.title}</caption>
     <thead className="sr-only">
       <tr>
         <th scope="col">Measure</th>
