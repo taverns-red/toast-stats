@@ -226,18 +226,14 @@
   color: var(--ink-3);
 }
 
-/* ── Compact aligned tables (#1577) ────────────────────────────────────── */
+/* ── Action and funnel tables (#1577, #2701) ───────────────────────────── */
 
-/* Measured on production before this change: 65px per row for one visual line
-   of 14px text, ~18 rows per 1176px screen — about 7,000px of scroll for the
-   107-club Club Success Plan section alone.
-
-   The row height here is arithmetic, not a guess:
-     14px text × 1.35 line-height = 18.9px  +  2 × 4px padding = 26.9px
-   plus the 1px separator ≈ 28px of pitch, so ~42 rows fit the same screen
-   (measured: 26.9px row, 27.4px pitch, 42 rows per 1176px). ONE fixed
-   density — no comfortable/compact toggle, no stored preference, no control
-   in the UI. */
+/* ActionTable renders on the shared `.dt` chrome (data-table.css, #2676 M2):
+   14px data and 14px sentence-case headers, 44px rows, a `th scope="row"`
+   subject column and 44px name targets (HUB-05 measured the links at 17px
+   tall). The header does not stick: the table scrolls sideways in its own
+   container, and a sticky header inside an overflow container pins to that
+   container, not the page. Colours are legacy tokens only. */
 
 .action-table__scroll {
   /* Only the table's own container may scroll sideways; the page body never
@@ -249,8 +245,11 @@
 
 .action-table {
   width: 100%;
+  /* The sections carry four different payloads, so columns size to content
+     rather than from a colgroup. */
+  table-layout: auto;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: var(--dt-font);
   line-height: 1.35;
   color: var(--ink);
 }
@@ -271,23 +270,36 @@
 
 .action-table th,
 .action-table td {
-  padding: 0.25rem 0.75rem 0.25rem 0;
+  padding: var(--dt-pad-y) var(--dt-pad-x) var(--dt-pad-y) 0;
   text-align: left;
-  vertical-align: baseline;
+  vertical-align: middle;
 }
 
-.action-table th {
+.action-table thead th {
+  position: static;
   padding-top: 0;
   padding-bottom: 0.375rem;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-3);
+  font-size: var(--dt-header-font);
+  font-weight: var(--dt-header-weight);
+  line-height: 1.3;
+  color: var(--ink-2);
+  background: none;
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
 
+.action-table tbody tr {
+  height: var(--dt-row-min);
+}
+
+/* The row header carries the 44px link, so it needs no padding of its own. */
+.action-table tbody th {
+  padding-top: 0;
+  padding-bottom: 0;
+  font-weight: 600;
+}
+
+.action-table tbody tr + tr th,
 .action-table tbody tr + tr td {
   border-top: 1px solid var(--line);
 }
@@ -301,7 +313,7 @@
 
 .action-table__area {
   width: 5rem;
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -311,13 +323,23 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A 44px-tall target (WCAG 2.5.5 / spec section 6): the link is a flex box
+   as tall as the row's minimum, so the whole name is hittable. */
 .action-table__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--link, #2563eb);
   text-decoration: none;
 }
 
 .action-table__link:hover {
   text-decoration: underline;
+}
+
+.action-table__link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 /* "· overdue" — the marker the section footnote explains once, instead of
@@ -332,14 +354,11 @@
 
 /* Below 640px a four-column table is unusable, so the rows become cards —
    the same pattern RaceTable established in #1562: the header row goes
-   visually hidden and each cell prints its `data-label` above its value.
-   The desktop 28px density deliberately does NOT apply here; the cards keep
-   full-size tap targets for the links inside them. */
+   visually hidden and each cell prints its `data-label` above its value. */
 @media (max-width: 639px) {
   /* Card rows never need a sideways scroller, and a table whose cells are
      display:block reports a phantom scrollWidth (~44px of nothing) that would
-     otherwise show a scrollbar with no content behind it. Measured: turning
-     this off adds 0px to the document's own scroll width. */
+     otherwise show a scrollbar with no content behind it. */
   .action-table__scroll {
     overflow-x: visible;
   }
@@ -350,6 +369,10 @@
     height: 1px;
     overflow: hidden;
     clip: rect(0 0 0 0);
+  }
+
+  .action-table tbody tr {
+    height: auto;
   }
 
   .action-table tr {
@@ -367,49 +390,31 @@
     border-top: none;
   }
 
+  .action-table tbody tr + tr th,
   .action-table tbody tr + tr td {
     border-top: 0;
   }
 
-  .action-table td {
+  .action-table tbody th,
+  .action-table tbody td {
     display: block;
     width: auto;
     padding: 0;
   }
 
-  /* The label sits INLINE before its value rather than on its own line.
-     RaceTable can afford a stacked label because its cells are rank/count
-     shaped; these carry dates and status phrases, and a line per label made
-     the card 133px — taller than the 105px list rows this replaced. Inline
-     brings it to ~104px while the cells still line up in columns across
-     cards, which is the scanability the whole change is for. */
-  .action-table td::before {
+  /* The label sits INLINE before its value rather than on its own line, so
+     the cells still line up in columns across cards. 14px, the table floor. */
+  .action-table tbody td::before {
     content: attr(data-label);
     display: inline;
     margin-right: 0.3rem;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--ink-3);
+    font-size: var(--dt-font);
+    font-weight: 600;
+    color: var(--ink-2);
   }
 
   .action-table__subject {
     grid-column: 1 / -1;
-  }
-
-  /* The subject is the row's heading — a visible "CLUB" before the club's own
-     name is noise. The real <th> stays in the accessibility tree either way. */
-  .action-table td.action-table__subject::before {
-    display: none;
-  }
-
-  .action-table__link {
-    display: inline-block;
-    /* A comfortable tap target on the card row — the compact desktop height
-       must not leak into the touch layout. */
-    min-height: 24px;
-    padding: 0.25rem 0;
   }
 }
 

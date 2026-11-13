@@ -112,9 +112,10 @@ describe('ActionTable on the shared table styles (#2701)', () => {
       expect(heads[0]).toHaveAttribute('scope', 'row')
       expect(row.querySelectorAll('td')).toHaveLength(1)
     }
-    expect(
-      screen.getAllByRole('rowheader').map(h => h.textContent)
-    ).toEqual(['Alpha Club', 'Beta Club'])
+    expect(screen.getAllByRole('rowheader').map(h => h.textContent)).toEqual([
+      'Alpha Club',
+      'Beta Club',
+    ])
   })
 
   it('honours an explicit rowHeader column that is not first', () => {
@@ -132,15 +133,16 @@ describe('ActionTable on the shared table styles (#2701)', () => {
         />
       </MemoryRouter>
     )
-    expect(
-      screen.getAllByRole('rowheader').map(h => h.textContent)
-    ).toEqual(['Alpha Club', 'Beta Club'])
+    expect(screen.getAllByRole('rowheader').map(h => h.textContent)).toEqual([
+      'Alpha Club',
+      'Beta Club',
+    ])
   })
 })
 
 describe('ActionTable stylesheet (#2701)', () => {
   const css = read('styles/components/action-list.css')
-  const tableCss = css.slice(css.indexOf('Compact aligned tables'))
+  const tableCss = css.slice(css.indexOf('.action-table__scroll {'))
 
   it('has no CSS-hidden columns', () => {
     expect(tableCss).not.toMatch(/display:\s*none/)

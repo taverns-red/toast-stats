@@ -71,9 +71,12 @@ export function ActionTable<T>({
       />
     )
   }
+  // The row header is the subject column: the flagged one, else the first.
+  const flagged = columns.findIndex(column => column.rowHeader)
+  const headerIndex = flagged >= 0 ? flagged : 0
   return (
-    <div className="action-table__scroll">
-      <table className="action-table" data-testid={testId}>
+    <div className="dt-scroll action-table__scroll">
+      <table className="dt action-table" data-testid={testId}>
         <caption className="action-table__caption">{caption}</caption>
         <thead>
           <tr>
@@ -87,15 +90,19 @@ export function ActionTable<T>({
         <tbody>
           {rows.map(row => (
             <tr key={rowKey(row)} className="action-table__row">
-              {columns.map(column => (
-                <td
-                  key={column.key}
-                  data-label={column.header}
-                  className={column.className}
-                >
-                  {column.cell(row)}
-                </td>
-              ))}
+              {columns.map((column, index) => {
+                const Cell = index === headerIndex ? 'th' : 'td'
+                return (
+                  <Cell
+                    key={column.key}
+                    scope={index === headerIndex ? 'row' : undefined}
+                    data-label={column.header}
+                    className={column.className}
+                  >
+                    {column.cell(row)}
+                  </Cell>
+                )
+              })}
             </tr>
           ))}
         </tbody>
