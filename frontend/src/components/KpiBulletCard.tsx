@@ -350,7 +350,7 @@ export const KpiBulletCard: React.FC<KpiBulletCardProps> = ({
             ranked by {rankedBy}
           </span>
         )}
-        {rankings.region && (
+        {!tied && rankings.region && (
           <>
             <DotSep />
             <RegionRankChip
