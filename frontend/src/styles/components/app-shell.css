@@ -2754,7 +2754,7 @@
     color: var(--ink-4);
   }
 
-  /* #2302 — one-line pointer to Methodology §14 above the back-link. */
+  /* #2302 — one-line pointer to Methodology §03 above the back-link. */
   .club-member-data-note {
     margin: 24px 0 0;
     color: var(--ink-3);
@@ -6280,9 +6280,59 @@
     gap: 8px 16px;
   }
 
-  @media (min-width: 640px) {
-    .methodology-toc__list {
-      grid-template-columns: repeat(2, 1fr);
+  /* Question headings over each run of sections (#2656, decision D1). */
+  .methodology-toc__group + .methodology-toc__group {
+    margin-top: 16px;
+  }
+
+  .methodology-toc__group-title,
+  .methodology-group__title {
+    margin: 0 0 8px;
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+  }
+
+  .methodology-group__title {
+    font-size: 24px;
+    margin: 0 0 20px;
+    padding-top: 8px;
+    border-top: 2px solid var(--tm-loyal-blue);
+  }
+
+  .methodology-group + .methodology-group {
+    margin-top: 48px;
+  }
+
+  /* Wide screens: text column on the left, jump list pinned on the right so
+     section 01 starts above the fold and the list stays in reach. */
+  @media (min-width: 1024px) {
+    .methodology-page--how-it-works {
+      display: grid;
+      grid-template-columns: minmax(0, 70ch) 300px;
+      column-gap: 48px;
+      justify-content: center;
+      align-items: start;
+    }
+
+    .methodology-page--how-it-works .methodology-page__header {
+      grid-column: 1 / -1;
+    }
+
+    .methodology-page--how-it-works .methodology-toc {
+      grid-column: 2;
+      grid-row: 2 / span 12;
+      position: sticky;
+      top: 80px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      margin-bottom: 0;
+    }
+
+    .methodology-page--how-it-works .methodology-group,
+    .methodology-page--how-it-works .methodology-page__made-by {
+      grid-column: 1;
     }
   }
 
@@ -6592,6 +6642,14 @@
     padding: 8px 0;
   }
 
+  .jump-to-sheet__group-title {
+    margin: 12px 16px 0;
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+  }
+
   .jump-to-sheet__link {
     display: flex;
     align-items: center;
@@ -6632,7 +6690,7 @@
     color: var(--ink-2);
   }
 
-  /* Program-year rule-change log (#1400) — §10 of /methodology.
+  /* Program-year rule-change log (#1400) — §19 of /methodology.
 
      Static content inside an already-static section: no async data, no
      conditional slot, so it reserves its own height at first paint and adds
