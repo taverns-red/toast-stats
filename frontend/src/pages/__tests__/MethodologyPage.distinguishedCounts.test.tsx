@@ -91,7 +91,7 @@ describe('MethodologyPage — Distinguished club counts (#2390)', () => {
     const txt = sectionText()
     expect(txt).toMatch(/On the district Overview/i)
     expect(txt).toMatch(/What Changed/)
-    expect(txt).toMatch(/Provisional not recorded/)
+    expect(txt).toMatch(/Qualifying today not recorded/)
   })
 
   it('cites the TI Distinguished Club Program source', () => {
