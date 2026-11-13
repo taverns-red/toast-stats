@@ -292,6 +292,14 @@
   height: var(--dt-row-min);
 }
 
+/* The layered .dt coarse rule would be beaten by the unlayered 44px above, so
+   the touch minimum is restated here. */
+@media (pointer: coarse) {
+  .action-table tbody tr {
+    height: var(--dt-row-min-coarse);
+  }
+}
+
 /* The row header carries the 44px link, so it needs no padding of its own. */
 .action-table tbody th {
   padding-top: 0;
@@ -380,7 +388,7 @@
     /* auto-fit rather than a fixed 2-up: the sections carry 2 or 3 meta
        columns, and one wrapped row of short cells is much shorter than two
        half-empty ones. */
-    grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
     gap: 0.25rem 0.75rem;
     padding: 0.5rem 0;
     border-top: 1px solid var(--line);
@@ -399,7 +407,15 @@
   .action-table tbody td {
     display: block;
     width: auto;
+    min-width: 0;
     padding: 0;
+  }
+
+  /* "Intervention" beside its marker is wider than a narrow card column; let
+     the health cell wrap instead of pushing the card past 375px. */
+  .action-table .dt-health {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   /* The label sits INLINE before its value rather than on its own line, so
@@ -415,6 +431,28 @@
 
   .action-table__subject {
     grid-column: 1 / -1;
+  }
+
+  /* The subject is the row's heading; a printed label before it is noise. */
+  .action-table tbody td.action-table__subject::before {
+    content: none;
+  }
+}
+
+/* Print: rows are compact, without the on-screen touch minimums. */
+@media print {
+  .action-table tbody tr {
+    height: auto;
+  }
+
+  .action-table th,
+  .action-table td {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .action-table__link {
+    min-height: 0;
   }
 }
 
