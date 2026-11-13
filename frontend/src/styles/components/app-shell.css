@@ -560,18 +560,47 @@
     font-size: 12px;
   }
 
+  /* From 768 the three blocks sit side by side and wrap as WHOLE blocks
+     (#2653); within a block a break can only fall between items. */
   @media (min-width: 768px) {
     .app-shell-footer__inner {
       flex-direction: row;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
+      column-gap: 24px;
     }
   }
 
-  .app-shell-footer__meta {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+  /* #2653 (CHR-28) — one unbreakable box per item. Each "·" is drawn in the
+     gutter before its item, and the group clips that gutter (the list is
+     shifted left by it), so the item that starts a wrapped line shows no
+     leading "·" and no line ends with one. The 2px block padding keeps link
+     focus rings inside the clip. */
+  .app-shell-footer__group {
+    min-width: 0;
+    overflow: hidden;
+    padding: 2px 0;
+  }
+
+  .app-shell-footer__list {
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    margin-left: -14px;
+  }
+
+  .app-shell-footer__item {
+    position: relative;
+    padding-left: 14px;
+    white-space: nowrap;
+  }
+
+  .app-shell-footer__sep {
+    position: absolute;
+    left: 0;
+    width: 14px;
+    text-align: center;
   }
 
   /* #1648 — the links sit inside running footer text (--ink-3), and
@@ -958,6 +987,54 @@
     line-height: 1;
     letter-spacing: -0.02em;
     color: var(--ink);
+  }
+
+  /* #2653 (LAND-04) — the region page's four totals as a 2×2 grid on phones
+     (the .rollup-kpis pattern): four stacked cards were 447px and put the
+     rankings table at y=1555. From 640 the strip's own 2-col and 4-col steps
+     apply. */
+  @media (max-width: 639px) {
+    .districts-kpi-strip--two-up {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .districts-kpi-strip--two-up .districts-kpi-card {
+      min-width: 0;
+      padding: 10px 12px;
+    }
+
+    .districts-kpi-strip--two-up .districts-kpi-card__value {
+      font-size: 24px;
+    }
+  }
+
+  /* #2653 — District Recognition on phones: closed behind one summary line
+     (the heading and the Distinguished count), opened by a tap. The summary
+     is a 44px target. */
+  .region-recognition__summary {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-height: 44px;
+    padding: 6px 0;
+    cursor: pointer;
+  }
+
+  .region-recognition__summary .districts-kpi-card__label {
+    margin: 0;
+  }
+
+  .region-recognition__glance {
+    font-size: 14px;
+    line-height: 1.3;
+    color: var(--ink-2);
+  }
+
+  .region-recognition__summary:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
   }
 
   /* #861 — Mobile hero zone. The KPI strip → AwardsRace → toolbar → hero

@@ -50,8 +50,11 @@
 
   /* Region page: recognition scoreboard and district table, as measured on
      /region/04 loaded at 375 / 768 / 1280. */
+  /* Below 768 (#2653) the scoreboard is one collapsed summary line (50px plus
+     its 24px margin, measured on /region/04 at 375; the block's own margin is
+     16px, so 58px), not four stacked cards (817px). */
   .shell-block--recognition {
-    min-height: 817px;
+    min-height: 58px;
   }
 
   .shell-block--table {

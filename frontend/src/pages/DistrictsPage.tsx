@@ -59,7 +59,7 @@ import {
   MyDistrictCardReserve,
 } from '../components/MyDistrictCard'
 import { WorldPulse } from '../components/WorldPulse'
-import { RedVoteBlock } from '../components/RedVoteBlock'
+import { RedVoteBlock, RedVoteLine } from '../components/RedVoteBlock'
 import { ErrorDisplay } from '../components/ErrorDisplay'
 import { DistinguishedCount } from '../components/DistinguishedCount'
 
@@ -807,6 +807,10 @@ const DistrictsPage: React.FC = () => {
               </div>
             ))}
           </div>
+          {/* #2653 (D2) — phones: the one-line Red Vote pointer sits above the
+              World pulse (static, so the real thing); the full block follows
+              the table, as in the loaded tree. */}
+          {reserveHeroSlots && isMobile && <RedVoteLine />}
           {/* #2249 — World pulse, reserved with the other data-fed slots. */}
           {reserveHeroSlots && (
             <WorldPulse
@@ -817,7 +821,7 @@ const DistrictsPage: React.FC = () => {
             />
           )}
           {/* #2249 — the Red Vote block is static, so the real thing. */}
-          {reserveHeroSlots && <RedVoteBlock />}
+          {reserveHeroSlots && !isMobile && <RedVoteBlock />}
           {reserveHeroSlots && (
             <>
               {/* Region toolbar. One chip row, and since #1359 gap (c) that
@@ -867,6 +871,7 @@ const DistrictsPage: React.FC = () => {
             load explains nothing. */}
         {reserveHeroSlots && <RecognitionLegend />}
         {body}
+        {reserveHeroSlots && isMobile && <RedVoteBlock />}
         {/* #2249 — the Awards Race sits below the table now (leaders-only,
             out of the first screen). Its own #750 skeleton — same component,
             so the reserve cannot drift from what it reserves for — is held
@@ -1387,6 +1392,10 @@ const DistrictsPage: React.FC = () => {
               </p>
             </div>
           </div>
+          {/* #2653 (D2) — phones: a one-line Red Vote pointer with the CTA near
+              the top, above the World pulse; the full block is below the
+              rankings. */}
+          {isMobile && <RedVoteLine />}
           {/* #2249 — World pulse: attention figures, the membership line and
               the regions, for international leaders and observers. */}
           <WorldPulse
@@ -1394,8 +1403,9 @@ const DistrictsPage: React.FC = () => {
             date={effectiveRankingsDate}
             programYear={selectedProgramYear.label}
           />
-          {/* #2249 — Red Vote: prominent but secondary, in its own brand. */}
-          <RedVoteBlock />
+          {/* #2249 — Red Vote: prominent but secondary, in its own brand.
+              Desktop is unchanged. */}
+          {!isMobile && <RedVoteBlock />}
 
           {/* Region Filter Toolbar — compact (#83). The dedicated "Sort by:"
             button row was retired in #851: sort now lives on the table
@@ -1571,6 +1581,9 @@ const DistrictsPage: React.FC = () => {
             fullTable={rankingsTable('page')}
           />
         </div>
+
+        {/* #2653 (D2) — phones: the full Red Vote block, after the rankings. */}
+        {isMobile && <RedVoteBlock />}
 
         {/* Awards Race — competitive district awards (#331), below the
             table since #2249 (leaders-only, so out of the first screen).
