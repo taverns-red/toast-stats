@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.64.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.63.0...frontend-v3.64.0) (2026-11-13)
+
+
+### Features
+
+* **landing:** district rankings on the shared DataTable ([#2689](https://github.com/taverns-red/toast-stats/issues/2689)) ([#2693](https://github.com/taverns-red/toast-stats/issues/2693)) ([c9a70fb](https://github.com/taverns-red/toast-stats/commit/c9a70fb0ae8ca0c8f5be47d894c0a058a196ae13))
+
+
+### Bug Fixes
+
+* **security:** neutralise CSV formula injection ([#2687](https://github.com/taverns-red/toast-stats/issues/2687)) ([#2690](https://github.com/taverns-red/toast-stats/issues/2690)) ([54ea0b2](https://github.com/taverns-red/toast-stats/commit/54ea0b2c185292f6a7119faa4eeaf2464eb4f064))
+* **smokes:** council ch-width font race + KPI smooth-scroll wait ([#2685](https://github.com/taverns-red/toast-stats/issues/2685)) ([#2691](https://github.com/taverns-red/toast-stats/issues/2691)) ([913708e](https://github.com/taverns-red/toast-stats/commit/913708e26a9958de024007e29ae69f0e3a65b1b0))
+
 ## [3.63.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.62.0...frontend-v3.63.0) (2026-11-12)
 
 
