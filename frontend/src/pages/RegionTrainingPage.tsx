@@ -4,7 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useRegionRollups } from '../hooks/useRegionRollups'
 import { useUrlSort } from '../hooks/useUrlSort'
-import { SortableHeader } from '../components/SortableHeader'
+import { RegionTrainingTable } from '../components/RegionTrainingTable'
 import {
   RollupPageShell,
   RollupSkeleton,
@@ -15,9 +15,7 @@ import { formatShortDate } from '../utils/dateFormatting'
 import {
   ALL_OFFICERS,
   DEFAULT_TRAINING_THRESHOLD,
-  formatPct,
   parseTrainingThreshold,
-  roundMonths,
   roundStatus,
   thresholdOptionLabel,
   trainingPageUrl,
@@ -37,7 +35,8 @@ import {
    fetch per district. A routed sibling of /region/:n (ADR-005, no tabs);
    program year and date are the page's own (R3), the threshold is
    `?threshold=` (1–7, default 4) and the sort is `?sort=&dir=`. Each
-   district links to its own Training page at the same threshold. */
+   district links to its own Training page at the same threshold. The table is
+   the shared DataTable, in RegionTrainingTable (#2733). */
 
 const SORT_FIELDS = [
   'district',
@@ -183,121 +182,25 @@ const RegionTrainingPage: React.FC = () => {
           <h2 id="region-training-heading" className="rollup-section__title">
             Districts
           </h2>
-          <div
-            className="overflow-x-auto region-training__scroll"
-            role="region"
-            tabIndex={0}
-            aria-label={`Region ${region} districts by officer training — scroll horizontally for both rounds`}
-          >
-            <table
-              className="districts-rankings-table region-training-table"
-              data-testid="region-training-table"
-            >
-              <caption className="sr-only">
-                Region {region} districts: % of clubs by officers trained, per
-                round
-              </caption>
-              <thead>
-                <tr>
-                  <SortableHeader<SortField>
-                    field="district"
-                    label="District"
-                    currentSort={sort}
-                    onSort={toggleSort}
-                    rowSpan={2}
-                  />
-                  <th scope="col" rowSpan={2} className="text-right">
-                    Clubs
-                  </th>
-                  {([1, 2] as const).map(round => (
-                    // #2318 — each part stays whole; the cell wraps only
-                    // between them (a phone broke "(Jun–" from "Aug)").
-                    <th key={round} scope="colgroup" colSpan={metrics.length}>
-                      <span className="region-training-table__round-part">
-                        Round {round}
-                      </span>{' '}
-                      <span className="region-training-table__round-part">
-                        {roundMonths(round)}
-                      </span>
-                      {upcoming(round) && (
-                        <>
-                          {' '}
-                          <span className="region-training-table__round-part">
-                            · opens {formatShortDate(windows[round - 1]!.start)}
-                          </span>
-                        </>
-                      )}
-                    </th>
-                  ))}
-                </tr>
-                <tr>
-                  {([1, 2] as const).flatMap(round =>
-                    metrics.map(m =>
-                      // A round that has not opened has nothing to sort by
-                      // (every club reads 0): a plain header (review N6).
-                      upcoming(round) ? (
-                        <th
-                          key={`r${round}-${m.metric}`}
-                          scope="col"
-                          className="text-right"
-                        >
-                          {m.label}
-                        </th>
-                      ) : (
-                        <SortableHeader<SortField>
-                          key={`r${round}-${m.metric}`}
-                          field={`r${round}-${m.metric}` as SortField}
-                          label={m.label}
-                          currentSort={sort}
-                          onSort={toggleSort}
-                          numeric
-                        />
-                      )
-                    )
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map(row => (
-                  <tr key={row.districtId}>
-                    <th scope="row" className="region-training-table__district">
-                      <Link
-                        to={trainingPageUrl(row.districtId, {
-                          threshold,
-                          py: searchParams.get('py'),
-                          date: searchParams.get('date'),
-                        })}
-                        className="clubs-name-link"
-                      >
-                        District {row.districtId}
-                      </Link>
-                    </th>
-                    <td className="text-right tabular-nums">{row.clubs}</td>
-                    {([1, 2] as const).flatMap(round =>
-                      metrics.map(m => {
-                        const f = upcoming(round) ? null : row.rounds[round - 1]
-                        const value = !f
-                          ? null
-                          : m.metric === 'dcp'
-                            ? f.pctDcp
-                            : m.metric === 'allSeven'
-                              ? f.pctAllSeven
-                              : f.pctAtThreshold
-                        return (
-                          <td
-                            key={`r${round}-${m.metric}`}
-                            className="text-right tabular-nums"
-                          >
-                            {formatPct(value)}
-                          </td>
-                        )
-                      })
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <RegionTrainingTable
+            region={region}
+            rows={sorted}
+            metrics={metrics}
+            opens={round =>
+              upcoming(round)
+                ? `opens ${formatShortDate(windows[round - 1]!.start)}`
+                : null
+            }
+            sort={sort}
+            onSort={field => toggleSort(field as SortField)}
+            districtHref={districtId =>
+              trainingPageUrl(districtId, {
+                threshold,
+                py: searchParams.get('py'),
+                date: searchParams.get('date'),
+              })
+            }
+          />
           <p className="training-note">
             Each round&apos;s share of the district&apos;s clubs. Counts are how
             many officers were trained, not which ones; &quot;—&quot; means the

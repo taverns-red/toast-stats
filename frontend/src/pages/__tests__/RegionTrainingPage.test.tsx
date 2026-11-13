@@ -127,10 +127,10 @@ describe('RegionTrainingPage (#2296)', () => {
     expect(
       within(table)
         .getAllByRole('columnheader')
-        .filter(th => /^5\+/.test(th.textContent ?? ''))
+        .filter(th => /: 5\+$/.test(th.textContent ?? ''))
     ).toHaveLength(2)
     expect(
-      within(table).getAllByRole('button', { name: /Sort by 5\+/ })
+      within(table).getAllByRole('button', { name: /: 5\+$/ })
     ).toHaveLength(1)
   })
 
@@ -139,7 +139,7 @@ describe('RegionTrainingPage (#2296)', () => {
     renderAt('/region/05/training')
     const table = await screen.findByTestId('region-training-table')
     fireEvent.click(
-      within(table).getAllByRole('button', { name: /Sort by All 7/ })[0]!
+      within(table).getAllByRole('button', { name: /: All 7$/ })[0]!
     )
     // Districts with one club at all seven (10%) lead, ties by district id.
     expect(districtOrder().slice(0, 4)).toEqual([
@@ -163,9 +163,12 @@ describe('RegionTrainingPage (#2296)', () => {
     mocked.mockResolvedValue(withTraining())
     renderAt('/region/05/training')
     const table = await screen.findByTestId('region-training-table')
+    // One header row: each of Round 2's two columns names the round and date.
     expect(
-      within(table).getByRole('columnheader', { name: /Round 2.*opens Nov 1/ })
-    ).toBeInTheDocument()
+      within(table).getAllByRole('columnheader', {
+        name: /Round 2.*opens Nov 1/,
+      })
+    ).toHaveLength(2)
     const row = within(table).getByRole('row', { name: /District 61/ })
     expect(row).not.toHaveTextContent(/\b0%/)
     expect(within(row).getAllByText('—')).toHaveLength(2)
@@ -198,7 +201,7 @@ describe('RegionTrainingPage (#2296)', () => {
     const table = await screen.findByTestId('region-training-table')
     // Round 1 keeps its two sort buttons; Round 2 (opens Nov 1) has none.
     expect(
-      within(table).getAllByRole('button', { name: /Sort by (4\+|All 7)/ })
+      within(table).getAllByRole('button', { name: /: (4\+|All 7)$/ })
     ).toHaveLength(2)
   })
 

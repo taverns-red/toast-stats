@@ -86,10 +86,14 @@ describe('ClubHistoryTable (#1229)', () => {
     expect(screen.getByText(/-6/)).toBeInTheDocument()
   })
 
-  it('exposes a keyboard-operable, labelled scroll region (Lesson 105)', () => {
+  it('is a scroll region only when the columns cannot fit (Lesson 105, spec §11)', () => {
+    // jsdom has no layout, so the table always "fits": no focusable region.
+    // The shared DataTable makes it a labelled, focusable region when it
+    // overflows (covered by DataTable's own tests); an always-on region is a
+    // tab stop with nothing to scroll.
     render(<ClubHistoryTable rows={rows} clubName="Test Club" />)
-    const region = screen.getByRole('region', { name: /history/i })
-    expect(region).toHaveAttribute('tabindex', '0')
+    expect(screen.queryByRole('region', { name: /history/i })).toBeNull()
+    expect(screen.getByRole('table')).toHaveClass('dt')
   })
 
   it('sorts by DCP goals ascending when its header is activated', async () => {

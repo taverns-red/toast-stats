@@ -60,6 +60,7 @@ export interface DataTableApi {
     id: string
     headers: ReadonlyArray<{
       id: string
+      getContext: () => unknown
       column: {
         id: string
         getCanSort: () => boolean
@@ -87,6 +88,8 @@ interface DataTableProps {
   /** A short accessible name for the `<table>` itself (the caption keeps the
    *  detail). Without it the caption is the name. */
   tableLabel?: string
+  /** `data-testid` on the `<table>`. */
+  testId?: string
   sort: DataTableSort
   onSort: (field: string) => void
   /** The column that labels each row: rendered as `<th scope="row">` and left
@@ -126,6 +129,7 @@ export function DataTable({
   caption,
   label,
   tableLabel,
+  testId,
   sort,
   onSort,
   rowHeaderColumnId,
@@ -210,6 +214,7 @@ export function DataTable({
             className="dt"
             style={{ minWidth: totalSize }}
             aria-label={tableLabel}
+            data-testid={testId}
           >
             <caption className="sr-only">{caption}</caption>
             <colgroup>
@@ -227,7 +232,12 @@ export function DataTable({
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => {
                     const column = header.column
-                    const text = column.columnDef.header as string
+                    // A string, or a TanStack-style `ctx => node` when a header
+                    // needs parts that must not wrap (#2318).
+                    const text: React.ReactNode = flexRender(
+                      column.columnDef.header as never,
+                      header.getContext() as never
+                    )
                     const thClassName = headerClassName?.(column.id) ?? ''
                     if (!column.getCanSort()) {
                       return (

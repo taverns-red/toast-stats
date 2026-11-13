@@ -34,7 +34,7 @@ for (const theme of ['light', 'dark'] as const) {
         ]
         const out: Array<{ text: string; lines: number }> = []
         const heads = document.querySelectorAll(
-          '[data-testid="region-training-table"] th[scope="colgroup"]'
+          '[data-testid="region-training-table"] th[scope="col"]'
         )
         for (const th of heads) {
           // The header's text may be split over several text nodes; map
@@ -76,11 +76,11 @@ for (const theme of ['light', 'dark'] as const) {
       expect(
         parts.filter(p => p.text.startsWith('Round')),
         ctx
-      ).toHaveLength(2)
+      ).toHaveLength(4)
       expect(
         parts.filter(p => p.text.startsWith('(')),
         ctx
-      ).toHaveLength(2)
+      ).toHaveLength(4)
       for (const p of parts) expect(p.lines, ctx).toBe(1)
     })
   }

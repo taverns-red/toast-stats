@@ -239,63 +239,6 @@
     margin: 16px 0 0;
   }
 
-  .rollup-breakdown__scroll {
-    overflow-x: auto;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background-color: var(--surface);
-  }
-
-  .rollup-breakdown__scroll:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--focus-ring);
-  }
-
-  .rollup-breakdown {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-    line-height: 20px;
-    color: var(--ink);
-  }
-
-  .rollup-breakdown__th {
-    padding: 8px 12px;
-    text-align: right;
-    font-weight: 600;
-    color: var(--ink-2);
-    white-space: nowrap;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .rollup-breakdown__th--name {
-    text-align: left;
-  }
-
-  .rollup-breakdown tbody tr + tr {
-    border-top: 1px solid var(--line);
-  }
-
-  .rollup-breakdown__name {
-    padding: 8px 12px;
-    text-align: left;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .rollup-breakdown__name a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-  }
-
-  .rollup-breakdown__num {
-    padding: 8px 12px;
-    text-align: right;
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-  }
-
   .rollup-breakdown__sub {
     display: block;
     color: var(--ink-3);
