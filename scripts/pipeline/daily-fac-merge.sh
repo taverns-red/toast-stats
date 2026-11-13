@@ -47,6 +47,9 @@ fi
 
 GCLOUD="${GCLOUD:-gcloud}"
 CACHE_DIR="${CACHE_DIR:-./cache}"
+# #2695: raw-fac/ is read from the private raw-source bucket, not staging.
+# shellcheck source=raw-source-config.sh
+source "$(dirname "${BASH_SOURCE[0]}")/raw-source-config.sh"
 SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/null}"
 export CACHE_DIR
 read -r -a COLLECTOR <<<"${COLLECTOR_CLI:-npx collector-cli}"
@@ -92,7 +95,7 @@ UNENRICHED=()
 if [ "${#MISSING[@]}" -gt 0 ]; then
   echo "No fresh Find-A-Club for ${#MISSING[@]} district(s): ${MISSING[*]}"
   err="${WORK}/ls.err"
-  if listing="$("${GCLOUD}" storage ls "gs://${BUCKET}/raw-fac/" 2>"${err}")"; then
+  if listing="$("${GCLOUD}" storage ls "gs://${RAW_SOURCE_BUCKET}/raw-fac/" 2>"${err}")"; then
     # The latest persisted date strictly before <date>: today's own
     # raw-fac/ (if the persist step ran) is the fresh copy already used.
     FALLBACK_DATE="$(printf '%s\n' "${listing}" |
@@ -106,7 +109,7 @@ if [ "${#MISSING[@]}" -gt 0 ]; then
   if [ -n "${FALLBACK_DATE}" ]; then
     mkdir -p "${FALLBACK_DIR}"
     if ! "${GCLOUD}" storage rsync -r \
-      "gs://${BUCKET}/raw-fac/${FALLBACK_DATE}/" "${FALLBACK_DIR}/"; then
+      "gs://${RAW_SOURCE_BUCKET}/raw-fac/${FALLBACK_DATE}/" "${FALLBACK_DIR}/"; then
       echo "::error::Could not download raw-fac/${FALLBACK_DATE}/; not publishing ${DATE} unenriched"
       exit 1
     fi

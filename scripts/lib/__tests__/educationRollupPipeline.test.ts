@@ -81,6 +81,7 @@ function shimEnv(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
     ...process.env,
     GCLOUD: SHIM,
     SHIM_ROOT: root,
+    RAW_SOURCE_BUCKET: BUCKET,
     SHIM_LOG: shimLog,
     SHIM_DOWNLOAD_DECOMPRESS: '1',
     CACHE_DIR: path.join(tmp, 'cache'),

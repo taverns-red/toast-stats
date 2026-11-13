@@ -629,6 +629,7 @@ export async function runPipeline(
     PATH: `${world.bin}${path.delimiter}${process.env.PATH ?? ''}`,
     GCLOUD: SHIM,
     SHIM_ROOT: world.root,
+    RAW_SOURCE_BUCKET: HARNESS_STAGING,
     // gcloud 588 (the runner's pin) inflates one gzip layer on download.
     SHIM_DOWNLOAD_DECOMPRESS: '1',
     CACHE_DIR: world.cache,

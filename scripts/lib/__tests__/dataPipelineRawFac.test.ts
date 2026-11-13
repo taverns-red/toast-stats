@@ -56,7 +56,7 @@ describe('daily persists the raw FAC fetch to staging raw-fac/ (#1758)', () => {
   it('uploads the snapshot date’s FAC directory under raw-fac/<snapshotDate>/', () => {
     expect(code(FETCH_SCRIPT)).toMatch(
       // Through gcs-upload.sh so the upload lands in the run manifest (#1762).
-      /scripts\/pipeline\/gcs-upload\.sh" [\w-]+ rsync -r\s+"\$\{FRESH\}\/"\s+"gs:\/\/\$\{BUCKET\}\/raw-fac\/\$\{DATE\}\/"/
+      /scripts\/pipeline\/gcs-upload\.sh" [\w-]+ rsync -r\s+"\$\{FRESH\}\/"\s+"gs:\/\/\$\{RAW_SOURCE_BUCKET\}\/raw-fac\/\$\{DATE\}\/"/
     )
     expect(FETCH_SCRIPT).toContain('FRESH="${CACHE_DIR}/find-a-club/${DATE}"')
   })
