@@ -66,7 +66,9 @@
 }
 
 .council-pack {
-  max-width: 52rem;
+  /* The roster is 870px with its nowrap cells; the page's own padding and
+     border add 42px more, so 52rem (832px) cut the last column at 1280. */
+  max-width: 60rem;
   margin: 0 auto;
   color: var(--ink);
   font-size: 0.9375rem;
@@ -183,9 +185,15 @@
   font-weight: 600;
 }
 
-/* Tables scroll inside their section on a phone; the page never does. */
-.council-pack__section {
+/* A table wider than the page scrolls inside its own named, focusable region
+   (CouncilPackDocument's ScrollRegion); the page never does (#2718). */
+.council-pack__scroll {
   overflow-x: auto;
+}
+
+.council-pack__scroll:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .council-pack__table {
@@ -294,6 +302,10 @@
   .council-pack__roster--own-page {
     break-before: page;
     page-break-before: always;
+  }
+
+  .council-pack__scroll {
+    overflow: visible;
   }
 
   .council-pack__section {

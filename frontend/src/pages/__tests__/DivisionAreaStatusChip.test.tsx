@@ -160,8 +160,11 @@ describe('Division/Area status chip at <768px (#871 CC-4)', () => {
     const heads = [...container.querySelectorAll('th')]
     expect(heads.map(h => h.textContent?.trim())).toContain('Health')
     expect(heads.map(h => h.textContent?.trim())).not.toContain('Status')
-    for (const th of heads) expect(th).toHaveAttribute('scope', 'col')
-    expect(container.querySelector('table')).toHaveAttribute('aria-label')
+    // Column headers scope=col; club names are row headers (#2718).
+    for (const th of heads)
+      expect(th).toHaveAttribute('scope', th.closest('thead') ? 'col' : 'row')
+    // Named by its caption (#2718), not an aria-label.
+    expect(container.querySelector('table')).toHaveAccessibleName()
   })
 
   it('AreaPage de-tables to compact rows (#1833) with a status chip on mobile', () => {
@@ -194,7 +197,10 @@ describe('Division/Area status chip at <768px (#871 CC-4)', () => {
     const heads = [...container.querySelectorAll('th')]
     expect(heads.map(h => h.textContent?.trim())).toContain('Health')
     expect(heads.map(h => h.textContent?.trim())).not.toContain('Status')
-    for (const th of heads) expect(th).toHaveAttribute('scope', 'col')
-    expect(container.querySelector('table')).toHaveAttribute('aria-label')
+    // Column headers scope=col; club names are row headers (#2718).
+    for (const th of heads)
+      expect(th).toHaveAttribute('scope', th.closest('thead') ? 'col' : 'row')
+    // Named by its caption (#2718), not an aria-label.
+    expect(container.querySelector('table')).toHaveAccessibleName()
   })
 })

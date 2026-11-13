@@ -91,7 +91,7 @@ describe('DivisionAreaProgressSummary < 768 px (#1862)', () => {
     render(<DivisionAreaProgressSummary divisions={DIVISIONS} />)
     const a = screen.getByRole('button', { name: /Division A/ })
     expect(a).toHaveAttribute('aria-expanded', 'false')
-    expect(a).toHaveTextContent('✗ Net loss')
+    expect(a).toHaveTextContent('✗ Net Loss')
     expect(a).toHaveTextContent('2 areas')
     // Narratives are not rendered while collapsed.
     expect(screen.queryByText('Division A Progress')).toBeNull()

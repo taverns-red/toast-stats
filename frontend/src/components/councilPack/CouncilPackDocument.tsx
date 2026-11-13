@@ -109,6 +109,28 @@ function Dates({
   )
 }
 
+/** On screen a pack table that is wider than its page scrolls sideways; that
+ *  scroller is a named, focusable region (REF-09 / UNIT-33). Print ignores it
+ *  (council-pack.css lays the tables out to the paper). */
+function ScrollRegion({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className="council-pack__scroll"
+      role="region"
+      tabIndex={0}
+      aria-label={`${label}, scrolls sideways`}
+    >
+      {children}
+    </div>
+  )
+}
+
 function Roster({
   rows,
   showArea,
@@ -124,65 +146,67 @@ function Roster({
     return <p className="council-pack__empty">No clubs are listed here.</p>
   }
   return (
-    <table
-      className="council-pack__table council-pack__roster-table"
-      data-testid="council-pack-roster"
-    >
-      {/* Fixed column widths in print (council-pack.css): the roster can
+    <ScrollRegion label="Club roster">
+      <table
+        className="council-pack__table council-pack__roster-table"
+        data-testid="council-pack-roster"
+      >
+        {/* Fixed column widths in print (council-pack.css): the roster can
           never be wider than the paper, whatever font the printer's
           machine falls back to. */}
-      <colgroup>
-        <col className="council-pack__col-club" />
-        {showArea && <col className="council-pack__col-area" />}
-        <col className="council-pack__col-health" />
-        <col className="council-pack__col-members" />
-        <col className="council-pack__col-goals" />
-        <col className="council-pack__col-tier" />
-        <col className="council-pack__col-mark" />
-        {cspTracked && <col className="council-pack__col-mark" />}
-      </colgroup>
-      <thead>
-        <tr>
-          <th scope="col">Club</th>
-          {showArea && <th scope="col">Area</th>}
-          <th scope="col">Health</th>
-          <th scope="col" className="council-pack__num">
-            Members
-          </th>
-          <th scope="col" className="council-pack__num">
-            Goals
-          </th>
-          <th scope="col">Distinguished</th>
-          <th scope="col">Round {round} visit</th>
-          {cspTracked && <th scope="col">Success Plan</th>}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map(r => (
-          <tr key={r.clubId}>
-            <th scope="row">
-              {/* One line with an ellipsis; the full name stays in the DOM. */}
-              <span className="council-pack__name" title={r.clubName}>
-                {r.clubName}
-              </span>
+        <colgroup>
+          <col className="council-pack__col-club" />
+          {showArea && <col className="council-pack__col-area" />}
+          <col className="council-pack__col-health" />
+          <col className="council-pack__col-members" />
+          <col className="council-pack__col-goals" />
+          <col className="council-pack__col-tier" />
+          <col className="council-pack__col-mark" />
+          {cspTracked && <col className="council-pack__col-mark" />}
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col">Club</th>
+            {showArea && <th scope="col">Area</th>}
+            <th scope="col">Health</th>
+            <th scope="col" className="council-pack__num">
+              Members
             </th>
-            {showArea && <td className="council-pack__nowrap">{r.areaId}</td>}
-            <td>{r.health}</td>
-            <td className="council-pack__num">{r.members ?? '—'}</td>
-            <td className="council-pack__num">{r.goals ?? '—'}</td>
-            <td>{r.distinguished}</td>
-            <td className="council-pack__nowrap">
-              {r.visit ? VISIT_TEXT[r.visit] : '—'}
-            </td>
-            {cspTracked && (
-              <td className="council-pack__nowrap">
-                {r.csp ? CSP_TEXT[r.csp] : '—'}
-              </td>
-            )}
+            <th scope="col" className="council-pack__num">
+              Goals
+            </th>
+            <th scope="col">Distinguished</th>
+            <th scope="col">Round {round} visit</th>
+            {cspTracked && <th scope="col">Success Plan</th>}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.clubId}>
+              <th scope="row">
+                {/* One line with an ellipsis; the full name stays in the DOM. */}
+                <span className="council-pack__name" title={r.clubName}>
+                  {r.clubName}
+                </span>
+              </th>
+              {showArea && <td className="council-pack__nowrap">{r.areaId}</td>}
+              <td>{r.health}</td>
+              <td className="council-pack__num">{r.members ?? '—'}</td>
+              <td className="council-pack__num">{r.goals ?? '—'}</td>
+              <td>{r.distinguished}</td>
+              <td className="council-pack__nowrap">
+                {r.visit ? VISIT_TEXT[r.visit] : '—'}
+              </td>
+              {cspTracked && (
+                <td className="council-pack__nowrap">
+                  {r.csp ? CSP_TEXT[r.csp] : '—'}
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </ScrollRegion>
   )
 }
 
@@ -310,53 +334,55 @@ export const CouncilPackDocument: React.FC<CouncilPackDocumentProps> = ({
             </div>
           </dl>
           {isDivision && (
-            <table
-              className="council-pack__table"
-              data-testid="council-pack-areas"
-            >
-              <thead>
-                <tr>
-                  <th scope="col">Area</th>
-                  <th scope="col">Status</th>
-                  <th scope="col" className="council-pack__num">
-                    Paid / base
-                  </th>
-                  <th scope="col" className="council-pack__num">
-                    Distinguished
-                  </th>
-                  <th scope="col" className="council-pack__num">
-                    Round {pack.visitRound} visit reports
-                  </th>
-                  {pack.csp.tracked && (
+            <ScrollRegion label="Areas in this division">
+              <table
+                className="council-pack__table"
+                data-testid="council-pack-areas"
+              >
+                <thead>
+                  <tr>
+                    <th scope="col">Area</th>
+                    <th scope="col">Status</th>
                     <th scope="col" className="council-pack__num">
-                      Success Plans
+                      Paid / base
                     </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {pack.areas.map(a => (
-                  <tr key={a.areaId} data-area-id={a.areaId}>
-                    <th scope="row">{a.areaId}</th>
-                    <td>{a.recognition}</td>
-                    <td className="council-pack__num">
-                      {a.paidClubs}/{a.clubBase}
-                    </td>
-                    <td className="council-pack__num">
-                      {a.distinguishedClubs}/{a.requiredDistinguishedClubs}
-                    </td>
-                    <td className="council-pack__num">
-                      {visitReports(a.visits)}
-                    </td>
+                    <th scope="col" className="council-pack__num">
+                      Distinguished
+                    </th>
+                    <th scope="col" className="council-pack__num">
+                      Round {pack.visitRound} visit reports
+                    </th>
                     {pack.csp.tracked && (
-                      <td className="council-pack__num">
-                        {a.cspSubmitted}/{a.cspHeld}
-                      </td>
+                      <th scope="col" className="council-pack__num">
+                        Success Plans
+                      </th>
                     )}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {pack.areas.map(a => (
+                    <tr key={a.areaId} data-area-id={a.areaId}>
+                      <th scope="row">{a.areaId}</th>
+                      <td>{a.recognition}</td>
+                      <td className="council-pack__num">
+                        {a.paidClubs}/{a.clubBase}
+                      </td>
+                      <td className="council-pack__num">
+                        {a.distinguishedClubs}/{a.requiredDistinguishedClubs}
+                      </td>
+                      <td className="council-pack__num">
+                        {visitReports(a.visits)}
+                      </td>
+                      {pack.csp.tracked && (
+                        <td className="council-pack__num">
+                          {a.cspSubmitted}/{a.cspHeld}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ScrollRegion>
           )}
         </section>
 
