@@ -182,4 +182,27 @@ describe('ClubDetailPage — worldwide standing read is lazy (#2759)', () => {
       expect(fetchCdnGlobalClubRace).toHaveBeenCalledWith('2026-09-11')
     )
   })
+
+  // A reader who presses Cmd-P without scrolling must still get the card.
+  it('requests it when a print is requested before the slot is near', async () => {
+    renderPage()
+    await screen.findAllByText('Limestone City Club')
+    expect(fetchCdnGlobalClubRace).not.toHaveBeenCalled()
+    await act(async () => {
+      window.dispatchEvent(new Event('beforeprint'))
+    })
+    await vi.waitFor(() =>
+      expect(fetchCdnGlobalClubRace).toHaveBeenCalledWith('2026-09-11')
+    )
+  })
+
+  // Without IntersectionObserver `useNearViewport` never turns true.
+  it('requests it without IntersectionObserver', async () => {
+    vi.stubGlobal('IntersectionObserver', undefined)
+    renderPage()
+    await screen.findAllByText('Limestone City Club')
+    await vi.waitFor(() =>
+      expect(fetchCdnGlobalClubRace).toHaveBeenCalledWith('2026-09-11')
+    )
+  })
 })
