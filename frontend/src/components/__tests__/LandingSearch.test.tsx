@@ -311,6 +311,10 @@ describe('LandingSearch — why a result matched (#2652)', () => {
   })
 
   it('spells out "District 61" beside the chip (LAND-10)', async () => {
+    // Real data: most districts' name is the bare number ("61").
+    vi.spyOn(searchIndex, 'loadSearchIndex').mockResolvedValue({
+      entities: [{ ...INDEX.entities[0]!, label: '61' }],
+    })
     renderSearch()
     fireEvent.focus(input())
     fireEvent.change(input(), { target: { value: '61' } })

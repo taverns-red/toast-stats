@@ -47,7 +47,7 @@ describe('search active row indicator (#2652)', () => {
 
   it('has a non-colour cue: a 3px inset bar in --tm-loyal-blue', () => {
     expect(active).toMatch(
-      /box-shadow:\s*inset\s+3px\s+0\s+0\s+0\s+var\(--tm-loyal-blue\)/
+      /box-shadow:\s*inset\s+3px\s+0\s+0(?:\s+0)?\s+var\(--tm-loyal-blue\)/
     )
   })
 
