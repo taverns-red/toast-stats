@@ -10,6 +10,7 @@ import {
 import { MemoryRouter } from 'react-router-dom'
 
 import { DistrictKpiStrip } from '../DistrictKpiStrip'
+import { PROVISIONAL_NOTE } from '../DistinguishedCount'
 import type { MetricRankings, RecognitionTargets } from '../../types/districts'
 
 /* #572 — sticky KPI strip extracted from DistrictOverview. Presentational
@@ -97,6 +98,24 @@ describe('DistrictKpiStrip (#572)', () => {
     expect(screen.getByTestId('district-kpi-strip-summary')).toHaveTextContent(
       '84 dist. +3 qualifying today'
     )
+  })
+
+  it('explains "qualifying today" to screen readers in the collapsed summary (#2776)', () => {
+    window.sessionStorage.setItem('district-kpi-strip-collapsed', 'true')
+    renderStrip(
+      <DistrictKpiStrip
+        kpis={{
+          ...sampleKpis,
+          distinguishedClubs: {
+            ...sampleKpis.distinguishedClubs,
+            provisional: 3,
+          },
+        }}
+      />
+    )
+    const note = screen.getByTestId('distinguished-provisional-note')
+    expect(note).toHaveClass('sr-only')
+    expect(note).toHaveTextContent(PROVISIONAL_NOTE)
   })
 
   it('collapsed summary has no provisional part when there is none', () => {
@@ -220,6 +239,21 @@ describe('DistrictKpiStrip (#572)', () => {
       expect(
         screen.getByTestId('district-kpi-strip-summary')
       ).toHaveTextContent(/6 dist\. qualifying today/)
+    })
+
+    it('adds no "+N" to the collapsed summary even if a provisional figure comes with it (#2776)', () => {
+      window.sessionStorage.setItem('district-kpi-strip-collapsed', 'true')
+      renderStrip(
+        <DistrictKpiStrip
+          kpis={{
+            ...kpis,
+            distinguishedClubs: { ...kpis.distinguishedClubs, provisional: 4 },
+          }}
+        />
+      )
+      const summary = screen.getByTestId('district-kpi-strip-summary')
+      expect(summary).toHaveTextContent(/6 dist\. qualifying today/)
+      expect(summary).not.toHaveTextContent('+4')
     })
 
     it('draws no basis label for a confirmed count', () => {
