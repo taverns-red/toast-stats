@@ -232,9 +232,9 @@ for (const [width, cols, rows] of [
     expect(lifecycle.rows, 'lifecycle rows').toBeGreaterThanOrEqual(2)
     expect(lifecycle.rowTextMin).toBeGreaterThanOrEqual(14)
     // Education and Compliance side by side from 768, the timeline
-    // (#2057, revised by #2655) under Education, laid out horizontally and
-    // hugging its content (no stretched empty space). Below 768 it stays a
-    // vertical timeline.
+    // (#2057) on its own full-width row below them, laid out horizontally
+    // and hugging its content (no stretched empty space). Below 768 it stays
+    // a vertical timeline.
     const [edu, compliance] = m.panels
     expect(
       lifecycle.slackBelowList,
@@ -251,13 +251,16 @@ for (const [width, cols, rows] of [
         edu!.top
       )
       expect(compliance!.left).toBeGreaterThan(edu!.left)
-      // #2655 UNIT-23 (review 2026-11-12): the timeline sits under
-      // Education in the left column; Compliance runs beside both.
-      expect(lifecycle.left, 'timeline under Education').toBe(edu!.left)
-      expect(lifecycle.top, 'timeline below Education').toBeGreaterThanOrEqual(
-        edu!.bottom
+      // Ron's #2057 decision stands (the review's UNIT-23 asked to pair
+      // Education with Lifecycle; Ron can choose that later): the timeline
+      // spans both columns on the row below them.
+      expect(
+        lifecycle.top,
+        'timeline below both panels'
+      ).toBeGreaterThanOrEqual(Math.max(edu!.bottom, compliance!.bottom))
+      expect(lifecycle.width, 'timeline is full width').toBeGreaterThanOrEqual(
+        m.panelsGridWidth - 2
       )
-      expect(lifecycle.width, 'timeline is Education wide').toBe(edu!.width)
       expect(new Set(lifecycle.itemTops).size, 'horizontal: one row').toBe(1)
       expect(lifecycle.itemLefts).toEqual(
         [...lifecycle.itemLefts].sort((a, b) => a - b)
