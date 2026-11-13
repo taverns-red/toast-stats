@@ -146,6 +146,20 @@ describe('DistrictCouncilPage (#2300)', () => {
     expect(mockedFetch).toHaveBeenCalledWith('2026-10-27', '61')
   })
 
+  // #2646 (HUB-07): the same section header as every other district tab, and
+  // no breadcrumb, so the section bar sits at one height. Pixels:
+  // e2e/district-subnav-position.smoke.ts.
+  it('uses the shared district section header and no breadcrumb (#2646)', async () => {
+    renderAt('/district/61/council?date=2026-10-27')
+    await screen.findByTestId('council-headline')
+    expect(screen.queryByTestId('subpage-breadcrumb')).toBeNull()
+    const lede = screen.getByTestId('district-detail-lede')
+    expect(lede.closest('.district-detail-page-header')).not.toBeNull()
+    expect(
+      screen.getByRole('heading', { level: 1, name: /District 61/ })
+    ).toBeInTheDocument()
+  })
+
   it('lists both groups by division, naming each reason', async () => {
     renderAt('/district/61/council?date=2026-10-27')
     const good = await screen.findByRole('region', {

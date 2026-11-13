@@ -160,6 +160,32 @@ describe('DistrictChangesPage', () => {
     expect(screen.getByText(/\(Active\) joined the roster/)).toBeInTheDocument()
   })
 
+  // #2646 (HUB-07): the section bar sat at six heights across tabs. This page
+  // used its own header and a 48px "District 61" breadcrumb under an h1 that
+  // already says it. It now carries the shared section header (title + lede)
+  // and no breadcrumb; the Overview tab is the way back. The pixel proof is
+  // e2e/district-subnav-position.smoke.ts.
+  it('uses the shared district section header and no breadcrumb (#2646)', () => {
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-05-25', '2026-05-26'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    mockedDiff.mockReturnValue({
+      data: diffFixture(),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+
+    const { container } = renderPage()
+    expect(screen.queryByTestId('subpage-breadcrumb')).toBeNull()
+    expect(
+      container.querySelector('.district-detail-page-header h1')
+    ).not.toBeNull()
+    expect(screen.getByTestId('district-detail-lede')).toHaveTextContent(
+      /what changed/i
+    )
+  })
+
   it('renders division and area status groups with entities linked to scoped routes (#1014)', () => {
     mockedDates.mockReturnValue({
       data: { dates: ['2026-05-25', '2026-05-26'] },

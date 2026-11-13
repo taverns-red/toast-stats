@@ -69,3 +69,40 @@ describe('AppMeta — report an issue (#1356)', () => {
     expect(text).toMatch(/MIT License\s*·\s*(?:v?\d|dev)/i)
   })
 })
+
+// #2646 (LAND-12): /mcp and /videos are reached from the footer, so the
+// footer link is the "you are here" marker on those pages.
+describe('AppMeta — current page (#2646)', () => {
+  const renderAt = (path: string) =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <AppMeta />
+      </MemoryRouter>
+    )
+
+  it('marks the MCP server link current on /mcp, and no other', () => {
+    renderAt('/mcp')
+    expect(screen.getByRole('link', { name: 'MCP server' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
+    expect(
+      screen.getByRole('link', { name: 'How-to videos' })
+    ).not.toHaveAttribute('aria-current')
+  })
+
+  it('marks the How-to videos link current on /videos', () => {
+    renderAt('/videos')
+    expect(screen.getByRole('link', { name: 'How-to videos' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
+  })
+
+  it('marks neither current elsewhere', () => {
+    renderAt('/district/61')
+    expect(
+      screen.getByRole('link', { name: 'MCP server' })
+    ).not.toHaveAttribute('aria-current')
+  })
+})

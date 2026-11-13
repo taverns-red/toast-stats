@@ -186,14 +186,20 @@ const queryClient = new QueryClient({
 
 function renderWithRoute(
   clubId: string = '00000606',
-  fromClubsSearch?: string
+  fromClubsSearch?: string,
+  /** Extra router state, e.g. `{ fromEntity }` from an area page (#2646). */
+  extraState?: Record<string, unknown>
 ) {
-  const entry = fromClubsSearch
-    ? {
-        pathname: `/district/61/club/${clubId}`,
-        state: { fromClubsSearch },
-      }
-    : `/district/61/club/${clubId}`
+  const entry =
+    fromClubsSearch || extraState
+      ? {
+          pathname: `/district/61/club/${clubId}`,
+          state: {
+            ...(fromClubsSearch ? { fromClubsSearch } : {}),
+            ...extraState,
+          },
+        }
+      : `/district/61/club/${clubId}`
   return render(
     <QueryClientProvider client={queryClient}>
       <ProgramYearProvider>
@@ -333,24 +339,74 @@ describe('ClubDetailPage (#208)', () => {
     )
   })
 
-  it('renders a bottom "Back to District" link (#618 redesign re-adds it as an anchor)', () => {
+  it('renders a bottom back link to the same parent as the breadcrumb (#618, #2646)', () => {
     renderWithRoute()
 
     // #577 removed the old bottom *button* as redundant with the breadcrumb.
-    // The #618 redesign (operator-confirmed, pixel-perfect to
-    // club-reference.html) reintroduces a bottom back affordance — but as an
-    // anchor link (reference uses a `.back-link` <a>), not a button. The
-    // breadcrumb's District crumb still provides top-of-page back nav.
-    const backLink = screen.getByRole('link', {
-      name: /Back to District 61/i,
-    })
-    expect(backLink).toHaveAttribute('href', '/district/61')
+    // The #618 redesign reintroduces a bottom back affordance as an anchor.
+    // #2646 (UNIT-07): it goes to the SAME parent as the breadcrumb and the
+    // phone back arrow (the clubs list), not a third place (the district hub).
+    const backLink = screen.getByTestId('club-back-link')
+    expect(backLink).toHaveTextContent('Back to Clubs')
+    expect(backLink).toHaveAttribute('href', '/district/61/clubs')
 
     // Still no *button* affordance — the reference is an anchor, and we keep
     // a single styled treatment.
     expect(
-      screen.queryAllByRole('button', { name: /Back to District 61/i })
+      screen.queryAllByRole('button', { name: /Back to Clubs/i })
     ).toHaveLength(0)
+  })
+
+  // #2646 (UNIT-07): one parent for the phone back arrow, the breadcrumb's
+  // parent crumb and the bottom link. From an area page it is that area.
+  describe('one parent for every way up (#2646)', () => {
+    const parentHrefs = () => ({
+      back: screen.getByTestId('context-bar-back').getAttribute('href'),
+      crumb: within(screen.getByTestId('subpage-breadcrumb'))
+        .getAllByRole('link')
+        .map(a => a.getAttribute('href')),
+      bottom: screen.getByTestId('club-back-link').getAttribute('href'),
+    })
+
+    it('leads to the clubs list when opened from nowhere in particular', () => {
+      renderWithRoute()
+      const { back, crumb, bottom } = parentHrefs()
+      expect(back).toBe('/district/61/clubs')
+      expect(crumb).toEqual(['/district/61', '/district/61/clubs'])
+      expect(bottom).toBe('/district/61/clubs')
+    })
+
+    it('leads to the area when opened from an area page', () => {
+      const AREA = '/district/61/division/A/area/A1'
+      renderWithRoute('00000606', undefined, {
+        fromEntity: { label: 'Area A1', to: AREA },
+      })
+      const { back, crumb, bottom } = parentHrefs()
+      expect(back).toBe(AREA)
+      expect(crumb).toEqual(['/district/61', AREA])
+      expect(bottom).toBe(AREA)
+      expect(screen.getByTestId('club-back-link')).toHaveTextContent(
+        'Back to Area A1'
+      )
+    })
+
+    it('ignores a fromEntity that points outside this district', () => {
+      renderWithRoute('00000606', undefined, {
+        fromEntity: { label: 'Elsewhere', to: 'https://example.com/' },
+      })
+      expect(parentHrefs().back).toBe('/district/61/clubs')
+    })
+
+    it('makes the hero Area and Division real links', () => {
+      renderWithRoute()
+      const hero = document.querySelector('.club-hero__sub') as HTMLElement
+      expect(
+        within(hero).getByRole('link', { name: 'Area A1' })
+      ).toHaveAttribute('href', '/district/61/division/A/area/A1')
+      expect(
+        within(hero).getByRole('link', { name: 'Division A' })
+      ).toHaveAttribute('href', '/district/61/division/A')
+    })
   })
 
   it('renders membership stats grid with correct net change', () => {
