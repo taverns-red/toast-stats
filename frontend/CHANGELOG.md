@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.66.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.65.0...frontend-v3.66.0) (2026-11-13)
+
+
+### Features
+
+* **methodology:** How it works, regrouped by reader question ([#2656](https://github.com/taverns-red/toast-stats/issues/2656)) ([#2715](https://github.com/taverns-red/toast-stats/issues/2715)) ([b23ee2b](https://github.com/taverns-red/toast-stats/commit/b23ee2beaaeec01012bc3ebefa82c7fa28d3f256))
+* **tables:** M4 education tables on DataTable ([#2732](https://github.com/taverns-red/toast-stats/issues/2732)) ([#2735](https://github.com/taverns-red/toast-stats/issues/2735)) ([6e707cb](https://github.com/taverns-red/toast-stats/commit/6e707cb5f7acec1ce00315996adde4f979b5fbe2))
+* **tables:** M5 division and area tables on shared styles ([#2718](https://github.com/taverns-red/toast-stats/issues/2718)) ([#2722](https://github.com/taverns-red/toast-stats/issues/2722)) ([e1824c8](https://github.com/taverns-red/toast-stats/commit/e1824c87fb9315c2d22a8c55b9b46d91b6c3bc38))
+* **tables:** M6 club history, health breakdown and region training on DataTable ([#2733](https://github.com/taverns-red/toast-stats/issues/2733)) ([#2736](https://github.com/taverns-red/toast-stats/issues/2736)) ([da87077](https://github.com/taverns-red/toast-stats/commit/da87077a81e2911c39840b0222a3eba75bccd4f3))
+* **tables:** M7 remaining tables on shared table styles ([#2734](https://github.com/taverns-red/toast-stats/issues/2734)) ([#2737](https://github.com/taverns-red/toast-stats/issues/2737)) ([b86e682](https://github.com/taverns-red/toast-stats/commit/b86e682bbdef226fdef5a630d1c2ad02040f7c5c))
+* **ui:** confirmed headline plus +N qualifying today on landing, rankings, regions ([#2580](https://github.com/taverns-red/toast-stats/issues/2580)) ([#2731](https://github.com/taverns-red/toast-stats/issues/2731)) ([507a15e](https://github.com/taverns-red/toast-stats/commit/507a15e497bab42fce3e67b1b5ed5628bb3896f8))
+* **ui:** sticky KPI line, one opaque row of 64px or less (D4) ([#2708](https://github.com/taverns-red/toast-stats/issues/2708)) ([#2711](https://github.com/taverns-red/toast-stats/issues/2711)) ([d9d5dd7](https://github.com/taverns-red/toast-stats/commit/d9d5dd76f6d31bfd2201e0cab519b6459b8641c2))
+
+
+### Bug Fixes
+
+* **charts:** axis text contrast, linear rank lines, labelled period bands ([#2659](https://github.com/taverns-red/toast-stats/issues/2659)) ([#2743](https://github.com/taverns-red/toast-stats/issues/2743)) ([51663a9](https://github.com/taverns-red/toast-stats/commit/51663a9631477d8fd0c891a9fad893fad69214e1))
+* **dark:** one slate dark palette, tokenised donut, dark status pills ([#2641](https://github.com/taverns-red/toast-stats/issues/2641)) ([#2741](https://github.com/taverns-red/toast-stats/issues/2741)) ([6cacc76](https://github.com/taverns-red/toast-stats/commit/6cacc762420c6f6aa74c4f0ed888ee77f5df00e7))
+* **landing,regions:** phone density, footer wrap, Red Vote placement, region count ([#2653](https://github.com/taverns-red/toast-stats/issues/2653)) ([#2729](https://github.com/taverns-red/toast-stats/issues/2729)) ([e60ba79](https://github.com/taverns-red/toast-stats/commit/e60ba7917bad2849c49ee1525d54fe4298fce8a7))
+* **nav:** active nav on district/region pages, steady section bar, one club parent ([#2646](https://github.com/taverns-red/toast-stats/issues/2646)) ([#2721](https://github.com/taverns-red/toast-stats/issues/2721)) ([6202421](https://github.com/taverns-red/toast-stats/commit/62024212a10040ee75ac0499797b352c19a3215c))
+* **ui:** D3 text sizes, 12px floor and sentence-case table headers ([#2725](https://github.com/taverns-red/toast-stats/issues/2725)) ([#2727](https://github.com/taverns-red/toast-stats/issues/2727)) ([9365327](https://github.com/taverns-red/toast-stats/commit/93653276405a4998bcaed55034b6d377463e6667))
+* **ui:** fetch the clubs snapshot diff only when it is needed ([#2740](https://github.com/taverns-red/toast-stats/issues/2740)) ([#2748](https://github.com/taverns-red/toast-stats/issues/2748)) ([777f19f](https://github.com/taverns-red/toast-stats/commit/777f19f664f454f256123524c232ef323b4440c8))
+
 ## [3.65.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.64.0...frontend-v3.65.0) (2026-11-13)
 
 
