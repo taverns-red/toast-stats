@@ -9,22 +9,16 @@
      ahead of system-ui: system-ui first would win and reintroduce the
      0.15 mobile CLS. If no local() resolves, the face is skipped and the
      stack degrades to system-ui exactly as it did before. */
-  --tm-font-headline:
-    'Montserrat', 'Montserrat Fallback', system-ui, -apple-system, 'Segoe UI',
-    'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji',
-    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-  --tm-font-body:
-    'Source Sans 3', 'Source Sans 3 Fallback', system-ui, -apple-system,
-    'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
-    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-
+  --tm-font-headline: "Montserrat", "Montserrat Fallback", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --tm-font-body: "Source Sans 3", "Source Sans 3 Fallback", system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  
   /* Font Weights */
   --tm-font-weight-regular: 400;
   --tm-font-weight-medium: 500;
   --tm-font-weight-semibold: 600;
   --tm-font-weight-bold: 700;
   --tm-font-weight-black: 900;
-
+  
   /* Font Sizes */
   --tm-font-size-xs: 12px;
   --tm-font-size-sm: 14px;
@@ -36,18 +30,18 @@
   --tm-font-size-4xl: 36px;
   --tm-font-size-5xl: 48px;
   --tm-font-size-6xl: 60px;
-
+  
   /* Minimum Requirements */
   --tm-font-size-min-body: 14px;
   --tm-line-height-min: 1.4;
-
+  
   /* Line Heights */
   --tm-line-height-tight: 1.25;
   --tm-line-height-snug: 1.375;
   --tm-line-height-normal: 1.5;
   --tm-line-height-relaxed: 1.625;
   --tm-line-height-loose: 2;
-
+  
   /* Letter Spacing */
   --tm-letter-spacing-tighter: -0.05em;
   --tm-letter-spacing-tight: -0.025em;
@@ -63,15 +57,15 @@
   --tm-h1-font-size: var(--tm-font-size-5xl);
   --tm-h1-line-height: var(--tm-line-height-tight);
   --tm-h1-font-weight: var(--tm-font-weight-black);
-
+  
   --tm-h2-font-size: var(--tm-font-size-4xl);
   --tm-h2-line-height: var(--tm-line-height-tight);
   --tm-h2-font-weight: var(--tm-font-weight-bold);
-
+  
   --tm-h3-font-size: var(--tm-font-size-3xl);
   --tm-h3-line-height: var(--tm-line-height-snug);
   --tm-h3-font-weight: var(--tm-font-weight-bold);
-
+  
   /* Page heading ramp (#2650). One size per role, so an h2 is never smaller
      than the h3 under it. Eyebrows stay mono and are not headings.
        page title 28/800, section 18/700, sub-section 16/700, card title 14/700.
@@ -89,20 +83,20 @@
   --tm-nav-font-size: var(--tm-font-size-base);
   --tm-nav-line-height: var(--tm-line-height-normal);
   --tm-nav-font-weight: var(--tm-font-weight-semibold);
-
+  
   /* Body Typography */
   --tm-body-large-font-size: var(--tm-font-size-lg);
   --tm-body-large-line-height: var(--tm-line-height-relaxed);
   --tm-body-large-font-weight: var(--tm-font-weight-regular);
-
+  
   --tm-body-medium-font-size: var(--tm-font-size-base);
   --tm-body-medium-line-height: var(--tm-line-height-normal);
   --tm-body-medium-font-weight: var(--tm-font-weight-regular);
-
+  
   --tm-body-small-font-size: var(--tm-font-size-sm);
   --tm-body-small-line-height: var(--tm-line-height-normal);
   --tm-body-small-font-weight: var(--tm-font-weight-regular);
-
+  
   --tm-caption-font-size: var(--tm-font-size-xs);
   --tm-caption-line-height: var(--tm-line-height-normal);
   --tm-caption-font-weight: var(--tm-font-weight-regular);

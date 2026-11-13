@@ -27,15 +27,9 @@
 
   .tm-body-small {
     font-family: var(--tm-font-body);
-    font-size: max(
-      var(--tm-body-small-font-size),
-      var(--tm-font-size-min-body)
-    );
+    font-size: max(var(--tm-body-small-font-size), var(--tm-font-size-min-body));
     font-weight: var(--tm-body-small-font-weight);
-    line-height: max(
-      var(--tm-body-small-line-height),
-      var(--tm-line-height-min)
-    );
+    line-height: max(var(--tm-body-small-line-height), var(--tm-line-height-min));
   }
 
   /* Prohibited Effects Prevention
@@ -63,6 +57,7 @@
   /* Responsive Typography Scaling */
 
   @media (max-width: 480px) {
+
     /* Ensure minimum body text size is maintained */
     .tm-body,
     .tm-body-medium,
