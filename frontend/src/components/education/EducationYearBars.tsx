@@ -15,6 +15,8 @@ export interface EducationYearBarsProps {
   programYear: string
   /** One secondary line under the rows: what each year sums. */
   note: React.ReactNode
+  /** Heading level of the section title; 2 on pages whose h1 has no h2 above. */
+  headingLevel?: 2 | 3
   /** Below 768, collapse the rows to sparkline-expand (#1793, #1835):
    *  the headline and a sparkline behind a tap, the rows in the sheet;
    *  `urlId` deep-links the open sheet via `?chartExpanded=`. Omitted =
@@ -41,7 +43,9 @@ export const EducationYearBars: React.FC<EducationYearBarsProps> = ({
   programYear,
   note,
   sparkline,
+  headingLevel = 3,
 }) => {
+  const Heading = `h${headingLevel}` as 'h2' | 'h3'
   const max = Math.max(1, ...years.map(y => y.totals?.awards ?? 0))
   const rows = (
     <ul className="education-rows" aria-label="Awards by program year">
@@ -93,9 +97,9 @@ export const EducationYearBars: React.FC<EducationYearBarsProps> = ({
   )
   return (
     <section className="education-section" aria-labelledby="edu-years-h">
-      <h2 id="edu-years-h" className="education-section__title">
+      <Heading id="edu-years-h" className="education-section__title">
         By program year
-      </h2>
+      </Heading>
       {sparkline ? (
         <ChartSparklineExpand
           urlId={sparkline.urlId}

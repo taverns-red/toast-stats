@@ -142,6 +142,8 @@ export const RankingsChangesView: React.FC<RankingsChangesViewProps> = ({
         )}
       </div>
 
+      {/* The tiles' titles are h3s; this h2 is their parent (#2650). */}
+      <h2 className="sr-only">Totals</h2>
       <div className="district-changes__kpis rankings-changes__kpis">
         <KpiDeltaCard
           title="Paid clubs"

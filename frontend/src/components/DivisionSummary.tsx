@@ -301,7 +301,7 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
     <div className="p-6 border-b border-gray-200">
       {/* Division Identifier and Status Badge */}
       <div className="flex items-center justify-between mb-3">
-        <h2 className="tm-h2 tm-text-loyal-blue">
+        <h2 className="heading-section tm-text-loyal-blue">
           {to ? (
             <Link to={to} className="division-heading-link">
               Division {divisionId}

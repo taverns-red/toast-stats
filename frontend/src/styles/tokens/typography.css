@@ -66,6 +66,20 @@
   --tm-h3-line-height: var(--tm-line-height-snug);
   --tm-h3-font-weight: var(--tm-font-weight-bold);
   
+  /* Page heading ramp (#2650). One size per role, so an h2 is never smaller
+     than the h3 under it. Eyebrows stay mono and are not headings.
+       page title 28/800, section 18/700, sub-section 16/700, card title 14/700.
+     Use these, not literal px, on any h1-h4 rule. */
+  --heading-page-size: 28px;
+  --heading-page-weight: 800;
+  --heading-section-size: 18px;
+  --heading-section-weight: 700;
+  --heading-sub-size: 16px;
+  --heading-sub-weight: 700;
+  --heading-card-size: 14px;
+  --heading-card-weight: 700;
+  --heading-line-height: 1.2;
+
   --tm-nav-font-size: var(--tm-font-size-base);
   --tm-nav-line-height: var(--tm-line-height-normal);
   --tm-nav-font-weight: var(--tm-font-weight-semibold);

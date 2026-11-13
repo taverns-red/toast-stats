@@ -84,13 +84,13 @@ export const MapClubSummary: React.FC<{
         const district = districtOf?.(club)
         return (
           <article key={club.clubId} className="map-club__item">
-            <h3
+            <h2
               ref={i === 0 ? first : undefined}
               tabIndex={-1}
               className="map-club__name"
             >
               {club.clubName}
-            </h3>
+            </h2>
             <p className="map-club__place">
               {[
                 district && `District ${district}`,

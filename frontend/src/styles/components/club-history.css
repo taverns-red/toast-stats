@@ -26,8 +26,8 @@
 
 .club-history-page__title {
   font-family: var(--serif);
-  font-size: clamp(1.4rem, 2.5vw, 1.9rem);
-  font-weight: 700;
+  font-size: var(--heading-page-size);
+  font-weight: var(--heading-page-weight);
   color: var(--ink);
   margin: 0;
 }

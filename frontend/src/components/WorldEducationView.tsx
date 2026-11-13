@@ -316,6 +316,7 @@ export const WorldEducationView: React.FC<WorldEducationViewProps> = ({
       </p>
       <KpiStrip e={e} />
       <EducationTimelineSection
+        headingLevel={2}
         programYear={programYear}
         kind="world"
         id={null}
@@ -324,10 +325,11 @@ export const WorldEducationView: React.FC<WorldEducationViewProps> = ({
         tilesAsOf={e.source.sourceDate}
         summary={e.summary}
       />
-      <ByLevelOrPathSection e={e.summary} />
-      <MatrixSection e={e.summary} />
+      <ByLevelOrPathSection e={e.summary} headingLevel={2} />
+      <MatrixSection e={e.summary} headingLevel={2} />
       {trend.length > 0 && (
         <EducationYearBars
+          headingLevel={2}
           years={trend}
           programYear={programYear}
           note={

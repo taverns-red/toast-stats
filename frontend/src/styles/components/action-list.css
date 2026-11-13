@@ -9,8 +9,8 @@
 }
 
 .action-list-page__title {
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: var(--heading-section-size);
+  font-weight: var(--heading-section-weight);
   color: var(--ink);
 }
 
@@ -122,7 +122,7 @@
    the button because that is what carries the text. */
 .action-list-section__heading {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--heading-sub-size);
   font-weight: 700;
 }
 

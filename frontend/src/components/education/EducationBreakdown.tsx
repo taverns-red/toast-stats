@@ -307,7 +307,11 @@ const Matrix: React.FC<{ e: EducationSummary }> = ({ e }) => {
   )
 }
 
-export const MatrixSection: React.FC<{ e: EducationSummary }> = ({ e }) => {
+export const MatrixSection: React.FC<{
+  e: EducationSummary
+  headingLevel?: 2 | 3
+}> = ({ e, headingLevel = 3 }) => {
+  const Heading = `h${headingLevel}` as 'h2' | 'h3'
   const isMobile = useIsMobile(768)
   const [open, setOpen] = useState(false)
   const openerRef = useRef<HTMLButtonElement>(null)
@@ -315,9 +319,9 @@ export const MatrixSection: React.FC<{ e: EducationSummary }> = ({ e }) => {
   const region = <Matrix e={e} />
   return (
     <section className="education-section" aria-labelledby={`${sheetId}-h`}>
-      <h2 id={`${sheetId}-h`} className="education-section__title">
+      <Heading id={`${sheetId}-h`} className="education-section__title">
         Level × path
-      </h2>
+      </Heading>
       <p className="education-note">
         Pathways awards only; Legacy awards and DTMs are counted in the totals
         above.
@@ -354,17 +358,19 @@ export const MatrixSection: React.FC<{ e: EducationSummary }> = ({ e }) => {
 
 /* ── By level / by path (`?by=path`) ─────────────────────────────────── */
 
-export const ByLevelOrPathSection: React.FC<{ e: EducationSummary }> = ({
-  e,
-}) => {
+export const ByLevelOrPathSection: React.FC<{
+  e: EducationSummary
+  headingLevel?: 2 | 3
+}> = ({ e, headingLevel = 3 }) => {
+  const Heading = `h${headingLevel}` as 'h2' | 'h3'
   const [params] = useSearchParams()
   const href = useParamHref()
   const by: 'level' | 'path' = params.get('by') === 'path' ? 'path' : 'level'
   return (
     <section className="education-section" aria-label="Awards by level or path">
-      <h2 className="education-section__title">
+      <Heading className="education-section__title">
         {by === 'level' ? 'By level' : 'By path'}
-      </h2>
+      </Heading>
       <SwitchLinks
         label="Group awards"
         options={[

@@ -184,7 +184,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
   return (
     <div className="redesign-panel">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">{heading}</h2>
+        <h2 className="heading-section text-gray-900">{heading}</h2>
         {analytics && clubCount > 0 && (
           <p className="mt-1 text-sm text-gray-600">
             {clubCount} club{clubCount === 1 ? '' : 's'}
@@ -317,7 +317,7 @@ export const DistrictOverviewSkeleton: React.FC<{
     data-testid="district-overview-skeleton"
   >
     <div className="mb-6">
-      <h2 className="text-2xl font-bold text-gray-900">{heading}</h2>
+      <h2 className="heading-section text-gray-900">{heading}</h2>
       <p
         className="mt-1 text-sm"
         data-testid="district-overview-skeleton-subtitle"

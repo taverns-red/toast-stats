@@ -67,7 +67,10 @@ export const RegionRecognitionScoreboard: React.FC<Props> = ({
   collapsible = false,
 }) => {
   const heading = (
-    <h2 id="region-recognition-heading" className="districts-kpi-card__label">
+    <h2
+      id="region-recognition-heading"
+      className="heading-section region-recognition__title"
+    >
       District Recognition
     </h2>
   )
