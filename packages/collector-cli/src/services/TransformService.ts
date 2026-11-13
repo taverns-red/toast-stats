@@ -1253,6 +1253,11 @@ export class TransformService {
         csvFetchedAt: calculatedAt,
         totalDistricts: rankings.length,
         fromCache: false,
+        // The date-level decision made above (`allZeroDistinguished`), kept
+        // so district analytics counts on the same basis (#2560).
+        distinguishedBasis: allZeroDistinguished
+          ? 'april-renewals'
+          : 'ti-recognised',
       },
       rankings,
     }

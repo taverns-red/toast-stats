@@ -29,6 +29,13 @@ export interface AllDistrictsRankingsMetadata {
   totalDistricts: number
   /** Whether data came from cache */
   fromCache: boolean
+  /**
+   * The date-level decision of whether TI publishes club Distinguished
+   * statuses yet (#2560): 'ti-recognised' when any district reports
+   * Distinguished clubs, else 'april-renewals' (the rankings substitute the
+   * renewals count). Absent in files written before #2560.
+   */
+  distinguishedBasis?: 'ti-recognised' | 'april-renewals'
 }
 
 /**
