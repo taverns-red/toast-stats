@@ -209,7 +209,7 @@ const TierGapTable: React.FC<{
       Still needed for each Distinguished District tier
     </caption>
     <thead>
-      <tr className="text-[11px] uppercase tracking-wide text-gray-600 theme-dark:text-gray-400">
+      <tr className="text-sm text-gray-600 theme-dark:text-gray-400">
         <th scope="col" className="py-1 pr-2 text-left font-medium">
           Tier
         </th>
@@ -284,7 +284,7 @@ const GapTile: React.FC<GapTileSpec> = ({
     >
       <div
         data-testid="gap-tile-label"
-        className="text-[11px] uppercase tracking-wide text-gray-600 theme-dark:text-gray-400 font-tm-body"
+        className="text-xs uppercase tracking-wide text-gray-600 theme-dark:text-gray-400 font-tm-body"
       >
         {label}
       </div>
@@ -302,7 +302,7 @@ const GapTile: React.FC<GapTileSpec> = ({
         /* The link rides the percentage's row, so it adds no row to the
            375 Overview (#2390, PAGE_MAX_H). Only the short link fits there
            on the CI renderer's wider system-ui face at the 14px floor. */
-        <div className="mt-0.5 text-[11px] text-gray-600 theme-dark:text-gray-400 font-tm-body">
+        <div className="mt-0.5 text-xs text-gray-600 theme-dark:text-gray-400 font-tm-body">
           <span data-testid="gap-tile-subitem" className="tabular-nums">
             +{gapPercent.toFixed(1)}%
           </span>

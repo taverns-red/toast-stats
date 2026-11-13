@@ -170,6 +170,16 @@ describe('RegionsPage (#496)', () => {
     ).toBeInTheDocument()
   })
 
+  it('counts the regions from the data, plus the unassigned districts (#2653 D11)', async () => {
+    renderPage()
+    await screen.findByRole('link', { name: /^region 01/i })
+    // The fixture holds 2 numbered regions and 1 DNAR district: the count and
+    // the districts without a region come from the data, never a literal 14.
+    const eyebrow = document.querySelector('.districts-page-header__eyebrow')
+    expect(eyebrow).toHaveTextContent('2 regions + 1 district not assigned')
+    expect(document.body).not.toHaveTextContent(/14 worldwide/)
+  })
+
   it('renders a "Find a region" filter bar with the available regions (#685)', async () => {
     renderPage()
     await screen.findByRole('link', { name: /^region 01/i })

@@ -191,8 +191,8 @@ describe('AreaPage data parity with the Divisions overview (#1016)', () => {
 
   it('renders the per-area First/Second Round Visit columns', () => {
     const { getByText } = renderArea()
-    expect(getByText('First Round Visits')).toBeInTheDocument()
-    expect(getByText('Second Round Visits')).toBeInTheDocument()
+    expect(getByText('First round visits')).toBeInTheDocument()
+    expect(getByText('Second round visits')).toBeInTheDocument()
   })
 
   it('renders Gap-to-D / S / P columns from the shared area performance row', () => {

@@ -78,7 +78,7 @@ const provenance = (ranking: EducationAwardRanking): string | null => {
 }
 
 const thClass =
-  'px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-gray-600 theme-dark:text-gray-400'
+  'px-2 py-2 text-sm font-semibold text-gray-600 theme-dark:text-gray-400'
 const tdClass = 'px-2 py-2 align-top'
 /* Below 768 (#2361) the "n / d" count sits under the rate in one column:
    with Rank, count and Rate all fixed-width, a 320 px phone left the Club
@@ -140,7 +140,7 @@ const ClubTable: React.FC<ClubTableProps> = ({
         <tr key={e.clubId}>
           {showRank && (
             <td
-              className={`${tdClass} tabular-nums text-xs font-bold text-tm-true-maroon`}
+              className={`${tdClass} tabular-nums text-sm font-bold text-tm-true-maroon`}
             >
               {e.rank !== null && tiedRanks.has(e.rank) && (
                 <span aria-hidden="true">=</span>
@@ -158,20 +158,20 @@ const ClubTable: React.FC<ClubTableProps> = ({
             >
               {e.clubName}
             </Link>
-            <span className="block text-[11px] text-gray-600 theme-dark:text-gray-400">
+            <span className="block text-xs text-gray-600 theme-dark:text-gray-400">
               Div {e.divisionId} · Area {e.areaId}
             </span>
           </td>
           <td
-            className={`${tdClass} ${countColClass} text-right tabular-nums text-xs text-gray-700 theme-dark:text-gray-300`}
+            className={`${tdClass} ${countColClass} text-right tabular-nums text-sm text-gray-700 theme-dark:text-gray-300`}
           >
             {e.numerator} / {e.denominator}
           </td>
           <td
-            className={`${tdClass} text-right tabular-nums text-xs font-semibold text-gray-900 theme-dark:text-gray-100`}
+            className={`${tdClass} text-right tabular-nums text-sm font-semibold text-gray-900 theme-dark:text-gray-100`}
           >
             {formatPercent(e.ratio)}
-            <span className="block whitespace-nowrap font-normal text-[11px] text-gray-600 theme-dark:text-gray-400 md:hidden">
+            <span className="block whitespace-nowrap font-normal text-xs text-gray-600 theme-dark:text-gray-400 md:hidden">
               <span className="sr-only">{countLabel}: </span>
               {e.numerator} / {e.denominator}
             </span>
@@ -232,7 +232,7 @@ const LeaderboardCard: React.FC<CardProps> = ({
         {spec.subtitle}
       </p>
       {spec.note && (
-        <p className="text-[11px] text-gray-600 theme-dark:text-gray-400 font-tm-body mb-3">
+        <p className="text-xs text-gray-600 theme-dark:text-gray-400 font-tm-body mb-3">
           {spec.note}
         </p>
       )}
@@ -295,7 +295,7 @@ const LeaderboardCard: React.FC<CardProps> = ({
       )}
 
       {ranking.available && source && (
-        <p className="mt-2 text-[11px] text-gray-600 theme-dark:text-gray-400 font-tm-body">
+        <p className="mt-2 text-xs text-gray-600 theme-dark:text-gray-400 font-tm-body">
           {source}
         </p>
       )}

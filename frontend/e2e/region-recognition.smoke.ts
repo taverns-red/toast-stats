@@ -18,6 +18,8 @@ for (const width of [390, 1280]) {
     await page.goto(PAGE, { waitUntil: 'networkidle', timeout: 60_000 })
     const section = page.locator('[data-testid="region-recognition"]')
     await section.waitFor({ timeout: 30_000 })
+    // #2653 — on a phone the scoreboard opens collapsed to one summary line.
+    if (width < 768) await section.locator('summary').click()
     await page
       .locator('[data-testid="recognition-tier"]')
       .first()

@@ -45,6 +45,7 @@ import { useDistrictRegionHistory } from '../hooks/useDistrictRegionHistory'
 import { RegionRecognitionScoreboard } from '../components/RegionRecognitionScoreboard'
 import { buildRecognitionScoreboard } from '../utils/regionRecognition'
 import { useRegionPace } from '../hooks/useRegionPace'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 const REGION_SORT_FIELDS = [
   'aggregate',
@@ -300,6 +301,10 @@ const RegionPage: React.FC = () => {
     () => districtProvisionalMap(rollups),
     [rollups]
   )
+
+  // Phones (#2653): District Recognition opens collapsed to a one-line
+  // summary, so the rankings table starts within two screens.
+  const isPhone = useIsMobile(768)
 
   // District Recognition scoreboard (#2307): the PY-gated tier each
   // district meets in the awards file, per tier of the selected PY's ladder.
@@ -608,7 +613,7 @@ const RegionPage: React.FC = () => {
         label={`Region ${region} sections`}
       />
       <div
-        className="districts-kpi-strip"
+        className="districts-kpi-strip districts-kpi-strip--two-up"
         style={{ marginBottom: 24 }}
         aria-label="Region totals"
       >
@@ -644,6 +649,7 @@ const RegionPage: React.FC = () => {
         scoreboard={recognition}
         programYear={selectedProgramYear.label}
         pace={pace.reference}
+        collapsible={isPhone}
       />
 
       <PriorityColumnsTable<DistrictRanking, RegionSortField>

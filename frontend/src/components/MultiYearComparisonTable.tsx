@@ -318,7 +318,7 @@ const MultiYearComparisonTable: React.FC<MultiYearComparisonTableProps> = ({
                 scope="col"
                 className="text-left py-3 px-2 text-sm font-semibold text-gray-700 font-tm-headline"
               >
-                Program Year
+                Program year
               </th>
               <th
                 scope="col"

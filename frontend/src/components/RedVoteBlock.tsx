@@ -161,3 +161,34 @@ export const RedVoteBlock: React.FC = () => {
     </section>
   )
 }
+
+/** The phone's one-line Red Vote pointer (#2653, decision D2): a line of copy
+    and the CTA near the top of the landing, in the block's own palette. The
+    full block follows the rankings (DistrictsPage). Static, so the loading
+    shell renders this same component and nothing shifts when data lands. It
+    sets no web font (it is above the fold): the metric-matched fallbacks. */
+export const RedVoteLine: React.FC = () => (
+  <section
+    className="red-vote-line"
+    aria-label={RED_VOTE_COPY.productName}
+    data-testid="red-vote-line"
+  >
+    <p className="red-vote-line__text">{RED_VOTE_COPY.lineText}</p>
+    <a
+      href={redVoteUrl('landing-line')}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="red-vote-block__cta red-vote-line__cta"
+      onClick={() =>
+        trackEvent('select_promotion', {
+          promotion_id: 'red-vote',
+          promotion_name: 'Red Vote',
+          creative_slot: 'landing-line',
+        })
+      }
+    >
+      {RED_VOTE_COPY.cta}
+      <span className="sr-only"> (opens in a new tab)</span>
+    </a>
+  </section>
+)

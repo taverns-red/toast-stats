@@ -341,7 +341,7 @@ describe('MultiYearComparisonTable', () => {
       renderWithProviders(<MultiYearComparisonTable {...baseProps} />)
 
       // Use getAllByText since mobile view also has these labels
-      expect(screen.getByText('Program Year')).toBeInTheDocument()
+      expect(screen.getByText('Program year')).toBeInTheDocument()
       // Column headers are unique to the table, but mobile has labels too
       const overallElements = screen.getAllByText('Overall')
       expect(overallElements.length).toBeGreaterThan(0)

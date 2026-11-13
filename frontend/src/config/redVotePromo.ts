@@ -17,6 +17,7 @@ export type RedVotePlacement =
   | 'district-card'
   | 'seasonal-banner'
   | 'landing-block'
+  | 'landing-line'
   | 'footer'
   | 'methodology'
 
@@ -27,6 +28,9 @@ export const RED_VOTE_COPY = {
   // season when one is on.
   blockEyebrow: 'District Council · DEC meetings',
   blockEyebrowSeason: 'District Council season',
+  // #2653 D2 — the phone's one-line pointer near the top of the landing; the
+  // full block follows the rankings.
+  lineText: 'Run DEC and Council votes with Red Vote',
   body: "Red Vote handles your meeting's votes securely and with ease. Built for district leaders and district budgets.",
   cta: 'See Red Vote',
   attribution:

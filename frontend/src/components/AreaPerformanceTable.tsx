@@ -247,11 +247,11 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
             <span className="entity-table__sub">(of club base)</span>
           </th>
           <th scope="col" className="entity-table__c">
-            First Round Visits
+            First round visits
             <span className="entity-table__sub">(75% of club base)</span>
           </th>
           <th scope="col" className="entity-table__c">
-            Second Round Visits
+            Second round visits
             <span className="entity-table__sub">(75% of club base)</span>
           </th>
           <th scope="col" className="entity-table__c">

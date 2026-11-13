@@ -18,6 +18,13 @@ import { regionProvisionalMap } from '../utils/rollupDistinguished'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { regionsTrainingOverview } from '../utils/regionTraining'
 import { RegionsTrainingWorld } from '../components/RegionsTrainingWorld'
+import { ContextBar } from '../components/ContextBar'
+import { ContextSheetControls } from '../components/ContextSheetControls'
+import { formatFreshnessLine } from '../utils/contextBar'
+import {
+  countUnassignedDistricts,
+  formatRegionCount,
+} from '../utils/regionCount'
 
 /* Region selection is URL state (#979) so it survives reload, back, and shared
    links — `?region=07`. Module-level options keep a stable reference so
@@ -140,10 +147,7 @@ const RegionsPage: React.FC = () => {
   )
 
   const dnarCount = useMemo(
-    () =>
-      data?.rankings
-        ? data.rankings.filter(r => !/^\d+$/.test(r.region)).length
-        : 0,
+    () => (data?.rankings ? countUnassignedDistricts(data.rankings) : 0),
     [data]
   )
 
@@ -170,18 +174,43 @@ const RegionsPage: React.FC = () => {
     )
   }
 
+  const lede =
+    'Aggregate ranking of the Toastmasters regions. Click any region to drill into its districts.'
+
   return (
-    <div className="app-shell__page">
+    <div className="districts-page">
+      {/* Phone context bar (#2653, as on /region/:n): below 768 it replaces
+          the 212px header stack, so the first region row is on screen. PY and
+          date are this page's own state (R3), set through the same setters. */}
+      <ContextBar
+        title="Regions"
+        programYear={selectedProgramYear}
+        date={effectiveDate}
+        controls={
+          <ContextSheetControls
+            availableProgramYears={availableProgramYears}
+            selectedProgramYear={selectedProgramYear}
+            onProgramYearChange={setSelectedProgramYear}
+            availableDates={cachedDates}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            freshness={formatFreshnessLine({
+              asOfDate: data?.asOfDate,
+              snapshotDate: effectiveDate,
+              isLatest: isLatestSnapshot,
+            })}
+          />
+        }
+        about={lede}
+        trail={[{ label: 'Regions' }]}
+      />
       <header className="districts-page-header">
         <div className="districts-page-header__intro">
           <p className="districts-page-header__eyebrow">
-            All regions · 14 worldwide
+            All regions · {formatRegionCount(regionIds.length, dnarCount)}
           </p>
           <h1 className="districts-page-header__title">Regions</h1>
-          <p className="districts-page-header__lede">
-            Aggregate ranking of all 14 Toastmasters regions. Click any region
-            to drill into its districts.
-          </p>
+          <p className="districts-page-header__lede">{lede}</p>
         </div>
         <div className="districts-page-header__actions">
           <DataControlsBar

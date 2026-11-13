@@ -56,7 +56,10 @@ export const RegionPageLoadingShell: React.FC<{ region: string }> = ({
       base={`/region/${region}`}
       label={`Region ${region} sections`}
     />
-    <div className="districts-kpi-strip" style={{ marginBottom: 24 }}>
+    <div
+      className="districts-kpi-strip districts-kpi-strip--two-up"
+      style={{ marginBottom: 24 }}
+    >
       <GhostKpiCard label="Districts" />
       <GhostKpiCard label="Paid Clubs" />
       <GhostKpiCard label="Payments" />
@@ -69,19 +72,20 @@ export const RegionPageLoadingShell: React.FC<{ region: string }> = ({
 
 export const RegionsPageLoadingShell: React.FC = () => (
   <div
-    className="app-shell__page"
+    className="districts-page"
     role="status"
     aria-label="Loading regions"
     data-testid="regions-loading-shell"
   >
+    <ContextBar title="Regions" chipLabel="About" />
     <header className="districts-page-header">
       <div className="districts-page-header__intro">
-        <p className="districts-page-header__eyebrow">
-          All regions · 14 worldwide
-        </p>
+        {/* The region count and the districts without a region come from the
+            data (#2653 D11), so the shell names neither. */}
+        <p className="districts-page-header__eyebrow">All regions</p>
         <h1 className="districts-page-header__title">Regions</h1>
         <p className="districts-page-header__lede">
-          Aggregate ranking of all 14 Toastmasters regions. Click any region to
+          Aggregate ranking of the Toastmasters regions. Click any region to
           drill into its districts.
         </p>
       </div>
