@@ -359,7 +359,7 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
             Distinguished:
           </span>
           {countsPending ? (
-            <CountPending width="12rem" height="36px" />
+            <CountPending width="12rem" height="33px" />
           ) : (
             <>
               <div
@@ -384,9 +384,9 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
         {countsPending && gapAnalysis && (
           <div className="flex items-center gap-2" aria-hidden="true">
             <span className="tm-body-small tm-text-cool-gray">Gap:</span>
-            <CountPending width="36px" height="36px" />
-            <CountPending width="36px" height="36px" />
-            <CountPending width="36px" height="36px" />
+            <CountPending width="37px" height="45px" />
+            <CountPending width="37px" height="45px" />
+            <CountPending width="37px" height="45px" />
           </div>
         )}
         {!countsPending && gapAnalysis && gapToD && gapToS && gapToP && (

@@ -30,7 +30,6 @@ import {
   DivisionRecognitionChip,
   divisionChip,
 } from './DivisionRecognitionChip'
-import { CountPending } from './DistinguishedCount'
 import type { DivisionPerformance } from '../utils/divisionStatus'
 import type { DivisionDistinguishedCountsRow } from '../hooks/useDistrictAnalytics'
 import {
@@ -65,7 +64,15 @@ function toDivisionRow(
       id: division.divisionId,
       to: `/district/${districtId}/division/${division.divisionId}`,
       title: `Division ${division.divisionId}`,
-      chip: <CountPending width="5rem" height="20px" />,
+      // A real chip's own box, so the row is the height it will be.
+      chip: (
+        <span
+          data-testid="distinguished-pending"
+          aria-hidden="true"
+          className="mobile-chip animate-pulse bg-gray-200"
+          style={{ display: 'block', width: '81px', height: '26px' }}
+        />
+      ),
       meta: [paid, net].join(' \u00b7 '),
       ariaLabel: `Division ${division.divisionId} — ${paid}, net ${net}`,
     }

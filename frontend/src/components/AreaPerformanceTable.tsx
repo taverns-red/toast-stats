@@ -320,7 +320,7 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
               </td>
               <td className="entity-table__c tabular">
                 {countsPending ? (
-                  <CountPending width="8rem" height="20px" />
+                  <CountPending width="73px" height="20px" />
                 ) : (
                   <>
                     {confirmedClubs}/{area.clubBase} {distinguishedPercentage}%
@@ -339,7 +339,7 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
               {countsPending ? (
                 <>
                   <td className="entity-table__c">
-                    <CountPending width="5rem" height="20px" />
+                    <CountPending width="123px" height="20px" />
                   </td>
                   {[0, 1, 2].map(i => (
                     <td key={i} className="entity-table__c tabular">
