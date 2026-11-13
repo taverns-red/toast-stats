@@ -246,11 +246,29 @@ const DistrictClubsPage: React.FC = () => {
     () => previousRecordedDate(sortedRecordedDates),
     [sortedRecordedDates]
   )
-  const { data: snapshotDiff } = useSnapshotDiff(
-    districtId,
-    defaultDiffPair?.from,
-    defaultDiffPair?.to
+  // #2740: the pair is two full district files (~104 KB for District 61), so
+  // it is read only once the diff is needed: the Columns menu opens, a Changes
+  // column is saved or sorted/filtered by, or "Export Changes" is clicked. The
+  // Changes group and the export button are offered meanwhile (a previous
+  // recorded date exists), so nothing is hidden, only fetched later.
+  // Keyed by district so a district change starts unwanted again.
+  const [diffWantedFor, setDiffWantedFor] = useState<string | undefined>()
+  const diffWanted = !!districtId && diffWantedFor === districtId
+  const requestChanges = useCallback(
+    () => setDiffWantedFor(districtId),
+    [districtId]
   )
+  const {
+    data: snapshotDiff,
+    isFetching: isDiffFetching,
+    isError: isDiffError,
+    refetch: refetchDiff,
+  } = useSnapshotDiff(districtId, defaultDiffPair?.from, defaultDiffPair?.to, {
+    enabled: diffWanted,
+  })
+  const retryChanges = useCallback(() => {
+    void refetchDiff()
+  }, [refetchDiff])
 
   // A refresh that fails while clubs are on screen keeps them (spec §7) and
   // says so inline, once per failure: dismissing hides that error, not the next.
@@ -369,6 +387,13 @@ const DistrictClubsPage: React.FC = () => {
                   initialPresetActive={initialPresetActive}
                   onPresetChange={handlePresetChange}
                   snapshotDiff={snapshotDiff}
+                  deferredChanges={{
+                    available: !!defaultDiffPair,
+                    isLoading: diffWanted && !!isDiffFetching,
+                    isError: diffWanted && !!isDiffError && !isDiffFetching,
+                    onRequest: requestChanges,
+                    onRetry: retryChanges,
+                  }}
                   programYear={effectiveProgramYear?.label}
                   openGroups={openGroups}
                   onOpenGroupsChange={setOpenGroups}

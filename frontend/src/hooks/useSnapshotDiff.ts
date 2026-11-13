@@ -55,12 +55,15 @@ export type SnapshotDiffView = SnapshotDiff & {
  *
  * Keyed by the (districtId, from, to) triple so each pair caches independently.
  * The dated file is the `PerDistrictData` wrapper — the diff engine consumes its
- * `.data` (`DistrictStatisticsFile`). Disabled until all three are present.
+ * `.data` (`DistrictStatisticsFile`). Disabled until all three are present, or
+ * while `options.enabled` is false (#2740: the clubs route fetches the pair
+ * only once the diff is needed; every other caller keeps the eager default).
  */
 export function useSnapshotDiff(
   districtId: string | undefined,
   from: SnapshotDate | undefined,
-  to: SnapshotDate | undefined
+  to: SnapshotDate | undefined,
+  options: { enabled?: boolean } = {}
 ) {
   return useQuery<SnapshotDiffView, Error>({
     queryKey: ['snapshot-diff', districtId, from, to],
@@ -90,7 +93,7 @@ export function useSnapshotDiff(
         clubStatusTotals: countClubStatusTotals(fromSnap.data, toSnap.data),
       }
     },
-    enabled: !!districtId && !!from && !!to,
+    enabled: (options.enabled ?? true) && !!districtId && !!from && !!to,
     staleTime: 5 * 60 * 1000,
     retry: 2,
   })
