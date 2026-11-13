@@ -106,6 +106,19 @@ describe('AreaPerformanceTable on the shared table styles (#2718)', () => {
     expect(table.querySelector('caption')).not.toBeNull()
   })
 
+  it('builds its caption from the label, so cards on one page differ', () => {
+    render(
+      <MemoryRouter>
+        <AreaPerformanceTable
+          areas={[area()]}
+          label="Division B area performance"
+        />
+      </MemoryRouter>
+    )
+    const caption = screen.getByRole('table').querySelector('caption')
+    expect(caption).toHaveTextContent('Division B area performance')
+  })
+
   it('names each area with th scope=row', () => {
     renderFull()
     const heads = screen.getAllByRole('rowheader')
