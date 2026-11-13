@@ -104,10 +104,31 @@ gen_enabled() { [ "${SHIM_GENERATIONS:-0}" = "1" ]; }
 next_gen() {
   # Real generations are microsecond write times, so a new one is newer than
   # any seeded (pre-2026-10-23) generation: start just after that.
-  local f="${SHIM_ROOT}/.gen-counter" n=1793000000000000
+  #
+  # Parallel shims (copy-out runs its workers under `xargs -P`, #2800) must not
+  # interleave the read, increment and write: a `mkdir` lock (atomic on macOS
+  # and Linux, which has no flock there) serialises them, and the new value is
+  # written to a temp file and `mv`d into place so a reader never sees a torn
+  # counter.
+  local f="${SHIM_ROOT}/.gen-counter" lock="${SHIM_ROOT}/.gen-counter.lock"
+  local n=1793000000000000 tries=0
+  until mkdir "${lock}" 2>/dev/null; do
+    tries=$((tries + 1))
+    if [ "${tries}" -gt 6000 ]; then
+      echo "gcloud shim: could not take ${lock}" >&2
+      return 1
+    fi
+    sleep 0.01
+  done
+  # Callers run this in a `$(...)` subshell, so the EXIT trap frees the lock on
+  # any failure path (set -e) without touching the script's own traps.
+  trap 'rmdir "${lock}" 2>/dev/null' EXIT
   [ -f "${f}" ] && n="$(cat "${f}")"
   n=$((n + 1))
-  echo "${n}" >"${f}"
+  echo "${n}" >"${f}.tmp.$$"
+  mv "${f}.tmp.$$" "${f}"
+  rmdir "${lock}"
+  trap - EXIT
   echo "${n}"
 }
 
