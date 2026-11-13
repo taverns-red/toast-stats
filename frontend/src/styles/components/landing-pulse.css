@@ -420,9 +420,24 @@
     font-weight: 600;
   }
 
+  /* #2645 — the region link is a 44px box at every width (it measured 59x17,
+     at 375 too). The row is sized to it, so loaded rows and the reserve
+     below agree. */
   .world-pulse__table tbody th a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     color: var(--link);
     text-decoration: none;
+  }
+
+  .world-pulse__table tbody th {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .world-pulse__table tbody tr {
+    height: 45px;
   }
 
   .world-pulse__table tbody th a:hover {
@@ -436,10 +451,11 @@
 
   /* Five rows at every width (review S1) plus the head and the link; a
      data-dependent count would have nothing to reserve against (#1359 gap
-     c). Rows measure 31.2px (14px x 1.3 + 12px padding + 1px border), so
-     the pitch is 32px, not 31: at 375 the loaded block is ~231px. */
+     c). The head row keeps a 32px pitch (14px x 1.3 + 12px padding + 1px
+     border, rounded up); body rows are 45px (a 44px link plus the border,
+     #2645). */
   .world-pulse__regions {
-    min-height: calc(6 * 32px + 44px);
+    min-height: calc(32px + 5 * 45px + 44px);
   }
 
   .world-pulse__table tbody th {

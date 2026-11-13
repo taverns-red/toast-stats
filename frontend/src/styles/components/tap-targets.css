@@ -46,6 +46,13 @@
     min-height: 44px;
   }
 
+  /* "Print pack" sat beside a 44px button as an 18px link (#2645). */
+  .area-council-tools .council-pack-link a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
   /* Touch devices above the 768 phone breakpoint (#2017). A phone in
      landscape (844×390) is wider than 768, so it gets the desktop chrome:
      the inline header search field (input 21px tall) and the footer meta
@@ -54,6 +61,17 @@
      mouse keeps the compact desktop sizes. Below 768 neither renders (the
      search is an icon button, the footer moves into "About"). */
   @media (pointer: coarse) {
+    /* Row and table links (#2645). At 768-1023 a touch device gets the
+       desktop table chrome, whose name links were 17px tall (clubs, action
+       list, training, council) and race-table district links 23x21. A coarse
+       pointer gets the 44px box at any width; a mouse keeps the compact
+       rows. inline-flex centres the text in the box. */
+    :is(.dt, .entity-table, .action-table, .race-table) :is(th, td) > a[href] {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+    }
+
     .header-search__field {
       height: auto;
     }
