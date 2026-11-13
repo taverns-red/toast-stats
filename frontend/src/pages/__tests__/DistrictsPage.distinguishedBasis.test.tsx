@@ -168,10 +168,10 @@ describe('DistrictsPage — confirmed headline + qualifying today (#2580)', () =
     expect(d83[6]).toBe('')
   })
 
-  // The phone priority-columns smoke forbids td text under 14px and any
-  // clipped metric cell, so the 12px extra stays out of the compact phone
-  // table; it lives in the full table and the KPI.
-  it('phone priority table keeps the plain confirmed count, no 12px extra', async () => {
+  // Ron, 2026-11-13: the compact phone table carries "+N qualifying today" too,
+  // on its own line under the confirmed count (14px, set in CSS); nothing
+  // extra for 0 or unknown.
+  it('phone priority table shows +N qualifying today for N>0 only', async () => {
     // jsdom has no media queries; useIsMobile reads a stubbed matchMedia.
     vi.stubGlobal(
       'matchMedia',
@@ -198,9 +198,11 @@ describe('DistrictsPage — confirmed headline + qualifying today (#2580)', () =
     expect(
       within(phone).getAllByText('25', { exact: false }).length
     ).toBeGreaterThan(0)
-    expect(
-      phone.querySelector('[data-testid="distinguished-provisional"]')
-    ).toBeNull()
+    const extras = phone.querySelectorAll(
+      '[data-testid="distinguished-provisional"]'
+    )
+    expect(extras).toHaveLength(1)
+    expect(extras[0]).toHaveTextContent('+11 qualifying today')
     vi.unstubAllGlobals()
   })
 

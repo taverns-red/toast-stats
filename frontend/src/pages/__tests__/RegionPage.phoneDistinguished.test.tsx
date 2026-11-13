@@ -1,5 +1,5 @@
-/* #2580: the phone priority-columns smoke forbids td text under 14px, so the
- * 12px "+N qualifying today" stays out of the compact phone table. */
+/* #2580: Ron (2026-11-13) wants "+N qualifying today" in the compact phone
+ * table too, on its own line under the confirmed count; nothing for N=0. */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -64,7 +64,7 @@ afterEach(() => {
 })
 
 describe('RegionPage phone view (#2580)', () => {
-  it('shows the confirmed count in the compact table, not the 12px extra', async () => {
+  it('shows +N qualifying today under the confirmed count in the compact table', async () => {
     vi.mocked(fetchCdnRankings).mockResolvedValue({
       rankings: [row],
       asOfDate: '2025-11-22',
@@ -90,7 +90,6 @@ describe('RegionPage phone view (#2580)', () => {
       </QueryClientProvider>
     )
     fireEvent.click(await screen.findByRole('button', { name: 'Dist. clubs' }))
-    // Wait for the rollups so the extra would be drawn if it were going to be.
     await screen.findAllByTestId('distinguished-provisional')
     const table = document.querySelector(
       'table.priority-columns__table'
@@ -98,6 +97,6 @@ describe('RegionPage phone view (#2580)', () => {
     expect(table).toHaveTextContent('50')
     expect(
       table.querySelector('[data-testid="distinguished-provisional"]')
-    ).toBeNull()
+    ).toHaveTextContent('+7 qualifying today')
   })
 })
