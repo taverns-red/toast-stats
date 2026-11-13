@@ -200,25 +200,21 @@ test.describe('768×1024 touch tablet (#2645)', () => {
       ).toEqual([])
 
       // The race table must not add cell padding on top of the 44px link
-      // (rows grew ~41 -> ~65px). A long club name may still wrap onto more
-      // lines at 768, so the row is measured against its tallest link: at
-      // most the row border above it, not 20px of padding.
+      // (rows grew ~41 -> ~65px). Row height also follows wrapped text in
+      // other cells at 768, so the check is on the cells' computed padding.
       if (path.includes('/clubs/race/')) {
-        const slack = await page
-          .locator('.race-table tbody tr')
-          .evaluateAll(trs =>
-            trs.map(tr => {
-              const links = Array.from(tr.querySelectorAll('a[href]'))
-              const tallest = Math.max(
-                ...links.map(a => a.getBoundingClientRect().height)
-              )
-              return Math.round(tr.getBoundingClientRect().height - tallest)
+        const pads = await page
+          .locator('.race-table tbody :is(th, td)')
+          .evaluateAll(cells =>
+            cells.map(c => {
+              const cs = getComputedStyle(c)
+              return parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
             })
           )
-        expect(slack.length).toBeGreaterThan(0)
+        expect(pads.length).toBeGreaterThan(0)
         expect(
-          slack.filter(s => s > 4),
-          'race-table rows carry extra vertical padding on touch'
+          pads.filter(p => p > 4),
+          'race-table cells carry vertical padding on touch'
         ).toEqual([])
       }
     })
