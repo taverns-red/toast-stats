@@ -1,4 +1,5 @@
 import React from 'react'
+import InfoTooltip from './InfoTooltip'
 import { AreaPerformance } from '../utils/divisionStatus'
 import {
   calculateAreaGapAnalysis,
@@ -192,10 +193,16 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
         <span
           className={`px-2 py-1 text-xs font-medium rounded-full border ${badge.className}`}
           aria-label={`Recognition status: ${badge.label}`}
-          title={badge.tooltip}
         >
           {badge.label}
         </span>
+        {/* The meaning was a `title`: touch and keyboard now open it (#2644). */}
+        {badge.tooltip && (
+          <InfoTooltip
+            label={`area ${area.areaId} recognition`}
+            text={badge.tooltip}
+          />
+        )}
       </td>
 
       {/* Gap to D - Requirement 9.6 */}

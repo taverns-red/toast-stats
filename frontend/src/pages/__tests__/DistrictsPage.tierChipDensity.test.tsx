@@ -223,12 +223,12 @@ describe('DistrictsPage — DDP tier chip + density (#546)', () => {
         screen.getByTestId('rankings-table-methodology-affordance')
       ).toBeInTheDocument()
       // The four per-column InfoTooltip icons inside the rankings table
-      // header are gone. InfoTooltip renders a <button aria-label="info">
+      // header are gone. InfoTooltip renders a <button aria-label="About …">
       // so we count those inside columnheader cells.
       const table = screen.getByRole('table', { name: /district rankings/i })
       const header = within(table).getAllByRole('columnheader')
       const tooltipButtons = header.flatMap(h =>
-        within(h).queryAllByRole('button', { name: /^info$/i })
+        within(h).queryAllByRole('button', { name: /^About / })
       )
       expect(tooltipButtons).toHaveLength(0)
     })

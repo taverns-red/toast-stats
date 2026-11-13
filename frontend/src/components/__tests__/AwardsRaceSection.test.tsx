@@ -3,7 +3,7 @@
 
 import React from 'react'
 import { describe, it, expect } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { AwardsRaceSection } from '../AwardsRaceSection'
 import type { CompetitiveAwardStandings } from '../../services/cdn'
@@ -171,20 +171,18 @@ describe('AwardsRaceSection — 3-card redesign (#357)', () => {
     expect(container.querySelector('.awards-race-card__leader-link')).toBeNull()
   })
 
-  // #1359 — the loaded section heading carries an InfoTooltip, whose trigger
-  // is a <button>, and styles/layers/base.css floors every button at 44px
-  // (WCAG 2.5.5). That inflates the heading's line box far beyond its text,
-  // so a skeleton heading rendered as a bare bar under-reserves by ~45px and
-  // the swap expands the section — measured as a residual CLS 0.0105 after
-  // the collapse in this same issue was fixed. The reserve is structural
-  // (a .tooltip-reserve box, same 44px floor) rather than a pinned height.
-  it('reserves the heading tooltip the loaded section renders (#1359)', () => {
+  // #1359 / #2644 — the loaded section heading carries an InfoTooltip. Its
+  // trigger used to be floored at 44px by styles/layers/base.css, which made
+  // the heading 45px taller than a bare skeleton bar and needed a
+  // .tooltip-reserve box. The trigger now opts out of the floor
+  // (.info-tooltip__trigger), so the skeleton needs no reserve at all.
+  it('needs no tooltip reserve: the loaded trigger adds no line height (#2644)', () => {
     const { container } = renderWithRouter(
       <AwardsRaceSection standings={null} isLoading />
     )
     const heading = container.querySelector('.awards-race__header')
     expect(heading).not.toBeNull()
-    expect(heading!.querySelector('.tooltip-reserve')).not.toBeNull()
+    expect(heading!.querySelector('.tooltip-reserve')).toBeNull()
   })
 
   it('renders that heading tooltip in the loaded section', () => {
@@ -195,7 +193,9 @@ describe('AwardsRaceSection — 3-card redesign (#357)', () => {
       <AwardsRaceSection standings={mockStandings} />
     )
     const heading = container.querySelector('.awards-race__header')
-    expect(heading!.querySelector('button')).not.toBeNull()
+    expect(
+      heading!.querySelector('button.info-tooltip__trigger')
+    ).not.toBeNull()
   })
 
   it('still renders nothing once the query settles with no data (not loading)', () => {
@@ -336,8 +336,10 @@ describe('AwardsRaceSection — 3-card redesign (#357)', () => {
     const ret = findCard(/retention/i)
     expect(within(ret).getByText(/5 districts tied/i)).toBeInTheDocument()
     expect(within(ret).queryByText(/qualifying/i)).not.toBeInTheDocument()
+    // The note opens from a button (it was a `title`, #2644).
+    fireEvent.click(within(ret).getByRole('button', { name: /tie-break/i }))
     expect(
-      within(ret).getByTitle(/tie-break isn.t published/i)
+      within(ret).getByText(/tie-break isn.t published/i)
     ).toBeInTheDocument()
   })
 })

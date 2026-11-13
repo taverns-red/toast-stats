@@ -72,8 +72,8 @@ const PINNABLE = [
   {
     what: 'InfoTooltip (w-56)',
     route: '/',
-    trigger: 'button[aria-label="info"]',
-    sentinel: 'button[aria-label="info"]',
+    trigger: 'button.info-tooltip__trigger',
+    sentinel: 'button.info-tooltip__trigger',
   },
 ]
 
@@ -250,7 +250,7 @@ test('the tooltip triggers keep their 44px floor', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   await load(page, '/', 'light')
   await page
-    .locator('button[aria-label="info"]')
+    .locator('button.info-tooltip__trigger')
     .first()
     .waitFor({ state: 'visible', timeout: 30_000 })
   await page.waitForTimeout(500)
@@ -259,13 +259,63 @@ test('the tooltip triggers keep their 44px floor', async ({ page }) => {
     const undersized: string[] = []
     let counted = 0
     for (const el of Array.from(
-      document.querySelectorAll('button[aria-label="info"]')
+      document.querySelectorAll('button.info-tooltip__trigger')
     )) {
       const r = el.getBoundingClientRect()
       if (r.width <= 1 || r.height <= 1) continue // collapsed, not a target
+      // Inside a folded <details> it is not rendered; the summary is the target.
+      if (el.closest('details:not([open])')) continue
       counted++
-      if (r.width < floor || r.height < floor) {
-        undersized.push(`${Math.round(r.width)}×${Math.round(r.height)}`)
+      // #2644: the hit area is the ::after that overflows the 14px icon. It
+      // counts only if it is not pointer-events:none and all four corners of
+      // it resolve, through elementFromPoint, to the trigger itself.
+      let hitW = 0
+      let hitH = 0
+      let blockedBy = ''
+      const after = getComputedStyle(el, '::after')
+      if (
+        after.position === 'absolute' &&
+        after.content !== 'none' &&
+        after.pointerEvents !== 'none'
+      ) {
+        el.scrollIntoView({
+          block: 'center',
+          inline: 'center',
+          behavior: 'instant',
+        })
+        const b = el.getBoundingClientRect()
+        const aw = parseFloat(after.width) || 0
+        const ah = parseFloat(after.height) || 0
+        const cx = b.left + b.width / 2
+        const cy = b.top + b.height / 2
+        const named = (n: Element | null): string => {
+          if (!n) return 'null'
+          const c = (n.getAttribute('class') || '').split(/\s+/)[0]
+          return `${n.tagName.toLowerCase()}${c ? `.${c}` : ''}`
+        }
+        const why: string[] = []
+        const tappable = [
+          [cx - aw / 2 + 1, cy - ah / 2 + 1],
+          [cx + aw / 2 - 1, cy - ah / 2 + 1],
+          [cx - aw / 2 + 1, cy + ah / 2 - 1],
+          [cx + aw / 2 - 1, cy + ah / 2 - 1],
+        ].every(([x, y], i) => {
+          const hit = document.elementFromPoint(x!, y!)
+          const ok = hit === el || (hit !== null && el.contains(hit))
+          if (!ok) why.push(`corner${i} covered by ${named(hit)}`)
+          return ok
+        })
+        if (tappable) {
+          hitW = aw
+          hitH = ah
+        } else {
+          blockedBy = why.join(' | ')
+        }
+      }
+      const w = Math.max(r.width, hitW)
+      const h = Math.max(r.height, hitH)
+      if (w < floor || h < floor) {
+        undersized.push(`${Math.round(w)}×${Math.round(h)} ${blockedBy}`.trim())
       }
     }
     return { undersized, counted }

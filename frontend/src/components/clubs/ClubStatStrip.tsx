@@ -1,4 +1,5 @@
 import { MobileDisclosure } from '../MobileDisclosure'
+import InfoTooltip from '../InfoTooltip'
 
 /**
  * #1843 (mobile review §6.3) — the club stat strip: 2×2 at 375, 4×2 from
@@ -25,8 +26,12 @@ const PRIMARY = 4
 
 function Cell({ stat }: { stat: ClubStat }) {
   return (
-    <div className="club-stat" title={stat.title}>
-      <div className="club-stat__label">{stat.label}</div>
+    <div className="club-stat">
+      <div className="club-stat__label">
+        {stat.label}
+        {/* `title` reached neither touch nor most screen readers (#2644). */}
+        {stat.title && <InfoTooltip label={stat.label} text={stat.title} />}
+      </div>
       <div
         className={`club-stat__val tabular-nums${
           stat.valClass ? ` club-stat__val--${stat.valClass}` : ''

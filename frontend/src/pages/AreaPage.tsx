@@ -35,6 +35,7 @@ import { downloadCSV } from '../utils/csvExport'
 import { ClubHealthTable } from '../components/ClubHealthTable'
 import { HealthLegend } from '../components/dataTable/cells/HealthLegend'
 import { areaWorkbookCsv } from '../utils/areaWorkbook'
+import InfoTooltip from '../components/InfoTooltip'
 
 const AreaPage: React.FC = () => {
   const { districtId, divId, areaId } = useParams<{
@@ -301,15 +302,26 @@ const AreaPage: React.FC = () => {
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="districts-page-header__title">{areaName}</h1>
             {badge ? (
-              <span
-                className={`px-2 py-1 text-sm font-medium rounded-full border ${badge.className}`}
-                aria-label={`Area ${areaPerformance?.areaId ?? areaId} recognition: ${badge.label}`}
-                title={badge.tooltip}
-              >
-                {/* Named, so a lone "Net Loss" pill is not a mystery (UNIT-27). */}
-                <span className="entity-recognition__label">Recognition: </span>
-                {badge.label}
-              </span>
+              <>
+                <span
+                  className={`px-2 py-1 text-sm font-medium rounded-full border ${badge.className}`}
+                  aria-label={`Area ${areaPerformance?.areaId ?? areaId} recognition: ${badge.label}`}
+                >
+                  {/* Named, so a lone "Net Loss" pill is not a mystery (UNIT-27). */}
+                  <span className="entity-recognition__label">
+                    Recognition:{' '}
+                  </span>
+                  {badge.label}
+                </span>
+                {/* The meaning was a `title`: touch and keyboard now open it
+                    (#2644). */}
+                {badge.tooltip && (
+                  <InfoTooltip
+                    label={`area ${areaPerformance?.areaId ?? areaId} recognition`}
+                    text={badge.tooltip}
+                  />
+                )}
+              </>
             ) : (
               /* #1896: every valid area gets a badge once the snapshot lands;
                  below 768 it is the header's only visible content, so hold

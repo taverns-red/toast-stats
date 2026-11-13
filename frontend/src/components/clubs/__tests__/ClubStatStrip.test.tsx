@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, cleanup } from '@testing-library/react'
+import {
+  render,
+  cleanup,
+  fireEvent,
+  screen,
+  within,
+} from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { ClubStatStrip, type ClubStat } from '../ClubStatStrip'
 
@@ -61,8 +67,12 @@ describe('ClubStatStrip (#1843)', () => {
     )
     expect(labels(direct)).toEqual(STATS.map(s => s.label))
     expect(grid.querySelector('details')).toBeNull()
-    const csp = direct[7]!
-    expect(csp).toHaveAttribute('title', 'Submitted')
+    const csp = direct[7] as HTMLElement
+    // The helper was a `title`, unreachable by touch; it opens from a button
+    // now (#2644).
+    expect(csp).not.toHaveAttribute('title')
+    fireEvent.click(within(csp).getByRole('button', { name: /^About / }))
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Submitted')
     expect(csp.querySelector('.club-stat__val')).toHaveClass(
       'club-stat__val--tick'
     )
