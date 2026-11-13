@@ -65,6 +65,8 @@ export interface DateRoles {
   yearEnds: string[]
   /** Every month-end the CDN has within the last 26 months. */
   monthEnds: string[]
+  /** The weekly dates the club page's Recent changes card reads. */
+  feed?: string[]
 }
 
 export interface ExpandVars extends DateRoles {

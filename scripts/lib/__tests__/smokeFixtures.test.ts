@@ -74,6 +74,52 @@ describe('dateRoles', () => {
     })
   })
 
+  it('names the weekly dates the club page Recent changes card reads (#2655)', () => {
+    // Mirrors `pickFeedDates` (frontend/src/utils/clubChangeFeed.ts): the
+    // newest date, then the newest at least 7 days before each pick, within
+    // 90 days. The club page reads these as soon as the card nears the
+    // viewport, so a smoke that scrolls there needs them.
+    const r = dateRoles('2026-11-12', [
+      '2026-08-01',
+      '2026-08-14',
+      '2026-09-30',
+      '2026-10-29',
+      '2026-11-05',
+      '2026-11-11',
+      '2026-11-12',
+    ])
+    expect(r.feed).toEqual([
+      '2026-08-14',
+      '2026-09-30',
+      '2026-10-29',
+      '2026-11-05',
+      '2026-11-12',
+    ])
+  })
+
+  it('expands {feed} to those dates', () => {
+    const out = expandManifest(
+      {
+        origin: ORIGIN,
+        districts: ['61'],
+        paths: [{ path: 'snapshots/{feed}/district_{district}.json' }],
+      },
+      {
+        date: '2026-11-07',
+        prev: null,
+        ago14: null,
+        yearEnds: [],
+        monthEnds: [],
+        feed: ['2026-10-01', '2026-11-07'],
+        py: [],
+      }
+    )
+    expect(out.map(e => e.path)).toEqual([
+      'snapshots/2026-10-01/district_61.json',
+      'snapshots/2026-11-07/district_61.json',
+    ])
+  })
+
   it('keeps only month-ends within the last 26 months', () => {
     const r = dateRoles('2026-11-07', [
       '2024-08-31',
