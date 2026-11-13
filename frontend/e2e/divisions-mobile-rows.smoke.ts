@@ -161,9 +161,10 @@ for (const theme of ['light', 'dark'] as const) {
         expect(r.titlePx, rc).toBeGreaterThanOrEqual(14)
         expect(r.metaPx, rc).toBeGreaterThanOrEqual(14)
         expect(r.href, rc).toMatch(/^\/district\/61\/division\/[A-Z0-9]+$/)
-        // Collapsed row content: name, status, paid/base, distinguished.
+        // Collapsed row content: name, status, paid/base, distinguished
+        // (confirmed), and "+N qualifying today" when some are unconfirmed.
         expect(r.label, rc).toMatch(
-          /^Division [A-Z0-9]+ — .+, \d+\/\d+ paid, .+\d+\/\d+ distinguished$/
+          /^Division [A-Z0-9]+ — .+, \d+\/\d+ paid, .+\d+\/\d+ distinguished(, \+\d+ qualifying today)?$/
         )
       }
       record(g.docHeight, `${theme} ${width}`)
