@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { RedVoteMadeByLine } from '../RedVotePromo'
 import { openConsentSettings } from '../../utils/consent'
 
@@ -89,15 +89,15 @@ const AppMeta: React.FC = () => {
               license so the "MIT License · <version>" slot pairing the
               version guard asserts on stays adjacent. */}
           <Item>
-            <Link to="/mcp" className="app-shell-footer__link">
+            <NavLink to="/mcp" className="app-shell-footer__link">
               MCP server
-            </Link>
+            </NavLink>
           </Item>
           {/* #2310 — same placement reasoning as the /mcp link. */}
           <Item>
-            <Link to="/videos" className="app-shell-footer__link">
+            <NavLink to="/videos" className="app-shell-footer__link">
               How-to videos
-            </Link>
+            </NavLink>
           </Item>
           {/* The only contact path in the app (#1356). There is no backend to
               POST a form to, so this goes to the GitHub issue chooser, whose

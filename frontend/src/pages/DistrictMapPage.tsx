@@ -17,7 +17,6 @@ import {
   isDateInProgramYear,
 } from '../utils/programYear'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
-import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
 // #2248: eager, not a lazy chunk. It is ~0.6 KB gzip, and a lazy first
@@ -463,9 +462,6 @@ const DistrictMapPage: React.FC = () => {
             selectedProgramYear
           ).sort((a, b) => b.localeCompare(a))}
           latestSnapshotDate={cachedDatesData?.dateRange?.endDate}
-        />
-        <SubpageBreadcrumb
-          crumbs={[{ label: districtName, to: `/district/${districtId}` }]}
         />
         <DistrictSubnav districtId={districtId} />
 

@@ -71,6 +71,8 @@ const SUITES: readonly Suite[] = [
         'Training',
         'Rankings',
         'Action List',
+        // D6 (#2646): Council lives in More on a phone.
+        'Council',
       ],
       pick: 'Rankings',
       to: /\/district\/61\/rankings(\?|$)/,

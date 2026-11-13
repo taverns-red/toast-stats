@@ -2242,6 +2242,34 @@
     color: rgba(255, 255, 255, 0.4);
   }
 
+  /* #2646 (UNIT-07): Area and Division are links to their pages. On the fixed
+     loyal-blue hero (same in both themes): the sub-line's white, underlined
+     so a link reads as one. The 44px touch floor (base.css) stays: the box
+     is 44px tall, and the 12px negative margins give back the 24px it would
+     add to the line, which keeps the phone hero inside its 200px chrome
+     budget (e2e/club-page-mobile.smoke.ts). */
+  .club-hero__sub {
+    align-items: center;
+  }
+
+  .club-hero__sub-link {
+    display: inline-flex;
+    align-items: center;
+    color: #ffffff;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-block: -12px;
+  }
+
+  .club-hero__sub-link:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  .club-hero__sub-link:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+
   /* #1805 — lineage chips on the area/division/district line ("(District 1
      until June 2026)", "Formerly …"). On the fixed loyal-blue hero, same in
      both themes, so the white-alpha treatment needs no dark remap (as
@@ -4941,7 +4969,13 @@
     font-size: 14px;
     line-height: 1.45;
     color: var(--ink-2);
-    max-width: 60ch;
+    /* 60 x 0.497em, the "0" of Source Sans 3: em, not ch, so the measure does
+       not move when the web font replaces the fallback (#2685). */
+    max-width: 29.8em;
+    /* #2646 (HUB-07): reserve two lines. A one-line lede (Divisions) put the
+       section bar 20px higher than a two-line one (Clubs, Map), so it moved
+       under the pointer between tabs. */
+    min-height: calc(2 * 1.45em);
   }
 
   .district-detail-page-header__actions {

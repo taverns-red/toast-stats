@@ -21,12 +21,15 @@ interface ClubHealthTableProps {
   /** Names the table and its scroll region, e.g. "Clubs in Area 01". Unique
    *  per table on a page. */
   label: string
+  /** Router state for each club link, e.g. the `fromEntity` parent (#2646). */
+  clubState?: unknown
 }
 
 export const ClubHealthTable: React.FC<ClubHealthTableProps> = ({
   clubs,
   districtId,
   label,
+  clubState,
 }) => (
   <div className="districts-rankings-table-wrap">
     <StaticTableScroll label={label}>
@@ -50,6 +53,7 @@ export const ClubHealthTable: React.FC<ClubHealthTableProps> = ({
                 <th scope="row">
                   <Link
                     to={`/district/${districtId}/club/${c.clubId}`}
+                    state={clubState}
                     className="entity-table__link"
                   >
                     {c.clubName}

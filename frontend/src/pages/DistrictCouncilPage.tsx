@@ -5,13 +5,14 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useCouncilStanding } from '../hooks/useCouncilStanding'
 import { useUrlState } from '../hooks/useUrlState'
-import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
+import { DistrictSectionIntro } from '../components/DistrictSectionIntro'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { ContextBar } from '../components/ContextBar'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { ExportButton } from '../components/ExportButton'
 import { RedVotePromo } from '../components/RedVotePromo'
 import ErrorBoundary from '../components/ErrorBoundary'
+import { DISTRICT_SECTIONS } from '../config/districtSections'
 import { exportCouncilStanding } from '../utils/csvExport'
 import {
   COUNCIL_DISCLAIMER,
@@ -24,13 +25,12 @@ import {
 /* District Council credentials (#2300) — `/district/:id/council?date=`.
    For a Credentials Chair before a council meeting: which clubs are in good
    standing on the council date, their votes (2 each) and the quorum. A routed
-   page reached from the Overview and the Red Vote card, deliberately not in
-   the district subnav (Ron, 2026-10-28). The council date lives in the URL so
+   page reached from the Overview, the Red Vote card and, since #2646 (D6), the
+   district section bar (the More sheet on a phone). The council date lives in the URL so
    a link is the answer; the page resolves the snapshot and passes it to the
    hook (R3). The data is TI's own club status, never recomputed. */
 
-const ABOUT =
-  'Clubs in good standing and their votes as of a District Council date, derived from TI’s club status. Not TI’s official credentials list.'
+const ABOUT = DISTRICT_SECTIONS.find(s => s.segment === 'council')?.about
 
 const METHODOLOGY_HREF = '/methodology#council-voting-strength'
 
@@ -176,12 +176,7 @@ const DistrictCouncilPage: React.FC = () => {
               { label: 'Council credentials' },
             ]}
           />
-          <h1 className="council-title">Council credentials</h1>
-          <p className="council-lede">{ABOUT}</p>
-
-          <SubpageBreadcrumb
-            crumbs={[{ label: districtName, to: `/district/${districtId}` }]}
-          />
+          <DistrictSectionIntro districtName={districtName} segment="council" />
 
           <DistrictSubnav districtId={districtId} />
 

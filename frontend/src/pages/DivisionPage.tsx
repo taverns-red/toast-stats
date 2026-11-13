@@ -182,6 +182,15 @@ const DivisionPage: React.FC = () => {
 
   const divisionName = clubs[0]?.divisionName ?? `Division ${divId}`
 
+  // The club page leads back here (#2646): its back arrow, breadcrumb and
+  // bottom link all go to the division the user came from.
+  const clubLinkState = {
+    fromEntity: {
+      label: divisionName,
+      to: `/district/${districtId}/division/${divId}`,
+    },
+  }
+
   // Group clubs by area for the table sections.
   const areaGroups = new Map<
     string,
@@ -415,12 +424,14 @@ const DivisionPage: React.FC = () => {
                 <ClubMiniList
                   clubs={area.clubs}
                   clubTo={c => `/district/${districtId}/club/${c.clubId}`}
+                  clubState={clubLinkState}
                 />
               ) : (
                 <ClubHealthTable
                   clubs={area.clubs}
                   districtId={districtId ?? ''}
                   label={`Clubs in ${areaLabel}`}
+                  clubState={clubLinkState}
                 />
               )}
             </section>

@@ -241,6 +241,14 @@ const AreaPage: React.FC = () => {
     if (workbook) downloadCSV(workbook.csv, workbook.filename)
   }
   const divisionUrl = `/district/${districtId}/division/${divId}`
+  // The club page leads back here (#2646): its back arrow, breadcrumb and
+  // bottom link all go to the area the user came from.
+  const clubLinkState = {
+    fromEntity: {
+      label: areaName,
+      to: `/district/${districtId}/division/${divId}/area/${areaId}`,
+    },
+  }
 
   return (
     <div className="app-shell__page entity-page district-detail-page-root">
@@ -457,12 +465,14 @@ const AreaPage: React.FC = () => {
             <ClubMiniList
               clubs={clubs}
               clubTo={c => `/district/${districtId}/club/${c.clubId}`}
+              clubState={clubLinkState}
             />
           ) : (
             <ClubHealthTable
               clubs={clubs}
               districtId={districtId ?? ''}
               label={`Clubs in ${areaName}`}
+              clubState={clubLinkState}
             />
           )}
         </section>

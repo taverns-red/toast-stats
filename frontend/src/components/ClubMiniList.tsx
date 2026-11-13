@@ -28,6 +28,8 @@ interface ClubMiniListProps {
   clubs: ClubTrend[]
   /** Build the club-detail href for a club (e.g. `/district/61/club/123`). */
   clubTo: (club: ClubTrend) => string
+  /** Router state for every club link, e.g. the `fromEntity` parent (#2646). */
+  clubState?: unknown
 }
 
 /* #1833: the stacked cards (~125 px each) became MobileRowList compact rows —
@@ -36,6 +38,7 @@ interface ClubMiniListProps {
 export const ClubMiniList: React.FC<ClubMiniListProps> = ({
   clubs,
   clubTo,
+  clubState,
 }) => (
   <MobileRowList
     label="Clubs"
@@ -51,6 +54,7 @@ export const ClubMiniList: React.FC<ClubMiniListProps> = ({
       return {
         id: c.clubId,
         to: clubTo(c),
+        ...(clubState !== undefined ? { state: clubState } : {}),
         title: c.clubName,
         chip: (
           <StatusChip

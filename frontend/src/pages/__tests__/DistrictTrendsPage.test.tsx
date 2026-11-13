@@ -306,10 +306,11 @@ describe('DistrictTrendsPage (#680 — ADR-005)', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows a back-to-district breadcrumb', async () => {
+  it('has no breadcrumb: the Overview tab is the way back (#2646)', async () => {
     renderAt('/district/61/trends')
     await screen.findByTestId('membership-trend-chart')
-    expect(screen.getByRole('link', { name: 'District 61' })).toHaveAttribute(
+    expect(screen.queryByTestId('subpage-breadcrumb')).toBeNull()
+    expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute(
       'href',
       '/district/61'
     )

@@ -84,6 +84,9 @@ describe('DistrictSubnav (#678, ADR-005 §3)', () => {
       'Trends',
       'Rankings',
       'Action List',
+      // Council credentials (#2300) joined the strip in #2646 (D6), last, so
+      // the phone bar carries it in More.
+      'Council',
     ])
   })
 
@@ -178,7 +181,7 @@ describe('DistrictSubnav on a phone (#1832)', () => {
     expect(screen.getByRole('button', { name: /^More/ })).toBeInTheDocument()
   })
 
-  it('More holds every other section, in config order, so all 12 are within 2 taps', () => {
+  it('More holds every other section, in config order, so all 14 are within 2 taps', () => {
     stubViewport(true)
     renderAt('/district/61')
     fireEvent.click(screen.getByRole('button', { name: /^More/ }))
@@ -198,7 +201,21 @@ describe('DistrictSubnav on a phone (#1832)', () => {
       ['Training', '/district/61/training'],
       ['Rankings', '/district/61/rankings'],
       ['Action List', '/district/61/action-list'],
+      // D6 (#2646): Council lives in the More sheet on a phone.
+      ['Council', '/district/61/council'],
     ])
+  })
+
+  it('keeps Council out of the phone bar itself: it is a More item (D6, #2646)', () => {
+    stubViewport(true)
+    renderAt('/district/61/council')
+    const bar = screen.getByTestId('district-section-bar')
+    expect(
+      Array.from(bar.querySelectorAll('a')).map(a => a.textContent)
+    ).not.toContain('Council')
+    expect(screen.getByRole('button', { name: /^More/ })).toHaveAccessibleName(
+      'More sections, current: Council'
+    )
   })
 
   it('bar tabs plus the More sheet cover every DISTRICT_SECTIONS entry exactly once, in config order (#2093)', () => {

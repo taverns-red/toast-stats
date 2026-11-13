@@ -25,6 +25,7 @@ import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { ContextBar } from '../components/ContextBar'
+import { resolveClubParent } from '../utils/clubParent'
 import { ContextSheetControls } from '../components/ContextSheetControls'
 import { formatFreshnessLine } from '../utils/contextBar'
 import {
@@ -118,11 +119,9 @@ const ClubDetailPage: React.FC = () => {
   // list, ClubsTable passed the prior search via navigation state. The
   // "Clubs" breadcrumb prefers it so going back restores their filters;
   // deep links without state fall back to the unfiltered clubs route.
-  const fromClubsSearch =
-    typeof (location.state as { fromClubsSearch?: unknown } | null)
-      ?.fromClubsSearch === 'string'
-      ? (location.state as { fromClubsSearch: string }).fromClubsSearch
-      : ''
+  // #2646 — one parent for the back arrow, the breadcrumb and the bottom
+  // link: the area/division page the user came from, else the clubs list.
+  const parent = resolveClubParent(urlDistrictId ?? '', location.state)
 
   // PY selector state (#1302) — the page owns program year/date (R3). Previously
   // this read `?py=` and computed the effective PY/date inline with no selector
@@ -606,10 +605,7 @@ const ClubDetailPage: React.FC = () => {
           PY/date are this page's own state (R3). */}
       <ContextBar
         title={heroClub.clubName}
-        back={{
-          label: 'Clubs',
-          to: `/district/${urlDistrictId}/clubs${fromClubsSearch}`,
-        }}
+        back={parent}
         programYear={effectiveProgramYear ?? selectedProgramYear}
         date={effectiveEndDate ?? latestSnapshotDate}
         controls={
@@ -631,24 +627,19 @@ const ClubDetailPage: React.FC = () => {
         trail={[
           { label: 'Districts', to: '/' },
           { label: districtName, to: `/district/${urlDistrictId}` },
-          {
-            label: 'Clubs',
-            to: `/district/${urlDistrictId}/clubs${fromClubsSearch}`,
-          },
+          parent,
           { label: heroClub.clubName },
         ]}
       />
       {/* Breadcrumbs (#577) — leading 'Home' crumb removed per #442
           (the AppShell's 'Districts' active nav is the top-level
-          signal). Trail: District › Clubs › <club>. The Clubs crumb
-          restores the user's prior filtered list (filter round-trip). */}
+          signal). Trail: District › <parent> › <club>, the parent being
+          the Clubs list (restoring the user's filters) or the area they
+          came from (#2646). */}
       <SubpageBreadcrumb
         crumbs={[
           { label: districtName, to: `/district/${urlDistrictId}` },
-          {
-            label: 'Clubs',
-            to: `/district/${urlDistrictId}/clubs${fromClubsSearch}`,
-          },
+          parent,
           { label: heroClub.clubName },
         ]}
       />
@@ -1206,7 +1197,11 @@ const ClubDetailPage: React.FC = () => {
               user who has scrolled the full page can return without scrolling
               back up to the breadcrumb. #577 removed the old *button*; this is
               a single styled link, not a duplicate button. */}
-          <Link to={`/district/${urlDistrictId}`} className="club-back-link">
+          <Link
+            to={parent.to}
+            className="club-back-link"
+            data-testid="club-back-link"
+          >
             <svg
               className="club-back-link__icon"
               width="14"
@@ -1223,7 +1218,7 @@ const ClubDetailPage: React.FC = () => {
                 d="M10 13L5 8l5-5"
               />
             </svg>
-            Back to {districtName}
+            Back to {parent.label}
           </Link>
         </div>
       </div>

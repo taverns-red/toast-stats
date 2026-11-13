@@ -15,6 +15,12 @@ export interface DistrictSection {
    * cannot fall back to another page's description.
    */
   about: string
+  /**
+   * `false` keeps the section out of the 404 page's "did you mean" chips
+   * (#2646): a chip past the 13th wraps to a new row, and the late-arriving
+   * list then shifts the page past its CLS budget. Omit for every other use.
+   */
+  suggestOnNotFound?: false
 }
 
 /* ADR-005 §2 + epic #674 AC1 require every item to be a REAL route — a
@@ -36,7 +42,9 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
     label: 'What Changed',
     segment: 'changes',
     about:
-      'What changed in this district between two snapshot dates: membership, payments, DCP goals, distinguished status, and clubs added, removed or transferred.',
+      // Two lines at 1280px, no more (#2646): a third line moves the section
+      // bar under the pointer between tabs.
+      'Changes between two dates: membership, payments, DCP goals, distinguished status, clubs added, removed or moved.',
   },
   {
     label: 'Clubs',
@@ -122,6 +130,16 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
     segment: 'action-list',
     about:
       'What to do next: clubs close to Distinguished, missing club visits and clubs that need intervention.',
+  },
+  // 'Council' (#2300, in the strip since #2646 / D6) — clubs in good standing
+  // and their votes as of a council date. Last: a reference page used a few
+  // times a year, so on a phone it sits in the More sheet.
+  {
+    label: 'Council',
+    segment: 'council',
+    about:
+      'Clubs in good standing and their votes as of a District Council date, derived from TI’s club status. Not TI’s official credentials list.',
+    suggestOnNotFound: false,
   },
 ]
 

@@ -14,7 +14,7 @@ import { useTransferCounterparts } from '../hooks/useTransferCounterparts'
 import { useDistrictRanking } from '../hooks/useDistrictRanking'
 import { useDistinguishedCountsAt } from '../hooks/useDistinguishedCountsAt'
 import { resolveDistinguishedCounts } from '../utils/distinguishedCounts'
-import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
+import { DistrictSectionIntro } from '../components/DistrictSectionIntro'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { ContextBar } from '../components/ContextBar'
 import { DatePairPicker } from '../components/DatePairPicker'
@@ -363,11 +363,7 @@ const DistrictChangesPage: React.FC = () => {
               { label: 'What Changed' },
             ]}
           />
-          <h1 className="district-changes__title">{districtName}</h1>
-
-          <SubpageBreadcrumb
-            crumbs={[{ label: districtName, to: `/district/${districtId}` }]}
-          />
+          <DistrictSectionIntro districtName={districtName} segment="changes" />
 
           <DistrictSubnav districtId={districtId} />
 

@@ -25,7 +25,6 @@ import {
   calculateProgramYearDay,
 } from '../utils/programYear'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
-import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import {
   LazyMembershipTrendChart as MembershipTrendChart,
@@ -249,10 +248,6 @@ const DistrictTrendsPage: React.FC = () => {
             latestSnapshotDate={
               cachedDatesData?.dateRange?.endDate ?? availableDates[0]
             }
-          />
-
-          <SubpageBreadcrumb
-            crumbs={[{ label: districtName, to: `/district/${districtId}` }]}
           />
 
           <DistrictSubnav districtId={districtId} />

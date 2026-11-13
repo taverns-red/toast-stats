@@ -312,17 +312,21 @@ describe('DistrictClubsPage (#570 — Phase 2)', () => {
     )
   })
 
-  it('shows a back-to-district breadcrumb crumb, not the old back button (#577)', async () => {
+  it('has no breadcrumb under the title: the Overview tab is the way back (#577, #2646)', async () => {
     renderAt('/district/61/clubs')
 
     await screen.findByText(/alpha toastmasters/i)
 
-    // The District 61 crumb links back to the overview.
-    const crumb = screen.getByRole('link', { name: 'District 61' })
-    expect(crumb).toHaveAttribute('href', '/district/61')
+    // #2646 (HUB-07): the 48px "District 61" crumb under an h1 that already
+    // says it moved the section bar by 81px between tabs. Overview, first in
+    // the bar, is the way up.
+    expect(screen.queryByTestId('subpage-breadcrumb')).toBeNull()
+    const subnav = screen.getByRole('navigation', { name: 'District sections' })
+    expect(
+      within(subnav).getByRole('link', { name: 'Overview' })
+    ).toHaveAttribute('href', '/district/61')
 
-    // The ad-hoc "← Back to District 61" button is gone — the breadcrumb
-    // is the single back affordance.
+    // The ad-hoc "← Back to District 61" button stays gone (#577).
     expect(
       screen.queryByRole('button', { name: /Back to District 61/i })
     ).not.toBeInTheDocument()

@@ -19,6 +19,9 @@ export interface ClubHeroSource extends ClubMeetingSource {
   clubName: string
   areaName?: string | undefined
   divisionName?: string | undefined
+  /** With the district, the targets of the Area and Division links (#2646). */
+  areaId?: string | undefined
+  divisionId?: string | undefined
   charterDate?: string | undefined
 }
 
@@ -37,6 +40,18 @@ export interface ClubHeroProps {
   /** #1805 — former districts and names; null/undefined renders no chip. */
   lineage?: ClubLineage | null | undefined
 }
+
+const HeroEntity: React.FC<{
+  name?: string | undefined
+  to?: string | undefined
+}> = ({ name, to }) =>
+  to && name ? (
+    <Link to={to} className="club-hero__sub-link">
+      {name}
+    </Link>
+  ) : (
+    <span>{name}</span>
+  )
 
 /**
  * Club page hero, per the redesign handoff (#23 follow-up): a Loyal-blue
@@ -67,11 +82,27 @@ export const ClubHero: React.FC<ClubHeroProps> = ({
         </p>
         <h1 className="club-hero__title">{club.clubName}</h1>
         <p className="club-hero__sub">
-          <span>{club.areaName}</span>
+          {/* #2646: Area and Division link to their pages when the ids are
+              known (the snapshot and analytics records both carry them). */}
+          <HeroEntity
+            name={club.areaName}
+            to={
+              districtId && club.divisionId && club.areaId
+                ? `/district/${districtId}/division/${club.divisionId}/area/${club.areaId}`
+                : undefined
+            }
+          />
           <span aria-hidden="true" className="club-hero__sub-divider">
             ·
           </span>
-          <span>{club.divisionName}</span>
+          <HeroEntity
+            name={club.divisionName}
+            to={
+              districtId && club.divisionId
+                ? `/district/${districtId}/division/${club.divisionId}`
+                : undefined
+            }
+          />
           {districtId && (
             <>
               <span aria-hidden="true" className="club-hero__sub-divider">

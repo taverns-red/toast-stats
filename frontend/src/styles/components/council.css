@@ -4,22 +4,6 @@
    No new colours. Tables keep three short columns so nothing scrolls
    sideways at 375px. */
 
-.council-title {
-  font-family: var(--display, var(--sans));
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--ink);
-  margin: 0 0 0.25rem;
-}
-
-.council-lede {
-  color: var(--ink-2);
-  margin: 0 0 0.75rem;
-  /* 70 x 0.497em, the "0" of Source Sans 3: em, not ch, so the measure does
-     not move when the web font replaces the fallback (#2685). */
-  max-width: 34.79em;
-}
-
 .council {
   display: flex;
   flex-direction: column;
@@ -57,7 +41,9 @@
 .council-note {
   color: var(--ink-2);
   margin: 0;
-  max-width: 34.79em; /* as .council-lede (#2685) */
+  /* 70 x 0.497em, the "0" of Source Sans 3: em, not ch, so the measure does
+     not move when the web font replaces the fallback (#2685). */
+  max-width: 34.79em;
 }
 
 /* A notice is a note with a rule on its leading edge: no fill colour, so it
