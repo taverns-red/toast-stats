@@ -49,7 +49,7 @@
   .my-district-card__eyebrow {
     grid-area: eyebrow;
     font-family: var(--serif);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -350,10 +350,8 @@
   .world-pulse__table thead th {
     white-space: normal;
     overflow-wrap: normal;
-    font-size: 11px;
+    font-size: var(--tm-font-size-sm);
     font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
     color: var(--ink-3);
   }
 

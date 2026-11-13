@@ -337,7 +337,7 @@ export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th
-                  className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-3 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('clubName')}
                 >
                   Club{' '}
@@ -347,11 +347,11 @@ export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
                     activeSortDirection={sortDirection}
                   />
                 </th>
-                <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
+                <th className="px-3 py-3 text-center text-sm font-semibold text-gray-600">
                   Div
                 </th>
                 <th
-                  className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-3 py-3 text-center text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('goals')}
                 >
                   Goals{' '}
@@ -362,7 +362,7 @@ export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
                   />
                 </th>
                 <th
-                  className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-3 py-3 text-center text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('members')}
                 >
                   Members{' '}
@@ -373,7 +373,7 @@ export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
                   />
                 </th>
                 <th
-                  className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-3 py-3 text-center text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('currentLevel')}
                 >
                   Level{' '}
@@ -384,7 +384,7 @@ export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
                   />
                 </th>
                 <th
-                  className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-3 py-3 text-center text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('gapToNext')}
                 >
                   Gap to Next{' '}
@@ -395,7 +395,7 @@ export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
                   />
                 </th>
                 <th
-                  className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-3 py-3 text-center text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('aprilRenewals')}
                 >
                   Apr. Renewals{' '}
@@ -406,7 +406,7 @@ export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
                   />
                 </th>
                 <th
-                  className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase cursor-pointer hover:bg-gray-100"
+                  className="px-3 py-3 text-center text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('projectedLevel')}
                 >
                   Projected{' '}
