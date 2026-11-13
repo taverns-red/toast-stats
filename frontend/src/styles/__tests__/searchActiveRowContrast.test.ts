@@ -31,7 +31,7 @@ function ratio(a: string, b: string): number {
 
 function rule(source: string, selector: string): string {
   const re = new RegExp(
-    selector.replace(/[.]/g, '\\.') + '\\s*\\{([^}]*)\\}',
+    selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}',
     'm'
   )
   const m = re.exec(source)
