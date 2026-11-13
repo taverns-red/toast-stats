@@ -257,7 +257,7 @@ export const CLUB_HISTORY_CSV_HEADERS = [
   'Distinguished',
   'Membership Base',
   'Membership End',
-  'Membership Net',
+  'Membership Net Since Base',
   'October Renewals',
   'April Renewals',
   'Status',

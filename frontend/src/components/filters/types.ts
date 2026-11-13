@@ -181,7 +181,7 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
     // sparkline itself is not a filter.
     field: 'netChange',
     label: 'Trend',
-    sortLabel: 'Net change',
+    sortLabel: 'Net change since July 1',
     sortable: true,
     filterable: false,
     filterType: 'numeric',

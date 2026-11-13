@@ -119,7 +119,7 @@ export function regionClubMetricText(
   metric: RegionMetric
 ): string {
   const v = regionClubMetric(c, metric)
-  if (metric === 'netGrowth') return `net ${signed(v)}`
+  if (metric === 'netGrowth') return `${signed(v)} since July 1`
   if (metric === 'dcpGoals') return `${v} DCP goal${v === 1 ? '' : 's'}`
   return `${v} member${v === 1 ? '' : 's'}`
 }

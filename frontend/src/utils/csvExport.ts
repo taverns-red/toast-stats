@@ -641,7 +641,7 @@ export const exportClubPerformance = (
     // shows, without moving the positions above.
     'Members Base',
     'Members Needed',
-    'Net Change',
+    'Net Change Since July 1',
     'Years Chartered',
     'Distinguished Confirmed',
   ]

@@ -871,7 +871,7 @@ const ClubDetailPage: React.FC = () => {
               { label: 'Base', value: baseMembership },
               { label: 'Current', value: latestMembership },
               {
-                label: 'Net Δ',
+                label: 'Change since July 1',
                 value: `${membershipChange > 0 ? '+' : ''}${membershipChange}`,
                 valClass:
                   membershipChange > 0

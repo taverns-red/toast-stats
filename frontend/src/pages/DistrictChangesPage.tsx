@@ -593,6 +593,7 @@ const DistrictChangesPage: React.FC = () => {
                         events={eventsByCategory.get(category) ?? []}
                         districtId={districtId}
                         collapsed={collapsedGroups.includes(category)}
+                        since={fmtDate(diff.from.date)}
                         onToggle={handleGroupToggle}
                         counterparts={counterparts}
                         deferredCounterparts={deferredCounterparts}
