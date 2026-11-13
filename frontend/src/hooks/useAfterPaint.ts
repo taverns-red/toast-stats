@@ -30,6 +30,18 @@ if (typeof window !== 'undefined') {
   }
 }
 
+/**
+ * Input before this lazy chunk loaded (a click from another route) predates
+ * the listeners above; the browser buffers it as a `first-input` entry.
+ */
+function inputRecordedByBrowser(): boolean {
+  try {
+    return performance.getEntriesByType('first-input').length > 0
+  } catch {
+    return false
+  }
+}
+
 /** Test seam: forget the first-mount claim and any recorded user input. */
 export function resetAfterPaintStateForTests(): void {
   userInteracted = false
@@ -79,7 +91,8 @@ export function useAfterPaint(ready: boolean): boolean {
   useEffect(() => {
     // Claim on mount, ready or not: the first route mount owns the LCP path.
     if (mayWaitForLcp.current === null) {
-      mayWaitForLcp.current = !firstMountClaimed && !userInteracted
+      mayWaitForLcp.current =
+        !firstMountClaimed && !userInteracted && !inputRecordedByBrowser()
       firstMountClaimed = true
     }
 
