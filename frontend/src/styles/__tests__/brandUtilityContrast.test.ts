@@ -56,6 +56,29 @@ describe('.tm-text-cool-gray is readable text, not a decorative tint (#2642)', (
   )
 })
 
+describe('dark remaps of the tint tokens match their Tailwind twins (#2642)', () => {
+  // .tm-bg-<c>-N paint var(--tm-<c>-N); the Tailwind twin .bg-tm-<c>-N already
+  // has a dark rgba. A token left at its light value would paint a bright wash
+  // in dark mode wherever the .tm-bg-* class is used.
+  it.each([
+    ['--tm-true-maroon-10', '.bg-tm-true-maroon-10'],
+    ['--tm-cool-gray-30', '.bg-tm-cool-gray-30'],
+    ['--tm-happy-yellow-20', '.bg-tm-happy-yellow-20'],
+    ['--tm-happy-yellow-30', '.bg-tm-happy-yellow-30'],
+  ])('%s equals the dark fill of %s', (token, twin) => {
+    const toks = tokens('dark')
+    const want = parseColor(
+      prop(
+        declsFor(darkCss, `[data-theme='dark'] ${twin}`),
+        'background-color'
+      )!,
+      toks
+    )
+    expect(toks.get(token), `dark ${token}`).toBeDefined()
+    expect(parseColor(`var(${token})`, toks)).toEqual(want)
+  })
+})
+
 describe('tinted /N fills carry an explicit rule per theme (#2642)', () => {
   // `bg-tm-x/N` compiles to an oklab() color-mix that axe cannot resolve and
   // that ignores the dark palette; dark-mode.css pins an rgba per theme (the
