@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.88.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.87.0...toast-stats-v2.88.0) (2026-11-13)
+
+
+### Features
+
+* **tables:** M2 action and funnel tables on the shared table styles ([#2701](https://github.com/taverns-red/toast-stats/issues/2701)) ([#2704](https://github.com/taverns-red/toast-stats/issues/2704)) ([f904b43](https://github.com/taverns-red/toast-stats/commit/f904b432ce053012573e87461493f3d07cdb6f89))
+* **tables:** M3 region rankings and regions leaderboard on DataTable ([#2702](https://github.com/taverns-red/toast-stats/issues/2702)) ([#2705](https://github.com/taverns-red/toast-stats/issues/2705)) ([3712601](https://github.com/taverns-red/toast-stats/commit/3712601601a8a8488cd140e045303d352a49153d))
+
+
+### Bug Fixes
+
+* **ui:** one-line phone consent banner above the section bar; z-index tokens ([#2674](https://github.com/taverns-red/toast-stats/issues/2674)) ([#2710](https://github.com/taverns-red/toast-stats/issues/2710)) ([e77386a](https://github.com/taverns-red/toast-stats/commit/e77386ac07456e808bf54a77ea7a72bd352c4cb5))
+* **ux:** consistent health wording and shared cells on Division/Area ([#2669](https://github.com/taverns-red/toast-stats/issues/2669)) ([#2703](https://github.com/taverns-red/toast-stats/issues/2703)) ([36074ce](https://github.com/taverns-red/toast-stats/commit/36074ce1d13cf8d727070ec2c560aa16a6ca4c34))
+
 ## [2.87.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.86.0...toast-stats-v2.87.0) (2026-11-13)
 
 
