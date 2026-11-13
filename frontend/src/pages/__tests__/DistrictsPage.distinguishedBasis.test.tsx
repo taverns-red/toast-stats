@@ -5,7 +5,7 @@
  * visible (touch-safe) note saying what the two mean.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import DistrictsPage from '../DistrictsPage'
 import '../../__tests__/preloadRankingsTable'
@@ -128,18 +128,18 @@ describe('DistrictsPage — confirmed headline + qualifying today (#2580)', () =
 
   it('table row: +N qualifying today under the confirmed count, not for 0 or unknown', async () => {
     renderWithProviders(<DistrictsPage />)
-    const link = await screen.findByRole('link', { name: /District 57/ })
-    const tr = link.closest('tr') as HTMLElement
+    const table = await screen.findByRole('table', {
+      name: /district rankings/i,
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^Columns,/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /distinguished/i }))
+    const tr = within(table).getByTestId('district-row-57')
     expect(
       await within(tr).findByTestId('distinguished-provisional')
     ).toHaveTextContent('+11 qualifying today')
-    const tr61 = screen
-      .getByRole('link', { name: /District 61/ })
-      .closest('tr') as HTMLElement
+    const tr61 = within(table).getByTestId('district-row-61')
     expect(within(tr61).queryByTestId('distinguished-provisional')).toBeNull()
-    const tr83 = screen
-      .getByRole('link', { name: /District 83/ })
-      .closest('tr') as HTMLElement
+    const tr83 = within(table).getByTestId('district-row-83')
     expect(within(tr83).queryByTestId('distinguished-provisional')).toBeNull()
   })
 

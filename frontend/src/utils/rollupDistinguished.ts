@@ -7,22 +7,31 @@ import type { DistinguishedCountPair } from './distinguishedCounts'
    block with no `distinguishedCounts` (file written before #2553, or a
    district without the source columns) yields null / no entry. */
 
+const pair = (
+  c: { confirmed: number; provisional: number } | null | undefined
+): DistinguishedCountPair | null =>
+  c ? { confirmed: c.confirmed, provisional: c.provisional } : null
+
 export function worldDistinguishedCounts(
-  _rollups: RegionRollups | null | undefined
+  rollups: RegionRollups | null | undefined
 ): DistinguishedCountPair | null {
-  return null
+  return pair(rollups?.world.distinguishedCounts)
 }
 
 export function regionDistinguishedCounts(
-  _rollups: RegionRollups | null | undefined,
-  _regionId: string
+  rollups: RegionRollups | null | undefined,
+  regionId: string
 ): DistinguishedCountPair | null {
-  return null
+  return pair(rollups?.regions?.[regionId]?.distinguishedCounts)
 }
 
 /** district id → provisional (qualifying-today, unconfirmed) count. */
 export function districtProvisionalMap(
-  _rollups: RegionRollups | null | undefined
+  rollups: RegionRollups | null | undefined
 ): ReadonlyMap<string, number> {
-  return new Map()
+  const out = new Map<string, number>()
+  for (const [id, d] of Object.entries(rollups?.districts ?? {})) {
+    if (d.distinguishedCounts) out.set(id, d.distinguishedCounts.provisional)
+  }
+  return out
 }

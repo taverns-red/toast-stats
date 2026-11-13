@@ -61,7 +61,15 @@ import {
 import { WorldPulse } from '../components/WorldPulse'
 import { RedVoteBlock } from '../components/RedVoteBlock'
 import { ErrorDisplay } from '../components/ErrorDisplay'
-import { DistinguishedCount } from '../components/DistinguishedCount'
+import {
+  DistinguishedBasisNote,
+  DistinguishedCount,
+} from '../components/DistinguishedCount'
+import { useRegionRollups } from '../hooks/useRegionRollups'
+import {
+  districtProvisionalMap,
+  worldDistinguishedCounts,
+} from '../utils/rollupDistinguished'
 
 // #922 — pinned widths for the renderShell header-actions skeleton, one per
 // loaded-toolbar item (measured at 390px, both engines). The widths only
@@ -349,6 +357,19 @@ const DistrictsPage: React.FC = () => {
     }
   }, [rankings])
 
+  // The pipeline's confirmed / qualifying-today pair (#2553, #2580) from the
+  // rollups file WorldPulse already loads (same key, one request). The page's
+  // pinned date is passed in (R3). Until it is published, the headline is the
+  // rankings sum and there is no extra.
+  const { rollups } = useRegionRollups(effectiveRankingsDate)
+  const worldCounts = worldDistinguishedCounts(rollups)
+  const provisionalByDistrict = React.useMemo(
+    () => districtProvisionalMap(rollups),
+    [rollups]
+  )
+  const headlineDistinguished =
+    worldCounts?.confirmed ?? kpiTotals.distinguishedClubs
+
   // #2249 — each KPI against the program-year base, from the same rows
   // (paidClubBase / paymentBase ride on every rankings row). Payments are
   // year-to-date against last year's full-year total, so the label says
@@ -363,7 +384,7 @@ const DistrictsPage: React.FC = () => {
     }
     const pct =
       kpiTotals.paidClubs > 0
-        ? Math.round((kpiTotals.distinguishedClubs / kpiTotals.paidClubs) * 100)
+        ? Math.round((headlineDistinguished / kpiTotals.paidClubs) * 100)
         : null
     return {
       paidClubs: `${signedDelta(kpiTotals.paidClubs - kpiTotals.paidClubBase)} vs PY start`,
@@ -445,8 +466,13 @@ const DistrictsPage: React.FC = () => {
 
   // Use overallRank from CDN data — supports ties (#303)
   const rankedRankings = React.useMemo(
-    () => sortedRankings.map(d => ({ ...d, displayRank: d.overallRank })),
-    [sortedRankings]
+    () =>
+      sortedRankings.map(d => ({
+        ...d,
+        displayRank: d.overallRank,
+        distinguishedProvisional: provisionalByDistrict.get(d.districtId),
+      })),
+    [sortedRankings, provisionalByDistrict]
   )
 
   // Filter by Recognition (#1362) — a NEW step inserted AFTER ranking, beside
@@ -1015,11 +1041,18 @@ const DistrictsPage: React.FC = () => {
 
   // Phone priority columns (#1834): the metrics a visitor can pick 2 of.
   // Same values as the full table's cells; growth % rides under the value.
-  const valueWithGrowth = (value: number, rank: number, pct: number) => {
+  const valueWithGrowth = (
+    value: number,
+    rank: number,
+    pct: number,
+    valueNode?: React.ReactNode
+  ) => {
     const g = formatPercentage(pct)
     return (
       <>
-        <span className="block font-medium">{formatNumber(value)}</span>
+        <span className="block font-medium">
+          {valueNode ?? formatNumber(value)}
+        </span>
         <span className="block">
           <span className="text-tm-loyal-blue">#{rank}</span>{' '}
           <span className={g.color}>{g.text}</span>
@@ -1069,7 +1102,11 @@ const DistrictsPage: React.FC = () => {
         valueWithGrowth(
           d.distinguishedClubs,
           d.distinguishedRank,
-          d.distinguishedPercent
+          d.distinguishedPercent,
+          <DistinguishedCount
+            confirmed={d.distinguishedClubs}
+            provisional={d.distinguishedProvisional}
+          />
         ),
     },
     {
@@ -1359,7 +1396,10 @@ const DistrictsPage: React.FC = () => {
                 className="districts-kpi-card__value"
                 data-testid="kpi-distinguished-clubs"
               >
-                <DistinguishedCount confirmed={kpiTotals.distinguishedClubs} />
+                <DistinguishedCount
+                  confirmed={headlineDistinguished}
+                  provisional={worldCounts?.provisional}
+                />
               </div>
               <p
                 className="districts-kpi-card__sub"
@@ -1570,6 +1610,7 @@ const DistrictsPage: React.FC = () => {
             sheetRegionClassName="districts-rankings-table__sheet"
             fullTable={rankingsTable('page')}
           />
+          {worldCounts && <DistinguishedBasisNote className="text-sm mt-2" />}
         </div>
 
         {/* Awards Race — competitive district awards (#331), below the
