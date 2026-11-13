@@ -247,7 +247,7 @@ const Rollup: React.FC<{ e: Available }> = ({ e }) => {
       className="education-section"
       aria-label="Division and area rollup"
     >
-      <h2 className="education-section__title">By division and area</h2>
+      <h3 className="education-section__title">By division and area</h3>
       <SwitchLinks
         label="Rollup level"
         options={[

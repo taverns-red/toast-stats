@@ -178,8 +178,8 @@
 }
 
 .education-section__title {
-  font-size: var(--heading-section-size);
-  font-weight: var(--heading-section-weight);
+  font-size: var(--heading-sub-size);
+  font-weight: var(--heading-sub-weight);
   color: var(--ink);
 }
 

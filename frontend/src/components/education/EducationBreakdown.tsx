@@ -315,9 +315,9 @@ export const MatrixSection: React.FC<{ e: EducationSummary }> = ({ e }) => {
   const region = <Matrix e={e} />
   return (
     <section className="education-section" aria-labelledby={`${sheetId}-h`}>
-      <h2 id={`${sheetId}-h`} className="education-section__title">
+      <h3 id={`${sheetId}-h`} className="education-section__title">
         Level × path
-      </h2>
+      </h3>
       <p className="education-note">
         Pathways awards only; Legacy awards and DTMs are counted in the totals
         above.
@@ -362,9 +362,9 @@ export const ByLevelOrPathSection: React.FC<{ e: EducationSummary }> = ({
   const by: 'level' | 'path' = params.get('by') === 'path' ? 'path' : 'level'
   return (
     <section className="education-section" aria-label="Awards by level or path">
-      <h2 className="education-section__title">
+      <h3 className="education-section__title">
         {by === 'level' ? 'By level' : 'By path'}
-      </h2>
+      </h3>
       <SwitchLinks
         label="Group awards"
         options={[

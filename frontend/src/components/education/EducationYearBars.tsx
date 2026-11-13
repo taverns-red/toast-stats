@@ -93,9 +93,9 @@ export const EducationYearBars: React.FC<EducationYearBarsProps> = ({
   )
   return (
     <section className="education-section" aria-labelledby="edu-years-h">
-      <h2 id="edu-years-h" className="education-section__title">
+      <h3 id="edu-years-h" className="education-section__title">
         By program year
-      </h2>
+      </h3>
       {sparkline ? (
         <ChartSparklineExpand
           urlId={sparkline.urlId}

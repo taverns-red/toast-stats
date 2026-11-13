@@ -59,7 +59,7 @@ describe('heading rules use the ramp, not literal sizes', () => {
 
   it.each(FAMILIES)('%s %s sizes itself with a heading token', (file, sel) => {
     const css = read(file)
-    const escaped = sel.replace(/[.]/g, '\\.')
+    const escaped = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const m = css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`))
     expect(m, `${sel} rule`).not.toBeNull()
     expect(m![1]).toMatch(/font-size:\s*var\(--heading-/)

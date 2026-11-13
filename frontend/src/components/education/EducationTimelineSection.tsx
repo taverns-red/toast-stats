@@ -85,9 +85,9 @@ export const EducationTimelineSection: React.FC<
       <div
         className={`edu-tl-section__block${reserved ? ' edu-tl-section--reserved' : ''}${reserved && mode === 'path' ? ' edu-tl-section--path' : ''}`}
       >
-        <h2 className="education-section__title">
+        <h3 className="education-section__title">
           Awards over time, by {mode === 'path' ? 'path' : 'level'}
-        </h2>
+        </h3>
         {isLoading ? (
           <Skeleton />
         ) : chartTimeline ? (
