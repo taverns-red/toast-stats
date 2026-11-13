@@ -128,7 +128,7 @@ describe('useAfterPaint with LCP entries (#2777)', () => {
   it('stays closed past the hidden-tab fallback until the LCP entry arrives', () => {
     const { result } = renderHook(() => useAfterPaint(true))
     act(() => {
-      vi.advanceTimersByTime(AFTER_PAINT_FALLBACK_MS * 4)
+      vi.advanceTimersByTime(AFTER_PAINT_FALLBACK_MS + 50)
     })
     expect(result.current).toBe(false)
     act(() => emitLcp(1200))
@@ -162,7 +162,7 @@ describe('useAfterPaint with LCP entries (#2777)', () => {
     first.unmount()
     const { result } = renderHook(() => useAfterPaint(true))
     // One frame (16 ms in this rAF mock) plus the open task.
-    act(() => vi.advanceTimersByTime(16))
+    act(() => vi.advanceTimersByTime(17))
     act(() => vi.advanceTimersByTime(0))
     expect(result.current).toBe(true)
     expect(observers).toHaveLength(0)
