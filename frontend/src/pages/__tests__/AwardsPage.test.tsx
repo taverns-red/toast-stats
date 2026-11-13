@@ -188,7 +188,7 @@ describe('AwardsPage (#371-#373)', () => {
         )
         .map(n => n.textContent)
         .join('')
-      expect(visible).toBe('D102')
+      expect(visible.trim()).toBe('D102')
     })
   })
 })

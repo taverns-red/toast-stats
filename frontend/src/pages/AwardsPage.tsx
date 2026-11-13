@@ -20,7 +20,7 @@ import type {
    defers to. Uses the existing useCompetitiveAwards hook for data. */
 
 /** Link text whose accessible name always says "District" and contains the
- *  visible label (WCAG 2.5.3, #2648): "D<hidden>istrict </hidden>93". */
+ *  visible label (WCAG 2.5.3, #2648): "D93 (District 93)". */
 const DistrictLinkText: React.FC<{ id: string; name: string }> = ({
   id,
   name,
@@ -36,10 +36,10 @@ const DistrictLinkText: React.FC<{ id: string; name: string }> = ({
     )
   }
   if (id === 'U') return <>Undistricted</>
+  const n = /^\d+$/.test(id) ? Number(id) : id
   return (
     <>
-      D<span className="sr-only">istrict </span>
-      {/^\d+$/.test(id) ? Number(id) : id}
+      D{n} <span className="sr-only">(District {n})</span>
     </>
   )
 }
