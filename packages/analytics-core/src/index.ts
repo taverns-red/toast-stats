@@ -17,6 +17,10 @@ export {
 export { DataTransformer } from './transformation/index.js'
 export type { Logger, DataTransformerConfig } from './transformation/index.js'
 
+// Club risk-factor messages, shared so the frontend rewrite is tested
+// against the published strings (#2655)
+export { RISK_FACTOR_MESSAGES } from './analytics/riskFactorMessages.js'
+
 // Snapshot diff engine ("What Changed", epic #797)
 export { diffSnapshots } from './analytics/diffSnapshots.js'
 
