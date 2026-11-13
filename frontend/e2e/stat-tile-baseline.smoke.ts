@@ -29,7 +29,15 @@ async function rowSpreads(page: Page): Promise<number[]> {
         if (!value) continue
         const rowTop = Math.round(tile.getBoundingClientRect().top)
         const tops = rows.get(rowTop) ?? []
-        tops.push(value.getBoundingClientRect().top)
+        // The first line box of the figure's text, not the element: a link
+        // with a 44px tap target is taller than its text.
+        const walker = document.createTreeWalker(value, NodeFilter.SHOW_TEXT)
+        let text: Node | null = walker.nextNode()
+        while (text && !text.textContent?.trim()) text = walker.nextNode()
+        if (!text) continue
+        const range = document.createRange()
+        range.selectNodeContents(text)
+        tops.push(range.getClientRects()[0]!.top)
         rows.set(rowTop, tops)
       }
       for (const tops of rows.values()) {
@@ -40,8 +48,24 @@ async function rowSpreads(page: Page): Promise<number[]> {
   })
 }
 
+const ALL_ROUTES = [
+  ...ROUTES.map(r => ({ ...r, widths: [375, 768, 1280] as number[] })),
+  {
+    name: 'region education',
+    url: '/region/05/education',
+    ready: '.education-kpi',
+    widths: [768],
+  },
+  {
+    name: 'world education',
+    url: '/regions/education',
+    ready: '.education-kpi',
+    widths: [768],
+  },
+]
+
 for (const width of [375, 768, 1280] as const) {
-  for (const route of ROUTES) {
+  for (const route of ALL_ROUTES.filter(r => r.widths.includes(width))) {
     test(`${route.name} KPI figures share a baseline at ${width}`, async ({
       page,
     }) => {
