@@ -20,6 +20,7 @@ import {
   sinceSnapshotBasis,
 } from '../utils/netChangeBasis'
 import { formatShortDate } from '../utils/dateFormatting'
+import { MembershipHeadline } from '../components/clubs/MembershipHeadline'
 import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
@@ -969,11 +970,11 @@ const ClubDetailPage: React.FC = () => {
                     title="Membership Trend"
                     sparklineData={membershipSparkline}
                     headline={
-                      <>
-                        {latestMembership} members
-                        {membershipChange !== 0 &&
-                          ` (${membershipChange > 0 ? '+' : ''}${membershipChange} ${membershipBasis})`}
-                      </>
+                      <MembershipHeadline
+                        latest={latestMembership}
+                        change={membershipChange}
+                        basis={membershipBasis}
+                      />
                     }
                   >
                     <>
