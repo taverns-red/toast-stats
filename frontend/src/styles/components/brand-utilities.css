@@ -54,6 +54,17 @@
   }
 }
 
+/* White on the 60% navy tint is 3.7:1 in light. The tint is a mid-tone, so its
+   label is black there (6:1) and white in dark, where the same tint sits on a
+   dark surface and white is 5:1. */
+.tm-bg-loyal-blue-60.tm-text-white {
+  color: var(--tm-black);
+}
+
+[data-theme='dark'] .tm-bg-loyal-blue-60.tm-text-white {
+  color: var(--tm-white);
+}
+
 /* Dark mode: --tm-black remaps to the light ink and --tm-loyal-blue to a light
    blue, so a fixed white / black label on those two fills would drop to ~2:1.
    Pair them with the page background colour, as .tm-btn-primary does. */
