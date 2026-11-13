@@ -101,6 +101,43 @@ test.describe('council packs print to their page budget (Chromium PDF)', () => {
     }
   })
 
+  // #2707: "Intervention required" broke onto two lines in the 84px health
+  // column and doubled rows. Every health cell of the largest roster must be
+  // one line in print, whatever the club mix.
+  test('the printed roster never wraps a health cell (#2707)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: PRINT_BOX.width, height: 1000 })
+    await openPack(page, `${LARGEST_DIVISION}/print`)
+    await page.emulateMedia({ media: 'print' })
+    const wrapped = await page.evaluate(() => {
+      const table = document.querySelector(
+        '[data-testid="council-pack-roster"]'
+      )
+      const col = [...(table?.querySelectorAll('thead th') ?? [])].findIndex(
+        th => th.textContent?.trim() === 'Health'
+      )
+      const rows = [
+        ...(table?.querySelectorAll<HTMLTableRowElement>('tbody tr') ?? []),
+      ]
+      return rows
+        .map(tr => {
+          const cell = tr.children[col]
+          if (!cell || col < 0) return 'no Health column'
+          // Lines of text, not the cell's height: a tall neighbour stretches
+          // the whole row.
+          const range = document.createRange()
+          range.selectNodeContents(cell)
+          const tops = new Set(
+            [...range.getClientRects()].map(r => Math.round(r.top))
+          )
+          return tops.size > 1 ? (cell.textContent ?? '') : null
+        })
+        .filter((t): t is string => t !== null)
+    })
+    expect(wrapped).toEqual([])
+  })
+
   test('the printed pack carries its dates and source, and no app chrome', async ({
     page,
   }) => {

@@ -103,6 +103,27 @@ test('area page at 375: 16px gutter and a table wider than 261px', async ({
   expect(m.pageScroll).toBeLessThanOrEqual(0)
 })
 
+// #2754 / #2676 M8: "Print pack" is a bordered secondary button, a 44px box.
+for (const [name, path] of [
+  ['division page', DIVISION],
+  ['area page', AREA],
+] as const) {
+  test(`${name}: the Print pack link is a bordered 44px button`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await open(page, path, 'table.entity-table--clubs')
+    const m = await page
+      .getByRole('link', { name: 'Print pack' })
+      .evaluate(el => ({
+        height: el.getBoundingClientRect().height,
+        border: parseFloat(getComputedStyle(el).borderTopWidth),
+      }))
+    expect(m.height).toBeGreaterThanOrEqual(44)
+    expect(m.border).toBeGreaterThanOrEqual(1)
+  })
+}
+
 test('division page at 1024: area table headers stay short and 14px or more', async ({
   page,
 }) => {
