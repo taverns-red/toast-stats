@@ -245,7 +245,14 @@ describe('DistrictEducationView', () => {
   it('provenance: the report and its as-of beside the snapshot date', () => {
     renderView()
     expect(screen.getByTestId('education-provenance')).toHaveTextContent(
-      'Source: TI Education Achievements report, as of October 14, 2026 · snapshot 2026-10-13'
+      'Source: TI Education Achievements report, as of October 14, 2026 · snapshot Oct 13, 2026'
+    )
+  })
+
+  it('provenance line shows no ISO-shaped date (#2648)', () => {
+    renderView()
+    expect(screen.getByTestId('education-provenance').textContent).not.toMatch(
+      /\d{4}-\d{2}-\d{2}/
     )
   })
 

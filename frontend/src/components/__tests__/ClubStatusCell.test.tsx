@@ -29,7 +29,19 @@ describe('ClubStatusCell', () => {
     expect(screen.getByText('Active')).toBeInTheDocument()
     expect(screen.queryByText('Low')).not.toBeInTheDocument()
     // A visible affordance names the date.
-    expect(screen.getByText(/renewal verified 2026-05-31/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/renewal verified May 31, 2026/i)
+    ).toBeInTheDocument()
+  })
+
+  it('shows no ISO-shaped date in visible text or the accessible name (#2648)', () => {
+    const { container } = render(
+      <ClubStatusCell clubStatus="Low" statusOverlay={overlay} />
+    )
+    expect(container.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/)
+    expect(screen.getByRole('note').getAttribute('aria-label')).not.toMatch(
+      /\d{4}-\d{2}-\d{2}/
+    )
   })
 
   it('exposes provenance (source + dates + base) accessibly, never silently blending', () => {
@@ -38,7 +50,7 @@ describe('ClubStatusCell', () => {
     const label = el.getAttribute('aria-label') ?? ''
     expect(label).toMatch(/active/i)
     expect(label).toMatch(/dues renewal/i)
-    expect(label).toMatch(/2026-05-31/)
+    expect(label).toMatch(/May 31, 2026/)
     expect(label).toMatch(/June 01, 2026/)
     // discloses the frozen base so two cadences are never presented as one
     expect(label).toMatch(/Low/)
