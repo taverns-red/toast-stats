@@ -95,7 +95,7 @@ const DivisionCriteriaExplanationView: React.FC<{
               clipRule="evenodd"
             />
           </svg>
-          <h3 className="text-xl font-bold text-gray-900 font-tm-headline">
+          <h3 className="heading-section text-gray-900">
             Distinguished Division Program Criteria
           </h3>
         </div>
