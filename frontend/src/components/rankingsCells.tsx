@@ -34,6 +34,9 @@ export const DistrictCell: React.FC<{
   // Absence is the signal for "no tier achieved", same convention as the chip.
   const tier = rawTier && rawTier !== 'NotDistinguished' ? rawTier : null
   const held = meta.clubGrowthHeld.get(id)
+  const starHelper = isMine
+    ? 'Click to clear · this district pins to top across visits'
+    : 'Click to mark as my district · pins to top across visits'
   return (
     <div className="rankings-district">
       <button
@@ -45,11 +48,8 @@ export const DistrictCell: React.FC<{
             : `Set District ${id} as my district`
         }
         aria-pressed={isMine}
-        title={
-          isMine
-            ? 'Click to clear · this district pins to top across visits'
-            : 'Click to mark as my district · pins to top across visits'
-        }
+        aria-describedby={`rankings-star-tip-${id}`}
+        title={starHelper}
         className="districts-rankings-table__touch-btn rankings-star"
       >
         <svg
@@ -67,6 +67,10 @@ export const DistrictCell: React.FC<{
           />
         </svg>
       </button>
+      {/* `title` does not reach touch or most screen readers (#2644). */}
+      <span id={`rankings-star-tip-${id}`} className="sr-only">
+        {starHelper}
+      </span>
       <Link to={`/district/${id}`} className="rankings-district__link">
         <DistrictChipAndName
           districtId={id}

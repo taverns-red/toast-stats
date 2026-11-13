@@ -34,6 +34,8 @@ function Cell({ stat }: { stat: ClubStat }) {
       >
         {stat.value}
       </div>
+      {/* `title` does not reach touch or most screen readers (#2644). */}
+      {stat.title && <span className="sr-only">{stat.title}</span>}
     </div>
   )
 }

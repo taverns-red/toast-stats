@@ -308,10 +308,23 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
                 <span
                   className={`px-2 py-1 text-sm font-medium rounded-full border ${badge.className}`}
                   aria-label={`Recognition status: ${badge.label}`}
+                  aria-describedby={
+                    badge.tooltip ? `area-badge-tip-${area.areaId}` : undefined
+                  }
                   title={badge.tooltip}
                 >
                   {badge.label}
                 </span>
+                {/* `title` does not reach touch or most screen readers
+                    (#2644). */}
+                {badge.tooltip && (
+                  <span
+                    id={`area-badge-tip-${area.areaId}`}
+                    className="sr-only"
+                  >
+                    {badge.tooltip}
+                  </span>
+                )}
               </td>
               <td className="entity-table__c tabular">
                 {gapCell(gapAnalysis.distinguishedGap)}

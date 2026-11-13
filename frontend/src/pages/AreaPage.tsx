@@ -304,11 +304,19 @@ const AreaPage: React.FC = () => {
               <span
                 className={`px-2 py-1 text-sm font-medium rounded-full border ${badge.className}`}
                 aria-label={`Area ${areaPerformance?.areaId ?? areaId} recognition: ${badge.label}`}
+                aria-describedby={badge.tooltip ? 'area-badge-tip' : undefined}
                 title={badge.tooltip}
               >
                 {/* Named, so a lone "Net Loss" pill is not a mystery (UNIT-27). */}
                 <span className="entity-recognition__label">Recognition: </span>
                 {badge.label}
+                {/* `title` does not reach touch or most screen readers
+                    (#2644). */}
+                {badge.tooltip && (
+                  <span id="area-badge-tip" className="sr-only">
+                    {badge.tooltip}
+                  </span>
+                )}
               </span>
             ) : (
               /* #1896: every valid area gets a badge once the snapshot lands;

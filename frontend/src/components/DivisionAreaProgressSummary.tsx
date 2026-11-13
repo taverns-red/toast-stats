@@ -441,10 +441,25 @@ export const DivisionAreaProgressSummary: React.FC<
                         <span
                           className={`px-2 py-1 text-xs font-medium rounded-full border ${badge.className}`}
                           aria-label={`Recognition status: ${badge.label}`}
+                          aria-describedby={
+                            badge.tooltip
+                              ? `area-${group.divisionId}-${area.areaId}-badge-tip`
+                              : undefined
+                          }
                           title={badge.tooltip}
                         >
                           {badge.label}
                         </span>
+                        {/* `title` does not reach touch or most screen readers
+                            (#2644). */}
+                        {badge.tooltip && (
+                          <span
+                            id={`area-${group.divisionId}-${area.areaId}-badge-tip`}
+                            className="sr-only"
+                          >
+                            {badge.tooltip}
+                          </span>
+                        )}
                       </div>
 
                       {/* Progress Paragraph */}

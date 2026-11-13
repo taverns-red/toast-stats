@@ -134,6 +134,8 @@ export const NextDeadlineStrip: React.FC<NextDeadlineStripProps> = ({
                   {countdown(d.daysLeft)}
                 </span>
               </span>
+              {/* `title` does not reach touch or most screen readers (#2644). */}
+              <span className="sr-only"> Source: {d.source}</span>
             </li>
           ))}
         </ul>

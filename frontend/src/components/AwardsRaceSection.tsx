@@ -240,6 +240,10 @@ const AwardCard: React.FC<AwardCardProps> = ({ spec, entries }) => {
               ? ` · ${tiedCount} districts tied`
               : winners.length > 1 &&
                 ` · ${winners.length} districts qualifying`}
+            {/* `title` does not reach touch or most screen readers (#2644). */}
+            {tiedCount > 0 && (
+              <span className="sr-only">. {TIE_BREAK_UNPUBLISHED}</span>
+            )}
           </span>
         ) : (
           <span>

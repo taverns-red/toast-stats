@@ -83,6 +83,9 @@ export const DeadlineTimeline: React.FC<DeadlineTimelineProps> = ({
                         · passed
                       </span>
                     )}
+                    {/* `title` does not reach touch or most screen readers
+                        (#2644): the source is also text. */}
+                    <span className="sr-only"> Source: {d.source}</span>
                     {d.owner && (
                       <span className="deadline-timeline__owner">
                         Owner: {d.owner.role} (
@@ -94,7 +97,7 @@ export const DeadlineTimeline: React.FC<DeadlineTimelineProps> = ({
                         >
                           {d.owner.short}
                         </a>
-                        )
+                        <span className="sr-only"> {d.owner.citation}</span>)
                       </span>
                     )}
                   </span>
