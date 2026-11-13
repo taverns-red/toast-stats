@@ -192,6 +192,25 @@ describe('RankingCard', () => {
     })
   })
 
+  describe('Fully tied category (#2613)', () => {
+    it('shows Tied instead of a rank and a percentile', () => {
+      renderWithProviders(
+        <RankingCard
+          {...baseProps}
+          rank={1}
+          totalDistricts={94}
+          percentile={98.9}
+          tied
+        />
+      )
+
+      expect(screen.getByText('Tied')).toBeInTheDocument()
+      expect(screen.queryByText(/percentile/i)).not.toBeInTheDocument()
+      expect(screen.queryByText('of 94')).not.toBeInTheDocument()
+      expect(screen.getByLabelText(/tied/i)).toBeInTheDocument()
+    })
+  })
+
   describe('Accessibility', () => {
     it('has accessible aria-label with complete ranking information', () => {
       renderWithProviders(<RankingCard {...baseProps} />)

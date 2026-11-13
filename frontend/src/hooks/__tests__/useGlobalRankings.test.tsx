@@ -575,9 +575,10 @@ describe('Helper Functions', () => {
       const result = extractEndOfYearRankings(history, programYearData)
 
       expect(result).not.toBeNull()
-      expect(result?.paidClubs.percentile).toBe(100)
-      expect(result?.membershipPayments.percentile).toBeCloseTo(0.8, 1)
-      expect(result?.distinguishedClubs.percentile).toBeCloseTo(50.8, 1)
+      // One formula everywhere, (n - r) / n (#2613): rank 1 is 99.2, never 100.
+      expect(result?.paidClubs.percentile).toBe(99.2)
+      expect(result?.membershipPayments.percentile).toBe(0)
+      expect(result?.distinguishedClubs.percentile).toBe(50)
     })
 
     it('should return null for empty history', () => {

@@ -58,6 +58,23 @@ describe('DistrictKpiStrip (#572)', () => {
     expect(within(strip).getByText('Distinguished Clubs')).toBeInTheDocument()
   })
 
+  // #2613: each card's rank is by a different measure than the figure it
+  // shows (analytics-core MetricRankingsCalculator.getMetricValue).
+  it.each([
+    ['Paid Clubs', /ranked by club growth %/i],
+    ['Membership Payments', /ranked by membership payments growth %/i],
+    ['Distinguished Clubs', /ranked by distinguished % of the club base/i],
+  ])('%s names the measure its rank is based on (#2613)', (title, pattern) => {
+    renderStrip(<DistrictKpiStrip kpis={sampleKpis} />)
+    const card = screen
+      .getAllByTestId('kpi-bullet-card')
+      .find(c => within(c).queryByText(title))
+    expect(card).toBeDefined()
+    expect(
+      within(card as HTMLElement).getByTestId('ranked-by')
+    ).toHaveTextContent(pattern)
+  })
+
   it('applies the sticky-positioning hook class', () => {
     const { container } = renderStrip(<DistrictKpiStrip kpis={sampleKpis} />)
     expect(container.querySelector('.district-kpi-strip')).toBeInTheDocument()
