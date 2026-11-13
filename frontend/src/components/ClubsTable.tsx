@@ -83,6 +83,11 @@ import { ClubSearchBox } from './ClubSearchBox'
 /**
  * Props for the ClubsTable component
  */
+const CHANGES_FAILED_NOTE =
+  'The changes could not load, so nothing was exported. Try again in a moment.'
+const CHANGES_EMPTY_NOTE =
+  'There are no changes to export between these two dates.'
+
 interface ClubsTableProps {
   /** Array of club trends to display in the table */
   clubs: ClubTrend[]
@@ -134,6 +139,8 @@ interface ClubsTableProps {
     isLoading: boolean
     isError?: boolean
     onRequest: () => void
+    /** Read again after a failure (the Columns menu opens, Export clicked). */
+    onRetry?: () => void
   }
   /**
    * Program year being shown ("YYYY-YYYY"), from the page that owns the
@@ -592,6 +599,13 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   // A Changes column that is on (saved, or the sort/filter needs it) needs the
   // diff now (#2740).
   const requestChanges = deferredChanges?.onRequest
+  const diffFailedForMenu = !!deferredChanges?.isError
+  const retryChanges = deferredChanges?.onRetry
+  // Opening the Columns menu asks for the diff, and tries again after a failure.
+  const onColumnsOpen = useCallback(() => {
+    requestChanges?.()
+    if (diffFailedForMenu) retryChanges?.()
+  }, [requestChanges, diffFailedForMenu, retryChanges])
   const wantsChanges = CHANGES_COLUMN_IDS.some(id => columns.isVisible(id))
   useEffect(() => {
     if (wantsChanges) requestChanges?.()
@@ -886,22 +900,41 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   // choice is a per-browser view preference that is not in the URL, so tying
   // the file to it would hand two people with one link different files.
   // "Export Changes" before the diff has loaded: ask for it, wait, then
-  // export (#2740). The button shows its own busy state meanwhile.
-  const pendingChangesExport = useRef<(() => void) | null>(null)
+  // export (#2740). The button shows its own busy state meanwhile. A failed or
+  // empty read ends the wait with a visible, announced message, never a hang.
+  const [exportNote, setExportNote] = useState('')
+  const pendingChangesExport = useRef<
+    ((diff: SnapshotDiff | null) => void) | null
+  >(null)
+  const diffFailed = !!deferredChanges?.isError
+  const runChangesExport = (diff: SnapshotDiff): void => {
+    const empty =
+      diff.clubs.bothPresent.length === 0 &&
+      diff.clubs.onlyInFrom.length === 0 &&
+      diff.clubs.onlyInTo.length === 0
+    if (empty) setExportNote(CHANGES_EMPTY_NOTE)
+    else exportSnapshotDiff(diff)
+  }
   const exportChanges = async (): Promise<void> => {
-    if (snapshotDiff) return exportSnapshotDiff(snapshotDiff)
+    setExportNote('')
+    if (snapshotDiff) return runChangesExport(snapshotDiff)
+    if (diffFailed) {
+      setExportNote(CHANGES_FAILED_NOTE)
+      deferredChanges?.onRetry?.()
+      return
+    }
     requestChanges?.()
-    await new Promise<void>(resolve => {
+    const loaded = await new Promise<SnapshotDiff | null>(resolve => {
       pendingChangesExport.current = resolve
     })
+    if (loaded) runChangesExport(loaded)
+    else setExportNote(CHANGES_FAILED_NOTE)
   }
-  const diffFailed = !!deferredChanges?.isError
   useEffect(() => {
     const done = pendingChangesExport.current
     if (!done || !(snapshotDiff || diffFailed)) return
     pendingChangesExport.current = null
-    if (snapshotDiff) exportSnapshotDiff(snapshotDiff)
-    done()
+    done(snapshotDiff ?? null)
   }, [snapshotDiff, diffFailed])
 
   const exportGroup = (
@@ -951,6 +984,11 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
             snapshotDiff.clubs.onlyInTo.length === 0
           }
         />
+      )}
+      {exportNote && (
+        <p role="alert" className="basis-full text-sm">
+          {exportNote}
+        </p>
       )}
     </div>
   )
@@ -1032,7 +1070,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 columns={columns}
                 changesAvailable={changesOffered}
                 changesLoading={!snapshotDiff && !!deferredChanges?.isLoading}
-                onOpen={requestChanges}
+                changesFailed={!snapshotDiff && diffFailed}
+                onOpen={onColumnsOpen}
                 changesLabel={changesLabel}
                 sinceActive={!!sinceByClub}
               />

@@ -28,6 +28,8 @@ interface ColumnsMenuProps {
   changesAvailable?: boolean
   /** The Changes diff is being fetched; the group says so (#2740). */
   changesLoading?: boolean
+  /** The Changes diff failed to load; the group says so and is disabled. */
+  changesFailed?: boolean
   /** Called when the menu opens (starts the on-demand diff read, #2740). */
   onOpen?: (() => void) | undefined
   /** Heading for the Changes group, e.g. "Changes since Nov 10". */
@@ -66,6 +68,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
   columns,
   changesAvailable = false,
   changesLoading = false,
+  changesFailed = false,
   onOpen,
   changesLabel,
   sinceActive = false,
@@ -83,6 +86,10 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
   const [announcement, setAnnouncement] = useState('')
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
+  const onOpenRef = useRef(onOpen)
+  useEffect(() => {
+    onOpenRef.current = onOpen
+  })
   const baseId = useId()
   const popoverId = `${baseId}-columns-popover`
 
@@ -99,7 +106,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
 
   useEffect(() => {
     if (!isOpen) return
-    onOpen?.()
+    onOpenRef.current?.()
     focusFirstCheckbox()
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') close()
@@ -119,7 +126,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
       document.removeEventListener('keydown', onKey)
       document.removeEventListener('mousedown', onPointerDown)
     }
-  }, [isOpen, close, focusFirstCheckbox, onOpen])
+  }, [isOpen, close, focusFirstCheckbox])
 
   const { shownCount, totalCount, isCustom } = columns
   const accessibleName = `Columns, ${shownCount} of ${totalCount} shown${
@@ -205,13 +212,18 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
             return (
               <fieldset key={group.id} className="clubs-columns-menu__group">
                 <legend className="clubs-columns-menu__legend">{legend}</legend>
-                {group.id === 'changes' && changesLoading && (
+                {group.id === 'changes' && (
                   <span
                     className="clubs-columns-menu__note"
                     role="status"
                     aria-live="polite"
+                    data-testid="columns-changes-status"
                   >
-                    Loading changes…
+                    {changesFailed
+                      ? 'Changes could not be loaded. Close and reopen this menu to try again.'
+                      : changesLoading
+                        ? 'Loading changes…'
+                        : ''}
                   </span>
                 )}
                 {ids.map(id => {
@@ -219,7 +231,13 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
                   if (!meta) return null
                   const isRevealed = columns.revealed.has(id)
                   const always = isAlwaysShown(id)
-                  const locked = always || id === SINCE_COLUMN_ID || isRevealed
+                  const changesBusy =
+                    group.id === 'changes' && (changesLoading || changesFailed)
+                  const locked =
+                    always ||
+                    id === SINCE_COLUMN_ID ||
+                    isRevealed ||
+                    changesBusy
                   const hintId = `${baseId}-hint-${id}`
                   const noteId = `${baseId}-note-${id}`
                   const hasNote = always || id === SINCE_COLUMN_ID || isRevealed

@@ -251,14 +251,24 @@ const DistrictClubsPage: React.FC = () => {
   // column is saved or sorted/filtered by, or "Export Changes" is clicked. The
   // Changes group and the export button are offered meanwhile (a previous
   // recorded date exists), so nothing is hidden, only fetched later.
-  const [diffWanted, setDiffWanted] = useState(false)
-  const requestChanges = useCallback(() => setDiffWanted(true), [])
-  const { data: snapshotDiff, isLoading: isDiffLoading } = useSnapshotDiff(
-    districtId,
-    defaultDiffPair?.from,
-    defaultDiffPair?.to,
-    { enabled: diffWanted }
+  // Keyed by district so a district change starts unwanted again.
+  const [diffWantedFor, setDiffWantedFor] = useState<string | undefined>()
+  const diffWanted = !!districtId && diffWantedFor === districtId
+  const requestChanges = useCallback(
+    () => setDiffWantedFor(districtId),
+    [districtId]
   )
+  const {
+    data: snapshotDiff,
+    isFetching: isDiffFetching,
+    isError: isDiffError,
+    refetch: refetchDiff,
+  } = useSnapshotDiff(districtId, defaultDiffPair?.from, defaultDiffPair?.to, {
+    enabled: diffWanted,
+  })
+  const retryChanges = useCallback(() => {
+    void refetchDiff()
+  }, [refetchDiff])
 
   // A refresh that fails while clubs are on screen keeps them (spec §7) and
   // says so inline, once per failure: dismissing hides that error, not the next.
@@ -379,8 +389,10 @@ const DistrictClubsPage: React.FC = () => {
                   snapshotDiff={snapshotDiff}
                   deferredChanges={{
                     available: !!defaultDiffPair,
-                    isLoading: diffWanted && !!isDiffLoading,
+                    isLoading: diffWanted && !!isDiffFetching,
+                    isError: diffWanted && !!isDiffError && !isDiffFetching,
                     onRequest: requestChanges,
+                    onRetry: retryChanges,
                   }}
                   programYear={effectiveProgramYear?.label}
                   openGroups={openGroups}
