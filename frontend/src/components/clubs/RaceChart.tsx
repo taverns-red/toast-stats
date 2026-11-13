@@ -11,6 +11,7 @@ import {
   YAxis,
 } from 'recharts'
 import type { DefaultLegendContentProps, LegendPayload } from 'recharts'
+import { AXIS_TICK_LARGE } from '../charts/chartAxis'
 import type {
   ClubRaceTier,
   GlobalClubRaceTimelinePoint,
@@ -137,8 +138,18 @@ export const RaceChart: React.FC<RaceChartProps> = ({
             stroke="currentColor"
             opacity={0.15}
           />
-          <XAxis dataKey="date" tickFormatter={shortDate} minTickGap={24} />
-          <YAxis domain={domain} allowDecimals={false} width={40} />
+          <XAxis
+            dataKey="date"
+            tickFormatter={shortDate}
+            minTickGap={24}
+            tick={AXIS_TICK_LARGE}
+          />
+          <YAxis
+            domain={domain}
+            allowDecimals={false}
+            width={40}
+            tick={AXIS_TICK_LARGE}
+          />
           <Tooltip
             labelFormatter={label => `Snapshot ${String(label)}`}
             {...readout.tooltipProps}

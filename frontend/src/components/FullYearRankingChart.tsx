@@ -13,6 +13,7 @@ import type { ProgramYear } from '../utils/programYear'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { dateAxisLayout } from './charts/compactAxis'
+import { AXIS_TICK, AXIS_LABEL_STYLE } from './charts/chartAxis'
 import {
   useChartReadout,
   ChartReadout,
@@ -176,6 +177,9 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
     value: point[metricConfig.dataKey] as number,
   }))
 
+  // One labelled tick per month (the first snapshot of it), not 30 dates.
+  const monthTicks = firstDatePerMonth(chartData.map(d => d.date))
+
   // Generate accessible description
   const chartDescription = generateChartDescription(
     data,
@@ -231,7 +235,8 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
               <XAxis
                 dataKey="date"
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '12px' }}
+                tick={AXIS_TICK}
+                ticks={monthTicks}
                 {...dateAxisLayout(
                   compact,
                   chartData.map(d => d.date)
@@ -246,15 +251,17 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
               />
               <YAxis
                 stroke="var(--tm-cool-gray)"
-                style={{ fontSize: '12px' }}
+                tick={AXIS_TICK}
                 width={50}
                 reversed={true}
-                domain={['dataMin', 'dataMax'] as const}
+                // Rank 1 is the floor; ranks are whole numbers.
+                domain={[1, 'dataMax'] as const}
+                allowDecimals={false}
                 label={{
                   value: 'Rank (1 = best)',
                   angle: -90,
                   position: 'insideLeft',
-                  style: { fontSize: '12px' },
+                  style: AXIS_LABEL_STYLE,
                 }}
               />
               <Tooltip
@@ -262,7 +269,8 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
                 {...readout.tooltipProps}
               />
               <Line
-                type="monotone"
+                // Integer ranks: a spline would dip below the axis floor.
+                type="linear"
                 dataKey="value"
                 stroke="var(--tm-loyal-blue)"
                 strokeWidth={2}
@@ -291,6 +299,17 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
       </p>
     </section>
   )
+}
+
+/** The first date in each calendar month, from ascending ISO dates. */
+function firstDatePerMonth(dates: string[]): string[] {
+  const seen = new Set<string>()
+  return dates.filter(date => {
+    const month = date.slice(0, 7)
+    if (seen.has(month)) return false
+    seen.add(month)
+    return true
+  })
 }
 
 /**

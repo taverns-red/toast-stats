@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
+import { AXIS_TICK_LARGE } from './charts/chartAxis'
 import {
   YearOverYearComparisonEmpty,
   YearOverYearComparisonSkeleton,
@@ -471,7 +472,7 @@ export const YearOverYearComparison: React.FC<YearOverYearComparisonProps> = ({
                       stroke="var(--tm-cool-gray)"
                       // Ticks are data: 14px floor, not the 12px eyebrow
                       // size (#1840, #2125).
-                      style={{ fontSize: '14px' }}
+                      tick={AXIS_TICK_LARGE}
                       domain={yAxisDomain}
                       tickFormatter={(value: number) =>
                         item.metric === 'Thriving Clubs %'

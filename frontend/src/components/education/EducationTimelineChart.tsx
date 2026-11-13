@@ -228,14 +228,14 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
               ticks={byMonth ? ticks : [tFirst, tLast]}
               tickFormatter={axisTick}
               minTickGap={16}
-              tick={{ fontSize: 13 }}
+              tick={{ fill: 'var(--ink-2)', fontSize: 13 }}
             />
             <YAxis
               domain={domain}
               ticks={scale.ticks}
               allowDecimals={false}
               width={yAxisWidth}
-              tick={{ fontSize: 13 }}
+              tick={{ fill: 'var(--ink-2)', fontSize: 13 }}
               tickFormatter={fmt}
             />
             <Tooltip

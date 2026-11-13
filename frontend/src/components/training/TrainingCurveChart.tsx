@@ -8,6 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { AXIS_TICK } from '../charts/chartAxis'
 import type { OfficerTrainingRoundWindow } from '@taverns-red/analytics-core'
 import { dayOfRound } from '@taverns-red/analytics-core'
 import type { CurvePoint } from '../../utils/officerTraining'
@@ -82,14 +83,14 @@ export const TrainingCurveChart: React.FC<TrainingCurveChartProps> = ({
             ticks={ticks}
             tickFormatter={day => formatShortDate(dateOf(day))}
             stroke="var(--tm-cool-gray)"
-            fontSize={12}
+            tick={AXIS_TICK}
           />
           <YAxis
             domain={[0, 100]}
             ticks={[0, 25, 50, 75, 100]}
             tickFormatter={v => `${v}%`}
             stroke="var(--tm-cool-gray)"
-            fontSize={12}
+            tick={AXIS_TICK}
           />
           <Tooltip
             formatter={(value, name) => [

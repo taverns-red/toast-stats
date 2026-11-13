@@ -53,7 +53,10 @@ describe('YearOverYearComparison y-axis type floor (#2125)', () => {
     )
     expect(ticks.length).toBeGreaterThan(0)
     for (const tick of ticks) {
-      expect(parseFloat(tick.style.fontSize)).toBeGreaterThanOrEqual(14)
+      // `tick={{ fontSize }}` lands as the font-size attribute (#2659);
+      // the older `style` prop landed as inline style. Either counts.
+      const size = tick.getAttribute('font-size') || tick.style.fontSize
+      expect(parseFloat(size)).toBeGreaterThanOrEqual(14)
     }
   })
 })
