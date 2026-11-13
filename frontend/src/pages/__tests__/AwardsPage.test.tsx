@@ -175,7 +175,18 @@ describe('AwardsPage (#371-#373)', () => {
       renderPage()
       const link = screen.getByRole('link', { name: 'District 102' })
       expect(link).toHaveAttribute('href', '/district/102')
-      expect(link).toHaveTextContent('D102')
+      // WCAG 2.5.3 (#2648): the accessible name contains the visible label
+      // ("D102"), so voice control can say what it sees. No aria-label
+      // override; the hidden letters complete the word instead.
+      expect(link).not.toHaveAttribute('aria-label')
+      const visible = Array.from(link.childNodes)
+        .filter(
+          n => !(n instanceof HTMLElement && n.classList.contains('sr-only'))
+        )
+        .map(n => n.textContent)
+        .join('')
+      expect(visible).toBe('D102')
+      expect('District 102'.startsWith('D')).toBe(true)
     })
   })
 })
