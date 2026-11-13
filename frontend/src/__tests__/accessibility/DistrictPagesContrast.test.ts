@@ -211,6 +211,28 @@ describe('district page contrast (#1660)', () => {
       prop(declsFor(darkCss, "[data-theme='dark'] .text-tm-black"), 'color')
     ).toMatch(/^var\(--text-heading\)/)
     expectAA(resolveColor('var(--ink)', dark), tint, 'banner text-tm-black')
+    // Body copy (text-gray-600) is re-inked inside the tint, over every surface.
+    const body = resolveColor(
+      prop(
+        declsFor(
+          darkCss,
+          "[data-theme='dark'] .bg-tm-happy-yellow\\/20 .text-gray-600"
+        ),
+        'color'
+      ),
+      dark
+    )
+    for (const base of ['--bg', '--surface', '--surface-2']) {
+      const fill = fillOver(
+        prop(
+          declsFor(darkCss, "[data-theme='dark'] .bg-tm-happy-yellow\\/20"),
+          'background-color'
+        ),
+        dark.get(base)!,
+        dark
+      )
+      expectAA(body, fill, `banner text-gray-600 over ${base}`)
+    }
   })
 
   it('dark true-maroon badge text clears AA on the happy-yellow-30 tint', () => {

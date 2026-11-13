@@ -1013,6 +1013,13 @@
   background-color: rgba(247, 209, 100, 0.15) !important;
 }
 
+/* The limited-data banner's body copy is text-gray-600, which dark maps to the
+   muted ink (--ink-3): 4.2:1 on this tint over a raised surface. Use the
+   secondary ink inside the tint. */
+[data-theme='dark'] .bg-tm-happy-yellow\/20 .text-gray-600 {
+  color: var(--ink-2) !important;
+}
+
 [data-theme='light'] .bg-tm-cool-gray\/20 {
   background-color: rgba(169, 178, 177, 0.2);
 }

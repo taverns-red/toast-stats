@@ -184,7 +184,11 @@ describe('tinted /N fills carry an explicit rule per theme (#2642)', () => {
       theme === 'dark'
         ? parseColor(
             prop(
-              declsFor(darkCss, "[data-theme='dark'] .text-gray-600"),
+              // The more specific in-tint rule wins the cascade when present.
+              declsFor(
+                darkCss,
+                "[data-theme='dark'] .bg-tm-happy-yellow\\/20 .text-gray-600"
+              ) || declsFor(darkCss, "[data-theme='dark'] .text-gray-600"),
               'color'
             )!,
             toks
