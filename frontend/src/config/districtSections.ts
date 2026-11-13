@@ -123,6 +123,15 @@ export const DISTRICT_SECTIONS: readonly DistrictSection[] = [
     about:
       'What to do next: clubs close to Distinguished, missing club visits and clubs that need intervention.',
   },
+  // 'Council' (#2300, in the strip since #2646 / D6) — clubs in good standing
+  // and their votes as of a council date. Last: a reference page used a few
+  // times a year, so on a phone it sits in the More sheet.
+  {
+    label: 'Council',
+    segment: 'council',
+    about:
+      'Clubs in good standing and their votes as of a District Council date, derived from TI’s club status. Not TI’s official credentials list.',
+  },
 ]
 
 /* #1832 (mobile epic #1827, review §5.1) — on a phone held upright the

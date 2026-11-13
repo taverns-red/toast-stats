@@ -7,7 +7,6 @@ import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { previousRecordedDate, useSnapshotDiff } from '../hooks/useSnapshotDiff'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
-import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { ClubsTable } from '../components/ClubsTable'
 import { useUrlStringSet } from '../hooks/useUrlStringSet'
@@ -289,10 +288,6 @@ const DistrictClubsPage: React.FC = () => {
               cachedDatesData?.dateRange?.endDate ?? availableDates[0]
             }
             contextBarToolsRef={setContextBarTools}
-          />
-
-          <SubpageBreadcrumb
-            crumbs={[{ label: districtName, to: `/district/${districtId}` }]}
           />
 
           <DistrictSubnav districtId={districtId} />

@@ -23,7 +23,6 @@ import {
   type EducationTrendYear,
 } from '../utils/educationTrend'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
-import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { DistrictEducationView } from '../components/DistrictEducationView'
 import { EducationAwardsLeaderboard } from '../components/EducationAwardsLeaderboard'
@@ -255,10 +254,6 @@ const DistrictEducationPage: React.FC = () => {
             latestSnapshotDate={
               cachedDatesData?.dateRange?.endDate ?? availableDates[0]
             }
-          />
-
-          <SubpageBreadcrumb
-            crumbs={[{ label: districtName, to: `/district/${districtId}` }]}
           />
 
           <DistrictSubnav districtId={districtId} />

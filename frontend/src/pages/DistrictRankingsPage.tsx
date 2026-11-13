@@ -11,7 +11,6 @@ import {
   isDateInProgramYear,
 } from '../utils/programYear'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
-import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import GlobalRankingsTab from '../components/GlobalRankingsTab'
 import ErrorBoundary from '../components/ErrorBoundary'
@@ -122,10 +121,6 @@ const DistrictRankingsPage: React.FC = () => {
             latestSnapshotDate={
               cachedDatesData?.dateRange?.endDate ?? availableDates[0]
             }
-          />
-
-          <SubpageBreadcrumb
-            crumbs={[{ label: districtName, to: `/district/${districtId}` }]}
           />
 
           <DistrictSubnav districtId={districtId} />

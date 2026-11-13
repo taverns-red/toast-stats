@@ -44,7 +44,6 @@ import { StatusChip } from '../components/StatusChip'
 import { getClubHealthStatusShortLabel } from '../utils/clubHealthStatus'
 import { arrayToCSV, downloadCSV, generateFilename } from '../utils/csvExport'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
-import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { isDistrictSlotPending } from '../utils/districtSlotPending'
@@ -927,10 +926,6 @@ const DistrictActionListPage: React.FC = () => {
             latestSnapshotDate={
               cachedDatesData?.dateRange?.endDate ?? availableDates[0]
             }
-          />
-
-          <SubpageBreadcrumb
-            crumbs={[{ label: districtName, to: `/district/${districtId}` }]}
           />
 
           <DistrictSubnav districtId={districtId} />

@@ -243,6 +243,14 @@ const AreaPage: React.FC = () => {
     if (workbook) downloadCSV(workbook.csv, workbook.filename)
   }
   const divisionUrl = `/district/${districtId}/division/${divId}`
+  // The club page leads back here (#2646): its back arrow, breadcrumb and
+  // bottom link all go to the area the user came from.
+  const clubLinkState = {
+    fromEntity: {
+      label: areaName,
+      to: `/district/${districtId}/division/${divId}/area/${areaId}`,
+    },
+  }
 
   return (
     <div className="app-shell__page district-detail-page-root">
@@ -449,6 +457,7 @@ const AreaPage: React.FC = () => {
           <ClubMiniList
             clubs={clubs}
             clubTo={c => `/district/${districtId}/club/${c.clubId}`}
+            clubState={clubLinkState}
           />
         ) : (
           <div className="districts-rankings-table-wrap">
@@ -493,7 +502,9 @@ const AreaPage: React.FC = () => {
                         key={c.clubId}
                         className="cursor-pointer"
                         onClick={() =>
-                          navigate(`/district/${districtId}/club/${c.clubId}`)
+                          navigate(`/district/${districtId}/club/${c.clubId}`, {
+                            state: clubLinkState,
+                          })
                         }
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -502,6 +513,7 @@ const AreaPage: React.FC = () => {
                               a name-click navigates once). */}
                           <Link
                             to={`/district/${districtId}/club/${c.clubId}`}
+                            state={clubLinkState}
                             onClick={e => e.stopPropagation()}
                             className="clubs-name-link text-sm font-medium text-gray-900"
                           >

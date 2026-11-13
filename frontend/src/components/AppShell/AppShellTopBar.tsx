@@ -1,18 +1,29 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { NavLink, Link, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import ThemeToggle from '../ThemeToggle'
 import AppMeta from './AppMeta'
 import HeaderSearch from './HeaderSearch'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { lockScroll } from '../../utils/scrollLock'
 
+/* Each item is active for the section its URL is in, not only its own `to`
+   (#2646): /district/* is Districts, /region/* and /regions/* are Regions.
+   `sections` are path prefixes matched on a segment boundary. NavLink cannot
+   do this: its aria-current follows its own `to` alone. */
 const NAV_ITEMS = [
-  { to: '/', label: 'Districts', end: true },
-  { to: '/awards', label: 'Awards', end: false },
-  { to: '/clubs', label: 'Clubs', end: false },
-  { to: '/history', label: 'History', end: false },
-  { to: '/methodology', label: 'How it works', end: false },
+  { to: '/', label: 'Districts', sections: ['/district'], home: true },
+  { to: '/regions', label: 'Regions', sections: ['/region', '/regions'] },
+  { to: '/awards', label: 'Awards', sections: ['/awards'] },
+  { to: '/clubs', label: 'Clubs', sections: ['/clubs'] },
+  { to: '/history', label: 'History', sections: ['/history'] },
+  { to: '/methodology', label: 'How it works', sections: ['/methodology'] },
 ] as const
+
+type NavItem = (typeof NAV_ITEMS)[number]
+
+const isNavItemActive = (item: NavItem, pathname: string): boolean =>
+  ('home' in item && pathname === '/') ||
+  item.sections.some(s => pathname === s || pathname.startsWith(`${s}/`))
 
 const PRIMARY_NAV_ID = 'app-shell-primary-nav'
 
@@ -147,26 +158,18 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
         className="app-shell-nav"
         data-open={navOpen}
       >
-        <NavLink to="/" end className="app-shell-nav__link" onClick={closeNav}>
-          Districts
-        </NavLink>
-        <NavLink
-          to="/regions"
-          className="app-shell-nav__link"
-          onClick={closeNav}
-        >
-          Regions
-        </NavLink>
-        {NAV_ITEMS.filter(i => i.to !== '/').map(item => (
-          <NavLink
+        {NAV_ITEMS.map(item => (
+          <Link
             key={item.to}
             to={item.to}
-            end={item.end}
             className="app-shell-nav__link"
+            aria-current={
+              isNavItemActive(item, location.pathname) ? 'page' : undefined
+            }
             onClick={closeNav}
           >
             {item.label}
-          </NavLink>
+          </Link>
         ))}
         {isMobile && (
           <details className="app-shell-nav-about">

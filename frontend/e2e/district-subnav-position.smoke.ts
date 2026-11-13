@@ -36,12 +36,20 @@ test.describe('district section bar position (#2646)', () => {
       const bar = page.locator('.district-subnav')
       await expect(bar).toBeVisible()
       await page.evaluate(() => document.fonts.ready)
-      // The page header settles after its data lands; wait for the lede.
-      await expect(page.getByTestId('district-detail-lede')).toBeVisible()
       await page.evaluate(() => window.scrollTo(0, 0))
-      tops[path] = await bar.evaluate(
-        el => el.getBoundingClientRect().top + window.scrollY
-      )
+      // The header settles as its data lands: read the top until it has held
+      // still for five reads (150ms apart), then record it.
+      const readTop = () =>
+        bar.evaluate(el => el.getBoundingClientRect().top + window.scrollY)
+      let last = await readTop()
+      let still = 0
+      for (let i = 0; i < 40 && still < 5; i++) {
+        await page.waitForTimeout(150)
+        const now = await readTop()
+        still = now === last ? still + 1 : 0
+        last = now
+      }
+      tops[path] = last
     }
     const values = Object.values(tops)
     const spread = Math.max(...values) - Math.min(...values)

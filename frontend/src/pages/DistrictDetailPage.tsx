@@ -1014,8 +1014,8 @@ const DistrictDetailPageInner: React.FC = () => {
                 >
                   Global rankings →
                 </Link>
-                {/* Council credentials (#2300) — a quiet text link, not a
-                    section: the page is not in the district subnav. */}
+                {/* Council credentials (#2300) — a quiet text link here; the
+                    page is also a district section since #2646 (D6). */}
                 <Link
                   to={`/district/${districtId}/council`}
                   className="inline-flex items-center px-2 min-h-[44px] text-tm-loyal-blue font-tm-headline underline underline-offset-2"

@@ -41,7 +41,6 @@ import { compareId } from '../utils/actionListData'
 import { arrayToCSV, downloadCSV, generateFilename } from '../utils/csvExport'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
-import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { ActionTable, type ActionTableColumn } from '../components/ActionTable'
@@ -421,10 +420,6 @@ const DistrictTrainingPage: React.FC = () => {
             latestSnapshotDate={
               cachedDatesData?.dateRange?.endDate ?? availableDates[0]
             }
-          />
-
-          <SubpageBreadcrumb
-            crumbs={[{ label: districtName, to: `/district/${districtId}` }]}
           />
 
           <DistrictSubnav districtId={districtId} />

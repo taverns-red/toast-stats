@@ -13,7 +13,6 @@ import {
 } from '../utils/programYear'
 import { parseMeetingMode, parseMeetingSlot } from '../utils/meetingHeatmap'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
-import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { MeetingHeatmap } from '../components/MeetingHeatmap'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
@@ -145,10 +144,6 @@ const DistrictMeetingsPage: React.FC = () => {
             latestSnapshotDate={
               cachedDatesData?.dateRange?.endDate ?? availableDates[0]
             }
-          />
-
-          <SubpageBreadcrumb
-            crumbs={[{ label: districtName, to: `/district/${districtId}` }]}
           />
 
           <DistrictSubnav districtId={districtId} />

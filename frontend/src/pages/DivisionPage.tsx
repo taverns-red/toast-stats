@@ -183,6 +183,15 @@ const DivisionPage: React.FC = () => {
 
   const divisionName = clubs[0]?.divisionName ?? `Division ${divId}`
 
+  // The club page leads back here (#2646): its back arrow, breadcrumb and
+  // bottom link all go to the division the user came from.
+  const clubLinkState = {
+    fromEntity: {
+      label: divisionName,
+      to: `/district/${districtId}/division/${divId}`,
+    },
+  }
+
   // Group clubs by area for the table sections.
   const areaGroups = new Map<
     string,
@@ -407,6 +416,7 @@ const DivisionPage: React.FC = () => {
               <ClubMiniList
                 clubs={area.clubs}
                 clubTo={c => `/district/${districtId}/club/${c.clubId}`}
+                clubState={clubLinkState}
               />
             ) : (
               <div className="districts-rankings-table-wrap">
@@ -453,7 +463,8 @@ const DivisionPage: React.FC = () => {
                             className="cursor-pointer"
                             onClick={() =>
                               navigate(
-                                `/district/${districtId}/club/${c.clubId}`
+                                `/district/${districtId}/club/${c.clubId}`,
+                                { state: clubLinkState }
                               )
                             }
                           >
@@ -464,6 +475,7 @@ const DivisionPage: React.FC = () => {
                                 bubble so a name-click navigates once). */}
                               <Link
                                 to={`/district/${districtId}/club/${c.clubId}`}
+                                state={clubLinkState}
                                 onClick={e => e.stopPropagation()}
                                 className="clubs-name-link text-sm font-medium text-gray-900"
                               >

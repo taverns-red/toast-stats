@@ -215,11 +215,12 @@ describe('DistrictRankingsPage (#571 — Phase 3)', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows a back-to-district breadcrumb, not the old back button (#577)', async () => {
+  it('has no breadcrumb: the Overview tab is the way back (#577, #2646)', async () => {
     renderAt('/district/61/rankings')
     await screen.findByTestId('global-rankings-tab')
 
-    expect(screen.getByRole('link', { name: 'District 61' })).toHaveAttribute(
+    expect(screen.queryByTestId('subpage-breadcrumb')).toBeNull()
+    expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute(
       'href',
       '/district/61'
     )
