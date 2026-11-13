@@ -89,15 +89,13 @@ for (const theme of THEMES) {
   }
 }
 
-/* The leaderboard on the shared DataTable (#2330 review, #2702): at 1280 every
- * header cell must be visible without scrolling the table sideways. At 1024
- * the 14px floor and the four training columns can need more room than the
- * page has once Round 2 expands; then the table scrolls INSIDE its own
- * labelled, focusable region (never the page), with the edge cue on the side
- * that has more, and the Region column stays pinned. */
+/* The leaderboard fits its container at desktop widths (#2330 review, #2702):
+ * it has no Columns menu, so its defaults must fit. At 1024 and 1280 the whole
+ * table, every header cell, is visible without scrolling it sideways, and no
+ * "more to the right" cue sits over the last column. */
 for (const theme of THEMES) {
   for (const width of [1024, 1280]) {
-    test(`regions leaderboard fits or scrolls in its own region at ${width}px (${theme})`, async ({
+    test(`regions leaderboard fits without side-scroll at ${width}px (${theme})`, async ({
       page,
     }) => {
       test.setTimeout(90_000)
@@ -114,8 +112,6 @@ for (const theme of THEMES) {
         return {
           tableWidth: t.scrollWidth,
           containerWidth: scroller.clientWidth,
-          region: scroller.getAttribute('role'),
-          tabindex: scroller.getAttribute('tabindex'),
           clipped: [...t.querySelectorAll('thead th')]
             .map(th => ({
               text: (th.textContent ?? '').trim(),
@@ -128,22 +124,13 @@ for (const theme of THEMES) {
         }
       })
       const ctx = JSON.stringify(m)
-      if (m.tableWidth <= m.containerWidth) {
-        expect(m.clipped, ctx).toEqual([])
-        // Nothing to scroll to, so no "more to the right" cue.
-        await expect(
-          page.locator('.dt-scroll-wrap[data-scrollable-end="true"]')
-        ).toHaveCount(0)
-      } else {
-        expect(width, `overflows at ${width}px: ${ctx}`).toBeLessThan(1280)
-        expect(m.region, ctx).toBe('region')
-        expect(m.tabindex, ctx).toBe('0')
-      }
-      const page_ = await page.evaluate(() => ({
-        scrollWidth: document.documentElement.scrollWidth,
-        clientWidth: document.documentElement.clientWidth,
-      }))
-      expect(page_.scrollWidth, ctx).toBeLessThanOrEqual(page_.clientWidth)
+      expect(m.tableWidth, ctx).toBeLessThanOrEqual(m.containerWidth)
+      expect(m.clipped, ctx).toEqual([])
+      // Nothing to scroll to, so no "more to the right" cue over the last
+      // column.
+      await expect(
+        page.locator('.dt-scroll-wrap[data-scrollable-end="true"]')
+      ).toHaveCount(0)
     })
   }
 }
