@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import DistrictsPage from '../DistrictsPage'
+import '../../__tests__/preloadRankingsTable'
 import { fetchCdnRankingsForDate } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
 

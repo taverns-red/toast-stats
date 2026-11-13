@@ -15,6 +15,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import DistrictsPage from '../DistrictsPage'
+import '../../__tests__/preloadRankingsTable'
 import {
   fetchCdnRankings,
   fetchCdnRankingsForDate,

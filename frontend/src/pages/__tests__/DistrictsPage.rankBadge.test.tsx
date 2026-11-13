@@ -1,25 +1,27 @@
 /**
- * Rank badge weight (#1363).
+ * Rank badge weight (#1363), palette per #2689 (shared DataTable, M1).
  *
  * Every row used to render its rank as a 40px filled circle, and because
  * `getRankBadgeColor` handed ranks 11+ a grey circle, most rows carried heavy
  * visual weight conveying nothing the numeral inside it didn't already say.
  *
  * The contract now: the circle is the PODIUM's, not every row's.
- *   - ranks 1–3 keep a filled medal circle (gold / silver / bronze), shrunk
- *     40px → 28px (`w-10 h-10` → `w-7 h-7`);
- *   - ranks 4+ are a plain bold right-aligned numeral — no circle, no fill.
+ *   - ranks 1-3 keep a medal circle (`rank-badge--medal`, 28px in CSS, keyed
+ *     on `data-medal`), now on the legacy palette: no raw yellow or amber
+ *     (spec M1: "rank badges drop raw yellows");
+ *   - ranks 4+ are a plain bold right-aligned numeral: no circle, no fill.
  *
  * The badge is a non-interactive <span>, so the WCAG 2.5.5 44px touch-target
  * floor does NOT apply (that floor is `styles/layers/base.css`'s `button`
- * rule — the distinction that caused the InfoTooltip under-reserve in #1359).
- * jsdom has no layout engine (Lesson 66), so these assert the classes the
- * geometry comes from.
+ * rule - the distinction that caused the InfoTooltip under-reserve in #1359).
+ * jsdom has no layout engine (Lesson 66), so these assert the hooks the
+ * geometry comes from; RankBadgeContrast.test.ts owns the colour ratios.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import DistrictsPage from '../DistrictsPage'
+import '../../__tests__/preloadRankingsTable'
 import { fetchCdnRankings } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
 
@@ -88,45 +90,39 @@ const badge = (rank: number) => screen.getByTestId(`rank-badge-${rank}`)
 describe('DistrictsPage rank badge (#1363)', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('keeps a filled medal circle for ranks 1–3, shrunk to 28px', async () => {
+  it('keeps a medal circle for ranks 1-3 with no raw yellow or amber', async () => {
     setup()
     renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 1')
 
-    const medals: Array<[number, RegExp]> = [
-      [1, /bg-yellow-500/],
-      [2, /bg-gray-400/],
-      [3, /bg-amber-600/],
+    const medals: Array<[number, string]> = [
+      [1, 'gold'],
+      [2, 'silver'],
+      [3, 'bronze'],
     ]
-    for (const [rank, fill] of medals) {
+    for (const [rank, name] of medals) {
       const el = badge(rank)
-      expect(el.className).toMatch(/rounded-full/)
-      // 28px, not the old 40px (w-10 h-10).
-      expect(el.className).toMatch(/\bw-7\b/)
-      expect(el.className).toMatch(/\bh-7\b/)
-      expect(el.className).not.toMatch(/\bw-10\b/)
-      expect(el.className).not.toMatch(/\bh-10\b/)
-      // Fills unchanged. The INK moved white → gray-900: white on these
-      // fills is 1.9 / 2.5 / 3.2:1, and the issue's own AC requires ≥4.5:1 in
-      // both themes, so "colours unchanged" can only mean the fills.
-      // __tests__/accessibility/RankBadgeContrast.test.ts owns the ratios.
-      expect(el.className).toMatch(fill)
-      expect(el.className).toMatch(/text-gray-900/)
+      expect(el.className).toMatch(/\brank-badge--medal\b/)
+      expect(el).toHaveAttribute('data-medal', name)
+      // Not the old 40px (w-10 h-10), and no Tailwind fill at all: the fill is
+      // a legacy token set in CSS, so dark mode remaps it.
+      expect(el.className).not.toMatch(/\bw-10\b|\bh-10\b/)
+      expect(el.className).not.toMatch(/yellow|amber/)
+      expect(el.className).not.toMatch(/\bbg-/)
     }
   })
 
-  it('renders ranks 4+ as a plain numeral — no circle, no fill', async () => {
+  it('renders ranks 4+ as a plain numeral - no circle, no fill', async () => {
     setup()
     renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 4')
 
     for (const rank of [4, 11]) {
       const el = badge(rank)
+      expect(el.className).not.toMatch(/rank-badge--medal/)
       expect(el.className).not.toMatch(/rounded-full/)
       expect(el.className).not.toMatch(/\bbg-/)
-      expect(el.className).not.toMatch(/\bw-7\b|\bw-10\b/)
-      // Still the strongest thing in its cell.
-      expect(el.className).toMatch(/font-bold/)
+      expect(el).not.toHaveAttribute('data-medal')
     }
   })
 
@@ -146,7 +142,10 @@ describe('DistrictsPage rank badge (#1363)', () => {
     renderWithProviders(<DistrictsPage />)
     await screen.findByText('District 4')
 
-    expect(screen.getByTestId('rank-cell-4').className).toMatch(/text-right/)
+    // Alignment is the numeric cell class (CSS: text-align: right).
+    expect(screen.getByTestId('rank-cell-4').className).toMatch(
+      /rankings-cell--num/
+    )
   })
 
   it('keeps every rank readable by assistive tech', async () => {

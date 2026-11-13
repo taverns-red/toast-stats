@@ -9,14 +9,28 @@ import {
   columnMeta,
 } from './clubsColumnMeta'
 
+/**
+ * What the menu lists, for a table other than the Clubs one (#2689). Omit it
+ * for the Clubs table, whose groups and columns come from `clubsColumnMeta`.
+ */
+export interface ColumnsMenuSpec {
+  groups: readonly { id: string; label: string }[]
+  /** Offered column ids, in table order. */
+  ids: readonly string[]
+  meta: Readonly<Record<string, { group: string; label: string; hint: string }>>
+  /** Ids shown at every width; listed, checked and locked. */
+  alwaysShown: readonly string[]
+}
+
 interface ColumnsMenuProps {
   columns: ColumnVisibilityApi
   /** The Changes columns are offered (a snapshot diff is loaded). */
-  changesAvailable: boolean
+  changesAvailable?: boolean
   /** Heading for the Changes group, e.g. "Changes since Nov 10". */
   changesLabel?: string | undefined
   /** The `?since=` preset is on, so "vs last year" is listed. */
-  sinceActive: boolean
+  sinceActive?: boolean
+  spec?: ColumnsMenuSpec
 }
 
 /** Ids offered under a group, in table order. */
@@ -46,10 +60,19 @@ const idsFor = (
  */
 export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
   columns,
-  changesAvailable,
+  changesAvailable = false,
   changesLabel,
-  sinceActive,
+  sinceActive = false,
+  spec,
 }) => {
+  const groups = spec?.groups ?? CHOOSER_GROUPS
+  const metaOf = (id: string) => (spec?.meta ?? columnMeta)[id]
+  const isAlwaysShown = (id: string) =>
+    spec ? spec.alwaysShown.includes(id) : id === ALWAYS_SHOWN_COLUMN_ID
+  const idsOf = (group: string): string[] =>
+    spec
+      ? spec.ids.filter(id => spec.meta[id]?.group === group)
+      : idsFor(group, changesAvailable, sinceActive)
   const [isOpen, setIsOpen] = useState(false)
   const [announcement, setAnnouncement] = useState('')
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -97,7 +120,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
   }`
 
   const onToggle = (id: string, input: HTMLInputElement) => {
-    const label = columnMeta[id]?.label ?? id
+    const label = metaOf(id)?.label ?? id
     if (columns.isVisible(id) && columns.needed.has(id)) {
       // The table is sorted or filtered by this column, so unchecking saves
       // the choice but hides nothing yet, and the box turns into a locked one.
@@ -165,8 +188,8 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
           role="group"
           aria-label="Choose columns"
         >
-          {CHOOSER_GROUPS.map(group => {
-            const ids = idsFor(group.id, changesAvailable, sinceActive)
+          {groups.map(group => {
+            const ids = idsOf(group.id)
             if (ids.length === 0) return null
             const legend =
               group.id === 'changes' && changesLabel
@@ -176,19 +199,14 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
               <fieldset key={group.id} className="clubs-columns-menu__group">
                 <legend className="clubs-columns-menu__legend">{legend}</legend>
                 {ids.map(id => {
-                  const meta = columnMeta[id]
+                  const meta = metaOf(id)
                   if (!meta) return null
                   const isRevealed = columns.revealed.has(id)
-                  const locked =
-                    id === ALWAYS_SHOWN_COLUMN_ID ||
-                    id === SINCE_COLUMN_ID ||
-                    isRevealed
+                  const always = isAlwaysShown(id)
+                  const locked = always || id === SINCE_COLUMN_ID || isRevealed
                   const hintId = `${baseId}-hint-${id}`
                   const noteId = `${baseId}-note-${id}`
-                  const hasNote =
-                    id === ALWAYS_SHOWN_COLUMN_ID ||
-                    id === SINCE_COLUMN_ID ||
-                    isRevealed
+                  const hasNote = always || id === SINCE_COLUMN_ID || isRevealed
                   return (
                     <div key={id} className="clubs-columns-menu__row">
                       <label className="clubs-columns-menu__item">
@@ -206,7 +224,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
                       <span id={hintId} className="clubs-columns-menu__hint">
                         {meta.hint}
                       </span>
-                      {id === ALWAYS_SHOWN_COLUMN_ID && (
+                      {always && (
                         <span id={noteId} className="clubs-columns-menu__note">
                           Always shown
                         </span>

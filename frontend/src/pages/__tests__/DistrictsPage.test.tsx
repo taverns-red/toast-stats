@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import DistrictsPage from '../DistrictsPage'
+import '../../__tests__/preloadRankingsTable'
 import { fetchCdnRankings } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
 
@@ -450,9 +451,7 @@ describe('DistrictsPage - Table Cell Rendering', () => {
     // Scope to the rankings table — the KPI strip from #356 also renders
     // these same numbers as global totals, and the World pulse (#2249)
     // puts a regions table before it in the DOM.
-    const table = within(
-      container.querySelector('table[aria-label="District rankings"]')!
-    )
+    const table = within(container.querySelector('#district-rankings-table')!)
 
     // Check paid clubs column. Per #546 the "Rank " word prefix is
     // dropped — per-metric cells show just "#N · +X.X%".
@@ -732,11 +731,11 @@ describe('DistrictsPage - My District sticky pin (#417)', () => {
     // (scoped to the rankings table: the World pulse's regions table also
     // has rows, #2249).
     const rows = within(
-      screen.getByRole('table', { name: 'District rankings' })
+      screen.getByRole('table', { name: /^district rankings/i })
     ).getAllByRole('row')
     const dataRows = rows.slice(1) // skip header
     const firstDistrictText =
-      dataRows[0]?.querySelector('td:first-child')?.textContent || ''
+      dataRows[0]?.querySelector('th:first-child')?.textContent || ''
     expect(firstDistrictText).toMatch(/D2/)
   })
 

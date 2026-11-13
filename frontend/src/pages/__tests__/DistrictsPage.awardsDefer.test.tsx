@@ -20,6 +20,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import DistrictsPage from '../DistrictsPage'
+import '../../__tests__/preloadRankingsTable'
 import { fetchCdnRankings } from '../../services/cdn'
 import type { CompetitiveAwardStandings } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
@@ -170,9 +171,7 @@ describe('DistrictsPage — defer Awards Race behind a mobile link (#862)', () =
     expect(stack.querySelector('.awards-race')).toBeNull()
     expect(stack.querySelector('.awards-race-mobile-link')).toBeNull()
 
-    const table = container.querySelector(
-      'table[aria-label="District rankings"]'
-    )!
+    const table = container.querySelector('#district-rankings-table')!
     const section = container.querySelector('.awards-race')!
     const link = container.querySelector('.awards-race-mobile-link')!
     const after = (a: Element, b: Element) =>

@@ -46,6 +46,10 @@ interface DataTableCell {
   column: { id: string; columnDef: { cell?: unknown } }
   getContext: () => unknown
 }
+/** Attributes a caller may add to a row or cell: test ids and data
+ *  attributes. Strings only, so nothing can add a handler (no row click). */
+export type DataTableAttrs = Record<string, string | undefined>
+
 export interface DataTableApi {
   getTotalSize: () => number
   getVisibleLeafColumns: () => ReadonlyArray<{
@@ -66,6 +70,7 @@ export interface DataTableApi {
   getRowModel: () => {
     rows: ReadonlyArray<{
       id: string
+      original: unknown
       getVisibleCells: () => ReadonlyArray<DataTableCell>
     }>
   }
@@ -79,6 +84,9 @@ interface DataTableProps {
   caption: React.ReactNode
   /** Short name for the scroll region, e.g. "All clubs table". */
   label: string
+  /** A short accessible name for the `<table>` itself (the caption keeps the
+   *  detail). Without it the caption is the name. */
+  tableLabel?: string
   sort: DataTableSort
   onSort: (field: string) => void
   /** The column that labels each row: rendered as `<th scope="row">` and left
@@ -90,8 +98,18 @@ interface DataTableProps {
   cellClassName?: (columnId: string) => string
   /** Class for every body row. */
   rowClassName?: string
+  /** Extra attributes for a body row (e.g. `data-testid`). */
+  rowProps?: (row: { id: string; original: unknown }) => DataTableAttrs
+  /** Extra attributes for a body cell, by column and row id. */
+  cellProps?: (columnId: string, rowId: string) => DataTableAttrs
+  /** Shown in place of the rows when there are none, under the headers. */
+  emptyState?: React.ReactNode
   /** Shown above the table while it scrolls sideways. */
   overflowHint?: React.ReactNode
+  /** The caller's own region scrolls this table (a full-screen sheet): the
+   *  shell adds no scroll region, no edge cues and no overflow mode, and the
+   *  header sticks to that scroller instead of the page. */
+  inScroller?: boolean
 }
 
 /** Is there more content past each horizontal edge of the scroller? */
@@ -107,13 +125,18 @@ export function DataTable({
   id,
   caption,
   label,
+  tableLabel,
   sort,
   onSort,
   rowHeaderColumnId,
   headerClassName,
   cellClassName,
   rowClassName,
+  rowProps,
+  cellProps,
+  emptyState,
   overflowHint,
+  inScroller = false,
 }: DataTableProps): React.JSX.Element {
   const wrapRef = useRef<HTMLDivElement>(null)
   const shellRef = useRef<HTMLDivElement>(null)
@@ -134,7 +157,7 @@ export function DataTable({
   // never "overflowing".
   useLayoutEffect(() => {
     const wrap = wrapRef.current
-    if (!wrap) return
+    if (!wrap || inScroller) return
     const measure = () => {
       const width = wrap.clientWidth
       setOverflow(width > 0 && totalSize > width)
@@ -151,7 +174,7 @@ export function DataTable({
       wrap.removeEventListener('scroll', syncEdges)
       ro?.disconnect()
     }
-  }, [totalSize, syncEdges])
+  }, [totalSize, syncEdges, inScroller])
 
   // The edges also change when the rows do (a filter can shrink the content).
   const rows = table.getRowModel().rows
@@ -172,7 +195,7 @@ export function DataTable({
       ) : null}
       <div
         ref={shellRef}
-        className="dt-scroll-wrap"
+        className={`dt-scroll-wrap${inScroller ? ' dt-scroll-wrap--in-scroller' : ''}`}
         data-scrollable-start="false"
         data-scrollable-end="false"
       >
@@ -182,7 +205,12 @@ export function DataTable({
           data-overflow={overflow ? 'true' : 'false'}
           {...regionProps}
         >
-          <table id={id} className="dt" style={{ minWidth: totalSize }}>
+          <table
+            id={id}
+            className="dt"
+            style={{ minWidth: totalSize }}
+            aria-label={tableLabel}
+          >
             <caption className="sr-only">{caption}</caption>
             <colgroup>
               {table.getVisibleLeafColumns().map(column => (
@@ -232,20 +260,33 @@ export function DataTable({
               ))}
             </thead>
             <tbody>
+              {rows.length === 0 && emptyState ? (
+                <tr>
+                  <td colSpan={table.getVisibleLeafColumns().length}>
+                    {emptyState}
+                  </td>
+                </tr>
+              ) : null}
               {rows.map(row => (
-                <tr key={row.id} className={rowClassName}>
+                <tr key={row.id} {...rowProps?.(row)} className={rowClassName}>
                   {row.getVisibleCells().map(cell => {
                     const content = flexRender(
                       cell.column.columnDef.cell as never,
                       cell.getContext() as never
                     )
                     const className = cellClassName?.(cell.column.id)
+                    const extra = cellProps?.(cell.column.id, row.id)
                     return cell.column.id === rowHeaderColumnId ? (
-                      <th key={cell.id} scope="row" className={className}>
+                      <th
+                        key={cell.id}
+                        {...extra}
+                        scope="row"
+                        className={className}
+                      >
                         {content}
                       </th>
                     ) : (
-                      <td key={cell.id} className={className}>
+                      <td key={cell.id} {...extra} className={className}>
                         {content}
                       </td>
                     )
@@ -255,14 +296,18 @@ export function DataTable({
             </tbody>
           </table>
         </div>
-        <div
-          className="dt-scroll__cue dt-scroll__cue--start"
-          aria-hidden="true"
-        />
-        <div
-          className="dt-scroll__cue dt-scroll__cue--end"
-          aria-hidden="true"
-        />
+        {inScroller ? null : (
+          <>
+            <div
+              className="dt-scroll__cue dt-scroll__cue--start"
+              aria-hidden="true"
+            />
+            <div
+              className="dt-scroll__cue dt-scroll__cue--end"
+              aria-hidden="true"
+            />
+          </>
+        )}
       </div>
     </>
   )

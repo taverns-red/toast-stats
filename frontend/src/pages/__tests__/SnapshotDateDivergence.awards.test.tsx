@@ -37,6 +37,7 @@ import {
 } from '../../services/cdn'
 import { snap } from '../../test-utils/snapshotDate'
 import DistrictsPage from '../DistrictsPage'
+import '../../__tests__/preloadRankingsTable'
 import AwardsPage from '../AwardsPage'
 import DistrictDetailPage from '../DistrictDetailPage'
 

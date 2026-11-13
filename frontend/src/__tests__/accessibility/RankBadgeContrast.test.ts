@@ -1,23 +1,17 @@
 /**
  * Medal-circle contrast for the rankings rank badge (#1363, AC "≥4.5:1 on the
- * three medal circles in both themes").
+ * three medal circles in both themes"), on the legacy palette per #2689 (M1:
+ * "rank badges drop the raw yellows").
  *
- * The badge text is 14px bold — NOT WCAG "large text" (≥18.66px bold), so the
- * 4.5:1 normal-text threshold applies, not 3:1.
+ * The badge text is 14px bold, NOT WCAG "large text" (≥18.66px bold), so the
+ * 4.5:1 normal-text threshold applies; the medal ring is a graphical object
+ * and needs 3:1 against the surface (WCAG 1.4.11).
  *
- * Both themes are covered, and the dark path needs its own reasoning because
- * `dark-mode.css` treats the three fills differently:
- *   - `.bg-gray-400` (silver) IS remapped to a dark surface, so the global
- *     `.text-gray-900 → var(--text-heading)` remap correctly flips its ink
- *     light;
- *   - `.bg-yellow-500` / `.bg-amber-600` (gold / bronze) are NOT remapped, so
- *     that same global rule would put LIGHT text on a LIGHT fill — exactly the
- *     `#c9b748`-on-white shape tracked in #1360. A compound override pins the
- *     ink dark for those two, mirroring the existing
- *     `.bg-tm-happy-yellow.text-gray-900` precedent.
- *
- * Pure computation over the real CSS + the real Tailwind literals, so it is
- * falsifiable: change a fill or drop the override and this goes red.
+ * The badge uses only tokens (`--tm-loyal-blue`, `--tm-true-maroon`, `--ink`,
+ * `--surface`), each of which remaps for `[data-theme='dark']`, so there is no
+ * per-theme ink pin any more (the old gold/bronze pin existed only because raw
+ * yellow/amber fills do not remap). This test reads the real CSS rules and the
+ * real token values, so changing a pairing or a token goes red.
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
@@ -26,97 +20,105 @@ import { dirname, resolve } from 'node:path'
 import { calculateContrastRatio } from '../../utils/contrastCalculator'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const darkModeCss = readFileSync(
-  resolve(here, '../../styles/dark-mode.css'),
-  'utf8'
-)
-const pageSrc = readFileSync(
-  resolve(here, '../../pages/DistrictsPage.tsx'),
-  'utf8'
-)
+const read = (rel: string): string => readFileSync(resolve(here, rel), 'utf8')
 
-/** Tailwind palette entries the medal pairs are allowed to draw from. */
-const TAILWIND: Record<string, string> = {
-  'bg-yellow-500': '#eab308',
-  'bg-gray-400': '#9ca3af',
-  'bg-amber-600': '#d97706',
-  'text-white': '#ffffff',
-  'text-gray-900': '#111827',
-  'text-gray-700': '#374151',
+const appShellCss = read('../../styles/components/app-shell.css')
+const colorsCss = read('../../styles/tokens/colors.css')
+const redesignCss = read('../../styles/tokens/redesign.css')
+const darkModeCss = read('../../styles/dark-mode.css')
+
+type Theme = 'light' | 'dark'
+
+/** A token's value in a theme, read from the stylesheet that declares it.
+ *  redesign.css declares the light value first and the dark value in its
+ *  `[data-theme='dark']` block after it, so the last declaration is the dark
+ *  one. */
+const token = (name: string, theme: Theme): string => {
+  const re = new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`, 'g')
+  const all = (text: string): string[] =>
+    Array.from(text.matchAll(re), m => m[1]!)
+  const redesign = all(redesignCss)
+  const found =
+    theme === 'light'
+      ? [...all(colorsCss), ...redesign.slice(0, 1)]
+      : [...all(darkModeCss), ...redesign.slice(-1)]
+  const value = found[0]
+  if (!value) throw new Error(`token ${name} not found for ${theme}`)
+  return value
 }
 
-/** Podium fills, read back out of the page's own MEDAL_FILLS map. */
-const MEDAL_FILLS = { gold: '#eab308', silver: '#9ca3af', bronze: '#d97706' }
-
-/** `--text-heading` in the dark theme (dark-mode.css). */
-const INK_DARK = '#f0ecf5'
-/** `[data-theme='dark'] .bg-gray-400` */
-const SILVER_DARK_FILL = '#3a3648'
-
-const AA_NORMAL = 4.5
-
-/** The page's `MEDAL_FILLS` map, as `rank → ['bg-…', 'text-…']`. */
-function medalPairsFromSource(): Array<[string, string, string]> {
-  const block = /const MEDAL_FILLS[^=]*=\s*\{([\s\S]*?)\n\s*\}/.exec(pageSrc)
-  if (!block) throw new Error('MEDAL_FILLS map not found in DistrictsPage.tsx')
-  const pairs: Array<[string, string, string]> = []
-  for (const m of block[1].matchAll(/(\d)\s*:\s*'([^']+)'/g)) {
-    const classes = m[2].split(/\s+/)
-    const bg = classes.find(c => c.startsWith('bg-'))
-    const fg = classes.find(c => c.startsWith('text-'))
-    if (!bg || !fg) throw new Error(`rank ${m[1]}: expected a bg + text pair`)
-    pairs.push([m[1], bg, fg])
-  }
-  if (pairs.length !== 3) throw new Error('expected exactly 3 medal ranks')
-  return pairs
+/** The declarations of the `.rank-badge` rule matching `selector`. */
+const rule = (selector: string): string => {
+  const at = appShellCss.indexOf(`${selector} {`)
+  if (at < 0) throw new Error(`rule ${selector} not found in app-shell.css`)
+  return appShellCss.slice(at, appShellCss.indexOf('}', at))
 }
 
-const hex = (cls: string): string => {
-  const v = TAILWIND[cls]
-  if (!v) throw new Error(`unmapped Tailwind class: ${cls}`)
-  return v
-}
+const TEXT_AA = 4.5
+const GRAPHIC_AA = 3
 
-describe('rank badge medal circles — contrast (#1363)', () => {
-  it('clears AA in the light theme on all three medals', () => {
-    for (const [rank, bg, fg] of medalPairsFromSource()) {
-      const ratio = calculateContrastRatio(hex(fg), hex(bg))
-      expect(
-        ratio,
-        `rank ${rank}: ${fg} on ${bg} = ${ratio.toFixed(2)}:1`
-      ).toBeGreaterThanOrEqual(AA_NORMAL)
-    }
+const themes: Theme[] = ['light', 'dark']
+
+describe('rank badge medal circles - contrast (#1363, #2689)', () => {
+  it('draws only from legacy tokens: no raw yellow or amber fill', () => {
+    const medal = [
+      rule('.rank-badge--medal'),
+      rule(".rank-badge[data-medal='gold']"),
+      rule(".rank-badge[data-medal='bronze']"),
+    ].join('\n')
+    expect(medal).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
+    expect(medal).not.toMatch(/yellow|amber/i)
   })
 
-  it('pins gold and bronze to dark ink in the dark theme', () => {
-    // The override must exist, or the global .text-gray-900 remap wins and
-    // paints #f0ecf5 on #eab308 — 1.9:1. It is keyed on the badge's semantic
-    // data-medal hook, NOT on the Tailwind pair: the #564 unmitigated-utility
-    // guard reads a `[data-theme='dark'] .bg-yellow-500…` rule as a blanket
-    // override of that utility and marks its remaining debt discharged.
-    const override =
-      /\[data-theme='dark'\][^{]*\.rank-badge\[data-medal='gold'\][\s\S]{0,200}?\{([\s\S]*?)\}/.exec(
-        darkModeCss
+  it('gold is surface ink on a loyal-blue fill, at >=4.5:1 in both themes', () => {
+    const gold = rule(".rank-badge[data-medal='gold']")
+    expect(gold).toMatch(/background-color:\s*var\(--tm-loyal-blue\)/)
+    expect(gold).toMatch(/color:\s*var\(--surface\)/)
+    for (const theme of themes) {
+      const ratio = calculateContrastRatio(
+        token('--surface', theme),
+        token('--tm-loyal-blue', theme)
       )
-    expect(override, 'gold medal dark-mode ink override missing').not.toBeNull()
-    const colorDecl = /color:\s*(#[0-9a-f]{3,8})/i.exec(override![1])
-    expect(colorDecl, 'override must set an explicit hex ink').not.toBeNull()
-
-    const ink = colorDecl![1]
-    for (const fill of [MEDAL_FILLS.gold, MEDAL_FILLS.bronze]) {
-      const ratio = calculateContrastRatio(ink, fill)
-      expect(
-        ratio,
-        `${fill} vs ${ink} = ${ratio.toFixed(2)}:1`
-      ).toBeGreaterThanOrEqual(AA_NORMAL)
+      expect(ratio, `${theme}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(
+        TEXT_AA
+      )
     }
-    expect(darkModeCss).toMatch(/\.rank-badge\[data-medal='bronze'\]/)
-    // Silver must NOT be pinned — its fill is remapped dark.
-    expect(darkModeCss).not.toMatch(/\.rank-badge\[data-medal='silver'\]/)
   })
 
-  it('leaves silver to the global dark remap, which clears AA', () => {
-    const ratio = calculateContrastRatio(INK_DARK, SILVER_DARK_FILL)
-    expect(ratio).toBeGreaterThanOrEqual(AA_NORMAL)
+  it('silver and bronze are ink on the surface, at >=4.5:1 in both themes', () => {
+    expect(rule('.rank-badge--medal')).toMatch(
+      /background-color:\s*var\(--surface\)/
+    )
+    expect(rule('.rank-badge')).toMatch(/color:\s*var\(--ink\)/)
+    for (const theme of themes) {
+      const ratio = calculateContrastRatio(
+        token('--ink', theme),
+        token('--surface', theme)
+      )
+      expect(ratio, `${theme}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(
+        TEXT_AA
+      )
+    }
+  })
+
+  it('the rings (loyal blue, true maroon) clear 3:1 against the surface', () => {
+    expect(rule('.rank-badge--medal')).toMatch(
+      /border:\s*2px solid var\(--tm-loyal-blue\)/
+    )
+    expect(rule(".rank-badge[data-medal='bronze']")).toMatch(
+      /border-color:\s*var\(--tm-true-maroon\)/
+    )
+    for (const theme of themes) {
+      for (const ring of ['--tm-loyal-blue', '--tm-true-maroon']) {
+        const ratio = calculateContrastRatio(
+          token(ring, theme),
+          token('--surface', theme)
+        )
+        expect(
+          ratio,
+          `${ring} ${theme}: ${ratio.toFixed(2)}:1`
+        ).toBeGreaterThanOrEqual(GRAPHIC_AA)
+      }
+    }
   })
 })

@@ -253,7 +253,7 @@ Grooming of the 11 proposals from the how-to-video role research (#2293), tested
 
 ### Clubs table rework and shared DataTable foundation (#2676, Ron 2026-11-12)
 
-Decided, not yet shipped. Spec in the Clubs table rework (ADR-006 Addendum 2).
+Spec in the Clubs table rework (ADR-006 Addendum 2). Clubs shipped first; the landing rankings followed (M1).
 
 - **Health column.** The Clubs "Status" column is renamed **Health**. Each cell is
   text plus a shape marker: maroon x circle for "Intervention required" (visible
@@ -284,8 +284,17 @@ Decided, not yet shipped. Spec in the Clubs table rework (ADR-006 Addendum 2).
   failed refresh with rows on screen keeps the rows and shows a dismissible
   "Couldn't refresh" note with Retry. "Clubs as of <date>" names the date the data
   is from, not the date asked for.
-- **Landing rankings (T3)** will later move onto the shared foundation, reversing
-  ADR-006 Addendum 1's "bespoke" decision.
+- **Landing rankings (T3, M1, #2689)** moved onto the shared foundation,
+  reversing ADR-006 Addendum 1's "bespoke" decision. The CSS column ladder
+  (`__col--compact/tablet/desktop`) is gone: District, Rank and Score always
+  show; Paid clubs and Total payments show from 768; Distinguished shows from
+  1024 and is one click away at 768 (and appears while the table is sorted by
+  it). The same Columns menu as the Clubs table, choices kept per browser. The
+  district name is a link (no whole-row click). "My district" is a loyal-blue
+  left bar plus the words "Your district" (no yellow tint). Rank badges use the
+  legacy palette (no raw yellows). 14px text and sentence-case headers; the
+  header sticks to the page. The phone list is unchanged and its full-table sheet
+  shows every column.
 
 ### Other
 

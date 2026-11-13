@@ -125,6 +125,12 @@
     top: auto;
   }
 
+  /* A sheet (or other caller region) scrolls the table: the header sticks to
+     that scroller, not to the page. */
+  .dt-scroll-wrap--in-scroller .dt thead th {
+    top: 0;
+  }
+
   .dt-sort-btn {
     display: flex;
     align-items: flex-end;
@@ -155,6 +161,16 @@
 
   .dt-sort-btn--active {
     color: var(--ink);
+  }
+
+  /* Numeric columns: the header lines up with the right-aligned figures. */
+  .dt-num .dt-sort-btn {
+    justify-content: flex-end;
+    text-align: right;
+  }
+
+  .dt-num .dt-sort-btn .sortable-header__label {
+    flex: 0 1 auto;
   }
 
   .dt-sort-btn .sortable-header__label {

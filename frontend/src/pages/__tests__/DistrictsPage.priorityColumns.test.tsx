@@ -14,6 +14,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 import DistrictsPage from '../DistrictsPage'
+import '../../__tests__/preloadRankingsTable'
 import { fetchCdnRankings } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
 
@@ -162,7 +163,9 @@ describe('DistrictsPage rankings priority columns below 768 (#1834)', () => {
     await screen.findAllByTestId(/^district-row-/)
     await userEvent.click(screen.getByRole('button', { name: /full table/i }))
     const dialog = screen.getByRole('dialog', { name: /District rankings/ })
-    const full = within(within(dialog).getByRole('region')).getByRole('table')
+    const full = await within(within(dialog).getByRole('region')).findByRole(
+      'table'
+    )
     expect(full.querySelectorAll('thead th')).toHaveLength(6)
   })
 
