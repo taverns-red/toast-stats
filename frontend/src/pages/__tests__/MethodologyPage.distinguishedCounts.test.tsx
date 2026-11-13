@@ -22,20 +22,20 @@ const sectionText = (): string =>
   screen.getByTestId('methodology-distinguished-club-counts').textContent || ''
 
 describe('MethodologyPage — Distinguished club counts (#2390)', () => {
-  it('has its own section as §19, in the TOC, before the Changelog (§20)', () => {
+  it('has its own section as §09, in the scoring group of the TOC (#2656 regroup)', () => {
     renderPage()
     expect(document.getElementById('distinguished-club-counts')).not.toBeNull()
     const toc = screen.getByRole('navigation', { name: /on this page/i })
+    const group = within(toc).getByRole('group', {
+      name: /how are districts and clubs scored/i,
+    })
     expect(
-      within(toc).getByRole('link', { name: /^distinguished club counts$/i })
+      within(group).getByRole('link', { name: /^distinguished club counts$/i })
     ).toHaveAttribute('href', '#distinguished-club-counts')
-    const links = within(toc)
+    const hrefs = within(toc)
       .getAllByRole('link')
       .map(a => a.getAttribute('href'))
-    expect(links.slice(-2)).toEqual([
-      '#distinguished-club-counts',
-      '#changelog',
-    ])
+    expect(hrefs.at(-1)).toBe('#changelog')
   })
 
   // Spec change (#2554, Ron 2026-11-08): the KPI card shows the confirmed

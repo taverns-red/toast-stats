@@ -37,14 +37,14 @@ vi.mock('../../hooks/useGlobalHistory', () => ({
 afterEach(() => cleanup())
 
 describe('static page document titles (#780)', () => {
-  it('titles the Methodology page', async () => {
+  it('titles the How it works page', async () => {
     render(
       <MemoryRouter>
         <MethodologyPage />
       </MemoryRouter>
     )
     await waitFor(() =>
-      expect(document.title).toBe('Methodology — Toast Stats')
+      expect(document.title).toBe('How it works — Toast Stats')
     )
   })
 
