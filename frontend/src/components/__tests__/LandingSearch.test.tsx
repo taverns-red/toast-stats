@@ -288,8 +288,77 @@ describe('LandingSearch — keyboard and failure states (#2250 review)', () => {
     fireEvent.change(input(), { target: { value: 'district' } })
     const list = await screen.findByRole('listbox')
     const options = within(list).getAllByRole('option')
+    fireEvent.keyDown(input(), { key: 'ArrowDown' })
     expect(input()).toHaveAttribute('aria-activedescendant', options[0]!.id)
     fireEvent.keyDown(input(), { key: 'ArrowDown' })
     expect(input()).toHaveAttribute('aria-activedescendant', options[1]!.id)
+  })
+})
+
+describe('LandingSearch — why a result matched (#2652)', () => {
+  beforeEach(() => {
+    vi.spyOn(searchIndex, 'loadSearchIndex').mockResolvedValue(INDEX)
+  })
+
+  it('names the club number when a numeric query matched on it (LAND-10)', async () => {
+    renderSearch()
+    fireEvent.focus(input())
+    fireEvent.change(input(), { target: { value: '61' } })
+    const listbox = await screen.findByRole('listbox')
+    const club = within(listbox).getByText('Boise Club').closest('li')!
+    expect(club).toHaveTextContent('Club 61')
+    expect(club).toHaveTextContent('District 207')
+  })
+
+  it('spells out "District 61" beside the chip (LAND-10)', async () => {
+    // Real data: most districts' name is the bare number ("61").
+    vi.spyOn(searchIndex, 'loadSearchIndex').mockResolvedValue({
+      entities: [{ ...INDEX.entities[0]!, label: '61' }],
+    })
+    renderSearch()
+    fireEvent.focus(input())
+    fireEvent.change(input(), { target: { value: '61' } })
+    const listbox = await screen.findByRole('listbox')
+    const options = within(listbox).getAllByRole('option')
+    expect(options[0]).toHaveTextContent('District 61')
+  })
+
+  it('has no active option until an arrow key is pressed (LAND-42)', async () => {
+    renderSearch()
+    fireEvent.focus(input())
+    fireEvent.change(input(), { target: { value: 'district' } })
+    const listbox = await screen.findByRole('listbox')
+    const options = within(listbox).getAllByRole('option')
+    options.forEach(o => expect(o).toHaveAttribute('aria-selected', 'false'))
+    expect(input()).not.toHaveAttribute('aria-activedescendant')
+    fireEvent.keyDown(input(), { key: 'ArrowDown' })
+    expect(options[0]).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('offers a clear button that empties the field and keeps focus (LAND-10)', async () => {
+    renderSearch()
+    expect(screen.queryByRole('button', { name: /clear search/i })).toBeNull()
+    fireEvent.focus(input())
+    fireEvent.change(input(), { target: { value: 'dis' } })
+    fireEvent.click(screen.getByRole('button', { name: /clear search/i }))
+    expect(input()).toHaveValue('')
+    expect(document.activeElement).toBe(input())
+  })
+
+  it('the empty state says what to try (LAND-10)', async () => {
+    renderSearch()
+    fireEvent.focus(input())
+    fireEvent.change(input(), { target: { value: 'zzz' } })
+    const status = await screen.findByRole('status')
+    await waitFor(() =>
+      expect(status).toHaveTextContent(
+        'No matches. Try a district number such as 61, or part of a club name.'
+      )
+    )
+  })
+
+  it('has a short placeholder that fits a 259px field and does not repeat the label (LAND-25)', () => {
+    renderSearch()
+    expect(input()).toHaveAttribute('placeholder', 'e.g. 61 or Rock On')
   })
 })

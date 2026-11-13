@@ -47,6 +47,32 @@
     transition: border-color 150ms;
   }
 
+  /* Room for the clear button (44px target, #2652). */
+  .landing-search__input:not(:placeholder-shown) {
+    padding-right: 52px;
+  }
+
+  .landing-search__clear {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-3);
+    cursor: pointer;
+  }
+
+  .landing-search__clear:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
   .landing-search__input::placeholder {
     color: var(--ink-4);
   }
