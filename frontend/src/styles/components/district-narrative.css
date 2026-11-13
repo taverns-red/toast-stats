@@ -17,14 +17,13 @@
     }
   }
 
-  /* ---------- KPI strip: in flow below 1024, sticky from 1024 ---------- */
+  /* ---------- KPI strip: always in flow ---------- */
 
-  /* #1828 (mobile review S2): below 768 the expanded strip is ~860px tall at
-     375, so pinning it covered the whole Overview once the reader scrolled.
-     At 768-979 it is still 576px (one card per row), so the pin was moved
-     up to >=1024 — no sticky element taller than 64px below 1024. #572's
-     desktop pin is unchanged there. `relative` (no offsets) keeps it in flow
-     while still being the loading shimmer's containing block. */
+  /* #1828 (mobile review S2) kept the full strip out of the pin below 1024
+     because it is 576-860px tall there. #2708 (D4) takes the pin away at every
+     width: the full strip (312px at 1280, translucent) covered content. What
+     pins instead is the one-line `.district-kpi-stuck` below. `relative` (no
+     offsets) keeps the strip the loading shimmer's containing block. */
   .district-kpi-strip {
     position: relative;
     margin: 0 0 16px;
@@ -32,26 +31,92 @@
     border-radius: 12px;
     border: 1px solid var(--line);
     background-color: var(--surface);
-    -webkit-backdrop-filter: saturate(140%) blur(8px);
-    backdrop-filter: saturate(140%) blur(8px);
     display: flex;
     align-items: flex-start;
     gap: 12px;
   }
 
-  @media (min-width: 1024px) {
-    .district-kpi-strip {
-      position: sticky;
-      top: var(--app-top-offset, 56px); /* under .app-shell-top-bar */
-      z-index: 30; /* below topbar (40) */
+  /* ---------- Stuck KPI line (#2708, D4) ---------- */
+
+  /* A zero-height sticky wrapper: it takes no layout space, so it appearing or
+     disappearing cannot shift the page (no CLS). The line is drawn absolutely
+     from it. z-index 30 is the existing value shared with .context-bar and
+     .jump-to-bar, below the top bar (40); the z-index tokens are #2674. */
+  .district-kpi-stuck {
+    position: sticky;
+    top: var(--app-top-offset, 56px); /* under .app-shell-top-bar */
+    height: 0;
+    z-index: 30;
+  }
+
+  /* Below 768 the 44px phone context bar sits under the top bar. */
+  @media (max-width: 767px) {
+    .district-kpi-stuck {
+      top: var(--mobile-sticky-top, 100px);
     }
   }
 
-  @supports (backdrop-filter: blur(1px)) or
-    (-webkit-backdrop-filter: blur(1px)) {
-    .district-kpi-strip {
-      background-color: rgba(var(--rds-surface-rgb), 0.88);
+  /* One opaque row, at most 64px: the legacy surface token with no alpha and
+     no blur, so nothing shows through in light or dark. */
+  .district-kpi-stuck__line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    box-sizing: border-box;
+    height: 48px;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 16px;
+    overflow: hidden;
+    white-space: nowrap;
+    background-color: var(--surface);
+    border-bottom: 1px solid var(--line);
+    border-radius: 0 0 12px 12px;
+    font-family: var(--sans);
+    color: var(--ink-2);
+  }
+
+  .district-kpi-stuck[data-stuck='false'] .district-kpi-stuck__line {
+    visibility: hidden;
+  }
+
+  .district-kpi-stuck__label {
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+
+  .district-kpi-stuck__item strong {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Focus must not land behind the line (WCAG 2.4.11): leave room for the top
+     bar plus the line while it is stuck, and keep sticky table headers below
+     it rather than under it. */
+  html:has(.district-kpi-stuck[data-stuck='true']) {
+    scroll-padding-top: calc(var(--app-top-offset, 56px) + 48px + 8px);
+  }
+
+  @media (max-width: 767px) {
+    html:has(.district-kpi-stuck[data-stuck='true']) {
+      scroll-padding-top: calc(var(--app-top-offset, 56px) + 44px + 48px + 8px);
     }
+  }
+
+  @media print {
+    .district-kpi-stuck {
+      display: none;
+    }
+  }
+
+  .app-shell:has(.district-kpi-stuck[data-stuck='true']) {
+    --table-sticky-top: calc(var(--app-top-offset, 56px) + 48px);
   }
 
   .district-kpi-strip__expanded {

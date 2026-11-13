@@ -16,8 +16,8 @@ import { test, expect, type Page } from './fixtures/test'
  * `elementFromPoint` what is at the viewport centre — it must not be inside
  * the strip. Then sweep every element below 768 for a sticky/fixed box taller
  * than 64px (review §7 "Overview readable while scrolling"); the same sweep
- * runs at 768 (vertical stickiness only). At 1280 the strip must still be
- * sticky — #572's desktop intent is unchanged.
+ * runs at 768 (vertical stickiness only). #2708 (D4): the full strip is in flow
+ * at every width; a one-line opaque `district-kpi-stuck` pins instead.
  */
 
 const PATHS = ['/district/61', '/district/80'] as const
