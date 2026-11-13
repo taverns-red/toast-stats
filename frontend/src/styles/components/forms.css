@@ -216,12 +216,6 @@
     padding: var(--tm-space-2) 0; /* Vertical padding for touch target */
   }
 
-  .tm-form-checkbox-wrapper--disabled,
-  .tm-form-radio-wrapper--disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
   .tm-form-checkbox,
   .tm-form-radio {
     width: 20px;
@@ -334,11 +328,6 @@
     color: var(--tm-black);
     cursor: pointer;
     flex: 1;
-  }
-
-  .tm-form-checkbox-wrapper--disabled .tm-form-checkbox__label,
-  .tm-form-radio-wrapper--disabled .tm-form-radio__label {
-    cursor: not-allowed;
   }
 
   /* Helper Text */

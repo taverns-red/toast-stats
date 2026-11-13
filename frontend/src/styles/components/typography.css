@@ -2,11 +2,6 @@
 
 @layer brand {
   /* Base Typography Classes */
-  .tm-typography {
-    /* Ensure minimum requirements are met */
-    font-size: max(var(--tm-font-size-min-body), 14px);
-    line-height: max(var(--tm-line-height-min), 1.4);
-  }
 
   /* Headline Typography Classes */
   .tm-headline {
@@ -16,50 +11,11 @@
     letter-spacing: var(--tm-letter-spacing-tight);
   }
 
-  .tm-headline-h1 {
-    font-family: var(--tm-font-headline);
-    font-size: var(--tm-h1-font-size);
-    font-weight: var(--tm-h1-font-weight);
-    line-height: var(--tm-h1-line-height);
-    letter-spacing: var(--tm-letter-spacing-tight);
-  }
-
-  .tm-headline-h2 {
-    font-family: var(--tm-font-headline);
-    font-size: var(--tm-h2-font-size);
-    font-weight: var(--tm-h2-font-weight);
-    line-height: var(--tm-h2-line-height);
-    letter-spacing: var(--tm-letter-spacing-tight);
-  }
-
-  .tm-headline-h3 {
-    font-family: var(--tm-font-headline);
-    font-size: var(--tm-h3-font-size);
-    font-weight: var(--tm-h3-font-weight);
-    line-height: var(--tm-h3-line-height);
-    letter-spacing: var(--tm-letter-spacing-normal);
-  }
-
-  .tm-nav-text {
-    font-family: var(--tm-font-headline);
-    font-size: var(--tm-nav-font-size);
-    font-weight: var(--tm-nav-font-weight);
-    line-height: var(--tm-nav-line-height);
-    letter-spacing: var(--tm-letter-spacing-normal);
-  }
-
   /* Body Typography Classes */
   .tm-body {
     font-family: var(--tm-font-body);
     font-weight: var(--tm-font-weight-regular);
     line-height: var(--tm-line-height-normal);
-  }
-
-  .tm-body-large {
-    font-family: var(--tm-font-body);
-    font-size: var(--tm-body-large-font-size);
-    font-weight: var(--tm-body-large-font-weight);
-    line-height: var(--tm-body-large-line-height);
   }
 
   .tm-body-medium {
@@ -74,13 +30,6 @@
     font-size: max(var(--tm-body-small-font-size), var(--tm-font-size-min-body));
     font-weight: var(--tm-body-small-font-weight);
     line-height: max(var(--tm-body-small-line-height), var(--tm-line-height-min));
-  }
-
-  .tm-caption {
-    font-family: var(--tm-font-body);
-    font-size: max(var(--tm-caption-font-size), var(--tm-font-size-min-body));
-    font-weight: var(--tm-caption-font-weight);
-    line-height: max(var(--tm-caption-line-height), var(--tm-line-height-min));
   }
 
   /* Prohibited Effects Prevention
@@ -106,36 +55,8 @@
   }
 
   /* Responsive Typography Scaling */
-  @media (max-width: 768px) {
-    .tm-headline-h1 {
-      font-size: var(--tm-font-size-4xl);
-    }
-
-    .tm-headline-h2 {
-      font-size: var(--tm-font-size-3xl);
-    }
-
-    .tm-headline-h3 {
-      font-size: var(--tm-font-size-2xl);
-    }
-
-    .tm-body-large {
-      font-size: var(--tm-font-size-base);
-    }
-  }
 
   @media (max-width: 480px) {
-    .tm-headline-h1 {
-      font-size: var(--tm-font-size-3xl);
-    }
-
-    .tm-headline-h2 {
-      font-size: var(--tm-font-size-2xl);
-    }
-
-    .tm-headline-h3 {
-      font-size: var(--tm-font-size-xl);
-    }
 
     /* Ensure minimum body text size is maintained */
     .tm-body,
@@ -178,73 +99,11 @@
   }
 
   /* Utility Classes for Quick Application */
-  .tm-text-xs {
-    font-size: max(var(--tm-font-size-xs), var(--tm-font-size-min-body));
-  }
-  .tm-text-sm {
-    font-size: max(var(--tm-font-size-sm), var(--tm-font-size-min-body));
-  }
-  .tm-text-base {
-    font-size: max(var(--tm-font-size-base), var(--tm-font-size-min-body));
-  }
-  .tm-text-lg {
-    font-size: var(--tm-font-size-lg);
-  }
-  .tm-text-xl {
-    font-size: var(--tm-font-size-xl);
-  }
-  .tm-text-2xl {
-    font-size: var(--tm-font-size-2xl);
-  }
-  .tm-text-3xl {
-    font-size: var(--tm-font-size-3xl);
-  }
-  .tm-text-4xl {
-    font-size: var(--tm-font-size-4xl);
-  }
-  .tm-text-5xl {
-    font-size: var(--tm-font-size-5xl);
-  }
-  .tm-text-6xl {
-    font-size: var(--tm-font-size-6xl);
-  }
 
   .tm-font-headline {
     font-family: var(--tm-font-headline);
   }
   .tm-font-body {
     font-family: var(--tm-font-body);
-  }
-
-  .tm-font-regular {
-    font-weight: var(--tm-font-weight-regular);
-  }
-  .tm-font-medium {
-    font-weight: var(--tm-font-weight-medium);
-  }
-  .tm-font-semibold {
-    font-weight: var(--tm-font-weight-semibold);
-  }
-  .tm-font-bold {
-    font-weight: var(--tm-font-weight-bold);
-  }
-  .tm-font-black {
-    font-weight: var(--tm-font-weight-black);
-  }
-
-  .tm-leading-tight {
-    line-height: max(var(--tm-line-height-tight), var(--tm-line-height-min));
-  }
-  .tm-leading-snug {
-    line-height: max(var(--tm-line-height-snug), var(--tm-line-height-min));
-  }
-  .tm-leading-normal {
-    line-height: max(var(--tm-line-height-normal), var(--tm-line-height-min));
-  }
-  .tm-leading-relaxed {
-    line-height: max(var(--tm-line-height-relaxed), var(--tm-line-height-min));
-  }
-  .tm-leading-loose {
-    line-height: max(var(--tm-line-height-loose), var(--tm-line-height-min));
   }
 }
