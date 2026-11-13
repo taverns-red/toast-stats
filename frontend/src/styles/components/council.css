@@ -120,15 +120,17 @@
 
 .council-group__heading {
   font-family: var(--tm-font-headline);
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: var(--heading-section-size);
+  font-weight: var(--heading-section-weight);
+  line-height: var(--heading-line-height);
   color: var(--ink);
   margin: 0.5rem 0 0;
 }
 
 .council-division__heading {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--heading-sub-size);
+  font-weight: var(--heading-sub-weight);
+  line-height: var(--heading-line-height);
   color: var(--ink-2);
   margin: 0 0 0.25rem;
 }
@@ -149,10 +151,17 @@
   overflow-wrap: anywhere;
 }
 
-.council-table th {
+.council-table thead th {
   font-size: var(--tm-font-size-sm);
   font-weight: 600;
   color: var(--ink-3);
+}
+
+/* The club cell is the row header: it reads as a cell, not a heading. */
+.council-table tbody th {
+  font-size: inherit;
+  font-weight: 400;
+  color: var(--ink);
 }
 
 /* Club takes the room; Area is short; the last column (votes or reason). */
@@ -168,7 +177,7 @@
 
 .council-table__num {
   display: block;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--ink-3);
 }
 

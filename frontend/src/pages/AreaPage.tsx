@@ -395,7 +395,7 @@ const AreaPage: React.FC = () => {
             </Link>
             <span className="council-pack-link__hint">
               {' '}
-              — One page: recognition, close-to-Distinguished clubs, visits,
+              One page: recognition, close-to-Distinguished clubs, visits,
               Success Plans and clubs.
             </span>
           </p>

@@ -321,8 +321,7 @@ const DivisionPage: React.FC = () => {
           </Link>
           <span className="council-pack-link__hint">
             {' '}
-            — Two pages: a summary of the division and its areas, then every
-            club.
+            Two pages: a summary of the division and its areas, then every club.
           </span>
         </p>
       )}

@@ -181,6 +181,28 @@ describe('DistrictCouncilPage (#2300)', () => {
     ).toHaveAttribute('href', '/district/61/club/9560')
   })
 
+  // #2676 M8: the credentials tables take the shared table styles.
+  it('puts each division table on the shared styles with a caption and row headers', async () => {
+    renderAt('/district/61/council?date=2026-10-27')
+    const good = await screen.findByRole('region', {
+      name: /^in good standing \(3\)/i,
+    })
+    const tables = within(good).getAllByRole('table')
+    for (const table of tables) {
+      expect(table).toHaveClass('dt', 'dt-static')
+      const caption = table.querySelector('caption')
+      expect(caption).not.toBeNull()
+      expect(caption!.textContent).toMatch(/^Division .+, in good standing$/)
+      for (const head of within(table).getAllByRole('rowheader')) {
+        expect(head).toHaveAttribute('scope', 'row')
+      }
+    }
+    const link = within(good).getByRole('link', {
+      name: 'Limestone City Club',
+    })
+    expect(link.parentElement?.tagName).toBe('TH')
+  })
+
   it('carries the disclaimer, a Methodology link and the Red Vote card', async () => {
     renderAt('/district/61/council?date=2026-10-27')
     await screen.findByTestId('council-headline')

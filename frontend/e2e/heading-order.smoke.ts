@@ -25,6 +25,9 @@ const ROUTES = [
   '/regions/changes',
   '/region/4/changes',
   '/region/4',
+  '/district/61/council',
+  '/district/61/division/B/print',
+  '/district/61/division/A/area/01/print',
 ]
 
 interface Heading {

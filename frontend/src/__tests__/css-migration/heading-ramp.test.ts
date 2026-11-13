@@ -55,6 +55,10 @@ describe('heading rules use the ramp, not literal sizes', () => {
     ['styles/components/app-shell.css', '.awards-page-card__title'],
     ['styles/components/app-shell.css', '.rule-change-year__title'],
     ['styles/components/club-history.css', '.club-history-page__title'],
+    ['styles/components/council-pack.css', '.council-pack__title'],
+    ['styles/components/council-pack.css', '.council-pack__section h2'],
+    ['styles/components/council.css', '.council-group__heading'],
+    ['styles/components/council.css', '.council-division__heading'],
   ]
 
   it.each(FAMILIES)('%s %s sizes itself with a heading token', (file, sel) => {
