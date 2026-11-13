@@ -134,6 +134,8 @@
   color: var(--link);
   text-decoration: none;
   font-weight: inherit;
+  /* "2025-2026" never breaks at its hyphen. */
+  white-space: nowrap;
 }
 
 .club-history-year-link:hover,
@@ -149,8 +151,11 @@
    year: a small worded tag beside the year (never colour alone). Theme-aware
    ink and rule (redesign tokens); --tm-loyal-blue as the border accent only (#2080). */
 .club-history-in-progress {
-  display: inline-block;
-  margin-left: var(--rt-space-2);
+  /* Its own line under the year, so the year column stays narrow (#2733). */
+  display: block;
+  width: fit-content;
+  margin-left: 0;
+  margin-bottom: var(--rt-space-2);
   padding: 0 6px;
   border: 1px solid var(--tm-loyal-blue);
   border-radius: var(--rt-radius-sm);

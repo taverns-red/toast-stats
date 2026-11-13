@@ -60,6 +60,7 @@ export interface DataTableApi {
     id: string
     headers: ReadonlyArray<{
       id: string
+      getContext: () => unknown
       column: {
         id: string
         getCanSort: () => boolean
@@ -231,13 +232,12 @@ export function DataTable({
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => {
                     const column = header.column
-                    // A string, or a function returning a node when a header
+                    // A string, or a TanStack-style `ctx => node` when a header
                     // needs parts that must not wrap (#2318).
-                    const raw = column.columnDef.header
-                    const text: React.ReactNode =
-                      typeof raw === 'function'
-                        ? (raw as () => React.ReactNode)()
-                        : (raw as string)
+                    const text: React.ReactNode = flexRender(
+                      column.columnDef.header as never,
+                      header.getContext() as never
+                    )
                     const thClassName = headerClassName?.(column.id) ?? ''
                     if (!column.getCanSort()) {
                       return (
