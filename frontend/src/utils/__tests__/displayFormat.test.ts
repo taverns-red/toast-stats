@@ -3,7 +3,6 @@ import {
   signedDelta,
   signedPercent,
   formatPY,
-  formatRegion,
   formatDistrict,
   districtAriaLabel,
 } from '../displayFormat'
@@ -26,6 +25,16 @@ describe('formatDateText', () => {
 
   it('does not shift the day for users west of UTC', () => {
     expect(formatDateText('2026-01-01')).toBe('Jan 1, 2026')
+  })
+
+  it('a full timestamp keeps its own calendar date, whatever the timezone', () => {
+    expect(formatDateText('2026-11-11T23:30:00Z')).toBe('Nov 11, 2026')
+    expect(formatDateText('2026-11-11T00:00:00')).toBe('Nov 11, 2026')
+    expect(formatDateText('2026-11-11 08:00', 'short')).toBe('Nov 11')
+  })
+
+  it('an impossible date is passed through, never "Invalid Date"', () => {
+    expect(formatDateText('2026-13-45')).toBe('2026-13-45')
   })
 
   it('leaves text that is already prose untouched', () => {
@@ -80,6 +89,12 @@ describe('signedDelta', () => {
     expect(signedDelta(-558)).not.toContain('-')
   })
 
+  it('a non-finite value reads as zero, never "−NaN"', () => {
+    expect(signedDelta(NaN)).toBe('0')
+    expect(signedDelta(undefined as unknown as number)).toBe('0')
+    expect(signedDelta(Infinity, '±0')).toBe('±0')
+  })
+
   it('lets a caller choose how zero reads', () => {
     expect(signedDelta(0, '±0')).toBe('±0')
   })
@@ -91,19 +106,15 @@ describe('signedPercent', () => {
     expect(signedPercent(-2)).toBe('−2.0%')
     expect(signedPercent(0)).toBe('0.0%')
   })
-})
 
-describe('formatRegion', () => {
-  it('prose and headings: "Region 4", no zero padding', () => {
-    expect(formatRegion('04')).toBe('Region 4')
-    expect(formatRegion('4')).toBe('Region 4')
-    expect(formatRegion(9)).toBe('Region 9')
-    expect(formatRegion('14')).toBe('Region 14')
+  it('a non-finite value reads "0.0%", never "−NaN%"', () => {
+    expect(signedPercent(NaN)).toBe('0.0%')
+    expect(signedPercent(undefined as unknown as number)).toBe('0.0%')
   })
 
-  it('compact tag: "R4"', () => {
-    expect(formatRegion('04', 'compact')).toBe('R4')
-    expect(formatRegion('09', 'compact')).toBe('R9')
+  it('a value that rounds to zero reads "0.0%" without a sign', () => {
+    expect(signedPercent(-0.04)).toBe('0.0%')
+    expect(signedPercent(0.04)).toBe('0.0%')
   })
 })
 
