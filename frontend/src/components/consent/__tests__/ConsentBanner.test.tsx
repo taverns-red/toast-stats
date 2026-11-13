@@ -35,10 +35,11 @@ describe('ConsentBanner (#2584)', () => {
     renderBanner()
     // The three choices; Details (phone) is not a choice.
     const buttons = region()!.querySelectorAll('.consent-banner__button')
+    // D10: the decline option comes first, at every width, in the DOM.
     expect([...buttons].map(b => b.textContent)).toEqual([
-      'Keep all',
-      'Keep minimal',
       'Keep none',
+      'Keep minimal',
+      'Keep all',
     ])
     for (const b of buttons) {
       expect(b).not.toHaveAttribute('aria-pressed')
@@ -198,7 +199,7 @@ describe('ConsentBanner (#2584)', () => {
         [...region()!.querySelectorAll('.consent-banner__button')].map(
           b => b.textContent
         )
-      ).toEqual(['Keep all', 'Keep minimal', 'Keep none'])
+      ).toEqual(['Keep none', 'Keep minimal', 'Keep all'])
     })
 
     it('CSS: below 768 the title, link and Keep minimal wait behind Details', () => {
