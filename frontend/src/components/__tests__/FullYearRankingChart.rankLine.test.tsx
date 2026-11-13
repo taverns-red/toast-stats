@@ -55,6 +55,11 @@ const point = (date: string, rank: number) => ({
 const DATA: RankHistoryResponse = {
   districtId: '57',
   districtName: 'District 57',
+  programYear: {
+    startDate: '2024-07-01',
+    endDate: '2025-06-30',
+    year: '2024-2025',
+  },
   history: [
     point('2024-07-15', 4),
     point('2024-07-22', 4),
