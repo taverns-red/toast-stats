@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.89.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.89.0...toast-stats-v2.89.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* **a11y:** heading order skips and one heading ramp ([#2650](https://github.com/taverns-red/toast-stats/issues/2650)) ([#2751](https://github.com/taverns-red/toast-stats/issues/2751)) ([2f1467e](https://github.com/taverns-red/toast-stats/commit/2f1467e47c8820c8dd23a017e1586fdc44284864))
+* **a11y:** tap targets at 768-1023 on touch and World pulse links ([#2645](https://github.com/taverns-red/toast-stats/issues/2645)) ([#2749](https://github.com/taverns-red/toast-stats/issues/2749)) ([6fa4131](https://github.com/taverns-red/toast-stats/commit/6fa413185dd685182a023267201b5f02d7e33184))
+* **search:** show why a result matched, visible active row, clear, short placeholder ([#2652](https://github.com/taverns-red/toast-stats/issues/2652)) ([#2742](https://github.com/taverns-red/toast-stats/issues/2742)) ([ac53af7](https://github.com/taverns-red/toast-stats/commit/ac53af79552f9cbf7ac4c571edd2bcb079c0300f))
+* **ui:** desktop footer first group gets slack so its last item cannot wrap ([#2758](https://github.com/taverns-red/toast-stats/issues/2758)) ([#2761](https://github.com/taverns-red/toast-stats/issues/2761)) ([9681e2c](https://github.com/taverns-red/toast-stats/commit/9681e2cc6b7a0ef86db5597e7be1f3adefb8dfc7))
+* **ui:** read the world race on the club page only when its card is near ([#2759](https://github.com/taverns-red/toast-stats/issues/2759)) ([#2763](https://github.com/taverns-red/toast-stats/issues/2763)) ([33f0ab6](https://github.com/taverns-red/toast-stats/commit/33f0ab6aa9640a3c8dcb6e7c292943868dfb7075))
+* **ui:** show +N qualifying today in the compact phone tables ([#2580](https://github.com/taverns-red/toast-stats/issues/2580)) ([#2757](https://github.com/taverns-red/toast-stats/issues/2757)) ([a15d369](https://github.com/taverns-red/toast-stats/commit/a15d369fdb1a9ff0fb411e4bc3dfbc4e019734f6))
+
 ## [2.89.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.88.0...toast-stats-v2.89.0) (2026-11-13)
 
 
