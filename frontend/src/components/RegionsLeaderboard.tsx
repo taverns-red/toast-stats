@@ -17,6 +17,11 @@ import {
 import { DistrictTrendSparkline } from './DistrictTrendSparkline'
 import { DataTable } from './dataTable/DataTable'
 import {
+  LEADERBOARD_SIZES,
+  leaderboardShowsTrend,
+} from './regionsLeaderboardLayout'
+import { useBreakpointTier } from '../hooks/useBreakpointTier'
+import {
   regionTrainingUrl,
   type RegionsTrainingOverview,
 } from '../utils/regionTraining'
@@ -201,23 +206,6 @@ type LeaderboardFeatures = typeof leaderboardFeatures
 const colHelper = createColumnHelper<LeaderboardFeatures, RegionRollup>()
 type LeaderboardColumns = ReturnType<typeof colHelper.columns>
 
-/** Fixed widths in px (8px padding per side included); Region takes the rest. */
-const LEADERBOARD_SIZES: Readonly<Record<string, number>> = {
-  region: 176,
-  trend: 80,
-  districts: 88,
-  paidClubs: 80,
-  payments: 88,
-  distinguished: 112,
-  score: 72,
-  r1Dcp: 96,
-  r1AllSeven: 96,
-  r2Dcp: 96,
-  r2AllSeven: 96,
-  r1: 128,
-  r2: 128,
-}
-
 const LEADERBOARD_TEXT_COLUMNS: ReadonlySet<string> = new Set([
   'region',
   'trend',
@@ -279,6 +267,7 @@ const LeaderboardTable: React.FC<{
       cellClassName={leaderboardCellClass}
       rowClassName="rankings-row"
       inScroller={inScroller}
+      overflowHint="Scroll sideways for more columns"
     />
   )
 }
@@ -295,7 +284,12 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
   // 0): a plain header, no sort (as on the region Training page).
   const round2Started = overview ? overview.round2Started : true
   const sortable = (round: TrainingRound) => round === 1 || round2Started
-  const showTrend = trends !== undefined && trends !== null
+  const tier = useBreakpointTier()
+  const showTrend = leaderboardShowsTrend(
+    tier,
+    trends !== undefined && trends !== null,
+    showTraining
+  )
   // A region the file holds no line for reads "no trend" in words; while
   // the file loads every cell is reserved (undefined).
   const trendOf = (region: string): number[] | null | undefined =>
@@ -358,6 +352,13 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
       )
     if (!overview) return null
     const r = overview.forRegion(region).rounds[round - 1]!
+    // An expanded round says "not started" / "not available" once, in its 4+
+    // column; the All 7 cell beside it stays a dash.
+    if (
+      metric === 'AllSeven' &&
+      (r.state === 'notStarted' || r.state === 'notAvailable')
+    )
+      return <span className="region-training-cell__muted">{'\u2014'}</span>
     if (r.state === 'notStarted')
       return <span className="region-training-cell__muted">not started</span>
     if (r.state === 'notAvailable')
@@ -464,13 +465,13 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
       ? [
           trainingColumn(
             `r${round}Dcp`,
-            `Round ${round}: ${METRIC_LABEL.Dcp} officers trained`,
+            `Round ${round} ${roundMonths(round)}: ${METRIC_LABEL.Dcp} officers trained`,
             round,
             'Dcp'
           ),
           trainingColumn(
             `r${round}AllSeven`,
-            `Round ${round}: ${METRIC_LABEL.AllSeven} officers trained`,
+            `Round ${round} ${roundMonths(round)}: ${METRIC_LABEL.AllSeven} officers trained`,
             round,
             'AllSeven'
           ),

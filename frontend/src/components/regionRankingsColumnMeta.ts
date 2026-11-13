@@ -229,21 +229,21 @@ export const regionRankingsColumnMeta: Readonly<
   },
   toPaid: {
     group: 'needed',
-    label: 'Paid clubs needed',
+    label: 'Paid clubs needed for minimum Distinguished',
     hint: 'Paid clubs still needed for the minimum Distinguished tier',
     size: 88,
     defaultVisible: from('wide'),
   },
   toPayments: {
     group: 'needed',
-    label: 'Payments needed',
+    label: 'Payments needed for minimum Distinguished',
     hint: 'Payments still needed for the minimum Distinguished tier',
     size: 96,
     defaultVisible: from('wide'),
   },
   toDist: {
     group: 'needed',
-    label: 'Distinguished needed',
+    label: 'Distinguished clubs needed for minimum tier',
     hint: 'Distinguished clubs still needed for the minimum tier',
     size: 112,
     defaultVisible: from('wide'),
@@ -257,9 +257,9 @@ export const regionRankingsColumnMeta: Readonly<
   },
   cgd: {
     group: 'awards',
-    label: 'CGD',
+    label: 'Club Growth Director (CGD)',
     hint: 'Club Growth Director officer award',
-    size: 72,
+    size: 80,
     defaultVisible: OFF,
   },
   tier: {

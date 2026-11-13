@@ -117,8 +117,8 @@ describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
       .getAllByRole('columnheader')
       .map(th => th.textContent?.trim() ?? '')
     // One header row (#2702): each round column names its round and metric.
-    expect(heads).toContain('Round 1: 4+ officers trained')
-    expect(heads).toContain('Round 1: All 7 officers trained')
+    expect(heads).toContain('Round 1 (Jun–Aug): 4+ officers trained')
+    expect(heads).toContain('Round 1 (Jun–Aug): All 7 officers trained')
     // Review of #2334: two "not started" columns overflowed the table at
     // 1024. Until it opens, Round 2 is one narrow column.
     expect(heads.filter(h => /^Round 2/.test(h))).toEqual([
@@ -180,11 +180,31 @@ describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
     expect(row.queryByText('0%')).toBeNull()
   })
 
+  it('an expanded round says "not available" once for a region with no figures', () => {
+    renderBoard(OCT)
+    const texts = within(rowOf('03'))
+      .getAllByRole('cell')
+      .map(td => td.textContent)
+    // Round 1 (expanded) says it in its 4+ cell and shows a dash in All 7;
+    // Round 2 (one column) says it once more. Never the same words twice side
+    // by side.
+    expect(texts.filter(t => t === 'not available')).toHaveLength(2)
+    expect(texts).toContain('\u2014')
+  })
+
+  it('names the round months in the expanded headers', () => {
+    renderBoard(OCT)
+    const heads = within(table())
+      .getAllByRole('columnheader')
+      .map(th => th.textContent?.trim() ?? '')
+    expect(heads.some(h => /^Round 1 \(Jun–Aug\)/.test(h))).toBe(true)
+  })
+
   it('sorts by Round 1 4+, highest first, regions without figures last', () => {
     renderBoard(OCT)
     fireEvent.click(
       within(table()).getByRole('button', {
-        name: /Round 1: 4\+ officers trained/,
+        name: /Round 1 \(Jun–Aug\): 4\+ officers trained/,
       })
     )
     expect(regionOrder()).toEqual(['/region/02', '/region/01', '/region/03'])
@@ -192,7 +212,7 @@ describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
     // Flipped: lowest first, the unmeasured region still last.
     fireEvent.click(
       within(table()).getByRole('button', {
-        name: /Round 1: 4\+ officers trained/,
+        name: /Round 1 \(Jun–Aug\): 4\+ officers trained/,
       })
     )
     expect(regionOrder()).toEqual(['/region/01', '/region/02', '/region/03'])

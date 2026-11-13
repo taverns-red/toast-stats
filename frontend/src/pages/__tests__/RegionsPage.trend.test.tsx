@@ -11,6 +11,12 @@ import RegionsPage from '../RegionsPage'
    2026-27 district series), instead of ~94 district series fetches. On a
    404 (until the file reaches prod) the leaderboard renders as before. */
 
+// Trend yields to the training columns below 1280 (#2702), so this test about
+// the sparkline runs at a desktop width.
+vi.mock('../../hooks/useBreakpointTier', () => ({
+  useBreakpointTier: () => 'desktop',
+}))
+
 const cdn = vi.hoisted(() => ({ series: null as unknown }))
 
 vi.mock('../../services/cdn', async () => {

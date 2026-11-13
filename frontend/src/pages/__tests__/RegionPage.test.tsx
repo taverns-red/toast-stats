@@ -343,20 +343,28 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
     // The headline columns (epic #683 F4): absolute counts still needed for
     // the minimum Distinguished tier. One header row, so each names itself.
     expect(
-      await screen.findByRole('columnheader', { name: /^paid clubs needed$/i })
+      await screen.findByRole('columnheader', {
+        name: /^paid clubs needed for minimum distinguished$/i,
+      })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('columnheader', { name: /^payments needed$/i })
+      screen.getByRole('columnheader', {
+        name: /^payments needed for minimum distinguished$/i,
+      })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('columnheader', { name: /^distinguished needed$/i })
+      screen.getByRole('columnheader', {
+        name: /^distinguished clubs needed for minimum tier$/i,
+      })
     ).toBeInTheDocument()
     // Officer-award + tier columns are unchanged.
     expect(
       screen.getByRole('columnheader', { name: /education ?\/ ?training/i })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('columnheader', { name: /^cgd$/i })
+      screen.getByRole('columnheader', {
+        name: /^club growth director \(cgd\)$/i,
+      })
     ).toBeInTheDocument()
     // The percentage-point prerequisite columns are GONE — Amy wants the
     // count, not the percentage (replace, don't bolt on — lesson 092).

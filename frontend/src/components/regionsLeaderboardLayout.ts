@@ -13,19 +13,19 @@ export { TIER_BUDGET_PX, type BreakpointTier }
 /** Fixed widths in px (8px padding per side included); Region takes the rest
  *  but is counted at its size here. */
 export const LEADERBOARD_SIZES: Readonly<Record<string, number>> = {
-  region: 176,
+  region: 160,
   trend: 80,
-  districts: 88,
-  paidClubs: 80,
+  districts: 80,
+  paidClubs: 72,
   payments: 88,
   distinguished: 112,
-  score: 72,
-  r1Dcp: 96,
-  r1AllSeven: 96,
-  r2Dcp: 96,
-  r2AllSeven: 96,
-  r1: 128,
-  r2: 128,
+  score: 64,
+  r1Dcp: 88,
+  r1AllSeven: 88,
+  r2Dcp: 88,
+  r2AllSeven: 88,
+  r1: 112,
+  r2: 112,
 }
 
 export interface LeaderboardShape {
@@ -35,12 +35,17 @@ export interface LeaderboardShape {
   expanded: readonly [boolean, boolean]
 }
 
-/** Whether the Trend column shows at a tier. */
+/**
+ * Whether the Trend column shows at a tier. With the training columns the
+ * table needs the room below 1280 (four 14px round columns, #2334), and the
+ * leaderboard has no Columns menu to give a column back, so Trend yields.
+ */
 export const leaderboardShowsTrend = (
-  _tier: BreakpointTier,
+  tier: BreakpointTier,
   hasTrends: boolean,
-  _showTraining: boolean
-): boolean => hasTrends
+  showTraining: boolean
+): boolean =>
+  hasTrends && !(showTraining && (tier === 'tablet' || tier === 'laptop'))
 
 /** Column ids in table order. */
 export const leaderboardColumnIds = (shape: LeaderboardShape): string[] => [
