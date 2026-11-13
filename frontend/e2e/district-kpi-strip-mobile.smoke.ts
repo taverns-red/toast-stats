@@ -160,16 +160,85 @@ test('no vertically sticky element taller than 64px on /district/61 at 768px', a
   expect(tall, tall.join('\n')).toEqual([])
 })
 
-test('KPI strip stays sticky under the top bar at 1280px (#572 desktop intent)', async ({
+/* #2708 (D4): once the KPI block has scrolled away, one opaque line of at most
+ * 64px pins under the top bar, at every width. The full strip itself is never
+ * sticky (it was 312px tall and translucent at 1280). */
+const STUCK_LINE = '[data-testid="district-kpi-stuck-line"]'
+
+for (const [width, height] of [
+  [375, 812],
+  [768, 1024],
+  [1280, 900],
+] as const) {
+  test(`stuck KPI line is one opaque line of at most ${MAX_STICKY_HEIGHT}px at ${width}px (#2708)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height })
+    await loadOverview(page, '/district/61')
+    await scrollInstantly(page, SCROLL_Y)
+    await page
+      .locator('[data-testid="district-kpi-stuck"][data-stuck="true"]')
+      .waitFor({ state: 'attached' })
+
+    const m = await page.evaluate(sel => {
+      const el = document.querySelector(sel) as HTMLElement | null
+      if (!el) return null
+      const cs = getComputedStyle(el)
+      const r = el.getBoundingClientRect()
+      const kids = Array.from(el.children).map(c => c.getBoundingClientRect())
+      const probe = document.elementFromPoint(r.left + 8, r.top + r.height / 2)
+      const smallest = Array.from(el.querySelectorAll('*')).reduce(
+        (min, n) => Math.min(min, parseFloat(getComputedStyle(n).fontSize)),
+        99
+      )
+      return {
+        height: Math.round(r.height),
+        visibility: cs.visibility,
+        background: cs.backgroundColor,
+        backdrop: cs.backdropFilter,
+        rowTops: Array.from(new Set(kids.map(k => Math.round(k.top)))).length,
+        hit: !!probe && el.contains(probe),
+        smallestFont: smallest,
+        top: Math.round(r.top),
+      }
+    }, STUCK_LINE)
+
+    const msg = JSON.stringify(m)
+    expect(m, msg).not.toBeNull()
+    expect(m?.visibility, msg).toBe('visible')
+    expect(m?.height, msg).toBeLessThanOrEqual(MAX_STICKY_HEIGHT)
+    expect(m?.rowTops, msg).toBe(1)
+    // Opaque: an rgb() colour, or rgba() with alpha 1; and no blur.
+    expect(m?.background, msg).not.toMatch(/rgba\(.*,\s*0?\.\d+\)$/)
+    expect(m?.background, msg).not.toBe('rgba(0, 0, 0, 0)')
+    expect(m?.backdrop, msg).toBe('none')
+    expect(m?.hit, msg).toBe(true)
+    expect(m?.smallestFont, msg).toBeGreaterThanOrEqual(12)
+  })
+}
+
+test('stuck KPI line is hidden while the KPI block is on screen (#2708)', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 })
   await loadOverview(page, '/district/61')
-  const style = await page.evaluate(() => {
-    const strip = document.querySelector('.district-kpi-strip')
-    if (!strip) return null
-    const cs = getComputedStyle(strip)
-    return { position: cs.position, top: cs.top }
-  })
-  expect(style).toEqual({ position: 'sticky', top: '56px' })
+  await scrollInstantly(page, 0)
+  const visibility = await page.evaluate(
+    sel => getComputedStyle(document.querySelector(sel) as Element).visibility,
+    STUCK_LINE
+  )
+  expect(visibility).toBe('hidden')
+})
+
+test('the full KPI strip is in flow at 1280px, not pinned (#2708)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await loadOverview(page, '/district/61')
+  const position = await page.evaluate(
+    () =>
+      getComputedStyle(document.querySelector('.district-kpi-strip') as Element)
+        .position
+  )
+  expect(position).toBe('relative')
 })
