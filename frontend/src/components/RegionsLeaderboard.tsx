@@ -431,28 +431,10 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
           },
         ]
       : BASE_PHONE_METRICS
-  // The Distinguished chip: confirmed count with "+N qualifying today", the
-  // share under it on the confirmed basis (#2580).
-  const phoneMetrics = basePhoneMetrics.map(m =>
-    m.id === 'distinguished'
-      ? {
-          ...m,
-          render: (r: RegionRollup) => (
-            <>
-              <span className="block">
-                <DistinguishedCount
-                  confirmed={r.distinguishedClubs}
-                  provisional={provisionalByRegion?.get(r.region)}
-                />
-              </span>
-              <span className="block text-gray-600 theme-dark:text-gray-300">
-                {Math.round(r.distinguishedPercent)}%
-              </span>
-            </>
-          ),
-        }
-      : m
-  )
+  // The phone chip stays the plain confirmed count and share: the 12px
+  // "+N qualifying today" would break the phone smoke's 14px floor, so the
+  // full table in the sheet carries it (#2580).
+  const phoneMetrics = basePhoneMetrics
 
   if (rollups.length === 0) {
     return (

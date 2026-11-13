@@ -499,12 +499,9 @@ const RegionPage: React.FC = () => {
       label: 'Dist. clubs',
       title: 'Distinguished clubs',
       sortField: 'distinguished',
-      render: d => (
-        <DistinguishedCount
-          confirmed={d.distinguishedClubs ?? 0}
-          provisional={provisionalByDistrict.get(d.districtId)}
-        />
-      ),
+      // Plain count: the 12px extra would break the phone smoke's 14px
+      // floor; the KPI card and the full table carry it (#2580).
+      render: d => (d.distinguishedClubs ?? 0).toLocaleString(),
     },
     {
       id: 'tier',
