@@ -1,5 +1,17 @@
 import { test, expect, type Page } from './fixtures/test'
 import { loadHeldCards } from './helpers/scrollUntilStable'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { DistinguishedCount } from '../src/components/DistinguishedCount'
+
+/* The tile's real markup for a confirmed / qualifying-today pair, rendered by
+ * the shipped component so the wording and classes can never drift from what
+ * users see (#2776: the old hand-typed "provisional" string was 5 characters
+ * shorter than the rendered "qualifying today"). */
+const pairMarkup = (confirmed: number, provisional: number): string =>
+  renderToStaticMarkup(
+    createElement(DistinguishedCount, { confirmed, provisional })
+  )
 
 /* District Overview hub on a phone (#1842, mobile epic #1827 Phase 2,
  * review §5.5).
@@ -150,27 +162,25 @@ for (const [scheme, season] of [
   })
 }
 
-/* The Distinguished tile draws "N +M provisional" in one nowrap row (#2554).
- * The number never shrinks; the provisional part must stay fully readable
+/* The Distinguished tile draws "N +M qualifying today" (#2554). The number
+ * never shrinks; the extra must stay fully readable
  * for the widest realistic pair (two-digit confirmed and provisional), not
  * just today's D61 figures. */
 for (const width of [375, 360]) {
-  test(`Distinguished tile keeps "+N provisional" readable with a two-digit pair at ${width}`, async ({
+  test(`Distinguished tile keeps "+N qualifying today" readable with a two-digit pair at ${width}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 812 })
     await loadHub(page)
-    const m = await page.evaluate(() => {
+    const markup = pairMarkup(88, 88)
+    const m = await page.evaluate(html => {
       const row = [
         ...document.querySelectorAll('.district-hub__tile-value'),
       ].find(e => e.querySelector('[data-testid="distinguished-confirmed"]'))
       if (!row) return null
-      // Mirror DistinguishedCount's markup, so the check does not depend on
-      // whether D61 has provisional clubs today.
-      row.innerHTML =
-        '<span data-testid="distinguished-confirmed">88</span> ' +
-        '<span data-testid="distinguished-provisional" ' +
-        'class="distinguished-count__provisional">+88 provisional</span>'
+      // The shipped component's markup, so the check does not depend on
+      // whether D61 has qualifying-today clubs today.
+      row.innerHTML = html
       const conf = row.querySelector('[data-testid="distinguished-confirmed"]')!
       const prov = row.querySelector(
         '[data-testid="distinguished-provisional"]'
@@ -178,10 +188,14 @@ for (const width of [375, 360]) {
       return {
         clipped: prov.scrollWidth > prov.clientWidth + 1,
         confClipped: conf.scrollWidth > conf.clientWidth + 1,
+        text: prov.textContent ?? '',
       }
-    })
+    }, markup)
     expect(m, 'the Distinguished tile row is missing').not.toBeNull()
-    expect(m!.clipped, '"+88 provisional" is clipped').toBe(false)
+    expect(m!.text, 'the injected pair is not the real wording').toContain(
+      '+88 qualifying today'
+    )
+    expect(m!.clipped, '"+88 qualifying today" is clipped').toBe(false)
     expect(m!.confClipped, 'the number is clipped').toBe(false)
   })
 
@@ -189,27 +203,25 @@ for (const width of [375, 360]) {
    * tall as its neighbours. The page has no height to spare (D201 sits at
    * the 4,000px cap, #2575), and the global span line-height once made this
    * row 6px taller. */
-  test(`a one-line "+N provisional" leaves the Distinguished row as tall as the others at ${width}`, async ({
+  test(`a one-line "+N qualifying today" leaves the Distinguished row as tall as the others at ${width}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 812 })
     await loadHub(page)
-    const m = await page.evaluate(() => {
+    const markup = pairMarkup(3, 5)
+    const m = await page.evaluate(html => {
       const rows = [...document.querySelectorAll('.district-hub__tile-value')]
       const dist = rows.find(e =>
         e.querySelector('[data-testid="distinguished-confirmed"]')
       )
       const plain = rows.find(e => e !== dist)
       if (!dist || !plain) return null
-      dist.innerHTML =
-        '<span data-testid="distinguished-confirmed">3</span> ' +
-        '<span data-testid="distinguished-provisional" ' +
-        'class="distinguished-count__provisional">+5 provisional</span>'
+      dist.innerHTML = html
       return {
         dist: dist.getBoundingClientRect().height,
         plain: plain.getBoundingClientRect().height,
       }
-    })
+    }, markup)
     expect(m, 'the hub tile rows are missing').not.toBeNull()
     expect(m!.dist, JSON.stringify(m)).toBeLessThanOrEqual(m!.plain + 0.5)
   })

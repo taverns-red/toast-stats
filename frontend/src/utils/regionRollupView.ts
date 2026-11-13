@@ -64,16 +64,25 @@ export interface RollupKpis {
   clubs: number
   membership: number
   payments: number
-  /** Clubs at any Distinguished level (the tiers are disjoint). */
+  /** Clubs at any Distinguished level on current membership (the tiers are
+   *  disjoint): the qualifying-today count, NOT the confirmed headline. */
   distinguished: number
+  /** The pipeline's confirmed / qualifying-today pair (#2553, #2580); null
+   *  when the file predates it or a district lacked the source columns. The
+   *  confirmed count is the headline; never derive it from `distinguished`. */
+  distinguishedCounts: { confirmed: number; provisional: number } | null
 }
 
 export function rollupKpis(fig: RegionRollupFigures): RollupKpis {
+  const counts = fig.distinguishedCounts
   return {
     clubs: fig.clubs,
     membership: fig.membership,
     payments: fig.payments,
     distinguished: fig.clubs - fig.distinguished.notDistinguished,
+    distinguishedCounts: counts
+      ? { confirmed: counts.confirmed, provisional: counts.provisional }
+      : null,
   }
 }
 
@@ -124,7 +133,9 @@ export function rollupSections(
     {
       id: 'distinguished',
       title: 'Distinguished clubs',
-      about: 'Each club counted once, at the highest level it meets.',
+      about: fig.distinguishedCounts
+        ? 'Each club counted once, at the highest level it meets on current membership. These rows include clubs not yet confirmed by April renewals, so they add up to more than the confirmed headline above.'
+        : 'Each club counted once, at the highest level it meets on current membership.',
       rows: [
         row('smedley', 'Smedley', fig.distinguished.smedley, n),
         row('president', "President's", fig.distinguished.president, n),
