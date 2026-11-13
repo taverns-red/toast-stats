@@ -698,9 +698,11 @@ const MethodologyPage: React.FC = () => {
             <p>
               The district Overview shows one Distinguished-club count: the{' '}
               <strong>confirmed</strong> clubs, with the{' '}
-              <strong>provisional</strong> clubs shown beside it as &ldquo;+N
-              provisional&rdquo;. The two are never added together, and the rank
-              and percentage beside the count use the confirmed count.
+              <strong>provisional</strong> clubs (those that qualify today on
+              current membership but are not yet confirmed) shown beside it as
+              &ldquo;+N qualifying today&rdquo;. The two are never added
+              together, and the rank and percentage beside the count use the
+              confirmed count.
             </p>
             <h3>The KPI card</h3>
             <p>
