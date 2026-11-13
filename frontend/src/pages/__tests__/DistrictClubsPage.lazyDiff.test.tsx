@@ -9,7 +9,15 @@
  */
 
 import React, { Suspense } from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
@@ -92,6 +100,12 @@ vi.mock('../../services/cdn', async importOriginal => ({
 }))
 
 const DistrictClubsPage = React.lazy(() => import('../DistrictClubsPage'))
+
+// Compile the page graph once, up front (#2248), so the first test's window
+// does not measure Vite's cold transform.
+beforeAll(async () => {
+  await import('../DistrictClubsPage')
+})
 
 const renderAt = (url: string) => {
   const queryClient = new QueryClient({
