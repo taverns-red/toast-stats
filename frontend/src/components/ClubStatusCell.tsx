@@ -10,6 +10,7 @@
  */
 
 import type { ClubStatusOverlay } from '../utils/clubStatusOverlay'
+import { formatDateText } from '../utils/dateFormatting'
 
 export interface ClubStatusCellProps {
   /** The frozen base operational status from the dashboard snapshot. */
@@ -24,8 +25,8 @@ export function ClubStatusCell({
 }: ClubStatusCellProps) {
   if (statusOverlay) {
     const base = clubStatus ?? 'no base status'
-    const label = `${statusOverlay.status} — renewal verified ${statusOverlay.activeSince} (daily Dues Renewal report${
-      statusOverlay.asOf ? `, as of ${statusOverlay.asOf}` : ''
+    const label = `${statusOverlay.status} — renewal verified ${formatDateText(statusOverlay.activeSince)} (daily Dues Renewal report${
+      statusOverlay.asOf ? `, as of ${formatDateText(statusOverlay.asOf)}` : ''
     }); base dashboard status: ${base}`
     return (
       <span className="club-status-overlay" role="note" aria-label={label}>
@@ -34,7 +35,7 @@ export function ClubStatusCell({
         </span>
         <span className="club-status-overlay__mark" title={label}>
           <span aria-hidden="true">✓</span> renewal verified{' '}
-          {statusOverlay.activeSince}
+          {formatDateText(statusOverlay.activeSince)}
         </span>
       </span>
     )

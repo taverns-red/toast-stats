@@ -237,7 +237,7 @@ describe('DivisionSummary', () => {
       const netGrowthElement = screen.getByLabelText(/Net growth: negative 2/i)
       expect(netGrowthElement).toBeInTheDocument()
       expect(netGrowthElement).toHaveTextContent('↓')
-      expect(netGrowthElement).toHaveTextContent('-2')
+      expect(netGrowthElement).toHaveTextContent('\u22122')
     })
 
     it('should display zero net growth with neutral arrow', () => {

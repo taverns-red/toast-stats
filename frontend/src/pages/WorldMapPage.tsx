@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { formatDateText } from '../utils/dateFormatting'
 import { Link, useSearchParams } from 'react-router-dom'
 import { clubIdsMatch } from '@taverns-red/shared-contracts'
 import type { Map as MapLibreMap } from 'maplibre-gl'
@@ -387,7 +388,7 @@ const WorldMapPage: React.FC = () => {
             ? WORLD_COLOR_MODES.find(m => m.id === mode)!.label
             : model.title}
         </strong>
-        {world && <span> · as of {world.snapshotDate}</span>}
+        {world && <span> · as of {formatDateText(world.snapshotDate)}</span>}
       </p>
       {pending ? (
         <div className="map-legend__chips" />

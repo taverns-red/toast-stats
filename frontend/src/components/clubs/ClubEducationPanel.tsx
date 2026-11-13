@@ -1,4 +1,5 @@
 import { ClubPanel } from './ClubPanel'
+import { formatPY } from '../../utils/displayFormat'
 import type {
   ClubEducationSummary,
   EducationProgram,
@@ -29,7 +30,7 @@ export function ClubEducationPanel({
   /** The page's program year (R3), e.g. "2026-2027". */
   programYearLabel: string
 }) {
-  const pyDisplay = programYearLabel.replace(/-/g, '–')
+  const pyDisplay = formatPY(programYearLabel)
   const meta = !summary.available
     ? null
     : summary.isArchive

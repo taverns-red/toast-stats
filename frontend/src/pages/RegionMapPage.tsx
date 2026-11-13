@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { formatDateText } from '../utils/dateFormatting'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { clubIdsMatch } from '@taverns-red/shared-contracts'
 import type { Map as MapLibreMap } from 'maplibre-gl'
@@ -327,7 +328,7 @@ const RegionMapPage: React.FC = () => {
             ? REGION_COLOR_MODES.find(m => m.id === mode)!.label
             : model.title}
         </strong>
-        {shard && <span> · as of {shard.snapshotDate}</span>}
+        {shard && <span> · as of {formatDateText(shard.snapshotDate)}</span>}
       </p>
       {pending ? (
         <div className="map-legend__chips" />

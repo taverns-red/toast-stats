@@ -32,12 +32,6 @@ export function worldRankText(rankings: MetricRankings): string | null {
     : null
 }
 
-/** Signed delta with a true minus sign: "+312", "−2,501", "0". */
-export function formatSigned(n: number): string {
-  if (n === 0) return '0'
-  return `${n > 0 ? '+' : '−'}${Math.abs(n).toLocaleString()}`
-}
-
 /**
  * The hub's layout switch: phones held upright (< 768) and phones on their
  * side (short landscape viewports, which are ≥ 768 wide on most handsets).

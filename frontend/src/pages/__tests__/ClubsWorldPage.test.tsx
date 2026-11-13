@@ -211,7 +211,7 @@ describe('ClubsWorldPage (#1556)', () => {
   it('renders the shared legacy eyebrow above the heading', () => {
     mockHook({ race: race(), snapshotDate: '2026-09-11' })
     renderPage()
-    const eyebrow = screen.getByText(/Program year .* · as of 2026-09-11/)
+    const eyebrow = screen.getByText(/Program year .* · as of Sep 11, 2026/)
     expect(eyebrow).toHaveClass('placeholder-page__eyebrow')
     expect(eyebrow).not.toHaveClass('clubs-page__eyebrow')
   })

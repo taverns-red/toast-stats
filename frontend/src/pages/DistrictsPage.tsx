@@ -46,6 +46,7 @@ import {
   rankBadgeClassName,
 } from '../utils/rankingsFormat'
 import { arrayToCSV, downloadCSV } from '../utils/csvExport'
+import { signedDelta } from '../utils/displayFormat'
 import {
   PriorityColumnsTable,
   type PriorityMetric,
@@ -378,8 +379,6 @@ const DistrictsPage: React.FC = () => {
   // YTD (re-review S2). The loading
   // shell holds the same line with an em dash so the strip's height is
   // data-independent.
-  const signedDelta = (n: number) =>
-    n === 0 ? '0' : `${n > 0 ? '+' : '−'}${Math.abs(n).toLocaleString()}`
   const kpiSub = (reserve: boolean) => {
     if (reserve || kpiTotals.tracked === 0) {
       return { paidClubs: '—', payments: '—', distinguished: '—' }

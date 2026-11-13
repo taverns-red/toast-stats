@@ -15,6 +15,7 @@ import {
   getDistinguishedCountdown,
   type CountdownCell,
 } from '../utils/distinguishedCountdown'
+import { signedDelta } from '../utils/displayFormat'
 import type { DistinguishedDistrictTier } from '../services/cdn'
 import type {
   RegionRankedDistrict,
@@ -88,8 +89,7 @@ export const SignedDelta: React.FC<{ value: number }> = ({ value }) => (
       value >= 0 ? 'text-green-700' : 'text-tm-true-maroon'
     }`}
   >
-    {value >= 0 ? '+' : ''}
-    {value.toLocaleString()}
+    {signedDelta(value)}
   </span>
 )
 

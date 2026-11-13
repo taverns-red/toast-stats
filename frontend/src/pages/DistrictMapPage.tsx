@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react'
+import { formatDateText } from '../utils/dateFormatting'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { clubIdsMatch } from '@taverns-red/shared-contracts'
 import type { Map as MapLibreMap } from 'maplibre-gl'
@@ -395,7 +396,9 @@ const DistrictMapPage: React.FC = () => {
     <div className="map-legend">
       <p className="map-legend__title">
         <strong>{pending ? modeLabel : model.title}</strong>
-        {effectiveEndDate && <span> · as of {effectiveEndDate}</span>}
+        {effectiveEndDate && (
+          <span> · as of {formatDateText(effectiveEndDate)}</span>
+        )}
       </p>
       {pending ? null : (
         <React.Suspense fallback={<div className="map-legend__chips" />}>

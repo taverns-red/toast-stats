@@ -1,18 +1,18 @@
 /** Number and growth formatting shared by the landing rankings table and its
  *  phone view, so the two never drift (#2689). */
 
+import { signedPercent } from './displayFormat'
+
 export const formatNumber = (num: number): string => num.toLocaleString()
 
 export const formatPercentage = (
   percent: number
 ): { text: string; color: string } => {
-  if (percent > 0) {
-    return { text: `+${percent.toFixed(1)}%`, color: 'text-green-600' }
-  }
-  if (percent < 0) {
-    return { text: `${percent.toFixed(1)}%`, color: 'text-red-600' }
-  }
-  return { text: '0.0%', color: 'text-gray-600' }
+  const text = signedPercent(percent)
+  // Colour follows what is shown: a value that displays as zero is neutral.
+  if (text === '0.0%') return { text, color: 'text-gray-600' }
+  if (percent > 0) return { text, color: 'text-green-600' }
+  return { text, color: 'text-red-600' }
 }
 
 /**

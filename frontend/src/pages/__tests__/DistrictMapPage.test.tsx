@@ -296,6 +296,14 @@ describe('DistrictMapPage — map and legend', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('dates the legend in prose, never as an ISO string (#2648)', async () => {
+    renderAt('/district/61/map')
+    await screen.findByRole('group', { name: /Club health legend/ })
+    const title = document.querySelector('.map-legend__title')!
+    expect(title.textContent).toMatch(/as of Oct 11, 2026/)
+    expect(title.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/)
+  })
+
   it('names the cluster pip as the "!" badge clusters now draw (#2173)', async () => {
     renderAt('/district/61/map')
     expect(

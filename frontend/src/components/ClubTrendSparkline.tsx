@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { Sparkline } from './Sparkline'
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
+import { signedDelta } from '../utils/displayFormat'
 
 /** Intrinsic size of the per-row trend (#1792): 60×16, the cheapest trend a
  *  375 px row can carry (mobile review §6.5). */
@@ -9,9 +10,7 @@ export const CLUB_TREND_HEIGHT = 16
 
 /** A signed count with a true minus sign; ±0 for no change. */
 export function formatSignedNet(net: number): string {
-  if (net > 0) return `+${net}`
-  if (net < 0) return `−${Math.abs(net)}`
-  return '±0'
+  return signedDelta(net, '±0')
 }
 
 type TrendInput = Pick<ClubTrend, 'membershipTrend' | 'membershipBase'>

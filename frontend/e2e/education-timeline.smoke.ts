@@ -405,9 +405,14 @@ test.describe('education timeline layout', () => {
           .textContent()
       )?.replace(/,/g, '')
     )
-    const date = (
+    // The provenance line shows the snapshot as "Oct 13, 2026" (#2648); the
+    // timeline fixture is keyed on the ISO date.
+    const shown = (
       await page.getByTestId('education-provenance').textContent()
-    )?.match(/snapshot (\d{4}-\d{2}-\d{2})/)?.[1]
+    )?.match(/snapshot ([A-Z][a-z]{2} \d{1,2}, \d{4})/)?.[1]
+    const date = shown
+      ? new Date(`${shown} UTC`).toISOString().slice(0, 10)
+      : undefined
     expect(date).toBeTruthy()
     // Hold the timeline so the skeleton is on screen, then release it.
     await page.unroute('**/derived/education-timeline/**')

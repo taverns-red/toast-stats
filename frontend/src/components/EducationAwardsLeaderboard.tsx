@@ -1,4 +1,5 @@
 import React, { useId, useState } from 'react'
+import { formatDateText } from '../utils/dateFormatting'
 import { Link } from 'react-router-dom'
 import { StaticTableScroll } from './dataTable/StaticTableScroll'
 import {
@@ -75,7 +76,7 @@ const formatPercent = (ratio: number): string => `${(ratio * 100).toFixed(1)}%`
 const provenance = (ranking: EducationAwardRanking): string | null => {
   if (!ranking.sourceReportType) return null
   const label = SOURCE_LABELS[ranking.sourceReportType] ?? DEFAULT_SOURCE_LABEL
-  return `Source: ${label}${ranking.asOf ? `, as of ${ranking.asOf}` : ''}`
+  return `Source: ${label}${ranking.asOf ? `, as of ${formatDateText(ranking.asOf)}` : ''}`
 }
 
 /* On the shared table styles (#2732, M4 of #2676): rank, club, count and rate

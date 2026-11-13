@@ -20,6 +20,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useRegionRollups } from '../hooks/useRegionRollups'
 import { fetchCdnRegionMembershipSeries } from '../services/cdn'
 import type { SnapshotDate } from '../types/snapshotDate'
+import { signedDelta } from '../utils/displayFormat'
 import {
   countUnassignedDistricts,
   formatRegionCount,
@@ -48,8 +49,6 @@ interface WorldPulseProps {
 const TOP_REGION_ROWS = 5
 
 const fmt = (n: number) => n.toLocaleString()
-const signed = (n: number) =>
-  n === 0 ? '0' : `${n > 0 ? '+' : '−'}${fmt(Math.abs(n))}`
 
 interface RegionSummary {
   region: string
@@ -343,10 +342,10 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
               {showPayments ? (
                 <>
                   <span aria-hidden="true">
-                    {signed(payments.delta)} vs last PY
+                    {signedDelta(payments.delta)} vs last PY
                   </span>
                   <span className="sr-only">
-                    {signed(payments.delta)} YTD vs last year's total
+                    {signedDelta(payments.delta)} YTD vs last year's total
                   </span>
                 </>
               ) : (
@@ -435,7 +434,7 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
                 </th>
                 <td className="world-pulse__num">{fmt(r.districts)}</td>
                 <td className="world-pulse__num">{fmt(r.paidClubs)}</td>
-                <td className="world-pulse__num">{signed(r.delta)}</td>
+                <td className="world-pulse__num">{signedDelta(r.delta)}</td>
               </tr>
             ))}
           </tbody>

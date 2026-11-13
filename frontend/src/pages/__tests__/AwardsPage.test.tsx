@@ -83,7 +83,7 @@ const mockStandings: CompetitiveAwardStandings = {
   retentionAward: [
     {
       districtId: '102',
-      districtName: 'District 102',
+      districtName: '102',
       region: '14',
       rank: 1,
       value: 94.1,
@@ -169,6 +169,26 @@ describe('AwardsPage (#371-#373)', () => {
       renderPage()
       const link = screen.getByRole('link', { name: /district 17/i })
       expect(link).toHaveAttribute('href', '/district/17')
+    })
+
+    it('a district whose name is the bare number still reads "District 102" to a screen reader (#2648)', () => {
+      renderPage()
+      // WCAG 2.5.3 (#2648): the name starts with the visible label "D102"
+      // and expands it. Exact, so a run-together "District102" or a split
+      // "D istrict 102" cannot pass.
+      const link = screen.getByRole('link', { name: 'D102 (District 102)' })
+      expect(link).toHaveAttribute('href', '/district/102')
+      // WCAG 2.5.3 (#2648): the accessible name contains the visible label
+      // ("D102"), so voice control can say what it sees. No aria-label
+      // override; the hidden letters complete the word instead.
+      expect(link).not.toHaveAttribute('aria-label')
+      const visible = Array.from(link.childNodes)
+        .filter(
+          n => !(n instanceof HTMLElement && n.classList.contains('sr-only'))
+        )
+        .map(n => n.textContent)
+        .join('')
+      expect(visible.trim()).toBe('D102')
     })
   })
 })
