@@ -61,6 +61,13 @@ const stripComments = (src: string) =>
 
 const count = (src: string, re: RegExp) => src.match(re)?.length ?? 0
 
+type Kind = 'code' | 'css'
+const countHex = (src: string, _kind: Kind) => count(src, HEX)
+const countGray = (src: string) => count(src, GRAY)
+const isScanned = (rel: string) =>
+  /\.(css|tsx)$/.test(rel) && !rel.includes('tokens/')
+const nextBaseline = (current: Counts, _baseline: Counts): Counts => current
+
 function measure(): Counts {
   const totals: Counts = { tsxHex: 0, tsxRgba: 0, tsxGray: 0, cssHex: 0 }
   for (const file of walk(srcDir)) {
@@ -122,5 +129,30 @@ describe('raw-value ratchet (#2651)', () => {
     expect(count(`fill: rgba(0, 0, 0, .1)`, RGBA)).toBe(1)
     expect(count(`className="text-gray-500 bg-gray-100"`, GRAY)).toBe(2)
     expect(count(`className="text-ink-2"`, GRAY)).toBe(0)
+  })
+
+  it('counts Tailwind arbitrary values and ignores issue numbers in text', () => {
+    expect(countHex(`<i className="bg-[#123456]" />`, 'code')).toBe(1)
+    expect(countHex(`<p>see #2651 and #304 for why</p>`, 'code')).toBe(0)
+    expect(countHex(`color: #fff;`, 'css')).toBe(1)
+  })
+
+  it('counts slate, zinc and neutral like gray, and scans .ts but not tokens', () => {
+    expect(countGray(`text-slate-500 bg-zinc-100 border-neutral-200`)).toBe(3)
+    expect(isScanned('services/palette.ts')).toBe(true)
+    expect(isScanned('styles/tokens/rt-brand-v1.css')).toBe(false)
+    expect(isScanned('components/tokens/Swatch.tsx')).toBe(true)
+    expect(isScanned('components/Foo.test.ts')).toBe(false)
+  })
+
+  it('the update path never raises a baseline', () => {
+    const baseline = { tsxHex: 5, tsxRgba: 0, tsxGray: 10, cssHex: 3 }
+    const current = { tsxHex: 9, tsxRgba: 0, tsxGray: 4, cssHex: 3 }
+    expect(nextBaseline(current, baseline)).toEqual({
+      tsxHex: 5,
+      tsxRgba: 0,
+      tsxGray: 4,
+      cssHex: 3,
+    })
   })
 })
