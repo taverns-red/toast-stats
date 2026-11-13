@@ -1,5 +1,5 @@
-/* #2580: the phone priority-columns smoke forbids td text under 14px, so the
- * 12px "+N qualifying today" stays out of the compact phone table. */
+/* #2580: Ron (2026-11-13) wants "+N qualifying today" in the compact phone
+ * table, on its own line under the confirmed count; nothing for N=0. */
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
@@ -38,7 +38,7 @@ const rollup = {
 } as RegionRollup
 
 describe('RegionsLeaderboard phone view (#2580)', () => {
-  it('shows the confirmed count and share, not the 12px extra', () => {
+  it('shows +N qualifying today under the confirmed count, and nothing for 0', () => {
     render(
       <MemoryRouter>
         <RegionsLeaderboard
@@ -51,6 +51,22 @@ describe('RegionsLeaderboard phone view (#2580)', () => {
     const table = screen.getByRole('table', { name: 'Region rankings' })
     expect(table).toHaveTextContent('200')
     expect(table).toHaveTextContent('40%')
+    expect(
+      table.querySelector('[data-testid="distinguished-provisional"]')
+    ).toHaveTextContent('+12 qualifying today')
+  })
+
+  it('shows nothing extra when N is 0 or unknown', () => {
+    render(
+      <MemoryRouter>
+        <RegionsLeaderboard
+          rollups={[rollup]}
+          provisionalByRegion={new Map([['01', 0]])}
+        />
+      </MemoryRouter>
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Dist. clubs' }))
+    const table = screen.getByRole('table', { name: 'Region rankings' })
     expect(
       table.querySelector('[data-testid="distinguished-provisional"]')
     ).toBeNull()

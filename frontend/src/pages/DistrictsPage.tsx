@@ -1046,13 +1046,27 @@ const DistrictsPage: React.FC = () => {
 
   // Phone priority columns (#1834): the metrics a visitor can pick 2 of.
   // Same values as the full table's cells; growth % rides under the value.
-  // The 12px "+N qualifying today" stays out of this compact view (the phone
-  // smoke forbids td text under 14px); the KPI and the full table carry it.
-  const valueWithGrowth = (value: number, rank: number, pct: number) => {
+  // "+N qualifying today" stacks under the confirmed count at 14px (#2580).
+  const valueWithGrowth = (
+    value: number,
+    rank: number,
+    pct: number,
+    qualifyingToday?: number
+  ) => {
     const g = formatPercentage(pct)
     return (
       <>
-        <span className="block font-medium">{formatNumber(value)}</span>
+        <span className="block font-medium">
+          {qualifyingToday === undefined ? (
+            formatNumber(value)
+          ) : (
+            <DistinguishedCount
+              confirmed={value}
+              provisional={qualifyingToday}
+              stacked
+            />
+          )}
+        </span>
         <span className="block">
           <span className="text-tm-loyal-blue">#{rank}</span>{' '}
           <span className={g.color}>{g.text}</span>
@@ -1102,7 +1116,8 @@ const DistrictsPage: React.FC = () => {
         valueWithGrowth(
           d.distinguishedClubs,
           d.distinguishedRank,
-          d.distinguishedPercent
+          d.distinguishedPercent,
+          provisionalByDistrict.get(d.districtId)
         ),
     },
     {
