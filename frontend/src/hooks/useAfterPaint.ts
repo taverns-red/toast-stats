@@ -87,17 +87,19 @@ export function useAfterPaint(ready: boolean): boolean {
     const open = () => setPainted(true)
 
     if (mayWaitForLcp.current && !userInteracted && canObserveLcp()) {
+      const readyAt = performance.now()
       let timer = 0
-      // `buffered` replays an entry painted before readiness (slow devices),
-      // so the latest one at or before readiness still opens the gate.
+      // Not `buffered`: replaying an early candidate recorded before the hero
+      // rendered would open the gate ahead of the real LCP. On a slow device
+      // whose entry lands before readiness, the cap opens the gate.
       const observer = new PerformanceObserver(list => {
-        if (list.getEntries().length > 0) {
+        if (list.getEntries().some(entry => entry.startTime >= readyAt)) {
           observer.disconnect()
           // Leave the observer callback; the reads start in the next task.
           timer = window.setTimeout(open, 0)
         }
       })
-      observer.observe({ type: 'largest-contentful-paint', buffered: true })
+      observer.observe({ type: 'largest-contentful-paint' })
       const cap = window.setTimeout(open, LCP_WAIT_CAP_MS)
       return () => {
         observer.disconnect()
