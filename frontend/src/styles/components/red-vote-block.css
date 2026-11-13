@@ -151,6 +151,46 @@
     }
   }
 
+  /* #2653 (D2) — the phone's one-line pointer: copy and the same CTA, in the
+     block's palette, square corners, brand red on the leading edge. The
+     fallback stacks only (above the fold: no web font is fetched for it). */
+  .red-vote-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 56px;
+    margin-bottom: 12px;
+    padding: 6px 12px;
+    background-color: var(--rt-paper);
+    border: 1px solid var(--rt-paper-3);
+    border-left: 4px solid var(--rt-vote);
+    border-radius: 0;
+    color: var(--rt-ink);
+    font-family: 'Inter Fallback', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .red-vote-line__text {
+    margin: 0;
+    min-width: 0;
+    /* 14px, the phone type floor (mobile-375-gate): --rt-text-sm is 13px. */
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .red-vote-line__cta {
+    flex: 0 0 auto;
+    padding: 0 14px;
+  }
+
+  [data-theme='dark'] .red-vote-line {
+    background-color: var(--rt-bg-2);
+    border-color: var(--rt-bg-3);
+    border-left-color: var(--rt-vote);
+    color: var(--rt-ink-on-dk);
+  }
+
   /* Dark theme: Red Vote's own dark surfaces, not the app's. */
   [data-theme='dark'] .red-vote-block {
     background-color: var(--rt-bg-2);
