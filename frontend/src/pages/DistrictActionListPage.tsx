@@ -31,7 +31,7 @@ import {
   type VisitGapArea,
 } from '../utils/actionListData'
 import { usePersistedState } from '../hooks/usePersistedState'
-import { getClubHealthStatusLabel } from '../utils/clubHealthStatus'
+import { HealthStatusCell } from '../components/dataTable/cells/HealthStatusCell'
 import {
   CSP_LOST_ELIGIBILITY,
   cspAutoCreditNote,
@@ -334,7 +334,7 @@ const interventionColumns = (
   {
     key: 'status',
     header: 'Status',
-    cell: () => getClubHealthStatusLabel('intervention-required'),
+    cell: () => <HealthStatusCell status="intervention-required" />,
   },
 ]
 
@@ -359,7 +359,7 @@ const cspColumns = (
   {
     key: 'health',
     header: 'Health',
-    cell: c => getClubHealthStatusLabel(c.currentStatus),
+    cell: c => <HealthStatusCell status={c.currentStatus} />,
   },
 ]
 

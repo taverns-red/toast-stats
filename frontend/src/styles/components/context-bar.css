@@ -13,7 +13,7 @@
     /* Under .app-shell-top-bar (56px + top inset, z-index 40); at the top
        inset in short landscape, where the top bar scrolls away (safe-area.css). */
     top: var(--app-top-offset, 56px);
-    z-index: 35;
+    z-index: var(--z-sub-bar);
     height: 44px;
     display: flex;
     align-items: center;
@@ -228,7 +228,7 @@
   .bottom-sheet-overlay {
     position: fixed;
     inset: 0;
-    z-index: 80;
+    z-index: var(--z-overlay);
     display: flex;
     flex-direction: column;
     justify-content: flex-end;

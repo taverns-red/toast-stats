@@ -78,16 +78,16 @@ describe('ActionTable (#1577)', () => {
     const table = screen.getByTestId('example-table')
     const bodyRows = within(table.querySelector('tbody')!).getAllByRole('row')
     expect(bodyRows).toHaveLength(2)
-    expect(
-      within(bodyRows[0]!)
-        .getAllByRole('cell')
-        .map(c => c.textContent)
-    ).toEqual(['Alpha Club', 'A/01', 'first'])
-    expect(
-      within(bodyRows[1]!)
-        .getAllByRole('cell')
-        .map(c => c.textContent)
-    ).toEqual(['Beta Club', 'B/02', 'second'])
+    expect(Array.from(bodyRows[0]!.children).map(c => c.textContent)).toEqual([
+      'Alpha Club',
+      'A/01',
+      'first',
+    ])
+    expect(Array.from(bodyRows[1]!.children).map(c => c.textContent)).toEqual([
+      'Beta Club',
+      'B/02',
+      'second',
+    ])
   })
 
   it('labels every cell with its column header for the <640px card rows', () => {
@@ -96,7 +96,11 @@ describe('ActionTable (#1577)', () => {
     // ::before. A cell with no data-label renders an unlabelled value on a
     // phone, so the contract is asserted here rather than trusted to CSS.
     renderTable()
-    const cells = screen.getAllByRole('cell')
+    // The first column is the row header (`th scope="row"`, #2701), the rest
+    // are cells; both carry a data-label (the CSS prints it on cells only).
+    const cells = Array.from(
+      screen.getByTestId('example-table').querySelectorAll('tbody th, tbody td')
+    )
     expect(cells).toHaveLength(6)
     expect(cells.map(c => c.getAttribute('data-label'))).toEqual([
       'Club',

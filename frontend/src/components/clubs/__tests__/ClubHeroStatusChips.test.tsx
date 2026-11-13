@@ -51,6 +51,22 @@ describe('ClubHeroStatusChips (#2171)', () => {
       expect(screen.getByText(clubStatus)).toBeInTheDocument()
     })
 
+    it.each([
+      ['Low', 'club-hero__chip--watch'],
+      ['Ineligible', 'club-hero__chip--at-risk'],
+      ['Suspended', 'club-hero__chip--at-risk'],
+    ])(
+      'gives a %s club a dotted chip, distinct from a neutral one (#2669)',
+      (clubStatus, cls) => {
+        render(
+          <ClubHeroStatusChips status="thriving" clubStatus={clubStatus} />
+        )
+        const chip = screen.getByText(clubStatus).closest('.club-hero__chip')
+        expect(chip).toHaveClass(cls)
+        expect(chip?.querySelector('.club-hero__chip-dot')).not.toBeNull()
+      }
+    )
+
     it.each(['Active', undefined])('adds no chip for %s', clubStatus => {
       const { container } = render(
         <ClubHeroStatusChips status="thriving" clubStatus={clubStatus} />

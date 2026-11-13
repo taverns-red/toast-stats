@@ -171,6 +171,8 @@ const ladderColumns: ActionTableColumn<ProspectiveStageCount>[] = [
     key: 'label',
     header: 'As reported',
     className: 'action-table__subject rollup-growth__ladder-label',
+    // "Not recognised" repeats across rows, so the stage count cannot name one.
+    rowHeader: true,
     cell: g => g.label,
   },
   {

@@ -15,9 +15,10 @@
     left: 0;
     right: 0;
     bottom: 0;
-    /* Above sticky page chrome (top bar 40, context bar 35); below the
-       filter panel (60), bottom sheets (80) and the command palette (90). */
-    z-index: 45;
+    /* Above sticky page chrome, below the consent banner and filter panel,
+       bottom sheets and the command palette (tokens/redesign.css). The
+       banner is lifted clear of this bar, not stacked over it (consent.css). */
+    z-index: var(--z-bottom-bar);
     box-sizing: border-box;
     height: calc(56px + env(safe-area-inset-bottom, 0px));
     padding-bottom: env(safe-area-inset-bottom, 0px);

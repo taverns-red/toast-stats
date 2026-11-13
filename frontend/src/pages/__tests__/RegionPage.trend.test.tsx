@@ -5,12 +5,13 @@
  * district pages) for the page's own program year (R3); at 375 it rides in
  * the row identity as the row's only chart (mobile review §6.5).
  */
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import RegionPage from '../RegionPage'
+import { showAllRegionColumns } from '../../__tests__/showAllRegionColumns'
 import { fetchCdnRankings } from '../../services/cdn'
 import { fetchTimeSeriesProgramYear } from '../../services/cdnTimeSeries'
 
@@ -105,6 +106,12 @@ const renderRegion = () => {
     </QueryClientProvider>
   )
 }
+
+// Trend is off by default at the narrowest width (#2702).
+beforeEach(() => {
+  window.localStorage.clear()
+  showAllRegionColumns()
+})
 
 afterEach(() => {
   cleanup()

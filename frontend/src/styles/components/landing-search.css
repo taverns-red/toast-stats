@@ -65,7 +65,7 @@
      result looks the same here, in the header and in the Cmd-K palette. */
   .landing-search__results {
     position: absolute;
-    z-index: 30;
+    z-index: var(--z-sticky);
     top: calc(100% + 4px);
     left: 0;
     right: 0;

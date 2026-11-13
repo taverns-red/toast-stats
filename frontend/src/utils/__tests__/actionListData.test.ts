@@ -641,7 +641,7 @@ describe('formatCspRow (shared list + CSV string)', () => {
         cspOverdue: false,
         currentStatus: 'intervention-required',
       })
-    ).toBe('CSP due 30 September 2026 · Intervention Required')
+    ).toBe('CSP due 30 September 2026 · Intervention required')
   })
 
   it('after the due date states the lost eligibility, with no "until" (#1565)', () => {
