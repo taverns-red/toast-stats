@@ -73,7 +73,8 @@ export default function ClubHistoryPage() {
           the header. No PY state here (one row per program year), so the chip
           opens About, Export and the trail. */}
       <ContextBar
-        title={`${heading} — History`}
+        title={heading}
+        titleSuffix=" — History"
         back={{ label: heading, to: clubDetailPath }}
         chipLabel="About"
         actions={

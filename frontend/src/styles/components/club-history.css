@@ -260,6 +260,12 @@
     overflow-wrap: anywhere;
   }
 
+  /* " — History" is in the sheet title and the H1; the bar keeps the room for
+     the name (two lines of 15px = 36px, inside the 44px bar). */
+  .club-history-page .context-bar__title-suffix {
+    display: none;
+  }
+
   .context-bar ~ .club-history-page__header .club-history-page__title {
     position: absolute;
     width: 1px;
