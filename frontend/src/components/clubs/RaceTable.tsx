@@ -10,6 +10,7 @@ import { raceTierTitle } from '../../utils/raceTierRoute'
 import { reachWindowCopy } from '../../utils/reachWindowCopy'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { MobileRowList, type MobileRow } from '../MobileRowList'
+import { StaticTableScroll } from '../dataTable/StaticTableScroll'
 
 /* #1556 — the full "first to reach" table for one tier. Every row is a club
    that HAS reached (the artifact carries no other club), so the table has no
@@ -152,8 +153,8 @@ export const RaceTable: React.FC<RaceTableProps> = ({
   }
 
   return (
-    <div className="race-table__scroll">
-      <table className="race-table">
+    <StaticTableScroll label={`First to ${title}`}>
+      <table className="dt dt-static race-table">
         <caption className="race-table__caption">
           First to {title} — every club that has reached it this program year
         </caption>
@@ -191,11 +192,11 @@ export const RaceTable: React.FC<RaceTableProps> = ({
                 <td className="race-table__rank" data-label="Rank">
                   {standing.rank}
                 </td>
-                <td className="race-table__club" data-label="Club">
+                <th scope="row" className="race-table__club" data-label="Club">
                   <Link to={`/district/${row.districtId}/club/${row.clubId}`}>
                     {row.clubName}
                   </Link>
-                </td>
+                </th>
                 <td data-label="District">
                   <Link to={`/district/${row.districtId}`}>
                     D{row.districtId}
@@ -257,7 +258,7 @@ export const RaceTable: React.FC<RaceTableProps> = ({
           })}
         </tbody>
       </table>
-    </div>
+    </StaticTableScroll>
   )
 }
 

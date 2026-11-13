@@ -134,7 +134,7 @@
   width: 100%;
   border-collapse: collapse;
   font-family: var(--sans);
-  font-size: 0.9rem;
+  font-size: var(--dt-font);
   color: var(--ink);
 }
 
@@ -142,7 +142,7 @@
 .wws__year-head {
   background: var(--surface);
   border-bottom: 2px solid var(--line);
-  font-size: 0.8rem;
+  font-size: var(--dt-header-font);
   font-weight: 700;
   color: var(--ink-2);
   padding: 10px 14px;
@@ -249,7 +249,6 @@
 .wws__cell--absent .wws__cell-text {
   color: var(--ink-3);
   font-style: italic;
-  font-size: 0.82rem;
   border-bottom: 1px dotted var(--ink-4);
   cursor: help;
 }
@@ -315,10 +314,6 @@
 @media (max-width: 640px) {
   .wws__heading {
     font-size: 1.2rem;
-  }
-
-  .wws__table {
-    font-size: 0.85rem;
   }
 
   .wws__metric,

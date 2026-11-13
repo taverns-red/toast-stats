@@ -203,6 +203,26 @@
     }
   }
 
+  /* ── Small tables that keep their own geometry (#2734, M7 of #2676) ────
+     `.dt-static` goes with `.dt` on a hand-written table whose columns size
+     to their content: it turns off the fixed layout, the page-pinned header
+     and the coarse-pointer row height. It lives in this layer, so a table's
+     own unlayered or components-layer rules (sticky header, fixed layout,
+     row height) still win. */
+  .dt.dt-static {
+    table-layout: auto;
+  }
+
+  .dt.dt-static thead th {
+    position: static;
+  }
+
+  @media (pointer: coarse) {
+    .dt.dt-static tbody tr {
+      height: auto;
+    }
+  }
+
   /* ── Health status marker ──────────────────────────────────────────────
      Shapes differ (circle, triangle, tick) so the marker works without
      colour. Contrast vs --surface is at least 3:1 in both themes (WCAG

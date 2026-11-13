@@ -306,12 +306,16 @@ const MultiYearComparisonTable: React.FC<MultiYearComparisonTableProps> = ({
       <div
         className="hidden sm:block overflow-x-auto"
         role="region"
+        tabIndex={0}
         aria-label="Multi-year rankings table"
       >
         <table
-          className="w-full min-w-[600px]"
+          className="dt dt-static w-full min-w-[600px]"
           aria-describedby="multi-year-table-desc"
         >
+          <caption className="sr-only">
+            District rank by program year, newest first
+          </caption>
           <thead>
             <tr className="border-b-2 border-gray-300">
               <th
@@ -355,14 +359,14 @@ const MultiYearComparisonTable: React.FC<MultiYearComparisonTableProps> = ({
                 } hover:bg-blue-50 transition-colors`}
               >
                 {/* Program Year */}
-                <td className="py-3 px-2">
+                <th scope="row" className="py-3 px-2 text-left font-normal">
                   <div className="flex items-center gap-2">
                     <span className="text-base font-medium text-gray-900">
                       {ranking.programYear}
                     </span>
                     {ranking.isPartialYear && <PartialYearBadge />}
                   </div>
-                </td>
+                </th>
 
                 {/* Overall Rank */}
                 <td className="py-3 px-2">

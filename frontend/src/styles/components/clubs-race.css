@@ -273,15 +273,10 @@
   }
 
   /* ── Race table ─────────────────────────────────────────────────────── */
-  .race-table__scroll {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
   .race-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
+    font-size: var(--dt-font);
     color: var(--ink);
   }
 
@@ -290,7 +285,7 @@
     caption-side: top;
     padding: 0 0 0.5rem;
     color: var(--ink-2);
-    font-size: 0.85rem;
+    font-size: var(--dt-font);
   }
 
   .race-table th,
@@ -301,7 +296,7 @@
     vertical-align: middle;
   }
 
-  .race-table th {
+  .race-table thead th {
     font-family: var(--serif);
     font-weight: 700;
     font-size: var(--tm-font-size-sm);
@@ -321,15 +316,13 @@
 
   .race-table__growth {
     font-family: var(--mono);
-    font-size: 0.8rem;
+    font-size: var(--dt-font);
     color: var(--ink-2);
   }
 
   .race-table__unconfirmed {
     margin-left: 0.5rem;
-    font-size: var(--tm-font-size-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    font-size: var(--dt-font);
     color: var(--ink-3);
     border-bottom: 1px dotted currentColor;
   }
@@ -356,7 +349,7 @@
   .race-goal-strip__count {
     margin-left: 0.375rem;
     font-family: var(--mono);
-    font-size: 0.8rem;
+    font-size: var(--dt-font);
     color: var(--ink-2);
   }
 
@@ -364,7 +357,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    font-size: 0.8rem;
+    font-size: var(--dt-font);
     color: var(--ink);
   }
 
@@ -392,13 +385,15 @@
       border-bottom: 1px solid var(--line-2);
     }
 
-    .race-table td {
+    .race-table td,
+    .race-table tbody th {
       display: block;
       padding: 0;
       border: 0;
     }
 
-    .race-table td::before {
+    .race-table td::before,
+    .race-table tbody th::before {
       content: attr(data-label);
       display: block;
       font-family: var(--serif);

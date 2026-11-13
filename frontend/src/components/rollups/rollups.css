@@ -169,7 +169,8 @@
     border-top: 1px solid var(--line);
   }
 
-  .rollup-row__label {
+  /* Two classes: `.dt tbody th` (same layer) would otherwise reset the weight. */
+  .rollup-table .rollup-row__label {
     padding: 8px 8px 8px 0;
     text-align: left;
     font-size: 14px;
@@ -194,7 +195,7 @@
     background-color: var(--tm-loyal-blue);
   }
 
-  .rollup-row__value {
+  .rollup-table .rollup-row__value {
     padding: 8px 0;
     text-align: right;
     white-space: nowrap;
