@@ -184,6 +184,20 @@ const COLUMN_HEADERS: Record<string, string> = {
   members: 'Members with an award',
 }
 
+const districtLink = (r: RegionEducationDistrictRow, programYear: string) => (
+  <Link
+    to={`/district/${r.id}/education?py=${programYear}`}
+    className="education-district__link"
+  >
+    District {r.id}
+  </Link>
+)
+
+const unavailable = (r: RegionEducationDistrictRow) =>
+  r.status === 'not-available'
+    ? `Not available (${REASONS[r.reason] ?? r.reason})`
+    : null
+
 const Districts: React.FC<{
   e: Available
   region: string
@@ -208,37 +222,28 @@ const Districts: React.FC<{
     )
   }, [e.districts, sort])
   const label = `Region ${region} districts, education awards`
-  const districtLink = (r: RegionEducationDistrictRow) => (
-    <Link
-      to={`/district/${r.id}/education?py=${programYear}`}
-      className="education-district__link"
-    >
-      District {r.id}
-    </Link>
+  const columns = useMemo<EducationRollupColumn<RegionEducationDistrictRow>[]>(
+    () => [
+      {
+        id: 'district',
+        header: 'District',
+        cell: r => (
+          <span className="education-district">
+            {districtLink(r, programYear)}
+            {r.status !== 'available' && (
+              <span className="education-district__na">{unavailable(r)}</span>
+            )}
+          </span>
+        ),
+      },
+      ...METRICS.map(m => ({
+        id: m.sortField!,
+        header: COLUMN_HEADERS[m.id]!,
+        cell: m.render,
+      })),
+    ],
+    [programYear]
   )
-  const unavailable = (r: RegionEducationDistrictRow) =>
-    r.status === 'not-available'
-      ? `Not available (${REASONS[r.reason] ?? r.reason})`
-      : null
-  const columns: EducationRollupColumn<RegionEducationDistrictRow>[] = [
-    {
-      id: 'district',
-      header: 'District',
-      cell: r => (
-        <span className="education-district">
-          {districtLink(r)}
-          {r.status !== 'available' && (
-            <span className="education-district__na">{unavailable(r)}</span>
-          )}
-        </span>
-      ),
-    },
-    ...METRICS.map(m => ({
-      id: m.sortField!,
-      header: COLUMN_HEADERS[m.id]!,
-      cell: m.render,
-    })),
-  ]
   const fullTable = (inScroller: boolean) => (
     <EducationRollupTable<RegionEducationDistrictRow>
       rows={sorted}
@@ -276,7 +281,7 @@ const Districts: React.FC<{
         identityWraps
         renderIdentity={r => (
           <span className="education-district">
-            {districtLink(r)}
+            {districtLink(r, programYear)}
             {r.status !== 'available' && (
               <span className="education-district__na">{unavailable(r)}</span>
             )}

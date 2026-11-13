@@ -212,8 +212,7 @@
 .education-switch__link:focus-visible,
 .education-row__button:focus-visible,
 .education-matrix__cell:focus-visible,
-.education-open-matrix:focus-visible,
-.education-matrix__region:focus-visible {
+.education-open-matrix:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }

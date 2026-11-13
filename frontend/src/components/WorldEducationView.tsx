@@ -159,6 +159,15 @@ const COLUMN_HEADERS: Record<string, string> = {
 }
 const UNAVAILABLE = 'Not available (no district with a ledger)'
 
+const regionLink = (r: WorldEducationRegionRow, programYear: string) => (
+  <Link
+    to={`/region/${r.id}/education?py=${programYear}`}
+    className="education-district__link"
+  >
+    Region {r.id}
+  </Link>
+)
+
 const Regions: React.FC<{
   rows: WorldEducationRegionRow[]
   programYear: string
@@ -180,33 +189,28 @@ const Regions: React.FC<{
     )
   }, [rows, sort])
   const label = 'Regions, education awards'
-  const regionLink = (r: WorldEducationRegionRow) => (
-    <Link
-      to={`/region/${r.id}/education?py=${programYear}`}
-      className="education-district__link"
-    >
-      Region {r.id}
-    </Link>
+  const columns = useMemo<EducationRollupColumn<WorldEducationRegionRow>[]>(
+    () => [
+      {
+        id: 'region',
+        header: 'Region',
+        cell: r => (
+          <span className="education-district">
+            {regionLink(r, programYear)}
+            {r.status !== 'available' && (
+              <span className="education-district__na">{UNAVAILABLE}</span>
+            )}
+          </span>
+        ),
+      },
+      ...METRICS.map(m => ({
+        id: m.sortField!,
+        header: COLUMN_HEADERS[m.id]!,
+        cell: m.render,
+      })),
+    ],
+    [programYear]
   )
-  const columns: EducationRollupColumn<WorldEducationRegionRow>[] = [
-    {
-      id: 'region',
-      header: 'Region',
-      cell: r => (
-        <span className="education-district">
-          {regionLink(r)}
-          {r.status !== 'available' && (
-            <span className="education-district__na">{UNAVAILABLE}</span>
-          )}
-        </span>
-      ),
-    },
-    ...METRICS.map(m => ({
-      id: m.sortField!,
-      header: COLUMN_HEADERS[m.id]!,
-      cell: m.render,
-    })),
-  ]
   const fullTable = (inScroller: boolean) => (
     <EducationRollupTable<WorldEducationRegionRow>
       rows={sorted}
@@ -234,7 +238,7 @@ const Regions: React.FC<{
       identityWraps
       renderIdentity={r => (
         <span className="education-district">
-          {regionLink(r)}
+          {regionLink(r, programYear)}
           {r.status !== 'available' && (
             <span className="education-district__na">{UNAVAILABLE}</span>
           )}
