@@ -67,7 +67,11 @@ const SortIcon: React.FC<{
   activeSortDirection: SortDirection
 }> = ({ field, activeSortField, activeSortDirection }) => {
   if (activeSortField !== field)
-    return <span className="text-gray-300 ml-1">↕</span>
+    return (
+      <span aria-hidden="true" className="text-[var(--ink-3)] ml-1">
+        ↕
+      </span>
+    )
   return (
     <span className="text-tm-loyal-blue ml-1">
       {activeSortDirection === 'asc' ? '↑' : '↓'}
@@ -77,7 +81,12 @@ const SortIcon: React.FC<{
 
 const TierBadge: React.FC<{ level: DistinguishedLevel }> = ({ level }) => {
   if (level === 'NotDistinguished') {
-    return <span className="text-sm text-gray-400">—</span>
+    return (
+      <span className="text-sm text-[var(--ink-3)]">
+        <span aria-hidden="true">—</span>
+        <span className="sr-only">Not distinguished</span>
+      </span>
+    )
   }
   const style = TIER_BADGE_STYLES[level]
   return (
@@ -479,7 +488,10 @@ export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
                           {proj.aprilRenewals}
                         </span>
                       ) : (
-                        <span className="text-gray-400">—</span>
+                        <span className="text-[var(--ink-3)]">
+                          <span aria-hidden="true">—</span>
+                          <span className="sr-only">No April renewals</span>
+                        </span>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-center">

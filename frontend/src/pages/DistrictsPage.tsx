@@ -129,7 +129,9 @@ const PhoneDistrictIdentity: React.FC<{
       }
       aria-pressed={isMine}
       className={`districts-rankings-table__touch-btn flex-shrink-0 inline-flex items-center justify-center rounded ${
-        isMine ? 'text-yellow-500' : 'text-gray-400'
+        isMine
+          ? 'text-tm-loyal-blue'
+          : 'text-[var(--ink-3)] hover:text-tm-loyal-blue'
       }`}
     >
       <svg

@@ -490,7 +490,7 @@
   }
 
   .header-search__input::placeholder {
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   /* The mobile search trigger needs a ≥44px touch target (#1058 AC). It is
@@ -1577,7 +1577,7 @@
     width: 100%;
     padding: 8px 12px 8px 36px;
     background-color: var(--surface-2);
-    border: 1px solid var(--line);
+    border: 1px solid var(--ink-3);
     border-radius: var(--rds-radius-sm);
     font-family: var(--sans);
     font-size: 13px;
@@ -1588,7 +1588,17 @@
   }
 
   .districts-toolbar__search-input::placeholder {
-    color: var(--ink-4);
+    color: var(--ink-3);
+  }
+
+  /* #2643: the light border is --ink-3 (3:1 non-text); dark already passed on
+     --line, so it keeps its quieter edge. */
+  [data-theme='dark'] .districts-toolbar__search-input {
+    border-color: var(--line);
+  }
+
+  [data-theme='dark'] .districts-toolbar__search-input:focus {
+    border-color: var(--loyal-400);
   }
 
   .districts-toolbar__search-input:focus {
@@ -1602,7 +1612,7 @@
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--ink-4);
+    color: var(--ink-3);
     pointer-events: none;
   }
 
@@ -4462,7 +4472,7 @@
   }
 
   .clubs-filter-input::placeholder {
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .clubs-filter-input:hover {
@@ -4900,7 +4910,7 @@
   }
 
   .district-detail-breadcrumbs__separator {
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .district-detail-breadcrumbs__current {
@@ -7271,7 +7281,7 @@
   }
 
   .command-palette__input::placeholder {
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .command-palette__hint {

@@ -174,7 +174,12 @@ const TierLabel: React.FC<{
   districtId: string
 }> = ({ tier, districtId }) => {
   if (!tier || tier === 'NotDistinguished' || tier === 'Unknown')
-    return <span className="text-gray-400">—</span>
+    return (
+      <span className="text-[var(--ink-3)]">
+        <span aria-hidden="true">—</span>
+        <span className="sr-only">No tier</span>
+      </span>
+    )
   const { short, full } = TIER_SHORT[tier]
   return (
     <span

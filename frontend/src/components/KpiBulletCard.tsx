@@ -160,7 +160,7 @@ const BulletBar: React.FC<BulletBarProps> = ({
             data-testid={`tier-tick-${t.key}`}
             aria-hidden="true"
             className={`absolute top-3 h-2 w-px ${
-              current >= t.value ? 'bg-tm-loyal-blue' : 'bg-gray-400'
+              current >= t.value ? 'bg-tm-loyal-blue' : 'bg-[var(--ink-3)]'
             }`}
             style={{
               left: formatPct(positionAt(t.value)),
@@ -237,7 +237,7 @@ const PlanLine: React.FC<{ current: number; planTarget: number }> = ({
       </span>
       <span className="sr-only">Success Plan target</span>{' '}
       <span>{planTarget.toLocaleString()}</span>
-      <span aria-hidden="true" className="text-gray-400">
+      <span aria-hidden="true" className="text-[var(--ink-3)]">
         ·
       </span>
       <span className="text-gray-500">
@@ -248,7 +248,7 @@ const PlanLine: React.FC<{ current: number; planTarget: number }> = ({
 }
 
 const DotSep: React.FC = () => (
-  <span aria-hidden="true" className="text-gray-400">
+  <span aria-hidden="true" className="text-[var(--ink-3)]">
     ·
   </span>
 )
