@@ -10,6 +10,8 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { MemoryRouter } from 'react-router-dom'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { ClubHistoryTable } from '../ClubHistoryTable'
 import type { ClubHistoryRow } from '../../utils/clubHistory'
 
@@ -117,5 +119,37 @@ describe('ClubHistoryTable on the DataTable (#2733)', () => {
   it('sets no text below the 14px floor on the table', () => {
     setup()
     expect(getTable().innerHTML).not.toMatch(/\btext-(?:xs|\[(?:9|1[0-3])px\])/)
+  })
+})
+
+describe('ClubHistoryTable year column (#2733)', () => {
+  const inProgressRows = [{ ...rows[0]!, inProgress: true }, rows[1]!]
+  const css = readFileSync(
+    join(__dirname, '../../styles/components/club-history.css'),
+    'utf-8'
+  )
+  const renderInProgress = () =>
+    render(
+      <MemoryRouter>
+        <ClubHistoryTable rows={inProgressRows} clubName="C" clubId="123" />
+      </MemoryRouter>
+    )
+
+  it('keeps the table at 920px with District, so it fits at 1024', () => {
+    setup()
+    expect(getTable().style.minWidth).toBe('920px')
+  })
+
+  it('keeps the year text on one line', () => {
+    renderInProgress()
+    expect(css).toMatch(
+      /\.club-history-year-link\s*\{[^}]*white-space:\s*nowrap/
+    )
+  })
+
+  it('puts the in-progress tag on its own line under the year', () => {
+    renderInProgress()
+    expect(screen.getByText('in progress')).toBeInTheDocument()
+    expect(css).toMatch(/\.club-history-in-progress\s*\{[^}]*display:\s*block/)
   })
 })
