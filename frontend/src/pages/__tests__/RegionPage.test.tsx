@@ -578,7 +578,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
       'tr'
     )!
     const cell = within(row).getByTestId('countdown-netClubGrowth')
-    expect(cell).toHaveTextContent(/-8/)
+    expect(cell).toHaveTextContent(/\u22128/)
     expect(cell).not.toHaveTextContent(/\+8/)
   })
 
@@ -653,7 +653,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
       'tr'
     )!
     const cell = within(row).getByTestId('countdown-netClubGrowth')
-    expect(cell).toHaveTextContent(/-3/)
+    expect(cell).toHaveTextContent(/\u22123/)
     expect(cell).not.toHaveTextContent(/\+10/)
   })
 
@@ -879,7 +879,7 @@ describe('RegionPage KPI strip — base / current / Δ / ±% (#514 #513)', () =>
 
     const paidCard = await screen.findByLabelText(/paid clubs kpi/i)
     const delta = within(paidCard).getByTestId('kpi-delta')
-    expect(delta.textContent).toContain('-10')
+    expect(delta.textContent).toContain('\u221210')
     expect(delta).toHaveClass('text-tm-true-maroon')
   })
 })
@@ -1008,7 +1008,7 @@ describe('RegionPage base → current → Δ column model (#687 epic #683)', () 
 
     const row = await row61()
     const delta = within(row).getByTestId('payments-delta')
-    expect(delta).toHaveTextContent(/-300/)
+    expect(delta).toHaveTextContent(/\u2212300/)
     expect(delta).not.toHaveTextContent(/\+300/)
     expect(delta.querySelector('span')).toHaveClass('text-tm-true-maroon')
   })

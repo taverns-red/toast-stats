@@ -111,7 +111,7 @@ describe('DistrictsPage - Percentage Formatting', () => {
       renderWithProviders(<DistrictsPage />)
 
       // Wait for data to load and check for negative percentage
-      const element = await screen.findByText('-11.1%')
+      const element = await screen.findByText('\u221211.1%')
       expect(element).toBeInTheDocument()
       expect(element).toHaveClass('text-red-600')
     })
@@ -366,7 +366,7 @@ describe('DistrictsPage - Table Cell Rendering', () => {
 
     // Wait for data to load and check for percentage colors
     const positivePercent = await screen.findByText('+15.5%')
-    const negativePercent = await screen.findByText('-11.1%')
+    const negativePercent = await screen.findByText('\u221211.1%')
     expect(positivePercent).toBeInTheDocument()
     expect(positivePercent).toHaveClass('text-green-600')
     expect(negativePercent).toBeInTheDocument()
