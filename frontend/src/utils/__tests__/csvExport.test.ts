@@ -394,7 +394,7 @@ describe('exportDailyReports', () => {
     exportDailyReports(sampleReports, '61', 'District 61')
     const content = capturedCSVContent!
     expect(content).toContain(
-      'Date,New Members,Renewals,Club Changes,Awards,Net Change'
+      'Date,New Members,Renewals,Club Changes,Awards,New Plus Renewed Members'
     )
   })
 
