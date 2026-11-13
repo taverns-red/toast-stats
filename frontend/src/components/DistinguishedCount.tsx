@@ -19,6 +19,9 @@ export const PROVISIONAL_TOOLTIP =
  *  never reads as a second count). */
 export const PROVISIONAL_NOTE = 'clubs qualifying today, not yet confirmed'
 
+/** Visible one-line key to the confirmed / qualifying-today pair (#2580). */
+export const DistinguishedBasisNote: React.FC = () => null
+
 export interface DistinguishedCountProps {
   confirmed: number
   provisional?: number | null | undefined

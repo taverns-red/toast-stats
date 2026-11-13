@@ -56,7 +56,7 @@ describe('district Distinguished KPI: confirmed headline (#2554)', () => {
       .getByText('Distinguished Clubs')
       .closest('[data-testid="kpi-bullet-card"]') as HTMLElement
     expect(within(card).getByTestId('kpi-value')).toHaveTextContent(
-      visibleThenNote('3 +3 provisional')
+      visibleThenNote('3 +3 qualifying today')
     )
     expect(within(card).getByTestId('world-rank')).toHaveTextContent(
       '#30 of 128'
@@ -84,7 +84,7 @@ describe('district Distinguished KPI: confirmed headline (#2554)', () => {
       .getAllByTestId('district-hub-tile')
       .find(t => /Distinguished/.test(t.textContent ?? ''))!
     const value = tile.querySelector('.district-hub__tile-value')
-    expect(value).toHaveTextContent(visibleThenNote('3 +3 provisional'))
+    expect(value).toHaveTextContent(visibleThenNote('3 +3 qualifying today'))
     // Rank sits on the same confirmed basis.
     expect(tile).toHaveTextContent('#30 of 128')
   })
@@ -143,7 +143,7 @@ describe('district Distinguished KPI: confirmed headline (#2554)', () => {
       renderHub(kpis)
       expect(
         within(openSheet()).getByTestId('distinguished-provisional')
-      ).toHaveTextContent('+3 provisional')
+      ).toHaveTextContent('+3 qualifying today')
     })
   })
 })
