@@ -10,6 +10,9 @@ export interface KpiDeltaCardProps {
   secondaryLabel?: string
   /** Optional breakdown lines under the secondary label (#2425). */
   subLines?: readonly string[]
+  /** Screen-reader-only explanation of a sub-line term, kept out of the list
+   *  so it neither shows nor counts as a line (#2580). */
+  subLinesNote?: string
 }
 
 /**
@@ -28,6 +31,7 @@ export const KpiDeltaCard: React.FC<KpiDeltaCardProps> = ({
   tooltipContent,
   secondaryLabel,
   subLines,
+  subLinesNote,
 }) => {
   const unavailable = current === null
   const isUp = (current ?? 0) > 0
@@ -108,6 +112,11 @@ export const KpiDeltaCard: React.FC<KpiDeltaCardProps> = ({
             <li key={line}>{line}</li>
           ))}
         </ul>
+      )}
+      {subLinesNote && (
+        <p data-testid="kpi-delta-subnote" className="sr-only">
+          {subLinesNote}
+        </p>
       )}
     </div>
   )
