@@ -429,7 +429,7 @@ describe('ClubDetailPage (#208)', () => {
     expect(inGrid.getByText('DCP Goals')).toBeInTheDocument()
 
     // Net Δ = -5 (appears in stats grid + chart)
-    expect(screen.getAllByText('-5').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('\u22125').length).toBeGreaterThanOrEqual(1)
   })
 
   // #1441 — now async: the page waits for the club index to settle before it
@@ -1099,15 +1099,13 @@ describe('Membership Trend + DCP Status re-skin (#619)', () => {
   it('renders the panel meta with an en-dashed program year and data-point count', () => {
     renderWithRoute()
     // baseMockClub has 4 trend points in PY 2025–2026
-    expect(
-      screen.getByText('Program Year 2025–2026 · 4 data points')
-    ).toBeInTheDocument()
+    expect(screen.getByText('PY 2025–26 · 4 data points')).toBeInTheDocument()
   })
 
   it('renders the chart-stats Change as a signed value + signed percent', () => {
     renderWithRoute()
     // base 46 → current 41 → change -5 → -5/46 = -10.9%
-    expect(screen.getByText('-5 (-10.9%)')).toBeInTheDocument()
+    expect(screen.getByText('\u22125 (\u221210.9%)')).toBeInTheDocument()
   })
 
   it('renders all four key-date verticals labeled Jul 1 / Oct 1 / Apr 1 / Jun 30', () => {
@@ -1251,6 +1249,6 @@ describe('membership trend with prior program years (#1791)', () => {
   it('keeps the stats on the current year only', () => {
     renderWithRoute()
     // base 46 → current 41, unchanged by the prior years.
-    expect(screen.getByText('-5 (-10.9%)')).toBeInTheDocument()
+    expect(screen.getByText('\u22125 (\u221210.9%)')).toBeInTheDocument()
   })
 })

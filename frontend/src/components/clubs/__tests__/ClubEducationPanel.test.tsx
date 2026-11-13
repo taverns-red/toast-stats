@@ -86,7 +86,7 @@ describe('ClubEducationPanel', () => {
       paths: [],
       membersWithAward: null,
     })
-    const note = screen.getByText(/no education awards recorded in 2026–2027/i)
+    const note = screen.getByText(/no education awards recorded in PY 2026–27/i)
     expect(note).not.toHaveTextContent(/yet/i)
   })
 
@@ -107,7 +107,7 @@ describe('ClubEducationPanel', () => {
       membersWithAward: 0,
     })
     expect(
-      screen.getByText(/no education awards recorded in 2026–2027/i)
+      screen.getByText(/no education awards recorded in PY 2026–27/i)
     ).toBeInTheDocument()
   })
 })

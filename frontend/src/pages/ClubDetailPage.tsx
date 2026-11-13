@@ -15,7 +15,7 @@ import {
   sinceSnapshotBasis,
 } from '../utils/netChangeBasis'
 import { formatShortDate } from '../utils/dateFormatting'
-import { signedDelta, signedPercent } from '../utils/displayFormat'
+import { formatPY, signedDelta, signedPercent } from '../utils/displayFormat'
 import { MembershipHeadline } from '../components/clubs/MembershipHeadline'
 import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
@@ -548,9 +548,8 @@ const ClubDetailPage: React.FC = () => {
     [filteredMembershipTrend]
   )
 
-  // En-dashed year for display ("2025–2026"), per reference. Used in both the
-  // panel meta and the chart's aria-label so they stay in sync.
-  const programYearLabelDisplay = programYear.label.replace(/-/g, '–')
+  // The shared PY spelling ("PY 2025–26") for the panel meta (#2648).
+  const programYearLabelDisplay = formatPY(programYear.label)
 
   // Per-route title (#780): club + district, falling back to the branded
   // default while the club is still loading or absent.
@@ -935,8 +934,8 @@ const ClubDetailPage: React.FC = () => {
                   Membership Trend
                 </h2>
                 <span className="club-panel__meta">
-                  Program Year {programYearLabelDisplay} ·{' '}
-                  {filteredMembershipTrend.length} data point
+                  {programYearLabelDisplay} · {filteredMembershipTrend.length}{' '}
+                  data point
                   {filteredMembershipTrend.length === 1 ? '' : 's'}
                 </span>
               </div>
