@@ -13,7 +13,7 @@ const narrative = read('../components/district-narrative.css')
 const code = narrative.replace(/\/\*[\s\S]*?\*\//g, '')
 
 const block = (selector: string): string => {
-  const escaped = selector.replace(/[.[\]]/g, '\\$&')
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const m = code.match(new RegExp(`\\n {2}${escaped}\\s*\\{([^}]*)\\}`))
   return m?.[1] ?? ''
 }
