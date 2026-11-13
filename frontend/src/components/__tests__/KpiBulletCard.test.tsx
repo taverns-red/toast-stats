@@ -121,6 +121,19 @@ describe('KpiBulletCard', () => {
       expect(screen.queryByText(/percentile/i)).not.toBeInTheDocument()
     })
 
+    it('hides the region rank chip: a tied world is tied in every region', () => {
+      renderWithRouter(
+        <KpiBulletCard
+          title="Distinguished Clubs"
+          current={0}
+          targets={standardTargets}
+          rankings={tiedRankings}
+        />
+      )
+      expect(screen.queryByText(/#1/)).not.toBeInTheDocument()
+      expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    })
+
     it('still shows rank and percentile when worldTied is false or absent', () => {
       renderWithRouter(
         <KpiBulletCard
