@@ -25,4 +25,18 @@ describe('signed cells (#2648)', () => {
     expect(formatPercentage(3.04).text).toBe('+3.0%')
     expect(formatPercentage(0).text).toBe('0.0%')
   })
+
+  it('formatPercentage: a value that displays as zero is neutral, not red', () => {
+    const tiny = formatPercentage(-0.04)
+    expect(tiny.text).toBe('0.0%')
+    expect(tiny.color).toBe('text-gray-600')
+    expect(formatPercentage(0.04).color).toBe('text-gray-600')
+  })
+
+  it('formatPercentage: NaN keeps the neutral "0.0%"', () => {
+    expect(formatPercentage(NaN)).toEqual({
+      text: '0.0%',
+      color: 'text-gray-600',
+    })
+  })
 })
