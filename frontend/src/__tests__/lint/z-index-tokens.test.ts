@@ -72,7 +72,9 @@ describe('z-index tokens (#2674)', () => {
     const resolved = (file: string, selector: string) => {
       const css = strip(readFileSync(join(SRC, file), 'utf-8'))
       const body = css.match(
-        new RegExp(`${selector.replace(/[[\]'.:=]/g, '\\$&')}\\s*\\{([^}]*)\\}`)
+        new RegExp(
+          `${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`
+        )
       )?.[1]
       const z = body?.match(/z-index:\s*(?:var\((--z-[\w-]+)\)|(\d+))/)
       return z?.[1] ? value(z[1]) : Number(z?.[2])
