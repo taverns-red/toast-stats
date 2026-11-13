@@ -6,6 +6,7 @@ import type { DiffEvent, SnapshotDiff } from '@taverns-red/shared-contracts'
 import { distinguishedTierName } from './distinguishedTier'
 import { toClubHistoryCsvRows, type ClubHistoryRow } from './clubHistory'
 import { logger } from './logger'
+import { PROGRAM_YEAR_START_BASIS_TITLE } from './netChangeBasis'
 import type { SnapshotDate } from '../types/snapshotDate'
 import { coachFilterValue, type ClubCoach } from './clubCoach'
 import { councilStandingCsvRows, type CouncilRow } from './councilStanding'
@@ -641,7 +642,7 @@ export const exportClubPerformance = (
     // shows, without moving the positions above.
     'Members Base',
     'Members Needed',
-    'Net Change Since July 1',
+    `Net Change ${PROGRAM_YEAR_START_BASIS_TITLE}`,
     'Years Chartered',
     'Distinguished Confirmed',
   ]

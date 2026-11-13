@@ -15,6 +15,11 @@ import { WorldwideStandingCard } from '../components/clubs/WorldwideStandingCard
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
+import {
+  PROGRAM_YEAR_START_BASIS,
+  sinceSnapshotBasis,
+} from '../utils/netChangeBasis'
+import { formatShortDate } from '../utils/dateFormatting'
 import { useGlobalFreshness } from '../hooks/useLatestAsOfDate'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { SubpageBreadcrumb } from '../components/SubpageBreadcrumb'
@@ -534,6 +539,13 @@ const ClubDetailPage: React.FC = () => {
         0)
       : 0
   const membershipChange = latestMembership - baseMembership
+  // What the change is measured against (#2712): TI's base when the club has
+  // one; otherwise the first snapshot we hold, named by its own date.
+  const firstSnapshotDate = filteredMembershipTrend[0]?.date
+  const membershipBasis =
+    club?.membershipBase == null && firstSnapshotDate
+      ? sinceSnapshotBasis(formatShortDate(firstSnapshotDate))
+      : PROGRAM_YEAR_START_BASIS
   const latestDcpGoals =
     filteredDcpGoalsTrend.length > 0
       ? (filteredDcpGoalsTrend[filteredDcpGoalsTrend.length - 1]
@@ -871,7 +883,7 @@ const ClubDetailPage: React.FC = () => {
               { label: 'Base', value: baseMembership },
               { label: 'Current', value: latestMembership },
               {
-                label: 'Change since July 1',
+                label: `Change ${membershipBasis}`,
                 value: `${membershipChange > 0 ? '+' : ''}${membershipChange}`,
                 valClass:
                   membershipChange > 0
@@ -960,7 +972,7 @@ const ClubDetailPage: React.FC = () => {
                       <>
                         {latestMembership} members
                         {membershipChange !== 0 &&
-                          ` (${membershipChange > 0 ? '+' : ''}${membershipChange})`}
+                          ` (${membershipChange > 0 ? '+' : ''}${membershipChange} ${membershipBasis})`}
                       </>
                     }
                   >
@@ -979,7 +991,9 @@ const ClubDetailPage: React.FC = () => {
                           </span>
                         </div>
                         <div className="chart-stats__row">
-                          <span className="chart-stats__label">Change</span>
+                          <span className="chart-stats__label">
+                            Change {membershipBasis}
+                          </span>
                           <span
                             className={
                               'chart-stats__val' +

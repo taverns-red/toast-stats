@@ -3,6 +3,7 @@
  */
 
 import { ClubTrend } from '../../hooks/useDistrictAnalytics'
+import { PROGRAM_YEAR_START_BASIS } from '../../utils/netChangeBasis'
 
 /**
  * Sortable field types for the clubs table
@@ -181,7 +182,7 @@ export const COLUMN_CONFIGS: ColumnConfig[] = [
     // sparkline itself is not a filter.
     field: 'netChange',
     label: 'Trend',
-    sortLabel: 'Net change since July 1',
+    sortLabel: `Net change ${PROGRAM_YEAR_START_BASIS}`,
     sortable: true,
     filterable: false,
     filterType: 'numeric',

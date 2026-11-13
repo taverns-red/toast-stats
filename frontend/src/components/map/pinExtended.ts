@@ -14,6 +14,7 @@
 import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import { getClubAnniversary } from '../../utils/clubAnniversary'
+import { PROGRAM_YEAR_START_BASIS } from '../../utils/netChangeBasis'
 import {
   EXTENDED_FACET_PARAMS,
   SUSPENDED,
@@ -96,7 +97,7 @@ const BINS: Record<
     },
   },
   growth: {
-    title: 'Net growth since 1 July',
+    title: `Net growth ${PROGRAM_YEAR_START_BASIS}`,
     keys: ['down5', 'down1', 'none', 'up1', 'up3'],
     labels: [
       'Down 5 or more',

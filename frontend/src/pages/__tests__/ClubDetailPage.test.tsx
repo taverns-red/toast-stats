@@ -791,7 +791,7 @@ describe('Provisional Distinguished Badge — ClubDetailPage', () => {
     expect(screen.queryByText(/since the start of the program year/)).toBeNull()
   })
 
-  it('puts the basis on the membership headline and the Change row (#2712)', () => {
+  it('puts the basis on the stat strip and the Change row of the chart (#2712)', () => {
     setClubOverrides({
       membershipBase: 46,
       membershipTrend: [
@@ -801,9 +801,10 @@ describe('Provisional Distinguished Badge — ClubDetailPage', () => {
     })
     renderWithRoute()
 
+    // Stat strip and the membership chart's Change row.
     expect(
-      screen.getAllByText(/-5 since the start of the program year/).length
-    ).toBeGreaterThan(0)
+      screen.getAllByText(/^Change since the start of the program year$/).length
+    ).toBeGreaterThanOrEqual(2)
   })
 
   it('shows "Provisional" when Distinguished and pre-April with low renewals', () => {
