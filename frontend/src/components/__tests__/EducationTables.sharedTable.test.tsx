@@ -252,6 +252,32 @@ describe('education awards leaderboard (#16)', () => {
   })
 })
 
+describe('leaderboard cards in the page grid (#2732)', () => {
+  it('can shrink below the table min-width, so the table scrolls inside the card', () => {
+    // A grid item defaults to min-width:auto and would grow to the 26rem table,
+    // widening the whole page at 375px; min-w-0 lets the card shrink and the
+    // labelled scroller take the overflow.
+    const board = {
+      available: true,
+      sourceReportType: 'education-achievements',
+      asOf: 'October 01, 2026',
+      ranked: [],
+      ineligible: [],
+    }
+    render(
+      <MemoryRouter>
+        <EducationAwardsLeaderboard
+          rankings={{ awardsPerBase: board, membersWithAward: board }}
+          districtId="61"
+          isPriorProgramYear={false}
+        />
+      </MemoryRouter>
+    )
+    for (const card of screen.getAllByTestId('education-awards-leaderboard'))
+      expect(card).toHaveClass('min-w-0')
+  })
+})
+
 describe('education stylesheet floor (#2732)', () => {
   const css = read('styles/components/education.css')
   const rule = (selector: string): string => {
