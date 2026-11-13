@@ -1,4 +1,5 @@
 import React, { useId, useRef, useState } from 'react'
+import { StaticTableScroll } from '../dataTable/StaticTableScroll'
 import { Link, useSearchParams } from 'react-router-dom'
 import type {
   EducationPathRow,
@@ -221,81 +222,86 @@ const Matrix: React.FC<{ e: EducationSummary }> = ({ e }) => {
       >
         {readout}
       </p>
-      <div
-        className="education-matrix__region"
-        role="region"
-        aria-label={MATRIX_LABEL}
-        tabIndex={0}
-      >
-        <table className="education-matrix" aria-label={MATRIX_LABEL}>
-          <thead>
-            <tr>
-              <th scope="col" className="education-matrix__corner">
-                Path
-              </th>
-              {[1, 2, 3, 4, 5].map(l => (
-                <th
-                  key={l}
-                  scope="col"
-                  className={sel?.level === l ? 'is-highlighted' : undefined}
+      <div className="education-matrix__region">
+        <StaticTableScroll label={MATRIX_LABEL}>
+          <table className="dt education-matrix" aria-label={MATRIX_LABEL}>
+            <caption className="sr-only">
+              {MATRIX_LABEL}: awards by path (rows) and level 1 to 5 (columns).
+              Select a cell to read it.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col" className="education-matrix__corner">
+                  Path
+                </th>
+                {[1, 2, 3, 4, 5].map(l => (
+                  <th
+                    key={l}
+                    scope="col"
+                    className={sel?.level === l ? 'is-highlighted' : undefined}
+                  >
+                    L{l}
+                  </th>
+                ))}
+                <th scope="col">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {e.paths.map(p => (
+                <tr
+                  key={p.path}
+                  className={
+                    sel?.path === p.path ? 'is-highlighted' : undefined
+                  }
                 >
-                  L{l}
-                </th>
-              ))}
-              <th scope="col">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {e.paths.map(p => (
-              <tr
-                key={p.path}
-                className={sel?.path === p.path ? 'is-highlighted' : undefined}
-              >
-                <th scope="row" className="education-matrix__path">
-                  <span className="education-matrix__code">{p.path}</span>
-                  <span className="education-matrix__title">{p.title}</span>
-                </th>
-                {p.levels.map((n, i) => {
-                  const active = sel?.path === p.path && sel.level === i + 1
-                  return (
-                    <td
-                      key={i}
-                      className={
-                        sel?.level === i + 1 ? 'is-highlighted' : undefined
-                      }
-                    >
-                      <button
-                        type="button"
-                        className="education-matrix__cell"
-                        aria-pressed={active}
-                        aria-label={`${p.title} level ${i + 1}: ${n}`}
-                        onClick={() =>
-                          setSel(active ? null : { path: p.path, level: i + 1 })
+                  <th scope="row" className="education-matrix__path">
+                    <span className="education-matrix__code">{p.path}</span>
+                    <span className="education-matrix__title">{p.title}</span>
+                  </th>
+                  {p.levels.map((n, i) => {
+                    const active = sel?.path === p.path && sel.level === i + 1
+                    return (
+                      <td
+                        key={i}
+                        className={
+                          sel?.level === i + 1 ? 'is-highlighted' : undefined
                         }
                       >
-                        {fmt(n)}
-                      </button>
-                    </td>
-                  )
-                })}
-                <td className="education-matrix__total">{fmt(p.total)}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th scope="row" className="education-matrix__path">
-                Total
-              </th>
-              {e.levelTotals.map((n, i) => (
-                <td key={i} className="education-matrix__total">
-                  {fmt(n)}
-                </td>
+                        <button
+                          type="button"
+                          className="education-matrix__cell"
+                          aria-pressed={active}
+                          aria-label={`${p.title} level ${i + 1}: ${n}`}
+                          onClick={() =>
+                            setSel(
+                              active ? null : { path: p.path, level: i + 1 }
+                            )
+                          }
+                        >
+                          {fmt(n)}
+                        </button>
+                      </td>
+                    )
+                  })}
+                  <td className="education-matrix__total">{fmt(p.total)}</td>
+                </tr>
               ))}
-              <td className="education-matrix__total">{fmt(pathways)}</td>
-            </tr>
-          </tfoot>
-        </table>
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row" className="education-matrix__path">
+                  Total
+                </th>
+                {e.levelTotals.map((n, i) => (
+                  <td key={i} className="education-matrix__total">
+                    {fmt(n)}
+                  </td>
+                ))}
+                <td className="education-matrix__total">{fmt(pathways)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </StaticTableScroll>
       </div>
     </>
   )

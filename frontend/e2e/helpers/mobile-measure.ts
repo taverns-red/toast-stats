@@ -32,7 +32,7 @@ export const NOT_PROSE_LINKS = [
   '[data-testid="district-csp-line"] a', // Overview "See which clubs →" (17px)
   '[data-testid="gap-tile-link"] a', // #2390 trophy case "How we count"
   '[data-testid="division-area-heading"] a', // division page area links (22px)
-  '[data-testid="education-awards-leaderboard"] td a', // analytics club link (61×37)
+  '[data-testid="education-awards-leaderboard"] th a', // analytics club link (61×37)
   '.maplibregl-ctrl-attrib a', // #1944 map ODbL credit links (14px tall)
   '.app-shell-footer__link', // #2017 footer meta links (17px at 844×390)
 ]

@@ -1,5 +1,6 @@
 import React, { useId, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { StaticTableScroll } from './dataTable/StaticTableScroll'
 import {
   MIN_ELIGIBLE_BASE,
   type EducationAwardEntry,
@@ -77,17 +78,16 @@ const provenance = (ranking: EducationAwardRanking): string | null => {
   return `Source: ${label}${ranking.asOf ? `, as of ${ranking.asOf}` : ''}`
 }
 
-const thClass =
-  'px-2 py-2 text-sm font-semibold text-gray-600 theme-dark:text-gray-400'
-const tdClass = 'px-2 py-2 align-top'
-/* Below 768 (#2361) the "n / d" count sits under the rate in one column:
-   with Rank, count and Rate all fixed-width, a 320 px phone left the Club
-   column 26 px and names broke mid-word. */
-const countColClass = 'hidden md:table-cell'
+/* On the shared table styles (#2732, M4 of #2676): rank, club, count and rate
+   are four real columns at every width (the count used to be hidden by CSS
+   below 768, #2361). A phone scrolls the table sideways in a labelled region
+   rather than losing a column or squeezing the club name. */
 
 interface ClubTableProps {
   caption: string
   captionVisible: boolean
+  /** Names this table's scroll region; unique per card. */
+  label: string
   entries: EducationAwardEntry[]
   tiedRanks: Set<number>
   showRank: boolean
@@ -98,88 +98,70 @@ interface ClubTableProps {
 const ClubTable: React.FC<ClubTableProps> = ({
   caption,
   captionVisible,
+  label,
   entries,
   tiedRanks,
   showRank,
   countLabel,
   districtId,
 }) => (
-  <table className="w-full table-fixed text-sm font-tm-body">
-    <caption
-      className={
-        captionVisible
-          ? 'pt-3 pb-1 text-left text-xs font-semibold text-gray-700 theme-dark:text-gray-300'
-          : 'sr-only'
-      }
-    >
-      {caption}
-    </caption>
-    <thead className="border-b border-gray-200 theme-dark:border-gray-700">
-      <tr>
-        {showRank && (
-          <th scope="col" className={`${thClass} w-10 md:w-12 text-left`}>
-            Rank
-          </th>
-        )}
-        <th scope="col" className={`${thClass} text-left`}>
-          Club
-        </th>
-        <th
-          scope="col"
-          className={`${thClass} ${countColClass} w-[5.5rem] text-right`}
-        >
-          {countLabel}
-        </th>
-        <th scope="col" className={`${thClass} w-[4.5rem] text-right`}>
-          Rate
-        </th>
-      </tr>
-    </thead>
-    <tbody className="divide-y divide-gray-100 theme-dark:divide-gray-800">
-      {entries.map(e => (
-        <tr key={e.clubId}>
+  <StaticTableScroll label={label}>
+    <table className="dt entity-table education-lb">
+      <caption className={captionVisible ? 'education-lb__caption' : 'sr-only'}>
+        {caption}
+      </caption>
+      <thead>
+        <tr>
           {showRank && (
-            <td
-              className={`${tdClass} tabular-nums text-sm font-bold text-tm-true-maroon`}
-            >
-              {e.rank !== null && tiedRanks.has(e.rank) && (
-                <span aria-hidden="true">=</span>
-              )}
-              {e.rank}
-              {e.rank !== null && tiedRanks.has(e.rank) && (
-                <span className="sr-only"> (tied)</span>
-              )}
-            </td>
+            <th scope="col" className="education-lb__rank">
+              Rank
+            </th>
           )}
-          <td className={`${tdClass} break-words`}>
-            <Link
-              to={`/district/${districtId}/club/${e.clubId}`}
-              className="text-tm-loyal-blue hover:underline"
-            >
-              {e.clubName}
-            </Link>
-            <span className="block text-xs text-gray-600 theme-dark:text-gray-400">
-              Div {e.divisionId} · Area {e.areaId}
-            </span>
-          </td>
-          <td
-            className={`${tdClass} ${countColClass} text-right tabular-nums text-sm text-gray-700 theme-dark:text-gray-300`}
-          >
-            {e.numerator} / {e.denominator}
-          </td>
-          <td
-            className={`${tdClass} text-right tabular-nums text-sm font-semibold text-gray-900 theme-dark:text-gray-100`}
-          >
-            {formatPercent(e.ratio)}
-            <span className="block whitespace-nowrap font-normal text-xs text-gray-600 theme-dark:text-gray-400 md:hidden">
-              <span className="sr-only">{countLabel}: </span>
-              {e.numerator} / {e.denominator}
-            </span>
-          </td>
+          <th scope="col">Club</th>
+          <th scope="col" className="dt-num education-lb__count">
+            {countLabel}
+          </th>
+          <th scope="col" className="dt-num education-lb__rate">
+            Rate
+          </th>
         </tr>
-      ))}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {entries.map(e => (
+          <tr key={e.clubId}>
+            {showRank && (
+              <td className="tabular education-lb__rank-cell">
+                {e.rank !== null && tiedRanks.has(e.rank) && (
+                  <span aria-hidden="true">=</span>
+                )}
+                {e.rank}
+                {e.rank !== null && tiedRanks.has(e.rank) && (
+                  <span className="sr-only"> (tied)</span>
+                )}
+              </td>
+            )}
+            <th scope="row">
+              <Link
+                to={`/district/${districtId}/club/${e.clubId}`}
+                className="entity-table__link"
+              >
+                {e.clubName}
+              </Link>
+              <span className="education-lb__where">
+                Div {e.divisionId} · Area {e.areaId}
+              </span>
+            </th>
+            <td className="dt-num">
+              {e.numerator} / {e.denominator}
+            </td>
+            <td className="dt-num education-lb__rate-cell">
+              {formatPercent(e.ratio)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </StaticTableScroll>
 )
 
 const tiedRanksOf = (entries: EducationAwardEntry[]): Set<number> => {
@@ -220,7 +202,7 @@ const LeaderboardCard: React.FC<CardProps> = ({
   return (
     <section
       aria-labelledby={titleId}
-      className="redesign-panel"
+      className="redesign-panel min-w-0"
       data-testid="education-awards-leaderboard"
     >
       <h3 id={titleId} className="redesign-panel__header !mb-1">
@@ -259,6 +241,7 @@ const LeaderboardCard: React.FC<CardProps> = ({
                     : `Ranked clubs (top ${Math.min(TOP_N, ranked.length)})`
                 }
                 captionVisible={false}
+                label={`Ranked clubs by ${spec.countLabel.toLowerCase()}`}
                 entries={visibleRanked}
                 tiedRanks={tiedRanksOf(ranked)}
                 showRank
@@ -270,6 +253,7 @@ const LeaderboardCard: React.FC<CardProps> = ({
               <ClubTable
                 caption={`Not eligible (base under ${MIN_ELIGIBLE_BASE})`}
                 captionVisible
+                label={`Clubs not eligible for ${spec.countLabel.toLowerCase()}`}
                 entries={ineligible}
                 tiedRanks={new Set()}
                 showRank={false}

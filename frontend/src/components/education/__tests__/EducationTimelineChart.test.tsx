@@ -544,3 +544,21 @@ describe('EducationTimelineChart — table view', () => {
     expect(screen.queryByRole('columnheader', { name: 'Last year' })).toBeNull()
   })
 })
+
+describe('EducationTimelineChart data table on the shared styles (#2732, M4 of #2676)', () => {
+  it('has the shared chrome, a caption, scoped headers and a labelled scroller', () => {
+    render(<EducationTimelineChart {...baseProps} />)
+    const table = screen.getByRole('table', {
+      name: 'Education awards by snapshot date',
+    })
+    expect(table).toHaveClass('dt')
+    expect(table.querySelector('caption')?.textContent?.trim()).toBeTruthy()
+    for (const th of table.querySelectorAll('thead th'))
+      expect(th).toHaveAttribute('scope', 'col')
+    for (const th of table.querySelectorAll('tbody th'))
+      expect(th).toHaveAttribute('scope', 'row')
+    const region = table.closest('[role="region"]')
+    expect(region).toHaveAttribute('tabindex', '0')
+    expect(region?.getAttribute('aria-label')).toMatch(/scrolls sideways/)
+  })
+})

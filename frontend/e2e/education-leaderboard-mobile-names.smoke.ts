@@ -1,20 +1,21 @@
 import { test, expect, type Page } from './fixtures/test'
 
-/* Club names in the Education leaderboards (#2361).
+/* Club names in the Education leaderboards (#2361, reshaped by #2732).
  *
- * The two leaderboards on /district/:id/education are fixed-layout tables:
- * Rank (48 px), Club, "Awards / base" (88 px) and Rate (72 px). On a phone
- * the fixed columns left the Club column 26 px wide at 320 and 81 px at 375,
- * and `break-words` split names mid-word ("Toastmaste / rs"). Below 768 the
- * count now sits under the rate in one column, so the name gets the width.
+ * The two leaderboards on /district/:id/education are tables on the shared
+ * .dt chrome with four real columns at every width: Rank, Club (a row header),
+ * the "n / d" count and Rate. The count column used to be hidden below 768 and
+ * the fixed columns left the Club column 26 px wide at 320, so names split
+ * mid-word ("Toastmaste / rs"). The table now has a minimum width and a narrow
+ * card scrolls it sideways in a labelled region instead.
  *
  * Measured on the deployed build (BASE_URL) by bounding box (Lesson 134),
  * with both leaderboards expanded (every ranked and not-eligible club), in
  * light and dark: every word of every club name sits on one line (a word
  * split across lines is a mid-word break; a hyphenated name may wrap after
- * its hyphen), the name stays inside its cell,
- * every row still shows its "n / d" count and its rate, and the page never
- * scrolls sideways with the `overflow-x:hidden` mask off. */
+ * its hyphen), the name stays inside its cell, every row still shows its
+ * "n / d" count and its rate, and the page never scrolls sideways with the
+ * `overflow-x:hidden` mask off. */
 
 const EDUCATION = '/district/86/education'
 const BOARD = '[data-testid="education-awards-leaderboard"]'
@@ -57,7 +58,7 @@ async function measure(page: Page): Promise<Geometry> {
       .filter(tr => tr.getBoundingClientRect().height > 0)
       .map(tr => {
         const a = tr.querySelector('a') as HTMLAnchorElement
-        const td = a.closest('td') as HTMLElement
+        const td = a.closest('th, td') as HTMLElement
         const textNode = a.firstChild as Text
         const text = textNode.data
         const brokenWords: string[] = []
