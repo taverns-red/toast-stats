@@ -438,8 +438,9 @@ describe('DistrictDetailPage - Division Performance Cards Integration', () => {
       expect(divisionHeadings.length).toBeGreaterThanOrEqual(2) // At least Division A and Division B
 
       // Verify heading text
-      expect(screen.getByText(/Division A/)).toBeInTheDocument()
-      expect(screen.getByText(/Division B/)).toBeInTheDocument()
+      // (Each area table's sr-only caption also names its division, #2718.)
+      expect(screen.getAllByText(/Division A/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/Division B/).length).toBeGreaterThan(0)
     })
 
     it('should have sufficient color contrast for status indicators', () => {

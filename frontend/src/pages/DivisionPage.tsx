@@ -294,10 +294,7 @@ const DivisionPage: React.FC = () => {
           <LoadingSkeleton variant="table" count={3} />
         ) : (
           divisionPerformance && (
-            <>
-              <h2 className="entity-section-heading">Recognition</h2>
-              <DivisionPerformanceCard division={divisionPerformance} />
-            </>
+            <DivisionPerformanceCard division={divisionPerformance} />
           )
         )}
       </div>

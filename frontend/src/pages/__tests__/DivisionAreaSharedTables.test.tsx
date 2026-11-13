@@ -242,10 +242,10 @@ describe('AreaPage headings (#2718, UNIT-27)', () => {
     expect(getByRole('heading', { level: 2, name: 'Clubs (2)' })).toBeVisible()
   })
 
-  it('the Division page labels its club sections the same way', () => {
-    const { getByRole } = renderDivision()
-    expect(
-      getByRole('heading', { level: 2, name: 'Recognition' })
-    ).toBeVisible()
+  // The division page keeps its card first: an h2 above it pushed the card
+  // past the 110px first-content budget of the 375 gate (mobile-375-budgets).
+  it('the Division page puts no heading above its recognition card', () => {
+    const { queryByRole } = renderDivision()
+    expect(queryByRole('heading', { level: 2, name: 'Recognition' })).toBeNull()
   })
 })

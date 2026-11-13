@@ -127,10 +127,15 @@ test('division page at 1024: area table headers stay short and 14px or more', as
   }
 })
 
-test('division page at 768: the area table uses the compact layout, not a clipped nine-column table', async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 768, height: 1024 })
-  await open(page, DIVISION, '.priority-columns')
-  await expect(page.locator('table.entity-table--areas')).toHaveCount(0)
-})
+for (const [name, path] of [
+  ['division page', DIVISION],
+  ['area page', AREA],
+] as const) {
+  test(`${name} at 768: the area table is compact, not a clipped nine-column table`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 768, height: 1024 })
+    await open(page, path, '.priority-columns')
+    await expect(page.locator('table.entity-table--areas')).toHaveCount(0)
+  })
+}

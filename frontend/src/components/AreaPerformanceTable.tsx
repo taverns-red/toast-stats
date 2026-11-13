@@ -234,7 +234,7 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
 
   const fullTable = (
     <table className="dt entity-table entity-table--areas">
-      <caption className="sr-only">Recognition by area</caption>
+      <caption className="sr-only">{`${label}, recognition by area`}</caption>
       <thead>
         <tr>
           <th scope="col">Area</th>
