@@ -13,26 +13,20 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     font-family: var(--tm-font-body);
     color: var(--tm-black);
-    transition:
-      box-shadow 0.2s ease-in-out,
-      transform 0.2s ease-in-out;
+    transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
   }
 
   /* Card Variants */
   .tm-card-default {
     background-color: var(--tm-white);
     border: var(--tm-border) solid var(--tm-cool-gray-30);
-    box-shadow:
-      0 1px 3px rgba(0, 0, 0, 0.1),
-      0 1px 2px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
   }
 
   .tm-card-elevated {
     background-color: var(--tm-white);
     border: var(--tm-border) solid var(--tm-cool-gray-20);
-    box-shadow:
-      0 4px 6px rgba(0, 0, 0, 0.1),
-      0 2px 4px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
   }
 
   .tm-card-outlined {
@@ -63,9 +57,7 @@
 
   .tm-card-interactive:hover {
     transform: translateY(-1px);
-    box-shadow:
-      0 8px 15px rgba(0, 0, 0, 0.1),
-      0 4px 6px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
   }
 
   .tm-card-interactive:focus-visible {
@@ -129,10 +121,32 @@
   }
 
   /* Card header styling */
+  .tm-card-header {
+    margin-bottom: var(--tm-space-md);
+    padding-bottom: var(--tm-space-sm);
+    border-bottom: var(--tm-border) solid var(--tm-cool-gray-30);
+  }
+
+  .tm-card-header h1,
+  .tm-card-header h2,
+  .tm-card-header h3 {
+    margin: 0;
+    font-family: var(--tm-font-headline);
+    color: var(--tm-black);
+  }
 
   /* Card content styling */
+  .tm-card-content {
+    font-size: max(var(--tm-body-medium-font-size), 14px);
+    line-height: var(--tm-body-medium-line-height);
+  }
 
   /* Card footer styling */
+  .tm-card-footer {
+    margin-top: var(--tm-space-md);
+    padding-top: var(--tm-space-sm);
+    border-top: var(--tm-border) solid var(--tm-cool-gray-30);
+  }
 
   /* Responsive adjustments */
   @media (max-width: 768px) {

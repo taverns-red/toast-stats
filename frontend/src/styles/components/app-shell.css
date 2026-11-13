@@ -238,6 +238,27 @@
     color: var(--link);
   }
 
+  .app-shell-nav__link--soon {
+    color: var(--ink-4);
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .app-shell-nav__link--soon::after {
+    content: 'soon';
+    font-family: var(--mono, ui-monospace, SFMono-Regular, monospace);
+    font-size: var(--tm-font-size-xs);
+    font-weight: 500;
+    background-color: var(--surface-3);
+    color: var(--ink-4);
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    vertical-align: 1px;
+  }
+
   /* "About ▾" nav disclosure (#889) — mobile-only fold for the version +
      license meta the dropped footer used to carry. The <summary> reuses
      .app-shell-nav__link for the nav-item look + >=44px touch target; we
@@ -673,6 +694,15 @@
     padding: 32px 24px;
   }
 
+  .districts-filters-card {
+    margin-bottom: 12px;
+    padding: 16px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-md);
+    box-shadow: var(--rds-shadow-sm);
+  }
+
   .districts-page-header {
     display: flex;
     flex-direction: column;
@@ -790,6 +820,27 @@
   /* Orientation strip (#415) — first-time-visitor primer below the lede.
      Quieter than the lede but still legible. Inline `kbd` styling carries
      the keyboard-shortcut hint. */
+  .districts-page-header__orientation {
+    margin: 8px 0 0;
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-3);
+    max-width: 70ch;
+  }
+
+  .districts-page-header__orientation kbd {
+    display: inline-block;
+    padding: 0 5px;
+    margin: 0 1px;
+    font-family: var(--mono, ui-monospace, SFMono-Regular, monospace);
+    font-size: var(--tm-font-size-xs);
+    color: var(--ink-2);
+    background-color: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    vertical-align: 1px;
+  }
 
   /* "What changed since last visit" diff strip (#418). Loyal-blue tinted
      pill that surfaces only when the user has visited before AND the
@@ -1029,6 +1080,14 @@
      skeleton/error → loaded swap doesn't shift the KPI strip down (CLS,
      #826/#488, Lesson 125). Height matches the rendered hero input
      (14px padding ×2 + ~24px line box + 2px border ×2, border-box). */
+  .districts-hero-search-skeleton {
+    display: block;
+    height: 56px;
+    margin-bottom: 12px;
+    background-color: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-sm);
+  }
 
   /* #922 — Reserved slot for the mobile-stacked header actions (freshness
      pill + PY/date chips + Export/Share) in the loading/error shell. At
@@ -1554,6 +1613,63 @@
   }
 
   /* Type-ahead suggestions dropdown */
+  .districts-toolbar__search-suggestions {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: var(--z-popover);
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-md);
+    box-shadow: var(--rds-shadow-lg);
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  .districts-toolbar__search-suggestions li {
+    margin: 0;
+    padding: 0;
+  }
+
+  .districts-toolbar__search-suggestion {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--rds-radius-sm);
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink);
+    text-decoration: none;
+    transition: background-color 100ms;
+  }
+
+  .districts-toolbar__search-suggestion:hover,
+  .districts-toolbar__search-suggestion:focus-visible {
+    background-color: var(--surface-2);
+    outline: none;
+  }
+
+  .districts-toolbar__search-suggestion-num {
+    font-weight: 600;
+    color: var(--loyal-500);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .districts-toolbar__search-suggestion-name {
+    color: var(--ink-2);
+  }
+
+  .districts-toolbar__search-suggestion-rank {
+    font-size: 12px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
 
   /* ── Recognition badges + legend (#1361) ────────────────────────────────
      One badge shape for both recognition families. The TEXT is themed ink on
@@ -1938,6 +2054,29 @@
      (Lesson 111). Gated to mobile by React (showMobileDisclosure), so no media
      query is needed here — it simply isn't rendered on desktop. Themed tokens
      so it remaps in dark (Lesson 116 — no hardcoded literals). */
+  .districts-rankings-table__show-all {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    margin-top: 0.5rem;
+    padding: 0.625rem 1rem;
+    border: 1px solid var(--line, #e5e7eb);
+    border-radius: 0.5rem;
+    background: var(--surface, #ffffff);
+    /* Label is primary ink (AA on --surface in both themes); the loyal-blue
+       accent (#2080, was amber) is reserved for the hover border. */
+    color: var(--ink, #0f1720);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease;
+  }
+  .districts-rankings-table__show-all:hover {
+    background: var(--surface-2, #f9fafb);
+    border-color: var(--tm-loyal-blue);
+  }
 
   /* Region district rankings and the regions leaderboard are on the shared
      DataTable (#2702): the pinned key column, the scroll region and the edge
@@ -2006,6 +2145,32 @@
 
   .districts-rankings-table tbody tr:last-child td {
     border-bottom: 0;
+  }
+
+  .districts-filters-card__date-label {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  .districts-filters-card__date-select {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-sm);
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink);
+  }
+
+  .districts-filters-card__date-help {
+    margin-top: 4px;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink-3);
   }
 
   /* Club detail hero — loyal panel with charter eyebrow + h1 + sub-line +
@@ -2320,6 +2485,10 @@
   .club-minimap__frame[data-tiles='painted'] .club-minimap__svg {
     opacity: 0;
     visibility: hidden;
+  }
+
+  .club-minimap__tiles .maplibregl-canvas {
+    cursor: pointer;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -5685,9 +5854,34 @@
      WebKit/Safari (renders ~20px tall on iOS), defeating the touch target —
      caught by the WebKit preview smoke (#710 dual-engine, lesson 108). With
      the native chrome off we own the box height and supply our own caret. */
+  .clubs-mobile-select {
+    appearance: none;
+    min-height: 44px;
+    padding: 0 28px 0 10px;
+    background-color: var(--surface);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    cursor: pointer;
+  }
 
   /* Lighter caret on dark surfaces so the affordance stays visible
      (lesson 096 — a token/asset that doesn't adapt is a dark-mode trap). */
+  [data-theme='dark'] .clubs-mobile-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa4b2' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+
+  .clubs-sort-dir {
+    min-width: 44px;
+    min-height: 44px;
+    color: var(--ink-3);
+  }
+
+  .clubs-sort-dir:hover {
+    color: var(--ink);
+  }
 
   /* ── Clubs table column model: phone status chip + DCP bar (#669) ──
      The desktop table no longer uses pills (#2676): Health is a shape marker
@@ -5827,6 +6021,14 @@
     outline-offset: 2px;
   }
 
+  .clubs-card__name {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.25;
+    color: var(--ink);
+  }
+
   /* CC-7 (#872): inline text links that sit inside an already-interactive
      surface — the desktop club-name cell (inside a clickable row) and the
      division card's "Division X" heading. Both inherit the surrounding colour,
@@ -5857,6 +6059,23 @@
       align-items: center;
       min-height: 44px;
     }
+  }
+
+  .clubs-card__stat-val {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .clubs-card__stat-unit {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--ink-3);
+  }
+
+  .clubs-card__stat-label {
+    font-size: var(--tm-font-size-xs);
+    color: var(--ink-3);
   }
 
   /* History page year strip (#367) — chip row of archived years. */

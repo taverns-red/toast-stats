@@ -2,16 +2,109 @@
 
 @layer brand {
   /* Navigation Container */
+  .tm-navigation {
+    background-color: var(--tm-loyal-blue);
+    color: var(--tm-white);
+  }
 
   /* Brand-Compliant Navigation Class (Task 6.1 Requirements) */
+  .tm-nav {
+    background-color: var(--tm-loyal-blue);
+    color: var(--tm-white);
+    font-family: var(--tm-font-headline);
+    font-weight: 600;
+    padding: var(--tm-component-padding-sm) var(--tm-component-padding-md);
+  }
 
   /* Navigation Item Base */
+  .tm-nav-item {
+    font-family: var(--tm-font-headline);
+    font-weight: 600;
+    color: var(--tm-white);
+    min-height: var(--tm-touch-target);
+    min-width: var(--tm-touch-target);
+    padding: 12px 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: background-color 0.2s ease-in-out;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+  }
 
   /* Navigation Item States */
+  .tm-nav-item:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .tm-nav-item:active:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .tm-nav-item:focus-visible {
+    outline: 2px solid var(--tm-white);
+    outline-offset: 2px;
+  }
+
+  .tm-nav-item[aria-current="page"],
+  .tm-nav-item.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    font-weight: 700;
+  }
+
+  .tm-nav-item:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .tm-nav-item:disabled:hover {
+    background-color: transparent;
+  }
 
   /* Navigation Menu Layout */
+  .tm-nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
 
   /* Responsive Navigation */
+  @media (max-width: 768px) {
+    .tm-nav-menu {
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .tm-nav-item {
+      width: 100%;
+      justify-content: flex-start;
+      padding: 16px 20px;
+    }
+  }
 
   /* Navigation Brand/Logo Area */
+  .tm-nav-brand {
+    font-family: var(--tm-font-headline);
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--tm-white);
+    text-decoration: none;
+    padding: 12px 0;
+  }
+
+  .tm-nav-brand:hover {
+    color: var(--tm-white);
+    text-decoration: none;
+  }
+
+  .tm-nav-brand:focus-visible {
+    outline: 2px solid var(--tm-white);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }

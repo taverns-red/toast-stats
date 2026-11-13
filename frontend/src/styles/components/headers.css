@@ -2,16 +2,108 @@
 
 @layer brand {
   /* Header Container */
+  .tm-header {
+    padding: 16px 24px;
+  }
+
+  .tm-header-primary {
+    background-color: var(--tm-loyal-blue);
+    color: var(--tm-white);
+  }
+
+  .tm-header-secondary {
+    background-color: var(--tm-cool-gray);
+    color: var(--tm-black);
+  }
 
   /* Header Layout */
+  .tm-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
 
   /* Header Title */
+  .tm-header-title {
+    font-family: var(--tm-font-headline);
+    margin: 0;
+  }
+
+  .tm-header-title.tm-h1 {
+    font-size: var(--tm-h1-font-size);
+    line-height: var(--tm-h1-line-height);
+    font-weight: var(--tm-h1-font-weight);
+  }
+
+  .tm-header-title.tm-h2 {
+    font-size: var(--tm-h2-font-size);
+    line-height: var(--tm-h2-line-height);
+    font-weight: var(--tm-h2-font-weight);
+  }
+
+  .tm-header-title.tm-h3 {
+    font-size: var(--tm-h3-font-size);
+    line-height: var(--tm-h3-line-height);
+    font-weight: var(--tm-h3-font-weight);
+  }
 
   /* Header Actions */
+  .tm-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .tm-header-actions.align-left {
+    justify-content: flex-start;
+  }
+
+  .tm-header-actions.align-center {
+    justify-content: center;
+  }
+
+  .tm-header-actions.align-right {
+    justify-content: flex-end;
+  }
 
   /* Responsive Header */
+  @media (max-width: 768px) {
+    .tm-header {
+      padding: 12px 16px;
+    }
+    
+    .tm-header-content {
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    
+    .tm-header-actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+    
+    .tm-header-title {
+      font-size: 1.5rem;
+    }
+  }
 
   /* Header with Navigation */
+  .tm-header + .tm-navigation,
+  .tm-navigation + .tm-header {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
 
   /* Header Accessibility */
+  .tm-header [role="banner"] {
+    /* Ensure proper landmark identification */
+  }
+
+  .tm-header .tm-header-title:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
