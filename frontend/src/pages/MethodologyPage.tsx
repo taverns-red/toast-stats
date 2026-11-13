@@ -769,7 +769,7 @@ const MethodologyPage: React.FC = () => {
               rankings row either the page shows the qualifying-today figure
               labelled as such, not as confirmed. On What Changed there is no
               qualifying-today figure, so a date that has only the rankings row
-              shows the confirmed count and &ldquo;Provisional not
+              shows the confirmed count and &ldquo;Qualifying today not
               recorded&rdquo;.
             </p>
           </div>

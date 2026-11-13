@@ -256,7 +256,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
         aria-live="polite"
       >
         <svg
-          className="w-5 h-5 flex-shrink-0 text-gray-400"
+          className="w-5 h-5 flex-shrink-0 text-[var(--ink-3)]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

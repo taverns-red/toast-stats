@@ -29,7 +29,7 @@
     left: 16px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--ink-4);
+    color: var(--ink-3);
     pointer-events: none;
   }
 
@@ -39,7 +39,7 @@
     height: 56px;
     padding: 0 16px 0 48px;
     background-color: var(--surface);
-    border: 2px solid var(--line);
+    border: 2px solid var(--ink-3);
     border-radius: var(--rds-radius-md);
     font-family: var(--sans);
     font-size: 16px;
@@ -74,7 +74,17 @@
   }
 
   .landing-search__input::placeholder {
-    color: var(--ink-4);
+    color: var(--ink-3);
+  }
+
+  /* #2643: the light border is --ink-3 (3:1 non-text); dark already passed on
+     --line, so it keeps its quieter edge. */
+  [data-theme='dark'] .landing-search__input {
+    border-color: var(--line);
+  }
+
+  [data-theme='dark'] .landing-search__input:focus {
+    border-color: var(--loyal-400);
   }
 
   .landing-search__input:focus {

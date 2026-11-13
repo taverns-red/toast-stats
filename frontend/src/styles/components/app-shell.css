@@ -490,7 +490,7 @@
   }
 
   .header-search__input::placeholder {
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   /* The mobile search trigger needs a ≥44px touch target (#1058 AC). It is
@@ -1577,7 +1577,7 @@
     width: 100%;
     padding: 8px 12px 8px 36px;
     background-color: var(--surface-2);
-    border: 1px solid var(--line);
+    border: 1px solid var(--ink-3);
     border-radius: var(--rds-radius-sm);
     font-family: var(--sans);
     font-size: 13px;
@@ -1588,7 +1588,17 @@
   }
 
   .districts-toolbar__search-input::placeholder {
-    color: var(--ink-4);
+    color: var(--ink-3);
+  }
+
+  /* #2643: the light border is --ink-3 (3:1 non-text); dark already passed on
+     --line, so it keeps its quieter edge. */
+  [data-theme='dark'] .districts-toolbar__search-input {
+    border-color: var(--line);
+  }
+
+  [data-theme='dark'] .districts-toolbar__search-input:focus {
+    border-color: var(--loyal-400);
   }
 
   .districts-toolbar__search-input:focus {
@@ -1602,7 +1612,7 @@
     left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--ink-4);
+    color: var(--ink-3);
     pointer-events: none;
   }
 
@@ -2952,7 +2962,7 @@
     list-style: none;
     margin: 0;
     padding: 0;
-    font-family: var(--rt-font-body);
+    font-family: var(--sans);
     font-size: 0.875rem;
     color: var(--ink);
   }
@@ -3027,7 +3037,7 @@
     list-style: none;
     margin: 0;
     padding: 0;
-    font-family: var(--rt-font-body);
+    font-family: var(--sans);
     font-size: 0.875rem;
     color: var(--ink);
   }
@@ -3108,7 +3118,7 @@
 
   .club-lifecycle__note {
     margin: var(--rt-space-2) 0 0;
-    font-family: var(--rt-font-body);
+    font-family: var(--sans);
     font-size: 0.875rem;
     color: var(--ink-3);
   }
@@ -3129,7 +3139,7 @@
     list-style: none;
     margin: 0;
     padding: 0;
-    font-family: var(--rt-font-body);
+    font-family: var(--sans);
     font-size: 0.875rem;
     color: var(--ink);
   }
@@ -3197,7 +3207,7 @@
 
   .club-changes__note {
     margin: var(--rt-space-2) 0 0;
-    font-family: var(--rt-font-body);
+    font-family: var(--sans);
     font-size: 0.875rem;
     color: var(--ink-3);
   }
@@ -3215,7 +3225,7 @@
 
   .club-changes__more {
     margin: var(--rt-space-3) 0 0;
-    font-family: var(--rt-font-body);
+    font-family: var(--sans);
     font-size: 0.875rem;
   }
 
@@ -3285,7 +3295,7 @@
      the uppercase labels. */
   .club-edu__note {
     margin: 0;
-    font-family: var(--rt-font-body);
+    font-family: var(--sans);
     font-size: 0.875rem;
     color: var(--ink-2);
   }
@@ -3298,7 +3308,7 @@
   }
 
   .club-edu__kpi dt {
-    font-family: var(--rt-font-body);
+    font-family: var(--sans);
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -3308,7 +3318,7 @@
 
   .club-edu__kpi dd {
     margin: var(--rt-space-1) 0 0;
-    font-family: var(--rt-font-display);
+    font-family: var(--serif);
     font-size: var(--rt-text-lg);
     font-weight: 700;
     color: var(--ink);
@@ -3346,7 +3356,7 @@
     gap: var(--rt-space-1) var(--rt-space-4);
     margin: var(--rt-space-2) 0 var(--rt-space-4);
     padding: 0;
-    font-family: var(--rt-font-body);
+    font-family: var(--sans);
     font-size: 0.875rem;
     color: var(--ink-2);
   }
@@ -3366,7 +3376,7 @@
 
   .club-edu__subhead {
     margin: 0 0 var(--rt-space-2);
-    font-family: var(--rt-font-body);
+    font-family: var(--sans);
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -3379,7 +3389,7 @@
     list-style: none;
     margin: 0 0 var(--rt-space-4);
     padding: 0;
-    font-family: var(--rt-font-body);
+    font-family: var(--sans);
     font-size: 0.875rem;
     color: var(--ink);
   }
@@ -4462,7 +4472,7 @@
   }
 
   .clubs-filter-input::placeholder {
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .clubs-filter-input:hover {
@@ -4900,7 +4910,7 @@
   }
 
   .district-detail-breadcrumbs__separator {
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .district-detail-breadcrumbs__current {
@@ -7271,7 +7281,7 @@
   }
 
   .command-palette__input::placeholder {
-    color: var(--ink-4);
+    color: var(--ink-3);
   }
 
   .command-palette__hint {

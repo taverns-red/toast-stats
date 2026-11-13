@@ -64,7 +64,7 @@ function DateChipSelect<T extends string>({
     >
       <span className="text-gray-500">{label}</span>
       <span>{value ? formatDisplayDate(value) : '—'}</span>
-      <span aria-hidden="true" className="text-gray-400">
+      <span aria-hidden="true" className="text-[var(--ink-3)]">
         ▾
       </span>
       <select
@@ -117,7 +117,7 @@ export function DatePairPicker<T extends string>({
         options={sorted}
         onChange={onFromChange}
       />
-      <span aria-hidden="true" className="text-gray-400">
+      <span aria-hidden="true" className="text-[var(--ink-3)]">
         →
       </span>
       <DateChipSelect

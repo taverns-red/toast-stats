@@ -81,7 +81,7 @@ export const SubpageBreadcrumb: React.FC<SubpageBreadcrumbProps> = ({
                 </span>
               )}
               {!isLast && (
-                <span aria-hidden="true" className="text-gray-400">
+                <span aria-hidden="true" className="text-[var(--ink-3)]">
                   ›
                 </span>
               )}

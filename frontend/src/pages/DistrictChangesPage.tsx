@@ -20,6 +20,7 @@ import { ContextBar } from '../components/ContextBar'
 import { DatePairPicker } from '../components/DatePairPicker'
 import { DatePairPresetChips } from '../components/DatePairPresetChips'
 import { KpiDeltaCard } from '../components/KpiDeltaCard'
+import { PROVISIONAL_NOTE } from '../components/DistinguishedCount'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ChangeGroup } from '../components/ChangeGroup'
@@ -123,16 +124,17 @@ type CountsRead = ReturnType<typeof useDistinguishedCountsAt>
 /**
  * Props for the "Distinguished clubs" tile (#2601, Ron 2026-11-09; supersedes
  * the TI-count headline of #2438). Confirmed is the headline everywhere, with
- * provisional beside it and never summed in (#2554):
+ * "+N qualifying today" (the pipeline's provisional) beside it, never summed
+ * in (#2554, label per Ron's D5):
  *
- *   0                     signed change in CONFIRMED clubs (to - from)
+ *   0                          signed change in CONFIRMED clubs (to - from)
  *   Confirmed 3 → 3
- *   +5 provisional (+2)   provisional at the "to" date; change only if != 0
+ *   +5 qualifying today (+2)   at the "to" date; change only if != 0
  *
  * Per date, confirmed is the analytics file's `distinguishedCounts`, falling
  * back to the dated rankings row's `distinguishedClubs` (the #2579 source
  * order). Provisional only exists in `distinguishedCounts`, so a file written
- * before it says "Provisional not recorded". A missing confirmed value on
+ * before it says "Qualifying today not recorded". A missing confirmed value on
  * either date renders a dash and says so - never a silent 0.
  */
 function distinguishedClubsTile(
@@ -140,7 +142,12 @@ function distinguishedClubsTile(
   toRanking: RankingRead,
   fromCounts: CountsRead,
   toCounts: CountsRead
-): { current: number | null; secondaryLabel: string; subLines: string[] } {
+): {
+  current: number | null
+  secondaryLabel: string
+  subLines: string[]
+  subLinesNote?: string
+} {
   const loading =
     fromRanking.isLoading ||
     toRanking.isLoading ||
@@ -160,8 +167,10 @@ function distinguishedClubsTile(
   const to = toResolved.confirmed ?? undefined
 
   let provisional: string
+  let subLinesNote: string | undefined
   if (toResolved.source === 'analytics' && toResolved.provisional !== null) {
-    const base = `+${toResolved.provisional.toLocaleString()} provisional`
+    subLinesNote = `Qualifying today: ${PROVISIONAL_NOTE}`
+    const base = `+${toResolved.provisional.toLocaleString()} qualifying today`
     if (
       fromResolved.source === 'analytics' &&
       fromResolved.provisional !== null
@@ -175,7 +184,9 @@ function distinguishedClubsTile(
         : `${base} (change not recorded)`
     }
   } else {
-    provisional = loading ? 'Provisional …' : 'Provisional not recorded'
+    provisional = loading
+      ? 'Qualifying today …'
+      : 'Qualifying today not recorded'
   }
 
   if (from === undefined || to === undefined) {
@@ -191,6 +202,7 @@ function distinguishedClubsTile(
     current: to - from,
     secondaryLabel: `Confirmed ${from.toLocaleString()} → ${to.toLocaleString()}`,
     subLines: [provisional],
+    ...(subLinesNote ? { subLinesNote } : {}),
   }
 }
 

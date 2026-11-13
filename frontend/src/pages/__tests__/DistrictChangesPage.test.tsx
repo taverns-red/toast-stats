@@ -3,6 +3,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react'
 import React from 'react'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import DistrictChangesPage from '../DistrictChangesPage'
+import { PROVISIONAL_NOTE } from '../../components/DistinguishedCount'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 import {
   useSnapshotDiff,
@@ -1245,7 +1246,7 @@ describe('DistrictChangesPage — Distinguished clubs tile (#2601)', () => {
     )
     expect(within(card).getByTestId('kpi-delta-value')).toHaveTextContent('0')
     expect(within(card).getByText('Confirmed 3 → 3')).toBeInTheDocument()
-    expect(subLines(card)).toEqual(['+5 provisional (+2)'])
+    expect(subLines(card)).toEqual(['+5 qualifying today (+2)'])
     expect(within(card).queryByText(/TI count/)).toBeNull()
     expect(mockedCounts).toHaveBeenCalledWith('61', '2026-07-31')
     expect(mockedCounts).toHaveBeenCalledWith('61', '2026-10-31')
@@ -1258,7 +1259,7 @@ describe('DistrictChangesPage — Distinguished clubs tile (#2601)', () => {
     )
     expect(within(card).getByTestId('kpi-delta-value')).toHaveTextContent('+3')
     expect(within(card).getByText('Confirmed 1 → 4')).toBeInTheDocument()
-    expect(subLines(card)).toEqual(['+4 provisional'])
+    expect(subLines(card)).toEqual(['+4 qualifying today'])
   })
 
   it('falls back to the rankings row for confirmed and says provisional is not recorded', () => {
@@ -1271,7 +1272,7 @@ describe('DistrictChangesPage — Distinguished clubs tile (#2601)', () => {
     )
     expect(within(card).getByTestId('kpi-delta-value')).toHaveTextContent('+3')
     expect(within(card).getByText('Confirmed 0 → 3')).toBeInTheDocument()
-    expect(subLines(card)).toEqual(['Provisional not recorded'])
+    expect(subLines(card)).toEqual(['Qualifying today not recorded'])
   })
 
   it('says the provisional change is not recorded when the from date has no counts', () => {
@@ -1279,7 +1280,9 @@ describe('DistrictChangesPage — Distinguished clubs tile (#2601)', () => {
       { '2026-07-31': { ranking: rankingRow(1), isLoading: false } },
       { '2026-10-31': counts(3, 2) }
     )
-    expect(subLines(card)).toEqual(['+2 provisional (change not recorded)'])
+    expect(subLines(card)).toEqual([
+      '+2 qualifying today (change not recorded)',
+    ])
   })
 
   it('keeps a recorded provisional 0 at both ends distinct from not recorded', () => {
@@ -1287,7 +1290,7 @@ describe('DistrictChangesPage — Distinguished clubs tile (#2601)', () => {
       {},
       { '2026-07-31': counts(2, 0), '2026-10-31': counts(2, 0) }
     )
-    expect(subLines(card)).toEqual(['+0 provisional'])
+    expect(subLines(card)).toEqual(['+0 qualifying today'])
   })
 
   it('mixes sources for the headline: from on rankings, to on analytics', () => {
@@ -1305,7 +1308,19 @@ describe('DistrictChangesPage — Distinguished clubs tile (#2601)', () => {
       { '2026-07-31': counts(1, 4) }
     )
     expect(within(card).getByTestId('kpi-delta-value')).toHaveTextContent('+2')
-    expect(subLines(card)).toEqual(['Provisional not recorded'])
+    expect(subLines(card)).toEqual(['Qualifying today not recorded'])
+  })
+
+  it('explains "qualifying today" in screen-reader text outside the list (#2580)', () => {
+    const card = renderWith(
+      {},
+      { '2026-07-31': counts(3, 3), '2026-10-31': counts(3, 5) }
+    )
+    const note = within(card).getByTestId('kpi-delta-subnote')
+    expect(note).toHaveClass('sr-only')
+    expect(note).toHaveTextContent(PROVISIONAL_NOTE)
+    // The note is not a sub-line, so the visible list is unchanged.
+    expect(subLines(card)).toEqual(['+5 qualifying today (+2)'])
   })
 
   it('says confirmed is not recorded instead of a silent 0', () => {
