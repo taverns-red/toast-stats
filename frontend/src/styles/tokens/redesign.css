@@ -92,6 +92,7 @@
      local stacking (a badge over its card); __tests__/lint/z-index-tokens
      fails on anything higher. */
   --z-sticky-search: 5;
+  --z-raised: 10;
   --z-popover: 20;
   --z-sticky: 30;
   --z-sub-bar: 35;

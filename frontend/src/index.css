@@ -753,7 +753,7 @@ html {
   width: 40px;
   background: linear-gradient(to right, transparent, white);
   pointer-events: none;
-  z-index: var(--z-sticky-search);
+  z-index: var(--z-raised);
 }
 
 /* Sticky column shadow for horizontal-scrolling tables (#85) */
