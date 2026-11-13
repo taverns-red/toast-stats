@@ -23,19 +23,12 @@ const districtOverview = read('components/DistrictOverview.tsx')
 
 describe('District breakpoint reconciliation (#682)', () => {
   describe('district-narrative.css KPI strip', () => {
-    it('uses 980px as the desktop layout threshold; 1024px only for the sticky pin', () => {
+    it('uses 980px as the desktop layout threshold; no 1024px query remains', () => {
       expect(narrativeCss).toContain('min-width: 980px')
       expect(narrativeCss).not.toContain('min-width: 768px')
-      // #1828: the strip's sticky pin is gated on 1024 (no sticky element
-      // taller than 64px below 1024) — used ONLY for that pin, never for its
-      // layout (cards grid, toggle), which stays on 980.
-      const at1024 = narrativeCss.match(
-        /@media\s*\(min-width:\s*1024px\)\s*\{[\s\S]*?\n {2}\}/g
-      )
-      expect(at1024).toHaveLength(1)
-      const body = at1024?.[0] ?? ''
-      expect(body).not.toMatch(/__cards|__toggle|grid-template-columns/)
-      expect(body).toMatch(/\.district-kpi-strip\s*\{[^}]*position:\s*sticky/)
+      // #1828 gated the strip's sticky pin on 1024. #2708 removed that pin (a
+      // one-line stuck KPI line replaces it, at every width), so 1024 is gone.
+      expect(narrativeCss).not.toContain('min-width: 1024px')
     })
 
     it('makes 2-col (2×2) the mobile base, no 640px intermediate (#866)', () => {
