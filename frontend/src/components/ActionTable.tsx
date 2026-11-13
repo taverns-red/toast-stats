@@ -30,6 +30,8 @@ export interface ActionTableColumn<T> {
   cell: (row: T) => React.ReactNode
   /** Optional extra class on the `<td>` (e.g. a numeric or lead-column look). */
   className?: string
+  /** This column's cells are the row header (`<th scope="row">`). Defaults to the first column. */
+  rowHeader?: boolean
 }
 
 export interface ActionTableProps<T> {
