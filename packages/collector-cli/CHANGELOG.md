@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.26.2](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.26.1...collector-cli-v1.26.2) (2026-11-13)
+
+
+### Bug Fixes
+
+* **analytics:** district Distinguished basis uses the date-level decision ([#2560](https://github.com/taverns-red/toast-stats/issues/2560)) ([#2799](https://github.com/taverns-red/toast-stats/issues/2799)) ([974a042](https://github.com/taverns-red/toast-stats/commit/974a042b170593c4c3de611bfdc149aea161642d))
+
 ## [1.26.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.26.0...collector-cli-v1.26.1) (2026-11-12)
 
 

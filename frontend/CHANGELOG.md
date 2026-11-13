@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.67.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.67.0...frontend-v3.67.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* **ui:** one percentile formula; name the ranked measure; tied categories ([#2613](https://github.com/taverns-red/toast-stats/issues/2613)) ([#2796](https://github.com/taverns-red/toast-stats/issues/2796)) ([874e7d4](https://github.com/taverns-red/toast-stats/commit/874e7d4a1fef17d30f57308a6f454d6300ef0c88))
+
 ## [3.67.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.66.1...frontend-v3.67.0) (2026-11-13)
 
 
