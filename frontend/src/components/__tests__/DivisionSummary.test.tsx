@@ -437,7 +437,7 @@ describe('DivisionSummary', () => {
       )
 
       const heading = screen.getByText('Division A')
-      expect(heading).toHaveClass('tm-h2')
+      expect(heading).toHaveClass('heading-section')
     })
   })
 

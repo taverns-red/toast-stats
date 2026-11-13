@@ -294,7 +294,7 @@ export const DistrictEducationView: React.FC<DistrictEducationViewProps> = ({
   if (education.status !== 'available') {
     return (
       <div className="education-page">
-        <h1 className="education-page__title">Education awards</h1>
+        <h2 className="education-page__title">Education awards</h2>
         <p role="status" className="education-empty">
           {isPriorProgramYear
             ? 'No education report for this date. For past program years, education awards are shown on the June 30 year-end snapshot.'
@@ -308,7 +308,7 @@ export const DistrictEducationView: React.FC<DistrictEducationViewProps> = ({
   const sourceLabel = SOURCE_LABELS[e.source.reportType] ?? DEFAULT_SOURCE_LABEL
   return (
     <div className="education-page">
-      <h1 className="education-page__title">Education awards</h1>
+      <h2 className="education-page__title">Education awards</h2>
       <p className="education-page__subtitle">
         Every award in Toastmasters&apos; education ledger this program year to
         date — Pathways levels, DTMs and any legacy awards.

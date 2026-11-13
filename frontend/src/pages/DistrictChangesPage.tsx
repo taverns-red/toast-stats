@@ -485,6 +485,9 @@ const DistrictChangesPage: React.FC = () => {
                   </p>
                 )}
 
+                {/* The tiles' titles are h3s; this h2 is their parent so the
+                    page never jumps from h1 to h3 (#2650). */}
+                <h2 className="sr-only">Totals</h2>
                 <div className="district-changes__kpis">
                   <KpiDeltaCard
                     title="Membership"

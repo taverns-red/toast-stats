@@ -27,9 +27,15 @@
 
   .tm-body-small {
     font-family: var(--tm-font-body);
-    font-size: max(var(--tm-body-small-font-size), var(--tm-font-size-min-body));
+    font-size: max(
+      var(--tm-body-small-font-size),
+      var(--tm-font-size-min-body)
+    );
     font-weight: var(--tm-body-small-font-weight);
-    line-height: max(var(--tm-body-small-line-height), var(--tm-line-height-min));
+    line-height: max(
+      var(--tm-body-small-line-height),
+      var(--tm-line-height-min)
+    );
   }
 
   /* Prohibited Effects Prevention
@@ -57,7 +63,6 @@
   /* Responsive Typography Scaling */
 
   @media (max-width: 480px) {
-
     /* Ensure minimum body text size is maintained */
     .tm-body,
     .tm-body-medium,
@@ -96,6 +101,37 @@
     letter-spacing: var(--tm-letter-spacing-normal);
     text-shadow: none !important;
     -webkit-text-stroke: none !important;
+  }
+
+  /* Heading ramp (#2650): page 28/800, section 18/700, sub-section 16/700,
+     card title 14/700. Apply by role, not by heading level, so a card h2 can
+     be small and a page h2 large without ever inverting under its parent. */
+  .heading-page,
+  .heading-section,
+  .heading-sub,
+  .heading-card {
+    font-family: var(--tm-font-headline);
+    line-height: var(--heading-line-height);
+  }
+
+  .heading-page {
+    font-size: var(--heading-page-size);
+    font-weight: var(--heading-page-weight);
+  }
+
+  .heading-section {
+    font-size: var(--heading-section-size);
+    font-weight: var(--heading-section-weight);
+  }
+
+  .heading-sub {
+    font-size: var(--heading-sub-size);
+    font-weight: var(--heading-sub-weight);
+  }
+
+  .heading-card {
+    font-size: var(--heading-card-size);
+    font-weight: var(--heading-card-weight);
   }
 
   /* Utility Classes for Quick Application */

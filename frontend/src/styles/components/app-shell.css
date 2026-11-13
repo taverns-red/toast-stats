@@ -645,8 +645,8 @@
   .placeholder-page__title {
     margin: 8px 0 12px;
     font-family: var(--serif);
-    font-weight: 800;
-    font-size: 28px;
+    font-weight: var(--heading-page-weight);
+    font-size: var(--heading-page-size);
     letter-spacing: -0.015em;
     color: var(--ink);
   }
@@ -1022,7 +1022,13 @@
     cursor: pointer;
   }
 
-  .region-recognition__summary .districts-kpi-card__label {
+  /* A real section heading, not an eyebrow (#2650). */
+  .region-recognition__title {
+    margin: 0 0 6px;
+    color: var(--ink);
+  }
+
+  .region-recognition__summary .region-recognition__title {
     margin: 0;
   }
 
@@ -6831,12 +6837,12 @@
 
   .rule-change-year__title {
     margin: 0 0 10px;
-    font-family: var(--mono);
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-3);
+    /* A sub-section heading (#2650), not an eyebrow: it was 12px mono, under
+       the 14.5px body text it heads. */
+    font-family: var(--tm-font-headline);
+    font-size: var(--heading-sub-size);
+    font-weight: var(--heading-sub-weight);
+    color: var(--ink);
     /* Sticky-header clearance, matching .methodology-section — the year
        heading must not hide under the top bar when the reader scrolls back up
        from a deep-linked entry. */
@@ -7000,7 +7006,7 @@
     margin: 0;
     font-family: var(--serif);
     font-weight: 700;
-    font-size: 14px;
+    font-size: var(--heading-section-size);
     color: var(--ink);
   }
 
@@ -7452,8 +7458,8 @@
 
   .error-page__heading {
     font-family: var(--serif);
-    font-weight: 700;
-    font-size: 22px;
+    font-weight: var(--heading-page-weight);
+    font-size: var(--heading-page-size);
     letter-spacing: -0.01em;
     color: var(--ink);
     margin: 0 0 8px;

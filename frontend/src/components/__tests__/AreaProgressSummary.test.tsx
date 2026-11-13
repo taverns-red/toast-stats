@@ -1243,7 +1243,7 @@ describe('AreaProgressSummary', () => {
         '#division-A-narrative-heading'
       )
       expect(divisionNarrativeHeading).toBeInTheDocument()
-      expect(divisionNarrativeHeading).toHaveClass('font-bold')
+      expect(divisionNarrativeHeading).toHaveClass('heading-card')
       expect(divisionNarrativeHeading).toHaveClass('text-tm-loyal-blue')
     })
 

@@ -312,7 +312,7 @@ export const DivisionAreaProgressSummary: React.FC<
       <div className="redesign-panel">
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
-          <h3 className="text-xl font-bold text-gray-900 font-tm-headline">
+          <h3 className="heading-section text-gray-900">
             Division and Area Progress Summary
           </h3>
           <p className="text-sm text-gray-600 mt-1 font-tm-body">
@@ -342,7 +342,7 @@ export const DivisionAreaProgressSummary: React.FC<
       <header className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-bold text-gray-900 font-tm-headline">
+            <h3 className="heading-section text-gray-900">
               Division and Area Progress Summary
             </h3>
             <p className="text-sm text-gray-600 mt-1 font-tm-body">
@@ -395,7 +395,7 @@ export const DivisionAreaProgressSummary: React.FC<
                 <div className="flex items-center justify-between mb-2">
                   <h5
                     id={`division-${group.divisionId}-narrative-heading`}
-                    className="font-bold text-tm-loyal-blue font-tm-headline"
+                    className="heading-card text-tm-loyal-blue"
                   >
                     Division {group.divisionId} Progress
                   </h5>
@@ -434,7 +434,7 @@ export const DivisionAreaProgressSummary: React.FC<
                       <div className="flex items-center justify-between mb-2">
                         <h5
                           id={`area-${group.divisionId}-${area.areaId}-heading`}
-                          className="font-semibold text-gray-900 font-tm-headline"
+                          className="heading-card text-gray-900"
                         >
                           Area {area.areaId}
                         </h5>
@@ -512,7 +512,7 @@ export const DivisionAreaProgressSummary: React.FC<
               {/* Division Header */}
               <h4
                 id={`division-${group.divisionId}-heading`}
-                className="text-lg font-semibold text-tm-loyal-blue font-tm-headline mb-4"
+                className="heading-sub text-tm-loyal-blue mb-4"
               >
                 Division {group.divisionId}
               </h4>

@@ -9,8 +9,8 @@
 }
 
 .education-page__title {
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: var(--heading-section-size);
+  font-weight: var(--heading-section-weight);
   color: var(--ink);
 }
 
@@ -178,8 +178,8 @@
 }
 
 .education-section__title {
-  font-size: 1.0625rem;
-  font-weight: 700;
+  font-size: var(--heading-section-size);
+  font-weight: var(--heading-section-weight);
   color: var(--ink);
 }
 

@@ -337,8 +337,8 @@
 
 .map-panel__heading {
   margin: 0;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--heading-section-size);
+  font-weight: var(--heading-section-weight);
 }
 
 .map-list {

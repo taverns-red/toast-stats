@@ -89,9 +89,9 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({
   const id = React.useId()
   return (
     <section className="map-panel__section" aria-labelledby={id}>
-      <h3 id={id} className="map-panel__heading">
+      <h2 id={id} className="map-panel__heading">
         {title}
-      </h3>
+      </h2>
       {children}
     </section>
   )
