@@ -359,7 +359,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
             href="/methodology#district-membership-trend"
             aria-label="info"
             title="How is this calculated?"
-            className="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full text-gray-400 hover:text-gray-600 transition-colors"
+            className="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full text-[var(--ink-3)] hover:text-[var(--ink-2)] transition-colors"
           >
             <svg
               className="w-3.5 h-3.5"
