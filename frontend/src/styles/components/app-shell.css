@@ -588,6 +588,10 @@
     flex-wrap: wrap;
     row-gap: 4px;
     margin-left: -14px;
+    /* #2758 — slack. The group is shrink-to-fit, so without this the list is
+       exactly as wide as its items and any sub-pixel layout difference wraps
+       the last item onto a second line. */
+    padding-right: 4px;
   }
 
   .app-shell-footer__item {
