@@ -230,7 +230,9 @@ const IMMUTABLE = 'public, max-age=31536000, immutable'
 
 const ASSET_SOURCES = [
   '**/*.@(js|css)',
-  '**/*.@(jpg|jpeg|gif|png|svg|webp|ico)',
+  // #2785: images are immutable only under Vite's hashed /assets/ dir; the
+  // unhashed favicons/OG image in frontend/public must revalidate.
+  '/assets/**/*.@(jpg|jpeg|gif|png|svg|webp|ico)',
   '**/*.@(woff|woff2|ttf|otf|eot)',
   // #2081: basemap glyph PBFs, under a font-versioned path.
   '/basemap/glyphs/**',
