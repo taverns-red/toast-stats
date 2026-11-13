@@ -4,7 +4,11 @@
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useAfterPaint, AFTER_PAINT_FALLBACK_MS } from '../useAfterPaint'
+import {
+  useAfterPaint,
+  AFTER_PAINT_FALLBACK_MS,
+  LCP_WAIT_CAP_MS,
+} from '../useAfterPaint'
 
 describe('useAfterPaint', () => {
   let rafCallbacks: ((time: number) => void)[]
@@ -63,6 +67,95 @@ describe('useAfterPaint', () => {
     act(() => vi.advanceTimersByTime(AFTER_PAINT_FALLBACK_MS))
     expect(result.current).toBe(true)
     rerender({ ready: false })
+    expect(result.current).toBe(true)
+  })
+})
+
+/**
+ * #2777 — Lighthouse charges every request that finishes before the LCP
+ * paint. The gate used to open one rAF + macrotask after readiness, which can
+ * be BEFORE the frame is presented, so the post-paint reads (rankings,
+ * analytics, club history) sometimes started and finished ahead of the LCP
+ * timestamp: the club route's simulated LCP flipped between ~3.6 s and ~4.2 s.
+ * Where the browser reports LCP, the gate waits for the LCP entry itself.
+ */
+describe('useAfterPaint with LCP entries (#2777)', () => {
+  type LcpCallback = (list: {
+    getEntries: () => { startTime: number }[]
+  }) => void
+  type Rec = { cb: LcpCallback; disconnected: boolean }
+  let observers: Rec[]
+  let now: number
+
+  const emitLcp = (startTime: number) =>
+    observers
+      .filter(o => !o.disconnected)
+      .forEach(o => o.cb({ getEntries: () => [{ startTime }] }))
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    observers = []
+    now = 1000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(cb => {
+      window.setTimeout(() => cb(now), 16)
+      return 1
+    })
+    vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
+    class FakeObserver {
+      static supportedEntryTypes = ['largest-contentful-paint']
+      private rec: Rec
+      constructor(cb: LcpCallback) {
+        this.rec = { cb, disconnected: false }
+        observers.push(this.rec)
+      }
+      observe() {}
+      disconnect() {
+        this.rec.disconnected = true
+      }
+    }
+    vi.stubGlobal('PerformanceObserver', FakeObserver)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('stays closed past the hidden-tab fallback until the LCP entry arrives', () => {
+    const { result } = renderHook(() => useAfterPaint(true))
+    act(() => {
+      vi.advanceTimersByTime(AFTER_PAINT_FALLBACK_MS * 4)
+    })
+    expect(result.current).toBe(false)
+    act(() => emitLcp(1200))
+    act(() => vi.advanceTimersByTime(0))
+    expect(result.current).toBe(true)
+  })
+
+  it('ignores an LCP entry that was painted before readiness', () => {
+    const { result } = renderHook(() => useAfterPaint(true))
+    act(() => emitLcp(400))
+    act(() => vi.advanceTimersByTime(0))
+    expect(result.current).toBe(false)
+    act(() => emitLcp(1100))
+    act(() => vi.advanceTimersByTime(0))
+    expect(result.current).toBe(true)
+  })
+
+  it('opens after the wait cap when no LCP entry follows', () => {
+    const { result } = renderHook(() => useAfterPaint(true))
+    act(() => vi.advanceTimersByTime(LCP_WAIT_CAP_MS - 1))
+    expect(result.current).toBe(false)
+    act(() => vi.advanceTimersByTime(1))
+    expect(result.current).toBe(true)
+  })
+
+  it('keeps the rAF path in a hidden tab, where no LCP entry ever comes', () => {
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    const { result } = renderHook(() => useAfterPaint(true))
+    act(() => vi.advanceTimersByTime(AFTER_PAINT_FALLBACK_MS))
     expect(result.current).toBe(true)
   })
 })

@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react'
 /** Fallback for a hidden tab, where requestAnimationFrame does not fire. */
 export const AFTER_PAINT_FALLBACK_MS = 250
 
+/** Longest the gate waits for an LCP entry before opening anyway (#2777). */
+export const LCP_WAIT_CAP_MS = 2000
+
 /**
  * True once `ready` has been true for one painted frame (#1901).
  *
