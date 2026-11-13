@@ -31,11 +31,10 @@ import {
   divisionChip,
 } from './DivisionRecognitionChip'
 import type { DivisionPerformance } from '../utils/divisionStatus'
-import type { ClubTrend } from '../hooks/useDistrictAnalytics'
+import type { DivisionDistinguishedCountsRow } from '../hooks/useDistrictAnalytics'
 import {
-  confirmedDistinguished,
+  applyPipelineDistinguished,
   provisionalOf,
-  withProvisionalDistinguished,
 } from '../utils/divisionAreaDistinguished'
 
 function signed(n: number): string {
@@ -52,7 +51,7 @@ function toDivisionRow(
   const paid = `${division.paidClubs}/${division.clubBase} paid`
   const net = signed(division.netGrowth)
   // Confirmed over required, then the extra as its own meta part (#2580).
-  const dist = `${confirmedDistinguished(division)}/${division.requiredDistinguishedClubs} distinguished`
+  const dist = `${division.distinguishedClubs}/${division.requiredDistinguishedClubs} distinguished`
   const extra =
     provisionalOf(division) > 0
       ? `+${provisionalOf(division)} qualifying today`
@@ -169,10 +168,13 @@ export interface DivisionPerformanceCardsProps {
   /** District id — threaded to each card so its heading links to the division
    *  page (CC-7, #872). */
   districtId?: string | undefined
-  /** The district's club rows (#2580). With them each division's and area's
-   *  count is split into confirmed + "+N qualifying today"; without them the
-   *  snapshot's count stands as it is. */
-  clubs?: readonly ClubTrend[] | undefined
+  /** The published confirmed / provisional counts per division and area
+   *  (#2580). With them each count is the confirmed one with "+N qualifying
+   *  today" beside it, and status and gaps follow; without them (old files,
+   *  still loading) the snapshot's count stands. The cards never wait for it:
+   *  the extra arrives into a reserved slot. */
+  distinguishedCountsByDivision?:
+    readonly DivisionDistinguishedCountsRow[] | undefined
 }
 
 /**
@@ -204,7 +206,7 @@ export const DivisionPerformanceCards: React.FC<
   isLoading = false,
   snapshotTimestamp,
   districtId,
-  clubs,
+  distinguishedCountsByDivision,
 }) => {
   // Below 768 the divisions list is compact rows (#1833); the inline area
   // tables live on each routed division page instead.
@@ -215,16 +217,21 @@ export const DivisionPerformanceCards: React.FC<
       return []
     }
     try {
-      return withProvisionalDistinguished(
+      return applyPipelineDistinguished(
         extractDivisionPerformance(districtSnapshot, snapshotTimestamp),
-        clubs,
+        distinguishedCountsByDivision,
         snapshotTimestamp
       )
     } catch (error) {
       logger.error('Error extracting division performance:', error)
       return []
     }
-  }, [districtSnapshot, isLoading, snapshotTimestamp, clubs])
+  }, [
+    districtSnapshot,
+    isLoading,
+    snapshotTimestamp,
+    distinguishedCountsByDivision,
+  ])
 
   // Loading state
   if (isLoading) {
@@ -340,6 +347,7 @@ export const DivisionPerformanceCards: React.FC<
                 key={division.divisionId}
                 division={division}
                 districtId={districtId}
+                reserveExtra
               />
             ))}
           </div>

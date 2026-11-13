@@ -14,7 +14,7 @@ import {
   isDateInProgramYear,
 } from '../utils/programYear'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
-import { withProvisionalDistinguished } from '../utils/divisionAreaDistinguished'
+import { applyPipelineDistinguished } from '../utils/divisionAreaDistinguished'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { DivisionPerformanceCards } from '../components/DivisionPerformanceCards'
@@ -112,17 +112,17 @@ const DistrictDivisionsPage: React.FC = () => {
     'divisions'
   )
 
-  // The club rows split each division's and area's count into confirmed and
-  // "+N qualifying today" (#2580). Shared with the district's other pages
-  // through the same query cache; if it fails the counts stand as the
-  // snapshot reports them, with no extra.
-  const { data: analytics, isLoading: isLoadingAnalytics } =
-    useDistrictAnalytics(
-      hasValidDates ? districtId || null : null,
-      undefined,
-      effectiveEndDate ?? undefined
-    )
-  const clubs = analytics?.allClubs
+  // The published confirmed / provisional counts per division and area
+  // (#2580), from the district analytics read the other district pages share
+  // through the query cache. Nothing waits for it (#1901): the cards render
+  // from the statistics alone and the extra arrives into a reserved slot. If
+  // it fails or the file predates the field, the snapshot's count stands.
+  const { data: analytics } = useDistrictAnalytics(
+    hasValidDates ? districtId || null : null,
+    undefined,
+    effectiveEndDate ?? undefined
+  )
+  const publishedCounts = analytics?.distinguishedCountsByDivision
 
   // #1837: reserve both data slots from first paint until the statistics
   // settle — including the date-index window, where the query is disabled and
@@ -174,12 +174,10 @@ const DistrictDivisionsPage: React.FC = () => {
             {districtStatistics && effectiveEndDate ? (
               <DivisionPerformanceCards
                 districtSnapshot={districtStatistics}
-                // Held until the club rows settle so the extra does not
-                // arrive after first paint and shift the list (#2580).
-                isLoading={isLoadingStatistics || isLoadingAnalytics}
+                isLoading={isLoadingStatistics}
                 snapshotTimestamp={effectiveEndDate}
                 districtId={districtId}
-                clubs={clubs}
+                distinguishedCountsByDivision={publishedCounts}
               />
             ) : isSlotPending ? (
               <DivisionPerformanceCards
@@ -204,12 +202,12 @@ const DistrictDivisionsPage: React.FC = () => {
 
             {districtStatistics && effectiveEndDate ? (
               <DivisionAreaRecognitionPanel
-                divisions={withProvisionalDistinguished(
+                divisions={applyPipelineDistinguished(
                   extractDivisionPerformance(
                     districtStatistics,
                     effectiveEndDate
                   ),
-                  clubs,
+                  publishedCounts,
                   effectiveEndDate
                 )}
                 isLoading={isLoadingStatistics}

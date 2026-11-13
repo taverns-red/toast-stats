@@ -11,7 +11,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
-import { withProvisionalDistinguished } from '../utils/divisionAreaDistinguished'
+import { applyPipelineDistinguished } from '../utils/divisionAreaDistinguished'
 import { calculateDivisionGapAnalysis } from '../utils/divisionGapAnalysis'
 import { generateDivisionProgressText } from '../utils/divisionProgressText'
 import { DivisionPerformanceCard } from '../components/DivisionPerformanceCard'
@@ -100,14 +100,19 @@ const DivisionPage: React.FC = () => {
   // disabled unless `hasValidDates`), but guard rather than assert.
   const divisionPerformance = React.useMemo(() => {
     if (!snapshot || !normalizedDivId || !effectiveEndDate) return undefined
-    // The count is split into confirmed + "+N qualifying today" from the
-    // district's club rows (#2580); without them it stands as the snapshot has it.
-    return withProvisionalDistinguished(
+    // The published confirmed / provisional counts (#2580); without them
+    // (old files) the count stands as the snapshot has it.
+    return applyPipelineDistinguished(
       extractDivisionPerformance(snapshot, effectiveEndDate),
-      data?.allClubs,
+      data?.distinguishedCountsByDivision,
       effectiveEndDate
     ).find(d => d.divisionId.toUpperCase() === normalizedDivId)
-  }, [snapshot, normalizedDivId, effectiveEndDate, data?.allClubs])
+  }, [
+    snapshot,
+    normalizedDivId,
+    effectiveEndDate,
+    data?.distinguishedCountsByDivision,
+  ])
 
   // Scoped division-level narrative — the same prose the overview's Division and
   // Area Progress Summary shows, scoped to this division (#1016 S2 refactor).

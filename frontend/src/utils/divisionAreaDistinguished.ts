@@ -1,32 +1,30 @@
-/* Division and area Distinguished counts, split into confirmed and
-   qualifying-today (#2580).
+/* Division and area Distinguished counts on the confirmed basis (#2580).
 
-   The snapshot's per-division and per-area `distinguishedClubs` counts every
-   club that holds a level today, so it includes the clubs whose level April
-   renewals do not yet confirm. Confirmed is the headline (Ron, 2026-11-08);
-   the rest shows beside it as "+N qualifying today" and is never added in.
+   The pipeline publishes each division's and area's confirmed and provisional
+   counts (`distinguishedCountsByDivision`, #2553), classified per club by the
+   same rule as the district KPI, so the divisions sum to it. This overlays
+   them on the snapshot-derived rows for the division and area surfaces only.
 
-   `distinguishedClubs` keeps its meaning (qualifying today): the recognition
-   status, the gap columns and the narratives all derive from it and are not a
-   count display. The provisional part rides beside it as
-   `provisionalDistinguishedClubs`, derived from the district's club rows with
-   the same per-club rule as the district KPI (`isProvisionallyDistinguished`). */
+   On the rows this returns, `distinguishedClubs` is the CONFIRMED count and
+   `provisionalDistinguishedClubs` is the "+N qualifying today" beside it. The
+   recognition status and `recognitionState` are re-derived from the confirmed
+   count, so a surface never shows a "Distinguished" badge beside a pill that
+   has not reached its threshold. The shared `extractDivisionPerformance`
+   meaning (qualifying today) is untouched for every other consumer. */
 
-import type { ClubTrend } from '../hooks/useDistrictAnalytics'
-import type { DivisionPerformance } from './divisionStatus'
-import { isProvisionallyDistinguished } from './provisionalDistinguished'
+import type { DivisionDistinguishedCountsRow } from '../hooks/useDistrictAnalytics'
+import {
+  calculateAreaStatus,
+  calculateDivisionStatus,
+  type AreaPerformance,
+  type DivisionPerformance,
+} from './divisionStatus'
+import { deriveAreaRecognitionState } from './areaRecognitionState'
 
 interface DistinguishedSplit {
+  /** The confirmed count on the overlaid surfaces. */
   distinguishedClubs: number
   provisionalDistinguishedClubs?: number | undefined
-}
-
-/** The confirmed count: qualifying today minus the provisional part. */
-export function confirmedDistinguished(x: DistinguishedSplit): number {
-  return Math.max(
-    0,
-    x.distinguishedClubs - (x.provisionalDistinguishedClubs ?? 0)
-  )
 }
 
 /** The provisional part, or 0 when unknown. */
@@ -34,65 +32,81 @@ export function provisionalOf(x: DistinguishedSplit): number {
   return x.provisionalDistinguishedClubs ?? 0
 }
 
-/** "3 of 10 distinguished", with " (+2 qualifying today)" when some of the
- *  count is not yet confirmed. The narratives use it for their metrics clause. */
+/** "3 of 10 distinguished", with " (+2 qualifying today)" when some clubs are
+ *  not yet confirmed. The narratives use it for their metrics clause. */
 export function describeDistinguished(
   x: DistinguishedSplit,
   clubBase: number
 ): string {
   const extra =
     provisionalOf(x) > 0 ? ` (+${provisionalOf(x)} qualifying today)` : ''
-  return `${confirmedDistinguished(x)} of ${clubBase} distinguished${extra}`
+  return `${x.distinguishedClubs} of ${clubBase} distinguished${extra}`
 }
 
-const capped = (provisional: number, today: number): number =>
-  Math.min(provisional, Math.max(0, today))
+function overlayArea(
+  area: AreaPerformance,
+  counts: { confirmed: number; provisional: number },
+  snapshotDate: string
+): AreaPerformance {
+  const confirmed = counts.confirmed
+  return {
+    ...area,
+    distinguishedClubs: confirmed,
+    provisionalDistinguishedClubs: counts.provisional,
+    status: calculateAreaStatus(
+      area.isQualified,
+      confirmed,
+      area.requiredDistinguishedClubs,
+      area.paidClubs,
+      area.clubBase,
+      area.netGrowth
+    ),
+    recognitionState: deriveAreaRecognitionState({
+      clubBase: area.clubBase,
+      paidClubs: area.paidClubs,
+      distinguishedClubs: confirmed,
+      firstRoundVisitMet: area.firstRoundVisits.meetsThreshold,
+      secondRoundVisitMet: area.secondRoundVisits.meetsThreshold,
+      snapshotDate,
+    }),
+  }
+}
 
 /**
- * Attach each division's and area's provisional Distinguished count.
+ * Put the published confirmed / provisional counts on each division and area.
  *
- * Without club rows (still loading, or the read failed) the divisions come
- * back as they were: the count then stands as the snapshot reports it, with no
- * extra, rather than guessing a split.
+ * Without the field (files written before it existed) the divisions come back
+ * as they were: the snapshot count stands, with no extra. A division or area
+ * the field does not list is left as it was.
  */
-export function withProvisionalDistinguished(
+export function applyPipelineDistinguished(
   divisions: DivisionPerformance[],
-  clubs: readonly ClubTrend[] | undefined,
+  published: readonly DivisionDistinguishedCountsRow[] | undefined,
   snapshotDate: string
 ): DivisionPerformance[] {
-  if (!clubs) return divisions
-
-  const byDivision = new Map<string, number>()
-  const byArea = new Map<string, number>()
-  for (const club of clubs) {
-    if (
-      !club.distinguishedLevel ||
-      club.distinguishedLevel === 'NotDistinguished'
-    ) {
-      continue
-    }
-    if (!isProvisionallyDistinguished(club, snapshotDate)) continue
-    const div = club.divisionId.toUpperCase()
-    byDivision.set(div, (byDivision.get(div) ?? 0) + 1)
-    const area = `${div}|${club.areaId.toUpperCase()}`
-    byArea.set(area, (byArea.get(area) ?? 0) + 1)
-  }
+  if (!published) return divisions
+  const byId = new Map(published.map(d => [d.divisionId.toUpperCase(), d]))
 
   return divisions.map(division => {
-    const div = division.divisionId.toUpperCase()
+    const row = byId.get(division.divisionId.toUpperCase())
+    if (!row) return division
+    const areaCounts = new Map(
+      row.areas.map(a => [a.areaId.toUpperCase(), a.distinguishedCounts])
+    )
+    const confirmed = row.distinguishedCounts.confirmed
     return {
       ...division,
-      provisionalDistinguishedClubs: capped(
-        byDivision.get(div) ?? 0,
-        division.distinguishedClubs
+      distinguishedClubs: confirmed,
+      provisionalDistinguishedClubs: row.distinguishedCounts.provisional,
+      status: calculateDivisionStatus(
+        confirmed,
+        division.paidClubs,
+        division.clubBase
       ),
-      areas: division.areas.map(area => ({
-        ...area,
-        provisionalDistinguishedClubs: capped(
-          byArea.get(`${div}|${area.areaId.toUpperCase()}`) ?? 0,
-          area.distinguishedClubs
-        ),
-      })),
+      areas: division.areas.map(area => {
+        const counts = areaCounts.get(area.areaId.toUpperCase())
+        return counts ? overlayArea(area, counts, snapshotDate) : area
+      }),
     }
   })
 }

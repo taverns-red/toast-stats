@@ -40,28 +40,45 @@ export const DistinguishedBasisNote: React.FC<{ className?: string }> = ({
 export const QualifyingTodayExtra: React.FC<{
   provisional?: number | null | undefined
   stacked?: boolean | undefined
-}> = ({ provisional, stacked = false }) =>
-  provisional != null && provisional > 0 ? (
-    <>
-      {' '}
-      <span
-        data-testid="distinguished-provisional"
-        className={
-          stacked
-            ? 'distinguished-count__provisional distinguished-count__provisional--stacked'
-            : 'distinguished-count__provisional'
-        }
-        title={PROVISIONAL_TOOLTIP}
-      >
-        +{provisional.toLocaleString()} qualifying today
-        {/* `title` does not reach touch or most screen readers (#2580). */}
-        <span data-testid="distinguished-provisional-note" className="sr-only">
-          {' '}
-          {PROVISIONAL_NOTE}
+  /** Draw a fixed-size slot even when there is no extra, so one arriving after
+   *  first paint (the published counts load on their own) shifts nothing. */
+  reserve?: boolean | undefined
+}> = ({ provisional, stacked = false, reserve = false }) => {
+  const extra =
+    provisional != null && provisional > 0 ? (
+      <>
+        {' '}
+        <span
+          data-testid="distinguished-provisional"
+          className={
+            stacked
+              ? 'distinguished-count__provisional distinguished-count__provisional--stacked'
+              : 'distinguished-count__provisional'
+          }
+          title={PROVISIONAL_TOOLTIP}
+        >
+          +{provisional.toLocaleString()} qualifying today
+          {/* `title` does not reach touch or most screen readers (#2580). */}
+          <span
+            data-testid="distinguished-provisional-note"
+            className="sr-only"
+          >
+            {' '}
+            {PROVISIONAL_NOTE}
+          </span>
         </span>
-      </span>
-    </>
-  ) : null
+      </>
+    ) : null
+  if (!reserve) return extra
+  return (
+    <span
+      data-testid="distinguished-extra-slot"
+      className="distinguished-count__slot"
+    >
+      {extra}
+    </span>
+  )
+}
 
 export interface DistinguishedCountProps {
   confirmed: number

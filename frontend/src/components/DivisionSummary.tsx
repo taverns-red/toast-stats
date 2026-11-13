@@ -26,7 +26,6 @@ import { Link } from 'react-router-dom'
 import { signedDelta } from '../utils/displayFormat'
 import type { DistinguishedStatus } from '../utils/divisionStatus'
 import type { DivisionGapAnalysis } from '../utils/divisionGapAnalysis'
-import { confirmedDistinguished } from '../utils/divisionAreaDistinguished'
 import { QualifyingTodayExtra } from './DistinguishedCount'
 
 export interface DivisionSummaryProps {
@@ -42,10 +41,12 @@ export interface DivisionSummaryProps {
   netGrowth: number
   /** Current number of clubs that have achieved Distinguished status */
   distinguishedClubs: number
-  /** How many of `distinguishedClubs` are not yet confirmed (#2580): the pill
-   *  headlines the confirmed count and shows this as "+N qualifying today".
-   *  Gap and status stay on the qualifying-today count. */
+  /** Clubs that qualify today but are not yet confirmed (#2580), shown beside
+   *  the pill as "+N qualifying today". `distinguishedClubs` is the confirmed
+   *  count, and the status and gaps are derived from it. */
   provisionalDistinguishedClubs?: number | undefined
+  /** Reserve the extra's slot so it can arrive later without a shift. */
+  reserveExtra?: boolean | undefined
   /** Required number of distinguished clubs (45% of club base for Distinguished) */
   requiredDistinguishedClubs: number
   /** Gap analysis for recognition levels (optional) */
@@ -276,15 +277,11 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
   netGrowth,
   distinguishedClubs,
   provisionalDistinguishedClubs,
+  reserveExtra,
   requiredDistinguishedClubs,
   gapAnalysis,
   to,
 }) => {
-  // The pill is on the confirmed basis (#2580); the extra rides beside it.
-  const confirmedClubs = confirmedDistinguished({
-    distinguishedClubs,
-    provisionalDistinguishedClubs,
-  })
   const statusLabel = getRecognitionBadgeLabel(status, gapAnalysis)
   const statusBadgeClasses = getStatusBadgeClasses(status, gapAnalysis)
   const netGrowthClasses = getNetGrowthClasses(netGrowth)
@@ -306,7 +303,7 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
 
   // Get distinguished badge classes
   const distinguishedBadgeClasses = getDistinguishedBadgeClasses(
-    confirmedClubs,
+    distinguishedClubs,
     requiredDistinguishedClubs
   )
 
@@ -357,16 +354,19 @@ const DivisionSummary: React.FC<DivisionSummaryProps> = ({
           </span>
           <div
             className={distinguishedBadgeClasses}
-            aria-label={`Distinguished clubs: ${confirmedClubs} of ${requiredDistinguishedClubs}${confirmedClubs >= requiredDistinguishedClubs ? ', threshold met' : ''}`}
+            aria-label={`Distinguished clubs: ${distinguishedClubs} of ${requiredDistinguishedClubs}${distinguishedClubs >= requiredDistinguishedClubs ? ', threshold met' : ''}`}
           >
-            {confirmedClubs}/{requiredDistinguishedClubs}
-            {confirmedClubs >= requiredDistinguishedClubs && (
+            {distinguishedClubs}/{requiredDistinguishedClubs}
+            {distinguishedClubs >= requiredDistinguishedClubs && (
               <span className="ml-1" aria-hidden="true">
                 ✓
               </span>
             )}
           </div>
-          <QualifyingTodayExtra provisional={provisionalDistinguishedClubs} />
+          <QualifyingTodayExtra
+            provisional={provisionalDistinguishedClubs}
+            reserve={reserveExtra}
+          />
         </div>
 
         {/* Gap Indicators - Inline when gapAnalysis is provided */}

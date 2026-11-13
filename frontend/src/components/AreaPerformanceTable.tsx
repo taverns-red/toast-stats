@@ -7,7 +7,6 @@ import {
   calculateDistinguishedPercentage,
 } from '../utils/areaGapAnalysis'
 import { renderRecognitionBadge } from '../utils/areaRecognitionBadge'
-import { confirmedDistinguished } from '../utils/divisionAreaDistinguished'
 import { QualifyingTodayExtra } from './DistinguishedCount'
 import { CriterionCell } from './dataTable/cells/CriterionCell'
 import { StaticTableScroll } from './dataTable/StaticTableScroll'
@@ -25,6 +24,9 @@ interface AreaPerformanceTableProps {
   /** Accessible name of the scroll region. Must be unique per page when
    *  several tables render (axe landmark-unique), e.g. one per division. */
   label?: string
+  /** Reserve the "+N qualifying today" slot in each row (the counts arrive
+   *  after first paint on the Divisions page). */
+  reserveExtra?: boolean | undefined
 }
 
 /**
@@ -72,7 +74,9 @@ const visitCell = (v: AreaPerformance['firstRoundVisits']) => (
   </CriterionCell>
 )
 
-const PHONE_METRICS: PriorityMetric<AreaPerformance, never>[] = [
+const phoneMetrics = (
+  reserveExtra?: boolean
+): PriorityMetric<AreaPerformance, never>[] => [
   {
     id: 'paid',
     label: 'Paid',
@@ -95,18 +99,15 @@ const PHONE_METRICS: PriorityMetric<AreaPerformance, never>[] = [
     render: a => (
       <>
         <span className="block">
-          {confirmedDistinguished(a)}/{a.clubBase}
+          {a.distinguishedClubs}/{a.clubBase}
         </span>
         <span className="block">
-          {calculateDistinguishedPercentage(
-            a.clubBase,
-            confirmedDistinguished(a)
-          )}
-          %
+          {calculateDistinguishedPercentage(a.clubBase, a.distinguishedClubs)}%
         </span>
         <QualifyingTodayExtra
           provisional={a.provisionalDistinguishedClubs}
           stacked
+          reserve={reserveExtra}
         />
       </>
     ),
@@ -237,6 +238,7 @@ const PHONE_METRICS: PriorityMetric<AreaPerformance, never>[] = [
 export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
   areas,
   label = 'Area performance',
+  reserveExtra,
 }) => {
   // Sort areas by area identifier (Requirement 6.8)
   const sortedAreas = [...areas].sort((a, b) =>
@@ -291,7 +293,7 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
             area.paidClubs
           )
           // Confirmed headline and percentage; the extra follows (#2580).
-          const confirmedClubs = confirmedDistinguished(area)
+          const confirmedClubs = area.distinguishedClubs
           const distinguishedPercentage = calculateDistinguishedPercentage(
             area.clubBase,
             confirmedClubs
@@ -311,6 +313,7 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
                 {confirmedClubs}/{area.clubBase} {distinguishedPercentage}%
                 <QualifyingTodayExtra
                   provisional={area.provisionalDistinguishedClubs}
+                  reserve={reserveExtra}
                 />
               </td>
               <td className="entity-table__c">
@@ -360,7 +363,7 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
       rowKey={a => a.areaId}
       identityHeader="Area"
       renderIdentity={a => <span className="font-semibold">{a.areaId}</span>}
-      metrics={PHONE_METRICS}
+      metrics={phoneMetrics(reserveExtra)}
       defaultMetricIds={['paid', 'award']}
       fullTableTitle={`${label} — all columns`}
       // The nine-column table needs about 730px, which the 654px content box

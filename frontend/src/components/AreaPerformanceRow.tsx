@@ -7,7 +7,6 @@ import {
   calculateDistinguishedPercentage,
 } from '../utils/areaGapAnalysis'
 import { renderRecognitionBadge } from '../utils/areaRecognitionBadge'
-import { confirmedDistinguished } from '../utils/divisionAreaDistinguished'
 import { QualifyingTodayExtra } from './DistinguishedCount'
 
 /**
@@ -118,7 +117,7 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
     area.paidClubs
   )
   // Confirmed headline and percentage; the extra follows (#2580).
-  const confirmedClubs = confirmedDistinguished(area)
+  const confirmedClubs = area.distinguishedClubs
   const distinguishedPercentage = calculateDistinguishedPercentage(
     area.clubBase,
     confirmedClubs

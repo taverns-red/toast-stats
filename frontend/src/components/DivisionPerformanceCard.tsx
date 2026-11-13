@@ -29,6 +29,9 @@ export interface DivisionPerformanceCardProps {
   /** District id — when set, the card heading links to the division page
    *  (CC-7, #872). */
   districtId?: string | undefined
+  /** Reserve the "+N qualifying today" slots (the counts arrive after first
+   *  paint on the Divisions page). */
+  reserveExtra?: boolean | undefined
 }
 
 /**
@@ -63,7 +66,7 @@ export interface DivisionPerformanceCardProps {
  */
 export const DivisionPerformanceCard: React.FC<
   DivisionPerformanceCardProps
-> = ({ division, districtId }) => {
+> = ({ division, districtId, reserveExtra }) => {
   // Calculate gap analysis for the division
   // Requirements: 9.1, 9.2, 9.3, 9.4
   const gapAnalysis = calculateDivisionGapAnalysis({
@@ -88,6 +91,7 @@ export const DivisionPerformanceCard: React.FC<
         netGrowth={division.netGrowth}
         distinguishedClubs={division.distinguishedClubs}
         provisionalDistinguishedClubs={division.provisionalDistinguishedClubs}
+        reserveExtra={reserveExtra}
         requiredDistinguishedClubs={division.requiredDistinguishedClubs}
         gapAnalysis={gapAnalysis}
         to={
@@ -104,6 +108,7 @@ export const DivisionPerformanceCard: React.FC<
       <div className="entity-card-body">
         <AreaPerformanceTable
           areas={division.areas}
+          reserveExtra={reserveExtra}
           label={`Division ${division.divisionId} area performance`}
         />
       </div>
