@@ -107,3 +107,58 @@ describe('RollupPanels', () => {
     )
   })
 })
+
+/* Confirmed Distinguished headline (#2580): the tile reads the published
+   `distinguishedCounts`; confirmed is the headline, the rest is "+N
+   qualifying today", and nothing is subtracted client-side. Fixture literals
+   mirror the 2026-11-12 world block (113 confirmed, 773 qualifying today). */
+describe('RollupPanels Distinguished tile (#2580)', () => {
+  const COUNTS = {
+    confirmed: 113,
+    provisional: 773,
+    byTier: {
+      distinguished: { confirmed: 71, provisional: 587 },
+      select: { confirmed: 31, provisional: 141 },
+      presidents: { confirmed: 11, provisional: 42 },
+      smedley: { confirmed: 0, provisional: 3 },
+    },
+  }
+  const tile = () =>
+    within(screen.getByTestId('rollup-kpis'))
+      .getByText('Distinguished')
+      .closest('li') as HTMLElement
+
+  it('headlines the confirmed count with the extra beside it', () => {
+    renderPanels({ ...world, distinguishedCounts: COUNTS })
+    expect(
+      within(tile()).getByTestId('distinguished-confirmed')
+    ).toHaveTextContent('113')
+    expect(tile()).toHaveTextContent('+773 qualifying today')
+    expect(tile()).not.toHaveTextContent('527')
+    expect(tile()).not.toHaveTextContent('886')
+  })
+
+  it('hides the extra at 0', () => {
+    renderPanels({
+      ...world,
+      distinguishedCounts: { ...COUNTS, provisional: 0 },
+    })
+    expect(tile()).toHaveTextContent('113')
+    expect(tile()).not.toHaveTextContent('qualifying today')
+  })
+
+  it('labels the snapshot count as qualifying today when nothing is published', () => {
+    renderPanels(world)
+    expect(tile()).toHaveTextContent('527')
+    expect(within(tile()).getByTestId('distinguished-basis')).toHaveTextContent(
+      'qualifying today'
+    )
+  })
+
+  it('says the level rows count clubs on current membership', () => {
+    renderPanels({ ...world, distinguishedCounts: COUNTS })
+    expect(
+      screen.getByTestId('rollup-section-distinguished')
+    ).toHaveTextContent(/current membership/i)
+  })
+})
