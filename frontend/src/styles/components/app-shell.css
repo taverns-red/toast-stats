@@ -588,6 +588,24 @@
     flex-wrap: wrap;
     row-gap: 4px;
     margin-left: -14px;
+    /* #2758 — slack. The group is shrink-to-fit, so without this the list is
+       exactly as wide as its items and any sub-pixel layout difference wraps
+       the last item onto a second line. */
+    padding-right: 4px;
+  }
+
+  /* #2758 — on a wide desktop the first group never shrinks and its list
+     never wraps, so a stale intrinsic width (a webfont swap) or a rounding
+     difference cannot push an item onto a second line. The outer row may
+     still wrap whole blocks. Below 1024 the items wrap between themselves. */
+  @media (min-width: 1024px) {
+    .app-shell-footer__group {
+      flex-shrink: 0;
+    }
+
+    .app-shell-footer__list {
+      flex-wrap: nowrap;
+    }
   }
 
   .app-shell-footer__item {

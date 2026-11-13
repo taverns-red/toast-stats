@@ -123,6 +123,100 @@ for (const width of [768, 1280]) {
   })
 }
 
+/* Footer row regression on wide desktops. The first group is sized to its
+ * content minus the 14px gutter it clips, so its list is exactly as wide as
+ * its items: zero slack. Any sub-pixel difference in how a browser lays out
+ * the text wraps the last item ("Privacy & cookies") onto a second line and
+ * leaves a "·" at the end of the first. The slack, not the wrap itself, is
+ * what fails here, because the wrap depends on the browser's rounding. */
+for (const width of [1280, 1440, 1920]) {
+  test(`footer first group fits on one line with room to spare at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await load(page, '/regions')
+    await page.locator('footer').waitFor({ state: 'visible' })
+    const m = await page.evaluate(() => {
+      const group = document.querySelector('.app-shell-footer__group')!
+      const list = group.querySelector('.app-shell-footer__list')!
+      const items = [...list.children] as HTMLElement[]
+      const sum = items.reduce((a, i) => a + i.getBoundingClientRect().width, 0)
+      const tops = new Set(
+        items.map(i => Math.round(i.getBoundingClientRect().top))
+      )
+      const gb = group.getBoundingClientRect()
+      const made = document.querySelector('[data-testid="red-vote-made-by"]')
+      const rb = made?.getBoundingClientRect()
+      return {
+        lines: tops.size,
+        slack: list.getBoundingClientRect().width - sum,
+        madeByFound: !!rb,
+        centreGap: rb
+          ? Math.abs(rb.top + rb.height / 2 - (gb.top + gb.height / 2))
+          : null,
+      }
+    })
+    expect(m.lines, 'first footer group wraps onto a second line').toBe(1)
+    expect(
+      m.slack,
+      'first footer group has no slack: a rounding difference wraps its last item'
+    ).toBeGreaterThanOrEqual(2)
+    expect(m.madeByFound, 'Red Vote made-by line not found').toBe(true)
+    expect(
+      m.centreGap,
+      'right group is not vertically aligned with the first group'
+    ).toBeLessThanOrEqual(2)
+  })
+}
+
+/* Webfont swap (#2758). A browser can keep a stale intrinsic width for the
+ * shrink-to-fit group across the font swap, so the first group is checked
+ * with the woff2 requests aborted (fallback font) and again after the real
+ * fonts load, in both engines (the smoke and webkit projects). Wide desktops
+ * also pin the structure: the group does not shrink and its list does not
+ * wrap, so a stale width can never push an item onto a second line. */
+async function firstGroupState(page: Page): Promise<{
+  lines: number
+  shrink: string
+  wrap: string
+}> {
+  return page.evaluate(() => {
+    const group = document.querySelector('.app-shell-footer__group')!
+    const list = group.querySelector('.app-shell-footer__list')!
+    const tops = new Set(
+      [...list.children].map(i => Math.round(i.getBoundingClientRect().top))
+    )
+    return {
+      lines: tops.size,
+      shrink: getComputedStyle(group).flexShrink,
+      wrap: getComputedStyle(list).flexWrap,
+    }
+  })
+}
+
+for (const width of [1440, 1920]) {
+  test(`footer first group stays on one line with fallback and loaded fonts at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.route('**/*.woff2', route => route.abort())
+    await load(page, '/regions')
+    await page.locator('footer').waitFor({ state: 'visible' })
+    const fallback = await firstGroupState(page)
+    expect(fallback.lines, 'wraps with the fallback font').toBe(1)
+
+    await page.unroute('**/*.woff2')
+    await load(page, '/regions')
+    await page.locator('footer').waitFor({ state: 'visible' })
+    const loaded = await firstGroupState(page)
+    expect(loaded.lines, 'wraps after the webfonts load').toBe(1)
+    expect(loaded.shrink, 'first group may shrink on a wide desktop').toBe('0')
+    expect(loaded.wrap, 'first group list may wrap on a wide desktop').toBe(
+      'nowrap'
+    )
+  })
+}
+
 test('World pulse with no rollups file has no horizontal overflow at 375px', async ({
   page,
 }) => {
