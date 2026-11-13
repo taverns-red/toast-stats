@@ -40,7 +40,7 @@ describe('Recharts axes name a tick fill token (#2659)', () => {
       .filter(
         ({ el }) =>
           !/tick=\{false\}/.test(el) &&
-          !/tick=\{AXIS_TICK\}/.test(el) &&
+          !/tick=\{AXIS_TICK(?:_LARGE)?\}/.test(el) &&
           !/tick=\{\{[^}]*fill:\s*'var\(--ink-[23]\)'/.test(el)
       )
       .map(({ file }) => file.replace(COMPONENTS, 'components'))
