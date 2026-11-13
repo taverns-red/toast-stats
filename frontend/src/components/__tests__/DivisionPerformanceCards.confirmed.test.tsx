@@ -87,13 +87,17 @@ function stubMobile(matches: boolean) {
   )
 }
 
-const renderCards = (by?: DivisionDistinguishedCountsRow[]) =>
+const renderCards = (
+  by?: DivisionDistinguishedCountsRow[],
+  countsPending = false
+) =>
   render(
     <DivisionPerformanceCards
       districtSnapshot={{ divisionPerformance: [] }}
       snapshotTimestamp="2026-03-15"
       districtId="61"
       distinguishedCountsByDivision={by}
+      countsPending={countsPending}
     />
   )
 
@@ -160,11 +164,41 @@ describe('DivisionPerformanceCards confirmed Distinguished (#2580)', () => {
     )
   })
 
-  it('reserves the extra slot on the desktop cards', () => {
+  it('desktop, counts loading: no status badge, no count, no qualifying-today value', () => {
     stubMobile(false)
-    renderCards(undefined)
+    renderCards(undefined, true)
+    const card = screen.getByLabelText('Division A performance card')
     expect(
-      screen.getAllByTestId('distinguished-extra-slot').length
-    ).toBeGreaterThanOrEqual(2)
+      screen.queryByRole('status', { name: /^Division status:/ })
+    ).toBeNull()
+    expect(
+      card.querySelector('[aria-label^="Distinguished clubs:"]')
+    ).toBeNull()
+    expect(screen.queryByLabelText(/^Recognition status:/)).toBeNull()
+    expect(card).not.toHaveTextContent('6/5')
+    expect(card).not.toHaveTextContent('6/10')
+    expect(screen.queryByTestId('distinguished-provisional')).toBeNull()
+    expect(
+      screen.getAllByTestId('distinguished-pending').length
+    ).toBeGreaterThan(0)
+  })
+
+  it('phone, counts loading: the row has no chip and no distinguished count', () => {
+    stubMobile(true)
+    renderCards(undefined, true)
+    const row = screen.getByTestId('mobile-row')
+    expect(row).not.toHaveTextContent('Distinguished')
+    expect(row).not.toHaveTextContent('distinguished')
+    expect(row).not.toHaveTextContent('6/5')
+    expect(row).toHaveTextContent('10/10 paid')
+  })
+
+  it('settled without the field: the snapshot basis shows, no placeholders', () => {
+    stubMobile(false)
+    renderCards(undefined, false)
+    expect(screen.queryByTestId('distinguished-pending')).toBeNull()
+    expect(
+      screen.getByRole('status', { name: /^Division status:/ })
+    ).toBeInTheDocument()
   })
 })

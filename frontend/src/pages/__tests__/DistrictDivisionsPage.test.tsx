@@ -135,10 +135,14 @@ vi.mock('../../components/LazyCharts', () => ({
 vi.mock('../../components/GlobalRankingsTab', () => ({ default: () => null }))
 
 vi.mock('../../components/DivisionPerformanceCards', () => ({
-  DivisionPerformanceCards: (props: { isLoading?: boolean }) => (
+  DivisionPerformanceCards: (props: {
+    isLoading?: boolean
+    countsPending?: boolean
+  }) => (
     <div
       data-testid="division-performance-cards"
       data-loading={String(props.isLoading === true)}
+      data-counts-pending={String(props.countsPending === true)}
     >
       division cards
     </div>
@@ -146,8 +150,13 @@ vi.mock('../../components/DivisionPerformanceCards', () => ({
 }))
 
 vi.mock('../../components/DivisionAreaRecognitionPanel', () => ({
-  DivisionAreaRecognitionPanel: () => (
-    <div data-testid="division-area-recognition-panel">area recognition</div>
+  DivisionAreaRecognitionPanel: (props: { isLoading?: boolean }) => (
+    <div
+      data-testid="division-area-recognition-panel"
+      data-loading={String(props.isLoading === true)}
+    >
+      area recognition
+    </div>
   ),
 }))
 
@@ -219,7 +228,7 @@ describe('DistrictDivisionsPage (#571 — Phase 3)', () => {
   // #1901, #2580: the confirmed/qualifying-today split comes from the district
   // analytics read. The cards render from the statistics alone and do not wait
   // for it; the extra arrives into a reserved slot.
-  it('does not hold the division cards for the analytics read', async () => {
+  it('does not hold the division cards for the analytics read, only their count-driven values', async () => {
     const pending = {
       data: undefined,
       isLoading: true,
@@ -232,6 +241,30 @@ describe('DistrictDivisionsPage (#571 — Phase 3)', () => {
       renderAt('/district/61/divisions')
       const cards = await screen.findByTestId('division-performance-cards')
       expect(cards).toHaveAttribute('data-loading', 'false')
+      // ...but it holds back the values the counts decide (no first paint on
+      // the qualifying-today basis), and so does the recognition panel.
+      expect(cards).toHaveAttribute('data-counts-pending', 'true')
+      expect(
+        screen.getByTestId('division-area-recognition-panel')
+      ).toHaveAttribute('data-loading', 'true')
+    } finally {
+      if (fallback) vi.mocked(useDistrictAnalytics).mockImplementation(fallback)
+    }
+  })
+
+  it('shows the snapshot basis once the analytics read has failed', async () => {
+    const failed = {
+      data: undefined,
+      isLoading: false,
+      error: new Error('boom'),
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useDistrictAnalytics>
+    const fallback = vi.mocked(useDistrictAnalytics).getMockImplementation()
+    vi.mocked(useDistrictAnalytics).mockImplementation(() => failed)
+    try {
+      renderAt('/district/61/divisions')
+      const cards = await screen.findByTestId('division-performance-cards')
+      expect(cards).toHaveAttribute('data-counts-pending', 'false')
     } finally {
       if (fallback) vi.mocked(useDistrictAnalytics).mockImplementation(fallback)
     }

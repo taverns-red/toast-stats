@@ -92,25 +92,25 @@ describe('AreaPerformanceRow confirmed Distinguished count', () => {
   })
 })
 
-describe('AreaPerformanceTable reserved extra slot', () => {
-  it('reserves an empty slot per row when asked, none otherwise', () => {
-    const { rerender } = render(
-      <AreaPerformanceTable areas={[makeArea()]} reserveExtra />
-    )
-    expect(screen.getByTestId('distinguished-extra-slot')).toBeEmptyDOMElement()
-    rerender(<AreaPerformanceTable areas={[makeArea()]} />)
-    expect(screen.queryByTestId('distinguished-extra-slot')).toBeNull()
-  })
-
-  it('keeps the extra inside the slot when there is one', () => {
+describe('AreaPerformanceTable while the counts load', () => {
+  it('shows placeholders for the count, recognition and gaps, not qualifying-today values', () => {
     render(
       <AreaPerformanceTable
-        areas={[makeArea({ provisionalDistinguishedClubs: 2 })]}
-        reserveExtra
+        areas={[makeArea({ distinguishedClubs: 6 })]}
+        countsPending
       />
     )
-    expect(screen.getByTestId('distinguished-extra-slot')).toContainElement(
-      screen.getByTestId('distinguished-provisional')
-    )
+    const row = screen.getByText('A1').closest('tr')!
+    expect(row).not.toHaveTextContent('6/10')
+    expect(within(row).queryByLabelText(/^Recognition status:/)).toBeNull()
+    expect(within(row).getAllByTestId('distinguished-pending').length).toBe(5)
+    // Paid and visits are not affected by the counts and still show.
+    expect(row).toHaveTextContent('10/10 100%')
+  })
+
+  it('has no placeholders, and no reserved space, once loaded', () => {
+    render(<AreaPerformanceTable areas={[makeArea()]} />)
+    expect(screen.queryByTestId('distinguished-pending')).toBeNull()
+    expect(screen.queryByTestId('distinguished-extra-slot')).toBeNull()
   })
 })

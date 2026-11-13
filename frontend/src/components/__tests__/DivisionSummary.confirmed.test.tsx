@@ -77,27 +77,30 @@ describe('DivisionSummary confirmed Distinguished count', () => {
     expect(screen.queryByTestId('distinguished-provisional')).toBeNull()
   })
 
-  it('reserves the extra slot when asked, empty when there is no extra', () => {
-    const { rerender } = render(
-      <DivisionSummary {...base} distinguishedClubs={5} reserveExtra />
-    )
-    const slot = screen.getByTestId('distinguished-extra-slot')
-    expect(slot).toBeEmptyDOMElement()
-    rerender(
+  it('while the counts load, shows fixed-size placeholders, not the status, pill or gaps', () => {
+    render(
       <DivisionSummary
         {...base}
-        distinguishedClubs={3}
-        provisionalDistinguishedClubs={2}
-        reserveExtra
+        status="distinguished"
+        distinguishedClubs={6}
+        countsPending
+        gapAnalysis={undefined}
       />
     )
-    expect(screen.getByTestId('distinguished-extra-slot')).toContainElement(
-      screen.getByTestId('distinguished-provisional')
-    )
+    expect(
+      screen.queryByRole('status', { name: /^Division status:/ })
+    ).toBeNull()
+    expect(screen.queryByLabelText(/^Distinguished clubs:/)).toBeNull()
+    expect(screen.queryByText('6/5')).toBeNull()
+    expect(screen.queryByTestId('distinguished-provisional')).toBeNull()
+    expect(screen.getAllByTestId('distinguished-pending').length).toBe(2)
   })
 
-  it('has no slot unless asked', () => {
+  it('shows the real values once the counts are not pending', () => {
     render(<DivisionSummary {...base} distinguishedClubs={5} />)
-    expect(screen.queryByTestId('distinguished-extra-slot')).toBeNull()
+    expect(screen.queryByTestId('distinguished-pending')).toBeNull()
+    expect(
+      screen.getByRole('status', { name: /^Division status:/ })
+    ).toBeInTheDocument()
   })
 })

@@ -58,4 +58,21 @@ describe('AreaPerformanceTable Dist. column on phones (#2580)', () => {
       within(row).getByTestId('distinguished-provisional')
     ).toHaveTextContent('+2 qualifying today')
   })
+
+  it('shows a placeholder, not the qualifying-today count, while loading', () => {
+    render(
+      <MemoryRouter initialEntries={['/district/61/divisions?cols=dist,award']}>
+        <AreaPerformanceTable
+          areas={[AREA]}
+          label="Division A area performance"
+          countsPending
+        />
+      </MemoryRouter>
+    )
+    const row = screen.getByText('A1').closest('tr')!
+    expect(within(row).queryByText('4/10')).toBeNull()
+    expect(
+      within(row).getAllByTestId('distinguished-pending').length
+    ).toBeGreaterThanOrEqual(1)
+  })
 })
