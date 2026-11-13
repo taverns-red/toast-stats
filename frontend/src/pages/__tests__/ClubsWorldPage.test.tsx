@@ -168,7 +168,7 @@ describe('ClubsWorldPage (#1556)', () => {
     const basis = screen.getByTestId('race-basis')
     expect(basis).toHaveTextContent(/confirmed April renewals/)
     expect(
-      within(basis).getByRole('link', { name: /Methodology/ })
+      within(basis).getByRole('link', { name: /How it works/ })
     ).toHaveAttribute('href', '/methodology#club-race')
   })
 

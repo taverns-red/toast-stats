@@ -146,7 +146,7 @@
     },
     {
       "path": "/methodology",
-      "sentinel": ".methodology-toc",
+      "sentinel": ".methodology-group",
       "firstContentMaxPx": 390,
       "maxShareUnder14": 0.13
     },

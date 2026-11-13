@@ -23,7 +23,10 @@ const SECTIONS = [
 const renderChip = (onJump = vi.fn()) => {
   render(
     <MemoryRouter>
-      <JumpToChip sections={SECTIONS} onJump={onJump} />
+      <JumpToChip
+        groups={[{ title: 'Topics', sections: SECTIONS }]}
+        onJump={onJump}
+      />
     </MemoryRouter>
   )
   return onJump
