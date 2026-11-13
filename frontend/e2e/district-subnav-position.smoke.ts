@@ -20,6 +20,14 @@ const TABS = [
   '/district/61/changes',
   '/district/61/map',
   '/district/61/council',
+  '/district/61/grid',
+  '/district/61/growth',
+  '/district/61/education',
+  '/district/61/meetings',
+  '/district/61/training',
+  '/district/61/trends',
+  '/district/61/rankings',
+  '/district/61/action-list',
 ] as const
 
 const TOLERANCE_PX = 1
@@ -27,7 +35,7 @@ const TOLERANCE_PX = 1
 test.describe('district section bar position (#2646)', () => {
   test.use({ viewport: { width: 1280, height: 900 } })
 
-  test('the bar top is identical across hub, clubs, divisions, changes, map and council', async ({
+  test('the bar top is identical across every district section', async ({
     page,
   }) => {
     const tops: Record<string, number> = {}
