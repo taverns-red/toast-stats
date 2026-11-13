@@ -62,6 +62,38 @@ describe('z-index tokens (#2674)', () => {
     expect(missing).toEqual([])
   })
 
+  /* The #2674 migration moved no layer: each rule keeps the number it had.
+     Resolved through the token file, so a token cannot quietly change a
+     rule's layer (the tab fade was 10, not --z-sticky-search's 5). */
+  it('keeps migrated rules at their original layer', () => {
+    const tokens = readFileSync(TOKENS, 'utf-8')
+    const value = (token: string) =>
+      Number(tokens.match(new RegExp(`${token}:\\s*(\\d+)`))?.[1])
+    const resolved = (file: string, selector: string) => {
+      const css = strip(readFileSync(join(SRC, file), 'utf-8'))
+      const body = css.match(
+        new RegExp(`${selector.replace(/[[\]'.:=]/g, '\\$&')}\\s*\\{([^}]*)\\}`)
+      )?.[1]
+      const z = body?.match(/z-index:\s*(?:var\((--z-[\w-]+)\)|(\d+))/)
+      return z?.[1] ? value(z[1]) : Number(z?.[2])
+    }
+    expect(
+      resolved(
+        'index.css',
+        ".tab-scroll-fade[data-scrollable-right='true']::after"
+      )
+    ).toBe(10)
+    expect(resolved('styles/components/section-bar.css', '.section-bar')).toBe(
+      45
+    )
+    expect(resolved('styles/components/consent.css', '.consent-banner')).toBe(
+      60
+    )
+    expect(resolved('styles/components/context-bar.css', '.context-bar')).toBe(
+      35
+    )
+  })
+
   it('keeps the scale ordered: section bar under the banner, banner under overlays', () => {
     const css = readFileSync(TOKENS, 'utf-8')
     const n = (name: string) =>
