@@ -153,14 +153,17 @@ describe('RegionPage priority columns below 768 (#1834)', () => {
     const region = within(dialog).getByRole('region')
     expect(region).toHaveAttribute('tabindex', '0')
     const full = within(region).getByRole('table')
-    // 2 header rows: 11 top cells + 12 sub-header cells; body rows 20 cells
-    // (the membership Trend column joined in #1815).
-    const firstBodyRow = within(full).getAllByRole('row')[2]!
-    expect(within(firstBodyRow).getAllByRole('cell').length).toBe(20)
-    // Sticky identity columns ride along into the sheet.
+    // One header row of 20 names, and 20 cells per body row: the district
+    // row header plus 19 data cells (every column, whatever the Columns menu
+    // says on the page).
+    expect(within(full).getAllByRole('columnheader')).toHaveLength(20)
+    const firstBodyRow = within(full).getAllByRole('row')[1]!
+    expect(within(firstBodyRow).getAllByRole('rowheader')).toHaveLength(1)
+    expect(within(firstBodyRow).getAllByRole('cell')).toHaveLength(19)
+    // The sticky district column rides along into the sheet.
     expect(
-      within(full).getAllByTestId('region-rank-cell')[0]!.className
-    ).toMatch(/region-rankings__sticky-col/)
+      within(full).getAllByTestId('region-district-cell')[0]!.className
+    ).toMatch(/rankings-sticky-col/)
   })
 })
 

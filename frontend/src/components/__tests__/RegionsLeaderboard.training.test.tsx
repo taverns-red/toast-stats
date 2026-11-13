@@ -115,19 +115,15 @@ describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
     renderBoard(OCT)
     const heads = within(table())
       .getAllByRole('columnheader')
-      .map(th => th.textContent?.trim())
-    expect(heads.some(h => /^Round 1 training/.test(h ?? ''))).toBe(true)
-    expect(
-      heads.some(h => /^Round 2 training.*opens Nov 1/.test(h ?? ''))
-    ).toBe(true)
+      .map(th => th.textContent?.trim() ?? '')
+    // One header row (#2702): each round column names its round and metric.
+    expect(heads).toContain('Round 1: 4+ officers trained')
+    expect(heads).toContain('Round 1: All 7 officers trained')
     // Review of #2334: two "not started" columns overflowed the table at
     // 1024. Until it opens, Round 2 is one narrow column.
-    expect(heads.filter(h => h === '4+')).toHaveLength(1)
-    expect(heads.filter(h => h === 'All 7')).toHaveLength(1)
-    const r2 = within(table()).getByRole('columnheader', {
-      name: /^Round 2 training/,
-    })
-    expect(r2).not.toHaveAttribute('colspan', '2')
+    expect(heads.filter(h => /^Round 2/.test(h))).toEqual([
+      expect.stringMatching(/^Round 2 training.*opens Nov 1/),
+    ])
     const cells = within(rowOf('01')).getAllByRole('cell')
     expect(cells.filter(td => td.textContent === 'not started')).toHaveLength(1)
     expect(
@@ -139,9 +135,9 @@ describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
     renderBoard(regionsTrainingOverview(FILE, '2026-11-20', '2026-2027'))
     const heads = within(table())
       .getAllByRole('columnheader')
-      .map(th => th.textContent?.trim())
-    expect(heads.filter(h => h === '4+')).toHaveLength(2)
-    expect(heads.filter(h => h === 'All 7')).toHaveLength(2)
+      .map(th => th.textContent?.trim() ?? '')
+    expect(heads.filter(h => /4\+ officers trained$/.test(h))).toHaveLength(2)
+    expect(heads.filter(h => /All 7 officers trained$/.test(h))).toHaveLength(2)
   })
 
   it('a date with no figures at all: one "not available" column per round', () => {
@@ -149,7 +145,7 @@ describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
     const heads = within(table())
       .getAllByRole('columnheader')
       .map(th => th.textContent?.trim())
-    expect(heads.filter(h => h === '4+')).toHaveLength(0)
+    expect(heads.filter(h => /officers trained/.test(h ?? ''))).toHaveLength(0)
     expect(within(rowOf('01')).getAllByText('not available')).toHaveLength(2)
   })
 
@@ -173,7 +169,7 @@ describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
     // A round with nothing to compare has no sort button (as on the
     // region Training page).
     expect(
-      within(table()).getAllByRole('button', { name: /Sort by 4\+/ })
+      within(table()).getAllByRole('button', { name: /4\+ officers trained/ })
     ).toHaveLength(1)
   })
 
@@ -187,13 +183,17 @@ describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
   it('sorts by Round 1 4+, highest first, regions without figures last', () => {
     renderBoard(OCT)
     fireEvent.click(
-      within(table()).getByRole('button', { name: /Sort by 4\+/ })
+      within(table()).getByRole('button', {
+        name: /Round 1: 4\+ officers trained/,
+      })
     )
     expect(regionOrder()).toEqual(['/region/02', '/region/01', '/region/03'])
     expect(screen.getByTestId('where').textContent).toContain('sort=r1Dcp')
     // Flipped: lowest first, the unmeasured region still last.
     fireEvent.click(
-      within(table()).getByRole('button', { name: /Sort by 4\+/ })
+      within(table()).getByRole('button', {
+        name: /Round 1: 4\+ officers trained/,
+      })
     )
     expect(regionOrder()).toEqual(['/region/01', '/region/02', '/region/03'])
   })

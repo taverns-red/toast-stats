@@ -88,7 +88,7 @@ describe('RegionsLeaderboard on the DataTable (#2702)', () => {
   it('sorts from the header and keeps the region link as the only way in', () => {
     setup()
     const table = screen.getByRole('table', { name: /region rankings/i })
-    fireEvent.click(screen.getByRole('button', { name: /sort by paid clubs/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^paid clubs$/i }))
     const first = table.querySelector('tbody tr th')!
     expect(first.textContent).toMatch(/Region 01/)
     fireEvent.click(table.querySelector('tbody tr')!)

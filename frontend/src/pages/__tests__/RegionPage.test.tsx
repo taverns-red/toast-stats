@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import {
   cleanup,
   fireEvent,
@@ -9,6 +9,7 @@ import {
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
+import { showAllRegionColumns } from '../../__tests__/showAllRegionColumns'
 import RegionPage from '../RegionPage'
 import {
   fetchCdnRankings,
@@ -72,6 +73,14 @@ const renderRegion = (region: string) => {
     </QueryClientProvider>
   )
 }
+
+// Under jsdom the width tier is the narrowest, which hides most columns by
+// default (#2702). These tests are about the CELLS, so they choose every column
+// through the same storage the Columns menu writes.
+beforeEach(() => {
+  window.localStorage.clear()
+  showAllRegionColumns()
+})
 
 afterEach(() => {
   cleanup()
@@ -322,7 +331,7 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
       ...overrides,
     }) as CompetitiveAwardStandings
 
-  it('renders the "Remaining to Distinguished" column group and drops the old % headers (#688)', async () => {
+  it('renders the "needed for Distinguished" columns and drops the old % headers (#688)', async () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
@@ -331,12 +340,16 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
     mockedFetchCdnAwards.mockResolvedValue(awardsFixture())
     renderRegion('2')
 
-    // The new headline grouping (epic #683 F4): absolute counts remaining
-    // to the minimum Distinguished tier.
+    // The headline columns (epic #683 F4): absolute counts still needed for
+    // the minimum Distinguished tier. One header row, so each names itself.
     expect(
-      await screen.findByRole('columnheader', {
-        name: /remaining to distinguished/i,
-      })
+      await screen.findByRole('columnheader', { name: /^paid clubs needed$/i })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('columnheader', { name: /^payments needed$/i })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('columnheader', { name: /^distinguished needed$/i })
     ).toBeInTheDocument()
     // Officer-award + tier columns are unchanged.
     expect(
@@ -869,7 +882,7 @@ describe('RegionPage base → current → Δ column model (#687 epic #683)', () 
       .findByTestId('district-number-chip-D61')
       .then(el => el.closest('tr')!)
 
-  it('renders grouped headers for the three metrics', async () => {
+  it('names each metric column in the one header row', async () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '61', region: '2' })],
       asOfDate: '2026-05-12',
@@ -881,11 +894,21 @@ describe('RegionPage base → current → Δ column model (#687 epic #683)', () 
       await screen.findByRole('columnheader', { name: /^paid clubs$/i })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('columnheader', { name: /membership payments/i })
+      screen.getByRole('columnheader', { name: /^payments$/i })
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('columnheader', { name: /distinguished clubs/i })
+      screen.getByRole('columnheader', { name: /^distinguished$/i })
     ).toBeInTheDocument()
+    for (const name of [
+      /^paid clubs base$/i,
+      /^paid clubs change$/i,
+      /^payments base$/i,
+      /^payments change$/i,
+      /^distinguished base$/i,
+      /^distinguished change$/i,
+    ]) {
+      expect(screen.getByRole('columnheader', { name })).toBeInTheDocument()
+    }
   })
 
   it('retains the liked single columns (region rank, district, world rank, score)', async () => {
@@ -1042,15 +1065,15 @@ describe('RegionPage rank-within-region column (#515 #513)', () => {
     renderRegion('2')
 
     const rows = await screen.findAllByRole('row')
-    // skip the two header rows (#687 added a Base/Current/Δ sub-header row)
-    const rank1 = within(rows[2]!).getByTestId('region-rank-cell')
-    const rank2 = within(rows[3]!).getByTestId('region-rank-cell')
-    const rank3 = within(rows[4]!).getByTestId('region-rank-cell')
+    // skip the one header row
+    const rank1 = within(rows[1]!).getByTestId('region-rank-cell')
+    const rank2 = within(rows[2]!).getByTestId('region-rank-cell')
+    const rank3 = within(rows[3]!).getByTestId('region-rank-cell')
     expect(rank1.textContent).toContain('#1')
     expect(rank2.textContent).toContain('#2')
     expect(rank3.textContent).toContain('#3')
     // D61 (score 300) ranks #1 within region 2.
-    expect(within(rows[2]!).getByText(/D61/)).toBeInTheDocument()
+    expect(within(rows[1]!).getByText(/D61/)).toBeInTheDocument()
   })
 
   it('marks tied region ranks (same aggregateScore) as tied', async () => {
@@ -1075,12 +1098,12 @@ describe('RegionPage rank-within-region column (#515 #513)', () => {
     renderRegion('3')
 
     const rows = await screen.findAllByRole('row')
-    // skip the two header rows (#687 Base/Current/Δ sub-header row)
+    // skip the one header row
     expect(
-      within(rows[2]!).getByTestId('region-rank-cell').textContent
+      within(rows[1]!).getByTestId('region-rank-cell').textContent
     ).toMatch(/#1.*tied/i)
     expect(
-      within(rows[3]!).getByTestId('region-rank-cell').textContent
+      within(rows[2]!).getByTestId('region-rank-cell').textContent
     ).toMatch(/#1.*tied/i)
   })
 
@@ -1100,14 +1123,14 @@ describe('RegionPage rank-within-region column (#515 #513)', () => {
     renderRegion('6')
 
     const rows = await screen.findAllByRole('row')
-    // skip the two header rows (#687 Base/Current/Δ sub-header row)
-    const districtCell = within(rows[2]!).getByTestId(
+    // skip the one header row
+    const districtCell = within(rows[1]!).getByTestId(
       'district-number-chip-D86'
     )
     expect(districtCell).toHaveTextContent('D86')
     // The bare "86" name should NOT render as a sibling span — the chip
     // already conveys the number.
-    expect(within(rows[2]!).queryByText(/^86$/)).not.toBeInTheDocument()
+    expect(within(rows[1]!).queryByText(/^86$/)).not.toBeInTheDocument()
   })
 })
 

@@ -30,7 +30,7 @@ describe('region district rankings: on the DataTable, no whole-row click', () =>
     const page = src('pages/RegionPage.tsx')
     expect(page).not.toMatch(/<table\b/)
     expect(page).not.toMatch(/cursor-pointer/)
-    expect(page).not.toMatch(/districts-rankings-table/)
+    expect(page).not.toMatch(/districts-rankings-table(?!-wrap|__sheet)/)
   })
 
   it('sets no sub-14px text size in any cell', () => {
