@@ -89,9 +89,7 @@ describe('RegionPage phone view (#2580)', () => {
         </ProgramYearProvider>
       </QueryClientProvider>
     )
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Dist. clubs', exact: true })
-    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Dist. clubs' }))
     // Wait for the rollups so the extra would be drawn if it were going to be.
     await screen.findAllByTestId('distinguished-provisional')
     const table = document.querySelector(
