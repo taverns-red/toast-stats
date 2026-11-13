@@ -178,8 +178,24 @@ describe('tinted /N fills carry an explicit rule per theme (#2642)', () => {
       theme === 'dark'
         ? parseColor('#5dade2', toks)
         : parseColor('#004165', toks)
+    // The banner's body copy is `text-gray-600` (DistrictDetailPage). Dark
+    // maps it to --text-muted; light is Tailwind's gray-600.
+    const body =
+      theme === 'dark'
+        ? parseColor(
+            prop(
+              declsFor(darkCss, "[data-theme='dark'] .text-gray-600"),
+              'color'
+            )!,
+            toks
+          )
+        : parseColor('#4b5563', toks)
     for (const surface of surfaces(theme)) {
       const bg = over(fill, surface)
+      expect(
+        contrast(body, bg),
+        'body copy (text-gray-600)'
+      ).toBeGreaterThanOrEqual(AA)
       expect(contrast(ink, bg), 'copy').toBeGreaterThanOrEqual(AA)
       expect(contrast(accent, bg), 'icon').toBeGreaterThanOrEqual(3)
     }
