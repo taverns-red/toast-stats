@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { ClubRiskFactors, plainRiskFactor } from '../ClubRiskFactors'
+import { ClubRiskFactors } from '../ClubRiskFactors'
+import { plainRiskFactor } from '../../../utils/plainRiskFactor'
 
 /* #2655 UNIT-21 — Risk Factors is a regular club panel with plain copy:
    no emoji, no Tailwind reds, no "need 3+ to override". The analytics

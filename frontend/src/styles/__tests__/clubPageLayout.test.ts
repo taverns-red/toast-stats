@@ -39,7 +39,7 @@ describe('goal timeline dates (#2655 UNIT-34)', () => {
   })
 
   it('sizes the date column to its content at every width', () => {
-    const grids = rulesFor('.timeline-row').join('\n')
+    const grids = rulesFor('.goal-timeline').join('\n')
     expect(grids).toMatch(/grid-template-columns:\s*max-content/)
   })
 })

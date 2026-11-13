@@ -2294,7 +2294,9 @@
      face is the line's own, so one line never mixes two families. */
   .club-hero__lineage {
     padding: 0 var(--rt-space-2);
-    border-left: 2px solid var(--tm-loyal-blue);
+    /* #2655 UNIT-44 — white: the old blue rule matched the hero's own
+       colour in light mode, so it only showed in dark. */
+    border-left: 2px solid rgba(255, 255, 255, 0.55);
     font-size: 13px;
     line-height: 20px;
     color: rgba(255, 255, 255, 0.85);
@@ -2390,7 +2392,8 @@
   @media (max-width: 767.98px) {
     .club-hero {
       gap: var(--rt-space-2);
-      padding: var(--rt-space-3) var(--rt-space-4);
+      /* 10px, not --rt-space-3: pays for the wrapped meeting line (#2655). */
+      padding: 10px var(--rt-space-4);
       margin-bottom: var(--rt-space-4);
     }
 
@@ -2409,21 +2412,21 @@
     }
 
     .club-hero__title {
-      margin: 0 0 2px;
+      margin: 0;
       font-size: 22px;
       line-height: 1.15;
     }
 
     .club-meets {
       display: block;
-      margin-top: 2px;
+      margin-top: 0;
     }
 
+    /* #2655 UNIT-15 — wraps (two lines for a long address) instead of
+       cutting the place to "875 Grande …". */
     .club-meets__facts {
       display: block;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      line-height: 1.3;
     }
 
     .club-meets__facts .club-meets__item {
@@ -2452,8 +2455,8 @@
 
     .club-meets__links {
       gap: 0 var(--rt-space-5);
-      margin-top: -6px;
-      margin-bottom: -6px;
+      margin-top: -8px;
+      margin-bottom: -8px;
     }
   }
 
@@ -2475,6 +2478,39 @@
      (≥ 3:1 on --surface in both themes), halo a translucent ring. */
   .club-minimap {
     margin-bottom: 20px;
+  }
+
+  /* #2655 UNIT-23 — from 768 the map sits beside its address and legend
+     instead of leaving a 480px picture in a 1,200px card. The credit stays
+     under the map. */
+  @media (min-width: 768px) {
+    .club-minimap__body {
+      display: grid;
+      grid-template-columns: minmax(0, 480px) minmax(0, 1fr);
+      grid-template-rows: auto 1fr auto;
+      grid-template-areas:
+        'map place'
+        'map legend'
+        'credit .';
+      column-gap: var(--rt-space-6);
+      align-items: start;
+    }
+
+    .club-minimap__body > .club-minimap__link {
+      grid-area: map;
+    }
+
+    .club-minimap__body > .club-minimap__place {
+      grid-area: place;
+    }
+
+    .club-minimap__body > .club-minimap__legend {
+      grid-area: legend;
+    }
+
+    .club-minimap__body > .club-minimap__credit {
+      grid-area: credit;
+    }
   }
 
   .club-minimap__link {
@@ -2950,8 +2986,30 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    /* #2655 UNIT-23 — Education (about 150px of content) was stretched to
+       Compliance's height. Lifecycle now sits under Education in the left
+       column and Compliance runs the full height of both on the right, so
+       neither column leaves a hole. */
+    .club-panels-grid {
+      align-items: start;
+      /* Spare height from the taller Compliance goes below Lifecycle, not
+         between it and Education. */
+      grid-template-rows: auto 1fr;
+    }
+
+    .club-panels-grid > .club-edu {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
     .club-panels-grid > .club-lifecycle {
-      grid-column: 1 / -1;
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .club-panels-grid > .club-compliance {
+      grid-column: 2;
+      grid-row: 1 / span 2;
     }
   }
 
@@ -3445,6 +3503,30 @@
     border: 1px solid var(--line);
     border-radius: var(--rds-radius-md);
     box-shadow: var(--rds-shadow-sm);
+    color: var(--ink);
+  }
+
+  /* #2655 UNIT-12 — the panels that close the page had no bottom margin, so
+     their borders met (0px). Every stacked panel is one token apart. */
+  .club-risk,
+  .worldwide-standing,
+  .club-dcp-goals {
+    margin-bottom: var(--rt-space-4);
+  }
+
+  /* #2655 UNIT-21 — Risk factors: a regular panel with a red left rule
+     (--red-600 remaps in dark) and plain copy. */
+  .club-risk {
+    border-left: 4px solid var(--red-600);
+  }
+
+  .club-risk__list {
+    margin: 0;
+    padding-left: 1.25rem;
+    display: grid;
+    gap: var(--rt-space-2);
+    font-family: var(--sans);
+    font-size: 0.9375rem;
     color: var(--ink);
   }
 
@@ -4072,21 +4154,26 @@
      (R10), reusing the panel's #8ec5e8 accent for page consistency. Gain
      colours reuse --green-600 / --red-600 (already dark-remapped + AA-safe,
      proven in #618). */
+  /* #2655 UNIT-34 — the date column is as wide as the widest date, so a date
+     never wraps ("Aug 31, 2026*" was 94px in a 90px / 70px column). The rows
+     share the list's columns (subgrid), so the bars still line up. */
   .goal-timeline {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: max-content 1fr max-content max-content;
+    column-gap: 10px;
+    row-gap: 8px;
     margin-bottom: 4px;
   }
 
   .timeline-row {
     display: grid;
-    grid-template-columns: 90px 1fr 60px 50px;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
     align-items: center;
-    gap: 10px;
   }
 
   .timeline-row .date {
+    white-space: nowrap;
     color: var(--ink-3);
     font-family: var(--mono);
     font-size: 12px;
@@ -4143,9 +4230,8 @@
   }
 
   @media (max-width: 640px) {
-    .timeline-row {
-      grid-template-columns: 70px 1fr 50px 40px;
-      gap: 6px;
+    .goal-timeline {
+      column-gap: 6px;
       font-size: 12px;
     }
   }

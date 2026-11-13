@@ -249,6 +249,17 @@
     display: none;
   }
 
+  /* #2655 UNIT-40 — the bar's title is the one place the club's name shows on
+     a phone, and it ran to one ellipsised line. It wraps instead; two lines
+     fit the bar's 44px, so the first-content budget is untouched. */
+  .club-history-page .context-bar__title {
+    white-space: normal;
+    text-overflow: clip;
+    font-size: 15px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
   .context-bar ~ .club-history-page__header .club-history-page__title {
     position: absolute;
     width: 1px;

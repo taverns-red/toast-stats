@@ -106,8 +106,15 @@ test('the club history page prints the club name on a phone', async ({
   page,
 }) => {
   await load(page, `${CLUB}/history`, 375)
-  const box = await page.locator('h1').first().boundingBox()
-  expect(box?.width ?? 0).toBeGreaterThan(100)
-  expect(box?.height ?? 0).toBeGreaterThan(10)
-  await expect(page.locator('h1').first()).toContainText('optimates')
+  // Below 768 the context bar carries the title (the H1 is visually hidden).
+  const title = page.locator('.context-bar__title')
+  await expect(title).toContainText('optimates de la colline')
+  const m = await title.evaluate(el => ({
+    clipped: el.scrollWidth > el.clientWidth + 1,
+    nowrap: getComputedStyle(el).whiteSpace === 'nowrap',
+    barH: el.closest('.context-bar')!.getBoundingClientRect().height,
+  }))
+  expect(m.nowrap).toBe(false)
+  expect(m.clipped).toBe(false)
+  expect(m.barH).toBeLessThanOrEqual(60)
 })

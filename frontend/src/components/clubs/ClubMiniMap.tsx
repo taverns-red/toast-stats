@@ -172,7 +172,7 @@ export function ClubMiniMap({
           Location
         </h2>
       </div>
-      <div className="club-panel__body">
+      <div className="club-panel__body club-minimap__body">
         <Link
           className="club-minimap__link"
           to={`/district/${districtId}/map?club=${encodeURIComponent(clubId)}`}

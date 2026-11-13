@@ -231,10 +231,10 @@ for (const [width, cols, rows] of [
     const lifecycle = m.panels[2]!
     expect(lifecycle.rows, 'lifecycle rows').toBeGreaterThanOrEqual(2)
     expect(lifecycle.rowTextMin).toBeGreaterThanOrEqual(14)
-    // Ron's layout decision on PR #2057: Education and Compliance side by
-    // side from 768, the timeline on its own full-width row below them,
-    // laid out horizontally and hugging its content (no stretched empty
-    // space). Below 768 it stays a vertical timeline.
+    // Education and Compliance side by side from 768, the timeline
+    // (#2057, revised by #2655) under Education, laid out horizontally and
+    // hugging its content (no stretched empty space). Below 768 it stays a
+    // vertical timeline.
     const [edu, compliance] = m.panels
     expect(
       lifecycle.slackBelowList,
@@ -251,13 +251,13 @@ for (const [width, cols, rows] of [
         edu!.top
       )
       expect(compliance!.left).toBeGreaterThan(edu!.left)
-      expect(
-        lifecycle.top,
-        'timeline below both panels'
-      ).toBeGreaterThanOrEqual(Math.max(edu!.bottom, compliance!.bottom))
-      expect(lifecycle.width, 'timeline is full width').toBeGreaterThanOrEqual(
-        m.panelsGridWidth - 2
+      // #2655 UNIT-23 (review 2026-11-12): the timeline sits under
+      // Education in the left column; Compliance runs beside both.
+      expect(lifecycle.left, 'timeline under Education').toBe(edu!.left)
+      expect(lifecycle.top, 'timeline below Education').toBeGreaterThanOrEqual(
+        edu!.bottom
       )
+      expect(lifecycle.width, 'timeline is Education wide').toBe(edu!.width)
       expect(new Set(lifecycle.itemTops).size, 'horizontal: one row').toBe(1)
       expect(lifecycle.itemLefts).toEqual(
         [...lifecycle.itemLefts].sort((a, b) => a - b)
@@ -368,14 +368,23 @@ for (const width of [375, 1280]) {
       heroH: Math.round(
         document.querySelector('.club-hero')!.getBoundingClientRect().height
       ),
+      // #2655 UNIT-15: the meeting line wraps instead of being cut, so a
+      // club with a long schedule and address owns the lines past two.
+      extraFacts: (() => {
+        const facts = document.querySelector('.club-meets__facts')!
+        const lineH = parseFloat(getComputedStyle(facts).lineHeight)
+        const lines = Math.round(facts.getBoundingClientRect().height / lineH)
+        return Math.max(0, lines - 2) * lineH
+      })(),
       docOverflow:
         document.documentElement.scrollWidth -
         document.documentElement.clientWidth,
     }))
     if (width < 768) {
-      expect(m.heroH, `hero height ${m.heroH}px`).toBeLessThanOrEqual(
-        HERO_MAX_H
-      )
+      expect(
+        m.heroH - m.extraFacts,
+        `hero height ${m.heroH}px, ${m.extraFacts}px of it a third+ meeting line`
+      ).toBeLessThanOrEqual(HERO_MAX_H)
     }
     expect(m.docOverflow).toBe(0)
     test.info().annotations.push({

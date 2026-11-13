@@ -13,6 +13,7 @@ import {
 import { raceTierTitle, raceTierUrl } from '../../utils/raceTierRoute'
 import { reachWindowCopy } from '../../utils/reachWindowCopy'
 import { ordinal } from './RacePodium'
+import { formatDisplayDate } from '../../utils/dateFormatting'
 
 /* #1556 — the club page's "Worldwide standing" card (spec §4.2, §6).
    Every club gets a private, cohort-based percentile ("top X %"). A RANK is
@@ -49,6 +50,15 @@ function highestReached(reached: GlobalClubRaceReached): {
     }
   }
   return null
+}
+
+/** "Top X%" at or above the median; below it "Ahead of N%" (#2655: the
+ *  weakest clubs read "Top 100%"). N is the share of the cohort below. */
+function standing(topPercent: number, capital: boolean): string {
+  if (topPercent > 50) {
+    return `${capital ? 'Ahead' : 'ahead'} of ${100 - topPercent}%`
+  }
+  return `${capital ? 'Top' : 'top'} ${topPercent}%`
 }
 
 export const WorldwideStandingCard: React.FC<WorldwideStandingCardProps> = ({
@@ -88,17 +98,19 @@ export const WorldwideStandingCard: React.FC<WorldwideStandingCardProps> = ({
         <p className="worldwide-standing__cohort">
           {cohort.topPercentOverall === null
             ? 'No worldwide comparison is available for this date.'
-            : `Top ${cohort.topPercentOverall}% of clubs worldwide by goals met`}
+            : `${standing(cohort.topPercentOverall, true)} of clubs worldwide by goals met`}
           {cohort.topPercentInBand !== null && (
             <>
-              {' · '}top {cohort.topPercentInBand}% among clubs with{' '}
+              {' · '}
+              {standing(cohort.topPercentInBand, false)} among clubs with{' '}
               {membershipBandLabel(cohort.band)}
             </>
           )}
         </p>
         <p className="worldwide-standing__note">
           Compared against {race.scope.clubsScanned.toLocaleString()} clubs on{' '}
-          {race.date}. <Link to="/clubs">Clubs worldwide</Link>
+          {formatDisplayDate(race.date)}.{' '}
+          <Link to="/clubs">Clubs worldwide</Link>
         </p>
       </div>
     </section>
