@@ -271,6 +271,34 @@ describe('WorldPulse (#2249)', () => {
     ).toHaveTextContent('All 7 regions →')
   })
 
+  // #2653 D11 — the link counts the numbered regions and, apart, the
+  // districts no region holds, both from the rows.
+  it('names the districts not assigned in the all-regions link', () => {
+    const rows: WorldPulseRow[] = [
+      ...Array.from({ length: 6 }, (_, i) => ({
+        districtId: String(i + 1),
+        region: String(i + 1).padStart(2, '0'),
+        paidClubs: 100 + i,
+        paidClubBase: 100,
+      })),
+      { districtId: '98', region: 'DNAR', paidClubs: 5, paidClubBase: 5 },
+      { districtId: '99', region: 'DNAR', paidClubs: 4, paidClubBase: 4 },
+    ]
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <WorldPulse rows={rows} date={DATE} programYear="2026-2027" />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+    expect(
+      screen.getByRole('link', { name: /all 6 regions/i })
+    ).toHaveTextContent('All 6 regions + 2 districts not assigned →')
+  })
+
   // #2256 — the Total Payments KPI card is hidden below 768, so phones
   // never saw payments. The pulse carries a phone-only payments row (the
   // CSS hides it from 768, where the KPI card shows), summed from the same

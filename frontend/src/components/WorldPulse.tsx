@@ -20,6 +20,10 @@ import { useQuery } from '@tanstack/react-query'
 import { useRegionRollups } from '../hooks/useRegionRollups'
 import { fetchCdnRegionMembershipSeries } from '../services/cdn'
 import type { SnapshotDate } from '../types/snapshotDate'
+import {
+  countUnassignedDistricts,
+  formatRegionCount,
+} from '../utils/regionCount'
 
 /** The fields the section reads from a rankings row. */
 export interface WorldPulseRow {
@@ -210,11 +214,41 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
   }, [rows])
   const showPayments = !reserve && rows.length > 0
   const shownRegions = regions.slice(0, TOP_REGION_ROWS)
+  // #2653 D11 — "14 regions + N districts not assigned": the numbered regions
+  // and the districts with none, both counted from the rows (never literals).
+  const numberedRegions = useMemo(
+    () => regions.filter(r => /^\d+$/.test(r.region)).length,
+    [regions]
+  )
+  const unassignedDistricts = useMemo(
+    () => countUnassignedDistricts(rows),
+    [rows]
+  )
 
   const figure = (n: number | null | undefined): string => {
     if (reserve || rollupsLoading) return '—'
     if (n === null || n === undefined) return 'Not available'
     return fmt(n)
+  }
+
+  /** A tile's value. An absent figure (a date with no rollups file) is an em
+      dash at value size with "Not available" under it at 14px (#2653,
+      LAND-13b): "Not available" at 22px/800 was wider than a phone tile. */
+  const tileValue = (n: number | null | undefined, testId: string) => {
+    const missing =
+      !reserve && !rollupsLoading && (n === null || n === undefined)
+    return (
+      <span
+        className="world-pulse__tile-value"
+        data-testid={testId}
+        {...(missing ? { 'data-missing': '' } : {})}
+      >
+        {missing ? '—' : figure(n)}
+        {missing && (
+          <span className="world-pulse__tile-note">Not available</span>
+        )}
+      </span>
+    )
   }
 
   const headingId = 'world-pulse-heading'
@@ -250,12 +284,10 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
                 <span className="world-pulse__tile-label">
                   Clubs needing attention
                 </span>
-                <span
-                  className="world-pulse__tile-value"
-                  data-testid="pulse-attention"
-                >
-                  {figure(world?.health.interventionRequired)}
-                </span>
+                {tileValue(
+                  world?.health.interventionRequired,
+                  'pulse-attention'
+                )}
               </div>
             ) : (
               <Link
@@ -265,12 +297,10 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
                 <span className="world-pulse__tile-label">
                   Clubs needing attention <span aria-hidden="true">→</span>
                 </span>
-                <span
-                  className="world-pulse__tile-value"
-                  data-testid="pulse-attention"
-                >
-                  {figure(world?.health.interventionRequired)}
-                </span>
+                {tileValue(
+                  world?.health.interventionRequired,
+                  'pulse-attention'
+                )}
               </Link>
             )}
           </li>
@@ -279,12 +309,7 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
               <span className="world-pulse__tile-label">
                 Chartered this year
               </span>
-              <span
-                className="world-pulse__tile-value"
-                data-testid="pulse-chartered"
-              >
-                {figure(world?.growth.chartered)}
-              </span>
+              {tileValue(world?.growth.chartered, 'pulse-chartered')}
             </div>
           </li>
           <li className="world-pulse__tile">
@@ -292,12 +317,7 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
               <span className="world-pulse__tile-label">
                 Suspended this year
               </span>
-              <span
-                className="world-pulse__tile-value"
-                data-testid="pulse-suspended"
-              >
-                {figure(world?.growth.suspended)}
-              </span>
+              {tileValue(world?.growth.suspended, 'pulse-suspended')}
             </div>
           </li>
         </ul>
@@ -421,7 +441,8 @@ export const WorldPulse: React.FC<WorldPulseProps> = ({
         </table>
         {!reserve && regions.length > TOP_REGION_ROWS && (
           <Link to="/regions" className="world-pulse__more">
-            All {regions.length} regions <span aria-hidden="true">→</span>
+            All {formatRegionCount(numberedRegions, unassignedDistricts)}{' '}
+            <span aria-hidden="true">→</span>
           </Link>
         )}
       </div>
