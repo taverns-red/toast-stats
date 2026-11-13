@@ -85,7 +85,7 @@ test('/regions on a phone uses the compact context bar', async ({ page }) => {
   await page.setViewportSize(PHONE)
   await load(page, '/regions')
   await expect(page.locator('.context-bar').first()).toBeVisible()
-  await expect(page.locator('.districts-page-header__title')).toBeHidden()
+  await expect(page.locator('.districts-page-header__lede')).toBeHidden()
 })
 
 for (const width of [768, 1280]) {
@@ -192,6 +192,7 @@ test('/regions counts regions with the unassigned districts (D11)', async ({
   await load(page, '/regions')
   await page.locator('table[aria-label="Region rankings"]').waitFor()
   const text = await page.locator('main, #root').first().innerText()
-  expect(text).toMatch(/14 regions \+ \d+ districts? not assigned/)
-  expect(text).not.toMatch(/14 worldwide/)
+  // innerText follows the eyebrow's text-transform, so match without case.
+  expect(text).toMatch(/14 regions \+ \d+ districts? not assigned/i)
+  expect(text).not.toMatch(/14 worldwide/i)
 })
