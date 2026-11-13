@@ -9,7 +9,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 60;
+  z-index: var(--z-banner);
   box-sizing: border-box;
   max-width: 720px;
   margin: 0 auto;
@@ -95,6 +95,57 @@
 .consent-banner__link:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
+}
+
+/* Details exists only on a phone (D10, #2674); from 768 up the full text and
+   all three choices are always shown, as before. */
+.consent-banner__details {
+  display: none;
+}
+
+.consent-banner__details:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Where the phone section bar is shown it owns the bottom edge: the banner
+   rests on top of it (its own 56px plus the safe-area inset, which the bar
+   consumes), and does not pad for the inset itself. Still position: fixed,
+   so no layout shift. */
+body:has(.section-bar) .consent-banner {
+  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  border-radius: 12px 12px 0 0;
+}
+
+/* Phone (D10, #2674): one line of copy, then Keep all, Keep none and Details.
+   The heading, the link and Keep minimal stay in the DOM and appear with
+   Details; the wording and the three choices are unchanged and nothing is
+   pre-selected. */
+@media (max-width: 767px) {
+  .consent-banner[data-expanded='false'] .consent-banner__title,
+  .consent-banner[data-expanded='false'] .consent-banner__button[data-detail],
+  .consent-banner[data-expanded='false'] .consent-banner__detail {
+    display: none;
+  }
+
+  .consent-banner__details {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px 6px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--link);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
 }
 
 /* Footer / About menu trigger: reads as a link, is a button. */

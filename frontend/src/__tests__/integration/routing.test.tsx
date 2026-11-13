@@ -91,7 +91,7 @@ describe('Routing scaffolding (#355)', () => {
     it('renders the page heading', () => {
       renderRoute(MethodologyPage, '/methodology')
       expect(
-        screen.getByRole('heading', { level: 1, name: /methodology/i })
+        screen.getByRole('heading', { level: 1, name: /how it works/i })
       ).toBeInTheDocument()
     })
 

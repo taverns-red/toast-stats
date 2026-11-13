@@ -84,13 +84,14 @@ describe('RegionsLeaderboard (#964) — structure', () => {
 
   it('renders the expected sortable column headers', () => {
     renderAt(<RegionsLeaderboard rollups={sampleRollups} />)
+    // The APG contract (#2676): a header button is named by its visible label.
     for (const name of [
-      /sort by region/i,
-      /sort by districts/i,
-      /sort by paid clubs/i,
-      /sort by payments/i,
-      /sort by distinguished/i,
-      /sort by score/i,
+      /^region$/i,
+      /^districts$/i,
+      /^paid clubs$/i,
+      /^payments$/i,
+      /^distinguished$/i,
+      /^score$/i,
     ]) {
       expect(screen.getByRole('button', { name })).toBeInTheDocument()
     }
@@ -102,11 +103,13 @@ describe('RegionsLeaderboard (#964) — structure', () => {
     expect(link).toHaveAttribute('href', '/region/02')
   })
 
-  it('wraps the table in a focusable, labelled scroll region (#689)', () => {
+  it('keeps the table in a scroll wrapper that scrolls only when the columns cannot fit (#689, #2702)', () => {
     renderAt(<RegionsLeaderboard rollups={sampleRollups} />)
-    const scroller = screen.getByRole('region', { name: /scroll/i })
-    expect(scroller).toHaveAttribute('tabindex', '0')
-    expect(scroller.className).toMatch(/overflow-x-auto/)
+    // jsdom has no layout, so the columns "fit": a plain block, not a tab
+    // stop. In overflow DataTable makes it a labelled, focusable region.
+    const wrapper = screen.getByRole('table').closest('.dt-scroll')!
+    expect(wrapper).toHaveAttribute('data-overflow', 'false')
+    expect(screen.queryByRole('region', { name: /scroll/i })).toBeNull()
   })
 })
 
@@ -127,7 +130,7 @@ describe('RegionsLeaderboard (#964) — default sort', () => {
   it('marks the Region header aria-sort=ascending by default', () => {
     renderAt(<RegionsLeaderboard rollups={sampleRollups} />)
     const header = screen
-      .getByRole('button', { name: /sort by region/i })
+      .getByRole('button', { name: /^region$/i })
       .closest('th')
     expect(header).toHaveAttribute('aria-sort', 'ascending')
   })
@@ -136,9 +139,7 @@ describe('RegionsLeaderboard (#964) — default sort', () => {
 describe('RegionsLeaderboard (#964) — click-header sort', () => {
   it('sorts by Score descending and writes ?sort=score&dir=desc on first click', async () => {
     renderAt(<RegionsLeaderboard rollups={sampleRollups} />)
-    await userEvent.click(
-      screen.getByRole('button', { name: /sort by score/i })
-    )
+    await userEvent.click(screen.getByRole('button', { name: /^score$/i }))
     const regions = rowRegions()
     // Score: 2200 (02), 1500 (01), 900 (03)
     expect(regions[0]).toMatch(/Region 02/)
@@ -152,7 +153,7 @@ describe('RegionsLeaderboard (#964) — click-header sort', () => {
 
   it('flips direction when the same header is clicked twice', async () => {
     renderAt(<RegionsLeaderboard rollups={sampleRollups} />)
-    const scoreBtn = screen.getByRole('button', { name: /sort by score/i })
+    const scoreBtn = screen.getByRole('button', { name: /^score$/i })
     await userEvent.click(scoreBtn) // desc
     await userEvent.click(scoreBtn) // asc
     const regions = rowRegions()
@@ -166,9 +167,7 @@ describe('RegionsLeaderboard (#964) — click-header sort', () => {
 
   it('sorts by Paid Clubs descending on click', async () => {
     renderAt(<RegionsLeaderboard rollups={sampleRollups} />)
-    await userEvent.click(
-      screen.getByRole('button', { name: /sort by paid clubs/i })
-    )
+    await userEvent.click(screen.getByRole('button', { name: /^paid clubs$/i }))
     const regions = rowRegions()
     // Paid clubs: 700 (01), 500 (02), 300 (03)
     expect(regions[0]).toMatch(/Region 01/)
@@ -200,33 +199,23 @@ describe('RegionsLeaderboard (#964) — deep link', () => {
 })
 
 describe('RegionsLeaderboard (#965) — sticky region-identity column', () => {
-  /* #965: at narrow widths the 6-column table scrolls horizontally; the Region
-     identity column must stay pinned so each row keeps its label while the
-     metric columns scroll under it (Lesson 105). The CSS that makes it opaque +
-     themed lives in app-shell.css and is contract-tested by
-     RegionDarkModeContrast; here we only assert the markup carries the hooks. */
-  it('tags the table so its sticky-column CSS can scope to it', () => {
-    renderAt(<RegionsLeaderboard rollups={sampleRollups} />)
-    expect(screen.getByRole('table').className).toMatch(
-      /region-leaderboard-table/
-    )
-  })
-
+  /* #965: at narrow widths the table scrolls horizontally; the Region identity
+     column must stay pinned so each row keeps its label while the metric
+     columns scroll under it (Lesson 105). #2702: it is the table's row header
+     on the shared DataTable; the opaque, themed pin lives in app-shell.css. */
   it('pins the Region header cell (sticky-col class on the <th>)', () => {
     renderAt(<RegionsLeaderboard rollups={sampleRollups} />)
-    const th = screen
-      .getByRole('button', { name: /sort by region/i })
-      .closest('th')
-    expect(th?.className).toMatch(/region-leaderboard__sticky-col/)
+    const th = screen.getByRole('button', { name: /^region$/i }).closest('th')
+    expect(th?.className).toMatch(/rankings-sticky-col/)
   })
 
-  it('pins the Region cell on every body row (sticky-col class on the first <td>)', () => {
+  it('pins the Region row header on every body row', () => {
     renderAt(<RegionsLeaderboard rollups={sampleRollups} />)
     const rows = screen.getByRole('table').querySelectorAll('tbody tr')
     expect(rows.length).toBeGreaterThan(0)
     for (const tr of rows) {
-      const firstCell = tr.querySelector('td')
-      expect(firstCell?.className).toMatch(/region-leaderboard__sticky-col/)
+      const rowHeader = tr.querySelector('th[scope="row"]')
+      expect(rowHeader?.className).toMatch(/rankings-sticky-col/)
     }
   })
 })

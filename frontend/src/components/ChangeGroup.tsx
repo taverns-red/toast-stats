@@ -179,6 +179,9 @@ export const ChangeGroup: React.FC<{
   deferredCounterparts?: ReadonlySet<string>
   /** Loads the next batch of history shards (#2063). */
   onLoadMoreCounterparts?: () => void
+  /** The earlier date the net is measured from, already formatted (#2712).
+   *  The page owns it (R3); with none, the net carries no "since". */
+  since?: string
 }> = ({
   category,
   heading,
@@ -189,6 +192,7 @@ export const ChangeGroup: React.FC<{
   counterparts,
   deferredCounterparts,
   onLoadMoreCounterparts,
+  since,
 }) => {
   if (events.length === 0) return null
   const net = netFor(category, events)
@@ -220,6 +224,7 @@ export const ChangeGroup: React.FC<{
                 data-testid="changes-group-net"
               >
                 net {formatNet(net)}
+                {since ? ` since ${since}` : ''}
                 <span className="sr-only"> {netDirectionWord(net)}</span>
               </span>
             </>

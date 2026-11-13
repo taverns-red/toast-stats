@@ -512,7 +512,7 @@
     border: 1px solid var(--line);
     border-radius: var(--rds-radius-lg);
     box-shadow: var(--rds-shadow-lg);
-    z-index: 90;
+    z-index: var(--z-modal);
   }
 
   .header-search__dropdown .command-palette__results {
@@ -1541,7 +1541,7 @@
     top: calc(100% + 4px);
     left: 0;
     right: 0;
-    z-index: 20;
+    z-index: var(--z-popover);
     list-style: none;
     margin: 0;
     padding: 4px;
@@ -1952,6 +1952,7 @@
      chip is 13px and the recognition badge 11px elsewhere on the site). */
   #district-rankings-table .districts-rankings-table__district-chip,
   #district-rankings-sheet-table .districts-rankings-table__district-chip,
+  .rankings-cell .districts-rankings-table__district-chip,
   #district-rankings-table .recognition-badge,
   #district-rankings-sheet-table .recognition-badge {
     font-size: var(--dt-font);
@@ -2000,118 +2001,10 @@
     border-color: var(--tm-loyal-blue);
   }
 
-  /* Region rankings: intentional, documented horizontal scroll (#689, epic
-     #683). The 19-column table can't fit a phone and a regional leaderboard
-     exists to compare districts across rows, so card-collapse is wrong here
-     (ron-ux). The scroll is made non-trap three ways: (1) the scroller is a
-     focusable, labelled region in the markup; (2) the row-identity columns are
-     pinned; (3) a right-edge fade signals more columns. */
-  .region-rankings__scroll {
-    /* Width of the pinned Region Rank column; the District column pins to its
-       right at exactly this offset. 120px clears the widest rank label
-       ("#10 (tied)", ~70px) plus the effective 16px cell padding (the
-       `.districts-rankings-table td` rule wins over Tailwind px-6), with
-       headroom — so the two sticky columns never overlap. */
-    --rank-col-w: 120px;
-  }
-
-  /* Minimal positioned wrapper for the regions-index leaderboard: just the
-     containing block for its scroll-cue. No border/shadow — the index table
-     sits chromeless in its section, unlike the detail page's table-wrap. */
-  .region-rankings__scroll-wrap {
-    position: relative;
-  }
-
-  /* Sticky identity columns (Region Rank = col 1, District = col 2). The
-     background MUST be a theme token (var(--surface)), never a hardcoded
-     literal, or scrolled cells bleed through in dark mode (lesson 092). */
-  .districts-rankings-table .region-rankings__sticky-col {
-    position: sticky;
-    z-index: 2;
-    background-color: var(--surface);
-  }
-
-  .districts-rankings-table .region-rankings__sticky-col--rank {
-    left: 0;
-    width: var(--rank-col-w);
-    min-width: var(--rank-col-w);
-    /* Restore the row rule that border-collapse drops from a positioned cell
-       (kept symmetric with the District column so the seam doesn't break). */
-    box-shadow: inset 0 -1px 0 var(--line-2);
-  }
-
-  .districts-rankings-table .region-rankings__sticky-col--district {
-    left: var(--rank-col-w);
-    /* Right inset divider marks the sticky/scroll seam; bottom inset restores
-       the row rule that border-collapse drops from a positioned cell. */
-    box-shadow:
-      inset -1px 0 0 var(--line),
-      inset 0 -1px 0 var(--line-2);
-  }
-
-  /* Header sticky cells ride the thead surface and layer above body cells. */
-  .districts-rankings-table thead .region-rankings__sticky-col {
-    z-index: 3;
-    background-color: var(--surface-2);
-  }
-
-  /* Keep the pinned cells in sync with the row-hover highlight. */
-  .districts-rankings-table tbody tr:hover .region-rankings__sticky-col {
-    background-color: var(--surface-2);
-  }
-
-  /* Right-edge fade discoverability cue. Themed (transparent → --surface, so
-     it remaps in dark); pointer-events:none so it never blocks taps/scroll. */
-  .region-rankings__scroll-cue {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 40px;
-    pointer-events: none;
-    background: linear-gradient(to right, rgba(0, 0, 0, 0), var(--surface));
-  }
-
-  /* The /regions overview marks its scroller with useScrollEdges (#2334):
-     no hidden columns to the right, no fade over the last one. */
-  .region-rankings__scroll--edges:not([data-more-after])
-    + .region-rankings__scroll-cue {
-    display: none;
-  }
-
-  /* #965 — sticky region-identity column for the /regions OVERVIEW leaderboard
-     (RegionsLeaderboard). This is a DIFFERENT table from the /region/:n detail
-     table above: it is the browser-default `border-collapse: separate` model
-     with Tailwind `divide-y` row rules, NOT the detail table's `collapse`
-     model. So the border restoration is re-derived for THIS model rather than
-     copied from the sibling (Lesson 126). The opaque pinned background MUST be
-     a theme token, never a hardcoded literal, or scrolled metric cells bleed
-     through in dark mode (Lesson 092). */
-  .region-leaderboard-table .region-leaderboard__sticky-col {
-    position: sticky;
-    left: 0;
-    z-index: 2;
-    background-color: var(--surface);
-    /* Right inset = the sticky/scroll seam. Bottom inset restores the row
-       hairline the opaque cell masks (the `divide-y` rule paints behind it);
-       both --line so the column reads as one themed rule, light and dark. */
-    box-shadow:
-      inset -1px 0 0 var(--line),
-      inset 0 -1px 0 var(--line);
-  }
-
-  /* Header sticky cell rides the slightly-lighter thead surface and layers
-     above the body cells as they scroll under it. */
-  .region-leaderboard-table thead .region-leaderboard__sticky-col {
-    z-index: 3;
-    background-color: var(--surface-2);
-  }
-
-  /* Keep the pinned cell in step with the row-hover highlight so the Region
-     column never reads as a detached strip when a row is hovered. */
-  .region-leaderboard-table tbody tr:hover .region-leaderboard__sticky-col {
-    background-color: var(--surface-2);
-  }
+  /* Region district rankings and the regions leaderboard are on the shared
+     DataTable (#2702): the pinned key column, the scroll region and the edge
+     cues are the .dt / .rankings-* rules above, so the per-table sticky,
+     scroll-wrap and cue rules that lived here are gone. */
 
   /* District-number chip on each ranking row (#436). Standalone visual
      element so the click affordance reads as obviously interactive. */
@@ -2889,7 +2782,7 @@
     color: var(--ink-4);
   }
 
-  /* #2302 — one-line pointer to Methodology §14 above the back-link. */
+  /* #2302 — one-line pointer to Methodology §03 above the back-link. */
   .club-member-data-note {
     margin: 24px 0 0;
     color: var(--ink-3);
@@ -5001,7 +4894,9 @@
     font-size: 14px;
     line-height: 1.45;
     color: var(--ink-2);
-    max-width: 60ch;
+    /* 60 x 0.497em, the "0" of Source Sans 3: em, not ch, so the measure does
+       not move when the web font replaces the fallback (#2685). */
+    max-width: 29.8em;
     /* #2646 (HUB-07): reserve two lines. A one-line lede (Divisions) put the
        section bar 20px higher than a two-line one (Clubs, Map), so it moved
        under the pointer between tabs. */
@@ -5057,7 +4952,7 @@
     position: absolute;
     top: calc(100% + 6px);
     right: 0;
-    z-index: 20;
+    z-index: var(--z-popover);
     min-width: 180px;
     padding: 6px;
     display: flex;
@@ -5611,7 +5506,7 @@
     position: absolute;
     top: calc(100% + 0.4rem);
     right: 0;
-    z-index: 40;
+    z-index: var(--z-header);
     width: min(24rem, calc(100vw - 2rem));
     max-height: min(32rem, 70vh);
     overflow-y: auto;
@@ -5726,7 +5621,7 @@
   .clubs-filters-overlay {
     position: fixed;
     inset: 0;
-    z-index: 60;
+    z-index: var(--z-panel);
     display: flex;
     justify-content: flex-end;
   }
@@ -6419,9 +6314,59 @@
     gap: 8px 16px;
   }
 
-  @media (min-width: 640px) {
-    .methodology-toc__list {
-      grid-template-columns: repeat(2, 1fr);
+  /* Question headings over each run of sections (#2656, decision D1). */
+  .methodology-toc__group + .methodology-toc__group {
+    margin-top: 16px;
+  }
+
+  .methodology-toc__group-title,
+  .methodology-group__title {
+    margin: 0 0 8px;
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+  }
+
+  .methodology-group__title {
+    font-size: 24px;
+    margin: 0 0 20px;
+    padding-top: 8px;
+    border-top: 2px solid var(--tm-loyal-blue);
+  }
+
+  .methodology-group + .methodology-group {
+    margin-top: 48px;
+  }
+
+  /* Wide screens: text column on the left, jump list pinned on the right so
+     section 01 starts above the fold and the list stays in reach. */
+  @media (min-width: 1024px) {
+    .methodology-page--how-it-works {
+      display: grid;
+      grid-template-columns: minmax(0, 70ch) 300px;
+      column-gap: 48px;
+      justify-content: center;
+      align-items: start;
+    }
+
+    .methodology-page--how-it-works .methodology-page__header {
+      grid-column: 1 / -1;
+    }
+
+    .methodology-page--how-it-works .methodology-toc {
+      grid-column: 2;
+      grid-row: 2 / span 12;
+      position: sticky;
+      top: 80px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      margin-bottom: 0;
+    }
+
+    .methodology-page--how-it-works .methodology-group,
+    .methodology-page--how-it-works .methodology-page__made-by {
+      grid-column: 1;
     }
   }
 
@@ -6594,7 +6539,7 @@
   .jump-to-bar {
     position: sticky;
     top: var(--app-top-offset, 56px);
-    z-index: 30;
+    z-index: var(--z-sticky);
     margin: -8px -24px 24px;
     padding: 8px 24px;
     background-color: rgba(var(--rds-surface-rgb), 0.85);
@@ -6640,7 +6585,7 @@
   .jump-to-sheet-overlay {
     position: fixed;
     inset: 0;
-    z-index: 80;
+    z-index: var(--z-overlay);
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -6731,6 +6676,14 @@
     padding: 8px 0;
   }
 
+  .jump-to-sheet__group-title {
+    margin: 12px 16px 0;
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+  }
+
   .jump-to-sheet__link {
     display: flex;
     align-items: center;
@@ -6771,7 +6724,7 @@
     color: var(--ink-2);
   }
 
-  /* Program-year rule-change log (#1400) — §10 of /methodology.
+  /* Program-year rule-change log (#1400) — §19 of /methodology.
 
      Static content inside an already-static section: no async data, no
      conditional slot, so it reserves its own height at first paint and adds

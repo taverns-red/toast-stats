@@ -29,14 +29,20 @@ export interface JumpToSection {
   title: string
 }
 
-export interface JumpToChipProps {
+/** Sections under a plain-language question heading (#2656). */
+export interface JumpToGroup {
+  title: string
   sections: ReadonlyArray<JumpToSection>
+}
+
+export interface JumpToChipProps {
+  groups: ReadonlyArray<JumpToGroup>
   /** Called with the chosen section id before the hash jump — lets the page
       reveal a collapsed target so the jump doesn't land on a hidden heading. */
   onJump: (id: string) => void
 }
 
-const JumpToChip: React.FC<JumpToChipProps> = ({ sections, onJump }) => {
+const JumpToChip: React.FC<JumpToChipProps> = ({ groups, onJump }) => {
   const [open, setOpen] = useState(false)
   const chipRef = useRef<HTMLButtonElement>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -185,20 +191,37 @@ const JumpToChip: React.FC<JumpToChipProps> = ({ sections, onJump }) => {
                 aria-label="Jump to a section"
                 className="jump-to-sheet__nav"
               >
-                <ol className="jump-to-sheet__list">
-                  {sections.map(s => (
-                    <li key={s.id} className="jump-to-sheet__item">
-                      <a
-                        href={`#${s.id}`}
-                        className="jump-to-sheet__link"
-                        onClick={e => handleJump(e, s.id)}
-                      >
-                        <span className="jump-to-sheet__num">{s.num}</span>
-                        <span className="jump-to-sheet__text">{s.title}</span>
-                      </a>
-                    </li>
-                  ))}
-                </ol>
+                {groups.map(g => (
+                  <div
+                    key={g.title}
+                    role="group"
+                    aria-label={g.title}
+                    className="jump-to-sheet__group"
+                  >
+                    <p
+                      className="jump-to-sheet__group-title"
+                      aria-hidden="true"
+                    >
+                      {g.title}
+                    </p>
+                    <ol className="jump-to-sheet__list">
+                      {g.sections.map(s => (
+                        <li key={s.id} className="jump-to-sheet__item">
+                          <a
+                            href={`#${s.id}`}
+                            className="jump-to-sheet__link"
+                            onClick={e => handleJump(e, s.id)}
+                          >
+                            <span className="jump-to-sheet__num">{s.num}</span>
+                            <span className="jump-to-sheet__text">
+                              {s.title}
+                            </span>
+                          </a>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
               </nav>
             </div>
           </div>,

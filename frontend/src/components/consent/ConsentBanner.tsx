@@ -25,6 +25,13 @@ const LABEL: Record<ConsentLevel, string> = {
   none: 'none',
 }
 
+// Decline first, at every width (D10).
+const CHOICES = [
+  ['none', 'Keep none'],
+  ['minimal', 'Keep minimal'],
+  ['all', 'Keep all'],
+] as const
+
 function useAfterLoadAndIdle(immediate: boolean): boolean {
   const [ready, setReady] = useState(immediate)
   useEffect(() => {
@@ -64,6 +71,11 @@ export const ConsentBanner: React.FC<{ immediate?: boolean }> = ({
   const ready = useAfterLoadAndIdle(immediate)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const reopened = state.level !== null && state.settingsOpen
+  // Phone (D10, #2674): first visit shows one line, Keep all, Keep none and
+  // Details; Details reveals the rest. A reopened banner is the user asking
+  // to change their choice, so it opens in full.
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const expanded = detailsOpen || reopened
   const visible = state.level === null ? ready : state.settingsOpen
 
   useEffect(() => {
@@ -91,6 +103,7 @@ export const ConsentBanner: React.FC<{ immediate?: boolean }> = ({
       role="region"
       aria-label="Privacy and cookies"
       data-testid="consent-banner"
+      data-expanded={expanded ? 'true' : 'false'}
     >
       <h2 className="consent-banner__title" tabIndex={-1} ref={headingRef}>
         Privacy and cookies
@@ -104,32 +117,47 @@ export const ConsentBanner: React.FC<{ immediate?: boolean }> = ({
           ? 'May we count visits with Google Analytics?'
           : `Your choice is ${LABEL[state.level]}. You can change it here.`}
       </p>
-      <p className="consent-banner__more">
+      <div className="consent-banner__actions">
+        {CHOICES.map(([level, label], i) => (
+          <React.Fragment key={level}>
+            <button
+              id={level === 'minimal' ? 'consent-banner-minimal' : undefined}
+              type="button"
+              className="consent-banner__button"
+              data-detail={level === 'minimal' ? '' : undefined}
+              onClick={() => {
+                setConsent(level)
+                restoreFocusAfterConsent()
+              }}
+            >
+              {label}
+            </button>
+            {/* Details sits right after the decline option and before
+                everything it reveals (Keep minimal, the link), so keyboard
+                and screen-reader users reach the revealed content going
+                forward from it. */}
+            {i === 0 && !reopened && (
+              <button
+                type="button"
+                className="consent-banner__details"
+                aria-expanded={expanded}
+                aria-controls="consent-banner-more consent-banner-minimal"
+                onClick={() => setDetailsOpen(open => !open)}
+              >
+                Details
+              </button>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+      <p
+        id="consent-banner-more"
+        className="consent-banner__more consent-banner__detail"
+      >
         <Link to="/privacy" className="consent-banner__link">
           What each choice stores
         </Link>
       </p>
-      <div className="consent-banner__actions">
-        {(
-          [
-            ['all', 'Keep all'],
-            ['minimal', 'Keep minimal'],
-            ['none', 'Keep none'],
-          ] as const
-        ).map(([level, label]) => (
-          <button
-            key={level}
-            type="button"
-            className="consent-banner__button"
-            onClick={() => {
-              setConsent(level)
-              restoreFocusAfterConsent()
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
       {reopened && (
         <button
           type="button"

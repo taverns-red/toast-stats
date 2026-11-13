@@ -800,7 +800,8 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
       )
 
       // Check for division identifier
-      expect(screen.getByText(/division a/i)).toBeInTheDocument()
+      // (The area table's sr-only caption also names the division, #2718.)
+      expect(screen.getAllByText(/division a/i).length).toBeGreaterThan(0)
 
       // Check for status
       expect(screen.getByText(/select distinguished/i)).toBeInTheDocument()

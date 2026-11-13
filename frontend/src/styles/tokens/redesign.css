@@ -82,18 +82,29 @@
   --rds-shadow: 0 1px 2px rgba(15, 23, 32, .04), 0 1px 3px rgba(15, 23, 32, .06);
   --rds-shadow-lg: 0 1px 2px rgba(15, 23, 32, .04), 0 8px 24px rgba(15, 23, 32, .08);
 
-  /* Named stacking layers (#2638, UX review CHR-35). Use these instead of raw
-     z-index numbers; low to high: a page's own sticky search, the context
-     bar, the top bar, the phone section bar, the consent banner, a scrim for
-     a surface that needs one, then modal dialogs (command palette).
-     Theme-independent. Existing raw values migrate as rules are touched. */
+  /* Named stacking layers (#2638, #2674, UX review CHR-35). Use these instead
+     of raw z-index numbers; low to high: a page's own sticky search, menus
+     and suggestion lists, sticky page headers, the context bar, the top bar,
+     the phone section bar and what floats just over it, full-screen views,
+     the consent banner and filter panels, a scrim for a surface that needs
+     one, then modal dialogs (command palette), then the skip link.
+     Theme-independent. Only 0 to 3 may be written raw, for a component's own
+     local stacking (a badge over its card); __tests__/lint/z-index-tokens
+     fails on anything higher. */
   --z-sticky-search: 5;
+  --z-raised: 10;
+  --z-popover: 20;
+  --z-sticky: 30;
   --z-sub-bar: 35;
   --z-header: 40;
   --z-bottom-bar: 45;
+  --z-fab: 46;
+  --z-fullscreen: 50;
   --z-banner: 60;
+  --z-panel: 60;
   --z-overlay: 80;
   --z-modal: 90;
+  --z-skip-link: 1000;
 
   /* Page-content max-width for DATA-TABLE pages (#810, ADR-006 §1). The data
      grid wants width: the 13-col club table can't fit below ~1600px. Prose /

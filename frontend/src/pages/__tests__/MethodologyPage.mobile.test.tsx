@@ -30,14 +30,9 @@ describe('MethodologyPage — mobile collapsed sections', () => {
 
   it('renders every H2 section as a disclosure button, collapsed by default', () => {
     renderPage()
-    // 20 sections → 20 toggle buttons, all collapsed. (§10 Program-year rule
-    // changes was added in #1400 — the rule-change entries inside it are
-    // anchors, not disclosures, so they add no toggles; §11 Worldwide rollup
-    // was added in #1500; §12 Worldwide club race in #1556; §13 Officer
-    // training in #2296; §14 Member-level data in #2302; §15 Region District
-    // Recognition in #2307; §16 Council voting strength in #2300; §17
-    // Prospective clubs in #2388; §18 Success Plan targets in #2297; §19
-    // Distinguished club counts in #2390.)
+    // 20 sections → 20 toggle buttons, all collapsed. The rule-change
+    // entries inside the Program-year rule changes section are anchors, not
+    // disclosures, so they add no toggles.
     const toggles = screen
       .getAllByRole('button')
       .filter(b => b.getAttribute('aria-expanded') !== null)
@@ -61,17 +56,9 @@ describe('MethodologyPage — mobile collapsed sections', () => {
     ).toBeVisible()
   })
 
-  it('expands the target section when a TOC anchor link is tapped', async () => {
-    renderPage()
-    // The TOC link (an <a>) is distinct from the section toggle (a <button>).
-    const tocLink = screen.getByRole('link', { name: /Borda count scoring/i })
-    await userEvent.click(tocLink)
-    const btn = screen.getByRole('button', { name: /Borda count scoring/i })
-    expect(btn).toHaveAttribute('aria-expanded', 'true')
-    expect(
-      screen.getByText(/weights all three categories equally/i)
-    ).toBeVisible()
-  })
+  // The in-page "On this page" card is desktop-only now (#2656): on a phone the
+  // accordion list above is the contents list, and the Jump to chip below is
+  // its shortcut. See MethodologyPage.groups.test.tsx for the absence check.
 })
 
 describe('MethodologyPage — sticky Jump-to chip (#878)', () => {

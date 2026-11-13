@@ -425,10 +425,14 @@ describe('DivisionCriteriaExplanation', () => {
       const table = screen.getByRole('table', {
         name: /Division recognition level requirements/i,
       })
+      // Column headers are scope=col; the level names are row headers (#2718).
       const headers = table.querySelectorAll('th')
 
       headers.forEach(header => {
-        expect(header).toHaveAttribute('scope', 'col')
+        expect(header).toHaveAttribute(
+          'scope',
+          header.closest('thead') ? 'col' : 'row'
+        )
       })
     })
 

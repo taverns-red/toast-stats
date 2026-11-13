@@ -34,24 +34,11 @@ describe('district-narrative.css (#572)', () => {
     expect(reducedBlock?.[0]).toMatch(/scroll-behavior:\s*auto/)
   })
 
-  it('pins the KPI strip with position:sticky under the topbar at ≥1024px only (#572, #1828)', () => {
-    // #572's desktop intent: the strip pins under the 56px top bar. #1828
-    // gated that behind 768px; at 768–979 the strip is still 576px tall
-    // (one-column cards), so the pin now starts at 1024 — no sticky element
-    // taller than 64px below 1024. The gated block carries both declarations.
-    const gated = css.match(
-      /@media\s*\(min-width:\s*1024px\)\s*\{\s*\.district-kpi-strip\s*\{[^}]*\}/
-    )
-    expect(gated).not.toBeNull()
-    expect(gated?.[0]).toMatch(/position:\s*sticky/)
-    // The offset token is 56px + the top inset (#1847, safe-area.css).
-    expect(gated?.[0]).toMatch(/top:\s*var\(--app-top-offset,\s*56px\)/)
-  })
-
-  it('keeps the KPI strip static below 1024px — never pinned over the Overview (#1828)', () => {
-    // At 375 the expanded strip is ~860px tall; pinned, it covered the whole
-    // Overview once scrolled (mobile review S2). The ungated base rule must
-    // not position it, and no ungated rule may make it sticky.
+  it('pins only the one-line stuck KPI line, never the full strip (#572, #1828, #2708)', () => {
+    // #572 pinned the whole strip at >=1024; #1828 gated it there because the
+    // strip is 576-860px tall below. #2708 (D4) moved the pin to a one-line
+    // `.district-kpi-stuck` (see districtKpiStickyLine.test.ts). Exactly one
+    // sticky declaration remains in this file, and it is that wrapper.
     const base = css.match(/\n {2}\.district-kpi-strip\s*\{[^}]*\}/)
     expect(base).not.toBeNull()
     expect(base?.[0]).not.toMatch(/position:\s*sticky/)
@@ -59,6 +46,7 @@ describe('district-narrative.css (#572)', () => {
     const code = css.replace(/\/\*[\s\S]*?\*\//g, '')
     const stickyRules = code.match(/position:\s*sticky/g) ?? []
     expect(stickyRules).toHaveLength(1)
+    expect(code).toMatch(/\.district-kpi-stuck\s*\{[^}]*position:\s*sticky/)
   })
 
   it('keeps the strip a containing block below 1024px for the loading shimmer (#1647, #1828)', () => {

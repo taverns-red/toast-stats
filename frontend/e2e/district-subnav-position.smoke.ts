@@ -45,6 +45,8 @@ test.describe('district section bar position (#2646)', () => {
       await page.goto(path)
       const bar = page.locator('.district-subnav')
       await expect(bar).toBeVisible()
+      // No breadcrumb above the bar on any section (the hub never had one).
+      await expect(page.getByTestId('subpage-breadcrumb')).toHaveCount(0)
       await page.evaluate(() => document.fonts.ready)
       await page.evaluate(() => window.scrollTo(0, 0))
       // The header settles as its data lands: read the top until it has held
@@ -67,13 +69,5 @@ test.describe('district section bar position (#2646)', () => {
       spread,
       `section bar top per tab: ${JSON.stringify(tops)}`
     ).toBeLessThanOrEqual(TOLERANCE_PX)
-  })
-
-  test('no tab carries a breadcrumb above the bar', async ({ page }) => {
-    for (const path of TABS.slice(1)) {
-      await page.goto(path)
-      await expect(page.locator('.district-subnav')).toBeVisible()
-      await expect(page.getByTestId('subpage-breadcrumb')).toHaveCount(0)
-    }
   })
 })

@@ -74,6 +74,7 @@
 @import './styles/components/deadline-strip.css';
 @import './styles/components/plan-targets.css';
 @import './styles/components/council-pack.css';
+@import './styles/components/entity-tables.css';
 @import './styles/components/survival.css';
 @import './styles/components/mobile-row-list.css';
 @import './styles/components/club-trend-sparkline.css';
@@ -635,7 +636,7 @@ body {
   width: 1px;
   height: 1px;
   overflow: hidden;
-  z-index: 1000;
+  z-index: var(--z-skip-link);
   background: var(--tm-loyal-blue);
   color: var(--tm-white);
   padding: 12px 24px;
@@ -753,7 +754,7 @@ html {
   width: 40px;
   background: linear-gradient(to right, transparent, white);
   pointer-events: none;
-  z-index: 10;
+  z-index: var(--z-raised);
 }
 
 /* Sticky column shadow for horizontal-scrolling tables (#85) */

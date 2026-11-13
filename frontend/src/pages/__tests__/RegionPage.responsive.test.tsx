@@ -76,8 +76,8 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe('RegionPage responsive scroll region (#689)', () => {
-  it('wraps the rankings table in a focusable, labelled scroll region', async () => {
+describe('RegionPage responsive scroll region (#689, #2702)', () => {
+  it('keeps the table in a scroll wrapper that scrolls only when the columns cannot fit', async () => {
     mockedFetchCdnRankings.mockResolvedValue({
       rankings: [mkRanking({ districtId: '7', districtName: 'Seven' })],
       asOfDate: '2026-05-12',
@@ -85,17 +85,20 @@ describe('RegionPage responsive scroll region (#689)', () => {
 
     renderRegion('7')
 
-    // role=region + accessible name + tabindex=0 = a keyboard-scrollable
-    // region (axe scrollable-region-focusable). Match by the scroll affordance
-    // accessible name so we assert the right element, not the page landmark.
-    const scroller = await screen.findByRole('region', {
-      name: /scroll/i,
+    // jsdom has no layout, so the columns "fit": the wrapper is a plain
+    // block (the header sticks to the page) and is not a tab stop. When the
+    // chosen columns overflow, DataTable makes it a labelled, focusable
+    // region (the real-browser smoke covers that mode).
+    const table = await screen.findByRole('table', {
+      name: /region 0?7 district rankings/i,
     })
-    expect(scroller).toHaveAttribute('tabindex', '0')
-    expect(scroller.className).toMatch(/overflow-x-auto/)
+    const wrapper = table.closest('.dt-scroll')!
+    expect(wrapper).toHaveAttribute('data-overflow', 'false')
+    expect(wrapper).not.toHaveAttribute('tabindex')
+    expect(screen.queryByRole('region', { name: /scroll/i })).toBeNull()
   })
 
-  it('sticks the Region Rank and District identity columns to the left', async () => {
+  it('pins the District column, the table row header, to the left', async () => {
     mockedFetchCdnRankings.mockResolvedValue({
       rankings: [mkRanking({ districtId: '7', districtName: 'Seven' })],
       asOfDate: '2026-05-12',
@@ -103,9 +106,8 @@ describe('RegionPage responsive scroll region (#689)', () => {
 
     renderRegion('7')
 
-    const rankCell = await screen.findByTestId('region-rank-cell')
     const districtCell = await screen.findByTestId('region-district-cell')
-    expect(rankCell.className).toMatch(/region-rankings__sticky-col/)
-    expect(districtCell.className).toMatch(/region-rankings__sticky-col/)
+    expect(districtCell.tagName).toBe('TH')
+    expect(districtCell.className).toMatch(/rankings-sticky-col/)
   })
 })
