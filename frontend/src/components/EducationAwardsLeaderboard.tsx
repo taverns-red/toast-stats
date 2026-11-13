@@ -202,7 +202,7 @@ const LeaderboardCard: React.FC<CardProps> = ({
   return (
     <section
       aria-labelledby={titleId}
-      className="redesign-panel"
+      className="redesign-panel min-w-0"
       data-testid="education-awards-leaderboard"
     >
       <h3 id={titleId} className="redesign-panel__header !mb-1">
