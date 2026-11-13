@@ -82,7 +82,10 @@ export const AwardsRaceSection: React.FC<AwardsRaceSectionProps> = ({
       <header className="awards-race__header">
         <h2 id="awards-race-heading" className="awards-race__title">
           Awards Race · Top contenders
-          <InfoTooltip text="Top-3 districts contending for each Toastmasters competitive award this program year. Source: All-Districts CSV. See How it works for definitions." />
+          <InfoTooltip
+            label="the Awards Race"
+            text="Top-3 districts contending for each Toastmasters competitive award this program year. Source: All-Districts CSV. See How it works for definitions."
+          />
         </h2>
         {updatedAt && (
           <span className="awards-race__meta">Updated {updatedAt}</span>
@@ -112,14 +115,10 @@ const AwardsRaceSkeleton: React.FC = () => (
     data-testid="awards-race-skeleton"
   >
     <header className="awards-race__header">
-      {/* Wrapped in the real __title so the heading's own metrics apply, and
-          carrying a .tooltip-reserve for the InfoTooltip the loaded heading
-          renders — its trigger is a <button>, floored at 44px by
-          styles/layers/base.css, which is 45px more than a bare bar reserves
-          (#1359). */}
+      {/* Wrapped in the real __title so the heading's own metrics apply. The
+          loaded heading's InfoTooltip adds no line height (#2644). */}
       <span className="awards-race__title">
         <span className="awards-race-skeleton__bar awards-race-skeleton__bar--heading" />
-        <span className="tooltip-reserve" aria-hidden="true" />
       </span>
     </header>
     <div className="awards-race__grid">
@@ -235,12 +234,17 @@ const AwardCard: React.FC<AwardCardProps> = ({ spec, entries }) => {
       >
         <span aria-hidden="true" className="awards-race-card__status-dot" />
         {isAchieved ? (
-          <span title={tiedCount > 0 ? TIE_BREAK_UNPUBLISHED : undefined}>
+          <span>
             ✓ Achieved
             {tiedCount > 0
               ? ` · ${tiedCount} districts tied`
               : winners.length > 1 &&
                 ` · ${winners.length} districts qualifying`}
+            {/* The tie-break note was a `title`: touch and keyboard now open
+                it (#2644). */}
+            {tiedCount > 0 && (
+              <InfoTooltip label="the tie-break" text={TIE_BREAK_UNPUBLISHED} />
+            )}
           </span>
         ) : (
           <span>

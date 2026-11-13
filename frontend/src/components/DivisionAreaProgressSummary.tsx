@@ -29,6 +29,7 @@
  * - Semantic HTML with appropriate ARIA labels
  */
 
+import InfoTooltip from './InfoTooltip'
 import React, { useCallback, useId, useMemo, useState } from 'react'
 import { DivisionPerformance, AreaPerformance } from '../utils/divisionStatus'
 import { calculateAreaGapAnalysis } from '../utils/areaGapAnalysis'
@@ -441,10 +442,17 @@ export const DivisionAreaProgressSummary: React.FC<
                         <span
                           className={`px-2 py-1 text-xs font-medium rounded-full border ${badge.className}`}
                           aria-label={`Recognition status: ${badge.label}`}
-                          title={badge.tooltip}
                         >
                           {badge.label}
                         </span>
+                        {/* The meaning was a `title`: touch and keyboard now
+                            open it (#2644). */}
+                        {badge.tooltip && (
+                          <InfoTooltip
+                            label={`area ${area.areaId} recognition`}
+                            text={badge.tooltip}
+                          />
+                        )}
                       </div>
 
                       {/* Progress Paragraph */}

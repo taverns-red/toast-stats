@@ -2,6 +2,7 @@ import React, { useId, useState } from 'react'
 import { nextDeadlines } from '../utils/programYearDeadlines'
 import { formatShortDate } from '../utils/dateFormatting'
 import { DeadlineTimeline } from './DeadlineTimeline'
+import InfoTooltip from './InfoTooltip'
 
 /* Next-deadline strip (#2298): the next two Toastmasters dates of the
    page's program year — officer-training rounds, Club Success Plans, dues
@@ -121,11 +122,7 @@ export const NextDeadlineStrip: React.FC<NextDeadlineStripProps> = ({
       ) : (
         <ul className="deadline-strip__list">
           {upcoming.map(d => (
-            <li
-              key={d.id}
-              className="deadline-strip__item"
-              title={`Source: ${d.source}`}
-            >
+            <li key={d.id} className="deadline-strip__item">
               <span className="deadline-strip__label">{d.label}</span>{' '}
               <span className="deadline-strip__when">
                 <time dateTime={d.date}>{formatShortDate(d.date)}</time>
@@ -134,6 +131,11 @@ export const NextDeadlineStrip: React.FC<NextDeadlineStripProps> = ({
                   {countdown(d.daysLeft)}
                 </span>
               </span>
+              {/* The source was a `title`: touch and keyboard now open it (#2644). */}
+              <InfoTooltip
+                label={`${d.label} source`}
+                text={`Source: ${d.source}`}
+              />
             </li>
           ))}
         </ul>

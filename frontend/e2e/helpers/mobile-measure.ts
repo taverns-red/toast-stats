@@ -46,6 +46,8 @@ export interface Finding {
   h: number
   /** The allowlist selector this element matches, if any (#1841). */
   allowedBy?: string
+  /** Why a tooltip trigger's ::after hit area is not tappable (#2644). */
+  blockers?: string
 }
 
 export async function measureInteractiveTargets(
@@ -74,14 +76,102 @@ export async function measureInteractiveTargets(
           el.getAttribute('role') !== 'button' &&
           !notProseSels.some(s => el.matches(s))
         if (inlineProseLink) continue
+        // #2644: the InfoTooltip trigger keeps its 44px hit area in an
+        // absolutely positioned ::after that overflows its 14px icon, so the
+        // icon adds no line height. Only that trigger is credited, and only
+        // when the area is provably tappable: the pseudo is not
+        // pointer-events:none and all four corners of it resolve, through
+        // elementFromPoint, to the trigger itself. An arbitrary decorative
+        // ::after therefore never counts.
+        let hitW = 0
+        let hitH = 0
+        let blockers: string | undefined
+        if (el.matches('.info-tooltip__trigger')) {
+          // Inside a folded <details> the trigger is not rendered or
+          // reachable (the summary is the tap target until it opens), so
+          // there is no hit area to prove.
+          if (el.closest('details:not([open])')) continue
+          const after = getComputedStyle(el, '::after')
+          if (
+            after.position === 'absolute' &&
+            after.content !== 'none' &&
+            after.pointerEvents !== 'none'
+          ) {
+            el.scrollIntoView({
+              block: 'center',
+              inline: 'center',
+              behavior: 'instant',
+            })
+            const r = el.getBoundingClientRect()
+            const w = parseFloat(after.width) || 0
+            const h = parseFloat(after.height) || 0
+            const cx = r.left + r.width / 2
+            const cy = r.top + r.height / 2
+            const corners = [
+              [cx - w / 2 + 1, cy - h / 2 + 1],
+              [cx + w / 2 - 1, cy - h / 2 + 1],
+              [cx - w / 2 + 1, cy + h / 2 - 1],
+              [cx + w / 2 - 1, cy + h / 2 - 1],
+            ]
+            // Name what is on top of a corner: tag.class plus the nearest
+            // ancestor that has a class, and any ancestor whose overflow
+            // clips the corner.
+            const named = (n: Element | null): string => {
+              if (!n) return 'null'
+              const c = (n.getAttribute('class') || '').split(/\s+/)[0]
+              return `${n.tagName.toLowerCase()}${c ? `.${c}` : ''}`
+            }
+            const why: string[] = []
+            const tappable = corners.every(([x, y], i) => {
+              const hit = document.elementFromPoint(x!, y!)
+              const ok = hit === el || (hit !== null && el.contains(hit))
+              if (!ok) {
+                let anc: Element | null = hit?.parentElement ?? null
+                while (anc && !anc.getAttribute('class')) {
+                  anc = anc.parentElement
+                }
+                let clip = ''
+                for (
+                  let p: HTMLElement | null = el.parentElement;
+                  p;
+                  p = p.parentElement
+                ) {
+                  const o = getComputedStyle(p).overflow
+                  if (o === 'visible') continue
+                  const pr = p.getBoundingClientRect()
+                  if (
+                    x! < pr.left ||
+                    x! > pr.right ||
+                    y! < pr.top ||
+                    y! > pr.bottom
+                  ) {
+                    clip = ` clipped-by ${named(p)}(overflow:${o})`
+                    break
+                  }
+                }
+                why.push(
+                  `corner${i} covered by ${named(hit)} in ${named(anc)}${clip}`
+                )
+              }
+              return ok
+            })
+            if (tappable) {
+              hitW = w
+              hitH = h
+            } else {
+              blockers = why.join(' | ')
+            }
+          }
+        }
         out.push({
           tag,
           testid: el.getAttribute('data-testid'),
           aria: el.getAttribute('aria-label'),
           cls: (el.getAttribute('class') || '').slice(0, 90),
-          w: Math.round(rect.width),
-          h: Math.round(rect.height),
+          w: Math.round(Math.max(rect.width, hitW)),
+          h: Math.round(Math.max(rect.height, hitH)),
           allowedBy: allowSels.find(s => el.matches(s)),
+          blockers,
         })
       }
       return out
@@ -98,7 +188,7 @@ export function describeTarget(f: Finding): string {
       : f.cls
         ? `.${f.cls.split(/\s+/).slice(0, 2).join('.')}`
         : ''
-  return `${f.tag}${id} ${f.w}×${f.h}`
+  return `${f.tag}${id} ${f.w}×${f.h}${f.blockers ? ` [${f.blockers}]` : ''}`
 }
 
 export interface TextStats {
