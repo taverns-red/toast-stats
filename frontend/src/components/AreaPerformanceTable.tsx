@@ -7,6 +7,8 @@ import {
   calculateDistinguishedPercentage,
 } from '../utils/areaGapAnalysis'
 import { renderRecognitionBadge } from '../utils/areaRecognitionBadge'
+import { confirmedDistinguished } from '../utils/divisionAreaDistinguished'
+import { QualifyingTodayExtra } from './DistinguishedCount'
 import { CriterionCell } from './dataTable/cells/CriterionCell'
 import { StaticTableScroll } from './dataTable/StaticTableScroll'
 import {
@@ -93,11 +95,19 @@ const PHONE_METRICS: PriorityMetric<AreaPerformance, never>[] = [
     render: a => (
       <>
         <span className="block">
-          {a.distinguishedClubs}/{a.clubBase}
+          {confirmedDistinguished(a)}/{a.clubBase}
         </span>
         <span className="block">
-          {calculateDistinguishedPercentage(a.clubBase, a.distinguishedClubs)}%
+          {calculateDistinguishedPercentage(
+            a.clubBase,
+            confirmedDistinguished(a)
+          )}
+          %
         </span>
+        <QualifyingTodayExtra
+          provisional={a.provisionalDistinguishedClubs}
+          stacked
+        />
       </>
     ),
   },
@@ -280,9 +290,11 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
             area.clubBase,
             area.paidClubs
           )
+          // Confirmed headline and percentage; the extra follows (#2580).
+          const confirmedClubs = confirmedDistinguished(area)
           const distinguishedPercentage = calculateDistinguishedPercentage(
             area.clubBase,
-            area.distinguishedClubs
+            confirmedClubs
           )
 
           // Source-of-truth recognition badge (#832) — visit-deadline gate
@@ -296,8 +308,10 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
                 {area.paidClubs}/{area.clubBase} {paidPercentage}%
               </td>
               <td className="entity-table__c tabular">
-                {area.distinguishedClubs}/{area.clubBase}{' '}
-                {distinguishedPercentage}%
+                {confirmedClubs}/{area.clubBase} {distinguishedPercentage}%
+                <QualifyingTodayExtra
+                  provisional={area.provisionalDistinguishedClubs}
+                />
               </td>
               <td className="entity-table__c">
                 {visitCell(area.firstRoundVisits)}

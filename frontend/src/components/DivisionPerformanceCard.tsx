@@ -87,6 +87,7 @@ export const DivisionPerformanceCard: React.FC<
         clubBase={division.clubBase}
         netGrowth={division.netGrowth}
         distinguishedClubs={division.distinguishedClubs}
+        provisionalDistinguishedClubs={division.provisionalDistinguishedClubs}
         requiredDistinguishedClubs={division.requiredDistinguishedClubs}
         gapAnalysis={gapAnalysis}
         to={

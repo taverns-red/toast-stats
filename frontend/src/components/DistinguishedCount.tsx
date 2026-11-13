@@ -35,6 +35,34 @@ export const DistinguishedBasisNote: React.FC<{ className?: string }> = ({
   </p>
 )
 
+/** The "+N qualifying today" extra beside a confirmed count: nothing when N is
+ *  0 or unknown. Shared by every surface that draws the pair itself (#2580). */
+export const QualifyingTodayExtra: React.FC<{
+  provisional?: number | null | undefined
+  stacked?: boolean | undefined
+}> = ({ provisional, stacked = false }) =>
+  provisional != null && provisional > 0 ? (
+    <>
+      {' '}
+      <span
+        data-testid="distinguished-provisional"
+        className={
+          stacked
+            ? 'distinguished-count__provisional distinguished-count__provisional--stacked'
+            : 'distinguished-count__provisional'
+        }
+        title={PROVISIONAL_TOOLTIP}
+      >
+        +{provisional.toLocaleString()} qualifying today
+        {/* `title` does not reach touch or most screen readers (#2580). */}
+        <span data-testid="distinguished-provisional-note" className="sr-only">
+          {' '}
+          {PROVISIONAL_NOTE}
+        </span>
+      </span>
+    </>
+  ) : null
+
 export interface DistinguishedCountProps {
   confirmed: number
   provisional?: number | null | undefined
@@ -71,29 +99,8 @@ export const DistinguishedCount: React.FC<DistinguishedCountProps> = ({
         </span>
       </>
     )}
-    {basis === 'confirmed' && provisional != null && provisional > 0 && (
-      <>
-        {' '}
-        <span
-          data-testid="distinguished-provisional"
-          className={
-            stacked
-              ? 'distinguished-count__provisional distinguished-count__provisional--stacked'
-              : 'distinguished-count__provisional'
-          }
-          title={PROVISIONAL_TOOLTIP}
-        >
-          +{provisional.toLocaleString()} qualifying today
-          {/* `title` does not reach touch or most screen readers (#2580). */}
-          <span
-            data-testid="distinguished-provisional-note"
-            className="sr-only"
-          >
-            {' '}
-            {PROVISIONAL_NOTE}
-          </span>
-        </span>
-      </>
+    {basis === 'confirmed' && (
+      <QualifyingTodayExtra provisional={provisional} stacked={stacked} />
     )}
   </>
 )

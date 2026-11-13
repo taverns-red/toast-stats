@@ -7,6 +7,8 @@ import {
   calculateDistinguishedPercentage,
 } from '../utils/areaGapAnalysis'
 import { renderRecognitionBadge } from '../utils/areaRecognitionBadge'
+import { confirmedDistinguished } from '../utils/divisionAreaDistinguished'
+import { QualifyingTodayExtra } from './DistinguishedCount'
 
 /**
  * Props for the AreaPerformanceRow component
@@ -115,9 +117,11 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
     area.clubBase,
     area.paidClubs
   )
+  // Confirmed headline and percentage; the extra follows (#2580).
+  const confirmedClubs = confirmedDistinguished(area)
   const distinguishedPercentage = calculateDistinguishedPercentage(
     area.clubBase,
-    area.distinguishedClubs
+    confirmedClubs
   )
 
   // Source-of-truth recognition badge — deadline-aware visit gate lives in
@@ -152,7 +156,10 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
         style={{ fontSize: '14px' }}
       >
         <span className="text-gray-900 tabular-nums">
-          {area.distinguishedClubs}/{area.clubBase} {distinguishedPercentage}%
+          {confirmedClubs}/{area.clubBase} {distinguishedPercentage}%
+          <QualifyingTodayExtra
+            provisional={area.provisionalDistinguishedClubs}
+          />
         </span>
       </td>
 
