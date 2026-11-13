@@ -11,6 +11,7 @@ import DistrictsPage from '../DistrictsPage'
 import '../../__tests__/preloadRankingsTable'
 import { fetchCdnRankings, fetchCdnRegionRollups } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
+import { downloadCSV } from '../../utils/csvExport'
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnDates: vi.fn().mockResolvedValue({
@@ -29,6 +30,11 @@ vi.mock('../../services/cdn', () => ({
   fetchCdnRegionMembershipSeries: vi.fn().mockResolvedValue(null),
   cdnAnalyticsUrl: vi.fn().mockReturnValue('https://cdn.taverns.red/test'),
   fetchFromCdn: vi.fn(),
+}))
+
+vi.mock('../../utils/csvExport', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../utils/csvExport')>()),
+  downloadCSV: vi.fn(),
 }))
 
 vi.mock('../../hooks/useDistricts', () => ({
@@ -141,6 +147,25 @@ describe('DistrictsPage — confirmed headline + qualifying today (#2580)', () =
     expect(within(tr61).queryByTestId('distinguished-provisional')).toBeNull()
     const tr83 = within(table).getByTestId('district-row-83')
     expect(within(tr83).queryByTestId('distinguished-provisional')).toBeNull()
+  })
+
+  it('CSV: Distinguished Clubs stays confirmed, with its own qualifying-today column', async () => {
+    renderWithProviders(<DistrictsPage />)
+    await screen.findByText('District 57')
+    await screen.findByTestId('distinguished-basis-note')
+    fireEvent.click(screen.getByRole('button', { name: /export csv/i }))
+    expect(downloadCSV).toHaveBeenCalledTimes(1)
+    const csv = vi.mocked(downloadCSV).mock.calls[0]![0]
+    const [header, ...rows] = csv.split('\n')
+    expect(header).toBe(
+      'Rank,District,Region,Paid Clubs,Total Payments,Distinguished Clubs,Distinguished Qualifying Today,Aggregate Score'
+    )
+    const d57 = rows.find(r => r.includes('D57'))!.split(',')
+    expect(d57[5]).toBe('25')
+    expect(d57[6]).toBe('11')
+    // Unknown is blank, not 0.
+    const d83 = rows.find(r => r.includes('D83'))!.split(',')
+    expect(d83[6]).toBe('')
   })
 
   it('shows the visible basis note once the figures are on the page', async () => {
