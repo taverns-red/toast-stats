@@ -106,13 +106,15 @@ next_gen() {
   # any seeded (pre-2026-10-23) generation: start just after that.
   #
   # Parallel shims (copy-out runs its workers under `xargs -P`, #2800) must not
-  # interleave the read, increment and write: a `mkdir` lock (atomic on macOS
-  # and Linux, which has no flock there) serialises them, and the new value is
-  # written to a temp file and `mv`d into place so a reader never sees a torn
-  # counter.
+  # interleave the read, increment and write. A lock file created by the shell
+  # itself with noclobber (O_EXCL, atomic on macOS and Linux, bash 3 too)
+  # serialises them, and the new value is written to a temp file and `mv`d into
+  # place so a reader never sees a torn counter. Not `mkdir`: the uutils
+  # `mkdir` of Ubuntu 26.04 succeeds on an existing directory under a race, so
+  # two shims held the lock at once (CI run 43516341701).
   local f="${SHIM_ROOT}/.gen-counter" lock="${SHIM_ROOT}/.gen-counter.lock"
   local n=1793000000000000 tries=0
-  until mkdir "${lock}" 2>/dev/null; do
+  until (set -C && : >"${lock}") 2>/dev/null; do
     tries=$((tries + 1))
     if [ "${tries}" -gt 6000 ]; then
       echo "gcloud shim: could not take ${lock}" >&2
@@ -124,16 +126,16 @@ next_gen() {
   # free the lock early. Every failure path releases the lock explicitly.
   if [ -f "${f}" ]; then
     n="$(cat "${f}")" || {
-      rmdir "${lock}"
+      rm -f "${lock}"
       return 1
     }
   fi
   n=$((n + 1))
   if ! { echo "${n}" >"${f}.tmp.$$" && mv "${f}.tmp.$$" "${f}"; }; then
-    rmdir "${lock}"
+    rm -f "${lock}"
     return 1
   fi
-  rmdir "${lock}"
+  rm -f "${lock}"
   echo "${n}"
 }
 
