@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { StatTile, StatTileList } from '../StatTile'
 import {
   EVENING_END_HOUR,
   EVENING_START_HOUR,
@@ -39,30 +40,30 @@ export const MeetingKpis: React.FC<{
   /** The "Schedule not stated" value: a link where the page lists them. */
   unknown: React.ReactNode
 }> = ({ scheduled, totalClubs, inPerson, onlineCapable, unknown }) => (
-  <ul className="meetings-kpis" aria-label="Meetings at a glance">
-    <li className="meetings-kpi">
-      <span className="meetings-kpi__label">Schedule listed</span>
-      <span className="meetings-kpi__value">
-        {scheduled.toLocaleString()} of {totalClubs.toLocaleString()}
-      </span>
-    </li>
-    <li className="meetings-kpi">
-      <span className="meetings-kpi__label">Meet in person</span>
-      <span className="meetings-kpi__value">{inPerson.toLocaleString()}</span>
-      <span className="meetings-kpi__hint">incl. hybrid</span>
-    </li>
-    <li className="meetings-kpi">
-      <span className="meetings-kpi__label">Online-capable</span>
-      <span className="meetings-kpi__value">
-        {onlineCapable.toLocaleString()}
-      </span>
-      <span className="meetings-kpi__hint">online or hybrid</span>
-    </li>
-    <li className="meetings-kpi">
-      <span className="meetings-kpi__label">Schedule not stated</span>
-      {unknown}
-    </li>
-  </ul>
+  <StatTileList family="meetings-kpis" aria-label="Meetings at a glance">
+    <StatTile
+      family="meetings-kpi"
+      label="Schedule listed"
+      value={`${scheduled.toLocaleString()} of ${totalClubs.toLocaleString()}`}
+    />
+    <StatTile
+      family="meetings-kpi"
+      label="Meet in person"
+      value={inPerson.toLocaleString()}
+      hint="incl. hybrid"
+    />
+    <StatTile
+      family="meetings-kpi"
+      label="Online-capable"
+      value={onlineCapable.toLocaleString()}
+      hint="online or hybrid"
+    />
+    <StatTile
+      family="meetings-kpi"
+      label="Schedule not stated"
+      value={unknown}
+    />
+  </StatTileList>
 )
 
 /** All / In person / Online: plain links writing `?mode=` (ADR-005). */

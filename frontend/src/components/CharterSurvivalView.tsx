@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { StatTile, StatTileList } from './StatTile'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import {
   CartesianGrid,
@@ -124,32 +125,32 @@ function buildRows(s: SurvivalCurves, cohorts: CharterCohort[]) {
 const Headline: React.FC<{ pooled: (PooledYearCell | null)[] }> = ({
   pooled,
 }) => (
-  <ul className="survival-kpis" aria-label="Survival after 1, 3 and 5 years">
+  <StatTileList
+    family="survival-kpis"
+    aria-label="Survival after 1, 3 and 5 years"
+  >
     {HEADLINE_YEARS.map(k => {
       const cell = pooled[k - 1] ?? null
-      return (
-        <li key={k} className="survival-kpi">
-          <span className="survival-kpi__label">After {yearLabel(k)}</span>
-          {cell ? (
-            <>
-              <span className="survival-kpi__value">{pct(cell.share)}</span>
-              <span className="survival-kpi__hint">
-                {cell.survivors} of {cell.chartered} clubs
-                {cell.provisional ? ' · so far' : ''}
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="survival-kpi__value survival-kpi__value--na">
-                —
-              </span>
-              <span className="survival-kpi__hint">Not reached yet</span>
-            </>
-          )}
-        </li>
+      return cell ? (
+        <StatTile
+          key={k}
+          family="survival-kpi"
+          label={`After ${yearLabel(k)}`}
+          value={pct(cell.share)}
+          hint={`${cell.survivors} of ${cell.chartered} clubs${cell.provisional ? ' · so far' : ''}`}
+        />
+      ) : (
+        <StatTile
+          key={k}
+          family="survival-kpi"
+          label={`After ${yearLabel(k)}`}
+          value="—"
+          valueClassName="survival-kpi__value--na"
+          hint="Not reached yet"
+        />
       )
     })}
-  </ul>
+  </StatTileList>
 )
 
 /* ── Cohort links (URL state, no tabs) ────────────────────────────────── */

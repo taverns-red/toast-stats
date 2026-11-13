@@ -1,0 +1,52 @@
+/* One KPI tile (#2649): label, figure, hint. Used by every tile family that
+   goes through components/StatTile.tsx. Legacy palette only (#2080); the
+   tokens remap under [data-theme='dark'].
+
+   Alignment: the label reserves two lines. A label that wraps ("Members with
+   an award") no longer pushes its figure below the neighbouring tiles'
+   figures; a tile's figure always starts one two-line label below the
+   tile's top. A family sets its own column counts on its strip class. */
+
+@layer brand {
+  .stat-tiles {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .stat-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    padding: 0.625rem 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-md, 8px);
+  }
+
+  .stat-tile__label {
+    min-height: 2.5em;
+    font-size: 0.875rem;
+    line-height: 1.25;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+
+  .stat-tile__value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+
+  .stat-tile__hint {
+    font-size: 0.875rem;
+    color: var(--ink-3);
+    overflow-wrap: anywhere;
+  }
+}

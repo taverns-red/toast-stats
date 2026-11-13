@@ -31,47 +31,14 @@
   color: var(--link);
 }
 
-/* ── KPI strip ─────────────────────────────────────────────────────── */
-
-.meetings-kpis {
-  list-style: none;
-  margin: 1rem 0 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
-}
+/* ── KPI strip ───────────────────────────────────────────────────────
+   Tile look and label/figure alignment: stat-tile.css (#2649). */
 
 @media (min-width: 768px) {
   .meetings-kpis {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.75rem;
   }
-}
-
-.meetings-kpi {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-  padding: 0.625rem 0.75rem;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--rt-radius-md, 4px);
-}
-
-.meetings-kpi__label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--ink-2);
-}
-
-.meetings-kpi__value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
 }
 
 .meetings-kpi__link {
@@ -82,11 +49,6 @@
   min-width: 44px;
   text-decoration: underline;
   color: var(--link);
-}
-
-.meetings-kpi__hint {
-  font-size: 0.875rem;
-  color: var(--ink-3);
 }
 
 /* ── Mode switch ───────────────────────────────────────────────────── */

@@ -5,6 +5,7 @@ import type {
   DistrictEducation,
   EducationRollupRow,
 } from '../utils/districtEducation'
+import { StatTile, StatTileList } from './StatTile'
 import { useParamHref } from '../hooks/useParamHref'
 import { useUrlSort } from '../hooks/useUrlSort'
 import {
@@ -91,19 +92,18 @@ const KpiStrip: React.FC<{ e: Available }> = ({ e }) => {
     },
   ]
   return (
-    <ul className="education-kpis" aria-label="Education at a glance">
+    <StatTileList family="education-kpis" aria-label="Education at a glance">
       {items.map(i => (
-        <li key={i.label} className="education-kpi">
-          <span className="education-kpi__label">{i.label}</span>
-          <span
-            className={`education-kpi__value${i.value === NOT_MEASURED ? ' is-unknown' : ''}`}
-          >
-            {i.value}
-          </span>
-          {i.hint && <span className="education-kpi__hint">{i.hint}</span>}
-        </li>
+        <StatTile
+          key={i.label}
+          family="education-kpi"
+          label={i.label}
+          value={i.value}
+          hint={i.hint}
+          valueClassName={i.value === NOT_MEASURED ? 'is-unknown' : undefined}
+        />
       ))}
-    </ul>
+    </StatTileList>
   )
 }
 

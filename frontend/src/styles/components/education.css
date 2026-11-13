@@ -58,26 +58,11 @@
   background: var(--tm-cool-gray);
 }
 
-/* ── KPI strip: 2×2 + a full-width sixth row at 375; one row at ≥768 ── */
+/* ── KPI strip: 2×2 + a full-width sixth row at 375; one row at ≥768 ──
+   Tile look and label/figure alignment: stat-tile.css (#2649). */
 
 .education-kpis {
-  list-style: none;
-  margin: 1rem 0 0;
-  padding: 0;
-  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.education-kpi {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-  padding: 0.625rem 0.75rem;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--rt-radius-md, 4px);
 }
 
 .education-kpi:last-child {
@@ -94,31 +79,11 @@
   }
 }
 
-.education-kpi__label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--ink-2);
-}
-
-.education-kpi__value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-}
-
 .education-kpi__value.is-unknown {
   font-size: 1rem;
   font-style: italic;
   font-weight: 600;
   color: var(--ink-3);
-}
-
-.education-kpi__hint {
-  font-size: 0.875rem;
-  color: var(--ink-3);
-  overflow-wrap: anywhere;
 }
 
 /* ── All awards by program ─────────────────────────────────────────── */

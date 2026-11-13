@@ -137,11 +137,7 @@ export const RollupMeetingHeatmap: React.FC<RollupMeetingHeatmapProps> = ({
         totalClubs={sum.clubs}
         inPerson={sum.inPerson}
         onlineCapable={sum.onlineCapable}
-        unknown={
-          <span className="meetings-kpi__value">
-            {(sum.clubs - sum.scheduled).toLocaleString()}
-          </span>
-        }
+        unknown={(sum.clubs - sum.scheduled).toLocaleString()}
       />
 
       <MeetingModeSwitch mode={mode} href={href} />

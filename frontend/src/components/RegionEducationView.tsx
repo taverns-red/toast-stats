@@ -6,6 +6,7 @@ import type {
   RegionEducationDistrictRow,
 } from '../utils/regionEducation'
 import { useUrlSort } from '../hooks/useUrlSort'
+import { StatTile, StatTileList } from './StatTile'
 import {
   PriorityColumnsTable,
   type PriorityMetric,
@@ -72,18 +73,17 @@ export const KpiStrip: React.FC<{ e: Pick<Available, 'kpis'> }> = ({ e }) => {
     { label: 'Clubs with an award', value: fmt(k.clubsWithAward) },
   ]
   return (
-    <ul className="education-kpis" aria-label="Education at a glance">
+    <StatTileList family="education-kpis" aria-label="Education at a glance">
       {items.map(i => (
-        <li key={i.label} className="education-kpi">
-          <span className="education-kpi__label">{i.label}</span>
-          <span
-            className={`education-kpi__value${i.value === NOT_MEASURED ? ' is-unknown' : ''}`}
-          >
-            {i.value}
-          </span>
-        </li>
+        <StatTile
+          key={i.label}
+          family="education-kpi"
+          label={i.label}
+          value={i.value}
+          valueClassName={i.value === NOT_MEASURED ? 'is-unknown' : undefined}
+        />
       ))}
-    </ul>
+    </StatTileList>
   )
 }
 
