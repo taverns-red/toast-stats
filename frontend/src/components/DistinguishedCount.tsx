@@ -24,7 +24,11 @@ export const PROVISIONAL_NOTE = 'not yet confirmed by April renewals'
 export const DistinguishedBasisNote: React.FC<{ className?: string }> = ({
   className,
 }) => (
-  <p data-testid="distinguished-basis-note" className={className}>
+  <p
+    id="distinguished-basis-note"
+    data-testid="distinguished-basis-note"
+    className={className}
+  >
     Distinguished clubs: the headline is confirmed by April renewals, and rank
     and % use it. &quot;+N qualifying today&quot; counts clubs that meet a level
     on current membership but are not yet confirmed; it is never added in.

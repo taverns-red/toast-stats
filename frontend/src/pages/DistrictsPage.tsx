@@ -1189,7 +1189,7 @@ const DistrictsPage: React.FC = () => {
       'Distinguished Clubs',
       // Confirmed above; clubs qualifying today but not yet confirmed here,
       // blank when the pipeline has not published it (#2580).
-      'Distinguished Qualifying Today',
+      'Distinguished Qualifying Today (Not Yet Confirmed)',
       'Aggregate Score',
     ]
     const rows: (string | number)[][] = sortedRankings.map((r, i) => [
@@ -1410,6 +1410,14 @@ const DistrictsPage: React.FC = () => {
                 data-testid="kpi-distinguished-clubs-delta"
               >
                 {kpiSub(false).distinguished}
+                {worldCounts && (
+                  <>
+                    {' '}
+                    <a href="#distinguished-basis-note" className="underline">
+                      What do these mean?
+                    </a>
+                  </>
+                )}
               </p>
             </div>
             <div className="districts-kpi-card districts-kpi-card--secondary">
