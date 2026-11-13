@@ -6,6 +6,9 @@ export const AFTER_PAINT_FALLBACK_MS = 250
 /** Longest the gate waits for an LCP entry before opening anyway (#2777). */
 export const LCP_WAIT_CAP_MS = 2000
 
+/** Test seam: forget the first-mount claim and any recorded user input. */
+export function resetAfterPaintStateForTests(): void {}
+
 /** A visible tab in a browser that reports `largest-contentful-paint`. */
 function canObserveLcp(): boolean {
   return (

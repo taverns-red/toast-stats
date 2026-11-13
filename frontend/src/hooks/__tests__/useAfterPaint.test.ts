@@ -8,6 +8,7 @@ import {
   useAfterPaint,
   AFTER_PAINT_FALLBACK_MS,
   LCP_WAIT_CAP_MS,
+  resetAfterPaintStateForTests,
 } from '../useAfterPaint'
 
 describe('useAfterPaint', () => {
@@ -93,6 +94,7 @@ describe('useAfterPaint with LCP entries (#2777)', () => {
       .forEach(o => o.cb({ getEntries: () => [{ startTime }] }))
 
   beforeEach(() => {
+    resetAfterPaintStateForTests()
     vi.useFakeTimers()
     observers = []
     now = 1000
@@ -134,14 +136,36 @@ describe('useAfterPaint with LCP entries (#2777)', () => {
     expect(result.current).toBe(true)
   })
 
-  it('ignores an LCP entry that was painted before readiness', () => {
+  it('accepts an LCP entry painted before readiness (slow device)', () => {
     const { result } = renderHook(() => useAfterPaint(true))
     act(() => emitLcp(400))
     act(() => vi.advanceTimersByTime(0))
-    expect(result.current).toBe(false)
-    act(() => emitLcp(1100))
+    expect(result.current).toBe(true)
+  })
+
+  it('caps the LCP wait at 400 ms or less', () => {
+    expect(LCP_WAIT_CAP_MS).toBeLessThanOrEqual(400)
+  })
+
+  it.each(['pointerdown', 'keydown', 'scroll'])(
+    'skips the LCP wait after a %s (browsers stop emitting LCP)',
+    type => {
+      window.dispatchEvent(new Event(type))
+      const { result } = renderHook(() => useAfterPaint(true))
+      act(() => vi.advanceTimersByTime(AFTER_PAINT_FALLBACK_MS))
+      expect(result.current).toBe(true)
+    }
+  )
+
+  it('skips the LCP wait on a soft navigation (not the first route mount)', () => {
+    const first = renderHook(() => useAfterPaint(false))
+    first.unmount()
+    const { result } = renderHook(() => useAfterPaint(true))
+    // One frame (16 ms in this rAF mock) plus the open task.
+    act(() => vi.advanceTimersByTime(16))
     act(() => vi.advanceTimersByTime(0))
     expect(result.current).toBe(true)
+    expect(observers).toHaveLength(0)
   })
 
   it('opens after the wait cap when no LCP entry follows', () => {
