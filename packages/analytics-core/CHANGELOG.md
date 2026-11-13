@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.25.2](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.25.1...analytics-core-v1.25.2) (2026-11-13)
+
+
+### Bug Fixes
+
+* **analytics:** district Distinguished basis uses the date-level decision ([#2560](https://github.com/taverns-red/toast-stats/issues/2560)) ([#2799](https://github.com/taverns-red/toast-stats/issues/2799)) ([974a042](https://github.com/taverns-red/toast-stats/commit/974a042b170593c4c3de611bfdc149aea161642d))
+* **ui:** one percentile formula; name the ranked measure; tied categories ([#2613](https://github.com/taverns-red/toast-stats/issues/2613)) ([#2796](https://github.com/taverns-red/toast-stats/issues/2796)) ([874e7d4](https://github.com/taverns-red/toast-stats/commit/874e7d4a1fef17d30f57308a6f454d6300ef0c88))
+
 ## [1.25.1](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.25.0...analytics-core-v1.25.1) (2026-11-13)
 
 

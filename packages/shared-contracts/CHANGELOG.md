@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.28.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.28.0...shared-contracts-v1.28.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* **analytics:** district Distinguished basis uses the date-level decision ([#2560](https://github.com/taverns-red/toast-stats/issues/2560)) ([#2799](https://github.com/taverns-red/toast-stats/issues/2799)) ([974a042](https://github.com/taverns-red/toast-stats/commit/974a042b170593c4c3de611bfdc149aea161642d))
+
 ## [1.28.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.27.0...shared-contracts-v1.28.0) (2026-11-09)
 
 
