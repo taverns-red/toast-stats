@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ClubRiskFactors } from '../ClubRiskFactors'
 import { plainRiskFactor } from '../../../utils/plainRiskFactor'
+import { RISK_FACTOR_MESSAGES as M } from '@taverns-red/analytics-core'
 
 /* #2655 UNIT-21 — Risk Factors is a regular club panel with plain copy:
    no emoji, no Tailwind reds, no "need 3+ to override". The analytics
@@ -13,7 +14,7 @@ describe('plainRiskFactor (#2655)', () => {
     ['Membership below 12 (critical)', 'Fewer than 12 members.'],
     [
       'Net growth since July: -5 (need 3+ to override)',
-      'Net membership change since July is -5. A gain of 3 or more would lift the club out of this status.',
+      'Net membership change since July is -5. It needs to reach +3 to lift the club out of this status.',
     ],
     [
       'Membership below threshold (15 members, need 20+ or net growth 3+)',
@@ -30,6 +31,30 @@ describe('plainRiskFactor (#2655)', () => {
     ['CSP not submitted', 'Club Success Plan not submitted.'],
   ])('rewrites %j', (raw, plain) => {
     expect(plainRiskFactor(raw)).toBe(plain)
+  })
+
+  // The strings the pipeline publishes, built by the same functions
+  // ClubHealthAnalyticsModule uses (analytics-core riskFactorMessages): a
+  // wording change there fails here instead of falling through as raw text.
+  it.each([
+    ['membershipCritical', M.membershipCritical()],
+    ['netGrowthOverride (negative)', M.netGrowthOverride(-5)],
+    ['netGrowthOverride (zero)', M.netGrowthOverride(0)],
+    ['membershipBelowThreshold', M.membershipBelowThreshold(15)],
+    ['dcpCheckpointNotMet (one)', M.dcpCheckpointNotMet(1, 2, 'October')],
+    ['dcpCheckpointNotMet (many)', M.dcpCheckpointNotMet(0, 3, 'November')],
+    ['cspNotSubmitted', M.cspNotSubmitted()],
+  ])('recognises the published %s message', (_name, raw) => {
+    const plain = plainRiskFactor(raw)
+    expect(plain).not.toBe(raw)
+    expect(plain).not.toMatch(/override|need 3\+|CSP/)
+  })
+
+  it('states the net-change target, not a member count', () => {
+    // From -5 the club needs a net change of +3 since July: 8 more members.
+    // The copy names the target as a net change so it cannot read as "3 more".
+    expect(plainRiskFactor(M.netGrowthOverride(-5))).toContain('reach +3')
+    expect(plainRiskFactor(M.netGrowthOverride(-5))).not.toMatch(/gain of 3/)
   })
 
   it('passes an unknown message through unchanged', () => {
