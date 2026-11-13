@@ -65,9 +65,11 @@ describe('favicon asset set (#1906)', () => {
   })
 
   it('index.html links the icon set', () => {
-    expect(html).toMatch(/<link\b[^>]*rel="icon"[^>]*href="\/favicon\.ico"/)
     expect(html).toMatch(
-      /<link\b[^>]*rel="apple-touch-icon"[^>]*href="\/apple-touch-icon\.png"/
+      /<link\b[^>]*rel="icon"[^>]*href="\/favicon\.ico\?v=[\d-]+"/
+    )
+    expect(html).toMatch(
+      /<link\b[^>]*rel="apple-touch-icon"[^>]*href="\/apple-touch-icon\.png\?v=[\d-]+"/
     )
   })
 })

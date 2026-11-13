@@ -27,15 +27,19 @@ interface WebManifest {
 
 describe('RT pennant icon set (#2507)', () => {
   it('index.html links favicon.svg as the primary icon', () => {
-    expect(linkHref('icon', 'image/svg\\+xml')).toBe('/favicon.svg')
+    expect(linkHref('icon', 'image/svg\\+xml')).toBe(
+      '/favicon.svg?v=2026-11-13'
+    )
   })
 
   it('index.html keeps favicon.ico as the fallback icon', () => {
-    expect(linkHref('icon', 'image/x-icon')).toBe('/favicon.ico')
+    expect(linkHref('icon', 'image/x-icon')).toBe('/favicon.ico?v=2026-11-13')
   })
 
   it('index.html links apple-touch-icon.png', () => {
-    expect(linkHref('apple-touch-icon')).toBe('/apple-touch-icon.png')
+    expect(linkHref('apple-touch-icon')).toBe(
+      '/apple-touch-icon.png?v=2026-11-13'
+    )
   })
 
   it('every linked icon exists in public/', () => {
@@ -71,7 +75,10 @@ describe('RT pennant icon set (#2507)', () => {
       expect(m.icons.map(i => i.sizes).sort()).toEqual(['192x192', '512x512'])
       for (const icon of m.icons) {
         expect(icon.src.startsWith('/'), icon.src).toBe(true)
-        expect(existsSync(resolve(PUBLIC, `.${icon.src}`)), icon.src).toBe(true)
+        // #2785: icon URLs carry a ?v= cache-busting query; the file does not.
+        expect(icon.src, icon.src).toMatch(/\?v=\d{4}-\d{2}-\d{2}$/)
+        const file = icon.src.split('?')[0]
+        expect(existsSync(resolve(PUBLIC, `.${file}`)), icon.src).toBe(true)
       }
     })
   })

@@ -64,7 +64,7 @@
           ]
         },
         {
-          "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|ico)",
+          "source": "/assets/**/*.@(jpg|jpeg|gif|png|svg|webp|ico)",
           "headers": [
             {
               "key": "Cache-Control",
@@ -174,7 +174,7 @@
           ]
         },
         {
-          "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|ico)",
+          "source": "/assets/**/*.@(jpg|jpeg|gif|png|svg|webp|ico)",
           "headers": [
             {
               "key": "Cache-Control",

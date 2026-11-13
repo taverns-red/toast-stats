@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { join, relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 /**
@@ -230,7 +230,9 @@ const IMMUTABLE = 'public, max-age=31536000, immutable'
 
 const ASSET_SOURCES = [
   '**/*.@(js|css)',
-  '**/*.@(jpg|jpeg|gif|png|svg|webp|ico)',
+  // #2785: images are immutable only under Vite's hashed /assets/ dir; the
+  // unhashed favicons/OG image in frontend/public must revalidate.
+  '/assets/**/*.@(jpg|jpeg|gif|png|svg|webp|ico)',
   '**/*.@(woff|woff2|ttf|otf|eot)',
   // #2081: basemap glyph PBFs, under a font-versioned path.
   '/basemap/glyphs/**',
@@ -366,6 +368,109 @@ describe('firebase.json missing build assets (#2415)', () => {
       const destination = rewrites[assets]!.destination
       expect(destination).not.toBe('/index.html')
       expect(existsSync(join(ROOT, 'frontend/public', destination))).toBe(false)
+    })
+  }
+})
+
+/**
+ * Contract test for #2785 — unhashed public files must never be `immutable`.
+ *
+ * `immutable` + a one-year max-age is only safe when the URL changes with the
+ * content (Vite's `/assets/<name>-<hash>.ext`). Files copied verbatim from
+ * `frontend/public` (favicons, touch icons, OG image, manifest) keep a fixed
+ * URL, so a browser that cached one never revalidates it: the retired roundel
+ * favicon stuck for users after #2507 replaced it with the RT pennant.
+ *
+ * `/basemap/glyphs/**` is exempt: it lives under a font-versioned directory
+ * name (`inter-4.1-noto-...`), so the URL does change with the content (#2081).
+ */
+
+/** Translate a Firebase header-source glob to a RegExp (full-path match). */
+function globToRegExp(glob: string): RegExp {
+  const g = glob.replace(/^\//, '')
+  let out = ''
+  for (let i = 0; i < g.length;) {
+    if (g.startsWith('**/', i)) {
+      out += '(?:.*/)?'
+      i += 3
+    } else if (g.startsWith('**', i)) {
+      out += '.*'
+      i += 2
+    } else if (g[i] === '*') {
+      out += '[^/]*'
+      i += 1
+    } else if (g.startsWith('@(', i)) {
+      const end = g.indexOf(')', i)
+      const alts = g
+        .slice(i + 2, end)
+        .split('|')
+        .map(escapeRegExp)
+      out += `(?:${alts.join('|')})`
+      i = end + 1
+    } else {
+      out += escapeRegExp(g[i]!)
+      i += 1
+    }
+  }
+  return new RegExp(`^${out}$`)
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\/-]/g, '\\$&')
+}
+
+/** Request paths (leading slash) of every file under frontend/public. */
+function publicRequestPaths(dir = join(ROOT, 'frontend/public')): string[] {
+  const out: string[] = []
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name)
+    if (entry.isDirectory()) out.push(...publicRequestPaths(full))
+    else out.push('/' + relative(join(ROOT, 'frontend/public'), full))
+  }
+  return out
+}
+
+describe('firebase.json unhashed public files are revalidated (#2785)', () => {
+  const unhashed = publicRequestPaths().filter(
+    p => !p.startsWith('/basemap/glyphs/')
+  )
+
+  it('finds the unhashed public files this contract covers', () => {
+    expect(unhashed).toEqual(
+      expect.arrayContaining(['/favicon.svg', '/favicon.ico', '/icon-192.png'])
+    )
+  })
+
+  it('globToRegExp escapes every regex metacharacter', () => {
+    const re = globToRegExp('/a.b+c(d)[e]{f}^g$h|i\\j/*.@(x|y.z)')
+    expect(re.test('a.b+c(d)[e]{f}^g$h|i\\j/k.x')).toBe(true)
+    expect(re.test('a.b+c(d)[e]{f}^g$h|i\\j/k.y.z')).toBe(true)
+    expect(re.test('aXb+c(d)[e]{f}^g$h|i\\j/k.x')).toBe(false)
+    expect(re.test('a.b+c(d)[e]{f}^g$h|i\\j/k.xz')).toBe(false)
+  })
+
+  it('matches root-level files with a leading **/ glob', () => {
+    expect(globToRegExp('**/*.@(png|svg)').test('favicon.svg')).toBe(true)
+    expect(globToRegExp('**/*.@(png|svg)').test('assets/a/b.png')).toBe(true)
+  })
+
+  for (const targetName of ['production', 'staging']) {
+    it(`${targetName}: no unhashed public file resolves to an immutable Cache-Control`, () => {
+      const matcher = rulesFor(targetName).map(r => ({
+        rule: r,
+        re: globToRegExp(r.source),
+      }))
+      const offenders: string[] = []
+      for (const path of unhashed) {
+        let resolved: string | undefined
+        for (const { rule, re } of matcher) {
+          if (!re.test(path.slice(1))) continue
+          const cc = headerValue(rule.headers, 'Cache-Control')
+          if (cc !== undefined) resolved = cc
+        }
+        if (resolved?.includes('immutable')) offenders.push(path)
+      }
+      expect(offenders).toEqual([])
     })
   }
 })
