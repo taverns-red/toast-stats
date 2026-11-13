@@ -168,6 +168,42 @@ describe('DistrictsPage — confirmed headline + qualifying today (#2580)', () =
     expect(d83[6]).toBe('')
   })
 
+  // The phone priority-columns smoke forbids td text under 14px and any
+  // clipped metric cell, so the 12px extra stays out of the compact phone
+  // table; it lives in the full table and the KPI.
+  it('phone priority table keeps the plain confirmed count, no 12px extra', async () => {
+    // jsdom has no media queries; useIsMobile reads a stubbed matchMedia.
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation((query: string) => ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }))
+    )
+    renderWithProviders(<DistrictsPage />)
+    const [chip] = await screen.findAllByRole('button', {
+      name: /dist\. clubs/i,
+    })
+    fireEvent.click(chip)
+    const phone = document.querySelector(
+      'table.priority-columns__table'
+    ) as HTMLElement
+    expect(phone).not.toBeNull()
+    expect(
+      within(phone).getAllByText('25', { exact: false }).length
+    ).toBeGreaterThan(0)
+    expect(
+      phone.querySelector('[data-testid="distinguished-provisional"]')
+    ).toBeNull()
+    vi.unstubAllGlobals()
+  })
+
   it('KPI links to the basis note, which carries the target id', async () => {
     renderWithProviders(<DistrictsPage />)
     const note = await screen.findByTestId('distinguished-basis-note')
