@@ -24,29 +24,31 @@
   --shadow-color: rgba(0, 0, 0, 0.1);
 }
 
-/* ─── Taverns-Red Dark Palette ─── */
+/* ─── Taverns-Red Dark Palette ───
+   One dark palette (#2641): the legacy semantic tokens alias the slate
+   redesign set (tokens/redesign.css) so there is a single source. */
 
 [data-theme='dark'] {
   /* Backgrounds */
-  --surface-primary: #0c0a0f;
-  --surface-secondary: #14111a;
-  --surface-card: #1a1722;
-  --surface-card-hover: #221e2d;
+  --surface-primary: var(--bg);
+  --surface-secondary: var(--surface-2);
+  --surface-card: var(--surface);
+  --surface-card-hover: var(--surface-3);
 
   /* Text */
-  --text-heading: #f0ecf5;
-  --text-body: rgba(240, 236, 245, 0.87);
-  --text-muted: #9b95a5;
+  --text-heading: var(--ink);
+  --text-body: var(--ink-2);
+  --text-muted: var(--ink-3);
 
   /* Borders */
-  --border-default: rgba(255, 255, 255, 0.06);
-  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-default: var(--line);
+  --border-subtle: var(--line-2);
 
   /* Shadows */
   --shadow-color: rgba(0, 0, 0, 0.4);
 
   /* ─── Toastmasters Brand Token Overrides ─── */
-  --tm-black: #f0ecf5;
+  --tm-black: var(--ink);
   --tm-loyal-blue: #5dade2;
   --tm-loyal-blue-100: rgba(93, 173, 226, 1);
   --tm-loyal-blue-90: rgba(93, 173, 226, 0.9);
@@ -95,11 +97,11 @@
 }
 
 [data-theme='dark'] .bg-gray-100 {
-  background-color: #1e1b27 !important;
+  background-color: var(--surface-3) !important;
 }
 
 [data-theme='dark'] .bg-gray-200 {
-  background-color: #252230 !important;
+  background-color: var(--line) !important;
 }
 
 [data-theme='dark'] .bg-gray-300 {
@@ -115,7 +117,7 @@
 }
 
 [data-theme='dark'] .bg-gray-900 {
-  background-color: #0c0a0f !important;
+  background-color: var(--bg) !important;
 }
 
 /* ─── Text Overrides ─── */
@@ -268,7 +270,7 @@
 }
 
 [data-theme='dark'] .hover\:bg-gray-100:hover {
-  background-color: #252230 !important;
+  background-color: var(--line) !important;
 }
 
 [data-theme='dark'] .hover\:bg-gray-200:hover {

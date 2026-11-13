@@ -226,7 +226,7 @@ button.club-grid-tile {
   opacity: 0.85;
 }
 
-/* Health fills (theme-stable soft tints, dark text — mirrors clubs-status-pill) */
+/* Health fills (soft tints, dark text in light; dark override below) */
 .club-grid-tile--thriving {
   background-color: #dcfce7;
   color: #14532d;
@@ -238,6 +238,21 @@ button.club-grid-tile {
 .club-grid-tile--intervention {
   background-color: #fee2e2;
   color: #7f1d1d;
+}
+
+/* Dark (#2641, D8): same dark tint/text pairs as .clubs-status-pill and
+   .dcp-cell--*, so the light pastels don't glare on the dark card. */
+[data-theme='dark'] .club-grid-tile--thriving {
+  background-color: rgba(22, 163, 74, 0.1);
+  color: #4ade80;
+}
+[data-theme='dark'] .club-grid-tile--vulnerable {
+  background-color: rgba(202, 138, 4, 0.12);
+  color: #fcd34d;
+}
+[data-theme='dark'] .club-grid-tile--intervention {
+  background-color: rgba(220, 38, 38, 0.12);
+  color: #fca5a5;
 }
 
 /* Tier fills (solid, white text — literal hex, theme-stable AA both modes) */
