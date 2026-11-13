@@ -97,7 +97,7 @@ describe('ActionTable (#1577)', () => {
     // phone, so the contract is asserted here rather than trusted to CSS.
     renderTable()
     // The first column is the row header (`th scope="row"`, #2701), the rest
-    // are cells; both print their label.
+    // are cells; both carry a data-label (the CSS prints it on cells only).
     const cells = Array.from(
       screen.getByTestId('example-table').querySelectorAll('tbody th, tbody td')
     )

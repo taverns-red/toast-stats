@@ -142,7 +142,12 @@ describe('ActionTable on the shared table styles (#2701)', () => {
 
 describe('ActionTable stylesheet (#2701)', () => {
   const css = read('styles/components/action-list.css')
-  const tableCss = css.slice(css.indexOf('.action-table__scroll {'))
+  const anchor = css.indexOf('.action-table__scroll {')
+  const tableCss = css.slice(Math.max(anchor, 0))
+
+  it('finds the table section it slices from', () => {
+    expect(anchor).toBeGreaterThanOrEqual(0)
+  })
 
   it('has no CSS-hidden columns', () => {
     expect(tableCss).not.toMatch(/display:\s*none/)
@@ -162,6 +167,61 @@ describe('ActionTable stylesheet (#2701)', () => {
     expect(body).not.toBeNull()
     expect(body).toMatch(/min-height:\s*44px/)
     expect(body).toMatch(/display:\s*(inline-)?flex/)
+  })
+})
+
+describe('ActionTable phone cards, touch rows and print (#2701)', () => {
+  const css = read('styles/components/action-list.css')
+  const section = css.slice(Math.max(css.indexOf('.action-table__scroll {'), 0))
+  const mediaBody = (header: RegExp): string => {
+    const m = header.exec(section)
+    if (!m) return ''
+    let depth = 0
+    for (let i = m.index; i < section.length; i++) {
+      if (section[i] === '{') depth++
+      if (section[i] === '}' && --depth === 0) return section.slice(m.index, i)
+    }
+    return ''
+  }
+
+  it('hides the redundant label on a non-first subject cell in card rows', () => {
+    const phone = mediaBody(/@media \(max-width: 639px\)/)
+    expect(phone).toMatch(
+      /\.action-table tbody td\.action-table__subject::before\s*\{[^}]*content:\s*none/
+    )
+  })
+
+  it('gives card columns room for a health cell, and lets it wrap', () => {
+    const phone = mediaBody(/@media \(max-width: 639px\)/)
+    const min = /minmax\(([\d.]+)rem,\s*1fr\)/.exec(phone)
+    expect(Number(min?.[1])).toBeGreaterThanOrEqual(6.5)
+    expect(phone).toMatch(
+      /\.action-table \.dt-health\s*\{[^}]*white-space:\s*normal/
+    )
+    expect(phone).toMatch(/tbody td\s*\{[^}]*min-width:\s*0/)
+  })
+
+  it('lets the coarse-pointer 48px row beat the base 44px row', () => {
+    const coarse = mediaBody(/@media \(pointer: coarse\)/)
+    expect(coarse).toMatch(
+      /\.action-table tbody tr\s*\{[^}]*height:\s*var\(--dt-row-min-coarse\)/
+    )
+  })
+
+  it('prints rows compact, without the 44px minimums', () => {
+    const print = mediaBody(/@media print/)
+    expect(print).toMatch(/\.action-table tbody tr\s*\{[^}]*height:\s*auto/)
+    expect(print).toMatch(/\.action-table__link\s*\{[^}]*min-height:\s*0/)
+  })
+
+  it('region/world stage ladder names its row by the as-reported label', () => {
+    const src = read('components/rollups/RollupGrowthFunnelView.tsx')
+    const ladder = src.slice(src.indexOf('const ladderColumns'))
+    const label = ladder.slice(
+      ladder.indexOf("key: 'label'"),
+      ladder.indexOf("key: 'clubs'")
+    )
+    expect(label).toMatch(/rowHeader:\s*true/)
   })
 })
 
