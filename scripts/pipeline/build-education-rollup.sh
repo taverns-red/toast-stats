@@ -141,6 +141,16 @@ if [ "${rc}" -eq 0 ]; then
 else
   # No ledger in the bucket: a seed from an earlier one must not stand in.
   find "${LEDGER}" -mindepth 1 -delete
+  # #2695: but if the previous rollup already names ledger years, a rebuild
+  # without them would shrink the index. Fail, so the previous copy stands.
+  set +e
+  copy_tolerant "gs://${BUCKET}/derived/education-rollup/index.json" "${WORK}/prev-index.json"
+  prev_rc=$?
+  set -e
+  if [ "${prev_rc}" -eq 0 ] && grep -q '"ledger-history"' "${WORK}/prev-index.json"; then
+    echo "::error::build-education-rollup: no raw-education-ledger/ in ${RAW_SOURCE_BUCKET}, but the previous index names ledger years; not rebuilding without them, the previous copy stands" >&2
+    exit 1
+  fi
   echo "::warning::build-education-rollup: no raw-education-ledger/ in ${RAW_SOURCE_BUCKET}; the ledger years (2003-04 → 2018-19) are not rolled up" >&2
 fi
 
