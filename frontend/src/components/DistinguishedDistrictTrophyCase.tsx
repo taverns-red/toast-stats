@@ -108,16 +108,6 @@ const TIER_LABELS: Record<DistinguishedDistrictTier, string> = {
   ...TIER_TITLES,
 }
 
-const TIER_BADGE_STYLES: Record<DistinguishedDistrictTier, string> = {
-  Unknown: 'bg-gray-50 text-gray-500 border-gray-200',
-  NotDistinguished: 'bg-gray-100 text-gray-700 border-gray-300',
-  Distinguished: 'bg-tm-true-maroon text-white border-tm-true-maroon',
-  Select: 'bg-tm-cool-gray text-gray-900 border-gray-400',
-  Presidents:
-    'bg-tm-happy-yellow text-gray-900 border-yellow-500 font-semibold',
-  Smedley: 'bg-purple-100 text-purple-900 border-purple-400 font-semibold',
-}
-
 const TIER_ICONS: Record<DistinguishedDistrictTier, string> = {
   Unknown: '◌',
   NotDistinguished: '○',
@@ -567,7 +557,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
         </div>
         <span
           data-testid="distinguished-status-pill"
-          className={`inline-flex items-center gap-2 px-4 py-2 text-base font-semibold rounded-full border-2 ${TIER_BADGE_STYLES[currentTier]}`}
+          className="inline-flex items-center gap-2 text-base font-semibold text-gray-900"
           aria-label={`Current tier: ${TIER_LABELS[currentTier]}`}
         >
           <span aria-hidden="true">{TIER_ICONS[currentTier]}</span>
