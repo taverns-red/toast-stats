@@ -43,7 +43,7 @@
     .district-kpi-strip {
       position: sticky;
       top: var(--app-top-offset, 56px); /* under .app-shell-top-bar */
-      z-index: 30; /* below topbar (40) */
+      z-index: var(--z-sticky); /* below the top bar (--z-header) */
     }
   }
 

@@ -211,3 +211,54 @@ test('<main> is a programmatic focus target for the skip link (#2637)', async ({
     '-1'
   )
 })
+
+/* D10 / #2674: on a phone the banner is one line plus Keep none, Details and
+ * Keep all, and it never covers the bottom section bar. Boxes are measured,
+ * not inferred from CSS, at 375 and 390 (the common iPhone widths). */
+for (const width of [375, 390]) {
+  test.describe(`phone, ${width} wide (D10, #2674)`, () => {
+    test.use({ viewport: { width, height: 812 } })
+
+    test('the district banner sits above the section bar: boxes do not overlap', async ({
+      page,
+    }) => {
+      await page.goto(`${BASE}/district/61`, { waitUntil: 'load' })
+      await expect(banner(page)).toBeVisible({ timeout: 20_000 })
+      const bar = page.getByTestId('district-section-bar')
+      await expect(bar).toBeVisible()
+      const b = (await banner(page).boundingBox())!
+      const s = (await bar.boundingBox())!
+      expect(b.y + b.height).toBeLessThanOrEqual(s.y + 0.5)
+      expect(b.y).toBeGreaterThanOrEqual(0)
+    })
+
+    test('collapsed: one line of copy and three 44px controls, Details reveals the rest', async ({
+      page,
+    }) => {
+      await page.goto(`${BASE}/`, { waitUntil: 'load' })
+      await expect(banner(page)).toBeVisible({ timeout: 20_000 })
+      const controls = banner(page).getByRole('button')
+      await expect(controls).toHaveText(['Keep none', 'Details', 'Keep all'])
+      for (const btn of await controls.all()) {
+        expect((await btn.boundingBox())!.height).toBeGreaterThanOrEqual(43.5)
+      }
+      await expect(
+        banner(page).getByRole('heading', { name: 'Privacy and cookies' })
+      ).toBeHidden()
+      const text = banner(page).locator('.consent-banner__text')
+      const lineHeight = await text.evaluate(el =>
+        parseFloat(getComputedStyle(el).lineHeight)
+      )
+      expect((await text.boundingBox())!.height).toBeLessThanOrEqual(
+        lineHeight * 1.5
+      )
+      await banner(page).getByRole('button', { name: 'Details' }).click()
+      await expect(
+        banner(page).getByRole('button', { name: 'Keep minimal' })
+      ).toBeVisible()
+      await expect(
+        banner(page).getByRole('link', { name: 'What each choice stores' })
+      ).toBeVisible()
+    })
+  })
+}

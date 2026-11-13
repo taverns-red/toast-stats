@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -30,11 +33,13 @@ describe('ConsentBanner (#2584)', () => {
 
   it('shows three equal buttons and none is pre-selected', () => {
     renderBanner()
-    const buttons = region()!.querySelectorAll('button')
+    // The three choices; Details (phone) is not a choice.
+    const buttons = region()!.querySelectorAll('.consent-banner__button')
+    // D10: the decline option comes first, at every width, in the DOM.
     expect([...buttons].map(b => b.textContent)).toEqual([
-      'Keep all',
-      'Keep minimal',
       'Keep none',
+      'Keep minimal',
+      'Keep all',
     ])
     for (const b of buttons) {
       expect(b).not.toHaveAttribute('aria-pressed')
@@ -140,6 +145,113 @@ describe('ConsentBanner (#2584)', () => {
       await userEvent.keyboard('{Escape}')
       expect(region()).not.toBeNull()
       expect(getConsent()).toBeNull()
+    })
+  })
+
+  /* Phone: one line, Keep none / Keep all, and a Details control (D10,
+     #2674). The wording is unchanged and the full text stays in the DOM, so
+     Details only reveals what is already there; nothing is pre-selected. */
+  describe('compact phone layout (D10, #2674)', () => {
+    const css = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        '../../../styles/components/consent.css'
+      ),
+      'utf-8'
+    ).replace(/\/\*[\s\S]*?\*\//g, '')
+    const phone = css.match(
+      /@media \(max-width: 767px\)\s*\{([\s\S]*?)\n\}/
+    )?.[1]
+
+    it('has a Details control, collapsed first, that reveals the full text', async () => {
+      renderBanner()
+      const details = screen.getByRole('button', { name: 'Details' })
+      expect(details).toHaveAttribute('aria-expanded', 'false')
+      expect(region()).toHaveAttribute('data-expanded', 'false')
+      const controlled = details
+        .getAttribute('aria-controls')!
+        .split(' ')
+        .map(id => document.getElementById(id)!)
+      expect(controlled.length).toBeGreaterThanOrEqual(2)
+      expect(
+        controlled.some(el =>
+          el.contains(screen.getByRole('link', { name: /what each choice/i }))
+        )
+      ).toBe(true)
+      expect(controlled).toContain(
+        screen.getByRole('button', { name: 'Keep minimal' })
+      )
+      await userEvent.click(details)
+      expect(details).toHaveAttribute('aria-expanded', 'true')
+      expect(region()).toHaveAttribute('data-expanded', 'true')
+      await userEvent.click(details)
+      expect(region()).toHaveAttribute('data-expanded', 'false')
+    })
+
+    it('Details does not record a choice, and keeps the wording and the three levels', async () => {
+      renderBanner()
+      await userEvent.click(screen.getByRole('button', { name: 'Details' }))
+      expect(getConsent()).toBeNull()
+      expect(region()).toHaveTextContent(
+        'May we count visits with Google Analytics?'
+      )
+      expect(
+        [...region()!.querySelectorAll('.consent-banner__button')].map(
+          b => b.textContent
+        )
+      ).toEqual(['Keep none', 'Keep minimal', 'Keep all'])
+    })
+
+    /* Focus order (D10 review): what Details reveals must follow the Details
+       button in the DOM, so keyboard and screen-reader users reach it going
+       forward from the control that opened it. Keep none stays first. */
+    it('puts everything Details reveals after the Details button', () => {
+      renderBanner()
+      const details = screen.getByRole('button', { name: 'Details' })
+      const follows = (el: Element) =>
+        Boolean(
+          details.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING
+        )
+      for (const id of details.getAttribute('aria-controls')!.split(' ')) {
+        expect(follows(document.getElementById(id)!)).toBe(true)
+      }
+      expect(
+        follows(screen.getByRole('link', { name: /what each choice/i }))
+      ).toBe(true)
+      expect(region()!.querySelector('button')).toHaveTextContent('Keep none')
+    })
+
+    it('CSS: below 768 the title, link and Keep minimal wait behind Details', () => {
+      expect(phone).toBeDefined()
+      expect(phone).toMatch(
+        /\.consent-banner\[data-expanded='false'\]\s+\.consent-banner__detail\s*\{[^}]*display:\s*none/
+      )
+      expect(phone).toMatch(
+        /\.consent-banner__title[^{]*\{[^}]*display:\s*none/
+      )
+    })
+
+    it('CSS: from 768 up the Details control does not exist', () => {
+      expect(css).toMatch(/\.consent-banner__details\s*\{[^}]*display:\s*none/)
+      expect(phone).toMatch(
+        /\.consent-banner__details\s*\{[^}]*display:\s*(?:inline-)?flex/
+      )
+    })
+
+    it('CSS: the Details control is a 44px target', () => {
+      expect(phone).toMatch(
+        /\.consent-banner__details\s*\{[^}]*min-height:\s*44px/
+      )
+    })
+
+    it('CSS: sits above the section bar and clear of its safe area, never over it', () => {
+      expect(css).toMatch(
+        /body:has\(\.section-bar\)\s+\.consent-banner\s*\{[^}]*bottom:\s*calc\(\s*56px\s*\+\s*env\(safe-area-inset-bottom/
+      )
+    })
+
+    it('CSS: uses the banner token, not a raw z-index', () => {
+      expect(css).toMatch(/z-index:\s*var\(--z-banner\)/)
     })
   })
 
