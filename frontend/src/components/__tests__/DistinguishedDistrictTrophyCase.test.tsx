@@ -84,6 +84,32 @@ describe('DistinguishedDistrictTrophyCase', () => {
       const pill = screen.getByTestId('distinguished-status-pill')
       expect(pill).toHaveTextContent(/Not Yet Distinguished/i)
     })
+
+    // Table spec G1 (#2766): tier is plain text in normal ink; the medal
+    // emoji is the non-colour cue. No fill, border or pill shape.
+    it.each([
+      ['Distinguished', '🥉'],
+      ['Select', '🥈'],
+      ['Presidents', '🥇'],
+      ['Smedley', '🏆'],
+    ] as const)(
+      'renders the %s tier as plain text with no fill',
+      (tier, icon) => {
+        render(
+          <DistinguishedDistrictTrophyCase
+            status={{ ...baseStatus, currentTier: tier }}
+            programYear={LEGACY_PY}
+          />
+        )
+        const pill = screen.getByTestId('distinguished-status-pill')
+        expect(pill.className).not.toMatch(/\bbg-|\bborder|\brounded|\bpx-/)
+        expect(pill.className).toMatch(/\btext-gray-900\b/)
+        expect(pill).toHaveTextContent(icon)
+        expect(
+          pill.textContent?.replace(icon, '').trim().length
+        ).toBeGreaterThan(0)
+      }
+    )
   })
 
   describe('prerequisites — collapsed by default when all met', () => {
