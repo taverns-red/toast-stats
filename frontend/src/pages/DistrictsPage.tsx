@@ -1187,6 +1187,9 @@ const DistrictsPage: React.FC = () => {
       'Paid Clubs',
       'Total Payments',
       'Distinguished Clubs',
+      // Confirmed above; clubs qualifying today but not yet confirmed here,
+      // blank when the pipeline has not published it (#2580).
+      'Distinguished Qualifying Today',
       'Aggregate Score',
     ]
     const rows: (string | number)[][] = sortedRankings.map((r, i) => [
@@ -1196,6 +1199,7 @@ const DistrictsPage: React.FC = () => {
       r.paidClubs,
       r.totalPayments,
       r.distinguishedClubs,
+      provisionalByDistrict.get(r.districtId) ?? '',
       r.aggregateScore,
     ])
     const csv = arrayToCSV([header, ...rows])
