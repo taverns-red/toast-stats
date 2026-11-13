@@ -13,7 +13,7 @@ import { test, expect } from './fixtures/test'
  * Gated on rendered body rows so a loading page cannot pass vacuously.
  */
 
-const ROUTES = ['/', '/regions', '/region/04']
+const ROUTES = ['/', '/regions', '/region/04', '/district/61/division/A']
 const WIDTHS = [768, 1280]
 
 for (const route of ROUTES) {
