@@ -6,7 +6,6 @@ import type {
 } from '../utils/worldEducation'
 import type { EducationTrendYear } from '../utils/educationTrend'
 import { useUrlSort } from '../hooks/useUrlSort'
-import { SortableHeader } from './SortableHeader'
 import {
   PriorityColumnsTable,
   type PriorityMetric,
@@ -16,6 +15,10 @@ import {
   MatrixSection,
 } from './education/EducationBreakdown'
 import { EducationTimelineSection } from './education/EducationTimelineSection'
+import {
+  EducationRollupTable,
+  type EducationRollupColumn,
+} from './education/EducationRollupTable'
 import { EducationYearBars } from './education/EducationYearBars'
 import { KpiStrip } from './RegionEducationView'
 
@@ -143,7 +146,17 @@ const METRICS: PriorityMetric<WorldEducationRegionRow, Field>[] = [
   },
 ]
 
-const TH = 'education-rollup__th'
+/** Full header text for each figure column (the phone chips use the short
+ *  label; the table spells it out). */
+const COLUMN_HEADERS: Record<string, string> = {
+  awards: 'Awards',
+  pathways: 'Pathways',
+  legacy: 'Legacy',
+  dtm: 'DTMs',
+  clubs: 'Clubs with an award',
+  members: 'Members with an award',
+  districts: 'Districts with a ledger',
+}
 const UNAVAILABLE = 'Not available (no district with a ledger)'
 
 const Regions: React.FC<{
@@ -175,57 +188,41 @@ const Regions: React.FC<{
       Region {r.id}
     </Link>
   )
-  const header = (field: Field, text: string, numeric = true) => (
-    <SortableHeader<Field>
-      field={field}
-      label={text}
-      currentSort={sort}
-      onSort={toggleSort}
-      thClassName={`${TH}${numeric ? ' text-right' : ' text-left'}`}
-      numeric={numeric}
+  const columns: EducationRollupColumn<WorldEducationRegionRow>[] = [
+    {
+      id: 'region',
+      header: 'Region',
+      cell: r => (
+        <span className="education-district">
+          {regionLink(r)}
+          {r.status !== 'available' && (
+            <span className="education-district__na">{UNAVAILABLE}</span>
+          )}
+        </span>
+      ),
+    },
+    ...METRICS.map(m => ({
+      id: m.sortField!,
+      header: COLUMN_HEADERS[m.id]!,
+      cell: m.render,
+    })),
+  ]
+  const fullTable = (inScroller: boolean) => (
+    <EducationRollupTable<WorldEducationRegionRow>
+      rows={sorted}
+      columns={columns}
+      getRowId={r => r.id}
+      sort={sort}
+      onSort={f => toggleSort(f as Field)}
+      id={
+        inScroller ? 'education-regions-sheet-table' : 'education-regions-table'
+      }
+      label={label}
+      caption={`${label}, ${sorted.length} ${
+        sorted.length === 1 ? 'region' : 'regions'
+      }. Column headers with buttons are sortable.`}
+      inScroller={inScroller}
     />
-  )
-  const fullTable = (
-    <table className="education-rollup" aria-label={label}>
-      <thead>
-        <tr>
-          {header('region', 'Region', false)}
-          {header('awards', 'Awards')}
-          {header('pathways', 'Pathways')}
-          {header('legacy', 'Legacy')}
-          {header('dtm', 'DTMs')}
-          {header('clubs', 'Clubs with an award')}
-          {header('members', 'Members with an award')}
-          {header('districts', 'Districts with a ledger')}
-        </tr>
-      </thead>
-      <tbody>
-        {sorted.map(r => (
-          <tr key={r.id}>
-            <th scope="row" className="education-rollup__unit">
-              {regionLink(r)}
-            </th>
-            {r.status === 'available' ? (
-              <>
-                <td>{fmt(r.totals.awards)}</td>
-                <td>{fmt(r.totals.pathways)}</td>
-                <td>{fmt(r.totals.legacy)}</td>
-                <td>{fmt(r.totals.dtm)}</td>
-                <td>{fmt(r.clubsWithAward)}</td>
-                <td>
-                  {r.membersWithAward === null ? '—' : fmt(r.membersWithAward)}
-                </td>
-              </>
-            ) : (
-              <td colSpan={6} className="education-district__na">
-                {UNAVAILABLE}
-              </td>
-            )}
-            <td>{coverage(r)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
   )
   return (
     <PriorityColumnsTable<WorldEducationRegionRow, Field>
@@ -248,17 +245,8 @@ const Regions: React.FC<{
       sort={sort}
       onSort={toggleSort}
       fullTableTitle={`${label} — all columns`}
-      sheetTable={fullTable}
-      fullTable={
-        <div
-          className="education-rollup__scroll"
-          role="region"
-          tabIndex={0}
-          aria-label={`${label} — scroll horizontally to see all columns`}
-        >
-          {fullTable}
-        </div>
-      }
+      sheetTable={fullTable(true)}
+      fullTable={fullTable(false)}
     />
   )
 }

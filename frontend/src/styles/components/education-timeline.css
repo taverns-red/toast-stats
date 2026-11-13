@@ -342,6 +342,9 @@
 }
 .edu-tl__table {
   width: 100%;
+  /* Cells hold one line each (nowrap); the shared .dt rule is a fixed layout
+     sized by a colgroup, which this table does not have. */
+  table-layout: auto;
   border-collapse: collapse;
   font-size: 0.875rem;
   font-variant-numeric: tabular-nums;

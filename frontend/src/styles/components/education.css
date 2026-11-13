@@ -213,8 +213,7 @@
 .education-row__button:focus-visible,
 .education-matrix__cell:focus-visible,
 .education-open-matrix:focus-visible,
-.education-matrix__region:focus-visible,
-.education-rollup__scroll:focus-visible {
+.education-matrix__region:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
@@ -380,13 +379,15 @@
    opaque to cover scrolled cells) matches what is behind it. */
 .education-matrix__region {
   max-width: 100%;
-  overflow-x: auto;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--rt-radius-md, 8px);
 }
 
 .education-matrix {
+  /* Sized by its content, not the shared fixed layout (no colgroup here). */
+  table-layout: auto;
+  width: auto;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.875rem;
@@ -485,38 +486,25 @@
 
 /* ── Division / area rollup ────────────────────────────────────────── */
 
-.education-rollup__scroll {
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.education-rollup {
-  width: 100%;
-  font-size: 0.875rem;
-  color: var(--ink);
-  border-collapse: collapse;
-}
-
-.education-rollup__th {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--ink-2);
-  border-bottom: 1px solid var(--line);
-}
-
-.education-rollup td,
-.education-rollup__unit {
-  padding: 0.625rem 0.75rem;
+/* On the shared DataTable (#2732, M4 of #2676): the .dt chrome in
+   data-table.css supplies the header (14px, sentence case) and the fixed
+   layout. These rules only set the cells: 14px figures on the right, the
+   division / area / district / region name on the left in a 44px link. */
+.education-rollup__num {
+  padding: var(--dt-pad-y) var(--dt-pad-x);
+  font-size: var(--dt-font);
   text-align: right;
   font-variant-numeric: tabular-nums;
+  color: var(--ink);
   border-bottom: 1px solid var(--line);
 }
 
 .education-rollup__unit {
-  text-align: left;
+  padding: 0 var(--dt-pad-x);
+  font-size: var(--dt-font);
   font-weight: 600;
-  white-space: nowrap;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
 }
 
 /* ── Leaderboards (moved here from Analytics) ──────────────────────── */
@@ -589,11 +577,55 @@
   outline-offset: 2px;
 }
 
-.education-district__na,
-.education-rollup td.education-district__na {
+.education-district__na {
   font-size: 0.875rem;
   font-style: italic;
   font-weight: 500;
   text-align: left;
   color: var(--ink-3);
+}
+
+/* ── Education awards leaderboard tables (#2732) ───────────────────────
+   Rank, club, count and rate on the shared .dt / .entity-table chrome. The
+   table is never narrower than its four columns; a narrower card scrolls it
+   sideways (StaticTableScroll). */
+.education-lb {
+  min-width: 26rem;
+}
+
+.education-lb__rank {
+  width: 3.5rem;
+}
+
+.education-lb__count {
+  width: 6.5rem;
+}
+
+.education-lb__rate {
+  width: 5rem;
+}
+
+.education-lb__rank-cell {
+  font-weight: 700;
+  color: var(--tm-true-maroon);
+}
+
+.education-lb__rate-cell {
+  font-weight: 600;
+}
+
+.education-lb__where {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.education-lb__caption {
+  caption-side: top;
+  padding: 0.75rem 0.5rem 0.25rem;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-2);
 }

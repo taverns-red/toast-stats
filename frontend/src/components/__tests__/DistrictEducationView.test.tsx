@@ -234,9 +234,9 @@ describe('DistrictEducationView', () => {
   it('rollup headers sort through the shared SortableHeader (URL-synced)', () => {
     renderView()
     const table = screen.getByRole('table', { name: /education by division/i })
-    fireEvent.click(
-      within(table).getByRole('button', { name: /^Sort by Awards\./ })
-    )
+    // The DataTable header (APG sortable table): the button is named by its
+    // column, the sort direction is aria-sort on the th.
+    fireEvent.click(within(table).getByRole('button', { name: 'Awards' }))
     expect(screen.getByTestId('loc').textContent).toMatch(/sort=awards/)
     const first = within(table).getAllByRole('row')[1]!
     expect(first).toHaveTextContent(/Division F/)

@@ -6,13 +6,16 @@ import type {
 } from '../utils/districtEducation'
 import { useParamHref } from '../hooks/useParamHref'
 import { useUrlSort } from '../hooks/useUrlSort'
-import { SortableHeader } from './SortableHeader'
 import {
   ByLevelOrPathSection,
   MatrixSection,
   SwitchLinks,
 } from './education/EducationBreakdown'
 import { EducationTimelineSection } from './education/EducationTimelineSection'
+import {
+  EducationRollupTable,
+  type EducationRollupColumn,
+} from './education/EducationRollupTable'
 import {
   PriorityColumnsTable,
   type PriorityMetric,
@@ -175,8 +178,6 @@ const ROLLUP_METRICS: PriorityMetric<EducationRollupRow, RollupField>[] = [
   },
 ]
 
-const TH = 'education-rollup__th'
-
 const Rollup: React.FC<{ e: Available }> = ({ e }) => {
   const [params] = useSearchParams()
   const href = useParamHref()
@@ -199,45 +200,47 @@ const Rollup: React.FC<{ e: Available }> = ({ e }) => {
     )
   }, [rows, sort])
   const label = `Education by ${level}`
-  const header = (field: RollupField, text: string, numeric = true) => (
-    <SortableHeader<RollupField>
-      field={field}
-      label={text}
-      currentSort={sort}
-      onSort={toggleSort}
-      thClassName={`${TH}${numeric ? ' text-right' : ' text-left'}`}
-      numeric={numeric}
-    />
+  const columns = useMemo<EducationRollupColumn<EducationRollupRow>[]>(
+    () => [
+      {
+        id: 'unit',
+        header: level === 'division' ? 'Division' : 'Area',
+        cell: r => unitName(r, level),
+      },
+      { id: 'awards', header: 'Awards', cell: r => fmt(r.awards) },
+      { id: 'pathways', header: 'Pathways', cell: r => fmt(r.pathways) },
+      { id: 'dtm', header: 'DTMs', cell: r => fmt(r.dtm) },
+      { id: 'members', header: 'Members with an award', cell: members },
+      {
+        id: 'clubs',
+        header: 'Clubs with an award',
+        cell: r => fmt(r.clubsWithAward),
+      },
+      {
+        id: 'perBase',
+        header: 'Awards per base member',
+        cell: perBase,
+        size: 140,
+      },
+    ],
+    [level]
   )
-  const fullTable = (
-    <table className="education-rollup" aria-label={label}>
-      <thead>
-        <tr>
-          {header('unit', level === 'division' ? 'Division' : 'Area', false)}
-          {header('awards', 'Awards')}
-          {header('pathways', 'Pathways')}
-          {header('dtm', 'DTMs')}
-          {header('members', 'Members with an award')}
-          {header('clubs', 'Clubs with an award')}
-          {header('perBase', 'Awards per base member')}
-        </tr>
-      </thead>
-      <tbody>
-        {sorted.map(r => (
-          <tr key={r.key}>
-            <th scope="row" className="education-rollup__unit">
-              {unitName(r, level)}
-            </th>
-            <td>{fmt(r.awards)}</td>
-            <td>{fmt(r.pathways)}</td>
-            <td>{fmt(r.dtm)}</td>
-            <td>{members(r)}</td>
-            <td>{fmt(r.clubsWithAward)}</td>
-            <td>{perBase(r)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+  const fullTable = (inScroller: boolean) => (
+    <EducationRollupTable<EducationRollupRow>
+      rows={sorted}
+      columns={columns}
+      getRowId={r => r.key}
+      sort={sort}
+      onSort={f => toggleSort(f as RollupField)}
+      id={
+        inScroller ? 'education-rollup-sheet-table' : 'education-rollup-table'
+      }
+      label={label}
+      caption={`${label}, ${sorted.length} ${
+        sorted.length === 1 ? level : `${level}s`
+      }. Column headers with buttons are sortable.`}
+      inScroller={inScroller}
+    />
   )
   return (
     <section
@@ -272,17 +275,8 @@ const Rollup: React.FC<{ e: Available }> = ({ e }) => {
         sort={sort}
         onSort={toggleSort}
         fullTableTitle={`${label} — all columns`}
-        sheetTable={fullTable}
-        fullTable={
-          <div
-            className="education-rollup__scroll"
-            role="region"
-            tabIndex={0}
-            aria-label={`${label} — scroll horizontally to see all columns`}
-          >
-            {fullTable}
-          </div>
-        }
+        sheetTable={fullTable(true)}
+        fullTable={fullTable(false)}
       />
     </section>
   )

@@ -126,9 +126,9 @@ describe('district education: division and area rollup (#14)', () => {
     renderDistrict()
     const table = screen.getByRole('table', { name: /education by division/i })
     expectSharedTable(table)
-    expect(
-      within(table).getByRole('button', { name: /^Sort by Awards\./ })
-    ).toHaveClass('dt-sort-btn')
+    expect(within(table).getByRole('button', { name: 'Awards' })).toHaveClass(
+      'dt-sort-btn'
+    )
   })
 
   it('names each division in a row header', () => {
@@ -158,9 +158,9 @@ describe('region education: districts (#15)', () => {
       name: /Region 01 districts, education awards/,
     })
     expectSharedTable(table)
-    expect(
-      within(table).getByRole('button', { name: /^Sort by Awards\./ })
-    ).toHaveClass('dt-sort-btn')
+    expect(within(table).getByRole('button', { name: 'Awards' })).toHaveClass(
+      'dt-sort-btn'
+    )
   })
 })
 
@@ -181,9 +181,9 @@ describe('world education: regions (#15)', () => {
       name: 'Regions, education awards',
     })
     expectSharedTable(table)
-    expect(
-      within(table).getByRole('button', { name: /^Sort by Awards\./ })
-    ).toHaveClass('dt-sort-btn')
+    expect(within(table).getByRole('button', { name: 'Awards' })).toHaveClass(
+      'dt-sort-btn'
+    )
   })
 })
 

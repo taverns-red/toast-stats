@@ -354,12 +354,16 @@ export const EducationTimelineChart: React.FC<EducationTimelineChartProps> = ({
           className="edu-tl__table-scroll"
           role="region"
           tabIndex={0}
-          aria-label="Education awards by snapshot date — scroll to see all columns"
+          aria-label="Education awards by snapshot date, scrolls sideways and down"
         >
           <table
-            className="edu-tl__table"
+            className="dt edu-tl__table"
             aria-label="Education awards by snapshot date"
           >
+            <caption className="sr-only">
+              Education awards by snapshot date, newest first, {rows.length}{' '}
+              {rows.length === 1 ? 'snapshot' : 'snapshots'}.
+            </caption>
             <thead>
               <tr>
                 <th scope="col">Date</th>
