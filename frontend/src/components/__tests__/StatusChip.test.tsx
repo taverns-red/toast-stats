@@ -36,7 +36,7 @@ const CASES: Array<{
   },
   {
     status: 'intervention-required',
-    label: 'Intervention Required',
+    label: 'Intervention required',
     modifier: 'clubs-status-pill--intervention',
     icon: '✗',
   },

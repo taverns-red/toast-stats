@@ -68,7 +68,7 @@ describe('getTileVisual — health mode', () => {
     )
     expect(v.modifierClass).toBe('club-grid-tile--intervention')
     expect(v.signalGlyph).toBe('✗')
-    expect(v.statusLabel).toBe('Intervention Required')
+    expect(v.statusLabel).toBe('Intervention required')
   })
 
   it('renders DCP goals as the {n}/10 signal text, clamped to 0..10', () => {
@@ -126,7 +126,7 @@ describe('getLegendItems — single source shared with the tiles', () => {
     expect(items.map(i => i.label)).toEqual([
       'Thriving',
       'Vulnerable',
-      'Intervention Required',
+      'Intervention required',
       'Suspended',
     ])
     // swatch modifier matches the tile modifier the mapping produces
