@@ -34,6 +34,17 @@ export function provisionalOf(x: DistinguishedSplit): number {
   return x.provisionalDistinguishedClubs ?? 0
 }
 
+/** "3 of 10 distinguished", with " (+2 qualifying today)" when some of the
+ *  count is not yet confirmed. The narratives use it for their metrics clause. */
+export function describeDistinguished(
+  x: DistinguishedSplit,
+  clubBase: number
+): string {
+  const extra =
+    provisionalOf(x) > 0 ? ` (+${provisionalOf(x)} qualifying today)` : ''
+  return `${confirmedDistinguished(x)} of ${clubBase} distinguished${extra}`
+}
+
 const capped = (provisional: number, today: number): number =>
   Math.min(provisional, Math.max(0, today))
 
