@@ -15,6 +15,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import '@testing-library/jest-dom/vitest'
+import { showAllRegionColumns } from '../../__tests__/showAllRegionColumns'
 import RegionPage from '../RegionPage'
 import { fetchCdnRankings } from '../../services/cdn'
 
@@ -106,7 +107,9 @@ const renderRegion = (region: string, initialPath?: string) => {
 }
 
 const getRowOrder = (): string[] => {
-  const rows = document.querySelectorAll('.districts-rankings-table tbody tr')
+  const rows = document.querySelectorAll(
+    '#region-district-rankings-table tbody tr'
+  )
   return Array.from(rows).map(r => {
     const id = r
       .querySelector('[data-testid="region-district-cell"]')
@@ -117,6 +120,8 @@ const getRowOrder = (): string[] => {
 
 describe('RegionPage — click-header sort (#851)', () => {
   beforeEach(() => {
+    // World rank is off by default at the narrowest width (#2702).
+    showAllRegionColumns()
     mockedFetchCdnRankings.mockResolvedValue({
       rankings,
       asOfDate: '2025-11-22',
@@ -139,7 +144,7 @@ describe('RegionPage — click-header sort (#851)', () => {
     renderRegion('1')
     await screen.findAllByTestId('region-district-cell')
 
-    fireEvent.click(screen.getByRole('button', { name: /Sort by Paid Clubs/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Paid clubs$/i }))
     await waitFor(() => {
       // D86=50, D60=70, D74=90 → asc
       expect(getRowOrder()).toEqual(['86', '60', '74'])
@@ -150,7 +155,7 @@ describe('RegionPage — click-header sort (#851)', () => {
     renderRegion('1')
     await screen.findAllByTestId('region-district-cell')
 
-    const btn = screen.getByRole('button', { name: /Sort by Paid Clubs/i })
+    const btn = screen.getByRole('button', { name: /^Paid clubs$/i })
     fireEvent.click(btn) // asc
     fireEvent.click(btn) // desc
 
@@ -172,7 +177,7 @@ describe('RegionPage — click-header sort (#851)', () => {
     renderRegion('1')
     await screen.findAllByTestId('region-district-cell')
     expect(
-      screen.getByRole('button', { name: /Sort by World Rank/i })
+      screen.getByRole('button', { name: /^World rank$/i })
     ).toBeInTheDocument()
   })
 })

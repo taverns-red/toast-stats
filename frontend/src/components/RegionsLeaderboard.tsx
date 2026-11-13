@@ -1,14 +1,26 @@
 import React, { useMemo } from 'react'
+import {
+  columnSizingFeature,
+  columnVisibilityFeature,
+  createColumnHelper,
+  rowSortingFeature,
+  tableFeatures,
+  useTable,
+} from '@tanstack/react-table'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { RegionRollup } from '../utils/aggregateRegions'
 import { useUrlSort } from '../hooks/useUrlSort'
-import { SortableHeader } from '../components/SortableHeader'
 import {
   PriorityColumnsTable,
   type PriorityMetric,
 } from './PriorityColumnsTable'
 import { DistrictTrendSparkline } from './DistrictTrendSparkline'
-import { useScrollEdges } from '../hooks/useScrollEdges'
+import { DataTable } from './dataTable/DataTable'
+import {
+  LEADERBOARD_SIZES,
+  leaderboardShowsTrend,
+} from './regionsLeaderboardLayout'
+import { useBreakpointTier } from '../hooks/useBreakpointTier'
 import {
   regionTrainingUrl,
   type RegionsTrainingOverview,
@@ -180,17 +192,85 @@ const BASE_PHONE_METRICS: PriorityMetric<RegionRollup, SortField>[] = [
   },
 ]
 
-const HEADER_TH =
-  'px-4 py-3 text-xs font-medium uppercase tracking-wider text-gray-500'
-// Not sortable: a plain header, sentence case like the sortable labels.
-const TREND_TH =
-  'px-4 py-3 text-xs font-medium tracking-wider text-gray-500 text-left align-top'
-// Training headers (#2330): sentence case like the sortable labels.
-const TRAINING_TH = 'px-4 py-3 text-xs font-medium tracking-wider text-gray-500'
-const TRAINING_TD =
-  'px-3 py-3 tabular-nums text-gray-700 theme-dark:text-gray-200 region-training-cell'
-const NUMERIC_TD =
-  'px-4 py-3 text-right tabular-nums text-gray-700 theme-dark:text-gray-200'
+/* The leaderboard on the shared DataTable (#2702, #2676 M3). Sort only: it has
+   a handful of columns, so it shows all of them and offers no Columns menu.
+   A column is a field the URL sort knows; the round columns are sortable only
+   once the round has started. The old two-row header (a "Round 1" group over
+   "4+" and "All 7") is a single row now, so each column names itself. */
+const leaderboardFeatures = tableFeatures({
+  rowSortingFeature,
+  columnSizingFeature,
+  columnVisibilityFeature,
+})
+type LeaderboardFeatures = typeof leaderboardFeatures
+const colHelper = createColumnHelper<LeaderboardFeatures, RegionRollup>()
+type LeaderboardColumns = ReturnType<typeof colHelper.columns>
+
+const LEADERBOARD_TEXT_COLUMNS: ReadonlySet<string> = new Set([
+  'region',
+  'trend',
+])
+
+const leaderboardHeaderClass = (id: string): string =>
+  [
+    id === 'region' ? 'rankings-sticky-col' : '',
+    LEADERBOARD_TEXT_COLUMNS.has(id) ? '' : 'dt-num',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+const leaderboardCellClass = (id: string): string =>
+  [
+    'rankings-cell',
+    id === 'region'
+      ? 'rankings-sticky-col'
+      : LEADERBOARD_TEXT_COLUMNS.has(id)
+        ? ''
+        : 'rankings-cell--num',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+const LeaderboardTable: React.FC<{
+  rows: readonly RegionRollup[]
+  columns: LeaderboardColumns
+  sort: { field: SortField; direction: 'asc' | 'desc' }
+  onSort: (field: SortField) => void
+  inScroller: boolean
+}> = ({ rows, columns, sort, onSort, inScroller }) => {
+  const table = useTable<LeaderboardFeatures, RegionRollup>({
+    features: leaderboardFeatures,
+    data: rows as RegionRollup[],
+    columns,
+    getRowId: r => r.region,
+    state: { columnSizing: LEADERBOARD_SIZES },
+    // The component owns the order (region number by default, Lesson 138).
+    manualSorting: true,
+  })
+  return (
+    <DataTable
+      table={table}
+      id={
+        inScroller
+          ? 'regions-leaderboard-sheet-table'
+          : 'regions-leaderboard-table'
+      }
+      label="Region rankings"
+      tableLabel="Region rankings"
+      caption={`Region rankings, ${rows.length} ${
+        rows.length === 1 ? 'region' : 'regions'
+      }. Column headers with buttons are sortable.`}
+      sort={sort}
+      onSort={id => onSort(id as SortField)}
+      rowHeaderColumnId="region"
+      headerClassName={leaderboardHeaderClass}
+      cellClassName={leaderboardCellClass}
+      rowClassName="rankings-row"
+      inScroller={inScroller}
+      overflowHint="Scroll sideways for more columns"
+    />
+  )
+}
 
 export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
   rollups,
@@ -198,16 +278,18 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
   training,
 }) => {
   const [searchParams] = useSearchParams()
-  // Marks the scroller `data-more-after` only while columns are hidden to
-  // the right, so the fade cue never covers a table that fits (#2334).
-  const scrollEdges = useScrollEdges<HTMLDivElement>(training)
   const showTraining = training !== undefined && training !== null
   const overview = training && training !== 'loading' ? training : null
   // A round that has not opened has nothing to compare (every club reads
   // 0): a plain header, no sort (as on the region Training page).
   const round2Started = overview ? overview.round2Started : true
   const sortable = (round: TrainingRound) => round === 1 || round2Started
-  const showTrend = trends !== undefined && trends !== null
+  const tier = useBreakpointTier()
+  const showTrend = leaderboardShowsTrend(
+    tier,
+    trends !== undefined && trends !== null,
+    showTraining
+  )
   // A region the file holds no line for reads "no trend" in words; while
   // the file loads every cell is reserved (undefined).
   const trendOf = (region: string): number[] | null | undefined =>
@@ -270,6 +352,13 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
       )
     if (!overview) return null
     const r = overview.forRegion(region).rounds[round - 1]!
+    // An expanded round says "not started" / "not available" once, in its 4+
+    // column; the All 7 cell beside it stays a dash.
+    if (
+      metric === 'AllSeven' &&
+      (r.state === 'notStarted' || r.state === 'notAvailable')
+    )
+      return <span className="region-training-cell__muted">{'\u2014'}</span>
     if (r.state === 'notStarted')
       return <span className="region-training-cell__muted">not started</span>
     if (r.state === 'notAvailable')
@@ -341,7 +430,6 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
     )
   }
 
-  const span = showTraining ? 2 : 1
   /* A round is split into 4+ and All 7 only when some region has a figure
      for it (#2334 review): before it opens, or on a date without the
      figures, it is ONE narrow column, so the table fits its container at
@@ -351,218 +439,143 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
     [...overview.regions.values()].some(
       b => b.rounds[round - 1]!.state === 'measured'
     )
-  const roundHeader = (round: TrainingRound) =>
-    expanded(round) ? (
-      <th
-        key={`round-${round}`}
-        scope="colgroup"
-        colSpan={2}
-        className={`${TRAINING_TH} text-center region-training-group`}
-      >
-        <span className="region-training-group__part">
-          Round {round} training
-        </span>{' '}
-        <span className="region-training-group__part">
-          {roundMonths(round)}
-        </span>
-      </th>
-    ) : (
-      <th
-        key={`round-${round}`}
-        scope="col"
-        rowSpan={2}
-        className={`${TRAINING_TH} text-right region-training-group region-training-group--single`}
-      >
-        <span className="region-training-group__part">
-          Round {round} training
-        </span>{' '}
-        <span className="region-training-group__part">
-          {round === 2 && overview && !overview.round2Started
-            ? `opens ${formatShortDate(overview.round2Opens)}`
-            : roundMonths(round)}
-        </span>
-      </th>
-    )
 
-  /** A row's cells for a round: one cell (its state in words) when the
-   *  round is a single column or the region has no figure, else 4+ and
-   *  All 7. */
-  const trainingCells = (region: string, round: TrainingRound) => {
-    if (!expanded(round))
-      return (
-        <td key={`r${round}`} className={`${TRAINING_TD} text-right`}>
-          {trainingCell(region, round, 'Dcp')}
-        </td>
-      )
-    const r = overview && overview.forRegion(region).rounds[round - 1]!.state
-    if (r === 'notStarted' || r === 'notAvailable')
-      return (
-        <td
-          key={`r${round}`}
-          colSpan={2}
-          className={`${TRAINING_TD} text-center`}
-        >
-          {trainingCell(region, round, 'Dcp')}
-        </td>
-      )
-    return (['Dcp', 'AllSeven'] as const).map(metric => (
-      <td key={`r${round}${metric}`} className={`${TRAINING_TD} text-right`}>
-        {trainingCell(region, round, metric)}
-      </td>
-    ))
+  /** A round column: sortable once the round has started. */
+  const trainingColumn = (
+    id: string,
+    header: string,
+    round: TrainingRound,
+    metric: TrainingMetric
+  ) => {
+    const cell = (r: RegionRollup) => trainingCell(r.region, round, metric)
+    return sortable(round)
+      ? colHelper.accessor(
+          r => trainingValue(training, r.region, round, metric) ?? -1,
+          { id, header, cell: info => cell(info.row.original) }
+        )
+      : colHelper.display({
+          id,
+          header,
+          cell: info => cell(info.row.original),
+        })
   }
 
-  const fullTable = (
-    <table
-      className={`region-leaderboard-table w-full text-sm font-tm-body${
-        showTraining ? ' region-leaderboard-table--training' : ''
-      }`}
-      aria-label="Region rankings"
-    >
-      <thead className="border-b border-gray-200 theme-dark:border-gray-700">
-        <tr>
-          <SortableHeader<SortField>
-            field="region"
-            rowSpan={span}
-            label="Region"
-            currentSort={sort}
-            onSort={toggleSort}
-            thClassName={`${HEADER_TH} text-left region-leaderboard__sticky-col`}
-          />
-          {showTrend && (
-            <th
-              scope="col"
-              rowSpan={span}
-              title="Membership this program year"
-              className={TREND_TH}
-            >
-              Trend
-            </th>
-          )}
-          <SortableHeader<SortField>
-            field="districts"
-            rowSpan={span}
-            label="Districts"
-            currentSort={sort}
-            onSort={toggleSort}
-            thClassName={`${HEADER_TH} text-right`}
-            numeric
-          />
-          <SortableHeader<SortField>
-            field="paidClubs"
-            rowSpan={span}
-            label="Paid Clubs"
-            currentSort={sort}
-            onSort={toggleSort}
-            thClassName={`${HEADER_TH} text-right`}
-            numeric
-          />
-          <SortableHeader<SortField>
-            field="payments"
-            rowSpan={span}
-            label="Payments"
-            currentSort={sort}
-            onSort={toggleSort}
-            thClassName={`${HEADER_TH} text-right`}
-            numeric
-          />
-          <SortableHeader<SortField>
-            field="distinguished"
-            rowSpan={span}
-            label="Distinguished"
-            currentSort={sort}
-            onSort={toggleSort}
-            thClassName={`${HEADER_TH} text-right`}
-            numeric
-          />
-          <SortableHeader<SortField>
-            field="score"
-            rowSpan={span}
-            label="Score"
-            currentSort={sort}
-            onSort={toggleSort}
-            thClassName={`${HEADER_TH} text-right`}
-            numeric
-          />
-          {showTraining && ([1, 2] as const).map(roundHeader)}
-        </tr>
-        {showTraining && (
-          <tr>
-            {TRAINING_COLUMNS.filter(c => expanded(c.round)).map(c =>
-              sortable(c.round) ? (
-                <SortableHeader<SortField>
-                  key={c.field}
-                  field={c.field}
-                  label={METRIC_LABEL[c.metric]}
-                  currentSort={sort}
-                  onSort={toggleSort}
-                  thClassName={`${HEADER_TH} text-right`}
-                  numeric
-                />
-              ) : (
-                <th
-                  key={c.field}
-                  scope="col"
-                  className={`${TRAINING_TH} text-right`}
-                >
-                  {METRIC_LABEL[c.metric]}
-                </th>
-              )
-            )}
-          </tr>
-        )}
-      </thead>
-      <tbody className="divide-y divide-gray-100 theme-dark:divide-gray-800">
-        {sorted.map(r => (
-          <tr
-            key={r.region}
-            className="hover:bg-gray-50 theme-dark:hover:bg-gray-800/50 transition-colors"
+  const roundColumns = ([1, 2] as const).flatMap(round =>
+    expanded(round)
+      ? [
+          trainingColumn(
+            `r${round}Dcp`,
+            `Round ${round} ${roundMonths(round)}: ${METRIC_LABEL.Dcp} officers trained`,
+            round,
+            'Dcp'
+          ),
+          trainingColumn(
+            `r${round}AllSeven`,
+            `Round ${round} ${roundMonths(round)}: ${METRIC_LABEL.AllSeven} officers trained`,
+            round,
+            'AllSeven'
+          ),
+        ]
+      : [
+          colHelper.display({
+            id: `r${round}`,
+            header: `Round ${round} training, ${
+              round === 2 && overview && !overview.round2Started
+                ? `opens ${formatShortDate(overview.round2Opens)}`
+                : roundMonths(round)
+            }`,
+            cell: info => trainingCell(info.row.original.region, round, 'Dcp'),
+          }),
+        ]
+  )
+
+  const columns = colHelper.columns([
+    colHelper.accessor(r => Number(r.region), {
+      id: 'region',
+      header: 'Region',
+      cell: info => {
+        const r = info.row.original
+        return (
+          <Link
+            to={`/region/${r.region}`}
+            aria-label={`Region ${r.region} \u2014 leader ${r.leadingDistrictName}`}
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 min-h-[44px] text-tm-loyal-blue hover:underline"
           >
-            <td className="region-leaderboard__sticky-col px-4 py-3 text-left">
-              <Link
-                to={`/region/${r.region}`}
-                aria-label={`Region ${r.region} — leader ${r.leadingDistrictName}`}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 text-tm-loyal-blue hover:underline"
-              >
-                <span
-                  className="inline-block whitespace-nowrap px-2 py-0.5 text-xs font-mono rounded bg-tm-loyal-blue/10 text-tm-loyal-blue theme-dark:bg-tm-loyal-blue/30 theme-dark:text-blue-200"
-                  aria-hidden="true"
-                >
-                  Region {r.region}
-                </span>
-                <span className="whitespace-nowrap text-gray-700 theme-dark:text-gray-200 text-xs">
-                  leader: {r.leadingDistrictName}
-                </span>
-              </Link>
-            </td>
-            {showTrend && (
-              <td
-                data-testid="region-trend-cell"
-                className="px-3 py-3 whitespace-nowrap"
-              >
-                <DistrictTrendSparkline series={trendOf(r.region)} />
-              </td>
-            )}
-            <td className={NUMERIC_TD}>{r.districtCount}</td>
-            <td className={NUMERIC_TD}>{r.paidClubs.toLocaleString()}</td>
-            <td className={NUMERIC_TD}>{r.totalPayments.toLocaleString()}</td>
-            <td className={NUMERIC_TD}>
-              {r.distinguishedClubs.toLocaleString()}
-              <span className="text-gray-500 theme-dark:text-gray-400 ml-1">
-                · {Math.round(r.distinguishedPercent)}%
+            <span
+              className="inline-block whitespace-nowrap px-2 py-0.5 text-sm font-mono rounded bg-tm-loyal-blue/10 text-tm-loyal-blue theme-dark:bg-tm-loyal-blue/30 theme-dark:text-blue-200"
+              aria-hidden="true"
+            >
+              Region {r.region}
+            </span>
+            <span className="whitespace-nowrap text-gray-700 theme-dark:text-gray-200 text-sm">
+              leader: {r.leadingDistrictName}
+            </span>
+          </Link>
+        )
+      },
+    }),
+    ...(showTrend
+      ? [
+          colHelper.display({
+            id: 'trend',
+            header: 'Trend',
+            cell: info => (
+              <span data-testid="region-trend-cell">
+                <DistrictTrendSparkline
+                  series={trendOf(info.row.original.region)}
+                />
               </span>
-            </td>
-            <td className="px-4 py-3 text-right tabular-nums font-semibold text-gray-900 theme-dark:text-gray-50">
-              {r.aggregateScore.toLocaleString()}
-            </td>
-            {showTraining &&
-              ([1, 2] as const).flatMap(round =>
-                trainingCells(r.region, round)
-              )}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+            ),
+          }),
+        ]
+      : []),
+    colHelper.accessor(r => r.districtCount, {
+      id: 'districts',
+      header: 'Districts',
+      cell: info => info.row.original.districtCount,
+    }),
+    colHelper.accessor(r => r.paidClubs, {
+      id: 'paidClubs',
+      header: 'Paid clubs',
+      cell: info => info.row.original.paidClubs.toLocaleString(),
+    }),
+    colHelper.accessor(r => r.totalPayments, {
+      id: 'payments',
+      header: 'Payments',
+      cell: info => info.row.original.totalPayments.toLocaleString(),
+    }),
+    colHelper.accessor(r => r.distinguishedClubs, {
+      id: 'distinguished',
+      header: 'Distinguished',
+      cell: info => (
+        <>
+          {info.row.original.distinguishedClubs.toLocaleString()}
+          <span className="text-gray-600 theme-dark:text-gray-300 ml-1">
+            {'\u00b7'} {Math.round(info.row.original.distinguishedPercent)}%
+          </span>
+        </>
+      ),
+    }),
+    colHelper.accessor(r => r.aggregateScore, {
+      id: 'score',
+      header: 'Score',
+      cell: info => (
+        <span className="font-semibold text-gray-900 theme-dark:text-gray-50">
+          {info.row.original.aggregateScore.toLocaleString()}
+        </span>
+      ),
+    }),
+    ...(showTraining ? roundColumns : []),
+  ])
+
+  const leaderboardTable = (variant: 'page' | 'sheet') => (
+    <LeaderboardTable
+      rows={sorted}
+      columns={columns}
+      sort={sort}
+      onSort={toggleSort}
+      inScroller={variant === 'sheet'}
+    />
   )
 
   // Below 768 (#1834): region + 2 chosen metrics, no side-scroll; the
@@ -598,23 +611,13 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
       sort={sort}
       onSort={toggleSort}
       fullTableTitle="Regions — all columns"
-      sheetTable={fullTable}
+      sheetTable={leaderboardTable('sheet')}
       fullTable={
-        // ≥768: intentional, documented horizontal scroll (#689). role=region
-        // + tabIndex + aria-label make the overflow keyboard-operable (WCAG
-        // 2.1.1); the scroll-cue overlay (in the relative wrap) signals more
-        // columns to the right.
-        <div className="region-rankings__scroll-wrap">
-          <div
-            {...scrollEdges}
-            className="overflow-x-auto region-rankings__scroll region-rankings__scroll--edges"
-            role="region"
-            tabIndex={0}
-            aria-label="Region rankings — scroll horizontally to see all metrics"
-          >
-            {fullTable}
-          </div>
-          <div className="region-rankings__scroll-cue" aria-hidden="true" />
+        // >=768: the shared DataTable. The header sticks to the page while the
+        // columns fit; only when they cannot does it scroll sideways, as a
+        // labelled, focusable region with edge cues (WCAG 2.1.1).
+        <div className="districts-rankings-table-wrap districts-rankings-table-wrap--dt">
+          {leaderboardTable('page')}
         </div>
       }
     />

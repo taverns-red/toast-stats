@@ -44,6 +44,7 @@ const read = (p: string) =>
 const redesignCss = read('tokens/redesign.css')
 const darkModeCss = read('dark-mode.css')
 const appShellCss = read('components/app-shell.css')
+const dataTableCss = read('components/data-table.css')
 
 /** Tailwind palette defaults for the utilities the Region pages use that may
  *  have NO dark override (framework constants — like trusting the contrast
@@ -317,7 +318,7 @@ describe('Region pages dark-mode contrast (#609)', () => {
     // the rule resolves through a var() that has a dark remap.
     const bg = ruleValue(
       appShellCss,
-      '.districts-rankings-table .region-rankings__sticky-col',
+      '.dt tbody th.rankings-sticky-col',
       'background-color'
     )
     expect(bg, 'sticky-col background-color rule must exist').toBeTruthy()
@@ -326,11 +327,11 @@ describe('Region pages dark-mode contrast (#609)', () => {
     expect(resolveVar(bg!)).not.toBe(lightTokens.get('--surface'))
   })
 
-  it('rank-cell text clears AA on the sticky column in dark (default + hover)', () => {
-    // Rank cell wears text-gray-900 (→ --text-heading in dark). It sits on the
-    // sticky bg, which is --surface at rest and --surface-2 on hover/header.
-    // Lesson 095: size for the LIGHTEST surface it lands on (--surface-2).
-    const fg = utilityDark('text-gray-900', 'color', surface)
+  it('district-cell text clears AA on the sticky column in dark (default + hover)', () => {
+    // The pinned district cell wears --ink. It sits on the sticky bg, which is
+    // --surface at rest and --surface-3 on hover. Lesson 095: size for the
+    // LIGHTEST surface it lands on.
+    const fg = resolveVar('var(--ink)')
     for (const bg of [surface, surface2]) {
       const ratio = calculateContrastRatio(fg, bg)
       expect(
@@ -340,18 +341,13 @@ describe('Region pages dark-mode contrast (#609)', () => {
     }
   })
 
-  it('header sticky cells use the themed thead surface', () => {
-    const bg = ruleValue(
-      appShellCss,
-      '.districts-rankings-table thead .region-rankings__sticky-col',
-      'background-color'
+  it('header cells use the themed thead surface', () => {
+    const bg = ruleValue(dataTableCss, '.dt thead th', 'background-color')
+    expect(bg, `thead bg "${bg}" must be a theme token`).toMatch(/var\(--/)
+    // The header label (--ink-2) must clear AA on the thead surface in dark.
+    const fg = resolveVar(
+      ruleValue(dataTableCss, '.dt thead th', 'color') ?? ''
     )
-    expect(bg, `thead sticky bg "${bg}" must be a theme token`).toMatch(
-      /var\(--/
-    )
-    // Header label is text-gray-500 (muted) → --text-muted; must clear AA on
-    // the thead surface it now sits on.
-    const fg = utilityDark('text-gray-500', 'color', surface2)
     const ratio = calculateContrastRatio(fg, surface2)
     expect(
       ratio,
@@ -389,40 +385,6 @@ describe('Region pages dark-mode contrast (#609)', () => {
     ).toBeGreaterThanOrEqual(4.5)
   })
 
-  // #965: the /regions OVERVIEW leaderboard (RegionsLeaderboard) gets its own
-  // sticky region-identity column. Unlike the detail table (border-collapse:
-  // collapse), the overview table is the default `separate` model with Tailwind
-  // `divide-y` row rules — a distinct class + re-derived border restoration
-  // (Lesson 126). Same lesson-092 trap applies: the opaque pinned background
-  // MUST be a theme token, never a hardcoded light literal.
-  it('overview sticky-col uses a THEMED background, not a hardcoded literal (#965)', () => {
-    const bg = ruleValue(
-      appShellCss,
-      '.region-leaderboard-table .region-leaderboard__sticky-col',
-      'background-color'
-    )
-    expect(
-      bg,
-      'overview sticky-col background-color rule must exist'
-    ).toBeTruthy()
-    expect(bg, `overview sticky-col bg "${bg}" must be a theme token`).toMatch(
-      /var\(--/
-    )
-    expect(resolveVar(bg!)).not.toBe(lightTokens.get('--surface'))
-  })
-
-  it('overview header sticky cell uses the themed thead surface (#965)', () => {
-    const bg = ruleValue(
-      appShellCss,
-      '.region-leaderboard-table thead .region-leaderboard__sticky-col',
-      'background-color'
-    )
-    expect(
-      bg,
-      `overview thead sticky bg "${bg}" must be a theme token`
-    ).toMatch(/var\(--/)
-  })
-
   it('Region-cell text clears AA on the overview sticky column in dark (#965)', () => {
     // The pinned Region cell carries the region link (text-tm-loyal-blue) and
     // the "leader: …" sublabel (text-gray-700). Both sit on the sticky bg,
@@ -441,11 +403,8 @@ describe('Region pages dark-mode contrast (#609)', () => {
   })
 
   it('scroll-cue overlay is themed, not a hardcoded colour (lesson 092)', () => {
-    const bg = ruleValue(
-      appShellCss,
-      '.region-rankings__scroll-cue',
-      'background'
-    )
+    // #2702: the region tables use the DataTable's edge cues.
+    const bg = ruleValue(dataTableCss, '.dt-scroll__cue--end', 'background')
     expect(bg, 'scroll-cue background rule must exist').toBeTruthy()
     expect(bg, `scroll-cue "${bg}" must reference a theme token`).toMatch(
       /var\(--surface\)/
