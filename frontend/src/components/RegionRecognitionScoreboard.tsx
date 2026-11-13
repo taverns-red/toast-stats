@@ -104,6 +104,15 @@ export const RegionRecognitionScoreboard: React.FC<Props> = ({
       </p>
       {scoreboard && (
         <>
+          <p
+            className="text-xs text-gray-500"
+            data-testid="recognition-basis"
+            style={{ margin: '0 0 12px' }}
+          >
+            Distinguished clubs are counted as confirmed by April renewals.
+            Clubs that are only &quot;qualifying today&quot; are not counted
+            toward a tier or in the gaps below.
+          </p>
           <div className="districts-kpi-strip" style={{ marginBottom: 0 }}>
             {scoreboard.rows.map(row => (
               <div

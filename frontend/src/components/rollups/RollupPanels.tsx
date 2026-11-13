@@ -1,6 +1,7 @@
 import React from 'react'
 import type { RegionRollupFigures } from '@taverns-red/shared-contracts'
 import { useIsMobile } from '../../hooks/useIsMobile'
+import { DistinguishedCount } from '../DistinguishedCount'
 import {
   formatShare,
   rollupKpis,
@@ -96,11 +97,28 @@ export const RollupPanels: React.FC<RollupPanelsProps> = ({
   const isMobile = useIsMobile(768)
   const kpis = rollupKpis(figures)
   const sections = rollupSections(figures, { programYear, snapshotDate })
-  const tiles = [
-    { key: 'clubs', label: 'Clubs', value: kpis.clubs },
-    { key: 'membership', label: 'Members', value: kpis.membership },
-    { key: 'payments', label: 'Payments', value: kpis.payments },
-    { key: 'distinguished', label: 'Distinguished', value: kpis.distinguished },
+  // Distinguished headlines the published confirmed count (#2580); with none
+  // published, the qualifying-today figure stands and says so.
+  const counts = kpis.distinguishedCounts
+  const tiles: { key: string; label: string; value: React.ReactNode }[] = [
+    { key: 'clubs', label: 'Clubs', value: fmt(kpis.clubs) },
+    { key: 'membership', label: 'Members', value: fmt(kpis.membership) },
+    { key: 'payments', label: 'Payments', value: fmt(kpis.payments) },
+    {
+      key: 'distinguished',
+      label: 'Distinguished',
+      value: counts ? (
+        <DistinguishedCount
+          confirmed={counts.confirmed}
+          provisional={counts.provisional}
+        />
+      ) : (
+        <DistinguishedCount
+          confirmed={kpis.distinguished}
+          basis="qualifying-today"
+        />
+      ),
+    },
   ]
 
   return (
@@ -113,7 +131,7 @@ export const RollupPanels: React.FC<RollupPanelsProps> = ({
         {tiles.map(t => (
           <li key={t.key} className="rollup-kpi">
             <span className="rollup-kpi__label">{t.label}</span>
-            <span className="rollup-kpi__value">{fmt(t.value)}</span>
+            <span className="rollup-kpi__value">{t.value}</span>
           </li>
         ))}
       </ul>
