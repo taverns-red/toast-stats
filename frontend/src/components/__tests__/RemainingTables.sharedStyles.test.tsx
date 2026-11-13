@@ -196,6 +196,7 @@ describe('M7 tables: shared .dt chrome, caption, scope (#2676)', () => {
   it('#25 multi-year comparison: scroller, caption, row header', () => {
     render(
       <MultiYearComparisonTable
+        isLoading={false}
         yearlyRankings={[
           {
             programYear: '2023-2024',
@@ -297,6 +298,9 @@ describe('M7 tables: shared .dt chrome, caption, scope (#2676)', () => {
       .querySelector('table')!
     expectSharedTable(table)
     expect(table.querySelector('.text-xs')).toBeNull()
+    // The header colour is the trophy case's own, not the foundation's.
+    for (const th of table.querySelectorAll('thead th'))
+      expect(th.className).toMatch(/text-gray-600/)
     // Tier is plain text: no fill or border utility on a tier cell.
     for (const th of table.querySelectorAll('tbody th'))
       expect(th.className).not.toMatch(/\bbg-|\bborder-(?!t\b)/)
@@ -365,5 +369,37 @@ describe('M7 stylesheets: 14px floor, no CSS-hidden columns (#2676)', () => {
         offenders.push(r.selector.slice(0, 80))
     }
     expect(offenders).toEqual([])
+  })
+})
+
+describe('.dt-static yields to each table own layout (#2734)', () => {
+  const dataTable = read('styles/components/data-table.css')
+  const entity = read('styles/components/entity-tables.css')
+
+  it('lives in the brand layer with .dt, not unlayered', () => {
+    expect(entity).not.toMatch(/\.dt-static/)
+    expect(dataTable).toMatch(/\.dt\.dt-static\s*\{/)
+    // Everything in data-table.css sits inside the single @layer brand block.
+    expect(dataTable.indexOf('.dt.dt-static')).toBeGreaterThan(
+      dataTable.indexOf('@layer brand')
+    )
+  })
+
+  it('cancels the coarse-pointer 48px row height', () => {
+    expect(dataTable).toMatch(
+      /@media \(pointer: coarse\)\s*\{[^@]*\.dt\.dt-static tbody tr\s*\{\s*height:\s*auto/
+    )
+  })
+
+  it('the tables keep their own sticky header, sticky column and fixed layout', () => {
+    expect(read('components/worldmap/worldmap.css')).toMatch(
+      /\.wm-table thead th\s*\{[^}]*position:\s*sticky/
+    )
+    expect(read('styles/components/worldwide-scoreboard.css')).toMatch(
+      /\.wws__metric-head,\s*\.wws__metric\s*\{[^}]*position:\s*sticky;[^}]*left:\s*0/
+    )
+    expect(read('styles/components/landing-pulse.css')).toMatch(
+      /\.world-pulse__table\s*\{[^}]*table-layout:\s*fixed/
+    )
   })
 })
