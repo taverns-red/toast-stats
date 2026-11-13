@@ -237,17 +237,21 @@ describe('ClubDetailPage — hero first, analytics after (#1901)', () => {
     expect(vi.mocked(fetchCdnGlobalClubRace)).not.toHaveBeenCalled()
   })
 
-  it('fetches the worldwide race once, pinned to the page date, after the hero paints', async () => {
+  // #2759 — the card's slot only exists once the full page renders, and its
+  // read then waits for the slot to come near the viewport (see
+  // ClubDetailPage.lazyRace.test.tsx for the pinned-date fetch). While only
+  // the hero has painted there is no slot, so nothing is requested.
+  it('does not fetch the worldwide race while only the hero has painted', async () => {
     mockedStats.mockReturnValue({ data: snapshot, isLoading: false } as never)
 
     renderAt()
+    await screen.findByRole('heading', {
+      level: 1,
+      name: '90 Elgin Toastmasters',
+    })
+    await new Promise(resolve => setTimeout(resolve, 400))
 
-    await waitFor(() =>
-      expect(vi.mocked(fetchCdnGlobalClubRace)).toHaveBeenCalled()
-    )
-    expect(vi.mocked(fetchCdnGlobalClubRace).mock.calls).toEqual([
-      ['2026-10-11'],
-    ])
+    expect(vi.mocked(fetchCdnGlobalClubRace)).not.toHaveBeenCalled()
   })
 
   // #1852 option C — `v1/rankings.json` and `v1/latest.json` feed only the
