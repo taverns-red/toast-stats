@@ -970,26 +970,39 @@ export function checkRollupsMatchRankings(
   rankings: unknown
 ): string | null {
   const parsed = RegionRollupsSchema.safeParse(rollups)
+  // A rollups file that does not parse is reported by its own check.
+  if (!parsed.success) return null
+  const withCounts = Object.entries(parsed.data.districts).filter(
+    ([, d]) => d.distinguishedCounts != null
+  )
+  // Older files carry no counts: nothing to compare.
+  if (withCounts.length === 0) return null
+
   const rows = (rankings as { rankings?: unknown } | null)?.rankings
-  // Files that do not parse are reported by their own checks.
-  if (!parsed.success || !Array.isArray(rows)) return null
-  const ranked = new Map<string, number>()
+  if (!Array.isArray(rows)) {
+    return 'the rollups publish distinguishedCounts, but the rankings carry no rows to compare'
+  }
+  const ranked = new Map<string, number | null>()
   for (const row of rows as Array<{
     districtId?: unknown
     distinguishedClubs?: unknown
   }>) {
-    if (
-      typeof row?.districtId === 'string' &&
-      typeof row.distinguishedClubs === 'number'
-    ) {
-      ranked.set(canonicalDistrictId(row.districtId), row.distinguishedClubs)
-    }
+    if (typeof row?.districtId !== 'string') continue
+    ranked.set(
+      canonicalDistrictId(row.districtId),
+      typeof row.distinguishedClubs === 'number' ? row.distinguishedClubs : null
+    )
   }
-  for (const [id, district] of Object.entries(parsed.data.districts)) {
-    // Absent or null: not collected, nothing to compare (older files too).
-    const confirmed = district.distinguishedCounts?.confirmed
-    const want = ranked.get(canonicalDistrictId(id))
-    if (confirmed === undefined || want === undefined) continue
+  for (const [id, district] of withCounts) {
+    const confirmed = district.distinguishedCounts!.confirmed
+    const key = canonicalDistrictId(id)
+    if (!ranked.has(key)) {
+      return `district ${id} publishes counts, but the rankings do not list it`
+    }
+    const want = ranked.get(key)
+    if (want === null || want === undefined) {
+      return `district ${id} publishes counts, but its rankings row has no numeric distinguishedClubs`
+    }
     if (confirmed !== want) {
       return `district ${id} confirmed ${confirmed}, but the rankings' distinguishedClubs is ${want}`
     }

@@ -406,21 +406,30 @@ export async function runContentGate(
     })
   }
 
-  // Region rollups against the same date's rankings (#2563). A date staging
-  // holds no rankings for is left to the rollups' own checks.
-  for (const check of plan.checks) {
-    if (check.kind !== 'region-rollups') continue
-    const rankingsPath = check.path.replace(
-      /region-rollups\.json$/,
-      'all-districts-rankings.json'
-    )
-    if (!stagingMeta.has(rankingsPath) || !stagingMeta.has(check.path)) {
+  // Region rollups against the same date's rankings (#2563). Either file
+  // changing puts the pair under check; a date staging holds only one of
+  // them for is left to that file's own checks.
+  const pairDates = new Set<string>()
+  for (const name of [
+    ...plan.checks.map(c => c.path),
+    ...changed.map(o => o.name),
+  ]) {
+    const m =
+      /^snapshots\/([^/]+)\/(?:region-rollups|all-districts-rankings)\.json$/.exec(
+        name
+      )
+    if (m) pairDates.add(m[1]!)
+  }
+  for (const date of [...pairDates].sort()) {
+    const rollupsPath = `snapshots/${date}/region-rollups.json`
+    const rankingsPath = `snapshots/${date}/all-districts-rankings.json`
+    if (!stagingMeta.has(rankingsPath) || !stagingMeta.has(rollupsPath)) {
       continue
     }
-    const pair = `${check.path} ↔ ${rankingsPath}`
+    const pair = `${rollupsPath} ↔ ${rankingsPath}`
     try {
       const [rollups, rankings] = await Promise.all(
-        [check.path, rankingsPath].map(async name =>
+        [rollupsPath, rankingsPath].map(async name =>
           decodeStoredObject(
             await readStored(
               staging,
@@ -430,14 +439,15 @@ export async function runContentGate(
           )
         )
       )
-      results.push({
-        path: pair,
-        kind: 'cross-check',
-        failure:
-          rollups!.ok && rankings!.ok
-            ? checkRollupsMatchRankings(rollups!.value, rankings!.value)
-            : null,
-      })
+      // An unreadable rollups file is that file's own failure; unreadable
+      // rankings cannot vouch for the counts, so the pair fails closed.
+      let failure: string | null = null
+      if (rollups!.ok) {
+        failure = rankings!.ok
+          ? checkRollupsMatchRankings(rollups!.value, rankings!.value)
+          : `the rankings cannot be read (${rankings!.reason})`
+      }
+      results.push({ path: pair, kind: 'cross-check', failure })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       results.push({
