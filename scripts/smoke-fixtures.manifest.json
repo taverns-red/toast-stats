@@ -87,6 +87,34 @@
       "optional": true
     },
     {
+      "path": "snapshots/2026-08-15/all-districts-rankings.json"
+    },
+    {
+      "path": "snapshots/2026-09-30/all-districts-rankings.json",
+      "optional": true
+    },
+    {
+      "path": "snapshots/2026-08-15/competitive-awards.json"
+    },
+    {
+      "path": "snapshots/2026-08-15/district_{district}.json",
+      "districts": ["61"]
+    },
+    {
+      "path": "snapshots/2026-08-15/analytics/district_{district}_analytics.json",
+      "districts": ["61"]
+    },
+    {
+      "path": "snapshots/2026-08-15/analytics/district_{district}_performance-targets.json",
+      "districts": ["61"],
+      "optional": true
+    },
+    {
+      "path": "snapshots/2026-08-15/district_{district}_reports.json",
+      "districts": ["61"],
+      "optional": true
+    },
+    {
       "path": "snapshots/{yearEnd}/district_{district}.json",
       "districts": ["01", "52", "61", "100", "113"],
       "optional": true
