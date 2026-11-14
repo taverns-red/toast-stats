@@ -39,6 +39,27 @@ permissions:
   security-events: write
   pull-requests: write
 
+# Supersede a PR's stale run when it is pushed again (#2607). Guarded by
+# scripts/lib/__tests__/ciConcurrency.test.ts.
+#  - Cancels only on `pull_request`. Push to main, tags and workflow_call get
+#    a group unique to the run, so nothing on main is ever cancelled or
+#    dropped from the queue.
+#  - A no-op edit (title/body, not base) runs with every job skipped (#2204).
+#    It gets its own group so it cannot cancel the real in-flight run and
+#    leave a cancelled check on the head with only a skipped run beside it.
+#    Same shape as docs.yml.
+#  - A superseded run reports `cancelled`, which CI Gate ignores when a newer
+#    run of the same check succeeded (#2316) and counts as a failure
+#    otherwise, so cancelling never opens the gate.
+concurrency:
+  group: >-
+    ${{ github.event_name == 'pull_request'
+    && format('ci-pr-{0}{1}', github.event.pull_request.number,
+    github.event.action == 'edited' && !github.event.changes.base
+    && format('-noop-{0}', github.run_id) || '')
+    || format('ci-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   # Quality Gates - Must pass before any other jobs
   # On `edited`, run only for a base change (#2204); every other job
