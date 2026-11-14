@@ -874,6 +874,7 @@ const DistrictDetailPageInner: React.FC = () => {
                     programYear={
                       (effectiveProgramYear ?? selectedProgramYear).label
                     }
+                    asOfDate={effectiveEndDate ?? undefined}
                     ranking={distinguishedRankingInputs}
                     clubStrengthQualifies={clubStrengthResult?.qualifies}
                     clubStrengthGrowth={clubStrengthResult?.growthPercent}
