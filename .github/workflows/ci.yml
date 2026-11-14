@@ -41,9 +41,10 @@ permissions:
 
 # Supersede a PR's stale run when it is pushed again (#2607). Guarded by
 # scripts/lib/__tests__/ciConcurrency.test.ts.
-#  - Cancels only on `pull_request`. Push to main, tags and workflow_call get
-#    a group unique to the run, so nothing on main is ever cancelled or
-#    dropped from the queue.
+#  - Cancels only on `pull_request`. This workflow triggers on push to main,
+#    pull_request and workflow_call (nothing calls it today). Everything that
+#    is not a pull_request gets a group unique to the run, so a push to main
+#    is never cancelled or dropped from the queue.
 #  - A no-op edit (title/body, not base) runs with every job skipped (#2204).
 #    It gets its own group so it cannot cancel the real in-flight run and
 #    leave a cancelled check on the head with only a skipped run beside it.
