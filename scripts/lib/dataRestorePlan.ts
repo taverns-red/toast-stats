@@ -15,22 +15,41 @@
  * name, bucket, generation (string), timeCreated, softDeleteTime,
  * hardDeleteTime (RFC 3339).
  *
- * `since` is when the bad run began promoting. A live object created before
- * it was not touched by the run (no-op); without that bound, an untouched
- * object with no soft-deleted copy would look "created by the run".
+ * `since` / `until` bound the bad run (when it began and ended promoting);
+ * both need an explicit `Z` or offset, never local time. A live object created
+ * before `since` was not touched by the run (no-op). One created after
+ * `until` is refused: something else wrote it, so it is not ours to act on.
+ *
+ * THE RULE (any ambiguity refuses; a wrong delete is far worse than a refuse):
+ *   Walk back from the live object. A soft-deleted copy "belongs" to the
+ *   current generation when its softDeleteTime equals that generation's
+ *   timeCreated to the millisecond (exact; no tolerance: a mismatch refuses).
+ *   - restore: the walk reaches a copy created before `since`.
+ *   - delete: ONLY when (a) the object has no soft-deleted copies at all, was
+ *     created in [since, until], and the soft-deleted listing is not empty
+ *     overall (an empty listing cannot tell "created" from "overwritten"); or
+ *     (b) every soft-deleted copy of the object was consumed by the walk, so
+ *     it ends at the oldest existing copy, which itself was created after
+ *     `since`.
+ *   - refuse: everything else, in particular any soft-deleted copy the walk
+ *     did not consume (missing link, hard-deleted generation, timestamp
+ *     mismatch), two copies matching one step, a loop, or a live object newer
+ *     than `until`.
  */
+
+import { z } from 'zod'
 
 export class RestorePlanError extends Error {}
 
 /** Thrown by executePlan when a command fails; says what ran and what failed. */
 export class ExecuteFailure extends Error {
-  executed: string[][] = []
-  failedAt: string[] = []
-}
-
-/** Red skeleton (#2539): validation lands in the green commit. */
-export function parseSavedPlan(json: unknown): RestorePlan {
-  return json as RestorePlan
+  constructor(
+    message: string,
+    readonly executed: string[][],
+    readonly failedAt: string[]
+  ) {
+    super(message)
+  }
 }
 
 export interface ObjectCopy {
@@ -55,9 +74,47 @@ export interface RestorePlan {
   version: 1
   bucket: string
   since: string
-  until?: string
+  until: string
   entries: PlanEntry[]
   refused: number
+}
+
+const EntrySchema = z
+  .object({
+    name: z.string().min(1),
+    action: z.enum(['restore', 'delete', 'noop', 'refuse']),
+    liveGeneration: z.string().min(1),
+    generation: z.string().min(1).optional(),
+    hardDeleteTime: z.string().optional(),
+    reason: z.string(),
+  })
+  .strict()
+  .refine(e => e.action !== 'restore' || e.generation !== undefined, {
+    message: 'restore entry has no generation',
+  })
+
+const PlanSchema = z
+  .object({
+    version: z.literal(1),
+    bucket: z.string().min(1),
+    since: z.string().min(1),
+    until: z.string().min(1),
+    entries: z.array(EntrySchema),
+    refused: z.number().int().nonnegative(),
+  })
+  .strict()
+
+/** Validate a saved plan file; anything malformed is refused, never coerced. */
+export function parseSavedPlan(json: unknown): RestorePlan {
+  const r = PlanSchema.safeParse(json)
+  if (!r.success) {
+    throw new RestorePlanError(
+      `saved plan is malformed: ${r.error.issues
+        .map(i => `${i.path.join('.') || '(root)'}: ${i.message}`)
+        .join('; ')}`
+    )
+  }
+  return r.data as RestorePlan
 }
 
 const ENTRY_POINTS = new Set(['v1/latest.json', 'v1/dates.json'])
@@ -72,6 +129,19 @@ function instant(value: string, what: string): number {
     throw new RestorePlanError(`${what}: not a timestamp: ${value}`)
   }
   return ms
+}
+
+const EXPLICIT_OFFSET =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/
+
+/** A bound given by the operator: must carry Z or an offset, never local time. */
+function bound(value: unknown, what: string): number {
+  if (typeof value !== 'string' || !EXPLICIT_OFFSET.test(value)) {
+    throw new RestorePlanError(
+      `${what} must be an ISO 8601 time with an explicit Z or offset (e.g. 2026-11-08T10:00:00Z), got: ${String(value)}`
+    )
+  }
+  return instant(value, what)
 }
 
 /** Parse a `gcloud storage ls --json` listing. Throws on anything unreadable. */
@@ -114,15 +184,28 @@ export function parseListing(json: unknown): ObjectCopy[] {
 function planOne(
   live: ObjectCopy,
   copies: ObjectCopy[],
-  sinceMs: number
+  sinceMs: number,
+  untilMs: number,
+  softListingEmpty: boolean
 ): PlanEntry {
   const base = { name: live.name, liveGeneration: live.generation }
-  if (instant(live.timeCreated, live.name) < sinceMs) {
+  const refuse = (reason: string): PlanEntry => ({
+    ...base,
+    action: 'refuse',
+    reason,
+  })
+  const liveMs = instant(live.timeCreated, live.name)
+  if (liveMs < sinceMs) {
     return {
       ...base,
       action: 'noop',
       reason: `live generation ${live.generation} was created before the bad run began`,
     }
+  }
+  if (liveMs > untilMs) {
+    return refuse(
+      `live generation ${live.generation} was created ${live.timeCreated}, after --until: not part of the bad run`
+    )
   }
   let cur = live
   const seen = new Set<string>([live.generation])
@@ -134,22 +217,25 @@ function planOne(
         instant(c.softDeleteTime, c.name) === curMs
     )
     if (matches.length > 1) {
-      return {
-        ...base,
-        action: 'refuse',
-        reason: `ambiguous: generations ${matches
+      return refuse(
+        `ambiguous: generations ${matches
           .map(c => c.generation)
-          .join(', ')} were all soft-deleted at ${cur.timeCreated}`,
-      }
+          .join(', ')} were all soft-deleted at ${cur.timeCreated}`
+      )
     }
     const m = matches[0]
     if (!m) {
-      if (cur === live && copies.length > 0) {
-        return {
-          ...base,
-          action: 'refuse',
-          reason: `${copies.length} soft-deleted copies exist but none has softDeleteTime equal to the live timeCreated ${live.timeCreated}`,
-        }
+      const unmatched = copies.filter(c => !seen.has(c.generation))
+      if (unmatched.length > 0) {
+        const gens = unmatched.map(c => c.generation).join(', ')
+        return refuse(
+          `soft-deleted generations ${gens} left unexplained: none has softDeleteTime equal to generation ${cur.generation}'s timeCreated ${cur.timeCreated}`
+        )
+      }
+      if (cur === live && softListingEmpty) {
+        return refuse(
+          'the soft-deleted listing is empty: cannot tell an object the bad run created from one it overwrote'
+        )
       }
       return {
         ...base,
@@ -157,15 +243,11 @@ function planOne(
         reason:
           cur === live
             ? 'no soft-deleted copy: the bad run created this object'
-            : `generation ${cur.generation} was created in the bad run and displaced nothing`,
+            : `every soft-deleted copy was walked; the oldest, generation ${cur.generation}, was created in the bad run and displaced nothing`,
       }
     }
     if (seen.has(m.generation)) {
-      return {
-        ...base,
-        action: 'refuse',
-        reason: `copy chain loops at generation ${m.generation}`,
-      }
+      return refuse(`copy chain loops at generation ${m.generation}`)
     }
     seen.add(m.generation)
     if (instant(m.timeCreated, m.name) < sinceMs) {
@@ -185,10 +267,14 @@ export function planRestore(input: {
   live: ObjectCopy[]
   softDeleted: ObjectCopy[]
   since: string
-  until?: string
+  until: string
   paths?: string[]
 }): RestorePlan {
-  const sinceMs = instant(input.since, 'since')
+  const sinceMs = bound(input.since, '--since')
+  const untilMs = bound(input.until, '--until')
+  if (untilMs <= sinceMs) {
+    throw new RestorePlanError('--until must be after --since')
+  }
   const buckets = new Set(
     [...input.live, ...input.softDeleted].map(o => o.bucket)
   )
@@ -204,12 +290,21 @@ export function planRestore(input: {
   }
   const entries = input.live
     .filter(o => !only || only.has(o.name))
-    .map(o => planOne(o, byName.get(o.name) ?? [], sinceMs))
+    .map(o =>
+      planOne(
+        o,
+        byName.get(o.name) ?? [],
+        sinceMs,
+        untilMs,
+        input.softDeleted.length === 0
+      )
+    )
     .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
   return {
     version: 1,
     bucket: [...buckets][0] ?? '',
     since: input.since,
+    until: input.until,
     entries,
     refused: entries.filter(e => e.action === 'refuse').length,
   }
@@ -225,6 +320,7 @@ export function verifyPlan(saved: RestorePlan, current: RestorePlan): void {
   if (
     saved.bucket !== current.bucket ||
     saved.since !== current.since ||
+    saved.until !== current.until ||
     JSON.stringify(saved.entries) !== JSON.stringify(current.entries)
   ) {
     throw new RestorePlanError(
@@ -233,7 +329,14 @@ export function verifyPlan(saved: RestorePlan, current: RestorePlan): void {
   }
 }
 
-/** Run the plan: restores (entry points first), then deletes. argv excludes `gcloud`. */
+/**
+ * Run the plan: restores (entry points first), then deletes. argv excludes
+ * `gcloud`. Stops at the first failure and throws ExecuteFailure naming what
+ * ran and what failed. Each restore carries `--if-generation-match=<live
+ * generation>` so it fails if the object changed since the plan (for
+ * objects.restore that precondition is the LIVE generation); a delete names
+ * the exact live generation in its `#generation` URL.
+ */
 export function executePlan(
   plan: RestorePlan,
   run: (argv: string[]) => void
@@ -245,15 +348,29 @@ export function executePlan(
     ...restores.filter(e => ENTRY_POINTS.has(e.name)),
     ...restores.filter(e => !ENTRY_POINTS.has(e.name)),
   ]
-  for (const e of ordered) {
-    run([
+  const commands: string[][] = [
+    ...ordered.map(e => [
       'storage',
       'restore',
       '--allow-overwrite',
+      `--if-generation-match=${e.liveGeneration}`,
       url(e, e.generation as string),
-    ])
-  }
-  for (const e of plan.entries.filter(x => x.action === 'delete')) {
-    run(['storage', 'rm', url(e, e.liveGeneration)])
+    ]),
+    ...plan.entries
+      .filter(x => x.action === 'delete')
+      .map(e => ['storage', 'rm', url(e, e.liveGeneration)]),
+  ]
+  const executed: string[][] = []
+  for (const argv of commands) {
+    try {
+      run(argv)
+    } catch (e) {
+      throw new ExecuteFailure(
+        e instanceof Error ? e.message : String(e),
+        [...executed],
+        argv
+      )
+    }
+    executed.push(argv)
   }
 }
