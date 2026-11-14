@@ -45,6 +45,9 @@ import {
   RegionRollupsReaderSchema,
   regionMembershipSeriesPath,
   REPORTS_ROLLUPS_FILE_NAME,
+  ReconciliationRevisionIndexSchema,
+  reconciliationRevisionDistrictPath,
+  reconciliationRevisionIndexPath,
   ReportsRollupsReaderSchema,
   SUSPENDED_CLUBS_FILE_NAME,
   SuspendedClubsReaderSchema,
@@ -956,20 +959,20 @@ export async function fetchCdnDistrictSnapshot<T>(
  * (`snapshots/<monthEnd>/revisions/<asOf>/district_<id>.json`, #2475).
  */
 export function cdnRevisionSnapshotUrl(
-  _date: SnapshotDate,
-  _asOf: string,
-  _districtId: string
+  date: SnapshotDate,
+  asOf: string,
+  districtId: string
 ): string {
-  throw new Error('not implemented')
+  return `${cdnBaseUrl()}/${reconciliationRevisionDistrictPath(date, asOf, districtId)}`
 }
 
 /** Fetch one reconciliation revision of a district snapshot (#2475). */
 export async function fetchCdnRevisionDistrictSnapshot<T>(
-  _date: SnapshotDate,
-  _asOf: string,
-  _districtId: string
+  date: SnapshotDate,
+  asOf: string,
+  districtId: string
 ): Promise<T> {
-  throw new Error('not implemented')
+  return fetchFromCdn<T>(cdnRevisionSnapshotUrl(date, asOf, districtId))
 }
 
 /**
@@ -978,9 +981,16 @@ export async function fetchCdnRevisionDistrictSnapshot<T>(
  * it does not match the contract, so a bad file reads as "no revisions".
  */
 export async function fetchCdnRevisionIndex(
-  _monthEnd: string
+  monthEnd: string
 ): Promise<ReconciliationRevisionIndex | null> {
-  throw new Error('not implemented')
+  const res = await fetch(
+    `${cdnBaseUrl()}/${reconciliationRevisionIndexPath(monthEnd)}`
+  )
+  if (!res.ok) return null
+  recordCdnResponse(res)
+  const parsed = ReconciliationRevisionIndexSchema.safeParse(await res.json())
+  if (!parsed.success || parsed.data.monthEnd !== monthEnd) return null
+  return parsed.data
 }
 
 /**

@@ -18,6 +18,17 @@ import { useDistinguishedCountsAt } from '../../hooks/useDistinguishedCountsAt'
 
 vi.mock('../../utils/csvExport', () => ({ exportSnapshotDiff: vi.fn() }))
 vi.mock('../../hooks/useDistrictData')
+// The month-end revision index (#2475) is its own seam; these tests are about a
+// district with plain dated snapshots, so the points ARE the dates.
+vi.mock('../../hooks/useRevisionPoints', async () => {
+  const { buildSnapshotPoints } = await import('../../utils/snapshotPoints')
+  return {
+    useRevisionPoints: (
+      _districtId: string | undefined,
+      dates: readonly import('../../types/snapshotDate').SnapshotDate[]
+    ) => ({ ...buildSnapshotPoints(dates, null, ''), isLoading: false }),
+  }
+})
 vi.mock('../../hooks/useDistricts')
 // The confirmed Distinguished count (#2438) is read from the dated rankings
 // row; a seam here, with no row unless a test names one.
