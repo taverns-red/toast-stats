@@ -33,6 +33,7 @@ import type {
   DistrictClubPayments,
   GlobalRollupInput,
 } from './globalRollup.js'
+import type { DistinguishedCountBasis } from '../analytics/distinguishedCounts.js'
 import type {
   RegionRollupClub,
   RegionRollupDistrictInput,
@@ -210,13 +211,16 @@ export function readRegionRollupInput(snapshotDir: string): {
   rankings: DistrictRanking[]
   /** The rankings' own `metadata.snapshotId` (often the collection date). */
   rankingsSnapshotId: string | null
+  /** The rankings' `metadata.distinguishedBasis` (#2560); absent in old files. */
+  distinguishedBasis?: DistinguishedCountBasis
   districts: RegionRollupDistrictInput[]
 } {
   const rankings = readSnapshotRankings(snapshotDir)
   const rankingsRaw = JSON.parse(
     readFileSync(join(snapshotDir, 'all-districts-rankings.json'), 'utf-8')
-  ) as { metadata?: { snapshotId?: unknown } }
+  ) as { metadata?: { snapshotId?: unknown; distinguishedBasis?: unknown } }
   const snapshotId = rankingsRaw.metadata?.snapshotId
+  const basis = rankingsRaw.metadata?.distinguishedBasis
 
   const districts: RegionRollupDistrictInput[] = []
   for (const fileName of readdirSync(snapshotDir).sort()) {
@@ -279,6 +283,9 @@ export function readRegionRollupInput(snapshotDir: string): {
   return {
     rankings,
     rankingsSnapshotId: typeof snapshotId === 'string' ? snapshotId : null,
+    ...((basis === 'ti-recognised' || basis === 'april-renewals') && {
+      distinguishedBasis: basis,
+    }),
     districts,
   }
 }
