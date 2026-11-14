@@ -71,8 +71,8 @@ export const ConsentBanner: React.FC<{ immediate?: boolean }> = ({
   const ready = useAfterLoadAndIdle(immediate)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const reopened = state.level !== null && state.settingsOpen
-  // Phone (D10, #2674): first visit shows one line, Keep all, Keep none and
-  // Details; Details reveals the rest. A reopened banner is the user asking
+  // Phone (D10, #2674): first visit shows one line, Keep none, Details and
+  // Keep all; Details reveals the rest (Keep minimal, the link). A reopened banner is the user asking
   // to change their choice, so it opens in full.
   const [detailsOpen, setDetailsOpen] = useState(false)
   const expanded = detailsOpen || reopened
