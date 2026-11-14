@@ -127,6 +127,52 @@ describe('useNearViewport', () => {
     expect(div.getAttribute('data-near')).toBe('false')
   })
 
+  // #2575 (review): a real IntersectionObserver queues an entry only on first
+  // observe or when intersection/threshold changes. A rotor jump from below
+  // the band straight to above it changes neither, so no callback ever fires
+  // after the first one. Only a scroll check can see it.
+  it('catches a below-to-above jump that IntersectionObserver never reports (#2575)', () => {
+    const { container } = render(<Probe />)
+    const div = container.firstElementChild!
+    const rect = vi.spyOn(div, 'getBoundingClientRect')
+    // First observe: below the band, not intersecting (the only entry real IO queues).
+    rect.mockReturnValue({ top: 3000, bottom: 3600 } as DOMRect)
+    act(() =>
+      observers[0]!.callback(
+        [
+          {
+            isIntersecting: false,
+            target: div,
+            boundingClientRect: { top: 3000, bottom: 3600 },
+            rootBounds: { top: -600, bottom: 1400 },
+          } as IntersectionObserverEntry,
+        ],
+        {} as IntersectionObserver
+      )
+    )
+    expect(div.getAttribute('data-near')).toBe('false')
+
+    // The jump: the element is now far above the band. No IO callback follows.
+    rect.mockReturnValue({ top: -5000, bottom: -4400 } as DOMRect)
+    act(() => {
+      window.dispatchEvent(new Event('scroll'))
+    })
+    expect(div.getAttribute('data-near')).toBe('true')
+  })
+
+  it('a scroll that leaves the element below the band keeps it false', () => {
+    const { container } = render(<Probe />)
+    const div = container.firstElementChild!
+    vi.spyOn(div, 'getBoundingClientRect').mockReturnValue({
+      top: 4000,
+      bottom: 4600,
+    } as DOMRect)
+    act(() => {
+      window.dispatchEvent(new Event('scroll'))
+    })
+    expect(div.getAttribute('data-near')).toBe('false')
+  })
+
   it('stays false without IntersectionObserver (the SVG stays)', () => {
     vi.stubGlobal('IntersectionObserver', undefined)
     const { container } = render(<Probe />)
