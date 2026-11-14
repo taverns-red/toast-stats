@@ -106,6 +106,26 @@ describe('no --rt-stats accent outside the brand tokens file (#2080)', () => {
     expect('gap: var(--rt-space-4);'.match(FORBIDDEN)).toBeNull()
   })
 
+  // #2630 — `--rt-warn` is the same amber (#D4873F) as `--rt-stats` and was
+  // never policed. Every --rt-* colour token the brand file declares must be
+  // caught, except the house red.
+  it('polices every --rt-* colour token except the house red (#2630)', () => {
+    const brand = stripComments(
+      readFileSync(join(srcDir, 'styles/tokens/rt-brand-v1.css'), 'utf8')
+    )
+    const colourTokens = [
+      ...brand.matchAll(
+        /^\s*(--rt-[\w-]+)\s*:\s*(?:#[0-9a-f]{3,8}|rgba?\()/gim
+      ),
+    ].map(m => m[1] as string)
+    expect(colourTokens).toContain('--rt-warn')
+    const unpoliced = colourTokens.filter(
+      t =>
+        t !== '--rt-red' && t !== '--rt-red-dk' && !`var(${t})`.match(FORBIDDEN)
+    )
+    expect(unpoliced).toEqual([])
+  })
+
   it('no component, page or stylesheet uses it', () => {
     const hits = findAccentUses(walk(srcDir))
     expect(hits, hits.join('\n')).toEqual([])
