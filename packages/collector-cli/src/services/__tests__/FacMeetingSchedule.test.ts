@@ -1652,6 +1652,21 @@ describe('parseMeetingSchedule (#2627) — gap 8: HHMM ranges', () => {
     ).toEqual([{ day: 'Thursday', cadence: 'weekly', startTime, endTime }])
   })
 
+  it.each([
+    ['Room 1200-1230'],
+    ['Suite 1200-1300'],
+    ['PO Box 1200-1300'],
+    ['Box 0700-0800'],
+    ['Tel 1200-1300'],
+    ['Ph: 1200-1300'],
+    ['# 1200-1300'],
+    ['#1200-1300'],
+  ])('%j (a label before the numbers) gives no time', meetingTime => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime })
+    ).toEqual([{ day: 'Thursday', cadence: 'weekly' }])
+  })
+
   it.each([['1200'], ['0700'], ['2019'], ['2019-2020'], ['1200-1900']])(
     '%j (a lone number, a year range or a long span) gives no time',
     meetingTime => {
