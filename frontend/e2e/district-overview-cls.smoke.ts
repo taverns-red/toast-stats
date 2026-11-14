@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/test'
+import { reportCls } from './helpers/clsReport'
 
 /* CLS budget for the district overview `/district/:id`, measured live (#1647).
  *
@@ -143,6 +144,7 @@ test.describe('district overview CLS on a cold load (#1647)', () => {
           await page.waitForTimeout(4_000)
 
           const entries = await page.evaluate(() => window.__clsEntries ?? [])
+          reportCls(test.info(), `${path} @${vp.width}px${order.name}`, entries)
           const total = Number(
             entries.reduce((a, e) => a + e.value, 0).toFixed(5)
           )
