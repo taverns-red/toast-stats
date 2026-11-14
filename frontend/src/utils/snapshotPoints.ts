@@ -49,7 +49,7 @@ export function buildSnapshotPoints(
   dates: readonly SnapshotDate[],
   index: ReconciliationRevisionIndex | null | undefined,
   districtId: string,
-  _monthEndCollectionDate?: string | null
+  monthEndCollectionDate?: string | null
 ): SnapshotPointSet {
   const set: SnapshotPointSet = {
     points: [],
@@ -59,10 +59,19 @@ export function buildSnapshotPoints(
   }
   const latest = index?.revisions[index.revisions.length - 1]
   const applies = !!index && !!latest && dates.some(d => d === index.monthEnd)
+  // The newest revision is the plain month end only when the month end's
+  // metadata says it was collected on that revision's asOf (#2814). Omitted
+  // (undefined) skips the check; null (unreadable) fails it. When the check
+  // fails the collector refused a later closing run, so the month end holds
+  // data newer than the index records: it is its own newest point and every
+  // revision keeps its own label.
+  const aliased =
+    monthEndCollectionDate === undefined ||
+    monthEndCollectionDate === latest?.asOf
   const earlier = applies
-    ? index.revisions
-        .slice(0, -1)
-        .filter(r => r.successfulDistricts.includes(districtId))
+    ? (aliased ? index.revisions.slice(0, -1) : index.revisions).filter(r =>
+        r.successfulDistricts.includes(districtId)
+      )
     : []
 
   for (const date of dates) {
@@ -82,13 +91,18 @@ export function buildSnapshotPoints(
       set.groups[token] = heading
     }
     set.points.push({ date })
-    if (latest.closing) {
+    if (aliased) {
+      if (latest.closing) {
+        set.labels[date] =
+          `${formatDisplayDate(date)} · revised ${formatShortDate(latest.asOf)}`
+      }
+      // The newest revision is the plain month end, spelled either way.
+      set.aliases[pointToken({ date, asOf: latest.asOf })] = date
+    } else if (monthEndCollectionDate) {
       set.labels[date] =
-        `${formatDisplayDate(date)} · revised ${formatShortDate(latest.asOf)}`
+        `${formatDisplayDate(date)} · revised ${formatShortDate(monthEndCollectionDate)}`
     }
     if (earlier.length > 0) set.groups[date] = heading
-    // The newest revision is the plain month end, spelled either way.
-    set.aliases[pointToken({ date, asOf: latest.asOf })] = date
   }
   return set
 }

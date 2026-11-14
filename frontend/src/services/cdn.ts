@@ -991,11 +991,19 @@ export async function fetchCdnRevisionIndex(
   return parsed.data
 }
 
-/** Stub (#2814 red): the real read lands with the fix. */
+/**
+ * The `collectionDate` a snapshot's `metadata.json` records (#2814): the asOf
+ * the data under `snapshots/<date>/` was collected on. Resolves `null` when
+ * the file or field is missing, so a bad read never throws.
+ */
 export async function fetchCdnSnapshotCollectionDate(
-  _date: SnapshotDate
+  date: SnapshotDate
 ): Promise<string | null> {
-  return null
+  const res = await fetch(`${cdnBaseUrl()}/snapshots/${date}/metadata.json`)
+  if (!res.ok) return null
+  recordCdnResponse(res)
+  const body = (await res.json()) as { collectionDate?: unknown }
+  return typeof body.collectionDate === 'string' ? body.collectionDate : null
 }
 
 /**
