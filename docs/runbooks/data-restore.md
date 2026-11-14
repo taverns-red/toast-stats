@@ -185,29 +185,43 @@ back the `soft_delete_time` chain below to the bad run's promote time.
 ### 2. Plan the restore (read)
 
 For each path: the generation the bad run displaced is the soft-deleted one
-whose `soft_delete_time` equals the live object's `creation_time`. A path
-with no such generation was **new** in the bad run (for example a new date
-directory) and is removed instead of restored.
+whose `softDeleteTime` equals the live object's `timeCreated`.
+`scripts/plan-data-restore.ts` (logic and tests in
+`scripts/lib/dataRestorePlan.ts`, #2539) applies that rule to two saved
+listings and prints a plan: per object **restore** a named generation,
+**delete** (no copy: the bad run created it), **noop** (live object older
+than the bad run, so untouched) or **refuse** (copies exist but none
+matches, or two match: it never guesses). Several overwrites inside the bad
+window are walked back to the generation live before the run. It makes no
+GCS call itself.
+
+`--since` is when the bad run began promoting (the run's start time, from
+`gh run view $RUN`). Without that bound an untouched object with no
+soft-deleted copy would look like one the run created.
 
 ```bash
-: > "$WORK/restore.txt"; : > "$WORK/remove.txt"
-while read -r P; do
-  LIVE=$(gcloud storage objects describe "$PROD/$P" \
-           --format="value(creation_time)" 2>/dev/null) || continue
-  PREV=$(gcloud storage objects list "$PROD/$P" --soft-deleted \
-           --format="value(generation,soft_delete_time)" \
-         | awk -v t="$LIVE" '$2 == t {print $1}' | tail -1)
-  if [ -n "$PREV" ]; then echo "$PROD/$P#$PREV" >> "$WORK/restore.txt"
-  else echo "$PROD/$P" >> "$WORK/remove.txt"; fi
-done < "$WORK/paths.txt"
-wc -l "$WORK/restore.txt" "$WORK/remove.txt"
+SINCE=<ISO time the bad run began, e.g. 2026-11-08T10:00:00Z>
+# Reads. `ls` exits non-zero for a path with no live object (new in the run
+# is fine, deleted by the run is not listed): that is expected, keep going.
+sed "s#^#$PROD/#" "$WORK/paths.txt" > "$WORK/urls.txt"
+gcloud storage ls --json -I < "$WORK/urls.txt" > "$WORK/live.json"
+gcloud storage ls --soft-deleted --json -I < "$WORK/urls.txt" > "$WORK/soft.json"
+npx tsx scripts/plan-data-restore.ts --live "$WORK/live.json" \
+  --soft-deleted "$WORK/soft.json" --since "$SINCE" \
+  --paths "$WORK/paths.txt" --out "$WORK/plan.json"
 ```
 
-The match rule was checked read-only on 2026-11-08: for prod
-`v1/latest.json` (live `creation_time` 2026-11-08T10:12:23+0000) it picks
-generation 1794046302577993, the 11-07 daily's. Review both lists by hand. `remove.txt` should hold only objects the bad run
-created (typically one `snapshots/<date>/` directory). For **wrong
-removals** (shape 4) there is no live object: list them with
+The listing fields are those of the Cloud Storage JSON API object resource
+(`name`, `bucket`, `generation`, `timeCreated`, `softDeleteTime`,
+`hardDeleteTime`), nested under `metadata` in each `gcloud storage ls --json`
+entry ([Objects](https://docs.cloud.google.com/storage/docs/json_api/v1/objects)).
+stdout is the plan as JSON, stderr a count per action; exit 1 means at least
+one object was refused. Review `plan.json` by hand: `delete` entries should
+be only objects the bad run created (typically one `snapshots/<date>/`
+directory), and every `restore` names its generation and why. Copies soft-deleted
+under the earlier 30-day policy match like any other. A refused plan cannot
+be executed: fix the cause (or restore that object by hand) and re-plan.
+For **wrong removals** (shape 4) there is no live object: list them with
 `gcloud storage ls "$PROD/snapshots/<date>/**" --soft-deleted` and restore
 by generation, or use the bulk restore with the promote's time window.
 
@@ -227,10 +241,10 @@ STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 BACKUPS=gs://toast-stats-backups-ca
 BACKUP="$BACKUPS/restore-2492-$STAMP/prod"
 # WRITE — needs approval
-sed "s#^$PROD/##; s/#.*//" "$WORK/restore.txt" "$WORK/remove.txt" \
-  | while read -r P; do echo "$PROD/$P $BACKUP/$P"; done \
-  | while read -r SRC DST; do gcloud storage cp "$SRC" "$DST"; done
-gcloud storage ls -r "$BACKUP/**" | wc -l   # equals the two lists' total
+jq -r '.entries[] | select(.action == "restore" or .action == "delete") | .name' \
+  "$WORK/plan.json" > "$WORK/changing.txt"
+while read -r P; do gcloud storage cp "$PROD/$P" "$BACKUP/$P"; done < "$WORK/changing.txt"
+gcloud storage ls -r "$BACKUP/**" | wc -l   # equals: wc -l < "$WORK/changing.txt"
 ```
 
 Record `$BACKUP` in the incident issue: `$STAMP` is empty in a new shell,
@@ -251,19 +265,24 @@ Reverse of the promote's order, so prod never names an object it lacks:
 then globals and dates, then remove what the bad run created.
 
 ```bash
-# WRITE — needs approval. Entry points first.
-grep -E '/v1/(latest|dates)\.json#' "$WORK/restore.txt" \
-  | gcloud storage restore -I
-date -u +%FT%TZ   # entry points restored at
-grep -vE '/v1/(latest|dates)\.json#' "$WORK/restore.txt" \
-  | gcloud storage restore -I
+# WRITE — needs approval. Applies the reviewed plan: restores (entry points
+# first), then deletes. Re-lists, re-plans and refuses unless the fresh plan
+# equals plan.json (an object changed since you reviewed it, or a refused
+# entry is in it), and then runs nothing.
+gcloud storage ls --json -I < "$WORK/urls.txt" > "$WORK/live.json"
+gcloud storage ls --soft-deleted --json -I < "$WORK/urls.txt" > "$WORK/soft.json"
+npx tsx scripts/plan-data-restore.ts --execute --plan "$WORK/plan.json" \
+  --live "$WORK/live.json" --soft-deleted "$WORK/soft.json"
 date -u +%FT%TZ   # all restored at
-# Objects the bad run created (soft-deleted, so reversible).
-gcloud storage rm -I < "$WORK/remove.txt"
 ```
 
+Each restore is `gcloud storage restore --allow-overwrite gs://…#GENERATION`
+and each delete `gcloud storage rm gs://…#LIVE_GENERATION` (the exact
+generation the plan saw), so a delete cannot remove a newer object. Deleted
+and displaced generations are soft-deleted, so both are reversible.
+
 `gcloud storage restore` overwrites the live object and soft-deletes it (see
-above). If a date that `remove.txt` empties is still named by **staging's**
+above). If a date that the plan's `delete` entries empty is still named by **staging's**
 `v1/dates.json`, the next promote holds its globals ("no dangling index
 entries", `manifestPromotion.ts`) until that date is re-derived or pruned
 from staging; plan that fix with the restore.
@@ -374,8 +393,9 @@ CDN_BASE_URL=$CDN BASE_URL=https://staging-toast-stats.web.app \
   SMOKE_RENDER=off SMOKE_WINDOW_SECONDS=120 npx tsx scripts/hosting-smoke.ts
 date -u +%FT%TZ   # detected at
 
-# 5. Plan (read): the procedure's step 2 loop against $STAGING; both paths
-#    should land in restore.txt with the generations recorded in step 1.
+# 5. Plan (read): procedure step 2 against $STAGING (list both paths with
+#    ls --json, --since = the break time from step 3); both should come out
+#    as `restore` with the generations recorded in step 1.
 
 # 6. Restore (WRITE), pointer first, then purge the staging CDN (WRITE).
 date -u +%FT%TZ   # restore started
@@ -422,8 +442,9 @@ backup expires under the backup bucket's 90-day rule; step 8's "expires with
   `toast-stats-backups-ca` in `NORTHAMERICA-NORTHEAST1`, 90-day retention,
   7-day soft delete. Cost is estimated under CAD 0.05/month for sub-GB
   backups. Ron approved the spend.
-- Should the restore plan be a script (`scripts/plan-data-restore.ts`) with
-  tests, rather than the shell loop above, before it is used in anger?
+- ~~Should the restore plan be a script with tests?~~ Done (#2539):
+  `scripts/plan-data-restore.ts`. Not yet run against a real bucket: its
+  first use is the staging drill.
 - 14 days of prod soft delete is the whole restore window. Enough, given the
   freshness and schema canaries run daily?
 
