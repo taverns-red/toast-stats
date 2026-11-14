@@ -213,3 +213,45 @@ describe('DistrictChangesPage — outside reconciliation (#2475 regression)', ()
     expect(lastPair()).toEqual({ from: '2026-11-04', to: '2026-11-05' })
   })
 })
+
+/* #2814 — an @asOf link is only understood once the revision index has loaded.
+   Until then the page must not fetch (or show) the default pair. */
+describe('DistrictChangesPage — @asOf link while the index loads (#2814)', () => {
+  function usePointsLoading() {
+    mockedPoints.mockReturnValue({
+      ...buildSnapshotPoints(DATES, null, '61'),
+      isLoading: true,
+    })
+  }
+
+  it('fetches no diff for an @ link before the index resolves', () => {
+    usePointsLoading()
+    renderPage('/district/61/changes?to=2026-10-31@2026-11-02')
+    for (const call of mockedDiff.mock.calls) {
+      expect(call[1]).toBeUndefined()
+      expect(call[2]).toBeUndefined()
+    }
+  })
+
+  it('holds for @ in the from param too, and shows the loading state', () => {
+    usePointsLoading()
+    renderPage('/district/61/changes?from=2026-10-31@2026-11-02')
+    for (const call of mockedDiff.mock.calls) {
+      expect(call[1]).toBeUndefined()
+      expect(call[2]).toBeUndefined()
+    }
+    expect(screen.queryByTestId('changes-error')).toBeNull()
+  })
+
+  it('a link without @ still fetches the default pair while the index loads', () => {
+    usePointsLoading()
+    renderPage('/district/61/changes?from=2026-10-29&to=2026-10-30')
+    expect(lastPair()).toEqual({ from: '2026-10-29', to: '2026-10-30' })
+  })
+
+  it('resolves the @ link once the index has loaded', () => {
+    usePoints(INDEX)
+    renderPage('/district/61/changes?from=2026-10-30&to=2026-10-31@2026-11-02')
+    expect(lastPair().to).toEqual({ date: '2026-10-31', asOf: '2026-11-02' })
+  })
+})
