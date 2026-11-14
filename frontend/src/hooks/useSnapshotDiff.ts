@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchCdnDistrictSnapshot } from '../services/cdn'
+import {
+  fetchCdnDistrictSnapshot,
+  fetchCdnRevisionDistrictSnapshot,
+} from '../services/cdn'
 import { diffSnapshots } from '@taverns-red/analytics-core'
 import type {
   PerDistrictData,
@@ -12,6 +15,7 @@ import {
   type ClubStatusTotals,
 } from '../utils/diffClubStatus'
 import type { SnapshotDate } from '../types/snapshotDate'
+import { pointToken, type SnapshotPoint } from '../utils/snapshotPoints'
 
 /**
  * Resolve the default "since the previous recorded date" pair from a district's
@@ -59,18 +63,40 @@ export type SnapshotDiffView = SnapshotDiff & {
  * while `options.enabled` is false (#2740: the clubs route fetches the pair
  * only once the diff is needed; every other caller keeps the eager default).
  */
+/**
+ * One side of the pair: a dated snapshot, or a month-end reconciliation
+ * revision (`snapshots/<monthEnd>/revisions/<asOf>/`, #2475). Both are the same
+ * `PerDistrictData`, so the diff engine below never learns which it got.
+ */
+function fetchPoint(p: SnapshotDate | SnapshotPoint, districtId: string) {
+  if (typeof p === 'string' || !p.asOf) {
+    return fetchCdnDistrictSnapshot<PerDistrictData>(
+      typeof p === 'string' ? p : p.date,
+      districtId
+    )
+  }
+  return fetchCdnRevisionDistrictSnapshot<PerDistrictData>(
+    p.date,
+    p.asOf,
+    districtId
+  )
+}
+
+const keyOf = (p: SnapshotDate | SnapshotPoint | undefined) =>
+  typeof p === 'object' ? pointToken(p) : p
+
 export function useSnapshotDiff(
   districtId: string | undefined,
-  from: SnapshotDate | undefined,
-  to: SnapshotDate | undefined,
+  from: SnapshotDate | SnapshotPoint | undefined,
+  to: SnapshotDate | SnapshotPoint | undefined,
   options: { enabled?: boolean } = {}
 ) {
   return useQuery<SnapshotDiffView, Error>({
-    queryKey: ['snapshot-diff', districtId, from, to],
+    queryKey: ['snapshot-diff', districtId, keyOf(from), keyOf(to)],
     queryFn: async () => {
       const [fromSnap, toSnap] = await Promise.all([
-        fetchCdnDistrictSnapshot<PerDistrictData>(from!, districtId!),
-        fetchCdnDistrictSnapshot<PerDistrictData>(to!, districtId!),
+        fetchPoint(from!, districtId!),
+        fetchPoint(to!, districtId!),
       ])
       // Club-scoped diff (analytics-core engine) + area/division recognition
       // transitions and club operational-status transitions (both frontend

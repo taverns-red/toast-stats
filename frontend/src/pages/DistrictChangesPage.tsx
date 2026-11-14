@@ -8,6 +8,7 @@ import {
   type SnapshotDiffView,
 } from '../hooks/useSnapshotDiff'
 import { useUrlDatePair } from '../hooks/useUrlDatePair'
+import { useRevisionPoints } from '../hooks/useRevisionPoints'
 import { useUrlStringSet } from '../hooks/useUrlStringSet'
 import { useUrlState } from '../hooks/useUrlState'
 import { useTransferCounterparts } from '../hooks/useTransferCounterparts'
@@ -26,6 +27,8 @@ import ErrorBoundary from '../components/ErrorBoundary'
 import { ChangeGroup } from '../components/ChangeGroup'
 import { ExportButton } from '../components/ExportButton'
 import { exportSnapshotDiff } from '../utils/csvExport'
+import { pointToken, type SnapshotPoint } from '../utils/snapshotPoints'
+import type { SnapshotDate } from '../types/snapshotDate'
 import type {
   DiffEvent,
   DiffEventCategory,
@@ -274,7 +277,38 @@ const DistrictChangesPage: React.FC = () => {
     districtId || ''
   )
   const dates = useMemo(() => cachedDates?.dates ?? [], [cachedDates?.dates])
-  const { from, to, setFrom, setTo, setPair } = useUrlDatePair(dates)
+  // The date list the picker offers is POINTS (#2475): the dated snapshots plus,
+  // while a month end is being reconciled, its earlier revisions. A point is a
+  // URL token (`2026-10-31`, or `2026-10-31@2026-11-02` for a revision) and
+  // this page resolves tokens to points once, so every consumer below reads the
+  // same pair (R3). With no revisions the tokens ARE the dates.
+  const pointSet = useRevisionPoints(districtId, dates)
+  const tokens = useMemo(
+    () => pointSet.points.map(pointToken),
+    [pointSet.points]
+  )
+  const pointByToken = useMemo(
+    () => new Map(pointSet.points.map(p => [pointToken(p), p])),
+    [pointSet.points]
+  )
+  const { from, to, setFrom, setTo, setPair } = useUrlDatePair<string>(tokens, {
+    aliases: pointSet.aliases,
+  })
+  /** What the diff hook fetches: the plain date, or the revision point. */
+  const diffArg = (
+    token: string | undefined
+  ): SnapshotDate | SnapshotPoint | undefined => {
+    const p = token ? pointByToken.get(token) : undefined
+    return p?.asOf ? p : p?.date
+  }
+  /** The dated snapshot a per-date file (rankings, analytics) exists for. Not
+   *  a revision: those files are not kept per revision in phase 1. */
+  const datedSnapshot = (
+    token: string | undefined
+  ): SnapshotDate | undefined => {
+    const p = token ? pointByToken.get(token) : undefined
+    return p?.asOf ? undefined : p?.date
+  }
 
   // Change-groups are open by default; ?expandChanges lists the categories the
   // user has COLLAPSED (so an all-default page keeps a clean URL). The page owns
@@ -290,16 +324,21 @@ const DistrictChangesPage: React.FC = () => {
   // invalid shape gets its own explicit prompt (R17) and skips the fetch —
   // from === to would diff to an all-zero "nothing changed" digest, and
   // from > to would render reversed (negative) deltas under a "what changed"
-  // header. Dates are ISO YYYY-MM-DD, so string comparison is chronological.
+  // header. Order is the points' order (dates, with a month end's revisions
+  // before it), not string order: `2026-10-31@…` > `2026-10-31` as text.
   const sameDate = !!from && !!to && from === to
-  const reversed = !!from && !!to && from > to
+  const reversed = !!from && !!to && tokens.indexOf(from) > tokens.indexOf(to)
   const invalidPair = sameDate || reversed
 
   const {
     data: diff,
     isLoading: diffLoading,
     isError,
-  } = useSnapshotDiff(districtId, from, invalidPair ? undefined : to)
+  } = useSnapshotDiff(
+    districtId,
+    diffArg(from),
+    invalidPair ? undefined : diffArg(to)
+  )
 
   // ?club= narrows the list to one club's events (#2452) — the club page's
   // Recent changes card links here. One more step in the pipeline (R11):
@@ -338,18 +377,21 @@ const DistrictChangesPage: React.FC = () => {
   // that date's own rankings file. Skipped for an invalid pair, like the diff.
   const fromRanking = useDistrictRanking(
     districtId,
-    invalidPair ? undefined : from
+    invalidPair ? undefined : datedSnapshot(from)
   )
-  const toRanking = useDistrictRanking(districtId, invalidPair ? undefined : to)
+  const toRanking = useDistrictRanking(
+    districtId,
+    invalidPair ? undefined : datedSnapshot(to)
+  )
   // The same two dates' analytics `distinguishedCounts` (#2601): confirmed
   // first, and the only source of provisional.
   const fromCounts = useDistinguishedCountsAt(
     districtId,
-    invalidPair ? undefined : from
+    invalidPair ? undefined : datedSnapshot(from)
   )
   const toCounts = useDistinguishedCountsAt(
     districtId,
-    invalidPair ? undefined : to
+    invalidPair ? undefined : datedSnapshot(to)
   )
 
   if (!districtId) return null
@@ -386,18 +428,20 @@ const DistrictChangesPage: React.FC = () => {
                     questions in one tap, and the raw pickers below stay for the
                     arbitrary pair. Presets write BOTH ends through setPair —
                     one navigation, so no half-pair URL is ever rendered. */}
-                <DatePairPresetChips
+                <DatePairPresetChips<string>
                   dates={dates}
                   from={from}
                   to={to}
                   onSelect={setPair}
                 />
                 <DatePairPicker
-                  dates={dates}
+                  dates={tokens}
                   from={from}
                   to={to}
                   onFromChange={setFrom}
                   onToChange={setTo}
+                  labelFor={token => pointSet.labels[token] ?? fmtDate(token)}
+                  groupFor={token => pointSet.groups[token]}
                 />
               </div>
             )}
@@ -462,8 +506,9 @@ const DistrictChangesPage: React.FC = () => {
                     className="district-changes__headline"
                     data-testid="changes-headline"
                   >
-                    Changes for {districtName} from {fmtDate(diff.from.date)} to{' '}
-                    {fmtDate(diff.to.date)}
+                    Changes for {districtName} from{' '}
+                    {(from && pointSet.labels[from]) ?? fmtDate(diff.from.date)}{' '}
+                    to {(to && pointSet.labels[to]) ?? fmtDate(diff.to.date)}
                     {diff.dayCount > 0 &&
                       ` · ${diff.dayCount} day${diff.dayCount === 1 ? '' : 's'}`}
                   </p>

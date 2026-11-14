@@ -13,6 +13,14 @@ import { previousRecordedDate } from './useSnapshotDiff'
  * previous recorded date (`[-2]`), `to` = latest (`[-1]`) — so an empty URL
  * reproduces the default digest exactly.
  *
+ * The list may hold month-end reconciliation revision tokens (`2026-10-31@2026-11-02`,
+ * #2475): an `@asOf` is honoured only when it is in the list or is an alias
+ * (the newest revision, spelled with its asOf, is the plain month end);
+ * anything else falls back to the default like any other unknown value.
+ * During reconciliation the last two tokens are the previous revision and the
+ * latest, so the default pair is the daily move; after rollover the last two
+ * are dated snapshots again.
+ *
  * The page owns this pair and passes `from`/`to` down as props (R3); the diff
  * hook never re-derives them from response data.
  *
@@ -24,7 +32,8 @@ import { previousRecordedDate } from './useSnapshotDiff'
  * @see docs/design/what-changed-feature.md §5, §4
  */
 export function useUrlDatePair<T extends string>(
-  dates: readonly T[]
+  dates: readonly T[],
+  options: { aliases?: Readonly<Record<string, T>> } = {}
 ): {
   from: T | undefined
   to: T | undefined
@@ -41,8 +50,16 @@ export function useUrlDatePair<T extends string>(
 
   // A URL value wins only if it's a date this district actually recorded;
   // otherwise fall back to the Phase-1 default for that side.
-  const from = dates.find(d => d === urlFrom) ?? defaultPair?.from
-  const to = dates.find(d => d === urlTo) ?? defaultPair?.to
+  const aliases = options.aliases
+  const resolve = (raw: string | null): T | undefined =>
+    dates.find(d => d === raw) ??
+    (raw !== null &&
+    aliases &&
+    Object.prototype.hasOwnProperty.call(aliases, raw)
+      ? aliases[raw]
+      : undefined)
+  const from = resolve(urlFrom) ?? defaultPair?.from
+  const to = resolve(urlTo) ?? defaultPair?.to
 
   // One key's worth of the write policy, applied to a params object the caller
   // owns — so a single navigation can apply it to BOTH keys (see setPair).

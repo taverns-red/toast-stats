@@ -18,6 +18,17 @@ import { useDistinguishedCountsAt } from '../../hooks/useDistinguishedCountsAt'
 
 vi.mock('../../utils/csvExport', () => ({ exportSnapshotDiff: vi.fn() }))
 vi.mock('../../hooks/useDistrictData')
+// The month-end revision index (#2475) is its own seam; these tests are about a
+// district with plain dated snapshots, so the points ARE the dates.
+vi.mock('../../hooks/useRevisionPoints', async () => {
+  const { buildSnapshotPoints } = await import('../../utils/snapshotPoints')
+  return {
+    useRevisionPoints: (
+      _districtId: string | undefined,
+      dates: readonly import('../../types/snapshotDate').SnapshotDate[]
+    ) => ({ ...buildSnapshotPoints(dates, null, ''), isLoading: false }),
+  }
+})
 vi.mock('../../hooks/useDistricts')
 // The confirmed Distinguished count (#2438) is read from the dated rankings
 // row; a seam here, with no row unless a test names one.
@@ -55,6 +66,10 @@ const noCounterparts = (
 
 const mockedDates = vi.mocked(useDistrictCachedDates)
 const mockedDiff = vi.mocked(useSnapshotDiff)
+// The page may hand the diff hook a revision point (#2475); these tests pass
+// plain dates, so echo the date.
+const dateOf = (p: string | { date: string }) =>
+  typeof p === 'string' ? p : p.date
 const mockedDistricts = vi.mocked(useDistricts)
 
 function renderPage(initialEntry = '/district/61/changes') {
@@ -720,7 +735,10 @@ describe('DistrictChangesPage — time-window preset chips (#1462)', () => {
         ({
           data:
             from && to
-              ? diffFixture({ from: { date: from }, to: { date: to } })
+              ? diffFixture({
+                  from: { date: dateOf(from) },
+                  to: { date: dateOf(to) },
+                })
               : undefined,
           isLoading: false,
           isError: false,
@@ -1362,7 +1380,10 @@ describe('DistrictChangesPage club filter (#2452)', () => {
         ({
           data:
             from && to
-              ? diffFixture({ from: { date: from }, to: { date: to } })
+              ? diffFixture({
+                  from: { date: dateOf(from) },
+                  to: { date: dateOf(to) },
+                })
               : undefined,
           isLoading: false,
           isError: false,

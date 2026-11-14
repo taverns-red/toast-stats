@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { formatDisplayDate } from '../utils/dateFormatting'
 
 /* From/To date-pair picker for the "What Changed" digest (#794, epic #797
@@ -20,6 +21,10 @@ export interface DatePairPickerProps<T extends string = string> {
   to: T | undefined
   onFromChange: (date: T) => void
   onToChange: (date: T) => void
+  /** Display label for an option; defaults to the formatted date. */
+  labelFor?: (value: T) => string
+  /** Group heading for an option (month-end revisions share one). */
+  groupFor?: (value: T) => string | undefined
 }
 
 // min-h-[44px]: the WCAG 2.5.5 / handoff 44px touch-target floor (#886, epic
@@ -44,33 +49,77 @@ const CHIP_SURFACE =
 
 const CHIP_BASE = `${CHIP_LAYOUT} ${CHIP_SURFACE}`
 
+/**
+ * Newest first. An option is a date, or `date@asOf` for a month-end
+ * reconciliation revision (#2475): a month end's plain entry (the newest
+ * revision) leads its older revisions, which run newest to oldest.
+ */
+function newestFirst(a: string, b: string): number {
+  const [dateA = '', asOfA] = a.split('@')
+  const [dateB = '', asOfB] = b.split('@')
+  if (dateA !== dateB) return dateB.localeCompare(dateA)
+  if (asOfA === undefined) return asOfB === undefined ? 0 : -1
+  if (asOfB === undefined) return 1
+  return asOfB.localeCompare(asOfA)
+}
+
 function DateChipSelect<T extends string>({
   testId,
   label,
   value,
   options,
   onChange,
+  labelFor,
+  groupFor,
 }: {
   testId: string
   label: string
   value: T | undefined
   options: readonly T[]
   onChange: (value: T) => void
+  labelFor: (value: T) => string
+  groupFor?: ((value: T) => string | undefined) | undefined
 }) {
+  const renderOption = (d: T) => (
+    <option key={d} value={d}>
+      {labelFor(d)}
+    </option>
+  )
+  // Revisions of one month end are adjacent, so a run of options sharing a
+  // group heading becomes one <optgroup>.
+  const rendered: ReactNode[] = []
+  for (let i = 0; i < options.length;) {
+    const group = groupFor?.(options[i]!)
+    if (group === undefined) {
+      rendered.push(renderOption(options[i]!))
+      i++
+      continue
+    }
+    const run: T[] = []
+    while (i < options.length && groupFor?.(options[i]!) === group) {
+      run.push(options[i]!)
+      i++
+    }
+    rendered.push(
+      <optgroup key={`group-${run[0]}`} label={group}>
+        {run.map(renderOption)}
+      </optgroup>
+    )
+  }
   return (
     <label
       data-testid={testId}
       className={`${CHIP_BASE} relative cursor-pointer hover:bg-gray-50 theme-dark:hover:bg-gray-700 focus-within:ring-2 focus-within:ring-tm-loyal-blue focus-within:ring-offset-1`}
     >
       <span className="text-gray-500">{label}</span>
-      <span>{value ? formatDisplayDate(value) : '—'}</span>
+      <span>{value ? labelFor(value) : '—'}</span>
       <span aria-hidden="true" className="text-[var(--ink-3)]">
         ▾
       </span>
       <select
         data-testid={`${testId}-select`}
         aria-label={
-          value ? `${label} date: ${formatDisplayDate(value)}` : `${label} date`
+          value ? `${label} date: ${labelFor(value)}` : `${label} date`
         }
         value={value ?? ''}
         onChange={e => {
@@ -84,11 +133,7 @@ function DateChipSelect<T extends string>({
         // min-height (Lesson 111). opacity-0 keeps it invisible.
         className="absolute inset-0 opacity-0 cursor-pointer appearance-none min-h-[44px]"
       >
-        {options.map(d => (
-          <option key={d} value={d}>
-            {formatDisplayDate(d)}
-          </option>
-        ))}
+        {rendered}
       </select>
     </label>
   )
@@ -100,9 +145,11 @@ export function DatePairPicker<T extends string>({
   to,
   onFromChange,
   onToChange,
+  labelFor = formatDisplayDate,
+  groupFor,
 }: DatePairPickerProps<T>) {
   // Newest first in the dropdown — the recent dates are the common pick.
-  const sorted = [...dates].sort((a, b) => b.localeCompare(a))
+  const sorted = [...dates].sort(newestFirst)
   return (
     <div
       role="group"
@@ -116,6 +163,8 @@ export function DatePairPicker<T extends string>({
         value={from}
         options={sorted}
         onChange={onFromChange}
+        labelFor={labelFor}
+        groupFor={groupFor}
       />
       <span aria-hidden="true" className="text-[var(--ink-3)]">
         →
@@ -126,6 +175,8 @@ export function DatePairPicker<T extends string>({
         value={to}
         options={sorted}
         onChange={onToChange}
+        labelFor={labelFor}
+        groupFor={groupFor}
       />
     </div>
   )

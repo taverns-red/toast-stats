@@ -45,6 +45,7 @@ import {
   RegionRollupsReaderSchema,
   regionMembershipSeriesPath,
   REPORTS_ROLLUPS_FILE_NAME,
+  ReconciliationRevisionIndexSchema,
   ReportsRollupsReaderSchema,
   SUSPENDED_CLUBS_FILE_NAME,
   SuspendedClubsReaderSchema,
@@ -59,6 +60,7 @@ import {
   type GlobalClubRace,
   type GlobalHistory,
   type GlobalTotals,
+  type ReconciliationRevisionIndex,
   type RegionMembershipSeries,
   type RegionRollups,
   type ReportsRollups,
@@ -948,6 +950,45 @@ export async function fetchCdnDistrictSnapshot<T>(
   districtId: string
 ): Promise<T> {
   return fetchFromCdn<T>(cdnSnapshotUrl(date, districtId))
+}
+
+/**
+ * Construct a CDN URL for one reconciliation revision of a district snapshot
+ * (`snapshots/<monthEnd>/revisions/<asOf>/district_<id>.json`, #2475).
+ */
+export function cdnRevisionSnapshotUrl(
+  date: SnapshotDate,
+  asOf: string,
+  districtId: string
+): string {
+  return `${cdnBaseUrl()}/snapshots/${date}/revisions/${asOf}/district_${districtId}.json`
+}
+
+/** Fetch one reconciliation revision of a district snapshot (#2475). */
+export async function fetchCdnRevisionDistrictSnapshot<T>(
+  date: SnapshotDate,
+  asOf: string,
+  districtId: string
+): Promise<T> {
+  return fetchFromCdn<T>(cdnRevisionSnapshotUrl(date, asOf, districtId))
+}
+
+/**
+ * Fetch a month end's revision index (#2475). Resolves `null` when there is
+ * none (the common case: most month ends were never reconciled live) or when
+ * it does not match the contract, so a bad file reads as "no revisions".
+ */
+export async function fetchCdnRevisionIndex(
+  monthEnd: string
+): Promise<ReconciliationRevisionIndex | null> {
+  const res = await fetch(
+    `${cdnBaseUrl()}/snapshots/${monthEnd}/revisions/index.json`
+  )
+  if (!res.ok) return null
+  recordCdnResponse(res)
+  const parsed = ReconciliationRevisionIndexSchema.safeParse(await res.json())
+  if (!parsed.success || parsed.data.monthEnd !== monthEnd) return null
+  return parsed.data
 }
 
 /**
