@@ -1437,16 +1437,38 @@ describe('parseMeetingSchedule (#2617) — spelled-out French ordinals', () => {
   )
 })
 
-describe('parseMeetingSchedule (#2617) — "last" has no cadence', () => {
+// #2617 left "last" without a cadence; #2627 added "last" to weeksOfMonth.
+describe('parseMeetingSchedule (#2627) — "last" is a week of the month', () => {
   it.each([
     ['Last Thursday', '7 pm', 'Thursday', '19:00'],
     ['Last Thursday of the month', '7 pm', 'Thursday', '19:00'],
     ['dernier jeudi', '19h', 'Thursday', '19:00'],
     ['Le dernier jeudi du mois', '19h', 'Thursday', '19:00'],
-  ])('%j leaves the cadence out', (meetingDay, meetingTime, day, startTime) => {
-    expect(parseMeetingSchedule({ meetingDay, meetingTime })).toEqual([
-      { day, startTime },
+  ])(
+    '%j is monthly on the last week',
+    (meetingDay, meetingTime, day, startTime) => {
+      expect(parseMeetingSchedule({ meetingDay, meetingTime })).toEqual([
+        { day, cadence: 'monthly', weeksOfMonth: ['last'], startTime },
+      ])
+    }
+  )
+
+  it('"1st and last Thursday" is [1, "last"]', () => {
+    const entries = parseMeetingSchedule({
+      meetingDay: '1st and last Thursday',
+      meetingTime: '7 pm',
+    })
+    expect(entries).toEqual([
+      {
+        day: 'Thursday',
+        cadence: 'monthly',
+        weeksOfMonth: [1, 'last'],
+        startTime: '19:00',
+      },
     ])
+    expect(MeetingScheduleEntrySchema.safeParse(entries?.[0]).success).toBe(
+      true
+    )
   })
 })
 
@@ -1594,9 +1616,14 @@ describe('parseMeetingSchedule (#2617) — review: "last" only before a weekday'
     ['dernier jeudi', 'Thursday'],
     ['Thursday, last of the month', 'Thursday'],
     ['Jeudi, le dernier du mois', 'Thursday'],
-  ])('%j still has no cadence', (meetingDay, day) => {
+  ])('%j is monthly on the last week', (meetingDay, day) => {
     expect(parseMeetingSchedule({ meetingDay, meetingTime: '7 pm' })).toEqual([
-      { day, startTime: '19:00' },
+      {
+        day,
+        cadence: 'monthly',
+        weeksOfMonth: ['last'],
+        startTime: '19:00',
+      },
     ])
   })
 })
