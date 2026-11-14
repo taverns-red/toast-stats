@@ -343,7 +343,11 @@ export function describeMeetingEntry(e: MeetingScheduleEntry): string {
   else if (e.cadence === 'monthly')
     parts.push(
       e.weeksOfMonth?.length
-        ? `${e.weeksOfMonth.map(w => ORDINALS[w - 1] ?? `${w}th`).join(' & ')} of the month`
+        ? `${e.weeksOfMonth
+            .map(w =>
+              typeof w === 'number' ? (ORDINALS[w - 1] ?? `${w}th`) : String(w)
+            )
+            .join(' & ')} of the month`
         : 'Monthly'
     )
   if (e.mode) parts.push(MODE_TEXT[e.mode])
