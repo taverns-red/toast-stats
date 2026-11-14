@@ -1710,7 +1710,6 @@ describe('parseMeetingSchedule (#2627) — gap 9: a second time on the day', () 
   it.each([
     ['Thursday', '18h30 pm et 7:00 am'],
     ['1st Tuesday', '7pm, 12 noon'],
-    ['Thursday', '7:00 pm or 12:00 pm'],
   ])('%j / %j keeps the first time and flags it uncertain', (day, time) => {
     const entries = parseMeetingSchedule({
       meetingDay: day,

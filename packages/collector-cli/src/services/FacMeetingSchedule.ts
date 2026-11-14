@@ -997,6 +997,12 @@ export function parseMeetingSchedule(
         ? slots[index]
         : slots[0]) ?? {}
 
+  // Two or more times that pair with no day: only the first is published,
+  // so say it is not the whole story (#2627).
+  const uncertain =
+    !perDay && slots.length > 1 && slots.length !== days.length
+      ? true
+      : undefined
   const timeZone = timeZoneIn(source.meetingTime)
   const restricted = isRestricted(
     source.meetingDay,
@@ -1021,6 +1027,7 @@ export function parseMeetingSchedule(
             timeZone,
             mode: group.mode ?? defaultMode,
             restricted,
+            uncertain,
           })
         )
       }
@@ -1034,6 +1041,7 @@ export function parseMeetingSchedule(
           timeZone,
           mode: defaultMode,
           restricted,
+          uncertain,
         })
       )
     }
