@@ -547,7 +547,14 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
     [
       'Twice a month - Thursday - No guests',
       '6:45 - 8:15 p.m.',
-      [{ day: 'Thursday', startTime: '18:45', endTime: '20:15' }],
+      [
+        {
+          day: 'Thursday',
+          startTime: '18:45',
+          endTime: '20:15',
+          restricted: true,
+        },
+      ],
     ],
     [
       'most Mondays (check webpage)',

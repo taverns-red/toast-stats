@@ -919,6 +919,19 @@ function timeZoneIn(
   return zones.size === 1 ? [...zones][0] : undefined
 }
 
+/**
+ * The club says it is closed to guests: "No guests", "workers only",
+ * "members only", "by invitation", "closed meeting". Matched on folded
+ * text. A negation in front ("not members only") or a fee after ("no guest
+ * fee") is not a restriction.
+ */
+const RESTRICTED =
+  /(?<!\bnot\s)(?<!\bnot\s+for\s)\b(?:no\s+guests?\b(?!\s+fees?)|(?:members?|workers?|employees?|staff)\s+only\b|(?:by\s+)?invitation(?:\s+only)?\b|invite[\s-]only\b|closed\s+(?:club|meeting)s?\b|guests?\s+not\s+(?:allowed|permitted|welcome)\b|membres?\s+seulement\b|reserve\s+aux\s+membres\b|pas\s+d'invites?\b)/
+
+function isRestricted(...texts: (string | null | undefined)[]): boolean {
+  return texts.some(t => typeof t === 'string' && RESTRICTED.test(fold(t)))
+}
+
 /* ── Parser ────────────────────────────────────────────────────────── */
 
 export interface MeetingScheduleSource {
@@ -976,6 +989,13 @@ export function parseMeetingSchedule(
         : slots[0]) ?? {}
 
   const timeZone = timeZoneIn(source.meetingTime)
+  const restricted = isRestricted(
+    source.meetingDay,
+    source.meetingTime,
+    source.location
+  )
+    ? true
+    : undefined
 
   const entries: MeetingScheduleEntry[] = []
   days.forEach((day, index) => {
@@ -991,6 +1011,7 @@ export function parseMeetingSchedule(
             endTime,
             timeZone,
             mode: group.mode ?? defaultMode,
+            restricted,
           })
         )
       }
@@ -1003,6 +1024,7 @@ export function parseMeetingSchedule(
           endTime,
           timeZone,
           mode: defaultMode,
+          restricted,
         })
       )
     }
