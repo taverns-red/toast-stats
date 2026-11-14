@@ -1645,6 +1645,33 @@ describe('parseMeetingSchedule (#2627) — gap 11: time zone', () => {
   })
 })
 
+describe('parseMeetingSchedule (#2627) — gap 12: guest restriction', () => {
+  it.each([
+    ['Thursday', '7:00 pm - No guests', undefined],
+    ['Thursday - workers only', '7:00 pm', undefined],
+    ['Thursday', '7 pm (members only)', undefined],
+    ['Thursday', '7 pm', 'Closed meeting, by invitation'],
+    ['Thursday', '7 pm', 'Employees only'],
+    ['Jeudi, membres seulement', '19h', undefined],
+  ])('%j / %j / %j is restricted', (meetingDay, meetingTime, location) => {
+    const entries = parseMeetingSchedule({ meetingDay, meetingTime, location })
+    expect(entries?.[0]?.restricted).toBe(true)
+    expect(MeetingScheduleEntrySchema.safeParse(entries?.[0]).success).toBe(
+      true
+    )
+  })
+
+  it.each([
+    ['Thursday', '7 pm', 'Guests welcome'],
+    ['Thursday', '7 pm - everyone welcome, not members only', undefined],
+    ['Thursday', '7 pm', 'Library, Room 2'],
+    ['Thursday', '7 pm - no guests fee', undefined],
+  ])('%j / %j / %j is not restricted', (meetingDay, meetingTime, location) => {
+    const entries = parseMeetingSchedule({ meetingDay, meetingTime, location })
+    expect(entries?.[0]).not.toHaveProperty('restricted')
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
