@@ -59,6 +59,16 @@ describe('rollupDistinguished (#2580)', () => {
     expect(m.has('U')).toBe(false)
   })
 
+  it('reads an explicit null world or region as no figure, not zero (#2563)', () => {
+    const nulled = {
+      world: { distinguishedCounts: null },
+      regions: { '05': { distinguishedCounts: null } },
+      districts: {},
+    } as unknown as RegionRollups
+    expect(worldDistinguishedCounts(nulled)).toBeNull()
+    expect(regionDistinguishedCounts(nulled, '05')).toBeNull()
+  })
+
   it('returns nothing without a file', () => {
     expect(worldDistinguishedCounts(null)).toBeNull()
     expect(regionDistinguishedCounts(undefined, '05')).toBeNull()
