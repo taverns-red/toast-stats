@@ -1683,6 +1683,7 @@ describe('parseMeetingSchedule (#2627) — gap 11: time zone', () => {
     ['6pm-8pm PST', 'PST', '18:00', '20:00'],
     ['7:00 pm (ET)', 'ET', '19:00', undefined],
     ['19h00 UTC', 'UTC', '19:00', undefined],
+    ['EST 7-9 pm', 'EST', '19:00', '21:00'],
   ])('%j keeps the zone %s as written', (meetingTime, timeZone, start, end) => {
     const [entry] =
       parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime }) ?? []
@@ -1699,6 +1700,7 @@ describe('parseMeetingSchedule (#2627) — gap 11: time zone', () => {
     ['18h30 pm et 7:00 am'], // French "et" is "and", not Eastern Time
     ['7:00 pm EST / 6:00 pm PST'], // two zones: which one is not stated
     ['14h @ UTC-5'], // an offset, not a zone name
+    ['7:00 pm, PT Building'], // a place, not Pacific Time
   ])('%j has no time zone', meetingTime => {
     const [entry] =
       parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime }) ?? []
