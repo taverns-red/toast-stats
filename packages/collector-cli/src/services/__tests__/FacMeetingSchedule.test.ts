@@ -1706,6 +1706,39 @@ describe('parseMeetingSchedule (#2627) — gap 12: guest restriction', () => {
   })
 })
 
+describe('parseMeetingSchedule (#2627) — gap 9: a second time on the day', () => {
+  it.each([
+    ['Thursday', '18h30 pm et 7:00 am'],
+    ['1st Tuesday', '7pm, 12 noon'],
+    ['Thursday', '7:00 pm or 12:00 pm'],
+  ])('%j / %j keeps the first time and flags it uncertain', (day, time) => {
+    const entries = parseMeetingSchedule({
+      meetingDay: day,
+      meetingTime: time,
+    })
+    expect(entries?.[0]).toMatchObject({ uncertain: true })
+    expect(entries?.[0]?.startTime).toBeDefined()
+    expect(MeetingScheduleEntrySchema.safeParse(entries?.[0]).success).toBe(
+      true
+    )
+  })
+
+  it.each([
+    ['Thursday', '7:00 pm'],
+    ['Thursday', '7:00 pm - 9:00 pm'],
+    ['Tuesday and Thursday', '7pm & 12pm'], // one time per day
+    ['Saturday, Wednesday', 'Sat 9:15am - 11:45 | Wed 7pm - 9pm'],
+  ])('%j / %j is not flagged', (day, time) => {
+    const entries = parseMeetingSchedule({
+      meetingDay: day,
+      meetingTime: time,
+    })
+    for (const entry of entries ?? []) {
+      expect(entry).not.toHaveProperty('uncertain')
+    }
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
