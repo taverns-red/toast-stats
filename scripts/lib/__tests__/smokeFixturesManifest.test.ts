@@ -29,6 +29,8 @@ const NOT_READ_BY_ANY_SMOKE: Record<string, string> = {
   'config/club-index.json': 'header search only; no smoke types in it',
   'config/closed-club-names.json': 'closed-club lookups; no smoke reaches one',
   'config/divisions-areas-index.json': 'not requested by any smoke',
+  'snapshots/*/revisions/*/district_*.json':
+    'earlier month-end revisions (#2475); the newest revision is the plain month end, which the smokes read',
 }
 
 /** `a/${x}/b.json` and `a/{x}/b.json` both become `a/*\/b.json`. */

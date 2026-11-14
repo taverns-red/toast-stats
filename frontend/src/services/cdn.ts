@@ -46,8 +46,6 @@ import {
   regionMembershipSeriesPath,
   REPORTS_ROLLUPS_FILE_NAME,
   ReconciliationRevisionIndexSchema,
-  reconciliationRevisionDistrictPath,
-  reconciliationRevisionIndexPath,
   ReportsRollupsReaderSchema,
   SUSPENDED_CLUBS_FILE_NAME,
   SuspendedClubsReaderSchema,
@@ -963,7 +961,7 @@ export function cdnRevisionSnapshotUrl(
   asOf: string,
   districtId: string
 ): string {
-  return `${cdnBaseUrl()}/${reconciliationRevisionDistrictPath(date, asOf, districtId)}`
+  return `${cdnBaseUrl()}/snapshots/${date}/revisions/${asOf}/district_${districtId}.json`
 }
 
 /** Fetch one reconciliation revision of a district snapshot (#2475). */
@@ -984,7 +982,7 @@ export async function fetchCdnRevisionIndex(
   monthEnd: string
 ): Promise<ReconciliationRevisionIndex | null> {
   const res = await fetch(
-    `${cdnBaseUrl()}/${reconciliationRevisionIndexPath(monthEnd)}`
+    `${cdnBaseUrl()}/snapshots/${monthEnd}/revisions/index.json`
   )
   if (!res.ok) return null
   recordCdnResponse(res)
