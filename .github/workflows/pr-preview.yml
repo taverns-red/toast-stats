@@ -725,6 +725,22 @@ jobs:
             split: '5/5'
 
     steps:
+      - name: Alias generic fonts to Liberation
+        run: |
+          echo "DIAG before: $(fc-match monospace) | $(fc-match sans-serif)"
+          cat > /etc/fonts/local.conf <<'EOF'
+          <?xml version="1.0"?>
+          <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+          <fontconfig>
+            <alias binding="same"><family>monospace</family><prefer><family>Liberation Mono</family></prefer></alias>
+            <alias binding="same"><family>ui-monospace</family><prefer><family>Liberation Mono</family></prefer></alias>
+            <alias binding="same"><family>sans-serif</family><prefer><family>Liberation Sans</family></prefer></alias>
+            <alias binding="same"><family>system-ui</family><prefer><family>Liberation Sans</family></prefer></alias>
+          </fontconfig>
+          EOF
+          fc-cache -f
+          echo "DIAG after: $(fc-match monospace) | $(fc-match sans-serif)"
+
       - name: Checkout code
         uses: actions/checkout@v7
 
@@ -874,6 +890,22 @@ jobs:
     env:
       BASE_URL: ${{ needs.preview.outputs.url }}
     steps:
+      - name: Alias generic fonts to Liberation
+        run: |
+          echo "DIAG before: $(fc-match monospace) | $(fc-match sans-serif)"
+          cat > /etc/fonts/local.conf <<'EOF'
+          <?xml version="1.0"?>
+          <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+          <fontconfig>
+            <alias binding="same"><family>monospace</family><prefer><family>Liberation Mono</family></prefer></alias>
+            <alias binding="same"><family>ui-monospace</family><prefer><family>Liberation Mono</family></prefer></alias>
+            <alias binding="same"><family>sans-serif</family><prefer><family>Liberation Sans</family></prefer></alias>
+            <alias binding="same"><family>system-ui</family><prefer><family>Liberation Sans</family></prefer></alias>
+          </fontconfig>
+          EOF
+          fc-cache -f
+          echo "DIAG after: $(fc-match monospace) | $(fc-match sans-serif)"
+
       - name: Checkout code
         uses: actions/checkout@v7
 
