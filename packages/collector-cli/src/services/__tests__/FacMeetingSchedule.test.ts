@@ -1512,6 +1512,26 @@ describe('parseMeetingSchedule (#2617) — noon start, smaller hour end', () => 
   })
 })
 
+describe('parseMeetingSchedule (#2626) — a 12 AM start in a range is not stated', () => {
+  it.each([['12:00 am - 1:00'], ['12:00 AM - 1:00 AM'], ['12:00 AM - 1:00']])(
+    '%j gives no start or end time',
+    meetingTime => {
+      expect(
+        parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime })
+      ).toEqual([{ day: 'Thursday', cadence: 'weekly' }])
+    }
+  )
+
+  it.each([
+    ['12:00 - 1:00', '12:00', '13:00'],
+    ['12:00 pm - 1:00 pm', '12:00', '13:00'],
+  ])('%j is unchanged', (meetingTime, startTime, endTime) => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime })
+    ).toEqual([{ day: 'Thursday', cadence: 'weekly', startTime, endTime }])
+  })
+})
+
 describe('parseMeetingSchedule (#2617) — review: noon start guesses', () => {
   it.each([
     ['12:00 - 11:00', undefined],
