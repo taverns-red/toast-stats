@@ -32,6 +32,7 @@ interface Job {
   needs?: string | string[]
   'timeout-minutes'?: number | string
   'continue-on-error'?: boolean | string
+  permissions?: Record<string, string>
   steps?: Step[]
 }
 
@@ -59,6 +60,20 @@ describe('data-smoke job (#2538)', () => {
     const c = topLevelConjuncts(job!.if ?? '')
     expect(c).toContain("needs.pipeline.result == 'success'")
     expect(c).toContain("needs.pipeline.outputs.skip_promotion != 'true'")
+  })
+
+  it('runs only when something was promoted (held days stay quiet)', () => {
+    const flat = (job!.if ?? '').replace(/\s+/g, ' ')
+    // One parenthesised OR group, ANDed in at the top level (so it cannot be
+    // swallowed by, or turned into, a top-level OR).
+    expect(flat).toContain(
+      "&& (needs.pipeline.outputs.promoted == 'true' || needs.pipeline.outputs.promoted_dates != '')"
+    )
+    expect(topLevelConjuncts(job!.if ?? '')).toContain('⟨group⟩')
+  })
+
+  it('drops the workflow id-token and issues grants: contents read only', () => {
+    expect(job!.permissions).toEqual({ contents: 'read' })
   })
 
   it('runs the cdn-data probe from hosting-smoke.ts against cdn.taverns.red', () => {
@@ -92,6 +107,20 @@ describe('data-smoke job (#2538)', () => {
     expect(last.if).toContain(`steps.${steps[schemaIdx]!.id}.outputs.unhealthy`)
     expect(last.run).toContain('::error')
     expect(last.run).toMatch(/exit 1/)
+  })
+
+  it('names which check failed in the final error', () => {
+    const last = steps[steps.length - 1]!
+    const run = last.run ?? ''
+    expect(run).toMatch(/data probe/)
+    expect(run).toMatch(/Hosting probes/)
+    expect(run).toMatch(/schema check/)
+    expect(run).toContain('cdn-data')
+    // the smoke result file's failing probe names feed the message
+    expect(last.env?.['SMOKE_RESULT_FILE']).toContain(
+      `steps.${steps[smokeIdx]!.id}.outputs.result_file`
+    )
+    expect(run).not.toMatch(/the published data failed after/)
   })
 
   it('never uses continue-on-error, on the job or any step', () => {
