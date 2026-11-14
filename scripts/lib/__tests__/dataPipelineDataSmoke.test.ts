@@ -55,8 +55,8 @@ describe('data-smoke job (#2538)', () => {
   })
 
   it('runs after a successful pipeline that promoted, never on a proof run or a cancel', () => {
+    expect(job!.if ?? '').toMatch(/^!cancelled\(\)/)
     const c = topLevelConjuncts(job!.if ?? '')
-    expect(c).toContain('!cancelled()')
     expect(c).toContain("needs.pipeline.result == 'success'")
     expect(c).toContain("needs.pipeline.outputs.skip_promotion != 'true'")
   })
