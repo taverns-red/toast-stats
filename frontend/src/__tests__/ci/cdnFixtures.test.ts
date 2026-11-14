@@ -10,7 +10,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { BrowserContext } from '@playwright/test'
 import {
+  CDN_ORIGINS,
+  CDN_PROD_ORIGIN,
   CDN_STAGING_ORIGIN,
+  cdnPath,
+  relayCdnRead,
   describeFixtureProblems,
   fixtureFetch,
   fixtureGet,
@@ -188,9 +192,125 @@ describe('installCdnFixtures: serving', () => {
   it('ignores every other origin', async () => {
     const { ctx, state } = fakeContext()
     await installCdnFixtures(ctx, { dir })
-    const r = await request(state, 'https://cdn.taverns.red/v1/latest.json')
+    const r = await request(state, 'https://example.com/v1/latest.json')
     expect(r.fulfill).not.toHaveBeenCalled()
     expect(r.abort).not.toHaveBeenCalled()
+  })
+})
+
+describe('installCdnFixtures: the prod CDN origin (#2570)', () => {
+  // The videos page points <video> at https://cdn.taverns.red. The shards
+  // answer it from the same directory, with the same miss and leak policy.
+  const PROD = 'https://cdn.taverns.red'
+
+  it('names both CDN origins', () => {
+    expect(CDN_PROD_ORIGIN).toBe(PROD)
+    expect(CDN_ORIGINS).toEqual([CDN_STAGING_ORIGIN, PROD])
+  })
+
+  it('finds the object path under either origin, and under no other', () => {
+    expect(cdnPath(`${PROD}/videos/v1/a.mp4?x=1`)).toBe('videos/v1/a.mp4')
+    expect(cdnPath(`${CDN_STAGING_ORIGIN}/v1/latest.json`)).toBe(
+      'v1/latest.json'
+    )
+    expect(cdnPath('https://example.com/v1/latest.json')).toBeNull()
+  })
+
+  it('fulfils a recorded file asked for under the prod origin', async () => {
+    const { ctx, state } = fakeContext()
+    const tally = await installCdnFixtures(ctx, { dir })
+    const r = await request(state, `${PROD}/v1/latest.json`)
+    expect(r.fulfill).toHaveBeenCalledTimes(1)
+    expect(r.abort).not.toHaveBeenCalled()
+    expect(tally.hits).toEqual(['v1/latest.json'])
+  })
+
+  it('aborts and lists a prod path with no fixture', async () => {
+    const { ctx, state } = fakeContext()
+    const tally = await installCdnFixtures(ctx, { dir })
+    const r = await request(state, `${PROD}/videos/v9/x.mp4`)
+    expect(r.abort).toHaveBeenCalledTimes(1)
+    expect(tally.misses).toEqual(['videos/v9/x.mp4'])
+  })
+
+  it('never forwards a prod request: no continue, fetch or fallback', async () => {
+    const { ctx, state } = fakeContext()
+    await installCdnFixtures(ctx, { dir })
+    for (const p of ['v1/latest.json', 'v1/unknown.json']) {
+      const r = await request(state, `${PROD}/${p}`)
+      expect(r.continue).not.toHaveBeenCalled()
+      expect(r.fetch).not.toHaveBeenCalled()
+      expect(r.fallback).not.toHaveBeenCalled()
+    }
+  })
+
+  it('lists a prod response that came off the network as a leak', async () => {
+    const { ctx, state } = fakeContext()
+    const tally = await installCdnFixtures(ctx, { dir })
+    const live = {
+      url: () => `${PROD}/videos/v1/a.mp4`,
+      serverAddr: async () => ({ ipAddress: '34.1.1.1', port: 443 }),
+    }
+    for (const cb of state.listeners['response'] ?? []) void cb(live)
+    await settled(tally)
+    expect(tally.leaks).toEqual(['videos/v1/a.mp4'])
+  })
+
+  it('serves a range read of a video, as a browser asks for one', async () => {
+    writeFileSync(
+      join(dir, '_index.json'),
+      JSON.stringify({
+        'videos/v1/clip.mp4': { status: 200, contentType: 'video/mp4' },
+      })
+    )
+    mkdirSync(join(dir, 'videos', 'v1'), { recursive: true })
+    writeFileSync(join(dir, 'videos', 'v1', 'clip.mp4'), 'abcdefghij')
+    const { ctx, state } = fakeContext()
+    await installCdnFixtures(ctx, { dir })
+    const r = await request(state, `${PROD}/videos/v1/clip.mp4`, 'GET', {
+      range: 'bytes=0-3',
+    })
+    const arg = r.fulfill.mock.calls[0]?.[0] as {
+      status: number
+      body: Buffer
+      headers: Record<string, string>
+    }
+    expect(arg.status).toBe(206)
+    expect(arg.body.toString()).toBe('abcd')
+    expect(arg.headers['content-type']).toBe('video/mp4')
+  })
+
+  it('reads a prod URL for a spec that rewrites it (fixtureFetch)', async () => {
+    const r = route(`${PROD}/v1/latest.json`)
+    const res = await fixtureFetch(r as never, { SMOKE_FIXTURES_DIR: dir })
+    expect(await res.json()).toEqual({ latestSnapshotDate: 'd' })
+    expect(r.fetch).not.toHaveBeenCalled()
+  })
+})
+
+describe('relayCdnRead: a local build reading the CDN cross-origin (#2570)', () => {
+  // priority-columns, rankings-data-table and loading-shells-cls relayed
+  // cdn.taverns.red through route.fetch() with a permissive CORS header. With
+  // the fixture on, that read must stay with the fixture route.
+  it('hands the request to the fixture route when fixtures are on', async () => {
+    const r = route(`${CDN_STAGING_ORIGIN}/v1/latest.json`)
+    await relayCdnRead(r as never, { SMOKE_FIXTURES_DIR: dir })
+    expect(r.fallback).toHaveBeenCalledTimes(1)
+    expect(r.fetch).not.toHaveBeenCalled()
+    expect(r.fulfill).not.toHaveBeenCalled()
+  })
+
+  it('relays through the network with CORS when fixtures are off', async () => {
+    const r = route(`${CDN_STAGING_ORIGIN}/v1/latest.json`)
+    r.fetch.mockResolvedValue({ headers: () => ({ 'x-a': '1' }) })
+    await relayCdnRead(r as never, {})
+    expect(r.fetch).toHaveBeenCalledTimes(1)
+    const arg = r.fulfill.mock.calls[0]?.[0] as {
+      headers: Record<string, string>
+    }
+    expect(arg.headers['access-control-allow-origin']).toBe('*')
+    expect(arg.headers['x-a']).toBe('1')
+    expect(r.fallback).not.toHaveBeenCalled()
   })
 })
 
