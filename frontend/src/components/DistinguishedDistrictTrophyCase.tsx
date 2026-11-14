@@ -367,13 +367,21 @@ const StrutBar: React.FC<{
 )
 
 /**
- * Program-year days from July 1 (day 0) through September 30 (day 91): the
+ * Program-year days from July 1 (day 0) through October 14 (day 105): the
  * window in which most districts still have unmet prerequisites and their
  * card loads with the checklist expanded (#2616).
+ *
+ * The cutoff is data-dependent: it is the date Toastmasters International
+ * posts the prerequisite results, not a calendar rule. CDN
+ * competitive-awards.json for 2026-27 shows 0 of 94 districts with every
+ * prerequisite met on 2026-09-30, 10-08, 10-10, 10-12, 10-13 and 10-14, and
+ * 90 of 94 on 10-15. 2025-26 never flipped inside the early window (0 of 128
+ * on 2025-09-30 and 2025-10-31), so a pinned 2025-26 date after the cutoff
+ * can still grow when its card loads.
  */
-const EARLY_PROGRAM_YEAR_LAST_DAY = 91
+const EARLY_PROGRAM_YEAR_LAST_DAY = 105
 
-/** True for a YYYY-MM-DD date in July to September; false when absent. */
+/** True for a YYYY-MM-DD date from July 1 to October 14; false when absent. */
 function isEarlyInProgramYear(asOfDate: string | undefined): boolean {
   if (!asOfDate) return false
   return calculateProgramYearDay(asOfDate) <= EARLY_PROGRAM_YEAR_LAST_DAY
