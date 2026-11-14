@@ -79,6 +79,28 @@ describe('AppShell (#354)', () => {
       expect(brand).toHaveTextContent('Toast Stats')
     })
 
+    it('the account placeholder shows a person glyph, not letters (#2625)', () => {
+      renderShell()
+      // Same accessible name as before; only the visible content changes, so
+      // a "TS" circle on the right can't be read as the old logo.
+      const avatar = screen.getByRole('img', { name: 'Account (placeholder)' })
+      expect(avatar.textContent?.trim()).toBe('')
+      const glyph = avatar.querySelector('svg')
+      expect(glyph).not.toBeNull()
+      expect(glyph).toHaveAttribute('aria-hidden', 'true')
+    })
+
+    it('pins the pennant mark itself: shape and fills (#2625)', () => {
+      renderShell()
+      const pennant = screen.getByTestId('brand-pennant')
+      const [body, letters] = Array.from(pennant.querySelectorAll('path'))
+      // A swapped or recoloured mark must fail here, not only the old "TS".
+      expect(pennant).toHaveAttribute('viewBox', '0 0 140 100')
+      expect(body).toHaveAttribute('d', 'M0 0 H120 L140 50 L120 100 H0 Z')
+      expect(body).toHaveAttribute('fill', '#E63946')
+      expect(letters).toHaveAttribute('fill', '#F4F1EB')
+    })
+
     it('links the brand mark to the home route', () => {
       renderShell('/history')
       const brand = screen.getByLabelText(/toast stats home/i)
