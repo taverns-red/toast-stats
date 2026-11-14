@@ -303,6 +303,34 @@ SMOKE_WINDOW_SECONDS=60 SMOKE_RENDER=off npx tsx scripts/hosting-smoke.ts
 Record: bad promote at → detected at → restore started → entry points
 restored → all restored → CDN purge issued → verified healthy.
 
+### Staging after a restore (#2540)
+
+A restore touches prod only. If it removed a whole date from prod (the bad
+run's new `snapshots/<date>/`), **staging's `v1/dates.json` and
+`v1/latest.json` still name that date**. The next promote then holds every
+global (`v1/`, `config/`, `time-series/`) under the "no dangling index
+entries" rule in `scripts/lib/manifestPromotion.ts`: promoting that index
+would point the frontend at a directory prod no longer has. The hold message
+names the date: "date X is in staging dates.json but not in prod".
+
+The rule is not loosened: prod's own gate stays closed, because letting the
+index through is exactly the bug it prevents. Fix staging instead, before the
+next scheduled daily (otherwise it holds and files a promotion-held issue):
+
+1. Fix the cause of the bad run first, or the same date comes back bad.
+2. Pick one:
+   - **Re-derive the date** so it promotes through its own gates and prod
+     regains it: dispatch `data-pipeline.yml` in `rebuild` mode with
+     `dates=<date>` (add `force` only when the raw CSVs are the problem).
+   - **Drop the date from staging** (the restore decided it should not exist
+     in prod): remove its `snapshots/<date>/` from staging and regenerate the
+     index so `dates.json` and `latest.json` stop naming it (the prune
+     reconcile does both for retention-expired dates, #1767).
+3. Verify: the next promote's plan shows `globals: promote`, not the
+   dangling-index hold.
+
+Do this alongside the restore, not after the hold appears.
+
 ### Alternative: fix forward
 
 When the cause is a code fix that lands quickly, re-running the daily on the

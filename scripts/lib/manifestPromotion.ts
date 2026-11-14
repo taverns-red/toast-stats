@@ -281,8 +281,13 @@ function globalsVerdict(
     return {
       promote: false,
       reason:
-        `staging's date index names ${dangling.join(', ')}, which prod does not have and this run does not promote ` +
-        '— re-derive it (or them) so it promotes through its own gates',
+        dangling
+          .map(d => `date ${d} is in staging dates.json but not in prod`)
+          .join('; ') +
+        ' and this run does not promote it — prune it from staging and ' +
+        'regenerate the index (a restore removed it from prod), or re-derive ' +
+        'it so it promotes through its own gates; see "Staging after a ' +
+        'restore" in docs/runbooks/data-restore.md',
     }
   }
   return {
