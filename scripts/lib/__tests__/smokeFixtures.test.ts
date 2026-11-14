@@ -557,6 +557,23 @@ describe('refreshFixtures', () => {
       'application/octet-stream'
     )
   })
+
+  it('serves a copied .mp4 as video/mp4, so a <video> will play it (#2570)', async () => {
+    const report = await refreshFixtures({
+      manifest: manifest([
+        { path: 'videos/v1/2026-10-27/v1-desktop.mp4', copyFrom: 'x/s.mp4' },
+      ]),
+      outDir: out,
+      fetchFn: fetchFrom(world, []),
+      rules,
+      readLocal: p => text(`local:${p}`),
+    })
+    expect(report.ok).toBe(true)
+    const index = JSON.parse(readFileSync(join(out, '_index.json'), 'utf8'))
+    expect(index['videos/v1/2026-10-27/v1-desktop.mp4'].contentType).toBe(
+      'video/mp4'
+    )
+  })
 })
 
 describe('formatReport', () => {
