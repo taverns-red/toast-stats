@@ -68,8 +68,8 @@ async function main() {
       })
 
       if (result.success) {
-        const s = result.districtsSkipped ?? 0
-        const p = result.districtsSucceeded ?? 0
+        const s = result.districtsSkipped?.length ?? 0
+        const p = result.districtsSucceeded?.length ?? 0
         if (p > 0) {
           console.log(`✓ (${p} districts)`)
           ok++

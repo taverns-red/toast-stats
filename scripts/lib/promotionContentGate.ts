@@ -1612,6 +1612,18 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
     'decoded, clubStrengthAward.allDistricts non-empty; current PY: priorYearAvgClubSize not null for every district (#1704)',
   'district-analytics': 'decoded, has `metadata` and `data` objects',
   'snapshot-index': 'decoded, `districts` maps ids to YYYY-MM-DD arrays',
+  'district-region-history':
+    'decoded, DistrictRegionHistorySchema, at least one district (#1820)',
+  'club-district-history-index':
+    'decoded, ClubDistrictHistoryIndexSchema, at least one club and shard, every listed shard staged, no shard prod serves dropped (#1782)',
+  'club-district-history-shard':
+    'decoded, ClubDistrictHistoryShardSchema, the shard its path names, at least one club, every club in the shard its id maps to (#1782)',
+  'charter-cohort-survival':
+    'decoded, CharterCohortSurvivalFileSchema, the district its path names, curves for every program year it lists (#2061)',
+  'charter-cohort-survival-rollup':
+    'decoded, CharterCohortSurvivalRollupFileSchema, the scope its path names, curves for every program year it lists (#1818)',
+  'closed-club-name-index':
+    'decoded, ClosedClubNameIndexSchema (id, name, lastSeen only), totalClubs = its rows, no club listed twice (#2062)',
   'region-rollups':
     'decoded, RegionRollupsSchema, served under its snapshotDate with that date’s program year, world = Σ districts, each region = Σ its districts (#1799)',
   'clubs-by-region-shard':
