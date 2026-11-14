@@ -527,8 +527,8 @@ describe('DistinguishedDistrictTrophyCase', () => {
     )
 
     // #2616 review — prerequisites are unmet for nearly every district early in
-    // the program year (2026-08-15: 0 of 94 met; 10-15: 90 of 94), so a card
-    // for a date in July to September loads with the checklist expanded and the
+    // the program year (2026-08-15 through 10-14: 0 of 94 met; 10-15: 90 of
+    // 94), so a card for a date from July to October 14 loads with the checklist expanded and the
     // warning line shown. The placeholder reserves that shape for those dates
     // (#1647) and the collapsed one later in the year.
     describe('reserves the expanded checklist early in the program year', () => {
@@ -559,8 +559,8 @@ describe('DistinguishedDistrictTrophyCase', () => {
         }
       )
 
-      it.each(['2026-07-01', '2026-09-30'])(
-        'expands for %s, the first and last day of the early window',
+      it.each(['2026-07-01', '2026-09-30', '2026-10-01', '2026-10-14'])(
+        'expands for %s, inside the early window (July 1 to October 14)',
         asOfDate => {
           render(
             <DistinguishedDistrictTrophyCase
@@ -576,7 +576,7 @@ describe('DistinguishedDistrictTrophyCase', () => {
         }
       )
 
-      it.each(['2026-10-01', '2026-11-13'])(
+      it.each(['2026-10-15', '2026-11-13'])(
         'stays collapsed for %s, once most districts meet them',
         asOfDate => {
           render(
