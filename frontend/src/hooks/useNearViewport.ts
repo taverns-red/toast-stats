@@ -39,7 +39,23 @@ export function useNearViewport(el: Element | null): boolean {
       { rootMargin: NEAR_VIEWPORT_MARGIN }
     )
     io.observe(el)
-    return () => io.disconnect()
+    // IntersectionObserver only queues an entry on first observe or when
+    // intersection changes. A jump from below the band straight to above it
+    // (a VoiceOver rotor jump after load) changes neither, so it is silent
+    // (#2575). A passive scroll check closes that gap: anything whose top is
+    // not below the band's bottom edge is in the band or already passed.
+    const onScroll = (): void => {
+      const margin = parseInt(NEAR_VIEWPORT_MARGIN, 10)
+      if (el.getBoundingClientRect().top <= window.innerHeight + margin) {
+        io.disconnect()
+        setNear(true)
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      io.disconnect()
+      window.removeEventListener('scroll', onScroll)
+    }
   }, [el, near])
 
   return near
