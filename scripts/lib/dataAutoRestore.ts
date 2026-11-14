@@ -175,7 +175,8 @@ const LIST_RESTORES = 40
 const LIST_DELETES = 100
 const LIST_REFUSED = 100
 
-const cell = (s: string): string => s.replace(/\|/g, '\\|').replace(/\n/g, ' ')
+const cell = (s: string): string =>
+  s.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ')
 
 function table(entries: PlanEntry[], cap: number, restore: boolean): string[] {
   const shown = entries.slice(0, cap)
