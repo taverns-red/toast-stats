@@ -112,7 +112,7 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({ label, text }) => {
           id={panelId}
           ref={panelRef}
           style={clampStyle}
-          className="absolute bottom-full tooltip-panel tooltip-panel--centered tooltip-panel--bordered mb-2 px-3 py-2 text-sm font-normal normal-case tracking-normal text-white bg-gray-900 rounded-lg shadow-lg whitespace-normal w-56 z-50 leading-relaxed"
+          className="absolute bottom-full tooltip-panel tooltip-panel--centered tooltip-panel--bordered mb-2 px-3 py-2 text-sm font-normal normal-case tracking-normal text-white bg-gray-900 rounded-lg shadow-lg whitespace-normal w-56 z-(--z-tooltip) leading-relaxed"
         >
           {text}
           <span className="absolute top-full tooltip-arrow--centered border-4 border-transparent border-t-gray-900" />
