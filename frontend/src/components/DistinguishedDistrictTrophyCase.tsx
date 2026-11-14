@@ -343,6 +343,23 @@ const SkeletonBar: React.FC<{ className: string }> = ({ className }) => {
 }
 
 /**
+ * A skeleton bar whose row height comes from real text: the row's own classes
+ * plus an invisible `strut` line size it, and the bar is laid over it. The
+ * height then follows the loaded row's CSS at every width, instead of a bar
+ * height that has to be re-tuned (#2616).
+ */
+const StrutBar: React.FC<{
+  className: string
+  strut: string
+  barClassName: string
+}> = ({ className, strut, barClassName }) => (
+  <div className={`relative ${className}`}>
+    <span className="invisible">{strut}</span>
+    <SkeletonBar className={`absolute left-0 top-1 bottom-1 ${barClassName}`} />
+  </div>
+)
+
+/**
  * The skeleton, also used still (`held`) while the awards read waits for the
  * card to near the viewport (#2513): identical geometry so nothing shifts
  * when it fills, but no pulse (nothing is loading yet) and its own test id.
@@ -399,7 +416,13 @@ const TrophyCaseSkeleton: React.FC<{ programYear: string; held?: boolean }> = ({
         unknowable before the query lands. Same accepted-collapse tradeoff as
         AwardsRaceSection (#750). */}
       <div className="border-t border-gray-200 pt-4">
-        <SkeletonBar className="h-4 w-40 mb-2" />
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <StrutBar
+            className="text-sm font-semibold font-tm-body"
+            strut="Gap to Distinguished"
+            barClassName="w-40"
+          />
+        </div>
         <div
           data-testid="distinguished-trophy-skeleton-tiles"
           className="grid grid-cols-1 md:grid-cols-3 gap-2"
@@ -411,10 +434,24 @@ const TrophyCaseSkeleton: React.FC<{ programYear: string; held?: boolean }> = ({
             >
               {/* label · value · "+x%" sub-item — the three rows a populated
                 GapTile renders in the common (count present, gate open)
-                case, so the tile height matches the loaded one. */}
-              <SkeletonBar className="h-3 w-20" />
-              <SkeletonBar className="mt-1.5 h-5 w-16" />
-              <SkeletonBar className="mt-1.5 h-3 w-10" />
+                case. Each row carries the GapTile row's own classes and an
+                invisible line of text, so its height comes from the same CSS
+                as the loaded row instead of a pinned bar height (#2616). */}
+              <StrutBar
+                className="text-xs uppercase tracking-wide font-tm-body"
+                strut="Paid Clubs"
+                barClassName="w-20"
+              />
+              <StrutBar
+                className="mt-0.5 text-base font-semibold tabular-nums"
+                strut="19 clubs"
+                barClassName="w-16"
+              />
+              <StrutBar
+                className="mt-0.5 text-xs font-tm-body"
+                strut="+11.8%"
+                barClassName="w-10"
+              />
             </div>
           ))}
         </div>
