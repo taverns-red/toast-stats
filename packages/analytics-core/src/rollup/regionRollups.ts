@@ -65,6 +65,7 @@ import {
 import { canonicalDistrictId } from './globalRollup.js'
 import { programYearForSnapshotDate } from './globalTotals.js'
 import { OFFICER_TRAINING_MAX_OFFICERS } from '../analytics/officerTraining.js'
+import { classifyDistinguishedTier } from '../analytics/ClubEligibilityUtils.js'
 import {
   addDistinguishedCounts,
   classifyClubDistinguished,
@@ -390,10 +391,13 @@ function districtFigures(
     f.officerTraining = distribution
   }
   // Confirmed / provisional Distinguished (#2553): null when no club
-  // carried TI's status or an April renewal count (not collected).
+  // carried a TI tier letter or an April renewal count (not collected). The
+  // status column is on every raw row, an empty string until TI publishes,
+  // so its presence alone is not collection (#2563).
   const distinguishedCollected = facts.some(
     ({ club }) =>
-      club.aprilRenewals !== undefined || club.distinguishedStatus !== undefined
+      club.aprilRenewals !== undefined ||
+      classifyDistinguishedTier(club.distinguishedStatus) !== null
   )
   f.distinguishedCounts = distinguishedCollected
     ? tallyDistinguished(
@@ -602,6 +606,7 @@ export function buildRegionRollups(
     }
     world.growth = { prospective: null, chartered: null, suspended: null }
     world.officerTraining = null
+    world.distinguishedCounts = null
     if (!ctx.smedley) world.distinguished.smedley = null
   }
 
