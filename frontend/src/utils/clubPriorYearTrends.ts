@@ -22,18 +22,22 @@ export function clubPriorYearTrends(
   if (!m) return []
   const currentStart = Number(m[1])
 
-  return rows
-    .filter(r => r.hasData && r.startYear < currentStart)
-    .map(r => ({
-      label: `${r.startYear}-${r.startYear + 1}`,
-      data: [
-        ...(r.membershipBase !== null
-          ? [{ date: `${r.startYear}-07-01`, count: r.membershipBase }]
-          : []),
-        ...(r.membershipEnd !== null
-          ? [{ date: r.yearEndDate, count: r.membershipEnd }]
-          : []),
-      ],
-    }))
-    .filter(t => t.data.length > 0)
+  return (
+    rows
+      .filter(r => r.hasData && r.startYear < currentStart)
+      .map(r => ({
+        label: `${r.startYear}-${r.startYear + 1}`,
+        data: [
+          ...(r.membershipBase !== null
+            ? [{ date: `${r.startYear}-07-01`, count: r.membershipBase }]
+            : []),
+          ...(r.membershipEnd !== null
+            ? [{ date: r.yearEndDate, count: r.membershipEnd }]
+            : []),
+        ],
+      }))
+      // A year recorded as 0 throughout is before the club chartered: absent,
+      // not a zero year-end (#2504).
+      .filter(t => t.data.some(p => p.count > 0))
+  )
 }

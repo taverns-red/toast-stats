@@ -8,8 +8,8 @@
  * size changes when Source Sans 3 lands, so district LCP was font arrival
  * time. The contract now:
  *
- * - every family the app loaded from Google is still declared (ops#37 blocks
- *   dropping any), from same-origin woff2 files with Google's own subsets and
+ * - every family the app loaded from Google is still declared (none is
+ *   dropped), from same-origin woff2 files with Google's own subsets and
  *   unicode-ranges, so nothing is fetched cross-origin;
  * - no font is preloaded. Measured (#1905 PR): preloading the two first-screen
  *   latin files (64 KB) made them compete with the app's JS on the 1.6 Mbps
@@ -17,7 +17,7 @@
  *   first-screen families keep their metric-matched fallbacks, so the swap
  *   cannot move layout (Lesson 81: JetBrains Mono, with no fallback, took
  *   CLS from 0.012 to 0.199);
- * - JetBrains Mono stays undeclared and unpreloaded (Phase 2, ops#37).
+ * - JetBrains Mono stays undeclared and unpreloaded (Lesson 81).
  */
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync, readdirSync } from 'fs'
@@ -104,7 +104,7 @@ describe('self-hosted web fonts (#1905)', () => {
   })
 
   it.each(Object.entries(REQUIRED))(
-    'still declares %s at every weight it was loaded at (ops#37: no family dropped)',
+    'still declares %s at every weight it was loaded at (no family dropped)',
     (family, weights) => {
       const own = declared.filter(f => f.family === family)
       expect(own.length).toBeGreaterThan(0)
@@ -131,7 +131,7 @@ describe('self-hosted web fonts (#1905)', () => {
     }
   })
 
-  it('does not declare JetBrains Mono (deferred to Phase 2 — Lesson 81)', () => {
+  it('does not declare JetBrains Mono (Lesson 81)', () => {
     expect(declared.some(f => f.family === 'JetBrains Mono')).toBe(false)
     expect(html).not.toMatch(/<link\b[^>]*jetbrains/i)
   })

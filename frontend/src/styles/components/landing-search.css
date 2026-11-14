@@ -128,6 +128,9 @@
      the Regions and Recognition rows above it. */
   .districts-toolbar__row--filter .districts-toolbar__search {
     max-width: 360px;
+    /* #2620: the shared 240px floor plus the row's label ran 16px past the
+       viewport at 320. Let it shrink; it is unchanged wherever 240 fits. */
+    min-width: 0;
   }
 
   /* Touch target (WCAG 2.5.5, review B2): the shared input padding gives

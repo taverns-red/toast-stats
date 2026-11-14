@@ -98,7 +98,7 @@ Reference doc.
 [TS] Toast Stats   Districts | Regions·soon | Awards·soon | History | Methodology         🔔 ❓ JS
 ```
 
-- Brand mark: 24×24 rounded rect, `--loyal-500` fill, white "TS" in 800-weight Montserrat.
+- Brand mark: 24×24 rounded rect, `--loyal-500` fill, white "TS" in 800-weight Montserrat. **Superseded (#2515, #2625):** the header mark is now the Red Taverns pennant, and the account placeholder on the right is a person glyph, not "TS".
 - Nav links: 13.5px, weight 500. Active = `--loyal-500` text on `--loyal-50` background. Disabled = grey + a tiny mono "soon" pill (`::after`), `pointer-events: none`.
 - Right-side: notification icon button, help icon button, 32px circular avatar (maroon background, white initials).
 - Sticky top, blurred background (`backdrop-filter: saturate(140%) blur(8px)`).
@@ -263,7 +263,7 @@ https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=
 
 - **Fonts:** Montserrat, Source Sans 3, JetBrains Mono — all from Google Fonts. Self-host in production for performance and privacy.
 - **Iconography:** all icons are inline SVG, drawn with `stroke="currentColor"`, `stroke-width: 1.5–1.6`, `viewBox="0 0 16 16"`. Lucide or Heroicons (outline, 16px) are reasonable substitutes. Replacements should preserve stroke-based linework — do not swap for filled glyphs.
-- **Brand mark:** "TS" wordmark in a rounded square (`--loyal-500`). Reproduce in CSS, not as an image asset.
+- **Brand mark:** "TS" wordmark in a rounded square (`--loyal-500`). Reproduce in CSS, not as an image asset. **Superseded (#2515):** the shipped header mark is the Red Taverns pennant SVG (`brand-pennant` in `AppShellTopBar.tsx`), not this tile.
 - **Charts:** all hand-rolled SVG. Use the codebase's preferred chart library (Recharts, Visx, Chart.js, ECharts). Keep visual treatment consistent — thin strokes, dots on data points, light gridlines, no chart-title chrome (the panel header is the title).
 
 No raster assets, logos, or photography are required.

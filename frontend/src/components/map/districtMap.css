@@ -1,5 +1,5 @@
-/* District club map (#1784). App-palette tokens (#2080: legacy palette
-   until the Phase 2 re-skin) with local remaps under [data-theme='dark']
+/* District club map (#1784). App-palette tokens (#2080: legacy palette)
+   with local remaps under [data-theme='dark']
    (R10). The legend and club summary also
    render inside the portalled BottomSheet, so the variables live on :root. */
 :root {

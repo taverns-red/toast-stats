@@ -55,39 +55,50 @@ const pointsOf = (el: Element) =>
     .map(p => p.split(',').map(Number) as [number, number])
 
 describe('ClubMembershipTrendChart', () => {
-  it('draws the current year solid and each prior year as a faint line', () => {
+  it('draws only the current year as a line; prior years are one reference (#2504)', () => {
     const { container } = renderChart()
     expect(container.querySelectorAll('polyline.line')).toHaveLength(1)
-    expect(container.querySelectorAll('polyline.line--prior')).toHaveLength(2)
+    // Two points per past year cannot show a path: no prior-year lines.
+    expect(container.querySelectorAll('polyline.line--prior')).toHaveLength(0)
+    expect(container.querySelectorAll('polyline')).toHaveLength(1)
+  })
+
+  it('marks last year-end as one horizontal reference at its own y', () => {
+    const { container } = renderChart()
+    const refs = container.querySelectorAll('line.ref-line')
+    expect(refs).toHaveLength(1)
+    const ref = refs[0]!
+    expect(ref.getAttribute('y1')).toBe(ref.getAttribute('y2'))
+    expect(container.querySelector('text.ref-text')).toHaveTextContent(
+      '2025–26 year-end 16'
+    )
   })
 
   it('anchors the current line at day 0 on the predecessor 06-30 close (D15)', () => {
     const { container } = renderChart()
     const current = pointsOf(container.querySelector('polyline.line')!)
-    const prior = pointsOf(
-      container.querySelector('polyline.line--prior[data-year="2025-2026"]')!
-    )
-    // Same x as the predecessor's July 1 start, same y as its June 30 close.
-    expect(current[0]![0]).toBeCloseTo(prior[0]![0], 1)
-    expect(current[0]![1]).toBeCloseTo(prior[1]![1], 1)
-    // The anchor is a plotted point, not a data dot.
-    expect(container.querySelectorAll('circle.dot')).toHaveLength(3)
+    const ref = container.querySelector('line.ref-line')!
+    expect(current[0]![1]).toBeCloseTo(Number(ref.getAttribute('y1')), 1)
   })
 
-  it('places every year by program-year position (Jul 1 at the same x)', () => {
+  it('shows no per-point markers beyond the end point (pin defaults to it)', () => {
     const { container } = renderChart()
-    const xs = [...container.querySelectorAll('polyline.line--prior')].map(
-      el => pointsOf(el)[0]![0]
-    )
-    expect(xs[0]).toBeCloseTo(xs[1]!, 1)
+    expect(container.querySelectorAll('circle.dot')).toHaveLength(1)
+  })
+
+  it('shows a second marker only for the pinned point', () => {
+    const { container } = renderChart()
+    const chart = screen.getByRole('img', { name: /Membership trend/ })
+    fireEvent.keyDown(chart.closest('[tabindex]')!, { key: 'ArrowLeft' })
+    expect(container.querySelectorAll('circle.dot')).toHaveLength(2)
+    expect(container.querySelectorAll('circle.dot--pinned')).toHaveLength(1)
   })
 
   it('labels the years in a legend that does not rely on colour', () => {
     renderChart()
     const legend = screen.getByRole('list', { name: 'Program years' })
     expect(legend).toHaveTextContent('2026–27')
-    expect(legend).toHaveTextContent('2025–26')
-    expect(legend).toHaveTextContent('2024–25')
+    expect(legend).toHaveTextContent('2025–26 year-end')
   })
 
   it('pins the latest point by default and reads every year at that day', () => {

@@ -215,7 +215,21 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
           aria-label="Account (placeholder)"
           role="img"
         >
-          TS
+          {/* Neutral person glyph, not letters: "TS" beside the pennant read
+              as the old logo (#2625). */}
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <circle cx="8" cy="5.5" r="2.5" />
+            <path d="M3 13.5c0-2.6 2.2-4.5 5-4.5s5 1.9 5 4.5" />
+          </svg>
         </span>
       </div>
     </header>

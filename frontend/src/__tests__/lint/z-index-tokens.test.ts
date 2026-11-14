@@ -28,7 +28,23 @@ function cssFiles(dir: string): string[] {
   })
 }
 
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap(name => {
+    const p = join(dir, name)
+    if (name === 'node_modules' || name === '__tests__') return []
+    if (statSync(p).isDirectory()) return sourceFiles(p)
+    return /\.(tsx|ts)$/.test(p) && !/\.test\.tsx?$/.test(p) ? [p] : []
+  })
+}
+
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '')
+
+// A raw z-index number, with or without `!important`.
+const RAW_Z_INDEX = /z-index:\s*(-?\d+)\s*(?:!important\s*)?[;}]/
+const RAW_Z_INDEX_ALL = new RegExp(RAW_Z_INDEX.source, 'g')
+// Tailwind `z-50` / `md:z-[60]`, not the negative `-z-10` or `z-(--token)`.
+const TAILWIND_Z = /(?<![\w-])z-(?:(\d+)|\[(\d+)\])(?![\w-])/
+const TAILWIND_Z_ALL = new RegExp(TAILWIND_Z.source, 'g')
 
 describe('z-index tokens (#2674)', () => {
   it('no raw z-index above the local range outside the token file', () => {
@@ -36,10 +52,33 @@ describe('z-index tokens (#2674)', () => {
     for (const file of cssFiles(SRC)) {
       if (file === TOKENS) continue
       for (const m of strip(readFileSync(file, 'utf-8')).matchAll(
-        /z-index:\s*(-?\d+)\s*[;}]/g
+        RAW_Z_INDEX_ALL
       )) {
         if (Number(m[1]) > LOCAL_MAX)
           offenders.push(`${relative(SRC, file)}: z-index ${m[1]}`)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  /* #2719: the first guard missed `z-index: 60 !important` (the `!` broke the
+     `;` match) and Tailwind classes such as `z-50`, which skip the token
+     file entirely. */
+  it('the raw-number pattern also catches !important values', () => {
+    expect(RAW_Z_INDEX.test('z-index: 60 !important;')).toBe(true)
+    expect(RAW_Z_INDEX.test('z-index: 60;')).toBe(true)
+    expect(RAW_Z_INDEX.test('z-index: var(--z-banner) !important;')).toBe(false)
+  })
+
+  it('no Tailwind z-N or z-[N] class above the local range in components', () => {
+    expect(TAILWIND_Z.test('className="absolute z-50 px-4"')).toBe(true)
+    expect(TAILWIND_Z.test('className="md:z-[60]"')).toBe(true)
+    expect(TAILWIND_Z.test('className="-z-10 z-(--z-tooltip)"')).toBe(false)
+    const offenders: string[] = []
+    for (const file of sourceFiles(SRC)) {
+      for (const m of readFileSync(file, 'utf-8').matchAll(TAILWIND_Z_ALL)) {
+        const n = Number(m[1] ?? m[2])
+        if (n > LOCAL_MAX) offenders.push(`${relative(SRC, file)}: ${m[0]}`)
       }
     }
     expect(offenders).toEqual([])
@@ -103,6 +142,10 @@ describe('z-index tokens (#2674)', () => {
     expect(n('--z-header')).toBeLessThan(n('--z-bottom-bar'))
     expect(n('--z-bottom-bar')).toBeLessThan(n('--z-banner'))
     expect(n('--z-banner')).toBeLessThan(n('--z-overlay'))
+    // #2719: the filter panel and the banner no longer tie. The banner wins,
+    // so the consent choice stays reachable over an open panel.
+    expect(n('--z-fullscreen')).toBeLessThan(n('--z-panel'))
+    expect(n('--z-panel')).toBeLessThan(n('--z-banner'))
     expect(n('--z-overlay')).toBeLessThan(n('--z-modal'))
   })
 })

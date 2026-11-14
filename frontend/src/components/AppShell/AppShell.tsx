@@ -48,13 +48,16 @@ const AppShell: React.FC = () => {
       <a href="#main-content" className="tm-skip-link">
         Skip to main content
       </a>
+      {/* Early in the DOM so a keyboard user reaches the consent choice
+          right after the skip link (#2587). It is position: fixed, so its
+          place in the source does not move the layout. */}
+      <ConsentBanner />
       <AppShellTopBar onOpenSearch={openPalette} />
       <main id="main-content" className="app-shell__main" tabIndex={-1}>
         <DateNotice />
         <Outlet />
       </main>
       {!isMobile && <AppShellFooter />}
-      <ConsentBanner />
       <CommandPalette isOpen={paletteOpen} onClose={closePalette} />
     </div>
   )
