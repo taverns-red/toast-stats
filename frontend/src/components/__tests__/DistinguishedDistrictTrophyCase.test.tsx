@@ -7,6 +7,7 @@ import {
   type DistinguishedDistrictStatus,
 } from '../DistinguishedDistrictTrophyCase'
 import type { RemainingInputs } from '../../utils/distinguishedCountdown'
+import { requiredPrerequisitesForProgramYear } from '@taverns-red/analytics-core'
 
 afterEach(() => cleanup())
 
@@ -524,6 +525,74 @@ describe('DistinguishedDistrictTrophyCase', () => {
         ).toBeNull()
       }
     )
+
+    // #2616 review — prerequisites are unmet for nearly every district early in
+    // the program year (2026-08-15: 0 of 94 met; 10-15: 90 of 94), so a card
+    // for a date in July to September loads with the checklist expanded and the
+    // warning line shown. The placeholder reserves that shape for those dates
+    // (#1647) and the collapsed one later in the year.
+    describe('reserves the expanded checklist early in the program year', () => {
+      const prereqRows = (el: HTMLElement) =>
+        within(el).queryAllByTestId('distinguished-trophy-skeleton-prereq')
+      const warning = (el: HTMLElement) =>
+        within(el).queryByTestId('distinguished-trophy-skeleton-warning')
+
+      it.each([
+        ['loading', { isLoading: true }, 'distinguished-trophy-skeleton'],
+        ['held', { held: true }, 'distinguished-trophy-held'],
+      ])(
+        'one row per prerequisite and the warning line while %s, on 2026-08-15',
+        (_name, props, testId) => {
+          render(
+            <DistinguishedDistrictTrophyCase
+              status={null}
+              programYear="2026-2027"
+              asOfDate="2026-08-15"
+              {...props}
+            />
+          )
+          const placeholder = screen.getByTestId(testId)
+          expect(prereqRows(placeholder)).toHaveLength(
+            requiredPrerequisitesForProgramYear('2026-2027').length
+          )
+          expect(warning(placeholder)).toBeInTheDocument()
+        }
+      )
+
+      it.each(['2026-07-01', '2026-09-30'])(
+        'expands for %s, the first and last day of the early window',
+        asOfDate => {
+          render(
+            <DistinguishedDistrictTrophyCase
+              status={null}
+              programYear="2026-2027"
+              asOfDate={asOfDate}
+              held
+            />
+          )
+          expect(
+            prereqRows(screen.getByTestId('distinguished-trophy-held'))
+          ).not.toHaveLength(0)
+        }
+      )
+
+      it.each(['2026-10-01', '2026-11-13'])(
+        'stays collapsed for %s, once most districts meet them',
+        asOfDate => {
+          render(
+            <DistinguishedDistrictTrophyCase
+              status={null}
+              programYear="2026-2027"
+              asOfDate={asOfDate}
+              held
+            />
+          )
+          const placeholder = screen.getByTestId('distinguished-trophy-held')
+          expect(prereqRows(placeholder)).toHaveLength(0)
+          expect(warning(placeholder)).toBeNull()
+        }
+      )
+    })
 
     it('still renders nothing when not loading and status is null', () => {
       const { container } = render(

@@ -83,6 +83,12 @@ interface DistinguishedDistrictTrophyCaseProps {
    * resolved year passes the year it is DISPLAYING rather than omitting.
    */
   programYear: string
+  /**
+   * The date the card is for (YYYY-MM-DD), the page's selected or pinned
+   * snapshot date. Sizes the placeholder (#2616): early in the program year
+   * prerequisites are unmet and the loaded card expands its checklist.
+   */
+  asOfDate?: string
   /** Optional rankings row used to derive the absolute remaining counts
       when the canonical fields are absent or the next tier is above
       Distinguished. Matches the region page's data source. */
