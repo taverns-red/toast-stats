@@ -30,6 +30,7 @@ import { pathToFileURL } from 'node:url'
 
 import {
   BASE_TAG_MATCH,
+  absentAtReleaseNotes,
   COMPAT_FIXTURES,
   applyGrandfather,
   compareCompat,
@@ -183,10 +184,14 @@ async function main(): Promise<boolean> {
       await importBuild(join(repo, 'packages/shared-contracts'))
     )
 
+    const baseFixtures = await loadFixtures(COMPAT_FIXTURES, work)
+    for (const note of absentAtReleaseNotes(baseFixtures)) {
+      log(`[cdn-json-compat] ${note}`)
+    }
     const findings = compareCompat({
       base: {
         schemas: baseSchemas,
-        fixtures: await loadFixtures(COMPAT_FIXTURES, work),
+        fixtures: baseFixtures,
       },
       head: {
         schemas: headSchemas,
