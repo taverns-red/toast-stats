@@ -313,7 +313,7 @@ const ORDINAL_OR_MODE = new RegExp(
 )
 
 interface WeekGroup {
-  weeks: number[]
+  weeks: (number | 'last')[]
   mode?: MeetingMode
 }
 
@@ -323,10 +323,10 @@ interface WeekGroup {
  * Mode words that follow no ordinal are returned as `loose`.
  */
 function weekGroupsIn(folded: string): {
-  groups: WeekGroup[]
+  groups: (WeekGroup & { weeks: number[] })[]
   loose: MeetingMode[]
 } {
-  const groups: WeekGroup[] = []
+  const groups: (WeekGroup & { weeks: number[] })[] = []
   const loose: MeetingMode[] = []
   let pending: number[] = []
   ORDINAL_OR_MODE.lastIndex = 0
@@ -963,9 +963,18 @@ export function parseMeetingSchedule(
   const days = weekdaysIn(dayText)
   if (days.length === 0) return undefined
 
-  const { groups, loose } = weekGroupsIn(dayText)
+  const { groups: ordinalGroups, loose } = weekGroupsIn(dayText)
+  // "Last Thursday" (#2627): the last week joins the first group's weeks.
+  const lastWeek = LAST_WEEK.test(dayText)
+  const groups: WeekGroup[] = lastWeek
+    ? ordinalGroups.length > 0
+      ? ordinalGroups.map((g, k) =>
+          k === 0 ? { ...g, weeks: [...g.weeks, 'last'] } : g
+        )
+      : [{ weeks: ['last'] }]
+    : ordinalGroups
   let cadence: Cadence | undefined
-  if (LAST_WEEK.test(dayText)) cadence = undefined
+  if (lastWeek) cadence = 'monthly'
   else if (BIWEEKLY.test(dayText)) cadence = 'biweekly'
   else if (groups.length > 0) {
     const weeks = new Set(groups.flatMap(g => g.weeks))
