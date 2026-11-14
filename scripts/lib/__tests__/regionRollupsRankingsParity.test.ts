@@ -89,16 +89,31 @@ describe('checkRollupsMatchRankings (#2563)', () => {
     ).toBeNull()
   })
 
-  it('skips a district the rankings do not list', () => {
+  it('fails a district with counts that the rankings do not list (the files disagree)', () => {
     const r = withCounts()
     const rankings = rankingsFor(r)
     rankings.rankings = rankings.rankings.filter(d => d.districtId !== '01')
-    expect(checkRollupsMatchRankings(r, rankings)).toBeNull()
+    expect(checkRollupsMatchRankings(r, rankings)).toMatch(/district 01.*not/)
+  })
+
+  it('fails a rankings row with no numeric distinguishedClubs', () => {
+    const r = withCounts()
+    const rankings = rankingsFor(r) as {
+      rankings: Array<Record<string, unknown>>
+    }
+    delete rankings.rankings.find(d => d.districtId === '111')!
+      .distinguishedClubs
+    expect(checkRollupsMatchRankings(r, rankings)).toMatch(/district 111/)
+  })
+
+  it('fails when counts are published but the rankings carry no rows', () => {
+    expect(checkRollupsMatchRankings(withCounts(), { metadata: {} })).toMatch(
+      /rankings/
+    )
   })
 
   it('does not decide on files it cannot read (other checks report those)', () => {
     expect(checkRollupsMatchRankings({ nope: 1 }, { nope: 1 })).toBeNull()
-    expect(checkRollupsMatchRankings(withCounts(), null)).toBeNull()
   })
 })
 
@@ -147,8 +162,43 @@ describe('runContentGate: region rollups against the date rankings (#2563)', () 
     } as GateBucket
   }
 
-  const run = (staged: Record<string, StoredObject>) =>
-    runContentGate(bucket(staged), bucket({}), () => {}, { random: () => 0 })
+  const run = (
+    staged: Record<string, StoredObject>,
+    prod: Record<string, StoredObject> = {}
+  ) =>
+    runContentGate(bucket(staged), bucket(prod), () => {}, {
+      random: () => 0,
+    })
+
+  it('holds a rankings file that cannot be decoded', async () => {
+    const result = await run({
+      [ROLLUPS_PATH]: plain(withCounts()),
+      [RANKINGS_PATH]: { bytes: new Uint8Array(Buffer.from('{not json')) },
+    })
+    expect(result.promote).toBe(false)
+  })
+
+  it('checks the pair when only the rankings changed (rollups already on prod)', async () => {
+    const r = withCounts()
+    const result = await run(
+      {
+        [ROLLUPS_PATH]: plain(r),
+        [RANKINGS_PATH]: plain(rankingsFor(r, { '111': 1 })),
+      },
+      { [ROLLUPS_PATH]: plain(r) }
+    )
+    expect(result.promote).toBe(false)
+  })
+
+  it('checks the pair when only the rollups changed (rankings already on prod)', async () => {
+    const r = withCounts()
+    const rankings = plain(rankingsFor(r, { '111': 1 }))
+    const result = await run(
+      { [ROLLUPS_PATH]: plain(r), [RANKINGS_PATH]: rankings },
+      { [RANKINGS_PATH]: rankings }
+    )
+    expect(result.promote).toBe(false)
+  })
 
   it('holds a promotion whose district confirmed differs from the rankings', async () => {
     const r = withCounts()
