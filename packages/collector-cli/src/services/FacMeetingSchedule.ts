@@ -911,7 +911,7 @@ function daySlotsIn(time: string | null | undefined): DaySlots | undefined {
 /** A zone abbreviation, upper case only, so the French "et" ("and") is not
  *  Eastern Time. */
 const ZONE_ABBREVIATION =
-  /(?<![A-Za-z])(?:AK[SD]T|[ECMPAN][SD]T|[ECMP]T|HST|UTC|GMT|CEST|CET|EET|BST|IST|WAT|EAT|SAST|AES?T|AEDT|JST|KST|SGT|HKT|PHT|WIB)(?![A-Za-z])(?!\s*[+\-−]?\s*\d)/g
+  /(?<![A-Za-z])(?:AK[SD]T|[ECMPAN][SD]T|[ECMP]T|HST|UTC|GMT|CEST|CET|EET|BST|IST|WAT|EAT|SAST|AES?T|AEDT|JST|KST|SGT|HKT|PHT|WIB)(?![A-Za-z])(?!\s*[+\-−]\s*\d)(?!\s+(?:Building|Bldg|Hall|Room|Centre|Center|Street|Avenue|Church|School|Library|Office|Clinic)\b)/g
 
 /**
  * The time zone the club wrote next to its time ("7:00 PM EST"), as
