@@ -7,7 +7,6 @@ import {
   type DistinguishedDistrictStatus,
 } from '../DistinguishedDistrictTrophyCase'
 import type { RemainingInputs } from '../../utils/distinguishedCountdown'
-import { requiredPrerequisitesForProgramYear } from '@taverns-red/analytics-core'
 
 afterEach(() => cleanup())
 
@@ -491,31 +490,6 @@ describe('DistinguishedDistrictTrophyCase', () => {
         )
         expect(note).toHaveClass('print-held-note')
         expect(screen.getByTestId(testId)).toHaveClass('print-held-card')
-      }
-    )
-
-    // #1647 — the loaded panel lists every required prerequisite (expanded
-    // whenever one is unmet, the common case) plus the "must be met" warning;
-    // the skeleton reserved neither, so the swap grew the panel 64-144px.
-    it.each([LEGACY_PY, '2026-2027'])(
-      'reserves one checklist row per %s prerequisite and the warning line (#1647)',
-      programYear => {
-        render(
-          <DistinguishedDistrictTrophyCase
-            status={null}
-            isLoading
-            programYear={programYear}
-          />
-        )
-        const skeleton = screen.getByTestId('distinguished-trophy-skeleton')
-        expect(
-          within(skeleton).getAllByTestId(
-            'distinguished-trophy-skeleton-prereq'
-          )
-        ).toHaveLength(requiredPrerequisitesForProgramYear(programYear).length)
-        expect(
-          within(skeleton).getByTestId('distinguished-trophy-skeleton-warning')
-        ).toBeInTheDocument()
       }
     )
 
