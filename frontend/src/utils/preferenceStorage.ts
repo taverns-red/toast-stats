@@ -63,6 +63,34 @@ export function removePreference(key: string): void {
   }
 }
 
+/** Moving to "all" or "minimal": preferences set in this tab before the
+ *  choice live in sessionStorage; copy them to localStorage so they survive
+ *  the tab (#2587). Only the site's own preference keys move. */
+export function promoteSessionPreferencesToLocal(): void {
+  try {
+    const ss = window.sessionStorage
+    const keys: string[] = []
+    for (let i = 0; i < ss.length; i++) {
+      const k = ss.key(i)
+      if (k && (k.startsWith('toast-stats:') || UNPREFIXED_KEYS.includes(k))) {
+        keys.push(k)
+      }
+    }
+    for (const k of keys) {
+      const v = ss.getItem(k)
+      if (v === null) continue
+      try {
+        window.localStorage.setItem(k, v)
+        ss.removeItem(k)
+      } catch {
+        // localStorage unavailable: the value stays for this tab session
+      }
+    }
+  } catch {
+    // sessionStorage unavailable: nothing to copy
+  }
+}
+
 /** Moving to "none": keep this tab's current preferences for the session,
  *  and take everything off the device. */
 export function removeAllSavedPreferencesToSession(): void {

@@ -25,6 +25,27 @@ describe('preferenceStorage (#2584)', () => {
     expect(readPreference('theme')).toBe('dark')
   })
 
+  it.each(['all', 'minimal'] as const)(
+    'choosing %s copies preferences set before the choice to localStorage (#2587)',
+    level => {
+      writePreference('theme', 'dark')
+      writePreference('toast-stats:view', 'table')
+      sessionStorage.setItem('unrelated', 'x')
+      setConsent(level)
+      expect(localStorage.getItem('theme')).toBe('dark')
+      expect(localStorage.getItem('toast-stats:view')).toBe('table')
+      expect(sessionStorage.getItem('theme')).toBeNull()
+      expect(localStorage.getItem('unrelated')).toBeNull()
+    }
+  )
+
+  it('choosing none does not copy session preferences to localStorage (#2587)', () => {
+    writePreference('theme', 'dark')
+    setConsent('none')
+    expect(localStorage.getItem('theme')).toBeNull()
+    expect(sessionStorage.getItem('theme')).toBe('dark')
+  })
+
   it('none keeps preferences in sessionStorage only', () => {
     setConsent('none')
     writePreference('theme', 'dark')

@@ -119,7 +119,7 @@ body:has(.section-bar) .consent-banner {
   border-radius: 12px 12px 0 0;
 }
 
-/* Phone (D10, #2674): one line of copy, then Keep all, Keep none and Details.
+/* Phone (D10, #2674): one line of copy, then Keep none, Details and Keep all.
    The heading, the link and Keep minimal stay in the DOM and appear with
    Details; the wording and the three choices are unchanged and nothing is
    pre-selected. */
