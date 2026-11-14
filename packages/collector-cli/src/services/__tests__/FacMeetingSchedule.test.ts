@@ -1588,6 +1588,28 @@ describe('parseMeetingSchedule (#2617) — review: "last" only before a weekday'
   })
 })
 
+describe('parseMeetingSchedule (#2627) — gap 8: HHMM ranges', () => {
+  it.each([
+    ['1200-1300', '12:00', '13:00'],
+    ['0700 - 0830', '07:00', '08:30'],
+    ['1830-2030', '18:30', '20:30'],
+    ['1200-1300 hrs', '12:00', '13:00'],
+  ])('%j is %s-%s', (meetingTime, startTime, endTime) => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime })
+    ).toEqual([{ day: 'Thursday', cadence: 'weekly', startTime, endTime }])
+  })
+
+  it.each([['1200'], ['0700'], ['2019'], ['2019-2020'], ['1200-1900']])(
+    '%j (a lone number, a year range or a long span) gives no time',
+    meetingTime => {
+      expect(
+        parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime })
+      ).toEqual([{ day: 'Thursday', cadence: 'weekly' }])
+    }
+  )
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
