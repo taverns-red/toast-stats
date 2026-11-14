@@ -59,13 +59,13 @@
  * size-adjusted Arial. 64 pixels of visual change for no CLS benefit.
  * Scoping keeps this change provably inert once the fonts have loaded.
  *
- * ── Phase 2 (ops#37 / #339) ──────────────────────────────────────────────
- * The brand pair's first live consumer is the landing's Red Vote block
+ * ── Brand pair (#339) ────────────────────────────────────────────────────
+ * The brand pair's only live consumer is the landing's Red Vote block
  * (#2249), whose stacks name the two fallback faces declared at the end of
  * this file from these measurements. `rt-brand-v1.css` is a copy-on-release
- * of upstream and must not be hand-edited, so the Phase 2 chrome PR will
- * wire the faces into the brand stacks themselves (same method, same
- * engine):
+ * of upstream and must not be hand-edited; the chrome re-skin that would
+ * have wired the faces into the brand stacks was abandoned (#2628). The
+ * measurements (same method, same engine):
  *
  *   Space Grotesk  w400/500 size-adjust 110.81% · w600/700 102.46%
  *                  ascent 0.9840  descent 0.2920  (normal line-height 1.276)
