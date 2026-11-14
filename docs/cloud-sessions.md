@@ -38,7 +38,7 @@ A draft PR deploys the preview channel but skips the heavy PR Preview smokes and
 ## Manual steps for Ron
 
 1. **Enable the skills on claude.ai** (Settings → Capabilities → Skills): `sprint`, `ron-ux`, `ron-qe` and `review`. Cloud sessions load claude.ai-enabled skills; they don't install repo plugins. The skills stay in the private `ops` repo; they are not vendored here because this repo is public.
-2. **Create the cloud environment** for `taverns-red/toast-stats`: network access **Trusted** (npm registry and GitHub are enough). Add **no environment variables and no secrets**; the setup hook needs none.
+2. **Create the cloud environment** for `taverns-red/toast-stats`: network access **Full** (since 2026-11-06, ops#159, so workers can also reach outside hosts such as taverns.red). Add **no environment variables and no secrets**; the setup hook needs none.
 
 ## Launching a worker on an issue
 
