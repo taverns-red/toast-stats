@@ -104,8 +104,9 @@ test('all: the gtag library loads, once', async ({ page }) => {
 
 test('lowering from all to minimal stops GA and clears _ga cookies', async ({
   page,
+  gaCollect,
 }) => {
-  test.setTimeout(60_000)
+  test.setTimeout(90_000)
   const gtm = await serveAsProd(page)
   await open(page)
   await banner(page).getByRole('button', { name: 'Keep all' }).click()
@@ -120,6 +121,15 @@ test('lowering from all to minimal stops GA and clears _ga cookies', async ({
           .length
     )
     .toBe(0)
+  // #2587: cookies cleared is not the same as hits stopped. Count the collect
+  // requests now, move to another page, and expect no new ones. The first
+  // wait lets anything already queued at the moment of the switch flush.
+  await page.waitForTimeout(2_000)
+  const before = gaCollect.length
+  await page.goto(`${PROD_ORIGIN}/awards`, { waitUntil: 'load' })
+  await page.mouse.click(5, 300)
+  await page.waitForTimeout(5_000)
+  expect(gaCollect.length).toBe(before)
 })
 
 test('banner is a fixed overlay: no shift, no extra page height', async ({

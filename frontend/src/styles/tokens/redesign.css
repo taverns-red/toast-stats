@@ -100,8 +100,11 @@
   --z-bottom-bar: 45;
   --z-fab: 46;
   --z-fullscreen: 50;
+  --z-tooltip: 50;
+  /* Filter slide-over under the consent banner: the choice stays reachable
+     over an open panel (#2719). */
+  --z-panel: 55;
   --z-banner: 60;
-  --z-panel: 60;
   --z-overlay: 80;
   --z-modal: 90;
   --z-skip-link: 1000;
