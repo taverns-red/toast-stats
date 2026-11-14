@@ -1,39 +1,37 @@
 /**
- * Workflow contract: a slow Ubuntu mirror must not eat a PR Preview job's
- * whole timeout (#2600).
+ * Workflow contract: the PR Preview jobs that run Playwright do it in the
+ * official Playwright image, with no OS-package install on the hot path
+ * (#2615, follow-up to #2600).
  *
  * On 2026-11-09, five smoke jobs were cancelled at their 20-minute job
  * timeout inside "Install Playwright browsers": `install --with-deps` was
  * fetching 139 MB of apt packages at 100-300 kB/s (run 42686172298, job
- * 129394370994), and the browser download never started. The apt packages
- * are not in the browser cache, so a cache hit does not help.
+ * 129394370994). #2612 capped that with step timeouts and one retry; the
+ * lasting fix is to not run apt at all. The image for the pinned Playwright
+ * version already has the OS packages and the browsers, on the same Ubuntu
+ * release as the runner (26.04, `resolute`).
  *
- * So every job that installs Playwright splits the OS packages from the
- * browser download. Each part has its own short step timeout and exactly
- * one retry of that step, never a test retry, and the job timeout is not
- * raised.
- * Sourced from the YAML so the contract cannot drift.
+ * The image tag must equal the pinned @playwright/test version, or the
+ * browsers in the image would not match the library. Sourced from the YAML
+ * and the lockfile so the contract cannot drift.
  */
 import { describe, it, expect } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { parse } from 'yaml'
 
-const FILE = path.join(process.cwd(), '.github/workflows/pr-preview.yml')
-const STEP_TIMEOUT_MAX = 5
-/** Minutes the rest of the job (npm ci, the tests) keeps in the worst case. */
-const JOB_HEADROOM = 5
+const ROOT = process.cwd()
+const FILE = path.join(ROOT, '.github/workflows/pr-preview.yml')
+const IMAGE_REPO = 'mcr.microsoft.com/playwright'
+const IMAGE_DISTRO = 'resolute'
 
 interface Step {
-  id?: string
   name?: string
   run?: string
-  if?: string
-  'timeout-minutes'?: number
-  'continue-on-error'?: boolean
+  uses?: string
 }
 interface Job {
-  'timeout-minutes'?: number
+  container?: { image?: string; options?: string } | string
   steps?: Step[]
 }
 
@@ -41,62 +39,49 @@ const workflow = parse(fs.readFileSync(FILE, 'utf8')) as {
   jobs: Record<string, Job>
 }
 
-const installJobs = Object.entries(workflow.jobs).filter(([, job]) =>
-  (job.steps ?? []).some(s => /npx playwright install/.test(s.run ?? ''))
+const lock = JSON.parse(
+  fs.readFileSync(path.join(ROOT, 'package-lock.json'), 'utf8')
+) as { packages: Record<string, { version?: string }> }
+const pinned = lock.packages['node_modules/@playwright/test']?.version
+
+/** Jobs that run `npx playwright test`. */
+const playwrightJobs = Object.entries(workflow.jobs).filter(([, job]) =>
+  (job.steps ?? []).some(s => /npx playwright test/.test(s.run ?? ''))
 )
 
-/** The first attempt (continue-on-error) and its single retry, by command. */
-function attempts(steps: Step[], command: RegExp): Step[] {
-  return steps.filter(s => command.test(s.run ?? ''))
-}
-
-describe('PR Preview Playwright install (#2600)', () => {
-  it('finds the jobs that install Playwright', () => {
-    expect(installJobs.length).toBeGreaterThanOrEqual(2)
+describe('PR Preview runs Playwright in the official image (#2615)', () => {
+  it('finds the lockfile version and the jobs that run Playwright', () => {
+    expect(pinned).toMatch(/^\d+\.\d+\.\d+$/)
+    expect(playwrightJobs.map(([name]) => name).sort()).toEqual([
+      'preview-smoke',
+      'smoke',
+    ])
   })
 
-  for (const [name, job] of installJobs) {
+  for (const [name, job] of playwrightJobs) {
     const steps = job.steps ?? []
 
-    it(`${name}: no step installs browsers and OS packages together`, () => {
-      const combined = steps.filter(s => /--with-deps/.test(s.run ?? ''))
-      expect(combined.map(s => s.name)).toEqual([])
+    it(`${name}: runs in the image pinned to @playwright/test`, () => {
+      const container =
+        typeof job.container === 'string'
+          ? { image: job.container }
+          : job.container
+      expect(container?.image).toBe(`${IMAGE_REPO}:v${pinned}-${IMAGE_DISTRO}`)
     })
 
-    for (const [label, command] of [
-      ['OS packages', /npx playwright install-deps chromium webkit/],
-      ['browser download', /npx playwright install chromium webkit/],
-    ] as const) {
-      it(`${name}: ${label} have a short timeout and exactly one retry`, () => {
-        const found = attempts(steps, command)
-        expect(found).toHaveLength(2)
-        const [first, retry] = found as [Step, Step]
-        for (const step of found) {
-          expect(step['timeout-minutes']).toBeGreaterThan(0)
-          expect(step['timeout-minutes']).toBeLessThanOrEqual(STEP_TIMEOUT_MAX)
-        }
-        expect(first['continue-on-error']).toBe(true)
-        expect(first.id).toBeTruthy()
-        expect(retry['continue-on-error']).toBeUndefined()
-        expect(retry.if).toContain(`steps.${first.id}.outcome == 'failure'`)
-        // No always(): a cancelled job must not start the retry.
-        expect(retry.if).not.toMatch(/always\(\)/)
-      })
-    }
+    it(`${name}: shares memory and reaps processes like the Playwright docs`, () => {
+      const options =
+        typeof job.container === 'object' ? job.container.options : ''
+      expect(options).toMatch(/--ipc=host/)
+      expect(options).toMatch(/--init/)
+    })
 
-    it(`${name}: worst-case install time leaves the job ${JOB_HEADROOM} minutes`, () => {
-      const total = steps
-        .filter(s => /npx playwright install/.test(s.run ?? ''))
-        .reduce((sum, s) => sum + (s['timeout-minutes'] ?? Infinity), 0)
-      expect(job['timeout-minutes']).toBeGreaterThan(0)
-      expect(total).toBeLessThanOrEqual(
-        (job['timeout-minutes'] as number) - JOB_HEADROOM
+    it(`${name}: installs no OS packages or browsers`, () => {
+      const offenders = steps.filter(s =>
+        /playwright install|apt-get|apt install|dpkg/.test(s.run ?? '')
       )
-    })
-
-    it(`${name}: the OS-package retry repairs an interrupted dpkg first`, () => {
-      const [, retry] = attempts(steps, /npx playwright install-deps/)
-      expect(retry?.run).toMatch(/sudo dpkg --configure -a/)
+      expect(offenders.map(s => s.name)).toEqual([])
+      expect(steps.some(s => s.uses?.startsWith('actions/cache@'))).toBe(false)
     })
   }
 })

@@ -376,21 +376,11 @@ describe('the smoke shard job (#2453)', () => {
     })
   })
 
-  it('caches the browsers on the Playwright version, then installs both engines', () => {
-    const cache = steps.find(s => s.uses?.startsWith('actions/cache@'))
-    expect(cache?.with?.['path']).toBe('~/.cache/ms-playwright')
-    expect(String(cache?.with?.['key'])).toContain(
-      'steps.playwright.outputs.version'
-    )
-    // OS packages and browsers install in separate steps since #2600.
-    for (const command of [
-      /playwright install-deps chromium webkit/,
-      /playwright install chromium webkit/,
-    ]) {
-      const install = steps.findIndex(s => command.test(s.run ?? ''))
-      expect(install).toBeGreaterThan(steps.indexOf(cache as Step))
-      expect(steps.indexOf(run as Step)).toBeGreaterThan(install)
-    }
+  it('has its browsers from the Playwright image, so nothing installs before the run (#2615)', () => {
+    // The image, and its pin to the lockfile, are asserted in
+    // prPreviewPlaywrightInstall.test.ts.
+    expect(steps.some(s => /playwright install/.test(s.run ?? ''))).toBe(false)
+    expect(steps.some(s => s.uses?.startsWith('actions/cache@'))).toBe(false)
   })
 
   it('uploads the failing shard results under a per-shard, per-attempt name', () => {
