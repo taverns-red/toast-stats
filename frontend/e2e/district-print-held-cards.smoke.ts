@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/test'
+import { fixtureFetch } from './helpers/cdnFixtures'
 
 /* Printing an unscrolled district page (#2616, from #2571/#2610).
  *
@@ -21,7 +22,12 @@ test('an unscrolled first print notes the held cards; a second print has both (D
   })
   await page.route('**/competitive-awards.json', async route => {
     await released
-    await route.continue()
+    const res = await fixtureFetch(route)
+    await route.fulfill({
+      status: res.status(),
+      json: await res.json(),
+      headers: { 'access-control-allow-origin': '*' },
+    })
   })
 
   await page.setViewportSize({ width: 375, height: 700 })
