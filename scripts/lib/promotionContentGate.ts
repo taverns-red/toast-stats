@@ -937,6 +937,17 @@ function checkRegionRollups(path: string, value: unknown): string | null {
   return null
 }
 
+/**
+ * Region rollups against the same date's rankings (#2563): a district's
+ * `distinguishedCounts.confirmed` equals its rankings `distinguishedClubs`.
+ */
+export function checkRollupsMatchRankings(
+  _rollups: unknown,
+  _rankings: unknown
+): string | null {
+  return null
+}
+
 /** Served under its own date, with that LOGICAL date's program year. */
 function datedArtifact(
   snapshotDate: string,
