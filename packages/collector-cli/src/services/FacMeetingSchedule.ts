@@ -898,6 +898,27 @@ function daySlotsIn(time: string | null | undefined): DaySlots | undefined {
   return { byDay, fallback }
 }
 
+/* ── Time zone and guest restriction (#2627) ───────────────────────── */
+
+/** A zone abbreviation, upper case only, so the French "et" ("and") is not
+ *  Eastern Time. */
+const ZONE_ABBREVIATION =
+  /(?<![A-Za-z])(?:AK[SD]T|[ECMPAN][SD]T|[ECMP]T|HST|UTC|GMT|CEST|CET|EET|BST|IST|WAT|EAT|SAST|AES?T|AEDT|JST|KST|SGT|HKT|PHT|WIB)(?![A-Za-z])(?!\s*[+\-−]?\s*\d)/g
+
+/**
+ * The time zone the club wrote next to its time ("7:00 PM EST"), as
+ * written: an abbreviation is not mapped to a region, since "EST" and "PST"
+ * name more than one country. Undefined when none, or when the text names
+ * two different zones.
+ */
+function timeZoneIn(
+  meetingTime: string | null | undefined
+): string | undefined {
+  if (typeof meetingTime !== 'string') return undefined
+  const zones = new Set(meetingTime.match(ZONE_ABBREVIATION) ?? [])
+  return zones.size === 1 ? [...zones][0] : undefined
+}
+
 /* ── Parser ────────────────────────────────────────────────────────── */
 
 export interface MeetingScheduleSource {
@@ -954,6 +975,8 @@ export function parseMeetingSchedule(
         ? slots[index]
         : slots[0]) ?? {}
 
+  const timeZone = timeZoneIn(source.meetingTime)
+
   const entries: MeetingScheduleEntry[] = []
   days.forEach((day, index) => {
     const { startTime, endTime } = slotFor(day, index)
@@ -966,13 +989,21 @@ export function parseMeetingSchedule(
             weeksOfMonth: group.weeks,
             startTime,
             endTime,
+            timeZone,
             mode: group.mode ?? defaultMode,
           })
         )
       }
     } else {
       entries.push(
-        compact({ day, cadence, startTime, endTime, mode: defaultMode })
+        compact({
+          day,
+          cadence,
+          startTime,
+          endTime,
+          timeZone,
+          mode: defaultMode,
+        })
       )
     }
   })

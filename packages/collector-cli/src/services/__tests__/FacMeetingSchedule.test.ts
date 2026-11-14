@@ -261,6 +261,7 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
           cadence: 'weekly',
           startTime: '12:00',
           endTime: '13:00',
+          timeZone: 'EST',
         },
       ],
     ],
@@ -322,6 +323,7 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
           cadence: 'weekly',
           startTime: '07:15',
           endTime: '08:30',
+          timeZone: 'EDT',
         },
       ],
     ],
@@ -346,6 +348,7 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
           cadence: 'weekly',
           startTime: '11:05',
           endTime: '11:55',
+          timeZone: 'ET',
         },
       ],
     ],
@@ -421,6 +424,7 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
           weeksOfMonth: [1, 3, 5],
           startTime: '19:00',
           endTime: '21:00',
+          timeZone: 'ET',
         },
       ],
     ],
@@ -433,6 +437,7 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
           cadence: 'monthly',
           weeksOfMonth: [1, 3],
           startTime: '09:00',
+          timeZone: 'EST',
         },
       ],
     ],
@@ -493,6 +498,7 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
           cadence: 'biweekly',
           startTime: '19:00',
           endTime: '20:40',
+          timeZone: 'EST',
         },
       ],
     ],
@@ -546,7 +552,7 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
     [
       'most Mondays (check webpage)',
       '1 p.m. EST',
-      [{ day: 'Monday', startTime: '13:00' }],
+      [{ day: 'Monday', startTime: '13:00', timeZone: 'EST' }],
     ],
   ])('%j / %j', (meetingDay, meetingTime, expected) => {
     expect(parseMeetingSchedule({ meetingDay, meetingTime })).toEqual(expected)
@@ -1631,6 +1637,7 @@ describe('parseMeetingSchedule (#2627) — gap 11: time zone', () => {
     ['7:00 pm'],
     ['18h30 pm et 7:00 am'], // French "et" is "and", not Eastern Time
     ['7:00 pm EST / 6:00 pm PST'], // two zones: which one is not stated
+    ['14h @ UTC-5'], // an offset, not a zone name
   ])('%j has no time zone', meetingTime => {
     const [entry] =
       parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime }) ?? []
