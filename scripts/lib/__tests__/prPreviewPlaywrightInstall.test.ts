@@ -90,5 +90,35 @@ describe('PR Preview runs Playwright in the official image (#2615)', () => {
       expect(offenders.map(s => s.name)).toEqual([])
       expect(steps.some(s => s.uses?.startsWith('actions/cache@'))).toBe(false)
     })
+
+    it(`${name}: aliases the generic font families to Liberation before Playwright runs`, () => {
+      // In the image, monospace/ui-monospace and sans-serif/system-ui resolve
+      // to WenQuanYi Zen Hei (a CJK font, not monospace for Latin); on the
+      // host runner they were DejaVu. The settled widths the smokes measure
+      // would be a font users never get. /etc/fonts/local.conf is included by
+      // the image's 51-local.conf.
+      const aliasIdx = steps.findIndex(s =>
+        /\/etc\/fonts\/local\.conf/.test(s.run ?? '')
+      )
+      const firstPlaywrightIdx = steps.findIndex(s =>
+        /npx playwright test/.test(s.run ?? '')
+      )
+      expect(aliasIdx).toBeGreaterThanOrEqual(0)
+      expect(aliasIdx).toBeLessThan(firstPlaywrightIdx)
+      const run = steps[aliasIdx]?.run ?? ''
+      for (const [generic, face] of [
+        ['monospace', 'Liberation Mono'],
+        ['ui-monospace', 'Liberation Mono'],
+        ['sans-serif', 'Liberation Sans'],
+        ['system-ui', 'Liberation Sans'],
+      ]) {
+        expect(run).toMatch(
+          new RegExp(
+            `<family>${generic}</family><prefer><family>${face}</family>`
+          )
+        )
+      }
+      expect(run).toMatch(/fc-cache -f/)
+    })
   }
 })
