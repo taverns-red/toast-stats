@@ -727,7 +727,6 @@ jobs:
     steps:
       - name: Alias generic fonts to Liberation
         run: |
-          echo "DIAG before: $(fc-match monospace) | $(fc-match sans-serif)"
           cat > /etc/fonts/local.conf <<'EOF'
           <?xml version="1.0"?>
           <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
@@ -739,7 +738,6 @@ jobs:
           </fontconfig>
           EOF
           fc-cache -f
-          echo "DIAG after: $(fc-match monospace) | $(fc-match sans-serif)"
 
       - name: Checkout code
         uses: actions/checkout@v7
@@ -892,7 +890,6 @@ jobs:
     steps:
       - name: Alias generic fonts to Liberation
         run: |
-          echo "DIAG before: $(fc-match monospace) | $(fc-match sans-serif)"
           cat > /etc/fonts/local.conf <<'EOF'
           <?xml version="1.0"?>
           <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
@@ -904,7 +901,6 @@ jobs:
           </fontconfig>
           EOF
           fc-cache -f
-          echo "DIAG after: $(fc-match monospace) | $(fc-match sans-serif)"
 
       - name: Checkout code
         uses: actions/checkout@v7
