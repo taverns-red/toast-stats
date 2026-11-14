@@ -263,14 +263,22 @@ export interface MeetingScheduleEntry {
   cadence?: 'weekly' | 'biweekly' | 'monthly'
   /** 1-5; "1st & 3rd Tuesday" → [1, 3]. Present when cadence is monthly. */
   weeksOfMonth?: number[]
+  /** True for "last Thursday": the last week of the month, alone or after
+   *  `weeksOfMonth`. Never a value inside `weeksOfMonth`. */
+  lastWeek?: boolean
   /** Local 24-hour "HH:MM". */
   startTime?: string
   /** Local 24-hour "HH:MM". */
   endTime?: string
-  /** Reserved; not populated (FAC's Address.TimeZone is null). */
+  /** The zone abbreviation the club wrote ("EST"), as written. */
   timeZone?: string
   /** What the club's own text says about how it meets. */
   mode?: 'in-person' | 'online' | 'hybrid'
+  /** True when the club's text says it is closed to guests. */
+  restricted?: boolean
+  /** True when more than one time was written and none could be tied to
+   *  this day, so `startTime` is the first only. */
+  uncertain?: boolean
 }
 
 /**

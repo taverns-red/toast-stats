@@ -389,6 +389,13 @@ const HHMM_HRS =
 /** Both ends of "730-930 pm", so the start is not lost (#2243). */
 const HHMM_RANGE_MERIDIEM =
   /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(\s*(?:-|–|to)\s*)(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
+/** A range of two 24-hour HHMM values ("1200-1300", "0700 - 0830", #2627).
+ *  Only a range, never a lone 4-digit number (a year); see hhmmRange. */
+const HHMM_RANGE_24 =
+  /(?<![\d:.+\-−])([01]\d|2[0-3])([0-5]\d)(\s*(?:-|–|—|to)\s*)([01]\d|2[0-3])([0-5]\d)(?:\s*(?:hrs?|hours?)\b\.?)?(?![\d:.-])/g
+/** A label that makes the number after it a room, box, phone or id. */
+const NUMBER_LABEL_BEFORE =
+  /(?:\b(?:room|rm|suite|ste|unit|apt|box|tel|ph|phone|salle)\b\.?:?|#)\s*$/
 /** 12-hour only: "2026 pm" is a year, not 20:26. */
 const HHMM_MERIDIEM = /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
 const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
@@ -609,6 +616,29 @@ function normalisedTimeText(time: string): string {
       .replace(/(?:(?<=\d)|\b)([ap])\.?\s?m\b\.?/g, '$1m') // "7:30p.m." too
       // "1600 hrs", "11:00 hours" → h-notation (24-hour); a lone "2 hours"
       // is a duration and stays out. "730 pm" → "7:30 pm" (#2243).
+      .replace(
+        HHMM_RANGE_24,
+        (
+          whole,
+          h1: string,
+          m1: string,
+          sep: string,
+          h2: string,
+          m2: string,
+          offset: number,
+          text: string
+        ) => {
+          // "Room 1200-1230", "PO Box 1200-1300", "Tel 1200-1300", "#1200-1300":
+          // a room, box, phone or number label, not a time.
+          if (NUMBER_LABEL_BEFORE.test(text.slice(0, offset))) return whole
+          // "2019-2020" is a pair of years: a meeting runs 15 min to 3 h.
+          const length =
+            Number(h2) * 60 + Number(m2) - (Number(h1) * 60 + Number(m1))
+          return length >= 15 && length <= 180
+            ? `${h1}h${m1}${sep}${h2}h${m2}`
+            : whole
+        }
+      )
       .replace(HHMM_HRS, '$1h$2')
       .replace(HHMM_RANGE_MERIDIEM, '$1:$2$3$4:$5')
       .replace(HHMM_MERIDIEM, '$1:$2')
@@ -672,10 +702,13 @@ function slotsFrom(found: readonly TimeToken[], text: string): Slot[] {
       }
       // "12:00 AM - 1:10 PM": a midnight start before an afternoon end is
       // a slip for noon (#2243). Up to 18:00 only: a later end could be a
-      // real long event from midnight, so it is left as written.
+      // real long event from midnight, so it is left as written. The end
+      // must say afternoon itself: "12:00 am - 1:00" only inherits a pm
+      // from the clock wrap, so it stays "not stated" (#2626).
       if (
         start.hour === 12 &&
         start.meridiem === 'am' &&
+        (next.meridiem === 'pm' || next.hour > 12) &&
         endMinutes !== undefined &&
         endMinutes > 12 * 60 &&
         endMinutes <= 18 * 60
@@ -873,6 +906,40 @@ function daySlotsIn(time: string | null | undefined): DaySlots | undefined {
   return { byDay, fallback }
 }
 
+/* ── Time zone and guest restriction (#2627) ───────────────────────── */
+
+/** A zone abbreviation, upper case only, so the French "et" ("and") is not
+ *  Eastern Time. */
+const ZONE_ABBREVIATION =
+  /(?<![A-Za-z])(?:AK[SD]T|[ECMPAN][SD]T|[ECMP]T|HST|UTC|GMT|CEST|CET|EET|BST|IST|WAT|EAT|SAST|AES?T|AEDT|JST|KST|SGT|HKT|PHT|WIB)(?![A-Za-z])(?!\s*[+\-−]\s*\d)(?!\s+(?:Building|Bldg|Hall|Room|Centre|Center|Street|Avenue|Church|School|Library|Office|Clinic)\b)/g
+
+/**
+ * The time zone the club wrote next to its time ("7:00 PM EST"), as
+ * written: an abbreviation is not mapped to a region, since "EST" and "PST"
+ * name more than one country. Undefined when none, or when the text names
+ * two different zones.
+ */
+function timeZoneIn(
+  meetingTime: string | null | undefined
+): string | undefined {
+  if (typeof meetingTime !== 'string') return undefined
+  const zones = new Set(meetingTime.match(ZONE_ABBREVIATION) ?? [])
+  return zones.size === 1 ? [...zones][0] : undefined
+}
+
+/**
+ * The club says it is closed to guests: "No guests", "workers only",
+ * "members only", "by invitation", "closed meeting". Matched on folded
+ * text. A negation in front ("not members only") or a fee after ("no guest
+ * fee") is not a restriction.
+ */
+const RESTRICTED =
+  /(?<!\bnot\s)(?<!\bnot\s+for\s)\b(?:no\s+guests?\b(?!\s+(?:fees?|under|below|younger))|(?:members?|workers?|employees?|staff)\s+only\b|by\s+invitation\b|invitation[\s-]only\b|invite[\s-]only\b|closed\s+(?:club|meeting)s?\b|guests?\s+not\s+(?:allowed|permitted|welcome)\b|membres?\s+seulement\b|reserve\s+aux\s+membres\b|pas\s+d'invites?\b)/
+
+function isRestricted(...texts: (string | null | undefined)[]): boolean {
+  return texts.some(t => typeof t === 'string' && RESTRICTED.test(fold(t)))
+}
+
 /* ── Parser ────────────────────────────────────────────────────────── */
 
 export interface MeetingScheduleSource {
@@ -905,8 +972,13 @@ export function parseMeetingSchedule(
   if (days.length === 0) return undefined
 
   const { groups, loose } = weekGroupsIn(dayText)
+  // "Last Thursday" (#2627): its own flag, because published readers read
+  // weeksOfMonth as numbers 1-5. Only for one day: "2nd Thursday and last
+  // Friday" cannot say which day the last week belongs to, so no cadence.
+  const lastMention = LAST_WEEK.test(dayText)
+  const lastWeek = lastMention && days.length === 1
   let cadence: Cadence | undefined
-  if (LAST_WEEK.test(dayText)) cadence = undefined
+  if (lastMention) cadence = lastWeek ? 'monthly' : undefined
   else if (BIWEEKLY.test(dayText)) cadence = 'biweekly'
   else if (groups.length > 0) {
     const weeks = new Set(groups.flatMap(g => g.weeks))
@@ -929,25 +1001,54 @@ export function parseMeetingSchedule(
         ? slots[index]
         : slots[0]) ?? {}
 
+  // Two or more times that pair with no day: only the first is published,
+  // so say it is not the whole story (#2627).
+  const uncertain =
+    !perDay && slots.length > 1 && slots.length !== days.length
+      ? true
+      : undefined
+  const timeZone = timeZoneIn(source.meetingTime)
+  const restricted = isRestricted(
+    source.meetingDay,
+    source.meetingTime,
+    source.location
+  )
+    ? true
+    : undefined
+
   const entries: MeetingScheduleEntry[] = []
   days.forEach((day, index) => {
     const { startTime, endTime } = slotFor(day, index)
     if (cadence === 'monthly') {
-      for (const group of groups) {
+      const monthly: WeekGroup[] = groups.length > 0 ? groups : [{ weeks: [] }]
+      for (const [k, group] of monthly.entries()) {
         entries.push(
           compact({
             day,
             cadence,
-            weeksOfMonth: group.weeks,
+            weeksOfMonth: group.weeks.length > 0 ? group.weeks : undefined,
+            lastWeek: lastWeek && k === 0 ? true : undefined,
             startTime,
             endTime,
+            timeZone,
             mode: group.mode ?? defaultMode,
+            restricted,
+            uncertain,
           })
         )
       }
     } else {
       entries.push(
-        compact({ day, cadence, startTime, endTime, mode: defaultMode })
+        compact({
+          day,
+          cadence,
+          startTime,
+          endTime,
+          timeZone,
+          mode: defaultMode,
+          restricted,
+          uncertain,
+        })
       )
     }
   })

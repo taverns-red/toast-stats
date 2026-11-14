@@ -56,11 +56,20 @@ const ClockTimeSchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
  * - `cadence`: weekly, every other week (`biweekly`), or `monthly` on the
  *   listed `weeksOfMonth` (1-5: "1st & 3rd Tuesday" → [1, 3]). Absent when
  *   the text names the day but not how often ("Twice a month").
+ * - `lastWeek`: true when the day also meets in the last week of the month
+ *   ("last Thursday", #2627). A separate field, not a `"last"` value in
+ *   `weeksOfMonth`: published readers validate that array as numbers 1-5
+ *   (ADR 0019). Set only for a string that names one day.
  * - `startTime` / `endTime`: local 24-hour time; absent when the text is
  *   ambiguous (a bare "6:30") or unparsed.
  * - `mode`: what the club's own text says. Absent when it says nothing.
- * - `timeZone`: reserved; FAC's Address.TimeZone is null on every recorded
- *   club, so the collector does not populate it.
+ * - `timeZone`: the zone abbreviation the club wrote next to its time
+ *   ("EST", "PT"), as written; absent when none or when two differ (#2627).
+ * - `restricted`: true when the club's own text says it is closed to guests
+ *   ("No guests", "workers only"). Never false (#2627).
+ * - `uncertain`: true when the time text holds more than one time that the
+ *   parser could not tie to a day, so `startTime` is the first one only
+ *   (#2627).
  *
  * Strict: every key is optional but `day`, so an unknown key must fail
  * rather than be stripped. The original {day, startTime, endTime,
@@ -70,10 +79,13 @@ export const MeetingScheduleEntrySchema = z.strictObject({
   day: z.enum(MEETING_WEEKDAYS),
   cadence: z.enum(['weekly', 'biweekly', 'monthly']).optional(),
   weeksOfMonth: z.array(z.number().int().min(1).max(5)).optional(),
+  lastWeek: z.boolean().optional(),
   startTime: ClockTimeSchema.optional(),
   endTime: ClockTimeSchema.optional(),
   timeZone: z.string().optional(),
   mode: z.enum(['in-person', 'online', 'hybrid']).optional(),
+  restricted: z.boolean().optional(),
+  uncertain: z.boolean().optional(),
 })
 
 /**

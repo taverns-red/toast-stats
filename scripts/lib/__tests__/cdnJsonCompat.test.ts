@@ -18,6 +18,7 @@ import * as contracts from '@taverns-red/shared-contracts'
 
 import {
   COMPAT_FIXTURES,
+  absentAtReleaseNotes,
   OVERRIDE_APPROVER,
   OVERRIDE_LABEL,
   applyGrandfather,
@@ -135,6 +136,81 @@ describe('forward: the PR head reads the release fixtures', () => {
     expect(compare(base, head)).toMatchObject([
       { direction: 'forward', reader: 'Thing', kind: 'missing-fixture' },
     ])
+  })
+
+  describe('several fixtures for one reader (#2562)', () => {
+    const absent = {
+      ok: false as const,
+      missing: true,
+      error: 'missing fixtures/new.json',
+      file: 'fixtures/new.json',
+    }
+    const V2 = { name: 'b', count: 2 }
+
+    it('a fixture the release does not have yet is not a forward failure', () => {
+      // The new fixture still has to parse with the release's schema
+      // (backward); only the forward read of a file that never existed at
+      // the release is skipped, and the runner says so.
+      const base = {
+        schemas: { Thing: OLD },
+        fixtures: { Thing: [ok(V1), absent] },
+      }
+      const head = {
+        schemas: { Thing: OLD },
+        fixtures: { Thing: [ok(V1), ok(V2)] },
+      }
+      expect(compare(base, head)).toEqual([])
+    })
+
+    it('the new fixture is still checked against the release schema', () => {
+      const base = {
+        schemas: { Thing: OLD },
+        fixtures: { Thing: [ok(V1), absent] },
+      }
+      const head = {
+        schemas: { Thing: OLD },
+        fixtures: { Thing: [ok(V1), ok({ name: 'b' })] },
+      }
+      expect(compare(base, head)).toMatchObject([
+        { direction: 'backward', reader: 'Thing', kind: 'rejected' },
+      ])
+    })
+
+    it('a release fixture that exists is still read by the PR schema', () => {
+      const base = {
+        schemas: { Thing: OLD },
+        fixtures: { Thing: [ok(V1), absent] },
+      }
+      const head = {
+        schemas: { Thing: OLD.extend({ extra: z.boolean() }) },
+        fixtures: { Thing: [ok({ ...V1, extra: true }), ok(V2)] },
+      }
+      expect(compare(base, head)).toMatchObject([
+        { direction: 'forward', reader: 'Thing', kind: 'rejected' },
+      ])
+    })
+
+    it('a release with none of the reader fixtures still fails', () => {
+      const base = { schemas: { Thing: OLD }, fixtures: { Thing: [absent] } }
+      const head = {
+        schemas: { Thing: OLD },
+        fixtures: { Thing: [ok(V1)] },
+      }
+      expect(compare(base, head)).toMatchObject([
+        { direction: 'forward', reader: 'Thing', kind: 'missing-fixture' },
+      ])
+    })
+
+    it('a head fixture that is missing fails backward', () => {
+      const base = { schemas: { Thing: OLD }, fixtures: { Thing: [ok(V1)] } }
+      const head = {
+        schemas: { Thing: OLD },
+        fixtures: { Thing: [ok(V1), absent] },
+      }
+      expect(compare(base, head)).toMatchObject([
+        { direction: 'backward', reader: 'Thing', kind: 'missing-fixture' },
+      ])
+    })
   })
 
   it('a reader new at the PR head needs its own fixture', () => {
@@ -509,23 +585,53 @@ describe('the real reader schemas and fixtures', () => {
     expect(head).toHaveProperty('PerDistrictData')
   })
 
-  it('every reader schema has exactly one fixture', () => {
-    expect(COMPAT_FIXTURES.map(s => s.reader).sort()).toEqual(
+  it('every reader schema has at least one fixture', () => {
+    expect([...new Set(COMPAT_FIXTURES.map(s => s.reader))].sort()).toEqual(
       Object.keys(head).sort()
     )
   })
 
   it('each fixture is what the writer contract accepts, strictly', async () => {
-    const fixtures = await loadFixtures(COMPAT_FIXTURES, repoRoot)
     for (const spec of COMPAT_FIXTURES) {
-      const fx = fixtures[spec.reader]
-      expect(fx, spec.reader).toMatchObject({ ok: true })
+      const fx = (await loadFixtures([spec], repoRoot))[spec.reader]?.[0]
+      expect(fx, `${spec.reader} ${spec.file}`).toMatchObject({ ok: true })
       const writer = (contracts as Record<string, unknown>)[
         `${spec.reader}Schema`
       ] as z.ZodType
       const r = writer.safeParse((fx as { payload: unknown }).payload)
-      expect(r.error?.issues, spec.reader).toBeUndefined()
+      expect(r.error?.issues, `${spec.reader} ${spec.file}`).toBeUndefined()
     }
+  })
+
+  it('the RegionRollups fixture carries distinguishedCounts on every level (#2562)', async () => {
+    const spec = COMPAT_FIXTURES.find(s =>
+      s.file.endsWith('-distinguished.json')
+    )
+    expect(spec).toBeDefined()
+    const fx = (await loadFixtures([spec!], repoRoot))['RegionRollups']?.[0]
+    expect(fx).toMatchObject({ ok: true })
+    const payload = (fx as { payload: unknown }).payload as {
+      world: { distinguishedCounts?: unknown }
+      regions: Record<string, { distinguishedCounts?: unknown }> | null
+      districts: Record<string, { distinguishedCounts?: unknown }>
+    }
+    const blocks = [
+      payload.world,
+      ...Object.values(payload.regions ?? {}),
+      ...Object.values(payload.districts),
+    ]
+    expect(blocks.length).toBeGreaterThan(1)
+    for (const b of blocks) {
+      expect(b.distinguishedCounts).toBeTruthy()
+    }
+    // Not all zero: a fixture of empty counts would parse without proving
+    // the tier shape is read.
+    const world = payload.world.distinguishedCounts as {
+      confirmed: number
+      provisional: number
+    }
+    expect(world.confirmed).toBeGreaterThan(0)
+    expect(world.provisional).toBeGreaterThan(0)
   })
 
   it('the PR head is compatible with itself', async () => {
@@ -538,12 +644,59 @@ describe('the real reader schemas and fixtures', () => {
     ).toEqual([])
   })
 
+  it('keeps the recorded RegionRollups fixture beside the synthetic one (#2562)', () => {
+    // The recorded one has numeric growth.chartered/suspended and a
+    // non-empty scope.excludedDistricts, which the synthetic one lacks.
+    expect(
+      COMPAT_FIXTURES.filter(s => s.reader === 'RegionRollups')
+        .map(s => s.file)
+        .sort()
+    ).toEqual([
+      '__fixtures__/recorded-region-rollups-distinguished.json',
+      '__fixtures__/recorded-region-rollups.json',
+    ])
+  })
+
+  it('a file missing from the tree is flagged missing, with its path', async () => {
+    const empty = mkdtempSync(join(tmpdir(), 'compat-'))
+    try {
+      const fixtures = await loadFixtures(COMPAT_FIXTURES, empty)
+      const all = Object.values(fixtures).flat()
+      expect(all).toHaveLength(COMPAT_FIXTURES.length)
+      for (const fx of all) {
+        expect(fx).toMatchObject({ ok: false, missing: true })
+      }
+      expect(absentAtReleaseNotes(fixtures)).toContain(
+        'release has no __fixtures__/recorded-region-rollups-distinguished.json; ' +
+          'checking current fixture against release schema'
+      )
+    } finally {
+      rmSync(empty, { recursive: true, force: true })
+    }
+  })
+
+  it('a missing export is a failure, not an absent file', async () => {
+    const fixtures = await loadFixtures(
+      [
+        {
+          reader: 'SuspendedClubs',
+          file: '__fixtures__/reader-payloads.ts',
+          exportName: 'NO_SUCH_EXPORT',
+        },
+      ],
+      repoRoot
+    )
+    const fx = Object.values(fixtures).flat()[0]
+    expect(fx).toMatchObject({ ok: false })
+    expect((fx as { missing?: boolean }).missing).toBeFalsy()
+  })
+
   it('a fixture missing from the tree loads as a failure', async () => {
     const empty = mkdtempSync(join(tmpdir(), 'compat-'))
     try {
       const fixtures = await loadFixtures(COMPAT_FIXTURES, empty)
-      for (const spec of COMPAT_FIXTURES) {
-        expect(fixtures[spec.reader]).toMatchObject({ ok: false })
+      for (const fx of Object.values(fixtures).flat()) {
+        expect(fx).toMatchObject({ ok: false })
       }
     } finally {
       rmSync(empty, { recursive: true, force: true })

@@ -259,6 +259,23 @@ describe('describeMeetingEntry', () => {
         mode: 'in-person',
       })
     ).toBe('Wednesday 19:30 · 1st & 3rd of the month · In person')
+    // #2627: the last week is the lastWeek flag; weeksOfMonth stays 1-5.
+    expect(
+      describeMeetingEntry({
+        day: 'Thursday',
+        cadence: 'monthly',
+        lastWeek: true,
+        startTime: '19:00',
+      })
+    ).toBe('Thursday 19:00 · last of the month')
+    expect(
+      describeMeetingEntry({
+        day: 'Thursday',
+        cadence: 'monthly',
+        weeksOfMonth: [2],
+        lastWeek: true,
+      })
+    ).toBe('Thursday, time not stated · 2nd & last of the month')
     expect(
       describeMeetingEntry({
         day: 'Monday',
