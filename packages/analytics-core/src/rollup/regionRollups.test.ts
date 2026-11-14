@@ -7,7 +7,8 @@
  * fixture bytes), not read back from its output.
  */
 
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -496,6 +497,35 @@ describe('buildRegionRollups — distinguishedCounts (#2553)', () => {
     expect(r.world.distinguishedCounts?.confirmed).toBe(1)
   })
 
+  it('follows the rankings date-level basis over the clubs own letters (#2801)', () => {
+    // TI publishes elsewhere (the rankings say so) but no club in these
+    // districts carries a letter: district 2 keeps TI's 0, as the rankings
+    // and district analytics do, not the April-renewals count.
+    const r = buildRegionRollups({
+      snapshotDate: '2025-11-15',
+      rankings: [{ districtId: '1' }, { districtId: '2' }],
+      districts: districts(false),
+      regionHistory: null,
+      distinguishedBasis: 'ti-recognised',
+      generatedAt: GENERATED_AT,
+    }).rollups
+    expect(r.districts['2']!.distinguishedCounts?.confirmed).toBe(0)
+    expect(r.districts['2']!.distinguishedCounts?.provisional).toBe(0)
+    expect(r.world.distinguishedCounts?.confirmed).toBe(0)
+  })
+
+  it('a rankings basis of april-renewals counts renewals even when letters exist (#2801)', () => {
+    const r = buildRegionRollups({
+      snapshotDate: '2026-05-31',
+      rankings: [{ districtId: '1' }, { districtId: '2' }],
+      districts: districts(true),
+      regionHistory: null,
+      distinguishedBasis: 'april-renewals',
+      generatedAt: GENERATED_AT,
+    }).rollups
+    expect(r.districts['2']!.distinguishedCounts?.confirmed).toBe(1)
+  })
+
   it('reads null for a district that carried neither TI status nor renewals, and for every block above it', () => {
     const d = districts(false)
     d[1] = {
@@ -525,5 +555,26 @@ describe('readRegionRollupInput — distinguished inputs (#2553)', () => {
     const d61 = districts.find(d => d.districtId === '61')!
     const club = d61.clubs.find(c => c.clubId === '9750')!
     expect(club.aprilRenewals).toBe(39)
+  })
+
+  it("reads the rankings' date-level distinguishedBasis, absent in old files (#2801)", () => {
+    const dir = mkdtempSync(join(tmpdir(), '2801-basis-'))
+    try {
+      const write = (metadata: Record<string, unknown>) =>
+        writeFileSync(
+          join(dir, 'all-districts-rankings.json'),
+          JSON.stringify({ metadata, rankings: [{ districtId: '61' }] })
+        )
+      write({ snapshotId: '2026-03-30', distinguishedBasis: 'ti-recognised' })
+      expect(readRegionRollupInput(dir).distinguishedBasis).toBe(
+        'ti-recognised'
+      )
+      write({ snapshotId: '2026-03-30', distinguishedBasis: 'bogus' })
+      expect(readRegionRollupInput(dir).distinguishedBasis).toBeUndefined()
+      write({ snapshotId: '2026-03-30' })
+      expect(readRegionRollupInput(dir).distinguishedBasis).toBeUndefined()
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

@@ -115,6 +115,11 @@ export interface RegionRollupsInput {
   readonly regionHistory: DistrictRegionHistory | null
   /** Why the history is null, when the caller knows better than "absent". */
   readonly regionHistoryNote?: string
+  /**
+   * The date-level Distinguished decision the rankings made (#2560, #2801).
+   * Absent (rankings written before it), the clubs' own letters decide.
+   */
+  readonly distinguishedBasis?: DistinguishedCountBasis
   readonly generatedAt?: string
 }
 
