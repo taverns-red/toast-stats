@@ -72,6 +72,7 @@ describe('og-cards job (#2304)', () => {
       'education-rollup': 15,
       'promote-reports': 30,
       'data-smoke': 10,
+      'data-auto-restore': 30,
       'education-ledger-history': 240,
     })
   })

@@ -251,6 +251,9 @@ jobs:
       # #1419: 'none' | 'auto' | 'manual'. The `closing-registry-pr` job below
       # keys off 'auto'; the red-alert steps in this job key off 'manual'.
       registry_remediation: ${{ steps.registrycheck.outputs.remediation }}
+      # When the promote began (UTC, with Z): the start of the window the
+      # data auto-restore (#2537) hands the planner as --since.
+      promote_started: ${{ steps.promotewindow.outputs.started }}
 
     steps:
       # ── Setup ────────────────────────────────────────────────
@@ -2034,6 +2037,12 @@ jobs:
       # sidecar) that staging no longer holds are removed after every copy,
       # only while prod's district file is the 0-club junk. Derived from
       # state, so it converges. Exits 1 on a failed copy or removal.
+      # The restore window's start (#2537). Reads nothing and writes nothing
+      # to a bucket; read by the data-auto-restore job as --since.
+      - name: Record the promotion window start (#2537)
+        id: promotewindow
+        run: echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Promote run manifest to production (#1763)
         id: promotemanifest
         if: >-
@@ -3388,6 +3397,14 @@ jobs:
     # needs no OIDC token or issue writes.
     permissions:
       contents: read
+    # The verdict the data-auto-restore job (#2537) keys off. Written by the
+    # last step, only when the data is bad, before that step fails the run.
+    outputs:
+      unhealthy: ${{ steps.verdict.outputs.unhealthy }}
+      failed: ${{ steps.verdict.outputs.failed }}
+      # When the check finished (UTC): the end of the restore window, after
+      # the last prod writer this run waits for.
+      window_end: ${{ steps.verdict.outputs.window_end }}
 
     steps:
       - name: Checkout code
@@ -3429,6 +3446,7 @@ jobs:
           CDN_BASE_URL: https://cdn.taverns.red
 
       - name: Fail the run when the published data is bad
+        id: verdict
         if: ${{ !cancelled() && (steps.smoke.outputs.healthy != 'true' || steps.schema.outputs.unhealthy != 'false') }}
         env:
           SMOKE_HEALTHY: ${{ steps.smoke.outputs.healthy }}
@@ -3449,7 +3467,206 @@ jobs:
           if [ "${SCHEMA_UNHEALTHY}" != "false" ]; then
             failed="${failed:+${failed}; }the schema check"
           fi
+          echo "unhealthy=true" >> "$GITHUB_OUTPUT"
+          echo "failed=${failed}" >> "$GITHUB_OUTPUT"
+          echo "window_end=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
           echo "::error title=Data smoke::failed after the promotion: ${failed}. cdn-data is the data probe; home, entry-asset and district are the Hosting probes. Prod was NOT changed by this job. See the steps above and docs/runbooks/data-restore.md."
+          exit 1
+
+  # ══════════════════════════════════════════════════════════
+  # DATA AUTO-RESTORE AFTER A FAILED SMOKE (#2537, epic #2492)
+  #
+  # When data-smoke reports bad data, plan a restore of the objects THIS run
+  # wrote (the run manifest's in-scope paths, over the window from the
+  # promote's start to the smoke's end) with the one planner,
+  # scripts/plan-data-restore.ts (#2539), and file a `data-rollback` issue
+  # with the plan. Restoring is `plan-data-restore.ts --execute`, which
+  # re-lists, re-plans and refuses on any difference, restores each object
+  # to the generation the run displaced (soft delete, 14 days) and removes
+  # what the run created.
+  #
+  # DRY-RUN BY DEFAULT. Only the repository variable DATA_AUTO_RESTORE set to
+  # exactly `execute` restores; unset, empty, `dry-run` or anything else only
+  # plans, and `off` skips even the plan. Ron sets it (never this workflow,
+  # never a dispatch input). Any refused entry, a plan that could not be
+  # built or a plan with nothing to do aborts the execute; the issue is filed
+  # either way. No backup copy is made here: soft delete is the backup, and a
+  # copy into toast-stats-backups-ca would need an IAM grant for the CI
+  # identity (a decision for Ron, see docs/runbooks/data-restore.md).
+  #
+  # Identity: the same service account the promote jobs write prod with; no
+  # job-level permissions (the workflow's contents/id-token/issues grants
+  # apply, as for the pipeline job). Nothing needs this job, so it cannot
+  # hold or change a promotion. Pinned by dataPipelineAutoRestore.test.ts.
+  # ══════════════════════════════════════════════════════════
+  data-auto-restore:
+    name: 'restore the published data (#2537)'
+    runs-on: ubuntu-26.04
+    needs: [pipeline, data-smoke]
+    if: >-
+      !cancelled()
+      && needs.data-smoke.outputs.unhealthy == 'true'
+      && needs.pipeline.outputs.skip_promotion != 'true'
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # check-cdn-schema.ts (the re-check) imports the built shared-contracts.
+      - name: Build shared-contracts
+        run: npm run build --workspace=@taverns-red/shared-contracts
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        run: gcloud version
+
+      - name: Resolve the restore mode (dry-run unless the variable says execute)
+        id: mode
+        run: npx tsx scripts/data-auto-restore.ts mode
+        env:
+          DATA_AUTO_RESTORE: ${{ vars.DATA_AUTO_RESTORE }}
+
+      # Read-only: lists the in-scope objects' live and soft-deleted copies
+      # in prod and plans. continue-on-error: a refused or failed plan must
+      # still reach the decision and the issue.
+      - name: Plan the restore
+        id: plan
+        if: steps.mode.outputs.mode != 'off'
+        continue-on-error: true
+        env:
+          PROD_BUCKET: ${{ env.GCS_BUCKET_PRODUCTION }}
+          PROMOTE_STARTED: ${{ needs.pipeline.outputs.promote_started }}
+          WINDOW_END: ${{ needs.data-smoke.outputs.window_end }}
+        run: |
+          W="${RUNNER_TEMP}/data-restore"
+          mkdir -p "${W}"
+          gcloud storage cat "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl" > "${W}/written.jsonl"
+          npx tsx scripts/data-auto-restore.ts paths --manifest "${W}/written.jsonl" --out "${W}/paths.txt"
+          bash scripts/pipeline/list-restore-candidates.sh "${W}" "${W}/paths.txt"
+          npx tsx scripts/plan-data-restore.ts \
+            --live "${W}/live.json" --soft-deleted "${W}/soft.json" \
+            --live-errors "${W}/live.err" --soft-errors "${W}/soft.err" \
+            --since "${PROMOTE_STARTED}" --until "${WINDOW_END}" \
+            --paths "${W}/paths.txt" --out "${W}/plan.json"
+
+      - name: Decide whether to restore
+        id: decide
+        if: ${{ !cancelled() }}
+        run: npx tsx scripts/data-auto-restore.ts decide --plan "${RUNNER_TEMP}/data-restore/plan.json"
+        env:
+          DATA_AUTO_RESTORE: ${{ vars.DATA_AUTO_RESTORE }}
+          UNHEALTHY: ${{ needs.data-smoke.outputs.unhealthy }}
+
+      # WRITE (production). Runs only when the variable is `execute` AND the
+      # plan is clean. Re-lists and re-plans first and refuses on any
+      # difference from the saved plan; entry points restore first.
+      - name: Restore the published data
+        id: execute
+        if: >-
+          !cancelled()
+          && steps.decide.outputs.execute == 'true'
+        env:
+          PROD_BUCKET: ${{ env.GCS_BUCKET_PRODUCTION }}
+        run: |
+          W="${RUNNER_TEMP}/data-restore"
+          bash scripts/pipeline/list-restore-candidates.sh "${W}/exec" "${W}/paths.txt"
+          npx tsx scripts/plan-data-restore.ts --execute --plan "${W}/plan.json" \
+            --live "${W}/exec/live.json" --soft-deleted "${W}/exec/soft.json" \
+            --live-errors "${W}/exec/live.err" --soft-errors "${W}/exec/soft.err"
+
+      # WRITE (the edge cache only). Also after a partial restore.
+      - name: Purge the CDN after the restore
+        id: purge
+        if: ${{ !cancelled() && (steps.execute.outcome == 'success' || steps.execute.outcome == 'failure') }}
+        continue-on-error: true
+        run: gcloud compute url-maps invalidate-cdn-cache toast-stats-cdn-url-map --path '/*' --async
+
+      - name: Re-check the published data
+        id: recheck
+        if: ${{ !cancelled() && (steps.execute.outcome == 'success' || steps.execute.outcome == 'failure') }}
+        continue-on-error: true
+        env:
+          CDN_BASE_URL: https://cdn.taverns.red
+        run: |
+          # Let the purge reach the edge before reading it back.
+          sleep 120
+          npx tsx scripts/check-cdn-schema.ts
+
+      - name: Attach the plan
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: data-restore-plan
+          path: |
+            ${{ runner.temp }}/data-restore/plan.json
+            ${{ runner.temp }}/data-restore/paths.txt
+          if-no-files-found: ignore
+
+      - name: Write the issue body
+        id: report
+        if: ${{ !cancelled() }}
+        env:
+          DATA_AUTO_RESTORE: ${{ vars.DATA_AUTO_RESTORE }}
+          UNHEALTHY: ${{ needs.data-smoke.outputs.unhealthy }}
+          FAILED: ${{ needs.data-smoke.outputs.failed }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EXECUTE_OUTCOME: ${{ steps.execute.outcome != 'skipped' && steps.execute.outcome || '' }}
+          PURGE_OUTCOME: ${{ steps.purge.outcome != 'skipped' && steps.purge.outcome || '' }}
+          RECHECK_UNHEALTHY: ${{ steps.recheck.outputs.unhealthy }}
+        run: npx tsx scripts/data-auto-restore.ts report --plan "${RUNNER_TEMP}/data-restore/plan.json"
+
+      # Same pattern as promotion-held and hosting-rollback: one open alert
+      # at a time, a later one comments on it. Filed whether or not anything
+      # was restored; the GITHUB_TOKEN already holds issues: write.
+      - name: File or refresh the data-rollback issue
+        if: ${{ !cancelled() && (steps.decide.outputs.file_issue == 'true' || steps.decide.outcome != 'success') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ steps.report.outputs.title }}
+          BODY_FILE: ${{ steps.report.outputs.body_file }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create data-rollback --color B60205 \
+            --description "A data promotion failed its post-promotion check" \
+            2>/dev/null || echo "Label already exists"
+          if [ -z "${BODY_FILE}" ] || [ ! -f "${BODY_FILE}" ]; then
+            BODY_FILE="${RUNNER_TEMP}/data-rollback-fallback.md"
+            echo "The post-promotion data check failed and the report step did not run: ${RUN_URL}" > "${BODY_FILE}"
+            TITLE="data-rollback: post-promotion check failed"
+          fi
+          EXISTING=$(gh issue list --label data-rollback --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "${EXISTING}" ]; then
+            gh issue comment "${EXISTING}" --body-file "${BODY_FILE}"
+          else
+            gh issue create --title "${TITLE}" --label data-rollback \
+              --body-file "${BODY_FILE}"
+          fi
+
+      - name: Fail the run when the restore did not complete
+        if: ${{ !cancelled() && steps.execute.outcome == 'failure' }}
+        run: |
+          echo "::error title=Data restore::the restore failed part way; some objects may be restored and some not. See the execute step and docs/runbooks/data-restore.md."
           exit 1
 
   # ══════════════════════════════════════════════════════════

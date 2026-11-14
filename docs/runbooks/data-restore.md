@@ -522,6 +522,39 @@ window. Its step 2 copies to the backup bucket instead of staging's
 backup expires under the backup bucket's 90-day rule; step 8's "expires with
 `_archive/` (30 days)" applies to the staging drill only.
 
+## Automatic restore (#2537): built, dry-run by default
+
+The `data-auto-restore` job in `data-pipeline.yml` runs when the post-promotion
+`data-smoke` reports bad data (the smoke or the CDN schema check). It plans a
+restore of the objects the run wrote with `scripts/plan-data-restore.ts`
+(window: the promote's start to the smoke's end; paths: the run manifest's
+in-scope objects, `scripts/data-auto-restore.ts paths`), attaches the plan as
+the `data-restore-plan` artifact, and files or refreshes a `data-rollback`
+issue holding it. Never on a `skip_promotion` run.
+
+| `DATA_AUTO_RESTORE` (repository variable) | What happens on a failed smoke  |
+| ----------------------------------------- | ------------------------------- |
+| unset, empty, `dry-run`, or anything else | plan and issue only (default)   |
+| `off`                                     | issue only, no plan             |
+| `execute`                                 | restore, purge, re-check, issue |
+
+`execute` restores only a clean plan: any refused entry, a plan that could not
+be built, or a plan with nothing to do aborts it, and the issue is still
+filed. It re-lists and re-plans first and refuses on any difference, restores
+entry points first, removes objects the run created, then purges the CDN
+(`toast-stats-cdn-url-map`) and re-checks the schema after two minutes.
+
+Not done by the job: the backup copy (step 3; soft delete is the backup, and
+copying into `toast-stats-backups-ca` needs an IAM grant, see Follow-ups),
+fixing staging after a removed date (#2540), and telling a freshness failure
+from a decode or schema failure (#2500: restore only on the latter). The
+schema check's `unhealthy` flag covers both, so a freshness-only failure also
+plans a restore; decide before turning `execute` on.
+
+Never turned on yet: it has not run against real objects. The staging drill
+must first confirm the planner's five assumptions (see #2492) and record them
+here.
+
 ## Open questions
 
 - ~~Is a staging `_archive/` copy enough as the backup, or a dedicated
@@ -537,10 +570,9 @@ backup expires under the backup bucket's 90-day rule; step 8's "expires with
 
 ## Follow-ups (not in this PR)
 
-- Automate it for #2492's acceptance criterion: after the promote, run the
-  schema check against prod; on failure, restore the run's manifest objects
-  by generation on the CI identity (it already has the permissions) and file
-  a `data-rollback` issue, mirroring `deploy.yml`.
+- ~~Automate it for #2492's acceptance criterion~~ Built in #2537 (above),
+  dry-run by default. Turning on `execute` needs Ron's OK after the staging
+  drill.
 - If the restore is automated, the CI identity needs a write grant on
   `toast-stats-backups-ca` for the backup step. That is an IAM change for
   Ron; none is made here.
