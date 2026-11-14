@@ -39,7 +39,23 @@ const ALLOWLIST = new Set([
     badge accents in redesign.css) and predates this. Hexes beyond the
     ambers are not policed either (locatorPins.ts draws the pin in hex). */
 const FORBIDDEN =
-  /--rt-(?:stats|vote|paper|bg)(?![\w])|--rt-(?:stats|paper|bg)-[\w-]+|--rt-red-soft(?![\w])|#d4873f\b|#b5651d\b/gi
+  /--rt-(?:stats|vote|paper|bg)(?![\w])|--rt-(?:stats|paper|bg)-[\w-]+|--rt-red-soft(?![\w])|--rt-(?:ink(?:-2|-3|-on-dk)?|good|warn|bad|info|table|club|eval|rule(?:-strong|-on-dk)?)(?![\w-])|#d4873f\b|#b5651d\b/gi
+
+/** #2630 — colour tokens that were already consumed before the guard covered
+    every --rt-* colour: the recognition-badge hues in redesign.css (their
+    contrast is pinned by RecognitionBadgeContrast.test.ts) and the app
+    shell's online dot. A use is exempt only for the exact tokens listed for
+    that file; any other --rt-* colour there still fails. */
+const PRE_EXISTING_USES: Record<string, string[]> = {
+  'styles/tokens/redesign.css': [
+    '--rt-good',
+    '--rt-info',
+    '--rt-ink-2',
+    '--rt-ink-3',
+    '--rt-eval',
+  ],
+  'styles/components/app-shell.css': ['--rt-good'],
+}
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -63,8 +79,12 @@ function findAccentUses(files: string[]): string[] {
     const rel = relative(srcDir, file)
     if (ALLOWLIST.has(rel)) continue
     const lines = stripComments(readFileSync(file, 'utf8')).split('\n')
+    const exempt = PRE_EXISTING_USES[rel] ?? []
     lines.forEach((line, i) => {
-      if (line.match(FORBIDDEN)) hits.push(`${rel}:${i + 1}: ${line.trim()}`)
+      const found = (line.match(FORBIDDEN) ?? []).filter(
+        m => !exempt.includes(m.toLowerCase())
+      )
+      if (found.length > 0) hits.push(`${rel}:${i + 1}: ${line.trim()}`)
     })
   }
   return hits
