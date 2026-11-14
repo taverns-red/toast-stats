@@ -542,6 +542,50 @@ describe('buildRegionRollups — distinguishedCounts (#2553)', () => {
     expect(r.world.distinguishedCounts).toBeNull()
   })
 
+  it('a district whose clubs carry only empty status strings and no renewals reads null, not zero (#2563)', () => {
+    // Every raw row has the 'Club Distinguished Status' column, empty before
+    // TI publishes; with no April renewals read either, nothing was
+    // collected, so confirmed 0 would be a made-up figure.
+    const d = districts(false)
+    d[1] = {
+      ...d[1]!,
+      clubs: d[1]!.clubs.map(c => ({
+        ...c,
+        aprilRenewals: undefined,
+        distinguishedStatus: '',
+      })),
+    }
+    const r = rollup('2025-11-15', d)
+    expect(r.districts['2']!.distinguishedCounts).toBeNull()
+    expect(r.world.distinguishedCounts).toBeNull()
+  })
+
+  it('a TI tier letter alone, without renewals, still counts as collected (#2563)', () => {
+    const d = districts(false)
+    d[1] = {
+      ...d[1]!,
+      clubs: d[1]!.clubs.map(c => ({
+        ...c,
+        aprilRenewals: undefined,
+        distinguishedStatus: 'S',
+      })),
+    }
+    const r = rollup('2026-05-31', d)
+    expect(r.districts['2']!.distinguishedCounts?.confirmed).toBe(2)
+  })
+
+  it('a world with no in-scope districts publishes null distinguishedCounts, like its sibling blocks (#2563)', () => {
+    const r = buildRegionRollups({
+      snapshotDate: '2025-11-15',
+      rankings: [{ districtId: '1' }],
+      districts: [],
+      regionHistory: null,
+      generatedAt: GENERATED_AT,
+    }).rollups
+    expect(r.world.officerTraining).toBeNull()
+    expect(r.world.distinguishedCounts).toBeNull()
+  })
+
   it('keeps the existing qualifying-today distinguished block unchanged', () => {
     const r = rollup('2025-11-15', districts(false))
     expect(r.world.distinguished.president).toBe(1)
