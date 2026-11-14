@@ -94,3 +94,44 @@ describe('BordaCountRankingCalculator — confirmed Distinguished PY (#2324)', (
     expect(spy.programYears).toEqual(['2025-2026'])
   })
 })
+
+describe('BordaCountRankingCalculator — pre-April renewals are the snapshot own (#2561)', () => {
+  // TI's "Apr. Ren." resets after the June close; a November snapshot must
+  // be judged on its own 5 renewals, never the prior June close's 25.
+  // Club 1401: 7 goals, base 20 -> confirmed only with >= 20 renewals.
+  function withRenewals(asOfDate: string, renewals: string) {
+    const base = district(asOfDate)
+    return {
+      ...base,
+      clubPerformance: [
+        {
+          'Club Number': '00001401',
+          'Goals Met': 7,
+          'Mem. Base': 20,
+          'Active Members': 25,
+        },
+      ],
+      districtPerformance: [
+        ...(base.districtPerformance ?? []).filter(row => !('Club' in row)),
+        { Club: '00001401', 'Apr. Ren.': renewals },
+      ],
+    }
+  }
+
+  async function confirmedCount(
+    stats: RankingDistrictStatistics
+  ): Promise<number | undefined> {
+    const [ranked] = await new BordaCountRankingCalculator().calculateRankings([
+      stats,
+    ])
+    return ranked?.ranking?.distinguishedClubs
+  }
+
+  it('a November snapshot counts only its own renewals (5), not the prior June close (25)', async () => {
+    expect(await confirmedCount(withRenewals('2026-11-10', '5'))).toBe(0)
+  })
+
+  it('control: the prior June close rows alone would confirm the club', async () => {
+    expect(await confirmedCount(withRenewals('2026-06-30', '25'))).toBe(1)
+  })
+})

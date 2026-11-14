@@ -72,7 +72,9 @@ describe('countConfirmedDistinguishedClubs requires a Club Success Plan (#2323)'
 describe('pre-April snapshots use their own "Apr. Ren." running count (#2561)', () => {
   // TI's "Apr. Ren." resets after the June close and is a running count for
   // the new program year; it is not last April's figure carried forward.
-  // Evidence (D61 club 3045): 2025-06-30=10, 2026-06-30=9, 2026-10-15=5.
+  // Real D61 club 3045 ran 10, 9 then 5 across 2025-06-30, 2026-06-30 and
+  // 2026-10-15. The fixture uses 25 for the prior close (above the 20-member
+  // rung) so the two inputs decide differently.
   // DCP FAQ: https://www.toastmasters.org/footer/faq/Distinguished%20Club%20Program
   const clubRow = {
     'Club Number': '00003045',
