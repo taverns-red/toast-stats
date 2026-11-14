@@ -60,6 +60,7 @@ import {
   type RegionRollupFigures,
 } from '@taverns-red/shared-contracts'
 import { programYearForSnapshotDate } from './ceoReportSnapshotDates.js'
+import { canonicalDistrictId } from '../../packages/analytics-core/src/rollup/globalRollup.js'
 import {
   ANCHOR_DISTRICT,
   checkDistrictSnapshotIndex,
@@ -852,6 +853,29 @@ function figureCounts(f: RegionRollupFigures): Array<[string, number | null]> {
       out.push([`${group}.${k}`, v as number | null])
     }
   }
+  // Confirmed / provisional Distinguished (#2563): absent on files written
+  // before #2553, so only a block that carries the field is checked; null
+  // (not collected) sums like any figure.
+  if (f.distinguishedCounts !== undefined) {
+    const c = f.distinguishedCounts
+    out.push(
+      ['distinguishedCounts.confirmed', c === null ? null : c.confirmed],
+      ['distinguishedCounts.provisional', c === null ? null : c.provisional]
+    )
+    for (const tier of [
+      'distinguished',
+      'select',
+      'presidents',
+      'smedley',
+    ] as const) {
+      for (const k of ['confirmed', 'provisional'] as const) {
+        out.push([
+          `distinguishedCounts.byTier.${tier}.${k}`,
+          c === null ? null : c.byTier[tier][k],
+        ])
+      }
+    }
+  }
   // Officer training (#2296): absent on files written before the field, so
   // only a block that carries it is checked; null sums like any figure.
   if (f.officerTraining !== undefined) {
@@ -933,6 +957,55 @@ function checkRegionRollups(path: string, value: unknown): string | null {
       sumFigures(members as RegionRollupFigures[])
     )
     if (mismatch !== null) return `region ${region}: ${mismatch}`
+  }
+  return null
+}
+
+/**
+ * Region rollups against the same date's rankings (#2563): a district's
+ * `distinguishedCounts.confirmed` equals its rankings `distinguishedClubs`.
+ */
+export function checkRollupsMatchRankings(
+  rollups: unknown,
+  rankings: unknown
+): string | null {
+  const parsed = RegionRollupsSchema.safeParse(rollups)
+  // A rollups file that does not parse is reported by its own check.
+  if (!parsed.success) return null
+  const withCounts = Object.entries(parsed.data.districts).filter(
+    ([, d]) => d.distinguishedCounts != null
+  )
+  // Older files carry no counts: nothing to compare.
+  if (withCounts.length === 0) return null
+
+  const rows = (rankings as { rankings?: unknown } | null)?.rankings
+  if (!Array.isArray(rows)) {
+    return 'the rollups publish distinguishedCounts, but the rankings carry no rows to compare'
+  }
+  const ranked = new Map<string, number | null>()
+  for (const row of rows as Array<{
+    districtId?: unknown
+    distinguishedClubs?: unknown
+  }>) {
+    if (typeof row?.districtId !== 'string') continue
+    ranked.set(
+      canonicalDistrictId(row.districtId),
+      typeof row.distinguishedClubs === 'number' ? row.distinguishedClubs : null
+    )
+  }
+  for (const [id, district] of withCounts) {
+    const confirmed = district.distinguishedCounts!.confirmed
+    const key = canonicalDistrictId(id)
+    if (!ranked.has(key)) {
+      return `district ${id} publishes counts, but the rankings do not list it`
+    }
+    const want = ranked.get(key)
+    if (want === null || want === undefined) {
+      return `district ${id} publishes counts, but its rankings row has no numeric distinguishedClubs`
+    }
+    if (confirmed !== want) {
+      return `district ${id} confirmed ${confirmed}, but the rankings' distinguishedClubs is ${want}`
+    }
   }
   return null
 }

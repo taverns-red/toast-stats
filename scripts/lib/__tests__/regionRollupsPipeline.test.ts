@@ -167,6 +167,99 @@ describe('content gate: region-rollups (#1799)', () => {
   })
 })
 
+describe('content gate: region-rollups distinguishedCounts (#2563)', () => {
+  type Counts = NonNullable<RegionRollups['world']['distinguishedCounts']>
+  const counts = (c: number, p: number): Counts => ({
+    confirmed: c,
+    provisional: p,
+    byTier: {
+      distinguished: { confirmed: c, provisional: p },
+      select: { confirmed: 0, provisional: 0 },
+      presidents: { confirmed: 0, provisional: 0 },
+      smedley: { confirmed: 0, provisional: 0 },
+    },
+  })
+  const sum = (rows: Counts[]): Counts =>
+    counts(
+      rows.reduce((a, r) => a + r.confirmed, 0),
+      rows.reduce((a, r) => a + r.provisional, 0)
+    )
+
+  /** RECORDED with a consistent distinguishedCounts on every block. */
+  const withCounts = (): RegionRollups => {
+    const r = structuredClone(RECORDED)
+    Object.values(r.districts).forEach((d, n) => {
+      d.distinguishedCounts = counts(n + 1, 2 * n)
+    })
+    for (const block of Object.values(r.regions ?? {})) {
+      block.distinguishedCounts = sum(
+        block.districtIds.map(id => r.districts[id]!.distinguishedCounts!)
+      )
+    }
+    r.world.distinguishedCounts = sum(
+      Object.values(r.districts).map(d => d.distinguishedCounts!)
+    )
+    return r
+  }
+
+  it('passes blocks whose counts are the sums of their districts', () => {
+    expect(check(PATH, withCounts())).toBeNull()
+  })
+
+  it('passes an older file that carries no distinguishedCounts at all', () => {
+    expect(RECORDED.world.distinguishedCounts).toBeUndefined()
+    expect(check(PATH, RECORDED)).toBeNull()
+  })
+
+  it('fails a world confirmed count that is not the sum of its districts', () => {
+    const bad = withCounts()
+    const w = bad.world.distinguishedCounts!
+    // Schema-valid on its own: the total and its tier move together.
+    w.confirmed += 1
+    w.byTier.distinguished.confirmed += 1
+    expect(check(PATH, bad)).toMatch(/world: distinguishedCounts\.confirmed/)
+  })
+
+  it('fails a world tier count that is not the sum of its districts', () => {
+    const bad = withCounts()
+    // Totals unchanged (so schema-valid), one club moved between tiers.
+    const w = bad.world.distinguishedCounts!
+    w.byTier.distinguished.confirmed -= 1
+    w.byTier.select.confirmed += 1
+    expect(check(PATH, bad)).toMatch(
+      /world: distinguishedCounts\.byTier\.distinguished\.confirmed/
+    )
+  })
+
+  it('fails a region count that is not the sum of its districts', () => {
+    const bad = withCounts()
+    const region = Object.keys(bad.regions!)[0]!
+    const b = bad.regions![region]!.distinguishedCounts!
+    b.provisional += 1
+    b.byTier.distinguished.provisional += 1
+    expect(check(PATH, bad)).toMatch(
+      new RegExp(`region ${region}: distinguishedCounts\\.provisional`)
+    )
+  })
+
+  it('fails a world that publishes counts while a district published null', () => {
+    const bad = withCounts()
+    bad.districts['68']!.distinguishedCounts = null
+    expect(check(PATH, bad)).toEqual(expect.any(String))
+    expect(check(PATH, bad)).toMatch(/distinguishedCounts\.confirmed/)
+  })
+
+  it('passes a world that is null because a district is null', () => {
+    const ok = withCounts()
+    ok.districts['68']!.distinguishedCounts = null
+    ok.world.distinguishedCounts = null
+    for (const block of Object.values(ok.regions ?? {})) {
+      if (block.districtIds.includes('68')) block.distinguishedCounts = null
+    }
+    expect(check(PATH, ok)).toBeNull()
+  })
+})
+
 describe('promotion: region-rollups moves with its date (#1799)', () => {
   it('is under a promoted prefix, a date object for scoped promotion', () => {
     expect(PROMOTED_PREFIXES.some(p => PATH.startsWith(p))).toBe(true)

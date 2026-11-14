@@ -17,6 +17,7 @@ import {
   PROMOTED_PREFIXES,
   SNAPSHOT_INDEX_PATH,
   checkLatestAgreesWithIndex,
+  checkRollupsMatchRankings,
   clubHistoryShardKeys,
   checkObject,
   decodeStoredObject,
@@ -403,6 +404,58 @@ export async function runContentGate(
           ? checkLatestAgreesWithIndex(latest, index)
           : 'latest manifest or snapshot index is missing from staging',
     })
+  }
+
+  // Region rollups against the same date's rankings (#2563). Either file
+  // changing puts the pair under check; a date staging holds only one of
+  // them for is left to that file's own checks.
+  const pairDates = new Set<string>()
+  for (const name of [
+    ...plan.checks.map(c => c.path),
+    ...changed.map(o => o.name),
+  ]) {
+    const m =
+      /^snapshots\/([^/]+)\/(?:region-rollups|all-districts-rankings)\.json$/.exec(
+        name
+      )
+    if (m) pairDates.add(m[1]!)
+  }
+  for (const date of [...pairDates].sort()) {
+    const rollupsPath = `snapshots/${date}/region-rollups.json`
+    const rankingsPath = `snapshots/${date}/all-districts-rankings.json`
+    if (!stagingMeta.has(rankingsPath) || !stagingMeta.has(rollupsPath)) {
+      continue
+    }
+    const pair = `${rollupsPath} ↔ ${rankingsPath}`
+    try {
+      const [rollups, rankings] = await Promise.all(
+        [rollupsPath, rankingsPath].map(async name =>
+          decodeStoredObject(
+            await readStored(
+              staging,
+              name,
+              stagingMeta.get(name)!.contentEncoding
+            )
+          )
+        )
+      )
+      // An unreadable rollups file is that file's own failure; unreadable
+      // rankings cannot vouch for the counts, so the pair fails closed.
+      let failure: string | null = null
+      if (rollups!.ok) {
+        failure = rankings!.ok
+          ? checkRollupsMatchRankings(rollups!.value, rankings!.value)
+          : `the rankings cannot be read (${rankings!.reason})`
+      }
+      results.push({ path: pair, kind: 'cross-check', failure })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      results.push({
+        path: pair,
+        kind: 'cross-check',
+        failure: `read failed: ${message}`,
+      })
+    }
   }
 
   return evaluateContentGate({
