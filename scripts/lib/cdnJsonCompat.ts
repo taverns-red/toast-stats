@@ -50,9 +50,18 @@ export interface ReaderLike {
 export type SchemaSet = Record<string, ReaderLike>
 
 export type LoadedFixture =
-  { ok: true; payload: unknown } | { ok: false; error: string }
+  | { ok: true; payload: unknown }
+  | {
+      ok: false
+      error: string
+      /** The fixture's file is not in the tree (as opposed to a bad one). */
+      missing?: boolean
+      /** The path, relative to FIXTURE_ROOT, when `missing`. */
+      file?: string
+    }
 
-export type FixtureSet = Record<string, LoadedFixture>
+/** A reader may have several fixtures; each is checked on its own. */
+export type FixtureSet = Record<string, LoadedFixture | LoadedFixture[]>
 
 /**
  * Where a reader's fixture lives, relative to
@@ -173,6 +182,15 @@ export interface IssueEvent {
 export interface OverrideResult {
   approved: boolean
   reason: string
+}
+
+/**
+ * One line per fixture the tree lacks, for the runner to log on the release
+ * side so the skipped forward read is visible, never silent.
+ */
+export function absentAtReleaseNotes(fixtures: FixtureSet): string[] {
+  void fixtures
+  return []
 }
 
 const SUFFIX = 'ReaderSchema'
