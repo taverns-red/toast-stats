@@ -8,14 +8,21 @@
  *   plan-data-restore.ts --live live.json --soft-deleted soft.json \
  *     --since <ISO time the bad run began, with Z or offset> \
  *     --until <ISO time it ended, with Z or offset> \
+ *     --live-errors live.err --soft-errors soft.err \
  *     --paths paths.txt [--out plan.json]
  * where the listings are `gcloud storage ls --json <urls>` and
- * `gcloud storage ls --soft-deleted --json <urls>`. --paths (one object name
+ * `gcloud storage ls --soft-deleted --json <urls>`, and the *.err files are the
+ * stderr of those same calls. Both are required: if any line of either is not
+ * gcloud's "matched no objects" message the whole plan is refused (a failed
+ * listing would make an overwritten object look new and get deleted). The plan
+ * also refuses every restore and delete when more than 13 days have passed
+ * since --since (soft-delete retention is 14 days). --paths (one object name
  * per line) is required: without it nothing limits the deletes.
  *
  * Execute mode (WRITE; runs gcloud storage restore / rm):
  *   plan-data-restore.ts --execute --plan plan.json \
- *     --live live.json --soft-deleted soft.json
+ *     --live live.json --soft-deleted soft.json \
+ *     --live-errors live.err --soft-errors soft.err
  * The saved plan is schema-checked; fresh listings are re-planned and must
  * equal it, else it refuses and does nothing. Restores carry
  * --if-generation-match=<live generation>.
@@ -32,6 +39,7 @@ import { parseArgs } from 'node:util'
 import {
   ExecuteFailure,
   RestorePlanError,
+  checkListingErrors,
   executePlan,
   parseListing,
   parseSavedPlan,
@@ -43,6 +51,8 @@ const { values } = parseArgs({
   options: {
     live: { type: 'string' },
     'soft-deleted': { type: 'string' },
+    'live-errors': { type: 'string' },
+    'soft-errors': { type: 'string' },
     since: { type: 'string' },
     until: { type: 'string' },
     paths: { type: 'string' },
@@ -53,18 +63,38 @@ const { values } = parseArgs({
   strict: true,
 })
 
+// PLAN_RESTORE_NOW (ISO time) is for the tests only: it pins the clock the
+// 13-day retention check uses. Operators never set it.
+const now = process.env.PLAN_RESTORE_NOW
+  ? Date.parse(process.env.PLAN_RESTORE_NOW)
+  : undefined
+
 const readJson = (f: string): unknown => JSON.parse(readFileSync(f, 'utf8'))
 
 function usage(): never {
   process.stderr.write(
-    'usage: plan-data-restore.ts --live F --soft-deleted F --since ISO --until ISO --paths F [--out F]\n' +
-      '       plan-data-restore.ts --execute --plan F --live F --soft-deleted F\n'
+    'usage: plan-data-restore.ts --live F --soft-deleted F --live-errors F --soft-errors F \\\n' +
+      '         --since ISO --until ISO --paths F [--out F]\n' +
+      '       plan-data-restore.ts --execute --plan F --live F --soft-deleted F \\\n' +
+      '         --live-errors F --soft-errors F\n'
   )
   process.exit(2)
 }
 
 try {
-  if (!values.live || !values['soft-deleted']) usage()
+  if (
+    !values.live ||
+    !values['soft-deleted'] ||
+    !values['live-errors'] ||
+    !values['soft-errors']
+  ) {
+    usage()
+  }
+  checkListingErrors(readFileSync(values['live-errors'], 'utf8'), 'live')
+  checkListingErrors(
+    readFileSync(values['soft-errors'], 'utf8'),
+    'soft-deleted'
+  )
   if (values.execute) {
     if (!values.plan) usage()
   } else if (!values.since || !values.until || !values.paths) {
@@ -81,6 +111,7 @@ try {
       since: saved.since,
       until: saved.until,
       paths: saved.entries.map(e => e.name),
+      now,
     })
     verifyPlan(saved, current)
     const gcloud = process.env.GCLOUD || 'gcloud'
@@ -118,6 +149,7 @@ try {
       since: values.since as string,
       until: values.until as string,
       paths,
+      now,
     })
     const text = JSON.stringify(plan, null, 2) + '\n'
     if (values.out) writeFileSync(values.out, text)

@@ -117,6 +117,39 @@ export function parseSavedPlan(json: unknown): RestorePlan {
   return r.data as RestorePlan
 }
 
+/**
+ * The one stderr line `gcloud storage ls` prints for a URL that lists nothing.
+ * Source: Google Cloud SDK, `googlecloudsdk/command_lib/storage/list_util.py`
+ * (`raise errors.InvalidUrlError('One or more URLs matched no objects.')`,
+ * which the gcloud framework prints as `ERROR: (gcloud.storage.ls) <message>`).
+ * Not shown in the public docs, so it is matched exactly and anything else
+ * refuses.
+ */
+export const MATCHED_NO_OBJECTS =
+  'ERROR: (gcloud.storage.ls) One or more URLs matched no objects.'
+
+/**
+ * Refuse the whole plan unless the captured stderr of a listing holds nothing
+ * but "matched no objects" lines (blank lines ignored). A listing that failed
+ * for any other reason (a transient error, quota) is missing objects, and a
+ * missing soft-deleted copy would make an overwritten object look new and get
+ * deleted.
+ */
+export function checkListingErrors(text: string, what: string): void {
+  const bad = text
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l !== '' && l !== MATCHED_NO_OBJECTS)
+  if (bad.length > 0) {
+    throw new RestorePlanError(
+      `the ${what} listing reported an error other than "matched no objects": ${bad[0]}${bad.length > 1 ? ` (+${bad.length - 1} more)` : ''}; the listing may be incomplete, re-run it`
+    )
+  }
+}
+
+/** Soft-deleted copies live 14 days; the run's copy is gone before that. */
+const WINDOW_MS = 13 * 24 * 60 * 60 * 1000
+
 const ENTRY_POINTS = new Set(['v1/latest.json', 'v1/dates.json'])
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -269,6 +302,8 @@ export function planRestore(input: {
   since: string
   until: string
   paths?: string[]
+  /** Epoch ms; injectable for tests. Defaults to the current time. */
+  now?: number
 }): RestorePlan {
   const sinceMs = bound(input.since, '--since')
   const untilMs = bound(input.until, '--until')
@@ -283,6 +318,7 @@ export function planRestore(input: {
       `listings span several buckets: ${[...buckets].join(', ')}`
     )
   }
+  const expired = (input.now ?? Date.now()) > sinceMs + WINDOW_MS
   const only = input.paths ? new Set(input.paths) : null
   const byName = new Map<string, ObjectCopy[]>()
   for (const c of input.softDeleted) {
@@ -298,6 +334,16 @@ export function planRestore(input: {
         untilMs,
         input.softDeleted.length === 0
       )
+    )
+    .map(e =>
+      expired && (e.action === 'restore' || e.action === 'delete')
+        ? ({
+            name: e.name,
+            liveGeneration: e.liveGeneration,
+            action: 'refuse',
+            reason: `more than 13 days since --since: the copy from before the run may be past soft-delete retention (14 days), so a missing copy cannot be told from a never-existing one`,
+          } as PlanEntry)
+        : e
     )
     .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
   return {
