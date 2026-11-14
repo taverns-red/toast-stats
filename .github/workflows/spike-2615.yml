@@ -35,6 +35,7 @@ jobs:
           dpkg-query -W -f='${Package} ${Version}\n' | sort > "$RUNNER_TEMP/fonts/dpkg.txt"
           cat /etc/os-release > "$RUNNER_TEMP/fonts/os-release.txt"
           wc -l "$RUNNER_TEMP"/fonts/*.txt
+          for f in sans-serif serif monospace system-ui ui-sans-serif ui-monospace Arial Helvetica Menlo; do echo "FCMATCH $f => $(fc-match "$f")"; done
       - uses: actions/upload-artifact@v7
         with:
           name: spike-fonts-host
@@ -69,6 +70,7 @@ jobs:
           dpkg-query -W -f='${Package} ${Version}\n' | sort > "$RUNNER_TEMP/fonts/dpkg.txt"
           cat /etc/os-release > "$RUNNER_TEMP/fonts/os-release.txt"
           wc -l "$RUNNER_TEMP"/fonts/*.txt
+          for f in sans-serif serif monospace system-ui ui-sans-serif ui-monospace Arial Helvetica Menlo; do echo "FCMATCH $f => $(fc-match "$f")"; done
       - uses: actions/upload-artifact@v7
         with:
           name: spike-fonts-container
