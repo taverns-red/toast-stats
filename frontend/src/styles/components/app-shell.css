@@ -3174,7 +3174,7 @@
   /* #2430 — Recent changes: a dated row list on its own full-width card
      below the panels grid. Date column + line; reason, gap marker and notes
      muted. Skeleton rows are a one-line row's height. Text ≥ 14px; the remapping ink/line tokens carry dark mode
-     (legacy palette until Phase 2, #2080). */
+     (legacy palette, #2080). */
   .club-changes {
     margin-bottom: var(--rt-space-4);
   }
@@ -7212,7 +7212,7 @@
 
   /* District Club Growth Achievement recipients (#1537). A threshold, not a
      race: districts grouped by the tier reached, no rank column. Legacy
-     chrome tokens only (no --rt-* before Phase 2). */
+     chrome tokens only (no --rt-* colours). */
   .awards-page__achievements {
     margin-top: 16px;
   }
@@ -7524,7 +7524,7 @@
     justify-content: center;
     margin-bottom: 16px;
     /* #2080: loyal blue (10.8:1 on white; #5dade2 in dark), not the amber
-       accent, until the Phase 2 re-skin. */
+       accent. */
     color: var(--tm-loyal-blue);
   }
 

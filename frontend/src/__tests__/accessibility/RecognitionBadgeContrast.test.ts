@@ -139,7 +139,7 @@ describe('recognition badge contrast (#1361)', () => {
   })
 
   it('routes the Club Growth accent through legacy chrome tokens, not --rt-* (#1537)', () => {
-    // New UI stays on the legacy chrome until the Phase 2 migration (ops#37).
+    // New UI stays on the legacy chrome; the palette is permanent (#2628).
     for (const theme of [light, dark]) {
       const raw = theme.get('--recognition-club-growth') ?? ''
       expect(raw).toMatch(/^var\(--tm-/)

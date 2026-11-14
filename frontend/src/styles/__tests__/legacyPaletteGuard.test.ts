@@ -1,6 +1,8 @@
 /**
- * Guard (#2080): until the Phase 2 re-skin (ops#37), new UI matches the
- * existing app palette — no `--rt-stats` amber accent, no amber hex.
+ * Legacy palette guard (#2080, #2630): the app keeps its existing palette
+ * permanently (Phase 2 was abandoned, no re-skin or rename is coming) — no
+ * `--rt-stats` amber accent, no amber hex, and no other `--rt-*` colour token
+ * apart from the house red and the listed pre-existing uses.
  *
  * Ron's decision (2026-10-15): pages built on the Red Taverns accent read as
  * yellow/brown next to the legacy TM / loyal-blue chrome. Use the legacy

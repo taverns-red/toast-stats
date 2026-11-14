@@ -1,6 +1,6 @@
 /* District Education page (#1793, epic #1781). Theme-aware tokens (--ink*,
    --surface*, --line) remap under [data-theme='dark']; the product accent
-   --tm-loyal-blue marks Pathways (#2080: legacy palette until Phase 2). Bars are aria-hidden decoration: every value is
+   --tm-loyal-blue marks Pathways (#2080: legacy palette). Bars are aria-hidden decoration: every value is
    printed as text beside it. Text stays ≥14px and tap targets ≥44px at 375
    (mobile review §6.4); matrix cells are ≥32px. */
 

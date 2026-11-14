@@ -1,7 +1,7 @@
 /* Council print packs (#2299): the Area pack (one page) and the Division
    pack (a summary page, then the club roster on its own page).
 
-   Legacy palette only (#2080: no product accent, no new colours before Phase 2):
+   Legacy palette only (#2080: no product accent, no new colours):
    --ink / --ink-2 / --ink-3, --surface / --surface-2, --line and
    --tm-loyal-blue, all remapped under [data-theme='dark']. Print forces
    black on white (print.css) and uses plain greys inside @media print.

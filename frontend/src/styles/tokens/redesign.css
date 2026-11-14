@@ -61,8 +61,8 @@
 
   /* Focus ring (#1106, #2080). The app's focus colour — --link, the same
      loyal blue the `outline: 2px solid var(--link)` rings use. It was a
-     darkened amber until #2080 retired the --rt-stats accent ahead of the
-     Phase 2 re-skin (ops#37). Clears 3:1 on every surface in both themes
+     darkened amber until #2080 retired the --rt-stats accent for good
+     (no re-skin is coming, #2628). Clears 3:1 on every surface in both themes
      (__tests__/accessibility/FocusRingContrast.test.ts). Defined in both
      theme blocks so it remaps with the surface (lessons 093/094). */
   --focus-ring: var(--link);
@@ -128,8 +128,8 @@
      by __tests__/accessibility/RecognitionBadgeContrast.test.ts. Defined in
      BOTH theme blocks — never inherited — so a dark-mode regression shows up
      as a missing token rather than as an unreadable glyph.
-     President's is legacy loyal blue (#2080: no --rt-stats amber until
-     Phase 2) — --loyal-400, the tier ramp's Select step, because the
+     President's is legacy loyal blue (#2080: no --rt-stats amber)
+     — --loyal-400, the tier ramp's Select step, because the
      President's step #004165 is already Club Growth's --tm-loyal-blue. */
   --recognition-extension: var(--rt-good); /* 3.90:1 */
   --recognition-twenty-plus: var(--rt-info); /* 4.45:1 */
@@ -138,8 +138,8 @@
   --recognition-select: var(--rt-ink-2); /* 10.89:1 */
   --recognition-presidents: var(--loyal-400); /* 5.37:1 */
   --recognition-smedley: var(--rt-eval); /* 5.31:1 */
-  /* Club Growth Achievement (#1537): a LEGACY chrome token, not --rt-*, until
-     the Phase 2 chrome migration (ops#37). TM Loyal Blue, 10.9:1. */
+  /* Club Growth Achievement (#1537): a LEGACY chrome token, not --rt-* (the
+     palette is permanent, #2628). TM Loyal Blue, 10.9:1. */
   --recognition-club-growth: var(--tm-loyal-blue);
 
   /* ── Tier chart fills (#1636) ──────────────────────────────────────────

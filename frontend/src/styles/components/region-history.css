@@ -1,5 +1,5 @@
 /* #1821 — moved-region banner on the district page. Legacy palette only
-   until the Phase 2 re-skin (#2080): `--tm-loyal-blue` accent rule with its
+   (#2080): `--tm-loyal-blue` accent rule with its
    `-10` tint (remapped in dark-mode.css), `--ink*` text, `--link` links and
    `--focus-ring`. All remap under [data-theme='dark'] (R10). */
 

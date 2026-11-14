@@ -1,5 +1,5 @@
 /* #2427 — "Before this district existed" on a new district's Overview.
-   Legacy palette only until the Phase 2 re-skin (#2080): the
+   Legacy palette only (#2080): the
    `--tm-loyal-blue` accent rule and `-10` tint (remapped in dark-mode.css),
    `--ink*` text, `--line` rules, `--link` links and `--focus-ring`. All
    remap under [data-theme='dark'] (R10). Collapsed, it is one 44px row plus
