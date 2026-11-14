@@ -22,6 +22,17 @@
 
 export class RestorePlanError extends Error {}
 
+/** Thrown by executePlan when a command fails; says what ran and what failed. */
+export class ExecuteFailure extends Error {
+  executed: string[][] = []
+  failedAt: string[] = []
+}
+
+/** Red skeleton (#2539): validation lands in the green commit. */
+export function parseSavedPlan(json: unknown): RestorePlan {
+  return json as RestorePlan
+}
+
 export interface ObjectCopy {
   name: string
   bucket: string
@@ -44,6 +55,7 @@ export interface RestorePlan {
   version: 1
   bucket: string
   since: string
+  until?: string
   entries: PlanEntry[]
   refused: number
 }
@@ -173,6 +185,7 @@ export function planRestore(input: {
   live: ObjectCopy[]
   softDeleted: ObjectCopy[]
   since: string
+  until?: string
   paths?: string[]
 }): RestorePlan {
   const sinceMs = instant(input.since, 'since')

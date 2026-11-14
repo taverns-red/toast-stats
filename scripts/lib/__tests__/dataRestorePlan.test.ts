@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest'
 import {
   parseListing,
   planRestore,
+  parseSavedPlan,
   verifyPlan,
   executePlan,
   RestorePlanError,
+  ExecuteFailure,
 } from '../dataRestorePlan.js'
 
 /**
@@ -38,6 +40,14 @@ function obj(
 
 // The bad run promoted at 2026-11-08T10:12:00Z.
 const SINCE = '2026-11-08T10:00:00Z'
+const UNTIL = '2026-11-08T11:00:00Z'
+// A soft-deleted copy of some other object, so the soft listing is not empty.
+const OTHER = obj(
+  'other.json',
+  '1',
+  '2026-11-01T00:00:00Z',
+  '2026-11-02T00:00:00Z'
+)
 const BAD = '2026-11-08T10:12:23.000000Z'
 
 const plan = (live: unknown[], soft: unknown[]) =>
@@ -45,6 +55,7 @@ const plan = (live: unknown[], soft: unknown[]) =>
     live: parseListing(live),
     softDeleted: parseListing(soft),
     since: SINCE,
+    until: UNTIL,
   })
 
 describe('planRestore', () => {
@@ -93,7 +104,10 @@ describe('planRestore', () => {
   })
 
   it('deletes an object the bad run created', () => {
-    const p = plan([obj('snapshots/2026-11-08/metadata.json', '300', BAD)], [])
+    const p = plan(
+      [obj('snapshots/2026-11-08/metadata.json', '300', BAD)],
+      [OTHER]
+    )
     expect(p.entries[0]).toMatchObject({
       name: 'snapshots/2026-11-08/metadata.json',
       action: 'delete',
@@ -106,7 +120,7 @@ describe('planRestore', () => {
     const mid = '2026-11-08T10:05:00Z'
     const p = plan(
       [obj('snapshots/2026-11-08/a.json', '300', BAD)],
-      [obj('snapshots/2026-11-08/a.json', '200', mid, BAD)]
+      [obj('snapshots/2026-11-08/a.json', '200', mid, BAD), OTHER]
     )
     expect(p.entries[0]).toMatchObject({ action: 'delete' })
   })
@@ -191,6 +205,7 @@ describe('planRestore', () => {
       live: parseListing([obj('a.json', '1', BAD), obj('b.json', '2', BAD)]),
       softDeleted: parseListing([]),
       since: SINCE,
+      until: UNTIL,
       paths: ['a.json'],
     })
     expect(p.entries.map(e => e.name)).toEqual(['a.json'])
@@ -240,9 +255,132 @@ describe('verifyPlan / executePlan', () => {
         'storage',
         'restore',
         '--allow-overwrite',
+        '--if-generation-match=300',
         `gs://${BUCKET}/v1/latest.json#200`,
       ],
       ['storage', 'rm', `gs://${BUCKET}/new.json#301`],
     ])
+  })
+
+  it('stops at the first runner failure and reports what ran', () => {
+    const two = plan(
+      [obj('a.json', '2', BAD), obj('b.json', '3', BAD)],
+      [
+        obj('a.json', '1', '2026-11-07T00:00:00Z', BAD),
+        obj('b.json', '4', '2026-11-07T00:00:00Z', BAD),
+      ]
+    )
+    const calls: string[][] = []
+    let err: unknown
+    try {
+      executePlan(two, argv => {
+        calls.push(argv)
+        if (calls.length === 2) throw new Error('412 precondition failed')
+      })
+    } catch (e) {
+      err = e
+    }
+    expect(calls).toHaveLength(2)
+    expect(err).toBeInstanceOf(ExecuteFailure)
+    const f = err as ExecuteFailure
+    expect(f.executed).toHaveLength(1)
+    expect(f.failedAt).toEqual(calls[1])
+  })
+})
+
+describe('refuse-over-delete rule', () => {
+  it('refuses when an intermediate step has no match but copies remain', () => {
+    // 100's copy is missing: 300 live <- 200 (bad run) <- ? ; 50 is unmatched.
+    const mid = '2026-11-08T10:05:00Z'
+    const p = plan(
+      [obj('v1/dates.json', '300', BAD)],
+      [
+        obj('v1/dates.json', '200', mid, BAD),
+        obj(
+          'v1/dates.json',
+          '50',
+          '2026-11-05T10:00:00Z',
+          '2026-11-07T10:00:00Z'
+        ),
+      ]
+    )
+    expect(p.entries[0]).toMatchObject({ action: 'refuse' })
+    expect(p.entries[0]?.generation).toBeUndefined()
+  })
+
+  it('refuses a delete when the whole soft-deleted listing is empty', () => {
+    const p = plan([obj('v1/latest.json', '300', BAD)], [])
+    expect(p.entries[0]).toMatchObject({ action: 'refuse' })
+    expect(p.entries[0]?.reason).toMatch(/empty/i)
+  })
+
+  it('refuses a live object created after --until', () => {
+    const p = plan([obj('late.json', '9', '2026-11-08T12:00:00Z')], [OTHER])
+    expect(p.entries[0]).toMatchObject({ action: 'refuse' })
+    expect(p.entries[0]?.reason).toMatch(/until/i)
+  })
+
+  it('refuses a since or until without an explicit offset', () => {
+    const run = (since: string, until: string) =>
+      planRestore({
+        live: parseListing([obj('a.json', '1', BAD)]),
+        softDeleted: parseListing([OTHER]),
+        since,
+        until,
+      })
+    expect(() => run('2026-11-08T10:00:00', UNTIL)).toThrow(RestorePlanError)
+    expect(() => run('2026-11-08', UNTIL)).toThrow(RestorePlanError)
+    expect(() => run(SINCE, '2026-11-08T11:00:00')).toThrow(RestorePlanError)
+    expect(() => run('2026-11-08T05:00:00-05:00', UNTIL)).not.toThrow()
+  })
+
+  it('requires until, and until after since', () => {
+    const base = {
+      live: parseListing([obj('a.json', '1', BAD)]),
+      softDeleted: parseListing([OTHER]),
+      since: SINCE,
+    }
+    expect(() =>
+      planRestore({ ...base, until: undefined as unknown as string })
+    ).toThrow(RestorePlanError)
+    expect(() =>
+      planRestore({ ...base, until: '2026-11-08T09:00:00Z' })
+    ).toThrow(RestorePlanError)
+  })
+
+  it('refuses a listing that spans more than one bucket', () => {
+    const other = obj('x.json', '1', BAD)
+    other.metadata.bucket = 'some-other-bucket'
+    expect(() => plan([obj('a.json', '1', BAD), other], [OTHER])).toThrow(
+      /bucket/i
+    )
+  })
+})
+
+describe('parseSavedPlan', () => {
+  const good = () => plan([obj('a.json', '2', BAD)], [OTHER])
+  it('accepts a plan produced by planRestore', () => {
+    expect(parseSavedPlan(JSON.parse(JSON.stringify(good())))).toEqual(good())
+  })
+  it('refuses malformed plans', () => {
+    expect(() => parseSavedPlan(null)).toThrow(RestorePlanError)
+    expect(() => parseSavedPlan({ ...good(), version: 2 })).toThrow(
+      RestorePlanError
+    )
+    expect(() => parseSavedPlan({ ...good(), entries: 'x' })).toThrow(
+      RestorePlanError
+    )
+    expect(() =>
+      parseSavedPlan({
+        ...good(),
+        entries: [{ name: 'a.json', action: 'explode', liveGeneration: '1' }],
+      })
+    ).toThrow(RestorePlanError)
+    expect(() =>
+      parseSavedPlan({
+        ...good(),
+        entries: [{ name: 'a.json', action: 'restore', liveGeneration: '1' }],
+      })
+    ).toThrow(RestorePlanError)
   })
 })
