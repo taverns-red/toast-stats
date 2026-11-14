@@ -1712,6 +1712,9 @@ describe('parseMeetingSchedule (#2627) — gap 12: guest restriction', () => {
     ['Thursday', '7 pm - everyone welcome, not members only', undefined],
     ['Thursday', '7 pm', 'Library, Room 2'],
     ['Thursday', '7 pm - no guests fee', undefined],
+    ['Thursday', '7 pm', 'Invitation to all guests, see our page'],
+    ['Thursday', '7 pm - no guests under 18', undefined],
+    ['Thursday', '7 pm - everyone is welcome, no invitation needed', undefined],
   ])('%j / %j / %j is not restricted', (meetingDay, meetingTime, location) => {
     const entries = parseMeetingSchedule({ meetingDay, meetingTime, location })
     expect(entries?.[0]).not.toHaveProperty('restricted')
