@@ -1236,13 +1236,12 @@ describe('membership trend with prior program years (#1791)', () => {
 
   afterEach(() => cleanup())
 
-  it('draws earlier program years faint behind the current line at desktop', () => {
+  it('marks the latest earlier year-end as one reference, not prior-year lines (#2504)', () => {
     const { container } = renderWithRoute()
-    const priors = container.querySelectorAll('polyline.line--prior')
-    expect([...priors].map(p => p.getAttribute('data-year'))).toEqual([
-      '2024-2025',
-      '2023-2024',
-    ])
+    expect(container.querySelectorAll('polyline.line--prior')).toHaveLength(0)
+    expect(container.querySelector('text.ref-text')).toHaveTextContent(
+      '2024–25 year-end 46'
+    )
     expect(vi.mocked(useClubHistory)).toHaveBeenCalledWith('61', '00000606')
   })
 
