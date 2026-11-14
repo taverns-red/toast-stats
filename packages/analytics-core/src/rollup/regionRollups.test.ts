@@ -502,7 +502,7 @@ describe('buildRegionRollups — distinguishedCounts (#2553)', () => {
     // districts carries a letter: district 2 keeps TI's 0, as the rankings
     // and district analytics do, not the April-renewals count.
     const r = buildRegionRollups({
-      snapshotDate: '2025-11-15',
+      snapshotDate: '2026-05-31',
       rankings: [{ districtId: '1' }, { districtId: '2' }],
       districts: districts(false),
       regionHistory: null,

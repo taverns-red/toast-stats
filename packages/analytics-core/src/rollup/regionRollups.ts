@@ -553,7 +553,11 @@ export function buildRegionRollups(
   const allFacts = perDistrict.flatMap(d => d.facts)
   const ctx: DateContext = {
     snapshotDate,
-    distinguishedBasis: distinguishedCountBasis(allFacts.map(f => f.club)),
+    // The rankings' date-level decision when it carries one (#2801); older
+    // rankings carry none, and the clubs' own letters decide.
+    distinguishedBasis:
+      input.distinguishedBasis ??
+      distinguishedCountBasis(allFacts.map(f => f.club)),
     month: getCurrentProgramMonth(snapshotDate),
     programYear,
     smedley: isClubSmedleyAvailable(programYear),

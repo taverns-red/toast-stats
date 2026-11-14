@@ -218,8 +218,9 @@ export function readRegionRollupInput(snapshotDir: string): {
   const rankings = readSnapshotRankings(snapshotDir)
   const rankingsRaw = JSON.parse(
     readFileSync(join(snapshotDir, 'all-districts-rankings.json'), 'utf-8')
-  ) as { metadata?: { snapshotId?: unknown } }
+  ) as { metadata?: { snapshotId?: unknown; distinguishedBasis?: unknown } }
   const snapshotId = rankingsRaw.metadata?.snapshotId
+  const basis = rankingsRaw.metadata?.distinguishedBasis
 
   const districts: RegionRollupDistrictInput[] = []
   for (const fileName of readdirSync(snapshotDir).sort()) {
@@ -282,6 +283,9 @@ export function readRegionRollupInput(snapshotDir: string): {
   return {
     rankings,
     rankingsSnapshotId: typeof snapshotId === 'string' ? snapshotId : null,
+    ...((basis === 'ti-recognised' || basis === 'april-renewals') && {
+      distinguishedBasis: basis,
+    }),
     districts,
   }
 }

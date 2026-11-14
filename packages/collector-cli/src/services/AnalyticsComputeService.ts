@@ -1931,12 +1931,14 @@ export class AnalyticsComputeService {
 
     try {
       const { regionHistory, note } = await this.readRegionHistory()
-      const { rankings, districts } = readRegionRollupInput(snapshotDir)
+      const { rankings, districts, distinguishedBasis } =
+        readRegionRollupInput(snapshotDir)
       const { rollups, missingDistricts: withoutFile } = buildRegionRollups({
         snapshotDate,
         rankings,
         districts,
         regionHistory,
+        ...(distinguishedBasis !== undefined && { distinguishedBasis }),
         ...(note !== undefined && { regionHistoryNote: note }),
       })
       // A district metadata records as failed or a gap is accounted for

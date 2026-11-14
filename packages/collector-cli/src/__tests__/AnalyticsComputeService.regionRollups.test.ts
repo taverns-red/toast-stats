@@ -117,4 +117,24 @@ describe('AnalyticsComputeService — region-rollups.json (#1799)', () => {
       result.errors.filter(e => e.error.includes(REGION_ROLLUPS_FILE_NAME))
     ).toEqual([])
   })
+
+  it("counts Distinguished on the rankings' date-level basis when it carries one (#2801)", async () => {
+    const confirmedUnder = async (
+      basis: 'ti-recognised' | 'april-renewals'
+    ): Promise<number | undefined> => {
+      const file = path.join(snapshotDir(), 'all-districts-rankings.json')
+      const rankings = JSON.parse(await fs.readFile(file, 'utf-8')) as {
+        metadata: Record<string, unknown>
+      }
+      rankings.metadata['distinguishedBasis'] = basis
+      await fs.writeFile(file, JSON.stringify(rankings))
+      await compute()
+      return RegionRollupsSchema.parse(
+        JSON.parse(await fs.readFile(outPath(), 'utf-8'))
+      ).world.distinguishedCounts?.confirmed
+    }
+    const renewals = await confirmedUnder('april-renewals')
+    const recognised = await confirmedUnder('ti-recognised')
+    expect(renewals).not.toBe(recognised)
+  })
 })
