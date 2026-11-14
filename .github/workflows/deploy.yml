@@ -120,7 +120,7 @@ jobs:
         run: gcloud version
 
       - name: Install firebase-tools
-        run: npm install -g firebase-tools
+        run: npm install -g firebase-tools@"$(jq -r '.devDependencies["firebase-tools"]' package.json)"
 
       # Before the deploy: if the browser cannot be installed, nothing is
       # released, so a release is never left live without its smoke (#2492).

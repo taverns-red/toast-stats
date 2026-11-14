@@ -18,9 +18,10 @@ const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf-8'))
 const pinned: string | undefined = pkg.devDependencies?.['firebase-tools']
 
 // Matches `npm install ... firebase-tools[@spec]` / `npm i` / `npx firebase-tools`.
-const INSTALL = /\b(?:npm\s+(?:install|i)|npx)\b[^\n]*\bfirebase-tools(@\S*)?/g
+const INSTALL =
+  /\b(?:npm\s+(?:install|i)|npx)\b[^\n]*?\bfirebase-tools(@[^\n]*)?/g
 const FROM_PACKAGE_JSON =
-  /^@"?\$\(node -p "require\('\.\/package\.json'\)\.devDependencies\['firebase-tools'\]"\)"?$/
+  /^@"\$\(jq -r '\.devDependencies\["firebase-tools"\]' package\.json\)"$/
 
 describe('firebase-tools pin (#2551)', () => {
   it('declares one exact version as a root devDependency', () => {
@@ -38,7 +39,7 @@ describe('firebase-tools pin (#2551)', () => {
       installs++
       const line = source.slice(0, m.index).split('\n').length
       it(`${file}:${line} installs the version from package.json`, () => {
-        expect(m[1] ?? '(no version)', `unpinned: ${m[0]}`).toMatch(
+        expect((m[1] ?? '(no version)').trim(), `unpinned: ${m[0]}`).toMatch(
           FROM_PACKAGE_JSON
         )
       })
