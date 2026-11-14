@@ -55,6 +55,10 @@ const noCounterparts = (
 
 const mockedDates = vi.mocked(useDistrictCachedDates)
 const mockedDiff = vi.mocked(useSnapshotDiff)
+// The page may hand the diff hook a revision point (#2475); these tests pass
+// plain dates, so echo the date.
+const dateOf = (p: string | { date: string }) =>
+  typeof p === 'string' ? p : p.date
 const mockedDistricts = vi.mocked(useDistricts)
 
 function renderPage(initialEntry = '/district/61/changes') {
@@ -720,7 +724,10 @@ describe('DistrictChangesPage — time-window preset chips (#1462)', () => {
         ({
           data:
             from && to
-              ? diffFixture({ from: { date: from }, to: { date: to } })
+              ? diffFixture({
+                  from: { date: dateOf(from) },
+                  to: { date: dateOf(to) },
+                })
               : undefined,
           isLoading: false,
           isError: false,
@@ -1362,7 +1369,10 @@ describe('DistrictChangesPage club filter (#2452)', () => {
         ({
           data:
             from && to
-              ? diffFixture({ from: { date: from }, to: { date: to } })
+              ? diffFixture({
+                  from: { date: dateOf(from) },
+                  to: { date: dateOf(to) },
+                })
               : undefined,
           isLoading: false,
           isError: false,

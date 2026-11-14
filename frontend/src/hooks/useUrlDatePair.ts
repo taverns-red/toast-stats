@@ -24,7 +24,8 @@ import { previousRecordedDate } from './useSnapshotDiff'
  * @see docs/design/what-changed-feature.md §5, §4
  */
 export function useUrlDatePair<T extends string>(
-  dates: readonly T[]
+  dates: readonly T[],
+  _options: { aliases?: Readonly<Record<string, T>> } = {}
 ): {
   from: T | undefined
   to: T | undefined

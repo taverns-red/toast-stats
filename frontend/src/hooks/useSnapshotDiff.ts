@@ -12,6 +12,7 @@ import {
   type ClubStatusTotals,
 } from '../utils/diffClubStatus'
 import type { SnapshotDate } from '../types/snapshotDate'
+import type { SnapshotPoint } from '../utils/snapshotPoints'
 
 /**
  * Resolve the default "since the previous recorded date" pair from a district's
@@ -59,18 +60,22 @@ export type SnapshotDiffView = SnapshotDiff & {
  * while `options.enabled` is false (#2740: the clubs route fetches the pair
  * only once the diff is needed; every other caller keeps the eager default).
  */
+function dateOf(p: SnapshotDate | SnapshotPoint): SnapshotDate {
+  return typeof p === 'string' ? p : p.date
+}
+
 export function useSnapshotDiff(
   districtId: string | undefined,
-  from: SnapshotDate | undefined,
-  to: SnapshotDate | undefined,
+  from: SnapshotDate | SnapshotPoint | undefined,
+  to: SnapshotDate | SnapshotPoint | undefined,
   options: { enabled?: boolean } = {}
 ) {
   return useQuery<SnapshotDiffView, Error>({
     queryKey: ['snapshot-diff', districtId, from, to],
     queryFn: async () => {
       const [fromSnap, toSnap] = await Promise.all([
-        fetchCdnDistrictSnapshot<PerDistrictData>(from!, districtId!),
-        fetchCdnDistrictSnapshot<PerDistrictData>(to!, districtId!),
+        fetchCdnDistrictSnapshot<PerDistrictData>(dateOf(from!), districtId!),
+        fetchCdnDistrictSnapshot<PerDistrictData>(dateOf(to!), districtId!),
       ])
       // Club-scoped diff (analytics-core engine) + area/division recognition
       // transitions and club operational-status transitions (both frontend

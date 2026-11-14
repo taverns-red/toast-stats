@@ -20,6 +20,10 @@ export interface DatePairPickerProps<T extends string = string> {
   to: T | undefined
   onFromChange: (date: T) => void
   onToChange: (date: T) => void
+  /** Display label for an option; defaults to the formatted date. */
+  labelFor?: (value: T) => string
+  /** Group heading for an option (month-end revisions share one). */
+  groupFor?: (value: T) => string | undefined
 }
 
 // min-h-[44px]: the WCAG 2.5.5 / handoff 44px touch-target floor (#886, epic
