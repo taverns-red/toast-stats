@@ -272,6 +272,134 @@
     {
       "path": "basemap/protomaps-v4/world-z0-14-20261015.pmtiles",
       "copyFrom": "frontend/e2e/fixtures/basemap-z0.pmtiles"
+    },
+    {
+      "path": "videos/v1/2026-10-27/v1-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v1/2026-10-27/v1-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v2/2026-10-26.2/v2-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v2/2026-10-26.2/v2-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v3/2026-10-27/v3-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v3/2026-10-27/v3-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v4/2026-10-27/v4-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v4/2026-10-27/v4-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v5/2026-10-27/v5-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v5/2026-10-27/v5-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v8/2026-10-27/v8-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v8/2026-10-27/v8-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v12/2026-10-27/v12-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v12/2026-10-27/v12-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v6/2026-10-27/v6-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v6/2026-10-27/v6-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v15/2026-10-27/v15-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v15/2026-10-27/v15-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v7/2026-10-27/v7-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v7/2026-10-27/v7-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v14/2026-10-27/v14-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v14/2026-10-27/v14-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v10/2026-10-27/v10-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v10/2026-10-27/v10-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v9/2026-10-27/v9-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v9/2026-10-27/v9-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v13/2026-10-27/v13-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v13/2026-10-27/v13-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v11/2026-10-27/v11-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v11/2026-10-27/v11-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v16/2026-10-27/v16-desktop.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
+    },
+    {
+      "path": "videos/v16/2026-10-27/v16-mobile.mp4",
+      "copyFrom": "frontend/e2e/fixtures/video-standin.mp4"
     }
   ]
 }
