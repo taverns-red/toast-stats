@@ -3361,6 +3361,98 @@ jobs:
         run: bash scripts/pipeline/check-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" "${PROMOTED_DATES}"
 
   # ══════════════════════════════════════════════════════════
+  # DATA SMOKE AFTER THE PROMOTION (#2538, epic #2492)
+  #
+  # The cdn-data probe in scripts/hosting-smoke.ts used to run only after a
+  # Hosting deploy, so a bad data publish with no Hosting change went unseen
+  # until the 14:00 UTC freshness monitor. This job runs that probe and the
+  # CDN schema check (scripts/check-cdn-schema.ts, the same one the 15:30
+  # canary runs) against cdn.taverns.red once the last prod writer
+  # (promote-reports) is done, and fails the run when either is bad.
+  #
+  # It cannot block or change a promotion: it runs AFTER them, only reads the
+  # public CDN (no GCP auth, no gcloud), no other job needs it, and a failure
+  # only marks the run red. Pinned by dataPipelineDataSmoke.test.ts.
+  # ══════════════════════════════════════════════════════════
+  data-smoke:
+    name: 'smoke the published data (#2538)'
+    runs-on: ubuntu-26.04
+    needs: [pipeline, promote-reports]
+    if: >-
+      !cancelled()
+      && needs.pipeline.result == 'success'
+      && needs.pipeline.outputs.skip_promotion != 'true'
+      && (needs.pipeline.outputs.promoted == 'true' || needs.pipeline.outputs.promoted_dates != '')
+    timeout-minutes: 10
+    # Narrower than the workflow default: this job reads the public CDN and
+    # needs no OIDC token or issue writes.
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # check-cdn-schema.ts imports PerDistrictDataSchema from the workspace
+      # package's built dist/ (the runner starts empty, R2).
+      - name: Build shared-contracts
+        run: npm run build --workspace=@taverns-red/shared-contracts
+
+      # Home, district and entry-asset probes ride along (they only read
+      # ts.taverns.red); the render probe needs a browser, so it is off.
+      # Exits 0 after deciding, so the last step reads `healthy`.
+      - name: Smoke the published data
+        id: smoke
+        run: npx tsx scripts/hosting-smoke.ts
+        env:
+          BASE_URL: https://ts.taverns.red
+          CDN_BASE_URL: https://cdn.taverns.red
+          SMOKE_RENDER: 'off'
+          SMOKE_WINDOW_SECONDS: '60'
+          SMOKE_INTERVAL_SECONDS: '15'
+
+      # Runs even if the smoke step crashed, so one fault never hides the other.
+      - name: Check the published data against the shared schemas
+        id: schema
+        if: ${{ !cancelled() }}
+        run: npx tsx scripts/check-cdn-schema.ts
+        env:
+          CDN_BASE_URL: https://cdn.taverns.red
+
+      - name: Fail the run when the published data is bad
+        if: ${{ !cancelled() && (steps.smoke.outputs.healthy != 'true' || steps.schema.outputs.unhealthy != 'false') }}
+        env:
+          SMOKE_HEALTHY: ${{ steps.smoke.outputs.healthy }}
+          SMOKE_RESULT_FILE: ${{ steps.smoke.outputs.result_file }}
+          SCHEMA_UNHEALTHY: ${{ steps.schema.outputs.unhealthy }}
+        run: |
+          failed=""
+          if [ "${SMOKE_HEALTHY}" != "true" ]; then
+            # The result file lists the failing probes as "name: detail":
+            # cdn-data is the data probe; home, entry-asset and district are
+            # the Hosting probes.
+            names=""
+            if [ -n "${SMOKE_RESULT_FILE}" ] && [ -f "${SMOKE_RESULT_FILE}" ]; then
+              names=$(jq -r '[.failures[] | split(":")[0]] | unique | join(", ")' "${SMOKE_RESULT_FILE}" 2>/dev/null || true)
+            fi
+            failed="the smoke step (failed probes: ${names:-unknown, the step crashed or left no result})"
+          fi
+          if [ "${SCHEMA_UNHEALTHY}" != "false" ]; then
+            failed="${failed:+${failed}; }the schema check"
+          fi
+          echo "::error title=Data smoke::failed after the promotion: ${failed}. cdn-data is the data probe; home, entry-asset and district are the Hosting probes. Prod was NOT changed by this job. See the steps above and docs/runbooks/data-restore.md."
+          exit 1
+
+  # ══════════════════════════════════════════════════════════
   # DISTRICT SHARE CARDS (#2304) — staging first, then gated into prod
   #
   # One 1200x630 Open Graph card per district (status + gap to the next
