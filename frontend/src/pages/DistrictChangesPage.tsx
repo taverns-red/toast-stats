@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
@@ -330,14 +330,24 @@ const DistrictChangesPage: React.FC = () => {
   const reversed = !!from && !!to && tokens.indexOf(from) > tokens.indexOf(to)
   const invalidPair = sameDate || reversed
 
+  // An @asOf link names a revision the index has not described yet, so until
+  // it loads the pair is not known: hold the diff rather than fetch (and
+  // briefly show) the default pair (#2814).
+  const [urlParams] = useSearchParams()
+  const holdForRevisions =
+    pointSet.isLoading &&
+    (urlParams.get('from')?.includes('@') ||
+      urlParams.get('to')?.includes('@') ||
+      false)
+
   const {
     data: diff,
     isLoading: diffLoading,
     isError,
   } = useSnapshotDiff(
     districtId,
-    diffArg(from),
-    invalidPair ? undefined : diffArg(to)
+    holdForRevisions ? undefined : diffArg(from),
+    invalidPair || holdForRevisions ? undefined : diffArg(to)
   )
 
   // ?club= narrows the list to one club's events (#2452) — the club page's
@@ -475,9 +485,11 @@ const DistrictChangesPage: React.FC = () => {
               </p>
             )}
 
-            {enoughHistory && !invalidPair && (datesLoading || diffLoading) && (
-              <LoadingSkeleton variant="card" height="220px" />
-            )}
+            {enoughHistory &&
+              !invalidPair &&
+              (datesLoading || diffLoading || holdForRevisions) && (
+                <LoadingSkeleton variant="card" height="220px" />
+              )}
 
             {enoughHistory && !invalidPair && isError && (
               <p

@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
-import { fetchCdnRevisionIndex } from '../services/cdn'
+import {
+  fetchCdnRevisionIndex,
+  fetchCdnSnapshotCollectionDate,
+} from '../services/cdn'
 import type { SnapshotDate } from '../types/snapshotDate'
 import {
   buildSnapshotPoints,
@@ -37,9 +40,28 @@ export function useRevisionPoints(
     retry: false,
   })
 
+  // The newest revision is the plain month end only if the month end's
+  // metadata says it was collected on that revision's asOf (#2814). Read it
+  // once an index exists; unreadable or still loading counts as "not the same"
+  // so nothing is ever aliased on a guess.
+  const hasRevisions = !!index && index.revisions.length > 0
+  const { data: collectionDate, isLoading: metaLoading } = useQuery({
+    queryKey: ['reconciliation-month-end-collection-date', monthEnd],
+    queryFn: () => fetchCdnSnapshotCollectionDate(monthEnd!),
+    enabled: !!monthEnd && hasRevisions,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
+
   const set = useMemo(
-    () => buildSnapshotPoints(dates, index, districtId ?? ''),
-    [dates, index, districtId]
+    () =>
+      buildSnapshotPoints(
+        dates,
+        index,
+        districtId ?? '',
+        hasRevisions ? (collectionDate ?? null) : undefined
+      ),
+    [dates, index, districtId, hasRevisions, collectionDate]
   )
-  return { ...set, isLoading }
+  return { ...set, isLoading: isLoading || metaLoading }
 }

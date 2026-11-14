@@ -992,6 +992,21 @@ export async function fetchCdnRevisionIndex(
 }
 
 /**
+ * The `collectionDate` a snapshot's `metadata.json` records (#2814): the asOf
+ * the data under `snapshots/<date>/` was collected on. Resolves `null` when
+ * the file or field is missing, so a bad read never throws.
+ */
+export async function fetchCdnSnapshotCollectionDate(
+  date: SnapshotDate
+): Promise<string | null> {
+  const res = await fetch(`${cdnBaseUrl()}/snapshots/${date}/metadata.json`)
+  if (!res.ok) return null
+  recordCdnResponse(res)
+  const body = (await res.json()) as { collectionDate?: unknown }
+  return typeof body.collectionDate === 'string' ? body.collectionDate : null
+}
+
+/**
  * Fetch a pre-computed analytics file for a district.
  * @param type - Analytics type: 'analytics' or 'performance-targets'. The
  *   other 8 per-district types are no longer written (#1798).

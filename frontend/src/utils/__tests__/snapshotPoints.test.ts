@@ -108,3 +108,61 @@ describe('buildSnapshotPoints', () => {
     expect(tokens(set)).toEqual(['2026-09-30', '2026-10-30'])
   })
 })
+
+/* #2814 — the newest revision is the plain month end ONLY when
+   snapshots/<monthEnd>/metadata.json `collectionDate` equals the index's latest
+   `asOf`. If the collector refused a closing run (warn only), the month end holds
+   newer data than the index records, and aliasing would serve it under the
+   older label. */
+describe('buildSnapshotPoints — alias guard (#2814)', () => {
+  const two = index([rev('2026-11-02'), rev('2026-11-03')])
+
+  it('keeps the alias when the month end collectionDate equals the latest asOf', () => {
+    const set = buildSnapshotPoints(DATES, two, '61', '2026-11-03')
+    expect(tokens(set)).toEqual([
+      '2026-10-29',
+      '2026-10-30',
+      '2026-10-31@2026-11-02',
+      '2026-10-31',
+    ])
+    expect(set.aliases['2026-10-31@2026-11-03']).toBe('2026-10-31')
+    expect(set.labels['2026-10-31']).toBe('Oct 31, 2026 · revised Nov 3')
+  })
+
+  it('does not alias when the month end holds newer data than the latest asOf', () => {
+    const set = buildSnapshotPoints(DATES, two, '61', '2026-11-04')
+    expect(set.aliases).toEqual({})
+    expect(tokens(set)).toEqual([
+      '2026-10-29',
+      '2026-10-30',
+      '2026-10-31@2026-11-02',
+      '2026-10-31@2026-11-03',
+      '2026-10-31',
+    ])
+    expect(set.labels['2026-10-31@2026-11-03']).toBe(
+      'Oct 31, 2026 · revised Nov 3'
+    )
+    // The plain month end is its own, newer point, labelled with its own date.
+    expect(set.labels['2026-10-31']).toBe('Oct 31, 2026 · revised Nov 4')
+    expect(set.groups['2026-10-31@2026-11-03']).toBe('Oct 31, 2026 revisions')
+    expect(set.groups['2026-10-31']).toBe('Oct 31, 2026 revisions')
+  })
+
+  it('does not alias when the month end collectionDate is unknown', () => {
+    const set = buildSnapshotPoints(DATES, two, '61', null)
+    expect(set.aliases).toEqual({})
+    expect(tokens(set)).toContain('2026-10-31@2026-11-03')
+    expect(set.labels['2026-10-31']).toBeUndefined()
+  })
+
+  it('a single revision that is not the month end is its own point too', () => {
+    const set = buildSnapshotPoints(
+      DATES,
+      index([rev('2026-11-02')]),
+      '61',
+      '2026-11-04'
+    )
+    expect(set.aliases).toEqual({})
+    expect(tokens(set)).toContain('2026-10-31@2026-11-02')
+  })
+})

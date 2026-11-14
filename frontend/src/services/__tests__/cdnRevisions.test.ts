@@ -8,6 +8,7 @@ import {
   cdnRevisionSnapshotUrl,
   fetchCdnRevisionDistrictSnapshot,
   fetchCdnRevisionIndex,
+  fetchCdnSnapshotCollectionDate,
 } from '../cdn'
 import { snap } from '../../test-utils/snapshotDate'
 
@@ -103,5 +104,31 @@ describe('fetchCdnRevisionIndex', () => {
   it('resolves null for an index of a different month end', async () => {
     stubFetch({ ok: true, status: 200, body: RECORDED_INDEX })
     expect(await fetchCdnRevisionIndex('2026-09-30')).toBeNull()
+  })
+})
+
+describe('fetchCdnSnapshotCollectionDate (#2814)', () => {
+  it('reads collectionDate from the month end metadata.json', async () => {
+    const fn = stubFetch({
+      ok: true,
+      status: 200,
+      body: { snapshotId: '2026-10-31', collectionDate: '2026-11-04' },
+    })
+    expect(await fetchCdnSnapshotCollectionDate(snap('2026-10-31'))).toBe(
+      '2026-11-04'
+    )
+    expect(fn.mock.calls[0]![0]).toMatch(
+      /snapshots\/2026-10-31\/metadata\.json$/
+    )
+  })
+
+  it('resolves null on a 404', async () => {
+    stubFetch({ ok: false, status: 404 })
+    expect(await fetchCdnSnapshotCollectionDate(snap('2026-10-31'))).toBeNull()
+  })
+
+  it('resolves null when collectionDate is missing', async () => {
+    stubFetch({ ok: true, status: 200, body: { snapshotId: '2026-10-31' } })
+    expect(await fetchCdnSnapshotCollectionDate(snap('2026-10-31'))).toBeNull()
   })
 })

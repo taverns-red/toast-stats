@@ -4,12 +4,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import type { ReconciliationRevisionIndex } from '@taverns-red/shared-contracts'
 import { useRevisionPoints } from '../useRevisionPoints'
-import { fetchCdnRevisionIndex } from '../../services/cdn'
+import {
+  fetchCdnRevisionIndex,
+  fetchCdnSnapshotCollectionDate,
+} from '../../services/cdn'
 import { pointToken } from '../../utils/snapshotPoints'
 import { snap } from '../../test-utils/snapshotDate'
 
-vi.mock('../../services/cdn', () => ({ fetchCdnRevisionIndex: vi.fn() }))
+vi.mock('../../services/cdn', () => ({
+  fetchCdnRevisionIndex: vi.fn(),
+  fetchCdnSnapshotCollectionDate: vi.fn(),
+}))
 const mockedIndex = vi.mocked(fetchCdnRevisionIndex)
+const mockedCollection = vi.mocked(fetchCdnSnapshotCollectionDate)
 
 /* #2475 — the hook reads ONE small index: the most recent month end in the
    district's dated list. Month ends before it are final and were reconciled
@@ -44,7 +51,52 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 describe('useRevisionPoints', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Default: the month end is the latest revision (collectionDate == asOf).
+    mockedCollection.mockResolvedValue('2026-11-03')
+  })
+
+  it('does not alias the latest revision when the month end holds newer data (#2814)', async () => {
+    mockedIndex.mockResolvedValue(INDEX)
+    mockedCollection.mockResolvedValue('2026-11-04')
+    const { result } = renderHook(() => useRevisionPoints('61', DATES), {
+      wrapper,
+    })
+    await waitFor(() =>
+      expect(result.current.points.map(pointToken)).toContain(
+        '2026-10-31@2026-11-03'
+      )
+    )
+    expect(result.current.aliases).toEqual({})
+    expect(mockedCollection).toHaveBeenCalledWith('2026-10-31')
+  })
+
+  it('stays loading until the month end metadata has resolved (#2814)', async () => {
+    mockedIndex.mockResolvedValue(INDEX)
+    let release: (v: string) => void = () => {}
+    mockedCollection.mockReturnValue(
+      new Promise<string>(r => {
+        release = r
+      })
+    )
+    const { result } = renderHook(() => useRevisionPoints('61', DATES), {
+      wrapper,
+    })
+    await waitFor(() => expect(mockedCollection).toHaveBeenCalled())
+    expect(result.current.isLoading).toBe(true)
+    release('2026-11-03')
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+  })
+
+  it('does not read metadata when there is no index (#2814)', async () => {
+    mockedIndex.mockResolvedValue(null)
+    const { result } = renderHook(() => useRevisionPoints('61', DATES), {
+      wrapper,
+    })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(mockedCollection).not.toHaveBeenCalled()
+  })
 
   it('asks for the latest month end only and lists its earlier revisions', async () => {
     mockedIndex.mockResolvedValue(INDEX)

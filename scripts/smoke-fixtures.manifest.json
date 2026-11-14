@@ -38,6 +38,10 @@
       "optional": true
     },
     {
+      "path": "snapshots/{monthEnd}/metadata.json",
+      "optional": true
+    },
+    {
       "path": "snapshots/{date}/competitive-awards.json"
     },
     {
