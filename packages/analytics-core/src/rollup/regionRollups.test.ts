@@ -574,6 +574,28 @@ describe('buildRegionRollups — distinguishedCounts (#2553)', () => {
     expect(r.districts['2']!.distinguishedCounts?.confirmed).toBe(2)
   })
 
+  it("under the TI basis a present status column is collected: no letters and no renewals is TI's real 0, not null (#2563)", () => {
+    const d = districts(false)
+    d[1] = {
+      ...d[1]!,
+      clubs: d[1]!.clubs.map(c => ({
+        ...c,
+        aprilRenewals: undefined,
+        distinguishedStatus: '',
+      })),
+    }
+    const r = buildRegionRollups({
+      snapshotDate: '2026-05-31',
+      rankings: [{ districtId: '1' }, { districtId: '2' }],
+      districts: d,
+      regionHistory: null,
+      distinguishedBasis: 'ti-recognised',
+      generatedAt: GENERATED_AT,
+    }).rollups
+    expect(r.districts['2']!.distinguishedCounts?.confirmed).toBe(0)
+    expect(r.world.distinguishedCounts).not.toBeNull()
+  })
+
   it('a world with no in-scope districts publishes null distinguishedCounts, like its sibling blocks (#2563)', () => {
     const r = buildRegionRollups({
       snapshotDate: '2025-11-15',
