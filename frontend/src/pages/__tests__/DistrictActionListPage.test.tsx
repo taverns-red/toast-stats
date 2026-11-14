@@ -1111,6 +1111,76 @@ describe('DistrictActionListPage — date index in flight (#1837)', () => {
   })
 })
 
+/* #2524 — the reserve above holds every clause, but the pinned date and the
+ * program year are known before the statistics snapshot lands, and they alone
+ * decide two clauses: officer training exists only while a round is open, and
+ * the Club Success Plan only in a year that tracks it. Reserving a clause that
+ * cannot apply leaves a line the final sentence does not fill, and the page
+ * moves up ~21px (CLS ~0.01) when the skeleton drops. Reserve only the clauses
+ * that can apply. */
+describe('DistrictActionListPage — intro reserve once the date is known (#2524)', () => {
+  const datesAt = (date: string) =>
+    ({
+      data: { dates: [date], dateRange: { startDate: date, endDate: date } },
+      isLoading: false,
+    }) as unknown as ReturnType<typeof useDistrictCachedDates>
+  const TRAINING = 'clubs short of officer training this round'
+  const CSP = 'clubs without a Club Success Plan'
+  const CORE = [
+    'clubs within reach of Distinguished',
+    'areas with outstanding club visits',
+    'clubs that need intervention',
+  ]
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(useDistrictStatistics).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isPending: true,
+      isError: false,
+    } as unknown as ReturnType<typeof useDistrictStatistics>)
+  })
+  afterEach(() => {
+    cleanup()
+    vi.mocked(useDistrictCachedDates).mockReturnValue(
+      DATES_2025_26 as ReturnType<typeof useDistrictCachedDates>
+    )
+    vi.mocked(useDistrictStatistics).mockReturnValue({
+      data: { asOfDate: '2025-07-15' },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictStatistics>)
+  })
+
+  const introAt = async (date: string) => {
+    vi.mocked(useDistrictCachedDates).mockReturnValue(datesAt(date))
+    renderAt('/district/61/action-list')
+    await screen.findByTestId('action-list-page')
+    const intro = document.querySelector('.action-list-page__subtitle')
+    expect(intro).toHaveAttribute('aria-hidden', 'true')
+    return intro
+  }
+
+  it('leaves out the officer-training clause between rounds (Oct 15)', async () => {
+    const intro = await introAt('2025-10-15')
+    expect(intro).not.toHaveTextContent(TRAINING)
+    for (const clause of [...CORE, CSP]) expect(intro).toHaveTextContent(clause)
+  })
+
+  it('keeps the officer-training clause while a round is open (Nov 15)', async () => {
+    const intro = await introAt('2025-11-15')
+    for (const clause of [TRAINING, ...CORE, CSP]) {
+      expect(intro).toHaveTextContent(clause)
+    }
+  })
+
+  it('leaves out the Club Success Plan clause in a year that does not track it', async () => {
+    const intro = await introAt('2024-10-15')
+    expect(intro).not.toHaveTextContent(CSP)
+    expect(intro).not.toHaveTextContent(TRAINING)
+    for (const clause of CORE) expect(intro).toHaveTextContent(clause)
+  })
+})
+
 describe('DistrictActionListPage — officer training (#2296)', () => {
   const datesAt = (date: string) =>
     ({
