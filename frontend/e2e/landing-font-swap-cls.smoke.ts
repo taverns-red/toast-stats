@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/test'
+import { reportCls } from './helpers/clsReport'
 
 /* Mobile CLS budget for the landing page, measured live (#1373).
  *
@@ -128,6 +129,7 @@ test.describe('landing CLS at 375px on a cold Fast-3G load (#1373)', () => {
     await page.waitForTimeout(3_000)
 
     const entries = await page.evaluate(() => window.__clsEntries ?? [])
+    reportCls(test.info(), `/ @${VIEWPORT.width}px`, entries)
     const total = Number(entries.reduce((a, e) => a + e.value, 0).toFixed(5))
 
     const breakdown = entries
