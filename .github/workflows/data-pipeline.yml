@@ -3384,6 +3384,10 @@ jobs:
       && needs.pipeline.outputs.skip_promotion != 'true'
       && (needs.pipeline.outputs.promoted == 'true' || needs.pipeline.outputs.promoted_dates != '')
     timeout-minutes: 10
+    # Narrower than the workflow default: this job reads the public CDN and
+    # needs no OIDC token or issue writes.
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
@@ -3426,8 +3430,26 @@ jobs:
 
       - name: Fail the run when the published data is bad
         if: ${{ !cancelled() && (steps.smoke.outputs.healthy != 'true' || steps.schema.outputs.unhealthy != 'false') }}
+        env:
+          SMOKE_HEALTHY: ${{ steps.smoke.outputs.healthy }}
+          SMOKE_RESULT_FILE: ${{ steps.smoke.outputs.result_file }}
+          SCHEMA_UNHEALTHY: ${{ steps.schema.outputs.unhealthy }}
         run: |
-          echo "::error title=Data smoke::the published data failed after the promotion (smoke healthy='${{ steps.smoke.outputs.healthy }}', schema unhealthy='${{ steps.schema.outputs.unhealthy }}'). Prod was NOT changed by this job. See the two steps above and docs/runbooks/data-restore.md."
+          failed=""
+          if [ "${SMOKE_HEALTHY}" != "true" ]; then
+            # The result file lists the failing probes as "name: detail":
+            # cdn-data is the data probe; home, entry-asset and district are
+            # the Hosting probes.
+            names=""
+            if [ -n "${SMOKE_RESULT_FILE}" ] && [ -f "${SMOKE_RESULT_FILE}" ]; then
+              names=$(jq -r '[.failures[] | split(":")[0]] | unique | join(", ")' "${SMOKE_RESULT_FILE}" 2>/dev/null || true)
+            fi
+            failed="the smoke step (failed probes: ${names:-unknown, the step crashed or left no result})"
+          fi
+          if [ "${SCHEMA_UNHEALTHY}" != "false" ]; then
+            failed="${failed:+${failed}; }the schema check"
+          fi
+          echo "::error title=Data smoke::failed after the promotion: ${failed}. cdn-data is the data probe; home, entry-asset and district are the Hosting probes. Prod was NOT changed by this job. See the steps above and docs/runbooks/data-restore.md."
           exit 1
 
   # ══════════════════════════════════════════════════════════
