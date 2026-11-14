@@ -66,6 +66,23 @@ describe('clubPriorYearTrends', () => {
     ])
   })
 
+  it('drops a pre-charter year recorded as 0 to 0, never a zero year-end (#2504)', () => {
+    const out = clubPriorYearTrends(
+      [
+        row({}),
+        row({
+          startYear: 2024,
+          label: '2024-2025',
+          yearEndDate: '2025-06-30',
+          membershipBase: 0,
+          membershipEnd: 0,
+        }),
+      ],
+      '2026-2027'
+    )
+    expect(out.map(t => t.label)).toEqual(['2025-2026'])
+  })
+
   it('keeps only years before the page program year (R3: the page decides)', () => {
     expect(clubPriorYearTrends(ROWS, '2025-2026').map(t => t.label)).toEqual([
       '2024-2025',

@@ -9,8 +9,8 @@ import {
 import { formatDisplayDate } from '../../utils/dateFormatting'
 
 /**
- * #1791 — the club page's membership trend, with prior program years drawn
- * faint behind the current line.
+ * #1791 — the club page's membership trend, with last year's year-end as
+ * context behind the current line.
  *
  * Placement and the D15 anchor come from #1705's shared builder
  * (`buildMembershipTrendChartData`), the one the district membership chart
@@ -20,8 +20,9 @@ import { formatDisplayDate } from '../../utils/dateFormatting'
  * current year's own points only.
  *
  * Prior years come from the club's year-end rows (base on July 1, close at
- * the year-end snapshot), so each is a straight two-point line: it shows
- * where the year started and ended, not its path.
+ * the year-end snapshot): two points each, so they say nothing about the
+ * path and are not drawn as lines (#2504). The newest one's year-end is a
+ * single labelled reference line instead.
  *
  * Hand-rolled SVG (not Recharts): the club route keeps Recharts off its
  * static graph (#1901), and CSS classes carry the dark-mode swap (R10).
@@ -88,9 +89,18 @@ export function ClubMembershipTrendChart({
   const priorSeries = series.slice(1).filter(s => s.points.length > 0)
   const dataPoints = currentSeries.points.filter(p => !p.anchor)
 
+  // #2504 — prior years have only a start and a year-end, so a line between
+  // them would imply a path we don't have. Context is one labelled reference
+  // at the newest prior year-end instead.
+  const refClose = priorSeries[0] ? lastOf(priorSeries[0].points) : undefined
+  const refLabel = priorSeries[0] ? shortYearLabel(priorSeries[0].label) : ''
+
   // y over every plotted value; ±4 keeps a flat series off the edges and
   // makes the range provably non-zero (the `range === 0` tripwire).
-  const values = series.flatMap(s => s.points.map(p => p.count))
+  const values = [
+    ...currentSeries.points.map(p => p.count),
+    ...(refClose ? [refClose.count] : []),
+  ]
   const yMin = values.length ? Math.max(0, Math.min(...values) - 4) : 0
   const yMax = values.length ? Math.max(...values) + 4 : 8
   const yRange = yMax - yMin
@@ -148,13 +158,10 @@ export function ClubMembershipTrendChart({
           <span className="club-trend__swatch" aria-hidden="true" />
           {pyDisplay}
         </li>
-        {priorSeries.length > 0 && (
+        {refClose && (
           <li className="club-trend__legend-item club-trend__legend-item--prior">
             <span className="club-trend__swatch" aria-hidden="true" />
-            {priorSeries.length === 1
-              ? shortYearLabel(priorSeries[0]!.label)
-              : `${shortYearLabel(lastOf(priorSeries)!.label)} to ${shortYearLabel(priorSeries[0]!.label)}`}{' '}
-            (start and year-end)
+            {refLabel} year-end
           </li>
         )}
       </ul>
@@ -172,8 +179,8 @@ export function ClubMembershipTrendChart({
           viewBox={`0 0 ${W} ${CHART.H}`}
           role="img"
           aria-label={`Membership trend for program year ${pyDisplay}${
-            priorSeries.length
-              ? `, with ${priorSeries.length} earlier year${priorSeries.length === 1 ? '' : 's'} faint behind it`
+            refClose
+              ? `, with a reference line at ${refLabel} year-end, ${refClose.count} members`
               : ''
           }`}
           onPointerDown={pinNearest}
@@ -225,15 +232,26 @@ export function ClubMembershipTrendChart({
             </g>
           ))}
 
-          {/* Earlier years first, so the current line draws on top. */}
-          {priorSeries.map((s, i) => (
-            <polyline
-              key={s.key}
-              className={`line--prior line--prior-${Math.min(i, 2)}`}
-              data-year={s.label}
-              points={line(s)}
-            />
-          ))}
+          {/* Reference first, so the current line draws on top. */}
+          {refClose && (
+            <g>
+              <line
+                className="ref-line"
+                x1={CHART.PL}
+                y1={y(refClose.count)}
+                x2={W - CHART.PR}
+                y2={y(refClose.count)}
+              />
+              <text
+                className="ref-text"
+                x={W - CHART.PR}
+                y={y(refClose.count) - 5}
+                textAnchor="end"
+              >
+                {refLabel} year-end {refClose.count}
+              </text>
+            </g>
+          )}
 
           {currentSeries.points.length > 1 && (
             <>
@@ -255,15 +273,19 @@ export function ClubMembershipTrendChart({
             />
           )}
 
-          {dataPoints.map((p, i) => (
-            <circle
-              key={p.date}
-              className={i === pinIndex ? 'dot dot--pinned' : 'dot'}
-              cx={x(p.day)}
-              cy={y(p.count)}
-              r={i === pinIndex ? 5 : 3}
-            />
-          ))}
+          {/* No per-point markers (77 of them read as noise): only the end
+              point and the pinned point get a dot. */}
+          {dataPoints.map((p, i) =>
+            i === pinIndex || i === dataPoints.length - 1 ? (
+              <circle
+                key={p.date}
+                className={i === pinIndex ? 'dot dot--pinned' : 'dot'}
+                cx={x(p.day)}
+                cy={y(p.count)}
+                r={i === pinIndex ? 5 : 3}
+              />
+            ) : null
+          )}
         </svg>
       </div>
 
