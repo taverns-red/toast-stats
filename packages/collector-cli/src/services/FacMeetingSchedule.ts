@@ -926,7 +926,7 @@ function timeZoneIn(
  * fee") is not a restriction.
  */
 const RESTRICTED =
-  /(?<!\bnot\s)(?<!\bnot\s+for\s)\b(?:no\s+guests?\b(?!\s+fees?)|(?:members?|workers?|employees?|staff)\s+only\b|(?:by\s+)?invitation(?:\s+only)?\b|invite[\s-]only\b|closed\s+(?:club|meeting)s?\b|guests?\s+not\s+(?:allowed|permitted|welcome)\b|membres?\s+seulement\b|reserve\s+aux\s+membres\b|pas\s+d'invites?\b)/
+  /(?<!\bnot\s)(?<!\bnot\s+for\s)\b(?:no\s+guests?\b(?!\s+(?:fees?|under|below|younger))|(?:members?|workers?|employees?|staff)\s+only\b|by\s+invitation\b|invitation[\s-]only\b|invite[\s-]only\b|closed\s+(?:club|meeting)s?\b|guests?\s+not\s+(?:allowed|permitted|welcome)\b|membres?\s+seulement\b|reserve\s+aux\s+membres\b|pas\s+d'invites?\b)/
 
 function isRestricted(...texts: (string | null | undefined)[]): boolean {
   return texts.some(t => typeof t === 'string' && RESTRICTED.test(fold(t)))
