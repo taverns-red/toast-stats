@@ -32,6 +32,7 @@ interface Step {
 }
 interface Job {
   container?: { image?: string; options?: string } | string
+  defaults?: { run?: { shell?: string } }
   steps?: Step[]
 }
 
@@ -74,6 +75,12 @@ describe('PR Preview runs Playwright in the official image (#2615)', () => {
         typeof job.container === 'object' ? job.container.options : ''
       expect(options).toMatch(/--ipc=host/)
       expect(options).toMatch(/--init/)
+    })
+
+    it(`${name}: run steps use bash, not the container's default sh`, () => {
+      // A container job's default shell is `sh` (dash): the shard script's
+      // bash arrays fail there with `Syntax error: "(" unexpected`.
+      expect(job.defaults?.run?.shell).toBe('bash')
     })
 
     it(`${name}: installs no OS packages or browsers`, () => {
