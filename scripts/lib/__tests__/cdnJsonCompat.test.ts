@@ -585,28 +585,30 @@ describe('the real reader schemas and fixtures', () => {
     expect(head).toHaveProperty('PerDistrictData')
   })
 
-  it('every reader schema has exactly one fixture', () => {
-    expect(COMPAT_FIXTURES.map(s => s.reader).sort()).toEqual(
+  it('every reader schema has at least one fixture', () => {
+    expect([...new Set(COMPAT_FIXTURES.map(s => s.reader))].sort()).toEqual(
       Object.keys(head).sort()
     )
   })
 
   it('each fixture is what the writer contract accepts, strictly', async () => {
-    const fixtures = await loadFixtures(COMPAT_FIXTURES, repoRoot)
     for (const spec of COMPAT_FIXTURES) {
-      const fx = fixtures[spec.reader]
-      expect(fx, spec.reader).toMatchObject({ ok: true })
+      const fx = (await loadFixtures([spec], repoRoot))[spec.reader]?.[0]
+      expect(fx, `${spec.reader} ${spec.file}`).toMatchObject({ ok: true })
       const writer = (contracts as Record<string, unknown>)[
         `${spec.reader}Schema`
       ] as z.ZodType
       const r = writer.safeParse((fx as { payload: unknown }).payload)
-      expect(r.error?.issues, spec.reader).toBeUndefined()
+      expect(r.error?.issues, `${spec.reader} ${spec.file}`).toBeUndefined()
     }
   })
 
   it('the RegionRollups fixture carries distinguishedCounts on every level (#2562)', async () => {
-    const fixtures = await loadFixtures(COMPAT_FIXTURES, repoRoot)
-    const fx = fixtures['RegionRollups']
+    const spec = COMPAT_FIXTURES.find(s =>
+      s.file.endsWith('-distinguished.json')
+    )
+    expect(spec).toBeDefined()
+    const fx = (await loadFixtures([spec!], repoRoot))['RegionRollups']?.[0]
     expect(fx).toMatchObject({ ok: true })
     const payload = (fx as { payload: unknown }).payload as {
       world: { distinguishedCounts?: unknown }
@@ -693,8 +695,8 @@ describe('the real reader schemas and fixtures', () => {
     const empty = mkdtempSync(join(tmpdir(), 'compat-'))
     try {
       const fixtures = await loadFixtures(COMPAT_FIXTURES, empty)
-      for (const spec of COMPAT_FIXTURES) {
-        expect(fixtures[spec.reader]).toMatchObject({ ok: false })
+      for (const fx of Object.values(fixtures).flat()) {
+        expect(fx).toMatchObject({ ok: false })
       }
     } finally {
       rmSync(empty, { recursive: true, force: true })
