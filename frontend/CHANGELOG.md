@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.68.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.68.0...frontend-v3.68.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **consent:** banner tab order, theme carry-over, z-index follow-ups ([#2587](https://github.com/taverns-red/toast-stats/issues/2587), [#2719](https://github.com/taverns-red/toast-stats/issues/2719)) ([#2819](https://github.com/taverns-red/toast-stats/issues/2819)) ([663a331](https://github.com/taverns-red/toast-stats/commit/663a331547649a26e491738298245bc4704a5678))
+* **district:** held cards load when scrolled past; growth placeholder guard ([#2575](https://github.com/taverns-red/toast-stats/issues/2575)) ([#2825](https://github.com/taverns-red/toast-stats/issues/2825)) ([d30f621](https://github.com/taverns-red/toast-stats/commit/d30f621369196c31d5b9ad7b356ca242f86802ad))
+* **district:** trophy placeholder height and a real print smoke ([#2616](https://github.com/taverns-red/toast-stats/issues/2616)) ([#2826](https://github.com/taverns-red/toast-stats/issues/2826)) ([946202d](https://github.com/taverns-red/toast-stats/commit/946202d313f0c5e20e25c72bf01e6c5d32ab97a1))
+* **landing:** no sideways scroll at 320px ([#2620](https://github.com/taverns-red/toast-stats/issues/2620)) ([#2824](https://github.com/taverns-red/toast-stats/issues/2824)) ([d8058cd](https://github.com/taverns-red/toast-stats/commit/d8058cd195c5d80638a950627334d5450e63d223))
+* **perf:** reserve only the action-list intro clauses the date allows ([#2524](https://github.com/taverns-red/toast-stats/issues/2524)) ([#2828](https://github.com/taverns-red/toast-stats/issues/2828)) ([f9d47b3](https://github.com/taverns-red/toast-stats/commit/f9d47b33373eb1c22929fc0b8db8b3ea1ac56ce5))
+* **ux:** drop straight prior-year lines on club membership trend ([#2504](https://github.com/taverns-red/toast-stats/issues/2504)) ([#2818](https://github.com/taverns-red/toast-stats/issues/2818)) ([42af7c7](https://github.com/taverns-red/toast-stats/commit/42af7c7948beef14d7e699ccc9388c3253e90477))
+
 ## [3.68.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.67.1...frontend-v3.68.0) (2026-11-14)
 
 
