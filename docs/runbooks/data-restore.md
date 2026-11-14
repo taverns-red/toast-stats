@@ -188,26 +188,44 @@ For each path: the generation the bad run displaced is the soft-deleted one
 whose `softDeleteTime` equals the live object's `timeCreated`.
 `scripts/plan-data-restore.ts` (logic and tests in
 `scripts/lib/dataRestorePlan.ts`, #2539) applies that rule to two saved
-listings and prints a plan: per object **restore** a named generation,
-**delete** (no copy: the bad run created it), **noop** (live object older
-than the bad run, so untouched) or **refuse** (copies exist but none
-matches, or two match: it never guesses). Several overwrites inside the bad
-window are walked back to the generation live before the run. It makes no
-GCS call itself.
+listings and prints a plan. It makes no GCS call itself. Any ambiguity
+refuses; a wrong delete is far worse than a refuse. The exact rule, walking
+back from the live object (each step matches by exact millisecond, no
+tolerance):
 
-`--since` is when the bad run began promoting (the run's start time, from
-`gh run view $RUN`). Without that bound an untouched object with no
-soft-deleted copy would look like one the run created.
+- **restore**: the walk reaches a copy created before `--since`.
+- **delete**: only if (a) the object has no soft-deleted copies at all, was
+  created between `--since` and `--until`, and the soft-deleted listing is
+  not empty overall; or (b) every soft-deleted copy of the object was consumed
+  by the walk, which ends at the oldest existing copy, itself created after
+  `--since`.
+- **noop**: live object created before `--since`.
+- **refuse**: anything else. In particular any soft-deleted copy the walk did
+  not consume (a missing or hard-deleted generation, a timestamp mismatch), two
+  copies matching one step, a loop, or a live object created after `--until`.
+
+`--since` and `--until` are when the bad run began and finished promoting
+(from `gh run view $RUN`). Both are required and need an explicit `Z` or
+offset; a time without one is refused, never read as local time. `--paths` is
+required: nothing else limits the deletes.
+
+**Before any production use: the staging drill (#2492) must confirm that a
+replaced generation's `softDeleteTime` equals the replacing generation's
+`timeCreated` to the millisecond.** Google's documentation does not promise
+that. The planner keeps the exact match on purpose and has no tolerance, so if
+the equality does not hold, every overwritten object refuses and nothing is
+executed. Do not loosen it to make a plan pass.
 
 ```bash
-SINCE=<ISO time the bad run began, e.g. 2026-11-08T10:00:00Z>
+SINCE=<ISO time the bad run began, with Z or offset, e.g. 2026-11-08T10:00:00Z>
+UNTIL=<ISO time the bad run ended, with Z or offset>
 # Reads. `ls` exits non-zero for a path with no live object (new in the run
 # is fine, deleted by the run is not listed): that is expected, keep going.
 sed "s#^#$PROD/#" "$WORK/paths.txt" > "$WORK/urls.txt"
 gcloud storage ls --json -I < "$WORK/urls.txt" > "$WORK/live.json"
 gcloud storage ls --soft-deleted --json -I < "$WORK/urls.txt" > "$WORK/soft.json"
 npx tsx scripts/plan-data-restore.ts --live "$WORK/live.json" \
-  --soft-deleted "$WORK/soft.json" --since "$SINCE" \
+  --soft-deleted "$WORK/soft.json" --since "$SINCE" --until "$UNTIL" \
   --paths "$WORK/paths.txt" --out "$WORK/plan.json"
 ```
 
@@ -276,10 +294,22 @@ npx tsx scripts/plan-data-restore.ts --execute --plan "$WORK/plan.json" \
 date -u +%FT%TZ   # all restored at
 ```
 
-Each restore is `gcloud storage restore --allow-overwrite gs://…#GENERATION`
+Each restore is
+`gcloud storage restore --allow-overwrite --if-generation-match=LIVE_GENERATION gs://…#GENERATION`
 and each delete `gcloud storage rm gs://…#LIVE_GENERATION` (the exact
-generation the plan saw), so a delete cannot remove a newer object. Deleted
-and displaced generations are soft-deleted, so both are reversible.
+generation the plan saw). For restore, `--if-generation-match` makes the
+call fail if the live object changed since the plan (JSON API
+[objects.restore](https://docs.cloud.google.com/storage/docs/json_api/v1/objects/restore):
+`ifGenerationMatch` is conditional on a live version with that generation;
+`gcloud storage restore` lists the flag at
+[its reference](https://docs.cloud.google.com/sdk/gcloud/reference/storage/restore)).
+The gcloud page does not show the flag combined with a `#generation` URL, so
+the staging drill must also confirm that exact invocation works. For delete
+the `#LIVE_GENERATION` URL already pins the object. The saved plan file is
+schema-checked and refused if malformed. If a command fails partway,
+execution stops and stdout gets `{executed, failedAt}` (exit 1); re-plan from
+fresh listings before going on. Deleted and displaced generations are
+soft-deleted, so both are reversible.
 
 `gcloud storage restore` overwrites the live object and soft-deletes it (see
 above). If a date that the plan's `delete` entries empty is still named by **staging's**
@@ -394,8 +424,12 @@ CDN_BASE_URL=$CDN BASE_URL=https://staging-toast-stats.web.app \
 date -u +%FT%TZ   # detected at
 
 # 5. Plan (read): procedure step 2 against $STAGING (list both paths with
-#    ls --json, --since = the break time from step 3); both should come out
-#    as `restore` with the generations recorded in step 1.
+#    ls --json, --since = the break time from step 3, --until = a few minutes
+#    after it; both with Z). Both should come out as `restore` with the
+#    generations recorded in step 1. This is also where to confirm that
+#    softDeleteTime equals the replacing generation's timeCreated exactly
+#    (a refuse here means it does not), and that
+#    `gcloud storage restore --if-generation-match=<live> ...#<gen>` runs.
 
 # 6. Restore (WRITE), pointer first, then purge the staging CDN (WRITE).
 date -u +%FT%TZ   # restore started
