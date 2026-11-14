@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.68.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.67.1...frontend-v3.68.0) (2026-11-14)
+
+
+### Features
+
+* **changes:** list month-end revisions in What Changed ([#2475](https://github.com/taverns-red/toast-stats/issues/2475)) ([#2813](https://github.com/taverns-red/toast-stats/issues/2813)) ([cfffbe2](https://github.com/taverns-red/toast-stats/commit/cfffbe22ad2fa4863d05c72c7f7514e032e0b390))
+* **collector:** FAC parser gaps 8, 9, 11, 12 and last week ([#2627](https://github.com/taverns-red/toast-stats/issues/2627)) ([#2808](https://github.com/taverns-red/toast-stats/issues/2808)) ([a3aeced](https://github.com/taverns-red/toast-stats/commit/a3aecedbb1c100a77243697e46fae48b497bad1f))
+
+
+### Bug Fixes
+
+* **changes:** guard the newest-revision alias and hold [@as](https://github.com/as)Of links while loading ([#2814](https://github.com/taverns-red/toast-stats/issues/2814)) ([#2816](https://github.com/taverns-red/toast-stats/issues/2816)) ([5e7e6df](https://github.com/taverns-red/toast-stats/commit/5e7e6df668fa1ec9a16afebb8d1cfe16d21aff1f))
+* **rollups:** distinguishedCounts null semantics and publish-gate coverage ([#2563](https://github.com/taverns-red/toast-stats/issues/2563)) ([#2807](https://github.com/taverns-red/toast-stats/issues/2807)) ([17e7d2b](https://github.com/taverns-red/toast-stats/commit/17e7d2b92422fa2048e2e062d582945c22a29076))
+
 ## [3.67.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.67.0...frontend-v3.67.1) (2026-11-13)
 
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.25.3](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.25.2...analytics-core-v1.25.3) (2026-11-14)
+
+
+### Bug Fixes
+
+* **rollups:** distinguishedCounts null semantics and publish-gate coverage ([#2563](https://github.com/taverns-red/toast-stats/issues/2563)) ([#2807](https://github.com/taverns-red/toast-stats/issues/2807)) ([17e7d2b](https://github.com/taverns-red/toast-stats/commit/17e7d2b92422fa2048e2e062d582945c22a29076))
+* **rollups:** region rollups read the date-level Distinguished basis ([#2801](https://github.com/taverns-red/toast-stats/issues/2801)) ([#2804](https://github.com/taverns-red/toast-stats/issues/2804)) ([0ef372f](https://github.com/taverns-red/toast-stats/commit/0ef372fad729e88f5e50e00b7ae7a83f049da520))
+
+
+### Tests
+
+* **analytics:** pin pre-April Apr. Ren. as the snapshot's own running count ([#2561](https://github.com/taverns-red/toast-stats/issues/2561)) ([#2812](https://github.com/taverns-red/toast-stats/issues/2812)) ([a21290b](https://github.com/taverns-red/toast-stats/commit/a21290b541bd6a8a3acf3c134444c67c98b76a0c))
+
 ## [1.25.2](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.25.1...analytics-core-v1.25.2) (2026-11-13)
 
 
