@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.29.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.28.1...shared-contracts-v1.29.0) (2026-11-14)
+
+
+### Features
+
+* **collector:** FAC parser gaps 8, 9, 11, 12 and last week ([#2627](https://github.com/taverns-red/toast-stats/issues/2627)) ([#2808](https://github.com/taverns-red/toast-stats/issues/2808)) ([a3aeced](https://github.com/taverns-red/toast-stats/commit/a3aecedbb1c100a77243697e46fae48b497bad1f))
+
+
+### Tests
+
+* **contracts:** region-rollups compat fixture with distinguishedCounts ([#2562](https://github.com/taverns-red/toast-stats/issues/2562)) ([#2806](https://github.com/taverns-red/toast-stats/issues/2806)) ([f90eb49](https://github.com/taverns-red/toast-stats/commit/f90eb49a7920bd7b593b9878c936d38dd35c292a))
+
 ## [1.28.1](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.28.0...shared-contracts-v1.28.1) (2026-11-13)
 
 

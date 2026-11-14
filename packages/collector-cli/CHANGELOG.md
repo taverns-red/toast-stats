@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.27.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.26.2...collector-cli-v1.27.0) (2026-11-14)
+
+
+### Features
+
+* **collector:** FAC parser gaps 8, 9, 11, 12 and last week ([#2627](https://github.com/taverns-red/toast-stats/issues/2627)) ([#2808](https://github.com/taverns-red/toast-stats/issues/2808)) ([a3aeced](https://github.com/taverns-red/toast-stats/commit/a3aecedbb1c100a77243697e46fae48b497bad1f))
+
+
+### Bug Fixes
+
+* **collector:** FAC parser reads '12:00 am - 1:00' as midday ([#2626](https://github.com/taverns-red/toast-stats/issues/2626)) ([#2805](https://github.com/taverns-red/toast-stats/issues/2805)) ([ada65fe](https://github.com/taverns-red/toast-stats/commit/ada65fe23620ce2d29f2ae0d47142bb749d1d5b7))
+* **rollups:** region rollups read the date-level Distinguished basis ([#2801](https://github.com/taverns-red/toast-stats/issues/2801)) ([#2804](https://github.com/taverns-red/toast-stats/issues/2804)) ([0ef372f](https://github.com/taverns-red/toast-stats/commit/0ef372fad729e88f5e50e00b7ae7a83f049da520))
+
+
+### Tests
+
+* **analytics:** pin pre-April Apr. Ren. as the snapshot's own running count ([#2561](https://github.com/taverns-red/toast-stats/issues/2561)) ([#2812](https://github.com/taverns-red/toast-stats/issues/2812)) ([a21290b](https://github.com/taverns-red/toast-stats/commit/a21290b541bd6a8a3acf3c134444c67c98b76a0c))
+
 ## [1.26.2](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.26.1...collector-cli-v1.26.2) (2026-11-13)
 
 
