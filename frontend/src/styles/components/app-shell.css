@@ -3696,24 +3696,21 @@
     fill: #8ec5e8;
   }
 
-  /* #1791 — earlier program years, faint and dashed behind the current
-     line (the dash, not only the tone, tells them apart). Newest prior year
-     is the least faint. Theme tokens, so dark mode follows (R10). */
-  .mem-chart .line--prior {
-    fill: none;
-    stroke: var(--ink-4);
+  /* #2504 — last year's year-end as one dashed reference (the dash and the
+     text label, not only the tone, identify it). Theme tokens, so dark mode
+     follows (R10). */
+  .mem-chart .ref-line {
+    stroke: var(--ink-3);
     stroke-width: 1.5;
     stroke-dasharray: 6 4;
     stroke-linecap: round;
-    opacity: 0.55;
+    opacity: 0.8;
   }
 
-  .mem-chart .line--prior-1 {
-    opacity: 0.4;
-  }
-
-  .mem-chart .line--prior-2 {
-    opacity: 0.28;
+  .mem-chart .ref-text {
+    fill: var(--ink-2);
+    font-size: 12px;
+    font-family: var(--sans);
   }
 
   /* Tap-to-pin marker. */
@@ -3774,7 +3771,7 @@
   }
 
   .club-trend__legend-item--prior .club-trend__swatch {
-    border-top: 2px dashed var(--ink-4);
+    border-top: 2px dashed var(--ink-3);
   }
 
   /* The readout is #1835's .chart-readout line (two lines reserved); only
