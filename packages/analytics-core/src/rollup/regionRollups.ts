@@ -397,7 +397,11 @@ function districtFigures(
   const distinguishedCollected = facts.some(
     ({ club }) =>
       club.aprilRenewals !== undefined ||
-      classifyDistinguishedTier(club.distinguishedStatus) !== null
+      classifyDistinguishedTier(club.distinguishedStatus) !== null ||
+      // TI publishes on this date: a present status column, even empty, is
+      // TI's own 0 for a club with no letter, not a missing figure.
+      (ctx.distinguishedBasis === 'ti-recognised' &&
+        club.distinguishedStatus !== undefined)
   )
   f.distinguishedCounts = distinguishedCollected
     ? tallyDistinguished(
