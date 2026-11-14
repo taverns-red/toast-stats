@@ -313,7 +313,7 @@ const ORDINAL_OR_MODE = new RegExp(
 )
 
 interface WeekGroup {
-  weeks: (number | 'last')[]
+  weeks: number[]
   mode?: MeetingMode
 }
 
@@ -323,10 +323,10 @@ interface WeekGroup {
  * Mode words that follow no ordinal are returned as `loose`.
  */
 function weekGroupsIn(folded: string): {
-  groups: (WeekGroup & { weeks: number[] })[]
+  groups: WeekGroup[]
   loose: MeetingMode[]
 } {
-  const groups: (WeekGroup & { weeks: number[] })[] = []
+  const groups: WeekGroup[] = []
   const loose: MeetingMode[] = []
   let pending: number[] = []
   ORDINAL_OR_MODE.lastIndex = 0
@@ -963,18 +963,14 @@ export function parseMeetingSchedule(
   const days = weekdaysIn(dayText)
   if (days.length === 0) return undefined
 
-  const { groups: ordinalGroups, loose } = weekGroupsIn(dayText)
-  // "Last Thursday" (#2627): the last week joins the first group's weeks.
-  const lastWeek = LAST_WEEK.test(dayText)
-  const groups: WeekGroup[] = lastWeek
-    ? ordinalGroups.length > 0
-      ? ordinalGroups.map((g, k) =>
-          k === 0 ? { ...g, weeks: [...g.weeks, 'last'] } : g
-        )
-      : [{ weeks: ['last'] }]
-    : ordinalGroups
+  const { groups, loose } = weekGroupsIn(dayText)
+  // "Last Thursday" (#2627): its own flag, because published readers read
+  // weeksOfMonth as numbers 1-5. Only for one day: "2nd Thursday and last
+  // Friday" cannot say which day the last week belongs to, so no cadence.
+  const lastMention = LAST_WEEK.test(dayText)
+  const lastWeek = lastMention && days.length === 1
   let cadence: Cadence | undefined
-  if (lastWeek) cadence = 'monthly'
+  if (lastMention) cadence = lastWeek ? 'monthly' : undefined
   else if (BIWEEKLY.test(dayText)) cadence = 'biweekly'
   else if (groups.length > 0) {
     const weeks = new Set(groups.flatMap(g => g.weeks))
@@ -1016,12 +1012,14 @@ export function parseMeetingSchedule(
   days.forEach((day, index) => {
     const { startTime, endTime } = slotFor(day, index)
     if (cadence === 'monthly') {
-      for (const group of groups) {
+      const monthly: WeekGroup[] = groups.length > 0 ? groups : [{ weeks: [] }]
+      for (const [k, group] of monthly.entries()) {
         entries.push(
           compact({
             day,
             cadence,
-            weeksOfMonth: group.weeks,
+            weeksOfMonth: group.weeks.length > 0 ? group.weeks : undefined,
+            lastWeek: lastWeek && k === 0 ? true : undefined,
             startTime,
             endTime,
             timeZone,

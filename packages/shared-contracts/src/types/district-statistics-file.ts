@@ -261,9 +261,11 @@ export interface MeetingScheduleEntry {
   day: MeetingWeekday
   /** weekly, every other week, or monthly on `weeksOfMonth`. */
   cadence?: 'weekly' | 'biweekly' | 'monthly'
-  /** 1-5 or "last"; "1st & 3rd Tuesday" → [1, 3]. Present when cadence is
-   *  monthly. */
-  weeksOfMonth?: (number | 'last')[]
+  /** 1-5; "1st & 3rd Tuesday" → [1, 3]. Present when cadence is monthly. */
+  weeksOfMonth?: number[]
+  /** True for "last Thursday": the last week of the month, alone or after
+   *  `weeksOfMonth`. Never a value inside `weeksOfMonth`. */
+  lastWeek?: boolean
   /** Local 24-hour "HH:MM". */
   startTime?: string
   /** Local 24-hour "HH:MM". */

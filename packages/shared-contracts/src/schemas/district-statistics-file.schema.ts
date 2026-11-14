@@ -54,9 +54,12 @@ const ClockTimeSchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
  * One recurring meeting of a club, parsed from the FAC free text (#1789).
  *
  * - `cadence`: weekly, every other week (`biweekly`), or `monthly` on the
- *   listed `weeksOfMonth` (1-5: "1st & 3rd Tuesday" → [1, 3]; `"last"`
- *   for "last Thursday", #2627). Absent when the text names the day but
- *   not how often ("Twice a month").
+ *   listed `weeksOfMonth` (1-5: "1st & 3rd Tuesday" → [1, 3]). Absent when
+ *   the text names the day but not how often ("Twice a month").
+ * - `lastWeek`: true when the day also meets in the last week of the month
+ *   ("last Thursday", #2627). A separate field, not a `"last"` value in
+ *   `weeksOfMonth`: published readers validate that array as numbers 1-5
+ *   (ADR 0019). Set only for a string that names one day.
  * - `startTime` / `endTime`: local 24-hour time; absent when the text is
  *   ambiguous (a bare "6:30") or unparsed.
  * - `mode`: what the club's own text says. Absent when it says nothing.
@@ -75,9 +78,8 @@ const ClockTimeSchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
 export const MeetingScheduleEntrySchema = z.strictObject({
   day: z.enum(MEETING_WEEKDAYS),
   cadence: z.enum(['weekly', 'biweekly', 'monthly']).optional(),
-  weeksOfMonth: z
-    .array(z.union([z.number().int().min(1).max(5), z.literal('last')]))
-    .optional(),
+  weeksOfMonth: z.array(z.number().int().min(1).max(5)).optional(),
+  lastWeek: z.boolean().optional(),
   startTime: ClockTimeSchema.optional(),
   endTime: ClockTimeSchema.optional(),
   timeZone: z.string().optional(),
