@@ -21,7 +21,7 @@ import {
   formatCloseNeeds,
   formatCspRow,
   formatVisitGap,
-  LONGEST_ACTION_SECTION_ORDER,
+  reservedActionSectionOrder,
   orderActionSections,
   type ActionListSections,
   type ActionSectionId,
@@ -664,6 +664,16 @@ const DistrictActionListPage: React.FC = () => {
      date. The rendered list, the intro copy and the CSV all read this one
      array, so they cannot drift apart. */
   const sectionOrder = useMemo(() => orderActionSections(sections), [sections])
+  /* The intro's reserve while the skeleton is up (#2524): the clauses the
+     pinned date and program year allow, before the statistics land. */
+  const reservedOrder = useMemo(
+    () =>
+      reservedActionSectionOrder(
+        effectiveEndDate ?? '',
+        effectiveProgramYear?.label
+      ),
+    [effectiveEndDate, effectiveProgramYear]
+  )
 
   /* Collapse preference — per viewer, per device, ONE key for the page, never
      in the URL (a shared link must not carry it). Reads and writes go through
@@ -938,8 +948,9 @@ const DistrictActionListPage: React.FC = () => {
                   clause needs its club rows): the sentence grew from two
                   lines to three mid-load and pushed the controls and every
                   section down 21px. While the sections skeleton is up, hold
-                  the longest sentence, invisible and out of the accessibility
-                  tree, so no clause is claimed that may not apply. */}
+                  the longest sentence the pinned date and year allow (#2524),
+                  invisible and out of the accessibility tree, so no clause is
+                  claimed that may not apply. */}
               <p
                 className={`action-list-page__subtitle${
                   showSectionsSkeleton
@@ -953,9 +964,7 @@ const DistrictActionListPage: React.FC = () => {
                     section (#1569). */}
                 Prioritized to-dos for this district:{' '}
                 {describeActionSections(
-                  showSectionsSkeleton
-                    ? LONGEST_ACTION_SECTION_ORDER
-                    : sectionOrder
+                  showSectionsSkeleton ? reservedOrder : sectionOrder
                 )}
                 . Filter to your division or area and share the link.
               </p>
