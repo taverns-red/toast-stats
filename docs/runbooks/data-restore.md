@@ -219,15 +219,40 @@ executed. Do not loosen it to make a plan pass.
 ```bash
 SINCE=<ISO time the bad run began, with Z or offset, e.g. 2026-11-08T10:00:00Z>
 UNTIL=<ISO time the bad run ended, with Z or offset>
-# Reads. `ls` exits non-zero for a path with no live object (new in the run
-# is fine, deleted by the run is not listed): that is expected, keep going.
+# Reads. One `ls` per object, because `gcloud storage ls -I` stops at the
+# first URL that matches nothing and never lists the rest (list_urls() in the
+# SDK raises on the first empty URL). An object new in the run has no
+# soft-deleted copy, so "matched no objects" is expected for it; the exit
+# code is ignored and stderr is what gets checked. Quiet gcloud's update
+# notice, which would also land in stderr and be refused.
+export CLOUDSDK_COMPONENT_MANAGER_DISABLE_UPDATE_CHECK=1
 sed "s#^#$PROD/#" "$WORK/paths.txt" > "$WORK/urls.txt"
-gcloud storage ls --json -I < "$WORK/urls.txt" > "$WORK/live.json"
-gcloud storage ls --soft-deleted --json -I < "$WORK/urls.txt" > "$WORK/soft.json"
+: > "$WORK/live.cat"; : > "$WORK/soft.cat"; : > "$WORK/live.err"; : > "$WORK/soft.err"
+while read -r U; do
+  gcloud storage ls --json "$U" >> "$WORK/live.cat" 2>> "$WORK/live.err" || true
+  gcloud storage ls --soft-deleted --json "$U" >> "$WORK/soft.cat" 2>> "$WORK/soft.err" || true
+done < "$WORK/urls.txt"
+jq -s 'add // []' "$WORK/live.cat" > "$WORK/live.json"
+jq -s 'add // []' "$WORK/soft.cat" > "$WORK/soft.json"
 npx tsx scripts/plan-data-restore.ts --live "$WORK/live.json" \
-  --soft-deleted "$WORK/soft.json" --since "$SINCE" --until "$UNTIL" \
+  --soft-deleted "$WORK/soft.json" --live-errors "$WORK/live.err" \
+  --soft-errors "$WORK/soft.err" --since "$SINCE" --until "$UNTIL" \
   --paths "$WORK/paths.txt" --out "$WORK/plan.json"
 ```
+
+**Both `--live-errors` and `--soft-errors` are required.** Every non-blank
+line in them must be exactly gcloud's `ERROR: (gcloud.storage.ls) One or more
+URLs matched no objects.` (from `list_util.py` in the Cloud SDK; the public docs
+do not quote it, so it is matched exactly). Any other line (a transient
+error, quota, a notice) refuses the whole plan, because a listing that failed
+for one object would make an overwritten object look new, and the planner
+would delete it. Re-run the reads and plan again.
+
+**The plan also refuses every restore and delete once more than 13 days have
+passed since `--since`.** Soft-deleted copies live 14 days; after that the copy
+from before the run may be hard-deleted while later copies remain, which would
+make an overwritten object look new. Reason: soft-delete retention. Past the
+window, restore by hand from the backup or CDN history.
 
 The listing fields are those of the Cloud Storage JSON API object resource
 (`name`, `bucket`, `generation`, `timeCreated`, `softDeleteTime`,
@@ -287,10 +312,10 @@ then globals and dates, then remove what the bad run created.
 # first), then deletes. Re-lists, re-plans and refuses unless the fresh plan
 # equals plan.json (an object changed since you reviewed it, or a refused
 # entry is in it), and then runs nothing.
-gcloud storage ls --json -I < "$WORK/urls.txt" > "$WORK/live.json"
-gcloud storage ls --soft-deleted --json -I < "$WORK/urls.txt" > "$WORK/soft.json"
+# Redo the step 2 read loop (same commands, same stderr files), then:
 npx tsx scripts/plan-data-restore.ts --execute --plan "$WORK/plan.json" \
-  --live "$WORK/live.json" --soft-deleted "$WORK/soft.json"
+  --live "$WORK/live.json" --soft-deleted "$WORK/soft.json" \
+  --live-errors "$WORK/live.err" --soft-errors "$WORK/soft.err"
 date -u +%FT%TZ   # all restored at
 ```
 
@@ -423,8 +448,8 @@ CDN_BASE_URL=$CDN BASE_URL=https://staging-toast-stats.web.app \
   SMOKE_RENDER=off SMOKE_WINDOW_SECONDS=120 npx tsx scripts/hosting-smoke.ts
 date -u +%FT%TZ   # detected at
 
-# 5. Plan (read): procedure step 2 against $STAGING (list both paths with
-#    ls --json, --since = the break time from step 3, --until = a few minutes
+# 5. Plan (read): procedure step 2 against $STAGING (list both paths with the
+#    per-object ls loop, stderr to the two errors files, --since = the break time from step 3, --until = a few minutes
 #    after it; both with Z). Both should come out as `restore` with the
 #    generations recorded in step 1. This is also where to confirm that
 #    softDeleteTime equals the replacing generation's timeCreated exactly
