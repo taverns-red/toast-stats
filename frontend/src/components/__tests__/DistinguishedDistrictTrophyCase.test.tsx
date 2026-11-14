@@ -519,6 +519,38 @@ describe('DistinguishedDistrictTrophyCase', () => {
       }
     )
 
+    // #2616 — D61 meets every prerequisite, so its loaded card shows only the
+    // 44px summary row; the expanded checklist and the warning line made the
+    // placeholder 117px taller at 375 (67px at 768). The held and loading
+    // placeholders reserve that collapsed shape, and a district with unmet
+    // prerequisites grows below the fold when its card lands.
+    it.each([
+      ['loading', { isLoading: true }, 'distinguished-trophy-skeleton'],
+      ['held', { held: true }, 'distinguished-trophy-held'],
+    ])(
+      'reserves the collapsed summary row, not the checklist, while %s (#2616)',
+      (_name, props, testId) => {
+        render(
+          <DistinguishedDistrictTrophyCase
+            status={null}
+            programYear="2026-2027"
+            {...props}
+          />
+        )
+        const placeholder = screen.getByTestId(testId)
+        expect(
+          within(placeholder).queryAllByTestId(
+            'distinguished-trophy-skeleton-prereq'
+          )
+        ).toHaveLength(0)
+        expect(
+          within(placeholder).queryByTestId(
+            'distinguished-trophy-skeleton-warning'
+          )
+        ).toBeNull()
+      }
+    )
+
     it('still renders nothing when not loading and status is null', () => {
       const { container } = render(
         <DistinguishedDistrictTrophyCase

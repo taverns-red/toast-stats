@@ -11,13 +11,18 @@ import { test, expect, type Page } from './fixtures/test'
  *
  * Measured on D61 against prod (#2575): the growth card's placeholder is within
  * 17px of the loaded card at 375, 768 and 1280 (-10, -4, +17), inside the
- * issue's 24px bar, so this guards it rather than fixing it.
+ * issue's 24px bar, so this guards it rather than fixing it. The trophy case
+ * was 117px taller at 375 and 67px at 768 (#2616): it reserved the expanded
+ * prerequisite checklist, and D61 meets every prerequisite and loads collapsed.
  */
 
 const MAX_SHIFT_PX = 20
 const WIDTHS = [375, 768, 1280] as const
 const HEIGHTS = [700, 400, 200] as const
-const SLOTS = [{ slot: 'growth-slot', held: 'club-growth-held' }] as const
+const SLOTS = [
+  { slot: 'trophy-case-slot', held: 'distinguished-trophy-held' },
+  { slot: 'growth-slot', held: 'club-growth-held' },
+] as const
 
 async function slotHeight(page: Page, slot: string): Promise<number> {
   return page.evaluate(
