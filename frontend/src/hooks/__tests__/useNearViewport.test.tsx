@@ -85,6 +85,48 @@ describe('useNearViewport', () => {
     expect(observers[0]!.disconnect).toHaveBeenCalled()
   })
 
+  // #2575: a reader who jumps past the element (a screen reader's heading
+  // rotor, a deep link, a restored scroll position) never has it inside the
+  // margin band, so it never reports intersecting. It has been passed all the
+  // same, and a held card there would stay an aria-hidden placeholder.
+  it('counts an element scrolled past, beyond the margin, as near (#2575)', () => {
+    const { container } = render(<Probe />)
+    const div = container.firstElementChild!
+    act(() =>
+      observers[0]!.callback(
+        [
+          {
+            isIntersecting: false,
+            target: div,
+            boundingClientRect: { top: -2000, bottom: -1400 },
+            rootBounds: { top: -600, bottom: 1400 },
+          } as IntersectionObserverEntry,
+        ],
+        {} as IntersectionObserver
+      )
+    )
+    expect(div.getAttribute('data-near')).toBe('true')
+  })
+
+  it('stays false for an element still below the viewport (#2575)', () => {
+    const { container } = render(<Probe />)
+    const div = container.firstElementChild!
+    act(() =>
+      observers[0]!.callback(
+        [
+          {
+            isIntersecting: false,
+            target: div,
+            boundingClientRect: { top: 3000, bottom: 3600 },
+            rootBounds: { top: -600, bottom: 1400 },
+          } as IntersectionObserverEntry,
+        ],
+        {} as IntersectionObserver
+      )
+    )
+    expect(div.getAttribute('data-near')).toBe('false')
+  })
+
   it('stays false without IntersectionObserver (the SVG stays)', () => {
     vi.stubGlobal('IntersectionObserver', undefined)
     const { container } = render(<Probe />)
