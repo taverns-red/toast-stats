@@ -94,7 +94,11 @@ export const COMPAT_FIXTURES: FixtureSpec[] = [
   },
   {
     reader: 'RegionRollups',
-    file: '__fixtures__/recorded-region-rollups.json',
+    // Synthetic, built by buildRegionRollups from clubs carrying TI's status
+    // column and April renewals, so distinguishedCounts is exercised (#2562).
+    // recorded-region-rollups.json stays as the pre-#2221 shape for the
+    // "old output still parses" tests.
+    file: '__fixtures__/recorded-region-rollups-distinguished.json',
   },
   {
     reader: 'ClubsByRegionShard',

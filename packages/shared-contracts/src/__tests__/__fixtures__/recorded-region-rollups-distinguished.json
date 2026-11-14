@@ -1,0 +1,555 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "region-rollups"
+  },
+  "snapshotDate": "2026-06-30",
+  "programYear": "2025-2026",
+  "generatedAt": "2026-10-13T00:00:00.000Z",
+  "regionMembership": {
+    "source": "config/district-region-history.json",
+    "asOf": "2026-10-12",
+    "programYear": "2025-2026"
+  },
+  "regionMembershipNote": null,
+  "scope": {
+    "excludedDistricts": [],
+    "unassignedDistricts": ["U"],
+    "duplicateClubs": []
+  },
+  "world": {
+    "districts": 5,
+    "clubs": 13,
+    "membership": 277,
+    "payments": 260,
+    "health": {
+      "thriving": 10,
+      "vulnerable": 2,
+      "interventionRequired": 1
+    },
+    "clubStatus": {
+      "active": 12,
+      "low": 0,
+      "ineligible": 0,
+      "suspended": 1,
+      "other": 0
+    },
+    "distinguished": {
+      "smedley": 2,
+      "president": 1,
+      "select": 4,
+      "distinguished": 3,
+      "notDistinguished": 3
+    },
+    "compliance": {
+      "cspSubmitted": 13,
+      "octoberDuesOnTime": 13,
+      "aprilDuesOnTime": 13,
+      "officerListOnTime": 13
+    },
+    "growth": {
+      "prospective": null,
+      "chartered": null,
+      "suspended": null
+    },
+    "officerTraining": null,
+    "distinguishedCounts": {
+      "confirmed": 6,
+      "provisional": 0,
+      "byTier": {
+        "distinguished": {
+          "confirmed": 3,
+          "provisional": 0
+        },
+        "select": {
+          "confirmed": 2,
+          "provisional": 0
+        },
+        "presidents": {
+          "confirmed": 1,
+          "provisional": 0
+        },
+        "smedley": {
+          "confirmed": 0,
+          "provisional": 0
+        }
+      }
+    }
+  },
+  "regions": {
+    "02": {
+      "districtIds": ["01"],
+      "clubs": 4,
+      "membership": 88,
+      "payments": 80,
+      "health": {
+        "thriving": 3,
+        "vulnerable": 1,
+        "interventionRequired": 0
+      },
+      "clubStatus": {
+        "active": 4,
+        "low": 0,
+        "ineligible": 0,
+        "suspended": 0,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 0,
+        "president": 1,
+        "select": 1,
+        "distinguished": 1,
+        "notDistinguished": 1
+      },
+      "compliance": {
+        "cspSubmitted": 4,
+        "octoberDuesOnTime": 4,
+        "aprilDuesOnTime": 4,
+        "officerListOnTime": 4
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": null,
+        "suspended": null
+      },
+      "officerTraining": null,
+      "distinguishedCounts": {
+        "confirmed": 2,
+        "provisional": 0,
+        "byTier": {
+          "distinguished": {
+            "confirmed": 1,
+            "provisional": 0
+          },
+          "select": {
+            "confirmed": 0,
+            "provisional": 0
+          },
+          "presidents": {
+            "confirmed": 1,
+            "provisional": 0
+          },
+          "smedley": {
+            "confirmed": 0,
+            "provisional": 0
+          }
+        }
+      }
+    },
+    "04": {
+      "districtIds": ["68"],
+      "clubs": 3,
+      "membership": 50,
+      "payments": 60,
+      "health": {
+        "thriving": 2,
+        "vulnerable": 0,
+        "interventionRequired": 1
+      },
+      "clubStatus": {
+        "active": 2,
+        "low": 0,
+        "ineligible": 0,
+        "suspended": 1,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 1,
+        "president": 0,
+        "select": 0,
+        "distinguished": 1,
+        "notDistinguished": 1
+      },
+      "compliance": {
+        "cspSubmitted": 3,
+        "octoberDuesOnTime": 3,
+        "aprilDuesOnTime": 3,
+        "officerListOnTime": 3
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": null,
+        "suspended": null
+      },
+      "officerTraining": null,
+      "distinguishedCounts": {
+        "confirmed": 1,
+        "provisional": 0,
+        "byTier": {
+          "distinguished": {
+            "confirmed": 0,
+            "provisional": 0
+          },
+          "select": {
+            "confirmed": 1,
+            "provisional": 0
+          },
+          "presidents": {
+            "confirmed": 0,
+            "provisional": 0
+          },
+          "smedley": {
+            "confirmed": 0,
+            "provisional": 0
+          }
+        }
+      }
+    },
+    "07": {
+      "districtIds": ["111", "47"],
+      "clubs": 4,
+      "membership": 95,
+      "payments": 80,
+      "health": {
+        "thriving": 3,
+        "vulnerable": 1,
+        "interventionRequired": 0
+      },
+      "clubStatus": {
+        "active": 4,
+        "low": 0,
+        "ineligible": 0,
+        "suspended": 0,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 1,
+        "president": 0,
+        "select": 2,
+        "distinguished": 0,
+        "notDistinguished": 1
+      },
+      "compliance": {
+        "cspSubmitted": 4,
+        "octoberDuesOnTime": 4,
+        "aprilDuesOnTime": 4,
+        "officerListOnTime": 4
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": null,
+        "suspended": null
+      },
+      "officerTraining": null,
+      "distinguishedCounts": {
+        "confirmed": 2,
+        "provisional": 0,
+        "byTier": {
+          "distinguished": {
+            "confirmed": 1,
+            "provisional": 0
+          },
+          "select": {
+            "confirmed": 1,
+            "provisional": 0
+          },
+          "presidents": {
+            "confirmed": 0,
+            "provisional": 0
+          },
+          "smedley": {
+            "confirmed": 0,
+            "provisional": 0
+          }
+        }
+      }
+    }
+  },
+  "districts": {
+    "47": {
+      "region": "07",
+      "clubs": 2,
+      "membership": 50,
+      "payments": 40,
+      "health": {
+        "thriving": 2,
+        "vulnerable": 0,
+        "interventionRequired": 0
+      },
+      "clubStatus": {
+        "active": 2,
+        "low": 0,
+        "ineligible": 0,
+        "suspended": 0,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 1,
+        "president": 0,
+        "select": 1,
+        "distinguished": 0,
+        "notDistinguished": 0
+      },
+      "compliance": {
+        "cspSubmitted": 2,
+        "octoberDuesOnTime": 2,
+        "aprilDuesOnTime": 2,
+        "officerListOnTime": 2
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": null,
+        "suspended": null
+      },
+      "officerTraining": null,
+      "distinguishedCounts": {
+        "confirmed": 1,
+        "provisional": 0,
+        "byTier": {
+          "distinguished": {
+            "confirmed": 0,
+            "provisional": 0
+          },
+          "select": {
+            "confirmed": 1,
+            "provisional": 0
+          },
+          "presidents": {
+            "confirmed": 0,
+            "provisional": 0
+          },
+          "smedley": {
+            "confirmed": 0,
+            "provisional": 0
+          }
+        }
+      }
+    },
+    "68": {
+      "region": "04",
+      "clubs": 3,
+      "membership": 50,
+      "payments": 60,
+      "health": {
+        "thriving": 2,
+        "vulnerable": 0,
+        "interventionRequired": 1
+      },
+      "clubStatus": {
+        "active": 2,
+        "low": 0,
+        "ineligible": 0,
+        "suspended": 1,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 1,
+        "president": 0,
+        "select": 0,
+        "distinguished": 1,
+        "notDistinguished": 1
+      },
+      "compliance": {
+        "cspSubmitted": 3,
+        "octoberDuesOnTime": 3,
+        "aprilDuesOnTime": 3,
+        "officerListOnTime": 3
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": null,
+        "suspended": null
+      },
+      "officerTraining": null,
+      "distinguishedCounts": {
+        "confirmed": 1,
+        "provisional": 0,
+        "byTier": {
+          "distinguished": {
+            "confirmed": 0,
+            "provisional": 0
+          },
+          "select": {
+            "confirmed": 1,
+            "provisional": 0
+          },
+          "presidents": {
+            "confirmed": 0,
+            "provisional": 0
+          },
+          "smedley": {
+            "confirmed": 0,
+            "provisional": 0
+          }
+        }
+      }
+    },
+    "111": {
+      "region": "07",
+      "clubs": 2,
+      "membership": 45,
+      "payments": 40,
+      "health": {
+        "thriving": 1,
+        "vulnerable": 1,
+        "interventionRequired": 0
+      },
+      "clubStatus": {
+        "active": 2,
+        "low": 0,
+        "ineligible": 0,
+        "suspended": 0,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 0,
+        "president": 0,
+        "select": 1,
+        "distinguished": 0,
+        "notDistinguished": 1
+      },
+      "compliance": {
+        "cspSubmitted": 2,
+        "octoberDuesOnTime": 2,
+        "aprilDuesOnTime": 2,
+        "officerListOnTime": 2
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": null,
+        "suspended": null
+      },
+      "officerTraining": null,
+      "distinguishedCounts": {
+        "confirmed": 1,
+        "provisional": 0,
+        "byTier": {
+          "distinguished": {
+            "confirmed": 1,
+            "provisional": 0
+          },
+          "select": {
+            "confirmed": 0,
+            "provisional": 0
+          },
+          "presidents": {
+            "confirmed": 0,
+            "provisional": 0
+          },
+          "smedley": {
+            "confirmed": 0,
+            "provisional": 0
+          }
+        }
+      }
+    },
+    "01": {
+      "region": "02",
+      "clubs": 4,
+      "membership": 88,
+      "payments": 80,
+      "health": {
+        "thriving": 3,
+        "vulnerable": 1,
+        "interventionRequired": 0
+      },
+      "clubStatus": {
+        "active": 4,
+        "low": 0,
+        "ineligible": 0,
+        "suspended": 0,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 0,
+        "president": 1,
+        "select": 1,
+        "distinguished": 1,
+        "notDistinguished": 1
+      },
+      "compliance": {
+        "cspSubmitted": 4,
+        "octoberDuesOnTime": 4,
+        "aprilDuesOnTime": 4,
+        "officerListOnTime": 4
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": null,
+        "suspended": null
+      },
+      "officerTraining": null,
+      "distinguishedCounts": {
+        "confirmed": 2,
+        "provisional": 0,
+        "byTier": {
+          "distinguished": {
+            "confirmed": 1,
+            "provisional": 0
+          },
+          "select": {
+            "confirmed": 0,
+            "provisional": 0
+          },
+          "presidents": {
+            "confirmed": 1,
+            "provisional": 0
+          },
+          "smedley": {
+            "confirmed": 0,
+            "provisional": 0
+          }
+        }
+      }
+    },
+    "U": {
+      "region": null,
+      "clubs": 2,
+      "membership": 44,
+      "payments": 40,
+      "health": {
+        "thriving": 2,
+        "vulnerable": 0,
+        "interventionRequired": 0
+      },
+      "clubStatus": {
+        "active": 2,
+        "low": 0,
+        "ineligible": 0,
+        "suspended": 0,
+        "other": 0
+      },
+      "distinguished": {
+        "smedley": 0,
+        "president": 0,
+        "select": 1,
+        "distinguished": 1,
+        "notDistinguished": 0
+      },
+      "compliance": {
+        "cspSubmitted": 2,
+        "octoberDuesOnTime": 2,
+        "aprilDuesOnTime": 2,
+        "officerListOnTime": 2
+      },
+      "growth": {
+        "prospective": null,
+        "chartered": null,
+        "suspended": null
+      },
+      "officerTraining": null,
+      "distinguishedCounts": {
+        "confirmed": 1,
+        "provisional": 0,
+        "byTier": {
+          "distinguished": {
+            "confirmed": 1,
+            "provisional": 0
+          },
+          "select": {
+            "confirmed": 0,
+            "provisional": 0
+          },
+          "presidents": {
+            "confirmed": 0,
+            "provisional": 0
+          },
+          "smedley": {
+            "confirmed": 0,
+            "provisional": 0
+          }
+        }
+      }
+    }
+  }
+}
