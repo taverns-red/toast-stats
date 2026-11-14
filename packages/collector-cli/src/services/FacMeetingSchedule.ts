@@ -393,6 +393,9 @@ const HHMM_RANGE_MERIDIEM =
  *  Only a range, never a lone 4-digit number (a year); see hhmmRange. */
 const HHMM_RANGE_24 =
   /(?<![\d:.+\-−])([01]\d|2[0-3])([0-5]\d)(\s*(?:-|–|—|to)\s*)([01]\d|2[0-3])([0-5]\d)(?:\s*(?:hrs?|hours?)\b\.?)?(?![\d:.-])/g
+/** A label that makes the number after it a room, box, phone or id. */
+const NUMBER_LABEL_BEFORE =
+  /(?:\b(?:room|rm|suite|ste|unit|apt|box|tel|ph|phone|salle)\b\.?:?|#)\s*$/
 /** 12-hour only: "2026 pm" is a year, not 20:26. */
 const HHMM_MERIDIEM = /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
 const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
@@ -621,8 +624,13 @@ function normalisedTimeText(time: string): string {
           m1: string,
           sep: string,
           h2: string,
-          m2: string
+          m2: string,
+          offset: number,
+          text: string
         ) => {
+          // "Room 1200-1230", "PO Box 1200-1300", "Tel 1200-1300", "#1200-1300":
+          // a room, box, phone or number label, not a time.
+          if (NUMBER_LABEL_BEFORE.test(text.slice(0, offset))) return whole
           // "2019-2020" is a pair of years: a meeting runs 15 min to 3 h.
           const length =
             Number(h2) * 60 + Number(m2) - (Number(h1) * 60 + Number(m1))
