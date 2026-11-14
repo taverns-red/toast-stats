@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  checkListingErrors,
   parseListing,
   planRestore,
   parseSavedPlan,
@@ -49,6 +50,9 @@ const OTHER = obj(
   '2026-11-02T00:00:00Z'
 )
 const BAD = '2026-11-08T10:12:23.000000Z'
+// "Now" for the planner: two days after the bad run, well inside the 14-day
+// soft-delete retention.
+const NOW = Date.parse('2026-11-10T00:00:00Z')
 
 const plan = (live: unknown[], soft: unknown[]) =>
   planRestore({
@@ -56,6 +60,7 @@ const plan = (live: unknown[], soft: unknown[]) =>
     softDeleted: parseListing(soft),
     since: SINCE,
     until: UNTIL,
+    now: NOW,
   })
 
 describe('planRestore', () => {
@@ -206,6 +211,7 @@ describe('planRestore', () => {
       softDeleted: parseListing([]),
       since: SINCE,
       until: UNTIL,
+      now: NOW,
       paths: ['a.json'],
     })
     expect(p.entries.map(e => e.name)).toEqual(['a.json'])
@@ -354,6 +360,67 @@ describe('refuse-over-delete rule', () => {
     expect(() => plan([obj('a.json', '1', BAD), other], [OTHER])).toThrow(
       /bucket/i
     )
+  })
+})
+
+describe('soft-delete retention window', () => {
+  const at = (iso: string) => Date.parse(iso)
+  const restorable = [
+    [obj('v1/latest.json', '300', BAD)],
+    [obj('v1/latest.json', '200', '2026-11-07T10:00:00Z', BAD)],
+  ]
+  const deletable = [[obj('new.json', '9', BAD)], [OTHER]]
+  const run = (now: number, [l, s]: unknown[][]) =>
+    planRestore({
+      live: parseListing(l),
+      softDeleted: parseListing(s),
+      since: SINCE,
+      until: UNTIL,
+      now,
+    })
+
+  it('refuses every restore and delete once now is past since + 13 days', () => {
+    const late = at('2026-11-21T10:00:01Z')
+    for (const input of [restorable, deletable]) {
+      const p = run(late, input)
+      expect(p.entries[0]).toMatchObject({ action: 'refuse' })
+      expect(p.entries[0]?.reason).toMatch(/soft.delete retention/i)
+      expect(p.refused).toBe(1)
+    }
+  })
+
+  it('still plans on the last instant of the window', () => {
+    const edge = at('2026-11-21T10:00:00Z')
+    expect(run(edge, restorable).entries[0]?.action).toBe('restore')
+    expect(run(edge, deletable).entries[0]?.action).toBe('delete')
+  })
+})
+
+describe('checkListingErrors', () => {
+  const NONE = 'ERROR: (gcloud.storage.ls) One or more URLs matched no objects.'
+
+  it('accepts empty output and only "matched no objects" lines', () => {
+    expect(() => checkListingErrors('', 'live')).not.toThrow()
+    expect(() =>
+      checkListingErrors(`${NONE}\n\n${NONE}\n`, 'live')
+    ).not.toThrow()
+  })
+
+  it('refuses any other line, naming it', () => {
+    const text = `${NONE}\nERROR: (gcloud.storage.ls) HTTPError 503: backend error\n`
+    expect(() => checkListingErrors(text, 'soft-deleted')).toThrow(
+      RestorePlanError
+    )
+    expect(() => checkListingErrors(text, 'soft-deleted')).toThrow(/503/)
+  })
+
+  it('refuses a near-miss of the expected message', () => {
+    expect(() => checkListingErrors(`${NONE} Quota exceeded`, 'live')).toThrow(
+      RestorePlanError
+    )
+    expect(() =>
+      checkListingErrors('WARNING: updates are available', 'live')
+    ).toThrow(RestorePlanError)
   })
 })
 

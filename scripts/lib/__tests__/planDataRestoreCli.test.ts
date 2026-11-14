@@ -47,12 +47,20 @@ const cli = (args: string[]) =>
   spawnSync(TSX, [CLI, ...args], {
     cwd: REPO,
     encoding: 'utf-8',
-    env: { ...process.env, GCLOUD: '/nonexistent/gcloud' },
+    env: {
+      ...process.env,
+      GCLOUD: '/nonexistent/gcloud',
+      // Two days after the bad run: inside the soft-delete retention window.
+      PLAN_RESTORE_NOW: '2026-11-10T00:00:00Z',
+    },
   })
 
 let live: string
 let soft: string
 let paths: string
+let liveErr: string
+let softErr: string
+const NONE = 'ERROR: (gcloud.storage.ls) One or more URLs matched no objects.\n'
 beforeEach(() => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'plan-data-restore-cli-'))
   live = file('live.json', [obj('v1/latest.json', '300', BAD)])
@@ -60,6 +68,8 @@ beforeEach(() => {
     obj('v1/latest.json', '200', '2026-11-07T10:00:00Z', BAD),
   ])
   paths = file('paths.txt', 'v1/latest.json\n')
+  liveErr = file('live.err', '')
+  softErr = file('soft.err', NONE)
 })
 afterEach(() => {
   fs.rmSync(tmp, { recursive: true, force: true })
@@ -76,9 +86,76 @@ const planArgs = () => [
   '2026-11-08T11:00:00Z',
   '--paths',
   paths,
+  '--live-errors',
+  liveErr,
+  '--soft-errors',
+  softErr,
 ]
 
+const without = (args: string[], flag: string): string[] => {
+  const a = [...args]
+  a.splice(a.indexOf(flag), 2)
+  return a
+}
+
 describe('plan-data-restore CLI', () => {
+  it('plans when an errors file holds only "matched no objects" lines', () => {
+    softErr = file('soft2.err', NONE + NONE)
+    expect(cli(planArgs()).status).toBe(0)
+  })
+
+  it('refuses the whole plan for any other line in an errors file', () => {
+    softErr = file(
+      'soft3.err',
+      NONE + 'ERROR: (gcloud.storage.ls) HTTPError 503: backend error\n'
+    )
+    const r = cli(planArgs())
+    expect(r.status).toBe(1)
+    expect(r.stdout).toBe('')
+    expect(r.stderr).toMatch(/refused/)
+    expect(r.stderr).toMatch(/503/)
+  })
+
+  it('exits 2 when an errors file argument is missing', () => {
+    for (const flag of ['--live-errors', '--soft-errors']) {
+      const r = cli(without(planArgs(), flag))
+      expect(r.status).toBe(2)
+      expect(r.stdout).toBe('')
+      expect(r.stderr).toMatch(/usage/)
+    }
+  })
+
+  it('exits 2 for --execute without an errors file', () => {
+    const r = cli([
+      '--execute',
+      '--plan',
+      file('p.json', {}),
+      '--live',
+      live,
+      '--soft-deleted',
+      soft,
+      '--live-errors',
+      liveErr,
+    ])
+    expect(r.status).toBe(2)
+  })
+
+  it('refuses every restore once now is past since + 13 days', () => {
+    const r = spawnSync(TSX, [CLI, ...planArgs()], {
+      cwd: REPO,
+      encoding: 'utf-8',
+      env: {
+        ...process.env,
+        GCLOUD: '/nonexistent/gcloud',
+        PLAN_RESTORE_NOW: '2026-11-22T00:00:00Z',
+      },
+    })
+    expect(r.status).toBe(1)
+    const entry = JSON.parse(r.stdout).entries[0]
+    expect(entry.action).toBe('refuse')
+    expect(entry.reason).toMatch(/soft.delete retention/i)
+  })
+
   it('prints the plan on stdout, logs on stderr, exits 0', () => {
     const r = cli(planArgs())
     expect(r.status).toBe(0)
@@ -128,7 +205,17 @@ describe('plan-data-restore CLI', () => {
   })
 
   it('exits 2 for --execute without --plan', () => {
-    const r = cli(['--execute', '--live', live, '--soft-deleted', soft])
+    const r = cli([
+      '--execute',
+      '--live',
+      live,
+      '--soft-deleted',
+      soft,
+      '--live-errors',
+      liveErr,
+      '--soft-errors',
+      softErr,
+    ])
     expect(r.status).toBe(2)
     expect(r.stdout).toBe('')
     expect(r.stderr).toMatch(/usage/)
@@ -144,6 +231,10 @@ describe('plan-data-restore CLI', () => {
       live,
       '--soft-deleted',
       soft,
+      '--live-errors',
+      liveErr,
+      '--soft-errors',
+      softErr,
     ])
     expect(r.status).toBe(1)
     expect(r.stdout).toBe('')
@@ -164,6 +255,10 @@ describe('plan-data-restore CLI', () => {
       live,
       '--soft-deleted',
       soft,
+      '--live-errors',
+      liveErr,
+      '--soft-errors',
+      softErr,
     ])
     expect(r.status).toBe(1)
     expect(r.stdout).toBe('')
