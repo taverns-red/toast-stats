@@ -528,6 +528,34 @@ describe('the real reader schemas and fixtures', () => {
     }
   })
 
+  it('the RegionRollups fixture carries distinguishedCounts on every level (#2562)', async () => {
+    const fixtures = await loadFixtures(COMPAT_FIXTURES, repoRoot)
+    const fx = fixtures['RegionRollups']
+    expect(fx).toMatchObject({ ok: true })
+    const payload = (fx as { payload: unknown }).payload as {
+      world: { distinguishedCounts?: unknown }
+      regions: Record<string, { distinguishedCounts?: unknown }> | null
+      districts: Record<string, { distinguishedCounts?: unknown }>
+    }
+    const blocks = [
+      payload.world,
+      ...Object.values(payload.regions ?? {}),
+      ...Object.values(payload.districts),
+    ]
+    expect(blocks.length).toBeGreaterThan(1)
+    for (const b of blocks) {
+      expect(b.distinguishedCounts).toBeTruthy()
+    }
+    // Not all zero: a fixture of empty counts would parse without proving
+    // the tier shape is read.
+    const world = payload.world.distinguishedCounts as {
+      confirmed: number
+      provisional: number
+    }
+    expect(world.confirmed).toBeGreaterThan(0)
+    expect(world.provisional).toBeGreaterThan(0)
+  })
+
   it('the PR head is compatible with itself', async () => {
     const fixtures = await loadFixtures(COMPAT_FIXTURES, repoRoot)
     expect(
