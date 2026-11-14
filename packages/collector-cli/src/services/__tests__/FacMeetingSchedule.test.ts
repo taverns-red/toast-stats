@@ -1610,6 +1610,34 @@ describe('parseMeetingSchedule (#2627) — gap 8: HHMM ranges', () => {
   )
 })
 
+describe('parseMeetingSchedule (#2627) — gap 11: time zone', () => {
+  it.each([
+    ['7:00 PM EST', 'EST', '19:00', undefined],
+    ['6pm-8pm PST', 'PST', '18:00', '20:00'],
+    ['7:00 pm (ET)', 'ET', '19:00', undefined],
+    ['19h00 UTC', 'UTC', '19:00', undefined],
+  ])('%j keeps the zone %s as written', (meetingTime, timeZone, start, end) => {
+    const [entry] =
+      parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime }) ?? []
+    expect(entry).toMatchObject({
+      timeZone,
+      startTime: start,
+      ...(end ? { endTime: end } : {}),
+    })
+    expect(MeetingScheduleEntrySchema.safeParse(entry).success).toBe(true)
+  })
+
+  it.each([
+    ['7:00 pm'],
+    ['18h30 pm et 7:00 am'], // French "et" is "and", not Eastern Time
+    ['7:00 pm EST / 6:00 pm PST'], // two zones: which one is not stated
+  ])('%j has no time zone', meetingTime => {
+    const [entry] =
+      parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime }) ?? []
+    expect(entry).not.toHaveProperty('timeZone')
+  })
+})
+
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
   const WEEKDAY_WORD =
     /\b(mon|tue|wed|thu|fri|sat|sun|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i
