@@ -1,5 +1,5 @@
 /* District Success Plan targets entry (#2297), on the district Overview.
-   Legacy palette only (#2080: no --rt-stats until Phase 2): --surface,
+   Legacy palette only (#2080: no --rt-stats): --surface,
    --line, --ink*, --tm-loyal-blue and --focus-ring, all remapped under
    [data-theme='dark']. Fields stack at phone widths and sit three-up from
    640px; text stays ≥14px and every control is ≥44px tall. No fixed widths,

@@ -6,7 +6,7 @@
    #2080 exception for the education timeline path colours, Ron 2026-11-09:
    this chart alone may keep teal, pink, green and gold for the 11 paths,
    since eleven paths cannot be told apart on the legacy hues. The
-   noProductAccentUntilPhase2 guard still passes: none of these is the
+   legacyPaletteGuard guard still passes: none of these is the
    product accent or its amber, so it needs no allow-list entry. Text wears ink tokens, which remap at [data-theme='dark']; colour
    is only a swatch or a fill, and every band is named in the legend with its
    value, so colour is never the only signal.

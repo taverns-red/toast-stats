@@ -129,7 +129,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
           role="tooltip"
           ref={panelRef}
           style={clampStyle}
-          className={`absolute z-50 px-4 py-3 text-sm text-white bg-gray-900 rounded-lg shadow-lg w-80 tooltip-panel ${getPositionClasses()} ${className} animate-fade-in`}
+          className={`absolute z-(--z-tooltip) px-4 py-3 text-sm text-white bg-gray-900 rounded-lg shadow-lg w-80 tooltip-panel ${getPositionClasses()} ${className} animate-fade-in`}
         >
           {content}
           <div

@@ -3,8 +3,8 @@
  *
  * The focus affordance at ~20 sites is `box-shadow: 0 0 0 2px var(--…)`.
  * #1106 gave it a darkened amber so it cleared WCAG 1.4.11's 3:1 non-text
- * floor on light surfaces. #2080 (Ron, 2026-10-15) retires the amber until
- * the Phase 2 re-skin: the ring is now `--focus-ring`, the app's existing
+ * floor on light surfaces. #2080 (Ron, 2026-10-15) retires the amber for
+ * good (no re-skin is coming, #2628): the ring is now `--focus-ring`, the app's existing
  * focus colour `--link` (loyal blue #004165 light, #60a5d8 dark) — the same
  * colour the `outline: 2px solid var(--link)` rings elsewhere already use.
  *

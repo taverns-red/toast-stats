@@ -5,8 +5,8 @@ import { BASEMAP_COLOURS } from '../basemapStyle'
 import { CHOROPLETH_THEME } from '../../worldmap/choroplethScale'
 import { appToken, readCss, themeBlock } from '../../../test-utils/appTokens'
 
-/* #2087 (follow-up to #2080) — until Phase 2 (ops#37) the map matches the
- * existing app palette. The pin outline and halo were warm Red Taverns
+/* #2087 (follow-up to #2080) — the map matches the existing app
+ * palette. The pin outline and halo were warm Red Taverns
  * neutrals (--rt-ink-2 #3D3B38, --rt-paper #F4F1EB, --rt-bg-2 #1A1816). Now
  * the outline is each theme's slate --ink-2, and the halo (the gap between a
  * pin and its ring) is the land colour, an app surface token. */

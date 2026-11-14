@@ -4,15 +4,19 @@
  */
 
 import { describe, it, expect, afterEach } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import AppShell from '../AppShell'
 import { DarkModeProvider } from '../../../contexts/DarkModeContext'
 import { ProgramYearProvider } from '../../../contexts/ProgramYearContext'
+import { openConsentSettings, setConsent } from '../../../utils/consent'
 
-afterEach(() => cleanup())
+afterEach(() => {
+  cleanup()
+  document.cookie = 'rt_consent=; Max-Age=0; Path=/'
+})
 
 const renderShell = () => {
   const client = new QueryClient({
@@ -63,5 +67,22 @@ describe('AppShell layout (#565)', () => {
     const allEls = Array.from(banner.querySelectorAll('*'))
     expect(allEls.indexOf(helpIcon)).toBeLessThan(allEls.indexOf(toggle))
     expect(allEls.indexOf(toggle)).toBeLessThan(allEls.indexOf(avatar))
+  })
+
+  /* #2587: a keyboard user must reach the consent choice without tabbing
+     through the whole page. The banner is position: fixed, so where it sits
+     in the DOM does not change the layout. */
+  it('puts the consent banner after the skip link and before the page content in tab order', () => {
+    setConsent('minimal')
+    renderShell()
+    act(() => openConsentSettings())
+    const region = screen.getByRole('region', { name: 'Privacy and cookies' })
+    const skip = screen.getByRole('link', { name: 'Skip to main content' })
+    const follows = (a: Node, b: Node) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(follows(skip, region)).toBe(true)
+    expect(follows(region, screen.getByRole('banner'))).toBe(true)
+    expect(follows(region, screen.getByRole('main'))).toBe(true)
+    expect(follows(region, screen.getByRole('contentinfo'))).toBe(true)
   })
 })

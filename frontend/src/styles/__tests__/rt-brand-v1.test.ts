@@ -6,10 +6,10 @@ import { dirname, resolve } from 'node:path'
 /* #339 — guards the wiring contract for Red Taverns Brand v1.0 tokens.
    Phase 1 is purely additive: copy `tokens.css` from
    taverns-red/ops:docs/brand/tokens.css verbatim, import it from
-   `index.css`, and preconnect/load the three brand fonts. Phase 2
-   (chrome migration: re-skinning components with --rt-* tokens) is
-   blocked on the Toast Stats / Tally rename decision (ops#37) and is
-   intentionally out of scope here.
+   `index.css`, and preconnect/load the three brand fonts. The chrome
+   is not re-skinned with --rt-* tokens: Phase 2 was abandoned and the
+   legacy palette is permanent (#2628), enforced by
+   legacyPaletteGuard.test.ts.
 
    These regexes are load-bearing — they catch a future edit that
    silently drops the import or renames a brand token. */

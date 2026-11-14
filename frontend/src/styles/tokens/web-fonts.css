@@ -17,8 +17,8 @@
  * (font-fallbacks.css, #1373), so the swap does not move layout (Lesson 81).
  *
  * ── What is here ─────────────────────────────────────────────────────────
- * The same families and weight ranges index.html requested, which ops#37
- * keeps until Phase 2:
+ * The same families and weight ranges index.html requested (none is
+ * dropped):
  *   Montserrat 500–900 · Source Sans 3 400–700 · Space Grotesk 400–700 ·
  *   Inter 400–600.
  * Every subset Google serves is included, with Google's unicode-range. These

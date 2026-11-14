@@ -1,6 +1,8 @@
 /**
- * Guard (#2080): until the Phase 2 re-skin (ops#37), new UI matches the
- * existing app palette — no `--rt-stats` amber accent, no amber hex.
+ * Legacy palette guard (#2080, #2630): the app keeps its existing palette
+ * permanently (Phase 2 was abandoned, no re-skin or rename is coming) — no
+ * `--rt-stats` amber accent, no amber hex, and no other `--rt-*` colour token
+ * apart from the house red and the listed pre-existing uses.
  *
  * Ron's decision (2026-10-15): pages built on the Red Taverns accent read as
  * yellow/brown next to the legacy TM / loyal-blue chrome. Use the legacy
@@ -39,7 +41,23 @@ const ALLOWLIST = new Set([
     badge accents in redesign.css) and predates this. Hexes beyond the
     ambers are not policed either (locatorPins.ts draws the pin in hex). */
 const FORBIDDEN =
-  /--rt-(?:stats|vote|paper|bg)(?![\w])|--rt-(?:stats|paper|bg)-[\w-]+|--rt-red-soft(?![\w])|#d4873f\b|#b5651d\b/gi
+  /--rt-(?:stats|vote|paper|bg)(?![\w])|--rt-(?:stats|paper|bg)-[\w-]+|--rt-red-soft(?![\w])|--rt-(?:ink(?:-2|-3|-on-dk)?|good|warn|bad|info|table|club|eval|rule(?:-strong|-on-dk)?)(?![\w-])|#d4873f\b|#b5651d\b/gi
+
+/** #2630 — colour tokens that were already consumed before the guard covered
+    every --rt-* colour: the recognition-badge hues in redesign.css (their
+    contrast is pinned by RecognitionBadgeContrast.test.ts) and the app
+    shell's online dot. A use is exempt only for the exact tokens listed for
+    that file; any other --rt-* colour there still fails. */
+const PRE_EXISTING_USES: Record<string, string[]> = {
+  'styles/tokens/redesign.css': [
+    '--rt-good',
+    '--rt-info',
+    '--rt-ink-2',
+    '--rt-ink-3',
+    '--rt-eval',
+  ],
+  'styles/components/app-shell.css': ['--rt-good'],
+}
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -63,8 +81,12 @@ function findAccentUses(files: string[]): string[] {
     const rel = relative(srcDir, file)
     if (ALLOWLIST.has(rel)) continue
     const lines = stripComments(readFileSync(file, 'utf8')).split('\n')
+    const exempt = PRE_EXISTING_USES[rel] ?? []
     lines.forEach((line, i) => {
-      if (line.match(FORBIDDEN)) hits.push(`${rel}:${i + 1}: ${line.trim()}`)
+      const found = (line.match(FORBIDDEN) ?? []).filter(
+        m => !exempt.includes(m.toLowerCase())
+      )
+      if (found.length > 0) hits.push(`${rel}:${i + 1}: ${line.trim()}`)
     })
   }
   return hits
@@ -104,6 +126,26 @@ describe('no --rt-stats accent outside the brand tokens file (#2080)', () => {
     expect('color: var(--rt-red-dk);'.match(FORBIDDEN)).toBeNull()
     expect('font-family: var(--rt-font-display);'.match(FORBIDDEN)).toBeNull()
     expect('gap: var(--rt-space-4);'.match(FORBIDDEN)).toBeNull()
+  })
+
+  // #2630 — `--rt-warn` is the same amber (#D4873F) as `--rt-stats` and was
+  // never policed. Every --rt-* colour token the brand file declares must be
+  // caught, except the house red.
+  it('polices every --rt-* colour token except the house red (#2630)', () => {
+    const brand = stripComments(
+      readFileSync(join(srcDir, 'styles/tokens/rt-brand-v1.css'), 'utf8')
+    )
+    const colourTokens = [
+      ...brand.matchAll(
+        /^\s*(--rt-[\w-]+)\s*:\s*(?:#[0-9a-f]{3,8}|rgba?\()/gim
+      ),
+    ].map(m => m[1] as string)
+    expect(colourTokens).toContain('--rt-warn')
+    const unpoliced = colourTokens.filter(
+      t =>
+        t !== '--rt-red' && t !== '--rt-red-dk' && !`var(${t})`.match(FORBIDDEN)
+    )
+    expect(unpoliced).toEqual([])
   })
 
   it('no component, page or stylesheet uses it', () => {

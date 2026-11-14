@@ -14,7 +14,10 @@
 
    Nothing non-essential happens before a choice (opt-in). */
 
-import { removeAllSavedPreferencesToSession } from './preferenceStorage'
+import {
+  promoteSessionPreferencesToLocal,
+  removeAllSavedPreferencesToSession,
+} from './preferenceStorage'
 
 export type ConsentLevel = 'all' | 'minimal' | 'none'
 
@@ -187,5 +190,6 @@ export function setConsent(level: ConsentLevel): void {
     clearGaCookies()
   }
   if (level === 'none') removeAllSavedPreferencesToSession()
+  else promoteSessionPreferencesToLocal()
   publish({ level, settingsOpen: false })
 }

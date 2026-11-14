@@ -6,9 +6,8 @@
    and shadow, the TM loyal-blue accent via `--link`) — the same family as the
    District overview KPI cards (`.districts-kpi-card`) and `.awards-page-card`.
    The feature first shipped on the Red Taverns v1 `--rt-*` tokens, which
-   clashed with the legacy chrome around it; the Phase 2 brand migration
-   (blocked on ops#37) re-skins every page at once, so until then this matches
-   its neighbours. The header eyebrow is the shared `.placeholder-page__eyebrow`.
+   clashed with the legacy chrome around it; no brand re-skin is coming
+   (#2628), so this matches its neighbours. The header eyebrow is the shared `.placeholder-page__eyebrow`.
 
    Dark mode is the `[data-theme='dark']` scope (R10): every token used here
    is remapped by redesign.css under that scope, so these surfaces follow the

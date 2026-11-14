@@ -13,7 +13,7 @@
    - colours and type come from the local brand tokens (rt-brand-v1.css):
      --rt-vote (= --rt-red), --rt-red-dk, --rt-red-soft, --rt-paper,
      --rt-bg-2, --rt-ink*, Space Grotesk + Inter. The stylesheet is the one
-     allowlisted exception in noProductAccentUntilPhase2.test.ts (#2080);
+     allowlisted exception in legacyPaletteGuard.test.ts (#2080);
      this file carries no brand value (the pennant's fills are classes). The
      source file's fills are #E63946 (flag) and #F4F1EB (the V), which are
      --rt-vote and --rt-ink-on-dk.
