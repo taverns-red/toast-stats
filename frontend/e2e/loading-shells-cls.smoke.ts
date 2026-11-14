@@ -1,4 +1,5 @@
 import { test, expect, type Page } from './fixtures/test'
+import { reportCls } from './helpers/clsReport'
 
 /* Loading shells must be the loaded box (#2634).
  *
@@ -138,6 +139,7 @@ async function measure(
   await page.waitForTimeout(2_000)
 
   const entries = await page.evaluate(() => window.__clsEntries ?? [])
+  reportCls(test.info(), `${path} @${vp.width}px`, entries)
   const total = Number(entries.reduce((a, e) => a + e.value, 0).toFixed(5))
   const breakdown = entries
     .filter(e => e.value > 0.0005)
