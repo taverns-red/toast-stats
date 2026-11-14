@@ -60,6 +60,7 @@ import {
   type RegionRollupFigures,
 } from '@taverns-red/shared-contracts'
 import { programYearForSnapshotDate } from './ceoReportSnapshotDates.js'
+import { canonicalDistrictId } from '../../packages/analytics-core/src/rollup/globalRollup.js'
 import {
   ANCHOR_DISTRICT,
   checkDistrictSnapshotIndex,
@@ -852,6 +853,29 @@ function figureCounts(f: RegionRollupFigures): Array<[string, number | null]> {
       out.push([`${group}.${k}`, v as number | null])
     }
   }
+  // Confirmed / provisional Distinguished (#2563): absent on files written
+  // before #2553, so only a block that carries the field is checked; null
+  // (not collected) sums like any figure.
+  if (f.distinguishedCounts !== undefined) {
+    const c = f.distinguishedCounts
+    out.push(
+      ['distinguishedCounts.confirmed', c === null ? null : c.confirmed],
+      ['distinguishedCounts.provisional', c === null ? null : c.provisional]
+    )
+    for (const tier of [
+      'distinguished',
+      'select',
+      'presidents',
+      'smedley',
+    ] as const) {
+      for (const k of ['confirmed', 'provisional'] as const) {
+        out.push([
+          `distinguishedCounts.byTier.${tier}.${k}`,
+          c === null ? null : c.byTier[tier][k],
+        ])
+      }
+    }
+  }
   // Officer training (#2296): absent on files written before the field, so
   // only a block that carries it is checked; null sums like any figure.
   if (f.officerTraining !== undefined) {
@@ -942,9 +966,34 @@ function checkRegionRollups(path: string, value: unknown): string | null {
  * `distinguishedCounts.confirmed` equals its rankings `distinguishedClubs`.
  */
 export function checkRollupsMatchRankings(
-  _rollups: unknown,
-  _rankings: unknown
+  rollups: unknown,
+  rankings: unknown
 ): string | null {
+  const parsed = RegionRollupsSchema.safeParse(rollups)
+  const rows = (rankings as { rankings?: unknown } | null)?.rankings
+  // Files that do not parse are reported by their own checks.
+  if (!parsed.success || !Array.isArray(rows)) return null
+  const ranked = new Map<string, number>()
+  for (const row of rows as Array<{
+    districtId?: unknown
+    distinguishedClubs?: unknown
+  }>) {
+    if (
+      typeof row?.districtId === 'string' &&
+      typeof row.distinguishedClubs === 'number'
+    ) {
+      ranked.set(canonicalDistrictId(row.districtId), row.distinguishedClubs)
+    }
+  }
+  for (const [id, district] of Object.entries(parsed.data.districts)) {
+    // Absent or null: not collected, nothing to compare (older files too).
+    const confirmed = district.distinguishedCounts?.confirmed
+    const want = ranked.get(canonicalDistrictId(id))
+    if (confirmed === undefined || want === undefined) continue
+    if (confirmed !== want) {
+      return `district ${id} confirmed ${confirmed}, but the rankings' distinguishedClubs is ${want}`
+    }
+  }
   return null
 }
 

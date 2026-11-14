@@ -17,6 +17,7 @@ import {
   PROMOTED_PREFIXES,
   SNAPSHOT_INDEX_PATH,
   checkLatestAgreesWithIndex,
+  checkRollupsMatchRankings,
   clubHistoryShardKeys,
   checkObject,
   decodeStoredObject,
@@ -403,6 +404,48 @@ export async function runContentGate(
           ? checkLatestAgreesWithIndex(latest, index)
           : 'latest manifest or snapshot index is missing from staging',
     })
+  }
+
+  // Region rollups against the same date's rankings (#2563). A date staging
+  // holds no rankings for is left to the rollups' own checks.
+  for (const check of plan.checks) {
+    if (check.kind !== 'region-rollups') continue
+    const rankingsPath = check.path.replace(
+      /region-rollups\.json$/,
+      'all-districts-rankings.json'
+    )
+    if (!stagingMeta.has(rankingsPath) || !stagingMeta.has(check.path)) {
+      continue
+    }
+    const pair = `${check.path} ↔ ${rankingsPath}`
+    try {
+      const [rollups, rankings] = await Promise.all(
+        [check.path, rankingsPath].map(async name =>
+          decodeStoredObject(
+            await readStored(
+              staging,
+              name,
+              stagingMeta.get(name)!.contentEncoding
+            )
+          )
+        )
+      )
+      results.push({
+        path: pair,
+        kind: 'cross-check',
+        failure:
+          rollups!.ok && rankings!.ok
+            ? checkRollupsMatchRankings(rollups!.value, rankings!.value)
+            : null,
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      results.push({
+        path: pair,
+        kind: 'cross-check',
+        failure: `read failed: ${message}`,
+      })
+    }
   }
 
   return evaluateContentGate({

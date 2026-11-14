@@ -73,7 +73,7 @@ describe('checkRollupsMatchRankings (#2563)', () => {
   it('fails a district whose confirmed differs from the rankings', () => {
     const r = withCounts()
     expect(checkRollupsMatchRankings(r, rankingsFor(r, { '111': 1 }))).toMatch(
-      /district 111.*confirmed 2.*distinguishedClubs 3/
+      /district 111.*confirmed 2.*distinguishedClubs is 3/
     )
   })
 
