@@ -339,6 +339,10 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-resolute
       options: --ipc=host --init
+    # A container job's default shell is sh (dash); the steps use bash.
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: read
     env:
@@ -861,6 +865,10 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.64.1-resolute
       options: --ipc=host --init
+    # A container job's default shell is sh (dash); the steps use bash.
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: read
     env:
