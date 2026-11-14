@@ -57,14 +57,17 @@ describe('WebKit verification coverage (#713)', () => {
     expect(smoke?.testMatch).toBe('**/*.smoke.ts')
   })
 
-  it('pr-preview workflow installs webkit and runs the smoke against the preview', () => {
+  it('pr-preview workflow has webkit and runs the smoke against the preview', () => {
     const wf = readFileSync(
       repoFile('.github/workflows/pr-preview.yml'),
       'utf8'
     )
+    // The official Playwright image ships chromium, firefox and webkit; the
+    // image pin is asserted in scripts/lib/__tests__/prPreviewPlaywrightInstall
+    // (#2615), which replaced the `playwright install ... webkit` step.
     expect(
-      /playwright install[^\n]*\bwebkit\b/.test(wf),
-      'pr-preview.yml must install the WebKit browser before smokes run'
+      /image: mcr\.microsoft\.com\/playwright:v\d+\.\d+\.\d+-/.test(wf),
+      'pr-preview.yml must run the smokes in the Playwright image (has WebKit)'
     ).toBe(true)
     expect(
       /playwright test --config playwright\.config\.ts \$specs/.test(wf) &&
