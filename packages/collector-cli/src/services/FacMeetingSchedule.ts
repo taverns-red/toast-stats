@@ -672,10 +672,13 @@ function slotsFrom(found: readonly TimeToken[], text: string): Slot[] {
       }
       // "12:00 AM - 1:10 PM": a midnight start before an afternoon end is
       // a slip for noon (#2243). Up to 18:00 only: a later end could be a
-      // real long event from midnight, so it is left as written.
+      // real long event from midnight, so it is left as written. The end
+      // must say afternoon itself: "12:00 am - 1:00" only inherits a pm
+      // from the clock wrap, so it stays "not stated" (#2626).
       if (
         start.hour === 12 &&
         start.meridiem === 'am' &&
+        (next.meridiem === 'pm' || next.hour > 12) &&
         endMinutes !== undefined &&
         endMinutes > 12 * 60 &&
         endMinutes <= 18 * 60
