@@ -92,15 +92,13 @@ jobs:
       - name: Download the debs
         run: |
           set -euo pipefail
+          echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/99keep-debs
+          sudo rm -f /var/cache/apt/archives/*.deb
           sudo apt-get update -q
-          cmd=$(npx playwright install-deps --dry-run chromium webkit | grep 'apt-get install' | head -1)
-          echo "$cmd"
-          pkgs=${cmd#*--no-install-recommends }
+          npx playwright install-deps chromium webkit
           mkdir -p ~/apt-debs
-          sudo apt-get install -y --no-install-recommends --download-only -o Dir::Cache::archives="$HOME/apt-debs" $pkgs
+          sudo cp /var/cache/apt/archives/*.deb ~/apt-debs/
           sudo chown -R "$USER" ~/apt-debs
-          rm -f ~/apt-debs/lock
-          rm -rf ~/apt-debs/partial
           du -sh ~/apt-debs
           ls ~/apt-debs | wc -l
       - name: Save the cache
