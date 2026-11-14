@@ -13,6 +13,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { AnalyticsComputeService } from '../packages/collector-cli/src/services/AnalyticsComputeService.js'
+import { classifyRebuildResult } from './lib/rebuildResult.js'
 
 const args = process.argv.slice(2)
 const since = args.includes('--since')
@@ -67,23 +68,11 @@ async function main() {
         verbose: false,
       })
 
-      if (result.success) {
-        const s = result.districtsSkipped ?? 0
-        const p = result.districtsSucceeded ?? 0
-        if (p > 0) {
-          console.log(`✓ (${p} districts)`)
-          ok++
-        } else if (s > 0) {
-          console.log(`⊘ skipped (${s} unchanged)`)
-          skipped++
-        } else {
-          console.log('✓')
-          ok++
-        }
-      } else {
-        console.log(`⚠️  failed: ${result.errors?.[0] ?? 'unknown'}`)
-        failed++
-      }
+      const { category, label } = classifyRebuildResult(result)
+      console.log(label)
+      if (category === 'ok') ok++
+      else if (category === 'skipped') skipped++
+      else failed++
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       console.log(`⚠️  error: ${msg}`)
