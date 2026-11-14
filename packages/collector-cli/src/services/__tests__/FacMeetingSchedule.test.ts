@@ -261,6 +261,7 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
           cadence: 'weekly',
           startTime: '12:00',
           endTime: '13:00',
+          timeZone: 'EST',
         },
       ],
     ],
@@ -322,6 +323,7 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
           cadence: 'weekly',
           startTime: '07:15',
           endTime: '08:30',
+          timeZone: 'EDT',
         },
       ],
     ],
@@ -346,6 +348,7 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
           cadence: 'weekly',
           startTime: '11:05',
           endTime: '11:55',
+          timeZone: 'ET',
         },
       ],
     ],
@@ -421,6 +424,7 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
           weeksOfMonth: [1, 3, 5],
           startTime: '19:00',
           endTime: '21:00',
+          timeZone: 'ET',
         },
       ],
     ],
@@ -433,6 +437,7 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
           cadence: 'monthly',
           weeksOfMonth: [1, 3],
           startTime: '09:00',
+          timeZone: 'EST',
         },
       ],
     ],
@@ -493,6 +498,7 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
           cadence: 'biweekly',
           startTime: '19:00',
           endTime: '20:40',
+          timeZone: 'EST',
         },
       ],
     ],
@@ -541,12 +547,19 @@ describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
     [
       'Twice a month - Thursday - No guests',
       '6:45 - 8:15 p.m.',
-      [{ day: 'Thursday', startTime: '18:45', endTime: '20:15' }],
+      [
+        {
+          day: 'Thursday',
+          startTime: '18:45',
+          endTime: '20:15',
+          restricted: true,
+        },
+      ],
     ],
     [
       'most Mondays (check webpage)',
       '1 p.m. EST',
-      [{ day: 'Monday', startTime: '13:00' }],
+      [{ day: 'Monday', startTime: '13:00', timeZone: 'EST' }],
     ],
   ])('%j / %j', (meetingDay, meetingTime, expected) => {
     expect(parseMeetingSchedule({ meetingDay, meetingTime })).toEqual(expected)
@@ -1424,16 +1437,50 @@ describe('parseMeetingSchedule (#2617) — spelled-out French ordinals', () => {
   )
 })
 
-describe('parseMeetingSchedule (#2617) — "last" has no cadence', () => {
+// #2617 left "last" without a cadence; #2627 added "last" to weeksOfMonth.
+describe('parseMeetingSchedule (#2627) — "last" is a week of the month', () => {
   it.each([
     ['Last Thursday', '7 pm', 'Thursday', '19:00'],
     ['Last Thursday of the month', '7 pm', 'Thursday', '19:00'],
     ['dernier jeudi', '19h', 'Thursday', '19:00'],
     ['Le dernier jeudi du mois', '19h', 'Thursday', '19:00'],
-  ])('%j leaves the cadence out', (meetingDay, meetingTime, day, startTime) => {
-    expect(parseMeetingSchedule({ meetingDay, meetingTime })).toEqual([
-      { day, startTime },
+  ])(
+    '%j is monthly on the last week',
+    (meetingDay, meetingTime, day, startTime) => {
+      expect(parseMeetingSchedule({ meetingDay, meetingTime })).toEqual([
+        { day, cadence: 'monthly', lastWeek: true, startTime },
+      ])
+    }
+  )
+
+  it('"last" is attached only when the string names one day (#2627 review)', () => {
+    const entries = parseMeetingSchedule({
+      meetingDay: '2nd & 4th Thursday and last Friday',
+      meetingTime: '7 pm',
+    })
+    expect(entries?.length).toBe(2)
+    for (const entry of entries ?? []) {
+      expect(entry).not.toHaveProperty('lastWeek')
+    }
+  })
+
+  it('"1st and last Thursday" is weeks [1] plus lastWeek', () => {
+    const entries = parseMeetingSchedule({
+      meetingDay: '1st and last Thursday',
+      meetingTime: '7 pm',
+    })
+    expect(entries).toEqual([
+      {
+        day: 'Thursday',
+        cadence: 'monthly',
+        weeksOfMonth: [1],
+        lastWeek: true,
+        startTime: '19:00',
+      },
     ])
+    expect(MeetingScheduleEntrySchema.safeParse(entries?.[0]).success).toBe(
+      true
+    )
   })
 })
 
@@ -1581,10 +1628,145 @@ describe('parseMeetingSchedule (#2617) — review: "last" only before a weekday'
     ['dernier jeudi', 'Thursday'],
     ['Thursday, last of the month', 'Thursday'],
     ['Jeudi, le dernier du mois', 'Thursday'],
-  ])('%j still has no cadence', (meetingDay, day) => {
+  ])('%j is monthly on the last week', (meetingDay, day) => {
     expect(parseMeetingSchedule({ meetingDay, meetingTime: '7 pm' })).toEqual([
-      { day, startTime: '19:00' },
+      {
+        day,
+        cadence: 'monthly',
+        lastWeek: true,
+        startTime: '19:00',
+      },
     ])
+  })
+})
+
+describe('parseMeetingSchedule (#2627) — gap 8: HHMM ranges', () => {
+  it.each([
+    ['1200-1300', '12:00', '13:00'],
+    ['0700 - 0830', '07:00', '08:30'],
+    ['1830-2030', '18:30', '20:30'],
+    ['1200-1300 hrs', '12:00', '13:00'],
+  ])('%j is %s-%s', (meetingTime, startTime, endTime) => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime })
+    ).toEqual([{ day: 'Thursday', cadence: 'weekly', startTime, endTime }])
+  })
+
+  it.each([
+    ['Room 1200-1230'],
+    ['Suite 1200-1300'],
+    ['PO Box 1200-1300'],
+    ['Box 0700-0800'],
+    ['Tel 1200-1300'],
+    ['Ph: 1200-1300'],
+    ['# 1200-1300'],
+    ['#1200-1300'],
+  ])('%j (a label before the numbers) gives no time', meetingTime => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime })
+    ).toEqual([{ day: 'Thursday', cadence: 'weekly' }])
+  })
+
+  it.each([['1200'], ['0700'], ['2019'], ['2019-2020'], ['1200-1900']])(
+    '%j (a lone number, a year range or a long span) gives no time',
+    meetingTime => {
+      expect(
+        parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime })
+      ).toEqual([{ day: 'Thursday', cadence: 'weekly' }])
+    }
+  )
+})
+
+describe('parseMeetingSchedule (#2627) — gap 11: time zone', () => {
+  it.each([
+    ['7:00 PM EST', 'EST', '19:00', undefined],
+    ['6pm-8pm PST', 'PST', '18:00', '20:00'],
+    ['7:00 pm (ET)', 'ET', '19:00', undefined],
+    ['19h00 UTC', 'UTC', '19:00', undefined],
+    ['EST 7-9 pm', 'EST', '19:00', '21:00'],
+  ])('%j keeps the zone %s as written', (meetingTime, timeZone, start, end) => {
+    const [entry] =
+      parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime }) ?? []
+    expect(entry).toMatchObject({
+      timeZone,
+      startTime: start,
+      ...(end ? { endTime: end } : {}),
+    })
+    expect(MeetingScheduleEntrySchema.safeParse(entry).success).toBe(true)
+  })
+
+  it.each([
+    ['7:00 pm'],
+    ['18h30 pm et 7:00 am'], // French "et" is "and", not Eastern Time
+    ['7:00 pm EST / 6:00 pm PST'], // two zones: which one is not stated
+    ['14h @ UTC-5'], // an offset, not a zone name
+    ['7:00 pm, PT Building'], // a place, not Pacific Time
+  ])('%j has no time zone', meetingTime => {
+    const [entry] =
+      parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime }) ?? []
+    expect(entry).not.toHaveProperty('timeZone')
+  })
+})
+
+describe('parseMeetingSchedule (#2627) — gap 12: guest restriction', () => {
+  it.each([
+    ['Thursday', '7:00 pm - No guests', undefined],
+    ['Thursday - workers only', '7:00 pm', undefined],
+    ['Thursday', '7 pm (members only)', undefined],
+    ['Thursday', '7 pm', 'Closed meeting, by invitation'],
+    ['Thursday', '7 pm', 'Employees only'],
+    ['Jeudi, membres seulement', '19h', undefined],
+  ])('%j / %j / %j is restricted', (meetingDay, meetingTime, location) => {
+    const entries = parseMeetingSchedule({ meetingDay, meetingTime, location })
+    expect(entries?.[0]?.restricted).toBe(true)
+    expect(MeetingScheduleEntrySchema.safeParse(entries?.[0]).success).toBe(
+      true
+    )
+  })
+
+  it.each([
+    ['Thursday', '7 pm', 'Guests welcome'],
+    ['Thursday', '7 pm - everyone welcome, not members only', undefined],
+    ['Thursday', '7 pm', 'Library, Room 2'],
+    ['Thursday', '7 pm - no guests fee', undefined],
+    ['Thursday', '7 pm', 'Invitation to all guests, see our page'],
+    ['Thursday', '7 pm - no guests under 18', undefined],
+    ['Thursday', '7 pm - everyone is welcome, no invitation needed', undefined],
+  ])('%j / %j / %j is not restricted', (meetingDay, meetingTime, location) => {
+    const entries = parseMeetingSchedule({ meetingDay, meetingTime, location })
+    expect(entries?.[0]).not.toHaveProperty('restricted')
+  })
+})
+
+describe('parseMeetingSchedule (#2627) — gap 9: a second time on the day', () => {
+  it.each([
+    ['Thursday', '18h30 pm et 7:00 am'],
+    ['1st Tuesday', '7pm, 12 noon'],
+  ])('%j / %j keeps the first time and flags it uncertain', (day, time) => {
+    const entries = parseMeetingSchedule({
+      meetingDay: day,
+      meetingTime: time,
+    })
+    expect(entries?.[0]).toMatchObject({ uncertain: true })
+    expect(entries?.[0]?.startTime).toBeDefined()
+    expect(MeetingScheduleEntrySchema.safeParse(entries?.[0]).success).toBe(
+      true
+    )
+  })
+
+  it.each([
+    ['Thursday', '7:00 pm'],
+    ['Thursday', '7:00 pm - 9:00 pm'],
+    ['Tuesday and Thursday', '7pm & 12pm'], // one time per day
+    ['Saturday, Wednesday', 'Sat 9:15am - 11:45 | Wed 7pm - 9pm'],
+  ])('%j / %j is not flagged', (day, time) => {
+    const entries = parseMeetingSchedule({
+      meetingDay: day,
+      meetingTime: time,
+    })
+    for (const entry of entries ?? []) {
+      expect(entry).not.toHaveProperty('uncertain')
+    }
   })
 })
 

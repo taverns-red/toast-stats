@@ -340,12 +340,14 @@ export function describeMeetingEntry(e: MeetingScheduleEntry): string {
   const parts = [`${e.day}${time}`]
   if (e.cadence === 'weekly') parts.push('Weekly')
   else if (e.cadence === 'biweekly') parts.push('Every other week')
-  else if (e.cadence === 'monthly')
-    parts.push(
-      e.weeksOfMonth?.length
-        ? `${e.weeksOfMonth.map(w => ORDINALS[w - 1] ?? `${w}th`).join(' & ')} of the month`
-        : 'Monthly'
-    )
+  else if (e.cadence === 'monthly') {
+    // The last week is its own flag (#2627), read after the numbered weeks.
+    const weeks = [
+      ...(e.weeksOfMonth ?? []).map(w => ORDINALS[w - 1] ?? `${w}th`),
+      ...(e.lastWeek ? ['last'] : []),
+    ]
+    parts.push(weeks.length ? `${weeks.join(' & ')} of the month` : 'Monthly')
+  }
   if (e.mode) parts.push(MODE_TEXT[e.mode])
   return parts.join(' · ')
 }
