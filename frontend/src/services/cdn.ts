@@ -991,6 +991,13 @@ export async function fetchCdnRevisionIndex(
   return parsed.data
 }
 
+/** Stub (#2814 red): the real read lands with the fix. */
+export async function fetchCdnSnapshotCollectionDate(
+  _date: SnapshotDate
+): Promise<string | null> {
+  return null
+}
+
 /**
  * Fetch a pre-computed analytics file for a district.
  * @param type - Analytics type: 'analytics' or 'performance-targets'. The

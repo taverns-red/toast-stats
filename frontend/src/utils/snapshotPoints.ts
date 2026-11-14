@@ -48,7 +48,8 @@ export function isMonthEnd(date: string): boolean {
 export function buildSnapshotPoints(
   dates: readonly SnapshotDate[],
   index: ReconciliationRevisionIndex | null | undefined,
-  districtId: string
+  districtId: string,
+  _monthEndCollectionDate?: string | null
 ): SnapshotPointSet {
   const set: SnapshotPointSet = {
     points: [],
