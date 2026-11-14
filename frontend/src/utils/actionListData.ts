@@ -432,6 +432,32 @@ export const LONGEST_ACTION_SECTION_ORDER: readonly ActionSectionId[] = [
   ...CORE_ACTION_SECTIONS,
 ]
 
+/**
+ * The clauses the intro can still need while the statistics snapshot is in
+ * flight (#2524). The pinned date and the program year are known before it
+ * lands, and they alone decide two sections: officer training exists only
+ * while a round is open, and the Club Success Plan only in a year that tracks
+ * it (the same two tests `buildActionList` applies). Reserving only the
+ * sections that can apply keeps the reserve from holding a line the final
+ * sentence never fills. Without a pinned date nothing is known, so it is the
+ * longest order. Which order the sections end up in does not change the
+ * sentence's length, only which of them are present.
+ */
+export function reservedActionSectionOrder(
+  snapshotDate: string,
+  programYear?: string
+): ActionSectionId[] {
+  if (!snapshotDate) return [...LONGEST_ACTION_SECTION_ORDER]
+  const year = programYear ?? getProgramYearForDate(snapshotDate).label
+  const trainingOpen = trainingRoundContext(snapshotDate, year).open !== null
+  const cspTracked = isCspRequired(programYear)
+  return LONGEST_ACTION_SECTION_ORDER.filter(
+    id =>
+      !(id === 'action-training' && !trainingOpen) &&
+      !(id === 'action-csp' && !cspTracked)
+  )
+}
+
 /** Each section's clause in the page's intro sentence. */
 const ACTION_SECTION_CLAUSES: Record<ActionSectionId, string> = {
   'action-close': 'clubs within reach of Distinguished',
