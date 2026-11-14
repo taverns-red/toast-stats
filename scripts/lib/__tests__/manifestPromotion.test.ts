@@ -395,6 +395,24 @@ describe('planManifestPromotion', () => {
     expect(copied(plan).every(p => p.startsWith('snapshots/'))).toBe(true)
   })
 
+  it('names the staging-side fix and the runbook when a restore left a date in staging only (#2540)', () => {
+    // A restore removed 2026-10-09 from prod; staging's dates.json still names
+    // it and nothing in this run promotes it. The gate must stay closed, and
+    // say what to do, not just what is wrong.
+    const plan = planManifestPromotion(
+      inputs({
+        indexDates: ['2026-10-09', '2026-10-10', '2026-10-11'],
+        prodDates: new Set(['2026-10-10']),
+      })
+    )
+    expect(plan.globals.promote).toBe(false)
+    expect(plan.globals.reason).toContain(
+      'date 2026-10-09 is in staging dates.json but not in prod'
+    )
+    expect(plan.globals.reason).toContain('docs/runbooks/data-restore.md')
+    expect(plan.globals.reason).toMatch(/prune|re-derive/)
+  })
+
   it('holds the globals when the index or prod listing could not be read', () => {
     expect(
       planManifestPromotion(inputs({ indexDates: null })).globals.promote
