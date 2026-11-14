@@ -199,6 +199,16 @@ describe('issue text', () => {
     expect(body).toContain('the schema check')
   })
 
+  it('escapes backslashes and pipes in a reason so a table row cannot break', () => {
+    const p = planOf([entry('v1/a.json', 'refuse', { reason: 'a\\|b | c' })])
+    const body = buildIssueBody({
+      ...ctx,
+      decision: decideRestore({ unhealthy: true, mode: 'dry-run', plan: p }),
+      plan: p,
+    })
+    expect(body).toContain('a\\\\\\|b \\| c')
+  })
+
   it('lists restores with the generation to restore and deletes by name', () => {
     const body = buildIssueBody({
       ...ctx,
