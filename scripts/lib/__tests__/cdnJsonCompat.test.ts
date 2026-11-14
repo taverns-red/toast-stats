@@ -547,12 +547,13 @@ describe('the real reader schemas and fixtures', () => {
       expect(b.distinguishedCounts).toBeTruthy()
     }
     // Not all zero: a fixture of empty counts would parse without proving
-    // the tier shape is read. (Provisional is 0 on a TI-letters date, so only
-    // confirmed is required to be positive.)
+    // the tier shape is read.
     const world = payload.world.distinguishedCounts as {
       confirmed: number
+      provisional: number
     }
     expect(world.confirmed).toBeGreaterThan(0)
+    expect(world.provisional).toBeGreaterThan(0)
   })
 
   it('the PR head is compatible with itself', async () => {
