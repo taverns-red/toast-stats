@@ -389,6 +389,10 @@ const HHMM_HRS =
 /** Both ends of "730-930 pm", so the start is not lost (#2243). */
 const HHMM_RANGE_MERIDIEM =
   /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(\s*(?:-|–|to)\s*)(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
+/** A range of two 24-hour HHMM values ("1200-1300", "0700 - 0830", #2627).
+ *  Only a range, never a lone 4-digit number (a year); see hhmmRange. */
+const HHMM_RANGE_24 =
+  /(?<![\d:.+\-−])([01]\d|2[0-3])([0-5]\d)(\s*(?:-|–|—|to)\s*)([01]\d|2[0-3])([0-5]\d)(?:\s*(?:hrs?|hours?)\b\.?)?(?![\d:.-])/g
 /** 12-hour only: "2026 pm" is a year, not 20:26. */
 const HHMM_MERIDIEM = /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
 const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
@@ -609,6 +613,24 @@ function normalisedTimeText(time: string): string {
       .replace(/(?:(?<=\d)|\b)([ap])\.?\s?m\b\.?/g, '$1m') // "7:30p.m." too
       // "1600 hrs", "11:00 hours" → h-notation (24-hour); a lone "2 hours"
       // is a duration and stays out. "730 pm" → "7:30 pm" (#2243).
+      .replace(
+        HHMM_RANGE_24,
+        (
+          whole,
+          h1: string,
+          m1: string,
+          sep: string,
+          h2: string,
+          m2: string
+        ) => {
+          // "2019-2020" is a pair of years: a meeting runs 15 min to 3 h.
+          const length =
+            Number(h2) * 60 + Number(m2) - (Number(h1) * 60 + Number(m1))
+          return length >= 15 && length <= 180
+            ? `${h1}h${m1}${sep}${h2}h${m2}`
+            : whole
+        }
+      )
       .replace(HHMM_HRS, '$1h$2')
       .replace(HHMM_RANGE_MERIDIEM, '$1:$2$3$4:$5')
       .replace(HHMM_MERIDIEM, '$1:$2')
