@@ -1,5 +1,5 @@
 /* Worldwide country choropleth (#1797). App-palette tokens (#2080: legacy
-   palette until the Phase 2 re-skin) with local theme remaps under
+   palette) with local theme remaps under
    [data-theme='dark'] (R10). Map fills come from
    choroplethScale.ts (validated there); only the chrome lives here. The table
    also renders inside the portalled BottomSheet, so variables sit on :root. */

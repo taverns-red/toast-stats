@@ -16,7 +16,7 @@
  *     (any number of districts can earn it; there is no race leader) nor a
  *     rung of the Distinguished ladder, so it is its own family with its own
  *     glyph. It also carries a legacy-chrome accent (`--tm-loyal-blue`), not a
- *     `--rt-*` one: new UI stays on the legacy tokens until Phase 2 (ops#37).
+ *     `--rt-*` one: new UI stays on the legacy tokens (the palette is permanent, #2628).
  *
  * Before this module the same vocabulary was described three times, in three
  * places that could drift: `AWARD_CARDS` in `AwardsRaceSection`, `TIER_CONFIG`

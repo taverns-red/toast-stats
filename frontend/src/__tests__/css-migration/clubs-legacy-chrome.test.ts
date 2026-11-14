@@ -5,9 +5,9 @@
 // accents, Space Grotesk headings, a grey JetBrains Mono eyebrow) while every
 // other top-level page still wears the legacy chrome (redesign tokens:
 // `--surface` / `--line` / `--ink*` / `--serif`, TM loyal-blue accents, the
-// shared red `.placeholder-page__eyebrow`). The Phase 2 brand chrome migration
-// is blocked (ops#37), so the pages must match the legacy look until it
-// lands. This guard pins that so the Brand v1 tokens can't creep back in.
+// shared red `.placeholder-page__eyebrow`). The brand chrome migration was
+// abandoned (#2628), so the pages must match the legacy look. This guard
+// pins that so the Brand v1 tokens can't creep back in.
 
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'

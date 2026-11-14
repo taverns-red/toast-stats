@@ -1,8 +1,8 @@
 /* RedVoteBlock (#2249) — the ONE surface on the site in Red Vote's own
    palette and type (brand v1.0 tokens from rt-brand-v1.css: --rt-vote,
    --rt-red-dk, --rt-red-soft, --rt-paper, --rt-bg-2, --rt-ink*, Space
-   Grotesk / Inter). Allowlisted in noProductAccentUntilPhase2.test.ts; no
-   other stylesheet may use these tokens until Phase 2 (#2080).
+   Grotesk / Inter). Allowlisted in legacyPaletteGuard.test.ts; no
+   other stylesheet may use these tokens (#2080).
 
    Red Vote's own audit: brand red on a light surface is 4.16:1, so the
    resting CTA is --rt-red-dk (ink-on-dk on it: 7.98:1) in BOTH themes, and

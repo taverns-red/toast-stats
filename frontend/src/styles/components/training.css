@@ -1,8 +1,8 @@
 /* District Training page (#2296) — club officer training (DCP goal 9).
    Theme-aware tokens (--ink*, --surface*, --line) remap under
    [data-theme='dark']; the accent is the legacy --tm-loyal-blue and the
-   "1–3 short" highlight the legacy --tm-true-maroon (#2080: legacy palette
-   until Phase 2, no --rt-stats). Bars and the curve are aria-hidden: every
+   "1–3 short" highlight the legacy --tm-true-maroon (#2080: legacy palette,
+   no --rt-stats). Bars and the curve are aria-hidden: every
    value is printed as text. Controls reuse the Action List's scope styles
    (44px targets). Text stays ≥14px at 375. */
 

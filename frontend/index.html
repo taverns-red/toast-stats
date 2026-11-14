@@ -76,7 +76,7 @@
          JetBrains Mono is still intentionally NOT loaded (Lesson 81). The
          redesign --mono token has 8 live consumers in app-shell.css with no
          metric-matched fallback. A late JetBrains Mono swap took CLS from
-         0.012 to 0.199 on PR #595. Phase 2 (ops#37) adds it with a fallback. -->
+         0.012 to 0.199 on PR #595. Nothing in the UI needs it. -->
 
     <!-- Theme init (#1662): set data-theme before first paint so the canvas
          never flashes the wrong theme. Mirrors DarkModeContext.getInitialTheme;
