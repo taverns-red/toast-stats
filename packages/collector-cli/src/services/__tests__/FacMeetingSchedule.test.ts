@@ -1448,12 +1448,23 @@ describe('parseMeetingSchedule (#2627) — "last" is a week of the month', () =>
     '%j is monthly on the last week',
     (meetingDay, meetingTime, day, startTime) => {
       expect(parseMeetingSchedule({ meetingDay, meetingTime })).toEqual([
-        { day, cadence: 'monthly', weeksOfMonth: ['last'], startTime },
+        { day, cadence: 'monthly', lastWeek: true, startTime },
       ])
     }
   )
 
-  it('"1st and last Thursday" is [1, "last"]', () => {
+  it('"last" is attached only when the string names one day (#2627 review)', () => {
+    const entries = parseMeetingSchedule({
+      meetingDay: '2nd & 4th Thursday and last Friday',
+      meetingTime: '7 pm',
+    })
+    expect(entries?.length).toBe(2)
+    for (const entry of entries ?? []) {
+      expect(entry).not.toHaveProperty('lastWeek')
+    }
+  })
+
+  it('"1st and last Thursday" is weeks [1] plus lastWeek', () => {
     const entries = parseMeetingSchedule({
       meetingDay: '1st and last Thursday',
       meetingTime: '7 pm',
@@ -1462,7 +1473,8 @@ describe('parseMeetingSchedule (#2627) — "last" is a week of the month', () =>
       {
         day: 'Thursday',
         cadence: 'monthly',
-        weeksOfMonth: [1, 'last'],
+        weeksOfMonth: [1],
+        lastWeek: true,
         startTime: '19:00',
       },
     ])
@@ -1621,7 +1633,7 @@ describe('parseMeetingSchedule (#2617) — review: "last" only before a weekday'
       {
         day,
         cadence: 'monthly',
-        weeksOfMonth: ['last'],
+        lastWeek: true,
         startTime: '19:00',
       },
     ])

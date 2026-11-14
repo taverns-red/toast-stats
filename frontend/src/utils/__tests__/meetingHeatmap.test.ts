@@ -259,12 +259,12 @@ describe('describeMeetingEntry', () => {
         mode: 'in-person',
       })
     ).toBe('Wednesday 19:30 · 1st & 3rd of the month · In person')
-    // #2627: a "last" week must read as words, never "lastth" or NaN.
+    // #2627: the last week is the lastWeek flag; weeksOfMonth stays 1-5.
     expect(
       describeMeetingEntry({
         day: 'Thursday',
         cadence: 'monthly',
-        weeksOfMonth: ['last'],
+        lastWeek: true,
         startTime: '19:00',
       })
     ).toBe('Thursday 19:00 · last of the month')
@@ -272,7 +272,8 @@ describe('describeMeetingEntry', () => {
       describeMeetingEntry({
         day: 'Thursday',
         cadence: 'monthly',
-        weeksOfMonth: [2, 'last'],
+        weeksOfMonth: [2],
+        lastWeek: true,
       })
     ).toBe('Thursday, time not stated · 2nd & last of the month')
     expect(

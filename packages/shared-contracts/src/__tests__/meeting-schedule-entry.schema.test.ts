@@ -19,21 +19,29 @@ describe('MeetingScheduleEntrySchema (#2627) — additive fields', () => {
     ).toBe(true)
   })
 
-  it('accepts "last" among the weeks of the month', () => {
+  it('says the last week with lastWeek; weeksOfMonth stays numbers 1-5', () => {
     expect(
       MeetingScheduleEntrySchema.safeParse({
         day: 'Thursday',
         cadence: 'monthly',
+        lastWeek: true,
+      }).success
+    ).toBe(true)
+    expect(
+      MeetingScheduleEntrySchema.safeParse({
+        day: 'Thursday',
+        cadence: 'monthly',
+        weeksOfMonth: [2],
+        lastWeek: true,
+      }).success
+    ).toBe(true)
+    // A 2.90.1 reader validates weeksOfMonth as 1-5 only (ADR 0019).
+    expect(
+      MeetingScheduleEntrySchema.safeParse({
+        day: 'Thursday',
         weeksOfMonth: ['last'],
       }).success
-    ).toBe(true)
-    expect(
-      MeetingScheduleEntrySchema.safeParse({
-        day: 'Thursday',
-        cadence: 'monthly',
-        weeksOfMonth: [2, 'last'],
-      }).success
-    ).toBe(true)
+    ).toBe(false)
   })
 
   it.each([['first'], [0], [6], [-1]])(
