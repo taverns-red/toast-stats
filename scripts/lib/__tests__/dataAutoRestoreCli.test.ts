@@ -164,7 +164,10 @@ describe('decide', () => {
 
   it('a clean plan executes only in execute mode', () => {
     const plan = file('plan.json', planOf([entry('v1/latest.json', 'restore')]))
-    const dry = run(['decide', '--plan', plan], { UNHEALTHY: 'true' })
+    const dry = run(['decide', '--plan', plan], {
+      UNHEALTHY: 'true',
+      RESTORE_ELIGIBLE: 'true',
+    })
     expect(dry.outputs['execute']).toBe('false')
     expect(dry.outputs['action']).toBe('plan-only')
     const live = run(['decide', '--plan', plan], {

@@ -5,6 +5,9 @@
  *
  *   data-auto-restore.ts mode
  *       env DATA_AUTO_RESTORE -> $GITHUB_OUTPUT mode=off|dry-run|execute
+ *   data-auto-restore.ts verdict
+ *       env SMOKE_HEALTHY, SMOKE_RESULT_FILE, SCHEMA_UNHEALTHY,
+ *       SCHEMA_RESTORE_ELIGIBLE -> outputs restore_eligible, restore_reason
  *   data-auto-restore.ts paths --manifest written.jsonl --out paths.txt
  *       the in-scope object names from the run manifest; exit 1 if none
  *   data-auto-restore.ts decide --plan plan.json
@@ -30,6 +33,7 @@ import { parseSavedPlan, type RestorePlan } from './lib/dataRestorePlan.js'
 import {
   buildIssueBody,
   buildIssueTitle,
+  classifyVerdict,
   decideRestore,
   manifestPaths,
   resolveRestoreMode,
@@ -80,6 +84,36 @@ switch (cmd) {
   case 'mode':
     output('mode', mode)
     break
+  case 'verdict': {
+    // Run by data-smoke's last step: classify the failure so only a decode or
+    // validation failure of the published data can ever execute a restore.
+    let failures: string[] | null = null
+    const resultFile = process.env['SMOKE_RESULT_FILE']
+    if (resultFile && existsSync(resultFile)) {
+      try {
+        const parsed = JSON.parse(readFileSync(resultFile, 'utf8')) as {
+          failures?: unknown
+        }
+        if (
+          Array.isArray(parsed.failures) &&
+          parsed.failures.every(f => typeof f === 'string')
+        ) {
+          failures = parsed.failures as string[]
+        }
+      } catch {
+        failures = null
+      }
+    }
+    const v = classifyVerdict({
+      smokeHealthy: process.env['SMOKE_HEALTHY'] ?? '',
+      smokeFailures: failures,
+      schemaUnhealthy: process.env['SCHEMA_UNHEALTHY'] ?? '',
+      schemaRestoreEligible: process.env['SCHEMA_RESTORE_ELIGIBLE'] ?? '',
+    })
+    output('restore_eligible', String(v.restoreEligible))
+    output('restore_reason', v.reason)
+    break
+  }
   case 'paths': {
     if (!values.manifest || !values.out) usage()
     const paths = manifestPaths(readFileSync(values.manifest, 'utf8'))

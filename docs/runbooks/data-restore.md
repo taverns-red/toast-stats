@@ -538,18 +538,34 @@ issue holding it. Never on a `skip_promotion` run.
 | `off`                                     | issue only, no plan             |
 | `execute`                                 | restore, purge, re-check, issue |
 
-`execute` restores only a clean plan: any refused entry, a plan that could not
-be built, or a plan with nothing to do aborts it, and the issue is still
-filed. It re-lists and re-plans first and refuses on any difference, restores
+The value is matched exactly: `execute` and `off` in lower case, nothing
+trimmed. `Execute`, `EXECUTE` or `true` only plans. The job reads
+`vars.DATA_AUTO_RESTORE` as GitHub resolves it, so an organization-level
+variable of the same name is inherited by this repository unless a repository
+variable overrides it. Check both levels before assuming it is unset.
+
+`execute` restores only when the failure is a decode or validation failure of
+the published data (`restore_eligible`, below) and the plan is clean: any
+refused entry, a plan that could not be built, or a plan with nothing to do
+aborts it, and the issue is still filed. It re-lists and re-plans first and refuses on any difference, restores
 entry points first, removes objects the run created, then purges the CDN
 (`toast-stats-cdn-url-map`) and re-checks the schema after two minutes.
 
 Not done by the job: the backup copy (step 3; soft delete is the backup, and
 copying into `toast-stats-backups-ca` needs an IAM grant, see Follow-ups),
-fixing staging after a removed date (#2540), and telling a freshness failure
-from a decode or schema failure (#2500: restore only on the latter). The
-schema check's `unhealthy` flag covers both, so a freshness-only failure also
-plans a restore; decide before turning `execute` on.
+and fixing staging after a removed date (#2540).
+
+**Which failures may restore (`restore_eligible`, #2500).** `data-smoke`
+classifies the failure (`scripts/data-auto-restore.ts verdict`). It is
+eligible only when every failure is a decode or validation failure: the
+cdn-data probe saying `latest.json is not JSON` or `no YYYY-MM-DD
+latestSnapshotDate`, or the schema check failing on nested gzip, bad UTF-8,
+bad JSON or a schema mismatch (`restoreEligibleFromCanary`). Not eligible:
+Hosting probe failures (home, entry-asset, district), a probe that failed on
+an HTTP status, a smoke or schema step that crashed or never ran, freshness,
+fetch and shape failures, and any mix of those with a decode failure. The
+issue is still filed, with the action `not-eligible` and the reason; nothing
+executes.
 
 Never turned on yet: it has not run against real objects. The staging drill
 must first confirm the planner's five assumptions (see #2492) and record them

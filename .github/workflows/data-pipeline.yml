@@ -2022,6 +2022,12 @@ jobs:
             echo "- Scoped promotion plan (#1763): **${{ steps.promoteplan.outputs.objects_planned }}** object(s) would be copied; held dates: ${{ steps.promoteplan.outputs.held_dates }}; globals: ${{ steps.promoteplan.outputs.globals_promoted }} (full plan in the 'Plan scoped promotion' log)"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # The restore window's start (#2537). Reads nothing and writes nothing
+      # to a bucket; read by the data-auto-restore job as --since.
+      - name: Record the promotion window start (#2537)
+        id: promotewindow
+        run: echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       # Promotion (#1763, ADR-015 P6) — the only staging → prod promotion.
       # Copies this run's manifest objects under the promoted prefixes,
       # server side, dates → globals → v1/ entry points. Nothing the run did
@@ -2037,12 +2043,6 @@ jobs:
       # sidecar) that staging no longer holds are removed after every copy,
       # only while prod's district file is the 0-club junk. Derived from
       # state, so it converges. Exits 1 on a failed copy or removal.
-      # The restore window's start (#2537). Reads nothing and writes nothing
-      # to a bucket; read by the data-auto-restore job as --since.
-      - name: Record the promotion window start (#2537)
-        id: promotewindow
-        run: echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
-
       - name: Promote run manifest to production (#1763)
         id: promotemanifest
         if: >-
@@ -3405,6 +3405,12 @@ jobs:
       # When the check finished (UTC): the end of the restore window, after
       # the last prod writer this run waits for.
       window_end: ${{ steps.verdict.outputs.window_end }}
+      # 'true' only when the failure is a decode or validation failure of the
+      # published data (cdn-data probe or schema check); every other unhealthy
+      # case (Hosting probes, a crashed step, freshness, fetch) is false and
+      # never executes a restore. Classified by scripts/data-auto-restore.ts.
+      restore_eligible: ${{ steps.verdict.outputs.restore_eligible }}
+      restore_reason: ${{ steps.verdict.outputs.restore_reason }}
 
     steps:
       - name: Checkout code
@@ -3452,6 +3458,7 @@ jobs:
           SMOKE_HEALTHY: ${{ steps.smoke.outputs.healthy }}
           SMOKE_RESULT_FILE: ${{ steps.smoke.outputs.result_file }}
           SCHEMA_UNHEALTHY: ${{ steps.schema.outputs.unhealthy }}
+          SCHEMA_RESTORE_ELIGIBLE: ${{ steps.schema.outputs.restore_eligible }}
         run: |
           failed=""
           if [ "${SMOKE_HEALTHY}" != "true" ]; then
@@ -3470,6 +3477,11 @@ jobs:
           echo "unhealthy=true" >> "$GITHUB_OUTPUT"
           echo "failed=${failed}" >> "$GITHUB_OUTPUT"
           echo "window_end=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          # Whether this is a failure a restore could fix (decode or
+          # validation of the published data). If the classifier itself
+          # fails, no output is written and the restore treats it as not
+          # eligible: it never executes on a missing verdict.
+          npx tsx scripts/data-auto-restore.ts verdict || echo "::warning::could not classify the failure; the restore will not execute"
           echo "::error title=Data smoke::failed after the promotion: ${failed}. cdn-data is the data probe; home, entry-asset and district are the Hosting probes. Prod was NOT changed by this job. See the steps above and docs/runbooks/data-restore.md."
           exit 1
 
@@ -3576,14 +3588,19 @@ jobs:
         env:
           DATA_AUTO_RESTORE: ${{ vars.DATA_AUTO_RESTORE }}
           UNHEALTHY: ${{ needs.data-smoke.outputs.unhealthy }}
+          RESTORE_ELIGIBLE: ${{ needs.data-smoke.outputs.restore_eligible }}
+          RESTORE_REASON: ${{ needs.data-smoke.outputs.restore_reason }}
 
-      # WRITE (production). Runs only when the variable is `execute` AND the
-      # plan is clean. Re-lists and re-plans first and refuses on any
-      # difference from the saved plan; entry points restore first.
+      # WRITE (production). Runs only when the variable is `execute`, the
+      # failure is a decode or validation failure of the published data
+      # (restore_eligible), AND the plan is clean. Re-lists and re-plans first
+      # and refuses on any difference from the saved plan; entry points
+      # restore first.
       - name: Restore the published data
         id: execute
         if: >-
           !cancelled()
+          && needs.data-smoke.outputs.restore_eligible == 'true'
           && steps.decide.outputs.execute == 'true'
         env:
           PROD_BUCKET: ${{ env.GCS_BUCKET_PRODUCTION }}
@@ -3628,6 +3645,8 @@ jobs:
         env:
           DATA_AUTO_RESTORE: ${{ vars.DATA_AUTO_RESTORE }}
           UNHEALTHY: ${{ needs.data-smoke.outputs.unhealthy }}
+          RESTORE_ELIGIBLE: ${{ needs.data-smoke.outputs.restore_eligible }}
+          RESTORE_REASON: ${{ needs.data-smoke.outputs.restore_reason }}
           FAILED: ${{ needs.data-smoke.outputs.failed }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           EXECUTE_OUTCOME: ${{ steps.execute.outcome != 'skipped' && steps.execute.outcome || '' }}

@@ -50,9 +50,9 @@ export interface IssueContext {
 export const DEFAULT_RESTORE_MODE: RestoreMode = 'dry-run'
 
 export function resolveRestoreMode(raw: string | undefined): RestoreMode {
-  const v = (raw ?? '').trim().toLowerCase()
-  if (v === 'execute') return 'execute'
-  if (v === 'off') return 'off'
+  // Exact match only: ' Execute ' or 'EXECUTE' is a typo, and a typo plans.
+  if (raw === 'execute') return 'execute'
+  if (raw === 'off') return 'off'
   return DEFAULT_RESTORE_MODE
 }
 
@@ -136,6 +136,14 @@ export function decideRestore(input: {
       reason: `${plan.refused} object(s) refused: nothing is executed; resolve them by hand`,
     }
   }
+  if (!input.restoreEligible) {
+    return {
+      action: 'not-eligible',
+      execute: false,
+      fileIssue: true,
+      reason: `not restored: ${input.ineligibleReason ?? 'the failure is not a decode or validation failure of the published data'}`,
+    }
+  }
   if (!plan.entries.some(acts)) {
     return {
       action: 'nothing-to-do',
@@ -180,7 +188,11 @@ const LIST_DELETES = 100
 const LIST_REFUSED = 100
 
 const cell = (s: string): string =>
-  s.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ')
+  s
+    .replace(/\\/g, '\\\\')
+    .replace(/\|/g, '\\|')
+    .replace(/`/g, '\\`')
+    .replace(/\n/g, ' ')
 
 function table(entries: PlanEntry[], cap: number, restore: boolean): string[] {
   const shown = entries.slice(0, cap)
@@ -289,17 +301,73 @@ export function buildIssueBody(ctx: IssueContext): string {
 }
 
 export interface VerdictInput {
+  /** The smoke step's `healthy` output: 'true', 'false', or '' (it crashed). */
   smokeHealthy: string
+  /** The smoke result file's `failures` ("probe: detail"); null if unreadable. */
   smokeFailures: string[] | null
+  /** The schema step's `unhealthy` output: 'true', 'false', or ''. */
   schemaUnhealthy: string
+  /** The schema step's `restore_eligible` output (see restoreEligibleFromCanary). */
   schemaRestoreEligible: string
 }
 
-/** Red-phase stub: the next commit implements it. */
+/**
+ * The cdn-data probe's own decode and validation failures
+ * (checkCdnLatest in hostingRollback.ts). An HTTP status failure is a fetch
+ * problem, not bad data.
+ */
+const CDN_DATA_DECODE =
+  /^cdn-data: (latest\.json is not JSON|no YYYY-MM-DD latestSnapshotDate)$/
+
+/**
+ * Whether the data smoke's verdict is bad enough, and of the right kind, to
+ * restore (#2492: "restore only on decode or schema failures, never on
+ * freshness"). Eligible only when every failure is a decode or validation
+ * failure of the published data and at least one exists. Hosting probe
+ * failures, a crashed or never-run step, freshness, fetch and shape failures
+ * are all ineligible; the reason names what blocked it.
+ */
 export function classifyVerdict(i: VerdictInput): {
   restoreEligible: boolean
   reason: string
 } {
-  void i
-  return { restoreEligible: true, reason: 'stub' }
+  const blockers: string[] = []
+  let dataFailure = false
+
+  if (i.smokeHealthy === 'true') {
+    // fine
+  } else if (i.smokeHealthy === 'false' && i.smokeFailures !== null) {
+    const bad = i.smokeFailures.filter(f => !CDN_DATA_DECODE.test(f))
+    if (bad.length > 0) {
+      blockers.push(
+        `the smoke failed on something other than cdn-data decode or validation (${bad.map(f => f.split(':')[0]).join(', ')})`
+      )
+    } else if (i.smokeFailures.length === 0) {
+      blockers.push('the smoke reported unhealthy with no failing probe')
+    } else {
+      dataFailure = true
+    }
+  } else {
+    blockers.push('the smoke step crashed or left no readable result')
+  }
+
+  if (i.schemaUnhealthy === 'false') {
+    // fine
+  } else if (i.schemaUnhealthy === 'true') {
+    if (i.schemaRestoreEligible === 'true') dataFailure = true
+    else {
+      blockers.push(
+        'the schema check failed on something other than decode or validation (fetch, freshness or shape)'
+      )
+    }
+  } else {
+    blockers.push('the schema check crashed or did not run')
+  }
+
+  if (blockers.length === 0 && !dataFailure) {
+    blockers.push('no decode or validation failure was found')
+  }
+  return blockers.length === 0
+    ? { restoreEligible: true, reason: 'a decode or validation failure' }
+    : { restoreEligible: false, reason: blockers.join('; ') }
 }
