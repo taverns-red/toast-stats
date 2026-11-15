@@ -258,6 +258,9 @@ describe('data-auto-restore-execute: the only job that mints the write token (#2
     expect(c).toContain("needs.data-smoke.outputs.restore_eligible == 'true'")
     expect(c).toContain("github.ref == 'refs/heads/main'")
     expect(c).toContain(SKIP_CLAUSE_DOWNSTREAM)
+    // a failed issue step after execute=true must not let execute run under
+    // !cancelled(): the decide job has to have succeeded
+    expect(c).toContain("needs.data-auto-restore-decide.result == 'success'")
     // equality with the literal 'true' fails closed on an empty output; no
     // `!= 'false'` style test, no OR a wrong branch could satisfy
     expect(cond).not.toMatch(/\|\|/)
