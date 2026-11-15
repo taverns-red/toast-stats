@@ -522,6 +522,87 @@ window. Its step 2 copies to the backup bucket instead of staging's
 backup expires under the backup bucket's 90-day rule; step 8's "expires with
 `_archive/` (30 days)" applies to the staging drill only.
 
+## Automatic restore (#2537): built, dry-run by default
+
+Two jobs in `data-pipeline.yml` run when the post-promotion `data-smoke`
+reports bad data (the smoke or the CDN schema check). Never on a
+`skip_promotion` run.
+
+- `data-auto-restore-decide` holds no GCP identity (`contents: read`,
+  `issues: write`). It files or refreshes the `data-rollback` issue: run id,
+  verdict, reason, mode, the run manifest's path
+  (`gs://toast-stats-data-staging/runs/<id>/written.jsonl`) and the exact
+  command to plan by hand. It lists no objects. It outputs `execute` (true only
+  for an unhealthy run, an eligible verdict and `DATA_AUTO_RESTORE=execute`)
+  and the issue number.
+- `data-auto-restore-execute` is the only job that mints the promote service
+  account's token. It runs only when `execute` is `true`, `restore_eligible`
+  is `true`, the ref is `refs/heads/main` and the run promoted, behind the
+  `data-restore` environment. It lists prod's live and soft-deleted copies of
+  the objects the run wrote, plans with `scripts/plan-data-restore.ts`
+  (window: the promote's start to the smoke's end; paths: the run manifest's
+  in-scope objects, `scripts/data-auto-restore.ts paths`), restores a clean
+  plan, purges the CDN, re-checks, attaches the plan as the
+  `data-restore-plan` artifact and comments the enumerated plan and the result
+  on the issue.
+
+Because the decide job cannot read prod, the dry-run no longer posts an
+enumerated plan: unset, nothing is listed and nothing is restored, and the
+issue carries the command to plan by hand. The enumerated dry-run returns once
+a read-only service account exists for a plan-only job (follow-up).
+
+| `DATA_AUTO_RESTORE` (repository variable) | What happens on a failed smoke   |
+| ----------------------------------------- | -------------------------------- |
+| unset, empty, `dry-run`, or anything else | issue only, no restore (default) |
+| `off`                                     | issue only, no restore           |
+| `execute`                                 | restore, purge, re-check, issue  |
+
+The value is matched exactly: `execute` and `off` in lower case, nothing
+trimmed. `Execute`, `EXECUTE` or `true` only plans. The job reads
+`vars.DATA_AUTO_RESTORE` as GitHub resolves it, so an organization-level
+variable of the same name is inherited by this repository unless a repository
+variable overrides it. Check both levels before assuming it is unset.
+
+`execute` restores only when the failure is a decode or validation failure of
+the published data (`restore_eligible`, below) and the plan is clean: any
+refused entry, a plan that could not be built, or a plan with nothing to do
+aborts it, and the issue is still filed. It re-lists and re-plans first and refuses on any difference, restores
+entry points first, removes objects the run created, then purges the CDN
+(`toast-stats-cdn-url-map`) and re-checks the schema after two minutes.
+
+Not done by the job: the backup copy (step 3; soft delete is the backup, and
+copying into `toast-stats-backups-ca` needs an IAM grant, see Follow-ups),
+and fixing staging after a removed date (#2540).
+
+**Which failures may restore (`restore_eligible`, #2500).** `data-smoke`
+classifies the failure (`scripts/data-auto-restore.ts verdict`). It is
+eligible only when every failure is a decode or validation failure: the
+cdn-data probe saying `latest.json is not JSON` or `no YYYY-MM-DD
+latestSnapshotDate`, or the schema check failing on nested gzip, bad UTF-8,
+bad JSON or a schema mismatch (`restoreEligibleFromCanary`). Not eligible:
+Hosting probe failures (home, entry-asset, district), a probe that failed on
+an HTTP status, a smoke or schema step that crashed or never ran, freshness,
+fetch and shape failures, and any mix of those with a decode failure. The
+issue is still filed, with the action `not-eligible` and the reason; nothing
+executes.
+
+**Preconditions for turning `execute` on (Ron).** Never turned on yet: it has
+not run against real objects.
+
+1. Create the `data-restore` environment (Settings, Environments) with a
+   deployment branch policy of `main` only. Until it exists the job's ref
+   check is the only lock; the environment is the second. A job that names a
+   missing environment is created on first use with no protection, so create
+   it first.
+2. #2856 has landed.
+3. The staging drill is done: it confirms the planner's five assumptions (see
+   #2492), and they are recorded here.
+4. Only after step 1: the `data-restore` environment must exist, with its
+   main-only policy, before `DATA_AUTO_RESTORE` is set to `execute`. The
+   environment's branch policy is the one lock a branch cannot edit (a branch
+   can change the workflow's `if`). Then set the repository variable `DATA_AUTO_RESTORE` to `execute` (and
+   check for an organization-level variable of the same name).
+
 ## Open questions
 
 - ~~Is a staging `_archive/` copy enough as the backup, or a dedicated
@@ -537,10 +618,9 @@ backup expires under the backup bucket's 90-day rule; step 8's "expires with
 
 ## Follow-ups (not in this PR)
 
-- Automate it for #2492's acceptance criterion: after the promote, run the
-  schema check against prod; on failure, restore the run's manifest objects
-  by generation on the CI identity (it already has the permissions) and file
-  a `data-rollback` issue, mirroring `deploy.yml`.
+- ~~Automate it for #2492's acceptance criterion~~ Built in #2537 (above),
+  dry-run by default. Turning on `execute` needs Ron's OK after the staging
+  drill.
 - If the restore is automated, the CI identity needs a write grant on
   `toast-stats-backups-ca` for the backup step. That is an IAM change for
   Ron; none is made here.

@@ -282,6 +282,12 @@ export function prodWriteReasons(
     if (/promote-run-manifest\.ts\b.*--execute\b/.test(cmd)) {
       reasons.push('manifest promotion → production')
     }
+    // The data auto-restore (#2537) puts objects back, or removes ones the
+    // run created, through the one planner's execute mode; its dry run only
+    // reads.
+    if (/plan-data-restore\.ts\b.*--execute\b/.test(cmd)) {
+      reasons.push('data restore → production')
+    }
     if (/invalidate-cdn-cache/.test(cmd)) reasons.push('CDN invalidation')
     if (
       /\bgh\s+(issue\s+(create|comment|close)|label\s+create)\b/.test(cmd) &&
@@ -365,6 +371,7 @@ export function findProdWriteSteps(
  */
 const NOT_A_DIRECT_WRITE: ReadonlySet<string> = new Set([
   'manifest promotion → production',
+  'data restore → production',
   'CDN invalidation',
   'promotion-held issue flow',
 ])

@@ -580,3 +580,26 @@ export function buildCanaryIssueBody(
 
   return lines.join('\n')
 }
+
+/**
+ * A failure that is a decode or validation failure of a published object:
+ * unreadable bytes (nested gzip, bad UTF-8, bad JSON) or a schema mismatch.
+ * Fetch failures, freshness, shape checks and "could not resolve" are not.
+ */
+const DECODE_OR_VALIDATION =
+  /^(body is still gzip-encoded|body is not valid UTF-8|invalid JSON|schema validation failed)/
+
+/**
+ * Whether this canary result justifies the data auto-restore (#2537): it is
+ * unhealthy, and EVERY failure is a decode or validation failure (at least
+ * one exists). A freshness-only failure, or one mixed with other kinds, is
+ * not: restoring older objects would not fix stale data (#2500).
+ */
+export function restoreEligibleFromCanary(result: CanaryResult): boolean {
+  if (result.healthy) return false
+  const reasons = [
+    ...result.failures.map(f => f.reason),
+    ...result.objectFailures.map(f => f.reason),
+  ]
+  return reasons.length > 0 && reasons.every(r => DECODE_OR_VALIDATION.test(r))
+}

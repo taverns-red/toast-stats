@@ -42,6 +42,7 @@ import { appendFileSync, writeFileSync } from 'node:fs'
 import { SnapshotManifestSchema } from '@taverns-red/shared-contracts'
 import {
   evaluateCdnSchema,
+  restoreEligibleFromCanary,
   buildCanaryIssueTitle,
   buildCanaryIssueBody,
   decodeCdnJson,
@@ -87,6 +88,7 @@ function emitOutput(key: string, value: string): void {
 
 function emitDecision(result: CanaryResult, baseUrl: string, now: Date): void {
   emitOutput('unhealthy', String(!result.healthy))
+  emitOutput('restore_eligible', String(restoreEligibleFromCanary(result)))
   emitOutput('title', buildCanaryIssueTitle(result))
   if (!result.healthy) {
     writeFileSync(BODY_FILE, buildCanaryIssueBody(result, { baseUrl, now }))
