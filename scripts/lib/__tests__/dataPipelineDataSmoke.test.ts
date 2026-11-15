@@ -140,6 +140,9 @@ describe('data-smoke job (#2538)', () => {
     expect(Number(job!['timeout-minutes'])).toBeLessThanOrEqual(15)
     for (const [name, j] of Object.entries(workflow.jobs)) {
       if (name.startsWith('data-auto-restore-')) continue
+      // A leaf that only reads the verdict to decide a status ping (#2863);
+      // nothing needs it (dataPipelineStatusHeartbeat.test.ts).
+      if (name === 'status-heartbeat') continue
       expect([j.needs ?? []].flat(), name).not.toContain('data-smoke')
     }
   })

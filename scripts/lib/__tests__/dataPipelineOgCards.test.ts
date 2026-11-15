@@ -75,6 +75,7 @@ describe('og-cards job (#2304)', () => {
       'data-auto-restore-decide': 10,
       'data-auto-restore-execute': 30,
       'education-ledger-history': 240,
+      'status-heartbeat': 5,
     })
   })
 

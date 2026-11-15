@@ -155,6 +155,15 @@ on:
         required: false
         type: boolean
         default: false
+      recovery:
+        description: >-
+          Recovering a missed daily (#2863): after a healthy promotion that advanced prod's
+          latest snapshot date, ping the status.taverns.red heartbeat, as the scheduled daily
+          does. Default off: a plain rebuild or dispatch never pings, so it cannot hide a
+          missed daily.
+        required: false
+        type: boolean
+        default: false
 
 # Prevent overlapping pipeline runs
 concurrency:
@@ -254,6 +263,9 @@ jobs:
       # When the promote began (UTC, with Z): the start of the window the
       # data auto-restore (#2537) hands the planner as --since.
       promote_started: ${{ steps.promotewindow.outputs.started }}
+      # 'true' when a promoted date is newer than prod's latest date before
+      # the run (#2863); the status heartbeat's recovery gate.
+      prod_newer_date: ${{ steps.heartbeatdate.outputs.newer }}
 
     steps:
       # ── Setup ────────────────────────────────────────────────
@@ -2028,6 +2040,18 @@ jobs:
         id: promotewindow
         run: echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
+      # Prod's latest date BEFORE this run promotes (#2863). A read of the one
+      # object; the status heartbeat's recovery gate compares the promoted
+      # dates to it. Empty when unreadable, which never pings.
+      - name: Read prod's latest date before promotion (#2863)
+        id: prodlatestbefore
+        if: steps.mode.outputs.mode != 'prune' && steps.mode.outputs.skip_promotion != 'true'
+        continue-on-error: true
+        run: |
+          DATE=$(gcloud storage cat "gs://${GCS_BUCKET_PRODUCTION}/v1/latest.json" 2>/dev/null \
+            | jq -r '.latestSnapshotDate // empty' 2>/dev/null || true)
+          echo "date=${DATE}" >> "$GITHUB_OUTPUT"
+
       # Promotion (#1763, ADR-015 P6) — the only staging → prod promotion.
       # Copies this run's manifest objects under the promoted prefixes,
       # server side, dates → globals → v1/ entry points. Nothing the run did
@@ -2055,6 +2079,17 @@ jobs:
         env:
           COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
         run: npx tsx scripts/promote-run-manifest.ts --execute
+
+      # Did the promotion advance prod's latest date? (#2863) Reads nothing
+      # and writes nothing outside the job output.
+      - name: Did the promotion advance prod's latest date? (#2863)
+        id: heartbeatdate
+        if: steps.promotemanifest.outcome == 'success'
+        continue-on-error: true
+        env:
+          PROD_LATEST_BEFORE: ${{ steps.prodlatestbefore.outputs.date }}
+          PROMOTED_DATES: ${{ steps.promotemanifest.outputs.promoted_dates }}
+        run: npx tsx scripts/status-heartbeat.ts
 
       # Prune reconcile (#1133) through the manifest (#1767, ADR-015 step 9).
       # The same promoter as above, so there is one prod-write mechanism: it
@@ -3484,6 +3519,46 @@ jobs:
           npx tsx scripts/data-auto-restore.ts verdict || echo "::warning::could not classify the failure; the restore will not execute"
           echo "::error title=Data smoke::failed after the promotion: ${failed}. cdn-data is the data probe; home, entry-asset and district are the Hosting probes. Prod was NOT changed by this job. See the steps above and docs/runbooks/data-restore.md."
           exit 1
+
+  # ══════════════════════════════════════════════════════════
+  # STATUS HEARTBEAT (#2863, taverns-red/ops#343)
+  #
+  # status.taverns.red expects a ping every 24 h with a 12 h grace, so a
+  # stale prod dataset alerts at 36 h. This job pings only after a healthy
+  # prod promotion (the smoke passed; the verdict the auto-restore keys off
+  # is not unhealthy), never on a proof run, and either
+  #   - on the daily (a `schedule` event whose mode is daily), or
+  #   - on a manual dispatch that set `recovery: true` AND promoted a date
+  #     newer than prod's latest before the run (pipeline job output
+  #     `prod_newer_date`).
+  # A plain rebuild or dispatch never pings, so it cannot hide a missed
+  # daily. The URL is a secret: env only, never echoed, no `set -x`, and
+  # `continue-on-error` so a status-page hiccup never fails the run.
+  # Pinned by dataPipelineStatusHeartbeat.test.ts.
+  # ══════════════════════════════════════════════════════════
+  status-heartbeat:
+    name: 'status.taverns.red heartbeat (#2863)'
+    runs-on: ubuntu-26.04
+    needs: [pipeline, data-smoke]
+    if: >-
+      !cancelled()
+      && needs.pipeline.result == 'success'
+      && needs.pipeline.outputs.skip_promotion != 'true'
+      && (needs.pipeline.outputs.promoted == 'true' || needs.pipeline.outputs.promoted_dates != '')
+      && needs.data-smoke.result == 'success'
+      && needs.data-smoke.outputs.unhealthy != 'true'
+      && ((github.event_name == 'schedule' && needs.pipeline.outputs.mode == 'daily')
+      || (github.event_name == 'workflow_dispatch' && inputs.recovery == true
+      && needs.pipeline.outputs.prod_newer_date == 'true'))
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    steps:
+      - name: Ping the status page heartbeat
+        continue-on-error: true
+        env:
+          HEARTBEAT_URL: ${{ secrets.STATUS_HEARTBEAT_TS_DATA }}
+        run: curl -fsS --max-time 10 "$HEARTBEAT_URL" >/dev/null
 
   # ══════════════════════════════════════════════════════════
   # DATA AUTO-RESTORE AFTER A FAILED SMOKE (#2537, epic #2492)

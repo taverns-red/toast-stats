@@ -204,6 +204,12 @@ describe('status-heartbeat job (#2863)', () => {
     expect(c).toContain("needs.data-smoke.outputs.unhealthy != 'true'")
   })
 
+  it('is a leaf: no other job needs it', () => {
+    for (const [name, j] of Object.entries(workflow.jobs)) {
+      expect([j.needs ?? []].flat(), name).not.toContain('status-heartbeat')
+    }
+  })
+
   it('keeps permissions narrow: contents read, no id-token, no issues', () => {
     expect(job!.permissions).toEqual({ contents: 'read' })
   })
