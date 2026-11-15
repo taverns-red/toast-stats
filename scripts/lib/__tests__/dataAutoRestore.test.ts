@@ -14,11 +14,14 @@ import {
   buildIssueBody,
   buildDecisionIssueBody,
   buildDecisionTitle,
+  classifyPlanFailure,
+  codeSpan,
   buildIssueTitle,
   classifyVerdict,
   decideIntent,
   decideRestore,
   manifestPaths,
+  resolveEnumeration,
   resolveRestoreMode,
 } from '../dataAutoRestore.js'
 
@@ -382,6 +385,256 @@ describe('buildDecisionIssueBody: no object list, a manual plan command', () => 
       buildDecisionTitle('dry-run')
     )
     expect(buildDecisionTitle('dry-run')).toMatch(/data-rollback/)
+  })
+})
+
+describe('resolveEnumeration: what the decide job learned about the plan (#2858)', () => {
+  it('a plan that loaded is shown, whatever the planner exit said', () => {
+    expect(
+      resolveEnumeration({
+        authOutcome: 'success',
+        enumOutcome: 'success',
+        errorClass: '',
+        plan: clean,
+      })
+    ).toEqual({ kind: 'plan', plan: clean })
+    // a refused plan exits non-zero but still carries its refused entries
+    expect(
+      resolveEnumeration({
+        authOutcome: 'success',
+        enumOutcome: 'failure',
+        errorClass: 'plan-refused',
+        plan: refused,
+      })
+    ).toEqual({ kind: 'plan', plan: refused })
+  })
+
+  it('a failed auth is named by class, never by the error text', () => {
+    expect(
+      resolveEnumeration({
+        authOutcome: 'failure',
+        enumOutcome: 'skipped',
+        errorClass: '',
+        plan: null,
+      })
+    ).toEqual({ kind: 'failed', errorClass: 'auth-failed' })
+  })
+
+  it('a step that failed with a known class reports it; an unknown or hostile class collapses', () => {
+    expect(
+      resolveEnumeration({
+        authOutcome: 'success',
+        enumOutcome: 'failure',
+        errorClass: 'manifest-unreadable',
+        plan: null,
+      })
+    ).toEqual({ kind: 'failed', errorClass: 'manifest-unreadable' })
+    expect(
+      resolveEnumeration({
+        authOutcome: 'success',
+        enumOutcome: 'failure',
+        errorClass: 'PERMISSION_DENIED reader@project.iam.gserviceaccount.com',
+        plan: null,
+      })
+    ).toEqual({ kind: 'failed', errorClass: 'plan-failed' })
+  })
+
+  it('auth not attempted (not main, or mode off) is skipped, not a failure', () => {
+    expect(
+      resolveEnumeration({
+        authOutcome: 'skipped',
+        enumOutcome: 'skipped',
+        errorClass: '',
+        plan: null,
+      })
+    ).toEqual({ kind: 'skipped' })
+  })
+})
+
+describe('classifyPlanFailure: why the planner exited non-zero (#2858)', () => {
+  it('a plan that was written is a genuine refusal', () => {
+    expect(
+      classifyPlanFailure({
+        stderr: '1 object(s) refused: resolve by hand\n',
+        planWritten: true,
+      })
+    ).toBe('plan-refused')
+  })
+
+  it('a listing error is a listing failure, not a refusal', () => {
+    expect(
+      classifyPlanFailure({
+        stderr:
+          'refused: the soft-deleted listing reported an error other than "matched no objects": ERROR: x; the listing may be incomplete, re-run it\n',
+        planWritten: false,
+      })
+    ).toBe('listing-failed')
+    expect(
+      classifyPlanFailure({
+        stderr: 'refused: listing is not a JSON array\n',
+        planWritten: false,
+      })
+    ).toBe('listing-failed')
+  })
+
+  it('anything else without a plan is a plain failure', () => {
+    expect(
+      classifyPlanFailure({
+        stderr: 'error: boom\n',
+        planWritten: false,
+      })
+    ).toBe('plan-failed')
+    expect(classifyPlanFailure({ stderr: '', planWritten: false })).toBe(
+      'plan-failed'
+    )
+  })
+})
+
+describe('resolveEnumeration: an empty reader variable (#2858)', () => {
+  it('a failed precheck is auth-failed even though auth was skipped', () => {
+    expect(
+      resolveEnumeration({
+        authOutcome: 'skipped',
+        precheckOutcome: 'failure',
+        enumOutcome: 'skipped',
+        errorClass: '',
+        plan: null,
+      })
+    ).toEqual({ kind: 'failed', errorClass: 'auth-failed' })
+  })
+})
+
+describe('codeSpan: names with backticks render safely (#2858)', () => {
+  it('uses a longer fence than any backtick run in the name', () => {
+    expect(codeSpan('plain.json')).toBe('`plain.json`')
+    expect(codeSpan('a`b')).toBe('`` a`b ``')
+    expect(codeSpan('a``b')).toBe('``` a``b ```')
+  })
+
+  it('the decision issue table does not let a name break out of its span', () => {
+    const plan = planOf([entry('v1/x`|y.json', 'restore')])
+    const body = buildDecisionIssueBody({
+      mode: 'dry-run',
+      decision: decideIntent({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'dry-run',
+      }),
+      runId: '1',
+      runUrl: 'u',
+      failed: 'f',
+      stagingBucket: 's',
+      prodBucket: 'p',
+      promoteStarted: '',
+      windowEnd: '',
+      enumeration: { kind: 'plan', plan },
+    })
+    expect(body).toContain('`` v1/x`\\|y.json ``')
+  })
+
+  it('a backslash in a name is escaped before a pipe can be', () => {
+    const plan = planOf([entry('v1/a\\|b.json', 'restore')])
+    const body = buildIssueBody({
+      mode: 'dry-run',
+      decision: decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'dry-run',
+        plan,
+      }),
+      plan,
+      runUrl: 'u',
+      failed: 'f',
+    })
+    expect(body).toContain('`v1/a\\\\\\|b.json`')
+  })
+
+  it('the execute report does the same', () => {
+    const body = buildIssueBody({
+      mode: 'dry-run',
+      decision: decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'dry-run',
+        plan: planOf([entry('v1/x`y.json', 'restore')]),
+      }),
+      plan: planOf([entry('v1/x`y.json', 'restore')]),
+      runUrl: 'u',
+      failed: 'f',
+    })
+    expect(body).toContain('`` v1/x`y.json ``')
+  })
+})
+
+describe('buildDecisionIssueBody: the enumerated plan (#2858)', () => {
+  const base = {
+    mode: 'dry-run' as const,
+    decision: decideIntent({
+      unhealthy: true,
+      restoreEligible: true,
+      mode: 'dry-run',
+    }),
+    runId: '4242',
+    runUrl: 'https://github.com/taverns-red/toast-stats/actions/runs/4242',
+    failed: 'the schema check',
+    stagingBucket: 'toast-stats-data-staging',
+    prodBucket: 'toast-stats-data-ca',
+    promoteStarted: '2026-11-14T10:00:00Z',
+    windowEnd: '2026-11-14T10:40:00Z',
+  }
+
+  it('lists the plan and keeps the manual command', () => {
+    const body = buildDecisionIssueBody({
+      ...base,
+      enumeration: { kind: 'plan', plan: clean },
+    })
+    expect(body).toContain('`v1/latest.json`')
+    expect(body).toContain('snapshots/2026-11-14/metadata.json')
+    expect(body).toContain('1 to restore')
+    expect(body).toContain('plan-data-restore.ts')
+    expect(body).toContain('data-restore-plan-dry-run')
+  })
+
+  it('shows refused entries', () => {
+    const body = buildDecisionIssueBody({
+      ...base,
+      enumeration: { kind: 'plan', plan: refused },
+    })
+    expect(body).toContain('`v1/dates.json`')
+    expect(body).toMatch(/refused/i)
+  })
+
+  it('truncates a large plan with a count, and stays under the issue size limit', () => {
+    const many = planOf(
+      Array.from({ length: 1500 }, (_, i) =>
+        entry(`snapshots/2026-11-14/district_${i}.json`, 'restore')
+      )
+    )
+    const body = buildDecisionIssueBody({
+      ...base,
+      enumeration: { kind: 'plan', plan: many },
+    })
+    expect(body).toContain('1500 object(s)')
+    expect(body).toMatch(/and \d+ more/)
+    expect(body.length).toBeLessThan(60000)
+  })
+
+  it('says enumeration failed with the class only, and still gives the manual command', () => {
+    const body = buildDecisionIssueBody({
+      ...base,
+      enumeration: { kind: 'failed', errorClass: 'auth-failed' },
+    })
+    expect(body).toContain('enumeration failed: auth-failed')
+    expect(body).toContain('plan-data-restore.ts')
+    expect(body).not.toMatch(/iam\.gserviceaccount|projects\//)
+  })
+
+  it('a skipped enumeration says so', () => {
+    const body = buildDecisionIssueBody({
+      ...base,
+      enumeration: { kind: 'skipped' },
+    })
+    expect(body).toMatch(/enumeration skipped/)
   })
 })
 

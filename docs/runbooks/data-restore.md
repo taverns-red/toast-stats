@@ -528,13 +528,17 @@ Two jobs in `data-pipeline.yml` run when the post-promotion `data-smoke`
 reports bad data (the smoke or the CDN schema check). Never on a
 `skip_promotion` run.
 
-- `data-auto-restore-decide` holds no GCP identity (`contents: read`,
-  `issues: write`). It files or refreshes the `data-rollback` issue: run id,
+- `data-auto-restore-decide` never uses a write identity: it authenticates
+  only as the read-only reader (#2858). It does hold `id-token: write`, on
+  the same workload identity provider as the other pipeline jobs, together
+  with `contents: read` and `issues: write`, so what stops it minting the
+  promote account's token is that provider's binding for that account, not
+  the job. Narrowing that binding is IAM work, tracked separately. It files or refreshes the `data-rollback` issue: run id,
   verdict, reason, mode, the run manifest's path
-  (`gs://toast-stats-data-staging/runs/<id>/written.jsonl`) and the exact
-  command to plan by hand. It lists no objects. It outputs `execute` (true only
-  for an unhealthy run, an eligible verdict and `DATA_AUTO_RESTORE=execute`)
-  and the issue number.
+  (`gs://toast-stats-data-staging/runs/<id>/written.jsonl`), the exact
+  command to plan by hand and the enumerated plan (see below). It outputs
+  `execute` (true only for an unhealthy run, an eligible verdict and
+  `DATA_AUTO_RESTORE=execute`) and the issue number.
 - `data-auto-restore-execute` is the only job that mints the promote service
   account's token. It runs only when `execute` is `true`, `restore_eligible`
   is `true`, the ref is `refs/heads/main` and the run promoted, behind the
@@ -546,10 +550,26 @@ reports bad data (the smoke or the CDN schema check). Never on a
   `data-restore-plan` artifact and comments the enumerated plan and the result
   on the issue.
 
-Because the decide job cannot read prod, the dry-run no longer posts an
-enumerated plan: unset, nothing is listed and nothing is restored, and the
-issue carries the command to plan by hand. The enumerated dry-run returns once
-a read-only service account exists for a plan-only job (follow-up).
+**The dry-run plan (#2858).** The decide job authenticates as the read-only
+data reader (repository variable `GCP_DATA_READER_SA`; role
+`roles/storage.objectViewer` on the prod and staging data buckets, nothing
+else), runs the same listing and `plan-data-restore.ts` as the execute job
+without `--execute`, and puts the plan in the issue: counts, then the refused,
+removed and restored objects, capped (the full plan is the
+`data-restore-plan-dry-run` artifact). The reader's workload identity binding
+admits only `refs/heads/main`, so the auth step runs on main only and the job
+must never gain an `environment:` (it would change the OIDC subject). It never
+uses the promote service account and writes nothing. If auth or the listing
+fails, the issue is still filed with the manual command and a line
+`enumeration failed: <class>`; the GCP error text stays in the job log. The
+classes: `auth-failed` (auth failed, or `GCP_DATA_READER_SA` is empty: it is
+checked before auth so auth cannot fall back to direct workload identity),
+`manifest-unreadable` (the run manifest is missing or malformed),
+`no-in-scope-objects` (a valid manifest with nothing to restore),
+`listing-failed` (the planner could not trust a listing), `plan-refused` (a
+plan was built and refuses entries; it is shown in the issue) and
+`plan-failed` (anything else). `DATA_AUTO_RESTORE=off` skips it. First
+live proof is the staging drill (#2492).
 
 | `DATA_AUTO_RESTORE` (repository variable) | What happens on a failed smoke   |
 | ----------------------------------------- | -------------------------------- |

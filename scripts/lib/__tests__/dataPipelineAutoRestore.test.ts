@@ -160,21 +160,118 @@ describe('data-auto-restore-decide: token-free, files the issue (#2537)', () => 
     expect(cond).not.toMatch(/always\(\)/)
   })
 
-  it('holds the least scope that files an issue: contents read, issues write, no id-token', () => {
+  it('holds the least scope that files an issue and mints the reader token: contents read, issues write, id-token write (#2858)', () => {
     expect(decideJob!.permissions).toEqual({
       contents: 'read',
       issues: 'write',
+      'id-token': 'write',
     })
   })
 
-  it('mints no token and makes no GCP call: no auth step, no secrets, no gcloud, no bucket', () => {
-    const all = JSON.stringify(decideJob)
-    expect(all).not.toMatch(/google-github-actions/)
-    expect(all).not.toMatch(/secrets\./)
-    expect(all).not.toMatch(/gcloud|gsutil|setup-gcloud/)
-    expect(all).not.toMatch(/plan-data-restore\.ts|list-restore-candidates/)
-    expect(all).not.toMatch(/GCS_BUCKET|PROD_BUCKET/)
+  it('has no environment: the reader binding admits only the main-branch subject (#2858)', () => {
+    // A job with `environment:` gets a different OIDC subject, which the
+    // reader service account's workload identity binding refuses.
     expect(decideJob!.environment).toBeUndefined()
+  })
+
+  it('authenticates as the read-only data reader and never as the promote identity (#2858)', () => {
+    const auth = dSteps.find(s =>
+      (s.uses ?? '').startsWith('google-github-actions/auth@')
+    )
+    expect(auth).toBeDefined()
+    expect(auth!.with?.['service_account']).toBe(
+      '${{ vars.GCP_DATA_READER_SA }}'
+    )
+    expect(auth!.with?.['workload_identity_provider']).toBe(
+      '${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}'
+    )
+    const all = JSON.stringify(decideJob)
+    // no promote service account, as a secret or a variable
+    expect(all).not.toMatch(/GCP_SERVICE_ACCOUNT/)
+    // the only secret is the shared provider; no new secret
+    const secrets = new Set([...all.matchAll(/secrets\.(\w+)/g)].map(m => m[1]))
+    expect([...secrets]).toEqual(['GCP_WORKLOAD_IDENTITY_PROVIDER'])
+  })
+
+  it('authenticates only on refs/heads/main, where the binding admits it (#2858)', () => {
+    const auth = dSteps.find(s =>
+      (s.uses ?? '').startsWith('google-github-actions/auth@')
+    )!
+    expect(topLevelConjuncts(auth.if ?? '')).toContain(
+      "github.ref == 'refs/heads/main'"
+    )
+    // a failed auth must not fail the job: the issue is still filed
+    expect(auth['continue-on-error']).toBe(true)
+  })
+
+  it('enumerates the plan with the one planner, read-only, after auth and before the issue is filed (#2858)', () => {
+    const i = (re: RegExp) => dSteps.findIndex(s => re.test(s.run ?? ''))
+    const authIdx = dSteps.findIndex(s =>
+      (s.uses ?? '').startsWith('google-github-actions/auth@')
+    )
+    const planIdx = i(/plan-data-restore\.ts/)
+    const issueIdx = i(/gh issue create/)
+    expect(planIdx).toBeGreaterThan(authIdx)
+    expect(issueIdx).toBeGreaterThan(planIdx)
+    const run = dSteps.map(s => s.run ?? '').join('\n')
+    expect(run).not.toMatch(/plan-data-restore\.ts\s+--execute/)
+    expect(run).not.toMatch(/storage\s+(restore|rm|cp|mv)\b/)
+    expect(run).not.toMatch(/invalidate-cdn-cache/)
+    const enumerate = dSteps[planIdx]!
+    expect(enumerate['continue-on-error']).toBe(true)
+    expect(enumerate.if ?? '').toContain("steps.auth.outcome == 'success'")
+  })
+
+  it('never passes --execute, in any position or step (#2858)', () => {
+    expect(JSON.stringify(decideJob)).not.toContain('--execute')
+  })
+
+  it('fails before auth when the reader variable is empty, so auth can never fall back to direct WIF (#2858)', () => {
+    const pre = dById('reader')
+    expect(pre).toBeDefined()
+    expect(pre!.run ?? '').toMatch(/-[nz]\s+"\$\{?READER_SA\}?"/)
+    expect(pre!.env?.['READER_SA']).toBe('${{ vars.GCP_DATA_READER_SA }}')
+    expect(pre!['continue-on-error']).toBe(true)
+    expect(dSteps.findIndex(s => s.id === 'reader')).toBeLessThan(
+      dSteps.findIndex(s => s.id === 'auth')
+    )
+    expect(dById('auth')!.if ?? '').toContain(
+      "steps.reader.outcome == 'success'"
+    )
+    expect(dById('intent')!.env?.['ENUM_PRECHECK_OUTCOME']).toBe(
+      '${{ steps.reader.outcome }}'
+    )
+  })
+
+  it('classifies a planner failure through the tested CLI, not a hard-coded label (#2858)', () => {
+    const run = dById('enumerate')!.run ?? ''
+    expect(run).toMatch(/data-auto-restore\.ts\s+plan-failure/)
+    expect(run).not.toMatch(/\|\|\s*fail\s+plan-refused/)
+  })
+
+  it('has no prod write: no write-capable gcloud verb anywhere in the job (#2858)', () => {
+    for (const s of dSteps) {
+      expect(prodWriteReasons(s.run ?? '', s.env ?? {}), s.name).toEqual([])
+    }
+  })
+
+  it('puts the enumeration, or the failure class, in the issue body through the tested CLI (#2858)', () => {
+    const intent = dById('intent')!
+    expect(JSON.stringify(intent.env)).toMatch(/steps\.auth\.outcome/)
+    expect(JSON.stringify(intent.env)).toMatch(/ENUM_PLAN_FILE/)
+    // auth runs before the intent step so its outcome is known
+    expect(dSteps.findIndex(s => s.id === 'auth')).toBeLessThan(
+      dSteps.findIndex(s => s.id === 'intent')
+    )
+  })
+
+  it('attaches the full plan as an artifact, since the body is truncated (#2858)', () => {
+    const upload = dSteps.find(s =>
+      (s.uses ?? '').startsWith('actions/upload-artifact@')
+    )
+    expect(upload).toBeDefined()
+    expect(upload!.with?.['name']).toBe('data-restore-plan-dry-run')
+    expect(upload!.if ?? '').toContain('!cancelled()')
   })
 
   it('has no prod-writing step the skip_promotion guard would have to find', () => {
@@ -307,27 +404,26 @@ describe('data-auto-restore-execute: the only job that mints the write token (#2
     ])
   })
 
-  it('is the only restore job with an auth step or a secret', () => {
+  it('is the only restore job that references the promote service account (#2858)', () => {
     expect(restoreJobs.map(([n]) => n).sort()).toEqual([
       'data-auto-restore-decide',
       'data-auto-restore-execute',
     ])
     for (const [name, j] of restoreJobs) {
-      const has = /google-github-actions\/auth@|secrets\./.test(
-        JSON.stringify(j)
-      )
+      const has = /GCP_SERVICE_ACCOUNT/.test(JSON.stringify(j))
       expect(has, name).toBe(name === 'data-auto-restore-execute')
     }
   })
 
-  it('does the listing, planning, restore, purge and recheck, and nothing else touches them', () => {
+  it('does the restore, purge and recheck; the decide job only lists and plans (#2858)', () => {
     for (const [name, j] of restoreJobs) {
       const body = (j.steps ?? []).map(s => s.run ?? '').join('\n')
-      const touches =
-        /plan-data-restore\.ts|invalidate-cdn-cache|list-restore-candidates/.test(
-          body
-        )
-      expect(touches, name).toBe(name === 'data-auto-restore-execute')
+      expect(/invalidate-cdn-cache/.test(body), name).toBe(
+        name === 'data-auto-restore-execute'
+      )
+      expect(/plan-data-restore\.ts\s+--execute/.test(body), name).toBe(
+        name === 'data-auto-restore-execute'
+      )
     }
   })
 
@@ -498,12 +594,9 @@ describe('order and the refused path', () => {
     expect(run).not.toMatch(/gh label create/)
   })
 
-  it('the decide job posts no object list: only the manifest path and the manual plan command', () => {
+  it('the intent step stays a pure formatter: it plans and lists nothing itself (#2858)', () => {
     const intent = dById('intent')
-    expect(intent?.run ?? '').not.toMatch(/plan-data-restore/)
-    expect(dSteps.map(s => s.run ?? '').join('\n')).not.toMatch(
-      /--paths|\.jsonl/
-    )
+    expect(intent?.run ?? '').not.toMatch(/plan-data-restore|gcloud/)
   })
 })
 

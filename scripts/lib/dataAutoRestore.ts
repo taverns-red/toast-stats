@@ -188,6 +188,23 @@ const LIST_RESTORES = 40
 const LIST_DELETES = 100
 const LIST_REFUSED = 100
 
+/**
+ * A markdown code span that a name cannot break out of: the fence is one
+ * backtick longer than the longest backtick run in the text (padded with a
+ * space when the text touches a backtick).
+ */
+export function codeSpan(text: string): string {
+  const runs = text.match(/`+/g) ?? []
+  const longest = runs.reduce((m, r) => Math.max(m, r.length), 0)
+  if (longest === 0) return `\`${text}\``
+  const fence = '`'.repeat(longest + 1)
+  return `${fence} ${text} ${fence}`
+}
+
+// A name in a table cell: a pipe would end the cell even inside a code span.
+const nameCell = (name: string): string =>
+  codeSpan(name.replace(/[\\|]/g, '\\$&'))
+
 const cell = (s: string): string =>
   s
     .replace(/\\/g, '\\\\')
@@ -200,10 +217,10 @@ function table(entries: PlanEntry[], cap: number, restore: boolean): string[] {
   const rows = restore
     ? shown.map(
         e =>
-          `| \`${e.name}\` | ${e.generation ?? ''} | ${e.liveGeneration} | ${cell(e.reason)} |`
+          `| ${nameCell(e.name)} | ${e.generation ?? ''} | ${e.liveGeneration} | ${cell(e.reason)} |`
       )
     : shown.map(
-        e => `| \`${e.name}\` | ${e.liveGeneration} | ${cell(e.reason)} |`
+        e => `| ${nameCell(e.name)} | ${e.liveGeneration} | ${cell(e.reason)} |`
       )
   const head = restore
     ? [
@@ -216,6 +233,66 @@ function table(entries: PlanEntry[], cap: number, restore: boolean): string[] {
       ? [``, `…and ${entries.length - cap} more (full plan in the artifact).`]
       : []
   return [...head, ...rows, ...more]
+}
+
+interface ListCaps {
+  restores: number
+  deletes: number
+  refused: number
+}
+const LIST_CAPS: ListCaps = {
+  restores: LIST_RESTORES,
+  deletes: LIST_DELETES,
+  refused: LIST_REFUSED,
+}
+
+/**
+ * The enumerated plan as issue lines: the counts, then the refused, removed
+ * and restored objects, each list capped (the full plan is an artifact).
+ */
+function planSectionLines(
+  plan: RestorePlan,
+  artifact: string,
+  caps: ListCaps
+): string[] {
+  const L: string[] = []
+  const by = (a: PlanEntry['action']) =>
+    plan.entries.filter(e => e.action === a)
+  L.push(
+    '## Restore plan',
+    '',
+    `Window: ${plan.since} to ${plan.until}. Bucket: \`${plan.bucket}\`.`,
+    '',
+    `${plan.entries.length} object(s) from the run manifest: ${by('restore').length} to restore, ${by('delete').length} to delete (created by the run), ${by('noop').length} untouched, ${by('refuse').length} refused.`,
+    '',
+    `The full plan is attached to the run as an artifact (\`${artifact}\`).`,
+    ''
+  )
+  if (by('refuse').length > 0) {
+    L.push(
+      '### Refused (nothing was executed)',
+      '',
+      ...table(by('refuse'), caps.refused, false),
+      ''
+    )
+  }
+  if (by('delete').length > 0) {
+    L.push('### Objects the run created (removed)', '')
+    L.push(...table(by('delete'), caps.deletes, false), '')
+  }
+  if (by('restore').length > 0) {
+    const entry = by('restore').filter(
+      e => e.name === 'v1/latest.json' || e.name === 'v1/dates.json'
+    )
+    const rest = by('restore').filter(e => !entry.includes(e))
+    L.push(
+      '### Objects to restore',
+      '',
+      ...table([...entry, ...rest], caps.restores, true),
+      ''
+    )
+  }
+  return L
 }
 
 export function buildIssueBody(ctx: IssueContext): string {
@@ -257,42 +334,7 @@ export function buildIssueBody(ctx: IssueContext): string {
     )
     return L.join('\n') + '\n'
   }
-  const by = (a: PlanEntry['action']) =>
-    plan.entries.filter(e => e.action === a)
-  L.push(
-    '## Restore plan',
-    '',
-    `Window: ${plan.since} to ${plan.until}. Bucket: \`${plan.bucket}\`.`,
-    '',
-    `${plan.entries.length} object(s) from the run manifest: ${by('restore').length} to restore, ${by('delete').length} to delete (created by the run), ${by('noop').length} untouched, ${by('refuse').length} refused.`,
-    '',
-    'The full plan is attached to the run as an artifact (`data-restore-plan`).',
-    ''
-  )
-  if (by('refuse').length > 0) {
-    L.push(
-      '### Refused (nothing was executed)',
-      '',
-      ...table(by('refuse'), LIST_REFUSED, false),
-      ''
-    )
-  }
-  if (by('delete').length > 0) {
-    L.push('### Objects the run created (removed)', '')
-    L.push(...table(by('delete'), LIST_DELETES, false), '')
-  }
-  if (by('restore').length > 0) {
-    const entry = by('restore').filter(
-      e => e.name === 'v1/latest.json' || e.name === 'v1/dates.json'
-    )
-    const rest = by('restore').filter(e => !entry.includes(e))
-    L.push(
-      '### Objects to restore',
-      '',
-      ...table([...entry, ...rest], LIST_RESTORES, true),
-      ''
-    )
-  }
+  L.push(...planSectionLines(plan, 'data-restore-plan', LIST_CAPS))
   L.push(
     '## Next',
     '',
@@ -381,8 +423,8 @@ export interface IntentInput {
 }
 
 /**
- * The token-free decision, made before any plan exists (the decide job has no
- * GCP identity). It says only whether the execute job may start; the execute
+ * The decision made from the verdict and the variable alone, before any plan
+ * exists (the decide job never uses a write identity). It says only whether the execute job may start; the execute
  * job re-plans and refuses on anything unclean. Fails closed: `execute` needs
  * unhealthy data, an eligible verdict and the exact word `execute`.
  */
@@ -438,15 +480,86 @@ export interface DecisionIssueContext {
   prodBucket: string
   promoteStarted: string
   windowEnd: string
+  /** What the decide job's read-only enumeration found (#2858); absent = none. */
+  enumeration?: Enumeration
+}
+
+/** The failure classes the issue may name; anything else collapses (#2858). */
+const ENUM_ERROR_CLASSES = [
+  'auth-failed',
+  'manifest-unreadable',
+  'no-in-scope-objects',
+  'listing-failed',
+  'plan-refused',
+  'plan-failed',
+] as const
+
+export type Enumeration =
+  | { kind: 'plan'; plan: RestorePlan }
+  | { kind: 'failed'; errorClass: string }
+  | { kind: 'skipped' }
+
+/**
+ * Turns the decide job's step outcomes into what the issue says. A plan that
+ * loaded is always shown (a refused plan exits non-zero but carries its
+ * refusals). A failure is named by a fixed class only: GCP error text can
+ * carry service account emails and project paths, so it stays in the job log.
+ */
+export function resolveEnumeration(i: {
+  /** The reader-variable precheck (#2858); failure means the variable is empty. */
+  precheckOutcome?: string
+  authOutcome: string
+  enumOutcome: string
+  errorClass: string
+  plan: RestorePlan | null
+}): Enumeration {
+  if (i.plan !== null) return { kind: 'plan', plan: i.plan }
+  if (i.precheckOutcome === 'failure' || i.authOutcome === 'failure') {
+    return { kind: 'failed', errorClass: 'auth-failed' }
+  }
+  if (i.authOutcome !== 'success' || i.enumOutcome === 'skipped') {
+    return { kind: 'skipped' }
+  }
+  const known = (ENUM_ERROR_CLASSES as readonly string[]).includes(i.errorClass)
+  return {
+    kind: 'failed',
+    errorClass: known ? i.errorClass : 'plan-failed',
+  }
 }
 
 /**
- * The data-rollback issue the token-free decide job files. It names the run,
- * the verdict and the manifest, and gives the exact command to plan by hand.
- * It lists no objects: enumerating them needs a read of prod's soft-deleted
- * copies, which only the execute job's identity can do.
+ * Why plan-data-restore.ts exited non-zero, as one of the fixed classes. A
+ * plan file means the planner finished and refused entries; without one, a
+ * stderr that blames a listing is a listing failure, anything else a plain
+ * failure. Only this class reaches the issue, never the stderr text.
+ */
+export function classifyPlanFailure(i: {
+  stderr: string
+  planWritten: boolean
+}): 'plan-refused' | 'listing-failed' | 'plan-failed' {
+  if (i.planWritten) return 'plan-refused'
+  if (/\blisting\b/.test(i.stderr)) return 'listing-failed'
+  return 'plan-failed'
+}
+
+// An issue body is capped at 65,536 characters; stay well under it.
+const DECISION_BODY_MAX = 60000
+const SMALL_CAPS: ListCaps = { restores: 10, deletes: 10, refused: 20 }
+
+/**
+ * The data-rollback issue the decide job files. It names the run, the verdict
+ * and the manifest, gives the exact command to plan by hand, and, when the
+ * read-only enumeration worked (#2858), the planned objects (capped; the full
+ * plan is an artifact). A failed enumeration is named by class only.
  */
 export function buildDecisionIssueBody(c: DecisionIssueContext): string {
+  const full = decisionIssueBody(c, LIST_CAPS)
+  return full.length <= DECISION_BODY_MAX
+    ? full
+    : decisionIssueBody(c, SMALL_CAPS)
+}
+
+function decisionIssueBody(c: DecisionIssueContext, caps: ListCaps): string {
   const manifest = `gs://${c.stagingBucket}/runs/${c.runId}/written.jsonl`
   const since = c.promoteStarted || '<promotion start>'
   const until = c.windowEnd || '<smoke end>'
@@ -475,11 +588,36 @@ export function buildDecisionIssueBody(c: DecisionIssueContext): string {
       `npx tsx scripts/plan-data-restore.ts --live out/live.json --soft-deleted out/soft.json --live-errors out/live.err --soft-errors out/soft.err --since ${since} --until ${until} --paths paths.txt --out plan.json`,
       '```',
       '',
+      ...enumerationLines(c.enumeration, caps),
       '## Next',
       '',
       'See docs/runbooks/data-restore.md: stop the next publish, fix the cause, and fix staging if a date was removed (#2540). `DATA_AUTO_RESTORE=execute` is what lets the execute job run; unset, nothing is restored.',
     ].join('\n') + '\n'
   )
+}
+
+function enumerationLines(
+  e: Enumeration | undefined,
+  caps: ListCaps
+): string[] {
+  if (e === undefined) return []
+  if (e.kind === 'plan') {
+    return [
+      ...planSectionLines(e.plan, 'data-restore-plan-dry-run', caps),
+      'Enumerated read-only by the decide job; nothing was written.',
+      '',
+    ]
+  }
+  if (e.kind === 'failed') {
+    return [
+      `enumeration failed: ${e.errorClass}. Plan it by hand with the commands above; the job log has the detail.`,
+      '',
+    ]
+  }
+  return [
+    'Plan enumeration skipped (it runs on main with the reader identity, and not when DATA_AUTO_RESTORE=off). Plan it by hand with the commands above.',
+    '',
+  ]
 }
 
 export function buildDecisionTitle(action: RestoreAction): string {

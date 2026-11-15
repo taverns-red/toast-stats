@@ -123,6 +123,83 @@ describe('paths', () => {
   })
 })
 
+describe('paths: a malformed manifest is not an empty selection (#2858)', () => {
+  it('exits 3 for a manifest line that is not JSON', () => {
+    const manifest = file('bad.jsonl', 'not json\n')
+    const r = run([
+      'paths',
+      '--manifest',
+      manifest,
+      '--out',
+      path.join(tmp, 'p'),
+    ])
+    expect(r.status).toBe(3)
+  })
+
+  it('exits 3 for a line with no path', () => {
+    const manifest = file('nopath.jsonl', '{"x":1}\n')
+    const r = run([
+      'paths',
+      '--manifest',
+      manifest,
+      '--out',
+      path.join(tmp, 'p'),
+    ])
+    expect(r.status).toBe(3)
+  })
+})
+
+describe('plan-failure: classify a failed planner run (#2858)', () => {
+  const out = () => path.join(tmp, 'error-class')
+  it('a written plan is plan-refused', () => {
+    const err = file('plan.err', '1 object(s) refused\n')
+    const plan = file('plan.json', planOf([entry('v1/a.json', 'refuse')]))
+    const r = run([
+      'plan-failure',
+      '--stderr',
+      err,
+      '--plan',
+      plan,
+      '--out',
+      out(),
+    ])
+    expect(r.status).toBe(0)
+    expect(fs.readFileSync(out(), 'utf-8').trim()).toBe('plan-refused')
+  })
+
+  it('a listing error with no plan is listing-failed', () => {
+    const err = file(
+      'plan.err',
+      'refused: the live listing reported an error other than "matched no objects": x\n'
+    )
+    const r = run([
+      'plan-failure',
+      '--stderr',
+      err,
+      '--plan',
+      path.join(tmp, 'absent.json'),
+      '--out',
+      out(),
+    ])
+    expect(r.status).toBe(0)
+    expect(fs.readFileSync(out(), 'utf-8').trim()).toBe('listing-failed')
+  })
+
+  it('anything else is plan-failed', () => {
+    const err = file('plan.err', 'error: boom\n')
+    const r = run([
+      'plan-failure',
+      '--stderr',
+      err,
+      '--plan',
+      path.join(tmp, 'absent.json'),
+      '--out',
+      out(),
+    ])
+    expect(fs.readFileSync(out(), 'utf-8').trim()).toBe('plan-failed')
+  })
+})
+
 describe('decide', () => {
   it('a refused plan in execute mode: no execute, issue filed', () => {
     const plan = file(
