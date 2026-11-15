@@ -170,9 +170,7 @@ jobs:
         run: npm run build:frontend
         env:
           # Preview channels read the staging bucket through the staging
-          # CDN (#1995), compressing like prod (#1900). Rollback: point
-          # back at https://storage.googleapis.com/toast-stats-data-staging
-          # (still allowed in the CSP connect-src).
+          # CDN (#1995), compressing like prod (#1900).
           VITE_CDN_BASE_URL: https://cdn-staging.taverns.red
 
       # The exact bytes the channel gets (#2544): the smoke shards serve them
