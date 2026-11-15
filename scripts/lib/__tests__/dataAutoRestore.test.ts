@@ -14,6 +14,8 @@ import {
   buildIssueBody,
   buildDecisionIssueBody,
   buildDecisionTitle,
+  classifyPlanFailure,
+  codeSpan,
   buildIssueTitle,
   classifyVerdict,
   decideIntent,
@@ -446,6 +448,104 @@ describe('resolveEnumeration: what the decide job learned about the plan (#2858)
         plan: null,
       })
     ).toEqual({ kind: 'skipped' })
+  })
+})
+
+describe('classifyPlanFailure: why the planner exited non-zero (#2858)', () => {
+  it('a plan that was written is a genuine refusal', () => {
+    expect(
+      classifyPlanFailure({
+        stderr: '1 object(s) refused: resolve by hand\n',
+        planWritten: true,
+      })
+    ).toBe('plan-refused')
+  })
+
+  it('a listing error is a listing failure, not a refusal', () => {
+    expect(
+      classifyPlanFailure({
+        stderr:
+          'refused: the soft-deleted listing reported an error other than "matched no objects": ERROR: x; the listing may be incomplete, re-run it\n',
+        planWritten: false,
+      })
+    ).toBe('listing-failed')
+    expect(
+      classifyPlanFailure({
+        stderr: 'refused: listing is not a JSON array\n',
+        planWritten: false,
+      })
+    ).toBe('listing-failed')
+  })
+
+  it('anything else without a plan is a plain failure', () => {
+    expect(
+      classifyPlanFailure({
+        stderr: 'error: boom\n',
+        planWritten: false,
+      })
+    ).toBe('plan-failed')
+    expect(classifyPlanFailure({ stderr: '', planWritten: false })).toBe(
+      'plan-failed'
+    )
+  })
+})
+
+describe('resolveEnumeration: an empty reader variable (#2858)', () => {
+  it('a failed precheck is auth-failed even though auth was skipped', () => {
+    expect(
+      resolveEnumeration({
+        authOutcome: 'skipped',
+        precheckOutcome: 'failure',
+        enumOutcome: 'skipped',
+        errorClass: '',
+        plan: null,
+      })
+    ).toEqual({ kind: 'failed', errorClass: 'auth-failed' })
+  })
+})
+
+describe('codeSpan: names with backticks render safely (#2858)', () => {
+  it('uses a longer fence than any backtick run in the name', () => {
+    expect(codeSpan('plain.json')).toBe('`plain.json`')
+    expect(codeSpan('a`b')).toBe('`` a`b ``')
+    expect(codeSpan('a``b')).toBe('``` a``b ```')
+  })
+
+  it('the decision issue table does not let a name break out of its span', () => {
+    const plan = planOf([entry('v1/x`|y.json', 'restore')])
+    const body = buildDecisionIssueBody({
+      mode: 'dry-run',
+      decision: decideIntent({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'dry-run',
+      }),
+      runId: '1',
+      runUrl: 'u',
+      failed: 'f',
+      stagingBucket: 's',
+      prodBucket: 'p',
+      promoteStarted: '',
+      windowEnd: '',
+      enumeration: { kind: 'plan', plan },
+    })
+    expect(body).toContain('`` v1/x`|y.json ``')
+  })
+
+  it('the execute report does the same', () => {
+    const body = buildIssueBody({
+      mode: 'dry-run',
+      decision: decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'dry-run',
+        plan: planOf([entry('v1/x`y.json', 'restore')]),
+      }),
+      plan: planOf([entry('v1/x`y.json', 'restore')]),
+      runUrl: 'u',
+      failed: 'f',
+    })
+    expect(body).toContain('`` v1/x`y.json ``')
   })
 })
 

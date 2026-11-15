@@ -222,6 +222,33 @@ describe('data-auto-restore-decide: token-free, files the issue (#2537)', () => 
     expect(enumerate.if ?? '').toContain("steps.auth.outcome == 'success'")
   })
 
+  it('never passes --execute, in any position or step (#2858)', () => {
+    expect(JSON.stringify(decideJob)).not.toContain('--execute')
+  })
+
+  it('fails before auth when the reader variable is empty, so auth can never fall back to direct WIF (#2858)', () => {
+    const pre = dById('reader')
+    expect(pre).toBeDefined()
+    expect(pre!.run ?? '').toMatch(/-n\s+"\$\{?READER_SA\}?"/)
+    expect(pre!.env?.['READER_SA']).toBe('${{ vars.GCP_DATA_READER_SA }}')
+    expect(pre!['continue-on-error']).toBe(true)
+    expect(dSteps.findIndex(s => s.id === 'reader')).toBeLessThan(
+      dSteps.findIndex(s => s.id === 'auth')
+    )
+    expect(dById('auth')!.if ?? '').toContain(
+      "steps.reader.outcome == 'success'"
+    )
+    expect(dById('intent')!.env?.['ENUM_PRECHECK_OUTCOME']).toBe(
+      '${{ steps.reader.outcome }}'
+    )
+  })
+
+  it('classifies a planner failure through the tested CLI, not a hard-coded label (#2858)', () => {
+    const run = dById('enumerate')!.run ?? ''
+    expect(run).toMatch(/data-auto-restore\.ts\s+plan-failure/)
+    expect(run).not.toMatch(/\|\|\s*fail\s+plan-refused/)
+  })
+
   it('has no prod write: no write-capable gcloud verb anywhere in the job (#2858)', () => {
     for (const s of dSteps) {
       expect(prodWriteReasons(s.run ?? '', s.env ?? {}), s.name).toEqual([])
