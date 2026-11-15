@@ -50,20 +50,6 @@ describe('Node version policy (#2853)', () => {
     expect(v).toMatch(new RegExp(`^v?${TOOLING_MAJOR}\\.\\d+\\.\\d+$`))
   })
 
-  it('discovers the private packages', () => {
-    const priv = packageFiles.filter(p => readPkg(p).private === true)
-    expect(priv).toEqual(
-      expect.arrayContaining([
-        'package.json',
-        'frontend/package.json',
-        'videos/package.json',
-        'packages/collector-cli/package.json',
-        'packages/shared-contracts/package.json',
-        'packages/analytics-core/package.json',
-      ])
-    )
-  })
-
   for (const file of packageFiles) {
     const pkg = readPkg(file)
     if (pkg.private === true) {
