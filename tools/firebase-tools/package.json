@@ -5,5 +5,8 @@
   "description": "Pinned Firebase CLI for CI deploys (#2551). Not an npm workspace: a root `npm ci` never installs it.",
   "dependencies": {
     "firebase-tools": "15.36.0"
+  },
+  "overrides": {
+    "re2": "1.27.1"
   }
 }

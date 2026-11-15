@@ -1,0 +1,40 @@
+# Trivy acceptances (#2551). Every entry is scoped to the pinned Firebase CLI
+# tree and expires 30 days after the decision of 2026-11-14. Do not widen the
+# paths or extend an expiry without a new decision; a repo-wide ignore is not
+# allowed. Each one is a transitive dependency of firebase-tools 15.36.0 whose
+# patched release lies outside the semver range its dependent declares, so an
+# `overrides` entry would force an untested major. The CLI runs only in CI
+# deploy and preview jobs, never serves user traffic.
+vulnerabilities:
+  - id: CVE-2026-41907
+    paths:
+      - 'tools/firebase-tools/**'
+    statement: >-
+      uuid 9.0.1 via gaxios (declares ^9.0.1); fixed in 11.1.1, a major
+      outside the range. Buffer-bounds bug in v3/v5/v6 with a caller buffer.
+    expired_at: 2026-12-14
+  - id: CVE-2026-54285
+    paths:
+      - 'tools/firebase-tools/**'
+    statement: >-
+      @opentelemetry/core 1.30.1 via @google-cloud/pubsub (declares
+      ^1.30.1); fixed in 2.8.0, a major outside the range. Baggage
+      propagation memory use; the deploy CLI receives no remote trace
+      headers.
+    expired_at: 2026-12-14
+  - id: CVE-2026-118773
+    paths:
+      - 'tools/firebase-tools/**'
+    statement: >-
+      glob 10.5.0 via firebase-tools, archiver-utils, exegesis and rimraf
+      (declare ^10); fixed in 14.0.2, a major outside the range. AbortSignal
+      bypass; the CLI globs local project files only.
+    expired_at: 2026-12-14
+  - id: CVE-2026-118764
+    paths:
+      - 'tools/firebase-tools/**'
+    statement: >-
+      minimatch 9.0.9 via glob 10 (declares ^9.0.4); fixed in 11.0.1, a
+      major outside the range. Pattern-amplification DoS; patterns come from
+      the repo's own firebase.json.
+    expired_at: 2026-12-14
