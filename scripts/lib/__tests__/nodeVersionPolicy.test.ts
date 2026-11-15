@@ -37,6 +37,7 @@ function floorOf(range: string | undefined): number {
 const packageFiles = [
   'package.json',
   'frontend/package.json',
+  'videos/package.json',
   ...fs
     .readdirSync(path.join(ROOT, 'packages'), { withFileTypes: true })
     .filter(d => d.isDirectory())
@@ -56,6 +57,7 @@ describe('Node version policy (#2853)', () => {
       expect.arrayContaining([
         'package.json',
         'frontend/package.json',
+        'videos/package.json',
         'packages/collector-cli/package.json',
         'packages/shared-contracts/package.json',
         'packages/analytics-core/package.json',
