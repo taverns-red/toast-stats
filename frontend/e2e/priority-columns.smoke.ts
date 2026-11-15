@@ -1,5 +1,5 @@
 import { test, expect, type Page } from './fixtures/test'
-import { fixtureFetch } from './helpers/cdnFixtures'
+import { fixtureFetch, relayCdnRead } from './helpers/cdnFixtures'
 
 /* Priority-column comparison tables (#1834, mobile epic #1827 Phase 1,
  * review §5.2).
@@ -119,13 +119,7 @@ const prep = async (page: Page, theme: string, width: number) => {
   // through Playwright with a permissive CORS header. Deployed previews
   // are on the CDN's allow-list and skip this.
   if (/localhost|127\.0\.0\.1/.test(process.env['BASE_URL'] ?? ''))
-    await page.route('https://cdn.taverns.red/**', async route => {
-      const res = await route.fetch()
-      await route.fulfill({
-        response: res,
-        headers: { ...res.headers(), 'access-control-allow-origin': '*' },
-      })
-    })
+    await page.route('https://cdn.taverns.red/**', route => relayCdnRead(route))
   await page.emulateMedia({ colorScheme: theme as 'light' | 'dark' })
   await page.setViewportSize({ width, height: width < 768 ? 812 : 900 })
 }

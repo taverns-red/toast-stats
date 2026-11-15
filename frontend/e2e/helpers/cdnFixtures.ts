@@ -7,7 +7,8 @@
  * answer from that directory instead.
  *
  * This is a CONTEXT route, so a spec's own `page.route` still wins, and it
- * covers popups and both engines. It never forwards a cdn-staging request: a
+ * covers popups and both engines. It answers both CDN origins (staging, and
+ * prod for the how-to videos, #2570) and never forwards a request to either: a
  * path with no fixture is aborted and listed, and the test fails at teardown
  * (describeFixtureProblems), so a gap cannot quietly keep the cost.
  *
@@ -25,6 +26,13 @@ import type {
 } from '@playwright/test'
 
 export const CDN_STAGING_ORIGIN = 'https://cdn-staging.taverns.red'
+/** Prod. The preview build reads it for the how-to videos only (#2570). */
+export const CDN_PROD_ORIGIN = 'https://cdn.taverns.red'
+/** Every CDN origin a shard may meet: all answered from the fixture. */
+export const CDN_ORIGINS: readonly string[] = [
+  CDN_STAGING_ORIGIN,
+  CDN_PROD_ORIGIN,
+]
 
 /** One recorded object: what the CDN answered. */
 export interface FixtureIndexEntry {
@@ -48,6 +56,7 @@ export interface CdnFixtureTally {
 export interface InstallOptions {
   /** The fixture directory (an `_index.json` plus the files it names). */
   dir?: string
+  /** One origin to answer; default is every CDN origin (CDN_ORIGINS). */
   origin?: string
   /** Record mode: pass through and append each path to this file. */
   recordFile?: string
@@ -84,6 +93,18 @@ export function fixturePath(
   }
   if (path === '' || path.split('/').some(part => part === '..')) return null
   return path
+}
+
+/** The object path a URL names under any CDN origin; null for none. */
+export function cdnPath(
+  url: string,
+  origins: readonly string[] = CDN_ORIGINS
+): string | null {
+  for (const origin of origins) {
+    const path = fixturePath(url, origin)
+    if (path) return path
+  }
+  return null
 }
 
 function readIndex(dir: string): FixtureIndex {
@@ -132,7 +153,7 @@ export function describeFixtureProblems(tally: CdnFixtureTally): string | null {
   }
   if (tally.leaks.length > 0) {
     lines.push(
-      `${tally.leaks.length} request(s) reached cdn-staging despite the fixture: ${tally.leaks.join(', ')}.`
+      `${tally.leaks.length} request(s) reached cdn-staging or cdn.taverns.red despite the fixture: ${tally.leaks.join(', ')}.`
     )
   }
   return lines.length > 0 ? lines.join('\n') : null
@@ -146,7 +167,7 @@ export async function installCdnFixtures(
   context: BrowserContext,
   options: InstallOptions
 ): Promise<CdnFixtureTally> {
-  const origin = options.origin ?? CDN_STAGING_ORIGIN
+  const origins = options.origin ? [options.origin] : CDN_ORIGINS
   const tally: CdnFixtureTally = {
     hits: [],
     misses: [],
@@ -161,10 +182,10 @@ export async function installCdnFixtures(
   }
 
   await context.route(
-    url => url.origin === origin,
+    url => origins.includes(url.origin),
     async (route: Route) => {
       const request = route.request()
-      const path = fixturePath(request.url(), origin)
+      const path = cdnPath(request.url(), origins)
 
       if (record) {
         if (path && !tally.recorded.includes(path)) {
@@ -228,7 +249,7 @@ export async function installCdnFixtures(
     const inFlight: Promise<void>[] = []
     pending.set(tally, inFlight)
     context.on('response', (res: Response) => {
-      const path = fixturePath(res.url(), origin)
+      const path = cdnPath(res.url(), origins)
       if (!path) return
       inFlight.push(
         res.serverAddr().then(
@@ -275,7 +296,7 @@ export async function fixtureGet(
   const dir = env['SMOKE_FIXTURES_DIR']
   if (!dir) return live()
   const root = resolve(dir)
-  const path = fixturePath(url)
+  const path = cdnPath(url)
   const entry = path ? readIndex(root)[path] : undefined
   const file = path ? resolve(root, path) : ''
   if (!path || !entry || !file.startsWith(root + sep)) {
@@ -308,4 +329,27 @@ export async function fixtureFetch(
   env: Record<string, string | undefined> = process.env
 ): Promise<FixtureResponse> {
   return fixtureGet(route.request().url(), () => route.fetch(), env)
+}
+
+/**
+ * The cross-origin relay a spec uses on a local build: a build served from
+ * 127.0.0.1 is not on the CDN's CORS allow-list, so the spec fetched the read
+ * through Playwright and added the header. With the fixture on, the fixture
+ * route already answers with a permissive header, so the request goes to it
+ * (`fallback`) and never to the network (#2570). With it off, this is the
+ * relay as before.
+ */
+export async function relayCdnRead(
+  route: Route,
+  env: Record<string, string | undefined> = process.env
+): Promise<void> {
+  if (env['SMOKE_FIXTURES_DIR']) {
+    await route.fallback()
+    return
+  }
+  const res = await route.fetch()
+  await route.fulfill({
+    response: res,
+    headers: { ...res.headers(), 'access-control-allow-origin': '*' },
+  })
 }
