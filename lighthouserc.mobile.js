@@ -168,6 +168,11 @@ function ciConfig(env) {
       url: keys.map(k => base + ROUTES[k]),
       numberOfRuns: 3,
       settings: {
+        // #2849: one fixed transfer protocol (HTTP/2). Firebase Hosting
+        // advertises h3 and Chrome otherwise mixes h2 and h3 per request;
+        // small chunks cost ~3x more over h3, so the byte totals flapped by
+        // several KB with the mix. `--disable-quic` stops Chrome using h3.
+        chromeFlags: '--disable-quic',
         // No `preset`: Lighthouse's default IS the mobile profile. Pinned
         // explicitly so a future default change can't silently move the gate.
         formFactor: 'mobile',

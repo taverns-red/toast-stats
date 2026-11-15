@@ -586,7 +586,9 @@ export async function refreshFixtures(options: {
       if (store(entry.path, body)) {
         index[entry.path] = {
           status: 200,
-          contentType: 'application/octet-stream',
+          contentType: entry.path.endsWith('.mp4')
+            ? 'video/mp4'
+            : 'application/octet-stream',
         }
       }
       return

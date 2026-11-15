@@ -21,6 +21,9 @@ module.exports = {
       url: ['http://localhost:4173/'],
       numberOfRuns: 3,
       settings: {
+        // #2849: one fixed transfer protocol. Chrome otherwise mixes h2 and h3
+        // per request, and the mix moves byte totals by several KB.
+        chromeFlags: '--disable-quic',
         preset: 'desktop',
         onlyCategories: [
           'performance',

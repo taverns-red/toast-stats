@@ -1,4 +1,5 @@
 import { test, expect, type Page } from './fixtures/test'
+import { reportCls } from './helpers/clsReport'
 
 /* The lazy-route fallback must reserve the page, so the footer does not jump
  * (#2633).
@@ -104,6 +105,7 @@ async function measure(
   await page.waitForTimeout(1_500)
 
   const entries = await page.evaluate(() => window.__clsEntries ?? [])
+  reportCls(test.info(), `${path} @${vp.width}px`, entries)
   const total = Number(entries.reduce((a, e) => a + e.value, 0).toFixed(5))
   const footerShifts = entries.filter(e =>
     e.sources.some(s => s.includes('app-shell-footer'))

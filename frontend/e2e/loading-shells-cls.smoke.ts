@@ -1,4 +1,6 @@
 import { test, expect, type Page } from './fixtures/test'
+import { relayCdnRead } from './helpers/cdnFixtures'
+import { reportCls } from './helpers/clsReport'
 
 /* Loading shells must be the loaded box (#2634).
  *
@@ -122,11 +124,7 @@ async function measure(
       await route.fallback()
       return
     }
-    const res = await route.fetch()
-    await route.fulfill({
-      response: res,
-      headers: { ...res.headers(), 'access-control-allow-origin': '*' },
-    })
+    await relayCdnRead(route)
   })
   await page.goto(path, { waitUntil: 'networkidle', timeout: 120_000 })
   await page.waitForFunction(
@@ -138,6 +136,7 @@ async function measure(
   await page.waitForTimeout(2_000)
 
   const entries = await page.evaluate(() => window.__clsEntries ?? [])
+  reportCls(test.info(), `${path} @${vp.width}px`, entries)
   const total = Number(entries.reduce((a, e) => a + e.value, 0).toFixed(5))
   const breakdown = entries
     .filter(e => e.value > 0.0005)
