@@ -252,6 +252,7 @@ jobs:
           # The bucket no longer serves public reads (#2696): send the job's
           # existing gcloud credentials as a bearer token (never printed).
           ACCESS_TOKEN=$(gcloud auth print-access-token)
+          echo "::add-mask::${ACCESS_TOKEN}"
           curl -fsS -o /dev/null -D /tmp/h.txt -H 'Range: bytes=0-16383' -H 'Accept-Encoding: gzip, br' \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             "https://storage.googleapis.com/${GCS_BUCKET}/${OBJ}"
