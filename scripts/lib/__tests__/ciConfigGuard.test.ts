@@ -71,9 +71,13 @@ describe('.nvmrc is the single Node pin (AC4)', () => {
     expect(existsSync(nvmrcPath)).toBe(true)
   })
 
-  // Every engines.node declaration (root + each workspace) must agree with
-  // .nvmrc's major, or a workspace can silently pin a divergent Node.
-  it.each(['package.json', ...WORKSPACE_PKGS])(
+  // Every engines.node declaration (root + each private workspace) must agree
+  // with .nvmrc's major, or a workspace can silently pin a divergent Node.
+  // Published packages are exempt (#2853): `engines` there is what consumers
+  // need, not what tooling runs on, so mcp-server keeps its own floor
+  // (pinned by nodeVersionPolicy.test.ts).
+  const isPrivate = (rel: string): boolean => readJson(rel).private === true
+  it.each(['package.json', ...WORKSPACE_PKGS].filter(isPrivate))(
     '%s engines.node agrees with .nvmrc',
     rel => {
       const major = nvmrcMajor(readFileSync(nvmrcPath, 'utf8'))
