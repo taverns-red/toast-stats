@@ -77,6 +77,13 @@ describe('AreaPerformanceTable visit cells (#2871)', () => {
     expect(text(second)).toContain('0 of 5 visited')
   })
 
+  it('reads as separated phrases for a screen reader (the stacked lines have no punctuation)', () => {
+    render(<AreaPerformanceTable areas={[area(visits(5, 4), visits(2, 4))]} />)
+    const { first, second } = cells()
+    expect(text(first)).toBe('5 of 5 visited, 4 needed, Met')
+    expect(text(second)).toBe('2 of 5 visited, 4 needed, Not met')
+  })
+
   it('never renders a ratio whose denominator is the requirement', () => {
     render(<AreaPerformanceTable areas={[area(visits(5, 4), visits(2, 4))]} />)
     const { first, second } = cells()
