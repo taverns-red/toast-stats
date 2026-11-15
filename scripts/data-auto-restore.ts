@@ -11,9 +11,11 @@
  *   data-auto-restore.ts paths --manifest written.jsonl --out paths.txt
  *       the in-scope object names from the run manifest; exit 1 if none
  *   data-auto-restore.ts intent
- *       (decide job, no GCP) env DATA_AUTO_RESTORE, UNHEALTHY, RESTORE_ELIGIBLE,
+ *       (decide job) env DATA_AUTO_RESTORE, UNHEALTHY, RESTORE_ELIGIBLE,
  *       RESTORE_REASON, RUN_URL, GITHUB_RUN_ID, FAILED, PROMOTE_STARTED,
- *       WINDOW_END -> outputs action, execute, file_issue, title, body_file
+ *       WINDOW_END, and the read-only enumeration (#2858): ENUM_AUTH_OUTCOME,
+ *       ENUM_STEP_OUTCOME, ENUM_PLAN_FILE, ENUM_ERROR_CLASS_FILE
+ *       -> outputs action, execute, file_issue, title, body_file
  *   data-auto-restore.ts decide --plan plan.json (execute job)
  *       env DATA_AUTO_RESTORE, UNHEALTHY -> outputs action, execute, file_issue
  *   data-auto-restore.ts report --plan plan.json
@@ -43,6 +45,7 @@ import {
   decideIntent,
   decideRestore,
   manifestPaths,
+  resolveEnumeration,
   resolveRestoreMode,
 } from './lib/dataAutoRestore.js'
 
@@ -68,6 +71,15 @@ function loadPlan(file: string | undefined): RestorePlan | null {
       `plan unreadable: ${e instanceof Error ? e.message : String(e)}`
     )
     return null
+  }
+}
+
+function readErrorClass(file: string | undefined): string {
+  if (!file || !existsSync(file)) return ''
+  try {
+    return readFileSync(file, 'utf8').trim()
+  } catch {
+    return ''
   }
 }
 
@@ -158,6 +170,14 @@ switch (cmd) {
       prodBucket: PROD_BUCKET,
       promoteStarted: process.env['PROMOTE_STARTED'] ?? '',
       windowEnd: process.env['WINDOW_END'] ?? '',
+      // The read-only enumeration (#2858). Only a fixed error class is read
+      // back: GCP error text stays in the job log.
+      enumeration: resolveEnumeration({
+        authOutcome: process.env['ENUM_AUTH_OUTCOME'] ?? '',
+        enumOutcome: process.env['ENUM_STEP_OUTCOME'] ?? '',
+        errorClass: readErrorClass(process.env['ENUM_ERROR_CLASS_FILE']),
+        plan: loadPlan(process.env['ENUM_PLAN_FILE']),
+      }),
     })
     const file = join(
       process.env['RUNNER_TEMP'] ?? '/tmp',

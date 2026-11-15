@@ -3530,11 +3530,16 @@ jobs:
   #
   # Two jobs, so the job that decides and reports holds no write identity:
   #
-  #   data-auto-restore-decide  (no GCP, contents: read + issues: write)
+  #   data-auto-restore-decide  (the read-only data SA; no write identity)
   #     Reads the data-smoke verdict and the DATA_AUTO_RESTORE variable, files
   #     or refreshes the `data-rollback` issue (run id, verdict, reason, mode,
-  #     the run manifest's path and the exact manual plan command; no object
-  #     list), and outputs `execute` and the issue number.
+  #     the run manifest's path, the exact manual plan command and, since
+  #     #2858, the enumerated plan), and outputs `execute` and the issue
+  #     number. The enumeration runs as the read-only data reader (objectViewer
+  #     on the data buckets, nothing else), on main only: its workload identity
+  #     binding admits only that ref, and the job must keep no `environment:`
+  #     or the OIDC subject changes and the binding refuses it. It never uses
+  #     the promote service account and never writes.
   #
   #   data-auto-restore-execute (the ONLY job that mints the promote SA token)
   #     Runs only when the decision says execute, the failure is a decode or
@@ -3567,9 +3572,11 @@ jobs:
       !cancelled()
       && needs.data-smoke.outputs.unhealthy == 'true'
       && needs.pipeline.outputs.skip_promotion != 'true'
-    # No id-token, no secrets, no cloud auth: this job cannot reach GCP.
+    # id-token only so this job can mint the READ-ONLY reader's token (#2858,
+    # COO-approved scoped exception). No environment: (see the header).
     permissions:
       contents: read
+      id-token: write
       issues: write
     timeout-minutes: 10
     outputs:
@@ -3589,6 +3596,66 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The read-only data reader (#2858). Main only: its binding admits no
+      # other ref. A failure never fails the job; the issue is still filed,
+      # with the manual command and "enumeration failed: auth-failed".
+      - name: Authenticate to GCP as the read-only data reader
+        id: auth
+        if: >-
+          !cancelled()
+          && github.ref == 'refs/heads/main'
+          && vars.DATA_AUTO_RESTORE != 'off'
+        continue-on-error: true
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DATA_READER_SA }}
+
+      - name: Set up Cloud SDK
+        if: ${{ !cancelled() && steps.auth.outcome == 'success' }}
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        if: ${{ !cancelled() && steps.auth.outcome == 'success' }}
+        run: gcloud version
+
+      # READ-ONLY. The same listing and the one planner the execute job uses
+      # (no --execute): lists prod's live and soft-deleted copies of the
+      # objects the run wrote and plans. A failure writes only a fixed error
+      # class for the issue; the GCP error text stays in this log.
+      - name: Enumerate the restore plan (read-only)
+        id: enumerate
+        if: ${{ !cancelled() && steps.auth.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          PROD_BUCKET: ${{ env.GCS_BUCKET_PRODUCTION }}
+          PROMOTE_STARTED: ${{ needs.pipeline.outputs.promote_started }}
+          WINDOW_END: ${{ needs.data-smoke.outputs.window_end }}
+        run: |
+          W="${RUNNER_TEMP}/data-restore-decide"
+          mkdir -p "${W}"
+          fail() { echo "$1" > "${W}/error-class"; exit 1; }
+          gcloud storage cat "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl" > "${W}/written.jsonl" || fail manifest-unreadable
+          npx tsx scripts/data-auto-restore.ts paths --manifest "${W}/written.jsonl" --out "${W}/paths.txt" || fail no-in-scope-objects
+          bash scripts/pipeline/list-restore-candidates.sh "${W}" "${W}/paths.txt" || fail listing-failed
+          npx tsx scripts/plan-data-restore.ts \
+            --live "${W}/live.json" --soft-deleted "${W}/soft.json" \
+            --live-errors "${W}/live.err" --soft-errors "${W}/soft.err" \
+            --since "${PROMOTE_STARTED}" --until "${WINDOW_END}" \
+            --paths "${W}/paths.txt" --out "${W}/plan.json" || fail plan-refused
+
+      - name: Attach the full plan
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: data-restore-plan-dry-run
+          path: |
+            ${{ runner.temp }}/data-restore-decide/plan.json
+            ${{ runner.temp }}/data-restore-decide/paths.txt
+          if-no-files-found: ignore
+
       # The only place the variable is turned into a decision. Fails closed:
       # execute=true only for an unhealthy run, an eligible verdict and the
       # exact word `execute`.
@@ -3604,6 +3671,10 @@ jobs:
           PROMOTE_STARTED: ${{ needs.pipeline.outputs.promote_started }}
           WINDOW_END: ${{ needs.data-smoke.outputs.window_end }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ENUM_AUTH_OUTCOME: ${{ steps.auth.outcome }}
+          ENUM_STEP_OUTCOME: ${{ steps.enumerate.outcome }}
+          ENUM_PLAN_FILE: ${{ runner.temp }}/data-restore-decide/plan.json
+          ENUM_ERROR_CLASS_FILE: ${{ runner.temp }}/data-restore-decide/error-class
 
       # Same pattern as promotion-held and hosting-rollback: one open alert
       # at a time, a later one comments on it. Filed whether or not anything

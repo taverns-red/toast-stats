@@ -96,8 +96,8 @@ describe('setup-gcloud steps (#1720)', () => {
     expect(sites.length).toBeGreaterThanOrEqual(4)
     // One per job; education-ledger-history (#1802) is the fifth,
     // education-rollup (#2028) the sixth, promote-reports (#2144, #1767) the seventh,
-    // og-cards (#2304) the eighth, data-auto-restore-execute (#2537) the ninth (its decide job has no gcloud).
-    expect(sites.filter(s => s.file === 'data-pipeline.yml').length).toBe(9)
+    // og-cards (#2304) the eighth, data-auto-restore-execute (#2537) the ninth, data-auto-restore-decide (#2858, the read-only plan) the tenth.
+    expect(sites.filter(s => s.file === 'data-pipeline.yml').length).toBe(10)
   })
 
   it('pins an exact Cloud SDK version >= 576.0.0 on every step', () => {
