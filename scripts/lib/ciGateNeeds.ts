@@ -54,6 +54,8 @@ export interface HeadCheckRun {
   conclusion: string | null
   id?: number
   started_at?: string | null
+  /** The GitHub App that reported the run (`github-actions` for workflows). */
+  app?: { slug?: string } | null
 }
 
 function isNewer(b: HeadCheckRun, a: HeadCheckRun): boolean {

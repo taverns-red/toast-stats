@@ -80,6 +80,11 @@ describe('ci.yml carries the CI Gate as a final needs: job (#2607)', () => {
       'pull-requests': 'read',
     })
   })
+  // These jobs used to inherit the workflow-level write token (docs-gate ran
+  // under `contents: read` in docs.yml). Narrowing only.
+  it.each(['changes', 'docs-gate'])('%s runs with contents: read only', id => {
+    expect(ci()[id]!.permissions).toEqual({ contents: 'read' })
+  })
   it('no job other than the gate and Agent CLI smoke has checks/actions scopes', () => {
     const holders = Object.entries(ci())
       .filter(

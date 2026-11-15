@@ -144,6 +144,7 @@ describe('evaluateHeadChecks — a no-op edit re-verifies the head', () => {
     name,
     status: conclusion === null ? 'in_progress' : 'completed',
     conclusion,
+    app: { slug: 'github-actions' },
     ...extra,
   })
   const green = NAMES.map((n, i) =>
@@ -154,6 +155,34 @@ describe('evaluateHeadChecks — a no-op edit re-verifies the head', () => {
     run(n, 'skipped', { id: 90 + i, started_at: '2026-11-15T02:00:00Z' })
   )
 
+  it('ignores a same-named RED check from another app (cannot pin the gate)', () => {
+    const foreign = run('Test Suite', 'failure', {
+      id: 500,
+      started_at: '2026-11-15T03:00:00Z',
+      app: { slug: 'some-other-app' },
+    })
+    expect(
+      evaluateHeadChecks(NAMES, [...green, ...editSkips, foreign]).pass
+    ).toBe(true)
+  })
+  it('does not accept a same-named GREEN check from another app', () => {
+    const foreign = NAMES.map((n, i) =>
+      run(n, 'success', {
+        id: 600 + i,
+        started_at: '2026-11-15T03:00:00Z',
+        app: { slug: 'some-other-app' },
+      })
+    )
+    expect(evaluateHeadChecks(NAMES, [...foreign, ...editSkips]).pass).toBe(
+      false
+    )
+  })
+  it('does not accept a check run that carries no app', () => {
+    const noApp = NAMES.map((n, i) =>
+      run(n, 'success', { id: 700 + i, app: undefined })
+    )
+    expect(evaluateHeadChecks(NAMES, noApp).pass).toBe(false)
+  })
   it('passes an edit after an all-green head, ignoring the edit run skips', () => {
     expect(evaluateHeadChecks(NAMES, [...green, ...editSkips]).pass).toBe(true)
   })
