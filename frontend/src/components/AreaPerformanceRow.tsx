@@ -30,10 +30,11 @@ const getVisitStatusStyle = (meetsThreshold: boolean): string => {
  */
 const formatVisitStatus = (
   completed: number,
+  clubBase: number,
   required: number,
   meetsThreshold: boolean
 ): string => {
-  return `${completed}/${required} ${meetsThreshold ? '✓' : '✗'}`
+  return `${completed} of ${clubBase} visited · ${required} needed ${meetsThreshold ? '✓' : '✗'}`
 }
 
 /**
@@ -172,6 +173,7 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
         >
           {formatVisitStatus(
             area.firstRoundVisits.completed,
+            area.clubBase,
             area.firstRoundVisits.required,
             area.firstRoundVisits.meetsThreshold
           )}
@@ -188,6 +190,7 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
         >
           {formatVisitStatus(
             area.secondRoundVisits.completed,
+            area.clubBase,
             area.secondRoundVisits.required,
             area.secondRoundVisits.meetsThreshold
           )}

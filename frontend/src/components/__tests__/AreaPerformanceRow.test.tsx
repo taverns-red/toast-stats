@@ -161,7 +161,7 @@ describe('AreaPerformanceRow', () => {
 
       const cells = container.querySelectorAll('td')
       // Cell 3 is First Round Visits column
-      expect(cells[3].textContent).toBe('8/8 ✓')
+      expect(cells[3].textContent).toBe('8 of 10 visited · 8 needed ✓')
     })
 
     it('should display first round visit status with X when threshold not met', () => {
@@ -182,7 +182,7 @@ describe('AreaPerformanceRow', () => {
       )
 
       const cells = container.querySelectorAll('td')
-      expect(cells[3].textContent).toBe('5/8 ✗')
+      expect(cells[3].textContent).toBe('5 of 10 visited · 8 needed ✗')
     })
   })
 
@@ -206,7 +206,7 @@ describe('AreaPerformanceRow', () => {
 
       const cells = container.querySelectorAll('td')
       // Cell 4 is Second Round Visits column
-      expect(cells[4].textContent).toBe('9/8 ✓')
+      expect(cells[4].textContent).toBe('9 of 10 visited · 8 needed ✓')
     })
 
     it('should display second round visit status with X when threshold not met', () => {
@@ -227,7 +227,7 @@ describe('AreaPerformanceRow', () => {
       )
 
       const cells = container.querySelectorAll('td')
-      expect(cells[4].textContent).toBe('6/8 ✗')
+      expect(cells[4].textContent).toBe('6 of 10 visited · 8 needed ✗')
     })
   })
 
@@ -575,9 +575,9 @@ describe('AreaPerformanceRow', () => {
       // Cell 2: Distinguished with percentage
       expect(cells[2].textContent).toBe('8/12 67%')
       // Cell 3: First round visits
-      expect(cells[3].textContent).toBe('10/10 ✓')
+      expect(cells[3].textContent).toBe('10 of 12 visited · 10 needed ✓')
       // Cell 4: Second round visits
-      expect(cells[4].textContent).toBe('9/10 ✗')
+      expect(cells[4].textContent).toBe('9 of 12 visited · 10 needed ✗')
       // Cell 5: Recognition badge (President's Distinguished: 15 >= 13, 8 >= 7)
       expect(cells[5].textContent).toContain("President's Distinguished")
       // Cell 6: Gap to D (achieved)
@@ -628,8 +628,8 @@ describe('AreaPerformanceRow', () => {
       expect(text).toContain('D7')
       expect(text).toContain('6/8') // Paid/Base
       expect(text).toContain('2/8') // Distinguished
-      expect(text).toContain('5/7') // First round visits
-      expect(text).toContain('3/7') // Second round visits
+      expect(text).toContain('5 of 8 visited · 7 needed') // First round visits
+      expect(text).toContain('3 of 8 visited · 7 needed') // Second round visits
       expect(text).toContain('Net Loss') // Recognition badge for net loss
     })
 

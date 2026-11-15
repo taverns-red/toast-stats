@@ -294,6 +294,11 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* "5 of 5 visited" and "4 needed" wrap between the two, never inside one. */
+  .dt-criterion__part {
+    white-space: nowrap;
+  }
+
   .dt-criterion__outcome {
     display: inline-flex;
     align-items: center;
