@@ -72,6 +72,7 @@ on:
       - 'scripts/check-hosting-site.sh'
       - 'lighthouserc.mobile.js' # the mobile gate below runs it (#1994)
       - '.nvmrc' # setup-node reads it (#2005)
+      - 'tools/firebase-tools/**' # the pinned Firebase CLI it installs (#2551)
       # the catch-all smoke step runs them (#2141)
       - 'scripts/unlisted-smoke-specs.ts'
       - 'scripts/lib/smokeSpecCoverage.ts'
@@ -204,7 +205,9 @@ jobs:
         run: gcloud version
 
       - name: Install firebase-tools
-        run: npm install -g firebase-tools
+        run: |
+          npm ci --prefix tools/firebase-tools
+          echo "$PWD/tools/firebase-tools/node_modules/.bin" >> "$GITHUB_PATH"
 
       # Fail fast with an actionable error if the staging site is missing
       # (new projects get no default Hosting site since 2026-10-15). Checks
@@ -768,7 +771,9 @@ jobs:
           merge-multiple: true
 
       - name: Install firebase-tools
-        run: npm install -g firebase-tools
+        run: |
+          npm ci --prefix tools/firebase-tools
+          echo "$PWD/tools/firebase-tools/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Serve the build like its preview channel
         run: scripts/serve-preview-locally.sh
