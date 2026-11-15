@@ -22,7 +22,7 @@ This is a monorepo containing:
 
 ## Prerequisites
 
-- Node.js 20+ and npm
+- Node.js 26+ and npm (the published `@taverns-red/toast-stats-mcp` supports Node 22+)
 
 ## Getting Started
 

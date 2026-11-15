@@ -25,7 +25,7 @@
     "exactOptionalPropertyTypes": false,
     "noUnusedLocals": false,
 
-    /* Tests run on Node 22, not in the ES2020 bundle target, so modern
+    /* Tests run on Node 26, not in the ES2020 bundle target, so modern
        built-ins such as Array.prototype.at are legitimately available. The
        production target stays ES2020 via tsconfig.json. */
     "lib": ["ES2023", "DOM", "DOM.Iterable"]
