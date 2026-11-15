@@ -74,6 +74,62 @@ describe('data-smoke reports a verdict the restore can key off (#2537)', () => {
   it('exposes when the published data was last written, for the restore window', () => {
     expect(smoke.outputs?.['window_end']).toBeTruthy()
   })
+
+  it('exposes restore_eligible and why, from the classified verdict', () => {
+    expect(smoke.outputs?.['restore_eligible']).toMatch(
+      /steps\.verdict\.outputs\.restore_eligible/
+    )
+    expect(smoke.outputs?.['restore_reason']).toMatch(
+      /steps\.verdict\.outputs\.restore_reason/
+    )
+    const last = smoke.steps![smoke.steps!.length - 1]!
+    expect(last.id).toBe('verdict')
+    expect(last.run).toMatch(/data-auto-restore\.ts\s+verdict/)
+    // the verdict is written before the step fails the run
+    expect(last.run!.indexOf('data-auto-restore.ts verdict')).toBeLessThan(
+      last.run!.indexOf('exit 1')
+    )
+  })
+
+  it('feeds the classifier the smoke result and the schema step flags', () => {
+    const last = smoke.steps![smoke.steps!.length - 1]!
+    const schema = smoke.steps!.find(s =>
+      /check-cdn-schema\.ts/.test(s.run ?? '')
+    )!
+    expect(last.env?.['SMOKE_HEALTHY']).toContain('outputs.healthy')
+    expect(last.env?.['SMOKE_RESULT_FILE']).toContain('outputs.result_file')
+    expect(last.env?.['SCHEMA_UNHEALTHY']).toContain(
+      `steps.${schema.id}.outputs.unhealthy`
+    )
+    expect(last.env?.['SCHEMA_RESTORE_ELIGIBLE']).toContain(
+      `steps.${schema.id}.outputs.restore_eligible`
+    )
+  })
+
+  it('the restore job keys its decision and its execute off restore_eligible', () => {
+    for (const id of ['decide', 'report']) {
+      expect(byId(id)?.env?.['RESTORE_ELIGIBLE'], id).toBe(
+        '${{ needs.data-smoke.outputs.restore_eligible }}'
+      )
+      expect(byId(id)?.env?.['RESTORE_REASON'], id).toBe(
+        '${{ needs.data-smoke.outputs.restore_reason }}'
+      )
+    }
+    // belt and braces: the execute step itself also needs the flag
+    expect(topLevelConjuncts(byId('execute')?.if ?? '')).toContain(
+      "needs.data-smoke.outputs.restore_eligible == 'true'"
+    )
+  })
+
+  it('keeps the promotion comment on the promote step: the window step sits before it', () => {
+    const i = source.indexOf('# Promotion (#1763, ADR-015 P6)')
+    const j = source.indexOf('- name: Promote run manifest to production')
+    const k = source.indexOf('- name: Record the promotion window start')
+    expect(i).toBeGreaterThan(-1)
+    expect(k).toBeGreaterThan(-1)
+    expect(k).toBeLessThan(i)
+    expect(source.slice(i, j)).not.toMatch(/- name:/)
+  })
 })
 
 describe('data-auto-restore job (#2537)', () => {
@@ -258,11 +314,15 @@ describe('order and the refused path', () => {
     expect(issue.if).not.toMatch(/steps\.execute\.outcome == 'success'/)
   })
 
-  it('the purge and recheck only follow a successful execute', () => {
+  it('purge and recheck run after an execute that finished or failed part way, never when it was skipped', () => {
+    // A partial restore has already changed prod, so the edge must be purged
+    // and the data re-checked then too; a skipped execute changed nothing.
     for (const id of ['purge', 'recheck']) {
-      expect(byId(id)?.if ?? '', id).toContain(
-        "steps.execute.outcome == 'success'"
-      )
+      const cond = byId(id)?.if ?? ''
+      expect(cond, id).toContain("steps.execute.outcome == 'success'")
+      expect(cond, id).toContain("steps.execute.outcome == 'failure'")
+      expect(cond, id).not.toContain('skipped')
+      expect(cond, id).not.toMatch(/steps\.execute\.outcome\s*!=/)
     }
     expect(text(byId('purge'))).toContain('invalidate-cdn-cache')
     expect(text(byId('recheck'))).toContain('check-cdn-schema.ts')

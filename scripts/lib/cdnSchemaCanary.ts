@@ -580,3 +580,9 @@ export function buildCanaryIssueBody(
 
   return lines.join('\n')
 }
+
+/** Red-phase stub: the next commit implements it. */
+export function restoreEligibleFromCanary(result: CanaryResult): boolean {
+  void result
+  return true
+}

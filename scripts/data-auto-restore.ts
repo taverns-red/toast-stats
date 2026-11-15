@@ -72,6 +72,9 @@ const { values } = parseArgs({
 })
 const mode = resolveRestoreMode(process.env['DATA_AUTO_RESTORE'])
 const unhealthy = process.env['UNHEALTHY'] === 'true'
+// Only the exact word `true` from the data smoke's verdict: unset is not.
+const restoreEligible = process.env['RESTORE_ELIGIBLE'] === 'true'
+const ineligibleReason = process.env['RESTORE_REASON'] || undefined
 
 switch (cmd) {
   case 'mode':
@@ -89,7 +92,13 @@ switch (cmd) {
     break
   }
   case 'decide': {
-    const d = decideRestore({ unhealthy, mode, plan: loadPlan(values.plan) })
+    const d = decideRestore({
+      unhealthy,
+      restoreEligible,
+      ineligibleReason,
+      mode,
+      plan: loadPlan(values.plan),
+    })
     output('action', d.action)
     output('execute', String(d.execute))
     output('file_issue', String(d.fileIssue))
@@ -98,7 +107,13 @@ switch (cmd) {
   }
   case 'report': {
     const plan = loadPlan(values.plan)
-    const decision = decideRestore({ unhealthy, mode, plan })
+    const decision = decideRestore({
+      unhealthy,
+      restoreEligible,
+      ineligibleReason,
+      mode,
+      plan,
+    })
     const body = buildIssueBody({
       mode,
       decision,

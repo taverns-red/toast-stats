@@ -24,6 +24,7 @@ export type RestoreAction =
   | 'refused'
   | 'plan-failed'
   | 'nothing-to-do'
+  | 'not-eligible'
 
 export interface RestoreDecision {
   action: RestoreAction
@@ -96,6 +97,9 @@ const acts = (e: PlanEntry): boolean =>
 
 export function decideRestore(input: {
   unhealthy: boolean
+  /** The verdict is a decode or validation failure (see classifyVerdict). */
+  restoreEligible: boolean
+  ineligibleReason?: string
   mode: RestoreMode
   plan: RestorePlan | null
 }): RestoreDecision {
@@ -282,4 +286,20 @@ export function buildIssueBody(ctx: IssueContext): string {
     'See docs/runbooks/data-restore.md: stop the next publish, fix the cause, and fix staging if a date was removed (#2540). `DATA_AUTO_RESTORE=execute` is what turns the restore on; unset, this job only plans.'
   )
   return L.join('\n') + '\n'
+}
+
+export interface VerdictInput {
+  smokeHealthy: string
+  smokeFailures: string[] | null
+  schemaUnhealthy: string
+  schemaRestoreEligible: string
+}
+
+/** Red-phase stub: the next commit implements it. */
+export function classifyVerdict(i: VerdictInput): {
+  restoreEligible: boolean
+  reason: string
+} {
+  void i
+  return { restoreEligible: true, reason: 'stub' }
 }

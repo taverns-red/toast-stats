@@ -170,8 +170,24 @@ describe('decide', () => {
     const live = run(['decide', '--plan', plan], {
       DATA_AUTO_RESTORE: 'execute',
       UNHEALTHY: 'true',
+      RESTORE_ELIGIBLE: 'true',
     })
     expect(live.outputs['execute']).toBe('true')
+  })
+
+  it('execute mode with a verdict that is not eligible never executes', () => {
+    const plan = file('plan.json', planOf([entry('v1/latest.json', 'restore')]))
+    for (const eligible of ['', 'false', 'TRUE']) {
+      const r = run(['decide', '--plan', plan], {
+        DATA_AUTO_RESTORE: 'execute',
+        UNHEALTHY: 'true',
+        RESTORE_ELIGIBLE: eligible,
+        RESTORE_REASON: 'only a freshness failure',
+      })
+      expect(r.outputs['execute'], eligible).toBe('false')
+      expect(r.outputs['action'], eligible).toBe('not-eligible')
+      expect(r.outputs['file_issue'], eligible).toBe('true')
+    }
   })
 
   it('healthy data decides nothing and files nothing', () => {
@@ -182,6 +198,57 @@ describe('decide', () => {
     })
     expect(r.outputs['execute']).toBe('false')
     expect(r.outputs['file_issue']).toBe('false')
+  })
+})
+
+describe('verdict', () => {
+  it('writes restore_eligible true for a cdn-data decode failure', () => {
+    const result = file('smoke.json', {
+      healthy: false,
+      failures: ['cdn-data: latest.json is not JSON'],
+    })
+    const r = run(['verdict'], {
+      SMOKE_HEALTHY: 'false',
+      SMOKE_RESULT_FILE: result,
+      SCHEMA_UNHEALTHY: 'false',
+    })
+    expect(r.status).toBe(0)
+    expect(r.outputs['restore_eligible']).toBe('true')
+  })
+
+  it('writes false with a reason for a Hosting probe failure', () => {
+    const result = file('smoke.json', {
+      healthy: false,
+      failures: ['home: HTTP 500'],
+    })
+    const r = run(['verdict'], {
+      SMOKE_HEALTHY: 'false',
+      SMOKE_RESULT_FILE: result,
+      SCHEMA_UNHEALTHY: 'false',
+    })
+    expect(r.outputs['restore_eligible']).toBe('false')
+    expect(r.outputs['restore_reason']).toContain('home')
+  })
+
+  it('a missing or unreadable result file is not eligible', () => {
+    for (const f of [path.join(tmp, 'absent.json'), file('bad.json', '{')]) {
+      const r = run(['verdict'], {
+        SMOKE_HEALTHY: 'false',
+        SMOKE_RESULT_FILE: f,
+        SCHEMA_UNHEALTHY: 'true',
+        SCHEMA_RESTORE_ELIGIBLE: 'true',
+      })
+      expect(r.outputs['restore_eligible']).toBe('false')
+    }
+  })
+
+  it('a schema failure flagged eligible by the canary is eligible', () => {
+    const r = run(['verdict'], {
+      SMOKE_HEALTHY: 'true',
+      SCHEMA_UNHEALTHY: 'true',
+      SCHEMA_RESTORE_ELIGIBLE: 'true',
+    })
+    expect(r.outputs['restore_eligible']).toBe('true')
   })
 })
 

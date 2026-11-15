@@ -7,10 +7,13 @@
 
 import { describe, it, expect } from 'vitest'
 import type { RestorePlan, PlanEntry } from '../dataRestorePlan.js'
+import { restoreEligibleFromCanary } from '../cdnSchemaCanary.js'
+import { checkCdnLatest } from '../hostingRollback.js'
 import {
   DEFAULT_RESTORE_MODE,
   buildIssueBody,
   buildIssueTitle,
+  classifyVerdict,
   decideRestore,
   manifestPaths,
   resolveRestoreMode,
@@ -64,9 +67,11 @@ describe('resolveRestoreMode', () => {
     }
   })
 
-  it('executes only on the exact word, ignoring case and spaces', () => {
+  it('executes only on the exact word `execute`: no trimming, no case folding', () => {
     expect(resolveRestoreMode('execute')).toBe('execute')
-    expect(resolveRestoreMode(' Execute ')).toBe('execute')
+    for (const raw of [' execute ', 'Execute', 'EXECUTE', 'execute\n']) {
+      expect(resolveRestoreMode(raw), JSON.stringify(raw)).toBe('dry-run')
+    }
   })
 
   it('honours off', () => {
@@ -114,7 +119,12 @@ describe('manifestPaths', () => {
 describe('decideRestore', () => {
   it('does nothing when the data is healthy', () => {
     for (const mode of ['off', 'dry-run', 'execute'] as const) {
-      const d = decideRestore({ unhealthy: false, mode, plan: clean })
+      const d = decideRestore({
+        unhealthy: false,
+        restoreEligible: true,
+        mode,
+        plan: clean,
+      })
       expect(d).toMatchObject({
         action: 'skip',
         execute: false,
@@ -125,32 +135,57 @@ describe('decideRestore', () => {
 
   it('plans only in dry-run, and files the issue', () => {
     expect(
-      decideRestore({ unhealthy: true, mode: 'dry-run', plan: clean })
+      decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'dry-run',
+        plan: clean,
+      })
     ).toMatchObject({ action: 'plan-only', execute: false, fileIssue: true })
   })
 
   it('executes a clean plan only in execute mode', () => {
     expect(
-      decideRestore({ unhealthy: true, mode: 'execute', plan: clean })
+      decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'execute',
+        plan: clean,
+      })
     ).toMatchObject({ action: 'execute', execute: true, fileIssue: true })
   })
 
   it('a refused entry aborts the whole execute and still files the issue', () => {
     expect(
-      decideRestore({ unhealthy: true, mode: 'execute', plan: refused })
+      decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'execute',
+        plan: refused,
+      })
     ).toMatchObject({ action: 'refused', execute: false, fileIssue: true })
   })
 
   it('a plan that failed to build never executes and files the issue', () => {
     expect(
-      decideRestore({ unhealthy: true, mode: 'execute', plan: null })
+      decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'execute',
+        plan: null,
+      })
     ).toMatchObject({ action: 'plan-failed', execute: false, fileIssue: true })
   })
 
   it('a plan with nothing to restore or delete does not execute', () => {
     const idle = planOf([entry('v1/latest.json', 'noop')])
     expect(
-      decideRestore({ unhealthy: true, mode: 'execute', plan: idle })
+      decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'execute',
+        plan: idle,
+      })
     ).toMatchObject({
       action: 'nothing-to-do',
       execute: false,
@@ -160,8 +195,246 @@ describe('decideRestore', () => {
 
   it('off files the issue without a plan and never executes', () => {
     expect(
-      decideRestore({ unhealthy: true, mode: 'off', plan: null })
+      decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'off',
+        plan: null,
+      })
     ).toMatchObject({ action: 'off', execute: false, fileIssue: true })
+  })
+})
+
+describe('decideRestore: only a decode or validation failure may execute', () => {
+  it('an ineligible verdict never executes, says why, and still files the issue', () => {
+    for (const mode of ['dry-run', 'execute'] as const) {
+      const d = decideRestore({
+        unhealthy: true,
+        restoreEligible: false,
+        ineligibleReason: 'the schema check failed only on freshness',
+        mode,
+        plan: clean,
+      })
+      expect(d, mode).toMatchObject({
+        action: 'not-eligible',
+        execute: false,
+        fileIssue: true,
+      })
+      expect(d.reason).toContain('freshness')
+    }
+  })
+
+  it('an ineligible verdict with no plan still reports plan-failed or off, not execute', () => {
+    expect(
+      decideRestore({
+        unhealthy: true,
+        restoreEligible: false,
+        mode: 'execute',
+        plan: null,
+      }).execute
+    ).toBe(false)
+    expect(
+      decideRestore({
+        unhealthy: true,
+        restoreEligible: false,
+        mode: 'off',
+        plan: null,
+      }).action
+    ).toBe('off')
+  })
+
+  it('an eligible verdict and a clean plan in execute mode executes', () => {
+    expect(
+      decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'execute',
+        plan: clean,
+      }).execute
+    ).toBe(true)
+  })
+})
+
+describe('classifyVerdict', () => {
+  const ok = { smokeHealthy: 'true', smokeFailures: [] as string[] }
+  const schemaOk = { schemaUnhealthy: 'false', schemaRestoreEligible: '' }
+
+  it('a cdn-data decode or validation failure is eligible', () => {
+    const notJson = checkCdnLatest(200, 'oops').detail
+    const noDate = checkCdnLatest(200, '{}').detail
+    for (const detail of [notJson, noDate]) {
+      const v = classifyVerdict({
+        smokeHealthy: 'false',
+        smokeFailures: [`cdn-data: ${detail}`],
+        ...schemaOk,
+      })
+      expect(v.restoreEligible, detail).toBe(true)
+    }
+  })
+
+  it('a schema check that failed on decode or validation is eligible', () => {
+    const v = classifyVerdict({
+      ...ok,
+      schemaUnhealthy: 'true',
+      schemaRestoreEligible: 'true',
+    })
+    expect(v.restoreEligible).toBe(true)
+  })
+
+  it('a Hosting probe failure is not eligible, and says so', () => {
+    for (const probe of ['home', 'entry-asset', 'district']) {
+      const v = classifyVerdict({
+        smokeHealthy: 'false',
+        smokeFailures: [`${probe}: HTTP 500`],
+        ...schemaOk,
+      })
+      expect(v.restoreEligible, probe).toBe(false)
+      expect(v.reason).toContain(probe)
+    }
+  })
+
+  it('a cdn-data probe that failed on HTTP status is not eligible', () => {
+    const v = classifyVerdict({
+      smokeHealthy: 'false',
+      smokeFailures: ['cdn-data: HTTP 503'],
+      ...schemaOk,
+    })
+    expect(v.restoreEligible).toBe(false)
+  })
+
+  it('a decode failure mixed with a Hosting probe failure is not eligible', () => {
+    const v = classifyVerdict({
+      smokeHealthy: 'false',
+      smokeFailures: ['cdn-data: latest.json is not JSON', 'home: HTTP 500'],
+      ...schemaOk,
+    })
+    expect(v.restoreEligible).toBe(false)
+  })
+
+  it('a crashed or never-run smoke step is not eligible', () => {
+    for (const smokeHealthy of ['', 'false']) {
+      const v = classifyVerdict({
+        smokeHealthy,
+        smokeFailures: null,
+        schemaUnhealthy: 'true',
+        schemaRestoreEligible: 'true',
+      })
+      expect(v.restoreEligible, smokeHealthy).toBe(false)
+      expect(v.reason).toMatch(/smoke/)
+    }
+  })
+
+  it('a crashed or never-run schema step is not eligible', () => {
+    const v = classifyVerdict({
+      smokeHealthy: 'false',
+      smokeFailures: ['cdn-data: latest.json is not JSON'],
+      schemaUnhealthy: '',
+      schemaRestoreEligible: '',
+    })
+    expect(v.restoreEligible).toBe(false)
+    expect(v.reason).toMatch(/schema/)
+  })
+
+  it('a schema failure that is not decode or validation is not eligible', () => {
+    const v = classifyVerdict({
+      ...ok,
+      schemaUnhealthy: 'true',
+      schemaRestoreEligible: 'false',
+    })
+    expect(v.restoreEligible).toBe(false)
+    expect(v.reason).toMatch(/schema/)
+  })
+
+  it('healthy on both sides is not eligible: there is nothing to restore', () => {
+    expect(classifyVerdict({ ...ok, ...schemaOk }).restoreEligible).toBe(false)
+  })
+})
+
+describe('restoreEligibleFromCanary', () => {
+  const base = {
+    healthy: false,
+    latestDate: '2026-11-14',
+    checked: 1,
+    objectsChecked: 1,
+    reason: '',
+  }
+  const district = (reason: string) => ({ districtId: '61', reason })
+  const object = (reason: string) => ({ path: 'time-series/x.json', reason })
+
+  it('true for decode and validation failures', () => {
+    for (const reason of [
+      'schema validation failed: x',
+      'invalid JSON: Unexpected token',
+      'body is not valid UTF-8',
+      'body is still gzip-encoded after HTTP decoding (nested gzip, #1702)',
+    ]) {
+      expect(
+        restoreEligibleFromCanary({
+          ...base,
+          failures: [district(reason)],
+          objectFailures: [],
+        }),
+        reason
+      ).toBe(true)
+      expect(
+        restoreEligibleFromCanary({
+          ...base,
+          failures: [],
+          objectFailures: [object(reason)],
+        }),
+        reason
+      ).toBe(true)
+    }
+  })
+
+  it('false for freshness, fetch and shape failures', () => {
+    for (const reason of [
+      'last data point 2026-11-01 is 13 days old (max 3 days)',
+      'last data point 2026-11-20 is in the future',
+      'fetch failed: HTTP 503',
+      'no data points — the file has no last point',
+    ]) {
+      expect(
+        restoreEligibleFromCanary({
+          ...base,
+          failures: [],
+          objectFailures: [object(reason)],
+        }),
+        reason
+      ).toBe(false)
+    }
+  })
+
+  it('false when a decode failure is mixed with a freshness failure', () => {
+    expect(
+      restoreEligibleFromCanary({
+        ...base,
+        failures: [],
+        objectFailures: [
+          object('schema validation failed: x'),
+          object('last data point 2026-11-01 is 13 days old (max 3 days)'),
+        ],
+      })
+    ).toBe(false)
+  })
+
+  it('false when healthy, or when it could not even resolve the snapshot', () => {
+    expect(
+      restoreEligibleFromCanary({
+        ...base,
+        healthy: true,
+        failures: [],
+        objectFailures: [],
+      })
+    ).toBe(false)
+    expect(
+      restoreEligibleFromCanary({
+        ...base,
+        checked: 0,
+        failures: [],
+        objectFailures: [],
+      })
+    ).toBe(false)
   })
 })
 
@@ -182,6 +455,7 @@ describe('issue text', () => {
       ...ctx,
       decision: decideRestore({
         unhealthy: true,
+        restoreEligible: true,
         mode: 'dry-run',
         plan: refused,
       }),
@@ -203,10 +477,49 @@ describe('issue text', () => {
     const p = planOf([entry('v1/a.json', 'refuse', { reason: 'a\\|b | c' })])
     const body = buildIssueBody({
       ...ctx,
-      decision: decideRestore({ unhealthy: true, mode: 'dry-run', plan: p }),
+      decision: decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'dry-run',
+        plan: p,
+      }),
       plan: p,
     })
     expect(body).toContain('a\\\\\\|b \\| c')
+  })
+
+  it('escapes backticks in a reason so it cannot open a code span in the table', () => {
+    const p = planOf([entry('v1/a.json', 'refuse', { reason: 'bad `x` here' })])
+    const body = buildIssueBody({
+      ...ctx,
+      decision: decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'dry-run',
+        plan: p,
+      }),
+      plan: p,
+    })
+    expect(body).toContain('bad \\`x\\` here')
+  })
+
+  it('an ineligible verdict says why in the issue', () => {
+    const d = decideRestore({
+      unhealthy: true,
+      restoreEligible: false,
+      ineligibleReason: 'the schema check failed only on freshness',
+      mode: 'execute',
+      plan: clean,
+    })
+    const body = buildIssueBody({
+      ...ctx,
+      mode: 'execute',
+      decision: d,
+      plan: clean,
+    })
+    expect(body).toContain('not-eligible')
+    expect(body).toContain('only on freshness')
+    expect(buildIssueTitle('not-eligible')).toMatch(/no restore/)
   })
 
   it('lists restores with the generation to restore and deletes by name', () => {
@@ -214,6 +527,7 @@ describe('issue text', () => {
       ...ctx,
       decision: decideRestore({
         unhealthy: true,
+        restoreEligible: true,
         mode: 'dry-run',
         plan: clean,
       }),
@@ -237,6 +551,7 @@ describe('issue text', () => {
       ...ctx,
       decision: decideRestore({
         unhealthy: true,
+        restoreEligible: true,
         mode: 'dry-run',
         plan: many,
       }),
@@ -254,6 +569,7 @@ describe('issue text', () => {
       mode: 'execute',
       decision: decideRestore({
         unhealthy: true,
+        restoreEligible: true,
         mode: 'execute',
         plan: clean,
       }),
@@ -270,7 +586,12 @@ describe('issue text', () => {
   it('without a plan, says why and where the manual runbook is', () => {
     const body = buildIssueBody({
       ...ctx,
-      decision: decideRestore({ unhealthy: true, mode: 'off', plan: null }),
+      decision: decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'off',
+        plan: null,
+      }),
       plan: null,
     })
     expect(body).toContain('docs/runbooks/data-restore.md')
