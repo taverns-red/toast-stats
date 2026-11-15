@@ -49,7 +49,7 @@ describe('staging bucket readers (#2696)', () => {
     const lines = read('.github/workflows/basemap-build.yml').split('\n')
     let checked = 0
     lines.forEach((line, i) => {
-      if (!line.includes('storage.googleapis.com')) return
+      if (!/storage\.googleapis\.com/.test(line)) return
       // The curl invocation spans the preceding continuation lines.
       let start = i
       while (start > 0 && lines[start - 1]!.trimEnd().endsWith('\\')) start--
