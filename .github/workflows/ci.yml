@@ -432,6 +432,9 @@ jobs:
       - name: Check YAML lint (#1375)
         run: npm run lint:yaml
 
+      - name: CANARY forced failure (#2607)
+        run: exit 1
+
   # CI Gate: the SINGLE required check on `main` (#1216, #2607).
   #
   # It is the last job of this workflow and `needs:` every gated job, so it
