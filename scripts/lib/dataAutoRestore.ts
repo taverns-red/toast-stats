@@ -380,10 +380,52 @@ export interface IntentInput {
   ineligibleReason?: string
 }
 
-/** Red-phase stub: the next commit implements it. */
+/**
+ * The token-free decision, made before any plan exists (the decide job has no
+ * GCP identity). It says only whether the execute job may start; the execute
+ * job re-plans and refuses on anything unclean. Fails closed: `execute` needs
+ * unhealthy data, an eligible verdict and the exact word `execute`.
+ */
 export function decideIntent(i: IntentInput): RestoreDecision {
-  void i
-  return { action: 'execute', execute: true, fileIssue: true, reason: 'stub' }
+  if (!i.unhealthy) {
+    return {
+      action: 'skip',
+      execute: false,
+      fileIssue: false,
+      reason: 'the published data is healthy',
+    }
+  }
+  if (i.mode === 'off') {
+    return {
+      action: 'off',
+      execute: false,
+      fileIssue: true,
+      reason: 'DATA_AUTO_RESTORE=off: no restore was planned',
+    }
+  }
+  if (!i.restoreEligible) {
+    return {
+      action: 'not-eligible',
+      execute: false,
+      fileIssue: true,
+      reason: `not restored: ${i.ineligibleReason ?? 'the failure is not a decode or validation failure of the published data'}`,
+    }
+  }
+  if (i.mode === 'execute') {
+    return {
+      action: 'execute',
+      execute: true,
+      fileIssue: true,
+      reason:
+        'DATA_AUTO_RESTORE=execute and the failure is a decode or validation failure: the execute job was started',
+    }
+  }
+  return {
+    action: 'dry-run',
+    execute: false,
+    fileIssue: true,
+    reason: 'dry-run: DATA_AUTO_RESTORE is not set to execute',
+  }
 }
 
 export interface DecisionIssueContext {
@@ -398,14 +440,50 @@ export interface DecisionIssueContext {
   windowEnd: string
 }
 
-/** Red-phase stub: the next commit implements it. */
+/**
+ * The data-rollback issue the token-free decide job files. It names the run,
+ * the verdict and the manifest, and gives the exact command to plan by hand.
+ * It lists no objects: enumerating them needs a read of prod's soft-deleted
+ * copies, which only the execute job's identity can do.
+ */
 export function buildDecisionIssueBody(c: DecisionIssueContext): string {
-  void c
-  return ''
+  const manifest = `gs://${c.stagingBucket}/runs/${c.runId}/written.jsonl`
+  const since = c.promoteStarted || '<promotion start>'
+  const until = c.windowEnd || '<smoke end>'
+  const started = c.decision.execute
+    ? 'The restore execute job was started; it re-plans, refuses on anything unclean, and comments the enumerated plan and result here.'
+    : 'No restore was started.'
+  return (
+    [
+      `The post-promotion check failed (${c.failed}) on run ${c.runUrl}.`,
+      '',
+      `- **Run**: ${c.runId}`,
+      `- **Mode**: \`${c.mode}\``,
+      `- **Decision**: \`${c.decision.action}\`: ${c.decision.reason}`,
+      `- **Run manifest**: \`${manifest}\``,
+      '',
+      started,
+      '',
+      '## Plan it by hand',
+      '',
+      'From a checkout, with read access to both buckets (see docs/runbooks/data-restore.md):',
+      '',
+      '```',
+      `gcloud storage cat ${manifest} > written.jsonl`,
+      'npx tsx scripts/data-auto-restore.ts paths --manifest written.jsonl --out paths.txt',
+      `PROD_BUCKET=${c.prodBucket} bash scripts/pipeline/list-restore-candidates.sh out paths.txt`,
+      `npx tsx scripts/plan-data-restore.ts --live out/live.json --soft-deleted out/soft.json --live-errors out/live.err --soft-errors out/soft.err --since ${since} --until ${until} --paths paths.txt --out plan.json`,
+      '```',
+      '',
+      '## Next',
+      '',
+      'See docs/runbooks/data-restore.md: stop the next publish, fix the cause, and fix staging if a date was removed (#2540). `DATA_AUTO_RESTORE=execute` is what lets the execute job run; unset, nothing is restored.',
+    ].join('\n') + '\n'
+  )
 }
 
-/** Red-phase stub: the next commit implements it. */
 export function buildDecisionTitle(action: RestoreAction): string {
-  void action
-  return ''
+  return action === 'execute'
+    ? 'data-rollback: post-promotion check failed, restore started'
+    : 'data-rollback: post-promotion check failed, no restore run'
 }

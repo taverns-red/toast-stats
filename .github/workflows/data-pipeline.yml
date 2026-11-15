@@ -3488,37 +3488,134 @@ jobs:
   # ══════════════════════════════════════════════════════════
   # DATA AUTO-RESTORE AFTER A FAILED SMOKE (#2537, epic #2492)
   #
-  # When data-smoke reports bad data, plan a restore of the objects THIS run
-  # wrote (the run manifest's in-scope paths, over the window from the
-  # promote's start to the smoke's end) with the one planner,
-  # scripts/plan-data-restore.ts (#2539), and file a `data-rollback` issue
-  # with the plan. Restoring is `plan-data-restore.ts --execute`, which
-  # re-lists, re-plans and refuses on any difference, restores each object
-  # to the generation the run displaced (soft delete, 14 days) and removes
-  # what the run created.
+  # Two jobs, so the job that decides and reports holds no write identity:
+  #
+  #   data-auto-restore-decide  (no GCP, contents: read + issues: write)
+  #     Reads the data-smoke verdict and the DATA_AUTO_RESTORE variable, files
+  #     or refreshes the `data-rollback` issue (run id, verdict, reason, mode,
+  #     the run manifest's path and the exact manual plan command; no object
+  #     list), and outputs `execute` and the issue number.
+  #
+  #   data-auto-restore-execute (the ONLY job that mints the promote SA token)
+  #     Runs only when the decision says execute, the failure is a decode or
+  #     validation failure (restore_eligible), the ref is main and the run
+  #     promoted. It sits behind the `data-restore` environment, which Ron
+  #     creates with a main-only deployment policy. It lists prod's live and
+  #     soft-deleted copies of the objects the run wrote, plans with the one
+  #     planner (scripts/plan-data-restore.ts, #2539), restores only a clean
+  #     plan (`--execute` re-lists, re-plans and refuses on any difference;
+  #     restores carry --if-generation-match), purges the CDN, re-checks the
+  #     data, and comments the enumerated plan and result on the issue.
   #
   # DRY-RUN BY DEFAULT. Only the repository variable DATA_AUTO_RESTORE set to
-  # exactly `execute` restores; unset, empty, `dry-run` or anything else only
-  # plans, and `off` skips even the plan. Ron sets it (never this workflow,
-  # never a dispatch input). Any refused entry, a plan that could not be
-  # built or a plan with nothing to do aborts the execute; the issue is filed
-  # either way. No backup copy is made here: soft delete is the backup, and a
+  # exactly `execute` restores; unset, empty, `dry-run` or anything else never
+  # starts the execute job, and `off` skips even the decision's restore. Ron
+  # sets it (never this workflow, never a dispatch input). Any refused entry,
+  # a plan that could not be built or a plan with nothing to do aborts the
+  # execute. No backup copy is made here: soft delete is the backup, and a
   # copy into toast-stats-backups-ca would need an IAM grant for the CI
   # identity (a decision for Ron, see docs/runbooks/data-restore.md).
   #
-  # Identity: the same service account the promote jobs write prod with; no
-  # job-level permissions (the workflow's contents/id-token/issues grants
-  # apply, as for the pipeline job). Nothing needs this job, so it cannot
-  # hold or change a promotion. Pinned by dataPipelineAutoRestore.test.ts.
+  # Nothing needs the execute job, so it cannot hold or change a promotion.
+  # Pinned by dataPipelineAutoRestore.test.ts.
   # ══════════════════════════════════════════════════════════
-  data-auto-restore:
-    name: 'restore the published data (#2537)'
+  data-auto-restore-decide:
+    name: 'decide and report the data restore (#2537)'
     runs-on: ubuntu-26.04
     needs: [pipeline, data-smoke]
     if: >-
       !cancelled()
       && needs.data-smoke.outputs.unhealthy == 'true'
       && needs.pipeline.outputs.skip_promotion != 'true'
+    # No id-token, no secrets, no cloud auth: this job cannot reach GCP.
+    permissions:
+      contents: read
+      issues: write
+    timeout-minutes: 10
+    outputs:
+      execute: ${{ steps.intent.outputs.execute }}
+      issue_number: ${{ steps.issue.outputs.issue_number }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # The only place the variable is turned into a decision. Fails closed:
+      # execute=true only for an unhealthy run, an eligible verdict and the
+      # exact word `execute`.
+      - name: Decide whether the restore may start
+        id: intent
+        run: npx tsx scripts/data-auto-restore.ts intent
+        env:
+          DATA_AUTO_RESTORE: ${{ vars.DATA_AUTO_RESTORE }}
+          UNHEALTHY: ${{ needs.data-smoke.outputs.unhealthy }}
+          RESTORE_ELIGIBLE: ${{ needs.data-smoke.outputs.restore_eligible }}
+          RESTORE_REASON: ${{ needs.data-smoke.outputs.restore_reason }}
+          FAILED: ${{ needs.data-smoke.outputs.failed }}
+          PROMOTE_STARTED: ${{ needs.pipeline.outputs.promote_started }}
+          WINDOW_END: ${{ needs.data-smoke.outputs.window_end }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      # Same pattern as promotion-held and hosting-rollback: one open alert
+      # at a time, a later one comments on it. Filed whether or not anything
+      # is restored; the GITHUB_TOKEN holds issues: write.
+      - name: File or refresh the data-rollback issue
+        id: issue
+        if: ${{ !cancelled() && (steps.intent.outputs.file_issue == 'true' || steps.intent.outcome != 'success') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ steps.intent.outputs.title }}
+          BODY_FILE: ${{ steps.intent.outputs.body_file }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create data-rollback --color B60205 \
+            --description "A data promotion failed its post-promotion check" \
+            2>/dev/null || echo "Label already exists"
+          if [ -z "${BODY_FILE}" ] || [ ! -f "${BODY_FILE}" ]; then
+            BODY_FILE="${RUNNER_TEMP}/data-rollback-fallback.md"
+            echo "The post-promotion data check failed and the decision step did not run: ${RUN_URL}" > "${BODY_FILE}"
+            TITLE="data-rollback: post-promotion check failed"
+          fi
+          EXISTING=$(gh issue list --label data-rollback --state open \
+            --json number --jq '.[0].number // empty')
+          if [ -n "${EXISTING}" ]; then
+            gh issue comment "${EXISTING}" --body-file "${BODY_FILE}"
+            NUMBER="${EXISTING}"
+          else
+            URL=$(gh issue create --title "${TITLE}" --label data-rollback \
+              --body-file "${BODY_FILE}")
+            NUMBER="${URL##*/}"
+          fi
+          echo "issue_number=${NUMBER}" >> "$GITHUB_OUTPUT"
+
+  data-auto-restore-execute:
+    name: 'restore the published data (#2537)'
+    runs-on: ubuntu-26.04
+    needs: [pipeline, data-smoke, data-auto-restore-decide]
+    # Four locks, each an equality with the literal 'true' (an empty output
+    # fails closed): the decision, the eligible verdict, main, and a run that
+    # promoted. The `data-restore` environment is a fifth (Ron's main-only
+    # deployment policy). There is no OR.
+    if: >-
+      !cancelled()
+      && needs.data-auto-restore-decide.outputs.execute == 'true'
+      && needs.data-smoke.outputs.restore_eligible == 'true'
+      && github.ref == 'refs/heads/main'
+      && needs.pipeline.outputs.skip_promotion != 'true'
+    environment: data-restore
+    permissions:
+      contents: read
+      id-token: write
+      issues: write
     timeout-minutes: 30
 
     steps:
@@ -3552,18 +3649,11 @@ jobs:
       - name: Log Cloud SDK version
         run: gcloud version
 
-      - name: Resolve the restore mode (dry-run unless the variable says execute)
-        id: mode
-        run: npx tsx scripts/data-auto-restore.ts mode
-        env:
-          DATA_AUTO_RESTORE: ${{ vars.DATA_AUTO_RESTORE }}
-
       # Read-only: lists the in-scope objects' live and soft-deleted copies
       # in prod and plans. continue-on-error: a refused or failed plan must
       # still reach the decision and the issue.
       - name: Plan the restore
         id: plan
-        if: steps.mode.outputs.mode != 'off'
         continue-on-error: true
         env:
           PROD_BUCKET: ${{ env.GCS_BUCKET_PRODUCTION }}
@@ -3654,33 +3744,30 @@ jobs:
           RECHECK_UNHEALTHY: ${{ steps.recheck.outputs.unhealthy }}
         run: npx tsx scripts/data-auto-restore.ts report --plan "${RUNNER_TEMP}/data-restore/plan.json"
 
-      # Same pattern as promotion-held and hosting-rollback: one open alert
-      # at a time, a later one comments on it. Filed whether or not anything
-      # was restored; the GITHUB_TOKEN already holds issues: write.
-      - name: File or refresh the data-rollback issue
-        if: ${{ !cancelled() && (steps.decide.outputs.file_issue == 'true' || steps.decide.outcome != 'success') }}
+      # The decide job filed the issue; this job only comments the enumerated
+      # plan and the result on it, whether or not the restore ran. The
+      # GITHUB_TOKEN holds issues: write.
+      - name: Comment the plan and result on the data-rollback issue
+        if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ github.token }}
-          TITLE: ${{ steps.report.outputs.title }}
+          ISSUE_NUMBER: ${{ needs.data-auto-restore-decide.outputs.issue_number }}
           BODY_FILE: ${{ steps.report.outputs.body_file }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          gh label create data-rollback --color B60205 \
-            --description "A data promotion failed its post-promotion check" \
-            2>/dev/null || echo "Label already exists"
+          if [ -z "${ISSUE_NUMBER}" ]; then
+            ISSUE_NUMBER=$(gh issue list --label data-rollback --state open \
+              --json number --jq '.[0].number // empty')
+          fi
+          if [ -z "${ISSUE_NUMBER}" ]; then
+            echo "::error title=Data restore::no open data-rollback issue to report on; see the run ${RUN_URL}"
+            exit 1
+          fi
           if [ -z "${BODY_FILE}" ] || [ ! -f "${BODY_FILE}" ]; then
             BODY_FILE="${RUNNER_TEMP}/data-rollback-fallback.md"
-            echo "The post-promotion data check failed and the report step did not run: ${RUN_URL}" > "${BODY_FILE}"
-            TITLE="data-rollback: post-promotion check failed"
+            echo "The data restore job ran and the report step did not: ${RUN_URL}" > "${BODY_FILE}"
           fi
-          EXISTING=$(gh issue list --label data-rollback --state open \
-            --json number --jq '.[0].number // empty')
-          if [ -n "${EXISTING}" ]; then
-            gh issue comment "${EXISTING}" --body-file "${BODY_FILE}"
-          else
-            gh issue create --title "${TITLE}" --label data-rollback \
-              --body-file "${BODY_FILE}"
-          fi
+          gh issue comment "${ISSUE_NUMBER}" --body-file "${BODY_FILE}"
 
       - name: Fail the run when the restore did not complete
         if: ${{ !cancelled() && steps.execute.outcome == 'failure' }}

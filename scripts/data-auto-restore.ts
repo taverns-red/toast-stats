@@ -10,7 +10,11 @@
  *       SCHEMA_RESTORE_ELIGIBLE -> outputs restore_eligible, restore_reason
  *   data-auto-restore.ts paths --manifest written.jsonl --out paths.txt
  *       the in-scope object names from the run manifest; exit 1 if none
- *   data-auto-restore.ts decide --plan plan.json
+ *   data-auto-restore.ts intent
+ *       (decide job, no GCP) env DATA_AUTO_RESTORE, UNHEALTHY, RESTORE_ELIGIBLE,
+ *       RESTORE_REASON, RUN_URL, GITHUB_RUN_ID, FAILED, PROMOTE_STARTED,
+ *       WINDOW_END -> outputs action, execute, file_issue, title, body_file
+ *   data-auto-restore.ts decide --plan plan.json (execute job)
  *       env DATA_AUTO_RESTORE, UNHEALTHY -> outputs action, execute, file_issue
  *   data-auto-restore.ts report --plan plan.json
  *       env DATA_AUTO_RESTORE, UNHEALTHY, RUN_URL, FAILED, and optionally
@@ -31,9 +35,12 @@ import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { parseSavedPlan, type RestorePlan } from './lib/dataRestorePlan.js'
 import {
+  buildDecisionIssueBody,
+  buildDecisionTitle,
   buildIssueBody,
   buildIssueTitle,
   classifyVerdict,
+  decideIntent,
   decideRestore,
   manifestPaths,
   resolveRestoreMode,
@@ -47,7 +54,7 @@ function output(key: string, value: string): void {
 
 function usage(): never {
   console.error(
-    'usage: data-auto-restore.ts mode | paths --manifest F --out F | decide --plan F | report --plan F'
+    'usage: data-auto-restore.ts mode | verdict | intent | paths --manifest F --out F | decide --plan F | report --plan F'
   )
   process.exit(2)
 }
@@ -63,6 +70,11 @@ function loadPlan(file: string | undefined): RestorePlan | null {
     return null
   }
 }
+
+// The buckets the data pipeline publishes through (workflow env GCS_BUCKET and
+// GCS_BUCKET_PRODUCTION); named in the issue body only.
+const STAGING_BUCKET = 'toast-stats-data-staging'
+const PROD_BUCKET = 'toast-stats-data-ca'
 
 const [cmd, ...rest] = process.argv.slice(2)
 const { values } = parseArgs({
@@ -123,6 +135,41 @@ switch (cmd) {
     }
     writeFileSync(values.out, paths.join('\n') + '\n')
     console.error(`${paths.length} in-scope object(s)`)
+    break
+  }
+  case 'intent': {
+    // The token-free decide job: no plan, no GCP. It files the issue and says
+    // whether the execute job may start; only the exact word `execute`, an
+    // unhealthy run and an eligible verdict give execute=true.
+    const d = decideIntent({
+      unhealthy,
+      restoreEligible,
+      ineligibleReason,
+      mode,
+    })
+    const runId = process.env['GITHUB_RUN_ID'] ?? process.env['RUN_ID'] ?? ''
+    const body = buildDecisionIssueBody({
+      mode,
+      decision: d,
+      runId,
+      runUrl: process.env['RUN_URL'] ?? '(run URL unknown)',
+      failed: process.env['FAILED'] || 'the data smoke',
+      stagingBucket: STAGING_BUCKET,
+      prodBucket: PROD_BUCKET,
+      promoteStarted: process.env['PROMOTE_STARTED'] ?? '',
+      windowEnd: process.env['WINDOW_END'] ?? '',
+    })
+    const file = join(
+      process.env['RUNNER_TEMP'] ?? '/tmp',
+      'data-rollback-intent.md'
+    )
+    writeFileSync(file, body)
+    output('action', d.action)
+    output('execute', String(d.execute))
+    output('file_issue', String(d.fileIssue))
+    output('body_file', file)
+    output('title', buildDecisionTitle(d.action))
+    console.error(`${d.action}: ${d.reason}`)
     break
   }
   case 'decide': {
