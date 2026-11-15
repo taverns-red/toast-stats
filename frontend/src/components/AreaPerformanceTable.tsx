@@ -76,10 +76,16 @@ const visitCell = (
   clubBase: number
 ) => (
   <CriterionCell met={v.meetsThreshold} stacked>
+    {/* The lines are stacked, so a screen reader needs the commas the eye
+        doesn't (#2871); sr-only, so the visual is unchanged. */}
     <span className="dt-criterion__part">
       {v.completed} of {clubBase} visited
-    </span>{' '}
-    <span className="dt-criterion__part">{v.required} needed</span>
+      <span className="sr-only">, </span>
+    </span>
+    <span className="dt-criterion__part">
+      {v.required} needed
+      <span className="sr-only">, </span>
+    </span>
   </CriterionCell>
 )
 
