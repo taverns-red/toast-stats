@@ -29,9 +29,12 @@ forever and the PR can never merge:
 - requiring `Docs Gate` deadlocks every code-only PR.
 
 So the required check is an aggregator that runs **unconditionally** — no path
-filter of its own — and decides. `.github/workflows/ci-gate.yml` is the job;
-`scripts/lib/ciGate.ts` is the (unit-tested) logic; `scripts/ci-gate.ts` is the
-runner.
+filter of its own — and decides. Since #2607 it is the last job (`gate`, named
+`CI Gate`) of `.github/workflows/ci.yml`, which has no `pull_request` path
+filter. It `needs:` the `changes` classifier, Quality Gates, Test Suite, Build
+Applications and Docs Gate, and decides from their results, so nothing polls.
+`scripts/lib/ciGateNeeds.ts` is the (unit-tested) logic;
+`scripts/ci-gate-needs.ts` is the runner.
 
 ## What the aggregator actually protects against
 
@@ -139,13 +142,13 @@ from the files themselves:
 
 - `ci.yml`'s `paths-ignore`, `docs.yml`'s `paths`, and `NON_CODE_GLOBS` in
   `changedFilesGate.ts` are the same list, on every trigger;
-- `ci-gate.yml` has **no** `paths:` / `paths-ignore:` of its own;
+- `ci.yml` has no `paths:` / `paths-ignore:` on `pull_request`, so the gate job exists on every PR head;
 - every check name the gate can expect resolves to a real job `name:`;
 - `main.json` requires `CI Gate` and no path-filtered check.
 
 ## Operator runbook
 
-1. Merge the PR that adds `ci-gate.yml`, so `CI Gate` exists on `main`.
+1. Merge the PR that adds the `CI Gate` job to `ci.yml`, so `CI Gate` exists on `main`.
 2. Confirm the context name GitHub actually reports, and the app that reports
    it (`integration_id: 15368` is GitHub Actions):
 
