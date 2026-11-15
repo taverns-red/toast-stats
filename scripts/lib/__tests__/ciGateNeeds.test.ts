@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { classifyChanges, evaluateNeeds, type NeedResult } from '../ciGateNeeds'
+import {
+  classifyChanges,
+  evaluateHeadChecks,
+  evaluateNeeds,
+  type HeadCheckRun,
+  type NeedResult,
+} from '../ciGateNeeds'
 
 const ok = (outputs?: Record<string, string>): NeedResult => ({
   result: 'success',
@@ -122,5 +128,89 @@ describe('evaluateNeeds — fail closed (#1484 semantics, #2607)', () => {
       'docs-gate': r('skipped'),
     }
     expect(evaluateNeeds(n, { noop: true }).pass).toBe(true)
+  })
+})
+
+// A body/title-only `edited` run skips every job, so the gate re-verifies the
+// head SHA's check runs once instead (#2607). Reproduces the canary sequence:
+// a red head, then a body-only edit, must not turn CI Gate green.
+describe('evaluateHeadChecks — a no-op edit re-verifies the head', () => {
+  const NAMES = ['Quality Gates', 'Test Suite', 'Build Applications']
+  const run = (
+    name: string,
+    conclusion: string | null,
+    extra: Partial<HeadCheckRun> = {}
+  ): HeadCheckRun => ({
+    name,
+    status: conclusion === null ? 'in_progress' : 'completed',
+    conclusion,
+    ...extra,
+  })
+  const green = NAMES.map((n, i) =>
+    run(n, 'success', { id: 10 + i, started_at: '2026-11-15T01:00:00Z' })
+  )
+  // The skipped jobs the edit-triggered run itself creates.
+  const editSkips = NAMES.map((n, i) =>
+    run(n, 'skipped', { id: 90 + i, started_at: '2026-11-15T02:00:00Z' })
+  )
+
+  it('passes an edit after an all-green head, ignoring the edit run skips', () => {
+    expect(evaluateHeadChecks(NAMES, [...green, ...editSkips]).pass).toBe(true)
+  })
+  it('FAILS an edit on a red head (the canary: a failed Docs Gate)', () => {
+    const v = evaluateHeadChecks(
+      ['Docs Gate', ...NAMES],
+      [...green, ...editSkips, run('Docs Gate', 'failure', { id: 50 })]
+    )
+    expect(v.pass).toBe(false)
+    expect(v.reasons.join(' ')).toContain('Docs Gate')
+  })
+  it('FAILS when an expected check is missing', () => {
+    const v = evaluateHeadChecks(NAMES, [green[0]!, green[1]!, ...editSkips])
+    expect(v.pass).toBe(false)
+    expect(v.reasons.join(' ')).toContain('Build Applications')
+  })
+  it('FAILS when an expected check is still in flight (no waiting)', () => {
+    const v = evaluateHeadChecks(NAMES, [
+      green[0]!,
+      run('Test Suite', null, { id: 30 }),
+      ...editSkips,
+    ])
+    expect(v.pass).toBe(false)
+    expect(v.reasons.join(' ')).toContain('Test Suite')
+  })
+  it('FAILS when the only runs of an expected check are skipped', () => {
+    expect(evaluateHeadChecks(NAMES, editSkips).pass).toBe(false)
+  })
+  it('uses the latest non-skipped run: a green re-run beats an older red', () => {
+    const rerun = [
+      run('Test Suite', 'failure', {
+        id: 5,
+        started_at: '2026-11-15T00:00:00Z',
+      }),
+      run('Test Suite', 'success', {
+        id: 6,
+        started_at: '2026-11-15T00:30:00Z',
+      }),
+    ]
+    expect(
+      evaluateHeadChecks(['Test Suite'], [...rerun, ...editSkips]).pass
+    ).toBe(true)
+  })
+  it('a newer red re-run beats an older green', () => {
+    const rerun = [
+      run('Test Suite', 'success', {
+        id: 5,
+        started_at: '2026-11-15T00:00:00Z',
+      }),
+      run('Test Suite', 'failure', {
+        id: 6,
+        started_at: '2026-11-15T00:30:00Z',
+      }),
+    ]
+    expect(evaluateHeadChecks(['Test Suite'], rerun).pass).toBe(false)
+  })
+  it('fails closed on an empty expectation', () => {
+    expect(evaluateHeadChecks([], green).pass).toBe(false)
   })
 })

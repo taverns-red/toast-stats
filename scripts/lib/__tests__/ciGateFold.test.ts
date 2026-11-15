@@ -17,6 +17,7 @@ interface Job {
   needs?: string | string[]
   if?: string
   steps?: { run?: string; env?: Record<string, string> }[]
+  permissions?: Record<string, string>
 }
 const jobs = (f: string) =>
   (parse(read(f)) as { jobs: Record<string, Job> }).jobs
@@ -66,5 +67,28 @@ describe('ci.yml carries the CI Gate as a final needs: job (#2607)', () => {
   it('docs.yml no longer runs on pull_request (Docs Gate lives in ci.yml)', () => {
     const on = (parse(read('docs.yml')) as { on: Record<string, unknown> }).on
     expect(on.pull_request).toBeUndefined()
+  })
+
+  // COO-approved scoped exception (#2607): on a no-op edit the gate reads the
+  // head's check runs once, so ONLY the gate job gets these read scopes. The
+  // workflow-level block is narrowed separately (#2861).
+  it('the gate job holds exactly four read scopes', () => {
+    expect(gate()!.permissions).toEqual({
+      contents: 'read',
+      checks: 'read',
+      actions: 'read',
+      'pull-requests': 'read',
+    })
+  })
+  it('no job other than the gate and Agent CLI smoke has checks/actions scopes', () => {
+    const holders = Object.entries(ci())
+      .filter(
+        ([, j]) =>
+          j.permissions &&
+          ('checks' in j.permissions || 'actions' in j.permissions)
+      )
+      .map(([id]) => id)
+      .sort()
+    expect(holders).toEqual(['agent-cli-smoke', 'gate'])
   })
 })

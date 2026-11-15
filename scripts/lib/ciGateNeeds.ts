@@ -47,6 +47,26 @@ export function classifyChanges(files: string[]): {
   }
 }
 
+/** One check run on the PR head, as `GET /commits/{sha}/check-runs` reports. */
+export interface HeadCheckRun {
+  name: string
+  status: string
+  conclusion: string | null
+  id?: number
+  started_at?: string | null
+}
+
+/**
+ * Stub: on a no-op `edited` run the gate re-verifies the head's check runs.
+ * Implemented in the next commit.
+ */
+export function evaluateHeadChecks(
+  _expectedNames: string[],
+  _runs: HeadCheckRun[]
+): NeedsVerdict {
+  return { pass: true, reasons: [] }
+}
+
 export function evaluateNeeds(
   needs: Record<string, NeedResult>,
   { noop }: { noop: boolean }
