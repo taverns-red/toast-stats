@@ -7,6 +7,8 @@ import {
   findLiteralNodeVersions,
   parseLintMaxWarnings,
   nvmrcMajor,
+  findNonPrivateTooling,
+  engineFloorMajor,
 } from '../ciConfigGuard'
 
 // Resolve the repo root from this file, not process.cwd() (Lesson 082) — the
@@ -61,6 +63,44 @@ describe('findLiteralNodeVersions', () => {
 
   it.each(workflowFiles)('node is pinned via .nvmrc only: %s', file => {
     expect(findLiteralNodeVersions(readWorkflow(file))).toEqual([])
+  })
+})
+
+describe('findNonPrivateTooling (#2853)', () => {
+  it('flags a non-private, non-published workspace (sentinel)', () => {
+    expect(
+      findNonPrivateTooling(
+        {
+          'a/package.json': {},
+          'b/package.json': { private: true },
+          'pub/package.json': {},
+        },
+        ['pub/package.json']
+      )
+    ).toEqual(['a/package.json'])
+  })
+
+  it('exempts a published package and accepts all-private', () => {
+    expect(
+      findNonPrivateTooling({ 'pub/package.json': {} }, ['pub/package.json'])
+    ).toEqual([])
+    expect(
+      findNonPrivateTooling({ 'b/package.json': { private: true } }, [])
+    ).toEqual([])
+  })
+})
+
+describe('engineFloorMajor (#2853)', () => {
+  it('parses the floor as a number, so >=126 is not 26 (sentinel)', () => {
+    expect(engineFloorMajor('>=26')).toBe(26)
+    expect(engineFloorMajor('>=126')).toBe(126)
+    expect(engineFloorMajor('>=126')).not.toBe(26)
+    expect(engineFloorMajor('>= 22.1.0')).toBe(22)
+  })
+
+  it('returns null for a non-floor range', () => {
+    expect(engineFloorMajor('^26')).toBeNull()
+    expect(engineFloorMajor('')).toBeNull()
   })
 })
 
