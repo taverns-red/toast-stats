@@ -3607,6 +3607,7 @@ jobs:
     # deployment policy). There is no OR.
     if: >-
       !cancelled()
+      && needs.data-auto-restore-decide.result == 'success'
       && needs.data-auto-restore-decide.outputs.execute == 'true'
       && needs.data-smoke.outputs.restore_eligible == 'true'
       && github.ref == 'refs/heads/main'

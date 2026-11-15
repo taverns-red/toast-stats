@@ -597,7 +597,10 @@ not run against real objects.
 2. #2856 has landed.
 3. The staging drill is done: it confirms the planner's five assumptions (see
    #2492), and they are recorded here.
-4. Then set the repository variable `DATA_AUTO_RESTORE` to `execute` (and
+4. Only after step 1: the `data-restore` environment must exist, with its
+   main-only policy, before `DATA_AUTO_RESTORE` is set to `execute`. The
+   environment's branch policy is the one lock a branch cannot edit (a branch
+   can change the workflow's `if`). Then set the repository variable `DATA_AUTO_RESTORE` to `execute` (and
    check for an organization-level variable of the same name).
 
 ## Open questions
