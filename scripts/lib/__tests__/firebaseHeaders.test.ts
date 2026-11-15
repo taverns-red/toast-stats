@@ -163,12 +163,10 @@ describe('firebase.json security headers (#783)', () => {
           expect(csp()).toMatch(/font-src[^;]*https:\/\/fonts\.gstatic\.com/)
         })
 
-        it('allows BOTH CDN origins in connect-src (staging GCS + prod)', () => {
-          // Lesson 093: previews read the staging GCS bucket; prod reads
-          // cdn.taverns.red. Dropping either silently breaks data fetches.
-          expect(csp()).toMatch(
-            /connect-src[^;]*https:\/\/storage\.googleapis\.com/
-          )
+        it('allows the prod CDN origin and not the raw bucket host (#2696)', () => {
+          // Previews now read through cdn-staging (#1995); the staging bucket
+          // stops serving public reads, so the direct host is gone (#2696).
+          expect(csp()).not.toContain('storage.googleapis.com')
           expect(csp()).toMatch(/connect-src[^;]*https:\/\/cdn\.taverns\.red/)
         })
 
