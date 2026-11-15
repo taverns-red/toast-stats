@@ -7,8 +7,9 @@ that, recovering, and the guardrails that now catch it automatically.
 ## How a missed run is detected
 
 - **Freshness monitor** (`.github/workflows/pipeline-freshness-monitor.yml`)
-  runs daily at **14:00 UTC** — after the primary (08:00) and backup (11:00)
-  pipeline crons. It fetches the production manifest
+  runs daily at **14:00 UTC** — after the daily run, which a launchd job on
+  the operator Mac dispatches at 05:00 America/Toronto (#1242; see
+  `local-daily-pipeline-trigger.md`). It fetches the production manifest
   `https://storage.googleapis.com/toast-stats-data-ca/v1/latest.json`,
   compares its `generatedAt` against a **26h** threshold, and on staleness:
   1. opens (or comments on) a `pipeline-stale` GitHub issue with the age,
@@ -88,7 +89,9 @@ gh run list --workflow=data-pipeline.yml --limit 1   # confirm it queued
 ## Why runs go missing
 
 `schedule` events are **best-effort** — GitHub can drop them under load with
-no failure record (observed 2026-05-26). Causes seen / ruled out during the
+no failure record (observed 2026-05-26). That is why the daily's cron was
+removed and replaced by the launchd dispatch (#1242), which has its own
+failure mode: a Mac that is asleep or off dispatches nothing. Causes seen / ruled out during the
 #753 investigation:
 
 - **GitHub queuing-layer degradation** — the dropped run plus a concurrent
@@ -100,7 +103,7 @@ no failure record (observed 2026-05-26). Causes seen / ruled out during the
 
 ## Guardrails now in place
 
-| Guardrail                      | Where                            | Purpose                                                                                                   |
-| ------------------------------ | -------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Backup cron `0 11 * * *`       | `data-pipeline.yml`              | Absorbs a dropped 08:00 scheduled event. Idempotent; serialized by the `data-pipeline` concurrency group. |
-| Freshness monitor `0 14 * * *` | `pipeline-freshness-monitor.yml` | Alerts loudly (issue + red run) when the manifest is still stale after both crons.                        |
+| Guardrail                      | Where                               | Purpose                                                                                       |
+| ------------------------------ | ----------------------------------- | --------------------------------------------------------------------------------------------- |
+| Launchd dispatch + retries     | `scripts/trigger-daily-pipeline.sh` | Dispatches the daily at 05:00 America/Toronto, retrying and confirming a run started (#2496). |
+| Freshness monitor `0 14 * * *` | `pipeline-freshness-monitor.yml`    | Alerts loudly (issue + red run) when the manifest is still stale after the daily run.         |
