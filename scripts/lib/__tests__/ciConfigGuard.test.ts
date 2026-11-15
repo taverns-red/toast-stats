@@ -119,19 +119,21 @@ describe('.nvmrc is the single Node pin (AC4)', () => {
   // The exemption is an explicit list, so a new workspace that forgets
   // `private: true` is held to the .nvmrc major instead of escaping.
   const PUBLISHED = ['packages/mcp-server/package.json']
-  const tooling = ['package.json', ...WORKSPACE_PKGS].filter(
-    rel => !PUBLISHED.includes(rel)
-  )
+  const all = ['package.json', ...WORKSPACE_PKGS]
+  const tooling = all.filter(rel => !PUBLISHED.includes(rel))
 
-  it.each(tooling)('%s is private (only PUBLISHED may be public)', rel => {
-    expect(readJson(rel).private).toBe(true)
+  it('every workspace but PUBLISHED is private', () => {
+    expect(
+      findNonPrivateTooling(
+        Object.fromEntries(all.map(rel => [rel, readJson(rel)])),
+        PUBLISHED
+      )
+    ).toEqual([])
   })
 
-  it.each(tooling)('%s engines.node agrees with .nvmrc', rel => {
-    const major = nvmrcMajor(readFileSync(nvmrcPath, 'utf8'))
-    const engines: string = readJson(rel).engines?.node ?? ''
-    expect(engines).not.toBe('')
-    expect(engines).toContain(major)
+  it.each(tooling)('%s engines.node floor equals the .nvmrc major', rel => {
+    const major = Number(nvmrcMajor(readFileSync(nvmrcPath, 'utf8')))
+    expect(engineFloorMajor(readJson(rel).engines?.node ?? '')).toBe(major)
   })
 })
 

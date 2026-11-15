@@ -125,21 +125,22 @@ export function findJobNames(yamlSource: string): string[] {
  * Paths of non-published packages that are not `private: true` (#2853). Only
  * the explicit `published` list may be public; a new workspace that forgets
  * `private` is flagged instead of silently escaping the engines guard.
- * STUB: returns nothing until the sentinel is green.
  */
 export function findNonPrivateTooling(
-  _pkgs: Record<string, { private?: boolean }>,
-  _published: string[]
+  pkgs: Record<string, { private?: boolean }>,
+  published: string[]
 ): string[] {
-  return []
+  return Object.entries(pkgs)
+    .filter(([rel, pkg]) => !published.includes(rel) && pkg.private !== true)
+    .map(([rel]) => rel)
 }
 
 /**
  * The integer floor of an `engines.node` range such as `>=26`, or `null` when
  * it is not a plain `>=N` range. Compared as a number, never as a substring
  * (`>=126` must not satisfy a Node 26 check).
- * STUB: returns null until the sentinel is green.
  */
-export function engineFloorMajor(_range: string): number | null {
-  return null
+export function engineFloorMajor(range: string): number | null {
+  const m = /^>=\s*(\d+)/.exec(range)
+  return m ? Number(m[1]) : null
 }
