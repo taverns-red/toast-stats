@@ -10,6 +10,8 @@ import { describe, expect, it } from 'vitest'
 const ROOT = join(__dirname, '..', '..', '..')
 const WORKFLOWS = join(ROOT, '.github', 'workflows')
 
+const ECHOES_TOKEN = /echo[^\n]*\$\{?\w*TOKEN/
+
 const read = (p: string): string => readFileSync(join(ROOT, p), 'utf8')
 
 function cspValues(): string[] {
@@ -61,12 +63,36 @@ describe('staging bucket readers (#2696)', () => {
     expect(checked).toBeGreaterThan(0)
   })
 
-  it('basemap-build.yml: never echoes the access token', () => {
-    const yml = read('.github/workflows/basemap-build.yml')
-    expect(yml).not.toMatch(/echo[^\n]*\$\{?TOKEN/)
+  it('the token-echo pattern catches an echoed ACCESS_TOKEN (fixture)', () => {
+    expect(ECHOES_TOKEN.test('echo "$ACCESS_TOKEN"')).toBe(true)
+    expect(ECHOES_TOKEN.test('echo "${ACCESS_TOKEN}"')).toBe(true)
+    expect(ECHOES_TOKEN.test('echo "unrelated"')).toBe(false)
   })
 
-  it('no workflow or frontend source reads the staging bucket unauthenticated', () => {
+  it('basemap-build.yml: never echoes the access token, and masks it', () => {
+    const yml = read('.github/workflows/basemap-build.yml')
+    // The ::add-mask:: workflow command is the one sanctioned echo.
+    const echoes = yml
+      .split('\n')
+      .filter(l => !l.includes('::add-mask::') && ECHOES_TOKEN.test(l))
+    expect(echoes).toEqual([])
+    expect(yml).toContain('echo "::add-mask::${ACCESS_TOKEN}"')
+  })
+
+  it('no frontend source reads the staging bucket directly', () => {
+    const walk = (dir: string): string[] =>
+      readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap(e => {
+        if (e.name === '__tests__' || e.name === 'node_modules') return []
+        const rel = join(dir, e.name)
+        return e.isDirectory() ? walk(rel) : [rel]
+      })
+    const offenders = walk(join('frontend', 'src')).filter(f =>
+      /storage\.googleapis\.com\/toast-stats-data-staging/.test(read(f))
+    )
+    expect(offenders).toEqual([])
+  })
+
+  it('no workflow reads the staging bucket unauthenticated', () => {
     const files = readdirSync(WORKFLOWS)
       .filter(f => f.endsWith('.yml'))
       .map(f => join('.github', 'workflows', f))
