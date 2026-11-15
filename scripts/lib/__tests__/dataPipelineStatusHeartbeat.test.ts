@@ -1,14 +1,15 @@
 /**
  * Workflow contract: the status.taverns.red heartbeat (#2863, ops#343).
  *
- * After a successful, healthy prod promotion the pipeline pings the
- * Better Stack heartbeat (24 h period + 12 h grace). It pings on the daily
- * run, or on a manual dispatch that opted in with `recovery: true` AND
- * advanced prod's latest snapshot date. Plain rebuilds, an unhealthy
- * verdict and a staging-only proof run never ping. The URL is a secret: it
- * lives in `env:` only and is never echoed.
+ * After a healthy prod promotion by a daily-mode run, any trigger, the
+ * pipeline pings the Better Stack heartbeat (24 h period + 12 h grace).
+ * The public component means "our daily pipeline ran and is healthy". It is
+ * deliberately NOT data freshness (TI's month-end dashboard freezes are not
+ * our outage), so do not "fix" this into a freshness check. A missed launchd
+ * run correctly shows the component down. Rebuilds, prune, proof runs and an
+ * unhealthy verdict never ping. The URL is a secret: env only, never echoed.
  *
- * The cases are evaluated by a tiny GitHub-expression interpreter over the
+ * Cases are evaluated by a tiny GitHub-expression interpreter over the
  * job's real `if:` string, so the test pins behaviour, not wording.
  */
 
@@ -51,8 +52,6 @@ const pipeline = workflow.jobs['pipeline']!
 interface Ctx {
   event: string
   mode: string
-  recovery: boolean
-  newerDate: string
   promotedDates: string
   skipPromotion: string
   pipelineResult: string
@@ -60,10 +59,8 @@ interface Ctx {
   unhealthy: string
 }
 const base: Ctx = {
-  event: 'schedule',
+  event: 'workflow_dispatch',
   mode: 'daily',
-  recovery: false,
-  newerDate: 'true',
   promotedDates: '2026-11-14',
   skipPromotion: 'false',
   pipelineResult: 'success',
@@ -75,13 +72,11 @@ const base: Ctx = {
 function evaluate(expr: string, c: Ctx): boolean {
   const values: Record<string, string | boolean> = {
     'github.event_name': c.event,
-    'inputs.recovery': c.recovery,
     'needs.pipeline.result': c.pipelineResult,
     'needs.pipeline.outputs.mode': c.mode,
     'needs.pipeline.outputs.skip_promotion': c.skipPromotion,
     'needs.pipeline.outputs.promoted': c.promotedDates ? 'true' : 'false',
     'needs.pipeline.outputs.promoted_dates': c.promotedDates,
-    'needs.pipeline.outputs.prod_newer_date': c.newerDate,
     'needs.data-smoke.result': c.smokeResult,
     'needs.data-smoke.outputs.unhealthy': c.unhealthy,
   }
@@ -103,61 +98,29 @@ describe('status-heartbeat job (#2863)', () => {
     expect(needs).toContain('data-smoke')
   })
 
-  it('declares a recovery input: boolean, default false', () => {
-    const input = workflow.on.workflow_dispatch.inputs['recovery']
-    expect(input).toBeDefined()
-    expect(input!['type']).toBe('boolean')
-    expect(input!['default']).toBe(false)
-    expect(input!['required']).toBe(false)
+  it('has no recovery input and reads no prior-date gate', () => {
+    expect(workflow.on.workflow_dispatch.inputs['recovery']).toBeUndefined()
+    expect(job!.if ?? '').not.toMatch(/recovery|prod_newer_date/)
   })
 
-  it('pings on the scheduled daily that promoted', () => {
+  it('pings on a mode=daily dispatch that promoted and is healthy', () => {
     expect(evaluate(job!.if ?? '', base)).toBe(true)
   })
 
-  it('pings on a recovery dispatch that promoted a newer date', () => {
-    expect(
-      evaluate(job!.if ?? '', {
-        ...base,
-        event: 'workflow_dispatch',
-        recovery: true,
-        newerDate: 'true',
-      })
-    ).toBe(true)
+  it('pings on a daily-mode schedule run too (any trigger)', () => {
+    expect(evaluate(job!.if ?? '', { ...base, event: 'schedule' })).toBe(true)
   })
 
-  it('never pings on a manual dispatch without recovery', () => {
-    for (const mode of ['daily', 'rebuild', 'rescrape', 'prune']) {
-      expect(
-        evaluate(job!.if ?? '', {
-          ...base,
-          event: 'workflow_dispatch',
-          mode,
-          recovery: false,
-          newerDate: 'true',
-        }),
-        mode
-      ).toBe(false)
+  it('never pings for rebuild, rescrape, prune or backfill modes', () => {
+    for (const mode of [
+      'rebuild',
+      'rescrape',
+      'rescrape-historical',
+      'prune',
+      'backfill-global-totals',
+    ]) {
+      expect(evaluate(job!.if ?? '', { ...base, mode }), mode).toBe(false)
     }
-  })
-
-  it('never pings on a recovery dispatch that promoted no newer date', () => {
-    expect(
-      evaluate(job!.if ?? '', {
-        ...base,
-        event: 'workflow_dispatch',
-        recovery: true,
-        newerDate: 'false',
-      })
-    ).toBe(false)
-    expect(
-      evaluate(job!.if ?? '', {
-        ...base,
-        event: 'workflow_dispatch',
-        recovery: true,
-        newerDate: '',
-      })
-    ).toBe(false)
   })
 
   it('never pings when the run judged the data unhealthy', () => {
@@ -166,7 +129,6 @@ describe('status-heartbeat job (#2863)', () => {
         evaluate(job!.if ?? '', {
           ...base,
           event,
-          recovery: true,
           unhealthy: 'true',
         }),
         event
@@ -261,39 +223,5 @@ describe('the ping step (#2863)', () => {
   it('has no checkout, auth or install: it needs only curl', () => {
     const all = JSON.stringify(job)
     expect(all).not.toMatch(/google-github-actions|actions\/checkout|npm ci/)
-  })
-})
-
-describe('the new-date comparison in the pipeline job (#2863)', () => {
-  const before = pipeline.steps!.find(s => s.id === 'prodlatestbefore')
-  const after = pipeline.steps!.find(s => s.id === 'heartbeatdate')
-  const promote = pipeline.steps!.findIndex(s => s.id === 'promotemanifest')
-
-  it('reads prod latest.json (read-only) before the promote step', () => {
-    expect(before).toBeDefined()
-    expect(pipeline.steps!.indexOf(before!)).toBeLessThan(promote)
-    expect(before!.run).toMatch(/gcloud storage cat/)
-    expect(before!.run).toMatch(/GCS_BUCKET_PRODUCTION/)
-    expect(before!.run).not.toMatch(/storage (cp|rsync|mv|rm)/)
-    expect(before!['continue-on-error']).toBe(true)
-  })
-
-  it('compares it to the promoted dates after the promote step, through the helper', () => {
-    expect(after).toBeDefined()
-    expect(pipeline.steps!.indexOf(after!)).toBeGreaterThan(promote)
-    expect(after!.run).toMatch(/status-heartbeat\.ts/)
-    expect(after!.env?.['PROD_LATEST_BEFORE']).toContain(
-      'steps.prodlatestbefore.outputs.date'
-    )
-    expect(after!.env?.['PROMOTED_DATES']).toContain(
-      'steps.promotemanifest.outputs.promoted_dates'
-    )
-    expect(after!['continue-on-error']).toBe(true)
-  })
-
-  it('exposes the verdict as a pipeline job output', () => {
-    expect(pipeline.outputs?.['prod_newer_date']).toContain(
-      'steps.heartbeatdate.outputs.newer'
-    )
   })
 })
