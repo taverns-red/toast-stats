@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import * as path from 'node:path'
+import { parse as parseYaml } from 'yaml'
 
 /**
  * firebase-tools is pinned and isolated (#2551).
@@ -81,5 +82,104 @@ describe('firebase-tools pin (#2551)', () => {
 
   it('finds every workflow install of firebase-tools (sweep is not vacuous)', () => {
     expect(installs).toBeGreaterThanOrEqual(4)
+  })
+})
+
+/**
+ * Trivy alerts on the isolated firebase-tools tree (#2551, COO decision).
+ *
+ * Pinning the tree made Trivy see its transitive dependencies. Policy:
+ * 1. `overrides` only where the patched version stays inside the semver
+ *    range the real dependent declares in the lockfile.
+ * 2. Everything else is accepted in `.trivyignore.yaml`, scoped to
+ *    `tools/firebase-tools/**`, each with a reason and an expiry no later
+ *    than 2026-12-14 (30 days after the decision, 2026-11-14).
+ */
+const EXPIRY_CAP = '2026-12-14'
+const SCOPE = 'tools/firebase-tools/**'
+
+const toolPkg = JSON.parse(
+  readFileSync(path.join(toolDir, 'package.json'), 'utf-8')
+)
+const lock = JSON.parse(
+  readFileSync(path.join(toolDir, 'package-lock.json'), 'utf-8')
+) as {
+  packages: Record<
+    string,
+    {
+      dependencies?: Record<string, string>
+      optionalDependencies?: Record<string, string>
+    }
+  >
+}
+
+// ^X.Y.Z only (all that firebase-tools' dependents use for the overridden
+// packages); anything else fails loudly rather than being guessed at.
+function satisfiesCaret(version: string, range: string): boolean {
+  const m = /^\^(\d+)\.(\d+)\.(\d+)$/.exec(range)
+  expect(m, `unsupported range ${range}`).not.toBeNull()
+  const [maj, min, pat] = m!.slice(1).map(Number)
+  const [vMaj, vMin, vPat] = version.split('.').map(Number)
+  expect(maj, 'caret check only supports major >= 1').toBeGreaterThan(0)
+  if (vMaj !== maj) return false
+  if (vMin !== min) return vMin > min
+  return vPat >= pat
+}
+
+describe('firebase-tools transitive alerts (#2551)', () => {
+  const overrides: Record<string, string> = toolPkg.overrides ?? {}
+
+  it('overrides re2 to a patched release (fix is > 1.26.0)', () => {
+    expect(overrides.re2).toBe('1.27.1')
+  })
+
+  it('every override stays inside its dependents declared range', () => {
+    const names = Object.keys(overrides)
+    expect(names.length).toBeGreaterThan(0)
+    for (const name of names) {
+      const declared: string[] = []
+      for (const pkg of Object.values(lock.packages)) {
+        const r = pkg.dependencies?.[name] ?? pkg.optionalDependencies?.[name]
+        if (r) declared.push(r)
+      }
+      expect(declared.length, `no dependent declares ${name}`).toBeGreaterThan(
+        0
+      )
+      for (const range of declared) {
+        expect(
+          satisfiesCaret(overrides[name], range),
+          `${name}@${overrides[name]} is outside ${range}`
+        ).toBe(true)
+      }
+    }
+  })
+
+  const ignorePath = path.join(root, '.trivyignore.yaml')
+  const ids = [
+    'CVE-2026-41907', // uuid 9.0.1: gaxios needs ^9.0.1, fixed in 11.1.1
+    'CVE-2026-54285', // @opentelemetry/core 1.30.1: pubsub needs ^1.30.1, fixed in 2.8.0
+    'CVE-2026-118773', // glob 10.5.0: dependents need ^10, fixed in 14.0.2
+    'CVE-2026-118764', // minimatch 9.0.9: glob needs ^9.0.4, fixed in 11.0.1
+  ]
+
+  it('accepts exactly the out-of-range alerts in .trivyignore.yaml', () => {
+    expect(existsSync(ignorePath), '.trivyignore.yaml').toBe(true)
+    const doc = parseYaml(readFileSync(ignorePath, 'utf-8'))
+    const entries: Array<Record<string, unknown>> = doc.vulnerabilities ?? []
+    expect(entries.map(e => e.id).sort()).toEqual([...ids].sort())
+    for (const e of entries) {
+      expect(e.paths, `${e.id} paths`).toEqual([SCOPE])
+      expect(
+        String(e.statement ?? '').length,
+        `${e.id} reason`
+      ).toBeGreaterThan(20)
+      const exp = new Date(String(e.expired_at)).toISOString().slice(0, 10)
+      expect(exp <= EXPIRY_CAP, `${e.id} expires ${exp}`).toBe(true)
+    }
+  })
+
+  it('the Trivy scan step reads the ignore file', () => {
+    const ci = readFileSync(path.join(workflowsDir, 'ci.yml'), 'utf-8')
+    expect(ci).toMatch(/trivyignores:\s*'?\.trivyignore\.yaml'?/)
   })
 })
