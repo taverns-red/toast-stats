@@ -54,25 +54,22 @@ curl -s https://storage.googleapis.com/toast-stats-data-ca/v1/latest.json | jq .
 
 Then close the `pipeline-stale` issue.
 
-### Telling status.taverns.red the recovery landed (`recovery`, #2863)
+### The status.taverns.red heartbeat (#2863)
 
 status.taverns.red (Better Stack, ops#343) expects a heartbeat from the data
-pipeline every **24 h**, with a **12 h grace**, so stale prod data alerts at
-about 36 h. The `status-heartbeat` job pings after a healthy promotion
-(the data smoke passed, no auto-restore verdict, not a `skip_promotion` run).
-It pings on a `schedule` daily, and on a manual dispatch only when you opt in:
+pipeline every **24 h**, with a **12 h grace**. The `status-heartbeat` job
+pings after a healthy prod promotion by a `mode=daily` run, whatever
+triggered it: the pipeline succeeded, it was not a `skip_promotion` run,
+something was promoted, and the data smoke passed (verdict not unhealthy).
+It uses the `STATUS_HEARTBEAT_TS_DATA` secret and never fails the run.
 
-```bash
-gh workflow run data-pipeline.yml -f mode=daily -f recovery=true
-```
-
-`recovery` defaults to **false**. Even with it on, the job pings only if the
-run promoted a snapshot date **newer** than the `latestSnapshotDate` prod held
-before the run (read from prod `v1/latest.json` just before the promote step;
-a promoted date later than it counts). A recovery dispatch that promoted no
-newer date, any dispatch without `recovery`, and every rebuild, rescrape or
-prune never ping, so they cannot hide a missed daily. The ping uses the
-`STATUS_HEARTBEAT_TS_DATA` secret and never fails the run.
+**What the component means: "our daily pipeline ran and is healthy".** It is
+deliberately **not data freshness**: TI's month-end dashboard freezes are not
+our outage, so a stale `latestSnapshotDate` must not turn it red. A missed
+launchd run (Mac asleep or off) correctly shows it down. Do not "fix" it into
+a freshness check; the freshness monitor above covers that. A manual
+`mode=daily` dispatch that promotes also pings, which is how a recovery run
+reports in. Rebuild, rescrape, prune and backfill modes never ping.
 
 ## Confirming a dispatch queues (without writing prod data)
 
