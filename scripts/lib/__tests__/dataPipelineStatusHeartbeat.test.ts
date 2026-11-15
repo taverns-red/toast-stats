@@ -176,12 +176,8 @@ describe('status-heartbeat job (#2863)', () => {
     expect(job!.permissions).toEqual({ contents: 'read' })
   })
 
-  it('leaves the workflow-level permissions untouched', () => {
-    expect(workflow.permissions).toEqual({
-      contents: 'read',
-      'id-token': 'write',
-      issues: 'write',
-    })
+  it('does not widen the workflow level beyond contents: read (#2868)', () => {
+    expect(workflow.permissions).toEqual({ contents: 'read' })
   })
 })
 
