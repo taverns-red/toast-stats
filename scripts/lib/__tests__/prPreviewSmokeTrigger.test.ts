@@ -176,7 +176,7 @@ describe('merge gating stays honest (#2101)', () => {
     // CI Gate runs on opened/synchronize/reopened only. If a check that a
     // draft legitimately skips became required, a draft-era `skipped` would
     // fail the gate and nothing would re-run it on ready_for_review. Making
-    // one required means adding ready_for_review to ci-gate.yml first.
+    // one required means adding ready_for_review to the CI Gate job's workflow (ci.yml) first.
     const preview = load('pr-preview.yml').jobs?.['preview']?.name
     const lighthouse = 'lighthouse'
     expect(preview).toBe('Deploy preview channel')
