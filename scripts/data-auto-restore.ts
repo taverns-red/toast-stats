@@ -9,11 +9,14 @@
  *       env SMOKE_HEALTHY, SMOKE_RESULT_FILE, SCHEMA_UNHEALTHY,
  *       SCHEMA_RESTORE_ELIGIBLE -> outputs restore_eligible, restore_reason
  *   data-auto-restore.ts paths --manifest written.jsonl --out paths.txt
+ *       exit 1 if no in-scope object, 3 if the manifest is malformed
+ *   data-auto-restore.ts plan-failure --stderr F --plan F --out F
+ *       (decide job) the class of a failed planner run -> --out (#2858)
  *       the in-scope object names from the run manifest; exit 1 if none
  *   data-auto-restore.ts intent
  *       (decide job) env DATA_AUTO_RESTORE, UNHEALTHY, RESTORE_ELIGIBLE,
  *       RESTORE_REASON, RUN_URL, GITHUB_RUN_ID, FAILED, PROMOTE_STARTED,
- *       WINDOW_END, and the read-only enumeration (#2858): ENUM_AUTH_OUTCOME,
+ *       WINDOW_END, and the read-only enumeration (#2858): ENUM_PRECHECK_OUTCOME, ENUM_AUTH_OUTCOME,
  *       ENUM_STEP_OUTCOME, ENUM_PLAN_FILE, ENUM_ERROR_CLASS_FILE
  *       -> outputs action, execute, file_issue, title, body_file
  *   data-auto-restore.ts decide --plan plan.json (execute job)
@@ -45,6 +48,7 @@ import {
   decideIntent,
   decideRestore,
   manifestPaths,
+  classifyPlanFailure,
   resolveEnumeration,
   resolveRestoreMode,
 } from './lib/dataAutoRestore.js'
@@ -57,7 +61,7 @@ function output(key: string, value: string): void {
 
 function usage(): never {
   console.error(
-    'usage: data-auto-restore.ts mode | verdict | intent | paths --manifest F --out F | decide --plan F | report --plan F'
+    'usage: data-auto-restore.ts mode | verdict | intent | paths --manifest F --out F | plan-failure --stderr F --plan F --out F | decide --plan F | report --plan F'
   )
   process.exit(2)
 }
@@ -95,6 +99,7 @@ const { values } = parseArgs({
     manifest: { type: 'string' },
     out: { type: 'string' },
     plan: { type: 'string' },
+    stderr: { type: 'string' },
   },
   strict: true,
 })
@@ -140,13 +145,40 @@ switch (cmd) {
   }
   case 'paths': {
     if (!values.manifest || !values.out) usage()
-    const paths = manifestPaths(readFileSync(values.manifest, 'utf8'))
+    let paths: string[]
+    try {
+      paths = manifestPaths(readFileSync(values.manifest, 'utf8'))
+    } catch (e) {
+      // A malformed manifest is not an empty selection (exit 1): exit 3.
+      console.error(
+        `run manifest unreadable: ${e instanceof Error ? e.message : String(e)}`
+      )
+      process.exit(3)
+    }
     if (paths.length === 0) {
       console.error('the run manifest lists no in-scope objects')
       process.exit(1)
     }
     writeFileSync(values.out, paths.join('\n') + '\n')
     console.error(`${paths.length} in-scope object(s)`)
+    break
+  }
+  case 'plan-failure': {
+    // After a failed plan-data-restore.ts in the decide job: write one fixed
+    // class to --out. The stderr text is read, never printed or written.
+    if (!values.stderr || !values.plan || !values.out) usage()
+    let stderr = ''
+    try {
+      stderr = readFileSync(values.stderr, 'utf8')
+    } catch {
+      stderr = ''
+    }
+    const errorClass = classifyPlanFailure({
+      stderr,
+      planWritten: existsSync(values.plan),
+    })
+    writeFileSync(values.out, errorClass + '\n')
+    console.error(`plan failure class: ${errorClass}`)
     break
   }
   case 'intent': {
@@ -173,6 +205,7 @@ switch (cmd) {
       // The read-only enumeration (#2858). Only a fixed error class is read
       // back: GCP error text stays in the job log.
       enumeration: resolveEnumeration({
+        precheckOutcome: process.env['ENUM_PRECHECK_OUTCOME'] ?? '',
         authOutcome: process.env['ENUM_AUTH_OUTCOME'] ?? '',
         enumOutcome: process.env['ENUM_STEP_OUTCOME'] ?? '',
         errorClass: readErrorClass(process.env['ENUM_ERROR_CLASS_FILE']),

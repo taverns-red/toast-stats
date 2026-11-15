@@ -188,6 +188,22 @@ const LIST_RESTORES = 40
 const LIST_DELETES = 100
 const LIST_REFUSED = 100
 
+/**
+ * A markdown code span that a name cannot break out of: the fence is one
+ * backtick longer than the longest backtick run in the text (padded with a
+ * space when the text touches a backtick).
+ */
+export function codeSpan(text: string): string {
+  const runs = text.match(/`+/g) ?? []
+  const longest = runs.reduce((m, r) => Math.max(m, r.length), 0)
+  if (longest === 0) return `\`${text}\``
+  const fence = '`'.repeat(longest + 1)
+  return `${fence} ${text} ${fence}`
+}
+
+// A name in a table cell: a pipe would end the cell even inside a code span.
+const nameCell = (name: string): string => codeSpan(name.replace(/\|/g, '\\|'))
+
 const cell = (s: string): string =>
   s
     .replace(/\\/g, '\\\\')
@@ -200,10 +216,10 @@ function table(entries: PlanEntry[], cap: number, restore: boolean): string[] {
   const rows = restore
     ? shown.map(
         e =>
-          `| \`${e.name}\` | ${e.generation ?? ''} | ${e.liveGeneration} | ${cell(e.reason)} |`
+          `| ${nameCell(e.name)} | ${e.generation ?? ''} | ${e.liveGeneration} | ${cell(e.reason)} |`
       )
     : shown.map(
-        e => `| \`${e.name}\` | ${e.liveGeneration} | ${cell(e.reason)} |`
+        e => `| ${nameCell(e.name)} | ${e.liveGeneration} | ${cell(e.reason)} |`
       )
   const head = restore
     ? [
@@ -406,8 +422,8 @@ export interface IntentInput {
 }
 
 /**
- * The token-free decision, made before any plan exists (the decide job has no
- * GCP identity). It says only whether the execute job may start; the execute
+ * The decision made from the verdict and the variable alone, before any plan
+ * exists (the decide job never uses a write identity). It says only whether the execute job may start; the execute
  * job re-plans and refuses on anything unclean. Fails closed: `execute` needs
  * unhealthy data, an eligible verdict and the exact word `execute`.
  */
@@ -489,13 +505,15 @@ export type Enumeration =
  * carry service account emails and project paths, so it stays in the job log.
  */
 export function resolveEnumeration(i: {
+  /** The reader-variable precheck (#2858); failure means the variable is empty. */
+  precheckOutcome?: string
   authOutcome: string
   enumOutcome: string
   errorClass: string
   plan: RestorePlan | null
 }): Enumeration {
   if (i.plan !== null) return { kind: 'plan', plan: i.plan }
-  if (i.authOutcome === 'failure') {
+  if (i.precheckOutcome === 'failure' || i.authOutcome === 'failure') {
     return { kind: 'failed', errorClass: 'auth-failed' }
   }
   if (i.authOutcome !== 'success' || i.enumOutcome === 'skipped') {
@@ -506,6 +524,21 @@ export function resolveEnumeration(i: {
     kind: 'failed',
     errorClass: known ? i.errorClass : 'plan-failed',
   }
+}
+
+/**
+ * Why plan-data-restore.ts exited non-zero, as one of the fixed classes. A
+ * plan file means the planner finished and refused entries; without one, a
+ * stderr that blames a listing is a listing failure, anything else a plain
+ * failure. Only this class reaches the issue, never the stderr text.
+ */
+export function classifyPlanFailure(i: {
+  stderr: string
+  planWritten: boolean
+}): 'plan-refused' | 'listing-failed' | 'plan-failed' {
+  if (i.planWritten) return 'plan-refused'
+  if (/\blisting\b/.test(i.stderr)) return 'listing-failed'
+  return 'plan-failed'
 }
 
 // An issue body is capped at 65,536 characters; stay well under it.

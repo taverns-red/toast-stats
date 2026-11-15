@@ -229,7 +229,7 @@ describe('data-auto-restore-decide: token-free, files the issue (#2537)', () => 
   it('fails before auth when the reader variable is empty, so auth can never fall back to direct WIF (#2858)', () => {
     const pre = dById('reader')
     expect(pre).toBeDefined()
-    expect(pre!.run ?? '').toMatch(/-n\s+"\$\{?READER_SA\}?"/)
+    expect(pre!.run ?? '').toMatch(/-[nz]\s+"\$\{?READER_SA\}?"/)
     expect(pre!.env?.['READER_SA']).toBe('${{ vars.GCP_DATA_READER_SA }}')
     expect(pre!['continue-on-error']).toBe(true)
     expect(dSteps.findIndex(s => s.id === 'reader')).toBeLessThan(

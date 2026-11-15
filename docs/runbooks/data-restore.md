@@ -528,9 +528,12 @@ Two jobs in `data-pipeline.yml` run when the post-promotion `data-smoke`
 reports bad data (the smoke or the CDN schema check). Never on a
 `skip_promotion` run.
 
-- `data-auto-restore-decide` holds no write identity (`contents: read`,
-  `issues: write`, and `id-token: write` only to mint the read-only reader's
-  token, #2858). It files or refreshes the `data-rollback` issue: run id,
+- `data-auto-restore-decide` never uses a write identity: it authenticates
+  only as the read-only reader (#2858). It does hold `id-token: write`, on
+  the same workload identity provider as the other pipeline jobs, together
+  with `contents: read` and `issues: write`, so what stops it minting the
+  promote account's token is that provider's binding for that account, not
+  the job. Narrowing that binding is IAM work, tracked separately. It files or refreshes the `data-rollback` issue: run id,
   verdict, reason, mode, the run manifest's path
   (`gs://toast-stats-data-staging/runs/<id>/written.jsonl`), the exact
   command to plan by hand and the enumerated plan (see below). It outputs
@@ -558,9 +561,14 @@ admits only `refs/heads/main`, so the auth step runs on main only and the job
 must never gain an `environment:` (it would change the OIDC subject). It never
 uses the promote service account and writes nothing. If auth or the listing
 fails, the issue is still filed with the manual command and a line
-`enumeration failed: <class>` (`auth-failed`, `manifest-unreadable`,
-`no-in-scope-objects`, `listing-failed`, `plan-refused`, `plan-failed`); the
-GCP error text stays in the job log. `DATA_AUTO_RESTORE=off` skips it. First
+`enumeration failed: <class>`; the GCP error text stays in the job log. The
+classes: `auth-failed` (auth failed, or `GCP_DATA_READER_SA` is empty: it is
+checked before auth so auth cannot fall back to direct workload identity),
+`manifest-unreadable` (the run manifest is missing or malformed),
+`no-in-scope-objects` (a valid manifest with nothing to restore),
+`listing-failed` (the planner could not trust a listing), `plan-refused` (a
+plan was built and refuses entries; it is shown in the issue) and
+`plan-failed` (anything else). `DATA_AUTO_RESTORE=off` skips it. First
 live proof is the staging drill (#2492).
 
 | `DATA_AUTO_RESTORE` (repository variable) | What happens on a failed smoke   |

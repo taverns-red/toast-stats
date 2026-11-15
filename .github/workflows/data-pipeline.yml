@@ -3528,9 +3528,9 @@ jobs:
   # ══════════════════════════════════════════════════════════
   # DATA AUTO-RESTORE AFTER A FAILED SMOKE (#2537, epic #2492)
   #
-  # Two jobs, so the job that decides and reports holds no write identity:
+  # Two jobs, so the job that decides and reports never USES a write identity:
   #
-  #   data-auto-restore-decide  (the read-only data SA; no write identity)
+  #   data-auto-restore-decide  (uses only the read-only data SA)
   #     Reads the data-smoke verdict and the DATA_AUTO_RESTORE variable, files
   #     or refreshes the `data-rollback` issue (run id, verdict, reason, mode,
   #     the run manifest's path, the exact manual plan command and, since
@@ -3539,7 +3539,11 @@ jobs:
   #     on the data buckets, nothing else), on main only: its workload identity
   #     binding admits only that ref, and the job must keep no `environment:`
   #     or the OIDC subject changes and the binding refuses it. It never uses
-  #     the promote service account and never writes.
+  #     the promote service account and never writes. It does hold
+  #     `id-token: write` on the same workload identity provider as the other
+  #     pipeline jobs, so the provider's binding for the promote account is
+  #     what limits it, not this job; narrowing that binding is IAM work
+  #     tracked separately.
   #
   #   data-auto-restore-execute (the ONLY job that mints the promote SA token)
   #     Runs only when the decision says execute, the failure is a decode or
@@ -3596,6 +3600,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # An empty reader variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      # Classified auth-failed in the issue.
+      - name: Require the read-only data reader variable
+        id: reader
+        if: >-
+          !cancelled()
+          && github.ref == 'refs/heads/main'
+          && vars.DATA_AUTO_RESTORE != 'off'
+        continue-on-error: true
+        env:
+          READER_SA: ${{ vars.GCP_DATA_READER_SA }}
+        run: |
+          if [ -z "${READER_SA}" ]; then
+            echo "::error title=Data auto-restore::the repository variable GCP_DATA_READER_SA is empty; the plan is not enumerated"
+            exit 1
+          fi
+
       # The read-only data reader (#2858). Main only: its binding admits no
       # other ref. A failure never fails the job; the issue is still filed,
       # with the manual command and "enumeration failed: auth-failed".
@@ -3605,6 +3627,7 @@ jobs:
           !cancelled()
           && github.ref == 'refs/heads/main'
           && vars.DATA_AUTO_RESTORE != 'off'
+          && steps.reader.outcome == 'success'
         continue-on-error: true
         uses: google-github-actions/auth@v3
         with:
@@ -3638,13 +3661,27 @@ jobs:
           mkdir -p "${W}"
           fail() { echo "$1" > "${W}/error-class"; exit 1; }
           gcloud storage cat "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl" > "${W}/written.jsonl" || fail manifest-unreadable
-          npx tsx scripts/data-auto-restore.ts paths --manifest "${W}/written.jsonl" --out "${W}/paths.txt" || fail no-in-scope-objects
+          # paths exits 1 for an empty selection and 3 for a malformed manifest
+          rc=0
+          npx tsx scripts/data-auto-restore.ts paths --manifest "${W}/written.jsonl" --out "${W}/paths.txt" || rc=$?
+          if [ "${rc}" -eq 1 ]; then fail no-in-scope-objects; fi
+          if [ "${rc}" -ne 0 ]; then fail manifest-unreadable; fi
           bash scripts/pipeline/list-restore-candidates.sh "${W}" "${W}/paths.txt" || fail listing-failed
+          # The planner's stderr goes to the log, and the CLI reads it only to
+          # pick a fixed class (refused plan, listing failure or other).
+          rc=0
           npx tsx scripts/plan-data-restore.ts \
             --live "${W}/live.json" --soft-deleted "${W}/soft.json" \
             --live-errors "${W}/live.err" --soft-errors "${W}/soft.err" \
             --since "${PROMOTE_STARTED}" --until "${WINDOW_END}" \
-            --paths "${W}/paths.txt" --out "${W}/plan.json" || fail plan-refused
+            --paths "${W}/paths.txt" --out "${W}/plan.json" 2> "${W}/plan.err" || rc=$?
+          cat "${W}/plan.err" >&2
+          if [ "${rc}" -ne 0 ]; then
+            npx tsx scripts/data-auto-restore.ts plan-failure \
+              --stderr "${W}/plan.err" --plan "${W}/plan.json" --out "${W}/error-class" \
+              || echo plan-failed > "${W}/error-class"
+            exit 1
+          fi
 
       - name: Attach the full plan
         if: ${{ !cancelled() }}
@@ -3671,6 +3708,7 @@ jobs:
           PROMOTE_STARTED: ${{ needs.pipeline.outputs.promote_started }}
           WINDOW_END: ${{ needs.data-smoke.outputs.window_end }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ENUM_PRECHECK_OUTCOME: ${{ steps.reader.outcome }}
           ENUM_AUTH_OUTCOME: ${{ steps.auth.outcome }}
           ENUM_STEP_OUTCOME: ${{ steps.enumerate.outcome }}
           ENUM_PLAN_FILE: ${{ runner.temp }}/data-restore-decide/plan.json

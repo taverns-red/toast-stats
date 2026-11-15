@@ -529,7 +529,7 @@ describe('codeSpan: names with backticks render safely (#2858)', () => {
       windowEnd: '',
       enumeration: { kind: 'plan', plan },
     })
-    expect(body).toContain('`` v1/x`|y.json ``')
+    expect(body).toContain('`` v1/x`\\|y.json ``')
   })
 
   it('the execute report does the same', () => {
