@@ -7,6 +7,8 @@ import {
   findLiteralNodeVersions,
   parseLintMaxWarnings,
   nvmrcMajor,
+  findNonPrivateTooling,
+  engineFloorMajor,
 } from '../ciConfigGuard'
 
 // Resolve the repo root from this file, not process.cwd() (Lesson 082) — the
@@ -64,6 +66,44 @@ describe('findLiteralNodeVersions', () => {
   })
 })
 
+describe('findNonPrivateTooling (#2853)', () => {
+  it('flags a non-private, non-published workspace (sentinel)', () => {
+    expect(
+      findNonPrivateTooling(
+        {
+          'a/package.json': {},
+          'b/package.json': { private: true },
+          'pub/package.json': {},
+        },
+        ['pub/package.json']
+      )
+    ).toEqual(['a/package.json'])
+  })
+
+  it('exempts a published package and accepts all-private', () => {
+    expect(
+      findNonPrivateTooling({ 'pub/package.json': {} }, ['pub/package.json'])
+    ).toEqual([])
+    expect(
+      findNonPrivateTooling({ 'b/package.json': { private: true } }, [])
+    ).toEqual([])
+  })
+})
+
+describe('engineFloorMajor (#2853)', () => {
+  it('parses the floor as a number, so >=126 is not 26 (sentinel)', () => {
+    expect(engineFloorMajor('>=26')).toBe(26)
+    expect(engineFloorMajor('>=126')).toBe(126)
+    expect(engineFloorMajor('>=126')).not.toBe(26)
+    expect(engineFloorMajor('>= 22.1.0')).toBe(22)
+  })
+
+  it('returns null for a non-floor range', () => {
+    expect(engineFloorMajor('^26')).toBeNull()
+    expect(engineFloorMajor('')).toBeNull()
+  })
+})
+
 describe('.nvmrc is the single Node pin (AC4)', () => {
   const nvmrcPath = join(repoRoot, '.nvmrc')
 
@@ -71,17 +111,30 @@ describe('.nvmrc is the single Node pin (AC4)', () => {
     expect(existsSync(nvmrcPath)).toBe(true)
   })
 
-  // Every engines.node declaration (root + each workspace) must agree with
-  // .nvmrc's major, or a workspace can silently pin a divergent Node.
-  it.each(['package.json', ...WORKSPACE_PKGS])(
-    '%s engines.node agrees with .nvmrc',
-    rel => {
-      const major = nvmrcMajor(readFileSync(nvmrcPath, 'utf8'))
-      const engines: string = readJson(rel).engines?.node ?? ''
-      expect(engines).not.toBe('')
-      expect(engines).toContain(major)
-    }
-  )
+  // Every engines.node declaration (root + each private workspace) must agree
+  // with .nvmrc's major, or a workspace can silently pin a divergent Node.
+  // Published packages are exempt (#2853): `engines` there is what consumers
+  // need, not what tooling runs on, so mcp-server keeps its own floor
+  // (pinned by nodeVersionPolicy.test.ts).
+  // The exemption is an explicit list, so a new workspace that forgets
+  // `private: true` is held to the .nvmrc major instead of escaping.
+  const PUBLISHED = ['packages/mcp-server/package.json']
+  const all = ['package.json', ...WORKSPACE_PKGS]
+  const tooling = all.filter(rel => !PUBLISHED.includes(rel))
+
+  it('every workspace but PUBLISHED is private', () => {
+    expect(
+      findNonPrivateTooling(
+        Object.fromEntries(all.map(rel => [rel, readJson(rel)])),
+        PUBLISHED
+      )
+    ).toEqual([])
+  })
+
+  it.each(tooling)('%s engines.node floor equals the .nvmrc major', rel => {
+    const major = Number(nvmrcMajor(readFileSync(nvmrcPath, 'utf8')))
+    expect(engineFloorMajor(readJson(rel).engines?.node ?? '')).toBe(major)
+  })
 })
 
 describe('lint caps (AC5)', () => {

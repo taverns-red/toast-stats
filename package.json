@@ -89,7 +89,7 @@
     "*.{ts,tsx,js,jsx,json,md}": "prettier --write"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=26"
   },
   "overrides": {
     "minimatch": "^11.0.1",

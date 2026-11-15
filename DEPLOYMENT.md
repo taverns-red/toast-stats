@@ -14,7 +14,7 @@ Toastmasters Dashboard  →  Data Pipeline (GitHub Actions)  →  GCS + Cloud CD
 
 ## Prerequisites
 
-- Node.js 22+ and npm
+- Node.js 26+ and npm (the published `@taverns-red/toast-stats-mcp` supports Node 22+)
 - Firebase CLI (`npm install -g firebase-tools`)
 - Google Cloud SDK (`gcloud`) for GCS bucket management
 - GCP project with billing enabled
