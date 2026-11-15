@@ -76,16 +76,23 @@ describe('.nvmrc is the single Node pin (AC4)', () => {
   // Published packages are exempt (#2853): `engines` there is what consumers
   // need, not what tooling runs on, so mcp-server keeps its own floor
   // (pinned by nodeVersionPolicy.test.ts).
-  const isPrivate = (rel: string): boolean => readJson(rel).private === true
-  it.each(['package.json', ...WORKSPACE_PKGS].filter(isPrivate))(
-    '%s engines.node agrees with .nvmrc',
-    rel => {
-      const major = nvmrcMajor(readFileSync(nvmrcPath, 'utf8'))
-      const engines: string = readJson(rel).engines?.node ?? ''
-      expect(engines).not.toBe('')
-      expect(engines).toContain(major)
-    }
+  // The exemption is an explicit list, so a new workspace that forgets
+  // `private: true` is held to the .nvmrc major instead of escaping.
+  const PUBLISHED = ['packages/mcp-server/package.json']
+  const tooling = ['package.json', ...WORKSPACE_PKGS].filter(
+    rel => !PUBLISHED.includes(rel)
   )
+
+  it.each(tooling)('%s is private (only PUBLISHED may be public)', rel => {
+    expect(readJson(rel).private).toBe(true)
+  })
+
+  it.each(tooling)('%s engines.node agrees with .nvmrc', rel => {
+    const major = nvmrcMajor(readFileSync(nvmrcPath, 'utf8'))
+    const engines: string = readJson(rel).engines?.node ?? ''
+    expect(engines).not.toBe('')
+    expect(engines).toContain(major)
+  })
 })
 
 describe('lint caps (AC5)', () => {

@@ -11,9 +11,11 @@
 import { describe, it, expect } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { parse } from 'yaml'
 
-const ROOT = process.cwd()
+// Resolve from this file, not process.cwd() (Lesson 082).
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 const WORKFLOW_DIR = path.join(ROOT, '.github/workflows')
 const TOOLING_MAJOR = 26
 const MCP_SERVER_FLOOR = 22
@@ -36,13 +38,10 @@ function floorOf(range: string | undefined): number {
 
 const packageFiles = [
   'package.json',
-  'frontend/package.json',
-  'videos/package.json',
-  ...fs
-    .readdirSync(path.join(ROOT, 'packages'), { withFileTypes: true })
-    .filter(d => d.isDirectory())
-    .map(d => `packages/${d.name}/package.json`)
-    .filter(p => fs.existsSync(path.join(ROOT, p))),
+  ...(
+    JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
+      .workspaces as string[]
+  ).map(ws => `${ws}/package.json`),
 ]
 
 describe('Node version policy (#2853)', () => {
