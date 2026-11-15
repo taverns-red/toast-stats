@@ -15,13 +15,19 @@ interface CriterionCellProps {
   met: boolean
   /** The figure the outcome qualifies, e.g. "5/8". Shown first. */
   children?: React.ReactNode
+  /** Lay the figure and the outcome out in a column, for a wide figure in a
+   *  narrow cell (the area visit cells, #2871). */
+  stacked?: boolean
 }
 
 export const CriterionCell: React.FC<CriterionCellProps> = ({
   met,
   children,
+  stacked,
 }) => (
-  <span className={`dt-criterion dt-criterion--${met ? 'met' : 'not-met'}`}>
+  <span
+    className={`dt-criterion dt-criterion--${met ? 'met' : 'not-met'}${stacked ? ' dt-criterion--stacked' : ''}`}
+  >
     {children !== undefined && (
       <>
         <span className="dt-criterion__figure">{children}</span>{' '}

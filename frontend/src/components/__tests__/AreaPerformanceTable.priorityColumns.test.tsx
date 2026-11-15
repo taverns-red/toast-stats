@@ -117,6 +117,16 @@ describe('AreaPerformanceTable priority columns below 768 (#1834)', () => {
     expect(screen.getByTestId('where').textContent).toBe('?cols=award%2CgapD')
   })
 
+  it('the Visit 1 chip reads visited of club base plus needed (#2871)', () => {
+    renderAt()
+    fireEvent.click(screen.getByRole('button', { name: 'Visit 1' }))
+    const a2 = within(table()).getByText('A2').closest('tr')!
+    // A2: base 8, 5 visited, 6 needed. Never "5/6" (a ratio over the need).
+    expect(a2.textContent).toContain('5 of 8 visited')
+    expect(a2.textContent).toContain('6 needed')
+    expect(a2.textContent).not.toMatch(/\b5\/6\b/)
+  })
+
   it('opens the complete 9-column table in the full-screen sheet', () => {
     renderAt()
     fireEvent.click(screen.getByRole('button', { name: /full table/i }))

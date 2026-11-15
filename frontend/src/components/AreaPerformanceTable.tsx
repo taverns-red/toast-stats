@@ -67,11 +67,25 @@ const gapCell = (gap: {
   achievable: boolean
 }) => formatGap(gap.distinguishedClubsNeeded, gap.achieved, gap.achievable)
 
-/** Visits completed of required, then marker plus "Met" / "Not met" (#2718):
- *  the outcome never rests on colour or a tick/cross glyph. */
-const visitCell = (v: AreaPerformance['firstRoundVisits']) => (
-  <CriterionCell met={v.meetsThreshold}>
-    {v.completed}/{v.required}
+/** Clubs visited of the club base, then how many are needed, then marker plus
+ *  "Met" / "Not met" (#2718): the outcome never rests on colour or a tick/cross
+ *  glyph. The denominator is the base, as in the Paid cell; the requirement is
+ *  stated apart so "5/4" can't read as 5 visits against 4 clubs (#2871). */
+const visitCell = (
+  v: AreaPerformance['firstRoundVisits'],
+  clubBase: number
+) => (
+  <CriterionCell met={v.meetsThreshold} stacked>
+    {/* The lines are stacked, so a screen reader needs the commas the eye
+        doesn't (#2871); sr-only, so the visual is unchanged. */}
+    <span className="dt-criterion__part">
+      {v.completed} of {clubBase} visited
+      <span className="sr-only">, </span>
+    </span>
+    <span className="dt-criterion__part">
+      {v.required} needed
+      <span className="sr-only">, </span>
+    </span>
   </CriterionCell>
 )
 
@@ -113,14 +127,14 @@ const PHONE_METRICS: PriorityMetric<AreaPerformance, never>[] = [
   {
     id: 'visit1',
     label: 'Visit 1',
-    title: 'First-round visits (75% of club base)',
-    render: a => visitCell(a.firstRoundVisits),
+    title: 'First-round visits: clubs visited of club base (75% needed)',
+    render: a => visitCell(a.firstRoundVisits, a.clubBase),
   },
   {
     id: 'visit2',
     label: 'Visit 2',
-    title: 'Second-round visits (75% of club base)',
-    render: a => visitCell(a.secondRoundVisits),
+    title: 'Second-round visits: clubs visited of club base (75% needed)',
+    render: a => visitCell(a.secondRoundVisits, a.clubBase),
   },
   {
     id: 'award',
@@ -331,10 +345,10 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
                 )}
               </td>
               <td className="entity-table__c">
-                {visitCell(area.firstRoundVisits)}
+                {visitCell(area.firstRoundVisits, area.clubBase)}
               </td>
               <td className="entity-table__c">
-                {visitCell(area.secondRoundVisits)}
+                {visitCell(area.secondRoundVisits, area.clubBase)}
               </td>
               {countsPending ? (
                 <>

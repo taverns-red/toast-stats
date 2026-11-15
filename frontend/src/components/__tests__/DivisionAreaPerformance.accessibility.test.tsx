@@ -569,7 +569,7 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
       // Check for visit status indicators
       const text = container.textContent ?? ''
       expect(text).toMatch(/✓|✗/)
-      expect(text).toMatch(/4\/4/)
+      expect(text).toContain('4 of 5 visited · 4 needed')
     })
 
     it('should have proper table structure for screen readers', () => {
@@ -735,7 +735,7 @@ describe('Division and Area Performance Components - Accessibility Audit', () =>
       // Visit status should have text or icons, not just color
       const text = container.textContent ?? ''
       expect(text).toMatch(/✓|✗/)
-      expect(text).toMatch(/4\/4/)
+      expect(text).toContain('4 of 5 visited · 4 needed')
     })
   })
 
