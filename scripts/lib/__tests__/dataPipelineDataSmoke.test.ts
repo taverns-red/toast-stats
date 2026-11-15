@@ -139,7 +139,7 @@ describe('data-smoke job (#2538)', () => {
   it('is bounded and gates no promotion: only the data auto-restore (#2537) reads its verdict', () => {
     expect(Number(job!['timeout-minutes'])).toBeLessThanOrEqual(15)
     for (const [name, j] of Object.entries(workflow.jobs)) {
-      if (name === 'data-auto-restore') continue
+      if (name.startsWith('data-auto-restore-')) continue
       expect([j.needs ?? []].flat(), name).not.toContain('data-smoke')
     }
   })

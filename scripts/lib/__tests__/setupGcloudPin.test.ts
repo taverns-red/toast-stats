@@ -96,7 +96,7 @@ describe('setup-gcloud steps (#1720)', () => {
     expect(sites.length).toBeGreaterThanOrEqual(4)
     // One per job; education-ledger-history (#1802) is the fifth,
     // education-rollup (#2028) the sixth, promote-reports (#2144, #1767) the seventh,
-    // og-cards (#2304) the eighth, data-auto-restore (#2537) the ninth.
+    // og-cards (#2304) the eighth, data-auto-restore-execute (#2537) the ninth (its decide job has no gcloud).
     expect(sites.filter(s => s.file === 'data-pipeline.yml').length).toBe(9)
   })
 

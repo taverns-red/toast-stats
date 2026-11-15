@@ -204,6 +204,73 @@ describe('decide', () => {
   })
 })
 
+describe('intent: the token-free decision, no plan needed', () => {
+  const env = {
+    UNHEALTHY: 'true',
+    RESTORE_ELIGIBLE: 'true',
+    RESTORE_REASON: '',
+    RUN_URL: 'https://github.com/x/y/actions/runs/777',
+    GITHUB_RUN_ID: '777',
+    FAILED: 'the schema check',
+    PROMOTE_STARTED: '2026-11-14T10:00:00Z',
+    WINDOW_END: '2026-11-14T10:40:00Z',
+  }
+
+  it('execute only on the exact word, an unhealthy eligible verdict', () => {
+    const r = run(['intent'], { ...env, DATA_AUTO_RESTORE: 'execute' })
+    expect(r.status).toBe(0)
+    expect(r.outputs['execute']).toBe('true')
+    expect(r.outputs['file_issue']).toBe('true')
+    expect(r.outputs['action']).toBe('execute')
+  })
+
+  it('unset, dry-run and off never execute, and still file the issue', () => {
+    for (const v of ['', 'dry-run', 'off', 'EXECUTE', 'true']) {
+      const r = run(['intent'], { ...env, DATA_AUTO_RESTORE: v })
+      expect(r.outputs['execute'], v).toBe('false')
+    }
+    expect(run(['intent'], { ...env }).outputs['file_issue']).toBe('true')
+  })
+
+  it('a verdict that is not eligible, or an unset one, never executes', () => {
+    const a = run(['intent'], {
+      ...env,
+      DATA_AUTO_RESTORE: 'execute',
+      RESTORE_ELIGIBLE: 'false',
+    })
+    expect(a.outputs['execute']).toBe('false')
+    expect(a.outputs['action']).toBe('not-eligible')
+    const b = run(['intent'], {
+      ...env,
+      DATA_AUTO_RESTORE: 'execute',
+      RESTORE_ELIGIBLE: '',
+    })
+    expect(b.outputs['execute']).toBe('false')
+  })
+
+  it('healthy data decides nothing and files nothing', () => {
+    const r = run(['intent'], {
+      ...env,
+      DATA_AUTO_RESTORE: 'execute',
+      UNHEALTHY: 'false',
+    })
+    expect(r.outputs['execute']).toBe('false')
+    expect(r.outputs['file_issue']).toBe('false')
+  })
+
+  it('writes the issue body: manifest path and plan command, no object list', () => {
+    const r = run(['intent'], { ...env, DATA_AUTO_RESTORE: 'execute' })
+    const bodyFile = r.outputs['body_file']!
+    expect(bodyFile).toBeTruthy()
+    const body = fs.readFileSync(bodyFile, 'utf-8')
+    expect(body).toContain('777')
+    expect(body).toContain('/runs/777/written.jsonl')
+    expect(body).toContain('--since 2026-11-14T10:00:00Z')
+    expect(body).toContain('--until 2026-11-14T10:40:00Z')
+    expect(r.outputs['title']).toMatch(/data-rollback/)
+  })
+})
+
 describe('verdict', () => {
   it('writes restore_eligible true for a cdn-data decode failure', () => {
     const result = file('smoke.json', {

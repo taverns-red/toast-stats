@@ -12,8 +12,11 @@ import { checkCdnLatest } from '../hostingRollback.js'
 import {
   DEFAULT_RESTORE_MODE,
   buildIssueBody,
+  buildDecisionIssueBody,
+  buildDecisionTitle,
   buildIssueTitle,
   classifyVerdict,
+  decideIntent,
   decideRestore,
   manifestPaths,
   resolveRestoreMode,
@@ -252,6 +255,133 @@ describe('decideRestore: only a decode or validation failure may execute', () =>
         plan: clean,
       }).execute
     ).toBe(true)
+  })
+})
+
+describe('decideIntent: the token-free decision, before any plan', () => {
+  const base = { unhealthy: true, restoreEligible: true }
+
+  it('healthy files nothing and executes nothing', () => {
+    for (const mode of ['off', 'dry-run', 'execute'] as const) {
+      expect(decideIntent({ ...base, unhealthy: false, mode })).toMatchObject({
+        action: 'skip',
+        execute: false,
+        fileIssue: false,
+      })
+    }
+  })
+
+  it('execute mode and an eligible verdict says execute', () => {
+    expect(decideIntent({ ...base, mode: 'execute' })).toMatchObject({
+      action: 'execute',
+      execute: true,
+      fileIssue: true,
+    })
+  })
+
+  it('execute mode and an ineligible verdict never executes, and says why', () => {
+    const d = decideIntent({
+      ...base,
+      restoreEligible: false,
+      ineligibleReason: 'only freshness failed',
+      mode: 'execute',
+    })
+    expect(d).toMatchObject({
+      action: 'not-eligible',
+      execute: false,
+      fileIssue: true,
+    })
+    expect(d.reason).toContain('only freshness failed')
+  })
+
+  it('dry-run never executes, eligible or not', () => {
+    for (const restoreEligible of [true, false]) {
+      expect(
+        decideIntent({ ...base, restoreEligible, mode: 'dry-run' }).execute
+      ).toBe(false)
+    }
+    expect(decideIntent({ ...base, mode: 'dry-run' }).action).toBe('dry-run')
+  })
+
+  it('off never executes and still files the issue', () => {
+    expect(decideIntent({ ...base, mode: 'off' })).toMatchObject({
+      action: 'off',
+      execute: false,
+      fileIssue: true,
+    })
+  })
+})
+
+describe('buildDecisionIssueBody: no object list, a manual plan command', () => {
+  const ctx = {
+    mode: 'dry-run' as const,
+    decision: decideIntent({
+      unhealthy: true,
+      restoreEligible: true,
+      mode: 'dry-run',
+    }),
+    runId: '4242',
+    runUrl: 'https://github.com/taverns-red/toast-stats/actions/runs/4242',
+    failed: 'the schema check',
+    stagingBucket: 'toast-stats-data-staging',
+    prodBucket: 'toast-stats-data-ca',
+    promoteStarted: '2026-11-14T10:00:00Z',
+    windowEnd: '2026-11-14T10:40:00Z',
+  }
+
+  it('names the run id, verdict, reason, mode and the manifest path', () => {
+    const body = buildDecisionIssueBody(ctx)
+    expect(body).toContain('4242')
+    expect(body).toContain(ctx.runUrl)
+    expect(body).toContain('the schema check')
+    expect(body).toContain(ctx.decision.reason)
+    expect(body).toContain('dry-run')
+    expect(body).toContain(
+      'gs://toast-stats-data-staging/runs/4242/written.jsonl'
+    )
+  })
+
+  it('gives the exact plan command with the run window', () => {
+    const body = buildDecisionIssueBody(ctx)
+    expect(body).toContain('plan-data-restore.ts')
+    expect(body).toContain('--since 2026-11-14T10:00:00Z')
+    expect(body).toContain('--until 2026-11-14T10:40:00Z')
+    expect(body).toContain('--paths')
+    expect(body).toContain('list-restore-candidates.sh')
+    expect(body).toContain('docs/runbooks/data-restore.md')
+  })
+
+  it('lists no objects: no table, no generations', () => {
+    const body = buildDecisionIssueBody(ctx)
+    expect(body).not.toMatch(/\| Object \|/)
+    expect(body).not.toMatch(/generation/i)
+  })
+
+  it('says whether an execute was started or why it was not', () => {
+    const exec = buildDecisionIssueBody({
+      ...ctx,
+      mode: 'execute',
+      decision: decideIntent({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'execute',
+      }),
+    })
+    expect(exec).toMatch(/execute job/i)
+    const no = buildDecisionIssueBody({
+      ...ctx,
+      decision: decideIntent({
+        unhealthy: true,
+        restoreEligible: false,
+        ineligibleReason: 'only freshness failed',
+        mode: 'execute',
+      }),
+    })
+    expect(no).toContain('only freshness failed')
+    expect(buildDecisionTitle('execute')).not.toBe(
+      buildDecisionTitle('dry-run')
+    )
+    expect(buildDecisionTitle('dry-run')).toMatch(/data-rollback/)
   })
 })
 

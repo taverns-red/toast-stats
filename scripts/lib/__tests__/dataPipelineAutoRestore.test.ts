@@ -33,6 +33,7 @@ interface Step {
 }
 interface Job {
   if?: string
+  environment?: string | { name?: string }
   needs?: string | string[]
   outputs?: Record<string, string>
   permissions?: Record<string, string>
@@ -50,8 +51,17 @@ const workflow = parse(source) as {
   jobs: Record<string, Job>
 }
 const smoke = workflow.jobs['data-smoke']!
-const job = workflow.jobs['data-auto-restore']
+// The restore is two jobs (#2537): a token-free decide job that files the
+// issue, and an execute job, behind a protected environment, that alone mints
+// the promote service account's token.
+const decideJob = workflow.jobs['data-auto-restore-decide']
+const dSteps = decideJob?.steps ?? []
+const dById = (id: string) => dSteps.find(s => s.id === id)
+const job = workflow.jobs['data-auto-restore-execute']
 const steps = job?.steps ?? []
+const restoreJobs = Object.entries(workflow.jobs).filter(([name]) =>
+  name.startsWith('data-auto-restore')
+)
 const byId = (id: string) => steps.find(s => s.id === id)
 const idx = (id: string) => steps.findIndex(s => s.id === id)
 const text = (s: Step | undefined) =>
@@ -132,50 +142,150 @@ describe('data-smoke reports a verdict the restore can key off (#2537)', () => {
   })
 })
 
-describe('data-auto-restore job (#2537)', () => {
+describe('data-auto-restore-decide: token-free, files the issue (#2537)', () => {
   it('exists and runs after the data smoke and the pipeline', () => {
-    expect(job).toBeDefined()
-    const needs = [job!.needs ?? []].flat()
+    expect(decideJob).toBeDefined()
+    const needs = [decideJob!.needs ?? []].flat()
     expect(needs).toContain('data-smoke')
     expect(needs).toContain('pipeline')
   })
 
-  it('unhealthy -> plan runs: the job runs only on an unhealthy verdict', () => {
-    expect(job!.if ?? '').toMatch(/^!cancelled\(\)/)
-    const c = topLevelConjuncts(job!.if ?? '')
+  it('unhealthy -> it runs; healthy -> nothing runs', () => {
+    const cond = decideJob!.if ?? ''
+    expect(cond).toMatch(/^!cancelled\(\)/)
+    const c = topLevelConjuncts(cond)
     expect(c).toContain("needs.data-smoke.outputs.unhealthy == 'true'")
+    expect(c).toContain(SKIP_CLAUSE_DOWNSTREAM)
+    expect(cond).not.toMatch(/\|\|/)
+    expect(cond).not.toMatch(/always\(\)/)
   })
 
-  it('healthy -> nothing runs: no way to reach a step without that verdict', () => {
-    // A job-level gate on the verdict and no step `if` that is a bare
-    // always()/!cancelled() without the job gate is enough: steps cannot
-    // run when the job is skipped. Pin that the gate is a top-level AND, not
-    // inside an OR that a healthy run could satisfy.
-    expect(job!.if).not.toMatch(/\|\|/)
-    expect(job!.if).not.toMatch(/always\(\)/)
+  it('holds the least scope that files an issue: contents read, issues write, no id-token', () => {
+    expect(decideJob!.permissions).toEqual({
+      contents: 'read',
+      issues: 'write',
+    })
   })
 
-  it('never runs on a staging-only proof run', () => {
-    expect(topLevelConjuncts(job!.if ?? '')).toContain(SKIP_CLAUSE_DOWNSTREAM)
+  it('mints no token and makes no GCP call: no auth step, no secrets, no gcloud, no bucket', () => {
+    const all = JSON.stringify(decideJob)
+    expect(all).not.toMatch(/google-github-actions/)
+    expect(all).not.toMatch(/secrets\./)
+    expect(all).not.toMatch(/gcloud|gsutil|setup-gcloud/)
+    expect(all).not.toMatch(/plan-data-restore\.ts|list-restore-candidates/)
+    expect(all).not.toMatch(/GCS_BUCKET|PROD_BUCKET/)
+    expect(decideJob!.environment).toBeUndefined()
   })
 
-  it('adds no permissions of its own, and no new secrets', () => {
-    expect(job!.permissions).toBeUndefined()
-    expect(workflow.permissions).toEqual({
+  it('has no prod-writing step the skip_promotion guard would have to find', () => {
+    const found = findProdWriteSteps(
+      workflow as unknown as Parameters<typeof findProdWriteSteps>[0]
+    ).filter(s => s.job === 'data-auto-restore-decide')
+    expect(found).toEqual([])
+  })
+
+  it('decides from the data-smoke verdict only, through the tested CLI', () => {
+    const intent = dById('intent')
+    expect(intent?.run ?? '').toMatch(/data-auto-restore\.ts\s+intent/)
+    expect(intent!.env?.['DATA_AUTO_RESTORE']).toBe(
+      '${{ vars.DATA_AUTO_RESTORE }}'
+    )
+    expect(intent!.env?.['RESTORE_ELIGIBLE']).toBe(
+      '${{ needs.data-smoke.outputs.restore_eligible }}'
+    )
+    expect(intent!.env?.['RESTORE_REASON']).toBe(
+      '${{ needs.data-smoke.outputs.restore_reason }}'
+    )
+    expect(intent!.env?.['UNHEALTHY']).toBe(
+      '${{ needs.data-smoke.outputs.unhealthy }}'
+    )
+  })
+
+  it('outputs the decision for the execute job: execute and the issue number', () => {
+    expect(decideJob!.outputs?.['execute']).toBe(
+      '${{ steps.intent.outputs.execute }}'
+    )
+    expect(decideJob!.outputs?.['issue_number']).toMatch(
+      /steps\.\w+\.outputs\.issue_number/
+    )
+  })
+
+  it('files the data-rollback issue the way promotion-held and hosting-rollback do', () => {
+    const run = dSteps.map(s => s.run ?? '').join('\n')
+    expect(run).toMatch(/gh label create data-rollback/)
+    expect(run).toMatch(/gh issue list --label data-rollback --state open/)
+    expect(run).toMatch(/gh issue comment/)
+    expect(run).toMatch(
+      /gh issue create[^\n]*--label data-rollback|--label data-rollback/
+    )
+    const filing = dSteps.filter(s => /gh issue/.test(s.run ?? ''))
+    expect(filing.length).toBeGreaterThan(0)
+    for (const s of filing) {
+      expect(s.env?.['GH_TOKEN'], s.name).toBe('${{ github.token }}')
+      expect(s.if ?? '', s.name).toContain(
+        "steps.intent.outputs.file_issue == 'true'"
+      )
+    }
+  })
+
+  it('is bounded, and nothing but the execute job needs it', () => {
+    expect(Number(decideJob!['timeout-minutes'])).toBeLessThanOrEqual(10)
+    for (const [name, j] of Object.entries(workflow.jobs)) {
+      if (name === 'data-auto-restore-execute') continue
+      expect([j.needs ?? []].flat(), name).not.toContain(
+        'data-auto-restore-decide'
+      )
+    }
+  })
+})
+
+describe('data-auto-restore-execute: the only job that mints the write token (#2537)', () => {
+  it('needs the decision and the data smoke', () => {
+    expect(job).toBeDefined()
+    const needs = [job!.needs ?? []].flat()
+    for (const n of ['pipeline', 'data-smoke', 'data-auto-restore-decide']) {
+      expect(needs).toContain(n)
+    }
+  })
+
+  it('runs only on main, only on a decided execute, only when eligible, failing closed', () => {
+    const cond = job!.if ?? ''
+    expect(cond).toMatch(/^!cancelled\(\)/)
+    const c = topLevelConjuncts(cond)
+    expect(c).toContain(
+      "needs.data-auto-restore-decide.outputs.execute == 'true'"
+    )
+    expect(c).toContain("needs.data-smoke.outputs.restore_eligible == 'true'")
+    expect(c).toContain("github.ref == 'refs/heads/main'")
+    expect(c).toContain(SKIP_CLAUSE_DOWNSTREAM)
+    // equality with the literal 'true' fails closed on an empty output; no
+    // `!= 'false'` style test, no OR a wrong branch could satisfy
+    expect(cond).not.toMatch(/\|\|/)
+    expect(cond).not.toMatch(/always\(\)/)
+    for (const conj of c.filter(x =>
+      /outputs\.(execute|restore_eligible)/.test(x)
+    )) {
+      expect(conj).toMatch(/ == 'true'$/)
+    }
+  })
+
+  it('is bound to the data-restore environment, which Ron creates with a main-only policy', () => {
+    const env =
+      typeof job!.environment === 'string'
+        ? job!.environment
+        : job!.environment?.name
+    expect(env).toBe('data-restore')
+  })
+
+  it('carries its own scope: contents read, id-token and issues write', () => {
+    expect(job!.permissions).toEqual({
       contents: 'read',
       'id-token': 'write',
       issues: 'write',
     })
-    const secrets = new Set(
-      [...JSON.stringify(job).matchAll(/secrets\.(\w+)/g)].map(m => m[1])
-    )
-    expect([...secrets].sort()).toEqual([
-      'GCP_SERVICE_ACCOUNT',
-      'GCP_WORKLOAD_IDENTITY_PROVIDER',
-    ])
   })
 
-  it('authenticates with the same identity the promote jobs use', () => {
+  it('authenticates with the same identity the promote jobs use, and no new secret', () => {
     const auth = steps.find(s =>
       (s.uses ?? '').startsWith('google-github-actions/auth@')
     )
@@ -185,6 +295,37 @@ describe('data-auto-restore job (#2537)', () => {
     expect(auth?.with?.['workload_identity_provider']).toBe(
       '${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}'
     )
+    const secrets = new Set(
+      [...JSON.stringify(job).matchAll(/secrets\.(\w+)/g)].map(m => m[1])
+    )
+    expect([...secrets].sort()).toEqual([
+      'GCP_SERVICE_ACCOUNT',
+      'GCP_WORKLOAD_IDENTITY_PROVIDER',
+    ])
+  })
+
+  it('is the only restore job with an auth step or a secret', () => {
+    expect(restoreJobs.map(([n]) => n).sort()).toEqual([
+      'data-auto-restore-decide',
+      'data-auto-restore-execute',
+    ])
+    for (const [name, j] of restoreJobs) {
+      const has = /google-github-actions\/auth@|secrets\./.test(
+        JSON.stringify(j)
+      )
+      expect(has, name).toBe(name === 'data-auto-restore-execute')
+    }
+  })
+
+  it('does the listing, planning, restore, purge and recheck, and nothing else touches them', () => {
+    for (const [name, j] of restoreJobs) {
+      const body = (j.steps ?? []).map(s => s.run ?? '').join('\n')
+      const touches =
+        /plan-data-restore\.ts|invalidate-cdn-cache|list-restore-candidates/.test(
+          body
+        )
+      expect(touches, name).toBe(name === 'data-auto-restore-execute')
+    }
   })
 
   it('is bounded', () => {
@@ -193,7 +334,9 @@ describe('data-auto-restore job (#2537)', () => {
 
   it('nothing needs it, so it cannot hold or change a promotion', () => {
     for (const [name, j] of Object.entries(workflow.jobs)) {
-      expect([j.needs ?? []].flat(), name).not.toContain('data-auto-restore')
+      expect([j.needs ?? []].flat(), name).not.toContain(
+        'data-auto-restore-execute'
+      )
     }
   })
 })
@@ -204,8 +347,9 @@ describe('mode: dry-run by default, execute only by explicit variable', () => {
   })
 
   it('reads the mode from the DATA_AUTO_RESTORE repository variable only', () => {
-    const all = JSON.stringify(workflow.jobs['data-auto-restore'])
-    expect(all).toContain('${{ vars.DATA_AUTO_RESTORE }}')
+    for (const j of [decideJob, job]) {
+      expect(JSON.stringify(j)).toContain('${{ vars.DATA_AUTO_RESTORE }}')
+    }
     // never a literal value: no env assignment of execute anywhere
     expect(source).not.toMatch(/DATA_AUTO_RESTORE:\s*['"]?execute/)
     expect(source).not.toMatch(/DATA_AUTO_RESTORE=execute/)
@@ -213,10 +357,10 @@ describe('mode: dry-run by default, execute only by explicit variable', () => {
     expect(source).not.toMatch(/inputs\.data_auto_restore/i)
   })
 
-  it('resolves the variable through the tested resolver', () => {
-    const mode = byId('mode')
-    expect(mode?.run ?? '').toMatch(/data-auto-restore\.ts\s+mode/)
-    expect(mode?.env?.['DATA_AUTO_RESTORE']).toBe(
+  it('resolves the variable through the tested resolver, in the decision and again at execute', () => {
+    expect(dById('intent')?.run ?? '').toMatch(/data-auto-restore\.ts\s+intent/)
+    expect(byId('decide')?.run ?? '').toMatch(/data-auto-restore\.ts\s+decide/)
+    expect(byId('decide')?.env?.['DATA_AUTO_RESTORE']).toBe(
       '${{ vars.DATA_AUTO_RESTORE }}'
     )
   })
@@ -287,8 +431,8 @@ describe('one planner, reused (#2539)', () => {
 })
 
 describe('order and the refused path', () => {
-  it('plan < decide < execute < purge < recheck < report < file the issue', () => {
-    const issue = steps.findIndex(s => /gh issue create/.test(s.run ?? ''))
+  it('plan < decide < execute < purge < recheck < report < comment on the issue', () => {
+    const issue = steps.findIndex(s => /gh issue comment/.test(s.run ?? ''))
     const order = [
       idx('plan'),
       idx('decide'),
@@ -307,11 +451,15 @@ describe('order and the refused path', () => {
     expect(decide?.run).toMatch(/data-auto-restore\.ts\s+decide/)
     expect(decide?.['continue-on-error']).toBeUndefined()
     expect(decide!.if ?? '').toContain('!cancelled()')
-    const issue = steps.find(s => /gh issue create/.test(s.run ?? ''))!
-    // files whenever the job got that far, not only when the execute worked
+    const issue = steps.find(s => /gh issue comment/.test(s.run ?? ''))!
+    // comments the enumerated plan whenever the job got that far, not only
+    // when the execute worked; the issue itself was filed by the decide job
     expect(issue.if ?? '').toContain('!cancelled()')
-    expect(issue.if).toContain("steps.decide.outputs.file_issue == 'true'")
     expect(issue.if).not.toMatch(/steps\.execute\.outcome == 'success'/)
+    expect(issue.env?.['GH_TOKEN']).toBe('${{ github.token }}')
+    expect(issue.env?.['ISSUE_NUMBER']).toBe(
+      '${{ needs.data-auto-restore-decide.outputs.issue_number }}'
+    )
   })
 
   it('purge and recheck run after an execute that finished or failed part way, never when it was skipped', () => {
@@ -340,18 +488,19 @@ describe('order and the refused path', () => {
     expect(upload!.with?.['path'] ?? '').toContain('plan.json')
   })
 
-  it('files a data-rollback issue the way promotion-held and hosting-rollback do', () => {
+  it('the execute job only comments the enumerated plan: it never opens the issue itself', () => {
     const run = steps.map(s => s.run ?? '').join('\n')
-    expect(run).toMatch(/gh label create data-rollback/)
-    expect(run).toMatch(/gh issue list --label data-rollback --state open/)
     expect(run).toMatch(/gh issue comment/)
-    expect(run).toMatch(
-      /gh issue create[^\n]*--label data-rollback|--label data-rollback/
+    expect(run).not.toMatch(/gh issue create/)
+    expect(run).not.toMatch(/gh label create/)
+  })
+
+  it('the decide job posts no object list: only the manifest path and the manual plan command', () => {
+    const intent = dById('intent')
+    expect(intent?.run ?? '').not.toMatch(/plan-data-restore/)
+    expect(dSteps.map(s => s.run ?? '').join('\n')).not.toMatch(
+      /--paths|\.jsonl/
     )
-    const filing = steps.filter(s => /gh issue/.test(s.run ?? ''))
-    for (const s of filing) {
-      expect(s.env?.['GH_TOKEN'], s.name).toBe('${{ github.token }}')
-    }
   })
 })
 
@@ -364,14 +513,14 @@ describe('the skip_promotion guard sees the new prod writers (#1754)', () => {
     ).not.toEqual([])
     const found = findProdWriteSteps(
       workflow as unknown as Parameters<typeof findProdWriteSteps>[0]
-    ).filter(s => s.job === 'data-auto-restore')
+    ).filter(s => s.job === 'data-auto-restore-execute')
     expect(found.map(f => f.step).length).toBeGreaterThanOrEqual(2)
   })
 
   it('guards every one of them with the skip clause', () => {
     const found = findProdWriteSteps(
       workflow as unknown as Parameters<typeof findProdWriteSteps>[0]
-    ).filter(s => s.job === 'data-auto-restore')
+    ).filter(s => s.job === 'data-auto-restore-execute')
     expect(found.filter(f => !f.guarded)).toEqual([])
   })
 })

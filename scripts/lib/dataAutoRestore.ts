@@ -25,6 +25,7 @@ export type RestoreAction =
   | 'plan-failed'
   | 'nothing-to-do'
   | 'not-eligible'
+  | 'dry-run'
 
 export interface RestoreDecision {
   action: RestoreAction
@@ -370,4 +371,41 @@ export function classifyVerdict(i: VerdictInput): {
   return blockers.length === 0
     ? { restoreEligible: true, reason: 'a decode or validation failure' }
     : { restoreEligible: false, reason: blockers.join('; ') }
+}
+
+export interface IntentInput {
+  unhealthy: boolean
+  mode: RestoreMode
+  restoreEligible: boolean
+  ineligibleReason?: string
+}
+
+/** Red-phase stub: the next commit implements it. */
+export function decideIntent(i: IntentInput): RestoreDecision {
+  void i
+  return { action: 'execute', execute: true, fileIssue: true, reason: 'stub' }
+}
+
+export interface DecisionIssueContext {
+  mode: RestoreMode
+  decision: RestoreDecision
+  runId: string
+  runUrl: string
+  failed: string
+  stagingBucket: string
+  prodBucket: string
+  promoteStarted: string
+  windowEnd: string
+}
+
+/** Red-phase stub: the next commit implements it. */
+export function buildDecisionIssueBody(c: DecisionIssueContext): string {
+  void c
+  return ''
+}
+
+/** Red-phase stub: the next commit implements it. */
+export function buildDecisionTitle(action: RestoreAction): string {
+  void action
+  return ''
 }
