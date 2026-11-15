@@ -3486,6 +3486,46 @@ jobs:
           exit 1
 
   # ══════════════════════════════════════════════════════════
+  # STATUS HEARTBEAT (#2863, taverns-red/ops#343)
+  #
+  # status.taverns.red expects a ping every 24 h with a 12 h grace. This job
+  # pings after a healthy prod promotion by a daily-mode run, whatever
+  # triggered it (the daily is a launchd dispatch, #1242): the pipeline
+  # succeeded, it was not a proof run, something was promoted, the data
+  # smoke passed and its verdict is not unhealthy.
+  #
+  # MEANING: the public component says "our daily pipeline ran and is
+  # healthy". It is deliberately NOT data freshness: TI's month-end dashboard
+  # freezes are not our outage. A missed launchd run correctly shows it down.
+  # Do not "fix" this into a freshness check.
+  #
+  # The URL is a secret: env only, never echoed, no `set -x`, and
+  # `continue-on-error` so a status-page hiccup never fails the run.
+  # Pinned by dataPipelineStatusHeartbeat.test.ts.
+  # ══════════════════════════════════════════════════════════
+  status-heartbeat:
+    name: 'status.taverns.red heartbeat (#2863)'
+    runs-on: ubuntu-26.04
+    needs: [pipeline, data-smoke]
+    if: >-
+      !cancelled()
+      && needs.pipeline.result == 'success'
+      && needs.pipeline.outputs.mode == 'daily'
+      && needs.pipeline.outputs.skip_promotion != 'true'
+      && (needs.pipeline.outputs.promoted == 'true' || needs.pipeline.outputs.promoted_dates != '')
+      && needs.data-smoke.result == 'success'
+      && needs.data-smoke.outputs.unhealthy != 'true'
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    steps:
+      - name: Ping the status page heartbeat
+        continue-on-error: true
+        env:
+          HEARTBEAT_URL: ${{ secrets.STATUS_HEARTBEAT_TS_DATA }}
+        run: curl -fsS --max-time 10 "$HEARTBEAT_URL" >/dev/null
+
+  # ══════════════════════════════════════════════════════════
   # DATA AUTO-RESTORE AFTER A FAILED SMOKE (#2537, epic #2492)
   #
   # Two jobs, so the job that decides and reports holds no write identity:
