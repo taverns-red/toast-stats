@@ -120,7 +120,9 @@ jobs:
         run: gcloud version
 
       - name: Install firebase-tools
-        run: npm install -g firebase-tools
+        run: |
+          npm ci --prefix tools/firebase-tools
+          echo "$PWD/tools/firebase-tools/node_modules/.bin" >> "$GITHUB_PATH"
 
       # Before the deploy: if the browser cannot be installed, nothing is
       # released, so a release is never left live without its smoke (#2492).

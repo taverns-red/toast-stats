@@ -58,12 +58,9 @@ const MAY_CONTINUE: Record<string, string> = {
 const MAY_FETCH: Record<string, string> = {
   'ga-page-view.smoke.ts': 'rewrites the prod origin onto BASE_URL',
   'consent-banner.smoke.ts': 'rewrites the prod origin onto BASE_URL (#2584)',
-  'priority-columns.smoke.ts':
-    'relays cdn.taverns.red (prod) when run on a local build',
-  'rankings-data-table.smoke.ts':
-    'relays cdn.taverns.red (prod) only when run on a local build (#2689)',
-  'loading-shells-cls.smoke.ts':
-    'relays cdn.taverns.red (prod) only when run on a local build (#2634)',
+  // #2570: the three specs that relayed the CDN through route.fetch() on a
+  // local build now call relayCdnRead (helpers/cdnFixtures.ts), which hands
+  // the request to the fixture when one is on.
 }
 const MAY_REQUEST: Record<string, string> = {}
 const MAY_NEW_CONTEXT: Record<string, string> = {

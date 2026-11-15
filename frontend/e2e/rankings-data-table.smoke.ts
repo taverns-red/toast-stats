@@ -1,4 +1,5 @@
 import { test, expect, type Page } from './fixtures/test'
+import { relayCdnRead } from './helpers/cdnFixtures'
 
 /* Landing rankings on the shared DataTable (#2689, #2676 M1, spec §12 tests
  * 10, 11, 12 and 14 applied to the landing table).
@@ -54,13 +55,7 @@ async function openLanding(page: Page, width: number, height = 900) {
   // through Playwright with a permissive CORS header. Deployed previews are on
   // the CDN's allow-list and skip this.
   if (/localhost|127\.0\.0\.1/.test(process.env['BASE_URL'] ?? ''))
-    await page.route('https://cdn.taverns.red/**', async route => {
-      const res = await route.fetch()
-      await route.fulfill({
-        response: res,
-        headers: { ...res.headers(), 'access-control-allow-origin': '*' },
-      })
-    })
+    await page.route('https://cdn.taverns.red/**', route => relayCdnRead(route))
   await page.setViewportSize({ width, height })
   await page.goto('/', { waitUntil: 'networkidle', timeout: 60_000 })
   await page.locator(`${TABLE} tbody tr`).first().waitFor({ timeout: 30_000 })

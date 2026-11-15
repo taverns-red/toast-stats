@@ -82,7 +82,8 @@ jobs:
       - name: Delete preview channel
         run: |
           set -o pipefail
-          npm install -g firebase-tools
+          npm ci --prefix tools/firebase-tools
+          export PATH="$PWD/tools/firebase-tools/node_modules/.bin:$PATH"
           CHANNEL_ID="pr-${{ github.event.pull_request.number }}"
 
           # An already-absent channel (TTL-expired, or never created because the

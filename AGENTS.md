@@ -9,7 +9,7 @@ This file contains **project-specific** context for AI coding agents.
 | Tool                   | Use Case                                      | Notes     |
 | ---------------------- | --------------------------------------------- | --------- |
 | `git`                  | Version control                               |           |
-| `node` / `npm` / `npx` | Runtime, package management, script execution | v22.x LTS |
+| `node` / `npm` / `npx` | Runtime, package management, script execution | v26.x LTS |
 | `curl`                 | CDN health checks, endpoint testing           |           |
 | `jq`                   | JSON processing, CDN response parsing         |           |
 

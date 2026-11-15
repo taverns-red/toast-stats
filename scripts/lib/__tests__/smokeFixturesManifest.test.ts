@@ -13,6 +13,10 @@ import { describe, it, expect } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { parseManifest } from '../smokeFixtures'
+import {
+  HOW_TO_VIDEOS,
+  VIDEO_CDN_BASE,
+} from '../../../frontend/src/content/howToVideos'
 
 const ROOT = process.cwd()
 const manifest = parseManifest(
@@ -114,6 +118,34 @@ describe('the basemap archive is served from the committed extract (#2545)', () 
     expect(fs.existsSync(path.join(ROOT, entry?.copyFrom ?? 'missing'))).toBe(
       true
     )
+  })
+})
+
+describe('the how-to videos are served from a stand-in (#2570)', () => {
+  // The videos page points <video> at cdn.taverns.red (prod). The shards
+  // answer that origin from the same fixture directory, so every published
+  // cut needs an entry: a 2 MB video per cut is not worth fetching for a
+  // spec that only checks the element loads its metadata.
+  const objectPath = (url: string) =>
+    url.replace(`${VIDEO_CDN_BASE}/`, 'videos/')
+
+  const wanted = HOW_TO_VIDEOS.flatMap(v => [
+    objectPath(v.desktopUrl),
+    objectPath(v.mobileUrl),
+  ])
+
+  it('finds the published videos', () => {
+    expect(wanted.length).toBeGreaterThanOrEqual(32)
+  })
+
+  it.each(wanted)('%s has a copyFrom entry for the stand-in', wantedPath => {
+    const entry = manifest.paths.find(e => e.path === wantedPath)
+    expect(entry?.copyFrom).toBe('frontend/e2e/fixtures/video-standin.mp4')
+  })
+
+  it('the stand-in is committed and small', () => {
+    const file = path.join(ROOT, 'frontend/e2e/fixtures/video-standin.mp4')
+    expect(fs.statSync(file).size).toBeLessThan(20_000)
   })
 })
 
