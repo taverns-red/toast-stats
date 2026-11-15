@@ -58,6 +58,9 @@ export interface HeadCheckRun {
   app?: { slug?: string } | null
 }
 
+/** The app slug GitHub reports on check runs created by workflow jobs. */
+export const ACTIONS_APP_SLUG = 'github-actions'
+
 function isNewer(b: HeadCheckRun, a: HeadCheckRun): boolean {
   const tb = b.started_at ? Date.parse(b.started_at) : NaN
   const ta = a.started_at ? Date.parse(a.started_at) : NaN
@@ -83,7 +86,11 @@ export function evaluateHeadChecks(
     return { pass: false, reasons: ['no expected checks (classifier bug)'] }
   const reasons: string[] = []
   for (const name of expectedNames) {
-    const same = runs.filter(r => r.name === name)
+    // Only GitHub Actions reports the real jobs; a same-named check from
+    // another app must neither pin the gate red nor satisfy it.
+    const same = runs.filter(
+      r => r.name === name && r.app?.slug === ACTIONS_APP_SLUG
+    )
     const real = same.filter(
       r => !(r.status === 'completed' && r.conclusion === 'skipped')
     )

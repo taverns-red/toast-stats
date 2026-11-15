@@ -48,9 +48,10 @@ permissions:
 #    It gets its own group so it cannot cancel the real in-flight run and
 #    leave a cancelled check on the head with only a skipped run beside it.
 #    Same shape as docs.yml.
-#  - A superseded run reports `cancelled`, which CI Gate ignores when a newer
-#    run of the same check succeeded (#2316) and counts as a failure
-#    otherwise, so cancelling never opens the gate.
+#  - A superseded run reports `cancelled`, and so does its `CI Gate` job, which
+#    is not `success`. The newer run's `CI Gate` is the latest result on the
+#    head, so cancelling never opens the gate (#2607: the gate no longer reads
+#    other runs' check results, so the #2316 superseded-cancel rule is gone).
 concurrency:
   group: >-
     ${{ github.event_name == 'pull_request'
@@ -69,6 +70,10 @@ jobs:
     if: github.event.action != 'edited' || github.event.changes.base
     runs-on: ubuntu-26.04
     timeout-minutes: 5
+    # Narrows the workflow-level token. The PR file list is public data on
+    # this public repo, so contents: read is enough (CI proves it).
+    permissions:
+      contents: read
     outputs:
       code: ${{ steps.classify.outputs.code }}
       docs: ${{ steps.classify.outputs.docs }}
@@ -406,6 +411,9 @@ jobs:
     if: needs.changes.outputs.docs == 'true'
     runs-on: ubuntu-26.04
     timeout-minutes: 5
+    # Same token docs.yml gave this job.
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
