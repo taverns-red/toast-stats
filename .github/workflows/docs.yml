@@ -11,6 +11,10 @@ name: Docs
 # goes red on the NEXT code PR, on files that author never touched (this
 # happened: the INDEX drift gate blocked #1369 and #1371 until #1372).
 #
+# Push to main only (#2607). On pull requests the same steps run as the
+# `Docs Gate` job inside ci.yml, so the required `CI Gate` job can `needs:` it.
+# Keep the steps of the two identical.
+#
 # SYNC WARNING: the `paths:` allowlist below MIRRORS the `paths-ignore:` list
 # in .github/workflows/ci.yml. If the two drift, files fall into a gap covered
 # by neither workflow. Edit both together.
@@ -24,30 +28,17 @@ on:
       - 'docs/**'
       - '.gitignore'
       - 'LICENSE'
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened, edited]
-    # `edited` so a retarget to main runs Docs Gate (#2204); see ci.yml.
-    paths:
-      - '**/*.md'
-      - 'tasks/**'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
 
 permissions:
   contents: read
 
 concurrency:
-  # A no-op edit (title/body, not base) gets its own group: its run is all
-  # skipped, and cancelling the real in-flight run would fail the gate (#2204).
-  group: docs-${{ github.workflow }}-${{ github.ref }}${{ github.event.action == 'edited' && !github.event.changes.base && format('-noop-{0}', github.run_id) || '' }}
+  group: docs-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   docs:
     name: Docs Gate
-    if: github.event.action != 'edited' || github.event.changes.base
     runs-on: ubuntu-26.04
     timeout-minutes: 5
 

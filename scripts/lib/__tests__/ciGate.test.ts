@@ -440,40 +440,39 @@ describe('workflowRunsInFlight — is another run on the head still going? (#221
       workflowRunsInFlight([wfRun(1, 'CI', 'completed')], 39810475356)
     ).toBe(true)
   })
-
-  it('ci-gate.yml grants actions: read so the run listing is readable', () => {
-    expect(workflow('ci-gate.yml')).toMatch(
-      /^permissions:\n(?: {2}.*\n)* {2}actions: read$/m
-    )
-  })
 })
 
 describe('drift guards — the classifier must match the live path filters', () => {
   it('ci.yml paths-ignore matches the declared non-code glob set, on every trigger', () => {
     const blocks = findPathFilterGlobs(workflow('ci.yml'), 'paths-ignore')
-    expect(blocks.length).toBeGreaterThanOrEqual(2) // push + pull_request
+    // push only: pull_request has no filter since the gate moved in (#2607)
+    expect(blocks).toHaveLength(1)
     for (const globs of blocks) expect(globs).toEqual([...NON_CODE_GLOBS])
   })
 
   it('docs.yml paths is the exact mirror image, on every trigger', () => {
     const blocks = findPathFilterGlobs(workflow('docs.yml'), 'paths')
-    expect(blocks.length).toBeGreaterThanOrEqual(2)
+    expect(blocks).toHaveLength(1)
     for (const globs of blocks) expect(globs).toEqual([...NON_CODE_GLOBS])
   })
 
-  it('the aggregator workflow carries NO path filter — it must always run', () => {
+  it('the aggregator runs on every PR: ci.yml has no pull_request path filter', () => {
     // A path-filtered required check is the deadlock this whole design avoids:
-    // it would sit "Expected" forever on any PR outside its globs.
-    const src = workflow('ci-gate.yml')
-    expect(findPathFilterGlobs(src, 'paths')).toEqual([])
-    expect(findPathFilterGlobs(src, 'paths-ignore')).toEqual([])
+    // it would sit "Expected" forever on any PR outside its globs. ci.yml's
+    // only filter is the push one (asserted above), so the gate job always
+    // exists on a PR head (#2607).
+    const src = workflow('ci.yml')
+    const pr = src.slice(src.indexOf('  pull_request:'))
+    const prBlock = pr.slice(0, pr.indexOf('  workflow_call:'))
+    expect(findPathFilterGlobs(prBlock, 'paths')).toEqual([])
+    expect(findPathFilterGlobs(prBlock, 'paths-ignore')).toEqual([])
   })
 
   it('every check name the gate can expect is a real job name', () => {
     const ciJobs = findJobNames(workflow('ci.yml'))
     for (const name of CI_CHECKS) expect(ciJobs).toContain(name)
     expect(findJobNames(workflow('docs.yml'))).toContain(DOCS_CHECK)
-    expect(findJobNames(workflow('ci-gate.yml'))).toContain(GATE_CHECK)
+    expect(ciJobs).toContain(GATE_CHECK)
   })
 })
 
@@ -557,33 +556,17 @@ describe('retarget wiring — a base change runs the required checks (#2204)', (
   const RUN_ON_BASE_CHANGE =
     "if: github.event.action != 'edited' || github.event.changes.base"
 
-  it.each(['ci.yml', 'docs.yml', 'ci-gate.yml'])(
-    '%s listens to pull_request edited',
-    f => {
-      expect(workflow(f)).toMatch(
-        /pull_request:\n\s+branches: \[main\]\n\s+types: \[opened, synchronize, reopened, edited\]/
-      )
-    }
-  )
+  it('ci.yml listens to pull_request edited', () => {
+    expect(workflow('ci.yml')).toMatch(
+      /pull_request:\n\s+branches: \[main\]\n\s+types: \[opened, synchronize, reopened, edited\]/
+    )
+  })
 
   it('ci.yml runs its root job only on a non-edit or a base change', () => {
-    // Every other ci.yml job `needs:` quality-gates, so they skip with it.
+    // Every other gated job `needs:` changes (directly or via quality-gates),
+    // so they skip with it; the gate job itself still runs for the title check.
     expect(workflow('ci.yml')).toContain(
-      `  quality-gates:\n    name: Quality Gates\n    ${RUN_ON_BASE_CHANGE}\n`
-    )
-  })
-
-  it('docs.yml runs Docs Gate only on a non-edit or a base change', () => {
-    expect(workflow('docs.yml')).toContain(
-      `    name: Docs Gate\n    ${RUN_ON_BASE_CHANGE}\n`
-    )
-  })
-
-  it('a no-op edit of docs.yml cannot cancel an in-flight Docs Gate', () => {
-    // cancel-in-progress would turn the real run `cancelled`, which fails the
-    // gate. A skipped edit run gets its own group so it supersedes nothing.
-    expect(workflow('docs.yml')).toContain(
-      "group: docs-${{ github.workflow }}-${{ github.ref }}${{ github.event.action == 'edited' && !github.event.changes.base && format('-noop-{0}', github.run_id) || '' }}"
+      `  changes:\n    name: Changes\n    ${RUN_ON_BASE_CHANGE}\n`
     )
   })
 })

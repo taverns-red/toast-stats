@@ -34,7 +34,7 @@ describe('findReleaseNotesHazards (#2185)', () => {
   })
 })
 
-describe('ci-gate.yml wiring (#2185)', () => {
+describe('ci.yml CI Gate wiring (#2185)', () => {
   const repoRoot = join(
     dirname(fileURLToPath(import.meta.url)),
     '..',
@@ -42,7 +42,7 @@ describe('ci-gate.yml wiring (#2185)', () => {
     '..'
   )
   const src = readFileSync(
-    join(repoRoot, '.github', 'workflows', 'ci-gate.yml'),
+    join(repoRoot, '.github', 'workflows', 'ci.yml'),
     'utf8'
   )
 

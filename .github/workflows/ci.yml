@@ -23,14 +23,13 @@ on:
     types: [opened, synchronize, reopened, edited]
     # `edited` so that retargeting a stacked PR to main runs CI (#2204) --
     # that fires only `edited`. Other edits (title, body) skip every job via
-    # the `if:` on quality-gates; the CI Gate ignores those skipped re-runs.
-    # Keep in sync with .github/workflows/docs.yml -- see the note above.
-    paths-ignore:
-      - '**/*.md'
-      - 'tasks/**'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
+    # the `if:` on `changes`; the CI Gate job below only re-checks the title.
+    # NO path filter on pull_request (#2607): the `CI Gate` job lives in this
+    # workflow and is the required check, so this workflow must run on every
+    # PR head or the required check would never report. What the old
+    # paths-ignore decided now comes from the `changes` job (same globs, in
+    # scripts/lib/changedFilesGate.ts), and the push trigger above keeps its
+    # paths-ignore.
   workflow_call:
 
 permissions:
@@ -62,12 +61,40 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Classify the diff (#2607). On `edited`, run only for a base change
+  # (#2204); every other job `needs:` this one, so they all skip with it.
+  # Needs no install: the script uses only fetch and the standalone tsx.
+  changes:
+    name: Changes
+    if: github.event.action != 'edited' || github.event.changes.base
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+      docs: ${{ steps.classify.outputs.docs }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Classify changed files (#2607)
+        id: classify
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GATE_PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          version="$(node -p "require('./package.json').devDependencies.tsx")"
+          npx --yes "tsx@${version}" scripts/ci-changes.ts
+
   # Quality Gates - Must pass before any other jobs
-  # On `edited`, run only for a base change (#2204); every other job
-  # `needs:` this one, so they all skip with it.
   quality-gates:
     name: Quality Gates
-    if: github.event.action != 'edited' || github.event.changes.base
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-26.04
     outputs:
       typescript-errors: ${{ steps.typescript.outputs.total_errors }}
@@ -368,3 +395,89 @@ jobs:
               echo "| $file | $size |" >> $GITHUB_STEP_SUMMARY
             fi
           done
+
+  # Docs Gate for PRs (#2607). It used to be docs.yml's pull_request run;
+  # that workflow is path-filtered, so its result could not be `needs:`-ed.
+  # docs.yml keeps the push-to-main run. SYNC: keep the steps identical to
+  # .github/workflows/docs.yml.
+  docs-gate:
+    name: Docs Gate
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: 'Check lessons INDEX.md generates (#1375, #2455)'
+        env:
+          LESSONS_DIR: tasks/lessons
+        run: |
+          bash scripts/lessons-index.sh
+          bash scripts/lessons-index.sh --check
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Check markdown formatting (#1375)
+        run: |
+          version="$(node -p "require('./package.json').devDependencies.prettier")"
+          echo "Using prettier@${version}"
+          npx --yes "prettier@${version}" --check "**/*.md"
+
+      - name: Check YAML lint (#1375)
+        run: npm run lint:yaml
+
+  # CI Gate: the SINGLE required check on `main` (#1216, #2607).
+  #
+  # It is the last job of this workflow and `needs:` every gated job, so it
+  # decides from the run's own results and never polls the check-runs API.
+  # This workflow has no pull_request path filter, so a `CI Gate` check exists
+  # on every PR head. `always()` makes it run when a need failed, was
+  # cancelled or was skipped; a skipped job counts as success to GitHub, so
+  # scripts/lib/ciGateNeeds.ts fails any job the diff requires that is not
+  # `success`. The name below is the required-check context in
+  # .github/rulesets/main.json; rename both together.
+  #
+  # Security Scan and Agent CLI smoke are not gated, as before.
+  gate:
+    name: CI Gate
+    needs: [changes, quality-gates, test, build, docs-gate]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
+      # The squash subject becomes a changelog line. release-please decodes
+      # `&lt;date&gt;` back to `<date>` and re-parses the notes as HTML, so a
+      # tag-like `<x` swallows every later component's release (#2185: 2.62.0
+      # released only the root; 2.63.0 overflowed 125k and skipped deploy).
+      # The title goes through env, never inline, so it cannot inject shell.
+      # Runs on every pull_request event including a title edit, so a rename
+      # after the gate passed cannot slip through.
+      - name: Release-notes-safe PR title (#2185)
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          version="$(node -p "require('./package.json').devDependencies.tsx")"
+          npx --yes "tsx@${version}" scripts/check-pr-title.ts
+
+      - name: Decide from the needed jobs (#2607)
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          GATE_NOOP: ${{ github.event.action == 'edited' && !github.event.changes.base }}
+        run: |
+          version="$(node -p "require('./package.json').devDependencies.tsx")"
+          npx --yes "tsx@${version}" scripts/ci-gate-needs.ts

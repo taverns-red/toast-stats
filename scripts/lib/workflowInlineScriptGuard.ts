@@ -254,8 +254,13 @@ export interface AllowedInlineNodeScript {
 
 export const ALLOWED_INLINE_NODE_SCRIPTS: readonly AllowedInlineNodeScript[] = [
   {
-    file: 'ci-gate.yml',
+    file: 'ci.yml',
     fingerprint: "require('./package.json').devDependencies.tsx",
+    reason: 'one-expression version read, no logic',
+  },
+  {
+    file: 'ci.yml',
+    fingerprint: "require('./package.json').devDependencies.prettier",
     reason: 'one-expression version read, no logic',
   },
   {
