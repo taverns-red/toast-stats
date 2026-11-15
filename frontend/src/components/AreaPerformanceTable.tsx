@@ -75,11 +75,11 @@ const visitCell = (
   v: AreaPerformance['firstRoundVisits'],
   clubBase: number
 ) => (
-  <CriterionCell met={v.meetsThreshold}>
+  <CriterionCell met={v.meetsThreshold} stacked>
     <span className="dt-criterion__part">
       {v.completed} of {clubBase} visited
     </span>{' '}
-    <span className="dt-criterion__part">· {v.required} needed</span>
+    <span className="dt-criterion__part">{v.required} needed</span>
   </CriterionCell>
 )
 

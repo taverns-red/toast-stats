@@ -294,8 +294,16 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* "5 of 5 visited" and "4 needed" wrap between the two, never inside one. */
+  /* Area visit cells (#2871): "5 of 5 visited", "4 needed" and the outcome on
+     three short lines, so the cell stays narrow and the table keeps its width
+     at 1024. Each line is nowrap. */
+  .dt-criterion--stacked {
+    flex-direction: column;
+    row-gap: 2px;
+  }
+
   .dt-criterion__part {
+    display: block;
     white-space: nowrap;
   }
 
