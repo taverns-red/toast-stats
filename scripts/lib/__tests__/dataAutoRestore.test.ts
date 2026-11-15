@@ -532,6 +532,23 @@ describe('codeSpan: names with backticks render safely (#2858)', () => {
     expect(body).toContain('`` v1/x`\\|y.json ``')
   })
 
+  it('a backslash in a name is escaped before a pipe can be', () => {
+    const plan = planOf([entry('v1/a\\|b.json', 'restore')])
+    const body = buildIssueBody({
+      mode: 'dry-run',
+      decision: decideRestore({
+        unhealthy: true,
+        restoreEligible: true,
+        mode: 'dry-run',
+        plan,
+      }),
+      plan,
+      runUrl: 'u',
+      failed: 'f',
+    })
+    expect(body).toContain('`v1/a\\\\\\|b.json`')
+  })
+
   it('the execute report does the same', () => {
     const body = buildIssueBody({
       mode: 'dry-run',

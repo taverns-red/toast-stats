@@ -202,7 +202,8 @@ export function codeSpan(text: string): string {
 }
 
 // A name in a table cell: a pipe would end the cell even inside a code span.
-const nameCell = (name: string): string => codeSpan(name.replace(/\|/g, '\\|'))
+const nameCell = (name: string): string =>
+  codeSpan(name.replace(/[\\|]/g, '\\$&'))
 
 const cell = (s: string): string =>
   s
