@@ -71,6 +71,15 @@ a freshness check; the freshness monitor above covers that. A manual
 `mode=daily` dispatch that promotes also pings, which is how a recovery run
 reports in. Rebuild, rescrape, prune and backfill modes never ping.
 
+### Data auto-restore and the `data-rollback` issue (#2537, #2858)
+
+When the post-promotion data smoke fails, the `data-auto-restore-decide` job
+files a `data-rollback` issue. By default (dry-run) nothing is restored; the
+issue lists the enumerated restore plan, planned read-only as the data reader
+service account (main only), or says `enumeration failed: <class>` and gives
+the command to plan by hand. Restoring needs `DATA_AUTO_RESTORE=execute`. Full
+procedure: [data-restore.md](data-restore.md#automatic-restore-2537-built-dry-run-by-default).
+
 ## Confirming a dispatch queues (without writing prod data)
 
 A `daily` dispatch writes to production. To verify only that
