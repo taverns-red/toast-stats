@@ -56,15 +56,54 @@ export interface HeadCheckRun {
   started_at?: string | null
 }
 
+function isNewer(b: HeadCheckRun, a: HeadCheckRun): boolean {
+  const tb = b.started_at ? Date.parse(b.started_at) : NaN
+  const ta = a.started_at ? Date.parse(a.started_at) : NaN
+  if (!Number.isNaN(tb) && !Number.isNaN(ta) && tb !== ta) return tb > ta
+  return (b.id ?? 0) > (a.id ?? 0)
+}
+
 /**
- * Stub: on a no-op `edited` run the gate re-verifies the head's check runs.
- * Implemented in the next commit.
+ * A title/body-only `edited` run skips every job, so its needs say nothing
+ * about the head. Without this check the gate would report success on a head
+ * whose real CI run failed, and GitHub takes the later `CI Gate` as the
+ * verdict (canary on PR #2859: BLOCKED became CLEAN). So the gate reads the
+ * head's check runs ONCE (no waiting, no polling) and, for each expected job,
+ * takes the latest NON-skipped run (the edit run's own skips are noise) and
+ * requires it present, completed and `success`. A run still in flight fails:
+ * the real run's own `CI Gate` reports later and becomes the latest.
  */
 export function evaluateHeadChecks(
-  _expectedNames: string[],
-  _runs: HeadCheckRun[]
+  expectedNames: string[],
+  runs: HeadCheckRun[]
 ): NeedsVerdict {
-  return { pass: true, reasons: [] }
+  if (expectedNames.length === 0)
+    return { pass: false, reasons: ['no expected checks (classifier bug)'] }
+  const reasons: string[] = []
+  for (const name of expectedNames) {
+    const same = runs.filter(r => r.name === name)
+    const real = same.filter(
+      r => !(r.status === 'completed' && r.conclusion === 'skipped')
+    )
+    if (real.length === 0) {
+      reasons.push(
+        same.length === 0
+          ? `${name} is missing on the head`
+          : `${name} only has skipped runs on the head`
+      )
+      continue
+    }
+    const latest = real.reduce((a, b) => (isNewer(b, a) ? b : a))
+    if (latest.status !== 'completed')
+      reasons.push(
+        `${name} is still running; re-run this check when it is done`
+      )
+    else if (latest.conclusion !== 'success')
+      reasons.push(
+        `${name} is ${latest.conclusion ?? 'unknown'}, expected success`
+      )
+  }
+  return { pass: reasons.length === 0, reasons }
 }
 
 export function evaluateNeeds(

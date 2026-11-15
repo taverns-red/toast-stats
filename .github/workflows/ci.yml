@@ -450,6 +450,14 @@ jobs:
     if: always() && github.event_name == 'pull_request'
     runs-on: ubuntu-26.04
     timeout-minutes: 5
+    # Scoped exception (#2607, COO-approved): only this job reads the head's
+    # check runs, once, on a title/body-only edit. The workflow-level block is
+    # narrowed separately (#2861).
+    permissions:
+      contents: read
+      checks: read
+      actions: read
+      pull-requests: read
 
     steps:
       - name: Checkout code
@@ -477,6 +485,9 @@ jobs:
       - name: Decide from the needed jobs (#2607)
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GATE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           GATE_NOOP: ${{ github.event.action == 'edited' && !github.event.changes.base }}
         run: |
           version="$(node -p "require('./package.json').devDependencies.tsx")"
