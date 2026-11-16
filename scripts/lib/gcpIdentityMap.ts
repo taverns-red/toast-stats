@@ -48,10 +48,6 @@ export const EXPECTED: Record<string, string> = {
  * this repo, so id-token is the real capability. One reason per entry.
  */
 export const NON_GCP_OIDC: Record<string, string> = {
-  'deploy.yml::post-deploy-verify':
-    'inherits workflow-level id-token; only runs health checks, no auth step',
-  'release-please.yml::release-please':
-    'inherits the workflow-level id-token that the called deploy workflow needs; no auth step',
   'release-please.yml::deploy':
     'reusable-workflow caller; id-token is passed through to deploy.yml',
 }

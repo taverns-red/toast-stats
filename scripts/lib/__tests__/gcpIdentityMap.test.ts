@@ -66,6 +66,12 @@ describe('GCP identity map (#2872)', () => {
     expect(unclassified).toEqual([])
   })
 
+  it('grants id-token to exactly the GCP-authenticating jobs plus the deploy caller (#2879)', () => {
+    expect(collectIdTokenJobs(files).sort()).toEqual(
+      [...Object.keys(EXPECTED), ...Object.keys(NON_GCP_OIDC)].sort()
+    )
+  })
+
   it('has no NON_GCP_OIDC entry that is stale, unexplained or in EXPECTED', () => {
     const withToken = new Set(collectIdTokenJobs(files))
     const bad = Object.entries(NON_GCP_OIDC)
