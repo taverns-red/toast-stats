@@ -7,24 +7,35 @@
  *
  * No-op `edited` run (title/body only, GATE_NOOP=true): every needed job was
  * skipped, so `needs` proves nothing about the head. The gate reads the PR's
- * changed files and the head SHA's check runs ONCE and requires each expected
- * job's latest non-skipped run to be `success` (scripts/lib/ciGateNeeds.ts).
- * It does not wait: an in-flight run fails and the real run's own `CI Gate`
- * reports later.
+ * changed files, WAITS for the head's older ci.yml runs to complete (30 s
+ * polls, fails if the head moves; #2881), then requires each expected job in
+ * the newest older run to be `success` (scripts/lib/ciGateWait.ts). A failing
+ * "still running" verdict would be the latest `CI Gate` on the head and pin it
+ * red until a manual re-run, so it waits; the job's timeout bounds the wait.
  *
  * Env: NEEDS_JSON, GATE_NOOP, GITHUB_STEP_SUMMARY (optional); for a no-op:
- * GITHUB_TOKEN, GITHUB_REPOSITORY, GATE_PR_NUMBER, GATE_HEAD_SHA.
+ * GITHUB_TOKEN, GITHUB_REPOSITORY, GATE_PR_NUMBER, GATE_HEAD_SHA,
+ * GITHUB_RUN_ID.
  */
 import { appendFileSync } from 'node:fs'
 import { CI_CHECKS, DOCS_CHECK } from './lib/ciGate'
 import {
+  ACTIONS_APP_SLUG,
   classifyChanges,
-  evaluateHeadChecks,
   evaluateNeeds,
   type HeadCheckRun,
   type NeedResult,
   type NeedsVerdict,
 } from './lib/ciGateNeeds'
+import {
+  jobsCacheKey,
+  retryUntilOk,
+  runBelongsToPr,
+  waitForGate,
+  type GateRun,
+  type GateState,
+  type RunRef,
+} from './lib/ciGateWait'
 
 function requireEnv(name: string): string {
   const v = process.env[name]
@@ -69,18 +80,69 @@ async function paged<T>(
 
 async function verifyHead(): Promise<NeedsVerdict> {
   const repo = requireEnv('GITHUB_REPOSITORY')
-  const files = await paged<{ filename: string }>(
-    `/repos/${repo}/pulls/${requireEnv('GATE_PR_NUMBER')}/files`,
-    b => b as { filename: string }[]
+  const sleep = (ms: number): Promise<void> =>
+    new Promise(r => setTimeout(r, ms))
+  // Same retry as the poll loop: a network blip here must not fail the gate.
+  const files = await retryUntilOk(
+    () =>
+      paged<{ filename: string }>(
+        `/repos/${repo}/pulls/${requireEnv('GATE_PR_NUMBER')}/files`,
+        b => b as { filename: string }[]
+      ),
+    { sleep, onRetry: m => console.error(m) }
   )
   const { code, docs } = classifyChanges(files.map(f => f.filename))
   const expected = [...(code ? CI_CHECKS : []), ...(docs ? [DOCS_CHECK] : [])]
-  const runs = await paged<HeadCheckRun>(
-    `/repos/${repo}/commits/${requireEnv('GATE_HEAD_SHA')}/check-runs?filter=all`,
-    b => (b as { check_runs: HeadCheckRun[] }).check_runs
+  const pr = requireEnv('GATE_PR_NUMBER')
+  const headSha = requireEnv('GATE_HEAD_SHA')
+  const selfRunId = Number(requireEnv('GITHUB_RUN_ID'))
+  // A completed attempt's jobs never change, but a re-run keeps the run id and
+  // bumps run_attempt, so the cache key carries both.
+  const jobsOf = new Map<string, HeadCheckRun[]>()
+  const prNumber = Number(pr)
+
+  const fetchState = async (): Promise<GateState> => {
+    const live = await getJson<{ head: { sha: string } }>(
+      `/repos/${repo}/pulls/${pr}`
+    )
+    const { workflow_runs } = await getJson<{
+      workflow_runs: (RunRef & { status: string })[]
+    }>(
+      `/repos/${repo}/actions/workflows/ci.yml/runs?head_sha=${headSha}&event=pull_request&per_page=100`
+    )
+    const runs: GateRun[] = []
+    for (const r of workflow_runs) {
+      if (r.id >= selfRunId) continue // never wait on this run or newer ones
+      // The query is by SHA, so another PR on the same commit can match.
+      if (!runBelongsToPr(r, prNumber)) continue
+      const key = jobsCacheKey(r)
+      if (r.status === 'completed' && !jobsOf.has(key)) {
+        const { jobs } = await getJson<{ jobs: HeadCheckRun[] }>(
+          `/repos/${repo}/actions/runs/${r.id}/jobs?filter=latest&per_page=100`
+        )
+        // The run-jobs endpoint lists only this workflow's own jobs, which
+        // GitHub Actions reports; it carries no app, so stamp the slug.
+        jobsOf.set(
+          key,
+          jobs.map(j => ({ ...j, app: { slug: ACTIONS_APP_SLUG } }))
+        )
+      }
+      runs.push({ id: r.id, status: r.status, jobs: jobsOf.get(key) ?? [] })
+    }
+    return { headSha: live.head.sha, runs }
+  }
+
+  console.error(
+    `no-op edit: waiting for earlier ci.yml runs, then checking ${expected.join(', ')}`
   )
-  console.error(`no-op edit: re-verifying ${expected.join(', ')} on the head`)
-  return evaluateHeadChecks(expected, runs)
+  return waitForGate({
+    fetchState,
+    expected,
+    headSha,
+    selfRunId,
+    sleep,
+    onWait: reasons => console.error(`waiting: ${reasons.join('; ')}`),
+  })
 }
 
 async function main(): Promise<void> {

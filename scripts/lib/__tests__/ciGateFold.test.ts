@@ -18,6 +18,7 @@ interface Job {
   if?: string
   steps?: { run?: string; env?: Record<string, string> }[]
   permissions?: Record<string, string>
+  'timeout-minutes'?: number
 }
 const jobs = (f: string) =>
   (parse(read(f)) as { jobs: Record<string, Job> }).jobs
@@ -67,6 +68,12 @@ describe('ci.yml carries the CI Gate as a final needs: job (#2607)', () => {
   it('docs.yml no longer runs on pull_request (Docs Gate lives in ci.yml)', () => {
     const on = (parse(read('docs.yml')) as { on: Record<string, unknown> }).on
     expect(on.pull_request).toBeUndefined()
+  })
+
+  // #2881: the no-op path waits for the earlier real run (13 to 21 minutes of
+  // CI wall time), so the job timeout is a deliberate wait, not a test mask.
+  it('the gate timeout covers the no-op wait (#2881)', () => {
+    expect(gate()!['timeout-minutes']).toBe(45)
   })
 
   // COO-approved scoped exception (#2607): on a no-op edit the gate reads the
