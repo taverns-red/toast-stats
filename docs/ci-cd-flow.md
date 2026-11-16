@@ -10,7 +10,7 @@ flowchart TD
 
     subgraph PRphase["on: pull_request → main"]
         CI["CI · ci.yml<br/>quality-gates → security + test → build"]
-        Preview["PR Preview · pr-preview.yml<br/>paths: frontend, packages, firebase<br/>→ Firebase preview channel + sticky URL"]
+        Preview["PR Preview · pr-preview.yml<br/>every PR; preview only if frontend, packages or firebase paths changed<br/>→ Firebase preview channel + sticky URL"]
         LH["Lighthouse · lighthouse-ci.yml<br/>paths: frontend, lighthouserc.js"]
     end
     PR --> CI
@@ -50,14 +50,14 @@ flowchart TD
 
 ## Workflows
 
-| Workflow             | Trigger                                 | Does                                                                                                             |
-| -------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `ci.yml`             | PR → main/develop; push develop; called | `quality-gates` (tsc/lint/yaml/fmt) → `security` (Trivy) + `test` (full suite) → `build`                         |
-| `pr-preview.yml`     | PR (frontend/packages/firebase paths)   | Per-PR Firebase preview channel (staging CDN data) + sticky comment with the URL                                 |
-| `lighthouse-ci.yml`  | PR (frontend paths)                     | Perf/a11y budget on the PR                                                                                       |
-| `deploy.yml`         | push → main; dispatch                   | Re-runs `ci.yml`, then builds + deploys `hosting:staging` and `hosting:production`, post-deploy CDN health check |
-| `release-please.yml` | push → main                             | Maintains the release PR + version tags from conventional commits                                                |
-| `data-pipeline.yml`  | schedule (daily) + dispatch             | Scrapes dashboards → computes analytics → uploads snapshots to GCS/CDN (independent of code)                     |
+| Workflow             | Trigger                                              | Does                                                                                                                                                                                                                      |
+| -------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ci.yml`             | PR → main/develop; push develop; called              | `quality-gates` (tsc/lint/yaml/fmt) → `security` (Trivy) + `test` (full suite) → `build`                                                                                                                                  |
+| `pr-preview.yml`     | Every PR (preview: frontend/packages/firebase paths) | Per-PR Firebase preview channel (staging CDN data) + sticky comment with the URL. `PR Preview verdict` reports on every open PR: "not needed" when no preview path changed, "not run" for fork and Dependabot PRs (#2865) |
+| `lighthouse-ci.yml`  | PR (frontend paths)                                  | Perf/a11y budget on the PR                                                                                                                                                                                                |
+| `deploy.yml`         | push → main; dispatch                                | Re-runs `ci.yml`, then builds + deploys `hosting:staging` and `hosting:production`, post-deploy CDN health check                                                                                                          |
+| `release-please.yml` | push → main                                          | Maintains the release PR + version tags from conventional commits                                                                                                                                                         |
+| `data-pipeline.yml`  | schedule (daily) + dispatch                          | Scrapes dashboards → computes analytics → uploads snapshots to GCS/CDN (independent of code)                                                                                                                              |
 
 ## Key properties
 
