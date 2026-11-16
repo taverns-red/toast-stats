@@ -46,8 +46,9 @@ describe('decideGate (#2881)', () => {
     expect(d).toMatchObject({ done: true, pass: true })
   })
   it('fails when the newest older run has a failed job', () => {
-    const jobs = jobsOf('success')
-    jobs[1] = job('Test Suite', 'failure', { id: 9 })
+    const jobs = jobsOf('success').map(j =>
+      j.name === 'Test Suite' ? job('Test Suite', 'failure', { id: 9 }) : j
+    )
     const d = decide([run(50, 'completed', jobs)])
     expect(d.done).toBe(true)
     expect(d.pass).toBe(false)
@@ -119,6 +120,15 @@ describe('decideGate (#2881)', () => {
       expect(d.reasons.join(' ')).toContain('Changes')
     }
   )
+  it('FAILS when the newest older run has no jobs at all (Changes missing)', () => {
+    const d = decide([
+      run(40, 'completed', jobsOf('success')),
+      run(50, 'completed', []),
+    ])
+    expect(d.done).toBe(true)
+    expect(d.pass).toBe(false)
+    expect(d.reasons.join(' ')).toContain('Changes is missing')
+  })
   it('passes a docs-only PR: code jobs skipped, Docs Gate success', () => {
     const jobs = [
       job('Changes', 'success'),
@@ -236,8 +246,11 @@ describe('waitForGate (#2881)', () => {
     expect(v.reasons.join(' ')).toContain('head moved')
   })
   it('fails (no hang) when the awaited run ends red', async () => {
-    const jobs = jobsOf('success')
-    jobs[2] = job('Build Applications', 'failure', { id: 7 })
+    const jobs = jobsOf('success').map(j =>
+      j.name === 'Build Applications'
+        ? job('Build Applications', 'failure', { id: 7 })
+        : j
+    )
     const states: GateState[] = [
       { headSha: 'a', runs: [run(50, 'in_progress')] },
       { headSha: 'a', runs: [run(50, 'completed', jobs)] },
