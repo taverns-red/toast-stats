@@ -1111,6 +1111,8 @@ jobs:
               echo "$1" >> "$GITHUB_STEP_SUMMARY"
             fi
           }
+          results="deploy: $DEPLOY, smoke: $SMOKE, lighthouse: $LIGHTHOUSE,"
+          results="$results real-preview smoke: $PREVIEW_SMOKE"
           none_ran() {
             [ "$DEPLOY" = "skipped" ] && [ "$SMOKE" = "skipped" ] \
               && [ "$LIGHTHOUSE" = "skipped" ] \
@@ -1123,7 +1125,7 @@ jobs:
           case "$PREVIEW_NEEDED" in
             false)
               if ! none_ran; then
-                echo "::error::no preview path changed, yet deploy: $DEPLOY, smoke: $SMOKE, lighthouse: $LIGHTHOUSE, real-preview smoke: $PREVIEW_SMOKE"
+                echo "::error::no preview path changed, yet $results"
                 exit 1
               fi
               note "Preview not needed: no preview paths changed"
@@ -1137,7 +1139,7 @@ jobs:
           esac
           if [ "$FORK" = "true" ] || [ "$DEPENDABOT" = "true" ]; then
             if ! none_ran; then
-              echo "::error::no preview can run for this PR, yet deploy: $DEPLOY, smoke: $SMOKE, lighthouse: $LIGHTHOUSE, real-preview smoke: $PREVIEW_SMOKE"
+              echo "::error::no preview can run for this PR, yet $results"
               exit 1
             fi
             if [ "$FORK" = "true" ]; then

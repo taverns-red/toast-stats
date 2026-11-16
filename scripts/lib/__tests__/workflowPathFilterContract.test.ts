@@ -54,6 +54,8 @@ const EXEMPT: Record<string, string> = {
     'the changes job reads it only for the pinned tsx version (as ci.yml does)',
   'pr-preview.yml: scripts/preview-changes.ts':
     'the classifier itself; it does not build or serve the preview',
+  'pr-preview.yml: scripts/lib/prChangedFiles.ts':
+    'the PR file-list fetch the classifier shares with ci.yml; no preview input',
   'pr-preview.yml: scripts/lib/previewPaths.ts':
     'the list and its matcher, used only by the classifier; tested by previewPaths.test.ts',
 }
