@@ -9,8 +9,9 @@
  *   - considers only runs OLDER than this one (id < this run's id) and never
  *     waits on newer ones, which will report after it;
  *   - WAITS until every older run is `completed` at run level;
- *   - then decides from the newest older run that actually ran the expected
- *     jobs, with the #2859 rules (`evaluateHeadChecks`) restricted to that
+ *   - then decides from the newest older run that is not a no-op (a no-op
+ *     run's `Changes` job was skipped), requiring its `Changes` to be success,
+ *     with the #2859 rules (`evaluateHeadChecks`) restricted to that
  *     run's jobs;
  *   - fails if the PR head moved or if there is no older run.
  * Same shape as scripts/lib/previewVerdictMirror.ts (#2880).
@@ -50,12 +51,23 @@ export interface RunRef {
   pull_requests?: { number: number }[] | null
 }
 
-/** Stub (red): keyed by id alone, and every run counts as this PR's. */
-export function runBelongsToPr(_run: RunRef, _pr: number): boolean {
-  return true
+/**
+ * Whether a run listed for this head SHA belongs to this PR. The runs query is
+ * by SHA, so another PR on the same commit would show up too. Fork PRs report
+ * an empty `pull_requests`, so an empty list is kept, not dropped.
+ */
+export function runBelongsToPr(run: RunRef, pr: number): boolean {
+  const prs = run.pull_requests
+  if (!prs || prs.length === 0) return true
+  return prs.some(p => p.number === pr)
 }
+
+/**
+ * A completed run's jobs change when it is re-run: the id stays, the attempt
+ * does not. Key the jobs cache by both.
+ */
 export function jobsCacheKey(run: RunRef): string {
-  return String(run.id)
+  return `${run.id}:${run.run_attempt ?? 1}`
 }
 
 const stop = (reason: string): GateDecision => ({
@@ -64,14 +76,22 @@ const stop = (reason: string): GateDecision => ({
   reasons: [reason],
 })
 
-/** True when the run executed (did not skip) at least one expected job. */
-function ranExpected(run: GateRun, expected: string[]): boolean {
-  return run.jobs.some(
-    j =>
-      expected.includes(j.name) &&
-      j.app?.slug === ACTIONS_APP_SLUG &&
-      !(j.status === 'completed' && j.conclusion === 'skipped')
+/** The classifier job; every real run executes it, a no-op edit run skips it. */
+export const CHANGES_NAME = 'Changes'
+
+/**
+ * A no-op (title/body edit) run is identified by its signature: its `Changes`
+ * job was skipped. A real run whose `Changes` failed or was cancelled also
+ * skips every other job, so "all expected jobs skipped" is not a safe test.
+ */
+function changesOf(run: GateRun): HeadCheckRun | undefined {
+  return run.jobs.find(
+    j => j.name === CHANGES_NAME && j.app?.slug === ACTIONS_APP_SLUG
   )
+}
+function isNoop(run: GateRun): boolean {
+  const c = changesOf(run)
+  return c?.status === 'completed' && c.conclusion === 'skipped'
 }
 
 export function decideGate(args: {
@@ -96,8 +116,13 @@ export function decideGate(args: {
       ],
     }
   // An earlier no-op run skipped everything; it says nothing about the head.
-  const newest = older.find(r => ranExpected(r, args.expected))
+  const newest = older.find(r => !isNoop(r))
   if (!newest) return stop('no earlier ci.yml run on this head ran the jobs')
+  const c = changesOf(newest)
+  if (!c || c.status !== 'completed' || c.conclusion !== 'success')
+    return stop(
+      `run ${newest.id}: ${CHANGES_NAME} is ${c?.conclusion ?? 'missing'}, expected success`
+    )
   const v = evaluateHeadChecks(args.expected, newest.jobs)
   return {
     done: true,
@@ -120,7 +145,18 @@ export async function waitForGate(opts: {
   onWait?: (reasons: string[]) => void
 }): Promise<NeedsVerdict> {
   for (;;) {
-    const state = await opts.fetchState()
+    let state: GateState
+    try {
+      state = await opts.fetchState()
+    } catch (err) {
+      // A transient poll error (network, 429, secondary rate limit) must not
+      // pin the gate red. Try again next interval; the job timeout bounds it.
+      opts.onWait?.([
+        `poll failed (${err instanceof Error ? err.message : err}); retrying`,
+      ])
+      await opts.sleep(opts.intervalMs ?? POLL_MS)
+      continue
+    }
     const d = decideGate({
       expected: opts.expected,
       runs: state.runs,

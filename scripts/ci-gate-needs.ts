@@ -27,7 +27,14 @@ import {
   type NeedResult,
   type NeedsVerdict,
 } from './lib/ciGateNeeds'
-import { waitForGate, type GateRun, type GateState } from './lib/ciGateWait'
+import {
+  jobsCacheKey,
+  runBelongsToPr,
+  waitForGate,
+  type GateRun,
+  type GateState,
+  type RunRef,
+} from './lib/ciGateWait'
 
 function requireEnv(name: string): string {
   const v = process.env[name]
@@ -81,33 +88,38 @@ async function verifyHead(): Promise<NeedsVerdict> {
   const pr = requireEnv('GATE_PR_NUMBER')
   const headSha = requireEnv('GATE_HEAD_SHA')
   const selfRunId = Number(requireEnv('GITHUB_RUN_ID'))
-  // A completed run's jobs never change: read them once.
-  const jobsOf = new Map<number, HeadCheckRun[]>()
+  // A completed attempt's jobs never change, but a re-run keeps the run id and
+  // bumps run_attempt, so the cache key carries both.
+  const jobsOf = new Map<string, HeadCheckRun[]>()
+  const prNumber = Number(pr)
 
   const fetchState = async (): Promise<GateState> => {
     const live = await getJson<{ head: { sha: string } }>(
       `/repos/${repo}/pulls/${pr}`
     )
     const { workflow_runs } = await getJson<{
-      workflow_runs: { id: number; status: string }[]
+      workflow_runs: (RunRef & { status: string })[]
     }>(
       `/repos/${repo}/actions/workflows/ci.yml/runs?head_sha=${headSha}&event=pull_request&per_page=100`
     )
     const runs: GateRun[] = []
     for (const r of workflow_runs) {
       if (r.id >= selfRunId) continue // never wait on this run or newer ones
-      if (r.status === 'completed' && !jobsOf.has(r.id)) {
+      // The query is by SHA, so another PR on the same commit can match.
+      if (!runBelongsToPr(r, prNumber)) continue
+      const key = jobsCacheKey(r)
+      if (r.status === 'completed' && !jobsOf.has(key)) {
         const { jobs } = await getJson<{ jobs: HeadCheckRun[] }>(
           `/repos/${repo}/actions/runs/${r.id}/jobs?filter=latest&per_page=100`
         )
         // The run-jobs endpoint lists only this workflow's own jobs, which
         // GitHub Actions reports; it carries no app, so stamp the slug.
         jobsOf.set(
-          r.id,
+          key,
           jobs.map(j => ({ ...j, app: { slug: ACTIONS_APP_SLUG } }))
         )
       }
-      runs.push({ id: r.id, status: r.status, jobs: jobsOf.get(r.id) ?? [] })
+      runs.push({ id: r.id, status: r.status, jobs: jobsOf.get(key) ?? [] })
     }
     return { headSha: live.head.sha, runs }
   }
