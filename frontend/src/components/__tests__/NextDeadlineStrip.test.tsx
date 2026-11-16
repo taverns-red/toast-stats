@@ -153,8 +153,8 @@ describe('NextDeadlineStrip — whole-year timeline (#2429)', () => {
       'listitem'
     )
     expect(items[0]).toHaveTextContent('passed')
-    expect(items[4]).toHaveTextContent('Round 1 club visit reports due')
-    expect(items[4]).not.toHaveTextContent('passed')
+    expect(items[5]).toHaveTextContent('Round 1 club visit reports due')
+    expect(items[5]).not.toHaveTextContent('passed')
   })
 
   it('offers the .ics feed of the same table', () => {

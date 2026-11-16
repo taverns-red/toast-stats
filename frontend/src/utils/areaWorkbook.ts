@@ -126,7 +126,7 @@ export function buildAreaWorkbookRows(
   const asOf = input.snapshotDate.slice(0, 10)
   const yearDeadlines = deadlinesForProgramYear(input.programYear)
   const general = yearDeadlines.filter(
-    d => !CLUB_SPECIFIC.has(d.id) && d.date >= asOf
+    d => d.audience === 'club' && !CLUB_SPECIFIC.has(d.id) && d.date >= asOf
   )
   const visitDeadline = yearDeadlines.find(
     d => d.id === `visits-r${pack.visitRound}`
