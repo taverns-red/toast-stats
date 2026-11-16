@@ -111,6 +111,34 @@ describe('coarse-pointer row and table links (#2645)', () => {
   })
 })
 
+// The footer's Privacy & cookies control is a <button>, and base.css gives
+// every button a 44px minimum. Beside the inline footer links (18px) that put
+// it 13px lower on a desktop mouse (#2889). On a fine pointer it drops the
+// minimum and lays out like the links; a coarse pointer keeps the 44px box
+// that tap-targets.css gives every .app-shell-footer__link.
+describe('footer privacy button on a fine pointer (#2889)', () => {
+  const consent = load('consent.css')
+  const FINE = '@media (pointer: fine)'
+  const SEL = '.app-shell-footer .consent-reopen'
+
+  it('drops the 44px minimum and sits on the links baseline', () => {
+    const r = decls(mediaBlock(consent, FINE), SEL)
+    expect(r['min-height']).toBe('0')
+    expect(r['min-width']).toBe('0')
+    expect(r['display']).toBe('inline')
+    expect(r['vertical-align']).toBe('baseline')
+  })
+
+  it('leaves the coarse-pointer 44px footer link box alone', () => {
+    const r = decls(
+      coarseBlock(load('tap-targets.css')),
+      '.app-shell-footer__link'
+    )
+    expect(r['min-height']).toBe('44px')
+    expect(withoutMedia(consent, FINE)).not.toContain(SEL)
+  })
+})
+
 /** [start, end) spans of every block whose at-rule header equals `query`. */
 function spans(css: string, query: string): [number, number][] {
   const out: [number, number][] = []
