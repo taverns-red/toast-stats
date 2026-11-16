@@ -10,6 +10,8 @@
  * - a job can mint an OIDC token (`id-token: write`, own or inherited) but is
  *   in neither EXPECTED nor NON_GCP_OIDC. The WIF binding admits any job with
  *   id-token on the repo, so id-token is the real capability;
+ * - the jobs with id-token are not exactly EXPECTED plus NON_GCP_OIDC (#2879),
+ *   so no other job can inherit the capability;
  * - a job-level `uses:` is not in CALLERS;
  * - a workflow carries key credentials, or a step uses a local `./` action.
  */
@@ -64,6 +66,12 @@ describe('GCP identity map (#2872)', () => {
       k => !(k in EXPECTED) && !(k in NON_GCP_OIDC)
     )
     expect(unclassified).toEqual([])
+  })
+
+  it('grants id-token to exactly the GCP-authenticating jobs plus the deploy caller (#2879)', () => {
+    expect(collectIdTokenJobs(files).sort()).toEqual(
+      [...Object.keys(EXPECTED), ...Object.keys(NON_GCP_OIDC)].sort()
+    )
   })
 
   it('has no NON_GCP_OIDC entry that is stale, unexplained or in EXPECTED', () => {

@@ -31,6 +31,7 @@ interface Step {
   'working-directory'?: string
 }
 interface Job {
+  permissions?: Record<string, string>
   steps: Step[]
   env?: Record<string, string>
   'timeout-minutes'?: number
@@ -187,14 +188,33 @@ describe('deploy.yml auto-rollback (#2492)', () => {
   })
 
   it('can write issues, here and in the release-please caller that caps it', () => {
-    expect(wf.permissions?.['issues']).toBe('write')
+    expect(job.permissions?.['issues']).toBe('write')
     const rp = parse(
       fs.readFileSync(
         path.resolve(ROOT, '.github/workflows/release-please.yml'),
         'utf-8'
       )
     ) as Workflow
-    expect(rp.permissions?.['issues']).toBe('write')
+    expect(rp.jobs['deploy']?.permissions?.['issues']).toBe('write')
+  })
+
+  it('reads contents only, here and in the caller (#2879)', () => {
+    expect(job.permissions).toEqual({
+      contents: 'read',
+      'id-token': 'write',
+      issues: 'write',
+    })
+    const rp = parse(
+      fs.readFileSync(
+        path.resolve(ROOT, '.github/workflows/release-please.yml'),
+        'utf-8'
+      )
+    ) as Workflow
+    expect(rp.jobs['deploy']?.permissions).toEqual(job.permissions)
+  })
+
+  it('does not leave a push-capable token in .git/config (#2879)', () => {
+    expect(step('Checkout code').with?.['persist-credentials']).toBe(false)
   })
 
   it('bounds the job so a hung smoke cannot hold the deploy lock forever', () => {
