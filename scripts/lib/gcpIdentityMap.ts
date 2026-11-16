@@ -19,21 +19,51 @@ export const DEPLOYER = 'secrets.GCP_SERVICE_ACCOUNT'
 export const DATA_READER = 'vars.GCP_DATA_READER_SA'
 
 /** Every job that runs google-github-actions/auth -> its one identity. */
-export const EXPECTED: Record<string, string> = {}
+export const EXPECTED: Record<string, string> = {
+  'basemap-build.yml::basemap': DEPLOYER,
+  'contact-strip.yml::strip': DEPLOYER,
+  'data-pipeline.yml::pipeline': DEPLOYER,
+  'data-pipeline.yml::closing-registry-pr': DEPLOYER,
+  'data-pipeline.yml::daily-reports': DEPLOYER,
+  'data-pipeline.yml::place-reports': DEPLOYER,
+  'data-pipeline.yml::education-rollup': DEPLOYER,
+  'data-pipeline.yml::promote-reports': DEPLOYER,
+  'data-pipeline.yml::data-auto-restore-decide': DATA_READER,
+  'data-pipeline.yml::data-auto-restore-execute': DEPLOYER,
+  'data-pipeline.yml::og-cards': DEPLOYER,
+  'data-pipeline.yml::education-ledger-history': DEPLOYER,
+  'deploy.yml::deploy-frontend': DEPLOYER,
+  'education-timeline-backfill.yml::backfill': DEPLOYER,
+  'gap-district-prune.yml::prune': DEPLOYER,
+  'harness-staging-canary.yml::canary': DEPLOYER,
+  'pr-preview-cleanup.yml::cleanup': DEPLOYER,
+  'pr-preview.yml::preview': DEPLOYER,
+  'validate-vs-ceo-report.yml::validate': DEPLOYER,
+  'videos-publish.yml::publish': DEPLOYER,
+}
 
 /**
  * Jobs that can mint a GitHub OIDC token (effective `id-token: write`) but do
  * not run the GCP auth action. The WIF binding admits any job with id-token on
  * this repo, so id-token is the real capability. One reason per entry.
  */
-export const NON_GCP_OIDC: Record<string, string> = {}
+export const NON_GCP_OIDC: Record<string, string> = {
+  'deploy.yml::post-deploy-verify':
+    'inherits workflow-level id-token; only runs health checks, no auth step',
+  'release-please.yml::release-please':
+    'inherits the workflow-level id-token that the called deploy workflow needs; no auth step',
+  'release-please.yml::deploy':
+    'reusable-workflow caller; id-token is passed through to deploy.yml',
+}
 
 /**
  * Job-level `uses:` (reusable workflow calls): caller job -> callee file.
  * B6 (hosting-deploy) must handle BOTH deploy.yml entry points:
  * workflow_dispatch and workflow_call from release-please.
  */
-export const CALLERS: Record<string, string> = {}
+export const CALLERS: Record<string, string> = {
+  'release-please.yml::deploy': 'deploy.yml',
+}
 
 /** Patterns that must never appear in a workflow (static or key credentials). */
 export const FORBIDDEN_CREDENTIAL_PATTERNS: RegExp[] = [
