@@ -24,6 +24,7 @@ import {
   collectCallers,
   collectLocalUses,
   findForbiddenCredentials,
+  type WorkflowFile,
 } from '../gcpIdentityMap'
 
 describe('GCP identity map (#2872)', () => {
@@ -85,5 +86,50 @@ describe('GCP identity map (#2872)', () => {
 
   it('has no local ./ action step', () => {
     expect(collectLocalUses(files)).toEqual([])
+  })
+
+  it('keys CALLERS by the full uses path, not the basename', () => {
+    expect(CALLERS).toEqual({
+      'release-please.yml::deploy': './.github/workflows/deploy.yml',
+    })
+  })
+})
+
+const fixture = (text: string, uses?: string): WorkflowFile => ({
+  file: 'fixture.yml',
+  text,
+  wf: { jobs: uses ? { deploy: { uses } } : {} },
+})
+
+describe('GCP identity tripwire fixtures (#2872)', () => {
+  it.each([
+    ['export in a run block', 'run: export GOOGLE_APPLICATION_CREDENTIALS=/k'],
+    ['env mapping', 'env:\n  GOOGLE_APPLICATION_CREDENTIALS: /k'],
+    ['GOOGLE_GHA_CREDS_PATH', 'run: cat "$GOOGLE_GHA_CREDS_PATH"'],
+    [
+      'CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE',
+      'run: export CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=/k',
+    ],
+    ['credentials_json', 'credentials_json: ${{ secrets.K }}'],
+    ['activate-service-account', 'run: gcloud auth activate-service-account'],
+    ['--cred-file', 'run: gcloud auth login --cred-file=/k'],
+  ])('flags %s', (_name, text) => {
+    expect(findForbiddenCredentials([fixture(text)])).not.toEqual([])
+  })
+
+  it('leaves CLOUDSDK_AUTH_ACCESS_TOKEN_FILE alone', () => {
+    expect(
+      findForbiddenCredentials([
+        fixture('env:\n  CLOUDSDK_AUTH_ACCESS_TOKEN_FILE: /t'),
+      ])
+    ).toEqual([])
+  })
+
+  it('records the full uses string, so a same-named workflow elsewhere differs', () => {
+    expect(
+      collectCallers([fixture('', './.github/workflows/sub/deploy.yml')])
+    ).toEqual({
+      'fixture.yml::deploy': './.github/workflows/sub/deploy.yml',
+    })
   })
 })
