@@ -131,6 +131,18 @@ export function decideGate(args: {
   }
 }
 
+/** Stub (red): calls `fn` once, no retry. */
+export async function retryUntilOk<T>(
+  fn: () => Promise<T>,
+  _opts: {
+    sleep: (ms: number) => Promise<void>
+    intervalMs?: number
+    onRetry?: (message: string) => void
+  }
+): Promise<T> {
+  return fn()
+}
+
 /**
  * Poll `fetchState` every POLL_MS until the decision is final. The caller's
  * job timeout bounds the wait; a timeout fails the job.

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   decideGate,
   jobsCacheKey,
+  retryUntilOk,
   runBelongsToPr,
   waitForGate,
   type GateRun,
@@ -183,6 +184,32 @@ describe('run selection (#2881 review)', () => {
   it('F4: keeps a run with no pull_requests (fork PRs report none)', () => {
     expect(runBelongsToPr({ id: 1, pull_requests: [] }, 8)).toBe(true)
     expect(runBelongsToPr({ id: 1 }, 8)).toBe(true)
+  })
+})
+
+describe('retryUntilOk (#2881 review)', () => {
+  it('retries a failing call after the poll interval, then returns', async () => {
+    let calls = 0
+    const sleeps: number[] = []
+    const msgs: string[] = []
+    const out = await retryUntilOk(
+      async () => {
+        if (++calls < 3) throw new Error('network blip')
+        return 'files'
+      },
+      {
+        sleep: async ms => void sleeps.push(ms),
+        onRetry: m => msgs.push(m),
+      }
+    )
+    expect(out).toBe('files')
+    expect(calls).toBe(3)
+    expect(sleeps).toEqual([30_000, 30_000])
+    expect(msgs[0]).toContain('network blip')
+  })
+  it('returns at once when the first call works', async () => {
+    const out = await retryUntilOk(async () => 7, { sleep: async () => {} })
+    expect(out).toBe(7)
   })
 })
 
