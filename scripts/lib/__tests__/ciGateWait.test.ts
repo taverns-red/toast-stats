@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   decideGate,
+  jobsCacheKey,
+  runBelongsToPr,
   waitForGate,
   type GateRun,
   type GateState,
@@ -21,8 +23,14 @@ const job = (
   app: { slug: 'github-actions' },
   ...extra,
 })
-const jobsOf = (conclusion: string | null): HeadCheckRun[] =>
-  NAMES.map((n, i) => job(n, conclusion, { id: i }))
+// A real run has a `Changes` job that ran; a no-op edit run skips it.
+const jobsOf = (
+  conclusion: string | null,
+  changes: string | null = conclusion
+): HeadCheckRun[] => [
+  job('Changes', changes, { id: 99 }),
+  ...NAMES.map((n, i) => job(n, conclusion, { id: i })),
+]
 const run = (
   id: number,
   status: string,
@@ -97,6 +105,48 @@ describe('decideGate (#2881)', () => {
     expect(d.done).toBe(true)
     expect(d.pass).toBe(false)
   })
+  // F1: a real run whose Changes job failed or was cancelled skips every
+  // other job too. It must not be mistaken for a no-op run.
+  it.each(['failure', 'cancelled'])(
+    'FAILS when the newest older run has Changes=%s, even with an older green run',
+    changes => {
+      const d = decide([
+        run(40, 'completed', jobsOf('success')),
+        run(50, 'completed', jobsOf('skipped', changes)),
+      ])
+      expect(d.done).toBe(true)
+      expect(d.pass).toBe(false)
+      expect(d.reasons.join(' ')).toContain('Changes')
+    }
+  )
+  it('passes a docs-only PR: code jobs skipped, Docs Gate success', () => {
+    const jobs = [
+      job('Changes', 'success'),
+      ...NAMES.map(n => job(n, 'skipped')),
+      job('Docs Gate', 'success'),
+    ]
+    const d = decideGate({
+      expected: ['Docs Gate'],
+      runs: [run(50, 'completed', jobs)],
+      selfRunId: SELF,
+      headMoved: false,
+    })
+    expect(d.pass).toBe(true)
+  })
+  it('a mixed PR passes only if every expected job succeeded', () => {
+    const base = [job('Changes', 'success'), ...jobsOf('success').slice(1)]
+    const expected = [...NAMES, 'Docs Gate']
+    const go = (docs: HeadCheckRun) =>
+      decideGate({
+        expected,
+        runs: [run(50, 'completed', [...base, docs])],
+        selfRunId: SELF,
+        headMoved: false,
+      })
+    expect(go(job('Docs Gate', 'success')).pass).toBe(true)
+    expect(go(job('Docs Gate', 'failure')).pass).toBe(false)
+    expect(go(job('Docs Gate', 'skipped')).pass).toBe(false)
+  })
   it('ignores a same-named success from another app', () => {
     const foreign = jobsOf('success').map(j => ({
       ...j,
@@ -106,8 +156,47 @@ describe('decideGate (#2881)', () => {
   })
 })
 
+describe('run selection (#2881 review)', () => {
+  it('F2: a re-run (same id, new attempt) is a different cache key', () => {
+    expect(jobsCacheKey({ id: 5, run_attempt: 1 })).not.toBe(
+      jobsCacheKey({ id: 5, run_attempt: 2 })
+    )
+  })
+  it('F4: drops a run that belongs to another PR on the same SHA', () => {
+    expect(runBelongsToPr({ id: 1, pull_requests: [{ number: 7 }] }, 8)).toBe(
+      false
+    )
+    expect(runBelongsToPr({ id: 1, pull_requests: [{ number: 8 }] }, 8)).toBe(
+      true
+    )
+  })
+  it('F4: keeps a run with no pull_requests (fork PRs report none)', () => {
+    expect(runBelongsToPr({ id: 1, pull_requests: [] }, 8)).toBe(true)
+    expect(runBelongsToPr({ id: 1 }, 8)).toBe(true)
+  })
+})
+
 describe('waitForGate (#2881)', () => {
   const instant = async () => {}
+  // F3: a transient poll error must not pin the gate red.
+  it('retries after fetchState throws, then decides normally', async () => {
+    let i = 0
+    const waits: string[][] = []
+    const v = await waitForGate({
+      fetchState: async () => {
+        if (i++ === 0) throw new Error('GET /x -> 429')
+        return { headSha: 'a', runs: [run(50, 'completed', jobsOf('success'))] }
+      },
+      expected: NAMES,
+      headSha: 'a',
+      selfRunId: SELF,
+      sleep: instant,
+      onWait: r => waits.push(r),
+    })
+    expect(v.pass).toBe(true)
+    expect(i).toBe(2)
+    expect(waits[0]!.join(' ')).toContain('429')
+  })
   it('waits through in-progress states, then passes once the run completes', async () => {
     const states: GateState[] = [
       { headSha: 'a', runs: [run(50, 'in_progress', jobsOf(null))] },

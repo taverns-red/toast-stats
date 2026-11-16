@@ -43,6 +43,21 @@ export interface GateState {
   runs: GateRun[]
 }
 
+/** A workflow run as `GET /actions/workflows/{id}/runs` lists it. */
+export interface RunRef {
+  id: number
+  run_attempt?: number
+  pull_requests?: { number: number }[] | null
+}
+
+/** Stub (red): keyed by id alone, and every run counts as this PR's. */
+export function runBelongsToPr(_run: RunRef, _pr: number): boolean {
+  return true
+}
+export function jobsCacheKey(run: RunRef): string {
+  return String(run.id)
+}
+
 const stop = (reason: string): GateDecision => ({
   done: true,
   pass: false,
