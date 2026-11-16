@@ -57,12 +57,12 @@ export const NON_GCP_OIDC: Record<string, string> = {
 }
 
 /**
- * Job-level `uses:` (reusable workflow calls): caller job -> callee file.
+ * Job-level `uses:` (reusable workflow calls): caller job -> full `uses` string.
  * B6 (hosting-deploy) must handle BOTH deploy.yml entry points:
  * workflow_dispatch and workflow_call from release-please.
  */
 export const CALLERS: Record<string, string> = {
-  'release-please.yml::deploy': 'deploy.yml',
+  'release-please.yml::deploy': './.github/workflows/deploy.yml',
 }
 
 /** Patterns that must never appear in a workflow (static or key credentials). */
@@ -70,7 +70,9 @@ export const FORBIDDEN_CREDENTIAL_PATTERNS: RegExp[] = [
   /credentials_json/,
   /activate-service-account/,
   /--cred-file/,
-  /GOOGLE_APPLICATION_CREDENTIALS:/,
+  /\bGOOGLE_APPLICATION_CREDENTIALS\b/,
+  /\bGOOGLE_GHA_CREDS_PATH\b/,
+  /\bCLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE\b/,
 ]
 
 const WORKFLOWS = path.resolve(process.cwd(), '.github/workflows')
@@ -152,14 +154,14 @@ export const collectIdTokenJobs = (files: WorkflowFile[]): string[] => {
   return out
 }
 
-/** key `<file>::<job>` -> callee, for every job-level `uses:`. */
+/** key `<file>::<job>` -> the full `uses:` string, for every job-level `uses:`. */
 export const collectCallers = (
   files: WorkflowFile[]
 ): Record<string, string> => {
   const out: Record<string, string> = {}
   for (const { file, wf } of files) {
     for (const [job, def] of Object.entries(wf.jobs ?? {})) {
-      if (def.uses) out[`${file}::${job}`] = path.basename(def.uses)
+      if (def.uses) out[`${file}::${job}`] = def.uses
     }
   }
   return out
