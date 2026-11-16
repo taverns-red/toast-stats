@@ -5,21 +5,19 @@ on:
     branches:
       - main
 
-# Superset of permissions needed by release-please AND the reusable deploy
-# workflow it calls (deploy.yml needs id-token for Workload Identity). A
-# called workflow's GITHUB_TOKEN permissions are capped by the caller, so
-# the deploy-relevant scopes must be granted here.
-permissions:
-  contents: write # release-please tags + deploy version tags
-  pull-requests: write # release-please PR
-  id-token: write # WIF auth in deploy.yml
-  issues: write # hosting-rollback alert in deploy.yml (#2492)
-  packages: write # required by deploy chain
-  security-events: write # required by deploy chain
+# No workflow-level grant (#2879): each job declares exactly what it needs.
+permissions: {}
 
 jobs:
   release-please:
     runs-on: ubuntu-26.04
+    # Scopes from the release-please-action README ("Workflow Permissions").
+    # No id-token: this job runs a third-party action and must not be able to
+    # mint the deploy identity (#2879).
+    permissions:
+      contents: write # release-please tags + releases
+      pull-requests: write # release-please PR
+      issues: write # release-please labels
     outputs:
       # Aggregate boolean: 'true' when ANY component was released by this
       # run. Fires exactly once per release-PR merge regardless of how many
@@ -41,5 +39,11 @@ jobs:
     name: Deploy on release
     needs: release-please
     if: needs.release-please.outputs.releases_created == 'true'
+    # A called workflow's token permissions are capped by this job, so it
+    # carries exactly the set deploy.yml's deploy-frontend job declares.
+    permissions:
+      contents: write # version tags / git metadata
+      id-token: write # WIF auth in deploy.yml
+      issues: write # hosting-rollback alert in deploy.yml (#2492)
     uses: ./.github/workflows/deploy.yml
     secrets: inherit

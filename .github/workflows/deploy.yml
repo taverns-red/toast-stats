@@ -48,15 +48,11 @@ env:
   REGION: 'northamerica-northeast1'
   GCS_BUCKET: 'toast-stats-data-ca'
 
-# Least privilege for the deploy job. The redundant CI gate job (which
-# needed packages / pull-requests / security-events) was removed in
-# ADR-004, so those scopes are gone. When called from release-please.yml
-# these are capped by that workflow's permissions; they apply directly on
-# a workflow_dispatch run.
-permissions:
-  contents: write # version tags / git metadata
-  id-token: write # Workload Identity Federation (GCP auth)
-  issues: write # hosting-rollback alert issue (#2492)
+# No workflow-level grant (#2879): every job declares its own scopes, so a
+# job added later starts with none. When called from release-please.yml,
+# each job's scopes are capped by that caller job's permissions; they apply
+# directly on a workflow_dispatch run.
+permissions: {}
 
 jobs:
   # ──────────────────────────────────────────────
@@ -67,6 +63,11 @@ jobs:
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-26.04
+    # The only job that signs in to GCP, so the only one with id-token (#2879).
+    permissions:
+      contents: write # version tags / git metadata
+      id-token: write # Workload Identity Federation (GCP auth)
+      issues: write # hosting-rollback alert issue (#2492)
     # Build + deploy + ~10 min smoke + rollback + restored smoke (#2492).
     timeout-minutes: 45
     env:
@@ -285,6 +286,8 @@ jobs:
     name: Post-Deploy Verification
     runs-on: ubuntu-26.04
     needs: [deploy-frontend]
+    # curl health checks and the step summary only; no checkout, no token (#2879).
+    permissions: {}
 
     steps:
       - name: Wait for services to stabilize
