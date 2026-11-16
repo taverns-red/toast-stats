@@ -165,6 +165,20 @@ body:has(.section-bar) .consent-banner {
   outline-offset: 2px;
 }
 
+/* Footer instance on a mouse (#2889). base.css gives every button a 44px
+   minimum, but the footer links beside it are inline <a>, where min-height
+   does nothing (18px). The button became a 44px box with its text centred,
+   13px below its row. Lay it out like the links. A coarse pointer keeps the
+   44px box tap-targets.css gives every .app-shell-footer__link. */
+@media (pointer: fine) {
+  .app-shell-footer .consent-reopen {
+    display: inline;
+    min-height: 0;
+    min-width: 0;
+    vertical-align: baseline;
+  }
+}
+
 @media print {
   .consent-banner {
     display: none;
