@@ -52,7 +52,6 @@ const EXPECTED: Record<string, Record<string, string>> = {
   'docs-gate': { contents: 'read' },
   gate: {
     contents: 'read',
-    checks: 'read',
     actions: 'read',
     'pull-requests': 'read',
   },
