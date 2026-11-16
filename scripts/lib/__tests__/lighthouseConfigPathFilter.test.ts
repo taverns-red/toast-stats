@@ -17,6 +17,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import picomatch from 'picomatch'
 import { parse } from 'yaml'
+import { PREVIEW_PATHS } from '../previewPaths'
 
 const ROOT = process.cwd()
 const WORKFLOWS = path.join(ROOT, '.github/workflows')
@@ -34,13 +35,21 @@ const configs = fs
   .filter(f => /^lighthouserc.*\.js$/.test(f))
   .sort()
 
+// pr-preview.yml has no `paths:` filter since #2865; its `changes` job applies
+// PREVIEW_PATHS instead, which is what decides whether a file needs a preview.
+function load(f: string): Workflow {
+  const wf = parse(
+    fs.readFileSync(path.join(WORKFLOWS, f), 'utf-8')
+  ) as Workflow
+  if (f === 'pr-preview.yml' && wf.on?.pull_request)
+    wf.on.pull_request.paths = [...PREVIEW_PATHS]
+  return wf
+}
+
 const workflows = fs
   .readdirSync(WORKFLOWS)
   .filter(f => /\.ya?ml$/.test(f))
-  .map(f => ({
-    file: f,
-    wf: parse(fs.readFileSync(path.join(WORKFLOWS, f), 'utf-8')) as Workflow,
-  }))
+  .map(f => ({ file: f, wf: load(f) }))
 
 /** Config files a workflow runs via a step's `with.configPath`. */
 function configsRunBy(wf: Workflow): string[] {

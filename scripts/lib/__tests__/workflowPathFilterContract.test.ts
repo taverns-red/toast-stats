@@ -25,6 +25,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import picomatch from 'picomatch'
 import { parse } from 'yaml'
+import { PREVIEW_PATHS } from '../previewPaths'
 
 const ROOT = process.cwd()
 const WORKFLOWS = path.join(ROOT, '.github/workflows')
@@ -46,6 +47,21 @@ const EXEMPT: Record<string, string> = {
     'only read for the pinned prettier version; a package.json change is not ' +
     "in ci.yml's paths-ignore, so ci.yml's format check (which covers " +
     '**/*.md) runs on it instead',
+  // The `changes` job classifies the diff (#2865). It deploys nothing and
+  // builds nothing, so a change to the classifier needs no preview; the
+  // verdict still reports on that PR as "not needed".
+  'pr-preview.yml: package.json':
+    'the changes job reads it only for the pinned tsx version (as ci.yml does)',
+  'pr-preview.yml: scripts/preview-changes.ts':
+    'the classifier itself; it does not build or serve the preview',
+  'pr-preview.yml: scripts/preview-verdict-mirror.ts':
+    'the label-event verdict mirror; it reads run results and builds nothing',
+  'pr-preview.yml: scripts/lib/previewVerdictMirror.ts':
+    'the mirror decision, unit-tested by previewVerdictMirror.test.ts',
+  'pr-preview.yml: scripts/lib/prChangedFiles.ts':
+    'the PR file-list fetch the classifier shares with ci.yml; no preview input',
+  'pr-preview.yml: scripts/lib/previewPaths.ts':
+    'the list and its matcher, used only by the classifier; tested by previewPaths.test.ts',
 }
 
 interface Step {
@@ -67,14 +83,27 @@ interface Workflow {
   jobs?: Record<string, Job>
 }
 
+// pr-preview.yml has no `paths:` filter since #2865; its `changes` job applies
+// PREVIEW_PATHS instead, so the contract reads that list as its filter.
+function load(f: string): Workflow {
+  const wf = parse(
+    fs.readFileSync(path.join(WORKFLOWS, f), 'utf-8')
+  ) as Workflow
+  if (f === 'pr-preview.yml' && wf.on && typeof wf.on === 'object') {
+    const on = wf.on as Record<string, EventFilter | null>
+    on['pull_request'] = {
+      ...(on['pull_request'] ?? {}),
+      paths: [...PREVIEW_PATHS],
+    }
+  }
+  return wf
+}
+
 const workflows = fs
   .readdirSync(WORKFLOWS)
   .filter(f => /\.ya?ml$/.test(f))
   .sort()
-  .map(f => ({
-    file: f,
-    wf: parse(fs.readFileSync(path.join(WORKFLOWS, f), 'utf-8')) as Workflow,
-  }))
+  .map(f => ({ file: f, wf: load(f) }))
 
 /** Events of a workflow that carry a path filter. */
 function filteredEvents(wf: Workflow): [string, EventFilter][] {

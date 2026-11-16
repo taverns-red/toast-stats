@@ -259,6 +259,12 @@ export const ALLOWED_INLINE_NODE_SCRIPTS: readonly AllowedInlineNodeScript[] = [
     reason: 'one-expression version read, no logic',
   },
   {
+    file: 'pr-preview.yml',
+    fingerprint: "require('./package.json').devDependencies.tsx",
+    reason:
+      'one-expression version read, no logic (the changes job, as in ci.yml, #2865)',
+  },
+  {
     file: 'ci.yml',
     fingerprint: "require('./package.json').devDependencies.prettier",
     reason: 'one-expression version read, no logic',
