@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-26.04
     # The only job that signs in to GCP, so the only one with id-token (#2879).
     permissions:
-      contents: write # version tags / git metadata
+      contents: read # checkout and `git log`; nothing pushes
       id-token: write # Workload Identity Federation (GCP auth)
       issues: write # hosting-rollback alert issue (#2492)
     # Build + deploy + ~10 min smoke + rollback + restored smoke (#2492).
@@ -78,6 +78,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          # npm ci, firebase-tools and Playwright run install scripts in this
+          # job, which holds id-token; leave no git token behind (#2879).
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v7

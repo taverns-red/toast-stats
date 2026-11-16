@@ -11,13 +11,14 @@ permissions: {}
 jobs:
   release-please:
     runs-on: ubuntu-26.04
-    # Scopes from the release-please-action README ("Workflow Permissions").
+    # Scopes listed in the release-please-action README (Workflow
+    # Permissions section).
     # No id-token: this job runs a third-party action and must not be able to
     # mint the deploy identity (#2879).
     permissions:
       contents: write # release-please tags + releases
       pull-requests: write # release-please PR
-      issues: write # release-please labels
+      issues: write # listed in the README's Workflow Permissions section
     outputs:
       # Aggregate boolean: 'true' when ANY component was released by this
       # run. Fires exactly once per release-PR merge regardless of how many
@@ -42,7 +43,7 @@ jobs:
     # A called workflow's token permissions are capped by this job, so it
     # carries exactly the set deploy.yml's deploy-frontend job declares.
     permissions:
-      contents: write # version tags / git metadata
+      contents: read # checkout and `git log` in deploy.yml
       id-token: write # WIF auth in deploy.yml
       issues: write # hosting-rollback alert in deploy.yml (#2492)
     uses: ./.github/workflows/deploy.yml
