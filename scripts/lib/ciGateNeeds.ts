@@ -72,11 +72,17 @@ function isNewer(b: HeadCheckRun, a: HeadCheckRun): boolean {
  * A title/body-only `edited` run skips every job, so its needs say nothing
  * about the head. Without this check the gate would report success on a head
  * whose real CI run failed, and GitHub takes the later `CI Gate` as the
- * verdict (canary on PR #2859: BLOCKED became CLEAN). So the gate reads the
- * head's check runs ONCE (no waiting, no polling) and, for each expected job,
- * takes the latest NON-skipped run (the edit run's own skips are noise) and
- * requires it present, completed and `success`. A run still in flight fails:
- * the real run's own `CI Gate` reports later and becomes the latest.
+ * verdict (canary on PR #2859: BLOCKED became CLEAN). So for each expected job
+ * the gate takes the latest NON-skipped run (the edit run's own skips are
+ * noise) and requires it present, completed and `success`.
+ *
+ * This function does not wait: a run still in flight fails here. That is not
+ * safe on its own. GitHub resolves a required check by the latest run of that
+ * name in the most recently created check suite (workflow run), so this no-op
+ * run's failed `CI Gate` stays the verdict even after the real run's own
+ * `CI Gate` passes (#2881, seen on PR #2880). The caller
+ * (scripts/lib/ciGateWait.ts) therefore waits for the head's older runs to
+ * complete first and passes only the newest one's jobs.
  */
 export function evaluateHeadChecks(
   expectedNames: string[],

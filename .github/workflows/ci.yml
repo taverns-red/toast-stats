@@ -470,7 +470,10 @@ jobs:
     needs: [changes, quality-gates, test, build, docs-gate]
     if: always() && github.event_name == 'pull_request'
     runs-on: ubuntu-26.04
-    timeout-minutes: 5
+    # Deliberate wait, not a slow-test mask (#2881): on a title/body-only edit
+    # the gate polls until the head's earlier ci.yml run completes (CI takes
+    # about 13 to 21 minutes). A normal run decides in seconds.
+    timeout-minutes: 45
     # Scoped exception (#2607, COO-approved): only this job reads the head's
     # check runs, once, on a title/body-only edit. The workflow-level block is
     # narrowed separately (#2861).
