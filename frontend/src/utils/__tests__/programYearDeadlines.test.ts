@@ -130,7 +130,7 @@ describe('nextDeadlines (#2298)', () => {
   it('drops a deadline the day after it passes', () => {
     expect(ids(nextDeadlines('2026-2027', '2026-12-01'))).toEqual([
       'training-r2-close',
-      'dues-april',
+      'dues-april-good-standing',
     ])
   })
 

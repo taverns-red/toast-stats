@@ -40,8 +40,10 @@ export type DeadlineId =
   | 'training-r2-open'
   | 'visits-r1'
   | 'training-r2-close'
+  | 'dues-april-good-standing'
   | 'dues-april'
   | 'visits-r2'
+  | 'year-end'
 
 /** Only the district roles a TI source names as a deadline's owner. */
 export type DeadlineOwnerRole =
@@ -124,7 +126,7 @@ const pqd = (page: number): DeadlineOwner => ({
   url: DLH_URL,
 })
 
-/* DRP p. 11: "Area Directors must submit an Area Director's Club Visit
+/* DRP p. 11 (printed): "Area Directors must submit an Area Director's Club Visit
    Report for each club visited during the first round of visits by November
    30, and for each club visited during the second round of visits by May
    31." The DLH timeline gives both dates the Area Director's dot (pp. 16,
@@ -199,12 +201,13 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     date: py => getOfficerTrainingRounds(py)[1].start,
   },
   {
-    // DRP p.10: "submit an Area Director's Club Visit Report for each club
-    // visited during the first round of visits by November 30".
+    // DRP p.11: "submit an Area Director's Club Visit Report for each club
+    // visited during the first round of visits by November 30" (the 75%
+    // qualifying requirement is on p. 10).
     id: 'visits-r1',
     label: 'Round 1 club visit reports due',
     fromProgramYear: ALWAYS,
-    source: `${DRP}, p. 10`,
+    source: `${DRP}, p. 11`,
     owner: AREA_DIRECTOR,
     date: fixed(0, '11-30'),
   },
@@ -217,6 +220,18 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     date: py => getOfficerTrainingRounds(py)[1].end,
   },
   {
+    // Renewal Dues FAQ, "When do I have to pay my dues to remain in good
+    // standing and retain access to Base Camp?": "World Headquarters must
+    // receive your dues by September 30 for the October cycle or March 31
+    // for the April cycle." A different date from the DCP goal 10 date below.
+    // No owner: no TI source names a role for it.
+    id: 'dues-april-good-standing',
+    label: 'April dues due to keep good standing',
+    fromProgramYear: ALWAYS,
+    source: `${RENEWAL_FAQ}, "When do I have to pay my dues to remain in good standing and retain access to Base Camp?": "World Headquarters must receive your dues by September 30 for the October cycle or March 31 for the April cycle."`,
+    date: fixed(1, '03-31'),
+  },
+  {
     // DCP p.8, goal 10: April–September dues "received by World
     // Headquarters on or before April 1"; Renewal Dues FAQ as above.
     id: 'dues-april',
@@ -227,14 +242,27 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     date: fixed(1, '04-01'),
   },
   {
-    // DRP p.10: "and for each club visited during the second round of
-    // visits by May 31".
+    // DRP p.11: "and for each club visited during the second round of
+    // visits by May 31" (the 75% qualifying requirement is on p. 10).
     id: 'visits-r2',
     label: 'Round 2 club visit reports due',
     fromProgramYear: ALWAYS,
-    source: `${DRP}, p. 10`,
+    source: `${DRP}, p. 11`,
     owner: AREA_DIRECTOR,
     date: fixed(1, '05-31'),
+  },
+  {
+    // DLH p.18, "June 30": "End: Distinguished programs", "End:
+    // Toastmasters year". DRP p.6: the paid clubs at year-end are those that
+    // "submitted their April membership-renewal dues by the June 30
+    // deadline"; later dues "are not added to the number of paid clubs at
+    // year-end". No owner: the DLH page's role dots were not read for this
+    // row.
+    id: 'year-end',
+    label: 'Program year ends',
+    fromProgramYear: ALWAYS,
+    source: `District Leader Handbook, Item 222 Rev. 03/2026, p. 18 (June 30: "End: Distinguished programs", "End: Toastmasters year"); ${DRP}, p. 6 ("submitted their April membership-renewal dues by the June 30 deadline")`,
+    date: fixed(1, '06-30'),
   },
 ]
 
