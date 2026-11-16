@@ -70,6 +70,11 @@ describe('needsPreview', () => {
   it('is true for an empty diff, never a free pass', () => {
     expect(needsPreview([])).toBe(true)
   })
+  it('is true when the list may be truncated by the 3000-file API cap (F4)', () => {
+    const docs = Array.from({ length: 3000 }, (_, i) => `docs/f${i}.md`)
+    expect(needsPreview(docs)).toBe(true)
+    expect(needsPreview(docs.slice(0, 2999))).toBe(false)
+  })
 })
 
 describe('the workflow no longer carries the list (#2865)', () => {

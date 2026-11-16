@@ -16,6 +16,16 @@ function requireEnv(name: string): string {
   return v
 }
 
+export interface PrFile {
+  filename: string
+  previous_filename?: string
+}
+
+/** Stub: previous_filename handling lands in the green commit. */
+export function collectFilenames(page: PrFile[]): string[] {
+  return page.map(f => f.filename)
+}
+
 export async function changedFiles(): Promise<string[]> {
   const token = requireEnv('GITHUB_TOKEN')
   const repo = requireEnv('GITHUB_REPOSITORY')

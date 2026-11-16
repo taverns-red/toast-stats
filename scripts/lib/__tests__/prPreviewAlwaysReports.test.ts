@@ -67,6 +67,19 @@ describe('the changes job classifies the diff', () => {
     expect(changes?.if).toContain("github.event.label.name == 'preview-smoke'")
   })
 
+  it('runs scripts/preview-changes.ts, which classifies with needsPreview', () => {
+    const run = JSON.stringify(
+      (changes as unknown as { steps: unknown[] }).steps
+    )
+    expect(run).toContain('scripts/preview-changes.ts')
+    const src = readFileSync(
+      join(process.cwd(), 'scripts/preview-changes.ts'),
+      'utf8'
+    )
+    expect(src).toContain('needsPreview')
+    expect(src).toContain('preview=')
+  })
+
   it('leaves the workflow-level permissions block as it was', () => {
     expect(wf.permissions).toEqual({
       contents: 'read',
@@ -118,9 +131,15 @@ describe('the verdict reports on every open PR', () => {
     expect(verdict?.if).toContain('!cancelled()')
   })
 
-  it('does not run for a closed PR or an unrelated label event', () => {
+  it('does not run for a closed PR', () => {
     expect(verdict?.if).toContain("github.event.pull_request.state == 'open'")
-    expect(verdict?.if).toContain("github.event.label.name == 'preview-smoke'")
+  })
+
+  // An unrelated label event used to leave the verdict skipped, which GitHub
+  // counts as passing and which then cleared an earlier failure on the same
+  // head. It now runs and mirrors the last real verdict (review of #2880, F1).
+  it('does not skip on an unrelated label event', () => {
+    expect(verdict?.if).not.toContain('label')
   })
 
   it('keeps its job-level permissions unchanged', () => {

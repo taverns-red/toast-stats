@@ -45,16 +45,32 @@ const verdict = wf.jobs['verdict']
 const steps = verdict?.steps ?? []
 const decide = steps.find(s => s.name === 'Verdict')
 
-function runVerdictFull(env: Record<string, string>): {
+/**
+ * Runs the Verdict step. A fake `gh` answers the live-draft lookup (#2865 F2):
+ * `ghDraft` is what `.draft` returns, or 'error' for a failing call.
+ */
+function runVerdictFull(
+  env: Record<string, string>,
+  ghDraft: 'true' | 'false' | 'error' = 'true'
+): {
   status: number
   summary: string
 } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'verdict-'))
   const summaryFile = path.join(dir, 'summary.md')
+  const bin = path.join(dir, 'bin')
+  fs.mkdirSync(bin)
+  fs.writeFileSync(
+    path.join(bin, 'gh'),
+    ghDraft === 'error' ? 'exit 1\n' : `echo ${ghDraft}\n`,
+    { mode: 0o755 }
+  )
   const r = spawnSync('bash', ['-c', decide?.run ?? 'exit 99'], {
     env: {
-      PATH: process.env.PATH ?? '',
+      PATH: `${bin}:${process.env.PATH ?? ''}`,
       GITHUB_STEP_SUMMARY: summaryFile,
+      REPO: 'o/r',
+      PR_NUMBER: '1',
       ...env,
     },
     encoding: 'utf-8',
@@ -65,8 +81,10 @@ function runVerdictFull(env: Record<string, string>): {
   fs.rmSync(dir, { recursive: true, force: true })
   return { status: r.status ?? -1, summary }
 }
-const runVerdict = (env: Record<string, string>): number =>
-  runVerdictFull(env).status
+const runVerdict = (
+  env: Record<string, string>,
+  ghDraft: 'true' | 'false' | 'error' = 'true'
+): number => runVerdictFull(env, ghDraft).status
 
 describe('pr-preview.yml: one verdict over every shard (#2453)', () => {
   it('is named for branch protection and needs the classifier, deploy, smoke, lighthouse and the real-preview smoke', () => {
@@ -85,6 +103,31 @@ describe('pr-preview.yml: one verdict over every shard (#2453)', () => {
     expect(verdict?.if).not.toContain('skipped')
   })
 
+  it('runs for EVERY open-PR event, labeled included: a skipped verdict would pass and mask a failure', () => {
+    expect(verdict?.if).not.toContain('label')
+    expect(verdict?.if).toContain("github.event.pull_request.state == 'open'")
+  })
+
+  it('mirrors the last real verdict on an unrelated label event, after a checkout', () => {
+    const cond = "github.event.action == 'labeled'"
+    const gated = steps.filter(s => s.if?.includes(cond))
+    expect(gated.map(s => s.uses ?? s.name)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('actions/checkout'),
+        expect.stringContaining('actions/setup-node'),
+      ])
+    )
+    expect(decide?.run).toContain('scripts/preview-verdict-mirror.ts')
+    expect(decide?.env).toMatchObject({
+      EVENT_ACTION: '${{ github.event.action }}',
+      LABEL: '${{ github.event.label.name }}',
+      GITHUB_TOKEN: '${{ github.token }}',
+      GATE_HEAD_SHA: '${{ github.event.pull_request.head.sha }}',
+      GATE_PR_NUMBER: '${{ github.event.pull_request.number }}',
+      GITHUB_RUN_ID: '${{ github.run_id }}',
+    })
+  })
+
   it('reads every result through env', () => {
     expect(decide?.env).toEqual({
       CHANGES: '${{ needs.changes.result }}',
@@ -96,6 +139,16 @@ describe('pr-preview.yml: one verdict over every shard (#2453)', () => {
       LIGHTHOUSE: '${{ needs.lighthouse.result }}',
       PREVIEW_SMOKE: '${{ needs.preview-smoke.result }}',
       HEAVY: '${{ needs.preview.outputs.heavy }}',
+      // the live-draft lookup (F2) and the label-event mirror (F1)
+      GH_TOKEN: '${{ github.token }}',
+      GITHUB_TOKEN: '${{ github.token }}',
+      REPO: '${{ github.repository }}',
+      PR_NUMBER: '${{ github.event.pull_request.number }}',
+      GATE_PR_NUMBER: '${{ github.event.pull_request.number }}',
+      GATE_HEAD_SHA: '${{ github.event.pull_request.head.sha }}',
+      GITHUB_RUN_ID: '${{ github.run_id }}',
+      EVENT_ACTION: '${{ github.event.action }}',
+      LABEL: '${{ github.event.label.name }}',
     })
     expect(decide?.if).toBeUndefined()
     expect(decide?.['continue-on-error']).toBeUndefined()
@@ -150,6 +203,29 @@ describe('pr-preview.yml: one verdict over every shard (#2453)', () => {
           HEAVY: 'false',
         })
       ).toBe(0)
+    })
+
+    describe('a heavy-skipped run re-checks the live draft state (#2865 F2)', () => {
+      const draftRun = {
+        ...ok,
+        SMOKE: 'skipped',
+        LIGHTHOUSE: 'skipped',
+        PREVIEW_SMOKE: 'skipped',
+        HEAVY: 'false',
+      }
+
+      it('fails a re-run of a draft-era run once the PR is ready', () => {
+        const r = runVerdictFull(draftRun, 'false')
+        expect(r.status).not.toBe(0)
+      })
+
+      it('passes while the PR is still a draft', () => {
+        expect(runVerdict(draftRun, 'true')).toBe(0)
+      })
+
+      it('fails closed when the live state cannot be read', () => {
+        expect(runVerdict(draftRun, 'error')).not.toBe(0)
+      })
     })
 
     it('fails a draft whose shards ran anyway', () => {
