@@ -36,12 +36,15 @@ import {
 export type DeadlineId =
   | 'csp'
   | 'training-r1-close'
+  | 'dues-october-good-standing'
   | 'dues-october'
   | 'training-r2-open'
   | 'visits-r1'
   | 'training-r2-close'
+  | 'dues-april-good-standing'
   | 'dues-april'
   | 'visits-r2'
+  | 'year-end'
 
 /** Only the district roles a TI source names as a deadline's owner. */
 export type DeadlineOwnerRole =
@@ -58,9 +61,13 @@ export interface DeadlineOwner {
   url: string
 }
 
+/** Who a date is for: a club, the district's own year, or a single member. */
+export type DeadlineAudience = 'club' | 'district' | 'member'
+
 /** One deadline of one program year. */
 export interface ProgramYearDeadline {
   id: DeadlineId
+  audience: DeadlineAudience
   /** Short plain-language name, e.g. "Round 1 club visit reports due". */
   label: string
   /** `YYYY-MM-DD`. The deadline day itself still counts as upcoming. */
@@ -73,6 +80,7 @@ export interface ProgramYearDeadline {
 
 export interface DeadlineRule {
   id: DeadlineId
+  audience: DeadlineAudience
   label: string
   /** First program year ("YYYY-YYYY") the rule applies to. */
   fromProgramYear: string
@@ -104,6 +112,8 @@ export const RENEWAL_DUES_FAQ_URL =
   'https://www.toastmasters.org/footer/faq/Renewal-Dues'
 const RENEWAL_FAQ = RENEWAL_DUES_FAQ_URL
 
+const GOOD_STANDING_SOURCE = `${RENEWAL_FAQ}, "When do I have to pay my dues to remain in good standing and retain access to Base Camp?": "World Headquarters must receive your dues by September 30 for the October cycle or March 31 for the April cycle."`
+
 const DLH_URL =
   'https://content.toastmasters.org/image/upload/222-district-leader-handbook.pdf'
 const DRP_URL =
@@ -124,7 +134,7 @@ const pqd = (page: number): DeadlineOwner => ({
   url: DLH_URL,
 })
 
-/* DRP p. 11: "Area Directors must submit an Area Director's Club Visit
+/* DRP p. 11 (printed): "Area Directors must submit an Area Director's Club Visit
    Report for each club visited during the first round of visits by November
    30, and for each club visited during the second round of visits by May
    31." The DLH timeline gives both dates the Area Director's dot (pp. 16,
@@ -161,6 +171,7 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     // DCP p.7, goal 9: "The first training session occurs between June 1
     // and August 31".
     id: 'training-r1-close',
+    audience: 'club',
     label: 'Round 1 officer training closes',
     fromProgramYear: ALWAYS,
     source: `${DCP}, p. 7 (goal 9)`,
@@ -168,9 +179,22 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     date: py => getOfficerTrainingRounds(py)[0].end,
   },
   {
+    // Same FAQ sentence, October cycle: "World Headquarters must receive
+    // your dues by September 30 for the October cycle". A member's own
+    // dues. No owner.
+    id: 'dues-october-good-standing',
+    audience: 'member',
+    label:
+      "Members' October dues: last day to keep good standing and Base Camp access",
+    fromProgramYear: ALWAYS,
+    source: GOOD_STANDING_SOURCE,
+    date: fixed(0, '09-30'),
+  },
+  {
     // DCP p.5: "The club must submit the Club Success Plan by September
     // 30." Required from 2025-2026 (CSP_REQUIRED_FROM_PROGRAM_YEAR).
     id: 'csp',
+    audience: 'club',
     label: 'Club Success Plans due',
     fromProgramYear: CSP_REQUIRED_FROM_PROGRAM_YEAR,
     source: `${DCP}, p. 5`,
@@ -182,6 +206,7 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     // on or before October 1"; Renewal Dues FAQ: "Renewal payments are due
     // twice a year: on April 1 and October 1."
     id: 'dues-october',
+    audience: 'club',
     label: 'October dues renewal due',
     fromProgramYear: ALWAYS,
     source: `${DCP}, p. 8 (goal 10); ${RENEWAL_FAQ}`,
@@ -192,6 +217,7 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     // DCP p.7, goal 9: "the second is held between November 1 and
     // February 28 (or February 29 in leap years)".
     id: 'training-r2-open',
+    audience: 'club',
     label: 'Round 2 officer training opens',
     fromProgramYear: ALWAYS,
     source: `${DCP}, p. 7 (goal 9)`,
@@ -199,17 +225,20 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     date: py => getOfficerTrainingRounds(py)[1].start,
   },
   {
-    // DRP p.10: "submit an Area Director's Club Visit Report for each club
-    // visited during the first round of visits by November 30".
+    // DRP p.11: "submit an Area Director's Club Visit Report for each club
+    // visited during the first round of visits by November 30" (the 75%
+    // qualifying requirement is on p. 10).
     id: 'visits-r1',
+    audience: 'club',
     label: 'Round 1 club visit reports due',
     fromProgramYear: ALWAYS,
-    source: `${DRP}, p. 10`,
+    source: `${DRP}, p. 11`,
     owner: AREA_DIRECTOR,
     date: fixed(0, '11-30'),
   },
   {
     id: 'training-r2-close',
+    audience: 'club',
     label: 'Round 2 officer training closes',
     fromProgramYear: ALWAYS,
     source: `${DCP}, p. 7 (goal 9)`,
@@ -217,9 +246,25 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     date: py => getOfficerTrainingRounds(py)[1].end,
   },
   {
+    // Renewal Dues FAQ, "When do I have to pay my dues to remain in good
+    // standing and retain access to Base Camp?": "World Headquarters must
+    // receive your dues by September 30 for the October cycle or March 31
+    // for the April cycle." A member's own dues, not the club rule below
+    // (FAQ: "Renewal dues must be paid by April 1 and October 1"; DCP
+    // goal 10). No owner: no TI source names a role for it.
+    id: 'dues-april-good-standing',
+    audience: 'member',
+    label:
+      "Members' April dues: last day to keep good standing and Base Camp access",
+    fromProgramYear: ALWAYS,
+    source: GOOD_STANDING_SOURCE,
+    date: fixed(1, '03-31'),
+  },
+  {
     // DCP p.8, goal 10: April–September dues "received by World
     // Headquarters on or before April 1"; Renewal Dues FAQ as above.
     id: 'dues-april',
+    audience: 'club',
     label: 'April dues renewal due',
     fromProgramYear: ALWAYS,
     source: `${DCP}, p. 8 (goal 10); ${RENEWAL_FAQ}`,
@@ -227,14 +272,29 @@ export const PROGRAM_YEAR_DEADLINE_RULES: readonly DeadlineRule[] = [
     date: fixed(1, '04-01'),
   },
   {
-    // DRP p.10: "and for each club visited during the second round of
-    // visits by May 31".
+    // DRP p.11: "and for each club visited during the second round of
+    // visits by May 31" (the 75% qualifying requirement is on p. 10).
     id: 'visits-r2',
+    audience: 'club',
     label: 'Round 2 club visit reports due',
     fromProgramYear: ALWAYS,
-    source: `${DRP}, p. 10`,
+    source: `${DRP}, p. 11`,
     owner: AREA_DIRECTOR,
     date: fixed(1, '05-31'),
+  },
+  {
+    // DLH p.18, "June 30": "End: Distinguished programs", "End:
+    // Toastmasters year". DRP p.6: the paid clubs at year-end are those that
+    // "submitted their April membership-renewal dues by the June 30
+    // deadline"; later dues "are not added to the number of paid clubs at
+    // year-end". No owner: DLH p. 18 gives these entries no role dot (only
+    // "Due: Club officer lists" has one).
+    id: 'year-end',
+    audience: 'district',
+    label: 'Program year ends',
+    fromProgramYear: ALWAYS,
+    source: `District Leader Handbook, Item 222 Rev. 03/2026, p. 18 (June 30: "End: Distinguished programs", "End: Toastmasters year"); ${DRP}, p. 6 ("submitted their April membership-renewal dues by the June 30 deadline")`,
+    date: fixed(1, '06-30'),
   },
 ]
 
@@ -248,6 +308,7 @@ export function deadlinesForProgramYear(
   )
     .map(rule => ({
       id: rule.id,
+      audience: rule.audience,
       label: rule.label,
       date: rule.date(programYear),
       source: rule.source,
@@ -280,8 +341,10 @@ export function nextDeadlines(
   limit = 2
 ): UpcomingDeadline[] {
   const asOf = asOfDate.slice(0, 10)
+  // A member's own dues date is not the district's band; the .ics and the
+  // whole-year timeline keep it.
   return deadlinesForProgramYear(programYear)
-    .filter(d => d.date >= asOf)
+    .filter(d => d.audience !== 'member' && d.date >= asOf)
     .slice(0, limit)
     .map(d => ({ ...d, daysLeft: daysBetween(asOf, d.date) }))
 }

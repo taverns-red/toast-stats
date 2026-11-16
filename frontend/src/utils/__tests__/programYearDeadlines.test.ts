@@ -19,14 +19,79 @@ describe('deadlinesForProgramYear (#2298)', () => {
       deadlinesForProgramYear('2026-2027').map(d => [d.id, d.date])
     ).toEqual([
       ['training-r1-close', '2026-08-31'],
+      ['dues-october-good-standing', '2026-09-30'],
       ['csp', '2026-09-30'],
       ['dues-october', '2026-10-01'],
       ['training-r2-open', '2026-11-01'],
       ['visits-r1', '2026-11-30'],
       ['training-r2-close', '2027-02-28'],
+      ['dues-april-good-standing', '2027-03-31'],
       ['dues-april', '2027-04-01'],
       ['visits-r2', '2027-05-31'],
+      ['year-end', '2027-06-30'],
     ])
+  })
+
+  /* #2870 — each added date quotes what the TI document says, with its
+     revision and printed page. */
+  it('cites the 30 Jun year-end and 31 Mar good-standing dates (#2870)', () => {
+    const list = deadlinesForProgramYear('2026-2027')
+    const yearEnd = list.find(d => d.id === 'year-end')
+    expect(yearEnd?.date).toBe('2027-06-30')
+    expect(yearEnd?.source).toContain('Item 222 Rev. 03/2026, p. 18')
+    expect(yearEnd?.source).toContain('End: Toastmasters year')
+    expect(yearEnd?.source).toContain('Item 1490 Rev. 07/2026, p. 6')
+    const standing = list.find(d => d.id === 'dues-april-good-standing')
+    expect(standing?.date).toBe('2027-03-31')
+    expect(standing?.source).toContain(
+      'toastmasters.org/footer/faq/Renewal-Dues'
+    )
+    expect(standing?.source).toContain('March 31 for the April cycle')
+  })
+
+  /* Review of #2875: the FAQ question is about a member's own dues; the club
+     rule is separate ("Renewal dues must be paid by April 1 and October 1"). */
+  it('labels the FAQ good-standing dates as member dates (#2870)', () => {
+    const list = deadlinesForProgramYear('2026-2027')
+    const label = (id: string) => list.find(d => d.id === id)?.label
+    expect(label('dues-april-good-standing')).toBe(
+      "Members' April dues: last day to keep good standing and Base Camp access"
+    )
+    expect(label('dues-october-good-standing')).toBe(
+      "Members' October dues: last day to keep good standing and Base Camp access"
+    )
+    const oct = list.find(d => d.id === 'dues-october-good-standing')
+    expect(oct?.source).toContain('September 30 for the October cycle')
+  })
+
+  it('classifies every deadline by audience (#2870)', () => {
+    expect(
+      Object.fromEntries(
+        deadlinesForProgramYear('2026-2027').map(d => [d.id, d.audience])
+      )
+    ).toEqual({
+      'training-r1-close': 'club',
+      'dues-october-good-standing': 'member',
+      csp: 'club',
+      'dues-october': 'club',
+      'training-r2-open': 'club',
+      'visits-r1': 'club',
+      'training-r2-close': 'club',
+      'dues-april-good-standing': 'member',
+      'dues-april': 'club',
+      'visits-r2': 'club',
+      'year-end': 'district',
+    })
+  })
+
+  it('cites the Distinguished Area visit text on the page it is printed (#2870)', () => {
+    // The "for each club visited during the first round ... by November
+    // 30" sentence is on printed p. 11 of Item 1490 Rev. 07/2026.
+    const visit = deadlinesForProgramYear('2026-2027').find(
+      d => d.id === 'visits-r1'
+    )
+    expect(visit?.source).toContain('p. 11')
+    expect(visit?.owner?.citation).toContain('p. 11')
   })
 
   it('closes Round 2 training on Feb 29 in a leap year', () => {
@@ -112,15 +177,34 @@ describe('nextDeadlines (#2298)', () => {
   })
 
   it('keeps the last deadline through its day, then has none left', () => {
-    expect(ids(nextDeadlines('2026-2027', '2027-05-31'))).toEqual(['visits-r2'])
-    expect(nextDeadlines('2026-2027', '2027-06-01')).toEqual([])
-    expect(nextDeadlines('2026-2027', '2027-06-30')).toEqual([])
+    expect(ids(nextDeadlines('2026-2027', '2027-05-31'))).toEqual([
+      'visits-r2',
+      'year-end',
+    ])
+    expect(ids(nextDeadlines('2026-2027', '2027-06-30'))).toEqual(['year-end'])
+    expect(nextDeadlines('2026-2027', '2027-07-01')).toEqual([])
   })
 
   it('reads the program year it is given, not the date (R3)', () => {
     // A date past the year's end: the page's year has nothing left, and
     // the next year's deadlines are not borrowed.
     expect(nextDeadlines('2025-2026', '2026-07-15')).toEqual([])
+  })
+
+  it('leaves member dates out of the next-deadlines band (#2870)', () => {
+    expect(ids(nextDeadlines('2026-2027', '2026-09-01', 3))).toEqual([
+      'csp',
+      'dues-october',
+      'training-r2-open',
+    ])
+    expect(ids(nextDeadlines('2026-2027', '2027-03-01'))).toEqual([
+      'dues-april',
+      'visits-r2',
+    ])
+    expect(ids(nextDeadlines('2026-2027', '2027-05-31'))).toEqual([
+      'visits-r2',
+      'year-end',
+    ])
   })
 
   it('honours the limit', () => {
@@ -152,8 +236,11 @@ describe('deadline owners (#2429)', () => {
       'training-r2-open': ['Program Quality Director', DLH],
       'visits-r1': ['Area Director', DRP],
       'training-r2-close': ['Program Quality Director', DLH],
+      'dues-april-good-standing': null,
+      'dues-october-good-standing': null,
       'dues-april': ['Club Growth Director', DLH],
       'visits-r2': ['Area Director', DRP],
+      'year-end': null,
     })
   })
 

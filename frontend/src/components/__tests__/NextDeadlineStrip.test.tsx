@@ -42,7 +42,7 @@ describe('NextDeadlineStrip (#2298)', () => {
   })
 
   it('says when every deadline of the year has passed', () => {
-    render(<NextDeadlineStrip programYear="2026-2027" asOfDate="2027-06-10" />)
+    render(<NextDeadlineStrip programYear="2026-2027" asOfDate="2027-07-01" />)
     expect(within(strip()).queryAllByRole('listitem')).toHaveLength(0)
     expect(strip()).toHaveTextContent('Every 2026–27 deadline has passed.')
   })
@@ -103,10 +103,12 @@ describe('NextDeadlineStrip — whole-year timeline (#2429)', () => {
       'October 2026',
       'November 2026',
       'February 2027',
+      'March 2027',
       'April 2027',
       'May 2027',
+      'June 2027',
     ])
-    expect(within(panel).getAllByRole('listitem')).toHaveLength(8)
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(11)
     fireEvent.click(toggle())
     expect(screen.queryByTestId('deadline-timeline')).toBeNull()
   })
@@ -151,8 +153,8 @@ describe('NextDeadlineStrip — whole-year timeline (#2429)', () => {
       'listitem'
     )
     expect(items[0]).toHaveTextContent('passed')
-    expect(items[4]).toHaveTextContent('Round 1 club visit reports due')
-    expect(items[4]).not.toHaveTextContent('passed')
+    expect(items[5]).toHaveTextContent('Round 1 club visit reports due')
+    expect(items[5]).not.toHaveTextContent('passed')
   })
 
   it('offers the .ics feed of the same table', () => {
@@ -178,11 +180,11 @@ describe('NextDeadlineStrip — whole-year timeline (#2429)', () => {
   })
 
   it('still offers the year once every deadline has passed', () => {
-    render(<NextDeadlineStrip programYear="2026-2027" asOfDate="2027-06-10" />)
+    render(<NextDeadlineStrip programYear="2026-2027" asOfDate="2027-07-01" />)
     fireEvent.click(toggle())
     expect(
       within(screen.getByTestId('deadline-timeline')).getAllByRole('listitem')
-    ).toHaveLength(8)
+    ).toHaveLength(11)
   })
 })
 
