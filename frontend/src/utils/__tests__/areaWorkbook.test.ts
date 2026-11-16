@@ -195,6 +195,26 @@ describe('buildAreaWorkbookRows (#2428)', () => {
     })
   })
 
+  /* #2870: only club-audience dates are a club's "next deadline". The
+     district year-end and the member good-standing dates are not. */
+  it('shows a blank next deadline for a club with everything done after 31 May', () => {
+    const rows = byHeader(
+      buildAreaWorkbookRows(input({ snapshotDate: '2027-06-10' }), SCOPE)!
+    )
+    const bravo = rows.find(r => r['Club Name'] === 'Bravo Speakers')!
+    expect(bravo['Next Deadline']).toBe('')
+    expect(bravo['Next Deadline For']).toBe('')
+  })
+
+  it('never offers a member or district date as a club next deadline', () => {
+    const rows = byHeader(
+      buildAreaWorkbookRows(input({ snapshotDate: '2027-03-01' }), SCOPE)!
+    )
+    const bravo = rows.find(r => r['Club Name'] === 'Bravo Speakers')!
+    expect(bravo['Next Deadline']).toBe('2027-04-01')
+    expect(bravo['Next Deadline For']).toBe('April dues renewal due')
+  })
+
   it('says a club that missed its plan date cannot be Distinguished', () => {
     const alpha = byHeader(buildAreaWorkbookRows(input(), SCOPE)!).find(
       r => r['Club Name'] === 'Alpha Orators'

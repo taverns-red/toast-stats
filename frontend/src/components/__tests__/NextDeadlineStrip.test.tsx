@@ -108,7 +108,7 @@ describe('NextDeadlineStrip — whole-year timeline (#2429)', () => {
       'May 2027',
       'June 2027',
     ])
-    expect(within(panel).getAllByRole('listitem')).toHaveLength(10)
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(11)
     fireEvent.click(toggle())
     expect(screen.queryByTestId('deadline-timeline')).toBeNull()
   })
@@ -184,7 +184,7 @@ describe('NextDeadlineStrip — whole-year timeline (#2429)', () => {
     fireEvent.click(toggle())
     expect(
       within(screen.getByTestId('deadline-timeline')).getAllByRole('listitem')
-    ).toHaveLength(10)
+    ).toHaveLength(11)
   })
 })
 

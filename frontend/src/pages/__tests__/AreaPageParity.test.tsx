@@ -266,9 +266,8 @@ describe('AreaPage area workbook (#2428)', () => {
     expect(csv.split('\n')).toEqual([
       'Club Number,Club Name,Division,Area,Health,Members,DCP Goals Met,Distinguished,Missing for Distinguished,Club Visit (Current Round),Club Success Plan,Next Deadline,Next Deadline For',
       // 15 March 2026 is round 2 (no May visit yet); the next date that
-      // applies to a club with its plan filed is 31 March, when April dues
-      // must reach World Headquarters to keep good standing (#2870).
-      '123456,Ottawa Club,A,10,Thriving,25,8,Select,Achieved,Not yet,Filed,2026-03-31,April dues due to keep good standing',
+      // applies to a club with its plan filed is the 1 April dues renewal.
+      '123456,Ottawa Club,A,10,Thriving,25,8,Select,Achieved,Not yet,Filed,2026-04-01,April dues renewal due',
     ])
   })
 })

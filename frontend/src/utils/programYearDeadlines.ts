@@ -36,6 +36,7 @@ import {
 export type DeadlineId =
   | 'csp'
   | 'training-r1-close'
+  | 'dues-october-good-standing'
   | 'dues-october'
   | 'training-r2-open'
   | 'visits-r1'
@@ -60,9 +61,13 @@ export interface DeadlineOwner {
   url: string
 }
 
+/** Who a date is for: a club, the district's own year, or a single member. */
+export type DeadlineAudience = 'club' | 'district' | 'member'
+
 /** One deadline of one program year. */
 export interface ProgramYearDeadline {
   id: DeadlineId
+  audience?: DeadlineAudience
   /** Short plain-language name, e.g. "Round 1 club visit reports due". */
   label: string
   /** `YYYY-MM-DD`. The deadline day itself still counts as upcoming. */
@@ -75,6 +80,7 @@ export interface ProgramYearDeadline {
 
 export interface DeadlineRule {
   id: DeadlineId
+  audience?: DeadlineAudience
   label: string
   /** First program year ("YYYY-YYYY") the rule applies to. */
   fromProgramYear: string
