@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import * as path from 'node:path'
 import { parse as parseYaml } from 'yaml'
+import { PREVIEW_PATHS, isPreviewPath } from '../previewPaths'
 
 /**
  * firebase-tools is pinned and isolated (#2551).
@@ -52,9 +53,10 @@ describe('firebase-tools pin (#2551)', () => {
     )
   })
 
-  it('pr-preview.yml watches the tool directory', () => {
-    const src = readFileSync(path.join(workflowsDir, 'pr-preview.yml'), 'utf-8')
-    expect(src).toContain("'tools/firebase-tools/**'")
+  // The path filter moved to PREVIEW_PATHS in #2865.
+  it('a change under the tool directory needs a preview', () => {
+    expect(PREVIEW_PATHS).toContain('tools/firebase-tools/**')
+    expect(isPreviewPath('tools/firebase-tools/package.json')).toBe(true)
   })
 
   const files = readdirSync(workflowsDir).filter(f => /\.ya?ml$/.test(f))
