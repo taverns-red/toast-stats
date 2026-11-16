@@ -96,14 +96,8 @@ fi
 # Step 6: Grant roles to service account
 echo "→ Granting IAM roles..."
 ROLES=(
-  "roles/run.admin"
-  "roles/iam.serviceAccountUser"
   "roles/storage.admin"
   "roles/firebasehosting.admin"
-  "roles/cloudbuild.builds.builder"
-  "roles/artifactregistry.writer"
-  "roles/apigateway.admin"
-  "roles/servicemanagement.admin"
   "roles/serviceusage.serviceUsageConsumer"
 )
 
