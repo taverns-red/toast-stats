@@ -475,11 +475,11 @@ jobs:
     # about 13 to 21 minutes). A normal run decides in seconds.
     timeout-minutes: 45
     # Scoped exception (#2607, COO-approved): only this job reads the head's
-    # check runs, once, on a title/body-only edit. The workflow-level block is
-    # narrowed separately (#2861).
+    # workflow runs and their jobs, on a title/body-only edit. It does not call
+    # the check-runs API (#2881), so it holds no checks scope (#2886). The
+    # workflow-level block is narrowed separately (#2861).
     permissions:
       contents: read
-      checks: read
       actions: read
       pull-requests: read
 
