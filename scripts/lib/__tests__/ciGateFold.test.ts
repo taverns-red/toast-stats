@@ -77,12 +77,12 @@ describe('ci.yml carries the CI Gate as a final needs: job (#2607)', () => {
   })
 
   // COO-approved scoped exception (#2607): on a no-op edit the gate reads the
-  // head's check runs once, so ONLY the gate job gets these read scopes. The
-  // workflow-level block is narrowed separately (#2861).
-  it('the gate job holds exactly four read scopes', () => {
+  // head's workflow runs and their jobs, so ONLY the gate job gets these read
+  // scopes. It no longer calls the check-runs API (#2881), so no checks scope
+  // (#2886). The workflow-level block is narrowed separately (#2861).
+  it('the gate job holds exactly three read scopes', () => {
     expect(gate()!.permissions).toEqual({
       contents: 'read',
-      checks: 'read',
       actions: 'read',
       'pull-requests': 'read',
     })
