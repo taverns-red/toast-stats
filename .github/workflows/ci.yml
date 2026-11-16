@@ -32,11 +32,11 @@ on:
     # paths-ignore.
   workflow_call:
 
+# Least privilege (#2861): the workflow level grants read only; every job
+# declares the scopes it needs. Guarded by
+# scripts/lib/__tests__/ciPermissionsAndPins.test.ts.
 permissions:
   contents: read
-  packages: write
-  security-events: write
-  pull-requests: write
 
 # Supersede a PR's stale run when it is pushed again (#2607). Guarded by
 # scripts/lib/__tests__/ciConcurrency.test.ts.
@@ -101,6 +101,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     outputs:
       typescript-errors: ${{ steps.typescript.outputs.total_errors }}
       lint-errors: ${{ steps.lint.outputs.total_errors }}
@@ -229,13 +231,19 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-26.04
     needs: quality-gates
+    # security-events: write is what upload-sarif needs on a public repo;
+    # actions: read is only for private repos (GitHub docs, "Uploading a
+    # SARIF file to GitHub"). Third-party action below is SHA-pinned (#2861).
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -254,6 +262,8 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-26.04
     needs: quality-gates
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
@@ -367,6 +377,8 @@ jobs:
     name: Build Applications
     runs-on: ubuntu-26.04
     needs: [quality-gates, test]
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
