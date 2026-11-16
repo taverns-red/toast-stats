@@ -25,9 +25,26 @@ const DEPLOYER = 'secrets.GCP_SERVICE_ACCOUNT'
 const DATA_READER = 'vars.GCP_DATA_READER_SA'
 
 export const EXPECTED: Record<string, string> = {
-  'basemap-build.yml::build': DEPLOYER,
+  'basemap-build.yml::basemap': DEPLOYER,
   'contact-strip.yml::strip': DEPLOYER,
-  'data-pipeline.yml::auto-restore-decide': DATA_READER,
+  'data-pipeline.yml::pipeline': DEPLOYER,
+  'data-pipeline.yml::closing-registry-pr': DEPLOYER,
+  'data-pipeline.yml::daily-reports': DEPLOYER,
+  'data-pipeline.yml::place-reports': DEPLOYER,
+  'data-pipeline.yml::education-rollup': DEPLOYER,
+  'data-pipeline.yml::promote-reports': DEPLOYER,
+  'data-pipeline.yml::data-auto-restore-decide': DATA_READER,
+  'data-pipeline.yml::data-auto-restore-execute': DEPLOYER,
+  'data-pipeline.yml::og-cards': DEPLOYER,
+  'data-pipeline.yml::education-ledger-history': DEPLOYER,
+  'deploy.yml::deploy-frontend': DEPLOYER,
+  'education-timeline-backfill.yml::backfill': DEPLOYER,
+  'gap-district-prune.yml::prune': DEPLOYER,
+  'harness-staging-canary.yml::canary': DEPLOYER,
+  'pr-preview-cleanup.yml::cleanup': DEPLOYER,
+  'pr-preview.yml::preview': DEPLOYER,
+  'validate-vs-ceo-report.yml::validate': DEPLOYER,
+  'videos-publish.yml::publish': DEPLOYER,
 }
 
 const WORKFLOWS = path.resolve(process.cwd(), '.github/workflows')
