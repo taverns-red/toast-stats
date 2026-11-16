@@ -983,15 +983,20 @@ jobs:
   #   - otherwise                     -> as before (#2453, #2101)
   # It stays skipped for a closed PR. It does NOT skip on a `labeled` event
   # for another label: a skipped verdict counts as passing and would clear an
-  # earlier failed one on the same head. There it mirrors the newest real
-  # verdict on the head (scripts/preview-verdict-mirror.ts), and fails if that
-  # one failed, is still running, or does not exist.
+  # earlier failed one on the same head. There it waits for the older runs on
+  # the head to complete, then mirrors the newest one's verdict
+  # (scripts/preview-verdict-mirror.ts); it fails if that one failed, if none
+  # exists, or if the PR head moved.
   verdict:
     name: PR Preview verdict
     needs: [changes, preview, smoke, lighthouse, preview-smoke]
     if: ${{ !cancelled() && github.event.pull_request.state == 'open' }}
     runs-on: ubuntu-26.04
-    timeout-minutes: 5
+    # 75, not 5: a label added while the real preview run is in flight makes
+    # this job WAIT for it (about 40 minutes wall time), so the check is not
+    # pinned red until someone re-runs it. A deliberate wait for another run,
+    # not a raised timeout masking a slow test. The wait fails on timeout.
+    timeout-minutes: 75
     permissions:
       actions: read
       pull-requests: write
