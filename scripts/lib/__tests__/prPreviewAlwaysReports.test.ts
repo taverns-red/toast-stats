@@ -138,6 +138,14 @@ describe('the verdict reports on every open PR', () => {
   // An unrelated label event used to leave the verdict skipped, which GitHub
   // counts as passing and which then cleared an earlier failure on the same
   // head. It now runs and mirrors the last real verdict (review of #2880, F1).
+  // The mirror waits for the real preview run (about 40 minutes), so the job
+  // timeout covers it. A deliberate wait, not a slow-test mask.
+  it('allows 75 minutes, so a label added mid-run can wait for the real run', () => {
+    expect(
+      (verdict as unknown as { 'timeout-minutes': number })['timeout-minutes']
+    ).toBe(75)
+  })
+
   it('does not skip on an unrelated label event', () => {
     expect(verdict?.if).not.toContain('label')
   })

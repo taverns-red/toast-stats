@@ -1,19 +1,24 @@
 #!/usr/bin/env tsx
 /**
- * `PR Preview verdict` on an unrelated label event (#2865, review F1): mirror
- * the newest real verdict on this head instead of posting a skipped one that
- * would count as passing. Decision logic: scripts/lib/previewVerdictMirror.ts.
+ * `PR Preview verdict` on an unrelated label event (#2865): wait for the
+ * older pr-preview.yml runs on this head to finish, then mirror the newest
+ * one's verdict. A skipped verdict would count as passing and clear an earlier
+ * failure, and a failing "still running" verdict would pin the check red
+ * (GitHub resolves a required check by the latest run in the newest check
+ * suite), so this waits instead. The decision and the wait loop are in
+ * scripts/lib/previewVerdictMirror.ts; the job's timeout bounds the wait.
  *
- * Reads the head's other pr-preview.yml runs and their jobs once, no waiting.
  * R4: logs go to stderr.
  *
- * Env: GITHUB_TOKEN, GITHUB_REPOSITORY, GATE_HEAD_SHA, GITHUB_RUN_ID,
- * GITHUB_STEP_SUMMARY (optional).
+ * Env: GITHUB_TOKEN, GITHUB_REPOSITORY, GATE_PR_NUMBER, GATE_HEAD_SHA,
+ * GITHUB_RUN_ID, GITHUB_STEP_SUMMARY (optional).
  */
 import { appendFileSync } from 'node:fs'
 import {
-  mirrorVerdict,
   VERDICT_JOB_NAME,
+  waitForMirror,
+  type MirrorState,
+  type RunInfo,
   type VerdictJob,
 } from './lib/previewVerdictMirror'
 
@@ -46,27 +51,51 @@ async function getJson<T>(path: string): Promise<T> {
 
 async function main(): Promise<void> {
   const repo = requireEnv('GITHUB_REPOSITORY')
-  const sha = requireEnv('GATE_HEAD_SHA')
-  const self = requireEnv('GITHUB_RUN_ID')
-  const { workflow_runs } = await getJson<{
-    workflow_runs: { id: number }[]
-  }>(
-    `/repos/${repo}/actions/workflows/pr-preview.yml/runs?head_sha=${sha}&event=pull_request&per_page=100`
-  )
-  const others = workflow_runs.filter(r => String(r.id) !== self)
-  const jobs: VerdictJob[] = []
-  for (const run of others) {
-    const { jobs: runJobs } = await getJson<{ jobs: VerdictJob[] }>(
-      `/repos/${repo}/actions/runs/${run.id}/jobs?filter=latest&per_page=100`
+  const pr = requireEnv('GATE_PR_NUMBER')
+  const headSha = requireEnv('GATE_HEAD_SHA')
+  const selfRunId = Number(requireEnv('GITHUB_RUN_ID'))
+  // A completed run's verdict jobs never change: read them once.
+  const jobsOf = new Map<number, VerdictJob[]>()
+
+  const fetchState = async (): Promise<MirrorState> => {
+    const live = await getJson<{ head: { sha: string } }>(
+      `/repos/${repo}/pulls/${pr}`
     )
-    jobs.push(...runJobs.filter(j => j.name === VERDICT_JOB_NAME))
+    const { workflow_runs } = await getJson<{
+      workflow_runs: { id: number; status: string }[]
+    }>(
+      `/repos/${repo}/actions/workflows/pr-preview.yml/runs?head_sha=${headSha}&event=pull_request&per_page=100`
+    )
+    const runs: RunInfo[] = []
+    for (const r of workflow_runs) {
+      if (r.id >= selfRunId) continue // never wait on this run or newer ones
+      if (r.status === 'completed' && !jobsOf.has(r.id)) {
+        const { jobs } = await getJson<{ jobs: VerdictJob[] }>(
+          `/repos/${repo}/actions/runs/${r.id}/jobs?filter=latest&per_page=100`
+        )
+        jobsOf.set(
+          r.id,
+          jobs.filter(j => j.name === VERDICT_JOB_NAME)
+        )
+      }
+      runs.push({
+        id: r.id,
+        status: r.status,
+        verdictJobs: jobsOf.get(r.id) ?? [],
+      })
+    }
+    return { headSha: live.head.sha, runs }
   }
-  console.error(
-    `${others.length} other run(s) on ${sha}, ${jobs.length} verdict job(s)`
-  )
-  const verdict = mirrorVerdict(jobs)
+
+  const verdict = await waitForMirror({
+    fetchState,
+    headSha,
+    selfRunId,
+    sleep: ms => new Promise(r => setTimeout(r, ms)),
+    onWait: reasons => console.error(`waiting: ${reasons.join('; ')}`),
+  })
   const text = verdict.pass
-    ? `Unrelated label event: mirrored the latest real ${VERDICT_JOB_NAME} on this head (success).`
+    ? `Unrelated label event: mirrored the newest real ${VERDICT_JOB_NAME} older than this run (success).`
     : `Unrelated label event: ${verdict.reasons.join('; ')}`
   console.log(text)
   if (process.env.GITHUB_STEP_SUMMARY)
