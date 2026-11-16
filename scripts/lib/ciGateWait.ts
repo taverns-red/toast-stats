@@ -131,16 +131,29 @@ export function decideGate(args: {
   }
 }
 
-/** Stub (red): calls `fn` once, no retry. */
+/**
+ * Call `fn` until it succeeds, sleeping one poll interval after each failure.
+ * A transient error (network, 429, secondary rate limit) must not pin the gate
+ * red. The job timeout bounds the retries.
+ */
 export async function retryUntilOk<T>(
   fn: () => Promise<T>,
-  _opts: {
+  opts: {
     sleep: (ms: number) => Promise<void>
     intervalMs?: number
     onRetry?: (message: string) => void
   }
 ): Promise<T> {
-  return fn()
+  for (;;) {
+    try {
+      return await fn()
+    } catch (err) {
+      opts.onRetry?.(
+        `poll failed (${err instanceof Error ? err.message : err}); retrying`
+      )
+      await opts.sleep(opts.intervalMs ?? POLL_MS)
+    }
+  }
 }
 
 /**
@@ -157,18 +170,11 @@ export async function waitForGate(opts: {
   onWait?: (reasons: string[]) => void
 }): Promise<NeedsVerdict> {
   for (;;) {
-    let state: GateState
-    try {
-      state = await opts.fetchState()
-    } catch (err) {
-      // A transient poll error (network, 429, secondary rate limit) must not
-      // pin the gate red. Try again next interval; the job timeout bounds it.
-      opts.onWait?.([
-        `poll failed (${err instanceof Error ? err.message : err}); retrying`,
-      ])
-      await opts.sleep(opts.intervalMs ?? POLL_MS)
-      continue
-    }
+    const state = await retryUntilOk(opts.fetchState, {
+      sleep: opts.sleep,
+      intervalMs: opts.intervalMs,
+      onRetry: m => opts.onWait?.([m]),
+    })
     const d = decideGate({
       expected: opts.expected,
       runs: state.runs,

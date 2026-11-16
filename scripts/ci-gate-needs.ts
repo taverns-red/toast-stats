@@ -29,6 +29,7 @@ import {
 } from './lib/ciGateNeeds'
 import {
   jobsCacheKey,
+  retryUntilOk,
   runBelongsToPr,
   waitForGate,
   type GateRun,
@@ -79,9 +80,16 @@ async function paged<T>(
 
 async function verifyHead(): Promise<NeedsVerdict> {
   const repo = requireEnv('GITHUB_REPOSITORY')
-  const files = await paged<{ filename: string }>(
-    `/repos/${repo}/pulls/${requireEnv('GATE_PR_NUMBER')}/files`,
-    b => b as { filename: string }[]
+  const sleep = (ms: number): Promise<void> =>
+    new Promise(r => setTimeout(r, ms))
+  // Same retry as the poll loop: a network blip here must not fail the gate.
+  const files = await retryUntilOk(
+    () =>
+      paged<{ filename: string }>(
+        `/repos/${repo}/pulls/${requireEnv('GATE_PR_NUMBER')}/files`,
+        b => b as { filename: string }[]
+      ),
+    { sleep, onRetry: m => console.error(m) }
   )
   const { code, docs } = classifyChanges(files.map(f => f.filename))
   const expected = [...(code ? CI_CHECKS : []), ...(docs ? [DOCS_CHECK] : [])]
@@ -132,7 +140,7 @@ async function verifyHead(): Promise<NeedsVerdict> {
     expected,
     headSha,
     selfRunId,
-    sleep: ms => new Promise(r => setTimeout(r, ms)),
+    sleep,
     onWait: reasons => console.error(`waiting: ${reasons.join('; ')}`),
   })
 }
