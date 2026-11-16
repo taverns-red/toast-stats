@@ -17,6 +17,7 @@ import { describe, it, expect } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { parse } from 'yaml'
+import { PREVIEW_PATHS } from '../previewPaths'
 
 const ROOT = process.cwd()
 const FILE = path.join(ROOT, '.github/workflows/pr-preview.yml')
@@ -40,7 +41,6 @@ interface Job {
 
 const raw = fs.readFileSync(FILE, 'utf-8')
 const wf = parse(raw) as {
-  on: { pull_request: { paths: string[] } }
   jobs: Record<string, Job>
 }
 const steps = (id: string): Step[] => wf.jobs[id]?.steps ?? []
@@ -126,7 +126,10 @@ describe('what changes the fixtures re-runs the preview (#2545)', () => {
     'scripts/refresh-smoke-fixtures.ts',
     'scripts/lib/smokeFixtures.ts',
     'scripts/smoke-fixtures.manifest.json',
-  ])('lists %s in the path filter', file => {
-    expect(wf.on.pull_request.paths).toContain(file)
-  })
+  ])(
+    'lists %s in the preview paths (#2865: scripts/lib/previewPaths.ts)',
+    file => {
+      expect(PREVIEW_PATHS).toContain(file)
+    }
+  )
 })

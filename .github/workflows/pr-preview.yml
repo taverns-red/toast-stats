@@ -62,30 +62,10 @@ name: PR Preview
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, labeled]
-    paths:
-      - 'frontend/**'
-      - 'packages/shared-contracts/**'
-      - 'packages/analytics-core/**'
-      - 'firebase.json'
-      - '.firebaserc'
-      - '.github/workflows/pr-preview.yml'
-      - 'scripts/check-hosting-site.sh'
-      - 'lighthouserc.mobile.js' # the mobile gate below runs it (#1994)
-      - '.nvmrc' # setup-node reads it (#2005)
-      - 'tools/firebase-tools/**' # the pinned Firebase CLI it installs (#2551)
-      # the catch-all smoke step runs them (#2141)
-      - 'scripts/unlisted-smoke-specs.ts'
-      - 'scripts/lib/smokeSpecCoverage.ts'
-      # the shards and Lighthouse serve the build with them (#2544)
-      - 'scripts/serve-preview-locally.sh'
-      - 'scripts/preview-local-server.mjs'
-      - 'scripts/check-deployed-files.mjs'
-      # the fixtures the shards read instead of live cdn-staging (#2545)
-      - 'scripts/refresh-smoke-fixtures.ts'
-      - 'scripts/lib/smokeFixtures.ts'
-      - 'scripts/lib/cdnSchemaCanary.ts' # its schema pass reuses these
-      - 'scripts/lib/zodIssueSummary.ts'
-      - 'scripts/smoke-fixtures.manifest.json'
+    # No `paths:` filter (#2865): the workflow runs on every PR so that
+    # `PR Preview verdict` exists on every head and can be a required check.
+    # Which changes need a preview is decided by the `changes` job, from
+    # PREVIEW_PATHS in scripts/lib/previewPaths.ts (the old filter, unchanged).
 
 # Cancel an in-flight preview build when a new push to the same PR
 # arrives — only the latest commit gets a deploy. A `labeled` event for any
@@ -115,8 +95,43 @@ permissions:
   pull-requests: write # Required to post the preview-URL comment
 
 jobs:
+  # Classify the diff (#2865), the same pattern as ci.yml's `changes` (#2607):
+  # does any changed file match PREVIEW_PATHS? Needs no install, only fetch
+  # and the standalone tsx. Runs for every event that can produce a verdict;
+  # the preview and the verdict `needs:` it. Narrows the workflow-level token:
+  # the PR file list is public data on this public repo.
+  changes:
+    name: Changes
+    if: >-
+      github.event.pull_request.state == 'open'
+      && (github.event.action != 'labeled' || github.event.label.name == 'preview-smoke')
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      preview: ${{ steps.classify.outputs.preview }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Classify changed files (#2865)
+        id: classify
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GATE_PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          version="$(node -p "require('./package.json').devDependencies.tsx")"
+          npx --yes "tsx@${version}" scripts/preview-changes.ts
+
   preview:
     name: Deploy preview channel
+    needs: changes
     runs-on: ubuntu-26.04
     # Skip PRs from forks — WIF tokens are not issued to fork branches,
     # and we don't want to leak credentials to untrusted code anyway.
@@ -127,8 +142,11 @@ jobs:
     # A labeled event runs only for `preview-smoke` (#2101).
     # Never deploy for a closed PR: cleanup has already reaped `pr-<N>`, and a
     # re-created channel would hold staging quota until its 7-day TTL (#2372).
+    # Only when a preview path changed (#2865); otherwise the verdict passes
+    # as "not needed".
     if: >-
-      github.event.pull_request.state == 'open'
+      needs.changes.outputs.preview == 'true'
+      && github.event.pull_request.state == 'open'
       && github.event.pull_request.head.repo.full_name == github.repository
       && github.actor != 'dependabot[bot]'
       && (github.event.action != 'labeled' || github.event.label.name == 'preview-smoke')
@@ -954,12 +972,24 @@ jobs:
   # One verdict over every shard (#2453). A matrix reports one check per
   # shard; this job needs them all and is the single check to require if PR
   # Preview is ever made merge-gating (today CI Gate does not require it).
-  # It runs whatever the shards concluded (`!cancelled()`), but not when the
-  # deploy job itself was skipped (fork, Dependabot, closed PR, other label).
+  # It reports on every open PR (#2865), so it can be required: this workflow
+  # has no `paths:` filter, and the verdict runs whatever its needs concluded
+  # (`!cancelled()`, so a skipped or failed need still reaches it). A skipped
+  # job counts as success to GitHub, so the Verdict step below decides from
+  # each result and treats a skipped job the diff expects as a failure.
+  #   - no preview path changed       -> pass, "Preview not needed"
+  #   - fork PR or Dependabot         -> pass, "Preview not run" (no secrets,
+  #                                      so a preview can never exist)
+  #   - otherwise                     -> as before (#2453, #2101)
+  # It stays skipped for a closed PR and for a `labeled` event other than
+  # `preview-smoke`: such an event must not post a result over the real one.
   verdict:
     name: PR Preview verdict
-    needs: [preview, smoke, lighthouse, preview-smoke]
-    if: ${{ !cancelled() && needs.preview.result != 'skipped' }}
+    needs: [changes, preview, smoke, lighthouse, preview-smoke]
+    if: >-
+      ${{ !cancelled()
+      && github.event.pull_request.state == 'open'
+      && (github.event.action != 'labeled' || github.event.label.name == 'preview-smoke') }}
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
@@ -971,6 +1001,9 @@ jobs:
       # Diagnostics only: a failure here cannot change the verdict.
       - name: Time the run
         id: timing
+        # Only when a preview was attempted (#2865): there is no URL, and no
+        # deploy to time, when none was needed or none could run.
+        if: needs.preview.result != 'skipped'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1049,16 +1082,71 @@ jobs:
       # smoke and Lighthouse shard and the real-preview smoke must have
       # succeeded. Draft run: all of them must have been skipped by design
       # (#2101). Anything else fails.
+      # #2865: first, the classifier must have succeeded. If no preview path
+      # changed, every preview job must be skipped (anything else means the
+      # classifier and the jobs disagree) and the verdict passes. If a preview
+      # path changed but the PR is from a fork or Dependabot, there are no
+      # secrets, so the deploy is skipped by design and the verdict passes
+      # with a note; CI Gate still applies. For any other PR the deploy is
+      # needed, and a skipped deploy fails below like any other non-success.
       - name: Verdict
         env:
+          CHANGES: ${{ needs.changes.result }}
+          PREVIEW_NEEDED: ${{ needs.changes.outputs.preview }}
+          FORK: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+          DEPENDABOT: ${{ github.actor == 'dependabot[bot]' }}
           DEPLOY: ${{ needs.preview.result }}
           SMOKE: ${{ needs.smoke.result }}
           LIGHTHOUSE: ${{ needs.lighthouse.result }}
           PREVIEW_SMOKE: ${{ needs.preview-smoke.result }}
           HEAVY: ${{ needs.preview.outputs.heavy }}
         run: |
+          echo "changes=$CHANGES preview_needed=$PREVIEW_NEEDED" \
+            "fork=$FORK dependabot=$DEPENDABOT"
           echo "deploy=$DEPLOY smoke=$SMOKE lighthouse=$LIGHTHOUSE" \
             "preview_smoke=$PREVIEW_SMOKE heavy=$HEAVY"
+          note() {
+            echo "$1"
+            if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+              echo "$1" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          }
+          none_ran() {
+            [ "$DEPLOY" = "skipped" ] && [ "$SMOKE" = "skipped" ] \
+              && [ "$LIGHTHOUSE" = "skipped" ] \
+              && [ "$PREVIEW_SMOKE" = "skipped" ]
+          }
+          if [ "$CHANGES" != "success" ]; then
+            echo "::error::the changes job did not succeed ($CHANGES)"
+            exit 1
+          fi
+          case "$PREVIEW_NEEDED" in
+            false)
+              if ! none_ran; then
+                echo "::error::no preview path changed, yet deploy: $DEPLOY, smoke: $SMOKE, lighthouse: $LIGHTHOUSE, real-preview smoke: $PREVIEW_SMOKE"
+                exit 1
+              fi
+              note "Preview not needed: no preview paths changed"
+              exit 0
+              ;;
+            true) ;;
+            *)
+              echo "::error::unexpected preview output from changes: '$PREVIEW_NEEDED'"
+              exit 1
+              ;;
+          esac
+          if [ "$FORK" = "true" ] || [ "$DEPENDABOT" = "true" ]; then
+            if ! none_ran; then
+              echo "::error::no preview can run for this PR, yet deploy: $DEPLOY, smoke: $SMOKE, lighthouse: $LIGHTHOUSE, real-preview smoke: $PREVIEW_SMOKE"
+              exit 1
+            fi
+            if [ "$FORK" = "true" ]; then
+              note "Preview not run for fork PRs (no secrets); CI Gate still applies"
+            else
+              note "Preview not run for Dependabot (no secrets); CI Gate still applies"
+            fi
+            exit 0
+          fi
           if [ "$DEPLOY" != "success" ]; then
             echo "::error::the deploy job did not succeed ($DEPLOY)"
             exit 1
