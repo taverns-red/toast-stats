@@ -54,6 +54,10 @@ const EXEMPT: Record<string, string> = {
     'the changes job reads it only for the pinned tsx version (as ci.yml does)',
   'pr-preview.yml: scripts/preview-changes.ts':
     'the classifier itself; it does not build or serve the preview',
+  'pr-preview.yml: scripts/preview-verdict-mirror.ts':
+    'the label-event verdict mirror; it reads run results and builds nothing',
+  'pr-preview.yml: scripts/lib/previewVerdictMirror.ts':
+    'the mirror decision, unit-tested by previewVerdictMirror.test.ts',
   'pr-preview.yml: scripts/lib/prChangedFiles.ts':
     'the PR file-list fetch the classifier shares with ci.yml; no preview input',
   'pr-preview.yml: scripts/lib/previewPaths.ts':

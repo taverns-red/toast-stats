@@ -55,11 +55,21 @@ export function isPreviewPath(file: string): boolean {
 }
 
 /**
+ * The pulls/{n}/files API returns at most 3000 files. A list that long may be
+ * truncated, so a preview path could be past the cut: run the preview (#2865 F4).
+ */
+export const PR_FILES_API_CAP = 3000
+
+/**
  * True if ANY changed file is a preview path, the same ANY semantics as a
  * GitHub `paths` filter. An empty list returns true: an ambiguous diff must
  * not be a free pass, so it runs the preview (the safe default, as in
  * classifyChanges for ci.yml).
  */
 export function needsPreview(files: string[]): boolean {
-  return files.length === 0 || files.some(isPreviewPath)
+  return (
+    files.length === 0 ||
+    files.length >= PR_FILES_API_CAP ||
+    files.some(isPreviewPath)
+  )
 }

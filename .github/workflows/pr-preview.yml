@@ -981,21 +981,33 @@ jobs:
   #   - fork PR or Dependabot         -> pass, "Preview not run" (no secrets,
   #                                      so a preview can never exist)
   #   - otherwise                     -> as before (#2453, #2101)
-  # It stays skipped for a closed PR and for a `labeled` event other than
-  # `preview-smoke`: such an event must not post a result over the real one.
+  # It stays skipped for a closed PR. It does NOT skip on a `labeled` event
+  # for another label: a skipped verdict counts as passing and would clear an
+  # earlier failed one on the same head. There it mirrors the newest real
+  # verdict on the head (scripts/preview-verdict-mirror.ts), and fails if that
+  # one failed, is still running, or does not exist.
   verdict:
     name: PR Preview verdict
     needs: [changes, preview, smoke, lighthouse, preview-smoke]
-    if: >-
-      ${{ !cancelled()
-      && github.event.pull_request.state == 'open'
-      && (github.event.action != 'labeled' || github.event.label.name == 'preview-smoke') }}
+    if: ${{ !cancelled() && github.event.pull_request.state == 'open' }}
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       actions: read
       pull-requests: write
     steps:
+      # Only for the mirror (an unrelated label event): the script is in the
+      # repo and runs with the standalone tsx, like the `changes` job.
+      - name: Checkout code
+        if: github.event.action == 'labeled' && github.event.label.name != 'preview-smoke'
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        if: github.event.action == 'labeled' && github.event.label.name != 'preview-smoke'
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
       # Wall time from the start of this run attempt to now, and each job's
       # own duration, against the #2453 targets (5 min, 8 min floor).
       # Diagnostics only: a failure here cannot change the verdict.
@@ -1100,7 +1112,24 @@ jobs:
           LIGHTHOUSE: ${{ needs.lighthouse.result }}
           PREVIEW_SMOKE: ${{ needs.preview-smoke.result }}
           HEAVY: ${{ needs.preview.outputs.heavy }}
+          # The live-draft lookup and the label-event mirror (#2865 review).
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GATE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          GATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          EVENT_ACTION: ${{ github.event.action }}
+          LABEL: ${{ github.event.label.name }}
         run: |
+          # A label other than preview-smoke deploys and tests nothing: this
+          # run's needs say nothing about the head, so mirror the newest real
+          # verdict on it. A skipped verdict would count as passing.
+          if [ "$EVENT_ACTION" = "labeled" ] && [ "$LABEL" != "preview-smoke" ]; then
+            version="$(node -p "require('./package.json').devDependencies.tsx")"
+            exec npx --yes "tsx@${version}" scripts/preview-verdict-mirror.ts
+          fi
           echo "changes=$CHANGES preview_needed=$PREVIEW_NEEDED" \
             "fork=$FORK dependabot=$DEPENDABOT"
           echo "deploy=$DEPLOY smoke=$SMOKE lighthouse=$LIGHTHOUSE" \
@@ -1166,6 +1195,17 @@ jobs:
               if [ "$SMOKE" != "skipped" ] || [ "$LIGHTHOUSE" != "skipped" ] \
                 || [ "$PREVIEW_SMOKE" != "skipped" ]; then
                 echo "::error::draft run, yet smoke: $SMOKE, lighthouse: $LIGHTHOUSE, real-preview smoke: $PREVIEW_SMOKE"
+                exit 1
+              fi
+              # A re-run replays the draft-era event payload, so HEAVY=false
+              # is stale once the PR is ready. Read the live state; if it
+              # cannot be read, fail (fail closed).
+              if ! draft="$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq .draft)"; then
+                echo "::error::could not read the PR's live draft state"
+                exit 1
+              fi
+              if [ "$draft" != "true" ]; then
+                echo "::error::heavy smoke required once ready (live draft=$draft): mark the PR ready or re-trigger, do not re-run a draft-era run"
                 exit 1
               fi
               echo "Draft PR: heavy smoke skipped by design (#2101)."
