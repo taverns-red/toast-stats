@@ -5,7 +5,11 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-/** The version after `>=` in an engines.node range. Throws on anything else. */
+/**
+ * The version after `>=` in an engines.node range. Throws on anything else.
+ * `engineFloorMajor` in scripts/lib/ciConfigGuard.ts reads the same field as a
+ * number for the policy tests; both accept only a plain `>=N` range.
+ */
 export function engineFloor(range) {
   const m = /^\s*>=\s*(\d+(?:\.\d+){0,2})\s*$/.exec(String(range ?? ''))
   if (!m) {
