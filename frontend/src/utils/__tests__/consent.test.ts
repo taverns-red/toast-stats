@@ -356,6 +356,27 @@ describe('lowering consent reloads a page where GA ran (#2827)', () => {
     }
   })
 
+  it('still writes the cookie and reloads when installing the guard throws', () => {
+    hook(true)
+    // A read-only fetch makes the guard's install throw a TypeError.
+    Object.defineProperty(window, 'fetch', {
+      value: vi.fn(),
+      writable: false,
+      configurable: true,
+    })
+    try {
+      expect(() => setConsent('minimal')).not.toThrow()
+      expect(getConsent()).toBe('minimal')
+      expect(reload).toHaveBeenCalledTimes(1)
+    } finally {
+      Object.defineProperty(window, 'fetch', {
+        value: savedFetch,
+        writable: true,
+        configurable: true,
+      })
+    }
+  })
+
   it('does not reload where there is no GA hook (preview, localhost)', () => {
     delete win['__tsGa']
     setConsent('minimal')
