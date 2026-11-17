@@ -289,12 +289,13 @@ describe('lowering consent after GA ran in the page (#2827)', () => {
     const order: string[] = []
     document.cookie = '_ga=GA1.1.1; path=/'
     const proto = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')!
-    Object.defineProperty(document, 'cookie', {
-      configurable: true,
-      get: () => proto.get!.call(document),
-      set: (v: string) => {
+    // On the prototype, not the document: jsdom cannot delete an own
+    // `cookie` property again, and it would shadow the guard's wrapper (#2923).
+    Object.defineProperty(Document.prototype, 'cookie', {
+      ...proto,
+      set(this: Document, v: string) {
         order.push(`write ${v.split('=')[0]}`)
-        proto.set!.call(document, v)
+        proto.set!.call(this, v)
       },
     })
     ;(win['__tsGa'] as { disable: () => void }).disable = () => {
@@ -307,7 +308,8 @@ describe('lowering consent after GA ran in the page (#2827)', () => {
     try {
       setConsent('minimal')
     } finally {
-      delete (document as unknown as Record<string, unknown>)['cookie']
+      uninstallGaTransportGuard()
+      Object.defineProperty(Document.prototype, 'cookie', proto)
     }
     expect(order.slice(0, 3)).toEqual([
       'disable (guard on)',
@@ -456,25 +458,28 @@ describe('lowering consent keeps _ga cookies away for the page view (#2923)', ()
     const orig = vi.fn(async () => new Response('real'))
     win['fetch'] = orig
     const proto = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')!
-    // Make the document's own setter throw (cookies blocked) so the consent
-    // write fails, while the guard's prototype wrapper is untouched.
-    Object.defineProperty(document, 'cookie', {
-      configurable: true,
-      get: () => proto.get!.call(document),
-      set: () => {
-        throw new Error('cookies blocked')
+    // Cookies blocked for the consent write only, under the guard's wrapper.
+    Object.defineProperty(Document.prototype, 'cookie', {
+      ...proto,
+      set(this: Document, v: string) {
+        if (v.startsWith(`${CONSENT_COOKIE}=`)) {
+          throw new Error('cookies blocked')
+        }
+        proto.set!.call(this, v)
       },
     })
     try {
       expect(() => setConsent('minimal')).not.toThrow()
+      expect(getConsent()).toBeNull()
+      document.cookie = '_ga=GA1.1.1; Path=/'
+      expect(gaCookies()).toEqual([])
+      const res = await window.fetch(GA_URL)
+      expect(res.status).toBe(204)
+      expect(orig).not.toHaveBeenCalled()
     } finally {
-      delete (document as unknown as Record<string, unknown>)['cookie']
+      uninstallGaTransportGuard()
+      Object.defineProperty(Document.prototype, 'cookie', proto)
+      win['fetch'] = savedFetch
     }
-    const res = await window.fetch(GA_URL)
-    expect(res.status).toBe(204)
-    expect(orig).not.toHaveBeenCalled()
-    document.cookie = '_ga=GA1.1.1; Path=/'
-    expect(gaCookies()).toEqual([])
-    win['fetch'] = savedFetch
   })
 })

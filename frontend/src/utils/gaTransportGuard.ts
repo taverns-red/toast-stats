@@ -6,7 +6,16 @@
    installs this guard as the first step of that downgrade. It drops requests
    to Google Analytics collect and googletagmanager hosts on every transport
    gtag uses, and nothing else. Any other request passes through unchanged.
-   The guard stays on until the page reloads. */
+
+   It also drops `document.cookie` writes that set a `_ga*` cookie (#2923):
+   gtag stays alive in the page and rewrites `_ga_<id>` whenever it handles an
+   event. Every other cookie, including `rt_consent`, and any write that
+   expires a `_ga*` cookie, passes through.
+
+   The guard stays on until the page reloads. So choosing "all" again in the
+   same page view counts nothing until the next page load: gtag does not start
+   a second time and its cookie writes stay dropped. That is the safe
+   direction for privacy. */
 
 const GTM_DOMAIN = 'googletagmanager.com'
 const GA_DOMAIN = 'google-analytics.com'
@@ -32,6 +41,21 @@ export function isGaCollectUrl(url: string): boolean {
     return COLLECT_PATHS.has(u.pathname)
   }
   return false
+}
+
+/** True for a `document.cookie` write that sets a `_ga*` cookie. A write that
+ *  expires one (Max-Age=0 or a past Expires) passes: that is how we clear. */
+export function isGaCookieSet(cookie: string): boolean {
+  const [pair = '', ...attrs] = cookie.split(';')
+  const name = pair.split('=')[0]?.trim() ?? ''
+  if (!name.startsWith('_ga')) return false
+  for (const attr of attrs) {
+    const [k = '', v = ''] = attr.split('=')
+    const key = k.trim().toLowerCase()
+    if (key === 'max-age' && Number(v.trim()) <= 0) return false
+    if (key === 'expires' && Date.parse(v.trim()) <= Date.now()) return false
+  }
+  return true
 }
 
 function inputUrl(input: unknown): string {
@@ -129,6 +153,33 @@ export function installGaTransportGuard(): () => void {
   restores.push(() => {
     delete (imgProto as { setAttribute?: unknown }).setAttribute
   })
+
+  // #2923: gtag stays alive and rewrites `_ga*` when it handles a later event.
+  // That is a cookie write, not a request, so drop it here. Find the accessor
+  // on the prototype chain (Document.prototype in Chromium and WebKit).
+  let cookieOwner: object | null = document
+  let cookieDescriptor: PropertyDescriptor | undefined
+  while (cookieOwner && !cookieDescriptor) {
+    cookieDescriptor = Object.getOwnPropertyDescriptor(cookieOwner, 'cookie')
+    if (!cookieDescriptor) cookieOwner = Object.getPrototypeOf(cookieOwner)
+  }
+  if (cookieOwner && cookieDescriptor?.get && cookieDescriptor.set) {
+    const { get, set } = cookieDescriptor
+    const owner = cookieOwner
+    Object.defineProperty(owner, 'cookie', {
+      ...cookieDescriptor,
+      get(this: Document) {
+        return get.call(this)
+      },
+      set(this: Document, value: string) {
+        if (isGaCookieSet(String(value))) return
+        set.call(this, value)
+      },
+    })
+    restores.push(() =>
+      Object.defineProperty(owner, 'cookie', cookieDescriptor)
+    )
+  }
 
   const remove = (): void => {
     if (active !== remove) return

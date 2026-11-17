@@ -185,7 +185,9 @@ export function setConsent(level: ConsentLevel): void {
   // A downgrade from a page where GA ran: gtag.js may hold hits it will send
   // whatever the opt-out flag says. So, in this order: drop its requests
   // (the guard stays for the rest of the page's life), set the opt-out flag,
-  // store the choice, clear the _ga cookies. No reload (#2827).
+  // store the choice, clear the _ga cookies. No reload (#2827). The guard
+  // also drops later `_ga*` cookie writes (#2923). Choosing "all" again in
+  // this page view takes effect on the next page load: the guard stays on.
   if (level !== 'all' && gaRanThisPage()) {
     try {
       installGaTransportGuard()
