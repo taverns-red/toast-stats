@@ -49,6 +49,8 @@ export interface CdnFixtureTally {
   misses: string[]
   /** Paths whose response came off the network (it must stay empty). */
   leaks: string[]
+  /** Prod-origin paths outside `videos/`: aborted, never served (#2855). */
+  prodReads: string[]
   /** Record mode: every path passed through. */
   recorded: string[]
 }
@@ -172,6 +174,7 @@ export async function installCdnFixtures(
     hits: [],
     misses: [],
     leaks: [],
+    prodReads: [],
     recorded: [],
   }
   const record = options.recordFile

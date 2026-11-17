@@ -216,13 +216,42 @@ describe('installCdnFixtures: the prod CDN origin (#2570)', () => {
     expect(cdnPath('https://example.com/v1/latest.json')).toBeNull()
   })
 
-  it('fulfils a recorded file asked for under the prod origin', async () => {
+  it('aborts a prod read outside videos/ even when a fixture exists, and lists it', async () => {
+    // The shards build against staging; a data read that reaches prod would
+    // otherwise be answered from the staging fixture and pass (#2855).
     const { ctx, state } = fakeContext()
     const tally = await installCdnFixtures(ctx, { dir })
-    const r = await request(state, `${PROD}/v1/latest.json`)
+    const r = await request(state, `${PROD}/v1/latest.json?x=1`)
+    expect(r.abort).toHaveBeenCalledTimes(1)
+    expect(r.fulfill).not.toHaveBeenCalled()
+    expect(tally.prodReads).toEqual(['v1/latest.json'])
+    expect(tally.hits).toEqual([])
+    expect(describeFixtureProblems(tally)).toContain('v1/latest.json')
+  })
+
+  it('still answers a recorded video under the prod origin', async () => {
+    writeFileSync(
+      join(dir, '_index.json'),
+      JSON.stringify({
+        'videos/v1/clip.mp4': { status: 200, contentType: 'video/mp4' },
+      })
+    )
+    mkdirSync(join(dir, 'videos', 'v1'), { recursive: true })
+    writeFileSync(join(dir, 'videos', 'v1', 'clip.mp4'), 'abcdefghij')
+    const { ctx, state } = fakeContext()
+    const tally = await installCdnFixtures(ctx, { dir })
+    const r = await request(state, `${PROD}/videos/v1/clip.mp4`)
     expect(r.fulfill).toHaveBeenCalledTimes(1)
-    expect(r.abort).not.toHaveBeenCalled()
-    expect(tally.hits).toEqual(['v1/latest.json'])
+    expect(tally.hits).toEqual(['videos/v1/clip.mp4'])
+    expect(tally.prodReads).toEqual([])
+  })
+
+  it('does not apply the videos/ rule to staging', async () => {
+    const { ctx, state } = fakeContext()
+    const tally = await installCdnFixtures(ctx, { dir })
+    const r = await request(state, `${CDN_STAGING_ORIGIN}/v1/latest.json`)
+    expect(r.fulfill).toHaveBeenCalledTimes(1)
+    expect(tally.prodReads).toEqual([])
   })
 
   it('aborts and lists a prod path with no fixture', async () => {
@@ -280,10 +309,11 @@ describe('installCdnFixtures: the prod CDN origin (#2570)', () => {
     expect(arg.headers['content-type']).toBe('video/mp4')
   })
 
-  it('reads a prod URL for a spec that rewrites it (fixtureFetch)', async () => {
+  it('refuses a prod data URL for a spec that rewrites it (fixtureFetch)', async () => {
     const r = route(`${PROD}/v1/latest.json`)
-    const res = await fixtureFetch(r as never, { SMOKE_FIXTURES_DIR: dir })
-    expect(await res.json()).toEqual({ latestSnapshotDate: 'd' })
+    await expect(
+      fixtureFetch(r as never, { SMOKE_FIXTURES_DIR: dir })
+    ).rejects.toThrow(/v1\/latest\.json/)
     expect(r.fetch).not.toHaveBeenCalled()
   })
 })
@@ -448,6 +478,7 @@ describe('describeFixtureProblems', () => {
     hits: [],
     misses: [],
     leaks: [],
+    prodReads: [],
     recorded: [],
     ...over,
   })
@@ -460,6 +491,12 @@ describe('describeFixtureProblems', () => {
     const msg = describeFixtureProblems(tally({ misses: ['v1/x.json'] }))
     expect(msg).toContain('v1/x.json')
     expect(msg).toContain('scripts/smoke-fixtures.manifest.json')
+  })
+
+  it('names every prod read outside videos/', () => {
+    const msg = describeFixtureProblems(tally({ prodReads: ['v1/z.json'] }))
+    expect(msg).toContain('v1/z.json')
+    expect(msg).toContain('videos/')
   })
 
   it('names every request that reached cdn-staging', () => {
