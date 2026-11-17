@@ -248,6 +248,29 @@ describe('agent-cli', () => {
       expect(c2.err.join('\n')).toContain('2027-01-15T08:00:00Z')
     })
 
+    it('does not mistake a check named "rate limit exceeded" on stdout for a rate-limit error', async () => {
+      const rows = JSON.stringify([
+        {
+          ...JSON.parse(PENDING)[0],
+          name: 'API rate limit exceeded test',
+          state: 'FAILURE',
+          bucket: 'fail',
+        },
+      ])
+      const c = capture()
+      const runner = fakeRunner([
+        [/^gh api rate_limit/, limit(4000)],
+        [/^gh pr checks /, fail('', 1, rows)],
+      ])
+      const code = await main(['ci-wait', '123'], {
+        ...c.deps,
+        runner,
+        ...clock(),
+      })
+      expect(code).toBe(1)
+      expect(c.out.join('\n')).toContain('API rate limit exceeded test')
+    })
+
     it('polls when core.remaining is 500 or more', async () => {
       const c = capture()
       const runner = fakeRunner([
