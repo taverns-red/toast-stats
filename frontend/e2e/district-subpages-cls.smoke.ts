@@ -217,6 +217,43 @@ test.describe('district subpages CLS on a throttled cold load (#1837)', () => {
   }
 })
 
+/* The Action List intro on a cold load at an off-season pinned date (#2830).
+ * The intro reserves the clauses the pinned date allows (#2524). While the date
+ * index loaded the page used to reserve the longest sentence, so off-season
+ * the final sentence was one line shorter and the controls and sections moved
+ * up ~21px (CLS ~0.01) once the skeleton dropped. That is far inside the 0.1
+ * budget above, so this asserts the cause: the controls row must not shift.
+ * 2025-10-15 sits between officer-training rounds. */
+test.describe('Action List intro off-season, cold load (#2830)', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'layout-shift + CDP throttling are Chromium-only'
+  )
+
+  for (const vp of VIEWPORTS) {
+    test(`/district/61/action-list?date=2025-10-15 at ${vp.width}px does not move the controls`, async ({
+      page,
+    }) => {
+      test.setTimeout(180_000)
+      const path = '/district/61/action-list?date=2025-10-15'
+      await measureCls(page, path, vp, '.district-detail-page')
+      const entries = await page.evaluate(() => window.__clsEntries ?? [])
+      const moved = entries.filter(e =>
+        e.sources.some(s => s.includes('action-list-page__controls'))
+      )
+      const detail = moved
+        .map(
+          e => `  t=${e.t}ms value=${e.value}\n    ${e.sources.join('\n    ')}`
+        )
+        .join('\n')
+      expect(
+        moved,
+        `The controls row moved on ${page.url()}:\n${detail}`
+      ).toEqual([])
+    })
+  }
+})
+
 /* The Clubs table picks its columns from the width tier (#2676, risk R-4:
  * CLS <= 0.1 at 768, 1024 and 1280). 1280 is covered by the `clubs` entry in
  * SUBPAGES above; 375 renders the phone list instead. This adds the tablet
