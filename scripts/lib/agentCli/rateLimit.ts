@@ -7,8 +7,8 @@
  */
 import { runGhResult, type ExecResult, type Runner } from './exec.js'
 
-/** Below this many core requests left, ci-wait refuses to start polling. */
-export const MIN_CORE_REMAINING = 500
+/** Below this many calls left in the core or graphql bucket, ci-wait refuses to start polling. */
+export const MIN_REMAINING = 500
 
 export class RateLimitError extends Error {
   constructor(message: string) {
@@ -24,26 +24,36 @@ export function isRateLimitText(text: string): boolean {
   )
 }
 
-interface CoreLimit {
+interface Bucket {
+  name: 'core' | 'graphql'
   remaining: number
   reset: number
 }
 
-/** Reads core.remaining and core.reset; null when it cannot be read. */
-export async function readCoreLimit(runner: Runner): Promise<CoreLimit | null> {
+/**
+ * Reads the core and graphql buckets and returns the one with the fewest
+ * calls left; null when the answer can't be read. `gh pr checks` spends
+ * graphql and the REST fallback spends core, so the lower is the budget.
+ */
+export async function readLowestLimit(runner: Runner): Promise<Bucket | null> {
   try {
     const r = await runGhResult(['api', 'rate_limit'], {
       runner,
       attempts: 1,
     })
-    const core = (
+    const res = (
       JSON.parse(r.stdout) as {
-        resources?: { core?: { remaining?: number; reset?: number } }
+        resources?: Record<string, { remaining?: number; reset?: number }>
       }
-    ).resources?.core
-    if (typeof core?.remaining !== 'number' || typeof core.reset !== 'number')
-      return null
-    return { remaining: core.remaining, reset: core.reset }
+    ).resources
+    const buckets: Bucket[] = []
+    for (const name of ['core', 'graphql'] as const) {
+      const b = res?.[name]
+      if (typeof b?.remaining === 'number' && typeof b.reset === 'number')
+        buckets.push({ name, remaining: b.remaining, reset: b.reset })
+    }
+    buckets.sort((a, b) => a.remaining - b.remaining)
+    return buckets[0] ?? null
   } catch {
     return null
   }
@@ -55,16 +65,16 @@ function resetText(reset: number, nowMs: number): string {
   return `resets at ${iso} (in about ${mins} min)`
 }
 
-/** Throws a RateLimitError when fewer than MIN_CORE_REMAINING calls are left. */
+/** Throws a RateLimitError when fewer than MIN_REMAINING calls are left. */
 export async function assertRateLimitBudget(
   runner: Runner,
   nowMs: number
 ): Promise<void> {
-  const core = await readCoreLimit(runner)
-  if (core && core.remaining < MIN_CORE_REMAINING) {
+  const low = await readLowestLimit(runner)
+  if (low && low.remaining < MIN_REMAINING) {
     throw new RateLimitError(
-      `GitHub core rate limit has ${core.remaining} calls left (need ${MIN_CORE_REMAINING}); ` +
-        `it ${resetText(core.reset, nowMs)}. Not polling.`
+      `GitHub ${low.name} rate limit has ${low.remaining} calls left (need ${MIN_REMAINING}); ` +
+        `it ${resetText(low.reset, nowMs)}. Not polling.`
     )
   }
 }
@@ -74,10 +84,10 @@ export async function rateLimitStop(
   runner: Runner,
   nowMs: number
 ): Promise<RateLimitError> {
-  const core = await readCoreLimit(runner)
+  const low = await readLowestLimit(runner)
   return new RateLimitError(
-    core
-      ? `GitHub rate limit hit; it ${resetText(core.reset, nowMs)}. Stopped, not retrying.`
+    low
+      ? `GitHub rate limit hit; it ${resetText(low.reset, nowMs)}. Stopped, not retrying.`
       : 'GitHub rate limit hit; reset time unknown. Stopped, not retrying.'
   )
 }
