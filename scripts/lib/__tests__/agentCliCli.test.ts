@@ -169,6 +169,8 @@ describe('agent-cli', () => {
           },
         })
       )
+    /** Green checks also need a mergeable PR (#2905). */
+    const CLEAN = ok('{"mergeStateStatus":"CLEAN","headRefOid":"abc"}')
     const PENDING = JSON.stringify([
       {
         name: 'build',
@@ -222,6 +224,7 @@ describe('agent-cli', () => {
       const low = fakeRunner([
         [/^gh api rate_limit/, limit(100, 100)],
         [/^gh pr checks /, fail('', 1, PASS)],
+        [/^gh pr view /, CLEAN],
       ])
       const c = capture()
       expect(
@@ -283,6 +286,7 @@ describe('agent-cli', () => {
             JSON.stringify([{ ...JSON.parse(PENDING)[0], bucket: 'pass' }])
           ),
         ],
+        [/^gh pr view /, CLEAN],
       ])
       expect(
         await main(['ci-wait', '123'], { ...c.deps, runner, ...clock() })
@@ -315,6 +319,7 @@ describe('agent-cli', () => {
             JSON.stringify([{ ...JSON.parse(PENDING)[0], bucket: 'pass' }])
           ),
         ],
+        [/^gh pr view /, CLEAN],
       ])
       expect(
         await main(['ci-wait', '123'], { ...c.deps, runner, ...clock() })

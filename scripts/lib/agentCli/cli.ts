@@ -134,6 +134,13 @@ sleep/gh pr checks loops. Wait-only: never re-runs, approves or merges.
 Where GraphQL is blocked (cloud sessions get HTTP 403), it reads the same
 checks over REST: the PR's head SHA, then its check-runs, every page.
 
+Green checks alone don't pass: once none is pending or failing, it reads the
+PR's mergeStateStatus (REST: mergeable_state). CLEAN, DRAFT, HAS_HOOKS and
+UNSTABLE pass. BLOCKED, BEHIND and UNKNOWN keep waiting (a newer run, such as
+the one a title or body edit starts, may not be listed yet) and are named in
+the timeout message. DIRTY (merge conflicts) fails. --once reports the state
+as-is; the merge state is in the --json output as mergeState.
+
 Options:
   --interval <s>     Seconds between polls (default and minimum 60)
   --timeout <s>      Give up after this many seconds (default 3600)

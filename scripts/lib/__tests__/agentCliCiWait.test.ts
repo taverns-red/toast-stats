@@ -134,6 +134,7 @@ describe('ciWait', () => {
   it('fails on a cancelled check unless --allow-cancelled', async () => {
     const runner = fakeRunner([
       [/^gh pr checks 2416 /, ok(JSON.stringify(CHECKS))],
+      [/^gh pr view 2416 /, ok('{"mergeStateStatus":"CLEAN"}')],
     ])
     const strict = await ciWait(2416, {
       repo: REPO,
@@ -191,6 +192,8 @@ describe('ciWait REST fallback when GraphQL is blocked (#2485)', () => {
   function restRunner(prChecks = fail(GRAPHQL_403)) {
     return fakeRunner([
       [/^gh pr checks 2482 /, prChecks],
+      // The merge state is not what these tests are about (#2905).
+      [/^gh pr view 2482 /, ok('{"mergeStateStatus":"CLEAN"}')],
       [
         /^gh api repos\/taverns-red\/toast-stats\/pulls\/2482$/,
         ok(fixture('pull-2482.json')),

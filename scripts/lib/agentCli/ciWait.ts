@@ -6,6 +6,8 @@
  *
  * Replaces the hand-written `sleep N; gh pr checks; break` loops that were
  * the largest measured cost in this repo's sessions (taverns-red/ops#148).
+ *
+ * PASS needs green checks and a mergeable PR (mergeStateStatus, #2905).
  */
 import { CommandError, runGhJson, runGhResult, type Runner } from './exec.js'
 import { assertRateLimitBudget, rateLimitAware } from './rateLimit.js'
@@ -216,6 +218,76 @@ export async function fetchPrChecksRest(
   }))
 }
 
+/**
+ * The PR's merge state (#2905). Green checks alone can lag: a title or body
+ * edit starts a new CI run whose gate isn't in the check list yet, while
+ * GitHub already shows the PR BLOCKED. `status` is GraphQL's
+ * `mergeStateStatus` (CLEAN, BLOCKED, BEHIND, DIRTY, DRAFT, HAS_HOOKS,
+ * UNSTABLE, UNKNOWN), or the REST `mergeable_state` upper-cased, which uses
+ * the same words.
+ */
+export interface MergeState {
+  status: string
+  headSha: string
+}
+
+/** States in which GitHub would let the PR merge, or it is a draft. */
+const MERGEABLE_STATES = new Set(['CLEAN', 'DRAFT', 'HAS_HOOKS', 'UNSTABLE'])
+
+export function mergeStateVerdict(
+  status: string
+): 'ok' | 'conflict' | 'waiting' {
+  if (MERGEABLE_STATES.has(status)) return 'ok'
+  return status === 'DIRTY' ? 'conflict' : 'waiting'
+}
+
+/**
+ * `gh pr view --json mergeStateStatus,headRefOid`, or, where GraphQL is
+ * blocked (cloud sessions, 403; #2485), the REST pull request's
+ * `mergeable_state`. Fields: GET /repos/{owner}/{repo}/pulls/{pull_number}
+ * https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request
+ * (`mergeable_state`: clean, blocked, behind, dirty, unstable, draft,
+ * has_hooks, unknown; `head.sha`). REST computes it lazily, so a first read
+ * can say `unknown`; ci-wait treats that as still waiting.
+ */
+export async function fetchMergeState(
+  pr: number,
+  opts: FetchOptions
+): Promise<MergeState> {
+  const gh = { runner: opts.runner, sleep: opts.sleep }
+  try {
+    const v = await runGhJson<{
+      mergeStateStatus?: string
+      headRefOid?: string
+    }>(
+      [
+        'pr',
+        'view',
+        String(pr),
+        '--repo',
+        opts.repo,
+        '--json',
+        'mergeStateStatus,headRefOid',
+      ],
+      gh
+    )
+    return {
+      status: (v.mergeStateStatus ?? 'UNKNOWN').toUpperCase(),
+      headSha: v.headRefOid ?? '',
+    }
+  } catch (err) {
+    if (!(err instanceof CommandError && isGraphQlBlocked(err))) throw err
+  }
+  const pull = await runGhJson<{
+    mergeable_state?: string | null
+    head?: { sha?: string }
+  }>(['api', `repos/${opts.repo}/pulls/${pr}`], gh)
+  return {
+    status: (pull.mergeable_state ?? 'unknown').toUpperCase(),
+    headSha: pull.head?.sha ?? '',
+  }
+}
+
 export type CiOutcome = 'pass' | 'fail' | 'pending'
 
 export interface CiWaitResult {
@@ -225,6 +297,8 @@ export interface CiWaitResult {
   waitedMs: number
   polls: number
   summary: CheckSummary
+  /** Set once the checks are done and none failed; absent before that. */
+  mergeState?: string
 }
 
 export interface CiWaitOptions extends FetchOptions {
@@ -276,6 +350,7 @@ export async function ciWait(
     polls++
     opts.onProgress?.(summary)
     const failing = isFailing(summary, allowCancelled)
+    let mergeState: string | undefined
     const finish = (outcome: CiOutcome, timedOut = false): CiWaitResult => ({
       pr,
       outcome,
@@ -283,8 +358,17 @@ export async function ciWait(
       waitedMs: now() - started,
       polls,
       summary,
+      ...(mergeState !== undefined && { mergeState }),
     })
-    if (summary.done) return finish(failing ? 'fail' : 'pass')
+    if (summary.done && failing) return finish('fail')
+    if (summary.done) {
+      // Green checks are not enough (#2905): GitHub must also allow a merge.
+      mergeState = (await fetchMergeState(pr, { ...opts, runner, sleep }))
+        .status
+      const verdict = mergeStateVerdict(mergeState)
+      if (verdict === 'ok') return finish('pass')
+      if (verdict === 'conflict') return finish('fail')
+    }
     if (opts.failFast && summary.failed > 0) return finish('fail')
     if (opts.once) return finish('pending')
     if (now() - started + interval > timeout) return finish('pending', true)
@@ -307,8 +391,19 @@ export function formatCiWait(r: CiWaitResult): string {
     `PR #${r.pr}: ${r.outcome.toUpperCase()}` +
     (r.timedOut ? ' (timed out waiting)' : '') +
     ` — ${s.passed} passed, ${s.failed} failed, ${s.cancelled} cancelled, ` +
-    `${s.pending} pending, ${s.skipped} skipped`
+    `${s.pending} pending, ${s.skipped} skipped` +
+    (r.mergeState ? `, merge state ${r.mergeState}` : '')
   const out = [head]
+  if (r.mergeState && mergeStateVerdict(r.mergeState) === 'conflict') {
+    out.push('merge conflicts: rebase or merge main into the branch')
+  } else if (r.mergeState && mergeStateVerdict(r.mergeState) === 'waiting') {
+    out.push(
+      `all checks passed, but GitHub reports the PR as ${r.mergeState}` +
+        (r.outcome === 'pending'
+          ? ' (a newer run or a required review may still be outstanding)'
+          : '')
+    )
+  }
   if (s.failures.length) out.push('failed:', ...s.failures.map(line))
   if (s.cancelledChecks.length)
     out.push('cancelled:', ...s.cancelledChecks.map(line))
