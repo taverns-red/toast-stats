@@ -9,8 +9,9 @@
  */
 import { describe, it, expect } from 'vitest'
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
 
 const ROOT = process.cwd()
 const SCRIPT = resolve(ROOT, 'scripts/agent-poll-guard.mjs')
@@ -35,6 +36,11 @@ const blocked = [
   'gh -R taverns-red/toast-stats pr checks 12 ; sleep 10',
   'sleep 5\ngh pr checks 12',
   'x=$(sleep 5; gh run view 9)',
+  'while ! gh pr checks 12 | grep -q pass; do sleep 30; done',
+  'sleep 30; GH_PAGER= gh pr checks 12',
+  'sleep 30; /opt/homebrew/bin/gh pr checks 12',
+  'sleep 30; echo `gh pr checks 12`',
+  'sleep 30; time gh run view 1',
 ]
 
 const allowed = [
@@ -67,6 +73,31 @@ describe('agent-poll-guard (#2895)', () => {
     expect(r.stderr).toContain('./bin/agent-cli ci-wait <pr>')
     expect(r.stderr).toContain('gh run watch <id> --interval 60')
     expect(r.stderr.trim().split('\n')).toHaveLength(1)
+  })
+
+  it('still blocks when started through a symlinked path', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'poll-guard-2895-'))
+    try {
+      const link = join(dir, 'link')
+      symlinkSync(ROOT, link)
+      const r = spawnSync(
+        'node',
+        [join(link, 'scripts/agent-poll-guard.mjs')],
+        {
+          input: JSON.stringify({
+            tool_name: 'Bash',
+            tool_input: {
+              command: 'while true; do gh pr checks 12; sleep 30; done',
+            },
+          }),
+          env: { PATH: process.env.PATH ?? '' },
+          encoding: 'utf8',
+        }
+      )
+      expect(r.status).toBe(2)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   it('ignores tools other than Bash', () => {
