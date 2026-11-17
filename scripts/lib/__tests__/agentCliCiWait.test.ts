@@ -129,7 +129,7 @@ describe('summarizeChecks', () => {
     expect(s).toMatchObject({ total: 1, passed: 1, skipped: 0 })
   })
 
-  it('a newer cancelled run does not hide an older failure (#2840)', () => {
+  it('a noop run skipped check does not hide an older failure (#2840)', () => {
     const s = summarizeChecks([
       check({
         bucket: 'fail',
@@ -137,12 +137,24 @@ describe('summarizeChecks', () => {
         startedAt: '2026-10-30T13:00:00Z',
       }),
       check({
+        bucket: 'skipping',
+        state: 'SKIPPED',
+        startedAt: '2026-10-30T13:30:00Z',
+      }),
+    ])
+    expect(s).toMatchObject({ total: 1, failed: 1, skipped: 0 })
+  })
+
+  it('a newer cancelled run still wins over an older pass, which may be a draft run (#2840)', () => {
+    const s = summarizeChecks([
+      check({ bucket: 'pass', startedAt: '2026-10-30T13:00:00Z' }),
+      check({
         bucket: 'cancel',
         state: 'CANCELLED',
         startedAt: '2026-10-30T13:30:00Z',
       }),
     ])
-    expect(s).toMatchObject({ total: 1, failed: 1, cancelled: 0 })
+    expect(s).toMatchObject({ total: 1, passed: 0, cancelled: 1 })
   })
 
   it('is not done while anything is pending, or before any check exists', () => {
