@@ -14,6 +14,15 @@
 // runs. They are rare, any pattern for them would be a guess, and the
 // ci-wait rate-limit check (#2892) is the real defence. This is a habit
 // stopper, not a boundary (see below).
+// `gh pr checks --watch` is refused even with `--interval 60`: CLAUDE.md bans
+// `gh pr checks` for waiting, and that repo rule wins over #2897's wording.
+// `-w` on `gh pr checks` is `--web`, so it is not matched.
+//
+// Known bypasses, all by design: a prefix before `gh` that the command-word
+// pattern does not skip (`command gh ...`, `env gh ...`, `nohup gh ...`,
+// `timeout 600 gh ...`, `exec gh ...`) and a quoted program name (`"gh" run
+// watch 1`). Aliases, scripts and `bash -c '...'` hide the call as well. The
+// guard is a habit stopper, not a boundary.
 //
 // Limitation: text inside quotes and heredoc bodies is ignored, so a commit
 // message or PR body that mentions the words passes. The flip side is that a
@@ -33,15 +42,43 @@ export const MESSAGE =
   '`./bin/agent-cli ci-wait <pr>` (60 s default), or for a run with no PR ' +
   '`gh run watch <id> --interval 60`.'
 
-/** Drop heredoc bodies and quoted strings, keeping the shell structure. */
+/**
+ * Drop heredoc bodies, quoted strings and `#` comments, and join backslash-
+ * newline continuations, keeping the shell structure.
+ */
 export function stripText(command) {
-  return String(command)
+  const text = String(command)
+    .replace(/\\\r?\n/g, ' ')
     .replace(
       /<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g,
       ' '
     )
-    .replace(/"(?:\\.|[^"\\])*"/g, '""')
-    .replace(/'[^']*'/g, "''")
+  let out = ''
+  let i = 0
+  while (i < text.length) {
+    const c = text[i]
+    if (c === '\\') {
+      out += text.slice(i, i + 2)
+      i += 2
+    } else if (c === '"' || c === "'") {
+      let j = i + 1
+      while (j < text.length && text[j] !== c)
+        j += c === '"' && text[j] === '\\' ? 2 : 1
+      if (j >= text.length) {
+        out += c // unterminated: keep it and carry on
+        i += 1
+      } else {
+        out += c + c
+        i = j + 1
+      }
+    } else if (c === '#' && (i === 0 || /[\s;&|(]/.test(text[i - 1]))) {
+      while (i < text.length && text[i] !== '\n') i += 1
+    } else {
+      out += c
+      i += 1
+    }
+  }
+  return out
 }
 
 // A command word: start of the command, or right after a separator, `(`,
@@ -64,32 +101,33 @@ export const WATCH_MESSAGE =
   'PR `gh run watch <id> --interval 60`.'
 
 // gh polls on its own: every 10 s for `pr checks --watch`, every 3 s for
-// `run watch`. Both are matched up to the end of the same shell command.
-const PR_CHECKS_WATCH = new RegExp(
-  CMD +
-    String.raw`gh\b[^;&|\n)]*?\bpr\s+checks\b[^;&|\n)]*?(?:\s--watch\b|\s-w\b)`
-)
-const RUN_WATCH = new RegExp(
-  CMD + String.raw`gh\b[^;&|\n)]*?\brun\s+watch\b([^;&|\n)]*)`
-)
-const INTERVAL = /\s(?:--interval|-i)(?:=|\s+)?(\S*)/
+// `run watch`. Each `gh` command is cut at the next separator and its
+// arguments are checked on their own, so the cost stays linear.
+const GH_COMMAND = new RegExp(CMD + String.raw`gh\b([^;&|\n)]*)`, 'g')
+const INTERVAL = /\s(?:--interval|-i)(?:=|\s+)?(\S*)/g
 const MIN_INTERVAL = 60
 
-/** True for `gh run watch` with no --interval, or one under 60 s. */
-function runWatchTooFast(s) {
-  const m = RUN_WATCH.exec(s)
-  if (!m) return false
-  const iv = INTERVAL.exec(m[1])
-  if (!iv) return true
-  const n = Number(iv[1].replace(/^=/, ''))
-  return !(Number.isFinite(n) && n >= MIN_INTERVAL)
+/** True for no --interval, or a last one that is not a plain number >= 60. */
+function intervalTooFast(args) {
+  let last = null
+  for (const m of args.matchAll(INTERVAL)) last = m[1]
+  if (last === null) return true
+  return !(/^[1-9]\d*$/.test(last) && Number(last) >= MIN_INTERVAL)
+}
+
+function pollsFast(args) {
+  if (/\bpr\s+checks\b/.test(args) && /\s--watch\b/.test(args)) return true
+  const w = /\brun\s+watch\b/.exec(args)
+  return w !== null && intervalTooFast(args.slice(w.index))
 }
 
 /** Returns the refusal message for a polling command, or null. */
 export function checkPolling(command) {
   const s = stripText(command)
   if (SLEEP.test(s) && GH_POLL.test(s)) return MESSAGE
-  if (PR_CHECKS_WATCH.test(s) || runWatchTooFast(s)) return WATCH_MESSAGE
+  for (const m of s.matchAll(GH_COMMAND)) {
+    if (pollsFast(m[1])) return WATCH_MESSAGE
+  }
   return null
 }
 
