@@ -109,6 +109,8 @@ export interface RestPull {
   head: { sha: string }
   state?: string
   mergeable_state?: string | null
+  /** True for a draft PR, whatever mergeable_state says (#2910). */
+  draft?: boolean
 }
 
 async function fetchPrChecksFull(
@@ -260,6 +262,11 @@ async function fetchPrChecksRestFull(
 export interface MergeState {
   status: string
   headSha: string
+  /**
+   * The PR is a draft. GitHub can report CLEAN for a draft (PR #2911), so
+   * this is read on its own and a draft is never mergeable (#2910).
+   */
+  draft: boolean
 }
 
 /** What the verdict on a merge state may depend on besides the state. */
@@ -316,6 +323,7 @@ function mergeStateFromPull(pull: RestPull): MergeState {
         ? 'CLOSED'
         : (pull.mergeable_state ?? 'unknown').toUpperCase(),
     headSha: pull.head?.sha ?? '',
+    draft: pull.draft === true,
   }
 }
 
@@ -338,6 +346,7 @@ export async function fetchMergeState(
       mergeStateStatus?: string
       headRefOid?: string
       state?: string
+      isDraft?: boolean
     }>(
       [
         'pr',
@@ -346,7 +355,7 @@ export async function fetchMergeState(
         '--repo',
         opts.repo,
         '--json',
-        'mergeStateStatus,headRefOid,state',
+        'mergeStateStatus,headRefOid,state,isDraft',
       ],
       gh
     )
@@ -357,6 +366,7 @@ export async function fetchMergeState(
           ? v.state
           : (v.mergeStateStatus ?? 'UNKNOWN').toUpperCase(),
       headSha: v.headRefOid ?? '',
+      draft: v.isDraft === true,
     }
   } catch (err) {
     if (!(err instanceof CommandError && isGraphQlBlocked(err))) throw err
@@ -381,6 +391,8 @@ export interface CiWaitResult {
   headSha?: string
   /** GitHub would let the PR merge now. False for a draft. */
   mergeable?: boolean
+  /** The PR is a draft (isDraft; REST: draft). */
+  draft?: boolean
   /** The head moved while the checks were being confirmed. */
   headMoved?: boolean
 }
@@ -469,7 +481,9 @@ export async function ciWait(
       ...(confirmed && {
         mergeState: confirmed.status,
         headSha: confirmed.headSha,
-        mergeable: !headMoved && isMergeable(confirmed.status, ctx),
+        mergeable:
+          !headMoved && !confirmed.draft && isMergeable(confirmed.status, ctx),
+        ...(confirmed.draft && { draft: true }),
         ...(headMoved && { headMoved }),
       }),
     })
@@ -508,7 +522,7 @@ export function formatCiWait(r: CiWaitResult): string {
     out.push('all checks passed, but the head commit moved while confirming')
   } else if (r.mergeState === 'DIRTY') {
     out.push('merge conflicts: rebase or merge main into the branch')
-  } else if (r.mergeState === 'DRAFT' && r.outcome === 'pass') {
+  } else if ((r.draft || r.mergeState === 'DRAFT') && r.outcome === 'pass') {
     out.push('draft: not mergeable yet')
   } else if (r.mergeState && r.outcome === 'pending') {
     out.push(
