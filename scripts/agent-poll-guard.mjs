@@ -22,7 +22,6 @@
 // convenience, not the cloud guard).
 
 import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
 
 export const MESSAGE =
   'Do not poll CI with sleep and gh pr checks or gh run view: wait with ' +
@@ -71,4 +70,4 @@ function main() {
   process.exit(0)
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main()
+main()
