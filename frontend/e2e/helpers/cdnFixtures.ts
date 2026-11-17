@@ -8,7 +8,7 @@
  *
  * This is a CONTEXT route, so a spec's own `page.route` still wins, and it
  * covers popups and both engines. It answers both CDN origins (staging, and
- * prod for the how-to videos, #2570) and never forwards a request to either: a
+ * prod for the how-to videos only, #2570, #2855) and never forwards a request to either: a
  * path with no fixture is aborted and listed, and the test fails at teardown
  * (describeFixtureProblems), so a gap cannot quietly keep the cost.
  *
@@ -49,6 +49,8 @@ export interface CdnFixtureTally {
   misses: string[]
   /** Paths whose response came off the network (it must stay empty). */
   leaks: string[]
+  /** Prod-origin paths outside `videos/`: aborted, never served (#2855). */
+  prodReads: string[]
   /** Record mode: every path passed through. */
   recorded: string[]
 }
@@ -93,6 +95,19 @@ export function fixturePath(
   }
   if (path === '' || path.split('/').some(part => part === '..')) return null
   return path
+}
+
+/**
+ * The one prod read the shards need is the how-to videos (#2570). Any other
+ * prod path is a data read that should have gone to staging; answering it
+ * from the staging fixture would let the mistake pass (#2855).
+ */
+export const PROD_FIXTURE_PREFIX = 'videos/'
+
+/** True when `url` is on the prod CDN origin and outside `videos/`. */
+export function isProdReadOutsideVideos(url: string): boolean {
+  const path = fixturePath(url, CDN_PROD_ORIGIN)
+  return path !== null && !path.startsWith(PROD_FIXTURE_PREFIX)
 }
 
 /** The object path a URL names under any CDN origin; null for none. */
@@ -151,6 +166,12 @@ export function describeFixtureProblems(tally: CdnFixtureTally): string | null {
       'Add each to scripts/smoke-fixtures.manifest.json (see frontend/e2e/fixtures/README.md).'
     )
   }
+  if (tally.prodReads.length > 0) {
+    lines.push(
+      `${tally.prodReads.length} request(s) read cdn.taverns.red outside ${PROD_FIXTURE_PREFIX}: ${tally.prodReads.join(', ')}.`,
+      'The shards build against staging and answer prod for the how-to videos only: find the hard-coded prod URL or VITE_CDN_BASE_URL.'
+    )
+  }
   if (tally.leaks.length > 0) {
     lines.push(
       `${tally.leaks.length} request(s) reached cdn-staging or cdn.taverns.red despite the fixture: ${tally.leaks.join(', ')}.`
@@ -172,6 +193,7 @@ export async function installCdnFixtures(
     hits: [],
     misses: [],
     leaks: [],
+    prodReads: [],
     recorded: [],
   }
   const record = options.recordFile
@@ -198,6 +220,11 @@ export async function installCdnFixtures(
 
       if (request.method() === 'OPTIONS') {
         await route.fulfill({ status: 204, headers: CORS })
+        return
+      }
+      if (isProdReadOutsideVideos(request.url())) {
+        if (path && !tally.prodReads.includes(path)) tally.prodReads.push(path)
+        await route.abort()
         return
       }
       const entry = path ? index[path] : undefined
@@ -296,11 +323,15 @@ export async function fixtureGet(
   const dir = env['SMOKE_FIXTURES_DIR']
   if (!dir) return live()
   const root = resolve(dir)
-  const path = cdnPath(url)
+  const path = isProdReadOutsideVideos(url) ? null : cdnPath(url)
   const entry = path ? readIndex(root)[path] : undefined
   const file = path ? resolve(root, path) : ''
   if (!path || !entry || !file.startsWith(root + sep)) {
-    throw new Error(`No CDN fixture for ${path ?? url}`)
+    throw new Error(
+      isProdReadOutsideVideos(url)
+        ? `Prod CDN read outside ${PROD_FIXTURE_PREFIX}: ${url}`
+        : `No CDN fixture for ${path ?? url}`
+    )
   }
   const body = readFileSync(file)
   return {
