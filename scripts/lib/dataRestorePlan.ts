@@ -80,9 +80,35 @@ export interface RemovalRecord {
   kind: 'gap' | 'prune'
 }
 
-/** Parse runs/<id>/prod-removed.jsonl. Absent or empty text is no record. */
-export function parseRemovalRecord(_jsonl: string): RemovalRecord[] {
-  return []
+/**
+ * Parse runs/<id>/prod-removed.jsonl, one `{"path","kind"[,"date"]}` per line.
+ * Absent or empty text is no record (a run that removed nothing publishes
+ * none). A line that is not a valid record refuses: reading it as "nothing
+ * removed" would turn a deliberate removal into an unexplained, restorable one.
+ */
+export function parseRemovalRecord(jsonl: string): RemovalRecord[] {
+  const out: RemovalRecord[] = []
+  jsonl.split('\n').forEach((line, i) => {
+    if (line.trim() === '') return
+    let v: unknown
+    try {
+      v = JSON.parse(line)
+    } catch {
+      throw new RestorePlanError(`removal record line ${i + 1} is not JSON`)
+    }
+    const path = isRecord(v) ? v['path'] : undefined
+    const kind = isRecord(v) ? v['kind'] : undefined
+    if (typeof path !== 'string' || path === '') {
+      throw new RestorePlanError(`removal record line ${i + 1} has no path`)
+    }
+    if (kind !== 'gap' && kind !== 'prune') {
+      throw new RestorePlanError(
+        `removal record line ${i + 1} has an unknown kind`
+      )
+    }
+    out.push({ path, kind })
+  })
+  return out
 }
 
 export interface RestorePlan {
@@ -318,6 +344,71 @@ function planOne(
   }
 }
 
+/** The entry for one object the run removed from prod on purpose. */
+function recordedEntry(r: RemovalRecord): PlanEntry {
+  return r.kind === 'gap'
+    ? {
+        name: r.path,
+        action: 'excluded',
+        liveGeneration: '0',
+        reason:
+          'removed on purpose (#2232 gap district, 0-club junk), recorded when the run removed it: not restored',
+      }
+    : {
+        name: r.path,
+        action: 'manual',
+        liveGeneration: '0',
+        reason:
+          'removed by a prune reconcile, recorded when the run removed it: not restorable automatically, a person decides',
+      }
+}
+
+/** Whether the record names this object: exactly, or by a pruned prefix. */
+function isRecorded(name: string, removals: RemovalRecord[]): boolean {
+  return removals.some(r =>
+    r.path.endsWith('/') ? name.startsWith(r.path) : name === r.path
+  )
+}
+
+/**
+ * A name the run wrote that has no live object in prod but was soft-deleted
+ * inside the run window, and is not in the removal record: an unexplained
+ * deletion. Restored (the newest copy, while the name is still empty) unless
+ * that copy was created inside the run itself, which refuses. Nothing here
+ * looks at what the object held: only the record says a removal was on purpose.
+ * A name with no soft-deleted copy in the window yields no entry: it never
+ * reached prod (a held date), or was deleted outside this run.
+ */
+function planDeleted(
+  name: string,
+  copies: ObjectCopy[],
+  sinceMs: number,
+  untilMs: number
+): PlanEntry | null {
+  const inWindow = copies
+    .filter(c => c.softDeleteTime !== undefined)
+    .map(c => ({ c, at: instant(c.softDeleteTime as string, name) }))
+    .filter(x => x.at >= sinceMs && x.at <= untilMs)
+    .sort((a, b) => b.at - a.at)
+  const newest = inWindow[0]?.c
+  if (!newest) return null
+  const base = { name, liveGeneration: '0' }
+  if (instant(newest.timeCreated, name) >= sinceMs) {
+    return {
+      ...base,
+      action: 'refuse',
+      reason: `generation ${newest.generation} was created by the run itself and deleted from prod: not in the removal record, and there is no earlier copy to put back`,
+    }
+  }
+  return {
+    ...base,
+    action: 'restore',
+    generation: newest.generation,
+    ...(newest.hardDeleteTime ? { hardDeleteTime: newest.hardDeleteTime } : {}),
+    reason: `generation ${newest.generation} was deleted from prod at ${newest.softDeleteTime} and is not in the removal record: an unexplained deletion`,
+  }
+}
+
 export function planRestore(input: {
   live: ObjectCopy[]
   softDeleted: ObjectCopy[]
@@ -348,6 +439,17 @@ export function planRestore(input: {
   for (const c of input.softDeleted) {
     byName.set(c.name, [...(byName.get(c.name) ?? []), c])
   }
+  const removals = input.removals ?? []
+  const liveNames = new Set(input.live.map(o => o.name))
+  const recorded = [
+    ...new Map(removals.map(r => [r.path, r] as const)).values(),
+  ].map(recordedEntry)
+  // Names the run wrote with no live object in prod: unexplained unless the
+  // removal record names them.
+  const deleted = [...(only ?? [])]
+    .filter(n => !liveNames.has(n) && !isRecorded(n, removals))
+    .map(n => planDeleted(n, byName.get(n) ?? [], sinceMs, untilMs))
+    .filter((e): e is PlanEntry => e !== null)
   const entries = input.live
     .filter(o => !only || only.has(o.name))
     .map(o =>
@@ -359,6 +461,7 @@ export function planRestore(input: {
         input.softDeleted.length === 0
       )
     )
+    .concat(deleted)
     .map(e =>
       expired && (e.action === 'restore' || e.action === 'delete')
         ? ({
@@ -369,6 +472,7 @@ export function planRestore(input: {
           } as PlanEntry)
         : e
     )
+    .concat(recorded)
     .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
   return {
     version: 1,

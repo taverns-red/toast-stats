@@ -98,6 +98,40 @@ const without = (args: string[], flag: string): string[] => {
   return a
 }
 
+describe('plan-data-restore CLI: --removals (#2856)', () => {
+  const RECORD =
+    '{"path":"snapshots/2026-10-10/district_U.json","kind":"gap","date":"2026-10-10"}\n'
+
+  it('lists a recorded removal as excluded, and never as a restore', () => {
+    const r = cli([...planArgs(), '--removals', file('r.jsonl', RECORD)])
+    expect(r.status, r.stderr).toBe(0)
+    const plan = JSON.parse(r.stdout) as {
+      entries: Array<{ name: string; action: string }>
+    }
+    expect(plan.entries.find(e => e.action === 'excluded')?.name).toBe(
+      'snapshots/2026-10-10/district_U.json'
+    )
+  })
+
+  it('plans without the flag: a run that removed nothing has no record', () => {
+    const r = cli(planArgs())
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stdout).not.toContain('excluded')
+  })
+
+  it('refuses a record that is not valid rather than reading it as empty', () => {
+    const r = cli([...planArgs(), '--removals', file('bad.jsonl', 'oops\n')])
+    expect(r.status).toBe(1)
+    expect(r.stdout).toBe('')
+    expect(r.stderr).toMatch(/removal record/)
+  })
+
+  it('refuses a record file that cannot be read', () => {
+    const r = cli([...planArgs(), '--removals', path.join(tmp, 'absent.jsonl')])
+    expect(r.status).toBe(1)
+  })
+})
+
 describe('plan-data-restore CLI', () => {
   it('plans when an errors file holds only "matched no objects" lines', () => {
     softErr = file('soft2.err', NONE + NONE)

@@ -8,7 +8,8 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process'
-import { appendFileSync, readFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, readFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { planBucketGapRemovals } from './gapRemovalIo.js'
 import {
   MAX_SOURCES_PER_COPY,
@@ -156,6 +157,36 @@ export async function runPromoteRunManifest(
       })
       child.on('close', code => resolve(code === 0))
     })
+
+  /**
+   * The prod removal record (#2856): one line per object or prefix this run
+   * removes from prod on purpose, appended BEFORE the removal so a removal
+   * that fails part way is still on record. The workflow publishes it to
+   * runs/<id>/prod-removed.jsonl; the restore plan reads it, and a prod
+   * deletion that is not in it is unexplained and restorable.
+   */
+  const recordRemovals = (
+    items: ReadonlyArray<{ path: string; kind: 'gap' | 'prune' }>
+  ) => {
+    const file = env.PROD_REMOVALS_FILE
+    if (!file || items.length === 0) return
+    mkdirSync(dirname(file), { recursive: true })
+    appendFileSync(
+      file,
+      items
+        .map(i =>
+          JSON.stringify({
+            path: i.path,
+            kind: i.kind,
+            date:
+              /^(?:snapshots|raw-csv)\/(\d{4}-\d{2}-\d{2})(?:\/|$)/.exec(
+                i.path
+              )?.[1] ?? null,
+          })
+        )
+        .join('\n') + '\n'
+    )
+  }
 
   /** One phase's batches, `concurrency` at a time; stop at the first failure. */
   const runPhase = async (
@@ -343,6 +374,20 @@ export async function runPromoteRunManifest(
     return plan.deletes.paths.length > 0 ? 1 : 0
   }
 
+  // A removal with nowhere to record it is refused, before any copy: it
+  // would read as an unexplained deletion and be restored (#2856), the same
+  // rule scripts/pipeline/gcs-remove.sh holds for staging (#2232).
+  if (
+    !env.PROD_REMOVALS_FILE &&
+    ((plan.deletes.promote && plan.deletes.paths.length > 0) ||
+      removalsPlanned > 0)
+  ) {
+    log(
+      '::error title=Prod removals::PROD_REMOVALS_FILE is not set; refusing an unrecorded removal from prod (#2856) — nothing promoted'
+    )
+    return 2
+  }
+
   const concurrency = Number(env.PROMOTE_CONCURRENCY) || 4
   let copied = 0
   let ok = true
@@ -368,6 +413,9 @@ export async function runPromoteRunManifest(
   let deleted = 0
   const runDeletes = ok && plan.deletes.promote
   if (runDeletes) {
+    recordRemovals(
+      plan.deletes.paths.map(prefix => ({ path: `${prefix}/`, kind: 'prune' }))
+    )
     for (const prefix of plan.deletes.paths) {
       if (await deletePrefix(prefix, prod)) deleted++
       else
@@ -389,6 +437,9 @@ export async function runPromoteRunManifest(
   let removalsOk = !removalError
   if (ok) {
     for (const r of removals) {
+      recordRemovals(
+        r.remove.map(n => ({ path: `snapshots/${r.date}/${n}`, kind: 'gap' }))
+      )
       const groups = [
         r.remove.filter(n => n.startsWith('analytics/')),
         r.remove.filter(n => !n.startsWith('analytics/')),

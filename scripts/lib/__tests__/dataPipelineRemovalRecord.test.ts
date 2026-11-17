@@ -78,7 +78,9 @@ describe('both restore jobs read the record into the plan (#2856)', () => {
     '%s job: reads it and passes it to the planner',
     (job, id) => {
       const s = planStep(job!, id!)
-      expect(s.run).toMatch(/prod-removed\.jsonl/)
+      expect(s.run).toMatch(
+        /read-prod-removals\.sh[^\n]*\$\{W\}\/removed\.jsonl/
+      )
       expect(s.run).toMatch(/plan-data-restore\.ts[^]*--removals/)
     }
   )
@@ -88,7 +90,9 @@ describe('both restore jobs read the record into the plan (#2856)', () => {
     (job, id) => {
       // Absent is an empty record; a read failure is not (it would turn a
       // deliberate removal into an unexplained, restorable one).
-      expect(planStep(job!, id!).run).toMatch(/matched no objects/)
+      // The reading, and the absent-versus-unreadable rule, are in
+      // scripts/pipeline/read-prod-removals.sh (readProdRemovals.test.ts).
+      expect(planStep(job!, id!).run).toMatch(/read-prod-removals\.sh/)
     }
   )
 

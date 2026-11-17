@@ -94,6 +94,25 @@ export function manifestPaths(jsonl: string): string[] {
   return [...out].sort()
 }
 
+/**
+ * The pipeline run modes whose publish a restore may undo (#2856, COO
+ * decision 3). Every other mode (proof and backfill runs, rescrapes, prune)
+ * gets a plan only. Exact match: an unknown, empty or differently cased mode
+ * does not execute.
+ */
+const EXECUTABLE_RUN_MODES: readonly string[] = ['daily', 'rebuild']
+
+export function runModeMayExecute(runMode: string | undefined): boolean {
+  return runMode !== undefined && EXECUTABLE_RUN_MODES.includes(runMode)
+}
+
+const modeRefusal = (runMode: string | undefined): RestoreDecision => ({
+  action: 'mode-refused',
+  execute: false,
+  fileIssue: true,
+  reason: `run mode ${runMode ? `\`${runMode}\`` : '(unknown)'}: a restore executes only for daily and rebuild runs; this run gets a plan only`,
+})
+
 const acts = (e: PlanEntry): boolean =>
   e.action === 'restore' || e.action === 'delete'
 
@@ -157,6 +176,7 @@ export function decideRestore(input: {
     }
   }
   if (mode === 'execute') {
+    if (!runModeMayExecute(input.runMode)) return modeRefusal(input.runMode)
     return {
       action: 'execute',
       execute: true,
@@ -238,6 +258,26 @@ function table(entries: PlanEntry[], cap: number, restore: boolean): string[] {
   return [...head, ...rows, ...more]
 }
 
+/** ", N removed on purpose, M not restorable automatically", or nothing. */
+function removalCounts(excluded: number, manual: number): string {
+  return (
+    (excluded > 0 ? `, ${excluded} removed on purpose` : '') +
+    (manual > 0 ? `, ${manual} not restorable automatically` : '')
+  )
+}
+
+/** Objects the run's removal record names: no generation columns apply. */
+function removalTable(entries: PlanEntry[], cap: number): string[] {
+  const rows = entries
+    .slice(0, cap)
+    .map(e => `| ${nameCell(e.name)} | ${cell(e.reason)} |`)
+  const more =
+    entries.length > cap
+      ? [``, `…and ${entries.length - cap} more (full plan in the artifact).`]
+      : []
+  return ['| Object | Why |', '|---|---|', ...rows, ...more]
+}
+
 interface ListCaps {
   restores: number
   deletes: number
@@ -266,7 +306,7 @@ function planSectionLines(
     '',
     `Window: ${plan.since} to ${plan.until}. Bucket: \`${plan.bucket}\`.`,
     '',
-    `${plan.entries.length} object(s) from the run manifest: ${by('restore').length} to restore, ${by('delete').length} to delete (created by the run), ${by('noop').length} untouched, ${by('refuse').length} refused.`,
+    `${plan.entries.length} object(s) from the run manifest and its removal record: ${by('restore').length} to restore, ${by('delete').length} to delete (created by the run), ${by('noop').length} untouched, ${by('refuse').length} refused${removalCounts(by('excluded').length, by('manual').length)}.`,
     '',
     `The full plan is attached to the run as an artifact (\`${artifact}\`).`,
     ''
@@ -276,6 +316,22 @@ function planSectionLines(
       '### Refused (nothing was executed)',
       '',
       ...table(by('refuse'), caps.refused, false),
+      ''
+    )
+  }
+  if (by('manual').length > 0) {
+    L.push(
+      '### Prune deletes (not restorable automatically: a person decides)',
+      '',
+      ...removalTable(by('manual'), caps.deletes),
+      ''
+    )
+  }
+  if (by('excluded').length > 0) {
+    L.push(
+      '### Removed on purpose (not restored)',
+      '',
+      ...removalTable(by('excluded'), caps.deletes),
       ''
     )
   }
@@ -459,6 +515,7 @@ export function decideIntent(i: IntentInput): RestoreDecision {
     }
   }
   if (i.mode === 'execute') {
+    if (!runModeMayExecute(i.runMode)) return modeRefusal(i.runMode)
     return {
       action: 'execute',
       execute: true,
@@ -493,6 +550,7 @@ export interface DecisionIssueContext {
 const ENUM_ERROR_CLASSES = [
   'auth-failed',
   'manifest-unreadable',
+  'removal-record-unreadable',
   'no-in-scope-objects',
   'listing-failed',
   'plan-refused',
@@ -566,6 +624,7 @@ export function buildDecisionIssueBody(c: DecisionIssueContext): string {
 
 function decisionIssueBody(c: DecisionIssueContext, caps: ListCaps): string {
   const manifest = `gs://${c.stagingBucket}/runs/${c.runId}/written.jsonl`
+  const removalRecord = `gs://${c.stagingBucket}/runs/${c.runId}/prod-removed.jsonl`
   const since = c.promoteStarted || '<promotion start>'
   const until = c.windowEnd || '<smoke end>'
   const started = c.decision.execute
@@ -588,9 +647,10 @@ function decisionIssueBody(c: DecisionIssueContext, caps: ListCaps): string {
       '',
       '```',
       `gcloud storage cat ${manifest} > written.jsonl`,
+      `gcloud storage cat ${removalRecord} > removed.jsonl   # skip if the run removed nothing from prod; then use an empty file`,
       'npx tsx scripts/data-auto-restore.ts paths --manifest written.jsonl --out paths.txt',
       `PROD_BUCKET=${c.prodBucket} bash scripts/pipeline/list-restore-candidates.sh out paths.txt`,
-      `npx tsx scripts/plan-data-restore.ts --live out/live.json --soft-deleted out/soft.json --live-errors out/live.err --soft-errors out/soft.err --since ${since} --until ${until} --paths paths.txt --out plan.json`,
+      `npx tsx scripts/plan-data-restore.ts --live out/live.json --soft-deleted out/soft.json --live-errors out/live.err --soft-errors out/soft.err --since ${since} --until ${until} --paths paths.txt --removals removed.jsonl --out plan.json`,
       '```',
       '',
       ...enumerationLines(c.enumeration, caps),

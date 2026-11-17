@@ -103,6 +103,8 @@ function runEnv(env: Record<string, string> = {}) {
     GCS_BUCKET: STG,
     GCS_BUCKET_PRODUCTION: PROD,
     RUN_MANIFEST_FILE: manifestFile,
+    // A removal from prod is refused without a record file (#2856).
+    PROD_REMOVALS_FILE: path.join(tmp, 'default-prod-removed.jsonl'),
     COMPLETENESS_GATE_FILE: gateFile,
     GITHUB_OUTPUT: outputFile,
     GITHUB_STEP_SUMMARY: path.join(tmp, 'summary.md'),

@@ -259,6 +259,7 @@ describe('decideRestore: only a decode or validation failure may execute', () =>
         unhealthy: true,
         restoreEligible: true,
         mode: 'execute',
+        runMode: 'daily',
         plan: clean,
       }).execute
     ).toBe(true)

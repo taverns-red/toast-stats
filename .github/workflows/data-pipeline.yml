@@ -192,6 +192,14 @@ env:
   # the pipeline job and, for its sidecar dates, the promote-reports job;
   # reports sidecars are never removed). Absent when nothing was removed.
   RUN_REMOVALS_FILE: '/tmp/run-manifest/removed.jsonl'
+  # The prod removal record (#2856): one JSON line per prod object or prefix the
+  # promoter removes on purpose (a prune reconcile's date prefixes, a #2232 gap
+  # district's objects), appended BEFORE each removal by
+  # scripts/promote-run-manifest.ts; published to
+  # runs/<github_run_id>/prod-removed.jsonl. The restore plan reads it: a
+  # recorded removal is never restored, a prod deletion missing from it is.
+  # Absent when nothing was removed from prod.
+  PROD_REMOVALS_FILE: '/tmp/run-manifest/prod-removed.jsonl'
   # The education ledger seed (#2102): restored from the Actions cache before
   # each rollup build. scripts/pipeline/build-education-rollup.sh verifies it
   # against raw-education-ledger/ and downloads only what differs.
@@ -2089,6 +2097,23 @@ jobs:
           fi
           npx tsx scripts/promote-run-manifest.ts --execute
 
+      # The prod removal record (#2856): what the promoter removed from prod on
+      # purpose, written before each removal. Published to the run folder in
+      # STAGING (nothing here touches prod) so the restore plan can tell a
+      # deliberate removal from an unexplained deletion. After a failed promote
+      # too: a removal that failed part way is still on record.
+      - name: Publish prod removal record (#2856)
+        id: prodremovals
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -s "${PROD_REMOVALS_FILE}" ]; then
+            gcloud storage cp --content-type="application/x-ndjson" \
+              "${PROD_REMOVALS_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/prod-removed.jsonl"
+            echo "- **Prod objects removed on purpose (#2856)**: $(wc -l < "${PROD_REMOVALS_FILE}" | tr -d ' ') → \`runs/${GITHUB_RUN_ID}/prod-removed.jsonl\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No prod removals recorded; nothing to publish"
+          fi
+
       # Purge the Cloud CDN edge so freshly-promoted data is served immediately
       # (#1294). Without this, cdn.taverns.red keeps the previous objects until
       # their max-age TTL expires (~1h), making a successful promotion look
@@ -3306,6 +3331,22 @@ jobs:
           COMPLETENESS_GATE_FILE: ${{ env.REPORT_SIDECAR_VERDICT_FILE }}
         run: npx tsx scripts/promote-run-manifest.ts --execute
 
+      # The prod removal record of this job's promote (#2856): the same gap
+      # removals as the pipeline job's (#2232), recorded before each one.
+      # Its own object, runs/<id>/prod-removed-reports.jsonl, since the
+      # pipeline job's file lives on another runner; the restore plan reads both.
+      - name: Publish prod removal record (#2856)
+        id: prodremovals
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -s "${PROD_REMOVALS_FILE}" ]; then
+            gcloud storage cp --content-type="application/x-ndjson" \
+              "${PROD_REMOVALS_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/prod-removed-reports.jsonl"
+            echo "- **Prod objects removed on purpose (#2856)**: $(wc -l < "${PROD_REMOVALS_FILE}" | tr -d ' ') → \`runs/${GITHUB_RUN_ID}/prod-removed-reports.jsonl\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No prod removals recorded; nothing to publish"
+          fi
+
       # ── Report-sidecar promotion-held alert (#2227) ──
       # The main promotion's flow (#1073, scripts/promotion-alert.ts), scoped
       # to the sidecars: a content hold files or refreshes its own
@@ -3683,6 +3724,8 @@ jobs:
           npx tsx scripts/data-auto-restore.ts paths --manifest "${W}/written.jsonl" --out "${W}/paths.txt" || rc=$?
           if [ "${rc}" -eq 1 ]; then fail no-in-scope-objects; fi
           if [ "${rc}" -ne 0 ]; then fail manifest-unreadable; fi
+          # The prod removal record (#2856): absent is empty, unreadable stops the plan
+          bash scripts/pipeline/read-prod-removals.sh "${GCS_BUCKET}" "${GITHUB_RUN_ID}" "${W}/removed.jsonl" || fail removal-record-unreadable
           bash scripts/pipeline/list-restore-candidates.sh "${W}" "${W}/paths.txt" || fail listing-failed
           # The planner's stderr goes to the log, and the CLI reads it only to
           # pick a fixed class (refused plan, listing failure or other).
@@ -3691,7 +3734,8 @@ jobs:
             --live "${W}/live.json" --soft-deleted "${W}/soft.json" \
             --live-errors "${W}/live.err" --soft-errors "${W}/soft.err" \
             --since "${PROMOTE_STARTED}" --until "${WINDOW_END}" \
-            --paths "${W}/paths.txt" --out "${W}/plan.json" 2> "${W}/plan.err" || rc=$?
+            --paths "${W}/paths.txt" --removals "${W}/removed.jsonl" \
+            --out "${W}/plan.json" 2> "${W}/plan.err" || rc=$?
           cat "${W}/plan.err" >&2
           if [ "${rc}" -ne 0 ]; then
             npx tsx scripts/data-auto-restore.ts plan-failure \
@@ -3718,6 +3762,8 @@ jobs:
         run: npx tsx scripts/data-auto-restore.ts intent
         env:
           DATA_AUTO_RESTORE: ${{ vars.DATA_AUTO_RESTORE }}
+          # Execute applies only to daily and rebuild runs (#2856).
+          RUN_MODE: ${{ needs.pipeline.outputs.mode }}
           UNHEALTHY: ${{ needs.data-smoke.outputs.unhealthy }}
           RESTORE_ELIGIBLE: ${{ needs.data-smoke.outputs.restore_eligible }}
           RESTORE_REASON: ${{ needs.data-smoke.outputs.restore_reason }}
@@ -3831,12 +3877,15 @@ jobs:
           mkdir -p "${W}"
           gcloud storage cat "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/written.jsonl" > "${W}/written.jsonl"
           npx tsx scripts/data-auto-restore.ts paths --manifest "${W}/written.jsonl" --out "${W}/paths.txt"
+          # The prod removal record (#2856): absent is empty, unreadable stops the plan
+          bash scripts/pipeline/read-prod-removals.sh "${GCS_BUCKET}" "${GITHUB_RUN_ID}" "${W}/removed.jsonl"
           bash scripts/pipeline/list-restore-candidates.sh "${W}" "${W}/paths.txt"
           npx tsx scripts/plan-data-restore.ts \
             --live "${W}/live.json" --soft-deleted "${W}/soft.json" \
             --live-errors "${W}/live.err" --soft-errors "${W}/soft.err" \
             --since "${PROMOTE_STARTED}" --until "${WINDOW_END}" \
-            --paths "${W}/paths.txt" --out "${W}/plan.json"
+            --paths "${W}/paths.txt" --removals "${W}/removed.jsonl" \
+            --out "${W}/plan.json"
 
       - name: Decide whether to restore
         id: decide
@@ -3844,6 +3893,8 @@ jobs:
         run: npx tsx scripts/data-auto-restore.ts decide --plan "${RUNNER_TEMP}/data-restore/plan.json"
         env:
           DATA_AUTO_RESTORE: ${{ vars.DATA_AUTO_RESTORE }}
+          # Execute applies only to daily and rebuild runs (#2856).
+          RUN_MODE: ${{ needs.pipeline.outputs.mode }}
           UNHEALTHY: ${{ needs.data-smoke.outputs.unhealthy }}
           RESTORE_ELIGIBLE: ${{ needs.data-smoke.outputs.restore_eligible }}
           RESTORE_REASON: ${{ needs.data-smoke.outputs.restore_reason }}
@@ -3866,7 +3917,8 @@ jobs:
           bash scripts/pipeline/list-restore-candidates.sh "${W}/exec" "${W}/paths.txt"
           npx tsx scripts/plan-data-restore.ts --execute --plan "${W}/plan.json" \
             --live "${W}/exec/live.json" --soft-deleted "${W}/exec/soft.json" \
-            --live-errors "${W}/exec/live.err" --soft-errors "${W}/exec/soft.err"
+            --live-errors "${W}/exec/live.err" --soft-errors "${W}/exec/soft.err" \
+            --removals "${W}/removed.jsonl"
 
       # WRITE (the edge cache only). Also after a partial restore.
       - name: Purge the CDN after the restore
@@ -3901,6 +3953,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           DATA_AUTO_RESTORE: ${{ vars.DATA_AUTO_RESTORE }}
+          RUN_MODE: ${{ needs.pipeline.outputs.mode }}
           UNHEALTHY: ${{ needs.data-smoke.outputs.unhealthy }}
           RESTORE_ELIGIBLE: ${{ needs.data-smoke.outputs.restore_eligible }}
           RESTORE_REASON: ${{ needs.data-smoke.outputs.restore_reason }}

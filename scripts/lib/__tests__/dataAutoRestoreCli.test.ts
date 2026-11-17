@@ -249,10 +249,35 @@ describe('decide', () => {
     expect(dry.outputs['action']).toBe('plan-only')
     const live = run(['decide', '--plan', plan], {
       DATA_AUTO_RESTORE: 'execute',
+      RUN_MODE: 'daily',
       UNHEALTHY: 'true',
       RESTORE_ELIGIBLE: 'true',
     })
     expect(live.outputs['execute']).toBe('true')
+  })
+
+  it('execute mode in a run mode other than daily and rebuild plans only (#2856)', () => {
+    const plan = file('plan.json', planOf([entry('v1/latest.json', 'restore')]))
+    for (const runMode of ['prune', 'rescrape', 'backfill-global-totals', '']) {
+      const r = run(['decide', '--plan', plan], {
+        DATA_AUTO_RESTORE: 'execute',
+        RUN_MODE: runMode,
+        UNHEALTHY: 'true',
+        RESTORE_ELIGIBLE: 'true',
+      })
+      expect(r.outputs['execute'], runMode).toBe('false')
+      expect(r.outputs['action'], runMode).toBe('mode-refused')
+      expect(r.outputs['file_issue'], runMode).toBe('true')
+    }
+    // rebuild may execute
+    expect(
+      run(['decide', '--plan', plan], {
+        DATA_AUTO_RESTORE: 'execute',
+        RUN_MODE: 'rebuild',
+        UNHEALTHY: 'true',
+        RESTORE_ELIGIBLE: 'true',
+      }).outputs['execute']
+    ).toBe('true')
   })
 
   it('execute mode with a verdict that is not eligible never executes', () => {
@@ -288,6 +313,7 @@ describe('intent: the token-free decision, no plan needed', () => {
     RESTORE_REASON: '',
     RUN_URL: 'https://github.com/x/y/actions/runs/777',
     GITHUB_RUN_ID: '777',
+    RUN_MODE: 'daily',
     FAILED: 'the schema check',
     PROMOTE_STARTED: '2026-11-14T10:00:00Z',
     WINDOW_END: '2026-11-14T10:40:00Z',
@@ -299,6 +325,19 @@ describe('intent: the token-free decision, no plan needed', () => {
     expect(r.outputs['execute']).toBe('true')
     expect(r.outputs['file_issue']).toBe('true')
     expect(r.outputs['action']).toBe('execute')
+  })
+
+  it('a run mode other than daily and rebuild never executes, and says why (#2856)', () => {
+    for (const runMode of ['prune', 'rescrape-historical', '']) {
+      const r = run(['intent'], {
+        ...env,
+        RUN_MODE: runMode,
+        DATA_AUTO_RESTORE: 'execute',
+      })
+      expect(r.outputs['execute'], runMode).toBe('false')
+      expect(r.outputs['action'], runMode).toBe('mode-refused')
+      expect(r.outputs['file_issue'], runMode).toBe('true')
+    }
   })
 
   it('unset, dry-run and off never execute, and still file the issue', () => {
