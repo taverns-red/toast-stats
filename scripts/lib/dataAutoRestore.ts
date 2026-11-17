@@ -26,6 +26,7 @@ export type RestoreAction =
   | 'nothing-to-do'
   | 'not-eligible'
   | 'dry-run'
+  | 'mode-refused'
 
 export interface RestoreDecision {
   action: RestoreAction
@@ -102,6 +103,8 @@ export function decideRestore(input: {
   restoreEligible: boolean
   ineligibleReason?: string
   mode: RestoreMode
+  /** The pipeline run mode (daily, rebuild, prune...). */
+  runMode?: string
   plan: RestorePlan | null
 }): RestoreDecision {
   const { unhealthy, mode, plan } = input
@@ -420,6 +423,8 @@ export interface IntentInput {
   mode: RestoreMode
   restoreEligible: boolean
   ineligibleReason?: string
+  /** The pipeline run mode (daily, rebuild, prune...). */
+  runMode?: string
 }
 
 /**

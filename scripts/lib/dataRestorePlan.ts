@@ -63,11 +63,26 @@ export interface ObjectCopy {
 
 export interface PlanEntry {
   name: string
-  action: 'restore' | 'delete' | 'noop' | 'refuse'
+  action: 'restore' | 'delete' | 'noop' | 'refuse' | 'excluded' | 'manual'
   liveGeneration: string
   generation?: string
   hardDeleteTime?: string
   reason: string
+}
+
+/**
+ * One prod removal the run made on purpose (#2856), recorded when it happens:
+ * `gap` is a #2232 gap-district object (an exact name), `prune` is a prune
+ * reconcile's date prefix (a name ending in `/`).
+ */
+export interface RemovalRecord {
+  path: string
+  kind: 'gap' | 'prune'
+}
+
+/** Parse runs/<id>/prod-removed.jsonl. Absent or empty text is no record. */
+export function parseRemovalRecord(_jsonl: string): RemovalRecord[] {
+  return []
 }
 
 export interface RestorePlan {
@@ -82,7 +97,14 @@ export interface RestorePlan {
 const EntrySchema = z
   .object({
     name: z.string().min(1),
-    action: z.enum(['restore', 'delete', 'noop', 'refuse']),
+    action: z.enum([
+      'restore',
+      'delete',
+      'noop',
+      'refuse',
+      'excluded',
+      'manual',
+    ]),
     liveGeneration: z.string().min(1),
     generation: z.string().min(1).optional(),
     hardDeleteTime: z.string().optional(),
@@ -302,6 +324,8 @@ export function planRestore(input: {
   since: string
   until: string
   paths?: string[]
+  /** The run's record of prod removals made on purpose (#2856). */
+  removals?: RemovalRecord[]
   /** Epoch ms; injectable for tests. Defaults to the current time. */
   now?: number
 }): RestorePlan {
