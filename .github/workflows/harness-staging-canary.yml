@@ -61,7 +61,11 @@ jobs:
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          # Schedule and dispatch use the read-only data reader (#2872 B2),
+          # whose binding admits the main ref only; dispatch from main.
+          # Pull requests keep the deploy identity until B1 gives them a
+          # preview one.
+          service_account: ${{ github.event_name == 'pull_request' && secrets.GCP_SERVICE_ACCOUNT || vars.GCP_DATA_READER_SA }}
           token_format: access_token
           access_token_scopes: https://www.googleapis.com/auth/devstorage.read_only
           access_token_lifetime: 600s

@@ -2395,11 +2395,13 @@ jobs:
           npm run build --workspace=@taverns-red/shared-contracts
           npm run build --workspace=@taverns-red/analytics-core
 
-      - name: Authenticate to GCP
+      # Read-only data reader (#2872 B2): this job only lists and reads
+      # raw-csv metadata in staging. Its binding admits the main ref only.
+      - name: Authenticate to GCP as the read-only data reader
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_DATA_READER_SA }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
