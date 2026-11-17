@@ -155,6 +155,11 @@ export function restoreFocusAfterConsent(): void {
   target.focus({ preventScroll: true })
 }
 
+/** Reloads the page. Its own export so tests can spy on it (#2827). */
+export const pageActions = {
+  reload: (): void => window.location.reload(),
+}
+
 function gaHook(): GaHook | undefined {
   return (window as unknown as { __tsGa?: GaHook }).__tsGa
 }

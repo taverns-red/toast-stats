@@ -8,6 +8,7 @@ import {
   getConsent,
   getConsentState,
   openConsentSettings,
+  pageActions,
   restoreFocusAfterConsent,
   setConsent,
   subscribeConsent,
@@ -233,5 +234,77 @@ describe('gaCookieExpiries (#2584, ops#319)', () => {
     const out = gaCookieExpiries(['_ga'], 'localhost')
     expect(out.some(c => c.includes('.taverns.red'))).toBe(false)
     expect(out.length).toBeGreaterThan(0)
+  })
+})
+
+/* #2827: lowering consent cannot stop a hit gtag.js has already queued, so
+   the page reloads without it. Only when GA ran in this page: the hook's
+   `ran()` says the loader started. Everyone else keeps their page. */
+describe('lowering consent reloads a page where GA ran (#2827)', () => {
+  const win = window as unknown as Record<string, unknown>
+  let reload: ReturnType<typeof vi.spyOn>
+
+  function hook(ran: boolean) {
+    win['__tsGa'] = { enable: vi.fn(), disable: vi.fn(), ran: () => ran }
+  }
+
+  beforeEach(() => {
+    wipeCookie(CONSENT_COOKIE)
+    reload = vi.spyOn(pageActions, 'reload').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    reload.mockRestore()
+    delete win['__tsGa']
+  })
+
+  it.each(['minimal', 'none'] as const)(
+    'reloads when GA ran and the choice drops to %s',
+    level => {
+      hook(true)
+      setConsent(level)
+      expect(reload).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it('reloads after the cookie is written and the GA cookies are cleared', () => {
+    hook(true)
+    document.cookie = '_ga=GA1.1.1; path=/'
+    reload.mockImplementation(() => {
+      expect(getConsent()).toBe('minimal')
+      expect(document.cookie).not.toMatch(/_ga/)
+    })
+    setConsent('minimal')
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['minimal', 'none'] as const)(
+    'does not reload a first-time choice of %s',
+    level => {
+      hook(false)
+      setConsent(level)
+      expect(reload).not.toHaveBeenCalled()
+    }
+  )
+
+  it('does not reload minimal to minimal, or none to minimal', () => {
+    hook(false)
+    setConsent('minimal')
+    setConsent('minimal')
+    setConsent('none')
+    setConsent('minimal')
+    expect(reload).not.toHaveBeenCalled()
+  })
+
+  it('does not reload when the choice is all', () => {
+    hook(true)
+    setConsent('all')
+    expect(reload).not.toHaveBeenCalled()
+  })
+
+  it('does not reload where there is no GA hook (preview, localhost)', () => {
+    delete win['__tsGa']
+    setConsent('minimal')
+    expect(reload).not.toHaveBeenCalled()
   })
 })
