@@ -46,7 +46,9 @@ if "${GCLOUD}" storage ls "gs://${BUCKET}/runs/${RUN}/prod-removed*.jsonl" \
 elif [ "$(grep -v '^[[:space:]]*$' "${TMP}/err")" = "${MATCHED_NO_OBJECTS}" ]; then
   # Exactly this line and nothing else (MATCHED_NO_OBJECTS in
   # scripts/lib/dataRestorePlan.ts): any other stderr, even beside it, is an
-  # error that must stop the plan.
+  # error that must stop the plan. This match is stricter than
+  # checkListingErrors in dataRestorePlan.ts (no trimming of the line), which
+  # fails closed: a line that differs by whitespace stops the plan.
   : >"${TMP}/urls"
   echo "no prod removal record for run ${RUN}: nothing was recorded" >&2
 else

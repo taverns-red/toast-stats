@@ -477,6 +477,15 @@ export function planRestore(input: {
         input.softDeleted.length === 0
       )
     )
+    // A live object under a recorded prune prefix: the removal did not finish,
+    // so a person decides (#2903). A refuse planOne raised stays.
+    .map(e =>
+      e.action !== 'refuse' &&
+      liveNames.has(e.name) &&
+      isRecorded(e.name, removals)
+        ? recordedEntry({ path: e.name, kind: 'prune' }, e.liveGeneration)
+        : e
+    )
     .concat(deleted)
     .map(e =>
       expired && (e.action === 'restore' || e.action === 'delete')
