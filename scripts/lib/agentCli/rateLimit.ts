@@ -103,7 +103,9 @@ export function rateLimitAware(runner: Runner, now: () => number): Runner {
       r.code !== 0 &&
       cmd === 'gh' &&
       !(args[0] === 'api' && args[1] === 'rate_limit') &&
-      isRateLimitText(`${r.stderr}\n${r.stdout}`)
+      // stderr only: `gh pr checks --json` exits 1 or 8 with check rows on
+      // stdout, and a check's name could contain these words.
+      isRateLimitText(r.stderr)
     ) {
       throw await rateLimitStop(runner, now())
     }
