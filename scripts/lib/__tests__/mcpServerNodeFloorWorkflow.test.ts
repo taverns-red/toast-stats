@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url'
 import { parse } from 'yaml'
 // @ts-expect-error plain .mjs helper shared with the workflow, no types
 import { engineFloor } from '../../mcp-server-node-floor.mjs'
+import { findSetupNodeViolations } from '../mcpServerNodeFloorGuard'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 const FILE = '.github/workflows/mcp-server-node-floor.yml'
@@ -52,6 +53,66 @@ interface Workflow {
 const source = fs.readFileSync(path.join(ROOT, FILE), 'utf8')
 const wf = parse(source) as Workflow
 const steps = Object.values(wf.jobs).flatMap(j => j.steps ?? [])
+
+describe('findSetupNodeViolations', () => {
+  const floorStep = {
+    id: 'floor',
+    run: 'node scripts/mcp-server-node-floor.mjs >> "$GITHUB_OUTPUT"',
+  }
+  const good = {
+    uses: 'actions/setup-node@v7',
+    with: { 'node-version': '${{ steps.floor.outputs.node }}' },
+  }
+  const docWith = (jobs: Record<string, Step[]>): Workflow =>
+    ({
+      jobs: Object.fromEntries(
+        Object.entries(jobs).map(([k, s]) => [k, { steps: s }])
+      ),
+    }) as unknown as Workflow
+
+  it('accepts one setup-node fed by the floor step', () => {
+    expect(findSetupNodeViolations(docWith({ a: [floorStep, good] }))).toEqual(
+      []
+    )
+  })
+
+  it('rejects a second setup-node on a literal version in another job', () => {
+    const bad = {
+      uses: 'actions/setup-node@v7',
+      with: { 'node-version': '20' },
+    }
+    const violations = findSetupNodeViolations(
+      docWith({ a: [floorStep, good], b: [bad] })
+    )
+    expect(violations.length).toBeGreaterThan(0)
+  })
+
+  it('rejects a second setup-node in the same job', () => {
+    const second = {
+      uses: 'actions/setup-node@v7',
+      with: { 'node-version-file': '.nvmrc' },
+    }
+    expect(
+      findSetupNodeViolations(docWith({ a: [floorStep, good, second] })).length
+    ).toBeGreaterThan(0)
+  })
+
+  it('rejects a setup-node whose version does not come from the floor step', () => {
+    const other = {
+      uses: 'actions/setup-node@v7',
+      with: { 'node-version': '${{ steps.other.outputs.node }}' },
+    }
+    expect(
+      findSetupNodeViolations(docWith({ a: [floorStep, other] })).length
+    ).toBeGreaterThan(0)
+  })
+
+  it('rejects a workflow with no setup-node', () => {
+    expect(
+      findSetupNodeViolations(docWith({ a: [floorStep] })).length
+    ).toBeGreaterThan(0)
+  })
+})
 
 describe('engineFloor', () => {
   it('reads the lower bound of a >= range', () => {
@@ -108,14 +169,12 @@ describe('mcp-server Node floor workflow (#2857)', () => {
   })
 
   it('takes the Node version from engines.node, not a literal', () => {
-    const resolve = steps.find(s => s.run?.includes('mcp-server-node-floor'))
-    expect(resolve?.id).toBeTruthy()
-    const setup = steps.find(s => s.uses?.startsWith('actions/setup-node@'))
-    expect(setup).toBeDefined()
-    expect(setup?.with?.['node-version']).toBe(
-      `\${{ steps.${resolve?.id}.outputs.node }}`
-    )
-    expect(setup?.with?.['node-version-file']).toBeUndefined()
+    // Every setup-node in the file, across all jobs: exactly one, fed by the
+    // floor step. A second one on a literal version must not slip through.
+    expect(findSetupNodeViolations(wf)).toEqual([])
+    expect(
+      steps.filter(s => s.uses?.startsWith('actions/setup-node@'))
+    ).toHaveLength(1)
   })
 
   it('builds shared-contracts and mcp-server, then tests mcp-server', () => {
