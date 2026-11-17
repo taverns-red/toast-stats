@@ -365,10 +365,13 @@ export async function fixtureFetch(
 /**
  * The cross-origin relay a spec uses on a local build: a build served from
  * 127.0.0.1 is not on the CDN's CORS allow-list, so the spec fetched the read
- * through Playwright and added the header. With the fixture on, the fixture
- * route already answers with a permissive header, so the request goes to it
- * (`fallback`) and never to the network (#2570). With it off, this is the
- * relay as before.
+ * through Playwright and added the header. With SMOKE_FIXTURES_DIR set, the
+ * fixture route installed by `installCdnFixtures` already answers with a
+ * permissive header, so this hands the request to it (`fallback`) and never to
+ * the network (#2570). That route serves cdn-staging paths and prod `videos/`
+ * paths from the fixture directory. It aborts every other prod path and lists
+ * it in the tally's `prodReads` (#2855), so this does not relay prod data.
+ * With SMOKE_FIXTURES_DIR unset, this is the relay as before.
  */
 export async function relayCdnRead(
   route: Route,
