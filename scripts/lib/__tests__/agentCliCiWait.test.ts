@@ -430,6 +430,70 @@ describe('ciWait merge state (#2905)', () => {
     expect(r.mergeState).toBe('DRAFT')
   })
 
+  it('judges a merged PR on its checks alone: GitHub reports its merge state as UNKNOWN', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 12 /, ok(GREEN)],
+      [
+        /^gh pr view 12 /,
+        ok(JSON.stringify({ mergeStateStatus: 'UNKNOWN', state: 'MERGED' })),
+      ],
+    ])
+    const r = await ciWait(12, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+  })
+
+  it('does the same over REST for a closed PR', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks /, fail(GRAPHQL_403)],
+      [/^gh pr view /, fail(GRAPHQL_403)],
+      [
+        /\/pulls\/13$/,
+        ok(
+          JSON.stringify({
+            head: { sha: 'abc' },
+            state: 'closed',
+            mergeable_state: 'unknown',
+          })
+        ),
+      ],
+      [
+        /\/commits\/abc\/check-runs/,
+        ok(
+          JSON.stringify({
+            total_count: 1,
+            check_runs: [
+              {
+                name: 'T',
+                status: 'completed',
+                conclusion: 'success',
+                details_url: 'https://x/1',
+                started_at: '2026-11-17T10:00:00Z',
+                completed_at: '2026-11-17T10:05:00Z',
+                check_suite: { id: 7 },
+              },
+            ],
+          })
+        ),
+      ],
+      [
+        /\/actions\/runs\?/,
+        ok(JSON.stringify({ total_count: 0, workflow_runs: [] })),
+      ],
+    ])
+    const r = await ciWait(13, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+  })
+
   it('does not read the merge state while a check is still failing', async () => {
     const runner = fakeRunner([
       [/^gh pr checks 8 /, ok(JSON.stringify([check({ bucket: 'fail' })]))],
