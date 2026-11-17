@@ -91,8 +91,19 @@ jobs:
           npm run build --workspace=@taverns-red/shared-contracts
           npm run build --workspace=@taverns-red/analytics-core
 
-      # ── GCS access (copied verbatim from data-pipeline.yml's
-      #    "Authenticate to GCP" and "Set up Cloud SDK" steps) ──────
+      # ── GCS access (the read-only data reader, then the same Cloud SDK
+      #    setup as data-pipeline.yml's "Set up Cloud SDK" step) ──────
+      # An empty reader variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      - name: Require the read-only data reader variable
+        env:
+          READER_SA: ${{ vars.GCP_DATA_READER_SA }}
+        run: |
+          if [ -z "${READER_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_DATA_READER_SA is empty"
+            exit 1
+          fi
+
       # Read-only data reader (#2872 B2). Its binding admits the main ref only.
       - name: Authenticate to GCP as the read-only data reader
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0

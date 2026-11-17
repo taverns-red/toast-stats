@@ -2395,6 +2395,17 @@ jobs:
           npm run build --workspace=@taverns-red/shared-contracts
           npm run build --workspace=@taverns-red/analytics-core
 
+      # An empty reader variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      - name: Require the read-only data reader variable
+        env:
+          READER_SA: ${{ vars.GCP_DATA_READER_SA }}
+        run: |
+          if [ -z "${READER_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_DATA_READER_SA is empty"
+            exit 1
+          fi
+
       # Read-only data reader (#2872 B2): this job only lists and reads
       # raw-csv metadata in staging. Its binding admits the main ref only.
       - name: Authenticate to GCP as the read-only data reader
