@@ -73,22 +73,17 @@
     },
     {
       "path": "snapshots/2026-10-24/district_{district}.json",
-      "districts": ["86"],
-      "optional": true
-    },
-    {
-      "path": "snapshots/2026-10-24/district_{district}.json",
-      "districts": ["61"],
+      "districts": ["61", "86"],
       "optional": true
     },
     {
       "path": "snapshots/2026-10-24/analytics/district_{district}_analytics.json",
-      "districts": ["86"],
+      "districts": ["61", "86"],
       "optional": true
     },
     {
       "path": "snapshots/2026-10-24/district_{district}_reports.json",
-      "districts": ["86"],
+      "districts": ["61", "86"],
       "optional": true
     },
     {
