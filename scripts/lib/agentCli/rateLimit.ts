@@ -19,7 +19,7 @@ export class RateLimitError extends Error {
 
 /** Primary ("API rate limit exceeded") and secondary rate-limit responses. */
 export function isRateLimitText(text: string): boolean {
-  return /rate limit (exceeded|hit)|exceeded a secondary rate limit|secondary rate limit/i.test(
+  return /rate limit (already )?(exceeded|hit)|secondary rate limit|\bRATE_LIMITED\b/i.test(
     text
   )
 }
