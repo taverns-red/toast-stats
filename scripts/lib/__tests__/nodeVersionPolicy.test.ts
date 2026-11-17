@@ -70,6 +70,9 @@ describe('Node version policy (#2853)', () => {
     let sites = 0
     for (const f of fs.readdirSync(WORKFLOW_DIR)) {
       if (!/\.ya?ml$/.test(f)) continue
+      // The one deliberate exception: it tests mcp-server on its own
+      // published floor (#2857), asserted in mcpServerNodeFloorWorkflow.test.
+      if (f === 'mcp-server-node-floor.yml') continue
       const doc = parse(
         fs.readFileSync(path.join(WORKFLOW_DIR, f), 'utf8')
       ) as {

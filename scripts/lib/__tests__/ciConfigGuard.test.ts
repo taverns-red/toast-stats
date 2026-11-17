@@ -61,9 +61,15 @@ describe('findLiteralNodeVersions', () => {
     ).toEqual([])
   })
 
-  it.each(workflowFiles)('node is pinned via .nvmrc only: %s', file => {
-    expect(findLiteralNodeVersions(readWorkflow(file))).toEqual([])
-  })
+  // mcp-server-node-floor.yml is the one deliberate exception (#2857): it
+  // tests the published package on the floor from its own engines.node.
+  // mcpServerNodeFloorWorkflow.test.ts pins that the version comes from there.
+  it.each(workflowFiles.filter(f => f !== 'mcp-server-node-floor.yml'))(
+    'node is pinned via .nvmrc only: %s',
+    file => {
+      expect(findLiteralNodeVersions(readWorkflow(file))).toEqual([])
+    }
+  )
 })
 
 describe('findNonPrivateTooling (#2853)', () => {
