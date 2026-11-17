@@ -215,6 +215,39 @@ describe('agent-cli', () => {
       expect(runner.calls.some(l => l.includes('pr checks'))).toBe(false)
     })
 
+    it('--once skips the budget check but still stops on a rate-limit error', async () => {
+      const PASS = JSON.stringify([
+        { ...JSON.parse(PENDING)[0], bucket: 'pass' },
+      ])
+      const low = fakeRunner([
+        [/^gh api rate_limit/, limit(100, 100)],
+        [/^gh pr checks /, fail('', 1, PASS)],
+      ])
+      const c = capture()
+      expect(
+        await main(['ci-wait', '123', '--once'], {
+          ...c.deps,
+          runner: low,
+          ...clock(),
+        })
+      ).toBe(0)
+      expect(low.calls.some(l => l.startsWith('gh api rate_limit'))).toBe(false)
+
+      const hit = fakeRunner([
+        [/^gh api rate_limit/, limit(0)],
+        [/^gh pr checks /, fail('HTTP 403: API rate limit exceeded')],
+      ])
+      const c2 = capture()
+      expect(
+        await main(['ci-wait', '123', '--once'], {
+          ...c2.deps,
+          runner: hit,
+          ...clock(),
+        })
+      ).toBe(3)
+      expect(c2.err.join('\n')).toContain('2027-01-15T08:00:00Z')
+    })
+
     it('polls when core.remaining is 500 or more', async () => {
       const c = capture()
       const runner = fakeRunner([
