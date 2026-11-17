@@ -137,11 +137,11 @@ Both are TI practice. They do not conflict: April 1 is when TI starts marking cl
 
 **Sources:**
 
-- Start on April 1: Dashboard guide ("Item XXX Rev. 08/2025"), p. 3 (districts) and p. 6 (clubs): "These icons will only begin to appear after April 1". The same guide, p. 7: "The title will start to indicate Distinguished club status after April 1". Also stated by Ron Servant, District 61 Director, 2026-11-15: TI starts marking clubs distinguished or better after April 1 renewals. No other TI source (DRP, DLH) was found that states the 1 April start in words.
+- Start on April 1: Dashboard guide ("Item XXX Rev. 08/2025"), p. 3 (districts), p. 4 (Areas and Divisions) and p. 6 (clubs): "These icons will only begin to appear after April 1". The same guide, p. 7: "The title will start to indicate Distinguished club status after April 1". Also stated by Ron Servant, District 61 Director, 2026-11-15: TI starts marking clubs distinguished or better after April 1 renewals. No other TI source (DRP, DLH) was found that states the 1 April start in words.
 - Final at June 30: DRP p. 9, Rev. 07/2026: "At year-end, Toastmasters International calculates the number of goals". DLH p. 18, Rev. 03/2026, June 30 column of the District Timeline: "End: Distinguished programs".
 - Why April 1 matters for the club base: DRP p. 5: "new clubs organized between April 1 and June 30" are counted in the club base. (About clubs paid for the April period, not about marking.)
 
-DRP pp. 8–10 never mention 1 April. That is not evidence against the rule: those pages describe the year-end calculation, not when TI starts marking clubs (#2869 correction).
+DRP pp. 8–10 don't say when TI starts marking clubs. The only April 1 there (p. 9 footnote) is about Club Success Plan credit: "Clubs that charter after April 1 will automatically receive credit". That is not evidence against the rule. Those pages describe the year-end calculation (#2869 correction).
 
 ### 3.5 Smedley Distinguished vs the Smedley Award
 
@@ -533,7 +533,7 @@ A prerequisite required by a year's rules but unknowable from the data yields ti
 
 ### 13.4 Competitive Awards (Top 3 Globally)
 
-DRP Rev. 07/2026 calls these the "District Top 3 Awards" (p. 16). It lists four:
+DRP Rev. 07/2026 calls these the "District Top 3 Awards" (pp. 16–17). It lists four:
 
 - **President's Extension Award:** Top 3 districts by net club growth. DRP p. 17: "the largest net club growth during the program year".
 - **President's 20-Plus Award:** Top 3 districts by % of active clubs with 20+ paid members. DRP p. 16: "20 or more paid members at year-end".
@@ -543,11 +543,11 @@ DRP Rev. 07/2026 calls these the "District Top 3 Awards" (p. 16). It lists four:
 ### 13.5 Threshold Awards
 
 - **District Leadership Excellence Award:** 3+ consecutive years Distinguished (any tier). DRP p. 16 ("District Excellence Awards"): "Distinguished for three or more consecutive years".
-- **District Club Strength Award** (10%+ growth in average club size, Total Membership / Active Clubs, year-over-year): **not listed in DRP Rev. 07/2026** (pp. 16–17, which name the awards above). A TI source defining or ending this award was **source not found**: the 10% rule is from an earlier revision that was not re-fetched (the document cited Rev. 04/2025 with no page). The site still shows it with a note (see the #2869 UI follow-ups). Do not treat the definition here as current TI policy.
+- **District Club Strength Award** (10%+ growth in average club size, Total Membership / Active Clubs, year-over-year): **not listed in DRP Rev. 07/2026** (pp. 16–17, which name the awards above). A TI source defining or ending this award was **source not found**: the 10% rule is from an earlier revision that was not re-fetched (the document cited Rev. 04/2025 with no page). The site still shows it with a note (see the #2869 UI follow-ups). Its status under Rev. 07/2026 is unverified.
 
 ### 13.6 Officer Awards (District Excellence Awards)
 
-Named "District Excellence Awards" on DRP p. 16, Rev. 07/2026. Both are presented at the Toastmasters International Convention.
+Named "District Excellence Awards" on DRP p. 16, Rev. 07/2026. DRP p. 16: "All of these awards are presented" at the Toastmasters International Convention. That sentence also covers the District Leadership Excellence Award (§13.5), which sits under the same heading.
 
 - **District Program Quality Award** (was "Excellence in Education & Training Award" in this document): for the Program Quality Director in districts that train 85% of Area and Division Directors and meet Distinguished goals in number of Distinguished clubs. DRP p. 16: "receive the District Program Quality Award".
 - **District Club Growth Award** (was "Excellence in Club Growth Award"): for the Club Growth Director in districts that meet Distinguished goals in club and membership payments growth. DRP p. 16: "receive the District Club Growth Award".
