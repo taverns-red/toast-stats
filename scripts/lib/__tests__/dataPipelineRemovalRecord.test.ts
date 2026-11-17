@@ -1,7 +1,7 @@
 /**
  * Workflow contract: the prod removal record and the run mode (#2856).
  *
- * The pipeline job publishes runs/<id>/prod-removed.jsonl (what the promoter
+ * The pipeline job publishes runs/<id>/prod-removed-a<attempt>.jsonl (what the promoter
  * removed from prod on purpose); both restore jobs read it into the plan; and
  * every restore decision step is told the run mode, so execute can be limited
  * to daily and rebuild. This pins the wiring; the logic is unit-tested in

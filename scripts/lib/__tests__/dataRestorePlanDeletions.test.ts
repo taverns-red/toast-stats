@@ -128,17 +128,38 @@ describe('planRestore: prod deletions and the removal record (#2856)', () => {
     ])
   })
 
-  it('a recorded name that is still live gets one entry, never two (#2903)', () => {
-    const live = obj(WRITTEN, '200', '2026-11-08T10:20:00Z')
+  it('a recorded name that is still live is manual with its real generation, one entry (#2903)', () => {
+    // The promoter recorded the removal, then the rm failed part way.
+    const live = obj(WRITTEN, '200', '2026-11-01T00:00:00Z')
     const p = planWith(
       [{ path: WRITTEN, kind: 'gap' }],
       [live],
       [deletedCopy, OTHER],
       [WRITTEN]
     )
-    expect(p.entries.filter(e => e.name === WRITTEN)).toEqual([
-      expect.objectContaining({ action: 'excluded' }),
+    const entries = p.entries.filter(e => e.name === WRITTEN)
+    expect(entries).toEqual([
+      expect.objectContaining({
+        action: 'manual',
+        liveGeneration: '200',
+        reason: expect.stringMatching(/recorded removal did not complete/),
+      }),
     ])
+  })
+
+  it('a recorded, still-live name keeps the refuse planOne raised (#2903)', () => {
+    const live = obj(WRITTEN, '300', '2026-11-09T00:00:00Z')
+    const p = planWith(
+      [{ path: WRITTEN, kind: 'gap' }],
+      [live],
+      [deletedCopy, OTHER],
+      [WRITTEN]
+    )
+    const entries = p.entries.filter(e => e.name === WRITTEN)
+    expect(entries).toEqual([
+      expect.objectContaining({ action: 'refuse', liveGeneration: '300' }),
+    ])
+    expect(p.refused).toBe(1)
   })
 
   it('a written name under a pruned prefix is covered by the record', () => {

@@ -102,8 +102,39 @@ describe('read-prod-removals.sh', () => {
     expect(fs.existsSync(out)).toBe(false)
   })
 
-  it('stops when the record listing itself fails (#2903)', () => {
+  it('stops, and leaves no file, when the record listing itself fails (#2903)', () => {
+    fs.mkdirSync(path.dirname(out), { recursive: true })
+    fs.writeFileSync(out, 'stale')
     const r = read({ SHIM_FAIL_MATCH: '^ls ' })
+    expect(r.status).toBe(1)
+    expect(fs.existsSync(out)).toBe(false)
+  })
+
+  it('reads "matched no objects" only as the exact line: with a real error beside it, it stops (#2903)', () => {
+    const stub = path.join(tmp, 'gcloud-stub')
+    fs.writeFileSync(
+      stub,
+      '#!/usr/bin/env bash\n' +
+        'echo "ERROR: (gcloud.storage.ls) One or more URLs matched no objects." >&2\n' +
+        'echo "ERROR: (gcloud.storage.ls) HTTPError 503: Service Unavailable" >&2\n' +
+        'exit 1\n',
+      { mode: 0o755 }
+    )
+    const r = read({ GCLOUD: stub })
+    expect(r.status).toBe(1)
+    expect(fs.existsSync(out)).toBe(false)
+  })
+
+  it('a loose mention of the phrase in another error does not read as absent (#2903)', () => {
+    const stub = path.join(tmp, 'gcloud-stub')
+    fs.writeFileSync(
+      stub,
+      '#!/usr/bin/env bash\n' +
+        'echo "ERROR: (gcloud.storage.ls) bucket x matched no objects policy denied" >&2\n' +
+        'exit 1\n',
+      { mode: 0o755 }
+    )
+    const r = read({ GCLOUD: stub })
     expect(r.status).toBe(1)
   })
 
