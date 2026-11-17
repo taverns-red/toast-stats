@@ -14,6 +14,7 @@
 
    Nothing non-essential happens before a choice (opt-in). */
 
+import { installGaTransportGuard } from './gaTransportGuard'
 import {
   promoteSessionPreferencesToLocal,
   removeAllSavedPreferencesToSession,
@@ -36,6 +37,8 @@ export interface ConsentState {
 interface GaHook {
   enable: () => void
   disable: () => void
+  /** True once the loader started in this page (gtag.js loaded or armed). */
+  ran?: () => boolean
 }
 
 function onSharedDomain(hostname: string): boolean {
@@ -172,8 +175,25 @@ function clearGaCookies(): void {
   }
 }
 
+/** True when Google Analytics started in this page (#2827). */
+export function gaRanThisPage(): boolean {
+  return gaHook()?.ran?.() === true
+}
+
 /** Record a choice and apply it at once. */
 export function setConsent(level: ConsentLevel): void {
+  // A downgrade from a page where GA ran: gtag.js may hold hits it will send
+  // whatever the opt-out flag says. So, in this order: drop its requests
+  // (the guard stays for the rest of the page's life), set the opt-out flag,
+  // store the choice, clear the _ga cookies. No reload (#2827).
+  if (level !== 'all' && gaRanThisPage()) {
+    try {
+      installGaTransportGuard()
+    } catch {
+      // The guard is a safety net: the choice must still be stored.
+    }
+  }
+  if (level !== 'all') gaHook()?.disable()
   try {
     document.cookie = buildConsentCookie(
       level,
@@ -186,7 +206,6 @@ export function setConsent(level: ConsentLevel): void {
   if (level === 'all') {
     gaHook()?.enable()
   } else {
-    gaHook()?.disable()
     clearGaCookies()
   }
   if (level === 'none') removeAllSavedPreferencesToSession()

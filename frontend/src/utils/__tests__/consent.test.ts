@@ -12,6 +12,7 @@ import {
   setConsent,
   subscribeConsent,
 } from '../consent'
+import { uninstallGaTransportGuard } from '../gaTransportGuard'
 
 /* Consent store (#2584). The choice is one first-party cookie, `rt_consent`,
    shared across *.taverns.red so a visitor answers once (ops#319). It is
@@ -233,5 +234,147 @@ describe('gaCookieExpiries (#2584, ops#319)', () => {
     const out = gaCookieExpiries(['_ga'], 'localhost')
     expect(out.some(c => c.includes('.taverns.red'))).toBe(false)
     expect(out.length).toBeGreaterThan(0)
+  })
+})
+
+/* #2827: lowering consent cannot stop a hit gtag.js has already queued, so a
+   page where GA ran gets a transport guard, with no reload. Only when GA ran
+   in this page: the hook's `ran()` says the loader started. */
+describe('lowering consent after GA ran in the page (#2827)', () => {
+  const win = window as unknown as Record<string, unknown>
+  const savedFetch = win['fetch']
+  const GA_URL = 'https://www.google-analytics.com/g/collect'
+
+  function hook(ran: boolean) {
+    const calls: string[] = []
+    win['__tsGa'] = {
+      enable: vi.fn(),
+      disable: vi.fn(() => {
+        calls.push('disable')
+      }),
+      ran: () => ran,
+    }
+    return calls
+  }
+
+  beforeEach(() => {
+    wipeCookie(CONSENT_COOKIE)
+  })
+
+  afterEach(() => {
+    uninstallGaTransportGuard()
+    win['fetch'] = savedFetch
+    delete win['__tsGa']
+  })
+
+  it.each(['minimal', 'none'] as const)(
+    'drops GA requests once the choice drops to %s, for the rest of the page',
+    async level => {
+      hook(true)
+      const orig = vi.fn(async () => new Response('real'))
+      win['fetch'] = orig
+      setConsent(level)
+      const res = await window.fetch(GA_URL)
+      expect(res.status).toBe(204)
+      expect(orig).not.toHaveBeenCalled()
+      await window.fetch('https://cdn.taverns.red/x.json')
+      expect(orig).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it('installs the guard first, then sets ga-disable, then writes the cookie, then clears _ga', () => {
+    hook(true)
+    const orig = vi.fn(async () => new Response('real'))
+    win['fetch'] = orig
+    const order: string[] = []
+    document.cookie = '_ga=GA1.1.1; path=/'
+    const proto = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')!
+    Object.defineProperty(document, 'cookie', {
+      configurable: true,
+      get: () => proto.get!.call(document),
+      set: (v: string) => {
+        order.push(`write ${v.split('=')[0]}`)
+        proto.set!.call(document, v)
+      },
+    })
+    ;(win['__tsGa'] as { disable: () => void }).disable = () => {
+      // the guard is already on when the opt-out flag is set
+      void window.fetch(GA_URL)
+      order.push(
+        orig.mock.calls.length === 0 ? 'disable (guard on)' : 'disable'
+      )
+    }
+    try {
+      setConsent('minimal')
+    } finally {
+      delete (document as unknown as Record<string, unknown>)['cookie']
+    }
+    expect(order.slice(0, 3)).toEqual([
+      'disable (guard on)',
+      `write ${CONSENT_COOKIE}`,
+      'write _ga',
+    ])
+  })
+
+  it('does not reload the page', () => {
+    hook(true)
+    const reload = vi.fn()
+    const loc = window.location
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...loc, reload, hostname: loc.hostname, protocol: loc.protocol },
+    })
+    try {
+      setConsent('minimal')
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: loc,
+      })
+    }
+    expect(reload).not.toHaveBeenCalled()
+  })
+
+  it('does not install the guard for a first-time choice, minimal to minimal, none to minimal or all', async () => {
+    const orig = vi.fn(async () => new Response('real'))
+    win['fetch'] = orig
+    hook(false)
+    setConsent('minimal')
+    setConsent('minimal')
+    setConsent('none')
+    setConsent('minimal')
+    hook(true)
+    setConsent('all')
+    await window.fetch(GA_URL)
+    expect(orig).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not install the guard where there is no GA hook (preview, localhost)', async () => {
+    const orig = vi.fn(async () => new Response('real'))
+    win['fetch'] = orig
+    delete win['__tsGa']
+    setConsent('minimal')
+    await window.fetch(GA_URL)
+    expect(orig).toHaveBeenCalledTimes(1)
+  })
+
+  it('still writes the cookie when installing the guard throws', () => {
+    hook(true)
+    // A read-only fetch makes the guard's install throw a TypeError.
+    Object.defineProperty(window, 'fetch', {
+      value: vi.fn(),
+      writable: false,
+      configurable: true,
+    })
+    try {
+      expect(() => setConsent('minimal')).not.toThrow()
+      expect(getConsent()).toBe('minimal')
+    } finally {
+      Object.defineProperty(window, 'fetch', {
+        value: savedFetch,
+        writable: true,
+        configurable: true,
+      })
+    }
   })
 })
