@@ -7,7 +7,8 @@
  * Replaces the hand-written `sleep N; gh pr checks; break` loops that were
  * the largest measured cost in this repo's sessions (taverns-red/ops#148).
  *
- * PASS needs green checks and a mergeable PR (mergeStateStatus, #2905).
+ * PASS needs green checks, a mergeable PR (mergeStateStatus, #2905) and no
+ * unfinished workflow run on the head commit (#2910).
  */
 import { CommandError, runGhJson, runGhResult, type Runner } from './exec.js'
 import { assertRateLimitBudget, rateLimitAware } from './rateLimit.js'
@@ -376,6 +377,56 @@ export async function fetchMergeState(
   )
 }
 
+/** Workflow-run statuses that mean the run has not finished (#2910). */
+const UNFINISHED_RUN_STATUSES = new Set([
+  'queued',
+  'in_progress',
+  'waiting',
+  'requested',
+  'pending',
+])
+
+/** A workflow run for the head commit that has not finished. */
+export interface ActiveRun {
+  name: string
+  status: string
+  url: string
+}
+
+/**
+ * The unfinished workflow runs for a commit (#2910). A run that has just
+ * started (after `gh pr ready` or a push) has no check in the list yet, so
+ * green checks can hide it. One read of
+ * GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&per_page=100; the
+ * first page is enough, since one commit has well under 100 workflow runs.
+ * https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-repository
+ */
+export async function fetchActiveRuns(
+  headSha: string,
+  opts: FetchOptions
+): Promise<ActiveRun[]> {
+  const body = await runGhJson<{
+    workflow_runs?: Array<{
+      name?: string | null
+      status?: string | null
+      html_url?: string | null
+    }>
+  }>(
+    [
+      'api',
+      `repos/${opts.repo}/actions/runs?head_sha=${headSha}&per_page=${PER_PAGE}`,
+    ],
+    { runner: opts.runner, sleep: opts.sleep }
+  )
+  return (body.workflow_runs ?? [])
+    .filter(r => UNFINISHED_RUN_STATUSES.has(r.status ?? ''))
+    .map(r => ({
+      name: r.name ?? '(unnamed workflow)',
+      status: r.status ?? '',
+      url: r.html_url ?? '',
+    }))
+}
+
 export type CiOutcome = 'pass' | 'fail' | 'pending'
 
 export interface CiWaitResult {
@@ -395,6 +446,8 @@ export interface CiWaitResult {
   draft?: boolean
   /** The head moved while the checks were being confirmed. */
   headMoved?: boolean
+  /** Workflow runs for the head commit that haven't finished (#2910). */
+  activeRuns?: ActiveRun[]
 }
 
 export interface CiWaitOptions extends FetchOptions {
@@ -471,6 +524,17 @@ export async function ciWait(
       cancelled: summary.cancelled,
     }
     const confirmed = summary.done && !failing ? merge : undefined
+    // A run that has just started has no check yet (#2910): once the merge
+    // state would pass, look for unfinished runs on this commit, once.
+    let activeRuns: ActiveRun[] = []
+    if (
+      confirmed &&
+      !headMoved &&
+      confirmed.headSha &&
+      mergeStateVerdict(confirmed.status, ctx) === 'ok'
+    ) {
+      activeRuns = await fetchActiveRuns(confirmed.headSha, fo)
+    }
     const finish = (outcome: CiOutcome, timedOut = false): CiWaitResult => ({
       pr,
       outcome,
@@ -482,15 +546,19 @@ export async function ciWait(
         mergeState: confirmed.status,
         headSha: confirmed.headSha,
         mergeable:
-          !headMoved && !confirmed.draft && isMergeable(confirmed.status, ctx),
+          !headMoved &&
+          !confirmed.draft &&
+          activeRuns.length === 0 &&
+          isMergeable(confirmed.status, ctx),
         ...(confirmed.draft && { draft: true }),
         ...(headMoved && { headMoved }),
       }),
+      ...(activeRuns.length > 0 && { activeRuns }),
     })
     if (summary.done && failing) return finish('fail')
     if (confirmed && !headMoved) {
       const verdict = mergeStateVerdict(confirmed.status, ctx)
-      if (verdict === 'ok') return finish('pass')
+      if (verdict === 'ok' && activeRuns.length === 0) return finish('pass')
       if (verdict === 'conflict') return finish('fail')
     }
     if (opts.failFast && summary.failed > 0) return finish('fail')
@@ -524,6 +592,10 @@ export function formatCiWait(r: CiWaitResult): string {
     out.push('merge conflicts: rebase or merge main into the branch')
   } else if ((r.draft || r.mergeState === 'DRAFT') && r.outcome === 'pass') {
     out.push('draft: not mergeable yet')
+  } else if (r.activeRuns?.length && r.outcome === 'pending') {
+    out.push(
+      'all checks passed, but a workflow run for this commit has not finished'
+    )
   } else if (r.mergeState && r.outcome === 'pending') {
     out.push(
       `all checks passed, but GitHub reports the PR as ${r.mergeState}` +
@@ -539,6 +611,12 @@ export function formatCiWait(r: CiWaitResult): string {
       ...s.pendingChecks.map(
         c => `  … ${c.workflow ? `${c.workflow} / ` : ''}${c.name}`
       )
+    )
+  }
+  if (r.outcome === 'pending' && r.activeRuns?.length) {
+    out.push(
+      'unfinished workflow runs:',
+      ...r.activeRuns.map(a => `  … ${a.name} (${a.status}) ${a.url}`)
     )
   }
   if (s.failures.length) {

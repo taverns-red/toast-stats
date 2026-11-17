@@ -225,6 +225,7 @@ describe('agent-cli', () => {
         [/^gh api rate_limit/, limit(100, 100)],
         [/^gh pr checks /, fail('', 1, PASS)],
         [/^gh pr view /, CLEAN],
+        [/\/actions\/runs\?/, ok('{"workflow_runs":[]}')],
       ])
       const c = capture()
       expect(
@@ -287,6 +288,7 @@ describe('agent-cli', () => {
           ),
         ],
         [/^gh pr view /, CLEAN],
+        [/\/actions\/runs\?/, ok('{"workflow_runs":[]}')],
       ])
       expect(
         await main(['ci-wait', '123'], { ...c.deps, runner, ...clock() })
@@ -338,6 +340,7 @@ describe('agent-cli', () => {
           ),
         ],
         [/^gh pr view /, CLEAN],
+        [/\/actions\/runs\?/, ok('{"workflow_runs":[]}')],
       ])
       expect(
         await main(['ci-wait', '123'], { ...c.deps, runner, ...clock() })

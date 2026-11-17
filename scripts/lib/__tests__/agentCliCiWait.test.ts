@@ -16,6 +16,12 @@ import { fakeRunner, fixture, ok, fail } from './agentCliFakes.js'
 const CHECKS = JSON.parse(fixture('pr-checks-2416.json')) as PrCheck[]
 const REPO = 'taverns-red/toast-stats'
 
+/** No workflow run in flight for the head commit (#2910): ci-wait reads this once per green poll. */
+const NO_RUNS: [RegExp, ReturnType<typeof ok>] = [
+  /\/actions\/runs\?/,
+  ok(JSON.stringify({ total_count: 0, workflow_runs: [] })),
+]
+
 function check(over: Partial<PrCheck>): PrCheck {
   return {
     name: 'Test Suite',
@@ -215,6 +221,7 @@ describe('ciWait REST fallback when GraphQL is blocked (#2485)', () => {
         new RegExp(`/actions/runs\\?head_sha=${SHA}&per_page=100&page=1$`),
         ok(fixture('actions-runs-2482.json')),
       ],
+      NO_RUNS,
     ])
   }
 
@@ -384,6 +391,7 @@ describe('ciWait merge state (#2905)', () => {
           view('CLEAN'),
         ],
       ],
+      NO_RUNS,
     ])
     const r = await ciWait(2904, {
       repo: REPO,
@@ -439,6 +447,7 @@ describe('ciWait merge state (#2905)', () => {
     const runner = fakeRunner([
       [/^gh pr checks 7 /, ok(GREEN)],
       [/^gh pr view 7 /, view('DRAFT')],
+      NO_RUNS,
     ])
     const r = await ciWait(7, { repo: REPO, runner, ...fakeClock() })
     expect(r.outcome).toBe('pass')
@@ -575,6 +584,7 @@ describe('ciWait merge state (#2905)', () => {
             })
           ),
         ],
+        NO_RUNS,
       ])
     }
 
@@ -636,6 +646,7 @@ describe('ciWait merge state, review fixes (#2905)', () => {
     const runner = fakeRunner([
       [/^gh pr checks 22 /, ok(GREEN_WITH_CANCELLED)],
       [/^gh pr view 22 /, view('UNSTABLE')],
+      NO_RUNS,
     ])
     const r = await ciWait(22, {
       repo: REPO,
@@ -682,6 +693,7 @@ describe('ciWait merge state, review fixes (#2905)', () => {
     const runner = fakeRunner([
       [/^gh pr checks 25 /, ok(GREEN)],
       [/^gh pr view 25 /, [view('CLEAN', 'aaa'), view('CLEAN', 'bbb')]],
+      NO_RUNS,
     ])
     const r = await ciWait(25, {
       repo: REPO,
@@ -699,6 +711,7 @@ describe('ciWait merge state, review fixes (#2905)', () => {
     const runner = fakeRunner([
       [/^gh pr checks 26 /, ok(GREEN)],
       [/^gh pr view 26 /, view('DRAFT')],
+      NO_RUNS,
     ])
     const r = await ciWait(26, {
       repo: REPO,
@@ -715,6 +728,7 @@ describe('ciWait merge state, review fixes (#2905)', () => {
     const runner = fakeRunner([
       [/^gh pr checks 27 /, ok(GREEN)],
       [/^gh pr view 27 /, view(state)],
+      NO_RUNS,
     ])
     const r = await ciWait(27, {
       repo: REPO,
@@ -784,10 +798,6 @@ describe('ciWait draft PRs are never mergeable (#2910)', () => {
   const GRAPHQL_403 =
     'HTTP 403: GitHub GraphQL is not available from Claude Code sessions; use the REST API'
   const GREEN = JSON.stringify([check({}), check({ name: 'Lint' })])
-  const NO_RUNS = [
-    /\/actions\/runs\?/,
-    ok(JSON.stringify({ total_count: 0, workflow_runs: [] })),
-  ] as [RegExp, ReturnType<typeof ok>]
 
   it('says mergeable false for a draft that GraphQL reports as CLEAN', async () => {
     const runner = fakeRunner([

@@ -141,8 +141,15 @@ one a title or body edit starts, may not be listed yet) and are named in the
 timeout message. UNSTABLE waits unless --allow-cancelled is set and a check
 was cancelled. DIRTY (merge conflicts) fails. It also needs the PR's head
 commit to hold still while it confirms; if it moves, it waits for the next
-poll. A draft (DRAFT) passes when its checks are green, but is not mergeable
-yet. --once reports the state as-is.
+poll. A draft passes when its checks are green, but is not mergeable yet: it
+reads isDraft (REST: draft) because GitHub can report CLEAN for a draft.
+--once reports the state as-is.
+
+Before it passes, it also reads the workflow runs for the head commit (one
+extra call per green poll). A workflow run that is queued, in_progress,
+waiting, requested or pending keeps it waiting, because that run's check may
+not be listed yet (right after gh pr ready or a push). The pending output
+names those runs.
 
 --json adds mergeState, headSha and mergeable. "mergeable": false means the
 PR is not ready to merge even when the exit code is 0. That covers a draft,
