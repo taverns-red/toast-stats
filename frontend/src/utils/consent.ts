@@ -14,6 +14,7 @@
 
    Nothing non-essential happens before a choice (opt-in). */
 
+import { installGaTransportGuard } from './gaTransportGuard'
 import {
   promoteSessionPreferencesToLocal,
   removeAllSavedPreferencesToSession,
@@ -187,6 +188,11 @@ export function gaRanThisPage(): boolean {
 
 /** Record a choice and apply it at once. */
 export function setConsent(level: ConsentLevel): void {
+  // A downgrade from a page where GA ran: gtag.js may hold hits it will send
+  // whatever the opt-out flag says, so drop its requests first, before
+  // anything else on this path, then reload below (#2827).
+  const downgrade = level !== 'all' && gaRanThisPage()
+  if (downgrade) installGaTransportGuard()
   try {
     document.cookie = buildConsentCookie(
       level,
@@ -196,9 +202,8 @@ export function setConsent(level: ConsentLevel): void {
   } catch {
     // cookies blocked: the choice applies to this page view only
   }
-  // Read before disable(): gtag.js may already hold hits it will send later
-  // whatever the opt-out flag says, so a page where GA ran reloads (#2827).
-  const reloadNeeded = level !== 'all' && gaRanThisPage()
+  // Reload only if the choice was stored; the guard stays on either way.
+  const reloadNeeded = downgrade && getConsent() === level
   if (level === 'all') {
     gaHook()?.enable()
   } else {
