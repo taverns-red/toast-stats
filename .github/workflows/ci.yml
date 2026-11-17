@@ -44,6 +44,9 @@ permissions:
 #    pull_request and workflow_call (nothing calls it today). Everything that
 #    is not a pull_request gets a group unique to the run, so a push to main
 #    is never cancelled or dropped from the queue.
+#  - The PR group starts with `github.workflow` (#2840). In a called workflow
+#    it is the caller's name, so a pull_request caller's run and the
+#    standalone run (`CI`) get different groups and don't cancel each other.
 #  - A no-op edit (title/body, not base) runs with every job skipped (#2204).
 #    It gets its own group so it cannot cancel the real in-flight run and
 #    leave a cancelled check on the head with only a skipped run beside it.
@@ -55,7 +58,8 @@ permissions:
 concurrency:
   group: >-
     ${{ github.event_name == 'pull_request'
-    && format('ci-pr-{0}{1}', github.event.pull_request.number,
+    && format('{0}-pr-{1}{2}', github.workflow,
+    github.event.pull_request.number,
     github.event.action == 'edited' && !github.event.changes.base
     && format('-noop-{0}', github.run_id) || '')
     || format('ci-run-{0}', github.run_id) }}

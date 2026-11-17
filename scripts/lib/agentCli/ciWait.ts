@@ -45,14 +45,35 @@ export interface CheckSummary {
   done: boolean
 }
 
+/**
+ * Whether `c` should replace `prev` as the row kept for a check (#2840).
+ * - A pending check wins: a queued run has an empty `startedAt` and is the
+ *   newest there is, and a still-running attempt is not settled.
+ * - A skipped row carries no verdict (a no-op edit's run has every job
+ *   skipped), so it never replaces a pass or a failure, whichever started
+ *   later.
+ * - A cancelled row is different: a newer cancelled run is not a verdict, but
+ *   an older pass can come from a draft run that skipped the smokes, so
+ *   letting it hide the cancelled run would give a premature PASS. The later
+ *   `startedAt` wins, as for a re-run (PR 2482 pins this).
+ */
+function supersedes(c: PrCheck, prev: PrCheck): boolean {
+  const pending = (x: PrCheck) => x.bucket === 'pending'
+  if (pending(c) !== pending(prev)) return pending(c)
+  const verdict = (x: PrCheck) => x.bucket !== 'skipping'
+  if (!pending(c) && verdict(c) !== verdict(prev)) return verdict(c)
+  // Not started yet means newer than anything that has.
+  const at = (x: PrCheck) => x.startedAt || '￿'
+  return at(c) > at(prev)
+}
+
 /** A re-run leaves the old attempt in the list; keep the newest per check. */
 export function latestPerCheck(checks: PrCheck[]): PrCheck[] {
   const latest = new Map<string, PrCheck>()
   for (const c of checks) {
     const key = `${c.workflow}\u0000${c.name}`
     const prev = latest.get(key)
-    if (!prev || (c.startedAt ?? '') > (prev.startedAt ?? ''))
-      latest.set(key, c)
+    if (!prev || supersedes(c, prev)) latest.set(key, c)
   }
   return [...latest.values()]
 }

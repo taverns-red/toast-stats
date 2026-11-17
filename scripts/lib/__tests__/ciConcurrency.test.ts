@@ -210,6 +210,7 @@ const prCtx = (
 ) => ({
   github: {
     event_name: 'pull_request',
+    workflow: 'CI',
     run_id: runId,
     event: { action, changes, pull_request: { number: 42 } },
   },
@@ -255,16 +256,49 @@ describe('ci.yml concurrency (#2607)', () => {
     })
   })
 
+  describe('workflow_call from a pull_request caller (#2840)', () => {
+    // A called workflow reports the caller's event_name and github.workflow,
+    // so a caller triggered by pull_request would otherwise share the
+    // standalone run's per-PR group and the two would cancel each other.
+    const standalone = (action: string, runId: number) => ({
+      github: { ...prCtx(action, runId).github, workflow: 'CI' },
+    })
+    const called = (action: string, runId: number) => ({
+      github: { ...prCtx(action, runId).github, workflow: 'Release' },
+    })
+
+    it('does not share a group with the standalone run', () => {
+      expect(group(called('synchronize', 31))).not.toBe(
+        group(standalone('synchronize', 30))
+      )
+    })
+
+    it('still shares one group per PR across pushes of the same caller', () => {
+      expect(group(called('synchronize', 31))).toBe(
+        group(called('synchronize', 32))
+      )
+    })
+
+    it('keeps the no-op edit isolated for both', () => {
+      expect(group(called('edited', 33))).not.toBe(
+        group(called('synchronize', 31))
+      )
+      expect(group(standalone('edited', 34))).not.toBe(
+        group(standalone('synchronize', 30))
+      )
+    })
+  })
+
   describe('pull_request synchronize', () => {
     it('shares one group per PR across pushes and cancels in progress', () => {
-      expect(group(prCtx('synchronize', 11))).toBe('ci-pr-42')
-      expect(group(prCtx('synchronize', 12))).toBe('ci-pr-42')
+      expect(group(prCtx('synchronize', 11))).toBe('CI-pr-42')
+      expect(group(prCtx('synchronize', 12))).toBe('CI-pr-42')
       expect(cancel(prCtx('synchronize', 11))).toBe(true)
     })
 
     it('opened and reopened use the per-PR group too', () => {
-      expect(group(prCtx('opened', 13))).toBe('ci-pr-42')
-      expect(group(prCtx('reopened', 14))).toBe('ci-pr-42')
+      expect(group(prCtx('opened', 13))).toBe('CI-pr-42')
+      expect(group(prCtx('reopened', 14))).toBe('CI-pr-42')
     })
   })
 
@@ -272,14 +306,14 @@ describe('ci.yml concurrency (#2607)', () => {
     it('isolates a body/title-only edit in a unique no-op group (#2204)', () => {
       const g1 = group(prCtx('edited', 21))
       const g2 = group(prCtx('edited', 22))
-      expect(g1).toBe('ci-pr-42-noop-21')
+      expect(g1).toBe('CI-pr-42-noop-21')
       expect(g1).not.toBe(group(prCtx('synchronize', 20)))
       expect(g1).not.toBe(g2)
     })
 
     it('keeps a base change in the per-PR group so it supersedes (#2204)', () => {
       const ctx = prCtx('edited', 23, { base: { ref: { from: 'dev' } } })
-      expect(group(ctx)).toBe('ci-pr-42')
+      expect(group(ctx)).toBe('CI-pr-42')
       expect(cancel(ctx)).toBe(true)
     })
   })
