@@ -41,6 +41,22 @@ const blocked = [
   'sleep 30; /opt/homebrew/bin/gh pr checks 12',
   'sleep 30; echo `gh pr checks 12`',
   'sleep 30; time gh run view 1',
+  // #2897: watch forms poll GitHub without any sleep
+  'gh pr checks 12 --watch',
+  'gh pr checks --watch 12',
+  'gh pr checks 12 -w',
+  'gh pr checks 12 --watch --interval 60',
+  'gh -R taverns-red/toast-stats pr checks 12 --watch',
+  'gh run watch 123',
+  'gh run watch 123 --exit-status',
+  'gh run watch 123 --interval 30',
+  'gh run watch 123 --interval=30',
+  'gh run watch 123 -i 30',
+  'gh run watch 123 -i=30',
+  'gh run watch 123 --interval 59',
+  'gh run watch 123 --interval abc',
+  'echo start; gh run watch 123',
+  '/opt/homebrew/bin/gh run watch 123 --interval 10',
 ]
 
 const allowed = [
@@ -55,6 +71,15 @@ const allowed = [
   "git commit -m 'while true; do gh pr checks 1; sleep 3; done'",
   'cat <<EOF\nsleep 30; gh pr checks 12\nEOF',
   "gh pr create --body-file b.md --title 'no sleep; gh run view loops'",
+  // #2897
+  'gh run watch 123 --interval 60',
+  'gh run watch 123 --interval=60',
+  'gh run watch 123 -i 60',
+  'gh run watch 123 --interval 120 --exit-status',
+  'gh run watch --interval 60 123',
+  'gh run list --limit 5',
+  'git commit -m "docs: never gh run watch without --interval (#2897)"',
+  'cat <<EOF\ngh pr checks 12 --watch\nEOF',
 ]
 
 describe('agent-poll-guard (#2895)', () => {
@@ -73,6 +98,28 @@ describe('agent-poll-guard (#2895)', () => {
     expect(r.stderr).toContain('./bin/agent-cli ci-wait <pr>')
     expect(r.stderr).toContain('gh run watch <id> --interval 60')
     expect(r.stderr.trim().split('\n')).toHaveLength(1)
+  })
+
+  it.each(['gh pr checks 12 --watch', 'gh run watch 123 --interval 30'])(
+    'names the allowed alternative, on stderr only, when it blocks %j (#2897)',
+    command => {
+      const r = run(command)
+      expect(r.status).toBe(2)
+      expect(r.stdout).toBe('')
+      expect(r.stderr).toContain('./bin/agent-cli ci-wait <pr>')
+      expect(r.stderr).toContain('gh run watch <id> --interval 60')
+      expect(r.stderr.trim().split('\n')).toHaveLength(1)
+    }
+  )
+
+  it('fails open when the hook input has no command (#2897)', () => {
+    const r = spawnSync('node', [SCRIPT], {
+      input: JSON.stringify({ tool_name: 'Bash', tool_input: {} }),
+      env: { PATH: process.env.PATH ?? '' },
+      encoding: 'utf8',
+    })
+    expect(r.status).toBe(0)
+    expect(r.stdout).toBe('')
   })
 
   it('still blocks when started through a symlinked path', () => {
