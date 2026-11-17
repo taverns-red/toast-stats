@@ -182,3 +182,29 @@ First-publish provenance: 0.1.0 was staged by npm's new-account flow and
 released from the Staged Packages page (2026-06-12). A version number that
 enters staging is burned — never reuse one that 403s with "previously
 published".
+
+## Node floor
+
+`engines.node` in `package.json` is the oldest Node this package promises to
+run on (today `>=22`). Every other job in this repo runs on `.nvmrc`, so the
+[MCP Server Node Floor](../../.github/workflows/mcp-server-node-floor.yml)
+workflow builds and tests the package on that floor. It reads the version from
+`engines.node`, runs on changes to this package or `shared-contracts`, and runs
+weekly. It is not a branch-protection required check, but agent sessions wait
+on every check with `./bin/agent-cli ci-wait`, so on a PR that touches this
+package it blocks agent merges until it is green.
+
+A red weekly run does not always mean mcp-server broke. The job runs `npm ci`
+on the floor Node, and `npm ci` runs the root `prepare` script, which builds
+`analytics-core`. If the root toolchain starts needing a newer Node, the job
+can fail before it reaches the mcp-server tests. Read the failed step first.
+
+Node 22 reaches end of life on **2027-04-30**. Before then, raise the floor on
+purpose, never as a side effect of another change:
+
+1. Change `engines.node` to the next supported LTS in a PR of its own.
+2. Mark it as a breaking change (`feat!:` or a `BREAKING CHANGE:` footer) so
+   release-please bumps the major version and the CHANGELOG says so.
+3. Update `MCP_SERVER_FLOOR` in
+   `scripts/lib/__tests__/nodeVersionPolicy.test.ts`. The workflow follows
+   `engines.node` by itself.
