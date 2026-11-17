@@ -103,6 +103,8 @@ export interface ChecksRead {
   checks: PrCheck[]
   /** Set only when REST was used; it carries the head SHA and merge state. */
   pull?: RestPull
+  /** Set with `pull`: the workflow runs of the head commit, all pages. */
+  workflowRuns?: WorkflowRun[]
 }
 
 /** The fields of `GET /repos/{o}/{r}/pulls/{n}` that ci-wait reads. */
@@ -141,6 +143,16 @@ async function fetchPrChecksFull(
 function isGraphQlBlocked(err: CommandError): boolean {
   const text = `${err.result.stderr}\n${err.result.stdout}`
   return /GraphQL/i.test(text) || /HTTP 403/.test(text)
+}
+
+/** The fields of a workflow run (`GET /repos/{o}/{r}/actions/runs`) read here. */
+export interface WorkflowRun {
+  name?: string | null
+  check_suite_id: number
+  status?: string | null
+  event?: string | null
+  pull_requests?: Array<{ number: number }> | null
+  html_url?: string | null
 }
 
 /** One check-run from `GET /repos/{o}/{r}/commits/{sha}/check-runs`. */
@@ -234,12 +246,13 @@ async function fetchPrChecksRestFull(
     opts
   )
   if (runs.length === 0) return { checks: [], pull }
-  const workflows = await fetchAllPages<{
-    name: string
-    check_suite_id: number
-  }>(`${base}/actions/runs?head_sha=${sha}`, 'workflow_runs', opts)
+  const workflows = await fetchAllPages<WorkflowRun>(
+    `${base}/actions/runs?head_sha=${sha}`,
+    'workflow_runs',
+    opts
+  )
   const workflowBySuite = new Map(
-    workflows.map(w => [w.check_suite_id, w.name])
+    workflows.map(w => [w.check_suite_id, w.name ?? ''])
   )
   const checks = runs.map(run => ({
     name: run.name,
@@ -249,7 +262,7 @@ async function fetchPrChecksRestFull(
     startedAt: run.started_at ?? '',
     completedAt: run.completed_at ?? '',
   }))
-  return { checks, pull }
+  return { checks, pull, workflowRuns: workflows }
 }
 
 /**
@@ -297,9 +310,13 @@ function unstableIsExpected(ctx: VerdictContext): boolean {
 
 export function mergeStateVerdict(
   status: string,
-  ctx: VerdictContext
+  ctx: VerdictContext,
+  draft = false
 ): 'ok' | 'conflict' | 'waiting' {
   if (PASSING_STATES.has(status)) return 'ok'
+  // A draft can't be merged, so what blocks a merge (BLOCKED, BEHIND, ...)
+  // isn't a reason to wait; only a conflict is still worth reporting (#2910).
+  if (draft && status !== 'DIRTY') return 'ok'
   if (status === 'UNSTABLE' && unstableIsExpected(ctx)) return 'ok'
   return status === 'DIRTY' ? 'conflict' : 'waiting'
 }
@@ -393,38 +410,56 @@ export interface ActiveRun {
   url: string
 }
 
+/** Events whose runs belong to a pull request's checks (#2910). */
+const PR_EVENTS = new Set(['pull_request', 'pull_request_target'])
+
 /**
- * The unfinished workflow runs for a commit (#2910). A run that has just
- * started (after `gh pr ready` or a push) has no check in the list yet, so
- * green checks can hide it. One read of
+ * The unfinished runs among a commit's workflow runs that belong to this PR
+ * (#2910): the event is pull_request or pull_request_target and the run lists
+ * the PR. A `gh workflow run` dispatch on the same SHA, or a run on another
+ * PR with the same head, doesn't hold this PR back.
+ */
+export function activeRunsFor(
+  rows: Array<Omit<WorkflowRun, 'check_suite_id'>>,
+  pr: number
+): ActiveRun[] {
+  return rows
+    .filter(
+      r =>
+        UNFINISHED_RUN_STATUSES.has(r.status ?? '') &&
+        PR_EVENTS.has(r.event ?? '') &&
+        (r.pull_requests ?? []).some(p => p.number === pr)
+    )
+    .map(r => ({
+      name: r.name ?? '(unnamed workflow)',
+      status: r.status ?? '',
+      url: r.html_url ?? '',
+    }))
+}
+
+/**
+ * The unfinished workflow runs of a PR's head commit (#2910). A run that has
+ * just started (after `gh pr ready` or a push) has no check in the list yet,
+ * so green checks can hide it. One read of
  * GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&per_page=100; the
  * first page is enough, since one commit has well under 100 workflow runs.
+ * Over REST the runs were already read for the check names, so ciWait reuses
+ * those instead.
  * https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-repository
  */
 export async function fetchActiveRuns(
   headSha: string,
+  pr: number,
   opts: FetchOptions
 ): Promise<ActiveRun[]> {
-  const body = await runGhJson<{
-    workflow_runs?: Array<{
-      name?: string | null
-      status?: string | null
-      html_url?: string | null
-    }>
-  }>(
+  const body = await runGhJson<{ workflow_runs?: WorkflowRun[] }>(
     [
       'api',
       `repos/${opts.repo}/actions/runs?head_sha=${headSha}&per_page=${PER_PAGE}`,
     ],
     { runner: opts.runner, sleep: opts.sleep }
   )
-  return (body.workflow_runs ?? [])
-    .filter(r => UNFINISHED_RUN_STATUSES.has(r.status ?? ''))
-    .map(r => ({
-      name: r.name ?? '(unnamed workflow)',
-      status: r.status ?? '',
-      url: r.html_url ?? '',
-    }))
+  return activeRunsFor(body.workflow_runs ?? [], pr)
 }
 
 export type CiOutcome = 'pass' | 'fail' | 'pending'
@@ -531,9 +566,13 @@ export async function ciWait(
       confirmed &&
       !headMoved &&
       confirmed.headSha &&
-      mergeStateVerdict(confirmed.status, ctx) === 'ok'
+      confirmed.status !== 'MERGED' &&
+      confirmed.status !== 'CLOSED' &&
+      mergeStateVerdict(confirmed.status, ctx, confirmed.draft) === 'ok'
     ) {
-      activeRuns = await fetchActiveRuns(confirmed.headSha, fo)
+      activeRuns = read.workflowRuns
+        ? activeRunsFor(read.workflowRuns, pr)
+        : await fetchActiveRuns(confirmed.headSha, pr, fo)
     }
     const finish = (outcome: CiOutcome, timedOut = false): CiWaitResult => ({
       pr,
@@ -557,7 +596,7 @@ export async function ciWait(
     })
     if (summary.done && failing) return finish('fail')
     if (confirmed && !headMoved) {
-      const verdict = mergeStateVerdict(confirmed.status, ctx)
+      const verdict = mergeStateVerdict(confirmed.status, ctx, confirmed.draft)
       if (verdict === 'ok' && activeRuns.length === 0) return finish('pass')
       if (verdict === 'conflict') return finish('fail')
     }
@@ -616,7 +655,10 @@ export function formatCiWait(r: CiWaitResult): string {
   if (r.outcome === 'pending' && r.activeRuns?.length) {
     out.push(
       'unfinished workflow runs:',
-      ...r.activeRuns.map(a => `  … ${a.name} (${a.status}) ${a.url}`)
+      ...r.activeRuns.map(
+        a =>
+          `  … ${a.name} (${a.status === 'waiting' ? 'waiting for approval' : a.status}) ${a.url}`
+      )
     )
   }
   if (s.failures.length) {
