@@ -296,6 +296,13 @@ describe('agent-cli', () => {
       expect(c.out.join('\n')).toMatch(/3 .*rate.limit.*usage/i)
     })
 
+    it('ci-wait --help says the verdict also needs the PR to be mergeable (#2905)', async () => {
+      const c = capture()
+      await main(['ci-wait', '--help'], c.deps)
+      expect(c.out.join('\n')).toMatch(/mergeStateStatus/)
+      expect(c.out.join('\n')).toMatch(/CLEAN/)
+    })
+
     it('polls when core.remaining is 500 or more', async () => {
       const c = capture()
       const runner = fakeRunner([
