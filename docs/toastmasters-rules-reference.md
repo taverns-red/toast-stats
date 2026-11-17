@@ -4,7 +4,32 @@
 **Applies to:** All Toastmasters reporting and analytics calculations  
 **Audience:** Developers, Analytics Engine, Reporting Systems  
 **Owner:** Development Team  
-**Last Updated:** August 2026 (v1.7 — see §14 Version History)
+**Last Updated:** November 2026 (v1.8 — see §14 Version History)
+
+---
+
+## 0. Sources and Citation Convention
+
+Every Toastmasters International (TI) rule in this document names the source
+document, its revision, the printed page and a short quoted phrase. Pages are the
+numbers printed in the page footer, not PDF page indexes, except for the dashboard
+guide, which prints "Page N of 9". All sources were fetched from public
+toastmasters.org pages on 2026-11-17 (#2869).
+
+| Short name             | Document                                                                                                                                                                               | Revision                                     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| **DRP**                | District Recognition Program, Item 1490 ([PDF](https://content.toastmasters.org/image/upload/1490-district-recognition-program.pdf))                                                   | Rev. 07/2026                                 |
+| **DLH**                | District Leadership Handbook, Item 222 (the "District Leader Handbook"; [PDF](https://content.toastmasters.org/image/upload/222-district-leader-handbook.pdf))                         | Rev. 03/2026                                 |
+| **Dashboard guide**    | Quick guide to the dashboard ([PDF](https://content.toastmasters.org/image/upload/guide-to-the-dashboard.pdf))                                                                         | "Item XXX Rev. 08/2025" (as printed on p. 9) |
+| **Smedley Award page** | Membership Building Programs for Clubs ([web page](https://www.toastmasters.org/Membership/Leadership/club-officer-tools/membership-building/membership-building-programs-for-clubs/)) | No revision printed                          |
+
+**Rule for gaps.** A document that does not mention something is not evidence that
+it is not a TI rule. Where no source was found, this document says **"source not
+found"** and leaves the rule as it was. It does not reclassify it.
+
+**Not re-verified in #2869:** revisions of Item 1490 older than Rev. 07/2026 (the
+historical tables in §13.3, and the Rev. 12/2022 and Rev. 04/2025 statements in §13.2
+and `programYearRuleChanges.ts`). The earlier revisions were not fetched.
 
 ---
 
@@ -78,6 +103,10 @@ The DCP consists of **10 goals** that clubs work toward during the program year:
 | 9    | Officer Training                       | 4+ officers trained in each round   |
 | 10   | Administrative Excellence              | Officer list on time + dues on time |
 
+**Source:** DRP p. 8 (goal list; quote: "Clubs earn recognition by achieving up to 10"), Rev. 07/2026.
+
+**Goals 2–3 and "Online Meeting Mastery".** DRP p. 8 footnote says "DCP credit is also awarded for exploration completion" starting with 2026-2027. It does not use the name "Online Meeting Mastery". The name in rows 2–3 above, and the `EOM` header in §10.2, is **source not found** in Rev. 07/2026; it comes from the dashboard export headers (#1399). See the UI follow-ups on #2869.
+
 ### 3.2 Distinguished Club Levels
 
 | Level                     | DCP Goals Required | Membership Requirement | Alternative       |
@@ -87,6 +116,8 @@ The DCP consists of **10 goals** that clubs work toward during the program year:
 | President's Distinguished | 9 goals            | 20 members             | —                 |
 | Smedley Distinguished     | 10 goals           | 25 members             | —                 |
 
+**Source:** DRP p. 9, Rev. 07/2026, table "Achievement Level": "20 total members or net growth of 3" (Distinguished), "net growth of 5" (Select), "25 total members" (Smedley Distinguished). Qualifying requirements, DRP p. 8: "either 20 members or a net growth of at least three".
+
 ### 3.3 CSP Requirement (2025-2026 and later)
 
 **Starting in program year 2025-2026**, clubs MUST have a submitted Club Success Plan (CSP) to qualify for any Distinguished level.
@@ -95,11 +126,33 @@ The DCP consists of **10 goals** that clubs work toward during the program year:
 - **CSP Not Submitted**: Club cannot achieve Distinguished status regardless of goals/membership
 - **Historical Data**: For program years prior to 2025-2026, CSP field did not exist; assume submitted
 
+**Source:** DRP p. 8, Rev. 07/2026: "The club must submit the Club Success Plan by September 30." DRP p. 9 footnote: for newly chartered clubs "the due date is 90 days after the charter date". The 2025-2026 start year is **source not found** in the documents fetched for #2869.
+
 ### 3.4 Recognition Timing
 
-- Distinguished status is **only valid from April 1 onwards** in the program year
-- Before April 1, clubs may meet requirements but are not officially recognized
-- Final recognition is determined at program year end (June 30)
+- TI marks clubs Distinguished or better **from April 1**, after the April renewals. Before April 1, a club can meet the goals but TI's dashboard does not mark it.
+- The result becomes **final at year-end, June 30**.
+
+Both are TI practice. They do not conflict: April 1 is when TI starts marking clubs, June 30 is when the result is final.
+
+**Sources:**
+
+- Start on April 1: Dashboard guide ("Item XXX Rev. 08/2025"), p. 3 (districts), p. 4 (Areas and Divisions) and p. 6 (clubs): "These icons will only begin to appear after April 1". The same guide, p. 7: "The title will start to indicate Distinguished club status after April 1". Also stated by Ron Servant, District 61 Director, 2026-11-15: TI starts marking clubs distinguished or better after April 1 renewals. No other TI source (DRP, DLH) was found that states the 1 April start in words.
+- Final at June 30: DRP p. 9, Rev. 07/2026: "At year-end, Toastmasters International calculates the number of goals". DLH p. 18, Rev. 03/2026, June 30 column of the District Timeline: "End: Distinguished programs".
+- Why April 1 matters for the club base: DRP p. 5: "new clubs organized between April 1 and June 30" are counted in the club base. (About clubs paid for the April period, not about marking.)
+
+DRP pp. 8–10 don't say when TI starts marking clubs. The only April 1 there (p. 9 footnote) is about Club Success Plan credit: "Clubs that charter after April 1 will automatically receive credit". That is not evidence against the rule. Those pages describe the year-end calculation (#2869 correction).
+
+### 3.5 Smedley Distinguished vs the Smedley Award
+
+Two different things share the name. Do not merge them in code or copy.
+
+| Name                      | What it is                                                                                               | Source                                                                                                                                         |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Smedley Distinguished** | The top DCP club level (10 goals, 25 members). Districts have a Smedley Distinguished level too (§13.2). | DRP p. 9: "Smedley Distinguished" row, "25 total members" and 10 goals. DRP p. 15 for districts.                                               |
+| **Smedley Award**         | A membership-building programme for clubs, 1 August to 30 September. It is not part of the DCP.          | Smedley Award page: "Program Dates: August 1 – September 30" and "add five new, dual, or reinstated members". Toast Stats does not compute it. |
+
+DLH p. 45 (Rev. 03/2026) also names the Ralph C. Smedley Memorial Fund. That is a third, unrelated use of the name.
 
 ---
 
@@ -111,6 +164,8 @@ Members pay dues **twice per year**, aligned with the two renewal periods:
 
 - **October Renewal** (Oct–Mar period): Dues for the first half of the program year
 - **April Renewal** (Apr–Sep period): Dues for the second half of the program year
+
+**Source:** DLH p. 60, Rev. 03/2026: "If club officers do not submit renewal dues by October 1 and April 1" the dues are not on time. DLH p. 18: "Membership-renewal dues for credit in the Distinguished Club Program" are due April 1. The "twice per year" payment count (up to 2× members) is Toast Stats' reading; **source not found**.
 
 This means a club's `paymentsCount` (total dues payments) can be **up to 2× its membership count**, depending on when members joined and which renewal periods have passed. For example, a club with 10 members that has been through both renewal periods could have up to 20 payments.
 
@@ -129,6 +184,8 @@ A club is NOT considered paid when status is:
 - "Ineligible"
 - "Low"
 
+**Source:** DRP p. 6, Rev. 07/2026, "Paid Club": "dues have been received from the club for the current dues period" for a minimum of eight members, at least three of them members in the previous renewal period. The status names above (Active, Suspended, Ineligible, Low) are the dashboard's club-status values; a TI source for this exact list was **source not found**.
+
 ### 4.3 Membership Thresholds
 
 | Threshold              | Count                         | Purpose                             |
@@ -138,6 +195,8 @@ A club is NOT considered paid when status is:
 | Smedley Minimum        | 25 members                    | Smedley distinguished qualification |
 | Low Membership Warning | < 12 members                  | Club health concern                 |
 | Intervention Required  | < 12 members + net growth < 3 | Critical club health                |
+
+Sources: charter, DLH p. 58, Rev. 03/2026: "a minimum of 20 members" is established before the club applies for a charter. Distinguished and Smedley minimums: DRP p. 9 (§3.2 above); "Smedley" here is Smedley Distinguished, the DCP level (§3.5), not the Smedley Award. The two "< 12" rows: **source not found** (see §5).
 
 ### 4.4 Net Growth Calculation
 
@@ -211,6 +270,8 @@ As a general rule, Area Directors are required to make **at least two club visit
 
 **Data source:** The club-performance CSV columns "Nov Visit award" and "May Visit award" indicate per-club visit completion for each round. The threshold is 75% of the Area's club base, not 100%.
 
+**Source:** DRP p. 10, Rev. 07/2026: Areas must submit the Area Director's Club Visit Report "for 75% of their club base" for first-round visits by November 30 and second-round visits by May 31. Visits per club: DRP p. 10, "at least twice a year", with four a year recommended. Also DRP p. 5 (Program at a Glance). Areas with a club base of at least four are contenders (DRP p. 10).
+
 **Eligibility states:**
 
 - **Eligible**: Both rounds meet the 75% threshold
@@ -221,6 +282,8 @@ As a general rule, Area Directors are required to make **at least two club visit
 
 - **No net club loss**: paid clubs ≥ the Area's club base (club base = paid clubs as of July 1).
 - Distinguished-club counts are measured against the **club base**, not against paid clubs.
+
+**Source:** DRP p. 10, Rev. 07/2026: "Areas must have no net club loss." Club base, DRP p. 5: "paid clubs assigned to an Area, Division, or District as of July 1".
 
 ### 6.3 Recognition Levels
 
@@ -234,8 +297,9 @@ Distinguished clubs are counted as a percentage of the Area's **club base**, rou
 | Select Distinguished Area      | ≥ 50% + 1                          | ≥ base                      |
 | President's Distinguished Area | ≥ 50% + 1                          | ≥ base + 1 (net growth ≥ 1) |
 
-**Source:** District Recognition Program manual (item 1490), Distinguished Area Program (DAP).
-Implemented by `frontend/src/utils/divisionStatus.ts::calculateAreaStatus` +
+**Source:** DRP (Item 1490, Rev. 07/2026), Distinguished Area Program, p. 10 (table "Recognition
+Earned"): "at least 50% of the Area's club base plus one" for Select, plus "a net club growth of one"
+for President's. Also p. 5. Implemented by `frontend/src/utils/divisionStatus.ts::calculateAreaStatus` +
 `areaGapAnalysis.ts`. The earlier "% of _paid_ clubs, 50/75/100" model was a legacy
 misreading corrected in #799.
 
@@ -270,8 +334,10 @@ Distinguished clubs are counted as a percentage of the Division's **club base**,
 | Select Distinguished Division      | ≥ 50%                              | ≥ base + 1              |
 | President's Distinguished Division | ≥ 55%                              | ≥ base + 2              |
 
-**Source:** District Recognition Program manual (item 1490), Distinguished Division Program
-(DDP). This is the model implemented by `frontend/src/utils/divisionGapAnalysis.ts` (the
+**Source:** DRP (Item 1490, Rev. 07/2026), Distinguished Division Program, p. 13: "at least 45% of
+the Division's club base" (Distinguished), "50%" plus "net growth of one club" (Select), "55%" plus
+"growth of two clubs" (President's); qualifying requirement "no net club loss"; "at least four Areas"
+are contenders. Also p. 5. This is the model implemented by `frontend/src/utils/divisionGapAnalysis.ts` (the
 verified recognition source of truth) and it reproduces the official TI dashboard. The earlier
 "≥ 85% paid _areas_, % of distinguished _areas_ 50/75/100" model was a legacy interpretation
 removed in #799 — see `docs/investigations/798-division-recognition-thresholds.md`.
@@ -300,13 +366,13 @@ This section documents differences between legacy report assumptions and current
 | Legacy PDF Assumption                 | Current Official Rule                                                                                                              | Application Rule                                                                       |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | No CSP requirement                    | CSP required for Distinguished (2025-2026+)                                                                                        | Check CSP field; default true for historical data                                      |
-| Distinguished valid year-round        | Distinguished valid from April 1                                                                                                   | Apply April 1 cutoff for recognition                                                   |
+| Distinguished valid year-round        | TI marks clubs Distinguished or better from April 1; the result is final at June 30 (§3.4)                                         | Apply April 1 cutoff for recognition                                                   |
 | Fixed membership thresholds           | Net growth alternative allowed                                                                                                     | Check both membership AND net growth                                                   |
 | No club visit requirement for DAP     | Club visits required for DAP eligibility                                                                                           | Mark eligibility "Unknown" when data unavailable                                       |
 | Simple percentage calculations        | District **% Distinguished** ranking uses paid club base as denominator                                                            | Applies to the district ranking metric only (see Lesson 60)                            |
 | Division recognition by area %        | DDP recognition counts distinguished **clubs** as % of division club base (45/50/55), NOT distinguished _areas_ as % of paid areas | Use `divisionGapAnalysis.ts`; the area-% model was removed in #799                     |
 | Area/Division recognition denominator | Area & Division recognition tiers count distinguished clubs against the **club base**                                              | Do not reuse the district ranking's paid-club-base denominator for area/division tiers |
-| No Smedley level mentioned            | Smedley Distinguished exists (10 goals + 25 members)                                                                               | Include Smedley in all calculations                                                    |
+| No Smedley level mentioned            | Smedley Distinguished exists (10 goals + 25 members); it is not the Smedley Award (§3.5)                                           | Include Smedley Distinguished in all calculations                                      |
 
 ---
 
@@ -410,13 +476,13 @@ When calculating recognition status, apply rules in this order:
 3. **Eligibility First**: Evaluate eligibility gates before scoring metrics
 4. **Highest Level**: Recognition level is the highest level for which ALL criteria are met
 5. **Unknown Handling**: When eligibility cannot be determined, mark as "Unknown"
-6. **April 1 Cutoff**: Distinguished recognition only valid from April 1 onwards
+6. **April 1 Cutoff**: Clubs are marked Distinguished or better from April 1 onwards (TI practice, §3.4); the result is final at June 30
 
 ---
 
 ## 13. District Recognition Program
 
-**Source:** Item 1490, Rev. 04/2025
+**Source:** Item 1490, Rev. 07/2026 (was Rev. 04/2025 before #2869). Pages below are the printed page numbers.
 
 ### 13.1 Prerequisites (Hard Gates)
 
@@ -428,6 +494,8 @@ All four Distinguished District tiers require these prerequisites:
 - **Communication Plan** submitted by September 30
 - **2+ Region Advisor meetings** by May 31
 
+**Sources (DRP, Rev. 07/2026):** p. 15 lists the first four: "showing that 85% of Division and Area Directors were trained", then the District Success Plan, Market Analysis Plan and Communication Plan, all by September 30. The Region Advisor meetings are on p. 5 only: "with their Region Advisor by May 31" (at least two meetings). Note that p. 15 says "five qualifying requirements" but numbers four, so the fifth is stated only on p. 5.
+
 **Data source:** All Districts Summary CSV columns: `DSP`, `Training`, `Market Analysis`, `Communication Plan`, `Region Advisor Visit` (Y/N values)
 
 ### 13.2 Distinguished District Tiers
@@ -438,6 +506,8 @@ All four Distinguished District tiers require these prerequisites:
 | Select Distinguished      |   Net +1 club    |       ≥3%       |     ≥3%     |      ≥50%       |
 | President's Distinguished |        —         |       ≥5%       |     ≥5%     |      ≥55%       |
 | Smedley Distinguished     |        —         |       ≥8%       |     ≥8%     |      ≥60%       |
+
+**Sources (DRP, Rev. 07/2026):** p. 15 table, "1% net membership payments growth, 1% net club growth" with 45% of club base (Distinguished); 3% and 50% (Select); 5% and 55% (President's); 8% and 60% (Smedley Distinguished). Same figures on p. 5. The "No Net Club Loss" column above (Required for Distinguished, "Net +1 club" for Select) is **source not found** in Rev. 07/2026 p. 5 or p. 15, which state only the growth percentages; it was not changed.
 
 Smedley Distinguished has existed at district level since **2018-19** (it is NOT new
 for 2025-2026 — a prior revision of this doc and #329 said otherwise). What changed in
@@ -463,19 +533,26 @@ A prerequisite required by a year's rules but unknowable from the data yields ti
 
 ### 13.4 Competitive Awards (Top 3 Globally)
 
-- **President's Extension Award:** Top 3 districts by net club growth
-- **President's 20-Plus Award:** Top 3 districts by % of active clubs with 20+ paid members
-- **District Club Retention Award:** Top 3 districts retaining 90%+ paid clubs
+DRP Rev. 07/2026 calls these the "District Top 3 Awards" (pp. 16–17). It lists four:
+
+- **President's Extension Award:** Top 3 districts by net club growth. DRP p. 17: "the largest net club growth during the program year".
+- **President's 20-Plus Award:** Top 3 districts by % of active clubs with 20+ paid members. DRP p. 16: "20 or more paid members at year-end".
+- **District Club Retention Award:** Top 3 districts retaining 90%+ paid clubs. DRP p. 17: "at least 90% of their paid club base".
+- **President's Membership Retention Award** (new in our doc, #2869): Top 3 districts by membership retention rate. DRP p. 17: "the highest membership retention rate at year-end". How Toast Stats should compute the rate is **source not found**; the award is not built.
 
 ### 13.5 Threshold Awards
 
-- **District Club Strength Award:** 10%+ growth in average club size (Total Membership / Active Clubs) year-over-year
-- **District Leadership Excellence Award:** 3+ consecutive years Distinguished (any tier)
+- **District Leadership Excellence Award:** 3+ consecutive years Distinguished (any tier). DRP p. 16 ("District Excellence Awards"): "Distinguished for three or more consecutive years".
+- **District Club Strength Award** (10%+ growth in average club size, Total Membership / Active Clubs, year-over-year): **not listed in DRP Rev. 07/2026** (pp. 16–17, which name the awards above). A TI source defining or ending this award was **source not found**: the 10% rule is from an earlier revision that was not re-fetched (the document cited Rev. 04/2025 with no page). The site still shows it with a note (see the #2869 UI follow-ups). Its status under Rev. 07/2026 is unverified.
 
-### 13.6 Officer Awards
+### 13.6 Officer Awards (District Excellence Awards)
 
-- **Excellence in Education & Training Award:** Awarded to PQD in districts that train 85% of Directors and meet Distinguished goals in Distinguished clubs
-- **Excellence in Club Growth Award:** Awarded to CGD in districts that meet Distinguished goals in club and membership payments growth
+Named "District Excellence Awards" on DRP p. 16, Rev. 07/2026. DRP p. 16: "All of these awards are presented" at the Toastmasters International Convention. That sentence also covers the District Leadership Excellence Award (§13.5), which sits under the same heading.
+
+- **District Program Quality Award** (was "Excellence in Education & Training Award" in this document): for the Program Quality Director in districts that train 85% of Area and Division Directors and meet Distinguished goals in number of Distinguished clubs. DRP p. 16: "receive the District Program Quality Award".
+- **District Club Growth Award** (was "Excellence in Club Growth Award"): for the Club Growth Director in districts that meet Distinguished goals in club and membership payments growth. DRP p. 16: "receive the District Club Growth Award".
+
+Do not confuse the District Club Growth Award with the District Club Growth Achievement in §13.7, which is a separate August 2026 announcement.
 
 ### 13.7 District Club Growth Achievement (2026-2027 and later)
 
@@ -486,6 +563,8 @@ A twelfth district award type, announced by Toastmasters International in August
 > **How to Qualify**
 > **September 30 Milestones** — Charter 3 or 5 new clubs
 > **March 31 Milestones** — Charter 3, 5, or 10 new clubs
+
+The District Club Growth Achievement is **not in Item 1490 Rev. 07/2026** (text searched for "Growth Achievement" and "milestone"; no match). That is not evidence against it: the August 2026 announcement above remains the only source, and no later TI document was found.
 
 **Assumptions (operator rulings, #1473 — NOT stated by TI):**
 
@@ -506,16 +585,17 @@ A twelfth district award type, announced by Toastmasters International in August
 
 ## 14. Version History
 
-| Version | Date          | Changes                                                                                                                                                                                                                                                                                                                                                                                                               |
-| ------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1.0     | January 2026  | Initial canonical rules reference                                                                                                                                                                                                                                                                                                                                                                                     |
-| 1.1     | February 2026 | Added membership dues payment schedule (§4.1)                                                                                                                                                                                                                                                                                                                                                                         |
-| 1.2     | April 2026    | Added §13 District Recognition Program (all 11 award types)                                                                                                                                                                                                                                                                                                                                                           |
-| 1.3     | May 2026      | Corrected §6 (DAP) and §7 (DDP) to the manual (item 1490) model — distinguished **clubs** as % of **club base** (DAP 50/50+1, DDP 45/50/55) + paid-club growth; removed the legacy area-%/paid-% recognition model; clarified §9 recognition denominators (#799)                                                                                                                                                      |
-| 1.4     | June 2026     | §5.3 corrected to the canonical (implemented) checkpoint table — October 2 (was 1), December 3 (was 2) — per operator ruling on #1122: no official TI monthly pacing exists; the implementation matched the original club-health spec and empirically discriminates, the doc's earlier values did not (audit 2026-06-09, H1)                                                                                          |
-| 1.5     | June 2026     | Added §13.3 historical DRP requirements (2016-17→2024-25, per-era, dashboard-verified — investigation 1116); corrected §13.2 (Smedley exists at district level since 2018-19, not new in 2025-26); renumbered §13.4-13.6 (#1116 item 5)                                                                                                                                                                               |
-| 1.6     | June 2026     | Aligned §11 (Calculation Precedence), §12 (Implementation Requirements), and §15 (Final Rules) with the v1.3 #799 correction — DAP/DDP recognition counts distinguished **clubs** against the **club base**, not "paid units"; clarified that the separate district-ranking % Distinguished metric still uses the paid club base (§9, Lesson 60). Removes the self-contradiction the 2026-06-09 audit flagged (#1108) |
-| 1.7     | August 2026   | Added §13.7 District Club Growth Achievement — TI's new Sep 30 / Mar 31 club-charter milestones, effective PY 2026-27 (announcement quoted verbatim; assumptions A1–A4 labelled as operator rulings, #1473/#1474); records that a district's charter count can fall mid-year through inter-district club moves, so each checkpoint is judged on that date's own snapshot                                              |
+| Version | Date          | Changes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | January 2026  | Initial canonical rules reference                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| 1.1     | February 2026 | Added membership dues payment schedule (§4.1)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 1.2     | April 2026    | Added §13 District Recognition Program (all 11 award types)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 1.3     | May 2026      | Corrected §6 (DAP) and §7 (DDP) to the manual (item 1490) model — distinguished **clubs** as % of **club base** (DAP 50/50+1, DDP 45/50/55) + paid-club growth; removed the legacy area-%/paid-% recognition model; clarified §9 recognition denominators (#799)                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 1.4     | June 2026     | §5.3 corrected to the canonical (implemented) checkpoint table — October 2 (was 1), December 3 (was 2) — per operator ruling on #1122: no official TI monthly pacing exists; the implementation matched the original club-health spec and empirically discriminates, the doc's earlier values did not (audit 2026-06-09, H1)                                                                                                                                                                                                                                                                                                                                                                                         |
+| 1.5     | June 2026     | Added §13.3 historical DRP requirements (2016-17→2024-25, per-era, dashboard-verified — investigation 1116); corrected §13.2 (Smedley exists at district level since 2018-19, not new in 2025-26); renumbered §13.4-13.6 (#1116 item 5)                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 1.6     | June 2026     | Aligned §11 (Calculation Precedence), §12 (Implementation Requirements), and §15 (Final Rules) with the v1.3 #799 correction — DAP/DDP recognition counts distinguished **clubs** against the **club base**, not "paid units"; clarified that the separate district-ranking % Distinguished metric still uses the paid club base (§9, Lesson 60). Removes the self-contradiction the 2026-06-09 audit flagged (#1108)                                                                                                                                                                                                                                                                                                |
+| 1.7     | August 2026   | Added §13.7 District Club Growth Achievement — TI's new Sep 30 / Mar 31 club-charter milestones, effective PY 2026-27 (announcement quoted verbatim; assumptions A1–A4 labelled as operator rulings, #1473/#1474); records that a district's charter count can fall mid-year through inter-district club moves, so each checkpoint is judged on that date's own snapshot                                                                                                                                                                                                                                                                                                                                             |
+| 1.8     | November 2026 | Re-checked against Item 1490 Rev. 07/2026 and the District Leadership Handbook Rev. 03/2026 (#2869): added §0 sources and citation convention; cited document, revision, page and quote for each TI rule; marked gaps "source not found"; §3.4 keeps the 1 April rule as TI practice (marked from April 1, final at June 30; dashboard guide, DLH p. 18, DRP p. 9, Ron 2026-11-15); added §3.5 (Smedley Distinguished vs Smedley Award); §13 renamed the officer awards to District Program Quality Award and District Club Growth Award, added the President's Membership Retention Award, and flagged the District Club Strength Award as not listed in Rev. 07/2026. No UI copy changed; follow-ups are on #2869. |
 
 ---
 
