@@ -1223,31 +1223,51 @@ describe('DistrictActionListPage — intro reserve on a cold load (#2830)', () =
     } as unknown as ReturnType<typeof useDistrictAnalytics>)
   })
 
-  const coldIntroAt = async (date: string) => {
-    renderAt(`/district/61/action-list?date=${date}`)
+  // `py` is the program year the URL selects. The page settles on the pinned
+  // date only when it falls inside that year, so the reserve may use the date
+  // only then.
+  const coldIntroAt = async (date: string, py?: number) => {
+    renderAt(`/district/61/action-list?date=${date}${py ? `&py=${py}` : ''}`)
     await screen.findByTestId('action-list-page')
     const intro = document.querySelector('.action-list-page__subtitle')
     expect(intro).toHaveAttribute('aria-hidden', 'true')
     return intro
   }
+  const expectLongest = (intro: Element | null) => {
+    for (const clause of [TRAINING, CSP, ...CORE]) {
+      expect(intro).toHaveTextContent(clause)
+    }
+  }
 
   it('leaves out the officer-training clause for an off-season date in the URL', async () => {
-    const intro = await coldIntroAt('2025-10-15')
+    const intro = await coldIntroAt('2025-10-15', 2025)
     expect(intro).not.toHaveTextContent(TRAINING)
     for (const clause of [...CORE, CSP]) expect(intro).toHaveTextContent(clause)
   })
 
   it('keeps the officer-training clause for a round-open date in the URL', async () => {
-    const intro = await coldIntroAt('2025-11-15')
+    const intro = await coldIntroAt('2025-11-15', 2025)
     for (const clause of [TRAINING, ...CORE, CSP]) {
       expect(intro).toHaveTextContent(clause)
     }
   })
 
   it('leaves out the Club Success Plan clause for a year that does not track it', async () => {
-    const intro = await coldIntroAt('2024-10-15')
+    const intro = await coldIntroAt('2024-10-15', 2024)
     expect(intro).not.toHaveTextContent(CSP)
     expect(intro).not.toHaveTextContent(TRAINING)
+  })
+
+  /* The page settles on the pinned date only when it is inside the selected
+   * program year (?py=, else the context default). Outside it, the page falls
+   * back to that year's latest snapshot, so the date says nothing about the
+   * final sentence and the reserve must stay at its longest. */
+  it('holds the longest sentence when the date is outside the default program year', async () => {
+    expectLongest(await coldIntroAt('2024-10-15'))
+  })
+
+  it('holds the longest sentence when the date is outside the program year in ?py=', async () => {
+    expectLongest(await coldIntroAt('2026-10-24', 2024))
   })
 
   it('holds the longest sentence when the URL names no date', async () => {
