@@ -162,7 +162,7 @@ export async function runPromoteRunManifest(
    * The prod removal record (#2856): one line per object or prefix this run
    * removes from prod on purpose, appended BEFORE the removal so a removal
    * that fails part way is still on record. The workflow publishes it to
-   * runs/<id>/prod-removed.jsonl; the restore plan reads it, and a prod
+   * runs/<id>/prod-removed-a<attempt>.jsonl; the restore plan reads it, and a prod
    * deletion that is not in it is unexplained and restorable.
    */
   const recordRemovals = (

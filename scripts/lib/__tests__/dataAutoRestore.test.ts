@@ -111,6 +111,16 @@ describe('manifestPaths', () => {
     ])
   })
 
+  it('never lists a run manifest or raw-csv object as restorable (#2903)', () => {
+    const paths = manifestPaths(
+      '{"path":"runs/4242/written.jsonl"}\n' +
+        '{"path":"runs/4242/prod-removed-a1.jsonl"}\n' +
+        '{"path":"raw-csv/2026-09-15/club-performance.csv"}\n' +
+        '{"path":"v1/latest.json"}\n'
+    )
+    expect(paths).toEqual(['v1/latest.json'])
+  })
+
   it('leaves out share cards: they are written after the window closes', () => {
     expect(manifestPaths(jsonl)).not.toContain('og/v1/district/61.png')
   })
@@ -359,6 +369,14 @@ describe('buildDecisionIssueBody: no object list, a manual plan command', () => 
     expect(body).toContain('--paths')
     expect(body).toContain('list-restore-candidates.sh')
     expect(body).toContain('docs/runbooks/data-restore.md')
+  })
+
+  it('reads the removal records with read-prod-removals.sh, not one cat (#2903)', () => {
+    const body = buildDecisionIssueBody(ctx)
+    expect(body).toContain(
+      'bash scripts/pipeline/read-prod-removals.sh toast-stats-data-staging 4242 removed.jsonl'
+    )
+    expect(body).not.toMatch(/gcloud storage cat [^\n]*prod-removed/)
   })
 
   it('lists no objects: no table, no generations', () => {

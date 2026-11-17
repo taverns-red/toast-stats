@@ -196,7 +196,7 @@ env:
   # promoter removes on purpose (a prune reconcile's date prefixes, a #2232 gap
   # district's objects), appended BEFORE each removal by
   # scripts/promote-run-manifest.ts; published to
-  # runs/<github_run_id>/prod-removed.jsonl. The restore plan reads it: a
+  # runs/<github_run_id>/prod-removed-a<attempt>.jsonl. The restore plan reads it: a
   # recorded removal is never restored, a prod deletion missing from it is.
   # Absent when nothing was removed from prod.
   PROD_REMOVALS_FILE: '/tmp/run-manifest/prod-removed.jsonl'
@@ -2108,8 +2108,8 @@ jobs:
         run: |
           if [ -s "${PROD_REMOVALS_FILE}" ]; then
             gcloud storage cp --content-type="application/x-ndjson" \
-              "${PROD_REMOVALS_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/prod-removed.jsonl"
-            echo "- **Prod objects removed on purpose (#2856)**: $(wc -l < "${PROD_REMOVALS_FILE}" | tr -d ' ') → \`runs/${GITHUB_RUN_ID}/prod-removed.jsonl\`" >> "$GITHUB_STEP_SUMMARY"
+              "${PROD_REMOVALS_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/prod-removed-a${GITHUB_RUN_ATTEMPT}.jsonl"
+            echo "- **Prod objects removed on purpose (#2856)**: $(wc -l < "${PROD_REMOVALS_FILE}" | tr -d ' ') → \`runs/${GITHUB_RUN_ID}/prod-removed-a${GITHUB_RUN_ATTEMPT}.jsonl\`" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "No prod removals recorded; nothing to publish"
           fi
@@ -3346,7 +3346,7 @@ jobs:
 
       # The prod removal record of this job's promote (#2856): the same gap
       # removals as the pipeline job's (#2232), recorded before each one.
-      # Its own object, runs/<id>/prod-removed-reports.jsonl, since the
+      # Its own object, runs/<id>/prod-removed-reports-a<attempt>.jsonl, since the
       # pipeline job's file lives on another runner; the restore plan reads both.
       - name: Publish prod removal record (#2856)
         id: prodremovals
@@ -3354,8 +3354,8 @@ jobs:
         run: |
           if [ -s "${PROD_REMOVALS_FILE}" ]; then
             gcloud storage cp --content-type="application/x-ndjson" \
-              "${PROD_REMOVALS_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/prod-removed-reports.jsonl"
-            echo "- **Prod objects removed on purpose (#2856)**: $(wc -l < "${PROD_REMOVALS_FILE}" | tr -d ' ') → \`runs/${GITHUB_RUN_ID}/prod-removed-reports.jsonl\`" >> "$GITHUB_STEP_SUMMARY"
+              "${PROD_REMOVALS_FILE}" "gs://${GCS_BUCKET}/runs/${GITHUB_RUN_ID}/prod-removed-reports-a${GITHUB_RUN_ATTEMPT}.jsonl"
+            echo "- **Prod objects removed on purpose (#2856)**: $(wc -l < "${PROD_REMOVALS_FILE}" | tr -d ' ') → \`runs/${GITHUB_RUN_ID}/prod-removed-reports-a${GITHUB_RUN_ATTEMPT}.jsonl\`" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "No prod removals recorded; nothing to publish"
           fi

@@ -81,7 +81,7 @@ export interface RemovalRecord {
 }
 
 /**
- * Parse runs/<id>/prod-removed.jsonl, one `{"path","kind"[,"date"]}` per line.
+ * Parse runs/<id>/prod-removed-a<attempt>.jsonl, one `{"path","kind"[,"date"]}` per line.
  * Absent or empty text is no record (a run that removed nothing publishes
  * none). A line that is not a valid record refuses: reading it as "nothing
  * removed" would turn a deliberate removal into an unexplained, restorable one.
@@ -344,8 +344,22 @@ function planOne(
   }
 }
 
-/** The entry for one object the run removed from prod on purpose. */
-function recordedEntry(r: RemovalRecord): PlanEntry {
+/**
+ * The entry for one object the run removed from prod on purpose. When the
+ * object is still live (`liveGeneration` given), the removal did not finish
+ * (the promoter records before it removes): a person decides, with the real
+ * generation shown.
+ */
+function recordedEntry(r: RemovalRecord, liveGeneration?: string): PlanEntry {
+  if (liveGeneration !== undefined) {
+    return {
+      name: r.path,
+      action: 'manual',
+      liveGeneration,
+      reason:
+        'recorded removal did not complete: the object is still live in prod, so a person decides',
+    }
+  }
   return r.kind === 'gap'
     ? {
         name: r.path,
@@ -441,16 +455,18 @@ export function planRestore(input: {
   }
   const removals = input.removals ?? []
   const liveNames = new Set(input.live.map(o => o.name))
+  const liveGenByName = new Map(input.live.map(o => [o.name, o.generation]))
   const recorded = [
     ...new Map(removals.map(r => [r.path, r] as const)).values(),
-  ].map(recordedEntry)
+  ].map(r => recordedEntry(r, liveGenByName.get(r.path)))
+  const recordedNames = new Set(recorded.map(e => e.name))
   // Names the run wrote with no live object in prod: unexplained unless the
   // removal record names them.
   const deleted = [...(only ?? [])]
     .filter(n => !liveNames.has(n) && !isRecorded(n, removals))
     .map(n => planDeleted(n, byName.get(n) ?? [], sinceMs, untilMs))
     .filter((e): e is PlanEntry => e !== null)
-  const entries = input.live
+  const planned = input.live
     .filter(o => !only || only.has(o.name))
     .map(o =>
       planOne(
@@ -460,6 +476,15 @@ export function planRestore(input: {
         untilMs,
         input.softDeleted.length === 0
       )
+    )
+    // A live object under a recorded prune prefix: the removal did not finish,
+    // so a person decides (#2903). A refuse planOne raised stays.
+    .map(e =>
+      e.action !== 'refuse' &&
+      liveNames.has(e.name) &&
+      isRecorded(e.name, removals)
+        ? recordedEntry({ path: e.name, kind: 'prune' }, e.liveGeneration)
+        : e
     )
     .concat(deleted)
     .map(e =>
@@ -472,7 +497,20 @@ export function planRestore(input: {
           } as PlanEntry)
         : e
     )
-    .concat(recorded)
+  // One entry per name (#2903). A recorded name is never also planned for a
+  // restore. A refuse planOne raised for a still-live one stays (it is the
+  // more serious finding) and the recorded entry steps aside.
+  const keptRefuses = planned.filter(
+    e =>
+      recordedNames.has(e.name) &&
+      e.action === 'refuse' &&
+      liveNames.has(e.name)
+  )
+  const keptNames = new Set(keptRefuses.map(e => e.name))
+  const entries = planned
+    .filter(e => !recordedNames.has(e.name))
+    .concat(keptRefuses)
+    .concat(recorded.filter(e => !keptNames.has(e.name)))
     .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
   return {
     version: 1,
