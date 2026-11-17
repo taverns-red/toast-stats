@@ -40,8 +40,13 @@ export function stripText(command) {
 }
 
 // A command word: start of the command, or right after a separator, `(`,
-// `{`, `$(`, or a loop/branch keyword.
-const CMD = String.raw`(?:^|[;&|(\n{]|\b(?:do|then|else|while|until|if)\b)\s*`
+// `{`, `$(`, a backtick, or a loop/branch keyword. It may be preceded by `!`, `time` and `VAR=value ` prefixes,
+// and the program may be path-qualified (/opt/homebrew/bin/gh).
+const CMD =
+  String.raw`(?:^|[;&|(\n{` +
+  '`' +
+  String.raw`]|\b(?:do|then|else|while|until|if)\b)\s*` +
+  String.raw`(?:!\s*)?(?:time\s+)?(?:\w+=\S*\s+)*(?:\S*/)?`
 
 const SLEEP = new RegExp(CMD + String.raw`sleep\s+\S`)
 const GH_POLL = new RegExp(
