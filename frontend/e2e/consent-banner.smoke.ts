@@ -122,6 +122,34 @@ test('lowering from all to minimal stops GA and clears _ga cookies', async ({
     .toBe(0)
 })
 
+/* #2827: GA used to send a queued `scroll` collect hit 2 to 8 s after the
+ * visitor lowered consent, although ga-disable-<id> was already true. Count
+ * the collect hits from the moment of the click, wait out the delay, and
+ * navigate: none may arrive. */
+test('lowering from all to minimal sends no collect hit afterwards (#2827)', async ({
+  page,
+  gaCollect,
+}) => {
+  test.setTimeout(90_000)
+  await serveAsProd(page)
+  await open(page)
+  await banner(page).getByRole('button', { name: 'Keep all' }).click()
+  await expect
+    .poll(() => gaCollect.length, { timeout: 30_000 })
+    .toBeGreaterThan(0)
+  // Real input makes gtag queue engagement events (scroll) for later.
+  await page.mouse.wheel(0, 2_000)
+  await page.getByRole('button', { name: 'Privacy & cookies' }).first().click()
+  await banner(page).getByRole('button', { name: 'Keep minimal' }).click()
+  await expect(banner(page)).toBeHidden()
+  const before = gaCollect.length
+  await page.mouse.wheel(0, 2_000)
+  await page.waitForTimeout(10_000)
+  await page.goto(`${PROD_ORIGIN}/awards`, { waitUntil: 'load' })
+  await page.waitForTimeout(2_000)
+  expect(gaCollect.length - before).toBe(0)
+})
+
 test('banner is a fixed overlay: no shift, no extra page height', async ({
   page,
 }) => {
