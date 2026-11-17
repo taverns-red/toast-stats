@@ -582,3 +582,180 @@ describe('ciWait merge state (#2905)', () => {
     })
   })
 })
+
+/**
+ * #2905 review: UNSTABLE waits, the head SHA must hold still across the
+ * merge-state read, DRAFT passes but says it is not mergeable, and REST reads
+ * the pull request once per poll.
+ */
+describe('ciWait merge state, review fixes (#2905)', () => {
+  const GRAPHQL_403 =
+    'HTTP 403: GitHub GraphQL is not available from Claude Code sessions; use the REST API'
+  const GREEN = JSON.stringify([check({}), check({ name: 'Lint' })])
+  const GREEN_WITH_CANCELLED = JSON.stringify([
+    check({}),
+    check({ name: 'Deploy', bucket: 'cancel', state: 'CANCELLED' }),
+  ])
+  const view = (mergeStateStatus: string, headRefOid = 'aaa') =>
+    ok(JSON.stringify({ mergeStateStatus, headRefOid, state: 'OPEN' }))
+
+  it('keeps waiting on UNSTABLE when nothing was cancelled', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 21 /, ok(GREEN)],
+      [/^gh pr view 21 /, view('UNSTABLE')],
+    ])
+    const r = await ciWait(21, {
+      repo: REPO,
+      runner,
+      intervalMs: 60_000,
+      timeoutMs: 180_000,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pending')
+    expect(r.timedOut).toBe(true)
+    expect(r.mergeState).toBe('UNSTABLE')
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(false)
+  })
+
+  it('passes UNSTABLE only with --allow-cancelled and a cancelled check', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 22 /, ok(GREEN_WITH_CANCELLED)],
+      [/^gh pr view 22 /, view('UNSTABLE')],
+    ])
+    const r = await ciWait(22, {
+      repo: REPO,
+      runner,
+      allowCancelled: true,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(true)
+  })
+
+  it('does not pass UNSTABLE with --allow-cancelled when nothing was cancelled', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 23 /, ok(GREEN)],
+      [/^gh pr view 23 /, view('UNSTABLE')],
+    ])
+    const r = await ciWait(23, {
+      repo: REPO,
+      runner,
+      allowCancelled: true,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pending')
+  })
+
+  it('is not a pass when the head SHA moved between the checks and the merge state', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 24 /, ok(GREEN)],
+      // First read sees A, the read after the checks sees B.
+      [/^gh pr view 24 /, [view('CLEAN', 'aaa'), view('CLEAN', 'bbb')]],
+    ])
+    const r = await ciWait(24, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pending')
+  })
+
+  it('passes on the next poll once the head SHA holds still, and reports it', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 25 /, ok(GREEN)],
+      [/^gh pr view 25 /, [view('CLEAN', 'aaa'), view('CLEAN', 'bbb')]],
+    ])
+    const r = await ciWait(25, {
+      repo: REPO,
+      runner,
+      intervalMs: 60_000,
+      timeoutMs: 600_000,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(r.polls).toBe(2)
+    expect(JSON.parse(JSON.stringify(r)).headSha).toBe('bbb')
+  })
+
+  it('says a draft is not mergeable yet, in text and JSON, but still passes', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 26 /, ok(GREEN)],
+      [/^gh pr view 26 /, view('DRAFT')],
+    ])
+    const r = await ciWait(26, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(false)
+    expect(formatCiWait(r)).toContain('draft: not mergeable yet')
+  })
+
+  it.each(['CLEAN', 'HAS_HOOKS'])('%s is mergeable', async state => {
+    const runner = fakeRunner([
+      [/^gh pr checks 27 /, ok(GREEN)],
+      [/^gh pr view 27 /, view(state)],
+    ])
+    const r = await ciWait(27, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(true)
+  })
+
+  it('reads the REST pull request once per poll and reuses it for the merge state', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks /, fail(GRAPHQL_403)],
+      [/^gh pr view /, fail(GRAPHQL_403)],
+      [
+        /\/pulls\/28$/,
+        ok(
+          JSON.stringify({
+            head: { sha: 'abc' },
+            state: 'open',
+            mergeable_state: 'clean',
+          })
+        ),
+      ],
+      [
+        /\/commits\/abc\/check-runs/,
+        ok(
+          JSON.stringify({
+            total_count: 1,
+            check_runs: [
+              {
+                name: 'T',
+                status: 'completed',
+                conclusion: 'success',
+                details_url: 'https://x/1',
+                started_at: '2026-11-17T10:00:00Z',
+                completed_at: '2026-11-17T10:05:00Z',
+                check_suite: { id: 7 },
+              },
+            ],
+          })
+        ),
+      ],
+      [
+        /\/actions\/runs\?/,
+        ok(JSON.stringify({ total_count: 0, workflow_runs: [] })),
+      ],
+    ])
+    const r = await ciWait(28, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(runner.calls.filter(c => /\/pulls\/28$/.test(c))).toHaveLength(1)
+  })
+})

@@ -307,6 +307,14 @@ describe('agent-cli', () => {
       expect(c.out.join('\n')).toMatch(/CLEAN/)
     })
 
+    it('ci-wait --help explains mergeable and that a draft is not mergeable yet (#2905)', async () => {
+      const c = capture()
+      await main(['ci-wait', '--help'], c.deps)
+      expect(c.out.join('\n')).toMatch(/"mergeable": false/)
+      expect(c.out.join('\n')).toMatch(/draft: not mergeable yet/)
+      expect(c.out.join('\n')).toMatch(/UNSTABLE waits/)
+    })
+
     it('polls when core.remaining is 500 or more', async () => {
       const c = capture()
       const runner = fakeRunner([
