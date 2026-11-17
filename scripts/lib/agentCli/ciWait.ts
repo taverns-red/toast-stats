@@ -261,7 +261,10 @@ export async function ciWait(
   const allowCancelled = opts.allowCancelled ?? false
   let runner = opts.runner
   if (opts.guardRateLimit) {
-    await assertRateLimitBudget(runner, now())
+    // A single --once snapshot is one cheap read; only a long wait needs the
+    // budget. CI's GITHUB_TOKEN allows only 1,000 an hour, so a floor of 500
+    // would flake the smoke (#2892).
+    if (!opts.once) await assertRateLimitBudget(runner, now())
     runner = rateLimitAware(runner, now)
   }
   const started = now()
