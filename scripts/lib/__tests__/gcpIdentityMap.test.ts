@@ -17,6 +17,11 @@
  */
 import { describe, it, expect } from 'vitest'
 import {
+  DEPLOYER,
+  DATA_READER,
+  KNOWN_IDENTITIES,
+  READER_GUARD_EXEMPT,
+  byEvent,
   EXPECTED,
   NON_GCP_OIDC,
   CALLERS,
@@ -100,6 +105,83 @@ describe('GCP identity map (#2872)', () => {
     expect(CALLERS).toEqual({
       'release-please.yml::deploy': './.github/workflows/deploy.yml',
     })
+  })
+})
+
+describe('data-reader jobs (#2872 B2)', () => {
+  const files = loadWorkflows()
+  const wfOf = (file: string) => files.find(f => f.file === file)!.wf
+
+  it('maps the read-only jobs to the data reader', () => {
+    expect(EXPECTED['data-pipeline.yml::closing-registry-pr']).toBe(DATA_READER)
+    expect(EXPECTED['validate-vs-ceo-report.yml::validate']).toBe(DATA_READER)
+  })
+
+  it('keeps the deploy identity on canary pull requests, data reader otherwise', () => {
+    expect(EXPECTED['harness-staging-canary.yml::canary']).toBe(
+      byEvent('pull_request', DEPLOYER, DATA_READER)
+    )
+  })
+
+  it('builds every identity from known variables only', () => {
+    const bad = Object.entries(EXPECTED).filter(
+      ([, v]) =>
+        !KNOWN_IDENTITIES.some(id => v.includes(id)) ||
+        v
+          .split(/[\s&|=']+/)
+          .filter(t => /^(secrets|vars)\./.test(t))
+          .some(t => !KNOWN_IDENTITIES.includes(t))
+    )
+    expect(bad).toEqual([])
+  })
+
+  it('checks the reader variable is non-empty before every data-reader auth step', () => {
+    const missing: string[] = []
+    for (const [key, id] of Object.entries(EXPECTED)) {
+      if (id !== DATA_READER) continue
+      const [file, job] = key.split('::')
+      const steps = wfOf(file!).jobs![job!]!.steps!
+      const authAt = steps.findIndex(s =>
+        /google-github-actions\/auth/.test(s.uses ?? '')
+      )
+      const guarded = steps
+        .slice(0, authAt)
+        .some(
+          s =>
+            /vars\.GCP_DATA_READER_SA/.test(
+              String(Object.values(s.env ?? {}))
+            ) &&
+            /-z\b/.test(s.run ?? '') &&
+            /exit 1/.test(s.run ?? '')
+        )
+      if (!guarded) missing.push(key)
+    }
+    expect(missing).toEqual([])
+  })
+
+  it('exempts only event-conditional canary from the reader guard, with a reason', () => {
+    expect(Object.keys(READER_GUARD_EXEMPT)).toEqual([
+      'harness-staging-canary.yml::canary',
+    ])
+    expect(Object.values(READER_GUARD_EXEMPT).every(r => r.trim())).toBe(true)
+    const canary = wfOf('harness-staging-canary.yml').jobs!.canary!.steps!.find(
+      s => /google-github-actions\/auth/.test(s.uses ?? '')
+    )
+    expect(canary?.with?.['token_format']).toBe('access_token')
+  })
+
+  it('stops the CEO report oracle on any ref but main, before it authenticates', () => {
+    const steps = wfOf('validate-vs-ceo-report.yml').jobs!.validate!.steps!
+    const authAt = steps.findIndex(s =>
+      /google-github-actions\/auth/.test(s.uses ?? '')
+    )
+    const guardAt = steps.findIndex(
+      s =>
+        /github\.ref\s*!=\s*'refs\/heads\/main'/.test(s.if ?? '') &&
+        /exit 1/.test(s.run ?? '')
+    )
+    expect(guardAt).toBeGreaterThanOrEqual(0)
+    expect(guardAt).toBeLessThan(authAt)
   })
 })
 
