@@ -131,10 +131,40 @@ export function decideGate(args: {
   }
 }
 
+/** A non-2xx GitHub API response (#2887). */
+export class HttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    /** A 403 that is a rate limit, not a permission failure. */
+    readonly rateLimited = false
+  ) {
+    super(message)
+    this.name = 'HttpError'
+  }
+}
+
+/**
+ * Whether a poll error can never succeed on retry (#2887): a 4xx other than
+ * 429 and other than a rate-limit 403, e.g. 401, 404, 422 or a permission 403.
+ * Network errors, 5xx, 429 and rate limits are transient and stay retried.
+ */
+export function isPermanentError(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false
+  const { status, rateLimited } = err as {
+    status?: unknown
+    rateLimited?: unknown
+  }
+  if (typeof status !== 'number') return false
+  if (status < 400 || status >= 500 || status === 429) return false
+  return !(status === 403 && rateLimited === true)
+}
+
 /**
  * Call `fn` until it succeeds, sleeping one poll interval after each failure.
- * A transient error (network, 429, secondary rate limit) must not pin the gate
- * red. The job timeout bounds the retries.
+ * A transient error (network, 5xx, 429, rate limit) must not pin the gate red.
+ * A permanent 4xx is rethrown at once instead of polling until the job
+ * timeout (#2887). The job timeout bounds the retries.
  */
 export async function retryUntilOk<T>(
   fn: () => Promise<T>,
@@ -148,6 +178,7 @@ export async function retryUntilOk<T>(
     try {
       return await fn()
     } catch (err) {
+      if (isPermanentError(err)) throw err
       opts.onRetry?.(
         `poll failed (${err instanceof Error ? err.message : err}); retrying`
       )
@@ -170,11 +201,18 @@ export async function waitForGate(opts: {
   onWait?: (reasons: string[]) => void
 }): Promise<NeedsVerdict> {
   for (;;) {
-    const state = await retryUntilOk(opts.fetchState, {
-      sleep: opts.sleep,
-      intervalMs: opts.intervalMs,
-      onRetry: m => opts.onWait?.([m]),
-    })
+    let state: GateState
+    try {
+      state = await retryUntilOk(opts.fetchState, {
+        sleep: opts.sleep,
+        intervalMs: opts.intervalMs,
+        onRetry: m => opts.onWait?.([m]),
+      })
+    } catch (err) {
+      if (!isPermanentError(err)) throw err
+      const msg = err instanceof Error ? err.message : String(err)
+      return { pass: false, reasons: [`poll failed, not retrying: ${msg}`] }
+    }
     const d = decideGate({
       expected: opts.expected,
       runs: state.runs,
