@@ -8,6 +8,10 @@
  * the largest measured cost in this repo's sessions (taverns-red/ops#148).
  */
 import { CommandError, runGhJson, runGhResult, type Runner } from './exec.js'
+import { assertRateLimitBudget, rateLimitAware } from './rateLimit.js'
+
+/** The shortest, and default, gap between polls (Ron, 2026-11-17, #2892). */
+export const MIN_INTERVAL_MS = 60_000
 
 /** One row of `gh pr checks --json name,state,bucket,link,workflow,startedAt,completedAt`. */
 export interface PrCheck {
@@ -234,6 +238,11 @@ export interface CiWaitOptions extends FetchOptions {
   allowCancelled?: boolean
   now?: () => number
   onProgress?: (s: CheckSummary) => void
+  /**
+   * Check the GitHub rate limit before polling (refuse under 500 calls left)
+   * and stop, without retrying, if a response says the limit is hit (#2892).
+   */
+  guardRateLimit?: boolean
 }
 
 function isFailing(s: CheckSummary, allowCancelled: boolean): boolean {
@@ -247,13 +256,23 @@ export async function ciWait(
   const now = opts.now ?? Date.now
   const sleep =
     opts.sleep ?? ((ms: number) => new Promise<void>(r => setTimeout(r, ms)))
-  const interval = opts.intervalMs ?? 30_000
+  const interval = opts.intervalMs ?? MIN_INTERVAL_MS
   const timeout = opts.timeoutMs ?? 60 * 60_000
   const allowCancelled = opts.allowCancelled ?? false
+  let runner = opts.runner
+  if (opts.guardRateLimit) {
+    // A single --once snapshot is one cheap read; only a long wait needs the
+    // budget. CI's GITHUB_TOKEN allows only 1,000 an hour, so a floor of 500
+    // would flake the smoke (#2892).
+    if (!opts.once) await assertRateLimitBudget(runner, now())
+    runner = rateLimitAware(runner, now)
+  }
   const started = now()
   let polls = 0
   for (;;) {
-    const summary = summarizeChecks(await fetchPrChecks(pr, { ...opts, sleep }))
+    const summary = summarizeChecks(
+      await fetchPrChecks(pr, { ...opts, runner, sleep })
+    )
     polls++
     opts.onProgress?.(summary)
     const failing = isFailing(summary, allowCancelled)

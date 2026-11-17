@@ -46,7 +46,7 @@ Toastmasters District Statistics Visualizer — a data visualization platform fo
 
 ## Commands
 
-**Agent sessions: run `./bin/agent-cli --help` first** — read-only/wait-only answers for CI waits, main status, failed job logs, live/preview version, preview URLs and worktree cleanup (#2418); use it instead of hand-written `sleep`/`gh pr checks` loops.
+**Agent sessions: run `./bin/agent-cli --help` first** — read-only/wait-only answers for CI waits, main status, failed job logs, live/preview version, preview URLs and worktree cleanup (#2418); use it instead of hand-written `sleep`/`gh pr checks` loops. **Wait on PR CI only with `./bin/agent-cli ci-wait <pr> --interval 60`**, never with `sleep` loops, `gh pr checks` (with or without `--watch`) or repeated `gh run view`. The GitHub rate limit (5,000 calls an hour) is shared by every session on Ron's login. `ci-wait` polls every 60 s and refuses a shorter `--interval`. It won't start a wait when `gh api rate_limit` shows fewer than 500 calls left in the core or graphql bucket (`--once` skips this check), and it stops, naming the reset time, if GitHub reports the limit hit (#2892).
 
 ```bash
 # Development
