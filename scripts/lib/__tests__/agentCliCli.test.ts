@@ -160,10 +160,13 @@ describe('agent-cli', () => {
       }
     }
     const RESET = 1_800_000_000 // 2027-01-15T08:00:00Z
-    const limit = (remaining: number) =>
+    const limit = (remaining: number, graphql = 5000) =>
       ok(
         JSON.stringify({
-          resources: { core: { limit: 5000, remaining, reset: RESET } },
+          resources: {
+            core: { limit: 5000, remaining, reset: RESET },
+            graphql: { limit: 5000, remaining: graphql, reset: RESET },
+          },
         })
       )
     const PENDING = JSON.stringify([
@@ -192,6 +195,23 @@ describe('agent-cli', () => {
       expect(code).not.toBe(0)
       expect(code).not.toBe(2)
       expect(c.err.join('\n')).toContain('2027-01-15T08:00:00Z')
+      expect(runner.calls.some(l => l.includes('pr checks'))).toBe(false)
+    })
+
+    it('refuses to poll when graphql.remaining is under 500 even if core is fine', async () => {
+      const c = capture()
+      const runner = fakeRunner([
+        [/^gh api rate_limit/, limit(4000, 100)],
+        [/^gh pr checks /, fail('', 8, PENDING)],
+      ])
+      const code = await main(['ci-wait', '123'], {
+        ...c.deps,
+        runner,
+        ...clock(),
+      })
+      expect(code).toBe(3)
+      expect(c.err.join('\n')).toContain('2027-01-15T08:00:00Z')
+      expect(c.err.join('\n')).toMatch(/graphql/i)
       expect(runner.calls.some(l => l.includes('pr checks'))).toBe(false)
     })
 
