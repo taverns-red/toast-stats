@@ -271,6 +271,31 @@ describe('agent-cli', () => {
       expect(c.out.join('\n')).toContain('API rate limit exceeded test')
     })
 
+    it('carries on when rate_limit cannot be read', async () => {
+      const c = capture()
+      const runner = fakeRunner([
+        [/^gh api rate_limit/, fail('HTTP 500: server error', 1)],
+        [
+          /^gh pr checks /,
+          fail(
+            '',
+            1,
+            JSON.stringify([{ ...JSON.parse(PENDING)[0], bucket: 'pass' }])
+          ),
+        ],
+      ])
+      expect(
+        await main(['ci-wait', '123'], { ...c.deps, runner, ...clock() })
+      ).toBe(0)
+      expect(runner.calls.filter(l => l.includes('pr checks'))).toHaveLength(1)
+    })
+
+    it('ci-wait --help lists exit 3 as a rate-limit stop or usage error', async () => {
+      const c = capture()
+      await main(['ci-wait', '--help'], c.deps)
+      expect(c.out.join('\n')).toMatch(/3 .*rate.limit.*usage/i)
+    })
+
     it('polls when core.remaining is 500 or more', async () => {
       const c = capture()
       const runner = fakeRunner([
