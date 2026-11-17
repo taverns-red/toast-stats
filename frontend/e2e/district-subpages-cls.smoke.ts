@@ -223,7 +223,7 @@ test.describe('district subpages CLS on a throttled cold load (#1837)', () => {
  * the final sentence was one line shorter and the controls and sections moved
  * up ~21px (CLS ~0.01) once the skeleton dropped. That is far inside the 0.1
  * budget above, so this asserts the cause: the controls row must not shift.
- * 2025-10-15 sits between officer-training rounds. */
+ * 2026-10-24 sits between officer-training rounds. */
 test.describe('Action List intro off-season, cold load (#2830)', () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
@@ -231,11 +231,11 @@ test.describe('Action List intro off-season, cold load (#2830)', () => {
   )
 
   for (const vp of VIEWPORTS) {
-    test(`/district/61/action-list?date=2025-10-15 at ${vp.width}px does not move the controls`, async ({
+    test(`/district/61/action-list?date=2026-10-24 at ${vp.width}px does not move the controls`, async ({
       page,
     }) => {
       test.setTimeout(180_000)
-      const path = '/district/61/action-list?date=2025-10-15'
+      const path = '/district/61/action-list?date=2026-10-24'
       await measureCls(page, path, vp, '.district-detail-page')
       const entries = await page.evaluate(() => window.__clsEntries ?? [])
       const moved = entries.filter(e =>
