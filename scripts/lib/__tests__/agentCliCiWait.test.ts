@@ -134,6 +134,7 @@ describe('ciWait', () => {
   it('fails on a cancelled check unless --allow-cancelled', async () => {
     const runner = fakeRunner([
       [/^gh pr checks 2416 /, ok(JSON.stringify(CHECKS))],
+      [/^gh pr view 2416 /, ok('{"mergeStateStatus":"CLEAN"}')],
     ])
     const strict = await ciWait(2416, {
       repo: REPO,
@@ -191,9 +192,16 @@ describe('ciWait REST fallback when GraphQL is blocked (#2485)', () => {
   function restRunner(prChecks = fail(GRAPHQL_403)) {
     return fakeRunner([
       [/^gh pr checks 2482 /, prChecks],
+      // The merge state is not what these tests are about (#2905); the
+      // recorded pull request has none, so say it is clean.
       [
         /^gh api repos\/taverns-red\/toast-stats\/pulls\/2482$/,
-        ok(fixture('pull-2482.json')),
+        ok(
+          JSON.stringify({
+            ...JSON.parse(fixture('pull-2482.json')),
+            mergeable_state: 'clean',
+          })
+        ),
       ],
       [
         new RegExp(`/commits/${SHA}/check-runs\\?per_page=100&page=1$`),
@@ -343,5 +351,426 @@ describe('ciWait REST fallback when GraphQL is blocked (#2485)', () => {
     ])
     await ciWait(2416, { repo: REPO, runner, once: true, ...fakeClock() })
     expect(runner.calls.some(c => c.startsWith('gh api'))).toBe(false)
+  })
+})
+
+/**
+ * #2905: green checks are not enough. After a PR title or body edit, a new
+ * CI run starts whose gate is not yet in the check list, so ci-wait read only
+ * the older green run and said PASS while GitHub still showed the PR BLOCKED
+ * (PR #2904, 2026-11-17). The verdict now also needs mergeStateStatus to
+ * allow a merge.
+ */
+describe('ciWait merge state (#2905)', () => {
+  const GRAPHQL_403 =
+    'HTTP 403: GitHub GraphQL is not available from Claude Code sessions; use the REST API'
+  const GREEN = JSON.stringify([check({}), check({ name: 'Lint' })])
+  const view = (mergeStateStatus: string) =>
+    ok(JSON.stringify({ mergeStateStatus, headRefOid: 'abc123' }))
+
+  it('keeps waiting while all checks are green but the PR is BLOCKED, then passes on CLEAN (#2904)', async () => {
+    const clock = fakeClock()
+    const sleeps: number[] = []
+    const runner = fakeRunner([
+      [/^gh pr checks 2904 /, ok(GREEN)],
+      // Each confirmation reads the PR twice, around a re-read of the checks.
+      [
+        /^gh pr view 2904 /,
+        [
+          view('BLOCKED'),
+          view('BLOCKED'),
+          view('BLOCKED'),
+          view('BLOCKED'),
+          view('CLEAN'),
+        ],
+      ],
+    ])
+    const r = await ciWait(2904, {
+      repo: REPO,
+      runner,
+      intervalMs: 60_000,
+      timeoutMs: 600_000,
+      now: clock.now,
+      sleep: async ms => {
+        sleeps.push(ms)
+        await clock.sleep(ms)
+      },
+    })
+    expect(r.outcome).toBe('pass')
+    expect(r.polls).toBe(3)
+    expect(sleeps).toEqual([60_000, 60_000])
+    expect(r.mergeState).toBe('CLEAN')
+  })
+
+  it.each(['BLOCKED', 'BEHIND', 'UNKNOWN'])(
+    'on timeout with %s, exits pending and names the merge state',
+    async state => {
+      const runner = fakeRunner([
+        [/^gh pr checks 5 /, ok(GREEN)],
+        [/^gh pr view 5 /, view(state)],
+      ])
+      const r = await ciWait(5, {
+        repo: REPO,
+        runner,
+        intervalMs: 60_000,
+        timeoutMs: 180_000,
+        ...fakeClock(),
+      })
+      expect(r.outcome).toBe('pending')
+      expect(r.timedOut).toBe(true)
+      expect(ciWaitExitCode(r)).toBe(2)
+      expect(formatCiWait(r)).toContain(state)
+    }
+  )
+
+  it('fails at once on DIRTY (conflicts) and says so', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 6 /, ok(GREEN)],
+      [/^gh pr view 6 /, view('DIRTY')],
+    ])
+    const r = await ciWait(6, { repo: REPO, runner, ...fakeClock() })
+    expect(r.outcome).toBe('fail')
+    expect(ciWaitExitCode(r)).toBe(1)
+    expect(r.polls).toBe(1)
+    expect(formatCiWait(r)).toMatch(/conflict/i)
+  })
+
+  it('passes a draft PR whose checks are green (mergeStateStatus DRAFT)', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 7 /, ok(GREEN)],
+      [/^gh pr view 7 /, view('DRAFT')],
+    ])
+    const r = await ciWait(7, { repo: REPO, runner, ...fakeClock() })
+    expect(r.outcome).toBe('pass')
+    expect(r.mergeState).toBe('DRAFT')
+  })
+
+  it('judges a merged PR on its checks alone: GitHub reports its merge state as UNKNOWN', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 12 /, ok(GREEN)],
+      [
+        /^gh pr view 12 /,
+        ok(JSON.stringify({ mergeStateStatus: 'UNKNOWN', state: 'MERGED' })),
+      ],
+    ])
+    const r = await ciWait(12, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+  })
+
+  it('does the same over REST for a closed PR', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks /, fail(GRAPHQL_403)],
+      [/^gh pr view /, fail(GRAPHQL_403)],
+      [
+        /\/pulls\/13$/,
+        ok(
+          JSON.stringify({
+            head: { sha: 'abc' },
+            state: 'closed',
+            mergeable_state: 'unknown',
+          })
+        ),
+      ],
+      [
+        /\/commits\/abc\/check-runs/,
+        ok(
+          JSON.stringify({
+            total_count: 1,
+            check_runs: [
+              {
+                name: 'T',
+                status: 'completed',
+                conclusion: 'success',
+                details_url: 'https://x/1',
+                started_at: '2026-11-17T10:00:00Z',
+                completed_at: '2026-11-17T10:05:00Z',
+                check_suite: { id: 7 },
+              },
+            ],
+          })
+        ),
+      ],
+      [
+        /\/actions\/runs\?/,
+        ok(JSON.stringify({ total_count: 0, workflow_runs: [] })),
+      ],
+    ])
+    const r = await ciWait(13, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+  })
+
+  it('does not read the merge state while a check is still failing', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 8 /, ok(JSON.stringify([check({ bucket: 'fail' })]))],
+    ])
+    const r = await ciWait(8, { repo: REPO, runner, ...fakeClock() })
+    expect(r.outcome).toBe('fail')
+    expect(runner.calls.some(c => c.startsWith('gh pr view'))).toBe(false)
+  })
+
+  it('--once reports a BLOCKED PR as pending and shows the merge state in text and JSON', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 9 /, ok(GREEN)],
+      [/^gh pr view 9 /, view('BLOCKED')],
+    ])
+    const r = await ciWait(9, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pending')
+    expect(r.timedOut).toBe(false)
+    expect(r.polls).toBe(1)
+    expect(JSON.parse(JSON.stringify(r))).toMatchObject({
+      mergeState: 'BLOCKED',
+    })
+    expect(formatCiWait(r)).toContain('BLOCKED')
+  })
+
+  describe('REST fallback maps mergeable_state', () => {
+    function restRunner(mergeable_state: string) {
+      return fakeRunner([
+        [/^gh pr checks /, fail(GRAPHQL_403)],
+        [/^gh pr view /, fail(GRAPHQL_403)],
+        [
+          /^gh api repos\/taverns-red\/toast-stats\/pulls\/\d+$/,
+          ok(JSON.stringify({ head: { sha: 'abc' }, mergeable_state })),
+        ],
+        [
+          /\/commits\/abc\/check-runs\?per_page=100&page=1$/,
+          ok(
+            JSON.stringify({
+              total_count: 1,
+              check_runs: [
+                {
+                  name: 'Test Suite',
+                  status: 'completed',
+                  conclusion: 'success',
+                  details_url: 'https://x/job/1',
+                  started_at: '2026-11-17T10:00:00Z',
+                  completed_at: '2026-11-17T10:05:00Z',
+                  check_suite: { id: 7 },
+                },
+              ],
+            })
+          ),
+        ],
+        [
+          /\/actions\/runs\?head_sha=abc&per_page=100&page=1$/,
+          ok(
+            JSON.stringify({
+              total_count: 1,
+              workflow_runs: [{ name: 'CI', check_suite_id: 7 }],
+            })
+          ),
+        ],
+      ])
+    }
+
+    it.each([
+      ['clean', 'pass', 'CLEAN'],
+      ['draft', 'pass', 'DRAFT'],
+      ['blocked', 'pending', 'BLOCKED'],
+      ['behind', 'pending', 'BEHIND'],
+      ['unknown', 'pending', 'UNKNOWN'],
+      ['dirty', 'fail', 'DIRTY'],
+    ])('%s -> %s', async (rest, outcome, state) => {
+      const r = await ciWait(11, {
+        repo: REPO,
+        runner: restRunner(rest),
+        once: true,
+        ...fakeClock(),
+      })
+      expect(r.outcome).toBe(outcome)
+      expect(r.mergeState).toBe(state)
+    })
+  })
+})
+
+/**
+ * #2905 review: UNSTABLE waits, the head SHA must hold still across the
+ * merge-state read, DRAFT passes but says it is not mergeable, and REST reads
+ * the pull request once per poll.
+ */
+describe('ciWait merge state, review fixes (#2905)', () => {
+  const GRAPHQL_403 =
+    'HTTP 403: GitHub GraphQL is not available from Claude Code sessions; use the REST API'
+  const GREEN = JSON.stringify([check({}), check({ name: 'Lint' })])
+  const GREEN_WITH_CANCELLED = JSON.stringify([
+    check({}),
+    check({ name: 'Deploy', bucket: 'cancel', state: 'CANCELLED' }),
+  ])
+  const view = (mergeStateStatus: string, headRefOid = 'aaa') =>
+    ok(JSON.stringify({ mergeStateStatus, headRefOid, state: 'OPEN' }))
+
+  it('keeps waiting on UNSTABLE when nothing was cancelled', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 21 /, ok(GREEN)],
+      [/^gh pr view 21 /, view('UNSTABLE')],
+    ])
+    const r = await ciWait(21, {
+      repo: REPO,
+      runner,
+      intervalMs: 60_000,
+      timeoutMs: 180_000,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pending')
+    expect(r.timedOut).toBe(true)
+    expect(r.mergeState).toBe('UNSTABLE')
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(false)
+  })
+
+  it('passes UNSTABLE only with --allow-cancelled and a cancelled check', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 22 /, ok(GREEN_WITH_CANCELLED)],
+      [/^gh pr view 22 /, view('UNSTABLE')],
+    ])
+    const r = await ciWait(22, {
+      repo: REPO,
+      runner,
+      allowCancelled: true,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(true)
+  })
+
+  it('does not pass UNSTABLE with --allow-cancelled when nothing was cancelled', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 23 /, ok(GREEN)],
+      [/^gh pr view 23 /, view('UNSTABLE')],
+    ])
+    const r = await ciWait(23, {
+      repo: REPO,
+      runner,
+      allowCancelled: true,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pending')
+  })
+
+  it('is not a pass when the head SHA moved between the checks and the merge state', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 24 /, ok(GREEN)],
+      // First read sees A, the read after the checks sees B.
+      [/^gh pr view 24 /, [view('CLEAN', 'aaa'), view('CLEAN', 'bbb')]],
+    ])
+    const r = await ciWait(24, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pending')
+  })
+
+  it('passes on the next poll once the head SHA holds still, and reports it', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 25 /, ok(GREEN)],
+      [/^gh pr view 25 /, [view('CLEAN', 'aaa'), view('CLEAN', 'bbb')]],
+    ])
+    const r = await ciWait(25, {
+      repo: REPO,
+      runner,
+      intervalMs: 60_000,
+      timeoutMs: 600_000,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(r.polls).toBe(2)
+    expect(JSON.parse(JSON.stringify(r)).headSha).toBe('bbb')
+  })
+
+  it('says a draft is not mergeable yet, in text and JSON, but still passes', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 26 /, ok(GREEN)],
+      [/^gh pr view 26 /, view('DRAFT')],
+    ])
+    const r = await ciWait(26, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(false)
+    expect(formatCiWait(r)).toContain('draft: not mergeable yet')
+  })
+
+  it.each(['CLEAN', 'HAS_HOOKS'])('%s is mergeable', async state => {
+    const runner = fakeRunner([
+      [/^gh pr checks 27 /, ok(GREEN)],
+      [/^gh pr view 27 /, view(state)],
+    ])
+    const r = await ciWait(27, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(true)
+  })
+
+  it('reads the REST pull request once per poll and reuses it for the merge state', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks /, fail(GRAPHQL_403)],
+      [/^gh pr view /, fail(GRAPHQL_403)],
+      [
+        /\/pulls\/28$/,
+        ok(
+          JSON.stringify({
+            head: { sha: 'abc' },
+            state: 'open',
+            mergeable_state: 'clean',
+          })
+        ),
+      ],
+      [
+        /\/commits\/abc\/check-runs/,
+        ok(
+          JSON.stringify({
+            total_count: 1,
+            check_runs: [
+              {
+                name: 'T',
+                status: 'completed',
+                conclusion: 'success',
+                details_url: 'https://x/1',
+                started_at: '2026-11-17T10:00:00Z',
+                completed_at: '2026-11-17T10:05:00Z',
+                check_suite: { id: 7 },
+              },
+            ],
+          })
+        ),
+      ],
+      [
+        /\/actions\/runs\?/,
+        ok(JSON.stringify({ total_count: 0, workflow_runs: [] })),
+      ],
+    ])
+    const r = await ciWait(28, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(runner.calls.filter(c => /\/pulls\/28$/.test(c))).toHaveLength(1)
   })
 })

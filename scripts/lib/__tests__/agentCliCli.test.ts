@@ -169,6 +169,8 @@ describe('agent-cli', () => {
           },
         })
       )
+    /** Green checks also need a mergeable PR (#2905). */
+    const CLEAN = ok('{"mergeStateStatus":"CLEAN","headRefOid":"abc"}')
     const PENDING = JSON.stringify([
       {
         name: 'build',
@@ -222,6 +224,7 @@ describe('agent-cli', () => {
       const low = fakeRunner([
         [/^gh api rate_limit/, limit(100, 100)],
         [/^gh pr checks /, fail('', 1, PASS)],
+        [/^gh pr view /, CLEAN],
       ])
       const c = capture()
       expect(
@@ -283,17 +286,34 @@ describe('agent-cli', () => {
             JSON.stringify([{ ...JSON.parse(PENDING)[0], bucket: 'pass' }])
           ),
         ],
+        [/^gh pr view /, CLEAN],
       ])
       expect(
         await main(['ci-wait', '123'], { ...c.deps, runner, ...clock() })
       ).toBe(0)
-      expect(runner.calls.filter(l => l.includes('pr checks'))).toHaveLength(1)
+      // One poll: the checks, then a re-read while confirming the merge state.
+      expect(runner.calls.filter(l => l.includes('pr checks'))).toHaveLength(2)
     })
 
     it('ci-wait --help lists exit 3 as a rate-limit stop or usage error', async () => {
       const c = capture()
       await main(['ci-wait', '--help'], c.deps)
       expect(c.out.join('\n')).toMatch(/3 .*rate.limit.*usage/i)
+    })
+
+    it('ci-wait --help says the verdict also needs the PR to be mergeable (#2905)', async () => {
+      const c = capture()
+      await main(['ci-wait', '--help'], c.deps)
+      expect(c.out.join('\n')).toMatch(/mergeStateStatus/)
+      expect(c.out.join('\n')).toMatch(/CLEAN/)
+    })
+
+    it('ci-wait --help explains mergeable and that a draft is not mergeable yet (#2905)', async () => {
+      const c = capture()
+      await main(['ci-wait', '--help'], c.deps)
+      expect(c.out.join('\n')).toMatch(/"mergeable": false/)
+      expect(c.out.join('\n')).toMatch(/draft: not mergeable yet/)
+      expect(c.out.join('\n')).toMatch(/UNSTABLE waits/)
     })
 
     it('polls when core.remaining is 500 or more', async () => {
@@ -308,6 +328,7 @@ describe('agent-cli', () => {
             JSON.stringify([{ ...JSON.parse(PENDING)[0], bucket: 'pass' }])
           ),
         ],
+        [/^gh pr view /, CLEAN],
       ])
       expect(
         await main(['ci-wait', '123'], { ...c.deps, runner, ...clock() })
