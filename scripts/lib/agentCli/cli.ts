@@ -18,7 +18,12 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs, type ParseArgsConfig } from 'node:util'
 import { realRunner, type Runner } from './exec.js'
-import { ciWait, ciWaitExitCode, formatCiWait } from './ciWait.js'
+import {
+  ciWait,
+  ciWaitExitCode,
+  formatCiWait,
+  MIN_INTERVAL_MS,
+} from './ciWait.js'
 import { formatJobLog, jobLog } from './jobLog.js'
 import {
   formatLiveVersion,
@@ -91,6 +96,17 @@ function seconds(
   return n * 1000
 }
 
+/** --interval in ms: 60 s by default, and never shorter (#2892). */
+function pollInterval(v: string | boolean | undefined): number {
+  const ms = seconds(v, MIN_INTERVAL_MS / 1000, 'interval')
+  if (ms < MIN_INTERVAL_MS)
+    throw new UsageError(
+      `--interval must be at least ${MIN_INTERVAL_MS / 1000} seconds: ` +
+        'the GitHub rate limit is shared by every session'
+    )
+  return ms
+}
+
 class UsageError extends Error {}
 
 function repoVersion(cwd: string): string | null {
@@ -111,7 +127,7 @@ export const SUBCOMMANDS: Record<string, Subcommand> = {
   'ci-wait': {
     summary: "Wait for a PR's checks to finish; print only failures",
     usage:
-      'agent-cli ci-wait <pr> [--interval 30] [--timeout 3600] [--once] [--fail-fast] [--allow-cancelled] [--json]',
+      'agent-cli ci-wait <pr> [--interval 60] [--timeout 3600] [--once] [--fail-fast] [--allow-cancelled] [--json]',
     help: `Polls \`gh pr checks <pr>\` until no check is pending, then prints only the
 failed (and cancelled) checks with their job links. Use instead of hand-written
 sleep/gh pr checks loops. Wait-only: never re-runs, approves or merges.
@@ -119,7 +135,7 @@ Where GraphQL is blocked (cloud sessions get HTTP 403), it reads the same
 checks over REST: the PR's head SHA, then its check-runs, every page.
 
 Options:
-  --interval <s>     Seconds between polls (default 30)
+  --interval <s>     Seconds between polls (default and minimum 60)
   --timeout <s>      Give up after this many seconds (default 3600)
   --once             Evaluate the current state once; don't wait
   --fail-fast        Return as soon as any check fails
@@ -141,7 +157,8 @@ Exit: 0 all passed · 1 a check failed or was cancelled · 2 still pending at ti
         runner: deps.runner,
         sleep: deps.sleep,
         now: deps.now,
-        intervalMs: seconds(v.interval, 30, 'interval'),
+        intervalMs: pollInterval(v.interval),
+        guardRateLimit: true,
         timeoutMs: seconds(v.timeout, 3600, 'timeout'),
         once: v.once === true,
         failFast: v['fail-fast'] === true,
