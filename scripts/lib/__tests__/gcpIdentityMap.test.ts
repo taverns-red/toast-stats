@@ -20,6 +20,7 @@ import {
   DEPLOYER,
   DATA_READER,
   KNOWN_IDENTITIES,
+  READER_GUARD_EXEMPT,
   byEvent,
   EXPECTED,
   NON_GCP_OIDC,
@@ -132,6 +133,41 @@ describe('data-reader jobs (#2872 B2)', () => {
           .some(t => !KNOWN_IDENTITIES.includes(t))
     )
     expect(bad).toEqual([])
+  })
+
+  it('checks the reader variable is non-empty before every data-reader auth step', () => {
+    const missing: string[] = []
+    for (const [key, id] of Object.entries(EXPECTED)) {
+      if (id !== DATA_READER) continue
+      const [file, job] = key.split('::')
+      const steps = wfOf(file!).jobs![job!]!.steps!
+      const authAt = steps.findIndex(s =>
+        /google-github-actions\/auth/.test(s.uses ?? '')
+      )
+      const guarded = steps
+        .slice(0, authAt)
+        .some(
+          s =>
+            /vars\.GCP_DATA_READER_SA/.test(
+              String(Object.values(s.env ?? {}))
+            ) &&
+            /-z\b/.test(s.run ?? '') &&
+            /exit 1/.test(s.run ?? '')
+        )
+      if (!guarded) missing.push(key)
+    }
+    expect(missing).toEqual([])
+  })
+
+  it('exempts only event-conditional canary from the reader guard, with a reason', () => {
+    expect(Object.keys(READER_GUARD_EXEMPT)).toEqual([
+      'harness-staging-canary.yml::canary',
+    ])
+    expect(Object.values(READER_GUARD_EXEMPT).every(r => r.trim())).toBe(true)
+    const canary = wfOf('harness-staging-canary.yml').jobs!.canary!.steps!.find(
+      s => /google-github-actions\/auth/.test(s.uses ?? '')
+    )
+    expect(canary?.with?.['token_format']).toBe('access_token')
   })
 
   it('stops the CEO report oracle on any ref but main, before it authenticates', () => {

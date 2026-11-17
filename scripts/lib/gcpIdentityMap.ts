@@ -22,12 +22,25 @@ export const DATA_READER = 'vars.GCP_DATA_READER_SA'
  * An identity chosen by event: `<event>` runs use `whenEvent`, every other
  * event uses `otherwise`. Written as the exact expression the workflow's
  * `service_account:` carries, so the map compares it verbatim (#2872 B2).
+ *
+ * The `otherwise` branch must never be the more privileged identity: an empty
+ * `whenEvent` secret falls through to it.
  */
 export const byEvent = (
   event: string,
   whenEvent: string,
   otherwise: string
 ): string => `github.event_name == '${event}' && ${whenEvent} || ${otherwise}`
+
+/**
+ * Jobs that use the data reader without the non-empty variable guard step,
+ * with the reason. The auth action given an empty service account falls back
+ * to direct workload identity, so every other data-reader job needs the guard.
+ */
+export const READER_GUARD_EXEMPT: Record<string, string> = {
+  'harness-staging-canary.yml::canary':
+    'asks for token_format access_token, which fails on an empty service account',
+}
 
 /** The identity variables an EXPECTED value may be built from. */
 export const KNOWN_IDENTITIES = [DEPLOYER, DATA_READER]
@@ -96,6 +109,7 @@ const AUTH_ACTION = /^google-github-actions\/auth(@|$)/
 interface Step {
   if?: string
   run?: string
+  env?: Record<string, unknown>
   uses?: string
   with?: Record<string, unknown>
 }
