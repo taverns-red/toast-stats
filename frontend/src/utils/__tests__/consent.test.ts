@@ -8,7 +8,6 @@ import {
   getConsent,
   getConsentState,
   openConsentSettings,
-  pageActions,
   restoreFocusAfterConsent,
   setConsent,
   subscribeConsent,
@@ -238,125 +237,128 @@ describe('gaCookieExpiries (#2584, ops#319)', () => {
   })
 })
 
-/* #2827: lowering consent cannot stop a hit gtag.js has already queued, so
-   the page reloads without it. Only when GA ran in this page: the hook's
-   `ran()` says the loader started. Everyone else keeps their page. */
-describe('lowering consent reloads a page where GA ran (#2827)', () => {
+/* #2827: lowering consent cannot stop a hit gtag.js has already queued, so a
+   page where GA ran gets a transport guard, with no reload. Only when GA ran
+   in this page: the hook's `ran()` says the loader started. */
+describe('lowering consent after GA ran in the page (#2827)', () => {
   const win = window as unknown as Record<string, unknown>
-  let reload: ReturnType<typeof vi.spyOn>
+  const savedFetch = win['fetch']
+  const GA_URL = 'https://www.google-analytics.com/g/collect'
 
   function hook(ran: boolean) {
-    win['__tsGa'] = { enable: vi.fn(), disable: vi.fn(), ran: () => ran }
+    const calls: string[] = []
+    win['__tsGa'] = {
+      enable: vi.fn(),
+      disable: vi.fn(() => {
+        calls.push('disable')
+      }),
+      ran: () => ran,
+    }
+    return calls
   }
 
   beforeEach(() => {
     wipeCookie(CONSENT_COOKIE)
-    reload = vi.spyOn(pageActions, 'reload').mockImplementation(() => {})
   })
 
-  const savedFetch = win['fetch']
-
   afterEach(() => {
-    reload.mockRestore()
     uninstallGaTransportGuard()
     win['fetch'] = savedFetch
     delete win['__tsGa']
   })
 
   it.each(['minimal', 'none'] as const)(
-    'reloads when GA ran and the choice drops to %s',
-    level => {
+    'drops GA requests once the choice drops to %s, for the rest of the page',
+    async level => {
       hook(true)
+      const orig = vi.fn(async () => new Response('real'))
+      win['fetch'] = orig
       setConsent(level)
-      expect(reload).toHaveBeenCalledTimes(1)
-    }
-  )
-
-  it('reloads after the cookie is written and the GA cookies are cleared', () => {
-    hook(true)
-    document.cookie = '_ga=GA1.1.1; path=/'
-    reload.mockImplementation(() => {
-      expect(getConsent()).toBe('minimal')
-      expect(document.cookie).not.toMatch(/_ga/)
-    })
-    setConsent('minimal')
-    expect(reload).toHaveBeenCalledTimes(1)
-  })
-
-  it.each(['minimal', 'none'] as const)(
-    'does not reload a first-time choice of %s',
-    level => {
-      hook(false)
-      setConsent(level)
-      expect(reload).not.toHaveBeenCalled()
-    }
-  )
-
-  it('does not reload minimal to minimal, or none to minimal', () => {
-    hook(false)
-    setConsent('minimal')
-    setConsent('minimal')
-    setConsent('none')
-    setConsent('minimal')
-    expect(reload).not.toHaveBeenCalled()
-  })
-
-  it('does not reload when the choice is all', () => {
-    hook(true)
-    setConsent('all')
-    expect(reload).not.toHaveBeenCalled()
-  })
-
-  it('drops GA requests from the first step on a downgrade, and keeps dropping', async () => {
-    hook(true)
-    const orig = vi.fn(async () => new Response('real'))
-    win['fetch'] = orig
-    reload.mockImplementation(() => {
+      const res = await window.fetch(GA_URL)
+      expect(res.status).toBe(204)
       expect(orig).not.toHaveBeenCalled()
-    })
-    setConsent('minimal')
-    const res = await window.fetch('https://www.google-analytics.com/g/collect')
-    expect(res.status).toBe(204)
-    expect(orig).not.toHaveBeenCalled()
-    expect(reload).toHaveBeenCalledTimes(1)
-  })
+      await window.fetch('https://cdn.taverns.red/x.json')
+      expect(orig).toHaveBeenCalledTimes(1)
+    }
+  )
 
-  it('does not install the guard off the downgrade path', async () => {
+  it('installs the guard first, then sets ga-disable, then writes the cookie, then clears _ga', () => {
+    hook(true)
     const orig = vi.fn(async () => new Response('real'))
     win['fetch'] = orig
-    hook(false)
-    setConsent('minimal')
-    hook(true)
-    setConsent('all')
-    await window.fetch('https://www.google-analytics.com/g/collect')
-    expect(orig).toHaveBeenCalledTimes(1)
-  })
-
-  it('does not reload when the cookie write failed, but still drops GA requests', async () => {
-    hook(true)
-    document.cookie = `${CONSENT_COOKIE}=v${CONSENT_VERSION}.all; Path=/`
-    const orig = vi.fn(async () => new Response('real'))
-    win['fetch'] = orig
+    const order: string[] = []
+    document.cookie = '_ga=GA1.1.1; path=/'
     const proto = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')!
     Object.defineProperty(document, 'cookie', {
       configurable: true,
       get: () => proto.get!.call(document),
       set: (v: string) => {
-        if (!v.startsWith(`${CONSENT_COOKIE}=`)) proto.set!.call(document, v)
+        order.push(`write ${v.split('=')[0]}`)
+        proto.set!.call(document, v)
       },
     })
+    ;(win['__tsGa'] as { disable: () => void }).disable = () => {
+      // the guard is already on when the opt-out flag is set
+      void window.fetch(GA_URL)
+      order.push(
+        orig.mock.calls.length === 0 ? 'disable (guard on)' : 'disable'
+      )
+    }
     try {
       setConsent('minimal')
-      expect(getConsent()).toBe('all') // the write silently failed
-      expect(reload).not.toHaveBeenCalled()
-      await window.fetch('https://www.google-analytics.com/g/collect')
-      expect(orig).not.toHaveBeenCalled()
     } finally {
       delete (document as unknown as Record<string, unknown>)['cookie']
     }
+    expect(order.slice(0, 3)).toEqual([
+      'disable (guard on)',
+      `write ${CONSENT_COOKIE}`,
+      'write _ga',
+    ])
   })
 
-  it('still writes the cookie and reloads when installing the guard throws', () => {
+  it('does not reload the page', () => {
+    hook(true)
+    const reload = vi.fn()
+    const loc = window.location
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...loc, reload, hostname: loc.hostname, protocol: loc.protocol },
+    })
+    try {
+      setConsent('minimal')
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: loc,
+      })
+    }
+    expect(reload).not.toHaveBeenCalled()
+  })
+
+  it('does not install the guard for a first-time choice, minimal to minimal, none to minimal or all', async () => {
+    const orig = vi.fn(async () => new Response('real'))
+    win['fetch'] = orig
+    hook(false)
+    setConsent('minimal')
+    setConsent('minimal')
+    setConsent('none')
+    setConsent('minimal')
+    hook(true)
+    setConsent('all')
+    await window.fetch(GA_URL)
+    expect(orig).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not install the guard where there is no GA hook (preview, localhost)', async () => {
+    const orig = vi.fn(async () => new Response('real'))
+    win['fetch'] = orig
+    delete win['__tsGa']
+    setConsent('minimal')
+    await window.fetch(GA_URL)
+    expect(orig).toHaveBeenCalledTimes(1)
+  })
+
+  it('still writes the cookie when installing the guard throws', () => {
     hook(true)
     // A read-only fetch makes the guard's install throw a TypeError.
     Object.defineProperty(window, 'fetch', {
@@ -367,7 +369,6 @@ describe('lowering consent reloads a page where GA ran (#2827)', () => {
     try {
       expect(() => setConsent('minimal')).not.toThrow()
       expect(getConsent()).toBe('minimal')
-      expect(reload).toHaveBeenCalledTimes(1)
     } finally {
       Object.defineProperty(window, 'fetch', {
         value: savedFetch,
@@ -375,11 +376,5 @@ describe('lowering consent reloads a page where GA ran (#2827)', () => {
         configurable: true,
       })
     }
-  })
-
-  it('does not reload where there is no GA hook (preview, localhost)', () => {
-    delete win['__tsGa']
-    setConsent('minimal')
-    expect(reload).not.toHaveBeenCalled()
   })
 })

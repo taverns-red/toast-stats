@@ -158,11 +158,6 @@ export function restoreFocusAfterConsent(): void {
   target.focus({ preventScroll: true })
 }
 
-/** Reloads the page. Its own export so tests can spy on it (#2827). */
-export const pageActions = {
-  reload: (): void => window.location.reload(),
-}
-
 function gaHook(): GaHook | undefined {
   return (window as unknown as { __tsGa?: GaHook }).__tsGa
 }
@@ -180,8 +175,7 @@ function clearGaCookies(): void {
   }
 }
 
-/** True when Google Analytics started in this page, so lowering the choice
- *  reloads the page (#2827). */
+/** True when Google Analytics started in this page (#2827). */
 export function gaRanThisPage(): boolean {
   return gaHook()?.ran?.() === true
 }
@@ -189,16 +183,17 @@ export function gaRanThisPage(): boolean {
 /** Record a choice and apply it at once. */
 export function setConsent(level: ConsentLevel): void {
   // A downgrade from a page where GA ran: gtag.js may hold hits it will send
-  // whatever the opt-out flag says, so drop its requests first, before
-  // anything else on this path, then reload below (#2827).
-  const downgrade = level !== 'all' && gaRanThisPage()
-  if (downgrade) {
+  // whatever the opt-out flag says. So, in this order: drop its requests
+  // (the guard stays for the rest of the page's life), set the opt-out flag,
+  // store the choice, clear the _ga cookies. No reload (#2827).
+  if (level !== 'all' && gaRanThisPage()) {
     try {
       installGaTransportGuard()
     } catch {
       // The guard is a safety net: the choice must still be stored.
     }
   }
+  if (level !== 'all') gaHook()?.disable()
   try {
     document.cookie = buildConsentCookie(
       level,
@@ -208,16 +203,12 @@ export function setConsent(level: ConsentLevel): void {
   } catch {
     // cookies blocked: the choice applies to this page view only
   }
-  // Reload only if the choice was stored; the guard stays on either way.
-  const reloadNeeded = downgrade && getConsent() === level
   if (level === 'all') {
     gaHook()?.enable()
   } else {
-    gaHook()?.disable()
     clearGaCookies()
   }
   if (level === 'none') removeAllSavedPreferencesToSession()
   else promoteSessionPreferencesToLocal()
   publish({ level, settingsOpen: false })
-  if (reloadNeeded) pageActions.reload()
 }

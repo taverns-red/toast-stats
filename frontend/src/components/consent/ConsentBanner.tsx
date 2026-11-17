@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 import {
   closeConsentSettings,
-  gaRanThisPage,
   getConsentState,
   restoreFocusAfterConsent,
   setConsent,
@@ -118,11 +117,6 @@ export const ConsentBanner: React.FC<{ immediate?: boolean }> = ({
           ? 'May we count visits with Google Analytics?'
           : `Your choice is ${LABEL[state.level]}. You can change it here.`}
       </p>
-      {reopened && state.level === 'all' && gaRanThisPage() && (
-        <p className="consent-banner__text">
-          Choosing none or minimal reloads this page.
-        </p>
-      )}
       <div className="consent-banner__actions">
         {CHOICES.map(([level, label], i) => (
           <React.Fragment key={level}>
