@@ -137,3 +137,58 @@ describe('installGaTransportGuard', () => {
     expect(origFetch).toHaveBeenCalledTimes(1)
   })
 })
+
+/* #2923: gtag stays alive after a downgrade and rewrites `_ga*` cookies when
+   it handles a later event. That write is not a network request, so the guard
+   also drops `document.cookie` writes for `_ga*` names. */
+describe('installGaTransportGuard: _ga cookie writes (#2923)', () => {
+  let uninstall: () => void = () => {}
+  const names = ['_ga', '_ga_CDWQYHC2Z3', '_gid', 'rt_consent', 'keepme']
+  const wipe = () => {
+    for (const n of names) document.cookie = `${n}=; Max-Age=0; Path=/`
+  }
+  const has = (name: string) =>
+    document.cookie.split(';').some(p => p.trim().startsWith(`${name}=`))
+
+  beforeEach(wipe)
+  afterEach(() => {
+    uninstall()
+    uninstall = () => {}
+    wipe()
+  })
+
+  it('drops a later _ga_<id> write', () => {
+    uninstall = installGaTransportGuard()
+    document.cookie = '_ga_CDWQYHC2Z3=GS2.1.s1; Path=/; Max-Age=63072000'
+    document.cookie = '_ga=GA1.1.1.2; Path=/; Max-Age=63072000'
+    expect(has('_ga_CDWQYHC2Z3')).toBe(false)
+    expect(has('_ga')).toBe(false)
+  })
+
+  it('passes other cookies through, including the consent cookie', () => {
+    uninstall = installGaTransportGuard()
+    document.cookie = 'keepme=1; Path=/'
+    document.cookie = 'rt_consent=v1.minimal; Path=/'
+    expect(has('keepme')).toBe(true)
+    expect(has('rt_consent')).toBe(true)
+  })
+
+  it('still lets a _ga cookie be expired', () => {
+    document.cookie = '_ga=GA1.1.1.2; Path=/'
+    uninstall = installGaTransportGuard()
+    expect(has('_ga')).toBe(true)
+    document.cookie = '_ga=; Max-Age=0; Path=/'
+    expect(has('_ga')).toBe(false)
+  })
+
+  it('writes _ga cookies normally when not installed', () => {
+    document.cookie = '_ga=GA1.1.1.2; Path=/'
+    expect(has('_ga')).toBe(true)
+  })
+
+  it('writes _ga cookies again after uninstall', () => {
+    installGaTransportGuard()()
+    document.cookie = '_ga=GA1.1.1.2; Path=/'
+    expect(has('_ga')).toBe(true)
+  })
+})

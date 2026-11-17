@@ -378,3 +378,103 @@ describe('lowering consent after GA ran in the page (#2827)', () => {
     }
   })
 })
+
+/* #2923: gtag stays alive in the page after a downgrade and can rewrite
+   `_ga*` later. The guard that setConsent installs also drops those writes. */
+describe('lowering consent keeps _ga cookies away for the page view (#2923)', () => {
+  const win = window as unknown as Record<string, unknown>
+  const GA_URL = 'https://www.google-analytics.com/g/collect'
+  const gaCookies = () =>
+    document.cookie
+      .split(';')
+      .map(p => p.split('=')[0]!.trim())
+      .filter(n => n.startsWith('_ga'))
+
+  function hook(ran: boolean) {
+    win['__tsGa'] = { enable: vi.fn(), disable: vi.fn(), ran: () => ran }
+  }
+
+  beforeEach(() => {
+    wipeCookie(CONSENT_COOKIE)
+    wipeCookie('_ga')
+    wipeCookie('_ga_CDWQYHC2Z3')
+    wipeCookie('keepme')
+  })
+
+  afterEach(() => {
+    uninstallGaTransportGuard()
+    delete win['__tsGa']
+    wipeCookie('_ga')
+    wipeCookie('_ga_CDWQYHC2Z3')
+    wipeCookie('keepme')
+  })
+
+  it.each(['minimal', 'none'] as const)(
+    'a _ga write after a downgrade to %s leaves no _ga cookie',
+    level => {
+      hook(true)
+      document.cookie = '_ga=GA1.1.1; Path=/'
+      setConsent(level)
+      document.cookie = '_ga_CDWQYHC2Z3=GS2.1.s2; Path=/; Max-Age=63072000'
+      document.cookie = '_ga=GA1.1.9; Path=/; Max-Age=63072000'
+      expect(gaCookies()).toEqual([])
+    }
+  )
+
+  it('other cookies still write after a downgrade', () => {
+    hook(true)
+    setConsent('minimal')
+    document.cookie = 'keepme=1; Path=/'
+    expect(document.cookie).toContain('keepme=1')
+    expect(getConsent()).toBe('minimal')
+    setConsent('none')
+    expect(getConsent()).toBe('none')
+  })
+
+  it('installs nothing off the downgrade path', () => {
+    hook(false)
+    setConsent('minimal')
+    document.cookie = '_ga=GA1.1.1; Path=/'
+    expect(gaCookies()).toEqual(['_ga'])
+    wipeCookie('_ga')
+    hook(true)
+    setConsent('all')
+    document.cookie = '_ga=GA1.1.1; Path=/'
+    expect(gaCookies()).toEqual(['_ga'])
+  })
+
+  it('installs nothing where there is no GA hook', () => {
+    delete win['__tsGa']
+    setConsent('minimal')
+    document.cookie = '_ga=GA1.1.1; Path=/'
+    expect(gaCookies()).toEqual(['_ga'])
+  })
+
+  it('keeps the guard installed when the consent cookie write fails', async () => {
+    hook(true)
+    const savedFetch = win['fetch']
+    const orig = vi.fn(async () => new Response('real'))
+    win['fetch'] = orig
+    const proto = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')!
+    // Make the document's own setter throw (cookies blocked) so the consent
+    // write fails, while the guard's prototype wrapper is untouched.
+    Object.defineProperty(document, 'cookie', {
+      configurable: true,
+      get: () => proto.get!.call(document),
+      set: () => {
+        throw new Error('cookies blocked')
+      },
+    })
+    try {
+      expect(() => setConsent('minimal')).not.toThrow()
+    } finally {
+      delete (document as unknown as Record<string, unknown>)['cookie']
+    }
+    const res = await window.fetch(GA_URL)
+    expect(res.status).toBe(204)
+    expect(orig).not.toHaveBeenCalled()
+    document.cookie = '_ga=GA1.1.1; Path=/'
+    expect(gaCookies()).toEqual([])
+    win['fetch'] = savedFetch
+  })
+})
