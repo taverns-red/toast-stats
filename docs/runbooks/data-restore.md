@@ -624,6 +624,15 @@ soft-deleted object in the bucket for the window, then restoring things a
 person may have deleted on purpose. If you suspect one, plan it by hand
 (step 2).
 
+The two deletion steps in prune mode never reach prod. "Delete pruned dates
+from GCS" (`data-pipeline.yml`, around line 1239) and "Expire run manifests
+older than 90 days" (around line 1268) both act on `gs://${GCS_BUCKET}`, and
+`GCS_BUCKET` is set once, at line 166, to `toast-stats-data-staging`. A pruned
+date reaches prod only through the promoter's prune reconcile, which writes
+its record first and which the plan lists as `manual`, never as a restore.
+Run manifests (`runs/<id>/`) are not restore candidates either: the plan's
+paths come from `manifestPaths`, which keeps only prod prefixes.
+
 Intent is never inferred from an object's size or content, only from the
 record. A run that removed nothing has no record file, and the plan reads
 that as empty; a record that exists but cannot be read stops the plan

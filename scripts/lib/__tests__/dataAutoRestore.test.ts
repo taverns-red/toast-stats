@@ -111,6 +111,16 @@ describe('manifestPaths', () => {
     ])
   })
 
+  it('never lists a run manifest or raw-csv object as restorable (#2903)', () => {
+    const paths = manifestPaths(
+      '{"path":"runs/4242/written.jsonl"}\n' +
+        '{"path":"runs/4242/prod-removed-a1.jsonl"}\n' +
+        '{"path":"raw-csv/2026-09-15/club-performance.csv"}\n' +
+        '{"path":"v1/latest.json"}\n'
+    )
+    expect(paths).toEqual(['v1/latest.json'])
+  })
+
   it('leaves out share cards: they are written after the window closes', () => {
     expect(manifestPaths(jsonl)).not.toContain('og/v1/district/61.png')
   })

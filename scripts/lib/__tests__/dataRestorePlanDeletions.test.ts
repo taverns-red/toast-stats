@@ -162,6 +162,26 @@ describe('planRestore: prod deletions and the removal record (#2856)', () => {
     expect(p.refused).toBe(1)
   })
 
+  it.each(['snapshots/2026-09-15/', 'raw-csv/2026-09-15/'])(
+    'a prune-recorded prefix (%s) is always manual, never restored (#2903)',
+    prefix => {
+      const name = `${prefix}district_61.json`
+      const copy = obj(name, '5', '2026-09-16T00:00:00Z', DELETED_AT)
+      const p = planWith(
+        [{ path: prefix, kind: 'prune' }],
+        [],
+        [copy, OTHER],
+        [name]
+      )
+      expect(find(p, prefix)).toMatchObject({ action: 'manual' })
+      expect(p.entries.some(e => e.action === 'restore')).toBe(false)
+      expect(p.entries.some(e => e.name === name)).toBe(false)
+      const ran: string[][] = []
+      executePlan(p, argv => ran.push(argv))
+      expect(ran).toEqual([])
+    }
+  )
+
   it('a written name under a pruned prefix is covered by the record', () => {
     const name = 'snapshots/2026-09-15/district_61.json'
     const copy = obj(name, '5', '2026-09-16T00:00:00Z', DELETED_AT)
