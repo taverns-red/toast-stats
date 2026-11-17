@@ -192,7 +192,13 @@ export function setConsent(level: ConsentLevel): void {
   // whatever the opt-out flag says, so drop its requests first, before
   // anything else on this path, then reload below (#2827).
   const downgrade = level !== 'all' && gaRanThisPage()
-  if (downgrade) installGaTransportGuard()
+  if (downgrade) {
+    try {
+      installGaTransportGuard()
+    } catch {
+      // The guard is a safety net: the choice must still be stored.
+    }
+  }
   try {
     document.cookie = buildConsentCookie(
       level,
