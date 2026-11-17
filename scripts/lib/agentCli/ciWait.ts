@@ -231,8 +231,15 @@ export interface MergeState {
   headSha: string
 }
 
-/** States in which GitHub would let the PR merge, or it is a draft. */
-const MERGEABLE_STATES = new Set(['CLEAN', 'DRAFT', 'HAS_HOOKS', 'UNSTABLE'])
+/** States in which GitHub would let the PR merge, or it is a draft or finished. */
+const MERGEABLE_STATES = new Set([
+  'CLEAN',
+  'DRAFT',
+  'HAS_HOOKS',
+  'UNSTABLE',
+  'MERGED',
+  'CLOSED',
+])
 
 export function mergeStateVerdict(
   status: string
@@ -259,6 +266,7 @@ export async function fetchMergeState(
     const v = await runGhJson<{
       mergeStateStatus?: string
       headRefOid?: string
+      state?: string
     }>(
       [
         'pr',
@@ -267,12 +275,16 @@ export async function fetchMergeState(
         '--repo',
         opts.repo,
         '--json',
-        'mergeStateStatus,headRefOid',
+        'mergeStateStatus,headRefOid,state',
       ],
       gh
     )
     return {
-      status: (v.mergeStateStatus ?? 'UNKNOWN').toUpperCase(),
+      // A merged or closed PR has no merge state (GitHub says UNKNOWN).
+      status:
+        v.state === 'MERGED' || v.state === 'CLOSED'
+          ? v.state
+          : (v.mergeStateStatus ?? 'UNKNOWN').toUpperCase(),
       headSha: v.headRefOid ?? '',
     }
   } catch (err) {
@@ -280,10 +292,14 @@ export async function fetchMergeState(
   }
   const pull = await runGhJson<{
     mergeable_state?: string | null
+    state?: string
     head?: { sha?: string }
   }>(['api', `repos/${opts.repo}/pulls/${pr}`], gh)
   return {
-    status: (pull.mergeable_state ?? 'unknown').toUpperCase(),
+    status:
+      pull.state === 'closed'
+        ? 'CLOSED'
+        : (pull.mergeable_state ?? 'unknown').toUpperCase(),
     headSha: pull.head?.sha ?? '',
   }
 }
