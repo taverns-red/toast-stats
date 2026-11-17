@@ -63,6 +63,62 @@ describe('the pipeline job records and publishes its prod removals (#2856)', () 
   it('publishes only when something was removed', () => {
     expect(publish!.run).toMatch(/-s "\$\{PROD_REMOVALS_FILE\}"/)
   })
+
+  it('names the record by attempt, so a re-run does not overwrite it (#2903)', () => {
+    expect(publish!.run).toMatch(
+      /runs\/\$\{GITHUB_RUN_ID\}\/prod-removed-a\$\{GITHUB_RUN_ATTEMPT\}\.jsonl/
+    )
+  })
+})
+
+describe('the promote-reports job publishes its own record (#2903)', () => {
+  const steps = workflow.jobs['promote-reports']!.steps ?? []
+  const publish = steps.find(s => /prod-removed/.test(s.run ?? '')) as
+    Step | undefined
+
+  it('has a publish step after its promote, even after a failed one', () => {
+    expect(publish).toBeDefined()
+    expect(steps.indexOf(publish!)).toBeGreaterThan(
+      steps.findIndex(s => /promote-run-manifest\.ts/.test(s.run ?? ''))
+    )
+    expect(publish!.if).toMatch(/!cancelled\(\)/)
+  })
+
+  it('publishes to STAGING, by attempt, only when something was removed', () => {
+    expect(publish!.run).toMatch(
+      /gs:\/\/\$\{GCS_BUCKET\}\/runs\/\$\{GITHUB_RUN_ID\}\/prod-removed-reports-a\$\{GITHUB_RUN_ATTEMPT\}\.jsonl/
+    )
+    expect(publish!.run).not.toMatch(/GCS_BUCKET_PRODUCTION/)
+    expect(publish!.run).toMatch(/-s "\$\{PROD_REMOVALS_FILE\}"/)
+  })
+})
+
+describe('the og-cards job cannot remove from prod without a record (#2903)', () => {
+  const steps = workflow.jobs['og-cards']!.steps ?? []
+  const text = steps.map(s => s.run ?? '').join('\n')
+
+  it('uploads only under og/v1/district/ unless it also publishes a removal record', () => {
+    // Its manifest holds og/v1/district/<id>.png only. Dated paths
+    // (snapshots/<date>/...) are what a gap or prune removal acts on; if the
+    // job ever writes them, it must publish its record like the other jobs.
+    const uploads = [
+      ...text.matchAll(/gcs-upload\.sh[^\n]*\n(?:[^\n]*\\\n)*[^\n]*/g),
+    ].map(m => m[0])
+    expect(uploads.length).toBeGreaterThan(0)
+    const dated = uploads.some(u =>
+      /gs:\/\/\$\{GCS_BUCKET\}\/(?!og\/v1\/district\/)/.test(u)
+    )
+    const publishes = /prod-removed/.test(text)
+    expect(dated && !publishes).toBe(false)
+  })
+
+  it('the guard itself catches a dated upload with no publish step', () => {
+    const sample =
+      'bash scripts/pipeline/gcs-upload.sh og-cards cp \\\n  x.png "gs://${GCS_BUCKET}/snapshots/${DATE}/"'
+    expect(/gs:\/\/\$\{GCS_BUCKET\}\/(?!og\/v1\/district\/)/.test(sample)).toBe(
+      true
+    )
+  })
 })
 
 describe('both restore jobs read the record into the plan (#2856)', () => {

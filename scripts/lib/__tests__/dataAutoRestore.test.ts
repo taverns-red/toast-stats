@@ -361,6 +361,14 @@ describe('buildDecisionIssueBody: no object list, a manual plan command', () => 
     expect(body).toContain('docs/runbooks/data-restore.md')
   })
 
+  it('reads the removal records with read-prod-removals.sh, not one cat (#2903)', () => {
+    const body = buildDecisionIssueBody(ctx)
+    expect(body).toContain(
+      'bash scripts/pipeline/read-prod-removals.sh toast-stats-data-staging 4242 removed.jsonl'
+    )
+    expect(body).not.toMatch(/gcloud storage cat [^\n]*prod-removed/)
+  })
+
   it('lists no objects: no table, no generations', () => {
     const body = buildDecisionIssueBody(ctx)
     expect(body).not.toMatch(/\| Object \|/)

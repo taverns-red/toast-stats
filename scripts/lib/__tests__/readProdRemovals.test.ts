@@ -77,6 +77,32 @@ describe('read-prod-removals.sh', () => {
     )
   })
 
+  it('merges the records of every attempt of the run (#2903)', () => {
+    put('prod-removed-a1.jsonl', '{"path":"a/","kind":"prune"}\n')
+    put('prod-removed-a2.jsonl', '{"path":"b.json","kind":"gap"}\n')
+    put('prod-removed-reports-a1.jsonl', '{"path":"c.json","kind":"gap"}\n')
+    put('prod-removed-reports-a2.jsonl', '{"path":"d.json","kind":"gap"}')
+    const r = read()
+    expect(r.status, r.stderr).toBe(0)
+    expect(fs.readFileSync(out, 'utf-8')).toBe(
+      '{"path":"a/","kind":"prune"}\n{"path":"b.json","kind":"gap"}\n' +
+        '{"path":"c.json","kind":"gap"}\n{"path":"d.json","kind":"gap"}\n'
+    )
+  })
+
+  it('stops when an attempt’s record exists but cannot be read (#2903)', () => {
+    put('prod-removed-a1.jsonl', '{"path":"a/","kind":"prune"}\n')
+    put('prod-removed-a2.jsonl', '{"path":"b/","kind":"prune"}\n')
+    const r = read({ SHIM_FAIL_MATCH: '^cat .*prod-removed-a2' })
+    expect(r.status).toBe(1)
+    expect(fs.existsSync(out)).toBe(false)
+  })
+
+  it('stops when the record listing itself fails (#2903)', () => {
+    const r = read({ SHIM_FAIL_MATCH: '^ls ' })
+    expect(r.status).toBe(1)
+  })
+
   it('stops, and leaves no file, when a record exists but cannot be read', () => {
     put('prod-removed.jsonl', '{"path":"a/","kind":"prune"}\n')
     fs.mkdirSync(path.dirname(out), { recursive: true })
@@ -86,7 +112,8 @@ describe('read-prod-removals.sh', () => {
     expect(fs.existsSync(out)).toBe(false)
   })
 
-  it('treats a listing outage on the other record as unreadable too', () => {
+  it('treats a read outage on the reports record as unreadable too', () => {
+    put('prod-removed-reports.jsonl', '{"path":"b.json","kind":"gap"}\n')
     const r = read({ SHIM_FAIL_MATCH: '^cat .*prod-removed-reports' })
     expect(r.status).toBe(1)
   })

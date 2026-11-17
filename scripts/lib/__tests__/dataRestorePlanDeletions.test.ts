@@ -128,6 +128,19 @@ describe('planRestore: prod deletions and the removal record (#2856)', () => {
     ])
   })
 
+  it('a recorded name that is still live gets one entry, never two (#2903)', () => {
+    const live = obj(WRITTEN, '200', '2026-11-08T10:20:00Z')
+    const p = planWith(
+      [{ path: WRITTEN, kind: 'gap' }],
+      [live],
+      [deletedCopy, OTHER],
+      [WRITTEN]
+    )
+    expect(p.entries.filter(e => e.name === WRITTEN)).toEqual([
+      expect.objectContaining({ action: 'excluded' }),
+    ])
+  })
+
   it('a written name under a pruned prefix is covered by the record', () => {
     const name = 'snapshots/2026-09-15/district_61.json'
     const copy = obj(name, '5', '2026-09-16T00:00:00Z', DELETED_AT)
