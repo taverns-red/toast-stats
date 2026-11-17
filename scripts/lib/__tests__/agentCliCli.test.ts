@@ -291,7 +291,8 @@ describe('agent-cli', () => {
       expect(
         await main(['ci-wait', '123'], { ...c.deps, runner, ...clock() })
       ).toBe(0)
-      expect(runner.calls.filter(l => l.includes('pr checks'))).toHaveLength(1)
+      // One poll: the checks, then a re-read while confirming the merge state.
+      expect(runner.calls.filter(l => l.includes('pr checks'))).toHaveLength(2)
     })
 
     it('ci-wait --help lists exit 3 as a rate-limit stop or usage error', async () => {

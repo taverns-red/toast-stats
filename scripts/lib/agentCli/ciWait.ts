@@ -94,6 +94,27 @@ export async function fetchPrChecks(
   pr: number,
   opts: FetchOptions
 ): Promise<PrCheck[]> {
+  return (await fetchPrChecksFull(pr, opts)).checks
+}
+
+/** The checks, plus the REST pull request when they were read over REST. */
+export interface ChecksRead {
+  checks: PrCheck[]
+  /** Set only when REST was used; it carries the head SHA and merge state. */
+  pull?: RestPull
+}
+
+/** The fields of `GET /repos/{o}/{r}/pulls/{n}` that ci-wait reads. */
+export interface RestPull {
+  head: { sha: string }
+  state?: string
+  mergeable_state?: string | null
+}
+
+async function fetchPrChecksFull(
+  pr: number,
+  opts: FetchOptions
+): Promise<ChecksRead> {
   let r
   try {
     r = await runGhResult(
@@ -106,12 +127,12 @@ export async function fetchPrChecks(
     )
   } catch (err) {
     if (err instanceof CommandError && isGraphQlBlocked(err)) {
-      return fetchPrChecksRest(pr, opts)
+      return fetchPrChecksRestFull(pr, opts)
     }
     throw err
   }
-  if (!r.stdout.trim().startsWith('[')) return []
-  return JSON.parse(r.stdout) as PrCheck[]
+  if (!r.stdout.trim().startsWith('[')) return { checks: [] }
+  return { checks: JSON.parse(r.stdout) as PrCheck[] }
 }
 
 function isGraphQlBlocked(err: CommandError): boolean {
@@ -188,19 +209,28 @@ export async function fetchPrChecksRest(
   pr: number,
   opts: FetchOptions
 ): Promise<PrCheck[]> {
+  return (await fetchPrChecksRestFull(pr, opts)).checks
+}
+
+/**
+ * One read of the pull request per poll (#2905): its head SHA picks the
+ * check-runs, and the same read gives the merge state, so the two can't
+ * disagree about which commit they describe.
+ */
+async function fetchPrChecksRestFull(
+  pr: number,
+  opts: FetchOptions
+): Promise<ChecksRead> {
   const gh = { runner: opts.runner, sleep: opts.sleep }
   const base = `repos/${opts.repo}`
-  const pull = await runGhJson<{ head: { sha: string } }>(
-    ['api', `${base}/pulls/${pr}`],
-    gh
-  )
+  const pull = await runGhJson<RestPull>(['api', `${base}/pulls/${pr}`], gh)
   const sha = pull.head.sha
   const runs = await fetchAllPages<RestCheckRun>(
     `${base}/commits/${sha}/check-runs`,
     'check_runs',
     opts
   )
-  if (runs.length === 0) return []
+  if (runs.length === 0) return { checks: [], pull }
   const workflows = await fetchAllPages<{
     name: string
     check_suite_id: number
@@ -208,7 +238,7 @@ export async function fetchPrChecksRest(
   const workflowBySuite = new Map(
     workflows.map(w => [w.check_suite_id, w.name])
   )
-  return runs.map(run => ({
+  const checks = runs.map(run => ({
     name: run.name,
     ...restCheckState(run),
     link: run.details_url ?? run.html_url ?? '',
@@ -216,6 +246,7 @@ export async function fetchPrChecksRest(
     startedAt: run.started_at ?? '',
     completedAt: run.completed_at ?? '',
   }))
+  return { checks, pull }
 }
 
 /**
@@ -231,21 +262,61 @@ export interface MergeState {
   headSha: string
 }
 
-/** States in which GitHub would let the PR merge, or it is a draft or finished. */
-const MERGEABLE_STATES = new Set([
+/** What the verdict on a merge state may depend on besides the state. */
+export interface VerdictContext {
+  allowCancelled: boolean
+  /** Number of cancelled checks in the latest summary. */
+  cancelled: number
+}
+
+/** Merge states that let a PR pass: mergeable, a draft, or already finished. */
+const PASSING_STATES = new Set([
   'CLEAN',
-  'DRAFT',
   'HAS_HOOKS',
-  'UNSTABLE',
+  'DRAFT',
   'MERGED',
   'CLOSED',
 ])
 
+/**
+ * UNSTABLE means a non-required check is failing or still pending, which
+ * can be a newer run that isn't listed yet. It only passes when the caller
+ * chose to ignore cancelled checks and one of them is the reason.
+ */
+function unstableIsExpected(ctx: VerdictContext): boolean {
+  return ctx.allowCancelled && ctx.cancelled > 0
+}
+
 export function mergeStateVerdict(
-  status: string
+  status: string,
+  ctx: VerdictContext
 ): 'ok' | 'conflict' | 'waiting' {
-  if (MERGEABLE_STATES.has(status)) return 'ok'
+  if (PASSING_STATES.has(status)) return 'ok'
+  if (status === 'UNSTABLE' && unstableIsExpected(ctx)) return 'ok'
   return status === 'DIRTY' ? 'conflict' : 'waiting'
+}
+
+/**
+ * True only when GitHub would let the PR merge now. A draft passes ci-wait
+ * (drafts are expected in this flow) but isn't mergeable; neither is a
+ * merged or closed PR.
+ */
+export function isMergeable(status: string, ctx: VerdictContext): boolean {
+  return (
+    status === 'CLEAN' ||
+    status === 'HAS_HOOKS' ||
+    (status === 'UNSTABLE' && unstableIsExpected(ctx))
+  )
+}
+
+function mergeStateFromPull(pull: RestPull): MergeState {
+  return {
+    status:
+      pull.state === 'closed'
+        ? 'CLOSED'
+        : (pull.mergeable_state ?? 'unknown').toUpperCase(),
+    headSha: pull.head?.sha ?? '',
+  }
 }
 
 /**
@@ -290,18 +361,9 @@ export async function fetchMergeState(
   } catch (err) {
     if (!(err instanceof CommandError && isGraphQlBlocked(err))) throw err
   }
-  const pull = await runGhJson<{
-    mergeable_state?: string | null
-    state?: string
-    head?: { sha?: string }
-  }>(['api', `repos/${opts.repo}/pulls/${pr}`], gh)
-  return {
-    status:
-      pull.state === 'closed'
-        ? 'CLOSED'
-        : (pull.mergeable_state ?? 'unknown').toUpperCase(),
-    headSha: pull.head?.sha ?? '',
-  }
+  return mergeStateFromPull(
+    await runGhJson<RestPull>(['api', `repos/${opts.repo}/pulls/${pr}`], gh)
+  )
 }
 
 export type CiOutcome = 'pass' | 'fail' | 'pending'
@@ -315,6 +377,12 @@ export interface CiWaitResult {
   summary: CheckSummary
   /** Set once the checks are done and none failed; absent before that. */
   mergeState?: string
+  /** The commit the merge state was read at. */
+  headSha?: string
+  /** GitHub would let the PR merge now. False for a draft. */
+  mergeable?: boolean
+  /** The head moved while the checks were being confirmed. */
+  headMoved?: boolean
 }
 
 export interface CiWaitOptions extends FetchOptions {
@@ -360,13 +428,37 @@ export async function ciWait(
   const started = now()
   let polls = 0
   for (;;) {
-    const summary = summarizeChecks(
-      await fetchPrChecks(pr, { ...opts, runner, sleep })
-    )
+    const fo = { ...opts, runner, sleep }
+    let read = await fetchPrChecksFull(pr, fo)
+    let summary = summarizeChecks(read.checks)
     polls++
     opts.onProgress?.(summary)
+    let merge: MergeState | undefined
+    let headMoved = false
+    if (summary.done && !isFailing(summary, allowCancelled)) {
+      // Green checks are not enough (#2905): GitHub must also allow a merge,
+      // and the head must not move while we confirm it. Over REST one read
+      // of the pull request gave both. Over GraphQL the checks carry no SHA,
+      // so read the head, then the checks again, then the head: if the two
+      // heads agree, the checks were read at that commit.
+      if (read.pull) {
+        merge = mergeStateFromPull(read.pull)
+      } else {
+        const before = await fetchMergeState(pr, fo)
+        read = await fetchPrChecksFull(pr, fo)
+        summary = summarizeChecks(read.checks)
+        merge = read.pull
+          ? mergeStateFromPull(read.pull)
+          : await fetchMergeState(pr, fo)
+        headMoved = before.headSha !== merge.headSha
+      }
+    }
     const failing = isFailing(summary, allowCancelled)
-    let mergeState: string | undefined
+    const ctx: VerdictContext = {
+      allowCancelled,
+      cancelled: summary.cancelled,
+    }
+    const confirmed = summary.done && !failing ? merge : undefined
     const finish = (outcome: CiOutcome, timedOut = false): CiWaitResult => ({
       pr,
       outcome,
@@ -374,14 +466,16 @@ export async function ciWait(
       waitedMs: now() - started,
       polls,
       summary,
-      ...(mergeState !== undefined && { mergeState }),
+      ...(confirmed && {
+        mergeState: confirmed.status,
+        headSha: confirmed.headSha,
+        mergeable: !headMoved && isMergeable(confirmed.status, ctx),
+        ...(headMoved && { headMoved }),
+      }),
     })
     if (summary.done && failing) return finish('fail')
-    if (summary.done) {
-      // Green checks are not enough (#2905): GitHub must also allow a merge.
-      mergeState = (await fetchMergeState(pr, { ...opts, runner, sleep }))
-        .status
-      const verdict = mergeStateVerdict(mergeState)
+    if (confirmed && !headMoved) {
+      const verdict = mergeStateVerdict(confirmed.status, ctx)
       if (verdict === 'ok') return finish('pass')
       if (verdict === 'conflict') return finish('fail')
     }
@@ -410,14 +504,16 @@ export function formatCiWait(r: CiWaitResult): string {
     `${s.pending} pending, ${s.skipped} skipped` +
     (r.mergeState ? `, merge state ${r.mergeState}` : '')
   const out = [head]
-  if (r.mergeState && mergeStateVerdict(r.mergeState) === 'conflict') {
+  if (r.headMoved) {
+    out.push('all checks passed, but the head commit moved while confirming')
+  } else if (r.mergeState === 'DIRTY') {
     out.push('merge conflicts: rebase or merge main into the branch')
-  } else if (r.mergeState && mergeStateVerdict(r.mergeState) === 'waiting') {
+  } else if (r.mergeState === 'DRAFT' && r.outcome === 'pass') {
+    out.push('draft: not mergeable yet')
+  } else if (r.mergeState && r.outcome === 'pending') {
     out.push(
       `all checks passed, but GitHub reports the PR as ${r.mergeState}` +
-        (r.outcome === 'pending'
-          ? ' (a newer run or a required review may still be outstanding)'
-          : '')
+        ' (a newer run or a required review may still be outstanding)'
     )
   }
   if (s.failures.length) out.push('failed:', ...s.failures.map(line))

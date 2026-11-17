@@ -135,11 +135,20 @@ Where GraphQL is blocked (cloud sessions get HTTP 403), it reads the same
 checks over REST: the PR's head SHA, then its check-runs, every page.
 
 Green checks alone don't pass: once none is pending or failing, it reads the
-PR's mergeStateStatus (REST: mergeable_state). CLEAN, DRAFT, HAS_HOOKS and
-UNSTABLE pass. BLOCKED, BEHIND and UNKNOWN keep waiting (a newer run, such as
-the one a title or body edit starts, may not be listed yet) and are named in
-the timeout message. DIRTY (merge conflicts) fails. --once reports the state
-as-is; the merge state is in the --json output as mergeState.
+PR's mergeStateStatus (REST: mergeable_state). CLEAN and HAS_HOOKS pass.
+BLOCKED, BEHIND, UNKNOWN and UNSTABLE keep waiting (a newer run, such as the
+one a title or body edit starts, may not be listed yet) and are named in the
+timeout message. UNSTABLE waits unless --allow-cancelled is set and a check
+was cancelled. DIRTY (merge conflicts) fails. It also needs the PR's head
+commit to hold still while it confirms; if it moves, it waits for the next
+poll. A draft (DRAFT) passes when its checks are green, but is not mergeable
+yet. --once reports the state as-is.
+
+--json adds mergeState, headSha and mergeable. "mergeable": false means the
+PR is not ready to merge even when the exit code is 0. That covers a draft,
+which the text reports as the line "draft: not mergeable yet", and a merged
+or closed PR. Only CLEAN, HAS_HOOKS, or UNSTABLE under the --allow-cancelled
+exception give "mergeable": true.
 
 Options:
   --interval <s>     Seconds between polls (default and minimum 60)

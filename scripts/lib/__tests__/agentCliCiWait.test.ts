@@ -192,11 +192,16 @@ describe('ciWait REST fallback when GraphQL is blocked (#2485)', () => {
   function restRunner(prChecks = fail(GRAPHQL_403)) {
     return fakeRunner([
       [/^gh pr checks 2482 /, prChecks],
-      // The merge state is not what these tests are about (#2905).
-      [/^gh pr view 2482 /, ok('{"mergeStateStatus":"CLEAN"}')],
+      // The merge state is not what these tests are about (#2905); the
+      // recorded pull request has none, so say it is clean.
       [
         /^gh api repos\/taverns-red\/toast-stats\/pulls\/2482$/,
-        ok(fixture('pull-2482.json')),
+        ok(
+          JSON.stringify({
+            ...JSON.parse(fixture('pull-2482.json')),
+            mergeable_state: 'clean',
+          })
+        ),
       ],
       [
         new RegExp(`/commits/${SHA}/check-runs\\?per_page=100&page=1$`),
@@ -368,7 +373,17 @@ describe('ciWait merge state (#2905)', () => {
     const sleeps: number[] = []
     const runner = fakeRunner([
       [/^gh pr checks 2904 /, ok(GREEN)],
-      [/^gh pr view 2904 /, [view('BLOCKED'), view('BLOCKED'), view('CLEAN')]],
+      // Each confirmation reads the PR twice, around a re-read of the checks.
+      [
+        /^gh pr view 2904 /,
+        [
+          view('BLOCKED'),
+          view('BLOCKED'),
+          view('BLOCKED'),
+          view('BLOCKED'),
+          view('CLEAN'),
+        ],
+      ],
     ])
     const r = await ciWait(2904, {
       repo: REPO,
