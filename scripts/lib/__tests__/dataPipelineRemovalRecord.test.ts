@@ -41,14 +41,13 @@ describe('the pipeline job records and publishes its prod removals (#2856)', () 
     expect(workflow.env['PROD_REMOVALS_FILE']).toMatch(/prod-removed\.jsonl$/)
   })
 
-  const publish = pipeline.find(s =>
-    /prod-removed\.jsonl/.test(s.run ?? '')
-  ) as Step | undefined
+  const publish = pipeline.find(s => /prod-removed-a/.test(s.run ?? '')) as
+    Step | undefined
 
   it('publishes it to the run folder in STAGING, after both promoters', () => {
     expect(publish).toBeDefined()
     expect(publish!.run).toMatch(
-      /gs:\/\/\$\{GCS_BUCKET\}\/runs\/\$\{GITHUB_RUN_ID\}\/prod-removed\.jsonl/
+      /gs:\/\/\$\{GCS_BUCKET\}\/runs\/\$\{GITHUB_RUN_ID\}\/prod-removed-a\$\{GITHUB_RUN_ATTEMPT\}\.jsonl/
     )
     expect(publish!.run).not.toMatch(/GCS_BUCKET_PRODUCTION/)
     const at = pipeline.indexOf(publish!)

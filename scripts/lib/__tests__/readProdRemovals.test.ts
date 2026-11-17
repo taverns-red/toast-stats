@@ -32,6 +32,8 @@ const put = (name: string, body: string) => {
   fs.writeFileSync(f, body)
 }
 
+const lines = (s: string) => s.split('\n').filter(Boolean).sort()
+
 const read = (env: Record<string, string> = {}) =>
   spawnSync('bash', [SCRIPT, STG, RUN, out], {
     encoding: 'utf-8',
@@ -72,9 +74,11 @@ describe('read-prod-removals.sh', () => {
     put('prod-removed-reports.jsonl', '{"path":"b.json","kind":"gap"}\n')
     const r = read()
     expect(r.status, r.stderr).toBe(0)
-    expect(fs.readFileSync(out, 'utf-8')).toBe(
-      '{"path":"a/","kind":"prune"}\n{"path":"b.json","kind":"gap"}\n'
-    )
+    // Order does not matter to the plan: it reads a set of records.
+    expect(lines(fs.readFileSync(out, 'utf-8'))).toEqual([
+      '{"path":"a/","kind":"prune"}',
+      '{"path":"b.json","kind":"gap"}',
+    ])
   })
 
   it('merges the records of every attempt of the run (#2903)', () => {

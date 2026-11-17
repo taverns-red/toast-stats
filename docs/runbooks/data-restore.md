@@ -598,8 +598,13 @@ an empty or unrecognised value does not execute.
 
 **Prod removals (#2856).** The plan lists what the run wrote and, from the
 run's removal record, what it removed from prod on purpose. The promoter
-appends one line per removal to `runs/<id>/prod-removed.jsonl` (the
-promote-reports job: `prod-removed-reports.jsonl`) before it removes:
+appends one line per removal to `runs/<id>/prod-removed-a<attempt>.jsonl`
+(the promote-reports job: `prod-removed-reports-a<attempt>.jsonl`) before it
+removes. The file name carries `GITHUB_RUN_ATTEMPT`, so "Re-run failed jobs"
+adds a record instead of replacing the last one (#2903), and
+`scripts/pipeline/read-prod-removals.sh` reads every attempt's record. Runs
+from before #2903 have `prod-removed.jsonl` and `prod-removed-reports.jsonl`;
+the reader matches `prod-removed*.jsonl`, so they still work:
 
 - a #2232 gap-district object is listed as removed on purpose and is not
   restored (0-club junk);
@@ -609,6 +614,15 @@ promote-reports job: `prod-removed-reports.jsonl`) before it removes:
   soft-deleted inside the run window, and that is not in the record, is an
   unexplained deletion and is planned as a restore (precondition
   `--if-generation-match=0`: the name must still be empty).
+
+The plan only checks names the run wrote (`written.jsonl`). It does not list a
+prod deletion outside that manifest, and that is deliberate (#2903). The
+promoter cannot make one: it refuses to remove without a record and writes the
+record before every removal. A deletion outside the run's names is not this
+run's doing (a person, or another run), and finding it would mean listing every
+soft-deleted object in the bucket for the window, then restoring things a
+person may have deleted on purpose. If you suspect one, plan it by hand
+(step 2).
 
 Intent is never inferred from an object's size or content, only from the
 record. A run that removed nothing has no record file, and the plan reads

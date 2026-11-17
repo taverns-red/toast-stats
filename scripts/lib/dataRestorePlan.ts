@@ -81,7 +81,7 @@ export interface RemovalRecord {
 }
 
 /**
- * Parse runs/<id>/prod-removed.jsonl, one `{"path","kind"[,"date"]}` per line.
+ * Parse runs/<id>/prod-removed-a<attempt>.jsonl, one `{"path","kind"[,"date"]}` per line.
  * Absent or empty text is no record (a run that removed nothing publishes
  * none). A line that is not a valid record refuses: reading it as "nothing
  * removed" would turn a deliberate removal into an unexplained, restorable one.
@@ -444,6 +444,7 @@ export function planRestore(input: {
   const recorded = [
     ...new Map(removals.map(r => [r.path, r] as const)).values(),
   ].map(recordedEntry)
+  const recordedNames = new Set(recorded.map(e => e.name))
   // Names the run wrote with no live object in prod: unexplained unless the
   // removal record names them.
   const deleted = [...(only ?? [])]
@@ -472,6 +473,8 @@ export function planRestore(input: {
           } as PlanEntry)
         : e
     )
+    // One entry per name (#2903): a recorded name is never also planned.
+    .filter(e => !recordedNames.has(e.name))
     .concat(recorded)
     .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
   return {

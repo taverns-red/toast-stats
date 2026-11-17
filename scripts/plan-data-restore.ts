@@ -11,7 +11,7 @@
  *     --live-errors live.err --soft-errors soft.err \
  *     --paths paths.txt [--removals removed.jsonl] [--out plan.json]
  * --removals is the run's record of prod removals made on purpose
- * (runs/<id>/prod-removed.jsonl, #2856): a recorded removal is listed but
+ * (runs/<id>/prod-removed-a<attempt>.jsonl, #2856): a recorded removal is listed but
  * never restored; a deletion that is not in it is restored. Execute mode
  * takes the same file and re-plans with it.
  * where the listings are `gcloud storage ls --json <urls>` and

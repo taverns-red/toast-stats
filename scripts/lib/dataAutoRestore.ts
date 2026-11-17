@@ -624,7 +624,6 @@ export function buildDecisionIssueBody(c: DecisionIssueContext): string {
 
 function decisionIssueBody(c: DecisionIssueContext, caps: ListCaps): string {
   const manifest = `gs://${c.stagingBucket}/runs/${c.runId}/written.jsonl`
-  const removalRecord = `gs://${c.stagingBucket}/runs/${c.runId}/prod-removed.jsonl`
   const since = c.promoteStarted || '<promotion start>'
   const until = c.windowEnd || '<smoke end>'
   const started = c.decision.execute
@@ -647,7 +646,7 @@ function decisionIssueBody(c: DecisionIssueContext, caps: ListCaps): string {
       '',
       '```',
       `gcloud storage cat ${manifest} > written.jsonl`,
-      `gcloud storage cat ${removalRecord} > removed.jsonl   # skip if the run removed nothing from prod; then use an empty file`,
+      `bash scripts/pipeline/read-prod-removals.sh ${c.stagingBucket} ${c.runId} removed.jsonl   # every attempt's record; an empty file when the run removed nothing`,
       'npx tsx scripts/data-auto-restore.ts paths --manifest written.jsonl --out paths.txt',
       `PROD_BUCKET=${c.prodBucket} bash scripts/pipeline/list-restore-candidates.sh out paths.txt`,
       `npx tsx scripts/plan-data-restore.ts --live out/live.json --soft-deleted out/soft.json --live-errors out/live.err --soft-errors out/soft.err --since ${since} --until ${until} --paths paths.txt --removals removed.jsonl --out plan.json`,

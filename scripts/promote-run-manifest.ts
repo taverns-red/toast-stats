@@ -46,7 +46,7 @@
  *      PROD_REMOVALS_FILE (required by --execute when it will remove
  *      anything from prod: each prune prefix and gap-district object is
  *      appended as {"path","kind":"prune"|"gap","date"} BEFORE its removal;
- *      the workflow publishes it to runs/<id>/prod-removed.jsonl and the
+ *      the workflow publishes it to runs/<id>/prod-removed-a<attempt>.jsonl and the
  *      restore plan reads it, #2856),
  *      GCLOUD (default gcloud), PROMOTE_CONCURRENCY (default 4).
  * Outputs (GITHUB_OUTPUT): objects_planned, promoted_dates, held_dates,
