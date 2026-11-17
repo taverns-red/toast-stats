@@ -1,5 +1,66 @@
 # Changelog
 
+## [2.92.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.91.1...toast-stats-v2.92.0) (2026-11-17)
+
+
+### Features
+
+* ci-wait polls every 60 s at most and stops on the rate limit ([#2892](https://github.com/taverns-red/toast-stats/issues/2892)) ([#2894](https://github.com/taverns-red/toast-stats/issues/2894)) ([f0bd362](https://github.com/taverns-red/toast-stats/commit/f0bd362f0af3c2f832cade3affc82b9d6c9d64ce))
+* **deadlines:** add 30 Jun year-end and 31 Mar good-standing TI dates ([#2870](https://github.com/taverns-red/toast-stats/issues/2870)) ([#2875](https://github.com/taverns-red/toast-stats/issues/2875)) ([15841a3](https://github.com/taverns-red/toast-stats/commit/15841a38403403e42b714bd3aa911d63c63a24a9))
+* **pipeline:** auto-restore decide enumerates the plan as a read-only SA ([#2858](https://github.com/taverns-red/toast-stats/issues/2858)) ([#2866](https://github.com/taverns-red/toast-stats/issues/2866)) ([041f096](https://github.com/taverns-red/toast-stats/commit/041f096e9af9b364fd38d998cccc07f5088481c2))
+* **pipeline:** auto-restore prod data on a failed post-promotion check, dry-run by default ([#2537](https://github.com/taverns-red/toast-stats/issues/2537)) ([#2851](https://github.com/taverns-red/toast-stats/issues/2851)) ([9d88370](https://github.com/taverns-red/toast-stats/commit/9d8837075dbd48a55a6eefede5874cf874068521))
+* **pipeline:** data smoke after every promotion ([#2538](https://github.com/taverns-red/toast-stats/issues/2538)) ([#2833](https://github.com/taverns-red/toast-stats/issues/2833)) ([33097a6](https://github.com/taverns-red/toast-stats/commit/33097a6d854023c53f4d332ea79d01fe6c592a7b))
+* **pipeline:** status.taverns.red heartbeat after a successful daily promotion ([#2863](https://github.com/taverns-red/toast-stats/issues/2863)) ([#2864](https://github.com/taverns-red/toast-stats/issues/2864)) ([23c4a00](https://github.com/taverns-red/toast-stats/commit/23c4a005cd45c71044973b3c687f76ebddbc6269))
+
+
+### Bug Fixes
+
+* **action-list:** reserve the intro from the URL date on a cold load ([#2830](https://github.com/taverns-red/toast-stats/issues/2830)) ([#2915](https://github.com/taverns-red/toast-stats/issues/2915)) ([c49eef2](https://github.com/taverns-red/toast-stats/commit/c49eef2aa71a520f107109b4ca8ac6c3fde01efd))
+* **agent-cli:** ci-wait misreports cancelled and no-op runs; ci.yml group hazard ([#2840](https://github.com/taverns-red/toast-stats/issues/2840)) ([#2926](https://github.com/taverns-red/toast-stats/issues/2926)) ([8dd35e6](https://github.com/taverns-red/toast-stats/commit/8dd35e6a1f3677f41da5e474b56419ab59712e38))
+* **agent-cli:** ci-wait waits for mergeStateStatus CLEAN before PASS ([#2905](https://github.com/taverns-red/toast-stats/issues/2905)) ([#2909](https://github.com/taverns-red/toast-stats/issues/2909)) ([2d54ab3](https://github.com/taverns-red/toast-stats/commit/2d54ab37eede6dac4b7583ce4d5158de3810a8e5))
+* **agent-cli:** ci-wait waits for unfinished runs and never calls a draft mergeable ([#2910](https://github.com/taverns-red/toast-stats/issues/2910)) ([#2917](https://github.com/taverns-red/toast-stats/issues/2917)) ([3c57012](https://github.com/taverns-red/toast-stats/commit/3c570129048f2ee3cc9735a37910277479cadbfe))
+* **ci-gate:** fail at once on a non-retryable 4xx poll error ([#2887](https://github.com/taverns-red/toast-stats/issues/2887)) ([#2914](https://github.com/taverns-red/toast-stats/issues/2914)) ([9b3f903](https://github.com/taverns-red/toast-stats/commit/9b3f9037f42f924166c153e25882dc3d38d58624))
+* **ci:** Lighthouse runs over a fixed protocol so byte budgets stop flapping ([#2849](https://github.com/taverns-red/toast-stats/issues/2849)) ([#2850](https://github.com/taverns-red/toast-stats/issues/2850)) ([e89fd87](https://github.com/taverns-red/toast-stats/commit/e89fd877394ea03711453a1b18187aa0338c6b84))
+* **consent:** drop GA requests after a downgrade from all ([#2827](https://github.com/taverns-red/toast-stats/issues/2827)) ([#2916](https://github.com/taverns-red/toast-stats/issues/2916)) ([2b0e02b](https://github.com/taverns-red/toast-stats/commit/2b0e02bd1a2d11d5205a29cfe5e553d07668e887))
+* **deps:** bump hono, @hono/node-server, fast-xml-parser in the lockfile ([#2862](https://github.com/taverns-red/toast-stats/issues/2862)) ([#2904](https://github.com/taverns-red/toast-stats/issues/2904)) ([eb4bfe1](https://github.com/taverns-red/toast-stats/commit/eb4bfe13717467927bec826ef84d35be1591dc6d))
+* **infra:** setup-wif.sh drops removed roles; GCP identity map test ([#2872](https://github.com/taverns-red/toast-stats/issues/2872) B0) ([#2878](https://github.com/taverns-red/toast-stats/issues/2878)) ([ea5398d](https://github.com/taverns-red/toast-stats/commit/ea5398dab3c1372605a29d7b230d5abe8446970f))
+* **pipeline:** dangling-index hold names the staging fix and the restore runbook ([#2540](https://github.com/taverns-red/toast-stats/issues/2540)) ([#2843](https://github.com/taverns-red/toast-stats/issues/2843)) ([3362599](https://github.com/taverns-red/toast-stats/commit/3362599c338a81dd5bf3f171791a6893dd76880f))
+* **pipeline:** restore plan reads a prod removal record; execute only for daily and rebuild ([#2856](https://github.com/taverns-red/toast-stats/issues/2856)) ([#2902](https://github.com/taverns-red/toast-stats/issues/2902)) ([98e6ec9](https://github.com/taverns-red/toast-stats/commit/98e6ec957f00db4640c05e5681442ce2f7e29cc5))
+* **scripts:** rebuild-analytics failure line prints the real error ([#2838](https://github.com/taverns-red/toast-stats/issues/2838)) ([#2911](https://github.com/taverns-red/toast-stats/issues/2911)) ([608dd24](https://github.com/taverns-red/toast-stats/commit/608dd24b12cc0fdb03881263972f744dcc27a795))
+* **ui:** area visit cells show visited of club base and the number needed ([#2871](https://github.com/taverns-red/toast-stats/issues/2871)) ([#2873](https://github.com/taverns-red/toast-stats/issues/2873)) ([8c82a0a](https://github.com/taverns-red/toast-stats/commit/8c82a0ae1814a8e69c94c474db8e4453b9c401ce))
+* **ui:** footer Privacy & cookies button lines up with its row on desktop ([#2889](https://github.com/taverns-red/toast-stats/issues/2889)) ([#2890](https://github.com/taverns-red/toast-stats/issues/2890)) ([7350e72](https://github.com/taverns-red/toast-stats/commit/7350e72b65756dd2f3c9fda3cbbce4ecb98d5485))
+
+
+### Performance
+
+* **ci:** PR Preview shards serve cdn.taverns.red reads from fixtures ([#2570](https://github.com/taverns-red/toast-stats/issues/2570)) ([#2847](https://github.com/taverns-red/toast-stats/issues/2847)) ([37b9da9](https://github.com/taverns-red/toast-stats/commit/37b9da995dfc55a5ca2a997425a11c16c4c465df))
+
+
+### Documentation
+
+* **e2e:** fixture README and relayCdnRead doc after the prod-origin abort ([#2900](https://github.com/taverns-red/toast-stats/issues/2900)) ([#2925](https://github.com/taverns-red/toast-stats/issues/2925)) ([96f780c](https://github.com/taverns-red/toast-stats/commit/96f780c8500d81956a39b55aba96a4152f22aec9))
+* **lessons:** a required check resolves from the newest workflow run ([#2865](https://github.com/taverns-red/toast-stats/issues/2865)) ([#2884](https://github.com/taverns-red/toast-stats/issues/2884)) ([ec89dfd](https://github.com/taverns-red/toast-stats/commit/ec89dfdfd3a9783811ee98da59e5a253079bf4c2))
+* refresh toastmasters-rules-reference to Item 1490 Rev. 07/2026 ([#2869](https://github.com/taverns-red/toast-stats/issues/2869)) ([#2906](https://github.com/taverns-red/toast-stats/issues/2906)) ([769fda7](https://github.com/taverns-red/toast-stats/commit/769fda7c55b6ad977ad517bee81e63ccf4fcacb8))
+
+
+### Tests
+
+* **e2e:** fixture route answers the prod CDN origin only for videos/ ([#2855](https://github.com/taverns-red/toast-stats/issues/2855)) ([#2898](https://github.com/taverns-red/toast-stats/issues/2898)) ([950b7fd](https://github.com/taverns-red/toast-stats/commit/950b7fd894a55eefb47fa211e12956b26dc298d2))
+* **scripts:** tested data-restore copy picker with plan/--execute ([#2539](https://github.com/taverns-red/toast-stats/issues/2539)) ([#2841](https://github.com/taverns-red/toast-stats/issues/2841)) ([78fabd4](https://github.com/taverns-red/toast-stats/commit/78fabd4ecbed7a124047eb64d0f58c227a850c3f))
+
+
+### Continuous Integration
+
+* authenticate the read-only jobs as the data reader ([#2872](https://github.com/taverns-red/toast-stats/issues/2872)) ([#2908](https://github.com/taverns-red/toast-stats/issues/2908)) ([a0777f7](https://github.com/taverns-red/toast-stats/commit/a0777f7c224da4f99202297e1e2dc41c042f2645))
+* cancel superseded PR runs of ci.yml, never main ([#2607](https://github.com/taverns-red/toast-stats/issues/2607)) ([#2837](https://github.com/taverns-red/toast-stats/issues/2837)) ([880c02c](https://github.com/taverns-red/toast-stats/commit/880c02c879b938bc20237cdaf318f3d9faf36f89))
+* CI Gate waits for the head's earlier run on a no-op edit ([#2881](https://github.com/taverns-red/toast-stats/issues/2881)) ([#2885](https://github.com/taverns-red/toast-stats/issues/2885)) ([70233af](https://github.com/taverns-red/toast-stats/commit/70233afc136749b9f1fe339c051895e828ecba16))
+* drop unused checks: read from the CI Gate job ([#2886](https://github.com/taverns-red/toast-stats/issues/2886)) ([#2888](https://github.com/taverns-red/toast-stats/issues/2888)) ([35eb588](https://github.com/taverns-red/toast-stats/commit/35eb5888a0d0ad22c7deb0f340bd82492e83dbf8))
+* fold CI Gate into ci.yml as a needs: job, no polling ([#2607](https://github.com/taverns-red/toast-stats/issues/2607)) ([#2859](https://github.com/taverns-red/toast-stats/issues/2859)) ([574289f](https://github.com/taverns-red/toast-stats/commit/574289f87e132370604d77a3cb9144d37f3a8107))
+* **mcp-server:** test the package on its engines.node floor ([#2857](https://github.com/taverns-red/toast-stats/issues/2857)) ([#2901](https://github.com/taverns-red/toast-stats/issues/2901)) ([21045d8](https://github.com/taverns-red/toast-stats/commit/21045d8b077efa88e2654440bac3e1b4db569710))
+* **pipeline:** per-job permissions in data-pipeline.yml ([#2868](https://github.com/taverns-red/toast-stats/issues/2868)) ([#2874](https://github.com/taverns-red/toast-stats/issues/2874)) ([865199e](https://github.com/taverns-red/toast-stats/commit/865199e7c1eb079e448f3486a0b7cca02af713b5))
+* **preview:** PR Preview verdict reports on every open PR ([#2865](https://github.com/taverns-red/toast-stats/issues/2865)) ([#2880](https://github.com/taverns-red/toast-stats/issues/2880)) ([4be2df0](https://github.com/taverns-red/toast-stats/commit/4be2df08beb4cbe2faa3b9f758436c9627717758))
+* **preview:** run the Playwright smoke jobs in the pinned official image, off apt ([#2615](https://github.com/taverns-red/toast-stats/issues/2615)) ([#2835](https://github.com/taverns-red/toast-stats/issues/2835)) ([92f5754](https://github.com/taverns-red/toast-stats/commit/92f5754349dab60f42902bc9225cdefd2f4768ed))
+
 ## [2.91.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.91.0...toast-stats-v2.91.1) (2026-11-14)
 
 

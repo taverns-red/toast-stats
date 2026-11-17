@@ -1,5 +1,40 @@
 # Changelog
 
+## [3.69.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.68.1...frontend-v3.69.0) (2026-11-17)
+
+
+### Features
+
+* **deadlines:** add 30 Jun year-end and 31 Mar good-standing TI dates ([#2870](https://github.com/taverns-red/toast-stats/issues/2870)) ([#2875](https://github.com/taverns-red/toast-stats/issues/2875)) ([15841a3](https://github.com/taverns-red/toast-stats/commit/15841a38403403e42b714bd3aa911d63c63a24a9))
+
+
+### Bug Fixes
+
+* **action-list:** reserve the intro from the URL date on a cold load ([#2830](https://github.com/taverns-red/toast-stats/issues/2830)) ([#2915](https://github.com/taverns-red/toast-stats/issues/2915)) ([c49eef2](https://github.com/taverns-red/toast-stats/commit/c49eef2aa71a520f107109b4ca8ac6c3fde01efd))
+* **consent:** drop GA requests after a downgrade from all ([#2827](https://github.com/taverns-red/toast-stats/issues/2827)) ([#2916](https://github.com/taverns-red/toast-stats/issues/2916)) ([2b0e02b](https://github.com/taverns-red/toast-stats/commit/2b0e02bd1a2d11d5205a29cfe5e553d07668e887))
+* **ui:** area visit cells show visited of club base and the number needed ([#2871](https://github.com/taverns-red/toast-stats/issues/2871)) ([#2873](https://github.com/taverns-red/toast-stats/issues/2873)) ([8c82a0a](https://github.com/taverns-red/toast-stats/commit/8c82a0ae1814a8e69c94c474db8e4453b9c401ce))
+* **ui:** footer Privacy & cookies button lines up with its row on desktop ([#2889](https://github.com/taverns-red/toast-stats/issues/2889)) ([#2890](https://github.com/taverns-red/toast-stats/issues/2890)) ([7350e72](https://github.com/taverns-red/toast-stats/commit/7350e72b65756dd2f3c9fda3cbbce4ecb98d5485))
+
+
+### Performance
+
+* **ci:** PR Preview shards serve cdn.taverns.red reads from fixtures ([#2570](https://github.com/taverns-red/toast-stats/issues/2570)) ([#2847](https://github.com/taverns-red/toast-stats/issues/2847)) ([37b9da9](https://github.com/taverns-red/toast-stats/commit/37b9da995dfc55a5ca2a997425a11c16c4c465df))
+
+
+### Documentation
+
+* **e2e:** fixture README and relayCdnRead doc after the prod-origin abort ([#2900](https://github.com/taverns-red/toast-stats/issues/2900)) ([#2925](https://github.com/taverns-red/toast-stats/issues/2925)) ([96f780c](https://github.com/taverns-red/toast-stats/commit/96f780c8500d81956a39b55aba96a4152f22aec9))
+
+
+### Tests
+
+* **e2e:** fixture route answers the prod CDN origin only for videos/ ([#2855](https://github.com/taverns-red/toast-stats/issues/2855)) ([#2898](https://github.com/taverns-red/toast-stats/issues/2898)) ([950b7fd](https://github.com/taverns-red/toast-stats/commit/950b7fd894a55eefb47fa211e12956b26dc298d2))
+
+
+### Continuous Integration
+
+* **preview:** run the Playwright smoke jobs in the pinned official image, off apt ([#2615](https://github.com/taverns-red/toast-stats/issues/2615)) ([#2835](https://github.com/taverns-red/toast-stats/issues/2835)) ([92f5754](https://github.com/taverns-red/toast-stats/commit/92f5754349dab60f42902bc9225cdefd2f4768ed))
+
 ## [3.68.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.68.0...frontend-v3.68.1) (2026-11-14)
 
 

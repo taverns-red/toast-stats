@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.13](https://github.com/taverns-red/toast-stats/compare/toast-stats-mcp-v0.1.12...toast-stats-mcp-v0.1.13) (2026-11-17)
+
+
+### Continuous Integration
+
+* **mcp-server:** test the package on its engines.node floor ([#2857](https://github.com/taverns-red/toast-stats/issues/2857)) ([#2901](https://github.com/taverns-red/toast-stats/issues/2901)) ([21045d8](https://github.com/taverns-red/toast-stats/commit/21045d8b077efa88e2654440bac3e1b4db569710))
+
 ## [0.1.12](https://github.com/taverns-red/toast-stats/compare/toast-stats-mcp-v0.1.11...toast-stats-mcp-v0.1.12) (2026-11-05)
 
 
