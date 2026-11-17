@@ -294,3 +294,104 @@ describe('waitForGate (#2881)', () => {
     expect(v.reasons.join(' ')).toContain('Build Applications')
   })
 })
+
+// #2887: a permanent 4xx must fail at once, not poll until the job timeout.
+describe('non-retryable 4xx (#2887)', () => {
+  const httpErr = (status: number, rateLimited = false) =>
+    Object.assign(new Error(`GET /x -> ${status}`), { status, rateLimited })
+  // A sleep that fails the test if the code tries to retry.
+  const noRetry = () => {
+    let sleeps = 0
+    return async () => {
+      if (++sleeps > 2) throw new Error('retried a permanent error')
+    }
+  }
+
+  // GitHub is briefly inconsistent after a run is created, so a 404 can be
+  // transient: give a permanent error 3 consecutive tries, not 1.
+  it.each([401, 403, 404, 422])(
+    'retryUntilOk rethrows a %i after 3 consecutive tries',
+    async s => {
+      let calls = 0
+      await expect(
+        retryUntilOk(
+          async () => {
+            calls++
+            throw httpErr(s)
+          },
+          { sleep: noRetry() }
+        )
+      ).rejects.toThrow(String(s))
+      expect(calls).toBe(3)
+    }
+  )
+
+  it('retryUntilOk passes on 404, 404, then success', async () => {
+    let calls = 0
+    const out = await retryUntilOk(
+      async () => {
+        if (++calls < 3) throw httpErr(404)
+        return 'ok'
+      },
+      { sleep: noRetry() }
+    )
+    expect(out).toBe('ok')
+    expect(calls).toBe(3)
+  })
+
+  it('a success resets the permanent-error count', async () => {
+    // Two separate polls, each with 404, 404, then success.
+    const sleep = async () => {}
+    for (let poll = 0; poll < 2; poll++) {
+      let calls = 0
+      const out = await retryUntilOk(
+        async () => {
+          if (++calls < 3) throw httpErr(404)
+          return 'ok'
+        },
+        { sleep }
+      )
+      expect(out).toBe('ok')
+    }
+  })
+
+  it.each([
+    ['500', httpErr(500)],
+    ['502', httpErr(502)],
+    ['429', httpErr(429)],
+    ['rate-limit 403', httpErr(403, true)],
+    ['network error', new TypeError('fetch failed')],
+  ])('retryUntilOk still retries %s', async (_n, err) => {
+    let calls = 0
+    const out = await retryUntilOk(
+      async () => {
+        if (++calls < 2) throw err
+        return 'ok'
+      },
+      { sleep: async () => {} }
+    )
+    expect(out).toBe('ok')
+    expect(calls).toBe(2)
+  })
+
+  it.each([404, 401])(
+    'waitForGate fails the gate after 3 consecutive %i, status in the reason',
+    async s => {
+      let calls = 0
+      const v = await waitForGate({
+        fetchState: async () => {
+          calls++
+          throw httpErr(s)
+        },
+        expected: NAMES,
+        headSha: 'a',
+        selfRunId: SELF,
+        sleep: noRetry(),
+      })
+      expect(v.pass).toBe(false)
+      expect(v.reasons.join(' ')).toContain(String(s))
+      expect(v.reasons.join(' ')).toContain('not retrying')
+      expect(calls).toBe(3)
+    }
+  )
+})
