@@ -225,6 +225,7 @@ describe('agent-cli', () => {
         [/^gh api rate_limit/, limit(100, 100)],
         [/^gh pr checks /, fail('', 1, PASS)],
         [/^gh pr view /, CLEAN],
+        [/\/actions\/runs\?/, ok('{"workflow_runs":[]}')],
       ])
       const c = capture()
       expect(
@@ -287,6 +288,7 @@ describe('agent-cli', () => {
           ),
         ],
         [/^gh pr view /, CLEAN],
+        [/\/actions\/runs\?/, ok('{"workflow_runs":[]}')],
       ])
       expect(
         await main(['ci-wait', '123'], { ...c.deps, runner, ...clock() })
@@ -316,6 +318,15 @@ describe('agent-cli', () => {
       expect(c.out.join('\n')).toMatch(/UNSTABLE waits/)
     })
 
+    it('ci-wait --help says a draft is never mergeable and that unfinished workflow runs keep it waiting (#2910)', async () => {
+      const c = capture()
+      await main(['ci-wait', '--help'], c.deps)
+      const help = c.out.join('\n')
+      expect(help).toMatch(/isDraft/)
+      expect(help).toMatch(/workflow run/i)
+      expect(help).toMatch(/queued/)
+    })
+
     it('polls when core.remaining is 500 or more', async () => {
       const c = capture()
       const runner = fakeRunner([
@@ -329,6 +340,7 @@ describe('agent-cli', () => {
           ),
         ],
         [/^gh pr view /, CLEAN],
+        [/\/actions\/runs\?/, ok('{"workflow_runs":[]}')],
       ])
       expect(
         await main(['ci-wait', '123'], { ...c.deps, runner, ...clock() })

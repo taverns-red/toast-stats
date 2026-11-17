@@ -16,6 +16,12 @@ import { fakeRunner, fixture, ok, fail } from './agentCliFakes.js'
 const CHECKS = JSON.parse(fixture('pr-checks-2416.json')) as PrCheck[]
 const REPO = 'taverns-red/toast-stats'
 
+/** No workflow run in flight for the head commit (#2910): ci-wait reads this once per green poll. */
+const NO_RUNS: [RegExp, ReturnType<typeof ok>] = [
+  /\/actions\/runs\?/,
+  ok(JSON.stringify({ total_count: 0, workflow_runs: [] })),
+]
+
 function check(over: Partial<PrCheck>): PrCheck {
   return {
     name: 'Test Suite',
@@ -215,6 +221,7 @@ describe('ciWait REST fallback when GraphQL is blocked (#2485)', () => {
         new RegExp(`/actions/runs\\?head_sha=${SHA}&per_page=100&page=1$`),
         ok(fixture('actions-runs-2482.json')),
       ],
+      NO_RUNS,
     ])
   }
 
@@ -384,6 +391,7 @@ describe('ciWait merge state (#2905)', () => {
           view('CLEAN'),
         ],
       ],
+      NO_RUNS,
     ])
     const r = await ciWait(2904, {
       repo: REPO,
@@ -439,6 +447,7 @@ describe('ciWait merge state (#2905)', () => {
     const runner = fakeRunner([
       [/^gh pr checks 7 /, ok(GREEN)],
       [/^gh pr view 7 /, view('DRAFT')],
+      NO_RUNS,
     ])
     const r = await ciWait(7, { repo: REPO, runner, ...fakeClock() })
     expect(r.outcome).toBe('pass')
@@ -575,6 +584,7 @@ describe('ciWait merge state (#2905)', () => {
             })
           ),
         ],
+        NO_RUNS,
       ])
     }
 
@@ -636,6 +646,7 @@ describe('ciWait merge state, review fixes (#2905)', () => {
     const runner = fakeRunner([
       [/^gh pr checks 22 /, ok(GREEN_WITH_CANCELLED)],
       [/^gh pr view 22 /, view('UNSTABLE')],
+      NO_RUNS,
     ])
     const r = await ciWait(22, {
       repo: REPO,
@@ -682,6 +693,7 @@ describe('ciWait merge state, review fixes (#2905)', () => {
     const runner = fakeRunner([
       [/^gh pr checks 25 /, ok(GREEN)],
       [/^gh pr view 25 /, [view('CLEAN', 'aaa'), view('CLEAN', 'bbb')]],
+      NO_RUNS,
     ])
     const r = await ciWait(25, {
       repo: REPO,
@@ -699,6 +711,7 @@ describe('ciWait merge state, review fixes (#2905)', () => {
     const runner = fakeRunner([
       [/^gh pr checks 26 /, ok(GREEN)],
       [/^gh pr view 26 /, view('DRAFT')],
+      NO_RUNS,
     ])
     const r = await ciWait(26, {
       repo: REPO,
@@ -715,6 +728,7 @@ describe('ciWait merge state, review fixes (#2905)', () => {
     const runner = fakeRunner([
       [/^gh pr checks 27 /, ok(GREEN)],
       [/^gh pr view 27 /, view(state)],
+      NO_RUNS,
     ])
     const r = await ciWait(27, {
       repo: REPO,
@@ -772,5 +786,427 @@ describe('ciWait merge state, review fixes (#2905)', () => {
     })
     expect(r.outcome).toBe('pass')
     expect(runner.calls.filter(c => /\/pulls\/28$/.test(c))).toHaveLength(1)
+  })
+})
+
+/**
+ * #2910: GitHub can report mergeStateStatus CLEAN for a draft PR (PR #2911),
+ * so the merge state alone doesn't say whether the PR is a draft. ci-wait
+ * reads isDraft (REST: draft) and never calls a draft mergeable.
+ */
+describe('ciWait draft PRs are never mergeable (#2910)', () => {
+  const GRAPHQL_403 =
+    'HTTP 403: GitHub GraphQL is not available from Claude Code sessions; use the REST API'
+  const GREEN = JSON.stringify([check({}), check({ name: 'Lint' })])
+
+  it('says mergeable false for a draft that GraphQL reports as CLEAN', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 2911 /, ok(GREEN)],
+      [
+        /^gh pr view 2911 /,
+        ok(
+          JSON.stringify({
+            mergeStateStatus: 'CLEAN',
+            headRefOid: 'abc123',
+            state: 'OPEN',
+            isDraft: true,
+          })
+        ),
+      ],
+      NO_RUNS,
+    ])
+    const r = await ciWait(2911, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(r.mergeState).toBe('CLEAN')
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(false)
+    expect(formatCiWait(r)).toContain('draft: not mergeable yet')
+  })
+
+  it('says mergeable false for a draft that REST reports as clean', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks /, fail(GRAPHQL_403)],
+      [
+        /^gh api repos\/taverns-red\/toast-stats\/pulls\/2911$/,
+        ok(
+          JSON.stringify({
+            head: { sha: 'abc' },
+            mergeable_state: 'clean',
+            draft: true,
+          })
+        ),
+      ],
+      [
+        /\/commits\/abc\/check-runs/,
+        ok(
+          JSON.stringify({
+            total_count: 1,
+            check_runs: [
+              {
+                name: 'T',
+                status: 'completed',
+                conclusion: 'success',
+                details_url: 'https://x/1',
+                started_at: '2026-11-17T10:00:00Z',
+                completed_at: '2026-11-17T10:05:00Z',
+                check_suite: { id: 7 },
+              },
+            ],
+          })
+        ),
+      ],
+      NO_RUNS,
+    ])
+    const r = await ciWait(2911, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(false)
+    expect(formatCiWait(r)).toContain('draft: not mergeable yet')
+  })
+
+  it('still says mergeable true for a non-draft CLEAN PR (no run in flight)', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 30 /, ok(GREEN)],
+      [
+        /^gh pr view 30 /,
+        ok(
+          JSON.stringify({
+            mergeStateStatus: 'CLEAN',
+            headRefOid: 'abc123',
+            state: 'OPEN',
+            isDraft: false,
+          })
+        ),
+      ],
+      NO_RUNS,
+    ])
+    const r = await ciWait(30, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(true)
+  })
+})
+
+/**
+ * #2910: right after `gh pr ready` or a push, ci-wait said PASS while a
+ * workflow run for the head commit was still queued or running, because that
+ * run's check hadn't registered yet (PR Preview run 44141207002 on PR #2911).
+ * Before passing, ci-wait reads the workflow runs for the head SHA, once per
+ * green poll, and keeps waiting while any is unfinished.
+ */
+describe('ciWait waits for unfinished workflow runs on the head commit (#2910)', () => {
+  const GREEN = JSON.stringify([check({}), check({ name: 'Lint' })])
+  const RUNS_URL =
+    /^gh api repos\/taverns-red\/toast-stats\/actions\/runs\?head_sha=abc123&per_page=100$/
+  const view = ok(
+    JSON.stringify({
+      mergeStateStatus: 'CLEAN',
+      headRefOid: 'abc123',
+      state: 'OPEN',
+      isDraft: false,
+    })
+  )
+  const run = (status: string, over: Record<string, unknown> = {}) => ({
+    id: 44141207002,
+    name: 'PR Preview',
+    status,
+    event: 'pull_request',
+    pull_requests: [{ number: 2911 }],
+    conclusion: status === 'completed' ? 'success' : null,
+    html_url:
+      'https://github.com/taverns-red/toast-stats/actions/runs/44141207002',
+    ...over,
+  })
+  const runs = (...rs: unknown[]) =>
+    ok(JSON.stringify({ total_count: rs.length, workflow_runs: rs }))
+
+  it('keeps waiting while a run is in progress, then passes once it completes', async () => {
+    const clock = fakeClock()
+    const sleeps: number[] = []
+    const runner = fakeRunner([
+      [/^gh pr checks 2911 /, ok(GREEN)],
+      [/^gh pr view 2911 /, view],
+      [RUNS_URL, [runs(run('in_progress')), runs(run('completed'))]],
+    ])
+    const r = await ciWait(2911, {
+      repo: REPO,
+      runner,
+      intervalMs: 60_000,
+      timeoutMs: 600_000,
+      now: clock.now,
+      sleep: async ms => {
+        sleeps.push(ms)
+        await clock.sleep(ms)
+      },
+    })
+    expect(r.outcome).toBe('pass')
+    expect(r.polls).toBe(2)
+    expect(sleeps).toEqual([60_000])
+  })
+
+  it.each(['queued', 'in_progress', 'waiting', 'requested', 'pending'])(
+    'treats a %s run as unfinished',
+    async status => {
+      const runner = fakeRunner([
+        [/^gh pr checks 2911 /, ok(GREEN)],
+        [/^gh pr view 2911 /, view],
+        [RUNS_URL, runs(run(status))],
+      ])
+      const r = await ciWait(2911, {
+        repo: REPO,
+        runner,
+        once: true,
+        ...fakeClock(),
+      })
+      expect(r.outcome).toBe('pending')
+      expect(ciWaitExitCode(r)).toBe(2)
+    }
+  )
+
+  it('names the unfinished runs in the pending output', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 2911 /, ok(GREEN)],
+      [/^gh pr view 2911 /, view],
+      [
+        RUNS_URL,
+        runs(
+          run('in_progress'),
+          run('completed', { id: 1, name: 'CI' }),
+          run('queued', { id: 2, name: 'Quality Gates' })
+        ),
+      ],
+    ])
+    const r = await ciWait(2911, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    const text = formatCiWait(r)
+    expect(text).toContain('PR Preview')
+    expect(text).toContain('in_progress')
+    expect(text).toContain('Quality Gates')
+    expect(text).toContain('queued')
+    expect(text).toContain('actions/runs/44141207002')
+    expect(text).not.toMatch(/CI \(/)
+  })
+
+  it('passes when every run for the head commit has completed', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 2911 /, ok(GREEN)],
+      [/^gh pr view 2911 /, view],
+      [RUNS_URL, runs(run('completed'), run('completed', { name: 'CI' }))],
+    ])
+    const r = await ciWait(2911, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+  })
+
+  it('reads the workflow runs once per green poll, and not while a check is failing', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 2911 /, ok(GREEN)],
+      [/^gh pr view 2911 /, view],
+      [RUNS_URL, runs(run('completed'))],
+    ])
+    await ciWait(2911, { repo: REPO, runner, once: true, ...fakeClock() })
+    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(1)
+
+    const failing = fakeRunner([
+      [
+        /^gh pr checks 2912 /,
+        ok(JSON.stringify([check({ bucket: 'fail', state: 'FAILURE' })])),
+      ],
+    ])
+    await ciWait(2912, { repo: REPO, runner: failing, ...fakeClock() })
+    expect(failing.calls.some(c => /actions\/runs/.test(c))).toBe(false)
+  })
+
+  describe('only runs that belong to this PR count', () => {
+    const once = (...rs: unknown[]) =>
+      ciWait(2911, {
+        repo: REPO,
+        runner: fakeRunner([
+          [/^gh pr checks 2911 /, ok(GREEN)],
+          [/^gh pr view 2911 /, view],
+          [RUNS_URL, runs(...rs)],
+        ]),
+        once: true,
+        ...fakeClock(),
+      })
+
+    it('ignores a workflow_dispatch run on the head SHA', async () => {
+      const r = await once(
+        run('in_progress', { event: 'workflow_dispatch', pull_requests: [] })
+      )
+      expect(r.outcome).toBe('pass')
+    })
+
+    it('ignores a pull_request run that belongs to another PR', async () => {
+      const r = await once(
+        run('in_progress', { pull_requests: [{ number: 9999 }] })
+      )
+      expect(r.outcome).toBe('pass')
+    })
+
+    it('counts a pull_request_target run for this PR', async () => {
+      const r = await once(
+        run('queued', {
+          event: 'pull_request_target',
+          pull_requests: [{ number: 9999 }, { number: 2911 }],
+        })
+      )
+      expect(r.outcome).toBe('pending')
+    })
+  })
+
+  it('names a waiting run as waiting for approval', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 2911 /, ok(GREEN)],
+      [/^gh pr view 2911 /, view],
+      [RUNS_URL, runs(run('waiting'))],
+    ])
+    const r = await ciWait(2911, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(formatCiWait(r)).toContain('PR Preview (waiting for approval)')
+  })
+
+  it.each(['MERGED', 'CLOSED'])(
+    'judges a %s PR on its checks alone: no workflow-run read',
+    async state => {
+      const runner = fakeRunner([
+        [/^gh pr checks 2911 /, ok(GREEN)],
+        [
+          /^gh pr view 2911 /,
+          ok(
+            JSON.stringify({
+              mergeStateStatus: 'UNKNOWN',
+              headRefOid: 'abc123',
+              state,
+              isDraft: false,
+            })
+          ),
+        ],
+        [RUNS_URL, runs(run('in_progress'))],
+      ])
+      const r = await ciWait(2911, {
+        repo: REPO,
+        runner,
+        once: true,
+        ...fakeClock(),
+      })
+      expect(r.outcome).toBe('pass')
+      expect(runner.calls.some(c => /actions\/runs/.test(c))).toBe(false)
+    }
+  )
+
+  it.each(['BLOCKED', 'BEHIND', 'UNKNOWN'])(
+    'passes a draft reporting %s, still not mergeable',
+    async state => {
+      const runner = fakeRunner([
+        [/^gh pr checks 2911 /, ok(GREEN)],
+        [
+          /^gh pr view 2911 /,
+          ok(
+            JSON.stringify({
+              mergeStateStatus: state,
+              headRefOid: 'abc123',
+              state: 'OPEN',
+              isDraft: true,
+            })
+          ),
+        ],
+        [RUNS_URL, runs(run('completed'))],
+      ])
+      const r = await ciWait(2911, {
+        repo: REPO,
+        runner,
+        once: true,
+        ...fakeClock(),
+      })
+      expect(r.outcome).toBe('pass')
+      expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(false)
+    }
+  )
+
+  it('on REST, reuses the workflow runs it already read for the check names', async () => {
+    const GRAPHQL_403 = 'HTTP 403: GitHub GraphQL is not available'
+    const wfRun = (status: string) => ({
+      name: 'PR Preview',
+      check_suite_id: 7,
+      status,
+      event: 'pull_request',
+      pull_requests: [{ number: 2911 }],
+      html_url:
+        'https://github.com/taverns-red/toast-stats/actions/runs/44141207002',
+    })
+    const runner = fakeRunner([
+      [/^gh pr checks /, fail(GRAPHQL_403)],
+      [
+        /\/pulls\/2911$/,
+        ok(
+          JSON.stringify({
+            head: { sha: 'abc' },
+            mergeable_state: 'clean',
+            draft: false,
+          })
+        ),
+      ],
+      [
+        /\/commits\/abc\/check-runs/,
+        ok(
+          JSON.stringify({
+            total_count: 1,
+            check_runs: [
+              {
+                name: 'T',
+                status: 'completed',
+                conclusion: 'success',
+                details_url: 'https://x/1',
+                started_at: '2026-11-17T10:00:00Z',
+                completed_at: '2026-11-17T10:05:00Z',
+                check_suite: { id: 7 },
+              },
+            ],
+          })
+        ),
+      ],
+      [
+        /\/actions\/runs\?head_sha=abc&per_page=100&page=1$/,
+        ok(
+          JSON.stringify({
+            total_count: 1,
+            workflow_runs: [wfRun('in_progress')],
+          })
+        ),
+      ],
+    ])
+    const r = await ciWait(2911, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pending')
+    expect(formatCiWait(r)).toContain('PR Preview (in_progress)')
+    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(1)
   })
 })
