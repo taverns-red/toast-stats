@@ -774,3 +774,116 @@ describe('ciWait merge state, review fixes (#2905)', () => {
     expect(runner.calls.filter(c => /\/pulls\/28$/.test(c))).toHaveLength(1)
   })
 })
+
+/**
+ * #2910: GitHub can report mergeStateStatus CLEAN for a draft PR (PR #2911),
+ * so the merge state alone doesn't say whether the PR is a draft. ci-wait
+ * reads isDraft (REST: draft) and never calls a draft mergeable.
+ */
+describe('ciWait draft PRs are never mergeable (#2910)', () => {
+  const GRAPHQL_403 =
+    'HTTP 403: GitHub GraphQL is not available from Claude Code sessions; use the REST API'
+  const GREEN = JSON.stringify([check({}), check({ name: 'Lint' })])
+  const NO_RUNS = [
+    /\/actions\/runs\?/,
+    ok(JSON.stringify({ total_count: 0, workflow_runs: [] })),
+  ] as [RegExp, ReturnType<typeof ok>]
+
+  it('says mergeable false for a draft that GraphQL reports as CLEAN', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 2911 /, ok(GREEN)],
+      [
+        /^gh pr view 2911 /,
+        ok(
+          JSON.stringify({
+            mergeStateStatus: 'CLEAN',
+            headRefOid: 'abc123',
+            state: 'OPEN',
+            isDraft: true,
+          })
+        ),
+      ],
+      NO_RUNS,
+    ])
+    const r = await ciWait(2911, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(r.mergeState).toBe('CLEAN')
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(false)
+    expect(formatCiWait(r)).toContain('draft: not mergeable yet')
+  })
+
+  it('says mergeable false for a draft that REST reports as clean', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks /, fail(GRAPHQL_403)],
+      [
+        /^gh api repos\/taverns-red\/toast-stats\/pulls\/2911$/,
+        ok(
+          JSON.stringify({
+            head: { sha: 'abc' },
+            mergeable_state: 'clean',
+            draft: true,
+          })
+        ),
+      ],
+      [
+        /\/commits\/abc\/check-runs/,
+        ok(
+          JSON.stringify({
+            total_count: 1,
+            check_runs: [
+              {
+                name: 'T',
+                status: 'completed',
+                conclusion: 'success',
+                details_url: 'https://x/1',
+                started_at: '2026-11-17T10:00:00Z',
+                completed_at: '2026-11-17T10:05:00Z',
+                check_suite: { id: 7 },
+              },
+            ],
+          })
+        ),
+      ],
+      NO_RUNS,
+    ])
+    const r = await ciWait(2911, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pass')
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(false)
+    expect(formatCiWait(r)).toContain('draft: not mergeable yet')
+  })
+
+  it('still says mergeable true for a non-draft CLEAN PR', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 30 /, ok(GREEN)],
+      [
+        /^gh pr view 30 /,
+        ok(
+          JSON.stringify({
+            mergeStateStatus: 'CLEAN',
+            headRefOid: 'abc123',
+            state: 'OPEN',
+            isDraft: false,
+          })
+        ),
+      ],
+      NO_RUNS,
+    ])
+    const r = await ciWait(30, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(JSON.parse(JSON.stringify(r)).mergeable).toBe(true)
+  })
+})
