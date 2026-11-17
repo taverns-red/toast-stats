@@ -11,6 +11,7 @@ import {
   filterDatesByProgramYear,
   getMostRecentDateInProgramYear,
   isDateInProgramYear,
+  getProgramYearForDate,
 } from '../utils/programYear'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import {
@@ -666,14 +667,23 @@ const DistrictActionListPage: React.FC = () => {
   const sectionOrder = useMemo(() => orderActionSections(sections), [sections])
   /* The intro's reserve while the skeleton is up (#2524): the clauses the
      pinned date and program year allow, before the statistics land. */
-  const reservedOrder = useMemo(
-    () =>
-      reservedActionSectionOrder(
-        effectiveEndDate ?? '',
+  const reservedOrder = useMemo(() => {
+    if (effectiveEndDate) {
+      return reservedActionSectionOrder(
+        effectiveEndDate,
         effectiveProgramYear?.label
-      ),
-    [effectiveEndDate, effectiveProgramYear]
-  )
+      )
+    }
+    // Cold load (#2830): the date index is still in flight, so nothing is
+    // resolved yet, but a pinned `?date=` is already in the URL and alone
+    // decides the reserve. Its own program year is the one the final sentence
+    // will use once the date resolves. With no pinned date nothing is known,
+    // and the reserve is the longest order.
+    return reservedActionSectionOrder(
+      selectedDate ?? '',
+      selectedDate ? getProgramYearForDate(selectedDate).label : undefined
+    )
+  }, [effectiveEndDate, effectiveProgramYear, selectedDate])
 
   /* Collapse preference — per viewer, per device, ONE key for the page, never
      in the URL (a shared link must not carry it). Reads and writes go through
