@@ -13,6 +13,7 @@ import {
   setConsent,
   subscribeConsent,
 } from '../consent'
+import { uninstallGaTransportGuard } from '../gaTransportGuard'
 
 /* Consent store (#2584). The choice is one first-party cookie, `rt_consent`,
    shared across *.taverns.red so a visitor answers once (ops#319). It is
@@ -253,8 +254,12 @@ describe('lowering consent reloads a page where GA ran (#2827)', () => {
     reload = vi.spyOn(pageActions, 'reload').mockImplementation(() => {})
   })
 
+  const savedFetch = win['fetch']
+
   afterEach(() => {
     reload.mockRestore()
+    uninstallGaTransportGuard()
+    win['fetch'] = savedFetch
     delete win['__tsGa']
   })
 
@@ -300,6 +305,55 @@ describe('lowering consent reloads a page where GA ran (#2827)', () => {
     hook(true)
     setConsent('all')
     expect(reload).not.toHaveBeenCalled()
+  })
+
+  it('drops GA requests from the first step on a downgrade, and keeps dropping', async () => {
+    hook(true)
+    const orig = vi.fn(async () => new Response('real'))
+    win['fetch'] = orig
+    reload.mockImplementation(() => {
+      expect(orig).not.toHaveBeenCalled()
+    })
+    setConsent('minimal')
+    const res = await window.fetch('https://www.google-analytics.com/g/collect')
+    expect(res.status).toBe(204)
+    expect(orig).not.toHaveBeenCalled()
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not install the guard off the downgrade path', async () => {
+    const orig = vi.fn(async () => new Response('real'))
+    win['fetch'] = orig
+    hook(false)
+    setConsent('minimal')
+    hook(true)
+    setConsent('all')
+    await window.fetch('https://www.google-analytics.com/g/collect')
+    expect(orig).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not reload when the cookie write failed, but still drops GA requests', async () => {
+    hook(true)
+    document.cookie = `${CONSENT_COOKIE}=v${CONSENT_VERSION}.all; Path=/`
+    const orig = vi.fn(async () => new Response('real'))
+    win['fetch'] = orig
+    const proto = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')!
+    Object.defineProperty(document, 'cookie', {
+      configurable: true,
+      get: () => proto.get!.call(document),
+      set: (v: string) => {
+        if (!v.startsWith(`${CONSENT_COOKIE}=`)) proto.set!.call(document, v)
+      },
+    })
+    try {
+      setConsent('minimal')
+      expect(getConsent()).toBe('all') // the write silently failed
+      expect(reload).not.toHaveBeenCalled()
+      await window.fetch('https://www.google-analytics.com/g/collect')
+      expect(orig).not.toHaveBeenCalled()
+    } finally {
+      delete (document as unknown as Record<string, unknown>)['cookie']
+    }
   })
 
   it('does not reload where there is no GA hook (preview, localhost)', () => {
