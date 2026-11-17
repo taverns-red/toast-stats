@@ -182,6 +182,48 @@ describe('planRestore: prod deletions and the removal record (#2856)', () => {
     }
   )
 
+  it('a live object under a recorded prune prefix is manual with its live generation, never restore or delete (#2903)', () => {
+    const name = `${PRUNED}district_61.json`
+    const live = obj(name, '200', '2026-11-08T10:30:00Z')
+    const displaced = obj(
+      name,
+      '100',
+      '2026-09-16T00:00:00Z',
+      '2026-11-08T10:30:00Z'
+    )
+    const p = planWith(
+      [{ path: PRUNED, kind: 'prune' }],
+      [live],
+      [displaced, OTHER],
+      [name]
+    )
+    expect(p.entries.filter(e => e.name === name)).toEqual([
+      expect.objectContaining({
+        action: 'manual',
+        liveGeneration: '200',
+        reason: expect.stringMatching(/recorded removal did not complete/),
+      }),
+    ])
+    expect(find(p, PRUNED)).toMatchObject({ action: 'manual' })
+    expect(
+      p.entries.some(e => e.action === 'restore' || e.action === 'delete')
+    ).toBe(false)
+  })
+
+  it('a live object under a recorded prefix keeps the refuse planOne raised (#2903)', () => {
+    const name = `${PRUNED}district_61.json`
+    const live = obj(name, '300', '2026-11-09T00:00:00Z')
+    const p = planWith(
+      [{ path: PRUNED, kind: 'prune' }],
+      [live],
+      [OTHER],
+      [name]
+    )
+    expect(p.entries.filter(e => e.name === name)).toEqual([
+      expect.objectContaining({ action: 'refuse', liveGeneration: '300' }),
+    ])
+  })
+
   it('a written name under a pruned prefix is covered by the record', () => {
     const name = 'snapshots/2026-09-15/district_61.json'
     const copy = obj(name, '5', '2026-09-16T00:00:00Z', DELETED_AT)

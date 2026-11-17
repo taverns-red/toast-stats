@@ -125,6 +125,26 @@ describe('read-prod-removals.sh', () => {
     expect(fs.existsSync(out)).toBe(false)
   })
 
+  it('a record deleted between the listing and the read stops, and leaves no file (#2903)', () => {
+    const stub = path.join(tmp, 'gcloud-stub')
+    fs.writeFileSync(
+      stub,
+      '#!/usr/bin/env bash\n' +
+        'if [ "$2" = "ls" ]; then\n' +
+        `  echo "gs://${STG}/runs/${RUN}/prod-removed-a1.jsonl"\n` +
+        '  exit 0\n' +
+        'fi\n' +
+        'echo "ERROR: (gcloud.storage.ls) One or more URLs matched no objects." >&2\n' +
+        'exit 1\n',
+      { mode: 0o755 }
+    )
+    fs.mkdirSync(path.dirname(out), { recursive: true })
+    fs.writeFileSync(out, 'stale')
+    const r = read({ GCLOUD: stub })
+    expect(r.status).toBe(1)
+    expect(fs.existsSync(out)).toBe(false)
+  })
+
   it('a loose mention of the phrase in another error does not read as absent (#2903)', () => {
     const stub = path.join(tmp, 'gcloud-stub')
     fs.writeFileSync(
