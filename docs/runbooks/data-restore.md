@@ -590,6 +590,32 @@ aborts it, and the issue is still filed. It re-lists and re-plans first and refu
 entry points first, removes objects the run created, then purges the CDN
 (`toast-stats-cdn-url-map`) and re-checks the schema after two minutes.
 
+**Run modes (#2856).** `execute` applies only to `daily` and `rebuild` runs.
+Every other mode (the proof and backfill modes, `rescrape`,
+`rescrape-historical`, `prune`) gets a plan and the issue, decision
+`mode-refused`. The run mode comes from the pipeline job's `mode` output;
+an empty or unrecognised value does not execute.
+
+**Prod removals (#2856).** The plan lists what the run wrote and, from the
+run's removal record, what it removed from prod on purpose. The promoter
+appends one line per removal to `runs/<id>/prod-removed.jsonl` (the
+promote-reports job: `prod-removed-reports.jsonl`) before it removes:
+
+- a #2232 gap-district object is listed as removed on purpose and is not
+  restored (0-club junk);
+- a prune reconcile's date prefix is listed as not restorable automatically,
+  so a person decides;
+- a name the run wrote that has no live object in prod, with a copy
+  soft-deleted inside the run window, and that is not in the record, is an
+  unexplained deletion and is planned as a restore (precondition
+  `--if-generation-match=0`: the name must still be empty).
+
+Intent is never inferred from an object's size or content, only from the
+record. A run that removed nothing has no record file, and the plan reads
+that as empty; a record that exists but cannot be read stops the plan
+(`removal-record-unreadable`). The promoter refuses to remove from prod when
+`PROD_REMOVALS_FILE` is unset.
+
 Not done by the job: the backup copy (step 3; soft delete is the backup, and
 copying into `toast-stats-backups-ca` needs an IAM grant, see Follow-ups),
 and fixing staging after a removed date (#2540).

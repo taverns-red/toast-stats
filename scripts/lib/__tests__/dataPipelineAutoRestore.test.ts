@@ -513,6 +513,8 @@ describe('one planner, reused (#2539)', () => {
       'scripts/check-cdn-schema.ts',
       'scripts/data-auto-restore.ts',
       'scripts/pipeline/list-restore-candidates.sh',
+      // Read-only: fetches the run's prod removal record for the one planner (#2856).
+      'scripts/pipeline/read-prod-removals.sh',
       'scripts/plan-data-restore.ts',
     ])
   })

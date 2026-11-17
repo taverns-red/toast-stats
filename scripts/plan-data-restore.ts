@@ -9,7 +9,11 @@
  *     --since <ISO time the bad run began, with Z or offset> \
  *     --until <ISO time it ended, with Z or offset> \
  *     --live-errors live.err --soft-errors soft.err \
- *     --paths paths.txt [--out plan.json]
+ *     --paths paths.txt [--removals removed.jsonl] [--out plan.json]
+ * --removals is the run's record of prod removals made on purpose
+ * (runs/<id>/prod-removed.jsonl, #2856): a recorded removal is listed but
+ * never restored; a deletion that is not in it is restored. Execute mode
+ * takes the same file and re-plans with it.
  * where the listings are `gcloud storage ls --json <urls>` and
  * `gcloud storage ls --soft-deleted --json <urls>`, and the *.err files are the
  * stderr of those same calls. Both are required: if any line of either is not
@@ -42,6 +46,7 @@ import {
   checkListingErrors,
   executePlan,
   parseListing,
+  parseRemovalRecord,
   parseSavedPlan,
   planRestore,
   verifyPlan,
@@ -56,6 +61,7 @@ const { values } = parseArgs({
     since: { type: 'string' },
     until: { type: 'string' },
     paths: { type: 'string' },
+    removals: { type: 'string' },
     out: { type: 'string' },
     plan: { type: 'string' },
     execute: { type: 'boolean', default: false },
@@ -102,6 +108,12 @@ try {
   }
   const live = parseListing(readJson(values.live))
   const softDeleted = parseListing(readJson(values['soft-deleted']))
+  // The run's record of prod removals made on purpose (#2856). Optional: a
+  // run that removed nothing publishes none. A file named but unreadable, or
+  // malformed, refuses the plan.
+  const removals = values.removals
+    ? parseRemovalRecord(readFileSync(values.removals, 'utf8'))
+    : []
 
   if (values.execute) {
     const saved = parseSavedPlan(readJson(values.plan as string))
@@ -111,6 +123,7 @@ try {
       since: saved.since,
       until: saved.until,
       paths: saved.entries.map(e => e.name),
+      removals,
       now,
     })
     verifyPlan(saved, current)
@@ -149,6 +162,7 @@ try {
       since: values.since as string,
       until: values.until as string,
       paths,
+      removals,
       now,
     })
     const text = JSON.stringify(plan, null, 2) + '\n'

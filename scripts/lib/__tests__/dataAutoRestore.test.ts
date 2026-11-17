@@ -156,6 +156,7 @@ describe('decideRestore', () => {
         unhealthy: true,
         restoreEligible: true,
         mode: 'execute',
+        runMode: 'daily',
         plan: clean,
       })
     ).toMatchObject({ action: 'execute', execute: true, fileIssue: true })
@@ -167,6 +168,7 @@ describe('decideRestore', () => {
         unhealthy: true,
         restoreEligible: true,
         mode: 'execute',
+        runMode: 'daily',
         plan: refused,
       })
     ).toMatchObject({ action: 'refused', execute: false, fileIssue: true })
@@ -178,6 +180,7 @@ describe('decideRestore', () => {
         unhealthy: true,
         restoreEligible: true,
         mode: 'execute',
+        runMode: 'daily',
         plan: null,
       })
     ).toMatchObject({ action: 'plan-failed', execute: false, fileIssue: true })
@@ -190,6 +193,7 @@ describe('decideRestore', () => {
         unhealthy: true,
         restoreEligible: true,
         mode: 'execute',
+        runMode: 'daily',
         plan: idle,
       })
     ).toMatchObject({
@@ -255,6 +259,7 @@ describe('decideRestore: only a decode or validation failure may execute', () =>
         unhealthy: true,
         restoreEligible: true,
         mode: 'execute',
+        runMode: 'daily',
         plan: clean,
       }).execute
     ).toBe(true)
@@ -275,7 +280,9 @@ describe('decideIntent: the token-free decision, before any plan', () => {
   })
 
   it('execute mode and an eligible verdict says execute', () => {
-    expect(decideIntent({ ...base, mode: 'execute' })).toMatchObject({
+    expect(
+      decideIntent({ ...base, mode: 'execute', runMode: 'daily' })
+    ).toMatchObject({
       action: 'execute',
       execute: true,
       fileIssue: true,
@@ -368,6 +375,7 @@ describe('buildDecisionIssueBody: no object list, a manual plan command', () => 
         unhealthy: true,
         restoreEligible: true,
         mode: 'execute',
+        runMode: 'daily',
       }),
     })
     expect(exec).toMatch(/execute job/i)
@@ -954,6 +962,7 @@ describe('issue text', () => {
         unhealthy: true,
         restoreEligible: true,
         mode: 'execute',
+        runMode: 'daily',
         plan: clean,
       }),
       plan: clean,

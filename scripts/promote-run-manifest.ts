@@ -43,6 +43,11 @@
  * Env: GCS_BUCKET, GCS_BUCKET_PRODUCTION, RUN_MANIFEST_FILE,
  *      COMPLETENESS_GATE_FILE (default /tmp/completeness-gate.json),
  *      PROD_DELETES_FILE (optional, prune reconcile only),
+ *      PROD_REMOVALS_FILE (required by --execute when it will remove
+ *      anything from prod: each prune prefix and gap-district object is
+ *      appended as {"path","kind":"prune"|"gap","date"} BEFORE its removal;
+ *      the workflow publishes it to runs/<id>/prod-removed.jsonl and the
+ *      restore plan reads it, #2856),
  *      GCLOUD (default gcloud), PROMOTE_CONCURRENCY (default 4).
  * Outputs (GITHUB_OUTPUT): objects_planned, promoted_dates, held_dates,
  *      globals_promoted, globals_reason (why they held; empty when they

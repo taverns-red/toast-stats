@@ -80,10 +80,13 @@ describe('data-pipeline run manifest (#1762)', () => {
   })
 
   it('no step in the pipeline job uploads to staging with a raw gcloud call: every write is recorded', () => {
-    // The one exemption: publishing the manifest itself, which is not an
+    // The exemptions: publishing the manifest itself, and the prod removal
+    // record (#2856), which are not an
     // object the run produced for promotion.
     const raw = steps.flatMap(s =>
-      storageWrites(s.id === 'runmanifest' ? '' : (s.run ?? ''))
+      storageWrites(
+        s.id === 'runmanifest' || s.id === 'prodremovals' ? '' : (s.run ?? '')
+      )
         .filter(c => STAGING_DEST.test(destination(c)))
         .map(c => `${s.name}: ${c}`)
     )

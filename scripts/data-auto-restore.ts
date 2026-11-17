@@ -108,6 +108,8 @@ const unhealthy = process.env['UNHEALTHY'] === 'true'
 // Only the exact word `true` from the data smoke's verdict: unset is not.
 const restoreEligible = process.env['RESTORE_ELIGIBLE'] === 'true'
 const ineligibleReason = process.env['RESTORE_REASON'] || undefined
+// The pipeline run mode; only daily and rebuild may execute a restore (#2856).
+const runMode = process.env['RUN_MODE'] ?? ''
 
 switch (cmd) {
   case 'mode':
@@ -188,6 +190,7 @@ switch (cmd) {
     const d = decideIntent({
       unhealthy,
       restoreEligible,
+      runMode,
       ineligibleReason,
       mode,
     })
@@ -229,6 +232,7 @@ switch (cmd) {
     const d = decideRestore({
       unhealthy,
       restoreEligible,
+      runMode,
       ineligibleReason,
       mode,
       plan: loadPlan(values.plan),
@@ -244,6 +248,7 @@ switch (cmd) {
     const decision = decideRestore({
       unhealthy,
       restoreEligible,
+      runMode,
       ineligibleReason,
       mode,
       plan,

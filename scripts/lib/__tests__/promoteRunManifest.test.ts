@@ -103,6 +103,8 @@ function runEnv(env: Record<string, string> = {}) {
     GCS_BUCKET: STG,
     GCS_BUCKET_PRODUCTION: PROD,
     RUN_MANIFEST_FILE: manifestFile,
+    // A removal from prod is refused without a record file (#2856).
+    PROD_REMOVALS_FILE: path.join(tmp, 'default-prod-removed.jsonl'),
     COMPLETENESS_GATE_FILE: gateFile,
     GITHUB_OUTPUT: outputFile,
     GITHUB_STEP_SUMMARY: path.join(tmp, 'summary.md'),
@@ -810,5 +812,154 @@ describe('promote-run-manifest: a prune reconcile whose gate could not run (#176
     expect(r.status).toBe(1)
     expect(tree(PROD)).toEqual(before)
     expect(r.outputs.prefixes_deleted).toBe('0')
+  })
+})
+
+describe('promote-run-manifest: prod removals are recorded as they happen (#2856)', () => {
+  let recordFile: string
+  const records = (): Array<Record<string, unknown>> =>
+    fs.existsSync(recordFile)
+      ? fs
+          .readFileSync(recordFile, 'utf-8')
+          .split('\n')
+          .filter(Boolean)
+          .map(l => JSON.parse(l) as Record<string, unknown>)
+      : []
+
+  beforeEach(() => {
+    recordFile = path.join(tmp, 'prod-removed.jsonl')
+  })
+
+  describe('a prune reconcile', () => {
+    let deletesFile: string
+    beforeEach(() => {
+      fs.rmSync(root, { recursive: true, force: true })
+      fs.mkdirSync(path.join(root, STG), { recursive: true })
+      fs.mkdirSync(path.join(root, PROD), { recursive: true })
+      manifestLines.length = 0
+      put(PROD, 'snapshots/2026-09-15/district_61.json', '{"daily":1}', true)
+      put(PROD, 'raw-csv/2026-09-15/all-districts.csv', 'a,b\n')
+      put(PROD, 'snapshots/2026-09-30/district_61.json', '{"me":1}', true)
+      put(PROD, 'v1/dates.json', DATES_JSON(['2026-09-15', '2026-09-30']))
+      put(PROD, 'v1/latest.json', LATEST_JSON('2026-09-30'))
+      put(STG, 'snapshots/2026-09-30/district_61.json', '{"me":1}', true)
+      stage('v1/dates.json', DATES_JSON(['2026-09-30']))
+      stage('v1/latest.json', LATEST_JSON('2026-09-30'))
+      deletesFile = path.join(tmp, 'prod-reconcile-paths.txt')
+      fs.writeFileSync(
+        deletesFile,
+        'raw-csv/2026-09-15\nsnapshots/2026-09-15\n'
+      )
+      writeInputs({ promote: true })
+    })
+
+    it('writes each deleted prefix to the record, kind prune', async () => {
+      const r = await run(['--execute'], {
+        PROD_DELETES_FILE: deletesFile,
+        PROD_REMOVALS_FILE: recordFile,
+      })
+      expect(r.status, r.stderr).toBe(0)
+      expect(records()).toEqual([
+        { path: 'raw-csv/2026-09-15/', kind: 'prune', date: '2026-09-15' },
+        { path: 'snapshots/2026-09-15/', kind: 'prune', date: '2026-09-15' },
+      ])
+    })
+
+    it('records a prefix before it removes it, so a failed removal is still on record', async () => {
+      const r = await run(['--execute'], {
+        PROD_DELETES_FILE: deletesFile,
+        PROD_REMOVALS_FILE: recordFile,
+        SHIM_FAIL_MATCH: '^rm -r .*raw-csv',
+      })
+      expect(r.status, r.stderr).toBe(0)
+      expect(records().map(x => x.path)).toContain('raw-csv/2026-09-15/')
+    })
+
+    it('refuses an unrecorded delete: no record file set, nothing removed', async () => {
+      const before = tree(PROD)
+      const r = await run(['--execute'], {
+        PROD_DELETES_FILE: deletesFile,
+        PROD_REMOVALS_FILE: '',
+      })
+      expect(r.status).toBe(2)
+      expect(tree(PROD)).toEqual(before)
+      expect(r.stderr).toMatch(/PROD_REMOVALS_FILE/)
+    })
+
+    it('writes no record when nothing is deleted', async () => {
+      fs.writeFileSync(deletesFile, '')
+      const r = await run(['--execute'], {
+        PROD_DELETES_FILE: deletesFile,
+        PROD_REMOVALS_FILE: recordFile,
+      })
+      expect(r.status, r.stderr).toBe(0)
+      expect(records()).toEqual([])
+    })
+
+    it('the dry run records nothing', async () => {
+      const r = await run(['--dry-run'], {
+        PROD_DELETES_FILE: deletesFile,
+        PROD_REMOVALS_FILE: recordFile,
+      })
+      expect(r.status, r.stderr).toBe(0)
+      expect(records()).toEqual([])
+    })
+  })
+
+  describe('a #2232 gap district', () => {
+    const D = 'snapshots/2026-10-10'
+    const JUNK = '{"districtId":"U","data":{"clubs":[]}}'
+    const STALE = [
+      `${D}/analytics/district_U_analytics.json`,
+      `${D}/analytics/district_U_membership.json`,
+      `${D}/district_U.json`,
+    ]
+    beforeEach(() => {
+      put(
+        STG,
+        `${D}/metadata.json`,
+        JSON.stringify({
+          successfulDistricts: ['61'],
+          failedDistricts: ['U'],
+          errors: ['U: Skipped: club-performance.csv is not a CSV (#1671)'],
+        }),
+        true
+      )
+      put(PROD, `${D}/district_U.json`, JUNK, true)
+      put(PROD, `${D}/analytics/district_U_analytics.json`, '{"m":0}', true)
+      put(PROD, `${D}/analytics/district_U_membership.json`, '{"m":0}', true)
+      writeInputs({ promote: true })
+    })
+
+    it('writes each removed object to the record, kind gap', async () => {
+      const r = await run(['--execute'], { PROD_REMOVALS_FILE: recordFile })
+      expect(r.status, r.stderr).toBe(0)
+      expect(records()).toEqual(
+        STALE.map(p => ({ path: p, kind: 'gap', date: '2026-10-10' }))
+      )
+    })
+
+    it('records the objects of a removal that failed part way', async () => {
+      const r = await run(['--execute'], {
+        PROD_REMOVALS_FILE: recordFile,
+        SHIM_FAIL_MATCH: '^rm ',
+      })
+      expect(r.status).toBe(1)
+      expect(records().map(x => x.path)).toEqual(STALE)
+    })
+
+    it('refuses an unrecorded removal: no record file set, nothing removed', async () => {
+      const before = tree(PROD)
+      const r = await run(['--execute'], { PROD_REMOVALS_FILE: '' })
+      expect(r.status).toBe(2)
+      expect(tree(PROD)).toEqual(before)
+      expect(r.stderr).toMatch(/PROD_REMOVALS_FILE/)
+    })
+
+    it('a run with nothing to remove needs no record file', async () => {
+      fs.rmSync(path.join(root, PROD, D), { recursive: true, force: true })
+      const r = await run(['--execute'], { PROD_REMOVALS_FILE: '' })
+      expect(r.status, r.stderr).toBe(0)
+    })
   })
 })
