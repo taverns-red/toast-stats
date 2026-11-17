@@ -210,6 +210,7 @@ const prCtx = (
 ) => ({
   github: {
     event_name: 'pull_request',
+    workflow: 'CI',
     run_id: runId,
     event: { action, changes, pull_request: { number: 42 } },
   },
@@ -290,14 +291,14 @@ describe('ci.yml concurrency (#2607)', () => {
 
   describe('pull_request synchronize', () => {
     it('shares one group per PR across pushes and cancels in progress', () => {
-      expect(group(prCtx('synchronize', 11))).toBe('ci-pr-42')
-      expect(group(prCtx('synchronize', 12))).toBe('ci-pr-42')
+      expect(group(prCtx('synchronize', 11))).toBe('CI-pr-42')
+      expect(group(prCtx('synchronize', 12))).toBe('CI-pr-42')
       expect(cancel(prCtx('synchronize', 11))).toBe(true)
     })
 
     it('opened and reopened use the per-PR group too', () => {
-      expect(group(prCtx('opened', 13))).toBe('ci-pr-42')
-      expect(group(prCtx('reopened', 14))).toBe('ci-pr-42')
+      expect(group(prCtx('opened', 13))).toBe('CI-pr-42')
+      expect(group(prCtx('reopened', 14))).toBe('CI-pr-42')
     })
   })
 
@@ -305,14 +306,14 @@ describe('ci.yml concurrency (#2607)', () => {
     it('isolates a body/title-only edit in a unique no-op group (#2204)', () => {
       const g1 = group(prCtx('edited', 21))
       const g2 = group(prCtx('edited', 22))
-      expect(g1).toBe('ci-pr-42-noop-21')
+      expect(g1).toBe('CI-pr-42-noop-21')
       expect(g1).not.toBe(group(prCtx('synchronize', 20)))
       expect(g1).not.toBe(g2)
     })
 
     it('keeps a base change in the per-PR group so it supersedes (#2204)', () => {
       const ctx = prCtx('edited', 23, { base: { ref: { from: 'dev' } } })
-      expect(group(ctx)).toBe('ci-pr-42')
+      expect(group(ctx)).toBe('CI-pr-42')
       expect(cancel(ctx)).toBe(true)
     })
   })
