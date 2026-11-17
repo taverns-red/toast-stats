@@ -45,6 +45,22 @@ describe('classifyRebuildResult', () => {
     ).toEqual({ category: 'failed', label: '⚠️  failed: boom' })
   })
 
+  it('failure with a real-shaped error object prints districtId and message', () => {
+    const { category, label } = classifyRebuildResult({
+      success: false,
+      errors: [
+        {
+          districtId: '61',
+          error: 'Snapshot file is missing',
+          timestamp: '2026-11-17T12:00:00.000Z',
+        },
+      ],
+    })
+    expect(category).toBe('failed')
+    expect(label).not.toContain('[object Object]')
+    expect(label).toBe('⚠️  failed: 61: Snapshot file is missing')
+  })
+
   it('failure without errors reports "unknown"', () => {
     expect(classifyRebuildResult({ success: false })).toEqual({
       category: 'failed',
