@@ -18,12 +18,26 @@ import { parse } from 'yaml'
 export const DEPLOYER = 'secrets.GCP_SERVICE_ACCOUNT'
 export const DATA_READER = 'vars.GCP_DATA_READER_SA'
 
+/**
+ * An identity chosen by event: `<event>` runs use `whenEvent`, every other
+ * event uses `otherwise`. Written as the exact expression the workflow's
+ * `service_account:` carries, so the map compares it verbatim (#2872 B2).
+ */
+export const byEvent = (
+  event: string,
+  whenEvent: string,
+  otherwise: string
+): string => `github.event_name == '${event}' && ${whenEvent} || ${otherwise}`
+
+/** The identity variables an EXPECTED value may be built from. */
+export const KNOWN_IDENTITIES = [DEPLOYER, DATA_READER]
+
 /** Every job that runs google-github-actions/auth -> its one identity. */
 export const EXPECTED: Record<string, string> = {
   'basemap-build.yml::basemap': DEPLOYER,
   'contact-strip.yml::strip': DEPLOYER,
   'data-pipeline.yml::pipeline': DEPLOYER,
-  'data-pipeline.yml::closing-registry-pr': DEPLOYER,
+  'data-pipeline.yml::closing-registry-pr': DATA_READER,
   'data-pipeline.yml::daily-reports': DEPLOYER,
   'data-pipeline.yml::place-reports': DEPLOYER,
   'data-pipeline.yml::education-rollup': DEPLOYER,
@@ -35,10 +49,15 @@ export const EXPECTED: Record<string, string> = {
   'deploy.yml::deploy-frontend': DEPLOYER,
   'education-timeline-backfill.yml::backfill': DEPLOYER,
   'gap-district-prune.yml::prune': DEPLOYER,
-  'harness-staging-canary.yml::canary': DEPLOYER,
+  // Pull requests keep the deploy identity until B1 gives them a preview one.
+  'harness-staging-canary.yml::canary': byEvent(
+    'pull_request',
+    DEPLOYER,
+    DATA_READER
+  ),
   'pr-preview-cleanup.yml::cleanup': DEPLOYER,
   'pr-preview.yml::preview': DEPLOYER,
-  'validate-vs-ceo-report.yml::validate': DEPLOYER,
+  'validate-vs-ceo-report.yml::validate': DATA_READER,
   'videos-publish.yml::publish': DEPLOYER,
 }
 
@@ -75,6 +94,8 @@ const WORKFLOWS = path.resolve(process.cwd(), '.github/workflows')
 const AUTH_ACTION = /^google-github-actions\/auth(@|$)/
 
 interface Step {
+  if?: string
+  run?: string
   uses?: string
   with?: Record<string, unknown>
 }
