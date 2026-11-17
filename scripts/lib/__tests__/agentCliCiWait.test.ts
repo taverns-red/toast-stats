@@ -75,6 +75,76 @@ describe('summarizeChecks', () => {
     expect(s).toMatchObject({ total: 1, passed: 1, failed: 0 })
   })
 
+  it('a queued newer run beside a cancelled older run is pending, not a failure (#2840)', () => {
+    const s = summarizeChecks([
+      check({
+        bucket: 'cancel',
+        state: 'CANCELLED',
+        startedAt: '2026-10-30T13:00:00Z',
+      }),
+      // Queued: GitHub has not started it, so startedAt is empty.
+      check({ bucket: 'pending', state: 'QUEUED', startedAt: '' }),
+    ])
+    expect(s).toMatchObject({ total: 1, pending: 1, cancelled: 0, done: false })
+  })
+
+  it('an in-progress newer run beats a cancelled older run whatever the row order (#2840)', () => {
+    const rows = [
+      check({ bucket: 'pending', state: 'QUEUED', startedAt: '' }),
+      check({
+        bucket: 'cancel',
+        state: 'CANCELLED',
+        startedAt: '2026-10-30T13:00:00Z',
+      }),
+    ]
+    expect(summarizeChecks(rows).pending).toBe(1)
+    expect(summarizeChecks([...rows].reverse()).pending).toBe(1)
+  })
+
+  it('a noop run skipped check does not hide a pending real run (#2840)', () => {
+    const s = summarizeChecks([
+      check({
+        bucket: 'pending',
+        state: 'IN_PROGRESS',
+        startedAt: '2026-10-30T13:00:00Z',
+      }),
+      check({
+        bucket: 'skipping',
+        state: 'SKIPPED',
+        startedAt: '2026-10-30T13:30:00Z',
+      }),
+    ])
+    expect(s).toMatchObject({ total: 1, pending: 1, skipped: 0, done: false })
+  })
+
+  it('a noop run skipped check does not hide a finished real result (#2840)', () => {
+    const s = summarizeChecks([
+      check({ bucket: 'pass', startedAt: '2026-10-30T13:00:00Z' }),
+      check({
+        bucket: 'skipping',
+        state: 'SKIPPED',
+        startedAt: '2026-10-30T13:30:00Z',
+      }),
+    ])
+    expect(s).toMatchObject({ total: 1, passed: 1, skipped: 0 })
+  })
+
+  it('a newer cancelled run does not hide an older failure (#2840)', () => {
+    const s = summarizeChecks([
+      check({
+        bucket: 'fail',
+        state: 'FAILURE',
+        startedAt: '2026-10-30T13:00:00Z',
+      }),
+      check({
+        bucket: 'cancel',
+        state: 'CANCELLED',
+        startedAt: '2026-10-30T13:30:00Z',
+      }),
+    ])
+    expect(s).toMatchObject({ total: 1, failed: 1, cancelled: 0 })
+  })
+
   it('is not done while anything is pending, or before any check exists', () => {
     expect(
       summarizeChecks([check({ bucket: 'pending', state: 'IN_PROGRESS' })]).done
