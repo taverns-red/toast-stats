@@ -29,6 +29,7 @@ import {
 } from './lib/ciGateNeeds'
 import {
   HttpError,
+  isRateLimit403,
   jobsCacheKey,
   retryUntilOk,
   runBelongsToPr,
@@ -62,11 +63,11 @@ async function getJson<T>(path: string): Promise<T> {
       continue
     }
     // A 403 is a rate limit (retry) or a permission failure (fail at once).
-    const rateLimited =
-      res.status === 403 &&
-      (res.headers.get('x-ratelimit-remaining') === '0' ||
-        res.headers.has('retry-after') ||
-        /rate limit/i.test(await res.text().catch(() => '')))
+    const rateLimited = isRateLimit403(
+      res.status,
+      res.headers,
+      res.status === 403 ? await res.text().catch(() => '') : ''
+    )
     throw new HttpError(`GET ${path} -> ${res.status}`, res.status, rateLimited)
   }
 }

@@ -160,11 +160,32 @@ export function isPermanentError(err: unknown): boolean {
   return !(status === 403 && rateLimited === true)
 }
 
+/** Consecutive permanent errors on one poll before the gate gives up. */
+export const PERMANENT_TRIES = 3
+
+/**
+ * Whether a 403 is a rate limit (retry) rather than a permission failure
+ * (fail). GitHub signals the primary limit with `x-ratelimit-remaining: 0` or
+ * `retry-after`, and the secondary limit with a body naming it.
+ */
+export function isRateLimit403(
+  status: number,
+  headers: { get(name: string): string | null },
+  bodyText: string
+): boolean {
+  if (status !== 403) return false
+  return (
+    headers.get('x-ratelimit-remaining') === '0' ||
+    headers.get('retry-after') !== null ||
+    /rate limit/i.test(bodyText)
+  )
+}
+
 /**
  * Call `fn` until it succeeds, sleeping one poll interval after each failure.
  * A transient error (network, 5xx, 429, rate limit) must not pin the gate red.
- * A permanent 4xx is rethrown at once instead of polling until the job
- * timeout (#2887). The job timeout bounds the retries.
+ * A permanent 4xx is rethrown after PERMANENT_TRIES consecutive failures
+ * instead of polling until the job timeout (#2887). The job timeout bounds the retries.
  */
 export async function retryUntilOk<T>(
   fn: () => Promise<T>,
@@ -174,11 +195,15 @@ export async function retryUntilOk<T>(
     onRetry?: (message: string) => void
   }
 ): Promise<T> {
+  let permanent = 0
   for (;;) {
     try {
       return await fn()
     } catch (err) {
-      if (isPermanentError(err)) throw err
+      // GitHub is briefly inconsistent after a run is created, so a 404 can be
+      // transient: fail only after PERMANENT_TRIES consecutive permanent errors.
+      permanent = isPermanentError(err) ? permanent + 1 : 0
+      if (permanent >= PERMANENT_TRIES) throw err
       opts.onRetry?.(
         `poll failed (${err instanceof Error ? err.message : err}); retrying`
       )
