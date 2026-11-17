@@ -217,6 +217,79 @@ test.describe('district subpages CLS on a throttled cold load (#1837)', () => {
   }
 })
 
+/* The Action List intro on a cold load at an off-season pinned date (#2830).
+ * The intro reserves the clauses the pinned date allows (#2524). While the date
+ * index loaded the page used to reserve the longest sentence, so off-season
+ * the final sentence was one line shorter and the controls and sections moved
+ * up ~21px (CLS ~0.01) once the skeleton dropped. That is far inside the 0.1
+ * budget above, so this asserts the cause: the reserve is one set of clauses
+ * for its whole life, and it is the set the final sentence names. (Heights
+ * are not compared: a web-font swap moves the intro at its own moment, for
+ * reserve and final alike.) 2026-10-24 sits between officer-training rounds. */
+test.describe('Action List intro off-season, cold load (#2830)', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'layout-shift + CDP throttling are Chromium-only'
+  )
+
+  for (const vp of VIEWPORTS) {
+    test(`/district/61/action-list?date=2026-10-24 at ${vp.width}px reserves the clauses the final intro names`, async ({
+      page,
+    }) => {
+      test.setTimeout(180_000)
+      type IntroLog = { reserved: string[]; final: string }
+      // The clauses, order-free: the reserve and the final sentence differ in
+      // order only, and "and" joins the last clause.
+      await page.addInitScript(() => {
+        const log: IntroLog = { reserved: [], final: '' }
+        ;(window as unknown as { __intro: IntroLog }).__intro = log
+        const clauses = (t: string) =>
+          t
+            .replace(/^.*district:\s*/, '')
+            .replace(/\.\s*Filter.*$/, '')
+            .split(/,\s*(?:and\s+)?|\s+and\s+/)
+            .sort()
+            .join('|')
+        const tick = () => {
+          const el = document.querySelector('.action-list-page__subtitle')
+          if (el) {
+            const c = clauses(el.textContent ?? '')
+            if (el.classList.contains('action-list-page__subtitle--reserved')) {
+              if (!log.reserved.includes(c)) log.reserved.push(c)
+            } else {
+              log.final = c
+            }
+          }
+          requestAnimationFrame(tick)
+        }
+        requestAnimationFrame(tick)
+      })
+      await measureCls(
+        page,
+        '/district/61/action-list?date=2026-10-24',
+        vp,
+        '.district-detail-page'
+      )
+      const intro = await page.evaluate(
+        () => (window as unknown as { __intro: IntroLog }).__intro
+      )
+      // The reserve was up and then released: the page took the skeleton path.
+      expect(
+        intro.reserved.length,
+        'the intro reserve never showed'
+      ).toBeGreaterThan(0)
+      expect(
+        intro.reserved,
+        `The reserve changed while the skeleton was up on ${page.url()}`
+      ).toHaveLength(1)
+      expect(
+        intro.reserved[0],
+        `The reserve names other clauses than the final sentence on ${page.url()}`
+      ).toBe(intro.final)
+    })
+  }
+})
+
 /* The Clubs table picks its columns from the width tier (#2676, risk R-4:
  * CLS <= 0.1 at 768, 1024 and 1280). 1280 is covered by the `clubs` entry in
  * SUBPAGES above; 375 renders the phone list instead. This adds the tablet

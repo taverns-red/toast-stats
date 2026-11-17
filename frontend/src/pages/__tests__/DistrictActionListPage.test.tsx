@@ -1181,6 +1181,105 @@ describe('DistrictActionListPage — intro reserve once the date is known (#2524
   })
 })
 
+/* #2830 — on a cold load the date index is still in flight, so the page has no
+ * resolved date yet. The pinned date is already in the URL, though, and it
+ * alone decides the reserve (#2524). Falling back to the longest sentence here
+ * holds a line the final sentence leaves empty off-season, and the page moves
+ * up ~21px when the skeleton drops. */
+describe('DistrictActionListPage — intro reserve on a cold load (#2830)', () => {
+  const TRAINING = 'clubs short of officer training this round'
+  const CSP = 'clubs without a Club Success Plan'
+  const CORE = [
+    'clubs within reach of Distinguished',
+    'areas with outstanding club visits',
+    'clubs that need intervention',
+  ]
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isPending: true,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isPending: true,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+  })
+  afterEach(() => {
+    cleanup()
+    vi.mocked(useDistrictCachedDates).mockReturnValue(
+      DATES_2025_26 as ReturnType<typeof useDistrictCachedDates>
+    )
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: analyticsData,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+  })
+
+  // `py` is the program year the URL selects. The page settles on the pinned
+  // date only when it falls inside that year, so the reserve may use the date
+  // only then.
+  const coldIntroAt = async (date: string, py?: number) => {
+    renderAt(`/district/61/action-list?date=${date}${py ? `&py=${py}` : ''}`)
+    await screen.findByTestId('action-list-page')
+    const intro = document.querySelector('.action-list-page__subtitle')
+    expect(intro).toHaveAttribute('aria-hidden', 'true')
+    return intro
+  }
+  const expectLongest = (intro: Element | null) => {
+    for (const clause of [TRAINING, CSP, ...CORE]) {
+      expect(intro).toHaveTextContent(clause)
+    }
+  }
+
+  it('leaves out the officer-training clause for an off-season date in the URL', async () => {
+    const intro = await coldIntroAt('2025-10-15', 2025)
+    expect(intro).not.toHaveTextContent(TRAINING)
+    for (const clause of [...CORE, CSP]) expect(intro).toHaveTextContent(clause)
+  })
+
+  it('keeps the officer-training clause for a round-open date in the URL', async () => {
+    const intro = await coldIntroAt('2025-11-15', 2025)
+    for (const clause of [TRAINING, ...CORE, CSP]) {
+      expect(intro).toHaveTextContent(clause)
+    }
+  })
+
+  it('leaves out the Club Success Plan clause for a year that does not track it', async () => {
+    const intro = await coldIntroAt('2024-10-15', 2024)
+    expect(intro).not.toHaveTextContent(CSP)
+    expect(intro).not.toHaveTextContent(TRAINING)
+  })
+
+  /* The page settles on the pinned date only when it is inside the selected
+   * program year (?py=, else the context default). Outside it, the page falls
+   * back to that year's latest snapshot, so the date says nothing about the
+   * final sentence and the reserve must stay at its longest. */
+  it('holds the longest sentence when the date is outside the default program year', async () => {
+    expectLongest(await coldIntroAt('2024-10-15'))
+  })
+
+  it('holds the longest sentence when the date is outside the program year in ?py=', async () => {
+    expectLongest(await coldIntroAt('2026-10-24', 2024))
+  })
+
+  it('holds the longest sentence when the URL names no date', async () => {
+    renderAt('/district/61/action-list')
+    await screen.findByTestId('action-list-page')
+    const intro = document.querySelector('.action-list-page__subtitle')
+    for (const clause of [TRAINING, CSP, ...CORE]) {
+      expect(intro).toHaveTextContent(clause)
+    }
+  })
+})
+
 describe('DistrictActionListPage — officer training (#2296)', () => {
   const datesAt = (date: string) =>
     ({
