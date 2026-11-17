@@ -127,6 +127,17 @@ describe('GA consent gate (#2584)', () => {
     expect(r.win['ga-disable-G-CDWQYHC2Z3']).toBe(true)
   })
 
+  it('ran() tells the app whether GA started in this page (#2827)', () => {
+    const r = run({ cookie: '' })
+    expect(r.win['__tsGa'].ran()).toBe(false)
+    r.win['__tsGa'].enable()
+    expect(r.win['__tsGa'].ran()).toBe(true)
+    expect(run({ cookie: 'rt_consent=v1.all' }).win['__tsGa'].ran()).toBe(true)
+    expect(run({ cookie: 'rt_consent=v1.minimal' }).win['__tsGa'].ran()).toBe(
+      false
+    )
+  })
+
   it('off production the hook is absent, so enable cannot load GA', () => {
     const r = run({ hostname: 'localhost' })
     expect(r.win['__tsGa']).toBeUndefined()

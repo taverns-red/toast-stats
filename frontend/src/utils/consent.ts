@@ -36,6 +36,8 @@ export interface ConsentState {
 interface GaHook {
   enable: () => void
   disable: () => void
+  /** True once the loader started in this page (gtag.js loaded or armed). */
+  ran?: () => boolean
 }
 
 function onSharedDomain(hostname: string): boolean {
@@ -177,6 +179,12 @@ function clearGaCookies(): void {
   }
 }
 
+/** True when Google Analytics started in this page, so lowering the choice
+ *  reloads the page (#2827). */
+export function gaRanThisPage(): boolean {
+  return gaHook()?.ran?.() === true
+}
+
 /** Record a choice and apply it at once. */
 export function setConsent(level: ConsentLevel): void {
   try {
@@ -188,6 +196,9 @@ export function setConsent(level: ConsentLevel): void {
   } catch {
     // cookies blocked: the choice applies to this page view only
   }
+  // Read before disable(): gtag.js may already hold hits it will send later
+  // whatever the opt-out flag says, so a page where GA ran reloads (#2827).
+  const reloadNeeded = level !== 'all' && gaRanThisPage()
   if (level === 'all') {
     gaHook()?.enable()
   } else {
@@ -197,4 +208,5 @@ export function setConsent(level: ConsentLevel): void {
   if (level === 'none') removeAllSavedPreferencesToSession()
   else promoteSessionPreferencesToLocal()
   publish({ level, settingsOpen: false })
+  if (reloadNeeded) pageActions.reload()
 }

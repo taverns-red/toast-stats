@@ -140,8 +140,12 @@ test('lowering from all to minimal sends no collect hit afterwards (#2827)', asy
   // Real input makes gtag queue engagement events (scroll) for later.
   await page.mouse.wheel(0, 2_000)
   await page.getByRole('button', { name: 'Privacy & cookies' }).first().click()
-  await banner(page).getByRole('button', { name: 'Keep minimal' }).click()
-  await expect(banner(page)).toBeHidden()
+  // The downgrade reloads the page (gtag.js may hold queued hits). The
+  // counter spans the context, so it covers the reloaded page as well.
+  await Promise.all([
+    page.waitForEvent('load'),
+    banner(page).getByRole('button', { name: 'Keep minimal' }).click(),
+  ])
   const before = gaCollect.length
   await page.mouse.wheel(0, 2_000)
   await page.waitForTimeout(10_000)

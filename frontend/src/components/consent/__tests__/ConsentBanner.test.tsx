@@ -87,6 +87,22 @@ describe('ConsentBanner (#2584)', () => {
     expect(text.querySelector('a')).toBeNull()
   })
 
+  it('says the page reloads, only when GA ran in this page and the choice is all (#2827)', () => {
+    const win = window as unknown as Record<string, unknown>
+    document.cookie = 'rt_consent=v1.all; Path=/'
+    win['__tsGa'] = { enable() {}, disable() {}, ran: () => true }
+    renderBanner()
+    act(() => openConsentSettings())
+    expect(region()).toHaveTextContent(
+      'Choosing none or minimal reloads this page.'
+    )
+    win['__tsGa'] = { enable() {}, disable() {}, ran: () => false }
+    act(() => closeConsentSettings())
+    act(() => openConsentSettings())
+    expect(region()).not.toHaveTextContent(/reloads this page/)
+    delete win['__tsGa']
+  })
+
   describe('focus and Escape (#2584 review)', () => {
     function renderWithPage() {
       return render(

@@ -16,10 +16,7 @@
       sizes="16x16 32x32 48x48"
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026-11-13" />
-    <link
-      rel="apple-touch-icon"
-      href="/apple-touch-icon.png?v=2026-11-13"
-    />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-11-13" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta
       name="viewport"
@@ -236,6 +233,11 @@
           },
           disable: function () {
             window['ga-disable-' + GA_ID] = true
+          },
+          // #2827: true once this page started GA. The app reloads the page
+          // when the choice drops, since gtag.js may still send queued hits.
+          ran: function () {
+            return gaStarted
           },
         }
         if (gaConsented()) startGa(false)
