@@ -11,7 +11,6 @@ import {
   filterDatesByProgramYear,
   getMostRecentDateInProgramYear,
   isDateInProgramYear,
-  getProgramYearForDate,
 } from '../utils/programYear'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import {
@@ -675,15 +674,24 @@ const DistrictActionListPage: React.FC = () => {
       )
     }
     // Cold load (#2830): the date index is still in flight, so nothing is
-    // resolved yet, but a pinned `?date=` is already in the URL and alone
-    // decides the reserve. Its own program year is the one the final sentence
-    // will use once the date resolves. With no pinned date nothing is known,
-    // and the reserve is the longest order.
-    return reservedActionSectionOrder(
-      selectedDate ?? '',
-      selectedDate ? getProgramYearForDate(selectedDate).label : undefined
-    )
-  }, [effectiveEndDate, effectiveProgramYear, selectedDate])
+    // resolved yet. The page settles on a pinned `?date=` only when it sits
+    // inside the selected program year; then it and that year decide the
+    // reserve. Outside the year the page falls back to the year's latest
+    // snapshot, which the URL cannot name, and with no pinned date nothing is
+    // known either: the reserve is the longest order.
+    if (
+      selectedDate &&
+      isDateInProgramYear(selectedDate, selectedProgramYear)
+    ) {
+      return reservedActionSectionOrder(selectedDate, selectedProgramYear.label)
+    }
+    return reservedActionSectionOrder('')
+  }, [
+    effectiveEndDate,
+    effectiveProgramYear,
+    selectedDate,
+    selectedProgramYear,
+  ])
 
   /* Collapse preference — per viewer, per device, ONE key for the page, never
      in the URL (a shared link must not carry it). Reads and writes go through
