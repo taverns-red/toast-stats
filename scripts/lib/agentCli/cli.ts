@@ -141,7 +141,7 @@ Options:
   --fail-fast        Return as soon as any check fails
   --allow-cancelled  Don't count a cancelled check as a failure
 
-Exit: 0 all passed · 1 a check failed or was cancelled · 2 still pending at timeout/--once`,
+Exit: 0 all passed · 1 a check failed or was cancelled · 2 still pending at timeout/--once · 3 rate-limit stop, or a usage or tool error`,
     options: {
       interval: { type: 'string' },
       timeout: { type: 'string' },
