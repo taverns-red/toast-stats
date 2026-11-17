@@ -10,9 +10,21 @@ export interface RebuildComputeResult {
   success: boolean
   districtsSucceeded?: string[]
   districtsSkipped?: string[]
-  // Real compute results carry objects here ({ districtId, error, timestamp });
-  // the script has always interpolated errors[0] as-is, kept for no behaviour change.
-  errors?: unknown[]
+  // Real compute results carry { districtId, error, timestamp } objects;
+  // plain strings are still accepted.
+  errors?: (RebuildError | string)[]
+}
+
+export interface RebuildError {
+  districtId: string
+  error: string
+  timestamp?: string
+}
+
+function formatRebuildError(err: RebuildError | string | undefined): string {
+  if (err === undefined) return 'unknown'
+  if (typeof err === 'string') return err
+  return err.districtId ? `${err.districtId}: ${err.error}` : err.error
 }
 
 export type RebuildCategory = 'ok' | 'skipped' | 'failed'
@@ -28,7 +40,7 @@ export function classifyRebuildResult(
   if (!result.success) {
     return {
       category: 'failed',
-      label: `⚠️  failed: ${result.errors?.[0] ?? 'unknown'}`,
+      label: `⚠️  failed: ${formatRebuildError(result.errors?.[0])}`,
     }
   }
   const s = result.districtsSkipped?.length ?? 0
