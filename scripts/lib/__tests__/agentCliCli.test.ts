@@ -249,6 +249,31 @@ describe('agent-cli', () => {
       expect(code).toBe(3)
       expect(runner.calls.filter(l => l.includes('pr checks'))).toHaveLength(1)
     })
+
+    it.each([
+      'GraphQL: API rate limit already exceeded for user ID 1234.',
+      'GraphQL error type: RATE_LIMITED',
+    ])(
+      'stops on gh pr checks GraphQL limit message %j without the REST fallback',
+      async message => {
+        const c = capture()
+        const runner = fakeRunner([
+          [/^gh api rate_limit/, limit(4000)],
+          [/^gh pr checks /, fail(message)],
+          [/^gh api repos\//, ok('{}')],
+        ])
+        const code = await main(['ci-wait', '123'], {
+          ...c.deps,
+          runner,
+          ...clock(),
+        })
+        expect(code).toBe(3)
+        expect(c.err.join('\n')).toContain('2027-01-15T08:00:00Z')
+        expect(runner.calls.some(l => l.startsWith('gh api repos/'))).toBe(
+          false
+        )
+      }
+    )
   })
 
   it('in --json mode reports a tool error as JSON on stdout and exits 3', async () => {
