@@ -167,6 +167,14 @@ test('lowering from all to minimal sends no collect hit and no _ga cookie afterw
   await page.mouse.wheel(0, 1_500)
   await page.waitForTimeout(4_000)
   expect(await gaCookies()).toEqual([])
+  // (b2) gtag is still alive in the page (#2923): an event it handles now must
+  // not write `_ga*` back, and must not send a hit.
+  await page.evaluate(() => {
+    const g = (window as unknown as { gtag: (...a: unknown[]) => void }).gtag
+    g('event', 'late_test')
+  })
+  await page.waitForTimeout(3_000)
+  expect(await gaCookies()).toEqual([])
   // (c) leave the page, so pagehide / unload flushes are counted
   await page.goto('about:blank')
   await page.waitForTimeout(2_000)
