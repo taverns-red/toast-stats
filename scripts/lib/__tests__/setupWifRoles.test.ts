@@ -50,6 +50,33 @@ describe('setup-wif.sh grants nothing (#3025)', () => {
     expect(stripComments(real())).not.toContain('toast-stats-prod-6d64a')
   })
 
+  // Without this condition the provider accepts tokens from ANY GitHub repo,
+  // so any repo could sign in through it (#3037 review).
+  describe('the provider only trusts this repo', () => {
+    const CONDITION =
+      '--attribute-condition="assertion.repository==\'${GITHUB_REPO}\'"'
+
+    it('keeps the repo condition and the repo default', () => {
+      const code = stripComments(real())
+      expect(code).toContain(CONDITION)
+      expect(code).toContain(
+        'GITHUB_REPO="${GITHUB_REPO:-taverns-red/toast-stats}"'
+      )
+    })
+
+    it('flags a script without the condition', () => {
+      const without = real().replace(CONDITION, '')
+      expect(checkSetupWif(without)).toContain(
+        'provider must restrict to this repo'
+      )
+    })
+
+    it('flags a later update-oidc that could change the condition', () => {
+      const updated = `${real()}\ngcloud iam workload-identity-pools providers update-oidc p --attribute-condition="true"\n`
+      expect(checkSetupWif(updated)).toContain('provider update')
+    })
+  })
+
   describe('bypass fixtures are flagged', () => {
     const add = (extra: string) => `${real()}\n${extra}\n`
     const bypasses: Record<string, string> = {
