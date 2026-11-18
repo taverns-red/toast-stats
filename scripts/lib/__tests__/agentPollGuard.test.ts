@@ -79,6 +79,15 @@ const blocked = [
   "echo '<<EOF'\ngh run watch 1\nEOF",
   'git commit -m "x <<EOF"\ngh run watch 1\nEOF',
   'echo $((1<<2))\ngh run watch 1',
+  // #2918 review: the whole delimiter word counts, and a body whose
+  // terminator never appears must not swallow the rest of the command
+  'cat <<A-B\nA-B\ngh run watch 1',
+  'cat <<E"F"\nEF\ngh run watch 1',
+  'cat <<"E"F\nEF\ngh run watch 1',
+  'cat <<EOF.x\nEOF.x\ngh run watch 1',
+  'echo $((1<<y))\ngh run watch 1',
+  '((a<<b))\ngh run watch 1',
+  'cat <<EOF\ngh run watch 1',
   // #2918: redirections and substitutions don't hide a fast interval
   'gh run watch 1 2>&1 --interval 30',
   'gh run watch $(echo 1) --interval 30',
