@@ -542,12 +542,27 @@ export function verifyPlan(saved: RestorePlan, current: RestorePlan): void {
 }
 
 /**
+ * Flags `gcloud storage restore` accepts only for bulk (`--async`) restores.
+ * A synchronous restore of a single `gs://B/O#GEN` rejects them. Source:
+ * googlecloudsdk/surface/storage/restore.py L40-41 (`_BULK_RESTORE_FLAGS`) and
+ * L381 ("Synchronous execution does not support flag: ..."), SDK 588.0.0.
+ */
+export const BULK_ONLY_RESTORE_FLAGS: readonly string[] = [
+  '--allow-overwrite',
+  '--deleted-after-time',
+  '--deleted-before-time',
+  '--all-versions',
+  '--preserve-acl',
+]
+
+/**
  * Run the plan: restores (entry points first), then deletes. argv excludes
  * `gcloud`. Stops at the first failure and throws ExecuteFailure naming what
  * ran and what failed. Each restore carries `--if-generation-match=<live
  * generation>` so it fails if the object changed since the plan (for
  * objects.restore that precondition is the LIVE generation); a delete names
- * the exact live generation in its `#generation` URL.
+ * the exact live generation in its `#generation` URL. No bulk-only flag
+ * (BULK_ONLY_RESTORE_FLAGS) is passed: a synchronous restore rejects them.
  */
 export function executePlan(
   plan: RestorePlan,
@@ -564,7 +579,6 @@ export function executePlan(
     ...ordered.map(e => [
       'storage',
       'restore',
-      '--allow-overwrite',
       `--if-generation-match=${e.liveGeneration}`,
       url(e, e.generation as string),
     ]),
