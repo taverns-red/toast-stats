@@ -275,7 +275,8 @@ jobs:
 
       # The hosting-deploy identity has no Cloud Storage access, so the record
       # goes to the run summary and a 90-day artifact, not the prod bucket
-      # (#2984). `metrics/deploys/` in the bucket is legacy: nothing writes it.
+      # (#2984). The legacy `metrics/deploys/` objects were archived privately
+      # and removed from the prod bucket on 2026-11-18 (#2872).
       - name: Record DORA deploy metrics
         if: success()
         run: |
