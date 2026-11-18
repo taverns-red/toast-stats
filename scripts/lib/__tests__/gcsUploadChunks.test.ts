@@ -184,6 +184,9 @@ describe('chunked resumable upload (#2972)', () => {
         )!
         return new Response(BYTES.slice(Number(r[1]), Number(r[2]) + 1), {
           status: 206,
+          headers: {
+            'Content-Range': `bytes ${r[1]}-${r[2]}/${BYTES.length}`,
+          },
         })
       }
       const h = init.headers as Record<string, string>

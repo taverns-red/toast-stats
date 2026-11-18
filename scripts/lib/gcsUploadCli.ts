@@ -16,6 +16,8 @@ import { objectExists, uploadObject, ObjectExistsError } from './gcsUpload.js'
 
 export interface UploadCliDeps {
   token: string | undefined
+  /** Mints a fresh token for long copies (#2980); absent: no renewal. */
+  mintToken?: () => Promise<string>
   fetch: typeof fetch
   log: (line: string) => void
 }
@@ -81,6 +83,8 @@ export const runUploadCli = async (
       cacheControl,
       onExists,
       token: deps.token,
+      // Only a copy reads long enough to outlive the token (#2980).
+      tokenProvider: command === 'copy' ? deps.mintToken : undefined,
       fetch: deps.fetch,
     })
     deps.log(

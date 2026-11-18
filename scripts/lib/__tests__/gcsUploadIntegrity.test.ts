@@ -88,7 +88,10 @@ const fakeWorld = (w: World) => {
       const slice = src.data.slice(Number(r[1]), Number(r[2]) + 1)
       return new Response(slice, {
         status: 206,
-        headers: { 'Content-Length': String(slice.length) },
+        headers: {
+          'Content-Length': String(slice.length),
+          'Content-Range': `bytes ${r[1]}-${Number(r[1]) + slice.length - 1}/${src.data.length}`,
+        },
       })
     }
     return new Response(

@@ -49,6 +49,15 @@ export interface UploadOptions {
   /** Required, no default: each call site decides what "already there" means. */
   onExists: OnExists
   token: string
+  /**
+   * Mints a fresh access token (#2980). Without it a 401 is fatal and the
+   * token is never renewed.
+   */
+  tokenProvider?: () => Promise<string>
+  /** Renew the token before a source GET once it is older than this. */
+  tokenMaxAgeMs?: number
+  /** Clock for token age; replaceable so a test need not wait. */
+  now?: () => number
   fetch: typeof fetch
   /** Bytes per PUT. Must be a multiple of 256 KiB in production. */
   chunkSize?: number
@@ -82,6 +91,54 @@ const MAX_ATTEMPTS = 5
 const retryableStatus = (status: number): boolean =>
   status >= 500 || status === 408 || status === 429
 
+/**
+ * gcloud owns the token cache: `print-access-token` returns the cached token
+ * and only refreshes it within 5 minutes of expiry. Asking for a new one
+ * every 30 minutes would just return the same token. So we ask at least every
+ * 4 minutes, which is sure to land inside that 5-minute window before the
+ * hour is up. A 401 still re-mints once as the backstop.
+ */
+const DEFAULT_TOKEN_MAX_AGE_MS = 4 * 60_000
+
+/**
+ * The bearer token for the source reads and the initiation. With a
+ * tokenProvider it is renewed before a read once it is older than
+ * tokenMaxAgeMs, and on demand after a 401. The token is held here and only
+ * ever placed in an Authorization header, never in a message.
+ */
+interface Auth {
+  header: () => Promise<string>
+  /** Mints a new token; false when there is no provider to ask. */
+  renew: () => Promise<boolean>
+}
+
+const makeAuth = (o: UploadOptions): Auth => {
+  const now = o.now ?? Date.now
+  const maxAge = o.tokenMaxAgeMs ?? DEFAULT_TOKEN_MAX_AGE_MS
+  let token = o.token
+  let mintedAt = now()
+  const mint = async (): Promise<void> => {
+    try {
+      token = await o.tokenProvider!()
+    } catch {
+      // The provider's message is not copied: it could carry a credential.
+      throw new FatalReadError('could not mint a fresh access token')
+    }
+    mintedAt = now()
+  }
+  return {
+    header: async () => {
+      if (o.tokenProvider && now() - mintedAt >= maxAge) await mint()
+      return `Bearer ${token}`
+    },
+    renew: async () => {
+      if (!o.tokenProvider) return false
+      await mint()
+      return true
+    },
+  }
+}
+
 const md5OfFile = (path: string): Promise<string> =>
   new Promise((resolve, reject) => {
     const hash = createHash('md5')
@@ -113,10 +170,17 @@ const fileSource = async (path: string): Promise<PreparedSource> => {
  * token; only these GETs do.
  */
 const rangedRead =
-  (o: UploadOptions, bucket: string, object: string, size: number) =>
+  (
+    o: UploadOptions,
+    auth: Auth,
+    bucket: string,
+    object: string,
+    size: number
+  ) =>
   async (offset: number, n: number): Promise<Buffer> => {
     const sleep = o.sleep ?? (ms => new Promise(r => setTimeout(r, ms)))
     const what = `GET gs://${bucket}/${object} bytes ${offset}-${offset + n - 1}`
+    let renewed = false // one re-mint per chunk; a second 401 is fatal
     for (let attempt = 1; ; attempt++) {
       let problem: string
       try {
@@ -125,16 +189,33 @@ const rangedRead =
           {
             method: 'GET',
             headers: {
-              Authorization: `Bearer ${o.token}`,
+              Authorization: await auth.header(),
               Range: `bytes=${offset}-${offset + n - 1}`,
             },
           }
         )
+        if (res.status === 401 && !renewed && (await auth.renew())) {
+          await res.body?.cancel() // free the connection before the retry
+          renewed = true
+          attempt-- // the re-mint is not a failed attempt
+          continue
+        }
         const whole = res.status === 200 && offset === 0 && n === size
         if (res.status !== 206 && !whole && !retryableStatus(res.status))
           throw new FatalReadError(
             `${what} -> ${res.status} ${res.statusText}`.trim()
           )
+        if (res.status === 206) {
+          // The bytes must be the ones asked for: a 206 for another offset
+          // would write the wrong data under a correct length.
+          const m = /^bytes (\d+)-\d+\/(?:\d+|\*)$/.exec(
+            res.headers.get('content-range') ?? ''
+          )
+          if (!m || Number(m[1]) !== offset)
+            throw new FatalReadError(
+              `${what} -> 206 with a wrong Content-Range`
+            )
+        }
         if (res.status === 206 || whole) {
           const buf = Buffer.from(await res.arrayBuffer())
           if (buf.length === n) return buf
@@ -153,13 +234,14 @@ const rangedRead =
 
 const gcsSource = async (
   o: UploadOptions,
+  auth: Auth,
   bucket: string,
   object: string
 ): Promise<PreparedSource> => {
   const res = await o.fetch(
     `${API}/${encodeURIComponent(bucket)}/o/${encodeURIComponent(object)}` +
       '?fields=size,md5Hash,contentEncoding',
-    { method: 'GET', headers: { Authorization: `Bearer ${o.token}` } }
+    { method: 'GET', headers: { Authorization: await auth.header() } }
   )
   if (!res.ok) throw failure(`GET gs://${bucket}/${object} (metadata)`, res)
   const meta = (await res.json()) as {
@@ -175,13 +257,18 @@ const gcsSource = async (
   const size = Number(meta.size)
   if (!Number.isInteger(size) || size < 0 || !meta.md5Hash)
     throw new Error(`gs://${bucket}/${object}: no size or md5Hash in metadata`)
-  return { size, md5: meta.md5Hash, read: rangedRead(o, bucket, object, size) }
+  return {
+    size,
+    md5: meta.md5Hash,
+    read: rangedRead(o, auth, bucket, object, size),
+  }
 }
 
 export const uploadObject = async (o: UploadOptions): Promise<UploadResult> => {
   if (o.onExists !== 'skip' && o.onExists !== 'fail')
     throw new Error("onExists must be 'skip' or 'fail'")
   const target = `gs://${o.bucket}/${o.object}`
+  const auth = makeAuth(o)
   const exists = async (src: PreparedSource): Promise<UploadResult> => {
     if (o.onExists !== 'skip')
       throw new ObjectExistsError(`${target} already exists`)
@@ -189,7 +276,7 @@ export const uploadObject = async (o: UploadOptions): Promise<UploadResult> => {
     // what we would have written. Any doubt is an error.
     const res = await o.fetch(
       `${API}/${encodeURIComponent(o.bucket)}/o/${encodeURIComponent(o.object)}?fields=md5Hash`,
-      { method: 'GET', headers: { Authorization: `Bearer ${o.token}` } }
+      { method: 'GET', headers: { Authorization: await auth.header() } }
     )
     if (!res.ok) throw failure(`GET ${target} (metadata, to compare)`, res)
     const have = ((await res.json()) as { md5Hash?: string }).md5Hash
@@ -211,7 +298,7 @@ export const uploadObject = async (o: UploadOptions): Promise<UploadResult> => {
   const src =
     o.source.kind === 'file'
       ? await fileSource(o.source.path)
-      : await gcsSource(o, o.source.bucket, o.source.object)
+      : await gcsSource(o, auth, o.source.bucket, o.source.object)
   if (src.size === 0) throw new Error(`${target}: the source is empty`)
 
   const start = await o.fetch(
@@ -220,7 +307,7 @@ export const uploadObject = async (o: UploadOptions): Promise<UploadResult> => {
     {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${o.token}`,
+        Authorization: await auth.header(),
         'Content-Type': 'application/json; charset=UTF-8',
         'X-Upload-Content-Type': o.contentType,
         'X-Upload-Content-Length': String(src.size),
