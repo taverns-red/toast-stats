@@ -129,6 +129,28 @@ describe('data-reader jobs (#2872 B2)', () => {
     expect(EXPECTED['pr-preview-cleanup.yml::cleanup']).toBe(PREVIEW)
   })
 
+  it('checks the preview variable is non-empty before every preview-identity auth step (#2956)', () => {
+    const missing: string[] = []
+    for (const [key, id] of Object.entries(EXPECTED)) {
+      if (id !== PREVIEW) continue
+      const [file, job] = key.split('::')
+      const steps = wfOf(file!).jobs![job!]!.steps!
+      const authAt = steps.findIndex(s =>
+        /google-github-actions\/auth/.test(s.uses ?? '')
+      )
+      const guarded = steps
+        .slice(0, authAt)
+        .some(
+          s =>
+            /vars\.GCP_PREVIEW_SA/.test(String(Object.values(s.env ?? {}))) &&
+            /-z\b/.test(s.run ?? '') &&
+            /exit 1/.test(s.run ?? '')
+        )
+      if (!guarded) missing.push(key)
+    }
+    expect(missing).toEqual([])
+  })
+
   it('checks the preview variable is non-empty before the canary authenticates on pull requests (#2956)', () => {
     const steps = wfOf('harness-staging-canary.yml').jobs!.canary!.steps!
     const authAt = steps.findIndex(s =>
