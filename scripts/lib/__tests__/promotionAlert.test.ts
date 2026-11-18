@@ -195,6 +195,46 @@ describe('buildPromotionHeldBody', () => {
     expect(body).toMatch(/value gate/i)
   })
 
+  it('hard guard cuts a body that exceeds the limit but keeps the head, the clear path and the footer (#2937)', () => {
+    // Reasons are capped at 40, but the affected-district list and each
+    // reason's length are not, so the body can still pass 60,000 chars.
+    const r = evaluatePromotion({
+      countPromote: true,
+      valuePromote: false,
+      valueDiff: {
+        ...CHANGED_DIFF,
+        report: {
+          ...CHANGED_DIFF.report,
+          changed: [
+            {
+              date: '2026-05-30',
+              changedDistricts: Array.from(
+                { length: 20_000 },
+                (_, i) => `district-${i}`
+              ),
+            },
+          ],
+        },
+      },
+    })
+    const body = buildPromotionHeldBody(r, OPTS)
+    expect(r.affectedDistricts.join(', ').length).toBeGreaterThan(60_000)
+    expect(body.length).toBeLessThanOrEqual(60_000)
+    expect(body).toContain("Body truncated to fit GitHub's 64KB issue limit")
+    // The head survives.
+    expect(
+      body.startsWith('## 🚫 Staging → production promotion is held')
+    ).toBe(true)
+    expect(body).toContain('**Affected districts:** district-0,')
+    // The operational essentials are re-stated at the end.
+    expect(body).toContain(
+      '**Clear path** (value gate only, after review): `gh workflow run data-pipeline.yml -f mode=daily -f allow_value_changes=true`'
+    )
+    expect(
+      body.endsWith('Filed by `.github/workflows/data-pipeline.yml` (#1073)._')
+    ).toBe(true)
+  })
+
   it('caps oversized bodies under the GitHub 64KB issue limit with a truncation notice (#1168)', () => {
     // A full-range re-derive: hundreds of reasons, every district affected —
     // the raw body would exceed 65,536 chars and crash gh issue create.
