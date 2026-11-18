@@ -111,22 +111,29 @@ describe('coarse-pointer row and table links (#2645)', () => {
   })
 })
 
-// The footer's Privacy & cookies control is a <button>, and base.css gives
-// every button a 44px minimum. Beside the inline footer links (18px) that put
-// it 13px lower on a desktop mouse (#2889). On a fine pointer it drops the
-// minimum and lays out like the links; a coarse pointer keeps the 44px box
-// that tap-targets.css gives every .app-shell-footer__link.
-describe('footer privacy button on a fine pointer (#2889)', () => {
+// The Privacy & cookies control is a <button>, and base.css gives every button
+// a 44px minimum. Beside inline links (18px) that put it 13px lower on a
+// desktop mouse (#2889). Off a coarse pointer it drops the minimum and lays out
+// like the links, in the footer and in the About menu (#2891).
+// "not (pointer: coarse)" covers fine and none, so a keyboard-only kiosk gets
+// it too. A coarse pointer keeps the 44px box that tap-targets.css gives every
+// .app-shell-footer__link. e2e/footer-privacy-button-layout.smoke.ts measures
+// the rendered boxes.
+describe('privacy button off a coarse pointer (#2889, #2891)', () => {
   const consent = load('consent.css')
-  const FINE = '@media (pointer: fine)'
-  const SEL = '.app-shell-footer .consent-reopen'
+  const NOT_COARSE = '@media not (pointer: coarse)'
+  const SEL =
+    ':is(.app-shell-footer, .app-shell-nav-about__content) .consent-reopen'
 
   it('drops the 44px minimum and sits on the links baseline', () => {
-    const r = decls(mediaBlock(consent, FINE), SEL)
+    const r = decls(mediaBlock(consent, NOT_COARSE), SEL)
     expect(r['min-height']).toBe('0')
     expect(r['min-width']).toBe('0')
-    expect(r['display']).toBe('inline')
     expect(r['vertical-align']).toBe('baseline')
+  })
+
+  it('leaves out the no-op display: inline', () => {
+    expect(mediaBlock(consent, NOT_COARSE)).not.toContain('display')
   })
 
   it('leaves the coarse-pointer 44px footer link box alone', () => {
@@ -135,7 +142,8 @@ describe('footer privacy button on a fine pointer (#2889)', () => {
       '.app-shell-footer__link'
     )
     expect(r['min-height']).toBe('44px')
-    expect(withoutMedia(consent, FINE)).not.toContain(SEL)
+    expect(consent).not.toContain('(pointer: fine)')
+    expect(withoutMedia(consent, NOT_COARSE)).not.toContain(SEL)
   })
 })
 
