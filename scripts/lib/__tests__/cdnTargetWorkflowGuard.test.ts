@@ -76,6 +76,35 @@ describe('every frontend build names its CDN target (#2982)', () => {
     }
   )
 
+  it.each([
+    'npm run-script build:frontend',
+    'npm --prefix . run build:frontend',
+    'npm --prefix=. run-script build:frontend',
+    'npm run build:frontend --workspace=frontend',
+    'npm run --silent build:frontend',
+    'npm run-script --prefix . build:frontend',
+    'npm -s run build:frontend',
+    'CI=true npm run build:frontend',
+  ])('flags `%s` with no target (#2987)', cmd => {
+    expect(buildTargetProblems(cmd, {})).toHaveLength(1)
+    expect(
+      buildTargetProblems(`VITE_CDN_BASE_URL=https://x.example ${cmd}`, {})
+    ).toEqual([])
+    expect(
+      buildTargetProblems(cmd, { VITE_CDN_BASE_URL: 'https://x.example' })
+    ).toEqual([])
+  })
+
+  it('does not flag other npm commands (#2987)', () => {
+    for (const cmd of [
+      'npm run build --workspace=frontend',
+      'npm run build:analytics-core',
+      'echo build:frontend',
+    ]) {
+      expect(buildTargetProblems(cmd, {})).toEqual([])
+    }
+  })
+
   it('flags a build step with no target', () => {
     expect(buildTargetProblems('npm run build:frontend', {})).toHaveLength(1)
     expect(
