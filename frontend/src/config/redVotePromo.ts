@@ -1,8 +1,8 @@
 /**
- * Red Vote promotion (#2090) — the one home of its copy, link and seasons,
+ * RT Vote promotion (#2090) — the one home of its copy, link and seasons,
  * so the brand and copy review (taverns-red/ops#117) edits a single file.
  *
- * Audience: district leaders. Red Vote runs District Council votes and
+ * Audience: district leaders. RT Vote runs District Council votes and
  * District Executive Committee meetings; it is not for club officer
  * elections, so nothing here is ever placed on a club page. Targeting is by
  * date only — never by member or club data.
@@ -22,23 +22,23 @@ export type RedVotePlacement =
   | 'methodology'
 
 export const RED_VOTE_COPY = {
-  cardHeading: 'Run your DEC and District Council votes with Red Vote',
+  cardHeading: 'Run your DEC and District Council votes with RT Vote',
   bannerHeading: 'District Council voting season',
-  // #2249 — the landing block's eyebrow: what Red Vote is for, and the
+  // #2249 — the landing block's eyebrow: what RT Vote is for, and the
   // season when one is on.
   blockEyebrow: 'District Council · DEC meetings',
   blockEyebrowSeason: 'District Council season',
   // #2653 D2 — the phone's one-line pointer near the top of the landing; the
   // full block follows the rankings.
-  lineText: 'Run DEC and Council votes with Red Vote',
-  body: "Red Vote handles your meeting's votes securely and with ease. Built for district leaders and district budgets.",
-  cta: 'See Red Vote',
+  lineText: 'Run DEC and Council votes with RT Vote',
+  body: "RT Vote handles your meeting's votes securely and with ease. Built for district leaders and district budgets.",
+  cta: 'See RT Vote',
   attribution:
-    'Red Vote is a product of Red Taverns, the makers of Toast Stats.',
+    'RT Vote is a product of Red Taverns, the makers of Toast Stats.',
   disclaimer: 'Not affiliated with Toastmasters International.',
-  dismissLabel: 'Dismiss the Red Vote banner',
+  dismissLabel: 'Dismiss the RT Vote banner',
   madeByPrefix: 'Free from Red Taverns · Also from us:',
-  productName: 'Red Vote',
+  productName: 'RT Vote',
   // #2300 — the card's link to the district's council credentials page.
   councilLink: 'Council credentials: clubs in good standing on a council date',
 } as const

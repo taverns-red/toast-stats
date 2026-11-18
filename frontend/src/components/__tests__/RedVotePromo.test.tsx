@@ -1,5 +1,5 @@
 /**
- * Red Vote promotion surfaces (#2090). The clock is injected through the
+ * RT Vote promotion surfaces (#2090). The clock is injected through the
  * preview-only `?promoDate=` override (jsdom's host is localhost, not prod).
  */
 import React from 'react'
@@ -18,7 +18,7 @@ function renderAt(search: string, ui: React.ReactElement) {
   )
 }
 
-const ctaLink = () => screen.getByRole('link', { name: /see red vote/i })
+const ctaLink = () => screen.getByRole('link', { name: /see rt vote/i })
 const medium = (a: HTMLElement) =>
   new URL(a.getAttribute('href') ?? '').searchParams.get('utm_medium')
 
@@ -39,7 +39,7 @@ describe('RedVotePromo (#2090)', () => {
     expect(screen.getByText(RED_VOTE_COPY.disclaimer)).toBeInTheDocument()
   })
 
-  // #2249 — the landing's Red Vote surface is now RedVoteBlock (its own
+  // #2249 — the landing's RT Vote surface is now RedVoteBlock (its own
   // test); this component is the district Overview's card/banner only.
   it('in season, the district surface shows the dismissible banner', () => {
     renderAt(IN_SEASON, <RedVotePromo />)
@@ -144,15 +144,15 @@ describe('RedVoteMadeByLine (#2090)', () => {
   })
 
   it.each(['footer', 'methodology'] as const)(
-    'reads "Free from Red Taverns · Also from us: Red Vote" (%s)',
+    'reads "Free from Red Taverns · Also from us: RT Vote" (%s)',
     placement => {
       renderAt('', <RedVoteMadeByLine placement={placement} />)
       const line = screen.getByTestId('red-vote-made-by')
       expect(line).toHaveTextContent(
-        'Free from Red Taverns · Also from us: Red Vote'
+        'Free from Red Taverns · Also from us: RT Vote'
       )
       expect(line).toHaveTextContent(RED_VOTE_COPY.disclaimer)
-      const link = screen.getByRole('link', { name: 'Red Vote' })
+      const link = screen.getByRole('link', { name: 'RT Vote' })
       expect(medium(link)).toBe(placement)
     }
   )
@@ -161,7 +161,7 @@ describe('RedVoteMadeByLine (#2090)', () => {
     const gtag = vi.fn()
     window.gtag = gtag
     renderAt('', <RedVoteMadeByLine placement="footer" />)
-    fireEvent.click(screen.getByRole('link', { name: 'Red Vote' }))
+    fireEvent.click(screen.getByRole('link', { name: 'RT Vote' }))
     expect(gtag).toHaveBeenCalledWith(
       'event',
       'select_promotion',
