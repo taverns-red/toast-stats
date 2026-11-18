@@ -226,6 +226,19 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
       'frontend/src/utils/globalHistoryView.ts',
     ],
   },
+  {
+    id: 'py-2025-2026-club-strength-award-removed',
+    programYear: '2025-2026',
+    title: 'District Club Strength Award removed from Item 1490',
+    affects:
+      'District Club Strength Award · Additional Awards on district pages',
+    whatChanged:
+      'Item 1490 Rev. 04/2025 listed the award for districts whose average club size grew 10% or more. Rev. 03/2026 removes that sentence, partway through 2025-26, and Rev. 07/2026 matches it. TI published no list of 2025-26 recipients.',
+    comparability:
+      'Toast Stats shows the award for program years up to 2024-25 and not for 2025-26 or later, so its absence from recent years is the rule change, not a district falling short.',
+    issues: [2907],
+    sources: ['frontend/src/utils/clubStrengthAward.ts'],
+  },
 
   // ───────────────────────────── PY 2022-2023 ─────────────────────────────
   {

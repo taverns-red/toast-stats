@@ -76,6 +76,7 @@ describe('programYearRuleChanges — the verified inventory (#1400)', () => {
     ['py-2025-2026-district-prerequisites-expanded', '2025-2026'],
     ['py-2025-2026-club-success-plan-required', '2025-2026'],
     ['py-2025-2026-smedley-distinguished-club', '2025-2026'],
+    ['py-2025-2026-club-strength-award-removed', '2025-2026'],
     ['py-2022-2023-district-club-growth-decoupled', '2022-2023'],
     ['py-2018-2019-district-smedley-added', '2018-2019'],
   ])('logs %s under PY %s', (id, programYear) => {
