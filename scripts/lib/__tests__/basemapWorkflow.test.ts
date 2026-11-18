@@ -5,10 +5,10 @@
  * load-bearing:
  * - a gzip upload (`-Z`, `--gzip-*`) makes GCS ignore `Range` and serve the
  *   whole multi-GB object on every request (GCS transcoding docs);
- * - a parallel composite upload loses the MD5, and Cloud CDN wants a strong
- *   validator;
- * - an overwrite would mix two builds in cached CDN chunks, so every copy is
- *   `--no-clobber`.
+ * - a composite upload loses the MD5, and Cloud CDN wants a strong validator
+ *   (scripts/gcs-upload.ts inserts one plain object, so the MD5 is kept);
+ * - an overwrite would mix two builds in cached CDN chunks, so every write is
+ *   create-only (ifGenerationMatch=0, #2972).
  * The workflow is manual-dispatch only and writes prod only by a server-side
  * copy of the staging object. Sourced from the YAML so the guard cannot drift.
  */
@@ -36,12 +36,13 @@ interface Workflow {
 const raw = fs.existsSync(FILE) ? fs.readFileSync(FILE, 'utf-8') : ''
 const wf = (raw ? parse(raw) : { on: {}, jobs: {} }) as Workflow
 const steps = Object.values(wf.jobs).flatMap(j => j.steps)
-/** Each `gcloud storage cp …` command, continuation lines joined. */
+/** Each `scripts/gcs-upload.ts put|copy …` command, continuation lines joined. */
 const cpCommands = steps.flatMap(s =>
   (s.run ?? '')
     .replace(/\\\n\s*/g, ' ')
     .split('\n')
-    .filter(l => /\bgcloud storage cp\b/.test(l))
+    .map(l => l.trim())
+    .filter(l => /gcs-upload\.ts (put|copy)\b/.test(l))
     .map(cmd => ({ step: s, cmd }))
 )
 
@@ -147,27 +148,29 @@ describe('basemap-build.yml (#1786)', () => {
     expect(cpCommands.length).toBeGreaterThanOrEqual(2)
   })
 
-  it('every copy: octet-stream, no-transform, no-clobber, never gzip', () => {
+  it('every write: octet-stream, no-transform, an explicit --on-exists, never gzip', () => {
     for (const { cmd } of cpCommands) {
-      expect(cmd).toContain('--content-type=application/octet-stream')
-      expect(cmd).toMatch(
-        /--cache-control="public, max-age=86400, no-transform"/
+      expect(cmd).toContain('--content-type application/octet-stream')
+      expect(cmd).toContain(
+        '--cache-control "public, max-age=86400, no-transform"'
       )
-      expect(cmd).toContain('--no-clobber')
+      expect(cmd).toMatch(/--on-exists (skip|fail)\b/)
       expect(cmd).not.toMatch(/\s-[A-Za-z]*[Zz]\b|--gzip|\s-[jJ]\b/)
     }
   })
 
-  it('disables parallel composite upload for every copy', () => {
-    const value =
-      wf.env?.['CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_ENABLED'] ??
-      Object.values(wf.jobs)[0]?.env?.[
-        'CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_ENABLED'
-      ]
-    expect(String(value)).toBe('False')
+  it('never uses gcloud storage cp (it reads and lists the destination first)', () => {
+    expect(raw).not.toMatch(/gcloud storage (cp|rsync|mv|rm)/)
   })
 
-  it('writes prod only by a server-side copy from staging, only for prod-copy', () => {
+  it('staging upload fails if the object exists; the prod copy skips (a re-run verifies it)', () => {
+    const up = cpCommands.find(({ cmd }) => /gcs-upload\.ts put /.test(cmd))
+    expect(up?.cmd).toContain('--on-exists fail')
+    const copy = cpCommands.find(({ cmd }) => /gcs-upload\.ts copy /.test(cmd))
+    expect(copy?.cmd).toContain('--on-exists skip')
+  })
+
+  it('writes prod only by a copy read from staging, only for prod-copy', () => {
     const prod = cpCommands.filter(({ cmd }) =>
       /GCS_BUCKET_PRODUCTION/.test(cmd)
     )
@@ -175,14 +178,55 @@ describe('basemap-build.yml (#1786)', () => {
     for (const { step, cmd } of prod) {
       expect(step.if ?? '').toContain("inputs.target == 'prod-copy'")
       expect(cmd).toMatch(
-        /gcloud storage cp "gs:\/\/\$\{GCS_BUCKET\}\/\$\{OBJ\}" "gs:\/\/\$\{GCS_BUCKET_PRODUCTION\}\/\$\{OBJ\}"/
+        /gcs-upload\.ts copy --from-bucket "\$GCS_BUCKET" --bucket "\$GCS_BUCKET_PRODUCTION" --object "\$OBJ"/
       )
     }
-    const uploads = cpCommands.filter(({ cmd }) => !/cp "gs:\/\//.test(cmd))
+    const uploads = cpCommands.filter(({ cmd }) =>
+      /gcs-upload\.ts put /.test(cmd)
+    )
+    expect(uploads.length).toBe(1)
     for (const { step, cmd } of uploads) {
       expect(cmd).not.toMatch(/GCS_BUCKET_PRODUCTION/)
+      expect(cmd).toContain('--file "$BUILD_DIR/$NAME"')
       expect(step.if ?? '').toContain("inputs.target == 'staging'")
     }
+  })
+
+  it('the staging existence check tells "not found" apart from every other error', () => {
+    const run =
+      steps.find(
+        s => s.name === 'Refuse to overwrite an existing staging object'
+      )?.run ?? ''
+    expect(run).toContain('gcs-upload.ts exists')
+    expect(run).not.toMatch(/>\s*\/dev\/null\s+2>&1/)
+    expect(run).toMatch(/10\)/)
+    expect(run).toMatch(/\*\)[^\n]*exit 1/)
+  })
+
+  it('installs dependencies with --ignore-scripts for both targets, after Node is set up', () => {
+    const node = steps.findIndex(s =>
+      String(s.uses ?? '').startsWith('actions/setup-node@')
+    )
+    const install = steps.findIndex(s =>
+      /^npm ci --ignore-scripts$/m.test(s.run ?? '')
+    )
+    expect(node).toBeGreaterThanOrEqual(0)
+    expect(install).toBeGreaterThan(node)
+    expect(steps[node]?.if).toBeUndefined()
+    expect(steps[install]?.if).toBeUndefined()
+  })
+
+  it('hands the job token to the helper through a masked environment variable, never echoed', () => {
+    const at = steps.findIndex(
+      s =>
+        /print-access-token/.test(s.run ?? '') && /GITHUB_ENV/.test(s.run ?? '')
+    )
+    expect(at).toBeGreaterThan(-1)
+    expect(steps[at]?.run).toContain('::add-mask::')
+    const authAt = steps.findIndex(s =>
+      /google-github-actions\/auth/.test(s.uses ?? '')
+    )
+    expect(at).toBeGreaterThan(authAt)
   })
 
   it('only ever writes under basemap/', () => {
