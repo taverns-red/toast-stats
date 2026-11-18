@@ -80,8 +80,12 @@ scripts/setup-hosting-sites.sh --project "$PROJECT_ID" \
 PROJECT_ID="$PROJECT_ID" scripts/setup-wif.sh
 ```
 
-The defaults (`GITHUB_REPO=taverns-red/toast-stats`,
-`SA_NAME=toast-stats-deployer`) match the live deployer. The live provider in
+`PROJECT_ID` is required; the script has no default project. The default
+`GITHUB_REPO=taverns-red/toast-stats` matches this repo. The script creates only
+the pool and provider. It creates no service account and grants no role
+(#3025). Each job's identity (`scripts/lib/gcpIdentityMap.ts`) and its
+bindings must be created separately; the script no longer does this, and this
+runbook does not yet list those steps. The live provider in
 `toast-stats-prod-6d64a` is shared with other Red Taverns repos and uses the
 condition `assertion.repository_owner=='taverns-red'`. The script's
 per-repository condition is stricter, which is fine for a single-repo project.

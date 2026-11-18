@@ -3,8 +3,12 @@
 # Workload Identity Federation Setup for GitHub Actions → GCP
 # =============================================================================
 #
-# Run this script ONCE to configure keyless authentication from GitHub Actions
-# to your GCP project. After running, add the output values as GitHub secrets.
+# Run this script ONCE to create the Workload Identity pool and GitHub provider
+# for keyless authentication from GitHub Actions to your GCP project. It
+# creates no service account and grants no role (#3025): every job has its own
+# identity (scripts/lib/gcpIdentityMap.ts), set up per
+# docs/runbooks/new-environment.md. After running, add the output values as
+# GitHub secrets.
 #
 # Prerequisites:
 #   - gcloud CLI installed and authenticated
@@ -13,7 +17,7 @@
 # Usage:
 #   chmod +x scripts/setup-wif.sh
 #   ./scripts/setup-wif.sh
-#   PROJECT_ID=<new-project> ./scripts/setup-wif.sh   # rebuilt environment
+#   PROJECT_ID=<project> ./scripts/setup-wif.sh   # PROJECT_ID is required
 #
 # Run scripts/setup-hosting-sites.sh BEFORE this on a new project: Firebase no
 # longer creates a default Hosting site (2026-10-15). Full order of a rebuild:
@@ -22,15 +26,13 @@
 
 set -euo pipefail
 
-# Configuration — override via env for a new project/repo. Defaults match the
-# live deployer for this repo (toast-stats-deployer, taverns-red/toast-stats).
-PROJECT_ID="${PROJECT_ID:-toast-stats-prod-6d64a}"
+# Configuration. PROJECT_ID has no default, so a run never lands on production
+# by accident. GITHUB_REPO can be overridden for a different repo.
+PROJECT_ID="${PROJECT_ID:?set PROJECT_ID to the target GCP project}"
 GITHUB_REPO="${GITHUB_REPO:-taverns-red/toast-stats}"
 REGION="us-east1"
 POOL_NAME="github-actions-pool"
 PROVIDER_NAME="github-provider"
-SA_NAME="${SA_NAME:-toast-stats-deployer}"
-SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
 echo "============================================"
 echo " Workload Identity Federation Setup"
@@ -79,46 +81,9 @@ gcloud iam workload-identity-pools providers create-oidc "${PROVIDER_NAME}" \
   --issuer-uri="https://token.actions.githubusercontent.com" \
   2>/dev/null || echo "  (provider already exists, skipping)"
 
-# Step 5: Create service account
-echo "→ Creating service account..."
-if gcloud iam service-accounts describe "${SA_EMAIL}" --project="${PROJECT_ID}" >/dev/null 2>&1; then
-  echo "  (service account already exists, skipping)"
-else
-  gcloud iam service-accounts create "${SA_NAME}" \
-    --project="${PROJECT_ID}" \
-    --display-name="GitHub Actions Deployer" \
-    --description="Service account for GitHub Actions deployments"
-  # Wait for propagation
-  echo "  Waiting for service account to propagate..."
-  sleep 10
-fi
-
-# Step 6: Grant roles to service account
-echo "→ Granting IAM roles..."
-ROLES=(
-  "roles/storage.admin"
-  "roles/firebasehosting.admin"
-  "roles/serviceusage.serviceUsageConsumer"
-)
-
-for ROLE in "${ROLES[@]}"; do
-  echo "  Granting ${ROLE}..."
-  gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
-    --member="serviceAccount:${SA_EMAIL}" \
-    --role="${ROLE}" \
-    --quiet >/dev/null
-done
-
-# Step 7: Allow GitHub Actions to impersonate the service account
-echo "→ Binding WIF to service account..."
+# Look up the pool resource name for the provider value printed below.
 PROJECT_NUMBER=$(gcloud projects describe "${PROJECT_ID}" --format='value(projectNumber)')
 POOL_ID="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_NAME}"
-
-gcloud iam service-accounts add-iam-policy-binding "${SA_EMAIL}" \
-  --project="${PROJECT_ID}" \
-  --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/${POOL_ID}/attribute.repository/${GITHUB_REPO}" \
-  --quiet >/dev/null
 
 # Get the full provider resource name
 WIF_PROVIDER="${POOL_ID}/providers/${PROVIDER_NAME}"
@@ -128,16 +93,14 @@ echo "============================================"
 echo " ✅ Setup Complete!"
 echo "============================================"
 echo ""
-echo "Add these as GitHub repository secrets"
+echo "Pool and provider are ready. Add these as GitHub repository secrets"
 echo "(Settings → Secrets and variables → Actions):"
 echo ""
 echo "  GCP_PROJECT_ID = ${PROJECT_ID}"
 echo "  GCP_WORKLOAD_IDENTITY_PROVIDER = ${WIF_PROVIDER}"
 echo ""
-echo "Workflows no longer use one shared deploy account. Set each per-job"
-echo "identity as a repository variable (GCP_DATA_READER_SA, GCP_PREVIEW_SA,"
-echo "GCP_PIPELINE_SA, GCP_RESTORE_SA, GCP_MEDIA_SA, GCP_HOSTING_DEPLOY_SA)."
-echo "See docs/runbooks/new-environment.md, step 6."
-echo ""
-echo "After adding them, push to main to trigger deployment."
+echo "This script creates no service account and grants no role. Set each"
+echo "per-job identity as a repository variable (GCP_DATA_READER_SA,"
+echo "GCP_PREVIEW_SA, GCP_PIPELINE_SA, GCP_RESTORE_SA, GCP_MEDIA_SA,"
+echo "GCP_HOSTING_DEPLOY_SA). See docs/runbooks/new-environment.md, step 6."
 echo ""

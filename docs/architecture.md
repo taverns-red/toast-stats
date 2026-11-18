@@ -211,7 +211,7 @@ CDN URL structure: `https://cdn.taverns.red/snapshots/{date}/district_{id}_analy
 
 ### Authentication
 
-GitHub Actions authenticates to GCP via Workload Identity Federation (no service account keys). Setup: `scripts/setup-wif.sh`.
+GitHub Actions authenticates to GCP via Workload Identity Federation (no service account keys). Each workflow job signs in as its own identity with only the roles it needs: data reader, PR preview (in the staging Firebase project), data pipeline, data auto-restore, media, and production Hosting deploy. The job-to-identity table is `scripts/lib/gcpIdentityMap.ts`, and a test fails if a job uses another identity. `scripts/setup-wif.sh` creates only the WIF pool and provider. It creates no service account and grants no role (#3025). Rebuild order: `docs/runbooks/new-environment.md`.
 
 ---
 
