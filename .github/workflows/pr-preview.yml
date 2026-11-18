@@ -1,16 +1,19 @@
 # Per-PR Firebase Hosting preview channels (#554)
 #
 # Builds the frontend on every PR push and publishes it to a temporary
-# Firebase Hosting preview channel under the `staging` site. Posts (or
-# updates) a sticky PR comment with the live URL.
+# Firebase Hosting preview channel under the `staging` target, which is the
+# `toast-stats-staging` site in its own Firebase project (vars.FIREBASE_STAGING_PROJECT,
+# #2956). Posts (or updates) a sticky PR comment with the live URL.
 #
 # Channels auto-expire after 7 days. Closed/merged PRs are also reaped
 # explicitly on close by pr-preview-cleanup.yml (#741), so the staging
 # site's ~50-channel quota frees immediately rather than waiting on TTL.
 #
-# Re-uses the same Workload Identity Federation credentials that
-# .github/workflows/deploy.yml uses for production deploys, so no
-# additional IAM setup is required.
+# Identity (#2956, epic #2872 B1): signs in as the preview identity
+# (vars.GCP_PREVIEW_SA) through the same Workload Identity Federation provider
+# as deploy.yml. That identity holds Hosting rights only in the staging Firebase
+# project, so it can't release to the prod site. The deploy passes
+# --no-authorized-domains, so it makes no Firebase Auth call.
 #
 # Heavy smoke only once the PR is ready (#2101). Every Playwright spec and
 # the Lighthouse mobile gate below load the app from the channel, and that
@@ -204,11 +207,22 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+      # The auth action given an empty service account falls back to direct
+      # workload identity as the pull_request principal (#2956).
+      - name: Require the preview identity variable
+        env:
+          PREVIEW_SA: ${{ vars.GCP_PREVIEW_SA }}
+        run: |
+          if [ -z "${PREVIEW_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_PREVIEW_SA is empty"
+            exit 1
+          fi
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_PREVIEW_SA }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
@@ -231,7 +245,7 @@ jobs:
       - name: Preflight — Hosting site exists
         run: scripts/check-hosting-site.sh staging
         env:
-          PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+          PROJECT: ${{ vars.FIREBASE_STAGING_PROJECT }}
 
       - name: Deploy preview channel
         id: deploy
@@ -251,7 +265,8 @@ jobs:
           #   "Hosting site or target hosting:staging not detected"
           if ! firebase hosting:channel:deploy "$CHANNEL_ID" \
               --only "staging" \
-              --project "${{ secrets.GCP_PROJECT_ID }}" \
+              --project "${{ vars.FIREBASE_STAGING_PROJECT }}" \
+              --no-authorized-domains \
               --expires 7d \
               --json > /tmp/firebase-out.json 2> /tmp/firebase-err.log; then
             echo "::group::firebase stdout"

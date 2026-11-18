@@ -53,6 +53,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # An empty variable would fall through to the data reader, whose binding
+      # admits the main ref only, so the job would fail late and confusingly.
+      # Fail early with the cause on pull requests (#2956).
+      - name: Require the preview identity variable
+        if: github.event_name == 'pull_request'
+        env:
+          PREVIEW_SA: ${{ vars.GCP_PREVIEW_SA }}
+        run: |
+          if [ -z "${PREVIEW_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_PREVIEW_SA is empty"
+            exit 1
+          fi
+
       # A short-lived access token limited to the read-only storage scope,
       # and no credentials file: gcloud has no other credential to fall
       # back on, so even the service account's write role cannot be used.
@@ -63,9 +76,10 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           # Schedule and dispatch use the read-only data reader (#2872 B2),
           # whose binding admits the main ref only; dispatch from main.
-          # Pull requests keep the deploy identity until B1 gives them a
-          # preview one.
-          service_account: ${{ github.event_name == 'pull_request' && secrets.GCP_SERVICE_ACCOUNT || vars.GCP_DATA_READER_SA }}
+          # Pull requests use the preview identity (#2956, B1), which has
+          # read access to the staging bucket and Hosting rights in the
+          # staging Firebase project only.
+          service_account: ${{ github.event_name == 'pull_request' && vars.GCP_PREVIEW_SA || vars.GCP_DATA_READER_SA }}
           token_format: access_token
           access_token_scopes: https://www.googleapis.com/auth/devstorage.read_only
           access_token_lifetime: 600s

@@ -139,7 +139,9 @@ to be undone.
 ## Staging drill (design — not yet run)
 
 Goal: watch a deliberately broken release get rolled back on the `staging`
-Hosting site (`staging-toast-stats`, `https://staging-toast-stats.web.app`),
+Hosting site (`staging-toast-stats` in the prod project; PR previews moved to
+the `toast-stats-staging` project in #2956, so use a preview channel URL as
+`BASE_URL` below),
 with the same runners CI uses, and record the timings. Prod is not touched.
 It runs from Ron's local session, authenticated to the project
 (`gcloud auth application-default login`, or impersonating the CI service
@@ -147,7 +149,7 @@ account).
 
 ```bash
 export PROJECT=toast-stats-prod-6d64a
-export BASE_URL=https://staging-toast-stats.web.app
+export BASE_URL=https://toast-stats-staging--pr-<N>-<hash>.web.app  # a preview channel URL
 export CDN_BASE_URL=https://cdn.taverns.red
 OUT=$(mktemp); export GITHUB_OUTPUT=$OUT   # the runners write outputs here
 

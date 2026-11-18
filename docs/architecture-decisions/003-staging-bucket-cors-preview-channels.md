@@ -20,6 +20,11 @@ blocked the read. Result: preview channels rendered chrome but no charts, KPIs,
 or district analytics — making them **non-verifiable for any data-dependent PR**
 (surfaced live-auditing PR #579, the #572 sticky-KPI work).
 
+> **Update, 2026-11-18 (#2956):** PR previews now deploy to the
+> `toast-stats-staging` Firebase project, so new preview hosts look like
+> `toast-stats-staging--pr-<N>-<hash>.web.app`. The `*` origin below already
+> admits them. The `staging-toast-stats` hosts in this note are the old ones.
+
 ## Decision
 
 Set the staging bucket's CORS `origin` to the wildcard `["*"]` (GET/HEAD only).

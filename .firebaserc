@@ -12,6 +12,13 @@
           "staging-toast-stats"
         ]
       }
+    },
+    "toast-stats-staging": {
+      "hosting": {
+        "staging": [
+          "toast-stats-staging"
+        ]
+      }
     }
   }
 }

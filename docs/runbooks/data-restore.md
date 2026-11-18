@@ -472,7 +472,7 @@ echo '{}' | gcloud storage cp - "$STAGING/$OBJ" \
 
 # 4. Detect (read): expect cdn-data to fail (allow up to 300 s of edge cache,
 #    or purge the staging CDN — WRITE — to see it at once).
-CDN_BASE_URL=$CDN BASE_URL=https://staging-toast-stats.web.app \
+CDN_BASE_URL=$CDN BASE_URL=https://toast-stats-staging--pr-<N>-<hash>.web.app \
   SMOKE_RENDER=off SMOKE_WINDOW_SECONDS=120 npx tsx scripts/hosting-smoke.ts
 date -u +%FT%TZ   # detected at
 
@@ -498,7 +498,7 @@ for P in v1/latest.json "$OBJ"; do
   gcloud storage objects describe "$STAGING/$P" \
     --format="value(name,generation,creation_time,cache_control,content_encoding)"
 done
-CDN_BASE_URL=$CDN BASE_URL=https://staging-toast-stats.web.app \
+CDN_BASE_URL=$CDN BASE_URL=https://toast-stats-staging--pr-<N>-<hash>.web.app \
   SMOKE_RENDER=off SMOKE_WINDOW_SECONDS=60 npx tsx scripts/hosting-smoke.ts
 CDN_BASE_URL=$CDN npx tsx scripts/check-cdn-schema.ts
 date -u +%FT%TZ   # verified healthy at

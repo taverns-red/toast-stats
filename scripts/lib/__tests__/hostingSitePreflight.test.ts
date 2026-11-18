@@ -131,14 +131,27 @@ describe('workflow wiring (#1585)', () => {
     readFileSync(join(ROOT, '.github', 'workflows', name), 'utf8')
 
   it.each([
-    ['deploy.yml', 'production', /firebase deploy --only hosting:production/],
-    ['pr-preview.yml', 'staging', /firebase hosting:channel:deploy/],
-  ])('%s runs the %s preflight before deploying', (file, target, deployCmd) => {
-    const text = wf(file)
-    const preflight = text.indexOf(`scripts/check-hosting-site.sh ${target}`)
-    expect(preflight, 'preflight step present').toBeGreaterThan(-1)
-    expect(preflight).toBeLessThan(text.search(deployCmd))
-    expect(text).toMatch(/PROJECT: \$\{\{ secrets\.GCP_PROJECT_ID \}\}/)
-    expect(text).not.toMatch(/hosting:sites:create/)
-  })
+    [
+      'deploy.yml',
+      'production',
+      /firebase deploy --only hosting:production/,
+      /PROJECT: \$\{\{ secrets\.GCP_PROJECT_ID \}\}/,
+    ],
+    [
+      'pr-preview.yml',
+      'staging',
+      /firebase hosting:channel:deploy/,
+      /PROJECT: \$\{\{ vars\.FIREBASE_STAGING_PROJECT \}\}/,
+    ],
+  ])(
+    '%s runs the %s preflight before deploying',
+    (file, target, deployCmd, projectEnv) => {
+      const text = wf(file)
+      const preflight = text.indexOf(`scripts/check-hosting-site.sh ${target}`)
+      expect(preflight, 'preflight step present').toBeGreaterThan(-1)
+      expect(preflight).toBeLessThan(text.search(deployCmd))
+      expect(text).toMatch(projectEnv)
+      expect(text).not.toMatch(/hosting:sites:create/)
+    }
+  )
 })

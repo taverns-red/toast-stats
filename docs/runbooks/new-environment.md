@@ -11,6 +11,13 @@ project. A `firebase deploy` into a project without its site fails with
 `404 Site Not Found`. Site creation used to happen implicitly, and
 `staging-toast-stats` was created by hand. It is now an explicit step (3).
 
+> **Staging is its own project (#2956).** PR previews deploy to the
+> `toast-stats-staging` Firebase project, site `toast-stats-staging`, as the
+> preview identity (`vars.GCP_PREVIEW_SA`), so that identity has no Hosting
+> rights in prod. The `staging-toast-stats` site named below is the old one in
+> the prod project. It stays until it is retired. A rebuild of staging follows
+> the same steps with the staging project id and `--site staging=toast-stats-staging`.
+
 > **Shared project caveat.** `toast-stats-prod-6d64a` also hosts other Red
 > Taverns sites (`red-club-prod`, `taverns-red-portal`) and other products'
 > service accounts. Rebuilding _that_ project is a multi-product event; this

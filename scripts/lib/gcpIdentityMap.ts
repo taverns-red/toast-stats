@@ -10,6 +10,8 @@
  * Identity variables seen today:
  * - DEPLOYER: `secrets.GCP_SERVICE_ACCOUNT`, the single shared deploy identity.
  * - DATA_READER: `vars.GCP_DATA_READER_SA`, the read-only identity (#2866).
+ * - PREVIEW: `vars.GCP_PREVIEW_SA`, the PR preview identity. It lives in the
+ *   staging Firebase project, so it can't release to the prod site (#2956).
  */
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -17,6 +19,7 @@ import { parse } from 'yaml'
 
 export const DEPLOYER = 'secrets.GCP_SERVICE_ACCOUNT'
 export const DATA_READER = 'vars.GCP_DATA_READER_SA'
+export const PREVIEW = 'vars.GCP_PREVIEW_SA'
 
 /**
  * An identity chosen by event: `<event>` runs use `whenEvent`, every other
@@ -43,7 +46,7 @@ export const READER_GUARD_EXEMPT: Record<string, string> = {
 }
 
 /** The identity variables an EXPECTED value may be built from. */
-export const KNOWN_IDENTITIES = [DEPLOYER, DATA_READER]
+export const KNOWN_IDENTITIES = [DEPLOYER, DATA_READER, PREVIEW]
 
 /** Every job that runs google-github-actions/auth -> its one identity. */
 export const EXPECTED: Record<string, string> = {
@@ -62,14 +65,13 @@ export const EXPECTED: Record<string, string> = {
   'deploy.yml::deploy-frontend': DEPLOYER,
   'education-timeline-backfill.yml::backfill': DEPLOYER,
   'gap-district-prune.yml::prune': DEPLOYER,
-  // Pull requests keep the deploy identity until B1 gives them a preview one.
   'harness-staging-canary.yml::canary': byEvent(
     'pull_request',
-    DEPLOYER,
+    PREVIEW,
     DATA_READER
   ),
-  'pr-preview-cleanup.yml::cleanup': DEPLOYER,
-  'pr-preview.yml::preview': DEPLOYER,
+  'pr-preview-cleanup.yml::cleanup': PREVIEW,
+  'pr-preview.yml::preview': PREVIEW,
   'validate-vs-ceo-report.yml::validate': DATA_READER,
   'videos-publish.yml::publish': DEPLOYER,
 }
