@@ -78,8 +78,11 @@ export function latestPerCheck(checks: PrCheck[]): PrCheck[] {
   return [...latest.values()]
 }
 
-export function summarizeChecks(checks: PrCheck[]): CheckSummary {
-  const latest = latestPerCheck(dropSupersededRunChecks(checks))
+export function summarizeChecks(
+  checks: PrCheck[],
+  eligibleRunIds?: ReadonlySet<number>
+): CheckSummary {
+  const latest = latestPerCheck(dropSupersededRunChecks(checks, eligibleRunIds))
   const by = (b: string) => latest.filter(c => c.bucket === b)
   const failures = by('fail')
   const cancelledChecks = by('cancel')
@@ -168,6 +171,7 @@ function isGraphQlBlocked(err: CommandError): boolean {
 
 /** The fields of a workflow run (`GET /repos/{o}/{r}/actions/runs`) read here. */
 export interface WorkflowRun {
+  id?: number
   name?: string | null
   check_suite_id: number
   status?: string | null
@@ -305,13 +309,35 @@ function runIdOf(link: string): number | undefined {
  * Fails closed: the newer run must have produced a verdict (a row that isn't
  * skipped), or an all-skipped no-op run would hide a real cancelled run. A
  * newer cancelled or pending run still counts, and its own rows stay.
+ *
+ * Also fails closed on names: a newer run that has a row of the same
+ * (workflow, name) at all, even a skipped one, never retires the cancelled
+ * row; that pair is already folded by name. A skipped `Smoke (1)` in a newer
+ * label-event run must not hide a cancelled `Smoke (1)`. Only an unexpanded
+ * name with no counterpart is retired.
+ *
+ * `eligibleRunIds`, when given (REST, where the run's event and PRs are
+ * known), limits which newer runs may retire anything: those of this PR's own
+ * pull_request / pull_request_target runs, as in #2910. Over GraphQL it is
+ * absent and any newer run of the workflow counts.
  */
-export function dropSupersededRunChecks(checks: PrCheck[]): PrCheck[] {
-  // Newest run id with a verdict, per workflow.
+export function dropSupersededRunChecks(
+  checks: PrCheck[],
+  eligibleRunIds?: ReadonlySet<number>
+): PrCheck[] {
+  // Newest eligible run id with a verdict, per workflow.
   const newestWithVerdict = new Map<string, number>()
+  // Newest run id carrying a row of this name, any state, per workflow+name.
+  const newestWithName = new Map<string, number>()
+  const nameKey = (c: PrCheck) => `${c.workflow}\u0000${c.name}`
   for (const c of checks) {
     const id = runIdOf(c.link)
-    if (id === undefined || c.bucket === 'skipping') continue
+    if (id === undefined) continue
+    if (id > (newestWithName.get(nameKey(c)) ?? 0)) {
+      newestWithName.set(nameKey(c), id)
+    }
+    if (c.bucket === 'skipping') continue
+    if (eligibleRunIds && !eligibleRunIds.has(id)) continue
     if (id > (newestWithVerdict.get(c.workflow) ?? 0)) {
       newestWithVerdict.set(c.workflow, id)
     }
@@ -321,8 +347,27 @@ export function dropSupersededRunChecks(checks: PrCheck[]): PrCheck[] {
     // Only a cancelled row is retired: a pass or fail from an older run is
     // evidence the existing name folding already weighs.
     if (id === undefined || !c.workflow || c.bucket !== 'cancel') return true
+    if ((newestWithName.get(nameKey(c)) ?? 0) > id) return true
     return id >= (newestWithVerdict.get(c.workflow) ?? 0)
   })
+}
+
+/** Ids of this PR's own pull_request runs, for `dropSupersededRunChecks`. */
+function eligibleRunIdsFor(
+  runs: WorkflowRun[] | undefined,
+  pr: number
+): Set<number> | undefined {
+  if (!runs) return undefined
+  return new Set(
+    runs
+      .filter(
+        r =>
+          r.id !== undefined &&
+          PR_EVENTS.has(r.event ?? '') &&
+          (r.pull_requests ?? []).some(p => p.number === pr)
+      )
+      .map(r => r.id as number)
+  )
 }
 
 /**
@@ -590,7 +635,10 @@ export async function ciWait(
   for (;;) {
     const fo = { ...opts, runner, sleep }
     let read = await fetchPrChecksFull(pr, fo)
-    let summary = summarizeChecks(read.checks)
+    let summary = summarizeChecks(
+      read.checks,
+      eligibleRunIdsFor(read.workflowRuns, pr)
+    )
     polls++
     opts.onProgress?.(summary)
     let merge: MergeState | undefined
@@ -606,7 +654,10 @@ export async function ciWait(
       } else {
         const before = await fetchMergeState(pr, fo)
         read = await fetchPrChecksFull(pr, fo)
-        summary = summarizeChecks(read.checks)
+        summary = summarizeChecks(
+          read.checks,
+          eligibleRunIdsFor(read.workflowRuns, pr)
+        )
         merge = read.pull
           ? mergeStateFromPull(read.pull)
           : await fetchMergeState(pr, fo)
