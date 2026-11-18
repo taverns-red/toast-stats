@@ -3,26 +3,21 @@
  * check-video-urls — confirm every how-to video the /videos page lists is
  * live on the CDN (#2310).
  *
- * Usage: npm run videos:check-urls
+ * Usage: npm run videos:check-urls, or `node scripts/check-video-urls.ts`
  *
  * Reads the catalogue (frontend/src/content/howToVideos.ts) and requests the
  * first byte of each desktop and mobile MP4. 200 or 206 passes; anything else
  * fails. Prints one JSON result per URL on stdout (R4: diagnostics on stderr)
  * and exits 1 when any URL fails, so run it before adding an entry.
  */
-import { HOW_TO_VIDEOS } from '../frontend/src/content/howToVideos'
-import { describeFailures, type VideoUrlResult } from './lib/videoUrlCheck'
-
-async function probe(url: string): Promise<number | null> {
-  try {
-    const res = await fetch(url, { headers: { Range: 'bytes=0-0' } })
-    await res.body?.cancel()
-    return res.status
-  } catch (err) {
-    console.error(`check-video-urls: ${url}: ${String(err)}`)
-    return null
-  }
-}
+// The .ts extensions let plain `node` (type stripping, no npm install) run
+// this file in the post-deploy verify job (#2899).
+import { HOW_TO_VIDEOS } from '../frontend/src/content/howToVideos.ts'
+import {
+  describeFailures,
+  probeUrl,
+  type VideoUrlResult,
+} from './lib/videoUrlCheck.ts'
 
 const checks = HOW_TO_VIDEOS.flatMap(v => [
   { id: v.id, cut: 'desktop' as const, url: v.desktopUrl },
@@ -32,7 +27,7 @@ const checks = HOW_TO_VIDEOS.flatMap(v => [
 async function main(): Promise<void> {
   const results: VideoUrlResult[] = await Promise.all(
     checks.map(async c => {
-      const status = await probe(c.url)
+      const status = await probeUrl(c.url)
       return { ...c, status, ok: status === 200 || status === 206 }
     })
   )
