@@ -97,6 +97,27 @@ const blocked = [
   'gh run watch 1 --interval "30"',
   // text after a heredoc operator on its line is still a command
   'cat <<EOF | gh run watch 1\nbody\nEOF',
+  // #2918 security re-review: inside `$( )` bash ends the heredoc at a line
+  // `DELIM)`, so a later bare DELIM must not hide the command
+  'x=$(cat <<EOF\nbody\nEOF)\ngh run watch 1\nEOF',
+  ...[
+    ['A-B', 'A-B'],
+    ['E.x', 'E.x'],
+    ['E"F"', 'EF'],
+    ['"E"F', 'EF'],
+    ["'E'F", 'EF'],
+    ['\\EOF', 'EOF'],
+    ['E\\F', 'EF'],
+    ['"E F"', 'E F'],
+  ].map(([d, t]) => `x=$(cat <<${d}\nbody\n${t})\ngh run watch 1\n${t}`),
+  'x=$(cat <<A-B\nbody\nA-B )\ngh run watch 1\nA-B',
+  'x=$(cat <<A-B\nbody\nA-B\r)\ngh run watch 1\nA-B',
+  'x=$(cat <<-A-B\nbody\n\tA-B)\ngh run watch 1\nA-B',
+  // #2918 security re-review: `<<` inside `$[ ]` and `${ }` is no heredoc
+  'echo $[1<<y]\ngh run watch 1\ny]',
+  'echo ${a:-<<x}\ngh run watch 1\nx}',
+  'echo $[1<< y ]\ngh run watch 1\ny ]',
+  'echo ${a:-<< x }\ngh run watch 1\nx }',
 ]
 
 const allowed = [
