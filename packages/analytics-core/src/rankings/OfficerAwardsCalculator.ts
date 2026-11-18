@@ -3,16 +3,17 @@
  *
  * Computes two officer-specific district awards:
  *
- * - **Excellence in Education & Training** (PQD role):
+ * - **District Program Quality Award** (PQD role):
  *   85% of Area and Division Directors trained AND the district meets the
  *   Distinguished goal for number of Distinguished clubs (#1612) — not full
  *   Distinguished District status (growth goals and the other
  *   prerequisites are not required)
  *
- * - **Excellence in Club Growth** (CGD role):
+ * - **District Club Growth Award** (CGD role):
  *   District meets Distinguished goals in club growth (1%+) AND
  *   membership payments growth (1%+)
  *
+ * Award names: DRP Item 1490 Rev. 07/2026 p. 16 (#2907).
  * Source: Item 1490, Rev. 04/2025
  */
 
