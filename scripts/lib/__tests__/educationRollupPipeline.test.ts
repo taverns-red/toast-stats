@@ -158,6 +158,45 @@ function readObject(objectPath: string): unknown {
   )
 }
 
+/**
+ * #2989: build "the state after one run" once, for a describe's beforeAll.
+ * `setup` stages the bucket (it runs with the globals pointed at a private
+ * directory); the script then runs once there. Each test copies the result
+ * back with `restorePrimed` and spawns the script only for the behaviour
+ * under test. Every spawn costs ~1.5 s idle and 5 to 11 s under load.
+ */
+function primeRun(
+  setup: () => void,
+  env: (dir: string) => Record<string, string> = () => ({})
+): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'education-rollup-primed-'))
+  const saved = { tmp, root, shimLog, summary, manifest }
+  tmp = dir
+  root = path.join(dir, 'gcs')
+  shimLog = path.join(dir, 'gcloud.log')
+  summary = path.join(dir, 'summary.md')
+  manifest = path.join(dir, 'written.jsonl')
+  try {
+    fs.mkdirSync(path.join(root, BUCKET), { recursive: true })
+    setup()
+    const r = runScript(env(dir))
+    if (r.status !== 0) throw new Error(`priming run failed: ${r.stderr}`)
+  } finally {
+    ;({ tmp, root, shimLog, summary, manifest } = saved)
+  }
+  return dir
+}
+
+/** Copy a primed state (bucket and, if any, ledger seed) into this test. */
+function restorePrimed(dir: string): void {
+  fs.cpSync(path.join(dir, 'gcs'), root, { recursive: true })
+  if (fs.existsSync(path.join(dir, 'seed'))) {
+    fs.cpSync(path.join(dir, 'seed'), path.join(tmp, 'seed'), {
+      recursive: true,
+    })
+  }
+}
+
 function lines(file: string): string[] {
   return fs.existsSync(file)
     ? fs.readFileSync(file, 'utf-8').split('\n').filter(Boolean)
@@ -429,16 +468,66 @@ describe('build-education-rollup.sh: the education timeline (#2591)', () => {
     )
 
   // #2989: tests that need "the state after one run" start from it instead
-  // of spawning the script to make it.
+  // of spawning the script to make it. Here the first run is only setup.
   describe('from the state a priming run left (#2989)', () => {
-    it('after a same-day run, the timeline files exist and no script has run in this test', () => {
-      expect(timelineObjects()).toContain(WORLD)
-      expect(lines(shimLog)).toEqual([])
+    describe('after a same-day run (the day before already in the bucket)', () => {
+      let primed: string
+      beforeAll(() => {
+        primed = primeRun(() => {
+          seedAll()
+          putFiles('2026-2027', filesAt('2026-2027', '2026-10-11'))
+        })
+      })
+      afterAll(() => fs.rmSync(primed, { recursive: true, force: true }))
+      beforeEach(() => restorePrimed(primed))
+
+      it('starts with the timeline files in the bucket and no script run of its own', () => {
+        expect(timelineObjects()).toContain(WORLD)
+        expect(lines(shimLog)).toEqual([])
+      })
+
+      it('re-running the same day writes no timeline file at all', () => {
+        const once = timelineObjects().map(o =>
+          fs.readFileSync(path.join(root, BUCKET, o), 'utf-8')
+        )
+        expect(runScript().status).toBe(0)
+        expect(timelineUploads()).toEqual([])
+        expect(
+          timelineObjects().map(o =>
+            fs.readFileSync(path.join(root, BUCKET, o), 'utf-8')
+          )
+        ).toEqual(once)
+      })
     })
 
-    it('after a first run, the rollup index exists and no script has run in this test', () => {
-      expect(rollupObjects()).toContain(`${PREFIX}index.json`)
-      expect(lines(shimLog)).toEqual([])
+    describe('after a first run', () => {
+      let primed: string
+      beforeAll(() => {
+        primed = primeRun(seedAll)
+      })
+      afterAll(() => fs.rmSync(primed, { recursive: true, force: true }))
+      beforeEach(() => restorePrimed(primed))
+
+      it('starts with the rollup index in the bucket and no script run of its own', () => {
+        expect(rollupObjects()).toContain(`${PREFIX}index.json`)
+        expect(lines(shimLog)).toEqual([])
+      })
+
+      it('a bad file keeps the previous index row for its PY and says ::error:: (review fix 2)', () => {
+        const before = EducationRollupIndexSchema.parse(
+          readObject(`${PREFIX}index.json`)
+        ).timelines
+        expect(before).toHaveLength(1)
+        putJson(WORLD, { not: 'a timeline' })
+        const r = runScript()
+        expect(r.status, r.stderr).toBe(0)
+        expect(r.stderr).toMatch(/::error::.*education timeline.*2026-2027/)
+        expect(
+          EducationRollupIndexSchema.parse(readObject(`${PREFIX}index.json`))
+            .timelines
+        ).toEqual(before)
+        expect(readObject(WORLD)).toEqual({ not: 'a timeline' })
+      })
     })
   })
 
@@ -498,23 +587,6 @@ describe('build-education-rollup.sh: the education timeline (#2591)', () => {
       ).toEqual(['2026-10-11', '2026-10-12'])
       expect(e.points[0]).toEqual(earlier.get(name)?.points[0])
     }
-  })
-
-  it('re-running the same day writes no timeline file at all', () => {
-    seedAll()
-    putFiles('2026-2027', filesAt('2026-2027', '2026-10-11'))
-    expect(runScript().status).toBe(0)
-    const once = timelineObjects().map(o =>
-      fs.readFileSync(path.join(root, BUCKET, o), 'utf-8')
-    )
-    fs.rmSync(shimLog, { force: true })
-    expect(runScript().status).toBe(0)
-    expect(timelineUploads()).toEqual([])
-    expect(
-      timelineObjects().map(o =>
-        fs.readFileSync(path.join(root, BUCKET, o), 'utf-8')
-      )
-    ).toEqual(once)
   })
 
   it('an entity that did not report today is not rewritten', () => {
@@ -622,24 +694,6 @@ describe('build-education-rollup.sh: the education timeline (#2591)', () => {
     expect(timelineReads().join('\n')).not.toContain('/2025-2026/*.json')
   })
 
-  it('a bad file keeps the previous index row for its PY and says ::error:: (review fix 2)', () => {
-    seedAll()
-    expect(runScript().status).toBe(0)
-    const before = EducationRollupIndexSchema.parse(
-      readObject(`${PREFIX}index.json`)
-    ).timelines
-    expect(before).toHaveLength(1)
-    putJson(WORLD, { not: 'a timeline' })
-    const r = runScript()
-    expect(r.status, r.stderr).toBe(0)
-    expect(r.stderr).toMatch(/::error::.*education timeline.*2026-2027/)
-    expect(
-      EducationRollupIndexSchema.parse(readObject(`${PREFIX}index.json`))
-        .timelines
-    ).toEqual(before)
-    expect(readObject(WORLD)).toEqual({ not: 'a timeline' })
-  })
-
   it('a transfer error on another PY world.json fails closed with nothing uploaded (review fix 2)', () => {
     seedAll()
     putFiles('2026-2027', filesAt('2026-2027', '2026-10-11'))
@@ -704,31 +758,12 @@ describe('build-education-rollup.sh: a seeded ledger (EDUCATION_LEDGER_DIR, #210
   describe('from a primed seed (#2989)', () => {
     let primed: string
     beforeAll(() => {
-      primed = fs.mkdtempSync(
-        path.join(os.tmpdir(), 'education-rollup-primed-')
-      )
-      const saved = { tmp, root, shimLog, summary, manifest }
-      tmp = primed
-      root = path.join(primed, 'gcs')
-      shimLog = path.join(primed, 'gcloud.log')
-      summary = path.join(primed, 'summary.md')
-      manifest = path.join(primed, 'written.jsonl')
-      try {
-        fs.mkdirSync(path.join(root, BUCKET), { recursive: true })
-        seedAll()
-        const r = runScript({ EDUCATION_LEDGER_DIR: path.join(primed, 'seed') })
-        if (r.status !== 0) throw new Error(`priming run failed: ${r.stderr}`)
-      } finally {
-        ;({ tmp, root, shimLog, summary, manifest } = saved)
-      }
+      primed = primeRun(seedAll, dir => ({
+        EDUCATION_LEDGER_DIR: path.join(dir, 'seed'),
+      }))
     })
-    afterAll(() => {
-      fs.rmSync(primed, { recursive: true, force: true })
-    })
-    beforeEach(() => {
-      fs.cpSync(path.join(primed, 'gcs'), root, { recursive: true })
-      fs.cpSync(path.join(primed, 'seed'), seed, { recursive: true })
-    })
+    afterAll(() => fs.rmSync(primed, { recursive: true, force: true }))
+    beforeEach(() => restorePrimed(primed))
 
     it('starts from the seed and rollup the priming run built, with no script run of its own', () => {
       expect(fs.existsSync(seedFile('2018-2019/district_111.json'))).toBe(true)
