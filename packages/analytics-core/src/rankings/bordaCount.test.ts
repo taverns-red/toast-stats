@@ -4,7 +4,10 @@
  * These pure functions are the single home for the category + aggregate
  * Borda algorithm previously duplicated between
  * `BordaCountRankingCalculator` (analytics-core) and `TransformService`
- * (collector-cli). See tasks/lessons/061 + 076.
+ * (collector-cli). See
+ * tasks/lessons/archive/lessons/fix-the-formula-everywhere-not-just-the-one-in-the-bug-report.md
+ * and
+ * tasks/lessons/archive/lessons/shared-formula-helper-eliminates-the-two-copies-trap.md.
  */
 
 import { describe, it, expect } from 'vitest'

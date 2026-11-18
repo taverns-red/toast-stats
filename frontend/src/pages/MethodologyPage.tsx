@@ -385,9 +385,7 @@ const MethodologyPage: React.FC = () => {
             <li>
               <strong>Charter date parsing</strong> — historical charter dates
               in <code>district-performance.csv</code> use a 2-digit year format
-              (<code>04/15/26</code>); the parser explicitly handles this. See{' '}
-              <code>tasks/lessons/archive/lessons.md</code> Lesson 47 for
-              context.
+              (<code>04/15/26</code>); the parser explicitly handles this.
             </li>
             <li>
               <strong>Ties in the Top-3 awards</strong> — Toastmasters names
