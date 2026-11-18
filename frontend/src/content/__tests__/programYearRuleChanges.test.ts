@@ -90,6 +90,15 @@ describe('programYearRuleChanges — the verified inventory (#1400)', () => {
     expect(change?.comparability).toMatch(/like-for-like|comparable/i)
   })
 
+  // #2907: Item 1490 Rev. 07/2026 p. 8 words the 2026-27 credit as
+  // "exploration completion"; the entry must give TI's wording as well as the
+  // dashboard's Online Meeting Mastery name.
+  it('gives the Item 1490 wording "exploration completion" with its page (#2907)', () => {
+    const change = byId('py-2026-2027-dcp-goals-2-3-eom')
+    expect(change?.whatChanged).toMatch(/exploration completion/i)
+    expect(change?.whatChanged).toMatch(/Item 1490 Rev\. 07\/2026, p\. 8/)
+  })
+
   it('claims the Club Growth Achievement predicate and says the blank years are a rules artefact', () => {
     const change = byId('py-2026-2027-district-club-growth-achievement')
     // The `sources` claim is what pacifies the drift guard — a PY-gated file
