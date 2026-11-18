@@ -21,17 +21,34 @@ const read = (rel: string): string =>
 
 const MAX_ACTIVE_RULES = 20
 
+const ruleHeadings = (text: string): RegExpMatchArray[] => [
+  ...text.matchAll(/^\*\*R(\d+) — (.+?)\*\*/gm),
+]
+const activeRuleHeadings = (text: string): RegExpMatchArray[] =>
+  ruleHeadings(text).filter(m => !/^Retired/i.test(m[2]))
+
 describe('tasks/rules.md is a short rule set (#2950)', () => {
   const rules = read('tasks/rules.md')
-  const heads = [...rules.matchAll(/^\*\*R(\d+) — (.+?)\*\*/gm)]
+  const heads = ruleHeadings(rules)
 
   it('lists rules by number', () => {
     expect(heads.length).toBeGreaterThan(0)
   })
 
   it(`has at most ${MAX_ACTIVE_RULES} active rules`, () => {
-    const active = heads.filter(m => !/^Retired/i.test(m[2]))
+    const active = activeRuleHeadings(rules)
     expect(active.length).toBeLessThanOrEqual(MAX_ACTIVE_RULES)
+  })
+
+  it('counts a rule heading however it is punctuated', () => {
+    const sample = [
+      '**R25: A colon heading**',
+      '**R26 - A hyphen heading**',
+      '**R27 — Retired, see archive.**',
+      '**R28 — A normal heading**',
+    ].join('\n')
+    const active = activeRuleHeadings(sample)
+    expect(active.map(m => m[1])).toEqual(['25', '26', '28'])
   })
 
   it('keeps R5 as a retired stub so old citations still resolve', () => {
