@@ -41,6 +41,9 @@ const FULL: Scenario = {
 }
 const HELD: Scenario = { ...FULL, held: [GAP_DATE] }
 // The two examples make sure removals really happen; the rest vary around them.
+// The space is 32 scenarios, and sampling stays (#2934): running all 32 through
+// the three properties took about 30 s here (each promote spawns the bash shim,
+// about 0.3 s), against a 10 s budget for this suite.
 const RUN = {
   seed: 2930,
   numRuns: 4,
@@ -222,6 +225,16 @@ function recordSet(file: string): string[] {
   ].sort()
 }
 
+/** The record's lines in the order the runner appended them. */
+function recordLines(file: string): { path: string; kind: string }[] {
+  if (!fs.existsSync(file)) return []
+  return fs
+    .readFileSync(file, 'utf-8')
+    .split('\n')
+    .filter(l => l.trim() !== '')
+    .map(l => JSON.parse(l) as { path: string; kind: string })
+}
+
 beforeEach(() => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'promote-property-'))
   root = path.join(tmp, 'gcs')
@@ -255,11 +268,19 @@ describe('promote-run-manifest properties (#2930)', () => {
         expect(first.status, first.stderr).toBeLessThan(2)
         const prodOnce = tree(PROD)
         const recordOnce = recordSet(record)
+        const linesOnce = recordLines(record)
 
         const second = await promote(env)
         expect(second.status, second.stderr).toBeLessThan(2)
         expect(tree(PROD)).toEqual(prodOnce)
         expect(recordSet(record)).toEqual(recordOnce)
+        // A re-run may append lines (the runner appends, the planner dedupes
+        // by path), but only prune prefixes: a gap object is gone after the
+        // first run, so there is nothing left to record for it (#2934).
+        for (const added of recordLines(record).slice(linesOnce.length)) {
+          expect(added.kind, `re-run recorded ${added.path}`).toBe('prune')
+          expect(added.path.endsWith('/'), added.path).toBe(true)
+        }
       }),
       RUN
     )
@@ -286,15 +307,8 @@ describe('promote-run-manifest properties (#2930)', () => {
         }
         // Write then read: every line the runner wrote is a record the plan
         // reader accepts, with the same path and kind.
-        const lines = fs.existsSync(record)
-          ? fs
-              .readFileSync(record, 'utf-8')
-              .split('\n')
-              .filter(l => l.trim() !== '')
-              .map(l => JSON.parse(l) as { path: string; kind: string })
-          : []
         expect(records).toEqual(
-          lines.map(l => ({ path: l.path, kind: l.kind }))
+          recordLines(record).map(l => ({ path: l.path, kind: l.kind }))
         )
       }),
       RUN
