@@ -36,6 +36,8 @@ export interface IdentityExpectation {
 
 export interface Mismatch {
   bucket: string
+  /** Set for an object-level check; absent for a bucket-level one. */
+  object?: string
   permission: string
   problem: 'missing-grant' | 'unexpected-grant'
 }
@@ -60,23 +62,51 @@ const MEDIA_DENIED = [
   'storage.buckets.setIamPolicy',
 ]
 
+// Probe paths for the media identity: one inside the allowed prefixes, one
+// outside. The prefixes are already public in the workflow paths.
+const MEDIA_PROBE_INSIDE = 'videos/identity-smoke/probe.mp4'
+const MEDIA_PROBE_OUTSIDE = 'identity-smoke/outside-prefix/probe'
+
 export const IDENTITY_EXPECTATIONS: Record<string, IdentityExpectation> = {
   // The video publish and basemap build identity (#2972): create-only under
   // the videos/ and basemap/ prefixes of both data buckets, plus read on the
-  // staging prefixes. Listing is not asserted: a public read grant on prod
-  // can add it, and prefix conditions do not cover it.
+  // staging prefixes. The grants are conditioned on the object name, so
+  // buckets.testIamPermissions cannot show them: the bucket level asserts the
+  // denied set only, and objectChecks ask about one path inside the prefixes
+  // and one outside. Listing is not asserted: a public read grant on prod can
+  // add it. The probe paths need not exist (a 404 fails the smoke closed).
   media: {
     identity: 'media',
     buckets: {
-      [PROD_DATA_BUCKET]: {
-        granted: ['storage.objects.create'],
-        denied: MEDIA_DENIED,
-      },
-      [STAGING_DATA_BUCKET]: {
-        granted: ['storage.objects.create', 'storage.objects.get'],
-        denied: MEDIA_DENIED,
-      },
+      [PROD_DATA_BUCKET]: { granted: [], denied: MEDIA_DENIED },
+      [STAGING_DATA_BUCKET]: { granted: [], denied: MEDIA_DENIED },
     },
+    objectChecks: [
+      {
+        bucket: PROD_DATA_BUCKET,
+        object: MEDIA_PROBE_INSIDE,
+        granted: ['storage.objects.create'],
+        denied: ['storage.objects.delete', 'storage.objects.update'],
+      },
+      {
+        bucket: PROD_DATA_BUCKET,
+        object: MEDIA_PROBE_OUTSIDE,
+        granted: [],
+        denied: ['storage.objects.create'],
+      },
+      {
+        bucket: STAGING_DATA_BUCKET,
+        object: MEDIA_PROBE_INSIDE,
+        granted: ['storage.objects.create', 'storage.objects.get'],
+        denied: ['storage.objects.delete', 'storage.objects.update'],
+      },
+      {
+        bucket: STAGING_DATA_BUCKET,
+        object: MEDIA_PROBE_OUTSIDE,
+        granted: [],
+        denied: ['storage.objects.create'],
+      },
+    ],
   },
   // The data auto-restore execute identity (#2964): object access including
   // restore on prod, read on staging, no bucket metadata or IAM anywhere.
@@ -125,9 +155,31 @@ export const permissionsToTest = (b: BucketExpectation): string[] => [
 export const evaluate = (
   expected: IdentityExpectation,
   actualByBucket: Record<string, string[]>,
-  _actualByObject: Record<string, string[]> = {}
+  actualByObject: Record<string, string[]> = {}
 ): Evaluation => {
   const mismatches: Mismatch[] = []
+  for (const oc of expected.objectChecks ?? []) {
+    const held = new Set(actualByObject[`${oc.bucket}/${oc.object}`] ?? [])
+    const { bucket, object } = oc
+    for (const permission of oc.granted) {
+      if (!held.has(permission))
+        mismatches.push({
+          bucket,
+          object,
+          permission,
+          problem: 'missing-grant',
+        })
+    }
+    for (const permission of oc.denied) {
+      if (held.has(permission))
+        mismatches.push({
+          bucket,
+          object,
+          permission,
+          problem: 'unexpected-grant',
+        })
+    }
+  }
   for (const [bucket, exp] of Object.entries(expected.buckets)) {
     const held = new Set(actualByBucket[bucket] ?? [])
     for (const permission of exp.granted) {
