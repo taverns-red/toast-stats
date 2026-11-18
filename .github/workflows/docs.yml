@@ -3,13 +3,13 @@ name: Docs
 # Fast gate for documentation-only changes (#1375).
 #
 # `ci.yml` deliberately skips markdown/docs so a typo does not pay for the
-# 15-minute frontend suite. But three of its gates DO cover markdown:
-#   - lessons INDEX.md generation (Test Suite -> Run scripts/lib tests)
+# 15-minute frontend suite. But two of its gates DO cover markdown:
 #   - prettier --check "**/*.md"  (Quality Gates -> format check)
 #   - yamllint ... docs/  (Quality Gates -> lint:yaml)
 # Without this job a docs-only PR merges completely ungated, and its defect
 # goes red on the NEXT code PR, on files that author never touched (this
-# happened: the INDEX drift gate blocked #1369 and #1371 until #1372).
+# happened: the lessons INDEX drift gate, since retired in #2950, blocked
+# #1369 and #1371 until #1372).
 #
 # Push to main only (#2607). On pull requests the same steps run as the
 # `Docs Gate` job inside ci.yml, so the required `CI Gate` job can `needs:` it.
@@ -46,20 +46,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      # Deliberately FIRST and dependency-free: the drift gate is pure bash.
-      # Putting it behind `npm ci` would triple this job for no benefit, and
-      # the whole point of this workflow is that it stays fast enough that
-      # nobody wants to path-filter it away again.
-      # INDEX.md is generated on read, not committed (#2455), so there is no
-      # copy to drift. Generating it still fails on a lesson missing
-      # date/summary frontmatter, and --check then proves the run is stable.
-      - name: 'Check lessons INDEX.md generates (#1375, #2455)'
-        env:
-          LESSONS_DIR: tasks/lessons
-        run: |
-          bash scripts/lessons-index.sh
-          bash scripts/lessons-index.sh --check
-
+      # Dependency-free steps stay cheap: this workflow has to stay fast enough
+      # that nobody wants to path-filter it away again.
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
@@ -68,8 +56,8 @@ jobs:
       # Whole-repo markdown, not just the changed files: it is exactly the md
       # coverage `npm run format:check` has in Quality Gates, it needs no diff
       # base (so `push` and `pull_request` behave identically), and it costs
-      # ~5s. `.prettierignore` still applies -- note tasks/lessons/ is excluded
-      # there on purpose, so lesson prose is covered by the drift gate only.
+      # ~5s. `.prettierignore` still applies -- note tasks/lessons/ (the
+      # archive) is excluded there on purpose.
       #
       # prettier is fetched standalone rather than via `npm ci` (~1 package vs
       # the full monorepo). The range is read from package.json so this can

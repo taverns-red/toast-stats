@@ -60,8 +60,6 @@
     "pipeline:step": "npx tsx scripts/prune-month-end-pipeline.ts",
     "pipeline:local": "tsx scripts/pipeline-local.ts",
     "cdn:proxy": "node scripts/dev/cdn-cors-proxy.mjs",
-    "lessons:index": "LESSONS_DIR=tasks/lessons bash scripts/lessons-index.sh",
-    "lessons:index:check": "LESSONS_DIR=tasks/lessons bash scripts/lessons-index.sh --check",
     "seo:generate": "npx tsx scripts/generate-seo-assets.ts",
     "seo:check": "npx tsx scripts/generate-seo-assets.ts --check",
     "videos:capture": "npm run capture --workspace=@taverns-red/videos --",
