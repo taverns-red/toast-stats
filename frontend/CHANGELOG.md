@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.69.3](https://github.com/taverns-red/toast-stats/compare/frontend-v3.69.2...frontend-v3.69.3) (2026-11-18)
+
+
+### Bug Fixes
+
+* **copy:** rename Red Vote to RT Vote in visible text ([#2968](https://github.com/taverns-red/toast-stats/issues/2968)) ([#2969](https://github.com/taverns-red/toast-stats/issues/2969)) ([c9a0d2d](https://github.com/taverns-red/toast-stats/commit/c9a0d2d9858a4f147b7aed035510e65deec90ec7))
+
+
+### Continuous Integration
+
+* **preview:** deploy PR previews to the staging Firebase project ([#2956](https://github.com/taverns-red/toast-stats/issues/2956)) ([#2958](https://github.com/taverns-red/toast-stats/issues/2958)) ([216f1a9](https://github.com/taverns-red/toast-stats/commit/216f1a9abb535b83665cd283787c1bf70a1e4e98))
+
 ## [3.69.2](https://github.com/taverns-red/toast-stats/compare/frontend-v3.69.1...frontend-v3.69.2) (2026-11-18)
 
 
