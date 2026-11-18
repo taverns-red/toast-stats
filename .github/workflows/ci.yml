@@ -411,6 +411,10 @@ jobs:
 
       - name: Build frontend
         run: npm run build:frontend
+        env:
+          # Throwaway build for the size report; it reads the prod CDN,
+          # named here so OG stub generation needs no default (#2982).
+          VITE_CDN_BASE_URL: https://cdn.taverns.red
 
       - name: Analyze bundle size
         run: |

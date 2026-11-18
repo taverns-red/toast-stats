@@ -3,8 +3,15 @@
  *
  * Runs after `vite build` (root `build:frontend`), so PR previews and the
  * release deploy both ship them. Reads the district list from the build's
- * CDN (`VITE_CDN_BASE_URL`, default prod) `v1/rankings.json`, and writes
+ * CDN (`VITE_CDN_BASE_URL`) `v1/rankings.json`, and writes
  * `frontend/dist/district/<id>.html` per district (scripts/lib/ogStubs.ts).
+ *
+ * CDN target (#2982): CI (`CI=true`) must set `VITE_CDN_BASE_URL`; with no
+ * target the script exits 2, so a staging or preview build can't quietly
+ * write stubs from prod data. Local `npm run build:frontend` keeps working
+ * for contributors: with no target it logs a stderr line and uses the prod
+ * CDN. Every build step in .github/workflows sets it (guard:
+ * cdnTargetWorkflowGuard.test.ts).
  *
  * Soft on the district list: if it cannot be read, the build still succeeds
  * with no stubs (every route keeps the generic card) and a ::warning:: says
@@ -20,6 +27,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { resolveBuildCdnTarget } from './lib/cdnTarget'
 import {
   buildDistrictStubHtml,
   districtIdsFromRankings,
@@ -28,8 +36,29 @@ import {
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DIST = process.env['OG_STUBS_DIST'] || join(REPO, 'frontend', 'dist')
-const CDN = process.env['VITE_CDN_BASE_URL'] || 'https://cdn.taverns.red'
+const PROD_CDN = 'https://cdn.taverns.red'
 const SITE = 'https://ts.taverns.red'
+
+function resolveCdn(): string {
+  try {
+    const { url, source } = resolveBuildCdnTarget(
+      'generate-og-stubs.ts',
+      process.env,
+      PROD_CDN
+    )
+    if (source === 'local-default') {
+      console.error(
+        `[og-stubs] VITE_CDN_BASE_URL is not set; using the prod CDN ${url} (local build). CI must set it.`
+      )
+    }
+    return url
+  } catch (err) {
+    console.error(`[og-stubs] ${(err as Error).message}`)
+    process.exit(2)
+  }
+}
+
+const CDN = resolveCdn()
 
 async function readRankings(): Promise<unknown> {
   const file = process.env['OG_STUBS_RANKINGS_FILE']

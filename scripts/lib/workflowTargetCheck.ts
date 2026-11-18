@@ -71,3 +71,25 @@ export function targetProblems(
   }
   return problems
 }
+
+/**
+ * Problems for one step that runs `npm run build:frontend` (#2982): the
+ * build writes the OG stubs from the CDN named by VITE_CDN_BASE_URL, so the
+ * step must set it to a literal URL, inline or in its env.
+ */
+export function buildTargetProblems(
+  run: string,
+  env: Record<string, string | undefined>
+): string[] {
+  const problems: string[] = []
+  for (const cmd of splitCommands(run)) {
+    if (!/\bnpm run build:frontend\b/.test(cmd)) continue
+    const inline = /(^|\s)VITE_CDN_BASE_URL=https?:\/\//.test(cmd)
+    if (!(inline || literalUrl(env['VITE_CDN_BASE_URL']))) {
+      problems.push(
+        'build:frontend: VITE_CDN_BASE_URL is not set to a literal URL'
+      )
+    }
+  }
+  return problems
+}
