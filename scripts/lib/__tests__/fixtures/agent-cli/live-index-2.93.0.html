@@ -1,7 +1,248 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <meta charset="UTF-8" />
+    <!-- RT red pennant icon set (#2507, taverns-red/ops#267), vendored
+         unedited from https://taverns.red/brand/icons/ on 2026-11-07:
+         favicon.svg, favicon.ico, apple-touch-icon.png, icon-192.png,
+         icon-512.png. Re-fetch from there to update; never redraw.
+         SVG is the primary tab icon; the 16/32/48 px ICO (#1906) is the
+         fallback. site.webmanifest keeps the app's name and takes only its
+         icon entries from the brand's manifest. -->
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="/favicon.ico?v=2026-11-13"
+      sizes="16x16 32x32 48x48"
+    />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2026-11-13" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2026-11-13" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Toast Stats — Toastmasters District Performance</title>
+    <meta
+      name="description"
+      content="Explore Toastmasters district performance: club health, DCP goals, membership trends, and Distinguished status — visualized across program years."
+    />
+    <link rel="canonical" href="https://ts.taverns.red/" />
+
+    <!-- Share/SEO metadata (#778). All values are STATIC — no user input —
+         and the og:image is a static asset shipped from public/ (F-SEC4),
+         so there is no injection vector. Absolute https URLs on the
+         canonical host are required for Open Graph / Twitter cards. -->
+    <meta
+      property="og:title"
+      content="Toast Stats — Toastmasters District Performance"
+    />
+    <meta
+      property="og:description"
+      content="Explore Toastmasters district performance: club health, DCP goals, membership trends, and Distinguished status — visualized across program years."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://ts.taverns.red/" />
+    <meta property="og:image" content="https://ts.taverns.red/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Toast Stats" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Toast Stats — Toastmasters District Performance"
+    />
+    <meta
+      name="twitter:description"
+      content="Explore Toastmasters district performance: club health, DCP goals, membership trends, and Distinguished status — visualized across program years."
+    />
+    <meta name="twitter:image" content="https://ts.taverns.red/og-image.png" />
+
+    <!-- Web fonts are self-hosted (#1905): src/styles/tokens/web-fonts.css
+         declares Montserrat, Source Sans 3, Space Grotesk and Inter from
+         same-origin woff2, bundled with the app CSS. They used to come from
+         Google Fonts' CSS API, which meant two extra origins plus a CSS hop
+         before any woff2 was found.
+
+         Nothing is preloaded, on purpose. Measured on the 1.6 Mbps mobile
+         profile, preloading the two first-screen files (64 KB) made them
+         compete with the app's JS and cost about 330 ms of FCP. Montserrat
+         and Source Sans 3 have metric-matched fallbacks (font-fallbacks.css),
+         so the swap does not move layout.
+
+         JetBrains Mono is still intentionally NOT loaded (Lesson 81). The
+         redesign --mono token has 8 live consumers in app-shell.css with no
+         metric-matched fallback. A late JetBrains Mono swap took CLS from
+         0.012 to 0.199 on PR #595. Nothing in the UI needs it. -->
+
+    <!-- Theme init (#1662): set data-theme before first paint so the canvas
+         never flashes the wrong theme. Mirrors DarkModeContext.getInitialTheme;
+         storage access is guarded (#1646). -->
+    <script>
+      ;(function () {
+        var theme = null
+        try {
+          // #2584: with consent "none" the theme is in sessionStorage.
+          theme =
+            window.sessionStorage.getItem('theme') ||
+            window.localStorage.getItem('theme')
+        } catch (e) {}
+        if (theme !== 'dark' && theme !== 'light') {
+          theme =
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+        }
+        document.documentElement.setAttribute('data-theme', theme)
+      })()
+    </script>
+    <!-- Font Loading Optimization Script -->
+    <script>
+      // Optimize font loading with font-display: swap fallback
+      if ('fonts' in document) {
+        document.fonts.ready.then(() => {
+          document.documentElement.classList.add('fonts-loaded')
+        })
+      }
+    </script>
+
+    <!-- Google Analytics 4 (#314) — production only, no PII collected.
+         The gtag() queue is set up now, so config is buffered in dataLayer
+         from the first moment (Google processes queued pushes in order once
+         the library loads). #1946: gtag owns page_view — config sends the
+         one per load, and the property's Enhanced Measurement "page changes
+         based on browser history events" sends one per SPA navigation. The
+         app must not send its own (that stacked 2–4 per load).
+         #1830 moved the ~176 KB library to `load` + idle. #1906: in this SPA
+         `load` fires before any CDN data, so gtag still raced the first
+         screen's LCP — and Lighthouse charges every request that finishes
+         before the observed LCP, which made mobile LCP bimodal. The library
+         now waits until the first screen has SETTLED: after `load`, no new
+         LCP candidate and no data fetch finishing for QUIET_MS, then idle.
+         It always loads: CAP_MS after `load`, the first pointer/key input
+         (LCP is final after input), or the tab going hidden. -->
+    <script>
+      // #2584: opt-in. GA starts only when the shared `rt_consent` cookie
+      // (utils/consent.ts) says "all" at the current version; "minimal",
+      // "none" and "undecided" never queue a config or request the library.
+      // Choosing "all" later calls window.__tsGa.enable() (the banner), which
+      // starts the same loader without the quiet-window wait; lowering the
+      // choice calls disable(). Only on the production hostname (not
+      // localhost / preview), where __tsGa does not exist.
+      if (window.location.hostname === 'ts.taverns.red') {
+        var GA_ID = 'G-CDWQYHC2Z3'
+        var gaStarted = false
+        var gaLoadNow = function () {}
+        var gaConsented = function () {
+          var m = /(?:^|;\s*)rt_consent=([^;]*)/.exec(document.cookie || '')
+          return !!m && m[1] === 'v1.all'
+        }
+        var startGa = function (immediate) {
+          if (gaStarted) return
+          gaStarted = true
+          window['ga-disable-' + GA_ID] = false
+          window.dataLayer = window.dataLayer || []
+          function gtag() {
+            window.dataLayer.push(arguments)
+          }
+          window.gtag = gtag
+          gtag('js', new Date())
+          gtag('config', 'G-CDWQYHC2Z3', {
+            anonymize_ip: true,
+            allow_google_signals: false,
+            allow_ad_personalization_signals: false,
+          })
+          ;(function () {
+            var QUIET_MS = 2000
+            var CAP_MS = 10000
+            var loaded = false
+            var afterLoad = false
+            var quietTimer = 0
+            var loadGa = function () {
+              if (loaded) return
+              loaded = true
+              window.clearTimeout(quietTimer)
+              var gaScript = document.createElement('script')
+              gaScript.async = true
+              gaScript.src =
+                'https://www.googletagmanager.com/gtag/js?id=G-CDWQYHC2Z3'
+              document.head.appendChild(gaScript)
+            }
+            gaLoadNow = loadGa
+            var loadGaWhenIdle = function () {
+              if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(loadGa, { timeout: 2000 })
+              } else {
+                loadGa()
+              }
+            }
+            // (Re)start the quiet window. A no-op before `load`: the window
+            // starts at `load`.
+            var rearm = function () {
+              if (loaded || !afterLoad) return
+              window.clearTimeout(quietTimer)
+              quietTimer = window.setTimeout(loadGaWhenIdle, QUIET_MS)
+            }
+            try {
+              new window.PerformanceObserver(rearm).observe({
+                type: 'largest-contentful-paint',
+                buffered: true,
+              })
+              new window.PerformanceObserver(function (list) {
+                var entries = list.getEntries()
+                for (var i = 0; i < entries.length; i++) {
+                  var t = entries[i].initiatorType
+                  if (t === 'fetch' || t === 'xmlhttprequest') return rearm()
+                }
+              }).observe({ type: 'resource' })
+            } catch (e) {}
+            var onLoad = function () {
+              afterLoad = true
+              rearm()
+              window.setTimeout(loadGa, CAP_MS)
+            }
+            if (document.readyState === 'complete') {
+              onLoad()
+            } else {
+              window.addEventListener('load', onLoad)
+            }
+            // Backstop in case `load` never fires (a hung subresource).
+            window.setTimeout(loadGa, 2 * CAP_MS)
+            window.addEventListener('pointerdown', loadGa, {
+              once: true,
+              passive: true,
+              capture: true,
+            })
+            window.addEventListener('keydown', loadGa, {
+              once: true,
+              capture: true,
+            })
+            document.addEventListener('visibilitychange', function () {
+              if (document.visibilityState === 'hidden') loadGa()
+            })
+          })()
+          // A mid-session "all": the visitor just clicked, so there is no
+          // first screen left to protect.
+          if (immediate) gaLoadNow()
+        }
+        window.__tsGa = {
+          enable: function () {
+            window['ga-disable-' + GA_ID] = false
+            startGa(true)
+          },
+          disable: function () {
+            window['ga-disable-' + GA_ID] = true
+          },
+          // #2827: true once this page started GA. The app reloads the page
+          // when the choice drops, since gtag.js may still send queued hits.
+          ran: function () {
+            return gaStarted
+          },
+        }
+        if (gaConsented()) startGa(false)
+      }
+    </script>
     <script type="module" crossorigin src="/assets/index-Dccouyo0.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-XKyaHtl9.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor-LyKwLCv-.js">
@@ -25,5 +266,7 @@
     <link rel="modulepreload" crossorigin href="/assets/toastmastersClubPageUrl-DLtLvegv.js">
     <link rel="stylesheet" crossorigin href="/assets/index-Bf2v3-Xq.css">
   </head>
-  <body></body>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>
