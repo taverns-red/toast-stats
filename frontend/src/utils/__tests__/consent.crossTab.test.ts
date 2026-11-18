@@ -28,7 +28,10 @@ class FakeChannel {
         c.handlers.forEach(h => h({ data }))
     }
   }
-  close() {}
+  closed = false
+  close() {
+    this.closed = true
+  }
 }
 
 function wipeCookie(name: string) {
@@ -182,6 +185,43 @@ describe('another tab lowers consent (#2919)', () => {
       }
     })
 
+    it('does not notify subscribers again when a re-check finds the level they already have (#2945)', async () => {
+      const { consent, guard } = await loadTab()
+      win['fetch'] = vi.fn(async () => new Response('real'))
+      gaRan()
+      document.cookie = `${CONSENT_COOKIE}=v1.minimal; path=/`
+      const seen = vi.fn()
+      consent.subscribeConsent(seen)
+      setVisibility('visible')
+      try {
+        document.dispatchEvent(new Event('visibilitychange'))
+        window.dispatchEvent(new Event('pageshow'))
+        document.dispatchEvent(new Event('visibilitychange'))
+        expect(seen).toHaveBeenCalledTimes(1)
+        expect(consent.getConsent()).toBe('minimal')
+      } finally {
+        guard.uninstallGaTransportGuard()
+      }
+    })
+
+    it('still notifies when the level changes again (#2945)', async () => {
+      const { consent, guard } = await loadTab()
+      win['fetch'] = vi.fn(async () => new Response('real'))
+      gaRan()
+      document.cookie = `${CONSENT_COOKIE}=v1.minimal; path=/`
+      const seen = vi.fn()
+      consent.subscribeConsent(seen)
+      setVisibility('visible')
+      try {
+        document.dispatchEvent(new Event('visibilitychange'))
+        document.cookie = `${CONSENT_COOKIE}=v1.none; path=/`
+        document.dispatchEvent(new Event('visibilitychange'))
+        expect(seen).toHaveBeenCalledTimes(2)
+      } finally {
+        guard.uninstallGaTransportGuard()
+      }
+    })
+
     it('leaves a page alone while the cookie still says all', async () => {
       const { guard } = await loadTab()
       const orig = vi.fn(async () => new Response('real'))
@@ -208,6 +248,40 @@ describe('another tab lowers consent (#2919)', () => {
       expect(orig).toHaveBeenCalledTimes(1)
       guard.uninstallGaTransportGuard()
     })
+  })
+
+  it('teardown removes the page listeners and closes the channel (#2945)', async () => {
+    const added: Array<[object, string, unknown]> = []
+    const removed: Array<[object, string, unknown]> = []
+    const addDoc = vi
+      .spyOn(document, 'addEventListener')
+      .mockImplementation((t, l) => void added.push([document, t, l]))
+    const addWin = vi
+      .spyOn(window, 'addEventListener')
+      .mockImplementation((t, l) => void added.push([window, t, l]))
+    const remDoc = vi
+      .spyOn(document, 'removeEventListener')
+      .mockImplementation((t, l) => void removed.push([document, t, l]))
+    const remWin = vi
+      .spyOn(window, 'removeEventListener')
+      .mockImplementation((t, l) => void removed.push([window, t, l]))
+    try {
+      const { consent } = await loadTab()
+      const mine = added.filter(
+        ([, t]) => t === 'visibilitychange' || t === 'pageshow'
+      )
+      expect(mine).toHaveLength(2)
+      consent.teardownConsentListenersForTests()
+      for (const a of mine) {
+        expect(removed).toContainEqual(a)
+      }
+      expect(FakeChannel.all.every(c => c.closed)).toBe(true)
+    } finally {
+      addDoc.mockRestore()
+      addWin.mockRestore()
+      remDoc.mockRestore()
+      remWin.mockRestore()
+    }
   })
 
   it('ignores an upgrade and malformed messages', async () => {

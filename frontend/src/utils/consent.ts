@@ -253,6 +253,11 @@ function announceDowngrade(level: ConsentLevel): void {
 openSyncChannel()
 watchForMissedSignal()
 
+/** Test-only: undo the page listeners and channel set up at module load. */
+export function teardownConsentListenersForTests(): void {
+  // Not implemented yet (#2945).
+}
+
 /** Record a choice and apply it at once. */
 export function setConsent(level: ConsentLevel): void {
   // A downgrade from a page where GA ran: gtag.js may hold hits it will send
