@@ -15,6 +15,10 @@
  * - PIPELINE: `vars.GCP_PIPELINE_SA`, the data pipeline and data-maintenance
  *   identity (#2960). Object access on the staging, prod and raw-private
  *   buckets plus CDN purge; no object restore, bucket metadata or IAM.
+ * - RESTORE: `vars.GCP_RESTORE_SA`, the data auto-restore execute identity
+ *   (#2964). It signs in only from the `data-restore` environment: object
+ *   access on the prod bucket (including restore), read on staging, create
+ *   (no overwrite) on the backups bucket, CDN purge; no bucket metadata or IAM.
  */
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -24,6 +28,10 @@ export const DEPLOYER = 'secrets.GCP_SERVICE_ACCOUNT'
 export const DATA_READER = 'vars.GCP_DATA_READER_SA'
 export const PREVIEW = 'vars.GCP_PREVIEW_SA'
 export const PIPELINE = 'vars.GCP_PIPELINE_SA'
+export const RESTORE = 'vars.GCP_RESTORE_SA'
+
+/** The one environment the restore identity's WIF binding admits (#2964). */
+export const RESTORE_ENVIRONMENT = 'data-restore'
 
 /**
  * An identity chosen by event: `<event>` runs use `whenEvent`, every other
@@ -50,7 +58,13 @@ export const READER_GUARD_EXEMPT: Record<string, string> = {
 }
 
 /** The identity variables an EXPECTED value may be built from. */
-export const KNOWN_IDENTITIES = [DEPLOYER, DATA_READER, PREVIEW, PIPELINE]
+export const KNOWN_IDENTITIES = [
+  DEPLOYER,
+  DATA_READER,
+  PREVIEW,
+  PIPELINE,
+  RESTORE,
+]
 
 /** Every job that runs google-github-actions/auth -> its one identity. */
 export const EXPECTED: Record<string, string> = {
@@ -63,7 +77,7 @@ export const EXPECTED: Record<string, string> = {
   'data-pipeline.yml::education-rollup': PIPELINE,
   'data-pipeline.yml::promote-reports': PIPELINE,
   'data-pipeline.yml::data-auto-restore-decide': DATA_READER,
-  'data-pipeline.yml::data-auto-restore-execute': DEPLOYER,
+  'data-pipeline.yml::data-auto-restore-execute': RESTORE,
   'data-pipeline.yml::og-cards': PIPELINE,
   'data-pipeline.yml::education-ledger-history': PIPELINE,
   'deploy.yml::deploy-frontend': DEPLOYER,
@@ -122,6 +136,7 @@ interface Step {
 type Permissions = string | Record<string, string> | undefined
 interface Job {
   uses?: string
+  environment?: string | { name?: string }
   permissions?: Permissions
   steps?: Step[]
 }
@@ -186,6 +201,23 @@ export const collectIdTokenJobs = (files: WorkflowFile[]): string[] => {
       const effective =
         def.permissions !== undefined ? def.permissions : wf.permissions
       if (grantsIdToken(effective)) out.push(`${file}::${job}`)
+    }
+  }
+  return out
+}
+
+/** key `<file>::<job>` -> the environment name, for every job that declares one. */
+export const collectEnvironments = (
+  files: WorkflowFile[]
+): Record<string, string> => {
+  const out: Record<string, string> = {}
+  for (const { file, wf } of files) {
+    for (const [job, def] of Object.entries(wf.jobs ?? {})) {
+      const env =
+        typeof def.environment === 'string'
+          ? def.environment
+          : def.environment?.name
+      if (env) out[`${file}::${job}`] = env
     }
   }
   return out
