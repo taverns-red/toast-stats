@@ -173,6 +173,29 @@ describe('summarizeChecks', () => {
     expect(s).toMatchObject({ total: 1, passed: 1, cancelled: 0 })
   })
 
+  it('a newer skipped row of the same name does not retire an older cancelled one (#2935)', () => {
+    const at = (run: number) =>
+      `https://github.com/x/y/actions/runs/${run}/job/${run}1`
+    const s = summarizeChecks([
+      check({
+        name: 'Smoke (1)',
+        workflow: 'PR Preview',
+        bucket: 'cancel',
+        state: 'CANCELLED',
+        link: at(100),
+      }),
+      check({
+        name: 'Smoke (1)',
+        workflow: 'PR Preview',
+        bucket: 'skipping',
+        state: 'SKIPPED',
+        link: at(200),
+      }),
+      check({ name: 'Verdict', workflow: 'PR Preview', link: at(200) }),
+    ])
+    expect(s).toMatchObject({ passed: 1, cancelled: 1 })
+  })
+
   it('is not done while anything is pending, or before any check exists', () => {
     expect(
       summarizeChecks([check({ bucket: 'pending', state: 'IN_PROGRESS' })]).done
@@ -1469,5 +1492,34 @@ describe('ciWait ignores rows of a run a newer run replaced (#2935)', () => {
       runsOldNew
     )
     expect(r.outcome).toBe('fail')
+  })
+
+  it('a newer run that skipped the same job and passed a verdict row does not hide the cancelled job', async () => {
+    const { r } = await poll(
+      [
+        { ...OLD, name: 'Smoke (1)', conclusion: 'cancelled' },
+        { ...NEW, name: 'Smoke (1)', conclusion: 'skipped' },
+        { ...NEW, name: 'Verdict' },
+      ],
+      runsOldNew
+    )
+    expect(r.outcome).toBe('fail')
+    expect(r.summary.cancelled).toBe(1)
+  })
+
+  it('a newer run from another event or PR does not retire an older cancelled run', async () => {
+    const dispatched = { ...wfRun(200, 8, '2026-11-17T10:01:00Z') }
+    const { r } = await poll(
+      [
+        { ...OLD, name: UNEXPANDED, conclusion: 'cancelled' },
+        { ...NEW, name: 'Smoke (1)' },
+      ],
+      [
+        wfRun(100, 7, '2026-11-17T10:00:00Z'),
+        { ...dispatched, event: 'workflow_dispatch', pull_requests: [] },
+      ]
+    )
+    expect(r.outcome).toBe('fail')
+    expect(r.summary.cancelled).toBe(1)
   })
 })
