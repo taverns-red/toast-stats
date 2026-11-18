@@ -58,6 +58,8 @@ export interface UploadOptions {
   tokenMaxAgeMs?: number
   /** Clock for token age; replaceable so a test need not wait. */
   now?: () => number
+  /** Where mint lines go (#2991). Defaults to console.error (R4). */
+  log?: (line: string) => void
   fetch: typeof fetch
   /** Bytes per PUT. Must be a multiple of 256 KiB in production. */
   chunkSize?: number
