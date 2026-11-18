@@ -230,6 +230,50 @@ describe('identity guard step configuration (#2963)', () => {
       )
     ).toBe(false)
   })
+
+  it.each(['always()', '!cancelled()', 'failure()', 'cancelled()'])(
+    'rejects an auth step with if: %s after a guard with no if',
+    cond => {
+      expect(check(guard(), auth({ if: cond }))).toBe(false)
+      expect(check(guard(), auth({ if: `\${{ ${cond} }}` }))).toBe(false)
+    }
+  )
+
+  it('accepts an auth step with a plain condition after a guard with no if', () => {
+    expect(check(guard(), auth({ if: "github.event_name == 'push'" }))).toBe(
+      true
+    )
+    expect(check(guard(), auth({ if: 'success()' }))).toBe(true)
+  })
+
+  it('rejects a soft guard whose || condition is not parenthesized in the auth if', () => {
+    const cond = "github.ref == 'refs/heads/a' || github.ref == 'refs/heads/b'"
+    expect(
+      check(
+        guard({ if: cond, 'continue-on-error': true }),
+        auth({ if: `${cond} && steps.reader.outcome == 'success'` })
+      )
+    ).toBe(false)
+  })
+
+  it('accepts a soft guard whose || condition is parenthesized in the auth if', () => {
+    const cond = "github.ref == 'refs/heads/a' || github.ref == 'refs/heads/b'"
+    expect(
+      check(
+        guard({ if: cond, 'continue-on-error': true }),
+        auth({ if: `(${cond}) && steps.reader.outcome == 'success'` })
+      )
+    ).toBe(true)
+  })
+
+  it('treats a regex metacharacter in the guard id literally', () => {
+    expect(
+      check(
+        guard({ id: 'r.d', 'continue-on-error': true }),
+        auth({ if: "steps.rXd.outcome == 'success'" })
+      )
+    ).toBe(false)
+  })
 })
 
 describe('data-reader jobs (#2872 B2)', () => {
