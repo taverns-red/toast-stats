@@ -287,11 +287,22 @@ jobs:
           npm run build --workspace=@taverns-red/analytics-core
           npm run build --workspace=@taverns-red/collector-cli
 
+      # An empty pipeline variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      - name: Require the pipeline identity variable
+        env:
+          PIPELINE_SA: ${{ vars.GCP_PIPELINE_SA }}
+        run: |
+          if [ -z "${PIPELINE_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_PIPELINE_SA is empty"
+            exit 1
+          fi
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_PIPELINE_SA }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
@@ -2607,11 +2618,22 @@ jobs:
       # dashboard login, no scrape state. Skipping it saves ~1-2 min and a
       # large apt install on every daily run.
 
+      # An empty pipeline variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      - name: Require the pipeline identity variable
+        env:
+          PIPELINE_SA: ${{ vars.GCP_PIPELINE_SA }}
+        run: |
+          if [ -z "${PIPELINE_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_PIPELINE_SA is empty"
+            exit 1
+          fi
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_PIPELINE_SA }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
@@ -2813,11 +2835,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # An empty pipeline variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      - name: Require the pipeline identity variable
+        env:
+          PIPELINE_SA: ${{ vars.GCP_PIPELINE_SA }}
+        run: |
+          if [ -z "${PIPELINE_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_PIPELINE_SA is empty"
+            exit 1
+          fi
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_PIPELINE_SA }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
@@ -3062,11 +3095,22 @@ jobs:
       - name: Build shared-contracts
         run: npm run build --workspace=@taverns-red/shared-contracts
 
+      # An empty pipeline variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      - name: Require the pipeline identity variable
+        env:
+          PIPELINE_SA: ${{ vars.GCP_PIPELINE_SA }}
+        run: |
+          if [ -z "${PIPELINE_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_PIPELINE_SA is empty"
+            exit 1
+          fi
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_PIPELINE_SA }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
@@ -3206,11 +3250,22 @@ jobs:
       - name: Build shared-contracts
         run: npm run build --workspace=@taverns-red/shared-contracts
 
+      # An empty pipeline variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      - name: Require the pipeline identity variable
+        env:
+          PIPELINE_SA: ${{ vars.GCP_PIPELINE_SA }}
+        run: |
+          if [ -z "${PIPELINE_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_PIPELINE_SA is empty"
+            exit 1
+          fi
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_PIPELINE_SA }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
@@ -4069,11 +4124,22 @@ jobs:
       - name: '[og] Install Chromium'
         run: npx playwright install chromium
 
+      # An empty pipeline variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      - name: Require the pipeline identity variable
+        env:
+          PIPELINE_SA: ${{ vars.GCP_PIPELINE_SA }}
+        run: |
+          if [ -z "${PIPELINE_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_PIPELINE_SA is empty"
+            exit 1
+          fi
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_PIPELINE_SA }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
@@ -4226,11 +4292,22 @@ jobs:
           npm run build --workspace=@taverns-red/analytics-core
           npm run build --workspace=@taverns-red/collector-cli
 
+      # An empty pipeline variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      - name: Require the pipeline identity variable
+        env:
+          PIPELINE_SA: ${{ vars.GCP_PIPELINE_SA }}
+        run: |
+          if [ -z "${PIPELINE_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_PIPELINE_SA is empty"
+            exit 1
+          fi
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_PIPELINE_SA }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
