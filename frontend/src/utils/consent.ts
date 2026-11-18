@@ -205,8 +205,12 @@ function applyRemoteDowngrade(level: ConsentLevel | null): void {
   gaHook()?.disable()
   clearGaCookies()
   // The steps above are safe to repeat; telling subscribers is not free (each
-  // one re-renders), so only do it when the level they know has changed.
-  if (level !== publishedLevel) publish({ ...state, level })
+  // one re-renders), so only do it when the level they know has changed. Also
+  // when state.level has moved on its own (getConsentState re-reads the
+  // cookie without publishing) and is not the level now.
+  if (level !== publishedLevel || level !== state.level) {
+    publish({ ...state, level })
+  }
 }
 
 function onRemoteDowngrade(data: unknown): void {
