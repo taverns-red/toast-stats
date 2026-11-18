@@ -105,4 +105,18 @@ describe('regionRankingsColumnMeta', () => {
       expect(regionRankingsSortField(column)).toBe(field)
     }
   })
+
+  // #2907 — award names from DRP Item 1490 Rev. 07/2026 p. 16.
+  it('names the two officer-award columns by their Item 1490 award names', () => {
+    const { education, cgd } = regionRankingsColumnMeta
+    expect(education.label).toBe('Program Quality award')
+    expect(education.hint).toContain('District Program Quality Award')
+    expect(cgd.label).toBe('Club Growth award')
+    expect(cgd.hint).toContain('District Club Growth Award')
+    for (const meta of [education, cgd]) {
+      expect(`${meta.label} ${meta.hint}`).not.toMatch(
+        /Education|Training|Club Growth Director/
+      )
+    }
+  })
 })
