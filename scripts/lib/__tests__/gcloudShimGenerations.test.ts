@@ -18,7 +18,9 @@ const SHIM = path.join(
 )
 const WRITES = 200
 const WORKERS = 16
-// Forks one stamped `storage cp` may spawn (cp, rm of the lock, mv of the meta).
+// Wrapped commands one stamped `storage cp` may run (cp, rm of the lock, mv of
+// the meta). It counts only the commands wrapped below; subshell forks are
+// covered by the static source check.
 const BUDGET = 3
 
 let tmp: string
@@ -69,6 +71,46 @@ describe('gcloud shim next_gen under parallel writers (#2800)', () => {
     expect(new Set(gens).size).toBe(WRITES)
   })
 
+  // #3005: a process killed between the truncate and the write leaves an
+  // empty counter. The shim must say so on stderr, naming the file.
+  it('names the counter file on stderr when it is empty', () => {
+    fs.writeFileSync(path.join(root, '.gen-counter'), '')
+    const run = spawnSync(
+      SHIM,
+      ['storage', 'cp', path.join(tmp, 'src.txt'), 'gs://b/o'],
+      {
+        env: { ...process.env, SHIM_ROOT: root, SHIM_GENERATIONS: '1' },
+        encoding: 'utf8',
+      }
+    )
+    expect(run.status).not.toBe(0)
+    expect(run.stderr).toContain(path.join(root, '.gen-counter'))
+    // The failed stamp must not leave the lock behind.
+    expect(fs.existsSync(path.join(root, '.gen-counter.lock'))).toBe(false)
+  })
+
+  // #3005: the fork-count test below counts the nine commands it wraps. It
+  // cannot see a `$(...)` or `( ... )` subshell, which forks without running
+  // any of them. This reads the source of the two functions on the hot path
+  // (the lock is held while they run) and rejects both.
+  it('keeps $(...) and ( ... ) subshells out of next_gen and stamp_generation', () => {
+    const src = fs.readFileSync(SHIM, 'utf8').split('\n')
+    const body: string[] = []
+    let inside = false
+    for (const line of src) {
+      if (/^(next_gen|stamp_generation)\(\) \{/.test(line)) inside = true
+      if (inside) body.push(line.replace(/^\s*#.*$/, ''))
+      if (inside && line === '}') inside = false
+    }
+    expect(body.length).toBeGreaterThan(10)
+    const code = body.join('\n')
+    // `$((` is arithmetic, not a command substitution.
+    expect(code.match(/\$\((?!\()/g) ?? []).toEqual([])
+    expect(code.match(/`/g) ?? []).toEqual([])
+    // A bare `(` opening a subshell: at the start of a command.
+    expect(code.match(/(^|[;&|]\s*|\bdo\s+|\bthen\s+)\(/gm) ?? []).toEqual([])
+  })
+
   // #3002: the counter lock serialises every write, so each process a stamp
   // forks inside it is paid 200 times in a row, and every process a waiter
   // forks while it polls is paid on top. Under two concurrent full suite runs
@@ -76,7 +118,7 @@ describe('gcloud shim next_gen under parallel writers (#2800)', () => {
   // alone). Counting forks is the load-independent measure: a stamped upload
   // spawns only what it must (the copy, the lock removal, the meta rename),
   // and the counter and the meta rewrite use shell builtins.
-  it('stamps a generation with a bounded number of forked commands', () => {
+  it('stamps a generation with a bounded number of forked wrapped commands', () => {
     const bin = path.join(tmp, 'bin')
     const log = path.join(tmp, 'spawns.log')
     fs.mkdirSync(bin)
