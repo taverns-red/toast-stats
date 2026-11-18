@@ -21,6 +21,8 @@ interface Step {
   uses?: string
   run?: string
   env?: Record<string, string>
+  with?: Record<string, unknown>
+  'timeout-minutes'?: number
 }
 interface Job {
   permissions?: Record<string, string>
@@ -46,6 +48,26 @@ describe('deploy.yml post-deploy-verify video URL check (#2899)', () => {
 
   it('runs after the deploy job, so it checks what just shipped', () => {
     expect([verify.needs].flat()).toContain('deploy-frontend')
+  })
+
+  it('runs the script with plain node, not npx, from the fetched commit', () => {
+    expect(checkStep?.run).toMatch(/^\s*node scripts\/check-video-urls\.ts/m)
+    expect(checkStep?.run).not.toMatch(/\bnpx\b|\bnpm\b/)
+  })
+
+  it('sets up Node from the fetched .nvmrc before the check', () => {
+    const i = verify.steps.findIndex(s => s === checkStep)
+    const setup = verify.steps.findIndex(s =>
+      (s.uses ?? '').startsWith('actions/setup-node@')
+    )
+    expect(setup).toBeGreaterThanOrEqual(0)
+    expect(setup).toBeLessThan(i)
+    expect(verify.steps[setup]?.with?.['node-version-file']).toMatch(/\.nvmrc$/)
+    expect(verify.steps[setup]?.with?.cache).toBeUndefined()
+  })
+
+  it('times the check step out after 5 minutes', () => {
+    expect(checkStep?.['timeout-minutes']).toBe(5)
   })
 
   it('keeps the job and the workflow at no permissions', () => {

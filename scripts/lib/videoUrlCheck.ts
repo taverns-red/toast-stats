@@ -17,3 +17,22 @@ export function describeFailures(results: VideoUrlResult[]): string[] {
         }`
     )
 }
+
+export interface ProbeDeps {
+  fetchFn?: (
+    url: string,
+    init: RequestInit
+  ) => Promise<{
+    status: number
+    body?: { cancel(): Promise<void> } | null
+  }>
+  sleep?: (ms: number) => Promise<void>
+}
+
+/** Not implemented yet (#2899). */
+export async function probeUrl(
+  _url: string,
+  _deps: ProbeDeps = {}
+): Promise<number | null> {
+  return null
+}
