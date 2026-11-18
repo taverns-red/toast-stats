@@ -108,30 +108,39 @@ next_gen() {
   # Parallel shims (copy-out runs its workers under `xargs -P`, #2800) must not
   # interleave the read, increment and write. A lock file created by the shell
   # itself with noclobber (O_EXCL, atomic on macOS and Linux, bash 3 too)
-  # serialises them, and the new value is written to a temp file and `mv`d into
-  # place so a reader never sees a torn counter. Not `mkdir`: the uutils
+  # serialises them. Not `mkdir`: the uutils
   # `mkdir` of Ubuntu 26.04 succeeds on an existing directory under a race, so
   # two shims held the lock at once (CI run 43516341701).
   local f="${SHIM_ROOT}/.gen-counter" lock="${SHIM_ROOT}/.gen-counter.lock"
   local n=1793000000000000 tries=0
-  until (set -C && : >"${lock}") 2>/dev/null; do
+  # Taking it forks nothing (no subshell for the noclobber redirect), so a
+  # waiter's only fork is the `sleep` between tries.
+  set -C
+  until { : >"${lock}"; } 2>/dev/null; do
     tries=$((tries + 1))
     if [ "${tries}" -gt 6000 ]; then
+      set +C
       echo "gcloud shim: could not take ${lock}" >&2
       return 1
     fi
     sleep 0.01
   done
-  # No EXIT trap: a `$(cat ...)` below forks a subshell that can inherit it and
-  # free the lock early. Every failure path releases the lock explicitly.
+  set +C
+  # No EXIT trap: a `$(...)` below could fork a subshell that inherits it and
+  # frees the lock early. Every failure path releases the lock explicitly.
+  #
+  # The lock serialises every write, so the work inside it is shell builtins
+  # only (#3002): a fork here is paid once per write, one after another, and
+  # under load that made 200 writes take 10 s. Every reader of the counter
+  # holds the lock, so it is written in place; no reader sees a torn value.
   if [ -f "${f}" ]; then
-    n="$(cat "${f}")" || {
+    read -r n <"${f}" || {
       rm -f "${lock}"
       return 1
     }
   fi
   n=$((n + 1))
-  if ! { echo "${n}" >"${f}.tmp.$$" && mv "${f}.tmp.$$" "${f}"; }; then
+  if ! echo "${n}" >"${f}"; then
     rm -f "${lock}"
     return 1
   fi
@@ -147,8 +156,8 @@ stamp_generation() {
   gen_enabled || return 0
   local meta="$1" g
   g="$(next_gen)"
-  mkdir -p "$(dirname "${meta}")"
-  touch "${meta}"
+  [ -d "${meta%/*}" ] || mkdir -p "${meta%/*}"
+  [ -f "${meta}" ] || : >"${meta}"
   grep -v '^generation=' "${meta}" >"${meta}.tmp" || true
   echo "generation=${g}" >>"${meta}.tmp"
   mv "${meta}.tmp" "${meta}"
@@ -183,7 +192,7 @@ upload_object() {
   local obj meta
   obj="$(local_of "${url}")"
   meta="$(meta_of "${url}")"
-  mkdir -p "$(dirname "${obj}")" "$(dirname "${meta}")"
+  mkdir -p "${obj%/*}" "${meta%/*}"
   if [ "${gz}" = "1" ]; then
     gzip -c -n <"${src}" >"${obj}"
     # The SDK writes the current time into the gzip header (gzip_util.
