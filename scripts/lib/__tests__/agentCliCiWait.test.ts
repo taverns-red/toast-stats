@@ -1507,6 +1507,25 @@ describe('ciWait ignores rows of a run a newer run replaced (#2935)', () => {
     expect(r.summary.cancelled).toBe(1)
   })
 
+  // #2947 item 4. GitHub reports a matrix job skipped by a job-level `if`
+  // under its UNEXPANDED name (checked on the check-runs of PR 3023's head:
+  // `Smoke (${{ matrix.shard }})`, `Lighthouse mobile (${{ matrix.route }})`,
+  // both skipped), because the matrix never expands. So a newer run that
+  // skipped the smokes carries the same unexpanded name as the cancelled row,
+  // the same-name guard matches, and the cancelled row is NOT retired.
+  it('a newer run that skipped the matrix under the unexpanded name does not retire the cancelled row', async () => {
+    const { r } = await poll(
+      [
+        { ...OLD, name: UNEXPANDED, conclusion: 'cancelled' },
+        { ...NEW, name: UNEXPANDED, conclusion: 'skipped' },
+        { ...NEW, name: 'Verdict' },
+      ],
+      runsOldNew
+    )
+    expect(r.outcome).toBe('fail')
+    expect(r.summary.cancelled).toBe(1)
+  })
+
   it('a newer run from another event or PR does not retire an older cancelled run', async () => {
     const dispatched = { ...wfRun(200, 8, '2026-11-17T10:01:00Z') }
     const { r } = await poll(
@@ -1582,9 +1601,10 @@ describe('ciWait over GraphQL retires a superseded row only for an eligible newe
     const { r, runner } = await poll([wf(100), wf(200)])
     expect(r.outcome).toBe('pass')
     expect(r.summary.cancelled).toBe(0)
-    // One runs read per check read (the green path reads the checks twice);
-    // the active-runs check reuses them instead of reading a third time.
-    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(2)
+    // One runs read per check read (the green path reads the checks twice),
+    // plus one for the active-runs check after the final merge-state read
+    // (#2947). This is the last poll, so it costs one call once.
+    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(3)
   })
 
   it.each(['push', 'workflow_dispatch'])(
@@ -1603,6 +1623,79 @@ describe('ciWait over GraphQL retires a superseded row only for an eligible newe
     ])
     expect(r.outcome).toBe('fail')
     expect(r.summary.cancelled).toBe(1)
+  })
+
+  // #2947 item 1: a pending poll can't end in a verdict, so it must not pay
+  // for the head SHA and runs reads (3 calls a minute instead of 1).
+  it('reads no runs and no head SHA while another row is still pending', async () => {
+    const pendingRows = [
+      ...rows,
+      row(300, 'Slow', { state: 'PENDING', bucket: 'pending', startedAt: '' }),
+    ]
+    const runner = fakeRunner([
+      [/^gh pr checks 2933 /, ok(JSON.stringify(pendingRows))],
+      [/^gh pr view 2933 /, view],
+      [/actions\/runs\?head_sha=abc/, ok('{"workflow_runs":[]}')],
+    ])
+    const r = await ciWait(2933, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('pending')
+    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(0)
+    expect(runner.calls.filter(c => /^gh pr view/.test(c))).toHaveLength(0)
+    // Nothing is retired without the runs (fail closed).
+    expect(r.summary.cancelled).toBe(1)
+  })
+
+  // #2947 item 2: the active-runs check must see runs started after the
+  // final merge-state read, so it reads the runs after it.
+  it('reads the runs for the active-runs check after the final merge-state read', async () => {
+    const { r, runner } = await poll([wf(100), wf(200)])
+    expect(r.outcome).toBe('pass')
+    const last = (re: RegExp) =>
+      runner.calls.map(c => re.test(c)).lastIndexOf(true)
+    expect(last(/actions\/runs/)).toBeGreaterThan(last(/^gh pr view/))
+  })
+
+  it('a runs read that throws is an error, not a PASS (#2947)', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 2933 /, ok(JSON.stringify(rows))],
+      [/^gh pr view 2933 /, view],
+      [/actions\/runs\?head_sha=abc/, fail('HTTP 500: boom', 1)],
+    ])
+    await expect(
+      ciWait(2933, { repo: REPO, runner, once: true, ...fakeClock() })
+    ).rejects.toThrow()
+  })
+
+  it('an empty head SHA retires nothing and reads no runs (#2947)', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 2933 /, ok(JSON.stringify(rows))],
+      [
+        /^gh pr view 2933 /,
+        ok(
+          JSON.stringify({
+            mergeStateStatus: 'CLEAN',
+            headRefOid: '',
+            state: 'OPEN',
+            isDraft: false,
+          })
+        ),
+      ],
+      NO_RUNS,
+    ])
+    const r = await ciWait(2933, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    expect(r.outcome).toBe('fail')
+    expect(r.summary.cancelled).toBe(1)
+    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(0)
   })
 
   it('reads no extra data when no cancelled row could be retired', async () => {

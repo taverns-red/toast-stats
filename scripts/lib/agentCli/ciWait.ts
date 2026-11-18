@@ -581,10 +581,10 @@ async function fetchHeadRuns(
  * runs' events, also read the head's workflow runs when (and only when) a
  * cancelled row could be retired as superseded (#2935). Without them no newer
  * run is known to belong to this PR, so nothing is retired (fail closed). The
- * runs are kept on the read, so the active-runs check reuses them. Cost, only
- * on a poll with such a row: one call for the head SHA (skipped when the
- * caller already read it) and one for the runs, which replaces the
- * active-runs read.
+ * runs are kept on the read for the eligibility check only: the active-runs
+ * check reads them again after the final merge-state read (#2947). Cost, only
+ * on a poll with such a row and nothing else pending: one call for the head
+ * SHA (skipped when the caller already read it) and one for the runs.
  */
 async function readChecks(
   pr: number,
@@ -595,6 +595,12 @@ async function readChecks(
   if (read.pull || read.workflowRuns) return read
   if (dropSupersededRunChecks(read.checks).length === read.checks.length) {
     return read
+  }
+  // A poll with another row still pending ends pending whatever the runs say
+  // (`isFailing` only matters once `summary.done`), so skip the two reads and
+  // retire nothing: an empty run list makes no newer run eligible (#2947).
+  if (read.checks.some(c => c.bucket === 'pending')) {
+    return { ...read, workflowRuns: [] }
   }
   const headSha = knownHeadSha ?? (await fetchMergeState(pr, fo)).headSha
   const workflowRuns = headSha ? await fetchHeadRuns(headSha, fo) : []
@@ -715,9 +721,14 @@ export async function ciWait(
       confirmed.status !== 'CLOSED' &&
       mergeStateVerdict(confirmed.status, ctx, confirmed.draft) === 'ok'
     ) {
-      activeRuns = read.workflowRuns
-        ? activeRunsFor(read.workflowRuns, pr)
-        : await fetchActiveRuns(confirmed.headSha, pr, fo)
+      // Over REST the runs came with the pull request read. Over GraphQL the
+      // runs read the checks used predates the final merge-state read, so a
+      // run started in between would be missed: read them again, after it
+      // (#2947).
+      activeRuns =
+        read.pull && read.workflowRuns
+          ? activeRunsFor(read.workflowRuns, pr)
+          : await fetchActiveRuns(confirmed.headSha, pr, fo)
     }
     const finish = (outcome: CiOutcome, timedOut = false): CiWaitResult => ({
       pr,
