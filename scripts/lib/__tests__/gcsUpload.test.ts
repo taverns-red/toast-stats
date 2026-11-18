@@ -193,9 +193,7 @@ describe('uploadObject (#2972)', () => {
       'https://storage.googleapis.com/storage/v1/b/stg/o/videos%2Fa%2Fb%2Fc.mp4?alt=media'
     )
     expect(
-      (calls[0]!.init.headers as Record<string, string>)[
-        'X-Upload-Content-Length'
-      ]
+      (calls[2]!.init.headers as Record<string, string>)['Content-Length']
     ).toBe('6')
   })
 
