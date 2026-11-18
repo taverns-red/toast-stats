@@ -293,6 +293,26 @@ describe('verifyPlan / executePlan', () => {
     expect(f.failedAt).toEqual(calls[1])
   })
 
+  it('restores an entry point before a non-entry name that sorts first (#2977)', () => {
+    const both = plan(
+      [obj('a.json', '12', BAD), obj('v1/latest.json', '300', BAD)],
+      [
+        obj('a.json', '11', '2026-11-07T10:00:00Z', BAD),
+        obj('v1/latest.json', '200', '2026-11-07T10:00:00Z', BAD),
+      ]
+    )
+    // The plan lists names in sorted order, so a.json comes first there.
+    expect(both.entries.map(e => e.name)).toEqual(['a.json', 'v1/latest.json'])
+    const calls: string[][] = []
+    executePlan(both, argv => {
+      calls.push(argv)
+    })
+    expect(calls.map(c => c[c.length - 1])).toEqual([
+      `gs://${BUCKET}/v1/latest.json#200`,
+      `gs://${BUCKET}/a.json#11`,
+    ])
+  })
+
   it('uses no bulk-only flag and exactly the sync restore shape', () => {
     const calls: string[][] = []
     executePlan(savedPlan(), argv => {
