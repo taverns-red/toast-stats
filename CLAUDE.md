@@ -25,6 +25,7 @@ Setup and Ron's manual steps: [`docs/cloud-sessions.md`](docs/cloud-sessions.md)
   - Create a PR: `gh api repos/taverns-red/toast-stats/pulls -f title='fix: … (#42)' -f head=<branch> -f base=main -F body=@pr-body.md` (`-F` reads `@file`; `-f` does not)
   - Comment on an issue or PR: `gh api repos/taverns-red/toast-stats/issues/42/comments -F body=@report.md`
   - **Always pass bodies as a file with `-F body=@file`, never inline.** `.claude/settings.json` asks before any `gh api` call whose text contains words like `hooks`, `keys` or `protection` (#2532), and in an unattended session that prompt stalls you.
+- **Open your PR as a draft** (add `-F draft=true` to the create call). Draft pushes skip the 216-minute PR Preview suite (#2607). When CI is green, say so in your report comment. The local session marks the PR ready, because `gh pr ready` uses GraphQL, which the VM proxy blocks.
 - **Wait for CI with `./bin/agent-cli ci-wait <pr>`**, not hand-written polling. In the VM it falls back to REST check-runs, every page (#2485). A draft PR runs the PR Preview smokes only once it has the `preview-smoke` label (#2101); without it they're skipped, not pending.
 - **Reference the issue as plain `#N` in PR bodies, never `Closes #N`.** The orchestrator closes issues.
 - **Don't merge.** No prod writes, no GCS writes, no workflow dispatches that publish data.
