@@ -112,7 +112,14 @@ export const IDENTITY_EXPECTATIONS: Record<string, IdentityExpectation> = {
         bucket: STAGING_DATA_BUCKET,
         object: MEDIA_PROBE_OUTSIDE,
         granted: [],
-        denied: ['storage.objects.delete', 'storage.objects.update'],
+        // get is denied here, granted inside the prefix: that shows the prefix
+        // condition working. Not asserted on the prod outside probe above,
+        // because prod has public read and get would be held.
+        denied: [
+          'storage.objects.get',
+          'storage.objects.delete',
+          'storage.objects.update',
+        ],
       },
     ],
   },
