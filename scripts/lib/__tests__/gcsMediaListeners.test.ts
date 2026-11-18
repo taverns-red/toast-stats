@@ -79,6 +79,9 @@ function hashHeader(bytes: Buffer): string {
   return `crc32c=${crc.toString()},md5=${md5}`
 }
 
+/** How many of the next media responses to deliver as one coalesced read. */
+let coalesceNext = 0
+
 /**
  * `?alt=media` as GCS answers it with Accept-Encoding: gzip: a gzip-stored
  * object is served as stored with `content-encoding: gzip`; an identity
@@ -122,6 +125,16 @@ function serveMedia(req: http.IncomingMessage, res: http.ServerResponse) {
   // listeners never coexist (measured: 0 warnings vs 2 per object).
   res.write(stored.bytes.subarray(0, 8))
   setTimeout(() => res.end(stored.bytes.subarray(8)), 10)
+  if (coalesceNext > 0) {
+    // Simulate a loaded machine: the server and the client share this event
+    // loop, so a stall here makes the 10 ms timer above overdue before the
+    // client reads the first packet. Both packets then arrive in one read.
+    coalesceNext--
+    const until = Date.now() + 30
+    while (Date.now() < until) {
+      /* stall the loop */
+    }
+  }
 }
 
 let server: http.Server
@@ -202,6 +215,17 @@ describe('GCS media reads (#1729)', () => {
       mapLimit(names, 1, n => bucket.file(n).download({ decompress: false }))
     )
     // 2 per object (error + close) at concurrency 1: per-response, not shared.
+    expect(warnings).toBe(names.length * 2)
+  })
+
+  it('harness: still trips the warning when the first response arrives in one read (a loaded machine, #3004)', async () => {
+    const bucket = storage.bucket(BUCKET)
+    const names = gzipNames().slice(0, 3)
+    coalesceNext = 1
+    const warnings = await countListenerWarnings(() =>
+      mapLimit(names, 1, n => bucket.file(n).download({ decompress: false }))
+    )
+    coalesceNext = 0
     expect(warnings).toBe(names.length * 2)
   })
 
