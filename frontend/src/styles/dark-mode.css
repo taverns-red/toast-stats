@@ -770,7 +770,7 @@
   border-color: rgba(168, 85, 247, 0.3) !important;
 }
 
-/* Education & Training — `bg-blue-50 text-blue-800 border-blue-200` */
+/* District Program Quality Award — `bg-blue-50 text-blue-800 border-blue-200` */
 [data-theme='dark'] .bg-blue-50 {
   background-color: rgba(59, 130, 246, 0.1) !important;
 }
@@ -783,7 +783,7 @@
   border-color: rgba(59, 130, 246, 0.3) !important;
 }
 
-/* Club Growth (CGD) — `bg-teal-50 text-teal-800 border-teal-200` */
+/* District Club Growth Award — `bg-teal-50 text-teal-800 border-teal-200` */
 [data-theme='dark'] .bg-teal-50 {
   background-color: rgba(20, 184, 166, 0.1) !important;
 }

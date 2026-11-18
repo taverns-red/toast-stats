@@ -97,7 +97,7 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
     affects:
       'Club DCP goals achieved · Level 2 award counts · club Distinguished tiers · district % Distinguished',
     whatChanged:
-      'Toastmasters made an exploration completion an alternative way to satisfy DCP goals 2 and 3, alongside a Level 2 award (Item 1490 Rev. 07/2026, p. 8). The dashboard names this route Online Meeting Mastery, the only exploration code in the education reports we read. TI publishes the two routes in one combined column ("Level 2s or EOM", "Add. Level 2s or EOM") and does not split them, so Toast Stats cannot tell them apart either.',
+      'Toastmasters made an exploration completion an alternative way to satisfy DCP goals 2 and 3, alongside a Level 2 award (Item 1490 Rev. 07/2026, p. 8). The dashboard column says "EOM". the education awards report from TI names the route Online Meeting Mastery, the only exploration code in the reports we read. TI publishes the two routes in one combined column ("Level 2s or EOM", "Add. Level 2s or EOM") and does not split them, so Toast Stats cannot tell them apart either.',
     comparability:
       'A club can now reach goals 2 and 3 by a route that did not exist in 2025-26, so education counts and goal-completion rates are not like-for-like across the boundary. Part of any year-over-year rise in Level 2 awards may be Online Meeting Mastery completions instead — and a club that finished Distinguished this year might not have on last year’s rules.',
     issues: [1399, 1402],
