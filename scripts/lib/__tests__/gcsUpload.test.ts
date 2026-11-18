@@ -229,11 +229,7 @@ describe('uploadObject (#2972)', () => {
         source: { kind: 'gcs', bucket: 'stg', object: 'x' },
       })
     )
-    expect(calls.map(c => c.init.method)).toEqual([
-      'GET',
-      'POST',
-      'GET',
-    ])
+    expect(calls.map(c => c.init.method)).toEqual(['GET', 'POST', 'GET'])
     expect(calls.some(c => c.url.includes('alt=media'))).toBe(false)
   })
 })
