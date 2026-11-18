@@ -16,9 +16,9 @@ import {
   type ClosedClubNameIndex,
 } from '@taverns-red/shared-contracts'
 import { recordCdnResponse } from './cdnCacheTracker'
+import { cdnBaseUrlFromEnv } from '../config/cdnBase'
 
-const CDN_BASE_URL =
-  import.meta.env['VITE_CDN_BASE_URL'] || 'https://cdn.taverns.red'
+const CDN_BASE_URL = cdnBaseUrlFromEnv()
 
 export function cdnClosedClubNamesUrl(): string {
   return `${CDN_BASE_URL}/config/closed-club-names.json`

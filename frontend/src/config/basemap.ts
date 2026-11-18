@@ -10,10 +10,10 @@
  * at a local extract.
  */
 
+import { cdnBaseUrlFromEnv } from './cdnBase'
+
 export const BASEMAP_OBJECT_PATH =
   'basemap/protomaps-v4/world-z0-14-20261015.pmtiles'
-
-const DEFAULT_CDN_BASE_URL = 'https://cdn.taverns.red'
 
 export function resolveBasemapUrl(
   env: Record<string, string | undefined>,
@@ -26,8 +26,5 @@ export function resolveBasemapUrl(
 
 export function basemapUrl(): string {
   const env = import.meta.env as Record<string, string | undefined>
-  return resolveBasemapUrl(
-    env,
-    env['VITE_CDN_BASE_URL'] || DEFAULT_CDN_BASE_URL
-  )
+  return resolveBasemapUrl(env, cdnBaseUrlFromEnv())
 }

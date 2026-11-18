@@ -16,9 +16,9 @@ import {
   type CharterCohortSurvivalFile,
 } from '@taverns-red/shared-contracts'
 import { recordCdnResponse } from './cdnCacheTracker'
+import { cdnBaseUrlFromEnv } from '../config/cdnBase'
 
-const CDN_BASE_URL =
-  import.meta.env['VITE_CDN_BASE_URL'] || 'https://cdn.taverns.red'
+const CDN_BASE_URL = cdnBaseUrlFromEnv()
 
 /** Throws on a district id that cannot name an object. */
 export function cdnCharterCohortSurvivalUrl(districtId: string): string {
