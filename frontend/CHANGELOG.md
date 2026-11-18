@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.69.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.69.0...frontend-v3.69.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **ui:** privacy button lines up in the About menu; footer smoke ([#2891](https://github.com/taverns-red/toast-stats/issues/2891)) ([#2933](https://github.com/taverns-red/toast-stats/issues/2933)) ([2d13811](https://github.com/taverns-red/toast-stats/commit/2d13811a49953756a809fe57af7e6016b0b9e297))
+
 ## [3.69.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.68.1...frontend-v3.69.0) (2026-11-17)
 
 
