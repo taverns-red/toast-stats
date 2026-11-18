@@ -22,7 +22,7 @@ const read = (rel: string): string =>
 const MAX_ACTIVE_RULES = 20
 
 const ruleHeadings = (text: string): RegExpMatchArray[] => [
-  ...text.matchAll(/^\*\*R(\d+) — (.+?)\*\*/gm),
+  ...text.matchAll(/^\*\*R(\d+)\b[\s:.—–-]*(.*?)\*\*/gm),
 ]
 const activeRuleHeadings = (text: string): RegExpMatchArray[] =>
   ruleHeadings(text).filter(m => !/^Retired/i.test(m[2]))
