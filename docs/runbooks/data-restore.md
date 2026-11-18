@@ -321,8 +321,11 @@ date -u +%FT%TZ   # all restored at
 ```
 
 Each restore is
-`gcloud storage restore --allow-overwrite --if-generation-match=LIVE_GENERATION gs://…#GENERATION`
-and each delete `gcloud storage rm gs://…#LIVE_GENERATION` (the exact
+`gcloud storage restore --if-generation-match=LIVE_GENERATION gs://…#GENERATION`
+(no `--allow-overwrite`: it is a bulk-only flag, and a synchronous restore
+rejects it with "Synchronous execution does not support flag:
+allow_overwrite", gcloud SDK 588.0.0 `surface/storage/restore.py` L40-41 and
+L381) and each delete `gcloud storage rm gs://…#LIVE_GENERATION` (the exact
 generation the plan saw). For restore, `--if-generation-match` makes the
 call fail if the live object changed since the plan (JSON API
 [objects.restore](https://docs.cloud.google.com/storage/docs/json_api/v1/objects/restore):
@@ -330,7 +333,9 @@ call fail if the live object changed since the plan (JSON API
 `gcloud storage restore` lists the flag at
 [its reference](https://docs.cloud.google.com/sdk/gcloud/reference/storage/restore)).
 The gcloud page does not show the flag combined with a `#generation` URL, so
-the staging drill must also confirm that exact invocation works. For delete
+the staging drill must also confirm that exact invocation works, including
+that `--if-generation-match` without `--allow-overwrite` replaces a live
+object. For delete
 the `#LIVE_GENERATION` URL already pins the object. The saved plan file is
 schema-checked and refused if malformed. If a command fails partway,
 execution stops and stdout gets `{executed, failedAt}` (exit 1); re-plan from

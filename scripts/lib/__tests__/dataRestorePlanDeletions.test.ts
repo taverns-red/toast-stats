@@ -269,7 +269,6 @@ describe('planRestore: prod deletions and the removal record (#2856)', () => {
       [
         'storage',
         'restore',
-        '--allow-overwrite',
         '--if-generation-match=0',
         `gs://${BUCKET}/${WRITTEN}#100`,
       ],

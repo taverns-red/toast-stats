@@ -261,7 +261,6 @@ describe('verifyPlan / executePlan', () => {
       [
         'storage',
         'restore',
-        '--allow-overwrite',
         '--if-generation-match=300',
         `gs://${BUCKET}/v1/latest.json#200`,
       ],

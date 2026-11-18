@@ -561,7 +561,8 @@ export const BULK_ONLY_RESTORE_FLAGS: readonly string[] = [
  * ran and what failed. Each restore carries `--if-generation-match=<live
  * generation>` so it fails if the object changed since the plan (for
  * objects.restore that precondition is the LIVE generation); a delete names
- * the exact live generation in its `#generation` URL.
+ * the exact live generation in its `#generation` URL. No bulk-only flag
+ * (BULK_ONLY_RESTORE_FLAGS) is passed: a synchronous restore rejects them.
  */
 export function executePlan(
   plan: RestorePlan,
@@ -578,7 +579,6 @@ export function executePlan(
     ...ordered.map(e => [
       'storage',
       'restore',
-      '--allow-overwrite',
       `--if-generation-match=${e.liveGeneration}`,
       url(e, e.generation as string),
     ]),
