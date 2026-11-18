@@ -174,6 +174,59 @@ test('lowering from all to minimal sends no collect hit and no _ga cookie afterw
   expect(await gaCookies()).toEqual([])
 })
 
+/* #2919: two tabs of one browser. Tab A chose all and GA runs there. Tab B
+ * (same context, so the same cookie jar) lowers the choice to minimal. Tab A
+ * is not reloaded and must follow: counting from B's click, A sends no collect
+ * hit and no `_ga*` cookie comes back, through scrolling, route changes and
+ * leaving the page. Only A's requests are counted; B has its own guard. */
+test('lowering consent in one tab stops GA in another open tab (#2919)', async ({
+  page,
+  context,
+  gaCollect,
+}) => {
+  test.setTimeout(120_000)
+  const gaCookies = async () =>
+    (await context.cookies()).filter(c => c.name.startsWith('_ga'))
+  const fromA = () => gaCollect.filter(r => r.frame().page() === page)
+  await serveAsProd(page)
+  await open(page)
+  await banner(page).getByRole('button', { name: 'Keep all' }).click()
+  await expect
+    .poll(() => fromA().length, { timeout: 30_000 })
+    .toBeGreaterThan(0)
+  // Real input makes gtag queue engagement events (scroll) for later.
+  await page.mouse.wheel(0, 2_000)
+
+  const pageB = await context.newPage()
+  await serveAsProd(pageB)
+  await pageB.goto(`${PROD_ORIGIN}/`, { waitUntil: 'load' })
+  await expect(banner(pageB)).toBeHidden() // the choice carries over
+  await pageB.getByRole('button', { name: 'Privacy & cookies' }).first().click()
+  const before = fromA().length
+  await banner(pageB).getByRole('button', { name: 'Keep minimal' }).click()
+  await expect(banner(pageB)).toBeHidden()
+
+  // Tab A keeps being used, without a reload.
+  await page.bringToFront()
+  for (const dy of [800, 800, 800, -800, -800, -800]) {
+    await page.mouse.wheel(0, dy)
+    await page.waitForTimeout(500)
+  }
+  await page.waitForTimeout(4_000)
+  await page.evaluate(() => {
+    window.history.pushState({}, '', '/awards')
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  })
+  await page.waitForTimeout(2_500)
+  await page.mouse.wheel(0, 1_500)
+  await page.waitForTimeout(4_000)
+  expect(await gaCookies()).toEqual([])
+  await page.goto('about:blank') // pagehide / unload flushes are counted
+  await page.waitForTimeout(2_000)
+  expect(fromA().length - before).toBe(0)
+  expect(await gaCookies()).toEqual([])
+})
+
 test('banner is a fixed overlay: no shift, no extra page height', async ({
   page,
 }) => {
