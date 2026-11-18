@@ -16,6 +16,8 @@ import { objectExists, uploadObject, ObjectExistsError } from './gcsUpload.js'
 
 export interface UploadCliDeps {
   token: string | undefined
+  /** Mints a fresh token for long copies (#2980); absent: no renewal. */
+  mintToken?: () => Promise<string>
   fetch: typeof fetch
   log: (line: string) => void
 }

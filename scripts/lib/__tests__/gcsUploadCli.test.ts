@@ -24,10 +24,16 @@ const ok = (): typeof fetch =>
       : new Response(`{"md5Hash":"${ABC_MD5}"}`, { status: 200 })
   ) as unknown as typeof fetch
 
-const run = (argv: string[], fetchFn: typeof fetch, token = 'tok') => {
+const run = (
+  argv: string[],
+  fetchFn: typeof fetch,
+  token = 'tok',
+  mintToken?: () => Promise<string>
+) => {
   const logs: string[] = []
   return runUploadCli(argv, {
     token,
+    mintToken,
     fetch: fetchFn,
     log: l => logs.push(l),
   }).then(code => ({ code, logs }))
@@ -127,6 +133,55 @@ describe('gcs-upload CLI (#2972)', () => {
       f
     )
     expect(r.code).toBe(0)
+  })
+
+  it('copy re-mints the token through mintToken after a 401 on a source read (#2980)', async () => {
+    const seen: string[] = []
+    const f = vi.fn(async (u: string, i: RequestInit) => {
+      const auth = (i.headers as Record<string, string>)['Authorization']
+      if (u.includes('alt=media')) {
+        seen.push(auth!)
+        return auth === 'Bearer tok'
+          ? new Response('', { status: 401 })
+          : new Response('abc', {
+              status: 206,
+              headers: { 'Content-Range': 'bytes 0-2/3' },
+            })
+      }
+      return i.method === 'POST'
+        ? new Response('{}', {
+            status: 200,
+            headers: { Location: 'https://s/x' },
+          })
+        : i.method === 'PUT'
+          ? new Response(`{"md5Hash":"${ABC_MD5}"}`, { status: 200 })
+          : new Response(`{"size":"3","md5Hash":"${ABC_MD5}"}`, {
+              status: 200,
+            })
+    }) as unknown as typeof fetch
+    const r = await run(
+      [
+        'copy',
+        '--from-bucket',
+        'stg',
+        '--bucket',
+        'prod',
+        '--object',
+        'basemap/x.pmtiles',
+        '--content-type',
+        'application/octet-stream',
+        '--cache-control',
+        'c',
+        '--on-exists',
+        'skip',
+      ],
+      f,
+      'tok',
+      async () => 'fresh'
+    )
+    expect(r.code).toBe(0)
+    expect(seen).toEqual(['Bearer tok', 'Bearer fresh'])
+    expect(r.logs.join('\n')).not.toMatch(/tok|fresh/)
   })
 
   it('exists: 0 when absent, 10 when present, 1 on an error', async () => {
