@@ -62,10 +62,12 @@ const MEDIA_DENIED = [
   'storage.buckets.setIamPolicy',
 ]
 
-// Probe paths for the media identity: one inside the allowed prefixes, one
-// outside. The prefixes are already public in the workflow paths.
-const MEDIA_PROBE_INSIDE = 'videos/identity-smoke/probe.mp4'
-const MEDIA_PROBE_OUTSIDE = 'identity-smoke/outside-prefix/probe'
+// Probe objects for the media identity: one inside the allowed prefixes, one
+// outside. objects.testIamPermissions answers 404 for a missing object, so
+// both are existing objects in both data buckets (read-only `gcloud storage
+// ls`, 2026-11-18). The prefixes are already public in the workflow paths.
+const MEDIA_PROBE_INSIDE = 'basemap/protomaps-v4/world-z0-14-20261015.pmtiles'
+const MEDIA_PROBE_OUTSIDE = 'v1/latest.json'
 
 export const IDENTITY_EXPECTATIONS: Record<string, IdentityExpectation> = {
   // The video publish and basemap build identity (#2972): create-only under
@@ -74,7 +76,7 @@ export const IDENTITY_EXPECTATIONS: Record<string, IdentityExpectation> = {
   // buckets.testIamPermissions cannot show them: the bucket level asserts the
   // denied set only, and objectChecks ask about one path inside the prefixes
   // and one outside. Listing is not asserted: a public read grant on prod can
-  // add it. The probe paths need not exist (a 404 fails the smoke closed).
+  // add it. The probes must exist (a 404 fails the smoke closed).
   media: {
     identity: 'media',
     buckets: {
