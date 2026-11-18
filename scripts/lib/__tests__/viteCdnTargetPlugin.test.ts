@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { cdnTargetPlugin } from '../viteCdnTargetPlugin.js'
-import { findProdCdnUses } from '../prodCdnScan.js'
+import { findProdCdnUses, stripComments } from '../prodCdnScan.js'
 
 const PROD = 'https://cdn.taverns.red'
 
@@ -158,7 +158,8 @@ describe('wiring (#2994)', () => {
     const visit = (file: string): void => {
       if (seen.has(file)) return
       seen.add(file)
-      const text = fs.readFileSync(file, 'utf8')
+      // Comments may explain why; only code counts.
+      const text = stripComments(fs.readFileSync(file, 'utf8'))
       if (/import\.meta\.env/.test(text))
         readers.push(path.relative(root, file).split(path.sep).join('/'))
       for (const m of text.matchAll(/from\s+['"](\.{1,2}\/[^'"]+)['"]/g)) {

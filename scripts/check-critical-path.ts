@@ -19,6 +19,7 @@ import {
   forbiddenOnCriticalPath,
   ROUTE_ONLY_CHUNK_PREFIXES,
   routeOnlyChunksOnChartlessRoutes,
+  standaloneChunks,
 } from './lib/criticalPath'
 
 const dist = resolve(process.argv[2] ?? 'frontend/dist')
@@ -41,20 +42,25 @@ const sized = chunks.map(name => {
 })
 const totalGzipBytes = sized.reduce((n, c) => n + c.gzipBytes, 0)
 const forbidden = forbiddenOnCriticalPath(chunks, ROUTE_ONLY_CHUNK_PREFIXES)
-const chartlessRoutes = routeOnlyChunksOnChartlessRoutes(
-  readdirSync(join(dist, 'assets')),
-  read
-)
+const assetNames = readdirSync(join(dist, 'assets'))
+const chartlessRoutes = routeOnlyChunksOnChartlessRoutes(assetNames, read)
+const standalone = standaloneChunks(assetNames)
 
 process.stdout.write(
   JSON.stringify(
-    { chunks: sized, totalGzipBytes, forbidden, chartlessRoutes },
+    { chunks: sized, totalGzipBytes, forbidden, chartlessRoutes, standalone },
     null,
     2
   ) + '\n'
 )
 
 let failed = false
+if (standalone.length > 0) {
+  console.error(
+    `check-critical-path: chunk(s) that must be folded into another: ${standalone.join(', ')} (#3000)`
+  )
+  failed = true
+}
 if (forbidden.length > 0) {
   console.error(
     `check-critical-path: route-only chunk(s) on every route's critical path: ${forbidden.join(', ')}`

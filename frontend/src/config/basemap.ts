@@ -10,8 +10,6 @@
  * at a local extract.
  */
 
-import { cdnBaseUrlFromEnv } from './cdnBase'
-
 export const BASEMAP_OBJECT_PATH =
   'basemap/protomaps-v4/world-z0-14-20261015.pmtiles'
 
@@ -26,5 +24,5 @@ export function resolveBasemapUrl(
 
 export function basemapUrl(): string {
   const env = import.meta.env as Record<string, string | undefined>
-  return resolveBasemapUrl(env, cdnBaseUrlFromEnv())
+  return resolveBasemapUrl(env, __CDN_BASE_URL__)
 }

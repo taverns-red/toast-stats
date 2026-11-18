@@ -23,18 +23,21 @@ export interface CdnTargetPlugin {
 export function cdnTargetPlugin(
   env: Record<string, string | undefined>,
   prodUrl: string,
-  _bundleUrl?: string
+  bundleUrl: string = prodUrl
 ): CdnTargetPlugin {
   return {
     name: 'cdn-target-check',
     apply: 'build',
     buildStart() {
-      const { url, source } = resolveBuildCdnTarget('vite build', env, prodUrl)
-      if (source === 'local-default') {
-        console.error(
-          `[cdn-target] VITE_CDN_BASE_URL is not set; the bundle uses the prod CDN ${url} (local build). CI must set it.`
-        )
-      }
+      const { source } = resolveBuildCdnTarget('vite build', env, prodUrl)
+      if (source !== 'local-default') return
+      // `bundleUrl` is what vite.config.ts bakes into the bundle: Vite also
+      // reads .env files, which the CI check above deliberately ignores.
+      console.error(
+        bundleUrl === prodUrl
+          ? `[cdn-target] VITE_CDN_BASE_URL is not set; the bundle uses the prod CDN ${prodUrl} (local build). CI must set it.`
+          : `[cdn-target] VITE_CDN_BASE_URL is not set in the environment; a .env file sets it, and the bundle uses ${bundleUrl} (local build). CI must set it in the environment.`
+      )
     },
   }
 }

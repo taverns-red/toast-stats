@@ -88,9 +88,24 @@ export function forbiddenOnCriticalPath(
   return chunks.filter(c => forbiddenPrefixes.some(p => c.startsWith(p)))
 }
 
-/** Red stub (#3000): reports nothing yet. */
-export function standaloneChunks(_assetNames: readonly string[]): string[] {
-  return []
+/**
+ * Modules that must be folded into a bigger chunk, never emitted on their own
+ * (#3000): a standalone chunk of a few bytes is one more request on the path
+ * that has to finish before anything renders. `cdnBase` was the CDN module
+ * (#2999): shared by several chunks, it came out as a 0.17 kB chunk with its
+ * own modulepreload. The CDN is now the `__CDN_BASE_URL__` constant that
+ * vite.config.ts defines, so no module is left to split out.
+ */
+export const NO_STANDALONE_CHUNK_PREFIXES: readonly string[] = ['cdnBase-']
+
+/** Built chunk files that match a prefix which must not stand alone. */
+export function standaloneChunks(
+  assetNames: readonly string[],
+  prefixes: readonly string[] = NO_STANDALONE_CHUNK_PREFIXES
+): string[] {
+  return assetNames.filter(
+    n => n.endsWith('.js') && prefixes.some(p => n.startsWith(p))
+  )
 }
 
 /**
