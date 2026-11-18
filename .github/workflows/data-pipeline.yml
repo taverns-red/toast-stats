@@ -19,8 +19,10 @@
 #
 # Prerequisites:
 #   1. Run scripts/setup-wif.sh (one-time)
-#   2. Add GitHub secrets: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
-#   3. Add the repository variables GCP_PIPELINE_SA (#2872 B3) and GCP_RESTORE_SA (#2872 B4)
+#   2. Add GitHub secrets: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER
+#   3. Add the repository variables for the per-job identities (#2872, #2955):
+#      GCP_DATA_READER_SA, GCP_PREVIEW_SA, GCP_PIPELINE_SA, GCP_RESTORE_SA,
+#      GCP_MEDIA_SA, GCP_HOSTING_DEPLOY_SA
 #
 # Identities (#2872): the jobs that write data (pipeline, daily-reports,
 # place-reports, education-rollup, promote-reports, og-cards,
