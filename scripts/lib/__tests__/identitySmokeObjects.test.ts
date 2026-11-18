@@ -4,7 +4,11 @@
  * objects.testIamPermissions on paths inside and outside the prefix.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { evaluate, type IdentityExpectation } from '../identitySmoke'
+import {
+  evaluate,
+  IDENTITY_EXPECTATIONS,
+  type IdentityExpectation,
+} from '../identitySmoke'
 import { runSmoke } from '../identitySmokeCli'
 
 const exp: IdentityExpectation = {
@@ -131,5 +135,22 @@ describe('runSmoke object checks (#2972)', () => {
     )
     expect(code).toBe(1)
     expect(logs.join('\n')).toContain('404')
+  })
+})
+
+describe('media probe objects (#2972)', () => {
+  // objects.testIamPermissions on a missing object answers 404, so the probes
+  // must exist in both data buckets (checked read-only with
+  // `gcloud storage ls`, 2026-11-18). Public prefixes, safe to name here.
+  it('probes existing objects: a basemap archive inside, v1/latest.json outside', () => {
+    const checks = IDENTITY_EXPECTATIONS.media.objectChecks ?? []
+    expect(checks.map(c => `${c.bucket}/${c.object}`).sort()).toEqual(
+      [
+        'toast-stats-data-ca/basemap/protomaps-v4/world-z0-14-20261015.pmtiles',
+        'toast-stats-data-ca/v1/latest.json',
+        'toast-stats-data-staging/basemap/protomaps-v4/world-z0-14-20261015.pmtiles',
+        'toast-stats-data-staging/v1/latest.json',
+      ].sort()
+    )
   })
 })
