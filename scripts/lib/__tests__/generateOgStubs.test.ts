@@ -35,7 +35,7 @@ function run(env: Record<string, string>) {
   return spawnSync('npx', ['tsx', SCRIPT], {
     cwd: REPO,
     encoding: 'utf-8',
-    env: { ...process.env, OG_STUBS_DIST: dist, ...env },
+    env: { ...process.env, CI: '', OG_STUBS_DIST: dist, ...env },
   })
 }
 
@@ -66,12 +66,35 @@ describe('generate-og-stubs', () => {
     expect(r.stdout).toBe('')
   })
 
-  it('defaults the card URLs to the prod CDN', () => {
+  it('a local build with no target says so and uses the prod CDN (#2982)', () => {
     const env = { OG_STUBS_RANKINGS_FILE: RANKINGS, VITE_CDN_BASE_URL: '' }
-    expect(run(env).status).toBe(0)
+    const r = run(env)
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toMatch(/VITE_CDN_BASE_URL is not set/)
     expect(
       fs.readFileSync(path.join(dist, 'district/61.html'), 'utf8')
     ).toContain('content="https://cdn.taverns.red/og/v1/district/61.png"')
+  })
+
+  it('a CI build with no target fails with exit 2 and writes no stubs (#2982)', () => {
+    const r = run({
+      CI: 'true',
+      OG_STUBS_RANKINGS_FILE: RANKINGS,
+      VITE_CDN_BASE_URL: '',
+    })
+    expect(r.status).toBe(2)
+    expect(r.stderr).toMatch(/VITE_CDN_BASE_URL/)
+    expect(r.stdout).toBe('')
+    expect(fs.existsSync(path.join(dist, 'district'))).toBe(false)
+  })
+
+  it('a CI build with an explicit target still works (#2982)', () => {
+    const r = run({
+      CI: 'true',
+      OG_STUBS_RANKINGS_FILE: RANKINGS,
+      VITE_CDN_BASE_URL: 'https://cdn-staging.taverns.red',
+    })
+    expect(r.status, r.stderr).toBe(0)
   })
 
   it('an unreadable district list is a warning and no stubs, never a failed build', () => {
