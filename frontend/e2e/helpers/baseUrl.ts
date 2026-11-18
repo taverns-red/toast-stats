@@ -4,7 +4,7 @@
  * BASE_URL is required. There is deliberately no default: the old one,
  * `https://staging-toast-stats.web.app`, is the staging site's live channel,
  * which nothing has deployed since 2026-05-25 (only per-PR `pr-<N>` channels
- * are updated), so a run without BASE_URL silently tested a stale build. CI
+ * are updated, now on the `toast-stats-staging` site, #2956), so a run without BASE_URL silently tested a stale build. CI
  * always sets BASE_URL to the PR preview channel URL.
  */
 export const BASE_URL_REQUIRED_MESSAGE = [

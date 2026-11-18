@@ -355,7 +355,7 @@
     "hosting": {
       "name": "Firebase Hosting",
       "production_target": "toast-stats-prod-6d64a",
-      "staging_target": "staging-toast-stats",
+      "staging_target": "toast-stats-staging",
       "asset_cache": "31536000s (immutable for hashed assets); index.html revalidated"
     },
     "auth": {
