@@ -61,10 +61,12 @@ export interface LiveVersionOptions {
   timeoutMs?: number
 }
 
+const DEFAULT_TIMEOUT_MS = 15_000
+
 async function get(
   f: Fetcher,
   url: string,
-  sleep?: (ms: number) => Promise<void>,
+  opts: { sleep?: (ms: number) => Promise<void>; timeoutMs?: number },
   method = 'GET'
 ): Promise<Response> {
   return retryAsync(
@@ -73,11 +75,15 @@ async function get(
         method,
         redirect: 'follow',
         headers: { 'cache-control': 'no-cache' },
+        signal: AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       })
-      if (r.status >= 500) throw new Error(`${method} ${url}: HTTP ${r.status}`)
+      if (r.status >= 500) {
+        await r.body?.cancel()
+        throw new Error(`${method} ${url}: HTTP ${r.status}`)
+      }
       return r
     },
-    { attempts: 3, baseDelayMs: 1000, sleep }
+    { attempts: 3, baseDelayMs: 1000, sleep: opts.sleep }
   )
 }
 
@@ -86,8 +92,11 @@ export async function liveVersion(
 ): Promise<LiveVersionReport> {
   const f = opts.fetcher ?? (fetch as Fetcher)
   const base = opts.base.replace(/\/+$/, '')
-  const index = await get(f, `${base}/`, opts.sleep)
-  if (!index.ok) throw new Error(`GET ${base}/: HTTP ${index.status}`)
+  const index = await get(f, `${base}/`, opts)
+  if (!index.ok) {
+    await index.body?.cancel()
+    throw new Error(`GET ${base}/: HTTP ${index.status}`)
+  }
   const { entry, assets } = parseEntryAssets(await index.text())
   if (!entry) throw new Error(`no module entry script in ${base}/`)
   const probes: AssetProbe[] = []
@@ -96,10 +105,11 @@ export async function liveVersion(
     // The entry is always read; other scripts are read only until the env
     // object turns up (#3013), and probed with HEAD after that.
     const read = path === entry || (version === null && path.endsWith('.js'))
-    const r = await get(f, `${base}${path}`, opts.sleep, read ? 'GET' : 'HEAD')
+    const r = await get(f, `${base}${path}`, opts, read ? 'GET' : 'HEAD')
     const contentType = r.headers.get('content-type') ?? ''
     if (read && r.ok && version === null)
       version = parseBundleVersion(await r.text())
+    else if (read) await r.body?.cancel()
     probes.push({
       path,
       status: r.status,
