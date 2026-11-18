@@ -210,17 +210,29 @@ describe('videos-publish.yml (#2310)', () => {
     expect(run).toMatch(/\*\)[^\n]*exit 1/)
   })
 
-  it('hands the job token to the helper through a masked environment variable, never echoed', () => {
-    const at = steps.findIndex(s => /print-access-token/.test(s.run ?? ''))
-    expect(at).toBeGreaterThan(-1)
-    const run = steps[at]?.run ?? ''
-    expect(run).toContain('::add-mask::')
-    expect(run).toMatch(/ACCESS_TOKEN=.*>> "\$GITHUB_ENV"|>> "\$GITHUB_ENV"/)
+  it('each step that calls the helper mints its own masked token first (tokens last an hour; none is persisted)', () => {
+    const callers = steps.filter(s => /gcs-upload\.ts/.test(s.run ?? ''))
+    expect(callers.length).toBeGreaterThanOrEqual(2)
+    for (const s of callers) {
+      const run = s.run ?? ''
+      const mint = run.indexOf('print-access-token')
+      expect(mint, s.name).toBeGreaterThan(-1)
+      expect(run.indexOf('::add-mask::'), s.name).toBeGreaterThan(mint)
+      expect(run, s.name).toMatch(/export ACCESS_TOKEN/)
+      expect(run.indexOf('export ACCESS_TOKEN'), s.name).toBeLessThan(
+        run.indexOf('gcs-upload.ts')
+      )
+    }
+    expect(raw).not.toMatch(
+      /ACCESS_TOKEN=.*GITHUB_ENV|>> "\$GITHUB_ENV".*TOKEN/
+    )
+    expect(raw).not.toMatch(
+      /echo[^\n]*\$\{?ACCESS_TOKEN\}?[^\n]*(?<!GITHUB_ENV")$/m
+    )
     const authAt = steps.findIndex(s =>
       /google-github-actions\/auth/.test(s.uses ?? '')
     )
-    expect(at).toBeGreaterThan(authAt)
-    expect(at).toBeLessThan(stepIndex('Refuse to overwrite existing objects'))
+    for (const s of callers) expect(steps.indexOf(s)).toBeGreaterThan(authAt)
   })
 
   it('installs dependencies with --ignore-scripts: no lifecycle script runs while the job holds the OIDC token', () => {

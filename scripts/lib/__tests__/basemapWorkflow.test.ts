@@ -216,17 +216,29 @@ describe('basemap-build.yml (#1786)', () => {
     expect(steps[install]?.if).toBeUndefined()
   })
 
-  it('hands the job token to the helper through a masked environment variable, never echoed', () => {
-    const at = steps.findIndex(
-      s =>
-        /print-access-token/.test(s.run ?? '') && /GITHUB_ENV/.test(s.run ?? '')
+  it('each step that calls the helper mints its own masked token first (tokens last an hour; none is persisted)', () => {
+    const callers = steps.filter(s => /gcs-upload\.ts/.test(s.run ?? ''))
+    expect(callers.length).toBeGreaterThanOrEqual(2)
+    for (const s of callers) {
+      const run = s.run ?? ''
+      const mint = run.indexOf('print-access-token')
+      expect(mint, s.name).toBeGreaterThan(-1)
+      expect(run.indexOf('::add-mask::'), s.name).toBeGreaterThan(mint)
+      expect(run, s.name).toMatch(/export ACCESS_TOKEN/)
+      expect(run.indexOf('export ACCESS_TOKEN'), s.name).toBeLessThan(
+        run.indexOf('gcs-upload.ts')
+      )
+    }
+    expect(raw).not.toMatch(
+      /ACCESS_TOKEN=.*GITHUB_ENV|>> "\$GITHUB_ENV".*TOKEN/
     )
-    expect(at).toBeGreaterThan(-1)
-    expect(steps[at]?.run).toContain('::add-mask::')
+    expect(raw).not.toMatch(
+      /echo[^\n]*\$\{?ACCESS_TOKEN\}?[^\n]*(?<!GITHUB_ENV")$/m
+    )
     const authAt = steps.findIndex(s =>
       /google-github-actions\/auth/.test(s.uses ?? '')
     )
-    expect(at).toBeGreaterThan(authAt)
+    for (const s of callers) expect(steps.indexOf(s)).toBeGreaterThan(authAt)
   })
 
   it('only ever writes under basemap/', () => {
