@@ -324,7 +324,10 @@ describe('prospect checklist progress (#2388)', () => {
   const D84 = DistrictReportsDatasetSchema.parse(REC.d84_reports)
   const history: DistrictRegionHistory = structuredClone(HISTORY)
   for (const id of ['25', '84']) {
-    history.districts[id] = { byProgramYear: { '2026-2027': '09' } }
+    history.districts[id] = {
+      spans: [{ from: '2026-07-01', to: null, region: '09' }],
+      byProgramYear: { '2026-2027': '09' },
+    }
   }
   const out = buildReportsRollups(
     input({
