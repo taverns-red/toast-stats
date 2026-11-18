@@ -116,6 +116,92 @@ describe('GCP identity map (#2872)', () => {
   })
 })
 
+interface GuardStep {
+  id?: string
+  if?: unknown
+  'continue-on-error'?: unknown
+  uses?: string
+  run?: string
+  env?: Record<string, unknown>
+}
+
+/**
+ * Is some step before `authAt` a guard for the repository variable `varName`?
+ * A guard has the variable in its env, an `-z` test and an `exit 1` (#2872).
+ */
+const hasGuard = (
+  steps: GuardStep[],
+  authAt: number,
+  varName: string
+): boolean =>
+  steps
+    .slice(0, authAt)
+    .some(
+      s =>
+        new RegExp(`vars\\.${varName}`).test(
+          String(Object.values(s.env ?? {}))
+        ) &&
+        /-z\b/.test(s.run ?? '') &&
+        /exit 1/.test(s.run ?? '')
+    )
+
+describe('identity guard step configuration (#2963)', () => {
+  const guard = (extra: Partial<GuardStep> = {}): GuardStep => ({
+    id: 'reader',
+    env: { READER_SA: '${{ vars.GCP_X_SA }}' },
+    run: 'if [ -z "${READER_SA}" ]; then\n  exit 1\nfi',
+    ...extra,
+  })
+  const auth = (extra: Partial<GuardStep> = {}): GuardStep => ({
+    uses: 'google-github-actions/auth@v3',
+    ...extra,
+  })
+  const check = (g: GuardStep, a: GuardStep) => hasGuard([g, a], 1, 'GCP_X_SA')
+
+  it('accepts a plain guard before an auth step', () => {
+    expect(check(guard(), auth())).toBe(true)
+  })
+
+  it('accepts a guard with the same if as the auth step', () => {
+    const cond = "github.ref == 'refs/heads/main'"
+    expect(check(guard({ if: cond }), auth({ if: cond }))).toBe(true)
+  })
+
+  it('accepts a soft-failing guard when the auth step needs its success', () => {
+    const cond = "!cancelled() && github.ref == 'refs/heads/main'"
+    expect(
+      check(
+        guard({ if: cond, 'continue-on-error': true }),
+        auth({ if: `${cond} && steps.reader.outcome == 'success'` })
+      )
+    ).toBe(true)
+  })
+
+  it('rejects a guard disabled with if: false', () => {
+    expect(check(guard({ if: false }), auth())).toBe(false)
+    expect(check(guard({ if: 'false' }), auth())).toBe(false)
+  })
+
+  it('rejects a guard with continue-on-error that auth does not wait for', () => {
+    expect(check(guard({ 'continue-on-error': true }), auth())).toBe(false)
+    expect(check(guard({ 'continue-on-error': '${{ true }}' }), auth())).toBe(
+      false
+    )
+  })
+
+  it('rejects a guard whose if is narrower than the auth step', () => {
+    expect(
+      check(guard({ if: "github.ref == 'refs/heads/main'" }), auth())
+    ).toBe(false)
+    expect(
+      check(
+        guard({ if: "github.ref == 'refs/heads/main'" }),
+        auth({ if: "github.event_name == 'push'" })
+      )
+    ).toBe(false)
+  })
+})
+
 describe('data-reader jobs (#2872 B2)', () => {
   const files = loadWorkflows()
   const wfOf = (file: string) => files.find(f => f.file === file)!.wf
