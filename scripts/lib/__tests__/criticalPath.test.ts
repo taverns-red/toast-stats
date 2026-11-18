@@ -62,7 +62,7 @@ describe('criticalPath (#1830)', () => {
   })
 
   it('flags charts when a critical chunk imports it statically', () => {
-    const leaky = {
+    const leaky: Record<string, string> = {
       ...CHUNKS,
       'vendor-dk9coiy2.js': `import{_ as e}from"./charts-xzsG-m48.js";`,
     }

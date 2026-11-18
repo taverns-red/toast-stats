@@ -203,16 +203,20 @@ describe('buildPromotionHeldBody', () => {
       valuePromote: false,
       valueDiff: {
         ...CHANGED_DIFF,
-        changedDates: Array.from({ length: 160 }, (_, i) => ({
-          date: `2024-01-${String((i % 28) + 1).padStart(2, '0')}`,
-          districtsChanged: 120,
-        })),
         reasons: Array.from(
           { length: 2000 },
           (_, i) =>
             `2024-01-01 district ${i}: totalPayments 11111111 -> 22222222, paidClubs 333 -> 444 (digest mismatch on overlap date)`
         ),
-        affectedDistricts: Array.from({ length: 130 }, (_, i) => String(i + 1)),
+        report: {
+          ...CHANGED_DIFF.report,
+          changed: Array.from({ length: 160 }, (_, i) => ({
+            date: `2024-01-${String((i % 28) + 1).padStart(2, '0')}`,
+            changedDistricts: Array.from({ length: 120 }, (_, d) =>
+              String(d + 1)
+            ),
+          })),
+        },
       },
     })
     const body = buildPromotionHeldBody(r, OPTS)

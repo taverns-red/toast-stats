@@ -9,6 +9,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["./**/*.ts"],
-  "exclude": ["./**/__tests__/**"]
+  "include": ["./**/*.ts"]
 }

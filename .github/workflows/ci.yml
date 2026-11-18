@@ -209,6 +209,13 @@ jobs:
         # unchanged and still enforced by the step above.
         run: npm run typecheck:tests
 
+      - name: Typecheck scripts
+        # scripts/tsconfig.json covers the scripts source and its __tests__
+        # trees (#2836). Vitest strips types, so without this step a typo in a
+        # scripts fixture is never caught. It also runs in `npm run typecheck`
+        # (pre-commit); here it gets its own named step.
+        run: npm run typecheck:scripts
+
       - name: Lint and Format Check
         id: lint
         run: |
