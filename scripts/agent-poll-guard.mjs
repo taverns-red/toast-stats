@@ -24,6 +24,11 @@
 // watch 1`). Aliases, scripts and `bash -c '...'` hide the call as well. The
 // guard is a habit stopper, not a boundary.
 //
+// Also not seen: a `gh` command nested more than one `$( )` deep inside
+// another `gh` command's arguments, and backtick substitutions there (#2918).
+// Heredocs, quotes (`'..'`, `".."`, `$'..'`) and comments are read in one
+// left-to-right pass, so `# <<EOF` or `echo '<<EOF'` starts no heredoc.
+//
 // Limitation: text inside quotes and heredoc bodies is ignored, so a commit
 // message or PR body that mentions the words passes. The flip side is that a
 // loop hidden in a quoted string (`bash -c 'while ...'`, `eval "..."`) is not
@@ -47,32 +52,60 @@ export const MESSAGE =
  * newline continuations, keeping the shell structure.
  */
 export function stripText(command) {
-  const text = String(command)
-    .replace(/\\\r?\n/g, ' ')
-    .replace(
-      /<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g,
-      ' '
-    )
+  const text = String(command).replace(/\\\r?\n/g, ' ')
+  // One left-to-right pass, so a `<<EOF` inside a comment or a quote starts
+  // no heredoc (#2918). A heredoc's body starts after the newline that ends
+  // its line and runs to a line holding only the delimiter.
   let out = ''
   let i = 0
+  let pending = [] // heredoc delimiters waiting for the end of their line
   while (i < text.length) {
     const c = text[i]
     if (c === '\\') {
       out += text.slice(i, i + 2)
       i += 2
-    } else if (c === '"' || c === "'") {
-      let j = i + 1
-      while (j < text.length && text[j] !== c)
-        j += c === '"' && text[j] === '\\' ? 2 : 1
+    } else if (c === '"' || c === "'" || (c === '$' && text[i + 1] === "'")) {
+      // `$'..'` honours `\'` like a double quote does (#2918).
+      const ansi = c === '$'
+      const q = ansi ? "'" : c
+      const start = i + (ansi ? 2 : 1)
+      let j = start
+      while (j < text.length && text[j] !== q)
+        j += (q === '"' || ansi) && text[j] === '\\' ? 2 : 1
       if (j >= text.length) {
         out += c // unterminated: keep it and carry on
         i += 1
       } else {
-        out += c + c
+        // A plain number stays readable: `--interval "60"` is 60 (#2918).
+        const inner = text.slice(start, j)
+        out += /^\d{1,6}$/.test(inner) ? inner : (ansi ? '$' : '') + q + q
         i = j + 1
       }
     } else if (c === '#' && (i === 0 || /[\s;&|(]/.test(text[i - 1]))) {
       while (i < text.length && text[i] !== '\n') i += 1
+    } else if (c === '<' && text[i + 1] === '<' && text[i + 2] !== '<') {
+      const op = HEREDOC.exec(text.slice(i, i + 200))
+      if (op && text[i - 1] !== '<') {
+        pending.push(op[1] ?? op[2] ?? op[3] ?? op[4])
+        out += ' '
+        i += op[0].length
+      } else {
+        out += '<<'
+        i += 2
+      }
+    } else if (c === '\n') {
+      out += c
+      i += 1
+      for (const delim of pending) {
+        while (i < text.length) {
+          let end = text.indexOf('\n', i)
+          if (end === -1) end = text.length
+          const line = text.slice(i, end).trim()
+          i = Math.min(end + 1, text.length)
+          if (line === delim) break
+        }
+      }
+      pending = []
     } else {
       out += c
       i += 1
@@ -80,6 +113,11 @@ export function stripText(command) {
   }
   return out
 }
+
+// `<<`, an optional `-`, then a delimiter: bare, quoted, or `\`-escaped. A
+// delimiter must start with a letter or `_`, so `$((1<<2))` is not a heredoc.
+const HEREDOC =
+  /^<<-?[ \t]*(?:\\([A-Za-z_]\w*)|'([A-Za-z_]\w*)'|"([A-Za-z_]\w*)"|([A-Za-z_]\w*))/
 
 // A command word: start of the command, or right after a separator, `(`,
 // `{`, `$(`, a backtick, or a loop/branch keyword. It may be preceded by `!`, `time` and `VAR=value ` prefixes,
@@ -103,7 +141,13 @@ export const WATCH_MESSAGE =
 // gh polls on its own: every 10 s for `pr checks --watch`, every 3 s for
 // `run watch`. Each `gh` command is cut at the next separator and its
 // arguments are checked on their own, so the cost stays linear.
-const GH_COMMAND = new RegExp(CMD + String.raw`gh\b([^;&|\n)]*)`, 'g')
+// An argument list may hold `$( )` substitutions (one level), so a `)` inside
+// one does not cut it short (#2918).
+const SUBST = String.raw`\$\([^()]*\)`
+const GH_COMMAND = new RegExp(
+  CMD + String.raw`gh\b((?:${SUBST}|[^;&|\n)$]|\$(?!\())*)`,
+  'g'
+)
 const INTERVAL = /\s(?:--interval|-i)(?:=|\s+)?(\S*)/g
 const MIN_INTERVAL = 60
 
@@ -115,19 +159,36 @@ function intervalTooFast(args) {
   return !(/^[1-9]\d*$/.test(last) && Number(last) >= MIN_INTERVAL)
 }
 
+// `--watch` on, but not `--watch=false` / `--watch=0` (#2918).
+const WATCH_ON = /\s--watch(?:=(?!(?:false|0)(?:\s|$))\S*)?(?=\s|$)/
+
 function pollsFast(args) {
-  if (/\bpr\s+checks\b/.test(args) && /\s--watch\b/.test(args)) return true
-  const w = /\brun\s+watch\b/.exec(args)
-  return w !== null && intervalTooFast(args.slice(w.index))
+  const flat = args.replace(new RegExp(SUBST, 'g'), ' X ')
+  if (/\bpr\s+checks\b/.test(flat) && WATCH_ON.test(flat)) return true
+  const w = /\brun\s+watch\b/.exec(flat)
+  return w !== null && intervalTooFast(flat.slice(w.index))
+}
+
+/** True when a `gh` command in `s` (or inside a `$( )` in its arguments) polls fast. */
+function pollsFastIn(s) {
+  for (const m of s.matchAll(GH_COMMAND)) {
+    if (pollsFast(m[1])) return true
+    for (const sub of m[1].matchAll(new RegExp(SUBST, 'g'))) {
+      if (pollsFastIn(sub[0].slice(2, -1))) return true
+    }
+  }
+  return false
 }
 
 /** Returns the refusal message for a polling command, or null. */
 export function checkPolling(command) {
+  // File-descriptor redirections (`2>&1`, `>&2`, `&>`) hold a `&` that would
+  // cut a command short, so they are dropped first (#2918).
   const s = stripText(command)
+    .replace(/\d*[<>]&(?:\d+-?|-)?/g, ' ')
+    .replace(/&>>?/g, ' ')
   if (SLEEP.test(s) && GH_POLL.test(s)) return MESSAGE
-  for (const m of s.matchAll(GH_COMMAND)) {
-    if (pollsFast(m[1])) return WATCH_MESSAGE
-  }
+  if (pollsFastIn(s)) return WATCH_MESSAGE
   return null
 }
 
