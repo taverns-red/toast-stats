@@ -25,7 +25,7 @@ All three hooks exit 0 at once unless `CLAUDE_CODE_REMOTE=true`, so local sessio
 The setup hook also fills two gaps in the VM image (#2467), skipping each when already present:
 
 - **`yamllint`**, installed with `pip install --user` (lands in `~/.local/bin`, already on PATH). The pre-commit hook runs `npm run lint:yaml`, which otherwise exits 127.
-- **A case-folding locale, `en_US.UTF-8`**, generated with `localedef`. The image ships only `C`, `C.utf8` and `POSIX`; `scripts/lib/__tests__/lessonsIndexLocale.test.ts` needs one that folds case.
+- **A case-folding locale, `en_US.UTF-8`**, generated with `localedef`. The image ships only `C`, `C.utf8` and `POSIX`; the lessons-index test that needed one folded case was retired in #2950, and `scripts/cloud-session-setup.sh` still installs it.
 
 There is no Playwright in the VM. Browser smokes run in CI against the PR preview channel.
 
