@@ -14,7 +14,7 @@ const WORKFLOWS = path.resolve(process.cwd(), '.github/workflows')
 // GitHub expression contexts are case-insensitive, so
 // `secrets.gcp_service_account` reads the same secret.
 const namesLegacyIdentity = (text: string): boolean =>
-  text.includes('GCP_SERVICE_ACCOUNT')
+  /gcp_service_account/i.test(text)
 
 describe('legacy deploy identity is gone (#2955)', () => {
   it('matches the secret name in any case', () => {
