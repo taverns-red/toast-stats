@@ -23,6 +23,7 @@ interface Step {
   env?: Record<string, string>
   with?: Record<string, unknown>
   'timeout-minutes'?: number
+  'working-directory'?: string
 }
 interface Job {
   permissions?: Record<string, string>
@@ -62,7 +63,10 @@ describe('deploy.yml post-deploy-verify video URL check (#2899)', () => {
     )
     expect(setup).toBeGreaterThanOrEqual(0)
     expect(setup).toBeLessThan(i)
-    expect(verify.steps[setup]?.with?.['node-version-file']).toMatch(/\.nvmrc$/)
+    // Exactly '.nvmrc': nodeVersionPolicy.test.ts (#2853) requires it, so the
+    // commit is fetched into the workspace root, not a subfolder.
+    expect(verify.steps[setup]?.with?.['node-version-file']).toBe('.nvmrc')
+    expect(checkStep?.['working-directory']).toBeUndefined()
     expect(verify.steps[setup]?.with?.cache).toBeUndefined()
   })
 
