@@ -39,7 +39,7 @@
 #   stale manifest; rsync decompresses only from 576.0.0. Every setup-gcloud
 #   step now pins an exact version >= 576 and logs `gcloud version` (#1720).
 #   Any CLI or flag change on a read path also needs a content check: decode,
-#   parse and compare. See tasks/lessons/lessons/
+#   parse and compare. See tasks/lessons/archive/lessons/
 #   a-store-round-tripped-through-gzip-encoding-needs-a-download-normaliser-and-an-upload-guard.md
 #   Three things a mechanical rewrite gets wrong:
 #     * `-m` has NO equivalent — parallelism is the default in `gcloud storage`.

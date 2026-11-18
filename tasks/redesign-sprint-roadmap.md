@@ -17,7 +17,7 @@
 - **One sprint at a time.** Pause for sign-off between sprints.
 - **Per-issue PRs**, conventional commits, `(#N)` references.
 - **TDD per Full DoD.** /simplify + /review (fresh-context Agent) before push.
-- **Lessons** added per file in `tasks/lessons/<NNN>-slug.md` (or appended to `tasks/lessons.md`).
+- **Lessons** added per file in `tasks/lessons/<NNN>-slug.md` (or appended to `tasks/lessons/archive/lessons.md`).
 - **Live verify** after each PR merges to main.
 
 ## Risk callouts

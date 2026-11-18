@@ -151,4 +151,4 @@ DCP status yet. Neither "City of Refuge" nor "Finer Women Speak" appears in
 - `curl --compressed https://cdn.taverns.red/snapshots/2026-06-30/district_44.json` → totals/clubs verification above
 - Live export (2026-07-09 ~15:30Z): 127 rows, Σ 5,202, footer "Month of Jun, As of 07/08/2026", both charters present
 - `docs/month-end-closing-dates.json` — closing registry (ADR-011)
-- Lessons: `tasks/lessons/lessons/key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md` (recurrence #4 of the divergence class), `resolve-the-active-program-year-by-data-not-the-calendar.md`
+- Lessons: `tasks/lessons/archive/lessons/key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md` (recurrence #4 of the divergence class), `resolve-the-active-program-year-by-data-not-the-calendar.md`

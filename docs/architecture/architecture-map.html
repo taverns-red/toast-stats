@@ -133,7 +133,9 @@
     <header
       class="bg-gradient-to-r from-loyal to-loyal/80 text-white sticky top-0 z-50 shadow-lg"
     >
-      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div
+        class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between"
+      >
         <div class="flex items-center gap-3">
           <div
             class="w-10 h-10 rounded-lg bg-white/15 grid place-items-center font-bold text-lg"
@@ -212,33 +214,25 @@
             <strong>No backend on the request path.</strong>
           </p>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div
-              class="node bg-white rounded-xl border-2 border-slate-200 p-4"
-            >
+            <div class="node bg-white rounded-xl border-2 border-slate-200 p-4">
               <div class="text-3xl font-bold text-loyal">4</div>
               <div class="text-xs text-slate-500 uppercase tracking-wider mt-1">
                 workspaces
               </div>
             </div>
-            <div
-              class="node bg-white rounded-xl border-2 border-slate-200 p-4"
-            >
+            <div class="node bg-white rounded-xl border-2 border-slate-200 p-4">
               <div class="text-3xl font-bold text-loyal">11</div>
               <div class="text-xs text-slate-500 uppercase tracking-wider mt-1">
                 frontend routes
               </div>
             </div>
-            <div
-              class="node bg-white rounded-xl border-2 border-slate-200 p-4"
-            >
+            <div class="node bg-white rounded-xl border-2 border-slate-200 p-4">
               <div class="text-3xl font-bold text-loyal">5</div>
               <div class="text-xs text-slate-500 uppercase tracking-wider mt-1">
                 CI workflows
               </div>
             </div>
-            <div
-              class="node bg-white rounded-xl border-2 border-slate-200 p-4"
-            >
+            <div class="node bg-white rounded-xl border-2 border-slate-200 p-4">
               <div class="text-3xl font-bold text-loyal">60+</div>
               <div class="text-xs text-slate-500 uppercase tracking-wider mt-1">
                 lessons captured
@@ -466,9 +460,7 @@
                   <strong>Consumers:</strong> analytics-core, collector-cli,
                   frontend
                 </p>
-                <p class="text-slate-600">
-                  <strong>Deps:</strong> zod
-                </p>
+                <p class="text-slate-600"><strong>Deps:</strong> zod</p>
               </div>
             </details>
 
@@ -502,8 +494,8 @@
                   <strong>Key modules:</strong> AnalyticsComputer,
                   BordaCountRankingCalculator,
                   <strong>DistinguishedDistrictCalculator</strong> (TI Item
-                  1490), CompetitiveAwardsCalculator,
-                  ClubHealthAnalyticsModule, MembershipAnalyticsModule, +9 more
+                  1490), CompetitiveAwardsCalculator, ClubHealthAnalyticsModule,
+                  MembershipAnalyticsModule, +9 more
                 </p>
               </div>
             </details>
@@ -532,9 +524,7 @@
               <div class="mt-3 text-sm space-y-1">
                 <p>4-stage pipeline CLI (commander).</p>
                 <ul class="text-xs space-y-0.5 text-slate-700">
-                  <li>
-                    <kbd>scrape</kbd> — Playwright → GCS raw-csv/{date}/
-                  </li>
+                  <li><kbd>scrape</kbd> — Playwright → GCS raw-csv/{date}/</li>
                   <li><kbd>transform</kbd> — CSV → typed DistrictStatistics</li>
                   <li><kbd>compute</kbd> — analytics-core → JSON</li>
                   <li><kbd>upload</kbd> — gsutil cp → GCS bucket</li>
@@ -613,7 +603,9 @@
                   </td>
                   <td class="px-4 py-3">
                     Fetch CSV exports from
-                    <span class="font-mono text-xs">dashboards.toastmasters.org</span>
+                    <span class="font-mono text-xs"
+                      >dashboards.toastmasters.org</span
+                    >
                   </td>
                   <td class="px-4 py-3 text-slate-600 font-mono text-xs">
                     gs://…-staging/raw-csv/{date}/
@@ -682,12 +674,9 @@
                     Frontend (TanStack Query)
                   </td>
                   <td class="px-4 py-3">
-                    fetchCdnManifest → fetchCdnRankings →
-                    fetchDistrictAnalytics
+                    fetchCdnManifest → fetchCdnRankings → fetchDistrictAnalytics
                   </td>
-                  <td class="px-4 py-3 text-slate-600">
-                    User sees fresh data
-                  </td>
+                  <td class="px-4 py-3 text-slate-600">User sees fresh data</td>
                 </tr>
               </tbody>
             </table>
@@ -851,9 +840,7 @@
                 <span class="font-mono text-sm">…/division/:id</span
                 ><span class="text-xs text-slate-500">DivisionPage</span>
               </div>
-              <div class="text-xs text-slate-600 mt-1">
-                Per-division detail
-              </div>
+              <div class="text-xs text-slate-600 mt-1">Per-division detail</div>
             </a>
             <a
               href="#"
@@ -1023,10 +1010,14 @@
             for the full set.
           </p>
           <div class="space-y-3">
-            <details class="node bg-white rounded-xl border-2 border-slate-200 p-4">
+            <details
+              class="node bg-white rounded-xl border-2 border-slate-200 p-4"
+            >
               <summary class="cursor-pointer list-none flex items-center gap-2">
                 <span class="chev text-slate-400">▸</span>
-                <span class="font-bold">ADR-001 · Compute once, serve static</span>
+                <span class="font-bold"
+                  >ADR-001 · Compute once, serve static</span
+                >
               </summary>
               <p class="mt-2 text-sm text-slate-700">
                 Daily pipeline pre-computes ALL analytics into immutable JSON;
@@ -1034,7 +1025,9 @@
                 pipeline backfill — not a hot deploy.
               </p>
             </details>
-            <details class="node bg-white rounded-xl border-2 border-slate-200 p-4">
+            <details
+              class="node bg-white rounded-xl border-2 border-slate-200 p-4"
+            >
               <summary class="cursor-pointer list-none flex items-center gap-2">
                 <span class="chev text-slate-400">▸</span>
                 <span class="font-bold"
@@ -1046,7 +1039,9 @@
                 cannot drift; types verified at build time.
               </p>
             </details>
-            <details class="node bg-white rounded-xl border-2 border-slate-200 p-4">
+            <details
+              class="node bg-white rounded-xl border-2 border-slate-200 p-4"
+            >
               <summary class="cursor-pointer list-none flex items-center gap-2">
                 <span class="chev text-slate-400">▸</span>
                 <span class="font-bold"
@@ -1058,7 +1053,9 @@
                 base field needed — Δ equals current. (Lesson 57)
               </p>
             </details>
-            <details class="node bg-white rounded-xl border-2 border-slate-200 p-4">
+            <details
+              class="node bg-white rounded-xl border-2 border-slate-200 p-4"
+            >
               <summary class="cursor-pointer list-none flex items-center gap-2">
                 <span class="chev text-slate-400">▸</span>
                 <span class="font-bold"
@@ -1072,7 +1069,9 @@
                 case used current. (Lesson 60)
               </p>
             </details>
-            <details class="node bg-white rounded-xl border-2 border-slate-200 p-4">
+            <details
+              class="node bg-white rounded-xl border-2 border-slate-200 p-4"
+            >
               <summary class="cursor-pointer list-none flex items-center gap-2">
                 <span class="chev text-slate-400">▸</span>
                 <span class="font-bold"
@@ -1085,7 +1084,9 @@
                 (Lesson 59)
               </p>
             </details>
-            <details class="node bg-white rounded-xl border-2 border-slate-200 p-4">
+            <details
+              class="node bg-white rounded-xl border-2 border-slate-200 p-4"
+            >
               <summary class="cursor-pointer list-none flex items-center gap-2">
                 <span class="chev text-slate-400">▸</span>
                 <span class="font-bold"
@@ -1098,7 +1099,9 @@
                 (Lesson 54)
               </p>
             </details>
-            <details class="node bg-white rounded-xl border-2 border-slate-200 p-4">
+            <details
+              class="node bg-white rounded-xl border-2 border-slate-200 p-4"
+            >
               <summary class="cursor-pointer list-none flex items-center gap-2">
                 <span class="chev text-slate-400">▸</span>
                 <span class="font-bold"
@@ -1141,7 +1144,9 @@
               <div class="text-xs uppercase tracking-wider text-amber-700">
                 Tripwire
               </div>
-              <div class="font-semibold">DCP goals are INDEPENDENT, not sequential</div>
+              <div class="font-semibold">
+                DCP goals are INDEPENDENT, not sequential
+              </div>
               <p class="text-sm text-amber-900 mt-1">
                 Use <code>clubPerformance</code> raw fields. Never infer count
                 as Goals 1 → N.
@@ -1180,8 +1185,8 @@
               </div>
               <p class="text-sm text-slate-800 mt-1">
                 Pass in serial; v8 coverage instrumentation contention.
-                Root-cause likely <code>renderWithProviders</code> bloat
-                (Lesson 53).
+                Root-cause likely <code>renderWithProviders</code> bloat (Lesson
+                53).
               </p>
             </div>
             <div class="rounded-lg border-l-4 border-loyal bg-blue-50 p-4">
@@ -1192,8 +1197,8 @@
                 Lighthouse CLS = 0.217 on / fails threshold
               </div>
               <p class="text-sm text-slate-800 mt-1">
-                Re-runs mask it intermittently. Real layout-shift bug in
-                initial paint.
+                Re-runs mask it intermittently. Real layout-shift bug in initial
+                paint.
               </p>
             </div>
             <div class="rounded-lg border-l-4 border-slate-400 bg-slate-50 p-4">
@@ -1211,8 +1216,7 @@
                 Open issue #522
               </div>
               <div class="font-semibold">
-                D## chip + bare numeric districtName pattern duplicated 4
-                places
+                D## chip + bare numeric districtName pattern duplicated 4 places
               </div>
               <p class="text-sm text-slate-700 mt-1">
                 Same #520 bug shape exists on RegionPage, search-suggestions,
@@ -1228,8 +1232,8 @@
           <h2 class="text-2xl font-bold mb-1">Lessons captured</h2>
           <p class="text-slate-600 mb-6 text-sm">
             60+ total. Legacy 1–51 in
-            <span class="font-mono">tasks/lessons.md</span> (append-only). Newer
-            52–60 split per-file in
+            <span class="font-mono">tasks/lessons/archive/lessons.md</span>
+            (append-only). Newer 52–60 split per-file in
             <span class="font-mono">tasks/lessons/</span> to avoid merge
             conflicts on parallel sprint branches.
           </p>
@@ -1276,9 +1280,9 @@
           <p class="text-xs text-slate-500 mt-4">
             Full older archive in
             <a
-              href="../../tasks/lessons.md"
+              href="../../tasks/lessons/archive/lessons.md"
               class="font-mono text-loyal underline hover:no-underline"
-              >tasks/lessons.md</a
+              >tasks/lessons/archive/lessons.md</a
             >.
           </p>
         </section>
