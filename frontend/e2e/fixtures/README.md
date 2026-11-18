@@ -27,7 +27,7 @@ The preview build reads `https://cdn-staging.taverns.red`. Staging was 73% of th
 
 Debug a shard locally:
 
-Build against staging first, as `pr-preview.yml` does for the shards. A plain `npm run build` uses `frontend/.env.production`, which sets `VITE_CDN_BASE_URL=https://cdn.taverns.red`. With `SMOKE_FIXTURES_DIR` set, every data read of that build goes to prod, so `installCdnFixtures` aborts it and the test fails on `prodReads` (#2855).
+Build against staging first, as `pr-preview.yml` does for the shards. A plain `npm run build` with `VITE_CDN_BASE_URL` unset falls back to the prod CDN (`https://cdn.taverns.red`, from `config/cdnBase.ts`; CI refuses to build without it, #2994). With `SMOKE_FIXTURES_DIR` set, every data read of that build goes to prod, so `installCdnFixtures` aborts it and the test fails on `prodReads` (#2855).
 
 ```bash
 VITE_CDN_BASE_URL=https://cdn-staging.taverns.red npm run build:frontend

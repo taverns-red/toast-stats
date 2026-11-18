@@ -1,11 +1,19 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { deadlinesIcsPlugin } from './src/utils/deadlinesIcsPlugin'
+import { PROD_CDN_BASE_URL } from './src/config/cdnBase'
+import { cdnTargetPlugin } from '../scripts/lib/viteCdnTargetPlugin'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   // #2429: deadlines.ics, built from the cited deadline table.
-  plugins: [react(), deadlinesIcsPlugin()],
+  // #2994: a CI build must name its CDN target (process env, not .env files).
+  plugins: [
+    react(),
+    deadlinesIcsPlugin(),
+    // eslint-disable-next-line no-undef
+    cdnTargetPlugin(process.env, PROD_CDN_BASE_URL),
+  ],
   define: {
     // eslint-disable-next-line no-undef
     __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || 'dev'),

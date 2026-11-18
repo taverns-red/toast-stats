@@ -151,6 +151,7 @@ account).
 export PROJECT=toast-stats-prod-6d64a
 export BASE_URL=https://toast-stats-staging--pr-<N>-<hash>.web.app  # a preview channel URL
 export CDN_BASE_URL=https://cdn.taverns.red
+export VITE_CDN_BASE_URL=$CDN_BASE_URL   # the build needs the same target (#2994)
 OUT=$(mktemp); export GITHUB_OUTPUT=$OUT   # the runners write outputs here
 
 # 0. The staging live channel needs a good release to fall back to.
