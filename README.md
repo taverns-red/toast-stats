@@ -79,10 +79,14 @@ npm run build:frontend
 
 The build also writes the per-district share stubs from the CDN named by
 `VITE_CDN_BASE_URL` (#2982). Locally, with it unset, the build logs a line and
-uses the production CDN (`https://cdn.taverns.red`). In CI (`CI=true`) the
-build step fails with exit 2 unless it sets the variable: staging for previews
-(`https://cdn-staging.taverns.red`), production for releases. A test over
-`.github/workflows` checks that every `npm run build:frontend` step sets it.
+uses the production CDN (`https://cdn.taverns.red`). In CI (any `CI` value
+but empty, `false` or `0`) the build step fails with exit 2 unless it sets the
+variable: staging for previews (`https://cdn-staging.taverns.red`), production
+for releases. A value that isn't an absolute http(s) URL fails in both places.
+A test over `.github/workflows` checks that every `npm run build:frontend` step sets it.
+
+`frontend/.env.local` changes the bundle's CDN but not the OG stub target, so
+set `VITE_CDN_BASE_URL` in the shell to point both at the same place.
 
 ### Code Quality
 
