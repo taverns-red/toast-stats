@@ -207,12 +207,13 @@ describe('data-reader jobs (#2872 B2)', () => {
     expect(missing).toEqual([])
   })
 
-  it('checks the restore variable is non-empty before the restore auth step (#2964)', () => {
+  it('checks the restore variable is non-empty before every restore auth step (#2964, #2966)', () => {
     const restoreJobs = Object.entries(EXPECTED).filter(
       ([, id]) => id === RESTORE
     )
     expect(restoreJobs.map(([k]) => k)).toEqual([
       'data-pipeline.yml::data-auto-restore-execute',
+      'gcp-identity-smoke.yml::restore',
     ])
     const missing: string[] = []
     for (const [key] of restoreJobs) {
@@ -248,6 +249,7 @@ describe('data-reader jobs (#2872 B2)', () => {
     expect(otherEnvUsers).toEqual([])
     expect(restoreJobs).toEqual([
       'data-pipeline.yml::data-auto-restore-execute',
+      'gcp-identity-smoke.yml::restore',
     ])
   })
 
