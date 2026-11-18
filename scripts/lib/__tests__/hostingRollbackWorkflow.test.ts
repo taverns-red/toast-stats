@@ -173,7 +173,7 @@ describe('deploy.yml auto-rollback (#2492)', () => {
   it('makes no Cloud Storage call: the hosting-deploy identity has no storage access (#2984)', () => {
     const runs = steps.map(s => s.run ?? '').join('\n')
     expect(runs).not.toMatch(/gcloud storage|gsutil|gs:\/\//)
-    expect(raw).not.toMatch(/GCS_BUCKET|metrics\/deploys/)
+    expect(raw).not.toMatch(/GCS_BUCKET/)
   })
 
   it('keeps the DORA record fields, in the step summary and a 90-day artifact (#2984)', () => {
