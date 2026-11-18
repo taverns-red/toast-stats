@@ -120,3 +120,21 @@ export function resolveBuildCdnTarget(
   }
   return { url: prodUrl, source: 'local-default' }
 }
+
+/**
+ * The CDN the frontend bundle reads from (#3000): the value Vite loaded for
+ * `VITE_CDN_BASE_URL` (process env first, then .env files), trimmed and
+ * without trailing slashes, or prod when it is empty or only whitespace.
+ * vite.config.ts bakes this into the bundle as `__CDN_BASE_URL__` and the
+ * build plugin logs the same value, so the two cannot disagree.
+ */
+export function bundleCdnBaseUrl(
+  value: string | undefined,
+  prodUrl: string
+): string {
+  const trimmed = (value ?? '').trim().replace(/\/+$/, '')
+  return trimmed === '' ? prodUrl : trimmed
+}
+
+/** The prod CDN origin; the one place outside the CDN itself that names it. */
+export const PROD_CDN_BASE_URL = 'https://cdn.taverns.red'

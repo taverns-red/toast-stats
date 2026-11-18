@@ -27,6 +27,8 @@ export default [
         ...globals.es2020,
         React: 'readonly',
         JSX: 'readonly',
+        // Baked in by `define` in vite.config.ts / vitest.config.ts (#3000).
+        __CDN_BASE_URL__: 'readonly',
       },
     },
     plugins: {

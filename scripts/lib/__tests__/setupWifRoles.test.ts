@@ -1,10 +1,12 @@
 /**
- * #2872 (B0): scripts/setup-wif.sh grants exactly the roles the deployer still
- * needs. The six roles removed in Step 0 (2026-11-15) must not come back, and
- * nothing else may be granted by another route.
+ * #2872 (B0), tightened in #3025: scripts/setup-wif.sh sets up the WIF pool
+ * and provider only. It must not create a service account or grant any role,
+ * and must not bind repo-wide workloadIdentityUser. The per-job identities
+ * (scripts/lib/gcpIdentityMap.ts) are the only deploy identities, so a re-run
+ * of the script must not bring back the shared deployer.
  *
  * The checks are pure functions (scripts/lib/setupWifChecks.ts). Each bypass
- * below is a fixture built by mutating the real script, and must be flagged.
+ * below is a fixture built from the real script, and must be flagged.
  */
 import { describe, it, expect } from 'vitest'
 import * as fs from 'node:fs'
@@ -21,51 +23,86 @@ const REMOVED_ROLES = [
   'roles/servicemanagement.admin',
   'roles/artifactregistry.writer',
   'roles/cloudbuild.builds.builder',
+  // Still granted to the shared deployer before #3025.
+  'roles/storage.admin',
+  'roles/firebasehosting.admin',
+  'roles/serviceusage.serviceUsageConsumer',
+  'roles/iam.workloadIdentityUser',
 ]
 
-const LAST = '"roles/serviceusage.serviceUsageConsumer"'
-const LOOP_ROLE = '--role="${ROLE}"'
-
-/** The real script with one exact substring replaced; fails if not found. */
-const mutate = (from: string, to: string): string => {
-  const text = real()
-  expect(text, `fixture anchor missing: ${from}`).toContain(from)
-  return text.replace(from, to)
-}
-
-describe('setup-wif.sh role grants (#2872 B0)', () => {
+describe('setup-wif.sh grants nothing (#3025)', () => {
   it('passes every check as committed', () => {
     expect(checkSetupWif(real())).toEqual([])
   })
 
-  it.each(REMOVED_ROLES)('does not grant %s', role => {
+  it.each(REMOVED_ROLES)('does not mention %s', role => {
     expect(stripComments(real())).not.toContain(role)
   })
 
+  it('creates no service account and binds no IAM policy', () => {
+    const code = stripComments(real())
+    expect(code).not.toMatch(/service-accounts\s+create/)
+    expect(code).not.toMatch(/add-iam-policy-binding/)
+    expect(code).not.toMatch(/workloadIdentityUser/i)
+  })
+
+  it('does not default to the production project', () => {
+    expect(stripComments(real())).not.toContain('toast-stats-prod-6d64a')
+  })
+
+  // Without this condition the provider accepts tokens from ANY GitHub repo,
+  // so any repo could sign in through it (#3037 review).
+  describe('the provider only trusts this repo', () => {
+    const CONDITION =
+      '--attribute-condition="assertion.repository==\'${GITHUB_REPO}\'"'
+
+    it('keeps the repo condition and the repo default', () => {
+      const code = stripComments(real())
+      expect(code).toContain(CONDITION)
+      expect(code).toContain(
+        'GITHUB_REPO="${GITHUB_REPO:-taverns-red/toast-stats}"'
+      )
+    })
+
+    it('flags a script without the condition', () => {
+      const without = real().replace(CONDITION, '')
+      expect(checkSetupWif(without)).toContain(
+        'provider must restrict to this repo'
+      )
+    })
+
+    it('flags a later update-oidc that could change the condition', () => {
+      const updated = `${real()}\ngcloud iam workload-identity-pools providers update-oidc p --attribute-condition="true"\n`
+      expect(checkSetupWif(updated)).toContain('provider update')
+    })
+  })
+
   describe('bypass fixtures are flagged', () => {
+    const add = (extra: string) => `${real()}\n${extra}\n`
     const bypasses: Record<string, string> = {
-      'unquoted ROLES entry': mutate(LAST, `${LAST}\n  roles/editor`),
-      'quoted extra ROLES entry': mutate(LAST, `${LAST}\n  "roles/editor"`),
-      'prefix-concatenated ROLES entry': mutate(
-        LAST,
-        `${LAST}\n  "roles/"editor`
+      'shared deployer creation': add(
+        'gcloud iam service-accounts create toast-stats-deployer --project=p'
       ),
-      'variable-built role literal': mutate(
-        LOOP_ROLE,
-        '--role="roles/${EXTRA_ROLE}"'
+      'project role grant to a per-job identity': add(
+        'gcloud projects add-iam-policy-binding p --member="serviceAccount:x@p.iam.gserviceaccount.com" --role="roles/storage.objectViewer"'
       ),
-      'loop --role not exactly ${ROLE}': mutate(
-        LOOP_ROLE,
-        '--role="${ROLE}-extra"'
+      'repo-wide workloadIdentityUser': add(
+        'gcloud iam service-accounts add-iam-policy-binding x --role="roles/iam.workloadIdentityUser" --member="principalSet://iam.googleapis.com/pool/attribute.repository/r"'
       ),
-      'set-iam-policy': `${real()}\ngcloud projects set-iam-policy x p.json\n`,
-      'project custom role path': `${real()}\necho projects/p/roles/custom\n`,
-      'sourced file': `${real()}\nsource ./other.sh\n`,
-      'dot-sourced file': `${real()}\n. ./other.sh\n`,
-      eval: `${real()}\neval "$CMD"\n`,
-      'bash invocation': `${real()}\nbash grant.sh\n`,
-      'relative script invocation': `${real()}\n./scripts/grant.sh\n`,
-      'third add-iam-policy-binding': `${real()}\ngcloud projects add-iam-policy-binding p --role="roles/iam.workloadIdentityUser"\n`,
+      'variable-built role': add('echo "roles/${EXTRA_ROLE}"'),
+      'principalSet member only': add('echo principalSet://x'),
+      'set-iam-policy': add('gcloud projects set-iam-policy x p.json'),
+      'project custom role path': add('echo projects/p/roles/custom'),
+      'deploy secret output': add('echo "GCP_SERVICE_ACCOUNT = x"'),
+      'sourced file': add('source ./other.sh'),
+      'dot-sourced file': add('. ./other.sh'),
+      eval: add('eval "$CMD"'),
+      'bash invocation': add('bash grant.sh'),
+      'relative script invocation': add('./scripts/grant.sh'),
+      'default project restored': real().replace(
+        /PROJECT_ID="\$\{PROJECT_ID:\?[^}]*\}"/,
+        'PROJECT_ID="${PROJECT_ID:-some-project}"'
+      ),
     }
     it.each(Object.entries(bypasses))('%s', (_name, text) => {
       expect(checkSetupWif(text)).not.toEqual([])

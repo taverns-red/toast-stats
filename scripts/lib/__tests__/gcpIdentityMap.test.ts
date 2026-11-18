@@ -17,7 +17,6 @@
  */
 import { describe, it, expect } from 'vitest'
 import {
-  DEPLOYER,
   DATA_READER,
   HOSTING_DEPLOY,
   HOSTING_DEPLOY_ENVIRONMENT,

@@ -355,6 +355,41 @@ describe('non-retryable 4xx (#2887)', () => {
     }
   })
 
+  // #2920: inside ONE call, a transient error in the middle resets the count.
+  it.each([
+    ['404, 500, 404, 404', [404, 500, 404, 404]],
+    ['404, 404, 500, 404, 404', [404, 404, 500, 404, 404]],
+  ])(
+    'a transient error resets the count within one call: %s',
+    async (_n, seq) => {
+      let calls = 0
+      const out = await retryUntilOk(
+        async () => {
+          const status = seq[calls++]
+          if (status === undefined) return 'ok'
+          throw httpErr(status)
+        },
+        { sleep: async () => {} }
+      )
+      expect(out).toBe('ok')
+      expect(calls).toBe(seq.length + 1)
+    }
+  )
+
+  it('still fails on 404, 404, 404 in one call', async () => {
+    let calls = 0
+    await expect(
+      retryUntilOk(
+        async () => {
+          calls++
+          throw httpErr(404)
+        },
+        { sleep: async () => {} }
+      )
+    ).rejects.toThrow('404')
+    expect(calls).toBe(3)
+  })
+
   it.each([
     ['500', httpErr(500)],
     ['502', httpErr(502)],

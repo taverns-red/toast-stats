@@ -8,7 +8,6 @@
  * the same PR as the workflow change.
  *
  * Identity variables seen today:
- * - DEPLOYER: `secrets.GCP_SERVICE_ACCOUNT`, the single shared deploy identity.
  * - DATA_READER: `vars.GCP_DATA_READER_SA`, the read-only identity (#2866).
  * - PREVIEW: `vars.GCP_PREVIEW_SA`, the PR preview identity. It lives in the
  *   staging Firebase project, so it can't release to the prod site (#2956).
@@ -32,7 +31,6 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { parse } from 'yaml'
 
-export const DEPLOYER = 'secrets.GCP_SERVICE_ACCOUNT'
 export const DATA_READER = 'vars.GCP_DATA_READER_SA'
 export const PREVIEW = 'vars.GCP_PREVIEW_SA'
 export const PIPELINE = 'vars.GCP_PIPELINE_SA'
@@ -72,7 +70,6 @@ export const READER_GUARD_EXEMPT: Record<string, string> = {
 
 /** The identity variables an EXPECTED value may be built from. */
 export const KNOWN_IDENTITIES = [
-  DEPLOYER,
   DATA_READER,
   PREVIEW,
   PIPELINE,

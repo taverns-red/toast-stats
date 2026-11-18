@@ -78,10 +78,13 @@ What the issue's outcome line means:
   `POST …/sites/SITE/channels/live/releases?versionName=sites/SITE/versions/VERSION`
   — the call `hosting:clone` makes here, and the same call
   `firebase deploy` makes to release.
-- Permissions: the CI service account has `roles/firebasehosting.admin`
-  (`scripts/setup-wif.sh`), which grants `firebasehosting.*`
+- Permissions: the production Hosting deploy identity (the
+  `GCP_HOSTING_DEPLOY_SA` variable, #2984) holds
+  `roles/firebasehosting.admin`, which grants `firebasehosting.*`
   ([IAM reference](https://docs.cloud.google.com/iam/docs/roles-permissions/firebasehosting)).
-  No new IAM or secrets.
+  It signs in only from the `production` environment. Each job has its own
+  identity (`scripts/lib/gcpIdentityMap.ts`); `scripts/setup-wif.sh` creates
+  none of them (#3025). No new IAM or secrets.
 - Retention: a version can only be restored while Hosting retains it
   (Hosting settings → release storage). The previous release is the newest
   retained one, so the default retention is enough.
