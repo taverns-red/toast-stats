@@ -428,6 +428,20 @@ describe('build-education-rollup.sh: the education timeline (#2591)', () => {
       /^storage cp gs:\/\/\S+\/derived\/education-timeline\//.test(l)
     )
 
+  // #2989: tests that need "the state after one run" start from it instead
+  // of spawning the script to make it.
+  describe('from the state a priming run left (#2989)', () => {
+    it('after a same-day run, the timeline files exist and no script has run in this test', () => {
+      expect(timelineObjects()).toContain(WORLD)
+      expect(lines(shimLog)).toEqual([])
+    })
+
+    it('after a first run, the rollup index exists and no script has run in this test', () => {
+      expect(rollupObjects()).toContain(`${PREFIX}index.json`)
+      expect(lines(shimLog)).toEqual([])
+    })
+  })
+
   it('seeds the current PY only: one schema-valid file per entity, last point = the rollup', () => {
     seedAll()
     const r = runScript()
