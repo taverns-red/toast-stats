@@ -14,6 +14,7 @@ import { spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { writeStubExecutable } from './stubExecutable.js'
 
 const SCRIPT = path.resolve(process.cwd(), 'scripts/pull-awards-history.sh')
 
@@ -24,8 +25,7 @@ function fakeGcloud(body: string): void {
   const bin = path.join(dir, 'bin')
   fs.mkdirSync(bin, { recursive: true })
   const f = path.join(bin, 'gcloud')
-  fs.writeFileSync(f, `#!/usr/bin/env bash\n${body}\n`)
-  fs.chmodSync(f, 0o755)
+  writeStubExecutable(f, `#!/usr/bin/env bash\n${body}\n`)
 }
 
 function run(dest: string) {

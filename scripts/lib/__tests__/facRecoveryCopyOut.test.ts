@@ -24,6 +24,7 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as zlib from 'node:zlib'
+import { writeStubExecutable } from './stubExecutable.js'
 
 const REPO = process.cwd()
 const SCRIPT = path.join(REPO, 'scripts/ops/fac-recovery-2239-copy-out.sh')
@@ -260,7 +261,7 @@ beforeEach(() => {
   ghStub = path.join(tmp, 'gh')
   // `gh run list ... --status in_progress --json databaseId --jq length`:
   // prints the next line of $STUB_GH_DIR/gh-running (default 0) per call.
-  fs.writeFileSync(
+  writeStubExecutable(
     ghStub,
     [
       '#!/usr/bin/env bash',
@@ -269,7 +270,6 @@ beforeEach(() => {
       'if [ -s "$q" ]; then head -1 "$q"; tail -n +2 "$q" >"$q.t"; mv "$q.t" "$q"; else echo 0; fi',
     ].join('\n') + '\n'
   )
-  fs.chmodSync(ghStub, 0o755)
   // Hooks around the shim, each armed by a file in $HOOK_DIR:
   //   pause-cp            the source→dest cp waits for $HOOK_DIR/go
   //                        (and touches cp-reached first)
@@ -278,7 +278,7 @@ beforeEach(() => {
   //   race-restore-back    before the restore of L, a third party writes
   //                        the live object (a newer generation)
   hooks = path.join(tmp, 'gcloud-hooks')
-  fs.writeFileSync(
+  writeStubExecutable(
     hooks,
     [
       '#!/usr/bin/env bash',
@@ -309,7 +309,6 @@ beforeEach(() => {
       'exec "$SHIM" "$@"',
     ].join('\n') + '\n'
   )
-  fs.chmodSync(hooks, 0o755)
   fs.mkdirSync(path.join(root, STAGING), { recursive: true })
   fs.mkdirSync(path.join(root, PROD), { recursive: true })
   // The happy preflight: a private recovery bucket, staging's allUsers off.

@@ -6,15 +6,10 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { spawnSync } from 'node:child_process'
-import {
-  copyFileSync,
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-  chmodSync,
-} from 'node:fs'
+import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { makeExecutable } from './stubExecutable.js'
 
 const WRAPPER = resolve(process.cwd(), 'scripts/cloud-session-guard.sh')
 
@@ -25,7 +20,7 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'guard-wrapper-2542-'))
   wrapper = join(dir, 'cloud-session-guard.sh')
   copyFileSync(WRAPPER, wrapper)
-  chmodSync(wrapper, 0o755)
+  makeExecutable(wrapper)
 })
 
 afterEach(() => {
