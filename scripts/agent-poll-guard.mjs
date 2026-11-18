@@ -196,10 +196,10 @@ function bodyEnd(text, from, delim) {
     const line = text.slice(i, end).trim()
     i = Math.min(end + 1, text.length)
     if (line === delim) return i
-    // Inside `$( )` bash also ends the body at `DELIM)`, so end it there too.
-    // Ending early only keeps more text visible (fail closed).
-    if (line.startsWith(delim) && /^\s*\)/.test(line.slice(delim.length)))
-      return i
+    // Inside `$( )` bash also ends the body at `DELIM)` (bash 3.2 even at
+    // `DELIM;)`), so end it on any line that starts with the delimiter and
+    // holds a `)`. Ending early only keeps more text visible (fail closed).
+    if (line.startsWith(delim) && line.includes(')', delim.length)) return i
   }
   return -1
 }
