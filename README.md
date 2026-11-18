@@ -77,6 +77,13 @@ Build the frontend (TypeScript check + Vite build):
 npm run build:frontend
 ```
 
+The build also writes the per-district share stubs from the CDN named by
+`VITE_CDN_BASE_URL` (#2982). Locally, with it unset, the build logs a line and
+uses the production CDN (`https://cdn.taverns.red`). In CI (`CI=true`) the
+build step fails with exit 2 unless it sets the variable: staging for previews
+(`https://cdn-staging.taverns.red`), production for releases. A test over
+`.github/workflows` checks that every `npm run build:frontend` step sets it.
+
 ### Code Quality
 
 Format code with Prettier:

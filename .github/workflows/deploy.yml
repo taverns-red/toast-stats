@@ -171,7 +171,9 @@ jobs:
         id: deploy
         run: |
           set -o pipefail
-          npm run build:frontend
+          # Production builds read the prod CDN; the target is explicit so
+          # OG stubs never depend on a script default (#2982).
+          VITE_CDN_BASE_URL=https://cdn.taverns.red npm run build:frontend
           # firebase-tools exits non-zero when the finalized version already IS the
           # live version (unchanged frontend content, or an internal retry re-issuing
           # the release after it already succeeded). Hosting then already serves the
