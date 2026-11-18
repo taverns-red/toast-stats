@@ -218,9 +218,10 @@ floor, which no stripped baseline can satisfy), hold it. A date that is legitima
 for good is added to the list in review; a one-off goes through `allow_value_changes`. A
 warned district loss clears on the next daily, which refetches FAC; if it persists, investigate
 that district's FAC fetch. A re-derive from `raw-fac/` reproduces the loss (the daily fallback
-is never persisted), and `fac_prior_root` accepts only the #2239 recovery bucket. The issue step
+is never persisted); the `fac_prior_root` rebuild input that read the #2239 recovery bucket was
+retired in #2962. The issue step
 is `continue-on-error`, so an API error only warns. Sequencing note: a rebuild of a group-C date such as
-2026-10-08 (for example the October Distinguished backfill) without `fac_prior_root` now holds
+2026-10-08 (for example the October Distinguished backfill) holds
 that date, since it would re-strip it.
 
 **What reaches prod without being written by the run.** Only what the manifest lists is
