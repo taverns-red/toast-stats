@@ -32,8 +32,23 @@ const FLAT_HEIGHT_MAX = 8_000
 /** 2 title lines (2 × 22) + meta (20) + gap (2) + padding (16) — #2331. */
 const WRAPPED_ROW_MAX = 82
 
+/** What the loaded page shows: the grouped phone list, the flat phone list or
+ * the desktop table. Each is rendered only once the data is there. */
+const LOADED = `${GROUPED}, ${FLAT}, #clubs-table`
+
 async function load(page: Page, path: string): Promise<void> {
   await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
+  // #2959: the table is a lazy chunk. `networkidle` can come before it has
+  // mounted, and webkit on a busy runner took over the 5 s an expect gets.
+  // Wait for the loaded content itself: "no skeleton" also holds before the
+  // skeleton has mounted, so it can't be the only signal.
+  await expect(
+    page.locator(LOADED).filter({ visible: true }).first()
+  ).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('status', { name: 'Loading table' })).toHaveCount(
+    0,
+    { timeout: 30_000 }
+  )
   await page.evaluate(() => document.fonts.ready)
 }
 
