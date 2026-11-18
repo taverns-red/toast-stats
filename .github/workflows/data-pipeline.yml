@@ -20,6 +20,16 @@
 # Prerequisites:
 #   1. Run scripts/setup-wif.sh (one-time)
 #   2. Add GitHub secrets: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
+#   3. Add the repository variable GCP_PIPELINE_SA (#2872 B3)
+#
+# Identities (#2872): the jobs that write data (pipeline, daily-reports,
+# place-reports, education-rollup, promote-reports, og-cards,
+# education-ledger-history) sign in as vars.GCP_PIPELINE_SA. It holds object
+# access on the staging, prod and raw-private buckets plus CDN purge, and
+# nothing else: no object restore, no bucket metadata or permissions. It signs
+# in from main only. data-auto-restore-execute (B4) still uses the shared
+# deployer (secrets.GCP_SERVICE_ACCOUNT); the read-only jobs use
+# vars.GCP_DATA_READER_SA.
 #
 # The collector fetches the Toastmasters dashboards over plain HTTP (no
 # browser, so no Playwright install, D-24, #1765). Data is processed locally

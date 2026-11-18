@@ -11,6 +11,8 @@
 # that district's file has 0 clubs. Every delete is conditional on the
 # listed generation. See scripts/lib/pruneGapDistricts.ts.
 #
+# Signs in as the pipeline identity (vars.GCP_PIPELINE_SA, #2960), from main only.
+#
 # Order: staging after the rebuild re-derives the dates; prod only after
 # promotion has carried the rebuilt metadata.json there (prod's own
 # metadata must record the gap, or nothing is deleted).

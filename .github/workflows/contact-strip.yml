@@ -8,6 +8,8 @@
 # metadata are kept. Every write is conditional on the generation that was
 # read. See scripts/lib/stripClubContact.ts.
 #
+# Signs in as the pipeline identity (vars.GCP_PIPELINE_SA, #2960), from main only.
+#
 # #2069 extends it to meeting links in place text. Files written before
 # #2074 carry FAC address.street (and rarely meetingDay/meetingTime)
 # verbatim, and some clubs typed their meeting link there (D201 club 977:

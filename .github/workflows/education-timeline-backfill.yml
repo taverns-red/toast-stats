@@ -6,7 +6,10 @@
 # ghost, via scripts/pipeline/backfill-education-timeline.sh.
 #
 # STAGING ONLY. The bucket is a literal below, not an input, and the job has
-# no prod credentials or environment. Uploads go through gcs-upload.sh, which
+# no prod environment. It signs in as the pipeline identity
+# (vars.GCP_PIPELINE_SA, #2960), which can reach the prod bucket, so the
+# staging limit is held by the literal and by gcs-upload.sh, not by
+# credentials. Uploads go through gcs-upload.sh, which
 # refuses the prod bucket and records every object in RUN_MANIFEST_FILE
 # (#1755). derived/ is never a promoted prefix: the next daily rollup run
 # finds the objects and the promote-reports job carries them to prod with the
