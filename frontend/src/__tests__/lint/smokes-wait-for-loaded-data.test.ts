@@ -52,7 +52,7 @@ describe('smokes wait for loaded data (#2959)', () => {
     // wait needs a positive signal: the grouped list, flat list or table.
     expect(src).toMatch(/const LOADED\s*=[^\n]*#clubs-table/)
     expect(clubsLoad()).toMatch(
-      /expect\(\s*page\.locator\(LOADED\)[\s\S]*?\)\s*\.toBeVisible\(\{\s*timeout: /
+      /expect\(\s*page\.locator\(LOADED\)[\s\S]*?\)\s*\.toBeVisible\(\s*\{\s*timeout: /
     )
   })
 
