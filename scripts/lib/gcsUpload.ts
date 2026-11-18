@@ -38,6 +38,10 @@ export interface UploadOptions {
   onExists: OnExists
   token: string
   fetch: typeof fetch
+  /** Bytes per PUT. Must be a multiple of 256 KiB in production. */
+  chunkSize?: number
+  /** Backoff between retries; replaceable so a test need not wait. */
+  sleep?: (ms: number) => Promise<void>
 }
 
 export type UploadResult = 'created' | 'skipped'
