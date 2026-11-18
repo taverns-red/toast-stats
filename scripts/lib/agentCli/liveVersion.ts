@@ -8,8 +8,9 @@
  * env object (e.g. ``VITE_APP_VERSION:`v2.76.3` ``). Which chunk holds that
  * object depends on the bundler: it was the entry until #2999 moved the only
  * `import.meta.env` read into cdnBase, so the scan covers the entry first and
- * then every script index.html references (#3013). Preview builds don't set it, so a preview reports `version: null` and is
- * identified by its entry-bundle hash instead. Firebase answers a missing
+ * then every script index.html references (#3013). Preview builds don't set
+ * it, so a preview reports `version: null` and is identified by its
+ * entry-bundle hash instead. Firebase answers a missing
  * `/assets/*` with a 404 HTML page (firebase.json rewrite), so an asset is
  * broken when it isn't a 200 or comes back as HTML. Read-only GETs/HEADs.
  */
@@ -72,12 +73,16 @@ export interface LiveVersionOptions {
   fetcher?: Fetcher
   repoVersion?: string | null
   sleep?: (ms: number) => Promise<void>
+  /** Per-request timeout in ms (default 15000). */
+  timeoutMs?: number
 }
+
+const DEFAULT_TIMEOUT_MS = 15_000
 
 async function get(
   f: Fetcher,
   url: string,
-  sleep?: (ms: number) => Promise<void>,
+  opts: { sleep?: (ms: number) => Promise<void>; timeoutMs?: number },
   method = 'GET'
 ): Promise<Response> {
   return retryAsync(
@@ -86,11 +91,15 @@ async function get(
         method,
         redirect: 'follow',
         headers: { 'cache-control': 'no-cache' },
+        signal: AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       })
-      if (r.status >= 500) throw new Error(`${method} ${url}: HTTP ${r.status}`)
+      if (r.status >= 500) {
+        await r.body?.cancel().catch(() => {})
+        throw new Error(`${method} ${url}: HTTP ${r.status}`)
+      }
       return r
     },
-    { attempts: 3, baseDelayMs: 1000, sleep }
+    { attempts: 3, baseDelayMs: 1000, sleep: opts.sleep }
   )
 }
 
@@ -99,8 +108,11 @@ export async function liveVersion(
 ): Promise<LiveVersionReport> {
   const f = opts.fetcher ?? (fetch as Fetcher)
   const base = opts.base.replace(/\/+$/, '')
-  const index = await get(f, `${base}/`, opts.sleep)
-  if (!index.ok) throw new Error(`GET ${base}/: HTTP ${index.status}`)
+  const index = await get(f, `${base}/`, opts)
+  if (!index.ok) {
+    await index.body?.cancel().catch(() => {})
+    throw new Error(`GET ${base}/: HTTP ${index.status}`)
+  }
   const html = await index.text()
   const { entry, assets } = parseEntryAssets(html)
   if (!entry) throw new Error(`no module entry script in ${base}/`)
@@ -111,10 +123,11 @@ export async function liveVersion(
     // The entry is always read; other scripts are read only until the env
     // object turns up (#3013), and probed with HEAD after that.
     const read = path === entry || (version === null && path.endsWith('.js'))
-    const r = await get(f, `${base}${path}`, opts.sleep, read ? 'GET' : 'HEAD')
+    const r = await get(f, `${base}${path}`, opts, read ? 'GET' : 'HEAD')
     const contentType = r.headers.get('content-type') ?? ''
     if (read && r.ok && version === null)
       version = parseBundleVersion(await r.text())
+    else if (read) await r.body?.cancel().catch(() => {})
     probes.push({
       path,
       status: r.status,
