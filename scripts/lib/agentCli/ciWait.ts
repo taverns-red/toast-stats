@@ -78,8 +78,11 @@ export function latestPerCheck(checks: PrCheck[]): PrCheck[] {
   return [...latest.values()]
 }
 
-export function summarizeChecks(checks: PrCheck[]): CheckSummary {
-  const latest = latestPerCheck(checks)
+export function summarizeChecks(
+  checks: PrCheck[],
+  eligibleRunIds?: ReadonlySet<number>
+): CheckSummary {
+  const latest = latestPerCheck(dropSupersededRunChecks(checks, eligibleRunIds))
   const by = (b: string) => latest.filter(c => c.bucket === b)
   const failures = by('fail')
   const cancelledChecks = by('cancel')
@@ -168,6 +171,7 @@ function isGraphQlBlocked(err: CommandError): boolean {
 
 /** The fields of a workflow run (`GET /repos/{o}/{r}/actions/runs`) read here. */
 export interface WorkflowRun {
+  id?: number
   name?: string | null
   check_suite_id: number
   status?: string | null
@@ -284,6 +288,87 @@ async function fetchPrChecksRestFull(
     completedAt: run.completed_at ?? '',
   }))
   return { checks, pull, workflowRuns: workflows }
+}
+
+/** The workflow run id in a check's job URL: `/actions/runs/<id>/job/<id>`. */
+function runIdOf(link: string): number | undefined {
+  const m = /\/actions\/runs\/(\d+)(?:\/|$)/.exec(link)
+  return m ? Number(m[1]) : undefined
+}
+
+/**
+ * Drop the cancelled rows of a run that a newer run of the same workflow
+ * replaced on this head commit (#2935). A run cancelled before its matrix expanded keeps
+ * literal job names (`Smoke (${{ matrix.shard }})`) that never match the
+ * newer run's expanded ones, so name-based folding can't retire them.
+ *
+ * Run ids only grow, so the newer run is the one with the higher id (read
+ * from the job URL; works over GraphQL and REST, no extra API call). A
+ * re-run keeps its run id, so it is never superseded by itself.
+ *
+ * Fails closed: the newer run must have produced a verdict (a row that isn't
+ * skipped), or an all-skipped no-op run would hide a real cancelled run. A
+ * newer cancelled or pending run still counts, and its own rows stay.
+ *
+ * Also fails closed on names: a newer run that has a row of the same
+ * (workflow, name) at all, even a skipped one, never retires the cancelled
+ * row; that pair is already folded by name. A skipped `Smoke (1)` in a newer
+ * label-event run must not hide a cancelled `Smoke (1)`. Only an unexpanded
+ * name with no counterpart is retired.
+ *
+ * `eligibleRunIds`, when given (REST, where the run's event and PRs are
+ * known), limits which newer runs may retire anything: those of this PR's own
+ * pull_request / pull_request_target runs, as in #2910. Over GraphQL ciWait
+ * reads the head's runs (`readChecks`) and passes the same set, so both paths
+ * apply one rule. Called without it (the pure helper), any newer run counts.
+ */
+export function dropSupersededRunChecks(
+  checks: PrCheck[],
+  eligibleRunIds?: ReadonlySet<number>
+): PrCheck[] {
+  // Newest eligible run id with a verdict, per workflow.
+  const newestWithVerdict = new Map<string, number>()
+  // Newest run id carrying a row of this name, any state, per workflow+name.
+  const newestWithName = new Map<string, number>()
+  const nameKey = (c: PrCheck) => `${c.workflow}\u0000${c.name}`
+  for (const c of checks) {
+    const id = runIdOf(c.link)
+    if (id === undefined) continue
+    if (id > (newestWithName.get(nameKey(c)) ?? 0)) {
+      newestWithName.set(nameKey(c), id)
+    }
+    if (c.bucket === 'skipping') continue
+    if (eligibleRunIds && !eligibleRunIds.has(id)) continue
+    if (id > (newestWithVerdict.get(c.workflow) ?? 0)) {
+      newestWithVerdict.set(c.workflow, id)
+    }
+  }
+  return checks.filter(c => {
+    const id = runIdOf(c.link)
+    // Only a cancelled row is retired: a pass or fail from an older run is
+    // evidence the existing name folding already weighs.
+    if (id === undefined || !c.workflow || c.bucket !== 'cancel') return true
+    if ((newestWithName.get(nameKey(c)) ?? 0) > id) return true
+    return id >= (newestWithVerdict.get(c.workflow) ?? 0)
+  })
+}
+
+/** Ids of this PR's own pull_request runs, for `dropSupersededRunChecks`. */
+function eligibleRunIdsFor(
+  runs: WorkflowRun[] | undefined,
+  pr: number
+): Set<number> | undefined {
+  if (!runs) return undefined
+  return new Set(
+    runs
+      .filter(
+        r =>
+          r.id !== undefined &&
+          PR_EVENTS.has(r.event ?? '') &&
+          (r.pull_requests ?? []).some(p => p.number === pr)
+      )
+      .map(r => r.id as number)
+  )
 }
 
 /**
@@ -473,6 +558,14 @@ export async function fetchActiveRuns(
   pr: number,
   opts: FetchOptions
 ): Promise<ActiveRun[]> {
+  return activeRunsFor(await fetchHeadRuns(headSha, opts), pr)
+}
+
+/** The first page of a commit's workflow runs (see `fetchActiveRuns`). */
+async function fetchHeadRuns(
+  headSha: string,
+  opts: FetchOptions
+): Promise<WorkflowRun[]> {
   const body = await runGhJson<{ workflow_runs?: WorkflowRun[] }>(
     [
       'api',
@@ -480,7 +573,32 @@ export async function fetchActiveRuns(
     ],
     { runner: opts.runner, sleep: opts.sleep }
   )
-  return activeRunsFor(body.workflow_runs ?? [], pr)
+  return body.workflow_runs ?? []
+}
+
+/**
+ * Read the checks; over GraphQL, which carries neither a head SHA nor the
+ * runs' events, also read the head's workflow runs when (and only when) a
+ * cancelled row could be retired as superseded (#2935). Without them no newer
+ * run is known to belong to this PR, so nothing is retired (fail closed). The
+ * runs are kept on the read, so the active-runs check reuses them. Cost, only
+ * on a poll with such a row: one call for the head SHA (skipped when the
+ * caller already read it) and one for the runs, which replaces the
+ * active-runs read.
+ */
+async function readChecks(
+  pr: number,
+  fo: FetchOptions,
+  knownHeadSha?: string
+): Promise<ChecksRead> {
+  const read = await fetchPrChecksFull(pr, fo)
+  if (read.pull || read.workflowRuns) return read
+  if (dropSupersededRunChecks(read.checks).length === read.checks.length) {
+    return read
+  }
+  const headSha = knownHeadSha ?? (await fetchMergeState(pr, fo)).headSha
+  const workflowRuns = headSha ? await fetchHeadRuns(headSha, fo) : []
+  return { ...read, workflowRuns }
 }
 
 export type CiOutcome = 'pass' | 'fail' | 'pending'
@@ -550,8 +668,11 @@ export async function ciWait(
   let polls = 0
   for (;;) {
     const fo = { ...opts, runner, sleep }
-    let read = await fetchPrChecksFull(pr, fo)
-    let summary = summarizeChecks(read.checks)
+    let read = await readChecks(pr, fo)
+    let summary = summarizeChecks(
+      read.checks,
+      eligibleRunIdsFor(read.workflowRuns, pr)
+    )
     polls++
     opts.onProgress?.(summary)
     let merge: MergeState | undefined
@@ -566,8 +687,11 @@ export async function ciWait(
         merge = mergeStateFromPull(read.pull)
       } else {
         const before = await fetchMergeState(pr, fo)
-        read = await fetchPrChecksFull(pr, fo)
-        summary = summarizeChecks(read.checks)
+        read = await readChecks(pr, fo, before.headSha)
+        summary = summarizeChecks(
+          read.checks,
+          eligibleRunIdsFor(read.workflowRuns, pr)
+        )
         merge = read.pull
           ? mergeStateFromPull(read.pull)
           : await fetchMergeState(pr, fo)

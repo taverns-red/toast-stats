@@ -157,6 +157,45 @@ describe('summarizeChecks', () => {
     expect(s).toMatchObject({ total: 1, passed: 0, cancelled: 1 })
   })
 
+  it('over GraphQL rows too, a newer run retires an older cancelled run with unexpanded names (#2935)', () => {
+    const at = (run: number) =>
+      `https://github.com/x/y/actions/runs/${run}/job/${run}1`
+    const s = summarizeChecks([
+      check({
+        name: 'Smoke (${{ matrix.shard }})',
+        workflow: 'PR Preview',
+        bucket: 'cancel',
+        state: 'CANCELLED',
+        link: at(100),
+      }),
+      check({ name: 'Smoke (1)', workflow: 'PR Preview', link: at(200) }),
+    ])
+    expect(s).toMatchObject({ total: 1, passed: 1, cancelled: 0 })
+  })
+
+  it('a newer skipped row of the same name does not retire an older cancelled one (#2935)', () => {
+    const at = (run: number) =>
+      `https://github.com/x/y/actions/runs/${run}/job/${run}1`
+    const s = summarizeChecks([
+      check({
+        name: 'Smoke (1)',
+        workflow: 'PR Preview',
+        bucket: 'cancel',
+        state: 'CANCELLED',
+        link: at(100),
+      }),
+      check({
+        name: 'Smoke (1)',
+        workflow: 'PR Preview',
+        bucket: 'skipping',
+        state: 'SKIPPED',
+        link: at(200),
+      }),
+      check({ name: 'Verdict', workflow: 'PR Preview', link: at(200) }),
+    ])
+    expect(s).toMatchObject({ passed: 1, cancelled: 1 })
+  })
+
   it('is not done while anything is pending, or before any check exists', () => {
     expect(
       summarizeChecks([check({ bucket: 'pending', state: 'IN_PROGRESS' })]).done
@@ -1290,5 +1329,290 @@ describe('ciWait waits for unfinished workflow runs on the head commit (#2910)',
     expect(r.outcome).toBe('pending')
     expect(formatCiWait(r)).toContain('PR Preview (in_progress)')
     expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(1)
+  })
+})
+
+describe('ciWait ignores rows of a run a newer run replaced (#2935)', () => {
+  const GRAPHQL_403 = 'HTTP 403: GitHub GraphQL is not available'
+  const URL_BASE = 'https://github.com/taverns-red/toast-stats/actions/runs'
+
+  interface Job {
+    run: number
+    suite: number
+    name: string
+    status?: string
+    conclusion?: string | null
+    started?: string
+  }
+  const job = (j: Job) => ({
+    name: j.name,
+    status: j.status ?? 'completed',
+    conclusion: j.conclusion === undefined ? 'success' : j.conclusion,
+    details_url: `${URL_BASE}/${j.run}/job/${j.run}1`,
+    started_at: j.started ?? '2026-11-17T10:00:00Z',
+    completed_at: j.status === 'in_progress' ? null : '2026-11-17T10:05:00Z',
+    check_suite: { id: j.suite },
+  })
+  const wfRun = (
+    id: number,
+    suite: number,
+    createdAt: string,
+    status = 'completed'
+  ) => ({
+    id,
+    name: 'PR Preview',
+    check_suite_id: suite,
+    status,
+    event: 'pull_request',
+    pull_requests: [{ number: 2933 }],
+    created_at: createdAt,
+    html_url: `${URL_BASE}/${id}`,
+  })
+
+  async function poll(jobs: Job[], runsList: ReturnType<typeof wfRun>[]) {
+    const runner = fakeRunner([
+      [/^gh pr checks /, fail(GRAPHQL_403)],
+      [
+        /\/pulls\/2933$/,
+        ok(
+          JSON.stringify({
+            head: { sha: 'abc' },
+            mergeable_state: 'clean',
+            draft: false,
+          })
+        ),
+      ],
+      [
+        /\/commits\/abc\/check-runs/,
+        ok(
+          JSON.stringify({
+            total_count: jobs.length,
+            check_runs: jobs.map(job),
+          })
+        ),
+      ],
+      [
+        /\/actions\/runs\?head_sha=abc&per_page=100&page=1$/,
+        ok(
+          JSON.stringify({
+            total_count: runsList.length,
+            workflow_runs: runsList,
+          })
+        ),
+      ],
+    ])
+    const r = await ciWait(2933, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    return { r, runner }
+  }
+
+  const OLD = { run: 100, suite: 7 }
+  const NEW = { run: 200, suite: 8 }
+  const UNEXPANDED = 'Smoke (${{ matrix.shard }})'
+  const runsOldNew = [
+    wfRun(100, 7, '2026-11-17T10:00:00Z'),
+    wfRun(200, 8, '2026-11-17T10:01:00Z'),
+  ]
+
+  it('PASSes when an older run was cancelled before its matrix expanded and a newer run succeeded', async () => {
+    const { r, runner } = await poll(
+      [
+        {
+          ...OLD,
+          name: UNEXPANDED,
+          conclusion: 'cancelled',
+          started: '2026-11-17T10:00:00Z',
+        },
+        { ...NEW, name: 'Smoke (1)', started: '2026-11-17T10:01:00Z' },
+        { ...NEW, name: 'Smoke (2)', started: '2026-11-17T10:01:00Z' },
+      ],
+      runsOldNew
+    )
+    expect(r.summary).toMatchObject({ cancelled: 0, passed: 2 })
+    expect(r.outcome).toBe('pass')
+    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(1)
+  })
+
+  it('still fails closed on a cancelled run with no newer run of that workflow', async () => {
+    const { r } = await poll(
+      [{ ...OLD, name: UNEXPANDED, conclusion: 'cancelled' }],
+      [wfRun(100, 7, '2026-11-17T10:00:00Z')]
+    )
+    expect(r.outcome).toBe('fail')
+    expect(r.summary.cancelled).toBe(1)
+  })
+
+  it('a newer cancelled run still beats an older pass', async () => {
+    const { r } = await poll(
+      [
+        { ...OLD, name: 'Smoke (1)' },
+        {
+          ...NEW,
+          name: 'Smoke (1)',
+          conclusion: 'cancelled',
+          started: '2026-11-17T10:01:00Z',
+        },
+      ],
+      runsOldNew
+    )
+    expect(r.outcome).toBe('fail')
+  })
+
+  it('pending rows of the newer run still make it wait', async () => {
+    const { r } = await poll(
+      [
+        { ...OLD, name: UNEXPANDED, conclusion: 'cancelled' },
+        {
+          ...NEW,
+          name: 'Smoke (1)',
+          status: 'in_progress',
+          conclusion: null,
+          started: '2026-11-17T10:01:00Z',
+        },
+      ],
+      [
+        wfRun(100, 7, '2026-11-17T10:00:00Z'),
+        wfRun(200, 8, '2026-11-17T10:01:00Z', 'in_progress'),
+      ]
+    )
+    expect(r.outcome).toBe('pending')
+    expect(r.summary).toMatchObject({ cancelled: 0, pending: 1 })
+  })
+
+  it('a newer run that only skipped does not hide an older cancelled run', async () => {
+    const { r } = await poll(
+      [
+        { ...OLD, name: UNEXPANDED, conclusion: 'cancelled' },
+        { ...NEW, name: 'Smoke (1)', conclusion: 'skipped' },
+      ],
+      runsOldNew
+    )
+    expect(r.outcome).toBe('fail')
+  })
+
+  it('a newer run that skipped the same job and passed a verdict row does not hide the cancelled job', async () => {
+    const { r } = await poll(
+      [
+        { ...OLD, name: 'Smoke (1)', conclusion: 'cancelled' },
+        { ...NEW, name: 'Smoke (1)', conclusion: 'skipped' },
+        { ...NEW, name: 'Verdict' },
+      ],
+      runsOldNew
+    )
+    expect(r.outcome).toBe('fail')
+    expect(r.summary.cancelled).toBe(1)
+  })
+
+  it('a newer run from another event or PR does not retire an older cancelled run', async () => {
+    const dispatched = { ...wfRun(200, 8, '2026-11-17T10:01:00Z') }
+    const { r } = await poll(
+      [
+        { ...OLD, name: UNEXPANDED, conclusion: 'cancelled' },
+        { ...NEW, name: 'Smoke (1)' },
+      ],
+      [
+        wfRun(100, 7, '2026-11-17T10:00:00Z'),
+        { ...dispatched, event: 'workflow_dispatch', pull_requests: [] },
+      ]
+    )
+    expect(r.outcome).toBe('fail')
+    expect(r.summary.cancelled).toBe(1)
+  })
+})
+
+describe('ciWait over GraphQL retires a superseded row only for an eligible newer run (#2935)', () => {
+  const URL_BASE = 'https://github.com/taverns-red/toast-stats/actions/runs'
+  const UNEXPANDED = 'Smoke (${{ matrix.shard }})'
+  const row = (run: number, name: string, over: Partial<PrCheck> = {}) =>
+    check({
+      name,
+      workflow: 'PR Preview',
+      link: `${URL_BASE}/${run}/job/${run}1`,
+      ...over,
+    })
+  const rows = [
+    row(100, UNEXPANDED, { state: 'CANCELLED', bucket: 'cancel' }),
+    row(200, 'Verdict'),
+  ]
+  const view = ok(
+    JSON.stringify({
+      mergeStateStatus: 'CLEAN',
+      headRefOid: 'abc',
+      state: 'OPEN',
+      isDraft: false,
+    })
+  )
+  const wf = (id: number, over: Record<string, unknown> = {}) => ({
+    id,
+    name: 'PR Preview',
+    status: 'completed',
+    event: 'pull_request',
+    pull_requests: [{ number: 2933 }],
+    html_url: `${URL_BASE}/${id}`,
+    ...over,
+  })
+  async function poll(runsList: unknown[]) {
+    const runner = fakeRunner([
+      [/^gh pr checks 2933 /, ok(JSON.stringify(rows))],
+      [/^gh pr view 2933 /, view],
+      [
+        /actions\/runs\?head_sha=abc/,
+        ok(
+          JSON.stringify({
+            total_count: runsList.length,
+            workflow_runs: runsList,
+          })
+        ),
+      ],
+    ])
+    const r = await ciWait(2933, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    return { r, runner }
+  }
+
+  it('PASSes when the newer run is a pull_request run for this PR (the #2933 shape)', async () => {
+    const { r, runner } = await poll([wf(100), wf(200)])
+    expect(r.outcome).toBe('pass')
+    expect(r.summary.cancelled).toBe(0)
+    // One runs read per check read (the green path reads the checks twice);
+    // the active-runs check reuses them instead of reading a third time.
+    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(2)
+  })
+
+  it.each(['push', 'workflow_dispatch'])(
+    'FAILs when the newer run is a %s run, not this PR',
+    async event => {
+      const { r } = await poll([wf(100), wf(200, { event, pull_requests: [] })])
+      expect(r.outcome).toBe('fail')
+      expect(r.summary.cancelled).toBe(1)
+    }
+  )
+
+  it('FAILs when the newer run is a pull_request run for a different PR', async () => {
+    const { r } = await poll([
+      wf(100),
+      wf(200, { pull_requests: [{ number: 9999 }] }),
+    ])
+    expect(r.outcome).toBe('fail')
+    expect(r.summary.cancelled).toBe(1)
+  })
+
+  it('reads no extra data when no cancelled row could be retired', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 2933 /, ok(JSON.stringify([row(200, 'Verdict')]))],
+      [/^gh pr view 2933 /, view],
+      NO_RUNS,
+    ])
+    await ciWait(2933, { repo: REPO, runner, once: true, ...fakeClock() })
+    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(1)
+    expect(runner.calls.filter(c => /^gh pr view/.test(c))).toHaveLength(2)
   })
 })
