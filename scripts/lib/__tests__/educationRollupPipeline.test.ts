@@ -20,7 +20,15 @@
  *      runs the same script in its own job after place-reports (#2028).
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterAll,
+  afterEach,
+} from 'vitest'
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import * as fs from 'node:fs'
@@ -148,6 +156,45 @@ function readObject(objectPath: string): unknown {
   return JSON.parse(
     fs.readFileSync(path.join(root, BUCKET, objectPath), 'utf-8')
   )
+}
+
+/**
+ * #2989: build "the state after one run" once, for a describe's beforeAll.
+ * `setup` stages the bucket (it runs with the globals pointed at a private
+ * directory); the script then runs once there. Each test copies the result
+ * back with `restorePrimed` and spawns the script only for the behaviour
+ * under test. Every spawn costs ~1.5 s idle and 5 to 11 s under load.
+ */
+function primeRun(
+  setup: () => void,
+  env: (dir: string) => Record<string, string> = () => ({})
+): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'education-rollup-primed-'))
+  const saved = { tmp, root, shimLog, summary, manifest }
+  tmp = dir
+  root = path.join(dir, 'gcs')
+  shimLog = path.join(dir, 'gcloud.log')
+  summary = path.join(dir, 'summary.md')
+  manifest = path.join(dir, 'written.jsonl')
+  try {
+    fs.mkdirSync(path.join(root, BUCKET), { recursive: true })
+    setup()
+    const r = runScript(env(dir))
+    if (r.status !== 0) throw new Error(`priming run failed: ${r.stderr}`)
+  } finally {
+    ;({ tmp, root, shimLog, summary, manifest } = saved)
+  }
+  return dir
+}
+
+/** Copy a primed state (bucket and, if any, ledger seed) into this test. */
+function restorePrimed(dir: string): void {
+  fs.cpSync(path.join(dir, 'gcs'), root, { recursive: true })
+  if (fs.existsSync(path.join(dir, 'seed'))) {
+    fs.cpSync(path.join(dir, 'seed'), path.join(tmp, 'seed'), {
+      recursive: true,
+    })
+  }
 }
 
 function lines(file: string): string[] {
@@ -420,6 +467,70 @@ describe('build-education-rollup.sh: the education timeline (#2591)', () => {
       /^storage cp gs:\/\/\S+\/derived\/education-timeline\//.test(l)
     )
 
+  // #2989: tests that need "the state after one run" start from it instead
+  // of spawning the script to make it. Here the first run is only setup.
+  describe('from the state a priming run left (#2989)', () => {
+    describe('after a same-day run (the day before already in the bucket)', () => {
+      let primed: string
+      beforeAll(() => {
+        primed = primeRun(() => {
+          seedAll()
+          putFiles('2026-2027', filesAt('2026-2027', '2026-10-11'))
+        })
+      })
+      afterAll(() => fs.rmSync(primed, { recursive: true, force: true }))
+      beforeEach(() => restorePrimed(primed))
+
+      it('starts with the timeline files in the bucket and no script run of its own', () => {
+        expect(timelineObjects()).toContain(WORLD)
+        expect(lines(shimLog)).toEqual([])
+      })
+
+      it('re-running the same day writes no timeline file at all', () => {
+        const once = timelineObjects().map(o =>
+          fs.readFileSync(path.join(root, BUCKET, o), 'utf-8')
+        )
+        expect(runScript().status).toBe(0)
+        expect(timelineUploads()).toEqual([])
+        expect(
+          timelineObjects().map(o =>
+            fs.readFileSync(path.join(root, BUCKET, o), 'utf-8')
+          )
+        ).toEqual(once)
+      })
+    })
+
+    describe('after a first run', () => {
+      let primed: string
+      beforeAll(() => {
+        primed = primeRun(seedAll)
+      })
+      afterAll(() => fs.rmSync(primed, { recursive: true, force: true }))
+      beforeEach(() => restorePrimed(primed))
+
+      it('starts with the rollup index in the bucket and no script run of its own', () => {
+        expect(rollupObjects()).toContain(`${PREFIX}index.json`)
+        expect(lines(shimLog)).toEqual([])
+      })
+
+      it('a bad file keeps the previous index row for its PY and says ::error:: (review fix 2)', () => {
+        const before = EducationRollupIndexSchema.parse(
+          readObject(`${PREFIX}index.json`)
+        ).timelines
+        expect(before).toHaveLength(1)
+        putJson(WORLD, { not: 'a timeline' })
+        const r = runScript()
+        expect(r.status, r.stderr).toBe(0)
+        expect(r.stderr).toMatch(/::error::.*education timeline.*2026-2027/)
+        expect(
+          EducationRollupIndexSchema.parse(readObject(`${PREFIX}index.json`))
+            .timelines
+        ).toEqual(before)
+        expect(readObject(WORLD)).toEqual({ not: 'a timeline' })
+      })
+    })
+  })
+
   it('seeds the current PY only: one schema-valid file per entity, last point = the rollup', () => {
     seedAll()
     const r = runScript()
@@ -476,23 +587,6 @@ describe('build-education-rollup.sh: the education timeline (#2591)', () => {
       ).toEqual(['2026-10-11', '2026-10-12'])
       expect(e.points[0]).toEqual(earlier.get(name)?.points[0])
     }
-  })
-
-  it('re-running the same day writes no timeline file at all', () => {
-    seedAll()
-    putFiles('2026-2027', filesAt('2026-2027', '2026-10-11'))
-    expect(runScript().status).toBe(0)
-    const once = timelineObjects().map(o =>
-      fs.readFileSync(path.join(root, BUCKET, o), 'utf-8')
-    )
-    fs.rmSync(shimLog, { force: true })
-    expect(runScript().status).toBe(0)
-    expect(timelineUploads()).toEqual([])
-    expect(
-      timelineObjects().map(o =>
-        fs.readFileSync(path.join(root, BUCKET, o), 'utf-8')
-      )
-    ).toEqual(once)
   })
 
   it('an entity that did not report today is not rewritten', () => {
@@ -600,24 +694,6 @@ describe('build-education-rollup.sh: the education timeline (#2591)', () => {
     expect(timelineReads().join('\n')).not.toContain('/2025-2026/*.json')
   })
 
-  it('a bad file keeps the previous index row for its PY and says ::error:: (review fix 2)', () => {
-    seedAll()
-    expect(runScript().status).toBe(0)
-    const before = EducationRollupIndexSchema.parse(
-      readObject(`${PREFIX}index.json`)
-    ).timelines
-    expect(before).toHaveLength(1)
-    putJson(WORLD, { not: 'a timeline' })
-    const r = runScript()
-    expect(r.status, r.stderr).toBe(0)
-    expect(r.stderr).toMatch(/::error::.*education timeline.*2026-2027/)
-    expect(
-      EducationRollupIndexSchema.parse(readObject(`${PREFIX}index.json`))
-        .timelines
-    ).toEqual(before)
-    expect(readObject(WORLD)).toEqual({ not: 'a timeline' })
-  })
-
   it('a transfer error on another PY world.json fails closed with nothing uploaded (review fix 2)', () => {
     seedAll()
     putFiles('2026-2027', filesAt('2026-2027', '2026-10-11'))
@@ -674,66 +750,80 @@ describe('build-education-rollup.sh: a seeded ledger (EDUCATION_LEDGER_DIR, #210
     ])
   })
 
-  it('a seed that matches the bucket is reused: nothing is downloaded again, same rollup', () => {
-    seedAll()
-    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
-    const before = outputs()
-    const r = runScript({ EDUCATION_LEDGER_DIR: seed, SHIM_DOWNLOAD_LOG: dl })
-    expect(r.status, r.stderr).toBe(0)
-    expect(ledgerDownloads()).toEqual([])
-    expect(outputs()).toEqual(before)
-  })
-
-  it('a seed file that differs from its object is downloaded again', () => {
-    seedAll()
-    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
-    const before = outputs()
-    fs.writeFileSync(seedFile('2018-2019/district_111.json'), '{}')
-    const r = runScript({ EDUCATION_LEDGER_DIR: seed, SHIM_DOWNLOAD_LOG: dl })
-    expect(r.status, r.stderr).toBe(0)
-    expect(ledgerDownloads()).toEqual([`${LEDGER}2018-2019/district_111.json`])
-    expect(outputs()).toEqual(before)
-  })
-
-  it('a seed file the bucket does not hold is removed before the build', () => {
-    seedAll()
-    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
-    const before = outputs()
-    // 85 has no 2018-19 ledger object; a stale seed file must not add it.
-    fs.copyFileSync(
-      seedFile('2018-2019/district_111.json'),
-      seedFile('2018-2019/district_85.json')
-    )
-    const r = runScript({ EDUCATION_LEDGER_DIR: seed })
-    expect(r.status, r.stderr).toBe(0)
-    expect(fs.existsSync(seedFile('2018-2019/district_85.json'))).toBe(false)
-    expect(outputs()).toEqual(before)
-  })
-
-  it('with no ledger in the bucket, a seed is not used', () => {
-    seedAll()
-    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
-    fs.rmSync(path.join(root, BUCKET, 'raw-education-ledger'), {
-      recursive: true,
+  // #2989: these tests need "a seed and a rollup from an earlier run". Each
+  // used to spawn the script twice to get there (cold tsx starts plus the
+  // build: ~1.5 s a run idle, 5 to 11 s a test under the full scripts
+  // project, past the 10 s limit once). One run now makes that state in
+  // beforeAll; each test starts from a copy of it and spawns once.
+  describe('from a primed seed (#2989)', () => {
+    let primed: string
+    beforeAll(() => {
+      primed = primeRun(seedAll, dir => ({
+        EDUCATION_LEDGER_DIR: path.join(dir, 'seed'),
+      }))
     })
-    // The first run's objects stay in derived/; judge the second alone.
-    fs.rmSync(path.join(root, BUCKET, PREFIX), { recursive: true })
-    const r = runScript({ EDUCATION_LEDGER_DIR: seed })
-    expect(r.status, r.stderr).toBe(0)
-    expect(r.stderr).toMatch(/::warning::.*raw-education-ledger/)
-    expect(rollupObjects()).not.toContain(`${PREFIX}2003-2004.json`)
-  })
+    afterAll(() => fs.rmSync(primed, { recursive: true, force: true }))
+    beforeEach(() => restorePrimed(primed))
 
-  it('a ledger listing error fails closed with nothing uploaded', () => {
-    seedAll()
-    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
-    fs.rmSync(path.join(root, BUCKET, PREFIX), { recursive: true })
-    const r = runScript({
-      EDUCATION_LEDGER_DIR: seed,
-      SHIM_FAIL_MATCH: '^ls .*raw-education-ledger',
+    it('starts from the seed and rollup the priming run built, with no script run of its own', () => {
+      expect(fs.existsSync(seedFile('2018-2019/district_111.json'))).toBe(true)
+      expect(rollupObjects()).toContain(`${PREFIX}2026-2027.json`)
+      expect(lines(shimLog)).toEqual([])
     })
-    expect(r.status).toBe(1)
-    expect(rollupObjects()).toEqual([])
+
+    it('a seed that matches the bucket is reused: nothing is downloaded again, same rollup', () => {
+      const before = outputs()
+      const r = runScript({ EDUCATION_LEDGER_DIR: seed, SHIM_DOWNLOAD_LOG: dl })
+      expect(r.status, r.stderr).toBe(0)
+      expect(ledgerDownloads()).toEqual([])
+      expect(outputs()).toEqual(before)
+    })
+
+    it('a seed file that differs from its object is downloaded again', () => {
+      const before = outputs()
+      fs.writeFileSync(seedFile('2018-2019/district_111.json'), '{}')
+      const r = runScript({ EDUCATION_LEDGER_DIR: seed, SHIM_DOWNLOAD_LOG: dl })
+      expect(r.status, r.stderr).toBe(0)
+      expect(ledgerDownloads()).toEqual([
+        `${LEDGER}2018-2019/district_111.json`,
+      ])
+      expect(outputs()).toEqual(before)
+    })
+
+    it('a seed file the bucket does not hold is removed before the build', () => {
+      const before = outputs()
+      // 85 has no 2018-19 ledger object; a stale seed file must not add it.
+      fs.copyFileSync(
+        seedFile('2018-2019/district_111.json'),
+        seedFile('2018-2019/district_85.json')
+      )
+      const r = runScript({ EDUCATION_LEDGER_DIR: seed })
+      expect(r.status, r.stderr).toBe(0)
+      expect(fs.existsSync(seedFile('2018-2019/district_85.json'))).toBe(false)
+      expect(outputs()).toEqual(before)
+    })
+
+    it('with no ledger in the bucket, a seed is not used', () => {
+      fs.rmSync(path.join(root, BUCKET, 'raw-education-ledger'), {
+        recursive: true,
+      })
+      // The priming run's objects stay in derived/; judge this run alone.
+      fs.rmSync(path.join(root, BUCKET, PREFIX), { recursive: true })
+      const r = runScript({ EDUCATION_LEDGER_DIR: seed })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.stderr).toMatch(/::warning::.*raw-education-ledger/)
+      expect(rollupObjects()).not.toContain(`${PREFIX}2003-2004.json`)
+    })
+
+    it('a ledger listing error fails closed with nothing uploaded', () => {
+      fs.rmSync(path.join(root, BUCKET, PREFIX), { recursive: true })
+      const r = runScript({
+        EDUCATION_LEDGER_DIR: seed,
+        SHIM_FAIL_MATCH: '^ls .*raw-education-ledger',
+      })
+      expect(r.status).toBe(1)
+      expect(rollupObjects()).toEqual([])
+    })
   })
 })
 
