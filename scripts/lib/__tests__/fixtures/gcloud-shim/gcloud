@@ -22,7 +22,7 @@
 # fails like `cat` does on a missing URL), `storage rm <gs://object>...`
 # (exact objects, #2232),
 # `storage objects list <prefix>**|<glob>|<object> [--soft-deleted] --format=json`,
-# and, for the #2239 copy-out (scripts/ops/fac-recovery-2239-copy-out.sh),
+# and, for the #2239 copy-out (the script was removed in #3048),
 # `storage objects describe <url>[#gen] --format=json`,
 # `storage restore <url>#<gen> [--if-generation-match=<gen>]` and
 # `storage cp [--no-clobber] gs://<b>/<o>#<gen> gs://<b>/<o>`, and
