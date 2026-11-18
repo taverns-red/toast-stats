@@ -385,33 +385,31 @@ describe('data-auto-restore-execute: the only job that mints the write token (#2
     })
   })
 
-  it('authenticates with the same identity the promote jobs use, and no new secret', () => {
+  it('authenticates as the restore-only identity, and uses no secret but the provider (#2964)', () => {
     const auth = steps.find(s =>
       (s.uses ?? '').startsWith('google-github-actions/auth@')
     )
-    expect(auth?.with?.['service_account']).toBe(
-      '${{ secrets.GCP_SERVICE_ACCOUNT }}'
-    )
+    expect(auth?.with?.['service_account']).toBe('${{ vars.GCP_RESTORE_SA }}')
     expect(auth?.with?.['workload_identity_provider']).toBe(
       '${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}'
     )
     const secrets = new Set(
       [...JSON.stringify(job).matchAll(/secrets\.(\w+)/g)].map(m => m[1])
     )
-    expect([...secrets].sort()).toEqual([
-      'GCP_SERVICE_ACCOUNT',
-      'GCP_WORKLOAD_IDENTITY_PROVIDER',
-    ])
+    expect([...secrets]).toEqual(['GCP_WORKLOAD_IDENTITY_PROVIDER'])
   })
 
-  it('is the only restore job that references the promote service account (#2858)', () => {
+  it('is the only restore job that references the restore identity, and neither uses the shared deployer (#2858, #2964)', () => {
     expect(restoreJobs.map(([n]) => n).sort()).toEqual([
       'data-auto-restore-decide',
       'data-auto-restore-execute',
     ])
     for (const [name, j] of restoreJobs) {
-      const has = /GCP_SERVICE_ACCOUNT/.test(JSON.stringify(j))
-      expect(has, name).toBe(name === 'data-auto-restore-execute')
+      const text = JSON.stringify(j)
+      expect(/GCP_SERVICE_ACCOUNT/.test(text), name).toBe(false)
+      expect(/GCP_RESTORE_SA/.test(text), name).toBe(
+        name === 'data-auto-restore-execute'
+      )
     }
   })
 

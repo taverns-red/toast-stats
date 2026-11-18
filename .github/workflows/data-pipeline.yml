@@ -20,15 +20,17 @@
 # Prerequisites:
 #   1. Run scripts/setup-wif.sh (one-time)
 #   2. Add GitHub secrets: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
-#   3. Add the repository variable GCP_PIPELINE_SA (#2872 B3)
+#   3. Add the repository variables GCP_PIPELINE_SA (#2872 B3) and GCP_RESTORE_SA (#2872 B4)
 #
 # Identities (#2872): the jobs that write data (pipeline, daily-reports,
 # place-reports, education-rollup, promote-reports, og-cards,
 # education-ledger-history) sign in as vars.GCP_PIPELINE_SA. It holds object
 # access on the staging, prod and raw-private buckets plus CDN purge, and
 # nothing else: no object restore, no bucket metadata or permissions. It signs
-# in from main only. data-auto-restore-execute (B4) still uses the shared
-# deployer (secrets.GCP_SERVICE_ACCOUNT); the read-only jobs use
+# in from main only. data-auto-restore-execute (B4, #2964) signs in as
+# vars.GCP_RESTORE_SA, which only the data-restore environment can use: object
+# access on the prod bucket including restore, read on staging, create (no
+# overwrite) on the backups bucket, CDN purge. The read-only jobs use
 # vars.GCP_DATA_READER_SA.
 #
 # The collector fetches the Toastmasters dashboards over plain HTTP (no
@@ -3681,7 +3683,7 @@ jobs:
   #     what limits it, not this job; narrowing that binding is IAM work
   #     tracked separately.
   #
-  #   data-auto-restore-execute (the ONLY job that mints the promote SA token)
+  #   data-auto-restore-execute (the ONLY job that mints the restore SA token)
   #     Runs only when the decision says execute, the failure is a decode or
   #     validation failure (restore_eligible), the ref is main and the run
   #     promoted. It sits behind the `data-restore` environment, which Ron
@@ -3697,9 +3699,10 @@ jobs:
   # starts the execute job, and `off` skips even the decision's restore. Ron
   # sets it (never this workflow, never a dispatch input). Any refused entry,
   # a plan that could not be built or a plan with nothing to do aborts the
-  # execute. No backup copy is made here: soft delete is the backup, and a
-  # copy into toast-stats-backups-ca would need an IAM grant for the CI
-  # identity (a decision for Ron, see docs/runbooks/data-restore.md).
+  # execute. No backup copy is made here: soft delete is the backup. The
+  # restore identity can create (not overwrite or delete) in
+  # toast-stats-backups-ca if a backup step is ever added (see
+  # docs/runbooks/data-restore.md).
   #
   # Nothing needs the execute job, so it cannot hold or change a promotion.
   # Pinned by dataPipelineAutoRestore.test.ts.
@@ -3926,11 +3929,24 @@ jobs:
       - name: Build shared-contracts
         run: npm run build --workspace=@taverns-red/shared-contracts
 
+      # An empty restore variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      - name: Require the restore identity variable
+        env:
+          RESTORE_SA: ${{ vars.GCP_RESTORE_SA }}
+        run: |
+          if [ -z "${RESTORE_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_RESTORE_SA is empty"
+            exit 1
+          fi
+
+      # The restore-only identity (#2872 B4, #2964). Its workload identity
+      # binding admits only the data-restore environment.
       - name: Authenticate to GCP
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_RESTORE_SA }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1

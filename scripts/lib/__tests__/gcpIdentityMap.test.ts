@@ -21,6 +21,8 @@ import {
   DATA_READER,
   PIPELINE,
   PREVIEW,
+  RESTORE,
+  RESTORE_ENVIRONMENT,
   KNOWN_IDENTITIES,
   READER_GUARD_EXEMPT,
   byEvent,
@@ -31,6 +33,7 @@ import {
   collectAuthJobs,
   collectIdTokenJobs,
   collectCallers,
+  collectEnvironments,
   collectLocalUses,
   findForbiddenCredentials,
   type WorkflowFile,
@@ -202,6 +205,50 @@ describe('data-reader jobs (#2872 B2)', () => {
       if (!guarded) missing.push(key)
     }
     expect(missing).toEqual([])
+  })
+
+  it('checks the restore variable is non-empty before the restore auth step (#2964)', () => {
+    const restoreJobs = Object.entries(EXPECTED).filter(
+      ([, id]) => id === RESTORE
+    )
+    expect(restoreJobs.map(([k]) => k)).toEqual([
+      'data-pipeline.yml::data-auto-restore-execute',
+    ])
+    const missing: string[] = []
+    for (const [key] of restoreJobs) {
+      const [file, job] = key.split('::')
+      const steps = wfOf(file!).jobs![job!]!.steps!
+      const authAt = steps.findIndex(s =>
+        /google-github-actions\/auth/.test(s.uses ?? '')
+      )
+      const guarded = steps
+        .slice(0, authAt)
+        .some(
+          s =>
+            /vars\.GCP_RESTORE_SA/.test(String(Object.values(s.env ?? {}))) &&
+            /-z\b/.test(s.run ?? '') &&
+            /exit 1/.test(s.run ?? '')
+        )
+      if (!guarded) missing.push(key)
+    }
+    expect(missing).toEqual([])
+  })
+
+  it('pairs the restore identity with the data-restore environment, and nothing else uses either (#2964)', () => {
+    const envs = collectEnvironments(files)
+    const restoreJobs = Object.entries(EXPECTED)
+      .filter(([, id]) => id === RESTORE)
+      .map(([k]) => k)
+    const wrongEnv = restoreJobs.filter(k => envs[k] !== RESTORE_ENVIRONMENT)
+    const otherEnvUsers = Object.entries(envs)
+      .filter(([, e]) => e === RESTORE_ENVIRONMENT)
+      .map(([k]) => k)
+      .filter(k => !restoreJobs.includes(k))
+    expect(wrongEnv).toEqual([])
+    expect(otherEnvUsers).toEqual([])
+    expect(restoreJobs).toEqual([
+      'data-pipeline.yml::data-auto-restore-execute',
+    ])
   })
 
   it('builds every identity from known variables only', () => {
