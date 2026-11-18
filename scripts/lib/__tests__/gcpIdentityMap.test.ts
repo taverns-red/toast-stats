@@ -141,12 +141,25 @@ const guardStopsAuth = (guard: GuardStep, auth: GuardStep): boolean => {
   const authIf = normCond(auth.if)
   if (guardIf === 'false') return false
   // The auth step may wait for the guard's own success (a soft-failing guard).
-  const waits = guard.id
-    ? new RegExp(`(^| && )steps\\.${guard.id}\\.outcome == 'success'$`)
+  const escapedId = guard.id?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const waits = escapedId
+    ? new RegExp(`(^| && )steps\\.${escapedId}\\.outcome == 'success'$`)
     : null
   const waitsForGuard = waits !== null && waits.test(authIf)
   const authBase = waitsForGuard ? authIf.replace(waits!, '') : authIf
-  if (guardIf !== '' && guardIf !== authBase) return false
+  if (guardIf === '') {
+    // No guard if: the guard runs under success(). An auth step that also
+    // runs after a failure or cancellation would run past a failed guard.
+    if (/\b(always|cancelled|failure)\s*\(/.test(authBase)) return false
+  } else {
+    // `&&` binds tighter than `||`, so a guard if with `||` must be
+    // parenthesized before the success check is appended.
+    const wrapped = `(${guardIf})`
+    const equal =
+      authBase === wrapped ||
+      (authBase === guardIf && !(waitsForGuard && guardIf.includes('||')))
+    if (!equal) return false
+  }
   const soft =
     guard['continue-on-error'] !== undefined &&
     normCond(guard['continue-on-error']) !== 'false'
