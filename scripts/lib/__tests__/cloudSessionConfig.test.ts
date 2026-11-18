@@ -80,10 +80,9 @@ beforeEach(() => {
     '#!/usr/bin/env bash\necho "npm $*" >> "$NPM_LOG"\n'
   )
   // Shadow the tools setup may install (#2467) so no test runs the real
-  // pip or localedef: by default both already look present.
+  // pip or localedef: by default yamllint already looks present.
   const present: Record<string, string> = {
     yamllint: '',
-    locale: 'printf "C\\nen_US.utf8\\n"',
     pip: 'exit 0',
     localedef: 'exit 0',
   }
@@ -218,15 +217,15 @@ describe('setup in a cloud session', () => {
 })
 
 /**
- * Tool gaps the first cloud worker hit by hand (#2467): `yamllint` (the
- * pre-commit hook runs `npm run lint:yaml`) and a case-folding locale
- * (sort-order checks need one besides C/POSIX).
+ * The tool gap the first cloud worker hit by hand (#2467): `yamllint` (the
+ * pre-commit hook runs `npm run lint:yaml`). The case-folding locale it also
+ * installed is gone (#2957); the `localedef` stub proves setup never runs it.
  *
  * These run with PATH = stubs only, so a yamllint installed on the host
  * (Homebrew, the CI runner image) can't leak in, and the real `pip` and
  * `localedef` never run.
  */
-describe('setup provides yamllint and a case-folding locale (#2467)', () => {
+describe('setup provides yamllint (#2467)', () => {
   let toolLog: string
 
   function stub(name: string, body = ''): void {
@@ -264,7 +263,6 @@ describe('setup provides yamllint and a case-folding locale (#2467)', () => {
     rmSync(join(stubBin, 'yamllint'))
     stub('pip')
     stub('localedef')
-    stub('locale', 'printf "C\\nC.utf8\\nPOSIX\\n"')
   })
 
   it('installs yamllint with pip when it is missing', () => {
@@ -273,20 +271,17 @@ describe('setup provides yamllint and a case-folding locale (#2467)', () => {
     expect(toolCalls()).toContain('pip install --user --quiet yamllint')
   })
 
-  it('generates en_US.UTF-8 when only byte-order locales exist', () => {
+  it('does not generate a locale when only byte-order locales exist (#2957)', () => {
     const r = spawnSync(BASH, [SETUP], { cwd: dir, env: setupEnv() })
     expect(r.status).toBe(0)
-    expect(toolCalls()).toContain('localedef -i en_US -f UTF-8 en_US.UTF-8')
+    expect(toolCalls().some(c => c.startsWith('localedef '))).toBe(false)
   })
 
-  it('is idempotent: skips both when already present', () => {
+  it('is idempotent: skips the install when yamllint is already present', () => {
     stub('yamllint')
-    stub('locale', 'printf "C\\nC.utf8\\nen_US.utf8\\nPOSIX\\n"')
     const r = spawnSync(BASH, [SETUP], { cwd: dir, env: setupEnv() })
     expect(r.status).toBe(0)
-    const calls = toolCalls()
-    expect(calls.some(c => c.startsWith('pip '))).toBe(false)
-    expect(calls.some(c => c.startsWith('localedef '))).toBe(false)
+    expect(toolCalls().some(c => c.startsWith('pip '))).toBe(false)
   })
 
   it('fails loudly when the yamllint install fails', () => {
@@ -303,7 +298,7 @@ describe('setup provides yamllint and a case-folding locale (#2467)', () => {
   it('is documented in docs/cloud-sessions.md', () => {
     const md = readFileSync(resolve(ROOT, 'docs/cloud-sessions.md'), 'utf8')
     expect(md).toMatch(/yamllint/)
-    expect(md).toMatch(/en_US\.UTF-8/)
+    expect(md).not.toMatch(/en_US\.UTF-8/)
   })
 })
 
