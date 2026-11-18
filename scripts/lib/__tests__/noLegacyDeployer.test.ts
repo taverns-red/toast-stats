@@ -11,15 +11,24 @@ import * as identityMap from '../gcpIdentityMap'
 
 const WORKFLOWS = path.resolve(process.cwd(), '.github/workflows')
 
+// GitHub expression contexts are case-insensitive, so
+// `secrets.gcp_service_account` reads the same secret.
+const namesLegacyIdentity = (text: string): boolean =>
+  text.includes('GCP_SERVICE_ACCOUNT')
+
 describe('legacy deploy identity is gone (#2955)', () => {
+  it('matches the secret name in any case', () => {
+    expect(namesLegacyIdentity('${{ secrets.GCP_SERVICE_ACCOUNT }}')).toBe(true)
+    expect(namesLegacyIdentity('${{ secrets.gcp_service_account }}')).toBe(true)
+    expect(namesLegacyIdentity('${{ vars.GCP_HOSTING_DEPLOY_SA }}')).toBe(false)
+  })
+
   it('is named in no file under .github/workflows/', () => {
     const offenders = fs
       .readdirSync(WORKFLOWS)
       .filter(f => fs.statSync(path.join(WORKFLOWS, f)).isFile())
       .filter(f =>
-        fs
-          .readFileSync(path.join(WORKFLOWS, f), 'utf-8')
-          .includes('GCP_SERVICE_ACCOUNT')
+        namesLegacyIdentity(fs.readFileSync(path.join(WORKFLOWS, f), 'utf-8'))
       )
     expect(offenders).toEqual([])
   })
