@@ -130,7 +130,7 @@ PROJECT=toast-stats-prod-6d64a PREVIOUS_VERSION=<VERSION_ID> \
 Then confirm with the smoke:
 
 ```bash
-SMOKE_WINDOW_SECONDS=60 npx tsx scripts/hosting-smoke.ts
+CDN_BASE_URL=https://cdn.taverns.red SMOKE_WINDOW_SECONDS=60 npx tsx scripts/hosting-smoke.ts
 ```
 
 After a rollback, the next `firebase deploy` releases normally; nothing has
@@ -169,12 +169,12 @@ firebase deploy --only hosting:staging --project "$PROJECT"
 date -u +%FT%TZ   # deployed at
 
 # 3. Smoke it: expect district-render to fail 3 times and healthy=false.
-EXPECTED_INDEX_HTML=frontend/dist/index.html npx tsx scripts/hosting-smoke.ts
+CDN_BASE_URL=https://cdn.taverns.red EXPECTED_INDEX_HTML=frontend/dist/index.html npx tsx scripts/hosting-smoke.ts
 grep -E '^(healthy|finished_at)=' "$OUT"
 
 # 4. Roll back, then smoke the restored release (expect healthy=true).
 PREVIOUS_VERSION=$PREV npx tsx scripts/hosting-release.ts rollback staging
-SMOKE_WINDOW_SECONDS=120 npx tsx scripts/hosting-smoke.ts
+CDN_BASE_URL=https://cdn.taverns.red SMOKE_WINDOW_SECONDS=120 npx tsx scripts/hosting-smoke.ts
 grep -E '^(rolled_back|started_at|finished_at|healthy)=' "$OUT"
 
 # 5. Clean the broken build out of the working tree.

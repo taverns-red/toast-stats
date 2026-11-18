@@ -61,6 +61,8 @@ describe('CDN scripts refuse to run without an explicit target (#2974)', () => {
         BASE_URL: UNREACHABLE,
         SMOKE_WINDOW_SECONDS: '1',
         SMOKE_RENDER: 'off',
+        // Fail on the first refused connection instead of retrying.
+        SMOKE_FAILURES_TO_FAIL: '1',
       })
       expect(r.stderr).not.toMatch(/requires an explicit CDN target/)
     },

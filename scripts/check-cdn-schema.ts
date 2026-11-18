@@ -24,8 +24,10 @@
  * stderr (R4); $GITHUB_OUTPUT carries only the structured decision.
  *
  * Env:
- *   CDN_BASE_URL  — surface to check (default: the production CDN edge,
- *                   the same base the mcp-server reads)
+ *   CDN_BASE_URL  — REQUIRED (or `--base URL`): the surface to check. There
+ *                   is no default; the script exits 2 without one (#2974).
+ *                   Production is https://cdn.taverns.red, the edge the
+ *                   mcp-server reads.
  *   MAX_DISTRICTS — optional cap on district snapshots checked; unset, 0 or
  *                   non-numeric means ALL; skipped districts are logged
  *                   loudly (no silent caps)
@@ -38,6 +40,7 @@
  * keeps the issue-create step reachable even when the CDN is broken.
  */
 
+import { CDN_TARGET } from './lib/cdnTargetFromEnv.js'
 import { appendFileSync, writeFileSync } from 'node:fs'
 import { SnapshotManifestSchema } from '@taverns-red/shared-contracts'
 import {
@@ -58,10 +61,6 @@ import {
   type ObjectCheck,
 } from './lib/cdnSchemaCanary.js'
 import { fetchCdnObject } from './lib/cdnFetch.js'
-
-// The edge consumers actually read (mcp-server CdnClient default), not the
-// origin bucket — an LB/edge-layer failure must also trip the canary.
-const DEFAULT_BASE_URL = 'https://cdn.taverns.red'
 
 const BODY_FILE = '/tmp/cdn-schema-canary-body.md'
 
@@ -210,7 +209,7 @@ async function checkClubHistory(
 }
 
 async function main(): Promise<void> {
-  const baseUrl = process.env.CDN_BASE_URL || DEFAULT_BASE_URL
+  const baseUrl = CDN_TARGET
   const now = new Date()
 
   log(`Checking CDN schema: ${baseUrl}`)
@@ -313,7 +312,7 @@ main().catch(err => {
       manifestError: `cdn schema canary crashed: ${message}`,
       districts: [],
     }),
-    process.env.CDN_BASE_URL || DEFAULT_BASE_URL,
+    CDN_TARGET,
     new Date()
   )
   process.exit(0)

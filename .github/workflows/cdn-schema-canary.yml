@@ -32,7 +32,7 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: 'CDN base URL to check (default: production CDN)'
+        description: 'CDN base URL to check (empty: production CDN, https://cdn.taverns.red)'
         required: false
         type: string
       max_districts:
@@ -75,7 +75,7 @@ jobs:
       - name: Validate published snapshots against shared contracts
         id: canary
         env:
-          CDN_BASE_URL: ${{ inputs.base_url }}
+          CDN_BASE_URL: ${{ inputs.base_url || 'https://cdn.taverns.red' }}
           MAX_DISTRICTS: ${{ inputs.max_districts }}
         run: npx tsx scripts/check-cdn-schema.ts
 

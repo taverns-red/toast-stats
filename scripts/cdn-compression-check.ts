@@ -11,7 +11,7 @@
  * object fails, 2 on bad usage.
  *
  * Usage: npx tsx scripts/cdn-compression-check.ts [--base URL] [--path P ...]
- *   --base   default https://cdn.taverns.red
+ *   --base   CDN base URL (or CDN_BASE_URL); required, no default (#2974)
  *   --path   object path; repeatable; replaces the default set
  *
  * The default set's snapshot sample uses the date in v1/latest.json.
@@ -24,8 +24,7 @@ import {
   type CdnResponse,
   type Verdict,
 } from './lib/cdnCompression.js'
-
-const DEFAULT_BASE = 'https://cdn.taverns.red'
+import { cdnTargetOrExit } from './lib/cdnTarget.js'
 
 /** Every v1/ and config/ object the frontend fetches, plus stored-gzip samples. */
 const FIXED_PATHS = [
@@ -104,17 +103,22 @@ async function check(base: string, path: string): Promise<Verdict> {
 }
 
 async function main(argv: string[]): Promise<number> {
-  let base = DEFAULT_BASE
+  let flagBase: string | undefined
   const paths: string[] = []
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
-    if (a === '--base' && argv[i + 1]) base = argv[++i]!.replace(/\/$/, '')
+    if (a === '--base' && argv[i + 1]) flagBase = argv[++i]
     else if (a === '--path' && argv[i + 1]) paths.push(argv[++i]!)
     else {
       log('Usage: cdn-compression-check.ts [--base URL] [--path P ...]')
       return 2
     }
   }
+  const base = cdnTargetOrExit(
+    'cdn-compression-check.ts',
+    process.env,
+    flagBase
+  )
   if (paths.length === 0) {
     paths.push(...FIXED_PATHS)
     const latest = await get(`${base}/v1/latest.json`)

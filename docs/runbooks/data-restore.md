@@ -124,8 +124,9 @@ promoted prefixes (run 42469518307: 166 `v1/`, 283 `config/`, 189
 - **CDN Schema Canary** (`cdn-schema-canary.yml`, daily 15:30 UTC): the
   mcp-server's read validation against what the prod CDN serves, plus
   `config/district-snapshot-index.json` and time-series decode + freshness.
-  Run it on demand: `npx tsx scripts/check-cdn-schema.ts` (`CDN_BASE_URL`
-  to point it elsewhere).
+  Run it on demand: `CDN_BASE_URL=https://cdn.taverns.red npx tsx scripts/check-cdn-schema.ts`.
+  `CDN_BASE_URL` is required (or `--base URL`); the script refuses to run
+  without one and has no default (#2974).
 - **Freshness monitor** (`pipeline-freshness-monitor.yml`, daily 14:00 UTC):
   `generatedAt` older than 26 h.
 - The run's own summary (gate verdicts, objects copied) and user reports.
@@ -373,11 +374,11 @@ gcloud storage objects describe "$PROD/v1/latest.json" --format="value(generatio
 curl -s https://cdn.taverns.red/v1/latest.json | jq '.latestSnapshotDate, .generatedAt'
 
 # Shape and freshness, as the canaries check them.
-npx tsx scripts/check-cdn-schema.ts
+CDN_BASE_URL=https://cdn.taverns.red npx tsx scripts/check-cdn-schema.ts
 npx tsx scripts/check-pipeline-freshness.ts   # expected stale if the bad run was the latest
 
 # The Hosting smoke's data probe (and the rest of the core path).
-SMOKE_WINDOW_SECONDS=60 SMOKE_RENDER=off npx tsx scripts/hosting-smoke.ts
+CDN_BASE_URL=https://cdn.taverns.red SMOKE_WINDOW_SECONDS=60 SMOKE_RENDER=off npx tsx scripts/hosting-smoke.ts
 ```
 
 Record: bad promote at → detected at → restore started → entry points

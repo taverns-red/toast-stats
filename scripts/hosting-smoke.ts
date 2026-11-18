@@ -9,7 +9,8 @@
  *     over HTTP, then rendered in Chromium — a heading, no error page, no
  *     uncaught page error (SMOKE_RENDER=off skips the browser;
  *     SMOKE_CHROMIUM_PATH points it at an installed Chromium);
- *   - the data CDN: CDN_BASE_URL/v1/latest.json parses.
+ *   - the data CDN: CDN_BASE_URL/v1/latest.json parses. CDN_BASE_URL is
+ *     required (no default); the script exits 2 without it (#2974).
  * SMOKE_FAILURES_TO_FAIL consecutive failed attempts (default 3) fail it at
  * once; otherwise it passes when the window has elapsed.
  *
@@ -21,6 +22,7 @@
  */
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { cdnTargetOrExit } from './lib/cdnTarget.js'
 import {
   checkCdnLatest,
   checkDistrictPage,
@@ -58,10 +60,9 @@ const num = (k: string, d: number) => {
 }
 
 const BASE_URL = env('BASE_URL', 'https://ts.taverns.red').replace(/\/$/, '')
-const CDN_BASE_URL = env('CDN_BASE_URL', 'https://cdn.taverns.red').replace(
-  /\/$/,
-  ''
-)
+// No default: a smoke that picks prod on its own can pass for the wrong target
+// (#2974). Exits 2 with a stderr message when CDN_BASE_URL is missing.
+const CDN_BASE_URL = cdnTargetOrExit('hosting-smoke.ts', process.env)
 const DISTRICT_PATH = env('DISTRICT_PATH', '/district/61')
 const WINDOW_MS = num('SMOKE_WINDOW_SECONDS', 600) * 1000
 const INTERVAL_MS = num('SMOKE_INTERVAL_SECONDS', 30) * 1000
