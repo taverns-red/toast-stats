@@ -115,6 +115,179 @@ describe('GCP identity map (#2872)', () => {
   })
 })
 
+interface GuardStep {
+  id?: string
+  if?: unknown
+  'continue-on-error'?: unknown
+  uses?: string
+  run?: string
+  env?: Record<string, unknown>
+}
+
+const normCond = (v: unknown): string =>
+  String(v ?? '')
+    .replace(/^\s*\$\{\{([\s\S]*)\}\}\s*$/, '$1')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+/**
+ * Does `guard` stop the job whenever `auth` would run? A guard that never
+ * runs, runs under a narrower condition, or fails without stopping the job
+ * lets the auth action fall back to direct workload identity (#2963).
+ */
+const guardStopsAuth = (guard: GuardStep, auth: GuardStep): boolean => {
+  const guardIf = normCond(guard.if)
+  const authIf = normCond(auth.if)
+  if (guardIf === 'false') return false
+  // The auth step may wait for the guard's own success (a soft-failing guard).
+  const escapedId = guard.id?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const waits = escapedId
+    ? new RegExp(`(^| && )steps\\.${escapedId}\\.outcome == 'success'$`)
+    : null
+  const waitsForGuard = waits !== null && waits.test(authIf)
+  const authBase = waitsForGuard ? authIf.replace(waits!, '') : authIf
+  if (guardIf === '') {
+    // No guard if: the guard runs under success(). An auth step that also
+    // runs after a failure or cancellation would run past a failed guard.
+    if (/\b(always|cancelled|failure)\s*\(/.test(authBase)) return false
+  } else {
+    // `&&` binds tighter than `||`, so a guard if with `||` must be
+    // parenthesized before the success check is appended.
+    const wrapped = `(${guardIf})`
+    const equal =
+      authBase === wrapped ||
+      (authBase === guardIf && !(waitsForGuard && guardIf.includes('||')))
+    if (!equal) return false
+  }
+  const soft =
+    guard['continue-on-error'] !== undefined &&
+    normCond(guard['continue-on-error']) !== 'false'
+  return !soft || waitsForGuard
+}
+
+/**
+ * Is the auth step at `authAt` preceded by a guard for the repository variable
+ * `varName`? A guard has the variable in its env, an `-z` test and an
+ * `exit 1` (#2872), and is configured so it really stops the job (#2963).
+ */
+const hasGuard = (
+  steps: GuardStep[],
+  authAt: number,
+  varName: string
+): boolean =>
+  steps
+    .slice(0, authAt)
+    .some(
+      s =>
+        new RegExp(`vars\\.${varName}`).test(
+          String(Object.values(s.env ?? {}))
+        ) &&
+        /-z\b/.test(s.run ?? '') &&
+        /exit 1/.test(s.run ?? '') &&
+        guardStopsAuth(s, steps[authAt]!)
+    )
+
+describe('identity guard step configuration (#2963)', () => {
+  const guard = (extra: Partial<GuardStep> = {}): GuardStep => ({
+    id: 'reader',
+    env: { READER_SA: '${{ vars.GCP_X_SA }}' },
+    run: 'if [ -z "${READER_SA}" ]; then\n  exit 1\nfi',
+    ...extra,
+  })
+  const auth = (extra: Partial<GuardStep> = {}): GuardStep => ({
+    uses: 'google-github-actions/auth@v3',
+    ...extra,
+  })
+  const check = (g: GuardStep, a: GuardStep) => hasGuard([g, a], 1, 'GCP_X_SA')
+
+  it('accepts a plain guard before an auth step', () => {
+    expect(check(guard(), auth())).toBe(true)
+  })
+
+  it('accepts a guard with the same if as the auth step', () => {
+    const cond = "github.ref == 'refs/heads/main'"
+    expect(check(guard({ if: cond }), auth({ if: cond }))).toBe(true)
+  })
+
+  it('accepts a soft-failing guard when the auth step needs its success', () => {
+    const cond = "!cancelled() && github.ref == 'refs/heads/main'"
+    expect(
+      check(
+        guard({ if: cond, 'continue-on-error': true }),
+        auth({ if: `${cond} && steps.reader.outcome == 'success'` })
+      )
+    ).toBe(true)
+  })
+
+  it('rejects a guard disabled with if: false', () => {
+    expect(check(guard({ if: false }), auth())).toBe(false)
+    expect(check(guard({ if: 'false' }), auth())).toBe(false)
+  })
+
+  it('rejects a guard with continue-on-error that auth does not wait for', () => {
+    expect(check(guard({ 'continue-on-error': true }), auth())).toBe(false)
+    expect(check(guard({ 'continue-on-error': '${{ true }}' }), auth())).toBe(
+      false
+    )
+  })
+
+  it('rejects a guard whose if is narrower than the auth step', () => {
+    expect(
+      check(guard({ if: "github.ref == 'refs/heads/main'" }), auth())
+    ).toBe(false)
+    expect(
+      check(
+        guard({ if: "github.ref == 'refs/heads/main'" }),
+        auth({ if: "github.event_name == 'push'" })
+      )
+    ).toBe(false)
+  })
+
+  it.each(['always()', '!cancelled()', 'failure()', 'cancelled()'])(
+    'rejects an auth step with if: %s after a guard with no if',
+    cond => {
+      expect(check(guard(), auth({ if: cond }))).toBe(false)
+      expect(check(guard(), auth({ if: `\${{ ${cond} }}` }))).toBe(false)
+    }
+  )
+
+  it('accepts an auth step with a plain condition after a guard with no if', () => {
+    expect(check(guard(), auth({ if: "github.event_name == 'push'" }))).toBe(
+      true
+    )
+    expect(check(guard(), auth({ if: 'success()' }))).toBe(true)
+  })
+
+  it('rejects a soft guard whose || condition is not parenthesized in the auth if', () => {
+    const cond = "github.ref == 'refs/heads/a' || github.ref == 'refs/heads/b'"
+    expect(
+      check(
+        guard({ if: cond, 'continue-on-error': true }),
+        auth({ if: `${cond} && steps.reader.outcome == 'success'` })
+      )
+    ).toBe(false)
+  })
+
+  it('accepts a soft guard whose || condition is parenthesized in the auth if', () => {
+    const cond = "github.ref == 'refs/heads/a' || github.ref == 'refs/heads/b'"
+    expect(
+      check(
+        guard({ if: cond, 'continue-on-error': true }),
+        auth({ if: `(${cond}) && steps.reader.outcome == 'success'` })
+      )
+    ).toBe(true)
+  })
+
+  it('treats a regex metacharacter in the guard id literally', () => {
+    expect(
+      check(
+        guard({ id: 'r.d', 'continue-on-error': true }),
+        auth({ if: "steps.rXd.outcome == 'success'" })
+      )
+    ).toBe(false)
+  })
+})
+
 describe('data-reader jobs (#2872 B2)', () => {
   const files = loadWorkflows()
   const wfOf = (file: string) => files.find(f => f.file === file)!.wf
@@ -144,14 +317,7 @@ describe('data-reader jobs (#2872 B2)', () => {
       const authAt = steps.findIndex(s =>
         /google-github-actions\/auth/.test(s.uses ?? '')
       )
-      const guarded = steps
-        .slice(0, authAt)
-        .some(
-          s =>
-            /vars\.GCP_PREVIEW_SA/.test(String(Object.values(s.env ?? {}))) &&
-            /-z\b/.test(s.run ?? '') &&
-            /exit 1/.test(s.run ?? '')
-        )
+      const guarded = hasGuard(steps, authAt, 'GCP_PREVIEW_SA')
       if (!guarded) missing.push(key)
     }
     expect(missing).toEqual([])
@@ -171,6 +337,9 @@ describe('data-reader jobs (#2872 B2)', () => {
     expect(guardAt).toBeGreaterThanOrEqual(0)
     expect(guardAt).toBeLessThan(authAt)
     expect(steps[guardAt]!.if).toMatch(/github\.event_name == 'pull_request'/)
+    // Not soft-failing (#2963). Its if is the same condition the service
+    // account expression switches on, so it covers every pull request run.
+    expect((steps[guardAt] as GuardStep)['continue-on-error']).toBeUndefined()
   })
 
   it('checks the pipeline variable is non-empty before every pipeline-identity auth step (#2960)', () => {
@@ -196,14 +365,7 @@ describe('data-reader jobs (#2872 B2)', () => {
       const authAt = steps.findIndex(s =>
         /google-github-actions\/auth/.test(s.uses ?? '')
       )
-      const guarded = steps
-        .slice(0, authAt)
-        .some(
-          s =>
-            /vars\.GCP_PIPELINE_SA/.test(String(Object.values(s.env ?? {}))) &&
-            /-z\b/.test(s.run ?? '') &&
-            /exit 1/.test(s.run ?? '')
-        )
+      const guarded = hasGuard(steps, authAt, 'GCP_PIPELINE_SA')
       if (!guarded) missing.push(key)
     }
     expect(missing).toEqual([])
@@ -224,14 +386,7 @@ describe('data-reader jobs (#2872 B2)', () => {
       const authAt = steps.findIndex(s =>
         /google-github-actions\/auth/.test(s.uses ?? '')
       )
-      const guarded = steps
-        .slice(0, authAt)
-        .some(
-          s =>
-            /vars\.GCP_RESTORE_SA/.test(String(Object.values(s.env ?? {}))) &&
-            /-z\b/.test(s.run ?? '') &&
-            /exit 1/.test(s.run ?? '')
-        )
+      const guarded = hasGuard(steps, authAt, 'GCP_RESTORE_SA')
       if (!guarded) missing.push(key)
     }
     expect(missing).toEqual([])
@@ -269,14 +424,7 @@ describe('data-reader jobs (#2872 B2)', () => {
       const authAt = steps.findIndex(s =>
         /google-github-actions\/auth/.test(s.uses ?? '')
       )
-      const guarded = steps
-        .slice(0, authAt)
-        .some(
-          s =>
-            /vars\.GCP_MEDIA_SA/.test(String(Object.values(s.env ?? {}))) &&
-            /-z\b/.test(s.run ?? '') &&
-            /exit 1/.test(s.run ?? '')
-        )
+      const guarded = hasGuard(steps, authAt, 'GCP_MEDIA_SA')
       if (!guarded) missing.push(key)
     }
     expect(missing).toEqual([])
@@ -313,16 +461,7 @@ describe('data-reader jobs (#2872 B2)', () => {
       const authAt = steps.findIndex(s =>
         /google-github-actions\/auth/.test(s.uses ?? '')
       )
-      const guarded = steps
-        .slice(0, authAt)
-        .some(
-          s =>
-            /vars\.GCP_HOSTING_DEPLOY_SA/.test(
-              String(Object.values(s.env ?? {}))
-            ) &&
-            /-z\b/.test(s.run ?? '') &&
-            /exit 1/.test(s.run ?? '')
-        )
+      const guarded = hasGuard(steps, authAt, 'GCP_HOSTING_DEPLOY_SA')
       if (!guarded) missing.push(key)
     }
     expect(missing).toEqual([])
@@ -383,16 +522,7 @@ describe('data-reader jobs (#2872 B2)', () => {
       const authAt = steps.findIndex(s =>
         /google-github-actions\/auth/.test(s.uses ?? '')
       )
-      const guarded = steps
-        .slice(0, authAt)
-        .some(
-          s =>
-            /vars\.GCP_DATA_READER_SA/.test(
-              String(Object.values(s.env ?? {}))
-            ) &&
-            /-z\b/.test(s.run ?? '') &&
-            /exit 1/.test(s.run ?? '')
-        )
+      const guarded = hasGuard(steps, authAt, 'GCP_DATA_READER_SA')
       if (!guarded) missing.push(key)
     }
     expect(missing).toEqual([])
