@@ -12,11 +12,17 @@ const GA = [
   'https://www.google-analytics.com/collect?v=1',
   'https://www.googletagmanager.com/gtag/js?id=G-CDWQYHC2Z3',
   'https://www.googletagmanager.com/a?id=G-CDWQYHC2Z3',
+  'https://www.google-analytics.com./g/collect?v=2',
+  'https://www.googletagmanager.com./gtag/js?id=G-CDWQYHC2Z3',
+  'https://www.google-analytics.com/G/collect?v=2',
+  'https://www.google-analytics.com/COLLECT?v=1',
 ]
 const NOT_GA = [
   'https://cdn.taverns.red/snapshots/latest.json',
   'https://google-analytics.com.evil.test/g/collect',
   'https://evil-googletagmanager.com/gtag/js',
+  'https://google-analytics.com.evil.test./g/collect',
+  'https://evil-googletagmanager.com./gtag/js',
   'https://www.google-analytics.com/other',
   'https://example.com/?u=https://www.google-analytics.com/g/collect',
 ]
