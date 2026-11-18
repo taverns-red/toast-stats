@@ -49,7 +49,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        # --ignore-scripts: no package lifecycle script may run while the job
+        # holds the OIDC request token. tsx's esbuild binary arrives through
+        # optionalDependencies, not a postinstall.
+        run: npm ci --ignore-scripts
 
       # An empty variable would make the auth action fall back to direct
       # workload identity; fail here with the cause instead.
