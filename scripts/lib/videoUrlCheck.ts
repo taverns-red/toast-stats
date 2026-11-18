@@ -27,6 +27,8 @@ export interface ProbeDeps {
     body?: { cancel(): Promise<void> } | null
   }>
   sleep?: (ms: number) => Promise<void>
+  /** Builds the per-request abort signal; injected so a test can see the timeout. */
+  timeoutSignal?: (ms: number) => AbortSignal
 }
 
 const REQUEST_TIMEOUT_MS = 15_000
