@@ -22,10 +22,7 @@ It is defence in depth. The real control is GitHub-side: a `pull_request` rule o
 
 All three hooks exit 0 at once unless `CLAUDE_CODE_REMOTE=true`, so local sessions only gain the allow rules. `scripts/lib/__tests__/cloudSessionConfig.test.ts` and `cloudSessionGuard.test.ts` pin that.
 
-The setup hook also fills two gaps in the VM image (#2467), skipping each when already present:
-
-- **`yamllint`**, installed with `pip install --user` (lands in `~/.local/bin`, already on PATH). The pre-commit hook runs `npm run lint:yaml`, which otherwise exits 127.
-- **A case-folding locale, `en_US.UTF-8`**, generated with `localedef`. The image ships only `C`, `C.utf8` and `POSIX`; the lessons-index test that needed one folded case was retired in #2950, and `scripts/cloud-session-setup.sh` still installs it.
+The setup hook also fills a gap in the VM image (#2467), skipping it when already present: **`yamllint`**, installed with `pip install --user` (lands in `~/.local/bin`, already on PATH). The pre-commit hook runs `npm run lint:yaml`, which otherwise exits 127. It used to generate a case-folding locale too; the one test that needed it was retired in #2950 and the install was removed in #2957.
 
 There is no Playwright in the VM. Browser smokes run in CI against the PR preview channel.
 
