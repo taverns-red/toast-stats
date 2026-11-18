@@ -8,9 +8,10 @@
  * - the source run must be a successful run of videos.yml;
  * - every destination is an object the planner (scripts/lib/videoPublish.ts)
  *   produced, re-checked in shell against the same shape;
- * - every write is `--no-clobber` with video/mp4 and the immutable cache
- *   header; existing objects are refused before anything is written;
- * - prod gets a server-side copy of the verified staging object;
+ * - every write goes through scripts/gcs-upload.ts (create-only insert with
+ *   ifGenerationMatch=0, #2972) with video/mp4 and the immutable cache header;
+ *   existing objects are refused before anything is written;
+ * - prod gets a copy of the verified staging object, read from staging;
  * - no rm, rsync, mv, metadata update, CDN invalidation or gzip.
  * Sourced from the YAML so the guard cannot drift.
  */
@@ -55,7 +56,7 @@ const commands = steps.flatMap(s =>
     .map(cmd => ({ step: s, cmd: cmd.trim() }))
 )
 const storageWrites = commands.filter(c =>
-  /\bgcloud storage (cp|rsync|mv|rm)\b|\bobjects update\b|\bgsutil\b/.test(
+  /gcs-upload\.ts (put|copy)\b|\bgcloud storage (cp|rsync|mv|rm)\b|\bobjects update\b|\bgsutil\b/.test(
     c.cmd
   )
 )
@@ -151,46 +152,101 @@ describe('videos-publish.yml (#2310)', () => {
     const refuse = stepIndex('Refuse to overwrite existing objects')
     expect(refuse).toBeGreaterThan(-1)
     const run = steps[refuse]?.run ?? ''
-    expect(run).toContain('gs://${GCS_BUCKET}/${OBJ}')
-    expect(run).toContain('gs://${GCS_BUCKET_PRODUCTION}/${OBJ}')
-    expect(run).toContain('objects describe')
+    expect(run).toContain(
+      'for BUCKET in "$GCS_BUCKET" "$GCS_BUCKET_PRODUCTION"'
+    )
+    expect(run).toContain(
+      'gcs-upload.ts exists --bucket "$BUCKET" --object "$OBJ"'
+    )
     const firstWrite = steps.findIndex(s =>
       storageWrites.some(w => w.step === s)
     )
     expect(firstWrite).toBeGreaterThan(refuse)
   })
 
-  it('writes only with gcloud storage cp, never rm/rsync/mv/update/gsutil', () => {
+  it('writes only with the upload helper, never gcloud cp/rm/rsync/mv/update/gsutil', () => {
     expect(storageWrites.length).toBe(2)
     for (const { cmd } of storageWrites) {
-      expect(cmd).toMatch(/^gcloud storage cp /)
+      expect(cmd).toMatch(/^npx tsx scripts\/gcs-upload\.ts (put|copy) /)
     }
+    expect(raw).not.toMatch(/gcloud storage (cp|rsync|mv|rm)/)
     expect(raw).not.toMatch(/invalidate-cdn-cache|url-maps/)
   })
 
-  it('every write lands on ${OBJ} with no-clobber, mp4 type and the immutable cache header', () => {
+  it('every write: ${OBJ}, mp4 type, the immutable cache header, no gzip, an explicit --on-exists', () => {
     for (const { cmd } of storageWrites) {
-      expect(cmd).toMatch(/"gs:\/\/\$\{GCS_BUCKET(_PRODUCTION)?\}\/\$\{OBJ\}"/)
-      expect(cmd).toContain('--no-clobber')
-      expect(cmd).toContain(`--content-type=${VIDEO_CONTENT_TYPE}`)
-      expect(cmd).toContain(`--cache-control="${VIDEO_CACHE_CONTROL}"`)
+      expect(cmd).toContain('--object "$OBJ"')
+      expect(cmd).toContain(`--content-type ${VIDEO_CONTENT_TYPE}`)
+      expect(cmd).toContain(`--cache-control "${VIDEO_CACHE_CONTROL}"`)
+      expect(cmd).toMatch(/--on-exists (skip|fail)\b/)
       expect(cmd).not.toMatch(/\s-Z\b|--gzip/)
     }
   })
 
-  it('uploads to staging, then copies that object to prod server side', () => {
+  it('a video that already exists fails the publish, at both writes (no skip)', () => {
+    for (const { cmd } of storageWrites) {
+      expect(cmd).toContain('--on-exists fail')
+    }
+  })
+
+  it('uploads to staging from the artifact, then copies that object to prod from staging', () => {
     const [up, copy] = storageWrites
     expect(up?.cmd).toMatch(
-      /^gcloud storage cp "\$DIR\/\$FILE" "gs:\/\/\$\{GCS_BUCKET\}\/\$\{OBJ\}"/
+      /^npx tsx scripts\/gcs-upload\.ts put --bucket "\$GCS_BUCKET" --object "\$OBJ" --file "\$DIR\/\$FILE"/
     )
     expect(copy?.cmd).toMatch(
-      /^gcloud storage cp "gs:\/\/\$\{GCS_BUCKET\}\/\$\{OBJ\}" "gs:\/\/\$\{GCS_BUCKET_PRODUCTION\}\/\$\{OBJ\}"/
+      /^npx tsx scripts\/gcs-upload\.ts copy --from-bucket "\$GCS_BUCKET" --bucket "\$GCS_BUCKET_PRODUCTION" --object "\$OBJ"/
     )
     expect(wf.env?.['GCS_BUCKET']).toBe('toast-stats-data-staging')
     expect(wf.env?.['GCS_BUCKET_PRODUCTION']).toBe('toast-stats-data-ca')
-    expect(wf.env?.['CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_ENABLED']).toBe(
-      'False'
+  })
+
+  it('distinguishes "not found" from every other error in the existence checks (a 403 must not read as absent)', () => {
+    const run =
+      steps.find(s => s.name === 'Refuse to overwrite existing objects')?.run ??
+      ''
+    expect(run).not.toMatch(/>\s*\/dev\/null\s+2>&1/)
+    expect(run).toMatch(/10\)/)
+    expect(run).toMatch(/\*\)[^\n]*exit 1/)
+  })
+
+  it('each step that calls the helper mints its own masked token first (tokens last an hour; none is persisted)', () => {
+    const callers = steps.filter(s => /gcs-upload\.ts/.test(s.run ?? ''))
+    expect(callers.length).toBeGreaterThanOrEqual(2)
+    for (const s of callers) {
+      const run = s.run ?? ''
+      const mint = run.indexOf('print-access-token')
+      expect(mint, s.name).toBeGreaterThan(-1)
+      expect(run.indexOf('::add-mask::'), s.name).toBeGreaterThan(mint)
+      expect(run, s.name).toMatch(/export ACCESS_TOKEN/)
+      expect(run.indexOf('export ACCESS_TOKEN'), s.name).toBeLessThan(
+        run.indexOf('gcs-upload.ts')
+      )
+    }
+    expect(raw).not.toMatch(
+      /ACCESS_TOKEN=.*GITHUB_ENV|>> "\$GITHUB_ENV".*TOKEN/
     )
+    // The only line that prints the token is the mask command.
+    for (const l of raw.split('\n').filter(l => /echo.*ACCESS_TOKEN/.test(l)))
+      expect(l).toContain('::add-mask::')
+    const authAt = steps.findIndex(s =>
+      /google-github-actions\/auth/.test(s.uses ?? '')
+    )
+    for (const s of callers) expect(steps.indexOf(s)).toBeGreaterThan(authAt)
+  })
+
+  it('installs dependencies with --ignore-scripts: no lifecycle script runs while the job holds the OIDC token', () => {
+    const run = steps.find(s => s.name === 'Install dependencies')?.run ?? ''
+    expect(run).toMatch(/^npm ci --ignore-scripts$/m)
+  })
+
+  it('builds shared-contracts after the install and before the planner and the auth step (--ignore-scripts skips the root prepare that builds it)', () => {
+    const build = steps.findIndex(s =>
+      /^npm run build:shared-contracts$/m.test(s.run ?? '')
+    )
+    expect(build).toBeGreaterThan(stepIndex('Install dependencies'))
+    expect(build).toBeLessThan(stepIndex('Plan the objects'))
+    expect(build).toBeLessThan(stepIndex('Authenticate to GCP'))
   })
 
   it('every write step is skipped on a dry run', () => {
@@ -205,5 +261,30 @@ describe('videos-publish.yml (#2310)', () => {
     expect(run).toContain(VIDEO_CACHE_CONTROL)
     expect(run).toContain('md5_hash')
     expect(run).toMatch(/206/)
+  })
+})
+
+describe('media identity (#2972)', () => {
+  const authAt = steps.findIndex(s =>
+    /google-github-actions\/auth/.test(
+      String((s as { uses?: string }).uses ?? '')
+    )
+  )
+
+  it('signs in as the media identity, not the shared deployer', () => {
+    const auth = steps[authAt] as { with?: Record<string, string> }
+    expect(auth.with?.['service_account']).toBe('${{ vars.GCP_MEDIA_SA }}')
+    expect(raw).not.toMatch(/secrets\.GCP_SERVICE_ACCOUNT/)
+  })
+
+  it('checks the media variable is non-empty before it authenticates', () => {
+    const guardAt = steps.findIndex(
+      s =>
+        /vars\.GCP_MEDIA_SA/.test(String(Object.values(s.env ?? {}))) &&
+        /-z\b/.test(s.run ?? '') &&
+        /exit 1/.test(s.run ?? '')
+    )
+    expect(guardAt).toBeGreaterThanOrEqual(0)
+    expect(guardAt).toBeLessThan(authAt)
   })
 })

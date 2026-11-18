@@ -57,6 +57,31 @@ const heldPermissions = async (
   return body.permissions ?? []
 }
 
+/**
+ * objects.testIamPermissions: GET b/{bucket}/o/{object}/iam/testPermissions
+ * (path from the Cloud Storage JSON API discovery document; the docs page is
+ * https://docs.cloud.google.com/storage/docs/json_api/v1/objects/testIamPermissions).
+ * Neither source says what a non-existent object returns, so a non-2xx
+ * answer, 404 included, fails the smoke.
+ */
+const heldObjectPermissions = async (
+  bucket: string,
+  object: string,
+  permissions: string[],
+  token: string,
+  fetchFn: typeof fetch
+): Promise<string[]> => {
+  const query = permissions
+    .map(p => `permissions=${encodeURIComponent(p)}`)
+    .join('&')
+  const body = (await getJson(
+    `${API}/${encodeURIComponent(bucket)}/o/${encodeURIComponent(object)}/iam/testPermissions?${query}`,
+    token,
+    fetchFn
+  )) as { permissions?: string[] }
+  return body.permissions ?? []
+}
+
 /** Count of soft-deleted objects under a prefix (first page, up to 1000). */
 const countSoftDeleted = async (
   bucket: string,
@@ -88,7 +113,19 @@ const check = async (
       deps.fetch
     )
   }
-  const result = evaluate(expected, actual)
+  // A 404 here throws (getJson), so a missing probe object fails closed
+  // instead of reading as "holds nothing".
+  const actualObjects: Record<string, string[]> = {}
+  for (const oc of expected.objectChecks ?? []) {
+    actualObjects[`${oc.bucket}/${oc.object}`] = await heldObjectPermissions(
+      oc.bucket,
+      oc.object,
+      [...new Set([...oc.granted, ...oc.denied])],
+      token,
+      deps.fetch
+    )
+  }
+  const result = evaluate(expected, actual, actualObjects)
 
   deps.log(`identity: ${expected.identity}`)
   for (const [bucket, exp] of Object.entries(expected.buckets)) {
@@ -100,6 +137,19 @@ const check = async (
     for (const p of exp.denied)
       deps.log(
         `${held.has(p) ? 'FAIL' : 'ok  '} ${bucket} denied  ${p} -> ${held.has(p) ? 'HELD' : 'not held'}`
+      )
+  }
+
+  for (const oc of expected.objectChecks ?? []) {
+    const held = new Set(actualObjects[`${oc.bucket}/${oc.object}`])
+    const where = `${oc.bucket}/${oc.object}`
+    for (const p of oc.granted)
+      deps.log(
+        `${held.has(p) ? 'ok  ' : 'FAIL'} ${where} granted ${p} -> ${held.has(p) ? 'held' : 'NOT held'}`
+      )
+    for (const p of oc.denied)
+      deps.log(
+        `${held.has(p) ? 'FAIL' : 'ok  '} ${where} denied  ${p} -> ${held.has(p) ? 'HELD' : 'not held'}`
       )
   }
 

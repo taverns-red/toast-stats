@@ -8,6 +8,9 @@
 # No new infrastructure: the CDN already serves both buckets, the same
 # placement as the basemap (ADR-016).
 #
+# Signs in as the media identity (vars.GCP_MEDIA_SA, #2972): create-only under
+# videos/ and basemap/, from main only. Dispatch it from main.
+#
 # Approval: every publish is a GCS write and needs Ron's approval for that
 # publish (run id + version). Only Ron, or the orchestrator acting on that
 # approval, dispatches it. It never runs on a schedule or a push.
@@ -18,12 +21,13 @@
 #   (scripts/lib/videoPublish.ts) and are re-checked in shell. Never a data
 #   prefix; the pipeline's promotion, gates, prune and lifecycle rules never
 #   reach videos/ (scripts/lib/__tests__/videoPublish.test.ts).
-# - Immutable: existing objects are refused up front and every copy is
-#   `--no-clobber`. A new render is a new version label.
+# - Immutable: existing objects are refused up front, and every write is a
+#   create-only insert (scripts/gcs-upload.ts, ifGenerationMatch=0, #2972). A
+#   new render is a new version label.
 # - video/mp4, `public, max-age=31536000, immutable, no-transform`, no gzip.
 #   The CDN caps its own TTLs (backend maxTtl 86400, clientTtl 3600);
 #   immutability is what makes the long header safe.
-# - No parallel composite upload, so GCS keeps the MD5 the CDN validates on.
+# - One plain object per upload, so GCS keeps the MD5 the CDN validates on.
 #
 # Renders are never committed (Ron, PR #2295); they move from the Actions
 # artifact to the bucket on the runner only.
@@ -63,7 +67,6 @@ permissions:
 env:
   GCS_BUCKET: 'toast-stats-data-staging'
   GCS_BUCKET_PRODUCTION: 'toast-stats-data-ca'
-  CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_ENABLED: 'False'
 
 jobs:
   publish:
@@ -117,7 +120,15 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        # --ignore-scripts: no package lifecycle script may run while the job
+        # holds the OIDC request token. Nothing here needs one: tsx's esbuild
+        # binary arrives through optionalDependencies. The root `prepare`
+        # (which builds shared-contracts) is skipped too, so the planner's
+        # dependency is built in the next step, before auth.
+        run: npm ci --ignore-scripts
+
+      - name: Build shared-contracts (the planner imports it)
+        run: npm run build:shared-contracts
 
       - name: Plan the objects
         run: |
@@ -162,11 +173,22 @@ jobs:
       - name: Verify render encoding (ffprobe)
         run: npm run -s videos:verify -- "$DIR"/*.mp4
 
+      # An empty media variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      - name: Require the media identity variable
+        env:
+          MEDIA_SA: ${{ vars.GCP_MEDIA_SA }}
+        run: |
+          if [ -z "${MEDIA_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_MEDIA_SA is empty"
+            exit 1
+          fi
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_MEDIA_SA }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
@@ -177,18 +199,30 @@ jobs:
       - name: Log Cloud SDK version
         run: gcloud version
 
+      # The helper reads the job's token from ACCESS_TOKEN. Each step mints and
+      # masks its own (a token lasts an hour) and none is written to a file.
+      # Exit codes of `gcs-upload.ts exists`: 0 not found, 10 found, anything
+      # else is an error (a 403 must never read as "not found").
       - name: Refuse to overwrite existing objects
         run: |
           set -euo pipefail
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          echo "::add-mask::${ACCESS_TOKEN}"
+          export ACCESS_TOKEN
           SHAPE='^videos/[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+([.-][a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*-(desktop|mobile)\.mp4$'
           EXISTS=0
           while IFS=$'\t' read -r _ OBJ; do
             [[ "$OBJ" =~ $SHAPE ]] || { echo "::error::refusing '${OBJ}': not a video object"; exit 1; }
-            for URI in "gs://${GCS_BUCKET}/${OBJ}" "gs://${GCS_BUCKET_PRODUCTION}/${OBJ}"; do
-              if gcloud storage objects describe "$URI" > /dev/null 2>&1; then
-                echo "::error::${URI} already exists; published videos are immutable, use a new version"
-                EXISTS=1
-              fi
+            for BUCKET in "$GCS_BUCKET" "$GCS_BUCKET_PRODUCTION"; do
+              RC=0
+              npx tsx scripts/gcs-upload.ts exists --bucket "$BUCKET" --object "$OBJ" || RC=$?
+              case "$RC" in
+                0) ;;
+                10)
+                  echo "::error::gs://${BUCKET}/${OBJ} already exists; published videos are immutable, use a new version"
+                  EXISTS=1 ;;
+                *) echo "::error::could not check gs://${BUCKET}/${OBJ} (exit ${RC})"; exit 1 ;;
+              esac
             done
           done < <(jq -r '.[] | [.file, .object] | @tsv' /tmp/plan.json)
           exit "$EXISTS"
@@ -209,26 +243,32 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           set -euo pipefail
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          echo "::add-mask::${ACCESS_TOKEN}"
+          export ACCESS_TOKEN
           SHAPE='^videos/[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+([.-][a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*-(desktop|mobile)\.mp4$'
           while IFS=$'\t' read -r FILE OBJ; do
             [[ "$OBJ" =~ $SHAPE ]] || { echo "::error::refusing '${OBJ}': not a video object"; exit 1; }
-            gcloud storage cp "$DIR/$FILE" "gs://${GCS_BUCKET}/${OBJ}" \
-              --no-clobber \
-              --content-type=video/mp4 \
-              --cache-control="public, max-age=31536000, immutable, no-transform"
+            npx tsx scripts/gcs-upload.ts put --bucket "$GCS_BUCKET" --object "$OBJ" --file "$DIR/$FILE" \
+              --content-type video/mp4 \
+              --cache-control "public, max-age=31536000, immutable, no-transform" \
+              --on-exists fail
           done < <(jq -r '.[] | [.file, .object] | @tsv' /tmp/plan.json)
 
-      - name: Copy the staging objects to prod (server side)
+      - name: Copy the staging objects to prod (read from staging)
         if: ${{ !inputs.dry_run }}
         run: |
           set -euo pipefail
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          echo "::add-mask::${ACCESS_TOKEN}"
+          export ACCESS_TOKEN
           SHAPE='^videos/[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+([.-][a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*-(desktop|mobile)\.mp4$'
           while IFS=$'\t' read -r _ OBJ; do
             [[ "$OBJ" =~ $SHAPE ]] || { echo "::error::refusing '${OBJ}': not a video object"; exit 1; }
-            gcloud storage cp "gs://${GCS_BUCKET}/${OBJ}" "gs://${GCS_BUCKET_PRODUCTION}/${OBJ}" \
-              --no-clobber \
-              --content-type=video/mp4 \
-              --cache-control="public, max-age=31536000, immutable, no-transform"
+            npx tsx scripts/gcs-upload.ts copy --from-bucket "$GCS_BUCKET" --bucket "$GCS_BUCKET_PRODUCTION" --object "$OBJ" \
+              --content-type video/mp4 \
+              --cache-control "public, max-age=31536000, immutable, no-transform" \
+              --on-exists fail
           done < <(jq -r '.[] | [.file, .object] | @tsv' /tmp/plan.json)
 
       - name: Verify the published objects

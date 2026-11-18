@@ -5,10 +5,10 @@
  * load-bearing:
  * - a gzip upload (`-Z`, `--gzip-*`) makes GCS ignore `Range` and serve the
  *   whole multi-GB object on every request (GCS transcoding docs);
- * - a parallel composite upload loses the MD5, and Cloud CDN wants a strong
- *   validator;
- * - an overwrite would mix two builds in cached CDN chunks, so every copy is
- *   `--no-clobber`.
+ * - a composite upload loses the MD5, and Cloud CDN wants a strong validator
+ *   (scripts/gcs-upload.ts inserts one plain object, so the MD5 is kept);
+ * - an overwrite would mix two builds in cached CDN chunks, so every write is
+ *   create-only (ifGenerationMatch=0, #2972).
  * The workflow is manual-dispatch only and writes prod only by a server-side
  * copy of the staging object. Sourced from the YAML so the guard cannot drift.
  */
@@ -24,6 +24,8 @@ interface Step {
   if?: string
   run?: string
   env?: Record<string, string>
+  uses?: string
+  with?: Record<string, string>
 }
 interface Workflow {
   on: Record<string, unknown>
@@ -34,12 +36,13 @@ interface Workflow {
 const raw = fs.existsSync(FILE) ? fs.readFileSync(FILE, 'utf-8') : ''
 const wf = (raw ? parse(raw) : { on: {}, jobs: {} }) as Workflow
 const steps = Object.values(wf.jobs).flatMap(j => j.steps)
-/** Each `gcloud storage cp …` command, continuation lines joined. */
+/** Each `scripts/gcs-upload.ts put|copy …` command, continuation lines joined. */
 const cpCommands = steps.flatMap(s =>
   (s.run ?? '')
     .replace(/\\\n\s*/g, ' ')
     .split('\n')
-    .filter(l => /\bgcloud storage cp\b/.test(l))
+    .map(l => l.trim())
+    .filter(l => /gcs-upload\.ts (put|copy)\b/.test(l))
     .map(cmd => ({ step: s, cmd }))
 )
 
@@ -145,27 +148,29 @@ describe('basemap-build.yml (#1786)', () => {
     expect(cpCommands.length).toBeGreaterThanOrEqual(2)
   })
 
-  it('every copy: octet-stream, no-transform, no-clobber, never gzip', () => {
+  it('every write: octet-stream, no-transform, an explicit --on-exists, never gzip', () => {
     for (const { cmd } of cpCommands) {
-      expect(cmd).toContain('--content-type=application/octet-stream')
-      expect(cmd).toMatch(
-        /--cache-control="public, max-age=86400, no-transform"/
+      expect(cmd).toContain('--content-type application/octet-stream')
+      expect(cmd).toContain(
+        '--cache-control "public, max-age=86400, no-transform"'
       )
-      expect(cmd).toContain('--no-clobber')
+      expect(cmd).toMatch(/--on-exists (skip|fail)\b/)
       expect(cmd).not.toMatch(/\s-[A-Za-z]*[Zz]\b|--gzip|\s-[jJ]\b/)
     }
   })
 
-  it('disables parallel composite upload for every copy', () => {
-    const value =
-      wf.env?.['CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_ENABLED'] ??
-      Object.values(wf.jobs)[0]?.env?.[
-        'CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_ENABLED'
-      ]
-    expect(String(value)).toBe('False')
+  it('never uses gcloud storage cp (it reads and lists the destination first)', () => {
+    expect(raw).not.toMatch(/gcloud storage (cp|rsync|mv|rm)/)
   })
 
-  it('writes prod only by a server-side copy from staging, only for prod-copy', () => {
+  it('staging upload fails if the object exists; the prod copy skips (a re-run verifies it)', () => {
+    const up = cpCommands.find(({ cmd }) => /gcs-upload\.ts put /.test(cmd))
+    expect(up?.cmd).toContain('--on-exists fail')
+    const copy = cpCommands.find(({ cmd }) => /gcs-upload\.ts copy /.test(cmd))
+    expect(copy?.cmd).toContain('--on-exists skip')
+  })
+
+  it('writes prod only by a copy read from staging, only for prod-copy', () => {
     const prod = cpCommands.filter(({ cmd }) =>
       /GCS_BUCKET_PRODUCTION/.test(cmd)
     )
@@ -173,18 +178,127 @@ describe('basemap-build.yml (#1786)', () => {
     for (const { step, cmd } of prod) {
       expect(step.if ?? '').toContain("inputs.target == 'prod-copy'")
       expect(cmd).toMatch(
-        /gcloud storage cp "gs:\/\/\$\{GCS_BUCKET\}\/\$\{OBJ\}" "gs:\/\/\$\{GCS_BUCKET_PRODUCTION\}\/\$\{OBJ\}"/
+        /gcs-upload\.ts copy --from-bucket "\$GCS_BUCKET" --bucket "\$GCS_BUCKET_PRODUCTION" --object "\$OBJ"/
       )
     }
-    const uploads = cpCommands.filter(({ cmd }) => !/cp "gs:\/\//.test(cmd))
+    const uploads = cpCommands.filter(({ cmd }) =>
+      /gcs-upload\.ts put /.test(cmd)
+    )
+    expect(uploads.length).toBe(1)
     for (const { step, cmd } of uploads) {
       expect(cmd).not.toMatch(/GCS_BUCKET_PRODUCTION/)
+      expect(cmd).toContain('--file "$BUILD_DIR/$NAME"')
       expect(step.if ?? '').toContain("inputs.target == 'staging'")
     }
+  })
+
+  it('the staging existence check tells "not found" apart from every other error', () => {
+    const run =
+      steps.find(
+        s => s.name === 'Refuse to overwrite an existing staging object'
+      )?.run ?? ''
+    expect(run).toContain('gcs-upload.ts exists')
+    expect(run).not.toMatch(/>\s*\/dev\/null\s+2>&1/)
+    expect(run).toMatch(/10\)/)
+    expect(run).toMatch(/\*\)[^\n]*exit 1/)
+  })
+
+  it('installs dependencies with --ignore-scripts for both targets, after Node is set up', () => {
+    const node = steps.findIndex(s =>
+      String(s.uses ?? '').startsWith('actions/setup-node@')
+    )
+    const install = steps.findIndex(s =>
+      /^npm ci --ignore-scripts$/m.test(s.run ?? '')
+    )
+    expect(node).toBeGreaterThanOrEqual(0)
+    expect(install).toBeGreaterThan(node)
+    expect(steps[node]?.if).toBeUndefined()
+    expect(steps[install]?.if).toBeUndefined()
+  })
+
+  it('each step that calls the helper mints its own masked token first (tokens last an hour; none is persisted)', () => {
+    const callers = steps.filter(s => /gcs-upload\.ts/.test(s.run ?? ''))
+    expect(callers.length).toBeGreaterThanOrEqual(2)
+    for (const s of callers) {
+      const run = s.run ?? ''
+      const mint = run.indexOf('print-access-token')
+      expect(mint, s.name).toBeGreaterThan(-1)
+      expect(run.indexOf('::add-mask::'), s.name).toBeGreaterThan(mint)
+      expect(run, s.name).toMatch(/export ACCESS_TOKEN/)
+      expect(run.indexOf('export ACCESS_TOKEN'), s.name).toBeLessThan(
+        run.indexOf('gcs-upload.ts')
+      )
+    }
+    expect(raw).not.toMatch(
+      /ACCESS_TOKEN=.*GITHUB_ENV|>> "\$GITHUB_ENV".*TOKEN/
+    )
+    // The only line that prints the token is the mask command.
+    for (const l of raw.split('\n').filter(l => /echo.*ACCESS_TOKEN/.test(l)))
+      expect(l).toContain('::add-mask::')
+    const authAt = steps.findIndex(s =>
+      /google-github-actions\/auth/.test(s.uses ?? '')
+    )
+    for (const s of callers) expect(steps.indexOf(s)).toBeGreaterThan(authAt)
   })
 
   it('only ever writes under basemap/', () => {
     expect(raw).toMatch(/OBJ=.*basemap\/protomaps-v4\//)
     expect(raw).not.toMatch(/gcloud storage (rm|rsync)/)
+  })
+})
+
+describe('media identity (#2972)', () => {
+  const authAt = steps.findIndex(s =>
+    /google-github-actions\/auth/.test(
+      String((s as { uses?: string }).uses ?? '')
+    )
+  )
+
+  it('signs in as the media identity, not the shared deployer', () => {
+    const auth = steps[authAt] as { with?: Record<string, string> }
+    expect(auth.with?.['service_account']).toBe('${{ vars.GCP_MEDIA_SA }}')
+    expect(raw).not.toMatch(/secrets\.GCP_SERVICE_ACCOUNT/)
+  })
+
+  it('checks the media variable is non-empty before it authenticates', () => {
+    const guardAt = steps.findIndex(
+      s =>
+        /vars\.GCP_MEDIA_SA/.test(String(Object.values(s.env ?? {}))) &&
+        /-z\b/.test(s.run ?? '') &&
+        /exit 1/.test(s.run ?? '')
+    )
+    expect(guardAt).toBeGreaterThanOrEqual(0)
+    expect(guardAt).toBeLessThan(authAt)
+  })
+})
+
+describe('z14 prod copy is blocked until #2980 (#2972, COO condition)', () => {
+  const gateAt = steps.findIndex(s => /#2980/.test(s.run ?? ''))
+  const copyAt = steps.findIndex(s => /gcs-upload\.ts copy /.test(s.run ?? ''))
+
+  it('has a gate step that runs before the prod copy', () => {
+    expect(gateAt).toBeGreaterThanOrEqual(0)
+    expect(copyAt).toBeGreaterThan(gateAt)
+  })
+
+  it('runs only for a real prod copy, and refuses z14 with an error and exit 1', () => {
+    const gate = steps[gateAt]!
+    expect(gate.if).toContain("inputs.target == 'prod-copy'")
+    expect(gate.if).toContain('!inputs.dry_run')
+    const run = gate.run ?? ''
+    expect(run).toMatch(/MAXZOOM/)
+    expect(run).toContain('world-z0-14-')
+    expect(run).toContain('::error::')
+    expect(run).toContain(
+      'blocked until #2980 (token refresh for long copies) lands'
+    )
+    expect(run).toMatch(/exit 1/)
+  })
+
+  it('the copy step points at #2980 in a comment', () => {
+    const from = raw.indexOf('- name: Copy the staging object to prod')
+    const to = raw.indexOf('- name:', from + 1)
+    expect(from).toBeGreaterThan(0)
+    expect(raw.slice(from, to)).toContain('#2980')
   })
 })

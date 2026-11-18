@@ -157,3 +157,63 @@ describe('restore identity expectation (#2966)', () => {
     }
   })
 })
+
+describe('media identity expectation (#2972)', () => {
+  const media = IDENTITY_EXPECTATIONS['media']!
+
+  it('is keyed by its own name', () => {
+    expect(media.identity).toBe('media')
+  })
+
+  it('asserts no grant at bucket level: an object-name condition hides it there', () => {
+    for (const b of Object.values(media.buckets)) expect(b.granted).toEqual([])
+  })
+
+  it('checks create inside the allowed prefixes, and create outside them denied, on both buckets', () => {
+    const isInside = (o: string) => /^(videos|basemap)\//.test(o)
+    for (const bucket of ['toast-stats-data-ca', 'toast-stats-data-staging']) {
+      const checks = (media.objectChecks ?? []).filter(c => c.bucket === bucket)
+      const inside = checks.filter(c => isInside(c.object))
+      const outside = checks.filter(c => !isInside(c.object))
+      expect(inside.length).toBeGreaterThan(0)
+      expect(outside.length).toBeGreaterThan(0)
+      for (const c of inside)
+        expect(c.granted).toContain('storage.objects.create')
+      for (const c of outside) {
+        expect(c.granted).toEqual([])
+        expect(c.denied).toContain('storage.objects.create')
+      }
+    }
+  })
+
+  it('checks read inside the prefix on staging only', () => {
+    const readInside = (b: string) =>
+      (media.objectChecks ?? []).some(
+        c =>
+          c.bucket === b &&
+          /^(videos|basemap)\//.test(c.object) &&
+          c.granted.includes('storage.objects.get')
+      )
+    expect(readInside('toast-stats-data-staging')).toBe(true)
+    expect(readInside('toast-stats-data-ca')).toBe(false)
+  })
+
+  it('can never delete, overwrite in place, restore or change bucket metadata or IAM', () => {
+    for (const b of Object.values(media.buckets)) {
+      for (const p of [
+        'storage.objects.delete',
+        'storage.objects.update',
+        'storage.objects.restore',
+        'storage.buckets.update',
+        'storage.buckets.setIamPolicy',
+      ])
+        expect(b.denied).toContain(p)
+    }
+  })
+
+  it('never lists a permission as both granted and denied', () => {
+    for (const b of Object.values(media.buckets)) {
+      expect(b.granted.filter(p => b.denied.includes(p))).toEqual([])
+    }
+  })
+})

@@ -1,549 +1,291 @@
 /**
- * scripts/pipeline/gcs-upload.sh — every staging upload records itself in
- * the run manifest (#1762, ADR-015 P5, migration step 4).
+ * #2972: the create-only upload helper that replaces `gcloud storage cp`.
+ * `cp` to a new object reads the destination and lists a prefix, neither of
+ * which the media identity holds. A direct objects.insert needs only
+ * storage.objects.create.
  *
- * Runs the REAL wrapper against the gcloud shim. The shim logs each object
- * an upload actually wrote, with the sha256 of the uncompressed bytes
- * (SHIM_UPLOAD_LOG); the contract is that the manifest lists exactly those
- * objects with exactly those hashes — every one, and nothing else.
+ * API: https://docs.cloud.google.com/storage/docs/json_api/v1/objects/insert
+ * (query ifGenerationMatch; 0 means "only if the object does not exist") and
+ * https://docs.cloud.google.com/storage/docs/resumable-uploads
+ * (POST uploadType=resumable, then PUT the bytes to the returned Location).
  */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import {
+  uploadObject,
+  objectExists,
+  ObjectExistsError,
+  type UploadOptions,
+} from '../gcsUpload'
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { spawnSync } from 'node:child_process'
-import * as fs from 'node:fs'
-import * as os from 'node:os'
-import * as path from 'node:path'
-import * as zlib from 'node:zlib'
-import { createHash } from 'node:crypto'
-
-const REPO = process.cwd()
-const SCRIPT = path.join(REPO, 'scripts/pipeline/gcs-upload.sh')
-const SHIM = path.join(
-  REPO,
-  'scripts/lib/__tests__/fixtures/gcloud-shim/gcloud'
-)
-const BUCKET = 'test-bucket'
-
-let tmp: string
-let root: string
-let local: string
-let manifest: string
-let uploadLog: string
-
-const sha = (bytes: string | Buffer) =>
-  createHash('sha256').update(bytes).digest('hex')
-
-function run(args: string[], env: Record<string, string> = {}) {
-  return spawnSync('bash', [SCRIPT, ...args], {
-    cwd: REPO,
-    encoding: 'utf-8',
-    env: {
-      ...process.env,
-      GCLOUD: SHIM,
-      SHIM_ROOT: root,
-      SHIM_UPLOAD_LOG: uploadLog,
-      RUN_MANIFEST_FILE: manifest,
-      GCS_BUCKET_PRODUCTION: 'prod-bucket',
-      ...env,
-    },
-  })
-}
-
-function writeLocal(rel: string, content: string): string {
-  const f = path.join(local, rel)
-  fs.mkdirSync(path.dirname(f), { recursive: true })
-  fs.writeFileSync(f, content)
-  return f
-}
-
-interface Entry {
-  path: string
-  sha256: string
-  date: string | null
-  stage: string
-}
-
-function manifestEntries(): Entry[] {
-  if (!fs.existsSync(manifest)) return []
-  return fs
-    .readFileSync(manifest, 'utf-8')
-    .split('\n')
-    .filter(Boolean)
-    .map(l => JSON.parse(l) as Entry)
-}
-
-/** `path sha` pairs the shim really wrote, sorted. */
-function uploaded(): string[] {
-  if (!fs.existsSync(uploadLog)) return []
-  return fs
-    .readFileSync(uploadLog, 'utf-8')
-    .split('\n')
-    .filter(Boolean)
-    .map(l => l.replaceAll('\t', ' '))
-    .sort()
-}
-
-const recorded = () =>
-  manifestEntries()
-    .map(e => `${e.path} ${e.sha256}`)
-    .sort()
+const SECRET = 'ya29.super-secret-token'
+// base64 md5 of the test file's bytes, 'hello-bytes'
+const MD5 = 'cmRXJ1v0KW2eSVzGExeIzw=='
+// base64 md5 of 'abcdef'
+const ABCDEF_MD5 = '6AtQFwmJUPxYqtg8jBSXjg=='
+let dir: string
+let file: string
 
 beforeEach(() => {
-  tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gcs-upload-'))
-  root = path.join(tmp, 'gcs')
-  local = path.join(tmp, 'local')
-  manifest = path.join(tmp, 'run', 'written.jsonl')
-  uploadLog = path.join(tmp, 'uploads.log')
-  fs.mkdirSync(path.join(root, BUCKET), { recursive: true })
-  fs.mkdirSync(path.join(root, 'prod-bucket'), { recursive: true })
+  dir = mkdtempSync(join(tmpdir(), 'gcs-upload-'))
+  file = join(dir, 'a.mp4')
+  writeFileSync(file, 'hello-bytes')
+})
+afterEach(() => rmSync(dir, { recursive: true, force: true }))
+
+const session =
+  'https://storage.googleapis.com/upload/storage/v1/b/b/o?upload_id=U1'
+
+interface Call {
+  url: string
+  init: RequestInit
+}
+
+/** A fake of the two-request resumable protocol. */
+const fakeGcs = (
+  init: { initiate?: number; put?: number } = {}
+): { fetchFn: typeof fetch; calls: Call[] } => {
+  const calls: Call[] = []
+  const fetchFn = vi.fn(async (url: string, i: RequestInit) => {
+    calls.push({ url, init: i })
+    if (i.method === 'POST')
+      return init.initiate && init.initiate !== 200
+        ? new Response('{"error":"x"}', { status: init.initiate })
+        : new Response('{}', { status: 200, headers: { Location: session } })
+    if (i.method === 'PUT')
+      return new Response(`{"name":"o","size":"11","md5Hash":"${MD5}"}`, {
+        status: init.put ?? 200,
+      })
+    // The destination read a skip makes after a 412: the same bytes.
+    return new Response(`{"md5Hash":"${MD5}"}`, { status: 200 })
+  }) as unknown as typeof fetch
+  return { fetchFn, calls }
+}
+
+const opts = (over: Partial<UploadOptions>): UploadOptions => ({
+  bucket: 'bkt',
+  object: 'videos/a/b/c-desktop.mp4',
+  source: { kind: 'file', path: file },
+  contentType: 'video/mp4',
+  cacheControl: 'public, max-age=31536000, immutable, no-transform',
+  onExists: 'fail',
+  token: SECRET,
+  fetch: fetch,
+  ...over,
 })
 
-afterEach(() => {
-  fs.rmSync(tmp, { recursive: true, force: true })
-})
-
-describe('gcs-upload.sh: the manifest is exactly what went up (#1762)', () => {
-  it('cp of several files into a prefix, -Z: one line per object, sha of the uncompressed bytes', () => {
-    const a = writeLocal('snap/district_61.json', '{"a":1}')
-    const b = writeLocal('snap/metadata.json', '{"b":2}')
-    const r = run([
-      'daily-upload',
-      'cp',
-      '--content-type=application/json',
-      '--cache-control=public, max-age=3600, must-revalidate',
-      '-Z',
-      a,
-      b,
-      `gs://${BUCKET}/snapshots/2026-10-10/`,
-    ])
-    expect(r.status, r.stderr).toBe(0)
-    expect(uploaded()).toHaveLength(2)
-    expect(recorded()).toEqual(uploaded())
-    // Stored gzip; the manifest hash is the hash of what a browser decodes.
-    const stored = fs.readFileSync(
-      path.join(root, BUCKET, 'snapshots/2026-10-10/district_61.json')
+describe('uploadObject (#2972)', () => {
+  it('starts a resumable upload that is create-only (ifGenerationMatch=0), by POST', async () => {
+    const { fetchFn, calls } = fakeGcs()
+    await uploadObject(opts({ fetch: fetchFn }))
+    const first = calls[0]!
+    expect(first.init.method).toBe('POST')
+    const url = new URL(first.url)
+    expect(url.origin + url.pathname).toBe(
+      'https://storage.googleapis.com/upload/storage/v1/b/bkt/o'
     )
-    const entry = manifestEntries().find(e => e.path.endsWith('_61.json'))
-    expect(entry?.sha256).toBe(sha(zlib.gunzipSync(stored)))
-    expect(entry).toMatchObject({
-      date: '2026-10-10',
-      stage: 'daily-upload',
+    expect(url.searchParams.get('uploadType')).toBe('resumable')
+    expect(url.searchParams.get('ifGenerationMatch')).toBe('0')
+    expect(url.searchParams.get('name')).toBe('videos/a/b/c-desktop.mp4')
+  })
+
+  it('sends the content type and cache control as object metadata, and the bearer token', async () => {
+    const { fetchFn, calls } = fakeGcs()
+    await uploadObject(opts({ fetch: fetchFn }))
+    const first = calls[0]!
+    expect(JSON.parse(first.init.body as string)).toEqual({
+      name: 'videos/a/b/c-desktop.mp4',
+      contentType: 'video/mp4',
+      cacheControl: 'public, max-age=31536000, immutable, no-transform',
+      md5Hash: MD5,
     })
+    const h = first.init.headers as Record<string, string>
+    expect(h['Authorization']).toBe(`Bearer ${SECRET}`)
+    expect(h['X-Upload-Content-Type']).toBe('video/mp4')
+    expect(h['X-Upload-Content-Length']).toBe('11')
   })
 
-  it('cp of one file to a full object name; a dateless path records date null', () => {
-    const f = writeLocal('latest.json', '{"latestSnapshotDate":"2026-10-10"}')
-    const r = run([
-      'cdn-manifests',
-      'cp',
-      '--content-type=application/json',
-      f,
-      `gs://${BUCKET}/v1/latest.json`,
-    ])
-    expect(r.status, r.stderr).toBe(0)
-    expect(manifestEntries()).toEqual([
-      {
-        path: 'v1/latest.json',
-        sha256: sha('{"latestSnapshotDate":"2026-10-10"}'),
-        date: null,
-        stage: 'cdn-manifests',
-      },
-    ])
-  })
-
-  it('cp -r of a quoted wildcard records every match', () => {
-    writeLocal('rh/61.json', '{"d":"61"}')
-    writeLocal('rh/02.json', '{"d":"02"}')
-    const r = run([
-      'cdn-manifests',
-      'cp',
-      '--content-type=application/json',
-      '-r',
-      path.join(local, 'rh/*.json'),
-      `gs://${BUCKET}/v1/rank-history/`,
-    ])
-    expect(r.status, r.stderr).toBe(0)
-    expect(uploaded()).toHaveLength(2)
-    expect(recorded()).toEqual(uploaded())
-  })
-
-  it('rsync -r of a tree records every file under its object path and date', () => {
-    writeLocal('raw/2026-10-10/district-61/club-performance.csv', 'Club\n')
-    writeLocal('raw/2026-10-09/district-02/club-performance.csv', 'Club,X\n')
-    const r = run([
-      'historical-raw-csv',
-      'rsync',
-      '-r',
-      `${path.join(local, 'raw')}/`,
-      `gs://${BUCKET}/raw-csv/`,
-    ])
-    expect(r.status, r.stderr).toBe(0)
-    expect(uploaded()).toHaveLength(2)
-    expect(recorded()).toEqual(uploaded())
+  it('PUTs the bytes to the session URL and returns created', async () => {
+    const { fetchFn, calls } = fakeGcs()
+    expect(await uploadObject(opts({ fetch: fetchFn }))).toBe('created')
+    expect(calls).toHaveLength(2)
+    expect(calls[1]!.url).toBe(session)
+    expect(calls[1]!.init.method).toBe('PUT')
     expect(
-      manifestEntries()
-        .map(e => e.date)
-        .sort()
-    ).toEqual(['2026-10-09', '2026-10-10'])
+      (calls[1]!.init.headers as Record<string, string>)['Content-Length']
+    ).toBe('11')
   })
 
-  it('appends across calls (one manifest per run)', () => {
-    run(['a', 'cp', writeLocal('x.json', '1'), `gs://${BUCKET}/v1/x.json`])
-    run(['b', 'cp', writeLocal('y.json', '2'), `gs://${BUCKET}/v1/y.json`])
-    expect(manifestEntries().map(e => e.stage)).toEqual(['a', 'b'])
-  })
-
-  it('a failed upload records nothing and exits with the gcloud status', () => {
-    const f = writeLocal('x.json', '1')
-    const r = run(['a', 'cp', f, `gs://${BUCKET}/v1/x.json`], {
-      SHIM_FAIL_MATCH: 'v1/x\\.json',
-    })
-    expect(r.status).not.toBe(0)
-    expect(manifestEntries()).toEqual([])
-  })
-
-  it('refuses a production destination: prod writes are the promote step only', () => {
-    const f = writeLocal('x.json', '1')
-    const r = run(['a', 'cp', f, 'gs://prod-bucket/v1/x.json'])
-    expect(r.status).toBe(2)
-    expect(uploaded()).toEqual([])
-  })
-
-  it('refuses to upload when RUN_MANIFEST_FILE is unset: an unrecorded write is invisible to the gate', () => {
-    const f = writeLocal('x.json', '1')
-    const r = run(['a', 'cp', f, `gs://${BUCKET}/v1/x.json`], {
-      RUN_MANIFEST_FILE: '',
-    })
-    expect(r.status).toBe(2)
-    expect(uploaded()).toEqual([])
-  })
-
-  it('refuses a missing source before uploading anything (a space-separated flag value reads as one)', () => {
-    const f = writeLocal('x.json', '1')
-    const r = run([
-      'a',
-      'cp',
-      '--content-type',
-      'application/json',
-      f,
-      `gs://${BUCKET}/v1/x.json`,
-    ])
-    expect(r.status).toBe(2)
-    expect(uploaded()).toEqual([])
-  })
-
-  it('refuses a download: it records uploads only', () => {
-    const r = run(['a', 'cp', `gs://${BUCKET}/v1/x.json`, local])
-    expect(r.status).toBe(2)
-  })
-})
-
-// #2566: a rebuild re-sent ~1,160 unchanged objects per date (class-A write
-// cost). With GCS_UPLOAD_SKIP_UNCHANGED=true the wrapper lists the
-// destination once per directory (`objects list`, which carries md5_hash,
-// not a per-object download) and uploads only what differs. The manifest
-// still lists every object the call covered: promotion copies exactly the
-// manifest, and the objects staging already holds are byte-identical to
-// what the call would have written.
-describe('gcs-upload.sh: skips unchanged objects, still records them (#2566)', () => {
-  const SKIP = {
-    GCS_UPLOAD_SKIP_UNCHANGED: 'true',
-    // md5_hash appears in the shim's listing only with generations on, as in
-    // the real one (the SDK prints it for every non-composite object).
-    SHIM_GENERATIONS: '1',
-  }
-  const CC = 'public, max-age=3600, must-revalidate'
-  const DST = `gs://${BUCKET}/snapshots/2026-10-10/`
-
-  const upload = (files: string[], env: Record<string, string> = SKIP) =>
-    run(
-      [
-        'process-dates:rebuild',
-        'cp',
-        '--content-type=application/json',
-        `--cache-control=${CC}`,
-        '-Z',
-        ...files,
-        DST,
-      ],
-      env
+  it('on 412 with onExists=skip and an identical object returns skipped and sends no bytes', async () => {
+    const { fetchFn, calls } = fakeGcs({ initiate: 412 })
+    expect(await uploadObject(opts({ fetch: fetchFn, onExists: 'skip' }))).toBe(
+      'skipped'
     )
-  const resetUploadLog = () => fs.rmSync(uploadLog, { force: true })
-
-  it('a second identical call uploads nothing, and the manifest still has every object twice-recorded', () => {
-    const a = writeLocal('s/district_61.json', '{"a":1}')
-    const b = writeLocal('s/district_62.json', '{"b":2}')
-    expect(upload([a, b]).status).toBe(0)
-    expect(uploaded()).toHaveLength(2)
-    resetUploadLog()
-    const r = upload([a, b])
-    expect(r.status, r.stderr).toBe(0)
-    expect(uploaded()).toEqual([])
-    // 2 + 2: every call records everything it covered, uploaded or not.
-    expect(manifestEntries()).toHaveLength(4)
-    const last = manifestEntries().slice(2)
-    expect(last.map(e => e.sha256).sort()).toEqual(
-      [sha('{"a":1}'), sha('{"b":2}')].sort()
-    )
+    expect(calls.map(c => c.init.method)).toEqual(['POST', 'GET'])
   })
 
-  it('several sources to a destination without a trailing slash: never narrowed to one source', () => {
-    // One source left to a `gs://b/dir` destination could be written to an
-    // object NAMED dir; with several it is a directory. So no skipping here.
-    const a = writeLocal('s/district_61.json', '{"a":1}')
-    const b = writeLocal('s/district_62.json', '{"b":2}')
-    expect(upload([a, b]).status).toBe(0)
-    fs.writeFileSync(b, '{"b":3}')
-    const log = path.join(tmp, 'shim.log')
-    const r = run(
-      [
-        'process-dates:rebuild',
-        'cp',
-        '--content-type=application/json',
-        `--cache-control=${CC}`,
-        '-Z',
-        a,
-        b,
-        `gs://${BUCKET}/snapshots/2026-10-10`,
-      ],
-      { ...SKIP, SHIM_LOG: log }
-    )
-    expect(r.status, r.stderr).toBe(0)
-    const cps = fs
-      .readFileSync(log, 'utf-8')
-      .split('\n')
-      .filter(l => l.startsWith('storage cp '))
-    expect(cps.length).toBeGreaterThan(0)
-    for (const l of cps) {
-      expect(l).toContain('district_61.json')
-      expect(l).toContain('district_62.json')
+  it('on 412 with onExists=fail throws ObjectExistsError', async () => {
+    const { fetchFn } = fakeGcs({ initiate: 412 })
+    await expect(
+      uploadObject(opts({ fetch: fetchFn, onExists: 'fail' }))
+    ).rejects.toBeInstanceOf(ObjectExistsError)
+  })
+
+  it('treats a 412 on the final PUT (a race) the same way', async () => {
+    const { fetchFn } = fakeGcs({ put: 412 })
+    await expect(
+      uploadObject(opts({ fetch: fetchFn, onExists: 'fail' }))
+    ).rejects.toBeInstanceOf(ObjectExistsError)
+  })
+
+  it.each([400, 401, 403, 404, 500])(
+    'any other failure (%i) throws, even with onExists=skip',
+    async status => {
+      const { fetchFn } = fakeGcs({ initiate: status })
+      await expect(
+        uploadObject(opts({ fetch: fetchFn, onExists: 'skip' }))
+      ).rejects.toThrow(String(status))
     }
+  )
+
+  it('fails when the byte PUT fails', async () => {
+    const { fetchFn } = fakeGcs({ put: 503 })
+    await expect(
+      uploadObject(opts({ fetch: fetchFn, sleep: async () => {} }))
+    ).rejects.toThrow('503')
   })
 
-  it('the shim -Z writes a new gzip header each time, like the SDK: -Z bytes never repeat', () => {
-    // gzip_util.get_temporary_gzipped_file writes the current time into the
-    // header, so the same content stores as different bytes. If the shim
-    // repeated them, a code path that went back to -Z would still "skip".
-    const a = writeLocal('s/district_61.json', '{"a":1}')
-    const obj = path.join(root, BUCKET, 'snapshots/2026-10-10/district_61.json')
-    expect(upload([a], {}).status).toBe(0)
-    const first = fs.readFileSync(obj)
-    expect(upload([a], {}).status).toBe(0)
-    const second = fs.readFileSync(obj)
-    expect(second.equals(first)).toBe(false)
-    expect(zlib.gunzipSync(second).toString()).toBe('{"a":1}')
+  it('never puts the token in an error message', async () => {
+    const { fetchFn } = fakeGcs({ initiate: 403 })
+    const err = await uploadObject(opts({ fetch: fetchFn })).catch(e => e)
+    expect(String(err.message)).not.toContain(SECRET)
   })
 
-  it('uploads only the file whose bytes changed', () => {
-    const a = writeLocal('s/district_61.json', '{"a":1}')
-    const b = writeLocal('s/district_62.json', '{"b":2}')
-    expect(upload([a, b]).status).toBe(0)
-    resetUploadLog()
-    fs.writeFileSync(b, '{"b":3}')
-    expect(upload([a, b]).status).toBe(0)
-    expect(uploaded()).toEqual([
-      `snapshots/2026-10-10/district_62.json ${sha('{"b":3}')}`,
-    ])
-    const stored = fs.readFileSync(
-      path.join(root, BUCKET, 'snapshots/2026-10-10/district_62.json')
+  it('refuses a missing onExists at runtime', async () => {
+    const { fetchFn } = fakeGcs()
+    await expect(
+      uploadObject({
+        ...opts({ fetch: fetchFn }),
+        onExists: undefined as never,
+      })
+    ).rejects.toThrow(/onExists/)
+  })
+
+  it('reads a staging source (metadata, then ranged alt=media) only after the create check passes', async () => {
+    const calls: Call[] = []
+    const fetchFn = vi.fn(async (url: string, i: RequestInit) => {
+      calls.push({ url, init: i })
+      if (i.method === 'POST')
+        return new Response('{}', {
+          status: 200,
+          headers: { Location: session },
+        })
+      if (i.method === 'PUT')
+        return new Response(`{"md5Hash":"${ABCDEF_MD5}"}`, { status: 200 })
+      if (url.includes('alt=media'))
+        return new Response('abcdef', { status: 206 })
+      return new Response(`{"size":"6","md5Hash":"${ABCDEF_MD5}"}`, {
+        status: 200,
+      })
+    }) as unknown as typeof fetch
+    await uploadObject(
+      opts({
+        fetch: fetchFn,
+        bucket: 'prod',
+        source: { kind: 'gcs', bucket: 'stg', object: 'videos/a/b/c.mp4' },
+      })
     )
-    expect(zlib.gunzipSync(stored).toString()).toBe('{"b":3}')
-  })
-
-  it('re-uploads when the stored headers differ (Cache-Control), though the bytes match', () => {
-    const a = writeLocal('s/district_61.json', '{"a":1}')
-    expect(upload([a]).status).toBe(0)
-    resetUploadLog()
-    const r = run(
-      [
-        'process-dates:rebuild',
-        'cp',
-        '--content-type=application/json',
-        '--cache-control=public, max-age=60',
-        '-Z',
-        a,
-        DST,
-      ],
-      SKIP
+    expect(calls.map(c => c.init.method)).toEqual(['GET', 'POST', 'GET', 'PUT'])
+    expect(calls[0]!.url).toBe(
+      'https://storage.googleapis.com/storage/v1/b/stg/o/videos%2Fa%2Fb%2Fc.mp4' +
+        '?fields=size,md5Hash,contentEncoding'
     )
-    expect(r.status, r.stderr).toBe(0)
-    expect(uploaded()).toHaveLength(1)
-  })
-
-  it('re-uploads an object stored without gzip, though the decoded bytes match', () => {
-    const a = writeLocal('s/district_61.json', '{"a":1}')
-    const obj = path.join(root, BUCKET, 'snapshots/2026-10-10/district_61.json')
-    fs.mkdirSync(path.dirname(obj), { recursive: true })
-    fs.writeFileSync(obj, '{"a":1}')
-    const meta = path.join(
-      root,
-      '.meta',
-      BUCKET,
-      'snapshots/2026-10-10/district_61.json'
+    const get = calls[2]!
+    expect(get.url).toBe(
+      'https://storage.googleapis.com/storage/v1/b/stg/o/videos%2Fa%2Fb%2Fc.mp4?alt=media'
     )
-    fs.mkdirSync(path.dirname(meta), { recursive: true })
-    fs.writeFileSync(
-      meta,
-      `content-type=application/json\ncache-control=${CC}, no-transform\ngeneration=1\n`
+    expect((get.init.headers as Record<string, string>)['Range']).toBe(
+      'bytes=0-5'
     )
-    expect(upload([a]).status).toBe(0)
-    expect(uploaded()).toHaveLength(1)
+    expect(
+      (calls[3]!.init.headers as Record<string, string>)['Content-Length']
+    ).toBe('6')
   })
 
-  it('uploads everything when the listing carries no md5_hash (a composite object has none)', () => {
-    const a = writeLocal('s/district_61.json', '{"a":1}')
-    // No generations: the shim lists no md5_hash, like a composite object.
-    const env = { GCS_UPLOAD_SKIP_UNCHANGED: 'true' }
-    expect(upload([a], env).status).toBe(0)
-    resetUploadLog()
-    expect(upload([a], env).status).toBe(0)
-    expect(uploaded()).toHaveLength(1)
-  })
-
-  it('uploads everything when the listing fails: a skip needs positive evidence', () => {
-    const a = writeLocal('s/district_61.json', '{"a":1}')
-    expect(upload([a]).status).toBe(0)
-    resetUploadLog()
-    const r = upload([a], { ...SKIP, SHIM_FAIL_MATCH: '^objects list' })
-    expect(r.status, r.stderr).toBe(0)
-    expect(uploaded()).toHaveLength(1)
-  })
-
-  it('does nothing different without the env: every call uploads (the default)', () => {
-    const a = writeLocal('s/district_61.json', '{"a":1}')
-    const env = { SHIM_GENERATIONS: '1' }
-    expect(upload([a], env).status).toBe(0)
-    resetUploadLog()
-    expect(upload([a], env).status).toBe(0)
-    expect(uploaded()).toHaveLength(1)
-  })
-
-  it('keeps the stored result the same as -Z: gzip, Cache-Control with no-transform', () => {
-    const a = writeLocal('s/district_61.json', '{"a":1}')
-    expect(upload([a]).status).toBe(0)
-    const meta = fs.readFileSync(
-      path.join(root, '.meta', BUCKET, 'snapshots/2026-10-10/district_61.json'),
-      'utf-8'
+  it('does not download the staging source when the destination exists', async () => {
+    const calls: Call[] = []
+    const fetchFn = vi.fn(async (url: string, i: RequestInit) => {
+      calls.push({ url, init: i })
+      return i.method === 'POST'
+        ? new Response('{}', { status: 412 })
+        : new Response('{"size":"6","md5Hash":"x"}', { status: 200 })
+    }) as unknown as typeof fetch
+    await uploadObject(
+      opts({
+        fetch: fetchFn,
+        onExists: 'skip',
+        source: { kind: 'gcs', bucket: 'stg', object: 'x' },
+      })
     )
-    expect(meta).toContain('content-encoding=gzip')
-    expect(meta).toContain(`cache-control=${CC}, no-transform`)
-    expect(meta).toContain('content-type=application/json')
+    expect(calls.map(c => c.init.method)).toEqual(['GET', 'POST', 'GET'])
+    expect(calls.some(c => c.url.includes('alt=media'))).toBe(false)
   })
 })
 
-// #1852: v1/ and config/ are stored identity and compressed at the edge by
-// Cloud CDN dynamic compression (compression-mode AUTOMATIC on the backend
-// bucket). The CDN skips any response that already has a Content-Encoding
-// and any whose Cache-Control has no-transform, and `-Z` sets both. So a
-// `-Z` or no-transform upload under these prefixes silently turns edge
-// compression off for that object AND changes the bytes every pipeline
-// reader (gcloud storage cat/cp, the gates, the daily index merge) gets
-// back: the #1702 class. The wrapper refuses it before anything goes up.
-describe('gcs-upload.sh: v1/ and config/ stay identity-encoded (#1852)', () => {
-  const refused: Array<[string, string[], string]> = [
-    ['-Z to v1/', ['-Z'], 'v1/rankings.json'],
-    [
-      '--gzip-local-all to config/',
-      ['--gzip-local-all'],
-      'config/club-index.json',
-    ],
-    ['--gzip-in-flight-all to v1/', ['--gzip-in-flight-all'], 'v1/dates.json'],
-    ['--gzip-local=json to config/', ['--gzip-local=json'], 'config/x.json'],
-    [
-      'a no-transform Cache-Control to config/',
-      ['--cache-control=public, max-age=300, no-transform'],
-      'config/district-snapshot-index.json',
-    ],
-    [
-      '--content-encoding=gzip to v1/',
-      ['--content-encoding=gzip'],
-      'v1/latest.json',
-    ],
-  ]
-
-  for (const [name, flags, object] of refused) {
-    it(`refuses ${name}: nothing uploaded, nothing recorded`, () => {
-      const f = writeLocal(path.basename(object), '{"a":1}')
-      const r = run([
-        'cdn-manifests',
-        'cp',
-        '--content-type=application/json',
-        ...flags,
-        f,
-        `gs://${BUCKET}/${object}`,
-      ])
-      expect(r.status).toBe(2)
-      expect(r.stderr).toMatch(/#1852/)
-      expect(uploaded()).toEqual([])
-      expect(manifestEntries()).toEqual([])
+describe('uploadObject against a real HTTP server (#2972)', () => {
+  it('streams the file bytes with a Content-Length through real fetch', async () => {
+    const http = await import('node:http')
+    let received = ''
+    let putLength = ''
+    const server = http.createServer((req, res) => {
+      if (req.method === 'POST') {
+        res.writeHead(200, {
+          Location: `http://127.0.0.1:${(server.address() as { port: number }).port}/session`,
+        })
+        res.end('{}')
+        return
+      }
+      putLength = String(req.headers['content-length'])
+      req.on('data', c => (received += c))
+      req.on('end', () => {
+        res.writeHead(200)
+        res.end(`{"md5Hash":"${MD5}"}`)
+      })
     })
-  }
+    await new Promise<void>(r => server.listen(0, '127.0.0.1', r))
+    const port = (server.address() as { port: number }).port
+    const realFetch: typeof fetch = (url, init) =>
+      fetch(
+        String(url).replace(
+          'https://storage.googleapis.com',
+          `http://127.0.0.1:${port}`
+        ),
+        init
+      )
+    try {
+      expect(await uploadObject(opts({ fetch: realFetch }))).toBe('created')
+    } finally {
+      server.close()
+    }
+    expect(received).toBe('hello-bytes')
+    expect(putLength).toBe('11')
+  })
+})
 
-  it('refuses -Z on a wildcard cp into v1/rank-history/', () => {
-    writeLocal('rh/61.json', '{"a":1}')
-    const r = run([
-      'cdn-manifests',
-      'cp',
-      '-Z',
-      '-r',
-      path.join(local, 'rh/*.json'),
-      `gs://${BUCKET}/v1/rank-history/`,
-    ])
-    expect(r.status).toBe(2)
-    expect(uploaded()).toEqual([])
+describe('objectExists (#2972)', () => {
+  const answer = (status: number): typeof fetch =>
+    vi.fn(async () => new Response('{}', { status })) as unknown as typeof fetch
+
+  it('200 means exists, 404 means absent', async () => {
+    expect(await objectExists('b', 'o/x', SECRET, answer(200))).toBe(true)
+    expect(await objectExists('b', 'o/x', SECRET, answer(404))).toBe(false)
   })
 
-  it('refuses -Z on an rsync into config/', () => {
-    writeLocal('cfg/a.json', '{"a":1}')
-    const r = run([
-      'x',
-      'rsync',
-      '-r',
-      '-Z',
-      path.join(local, 'cfg/'),
-      `gs://${BUCKET}/config/`,
-    ])
-    expect(r.status).toBe(2)
-    expect(uploaded()).toEqual([])
-  })
-
-  it('allows the real v1/ upload shape: identity bytes, no no-transform', () => {
-    const f = writeLocal('rankings.json', '{"rankings":[]}')
-    const r = run([
-      'cdn-manifests',
-      'cp',
-      '--content-type=application/json',
-      '--cache-control=public, max-age=300',
-      f,
-      `gs://${BUCKET}/v1/rankings.json`,
-    ])
-    expect(r.status, r.stderr).toBe(0)
-    const stored = fs.readFileSync(path.join(root, BUCKET, 'v1/rankings.json'))
-    expect(stored.toString('utf-8')).toBe('{"rankings":[]}')
-  })
-
-  it('still allows -Z outside v1/ and config/ (snapshots/, time-series/)', () => {
-    const f = writeLocal('ts.json', '{"a":1}')
-    const r = run([
-      'publish-stores',
-      'cp',
-      '--cache-control=public, max-age=3600',
-      '-Z',
-      f,
-      `gs://${BUCKET}/time-series/district_61/2026-2027.json`,
-    ])
-    expect(r.status, r.stderr).toBe(0)
-  })
-
-  it('a path that only contains "v1/" further down is not the v1/ prefix', () => {
-    const f = writeLocal('d.json', '{"a":1}')
-    const r = run([
-      'x',
-      'cp',
-      '-Z',
-      f,
-      `gs://${BUCKET}/snapshots/2026-10-10/v1/d.json`,
-    ])
-    expect(r.status, r.stderr).toBe(0)
+  it.each([401, 403, 500])('%i is an error, never "absent"', async status => {
+    await expect(
+      objectExists('b', 'o/x', SECRET, answer(status))
+    ).rejects.toThrow(String(status))
   })
 })
