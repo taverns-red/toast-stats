@@ -9,7 +9,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { RedVoteLine } from '../RedVoteBlock'
 import { RED_VOTE_COPY } from '../../config/redVotePromo'
 
-const cta = () => screen.getByRole('link', { name: /see red vote/i })
+const cta = () => screen.getByRole('link', { name: /see rt vote/i })
 
 describe('RedVoteLine (#2653)', () => {
   afterEach(() => {

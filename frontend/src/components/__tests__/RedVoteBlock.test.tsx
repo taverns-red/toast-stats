@@ -22,7 +22,7 @@ function renderAt(search: string) {
   )
 }
 
-const cta = () => screen.getByRole('link', { name: /see red vote/i })
+const cta = () => screen.getByRole('link', { name: /see rt vote/i })
 const medium = (a: HTMLElement) =>
   new URL(a.getAttribute('href') ?? '').searchParams.get('utm_medium')
 
