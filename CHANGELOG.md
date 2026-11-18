@@ -1,5 +1,41 @@
 # Changelog
 
+## [2.93.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.92.3...toast-stats-v2.93.0) (2026-11-18)
+
+
+### Features
+
+* **media:** log token re-mints during long copies ([#2991](https://github.com/taverns-red/toast-stats/issues/2991)) ([#2992](https://github.com/taverns-red/toast-stats/issues/2992)) ([0cc9291](https://github.com/taverns-red/toast-stats/commit/0cc92910603a69476d9236eb7be4dd068eb73729))
+
+
+### Bug Fixes
+
+* **build:** OG stub generation needs an explicit CDN target ([#2982](https://github.com/taverns-red/toast-stats/issues/2982)) ([#2986](https://github.com/taverns-red/toast-stats/issues/2986)) ([f40aea3](https://github.com/taverns-red/toast-stats/commit/f40aea3d139f0738911ec112f04e0fb934f05925))
+* **build:** the frontend bundle needs an explicit CDN target in CI ([#2994](https://github.com/taverns-red/toast-stats/issues/2994)) ([#2999](https://github.com/taverns-red/toast-stats/issues/2999)) ([d421757](https://github.com/taverns-red/toast-stats/commit/d4217571fae6ddabe7d176762cf09438c8f4876b))
+* **build:** tighten the CDN build-target check ([#2987](https://github.com/taverns-red/toast-stats/issues/2987)) ([#2993](https://github.com/taverns-red/toast-stats/issues/2993)) ([345bdd6](https://github.com/taverns-red/toast-stats/commit/345bdd6590a24d3e685e7f43fa532ba13d2c4d7e))
+* **ci:** media identity smoke drops unassertable objects.create ([#2972](https://github.com/taverns-red/toast-stats/issues/2972)) ([#2983](https://github.com/taverns-red/toast-stats/issues/2983)) ([f287f43](https://github.com/taverns-red/toast-stats/commit/f287f4390eff78886d74256ac3ba3743c0f349e2))
+* **media:** refresh the token during long basemap copies ([#2980](https://github.com/taverns-red/toast-stats/issues/2980)) ([#2988](https://github.com/taverns-red/toast-stats/issues/2988)) ([752f24c](https://github.com/taverns-red/toast-stats/commit/752f24c1f24425b40a8f274c7b519929d6bfd715))
+* **restore:** drop bulk-only --allow-overwrite from sync restore ([#2971](https://github.com/taverns-red/toast-stats/issues/2971)) ([#2976](https://github.com/taverns-red/toast-stats/issues/2976)) ([5fafab0](https://github.com/taverns-red/toast-stats/commit/5fafab0a803aed64d51fdadbb2c65c3531e4c5c7))
+* **scripts:** CDN checks require an explicit target, no prod default ([#2974](https://github.com/taverns-red/toast-stats/issues/2974)) ([#2981](https://github.com/taverns-red/toast-stats/issues/2981)) ([02ca702](https://github.com/taverns-red/toast-stats/commit/02ca702e1e79cae3bdd8a19602381c635cd1ac1f))
+* **test:** gcloudShimGenerations uses writeStubExecutable ([#3009](https://github.com/taverns-red/toast-stats/issues/3009)) ([#3010](https://github.com/taverns-red/toast-stats/issues/3010)) ([8d07ab1](https://github.com/taverns-red/toast-stats/commit/8d07ab1c3b5846901ea3955b3f837ee668c17336))
+* **ui:** DRP award names and Club Strength cut-off ([#2907](https://github.com/taverns-red/toast-stats/issues/2907)) ([#2973](https://github.com/taverns-red/toast-stats/issues/2973)) ([6eaf690](https://github.com/taverns-red/toast-stats/commit/6eaf69098233b4f5bf13edc5655214803b82ef3f))
+
+
+### Tests
+
+* education rollup seed-reuse test no longer times out under load ([#2989](https://github.com/taverns-red/toast-stats/issues/2989)) ([#2995](https://github.com/taverns-red/toast-stats/issues/2995)) ([a15243b](https://github.com/taverns-red/toast-stats/commit/a15243b201ef4b42cc7599126e8fed7063211db8))
+* gcloud shim concurrent-write test no longer times out under load ([#3002](https://github.com/taverns-red/toast-stats/issues/3002)) ([#3003](https://github.com/taverns-red/toast-stats/issues/3003)) ([87f0eaf](https://github.com/taverns-red/toast-stats/commit/87f0eaf79049861c6b34dffd496f81005f437419))
+* gcsMediaListeners no longer depends on a 20 ms window ([#3004](https://github.com/taverns-red/toast-stats/issues/3004)) ([#3006](https://github.com/taverns-red/toast-stats/issues/3006)) ([b0db3d0](https://github.com/taverns-red/toast-stats/commit/b0db3d0302d5edbf1f62cf30a07dbf6f59216f22))
+* give the verdict test's stub gh a shebang ([#2996](https://github.com/taverns-red/toast-stats/issues/2996)) ([#2997](https://github.com/taverns-red/toast-stats/issues/2997)) ([67dd309](https://github.com/taverns-red/toast-stats/commit/67dd309d0de1aa5d8257670da053aeb6747c8d14))
+* one stub-executable helper with a shebang, and a guard ([#2998](https://github.com/taverns-red/toast-stats/issues/2998)) ([#3001](https://github.com/taverns-red/toast-stats/issues/3001)) ([a94b677](https://github.com/taverns-red/toast-stats/commit/a94b67797f3e35b9c00739c0d55824a2c6bc5f9d))
+
+
+### Continuous Integration
+
+* **deploy:** production Hosting deploy uses the hosting-deploy identity ([#2984](https://github.com/taverns-red/toast-stats/issues/2984)) ([#2985](https://github.com/taverns-red/toast-stats/issues/2985)) ([2bf4527](https://github.com/taverns-red/toast-stats/commit/2bf452769d32b49e1cbd62f39a899d5a4733508f))
+* **media:** remove the z14 prod-copy gate ([#2980](https://github.com/taverns-red/toast-stats/issues/2980)) ([#2990](https://github.com/taverns-red/toast-stats/issues/2990)) ([81f1213](https://github.com/taverns-red/toast-stats/commit/81f121396b145b74683c0804c1c9fae1f22589d2))
+* **media:** video publish and basemap jobs use the media identity ([#2972](https://github.com/taverns-red/toast-stats/issues/2972)) ([#2975](https://github.com/taverns-red/toast-stats/issues/2975)) ([0519926](https://github.com/taverns-red/toast-stats/commit/0519926a2502b65b916e46554b8f42fa3a32e77f))
+
 ## [2.92.3](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.92.2...toast-stats-v2.92.3) (2026-11-18)
 
 
