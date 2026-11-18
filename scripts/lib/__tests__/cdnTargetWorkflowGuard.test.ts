@@ -13,6 +13,8 @@ import { parse } from 'yaml'
 import {
   TARGET_SCRIPTS,
   buildTargetProblems,
+  runsFrontendBuild,
+  splitCommands,
   targetProblems,
 } from '../workflowTargetCheck.js'
 
@@ -34,7 +36,7 @@ for (const file of fs.readdirSync(dir).filter(f => /\.ya?ml$/.test(f))) {
     for (const step of job.steps ?? []) {
       const run = step.run ?? ''
       const withEnv = { ...step, env: { ...wf.env, ...job.env, ...step.env } }
-      if (/\bnpm run build:frontend\b/.test(run)) {
+      if (splitCommands(run).some(runsFrontendBuild)) {
         builds.push({ file, step: withEnv })
       }
       if (TARGET_SCRIPTS.some(s => run.includes(`scripts/${s.file}`))) {

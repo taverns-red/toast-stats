@@ -73,6 +73,17 @@ export function targetProblems(
 }
 
 /**
+ * Does one command run the `build:frontend` script through npm? Covers
+ * `run`, `run-script`, and options in between (`--prefix x`, `-s`,
+ * `--workspace`), not just the literal `npm run build:frontend` (#2987).
+ */
+export function runsFrontendBuild(cmd: string): boolean {
+  return /\bnpm\s(?:.*\s)?run(?:-script)?\s(?:.*\s)?build:frontend(?:\s|$)/.test(
+    cmd
+  )
+}
+
+/**
  * Problems for one step that runs `npm run build:frontend` (#2982): the
  * build writes the OG stubs from the CDN named by VITE_CDN_BASE_URL, so the
  * step must set it to a literal URL, inline or in its env.
@@ -83,7 +94,7 @@ export function buildTargetProblems(
 ): string[] {
   const problems: string[] = []
   for (const cmd of splitCommands(run)) {
-    if (!/\bnpm run build:frontend\b/.test(cmd)) continue
+    if (!runsFrontendBuild(cmd)) continue
     const inline = /(^|\s)VITE_CDN_BASE_URL=https?:\/\//.test(cmd)
     if (!(inline || literalUrl(env['VITE_CDN_BASE_URL']))) {
       problems.push(
