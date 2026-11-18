@@ -12,6 +12,7 @@ import { spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { writeStubExecutable } from './stubExecutable.js'
 
 const REPO = process.cwd()
 const SCRIPT = path.join(REPO, 'scripts/pipeline/read-prod-removals.sh')
@@ -112,13 +113,12 @@ describe('read-prod-removals.sh', () => {
 
   it('reads "matched no objects" only as the exact line: with a real error beside it, it stops (#2903)', () => {
     const stub = path.join(tmp, 'gcloud-stub')
-    fs.writeFileSync(
+    writeStubExecutable(
       stub,
       '#!/usr/bin/env bash\n' +
         'echo "ERROR: (gcloud.storage.ls) One or more URLs matched no objects." >&2\n' +
         'echo "ERROR: (gcloud.storage.ls) HTTPError 503: Service Unavailable" >&2\n' +
-        'exit 1\n',
-      { mode: 0o755 }
+        'exit 1\n'
     )
     const r = read({ GCLOUD: stub })
     expect(r.status).toBe(1)
@@ -127,7 +127,7 @@ describe('read-prod-removals.sh', () => {
 
   it('a record deleted between the listing and the read stops, and leaves no file (#2903)', () => {
     const stub = path.join(tmp, 'gcloud-stub')
-    fs.writeFileSync(
+    writeStubExecutable(
       stub,
       '#!/usr/bin/env bash\n' +
         'if [ "$2" = "ls" ]; then\n' +
@@ -135,8 +135,7 @@ describe('read-prod-removals.sh', () => {
         '  exit 0\n' +
         'fi\n' +
         'echo "ERROR: (gcloud.storage.ls) One or more URLs matched no objects." >&2\n' +
-        'exit 1\n',
-      { mode: 0o755 }
+        'exit 1\n'
     )
     fs.mkdirSync(path.dirname(out), { recursive: true })
     fs.writeFileSync(out, 'stale')
@@ -147,12 +146,11 @@ describe('read-prod-removals.sh', () => {
 
   it('a loose mention of the phrase in another error does not read as absent (#2903)', () => {
     const stub = path.join(tmp, 'gcloud-stub')
-    fs.writeFileSync(
+    writeStubExecutable(
       stub,
       '#!/usr/bin/env bash\n' +
         'echo "ERROR: (gcloud.storage.ls) bucket x matched no objects policy denied" >&2\n' +
-        'exit 1\n',
-      { mode: 0o755 }
+        'exit 1\n'
     )
     const r = read({ GCLOUD: stub })
     expect(r.status).toBe(1)

@@ -11,7 +11,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { spawnSync } from 'node:child_process'
 import {
-  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -23,6 +22,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { writeStubExecutable } from './stubExecutable.js'
 
 const ROOT = process.cwd()
 const SETTINGS = resolve(ROOT, '.claude/settings.json')
@@ -75,8 +75,10 @@ beforeEach(() => {
   npmLog = join(dir, 'npm.log')
   mkdirSync(stubBin)
   const stub = join(stubBin, 'npm')
-  writeFileSync(stub, '#!/usr/bin/env bash\necho "npm $*" >> "$NPM_LOG"\n')
-  chmodSync(stub, 0o755)
+  writeStubExecutable(
+    stub,
+    '#!/usr/bin/env bash\necho "npm $*" >> "$NPM_LOG"\n'
+  )
   // Shadow the tools setup may install (#2467) so no test runs the real
   // pip or localedef: by default both already look present.
   const present: Record<string, string> = {
@@ -86,8 +88,7 @@ beforeEach(() => {
     localedef: 'exit 0',
   }
   for (const [name, body] of Object.entries(present)) {
-    writeFileSync(join(stubBin, name), `#!/usr/bin/env bash\n${body}\n`)
-    chmodSync(join(stubBin, name), 0o755)
+    writeStubExecutable(join(stubBin, name), `#!/usr/bin/env bash\n${body}\n`)
   }
   writeFileSync(
     join(dir, '.gitconfig'),
@@ -230,11 +231,10 @@ describe('setup provides yamllint and a case-folding locale (#2467)', () => {
 
   function stub(name: string, body = ''): void {
     const file = join(stubBin, name)
-    writeFileSync(
+    writeStubExecutable(
       file,
       `#!${BASH}\necho "${name} $*" >> "$TOOL_LOG"\n${body}\n`
     )
-    chmodSync(file, 0o755)
   }
 
   const BASH = spawnSync('bash', ['-c', 'command -v bash'], {

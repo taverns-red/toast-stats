@@ -12,18 +12,12 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { spawnSync } from 'node:child_process'
-import {
-  chmodSync,
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import * as http from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { writeStubExecutable } from './stubExecutable.js'
 
 const SCRIPT = resolve(process.cwd(), 'scripts/basemap/build-basemap.sh')
 
@@ -76,8 +70,7 @@ const log = () => readFileSync(join(dir, 'log'), 'utf-8').trim().split('\n')
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'basemap-build-'))
-  writeFileSync(join(dir, 'pmtiles'), FAKE)
-  chmodSync(join(dir, 'pmtiles'), 0o755)
+  writeStubExecutable(join(dir, 'pmtiles'), FAKE)
 })
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
 

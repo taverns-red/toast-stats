@@ -16,6 +16,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { parse } from 'yaml'
+import { writeStubExecutable } from './stubExecutable.js'
 
 const ROOT = process.cwd()
 const PR_PREVIEW = path.join(ROOT, '.github/workflows/pr-preview.yml')
@@ -63,12 +64,9 @@ function runVerdictFull(
   // The shebang is required (#2996): without it, bash falls back to running
   // the file itself after ENOEXEC, and under load that forked child died
   // (rc 139) in about 6% of calls, failing the verdict with no message.
-  fs.writeFileSync(
+  writeStubExecutable(
     path.join(bin, 'gh'),
-    ghDraft === 'error'
-      ? '#!/bin/sh\nexit 1\n'
-      : `#!/bin/sh\necho ${ghDraft}\n`,
-    { mode: 0o755 }
+    ghDraft === 'error' ? '#!/bin/sh\nexit 1\n' : `#!/bin/sh\necho ${ghDraft}\n`
   )
   const r = spawnSync('bash', ['-c', decide?.run ?? 'exit 99'], {
     env: {

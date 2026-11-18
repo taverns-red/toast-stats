@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process'
 import {
-  chmodSync,
   copyFileSync,
   mkdtempSync,
   readFileSync,
@@ -10,6 +9,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { writeStubExecutable } from './stubExecutable.js'
 
 /**
  * Behaviour test for scripts/setup-hosting-sites.sh (#1584).
@@ -68,8 +68,7 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'hosting-sites-'))
   const bin = join(dir, 'bin')
   spawnSync('mkdir', ['-p', bin])
-  writeFileSync(join(bin, 'firebase'), STUB)
-  chmodSync(join(bin, 'firebase'), 0o755)
+  writeStubExecutable(join(bin, 'firebase'), STUB)
   log = join(dir, 'calls.log')
   writeFileSync(log, '')
   rc = join(dir, '.firebaserc')

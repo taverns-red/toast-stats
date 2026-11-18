@@ -12,15 +12,10 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { spawnSync } from 'node:child_process'
-import {
-  chmodSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { writeStubExecutable } from './stubExecutable.js'
 
 const SCRIPT = resolve(process.cwd(), 'scripts/trigger-daily-pipeline.sh')
 
@@ -94,8 +89,7 @@ const logLines = () =>
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'daily-trigger-'))
-  writeFileSync(join(dir, 'gh'), FAKE)
-  chmodSync(join(dir, 'gh'), 0o755)
+  writeStubExecutable(join(dir, 'gh'), FAKE)
   // A run from before the trigger — it must never count as today's run.
   writeFileSync(join(dir, 'runs'), '999 2026-01-01T05:00:00Z\n')
 })

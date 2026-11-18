@@ -22,6 +22,7 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { parse } from 'yaml'
+import { writeStubExecutable } from './stubExecutable.js'
 
 const REPO = process.cwd()
 const WORKFLOW_PATH = path.join(REPO, '.github/workflows/data-pipeline.yml')
@@ -93,7 +94,7 @@ beforeEach(() => {
   const bin = path.join(tmp, 'bin')
   fs.mkdirSync(bin)
   fs.symlinkSync(SHIM, path.join(bin, 'gcloud'))
-  fs.writeFileSync(path.join(bin, 'npx'), NPX_STUB, { mode: 0o755 })
+  writeStubExecutable(path.join(bin, 'npx'), NPX_STUB)
 })
 
 afterEach(() => {
