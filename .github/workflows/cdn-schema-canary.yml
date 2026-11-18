@@ -19,6 +19,21 @@
 # Self-clearing: a healthy run closes any open canary alert. Safe because
 # runs are serialized by the concurrency group.
 #
+# Why production only (#2569, decided 2026-11-18): this canary does not check
+# cdn-staging, and shouldn't. Staging is the buffer before promotion, and
+# schema drift there is caught before any user can see it:
+#   - the daily process runs the schema gate (#1125) before it uploads to
+#     staging, and the count, value, content and completeness gates before it
+#     promotes;
+#   - the PR Preview `fixtures` job (#2545) schema-checks the staging objects
+#     the shards read, on every PR run;
+#   - the data-smoke job (#2538) runs this same check against production
+#     after every promotion.
+# A staging canary would also alert on unpromoted dates a gate is holding on
+# purpose. To look at staging by hand, dispatch this workflow with base_url
+# set to https://cdn-staging.taverns.red; a dispatch run with a base_url never
+# closes a production alert.
+#
 # Decision logic is unit-tested in scripts/lib/__tests__/cdnSchemaCanary.test.ts;
 # this workflow is the scheduler + alerter around scripts/check-cdn-schema.ts.
 
