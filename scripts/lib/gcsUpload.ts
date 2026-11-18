@@ -49,6 +49,15 @@ export interface UploadOptions {
   /** Required, no default: each call site decides what "already there" means. */
   onExists: OnExists
   token: string
+  /**
+   * Mints a fresh access token (#2980). Without it a 401 is fatal and the
+   * token is never renewed.
+   */
+  tokenProvider?: () => Promise<string>
+  /** Renew the token before a source GET once it is older than this. */
+  tokenMaxAgeMs?: number
+  /** Clock for token age; replaceable so a test need not wait. */
+  now?: () => number
   fetch: typeof fetch
   /** Bytes per PUT. Must be a multiple of 256 KiB in production. */
   chunkSize?: number
