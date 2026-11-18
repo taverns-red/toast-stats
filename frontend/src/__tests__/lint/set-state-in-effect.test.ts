@@ -22,7 +22,7 @@ const RULE = 'react-hooks/set-state-in-effect'
 // known-bad snippet through the project's real ESLint config to prove the
 // rule is genuinely catching the anti-pattern. If a future dependency or
 // config change makes the rule inert again, this fails loudly instead of
-// silently re-admitting the pattern. See tasks/lessons/082.
+// silently re-admitting the pattern. See tasks/lessons/archive/lessons/a-lint-rule-can-be-present-but-inert-assert-behavior-not-severity.md.
 const OFFENDING_SOURCE = `import { useState, useEffect } from 'react'
 export function MirrorPropIntoState({ value }: { value: string }) {
   const [local, setLocal] = useState(value)
