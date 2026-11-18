@@ -26,7 +26,7 @@ describe('smokes wait for loaded data (#2959)', () => {
     const load = src.match(/async function load\([\s\S]*?\n}\n/)?.[0] ?? ''
     expect(load).toMatch(/Loading table/)
     expect(load).toMatch(
-      /toHaveCount\(0|toBeHidden|waitFor\(\{\s*state: 'detached'/
+      /toHaveCount\(\s*0|toBeHidden|waitFor\(\{\s*state: 'detached'/
     )
   })
 

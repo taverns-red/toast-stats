@@ -34,6 +34,13 @@ const WRAPPED_ROW_MAX = 82
 
 async function load(page: Page, path: string): Promise<void> {
   await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
+  // #2959: the table is a lazy chunk. `networkidle` can come before it has
+  // mounted, and webkit on a busy runner took over the 5 s an expect gets.
+  // The page's own loading status is the signal that the data is there.
+  await expect(page.getByRole('status', { name: 'Loading table' })).toHaveCount(
+    0,
+    { timeout: 30_000 }
+  )
   await page.evaluate(() => document.fonts.ready)
 }
 

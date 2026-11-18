@@ -127,7 +127,10 @@ for (const theme of ['light', 'dark'] as const) {
     const region = page.getByRole('region', {
       name: 'Club map, coloured by club health',
     })
-    await expect(region).toBeVisible()
+    // #2959: the region takes this name once the lazy map has mounted (until
+    // then it is "Club map" with a "Loading map" status). Same budget as the
+    // canvas it contains: they are one event.
+    await expect(region).toBeVisible({ timeout: 15_000 })
     const canvas = region.locator('canvas.maplibregl-canvas')
     await expect(canvas).toBeVisible({ timeout: 15_000 })
 

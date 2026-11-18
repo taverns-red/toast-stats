@@ -161,6 +161,12 @@ for (const theme of ['light', 'dark'] as const) {
       await page.setViewportSize({ width, height: 900 })
       await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
       await page.locator(ready).first().waitFor({ timeout: 30_000 })
+      // #2959: `ready` can match while sibling placeholders are still on the
+      // page (/history: the live chip beside `shell-ghost` year chips, which
+      // measure 1:1). Measure only once the shell is gone.
+      await expect(page.locator('.shell-ghost')).toHaveCount(0, {
+        timeout: 30_000,
+      })
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
       const fails = await contrastFailures(page)
       expect(
