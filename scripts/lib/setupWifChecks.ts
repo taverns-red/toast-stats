@@ -31,7 +31,12 @@ const FORBIDDEN: Array<[string, RegExp]> = [
   ['eval', /\beval\b/],
   ['shell invocation', /^\s*(bash|sh|zsh)\s+\S/m],
   ['other script invocation', /(^|[\s;&|(])(\.\/|scripts\/)[\w./-]+/],
+  ['provider update', /providers\s+update-oidc/],
 ]
+
+/** The provider must only accept tokens from this repo (#3037 review). */
+const REPO_CONDITION =
+  '--attribute-condition="assertion.repository==\'${GITHUB_REPO}\'"'
 
 /** Returns a list of violations; empty means the script passes. */
 export const checkSetupWif = (text: string): string[] => {
@@ -46,6 +51,10 @@ export const checkSetupWif = (text: string): string[] => {
   // the project explicitly.
   if (!/PROJECT_ID="\$\{PROJECT_ID:\?[^}]*\}"/.test(code)) {
     out.push('PROJECT_ID must be required, with no default')
+  }
+
+  if (!code.includes(REPO_CONDITION)) {
+    out.push('provider must restrict to this repo')
   }
 
   return out
