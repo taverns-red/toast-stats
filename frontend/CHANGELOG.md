@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.69.4](https://github.com/taverns-red/toast-stats/compare/frontend-v3.69.3...frontend-v3.69.4) (2026-11-18)
+
+
+### Bug Fixes
+
+* **build:** the frontend bundle needs an explicit CDN target in CI ([#2994](https://github.com/taverns-red/toast-stats/issues/2994)) ([#2999](https://github.com/taverns-red/toast-stats/issues/2999)) ([d421757](https://github.com/taverns-red/toast-stats/commit/d4217571fae6ddabe7d176762cf09438c8f4876b))
+* **ui:** DRP award names and Club Strength cut-off ([#2907](https://github.com/taverns-red/toast-stats/issues/2907)) ([#2973](https://github.com/taverns-red/toast-stats/issues/2973)) ([6eaf690](https://github.com/taverns-red/toast-stats/commit/6eaf69098233b4f5bf13edc5655214803b82ef3f))
+
 ## [3.69.3](https://github.com/taverns-red/toast-stats/compare/frontend-v3.69.2...frontend-v3.69.3) (2026-11-18)
 
 
