@@ -1582,7 +1582,9 @@ describe('ciWait over GraphQL retires a superseded row only for an eligible newe
     const { r, runner } = await poll([wf(100), wf(200)])
     expect(r.outcome).toBe('pass')
     expect(r.summary.cancelled).toBe(0)
-    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(1)
+    // One runs read per check read (the green path reads the checks twice);
+    // the active-runs check reuses them instead of reading a third time.
+    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(2)
   })
 
   it.each(['push', 'workflow_dispatch'])(
