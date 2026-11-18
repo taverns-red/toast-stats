@@ -52,11 +52,20 @@ export const IDENTITY_EXPECTATIONS: Record<string, IdentityExpectation> = {
           'storage.objects.restore',
           'storage.objects.update',
         ],
-        denied: ['storage.buckets.get', 'storage.buckets.getIamPolicy'],
+        denied: [
+          'storage.buckets.get',
+          'storage.buckets.getIamPolicy',
+          'storage.buckets.setIamPolicy',
+          'storage.buckets.update',
+        ],
       },
       [STAGING_DATA_BUCKET]: {
         granted: ['storage.objects.get', 'storage.objects.list'],
-        denied: ['storage.objects.create'],
+        denied: [
+          'storage.objects.create',
+          'storage.objects.delete',
+          'storage.objects.update',
+        ],
       },
     },
   },
