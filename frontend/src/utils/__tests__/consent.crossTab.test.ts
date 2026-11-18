@@ -96,6 +96,120 @@ describe('another tab lowers consent (#2919)', () => {
     guard.uninstallGaTransportGuard()
   })
 
+  it('ignores a downgrade message while the cookie says all', async () => {
+    const { guard } = await loadTab()
+    const orig = vi.fn(async () => new Response('real'))
+    win['fetch'] = orig
+    const disable = gaRan()
+    document.cookie = `${CONSENT_COOKIE}=v1.all; path=/`
+    document.cookie = '_ga=GA1.1.1; path=/'
+    new FakeChannel('rt-consent').postMessage({ level: 'minimal' })
+    await window.fetch(GA_URL)
+    expect(orig).toHaveBeenCalledTimes(1)
+    expect(disable).not.toHaveBeenCalled()
+    expect(document.cookie).toContain('_ga=')
+    guard.uninstallGaTransportGuard()
+  })
+
+  /* The message can be missed: it can beat the cookie, a page can be in the
+     back/forward cache, or another .taverns.red site changed the cookie. So a
+     tab re-checks the cookie when it becomes visible or is shown again. */
+  describe('re-check when no message arrives', () => {
+    function setVisibility(state: 'visible' | 'hidden') {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        get: () => state,
+      })
+    }
+
+    afterEach(() => {
+      delete (document as unknown as Record<string, unknown>)['visibilityState']
+    })
+
+    it('visibilitychange to visible, cookie now minimal: guard on, _ga cleared', async () => {
+      const { guard } = await loadTab()
+      const orig = vi.fn(async () => new Response('real'))
+      win['fetch'] = orig
+      const disable = gaRan()
+      document.cookie = `${CONSENT_COOKIE}=v1.all; path=/`
+      document.cookie = '_ga=GA1.1.1; path=/'
+      // the cookie flips with no message
+      document.cookie = `${CONSENT_COOKIE}=v1.minimal; path=/`
+      setVisibility('visible')
+      document.dispatchEvent(new Event('visibilitychange'))
+      try {
+        const res = await window.fetch(GA_URL)
+        expect(res.status).toBe(204)
+        expect(orig).not.toHaveBeenCalled()
+        expect(disable).toHaveBeenCalled()
+        expect(document.cookie).not.toContain('_ga=')
+      } finally {
+        guard.uninstallGaTransportGuard()
+      }
+    })
+
+    it('does nothing when the page becomes hidden', async () => {
+      const { guard } = await loadTab()
+      const orig = vi.fn(async () => new Response('real'))
+      win['fetch'] = orig
+      gaRan()
+      document.cookie = `${CONSENT_COOKIE}=v1.minimal; path=/`
+      setVisibility('hidden')
+      document.dispatchEvent(new Event('visibilitychange'))
+      await window.fetch(GA_URL)
+      expect(orig).toHaveBeenCalledTimes(1)
+      guard.uninstallGaTransportGuard()
+    })
+
+    it('pageshow from the back/forward cache, cookie now minimal: guard on, _ga cleared', async () => {
+      const { guard } = await loadTab()
+      const orig = vi.fn(async () => new Response('real'))
+      win['fetch'] = orig
+      const disable = gaRan()
+      document.cookie = '_ga=GA1.1.1; path=/'
+      document.cookie = `${CONSENT_COOKIE}=v1.minimal; path=/`
+      const ev = new Event('pageshow') as Event & { persisted: boolean }
+      Object.defineProperty(ev, 'persisted', { value: true })
+      window.dispatchEvent(ev)
+      try {
+        const res = await window.fetch(GA_URL)
+        expect(res.status).toBe(204)
+        expect(orig).not.toHaveBeenCalled()
+        expect(disable).toHaveBeenCalled()
+        expect(document.cookie).not.toContain('_ga=')
+      } finally {
+        guard.uninstallGaTransportGuard()
+      }
+    })
+
+    it('leaves a page alone while the cookie still says all', async () => {
+      const { guard } = await loadTab()
+      const orig = vi.fn(async () => new Response('real'))
+      win['fetch'] = orig
+      const disable = gaRan()
+      document.cookie = `${CONSENT_COOKIE}=v1.all; path=/`
+      setVisibility('visible')
+      document.dispatchEvent(new Event('visibilitychange'))
+      window.dispatchEvent(new Event('pageshow'))
+      await window.fetch(GA_URL)
+      expect(orig).toHaveBeenCalledTimes(1)
+      expect(disable).not.toHaveBeenCalled()
+      guard.uninstallGaTransportGuard()
+    })
+
+    it('does nothing where GA never ran', async () => {
+      const { guard } = await loadTab()
+      const orig = vi.fn(async () => new Response('real'))
+      win['fetch'] = orig
+      document.cookie = `${CONSENT_COOKIE}=v1.minimal; path=/`
+      setVisibility('visible')
+      document.dispatchEvent(new Event('visibilitychange'))
+      await window.fetch(GA_URL)
+      expect(orig).toHaveBeenCalledTimes(1)
+      guard.uninstallGaTransportGuard()
+    })
+  })
+
   it('ignores an upgrade and malformed messages', async () => {
     const { guard } = await loadTab()
     const orig = vi.fn(async () => new Response('real'))
