@@ -227,6 +227,31 @@ describe('another tab lowers consent (#2919)', () => {
       }
     })
 
+    it('notifies when state.level drifted to all without a publish and the cookie falls back (#2945)', async () => {
+      const { consent, guard } = await loadTab()
+      win['fetch'] = vi.fn(async () => new Response('real'))
+      gaRan()
+      // published level: minimal
+      document.cookie = `${CONSENT_COOKIE}=v1.minimal; path=/`
+      const seen = vi.fn()
+      consent.subscribeConsent(seen)
+      setVisibility('visible')
+      try {
+        document.dispatchEvent(new Event('visibilitychange'))
+        expect(seen).toHaveBeenCalledTimes(1)
+        // another tab sets all; a read moves state.level without publishing
+        document.cookie = `${CONSENT_COOKIE}=v1.all; path=/`
+        expect(consent.getConsentState().level).toBe('all')
+        // the cookie drops back to minimal and a re-check runs
+        document.cookie = `${CONSENT_COOKIE}=v1.minimal; path=/`
+        document.dispatchEvent(new Event('visibilitychange'))
+        expect(consent.getConsentState().level).toBe('minimal')
+        expect(seen).toHaveBeenCalledTimes(2)
+      } finally {
+        guard.uninstallGaTransportGuard()
+      }
+    })
+
     it('leaves a page alone while the cookie still says all', async () => {
       const { guard } = await loadTab()
       const orig = vi.fn(async () => new Response('real'))
