@@ -6,7 +6,8 @@
  *   exists --bucket B --object O
  *
  * `copy` streams the object of the same name from SB (objects.get) into B.
- * --on-exists has no default. Exit: 0 ok (or skipped) - 1 failure, or "already
+ * --on-exists has no default. `skip` reads the existing object's md5Hash and
+ * skips only when it equals the source's (any doubt exits 1). Exit: 0 ok (or skipped) - 1 failure, or "already
  * exists" with --on-exists fail - 2 usage - 10 (`exists` only) the object
  * exists. The token comes from ACCESS_TOKEN and is never logged.
  */
@@ -82,7 +83,11 @@ export const runUploadCli = async (
       token: deps.token,
       fetch: deps.fetch,
     })
-    deps.log(`gs://${bucket}/${object}: ${result}`)
+    deps.log(
+      `gs://${bucket}/${object}: ${
+        result === 'skipped' ? 'already present, identical' : result
+      }`
+    )
     return 0
   } catch (err) {
     deps.log(

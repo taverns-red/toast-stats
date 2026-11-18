@@ -68,9 +68,12 @@ describe('gcs-upload CLI (#2972)', () => {
     expect((await run([...base, '--on-exists', 'fail'], ok(), '')).code).toBe(2)
   })
 
+  // Initiation answers 412; the destination read a skip makes holds the same bytes.
   const exists = (): typeof fetch =>
-    vi.fn(
-      async () => new Response('{}', { status: 412 })
+    vi.fn(async (_u: string, i: RequestInit) =>
+      i.method === 'POST'
+        ? new Response('{}', { status: 412 })
+        : new Response(`{"md5Hash":"${ABC_MD5}"}`, { status: 200 })
     ) as unknown as typeof fetch
 
   it('412 exits 0 with skip and 1 with fail', async () => {

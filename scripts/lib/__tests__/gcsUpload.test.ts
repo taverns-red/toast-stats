@@ -58,7 +58,8 @@ const fakeGcs = (
       return new Response(`{"name":"o","size":"11","md5Hash":"${MD5}"}`, {
         status: init.put ?? 200,
       })
-    return new Response('x', { status: 200 })
+    // The destination read a skip makes after a 412: the same bytes.
+    return new Response(`{"md5Hash":"${MD5}"}`, { status: 200 })
   }) as unknown as typeof fetch
   return { fetchFn, calls }
 }
@@ -117,12 +118,12 @@ describe('uploadObject (#2972)', () => {
     ).toBe('11')
   })
 
-  it('on 412 with onExists=skip returns skipped and sends no bytes', async () => {
+  it('on 412 with onExists=skip and an identical object returns skipped and sends no bytes', async () => {
     const { fetchFn, calls } = fakeGcs({ initiate: 412 })
     expect(await uploadObject(opts({ fetch: fetchFn, onExists: 'skip' }))).toBe(
       'skipped'
     )
-    expect(calls).toHaveLength(1)
+    expect(calls.map(c => c.init.method)).toEqual(['POST', 'GET'])
   })
 
   it('on 412 with onExists=fail throws ObjectExistsError', async () => {
@@ -228,7 +229,11 @@ describe('uploadObject (#2972)', () => {
         source: { kind: 'gcs', bucket: 'stg', object: 'x' },
       })
     )
-    expect(calls.map(c => c.init.method)).toEqual(['GET', 'POST'])
+    expect(calls.map(c => c.init.method)).toEqual([
+      'GET',
+      'POST',
+      'GET',
+    ])
     expect(calls.some(c => c.url.includes('alt=media'))).toBe(false)
   })
 })

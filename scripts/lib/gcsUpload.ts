@@ -23,6 +23,10 @@
  * The session URL is its own authorisation (it lasts a week); the token is
  * used only at initiation and for the source reads.
  *
+ * onExists=skip meets an existing object (412) by reading its md5Hash
+ * (objects.get on the destination) and skipping only if it equals the
+ * source's; a mismatch, a missing md5 or a failed read throws.
+ *
  * Every non-2xx other than the 412 throws; nothing is swallowed. The token is
  * never put in a message. Only global fetch is used.
  */
@@ -178,9 +182,27 @@ export const uploadObject = async (o: UploadOptions): Promise<UploadResult> => {
   if (o.onExists !== 'skip' && o.onExists !== 'fail')
     throw new Error("onExists must be 'skip' or 'fail'")
   const target = `gs://${o.bucket}/${o.object}`
-  const exists = (): UploadResult => {
-    if (o.onExists === 'skip') return 'skipped'
-    throw new ObjectExistsError(`${target} already exists`)
+  const exists = async (src: PreparedSource): Promise<UploadResult> => {
+    if (o.onExists !== 'skip')
+      throw new ObjectExistsError(`${target} already exists`)
+    // A skip must not hide a different object: compare what is there with
+    // what we would have written. Any doubt is an error.
+    const res = await o.fetch(
+      `${API}/${encodeURIComponent(o.bucket)}/o/${encodeURIComponent(o.object)}?fields=md5Hash`,
+      { method: 'GET', headers: { Authorization: `Bearer ${o.token}` } }
+    )
+    if (!res.ok) throw failure(`GET ${target} (metadata, to compare)`, res)
+    const have = ((await res.json()) as { md5Hash?: string }).md5Hash
+    if (!have || !src.md5)
+      throw new Error(
+        `${target} already exists but its md5Hash cannot be compared; not skipping`
+      )
+    if (have !== src.md5)
+      throw new Error(
+        `${target} already exists and differs from the source ` +
+          `(md5 ${have}, expected ${src.md5}); not skipping`
+      )
+    return 'skipped'
   }
 
   // Size and md5 are known before the session opens, so the initiation can
@@ -211,13 +233,13 @@ export const uploadObject = async (o: UploadOptions): Promise<UploadResult> => {
       }),
     }
   )
-  if (start.status === 412) return exists()
+  if (start.status === 412) return exists(src)
   if (!start.ok) throw failure(`POST upload ${target}`, start)
   const session = start.headers.get('location')
   if (!session) throw new Error(`POST upload ${target}: no session URL`)
 
   const outcome = await sendChunks(o, session, src, target)
-  return outcome === 'exists' ? exists() : 'created'
+  return outcome === 'exists' ? exists(src) : 'created'
 }
 
 /** Reads exactly n bytes (or what is left) from a web stream, in order. */
