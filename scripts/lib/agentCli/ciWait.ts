@@ -168,6 +168,8 @@ function isGraphQlBlocked(err: CommandError): boolean {
 
 /** The fields of a workflow run (`GET /repos/{o}/{r}/actions/runs`) read here. */
 export interface WorkflowRun {
+  id?: number
+  created_at?: string | null
   name?: string | null
   check_suite_id: number
   status?: string | null
@@ -283,7 +285,59 @@ async function fetchPrChecksRestFull(
     startedAt: run.started_at ?? '',
     completedAt: run.completed_at ?? '',
   }))
-  return { checks, pull, workflowRuns: workflows }
+  return {
+    checks: dropSupersededRunChecks(checks, workflows),
+    pull,
+    workflowRuns: workflows,
+  }
+}
+
+/** The workflow run id in a check's job URL: `/actions/runs/<id>/job/<id>`. */
+function runIdOf(link: string): number | undefined {
+  const m = /\/actions\/runs\/(\d+)(?:\/|$)/.exec(link)
+  return m ? Number(m[1]) : undefined
+}
+
+/**
+ * Drop the rows of a run that a newer run of the same workflow replaced on
+ * this head commit (#2935). A run cancelled before its matrix expanded keeps
+ * literal job names (`Smoke (${{ matrix.shard }})`) that never match the
+ * newer run's expanded ones, so name-based folding can't retire them. Uses
+ * the workflow runs already read for the check names: no extra API call.
+ *
+ * Fails closed: the newer run must have produced a verdict (a row that isn't
+ * skipped), or an all-skipped no-op run would hide a real cancelled run. A
+ * newer cancelled or pending run still counts, and its own rows stay.
+ */
+export function dropSupersededRunChecks(
+  checks: PrCheck[],
+  runs: WorkflowRun[]
+): PrCheck[] {
+  const created = (r: WorkflowRun) => r.created_at ?? ''
+  const byId = new Map(
+    runs.filter(r => r.id !== undefined).map(r => [r.id as number, r])
+  )
+  const hasVerdict = new Set<number>()
+  for (const c of checks) {
+    const id = runIdOf(c.link)
+    if (id !== undefined && c.bucket !== 'skipping') hasVerdict.add(id)
+  }
+  const newer = (a: WorkflowRun, b: WorkflowRun) =>
+    created(a) > created(b) || (created(a) === created(b) && a.id! > b.id!)
+  const superseded = (run: WorkflowRun) =>
+    runs.some(
+      o =>
+        o.id !== undefined &&
+        o.id !== run.id &&
+        (o.name ?? '') === (run.name ?? '') &&
+        hasVerdict.has(o.id) &&
+        newer(o, run)
+    )
+  return checks.filter(c => {
+    const id = runIdOf(c.link)
+    const run = id === undefined ? undefined : byId.get(id)
+    return !run || !superseded(run)
+  })
 }
 
 /**
