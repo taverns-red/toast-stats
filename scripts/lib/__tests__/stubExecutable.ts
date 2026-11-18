@@ -7,7 +7,7 @@
  * first line. `stubExecutableGuard.test.ts` fails any other test that sets
  * an executable mode by hand.
  */
-import { chmodSync, writeFileSync } from 'node:fs'
+import { chmodSync, readFileSync, writeFileSync } from 'node:fs'
 
 /**
  * Write `body` to `path` as an executable that starts with a shebang.
@@ -43,7 +43,13 @@ export function writeStubExecutable(
   chmodSync(path, 0o755)
 }
 
-/** Make an existing script (one that already has its own shebang) executable. */
+/**
+ * Make an existing script executable. It must already start with `#!`,
+ * otherwise this would be a way around the shebang rule.
+ */
 export function makeExecutable(path: string): void {
+  if (!readFileSync(path, 'utf8').startsWith('#!')) {
+    throw new Error(`${path} has no "#!" first line; use writeStubExecutable`)
+  }
   chmodSync(path, 0o755)
 }
