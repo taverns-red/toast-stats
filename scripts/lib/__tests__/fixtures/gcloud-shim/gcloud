@@ -126,8 +126,9 @@ next_gen() {
     sleep 0.01
   done
   set +C
-  # No EXIT trap: a `$(...)` below could fork a subshell that inherits it and
-  # frees the lock early. Every failure path releases the lock explicitly.
+  # No EXIT trap: a subshell forked while the lock is held (a `$(...)`, say)
+  # would inherit it and free the lock early. Every failure path releases the
+  # lock explicitly.
   #
   # The lock serialises every write, so the work inside it is shell builtins
   # only (#3002): a fork here is paid once per write, one after another, and
@@ -136,6 +137,7 @@ next_gen() {
   if [ -f "${f}" ]; then
     read -r n <"${f}" || {
       rm -f "${lock}"
+      echo "gcloud shim: ${f} is empty or unreadable (a shim killed mid-write?); delete it to restart generations" >&2
       return 1
     }
   fi
