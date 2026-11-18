@@ -1507,6 +1507,23 @@ describe('ciWait ignores rows of a run a newer run replaced (#2935)', () => {
     expect(r.summary.cancelled).toBe(1)
   })
 
+  // #2945: a whole re-run keeps its run id, so an old attempt's unexpanded
+  // cancelled row is not "superseded" by the same run's new rows. ci-wait
+  // reports FAIL (closed) rather than guess; re-running only the failed jobs
+  // or pushing a commit clears it.
+  it('a re-run of the same run keeps the old attempt cancelled row, so it FAILs (fail closed)', async () => {
+    const { r } = await poll(
+      [
+        { ...OLD, name: UNEXPANDED, conclusion: 'cancelled' },
+        { ...OLD, name: 'Smoke (1)', started: '2026-11-17T10:03:00Z' },
+        { ...OLD, name: 'Smoke (2)', started: '2026-11-17T10:03:00Z' },
+      ],
+      [wfRun(100, 7, '2026-11-17T10:00:00Z')]
+    )
+    expect(r.outcome).toBe('fail')
+    expect(r.summary).toMatchObject({ cancelled: 1, passed: 2 })
+  })
+
   // #2947 item 4. GitHub reports a matrix job skipped by a job-level `if`
   // under its UNEXPANDED name (checked on the check-runs of PR 3023's head:
   // `Smoke (${{ matrix.shard }})`, `Lighthouse mobile (${{ matrix.route }})`,
