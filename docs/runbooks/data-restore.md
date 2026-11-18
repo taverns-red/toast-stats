@@ -72,7 +72,8 @@ displaces is soft-deleted in turn.
 Permissions: per-object restore needs `storage.objects.restore` (and
 `storage.objects.delete` when it overwrites); bulk restore also needs
 `storage.buckets.restore`. The CI deploy identity and the project owners
-already hold these, so no new IAM is needed.
+already hold these, and so does the restore identity (below), so no new IAM
+is needed.
 
 ## What a bad publish can damage
 
@@ -539,8 +540,14 @@ reports bad data (the smoke or the CDN schema check). Never on a
   command to plan by hand and the enumerated plan (see below). It outputs
   `execute` (true only for an unhealthy run, an eligible verdict and
   `DATA_AUTO_RESTORE=execute`) and the issue number.
-- `data-auto-restore-execute` is the only job that mints the promote service
-  account's token. It runs only when `execute` is `true`, `restore_eligible`
+- `data-auto-restore-execute` is the only job that signs in as the restore
+  identity (repository variable `GCP_RESTORE_SA`, #2964). Its workload identity
+  binding admits only the `data-restore` environment. It holds object access
+  on the prod data bucket (list, read, create, delete, update and restore),
+  read on the staging data bucket, create-only on the backups bucket and the
+  CDN cache-invalidation role; no bucket metadata and no IAM. The variable is
+  checked before auth so an empty value cannot fall back to direct workload
+  identity. It runs only when `execute` is `true`, `restore_eligible`
   is `true`, the ref is `refs/heads/main` and the run promoted, behind the
   `data-restore` environment. It lists prod's live and soft-deleted copies of
   the objects the run wrote, plans with `scripts/plan-data-restore.ts`
@@ -690,7 +697,7 @@ not run against real objects.
 - ~~Automate it for #2492's acceptance criterion~~ Built in #2537 (above),
   dry-run by default. Turning on `execute` needs Ron's OK after the staging
   drill.
-- If the restore is automated, the CI identity needs a write grant on
-  `toast-stats-backups-ca` for the backup step. That is an IAM change for
-  Ron; none is made here.
+- The restore identity has create-only access to `toast-stats-backups-ca`,
+  but the execute job makes no backup copy today (soft delete is the backup).
+  A backup step would use that grant; it can't overwrite or delete there.
 - Smoke the data after every promote, not only after a Hosting deploy.

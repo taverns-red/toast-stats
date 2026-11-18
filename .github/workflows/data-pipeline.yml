@@ -20,7 +20,7 @@
 # Prerequisites:
 #   1. Run scripts/setup-wif.sh (one-time)
 #   2. Add GitHub secrets: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
-#   3. Add the repository variable GCP_PIPELINE_SA (#2872 B3)
+#   3. Add the repository variables GCP_PIPELINE_SA (#2872 B3) and GCP_RESTORE_SA (#2872 B4)
 #
 # Identities (#2872): the jobs that write data (pipeline, daily-reports,
 # place-reports, education-rollup, promote-reports, og-cards,
@@ -3699,9 +3699,10 @@ jobs:
   # starts the execute job, and `off` skips even the decision's restore. Ron
   # sets it (never this workflow, never a dispatch input). Any refused entry,
   # a plan that could not be built or a plan with nothing to do aborts the
-  # execute. No backup copy is made here: soft delete is the backup, and a
-  # copy into toast-stats-backups-ca would need an IAM grant for the CI
-  # identity (a decision for Ron, see docs/runbooks/data-restore.md).
+  # execute. No backup copy is made here: soft delete is the backup. The
+  # restore identity can create (not overwrite or delete) in
+  # toast-stats-backups-ca if a backup step is ever added (see
+  # docs/runbooks/data-restore.md).
   #
   # Nothing needs the execute job, so it cannot hold or change a promotion.
   # Pinned by dataPipelineAutoRestore.test.ts.
