@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.92.2](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.92.1...toast-stats-v2.92.2) (2026-11-18)
+
+
+### Bug Fixes
+
+* **ci-wait:** ignore rows of runs a newer run replaced ([#2935](https://github.com/taverns-red/toast-stats/issues/2935)) ([#2941](https://github.com/taverns-red/toast-stats/issues/2941)) ([001cc8a](https://github.com/taverns-red/toast-stats/commit/001cc8a8c1f3bc95c46a188816ccde3f1d113afa))
+* **consent:** other open tabs follow a consent downgrade ([#2919](https://github.com/taverns-red/toast-stats/issues/2919)) ([#2943](https://github.com/taverns-red/toast-stats/issues/2943)) ([363b038](https://github.com/taverns-red/toast-stats/commit/363b03846d7b7ecdb36cac1cdd6abd417206de08))
+
 ## [2.92.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.92.0...toast-stats-v2.92.1) (2026-11-18)
 
 
