@@ -20,7 +20,15 @@
  *      runs the same script in its own job after place-reports (#2028).
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterAll,
+  afterEach,
+} from 'vitest'
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import * as fs from 'node:fs'
@@ -663,17 +671,6 @@ describe('build-education-rollup.sh: a seeded ledger (EDUCATION_LEDGER_DIR, #210
     )
   const seedFile = (rel: string) => path.join(seed, rel)
 
-  // #2989: a test that needs "a seed and a rollup from an earlier run" starts
-  // from that state; it does not spawn the script (two cold tsx starts plus
-  // the build, ~1.5 s idle, 5 to 11 s under load) to make it.
-  describe('from a primed seed (#2989)', () => {
-    it('starts from a seed and rollup built once for the whole describe', () => {
-      expect(fs.existsSync(seedFile('2018-2019/district_111.json'))).toBe(true)
-      expect(rollupObjects()).toContain(`${PREFIX}2026-2027.json`)
-      expect(lines(shimLog)).toEqual([])
-    })
-  })
-
   it('an empty seed directory downloads the whole ledger, as before', () => {
     seedAll()
     const r = runScript({ EDUCATION_LEDGER_DIR: seed, SHIM_DOWNLOAD_LOG: dl })
@@ -685,66 +682,99 @@ describe('build-education-rollup.sh: a seeded ledger (EDUCATION_LEDGER_DIR, #210
     ])
   })
 
-  it('a seed that matches the bucket is reused: nothing is downloaded again, same rollup', () => {
-    seedAll()
-    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
-    const before = outputs()
-    const r = runScript({ EDUCATION_LEDGER_DIR: seed, SHIM_DOWNLOAD_LOG: dl })
-    expect(r.status, r.stderr).toBe(0)
-    expect(ledgerDownloads()).toEqual([])
-    expect(outputs()).toEqual(before)
-  })
-
-  it('a seed file that differs from its object is downloaded again', () => {
-    seedAll()
-    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
-    const before = outputs()
-    fs.writeFileSync(seedFile('2018-2019/district_111.json'), '{}')
-    const r = runScript({ EDUCATION_LEDGER_DIR: seed, SHIM_DOWNLOAD_LOG: dl })
-    expect(r.status, r.stderr).toBe(0)
-    expect(ledgerDownloads()).toEqual([`${LEDGER}2018-2019/district_111.json`])
-    expect(outputs()).toEqual(before)
-  })
-
-  it('a seed file the bucket does not hold is removed before the build', () => {
-    seedAll()
-    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
-    const before = outputs()
-    // 85 has no 2018-19 ledger object; a stale seed file must not add it.
-    fs.copyFileSync(
-      seedFile('2018-2019/district_111.json'),
-      seedFile('2018-2019/district_85.json')
-    )
-    const r = runScript({ EDUCATION_LEDGER_DIR: seed })
-    expect(r.status, r.stderr).toBe(0)
-    expect(fs.existsSync(seedFile('2018-2019/district_85.json'))).toBe(false)
-    expect(outputs()).toEqual(before)
-  })
-
-  it('with no ledger in the bucket, a seed is not used', () => {
-    seedAll()
-    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
-    fs.rmSync(path.join(root, BUCKET, 'raw-education-ledger'), {
-      recursive: true,
+  // #2989: these tests need "a seed and a rollup from an earlier run". Each
+  // used to spawn the script twice to get there (cold tsx starts plus the
+  // build: ~1.5 s a run idle, 5 to 11 s a test under the full scripts
+  // project, past the 10 s limit once). One run now makes that state in
+  // beforeAll; each test starts from a copy of it and spawns once.
+  describe('from a primed seed (#2989)', () => {
+    let primed: string
+    beforeAll(() => {
+      primed = fs.mkdtempSync(
+        path.join(os.tmpdir(), 'education-rollup-primed-')
+      )
+      const saved = { tmp, root, shimLog, summary, manifest }
+      tmp = primed
+      root = path.join(primed, 'gcs')
+      shimLog = path.join(primed, 'gcloud.log')
+      summary = path.join(primed, 'summary.md')
+      manifest = path.join(primed, 'written.jsonl')
+      try {
+        fs.mkdirSync(path.join(root, BUCKET), { recursive: true })
+        seedAll()
+        const r = runScript({ EDUCATION_LEDGER_DIR: path.join(primed, 'seed') })
+        if (r.status !== 0) throw new Error(`priming run failed: ${r.stderr}`)
+      } finally {
+        ;({ tmp, root, shimLog, summary, manifest } = saved)
+      }
     })
-    // The first run's objects stay in derived/; judge the second alone.
-    fs.rmSync(path.join(root, BUCKET, PREFIX), { recursive: true })
-    const r = runScript({ EDUCATION_LEDGER_DIR: seed })
-    expect(r.status, r.stderr).toBe(0)
-    expect(r.stderr).toMatch(/::warning::.*raw-education-ledger/)
-    expect(rollupObjects()).not.toContain(`${PREFIX}2003-2004.json`)
-  })
-
-  it('a ledger listing error fails closed with nothing uploaded', () => {
-    seedAll()
-    expect(runScript({ EDUCATION_LEDGER_DIR: seed }).status).toBe(0)
-    fs.rmSync(path.join(root, BUCKET, PREFIX), { recursive: true })
-    const r = runScript({
-      EDUCATION_LEDGER_DIR: seed,
-      SHIM_FAIL_MATCH: '^ls .*raw-education-ledger',
+    afterAll(() => {
+      fs.rmSync(primed, { recursive: true, force: true })
     })
-    expect(r.status).toBe(1)
-    expect(rollupObjects()).toEqual([])
+    beforeEach(() => {
+      fs.cpSync(path.join(primed, 'gcs'), root, { recursive: true })
+      fs.cpSync(path.join(primed, 'seed'), seed, { recursive: true })
+    })
+
+    it('starts from the seed and rollup the priming run built, with no script run of its own', () => {
+      expect(fs.existsSync(seedFile('2018-2019/district_111.json'))).toBe(true)
+      expect(rollupObjects()).toContain(`${PREFIX}2026-2027.json`)
+      expect(lines(shimLog)).toEqual([])
+    })
+
+    it('a seed that matches the bucket is reused: nothing is downloaded again, same rollup', () => {
+      const before = outputs()
+      const r = runScript({ EDUCATION_LEDGER_DIR: seed, SHIM_DOWNLOAD_LOG: dl })
+      expect(r.status, r.stderr).toBe(0)
+      expect(ledgerDownloads()).toEqual([])
+      expect(outputs()).toEqual(before)
+    })
+
+    it('a seed file that differs from its object is downloaded again', () => {
+      const before = outputs()
+      fs.writeFileSync(seedFile('2018-2019/district_111.json'), '{}')
+      const r = runScript({ EDUCATION_LEDGER_DIR: seed, SHIM_DOWNLOAD_LOG: dl })
+      expect(r.status, r.stderr).toBe(0)
+      expect(ledgerDownloads()).toEqual([
+        `${LEDGER}2018-2019/district_111.json`,
+      ])
+      expect(outputs()).toEqual(before)
+    })
+
+    it('a seed file the bucket does not hold is removed before the build', () => {
+      const before = outputs()
+      // 85 has no 2018-19 ledger object; a stale seed file must not add it.
+      fs.copyFileSync(
+        seedFile('2018-2019/district_111.json'),
+        seedFile('2018-2019/district_85.json')
+      )
+      const r = runScript({ EDUCATION_LEDGER_DIR: seed })
+      expect(r.status, r.stderr).toBe(0)
+      expect(fs.existsSync(seedFile('2018-2019/district_85.json'))).toBe(false)
+      expect(outputs()).toEqual(before)
+    })
+
+    it('with no ledger in the bucket, a seed is not used', () => {
+      fs.rmSync(path.join(root, BUCKET, 'raw-education-ledger'), {
+        recursive: true,
+      })
+      // The priming run's objects stay in derived/; judge this run alone.
+      fs.rmSync(path.join(root, BUCKET, PREFIX), { recursive: true })
+      const r = runScript({ EDUCATION_LEDGER_DIR: seed })
+      expect(r.status, r.stderr).toBe(0)
+      expect(r.stderr).toMatch(/::warning::.*raw-education-ledger/)
+      expect(rollupObjects()).not.toContain(`${PREFIX}2003-2004.json`)
+    })
+
+    it('a ledger listing error fails closed with nothing uploaded', () => {
+      fs.rmSync(path.join(root, BUCKET, PREFIX), { recursive: true })
+      const r = runScript({
+        EDUCATION_LEDGER_DIR: seed,
+        SHIM_FAIL_MATCH: '^ls .*raw-education-ledger',
+      })
+      expect(r.status).toBe(1)
+      expect(rollupObjects()).toEqual([])
+    })
   })
 })
 
