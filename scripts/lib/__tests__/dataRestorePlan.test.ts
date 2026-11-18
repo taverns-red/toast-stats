@@ -8,6 +8,7 @@ import {
   executePlan,
   RestorePlanError,
   ExecuteFailure,
+  BULK_ONLY_RESTORE_FLAGS,
 } from '../dataRestorePlan.js'
 
 /**
@@ -291,6 +292,29 @@ describe('verifyPlan / executePlan', () => {
     const f = err as ExecuteFailure
     expect(f.executed).toHaveLength(1)
     expect(f.failedAt).toEqual(calls[1])
+  })
+
+  it('uses no bulk-only flag and exactly the sync restore shape', () => {
+    const calls: string[][] = []
+    executePlan(savedPlan(), argv => {
+      calls.push(argv)
+    })
+    const restores = calls.filter(a => a[1] === 'restore')
+    expect(restores.length).toBeGreaterThan(0)
+    for (const argv of restores) {
+      expect(argv.includes('--async')).toBe(false)
+      for (const flag of BULK_ONLY_RESTORE_FLAGS) {
+        expect(argv.some(a => a === flag || a.startsWith(`${flag}=`))).toBe(
+          false
+        )
+      }
+      expect(argv).toEqual([
+        'storage',
+        'restore',
+        expect.stringMatching(/^--if-generation-match=\d+$/),
+        expect.stringMatching(new RegExp(`^gs://${BUCKET}/[^#]+#\\d+$`)),
+      ])
+    }
   })
 })
 
