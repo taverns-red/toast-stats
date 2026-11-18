@@ -1,4 +1,10 @@
-import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -50,5 +56,12 @@ describe('writeStubExecutable (#2998)', () => {
     writeStubExecutable(f, 'x\n')
     makeExecutable(f)
     expect(isExec(f)).toBe(true)
+  })
+
+  it('refuses to make a file with no shebang executable', () => {
+    const f = join(dir, 'b')
+    writeFileSync(f, 'echo hi\n')
+    expect(() => makeExecutable(f)).toThrow(/#!/)
+    expect(isExec(f)).toBe(false)
   })
 })
