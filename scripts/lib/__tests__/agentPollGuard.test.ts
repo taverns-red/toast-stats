@@ -72,6 +72,22 @@ const blocked = [
   // leading zeros are invalid
   'gh run watch 1 --interval 060',
   'gh run watch 1 --interval=070',
+  // #2918: `\'` escapes a quote inside $'..'
+  "echo $'\\'' ; gh run watch 1 ; echo $'\\''",
+  // #2918: a heredoc marker inside a comment or quotes starts no heredoc
+  '# <<EOF\ngh run watch 1\nEOF',
+  "echo '<<EOF'\ngh run watch 1\nEOF",
+  'git commit -m "x <<EOF"\ngh run watch 1\nEOF',
+  'echo $((1<<2))\ngh run watch 1',
+  // #2918: redirections and substitutions don't hide a fast interval
+  'gh run watch 1 2>&1 --interval 30',
+  'gh run watch $(echo 1) --interval 30',
+  'gh run watch $(echo 1)',
+  'gh pr view $(gh run watch 1) --json state',
+  'gh pr checks 1 --watch=true',
+  'gh run watch 1 --interval "30"',
+  // text after a heredoc operator on its line is still a command
+  'cat <<EOF | gh run watch 1\nbody\nEOF',
 ]
 
 const allowed = [
@@ -103,6 +119,20 @@ const allowed = [
   'echo hi # gh run watch 1',
   'gh run watch 1 --interval 60 # then wait',
   'gh run watch 1 --interval 60; gh run watch 2 --interval 90',
+  // #2918: quoted and escaped heredoc delimiters strip their bodies too
+  'cat <<\\EOF\ngh pr checks 1 --watch\nEOF',
+  "cat <<'EOF'\ngh pr checks 1 --watch\nEOF",
+  'cat <<"EOF"\ngh pr checks 1 --watch\nEOF',
+  'cat <<-EOF\n\tgh pr checks 1 --watch\n\tEOF',
+  'cat <<EOF\nsleep 3; gh run view 1\nEOF\ngit status',
+  // #2918: false positives
+  'gh run watch 1 2>&1 --interval 60',
+  'gh run watch 1 --interval 60 >&2',
+  'gh run watch $(echo 1) --interval 60',
+  'gh pr checks 1 --watch=false',
+  'gh run watch 1 --interval "60"',
+  "gh run watch 1 --interval '60'",
+  "echo $'it\\'s' ; gh run list",
 ]
 
 describe('agent-poll-guard (#2895)', () => {
@@ -145,6 +175,20 @@ describe('agent-poll-guard (#2895)', () => {
       timeout: 20000,
     })
     expect(r.status).toBe(0)
+    expect(Date.now() - start).toBeLessThan(1500)
+  })
+
+  it('checks 160 KB of heredoc operators in linear time (#2918)', () => {
+    const command = '<<A\n'.repeat(40000)
+    const start = Date.now()
+    const r = spawnSync('node', [SCRIPT], {
+      input: JSON.stringify({ tool_name: 'Bash', tool_input: { command } }),
+      env: { PATH: process.env.PATH ?? '' },
+      encoding: 'utf8',
+      timeout: 20000,
+    })
+    expect(r.status).toBe(0)
+    expect(r.stdout).toBe('')
     expect(Date.now() - start).toBeLessThan(1500)
   })
 
