@@ -342,7 +342,7 @@ describe('prior-year ghost', () => {
       programYear: '2027-2028',
       asOf: '2027-10-01',
       dates: ['2027-10-01'],
-      world: [{ ...(base.world[0] as object), date: '2027-10-01' }],
+      world: [{ ...base.world[0]!, date: '2027-10-01' }],
       regions: null,
       districts: {},
       prior,
@@ -625,7 +625,7 @@ describe('planTimelineUpdates (the daily, incremental step)', () => {
     it('a district that first reports on day 10 gets its prior-year series', () => {
       const day1 = planTimelineUpdates(
         [multi(PY, D1, { '49': 20 })],
-        new Map([
+        new Map<string, TimelineFiles>([
           [PY, new Map()],
           [PRIOR, priorFiles()],
         ]),
@@ -695,7 +695,7 @@ describe('planTimelineUpdates (the daily, incremental step)', () => {
     it('does not name an entity whose prior-year file was read', () => {
       const r = planTimelineUpdates(
         [multi(PY, D1, { '49': 20, '85': 5 })],
-        new Map([
+        new Map<string, TimelineFiles>([
           [PY, new Map()],
           [PRIOR, priorFiles()],
         ]),
