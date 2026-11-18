@@ -79,6 +79,9 @@ function hashHeader(bytes: Buffer): string {
   return `crc32c=${crc.toString()},md5=${md5}`
 }
 
+/** How many of the next media responses to deliver as one coalesced read. */
+let coalesceNext = 0
+
 /**
  * `?alt=media` as GCS answers it with Accept-Encoding: gzip: a gzip-stored
  * object is served as stored with `content-encoding: gzip`; an identity
@@ -122,6 +125,16 @@ function serveMedia(req: http.IncomingMessage, res: http.ServerResponse) {
   // listeners never coexist (measured: 0 warnings vs 2 per object).
   res.write(stored.bytes.subarray(0, 8))
   setTimeout(() => res.end(stored.bytes.subarray(8)), 10)
+  if (coalesceNext > 0) {
+    // Simulate a loaded machine: the server and the client share this event
+    // loop, so a stall here makes the 10 ms timer above overdue before the
+    // client reads the first packet. Both packets then arrive in one read.
+    coalesceNext--
+    const until = Date.now() + 30
+    while (Date.now() < until) {
+      /* stall the loop */
+    }
+  }
 }
 
 let server: http.Server
@@ -174,21 +187,51 @@ afterAll(async () => {
   await new Promise<void>(resolve => server.close(() => resolve()))
 })
 
-/** Run `fn`, then let queued process warnings fire, and count ours. */
-async function countListenerWarnings(fn: () => Promise<unknown>) {
+/**
+ * Run `fn` and count our warnings. No wall-clock window (#3004): Node emits a
+ * MaxListenersExceededWarning from process.nextTick when the 11th listener is
+ * added, which happens while the download is in flight, so every warning has
+ * fired before `fn` resolves. One setImmediate drains anything still queued.
+ */
+async function countListenerWarnings(
+  fn: (current: () => number) => Promise<unknown>
+) {
   let count = 0
   const onWarning = (w: Error) => {
     if (w.name === 'MaxListenersExceededWarning') count++
   }
   process.on('warning', onWarning)
   try {
-    await fn()
+    await fn(() => count)
     await new Promise(resolve => setImmediate(resolve))
-    await new Promise(resolve => setTimeout(resolve, 20))
   } finally {
     process.off('warning', onWarning)
   }
   return count
+}
+
+/**
+ * Harness check that the SDK path trips the warning. An object trips it only
+ * when its two packets arrive in separate reads, and on a loaded machine they
+ * can arrive in one (#3004), so the count per object is 0 or 2, never fixed.
+ * The invariant: one SDK download trips it, as exactly 2 warnings (error and
+ * close, per response). Download distinct objects one at a time until one
+ * trips; fail, naming how many were tried, if none of `names` does.
+ */
+async function downloadUntilTripped(
+  names: string[],
+  download: (name: string) => Promise<unknown>
+) {
+  let tried = 0
+  const warnings = await countListenerWarnings(async current => {
+    for (const n of names) {
+      tried++
+      await download(n)
+      await new Promise(resolve => setImmediate(resolve))
+      if (current() > 0) return
+    }
+  })
+  return { warnings, tried }
 }
 
 const gzipNames = () =>
@@ -197,12 +240,26 @@ const gzipNames = () =>
 describe('GCS media reads (#1729)', () => {
   it('harness: the SDK stream download trips the warning on this server (so the checks below are not vacuous)', async () => {
     const bucket = storage.bucket(BUCKET)
-    const names = gzipNames().slice(0, 3)
-    const warnings = await countListenerWarnings(() =>
-      mapLimit(names, 1, n => bucket.file(n).download({ decompress: false }))
+    const { warnings, tried } = await downloadUntilTripped(gzipNames(), n =>
+      bucket.file(n).download({ decompress: false })
     )
-    // 2 per object (error + close) at concurrency 1: per-response, not shared.
-    expect(warnings).toBe(names.length * 2)
+    // 2 for the tripping object (error + close): per-response, not shared.
+    expect(warnings, `no SDK download of ${tried} tripped it`).toBe(2)
+  })
+
+  it('harness: still trips the warning when the first response arrives in one read (a loaded machine, #3004)', async () => {
+    const bucket = storage.bucket(BUCKET)
+    coalesceNext = 1
+    try {
+      const { warnings, tried } = await downloadUntilTripped(gzipNames(), n =>
+        bucket.file(n).download({ decompress: false })
+      )
+      // The coalesced first response trips nothing, so a later one must.
+      expect(tried).toBeGreaterThanOrEqual(2)
+      expect(warnings).toBe(2)
+    } finally {
+      coalesceNext = 0
+    }
   })
 
   it('content gate reads 40 objects at CONCURRENCY with no MaxListenersExceededWarning, returning stored gzip bytes', async () => {
@@ -260,11 +317,32 @@ async function pullInto(bucket: RankHistoryBucket) {
 
 describe('rank-history pull reads (#2029)', () => {
   it('harness: the SDK bucket trips the warning on the rank-history pull (2 per object)', async () => {
+    // As above: an object whose packets coalesce trips nothing, so the count is
+    // an even number up to 2 per object; 0 means the harness is blind.
     const { dir, warnings } = await pullInto(
       storage.bucket(RANK_BUCKET) as unknown as RankHistoryBucket
     )
     fs.rmSync(dir, { recursive: true, force: true })
-    expect(warnings).toBe(RANK_DATES * 2)
+    expect(warnings).toBeGreaterThanOrEqual(2)
+    expect(warnings).toBeLessThanOrEqual(RANK_DATES * 2)
+    expect(warnings % 2).toBe(0)
+  })
+
+  it('harness: still trips the warning when the first rank response arrives in one read (#3004)', async () => {
+    coalesceNext = 1
+    try {
+      const { dir, warnings } = await pullInto(
+        storage.bucket(RANK_BUCKET) as unknown as RankHistoryBucket
+      )
+      fs.rmSync(dir, { recursive: true, force: true })
+      // The first date trips nothing; the rest trip 2 each unless load also
+      // coalesced them, so the count is even and between 2 and 2 per other date.
+      expect(warnings).toBeGreaterThanOrEqual(2)
+      expect(warnings).toBeLessThanOrEqual((RANK_DATES - 1) * 2)
+      expect(warnings % 2).toBe(0)
+    } finally {
+      coalesceNext = 0
+    }
   })
 
   it('rankHistoryBucket pulls every date with no MaxListenersExceededWarning, writing the decompressed JSON', async () => {

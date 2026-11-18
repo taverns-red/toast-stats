@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.4](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.25.3...analytics-core-v1.25.4) (2026-11-18)
+
+
+### Bug Fixes
+
+* **ui:** DRP award names and Club Strength cut-off ([#2907](https://github.com/taverns-red/toast-stats/issues/2907)) ([#2973](https://github.com/taverns-red/toast-stats/issues/2973)) ([6eaf690](https://github.com/taverns-red/toast-stats/commit/6eaf69098233b4f5bf13edc5655214803b82ef3f))
+
 ## [1.25.3](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.25.2...analytics-core-v1.25.3) (2026-11-14)
 
 
