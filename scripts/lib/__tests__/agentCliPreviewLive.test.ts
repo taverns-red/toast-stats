@@ -290,6 +290,36 @@ describe('live-version', () => {
     })
   })
 
+  it('still records an asset as broken when cancelling its body rejects (#3015)', async () => {
+    // A body that already errored (a timeout after the headers) rejects on
+    // cancel(); that must not abort the whole run.
+    const f = (async (url: string) => {
+      const path = new URL(url).pathname
+      if (path === '/')
+        return new Response(HTML, { headers: { 'content-type': 'text/html' } })
+      if (path === '/assets/index-CJS8zk9A.js') {
+        const body = new ReadableStream({
+          cancel() {
+            return Promise.reject(new Error('stream already errored'))
+          },
+        })
+        return new Response(body, {
+          status: 404,
+          headers: { 'content-type': 'text/html' },
+        })
+      }
+      return new Response('', {
+        headers: {
+          'content-type': path.endsWith('.css')
+            ? 'text/css'
+            : 'text/javascript',
+        },
+      })
+    }) as Fetcher
+    const r = await liveVersion({ base: 'https://ts.taverns.red', fetcher: f })
+    expect(r.broken.map(b => b.path)).toContain('/assets/index-CJS8zk9A.js')
+  })
+
   it('lists a 404 asset as broken', async () => {
     const r = await liveVersion({
       base: 'https://ts.taverns.red',
