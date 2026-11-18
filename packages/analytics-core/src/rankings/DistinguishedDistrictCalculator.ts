@@ -371,7 +371,7 @@ export function requiredPrerequisitesForProgramYear(
 /**
  * The Distinguished goal for number of Distinguished clubs (% of club base)
  * in a program year — the entry-tier `distinguishedPercentMin`. Item 1490's
- * Excellence in Education & Training award (PQD) gates on this goal alone,
+ * District Program Quality Award (PQD, DRP Item 1490 Rev. 07/2026 p. 16) gates on this goal alone,
  * not on full Distinguished District status (#1612).
  */
 export function distinguishedClubsGoalPercent(programYear?: string): number {

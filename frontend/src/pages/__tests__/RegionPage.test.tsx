@@ -359,11 +359,11 @@ describe('RegionPage Distinguished countdown columns (#516 #513)', () => {
     ).toBeInTheDocument()
     // Officer-award + tier columns are unchanged.
     expect(
-      screen.getByRole('columnheader', { name: /education ?\/ ?training/i })
+      screen.getByRole('columnheader', { name: /^program quality award$/i })
     ).toBeInTheDocument()
     expect(
       screen.getByRole('columnheader', {
-        name: /^club growth director \(cgd\)$/i,
+        name: /^club growth award$/i,
       })
     ).toBeInTheDocument()
     // The percentage-point prerequisite columns are GONE — Amy wants the

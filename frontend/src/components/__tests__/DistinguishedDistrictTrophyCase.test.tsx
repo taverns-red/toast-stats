@@ -622,33 +622,67 @@ describe('DistinguishedDistrictTrophyCase', () => {
     })
   })
 
-  // #1613 — shown for every program year (Ron's decision), with a note that
-  // TI dropped the award from Item 1490 in Rev. 03/2026.
-  describe('Club Strength award note (#1613)', () => {
-    it('notes that TI removed Club Strength from Item 1490 in Rev. 03/2026', () => {
+  // #2907 (spec change, supersedes #1613): Ron decided 2026-11-18 to show the
+  // Club Strength Award for past years only (through 2024-2025). The old
+  // "shown for every year, with a removal note" assertions are replaced.
+  describe('Club Strength award by program year (#2907)', () => {
+    it.each(['2024-2025'])('shows the award for %s', py => {
       render(
         <DistinguishedDistrictTrophyCase
           status={baseStatus}
-          programYear={LEGACY_PY}
+          programYear={py}
           clubStrengthQualifies
           clubStrengthGrowth={12.3}
         />
       )
       expect(screen.getByTitle(/Club Strength Award/)).toBeInTheDocument()
-      expect(
-        screen.getByText(/removed .*Item 1490 in Rev\. 03\/2026/i)
-      ).toBeInTheDocument()
     })
 
-    it('shows no Club Strength note when the award is not earned', () => {
+    it.each(['2025-2026', '2026-2027'])('hides the award for %s', py => {
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={baseStatus}
+          programYear={py}
+          clubStrengthQualifies
+          clubStrengthGrowth={12.3}
+          clubGrowthQualifies
+        />
+      )
+      expect(screen.queryByTitle(/Club Strength Award/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Club Strength/)).not.toBeInTheDocument()
+    })
+
+    it('shows no Additional Awards block when Club Strength is the only award and the year is hidden', () => {
+      render(
+        <DistinguishedDistrictTrophyCase
+          status={baseStatus}
+          programYear="2026-2027"
+          clubStrengthQualifies
+        />
+      )
+      expect(screen.queryByText(/Additional Awards Earned/i)).toBeNull()
+    })
+  })
+
+  // #2907 — names from DRP Item 1490 Rev. 07/2026 p. 16.
+  describe('Officer award names (#2907)', () => {
+    it('uses the Item 1490 names for the PQD and CGD awards', () => {
       render(
         <DistinguishedDistrictTrophyCase
           status={baseStatus}
           programYear={LEGACY_PY}
+          educationTrainingQualifies
           clubGrowthQualifies
         />
       )
-      expect(screen.queryByText(/Rev\. 03\/2026/i)).not.toBeInTheDocument()
+      expect(
+        screen.getByTitle('District Program Quality Award')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByTitle('District Club Growth Award')
+      ).toBeInTheDocument()
+      expect(screen.queryByText(/Excellence in/)).not.toBeInTheDocument()
+      expect(screen.queryByTitle(/Excellence in/)).not.toBeInTheDocument()
     })
   })
 

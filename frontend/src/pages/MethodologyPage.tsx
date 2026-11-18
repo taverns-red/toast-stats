@@ -421,6 +421,14 @@ const MethodologyPage: React.FC = () => {
               Stats shows the published rule and does not guess at an
               unpublished one.
             </li>
+            <li>
+              <strong>Club Strength Award</strong> — Toastmasters removed the
+              District Club Strength Award (average club size up 10% or more)
+              from Item 1490 in March 2026 (Rev. 03/2026). Toast Stats shows it
+              for program years up to 2024–25 and does not show it for 2025–26
+              or later. The 2025–26 year began under the old rules, but TI
+              published no list of 2025–26 recipients.
+            </li>
           </ul>
         </CollapsibleSection>
       </div>

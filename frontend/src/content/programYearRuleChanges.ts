@@ -83,13 +83,21 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
     ],
   },
   {
+    // #2907: Online Meeting Mastery is a real TI name for one type of
+    // exploration (Ron, 2026-11-18). The EOM column header ("Level 2s or EOM")
+    // and the education ledger code `EOMOnline Meeting Mastery` (see
+    // packages/shared-contracts/src/education/countedEducationAward.ts) tie the
+    // column to that one code; the 2026-27 world rollup fixture lists no other
+    // exploration code. Item 1490 Rev. 07/2026 p. 8 words the credit as
+    // "exploration completion", so both names are given. Before 2026-27 there
+    // was no such route, so no earlier year needs a label.
     id: 'py-2026-2027-dcp-goals-2-3-eom',
     programYear: '2026-2027',
     title: 'DCP goals 2 and 3 can be met by Online Meeting Mastery',
     affects:
       'Club DCP goals achieved · Level 2 award counts · club Distinguished tiers · district % Distinguished',
     whatChanged:
-      'Toastmasters made an Online Meeting Mastery completion an alternative way to satisfy DCP goals 2 and 3, alongside a Level 2 award. TI publishes the two routes in one combined column ("Level 2s or EOM", "Add. Level 2s or EOM") and does not split them, so Toast Stats cannot tell them apart either.',
+      'Toastmasters made an exploration completion an alternative way to satisfy DCP goals 2 and 3, alongside a Level 2 award (Item 1490 Rev. 07/2026, p. 8). The dashboard column says "EOM". the education awards report from TI names the route Online Meeting Mastery, the only exploration code in the reports we read. TI publishes the two routes in one combined column ("Level 2s or EOM", "Add. Level 2s or EOM") and does not split them, so Toast Stats cannot tell them apart either.',
     comparability:
       'A club can now reach goals 2 and 3 by a route that did not exist in 2025-26, so education counts and goal-completion rates are not like-for-like across the boundary. Part of any year-over-year rise in Level 2 awards may be Online Meeting Mastery completions instead — and a club that finished Distinguished this year might not have on last year’s rules.',
     issues: [1399, 1402],
@@ -217,6 +225,19 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
       'packages/collector-cli/src/types/collector.ts',
       'frontend/src/utils/globalHistoryView.ts',
     ],
+  },
+  {
+    id: 'py-2025-2026-club-strength-award-removed',
+    programYear: '2025-2026',
+    title: 'District Club Strength Award removed from Item 1490',
+    affects:
+      'District Club Strength Award · Additional Awards on district pages',
+    whatChanged:
+      'Item 1490 Rev. 04/2025 listed the award for districts whose average club size grew 10% or more. Rev. 03/2026 removes that sentence, partway through 2025-26, and Rev. 07/2026 matches it. TI published no list of 2025-26 recipients.',
+    comparability:
+      'Toast Stats shows the award for program years up to 2024-25 and not for 2025-26 or later, so its absence from recent years is the rule change, not a district falling short.',
+    issues: [2907],
+    sources: ['frontend/src/utils/clubStrengthAward.ts'],
   },
 
   // ───────────────────────────── PY 2022-2023 ─────────────────────────────

@@ -543,7 +543,7 @@ DRP Rev. 07/2026 calls these the "District Top 3 Awards" (pp. 16–17). It lists
 ### 13.5 Threshold Awards
 
 - **District Leadership Excellence Award:** 3+ consecutive years Distinguished (any tier). DRP p. 16 ("District Excellence Awards"): "Distinguished for three or more consecutive years".
-- **District Club Strength Award** (10%+ growth in average club size, Total Membership / Active Clubs, year-over-year): **not listed in DRP Rev. 07/2026** (pp. 16–17, which name the awards above). A TI source defining or ending this award was **source not found**: the 10% rule is from an earlier revision that was not re-fetched (the document cited Rev. 04/2025 with no page). The site still shows it with a note (see the #2869 UI follow-ups). Its status under Rev. 07/2026 is unverified.
+- **District Club Strength Award** (10%+ growth in average club size, Total Membership / Active Clubs, year-over-year): **not listed in DRP Rev. 07/2026** (pp. 16–17, which name the awards above). Verified in #2907: Rev. 04/2025 lists it under District Excellence Awards ("increased in average club size by 10% or more"; [archive](https://web.archive.org/web/20250907091655/https://content.toastmasters.org/image/upload/1490-district-recognition-program.pdf)). Rev. 03/2026 removes that sentence and leaves the rest of the section unchanged ([archive](https://web.archive.org/web/20260602091114/https://content.toastmasters.org/image/upload/1490-district-recognition-program.pdf)); Rev. 07/2026 matches 03/2026. Toast Stats therefore shows the award for past program years only (through 2024-2025) and not for 2025-26 or later; the cut-off lives in one place (`clubStrengthAward.ts`, #2907).
 
 ### 13.6 Officer Awards (District Excellence Awards)
 

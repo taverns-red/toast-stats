@@ -1,3 +1,4 @@
+import { isClubStrengthAwardShown } from '../utils/clubStrengthAward'
 import React, { useState } from 'react'
 import {
   districtTiersForProgramYear,
@@ -601,8 +602,12 @@ export const DistinguishedDistrictTrophyCase: React.FC<
   const expanded = !allPrerequisitesMet || userExpanded
   const summaryText = `${metCount} of ${totalCount} prerequisites met`
 
+  // #2907: Club Strength is shown for past program years only; the cut-off
+  // lives in utils/clubStrengthAward.ts.
+  const showClubStrength =
+    clubStrengthQualifies === true && isClubStrengthAwardShown(programYear)
   const additionalAwardsVisible =
-    clubStrengthQualifies ||
+    showClubStrength ||
     leadershipExcellenceQualifies ||
     educationTrainingQualifies ||
     clubGrowthQualifies
@@ -842,7 +847,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
             Additional Awards Earned
           </h3>
           <div className="flex flex-wrap gap-2">
-            {clubStrengthQualifies && (
+            {showClubStrength && (
               <span
                 className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border bg-green-50 text-green-800 border-green-200"
                 title={`Club Strength Award — ${clubStrengthGrowth?.toFixed(1)}% avg club size growth`}
@@ -862,34 +867,28 @@ export const DistinguishedDistrictTrophyCase: React.FC<
                 Leadership Excellence ({leadershipExcellenceYears}yr)
               </span>
             )}
+            {/* Award names: DRP Item 1490 Rev. 07/2026 p. 16 (#2907). The
+                old "Excellence in Education & Training" and "Excellence in
+                Club Growth" names appear in no Item 1490 revision. */}
             {educationTrainingQualifies && (
               <span
                 className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border bg-blue-50 text-blue-800 border-blue-200"
-                title="Excellence in Education & Training (PQD)"
+                title="District Program Quality Award"
               >
                 <span aria-hidden="true">🎓</span>
-                Education & Training (PQD)
+                District Program Quality Award
               </span>
             )}
             {clubGrowthQualifies && (
               <span
                 className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border bg-teal-50 text-teal-800 border-teal-200"
-                title="Excellence in Club Growth (CGD)"
+                title="District Club Growth Award"
               >
                 <span aria-hidden="true">📈</span>
-                Club Growth (CGD)
+                District Club Growth Award
               </span>
             )}
           </div>
-          {/* #1613 — shown for every program year (product decision), but
-              TI no longer lists it, so say so rather than imply it is
-              still presented. */}
-          {clubStrengthQualifies && (
-            <p className="mt-2 text-xs text-gray-600 font-tm-body">
-              Club Strength: TI removed this award from Item 1490 in Rev.
-              03/2026, so it may not be presented.
-            </p>
-          )}
         </div>
       )}
 
