@@ -240,6 +240,15 @@ describe('videos-publish.yml (#2310)', () => {
     expect(run).toMatch(/^npm ci --ignore-scripts$/m)
   })
 
+  it('builds shared-contracts after the install and before the planner and the auth step (--ignore-scripts skips the root prepare that builds it)', () => {
+    const build = steps.findIndex(s =>
+      /^npm run build:shared-contracts$/m.test(s.run ?? '')
+    )
+    expect(build).toBeGreaterThan(stepIndex('Install dependencies'))
+    expect(build).toBeLessThan(stepIndex('Plan the objects'))
+    expect(build).toBeLessThan(stepIndex('Authenticate to GCP'))
+  })
+
   it('every write step is skipped on a dry run', () => {
     for (const s of steps.filter(s => storageWrites.some(w => w.step === s))) {
       expect(s.if ?? '', s.name).toContain('!inputs.dry_run')
