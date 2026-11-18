@@ -32,6 +32,11 @@ export function parseEntryAssets(html: string): {
   return { entry, assets: [...assets] }
 }
 
+/** Red stub (#3000): reads nothing yet. */
+export function parseHtmlVersion(_html: string): string | null {
+  return null
+}
+
 export function parseBundleVersion(js: string): string | null {
   return js.match(/VITE_APP_VERSION:\s*[`"']([^`"']+)[`"']/)?.[1] ?? null
 }

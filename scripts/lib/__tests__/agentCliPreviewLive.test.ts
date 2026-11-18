@@ -14,6 +14,7 @@ import {
   liveVersion,
   parseBundleVersion,
   parseEntryAssets,
+  parseHtmlVersion,
   type Fetcher,
 } from '../agentCli/liveVersion.js'
 import { fakeRunner, fixture, ok, noSleep } from './agentCliFakes.js'
@@ -176,6 +177,44 @@ describe('live-version', () => {
         fetcher: fetcher2('var x={BASE_URL:`/`,DEV:!1}'),
       })
       expect(r.version).toBeNull()
+    })
+  })
+
+  describe('after #3000 (the version is a meta tag in index.html)', () => {
+    const META = '<meta name="app-version" content="v2.94.0">'
+    const HTML3 = fixture('live-index-2.93.0.html').replace(
+      '</head>',
+      `${META}</head>`
+    )
+
+    it('reads the version from the page, whatever the chunks hold', async () => {
+      const urls: string[] = []
+      const f = (async (url: string) => {
+        urls.push(`${url}`)
+        const path = new URL(url).pathname
+        return new Response(
+          path === '/' ? HTML3 : 'var env={mode:`production`}',
+          {
+            headers: {
+              'content-type': path === '/' ? 'text/html' : 'text/javascript',
+            },
+          }
+        )
+      }) as Fetcher
+      const r = await liveVersion({
+        base: 'https://ts.taverns.red',
+        fetcher: f,
+      })
+      expect(r.version).toBe('v2.94.0')
+      expect(r.broken).toEqual([])
+    })
+
+    it('parses the tag, in either attribute order', () => {
+      expect(parseHtmlVersion(HTML3)).toBe('v2.94.0')
+      expect(
+        parseHtmlVersion('<meta content="v1.2.3" name="app-version" />')
+      ).toBe('v1.2.3')
+      expect(parseHtmlVersion('<meta name="viewport" content="x">')).toBeNull()
     })
   })
 
