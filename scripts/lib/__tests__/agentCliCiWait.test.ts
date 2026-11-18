@@ -1292,3 +1292,166 @@ describe('ciWait waits for unfinished workflow runs on the head commit (#2910)',
     expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(1)
   })
 })
+
+describe('ciWait ignores rows of a run a newer run replaced (#2935)', () => {
+  const GRAPHQL_403 = 'HTTP 403: GitHub GraphQL is not available'
+  const URL_BASE = 'https://github.com/taverns-red/toast-stats/actions/runs'
+
+  interface Job {
+    run: number
+    suite: number
+    name: string
+    status?: string
+    conclusion?: string | null
+    started?: string
+  }
+  const job = (j: Job) => ({
+    name: j.name,
+    status: j.status ?? 'completed',
+    conclusion: j.conclusion === undefined ? 'success' : j.conclusion,
+    details_url: `${URL_BASE}/${j.run}/job/${j.run}1`,
+    started_at: j.started ?? '2026-11-17T10:00:00Z',
+    completed_at: j.status === 'in_progress' ? null : '2026-11-17T10:05:00Z',
+    check_suite: { id: j.suite },
+  })
+  const wfRun = (
+    id: number,
+    suite: number,
+    createdAt: string,
+    status = 'completed'
+  ) => ({
+    id,
+    name: 'PR Preview',
+    check_suite_id: suite,
+    status,
+    event: 'pull_request',
+    pull_requests: [{ number: 2933 }],
+    created_at: createdAt,
+    html_url: `${URL_BASE}/${id}`,
+  })
+
+  async function poll(jobs: Job[], runsList: ReturnType<typeof wfRun>[]) {
+    const runner = fakeRunner([
+      [/^gh pr checks /, fail(GRAPHQL_403)],
+      [
+        /\/pulls\/2933$/,
+        ok(
+          JSON.stringify({
+            head: { sha: 'abc' },
+            mergeable_state: 'clean',
+            draft: false,
+          })
+        ),
+      ],
+      [
+        /\/commits\/abc\/check-runs/,
+        ok(
+          JSON.stringify({
+            total_count: jobs.length,
+            check_runs: jobs.map(job),
+          })
+        ),
+      ],
+      [
+        /\/actions\/runs\?head_sha=abc&per_page=100&page=1$/,
+        ok(
+          JSON.stringify({
+            total_count: runsList.length,
+            workflow_runs: runsList,
+          })
+        ),
+      ],
+    ])
+    const r = await ciWait(2933, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    return { r, runner }
+  }
+
+  const OLD = { run: 100, suite: 7 }
+  const NEW = { run: 200, suite: 8 }
+  const UNEXPANDED = 'Smoke (${{ matrix.shard }})'
+  const runsOldNew = [
+    wfRun(100, 7, '2026-11-17T10:00:00Z'),
+    wfRun(200, 8, '2026-11-17T10:01:00Z'),
+  ]
+
+  it('PASSes when an older run was cancelled before its matrix expanded and a newer run succeeded', async () => {
+    const { r, runner } = await poll(
+      [
+        {
+          ...OLD,
+          name: UNEXPANDED,
+          conclusion: 'cancelled',
+          started: '2026-11-17T10:00:00Z',
+        },
+        { ...NEW, name: 'Smoke (1)', started: '2026-11-17T10:01:00Z' },
+        { ...NEW, name: 'Smoke (2)', started: '2026-11-17T10:01:00Z' },
+      ],
+      runsOldNew
+    )
+    expect(r.summary).toMatchObject({ cancelled: 0, passed: 2 })
+    expect(r.outcome).toBe('pass')
+    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(1)
+  })
+
+  it('still fails closed on a cancelled run with no newer run of that workflow', async () => {
+    const { r } = await poll(
+      [{ ...OLD, name: UNEXPANDED, conclusion: 'cancelled' }],
+      [wfRun(100, 7, '2026-11-17T10:00:00Z')]
+    )
+    expect(r.outcome).toBe('fail')
+    expect(r.summary.cancelled).toBe(1)
+  })
+
+  it('a newer cancelled run still beats an older pass', async () => {
+    const { r } = await poll(
+      [
+        { ...OLD, name: 'Smoke (1)' },
+        {
+          ...NEW,
+          name: 'Smoke (1)',
+          conclusion: 'cancelled',
+          started: '2026-11-17T10:01:00Z',
+        },
+      ],
+      runsOldNew
+    )
+    expect(r.outcome).toBe('fail')
+  })
+
+  it('pending rows of the newer run still make it wait', async () => {
+    const { r } = await poll(
+      [
+        { ...OLD, name: UNEXPANDED, conclusion: 'cancelled' },
+        {
+          ...NEW,
+          name: 'Smoke (1)',
+          status: 'in_progress',
+          conclusion: null,
+          started: '2026-11-17T10:01:00Z',
+        },
+      ],
+      [
+        wfRun(100, 7, '2026-11-17T10:00:00Z'),
+        wfRun(200, 8, '2026-11-17T10:01:00Z', 'in_progress'),
+      ]
+    )
+    expect(r.outcome).toBe('pending')
+    expect(r.summary).toMatchObject({ cancelled: 0, pending: 1 })
+  })
+
+  it('a newer run that only skipped does not hide an older cancelled run', async () => {
+    const { r } = await poll(
+      [
+        { ...OLD, name: UNEXPANDED, conclusion: 'cancelled' },
+        { ...NEW, name: 'Smoke (1)', conclusion: 'skipped' },
+      ],
+      runsOldNew
+    )
+    expect(r.outcome).toBe('fail')
+  })
+})
