@@ -47,7 +47,7 @@
     "typecheck": "npm run typecheck --workspaces && npm run typecheck:scripts",
     "typecheck:scripts": "tsc -p scripts/tsconfig.json",
     "typecheck:frontend": "npm run typecheck --workspace=frontend",
-    "typecheck:tests": "npm run typecheck:test --workspace=frontend && npm run typecheck:scripts",
+    "typecheck:tests": "npm run typecheck:test --workspace=frontend",
     "typecheck:count": "npm run typecheck:count --workspaces",
     "quality:check": "npm run lint && npm run lint:yaml && npm run typecheck && npm run typecheck:tests && npm run format:check && npm run test",
     "quality:fix": "npm run lint --workspaces -- --fix && npm run format",
