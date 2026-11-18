@@ -30,10 +30,11 @@ const checks = HOW_TO_VIDEOS.flatMap(v => [
 ])
 
 async function main(): Promise<void> {
-  const results: VideoUrlResult[] =await Promise.all(
+  const results: VideoUrlResult[] = await Promise.all(
     checks.map(async c => {
       const status = await probe(c.url)
-      return { ...c, status, ok: status === 200 || status === 206 }    })
+      return { ...c, status, ok: status === 200 || status === 206 }
+    })
   )
 
   process.stdout.write(JSON.stringify(results, null, 2) + '\n')
