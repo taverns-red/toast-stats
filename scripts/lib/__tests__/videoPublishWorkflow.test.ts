@@ -152,9 +152,12 @@ describe('videos-publish.yml (#2310)', () => {
     const refuse = stepIndex('Refuse to overwrite existing objects')
     expect(refuse).toBeGreaterThan(-1)
     const run = steps[refuse]?.run ?? ''
-    expect(run).toContain('gs://${GCS_BUCKET}/${OBJ}')
-    expect(run).toContain('gs://${GCS_BUCKET_PRODUCTION}/${OBJ}')
-    expect(run).toContain('gcs-upload.ts exists')
+    expect(run).toContain(
+      'for BUCKET in "$GCS_BUCKET" "$GCS_BUCKET_PRODUCTION"'
+    )
+    expect(run).toContain(
+      'gcs-upload.ts exists --bucket "$BUCKET" --object "$OBJ"'
+    )
     const firstWrite = steps.findIndex(s =>
       storageWrites.some(w => w.step === s)
     )
