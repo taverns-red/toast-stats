@@ -59,6 +59,7 @@ export function stripText(command) {
   let out = ''
   let i = 0
   let pending = [] // heredoc delimiters waiting for the end of their line
+  const absent = new Set() // delimiters with no terminator line left in text
   while (i < text.length) {
     const c = text[i]
     if (c === '\\') {
@@ -83,12 +84,23 @@ export function stripText(command) {
       }
     } else if (c === '#' && (i === 0 || /[\s;&|(]/.test(text[i - 1]))) {
       while (i < text.length && text[i] !== '\n') i += 1
+    } else if (c === '(' && text[i + 1] === '(') {
+      // `((..))` and `$((..))` are arithmetic: a `<<` in there is a shift, not
+      // a heredoc. The text stays visible to the scanner (fail closed).
+      const close = arithmeticEnd(text, i)
+      if (close === -1) {
+        out += c
+        i += 1
+      } else {
+        out += text.slice(i, close)
+        i = close
+      }
     } else if (c === '<' && text[i + 1] === '<' && text[i + 2] !== '<') {
-      const op = HEREDOC.exec(text.slice(i, i + 200))
-      if (op && text[i - 1] !== '<') {
-        pending.push(op[1] ?? op[2] ?? op[3] ?? op[4])
+      const op = text[i - 1] !== '<' ? parseHeredoc(text, i) : null
+      if (op) {
+        pending.push(op.delim)
         out += ' '
-        i += op[0].length
+        i = op.end
       } else {
         out += '<<'
         i += 2
@@ -96,14 +108,18 @@ export function stripText(command) {
     } else if (c === '\n') {
       out += c
       i += 1
+      // Fail closed: a body is dropped only when its exact terminator line is
+      // found. Otherwise the text stays visible to the scanner.
       for (const delim of pending) {
-        while (i < text.length) {
-          let end = text.indexOf('\n', i)
-          if (end === -1) end = text.length
-          const line = text.slice(i, end).trim()
-          i = Math.min(end + 1, text.length)
-          if (line === delim) break
+        if (absent.has(delim)) break
+        const end = bodyEnd(text, i, delim)
+        if (end === -1) {
+          // No terminator anywhere after here, so none after a later `<<` of
+          // the same word either: remember it to stay linear.
+          absent.add(delim)
+          break
         }
+        i = end
       }
       pending = []
     } else {
@@ -114,19 +130,78 @@ export function stripText(command) {
   return out
 }
 
-// `<<`, an optional `-`, then a delimiter: bare, quoted, or `\`-escaped. A
-// delimiter must start with a letter or `_`, so `$((1<<2))` is not a heredoc.
-const HEREDOC =
-  /^<<-?[ \t]*(?:\\([A-Za-z_]\w*)|'([A-Za-z_]\w*)'|"([A-Za-z_]\w*)"|([A-Za-z_]\w*))/
+/**
+ * Read a heredoc operator at `i` (`<<`, optional `-`, optional blanks, then a
+ * delimiter word). The whole word counts, with `'..'`, `".."` and `\x` parts
+ * joined as bash does (`E"F"` is `EF`). Returns null for anything unusual, so
+ * the text stays visible.
+ */
+function parseHeredoc(text, i) {
+  let j = i + 2
+  if (text[j] === '-') j += 1
+  while (text[j] === ' ' || text[j] === '\t') j += 1
+  let delim = ''
+  const start = j
+  while (j < text.length && !/[\s;&|()<>]/.test(text[j])) {
+    const ch = text[j]
+    if (ch === "'" || ch === '"') {
+      const close = text.indexOf(ch, j + 1)
+      if (close === -1) return null
+      delim += text.slice(j + 1, close)
+      j = close + 1
+    } else if (ch === '\\') {
+      if (j + 1 >= text.length || text[j + 1] === '\n') return null
+      delim += text[j + 1]
+      j += 2
+    } else if (ch === '$' || ch === '`') {
+      return null // expansions are not performed, but do not guess
+    } else {
+      delim += ch
+      j += 1
+    }
+  }
+  if (j === start || delim === '' || delim.includes('\n')) return null
+  return { delim, end: j }
+}
+
+/** Index just past the line holding only `delim`, or -1 when there is none. */
+function bodyEnd(text, from, delim) {
+  let i = from
+  while (i < text.length) {
+    let end = text.indexOf('\n', i)
+    if (end === -1) end = text.length
+    const line = text.slice(i, end).trim()
+    i = Math.min(end + 1, text.length)
+    if (line === delim) return i
+  }
+  return -1
+}
+
+/** Index just past the `))` that closes the `((` at `i`, or -1. */
+function arithmeticEnd(text, i) {
+  let depth = 0
+  // Capped, so a long run of `((` stays linear overall.
+  const stop = Math.min(text.length, i + 2000)
+  for (let j = i; j < stop; j += 1) {
+    if (text[j] === '(') depth += 1
+    else if (text[j] === ')') {
+      depth -= 1
+      if (depth === 0) return text[j - 1] === ')' && j - 1 > i ? j + 1 : -1
+    }
+  }
+  return -1
+}
 
 // A command word: start of the command, or right after a separator, `(`,
 // `{`, `$(`, a backtick, or a loop/branch keyword. It may be preceded by `!`, `time` and `VAR=value ` prefixes,
 // and the program may be path-qualified (/opt/homebrew/bin/gh).
+// Blanks between the parts never include a newline: `\n` is a separator on
+// its own, and a run of blank lines must not be rescanned from every newline.
 const CMD =
   String.raw`(?:^|[;&|(\n{` +
   '`' +
-  String.raw`]|\b(?:do|then|else|while|until|if)\b)\s*` +
-  String.raw`(?:!\s*)?(?:time\s+)?(?:\w+=\S*\s+)*(?:\S*/)?`
+  String.raw`]|\b(?:do|then|else|while|until|if)\b)[^\S\n]*` +
+  String.raw`(?:![^\S\n]*)?(?:time[^\S\n]+)?(?:\w+=\S*[^\S\n]+)*(?:\S*/)?`
 
 const SLEEP = new RegExp(CMD + String.raw`sleep\s+\S`)
 const GH_POLL = new RegExp(
