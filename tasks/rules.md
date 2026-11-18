@@ -1,113 +1,89 @@
-# ⚡ Engineering Rules
+# Engineering Rules
 
-<!-- Read this COMPLETELY before every task. Keep it under 60 seconds to read. -->
-<!-- When you add a lesson to lessons.md, update this file if it changes a rule. -->
-<!-- Ordered by blast radius: most dangerous mistakes first. -->
+<!-- Always loaded: read this completely before every task. At most 20 active rules (alwaysLoadedContext.test.ts). -->
+<!-- A rule earns its place by naming the test, hook or guard that enforces it, or by being dangerous enough to need no guard. -->
+<!-- R-numbers are cited from CLAUDE.md and code comments: never renumber. A retired rule keeps a one-line stub. -->
+<!-- Lessons are archived in tasks/lessons/archive/ (reference only, not loaded by default). Add a rule here only when a test, guard or hook can't cover the recurrence. -->
 
----
-
-## 🔴 Never Do These
+## Never do these
 
 **R1 — Never bypass failing tests.**
-`--no-verify`, `--skip-tests`, commenting out assertions, or pinning expectations to match a bug are all forbidden. If pre-existing tests are red, fix them before adding new code.
+`--no-verify`, `--skip-tests`, commenting out or skipping tests, and pinning an expectation to match a bug are all forbidden. Fix red tests before adding code. _Enforced by:_ `.husky/pre-commit`, `.husky/pre-push`, CI Quality Gates.
 
 **R2 — Never assume data exists on the ephemeral runner.**
-The GitHub Actions runner starts empty. Every piece of data a compute step needs must be explicitly synced from GCS first (snapshots, time-series, club-trends). "It works locally" does not count.
+GitHub Actions runners start empty. Sync every input from GCS first (snapshots, time-series, club-trends). "It works locally" does not count.
 
 **R3 — Never infer context a parent already has.**
-If a parent component manages program year, date range, or filter state, pass it as a prop. Never re-derive it from API response data inside a child component — the first data point's date is not the current year.
+Pass program year, date range and filter state down as props. Never re-derive them from API response data in a child: the first data point's date is not the current year.
 
-**R4 — Never use stdout for logs in a CLI.**
-`console.log()` in shared package fallback loggers contaminates the JSON output that `| tee | jq` expects. All log levels go to `console.error()` (stderr). Stdout is for structured data only.
+**R4 — Never log to stdout in a CLI.**
+`console.log()` contaminates the JSON that `| tee | jq` expects. Log with `console.error()`; stdout is for structured data only.
 
----
+## Before you change things
 
-## 🟡 Always Do These Before Starting
+**R5 — Retired, see `tasks/lessons/archive/`.** ("Read the last 5 lessons"; replaced by this short rule set, #2950.)
 
-**R5 — Read the last 5 entries in lessons.md before starting any task.**
-`tail -n 120 tasks/lessons.md`
-
-**R6 — Trace the actual call graph before refactoring.**
-An issue description can overstate the problem. Before a cross-module consolidation, verify actual code overlap — not just similar names. Check whether `SnapshotBuilder` truly duplicates `DataTransformer` or just delegates to it.
+**R6 — Trace the real call graph before refactoring.**
+An issue can overstate the problem. Check actual overlap, not similar names, before consolidating across modules.
 
 **R7 — Inventory existing fields before designing new backend work.**
-When a frontend feature needs "new" data, grep the existing types first. Pre-computed fields are often already computed, served, and typed — just not yet wired into the UI.
+Grep the existing types first. Pre-computed fields are often already served and typed, just not wired into the UI.
 
-**R8 — When deleting a service, audit its entire write AND read path.**
-`grep -r "ServiceName" .` including `.github/workflows/`. Removing a reader doesn't remove the writer. Removing a gate doesn't remove hidden secondary gates (e.g., `CollectorOrchestrator` validating against the same config file the pipeline was still reading).
+**R8 — When deleting a service, audit its whole write AND read path.**
+`grep -r "ServiceName" .` including `.github/workflows/`. Removing a reader doesn't remove the writer, and a removed gate can leave a hidden second gate reading the same config.
 
----
+## Patterns proven here
 
-## 🟢 Architecture Patterns That Are Proven Here
+**R9 — Multi-run aggregation needs a GCS-backed store, not history re-loading.**
+Sync store from GCS, upsert today's data, save, push back. Reference: `ClubTrendsStore`, `TimeSeriesIndexWriter`.
 
-**R9 — Multi-run aggregation needs a persistent GCS-backed store, not history re-loading.**
-Pattern: sync store from GCS → upsert today's data → save → push back. The `ClubTrendsStore` and `TimeSeriesIndexWriter` are reference implementations. "Load all history" approaches produce 1 data point on ephemeral runners.
+**R10 — Override cross-cutting styling at CSS level, not per component.**
+Dark mode and brand tokens go under `[data-theme='dark']`. Tailwind opacity variants (`-80`, `-70`) bake in `rgba()` and need their own override. _Enforced by:_ the dark-mode contrast tests and `legacyPaletteGuard.test.ts`.
 
-**R10 — CSS-level overrides beat component-level changes for cross-cutting concerns.**
-Dark mode, theme tokens, brand colors — override at `[data-theme='dark']` scope in CSS. But: Tailwind opacity-variant classes (`-80`, `-70`) bake in hardcoded `rgba()` and must also be overridden explicitly.
+**R11 — Insert into existing filter pipelines, don't replace them.**
+`original → filtered → searchFiltered → sorted`: a new filter is a new step.
 
-**R11 — Insert into existing filter pipelines, don't replace.**
-`original → filtered → searchFiltered → sorted` is correct. Adding a new filter is a new step, not a replacement of an existing one. Keeps existing test coverage intact.
+**R12 — Retired, see `tasks/lessons/archive/`.** (Batching same-breakpoint CSS fixes; it overlaps the red/green/refactor loop in CLAUDE.md.)
 
-**R12 — Batch independent, same-breakpoint CSS fixes.**
-When multiple issues touch the same root cause (e.g., responsive table at 375px), write all failing tests first, apply all fixes, verify once. This is not batching unrelated changes — it's one logical fix at one level.
-
----
-
-## 🤖 Automation, Shell & Monorepo Discipline
-
-<!-- R13–R20 promoted from lessons 083–092 (epic #647 Sprint 2, #649). -->
-<!-- Sprint-runner / CI / bash / worktree surfaces. Each links its origin lesson. -->
+## Automation, shell and monorepo
 
 **R13 — End every trap-wired cleanup function with `return 0` (or `:`).**
-Bash uses an `EXIT` trap's final return value as the script's exit code. A trailing conditional (`[[ -n "$X" ]] && rm ...`) that evaluates false makes the trap — and thus a script with an explicit `exit 0` — return 1. Never let a conditional be the last statement in a trap unless you mean to mask the exit code. (Lesson 083 / #603)
-_Trigger:_ writing or editing any function wired to `trap ... EXIT|INT|TERM`.
+Bash uses an `EXIT` trap's last return value as the script's exit code, so a trailing false conditional turns a clean `exit 0` into 1.
 
-**R14 — Don't trust a command's exit code inside a `pipefail` predicate; absorb it with `|| true`.**
-`set -o pipefail` propagates the rightmost non-zero status. macOS `screen -ls` exits 1 even when sessions exist, so `screen -ls | grep -q …` always reports "not found" under pipefail — silently inverting detection logic (and nearly triggering a live-worktree GC). Verify exit semantics for every case you care about, drop pipefail locally, or append `|| true`. Prefer `pgrep -f` over `screen -ls` for liveness. (Lesson 089 / #633, #634)
-_Trigger:_ piping any command into a `pipefail` pipeline used as a boolean predicate.
+**R14 — Don't trust a command's exit code inside a `pipefail` predicate.**
+`screen -ls` exits 1 even when sessions exist, so `screen -ls | grep -q …` always reports "not found". Absorb with `|| true` or test the case you care about.
 
-**R15 — When two pieces of distributed state must agree before automation acts, require BOTH signals and write the strongest one LAST.**
-"Sprint done" needs the sub-issue CLOSED _and_ the epic checkbox ticked. A consumer keying off only the close signal fires inside the gap before the tick lands — the close-then-tick duplicate-launch race. Tick the epic (weak, revertible string PATCH) first; close the issue (strong, irreversible) last; have the consumer require both. (Lesson 086 / #626)
-_Trigger:_ ordering writes to issue/epic/label state, or designing automation that triggers off issue state.
+**R15 — When two pieces of state must agree before automation acts, require both and write the strongest last.**
+Tick the epic checkbox (weak, revertible) first; close the issue (strong) last; have the consumer require both.
 
 **R16 — After touching `packages/*/src/`, run `npm run build:<package>` before tests or pre-push.**
-The frontend imports workspace packages from their built `dist/` (gitignored, not auto-rebuilt). CI rebuilds in a clean checkout; the local pre-push hook does not. Skip the rebuild and your tests pass against stale `dist/` while every fresh operator pull breaks with `X is not a function`. (Lesson 092 / #645)
-_Trigger:_ any change under `packages/*/src/`.
+The frontend imports workspace packages from gitignored `dist/`. CI rebuilds clean; the local pre-push hook doesn't, so stale `dist/` passes locally and breaks fresh pulls.
 
-**R17 — Every conditional in an automated workflow needs an explicit case for every value.**
-"Do X if Y" in a prompt or script must also state what happens when Y is false — even if the answer is "do nothing." Implicit scope invites divergence: two sessions ran the same bootstrap prompt and ended in different states (epic closed vs left open) because the "last sprint?" case was unstated. (Lesson 091 / #636)
-_Trigger:_ writing a conditional instruction in a prompt, routine, or shell script.
+**R17 — Every conditional in an automated prompt or script states the false case.**
+"Do X if Y" must also say what happens when Y is false, even if that is "do nothing".
 
-**R18 — Decouple scheduling cadence from forward progress.**
-A cron interval sets the cadence of _attempts_, not of _progress_. "One visible action per tick" couples them and leaves work queued during idle ticks. Each tick should make as much _valid_ forward progress as it safely can, bounded by a sane cap (e.g. an 8-iteration cascade guard). (Lesson 088 / #627)
-_Trigger:_ designing or tuning any periodic automation loop.
+**R18 — Retired, see `tasks/lessons/archive/`.** (Scheduling cadence vs forward progress for periodic automation; no guard enforces it.)
 
-**R19 — Branch a long-lived worktree from the fetched remote tip, not its possibly-stale base.**
-A spawned session's worktree is detached at whatever commit the runner left it on; `origin/main` may be several commits ahead. Branching from the stale base silently _reverts_ intervening work and deletes files you never touched. `git fetch`, branch from `origin/main`, and diff `origin/main..HEAD` before opening the PR. (Lessons 087, 090 / #625, #482)
-_Trigger:_ starting work in a spawned/automation worktree, or before opening a PR from a long-lived branch.
+**R19 — Branch a long-lived worktree from the fetched remote tip.**
+`git fetch`, branch from `origin/main`, and diff `origin/main..HEAD` before opening the PR. A stale base silently reverts intervening work.
 
-**R20 — When you partition a test suite (projects, shards, tags), add an exhaustiveness guard sourced from the tool itself.**
-A file matching no project's include/exclude stops running in every gate, silently — coverage dips, a regression sails through weeks later, nothing points at the cause. Assert the partition is disjoint _and_ exhaustive using the tool's own resolution (`vitest list --json`), never a re-implemented glob walk that can drift. (Lesson 090 / #482)
-_Trigger:_ splitting a test suite into projects/shards, or adding a top-level test directory.
+**R20 — A partitioned test suite needs an exhaustiveness guard sourced from the tool itself.**
+Assert projects are disjoint and exhaustive with `vitest list --json`, not a hand-rolled glob walk. _Enforced by:_ `npm run test:projects:check` (`frontend/scripts/check-test-projects.mjs`).
 
-<!-- Rule retired (#1263, epic #1262): the flake-detection layer it governed was
-removed once its root causes (local-machine contention + over-strict timeouts)
-were solved. The principle survives in Lessons 135/136 for historical reference.
-The number between R20 and R22 is intentionally left vacant — do NOT renumber R22+. -->
+**R21 — Retired, see `tasks/lessons/archive/`.** (Flake-detection layer, removed in #1263.)
 
-**R22 — A unit test must not full-page-mount; page mounts belong in the integration project.**
-`render(<SomePage/>)` drags in QueryClientProvider + router + lazy children + hook mocks — the L53 contention surface — into the fast unit project that also gates pre-push. Keep mounts in `src/pages/__tests__/` or `src/__tests__/integration/` (or name the file `*.integration.test.tsx`). Enforced by `npm run test:no-page-mounts:check`, sourced from vitest's own unit-project resolution (R20 spirit). (Deep-dive V1/V12 / #916)
-_Trigger:_ writing a test that imports a `pages/*Page` component or `<App/>`.
+**R22 — A unit test must not full-page-mount.**
+Page mounts belong in `src/pages/__tests__/` or `src/__tests__/integration/` (or `*.integration.test.tsx`). _Enforced by:_ `npm run test:no-page-mounts:check`.
 
----
+## Data contracts
 
-## ⚠️ Active Tripwires
+**R23 — Key per-snapshot fetches on the snapshot date, never the as-of `sourceCsvDate`.**
+They are equal mid-month and diverge for about three weeks each month-end close, so the bug passes every test and then blanks the UI. Use `effectiveDate`; the program year comes from the snapshot's logical date. _Enforced by:_ `no-snapshot-date-cast.test.ts`, `snapshotDate.brand.sentinel.test.ts`.
 
-- District success/failure tracking lives in **one place** — `TransformService.transform()` (`packages/collector-cli`) loops over per-district `transformDistrictToDate` results and derives `districtsSucceeded`/`districtsFailed`/`districtsSkipped` by filtering that single `results[]` array. No second validation-failure path exists: the `SnapshotBuilder.build()` two-path hazard is gone with the now-deleted backend (the name survives only in `DataTransformer.ts` comments). Changing district discovery touches only that one loop.
-- DCP goals are **independent** (not sequential). Never approximate `dcpGoals` count as Goals 1-N achieved in order. Use `clubPerformance` raw fields.
-- Any chart with `|| 1` range fallback is a y-axis inversion bug waiting to happen. Pad symmetrically when `range === 0`.
-- Tailwind opacity variants (`text-tm-*-80`) don't inherit CSS variable overrides. Audit on every new brand token.
-- `Path.join()` with raw user input = path traversal. Always call `validateDistrictId()` before constructing paths from request params.
-- `AwardsRaceSection` (landing `/`, above the toolbar) is fed by `useCompetitiveAwards` — a **separate** query from rankings. It must reserve its slot while that query loads (height-matched skeleton), never render `null`-until-data: the late expansion shifts the whole page down ~286px → CLS 0.198 (Lesson 107). Same shape for any above-the-fold section fed by a secondary, separately-resolving query. A deferral conditioned on "the data is usually absent" expires the day the pipeline populates it.
-- **Commit-type vocabulary is now wider than conventional-commits' defaults, and an unrecognised type costs you a changelog entry.** `release-please-config.json` recognises `feat, fix, refactor, perf, docs, test, harden, cutover, deps, ci, build` (+ hidden `chore`). Anything else — `ops:`, `audit:`, a typo — renders no changelog section and cannot cut a release on its own. It still _ships_, riding along with the next recognised commit (`git tag --contains` proves it), so the failure is silent: lost provenance, not lost code. 37 of 200 commits were affected before #1554. **`cutover` vs `build`:** this repo has always typed dependency and tooling migrations as `build(...)` — keep doing that. Reserve `cutover` for a platform/provider move (a database or host migration), not a package major bump.
+**R24 — A strict CDN contract makes an additive field a breaking change.**
+A `.strict()` schema rejects the new key in readers already deployed. Release the accepting schema first, confirm it is live, then let the pipeline write the field. Breaking changes follow ADR 0019 (`db-breaking-approved` is Ron's alone). _Enforced by:_ `scripts/lib/cdnSchemaCanary.ts` and the CDN schema canary workflow.
+
+## Tripwires not in CLAUDE.md
+
+- `AwardsRaceSection` (landing `/`) is fed by `useCompetitiveAwards`, a separate query. Reserve its slot with a height-matched skeleton; rendering `null` until data lands shifts the page ~286px (CLS 0.198).
+- Commit types recognised by release-please: `feat, fix, refactor, perf, docs, test, harden, cutover, deps, ci, build` (+ hidden `chore`). Any other type (`ops:`, `audit:`) ships but loses its changelog entry. Type dependency and tooling migrations as `build(...)`; keep `cutover` for platform moves.
