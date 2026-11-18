@@ -145,7 +145,8 @@ next_gen() {
     return 1
   fi
   rm -f "${lock}"
-  echo "${n}"
+  # Handed back in a variable: `g="$(next_gen)"` would fork a subshell.
+  NEXT_GEN="${n}"
 }
 
 # The value of <key>= in a meta file, or nothing.
@@ -154,12 +155,18 @@ meta_get() { sed -n "s/^$2=//p" "$1" 2>/dev/null | head -1; }
 # Give the object behind <meta file> a new generation (SHIM_GENERATIONS).
 stamp_generation() {
   gen_enabled || return 0
-  local meta="$1" g
-  g="$(next_gen)"
+  local meta="$1" line
+  next_gen
   [ -d "${meta%/*}" ] || mkdir -p "${meta%/*}"
-  [ -f "${meta}" ] || : >"${meta}"
-  grep -v '^generation=' "${meta}" >"${meta}.tmp" || true
-  echo "generation=${g}" >>"${meta}.tmp"
+  # Drop any old generation line and add the new one, with builtins only.
+  {
+    if [ -f "${meta}" ]; then
+      while IFS= read -r line || [ -n "${line}" ]; do
+        case "${line}" in generation=*) ;; *) printf '%s\n' "${line}" ;; esac
+      done <"${meta}"
+    fi
+    printf 'generation=%s\n' "${NEXT_GEN}"
+  } >"${meta}.tmp"
   mv "${meta}.tmp" "${meta}"
 }
 
@@ -192,7 +199,7 @@ upload_object() {
   local obj meta
   obj="$(local_of "${url}")"
   meta="$(meta_of "${url}")"
-  mkdir -p "${obj%/*}" "${meta%/*}"
+  [ -d "${obj%/*}" ] && [ -d "${meta%/*}" ] || mkdir -p "${obj%/*}" "${meta%/*}"
   if [ "${gz}" = "1" ]; then
     gzip -c -n <"${src}" >"${obj}"
     # The SDK writes the current time into the gzip header (gzip_util.

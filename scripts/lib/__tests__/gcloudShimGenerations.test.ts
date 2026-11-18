@@ -17,8 +17,8 @@ const SHIM = path.join(
 )
 const WRITES = 200
 const WORKERS = 16
-// Forks one stamped `storage cp` may spawn (mkdir, cp, rm of the lock, grep, mv of the meta).
-const BUDGET = 5
+// Forks one stamped `storage cp` may spawn (cp, rm of the lock, mv of the meta).
+const BUDGET = 3
 
 let tmp: string
 let root: string
@@ -73,8 +73,8 @@ describe('gcloud shim next_gen under parallel writers (#2800)', () => {
   // forks while it polls is paid on top. Under two concurrent full suite runs
   // forks are slow and the 200 writes took 10.3 s against a 10 s limit (2.6 s
   // alone). Counting forks is the load-independent measure: a stamped upload
-  // spawns only what it must (the copy, the dirs, the final rename), and the
-  // counter itself reads and writes with shell builtins.
+  // spawns only what it must (the copy, the lock removal, the meta rename),
+  // and the counter and the meta rewrite use shell builtins.
   it('stamps a generation with a bounded number of forked commands', () => {
     const bin = path.join(tmp, 'bin')
     const log = path.join(tmp, 'spawns.log')
