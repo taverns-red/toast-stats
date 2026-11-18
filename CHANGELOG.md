@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.92.3](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.92.2...toast-stats-v2.92.3) (2026-11-18)
+
+
+### Bug Fixes
+
+* **copy:** rename Red Vote to RT Vote in visible text ([#2968](https://github.com/taverns-red/toast-stats/issues/2968)) ([#2969](https://github.com/taverns-red/toast-stats/issues/2969)) ([c9a0d2d](https://github.com/taverns-red/toast-stats/commit/c9a0d2d9858a4f147b7aed035510e65deec90ec7))
+
+
+### Documentation
+
+* cloud workers open PRs as drafts ([#2948](https://github.com/taverns-red/toast-stats/issues/2948)) ([#2949](https://github.com/taverns-red/toast-stats/issues/2949)) ([e410928](https://github.com/taverns-red/toast-stats/commit/e41092861bf41094f7bee64f7c08895609574c46))
+
+
+### Continuous Integration
+
+* **identity:** read-only identity smoke for the restore identity ([#2966](https://github.com/taverns-red/toast-stats/issues/2966)) ([#2967](https://github.com/taverns-red/toast-stats/issues/2967)) ([8a6c47c](https://github.com/taverns-red/toast-stats/commit/8a6c47ca9ad64a9ccbeda7fb451d90dea65c6347))
+* **pipeline:** data pipeline and maintenance jobs use the pipeline identity ([#2960](https://github.com/taverns-red/toast-stats/issues/2960)) ([#2961](https://github.com/taverns-red/toast-stats/issues/2961)) ([e2e7ff2](https://github.com/taverns-red/toast-stats/commit/e2e7ff232cdf17ea8855900ca6c83e1058eee5b0))
+* **preview:** deploy PR previews to the staging Firebase project ([#2956](https://github.com/taverns-red/toast-stats/issues/2956)) ([#2958](https://github.com/taverns-red/toast-stats/issues/2958)) ([216f1a9](https://github.com/taverns-red/toast-stats/commit/216f1a9abb535b83665cd283787c1bf70a1e4e98))
+* **restore:** data auto-restore execute uses the restore identity ([#2964](https://github.com/taverns-red/toast-stats/issues/2964)) ([#2965](https://github.com/taverns-red/toast-stats/issues/2965)) ([e9fdd15](https://github.com/taverns-red/toast-stats/commit/e9fdd151a3b65dca17cf4baa33ba9930c4d77cba))
+
 ## [2.92.2](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.92.1...toast-stats-v2.92.2) (2026-11-18)
 
 
