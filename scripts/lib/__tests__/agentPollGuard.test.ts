@@ -113,6 +113,9 @@ const blocked = [
   'x=$(cat <<A-B\nbody\nA-B )\ngh run watch 1\nA-B',
   'x=$(cat <<A-B\nbody\nA-B\r)\ngh run watch 1\nA-B',
   'x=$(cat <<-A-B\nbody\n\tA-B)\ngh run watch 1\nA-B',
+  // macOS bash 3.2 also ends the body at `DELIM;)`
+  'x=$(cat <<A-B\nbody\nA-B;)\ngh run watch 1\nA-B',
+  'x=$(cat <<EOF\nbody\nEOF;)\ngh run watch 1\nEOF',
   // #2918 security re-review: `<<` inside `$[ ]` and `${ }` is no heredoc
   'echo $[1<<y]\ngh run watch 1\ny]',
   'echo ${a:-<<x}\ngh run watch 1\nx}',
