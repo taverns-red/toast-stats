@@ -65,6 +65,32 @@ describe('resolveBuildCdnTarget (#2982)', () => {
     ).toBe('local-default')
   })
 
+  it('rejects a target that is not an absolute http(s) URL (#2987)', () => {
+    for (const CI of [undefined, 'true']) {
+      for (const bad of [
+        'cdn-staging.taverns.red',
+        '/v1',
+        'ftp://cdn.taverns.red',
+        'https://',
+        'not a url',
+      ]) {
+        expect(() =>
+          resolveBuildCdnTarget('x.ts', { CI, VITE_CDN_BASE_URL: bad }, PROD)
+        ).toThrow(/x\.ts.*VITE_CDN_BASE_URL.*http/)
+      }
+    }
+  })
+
+  it('accepts http and https targets (#2987)', () => {
+    expect(
+      resolveBuildCdnTarget(
+        'x.ts',
+        { VITE_CDN_BASE_URL: 'http://localhost:8080/' },
+        PROD
+      ).url
+    ).toBe('http://localhost:8080')
+  })
+
   it('refuses in CI with no target, naming the variable', () => {
     for (const CI of ['true', '1']) {
       expect(() =>
