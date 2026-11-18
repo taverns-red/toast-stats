@@ -235,7 +235,7 @@ describe('buildPromotionHeldBody', () => {
     ).toBe(true)
   })
 
-  it('caps oversized bodies under the GitHub 64KB issue limit with a truncation notice (#1168)', () => {
+  it('caps the value-gate reasons list at 40 with a "more" line (#1168, #2937)', () => {
     // A full-range re-derive: hundreds of reasons, every district affected —
     // the raw body would exceed 65,536 chars and crash gh issue create.
     const r = evaluatePromotion({
