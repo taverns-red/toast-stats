@@ -226,9 +226,9 @@ describe('videos-publish.yml (#2310)', () => {
     expect(raw).not.toMatch(
       /ACCESS_TOKEN=.*GITHUB_ENV|>> "\$GITHUB_ENV".*TOKEN/
     )
-    expect(raw).not.toMatch(
-      /echo[^\n]*\$\{?ACCESS_TOKEN\}?[^\n]*(?<!GITHUB_ENV")$/m
-    )
+    // The only line that prints the token is the mask command.
+    for (const l of raw.split('\n').filter(l => /echo.*ACCESS_TOKEN/.test(l)))
+      expect(l).toContain('::add-mask::')
     const authAt = steps.findIndex(s =>
       /google-github-actions\/auth/.test(s.uses ?? '')
     )

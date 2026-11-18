@@ -4,8 +4,8 @@
 # - target=staging: builds the self-hosted world basemap (a Protomaps v4
 #   PMTiles extract, z0..maxzoom) on a GitHub runner and uploads it to the
 #   STAGING data bucket.
-# - target=prod-copy: copies that exact object to the prod bucket, server
-#   side (no re-upload).
+# - target=prod-copy: copies that exact object to the prod bucket, streamed
+#   from staging through the runner (scripts/gcs-upload.ts copy, #2972).
 # - dry_run (default true): sizes the archive with the CLI's --dry-run and
 #   checks the disk, then stops. Nothing is downloaded and nothing is written.
 #
@@ -19,9 +19,12 @@
 # scripts/lib/__tests__/basemapWorkflow.test.ts guards them:
 # - No gzip (`-Z`/`--gzip-*`). GCS would ignore Range and serve the whole
 #   multi-GB object on every request (decompressive transcoding).
-# - No parallel composite upload. Cloud CDN needs a strong validator (MD5 ETag).
-# - `--no-clobber`. Objects are immutable and dated, and an overwrite would
-#   mix two builds in cached CDN chunks. A refresh is a new build date.
+# - One plain object per upload (no composite). Cloud CDN needs a strong
+#   validator (MD5 ETag).
+# - Create-only. scripts/gcs-upload.ts inserts with ifGenerationMatch=0, so an
+#   existing object is never replaced (#2972). Objects are immutable and
+#   dated, and an overwrite would mix two builds in cached CDN chunks. A
+#   refresh is a new build date.
 # - application/octet-stream plus `no-transform`. Cloud CDN dynamic
 #   compression (backend compressionMode AUTOMATIC) never touches the archive.
 #
@@ -78,7 +81,6 @@ permissions:
 env:
   GCS_BUCKET: 'toast-stats-data-staging'
   GCS_BUCKET_PRODUCTION: 'toast-stats-data-ca'
-  CLOUDSDK_STORAGE_PARALLEL_COMPOSITE_UPLOAD_ENABLED: 'False'
   PMTILES_VERSION: '1.31.2'
   # sha256 of go-pmtiles_1.31.2_Linux_x86_64.tar.gz (GitHub release asset),
   # computed 2026-10-12. Bump both together.
@@ -159,11 +161,16 @@ jobs:
             /opt/hostedtoolcache/CodeQL /usr/local/share/boost
           df -h
 
-      - name: Set up Node (runs the range proxy)
-        if: inputs.target == 'staging'
+      - name: Set up Node (range proxy and upload helper)
         uses: actions/setup-node@v7
         with:
           node-version-file: '.nvmrc'
+
+      - name: Install dependencies
+        # --ignore-scripts: no package lifecycle script may run while the job
+        # holds the OIDC request token. The upload helper needs only tsx,
+        # whose esbuild binary arrives through optionalDependencies.
+        run: npm ci --ignore-scripts
 
       - name: Install the pmtiles CLI (pinned, checksum-verified)
         if: inputs.target == 'staging'
@@ -178,11 +185,24 @@ jobs:
 
       - name: Refuse to overwrite an existing staging object
         if: inputs.target == 'staging'
+        # The helper reads the job's token from ACCESS_TOKEN. Each step mints and
+        # masks its own (a token lasts an hour, this job runs up to four) and
+        # none is written to a file.
+        # Exit codes of `gcs-upload.ts exists`: 0 not found, 10 found, anything
+        # else is an error (a 403 must never read as "not found").
         run: |
-          if gcloud storage objects describe "gs://${GCS_BUCKET}/${OBJ}" > /dev/null 2>&1; then
-            echo "::error::gs://${GCS_BUCKET}/${OBJ} already exists; objects are immutable, use a new build_date"
-            exit 1
-          fi
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          echo "::add-mask::${ACCESS_TOKEN}"
+          export ACCESS_TOKEN
+          RC=0
+          npx tsx scripts/gcs-upload.ts exists --bucket "$GCS_BUCKET" --object "$OBJ" || RC=$?
+          case "$RC" in
+            0) ;;
+            10)
+              echo "::error::gs://${GCS_BUCKET}/${OBJ} already exists; objects are immutable, use a new build_date"
+              exit 1 ;;
+            *) echo "::error::could not check gs://${GCS_BUCKET}/${OBJ} (exit ${RC})"; exit 1 ;;
+          esac
 
       - name: Pick a build volume with enough space
         if: inputs.target == 'staging'
@@ -244,10 +264,13 @@ jobs:
       - name: Upload to staging
         if: inputs.target == 'staging' && !inputs.dry_run
         run: |
-          gcloud storage cp "$BUILD_DIR/$NAME" "gs://${GCS_BUCKET}/${OBJ}" \
-            --no-clobber \
-            --content-type=application/octet-stream \
-            --cache-control="public, max-age=86400, no-transform"
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          echo "::add-mask::${ACCESS_TOKEN}"
+          export ACCESS_TOKEN
+          npx tsx scripts/gcs-upload.ts put --bucket "$GCS_BUCKET" --object "$OBJ" --file "$BUILD_DIR/$NAME" \
+            --content-type application/octet-stream \
+            --cache-control "public, max-age=86400, no-transform" \
+            --on-exists fail
 
       - name: Verify the staging object and its range response
         if: inputs.target == 'staging' && !inputs.dry_run
@@ -302,13 +325,18 @@ jobs:
             echo "### Dry run: would copy gs://${GCS_BUCKET}/${OBJ} to prod" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Copy the staging object to prod (server side)
+      - name: Copy the staging object to prod (read from staging)
         if: inputs.target == 'prod-copy' && !inputs.dry_run
         run: |
-          gcloud storage cp "gs://${GCS_BUCKET}/${OBJ}" "gs://${GCS_BUCKET_PRODUCTION}/${OBJ}" \
-            --no-clobber \
-            --content-type=application/octet-stream \
-            --cache-control="public, max-age=86400, no-transform"
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          echo "::add-mask::${ACCESS_TOKEN}"
+          export ACCESS_TOKEN
+          # --on-exists skip: a re-run after a verify failure does not rewrite
+          # prod; the verify step below still compares md5 with staging.
+          npx tsx scripts/gcs-upload.ts copy --from-bucket "$GCS_BUCKET" --bucket "$GCS_BUCKET_PRODUCTION" --object "$OBJ" \
+            --content-type application/octet-stream \
+            --cache-control "public, max-age=86400, no-transform" \
+            --on-exists skip
 
       - name: Verify the prod object and the CDN range response
         if: inputs.target == 'prod-copy' && !inputs.dry_run

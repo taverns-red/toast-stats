@@ -195,20 +195,16 @@ jobs:
       - name: Log Cloud SDK version
         run: gcloud version
 
-      # The helper reads the job's token from ACCESS_TOKEN. Masked first; it
-      # goes to the environment file only, never to a log.
-      - name: Get an access token for the upload helper
-        run: |
-          set -euo pipefail
-          ACCESS_TOKEN=$(gcloud auth print-access-token)
-          echo "::add-mask::${ACCESS_TOKEN}"
-          echo "ACCESS_TOKEN=${ACCESS_TOKEN}" >> "$GITHUB_ENV"
-
+      # The helper reads the job's token from ACCESS_TOKEN. Each step mints and
+      # masks its own (a token lasts an hour) and none is written to a file.
       # Exit codes of `gcs-upload.ts exists`: 0 not found, 10 found, anything
       # else is an error (a 403 must never read as "not found").
       - name: Refuse to overwrite existing objects
         run: |
           set -euo pipefail
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          echo "::add-mask::${ACCESS_TOKEN}"
+          export ACCESS_TOKEN
           SHAPE='^videos/[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+([.-][a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*-(desktop|mobile)\.mp4$'
           EXISTS=0
           while IFS=$'\t' read -r _ OBJ; do
@@ -243,6 +239,9 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           set -euo pipefail
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          echo "::add-mask::${ACCESS_TOKEN}"
+          export ACCESS_TOKEN
           SHAPE='^videos/[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+([.-][a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*-(desktop|mobile)\.mp4$'
           while IFS=$'\t' read -r FILE OBJ; do
             [[ "$OBJ" =~ $SHAPE ]] || { echo "::error::refusing '${OBJ}': not a video object"; exit 1; }
@@ -256,6 +255,9 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: |
           set -euo pipefail
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          echo "::add-mask::${ACCESS_TOKEN}"
+          export ACCESS_TOKEN
           SHAPE='^videos/[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+([.-][a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*-(desktop|mobile)\.mp4$'
           while IFS=$'\t' read -r _ OBJ; do
             [[ "$OBJ" =~ $SHAPE ]] || { echo "::error::refusing '${OBJ}': not a video object"; exit 1; }
