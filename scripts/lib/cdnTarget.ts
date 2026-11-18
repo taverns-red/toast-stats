@@ -120,3 +120,11 @@ export function resolveBuildCdnTarget(
   }
   return { url: prodUrl, source: 'local-default' }
 }
+
+/** Red stub (#3000): returns the raw value, as the bundle did. */
+export function bundleCdnBaseUrl(
+  value: string | undefined,
+  prodUrl: string
+): string {
+  return value || prodUrl
+}

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  bundleCdnBaseUrl,
   MissingCdnTargetError,
   requireCdnTarget,
   resolveBuildCdnTarget,
@@ -111,5 +112,26 @@ describe('resolveBuildCdnTarget (#2982)', () => {
         resolveBuildCdnTarget('x.ts', { CI, VITE_CDN_BASE_URL: ' ' }, PROD)
       ).toThrow(/x\.ts.*VITE_CDN_BASE_URL/)
     }
+  })
+})
+
+describe('bundleCdnBaseUrl (#3000)', () => {
+  // The value vite.config.ts bakes into the bundle. The plugin logs the same
+  // value, so the log can no longer disagree with the bundle.
+  const PROD = 'https://cdn.taverns.red'
+
+  it('is the prod URL when nothing is set', () => {
+    expect(bundleCdnBaseUrl(undefined, PROD)).toBe(PROD)
+    expect(bundleCdnBaseUrl('', PROD)).toBe(PROD)
+  })
+
+  it('treats a whitespace-only value as unset, not as a URL', () => {
+    expect(bundleCdnBaseUrl('   ', PROD)).toBe(PROD)
+  })
+
+  it('trims the value and its trailing slashes', () => {
+    expect(bundleCdnBaseUrl(' https://cdn-staging.taverns.red/ ', PROD)).toBe(
+      'https://cdn-staging.taverns.red'
+    )
   })
 })

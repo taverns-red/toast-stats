@@ -22,7 +22,8 @@ export interface CdnTargetPlugin {
 
 export function cdnTargetPlugin(
   env: Record<string, string | undefined>,
-  prodUrl: string
+  prodUrl: string,
+  _bundleUrl?: string
 ): CdnTargetPlugin {
   return {
     name: 'cdn-target-check',
