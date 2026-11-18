@@ -24,4 +24,10 @@ describe('requireCdnTarget (#2974)', () => {
       requireCdnTarget('x.ts', { CDN_BASE_URL: 'https://a' }, 'https://b')
     ).toBe('https://b')
   })
+
+  it('treats an empty or blank flag as unset, so the env value is used', () => {
+    const env = { CDN_BASE_URL: 'https://a' }
+    expect(requireCdnTarget('x.ts', env, '')).toBe('https://a')
+    expect(requireCdnTarget('x.ts', env, '  ')).toBe('https://a')
+  })
 })

@@ -19,6 +19,8 @@ function run(script: string, args: string[], env: Record<string, string>) {
   const base: NodeJS.ProcessEnv = { ...process.env }
   delete base['CDN_BASE_URL']
   delete base['GITHUB_OUTPUT']
+  delete base['BASE_URL']
+  delete base['MANIFEST_URL']
   return spawnSync(
     'npx',
     ['tsx', path.join(REPO, 'scripts', script), ...args],
@@ -78,6 +80,30 @@ describe('CDN scripts refuse to run without an explicit target (#2974)', () => {
         {}
       )
       expect(r.stderr).not.toMatch(/requires an explicit CDN target/)
+    },
+    SPAWN_TIMEOUT
+  )
+
+  it(
+    'hosting-smoke.ts exits 2 without BASE_URL, with a message naming it',
+    () => {
+      const r = run('hosting-smoke.ts', [], {
+        CDN_BASE_URL: UNREACHABLE,
+        SMOKE_WINDOW_SECONDS: '1',
+        SMOKE_RENDER: 'off',
+      })
+      expect(r.status).toBe(2)
+      expect(r.stderr).toMatch(/BASE_URL/)
+    },
+    SPAWN_TIMEOUT
+  )
+
+  it(
+    'check-pipeline-freshness.ts exits 2 without MANIFEST_URL, with a message naming it',
+    () => {
+      const r = run('check-pipeline-freshness.ts', [], {})
+      expect(r.status).toBe(2)
+      expect(r.stderr).toMatch(/MANIFEST_URL/)
     },
     SPAWN_TIMEOUT
   )
