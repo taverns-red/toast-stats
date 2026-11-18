@@ -58,6 +58,8 @@ export interface UploadOptions {
   tokenMaxAgeMs?: number
   /** Clock for token age; replaceable so a test need not wait. */
   now?: () => number
+  /** Where mint lines go (#2991). Defaults to console.error (R4). */
+  log?: (line: string) => void
   fetch: typeof fetch
   /** Bytes per PUT. Must be a multiple of 256 KiB in production. */
   chunkSize?: number
@@ -110,31 +112,53 @@ interface Auth {
   header: () => Promise<string>
   /** Mints a new token; false when there is no provider to ask. */
   renew: () => Promise<boolean>
+  /** Logs total mints and real token changes; a no-op without a provider. */
+  finish: () => void
 }
 
 const makeAuth = (o: UploadOptions): Auth => {
   const now = o.now ?? Date.now
+  const log = o.log ?? ((line: string) => console.error(line)) // R4
   const maxAge = o.tokenMaxAgeMs ?? DEFAULT_TOKEN_MAX_AGE_MS
   let token = o.token
-  let mintedAt = now()
-  const mint = async (): Promise<void> => {
+  const startedAt = now()
+  let mintedAt = startedAt
+  let mints = 0
+  let changes = 0
+  const mint = async (reason: 'age' | '401'): Promise<void> => {
+    let fresh: string
     try {
-      token = await o.tokenProvider!()
+      fresh = await o.tokenProvider!()
     } catch {
       // The provider's message is not copied: it could carry a credential.
       throw new FatalReadError('could not mint a fresh access token')
     }
+    // Compared in memory only. A log line says whether the token changed,
+    // never anything about its text, length or a hash of it (#2991).
+    const changed = fresh !== token
+    token = fresh
     mintedAt = now()
+    mints++
+    if (changed) changes++
+    const elapsed = Math.round((mintedAt - startedAt) / 1000)
+    log(
+      `token mint ${mints}: +${elapsed}s, reason: ${reason}, ` +
+        `changed: ${changed ? 'yes' : 'no'}`
+    )
   }
   return {
     header: async () => {
-      if (o.tokenProvider && now() - mintedAt >= maxAge) await mint()
+      if (o.tokenProvider && now() - mintedAt >= maxAge) await mint('age')
       return `Bearer ${token}`
     },
     renew: async () => {
       if (!o.tokenProvider) return false
-      await mint()
+      await mint('401')
       return true
+    },
+    finish: () => {
+      if (o.tokenProvider)
+        log(`token mints: ${mints} total, ${changes} changed`)
     },
   }
 }
@@ -267,8 +291,16 @@ const gcsSource = async (
 export const uploadObject = async (o: UploadOptions): Promise<UploadResult> => {
   if (o.onExists !== 'skip' && o.onExists !== 'fail')
     throw new Error("onExists must be 'skip' or 'fail'")
-  const target = `gs://${o.bucket}/${o.object}`
   const auth = makeAuth(o)
+  try {
+    return await upload(o, auth)
+  } finally {
+    auth.finish() // also on failure: a failed copy's mints are evidence too
+  }
+}
+
+const upload = async (o: UploadOptions, auth: Auth): Promise<UploadResult> => {
+  const target = `gs://${o.bucket}/${o.object}`
   const exists = async (src: PreparedSource): Promise<UploadResult> => {
     if (o.onExists !== 'skip')
       throw new ObjectExistsError(`${target} already exists`)
