@@ -50,6 +50,27 @@ The check fails closed on anything else: an app object, a missing field, or a va
 
 This closes the cloud path. A local agent session using Ron's own `gh` token still records `null`; the agent GitHub App (ops#242) closes that path by giving local agents their own app identity.
 
+### If GitHub stops sending `performed_via_github_app` (#2529)
+
+The REST schema for issue events marks the field required and nullable, but the [issue event types page](https://docs.github.com/en/rest/using-the-rest-api/issue-event-types?apiVersion=2022-11-28#labeled) doesn't list it for `labeled`. If GitHub drops the field, the check reads it as missing and fails closed, so every override fails, including Ron's own.
+
+What it looks like:
+
+- A breaking-change PR with `db-breaking-approved` applied by Ron in the web UI still fails the compat check.
+- The job summary says the label "was last applied by rservant with no `performed_via_github_app` field, not by rservant directly" (`viaApp` in `scripts/lib/cdnJsonCompat.ts`). A real app refusal reads "via the <slug> GitHub app" instead.
+- Other PRs with the label applied the same way fail too, so it isn't one bad event.
+
+How to tell it from a real refusal: fetch the latest `labeled` event for the label (`gh api repos/taverns-red/toast-stats/issues/<pr>/events --paginate`) and look at that event's keys. If `actor.login` is `rservant` and the `performed_via_github_app` key is absent, GitHub changed the payload. If the key is present with an app object, the label was applied by an app, and the refusal is correct.
+
+How Ron unblocks it:
+
+1. Don't remove the guard or apply the label from an agent session. Neither is a fix.
+2. Open an issue that names the failing PR and pastes the event JSON, so the change is on record.
+3. Changing what the check accepts (`verifyOverride` in `scripts/lib/cdnJsonCompat.ts`) is a security-model change, so it goes through Ron and the COO, never an agent on its own. Until it lands, the breaking change waits.
+4. A PR that can't wait can have its finding pinned in the grandfather list below. That list works by content hash and needs no label, but every entry needs Ron's review.
+
+Nothing watches for this today. A weekly canary could read one known web-UI `labeled` event and fail when the key is gone. It is not built (proposed in the #2529 PR).
+
 Only Ron applies it, in the GitHub web UI, after reading the summary. Applying it from a cloud session, or asking one to, doesn't count. Adding or removing the label re-runs the check. If anyone else removes the label and adds it back, the latest `labeled` event is theirs, and the check fails until Ron applies it again. Each new push re-runs the check and re-verifies the label. The label doesn't carry over to another PR.
 
 The label must exist in the repo before Ron can apply it (Settings → Labels, or `gh api repos/taverns-red/toast-stats/labels -f name=db-breaking-approved -f color=B60205 -f description='ADR 0019: rservant-approved breaking CDN JSON change'`).
