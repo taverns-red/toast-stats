@@ -97,20 +97,25 @@ async function load(page: Page, theme: string): Promise<void> {
 }
 
 for (const theme of THEMES) {
-  test(`footer privacy button lines up with the links — 1280px ${theme}`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 1280, height: 900 })
-    await load(page, theme)
-    await expect(
-      page.locator('.app-shell-footer button.consent-reopen')
-    ).toBeVisible({ timeout: 20_000 })
-    expect(
-      await page.evaluate(() => matchMedia('(pointer: fine)').matches),
-      'this test needs a fine pointer'
-    ).toBe(true)
-    expectAligned(await measure(page, '.app-shell-footer'), `1280/${theme}`)
-  })
+  for (const width of [768, 1280]) {
+    test(`footer privacy button lines up with the links — ${width}px ${theme}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 })
+      await load(page, theme)
+      await expect(
+        page.locator('.app-shell-footer button.consent-reopen')
+      ).toBeVisible({ timeout: 20_000 })
+      expect(
+        await page.evaluate(() => matchMedia('(pointer: fine)').matches),
+        'this test needs a fine pointer'
+      ).toBe(true)
+      expectAligned(
+        await measure(page, '.app-shell-footer'),
+        `${width}/${theme}`
+      )
+    })
+  }
 
   for (const width of [375, 700]) {
     test(`About menu privacy button lines up with the links — ${width}px ${theme}`, async ({
