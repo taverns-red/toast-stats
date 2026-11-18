@@ -92,7 +92,7 @@ export type BuildCdnSource = 'env' | 'local-default'
 /**
  * CDN target for the frontend build (#2982): `VITE_CDN_BASE_URL`.
  *
- * A CI build (`CI=true`) must name its target: a staging or preview build
+ * A CI build (any `CI` value but empty, `false` or `0`) must name its target: a staging or preview build
  * that left it out would write OG stubs from prod data. A local
  * `npm run build:frontend` keeps working for contributors: with no target
  * it falls back to the prod CDN, and `source: 'local-default'` lets the
@@ -108,7 +108,9 @@ export function resolveBuildCdnTarget(
     assertHttpUrl(script, raw)
     return { url: raw.replace(/\/+$/, ''), source: 'env' }
   }
-  if (/^(true|1)$/i.test((env['CI'] ?? '').trim())) {
+  // Fail closed: any non-empty CI value counts, except an explicit off.
+  const ci = (env['CI'] ?? '').trim().toLowerCase()
+  if (ci !== '' && ci !== 'false' && ci !== '0') {
     throw new Error(
       `${script} requires an explicit CDN target in CI: set ` +
         `VITE_CDN_BASE_URL on the build step (staging for previews, ` +
