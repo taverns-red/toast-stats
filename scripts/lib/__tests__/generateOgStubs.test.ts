@@ -88,6 +88,19 @@ describe('generate-og-stubs', () => {
     expect(fs.existsSync(path.join(dist, 'district'))).toBe(false)
   })
 
+  it('a malformed target exits 2 in CI and locally, writing no stubs (#2987)', () => {
+    for (const CI of ['true', '']) {
+      const r = run({
+        CI,
+        OG_STUBS_RANKINGS_FILE: RANKINGS,
+        VITE_CDN_BASE_URL: 'cdn-staging.taverns.red',
+      })
+      expect(r.status).toBe(2)
+      expect(r.stderr).toMatch(/absolute http\(s\) URL/)
+      expect(fs.existsSync(path.join(dist, 'district'))).toBe(false)
+    }
+  })
+
   it('a CI build with an explicit target still works (#2982)', () => {
     const r = run({
       CI: 'true',

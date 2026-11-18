@@ -91,6 +91,20 @@ describe('resolveBuildCdnTarget (#2982)', () => {
     ).toBe('http://localhost:8080')
   })
 
+  it('treats any non-empty CI except false/0 as CI (#2987)', () => {
+    for (const CI of ['true', '1', 'TRUE', ' yes ', 'github', 'on']) {
+      expect(() =>
+        resolveBuildCdnTarget('x.ts', { CI, VITE_CDN_BASE_URL: '' }, PROD)
+      ).toThrow(/VITE_CDN_BASE_URL/)
+    }
+    for (const CI of ['false', '0', ' False ', '', '  ', undefined]) {
+      expect(
+        resolveBuildCdnTarget('x.ts', { CI, VITE_CDN_BASE_URL: '' }, PROD)
+          .source
+      ).toBe('local-default')
+    }
+  })
+
   it('refuses in CI with no target, naming the variable', () => {
     for (const CI of ['true', '1']) {
       expect(() =>
