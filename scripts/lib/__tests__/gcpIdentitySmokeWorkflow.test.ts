@@ -102,6 +102,14 @@ describe('gcp-identity-smoke workflow (#2966)', () => {
     expect(options.every(o => o in IDENTITY_EXPECTATIONS)).toBe(true)
   })
 
+  it('installs with --ignore-scripts so no package script runs beside the OIDC token', () => {
+    const installs = wf.jobs['restore']!.steps.map(s => s.run ?? '').filter(r =>
+      /\bnpm (ci|install)\b/.test(r)
+    )
+    expect(installs.length).toBeGreaterThan(0)
+    for (const r of installs) expect(r).toMatch(/--ignore-scripts/)
+  })
+
   it('does not write: no gcloud, gh or curl mutation in a run step', () => {
     const runs = wf.jobs['restore']!.steps.map(s => s.run ?? '').join('\n')
     expect(runs).not.toMatch(
