@@ -13,9 +13,9 @@ import type {
   TimeSeriesIndexMetadata,
 } from '@taverns-red/shared-contracts'
 import { fetchFromCdn } from './cdn'
+import { cdnBaseUrlFromEnv } from '../config/cdnBase'
 
-const CDN_BASE_URL =
-  import.meta.env['VITE_CDN_BASE_URL'] || 'https://cdn.taverns.red'
+const CDN_BASE_URL = cdnBaseUrlFromEnv()
 
 /**
  * Construct a CDN URL for time-series index metadata.

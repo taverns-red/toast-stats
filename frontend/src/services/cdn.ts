@@ -73,12 +73,12 @@ import {
 } from '../types/snapshotDate'
 
 import { recordCdnResponse } from './cdnCacheTracker'
+import { cdnBaseUrlFromEnv } from '../config/cdnBase'
 
 // CDN base URL — set via VITE_CDN_BASE_URL at build time (#316)
 // Production build: https://cdn.taverns.red (default)
 // PR preview build: https://cdn-staging.taverns.red (staging bucket via CDN, #1995)
-const CDN_BASE_URL: string =
-  import.meta.env['VITE_CDN_BASE_URL'] || 'https://cdn.taverns.red'
+const CDN_BASE_URL: string = cdnBaseUrlFromEnv()
 
 function cdnBaseUrl(): string {
   return CDN_BASE_URL
