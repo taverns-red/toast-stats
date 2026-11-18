@@ -1523,3 +1523,94 @@ describe('ciWait ignores rows of a run a newer run replaced (#2935)', () => {
     expect(r.summary.cancelled).toBe(1)
   })
 })
+
+describe('ciWait over GraphQL retires a superseded row only for an eligible newer run (#2935)', () => {
+  const URL_BASE = 'https://github.com/taverns-red/toast-stats/actions/runs'
+  const UNEXPANDED = 'Smoke (${{ matrix.shard }})'
+  const row = (run: number, name: string, over: Partial<PrCheck> = {}) =>
+    check({
+      name,
+      workflow: 'PR Preview',
+      link: `${URL_BASE}/${run}/job/${run}1`,
+      ...over,
+    })
+  const rows = [
+    row(100, UNEXPANDED, { state: 'CANCELLED', bucket: 'cancel' }),
+    row(200, 'Verdict'),
+  ]
+  const view = ok(
+    JSON.stringify({
+      mergeStateStatus: 'CLEAN',
+      headRefOid: 'abc',
+      state: 'OPEN',
+      isDraft: false,
+    })
+  )
+  const wf = (id: number, over: Record<string, unknown> = {}) => ({
+    id,
+    name: 'PR Preview',
+    status: 'completed',
+    event: 'pull_request',
+    pull_requests: [{ number: 2933 }],
+    html_url: `${URL_BASE}/${id}`,
+    ...over,
+  })
+  async function poll(runsList: unknown[]) {
+    const runner = fakeRunner([
+      [/^gh pr checks 2933 /, ok(JSON.stringify(rows))],
+      [/^gh pr view 2933 /, view],
+      [
+        /actions\/runs\?head_sha=abc/,
+        ok(
+          JSON.stringify({
+            total_count: runsList.length,
+            workflow_runs: runsList,
+          })
+        ),
+      ],
+    ])
+    const r = await ciWait(2933, {
+      repo: REPO,
+      runner,
+      once: true,
+      ...fakeClock(),
+    })
+    return { r, runner }
+  }
+
+  it('PASSes when the newer run is a pull_request run for this PR (the #2933 shape)', async () => {
+    const { r, runner } = await poll([wf(100), wf(200)])
+    expect(r.outcome).toBe('pass')
+    expect(r.summary.cancelled).toBe(0)
+    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(1)
+  })
+
+  it.each(['push', 'workflow_dispatch'])(
+    'FAILs when the newer run is a %s run, not this PR',
+    async event => {
+      const { r } = await poll([wf(100), wf(200, { event, pull_requests: [] })])
+      expect(r.outcome).toBe('fail')
+      expect(r.summary.cancelled).toBe(1)
+    }
+  )
+
+  it('FAILs when the newer run is a pull_request run for a different PR', async () => {
+    const { r } = await poll([
+      wf(100),
+      wf(200, { pull_requests: [{ number: 9999 }] }),
+    ])
+    expect(r.outcome).toBe('fail')
+    expect(r.summary.cancelled).toBe(1)
+  })
+
+  it('reads no extra data when no cancelled row could be retired', async () => {
+    const runner = fakeRunner([
+      [/^gh pr checks 2933 /, ok(JSON.stringify([row(200, 'Verdict')]))],
+      [/^gh pr view 2933 /, view],
+      NO_RUNS,
+    ])
+    await ciWait(2933, { repo: REPO, runner, once: true, ...fakeClock() })
+    expect(runner.calls.filter(c => /actions\/runs/.test(c))).toHaveLength(1)
+    expect(runner.calls.filter(c => /^gh pr view/.test(c))).toHaveLength(2)
+  })
+})
