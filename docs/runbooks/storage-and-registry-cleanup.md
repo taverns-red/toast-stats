@@ -111,12 +111,13 @@ Checked with `git grep` over `frontend/src`, `packages/*/src`, `scripts/` and
 - `snapshots/`, `v1/`, `time-series/` and `config/` are promoted to prod
   (`PROMOTED_PREFIXES`) and read by the frontend.
 - `derived/` is read by the frontend (`cdn.ts`, the education rollup).
-- `metrics/deploys/` holds old deploy records. It's legacy since #2984: the
+- `metrics/deploys/` held old deploy records. It was legacy since #2984: the
   production deploy identity has no bucket access, so `deploy.yml` now writes
   the record to the run summary and a 90-day `dora-deploy-<run id>` artifact.
-  Nothing writes or reads the prefix (the taverns-red DORA page was retired
-  on 2026-11-04, taverns-red#130). It's under 0.01 GB, so it's safe to sweep
-  in a future cleanup but worth nothing today.
+  Nothing wrote or read the prefix (the taverns-red DORA page was retired
+  on 2026-11-04, taverns-red#130). On 2026-11-18 the 355 objects were archived
+  to the private backups bucket and deleted from the prod bucket (#2872). The
+  prefix is empty.
 - `raw-csv/` is the rebuild source: `data-pipeline.yml` discovers rebuild dates
   from it. The ca copy (0.78 GB) is a cross-region copy of raw history,
   and prod-bucket scripts can still read it, so it's kept.
