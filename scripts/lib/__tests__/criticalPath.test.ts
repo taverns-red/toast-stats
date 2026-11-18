@@ -7,6 +7,7 @@ import {
   htmlCriticalRoots,
   ROUTE_ONLY_CHUNK_PREFIXES,
   routeOnlyChunksOnChartlessRoutes,
+  standaloneChunks,
   staticImports,
 } from '../criticalPath'
 
@@ -136,5 +137,20 @@ describe('chartless routes (#1830)', () => {
     expect(
       routeOnlyChunksOnChartlessRoutes(names, readRoute, ['GonePage-'])
     ).toEqual({ violations: [], missing: ['GonePage-'] })
+  })
+})
+
+describe('standalone config chunks (#3000)', () => {
+  // #2999 put the prod CDN constant in config/cdnBase.ts, which rolldown split
+  // into its own 0.17 kB chunk with a modulepreload in index.html: one more
+  // request on every route's critical path for one string.
+  it('flags a cdnBase chunk of its own', () => {
+    expect(
+      standaloneChunks(['cdnBase-Dd_LbuI8.js', 'cdn-DPFnJgvd.js', 'index-a.js'])
+    ).toEqual(['cdnBase-Dd_LbuI8.js'])
+  })
+
+  it('passes a build where cdnBase is folded into another chunk', () => {
+    expect(standaloneChunks(['cdn-DPFnJgvd.js', 'index-a.js'])).toEqual([])
   })
 })
