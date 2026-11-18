@@ -180,6 +180,51 @@ export function gaRanThisPage(): boolean {
   return gaHook()?.ran?.() === true
 }
 
+/* Other open tabs (#2919). Cookies fire no event, so a tab that lowers the
+   choice says so on a BroadcastChannel and its siblings apply the same
+   guard-and-clear steps. Downgrades only: an upgrade takes effect on the next
+   load, as in the same-page case. Where BroadcastChannel is missing, nothing
+   changes. */
+const SYNC_CHANNEL = 'rt-consent'
+let syncChannel: BroadcastChannel | null = null
+
+function onRemoteDowngrade(data: unknown): void {
+  const level = (data as { level?: unknown } | null)?.level
+  if (level !== 'minimal' && level !== 'none') return
+  // The cookie is the truth: ignore a stale signal after a later upgrade.
+  if (getConsent() === 'all') return
+  if (gaRanThisPage()) {
+    try {
+      installGaTransportGuard()
+    } catch {
+      // The guard is a safety net: the opt-out below still applies.
+    }
+  }
+  gaHook()?.disable()
+  clearGaCookies()
+  publish({ ...state, level })
+}
+
+function openSyncChannel(): void {
+  try {
+    if (typeof BroadcastChannel !== 'function') return
+    syncChannel = new BroadcastChannel(SYNC_CHANNEL)
+    syncChannel.addEventListener('message', e => onRemoteDowngrade(e.data))
+  } catch {
+    syncChannel = null
+  }
+}
+
+function announceDowngrade(level: ConsentLevel): void {
+  try {
+    syncChannel?.postMessage({ level })
+  } catch {
+    // best effort: this tab has already applied the choice
+  }
+}
+
+openSyncChannel()
+
 /** Record a choice and apply it at once. */
 export function setConsent(level: ConsentLevel): void {
   // A downgrade from a page where GA ran: gtag.js may hold hits it will send
@@ -211,4 +256,6 @@ export function setConsent(level: ConsentLevel): void {
   if (level === 'none') removeAllSavedPreferencesToSession()
   else promoteSessionPreferencesToLocal()
   publish({ level, settingsOpen: false })
+  // Last, so the cookie the other tabs check is already written.
+  if (level !== 'all') announceDowngrade(level)
 }
