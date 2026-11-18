@@ -67,7 +67,10 @@ const cont = (upTo: number): Response =>
     status: 308,
     headers: upTo >= 0 ? { Range: `bytes=0-${upTo}` } : {},
   })
-const done = (): Response => new Response('{}', { status: 200 })
+// base64 md5 of BYTES ('hello-bytes')
+const MD5 = 'cmRXJ1v0KW2eSVzGExeIzw=='
+const done = (): Response =>
+  new Response(`{"md5Hash":"${MD5}"}`, { status: 200 })
 
 const opts = (over: Partial<UploadOptions>): UploadOptions => ({
   bucket: 'b',
@@ -163,26 +166,24 @@ describe('chunked resumable upload (#2972)', () => {
     )
   })
 
-  it('chunks a storage source across arbitrary response pieces', async () => {
+  it('chunks a storage source with one ranged GET per chunk', async () => {
     const puts: Put[] = []
-    const fetchFn = vi.fn(async (_u: string, init: RequestInit) => {
+    const fetchFn = vi.fn(async (u: string, init: RequestInit) => {
       if (init.method === 'POST')
         return new Response('{}', {
           status: 200,
           headers: { Location: SESSION },
         })
       if (init.method === 'GET') {
-        const enc = new TextEncoder()
-        const body = new ReadableStream<Uint8Array>({
-          start(c) {
-            for (const piece of ['hel', 'lo-b', 'y', 'tes'])
-              c.enqueue(enc.encode(piece))
-            c.close()
-          },
-        })
-        return new Response(body, {
-          status: 200,
-          headers: { 'Content-Length': '11' },
+        if (!u.includes('alt=media'))
+          return new Response(`{"size":"11","md5Hash":"${MD5}"}`, {
+            status: 200,
+          })
+        const r = /^bytes=(\d+)-(\d+)$/.exec(
+          (init.headers as Record<string, string>)['Range']!
+        )!
+        return new Response(BYTES.slice(Number(r[1]), Number(r[2]) + 1), {
+          status: 206,
         })
       }
       const h = init.headers as Record<string, string>

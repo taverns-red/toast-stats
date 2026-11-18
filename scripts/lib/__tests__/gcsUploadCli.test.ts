@@ -8,6 +8,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runUploadCli } from '../gcsUploadCli'
 
+// base64 md5 of 'abc', the bytes of the test file and of the fake source
+const ABC_MD5 = 'kAFQmDzST7DWlj99KOF/cg=='
 const dir = mkdtempSync(join(tmpdir(), 'gcs-cli-'))
 const file = join(dir, 'a.bin')
 writeFileSync(file, 'abc')
@@ -19,7 +21,7 @@ const ok = (): typeof fetch =>
           status: 200,
           headers: { Location: 'https://s/x' },
         })
-      : new Response('{}', { status: 200 })
+      : new Response(`{"md5Hash":"${ABC_MD5}"}`, { status: 200 })
   ) as unknown as typeof fetch
 
 const run = (argv: string[], fetchFn: typeof fetch, token = 'tok') => {
@@ -86,18 +88,19 @@ describe('gcs-upload CLI (#2972)', () => {
   })
 
   it('copy reads the staging object and writes the destination', async () => {
-    const f = vi.fn(async (_u: string, i: RequestInit) =>
+    const f = vi.fn(async (u: string, i: RequestInit) =>
       i.method === 'POST'
         ? new Response('{}', {
             status: 200,
             headers: { Location: 'https://s/x' },
           })
         : i.method === 'PUT'
-          ? new Response('{}', { status: 200 })
-          : new Response('abc', {
-              status: 200,
-              headers: { 'Content-Length': '3' },
-            })
+          ? new Response(`{"md5Hash":"${ABC_MD5}"}`, { status: 200 })
+          : u.includes('alt=media')
+            ? new Response('abc', { status: 206 })
+            : new Response(`{"size":"3","md5Hash":"${ABC_MD5}"}`, {
+                status: 200,
+              })
     ) as unknown as typeof fetch
     const r = await run(
       [

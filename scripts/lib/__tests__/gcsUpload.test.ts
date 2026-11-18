@@ -21,6 +21,10 @@ import {
 } from '../gcsUpload'
 
 const SECRET = 'ya29.super-secret-token'
+// base64 md5 of the test file's bytes, 'hello-bytes'
+const MD5 = 'cmRXJ1v0KW2eSVzGExeIzw=='
+// base64 md5 of 'abcdef'
+const ABCDEF_MD5 = '6AtQFwmJUPxYqtg8jBSXjg=='
 let dir: string
 let file: string
 
@@ -51,7 +55,7 @@ const fakeGcs = (
         ? new Response('{"error":"x"}', { status: init.initiate })
         : new Response('{}', { status: 200, headers: { Location: session } })
     if (i.method === 'PUT')
-      return new Response('{"name":"o","size":"11"}', {
+      return new Response(`{"name":"o","size":"11","md5Hash":"${MD5}"}`, {
         status: init.put ?? 200,
       })
     return new Response('x', { status: 200 })
@@ -94,6 +98,7 @@ describe('uploadObject (#2972)', () => {
       name: 'videos/a/b/c-desktop.mp4',
       contentType: 'video/mp4',
       cacheControl: 'public, max-age=31536000, immutable, no-transform',
+      md5Hash: MD5,
     })
     const h = first.init.headers as Record<string, string>
     expect(h['Authorization']).toBe(`Bearer ${SECRET}`)
@@ -167,7 +172,7 @@ describe('uploadObject (#2972)', () => {
     ).rejects.toThrow(/onExists/)
   })
 
-  it('reads a staging source with objects.get (alt=media) only after the create check passes', async () => {
+  it('reads a staging source (metadata, then ranged alt=media) only after the create check passes', async () => {
     const calls: Call[] = []
     const fetchFn = vi.fn(async (url: string, i: RequestInit) => {
       calls.push({ url, init: i })
@@ -176,10 +181,12 @@ describe('uploadObject (#2972)', () => {
           status: 200,
           headers: { Location: session },
         })
-      if (i.method === 'PUT') return new Response('{}', { status: 200 })
-      return new Response('abcdef', {
+      if (i.method === 'PUT')
+        return new Response(`{"md5Hash":"${ABCDEF_MD5}"}`, { status: 200 })
+      if (url.includes('alt=media'))
+        return new Response('abcdef', { status: 206 })
+      return new Response(`{"size":"6","md5Hash":"${ABCDEF_MD5}"}`, {
         status: 200,
-        headers: { 'Content-Length': '6' },
       })
     }) as unknown as typeof fetch
     await uploadObject(
@@ -189,13 +196,20 @@ describe('uploadObject (#2972)', () => {
         source: { kind: 'gcs', bucket: 'stg', object: 'videos/a/b/c.mp4' },
       })
     )
-    expect(calls.map(c => c.init.method)).toEqual(['POST', 'GET', 'PUT'])
-    const get = calls[1]!
+    expect(calls.map(c => c.init.method)).toEqual(['GET', 'POST', 'GET', 'PUT'])
+    expect(calls[0]!.url).toBe(
+      'https://storage.googleapis.com/storage/v1/b/stg/o/videos%2Fa%2Fb%2Fc.mp4' +
+        '?fields=size,md5Hash,contentEncoding'
+    )
+    const get = calls[2]!
     expect(get.url).toBe(
       'https://storage.googleapis.com/storage/v1/b/stg/o/videos%2Fa%2Fb%2Fc.mp4?alt=media'
     )
+    expect((get.init.headers as Record<string, string>)['Range']).toBe(
+      'bytes=0-5'
+    )
     expect(
-      (calls[2]!.init.headers as Record<string, string>)['Content-Length']
+      (calls[3]!.init.headers as Record<string, string>)['Content-Length']
     ).toBe('6')
   })
 
@@ -203,7 +217,9 @@ describe('uploadObject (#2972)', () => {
     const calls: Call[] = []
     const fetchFn = vi.fn(async (url: string, i: RequestInit) => {
       calls.push({ url, init: i })
-      return new Response('{}', { status: 412 })
+      return i.method === 'POST'
+        ? new Response('{}', { status: 412 })
+        : new Response('{"size":"6","md5Hash":"x"}', { status: 200 })
     }) as unknown as typeof fetch
     await uploadObject(
       opts({
@@ -212,7 +228,8 @@ describe('uploadObject (#2972)', () => {
         source: { kind: 'gcs', bucket: 'stg', object: 'x' },
       })
     )
-    expect(calls.map(c => c.init.method)).toEqual(['POST'])
+    expect(calls.map(c => c.init.method)).toEqual(['GET', 'POST'])
+    expect(calls.some(c => c.url.includes('alt=media'))).toBe(false)
   })
 })
 
@@ -233,7 +250,7 @@ describe('uploadObject against a real HTTP server (#2972)', () => {
       req.on('data', c => (received += c))
       req.on('end', () => {
         res.writeHead(200)
-        res.end('{}')
+        res.end(`{"md5Hash":"${MD5}"}`)
       })
     })
     await new Promise<void>(r => server.listen(0, '127.0.0.1', r))
