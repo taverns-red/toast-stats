@@ -378,10 +378,17 @@ function recordedEntry(r: RemovalRecord, liveGeneration?: string): PlanEntry {
 }
 
 /** Whether the record names this object: exactly, or by a pruned prefix. */
-function isRecorded(name: string, removals: RemovalRecord[]): boolean {
-  return removals.some(r =>
+function recordFor(
+  name: string,
+  removals: RemovalRecord[]
+): RemovalRecord | undefined {
+  return removals.find(r =>
     r.path.endsWith('/') ? name.startsWith(r.path) : name === r.path
   )
+}
+
+function isRecorded(name: string, removals: RemovalRecord[]): boolean {
+  return recordFor(name, removals) !== undefined
 }
 
 /**
@@ -479,13 +486,12 @@ export function planRestore(input: {
     )
     // A live object under a recorded prune prefix: the removal did not finish,
     // so a person decides (#2903). A refuse planOne raised stays.
-    .map(e =>
-      e.action !== 'refuse' &&
-      liveNames.has(e.name) &&
-      isRecorded(e.name, removals)
-        ? recordedEntry({ path: e.name, kind: 'prune' }, e.liveGeneration)
+    .map(e => {
+      const record = recordFor(e.name, removals)
+      return e.action !== 'refuse' && liveNames.has(e.name) && record
+        ? recordedEntry({ path: e.name, kind: record.kind }, e.liveGeneration)
         : e
-    )
+    })
     .concat(deleted)
     .map(e =>
       expired && (e.action === 'restore' || e.action === 'delete')
