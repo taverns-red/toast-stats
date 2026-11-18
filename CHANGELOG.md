@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.92.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.92.0...toast-stats-v2.92.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **pipeline:** restore-plan removal record follow-ups ([#2903](https://github.com/taverns-red/toast-stats/issues/2903)) ([#2927](https://github.com/taverns-red/toast-stats/issues/2927)) ([283a31f](https://github.com/taverns-red/toast-stats/commit/283a31fb6623cc0b576b6f8c529b6a79f5417bb7))
+* **ui:** privacy button lines up in the About menu; footer smoke ([#2891](https://github.com/taverns-red/toast-stats/issues/2891)) ([#2933](https://github.com/taverns-red/toast-stats/issues/2933)) ([2d13811](https://github.com/taverns-red/toast-stats/commit/2d13811a49953756a809fe57af7e6016b0b9e297))
+
+
+### Tests
+
+* **scripts:** cover the promotion alert's 60,000-char hard guard ([#2937](https://github.com/taverns-red/toast-stats/issues/2937)) ([#2938](https://github.com/taverns-red/toast-stats/issues/2938)) ([6b044b8](https://github.com/taverns-red/toast-stats/commit/6b044b828991cdf0a03fecce2bf047a5e1f078f1))
+* **scripts:** property tests for the restore plan and promote ([#2930](https://github.com/taverns-red/toast-stats/issues/2930)) ([#2931](https://github.com/taverns-red/toast-stats/issues/2931)) ([f92bf0a](https://github.com/taverns-red/toast-stats/commit/f92bf0a64116a8eb73f6dc8865dd0d41f814d5f9))
+
+
+### Continuous Integration
+
+* **videos:** check the live how-to video URLs after each deploy ([#2899](https://github.com/taverns-red/toast-stats/issues/2899)) ([#2932](https://github.com/taverns-red/toast-stats/issues/2932)) ([9ede7fb](https://github.com/taverns-red/toast-stats/commit/9ede7fbcd4bff31c754dcaf31168fd6c2921cfc3))
+
 ## [2.92.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.91.1...toast-stats-v2.92.0) (2026-11-17)
 
 
