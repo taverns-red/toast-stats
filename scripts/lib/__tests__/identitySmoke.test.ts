@@ -212,6 +212,19 @@ describe('media identity expectation (#2972)', () => {
     expect(readInside('toast-stats-data-ca')).toBe(false)
   })
 
+  it('shows the prefix condition on staging: get is denied outside it, and not asserted on prod (public read)', () => {
+    const outside = (b: string) =>
+      (media.objectChecks ?? []).find(
+        c => c.bucket === b && !/^(videos|basemap)\//.test(c.object)
+      )!
+    expect(outside('toast-stats-data-staging').denied).toContain(
+      'storage.objects.get'
+    )
+    expect(outside('toast-stats-data-ca').denied).not.toContain(
+      'storage.objects.get'
+    )
+  })
+
   it('can never delete, overwrite in place, restore or change bucket metadata or IAM', () => {
     for (const b of Object.values(media.buckets)) {
       for (const p of [
