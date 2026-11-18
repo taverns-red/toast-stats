@@ -12,6 +12,9 @@
  * - DATA_READER: `vars.GCP_DATA_READER_SA`, the read-only identity (#2866).
  * - PREVIEW: `vars.GCP_PREVIEW_SA`, the PR preview identity. It lives in the
  *   staging Firebase project, so it can't release to the prod site (#2956).
+ * - PIPELINE: `vars.GCP_PIPELINE_SA`, the data pipeline and data-maintenance
+ *   identity (#2960). Object access on the staging, prod and raw-private
+ *   buckets plus CDN purge; no object restore, bucket metadata or IAM.
  */
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -20,6 +23,7 @@ import { parse } from 'yaml'
 export const DEPLOYER = 'secrets.GCP_SERVICE_ACCOUNT'
 export const DATA_READER = 'vars.GCP_DATA_READER_SA'
 export const PREVIEW = 'vars.GCP_PREVIEW_SA'
+export const PIPELINE = 'vars.GCP_PIPELINE_SA'
 
 /**
  * An identity chosen by event: `<event>` runs use `whenEvent`, every other
@@ -46,25 +50,25 @@ export const READER_GUARD_EXEMPT: Record<string, string> = {
 }
 
 /** The identity variables an EXPECTED value may be built from. */
-export const KNOWN_IDENTITIES = [DEPLOYER, DATA_READER, PREVIEW]
+export const KNOWN_IDENTITIES = [DEPLOYER, DATA_READER, PREVIEW, PIPELINE]
 
 /** Every job that runs google-github-actions/auth -> its one identity. */
 export const EXPECTED: Record<string, string> = {
   'basemap-build.yml::basemap': DEPLOYER,
-  'contact-strip.yml::strip': DEPLOYER,
-  'data-pipeline.yml::pipeline': DEPLOYER,
+  'contact-strip.yml::strip': PIPELINE,
+  'data-pipeline.yml::pipeline': PIPELINE,
   'data-pipeline.yml::closing-registry-pr': DATA_READER,
-  'data-pipeline.yml::daily-reports': DEPLOYER,
-  'data-pipeline.yml::place-reports': DEPLOYER,
-  'data-pipeline.yml::education-rollup': DEPLOYER,
-  'data-pipeline.yml::promote-reports': DEPLOYER,
+  'data-pipeline.yml::daily-reports': PIPELINE,
+  'data-pipeline.yml::place-reports': PIPELINE,
+  'data-pipeline.yml::education-rollup': PIPELINE,
+  'data-pipeline.yml::promote-reports': PIPELINE,
   'data-pipeline.yml::data-auto-restore-decide': DATA_READER,
   'data-pipeline.yml::data-auto-restore-execute': DEPLOYER,
-  'data-pipeline.yml::og-cards': DEPLOYER,
-  'data-pipeline.yml::education-ledger-history': DEPLOYER,
+  'data-pipeline.yml::og-cards': PIPELINE,
+  'data-pipeline.yml::education-ledger-history': PIPELINE,
   'deploy.yml::deploy-frontend': DEPLOYER,
-  'education-timeline-backfill.yml::backfill': DEPLOYER,
-  'gap-district-prune.yml::prune': DEPLOYER,
+  'education-timeline-backfill.yml::backfill': PIPELINE,
+  'gap-district-prune.yml::prune': PIPELINE,
   'harness-staging-canary.yml::canary': byEvent(
     'pull_request',
     PREVIEW,
