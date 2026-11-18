@@ -19,6 +19,7 @@ import { describe, it, expect } from 'vitest'
 import {
   DEPLOYER,
   DATA_READER,
+  PREVIEW,
   KNOWN_IDENTITIES,
   READER_GUARD_EXEMPT,
   byEvent,
@@ -117,10 +118,31 @@ describe('data-reader jobs (#2872 B2)', () => {
     expect(EXPECTED['validate-vs-ceo-report.yml::validate']).toBe(DATA_READER)
   })
 
-  it('keeps the deploy identity on canary pull requests, data reader otherwise', () => {
+  it('uses the preview identity on canary pull requests, data reader otherwise (#2956)', () => {
     expect(EXPECTED['harness-staging-canary.yml::canary']).toBe(
-      byEvent('pull_request', DEPLOYER, DATA_READER)
+      byEvent('pull_request', PREVIEW, DATA_READER)
     )
+  })
+
+  it('maps the preview and cleanup jobs to the preview identity (#2956)', () => {
+    expect(EXPECTED['pr-preview.yml::preview']).toBe(PREVIEW)
+    expect(EXPECTED['pr-preview-cleanup.yml::cleanup']).toBe(PREVIEW)
+  })
+
+  it('checks the preview variable is non-empty before the canary authenticates on pull requests (#2956)', () => {
+    const steps = wfOf('harness-staging-canary.yml').jobs!.canary!.steps!
+    const authAt = steps.findIndex(s =>
+      /google-github-actions\/auth/.test(s.uses ?? '')
+    )
+    const guardAt = steps.findIndex(
+      s =>
+        /vars\.GCP_PREVIEW_SA/.test(String(Object.values(s.env ?? {}))) &&
+        /-z\b/.test(s.run ?? '') &&
+        /exit 1/.test(s.run ?? '')
+    )
+    expect(guardAt).toBeGreaterThanOrEqual(0)
+    expect(guardAt).toBeLessThan(authAt)
+    expect(steps[guardAt]!.if).toMatch(/github\.event_name == 'pull_request'/)
   })
 
   it('builds every identity from known variables only', () => {
