@@ -6,18 +6,8 @@
  * token comes back on stdout, never through argv or a log line.
  * stderr: one status line (R4).
  */
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
+import { mintToken } from './lib/gcloudToken.js'
 import { runUploadCli } from './lib/gcsUploadCli.js'
-
-const run = promisify(execFile)
-
-const mintToken = async (): Promise<string> => {
-  const { stdout } = await run('gcloud', ['auth', 'print-access-token'])
-  const token = stdout.trim()
-  if (!token) throw new Error('gcloud returned no token')
-  return token
-}
 
 void runUploadCli(process.argv.slice(2), {
   token: process.env['ACCESS_TOKEN'],
