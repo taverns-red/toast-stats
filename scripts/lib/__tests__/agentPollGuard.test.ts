@@ -72,6 +72,55 @@ const blocked = [
   // leading zeros are invalid
   'gh run watch 1 --interval 060',
   'gh run watch 1 --interval=070',
+  // #2918: `\'` escapes a quote inside $'..'
+  "echo $'\\'' ; gh run watch 1 ; echo $'\\''",
+  // #2918: a heredoc marker inside a comment or quotes starts no heredoc
+  '# <<EOF\ngh run watch 1\nEOF',
+  "echo '<<EOF'\ngh run watch 1\nEOF",
+  'git commit -m "x <<EOF"\ngh run watch 1\nEOF',
+  'echo $((1<<2))\ngh run watch 1',
+  // #2918 review: the whole delimiter word counts, and a body whose
+  // terminator never appears must not swallow the rest of the command
+  'cat <<A-B\nA-B\ngh run watch 1',
+  'cat <<E"F"\nEF\ngh run watch 1',
+  'cat <<"E"F\nEF\ngh run watch 1',
+  'cat <<EOF.x\nEOF.x\ngh run watch 1',
+  'echo $((1<<y))\ngh run watch 1',
+  '((a<<b))\ngh run watch 1',
+  'cat <<EOF\ngh run watch 1',
+  // #2918: redirections and substitutions don't hide a fast interval
+  'gh run watch 1 2>&1 --interval 30',
+  'gh run watch $(echo 1) --interval 30',
+  'gh run watch $(echo 1)',
+  'gh pr view $(gh run watch 1) --json state',
+  'gh pr checks 1 --watch=true',
+  'gh run watch 1 --interval "30"',
+  // text after a heredoc operator on its line is still a command
+  'cat <<EOF | gh run watch 1\nbody\nEOF',
+  // #2918 security re-review: inside `$( )` bash ends the heredoc at a line
+  // `DELIM)`, so a later bare DELIM must not hide the command
+  'x=$(cat <<EOF\nbody\nEOF)\ngh run watch 1\nEOF',
+  ...[
+    ['A-B', 'A-B'],
+    ['E.x', 'E.x'],
+    ['E"F"', 'EF'],
+    ['"E"F', 'EF'],
+    ["'E'F", 'EF'],
+    ['\\EOF', 'EOF'],
+    ['E\\F', 'EF'],
+    ['"E F"', 'E F'],
+  ].map(([d, t]) => `x=$(cat <<${d}\nbody\n${t})\ngh run watch 1\n${t}`),
+  'x=$(cat <<A-B\nbody\nA-B )\ngh run watch 1\nA-B',
+  'x=$(cat <<A-B\nbody\nA-B\r)\ngh run watch 1\nA-B',
+  'x=$(cat <<-A-B\nbody\n\tA-B)\ngh run watch 1\nA-B',
+  // macOS bash 3.2 also ends the body at `DELIM;)`
+  'x=$(cat <<A-B\nbody\nA-B;)\ngh run watch 1\nA-B',
+  'x=$(cat <<EOF\nbody\nEOF;)\ngh run watch 1\nEOF',
+  // #2918 security re-review: `<<` inside `$[ ]` and `${ }` is no heredoc
+  'echo $[1<<y]\ngh run watch 1\ny]',
+  'echo ${a:-<<x}\ngh run watch 1\nx}',
+  'echo $[1<< y ]\ngh run watch 1\ny ]',
+  'echo ${a:-<< x }\ngh run watch 1\nx }',
 ]
 
 const allowed = [
@@ -103,6 +152,20 @@ const allowed = [
   'echo hi # gh run watch 1',
   'gh run watch 1 --interval 60 # then wait',
   'gh run watch 1 --interval 60; gh run watch 2 --interval 90',
+  // #2918: quoted and escaped heredoc delimiters strip their bodies too
+  'cat <<\\EOF\ngh pr checks 1 --watch\nEOF',
+  "cat <<'EOF'\ngh pr checks 1 --watch\nEOF",
+  'cat <<"EOF"\ngh pr checks 1 --watch\nEOF',
+  'cat <<-EOF\n\tgh pr checks 1 --watch\n\tEOF',
+  'cat <<EOF\nsleep 3; gh run view 1\nEOF\ngit status',
+  // #2918: false positives
+  'gh run watch 1 2>&1 --interval 60',
+  'gh run watch 1 --interval 60 >&2',
+  'gh run watch $(echo 1) --interval 60',
+  'gh pr checks 1 --watch=false',
+  'gh run watch 1 --interval "60"',
+  "gh run watch 1 --interval '60'",
+  "echo $'it\\'s' ; gh run list",
 ]
 
 describe('agent-poll-guard (#2895)', () => {
@@ -145,6 +208,20 @@ describe('agent-poll-guard (#2895)', () => {
       timeout: 20000,
     })
     expect(r.status).toBe(0)
+    expect(Date.now() - start).toBeLessThan(1500)
+  })
+
+  it('checks 160 KB of heredoc operators in linear time (#2918)', () => {
+    const command = '<<A\n'.repeat(40000)
+    const start = Date.now()
+    const r = spawnSync('node', [SCRIPT], {
+      input: JSON.stringify({ tool_name: 'Bash', tool_input: { command } }),
+      env: { PATH: process.env.PATH ?? '' },
+      encoding: 'utf8',
+      timeout: 20000,
+    })
+    expect(r.status).toBe(0)
+    expect(r.stdout).toBe('')
     expect(Date.now() - start).toBeLessThan(1500)
   })
 
