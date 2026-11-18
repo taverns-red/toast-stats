@@ -336,7 +336,18 @@ call fail if the live object changed since the plan (JSON API
 The gcloud page does not show the flag combined with a `#generation` URL, so
 the staging drill must also confirm that exact invocation works, including
 that `--if-generation-match` without `--allow-overwrite` replaces a live
-object. For delete
+object.
+
+**Unproven against real GCS (#2977):** a restore of a name the run deleted
+(nothing live) uses `--if-generation-match=0`. A unit test checks the command
+the plan builds, but no drill has run it. Until one does, treat that path as
+unproven and check the first such restore by hand. The bulk-only flag list
+(`BULK_ONLY_RESTORE_FLAGS` in `scripts/lib/dataRestorePlan.ts`) was copied from
+SDK 588.0.0 by hand: re-check it against `_BULK_RESTORE_FLAGS` in
+`surface/storage/restore.py` whenever the CI gcloud pin changes. `dataRestoreBulkFlagsPin.test.ts` fails
+until `BULK_FLAGS_CHECKED_SDK` matches the pin in `data-pipeline.yml`.
+
+For delete
 the `#LIVE_GENERATION` URL already pins the object. The saved plan file is
 schema-checked and refused if malformed. If a command fails partway,
 execution stops and stdout gets `{executed, failedAt}` (exit 1); re-plan from
