@@ -33,8 +33,20 @@ const getJson = async (
     headers: { Authorization: `Bearer ${token}` },
   })
   if (!res.ok) {
+    // Google's error body is {error: {code, message}}. Log it (never the token
+    // or headers) so a 400 names its cause.
+    let detail = ''
+    try {
+      const body = (await res.json()) as {
+        error?: { code?: number; message?: string }
+      }
+      if (body.error?.message)
+        detail = ` (${body.error.code ?? res.status}: ${body.error.message})`
+    } catch {
+      // Non-JSON error body: status alone.
+    }
     throw new Error(
-      `GET ${url.split('?')[0]} -> ${res.status} ${res.statusText}`
+      `GET ${url.split('?')[0]} -> ${res.status} ${res.statusText}${detail}`
     )
   }
   return res.json()
