@@ -443,5 +443,11 @@ export function buildPromotionHeldBody(
     '---',
     '_This issue auto-closes when a later run successfully promotes. Filed by `.github/workflows/data-pipeline.yml` (#1073)._',
   ].join('\n')
-  return body.slice(0, MAX_BODY_CHARS - tail.length) + tail
+  // GitHub counts characters, so the unit is right; only the cut point needs
+  // care. Back off one unit when the last kept one is a high surrogate, so the
+  // cut never leaves half of an emoji (#2940).
+  let cut = MAX_BODY_CHARS - tail.length
+  const last = body.charCodeAt(cut - 1)
+  if (last >= 0xd800 && last <= 0xdbff) cut -= 1
+  return body.slice(0, cut) + tail
 }
