@@ -82,7 +82,7 @@ gcloud compute backend-buckets update toast-stats-cdn-backend --compression-mode
 gcloud compute backend-buckets update toast-stats-cdn-backend --compression-mode=DISABLED   # rollback
 ```
 
-**Verify:** `npx tsx scripts/cdn-compression-check.ts` (read-only; exit 0 when
+**Verify:** `npx tsx scripts/cdn-compression-check.ts --base https://cdn.taverns.red` (read-only; exit 0 when
 every frontend-fetched `v1/`/`config/` object comes back br/gzip and decodes
 to one layer of JSON). Cached identity entries age out within their
 `max-age` (300–900 s). Preview channels were left uncompressed by this

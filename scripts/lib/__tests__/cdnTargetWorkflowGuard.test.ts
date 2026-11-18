@@ -1,19 +1,16 @@
 /**
- * Guard (#2974): every workflow step that runs a CDN-reading script sets
- * its target explicitly. A step that relies on the script's old prod
- * fallback, or on an input that can be empty, fails here.
+ * Guard (#2974): every workflow step that runs a target-reading script
+ * names its target explicitly (CDN_BASE_URL, BASE_URL, MANIFEST_URL as the
+ * script needs). A step that relies on a script's old prod fallback, or on
+ * an input that can be empty, fails here. The matching rules, per command
+ * and per script, live in ../workflowTargetCheck.ts.
  */
 
 import { describe, it, expect } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { parse } from 'yaml'
-
-const SCRIPTS = [
-  'check-cdn-schema.ts',
-  'hosting-smoke.ts',
-  'cdn-compression-check.ts',
-]
+import { TARGET_SCRIPTS, targetProblems } from '../workflowTargetCheck.js'
 
 interface Step {
   name?: string
@@ -31,7 +28,7 @@ for (const file of fs.readdirSync(dir).filter(f => /\.ya?ml$/.test(f))) {
   for (const job of Object.values(wf.jobs ?? {})) {
     for (const step of job.steps ?? []) {
       const run = step.run ?? ''
-      if (SCRIPTS.some(s => new RegExp(`scripts/${s}`).test(run))) {
+      if (TARGET_SCRIPTS.some(s => run.includes(`scripts/${s.file}`))) {
         invocations.push({
           file,
           step: { ...step, env: { ...wf.env, ...job.env, ...step.env } },
@@ -41,24 +38,17 @@ for (const file of fs.readdirSync(dir).filter(f => /\.ya?ml$/.test(f))) {
   }
 }
 
-describe('workflows pass the CDN target explicitly (#2974)', () => {
+describe('workflows pass the target explicitly (#2974)', () => {
   it('finds the known invocations', () => {
-    expect(invocations.length).toBeGreaterThanOrEqual(5)
+    expect(invocations.length).toBeGreaterThanOrEqual(6)
   })
 
   it.each(invocations.map(i => [`${i.file}: ${i.step.name}`, i.step]))(
-    '%s sets CDN_BASE_URL to a literal URL or a literal fallback',
+    '%s names the target of every script it runs',
     (_label, step) => {
-      const run = (step as Step).run ?? ''
-      const v = (step as Step).env?.['CDN_BASE_URL']
-      const inline =
-        /CDN_BASE_URL=https?:\/\//.test(run) || /--base\s+https?:\/\//.test(run)
+      const { run, env } = step as Step
       // A bare `${{ inputs.x }}` can be empty, which the script refuses.
-      expect(
-        inline ||
-          /^https?:\/\//.test(v ?? '') ||
-          /\|\|\s*'https?:\/\//.test(v ?? '')
-      ).toBe(true)
+      expect(targetProblems(run ?? '', env ?? {})).toEqual([])
     }
   )
 })

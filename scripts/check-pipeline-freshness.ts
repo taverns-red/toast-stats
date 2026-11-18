@@ -2,7 +2,7 @@
  * Pipeline Freshness Check — Runner (#753)
  *
  * Thin glue around the pure functions in ./lib/pipelineFreshness.js:
- *   1. fetch the published v1/latest.json (production CDN by default),
+ *   1. fetch the published v1/latest.json (MANIFEST_URL, required),
  *   2. evaluate its freshness against a threshold,
  *   3. emit a stale/fresh decision + alert body for the monitor workflow.
  *
@@ -11,7 +11,7 @@
  * stderr (R4); stdout/$GITHUB_OUTPUT carry only the structured decision.
  *
  * Env:
- *   MANIFEST_URL    — manifest to check (default: production CDN bucket)
+ *   MANIFEST_URL    — REQUIRED: manifest to check (exits 2 without it, #2974)
  *   THRESHOLD_HOURS — staleness threshold in hours (default: 26)
  *
  * The process always exits 0; the workflow decides whether to open an
@@ -27,9 +27,7 @@ import {
   resolveThresholdHours,
   type FreshnessResult,
 } from './lib/pipelineFreshness.js'
-
-const DEFAULT_MANIFEST_URL =
-  'https://storage.googleapis.com/toast-stats-data-ca/v1/latest.json'
+import { requireEnvUrlOrExit } from './lib/cdnTarget.js'
 
 const BODY_FILE = '/tmp/pipeline-freshness-body.md'
 
@@ -69,7 +67,11 @@ function emitDecision(
 }
 
 async function main(): Promise<void> {
-  const manifestUrl = process.env.MANIFEST_URL || DEFAULT_MANIFEST_URL
+  const manifestUrl = requireEnvUrlOrExit(
+    'check-pipeline-freshness.ts',
+    'MANIFEST_URL',
+    process.env
+  )
   const thresholdHours = resolveThresholdHours(process.env.THRESHOLD_HOURS)
   const now = new Date()
 
@@ -122,7 +124,7 @@ main().catch(err => {
       latestSnapshotDate: null,
       thresholdHours: resolveThresholdHours(process.env.THRESHOLD_HOURS),
     },
-    process.env.MANIFEST_URL || DEFAULT_MANIFEST_URL,
+    process.env.MANIFEST_URL ?? '',
     new Date()
   )
   process.exit(0)

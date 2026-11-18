@@ -24,7 +24,8 @@ that, recovering, and the guardrails that now catch it automatically.
   ```bash
   curl -s https://storage.googleapis.com/toast-stats-data-ca/v1/latest.json | jq .
   # or run the exact monitor logic locally:
-  npx tsx scripts/check-pipeline-freshness.ts
+  MANIFEST_URL=https://storage.googleapis.com/toast-stats-data-ca/v1/latest.json \
+    npx tsx scripts/check-pipeline-freshness.ts
   ```
 
   `generatedAt` is refreshed on every successful daily run. If it is more than

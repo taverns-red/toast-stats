@@ -375,10 +375,10 @@ curl -s https://cdn.taverns.red/v1/latest.json | jq '.latestSnapshotDate, .gener
 
 # Shape and freshness, as the canaries check them.
 CDN_BASE_URL=https://cdn.taverns.red npx tsx scripts/check-cdn-schema.ts
-npx tsx scripts/check-pipeline-freshness.ts   # expected stale if the bad run was the latest
+MANIFEST_URL=https://storage.googleapis.com/toast-stats-data-ca/v1/latest.json npx tsx scripts/check-pipeline-freshness.ts   # expected stale if the bad run was the latest
 
 # The Hosting smoke's data probe (and the rest of the core path).
-CDN_BASE_URL=https://cdn.taverns.red SMOKE_WINDOW_SECONDS=60 SMOKE_RENDER=off npx tsx scripts/hosting-smoke.ts
+BASE_URL=https://ts.taverns.red CDN_BASE_URL=https://cdn.taverns.red SMOKE_WINDOW_SECONDS=60 SMOKE_RENDER=off npx tsx scripts/hosting-smoke.ts
 ```
 
 Record: bad promote at → detected at → restore started → entry points

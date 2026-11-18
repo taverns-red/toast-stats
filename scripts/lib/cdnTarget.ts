@@ -24,7 +24,9 @@ export function requireCdnTarget(
   env: Record<string, string | undefined>,
   flagValue?: string
 ): string {
-  const raw = (flagValue ?? env['CDN_BASE_URL'] ?? '').trim()
+  // An empty --base counts as not given, so it cannot hide a valid env value.
+  const flag = (flagValue ?? '').trim()
+  const raw = flag !== '' ? flag : (env['CDN_BASE_URL'] ?? '').trim()
   if (raw === '') throw new MissingCdnTargetError(script)
   return raw.replace(/\/+$/, '')
 }
@@ -41,4 +43,25 @@ export function cdnTargetOrExit(
     process.stderr.write(`${(err as Error).message}\n`)
     process.exit(2)
   }
+}
+
+/**
+ * For CLI entry points: a required URL env var (BASE_URL, MANIFEST_URL), or
+ * a stderr message and exit code 2. No default, for the same reason as the
+ * CDN target.
+ */
+export function requireEnvUrlOrExit(
+  script: string,
+  name: string,
+  env: Record<string, string | undefined>
+): string {
+  const raw = (env[name] ?? '').trim()
+  if (raw === '') {
+    process.stderr.write(
+      `${script} requires ${name} to be set to the URL to check. ` +
+        `It no longer defaults to production.\n`
+    )
+    process.exit(2)
+  }
+  return raw
 }

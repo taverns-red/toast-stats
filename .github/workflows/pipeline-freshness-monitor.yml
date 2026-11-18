@@ -58,7 +58,7 @@ jobs:
         id: freshness
         env:
           THRESHOLD_HOURS: ${{ inputs.threshold_hours }}
-          MANIFEST_URL: ${{ inputs.manifest_url }}
+          MANIFEST_URL: ${{ inputs.manifest_url || 'https://storage.googleapis.com/toast-stats-data-ca/v1/latest.json' }}
         run: npx tsx scripts/check-pipeline-freshness.ts
 
       - name: Ensure pipeline-stale label exists

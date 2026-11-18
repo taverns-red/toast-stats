@@ -22,7 +22,7 @@
  */
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { cdnTargetOrExit } from './lib/cdnTarget.js'
+import { cdnTargetOrExit, requireEnvUrlOrExit } from './lib/cdnTarget.js'
 import {
   checkCdnLatest,
   checkDistrictPage,
@@ -59,7 +59,12 @@ const num = (k: string, d: number) => {
   return Number.isFinite(v) && v > 0 ? v : d
 }
 
-const BASE_URL = env('BASE_URL', 'https://ts.taverns.red').replace(/\/$/, '')
+// No default for the site either (#2974): exits 2 when BASE_URL is missing.
+const BASE_URL = requireEnvUrlOrExit(
+  'hosting-smoke.ts',
+  'BASE_URL',
+  process.env
+).replace(/\/$/, '')
 // No default: a smoke that picks prod on its own can pass for the wrong target
 // (#2974). Exits 2 with a stderr message when CDN_BASE_URL is missing.
 const CDN_BASE_URL = cdnTargetOrExit('hosting-smoke.ts', process.env)

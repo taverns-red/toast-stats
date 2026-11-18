@@ -130,7 +130,7 @@ PROJECT=toast-stats-prod-6d64a PREVIOUS_VERSION=<VERSION_ID> \
 Then confirm with the smoke:
 
 ```bash
-CDN_BASE_URL=https://cdn.taverns.red SMOKE_WINDOW_SECONDS=60 npx tsx scripts/hosting-smoke.ts
+BASE_URL=https://ts.taverns.red CDN_BASE_URL=https://cdn.taverns.red SMOKE_WINDOW_SECONDS=60 npx tsx scripts/hosting-smoke.ts
 ```
 
 After a rollback, the next `firebase deploy` releases normally; nothing has
