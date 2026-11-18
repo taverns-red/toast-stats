@@ -179,6 +179,117 @@ describe('live-version', () => {
     })
   })
 
+  describe('request discipline (#3015)', () => {
+    const HTML2 = fixture('live-index-2.93.0.html')
+    const ENTRY2 = fixture('live-entry-excerpt-2.93.0.txt')
+    const CHUNK = fixture('live-cdnbase-chunk-2.93.0.txt')
+
+    it('goes back to HEAD for every script after the one holding the version', async () => {
+      const calls: string[] = []
+      const f = (async (url: string, init?: RequestInit) => {
+        const path = new URL(url).pathname
+        calls.push(`${init?.method ?? 'GET'} ${path}`)
+        if (path === '/')
+          return new Response(HTML2, {
+            headers: { 'content-type': 'text/html' },
+          })
+        const body =
+          path === '/assets/index-Dccouyo0.js'
+            ? ENTRY2
+            : path === '/assets/cdnBase-BTEFPS6P.js'
+              ? CHUNK
+              : ''
+        return new Response(init?.method === 'HEAD' ? null : body, {
+          headers: {
+            'content-type': path.endsWith('.css')
+              ? 'text/css'
+              : 'text/javascript',
+          },
+        })
+      }) as Fetcher
+      const r = await liveVersion({
+        base: 'https://ts.taverns.red',
+        fetcher: f,
+      })
+      expect(r.version).toBe('v2.93.0')
+      const gets = calls.filter(c => c.startsWith('GET ')).map(c => c.slice(4))
+      expect(gets).toEqual([
+        '/',
+        '/assets/index-Dccouyo0.js',
+        '/assets/rolldown-runtime-XKyaHtl9.js',
+        '/assets/vendor-LyKwLCv-.js',
+        '/assets/query-B2l-coOX.js',
+        '/assets/meetingHeatmap-Y_Z3357d.js',
+        '/assets/esm-n4Spsqby.js',
+        '/assets/logger-DZEsNi23.js',
+        '/assets/cdnCacheTracker-DmTGIf9q.js',
+        '/assets/cdnBase-BTEFPS6P.js',
+      ])
+      expect(calls).toContain('HEAD /assets/cdn-Bwbz6qMx.js')
+      expect(calls).toContain('HEAD /assets/index-Bf2v3-Xq.css')
+    })
+
+    it('gives every request an abort signal', async () => {
+      const signals: Array<AbortSignal | null | undefined> = []
+      const f = (async (url: string, init?: RequestInit) => {
+        signals.push(init?.signal)
+        const path = new URL(url).pathname
+        return new Response(path === '/' ? HTML2 : ENTRY2, {
+          headers: {
+            'content-type': path === '/' ? 'text/html' : 'text/javascript',
+          },
+        })
+      }) as Fetcher
+      await liveVersion({ base: 'https://ts.taverns.red', fetcher: f })
+      expect(signals.length).toBeGreaterThan(2)
+      for (const s of signals) expect(s).toBeInstanceOf(AbortSignal)
+    })
+
+    it('fails a request that hangs past the timeout', async () => {
+      const f = ((_url: string, init?: RequestInit) =>
+        new Promise<Response>((_res, rej) => {
+          init?.signal?.addEventListener('abort', () =>
+            rej(new Error('aborted'))
+          )
+        })) as Fetcher
+      await expect(
+        liveVersion({
+          base: 'https://ts.taverns.red',
+          fetcher: f,
+          timeoutMs: 5,
+          sleep: noSleep,
+        })
+      ).rejects.toThrow()
+    })
+
+    it('cancels the body of a GET that comes back non-ok', async () => {
+      let cancelled = false
+      const f = (async (url: string) => {
+        const path = new URL(url).pathname
+        if (path === '/')
+          return new Response(HTML2, {
+            headers: { 'content-type': 'text/html' },
+          })
+        const isEntry = path === '/assets/index-Dccouyo0.js'
+        const body = new ReadableStream({
+          cancel() {
+            cancelled = true
+          },
+        })
+        return new Response(isEntry ? body : '', {
+          status: isEntry ? 404 : 200,
+          headers: { 'content-type': 'text/javascript' },
+        })
+      }) as Fetcher
+      const r = await liveVersion({
+        base: 'https://ts.taverns.red',
+        fetcher: f,
+      })
+      expect(r.broken.map(b => b.path)).toContain('/assets/index-Dccouyo0.js')
+      expect(cancelled).toBe(true)
+    })
+  })
+
   it('lists a 404 asset as broken', async () => {
     const r = await liveVersion({
       base: 'https://ts.taverns.red',

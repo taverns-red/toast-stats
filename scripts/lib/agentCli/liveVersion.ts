@@ -57,6 +57,8 @@ export interface LiveVersionOptions {
   fetcher?: Fetcher
   repoVersion?: string | null
   sleep?: (ms: number) => Promise<void>
+  /** Per-request timeout in ms (default 15000). */
+  timeoutMs?: number
 }
 
 async function get(
