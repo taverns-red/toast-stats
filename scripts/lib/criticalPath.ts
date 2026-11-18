@@ -88,6 +88,11 @@ export function forbiddenOnCriticalPath(
   return chunks.filter(c => forbiddenPrefixes.some(p => c.startsWith(p)))
 }
 
+/** Red stub (#3000): reports nothing yet. */
+export function standaloneChunks(_assetNames: readonly string[]): string[] {
+  return []
+}
+
 /**
  * Page chunks of the lazy Lighthouse mobile routes (`lighthouserc.mobile.js`;
  * the landing page is bundled into the entry, so the critical-path check
