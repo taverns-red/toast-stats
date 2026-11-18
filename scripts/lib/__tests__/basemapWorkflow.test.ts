@@ -271,3 +271,34 @@ describe('media identity (#2972)', () => {
     expect(guardAt).toBeLessThan(authAt)
   })
 })
+
+describe('z14 prod copy is blocked until #2980 (#2972, COO condition)', () => {
+  const gateAt = steps.findIndex(s => /#2980/.test(s.run ?? ''))
+  const copyAt = steps.findIndex(s => /gcs-upload\.ts copy /.test(s.run ?? ''))
+
+  it('has a gate step that runs before the prod copy', () => {
+    expect(gateAt).toBeGreaterThanOrEqual(0)
+    expect(copyAt).toBeGreaterThan(gateAt)
+  })
+
+  it('runs only for a real prod copy, and refuses z14 with an error and exit 1', () => {
+    const gate = steps[gateAt]!
+    expect(gate.if).toContain("inputs.target == 'prod-copy'")
+    expect(gate.if).toContain('!inputs.dry_run')
+    const run = gate.run ?? ''
+    expect(run).toMatch(/MAXZOOM/)
+    expect(run).toContain('world-z0-14-')
+    expect(run).toContain('::error::')
+    expect(run).toContain(
+      'blocked until #2980 (token refresh for long copies) lands'
+    )
+    expect(run).toMatch(/exit 1/)
+  })
+
+  it('the copy step points at #2980 in a comment', () => {
+    const from = raw.indexOf('- name: Copy the staging object to prod')
+    const to = raw.indexOf('- name:', from + 1)
+    expect(from).toBeGreaterThan(0)
+    expect(raw.slice(from, to)).toContain('#2980')
+  })
+})
