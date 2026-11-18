@@ -66,6 +66,26 @@ export function requireEnvUrlOrExit(
   return raw
 }
 
+/**
+ * A set but malformed target is a typo, not a missing value, so it fails
+ * in CI and locally alike (#2987).
+ */
+function assertHttpUrl(script: string, raw: string): void {
+  let ok = false
+  try {
+    const u = new URL(raw)
+    ok = (u.protocol === 'http:' || u.protocol === 'https:') && u.host !== ''
+  } catch {
+    ok = false
+  }
+  if (!ok) {
+    throw new Error(
+      `${script}: VITE_CDN_BASE_URL must be an absolute http(s) URL, got ` +
+        `"${raw}".`
+    )
+  }
+}
+
 /** Where the build's CDN target came from. */
 export type BuildCdnSource = 'env' | 'local-default'
 
@@ -84,7 +104,10 @@ export function resolveBuildCdnTarget(
   prodUrl: string
 ): { url: string; source: BuildCdnSource } {
   const raw = (env['VITE_CDN_BASE_URL'] ?? '').trim()
-  if (raw !== '') return { url: raw.replace(/\/+$/, ''), source: 'env' }
+  if (raw !== '') {
+    assertHttpUrl(script, raw)
+    return { url: raw.replace(/\/+$/, ''), source: 'env' }
+  }
   if (/^(true|1)$/i.test((env['CI'] ?? '').trim())) {
     throw new Error(
       `${script} requires an explicit CDN target in CI: set ` +
