@@ -316,6 +316,31 @@ jobs:
             echo "::warning::CDN health check did not return expected response. Manual verification recommended."
           fi
 
+      # The how-to videos are public CDN objects the PR Preview smokes only
+      # stand in for (#2570), so a deleted or moved prod video fails nothing
+      # else (#2899). This job holds no token (#2879), so fetch the released
+      # commit anonymously (public repo) instead of using actions/checkout.
+      # The script runs on plain `node` (type stripping, no npm install), with
+      # the Node version from the fetched .nvmrc. A failure names each video,
+      # cut, URL and status.
+      - name: Fetch the released commit
+        run: |
+          # The workspace is empty (no checkout), so fetch into its root and
+          # setup-node reads .nvmrc from there, as the Node policy requires.
+          git init --quiet
+          git fetch --quiet --depth 1 \
+            "https://github.com/${GITHUB_REPOSITORY}.git" "${GITHUB_SHA}"
+          git checkout --quiet FETCH_HEAD
+
+      - name: Setup Node.js for the video check
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Check the live how-to video URLs
+        timeout-minutes: 5
+        run: node scripts/check-video-urls.ts > /dev/null
+
       - name: Deployment summary
         run: |
           echo "" >> "$GITHUB_STEP_SUMMARY"
