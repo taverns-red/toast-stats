@@ -122,9 +122,13 @@ jobs:
       - name: Install dependencies
         # --ignore-scripts: no package lifecycle script may run while the job
         # holds the OIDC request token. Nothing here needs one: tsx's esbuild
-        # binary arrives through optionalDependencies, and the planner and the
-        # ffprobe check import no built workspace package.
+        # binary arrives through optionalDependencies. The root `prepare`
+        # (which builds shared-contracts) is skipped too, so the planner's
+        # dependency is built in the next step, before auth.
         run: npm ci --ignore-scripts
+
+      - name: Build shared-contracts (the planner imports it)
+        run: npm run build:shared-contracts
 
       - name: Plan the objects
         run: |
