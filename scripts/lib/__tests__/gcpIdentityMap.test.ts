@@ -125,9 +125,38 @@ interface GuardStep {
   env?: Record<string, unknown>
 }
 
+const normCond = (v: unknown): string =>
+  String(v ?? '')
+    .replace(/^\s*\$\{\{([\s\S]*)\}\}\s*$/, '$1')
+    .replace(/\s+/g, ' ')
+    .trim()
+
 /**
- * Is some step before `authAt` a guard for the repository variable `varName`?
- * A guard has the variable in its env, an `-z` test and an `exit 1` (#2872).
+ * Does `guard` stop the job whenever `auth` would run? A guard that never
+ * runs, runs under a narrower condition, or fails without stopping the job
+ * lets the auth action fall back to direct workload identity (#2963).
+ */
+const guardStopsAuth = (guard: GuardStep, auth: GuardStep): boolean => {
+  const guardIf = normCond(guard.if)
+  const authIf = normCond(auth.if)
+  if (guardIf === 'false') return false
+  // The auth step may wait for the guard's own success (a soft-failing guard).
+  const waits = guard.id
+    ? new RegExp(`(^| && )steps\\.${guard.id}\\.outcome == 'success'$`)
+    : null
+  const waitsForGuard = waits !== null && waits.test(authIf)
+  const authBase = waitsForGuard ? authIf.replace(waits!, '') : authIf
+  if (guardIf !== '' && guardIf !== authBase) return false
+  const soft =
+    guard['continue-on-error'] !== undefined &&
+    normCond(guard['continue-on-error']) !== 'false'
+  return !soft || waitsForGuard
+}
+
+/**
+ * Is the auth step at `authAt` preceded by a guard for the repository variable
+ * `varName`? A guard has the variable in its env, an `-z` test and an
+ * `exit 1` (#2872), and is configured so it really stops the job (#2963).
  */
 const hasGuard = (
   steps: GuardStep[],
@@ -142,7 +171,8 @@ const hasGuard = (
           String(Object.values(s.env ?? {}))
         ) &&
         /-z\b/.test(s.run ?? '') &&
-        /exit 1/.test(s.run ?? '')
+        /exit 1/.test(s.run ?? '') &&
+        guardStopsAuth(s, steps[authAt]!)
     )
 
 describe('identity guard step configuration (#2963)', () => {
@@ -231,14 +261,7 @@ describe('data-reader jobs (#2872 B2)', () => {
       const authAt = steps.findIndex(s =>
         /google-github-actions\/auth/.test(s.uses ?? '')
       )
-      const guarded = steps
-        .slice(0, authAt)
-        .some(
-          s =>
-            /vars\.GCP_PREVIEW_SA/.test(String(Object.values(s.env ?? {}))) &&
-            /-z\b/.test(s.run ?? '') &&
-            /exit 1/.test(s.run ?? '')
-        )
+      const guarded = hasGuard(steps, authAt, 'GCP_PREVIEW_SA')
       if (!guarded) missing.push(key)
     }
     expect(missing).toEqual([])
@@ -258,6 +281,9 @@ describe('data-reader jobs (#2872 B2)', () => {
     expect(guardAt).toBeGreaterThanOrEqual(0)
     expect(guardAt).toBeLessThan(authAt)
     expect(steps[guardAt]!.if).toMatch(/github\.event_name == 'pull_request'/)
+    // Not soft-failing (#2963). Its if is the same condition the service
+    // account expression switches on, so it covers every pull request run.
+    expect((steps[guardAt] as GuardStep)['continue-on-error']).toBeUndefined()
   })
 
   it('checks the pipeline variable is non-empty before every pipeline-identity auth step (#2960)', () => {
@@ -283,14 +309,7 @@ describe('data-reader jobs (#2872 B2)', () => {
       const authAt = steps.findIndex(s =>
         /google-github-actions\/auth/.test(s.uses ?? '')
       )
-      const guarded = steps
-        .slice(0, authAt)
-        .some(
-          s =>
-            /vars\.GCP_PIPELINE_SA/.test(String(Object.values(s.env ?? {}))) &&
-            /-z\b/.test(s.run ?? '') &&
-            /exit 1/.test(s.run ?? '')
-        )
+      const guarded = hasGuard(steps, authAt, 'GCP_PIPELINE_SA')
       if (!guarded) missing.push(key)
     }
     expect(missing).toEqual([])
@@ -311,14 +330,7 @@ describe('data-reader jobs (#2872 B2)', () => {
       const authAt = steps.findIndex(s =>
         /google-github-actions\/auth/.test(s.uses ?? '')
       )
-      const guarded = steps
-        .slice(0, authAt)
-        .some(
-          s =>
-            /vars\.GCP_RESTORE_SA/.test(String(Object.values(s.env ?? {}))) &&
-            /-z\b/.test(s.run ?? '') &&
-            /exit 1/.test(s.run ?? '')
-        )
+      const guarded = hasGuard(steps, authAt, 'GCP_RESTORE_SA')
       if (!guarded) missing.push(key)
     }
     expect(missing).toEqual([])
@@ -356,14 +368,7 @@ describe('data-reader jobs (#2872 B2)', () => {
       const authAt = steps.findIndex(s =>
         /google-github-actions\/auth/.test(s.uses ?? '')
       )
-      const guarded = steps
-        .slice(0, authAt)
-        .some(
-          s =>
-            /vars\.GCP_MEDIA_SA/.test(String(Object.values(s.env ?? {}))) &&
-            /-z\b/.test(s.run ?? '') &&
-            /exit 1/.test(s.run ?? '')
-        )
+      const guarded = hasGuard(steps, authAt, 'GCP_MEDIA_SA')
       if (!guarded) missing.push(key)
     }
     expect(missing).toEqual([])
@@ -400,16 +405,7 @@ describe('data-reader jobs (#2872 B2)', () => {
       const authAt = steps.findIndex(s =>
         /google-github-actions\/auth/.test(s.uses ?? '')
       )
-      const guarded = steps
-        .slice(0, authAt)
-        .some(
-          s =>
-            /vars\.GCP_HOSTING_DEPLOY_SA/.test(
-              String(Object.values(s.env ?? {}))
-            ) &&
-            /-z\b/.test(s.run ?? '') &&
-            /exit 1/.test(s.run ?? '')
-        )
+      const guarded = hasGuard(steps, authAt, 'GCP_HOSTING_DEPLOY_SA')
       if (!guarded) missing.push(key)
     }
     expect(missing).toEqual([])
@@ -470,16 +466,7 @@ describe('data-reader jobs (#2872 B2)', () => {
       const authAt = steps.findIndex(s =>
         /google-github-actions\/auth/.test(s.uses ?? '')
       )
-      const guarded = steps
-        .slice(0, authAt)
-        .some(
-          s =>
-            /vars\.GCP_DATA_READER_SA/.test(
-              String(Object.values(s.env ?? {}))
-            ) &&
-            /-z\b/.test(s.run ?? '') &&
-            /exit 1/.test(s.run ?? '')
-        )
+      const guarded = hasGuard(steps, authAt, 'GCP_DATA_READER_SA')
       if (!guarded) missing.push(key)
     }
     expect(missing).toEqual([])
