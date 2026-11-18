@@ -157,3 +157,40 @@ describe('restore identity expectation (#2966)', () => {
     }
   })
 })
+
+describe('media identity expectation (#2972)', () => {
+  const media = IDENTITY_EXPECTATIONS['media']!
+
+  it('is keyed by its own name', () => {
+    expect(media.identity).toBe('media')
+  })
+
+  it('creates on both data buckets, and reads on staging only', () => {
+    expect(media.buckets['toast-stats-data-ca']!.granted).toEqual([
+      'storage.objects.create',
+    ])
+    expect(media.buckets['toast-stats-data-staging']!.granted.sort()).toEqual([
+      'storage.objects.create',
+      'storage.objects.get',
+    ])
+  })
+
+  it('can never delete, overwrite in place, restore or change bucket metadata or IAM', () => {
+    for (const b of Object.values(media.buckets)) {
+      for (const p of [
+        'storage.objects.delete',
+        'storage.objects.update',
+        'storage.objects.restore',
+        'storage.buckets.update',
+        'storage.buckets.setIamPolicy',
+      ])
+        expect(b.denied).toContain(p)
+    }
+  })
+
+  it('never lists a permission as both granted and denied', () => {
+    for (const b of Object.values(media.buckets)) {
+      expect(b.granted.filter(p => b.denied.includes(p))).toEqual([])
+    }
+  })
+})

@@ -19,6 +19,7 @@ import { describe, it, expect } from 'vitest'
 import {
   DEPLOYER,
   DATA_READER,
+  MEDIA,
   PIPELINE,
   PREVIEW,
   RESTORE,
@@ -251,6 +252,42 @@ describe('data-reader jobs (#2872 B2)', () => {
       'data-pipeline.yml::data-auto-restore-execute',
       'gcp-identity-smoke.yml::restore',
     ])
+  })
+
+  it('checks the media variable is non-empty before every media auth step (#2972)', () => {
+    const mediaJobs = Object.entries(EXPECTED).filter(([, id]) => id === MEDIA)
+    expect(mediaJobs.map(([k]) => k).sort()).toEqual([
+      'basemap-build.yml::basemap',
+      'gcp-identity-smoke.yml::media',
+      'videos-publish.yml::publish',
+    ])
+    const missing: string[] = []
+    for (const [key] of mediaJobs) {
+      const [file, job] = key.split('::')
+      const steps = wfOf(file!).jobs![job!]!.steps!
+      const authAt = steps.findIndex(s =>
+        /google-github-actions\/auth/.test(s.uses ?? '')
+      )
+      const guarded = steps
+        .slice(0, authAt)
+        .some(
+          s =>
+            /vars\.GCP_MEDIA_SA/.test(String(Object.values(s.env ?? {}))) &&
+            /-z\b/.test(s.run ?? '') &&
+            /exit 1/.test(s.run ?? '')
+        )
+      if (!guarded) missing.push(key)
+    }
+    expect(missing).toEqual([])
+  })
+
+  it('declares no environment on media jobs: the binding is main-only, not environment-scoped (#2972)', () => {
+    const envs = collectEnvironments(files)
+    const withEnv = Object.entries(EXPECTED)
+      .filter(([, id]) => id === MEDIA)
+      .map(([k]) => k)
+      .filter(k => k in envs)
+    expect(withEnv).toEqual([])
   })
 
   it('builds every identity from known variables only', () => {

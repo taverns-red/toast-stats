@@ -19,6 +19,10 @@
  *   (#2964). It signs in only from the `data-restore` environment: object
  *   access on the prod bucket (including restore), read on staging, create
  *   (no overwrite) on the backups bucket, CDN purge; no bucket metadata or IAM.
+ * - MEDIA: `vars.GCP_MEDIA_SA`, the video publish and basemap build identity
+ *   (#2972). It signs in from main only and can create (never overwrite or
+ *   delete) objects under the `videos/` and `basemap/` prefixes of the staging
+ *   and prod data buckets, and read objects under those prefixes on staging.
  */
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -29,6 +33,7 @@ export const DATA_READER = 'vars.GCP_DATA_READER_SA'
 export const PREVIEW = 'vars.GCP_PREVIEW_SA'
 export const PIPELINE = 'vars.GCP_PIPELINE_SA'
 export const RESTORE = 'vars.GCP_RESTORE_SA'
+export const MEDIA = 'vars.GCP_MEDIA_SA'
 
 /** The one environment the restore identity's WIF binding admits (#2964). */
 export const RESTORE_ENVIRONMENT = 'data-restore'
@@ -64,11 +69,12 @@ export const KNOWN_IDENTITIES = [
   PREVIEW,
   PIPELINE,
   RESTORE,
+  MEDIA,
 ]
 
 /** Every job that runs google-github-actions/auth -> its one identity. */
 export const EXPECTED: Record<string, string> = {
-  'basemap-build.yml::basemap': DEPLOYER,
+  'basemap-build.yml::basemap': MEDIA,
   'contact-strip.yml::strip': PIPELINE,
   'data-pipeline.yml::pipeline': PIPELINE,
   'data-pipeline.yml::closing-registry-pr': DATA_READER,
@@ -83,6 +89,7 @@ export const EXPECTED: Record<string, string> = {
   'deploy.yml::deploy-frontend': DEPLOYER,
   'education-timeline-backfill.yml::backfill': PIPELINE,
   'gap-district-prune.yml::prune': PIPELINE,
+  'gcp-identity-smoke.yml::media': MEDIA,
   'gcp-identity-smoke.yml::restore': RESTORE,
   'harness-staging-canary.yml::canary': byEvent(
     'pull_request',
@@ -92,7 +99,7 @@ export const EXPECTED: Record<string, string> = {
   'pr-preview-cleanup.yml::cleanup': PREVIEW,
   'pr-preview.yml::preview': PREVIEW,
   'validate-vs-ceo-report.yml::validate': DATA_READER,
-  'videos-publish.yml::publish': DEPLOYER,
+  'videos-publish.yml::publish': MEDIA,
 }
 
 /**

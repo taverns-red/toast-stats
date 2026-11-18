@@ -207,3 +207,28 @@ describe('videos-publish.yml (#2310)', () => {
     expect(run).toMatch(/206/)
   })
 })
+
+describe('media identity (#2972)', () => {
+  const authAt = steps.findIndex(s =>
+    /google-github-actions\/auth/.test(
+      String((s as { uses?: string }).uses ?? '')
+    )
+  )
+
+  it('signs in as the media identity, not the shared deployer', () => {
+    const auth = steps[authAt] as { with?: Record<string, string> }
+    expect(auth.with?.['service_account']).toBe('${{ vars.GCP_MEDIA_SA }}')
+    expect(raw).not.toMatch(/secrets\.GCP_SERVICE_ACCOUNT/)
+  })
+
+  it('checks the media variable is non-empty before it authenticates', () => {
+    const guardAt = steps.findIndex(
+      s =>
+        /vars\.GCP_MEDIA_SA/.test(String(Object.values(s.env ?? {}))) &&
+        /-z\b/.test(s.run ?? '') &&
+        /exit 1/.test(s.run ?? '')
+    )
+    expect(guardAt).toBeGreaterThanOrEqual(0)
+    expect(guardAt).toBeLessThan(authAt)
+  })
+})

@@ -9,6 +9,7 @@ import * as path from 'node:path'
 import { parse } from 'yaml'
 import {
   EXPECTED,
+  MEDIA,
   RESTORE,
   RESTORE_ENVIRONMENT,
   collectEnvironments,
@@ -69,6 +70,41 @@ describe('gcp-identity-smoke workflow (#2966)', () => {
     )
   })
 
+  it('runs the media job from main, with no environment', () => {
+    const job = wf.jobs['media']!
+    expect(job.environment).toBeUndefined()
+    expect(job.if).toMatch(/github\.ref == 'refs\/heads\/main'/)
+    expect(job.if).toMatch(/inputs\.identity == 'media'/)
+  })
+
+  it('registers the media job as the media identity', () => {
+    expect(EXPECTED[`${FILE}::media`]).toBe(MEDIA)
+  })
+
+  it('checks the media variable is non-empty before the media job authenticates', () => {
+    const steps = wf.jobs['media']!.steps
+    const authAt = steps.findIndex(s =>
+      /google-github-actions\/auth/.test(s.uses ?? '')
+    )
+    const guardAt = steps.findIndex(
+      s =>
+        /vars\.GCP_MEDIA_SA/.test(String(Object.values(s.env ?? {}))) &&
+        /-z\b/.test(s.run ?? '') &&
+        /exit 1/.test(s.run ?? '')
+    )
+    expect(authAt).toBeGreaterThan(0)
+    expect(guardAt).toBeGreaterThanOrEqual(0)
+    expect(guardAt).toBeLessThan(authAt)
+    const auth = steps[authAt]!
+    expect(auth.with?.['token_format']).toBe('access_token')
+    expect(auth.with?.['create_credentials_file']).toBe(false)
+  })
+
+  it('smokes the media identity with the media script argument', () => {
+    const run = wf.jobs['media']!.steps.map(s => s.run ?? '').join('\n')
+    expect(run).toMatch(/identity-smoke\.ts media\b/)
+  })
+
   it('checks the restore variable is non-empty before it authenticates', () => {
     const steps = wf.jobs['restore']!.steps
     const authAt = steps.findIndex(s =>
@@ -103,15 +139,19 @@ describe('gcp-identity-smoke workflow (#2966)', () => {
   })
 
   it('installs with --ignore-scripts so no package script runs beside the OIDC token', () => {
-    const installs = wf.jobs['restore']!.steps.map(s => s.run ?? '').filter(r =>
-      /\bnpm (ci|install)\b/.test(r)
-    )
-    expect(installs.length).toBeGreaterThan(0)
-    for (const r of installs) expect(r).toMatch(/--ignore-scripts/)
+    for (const job of Object.values(wf.jobs)) {
+      const installs = job.steps
+        .map(s => s.run ?? '')
+        .filter(r => /\bnpm (ci|install)\b/.test(r))
+      expect(installs.length).toBeGreaterThan(0)
+      for (const r of installs) expect(r).toMatch(/--ignore-scripts/)
+    }
   })
 
   it('does not write: no gcloud, gh or curl mutation in a run step', () => {
-    const runs = wf.jobs['restore']!.steps.map(s => s.run ?? '').join('\n')
+    const runs = Object.values(wf.jobs)
+      .flatMap(j => j.steps.map(s => s.run ?? ''))
+      .join('\n')
     expect(runs).not.toMatch(
       /\bgcloud\b|\bgh\b|\bgsutil\b|-X\s*(POST|PUT|DELETE|PATCH)/
     )
