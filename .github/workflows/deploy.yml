@@ -370,7 +370,7 @@ jobs:
 
       - name: Check the live how-to video URLs
         timeout-minutes: 5
-        run: node scripts/check-video-urls.ts > /dev/null
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-video-urls.ts > /dev/null
 
       - name: Deployment summary
         run: |
