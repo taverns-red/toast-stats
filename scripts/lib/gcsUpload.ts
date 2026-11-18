@@ -91,7 +91,14 @@ const MAX_ATTEMPTS = 5
 const retryableStatus = (status: number): boolean =>
   status >= 500 || status === 408 || status === 429
 
-const DEFAULT_TOKEN_MAX_AGE_MS = 30 * 60_000 // tokens last an hour
+/**
+ * gcloud owns the token cache: `print-access-token` returns the cached token
+ * and only refreshes it within 5 minutes of expiry. Asking for a new one
+ * every 30 minutes would just return the same token. So we ask at least every
+ * 4 minutes, which is sure to land inside that 5-minute window before the
+ * hour is up. A 401 still re-mints once as the backstop.
+ */
+const DEFAULT_TOKEN_MAX_AGE_MS = 4 * 60_000
 
 /**
  * The bearer token for the source reads and the initiation. With a
@@ -188,6 +195,7 @@ const rangedRead =
           }
         )
         if (res.status === 401 && !renewed && (await auth.renew())) {
+          await res.body?.cancel() // free the connection before the retry
           renewed = true
           attempt-- // the re-mint is not a failed attempt
           continue
