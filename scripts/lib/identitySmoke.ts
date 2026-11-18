@@ -3,8 +3,8 @@
  * not hold, on each bucket, plus the pure comparison against what the Cloud
  * Storage `buckets.testIamPermissions` API reports.
  *
- * HOW TO ADD AN IDENTITY: add an entry to IDENTITY_EXPECTATIONS (B6
- * hosting-deploy) and a job in .github/workflows/gcp-identity-smoke.yml.
+ * HOW TO ADD AN IDENTITY: add an entry to IDENTITY_EXPECTATIONS
+ * and a job in .github/workflows/gcp-identity-smoke.yml.
  * `granted` is every permission the design gives the identity on the bucket;
  * `denied` is the permissions it must NOT have (they prove a grant is as
  * narrow as designed). A permission never appears in both lists.
@@ -26,9 +26,20 @@ export interface ObjectCheck {
   denied: string[]
 }
 
+/**
+ * Permissions asked of the project (projects.testIamPermissions). Only
+ * permissions valid on a project resource belong here: storage.objects.* and
+ * storage.buckets.get are not.
+ */
+export interface ProjectCheck {
+  granted: string[]
+  denied: string[]
+}
+
 export interface IdentityExpectation {
   identity: string
   buckets: Record<string, BucketExpectation>
+  projectChecks?: ProjectCheck
   objectChecks?: ObjectCheck[]
   /** Read-only listing of soft-deleted copies under one small prefix. */
   softDeletedProbe?: { bucket: string; prefix: string }
@@ -69,7 +80,52 @@ const MEDIA_DENIED = [
 const MEDIA_PROBE_INSIDE = 'basemap/protomaps-v4/world-z0-14-20261015.pmtiles'
 const MEDIA_PROBE_OUTSIDE = 'v1/latest.json'
 
+// What the hosting-deploy identity must never hold on a data bucket (#2984).
+// Reading is asserted on staging only: prod is public-read, so every caller
+// holds get and list there.
+const HOSTING_DENIED_BASE = [
+  'storage.objects.create',
+  'storage.objects.delete',
+  'storage.objects.update',
+  'storage.buckets.get',
+]
+
 export const IDENTITY_EXPECTATIONS: Record<string, IdentityExpectation> = {
+  // The production Hosting deploy identity (#2984): Hosting admin and
+  // service-usage roles at project level, no Cloud Storage access. Bucket
+  // level asserts the denied set only. The project level asks
+  // projects.testIamPermissions: sites.get/update/list are what `firebase
+  // deploy --only hosting` and the Hosting REST release calls use
+  // (roles/firebasehosting.admin), firebase.projects.get is the CLI's project
+  // lookup, serviceusage.services.use is the quota-project header. Project IAM
+  // and bucket creation must stay denied.
+  'hosting-deploy': {
+    identity: 'hosting-deploy',
+    buckets: {
+      [PROD_DATA_BUCKET]: { granted: [], denied: HOSTING_DENIED_BASE },
+      [STAGING_DATA_BUCKET]: {
+        granted: [],
+        denied: [
+          ...HOSTING_DENIED_BASE,
+          'storage.objects.get',
+          'storage.objects.list',
+        ],
+      },
+    },
+    projectChecks: {
+      granted: [
+        'firebasehosting.sites.get',
+        'firebasehosting.sites.list',
+        'firebasehosting.sites.update',
+        'firebase.projects.get',
+        'serviceusage.services.use',
+      ],
+      denied: [
+        'storage.buckets.create',
+        'resourcemanager.projects.setIamPolicy',
+      ],
+    },
+  },
   // The video publish and basemap build identity (#2972): create-only under
   // the videos/ and basemap/ prefixes of both data buckets, plus read on the
   // staging prefixes. The grants are conditioned on the object name, so
@@ -170,7 +226,8 @@ export const permissionsToTest = (b: BucketExpectation): string[] => [
 export const evaluate = (
   expected: IdentityExpectation,
   actualByBucket: Record<string, string[]>,
-  actualByObject: Record<string, string[]> = {}
+  actualByObject: Record<string, string[]> = {},
+  actualProject: string[] = []
 ): Evaluation => {
   const mismatches: Mismatch[] = []
   for (const oc of expected.objectChecks ?? []) {
@@ -190,6 +247,25 @@ export const evaluate = (
         mismatches.push({
           bucket,
           object,
+          permission,
+          problem: 'unexpected-grant',
+        })
+    }
+  }
+  if (expected.projectChecks) {
+    const held = new Set(actualProject)
+    for (const permission of expected.projectChecks.granted) {
+      if (!held.has(permission))
+        mismatches.push({
+          bucket: 'project',
+          permission,
+          problem: 'missing-grant',
+        })
+    }
+    for (const permission of expected.projectChecks.denied) {
+      if (held.has(permission))
+        mismatches.push({
+          bucket: 'project',
           permission,
           problem: 'unexpected-grant',
         })

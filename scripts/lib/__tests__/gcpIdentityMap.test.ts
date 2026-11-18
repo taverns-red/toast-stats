@@ -19,6 +19,8 @@ import { describe, it, expect } from 'vitest'
 import {
   DEPLOYER,
   DATA_READER,
+  HOSTING_DEPLOY,
+  HOSTING_DEPLOY_ENVIRONMENT,
   MEDIA,
   PIPELINE,
   PREVIEW,
@@ -288,6 +290,77 @@ describe('data-reader jobs (#2872 B2)', () => {
       .map(([k]) => k)
       .filter(k => k in envs)
     expect(withEnv).toEqual([])
+  })
+
+  it('maps the production deploy and its smoke job to the hosting-deploy identity (#2984)', () => {
+    expect(EXPECTED['deploy.yml::deploy-frontend']).toBe(HOSTING_DEPLOY)
+    expect(EXPECTED['gcp-identity-smoke.yml::hosting-deploy']).toBe(
+      HOSTING_DEPLOY
+    )
+  })
+
+  it('checks the hosting-deploy variable is non-empty before every hosting-deploy auth step (#2984)', () => {
+    const jobs = Object.entries(EXPECTED).filter(
+      ([, id]) => id === HOSTING_DEPLOY
+    )
+    expect(jobs.map(([k]) => k).sort()).toEqual([
+      'deploy.yml::deploy-frontend',
+      'gcp-identity-smoke.yml::hosting-deploy',
+    ])
+    const missing: string[] = []
+    for (const [key] of jobs) {
+      const [file, job] = key.split('::')
+      const steps = wfOf(file!).jobs![job!]!.steps!
+      const authAt = steps.findIndex(s =>
+        /google-github-actions\/auth/.test(s.uses ?? '')
+      )
+      const guarded = steps
+        .slice(0, authAt)
+        .some(
+          s =>
+            /vars\.GCP_HOSTING_DEPLOY_SA/.test(
+              String(Object.values(s.env ?? {}))
+            ) &&
+            /-z\b/.test(s.run ?? '') &&
+            /exit 1/.test(s.run ?? '')
+        )
+      if (!guarded) missing.push(key)
+    }
+    expect(missing).toEqual([])
+  })
+
+  it('pairs the hosting-deploy identity with the production environment, and nothing else uses either (#2984)', () => {
+    const envs = collectEnvironments(files)
+    const jobs = Object.entries(EXPECTED)
+      .filter(([, id]) => id === HOSTING_DEPLOY)
+      .map(([k]) => k)
+    const wrongEnv = jobs.filter(k => envs[k] !== HOSTING_DEPLOY_ENVIRONMENT)
+    const otherEnvUsers = Object.entries(envs)
+      .filter(([, e]) => e === HOSTING_DEPLOY_ENVIRONMENT)
+      .map(([k]) => k)
+      .filter(k => !jobs.includes(k))
+    expect(jobs).toHaveLength(2)
+    expect(wrongEnv).toEqual([])
+    expect(otherEnvUsers).toEqual([])
+  })
+
+  it('lets the release-please caller run the deploy job with its environment and token (#2984)', () => {
+    // A called workflow's job that declares `environment:` gets that
+    // environment's subject claim, so both entry points (workflow_dispatch
+    // and this workflow_call) sign in from `production`. The caller must pass
+    // the token scope and the repository variables through.
+    const caller = wfOf('release-please.yml').jobs!.deploy as unknown as {
+      permissions?: Record<string, string>
+      secrets?: string
+    }
+    expect(CALLERS['release-please.yml::deploy']).toBe(
+      './.github/workflows/deploy.yml'
+    )
+    expect(caller.permissions?.['id-token']).toBe('write')
+    expect(caller.secrets).toBe('inherit')
+    expect(collectEnvironments(files)['deploy.yml::deploy-frontend']).toBe(
+      HOSTING_DEPLOY_ENVIRONMENT
+    )
   })
 
   it('builds every identity from known variables only', () => {

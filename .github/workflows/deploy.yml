@@ -9,7 +9,11 @@
 #
 # Prerequisites:
 #   1. Run scripts/setup-wif.sh (one-time)
-#   2. Add GitHub secrets: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
+#   2. Add GitHub secrets: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, and the
+#      repository variable GCP_HOSTING_DEPLOY_SA (the hosting-deploy identity,
+#      #2984). It signs in only from the `production` environment, which both
+#      entry points (workflow_dispatch and the release-please workflow_call)
+#      get from the job below, and it has no Cloud Storage access.
 #
 # Auto-rollback (#2492): the job records the live Hosting version before
 # `firebase deploy`, smokes the core path for ~10 minutes after it, and on a
@@ -46,7 +50,6 @@ concurrency:
 
 env:
   REGION: 'northamerica-northeast1'
-  GCS_BUCKET: 'toast-stats-data-ca'
 
 # No workflow-level grant (#2879): every job declares its own scopes, so a
 # job added later starts with none. When called from release-please.yml,
@@ -63,6 +66,10 @@ jobs:
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-26.04
+    # The hosting-deploy identity admits only this environment (branch policy:
+    # main). A called workflow's job that declares it gets the same subject as
+    # a dispatched run, so release-please.yml and workflow_dispatch both work.
+    environment: production
     # The only job that signs in to GCP, so the only one with id-token (#2879).
     permissions:
       contents: read # checkout and `git log`; nothing pushes
@@ -109,11 +116,22 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Resolved package version: ${VERSION}"
 
+      # An empty variable would make the auth action fall back to direct
+      # workload identity; fail here with the cause instead.
+      - name: Require the hosting-deploy identity variable
+        env:
+          HOSTING_DEPLOY_SA: ${{ vars.GCP_HOSTING_DEPLOY_SA }}
+        run: |
+          if [ -z "${HOSTING_DEPLOY_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_HOSTING_DEPLOY_SA is empty"
+            exit 1
+          fi
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_HOSTING_DEPLOY_SA }}
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
         with:
@@ -253,6 +271,9 @@ jobs:
           echo "::error::Post-deploy smoke failed (rollback outcome: ${OUTCOME}). A hosting-rollback issue has been filed. See docs/runbooks/hosting-auto-rollback.md"
           exit 1
 
+      # The hosting-deploy identity has no Cloud Storage access, so the record
+      # goes to the run summary and a 90-day artifact, not the prod bucket
+      # (#2984). `metrics/deploys/` in the bucket is legacy: nothing writes it.
       - name: Record DORA deploy metrics
         if: success()
         run: |
@@ -262,7 +283,7 @@ jobs:
           VERSION="${{ steps.pkg.outputs.version }}"
           TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-          cat <<METRICS_EOF > /tmp/deploy-metrics.json
+          cat <<METRICS_EOF > "${RUNNER_TEMP}/deploy-metrics.json"
           {
             "timestamp": "${TIMESTAMP}",
             "commitSha": "${GITHUB_SHA}",
@@ -274,14 +295,21 @@ jobs:
           }
           METRICS_EOF
 
-          gcloud storage cp \
-            --content-type="application/json" \
-            /tmp/deploy-metrics.json \
-            "gs://${{ env.GCS_BUCKET }}/metrics/deploys/$(date -u +%Y-%m-%d_%H%M%S).json"
-
           echo "## 📊 DORA Metrics" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Lead time**: ${LEAD_TIME}s (commit → deploy)" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Version**: v${VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat "${RUNNER_TEMP}/deploy-metrics.json" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the DORA deploy record
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dora-deploy-${{ github.run_id }}
+          path: ${{ runner.temp }}/deploy-metrics.json
+          retention-days: 90
+          if-no-files-found: error
 
   # ──────────────────────────────────────────────
   # Post-Deployment Verification

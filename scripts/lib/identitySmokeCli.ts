@@ -1,10 +1,14 @@
 /**
  * #2966: the identity smoke's I/O, with `fetch` and the output sinks
- * injected so a test can drive the fail-closed paths. Only GET requests.
+ * injected so a test can drive the fail-closed paths. GET requests, plus one
+ * POST to projects.testIamPermissions for the project-level check (#2984).
+ * That call only reports; it changes nothing.
  * Returns the exit code: 0 pass - 1 mismatch or API failure - 2 usage.
  *
  * APIs: https://docs.cloud.google.com/storage/docs/json_api/v1/buckets/testIamPermissions
  *       https://docs.cloud.google.com/storage/docs/json_api/v1/objects/list
+ *       https://cloud.google.com/resource-manager/reference/rest/v1/projects/testIamPermissions
+ *       (POST v1/projects/{project}:testIamPermissions, body {permissions})
  */
 import {
   evaluate,
@@ -13,9 +17,12 @@ import {
 } from './identitySmoke.js'
 
 const API = 'https://storage.googleapis.com/storage/v1/b'
+const PROJECTS_API = 'https://cloudresourcemanager.googleapis.com/v1/projects'
 
 export interface SmokeDeps {
   token: string | undefined
+  /** The GCP project id, for project-level checks (#2984). */
+  projectId?: string
   fetch: typeof fetch
   /** Human-readable table (stderr, R4). */
   log: (line: string) => void
@@ -50,6 +57,31 @@ const getJson = async (
     )
   }
   return res.json()
+}
+
+/** projects.testIamPermissions: POST with the permissions in the body. */
+const heldProjectPermissions = async (
+  projectId: string,
+  permissions: string[],
+  token: string,
+  fetchFn: typeof fetch
+): Promise<string[]> => {
+  const url = `${PROJECTS_API}/${encodeURIComponent(projectId)}:testIamPermissions`
+  const res = await fetchFn(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ permissions }),
+  })
+  if (!res.ok) {
+    throw new Error(
+      `POST ${url.split('?')[0]} -> ${res.status} ${res.statusText}`
+    )
+  }
+  const body = (await res.json()) as { permissions?: string[] }
+  return body.permissions ?? []
 }
 
 const heldPermissions = async (
@@ -137,7 +169,21 @@ const check = async (
       deps.fetch
     )
   }
-  const result = evaluate(expected, actual, actualObjects)
+  let actualProject: string[] = []
+  if (expected.projectChecks) {
+    actualProject = await heldProjectPermissions(
+      deps.projectId as string,
+      [
+        ...new Set([
+          ...expected.projectChecks.granted,
+          ...expected.projectChecks.denied,
+        ]),
+      ],
+      token,
+      deps.fetch
+    )
+  }
+  const result = evaluate(expected, actual, actualObjects, actualProject)
 
   deps.log(`identity: ${expected.identity}`)
   for (const [bucket, exp] of Object.entries(expected.buckets)) {
@@ -165,6 +211,18 @@ const check = async (
       )
   }
 
+  if (expected.projectChecks) {
+    const held = new Set(actualProject)
+    for (const p of expected.projectChecks.granted)
+      deps.log(
+        `${held.has(p) ? 'ok  ' : 'FAIL'} project granted ${p} -> ${held.has(p) ? 'held' : 'NOT held'}`
+      )
+    for (const p of expected.projectChecks.denied)
+      deps.log(
+        `${held.has(p) ? 'FAIL' : 'ok  '} project denied  ${p} -> ${held.has(p) ? 'HELD' : 'not held'}`
+      )
+  }
+
   let softDeleted: { count: number; more: boolean } | undefined
   if (expected.softDeletedProbe) {
     const { bucket, prefix } = expected.softDeletedProbe
@@ -189,6 +247,10 @@ export const runSmoke = async (
 ): Promise<number> => {
   if (!deps.token) {
     deps.log('ACCESS_TOKEN is not set')
+    return 2
+  }
+  if (expected.projectChecks && !deps.projectId) {
+    deps.log('PROJECT_ID is not set')
     return 2
   }
   try {

@@ -19,6 +19,10 @@
  *   (#2964). It signs in only from the `data-restore` environment: object
  *   access on the prod bucket (including restore), read on staging, create
  *   (no overwrite) on the backups bucket, CDN purge; no bucket metadata or IAM.
+ * - HOSTING_DEPLOY: `vars.GCP_HOSTING_DEPLOY_SA`, the production Hosting deploy
+ *   identity (#2984). It signs in only from the `production` environment and
+ *   holds Hosting admin plus service-usage roles at project level; no Cloud
+ *   Storage access, so the job writes no bucket object.
  * - MEDIA: `vars.GCP_MEDIA_SA`, the video publish and basemap build identity
  *   (#2972). It signs in from main only and can create (never overwrite or
  *   delete) objects under the `videos/` and `basemap/` prefixes of the staging
@@ -34,9 +38,13 @@ export const PREVIEW = 'vars.GCP_PREVIEW_SA'
 export const PIPELINE = 'vars.GCP_PIPELINE_SA'
 export const RESTORE = 'vars.GCP_RESTORE_SA'
 export const MEDIA = 'vars.GCP_MEDIA_SA'
+export const HOSTING_DEPLOY = 'vars.GCP_HOSTING_DEPLOY_SA'
 
 /** The one environment the restore identity's WIF binding admits (#2964). */
 export const RESTORE_ENVIRONMENT = 'data-restore'
+
+/** The one environment the hosting-deploy identity's binding admits (#2984). */
+export const HOSTING_DEPLOY_ENVIRONMENT = 'production'
 
 /**
  * An identity chosen by event: `<event>` runs use `whenEvent`, every other
@@ -70,6 +78,7 @@ export const KNOWN_IDENTITIES = [
   PIPELINE,
   RESTORE,
   MEDIA,
+  HOSTING_DEPLOY,
 ]
 
 /** Every job that runs google-github-actions/auth -> its one identity. */
@@ -86,9 +95,10 @@ export const EXPECTED: Record<string, string> = {
   'data-pipeline.yml::data-auto-restore-execute': RESTORE,
   'data-pipeline.yml::og-cards': PIPELINE,
   'data-pipeline.yml::education-ledger-history': PIPELINE,
-  'deploy.yml::deploy-frontend': DEPLOYER,
+  'deploy.yml::deploy-frontend': HOSTING_DEPLOY,
   'education-timeline-backfill.yml::backfill': PIPELINE,
   'gap-district-prune.yml::prune': PIPELINE,
+  'gcp-identity-smoke.yml::hosting-deploy': HOSTING_DEPLOY,
   'gcp-identity-smoke.yml::media': MEDIA,
   'gcp-identity-smoke.yml::restore': RESTORE,
   'harness-staging-canary.yml::canary': byEvent(
@@ -114,8 +124,10 @@ export const NON_GCP_OIDC: Record<string, string> = {
 
 /**
  * Job-level `uses:` (reusable workflow calls): caller job -> full `uses` string.
- * B6 (hosting-deploy) must handle BOTH deploy.yml entry points:
- * workflow_dispatch and workflow_call from release-please.
+ * deploy.yml has two entry points: workflow_dispatch and workflow_call from
+ * release-please. The hosting-deploy identity admits the `production`
+ * environment, which the called job declares, so both sign in with the same
+ * subject (#2984).
  */
 export const CALLERS: Record<string, string> = {
   'release-please.yml::deploy': './.github/workflows/deploy.yml',

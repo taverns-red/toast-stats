@@ -9,6 +9,8 @@ import * as path from 'node:path'
 import { parse } from 'yaml'
 import {
   EXPECTED,
+  HOSTING_DEPLOY,
+  HOSTING_DEPLOY_ENVIRONMENT,
   MEDIA,
   RESTORE,
   RESTORE_ENVIRONMENT,
@@ -103,6 +105,38 @@ describe('gcp-identity-smoke workflow (#2966)', () => {
   it('smokes the media identity with the media script argument', () => {
     const run = wf.jobs['media']!.steps.map(s => s.run ?? '').join('\n')
     expect(run).toMatch(/identity-smoke\.ts media\b/)
+  })
+
+  it('runs the hosting-deploy job from main, in the production environment (#2984)', () => {
+    const job = wf.jobs['hosting-deploy']!
+    expect(job.environment).toBe(HOSTING_DEPLOY_ENVIRONMENT)
+    expect(job.if).toMatch(/github\.ref == 'refs\/heads\/main'/)
+    expect(job.if).toMatch(/inputs\.identity == 'hosting-deploy'/)
+    expect(EXPECTED[`${FILE}::hosting-deploy`]).toBe(HOSTING_DEPLOY)
+  })
+
+  it('checks the hosting-deploy variable before auth, and smokes with its argument and the project id (#2984)', () => {
+    const steps = wf.jobs['hosting-deploy']!.steps
+    const authAt = steps.findIndex(s =>
+      /google-github-actions\/auth/.test(s.uses ?? '')
+    )
+    const guardAt = steps.findIndex(
+      s =>
+        /vars\.GCP_HOSTING_DEPLOY_SA/.test(
+          String(Object.values(s.env ?? {}))
+        ) &&
+        /-z\b/.test(s.run ?? '') &&
+        /exit 1/.test(s.run ?? '')
+    )
+    expect(guardAt).toBeGreaterThanOrEqual(0)
+    expect(guardAt).toBeLessThan(authAt)
+    const auth = steps[authAt]!
+    expect(auth.with?.['token_format']).toBe('access_token')
+    expect(auth.with?.['create_credentials_file']).toBe(false)
+    const smoke = steps.find(s =>
+      /identity-smoke\.ts hosting-deploy\b/.test(s.run ?? '')
+    )
+    expect(smoke?.env?.['PROJECT_ID']).toBe('${{ secrets.GCP_PROJECT_ID }}')
   })
 
   it('checks the restore variable is non-empty before it authenticates', () => {
