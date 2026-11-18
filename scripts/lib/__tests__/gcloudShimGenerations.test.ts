@@ -108,7 +108,9 @@ describe('gcloud shim next_gen under parallel writers (#2800)', () => {
     expect(code.match(/\$\((?!\()/g) ?? []).toEqual([])
     expect(code.match(/`/g) ?? []).toEqual([])
     // A bare `(` opening a subshell: at the start of a command.
-    expect(code.match(/(^|[;&|]\s*|\bdo\s+|\bthen\s+)\(/gm) ?? []).toEqual([])
+    expect(code.match(/(^\s*|[;&|]\s*|\bdo\s+|\bthen\s+)\(/gm) ?? []).toEqual(
+      []
+    )
   })
 
   // #3002: the counter lock serialises every write, so each process a stamp
