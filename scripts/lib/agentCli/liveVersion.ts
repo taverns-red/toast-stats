@@ -2,7 +2,9 @@
  * `agent-cli live-version [--preview <pr>]` (#2418): which build a site is
  * serving, plus a probe of every asset its index.html references.
  *
- * The version is the `VITE_APP_VERSION` that deploy.yml bakes into the Vite
+ * The version is the `<meta name="app-version">` tag the build writes into
+ * index.html (#3000). Older builds carry it as the `VITE_APP_VERSION` that
+ * deploy.yml bakes into the Vite
  * env object (e.g. ``VITE_APP_VERSION:`v2.76.3` ``). Which chunk holds that
  * object depends on the bundler: it was the entry until #2999 moved the only
  * `import.meta.env` read into cdnBase, so the scan covers the entry first and
@@ -32,8 +34,16 @@ export function parseEntryAssets(html: string): {
   return { entry, assets: [...assets] }
 }
 
-/** Red stub (#3000): reads nothing yet. */
-export function parseHtmlVersion(_html: string): string | null {
+/**
+ * The version from `<meta name="app-version" content="v…">` in index.html
+ * (#3000), in either attribute order, or null when the page has none.
+ */
+export function parseHtmlVersion(html: string): string | null {
+  for (const tag of html.matchAll(/<meta\b[^>]*>/gi)) {
+    if (!/\bname=["']app-version["']/i.test(tag[0])) continue
+    const content = tag[0].match(/\bcontent=["']([^"']*)["']/i)?.[1]
+    if (content) return content
+  }
   return null
 }
 
@@ -91,10 +101,12 @@ export async function liveVersion(
   const base = opts.base.replace(/\/+$/, '')
   const index = await get(f, `${base}/`, opts.sleep)
   if (!index.ok) throw new Error(`GET ${base}/: HTTP ${index.status}`)
-  const { entry, assets } = parseEntryAssets(await index.text())
+  const html = await index.text()
+  const { entry, assets } = parseEntryAssets(html)
   if (!entry) throw new Error(`no module entry script in ${base}/`)
   const probes: AssetProbe[] = []
-  let version: string | null = null
+  // The meta tag (#3000) first; builds before it carry the version in a chunk.
+  let version: string | null = parseHtmlVersion(html)
   for (const path of assets) {
     // The entry is always read; other scripts are read only until the env
     // object turns up (#3013), and probed with HEAD after that.

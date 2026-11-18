@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { deadlinesIcsPlugin } from './src/utils/deadlinesIcsPlugin'
 import { bundleCdnBaseUrl, PROD_CDN_BASE_URL } from '../scripts/lib/cdnTarget'
+import { appVersionMetaPlugin } from '../scripts/lib/appVersionMeta'
 import { cdnTargetPlugin } from '../scripts/lib/viteCdnTargetPlugin'
 
 // https://vitejs.dev/config/
@@ -24,6 +25,9 @@ export default defineConfig(({ mode }) => {
       deadlinesIcsPlugin(),
       // eslint-disable-next-line no-undef
       cdnTargetPlugin(process.env, PROD_CDN_BASE_URL, bundleCdnUrl),
+      // #3000: `agent-cli live-version` reads the release from this tag.
+      // eslint-disable-next-line no-undef
+      appVersionMetaPlugin(process.env.VITE_APP_VERSION),
     ],
     define: {
       // eslint-disable-next-line no-undef

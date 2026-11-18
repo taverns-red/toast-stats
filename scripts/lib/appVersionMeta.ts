@@ -1,5 +1,13 @@
 /**
- * Red stub (#3000): adds no tag yet.
+ * Writes the release version into index.html as
+ * `<meta name="app-version" content="v…">` (#3000).
+ *
+ * `agent-cli live-version` used to find the version in the Vite env object,
+ * which sat in whichever chunk happened to read `import.meta.env`: the entry,
+ * then the cdnBase chunk (#2999, #3013). With the CDN a build-time constant,
+ * no critical-path chunk reads it. A tag in the page can't move with the
+ * chunking. deploy.yml sets `VITE_APP_VERSION`; preview and local builds don't,
+ * so they get no tag.
  */
 
 export interface HtmlTag {
@@ -14,7 +22,20 @@ export interface AppVersionMetaPlugin {
 }
 
 export function appVersionMetaPlugin(
-  _version: string | undefined
+  version: string | undefined
 ): AppVersionMetaPlugin {
-  return { name: 'app-version-meta', transformIndexHtml: () => [] }
+  const content = (version ?? '').trim()
+  return {
+    name: 'app-version-meta',
+    transformIndexHtml: () =>
+      content === ''
+        ? []
+        : [
+            {
+              tag: 'meta',
+              attrs: { name: 'app-version', content },
+              injectTo: 'head',
+            },
+          ],
+  }
 }
