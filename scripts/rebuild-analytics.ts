@@ -39,15 +39,15 @@ if (since) {
   dates = dates.filter(d => d >= since)
 }
 
-console.log(`📊 Computing analytics for ${dates.length} dates`)
+console.error(`📊 Computing analytics for ${dates.length} dates`)
 if (dates.length === 0) {
-  console.log('Nothing to do.')
+  console.error('Nothing to do.')
   process.exit(0)
 }
-console.log(`   First: ${dates[0]}`)
-console.log(`   Last:  ${dates[dates.length - 1]}`)
-console.log(`   Force: ${force}`)
-console.log()
+console.error(`   First: ${dates[0]}`)
+console.error(`   Last:  ${dates[dates.length - 1]}`)
+console.error(`   Force: ${force}`)
+console.error()
 
 async function main() {
   const analyticsService = new AnalyticsComputeService({ cacheDir })
@@ -59,7 +59,7 @@ async function main() {
   for (let i = 0; i < dates.length; i++) {
     const date = dates[i]!
     const n = i + 1
-    process.stdout.write(`  [${n}/${dates.length}] ${date} ... `)
+    process.stderr.write(`  [${n}/${dates.length}] ${date} ... `)
 
     try {
       const result = await analyticsService.compute({
@@ -69,36 +69,36 @@ async function main() {
       })
 
       const { category, label } = classifyRebuildResult(result)
-      console.log(label)
+      console.error(label)
       if (category === 'ok') ok++
       else if (category === 'skipped') skipped++
       else failed++
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
-      console.log(`⚠️  error: ${msg}`)
+      console.error(`⚠️  error: ${msg}`)
       failed++
     }
   }
 
-  console.log()
-  console.log('═══════════════════════════════════════════')
-  console.log('✅ Analytics rebuild complete')
-  console.log('═══════════════════════════════════════════')
-  console.log(`  Dates:   ${dates.length}`)
-  console.log(`  Success: ${ok}`)
-  console.log(`  Skipped: ${skipped}`)
-  console.log(`  Failed:  ${failed}`)
-  console.log()
+  console.error()
+  console.error('═══════════════════════════════════════════')
+  console.error('✅ Analytics rebuild complete')
+  console.error('═══════════════════════════════════════════')
+  console.error(`  Dates:   ${dates.length}`)
+  console.error(`  Success: ${ok}`)
+  console.error(`  Skipped: ${skipped}`)
+  console.error(`  Failed:  ${failed}`)
+  console.error()
   // No GCS command here on purpose (#1709): prod is written only by the gated
   // promotion in data-pipeline.yml, which is additive. The old hint mirrored
   // this local cache onto prod with --delete-unmatched-destination-objects.
-  console.log(
+  console.error(
     'Next step — publish through the Data Pipeline workflow (mode=rebuild):'
   )
-  console.log(
+  console.error(
     '  it uploads to staging, then promotes to prod only if the gates pass.'
   )
-  console.log(
+  console.error(
     `  Do not rsync ${cacheDir}/snapshots to the production bucket by hand.`
   )
 }
