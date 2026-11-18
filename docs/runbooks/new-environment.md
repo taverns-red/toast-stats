@@ -99,16 +99,29 @@ ADR-002 and ADR-003. For pipeline backfill, see
 
 ### 6. GitHub secrets
 
-Use the values that `setup-wif.sh` prints:
+Use the values that `setup-wif.sh` prints for the project and provider:
 
 ```bash
 gh secret set GCP_PROJECT_ID --repo taverns-red/toast-stats --body "$PROJECT_ID"
 gh secret set GCP_WORKLOAD_IDENTITY_PROVIDER --repo taverns-red/toast-stats --body "<provider resource name>"
 ```
 
-Set the per-job identity variables (`GCP_DATA_READER_SA`, `GCP_PREVIEW_SA`,
-`GCP_PIPELINE_SA`, `GCP_RESTORE_SA`, `GCP_MEDIA_SA`, `GCP_HOSTING_DEPLOY_SA`)
-as repository variables once those identities exist.
+There is no single deploy identity secret any more (#2872, #2955). Each job
+signs in as its own service account, set as a repository variable. Set one per
+identity, each to that identity's service account email:
+
+```bash
+gh variable set GCP_DATA_READER_SA --repo taverns-red/toast-stats --body "<email>"
+gh variable set GCP_PREVIEW_SA --repo taverns-red/toast-stats --body "<email>"
+gh variable set GCP_PIPELINE_SA --repo taverns-red/toast-stats --body "<email>"
+gh variable set GCP_RESTORE_SA --repo taverns-red/toast-stats --body "<email>"
+gh variable set GCP_MEDIA_SA --repo taverns-red/toast-stats --body "<email>"
+gh variable set GCP_HOSTING_DEPLOY_SA --repo taverns-red/toast-stats --body "<email>"
+```
+
+The roles and workload identity bindings for each one are in
+`scripts/lib/gcpIdentityMap.ts` (which job uses which) and the identity
+issues under #2872. `setup-wif.sh` does not create these accounts.
 
 ### 7. First deploy
 

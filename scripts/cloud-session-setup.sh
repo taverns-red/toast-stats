@@ -45,25 +45,4 @@ if ! command -v yamllint >/dev/null 2>&1; then
   fi
 fi
 
-# A case-folding locale, so sort-order-sensitive scripts and tests can be run
-# under byte order (C) and under one that folds case (the lessons-index test
-# that first needed it was retired in #2950). The image ships only C, C.utf8
-# and POSIX, but has the en_US source data and localedef.
-has_case_folding_locale() {
-  local line
-  while IFS= read -r line; do
-    case "$line" in
-      en_US.utf8 | en_US.UTF-8 | en_US.utf-8 | en_US.UTF8) return 0 ;;
-    esac
-  done < <(locale -a 2>/dev/null || true)
-  return 1
-}
-if ! has_case_folding_locale; then
-  echo "cloud-session-setup: localedef en_US.UTF-8" >&2
-  if ! localedef -i en_US -f UTF-8 en_US.UTF-8 >&2; then
-    echo "cloud-session-setup: FAILED: localedef en_US.UTF-8" >&2
-    exit 1
-  fi
-fi
-
 echo "cloud-session-setup: ready" >&2
