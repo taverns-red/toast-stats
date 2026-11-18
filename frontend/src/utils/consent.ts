@@ -188,11 +188,8 @@ export function gaRanThisPage(): boolean {
 const SYNC_CHANNEL = 'rt-consent'
 let syncChannel: BroadcastChannel | null = null
 
-function onRemoteDowngrade(data: unknown): void {
-  const level = (data as { level?: unknown } | null)?.level
-  if (level !== 'minimal' && level !== 'none') return
-  // The cookie is the truth: ignore a stale signal after a later upgrade.
-  if (getConsent() === 'all') return
+/** The downgrade steps for a tab told to lower consent. Safe to repeat. */
+function applyRemoteDowngrade(level: ConsentLevel | null): void {
   if (gaRanThisPage()) {
     try {
       installGaTransportGuard()
@@ -203,6 +200,36 @@ function onRemoteDowngrade(data: unknown): void {
   gaHook()?.disable()
   clearGaCookies()
   publish({ ...state, level })
+}
+
+function onRemoteDowngrade(data: unknown): void {
+  const level = (data as { level?: unknown } | null)?.level
+  if (level !== 'minimal' && level !== 'none') return
+  // The cookie is the truth: ignore a stale signal after a later upgrade.
+  if (getConsent() === 'all') return
+  applyRemoteDowngrade(level)
+}
+
+/* The message can be missed: it can beat the cookie, the page can sit in the
+   back/forward cache, or another .taverns.red site changed the cookie. So a
+   page where GA ran checks the cookie again when it is shown or becomes
+   visible, and takes the same downgrade path if it no longer says all. */
+function recheckConsent(): void {
+  if (!gaRanThisPage()) return
+  const level = getConsent()
+  if (level === 'all') return
+  applyRemoteDowngrade(level)
+}
+
+function watchForMissedSignal(): void {
+  try {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') recheckConsent()
+    })
+    window.addEventListener('pageshow', recheckConsent)
+  } catch {
+    // no DOM events: the channel signal still works
+  }
 }
 
 function openSyncChannel(): void {
@@ -224,6 +251,7 @@ function announceDowngrade(level: ConsentLevel): void {
 }
 
 openSyncChannel()
+watchForMissedSignal()
 
 /** Record a choice and apply it at once. */
 export function setConsent(level: ConsentLevel): void {
