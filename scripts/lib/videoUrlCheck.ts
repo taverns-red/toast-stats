@@ -27,6 +27,8 @@ export interface ProbeDeps {
     body?: { cancel(): Promise<void> } | null
   }>
   sleep?: (ms: number) => Promise<void>
+  /** Builds the per-request abort signal; injected so a test can see the timeout. */
+  timeoutSignal?: (ms: number) => AbortSignal
 }
 
 const REQUEST_TIMEOUT_MS = 15_000
@@ -34,12 +36,13 @@ const RETRY_DELAY_MS = 2_000
 
 async function attempt(
   url: string,
-  fetchFn: NonNullable<ProbeDeps['fetchFn']>
+  fetchFn: NonNullable<ProbeDeps['fetchFn']>,
+  timeoutSignal: NonNullable<ProbeDeps['timeoutSignal']>
 ): Promise<number | null> {
   try {
     const res = await fetchFn(url, {
       headers: { Range: 'bytes=0-0' },
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: timeoutSignal(REQUEST_TIMEOUT_MS),
     })
     await res.body?.cancel()
     return res.status
@@ -61,8 +64,9 @@ export async function probeUrl(
   const fetchFn = deps.fetchFn ?? fetch
   const sleep =
     deps.sleep ?? ((ms: number) => new Promise<void>(r => setTimeout(r, ms)))
-  const first = await attempt(url, fetchFn)
+  const timeoutSignal = deps.timeoutSignal ?? AbortSignal.timeout
+  const first = await attempt(url, fetchFn, timeoutSignal)
   if (first !== null && first < 500) return first
   await sleep(RETRY_DELAY_MS)
-  return attempt(url, fetchFn)
+  return attempt(url, fetchFn, timeoutSignal)
 }

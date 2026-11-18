@@ -6,7 +6,9 @@
  */
 import {
   EDUCATION_ROLLUP_VERSION,
+  REINSTATABLE_CLUBS_FORMAT,
   SUSPENDED_CLUBS_FORMAT,
+  type ReinstatableClubs,
   type EducationAwardsBlock,
   type EducationRollupProgramYear,
   type EducationTimelineEntity,
@@ -29,6 +31,37 @@ export const SUSPENDED_CLUBS: SuspendedClubs = {
         suspendDate: '2026-10-01',
       },
     ],
+  },
+}
+
+export const REINSTATABLE_CLUBS: ReinstatableClubs = {
+  _format: REINSTATABLE_CLUBS_FORMAT,
+  snapshotDate: '2026-11-17',
+  baseProgramYear: '2026-2027',
+  districts: {
+    '61': [
+      {
+        clubNumber: '1380016',
+        clubName: 'Example Suspended Club',
+        division: 'C',
+        area: '33',
+        status: 'suspended',
+        suspendDate: '2026-10-01',
+        oldestPeriod: false,
+        addsToBase: true,
+        reason: 'suspended_sept30_october_cycle',
+      },
+      {
+        clubNumber: '875053',
+        clubName: 'Example Closed Club',
+        status: 'closed',
+        lastSeen: '2025-03-31',
+        oldestPeriod: true,
+        addsToBase: false,
+        reason: 'closed_does_not_add',
+      },
+    ],
+    '83': [],
   },
 }
 

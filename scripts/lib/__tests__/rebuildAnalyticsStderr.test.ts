@@ -27,16 +27,28 @@ afterEach(() => {
   fs.rmSync(tmp, { recursive: true, force: true })
 })
 
+// Well under the suite's 10 s test timeout, so a hung child fails here with a
+// clear message and not as a generic test timeout (#2944).
+const CHILD_TIMEOUT_MS = 8_000
+
 function run(dates: string[]) {
-  for (const d of dates) {
-    fs.mkdirSync(path.join(tmp, 'snapshots', d), { recursive: true })
-  }
-  fs.mkdirSync(path.join(tmp, 'snapshots'), { recursive: true })
-  return spawnSync(TSX, [CLI], {
+  // The script exits 1 when the snapshots folder is missing, so an empty list
+  // still needs the folder; the date folders below then need no `recursive`.
+  const snapshots = path.join(tmp, 'snapshots')
+  fs.mkdirSync(snapshots)
+  for (const d of dates) fs.mkdirSync(path.join(snapshots, d))
+  const r = spawnSync(TSX, [CLI], {
     cwd: REPO,
     env: { ...process.env, CACHE_DIR: tmp },
     encoding: 'utf-8',
+    timeout: CHILD_TIMEOUT_MS,
   })
+  // spawnSync reports a timeout or a failed launch in `error`, not as a throw.
+  expect(
+    r.error,
+    `rebuild-analytics did not finish in ${CHILD_TIMEOUT_MS} ms: ${String(r.error)}`
+  ).toBeUndefined()
+  return r
 }
 
 describe('rebuild-analytics output streams (#2913)', () => {
@@ -49,6 +61,7 @@ describe('rebuild-analytics output streams (#2913)', () => {
 
   it('sends progress, per-date result and summary to stderr', () => {
     const r = run(['2026-01-01'])
+    expect(r.status, r.stderr).toBe(0)
     expect(r.stdout).toBe('')
     expect(r.stderr).toContain('Computing analytics for 1 dates')
     expect(r.stderr).toContain('[1/1] 2026-01-01')

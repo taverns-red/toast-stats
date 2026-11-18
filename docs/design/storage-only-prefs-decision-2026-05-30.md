@@ -57,5 +57,5 @@ Reopen this decision only if one of these changes the calculus:
   legitimately want to hand to a co-leader — at which point it stops being a
   single personal anchor and the imposition argument weakens.
 
-[Lesson 107 / #680]: ../../tasks/lessons/107-reserve-a-future-seam-with-a-tripwire-test-not-just-a-comment.md
-[Lesson 144]: ../../tasks/lessons/144-a-cap-enforced-only-on-the-mutation-path-is-bypassed-once-the-value-becomes-url-seedable.md
+[Lesson 107 / #680]: ../../tasks/lessons/archive/lessons/reserve-a-future-seam-with-a-tripwire-test-not-just-a-comment.md
+[Lesson 144]: ../../tasks/lessons/archive/lessons/a-cap-enforced-only-on-the-mutation-path-is-bypassed-once-the-value-becomes-url-seedable.md

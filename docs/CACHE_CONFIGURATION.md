@@ -38,8 +38,8 @@ This creates a cache directory in your project root, making it easy to inspect c
 For production deployments, use an absolute path:
 
 ```bash
-# .env.production
-CACHE_DIR=/var/cache/toastmasters
+# in the environment of the process that runs the collector
+export CACHE_DIR=/var/cache/toastmasters
 ```
 
 ### Docker Deployment

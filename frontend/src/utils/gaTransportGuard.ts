@@ -26,10 +26,11 @@ export function isGaCollectUrl(url: string): boolean {
     return false
   }
   if (u.protocol !== 'https:' && u.protocol !== 'http:') return false
-  const host = u.hostname.toLowerCase()
+  // A trailing dot (an absolute DNS name) reaches the same host.
+  const host = u.hostname.toLowerCase().replace(/\.$/, '')
   if (onDomain(host, GTM_DOMAIN)) return true
   if (onDomain(host, GA_DOMAIN) || onDomain(host, GA_ALT_DOMAIN)) {
-    return COLLECT_PATHS.has(u.pathname)
+    return COLLECT_PATHS.has(u.pathname.toLowerCase())
   }
   return false
 }

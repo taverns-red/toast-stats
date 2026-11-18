@@ -378,10 +378,17 @@ function recordedEntry(r: RemovalRecord, liveGeneration?: string): PlanEntry {
 }
 
 /** Whether the record names this object: exactly, or by a pruned prefix. */
-function isRecorded(name: string, removals: RemovalRecord[]): boolean {
-  return removals.some(r =>
+function recordFor(
+  name: string,
+  removals: RemovalRecord[]
+): RemovalRecord | undefined {
+  return removals.find(r =>
     r.path.endsWith('/') ? name.startsWith(r.path) : name === r.path
   )
+}
+
+function isRecorded(name: string, removals: RemovalRecord[]): boolean {
+  return recordFor(name, removals) !== undefined
 }
 
 /**
@@ -479,13 +486,12 @@ export function planRestore(input: {
     )
     // A live object under a recorded prune prefix: the removal did not finish,
     // so a person decides (#2903). A refuse planOne raised stays.
-    .map(e =>
-      e.action !== 'refuse' &&
-      liveNames.has(e.name) &&
-      isRecorded(e.name, removals)
-        ? recordedEntry({ path: e.name, kind: 'prune' }, e.liveGeneration)
+    .map(e => {
+      const record = recordFor(e.name, removals)
+      return e.action !== 'refuse' && liveNames.has(e.name) && record
+        ? recordedEntry({ path: e.name, kind: record.kind }, e.liveGeneration)
         : e
-    )
+    })
     .concat(deleted)
     .map(e =>
       expired && (e.action === 'restore' || e.action === 'delete')
@@ -541,11 +547,18 @@ export function verifyPlan(saved: RestorePlan, current: RestorePlan): void {
   }
 }
 
+/** The gcloud SDK whose `_BULK_RESTORE_FLAGS` the list below was checked against. */
+export const BULK_FLAGS_CHECKED_SDK = '588.0.0'
+
 /**
  * Flags `gcloud storage restore` accepts only for bulk (`--async`) restores.
  * A synchronous restore of a single `gs://B/O#GEN` rejects them. Source:
  * googlecloudsdk/surface/storage/restore.py L40-41 (`_BULK_RESTORE_FLAGS`) and
  * L381 ("Synchronous execution does not support flag: ..."), SDK 588.0.0.
+ *
+ * Copied by hand, so a flag added in a later SDK is not in this list. Re-check
+ * `_BULK_RESTORE_FLAGS` whenever the CI gcloud pin changes (#2977): a test
+ * fails until BULK_FLAGS_CHECKED_SDK matches the pin in data-pipeline.yml.
  */
 export const BULK_ONLY_RESTORE_FLAGS: readonly string[] = [
   '--allow-overwrite',

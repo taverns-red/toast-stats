@@ -38,6 +38,8 @@ import {
   RegionRollupsSchema,
   ReportsRollupsReaderSchema,
   ReportsRollupsSchema,
+  ReinstatableClubsReaderSchema,
+  ReinstatableClubsSchema,
   SuspendedClubsReaderSchema,
   SuspendedClubsSchema,
 } from '../index.js'
@@ -46,6 +48,7 @@ import {
   EDUCATION_ROLLUP_INDEX,
   EDUCATION_TIMELINE_ENTITY,
   GLOBAL_CLUB_RACE,
+  REINSTATABLE_CLUBS,
   SUSPENDED_CLUBS,
 } from './__fixtures__/reader-payloads.js'
 
@@ -83,6 +86,13 @@ const CASES: Case[] = [
     writer: SuspendedClubsSchema,
     payload: SUSPENDED_CLUBS,
     at: [[], ['districts', '83', 0]],
+  },
+  {
+    name: 'ReinstatableClubs',
+    reader: ReinstatableClubsReaderSchema,
+    writer: ReinstatableClubsSchema,
+    payload: REINSTATABLE_CLUBS,
+    at: [[], ['districts', '61', 0]],
   },
   {
     name: 'GlobalClubRace',

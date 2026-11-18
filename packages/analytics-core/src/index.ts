@@ -24,6 +24,18 @@ export { RISK_FACTOR_MESSAGES } from './analytics/riskFactorMessages.js'
 // Snapshot diff engine ("What Changed", epic #797)
 export { diffSnapshots } from './analytics/diffSnapshots.js'
 
+// Reinstatement rule: who can be reinstated, and whether it adds to the club
+// base (#3007)
+export {
+  classifyReinstatement,
+  CYCLE_TOLERANCE_DAYS,
+} from './analytics/reinstatement.js'
+export type {
+  ReinstatementInput,
+  ReinstatementReason,
+  ReinstatementResult,
+} from './analytics/reinstatement.js'
+
 // Shared DCP goal definitions — single source of truth (epic #1095, #1118)
 export {
   DCP_GOAL_DEFINITIONS,

@@ -97,6 +97,11 @@ export const COMPAT_FIXTURES: FixtureSpec[] = [
     exportName: 'SUSPENDED_CLUBS',
   },
   {
+    reader: 'ReinstatableClubs',
+    file: '__fixtures__/reader-payloads.ts',
+    exportName: 'REINSTATABLE_CLUBS',
+  },
+  {
     reader: 'GlobalClubRace',
     file: '__fixtures__/reader-payloads.ts',
     exportName: 'GLOBAL_CLUB_RACE',

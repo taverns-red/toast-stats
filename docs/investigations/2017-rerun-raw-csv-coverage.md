@@ -103,7 +103,7 @@ gsutil cat gs://toast-stats-data-ca/v1/rankings.json | jq '.rankings | length'  
 
 ## 7. Related
 
-- Lesson 139 — year-end snapshot `sourceCsvDate` falls in July (the §3c remap). `tasks/lessons/139-a-year-end-snapshots-source-date-falls-in-july-so-a-program-year-equality-guard-drops-every-year.md`
+- Lesson 139 — year-end snapshot `sourceCsvDate` falls in July (the §3c remap). `tasks/lessons/archive/lessons/a-year-end-snapshots-source-date-falls-in-july-so-a-program-year-equality-guard-drops-every-year.md`
 - R2 — never assume data exists on the ephemeral runner; the rebuild syncs everything from GCS first.
 - R6/R7 — `rebuild` mode + `BackfillOrchestrator` already exist; this epic wires/validates them, it does not rebuild them.
 - `docs/runbooks/data-pipeline-recovery.md`, `docs/data-pipeline-flow.md` — adjacent operational docs.

@@ -116,10 +116,23 @@ const plan = (s: Scenario): RestorePlan =>
     now: s.now,
   })
 
-const isRecorded = (name: string, removals: RemovalRecord[]): boolean =>
-  removals.some(r =>
-    r.path.endsWith('/') ? name.startsWith(r.path) : name === r.path
-  )
+/**
+ * The oracle, written from the spec and not from the planner's `isRecorded`
+ * (#2934): a name is recorded when it equals a recorded path, or when it sits
+ * under a recorded `prefix/`. Compared by path segment, so a bug that the
+ * planner's startsWith/endsWith test shares would not hide here.
+ */
+const isRecorded = (name: string, removals: RemovalRecord[]): boolean => {
+  const nameParts = name.split('/')
+  return removals.some(r => {
+    if (!r.path.endsWith('/')) return name === r.path
+    const prefixParts = r.path.slice(0, -1).split('/')
+    return (
+      nameParts.length > prefixParts.length &&
+      prefixParts.every((part, i) => nameParts[i] === part)
+    )
+  })
+}
 
 describe('planRestore properties (#2930)', () => {
   it('never restores or deletes a recorded name or a name under a recorded prefix', () => {

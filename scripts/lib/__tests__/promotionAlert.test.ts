@@ -220,6 +220,9 @@ describe('buildPromotionHeldBody', () => {
     const body = buildPromotionHeldBody(r, OPTS)
     expect(r.affectedDistricts.join(', ').length).toBeGreaterThan(60_000)
     expect(body.length).toBeLessThanOrEqual(60_000)
+    // Plain ASCII at the cut: the guard keeps exactly the limit, no more cut
+    // than needed (#2940).
+    expect(body.length).toBe(60_000)
     expect(body).toContain("Body truncated to fit GitHub's 64KB issue limit")
     // The head survives.
     expect(
@@ -234,6 +237,39 @@ describe('buildPromotionHeldBody', () => {
       body.endsWith('Filed by `.github/workflows/data-pipeline.yml` (#1073)._')
     ).toBe(true)
   })
+
+  // A lone surrogate is a broken character: GitHub shows U+FFFD and strict
+  // encoders throw. The heading emoji (🛑, 🔶) are astral, so a cut can land
+  // inside one (#2940).
+  const LONE_SURROGATE =
+    /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+
+  it.each(['', 'a'])(
+    'never cuts inside a surrogate pair at the hard guard, whichever side of the pair the limit falls (prefix %j) (#2940)',
+    prefix => {
+      // One district id of emoji: every code point after the head is two
+      // UTF-16 units, so with and without a one-unit prefix the cut falls
+      // once between the pair and once on its edge.
+      const id = prefix + '🛑'.repeat(40_000)
+      const r = evaluatePromotion({
+        countPromote: true,
+        valuePromote: false,
+        valueDiff: {
+          ...CHANGED_DIFF,
+          report: {
+            ...CHANGED_DIFF.report,
+            changed: [{ date: '2026-05-30', changedDistricts: [id] }],
+          },
+        },
+      })
+      const body = buildPromotionHeldBody(r, OPTS)
+      expect(body).toContain("Body truncated to fit GitHub's 64KB issue limit")
+      expect(body.length).toBeLessThanOrEqual(60_000)
+      // At most one unit short of the limit: backing off a half pair only.
+      expect(body.length).toBeGreaterThanOrEqual(59_999)
+      expect(LONE_SURROGATE.test(body)).toBe(false)
+    }
+  )
 
   it('caps the value-gate reasons list at 40 with a "more" line (#1168, #2937)', () => {
     // A full-range re-derive: hundreds of reasons, every district affected —

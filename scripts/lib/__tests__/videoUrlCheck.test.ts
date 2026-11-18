@@ -76,10 +76,26 @@ describe('probeUrl (#2899)', () => {
     const fetchFn = vi.fn(async (_url: string, _init: RequestInit) =>
       reply(200)
     )
-    await probeUrl('https://x/y.mp4', { fetchFn, sleep: noSleep })
+    const signal = new AbortController().signal
+    const timeoutSignal = vi.fn((_ms: number) => signal)
+    await probeUrl('https://x/y.mp4', {
+      fetchFn,
+      sleep: noSleep,
+      timeoutSignal,
+    })
+    // The timeout itself, not just that some signal is passed (#2939).
+    expect(timeoutSignal).toHaveBeenCalledExactlyOnceWith(15_000)
     const init = fetchFn.mock.calls[0]?.[1]
-    expect(init?.signal).toBeInstanceOf(AbortSignal)
+    expect(init?.signal).toBe(signal)
     expect(init?.headers).toEqual({ Range: 'bytes=0-0' })
+  })
+
+  it('uses the real AbortSignal.timeout when none is injected', async () => {
+    const fetchFn = vi.fn(async (_url: string, _init: RequestInit) =>
+      reply(200)
+    )
+    await probeUrl('https://x/y.mp4', { fetchFn, sleep: noSleep })
+    expect(fetchFn.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal)
   })
 
   it('retries once after a network error', async () => {

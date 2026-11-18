@@ -181,8 +181,8 @@ Prioritised by user-facing value (sharing a filtered/searched view is the core p
 ### Guardrails for implementers
 
 - **Reuse existing infra** — do not hand-roll `useSearchParams`. Extend `useUrlState` / `useUrlSort` / `useUrlDatePair`; for the clubs surface reuse the `clubFilterUrl` codec.
-- **R3** — pass URL/derived state down as props from the page that owns it; never re-derive from API response data ([Lesson 124](../../tasks/lessons/124-validate-url-synced-range-state-at-the-page-not-the-picker.md)).
-- **[Lesson 070](../../tasks/lessons/070-setSearchParams-prev-races-in-batched-updates.md)** — `setSearchParams(prev => …)` races same-batch updaters; batch multi-param writes.
-- **[Lesson 130](../../tasks/lessons/130-a-debounced-outward-push-must-gate-on-the-debounce-having-settled.md)** — a debounced outward push (e.g. search box) must gate on the debounce having settled, or an external clear races the stale value back out.
-- **[Lesson 128](../../tasks/lessons/128-a-filter-control-is-aria-pressed-not-role-tab.md)** — filter presets are `aria-pressed`, not `role="tab"`.
-- **[Lesson 107 (#680)](../../tasks/lessons/107-reserve-a-future-seam-with-a-tripwire-test-not-just-a-comment.md)** — each remediation sprint should land a tripwire/round-trip test (back-button + reload + shared-link), not just a comment. This audit is doc-only by design; the tests live with the code that needs them.
+- **R3** — pass URL/derived state down as props from the page that owns it; never re-derive from API response data ([Lesson 124](../../tasks/lessons/archive/lessons/validate-url-synced-range-state-at-the-page-not-the-picker.md)).
+- **[Lesson 070](../../tasks/lessons/archive/lessons/setSearchParams-prev-races-in-batched-updates.md)** — `setSearchParams(prev => …)` races same-batch updaters; batch multi-param writes.
+- **[Lesson 130](../../tasks/lessons/archive/lessons/a-debounced-outward-push-must-gate-on-the-debounce-having-settled.md)** — a debounced outward push (e.g. search box) must gate on the debounce having settled, or an external clear races the stale value back out.
+- **[Lesson 128](../../tasks/lessons/archive/lessons/a-filter-control-is-aria-pressed-not-role-tab.md)** — filter presets are `aria-pressed`, not `role="tab"`.
+- **[Lesson 107 (#680)](../../tasks/lessons/archive/lessons/reserve-a-future-seam-with-a-tripwire-test-not-just-a-comment.md)** — each remediation sprint should land a tripwire/round-trip test (back-button + reload + shared-link), not just a comment. This audit is doc-only by design; the tests live with the code that needs them.

@@ -52,8 +52,23 @@ describe('deploy.yml post-deploy-verify video URL check (#2899)', () => {
   })
 
   it('runs the script with plain node, not npx, from the fetched commit', () => {
-    expect(checkStep?.run).toMatch(/^\s*node scripts\/check-video-urls\.ts/m)
+    expect(checkStep?.run).toMatch(
+      /^\s*node\s[^\n]*scripts\/check-video-urls\.ts/m
+    )
     expect(checkStep?.run).not.toMatch(/\bnpx\b|\bnpm\b/)
+  })
+
+  it('silences the typeless-package warning on that one command only (#2939)', () => {
+    // The root package.json has no "type", so node warns on every run. A flag
+    // on this command keeps the log clean without changing how any other
+    // script loads.
+    expect(checkStep?.run).toMatch(
+      /^\s*node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts\/check-video-urls\.ts/m
+    )
+    const root = JSON.parse(
+      fs.readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf-8')
+    ) as { type?: string }
+    expect(root.type).toBeUndefined()
   })
 
   it('sets up Node from the fetched .nvmrc before the check', () => {

@@ -80,8 +80,12 @@ scripts/setup-hosting-sites.sh --project "$PROJECT_ID" \
 PROJECT_ID="$PROJECT_ID" scripts/setup-wif.sh
 ```
 
-The defaults (`GITHUB_REPO=taverns-red/toast-stats`,
-`SA_NAME=toast-stats-deployer`) match the live deployer. The live provider in
+`PROJECT_ID` is required; the script has no default project. The default
+`GITHUB_REPO=taverns-red/toast-stats` matches this repo. The script creates only
+the pool and provider. It creates no service account and grants no role
+(#3025). Each job's identity (`scripts/lib/gcpIdentityMap.ts`) and its
+bindings must be created separately; the script no longer does this, and this
+runbook does not yet list those steps. The live provider in
 `toast-stats-prod-6d64a` is shared with other Red Taverns repos and uses the
 condition `assertion.repository_owner=='taverns-red'`. The script's
 per-repository condition is stricter, which is fine for a single-repo project.
@@ -95,13 +99,29 @@ ADR-002 and ADR-003. For pipeline backfill, see
 
 ### 6. GitHub secrets
 
-Use the values that `setup-wif.sh` prints:
+Use the values that `setup-wif.sh` prints for the project and provider:
 
 ```bash
 gh secret set GCP_PROJECT_ID --repo taverns-red/toast-stats --body "$PROJECT_ID"
 gh secret set GCP_WORKLOAD_IDENTITY_PROVIDER --repo taverns-red/toast-stats --body "<provider resource name>"
-gh secret set GCP_SERVICE_ACCOUNT --repo taverns-red/toast-stats --body "<sa email>"
 ```
+
+There is no single deploy identity secret any more (#2872, #2955). Each job
+signs in as its own service account, set as a repository variable. Set one per
+identity, each to that identity's service account email:
+
+```bash
+gh variable set GCP_DATA_READER_SA --repo taverns-red/toast-stats --body "<email>"
+gh variable set GCP_PREVIEW_SA --repo taverns-red/toast-stats --body "<email>"
+gh variable set GCP_PIPELINE_SA --repo taverns-red/toast-stats --body "<email>"
+gh variable set GCP_RESTORE_SA --repo taverns-red/toast-stats --body "<email>"
+gh variable set GCP_MEDIA_SA --repo taverns-red/toast-stats --body "<email>"
+gh variable set GCP_HOSTING_DEPLOY_SA --repo taverns-red/toast-stats --body "<email>"
+```
+
+The roles and workload identity bindings for each one are in
+`scripts/lib/gcpIdentityMap.ts` (which job uses which) and the identity
+issues under #2872. `setup-wif.sh` does not create these accounts.
 
 ### 7. First deploy
 

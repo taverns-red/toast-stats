@@ -20,6 +20,14 @@ export default defineConfig({
   define: {
     // eslint-disable-next-line no-undef
     __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || 'dev'),
+    // #3000: the same constant vite.config.ts bakes into the bundle (same
+    // rule as bundleCdnBaseUrl: trimmed, no trailing slash, else prod). Not
+    // imported from scripts/lib: that adds a config-loader warning to every run.
+    __CDN_BASE_URL__: JSON.stringify(
+      // eslint-disable-next-line no-undef
+      (process.env.VITE_CDN_BASE_URL ?? '').trim().replace(/\/+$/, '') ||
+        'https://cdn.taverns.red'
+    ),
   },
   test: {
     // Shared defaults — inherited by each project via `extends: true`.
