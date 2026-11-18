@@ -182,6 +182,40 @@ describe('copy token refresh (#2980)', () => {
     expect(mint).toHaveBeenCalledTimes(1)
   })
 
+  it('by default asks the provider again once 4 minutes have passed', async () => {
+    // gcloud serves its cached token until 5 minutes before expiry, so the
+    // provider has to be asked often enough to land inside that window.
+    let clock = 0
+    let minted = 0
+    const mint = vi.fn(async () => `tok-${++minted}`)
+    const { fetchFn, gets } = world((n, r) => {
+      clock += 5 * 60_000 // each source GET takes 5 minutes
+      return part(r)
+    })
+    await uploadObject(copy(fetchFn, { tokenProvider: mint, now: () => clock }))
+    expect(gets.map(g => g.auth)).toEqual([
+      'Bearer tok-0',
+      'Bearer tok-1',
+      'Bearer tok-2',
+    ])
+  })
+
+  it('cancels the 401 response body before it retries', async () => {
+    const cancel = vi.fn(async () => {})
+    const { fetchFn } = world((n, r, auth) => {
+      if (n === 2 && auth === 'Bearer tok-0') {
+        const res = new Response('', { status: 401 })
+        Object.defineProperty(res, 'body', {
+          value: { cancel },
+        })
+        return res
+      }
+      return part(r)
+    })
+    await uploadObject(copy(fetchFn, { tokenProvider: async () => 'tok-1' }))
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
   it('never puts a token in an error message', async () => {
     const { fetchFn } = world(() => new Response('', { status: 401 }))
     const err = await uploadObject(
@@ -195,14 +229,14 @@ describe('copy token refresh (#2980)', () => {
 
   it('a provider that fails is fatal and says so', async () => {
     const { fetchFn } = world(() => new Response('', { status: 401 }))
-    await expect(
-      uploadObject(
-        copy(fetchFn, {
-          tokenProvider: async () => {
-            throw new Error('gcloud not found')
-          },
-        })
-      )
-    ).rejects.toThrow(/token/i)
+    const err = await uploadObject(
+      copy(fetchFn, {
+        tokenProvider: async () => {
+          throw new Error('gcloud failed: ya29.FAKE-provider-secret')
+        },
+      })
+    ).catch((e: Error) => e)
+    expect((err as Error).message).toMatch(/token/i)
+    expect((err as Error).message).not.toContain('FAKE-provider-secret')
   })
 })
