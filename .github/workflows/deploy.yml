@@ -325,8 +325,9 @@ jobs:
       # cut, URL and status.
       - name: Fetch the released commit
         run: |
-          git init --quiet videos-check
-          cd videos-check
+          # The workspace is empty (no checkout), so fetch into its root and
+          # setup-node reads .nvmrc from there, as the Node policy requires.
+          git init --quiet
           git fetch --quiet --depth 1 \
             "https://github.com/${GITHUB_REPOSITORY}.git" "${GITHUB_SHA}"
           git checkout --quiet FETCH_HEAD
@@ -334,11 +335,10 @@ jobs:
       - name: Setup Node.js for the video check
         uses: actions/setup-node@v7
         with:
-          node-version-file: 'videos-check/.nvmrc'
+          node-version-file: '.nvmrc'
 
       - name: Check the live how-to video URLs
         timeout-minutes: 5
-        working-directory: videos-check
         run: node scripts/check-video-urls.ts > /dev/null
 
       - name: Deployment summary
