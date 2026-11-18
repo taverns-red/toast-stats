@@ -6,8 +6,9 @@
  * env object (e.g. ``VITE_APP_VERSION:`v2.76.3` ``). Which chunk holds that
  * object depends on the bundler: it was the entry until #2999 moved the only
  * `import.meta.env` read into cdnBase, so the scan covers the entry first and
- * then every script index.html references (#3013). Preview builds don't set it, so a preview reports `version: null` and is
- * identified by its entry-bundle hash instead. Firebase answers a missing
+ * then every script index.html references (#3013). Preview builds don't set
+ * it, so a preview reports `version: null` and is identified by its
+ * entry-bundle hash instead. Firebase answers a missing
  * `/assets/*` with a 404 HTML page (firebase.json rewrite), so an asset is
  * broken when it isn't a 200 or comes back as HTML. Read-only GETs/HEADs.
  */
