@@ -15,9 +15,21 @@ export interface BucketExpectation {
   denied: string[]
 }
 
+/**
+ * Permissions asked of one object path (objects.testIamPermissions). A grant
+ * conditioned on an object-name prefix shows only here, never at bucket level.
+ */
+export interface ObjectCheck {
+  bucket: string
+  object: string
+  granted: string[]
+  denied: string[]
+}
+
 export interface IdentityExpectation {
   identity: string
   buckets: Record<string, BucketExpectation>
+  objectChecks?: ObjectCheck[]
   /** Read-only listing of soft-deleted copies under one small prefix. */
   softDeletedProbe?: { bucket: string; prefix: string }
 }
@@ -112,7 +124,8 @@ export const permissionsToTest = (b: BucketExpectation): string[] => [
  */
 export const evaluate = (
   expected: IdentityExpectation,
-  actualByBucket: Record<string, string[]>
+  actualByBucket: Record<string, string[]>,
+  _actualByObject: Record<string, string[]> = {}
 ): Evaluation => {
   const mismatches: Mismatch[] = []
   for (const [bucket, exp] of Object.entries(expected.buckets)) {
