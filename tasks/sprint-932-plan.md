@@ -59,6 +59,6 @@ $RUNNER_LOG_DIR/session-$issue.log`, `deflog on`) and launches with `-c
 - Shell tests are **macOS-local** (`ps -o lstart`, `stat -f`, `date -j`) — not
   ubuntu-CI-portable by design (the runner is a macOS launchd job). "Regression
   test green" = passes here; "CI green" = the vitest/lint/format pipeline stays
-  green. Run `npm run format` (prettier touches \*_/_.md) before commit; regen
-  `tasks/lessons/INDEX.md` (lessonsIndexGuard vitest asserts it).
+  green. Run `npm run format` (prettier touches \*_/_.md) before commit. (The
+  lessons index it once told you to regenerate is gone after #2950.)
 - Every commit references #932. No `Closes #932` in the PR body (L106/R15).
