@@ -6,7 +6,10 @@
 # ghost, via scripts/pipeline/backfill-education-timeline.sh.
 #
 # STAGING ONLY. The bucket is a literal below, not an input, and the job has
-# no prod credentials or environment. Uploads go through gcs-upload.sh, which
+# no prod environment. It signs in as the pipeline identity
+# (vars.GCP_PIPELINE_SA, #2960), which can reach the prod bucket, so the
+# staging limit is held by the literal and by gcs-upload.sh, not by
+# credentials. Uploads go through gcs-upload.sh, which
 # refuses the prod bucket and records every object in RUN_MANIFEST_FILE
 # (#1755). derived/ is never a promoted prefix: the next daily rollup run
 # finds the objects and the promote-reports job carries them to prod with the
@@ -80,11 +83,22 @@ jobs:
       - name: Build analytics core
         run: npm run build:analytics-core
 
+      # An empty pipeline variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      - name: Require the pipeline identity variable
+        env:
+          PIPELINE_SA: ${{ vars.GCP_PIPELINE_SA }}
+        run: |
+          if [ -z "${PIPELINE_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_PIPELINE_SA is empty"
+            exit 1
+          fi
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          service_account: ${{ vars.GCP_PIPELINE_SA }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1

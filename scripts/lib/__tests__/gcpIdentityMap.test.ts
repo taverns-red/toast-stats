@@ -19,6 +19,7 @@ import { describe, it, expect } from 'vitest'
 import {
   DEPLOYER,
   DATA_READER,
+  PIPELINE,
   PREVIEW,
   KNOWN_IDENTITIES,
   READER_GUARD_EXEMPT,
@@ -165,6 +166,42 @@ describe('data-reader jobs (#2872 B2)', () => {
     expect(guardAt).toBeGreaterThanOrEqual(0)
     expect(guardAt).toBeLessThan(authAt)
     expect(steps[guardAt]!.if).toMatch(/github\.event_name == 'pull_request'/)
+  })
+
+  it('checks the pipeline variable is non-empty before every pipeline-identity auth step (#2960)', () => {
+    const pipelineJobs = Object.entries(EXPECTED).filter(
+      ([, id]) => id === PIPELINE
+    )
+    expect(pipelineJobs.map(([k]) => k).sort()).toEqual([
+      'contact-strip.yml::strip',
+      'data-pipeline.yml::daily-reports',
+      'data-pipeline.yml::education-ledger-history',
+      'data-pipeline.yml::education-rollup',
+      'data-pipeline.yml::og-cards',
+      'data-pipeline.yml::pipeline',
+      'data-pipeline.yml::place-reports',
+      'data-pipeline.yml::promote-reports',
+      'education-timeline-backfill.yml::backfill',
+      'gap-district-prune.yml::prune',
+    ])
+    const missing: string[] = []
+    for (const [key] of pipelineJobs) {
+      const [file, job] = key.split('::')
+      const steps = wfOf(file!).jobs![job!]!.steps!
+      const authAt = steps.findIndex(s =>
+        /google-github-actions\/auth/.test(s.uses ?? '')
+      )
+      const guarded = steps
+        .slice(0, authAt)
+        .some(
+          s =>
+            /vars\.GCP_PIPELINE_SA/.test(String(Object.values(s.env ?? {}))) &&
+            /-z\b/.test(s.run ?? '') &&
+            /exit 1/.test(s.run ?? '')
+        )
+      if (!guarded) missing.push(key)
+    }
+    expect(missing).toEqual([])
   })
 
   it('builds every identity from known variables only', () => {
