@@ -133,6 +133,52 @@ describe('live-version', () => {
     expect(r.assets.length).toBeGreaterThan(5)
   })
 
+  describe('after #2999 (env object lives in the cdnBase chunk)', () => {
+    const HTML2 = fixture('live-index-2.93.0.html')
+    const ENTRY2 = fixture('live-entry-excerpt-2.93.0.txt')
+    const CHUNK = fixture('live-cdnbase-chunk-2.93.0.txt')
+
+    function fetcher2(chunk: string): Fetcher {
+      return (async (url: string) => {
+        const path = new URL(url).pathname
+        if (path === '/')
+          return new Response(HTML2, {
+            headers: { 'content-type': 'text/html' },
+          })
+        const body =
+          path === '/assets/index-Dccouyo0.js'
+            ? ENTRY2
+            : path === '/assets/cdnBase-BTEFPS6P.js'
+              ? chunk
+              : ''
+        return new Response(body, {
+          headers: {
+            'content-type': path.endsWith('.css')
+              ? 'text/css'
+              : 'text/javascript',
+          },
+        })
+      }) as Fetcher
+    }
+
+    it('finds the version in a modulepreload chunk', async () => {
+      const r = await liveVersion({
+        base: 'https://ts.taverns.red',
+        fetcher: fetcher2(CHUNK),
+      })
+      expect(r.version).toBe('v2.93.0')
+      expect(r.broken).toEqual([])
+    })
+
+    it('reports no version when no chunk has the env object', async () => {
+      const r = await liveVersion({
+        base: 'https://ts.taverns.red',
+        fetcher: fetcher2('var x={BASE_URL:`/`,DEV:!1}'),
+      })
+      expect(r.version).toBeNull()
+    })
+  })
+
   it('lists a 404 asset as broken', async () => {
     const r = await liveVersion({
       base: 'https://ts.taverns.red',

@@ -1,0 +1,4 @@
+// Shape of https://ts.taverns.red/assets/index-Dccouyo0.js at v2.93.0 (#3013):
+// the Vite env object moved to the cdnBase chunk (#2999); the entry only has
+// the `__APP_VERSION__` define, a bare string literal with no key to match.
+var appVersion=`v2.93.0`;var env={mode:`production`};export{appVersion as a};

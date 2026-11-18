@@ -2,9 +2,11 @@
  * `agent-cli live-version [--preview <pr>]` (#2418): which build a site is
  * serving, plus a probe of every asset its index.html references.
  *
- * The version is the `VITE_APP_VERSION` that deploy.yml bakes into the
- * entry bundle (the Vite env object, e.g. ``VITE_APP_VERSION:`v2.76.3` ``).
- * Preview builds don't set it, so a preview reports `version: null` and is
+ * The version is the `VITE_APP_VERSION` that deploy.yml bakes into the Vite
+ * env object (e.g. ``VITE_APP_VERSION:`v2.76.3` ``). Which chunk holds that
+ * object depends on the bundler: it was the entry until #2999 moved the only
+ * `import.meta.env` read into cdnBase, so the scan covers the entry first and
+ * then every script index.html references (#3013). Preview builds don't set it, so a preview reports `version: null` and is
  * identified by its entry-bundle hash instead. Firebase answers a missing
  * `/assets/*` with a 404 HTML page (firebase.json rewrite), so an asset is
  * broken when it isn't a 200 or comes back as HTML. Read-only GETs/HEADs.
@@ -89,15 +91,13 @@ export async function liveVersion(
   const probes: AssetProbe[] = []
   let version: string | null = null
   for (const path of assets) {
-    const isEntry = path === entry
-    const r = await get(
-      f,
-      `${base}${path}`,
-      opts.sleep,
-      isEntry ? 'GET' : 'HEAD'
-    )
+    // The entry is always read; other scripts are read only until the env
+    // object turns up (#3013), and probed with HEAD after that.
+    const read = path === entry || (version === null && path.endsWith('.js'))
+    const r = await get(f, `${base}${path}`, opts.sleep, read ? 'GET' : 'HEAD')
     const contentType = r.headers.get('content-type') ?? ''
-    if (isEntry && r.ok) version = parseBundleVersion(await r.text())
+    if (read && r.ok && version === null)
+      version = parseBundleVersion(await r.text())
     probes.push({
       path,
       status: r.status,
