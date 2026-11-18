@@ -8,8 +8,8 @@ on:
     # these globs, so mixed code+docs changes are still fully gated.
     #
     # SYNC WARNING: what this list skips, .github/workflows/docs.yml picks up
-    # via an identical `paths:` allowlist (#1375) -- it runs the three gates
-    # that DO apply to markdown (lessons INDEX drift, prettier, yamllint). If
+    # via an identical `paths:` allowlist (#1375) -- it runs the two gates
+    # that DO apply to markdown (prettier, yamllint). If
     # the two lists drift, files fall into a gap covered by neither workflow.
     # Edit both together.
     paths-ignore:
@@ -442,13 +442,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
-
-      - name: 'Check lessons INDEX.md generates (#1375, #2455)'
-        env:
-          LESSONS_DIR: tasks/lessons
-        run: |
-          bash scripts/lessons-index.sh
-          bash scripts/lessons-index.sh --check
 
       - name: Setup Node.js
         uses: actions/setup-node@v7

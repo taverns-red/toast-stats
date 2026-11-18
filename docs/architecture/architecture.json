@@ -478,8 +478,8 @@
     },
     {
       "id": "R5",
-      "rule": "Read the last 5 entries in tasks/lessons/ (or tasks/lessons.md) before starting any task.",
-      "consequence": "Re-deriving lessons already learned wastes sprint capacity."
+      "rule": "Retired (#2950): lessons are archived in tasks/lessons/archive/ and not read by default. tasks/rules.md is the always-loaded rule set.",
+      "consequence": "Kept as a stub so old citations of R5 still resolve."
     },
     {
       "id": "R6",
@@ -533,7 +533,7 @@
   ],
 
   "lessons_learned": {
-    "summary": "60+ insights captured. Older entries (1–51) archived in tasks/lessons.md (append-only). Newer entries (52–60) split into per-file under tasks/lessons/ to avoid merge conflicts on parallel sprint branches.",
+    "summary": "60+ insights captured. Older entries (1–51) archived in tasks/lessons/archive/lessons.md (append-only). Newer entries (52–60) split into per-file under tasks/lessons/ to avoid merge conflicts on parallel sprint branches.",
     "recent_per_file": [
       {
         "id": 52,
@@ -622,7 +622,6 @@
   "agent_guidance": {
     "before_any_task": [
       "Read tasks/rules.md completely.",
-      "Read the last 5 files in tasks/lessons/ (sort by filename desc).",
       "Identify or create a GitHub issue. All commits reference issue # (e.g. 'feat: thing (#42)').",
       "Use EnterPlanMode for any task with >3 steps."
     ],
@@ -641,7 +640,7 @@
     ],
     "memory_locations": {
       "engineering_rules": "tasks/rules.md (12 rules + tripwires)",
-      "lessons_legacy_archive": "tasks/lessons.md (entries 1–51, append-only)",
+      "lessons_legacy_archive": "tasks/lessons/archive/lessons.md (entries 1–51, append-only)",
       "lessons_per_file": "tasks/lessons/ (entries 52+, one file each to avoid merge conflicts)",
       "product_spec": "docs/product-spec.md (shipped features, business rules, decisions)",
       "claude_md_global": "/Users/rservant/.claude/CLAUDE.md (engineering manifesto, sprint workflow)",

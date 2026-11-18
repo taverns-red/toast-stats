@@ -36,7 +36,7 @@
  *   (`${year + 1}-06-30`), not dates any snapshot was written under.
  * - `new Date()` / `todayIso()` — the wall clock never names a snapshot.
  *
- * @see tasks/lessons/lessons/key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md
+ * @see tasks/lessons/archive/lessons/key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md
  */
 
 /**

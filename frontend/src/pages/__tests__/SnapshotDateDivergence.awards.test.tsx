@@ -22,7 +22,7 @@
  * `SnapshotDateDivergence.test.tsx` (#1321) covers Division/Area visit-round
  * gating. These three are the consumers that had no divergence test.
  *
- * @see tasks/lessons/lessons/key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md
+ * @see tasks/lessons/archive/lessons/key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md
  */
 import React from 'react'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'

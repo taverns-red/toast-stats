@@ -105,7 +105,6 @@ Read `tasks/rules.md` completely before every task. Key rules:
 - **R2** — GitHub Actions runners start empty. All data must be explicitly synced from GCS.
 - **R3** — Pass program year/date/filters as props from parent. Never re-derive from API response data.
 - **R4** — CLI logging: `console.error()` only (stderr). Stdout is for structured JSON output.
-- **R5** — Read the last 5 entries in `tasks/lessons.md` before starting any task.
 - **R6–R8** — Trace call graphs before refactoring; inventory existing fields before adding new ones; audit full read+write paths when deleting services.
 
 ## Active Tripwires
@@ -114,7 +113,7 @@ Read `tasks/rules.md` completely before every task. Key rules:
 - DCP goals are **independent**, not sequential. Use `clubPerformance` raw fields, never infer count as Goals 1-N.
 - Chart `|| 1` range fallback causes y-axis inversion. Pad symmetrically when `range === 0`.
 - `Path.join()` with raw user input = path traversal. Always call `validateDistrictId()` first.
-- **Program year is resolved by data, not the calendar, at the fetch path (#1284).** TM's rollover lags July 1 — June's close stays live under the prior PY into late July while the new PY's dashboard 302-redirects to an error page (a 200 HTML body, so a successful fetch ≠ valid data). `resolveActiveProgramYear` probes the calendar PY, validates the districtsummary content (header must contain `DISTRICT`), and falls back to `getPriorProgramYear(...)`; it's self-healing. Resolve **once per run** in `CollectorOrchestrator.scrape()` and thread it — don't recompute `calculateProgramYear(date)` per fetch site (they'd disagree at the boundary). Keep `calculateProgramYear` calendar-pure (cache paths/history depend on it). Discovery goes through `collector-cli discover-districts`, not inline node. On the computation side, a snapshot's PY window (charters, suspensions, streak history) comes from its logical date (`snapshotDate`/`dataMonth`), not its collection date — a June close is collected in July — and is bounded at both ends (PY start and June 30); when rebuilding past years, filter prior years with `<`, never `!==` (#1622, #1675, #1609). See [Lesson: PY from logical date](tasks/lessons/lessons/derive-the-program-year-from-a-snapshots-logical-date-not-its-collection-date.md).
+- **Program year is resolved by data, not the calendar, at the fetch path (#1284).** TM's rollover lags July 1 — June's close stays live under the prior PY into late July while the new PY's dashboard 302-redirects to an error page (a 200 HTML body, so a successful fetch ≠ valid data). `resolveActiveProgramYear` probes the calendar PY, validates the districtsummary content (header must contain `DISTRICT`), and falls back to `getPriorProgramYear(...)`; it's self-healing. Resolve **once per run** in `CollectorOrchestrator.scrape()` and thread it — don't recompute `calculateProgramYear(date)` per fetch site (they'd disagree at the boundary). Keep `calculateProgramYear` calendar-pure (cache paths/history depend on it). Discovery goes through `collector-cli discover-districts`, not inline node. On the computation side, a snapshot's PY window (charters, suspensions, streak history) comes from its logical date (`snapshotDate`/`dataMonth`), not its collection date — a June close is collected in July — and is bounded at both ends (PY start and June 30); when rebuilding past years, filter prior years with `<`, never `!==` (#1622, #1675, #1609). See [Lesson: PY from logical date](tasks/lessons/archive/lessons/derive-the-program-year-from-a-snapshots-logical-date-not-its-collection-date.md).
 
 ### Test-infra contracts (flakiness epic #917 — don't unknowingly break)
 
@@ -128,22 +127,9 @@ DISCIPLINE (quarantine/R1) guards below contain those root causes, so they stay.
 
 ## Learning Artifacts
 
-- `tasks/lessons/` — Per-file lessons (one discovery each, tagged frontmatter). `tasks/lessons/INDEX.md` is the always-loadable tag index — generated, gitignored (#2455); `scripts/relevant-lessons.sh` regenerates it on read, or run `npm run lessons:index`.
-- `tasks/rules.md` — Curated high-signal rules distilled from lessons. Read completely before each task.
+- `tasks/rules.md` — The always-loaded rule set (at most 20 rules, each naming the guard that enforces it). Read completely before each task.
+- `tasks/lessons/archive/` — Old lessons, incidents and the pre-2026 log. Reference only, not loaded by default; search it when a rule links there. No new lessons are filed (#2950).
 - `docs/product-spec.md` — Shipped features, business rules, product decisions.
-
-### Per-sprint relevant-lessons manifest (#650)
-
-A sprint issue body **SHOULD** include a `## Relevant lessons` section naming the lessons whoever picks the work up must read first. Operator curation beats tag inference, so an explicit list wins. Format (one bullet per lesson; the trailing reason is optional but recommended):
-
-```markdown
-## Relevant lessons
-
-- [Lesson 087](tasks/lessons/087-spawned-sessions-need-their-own-worktree-not-shared-checkout.md) — branch a long-lived worktree from origin/main, not the stale base
-- [Lesson 092](tasks/lessons/092-workspace-package-dist-is-gitignored-and-not-auto-rebuilt.md) — rebuild workspace dist before tests
-```
-
-Only the strict `- [text](path)` (or `* [text](path)`) bullet form is recognized — a colon separator or a space before `(` is silently skipped. Validate a manifest with `scripts/relevant-lessons.sh <issue#>`: it fetches the issue via `gh`, prints each resolved path, and exits 3 if a listed lesson file is missing. To check a draft body offline, set `ISSUE_BODY_FILE` (the issue-number argument is still required): `ISSUE_BODY_FILE=draft.md scripts/relevant-lessons.sh 0`. There is no `--stdin` flag.
 
 ## Key Conventions
 
@@ -160,7 +146,7 @@ Only the strict `- [text](path)` (or `* [text](path)`) bullet form is recognized
 - **Red Taverns brand source:** [`taverns-red/ops:docs/brand/`](https://github.com/taverns-red/ops/blob/main/docs/brand/) ([ADR 0004](https://github.com/taverns-red/ops/blob/main/docs/strategy/decisions/0004-brand-v1-2026-04-22.md)). Use it for the pennant mark only.
 - **Tokens file:** `frontend/src/styles/tokens/rt-brand-v1.css` — local copy of upstream `tokens.css`. **Do not hand-edit**; re-sync from upstream. Imported from `frontend/src/index.css`. Its `--rt-*` spacing, radius and type tokens are fine to use. Its colours are not (next bullet).
 - **Palette: match the existing app (Ron, 2026-10-15, #2080; permanent since 2026-11-12).** Use no `--rt-*` colour token in the UI (no `--rt-stats` or `--rt-warn` amber, no `--rt-paper`/`--rt-bg` beige, no `--rt-vote`/`--rt-red-soft`). The house red `--rt-red`/`--rt-red-dk` is the exception: it already appears in the legacy chrome. Add no new colours. Two exceptions are approved: the landing's Red Vote block (`red-vote-block.css`, #2249, in Red Vote's own colours) and the education timeline chart's path colours (#2592). Any other new colour needs Ron's explicit OK. Use the legacy tokens, which already remap under `[data-theme='dark']`: `--tm-loyal-blue` (accent, bars, highlighted series; `--tm-loyal-blue-10/-20` for tints — opacity variants are remapped explicitly in `dark-mode.css`), `--focus-ring` (= `--link`) for focus rings, `--ink*` / `--surface*` / `--line` for text and neutrals, `--tm-true-maroon` / `--tm-cool-gray` for extra series. `legacyPaletteGuard.test.ts` fails on any `--rt-*` colour token except the house red and the listed pre-existing uses in `redesign.css` and `app-shell.css` (a test checks every colour token in the brand file is covered, so a new one can't slip through) and on the amber hexes, outside its allowlist. It doesn't police other hexes, so the rule above still applies. The guard is permanent.
-- **Fonts:** the legacy Montserrat / Source Sans 3 pair stays, with metric-matched fallbacks (`font-fallbacks.css`). All families are self-hosted via `web-fonts.css`. None is preloaded, on purpose (#1905: preloading cost about 330 ms of FCP). Rendered UI uses `--sans` / `--serif`, never `--rt-font-display` / `--rt-font-body` (Inter, Space Grotesk); `noBrandFontsInUi.test.ts` enforces it (#2765). **Don't add JetBrains Mono.** `var(--mono)` (the redesign-tokens `--mono`, NOT `--rt-font-mono`) has many consumers in `app-shell.css` and no metric-matched fallback. A late JetBrains Mono swap pushed CLS from ~0.012 to ~0.199 on PR #595 (the Lighthouse threshold is 0.1). See [Lesson 81](tasks/lessons/lessons/phase-gated-deferral-tests-move-with-the-spec.md).
+- **Fonts:** the legacy Montserrat / Source Sans 3 pair stays, with metric-matched fallbacks (`font-fallbacks.css`). All families are self-hosted via `web-fonts.css`. None is preloaded, on purpose (#1905: preloading cost about 330 ms of FCP). Rendered UI uses `--sans` / `--serif`, never `--rt-font-display` / `--rt-font-body` (Inter, Space Grotesk); `noBrandFontsInUi.test.ts` enforces it (#2765). **Don't add JetBrains Mono.** `var(--mono)` (the redesign-tokens `--mono`, NOT `--rt-font-mono`) has many consumers in `app-shell.css` and no metric-matched fallback. A late JetBrains Mono swap pushed CLS from ~0.012 to ~0.199 on PR #595 (the Lighthouse threshold is 0.1). See [Lesson 81](tasks/lessons/archive/lessons/phase-gated-deferral-tests-move-with-the-spec.md).
 
 ## Workflow Protocol
 
@@ -168,11 +154,10 @@ The binding rules (issue first, separate red/green/refactor commits, no bypassed
 
 ### Before Starting Any Task
 
-1. Read the last 5 entries in `tasks/lessons.md` (R5).
-2. Read `tasks/rules.md` completely.
-3. Create or identify a GitHub issue (`gh issue create` or `gh issue list`). All commits and PRs must reference the issue number.
-4. Use `EnterPlanMode` for any task requiring >3 steps.
-5. If root cause is unknown, run an experiment using `tasks/experiment_template.md` in a canary file first.
+1. Read `tasks/rules.md` completely.
+2. Create or identify a GitHub issue (`gh issue create` or `gh issue list`). All commits and PRs must reference the issue number.
+3. Use `EnterPlanMode` for any task requiring >3 steps.
+4. If root cause is unknown, run an experiment using `tasks/experiment_template.md` in a canary file first.
 
 ### Implementation Loop (TDD)
 
@@ -195,7 +180,7 @@ Commit every 15–30 minutes of active work; never batch unrelated changes.
 - Failing test existed before the fix. Targeted tests now pass. No assertion pinning.
 - All tests pass. Zero regressions. CI green. Live verification passes on the **PR preview channel** — the per-PR Firebase URL posted as a sticky comment by `pr-preview.yml` — **pre-merge, not prod**. (Prod deploys are decoupled from per-sprint verification.)
 - Change is single-responsibility. Dead code and experiment files deleted.
-- **Learning captured — only if there was one.** Not every sprint yields a transferable insight, and a "no new lesson" sprint is a valid outcome. When the sprint did surface something durable, file it by kind in `tasks/lessons/` with frontmatter: **principle** (→ `category: principle`, candidate for an R-rule), **lesson** (→ `category: lesson` + `tags:` for relevance matching), or **incident** (→ `category: incident` + `auto_load: false`, reference-only). A restated commit message is not a lesson — if you cannot name the transferable takeaway in one sentence, do not file one. Don't commit `tasks/lessons/INDEX.md` — it is generated on read and gitignored, so parallel lesson PRs don't conflict on it (#2455).
+- **Recurrence prevented:** a test, hook, guard, checklist item or short rule in `tasks/rules.md` that stops this class of bug coming back. Prefer a test or guard over prose. Don't file a lesson; `tasks/lessons/archive/` is reference-only and not loaded by default (#2950).
 
 ## Specialized Agent Personas
 

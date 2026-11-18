@@ -219,7 +219,7 @@ describe('setup in a cloud session', () => {
 /**
  * Tool gaps the first cloud worker hit by hand (#2467): `yamllint` (the
  * pre-commit hook runs `npm run lint:yaml`) and a case-folding locale
- * (`lessonsIndexLocale.test.ts` needs one besides C/POSIX).
+ * (sort-order checks need one besides C/POSIX).
  *
  * These run with PATH = stubs only, so a yamllint installed on the host
  * (Homebrew, the CI runner image) can't leak in, and the real `pip` and

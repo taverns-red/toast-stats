@@ -15,7 +15,7 @@
  *     pass — reproducing the #1315 blind spot inside the harness meant to catch
  *     it.
  *
- * @see tasks/lessons/lessons/key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md
+ * @see tasks/lessons/archive/lessons/key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {

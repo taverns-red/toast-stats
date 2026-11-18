@@ -79,7 +79,7 @@ Traced with an Explore subagent (full paths verified):
   `<option>`s for years with data — **2026-2027 does not appear in the
   dropdown at all**, by design.
 - This all matches the intentional fix documented in
-  [`resolve-the-active-program-year-by-data-not-the-calendar.md`](../../tasks/lessons/lessons/resolve-the-active-program-year-by-data-not-the-calendar.md).
+  [`resolve-the-active-program-year-by-data-not-the-calendar.md`](../../tasks/lessons/archive/lessons/resolve-the-active-program-year-by-data-not-the-calendar.md).
   **No bug here** — this is the collector-side lesson's frontend sibling,
   already applied correctly.
 
@@ -135,6 +135,6 @@ doesn't imply live content that doesn't exist. Small, single-file,
 - `frontend/src/hooks/useDefaultProgramYear.ts`, `useProgramYearControls.ts`,
   `components/ProgramYearSelector.tsx`, `pages/HistoryPage.tsx`,
   `utils/programYear.ts`
-- Related lessons: `tasks/lessons/lessons/resolve-the-active-program-year-by-data-not-the-calendar.md`,
+- Related lessons: `tasks/lessons/archive/lessons/resolve-the-active-program-year-by-data-not-the-calendar.md`,
   `tasks/epic-snapshot-date-guard.md`,
   `docs/investigations/2026-07-09-district44-stale-vs-live-restatement.md`

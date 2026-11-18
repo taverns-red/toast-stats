@@ -40,9 +40,6 @@ const EXEMPT: Record<string, string> = {
   // the same checks on it instead.
   'docs.yml: .nvmrc':
     'ci.yml runs on it and builds/lints/tests with the same Node version',
-  'docs.yml: scripts/lessons-index.sh':
-    "ci.yml runs on it; Test Suite's test:scripts runs the lessons INDEX " +
-    'drift check (lessonsModel.test.ts) that docs.yml duplicates',
   'docs.yml: package.json':
     'only read for the pinned prettier version; a package.json change is not ' +
     "in ci.yml's paths-ignore, so ci.yml's format check (which covers " +

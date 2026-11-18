@@ -46,7 +46,7 @@ function cdnPathOf(url: string): string | null {
  * A test asserting equal-date behaviour must opt in EXPLICITLY by overriding
  * these values in its own mock — never by flattening the default back.
  *
- * @see tasks/lessons/lessons/key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md
+ * @see tasks/lessons/archive/lessons/key-per-snapshot-fetches-on-the-snapshot-date-not-the-as-of-sourcecsvdate.md
  */
 export const SNAPSHOT_DATE = '2024-12-31'
 export const SOURCE_CSV_DATE = '2025-01-05'

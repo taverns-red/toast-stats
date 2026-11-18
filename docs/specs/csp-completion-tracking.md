@@ -3,7 +3,7 @@
 **Status:** Draft for operator review · **Date:** 2026-09-12 · **Author:** Claude (spec only — no implementation, no issue created)
 **Scope:** Surface the clubs that have **not** submitted a Club Success Plan and weave that into (a) the district and division narratives, (b) the area narratives, and (c) the Area Director action list.
 
-> Terminology guard: in this codebase the literal token `CSP` is **also** used for Content-Security-Policy (Firebase hosting headers, Lighthouse gate, `tasks/lessons/lessons/a-csp-in-hosting-config-is-invisible-to-the-localhost-lighthouse-gate.md`). Everything in this spec means **Club Success Plan**. Grep for `cspSubmitted` / `Club Success Plan` / `clubSuccessPlan`, never bare `CSP`.
+> Terminology guard: in this codebase the literal token `CSP` is **also** used for Content-Security-Policy (Firebase hosting headers, Lighthouse gate, `tasks/lessons/archive/lessons/a-csp-in-hosting-config-is-invisible-to-the-localhost-lighthouse-gate.md`). Everything in this spec means **Club Success Plan**. Grep for `cspSubmitted` / `Club Success Plan` / `clubSuccessPlan`, never bare `CSP`.
 
 ---
 

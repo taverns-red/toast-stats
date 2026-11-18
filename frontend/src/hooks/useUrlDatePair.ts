@@ -109,8 +109,8 @@ export function useUrlDatePair<T extends string>(
    * return value still looks right (it reflects the new location) while the URL
    * — the thing users share — is missing a key.
    *
-   * @see tasks/lessons/lessons/coupled-url-params-need-one-setter-not-two-calls.md
-   * @see tasks/lessons/lessons/two-url-state-hooks-in-one-handler-lose-a-facet.md
+   * @see tasks/lessons/archive/lessons/coupled-url-params-need-one-setter-not-two-calls.md
+   * @see tasks/lessons/archive/lessons/two-url-state-hooks-in-one-handler-lose-a-facet.md
    */
   const setPair = useCallback(
     (nextFrom: T, nextTo: T) => {
