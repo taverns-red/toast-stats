@@ -220,15 +220,6 @@
 #                          audit log, never read back
 #   PLAN_GAP_REMOVALS      gap removal planner, rebuild only (default: tsx
 #                          plan-gap-removals.ts)
-#   FAC_PRIOR_ROOT         rebuild only, the `fac_prior_root` input (#2239):
-#                          stage 7's carry-forward reads each date's prior copy
-#                          from <root>/<date>/district_*.json (the private
-#                          recovery bucket) instead of the live staging
-#                          snapshot. Checked by scripts/pipeline/
-#                          fac-prior-root.sh (exact allowlist; usage error
-#                          otherwise). Set, a date missing there or not
-#                          enriched there FAILS: the operator asserted a
-#                          recovered source. Empty: the staging snapshot.
 #
 # Output: stdout is ONE JSON line, {"succeeded":N,"refused":N,"failed":N}
 # (R4); everything else, including the CLI's own output, goes to stderr.
@@ -316,9 +307,6 @@ for date in "$@"; do
 done
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-# #2239: validated before anything touches the bucket; exit 2 on a bad one.
-FAC_PRIOR_ROOT="$(bash "${REPO}/scripts/pipeline/fac-prior-root.sh" \
-  "${MODE}" "${FAC_PRIOR_ROOT:-}")" || exit 2
 TSX="${TSX:-${REPO}/node_modules/.bin/tsx}"
 GCLOUD="${GCLOUD:-gcloud}"
 CACHE_DIR="${CACHE_DIR:-./cache}"
@@ -691,27 +679,17 @@ remove_gap_districts() {
 # No raw-fac for <date> (#2237): carry the FAC fields of the date's existing
 # staging snapshot onto the rebuild. Sets ENRICH to carried | unenriched |
 # failed. A staging snapshot that cannot be read is not "never enriched":
-# the date fails rather than risk stripping it. With FAC_PRIOR_ROOT (#2239)
-# the prior is <root>/<date>/ instead, and its absence or an unenriched copy
-# there fails the date too.
+# the date fails rather than risk stripping it.
 carry_forward_fac() {
   local actual="$1" prior="${WORK}/prior-snapshot/$1"
   local err="${WORK}/prior-snapshot-cp.err" out="${WORK}/carry-forward.json"
   local src="gs://${BUCKET}/snapshots/${actual}" what="staging snapshots/${actual}/"
-  if [ -n "${FAC_PRIOR_ROOT}" ]; then
-    src="${FAC_PRIOR_ROOT}/${actual}"
-    what="recovered ${src}/"
-  fi
   ENRICH=failed
   mkdir -p "${prior}"
   if ! "${GCLOUD}" storage cp "${src}/district_*.json" \
     "${prior}/" >/dev/null 2>"${err}"; then
     rm -rf "${prior}"
     if grep -q 'matched no objects' "${err}"; then
-      if [ -n "${FAC_PRIOR_ROOT}" ]; then
-        echo "::warning::No ${what} copy of ${actual} under fac_prior_root; nothing uploaded for it"
-        return 0
-      fi
       echo "No raw-fac/${actual}/ and no staging snapshot of it; ${actual} is processed unenriched"
       ENRICH=unenriched
       return 0
@@ -735,8 +713,6 @@ carry_forward_fac() {
     ENRICH=carried
   elif jq -e '.priorEnriched > 0' "${out}" >/dev/null 2>&1; then
     echo "::warning::${what} is enriched but no Find-A-Club field was carried ($(jq -c '{priorEnriched, carried, alreadyEnriched}' "${out}")); nothing uploaded for it"
-  elif [ -n "${FAC_PRIOR_ROOT}" ]; then
-    echo "::warning::${what} is not enriched, though fac_prior_root asserts a recovered source; nothing uploaded for ${actual}"
   elif jq -e '.priorEnriched == 0' "${out}" >/dev/null 2>&1; then
     echo "No raw-fac/${actual}/ and its staging snapshot is not enriched; ${actual} is processed unenriched"
     ENRICH=unenriched
@@ -1110,9 +1086,6 @@ fi
     *) echo "- **Dates enriched from raw-fac**: ${ENRICHED}" ;;
   esac
   echo "- **Dates carried forward from their staged snapshot (no raw-fac)**: ${CARRIED}"
-  if [ -n "${FAC_PRIOR_ROOT}" ]; then
-    echo "- **FAC prior root**: ${FAC_PRIOR_ROOT}"
-  fi
   echo "- **Dates unenriched (no raw-fac)**: ${UNENRICHED}"
   echo "- **Dates with a prior-year snapshot (YoY)**: ${YOY_PRESENT}"
   echo "- **Dates without one (no YoY)**: ${YOY_ABSENT}"
