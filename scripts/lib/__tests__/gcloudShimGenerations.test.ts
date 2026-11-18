@@ -42,6 +42,10 @@ const forkOffenders = (code: string): string[] => [
   ...(code.match(/`/g) ?? []),
   // A bare `(` opening a subshell: at the start of a command.
   ...(code.match(/(^\s*|[;&|]\s*|\bdo\s+|\bthen\s+)\(/gm) ?? []),
+  // Process substitution forks too.
+  ...(code.match(/[<>]\(/g) ?? []),
+  // A pipeline forks a process per stage; `||` is a list, not a pipe.
+  ...(code.match(/(?<!\|)\|(?!\|)/g) ?? []),
 ]
 
 let tmp: string
