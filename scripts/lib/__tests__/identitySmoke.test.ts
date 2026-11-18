@@ -140,6 +140,13 @@ describe('restore identity expectation (#2966)', () => {
     expect(staging.denied).toContain('storage.objects.create')
   })
 
+  it('probes soft-deleted copies under one small prod prefix', () => {
+    expect(restore.softDeletedProbe).toEqual({
+      bucket: 'toast-stats-data-ca',
+      prefix: 'v1/latest',
+    })
+  })
+
   it('never lists a permission as both granted and denied', () => {
     for (const b of Object.values(restore.buckets)) {
       expect(b.granted.filter(p => b.denied.includes(p))).toEqual([])

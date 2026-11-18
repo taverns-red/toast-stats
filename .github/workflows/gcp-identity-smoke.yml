@@ -1,0 +1,79 @@
+name: GCP Identity Smoke
+
+# Read-only proof that a GCP identity's workload identity binding works and
+# its grants are exactly as designed (#2966, epic #2872).
+#
+# The restore identity (#2964) only runs for real after a failed promotion
+# with auto-restore in execute mode. This job signs in as it from the
+# `data-restore` environment, asks Cloud Storage which permissions it holds
+# (buckets.testIamPermissions), and fails on any difference from
+# scripts/lib/identitySmoke.ts in either direction: a missing grant, or a
+# permission that must be denied (storage.buckets.get on the prod bucket).
+# It also counts soft-deleted objects under one small prod prefix.
+#
+# No writes: GET requests only (a contract test in
+# scripts/lib/__tests__/gcpIdentitySmokeWorkflow.test.ts pins the shape).
+# Dispatch from main only. Add B5 (media) and B6 (hosting deploy) as further
+# jobs when those identities exist.
+
+on:
+  workflow_dispatch:
+    inputs:
+      identity:
+        description: Identity to check
+        type: choice
+        options:
+          - restore
+        default: restore
+
+permissions:
+  contents: read
+  id-token: write # Workload Identity Federation
+
+jobs:
+  restore:
+    name: Identity smoke (restore)
+    # The data-restore environment admits main only; stop early elsewhere.
+    if: github.ref == 'refs/heads/main' && inputs.identity == 'restore'
+    environment: data-restore
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # An empty variable would make the auth action fall back to direct
+      # workload identity; fail here with the cause instead.
+      - name: Require the restore identity variable
+        env:
+          RESTORE_SA: ${{ vars.GCP_RESTORE_SA }}
+        run: |
+          if [ -z "${RESTORE_SA}" ]; then
+            echo "::error title=Missing variable::the repository variable GCP_RESTORE_SA is empty"
+            exit 1
+          fi
+
+      # A short-lived access token and no credentials file.
+      - name: Authenticate to GCP
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_RESTORE_SA }}
+          token_format: access_token
+          access_token_lifetime: 600s
+          create_credentials_file: false
+
+      - name: Check the restore identity
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: npx tsx scripts/identity-smoke.ts restore

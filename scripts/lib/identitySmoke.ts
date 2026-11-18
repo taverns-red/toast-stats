@@ -18,6 +18,8 @@ export interface BucketExpectation {
 export interface IdentityExpectation {
   identity: string
   buckets: Record<string, BucketExpectation>
+  /** Read-only listing of soft-deleted copies under one small prefix. */
+  softDeletedProbe?: { bucket: string; prefix: string }
 }
 
 export interface Mismatch {
@@ -39,6 +41,7 @@ export const IDENTITY_EXPECTATIONS: Record<string, IdentityExpectation> = {
   // restore on prod, read on staging, no bucket metadata or IAM anywhere.
   restore: {
     identity: 'restore',
+    softDeletedProbe: { bucket: PROD_DATA_BUCKET, prefix: 'v1/latest' },
     buckets: {
       [PROD_DATA_BUCKET]: {
         granted: [

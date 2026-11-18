@@ -83,6 +83,7 @@ export const EXPECTED: Record<string, string> = {
   'deploy.yml::deploy-frontend': DEPLOYER,
   'education-timeline-backfill.yml::backfill': PIPELINE,
   'gap-district-prune.yml::prune': PIPELINE,
+  'gcp-identity-smoke.yml::restore': RESTORE,
   'harness-staging-canary.yml::canary': byEvent(
     'pull_request',
     PREVIEW,
