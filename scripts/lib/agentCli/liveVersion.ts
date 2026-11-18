@@ -79,7 +79,7 @@ async function get(
         signal: AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       })
       if (r.status >= 500) {
-        await r.body?.cancel()
+        await r.body?.cancel().catch(() => {})
         throw new Error(`${method} ${url}: HTTP ${r.status}`)
       }
       return r
@@ -95,7 +95,7 @@ export async function liveVersion(
   const base = opts.base.replace(/\/+$/, '')
   const index = await get(f, `${base}/`, opts)
   if (!index.ok) {
-    await index.body?.cancel()
+    await index.body?.cancel().catch(() => {})
     throw new Error(`GET ${base}/: HTTP ${index.status}`)
   }
   const { entry, assets } = parseEntryAssets(await index.text())
@@ -110,7 +110,7 @@ export async function liveVersion(
     const contentType = r.headers.get('content-type') ?? ''
     if (read && r.ok && version === null)
       version = parseBundleVersion(await r.text())
-    else if (read) await r.body?.cancel()
+    else if (read) await r.body?.cancel().catch(() => {})
     probes.push({
       path,
       status: r.status,
