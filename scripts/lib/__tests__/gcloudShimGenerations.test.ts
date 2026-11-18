@@ -17,6 +17,8 @@ const SHIM = path.join(
 )
 const WRITES = 200
 const WORKERS = 16
+// Forks one stamped `storage cp` may spawn (cp, rm of the lock, mv of the meta).
+const BUDGET = 3
 
 let tmp: string
 let root: string
@@ -64,5 +66,64 @@ describe('gcloud shim next_gen under parallel writers (#2800)', () => {
     }
     for (const g of gens) expect(g).toMatch(/^\d+$/)
     expect(new Set(gens).size).toBe(WRITES)
+  })
+
+  // #3002: the counter lock serialises every write, so each process a stamp
+  // forks inside it is paid 200 times in a row, and every process a waiter
+  // forks while it polls is paid on top. Under two concurrent full suite runs
+  // forks are slow and the 200 writes took 10.3 s against a 10 s limit (2.6 s
+  // alone). Counting forks is the load-independent measure: a stamped upload
+  // spawns only what it must (the copy, the lock removal, the meta rename),
+  // and the counter and the meta rewrite use shell builtins.
+  it('stamps a generation with a bounded number of forked commands', () => {
+    const bin = path.join(tmp, 'bin')
+    const log = path.join(tmp, 'spawns.log')
+    fs.mkdirSync(bin)
+    for (const name of [
+      'cat',
+      'cp',
+      'dirname',
+      'grep',
+      'mkdir',
+      'mv',
+      'rm',
+      'sleep',
+      'touch',
+    ]) {
+      const real = ['/bin', '/usr/bin']
+        .map(d => path.join(d, name))
+        .find(f => fs.existsSync(f))
+      fs.writeFileSync(
+        path.join(bin, name),
+        `#!/bin/sh\necho ${name} >>"$SPAWN_LOG"\nexec ${real} "$@"\n`,
+        { mode: 0o755 }
+      )
+    }
+    const write = (name: string) =>
+      spawnSync(
+        SHIM,
+        ['storage', 'cp', path.join(tmp, 'src.txt'), `gs://b/${name}`],
+        {
+          env: {
+            ...process.env,
+            PATH: `${bin}:${process.env.PATH}`,
+            SPAWN_LOG: log,
+            SHIM_ROOT: root,
+            SHIM_GENERATIONS: '1',
+          },
+          encoding: 'utf8',
+        }
+      )
+    // The first write creates the counter; measure the second, which reads it.
+    expect(write('one').status).toBe(0)
+    fs.rmSync(log)
+    const run = write('two')
+    expect(run.stderr).toBe('')
+    expect(run.status).toBe(0)
+    const spawns = fs.readFileSync(log, 'utf8').split('\n').filter(Boolean)
+    // Uncontended: no lock retries, so no `sleep`; no `cat` for the counter.
+    expect(spawns).not.toContain('sleep')
+    expect(spawns).not.toContain('cat')
+    expect(spawns.length, spawns.join(' ')).toBeLessThanOrEqual(BUDGET)
   })
 })
