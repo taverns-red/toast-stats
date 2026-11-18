@@ -79,7 +79,7 @@ export function latestPerCheck(checks: PrCheck[]): PrCheck[] {
 }
 
 export function summarizeChecks(checks: PrCheck[]): CheckSummary {
-  const latest = latestPerCheck(checks)
+  const latest = latestPerCheck(dropSupersededRunChecks(checks))
   const by = (b: string) => latest.filter(c => c.bucket === b)
   const failures = by('fail')
   const cancelledChecks = by('cancel')
@@ -168,8 +168,6 @@ function isGraphQlBlocked(err: CommandError): boolean {
 
 /** The fields of a workflow run (`GET /repos/{o}/{r}/actions/runs`) read here. */
 export interface WorkflowRun {
-  id?: number
-  created_at?: string | null
   name?: string | null
   check_suite_id: number
   status?: string | null
@@ -285,11 +283,7 @@ async function fetchPrChecksRestFull(
     startedAt: run.started_at ?? '',
     completedAt: run.completed_at ?? '',
   }))
-  return {
-    checks: dropSupersededRunChecks(checks, workflows),
-    pull,
-    workflowRuns: workflows,
-  }
+  return { checks, pull, workflowRuns: workflows }
 }
 
 /** The workflow run id in a check's job URL: `/actions/runs/<id>/job/<id>`. */
@@ -299,44 +293,35 @@ function runIdOf(link: string): number | undefined {
 }
 
 /**
- * Drop the rows of a run that a newer run of the same workflow replaced on
- * this head commit (#2935). A run cancelled before its matrix expanded keeps
+ * Drop the cancelled rows of a run that a newer run of the same workflow
+ * replaced on this head commit (#2935). A run cancelled before its matrix expanded keeps
  * literal job names (`Smoke (${{ matrix.shard }})`) that never match the
- * newer run's expanded ones, so name-based folding can't retire them. Uses
- * the workflow runs already read for the check names: no extra API call.
+ * newer run's expanded ones, so name-based folding can't retire them.
+ *
+ * Run ids only grow, so the newer run is the one with the higher id (read
+ * from the job URL; works over GraphQL and REST, no extra API call). A
+ * re-run keeps its run id, so it is never superseded by itself.
  *
  * Fails closed: the newer run must have produced a verdict (a row that isn't
  * skipped), or an all-skipped no-op run would hide a real cancelled run. A
  * newer cancelled or pending run still counts, and its own rows stay.
  */
-export function dropSupersededRunChecks(
-  checks: PrCheck[],
-  runs: WorkflowRun[]
-): PrCheck[] {
-  const created = (r: WorkflowRun) => r.created_at ?? ''
-  const byId = new Map(
-    runs.filter(r => r.id !== undefined).map(r => [r.id as number, r])
-  )
-  const hasVerdict = new Set<number>()
+export function dropSupersededRunChecks(checks: PrCheck[]): PrCheck[] {
+  // Newest run id with a verdict, per workflow.
+  const newestWithVerdict = new Map<string, number>()
   for (const c of checks) {
     const id = runIdOf(c.link)
-    if (id !== undefined && c.bucket !== 'skipping') hasVerdict.add(id)
+    if (id === undefined || c.bucket === 'skipping') continue
+    if (id > (newestWithVerdict.get(c.workflow) ?? 0)) {
+      newestWithVerdict.set(c.workflow, id)
+    }
   }
-  const newer = (a: WorkflowRun, b: WorkflowRun) =>
-    created(a) > created(b) || (created(a) === created(b) && a.id! > b.id!)
-  const superseded = (run: WorkflowRun) =>
-    runs.some(
-      o =>
-        o.id !== undefined &&
-        o.id !== run.id &&
-        (o.name ?? '') === (run.name ?? '') &&
-        hasVerdict.has(o.id) &&
-        newer(o, run)
-    )
   return checks.filter(c => {
     const id = runIdOf(c.link)
-    const run = id === undefined ? undefined : byId.get(id)
-    return !run || !superseded(run)
+    // Only a cancelled row is retired: a pass or fail from an older run is
+    // evidence the existing name folding already weighs.
+    if (id === undefined || !c.workflow || c.bucket !== 'cancel') return true
+    return id >= (newestWithVerdict.get(c.workflow) ?? 0)
   })
 }
 

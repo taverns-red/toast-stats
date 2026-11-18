@@ -157,6 +157,22 @@ describe('summarizeChecks', () => {
     expect(s).toMatchObject({ total: 1, passed: 0, cancelled: 1 })
   })
 
+  it('over GraphQL rows too, a newer run retires an older cancelled run with unexpanded names (#2935)', () => {
+    const at = (run: number) =>
+      `https://github.com/x/y/actions/runs/${run}/job/${run}1`
+    const s = summarizeChecks([
+      check({
+        name: 'Smoke (${{ matrix.shard }})',
+        workflow: 'PR Preview',
+        bucket: 'cancel',
+        state: 'CANCELLED',
+        link: at(100),
+      }),
+      check({ name: 'Smoke (1)', workflow: 'PR Preview', link: at(200) }),
+    ])
+    expect(s).toMatchObject({ total: 1, passed: 1, cancelled: 0 })
+  })
+
   it('is not done while anything is pending, or before any check exists', () => {
     expect(
       summarizeChecks([check({ bucket: 'pending', state: 'IN_PROGRESS' })]).done
