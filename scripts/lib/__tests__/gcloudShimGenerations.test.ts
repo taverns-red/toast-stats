@@ -10,6 +10,7 @@ import { spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { writeStubExecutable } from './stubExecutable.js'
 
 const SHIM = path.join(
   process.cwd(),
@@ -93,10 +94,9 @@ describe('gcloud shim next_gen under parallel writers (#2800)', () => {
       const real = ['/bin', '/usr/bin']
         .map(d => path.join(d, name))
         .find(f => fs.existsSync(f))
-      fs.writeFileSync(
+      writeStubExecutable(
         path.join(bin, name),
-        `#!/bin/sh\necho ${name} >>"$SPAWN_LOG"\nexec ${real} "$@"\n`,
-        { mode: 0o755 }
+        `echo ${name} >>"$SPAWN_LOG"\nexec ${real} "$@"\n`
       )
     }
     const write = (name: string) =>
