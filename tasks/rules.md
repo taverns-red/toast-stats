@@ -80,8 +80,8 @@ Page mounts belong in `src/pages/__tests__/` or `src/__tests__/integration/` (or
 **R23 — Key per-snapshot fetches on the snapshot date, never the as-of `sourceCsvDate`.**
 They are equal mid-month and diverge for about three weeks each month-end close, so the bug passes every test and then blanks the UI. Use `effectiveDate`; the program year comes from the snapshot's logical date. _Enforced by:_ `no-snapshot-date-cast.test.ts`, `snapshotDate.brand.sentinel.test.ts`.
 
-**R24 — A strict CDN contract makes an additive field a breaking change.**
-A `.strict()` schema rejects the new key in readers already deployed. Release the accepting schema first, confirm it is live, then let the pipeline write the field. Breaking changes follow ADR 0019 (`db-breaking-approved` is Ron's alone). _Enforced by:_ `scripts/lib/cdnSchemaCanary.ts` and the CDN schema canary workflow.
+**R24 — Readers parse CDN files with the `*ReaderSchema`; strict validation belongs at the writer gate.**
+A `.strict()` schema in a reader rejects a new key in already-deployed code and blanks the page. Readers use `toTolerantReader` / `*ReaderSchema` (#2493), so an additive field is safe; keep `.strict()` for the writer. Breaking changes still follow ADR 0019 (`db-breaking-approved` is Ron's alone). _Enforced by:_ `readerSchemasTolerant.test.ts`, `reader-schemas.test.ts` (`findStrictObjects`).
 
 ## Tripwires not in CLAUDE.md
 
