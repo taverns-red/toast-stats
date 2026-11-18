@@ -60,6 +60,8 @@ export function stripText(command) {
   let i = 0
   let pending = [] // heredoc delimiters waiting for the end of their line
   const absent = new Set() // delimiters with no terminator line left in text
+  let shielded = -1 // a `<<` before this index sits inside `$[..]` or `${..}`
+  const noClose = new Set() // `]` / `}` with no closer left in text
   while (i < text.length) {
     const c = text[i]
     if (c === '\\') {
@@ -95,8 +97,29 @@ export function stripText(command) {
         out += text.slice(i, close)
         i = close
       }
+    } else if (c === '$' && (text[i + 1] === '[' || text[i + 1] === '{')) {
+      // `$[..]` is arithmetic and `${..}` an expansion: a `<<` inside is no
+      // heredoc. The text stays visible to the scanner (fail closed). Each
+      // search resumes after the last one, so this stays linear.
+      const closer = text[i + 1] === '[' ? ']' : '}'
+      if (i < shielded || noClose.has(closer)) {
+        out += c
+        i += 1
+      } else {
+        const close = text.indexOf(closer, i + 2)
+        if (close === -1) {
+          noClose.add(closer)
+          out += c
+          i += 1
+        } else {
+          shielded = close
+          out += c
+          i += 1
+        }
+      }
     } else if (c === '<' && text[i + 1] === '<' && text[i + 2] !== '<') {
-      const op = text[i - 1] !== '<' ? parseHeredoc(text, i) : null
+      const op =
+        text[i - 1] !== '<' && !(i < shielded) ? parseHeredoc(text, i) : null
       if (op) {
         pending.push(op.delim)
         out += ' '
@@ -173,6 +196,10 @@ function bodyEnd(text, from, delim) {
     const line = text.slice(i, end).trim()
     i = Math.min(end + 1, text.length)
     if (line === delim) return i
+    // Inside `$( )` bash also ends the body at `DELIM)`, so end it there too.
+    // Ending early only keeps more text visible (fail closed).
+    if (line.startsWith(delim) && /^\s*\)/.test(line.slice(delim.length)))
+      return i
   }
   return -1
 }
