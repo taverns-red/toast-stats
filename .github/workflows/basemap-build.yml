@@ -325,26 +325,15 @@ jobs:
             echo "### Dry run: would copy gs://${GCS_BUCKET}/${OBJ} to prod" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      # Remove this step in the PR that lands #2980.
-      - name: Refuse a z14 prod copy until #2980 lands
-        if: inputs.target == 'prod-copy' && !inputs.dry_run
-        env:
-          MAXZOOM: ${{ inputs.maxzoom }}
-        run: |
-          if [[ "$MAXZOOM" == "14" || "$OBJ" == *world-z0-14-* ]]; then
-            echo "::error::a z14 prod copy is blocked until #2980 (token refresh for long copies) lands"
-            exit 1
-          fi
-
       - name: Copy the staging object to prod (read from staging)
         if: inputs.target == 'prod-copy' && !inputs.dry_run
         run: |
           ACCESS_TOKEN=$(gcloud auth print-access-token)
           echo "::add-mask::${ACCESS_TOKEN}"
           export ACCESS_TOKEN
-          # The token above lasts an hour; a z14 copy can outlive it. Until
-          # #2980 (token refresh for long copies) lands, the step before this
-          # one refuses z14.
+          # The token above lasts an hour; a z14 copy can outlive it, so the
+          # helper re-mints through gcloud at least every 4 minutes and once
+          # more on a 401 (#2980).
           # --on-exists skip: an existing prod object is skipped only if its
           # md5 equals staging's; a different or unreadable one fails the step.
           # A re-run after a verify failure therefore does not rewrite prod;
