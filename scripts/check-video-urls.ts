@@ -11,14 +11,7 @@
  * and exits 1 when any URL fails, so run it before adding an entry.
  */
 import { HOW_TO_VIDEOS } from '../frontend/src/content/howToVideos'
-
-interface Result {
-  id: string
-  cut: 'desktop' | 'mobile'
-  url: string
-  status: number | null
-  ok: boolean
-}
+import { describeFailures, type VideoUrlResult } from './lib/videoUrlCheck'
 
 async function probe(url: string): Promise<number | null> {
   try {
@@ -37,16 +30,16 @@ const checks = HOW_TO_VIDEOS.flatMap(v => [
 ])
 
 async function main(): Promise<void> {
-  const results: Result[] = await Promise.all(
+  const results: VideoUrlResult[] =await Promise.all(
     checks.map(async c => {
       const status = await probe(c.url)
-      return { ...c, status, ok: status === 200 || status === 206 }
-    })
+      return { ...c, status, ok: status === 200 || status === 206 }    })
   )
 
   process.stdout.write(JSON.stringify(results, null, 2) + '\n')
-  const failed = results.filter(r => !r.ok)
+  const failed = describeFailures(results)
   if (failed.length > 0) {
+    for (const line of failed) console.error(`check-video-urls: ${line}`)
     console.error(
       `check-video-urls: ${failed.length} of ${results.length} URLs are not live`
     )

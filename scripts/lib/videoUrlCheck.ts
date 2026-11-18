@@ -6,7 +6,14 @@ export interface VideoUrlResult {
   ok: boolean
 }
 
-/** One line per failed URL. Not implemented yet (#2899). */
-export function describeFailures(_results: VideoUrlResult[]): string[] {
-  return []
+/** One line per failed URL, naming the video, the cut, the URL and the status. */
+export function describeFailures(results: VideoUrlResult[]): string[] {
+  return results
+    .filter(r => !r.ok)
+    .map(
+      r =>
+        `${r.id} (${r.cut}): ${r.url} returned ${
+          r.status === null ? 'no response' : r.status
+        }`
+    )
 }
