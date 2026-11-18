@@ -100,7 +100,10 @@ describe('gcs-upload CLI (#2972)', () => {
         : i.method === 'PUT'
           ? new Response(`{"md5Hash":"${ABC_MD5}"}`, { status: 200 })
           : u.includes('alt=media')
-            ? new Response('abc', { status: 206 })
+            ? new Response('abc', {
+                status: 206,
+                headers: { 'Content-Range': 'bytes 0-2/3' },
+              })
             : new Response(`{"size":"3","md5Hash":"${ABC_MD5}"}`, {
                 status: 200,
               })

@@ -185,7 +185,10 @@ describe('uploadObject (#2972)', () => {
       if (i.method === 'PUT')
         return new Response(`{"md5Hash":"${ABCDEF_MD5}"}`, { status: 200 })
       if (url.includes('alt=media'))
-        return new Response('abcdef', { status: 206 })
+        return new Response('abcdef', {
+          status: 206,
+          headers: { 'Content-Range': 'bytes 0-5/6' },
+        })
       return new Response(`{"size":"6","md5Hash":"${ABCDEF_MD5}"}`, {
         status: 200,
       })
