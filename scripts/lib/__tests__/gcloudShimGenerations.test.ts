@@ -23,6 +23,27 @@ const WORKERS = 16
 // covered by the static source check.
 const BUDGET = 3
 
+/** The code of next_gen and stamp_generation, whole-line comments removed. */
+const hotPathCode = (shim: string): string => {
+  const body: string[] = []
+  let inside = false
+  for (const line of shim.split('\n')) {
+    if (/^(next_gen|stamp_generation)\(\) \{/.test(line)) inside = true
+    if (inside) body.push(line.replace(/^\s*#.*$/, ''))
+    if (inside && line === '}') inside = false
+  }
+  return body.join('\n')
+}
+
+/** Every construct in `code` that forks a subshell (#3005). */
+const forkOffenders = (code: string): string[] => [
+  // `$((` is arithmetic, not a command substitution.
+  ...(code.match(/\$\((?!\()/g) ?? []),
+  ...(code.match(/`/g) ?? []),
+  // A bare `(` opening a subshell: at the start of a command.
+  ...(code.match(/(^\s*|[;&|]\s*|\bdo\s+|\bthen\s+)\(/gm) ?? []),
+]
+
 let tmp: string
 let root: string
 
@@ -94,23 +115,31 @@ describe('gcloud shim next_gen under parallel writers (#2800)', () => {
   // any of them. This reads the source of the two functions on the hot path
   // (the lock is held while they run) and rejects both.
   it('keeps $(...) and ( ... ) subshells out of next_gen and stamp_generation', () => {
-    const src = fs.readFileSync(SHIM, 'utf8').split('\n')
-    const body: string[] = []
-    let inside = false
-    for (const line of src) {
-      if (/^(next_gen|stamp_generation)\(\) \{/.test(line)) inside = true
-      if (inside) body.push(line.replace(/^\s*#.*$/, ''))
-      if (inside && line === '}') inside = false
-    }
-    expect(body.length).toBeGreaterThan(10)
-    const code = body.join('\n')
-    // `$((` is arithmetic, not a command substitution.
-    expect(code.match(/\$\((?!\()/g) ?? []).toEqual([])
-    expect(code.match(/`/g) ?? []).toEqual([])
-    // A bare `(` opening a subshell: at the start of a command.
-    expect(code.match(/(^\s*|[;&|]\s*|\bdo\s+|\bthen\s+)\(/gm) ?? []).toEqual(
-      []
+    const code = hotPathCode(fs.readFileSync(SHIM, 'utf8'))
+    expect(code.split('\n').length).toBeGreaterThan(10)
+    expect(forkOffenders(code)).toEqual([])
+  })
+
+  // The same check must see the other ways to fork: process substitution and
+  // a pipeline (each stage is a subshell). These probes are run through the
+  // check on a stand-in shim, so a weakened pattern fails here.
+  it.each([
+    ['command substitution', 'x="$(date)"'],
+    ['backticks', 'x=`date`'],
+    ['a subshell', '( : )'],
+    ['process substitution (input)', 'read -r _x < <(:)'],
+    ['process substitution (output)', 'echo hi > >(cat)'],
+    ['a pipeline', 'echo hi | read -r _y'],
+  ])('rejects %s inside next_gen', (_name, line) => {
+    const code = hotPathCode(`next_gen() {\n  ${line}\n}\n`)
+    expect(forkOffenders(code), line).not.toEqual([])
+  })
+
+  it('allows || and arithmetic in next_gen', () => {
+    const code = hotPathCode(
+      'next_gen() {\n  n=$((n + 1))\n  read -r n <"${f}" || return 1\n}\n'
     )
+    expect(forkOffenders(code)).toEqual([])
   })
 
   // #3002: the counter lock serialises every write, so each process a stamp
