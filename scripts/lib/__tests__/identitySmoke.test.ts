@@ -169,20 +169,34 @@ describe('media identity expectation (#2972)', () => {
     for (const b of Object.values(media.buckets)) expect(b.granted).toEqual([])
   })
 
-  it('checks create inside the allowed prefixes, and create outside them denied, on both buckets', () => {
+  it('asks only object-valid permissions in objectChecks (run 44316985025: objects.create answers 400)', () => {
+    // Valid at object level: get, delete, update, getIamPolicy, setIamPolicy.
+    const objectValid = new Set([
+      'storage.objects.get',
+      'storage.objects.delete',
+      'storage.objects.update',
+      'storage.objects.getIamPolicy',
+      'storage.objects.setIamPolicy',
+    ])
+    for (const [name, exp] of Object.entries(IDENTITY_EXPECTATIONS)) {
+      for (const c of exp.objectChecks ?? []) {
+        for (const p of [...c.granted, ...c.denied])
+          expect(
+            objectValid.has(p),
+            `${name} ${c.bucket}/${c.object} asks ${p}`
+          ).toBe(true)
+      }
+    }
+  })
+
+  it('checks inside and outside the allowed prefixes on both buckets', () => {
     const isInside = (o: string) => /^(videos|basemap)\//.test(o)
     for (const bucket of ['toast-stats-data-ca', 'toast-stats-data-staging']) {
       const checks = (media.objectChecks ?? []).filter(c => c.bucket === bucket)
-      const inside = checks.filter(c => isInside(c.object))
-      const outside = checks.filter(c => !isInside(c.object))
-      expect(inside.length).toBeGreaterThan(0)
-      expect(outside.length).toBeGreaterThan(0)
-      for (const c of inside)
-        expect(c.granted).toContain('storage.objects.create')
-      for (const c of outside) {
+      expect(checks.some(c => isInside(c.object))).toBe(true)
+      expect(checks.some(c => !isInside(c.object))).toBe(true)
+      for (const c of checks.filter(c => !isInside(c.object)))
         expect(c.granted).toEqual([])
-        expect(c.denied).toContain('storage.objects.create')
-      }
     }
   })
 
@@ -196,6 +210,19 @@ describe('media identity expectation (#2972)', () => {
       )
     expect(readInside('toast-stats-data-staging')).toBe(true)
     expect(readInside('toast-stats-data-ca')).toBe(false)
+  })
+
+  it('shows the prefix condition on staging: get is denied outside it, and not asserted on prod (public read)', () => {
+    const outside = (b: string) =>
+      (media.objectChecks ?? []).find(
+        c => c.bucket === b && !/^(videos|basemap)\//.test(c.object)
+      )!
+    expect(outside('toast-stats-data-staging').denied).toContain(
+      'storage.objects.get'
+    )
+    expect(outside('toast-stats-data-ca').denied).not.toContain(
+      'storage.objects.get'
+    )
   })
 
   it('can never delete, overwrite in place, restore or change bucket metadata or IAM', () => {

@@ -138,6 +138,28 @@ describe('runSmoke object checks (#2972)', () => {
   })
 })
 
+describe('runSmoke API error detail (#2972)', () => {
+  it('logs the error code and message and the URL without its query, never the token', async () => {
+    const fetchFn = vi.fn(async (url: string) =>
+      url.includes('/o/')
+        ? json({ error: { code: 400, message: 'Invalid argument' } }, 400)
+        : json({ permissions: [] })
+    )
+    const logs: string[] = []
+    const code = await runSmoke(
+      withObjects,
+      deps(fetchFn, l => logs.push(l))
+    )
+    expect(code).toBe(1)
+    const text = logs.join('\n')
+    expect(text).toContain('400')
+    expect(text).toContain('Invalid argument')
+    expect(text).toContain('/iam/testPermissions')
+    expect(text).not.toContain('permissions=')
+    expect(text).not.toContain('Bearer')
+  })
+})
+
 describe('media probe objects (#2972)', () => {
   // objects.testIamPermissions on a missing object answers 404, so the probes
   // must exist in both data buckets (checked read-only with

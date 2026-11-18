@@ -83,30 +83,43 @@ export const IDENTITY_EXPECTATIONS: Record<string, IdentityExpectation> = {
       [PROD_DATA_BUCKET]: { granted: [], denied: MEDIA_DENIED },
       [STAGING_DATA_BUCKET]: { granted: [], denied: MEDIA_DENIED },
     },
+    // Media `create` is NOT asserted. Object-level testIamPermissions rejects
+    // storage.objects.create with 400 "Invalid argument" (run 44316985025,
+    // 2026-11-18), and the bucket-level call cannot see a prefix condition.
+    // Create is proven by the first real staging publish; if that fails on
+    // create, it is a same-day P1 to the COO, not a retry. Only permissions
+    // valid at object level belong here (get, delete, update, IAM policy).
     objectChecks: [
       {
         bucket: PROD_DATA_BUCKET,
         object: MEDIA_PROBE_INSIDE,
-        granted: ['storage.objects.create'],
+        granted: [],
         denied: ['storage.objects.delete', 'storage.objects.update'],
       },
       {
         bucket: PROD_DATA_BUCKET,
         object: MEDIA_PROBE_OUTSIDE,
         granted: [],
-        denied: ['storage.objects.create'],
+        denied: ['storage.objects.delete', 'storage.objects.update'],
       },
       {
         bucket: STAGING_DATA_BUCKET,
         object: MEDIA_PROBE_INSIDE,
-        granted: ['storage.objects.create', 'storage.objects.get'],
+        granted: ['storage.objects.get'],
         denied: ['storage.objects.delete', 'storage.objects.update'],
       },
       {
         bucket: STAGING_DATA_BUCKET,
         object: MEDIA_PROBE_OUTSIDE,
         granted: [],
-        denied: ['storage.objects.create'],
+        // get is denied here, granted inside the prefix: that shows the prefix
+        // condition working. Not asserted on the prod outside probe above,
+        // because prod has public read and get would be held.
+        denied: [
+          'storage.objects.get',
+          'storage.objects.delete',
+          'storage.objects.update',
+        ],
       },
     ],
   },
