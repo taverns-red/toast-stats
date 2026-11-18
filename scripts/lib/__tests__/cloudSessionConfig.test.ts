@@ -273,10 +273,10 @@ describe('setup provides yamllint and a case-folding locale (#2467)', () => {
     expect(toolCalls()).toContain('pip install --user --quiet yamllint')
   })
 
-  it('generates en_US.UTF-8 when only byte-order locales exist', () => {
+  it('does not generate a locale when only byte-order locales exist (#2957)', () => {
     const r = spawnSync(BASH, [SETUP], { cwd: dir, env: setupEnv() })
     expect(r.status).toBe(0)
-    expect(toolCalls()).toContain('localedef -i en_US -f UTF-8 en_US.UTF-8')
+    expect(toolCalls().some(c => c.startsWith('localedef '))).toBe(false)
   })
 
   it('is idempotent: skips both when already present', () => {
@@ -303,7 +303,7 @@ describe('setup provides yamllint and a case-folding locale (#2467)', () => {
   it('is documented in docs/cloud-sessions.md', () => {
     const md = readFileSync(resolve(ROOT, 'docs/cloud-sessions.md'), 'utf8')
     expect(md).toMatch(/yamllint/)
-    expect(md).toMatch(/en_US\.UTF-8/)
+    expect(md).not.toMatch(/en_US\.UTF-8/)
   })
 })
 
