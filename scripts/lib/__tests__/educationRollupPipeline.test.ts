@@ -663,6 +663,17 @@ describe('build-education-rollup.sh: a seeded ledger (EDUCATION_LEDGER_DIR, #210
     )
   const seedFile = (rel: string) => path.join(seed, rel)
 
+  // #2989: a test that needs "a seed and a rollup from an earlier run" starts
+  // from that state; it does not spawn the script (two cold tsx starts plus
+  // the build, ~1.5 s idle, 5 to 11 s under load) to make it.
+  describe('from a primed seed (#2989)', () => {
+    it('starts from a seed and rollup built once for the whole describe', () => {
+      expect(fs.existsSync(seedFile('2018-2019/district_111.json'))).toBe(true)
+      expect(rollupObjects()).toContain(`${PREFIX}2026-2027.json`)
+      expect(lines(shimLog)).toEqual([])
+    })
+  })
+
   it('an empty seed directory downloads the whole ledger, as before', () => {
     seedAll()
     const r = runScript({ EDUCATION_LEDGER_DIR: seed, SHIM_DOWNLOAD_LOG: dl })
