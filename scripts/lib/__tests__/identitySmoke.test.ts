@@ -129,6 +129,8 @@ describe('restore identity expectation (#2966)', () => {
     const denied = restore.buckets['toast-stats-data-ca']!.denied
     expect(denied).toContain('storage.buckets.get')
     expect(denied).toContain('storage.buckets.getIamPolicy')
+    expect(denied).toContain('storage.buckets.setIamPolicy')
+    expect(denied).toContain('storage.buckets.update')
   })
 
   it('reads staging and cannot write there', () => {
@@ -138,6 +140,8 @@ describe('restore identity expectation (#2966)', () => {
       'storage.objects.list',
     ])
     expect(staging.denied).toContain('storage.objects.create')
+    expect(staging.denied).toContain('storage.objects.delete')
+    expect(staging.denied).toContain('storage.objects.update')
   })
 
   it('probes soft-deleted copies under one small prod prefix', () => {
