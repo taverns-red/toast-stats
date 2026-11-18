@@ -34,9 +34,13 @@ export const PREVIEW = 'vars.GCP_PREVIEW_SA'
 export const PIPELINE = 'vars.GCP_PIPELINE_SA'
 export const RESTORE = 'vars.GCP_RESTORE_SA'
 export const MEDIA = 'vars.GCP_MEDIA_SA'
+export const HOSTING_DEPLOY = 'vars.GCP_HOSTING_DEPLOY_SA'
 
 /** The one environment the restore identity's WIF binding admits (#2964). */
 export const RESTORE_ENVIRONMENT = 'data-restore'
+
+/** The one environment the hosting-deploy identity's binding admits (#2984). */
+export const HOSTING_DEPLOY_ENVIRONMENT = 'production'
 
 /**
  * An identity chosen by event: `<event>` runs use `whenEvent`, every other

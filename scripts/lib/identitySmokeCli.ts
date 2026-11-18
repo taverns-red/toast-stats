@@ -16,6 +16,8 @@ const API = 'https://storage.googleapis.com/storage/v1/b'
 
 export interface SmokeDeps {
   token: string | undefined
+  /** The GCP project id, for project-level checks (#2984). */
+  projectId?: string
   fetch: typeof fetch
   /** Human-readable table (stderr, R4). */
   log: (line: string) => void

@@ -217,3 +217,74 @@ describe('media identity expectation (#2972)', () => {
     }
   })
 })
+
+describe('hosting-deploy identity expectation (#2984)', () => {
+  const hosting = IDENTITY_EXPECTATIONS['hosting-deploy']!
+
+  it('is keyed by its own name', () => {
+    expect(hosting.identity).toBe('hosting-deploy')
+  })
+
+  it('has no object or bucket access on the prod data bucket', () => {
+    const b = hosting.buckets['toast-stats-data-ca']!
+    expect(b.granted).toEqual([])
+    // Not get/list: the prod bucket is public-read, so anyone holds them.
+    for (const p of [
+      'storage.objects.create',
+      'storage.objects.delete',
+      'storage.buckets.get',
+    ])
+      expect(b.denied).toContain(p)
+  })
+
+  it('has no object or bucket access on the staging data bucket', () => {
+    const b = hosting.buckets['toast-stats-data-staging']!
+    expect(b.granted).toEqual([])
+    for (const p of [
+      'storage.objects.create',
+      'storage.objects.delete',
+      'storage.objects.get',
+      'storage.objects.list',
+      'storage.buckets.get',
+    ])
+      expect(b.denied).toContain(p)
+  })
+
+  it('holds the Hosting permissions a deploy needs, and no project IAM or bucket creation', () => {
+    const p = hosting.projectChecks!
+    for (const g of [
+      'firebasehosting.sites.get',
+      'firebasehosting.sites.update',
+    ])
+      expect(p.granted).toContain(g)
+    for (const d of [
+      'storage.buckets.create',
+      'resourcemanager.projects.setIamPolicy',
+    ])
+      expect(p.denied).toContain(d)
+    expect(p.granted.filter(g => p.denied.includes(g))).toEqual([])
+  })
+
+  it('asks only permissions valid on a project resource', () => {
+    const p = hosting.projectChecks!
+    for (const perm of [...p.granted, ...p.denied])
+      expect(perm).not.toMatch(/^storage\.objects\./)
+  })
+
+  it('reports a missing project grant and a held project denial', () => {
+    const result = evaluate(
+      {
+        identity: 'x',
+        buckets: {},
+        projectChecks: { granted: ['a'], denied: ['b'] },
+      },
+      {},
+      {},
+      ['b']
+    )
+    expect(result.mismatches).toEqual([
+      { bucket: 'project', permission: 'a', problem: 'missing-grant' },
+      { bucket: 'project', permission: 'b', problem: 'unexpected-grant' },
+    ])
+  })
+})

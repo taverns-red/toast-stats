@@ -31,6 +31,7 @@ interface Step {
   'working-directory'?: string
 }
 interface Job {
+  environment?: string
   permissions?: Record<string, string>
   steps: Step[]
   env?: Record<string, string>
@@ -165,6 +166,39 @@ describe('deploy.yml auto-rollback (#2492)', () => {
     expect(idx('Record DORA deploy metrics')).toBeGreaterThan(idx(FAIL))
   })
 
+  it('signs in from the production environment, the one the hosting-deploy identity admits (#2984)', () => {
+    expect(job.environment).toBe('production')
+  })
+
+  it('makes no Cloud Storage call: the hosting-deploy identity has no storage access (#2984)', () => {
+    const runs = steps.map(s => s.run ?? '').join('\n')
+    expect(runs).not.toMatch(/gcloud storage|gsutil|gs:\/\//)
+    expect(raw).not.toMatch(/GCS_BUCKET|metrics\/deploys/)
+  })
+
+  it('keeps the DORA record fields, in the step summary and a 90-day artifact (#2984)', () => {
+    const record = step('Record DORA deploy metrics')
+    for (const field of [
+      'timestamp',
+      'commitSha',
+      'leadTimeSeconds',
+      'deploySuccess',
+      'version',
+      'actor',
+      'runId',
+    ])
+      expect(record.run, field).toContain(`"${field}"`)
+    expect(record.run).toContain('GITHUB_STEP_SUMMARY')
+    const upload = step('Upload the DORA deploy record')
+    expect(upload.uses).toMatch(/^actions\/upload-artifact@v7$/)
+    expect(upload.if).toBe('success()')
+    expect(upload.with?.['name']).toBe('dora-deploy-${{ github.run_id }}')
+    expect(upload.with?.['retention-days']).toBe(90)
+    expect(idx('Upload the DORA deploy record')).toBeGreaterThan(
+      idx('Record DORA deploy metrics')
+    )
+  })
+
   it('offers an override as a dispatch input and a repo variable', () => {
     for (const trigger of ['workflow_dispatch', 'workflow_call']) {
       const input = wf.on[trigger]?.inputs?.['skip_auto_rollback']
@@ -182,9 +216,10 @@ describe('deploy.yml auto-rollback (#2492)', () => {
     )
     expect([...used].sort()).toEqual([
       'GCP_PROJECT_ID',
-      'GCP_SERVICE_ACCOUNT',
       'GCP_WORKLOAD_IDENTITY_PROVIDER',
     ])
+    expect(raw).toContain('vars.GCP_HOSTING_DEPLOY_SA')
+    expect(raw).not.toContain('GCP_SERVICE_ACCOUNT')
   })
 
   it('can write issues, here and in the release-please caller that caps it', () => {

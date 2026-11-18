@@ -26,9 +26,20 @@ export interface ObjectCheck {
   denied: string[]
 }
 
+/**
+ * Permissions asked of the project (projects.testIamPermissions). Only
+ * permissions valid on a project resource belong here: storage.objects.* and
+ * storage.buckets.get are not.
+ */
+export interface ProjectCheck {
+  granted: string[]
+  denied: string[]
+}
+
 export interface IdentityExpectation {
   identity: string
   buckets: Record<string, BucketExpectation>
+  projectChecks?: ProjectCheck
   objectChecks?: ObjectCheck[]
   /** Read-only listing of soft-deleted copies under one small prefix. */
   softDeletedProbe?: { bucket: string; prefix: string }
@@ -157,7 +168,8 @@ export const permissionsToTest = (b: BucketExpectation): string[] => [
 export const evaluate = (
   expected: IdentityExpectation,
   actualByBucket: Record<string, string[]>,
-  actualByObject: Record<string, string[]> = {}
+  actualByObject: Record<string, string[]> = {},
+  _actualProject: string[] = []
 ): Evaluation => {
   const mismatches: Mismatch[] = []
   for (const oc of expected.objectChecks ?? []) {
