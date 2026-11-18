@@ -18,26 +18,66 @@ import { describe, expect, it } from 'vitest'
  * it: the failure needs a loaded CI runner and cannot be reproduced locally. */
 
 const E2E_DIR = resolve(__dirname, '../../../e2e')
-const read = (f: string) => readFileSync(resolve(E2E_DIR, f), 'utf8')
+/** Source with its comments removed, so a comment can't satisfy a check. */
+const stripComments = (src: string): string =>
+  src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/.*$/gm, '$1')
+
+const read = (f: string) =>
+  stripComments(readFileSync(resolve(E2E_DIR, f), 'utf8'))
+
+describe('stripComments', () => {
+  it('removes block and line comments but keeps code and URLs', () => {
+    const src = [
+      "/* expect(page.locator('.shell-ghost')).toHaveCount(0) */",
+      "// expect(page.locator('.shell-ghost')).toHaveCount(0)",
+      "const url = 'https://example.com'",
+      'await go() // shell-ghost',
+    ].join('\n')
+    const out = stripComments(src)
+    expect(out).not.toMatch(/shell-ghost/)
+    expect(out).toMatch(/https:\/\/example\.com/)
+    expect(out).toMatch(/await go\(\)/)
+  })
+})
 
 describe('smokes wait for loaded data (#2959)', () => {
-  it('clubs-mobile-rows load() waits for the table skeleton to go', () => {
+  const clubsLoad = (): string => {
     const src = read('clubs-mobile-rows.smoke.ts')
-    const load = src.match(/async function load\([\s\S]*?\n}\n/)?.[0] ?? ''
-    expect(load).toMatch(/Loading table/)
-    expect(load).toMatch(
-      /toHaveCount\(\s*0|toBeHidden|waitFor\(\{\s*state: 'detached'/
+    return src.match(/async function load\([\s\S]*?\n}\n/)?.[0] ?? ''
+  }
+
+  it('clubs-mobile-rows load() waits for a loaded list or table to be visible', () => {
+    const src = read('clubs-mobile-rows.smoke.ts')
+    // The skeleton being absent also holds before it has mounted, so the
+    // wait needs a positive signal: the grouped list, flat list or table.
+    expect(src).toMatch(/const LOADED\s*=[^\n]*#clubs-table/)
+    expect(clubsLoad()).toMatch(
+      /expect\(\s*page\.locator\(LOADED\)[\s\S]*?\)\s*\.toBeVisible\(\{\s*timeout: /
+    )
+  })
+
+  it('clubs-mobile-rows load() also waits for the table skeleton to go', () => {
+    expect(clubsLoad()).toMatch(
+      /getByRole\('status', \{ name: 'Loading table' \}\)\)\.toHaveCount\(\s*0/
     )
   })
 
   it('contrast-aa does not measure while a shell-ghost placeholder is on the page', () => {
     const src = read('contrast-aa.smoke.ts')
-    expect(src).toMatch(/shell-ghost/)
+    expect(src).toMatch(
+      /expect\(page\.locator\('\.shell-ghost'\)\)\.toHaveCount\(\s*0/
+    )
   })
 
   it('basemap-375 gives the loaded map region the same budget as its canvas', () => {
     const src = read('basemap-375.smoke.ts')
+    // The region takes its full name only once the lazy map has mounted.
+    expect(src).toMatch(
+      /const region = page\.getByRole\('region', \{\s*name: 'Club map, coloured by club health',?\s*\}\)/
+    )
     expect(src).not.toMatch(/await expect\(region\)\.toBeVisible\(\)/)
-    expect(src).toMatch(/await expect\(region\)\.toBeVisible\(\{ timeout: /)
+    expect(src).toMatch(
+      /await expect\(region\)\.toBeVisible\(\{\s*timeout: 15_000/
+    )
   })
 })
