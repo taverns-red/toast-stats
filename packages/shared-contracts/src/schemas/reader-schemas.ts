@@ -35,6 +35,7 @@ import {
 import { EducationTimelineEntitySchema } from './education-timeline.schema.js'
 import { GlobalClubRaceSchema } from './global-club-race.schema.js'
 import { PerDistrictDataSchema } from './per-district-data.schema.js'
+import { ReinstatableClubsSchema } from './reinstatable-clubs.schema.js'
 import { RegionMembershipSeriesSchema } from './region-membership-series.schema.js'
 import { RegionRollupsSchema } from './region-rollups.schema.js'
 import { ReportsRollupsSchema } from './reports-rollups.schema.js'
@@ -44,6 +45,9 @@ export const DistrictReportsDatasetReaderSchema = toTolerantReader(
   DistrictReportsDatasetSchema
 )
 export const SuspendedClubsReaderSchema = toTolerantReader(SuspendedClubsSchema)
+export const ReinstatableClubsReaderSchema = toTolerantReader(
+  ReinstatableClubsSchema
+)
 export const GlobalClubRaceReaderSchema = toTolerantReader(GlobalClubRaceSchema)
 export const RegionRollupsReaderSchema = toTolerantReader(RegionRollupsSchema)
 export const ClubsByRegionShardReaderSchema = toTolerantReader(

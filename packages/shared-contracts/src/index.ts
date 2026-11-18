@@ -208,6 +208,18 @@ export {
   type SuspendedClub,
 } from './schemas/suspended-clubs.schema.js'
 
+// Suspended and closed clubs that can be reinstated — snapshots/{date}/reinstatable-clubs.json (#3007)
+export {
+  ReinstatableClubsSchema,
+  ReinstatableClubsFormatSchema,
+  ReinstatableClubSchema,
+  REINSTATABLE_CLUBS_FORMAT,
+  REINSTATABLE_CLUBS_FILE_NAME,
+  type ReinstatableClubs,
+  type ReinstatableClubsFormat,
+  type ReinstatableClub,
+} from './schemas/reinstatable-clubs.schema.js'
+
 // Club-race crossing store — club-race/{PY}/first-reached.json (#1556)
 export {
   ClubRaceStoreSchema,
@@ -723,6 +735,7 @@ export {
 export {
   DistrictReportsDatasetReaderSchema,
   SuspendedClubsReaderSchema,
+  ReinstatableClubsReaderSchema,
   GlobalClubRaceReaderSchema,
   RegionRollupsReaderSchema,
   ClubsByRegionShardReaderSchema,
