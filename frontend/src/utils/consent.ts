@@ -103,8 +103,13 @@ export function getConsent(): ConsentLevel | null {
 let state: ConsentState = { level: getConsent(), settingsOpen: false }
 const listeners = new Set<() => void>()
 
+/** The level subscribers were last told about (#2945). `state.level` can move
+ *  without a publish, when getConsentState re-reads the cookie. */
+let publishedLevel = state.level
+
 function publish(next: ConsentState): void {
   state = next
+  publishedLevel = next.level
   listeners.forEach(l => l())
 }
 
@@ -199,7 +204,9 @@ function applyRemoteDowngrade(level: ConsentLevel | null): void {
   }
   gaHook()?.disable()
   clearGaCookies()
-  publish({ ...state, level })
+  // The steps above are safe to repeat; telling subscribers is not free (each
+  // one re-renders), so only do it when the level they know has changed.
+  if (level !== publishedLevel) publish({ ...state, level })
 }
 
 function onRemoteDowngrade(data: unknown): void {
@@ -221,11 +228,13 @@ function recheckConsent(): void {
   applyRemoteDowngrade(level)
 }
 
+function onVisibilityChange(): void {
+  if (document.visibilityState === 'visible') recheckConsent()
+}
+
 function watchForMissedSignal(): void {
   try {
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') recheckConsent()
-    })
+    document.addEventListener('visibilitychange', onVisibilityChange)
     window.addEventListener('pageshow', recheckConsent)
   } catch {
     // no DOM events: the channel signal still works
@@ -255,7 +264,20 @@ watchForMissedSignal()
 
 /** Test-only: undo the page listeners and channel set up at module load. */
 export function teardownConsentListenersForTests(): void {
-  // Not implemented yet (#2945).
+  // Tests reload this module with vi.resetModules, and the old copies' listeners
+  // would stay on `document` and `window` for the rest of the file.
+  try {
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+    window.removeEventListener('pageshow', recheckConsent)
+  } catch {
+    // no DOM events
+  }
+  try {
+    syncChannel?.close()
+  } catch {
+    // already closed
+  }
+  syncChannel = null
 }
 
 /** Record a choice and apply it at once. */

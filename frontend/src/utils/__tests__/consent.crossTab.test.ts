@@ -39,9 +39,12 @@ function wipeCookie(name: string) {
 }
 
 /** A fresh copy of the modules, as a second tab would load them. */
+const loadedTabs: Array<{ teardownConsentListenersForTests(): void }> = []
+
 async function loadTab() {
   vi.resetModules()
   const consent = await import('../consent')
+  loadedTabs.push(consent)
   const guard = await import('../gaTransportGuard')
   return { consent, guard }
 }
@@ -60,6 +63,8 @@ describe('another tab lowers consent (#2919)', () => {
   })
 
   afterEach(() => {
+    // Each loadTab() copy of the module attached its own listeners (#2945).
+    for (const t of loadedTabs.splice(0)) t.teardownConsentListenersForTests()
     win['fetch'] = savedFetch
     delete win['__tsGa']
     g['BroadcastChannel'] = savedBc
