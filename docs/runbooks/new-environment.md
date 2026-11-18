@@ -80,8 +80,12 @@ scripts/setup-hosting-sites.sh --project "$PROJECT_ID" \
 PROJECT_ID="$PROJECT_ID" scripts/setup-wif.sh
 ```
 
-The defaults (`GITHUB_REPO=taverns-red/toast-stats`,
-`SA_NAME=toast-stats-deployer`) match the live deployer. The live provider in
+`PROJECT_ID` is required; the script has no default project. The default
+`GITHUB_REPO=taverns-red/toast-stats` matches this repo. The script creates only
+the pool and provider. It creates no service account and grants no role
+(#3025). Each job's identity (`scripts/lib/gcpIdentityMap.ts`) and its
+bindings must be created separately; the script no longer does this, and this
+runbook does not yet list those steps. The live provider in
 `toast-stats-prod-6d64a` is shared with other Red Taverns repos and uses the
 condition `assertion.repository_owner=='taverns-red'`. The script's
 per-repository condition is stricter, which is fine for a single-repo project.
@@ -100,8 +104,11 @@ Use the values that `setup-wif.sh` prints:
 ```bash
 gh secret set GCP_PROJECT_ID --repo taverns-red/toast-stats --body "$PROJECT_ID"
 gh secret set GCP_WORKLOAD_IDENTITY_PROVIDER --repo taverns-red/toast-stats --body "<provider resource name>"
-gh secret set GCP_SERVICE_ACCOUNT --repo taverns-red/toast-stats --body "<sa email>"
 ```
+
+Set the per-job identity variables (`GCP_DATA_READER_SA`, `GCP_PREVIEW_SA`,
+`GCP_PIPELINE_SA`, `GCP_RESTORE_SA`, `GCP_MEDIA_SA`, `GCP_HOSTING_DEPLOY_SA`)
+as repository variables once those identities exist.
 
 ### 7. First deploy
 
