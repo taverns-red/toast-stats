@@ -146,7 +146,9 @@ describe('uploadObject (#2972)', () => {
 
   it('fails when the byte PUT fails', async () => {
     const { fetchFn } = fakeGcs({ put: 503 })
-    await expect(uploadObject(opts({ fetch: fetchFn }))).rejects.toThrow('503')
+    await expect(
+      uploadObject(opts({ fetch: fetchFn, sleep: async () => {} }))
+    ).rejects.toThrow('503')
   })
 
   it('never puts the token in an error message', async () => {

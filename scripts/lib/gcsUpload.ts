@@ -122,19 +122,136 @@ export const uploadObject = async (o: UploadOptions): Promise<UploadResult> => {
   if (!session) throw new Error(`POST upload ${target}: no session URL`)
 
   const src = await openSource(o)
-  const put = await o.fetch(session, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': o.contentType,
-      'Content-Length': String(src.size),
-    },
-    body: src.body,
-    // Required by undici for a streamed request body.
-    duplex: 'half',
-  } as RequestInit)
-  if (put.status === 412) return exists()
-  if (!put.ok) throw failure(`PUT upload ${target}`, put)
-  return 'created'
+  if (src.size === 0) throw new Error(`${target}: the source is empty`)
+  const outcome = await sendChunks(o, session, src, target)
+  return outcome === 'exists' ? exists() : 'created'
+}
+
+const DEFAULT_CHUNK = 256 * 1024 * 1024 // a multiple of 256 KiB, as GCS requires
+const MAX_ATTEMPTS = 5
+
+/** Reads exactly n bytes (or what is left) from a web stream, in order. */
+const chunkReader = (body: ReadableStream<Uint8Array>) => {
+  const reader = body.getReader()
+  let spare: Buffer = Buffer.alloc(0)
+  return async (n: number): Promise<Buffer> => {
+    const parts: Buffer[] = []
+    let have = 0
+    if (spare.length > 0) {
+      parts.push(spare)
+      have = spare.length
+      spare = Buffer.alloc(0)
+    }
+    while (have < n) {
+      const { value, done } = await reader.read()
+      if (done) break
+      parts.push(Buffer.from(value))
+      have += value.length
+    }
+    const all = Buffer.concat(parts, have)
+    spare = all.subarray(n)
+    return all.subarray(0, n)
+  }
+}
+
+/** Bytes the session holds, from a 308's Range header ("bytes=0-N"). */
+const persistedFrom = (res: Response): number => {
+  const m = /^bytes=0-(\d+)$/.exec(res.headers.get('range') ?? '')
+  return m ? Number(m[1]) + 1 : 0
+}
+
+/**
+ * PUTs the source in chunks. After a network error or a 5xx/408/429 it asks
+ * the session what it holds (PUT with `Content-Range: bytes * / total`) and
+ * resends only the rest, up to MAX_ATTEMPTS per chunk. Any other non-2xx
+ * (412 aside) throws at once.
+ */
+const sendChunks = async (
+  o: UploadOptions,
+  session: string,
+  src: OpenedSource,
+  target: string
+): Promise<'created' | 'exists'> => {
+  const total = src.size
+  const chunkSize = o.chunkSize ?? DEFAULT_CHUNK
+  const sleep = o.sleep ?? (ms => new Promise(r => setTimeout(r, ms)))
+  const read = chunkReader(src.body)
+  const put = (range: string, body?: Buffer): Promise<Response> =>
+    o.fetch(session, {
+      method: 'PUT',
+      // 308 is GCS's "resume incomplete", not a redirect.
+      redirect: 'manual',
+      headers: {
+        'Content-Type': o.contentType,
+        'Content-Length': String(body?.length ?? 0),
+        'Content-Range': range,
+      },
+      body: body as unknown as BodyInit | undefined,
+    })
+
+  let offset = 0
+  while (offset < total) {
+    const chunk = await read(Math.min(chunkSize, total - offset))
+    if (chunk.length !== Math.min(chunkSize, total - offset))
+      throw new Error(`${target}: the source ended early at ${offset}`)
+    const end = offset + chunk.length
+    let sent = offset // first byte of this chunk the session lacks
+    for (let attempt = 1; ; attempt++) {
+      let res: Response | undefined
+      let netError: unknown
+      try {
+        res = await put(
+          `bytes ${sent}-${end - 1}/${total}`,
+          chunk.subarray(sent - offset)
+        )
+      } catch (err) {
+        netError = err
+      }
+      if (res && res.status === 412) return 'exists'
+      if (res && (res.status === 200 || res.status === 201)) {
+        if (end < total)
+          throw new Error(`PUT upload ${target}: finished before the last byte`)
+        return 'created'
+      }
+      if (res && res.status === 308) {
+        sent = Math.max(sent, Math.min(end, persistedFrom(res)))
+        if (sent >= end) break
+        if (attempt >= MAX_ATTEMPTS)
+          throw new Error(`PUT upload ${target}: chunk stalled at ${sent}`)
+        continue
+      }
+      const retryable =
+        netError !== undefined ||
+        (res !== undefined &&
+          (res.status >= 500 || res.status === 408 || res.status === 429))
+      if (!retryable) throw failure(`PUT upload ${target}`, res!)
+      if (attempt >= MAX_ATTEMPTS)
+        throw netError instanceof Error
+          ? new Error(`PUT upload ${target}: ${netError.message}`)
+          : failure(`PUT upload ${target}`, res!)
+      await sleep(2 ** attempt * 500)
+      // What does the session hold? A 308 says; a 200/201 says it is done.
+      let q: Response
+      try {
+        q = await put(`bytes */${total}`)
+      } catch (err) {
+        if (attempt >= MAX_ATTEMPTS) throw err
+        continue
+      }
+      if (q.status === 412) return 'exists'
+      if (q.status === 200 || q.status === 201) {
+        if (end < total)
+          throw new Error(`PUT upload ${target}: finished before the last byte`)
+        return 'created'
+      }
+      if (q.status === 308) {
+        sent = Math.max(sent, Math.min(end, persistedFrom(q)))
+        if (sent >= end) break
+      }
+    }
+    offset = end
+  }
+  throw new Error(`PUT upload ${target}: the session never reported completion`)
 }
 
 /** Whether an object exists: 200 yes, 404 no, anything else throws. */
