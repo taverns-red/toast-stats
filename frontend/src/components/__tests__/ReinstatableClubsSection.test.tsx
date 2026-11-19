@@ -15,6 +15,7 @@ import type {
   ReinstatableClub,
   ReinstatableClubs,
 } from '@taverns-red/shared-contracts'
+import type { ReinstatementReason } from '@taverns-red/analytics-core'
 import recordedJson from '../../__tests__/fixtures/reinstatable-clubs-2026-11-18.recorded.json'
 import { ReinstatableClubsSection } from '../ReinstatableClubsSection'
 
@@ -192,6 +193,143 @@ describe('ReinstatableClubsSection', () => {
     expect(rowFor('Spring Club')).toHaveTextContent(
       'Adds to next year’s club base'
     )
+  })
+
+  describe('every reason code the pipeline can list', () => {
+    const CONFIRM = 'Confirm with World Headquarters.'
+    const NOT_KNOWN = 'Effect on the club base not known'
+    const ADDS = 'Adds to the club base'
+    const DOESNT = 'Doesn’t add to the club base'
+
+    function club(
+      reason: string,
+      over: Partial<ReinstatableClub> = {}
+    ): ReinstatableClub {
+      return {
+        clubNumber: '9',
+        clubName: 'Reason Club',
+        status: 'suspended',
+        suspendDate: '2026-03-31',
+        oldestPeriod: false,
+        addsToBase: false,
+        reason,
+        ...over,
+      }
+    }
+
+    function confirmCount(row: HTMLElement): number {
+      return (row.textContent ?? '').split(CONFIRM).length - 1
+    }
+
+    function renderOne(c: ReinstatableClub): HTMLElement {
+      render(
+        <ReinstatableClubsSection
+          clubs={[c]}
+          baseProgramYear="2026-2027"
+          programYearStart={2026}
+        />
+      )
+      return rowFor(c.clubName)
+    }
+
+    // Typed against analytics-core's ReinstatementReason, minus the codes for
+    // clubs that are not eligible (never listed). A new code without a row
+    // here fails typecheck; the section must then map it too.
+    type ListedReason = Exclude<
+      ReinstatementReason,
+      | 'closed_outside_window'
+      | 'closed_last_seen_after_as_of'
+      | 'closed_last_seen_invalid'
+    >
+    const CASES: Record<
+      ListedReason,
+      { row: Partial<ReinstatableClub>; tag: string; why: string }
+    > = {
+      suspended_sept30_october_cycle: {
+        row: { suspendDate: '2026-09-30', addsToBase: true },
+        tag: ADDS,
+        why: '“Reinstatement during the October renewal cycle will increase the club base.”',
+      },
+      suspended_mar31_before_oct1: {
+        row: { suspendDate: '2026-03-31', addsToBase: true },
+        tag: ADDS,
+        why: 'reinstating before October 1 increases the club base',
+      },
+      suspended_mar31_after_oct1: {
+        row: { suspendDate: '2026-03-31' },
+        tag: DOESNT,
+        why: 'the club closes on October 1',
+      },
+      suspended_sept30_past_october_cycle: {
+        row: { suspendDate: '2025-09-30' },
+        tag: DOESNT,
+        why: 'has likely closed',
+      },
+      suspend_date_unexpected: {
+        row: { suspendDate: '2026-06-15' },
+        tag: NOT_KNOWN,
+        why: 'isn’t at the end of a renewal period',
+      },
+      suspend_date_after_as_of: {
+        row: { suspendDate: '2026-12-31' },
+        tag: NOT_KNOWN,
+        why: 'after this snapshot’s date',
+      },
+      closed_does_not_add: {
+        row: {
+          status: 'closed',
+          suspendDate: undefined,
+          lastSeen: '2026-06-30',
+        },
+        tag: DOESNT,
+        why: '“will not increase the club base”',
+      },
+    }
+
+    it.each(Object.entries(CASES))(
+      '%s: shows its tag and reason sentence',
+      (reason, { row, tag, why }) => {
+        const tr = renderOne(club(reason, row))
+        expect(tr).toHaveTextContent(tag)
+        expect(tr).toHaveTextContent(why)
+        expect(confirmCount(tr)).toBeLessThanOrEqual(1)
+      }
+    )
+
+    it('an unknown code (a later release) says the effect is not known', () => {
+      const tr = renderOne(club('some_future_code', { addsToBase: true }))
+      expect(tr).toHaveTextContent(NOT_KNOWN)
+      expect(tr).not.toHaveTextContent(ADDS)
+      expect(confirmCount(tr)).toBe(1)
+    })
+
+    it('an unknown code in the oldest period says "Confirm with World Headquarters" once', () => {
+      const tr = renderOne(
+        club('some_future_code', {
+          status: 'closed',
+          suspendDate: undefined,
+          lastSeen: '2025-06-30',
+          oldestPeriod: true,
+        })
+      )
+      expect(tr).toHaveTextContent(NOT_KNOWN)
+      expect(tr).toHaveTextContent('oldest of the four renewal periods')
+      expect(confirmCount(tr)).toBe(1)
+    })
+
+    it('a Sept 30 suspension past the October cycle does not say the club has closed', () => {
+      // The Status column says "Suspended"; the FAQ only fixes the closure
+      // date for a March 31 suspension.
+      const tr = renderOne(
+        club('suspended_sept30_past_october_cycle', {
+          suspendDate: '2025-09-30',
+        })
+      )
+      expect(tr).toHaveTextContent('Suspended Sep 30, 2025')
+      expect(tr).not.toHaveTextContent('so the club has closed')
+      expect(tr).toHaveTextContent('has likely closed')
+      expect(tr).toHaveTextContent(CONFIRM)
+    })
   })
 
   it('explains what it takes, links the FAQ and says Toastmasters decides', () => {
