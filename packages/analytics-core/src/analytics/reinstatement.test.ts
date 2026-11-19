@@ -64,12 +64,24 @@ describe('suspended on Sept 30 (FAQ: "Reinstatement during the October renewal c
     ).toBe(true)
   })
 
-  it('on April 1 the base year rolls to the next year, so it no longer matches', () => {
+  it('on April 1 the October cycle is over: the FAQ says the club has closed, so it names that reason (#3011)', () => {
     const r = classifyReinstatement(suspended('2026-09-30'), '2027-04-01')
     expect(r.eligible).toBe(true)
     expect(r.addsToBase).toBe(false)
-    expect(r.reason).toBe('suspend_date_unexpected')
+    expect(r.reason).toBe('suspended_sept30_past_october_cycle')
     expect(r.baseProgramYear).toBe('2027-2028')
+  })
+
+  it('the Oct 1 stamp counts the same way once the cycle is over (#3011)', () => {
+    expect(
+      classifyReinstatement(suspended('2026-10-01'), '2027-06-15').reason
+    ).toBe('suspended_sept30_past_october_cycle')
+  })
+
+  it('a Sept 30 suspension two years back is still "unexpected", not past-cycle (#3011)', () => {
+    expect(
+      classifyReinstatement(suspended('2025-09-30'), '2027-06-15').reason
+    ).toBe('suspend_date_unexpected')
   })
 
   it('a suspend date after asOf is never a guess', () => {
@@ -225,6 +237,17 @@ describe('closed clubs: four renewal periods, counting back from the current one
     const slid = classifyReinstatement(closed('2025-09-30'), '2027-04-01')
     expect(slid.eligible).toBe(true)
     expect(slid.oldestPeriod).toBe(true)
+  })
+
+  it('the window slides on Oct 1: lastSeen 2024-09-30 is oldest on Sep 30 and gone on Oct 1 (#3011)', () => {
+    // asOf 2026-09-30 is in Apr-Sep 2026: the four periods start Oct 2024.
+    const before = classifyReinstatement(closed('2024-09-30'), '2026-09-30')
+    expect(before.eligible).toBe(true)
+    expect(before.oldestPeriod).toBe(true)
+    // asOf 2026-10-01 is in Oct 2026-Mar 2027: the four periods start Apr 2025.
+    const after = classifyReinstatement(closed('2024-09-30'), '2026-10-01')
+    expect(after.eligible).toBe(false)
+    expect(after.reason).toBe('closed_outside_window')
   })
 
   it('works in the Apr-Sep half too (asOf 2026-06-15)', () => {

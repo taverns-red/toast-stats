@@ -133,4 +133,25 @@ describe('ReinstatableClubsSchema (#3007)', () => {
         .success
     ).toBe(false)
   })
+
+  it.each(['2026-2030', '2026-2026', '2027-2026'])(
+    'rejects the base program year "%s": the end year is the start year plus one (#3011)',
+    baseProgramYear => {
+      expect(
+        ReinstatableClubsSchema.safeParse({ ...FILE, baseProgramYear }).success
+      ).toBe(false)
+    }
+  )
+
+  it('rejects a suspended row that also carries a last-seen date (#3011)', () => {
+    const f = clone()
+    f.districts['61']![0]!.lastSeen = '2025-03-31'
+    expect(ReinstatableClubsSchema.safeParse(f).success).toBe(false)
+  })
+
+  it('rejects a closed row that also carries a suspend date (#3011)', () => {
+    const f = clone()
+    f.districts['61']![1]!.suspendDate = '2026-10-01'
+    expect(ReinstatableClubsSchema.safeParse(f).success).toBe(false)
+  })
 })
