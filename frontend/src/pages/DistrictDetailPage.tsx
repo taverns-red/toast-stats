@@ -38,6 +38,7 @@ import { LongestServingClubsLeaderboard } from '../components/LongestServingClub
 import { MobileDisclosure } from '../components/MobileDisclosure'
 import { DistinguishedDistrictTrophyCase } from '../components/DistinguishedDistrictTrophyCase'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
+import { membershipRetentionBadgeFor } from '../utils/membershipRetentionBadge'
 import { useNearViewport } from '../hooks/useNearViewport'
 import { usePrintRequested } from '../hooks/usePrintRequested'
 import { useDistrictRanking } from '../hooks/useDistrictRanking'
@@ -349,6 +350,12 @@ const DistrictDetailPageInner: React.FC = () => {
       ) ?? null
     )
   }, [districtId, competitiveAwards])
+
+  // Our President's Membership Retention Award estimate (#1614).
+  const membershipRetentionBadge = React.useMemo(
+    () => membershipRetentionBadgeFor(competitiveAwards, districtId),
+    [districtId, competitiveAwards]
+  )
 
   const officerAwardsResult = React.useMemo(() => {
     if (!districtId || !competitiveAwards?.officerAwards) return null
@@ -894,6 +901,7 @@ const DistrictDetailPageInner: React.FC = () => {
                     clubGrowthQualifies={
                       officerAwardsResult?.clubGrowth?.qualifies
                     }
+                    membershipRetention={membershipRetentionBadge}
                   />
                 </div>
 

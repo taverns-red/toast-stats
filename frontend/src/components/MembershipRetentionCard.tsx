@@ -20,6 +20,7 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import { DistrictLinkText } from './DistrictLinkText'
 import { tiedWinnerIds, TIE_BREAK_UNPUBLISHED } from '../utils/awardTies'
+import { isRenderableStanding } from '../utils/membershipRetentionBadge'
 import type {
   MembershipRetentionAward,
   MembershipRetentionStanding,
@@ -41,24 +42,10 @@ type View =
   | { kind: 'unavailable' }
   | { kind: 'standings'; final: boolean; rows: MembershipRetentionStanding[] }
 
-const isFiniteNumber = (n: unknown): n is number =>
-  typeof n === 'number' && Number.isFinite(n)
-
-/** A row we can render: its three numbers are real, finite numbers. */
-const isRenderable = (row: unknown): row is MembershipRetentionStanding => {
-  if (typeof row !== 'object' || row === null) return false
-  const r = row as Partial<MembershipRetentionStanding>
-  return (
-    isFiniteNumber(r.value) &&
-    isFiniteNumber(r.retained) &&
-    isFiniteNumber(r.base)
-  )
-}
-
 function viewOf(award: MembershipRetentionAward): View {
   if (award.status === 'not-started') return { kind: 'not-started' }
   const rows = Array.isArray(award.standings)
-    ? award.standings.filter(isRenderable)
+    ? award.standings.filter(isRenderableStanding)
     : []
   if (
     (award.status === 'in-progress' || award.status === 'final') &&

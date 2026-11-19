@@ -12,6 +12,8 @@ import {
 } from '../utils/distinguishedCountdown'
 import { TIER_TITLES } from './recognition/recognitionRegistry'
 import { calculateProgramYearDay } from '../utils/programYear'
+import type { MembershipRetentionBadge } from '../utils/membershipRetentionBadge'
+import { TIE_BREAK_UNPUBLISHED } from '../utils/awardTies'
 
 export type DistinguishedDistrictTier =
   | 'Unknown'
@@ -104,6 +106,9 @@ interface DistinguishedDistrictTrophyCaseProps {
   leadershipExcellenceOnTrack?: boolean | undefined
   educationTrainingQualifies?: boolean | undefined
   clubGrowthQualifies?: boolean | undefined
+  /** This district's place in our President's Membership Retention Award
+      estimate (#1614). Null outside April to June and on older files. */
+  membershipRetention?: MembershipRetentionBadge | null | undefined
 }
 
 /* The four achieved-tier titles come from the shared recognition registry
@@ -160,6 +165,10 @@ interface GapTileSpec {
    unit tests, the same reason MembershipTrendChart links this way. */
 const DISTINGUISHED_COUNTS_METHODOLOGY_HREF =
   '/methodology#distinguished-club-counts'
+
+/* How we estimate the President's Membership Retention Award (#1614). */
+const MEMBERSHIP_RETENTION_METHODOLOGY_HREF =
+  '/methodology#membership-retention-award'
 
 /* Item 1490, the District Recognition Program: the source of every tier
    threshold (docs/investigations/1116-historical-drp-rules.md;
@@ -554,6 +563,80 @@ const TrophyCaseSkeleton: React.FC<{
   )
 }
 
+/* Our estimate of the President's Membership Retention Award (#1614), one
+   line. "Winner" only on the June 30 close; before that a top-3 district is
+   "top 3 so far", the same words as the Awards page card. Loyal blue keeps
+   it apart from the District Club Retention Award.
+
+   Phones get a short form ("Retention #13 of 126 · 78.5% · estimate"): the
+   375 Overview has about 12px left under PAGE_MAX_H (4000), so this line may
+   cost one text row and no border or padding there. The award name and the
+   longer wording show from md: up. */
+const MembershipRetentionLine: React.FC<{
+  badge: MembershipRetentionBadge
+}> = ({ badge }) => {
+  const { rank, of, value, isWinner, final, tied } = badge
+  const longOnly = 'hidden md:inline'
+  return (
+    <p
+      data-testid="membership-retention-badge"
+      className="mt-1 md:mt-0 md:border-t md:border-[var(--line)] md:pt-4 text-sm text-[var(--ink-2)] font-tm-body"
+    >
+      <span data-testid="membership-retention-compact" className="md:hidden">
+        Retention{' '}
+      </span>
+      <span className="font-semibold text-tm-loyal-blue tabular-nums">
+        #{rank}
+        {of != null && ` of ${of}`}
+        {!final && !isWinner && (
+          <span data-testid="membership-retention-long" className={longOnly}>
+            {' so far'}
+          </span>
+        )}
+      </span>
+      <span data-testid="membership-retention-long" className={longOnly}>
+        {' · '}President&apos;s Membership Retention Award
+      </span>
+      {' · '}
+      <span className="tabular-nums">{value.toFixed(1)}%</span>
+      {isWinner && final && (
+        <>
+          {' · '}
+          <span className="font-semibold text-tm-loyal-blue">winner</span>
+        </>
+      )}
+      {isWinner && !final && (
+        <span data-testid="membership-retention-long" className={longOnly}>
+          {' · '}
+          <span className="font-semibold text-tm-loyal-blue">top 3 so far</span>
+        </span>
+      )}
+      {tied && (
+        <>
+          <span data-testid="membership-retention-long" className={longOnly}>
+            {' · '}
+            <span aria-hidden="true" title={TIE_BREAK_UNPUBLISHED}>
+              tied
+            </span>
+          </span>
+          <span className="sr-only">{` (tied: ${TIE_BREAK_UNPUBLISHED})`}</span>
+        </>
+      )}
+      {' · '}
+      <span data-testid="membership-retention-long" className={longOnly}>
+        Toast Stats{' '}
+      </span>
+      <a
+        href={MEMBERSHIP_RETENTION_METHODOLOGY_HREF}
+        aria-label="How we estimate the President's Membership Retention Award"
+        className="text-tm-loyal-blue underline"
+      >
+        estimate
+      </a>
+    </p>
+  )
+}
+
 export const DistinguishedDistrictTrophyCase: React.FC<
   DistinguishedDistrictTrophyCaseProps
 > = ({
@@ -570,6 +653,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
   leadershipExcellenceOnTrack,
   educationTrainingQualifies,
   clubGrowthQualifies,
+  membershipRetention,
 }) => {
   const [userExpanded, setUserExpanded] = useState(false)
   const [allTiersOpen, setAllTiersOpen] = useState(false)
@@ -898,6 +982,10 @@ export const DistinguishedDistrictTrophyCase: React.FC<
           {leadershipExcellenceYears} consecutive Distinguished years so far,
           and tracking Distinguished this year. Awarded at the year-end close.
         </p>
+      )}
+
+      {membershipRetention && (
+        <MembershipRetentionLine badge={membershipRetention} />
       )}
     </div>
   )
