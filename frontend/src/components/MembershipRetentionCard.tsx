@@ -18,6 +18,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { DistrictLinkText } from './DistrictLinkText'
+import { tiedWinnerIds, TIE_BREAK_UNPUBLISHED } from '../utils/awardTies'
 import type {
   MembershipRetentionAward,
   MembershipRetentionStanding,
@@ -63,6 +64,9 @@ export const MembershipRetentionCard: React.FC<
     view.kind === 'standings' ? view.rows.filter(r => r.isWinner).length : 0
   const winnerLabel =
     view.kind === 'standings' && view.final ? 'winner' : 'top 3 so far'
+  // Same tie handling as the other award cards (#1610).
+  const tiedIds =
+    view.kind === 'standings' ? tiedWinnerIds(view.rows) : new Set<string>()
 
   return (
     <section
@@ -94,6 +98,12 @@ export const MembershipRetentionCard: React.FC<
             {view.final
               ? 'Final standings at June 30.'
               : 'Standings so far. They become final on June 30.'}
+          </p>
+        )}
+        {tiedIds.size > 0 && (
+          <p className="awards-page-card__tie-note">
+            {tiedIds.size} districts tied — {TIE_BREAK_UNPUBLISHED}, so they
+            share a rank.
           </p>
         )}
       </header>
@@ -131,6 +141,17 @@ export const MembershipRetentionCard: React.FC<
                     {' '}
                     <span className="awards-page-card__winner">
                       {winnerLabel}
+                    </span>
+                  </>
+                )}
+                {tiedIds.has(entry.districtId) && (
+                  <>
+                    {' '}
+                    <span
+                      className="awards-page-card__tied"
+                      title={TIE_BREAK_UNPUBLISHED}
+                    >
+                      tied
                     </span>
                   </>
                 )}
