@@ -39,11 +39,44 @@ describe('DistinguishedCompositionBar basis (#2580)', () => {
         select={0}
         distinguished={57}
         totalClubs={162}
+        kpiBasis="confirmed"
       />
     )
     const note = screen.getByTestId('distinguished-composition-basis')
     expect(note).toHaveTextContent(/qualifying today/i)
-    expect(note).toHaveTextContent(/confirmed/i)
+    expect(note).toHaveTextContent(/confirmed count is in the Distinguished/i)
+  })
+
+  it('does not point to a confirmed count when the KPI card has none', () => {
+    render(
+      <DistinguishedCompositionBar
+        smedley={0}
+        presidents={0}
+        select={0}
+        distinguished={57}
+        totalClubs={162}
+        kpiBasis="qualifying-today"
+      />
+    )
+    const note = screen.getByTestId('distinguished-composition-basis')
+    expect(note).toHaveTextContent(/qualifying today/i)
+    expect(note).not.toHaveTextContent(/confirmed count is in/i)
+    expect(note).toHaveTextContent(/no confirmed count/i)
+  })
+
+  it('makes no claim about the KPI card until its basis is known', () => {
+    render(
+      <DistinguishedCompositionBar
+        smedley={0}
+        presidents={0}
+        select={0}
+        distinguished={57}
+        totalClubs={162}
+      />
+    )
+    const note = screen.getByTestId('distinguished-composition-basis')
+    expect(note).toHaveTextContent(/qualifying today/i)
+    expect(note).not.toHaveTextContent(/confirmed count is in/i)
   })
 
   it('puts the basis in the bar description for screen readers', () => {

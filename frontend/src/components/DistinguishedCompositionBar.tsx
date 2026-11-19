@@ -11,6 +11,7 @@ interface DistinguishedCompositionBarProps {
   select: number
   distinguished: number
   totalClubs: number
+  kpiBasis?: 'confirmed' | 'qualifying-today' | undefined
 }
 
 interface Segment {
