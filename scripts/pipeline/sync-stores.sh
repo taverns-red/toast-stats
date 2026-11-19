@@ -3,7 +3,7 @@
 #
 # Usage: scripts/pipeline/sync-stores.sh <bucket> <store>...
 #   <store>: time-series | club-trends | club-race | district-awards-history
-#            | district-region-history
+#            | district-region-history | closed-club-names
 # Env:   GCLOUD     the gcloud binary (default `gcloud`; tests point it at a
 #                   shim over a temp dir, decision D10)
 #        CACHE_DIR  the runner cache (default ./cache)
@@ -43,6 +43,14 @@
 # built yet ("matched no objects") is a warning and no file: compute then
 # writes the rollups with regions null. Any other error fails.
 #
+# closed-club-names is the same kind of input (#3007):
+# config/closed-club-names.json, also built by build-identity-history.sh,
+# lands at ${CACHE_DIR}/config/closed-club-names.json for compute-analytics'
+# reinstatable-clubs.json. Not built yet: a warning, and compute writes no
+# reinstatable-clubs.json. It can be a day or more older than the date.
+# Unlike the region history it is best effort: any other pull error is also
+# a warning and no file, so it can't fail the run (#3064 review N4).
+#
 # Exit codes: 0 ok · 1 a store could not be pulled or is corrupt · 2 usage
 set -euo pipefail
 
@@ -63,7 +71,7 @@ TSX="${TSX:-${REPO}/node_modules/.bin/tsx}"
 
 for store in "$@"; do
   case "${store}" in
-    time-series | club-trends | club-race | district-awards-history | district-region-history) ;;
+    time-series | club-trends | club-race | district-awards-history | district-region-history | closed-club-names) ;;
     *)
       echo "::error::sync-stores: unknown store '${store}'" >&2
       exit 2
@@ -104,27 +112,36 @@ sync_awards() {
   fi
 }
 
-sync_region_history() {
-  local src="gs://${BUCKET}/config/district-region-history.json"
-  local dest="${CACHE_DIR}/config/district-region-history.json"
+# Pull one read-only config/ input: <name> <what a missing file means>
+# <issue> [best-effort]. With best-effort, a pull error other than "not
+# built yet" is a warning and no file, not a failure.
+sync_config_input() {
+  local name="$1" missing="$2" issue="$3" best_effort="${4:-}"
+  local src="gs://${BUCKET}/config/${name}.json"
+  local dest="${CACHE_DIR}/config/${name}.json"
   local err
   err="$(mktemp)"
   mkdir -p "$(dirname "${dest}")"
   if "${GCLOUD}" storage cp "${src}" "${dest}" 2>"${err}"; then
     rm -f "${err}"
     normalize "${dest}"
-    echo "- **district-region-history**: pulled" >>"${SUMMARY}"
+    echo "- **${name}**: pulled" >>"${SUMMARY}"
     return 0
   fi
   if grep -q 'matched no objects' "${err}"; then
     rm -f "${err}" "${dest}"
-    echo "::warning::No ${src} yet; region rollups are written with regions null (#1799)" >&2
-    echo "- **district-region-history**: none yet (regions null this run)" >>"${SUMMARY}"
+    echo "::warning::No ${src} yet; ${missing} (${issue})" >&2
+    echo "- **${name}**: none yet (${missing} this run)" >>"${SUMMARY}"
     return 0
   fi
   cat "${err}" >&2
   rm -f "${err}" "${dest}"
-  echo "::error::Failed to pull ${src} (#1799)" >&2
+  if [ "${best_effort}" = "best-effort" ]; then
+    echo "::warning::Failed to pull ${src}; ${missing} (${issue})" >&2
+    echo "- **${name}**: failed to pull (${missing} this run)" >>"${SUMMARY}"
+    return 0
+  fi
+  echo "::error::Failed to pull ${src} (${issue})" >&2
   exit 1
 }
 
@@ -181,7 +198,10 @@ for store in "$@"; do
   if [ "${store}" = "district-awards-history" ]; then
     sync_awards
   elif [ "${store}" = "district-region-history" ]; then
-    sync_region_history
+    sync_config_input district-region-history "regions null" "#1799"
+  elif [ "${store}" = "closed-club-names" ]; then
+    sync_config_input closed-club-names "no reinstatable-clubs.json" "#3007" \
+      best-effort
   elif [ "${store}" = "club-trends" ]; then
     rm -f "${CACHE_DIR}/club-trends.scope"
     if [ "${#CLUB_TRENDS_PYS[@]}" -gt 0 ]; then

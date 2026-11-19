@@ -95,7 +95,12 @@
 #                compute-analytics reads for YoY (findPreviousProgramYearDate,
 #                the year minus one), so it is keyed on the date the
 #                transform WROTE. None: YoY is omitted (dataAvailable:
-#                false) and the date is counted. Then collector-cli
+#                false) and the date is counted. Also best effort, the
+#                snapshots/<Y>-06-30/suspended-clubs.json of the three
+#                program years before the date's, for
+#                reinstatable-clubs.json (#3007); download errors, not
+#                missing files, are counted in the summary.
+#                Then collector-cli
 #                compute-analytics. A failure is counted, but
 #                the snapshots still upload (#1708); its JSON feeds the store
 #                counters either way. daily: computes the $DISTRICTS list,
@@ -378,6 +383,8 @@ YOY_PRESENT=0
 YOY_ABSENT=0
 HYDRATED=""
 PREV=""
+PREV_SUSPENDED=""
+SUSPENDED_PULL_ERRORS=0
 ACTUAL=""
 RESULTS="${DATE_RESULTS_FILE:-/dev/null}"
 # Snapshot dates this run uploaded (post-remap), for step 14.
@@ -416,6 +423,55 @@ pull_prior_year() {
     echo "No prior-year snapshot for ${prior}; YoY omitted for $1"
     YOY_ABSENT=$((YOY_ABSENT + 1))
   fi
+  return 0
+}
+
+# The last day of the program year $2 years before the one $1 falls in
+# ($2 = 1, the default: the previous one). July-December of Y ->
+# (Y+1-$2)-06-30, January-June of Y -> (Y-$2)-06-30. Keyed on the snapshot
+# (logical) date, as compute-analytics keys it (#1284).
+previous_py_end() {
+  local year="$((10#${1:0:4}))" month="$((10#${1:5:2}))" back="${2:-1}"
+  if [ "${month}" -ge 7 ]; then year=$((year + 1)); fi
+  printf '%04d-06-30\n' "$((year - back))"
+}
+
+# Pull snapshots/<June 30>/suspended-clubs.json of each of the three program
+# years before $1's, for compute's reinstatable-clubs.json (#3007). A club
+# suspended on Mar 31 leaves the date's own list on Jul 1 but stays
+# suspended until Oct 1 (the previous year's list). Its closure then stays
+# in the four-period window until Sep 30 two years later, and only its own
+# year's list still dates it (the older lists, #3064 review F2). Best
+# effort, one file per year. A missing file is expected. Any other error is
+# a warning, counted in SUSPENDED_PULL_ERRORS for the summary (#3064 review
+# N1). Directories this call creates are listed in PREV_SUSPENDED and
+# removed by cleanup_date. One can be the YoY directory of a 06-30 date
+# (PREV), which cleanup removes anyway. Any other existing directory is used
+# as it is.
+pull_previous_suspended() {
+  local back end dir err
+  for back in 1 2 3; do
+    end="$(previous_py_end "$1" "${back}")"
+    dir="${SNAPSHOTS}/${end}"
+    if [ -d "${dir}" ] && [ "${end}" != "${PREV}" ]; then continue; fi
+    if [ ! -d "${dir}" ]; then
+      mkdir -p "${dir}"
+      PREV_SUSPENDED="${PREV_SUSPENDED} ${end}"
+    fi
+    err="$(mktemp)"
+    if "${GCLOUD}" storage cp \
+      "gs://${BUCKET}/snapshots/${end}/suspended-clubs.json" \
+      "${dir}/" 2>"${err}"; then
+      :
+    elif grep -q 'matched no objects' "${err}"; then
+      echo "No snapshots/${end}/suspended-clubs.json; reinstatable-clubs.json for $1 may be unknown or miss clubs (#3007)"
+    else
+      cat "${err}" >&2
+      echo "::warning::Could not download snapshots/${end}/suspended-clubs.json (an error, not a missing file); reinstatable-clubs.json for $1 may be unknown or miss clubs (#3007)"
+      SUSPENDED_PULL_ERRORS=$((SUSPENDED_PULL_ERRORS + 1))
+    fi
+    rm -f "${err}"
+  done
   return 0
 }
 
@@ -908,6 +964,7 @@ process_one() {
   OUTCOME=failed
   HYDRATED=""
   PREV=""
+  PREV_SUSPENDED=""
   ACTUAL=""
   source="${date}"
   prev=""
@@ -1046,6 +1103,7 @@ process_one() {
   # 8. compute, with the prior year it reads for YoY (#1769)
   pull_prior_year "${actual}"
   prev="${PREV}"
+  pull_previous_suspended "${actual}"
   echo "Computing analytics for ${actual}..."
   local compute_ok=1 compute_districts=()
   if [ "${MODE}" = "daily" ]; then compute_districts=("${DISTRICT_ARGS[@]}"); fi
@@ -1135,6 +1193,8 @@ cleanup_date() {
   if [ -n "${actual}" ]; then rm -rf "${SNAPSHOTS:?}/${actual}"; fi
   if [ -n "${prev}" ]; then rm -rf "${SNAPSHOTS:?}/${prev}"; fi
   if [ -n "${HYDRATED}" ]; then rm -rf "${SNAPSHOTS:?}/${HYDRATED}"; fi
+  local dir
+  for dir in ${PREV_SUSPENDED}; do rm -rf "${SNAPSHOTS:?}/${dir}"; done
   rm -rf "${MARCH_CLOSE_DIR:?}"
   return 0
 }
@@ -1228,6 +1288,7 @@ fi
   echo "- **Dates unenriched (no raw-fac)**: ${UNENRICHED}"
   echo "- **Dates with a prior-year snapshot (YoY)**: ${YOY_PRESENT}"
   echo "- **Dates without one (no YoY)**: ${YOY_ABSENT}"
+  echo "- **Earlier suspended lists that failed to download (#3007)**: ${SUSPENDED_PULL_ERRORS}"
   march_close_summary
   echo "- **Identity histories**: ${IDENTITY_STATUS}"
   echo "- **Education rollup**: ${EDUCATION_STATUS}"

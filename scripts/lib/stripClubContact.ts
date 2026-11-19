@@ -55,6 +55,8 @@ import {
   repairReportsPlaceText,
   SnapshotManifestSchema,
   SnapshotMetadataFileSchema,
+  REINSTATABLE_CLUBS_FILE_NAME,
+  ReinstatableClubsSchema,
   SUSPENDED_CLUBS_FILE_NAME,
   SuspendedClubsSchema,
 } from '@taverns-red/shared-contracts'
@@ -376,6 +378,10 @@ const TOP_LEVEL_SCHEMAS: Record<string, ObjectSchema> = {
   [SUSPENDED_CLUBS_FILE_NAME]: schemaOf(
     'suspended-clubs',
     SuspendedClubsSchema
+  ),
+  [REINSTATABLE_CLUBS_FILE_NAME]: schemaOf(
+    'reinstatable-clubs',
+    ReinstatableClubsSchema
   ),
   // Counts only (#1814): no place key to scrub, but a rewrite is still
   // checked against its schema.

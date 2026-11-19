@@ -46,6 +46,7 @@ import type {
   DistrictRanking,
 } from '@taverns-red/shared-contracts'
 import {
+  ClosedClubNameIndexSchema,
   CLUBS_BY_REGION_DIR,
   CLUBS_BY_REGION_WORLD_FILE_NAME,
   CLUBS_BY_REGION_WORLD_POINTS_FILE_NAME,
@@ -59,10 +60,20 @@ import {
   normalizeClubId,
   REGION_ROLLUPS_FILE_NAME,
   REGION_ROLLUPS_REGION_SOURCE,
+  REINSTATABLE_CLUBS_FILE_NAME,
+  ReinstatableClubsSchema,
   RegionMembershipSeriesSchema,
   regionMembershipSeriesPath,
+  SUSPENDED_CLUBS_FILE_NAME,
+  SuspendedClubsSchema,
   type DistrictRegionHistory,
+  type SuspendedClubs,
 } from '@taverns-red/shared-contracts'
+import {
+  buildReinstatableClubs,
+  type RosterEntry,
+} from './ReinstatableClubsBuilder.js'
+import { calculateProgramYear } from '../utils/CachePaths.js'
 import { readStoreFileText } from '../utils/gzipLayers.js'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
 import {
@@ -246,6 +257,16 @@ export interface ComputeOperationResult {
    * no file, ADR-015 P3) or threw. Reported, never publish-blocking.
    */
   meetingTimesFailed: boolean
+  /**
+   * Path of `snapshots/{date}/reinstatable-clubs.json` (#3007), or undefined
+   * when an input is missing (the list is then unknown) or the step failed.
+   */
+  reinstatableClubsPath?: string
+  /**
+   * True when an input could not be read or the file could not be written.
+   * Reported, never publish-blocking: nothing depends on the file yet.
+   */
+  reinstatableClubsFailed?: boolean
   /**
    * Path of `time-series/regions/{PY}.json` (#2127), or undefined when no
    * district series exists for the date's program year.
@@ -1471,6 +1492,10 @@ export class AnalyticsComputeService {
     // refusal rule and region membership as the region rollups.
     const meetingTimes = await this.writeMeetingTimes(snapshotDate, errors)
 
+    // Suspended and closed clubs that can still be reinstated (#3007): the
+    // date's suspended-clubs.json plus the synced closed-club index.
+    const reinstatableClubs = await this.writeReinstatableClubs(snapshotDate)
+
     // A time-series write failure is recorded per district but must fail the
     // run (#1702): it is the only writer behind Trends.
     const timeSeriesFailed: string[] = []
@@ -1572,6 +1597,8 @@ export class AnalyticsComputeService {
       clubsByRegionFailed: clubsByRegion.failed,
       meetingTimesPath: meetingTimes.path,
       meetingTimesFailed: meetingTimes.failed,
+      reinstatableClubsPath: reinstatableClubs.path,
+      reinstatableClubsFailed: reinstatableClubs.failed,
       regionSeriesPath: regionSeries.path,
       regionSeriesFailed: regionSeries.failed,
       timeSeriesFailed,
@@ -2221,6 +2248,153 @@ export class AnalyticsComputeService {
         districtId: 'N/A',
         error: `Failed to write ${MEETING_TIMES_FILE_NAME}: ${message}`,
         timestamp: new Date().toISOString(),
+      })
+      return { failed: true }
+    }
+  }
+
+  /**
+   * Write `snapshots/{date}/reinstatable-clubs.json` (#3007, phase 2): the
+   * suspended and closed clubs that can still be reinstated, per district.
+   *
+   * Inputs are the date's own `suspended-clubs.json` and the closed-club
+   * index at `<cache>/config/closed-club-names.json`, which the pipeline has
+   * to sync before compute (like the region history). Presence carries
+   * meaning (#1757): when either input is missing the list is unknown, so
+   * there is no file, never a file of empty lists. A closed-club index newer
+   * than the date (a rebuild) also skips the step.
+   *
+   * More inputs, all optional: the June 30 `suspended-clubs.json` of each
+   * of the three program years before the date's (process-dates.sh pulls
+   * them into the cache) and the date's district snapshots, for each club's
+   * status on the roster. Without the previous year's list, from Jul 1 to
+   * Sep 30, there is no file: the list is unknown.
+   *
+   * Never publish-blocking: the file is new and nothing reads it yet. A
+   * failure is logged and reported in `reinstatableClubsFailed`, and is not
+   * added to `errors`.
+   */
+  private async writeReinstatableClubs(
+    snapshotDate: string
+  ): Promise<{ path?: string; failed: boolean }> {
+    const snapshotDir = this.getSnapshotDir(snapshotDate)
+    const readOptional = async (file: string): Promise<string | null> => {
+      try {
+        return await fs.readFile(file, 'utf-8')
+      } catch {
+        return null
+      }
+    }
+    try {
+      const suspendedRaw = await readOptional(
+        path.join(snapshotDir, SUSPENDED_CLUBS_FILE_NAME)
+      )
+      const closedRaw = await readOptional(
+        path.join(this.cacheDir, 'config/closed-club-names.json')
+      )
+      if (suspendedRaw === null || closedRaw === null) {
+        this.logger.warn(
+          'No suspended-clubs.json or closed-club index — skipping reinstatable-clubs.json',
+          {
+            snapshotDate,
+            hasSuspended: suspendedRaw !== null,
+            hasClosedIndex: closedRaw !== null,
+          }
+        )
+        return { failed: false }
+      }
+
+      const suspended = SuspendedClubsSchema.parse(JSON.parse(suspendedRaw))
+      const closed = ClosedClubNameIndexSchema.parse(JSON.parse(closedRaw))
+      // The index is not point in time: a rebuild or backfill of an earlier
+      // date would read closures that came later.
+      if (closed.asOf > snapshotDate) {
+        this.logger.warn(
+          'Closed-club index is newer than the date — skipping reinstatable-clubs.json',
+          { snapshotDate, closedIndexAsOf: closed.asOf }
+        )
+        return { failed: false }
+      }
+
+      // The June 30 suspended lists of the three program years before the
+      // date's (#3064 review): the previous one places Mar 31 suspensions
+      // still suspended before Oct 1; all three date closures, since a
+      // Mar 31 suspension stays in the window until Sep 30 two years later.
+      // The PY is the snapshot's logical date's (#1284).
+      const pyStart = Number(calculateProgramYear(snapshotDate).slice(0, 4))
+      const readJuneList = async (
+        year: number
+      ): Promise<SuspendedClubs | null> => {
+        const raw = await readOptional(
+          path.join(
+            this.getSnapshotDir(`${year}-06-30`),
+            SUSPENDED_CLUBS_FILE_NAME
+          )
+        )
+        return raw === null ? null : SuspendedClubsSchema.parse(JSON.parse(raw))
+      }
+      const previousSuspended = await readJuneList(pyStart)
+      const olderSuspended: SuspendedClubs[] = []
+      for (const year of [pyStart - 1, pyStart - 2]) {
+        const list = await readJuneList(year)
+        if (list !== null) olderSuspended.push(list)
+      }
+
+      // The date's roster: who is on it, and in what status.
+      const roster = new Map<string, RosterEntry>()
+      for (const districtId of Object.keys(suspended.districts)) {
+        const snapshot = await this.loadDistrictSnapshot(
+          snapshotDate,
+          districtId
+        )
+        for (const club of snapshot?.clubs ?? []) {
+          roster.set(normalizeClubId(club.clubId), {
+            districtId,
+            ...(club.clubStatus !== undefined && {
+              clubStatus: club.clubStatus,
+            }),
+          })
+        }
+      }
+
+      const built = buildReinstatableClubs({
+        snapshotDate,
+        suspended,
+        closed,
+        previousSuspended,
+        olderSuspended,
+        roster,
+      })
+      if (built === null) {
+        // Jul 1 - Sep 30 without the previous list: Mar 31 suspensions that
+        // still add to the base would be missing (#1757, #3064 review N2).
+        this.logger.warn(
+          'No suspended-clubs.json for the previous program year — from Jul 1 to Sep 30 the list is unknown, skipping reinstatable-clubs.json',
+          { snapshotDate, previousEnd: `${pyStart}-06-30` }
+        )
+        return { failed: false }
+      }
+      const reinstatable = ReinstatableClubsSchema.parse(built)
+      const outputPath = path.join(snapshotDir, REINSTATABLE_CLUBS_FILE_NAME)
+      await fs.writeFile(
+        outputPath,
+        JSON.stringify(reinstatable, null, 2) + '\n',
+        'utf-8'
+      )
+      this.logger.info('Wrote reinstatable clubs', {
+        snapshotDate,
+        path: outputPath,
+        districts: Object.keys(reinstatable.districts).length,
+        clubs: Object.values(reinstatable.districts).reduce(
+          (sum, rows) => sum + rows.length,
+          0
+        ),
+      })
+      return { path: outputPath, failed: false }
+    } catch (error) {
+      this.logger.error('Failed to write reinstatable clubs', {
+        snapshotDate,
+        error: error instanceof Error ? error.message : 'Unknown error',
       })
       return { failed: true }
     }

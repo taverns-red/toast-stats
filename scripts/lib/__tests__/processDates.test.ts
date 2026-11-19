@@ -710,6 +710,113 @@ describe('process-dates.sh: prior-year snapshot for YoY in every mode (#1769, D-
   })
 })
 
+describe('process-dates.sh: the previous program year’s June 30 suspended list (#3007)', () => {
+  // compute-analytics reads snapshots/<PY start>-06-30/suspended-clubs.json
+  // for reinstatable-clubs.json: a club suspended on Mar 31 drops off the
+  // date's own list on Jul 1 but stays suspended until Oct 1. The program
+  // year is the snapshot's logical date's (CLAUDE.md tripwire, #1284).
+  let diskLog: string
+
+  beforeEach(() => {
+    diskLog = path.join(tmp, 'disk.log')
+  })
+
+  function seenByCompute(): string[] {
+    return lines(diskLog)
+      .filter(l => l.startsWith('compute-analytics: '))
+      .map(l => l.slice('compute-analytics: '.length))
+  }
+
+  it('pulls only that one file before compute, and removes it afterwards', () => {
+    putObject('snapshots/2026-06-30/suspended-clubs.json', '{"s":1}', true)
+    putObject('snapshots/2026-06-30/district_61.json', '{"d":61}', true)
+    const r = run('rescrape', ['2026-08-31'], {
+      DISTRICTS: '61',
+      STUB_DISK_LOG: diskLog,
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    const seen = seenByCompute().filter(f => f.startsWith('snapshots/2026-06'))
+    expect(seen).toEqual(['snapshots/2026-06-30/suspended-clubs.json'])
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+
+  it('keys the program year on the date the transform wrote', () => {
+    // A close collected 2026-07-02 lands on 2026-06-30, in 2025-2026: the
+    // previous year's list is 2025-06-30, which is also its YoY date.
+    putObject('snapshots/2025-06-30/suspended-clubs.json', '{"s":1}', true)
+    putObject('snapshots/2025-06-30/district_61.json', '{"d":61}', true)
+    putObject('snapshots/2026-06-30/suspended-clubs.json', '{"s":2}', true)
+    const r = run('rescrape', ['2026-07-02'], {
+      DISTRICTS: '61',
+      STUB_REMAP: '2026-07-02=2026-06-30',
+      STUB_DISK_LOG: diskLog,
+    })
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(seenByCompute()).toEqual(
+      expect.arrayContaining([
+        'snapshots/2025-06-30/suspended-clubs.json',
+        'snapshots/2025-06-30/district_61.json',
+      ])
+    )
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+
+  it('is best effort: no list in the bucket still publishes the date', () => {
+    const r = run('rescrape', ['2026-08-31'], { DISTRICTS: '61' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(r.stdout + r.stderr).toMatch(
+      /No snapshots\/2026-06-30\/suspended-clubs\.json/
+    )
+    expect(summaryText()).toContain(
+      '- **Earlier suspended lists that failed to download (#3007)**: 0'
+    )
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+
+  it('also pulls the two program years before that, and removes them afterwards (#3064 review F2)', () => {
+    // A Mar 31 suspension closes on Oct 1 and stays inside the four-period
+    // window for two more years; from Jul 1 of the second year its suspend
+    // date is only in the June 30 list three program years back.
+    putObject('snapshots/2026-06-30/suspended-clubs.json', '{"s":3}', true)
+    putObject('snapshots/2025-06-30/suspended-clubs.json', '{"s":2}', true)
+    putObject('snapshots/2024-06-30/suspended-clubs.json', '{"s":1}', true)
+    const r = run('rescrape', ['2026-08-31'], {
+      DISTRICTS: '61',
+      STUB_DISK_LOG: diskLog,
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(seenByCompute()).toEqual(
+      expect.arrayContaining([
+        'snapshots/2026-06-30/suspended-clubs.json',
+        'snapshots/2025-06-30/suspended-clubs.json',
+        'snapshots/2024-06-30/suspended-clubs.json',
+      ])
+    )
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+
+  it('a download error is not "missing": it is logged and counted in the summary (#3064 review N1)', () => {
+    putObject('snapshots/2026-06-30/suspended-clubs.json', '{"s":1}', true)
+    const r = run('rescrape', ['2026-08-31'], {
+      DISTRICTS: '61',
+      SHIM_FAIL_MATCH: '^cp gs://test-bucket/snapshots/2026-06-30/suspended',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(r.stderr).toMatch(/HTTPError 503/)
+    expect(r.stdout + r.stderr).toMatch(
+      /::warning::Could not download snapshots\/2026-06-30\/suspended-clubs\.json/
+    )
+    expect(summaryText()).toContain(
+      '- **Earlier suspended lists that failed to download (#3007)**: 1'
+    )
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+})
+
 describe('process-dates.sh rescrape: guard, compute and upload', () => {
   const env = { DISTRICTS: '61' }
 
@@ -2084,7 +2191,10 @@ describe('process-dates.sh daily (#1765)', () => {
       putObject('snapshots/2025-10-31/district_61.json', '{"districtId":"61"}')
       putObject('snapshots/2025-11-02/district_61.json', '{"districtId":"61"}')
       daily({ STUB_REMAP: '2026-11-02=2026-10-31' }, ['2026-11-02'])
-      const pulls = lines(shimLog).filter(l => /snapshots\/2025-/.test(l))
+      // The YoY pulls only: the June 30 suspended lists are pulled too (#3007).
+      const pulls = lines(shimLog).filter(l =>
+        /snapshots\/2025-.*district_/.test(l)
+      )
       expect(pulls).toEqual([
         `storage cp gs://${BUCKET}/snapshots/2025-10-31/district_*.json ${cache}/snapshots/2025-10-31/`,
       ])
@@ -2097,7 +2207,12 @@ describe('process-dates.sh daily (#1765)', () => {
   describe('after the date', () => {
     it('keeps the published snapshot and raw on disk for the post-loop steps (CDN manifests read the local latest), drops the prior year', () => {
       putObject('snapshots/2025-10-23/district_61.json', '{"districtId":"61"}')
+      // The previous program year's June 30 suspended list (#3007) goes too.
+      putObject('snapshots/2026-06-30/suspended-clubs.json', '{"s":1}')
       daily()
+      expect(lines(shimLog)).toContain(
+        `storage cp gs://${BUCKET}/snapshots/2026-06-30/suspended-clubs.json ${cache}/snapshots/2026-06-30/`
+      )
       expect(localDateDirs('snapshots')).toEqual([DATE])
       expect(localDateDirs('raw-csv')).toEqual([DATE])
     })
