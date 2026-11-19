@@ -1,4 +1,6 @@
 import type { ReconciliationRevisionIndex } from '@taverns-red/shared-contracts'
+import { toSnapshotDate } from '../types/snapshotDate'
+import { buildSnapshotPoints, pointToken } from './snapshotPoints'
 
 /**
  * The date of the newest reconciliation revision that holds `districtId`, or
@@ -30,11 +32,29 @@ export interface DistrictRevisionLink {
   to: string
 }
 
-/** Stub (#2475 red step). */
+/**
+ * Where the header's revised note points: What Changed from the district's
+ * previous version of the month end to the month end as it stands (#2475).
+ *
+ * The points come from `buildSnapshotPoints`, the same list the What Changed
+ * picker offers, so `from` is always a token that page accepts. Null when the
+ * district has no revision, or no earlier version to compare against.
+ */
 export function districtRevisionLink(
-  _index: ReconciliationRevisionIndex | null | undefined,
-  _districtId: string,
-  _monthEndCollectionDate?: string | null
+  index: ReconciliationRevisionIndex | null | undefined,
+  districtId: string,
+  monthEndCollectionDate?: string | null
 ): DistrictRevisionLink | null {
-  return null
+  const revisedOn = districtRevisedAsOf(index, districtId)
+  const monthEnd = toSnapshotDate(index?.monthEnd)
+  if (!index || !revisedOn || !monthEnd) return null
+  const { points } = buildSnapshotPoints(
+    [monthEnd],
+    index,
+    districtId,
+    monthEndCollectionDate
+  )
+  const previous = points[points.length - 2]
+  if (!previous) return null
+  return { revisedOn, from: pointToken(previous), to: monthEnd }
 }

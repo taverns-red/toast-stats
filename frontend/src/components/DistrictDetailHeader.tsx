@@ -168,6 +168,7 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
           <DistrictRevisedNote
             districtId={districtId}
             viewedDate={viewedDate}
+            latestSnapshotDate={latestSnapshotDate}
           />
         </div>
 

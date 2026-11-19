@@ -37,9 +37,14 @@ export function isMonthEnd(date: string): boolean {
   return d === new Date(Date.UTC(y, m, 0)).getUTCDate()
 }
 
-/** Stub (#2475 red step). */
+/**
+ * The newest month end on or before `date` (YYYY-MM-DD): `date` itself when it
+ * is one, else the last day of the month before (#2475).
+ */
 export function newestMonthEndOnOrBefore(date: string): string {
-  return date
+  if (isMonthEnd(date)) return date
+  const [y, m] = date.split('-').map(Number) as [number, number]
+  return new Date(Date.UTC(y, m - 1, 0)).toISOString().slice(0, 10)
 }
 
 /**
