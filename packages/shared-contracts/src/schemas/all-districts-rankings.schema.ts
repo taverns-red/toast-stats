@@ -122,6 +122,10 @@ export const DistrictRankingSchema = z.object({
   octoberPayments: z.number().optional(),
   latePayments: z.number().optional(),
   charterPayments: z.number().optional(),
+  // #1614: the March close's new and charter payments, joined in for April to
+  // June dates. Optional (ADR 0019): older files lack them.
+  marchCloseNewPayments: z.number().optional(),
+  marchCloseCharterPayments: z.number().optional(),
 })
 
 /**
