@@ -334,6 +334,7 @@ export function buildModeModel(mode: 'health' | 'tier'): ModeModel {
       ),
       isDashed: c => c.isProvisionallyDistinguished === true,
       facet: { param: 'distinguished', valueOf: cat => cat.key },
+      note: 'A dashed outline marks a club that qualifies today for this level but is not confirmed at it yet. Counts include these clubs.',
     }
   }
   return {
