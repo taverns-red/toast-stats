@@ -35,6 +35,10 @@
  * is capped at a program year's last snapshot (Jun 30).
  * So `lastSeen` 2025-03-31 closed on 2025-04-01, in the Apr-Sep 2025 period,
  * and `lastSeen` 2025-03-30 closed on 2025-03-31, in the period before.
+ * When the club's suspend date is known, the FAQ fixes the closure instead
+ * (Oct 1 for the Mar 31 cycle, Apr 1 of the next year for the Sep 30 cycle),
+ * unless the club was seen later than that. A club seen on `asOf` itself
+ * was on the roster that day, so it is not closed yet (#3064 review).
  * With `asOf` 2026-11-17 the four periods are Oct 2026-Mar 2027, Apr-Sep 2026,
  * Oct 2025-Mar 2026 and Apr-Sep 2025 (the oldest). The window slides on each
  * Apr 1 and Oct 1.
@@ -107,7 +111,7 @@ export type ReinstatementReason =
   | 'closed_does_not_add'
   /** Closed before the four-period window. Not eligible. */
   | 'closed_outside_window'
-  /** `lastSeen` is later than `asOf`. Not eligible. */
+  /** `lastSeen` is on or after `asOf`: not closed yet. Not eligible. */
   | 'closed_last_seen_after_as_of'
   /** `lastSeen` is not an ISO date. Not eligible. */
   | 'closed_last_seen_invalid'
@@ -184,6 +188,23 @@ function baseLabel(startYear: number): string {
   return `${startYear}-${startYear + 1}`
 }
 
+/**
+ * The FAQ closure for a suspend date: Oct 1 of the same year for the Mar 31
+ * cycle, Apr 1 of the next year for the Sep 30 cycle. Null when the date is
+ * not near either cycle end.
+ */
+function closureFromSuspendDate(suspendDate: string): number | null {
+  const d = parseIso(suspendDate)
+  if (d === null) return null
+  const y = new Date(d * DAY_MS).getUTCFullYear()
+  // Sep 30 within tolerance can spill into Oct 1-3, same year.
+  if (Math.abs(d - day(y, 3, 31)) <= CYCLE_TOLERANCE_DAYS) return day(y, 10, 1)
+  if (Math.abs(d - day(y, 9, 30)) <= CYCLE_TOLERANCE_DAYS) {
+    return day(y + 1, 4, 1)
+  }
+  return null
+}
+
 function classifySuspended(
   suspendDate: string,
   asOf: number,
@@ -252,10 +273,15 @@ export function classifyReinstatement(
   if (lastSeen === null) {
     return { ...base, eligible: false, reason: 'closed_last_seen_invalid' }
   }
-  if (lastSeen > asOfDay) {
+  // Seen on asOf itself: the club was on the roster that day, not closed.
+  if (lastSeen >= asOfDay) {
     return { ...base, eligible: false, reason: 'closed_last_seen_after_as_of' }
   }
-  const closure = lastSeen + 1
+  const fromSuspend =
+    input.suspendDate === undefined
+      ? null
+      : closureFromSuspendDate(input.suspendDate)
+  const closure = Math.max(lastSeen + 1, fromSuspend ?? 0)
   const windowStart = oldestPeriodStart(periodStart(asOfDay))
   if (closure < windowStart) {
     return { ...base, eligible: false, reason: 'closed_outside_window' }
