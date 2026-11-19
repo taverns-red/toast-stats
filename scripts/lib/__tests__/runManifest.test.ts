@@ -122,6 +122,38 @@ describe('manifestSnapshotDates (the completeness gate reads its dates here)', (
     )
     expect(manifestSnapshotDates(entries)).toEqual(['2026-09-30', '2026-10-10'])
   })
+
+  // #2475 phase 3: the daily that stamps last month's revision index final
+  // writes only snapshots/<monthEnd>/revisions/index.json for that month
+  // end. That is not a date the run wrote: the gate and closing-pinned
+  // auto-allow must not judge or vouch for it (#2040).
+  it('a month end the run wrote only revisions/ for does not count', () => {
+    const entries = parseRunManifest(
+      [
+        line('snapshots/2026-11-05/district_61.json', '2026-11-05'),
+        line('snapshots/2026-10-31/revisions/index.json', '2026-10-31'),
+        line(
+          'snapshots/2026-09-30/revisions/2026-10-02/district_61.json',
+          '2026-09-30'
+        ),
+      ].join('\n')
+    )
+    expect(manifestSnapshotDates(entries)).toEqual(['2026-11-05'])
+  })
+
+  it('a closing daily still counts its month end (its own files are there)', () => {
+    const entries = parseRunManifest(
+      [
+        line('snapshots/2026-10-31/district_61.json', '2026-10-31'),
+        line(
+          'snapshots/2026-10-31/revisions/2026-11-02/district_61.json',
+          '2026-10-31'
+        ),
+        line('snapshots/2026-10-31/revisions/index.json', '2026-10-31'),
+      ].join('\n')
+    )
+    expect(manifestSnapshotDates(entries)).toEqual(['2026-10-31'])
+  })
 })
 
 describe('runs/ is internal', () => {
