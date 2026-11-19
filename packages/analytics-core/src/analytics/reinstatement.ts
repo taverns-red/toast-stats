@@ -74,7 +74,16 @@
 
 export type ReinstatementInput =
   | { status: 'suspended'; suspendDate: string }
-  | { status: 'closed'; lastSeen: string }
+  | {
+      status: 'closed'
+      lastSeen: string
+      /**
+       * The club's suspend date, when a suspended list still had it. The FAQ
+       * then fixes the closure: Oct 1 for the Mar 31 cycle, Apr 1 of the next
+       * year for the Sep 30 cycle. A later sighting still wins.
+       */
+      suspendDate?: string
+    }
 
 /** Stable codes: safe to store, test against and map to display text. */
 export type ReinstatementReason =
