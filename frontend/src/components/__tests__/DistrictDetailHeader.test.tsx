@@ -6,6 +6,7 @@ import { DistrictDetailHeader } from '../DistrictDetailHeader'
 import { DISTRICT_SECTIONS } from '../../config/districtSections'
 import { getProgramYear } from '../../utils/programYear'
 import { useLatestAsOfDate } from '../../hooks/useLatestAsOfDate'
+import { useDistrictRevisedAsOf } from '../../hooks/useDistrictRevisedAsOf'
 import { snap } from '../../test-utils/snapshotDate'
 import type { SnapshotDate } from '../../types/snapshotDate'
 import { USER_PICK } from '../../hooks/useUrlProgramYear'
@@ -20,13 +21,21 @@ vi.mock('../../hooks/useLatestAsOfDate', () => ({
 }))
 const mockUseLatestAsOfDate = vi.mocked(useLatestAsOfDate)
 
+// The "Revised <date>" note reads the month-end revision index (#2475); the
+// header test has no QueryClientProvider, so it is mocked here.
+vi.mock('../../hooks/useDistrictRevisedAsOf', () => ({
+  useDistrictRevisedAsOf: vi.fn(() => null),
+}))
+const mockRevised = vi.mocked(useDistrictRevisedAsOf)
+
 afterEach(() => cleanup())
-beforeEach(() =>
+beforeEach(() => {
+  mockRevised.mockReturnValue(null)
   mockUseLatestAsOfDate.mockReturnValue({
     asOfDate: undefined,
     latestSnapshotDate: undefined,
   })
-)
+})
 
 const py2526 = getProgramYear(2025)
 
@@ -90,6 +99,28 @@ describe('DistrictDetailHeader mobile sub-line collapse (#890)', () => {
     // Desktop sub-line unchanged — the eyebrow still carries the full label;
     // CSS hides it <768px. Both surfaces render so neither width loses the PY.
     expect(screen.getByText(/Program Year 2025–2026/)).toBeInTheDocument()
+  })
+})
+
+describe('DistrictDetailHeader revised note (#2475)', () => {
+  it('shows "Revised <date>" linking to What Changed when the district has a revision', () => {
+    mockRevised.mockReturnValue('2026-11-03')
+    renderHeader()
+    expect(
+      screen.getByRole('link', { name: /revised nov 3/i })
+    ).toHaveAttribute('href', '/district/61/changes')
+  })
+
+  it('shows no note when the district has no revision', () => {
+    renderHeader()
+    expect(screen.queryByTestId('district-revised-note')).toBeNull()
+  })
+
+  it('leaves the freshness pill untouched (fixed width, #2472)', () => {
+    mockRevised.mockReturnValue('2026-11-03')
+    renderHeader()
+    const bar = screen.getByRole('toolbar', { name: /data controls/i })
+    expect(within(bar).queryByText(/revised/i)).toBeNull()
   })
 })
 
