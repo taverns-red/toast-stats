@@ -38,6 +38,42 @@ export function isMonthEnd(date: string): boolean {
 }
 
 /**
+ * The newest month end on or before `date` (YYYY-MM-DD): `date` itself when it
+ * is one, else the last day of the month before (#2475).
+ */
+export function newestMonthEndOnOrBefore(date: string): string {
+  if (isMonthEnd(date)) return date
+  const [y, m] = date.split('-').map(Number) as [number, number]
+  return new Date(Date.UTC(y, m - 1, 0)).toISOString().slice(0, 10)
+}
+
+/**
+ * The date the plain month-end point is labelled "revised" with, or null when
+ * it carries no revised date (#2475, #2814). What Changed's picker and the
+ * district header's revised note both read it, so they always agree.
+ *
+ * When the month end's `metadata.json` collection date matches the newest
+ * revision (or is omitted), the month end IS that revision: it is dated by
+ * that revision's asOf, unless it is the pre-close view. When they differ, the
+ * collector refused a later closing run and the month end is dated by its
+ * collection date. Unreadable (null) means no date.
+ */
+export function monthEndRevisedOn(
+  index: ReconciliationRevisionIndex | null | undefined,
+  monthEndCollectionDate?: string | null
+): string | null {
+  const latest = index?.revisions[index.revisions.length - 1]
+  if (!latest) return null
+  if (
+    monthEndCollectionDate === undefined ||
+    monthEndCollectionDate === latest.asOf
+  ) {
+    return latest.closing ? latest.asOf : null
+  }
+  return monthEndCollectionDate || null
+}
+
+/**
  * Turn the district's dated snapshots plus the month-end revision index into
  * the points the What Changed picker offers.
  *
@@ -91,16 +127,14 @@ export function buildSnapshotPoints(
       set.groups[token] = heading
     }
     set.points.push({ date })
+    const revisedOn = monthEndRevisedOn(index, monthEndCollectionDate)
+    if (revisedOn) {
+      set.labels[date] =
+        `${formatDisplayDate(date)} · revised ${formatShortDate(revisedOn)}`
+    }
     if (aliased) {
-      if (latest.closing) {
-        set.labels[date] =
-          `${formatDisplayDate(date)} · revised ${formatShortDate(latest.asOf)}`
-      }
       // The newest revision is the plain month end, spelled either way.
       set.aliases[pointToken({ date, asOf: latest.asOf })] = date
-    } else if (monthEndCollectionDate) {
-      set.labels[date] =
-        `${formatDisplayDate(date)} · revised ${formatShortDate(monthEndCollectionDate)}`
     }
     if (earlier.length > 0) set.groups[date] = heading
   }

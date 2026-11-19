@@ -182,6 +182,8 @@ vi.mock('../../services/cdn', async importOriginal => {
     // #2405 — config/district-region-history.json, resolved absent (`null` is
     // the reader's 404 contract), so the region comes from the rankings row.
     fetchCdnDistrictRegionHistory: vi.fn().mockResolvedValue(null),
+    // The header's revised note (#2475): no revision index (the 404 null).
+    fetchCdnRevisionIndex: vi.fn().mockResolvedValue(null),
     // #2405 — ProgramYearProvider's v1/dates.json read, settled as the CDN's
     // 404: the default PY falls back to the calendar, as these tests assume
     // (each one that needs a year passes ?py=).

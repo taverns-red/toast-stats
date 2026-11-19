@@ -109,6 +109,8 @@ vi.mock('../../services/cdn', async importOriginal => {
     fetchCdnDistrictRegionHistory: vi.fn().mockResolvedValue(null),
     fetchCdnRegionRollups: vi.fn().mockResolvedValue(null),
     fetchCdnRegionMembershipSeries: vi.fn().mockResolvedValue(null),
+    // The header's revised note (#2475): no revision index for this month end.
+    fetchCdnRevisionIndex: vi.fn().mockResolvedValue(null),
   }
 })
 

@@ -13,6 +13,7 @@ import userEvent from '@testing-library/user-event'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { DistrictDetailHeader } from '../../components/DistrictDetailHeader'
 import type { ProgramYear } from '../../utils/programYear'
 import { snap } from '../../test-utils/snapshotDate'
@@ -48,10 +49,18 @@ const renderHeader = (
     latestSnapshotDate: '2025-11-22',
     ...overrides,
   }
+  // The header's revised note reads the revision index through useQuery
+  // (#2475), so the header needs a QueryClientProvider. Not
+  // renderWithProviders: its ProgramYearProvider fetches v1/dates.json.
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   return render(
-    <MemoryRouter>
-      <DistrictDetailHeader {...defaultProps} />
-    </MemoryRouter>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <DistrictDetailHeader {...defaultProps} />
+      </MemoryRouter>
+    </QueryClientProvider>
   )
 }
 
