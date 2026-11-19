@@ -187,11 +187,7 @@ const DistrictGrowthPage: React.FC = () => {
           {loading || !funnel || !effectiveEndDate ? (
             <LoadingSkeleton variant="card" />
           ) : (
-            <>
-              <ClubGrowthFunnelView
-                funnel={funnel}
-                asOfDate={effectiveEndDate}
-              />
+            <ClubGrowthFunnelView funnel={funnel} asOfDate={effectiveEndDate}>
               {effectiveProgramYear && (
                 <ReinstatableClubsSection
                   clubs={reinstatableClubs}
@@ -199,7 +195,7 @@ const DistrictGrowthPage: React.FC = () => {
                   programYearStart={effectiveProgramYear.year}
                 />
               )}
-            </>
+            </ClubGrowthFunnelView>
           )}
         </div>
       </div>

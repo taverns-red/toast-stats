@@ -39,6 +39,9 @@ export interface ClubGrowthFunnelViewProps {
   funnel: ClubGrowthFunnel
   /** The displayed snapshot date (R3). */
   asOfDate: string
+  /** Sections after the stages (e.g. "Can reinstate", #3007). They render
+   *  inside .growth-page so they share its gutter and max width. */
+  children?: React.ReactNode
 }
 
 const sectionId = (id: StageId) => `growth-${id}`
@@ -455,6 +458,7 @@ function SponsorsMentors({
 export const ClubGrowthFunnelView: React.FC<ClubGrowthFunnelViewProps> = ({
   funnel,
   asOfDate,
+  children,
 }) => {
   const { prospective, chartered, coached, suspended, sponsorsMentors } = funnel
   const query = keptQuery(useLocation().search)
@@ -636,6 +640,7 @@ export const ClubGrowthFunnelView: React.FC<ClubGrowthFunnelViewProps> = ({
           </>
         )}
       </StageSection>
+      {children}
     </div>
   )
 }
