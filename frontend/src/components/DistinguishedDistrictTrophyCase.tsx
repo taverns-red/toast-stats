@@ -574,7 +574,7 @@ const MembershipRetentionLine: React.FC<{
   return (
     <p
       data-testid="membership-retention-badge"
-      className="border-t border-gray-200 pt-4 text-sm text-gray-700 font-tm-body"
+      className="border-t border-[var(--line)] pt-4 text-sm text-[var(--ink-2)] font-tm-body"
     >
       <span className="font-semibold text-tm-loyal-blue tabular-nums">
         #{rank} of {of}
