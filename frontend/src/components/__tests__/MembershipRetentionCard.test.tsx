@@ -206,6 +206,39 @@ describe('MembershipRetentionCard — no standings', () => {
     expect(within(c).queryByRole('list')).toBeNull()
   })
 
+  it('drops rows whose numbers are not finite, without throwing', () => {
+    const bad = (patch: Record<string, unknown>) =>
+      ({ ...standing('99', 2, 10, 20, false), ...patch }) as never
+    renderCard({
+      status: 'final',
+      standings: [
+        standing('64', 1, 727, 869, true),
+        bad({ districtId: '98', value: undefined }),
+        bad({ districtId: '97', retained: null }),
+        bad({ districtId: '96', base: '740' }),
+        bad({ districtId: '95', value: Number.NaN }),
+        bad({ districtId: '94', base: Number.POSITIVE_INFINITY }),
+        standing('61', 3, 2000, 2548, true),
+      ],
+    })
+    const rows = within(card()).getAllByRole('listitem')
+    expect(rows).toHaveLength(2)
+    expect(rows[0].textContent).toMatch(/D64/)
+    expect(rows[1].textContent).toMatch(/D61/)
+  })
+
+  it('reads as not available when every row is malformed', () => {
+    renderCard({
+      status: 'final',
+      standings: [
+        { ...standing('64', 1, 727, 869, true), value: undefined } as never,
+      ],
+    })
+    const c = card()
+    expect(c.textContent).toMatch(/isn.t available for this date/)
+    expect(within(c).queryByRole('list')).toBeNull()
+  })
+
   it('treats in-progress with missing standings as not available', () => {
     renderCard({
       status: 'in-progress',
