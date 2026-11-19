@@ -2515,6 +2515,144 @@ describe('process-dates.sh daily: reconciliation revisions (#2475)', () => {
   })
 })
 
+// #2475 phase 3: the first non-closing daily after a close stamps the
+// previous month end's revision index `final`.
+describe('process-dates.sh daily: the reconciliation final stamp (#2475)', () => {
+  const MONTH_END = '2026-10-31'
+  const DAILY = '2026-11-05'
+  const INDEX = `snapshots/${MONTH_END}/revisions/index.json`
+  const env = {
+    DISTRICTS: '61',
+    BUILD_EDUCATION_ROLLUP: path.join(STUBS, 'build-education-rollup'),
+    DISTRICTS_SOURCE: 'discovered',
+  }
+  const daily = (extra: Record<string, string> = {}, date = DAILY) =>
+    run('daily', [date], { ...env, ...extra })
+  const revision = (asOf: string, closing = true) => ({
+    asOf,
+    collectedAt: `${asOf}T13:00:00.000Z`,
+    closing,
+    successfulDistricts: ['61'],
+  })
+  const putIndex = (final: string | null = null) =>
+    putObject(
+      INDEX,
+      JSON.stringify({
+        schemaVersion: 1,
+        monthEnd: MONTH_END,
+        dataMonth: '2026-10',
+        revisions: [
+          revision(MONTH_END, false),
+          revision('2026-11-01'),
+          revision('2026-11-03'),
+        ],
+        final,
+      }),
+      true
+    )
+  const stagedIndex = () =>
+    JSON.parse(
+      zlib
+        .gunzipSync(fs.readFileSync(path.join(root, BUCKET, INDEX)))
+        .toString()
+    ) as { final: string | null }
+  const stampCalls = () =>
+    lines(stubLog).filter(l => l.startsWith('collector-cli stamp-final'))
+  const manifestPaths = () =>
+    lines(manifest).map(l => (JSON.parse(l) as { path: string }).path)
+
+  it('stamps final with the last closing revision and uploads the index', () => {
+    putIndex()
+    const r = daily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(stampCalls()).toEqual([
+      expect.stringMatching(
+        new RegExp(`^collector-cli stamp-final --date ${DAILY} --index \\S+$`)
+      ),
+    ])
+    expect(stagedIndex().final).toBe('2026-11-03')
+    expect(readMeta(INDEX)).toContain('content-encoding=gzip')
+    expect(readMeta(INDEX)).toContain(`cache-control=${CACHE_CONTROL}`)
+    expect(manifestPaths()).toContain(INDEX)
+    expect(summaryText()).toMatch(
+      /Reconciliation final.*2026-10-31.*2026-11-03/
+    )
+  })
+
+  it('uploads nothing when final is already set (forward only)', () => {
+    putIndex('2026-11-01')
+    const r = daily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(stagedIndex().final).toBe('2026-11-01')
+    expect(manifestPaths()).not.toContain(INDEX)
+  })
+
+  it('does nothing, quietly, when the month end has no revision index', () => {
+    const r = daily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(stampCalls()).toEqual([])
+    expect(r.stderr).not.toMatch(/::warning::.*final/)
+  })
+
+  it('an unreadable index only warns, and the daily still publishes', () => {
+    putIndex()
+    const r = daily({ SHIM_FAIL_MATCH: `${MONTH_END}/revisions/index\\.json` })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(r.stderr).toMatch(
+      /::warning::.*revisions\/index\.json.*final.*#2475/
+    )
+    expect(stampCalls()).toEqual([])
+  })
+
+  it('a failed stamp-final only warns and uploads nothing', () => {
+    putIndex()
+    const r = daily({ STUB_STAMP_FINAL_FAIL: '.' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(r.stderr).toMatch(/::warning::stamp-final failed.*#2475/)
+    expect(stagedIndex().final).toBeNull()
+    expect(manifestPaths()).not.toContain(INDEX)
+  })
+
+  it('takes the previous month end across a year end', () => {
+    putObject(
+      'snapshots/2026-12-31/revisions/index.json',
+      JSON.stringify({
+        schemaVersion: 1,
+        monthEnd: '2026-12-31',
+        dataMonth: '2026-12',
+        revisions: [revision('2027-01-02')],
+        final: null,
+      }),
+      true
+    )
+    const r = daily({}, '2027-01-04')
+    expect(r.status, r.stderr).toBe(0)
+    expect(manifestPaths()).toContain(
+      'snapshots/2026-12-31/revisions/index.json'
+    )
+  })
+
+  it('a closing daily stamps nothing (the close is not over)', () => {
+    putIndex()
+    const r = daily({ STUB_REMAP: `2026-11-04=${MONTH_END}` }, '2026-11-04')
+    expect(r.status, r.stderr).toBe(0)
+    expect(stampCalls()).toEqual([])
+    expect(stagedIndex().final).toBeNull()
+  })
+
+  it('a rebuild stamps nothing (daily only)', () => {
+    putIndex()
+    putRaw(DAILY)
+    const r = run('rebuild', [DAILY])
+    expect(r.status, r.stderr).toBe(0)
+    expect(stampCalls()).toEqual([])
+    expect(stagedIndex().final).toBeNull()
+  })
+})
+
 describe('process-dates.sh: every MODE case names every mode (R17, #2274 N2)', () => {
   const source = fs.readFileSync(SCRIPT, 'utf-8').split('\n')
 
