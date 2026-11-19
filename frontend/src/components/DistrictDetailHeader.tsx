@@ -7,6 +7,7 @@ import { DistrictSheetActions } from './DistrictSheetActions'
 import { DISTRICT_SECTIONS } from '../config/districtSections'
 import { formatFreshnessLine } from '../utils/contextBar'
 import { HeaderActionsMenu } from './HeaderActionsMenu'
+import { DistrictRevisedNote } from './DistrictRevisedNote'
 import { ProgramYearTitleSuffix } from './ProgramYearTitleSuffix'
 import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
 import type { ProgramYear } from '../utils/programYear'
@@ -164,6 +165,10 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
               {lede}
             </p>
           )}
+          <DistrictRevisedNote
+            districtId={districtId}
+            viewedDate={viewedDate}
+          />
         </div>
 
         <div className="district-detail-page-header__actions">

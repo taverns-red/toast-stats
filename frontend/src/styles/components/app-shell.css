@@ -5024,6 +5024,19 @@
     color: var(--tier-chart-smedley);
   }
 
+  /* #2475: "Revised <date>" link under the lede. Legacy link token, which
+     already remaps under [data-theme='dark']; no new colour. */
+  .district-revised-note {
+    margin: 6px 0 0;
+    font-family: var(--sans);
+    font-size: 13px;
+  }
+
+  .district-revised-note a {
+    color: var(--link);
+    text-decoration: underline;
+  }
+
   .district-detail-page-header__title {
     margin: 8px 0 8px;
     font-family: var(--serif);
