@@ -149,6 +149,26 @@ describe('buildDistrictCards', () => {
     ).toEqual(['61'])
   })
 
+  it('builds the same cards when the files carry the #1614 retention keys', () => {
+    const withRetention = {
+      ...awards,
+      membershipRetentionAward: {
+        status: 'final',
+        baselineDate: '2026-03-31',
+        standings: [],
+      },
+    }
+    const withBaseline = {
+      ...rankings,
+      rankings: rankings.rankings.map((r: Record<string, unknown>) => ({
+        ...r,
+        marchCloseNewPayments: 100,
+        marchCloseCharterPayments: 10,
+      })),
+    }
+    expect(buildDistrictCards(withBaseline, withRetention)).toEqual(cards)
+  })
+
   it('refuses a district id that is not a plain id (path and markup safety)', () => {
     const bad = {
       ...rankings,

@@ -6,6 +6,7 @@ import { DistrictDetailHeader } from '../DistrictDetailHeader'
 import { DISTRICT_SECTIONS } from '../../config/districtSections'
 import { getProgramYear } from '../../utils/programYear'
 import { useLatestAsOfDate } from '../../hooks/useLatestAsOfDate'
+import { useDistrictRevision } from '../../hooks/useDistrictRevision'
 import { snap } from '../../test-utils/snapshotDate'
 import type { SnapshotDate } from '../../types/snapshotDate'
 import { USER_PICK } from '../../hooks/useUrlProgramYear'
@@ -20,13 +21,26 @@ vi.mock('../../hooks/useLatestAsOfDate', () => ({
 }))
 const mockUseLatestAsOfDate = vi.mocked(useLatestAsOfDate)
 
+// The "Revised <date>" note reads the month-end revision index (#2475); the
+// header test has no QueryClientProvider, so it is mocked here.
+vi.mock('../../hooks/useDistrictRevision', () => ({
+  useDistrictRevision: vi.fn(() => null),
+}))
+const mockRevised = vi.mocked(useDistrictRevision)
+const REVISION = {
+  revisedOn: '2026-04-03',
+  from: '2026-03-31@2026-04-02',
+  to: '2026-03-31',
+}
+
 afterEach(() => cleanup())
-beforeEach(() =>
+beforeEach(() => {
+  mockRevised.mockReturnValue(null)
   mockUseLatestAsOfDate.mockReturnValue({
     asOfDate: undefined,
     latestSnapshotDate: undefined,
   })
-)
+})
 
 const py2526 = getProgramYear(2025)
 
@@ -36,7 +50,8 @@ const py2526 = getProgramYear(2025)
  *  `undefined` and `renderHeader`'s `Partial<typeof baseProps>` would then
  *  reject a real date. */
 const noDate = (): SnapshotDate | undefined => undefined
-const latestDate = (): string | undefined => snap('2026-04-26')
+const latestOn = (date: string): string | undefined => snap(date)
+const latestDate = (): string | undefined => latestOn('2026-04-26')
 
 const baseProps = {
   districtId: '61',
@@ -90,6 +105,38 @@ describe('DistrictDetailHeader mobile sub-line collapse (#890)', () => {
     // Desktop sub-line unchanged — the eyebrow still carries the full label;
     // CSS hides it <768px. Both surfaces render so neither width loses the PY.
     expect(screen.getByText(/Program Year 2025–2026/)).toBeInTheDocument()
+  })
+})
+
+describe('DistrictDetailHeader revised note (#2475)', () => {
+  // Only a month end can be revised, so these views sit on one.
+  const monthEnd = { latestSnapshotDate: latestOn('2026-03-31') }
+
+  it("links to the month end's revision diff when the district has a revision", () => {
+    mockRevised.mockReturnValue(REVISION)
+    renderHeader(monthEnd)
+    expect(screen.getByRole('link', { name: /revised/i })).toHaveAttribute(
+      'href',
+      '/district/61/changes?from=2026-03-31%402026-04-02&to=2026-03-31'
+    )
+  })
+
+  it('shows no link when the district has no revision', () => {
+    renderHeader(monthEnd)
+    expect(screen.queryByRole('link', { name: /revised/i })).toBeNull()
+  })
+
+  it('reserves no line on a view that is not a month end', () => {
+    mockRevised.mockReturnValue(REVISION)
+    renderHeader()
+    expect(screen.queryByTestId('district-revised-note')).toBeNull()
+  })
+
+  it('leaves the freshness pill untouched (fixed width, #2472)', () => {
+    mockRevised.mockReturnValue(REVISION)
+    renderHeader(monthEnd)
+    const bar = screen.getByRole('toolbar', { name: /data controls/i })
+    expect(within(bar).queryByText(/revised/i)).toBeNull()
   })
 })
 

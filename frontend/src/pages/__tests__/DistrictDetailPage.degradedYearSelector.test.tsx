@@ -195,6 +195,8 @@ vi.mock('../../services/cdn', async importOriginal => {
     // #2405 — config/district-region-history.json, resolved absent (`null` is
     // the reader's 404 contract), so the region comes from the rankings row.
     fetchCdnDistrictRegionHistory: vi.fn().mockResolvedValue(null),
+    // The header's revised note (#2475): no revision index (the 404 null).
+    fetchCdnRevisionIndex: vi.fn().mockResolvedValue(null),
     fetchCdnRankHistory: vi.fn(),
     fetchCdnDates: vi.fn(),
   }

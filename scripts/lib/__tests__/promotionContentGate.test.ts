@@ -365,6 +365,29 @@ describe('checkObject — competitive-awards (#1704)', () => {
     expect(check(AWARDS_PATH, plain(awards([20, null, 18])))).toBeNull()
   })
 
+  it('passes a file carrying the membershipRetentionAward key (#1614)', () => {
+    const withRetention = {
+      ...awards([20, 18]),
+      membershipRetentionAward: {
+        status: 'in-progress',
+        baselineDate: '2026-03-31',
+        standings: [
+          {
+            districtId: '1',
+            districtName: 'District 1',
+            region: '1',
+            rank: 1,
+            value: 80,
+            isWinner: true,
+            retained: 400,
+            base: 500,
+          },
+        ],
+      },
+    }
+    expect(check(AWARDS_PATH, plain(withRetention))).toBeNull()
+  })
+
   it('fails when priorYearAvgClubSize is null for every district', () => {
     expect(check(AWARDS_PATH, plain(awards([null, null, null])))).toMatch(
       /priorYearAvgClubSize/
@@ -879,6 +902,60 @@ describe('planContentChecks — bounded, change-driven sampling', () => {
     )
     expect(plan.notJson).toBe(1)
     expect(plan.sampledOut).toBe(451)
+  })
+
+  // #2486: a closing day writes ~94 revision files next to the month-end
+  // files. They get their own small sample so they cannot displace the
+  // month-end objects from the generic budget.
+  describe('reconciliation revisions (#2486)', () => {
+    const monthEnd = Array.from({ length: 150 }, (_, i) =>
+      meta(`snapshots/2026-10-31/district_${i + 100}.json`)
+    )
+    const revisions = Array.from({ length: 94 }, (_, i) =>
+      meta(`snapshots/2026-10-31/revisions/2026-11-02/district_${i + 100}.json`)
+    )
+    const isRevision = (path: string): boolean => path.includes('/revisions/')
+    /** The default revision sample (`DEFAULT_CAPS.revisions`). */
+    const REVISION_SAMPLE = 10
+
+    it('classifies a revision district file as its own kind', () => {
+      expect(
+        classifyObject(
+          'snapshots/2026-10-31/revisions/2026-11-02/district_61.json'
+        )
+      ).toBe('reconciliation-revision')
+      expect(classifyObject('snapshots/2026-10-31/revisions/index.json')).toBe(
+        'json'
+      )
+      // The month-end district file itself keeps the generic kind.
+      expect(classifyObject('snapshots/2026-10-31/district_61.json')).toBe(
+        'json'
+      )
+    })
+
+    it('keeps the month-end files at the full generic sample share', () => {
+      const plan = planContentChecks([...monthEnd, ...revisions], {
+        random: () => 0.5,
+      })
+      const monthEndChecked = plan.checks.filter(c => !isRevision(c.path))
+      expect(monthEndChecked).toHaveLength(150)
+    })
+
+    it('samples revisions on their own small cap, D61 first', () => {
+      const plan = planContentChecks(
+        [
+          ...revisions,
+          meta('snapshots/2026-10-31/revisions/2026-11-02/district_61.json'),
+        ],
+        { random: () => 0.5 }
+      )
+      const revisionChecked = plan.checks.filter(c => isRevision(c.path))
+      expect(revisionChecked).toHaveLength(REVISION_SAMPLE)
+      expect(revisionChecked.map(c => c.path)).toContain(
+        'snapshots/2026-10-31/revisions/2026-11-02/district_61.json'
+      )
+      expect(plan.sampledOut).toBe(95 - REVISION_SAMPLE)
+    })
   })
 })
 
