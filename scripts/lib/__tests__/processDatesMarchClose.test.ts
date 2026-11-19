@@ -204,11 +204,16 @@ describe('process-dates.sh: March-close baseline pull (#1614)', () => {
   })
 
   it('leaves plain JSON on disk whether or not the download inflated the gzip object', () => {
-    for (const decompress of ['1', '0']) {
-      putRaw('2026-04-30')
+    // A fresh date per pass: the first pass's upload must not become the
+    // second pass's staged snapshot.
+    for (const [decompress, date] of [
+      ['1', '2026-04-30'],
+      ['0', '2026-05-31'],
+    ] as const) {
+      putRaw(date)
       putBaseline()
       const copy = path.join(tmp, `baseline-${decompress}.json`)
-      const r = run('rebuild', ['2026-04-30'], {
+      const r = run('rebuild', [date], {
         SHIM_DOWNLOAD_DECOMPRESS: decompress,
         STUB_COPY_ON_COMPUTE: `${BASELINE_LOCAL}=${copy}`,
       })
