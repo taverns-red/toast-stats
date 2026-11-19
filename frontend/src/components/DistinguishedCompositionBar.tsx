@@ -109,7 +109,7 @@ const DistinguishedCompositionBar: React.FC<
       <div
         className="flex w-full h-7 rounded-md overflow-hidden border border-gray-200"
         role="img"
-        aria-label={`Distinguished club composition: Smedley ${smedley}, President's ${presidents}, Select ${select}, Distinguished ${distinguished}, Not yet ${notYet}, total ${totalClubs}`}
+        aria-label={`Distinguished club composition, clubs qualifying today: Smedley ${smedley}, President's ${presidents}, Select ${select}, Distinguished ${distinguished}, Not yet ${notYet}, total ${totalClubs}`}
       >
         {segments.map(seg => {
           if (seg.count === 0) return null
@@ -126,6 +126,16 @@ const DistinguishedCompositionBar: React.FC<
           )
         })}
       </div>
+
+      {/* #2580: the tier counts are on current membership. The KPI above
+          headlines the confirmed count, so say which basis this is. */}
+      <p
+        data-testid="distinguished-composition-basis"
+        className="mt-2 text-xs font-tm-body text-gray-600"
+      >
+        Clubs qualifying today on current membership. The confirmed count is in
+        the Distinguished card above.
+      </p>
 
       <ul className="mt-3 flex flex-wrap gap-3 list-none text-xs font-tm-body text-gray-700">
         {segments.map(seg => (
