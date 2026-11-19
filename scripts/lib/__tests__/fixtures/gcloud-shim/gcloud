@@ -50,6 +50,9 @@
 #   SHIM_LOG               optional: every invocation's argv is appended here
 #   SHIM_FAIL_MATCH        optional: ERE; an invocation whose "$*" matches it
 #                          fails with an HTTP 503 (a transport error)
+#   SHIM_FAIL_TIMES        optional, with SHIM_FAIL_MATCH: only the first N
+#                          matching invocations fail, the rest succeed (a
+#                          transient error; counted in $SHIM_ROOT/.fail-count)
 #   SHIM_DOWNLOAD_DECOMPRESS
 #                          "1": downloads inflate one layer of a
 #                          Content-Encoding: gzip object (gcloud >= 576, the
@@ -80,8 +83,21 @@ CMD="${1:-}"
 shift
 
 if [ -n "${SHIM_FAIL_MATCH:-}" ] && [[ "${CMD} $*" =~ ${SHIM_FAIL_MATCH} ]]; then
-  echo "ERROR: (gcloud.storage.${CMD}) HTTPError 503: Service Unavailable" >&2
-  exit 1
+  fail_now=1
+  if [ -n "${SHIM_FAIL_TIMES:-}" ]; then
+    # Only the first N matching calls fail: a transient error (#1614).
+    fail_count=0
+    [ -f "${SHIM_ROOT}/.fail-count" ] && read -r fail_count <"${SHIM_ROOT}/.fail-count"
+    if [ "${fail_count}" -ge "${SHIM_FAIL_TIMES}" ]; then
+      fail_now=0
+    else
+      echo "$((fail_count + 1))" >"${SHIM_ROOT}/.fail-count"
+    fi
+  fi
+  if [ "${fail_now}" = 1 ]; then
+    echo "ERROR: (gcloud.storage.${CMD}) HTTPError 503: Service Unavailable" >&2
+    exit 1
+  fi
 fi
 
 is_gs() { [[ "$1" == gs://* ]]; }
