@@ -372,3 +372,104 @@ export async function recordRevision(
   result.recorded = partial === null
   return result
 }
+
+export interface StampFinalOptions {
+  /** The local `snapshots/` directory (`<cacheDir>/snapshots`). */
+  snapshotsDir: string
+  /** The non-closing daily's snapshot date (its logical date). */
+  date: string
+  /** The previous month end's index, hydrated from staging; rewritten in place. */
+  indexFile: string
+}
+
+export type StampFinalOutcome =
+  'stamped' | 'already-final' | 'no-closing-revision'
+
+export interface StampFinalResult {
+  date: string
+  /** The month end before `date`'s month: the index it stamps. */
+  monthEnd: string
+  stamped: boolean
+  /** The index's `final` after the call. */
+  final: string | null
+  outcome: StampFinalOutcome
+  /** Files written, relative to `snapshots/<monthEnd>/`. */
+  written: string[]
+}
+
+/** The last day of the month before `date`'s month (UTC). */
+function previousMonthEnd(date: string): string {
+  const [y, m] = date.split('-').map(Number) as [number, number]
+  return new Date(Date.UTC(y, m - 1, 0)).toISOString().slice(0, 10)
+}
+
+/**
+ * #2475 phase 3: on a non-closing daily, TI has rolled past the previous
+ * month's reconciliation, so that month end's last closing revision is its
+ * final close. Forward only: a `final` already set is never moved or
+ * changed, so a rerun is a no-op. Fails closed, writing nothing, on a daily
+ * that is closing data (or has no metadata), an index of another month
+ * end, or a closing revision on or after `date` (an earlier day rerun after
+ * the close went on).
+ */
+export async function stampFinal(
+  opts: StampFinalOptions
+): Promise<StampFinalResult> {
+  const { snapshotsDir, date, indexFile } = opts
+  if (!ISO_DATE.test(date)) {
+    throw new Error(`invalid date ${date} (YYYY-MM-DD)`)
+  }
+  const monthEnd = previousMonthEnd(date)
+
+  const metadata = await readMetadata(path.join(snapshotsDir, date))
+  if (metadata.isClosingPeriodData === true) {
+    throw new Error(
+      `snapshots/${date} is closing-period data; the close of ${monthEnd} is not over`
+    )
+  }
+
+  const index = await readIndex(indexFile)
+  if (index === null) throw new Error(`${indexFile}: no revision index`)
+  if (index.monthEnd !== monthEnd) {
+    throw new Error(
+      `${indexFile}: indexes ${index.monthEnd}, not ${monthEnd} (the month end before ${date})`
+    )
+  }
+
+  const result = (
+    outcome: StampFinalOutcome,
+    final: string | null
+  ): StampFinalResult => ({
+    date,
+    monthEnd,
+    stamped: outcome === 'stamped',
+    final,
+    outcome,
+    written:
+      outcome === 'stamped'
+        ? [
+            `${RECONCILIATION_REVISIONS_DIR}/${RECONCILIATION_REVISION_INDEX_FILE_NAME}`,
+          ]
+        : [],
+  })
+
+  if (index.final !== null) return result('already-final', index.final)
+
+  const closing = index.revisions.filter(r => r.closing)
+  const last = closing[closing.length - 1]
+  if (last === undefined) return result('no-closing-revision', null)
+  if (last.asOf >= date) {
+    throw new Error(
+      `closing revision ${last.asOf} is on or after ${date}; the close of ${monthEnd} was not over that day`
+    )
+  }
+
+  const next = ReconciliationRevisionIndexSchema.parse({
+    ...index,
+    final: last.asOf,
+  })
+  const tmp = `${indexFile}.tmp.${process.pid}`
+  await fs.writeFile(tmp, JSON.stringify(next, null, 2), 'utf-8')
+  await fs.rename(tmp, indexFile)
+  return result('stamped', last.asOf)
+}

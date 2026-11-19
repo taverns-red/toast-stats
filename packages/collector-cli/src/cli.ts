@@ -1821,6 +1821,48 @@ export function createCLI(): Command {
       }
     )
 
+  // #2475 phase 3: a non-closing daily stamps the previous month end's
+  // revision index `final` (its last closing revision). The pipeline
+  // hydrates staging's index into --index and uploads it when `stamped`
+  // (process-dates.sh, daily only). Forward only and idempotent.
+  program
+    .command('stamp-final')
+    .description(
+      "Stamp the previous month end's revision index final after a non-closing daily (#2475)"
+    )
+    .requiredOption(
+      '--date <date>',
+      "The non-closing daily's snapshot date (YYYY-MM-DD)"
+    )
+    .requiredOption(
+      '--index <file>',
+      "The previous month end's revisions/index.json, rewritten in place"
+    )
+    .option('-c, --config <path>', 'Alternative configuration file path')
+    .action(
+      async (options: { date: string; index: string; config?: string }) => {
+        const { stampFinal } = await import('./services/RevisionStore.js')
+        const { cacheDir } = resolveConfiguration({
+          configPath: options.config,
+        })
+        try {
+          const result = await stampFinal({
+            snapshotsDir: path.join(cacheDir, 'snapshots'),
+            date: options.date,
+            indexFile: options.index,
+          })
+          emitJsonAndExit(result, ExitCode.SUCCESS)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          console.error(`[ERROR] stamp-final: ${message}`)
+          emitJsonAndExit(
+            { date: options.date, error: message },
+            ExitCode.COMPLETE_FAILURE
+          )
+        }
+      }
+    )
+
   // Value-aware staging→production diff for the full-range re-derive promote
   // gate (#1034, epic #1031). Complements the count-only gate in
   // data-pipeline.yml: detects re-derived VALUE changes the count gate is blind

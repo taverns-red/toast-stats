@@ -16,8 +16,9 @@
  *   captured before the first close overwrote it: its `asOf` IS the month
  *   end. It is optional (absent when recording began mid-close).
  * - **Closing revisions** (`closing: true`) have `asOf` after the month end.
- * - **`final`** is null until the rollover stamps it (phase 2); when set it
- *   names a listed revision.
+ * - **`final`** is null until the first non-closing daily after the close
+ *   stamps it with the last closing revision (phase 3, `stamp-final`);
+ *   when set it names a listed revision and never changes.
  * - **`successfulDistricts`** per revision, so a reader can exclude a
  *   revision that lacks a district (#1671 gap) instead of reading a missing
  *   file as every club leaving.
