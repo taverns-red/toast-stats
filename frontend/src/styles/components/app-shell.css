@@ -6928,7 +6928,7 @@
     color: var(--ink-2);
   }
 
-  /* Program-year rule-change log (#1400) — §19 of /methodology.
+  /* Program-year rule-change log (#1400) — §20 of /methodology.
 
      Static content inside an already-static section: no async data, no
      conditional slot, so it reserves its own height at first paint and adds

@@ -61,7 +61,7 @@ Kiro MUST treat this document as the **primary source of truth** for all Toastma
 
 **Rules move between program years.** The reader-facing log of those moves — what
 changed, in which year, and what it means for comparing across the boundary —
-lives at `/methodology` §10, sourced from
+lives at `/methodology` §20, sourced from
 `frontend/src/content/programYearRuleChanges.ts` (#1400). When a rule change is
 recorded in this document, add the matching entry there: a guard test
 (`frontend/src/__tests__/guards/programYearRuleChangeLog.test.ts`) fails the
