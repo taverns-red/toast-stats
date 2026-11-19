@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.26.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.25.4...analytics-core-v1.26.0) (2026-11-19)
+
+
+### Features
+
+* **analytics-core:** membership retention estimate calculator ([#1614](https://github.com/taverns-red/toast-stats/issues/1614)) ([#3055](https://github.com/taverns-red/toast-stats/issues/3055)) ([0b1136d](https://github.com/taverns-red/toast-stats/commit/0b1136dc5c81c378d97b5bad50866292a5278349))
+* **club-growth:** reinstatement rule and contract ([#3007](https://github.com/taverns-red/toast-stats/issues/3007)) ([#3008](https://github.com/taverns-red/toast-stats/issues/3008)) ([2d3bc69](https://github.com/taverns-red/toast-stats/commit/2d3bc69ea74832bc3bbea79b5b93a075c433634d))
+* pipeline writes reinstatable-clubs.json, phase 2 ([#3007](https://github.com/taverns-red/toast-stats/issues/3007)) ([#3064](https://github.com/taverns-red/toast-stats/issues/3064)) ([11e9c2f](https://github.com/taverns-red/toast-stats/commit/11e9c2ffe315174727371b9e4a0c5a4f7ec2d699))
+
+
+### Bug Fixes
+
+* reinstatement review follow-ups and lastSeen finding ([#3011](https://github.com/taverns-red/toast-stats/issues/3011)) ([#3058](https://github.com/taverns-red/toast-stats/issues/3058)) ([a44d5ec](https://github.com/taverns-red/toast-stats/commit/a44d5eccb7c16866d18c0bfc96368181200ede9d))
+
+
+### Documentation
+
+* point stale lesson citations at the archive ([#2957](https://github.com/taverns-red/toast-stats/issues/2957)) ([#3031](https://github.com/taverns-red/toast-stats/issues/3031)) ([5721f3a](https://github.com/taverns-red/toast-stats/commit/5721f3a5eeeaca2865c09adc2160cc0261ee386d))
+
 ## [1.25.4](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.25.3...analytics-core-v1.25.4) (2026-11-18)
 
 

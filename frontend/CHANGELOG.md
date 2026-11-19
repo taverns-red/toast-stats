@@ -1,5 +1,34 @@
 # Changelog
 
+## [3.70.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.69.4...frontend-v3.70.0) (2026-11-19)
+
+
+### Features
+
+* **map:** explain the dashed outline in the tier legend ([#2580](https://github.com/taverns-red/toast-stats/issues/2580)) ([#3061](https://github.com/taverns-red/toast-stats/issues/3061)) ([640cea1](https://github.com/taverns-red/toast-stats/commit/640cea129ef8c58b527807a43648c5694b3da13b))
+* **ui:** membership retention badge on the district trophy case ([#1614](https://github.com/taverns-red/toast-stats/issues/1614)) ([#3074](https://github.com/taverns-red/toast-stats/issues/3074)) ([955ff28](https://github.com/taverns-red/toast-stats/commit/955ff2894c965fcd2283c43b44de34f471d7874e))
+* **ui:** membership retention estimate on Awards and Methodology ([#1614](https://github.com/taverns-red/toast-stats/issues/1614)) ([#3073](https://github.com/taverns-red/toast-stats/issues/3073)) ([5621787](https://github.com/taverns-red/toast-stats/commit/5621787804507415effe43bee0d0e66ca7e46362))
+* **ui:** Revised date on district pages, linking to What Changed ([#2475](https://github.com/taverns-red/toast-stats/issues/2475)) ([#3063](https://github.com/taverns-red/toast-stats/issues/3063)) ([f9b4979](https://github.com/taverns-red/toast-stats/commit/f9b4979f7fd6afdbfce7dea1fb78a0d90aafd01b))
+
+
+### Bug Fixes
+
+* **build:** CDN base as a build-time constant, version as a meta tag ([#3000](https://github.com/taverns-red/toast-stats/issues/3000)) ([#3035](https://github.com/taverns-red/toast-stats/issues/3035)) ([096e136](https://github.com/taverns-red/toast-stats/commit/096e136985093b4bfabb8a31e05fdabfc814cc91))
+* **consent:** GA guard matches trailing-dot hosts and uppercase paths ([#2921](https://github.com/taverns-red/toast-stats/issues/2921)) ([#3021](https://github.com/taverns-red/toast-stats/issues/3021)) ([727e04e](https://github.com/taverns-red/toast-stats/commit/727e04eb3a2be03aaef59861014d0149b1cfe982))
+* **consent:** re-check skips publish when the level is unchanged ([#2945](https://github.com/taverns-red/toast-stats/issues/2945)) ([#3039](https://github.com/taverns-red/toast-stats/issues/3039)) ([0331d54](https://github.com/taverns-red/toast-stats/commit/0331d54a729e78ffe0ec2e6346d0fec30f44b47e))
+* **e2e:** smokes wait for the loaded table, map and shell ([#2959](https://github.com/taverns-red/toast-stats/issues/2959)) ([#3043](https://github.com/taverns-red/toast-stats/issues/3043)) ([ba2fafc](https://github.com/taverns-red/toast-stats/commit/ba2fafc81f0bbe3526154fee48e222769353ae32))
+* **ui:** label the Distinguished composition bar as qualifying today ([#2580](https://github.com/taverns-red/toast-stats/issues/2580)) ([#3056](https://github.com/taverns-red/toast-stats/issues/3056)) ([00ad191](https://github.com/taverns-red/toast-stats/commit/00ad1916ebd8a3632a4aa6f2a48b015361a5a305))
+
+
+### Refactors
+
+* remove the unused exportDistrictStatistics CSV function ([#2580](https://github.com/taverns-red/toast-stats/issues/2580)) ([#3062](https://github.com/taverns-red/toast-stats/issues/3062)) ([2d9c00f](https://github.com/taverns-red/toast-stats/commit/2d9c00ffb35d59bd4041e14c299890caa60431d0))
+
+
+### Documentation
+
+* point stale lesson citations at the archive ([#2957](https://github.com/taverns-red/toast-stats/issues/2957)) ([#3031](https://github.com/taverns-red/toast-stats/issues/3031)) ([5721f3a](https://github.com/taverns-red/toast-stats/commit/5721f3a5eeeaca2865c09adc2160cc0261ee386d))
+
 ## [3.69.4](https://github.com/taverns-red/toast-stats/compare/frontend-v3.69.3...frontend-v3.69.4) (2026-11-18)
 
 
