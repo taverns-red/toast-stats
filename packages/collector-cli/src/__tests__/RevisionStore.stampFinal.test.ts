@@ -234,7 +234,11 @@ describe('stampFinal (#2475 phase 3)', () => {
 
     it('fails closed on a prod index of another month end', async () => {
       writeDaily(DAILY)
-      writeProdIndex({ monthEnd: '2026-09-30', dataMonth: '2026-09' })
+      writeProdIndex({
+        monthEnd: '2026-09-30',
+        dataMonth: '2026-09',
+        revisions: [revision('2026-09-30', false), revision('2026-10-02')],
+      })
       writeIndex()
       await expect(stamp()).rejects.toThrow(/2026-09-30/)
       expect(readIndex().final).toBeNull()

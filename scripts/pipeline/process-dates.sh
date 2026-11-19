@@ -119,6 +119,9 @@
 #                the date is hydrated and collector-cli stamp-final sets its
 #                `final` to the last closing revision (forward only, never
 #                moved once set); the index is uploaded only when stamped.
+#                Prod's index is read too (read-only, GCS_BUCKET_PRODUCTION):
+#                prod final is done; staging final but prod not re-sends
+#                staging's; prod lacking a revision staging names waits.
 #                No index: nothing to do. Any failure is a warning.
 #  10. upload    snapshots/<date>/*.json, analytics/*.json and
 #                clubs-by-region/*.json (#1800), `-Z` with the CDN headers;
@@ -815,14 +818,39 @@ stamp_final() {
     rm -rf "${work}"
     return 0
   fi
+  # Prod's index too, read-only, with the pipeline's existing prod read
+  # access (the value gate reads prod the same way). Staging alone would
+  # read already-final forever after a held promotion, and prod must hold
+  # every revision the index names before the index goes (review of PR
+  # #3070). Missing in prod is an answer (prod-behind); unreadable is not.
+  if [ -z "${GCS_BUCKET_PRODUCTION:-}" ]; then
+    echo "::warning::GCS_BUCKET_PRODUCTION is not set, so prod's index of ${month_end} cannot be read; its final is not stamped (#2475)"
+    rm -rf "${work}"
+    return 0
+  fi
+  if ! "${GCLOUD}" storage cp \
+    "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${month_end}/revisions/index.json" \
+    "${work}/prod-index.json" 2>"${err}"; then
+    if ! grep -q 'matched no objects' "${err}"; then
+      cat "${err}"
+      echo "::warning::Could not read prod's snapshots/${month_end}/revisions/index.json; its final is not stamped (#2475)"
+      rm -rf "${work}"
+      return 0
+    fi
+    rm -f "${work}/prod-index.json"
+  fi
   if ! "${COLLECTOR[@]}" stamp-final --date "${actual}" \
-    --index "${work}/index.json" >"${result}"; then
+    --index "${work}/index.json" --prod-index "${work}/prod-index.json" \
+    >"${result}"; then
     cat "${result}"
     echo "::warning::stamp-final failed for ${month_end} (daily ${actual}); its final is not stamped (#2475)"
     rm -rf "${work}" "${result}"
     return 0
   fi
   cat "${result}"
+  if jq -e '.outcome == "prod-behind"' "${result}" >/dev/null; then
+    echo "::warning::Staging's revision index of ${month_end} names revisions prod does not hold yet (a held close); its final waits for a later daily (#2475)"
+  fi
   if jq -e '.stamped == true' "${result}" >/dev/null; then
     if "${UPLOAD[@]}" cp \
       --content-type="application/json" \
@@ -830,7 +858,7 @@ stamp_final() {
       -Z \
       "${work}/index.json" \
       "gs://${BUCKET}/snapshots/${month_end}/revisions/"; then
-      echo "- **Reconciliation final** (${month_end}): $(jq -r '.final' "${result}")" >>"${SUMMARY}"
+      echo "- **Reconciliation final** (${month_end}): $(jq -r '"\(.final) (\(.outcome))"' "${result}")" >>"${SUMMARY}"
     else
       echo "::warning::Could not upload the stamped revision index of ${month_end}; staging keeps its earlier index (#2475)"
     fi

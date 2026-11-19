@@ -389,15 +389,31 @@ export interface StampFinalOptions {
   date: string
   /** The previous month end's index, hydrated from staging; rewritten in place. */
   indexFile: string
+  /**
+   * Prod's index for the same month end, read-only (review of PR #3070).
+   * A missing file means prod has none.
+   */
+  prodIndexFile: string
 }
 
+/**
+ * - `stamped`: final set now; upload the index.
+ * - `resent`: staging was already final, prod is not (the stamping run's
+ *   promotion was held); upload staging's index again, unchanged.
+ * - `already-final`: prod is final; nothing to do.
+ * - `prod-behind`: prod has no index, or lacks a revision staging's index
+ *   names (a held close). Sending it would make prod name revisions it
+ *   does not hold, so nothing is stamped; a later daily tries again.
+ * - `no-closing-revision`: only revision 0 was kept; nothing to stamp.
+ */
 export type StampFinalOutcome =
-  'stamped' | 'already-final' | 'no-closing-revision'
+  'stamped' | 'resent' | 'already-final' | 'prod-behind' | 'no-closing-revision'
 
 export interface StampFinalResult {
   date: string
   /** The month end before `date`'s month: the index it stamps. */
   monthEnd: string
+  /** true: upload the index (`stamped` or `resent`). */
   stamped: boolean
   /** The index's `final` after the call. */
   final: string | null
@@ -416,7 +432,10 @@ function previousMonthEnd(date: string): string {
  * #2475 phase 3: on a non-closing daily, TI has rolled past the previous
  * month's reconciliation, so that month end's last closing revision is its
  * final close. Forward only: a `final` already set is never moved or
- * changed, so a rerun is a no-op. Fails closed, writing nothing, on a daily
+ * changed, so a rerun is a no-op. Judged against prod's index as well as
+ * staging's: prod final means done; prod missing a revision staging names
+ * means wait; staging final but prod not means send it again (see
+ * StampFinalOutcome). Fails closed, writing nothing, on a daily
  * that is closing data (or has no metadata), an index of another month
  * end, or a closing revision on or after `date` (an earlier day rerun after
  * the close went on). Once `final` is set, recordRevision refuses any later
@@ -433,7 +452,7 @@ function previousMonthEnd(date: string): string {
 export async function stampFinal(
   opts: StampFinalOptions
 ): Promise<StampFinalResult> {
-  const { snapshotsDir, date, indexFile } = opts
+  const { snapshotsDir, date, indexFile, prodIndexFile } = opts
   if (!ISO_DATE.test(date)) {
     throw new Error(`invalid date ${date} (YYYY-MM-DD)`)
   }
@@ -454,27 +473,45 @@ export async function stampFinal(
     )
   }
 
+  const prod = await readIndex(prodIndexFile)
+  if (prod !== null && prod.monthEnd !== monthEnd) {
+    throw new Error(
+      `${prodIndexFile}: prod's index is of ${prod.monthEnd}, not ${monthEnd}`
+    )
+  }
+
   const result = (
     outcome: StampFinalOutcome,
     final: string | null
-  ): StampFinalResult => ({
-    date,
-    monthEnd,
-    stamped: outcome === 'stamped',
-    final,
-    outcome,
-    written:
-      outcome === 'stamped'
+  ): StampFinalResult => {
+    const upload = outcome === 'stamped' || outcome === 'resent'
+    return {
+      date,
+      monthEnd,
+      stamped: upload,
+      final,
+      outcome,
+      written: upload
         ? [
             `${RECONCILIATION_REVISIONS_DIR}/${RECONCILIATION_REVISION_INDEX_FILE_NAME}`,
           ]
         : [],
-  })
+    }
+  }
 
-  if (index.final !== null) return result('already-final', index.final)
+  if (prod?.final != null) return result('already-final', prod.final)
 
   const closing = index.revisions.filter(r => r.closing)
   const last = closing[closing.length - 1]
+  if (index.final === null && last === undefined) {
+    return result('no-closing-revision', null)
+  }
+  const inProd = new Set(prod?.revisions.map(r => r.asOf) ?? [])
+  if (prod === null || index.revisions.some(r => !inProd.has(r.asOf))) {
+    return result('prod-behind', null)
+  }
+  // Forward only: staging's final stands; prod just never received it.
+  if (index.final !== null) return result('resent', index.final)
   if (last === undefined) return result('no-closing-revision', null)
   if (last.asOf >= date) {
     throw new Error(

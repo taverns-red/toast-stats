@@ -1823,8 +1823,9 @@ export function createCLI(): Command {
 
   // #2475 phase 3: a non-closing daily stamps the previous month end's
   // revision index `final` (its last closing revision). The pipeline
-  // hydrates staging's index into --index and uploads it when `stamped`
-  // (process-dates.sh, daily only). Forward only and idempotent.
+  // hydrates staging's index into --index and prod's into --prod-index
+  // (read-only), and uploads --index when `stamped` (process-dates.sh,
+  // daily only). Forward only and idempotent.
   program
     .command('stamp-final')
     .description(
@@ -1838,9 +1839,18 @@ export function createCLI(): Command {
       '--index <file>',
       "The previous month end's revisions/index.json, rewritten in place"
     )
+    .requiredOption(
+      '--prod-index <file>',
+      "Prod's copy of that index, read-only; a missing file means prod has none"
+    )
     .option('-c, --config <path>', 'Alternative configuration file path')
     .action(
-      async (options: { date: string; index: string; config?: string }) => {
+      async (options: {
+        date: string
+        index: string
+        prodIndex: string
+        config?: string
+      }) => {
         const { stampFinal } = await import('./services/RevisionStore.js')
         const { cacheDir } = resolveConfiguration({
           configPath: options.config,
@@ -1850,6 +1860,7 @@ export function createCLI(): Command {
             snapshotsDir: path.join(cacheDir, 'snapshots'),
             date: options.date,
             indexFile: options.index,
+            prodIndexFile: options.prodIndex,
           })
           emitJsonAndExit(result, ExitCode.SUCCESS)
         } catch (error) {
