@@ -82,8 +82,8 @@ export const MembershipRetentionCard: React.FC<
           President&apos;s Membership Retention Award
         </h2>
         <p className="awards-page-card__description">
-          Members who renewed in April, out of those who renewed in October or
-          joined before April. The top 3 districts win.
+          Members who paid April dues, out of those who paid October dues (on
+          time or late) or joined before April. The top 3 districts win.
         </p>
         <div className="awards-page-card__meta">
           <span className="awards-page-card__tag">Toast Stats estimate</span>
@@ -110,7 +110,8 @@ export const MembershipRetentionCard: React.FC<
 
       {view.kind === 'not-started' && (
         <p className="awards-page-card__empty">
-          These standings start in April, when April renewals open.
+          These standings start in April, when April renewals open. Last
+          year&apos;s final standings are on the June 30 date.
         </p>
       )}
 

@@ -1002,9 +1002,11 @@ const MethodologyPage: React.FC = () => {
                 <strong>Window.</strong> The standings run from April 1 to June
                 30 and are final on June 30. Before April 1 there are no April
                 renewals, so the card says when the standings start instead of
-                showing near-zero rates. If the March 31 close is missing, the
-                card says the estimate isn&apos;t available; it never shows
-                zeros.
+                showing near-zero rates. From July 1, when a new program year
+                starts, the card shows that message again; last year&apos;s
+                final standings are on the June 30 date. If the March 31 close
+                is missing, the card says the estimate isn&apos;t available; it
+                never shows zeros.
               </li>
               <li>
                 <strong>Who is ranked.</strong> District U, the clubs that
