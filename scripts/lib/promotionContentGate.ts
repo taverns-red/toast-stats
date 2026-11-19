@@ -122,6 +122,7 @@ export type ObjectKind =
   | 'education-rollup-index'
   | 'education-timeline'
   | 'meeting-times'
+  | 'reconciliation-revision'
   | 'latest'
   | 'json'
 
@@ -185,6 +186,14 @@ const EDUCATION_ROLLUP_YEAR = new RegExp(
   `^${EDUCATION_ROLLUP_PREFIX}/(\\d{4}-\\d{4})\\.json$`
 )
 const EDUCATION_ROLLUP_INDEX = `${EDUCATION_ROLLUP_PREFIX}/index.json`
+/**
+ * A month-end reconciliation revision's district file (#2475, #2486):
+ * `snapshots/<monthEnd>/revisions/<asOf>/district_<id>.json`. A closing day
+ * writes about 94 of them; they are write-once copies of month-end files,
+ * so they get a small sample of their own, not a share of the generic one.
+ */
+const RECONCILIATION_REVISION =
+  /^snapshots\/\d{4}-\d{2}-\d{2}\/revisions\/\d{4}-\d{2}-\d{2}\/district_[A-Za-z0-9]+\.json$/
 const DISTRICT_ANALYTICS =
   /^snapshots\/\d{4}-\d{2}-\d{2}\/analytics\/district_[A-Za-z0-9]+_[a-z-]+\.json$/
 
@@ -252,6 +261,7 @@ export function classifyObject(path: string): ObjectKind | null {
   if (TS_PROGRAM_YEAR.test(path)) return 'time-series-program-year'
   if (AWARDS.test(path)) return 'competitive-awards'
   if (DISTRICT_ANALYTICS.test(path)) return 'district-analytics'
+  if (RECONCILIATION_REVISION.test(path)) return 'reconciliation-revision'
   if (REGION_ROLLUPS.test(path)) return 'region-rollups'
   if (CLUBS_BY_REGION_WORLD.test(path)) return 'clubs-by-region-world'
   if (CLUBS_BY_REGION_WORLD_POINTS.test(path))
@@ -304,12 +314,15 @@ export interface SamplingCaps {
   awards: number
   /** Every other changed JSON object, sampled (D61 first). */
   generic: number
+  /** Month-end reconciliation revision district files (#2486), D61 first. */
+  revisions: number
 }
 
 export const DEFAULT_CAPS: SamplingCaps = {
   timeSeriesDistricts: 200,
   awards: 30,
   generic: 150,
+  revisions: 10,
 }
 
 export interface ContentCheckPlan {
@@ -384,9 +397,12 @@ export function planContentChecks(
   // Time-series: group by district.
   const byDistrict = new Map<string, PlannedCheck[]>()
   const awards: PlannedCheck[] = []
+  const revisionChecks: PlannedCheck[] = []
   for (const c of json) {
     const ts = TS_METADATA.exec(c.path) ?? TS_PROGRAM_YEAR.exec(c.path)
-    if (ts) {
+    if (c.kind === 'reconciliation-revision') {
+      revisionChecks.push(c)
+    } else if (ts) {
       const list = byDistrict.get(ts[1]!) ?? []
       list.push(c)
       byDistrict.set(ts[1]!, list)
@@ -444,11 +460,19 @@ export function planContentChecks(
   const sampled = sample(rest, caps.generic, random)
   checks.push(...sampled)
 
+  // #2486: revisions have their own small sample, so ~94 of them cannot
+  // displace month-end objects from the generic budget.
+  const sampledRevisions = sample(revisionChecks, caps.revisions, random)
+  checks.push(...sampledRevisions)
+
   return {
     checks,
     changedCount: changed.length,
     notJson,
-    sampledOut: rest.length - sampled.length,
+    sampledOut:
+      rest.length -
+      sampled.length +
+      (revisionChecks.length - sampledRevisions.length),
     crossCheckLatest: json.some(
       c => c.kind === 'latest' || c.kind === 'snapshot-index'
     ),
@@ -1513,6 +1537,7 @@ export function checkObject(
       return checkEducationTimeline(check.path, value)
     case 'latest':
       return checkLatest(value)
+    case 'reconciliation-revision':
     case 'json':
       return null
   }
@@ -1646,6 +1671,8 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
     'decoded, EducationTimelineEntitySchema (strict: counts only), the program year and entity its path names (#2591)',
   'meeting-times':
     'decoded, MeetingTimesSchema, served under its snapshotDate with that date’s program year, totals = Σ districts, each district’s counts within its clubs and every mode cell within the all-meetings cell (#1814)',
+  'reconciliation-revision':
+    'decoded, JSON, no club contact field; a sample of its own so revisions never displace month-end objects (#2486)',
   latest: 'decoded, latestSnapshotDate is a real date',
   json: 'decoded (no nested gzip) and parses as JSON; every kind: no non-empty club email/phone (#2026)',
   'cross-check': 'latest.json’s date is listed by the snapshot index',
