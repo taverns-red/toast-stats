@@ -66,7 +66,13 @@ describe('FIELD_CLASSIFICATION registry (#1086)', () => {
         'suspendedClubs',
       ].sort()
     )
-    expect(byClass('base')).toEqual(['paidClubBase', 'paymentBase'])
+    // #1614 adds the frozen March 31 close copies as bases (§4 table updated).
+    expect(byClass('base')).toEqual([
+      'marchCloseCharterPayments',
+      'marchCloseNewPayments',
+      'paidClubBase',
+      'paymentBase',
+    ])
     expect(byClass('identity')).toEqual([
       'districtId',
       'districtName',

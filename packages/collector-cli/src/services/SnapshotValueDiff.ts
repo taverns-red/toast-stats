@@ -59,6 +59,10 @@ export const FIELD_CLASSIFICATION: Record<string, FieldClass> = {
   // base value moves are allowed as provenance, any magnitude (#1289).
   paidClubBase: 'base',
   paymentBase: 'base',
+  // Frozen copies of the program year's March 31 close (#1614); they move
+  // only if that March close is itself rebuilt.
+  marchCloseNewPayments: 'base',
+  marchCloseCharterPayments: 'base',
   // Plan booleans — one-way false→true
   dspSubmitted: 'planBoolean',
   trainingMet: 'planBoolean',
