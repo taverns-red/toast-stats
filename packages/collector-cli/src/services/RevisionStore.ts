@@ -8,6 +8,8 @@
  * write-once, as a copy of its district files:
  *
  *   snapshots/<monthEnd>/revisions/<asOf>/district_<id>.json
+ *   snapshots/<monthEnd>/revisions/<asOf>/all-districts-rankings.json
+ *     (phase 3; when the copied month end has one, flagged `rankings`)
  *   snapshots/<monthEnd>/revisions/index.json   (ReconciliationRevisionIndex)
  *
  * `asOf` is the collection date (unique per raw-csv dir). Revision 0 is the
@@ -152,6 +154,22 @@ async function planCopies(
   return copies
 }
 
+/** The date's rankings file, copied with each revision (phase 3). */
+const RANKINGS_FILE_NAME = 'all-districts-rankings.json'
+
+/**
+ * The rankings file in `dir` as a planned copy under `revRel`, or null when
+ * `dir` has none (the revision is then kept without it, flag off).
+ */
+async function planRankings(dir: string, revRel: string): Promise<Copy | null> {
+  const src = path.join(dir, RANKINGS_FILE_NAME)
+  if (!(await exists(src))) return null
+  return {
+    rel: `${revRel}/${RANKINGS_FILE_NAME}`,
+    bytes: await fs.readFile(src),
+  }
+}
+
 /** Throws if any copy's target already holds different bytes. */
 async function assertWriteOnce(
   dir: string,
@@ -187,11 +205,14 @@ async function planRevisionZero(
       `${priorSnapshotDir}: prior copy is of ${prior.dataAsOfDate}, not ${date}`
     )
   }
+  const revRel = `${RECONCILIATION_REVISIONS_DIR}/${date}`
   const copies = await planCopies(
     priorSnapshotDir,
     prior.successfulDistricts,
-    `${RECONCILIATION_REVISIONS_DIR}/${date}`
+    revRel
   )
+  const rankings = await planRankings(priorSnapshotDir, revRel)
+  if (rankings) copies.push(rankings)
   await assertWriteOnce(dir, copies)
   return {
     copies,
@@ -200,6 +221,7 @@ async function planRevisionZero(
       collectedAt: prior.createdAt,
       closing: false,
       successfulDistricts: [...prior.successfulDistricts],
+      ...(rankings ? { rankings: true } : {}),
     },
   }
 }
@@ -273,6 +295,15 @@ export async function recordRevision(
     return result
   }
 
+  // Phase 3: a stamped `final` ends the close (stampFinal). A later closing
+  // day would leave `final` naming a revision older than the month end, so
+  // nothing is recorded; the pipeline warns on the refusal.
+  if (index.final !== null) {
+    result.refused = `the close of ${date} is final (${index.final}); revision ${asOf} not recorded`
+    result.revisionZero = listed(date) ? 'already-recorded' : 'no-prior'
+    return result
+  }
+
   const copies: Copy[] = []
   const added: ReconciliationRevision[] = []
 
@@ -311,11 +342,10 @@ export async function recordRevision(
     result.refused = partial
     if (added.length === 0) return result
   } else {
-    const closing = await planCopies(
-      dir,
-      metadata.successfulDistricts,
-      `${RECONCILIATION_REVISIONS_DIR}/${asOf}`
-    )
+    const revRel = `${RECONCILIATION_REVISIONS_DIR}/${asOf}`
+    const closing = await planCopies(dir, metadata.successfulDistricts, revRel)
+    const rankings = await planRankings(dir, revRel)
+    if (rankings) closing.push(rankings)
     // Write-once, checked for every file before any is written.
     await assertWriteOnce(dir, closing)
     copies.push(...closing)
@@ -324,6 +354,7 @@ export async function recordRevision(
       collectedAt: metadata.createdAt,
       closing: true,
       successfulDistricts: [...metadata.successfulDistricts],
+      ...(rankings ? { rankings: true } : {}),
     })
   }
 
@@ -349,4 +380,151 @@ export async function recordRevision(
   )
   result.recorded = partial === null
   return result
+}
+
+export interface StampFinalOptions {
+  /** The local `snapshots/` directory (`<cacheDir>/snapshots`). */
+  snapshotsDir: string
+  /** The non-closing daily's snapshot date (its logical date). */
+  date: string
+  /** The previous month end's index, hydrated from staging; rewritten in place. */
+  indexFile: string
+  /**
+   * Prod's index for the same month end, read-only (review of PR #3070).
+   * A missing file means prod has none.
+   */
+  prodIndexFile: string
+}
+
+/**
+ * - `stamped`: final set now; upload the index.
+ * - `resent`: staging was already final, prod is not (the stamping run's
+ *   promotion was held); upload staging's index again, unchanged.
+ * - `already-final`: prod is final; nothing to do.
+ * - `prod-behind`: prod has no index, or lacks a revision staging's index
+ *   names (a held close). Sending it would make prod name revisions it
+ *   does not hold, so nothing is stamped; a later daily tries again.
+ * - `no-closing-revision`: only revision 0 was kept; nothing to stamp.
+ */
+export type StampFinalOutcome =
+  'stamped' | 'resent' | 'already-final' | 'prod-behind' | 'no-closing-revision'
+
+export interface StampFinalResult {
+  date: string
+  /** The month end before `date`'s month: the index it stamps. */
+  monthEnd: string
+  /** true: upload the index (`stamped` or `resent`). */
+  stamped: boolean
+  /** The index's `final` after the call. */
+  final: string | null
+  outcome: StampFinalOutcome
+  /** Files written, relative to `snapshots/<monthEnd>/`. */
+  written: string[]
+}
+
+/** The last day of the month before `date`'s month (UTC). */
+function previousMonthEnd(date: string): string {
+  const [y, m] = date.split('-').map(Number) as [number, number]
+  return new Date(Date.UTC(y, m - 1, 0)).toISOString().slice(0, 10)
+}
+
+/**
+ * #2475 phase 3: on a non-closing daily, TI has rolled past the previous
+ * month's reconciliation, so that month end's last closing revision is its
+ * final close. Forward only: a `final` already set is never moved or
+ * changed, so a rerun is a no-op. Judged against prod's index as well as
+ * staging's: prod final means done; prod missing a revision staging names
+ * means wait; staging final but prod not means send it again (see
+ * StampFinalOutcome). Fails closed, writing nothing, on a daily
+ * that is closing data (or has no metadata), an index of another month
+ * end, or a closing revision on or after `date` (an earlier day rerun after
+ * the close went on). Once `final` is set, recordRevision refuses any later
+ * closing revision.
+ *
+ * `final` is the last closing revision KEPT, which is not always the close
+ * `snapshots/<monthEnd>/` serves. A partial close day (failed districts) is
+ * refused as a revision (#2483 fix 4) but its month end is still uploaded.
+ * If the last close day was partial, the month end holds that partial day
+ * and `final` names the day before it, the last full close. Readers that
+ * want the final close's numbers read `revisions/<final>/`, not the month
+ * end.
+ */
+export async function stampFinal(
+  opts: StampFinalOptions
+): Promise<StampFinalResult> {
+  const { snapshotsDir, date, indexFile, prodIndexFile } = opts
+  if (!ISO_DATE.test(date)) {
+    throw new Error(`invalid date ${date} (YYYY-MM-DD)`)
+  }
+  const monthEnd = previousMonthEnd(date)
+
+  const metadata = await readMetadata(path.join(snapshotsDir, date))
+  if (metadata.isClosingPeriodData === true) {
+    throw new Error(
+      `snapshots/${date} is closing-period data; the close of ${monthEnd} is not over`
+    )
+  }
+
+  const index = await readIndex(indexFile)
+  if (index === null) throw new Error(`${indexFile}: no revision index`)
+  if (index.monthEnd !== monthEnd) {
+    throw new Error(
+      `${indexFile}: indexes ${index.monthEnd}, not ${monthEnd} (the month end before ${date})`
+    )
+  }
+
+  const prod = await readIndex(prodIndexFile)
+  if (prod !== null && prod.monthEnd !== monthEnd) {
+    throw new Error(
+      `${prodIndexFile}: prod's index is of ${prod.monthEnd}, not ${monthEnd}`
+    )
+  }
+
+  const result = (
+    outcome: StampFinalOutcome,
+    final: string | null
+  ): StampFinalResult => {
+    const upload = outcome === 'stamped' || outcome === 'resent'
+    return {
+      date,
+      monthEnd,
+      stamped: upload,
+      final,
+      outcome,
+      written: upload
+        ? [
+            `${RECONCILIATION_REVISIONS_DIR}/${RECONCILIATION_REVISION_INDEX_FILE_NAME}`,
+          ]
+        : [],
+    }
+  }
+
+  if (prod?.final != null) return result('already-final', prod.final)
+
+  const closing = index.revisions.filter(r => r.closing)
+  const last = closing[closing.length - 1]
+  if (index.final === null && last === undefined) {
+    return result('no-closing-revision', null)
+  }
+  const inProd = new Set(prod?.revisions.map(r => r.asOf) ?? [])
+  if (prod === null || index.revisions.some(r => !inProd.has(r.asOf))) {
+    return result('prod-behind', null)
+  }
+  // Forward only: staging's final stands; prod just never received it.
+  if (index.final !== null) return result('resent', index.final)
+  if (last === undefined) return result('no-closing-revision', null)
+  if (last.asOf >= date) {
+    throw new Error(
+      `closing revision ${last.asOf} is on or after ${date}; the close of ${monthEnd} was not over that day`
+    )
+  }
+
+  const next = ReconciliationRevisionIndexSchema.parse({
+    ...index,
+    final: last.asOf,
+  })
+  const tmp = `${indexFile}.tmp.${process.pid}`
+  await fs.writeFile(tmp, JSON.stringify(next, null, 2), 'utf-8')
+  await fs.rename(tmp, indexFile)
+  return result('stamped', last.asOf)
 }

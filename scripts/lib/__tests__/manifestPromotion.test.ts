@@ -237,6 +237,25 @@ describe('reconciliation revisions promote with their month end (#2475)', () => 
     expect(copied(plan)).toContain(`${REV}/index.json`)
   })
 
+  // Phase 3 (review of PR #3070): the stamping daily writes only the month
+  // end's index, and the gate never sees that month end (manifestSnapshot
+  // Dates skips revisions/). Not held, so the index still promotes.
+  it('promote a stamped index alone, though the gate never judged its month end', () => {
+    const plan = planManifestPromotion(
+      month({
+        entries: [
+          entry('snapshots/2026-11-05/district_61.json'),
+          entry(`${REV}/index.json`),
+        ],
+        held: resolveHeldDates(pass),
+        indexDates: ['2026-10-31', '2026-11-05'],
+        prodDates: new Set(['2026-10-31']),
+      })
+    )
+    expect(plan.promotedDates).toEqual(['2026-10-31', '2026-11-05'])
+    expect(copied(plan)).toContain(`${REV}/index.json`)
+  })
+
   it('hold with a held month end', () => {
     const plan = planManifestPromotion(
       month({

@@ -112,6 +112,28 @@ describe('ReconciliationRevisionIndexSchema (#2475)', () => {
     ).toBe(false)
   })
 
+  // #2475 phase 3: a revision may also hold its all-districts-rankings.json.
+  // Optional, so every index written before it still parses (ADR 0019).
+  it('keeps a revision’s optional rankings flag', () => {
+    const withRankings = {
+      ...index(),
+      revisions: index().revisions.map(r => ({ ...r, rankings: true })),
+    }
+    const r = ReconciliationRevisionIndexSchema.safeParse(withRankings)
+    expect(r.success).toBe(true)
+    expect(r.data?.revisions.map(x => x as Record<string, unknown>)).toEqual(
+      withRankings.revisions
+    )
+  })
+
+  it('rejects a rankings flag that is not a boolean', () => {
+    const bad = {
+      ...index(),
+      revisions: index().revisions.map(r => ({ ...r, rankings: 'yes' })),
+    }
+    expect(ReconciliationRevisionIndexSchema.safeParse(bad).success).toBe(false)
+  })
+
   it('is a tolerant reader: an unknown key does not break it', () => {
     expect(
       ReconciliationRevisionIndexSchema.safeParse({ ...index(), later: 1 })

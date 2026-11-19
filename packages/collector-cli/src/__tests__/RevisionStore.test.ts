@@ -38,6 +38,8 @@ interface SnapshotFixture {
   districts?: Record<string, unknown>
   createdAt?: string
   failed?: string[]
+  /** Written as all-districts-rankings.json when given (#2475 phase 3). */
+  rankings?: unknown
 }
 
 /** A snapshot directory as TransformService writes it (metadata + districts). */
@@ -60,6 +62,12 @@ function writeSnapshot(dir: string, f: SnapshotFixture = {}): void {
     metadata['logicalDate'] = MONTH_END
   }
   fs.writeFileSync(path.join(dir, 'metadata.json'), JSON.stringify(metadata))
+  if (f.rankings !== undefined) {
+    fs.writeFileSync(
+      path.join(dir, 'all-districts-rankings.json'),
+      JSON.stringify(f.rankings)
+    )
+  }
   for (const [id, body] of Object.entries(districts)) {
     fs.writeFileSync(
       path.join(dir, `district_${id}.json`),
@@ -437,5 +445,179 @@ describe('recordRevision (#2475)', () => {
       expect(fs.existsSync(path.join(revDir(), '2026-11-01'))).toBe(false)
       expect(readIndex().revisions.map(x => x.asOf)).toEqual([MONTH_END])
     })
+  })
+
+  // #2475 phase 3: a revision also keeps the month end's rankings file, so
+  // What Changed can compare district rankings across reconciliation days.
+  describe('the rankings file (#2475 phase 3)', () => {
+    const closingRankings = { metadata: { v: 'close' }, rankings: [] }
+    const inMonthRankings = { metadata: { v: 'in-month' }, rankings: [] }
+    const flags = () =>
+      readIndex().revisions.map(x => [
+        x.asOf,
+        (x as Record<string, unknown>)['rankings'],
+      ])
+
+    it('copies all-districts-rankings.json with the closing revision and flags it', async () => {
+      writeSnapshot(monthEndDir(), {
+        closing: { collectionDate: '2026-11-01' },
+        rankings: closingRankings,
+      })
+
+      const r = await recordRevision({
+        snapshotsDir: snapshots,
+        date: MONTH_END,
+        asOf: '2026-11-01',
+      })
+
+      expect(r.written).toEqual([
+        'revisions/2026-11-01/district_61.json',
+        'revisions/2026-11-01/district_F.json',
+        'revisions/2026-11-01/all-districts-rankings.json',
+        'revisions/index.json',
+      ])
+      expect(read('revisions/2026-11-01/all-districts-rankings.json')).toBe(
+        read('all-districts-rankings.json')
+      )
+      expect(flags()).toEqual([['2026-11-01', true]])
+    })
+
+    it('copies revision 0’s rankings from the prior copy', async () => {
+      writeSnapshot(prior, {
+        districts: { '61': { v: 'in-month' } },
+        rankings: inMonthRankings,
+      })
+      writeSnapshot(monthEndDir(), {
+        closing: { collectionDate: '2026-11-01' },
+        rankings: closingRankings,
+      })
+
+      await recordRevision({
+        snapshotsDir: snapshots,
+        date: MONTH_END,
+        asOf: '2026-11-01',
+        priorSnapshotDir: prior,
+      })
+
+      expect(
+        JSON.parse(read(`revisions/${MONTH_END}/all-districts-rankings.json`))
+      ).toEqual(inMonthRankings)
+      expect(flags()).toEqual([
+        [MONTH_END, true],
+        ['2026-11-01', true],
+      ])
+    })
+
+    it('without a rankings file, records the districts and leaves the flag off', async () => {
+      writeSnapshot(prior, { districts: { '61': { v: 'in-month' } } })
+      writeSnapshot(monthEndDir(), {
+        closing: { collectionDate: '2026-11-01' },
+        rankings: closingRankings,
+      })
+
+      await recordRevision({
+        snapshotsDir: snapshots,
+        date: MONTH_END,
+        asOf: '2026-11-01',
+        priorSnapshotDir: prior,
+      })
+
+      expect(
+        fs.existsSync(
+          path.join(revDir(), MONTH_END, 'all-districts-rankings.json')
+        )
+      ).toBe(false)
+      expect(flags()).toEqual([
+        [MONTH_END, undefined],
+        ['2026-11-01', true],
+      ])
+    })
+
+    it('is write-once for the rankings file too', async () => {
+      writeSnapshot(monthEndDir(), {
+        closing: { collectionDate: '2026-11-01' },
+        rankings: closingRankings,
+      })
+      const stray = path.join(
+        revDir(),
+        '2026-11-01',
+        'all-districts-rankings.json'
+      )
+      fs.mkdirSync(path.dirname(stray), { recursive: true })
+      fs.writeFileSync(stray, '{"other":true}')
+
+      await expect(
+        recordRevision({
+          snapshotsDir: snapshots,
+          date: MONTH_END,
+          asOf: '2026-11-01',
+        })
+      ).rejects.toThrow(/write-once/)
+      expect(fs.readFileSync(stray, 'utf-8')).toBe('{"other":true}')
+    })
+  })
+})
+
+// #2475 phase 3 (review of PR #3070): once a non-closing daily stamped the
+// index `final`, the close is over. A later closing revision would make
+// `final` disagree with the month end, so it is refused, loudly (the
+// pipeline warns on any refusal that is not "already recorded").
+describe('recordRevision after the close is final (#2475 phase 3)', () => {
+  const putFinalIndex = () => {
+    fs.mkdirSync(revDir(), { recursive: true })
+    fs.writeFileSync(
+      path.join(revDir(), 'index.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        monthEnd: MONTH_END,
+        dataMonth: '2026-10',
+        revisions: [
+          {
+            asOf: '2026-11-01',
+            collectedAt: '2026-11-01T13:05:00.000Z',
+            closing: true,
+            successfulDistricts: ['61', 'F'],
+          },
+        ],
+        final: '2026-11-01',
+      })
+    )
+  }
+
+  it('refuses a closing revision and writes nothing', async () => {
+    writeSnapshot(monthEndDir(), { closing: { collectionDate: '2026-11-04' } })
+    putFinalIndex()
+    const before = fs.readFileSync(path.join(revDir(), 'index.json'), 'utf-8')
+
+    const r = await recordRevision({
+      snapshotsDir: snapshots,
+      date: MONTH_END,
+      asOf: '2026-11-04',
+    })
+
+    expect(r.recorded).toBe(false)
+    expect(r.written).toEqual([])
+    expect(r.refused).toMatch(/final.*2026-11-01.*2026-11-04 not recorded/)
+    expect(r.refused).not.toMatch(/already recorded/)
+    expect(fs.existsSync(path.join(revDir(), '2026-11-04'))).toBe(false)
+    expect(fs.readFileSync(path.join(revDir(), 'index.json'), 'utf-8')).toBe(
+      before
+    )
+  })
+
+  it('takes no revision 0 either', async () => {
+    writeSnapshot(monthEndDir(), { closing: { collectionDate: '2026-11-04' } })
+    writeSnapshot(prior)
+    putFinalIndex()
+
+    const r = await recordRevision({
+      snapshotsDir: snapshots,
+      date: MONTH_END,
+      asOf: '2026-11-04',
+      priorSnapshotDir: prior,
+    })
+
+    expect(r.written).toEqual([])
+    expect(readIndex().revisions.map(x => x.asOf)).toEqual(['2026-11-01'])
   })
 })

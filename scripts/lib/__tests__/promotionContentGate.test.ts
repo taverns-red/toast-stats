@@ -146,6 +146,9 @@ const META_PATH = 'time-series/district_61/index-metadata.json'
 const AWARDS_PATH = 'snapshots/2026-10-08/competitive-awards.json'
 const ANALYTICS_PATH =
   'snapshots/2026-10-08/analytics/district_61_analytics.json'
+const REVISION_INDEX_PATH = 'snapshots/2026-10-31/revisions/index.json'
+const REVISION_RANKINGS_PATH =
+  'snapshots/2026-10-31/revisions/2026-11-02/all-districts-rankings.json'
 
 const check = (
   path: string,
@@ -925,8 +928,13 @@ describe('planContentChecks — bounded, change-driven sampling', () => {
         )
       ).toBe('reconciliation-revision')
       expect(classifyObject('snapshots/2026-10-31/revisions/index.json')).toBe(
-        'json'
+        'reconciliation-revision-index'
       )
+      expect(
+        classifyObject(
+          'snapshots/2026-10-31/revisions/2026-11-02/all-districts-rankings.json'
+        )
+      ).toBe('reconciliation-revision-rankings')
       // The month-end district file itself keeps the generic kind.
       expect(classifyObject('snapshots/2026-10-31/district_61.json')).toBe(
         'json'
@@ -956,6 +964,108 @@ describe('planContentChecks — bounded, change-driven sampling', () => {
       )
       expect(plan.sampledOut).toBe(95 - REVISION_SAMPLE)
     })
+
+    // #2475 phase 3: one index and one rankings file per revision day, so
+    // both are always read, whatever the sample caps.
+    it('always checks a revision index and a revision rankings file', () => {
+      const plan = planContentChecks(
+        [...revisions, meta(REVISION_RANKINGS_PATH), meta(REVISION_INDEX_PATH)],
+        { random: () => 0.5, caps: { generic: 0, revisions: 0 } }
+      )
+      expect(plan.checks.map(c => [c.path, c.kind])).toEqual([
+        [REVISION_RANKINGS_PATH, 'reconciliation-revision-rankings'],
+        [REVISION_INDEX_PATH, 'reconciliation-revision-index'],
+      ])
+    })
+  })
+})
+
+describe('reconciliation revision index and rankings checks (#2475 phase 3)', () => {
+  const revisionIndex = {
+    schemaVersion: 1,
+    monthEnd: '2026-10-31',
+    dataMonth: '2026-10',
+    revisions: [
+      {
+        asOf: '2026-11-02',
+        collectedAt: '2026-11-02T13:05:00.000Z',
+        closing: true,
+        successfulDistricts: ['61', 'F'],
+        rankings: true,
+      },
+    ],
+    final: null,
+  }
+  const rankings = {
+    metadata: {
+      snapshotId: '2026-10-31',
+      calculatedAt: '2026-11-02T13:05:00.000Z',
+      schemaVersion: '1.0.0',
+      calculationVersion: '1.0.0',
+      rankingVersion: '2.0',
+      sourceCsvDate: '2026-10-31',
+      csvFetchedAt: '2026-11-02T13:05:00.000Z',
+      totalDistricts: 1,
+      fromCache: false,
+    },
+    rankings: [
+      {
+        districtId: 'F',
+        districtName: 'F',
+        region: '00',
+        paidClubs: 100,
+        paidClubBase: 98,
+        clubGrowthPercent: 2.04,
+        totalPayments: 3000,
+        paymentBase: 2900,
+        paymentGrowthPercent: 3.45,
+        activeClubs: 101,
+        distinguishedClubs: 10,
+        selectDistinguished: 4,
+        presidentsDistinguished: 2,
+        distinguishedPercent: 9.9,
+        clubsRank: 1,
+        paymentsRank: 1,
+        distinguishedRank: 1,
+        aggregateScore: 3,
+        overallRank: 1,
+      },
+    ],
+  }
+
+  it('passes a well-formed revision index', () => {
+    expect(check(REVISION_INDEX_PATH, stored(revisionIndex))).toBeNull()
+  })
+
+  it('fails an index whose final is not a listed revision', () => {
+    expect(
+      check(
+        REVISION_INDEX_PATH,
+        stored({ ...revisionIndex, final: '2026-11-09' })
+      )
+    ).toMatch(/final/)
+  })
+
+  it('fails an index served under another month end', () => {
+    expect(
+      check('snapshots/2026-09-30/revisions/index.json', stored(revisionIndex))
+    ).toMatch(/2026-10-31/)
+  })
+
+  it('passes a well-formed revision rankings file', () => {
+    expect(check(REVISION_RANKINGS_PATH, stored(rankings))).toBeNull()
+  })
+
+  it('fails a revision rankings file that breaks the rankings contract', () => {
+    expect(
+      check(REVISION_RANKINGS_PATH, stored({ rankings: rankings.rankings }))
+    ).toMatch(/metadata/)
+  })
+
+  it('fails a revision rankings file with no district', () => {
+    expect(
+      check(REVISION_RANKINGS_PATH, stored({ ...rankings, rankings: [] }))
+    ).toMatch(/no district/)
   })
 })
 

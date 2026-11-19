@@ -13,6 +13,8 @@
  * prefixes; the completeness gate takes its dates from it. Pure; no I/O.
  */
 
+import { RECONCILIATION_REVISIONS_DIR } from '@taverns-red/shared-contracts'
+
 export interface RunManifestEntry {
   /** Object name, bucket stripped. */
   path: string
@@ -30,6 +32,14 @@ export const RUN_MANIFEST_RETENTION_DAYS = 90
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 const SHA256 = /^[0-9a-f]{64}$/
 const SNAPSHOT_DATE = /^snapshots\/(\d{4}-\d{2}-\d{2})\//
+/**
+ * A month end's reconciliation revisions (#2475): `snapshots/<d>/revisions/…`.
+ * A revision index the daily stamps `final` (phase 3) lives under last
+ * month's end, which that daily did not otherwise write.
+ */
+const REVISIONS_UNDER_DATE = new RegExp(
+  `^snapshots/\\d{4}-\\d{2}-\\d{2}/${RECONCILIATION_REVISIONS_DIR}/`
+)
 const RUN_ID = /^[0-9A-Za-z_-]+$/
 const RUN_OF = /^runs\/([^/]+)\//
 
@@ -89,12 +99,25 @@ export function latestByPath(
   return out
 }
 
-/** The snapshot dates the run wrote, sorted (the completeness gate's input). */
+/**
+ * The snapshot dates the run wrote, sorted: the completeness gate's input
+ * and the closing-pinned auto-allow list (#2040).
+ *
+ * `snapshots/<d>/revisions/` objects do not make `<d>` a written date
+ * (#2475). A closing daily writes its month end's own files too, so the
+ * month end still counts. The daily that stamps last month's revision
+ * index `final` writes only that index: the gate must not judge, and
+ * auto-allow must not vouch for, a month end the daily never rebuilt.
+ * The index still promotes with the run (promotion holds a dated object
+ * only when the gate held its date; manifestPromotion.ts), and the content
+ * gate still reads it (promotionContentGate.ts).
+ */
 export function manifestSnapshotDates(
   entries: readonly RunManifestEntry[]
 ): string[] {
   const dates = new Set<string>()
   for (const e of entries) {
+    if (REVISIONS_UNDER_DATE.test(e.path)) continue
     const m = SNAPSHOT_DATE.exec(e.path)
     if (m) dates.add(m[1]!)
   }

@@ -114,9 +114,20 @@
 #                its month end) is also kept as a write-once reconciliation
 #                revision. Staging's revisions/index.json is hydrated (R2,
 #                R9) and, while staging's month end is still the pre-close
-#                in-month view, its district files too, for revision 0;
+#                in-month view, its district files and rankings file too,
+#                for revision 0;
 #                then collector-cli record-revision. Any failure here is a
 #                warning: no revision is uploaded, the month end still is.
+#   9c. final    daily only (#2475 phase 3), after the date's upload: a date
+#                the transform kept (not a close) ends the previous month's
+#                reconciliation. Staging's index for the month end before
+#                the date is hydrated and collector-cli stamp-final sets its
+#                `final` to the last closing revision (forward only, never
+#                moved once set); the index is uploaded only when stamped.
+#                Prod's index is read too (read-only, GCS_BUCKET_PRODUCTION):
+#                prod final is done; staging final but prod not re-sends
+#                staging's; prod lacking a revision staging names waits.
+#                No index: nothing to do. Any failure is a warning.
 #  10. upload    snapshots/<date>/*.json, analytics/*.json and
 #                clubs-by-region/*.json (#1800), `-Z` with the CDN headers;
 #                then the 9b revision files and revisions/index.json last
@@ -707,6 +718,15 @@ record_revision() {
           rm -rf "${rev}"
           return 0
         fi
+        # Phase 3: its rankings file too. Absent is quiet (revision 0 is
+        # then kept without it); unreadable costs only the rankings copy.
+        if ! "${GCLOUD}" storage cp "${src}/all-districts-rankings.json" \
+          "${prior}/" 2>"${err}" &&
+          ! grep -q 'matched no objects' "${err}"; then
+          cat "${err}"
+          echo "::warning::Could not read staging's in-month ${actual}/all-districts-rankings.json; revision 0 is recorded without its rankings (#2475)"
+          rm -f "${prior}/all-districts-rankings.json"
+        fi
         prior_args=(--prior-snapshot "${prior}")
         ;;
       closing) ;; # already a close: revision 0 was the first close's to take
@@ -821,6 +841,85 @@ upload_revisions() {
     fi
   fi
   rm -rf "${dir}/revisions" "${result}"
+  return 0
+}
+
+# 9c (#2475 phase 3): a non-closing daily shows TI has rolled past the
+# previous month's reconciliation, so that month end's revision index gets
+# its `final`: the last closing revision. Staging's index is hydrated into
+# a work file (R2, R9); collector-cli stamp-final decides (forward only:
+# a set final is never moved; idempotent) and the index goes back up only
+# when it stamped. Warn-only, like 9b: the daily never fails on it. The
+# month end comes from the daily's own date (its logical date: the
+# transform kept it, so it is not a close).
+stamp_final() {
+  local actual="$1" month_end work="${WORK}/stamp-final"
+  local err="${WORK}/stamp-final.err" result="${WORK}/stamp-final.json"
+  if ! month_end="$(jq -nr --arg d "${actual}" \
+    '($d[0:7] + "-01") | strptime("%Y-%m-%d") | mktime - 86400 | strftime("%Y-%m-%d")')"; then
+    echo "::warning::Could not work out the month end before ${actual}; no final stamped (#2475)"
+    return 0
+  fi
+  rm -rf "${work}" "${result}"
+  mkdir -p "${work}"
+  if ! "${GCLOUD}" storage cp \
+    "gs://${BUCKET}/snapshots/${month_end}/revisions/index.json" \
+    "${work}/index.json" 2>"${err}"; then
+    if grep -q 'matched no objects' "${err}"; then
+      echo "No revision index for ${month_end} in staging: no final to stamp"
+    else
+      cat "${err}"
+      echo "::warning::Could not read staging's snapshots/${month_end}/revisions/index.json; its final is not stamped (#2475)"
+    fi
+    rm -rf "${work}"
+    return 0
+  fi
+  # Prod's index too, read-only, with the pipeline's existing prod read
+  # access (the value gate reads prod the same way). Staging alone would
+  # read already-final forever after a held promotion, and prod must hold
+  # every revision the index names before the index goes (review of PR
+  # #3070). Missing in prod is an answer (prod-behind); unreadable is not.
+  if [ -z "${GCS_BUCKET_PRODUCTION:-}" ]; then
+    echo "::warning::GCS_BUCKET_PRODUCTION is not set, so prod's index of ${month_end} cannot be read; its final is not stamped (#2475)"
+    rm -rf "${work}"
+    return 0
+  fi
+  if ! "${GCLOUD}" storage cp \
+    "gs://${GCS_BUCKET_PRODUCTION}/snapshots/${month_end}/revisions/index.json" \
+    "${work}/prod-index.json" 2>"${err}"; then
+    if ! grep -q 'matched no objects' "${err}"; then
+      cat "${err}"
+      echo "::warning::Could not read prod's snapshots/${month_end}/revisions/index.json; its final is not stamped (#2475)"
+      rm -rf "${work}"
+      return 0
+    fi
+    rm -f "${work}/prod-index.json"
+  fi
+  if ! "${COLLECTOR[@]}" stamp-final --date "${actual}" \
+    --index "${work}/index.json" --prod-index "${work}/prod-index.json" \
+    >"${result}"; then
+    cat "${result}"
+    echo "::warning::stamp-final failed for ${month_end} (daily ${actual}); its final is not stamped (#2475)"
+    rm -rf "${work}" "${result}"
+    return 0
+  fi
+  cat "${result}"
+  if jq -e '.outcome == "prod-behind"' "${result}" >/dev/null; then
+    echo "::warning::Staging's revision index of ${month_end} names revisions prod does not hold yet (a held close); its final waits for a later daily (#2475)"
+  fi
+  if jq -e '.stamped == true' "${result}" >/dev/null; then
+    if "${UPLOAD[@]}" cp \
+      --content-type="application/json" \
+      --cache-control="public, max-age=3600, must-revalidate" \
+      -Z \
+      "${work}/index.json" \
+      "gs://${BUCKET}/snapshots/${month_end}/revisions/"; then
+      echo "- **Reconciliation final** (${month_end}): $(jq -r '"\(.final) (\(.outcome))"' "${result}")" >>"${SUMMARY}"
+    else
+      echo "::warning::Could not upload the stamped revision index of ${month_end}; staging keeps its earlier index (#2475)"
+    fi
+  fi
+  rm -rf "${work}" "${result}"
   return 0
 }
 
@@ -1153,6 +1252,13 @@ process_one() {
   if [ -d "${SNAPSHOTS}/${actual}" ]; then
     upload_snapshot "${actual}"
     upload_revisions "${actual}"
+    # 9c. final stamp (#2475 phase 3) — daily only (R17), after the date's
+    # own upload: a date the transform kept is not a close, so the
+    # previous month's reconciliation is over.
+    case "${MODE}" in
+      daily) if [ "${actual}" = "${date}" ]; then stamp_final "${actual}"; fi ;;
+      rebuild | rescrape | rescrape-historical) ;;
+    esac
     # 10b. remove — rebuild only (#2232). R17: the other modes keep what
     # staging holds for districts they did not re-derive.
     case "${MODE}" in

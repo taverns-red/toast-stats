@@ -45,13 +45,23 @@
 #   record-revision --date M --as-of A [--prior-snapshot P]
 #       [--revision-zero-only]   (#2475; the last: revision 0 only, the
 #       closing revision refused)
-#       copies snapshots/M/district_*.json to snapshots/M/revisions/A/ and,
-#       with P, P's district_*.json to revisions/M/ (revision 0); appends
+#       copies snapshots/M/district_*.json (and all-districts-rankings.json,
+#       when present) to snapshots/M/revisions/A/ and, with P, P's
+#       district_*.json and rankings to revisions/M/ (revision 0); appends
 #       the entries to snapshots/M/revisions/index.json (the hydrated one,
 #       if any) and prints the real result JSON (date, asOf, recorded,
 #       revisionZero, refused, written: paths under snapshots/M/, index
 #       last). The write-once and fail-closed rules are the real CLI's
 #       (RevisionStore.test.ts); the stub keeps only the contract.
+#   stamp-final --date D --index F --prod-index P   (#2475 phase 3)
+#       P is prod's index (absent: prod has none). Prod already final:
+#       {stamped: false, outcome: already-final}. Prod missing, or lacking
+#       a revision F lists: {stamped: false, outcome: prod-behind}. No
+#       closing revision: no-closing-revision. F already final (prod not):
+#       {stamped: true, outcome: resent}, F untouched. Otherwise sets
+#       F's `final` to its last closing revision in place: {stamped: true,
+#       outcome: stamped}. The fail-closed rules are the real CLI's
+#       (RevisionStore.stampFinal.test.ts).
 # Env:
 #   CACHE_DIR            required, as for the real CLI
 #   STUB_LOG             optional: argv of each call is appended here
@@ -95,6 +105,8 @@
 #   STUB_RECORD_REVISION_REFUSE optional: ERE; a record-revision of a
 #                        matching date is refused (already recorded):
 #                        nothing written, exit 0
+#   STUB_STAMP_FINAL_FAIL optional: ERE; a stamp-final of a matching date
+#                        writes nothing and exits 2
 #   STUB_FAC_FETCH_CRASH optional: ERE; a fetch-find-a-club of a matching
 #                        date dies before it creates its output folder (an
 #                        npx or config failure), prints nothing on stdout
@@ -122,6 +134,8 @@ COMPARE_DIR=""
 AS_OF=""
 PRIOR_DIR=""
 ZERO_ONLY=""
+INDEX_FILE=""
+PROD_INDEX_FILE=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --date)
@@ -159,6 +173,14 @@ while [ "$#" -gt 0 ]; do
     --revision-zero-only)
       ZERO_ONLY=1
       shift
+      ;;
+    --index)
+      INDEX_FILE="$2"
+      shift 2
+      ;;
+    --prod-index)
+      PROD_INDEX_FILE="$2"
+      shift 2
       ;;
     *) shift ;;
   esac
@@ -373,7 +395,7 @@ case "${CMD}" in
     zero=no-prior
     if [ -n "${PRIOR_DIR}" ]; then
       mkdir -p "${rev}/${DATE}"
-      for f in "${PRIOR_DIR}"/district_*.json; do
+      for f in "${PRIOR_DIR}"/district_*.json "${PRIOR_DIR}/all-districts-rankings.json"; do
         [ -f "${f}" ] || continue
         cp "${f}" "${rev}/${DATE}/"
         written+=("revisions/${DATE}/$(basename "${f}")")
@@ -386,7 +408,7 @@ case "${CMD}" in
       refused="manual district subset: revision ${AS_OF} not recorded (revision 0 only)"
     else
       mkdir -p "${rev}/${AS_OF}"
-      for f in "${dir}"/district_*.json; do
+      for f in "${dir}"/district_*.json "${dir}/all-districts-rankings.json"; do
         [ -f "${f}" ] || continue
         cp "${f}" "${rev}/${AS_OF}/"
         written+=("revisions/${AS_OF}/$(basename "${f}")")
@@ -413,6 +435,46 @@ case "${CMD}" in
       --arg r "${refused}" \
       '{date: $d, asOf: $a, recorded: ($r == ""), revisionZero: $z, revisionZeroError: (if $ze == "" then null else $ze end), refused: (if $r == "" then null else $r end), written: $ARGS.positional}' \
       --args "${written[@]}"
+    ;;
+  stamp-final)
+    : "${INDEX_FILE:?--index is required}"
+    : "${PROD_INDEX_FILE:?--prod-index is required}"
+    if matches "${STUB_STAMP_FINAL_FAIL:-}"; then
+      echo "[ERROR] stamp-final: stub failure" >&2
+      printf '{"date":"%s","error":"stub failure"}\n' "${DATE}"
+      exit 2
+    fi
+    month_end="$(jq -r '.monthEnd' "${INDEX_FILE}")"
+    staged_final="$(jq -r '.final // ""' "${INDEX_FILE}")"
+    last="$(jq -r '[.revisions[] | select(.closing) | .asOf] | last // ""' "${INDEX_FILE}")"
+    out() {
+      jq -nc --arg d "${DATE}" --arg m "${month_end}" --arg o "$1" \
+        --argjson s "$2" --arg f "$3" \
+        '{date: $d, monthEnd: $m, stamped: $s, final: (if $f == "" then null else $f end), outcome: $o, written: (if $s then ["revisions/index.json"] else [] end)}'
+    }
+    prod_final=""
+    prod_behind=1
+    if [ -f "${PROD_INDEX_FILE}" ]; then
+      prod_final="$(jq -r '.final // ""' "${PROD_INDEX_FILE}")"
+      if jq -e --slurpfile p "${PROD_INDEX_FILE}" \
+        '[.revisions[].asOf] - [$p[0].revisions[].asOf] | length == 0' \
+        "${INDEX_FILE}" >/dev/null; then
+        prod_behind=0
+      fi
+    fi
+    if [ -n "${prod_final}" ]; then
+      out already-final false "${prod_final}"
+    elif [ -z "${staged_final}" ] && [ -z "${last}" ]; then
+      out no-closing-revision false ""
+    elif [ "${prod_behind}" = 1 ]; then
+      out prod-behind false ""
+    elif [ -n "${staged_final}" ]; then
+      out resent true "${staged_final}"
+    else
+      jq -c --arg f "${last}" '.final = $f' "${INDEX_FILE}" >"${INDEX_FILE}.tmp"
+      mv "${INDEX_FILE}.tmp" "${INDEX_FILE}"
+      out stamped true "${last}"
+    fi
     ;;
   *)
     echo "collector-cli stub: unsupported command ${CMD}" >&2

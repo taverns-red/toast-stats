@@ -56,13 +56,15 @@ function touchedDates(): string[] {
 async function run(
   allowValueChanges: boolean
 ): Promise<CompletenessGateResult> {
+  // The dates first: logged before any bucket is touched, so the dates the
+  // gate judges are on record even when the run fails closed (#2475).
+  const dates = touchedDates()
+  log(`[completeness-gate] touched dates: ${dates.join(' ') || '(none)'}`)
   const stagingName = process.env.GCS_BUCKET
   const prodName = process.env.GCS_BUCKET_PRODUCTION
   if (!stagingName || !prodName) {
     throw new Error('GCS_BUCKET and GCS_BUCKET_PRODUCTION must be set')
   }
-  const dates = touchedDates()
-  log(`[completeness-gate] touched dates: ${dates.join(' ') || '(none)'}`)
   const storage = new Storage()
   // Non-streaming reads: SDK file.download() logs 2 MaxListeners warnings
   // per object (#2029, see gcsMedia.ts).

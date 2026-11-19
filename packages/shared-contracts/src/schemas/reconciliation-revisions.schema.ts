@@ -5,7 +5,8 @@
  *
  * `snapshots/<monthEnd>/` stays the newest revision (and, after rollover,
  * the final close) because awards, DCP and YoY read it. Each revision is
- * ALSO kept, write-once, as `revisions/<asOf>/district_<id>.json`, where
+ * ALSO kept, write-once, as `revisions/<asOf>/district_<id>.json` (and,
+ * since phase 3, `revisions/<asOf>/all-districts-rankings.json`), where
  * `asOf` is the collection date (unique per raw-csv dir), so What Changed can
  * diff one reconciliation day against the next.
  *
@@ -15,8 +16,9 @@
  *   captured before the first close overwrote it: its `asOf` IS the month
  *   end. It is optional (absent when recording began mid-close).
  * - **Closing revisions** (`closing: true`) have `asOf` after the month end.
- * - **`final`** is null until the rollover stamps it (phase 2); when set it
- *   names a listed revision.
+ * - **`final`** is null until the first non-closing daily after the close
+ *   stamps it with the last closing revision (phase 3, `stamp-final`);
+ *   when set it names a listed revision and never changes.
  * - **`successfulDistricts`** per revision, so a reader can exclude a
  *   revision that lacks a district (#1671 gap) instead of reading a missing
  *   file as every club leaving.
@@ -53,6 +55,12 @@ export const ReconciliationRevisionSchema = z.object({
   closing: z.boolean(),
   /** Districts whose `district_<id>.json` the revision holds. */
   successfulDistricts: z.array(z.string().min(1)),
+  /**
+   * True when the revision also holds `all-districts-rankings.json`
+   * (phase 3). Optional: absent means no rankings copy, as in every index
+   * written before it (ADR 0019).
+   */
+  rankings: z.boolean().optional(),
 })
 
 export const ReconciliationRevisionIndexSchema = z

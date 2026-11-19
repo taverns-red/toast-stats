@@ -32,6 +32,8 @@ const SHIM = path.join(
 )
 const STUBS = path.join(REPO, 'scripts/lib/__tests__/fixtures/process-dates')
 const BUCKET = 'test-bucket'
+/** Prod, read-only: only the 9c final stamp reads it (#2475). */
+const PROD_BUCKET = 'test-prod-bucket'
 const CACHE_CONTROL = 'public, max-age=3600, must-revalidate'
 
 let tmp: string
@@ -78,6 +80,7 @@ function run(
       RUN_MANIFEST_FILE: manifest,
       RUN_REMOVALS_FILE: removals,
       SHIM_UPLOAD_LOG: uploadLog,
+      GCS_BUCKET_PRODUCTION: PROD_BUCKET,
       ...env,
     },
   })
@@ -90,11 +93,16 @@ function run(
   return { status: r.status, stdout: r.stdout, stderr: r.stderr, counts }
 }
 
-function putObject(objectPath: string, content: string, gzip = false): void {
-  const obj = path.join(root, BUCKET, objectPath)
+function putObject(
+  objectPath: string,
+  content: string,
+  gzip = false,
+  bucket = BUCKET
+): void {
+  const obj = path.join(root, bucket, objectPath)
   fs.mkdirSync(path.dirname(obj), { recursive: true })
   fs.writeFileSync(obj, gzip ? zlib.gzipSync(content) : content)
-  const meta = path.join(root, '.meta', BUCKET, objectPath)
+  const meta = path.join(root, '.meta', bucket, objectPath)
   fs.mkdirSync(path.dirname(meta), { recursive: true })
   fs.writeFileSync(meta, gzip ? 'content-encoding=gzip\n' : '')
 }
@@ -2346,6 +2354,30 @@ describe('process-dates.sh daily: reconciliation revisions (#2475)', () => {
     ])
   })
 
+  // #2475 phase 3: revision 0 keeps the in-month rankings file too.
+  it('hydrates staging’s in-month rankings for revision 0', () => {
+    putInMonthMonthEnd()
+    const rankings = '{"metadata":{"view":"in-month"},"rankings":[]}\n'
+    putObject(
+      `snapshots/${MONTH_END}/all-districts-rankings.json`,
+      rankings,
+      true
+    )
+    const r = closingDaily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(gunzipped(`${REV}/${MONTH_END}/all-districts-rankings.json`)).toBe(
+      rankings
+    )
+  })
+
+  it('takes revision 0 without rankings, quietly, when staging has none', () => {
+    putInMonthMonthEnd()
+    const r = closingDaily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).not.toMatch(/::warning::.*rankings/)
+    expect(objectsUnder(`${REV}/${MONTH_END}`)).toEqual(['district_61.json'])
+  })
+
   it('passes no prior copy once staging’s month end is already a close', () => {
     putObject(
       `snapshots/${MONTH_END}/metadata.json`,
@@ -2603,6 +2635,196 @@ describe('process-dates.sh daily: reconciliation revisions (#2475)', () => {
     expect(r.status, r.stderr).toBe(0)
     expect(recordCalls()).toEqual([])
     expect(objectsUnder('snapshots/2026-07-31/revisions')).toEqual([])
+  })
+})
+
+// #2475 phase 3: the first non-closing daily after a close stamps the
+// previous month end's revision index `final`.
+describe('process-dates.sh daily: the reconciliation final stamp (#2475)', () => {
+  const MONTH_END = '2026-10-31'
+  const DAILY = '2026-11-05'
+  const INDEX = `snapshots/${MONTH_END}/revisions/index.json`
+  const env = {
+    DISTRICTS: '61',
+    BUILD_EDUCATION_ROLLUP: path.join(STUBS, 'build-education-rollup'),
+    DISTRICTS_SOURCE: 'discovered',
+  }
+  const daily = (extra: Record<string, string> = {}, date = DAILY) =>
+    run('daily', [date], { ...env, ...extra })
+  const revision = (asOf: string, closing = true) => ({
+    asOf,
+    collectedAt: `${asOf}T13:00:00.000Z`,
+    closing,
+    successfulDistricts: ['61'],
+  })
+  const indexBody = (
+    final: string | null,
+    revisions = [
+      revision(MONTH_END, false),
+      revision('2026-11-01'),
+      revision('2026-11-03'),
+    ]
+  ) =>
+    JSON.stringify({
+      schemaVersion: 1,
+      monthEnd: MONTH_END,
+      dataMonth: '2026-10',
+      revisions,
+      final,
+    })
+  /** Prod's index (read-only): the closing dailies promoted, the stamp not. */
+  const putProdIndex = (
+    final: string | null = null,
+    revisions?: ReturnType<typeof revision>[]
+  ) => putObject(INDEX, indexBody(final, revisions), true, PROD_BUCKET)
+  /** Staging's index; prod mirrors it, not final, unless already put. */
+  const putIndex = (final: string | null = null) => {
+    putObject(INDEX, indexBody(final), true)
+    if (!fs.existsSync(path.join(root, PROD_BUCKET, INDEX))) putProdIndex()
+  }
+  const stagedIndex = () =>
+    JSON.parse(
+      zlib
+        .gunzipSync(fs.readFileSync(path.join(root, BUCKET, INDEX)))
+        .toString()
+    ) as { final: string | null }
+  const stampCalls = () =>
+    lines(stubLog).filter(l => l.startsWith('collector-cli stamp-final'))
+  const manifestPaths = () =>
+    lines(manifest).map(l => (JSON.parse(l) as { path: string }).path)
+
+  it('stamps final with the last closing revision and uploads the index', () => {
+    putIndex()
+    const r = daily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(stampCalls()).toEqual([
+      expect.stringMatching(
+        new RegExp(
+          `^collector-cli stamp-final --date ${DAILY} --index \\S+ --prod-index \\S+$`
+        )
+      ),
+    ])
+    expect(stagedIndex().final).toBe('2026-11-03')
+    expect(readMeta(INDEX)).toContain('content-encoding=gzip')
+    expect(readMeta(INDEX)).toContain(`cache-control=${CACHE_CONTROL}`)
+    expect(manifestPaths()).toContain(INDEX)
+    expect(summaryText()).toMatch(
+      /Reconciliation final.*2026-10-31.*2026-11-03/
+    )
+  })
+
+  it('uploads nothing when final is already set in prod (forward only)', () => {
+    putProdIndex('2026-11-01')
+    putIndex('2026-11-01')
+    const r = daily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(stagedIndex().final).toBe('2026-11-01')
+    expect(manifestPaths()).not.toContain(INDEX)
+  })
+
+  it('does nothing, quietly, when the month end has no revision index', () => {
+    const r = daily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(stampCalls()).toEqual([])
+    expect(r.stderr).not.toMatch(/::warning::.*final/)
+  })
+
+  it('an unreadable index only warns, and the daily still publishes', () => {
+    putIndex()
+    const r = daily({ SHIM_FAIL_MATCH: `${MONTH_END}/revisions/index\\.json` })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(r.stderr).toMatch(
+      /::warning::.*revisions\/index\.json.*final.*#2475/
+    )
+    expect(stampCalls()).toEqual([])
+  })
+
+  // Review of PR #3070: staging alone would read already-final forever
+  // after the stamping daily's promotion was held.
+  it('sends staging’s final again while prod’s index is not final', () => {
+    putIndex('2026-11-03')
+    const r = daily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(stagedIndex().final).toBe('2026-11-03')
+    expect(manifestPaths()).toContain(INDEX)
+  })
+
+  it('waits, warning, while prod lacks a revision the index names', () => {
+    putProdIndex(null, [revision(MONTH_END, false), revision('2026-11-01')])
+    putIndex()
+    const r = daily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toMatch(/::warning::.*2026-10-31.*prod.*#2475/)
+    expect(stagedIndex().final).toBeNull()
+    expect(manifestPaths()).not.toContain(INDEX)
+  })
+
+  it('an unreadable prod index only warns and stamps nothing', () => {
+    putIndex()
+    const r = daily({
+      SHIM_FAIL_MATCH: `${PROD_BUCKET}/snapshots/${MONTH_END}/revisions/index\\.json`,
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(r.stderr).toMatch(/::warning::.*prod.*revisions\/index\.json.*#2475/)
+    expect(stampCalls()).toEqual([])
+    expect(manifestPaths()).not.toContain(INDEX)
+  })
+
+  it('stamps nothing, warning, when the prod bucket is not named', () => {
+    putIndex()
+    const r = daily({ GCS_BUCKET_PRODUCTION: '' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toMatch(/::warning::.*GCS_BUCKET_PRODUCTION.*#2475/)
+    expect(stampCalls()).toEqual([])
+    expect(manifestPaths()).not.toContain(INDEX)
+  })
+
+  it('a failed stamp-final only warns and uploads nothing', () => {
+    putIndex()
+    const r = daily({ STUB_STAMP_FINAL_FAIL: '.' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(r.stderr).toMatch(/::warning::stamp-final failed.*#2475/)
+    expect(stagedIndex().final).toBeNull()
+    expect(manifestPaths()).not.toContain(INDEX)
+  })
+
+  it('takes the previous month end across a year end', () => {
+    const december = JSON.stringify({
+      schemaVersion: 1,
+      monthEnd: '2026-12-31',
+      dataMonth: '2026-12',
+      revisions: [revision('2027-01-02')],
+      final: null,
+    })
+    const decemberIndex = 'snapshots/2026-12-31/revisions/index.json'
+    putObject(decemberIndex, december, true)
+    putObject(decemberIndex, december, true, PROD_BUCKET)
+    const r = daily({}, '2027-01-04')
+    expect(r.status, r.stderr).toBe(0)
+    expect(manifestPaths()).toContain(
+      'snapshots/2026-12-31/revisions/index.json'
+    )
+  })
+
+  it('a closing daily stamps nothing (the close is not over)', () => {
+    putIndex()
+    const r = daily({ STUB_REMAP: `2026-11-04=${MONTH_END}` }, '2026-11-04')
+    expect(r.status, r.stderr).toBe(0)
+    expect(stampCalls()).toEqual([])
+    expect(stagedIndex().final).toBeNull()
+  })
+
+  it('a rebuild stamps nothing (daily only)', () => {
+    putIndex()
+    putRaw(DAILY)
+    const r = run('rebuild', [DAILY])
+    expect(r.status, r.stderr).toBe(0)
+    expect(stampCalls()).toEqual([])
+    expect(stagedIndex().final).toBeNull()
   })
 })
 
