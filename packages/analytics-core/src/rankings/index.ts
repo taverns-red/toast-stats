@@ -35,6 +35,13 @@ export {
 } from './CompetitiveAwardsCalculator.js'
 
 export {
+  calculateMembershipRetention,
+  type MembershipRetentionAward,
+  type MembershipRetentionStanding,
+  type MembershipRetentionStatus,
+} from './MembershipRetentionCalculator.js'
+
+export {
   DistinguishedDistrictCalculator,
   requiredPrerequisitesForProgramYear,
   districtTiersForProgramYear,
