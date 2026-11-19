@@ -60,10 +60,11 @@ describe('MembershipRetentionCard — always', () => {
       })
     ).toBeInTheDocument()
     expect(within(c).getByText('Toast Stats estimate')).toBeInTheDocument()
+    // Names late renewals, and "April dues" so April isn't read as a
+    // calendar month of renewals.
     expect(c.textContent).toMatch(
-      /renewed in April, out of those who renewed in October or joined before April/
+      'Members who paid April dues, out of those who paid October dues (on time or late) or joined before April. The top 3 districts win.'
     )
-    expect(c.textContent).toMatch(/top 3 districts win/i)
   })
 
   it('links a footnote to the Methodology section and says it is not TI’s result', () => {
@@ -175,6 +176,10 @@ describe('MembershipRetentionCard — no standings', () => {
     const c = card()
     expect(c.textContent).toMatch(
       /These standings start in April, when April renewals open\./
+    )
+    // July resets the year; the previous year's result is still reachable.
+    expect(c.textContent).toMatch(
+      /Last year.s final standings are on the June 30 date\./
     )
     expect(within(c).queryByRole('list')).toBeNull()
   })

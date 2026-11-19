@@ -40,6 +40,12 @@ describe('MethodologyPage — membership retention estimate (#1614)', () => {
     expect(txt).toMatch(/final on June 30/i)
   })
 
+  it('says what July shows and where last year’s result is', () => {
+    const txt = section()
+    expect(txt).toMatch(/From July 1/)
+    expect(txt).toMatch(/last year.s final standings are on the June 30 date/i)
+  })
+
   it('leaves out U and ranks F', () => {
     const txt = section()
     expect(txt).toMatch(/District U[^.]*left out/)
