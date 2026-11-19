@@ -170,7 +170,8 @@ a quiet week.
 
 ```bash
 gcloud storage buckets update gs://toast-stats-data-staging --soft-delete-duration=7d
-gcloud storage buckets update gs://toast-stats-data-ca --soft-delete-duration=7d
+# DO NOT RUN: prod soft delete is 30 days by COO decision (#3076).
+# gcloud storage buckets update gs://toast-stats-data-ca --soft-delete-duration=7d
 ```
 
 Objects that are already soft-deleted keep the retention they had when they
