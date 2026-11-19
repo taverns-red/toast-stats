@@ -13,6 +13,9 @@
  * - a district key absent: unknown for that district;
  * - `[]`: a measured zero.
  *
+ * The writer emits eligible rows only: the schema has no `eligible` field, so
+ * a club that `classifyReinstatement` marks not eligible is left out.
+ *
  * Rows hold public club-level facts only. They are strict, so a person field
  * can never ride along.
  *
@@ -59,11 +62,25 @@ export const ReinstatableClubSchema = z
         message: 'a suspended club needs its suspendDate',
       })
     }
+    if (row.status === 'suspended' && row.lastSeen !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['lastSeen'],
+        message: 'a suspended club has no lastSeen',
+      })
+    }
     if (row.status === 'closed' && row.lastSeen === undefined) {
       ctx.addIssue({
         code: 'custom',
         path: ['lastSeen'],
         message: 'a closed club needs its lastSeen',
+      })
+    }
+    if (row.status === 'closed' && row.suspendDate !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['suspendDate'],
+        message: 'a closed club has no suspendDate',
       })
     }
   })
@@ -73,7 +90,12 @@ export const ReinstatableClubsSchema = z.strictObject({
   /** The snapshot (logical) date the list describes. */
   snapshotDate: z.string().regex(ISO_DATE),
   /** The program year whose July 1 base a reinstatement on that date affects, `YYYY-YYYY`. */
-  baseProgramYear: z.string().regex(/^\d{4}-\d{4}$/),
+  baseProgramYear: z
+    .string()
+    .regex(/^\d{4}-\d{4}$/)
+    .refine(v => Number(v.slice(5)) === Number(v.slice(0, 4)) + 1, {
+      message: 'the end year must be the start year plus one',
+    }),
   /** District id → its reinstatable clubs, in source order. */
   districts: z.record(z.string(), z.array(ReinstatableClubSchema)),
 })

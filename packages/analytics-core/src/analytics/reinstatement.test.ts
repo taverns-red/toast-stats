@@ -159,9 +159,10 @@ describe('suspend dates near the cycle ends (TI is off by a day or two)', () => 
     expect(r.reason).toBe('suspend_date_unexpected')
   })
 
-  it('a suspension from an earlier year does not match this base year', () => {
+  it('a suspension from two years back does not match this base year', () => {
+    // 2025-09-30 against asOf 2026-11-17 is the past-cycle case (#3011).
     expect(
-      classifyReinstatement(suspended('2025-09-30'), '2026-11-17').reason
+      classifyReinstatement(suspended('2024-09-30'), '2026-11-17').reason
     ).toBe('suspend_date_unexpected')
   })
 

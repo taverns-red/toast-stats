@@ -18,13 +18,21 @@
  *
  * - A suspended club: always.
  * - A closed club: when its closure falls in the four renewal periods counting
- *   back from, and including, the period that contains `asOf`. The oldest of
+ *   back from, and including, the period that contains `asOf` (so "past four
+ *   periods" is the current period plus the three before it, the narrower
+ *   reading Ron chose in #3007). The oldest of
  *   the four is flagged `oldestPeriod` ("confirm with World Headquarters"):
  *   the FAQ's "four renewal periods" and "inactive for five" answers don't
  *   clearly agree (Ron, #3007).
  *
  * We have no closure date, only `lastSeen`, the last snapshot in which the
  * club was on the roster. The closure is taken as the day after `lastSeen`.
+ * Checked against real District 61 snapshots (#3011): a suspended club stays on
+ * the roster, marked Suspended, until it closes. Five clubs suspended in the
+ * Sep 30 2024 cycle were Suspended on 2024-10-31 and 2025-03-31 and gone on
+ * 2025-04-30, so their `lastSeen` 2025-03-31 is the day before closure, not
+ * the suspend date. `lastSeen` can run early by up to one snapshot gap, and
+ * is capped at a program year's last snapshot (Jun 30).
  * So `lastSeen` 2025-03-31 closed on 2025-04-01, in the Apr-Sep 2025 period,
  * and `lastSeen` 2025-03-30 closed on 2025-03-31, in the period before.
  * With `asOf` 2026-11-17 the four periods are Oct 2026-Mar 2027, Apr-Sep 2026,
@@ -47,6 +55,7 @@
  * | Sep 30 of `S`           | Oct 1 of `S` to Mar 31     | yes   |
  * | Mar 31 before Jul 1 `S` | before Oct 1 of `S`        | yes   |
  * | Mar 31 before Jul 1 `S` | on or after Oct 1 of `S`   | no    |
+ * | Sep 30 of `S - 1`       | Apr 1 of `S` on            | no, the club has closed |
  * | any other date          |                            | no, with a distinct reason, never a guess |
  *
  * A closed club never adds.
@@ -75,6 +84,12 @@ export type ReinstatementReason =
   | 'suspended_mar31_before_oct1'
   /** Suspended at the Mar 31 cycle and `asOf` is on or after Oct 1. Does not add. */
   | 'suspended_mar31_after_oct1'
+  /**
+   * Suspended at the Sep 30 cycle of the year before the base year, and `asOf`
+   * is past the October cycle (on or after Apr 1). By the FAQ the club has
+   * closed by then, so reinstating does not add to the base.
+   */
+  | 'suspended_sept30_past_october_cycle'
   /** Suspend date is not at a cycle end that matches the base year. Does not add. */
   | 'suspend_date_unexpected'
   /** Suspend date is later than `asOf`. Does not add. */
@@ -189,6 +204,9 @@ function classifySuspended(
     return asOf < oct1
       ? { addsToBase: true, reason: 'suspended_mar31_before_oct1' }
       : { addsToBase: false, reason: 'suspended_mar31_after_oct1' }
+  }
+  if (near(day(s - 1, 9, 30))) {
+    return { addsToBase: false, reason: 'suspended_sept30_past_october_cycle' }
   }
   return unexpected
 }
