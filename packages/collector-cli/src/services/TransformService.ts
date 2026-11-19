@@ -15,6 +15,7 @@
 
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import { gunzipSync } from 'node:zlib'
 import { parse } from 'csv-parse/sync'
 import { parseClosingPeriodFromCsv } from '../utils/csvFooterParser.js'
 import { validateDistrictId } from '../utils/validateDistrictId.js'
@@ -1224,6 +1225,8 @@ export class TransformService {
       }
     })
 
+    await this.joinMarchCloseBaseline(rankings, logicalDate)
+
     const calculatedAt = new Date().toISOString()
 
     // Same presence rule as the counts above (#1757): no Susp value anywhere
@@ -2047,6 +2050,81 @@ export class TransformService {
   }
 
   /**
+   * Join the program year's March 31 close onto the rankings rows (#1614):
+   * `marchCloseNewPayments` and `marchCloseCharterPayments`, used by the
+   * President's Membership Retention estimate from April 1 to June 30.
+   *
+   * The year comes from the snapshot's LOGICAL date: a June close collected
+   * in July still reads that June's March close. The file is trusted by its
+   * path, not its metadata: a March close is collected in April, so its
+   * snapshotId and sourceCsvDate carry the April collection date.
+   *
+   * Best effort. A missing or unreadable baseline leaves the fields absent
+   * (the award reads baseline-missing, never zero) and is only logged.
+   */
+  private async joinMarchCloseBaseline(
+    rankings: DistrictRanking[],
+    logicalDate: string
+  ): Promise<void> {
+    const match = /^(\d{4})-(0[4-6])-\d{2}$/.exec(logicalDate)
+    if (!match) return
+    const baselineDate = `${match[1]}-03-31`
+    const baselinePath = path.join(
+      this.cacheDir,
+      'baselines',
+      'march-close',
+      `${baselineDate}.json`
+    )
+
+    let baseline: AllDistrictsRankingsData
+    try {
+      let bytes = await fs.readFile(baselinePath)
+      // A copy that kept its gzip Content-Encoding (#1614).
+      if (bytes[0] === 0x1f && bytes[1] === 0x8b) bytes = gunzipSync(bytes)
+      const validation = validateAllDistrictsRankings(
+        JSON.parse(bytes.toString('utf-8'))
+      )
+      if (!validation.success || !validation.data) {
+        this.logger.warn('March-close baseline failed schema validation', {
+          logicalDate,
+          baselinePath,
+          error: validation.error,
+        })
+        return
+      }
+      baseline = validation.data
+    } catch (error) {
+      this.logger.warn('March-close baseline unavailable', {
+        logicalDate,
+        baselinePath,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return
+    }
+
+    const byDistrict = new Map(baseline.rankings.map(r => [r.districtId, r]))
+    let joined = 0
+    for (const ranking of rankings) {
+      const march = byDistrict.get(ranking.districtId)
+      if (
+        typeof march?.newPayments !== 'number' ||
+        typeof march.charterPayments !== 'number'
+      ) {
+        continue
+      }
+      ranking.marchCloseNewPayments = march.newPayments
+      ranking.marchCloseCharterPayments = march.charterPayments
+      joined++
+    }
+    this.logger.info('March-close baseline joined', {
+      logicalDate,
+      baselineDate,
+      joined,
+      districts: rankings.length,
+    })
+  }
+
+  /**
    * Write all-districts rankings to a specific snapshot date directory
    *
    * @param snapshotDate - The date to use for the snapshot directory
@@ -2137,7 +2215,11 @@ export class TransformService {
   ): Promise<string> {
     // ── Competitive awards (Extension, 20-Plus, Retention) ──
     const competitiveCalculator = new CompetitiveAwardsCalculator()
-    const standings = competitiveCalculator.calculate(rankings.rankings)
+    // snapshotDate is the logical date; it scopes the #1614 retention window.
+    const standings = competitiveCalculator.calculate(
+      rankings.rankings,
+      snapshotDate
+    )
 
     // ── Distinguished District tier status (#332) ──
     // Per-program-year rules (#1116 item 5): historical years gate on the
