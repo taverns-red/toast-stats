@@ -148,6 +148,12 @@ from PR #2109 (`git show 1098a5853:infra/gcs-lifecycle/toast-stats-data-staging.
 
 ### 2a. Shorten soft delete to 7 days (separate decision)
 
+Status 2026-11-19: staging is at 7 days. Prod `toast-stats-data-ca` is not:
+its soft delete is 30 days from 2026-11-19 (#3076), because soft delete is
+the prod restore window ([data-restore.md](data-restore.md)). Do not run the
+`toast-stats-data-ca` command below. The rest of this section is the
+2026-10-28 proposal as written.
+
 This is the larger lever in the data buckets. The soft-deleted bytes are:
 
 - staging: 34.23 GiB (36.8 GB), USD 0.96/month;
@@ -164,7 +170,8 @@ a quiet week.
 
 ```bash
 gcloud storage buckets update gs://toast-stats-data-staging --soft-delete-duration=7d
-gcloud storage buckets update gs://toast-stats-data-ca --soft-delete-duration=7d
+# DO NOT RUN: prod soft delete is 30 days by COO decision (#3076).
+# gcloud storage buckets update gs://toast-stats-data-ca --soft-delete-duration=7d
 ```
 
 Objects that are already soft-deleted keep the retention they had when they

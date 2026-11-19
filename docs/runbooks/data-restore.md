@@ -20,11 +20,21 @@ approval from the staging drill). Everything else is a read.
 Neither bucket has Object Versioning. Both have soft delete, which keeps
 **overwritten** generations as well as deleted ones:
 
+| Bucket                     | Soft delete | `retentionDurationSeconds` | Since      |
+| -------------------------- | ----------- | -------------------------- | ---------- |
+| `toast-stats-data-ca`      | 30 days     | 2592000                    | 2026-11-19 |
+| `toast-stats-data-staging` | 7 days      | 604800                     | 2026-10-04 |
+
+Prod went from 14 to 30 days on 2026-11-19 (#3076, COO-approved in place of
+scheduled backups). The change is not retroactive: a copy soft-deleted before
+2026-11-19 keeps the 14 days it had, so the last of those expire by
+2026-12-03. Check the current policy with:
+
 ```text
 $ gcloud storage buckets describe gs://toast-stats-data-ca \
     --format="json(versioning_enabled,soft_delete_policy)"
-"soft_delete_policy": {"effectiveTime": "2026-11-05T02:33:34.545000+00:00",
-                       "retentionDurationSeconds": "1209600"},   # 14 days
+"soft_delete_policy": {"effectiveTime": "…",
+                       "retentionDurationSeconds": "2592000"},   # 30 days
 "versioning_enabled": false
 
 $ gcloud storage buckets describe gs://toast-stats-data-staging ...
@@ -33,7 +43,8 @@ $ gcloud storage buckets describe gs://toast-stats-data-staging ...
 (no versioning field: off)
 ```
 
-(read 2026-11-08)
+(Staging read 2026-11-08. Before 2026-11-19, prod read `1209600`, 14 days,
+effective 2026-11-05T02:33:34Z.)
 
 - Google: soft delete "preserves objects and buckets that get deleted or
   overwritten by retaining them in a soft-deleted state", and "When you
@@ -61,13 +72,17 @@ $ gcloud storage buckets describe gs://toast-stats-data-staging ...
   …
   ```
 
-  (Those older entries show a 30-day hard delete: they were soft-deleted
-  under an earlier policy. Objects soft-deleted from now on keep 14 days in
-  prod, 7 in staging.)
+  (Those entries, read 2026-11-08, show a 30-day hard delete: they were
+  soft-deleted under an earlier 30-day policy. Copies soft-deleted between
+  2026-11-05 and 2026-11-18 keep 14 days. From 2026-11-19, prod copies keep
+  30 days and staging copies 7.)
 
-So the window to restore a bad prod publish is **14 days** from the
-overwrite. A restore is itself reversible for 14 days: the bad generation it
-displaces is soft-deleted in turn.
+So the window to restore a bad prod publish is **30 days** from the
+overwrite, for anything overwritten on or after 2026-11-19. A restore is
+itself reversible for 30 days: the bad generation it displaces is
+soft-deleted in turn. Until 2026-12-19 the restore planner still refuses a
+window more than 13 days old (step 2), so a restore past day 13 is done by
+hand until then.
 
 Permissions: per-object restore needs `storage.objects.restore` (and
 `storage.objects.delete` when it overwrites); bulk restore also needs
@@ -251,10 +266,17 @@ for one object would make an overwritten object look new, and the planner
 would delete it. Re-run the reads and plan again.
 
 **The plan also refuses every restore and delete once more than 13 days have
-passed since `--since`.** Soft-deleted copies live 14 days; after that the copy
-from before the run may be hard-deleted while later copies remain, which would
-make an overwritten object look new. Reason: soft-delete retention. Past the
-window, restore by hand from the backup or CDN history.
+passed since `--since`.** The guard was set for 14-day soft delete: after 14
+days the copy from before the run may be hard-deleted while later copies
+remain, which would make an overwritten object look new. Reason: soft-delete
+retention. Past the window, restore by hand from the backup or CDN history.
+
+Prod soft delete is 30 days from 2026-11-19, but the 13-day guard in
+`scripts/lib/dataRestorePlan.ts` stays unchanged until 2026-12-19. Copies
+soft-deleted before 2026-11-19 keep 14 days (the last expire by 2026-12-03),
+and a window can reach back up to 30 days, so the guard is safe to raise
+only once every copy a 30-day window could need was deleted under the 30-day
+policy. A follow-up issue will raise it after 2026-12-19.
 
 The listing fields are those of the Cloud Storage JSON API object resource
 (`name`, `bucket`, `generation`, `timeCreated`, `softDeleteTime`,
@@ -272,7 +294,7 @@ by generation, or use the bulk restore with the promote's time window.
 
 ### 3. Back up the live state (WRITE, backup bucket)
 
-Soft delete already keeps what a restore displaces for 14 days. The backup
+Soft delete already keeps what a restore displaces for 30 days in prod. The backup
 is a second, independent copy that survives a mistaken purge and needs no
 soft-delete knowledge to read back. Copy the objects about to change into
 the dedicated backup bucket `gs://toast-stats-backups-ca` (#2541): same
@@ -706,8 +728,11 @@ not run against real objects.
 - ~~Should the restore plan be a script with tests?~~ Done (#2539):
   `scripts/plan-data-restore.ts`. Not yet run against a real bucket: its
   first use is the staging drill.
-- 14 days of prod soft delete is the whole restore window. Enough, given the
-  freshness and schema canaries run daily?
+- ~~14 days of prod soft delete is the whole restore window. Enough, given
+  the freshness and schema canaries run daily?~~ Resolved 2026-11-19 (#3076):
+  the COO approved 30 days in place of scheduled backups, which covers a
+  whole month-end close cycle. The planner's 13-day guard is raised in a
+  follow-up after 2026-12-19 (see step 2).
 
 ## Follow-ups (not in this PR)
 
