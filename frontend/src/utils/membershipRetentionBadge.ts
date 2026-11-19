@@ -58,7 +58,9 @@ export function membershipRetentionBadgeFor(
 
   return {
     rank: own.rank,
-    of: rows.length,
+    // "#7 of 5" would be wrong, so a rank past the rows we can render
+    // drops the count.
+    of: own.rank <= rows.length ? rows.length : null,
     value: own.value,
     isWinner: own.isWinner === true,
     final: award.status === 'final',

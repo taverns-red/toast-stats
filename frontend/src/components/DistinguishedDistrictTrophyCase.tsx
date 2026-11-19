@@ -566,44 +566,73 @@ const TrophyCaseSkeleton: React.FC<{
 /* Our estimate of the President's Membership Retention Award (#1614), one
    line. "Winner" only on the June 30 close; before that a top-3 district is
    "top 3 so far", the same words as the Awards page card. Loyal blue keeps
-   it apart from the District Club Retention Award. */
+   it apart from the District Club Retention Award.
+
+   Phones get a short form ("Retention #13 of 126 · 78.5% · estimate"): the
+   375 Overview has about 12px left under PAGE_MAX_H (4000), so this line may
+   cost one text row and no border or padding there. The award name and the
+   longer wording show from md: up. */
 const MembershipRetentionLine: React.FC<{
   badge: MembershipRetentionBadge
 }> = ({ badge }) => {
   const { rank, of, value, isWinner, final, tied } = badge
+  const longOnly = 'hidden md:inline'
   return (
     <p
       data-testid="membership-retention-badge"
-      className="border-t border-[var(--line)] pt-4 text-sm text-[var(--ink-2)] font-tm-body"
+      className="mt-1 md:mt-0 md:border-t md:border-[var(--line)] md:pt-4 text-sm text-[var(--ink-2)] font-tm-body"
     >
-      <span className="font-semibold text-tm-loyal-blue tabular-nums">
-        #{rank} of {of}
-        {!final && !isWinner && ' so far'}
+      <span data-testid="membership-retention-compact" className="md:hidden">
+        Retention{' '}
       </span>
-      {' · '}President&apos;s Membership Retention Award ·{' '}
+      <span className="font-semibold text-tm-loyal-blue tabular-nums">
+        #{rank}
+        {of != null && ` of ${of}`}
+        {!final && !isWinner && (
+          <span data-testid="membership-retention-long" className={longOnly}>
+            {' so far'}
+          </span>
+        )}
+      </span>
+      <span data-testid="membership-retention-long" className={longOnly}>
+        {' · '}President&apos;s Membership Retention Award
+      </span>
+      {' · '}
       <span className="tabular-nums">{value.toFixed(1)}%</span>
-      {isWinner && (
+      {isWinner && final && (
         <>
           {' · '}
-          <span className="font-semibold text-tm-loyal-blue">
-            {final ? 'winner' : 'top 3 so far'}
-          </span>
+          <span className="font-semibold text-tm-loyal-blue">winner</span>
         </>
+      )}
+      {isWinner && !final && (
+        <span data-testid="membership-retention-long" className={longOnly}>
+          {' · '}
+          <span className="font-semibold text-tm-loyal-blue">top 3 so far</span>
+        </span>
       )}
       {tied && (
         <>
-          {' · '}
-          <span title={TIE_BREAK_UNPUBLISHED}>tied</span>
+          <span data-testid="membership-retention-long" className={longOnly}>
+            {' · '}
+            <span aria-hidden="true" title={TIE_BREAK_UNPUBLISHED}>
+              tied
+            </span>
+          </span>
+          <span className="sr-only">{` (tied: ${TIE_BREAK_UNPUBLISHED})`}</span>
         </>
       )}
-      {' · '}Toast Stats estimate (
+      {' · '}
+      <span data-testid="membership-retention-long" className={longOnly}>
+        Toast Stats{' '}
+      </span>
       <a
         href={MEMBERSHIP_RETENTION_METHODOLOGY_HREF}
+        aria-label="How we estimate the President's Membership Retention Award"
         className="text-tm-loyal-blue underline"
       >
-        how we work it out
+        estimate
       </a>
-      )
     </p>
   )
 }
