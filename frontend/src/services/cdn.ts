@@ -46,6 +46,8 @@ import {
   regionMembershipSeriesPath,
   REPORTS_ROLLUPS_FILE_NAME,
   ReconciliationRevisionIndexSchema,
+  REINSTATABLE_CLUBS_FILE_NAME,
+  ReinstatableClubsReaderSchema,
   ReportsRollupsReaderSchema,
   SUSPENDED_CLUBS_FILE_NAME,
   SuspendedClubsReaderSchema,
@@ -63,6 +65,7 @@ import {
   type ReconciliationRevisionIndex,
   type RegionMembershipSeries,
   type RegionRollups,
+  type ReinstatableClubs,
   type ReportsRollups,
   type SuspendedClubs,
 } from '@taverns-red/shared-contracts'
@@ -634,6 +637,33 @@ export async function fetchCdnSuspendedClubs(
     if (!res.ok) return null
     recordCdnResponse(res)
     const parsed = SuspendedClubsReaderSchema.safeParse(await res.json())
+    return parsed.success ? parsed.data : null
+  } catch {
+    return null
+  }
+}
+
+/** `snapshots/{date}/reinstatable-clubs.json` (#3007) — the suspended and
+ *  closed clubs that can still reinstate, per district. */
+export function cdnReinstatableClubsUrl(date: SnapshotDate): string {
+  return `${cdnBaseUrl()}/snapshots/${date}/${REINSTATABLE_CLUBS_FILE_NAME}`
+}
+
+/**
+ * Fetch a date's reinstatable-clubs list (#3007) for the Club Growth page's
+ * "Can reinstate" section, **tolerantly**. The pipeline started writing the
+ * file in 2.94.0, so older dates lack it. `null` (a 404, a contract failure
+ * or a network error) means "not measured for this date"; the caller must
+ * never render it as an empty list.
+ */
+export async function fetchCdnReinstatableClubs(
+  date: SnapshotDate
+): Promise<ReinstatableClubs | null> {
+  try {
+    const res = await fetch(cdnReinstatableClubsUrl(date))
+    if (!res.ok) return null
+    recordCdnResponse(res)
+    const parsed = ReinstatableClubsReaderSchema.safeParse(await res.json())
     return parsed.success ? parsed.data : null
   } catch {
     return null

@@ -106,7 +106,8 @@ describe('ReinstatableClubsSection', () => {
       />
     )
     const row = rowFor('Toastmasters At St. Lawrence College')
-    expect(row).toHaveTextContent('Suspended September 30, 2026')
+    // The page's shared date format (formatDisplayDate), as the Suspended stage.
+    expect(row).toHaveTextContent('Suspended Sep 30, 2026')
     expect(row).toHaveTextContent('Adds to the club base')
     expect(row).toHaveTextContent(
       '“Reinstatement during the October renewal cycle will increase the club base.”'
@@ -122,7 +123,7 @@ describe('ReinstatableClubsSection', () => {
       />
     )
     const row = rowFor("Tunney's Toastmasters")
-    expect(row).toHaveTextContent('Closed, last seen June 30, 2026')
+    expect(row).toHaveTextContent('Closed, last seen Jun 30, 2026')
     expect(row).toHaveTextContent('Doesn’t add to the club base')
     expect(row).toHaveTextContent('“will not increase the club base”')
     expect(row).not.toHaveTextContent('Confirm with World Headquarters')

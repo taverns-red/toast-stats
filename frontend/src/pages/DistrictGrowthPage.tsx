@@ -7,6 +7,7 @@ import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictGrowthCounts } from '../hooks/useDistrictGrowthCounts'
 import { useSuspendedClubs } from '../hooks/useSuspendedClubs'
+import { useReinstatableClubs } from '../hooks/useReinstatableClubs'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import {
   getAvailableProgramYears,
@@ -18,6 +19,7 @@ import { buildClubGrowthFunnel } from '../utils/clubGrowthFunnel'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import { ClubGrowthFunnelView } from '../components/ClubGrowthFunnelView'
+import { ReinstatableClubsSection } from '../components/ReinstatableClubsSection'
 import { GrowthSurvivalLink } from '../components/GrowthSurvivalLink'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import ErrorBoundary from '../components/ErrorBoundary'
@@ -109,6 +111,13 @@ const DistrictGrowthPage: React.FC = () => {
   const { clubs: suspendedClubs, isLoading: suspendedLoading } =
     useSuspendedClubs(districtId, effectiveEndDate ?? undefined)
 
+  // #3007: not part of `loading`. A date without the file renders nothing,
+  // and the funnel never waits on it.
+  const { clubs: reinstatableClubs, baseProgramYear } = useReinstatableClubs(
+    districtId,
+    effectiveEndDate ?? undefined
+  )
+
   // A suspended club keeps its page here while the analytics club list still
   // carries it; otherwise its row links out to toastmasters.org.
   const clubPageIds = useMemo(
@@ -178,7 +187,19 @@ const DistrictGrowthPage: React.FC = () => {
           {loading || !funnel || !effectiveEndDate ? (
             <LoadingSkeleton variant="card" />
           ) : (
-            <ClubGrowthFunnelView funnel={funnel} asOfDate={effectiveEndDate} />
+            <>
+              <ClubGrowthFunnelView
+                funnel={funnel}
+                asOfDate={effectiveEndDate}
+              />
+              {effectiveProgramYear && (
+                <ReinstatableClubsSection
+                  clubs={reinstatableClubs}
+                  baseProgramYear={baseProgramYear}
+                  programYearStart={effectiveProgramYear.year}
+                />
+              )}
+            </>
           )}
         </div>
       </div>
