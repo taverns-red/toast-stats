@@ -247,6 +247,16 @@ export interface ComputeOperationResult {
    */
   meetingTimesFailed: boolean
   /**
+   * Path of `snapshots/{date}/reinstatable-clubs.json` (#3007), or undefined
+   * when an input is missing (the list is then unknown) or the step failed.
+   */
+  reinstatableClubsPath?: string
+  /**
+   * True when an input could not be read or the file could not be written.
+   * Reported, never publish-blocking: nothing depends on the file yet.
+   */
+  reinstatableClubsFailed?: boolean
+  /**
    * Path of `time-series/regions/{PY}.json` (#2127), or undefined when no
    * district series exists for the date's program year.
    */
