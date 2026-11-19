@@ -125,6 +125,37 @@ describe('MembershipRetentionCard — final', () => {
   })
 })
 
+describe('MembershipRetentionCard — ties (#1610)', () => {
+  // Two districts share rank 3, so four districts win.
+  const TIED: MembershipRetentionStanding[] = [
+    standing('64', 1, 727, 869, true),
+    standing('76', 2, 2827, 3386, true),
+    standing('24', 3, 600, 750, true),
+    standing('61', 3, 1200, 1500, true),
+    standing('F', 5, 300, 420, false),
+  ]
+
+  it('marks each tied winner with a "tied" chip and says the tie-break is unpublished', () => {
+    renderCard({ status: 'final', standings: TIED })
+    const c = card()
+    expect(within(c).getByText(/✓ 4 achieved/)).toBeInTheDocument()
+    expect(c.textContent).toMatch(
+      /2 districts tied — TI.s tie-break isn.t published, so they share a rank\./
+    )
+    const rows = within(c).getAllByRole('listitem')
+    expect(within(rows[2]).getByText('tied')).toBeInTheDocument()
+    expect(within(rows[3]).getByText('tied')).toBeInTheDocument()
+    for (const row of [rows[0], rows[1], rows[4]]) {
+      expect(within(row).queryByText('tied')).toBeNull()
+    }
+  })
+
+  it('shows no tie note when no winners share a rank', () => {
+    renderCard({ status: 'final', standings: STANDINGS })
+    expect(card().textContent).not.toMatch(/tie-break/)
+  })
+})
+
 describe('MembershipRetentionCard — in progress', () => {
   it('labels the standings as so far, with no "achieved" claim', () => {
     renderCard({ status: 'in-progress', standings: STANDINGS })
