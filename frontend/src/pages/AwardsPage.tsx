@@ -1,5 +1,6 @@
 import React from 'react'
 import { DistrictLinkText } from '../components/DistrictLinkText'
+import { MembershipRetentionCard } from '../components/MembershipRetentionCard'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { Link } from 'react-router-dom'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
@@ -168,6 +169,13 @@ const AwardsPage: React.FC = () => {
               tiedIds={tiedWinnerIds(standings[spec.key] ?? [])}
             />
           ))}
+          {/* #1614: absent on files built before the estimate existed, so
+              the card is left out there, like the other optional sections. */}
+          {standings.membershipRetentionAward && (
+            <MembershipRetentionCard
+              award={standings.membershipRetentionAward}
+            />
+          )}
         </div>
       )}
 

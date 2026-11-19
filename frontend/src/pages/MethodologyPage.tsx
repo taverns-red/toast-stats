@@ -63,17 +63,22 @@ const GROUPS: ReadonlyArray<JumpToGroup> = [
         num: '11',
         title: 'District Membership Trend',
       },
+      {
+        id: 'membership-retention-award',
+        num: '12',
+        title: 'Membership Retention Award estimate',
+      },
     ],
   },
   {
     title: 'What do the worldwide and growth pages show?',
     sections: [
-      { id: 'worldwide-rollup', num: '12', title: 'Worldwide rollup' },
-      { id: 'club-race', num: '13', title: 'Worldwide club race' },
-      { id: 'club-growth-prospective', num: '14', title: 'Prospective clubs' },
+      { id: 'worldwide-rollup', num: '13', title: 'Worldwide rollup' },
+      { id: 'club-race', num: '14', title: 'Worldwide club race' },
+      { id: 'club-growth-prospective', num: '15', title: 'Prospective clubs' },
       {
         id: 'success-plan-targets',
-        num: '15',
+        num: '16',
         title: 'Success Plan targets',
       },
     ],
@@ -83,22 +88,22 @@ const GROUPS: ReadonlyArray<JumpToGroup> = [
     sections: [
       {
         id: 'council-voting-strength',
-        num: '16',
+        num: '17',
         title: 'Council voting strength',
       },
-      { id: 'officer-training', num: '17', title: 'Officer training' },
+      { id: 'officer-training', num: '18', title: 'Officer training' },
     ],
   },
   {
     title: 'What do the words mean, and what changed?',
     sections: [
-      { id: 'glossary', num: '18', title: 'Glossary' },
+      { id: 'glossary', num: '19', title: 'Glossary' },
       {
         id: 'program-year-rule-changes',
-        num: '19',
+        num: '20',
         title: 'Program-year rule changes',
       },
-      { id: 'changelog', num: '20', title: 'Changelog' },
+      { id: 'changelog', num: '21', title: 'Changelog' },
     ],
   },
 ]
@@ -576,7 +581,7 @@ const MethodologyPage: React.FC = () => {
               did not exist before 2025-26
             </a>
             . Both make year-over-year comparisons something other than
-            like-for-like — see §19.
+            like-for-like — see §20.
           </p>
           <p>
             The 10 DCP goals are <strong>independent</strong>, not sequential —
@@ -807,7 +812,7 @@ const MethodologyPage: React.FC = () => {
                 clubs reach that tier&apos;s thresholds <em>and</em> it has met
                 every prerequisite the program year requires, under that program
                 year&apos;s own rules (District Recognition Program, Item 1490
-                and its revisions; see §19 for how the rules changed). It is the
+                and its revisions; see §20 for how the rules changed). It is the
                 same tier the district page shows. Tiers are counted at that
                 tier or higher, so a Select district also counts for
                 Distinguished.
@@ -953,6 +958,72 @@ const MethodologyPage: React.FC = () => {
             <code>frontend/src/components/MembershipTrendChart.tsx</code>.
           </p>
         </CollapsibleSection>
+
+        {/* President's Membership Retention Award estimate (#1614). The
+          /awards card's footnote links here. Asserted by
+          MethodologyPage.membershipRetention.test.tsx. */}
+        <CollapsibleSection
+          id="membership-retention-award"
+          num="12"
+          title="Membership Retention Award estimate"
+          collapsible={isMobile}
+          open={openIds.has('membership-retention-award')}
+          onToggle={toggle}
+        >
+          <div data-testid="methodology-membership-retention">
+            <p>
+              Toastmasters International gives the President&apos;s Membership
+              Retention Award to the 3 districts with &quot;the highest
+              membership retention rate at year-end&quot; (District Recognition
+              Program, Item 1490, Rev. 07/2026, p. 17). It does not publish how
+              it works out that rate. The standings on the{' '}
+              <Link to="/awards" className="methodology-link">
+                District Awards page
+              </Link>{' '}
+              are our estimate, not Toastmasters International&apos;s result.
+            </p>
+            <ul>
+              <li>
+                <strong>Formula.</strong> April renewals ÷ (October renewals +
+                late renewals + new members before April + charter members
+                before April). Each figure is summed over the district&apos;s
+                clubs. Districts are ranked by the result, highest first, and
+                the top 3 win. Districts with exactly equal rates share a rank.
+              </li>
+              <li>
+                <strong>Data source.</strong> Membership payments from the
+                Toastmasters dashboard, the same district performance figures as
+                the rest of the site. April, October and late renewals come from
+                the snapshot being shown. New and charter members come from the
+                March 31 close of the same program year, so only members who
+                joined before April count.
+              </li>
+              <li>
+                <strong>Window.</strong> The standings run from April 1 to June
+                30 and are final on June 30. Before April 1 there are no April
+                renewals, so the card says when the standings start instead of
+                showing near-zero rates. If the March 31 close is missing, the
+                card says the estimate isn&apos;t available; it never shows
+                zeros.
+              </li>
+              <li>
+                <strong>Who is ranked.</strong> District U, the clubs that
+                aren&apos;t in any district, is left out. District F is ranked
+                like any other district. A district missing any of the figures
+                is left out too.
+              </li>
+            </ul>
+            <p className="methodology-source">
+              Source:{' '}
+              <code>snapshots/&#123;date&#125;/competitive-awards.json</code> (
+              <code>membershipRetentionAward</code>), computed from{' '}
+              <code>
+                snapshots/&#123;date&#125;/all-districts-rankings.json
+              </code>{' '}
+              and the March 31 close.
+            </p>
+          </div>
+        </CollapsibleSection>
       </div>
 
       <div
@@ -973,7 +1044,7 @@ const MethodologyPage: React.FC = () => {
           paraphrased without re-reading #1426. */}
         <CollapsibleSection
           id="worldwide-rollup"
-          num="12"
+          num="13"
           title="Worldwide rollup"
           collapsible={isMobile}
           open={openIds.has('worldwide-rollup')}
@@ -1113,7 +1184,7 @@ const MethodologyPage: React.FC = () => {
           wording below is asserted by MethodologyPage.clubRace.test.tsx. */}
         <CollapsibleSection
           id="club-race"
-          num="13"
+          num="14"
           title="Worldwide club race"
           collapsible={isMobile}
           open={openIds.has('club-race')}
@@ -1207,7 +1278,7 @@ const MethodologyPage: React.FC = () => {
           progress" table. Asserted by MethodologyPage.clubGrowth.test.tsx. */}
         <CollapsibleSection
           id="club-growth-prospective"
-          num="14"
+          num="15"
           title="Prospective clubs"
           collapsible={isMobile}
           open={openIds.has('club-growth-prospective')}
@@ -1272,7 +1343,7 @@ const MethodologyPage: React.FC = () => {
           MethodologyPage.successPlanTargets.test.tsx. */}
         <CollapsibleSection
           id="success-plan-targets"
-          num="15"
+          num="16"
           title="Success Plan targets"
           collapsible={isMobile}
           open={openIds.has('success-plan-targets')}
@@ -1346,7 +1417,7 @@ const MethodologyPage: React.FC = () => {
           MethodologyPage.councilVoting.test.tsx. */}
         <CollapsibleSection
           id="council-voting-strength"
-          num="16"
+          num="17"
           title="Council voting strength"
           collapsible={isMobile}
           open={openIds.has('council-voting-strength')}
@@ -1447,7 +1518,7 @@ const MethodologyPage: React.FC = () => {
           MethodologyPage.officerTraining.test.tsx. */}
         <CollapsibleSection
           id="officer-training"
-          num="17"
+          num="18"
           title="Officer training"
           collapsible={isMobile}
           open={openIds.has('officer-training')}
@@ -1543,7 +1614,7 @@ const MethodologyPage: React.FC = () => {
 
         <CollapsibleSection
           id="glossary"
-          num="18"
+          num="19"
           title="Glossary"
           collapsible={isMobile}
           open={openIds.has('glossary')}
@@ -1609,7 +1680,7 @@ const MethodologyPage: React.FC = () => {
           holds against the year-conditional code — see that module's header. */}
         <CollapsibleSection
           id="program-year-rule-changes"
-          num="19"
+          num="20"
           title="Program-year rule changes"
           collapsible={isMobile}
           open={openIds.has('program-year-rule-changes')}
@@ -1668,7 +1739,7 @@ const MethodologyPage: React.FC = () => {
 
         <CollapsibleSection
           id="changelog"
-          num="20"
+          num="21"
           title="Changelog"
           collapsible={isMobile}
           open={openIds.has('changelog')}

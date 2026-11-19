@@ -93,7 +93,10 @@ describe('AwardsPage — membership retention estimate (#1614)', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: TITLE })
     ).toBeInTheDocument()
-    expect(screen.getByText(/83\.7% \(727 of 869\)/)).toBeInTheDocument()
+    // The percentage and "(727 of 869)" are separate spans in one cell.
+    expect(screen.getByTestId('membership-retention-card').textContent).toMatch(
+      /83\.7% \(727 of 869\)/
+    )
   })
 
   it('leaves the card out for an older file without the award', () => {
