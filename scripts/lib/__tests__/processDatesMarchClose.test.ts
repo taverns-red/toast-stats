@@ -292,16 +292,51 @@ describe('process-dates.sh: March-close baseline pull (#1614)', () => {
     )
   })
 
-  it('fails the step when the object exists but every copy fails, uploading nothing for the date', () => {
+  it('fails the date, not the run, when the object exists but every copy fails', () => {
     putRaw('2026-05-31')
+    putRaw('2026-09-10')
     putBaseline()
-    const r = run('rebuild', ['2026-05-31'], {
+    const r = run('rebuild', ['2026-05-31', '2026-09-10'], {
       SHIM_FAIL_MATCH: FAIL_BASELINE,
     })
-    expect(r.status).toBe(1)
+    expect(r.status, r.stderr).toBe(0)
+    // The failed date is counted, and the later date still publishes.
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 1 })
     expect(baselineCopies()).toHaveLength(3)
     expect(r.stderr).toMatch(/::error::.*March close/)
     expect(objectsUnder('snapshots/2026-05-31')).toEqual([])
+    expect(objectsUnder('snapshots/2026-09-10')).toContain('district_61.json')
+    expect(summaryText()).toContain(
+      '- **March-close baseline (#1614)**: 0 present, 0 absent, 1 failed'
+    )
+    expect(summaryText()).toContain('- **Dates failed**: 1')
+  })
+
+  it('says the baseline was not pulled when a remap lands in the window unforeseen', () => {
+    putRaw('2026-08-02')
+    putBaseline()
+    const r = run('rebuild', ['2026-08-02'], {
+      STUB_REMAP: '2026-08-02=2026-06-30',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+    expect(r.stderr).toContain(
+      'the March close 2026-03-31 was not pulled for 2026-06-30'
+    )
+    expect(r.stderr).not.toContain('exists but could not be copied')
+    expect(objectsUnder('snapshots/2026-06-30')).toEqual([])
+  })
+
+  it('does not count a JSON object without a rankings array as present', () => {
+    putRaw('2026-05-31')
+    putObject(
+      BASELINE_OBJECT,
+      JSON.stringify({ metadata: { snapshotId: '2026-03-31' } }),
+      true
+    )
+    const r = run('rebuild', ['2026-05-31'])
+    expect(r.counts).toEqual({ succeeded: 0, refused: 0, failed: 1 })
+    expect(diskAt('transform')).not.toContain(BASELINE_LOCAL)
     expect(summaryText()).toContain(
       '- **March-close baseline (#1614)**: 0 present, 0 absent, 1 failed'
     )
