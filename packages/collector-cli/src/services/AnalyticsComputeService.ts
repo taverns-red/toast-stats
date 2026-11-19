@@ -67,6 +67,7 @@ import {
   SUSPENDED_CLUBS_FILE_NAME,
   SuspendedClubsSchema,
   type DistrictRegionHistory,
+  type SuspendedClubs,
 } from '@taverns-red/shared-contracts'
 import {
   buildReinstatableClubs,
@@ -2263,9 +2264,11 @@ export class AnalyticsComputeService {
    * there is no file, never a file of empty lists. A closed-club index newer
    * than the date (a rebuild) also skips the step.
    *
-   * Two more inputs, both optional: the previous program year's June 30
-   * `suspended-clubs.json` (process-dates.sh pulls it into the cache) and the
-   * date's district snapshots, for each club's status on the roster.
+   * More inputs, all optional: the June 30 `suspended-clubs.json` of each
+   * of the three program years before the date's (process-dates.sh pulls
+   * them into the cache) and the date's district snapshots, for each club's
+   * status on the roster. Without the previous year's list, from Jul 1 to
+   * Sep 30, there is no file: the list is unknown.
    *
    * Never publish-blocking: the file is new and nothing reads it yet. A
    * failure is logged and reported in `reinstatableClubsFailed`, and is not
@@ -2313,21 +2316,28 @@ export class AnalyticsComputeService {
         return { failed: false }
       }
 
-      // The previous program year's last list, its June 30 snapshot (#3064
-      // review). The PY is the snapshot's logical date's (#1284).
-      const previousEnd = `${calculateProgramYear(snapshotDate).slice(0, 4)}-06-30`
-      const previousRaw = await readOptional(
-        path.join(this.getSnapshotDir(previousEnd), SUSPENDED_CLUBS_FILE_NAME)
-      )
-      const previousSuspended =
-        previousRaw === null
-          ? null
-          : SuspendedClubsSchema.parse(JSON.parse(previousRaw))
-      if (previousSuspended === null) {
-        this.logger.warn(
-          'No suspended-clubs.json for the previous program year — from Jul 1 to Sep 30, clubs that left the roster from Apr 1 to Jun 30 are withheld',
-          { snapshotDate, previousEnd }
+      // The June 30 suspended lists of the three program years before the
+      // date's (#3064 review): the previous one places Mar 31 suspensions
+      // still suspended before Oct 1; all three date closures, since a
+      // Mar 31 suspension stays in the window until Sep 30 two years later.
+      // The PY is the snapshot's logical date's (#1284).
+      const pyStart = Number(calculateProgramYear(snapshotDate).slice(0, 4))
+      const readJuneList = async (
+        year: number
+      ): Promise<SuspendedClubs | null> => {
+        const raw = await readOptional(
+          path.join(
+            this.getSnapshotDir(`${year}-06-30`),
+            SUSPENDED_CLUBS_FILE_NAME
+          )
         )
+        return raw === null ? null : SuspendedClubsSchema.parse(JSON.parse(raw))
+      }
+      const previousSuspended = await readJuneList(pyStart)
+      const olderSuspended: SuspendedClubs[] = []
+      for (const year of [pyStart - 1, pyStart - 2]) {
+        const list = await readJuneList(year)
+        if (list !== null) olderSuspended.push(list)
       }
 
       // The date's roster: who is on it, and in what status.
@@ -2347,15 +2357,24 @@ export class AnalyticsComputeService {
         }
       }
 
-      const reinstatable = ReinstatableClubsSchema.parse(
-        buildReinstatableClubs({
-          snapshotDate,
-          suspended,
-          closed,
-          previousSuspended,
-          roster,
-        })
-      )
+      const built = buildReinstatableClubs({
+        snapshotDate,
+        suspended,
+        closed,
+        previousSuspended,
+        olderSuspended,
+        roster,
+      })
+      if (built === null) {
+        // Jul 1 - Sep 30 without the previous list: Mar 31 suspensions that
+        // still add to the base would be missing (#1757, #3064 review N2).
+        this.logger.warn(
+          'No suspended-clubs.json for the previous program year — from Jul 1 to Sep 30 the list is unknown, skipping reinstatable-clubs.json',
+          { snapshotDate, previousEnd: `${pyStart}-06-30` }
+        )
+        return { failed: false }
+      }
+      const reinstatable = ReinstatableClubsSchema.parse(built)
       const outputPath = path.join(snapshotDir, REINSTATABLE_CLUBS_FILE_NAME)
       await fs.writeFile(
         outputPath,

@@ -86,8 +86,10 @@
 #                the year minus one), so it is keyed on the date the
 #                transform WROTE. None: YoY is omitted (dataAvailable:
 #                false) and the date is counted. Also best effort, the
-#                previous program year's snapshots/<Y>-06-30/
-#                suspended-clubs.json, for reinstatable-clubs.json (#3007).
+#                snapshots/<Y>-06-30/suspended-clubs.json of the three
+#                program years before the date's, for
+#                reinstatable-clubs.json (#3007); download errors, not
+#                missing files, are counted in the summary.
 #                Then collector-cli
 #                compute-analytics. A failure is counted, but
 #                the snapshots still upload (#1708); its JSON feeds the store
@@ -369,6 +371,7 @@ YOY_ABSENT=0
 HYDRATED=""
 PREV=""
 PREV_SUSPENDED=""
+SUSPENDED_PULL_ERRORS=0
 ACTUAL=""
 RESULTS="${DATE_RESULTS_FILE:-/dev/null}"
 # Snapshot dates this run uploaded (post-remap), for step 14.
@@ -410,38 +413,52 @@ pull_prior_year() {
   return 0
 }
 
-# The last day of the program year before the one $1 falls in: July-
-# December of Y -> Y-06-30, January-June of Y -> (Y-1)-06-30. Keyed on the
-# snapshot (logical) date, as compute-analytics keys it (#1284).
+# The last day of the program year $2 years before the one $1 falls in
+# ($2 = 1, the default: the previous one). July-December of Y ->
+# (Y+1-$2)-06-30, January-June of Y -> (Y-$2)-06-30. Keyed on the snapshot
+# (logical) date, as compute-analytics keys it (#1284).
 previous_py_end() {
-  local year="$((10#${1:0:4}))" month="$((10#${1:5:2}))"
-  if [ "${month}" -ge 7 ]; then
-    printf '%04d-06-30\n' "${year}"
-  else
-    printf '%04d-06-30\n' "$((year - 1))"
-  fi
+  local year="$((10#${1:0:4}))" month="$((10#${1:5:2}))" back="${2:-1}"
+  if [ "${month}" -ge 7 ]; then year=$((year + 1)); fi
+  printf '%04d-06-30\n' "$((year - back))"
 }
 
-# Pull snapshots/<previous PY end of $1>/suspended-clubs.json for compute's
-# reinstatable-clubs.json (#3007): a club suspended on Mar 31 leaves the
-# date's own list on Jul 1 but stays suspended until Oct 1. Best effort; one
-# file. A directory this call creates is removed by cleanup_date
-# (PREV_SUSPENDED). It can be the YoY directory of a 06-30 date (PREV), which
-# cleanup removes anyway. Any other existing directory is used as it is.
+# Pull snapshots/<June 30>/suspended-clubs.json of each of the three program
+# years before $1's, for compute's reinstatable-clubs.json (#3007). A club
+# suspended on Mar 31 leaves the date's own list on Jul 1 but stays
+# suspended until Oct 1 (the previous year's list). Its closure then stays
+# in the four-period window until Sep 30 two years later, and only its own
+# year's list still dates it (the older lists, #3064 review F2). Best
+# effort, one file per year. A missing file is expected. Any other error is
+# a warning, counted in SUSPENDED_PULL_ERRORS for the summary (#3064 review
+# N1). Directories this call creates are listed in PREV_SUSPENDED and
+# removed by cleanup_date. One can be the YoY directory of a 06-30 date
+# (PREV), which cleanup removes anyway. Any other existing directory is used
+# as it is.
 pull_previous_suspended() {
-  local end dir
-  end="$(previous_py_end "$1")"
-  dir="${SNAPSHOTS}/${end}"
-  if [ -d "${dir}" ] && [ "${end}" != "${PREV}" ]; then return 0; fi
-  if [ ! -d "${dir}" ]; then
-    mkdir -p "${dir}"
-    PREV_SUSPENDED="${end}"
-  fi
-  if ! "${GCLOUD}" storage cp \
-    "gs://${BUCKET}/snapshots/${end}/suspended-clubs.json" \
-    "${dir}/" 2>/dev/null; then
-    echo "No snapshots/${end}/suspended-clubs.json; reinstatable-clubs.json for $1 withholds clubs it cannot place (#3007)"
-  fi
+  local back end dir err
+  for back in 1 2 3; do
+    end="$(previous_py_end "$1" "${back}")"
+    dir="${SNAPSHOTS}/${end}"
+    if [ -d "${dir}" ] && [ "${end}" != "${PREV}" ]; then continue; fi
+    if [ ! -d "${dir}" ]; then
+      mkdir -p "${dir}"
+      PREV_SUSPENDED="${PREV_SUSPENDED} ${end}"
+    fi
+    err="$(mktemp)"
+    if "${GCLOUD}" storage cp \
+      "gs://${BUCKET}/snapshots/${end}/suspended-clubs.json" \
+      "${dir}/" 2>"${err}"; then
+      :
+    elif grep -q 'matched no objects' "${err}"; then
+      echo "No snapshots/${end}/suspended-clubs.json; reinstatable-clubs.json for $1 may be unknown or miss clubs (#3007)"
+    else
+      cat "${err}" >&2
+      echo "::warning::Could not download snapshots/${end}/suspended-clubs.json (an error, not a missing file); reinstatable-clubs.json for $1 may be unknown or miss clubs (#3007)"
+      SUSPENDED_PULL_ERRORS=$((SUSPENDED_PULL_ERRORS + 1))
+    fi
+    rm -f "${err}"
+  done
   return 0
 }
 
@@ -1038,9 +1055,8 @@ cleanup_date() {
   if [ -n "${actual}" ]; then rm -rf "${SNAPSHOTS:?}/${actual}"; fi
   if [ -n "${prev}" ]; then rm -rf "${SNAPSHOTS:?}/${prev}"; fi
   if [ -n "${HYDRATED}" ]; then rm -rf "${SNAPSHOTS:?}/${HYDRATED}"; fi
-  if [ -n "${PREV_SUSPENDED}" ]; then
-    rm -rf "${SNAPSHOTS:?}/${PREV_SUSPENDED}"
-  fi
+  local dir
+  for dir in ${PREV_SUSPENDED}; do rm -rf "${SNAPSHOTS:?}/${dir}"; done
   return 0
 }
 
@@ -1133,6 +1149,7 @@ fi
   echo "- **Dates unenriched (no raw-fac)**: ${UNENRICHED}"
   echo "- **Dates with a prior-year snapshot (YoY)**: ${YOY_PRESENT}"
   echo "- **Dates without one (no YoY)**: ${YOY_ABSENT}"
+  echo "- **Earlier suspended lists that failed to download (#3007)**: ${SUSPENDED_PULL_ERRORS}"
   echo "- **Identity histories**: ${IDENTITY_STATUS}"
   echo "- **Education rollup**: ${EDUCATION_STATUS}"
   jq -rs -f "${REPO}/scripts/compute-counters.jq" "${COUNTERS_JSONL}"

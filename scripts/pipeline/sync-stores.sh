@@ -48,6 +48,8 @@
 # lands at ${CACHE_DIR}/config/closed-club-names.json for compute-analytics'
 # reinstatable-clubs.json. Not built yet: a warning, and compute writes no
 # reinstatable-clubs.json. It can be a day or more older than the date.
+# Unlike the region history it is best effort: any other pull error is also
+# a warning and no file, so it can't fail the run (#3064 review N4).
 #
 # Exit codes: 0 ok · 1 a store could not be pulled or is corrupt · 2 usage
 set -euo pipefail
@@ -110,9 +112,11 @@ sync_awards() {
   fi
 }
 
-# Pull one read-only config/ input: <name> <what a missing file means> <issue>.
+# Pull one read-only config/ input: <name> <what a missing file means>
+# <issue> [best-effort]. With best-effort, a pull error other than "not
+# built yet" is a warning and no file, not a failure.
 sync_config_input() {
-  local name="$1" missing="$2" issue="$3"
+  local name="$1" missing="$2" issue="$3" best_effort="${4:-}"
   local src="gs://${BUCKET}/config/${name}.json"
   local dest="${CACHE_DIR}/config/${name}.json"
   local err
@@ -132,6 +136,11 @@ sync_config_input() {
   fi
   cat "${err}" >&2
   rm -f "${err}" "${dest}"
+  if [ "${best_effort}" = "best-effort" ]; then
+    echo "::warning::Failed to pull ${src}; ${missing} (${issue})" >&2
+    echo "- **${name}**: failed to pull (${missing} this run)" >>"${SUMMARY}"
+    return 0
+  fi
   echo "::error::Failed to pull ${src} (${issue})" >&2
   exit 1
 }
@@ -191,7 +200,8 @@ for store in "$@"; do
   elif [ "${store}" = "district-region-history" ]; then
     sync_config_input district-region-history "regions null" "#1799"
   elif [ "${store}" = "closed-club-names" ]; then
-    sync_config_input closed-club-names "no reinstatable-clubs.json" "#3007"
+    sync_config_input closed-club-names "no reinstatable-clubs.json" "#3007" \
+      best-effort
   elif [ "${store}" = "club-trends" ]; then
     rm -f "${CACHE_DIR}/club-trends.scope"
     if [ "${#CLUB_TRENDS_PYS[@]}" -gt 0 ]; then

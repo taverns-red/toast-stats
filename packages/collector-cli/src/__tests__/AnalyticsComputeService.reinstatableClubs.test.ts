@@ -280,6 +280,8 @@ describe('AnalyticsComputeService — reinstatable-clubs.json is point in time (
     const TUNNEYS = {
       clubNumber: '3475582',
       clubName: "Tunney's Toastmasters",
+      division: 'B',
+      area: '15',
       suspendDate: '2026-03-31',
     }
 

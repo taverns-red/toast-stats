@@ -22,13 +22,19 @@
  *   club base. Before October 1 it is listed as suspended, with the
  *   previous list's division and area, when the date's roster shows it
  *   Suspended or the closed index has it (it left the roster). A club the
- *   roster shows in any other status was reinstated and is left out. From
- *   October 1 it is a closed club like any other, but its closure is dated
- *   from its suspend date, not from `lastSeen`.
- * - When `previousSuspended` is unknown, from July 1 to September 30 closed
- *   clubs last seen from April 1 to June 30 are withheld: they may be such
- *   March 31 suspensions, and listing them as closed would say they cannot
- *   add to the base.
+ *   roster shows Active or Low was reinstated and is left out; any other
+ *   status (Ineligible, or none) is not taken as reinstated. From October 1
+ *   it is a closed club like any other, but its closure is dated from its
+ *   suspend date, not from `lastSeen`.
+ * - Optional `olderSuspended` holds the June 30 lists of the program years
+ *   before that. They only date closures: a March 31 suspension closes on
+ *   October 1 and stays inside the four-period window until September 30
+ *   two years later, when its suspend date is three June 30 lists back
+ *   (#3064 review F2).
+ * - When `previousSuspended` is unknown, from July 1 to September 30 the
+ *   list is unknown and the builder returns null: the clubs that list would
+ *   add are missing, so an empty district would read as a measured zero
+ *   (#1757, #3064 review N2).
  *
  * Rows are public club-level facts only, as in `suspended-clubs.json`.
  *
@@ -112,23 +118,33 @@ interface ClosedRow {
   districtId: string
 }
 
-/**
- * Closed rows whose lastSeen falls Apr 1 - Jun 30 of the date's year, when
- * the date is Jul 1 - Sep 30: possibly a Mar 31 suspension still suspended.
- */
-function mayBeMar31Suspension(row: ClosedRow, snapshotDate: string): boolean {
-  const year = snapshotDate.slice(0, 4)
+/** Roster statuses of a club in good standing: it was reinstated. */
+const REINSTATED_STATUSES = new Set(['active', 'low'])
+
+/** July 1 - September 30: the previous list is needed to place clubs. */
+function needsPreviousList(snapshotDate: string): boolean {
   const month = snapshotDate.slice(5, 7)
-  if (month < '07' || month > '09') return false
-  return row.lastSeen >= `${year}-04-01` && row.lastSeen <= `${year}-06-30`
+  return month >= '07' && month <= '09'
 }
 
 export function buildReinstatableClubs(
   input: BuildReinstatableClubsInput
-): ReinstatableClubs {
+): ReinstatableClubs | null {
   const { snapshotDate, suspended, closed } = input
-  const previousKnown = input.previousSuspended != null
+  if (input.previousSuspended == null && needsPreviousList(snapshotDate)) {
+    return null
+  }
   const previous = indexSuspended(input.previousSuspended)
+  // Suspend dates for dating closures: the newest list that has the club.
+  const suspendDates = new Map<string, string>()
+  for (const list of [
+    ...[...(input.olderSuspended ?? [])].reverse(),
+    input.previousSuspended,
+  ]) {
+    for (const club of indexSuspended(list).values()) {
+      suspendDates.set(club.clubNumber, club.suspendDate)
+    }
+  }
   const roster = input.roster ?? null
   const current = indexSuspended(suspended)
 
@@ -161,9 +177,10 @@ export function buildReinstatableClubs(
     const onRoster = roster?.get(club.clubNumber)
     let districtId: string | undefined
     if (onRoster) {
-      // The roster is the date's truth: any status but Suspended means the
-      // club was reinstated.
-      if (onRoster.clubStatus?.trim().toLowerCase() !== 'suspended') continue
+      // The roster is the date's truth: Active or Low means the club was
+      // reinstated. Suspended, Ineligible or no status does not (#3064 N3).
+      const status = onRoster.clubStatus?.trim().toLowerCase() ?? ''
+      if (REINSTATED_STATUSES.has(status)) continue
       districtId = onRoster.districtId
     } else {
       districtId = closedByNumber.get(club.clubNumber)?.districtId
@@ -185,8 +202,7 @@ export function buildReinstatableClubs(
     }
     // On the date's roster: not closed, whatever a later index says.
     if (roster?.has(row.clubNumber)) continue
-    if (!previousKnown && mayBeMar31Suspension(row, snapshotDate)) continue
-    const suspendDate = previous.get(row.clubNumber)?.suspendDate
+    const suspendDate = suspendDates.get(row.clubNumber)
     const result = classifyReinstatement(
       {
         status: 'closed',

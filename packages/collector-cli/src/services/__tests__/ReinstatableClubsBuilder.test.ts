@@ -422,11 +422,15 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
       {
         clubNumber: '3475582',
         clubName: "Tunney's Toastmasters",
+        division: 'B',
+        area: '15',
         suspendDate: '2026-03-31',
       },
       {
         clubNumber: '7270199',
         clubName: 'HULL Toastmasters Club',
+        division: 'C',
+        area: '22',
         suspendDate: '2026-03-31',
       },
     ])

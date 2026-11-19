@@ -2191,7 +2191,10 @@ describe('process-dates.sh daily (#1765)', () => {
       putObject('snapshots/2025-10-31/district_61.json', '{"districtId":"61"}')
       putObject('snapshots/2025-11-02/district_61.json', '{"districtId":"61"}')
       daily({ STUB_REMAP: '2026-11-02=2026-10-31' }, ['2026-11-02'])
-      const pulls = lines(shimLog).filter(l => /snapshots\/2025-/.test(l))
+      // The YoY pulls only: the June 30 suspended lists are pulled too (#3007).
+      const pulls = lines(shimLog).filter(l =>
+        /snapshots\/2025-.*district_/.test(l)
+      )
       expect(pulls).toEqual([
         `storage cp gs://${BUCKET}/snapshots/2025-10-31/district_*.json ${cache}/snapshots/2025-10-31/`,
       ])
