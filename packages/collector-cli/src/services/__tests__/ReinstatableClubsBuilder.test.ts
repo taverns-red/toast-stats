@@ -3,6 +3,7 @@ import {
   ReinstatableClubsSchema,
   SUSPENDED_CLUBS_FORMAT,
   type ClosedClubNameIndex,
+  type ReinstatableClubs,
   type SuspendedClubs,
 } from '@taverns-red/shared-contracts'
 
@@ -61,6 +62,10 @@ const D61_CLOSED = closedIndex({
     '61': [['3475582', "Tunney's Toastmasters", '2026-06-30']],
   },
 })
+
+/** Club numbers of one district, in file order. */
+const numbers = (out: ReinstatableClubs, districtId: string): string[] =>
+  out.districts[districtId]!.map(c => c.clubNumber)
 
 describe('buildReinstatableClubs (#3007 phase 2)', () => {
   it('lists a suspended club with the rule result and its place', () => {
@@ -171,10 +176,12 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
     expect(ReinstatableClubsSchema.safeParse(out).success).toBe(true)
   })
 
-  describe('a club suspended in the previous program year (the July to September window)', () => {
-    // TI drops a Mar 31 suspension from the roster at the July rollover, so
-    // the closed index has it with lastSeen 2026-06-30. By the FAQ it is still
-    // suspended until Oct 1, and reinstating it before then adds to the base.
+  describe('a club suspended in the previous program year (#3064 review)', () => {
+    // suspended-clubs.json keeps only suspensions dated in the current program
+    // year, so from Jul 1 a club suspended on Mar 31 drops off the date's list.
+    // By the FAQ it stays suspended until Oct 1, and reinstating it before
+    // then adds to the base. The previous program year's last list (its
+    // June 30 snapshot) still has it.
     const previous = suspendedList({
       '61': [
         {
@@ -186,10 +193,32 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
         },
       ],
     })
+    const AUGUST = '2026-08-15'
+    const augustSuspended = suspendedList({
+      '61': [
+        {
+          clubNumber: '1849755',
+          clubName: 'Toastmasters At St. Lawrence College',
+          division: 'A',
+          area: '01',
+          suspendDate: '2026-07-15',
+        },
+      ],
+    })
+    // A club that left the roster in May: newer than Tunney's suspend date.
+    const withRecent = closedIndex({
+      ...D61_CLOSED.programYears,
+      '2025-2026': {
+        '61': [
+          ['3475582', "Tunney's Toastmasters", '2026-06-30'],
+          ['9000001', 'Recent Club', '2026-05-31'],
+        ],
+      },
+    })
 
-    it('before Oct 1 it is listed as suspended and adds to the base', () => {
+    it('before Oct 1, a club the closed index has is listed as suspended and adds to the base', () => {
       const out = buildReinstatableClubs({
-        snapshotDate: '2026-08-15',
+        snapshotDate: AUGUST,
         suspended: suspendedList({ '61': [] }),
         closed: D61_CLOSED,
         previousSuspended: previous,
@@ -203,6 +232,74 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
         addsToBase: true,
         reason: 'suspended_mar31_before_oct1',
       })
+    })
+
+    it('is listed with the suspended clubs, ahead of every closed club', () => {
+      const out = buildReinstatableClubs({
+        snapshotDate: AUGUST,
+        suspended: augustSuspended,
+        closed: withRecent,
+        previousSuspended: previous,
+      })
+      expect(numbers(out, '61')).toEqual([
+        '1849755',
+        '3475582',
+        '9000001',
+        '1314924',
+        '3492',
+      ])
+    })
+
+    it('before Oct 1, a club still on the roster as Suspended is listed (it is in no closed index)', () => {
+      const out = buildReinstatableClubs({
+        snapshotDate: AUGUST,
+        suspended: suspendedList({ '61': [] }),
+        closed: closedIndex({}),
+        previousSuspended: previous,
+        roster: new Map([
+          ['3475582', { districtId: '61', clubStatus: 'Suspended' }],
+        ]),
+      })
+      expect(out.districts['61']).toEqual([
+        {
+          clubNumber: '3475582',
+          clubName: "Tunney's Toastmasters",
+          division: 'B',
+          area: '22',
+          status: 'suspended',
+          suspendDate: '2026-03-31',
+          oldestPeriod: false,
+          addsToBase: true,
+          reason: 'suspended_mar31_before_oct1',
+        },
+      ])
+    })
+
+    it('a club reinstated since June 30 (Active on the roster) is not listed', () => {
+      const out = buildReinstatableClubs({
+        snapshotDate: AUGUST,
+        suspended: suspendedList({ '61': [] }),
+        closed: D61_CLOSED,
+        previousSuspended: previous,
+        roster: new Map([
+          ['3475582', { districtId: '61', clubStatus: 'Active' }],
+        ]),
+      })
+      expect(numbers(out, '61')).not.toContain('3475582')
+    })
+
+    it('is listed under the district the roster puts it in on the date', () => {
+      const out = buildReinstatableClubs({
+        snapshotDate: AUGUST,
+        suspended: suspendedList({ '61': [], '62': [] }),
+        closed: closedIndex({}),
+        previousSuspended: previous,
+        roster: new Map([
+          ['3475582', { districtId: '62', clubStatus: 'suspended' }],
+        ]),
+      })
+      expect(out.districts['61']).toEqual([])
+      expect(numbers(out, '62')).toEqual(['3475582'])
     })
 
     it('from Oct 1 it has closed, so it is listed as closed and does not add', () => {
@@ -219,6 +316,75 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
         addsToBase: false,
         reason: 'closed_does_not_add',
       })
+    })
+
+    it('once closed, its closure is Oct 1 (from the suspend date), not the day after lastSeen', () => {
+      // 2028-09-30: the oldest of the four periods is Oct 2026 - Mar 2027.
+      // Closed on Oct 1 2026 it is in it; on Jul 1 2026 it would be outside.
+      const out = buildReinstatableClubs({
+        snapshotDate: '2028-09-30',
+        suspended: suspendedList({ '61': [] }),
+        closed: D61_CLOSED,
+        previousSuspended: previous,
+      })
+      const row = out.districts['61']!.find(c => c.clubNumber === '3475582')
+      expect(row).toMatchObject({
+        status: 'closed',
+        lastSeen: '2026-06-30',
+        oldestPeriod: true,
+      })
+    })
+
+    it('when the previous list is unknown, Jul 1 to Sep 30 withholds clubs that left the roster from Apr 1 to Jun 30', () => {
+      // They may be Mar 31 suspensions, still suspended by the FAQ: listing
+      // them as closed would say they cannot add to the base.
+      const out = buildReinstatableClubs({
+        snapshotDate: AUGUST,
+        suspended: suspendedList({ '61': [] }),
+        closed: withRecent,
+      })
+      expect(numbers(out, '61')).toEqual(['1314924', '3492'])
+    })
+
+    it('from Oct 1 an unknown previous list withholds nothing', () => {
+      const out = buildReinstatableClubs({
+        snapshotDate: SNAPSHOT,
+        suspended: suspendedList({ '61': [] }),
+        closed: withRecent,
+      })
+      expect(numbers(out, '61')).toEqual(['3475582', '9000001', '1314924'])
+    })
+  })
+
+  describe('districts', () => {
+    it('leaves out district U (clubs not in a district), in any case', () => {
+      const out = buildReinstatableClubs({
+        snapshotDate: SNAPSHOT,
+        suspended: suspendedList({ '61': [], U: [], u: [] }),
+        closed: closedIndex({
+          '2025-2026': { U: [['1', 'Undistricted Club', '2026-06-30']] },
+        }),
+      })
+      expect(Object.keys(out.districts)).toEqual(['61'])
+    })
+
+    it('keeps district F, which is a real district', () => {
+      const out = buildReinstatableClubs({
+        snapshotDate: SNAPSHOT,
+        suspended: suspendedList({
+          F: [
+            {
+              clubNumber: '7777',
+              clubName: 'F Club',
+              division: 'A',
+              area: '1',
+              suspendDate: '2026-09-30',
+            },
+          ],
+        }),
+        closed: closedIndex({}),
+      })
+      expect(numbers(out, 'F')).toEqual(['7777'])
     })
   })
 })

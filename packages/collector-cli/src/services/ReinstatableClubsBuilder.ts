@@ -44,6 +44,14 @@ export interface BuildReinstatableClubsInput {
   closed: ClosedClubNameIndex
   /** The previous program year's last suspended list, when it is known. */
   previousSuspended?: SuspendedClubs | null
+  /** The date's roster: club number → its district and club status. */
+  roster?: ReadonlyMap<string, RosterEntry> | null
+}
+
+/** One club on the date's roster (`district_{id}.json` `clubs[]`). */
+export interface RosterEntry {
+  districtId: string
+  clubStatus?: string
 }
 
 function suspendedRow(
