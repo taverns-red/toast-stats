@@ -138,3 +138,127 @@ describe('AnalyticsComputeService — reinstatable-clubs.json (#3007)', () => {
     await expect(fs.access(outPath())).rejects.toThrow()
   })
 })
+
+describe('AnalyticsComputeService — reinstatable-clubs.json is point in time (#3064 review)', () => {
+  let cacheDir: string
+
+  beforeEach(async () => {
+    cacheDir = await fs.mkdtemp(path.join(os.tmpdir(), 'reinstatable-pit-'))
+  })
+
+  afterEach(async () => {
+    await fs.rm(cacheDir, { recursive: true, force: true })
+  })
+
+  /** The recorded 2026-10-19 inputs, filed under `date`. */
+  async function seed(date: string, closedAsOf: string): Promise<string> {
+    const dir = path.join(cacheDir, 'snapshots', date)
+    await fs.cp(path.join(FIXTURES, 'meeting-times/snapshots', DATE), dir, {
+      recursive: true,
+    })
+    await fs.writeFile(
+      path.join(dir, 'suspended-clubs.json'),
+      JSON.stringify({ ...SUSPENDED, snapshotDate: date })
+    )
+    await fs.mkdir(path.join(cacheDir, 'config'), { recursive: true })
+    await fs.writeFile(
+      path.join(cacheDir, 'config/closed-club-names.json'),
+      JSON.stringify({ ...CLOSED, asOf: closedAsOf })
+    )
+    return dir
+  }
+
+  const compute = (date: string) =>
+    new AnalyticsComputeService({ cacheDir }).compute({
+      date,
+      districts: DISTRICTS,
+    })
+
+  const readOut = async (dir: string) =>
+    ReinstatableClubsSchema.parse(
+      JSON.parse(
+        await fs.readFile(path.join(dir, REINSTATABLE_CLUBS_FILE_NAME), 'utf-8')
+      )
+    )
+
+  it('skips the step when the closed-club index is newer than the date (a rebuild)', async () => {
+    const dir = await seed(DATE, '2026-10-20')
+    const result = await compute(DATE)
+    expect(result.reinstatableClubsFailed).toBe(false)
+    expect(result.reinstatableClubsPath).toBeUndefined()
+    await expect(
+      fs.access(path.join(dir, REINSTATABLE_CLUBS_FILE_NAME))
+    ).rejects.toThrow()
+  })
+
+  describe('the previous program year’s June 30 suspended list', () => {
+    const AUGUST = '2026-08-15'
+    const PREVIOUS = {
+      _format: SUSPENDED_CLUBS_FORMAT,
+      snapshotDate: '2026-06-30',
+      programYear: { start: '2025-07-01', end: '2026-06-30' },
+      districts: {
+        '61': [
+          {
+            clubNumber: '3475582',
+            clubName: "Tunney's Toastmasters",
+            division: 'B',
+            area: '22',
+            suspendDate: '2026-03-31',
+          },
+        ],
+      },
+    }
+
+    async function seedAugust(): Promise<string> {
+      const dir = await seed(AUGUST, AUGUST)
+      // Tunney's is still on the date's roster, marked Suspended.
+      const district61 = path.join(dir, 'district_61.json')
+      const snapshot = JSON.parse(await fs.readFile(district61, 'utf-8'))
+      snapshot.data.clubs.push({ clubId: '3475582', clubStatus: 'Suspended' })
+      await fs.writeFile(district61, JSON.stringify(snapshot))
+      return dir
+    }
+
+    const previousPath = () =>
+      path.join(cacheDir, 'snapshots/2026-06-30/suspended-clubs.json')
+
+    it('lists a Mar 31 suspension that left the date’s list, before Oct 1', async () => {
+      const dir = await seedAugust()
+      await fs.mkdir(path.dirname(previousPath()), { recursive: true })
+      await fs.writeFile(previousPath(), JSON.stringify(PREVIOUS))
+      const result = await compute(AUGUST)
+      expect(result.reinstatableClubsFailed).toBe(false)
+      const file = await readOut(dir)
+      expect(
+        file.districts['61']!.map(c => [c.clubNumber, c.status, c.addsToBase])
+      ).toEqual([
+        ['1849755', 'suspended', false],
+        ['3475582', 'suspended', true],
+        ['1314924', 'closed', false],
+      ])
+    })
+
+    it('without the previous list the file is still written, minus those clubs', async () => {
+      const dir = await seedAugust()
+      const result = await compute(AUGUST)
+      expect(result.reinstatableClubsFailed).toBe(false)
+      const file = await readOut(dir)
+      expect(file.districts['61']!.map(c => c.clubNumber)).toEqual([
+        '1849755',
+        '1314924',
+      ])
+    })
+
+    it('an unreadable previous list fails the step, not the run', async () => {
+      const dir = await seedAugust()
+      await fs.mkdir(path.dirname(previousPath()), { recursive: true })
+      await fs.writeFile(previousPath(), '{ not json')
+      const result = await compute(AUGUST)
+      expect(result.reinstatableClubsFailed).toBe(true)
+      await expect(
+        fs.access(path.join(dir, REINSTATABLE_CLUBS_FILE_NAME))
+      ).rejects.toThrow()
+    })
+  })
+})
