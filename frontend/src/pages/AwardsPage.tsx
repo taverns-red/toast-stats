@@ -1,5 +1,5 @@
 import React from 'react'
-import { hasDescriptiveName } from '../utils/districtName'
+import { DistrictLinkText } from '../components/DistrictLinkText'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { Link } from 'react-router-dom'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
@@ -18,31 +18,6 @@ import type {
 /* /awards page (#371-#373). Full top-10 leaderboards per district award
    — the deeper view that the Districts page's Awards Race summary
    defers to. Uses the existing useCompetitiveAwards hook for data. */
-
-/** Link text whose accessible name always says "District" and contains the
- *  visible label (WCAG 2.5.3, #2648): "D93 (District 93)". */
-const DistrictLinkText: React.FC<{ id: string; name: string }> = ({
-  id,
-  name,
-}) => {
-  if (hasDescriptiveName(name)) {
-    return /district/i.test(name) ? (
-      <>{name}</>
-    ) : (
-      <>
-        <span className="sr-only">District {id}, </span>
-        {name}
-      </>
-    )
-  }
-  if (id === 'U') return <>Undistricted</>
-  const n = /^\d+$/.test(id) ? Number(id) : id
-  return (
-    <>
-      D{n} <span className="sr-only">(District {n})</span>
-    </>
-  )
-}
 
 interface AwardSpec {
   key: keyof Pick<
