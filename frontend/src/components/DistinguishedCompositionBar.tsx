@@ -11,6 +11,9 @@ interface DistinguishedCompositionBarProps {
   select: number
   distinguished: number
   totalClubs: number
+  /** The Distinguished KPI card's basis, owned by the page (R3). The note
+   *  points to the confirmed count only when the card shows one. */
+  kpiBasis?: 'confirmed' | 'qualifying-today' | undefined
 }
 
 interface Segment {
@@ -29,7 +32,7 @@ interface Segment {
 
 const DistinguishedCompositionBar: React.FC<
   DistinguishedCompositionBarProps
-> = ({ smedley, presidents, select, distinguished, totalClubs }) => {
+> = ({ smedley, presidents, select, distinguished, totalClubs, kpiBasis }) => {
   if (totalClubs <= 0) return null
 
   const distinguishedTotal = smedley + presidents + select + distinguished
@@ -109,7 +112,7 @@ const DistinguishedCompositionBar: React.FC<
       <div
         className="flex w-full h-7 rounded-md overflow-hidden border border-gray-200"
         role="img"
-        aria-label={`Distinguished club composition: Smedley ${smedley}, President's ${presidents}, Select ${select}, Distinguished ${distinguished}, Not yet ${notYet}, total ${totalClubs}`}
+        aria-label={`Distinguished club composition, clubs qualifying today: Smedley ${smedley}, President's ${presidents}, Select ${select}, Distinguished ${distinguished}, Not yet ${notYet}, total ${totalClubs}`}
       >
         {segments.map(seg => {
           if (seg.count === 0) return null
@@ -126,6 +129,19 @@ const DistinguishedCompositionBar: React.FC<
           )
         })}
       </div>
+
+      {/* #2580: the tier counts are on current membership. The KPI above
+          headlines the confirmed count, so say which basis this is. */}
+      <p
+        data-testid="distinguished-composition-basis"
+        className="mt-2 text-xs font-tm-body text-gray-600"
+      >
+        Clubs qualifying today on current membership.
+        {kpiBasis === 'confirmed' &&
+          ' The confirmed count is in the Distinguished card above.'}
+        {kpiBasis === 'qualifying-today' &&
+          ' No confirmed count is available for this date.'}
+      </p>
 
       <ul className="mt-3 flex flex-wrap gap-3 list-none text-xs font-tm-body text-gray-700">
         {segments.map(seg => (

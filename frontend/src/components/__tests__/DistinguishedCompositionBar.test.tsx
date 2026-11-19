@@ -27,6 +27,72 @@ describe('DistinguishedCompositionBar caption (#1107)', () => {
   })
 })
 
+/* #2580 — the bar counts clubs that qualify on current membership. The KPI
+   above it headlines the confirmed count, so the bar says which basis it
+   shows and never reads as the confirmed figure. */
+describe('DistinguishedCompositionBar basis (#2580)', () => {
+  it('names the qualifying-today basis and points to the confirmed KPI', () => {
+    render(
+      <DistinguishedCompositionBar
+        smedley={0}
+        presidents={0}
+        select={0}
+        distinguished={57}
+        totalClubs={162}
+        kpiBasis="confirmed"
+      />
+    )
+    const note = screen.getByTestId('distinguished-composition-basis')
+    expect(note).toHaveTextContent(/qualifying today/i)
+    expect(note).toHaveTextContent(/confirmed count is in the Distinguished/i)
+  })
+
+  it('does not point to a confirmed count when the KPI card has none', () => {
+    render(
+      <DistinguishedCompositionBar
+        smedley={0}
+        presidents={0}
+        select={0}
+        distinguished={57}
+        totalClubs={162}
+        kpiBasis="qualifying-today"
+      />
+    )
+    const note = screen.getByTestId('distinguished-composition-basis')
+    expect(note).toHaveTextContent(/qualifying today/i)
+    expect(note).not.toHaveTextContent(/confirmed count is in/i)
+    expect(note).toHaveTextContent(/no confirmed count/i)
+  })
+
+  it('makes no claim about the KPI card until its basis is known', () => {
+    render(
+      <DistinguishedCompositionBar
+        smedley={0}
+        presidents={0}
+        select={0}
+        distinguished={57}
+        totalClubs={162}
+      />
+    )
+    const note = screen.getByTestId('distinguished-composition-basis')
+    expect(note).toHaveTextContent(/qualifying today/i)
+    expect(note).not.toHaveTextContent(/confirmed count is in/i)
+  })
+
+  it('puts the basis in the bar description for screen readers', () => {
+    render(
+      <DistinguishedCompositionBar
+        smedley={0}
+        presidents={0}
+        select={0}
+        distinguished={57}
+        totalClubs={162}
+      />
+    )
+    expect(screen.getByRole('img')).toHaveAccessibleName(/qualifying today/i)
+  })
+})
+
 /* #1636 — each tier segment and its legend swatch carry a `.tier-fill--*`
    hook, which dark-mode.css remaps to the `--tier-chart-*` tokens so the
    President's / Smedley fills clear 3:1 on the dark surface. Light mode keeps

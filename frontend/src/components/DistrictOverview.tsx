@@ -134,6 +134,8 @@ interface DistrictOverviewProps {
    * the phone hub, where the hub above it already is the overview (#1842).
    */
   heading?: string
+  /** The Distinguished KPI card's basis (#2580), resolved by the page (R3). */
+  distinguishedBasis?: 'confirmed' | 'qualifying-today' | undefined
 }
 
 export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
@@ -142,6 +144,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
   selectedDate,
   programYearStartDate,
   heading = 'Overview',
+  distinguishedBasis,
 }) => {
   const {
     data: analytics,
@@ -257,6 +260,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             select={analytics.distinguishedClubs.select}
             distinguished={analytics.distinguishedClubs.distinguished}
             totalClubs={analytics.allClubs.length}
+            kpiBasis={distinguishedBasis}
           />
           <PaymentComposition
             totalMembership={analytics.totalMembership}
