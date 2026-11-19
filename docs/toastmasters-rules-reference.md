@@ -538,7 +538,7 @@ DRP Rev. 07/2026 calls these the "District Top 3 Awards" (pp. 16–17). It lists
 - **President's Extension Award:** Top 3 districts by net club growth. DRP p. 17: "the largest net club growth during the program year".
 - **President's 20-Plus Award:** Top 3 districts by % of active clubs with 20+ paid members. DRP p. 16: "20 or more paid members at year-end".
 - **District Club Retention Award:** Top 3 districts retaining 90%+ paid clubs. DRP p. 17: "at least 90% of their paid club base".
-- **President's Membership Retention Award** (new in our doc, #2869): Top 3 districts by membership retention rate. DRP p. 17: "the highest membership retention rate at year-end". How Toast Stats should compute the rate is **source not found**; the award is not built.
+- **President's Membership Retention Award** (new in our doc, #2869): Top 3 districts by membership retention rate. DRP p. 17: "the highest membership retention rate at year-end". TI doesn't publish the formula, so Toast Stats publishes its own estimate, labelled as one; `/methodology` §12 gives the formula (#1614).
 
 ### 13.5 Threshold Awards
 
