@@ -295,6 +295,15 @@ export async function recordRevision(
     return result
   }
 
+  // Phase 3: a stamped `final` ends the close (stampFinal). A later closing
+  // day would leave `final` naming a revision older than the month end, so
+  // nothing is recorded; the pipeline warns on the refusal.
+  if (index.final !== null) {
+    result.refused = `the close of ${date} is final (${index.final}); revision ${asOf} not recorded`
+    result.revisionZero = listed(date) ? 'already-recorded' : 'no-prior'
+    return result
+  }
+
   const copies: Copy[] = []
   const added: ReconciliationRevision[] = []
 
@@ -410,7 +419,16 @@ function previousMonthEnd(date: string): string {
  * changed, so a rerun is a no-op. Fails closed, writing nothing, on a daily
  * that is closing data (or has no metadata), an index of another month
  * end, or a closing revision on or after `date` (an earlier day rerun after
- * the close went on).
+ * the close went on). Once `final` is set, recordRevision refuses any later
+ * closing revision.
+ *
+ * `final` is the last closing revision KEPT, which is not always the close
+ * `snapshots/<monthEnd>/` serves. A partial close day (failed districts) is
+ * refused as a revision (#2483 fix 4) but its month end is still uploaded.
+ * If the last close day was partial, the month end holds that partial day
+ * and `final` names the day before it, the last full close. Readers that
+ * want the final close's numbers read `revisions/<final>/`, not the month
+ * end.
  */
 export async function stampFinal(
   opts: StampFinalOptions
