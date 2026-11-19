@@ -14,6 +14,8 @@
 
 import type { DistrictRanking } from '@taverns-red/shared-contracts'
 
+import type { MembershipRetentionAward } from './MembershipRetentionCalculator.js'
+
 /**
  * Single ranked entry in a competitive award leaderboard.
  */
@@ -47,6 +49,10 @@ export interface CompetitiveAwardsByDistrict {
   retentionRank: number
   retentionValue: number
   retentionIsWinner: boolean
+  /** #1614: absent for districts left out of the estimate */
+  membershipRetentionRank?: number
+  membershipRetentionValue?: number
+  membershipRetentionIsWinner?: boolean
 }
 
 /**
@@ -59,6 +65,8 @@ export interface CompetitiveAwardStandings {
   twentyPlusAward: CompetitiveAwardRanking[]
   /** Top-ranked districts for District Club Retention Award (sorted, all districts) */
   retentionAward: CompetitiveAwardRanking[]
+  /** #1614: present only when a logical date is passed to calculate() */
+  membershipRetentionAward?: MembershipRetentionAward
   /** Per-district summary for fast lookup */
   byDistrict: Record<string, CompetitiveAwardsByDistrict>
 }
@@ -79,7 +87,10 @@ export class CompetitiveAwardsCalculator {
    * @param rankings - Array of district rankings from BordaCountRankingCalculator
    * @returns Complete competitive award standings
    */
-  calculate(rankings: DistrictRanking[]): CompetitiveAwardStandings {
+  calculate(
+    rankings: DistrictRanking[],
+    _logicalDate?: string
+  ): CompetitiveAwardStandings {
     const extensionAward = this.rankByExtension(rankings)
     const twentyPlusAward = this.rankByTwentyPlus(rankings)
     const retentionAward = this.rankByRetention(rankings)
