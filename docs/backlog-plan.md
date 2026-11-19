@@ -26,11 +26,11 @@ The goal is zero open issues that aren't parked. Every open issue is in one of t
 
 ## Next, in order
 
-Builders run on Sonnet, 3 or 4 at a time. Each PR has a red test first and one independent review, and merges on a green exact head. Each sprint ends with a release, which needs an OK each time.
+Builders run on Sonnet, 3 or 4 at a time. Each PR has a red test first and one independent review, and merges on a green exact head. Each batch ends with a release, which the VP cuts.
 
 ### Batch 1: Sprint 1 leftovers and review follow-ups (2026-11-19 to 11-20)
 
-- #1614: President's Membership Retention Award, as a labelled estimate. 6 PRs; the 2025–26 rebuild needs Ron's OK.
+- #1614: President's Membership Retention Award, as a labelled estimate. 6 PRs; the 2025–26 rebuild needs the COO's OK.
 - #3019: a staging drill path for the auto-restore decide job. Then the COO's one approved drill, which closes #2856, #2858 and #2977.
 - #2418: re-measure the agent CLI.
 - #2810: take the scripts-suite timings in CI.
@@ -62,14 +62,14 @@ Builders run on Sonnet, 3 or 4 at a time. Each PR has a red test first and one i
 
 ### Batch 6: P3 features (2026-12-04 to 12-11; Ron kept all three)
 
-- #2764: region What Changed events. Staging proof first; the prod publish needs Ron.
-- #2498: 3D spike-map social image. Each publish needs Ron.
+- #2764: region What Changed events. Staging proof first (publish rule under Approvals).
+- #2498: 3D spike-map social image (publish rule under Approvals).
 - #2433: remote MCP endpoint. COO approval and a security review come before any build.
 
 **Zero unparked: about 2026-12-11.** New review follow-ups land about 1 per 3 PRs. Anything S-sized gets fixed inside the PR that caused it.
 
-## Needs Ron
+## Approvals
 
-- The #1614 rebuild of the 2026-04-30, 05-31 and 06-30 dates, so the 2025–26 standings show.
-- A release at the end of each batch.
-- The prod publishes for #2764 and #2498.
+- **Releases:** the VP cuts them at the end of each batch, on green CI on the exact head with reviews done (ADR 0020).
+- **#1614 rebuild** of 2026-04-30, 05-31 and 06-30: the COO OKs it from the run details. Ron is needed only if a permission check blocks it.
+- **#2764 and #2498 publishes:** a normal pipeline publish just runs. One that can't be undone or that overwrites published data goes to the COO first, with a backup or restore point named.
