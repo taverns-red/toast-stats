@@ -12,6 +12,7 @@
 import { describe, it, expect } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import * as contracts from '@taverns-red/shared-contracts'
 import { parseManifest } from '../smokeFixtures'
 import {
   HOW_TO_VIDEOS,
@@ -101,6 +102,40 @@ describe('families read through a path helper are named in the manifest (#2545)'
     'config/club-district-history/',
   ])('has an entry under %s', family => {
     expect(manifest.paths.some(e => e.path.startsWith(family))).toBe(true)
+  })
+})
+
+describe('per-date files named by a shared-contracts constant are in the manifest (#3007)', () => {
+  // `snapshots/${date}/${SOME_FILE_NAME}` normalises to `snapshots/*/*`,
+  // which any per-date entry matches, so the check above cannot see a new
+  // one. Resolve each constant and look for its own entry: #3081 shipped a
+  // reinstatable-clubs.json read with no fixture and every growth smoke
+  // failed on the miss.
+  const sources = fs
+    .readdirSync(servicesDir)
+    .filter(f => f.endsWith('.ts'))
+    .map(f => fs.readFileSync(path.join(servicesDir, f), 'utf-8'))
+    .join('\n')
+  const names = [
+    ...new Set(
+      [
+        ...sources.matchAll(
+          /(?:cdnBaseUrl\(\)|CDN_BASE_URL)\}\/snapshots\/\$\{date\}\/\$\{([A-Z_]+_FILE_NAME)\}/g
+        ),
+      ].map(m => m[1] as string)
+    ),
+  ]
+
+  it('finds the constant-named reads', () => {
+    expect(names).toContain('SUSPENDED_CLUBS_FILE_NAME')
+  })
+
+  it.each(names)('%s has its own per-date entry', name => {
+    const value = (contracts as Record<string, unknown>)[name]
+    expect(typeof value, `${name} is a shared-contracts export`).toBe('string')
+    expect(manifest.paths.map(e => e.path)).toContain(
+      `snapshots/{date}/${value as string}`
+    )
   })
 })
 
