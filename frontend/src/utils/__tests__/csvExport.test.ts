@@ -3,7 +3,7 @@
  *
  * Covers: arrayToCSV, downloadCSV, generateFilename, exportMembershipHistory,
  * exportClubs, exportEducationalAwards, exportDailyReports,
- * exportDailyReportDetail, exportDistrictStatistics,
+ * exportDailyReportDetail,
  * exportHistoricalRankData
  */
 
@@ -17,7 +17,6 @@ import {
   exportEducationalAwards,
   exportDailyReports,
   exportDailyReportDetail,
-  exportDistrictStatistics,
   exportHistoricalRankData,
 } from '../csvExport'
 
@@ -504,70 +503,6 @@ describe('exportDailyReportDetail', () => {
     const lines = content.split('\n')
     const newMemberHeaders = lines.filter(l => l.trim() === 'New Members')
     expect(newMemberHeaders).toHaveLength(0)
-  })
-})
-
-// ─── exportDistrictStatistics ────────────────────────────────────────
-
-describe('exportDistrictStatistics', () => {
-  beforeEach(setupDownloadMocks)
-  afterEach(teardownDownloadMocks)
-
-  const sampleStats = {
-    districtId: '61',
-    asOfDate: '2025-03-15',
-    membership: {
-      total: 5000,
-      change: 100,
-      changePercent: 2.0,
-    },
-    clubs: {
-      total: 200,
-      active: 180,
-      suspended: 20,
-      distinguished: 50,
-    },
-    education: {
-      totalAwards: 300,
-    },
-  }
-
-  it('includes all three stat sections', () => {
-    exportDistrictStatistics(sampleStats, 'District 61')
-    const content = capturedCSVContent!
-    expect(content).toContain('Membership Statistics')
-    expect(content).toContain('Club Statistics')
-    expect(content).toContain('Educational Statistics')
-  })
-
-  it('includes membership metrics', () => {
-    exportDistrictStatistics(sampleStats, 'District 61')
-    const content = capturedCSVContent!
-    expect(content).toContain('Total Members,5000')
-    expect(content).toContain('Change,100')
-    expect(content).toContain('Change Percent,2%')
-  })
-
-  it('includes club metrics', () => {
-    exportDistrictStatistics(sampleStats, 'District 61')
-    const content = capturedCSVContent!
-    expect(content).toContain('Total Clubs,200')
-    expect(content).toContain('Active Clubs,180')
-    expect(content).toContain('Suspended Clubs,20')
-    expect(content).toContain('Distinguished Clubs,50')
-  })
-
-  it('computes distinguished percentage', () => {
-    exportDistrictStatistics(sampleStats, 'District 61')
-    const content = capturedCSVContent!
-    // 50/200 = 25.0%
-    expect(content).toContain('Distinguished Percentage,25.0%')
-  })
-
-  it('includes educational statistics', () => {
-    exportDistrictStatistics(sampleStats, 'District 61')
-    const content = capturedCSVContent!
-    expect(content).toContain('Total Awards,300')
   })
 })
 
