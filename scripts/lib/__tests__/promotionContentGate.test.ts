@@ -904,6 +904,10 @@ describe('planContentChecks — bounded, change-driven sampling', () => {
       expect(classifyObject('snapshots/2026-10-31/revisions/index.json')).toBe(
         'json'
       )
+      // The month-end district file itself keeps the generic kind.
+      expect(classifyObject('snapshots/2026-10-31/district_61.json')).toBe(
+        'json'
+      )
     })
 
     it('keeps the month-end files at the full generic sample share', () => {
