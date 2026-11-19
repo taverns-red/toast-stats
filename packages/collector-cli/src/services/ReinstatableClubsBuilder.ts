@@ -54,6 +54,11 @@ export interface BuildReinstatableClubsInput {
   closed: ClosedClubNameIndex
   /** The previous program year's last suspended list, when it is known. */
   previousSuspended?: SuspendedClubs | null
+  /**
+   * The June 30 suspended lists of the program years before the previous
+   * one, newest first, when they are known. Used only to date closures.
+   */
+  olderSuspended?: readonly SuspendedClubs[]
   /** The date's roster: club number → its district and club status. */
   roster?: ReadonlyMap<string, RosterEntry> | null
 }

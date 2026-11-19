@@ -239,15 +239,16 @@ describe('AnalyticsComputeService — reinstatable-clubs.json is point in time (
       ])
     })
 
-    it('without the previous list the file is still written, minus those clubs', async () => {
+    it('without the previous list, Jul 1 to Sep 30, writes no file (unknown, not zero)', async () => {
+      // #3064 review N2: the clubs that list would add are missing, so an
+      // empty district would read as a measured zero (#1757).
       const dir = await seedAugust()
       const result = await compute(AUGUST)
       expect(result.reinstatableClubsFailed).toBe(false)
-      const file = await readOut(dir)
-      expect(file.districts['61']!.map(c => c.clubNumber)).toEqual([
-        '1849755',
-        '1314924',
-      ])
+      expect(result.reinstatableClubsPath).toBeUndefined()
+      await expect(
+        fs.access(path.join(dir, REINSTATABLE_CLUBS_FILE_NAME))
+      ).rejects.toThrow()
     })
 
     it('an unreadable previous list fails the step, not the run', async () => {
@@ -260,5 +261,66 @@ describe('AnalyticsComputeService — reinstatable-clubs.json is point in time (
         fs.access(path.join(dir, REINSTATABLE_CLUBS_FILE_NAME))
       ).rejects.toThrow()
     })
+  })
+
+  describe('older program years’ June 30 suspended lists (#3064 review F2)', () => {
+    // Tunney's Toastmasters (D61) was suspended 2026-03-31 and left the
+    // roster at the July rollover (lastSeen 2026-06-30). It closed on
+    // Oct 1 2026, inside the window until Sep 30 2028, but only the
+    // 2026-06-30 list still has its suspend date.
+    const juneList = (date: string, clubs: unknown[]) => ({
+      _format: SUSPENDED_CLUBS_FORMAT,
+      snapshotDate: date,
+      programYear: {
+        start: `${Number(date.slice(0, 4)) - 1}-07-01`,
+        end: date,
+      },
+      districts: { '61': clubs },
+    })
+    const TUNNEYS = {
+      clubNumber: '3475582',
+      clubName: "Tunney's Toastmasters",
+      suspendDate: '2026-03-31',
+    }
+
+    async function writeList(date: string, clubs: unknown[]): Promise<void> {
+      const file = path.join(
+        cacheDir,
+        'snapshots',
+        date,
+        'suspended-clubs.json'
+      )
+      await fs.mkdir(path.dirname(file), { recursive: true })
+      await fs.writeFile(file, JSON.stringify(juneList(date, clubs)))
+    }
+
+    for (const [date, lists] of [
+      ['2028-04-01', ['2027-06-30']],
+      ['2028-08-01', ['2028-06-30', '2027-06-30']],
+    ] as const) {
+      it(`${date}: dates the closure from the older list, so it is listed in the oldest period`, async () => {
+        const dir = await seed(date, date)
+        await fs.writeFile(
+          path.join(cacheDir, 'config/closed-club-names.json'),
+          JSON.stringify({
+            ...CLOSED,
+            asOf: date,
+            programYears: {
+              '2025-2026': {
+                '61': [['3475582', "Tunney's Toastmasters", '2026-06-30']],
+              },
+            },
+          })
+        )
+        for (const newer of lists) await writeList(newer, [])
+        await writeList('2026-06-30', [TUNNEYS])
+        const result = await compute(date)
+        expect(result.reinstatableClubsFailed).toBe(false)
+        const row = (await readOut(dir)).districts['61']!.find(
+          c => c.clubNumber === '3475582'
+        )
+        expect(row).toMatchObject({ status: 'closed', oldestPeriod: true })
+      })
+    }
   })
 })

@@ -769,6 +769,50 @@ describe('process-dates.sh: the previous program year’s June 30 suspended list
     expect(r.stdout + r.stderr).toMatch(
       /No snapshots\/2026-06-30\/suspended-clubs\.json/
     )
+    expect(summaryText()).toContain(
+      '- **Earlier suspended lists that failed to download (#3007)**: 0'
+    )
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+
+  it('also pulls the two program years before that, and removes them afterwards (#3064 review F2)', () => {
+    // A Mar 31 suspension closes on Oct 1 and stays inside the four-period
+    // window for two more years; from Jul 1 of the second year its suspend
+    // date is only in the June 30 list three program years back.
+    putObject('snapshots/2026-06-30/suspended-clubs.json', '{"s":3}', true)
+    putObject('snapshots/2025-06-30/suspended-clubs.json', '{"s":2}', true)
+    putObject('snapshots/2024-06-30/suspended-clubs.json', '{"s":1}', true)
+    const r = run('rescrape', ['2026-08-31'], {
+      DISTRICTS: '61',
+      STUB_DISK_LOG: diskLog,
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(seenByCompute()).toEqual(
+      expect.arrayContaining([
+        'snapshots/2026-06-30/suspended-clubs.json',
+        'snapshots/2025-06-30/suspended-clubs.json',
+        'snapshots/2024-06-30/suspended-clubs.json',
+      ])
+    )
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+
+  it('a download error is not "missing": it is logged and counted in the summary (#3064 review N1)', () => {
+    putObject('snapshots/2026-06-30/suspended-clubs.json', '{"s":1}', true)
+    const r = run('rescrape', ['2026-08-31'], {
+      DISTRICTS: '61',
+      SHIM_FAIL_MATCH: '^cp gs://test-bucket/snapshots/2026-06-30/suspended',
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(r.stderr).toMatch(/HTTPError 503/)
+    expect(r.stdout + r.stderr).toMatch(
+      /::warning::Could not download snapshots\/2026-06-30\/suspended-clubs\.json/
+    )
+    expect(summaryText()).toContain(
+      '- **Earlier suspended lists that failed to download (#3007)**: 1'
+    )
     expect(localDateDirs('snapshots')).toEqual([])
   })
 })

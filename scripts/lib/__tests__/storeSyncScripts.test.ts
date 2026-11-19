@@ -290,12 +290,26 @@ describe('sync-stores.sh (#1722)', () => {
     )
   })
 
-  it('fails when the closed-club index cannot be fetched', () => {
+  it('warns and goes on when the closed-club index cannot be fetched (#3064 review N4)', () => {
+    // A best-effort input: compute then writes no reinstatable-clubs.json.
+    // It must not become a new way for the daily to fail.
     putObject('config/closed-club-names.json', doc(6))
-    const r = run(SYNC, ['closed-club-names'], {
-      SHIM_FAIL_MATCH: '^cp ',
+    putObject('config/district-region-history.json', doc(5))
+    const r = run(SYNC, ['closed-club-names', 'district-region-history'], {
+      SHIM_FAIL_MATCH: '^cp .*closed-club-names',
     })
-    expect(r.status).not.toBe(0)
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toMatch(/::warning::Failed to pull .*closed-club-names/)
+    expect(
+      fs.existsSync(path.join(cache, 'config/closed-club-names.json'))
+    ).toBe(false)
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+      /closed-club-names\*\*: failed to pull/
+    )
+    // The next store is still pulled.
+    expect(
+      fs.existsSync(path.join(cache, 'config/district-region-history.json'))
+    ).toBe(true)
   })
 
   it('rejects an unknown store name', () => {
