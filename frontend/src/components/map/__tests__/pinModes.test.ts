@@ -169,6 +169,14 @@ describe('tier mode', () => {
     )
     expect(model.isDashed(club({}))).toBe(false)
   })
+
+  // #2580: the legend says what a dashed outline means.
+  it('explains the dashed outline as qualifying today, not confirmed', () => {
+    const model = buildModeModel('tier', [])
+    expect(model.note).toMatch(/dashed/i)
+    expect(model.note).toMatch(/qualif\w+ today/i)
+    expect(model.note).toMatch(/not (yet )?confirmed/i)
+  })
 })
 
 describe('territory modes', () => {
