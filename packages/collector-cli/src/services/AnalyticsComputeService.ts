@@ -68,7 +68,11 @@ import {
   SuspendedClubsSchema,
   type DistrictRegionHistory,
 } from '@taverns-red/shared-contracts'
-import { buildReinstatableClubs } from './ReinstatableClubsBuilder.js'
+import {
+  buildReinstatableClubs,
+  type RosterEntry,
+} from './ReinstatableClubsBuilder.js'
+import { calculateProgramYear } from '../utils/CachePaths.js'
 import { readStoreFileText } from '../utils/gzipLayers.js'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
 import {
@@ -2256,7 +2260,12 @@ export class AnalyticsComputeService {
    * index at `<cache>/config/closed-club-names.json`, which the pipeline has
    * to sync before compute (like the region history). Presence carries
    * meaning (#1757): when either input is missing the list is unknown, so
-   * there is no file, never a file of empty lists.
+   * there is no file, never a file of empty lists. A closed-club index newer
+   * than the date (a rebuild) also skips the step.
+   *
+   * Two more inputs, both optional: the previous program year's June 30
+   * `suspended-clubs.json` (process-dates.sh pulls it into the cache) and the
+   * date's district snapshots, for each club's status on the roster.
    *
    * Never publish-blocking: the file is new and nothing reads it yet. A
    * failure is logged and reported in `reinstatableClubsFailed`, and is not
@@ -2292,11 +2301,59 @@ export class AnalyticsComputeService {
         return { failed: false }
       }
 
+      const suspended = SuspendedClubsSchema.parse(JSON.parse(suspendedRaw))
+      const closed = ClosedClubNameIndexSchema.parse(JSON.parse(closedRaw))
+      // The index is not point in time: a rebuild or backfill of an earlier
+      // date would read closures that came later.
+      if (closed.asOf > snapshotDate) {
+        this.logger.warn(
+          'Closed-club index is newer than the date — skipping reinstatable-clubs.json',
+          { snapshotDate, closedIndexAsOf: closed.asOf }
+        )
+        return { failed: false }
+      }
+
+      // The previous program year's last list, its June 30 snapshot (#3064
+      // review). The PY is the snapshot's logical date's (#1284).
+      const previousEnd = `${calculateProgramYear(snapshotDate).slice(0, 4)}-06-30`
+      const previousRaw = await readOptional(
+        path.join(this.getSnapshotDir(previousEnd), SUSPENDED_CLUBS_FILE_NAME)
+      )
+      const previousSuspended =
+        previousRaw === null
+          ? null
+          : SuspendedClubsSchema.parse(JSON.parse(previousRaw))
+      if (previousSuspended === null) {
+        this.logger.warn(
+          'No suspended-clubs.json for the previous program year — from Jul 1 to Sep 30, clubs that left the roster from Apr 1 to Jun 30 are withheld',
+          { snapshotDate, previousEnd }
+        )
+      }
+
+      // The date's roster: who is on it, and in what status.
+      const roster = new Map<string, RosterEntry>()
+      for (const districtId of Object.keys(suspended.districts)) {
+        const snapshot = await this.loadDistrictSnapshot(
+          snapshotDate,
+          districtId
+        )
+        for (const club of snapshot?.clubs ?? []) {
+          roster.set(normalizeClubId(club.clubId), {
+            districtId,
+            ...(club.clubStatus !== undefined && {
+              clubStatus: club.clubStatus,
+            }),
+          })
+        }
+      }
+
       const reinstatable = ReinstatableClubsSchema.parse(
         buildReinstatableClubs({
           snapshotDate,
-          suspended: SuspendedClubsSchema.parse(JSON.parse(suspendedRaw)),
-          closed: ClosedClubNameIndexSchema.parse(JSON.parse(closedRaw)),
+          suspended,
+          closed,
+          previousSuspended,
+          roster,
         })
       )
       const outputPath = path.join(snapshotDir, REINSTATABLE_CLUBS_FILE_NAME)
