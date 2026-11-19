@@ -32,6 +32,8 @@ const SHIM = path.join(
 )
 const STUBS = path.join(REPO, 'scripts/lib/__tests__/fixtures/process-dates')
 const BUCKET = 'test-bucket'
+/** Prod, read-only: only the 9c final stamp reads it (#2475). */
+const PROD_BUCKET = 'test-prod-bucket'
 const CACHE_CONTROL = 'public, max-age=3600, must-revalidate'
 
 let tmp: string
@@ -78,6 +80,7 @@ function run(
       RUN_MANIFEST_FILE: manifest,
       RUN_REMOVALS_FILE: removals,
       SHIM_UPLOAD_LOG: uploadLog,
+      GCS_BUCKET_PRODUCTION: PROD_BUCKET,
       ...env,
     },
   })
@@ -90,11 +93,16 @@ function run(
   return { status: r.status, stdout: r.stdout, stderr: r.stderr, counts }
 }
 
-function putObject(objectPath: string, content: string, gzip = false): void {
-  const obj = path.join(root, BUCKET, objectPath)
+function putObject(
+  objectPath: string,
+  content: string,
+  gzip = false,
+  bucket = BUCKET
+): void {
+  const obj = path.join(root, bucket, objectPath)
   fs.mkdirSync(path.dirname(obj), { recursive: true })
   fs.writeFileSync(obj, gzip ? zlib.gzipSync(content) : content)
-  const meta = path.join(root, '.meta', BUCKET, objectPath)
+  const meta = path.join(root, '.meta', bucket, objectPath)
   fs.mkdirSync(path.dirname(meta), { recursive: true })
   fs.writeFileSync(meta, gzip ? 'content-encoding=gzip\n' : '')
 }
@@ -2534,22 +2542,31 @@ describe('process-dates.sh daily: the reconciliation final stamp (#2475)', () =>
     closing,
     successfulDistricts: ['61'],
   })
-  const putIndex = (final: string | null = null) =>
-    putObject(
-      INDEX,
-      JSON.stringify({
-        schemaVersion: 1,
-        monthEnd: MONTH_END,
-        dataMonth: '2026-10',
-        revisions: [
-          revision(MONTH_END, false),
-          revision('2026-11-01'),
-          revision('2026-11-03'),
-        ],
-        final,
-      }),
-      true
-    )
+  const indexBody = (
+    final: string | null,
+    revisions = [
+      revision(MONTH_END, false),
+      revision('2026-11-01'),
+      revision('2026-11-03'),
+    ]
+  ) =>
+    JSON.stringify({
+      schemaVersion: 1,
+      monthEnd: MONTH_END,
+      dataMonth: '2026-10',
+      revisions,
+      final,
+    })
+  /** Prod's index (read-only): the closing dailies promoted, the stamp not. */
+  const putProdIndex = (
+    final: string | null = null,
+    revisions?: ReturnType<typeof revision>[]
+  ) => putObject(INDEX, indexBody(final, revisions), true, PROD_BUCKET)
+  /** Staging's index; prod mirrors it, not final, unless already put. */
+  const putIndex = (final: string | null = null) => {
+    putObject(INDEX, indexBody(final), true)
+    if (!fs.existsSync(path.join(root, PROD_BUCKET, INDEX))) putProdIndex()
+  }
   const stagedIndex = () =>
     JSON.parse(
       zlib
@@ -2568,7 +2585,9 @@ describe('process-dates.sh daily: the reconciliation final stamp (#2475)', () =>
     expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
     expect(stampCalls()).toEqual([
       expect.stringMatching(
-        new RegExp(`^collector-cli stamp-final --date ${DAILY} --index \\S+$`)
+        new RegExp(
+          `^collector-cli stamp-final --date ${DAILY} --index \\S+ --prod-index \\S+$`
+        )
       ),
     ])
     expect(stagedIndex().final).toBe('2026-11-03')
@@ -2580,7 +2599,8 @@ describe('process-dates.sh daily: the reconciliation final stamp (#2475)', () =>
     )
   })
 
-  it('uploads nothing when final is already set (forward only)', () => {
+  it('uploads nothing when final is already set in prod (forward only)', () => {
+    putProdIndex('2026-11-01')
     putIndex('2026-11-01')
     const r = daily()
     expect(r.status, r.stderr).toBe(0)
@@ -2606,6 +2626,47 @@ describe('process-dates.sh daily: the reconciliation final stamp (#2475)', () =>
     expect(stampCalls()).toEqual([])
   })
 
+  // Review of PR #3070: staging alone would read already-final forever
+  // after the stamping daily's promotion was held.
+  it('sends staging’s final again while prod’s index is not final', () => {
+    putIndex('2026-11-03')
+    const r = daily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(stagedIndex().final).toBe('2026-11-03')
+    expect(manifestPaths()).toContain(INDEX)
+  })
+
+  it('waits, warning, while prod lacks a revision the index names', () => {
+    putProdIndex(null, [revision(MONTH_END, false), revision('2026-11-01')])
+    putIndex()
+    const r = daily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toMatch(/::warning::.*2026-10-31.*prod.*#2475/)
+    expect(stagedIndex().final).toBeNull()
+    expect(manifestPaths()).not.toContain(INDEX)
+  })
+
+  it('an unreadable prod index only warns and stamps nothing', () => {
+    putIndex()
+    const r = daily({
+      SHIM_FAIL_MATCH: `${PROD_BUCKET}/snapshots/${MONTH_END}/revisions/index\\.json`,
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(r.stderr).toMatch(/::warning::.*prod.*revisions\/index\.json.*#2475/)
+    expect(stampCalls()).toEqual([])
+    expect(manifestPaths()).not.toContain(INDEX)
+  })
+
+  it('stamps nothing, warning, when the prod bucket is not named', () => {
+    putIndex()
+    const r = daily({ GCS_BUCKET_PRODUCTION: '' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toMatch(/::warning::.*GCS_BUCKET_PRODUCTION.*#2475/)
+    expect(stampCalls()).toEqual([])
+    expect(manifestPaths()).not.toContain(INDEX)
+  })
+
   it('a failed stamp-final only warns and uploads nothing', () => {
     putIndex()
     const r = daily({ STUB_STAMP_FINAL_FAIL: '.' })
@@ -2617,17 +2678,16 @@ describe('process-dates.sh daily: the reconciliation final stamp (#2475)', () =>
   })
 
   it('takes the previous month end across a year end', () => {
-    putObject(
-      'snapshots/2026-12-31/revisions/index.json',
-      JSON.stringify({
-        schemaVersion: 1,
-        monthEnd: '2026-12-31',
-        dataMonth: '2026-12',
-        revisions: [revision('2027-01-02')],
-        final: null,
-      }),
-      true
-    )
+    const december = JSON.stringify({
+      schemaVersion: 1,
+      monthEnd: '2026-12-31',
+      dataMonth: '2026-12',
+      revisions: [revision('2027-01-02')],
+      final: null,
+    })
+    const decemberIndex = 'snapshots/2026-12-31/revisions/index.json'
+    putObject(decemberIndex, december, true)
+    putObject(decemberIndex, december, true, PROD_BUCKET)
     const r = daily({}, '2027-01-04')
     expect(r.status, r.stderr).toBe(0)
     expect(manifestPaths()).toContain(

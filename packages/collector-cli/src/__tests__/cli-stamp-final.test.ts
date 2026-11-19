@@ -16,12 +16,12 @@ describe('CLI: stamp-final command (#2475)', () => {
     expect(command).toBeDefined()
   })
 
-  it('takes the daily’s date and the hydrated index file', () => {
+  it('takes the daily’s date, the hydrated index file and prod’s index file', () => {
     const flags = command!.options.map(o => o.long)
     expect(flags).toEqual(
-      expect.arrayContaining(['--date', '--index', '--config'])
+      expect.arrayContaining(['--date', '--index', '--prod-index', '--config'])
     )
     const required = command!.options.filter(o => o.mandatory).map(o => o.long)
-    expect(required.sort()).toEqual(['--date', '--index'])
+    expect(required.sort()).toEqual(['--date', '--index', '--prod-index'])
   })
 })
