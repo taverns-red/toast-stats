@@ -79,6 +79,29 @@ describe('DistrictRevisedNote (#2475)', () => {
     expect(mockHook).toHaveBeenLastCalledWith('61', '2026-10-31')
   })
 
+  it('says in plain words what was revised, when, and where to look', () => {
+    // "Nov 3" is the one on-screen spelling of a date (#2648).
+    mockHook.mockReturnValue(LINK)
+    renderNote()
+    expect(
+      screen.getByRole('link', {
+        name: 'Month-end figures revised Nov 3. See what changed.',
+      })
+    ).toBeInTheDocument()
+  })
+
+  it('the stylesheet reserves two lines on the narrowest phones, where the sentence wraps', () => {
+    const css = readFileSync(
+      join(__dirname, '../../styles/components/app-shell.css'),
+      'utf-8'
+    )
+    const narrowRule =
+      css.match(
+        /@media \(max-width: 359px\)\s*\{\s*\.district-revised-note\s*\{([^}]*)\}/
+      )?.[1] ?? ''
+    expect(narrowRule).toMatch(/min-height:\s*36px/)
+  })
+
   it("opens What Changed on the month end's newest revision", () => {
     mockHook.mockReturnValue(LINK)
     renderNote()
