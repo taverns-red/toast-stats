@@ -12,6 +12,8 @@ import {
 } from '../utils/distinguishedCountdown'
 import { TIER_TITLES } from './recognition/recognitionRegistry'
 import { calculateProgramYearDay } from '../utils/programYear'
+import type { MembershipRetentionBadge } from '../utils/membershipRetentionBadge'
+import { TIE_BREAK_UNPUBLISHED } from '../utils/awardTies'
 
 export type DistinguishedDistrictTier =
   | 'Unknown'
@@ -104,6 +106,9 @@ interface DistinguishedDistrictTrophyCaseProps {
   leadershipExcellenceOnTrack?: boolean | undefined
   educationTrainingQualifies?: boolean | undefined
   clubGrowthQualifies?: boolean | undefined
+  /** This district's place in our President's Membership Retention Award
+      estimate (#1614). Null outside April to June and on older files. */
+  membershipRetention?: MembershipRetentionBadge | null | undefined
 }
 
 /* The four achieved-tier titles come from the shared recognition registry
@@ -160,6 +165,10 @@ interface GapTileSpec {
    unit tests, the same reason MembershipTrendChart links this way. */
 const DISTINGUISHED_COUNTS_METHODOLOGY_HREF =
   '/methodology#distinguished-club-counts'
+
+/* How we estimate the President's Membership Retention Award (#1614). */
+const MEMBERSHIP_RETENTION_METHODOLOGY_HREF =
+  '/methodology#membership-retention-award'
 
 /* Item 1490, the District Recognition Program: the source of every tier
    threshold (docs/investigations/1116-historical-drp-rules.md;
@@ -554,6 +563,51 @@ const TrophyCaseSkeleton: React.FC<{
   )
 }
 
+/* Our estimate of the President's Membership Retention Award (#1614), one
+   line. "Winner" only on the June 30 close; before that a top-3 district is
+   "top 3 so far", the same words as the Awards page card. Loyal blue keeps
+   it apart from the District Club Retention Award. */
+const MembershipRetentionLine: React.FC<{
+  badge: MembershipRetentionBadge
+}> = ({ badge }) => {
+  const { rank, of, value, isWinner, final, tied } = badge
+  return (
+    <p
+      data-testid="membership-retention-badge"
+      className="border-t border-gray-200 pt-4 text-sm text-gray-700 font-tm-body"
+    >
+      <span className="font-semibold text-tm-loyal-blue tabular-nums">
+        #{rank} of {of}
+        {!final && !isWinner && ' so far'}
+      </span>
+      {' · '}President&apos;s Membership Retention Award ·{' '}
+      <span className="tabular-nums">{value.toFixed(1)}%</span>
+      {isWinner && (
+        <>
+          {' · '}
+          <span className="font-semibold text-tm-loyal-blue">
+            {final ? 'winner' : 'top 3 so far'}
+          </span>
+        </>
+      )}
+      {tied && (
+        <>
+          {' · '}
+          <span title={TIE_BREAK_UNPUBLISHED}>tied</span>
+        </>
+      )}
+      {' · '}Toast Stats estimate (
+      <a
+        href={MEMBERSHIP_RETENTION_METHODOLOGY_HREF}
+        className="text-tm-loyal-blue underline"
+      >
+        how we work it out
+      </a>
+      )
+    </p>
+  )
+}
+
 export const DistinguishedDistrictTrophyCase: React.FC<
   DistinguishedDistrictTrophyCaseProps
 > = ({
@@ -570,6 +624,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
   leadershipExcellenceOnTrack,
   educationTrainingQualifies,
   clubGrowthQualifies,
+  membershipRetention,
 }) => {
   const [userExpanded, setUserExpanded] = useState(false)
   const [allTiersOpen, setAllTiersOpen] = useState(false)
@@ -898,6 +953,10 @@ export const DistinguishedDistrictTrophyCase: React.FC<
           {leadershipExcellenceYears} consecutive Distinguished years so far,
           and tracking Distinguished this year. Awarded at the year-end close.
         </p>
+      )}
+
+      {membershipRetention && (
+        <MembershipRetentionLine badge={membershipRetention} />
       )}
     </div>
   )
