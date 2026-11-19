@@ -27,6 +27,39 @@ describe('DistinguishedCompositionBar caption (#1107)', () => {
   })
 })
 
+/* #2580 — the bar counts clubs that qualify on current membership. The KPI
+   above it headlines the confirmed count, so the bar says which basis it
+   shows and never reads as the confirmed figure. */
+describe('DistinguishedCompositionBar basis (#2580)', () => {
+  it('names the qualifying-today basis and points to the confirmed KPI', () => {
+    render(
+      <DistinguishedCompositionBar
+        smedley={0}
+        presidents={0}
+        select={0}
+        distinguished={57}
+        totalClubs={162}
+      />
+    )
+    const note = screen.getByTestId('distinguished-composition-basis')
+    expect(note).toHaveTextContent(/qualifying today/i)
+    expect(note).toHaveTextContent(/confirmed/i)
+  })
+
+  it('puts the basis in the bar description for screen readers', () => {
+    render(
+      <DistinguishedCompositionBar
+        smedley={0}
+        presidents={0}
+        select={0}
+        distinguished={57}
+        totalClubs={162}
+      />
+    )
+    expect(screen.getByRole('img')).toHaveAccessibleName(/qualifying today/i)
+  })
+})
+
 /* #1636 — each tier segment and its legend swatch carry a `.tier-fill--*`
    hook, which dark-mode.css remaps to the `--tier-chart-*` tokens so the
    President's / Smedley fills clear 3:1 on the dark surface. Light mode keeps
