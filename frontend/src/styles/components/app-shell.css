@@ -5036,6 +5036,13 @@
     min-height: 18px;
   }
 
+  /* The sentence is about 50 characters: one line from 360px, two below. */
+  @media (max-width: 359px) {
+    .district-revised-note {
+      min-height: 36px;
+    }
+  }
+
   .district-revised-note a {
     color: var(--link);
     text-decoration: underline;

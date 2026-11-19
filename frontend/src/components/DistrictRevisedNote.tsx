@@ -12,7 +12,8 @@ interface DistrictRevisedNoteProps {
 }
 
 /**
- * "Revised <date>" under the district lede, linking to What Changed on that
+ * "Month-end figures revised <date>. See what changed." under the district
+ * lede, linking to What Changed on that
  * month end's newest revision (#2475). It is separate from the global
  * freshness pill, which has no district context and a fixed width (#2472).
  *
@@ -41,7 +42,8 @@ export const DistrictRevisedNote: React.FC<DistrictRevisedNoteProps> = ({
     <p className="district-revised-note" data-testid="district-revised-note">
       {revision && (
         <Link to={`/district/${districtId}/changes?${query}`}>
-          Revised {formatShortDate(revision.revisedOn)}
+          Month-end figures revised {formatShortDate(revision.revisedOn)}. See
+          what changed.
         </Link>
       )}
     </p>
