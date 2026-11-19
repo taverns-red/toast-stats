@@ -471,7 +471,7 @@ jobs:
           CLUB_TRENDS_PROGRAM_YEARS="${CLUB_TRENDS_PROGRAM_YEARS}" \
             bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
             district-awards-history time-series club-trends club-race \
-            district-region-history
+            district-region-history closed-club-names
 
       # ── Daily Step 3: the date through the shared runner (#1765) ──
       # ADR-015 step 7 (P1): the same per-date loop as rebuild, rescrape and
@@ -795,7 +795,7 @@ jobs:
           CLUB_TRENDS_PROGRAM_YEARS="${CLUB_TRENDS_PROGRAM_YEARS}" \
             bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
             time-series club-trends club-race district-awards-history \
-            district-region-history
+            district-region-history closed-club-names
 
       # ── Rebuild Step 2: Discover dates, then stream one-at-a-time ──
       - name: '[rebuild] Stream rebuild — one date at a time'
@@ -977,7 +977,7 @@ jobs:
           echo "## ⏬ Store Sync (rescrape)" >> "$GITHUB_STEP_SUMMARY"
           bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
             time-series club-trends club-race district-awards-history \
-            district-region-history
+            district-region-history closed-club-names
 
       # ── Rescrape Step 2: Scrape → transform → compute → upload ──
       - name: '[rescrape] Re-collect and process dates'
@@ -1101,7 +1101,7 @@ jobs:
           # (#1722, #1738). Whole club-trends store, like rescrape.
           bash scripts/pipeline/sync-stores.sh "${GCS_BUCKET}" \
             time-series club-trends club-race district-awards-history \
-            district-region-history
+            district-region-history closed-club-names
 
           RAW_DATES=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' -exec basename {} \; | sort)
           echo "## 🔨 Historical rebuild (#1670)" >> "$GITHUB_STEP_SUMMARY"
