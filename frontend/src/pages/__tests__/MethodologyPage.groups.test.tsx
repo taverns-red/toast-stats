@@ -44,6 +44,11 @@ const LEGACY_SECTION_IDS = [
   'changelog',
 ]
 
+// Sections added after the regroup.
+const NEW_SECTION_IDS = ['membership-retention-award'] // #1614
+
+const SECTION_COUNT = LEGACY_SECTION_IDS.length + NEW_SECTION_IDS.length
+
 const EXPECTED_GROUPS: ReadonlyArray<{
   name: string
   ids: ReadonlyArray<string>
@@ -62,6 +67,7 @@ const EXPECTED_GROUPS: ReadonlyArray<{
       'distinguished-club-counts',
       'region-recognition',
       'district-membership-trend',
+      'membership-retention-award',
     ],
   },
   {
@@ -119,7 +125,7 @@ describe('How it works — naming', () => {
 describe('How it works — grouped jump list (desktop)', () => {
   beforeEach(() => mockIsMobile.mockReturnValue(false))
 
-  it('groups the 20 sections under five question headings, in order', () => {
+  it('groups every section under five question headings, in order', () => {
     renderAt()
     const toc = screen.getByRole('navigation', { name: /on this page/i })
     const groups = within(toc).getAllByRole('group')
@@ -137,21 +143,25 @@ describe('How it works — grouped jump list (desktop)', () => {
   it('lists each section exactly once and puts the sections in the same order in the body', () => {
     renderAt()
     const expected = EXPECTED_GROUPS.flatMap(g => g.ids)
-    expect(expected).toHaveLength(20)
-    expect([...expected].sort()).toEqual([...LEGACY_SECTION_IDS].sort())
+    expect(expected).toHaveLength(SECTION_COUNT)
+    expect([...expected].sort()).toEqual(
+      [...LEGACY_SECTION_IDS, ...NEW_SECTION_IDS].sort()
+    )
     const bodyOrder = Array.from(
       document.querySelectorAll('section.methodology-section')
     ).map(s => s.id)
     expect(bodyOrder).toEqual(expected)
   })
 
-  it('numbers the sections 01-20 in reading order', () => {
+  it('numbers the sections 01 to N in reading order', () => {
     renderAt()
     const nums = Array.from(
       document.querySelectorAll('.methodology-section__num')
     ).map(n => n.textContent)
     expect(nums).toEqual(
-      Array.from({ length: 20 }, (_, i) => String(i + 1).padStart(2, '0'))
+      Array.from({ length: SECTION_COUNT }, (_, i) =>
+        String(i + 1).padStart(2, '0')
+      )
     )
   })
 })
@@ -167,7 +177,7 @@ describe('How it works — phone has one contents list', () => {
     const toggles = screen
       .getAllByRole('button')
       .filter(b => b.getAttribute('aria-expanded') !== null)
-    expect(toggles).toHaveLength(20)
+    expect(toggles).toHaveLength(SECTION_COUNT)
   })
 
   it('shows the group question above each run of accordions', () => {

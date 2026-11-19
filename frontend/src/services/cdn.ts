@@ -341,6 +341,31 @@ export interface CompetitiveAwardsByDistrict {
   retentionRank: number
   retentionValue: number
   retentionIsWinner: boolean
+  /** President's Membership Retention Award estimate (#1614). Absent before
+      April, on older files, and for districts left out of the ranking. */
+  membershipRetentionRank?: number
+  membershipRetentionValue?: number
+  membershipRetentionIsWinner?: boolean
+}
+
+/** Where the President's Membership Retention Award estimate stands (#1614). */
+export type MembershipRetentionStatus =
+  'not-started' | 'in-progress' | 'final' | 'baseline-missing'
+
+/** One ranked district in the membership retention estimate (#1614). */
+export interface MembershipRetentionStanding extends CompetitiveAwardRanking {
+  /** April renewals */
+  retained: number
+  /** October + late renewals + new and charter members as of March 31 */
+  base: number
+}
+
+/** President's Membership Retention Award, Toast Stats estimate (#1614). */
+export interface MembershipRetentionAward {
+  status: MembershipRetentionStatus
+  /** The March 31 close the baseline came from (YYYY-03-31) */
+  baselineDate?: string
+  standings: MembershipRetentionStanding[]
 }
 
 /**
@@ -416,6 +441,8 @@ export interface CompetitiveAwardStandings {
   extensionAward: CompetitiveAwardRanking[]
   twentyPlusAward: CompetitiveAwardRanking[]
   retentionAward: CompetitiveAwardRanking[]
+  /** Absent on files built before #1614. */
+  membershipRetentionAward?: MembershipRetentionAward
   byDistrict: Record<string, CompetitiveAwardsByDistrict>
   /** Per-district Distinguished District tier status (#332) */
   distinguishedDistrict?: Record<string, DistinguishedDistrictStatus>
