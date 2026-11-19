@@ -383,65 +383,6 @@ export const exportDailyReportDetail = (
 }
 
 /**
- * Export district statistics summary to CSV
- */
-export const exportDistrictStatistics = (
-  statistics: {
-    districtId: string
-    asOfDate: string
-    membership: {
-      total: number
-      change: number
-      changePercent: number
-    }
-    clubs: {
-      total: number
-      active: number
-      suspended: number
-      distinguished: number
-    }
-    education: {
-      totalAwards: number
-    }
-  },
-  districtName: string
-): void => {
-  const csvData: (string | number)[][] = [
-    [`District: ${districtName} (${statistics.districtId})`],
-    [`As of Date: ${statistics.asOfDate}`],
-    [`Export Date: ${new Date().toISOString()}`],
-    [],
-    ['Membership Statistics'],
-    ['Metric', 'Value'],
-    ['Total Members', statistics.membership.total],
-    ['Change', statistics.membership.change],
-    ['Change Percent', `${statistics.membership.changePercent}%`],
-    [],
-    ['Club Statistics'],
-    ['Metric', 'Value'],
-    ['Total Clubs', statistics.clubs.total],
-    ['Active Clubs', statistics.clubs.active],
-    ['Suspended Clubs', statistics.clubs.suspended],
-    ['Distinguished Clubs', statistics.clubs.distinguished],
-    [
-      'Distinguished Percentage',
-      `${((statistics.clubs.distinguished / statistics.clubs.total) * 100).toFixed(1)}%`,
-    ],
-    [],
-    ['Educational Statistics'],
-    ['Metric', 'Value'],
-    ['Total Awards', statistics.education.totalAwards],
-  ]
-
-  const csvContent = arrayToCSV(csvData)
-  const filename = generateFilename(
-    'district_statistics',
-    statistics.districtId
-  )
-  downloadCSV(csvContent, filename)
-}
-
-/**
  * Export historical rank data to CSV
  */
 export const exportHistoricalRankData = (
