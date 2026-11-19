@@ -46,6 +46,7 @@ import type {
   DistrictRanking,
 } from '@taverns-red/shared-contracts'
 import {
+  ClosedClubNameIndexSchema,
   CLUBS_BY_REGION_DIR,
   CLUBS_BY_REGION_WORLD_FILE_NAME,
   CLUBS_BY_REGION_WORLD_POINTS_FILE_NAME,
@@ -59,10 +60,15 @@ import {
   normalizeClubId,
   REGION_ROLLUPS_FILE_NAME,
   REGION_ROLLUPS_REGION_SOURCE,
+  REINSTATABLE_CLUBS_FILE_NAME,
+  ReinstatableClubsSchema,
   RegionMembershipSeriesSchema,
   regionMembershipSeriesPath,
+  SUSPENDED_CLUBS_FILE_NAME,
+  SuspendedClubsSchema,
   type DistrictRegionHistory,
 } from '@taverns-red/shared-contracts'
+import { buildReinstatableClubs } from './ReinstatableClubsBuilder.js'
 import { readStoreFileText } from '../utils/gzipLayers.js'
 import { AnalyticsWriter } from './AnalyticsWriter.js'
 import {
@@ -1481,6 +1487,10 @@ export class AnalyticsComputeService {
     // refusal rule and region membership as the region rollups.
     const meetingTimes = await this.writeMeetingTimes(snapshotDate, errors)
 
+    // Suspended and closed clubs that can still be reinstated (#3007): the
+    // date's suspended-clubs.json plus the synced closed-club index.
+    const reinstatableClubs = await this.writeReinstatableClubs(snapshotDate)
+
     // A time-series write failure is recorded per district but must fail the
     // run (#1702): it is the only writer behind Trends.
     const timeSeriesFailed: string[] = []
@@ -1582,6 +1592,8 @@ export class AnalyticsComputeService {
       clubsByRegionFailed: clubsByRegion.failed,
       meetingTimesPath: meetingTimes.path,
       meetingTimesFailed: meetingTimes.failed,
+      reinstatableClubsPath: reinstatableClubs.path,
+      reinstatableClubsFailed: reinstatableClubs.failed,
       regionSeriesPath: regionSeries.path,
       regionSeriesFailed: regionSeries.failed,
       timeSeriesFailed,
@@ -2231,6 +2243,82 @@ export class AnalyticsComputeService {
         districtId: 'N/A',
         error: `Failed to write ${MEETING_TIMES_FILE_NAME}: ${message}`,
         timestamp: new Date().toISOString(),
+      })
+      return { failed: true }
+    }
+  }
+
+  /**
+   * Write `snapshots/{date}/reinstatable-clubs.json` (#3007, phase 2): the
+   * suspended and closed clubs that can still be reinstated, per district.
+   *
+   * Inputs are the date's own `suspended-clubs.json` and the closed-club
+   * index at `<cache>/config/closed-club-names.json`, which the pipeline has
+   * to sync before compute (like the region history). Presence carries
+   * meaning (#1757): when either input is missing the list is unknown, so
+   * there is no file, never a file of empty lists.
+   *
+   * Never publish-blocking: the file is new and nothing reads it yet. A
+   * failure is logged and reported in `reinstatableClubsFailed`, and is not
+   * added to `errors`.
+   */
+  private async writeReinstatableClubs(
+    snapshotDate: string
+  ): Promise<{ path?: string; failed: boolean }> {
+    const snapshotDir = this.getSnapshotDir(snapshotDate)
+    const readOptional = async (file: string): Promise<string | null> => {
+      try {
+        return await fs.readFile(file, 'utf-8')
+      } catch {
+        return null
+      }
+    }
+    try {
+      const suspendedRaw = await readOptional(
+        path.join(snapshotDir, SUSPENDED_CLUBS_FILE_NAME)
+      )
+      const closedRaw = await readOptional(
+        path.join(this.cacheDir, 'config/closed-club-names.json')
+      )
+      if (suspendedRaw === null || closedRaw === null) {
+        this.logger.warn(
+          'No suspended-clubs.json or closed-club index — skipping reinstatable-clubs.json',
+          {
+            snapshotDate,
+            hasSuspended: suspendedRaw !== null,
+            hasClosedIndex: closedRaw !== null,
+          }
+        )
+        return { failed: false }
+      }
+
+      const reinstatable = ReinstatableClubsSchema.parse(
+        buildReinstatableClubs({
+          snapshotDate,
+          suspended: SuspendedClubsSchema.parse(JSON.parse(suspendedRaw)),
+          closed: ClosedClubNameIndexSchema.parse(JSON.parse(closedRaw)),
+        })
+      )
+      const outputPath = path.join(snapshotDir, REINSTATABLE_CLUBS_FILE_NAME)
+      await fs.writeFile(
+        outputPath,
+        JSON.stringify(reinstatable, null, 2) + '\n',
+        'utf-8'
+      )
+      this.logger.info('Wrote reinstatable clubs', {
+        snapshotDate,
+        path: outputPath,
+        districts: Object.keys(reinstatable.districts).length,
+        clubs: Object.values(reinstatable.districts).reduce(
+          (sum, rows) => sum + rows.length,
+          0
+        ),
+      })
+      return { path: outputPath, failed: false }
+    } catch (error) {
+      this.logger.error('Failed to write reinstatable clubs', {
+        snapshotDate,
+        error: error instanceof Error ? error.message : 'Unknown error',
       })
       return { failed: true }
     }
