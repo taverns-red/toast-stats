@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import type { ReconciliationRevisionIndex } from '@taverns-red/shared-contracts'
 import { snap } from '../../test-utils/snapshotDate'
-import { buildSnapshotPoints, pointToken } from '../snapshotPoints'
+import {
+  buildSnapshotPoints,
+  newestMonthEndOnOrBefore,
+  pointToken,
+} from '../snapshotPoints'
 
 /* #2475 phase 1 — What Changed lists month-end reconciliation revisions.
    The date list becomes points {date, asOf?}: a revision point is
@@ -164,5 +168,17 @@ describe('buildSnapshotPoints — alias guard (#2814)', () => {
     )
     expect(set.aliases).toEqual({})
     expect(tokens(set)).toContain('2026-10-31@2026-11-02')
+  })
+})
+
+describe('newestMonthEndOnOrBefore (#2475)', () => {
+  it('is the date itself when it is a month end', () => {
+    expect(newestMonthEndOnOrBefore('2026-10-31')).toBe('2026-10-31')
+  })
+
+  it('is the last day of the month before otherwise', () => {
+    expect(newestMonthEndOnOrBefore('2026-11-12')).toBe('2026-10-31')
+    expect(newestMonthEndOnOrBefore('2026-03-01')).toBe('2026-02-28')
+    expect(newestMonthEndOnOrBefore('2026-01-05')).toBe('2025-12-31')
   })
 })

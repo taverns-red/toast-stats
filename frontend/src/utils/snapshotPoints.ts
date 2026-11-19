@@ -37,6 +37,11 @@ export function isMonthEnd(date: string): boolean {
   return d === new Date(Date.UTC(y, m, 0)).getUTCDate()
 }
 
+/** Stub (#2475 red step). */
+export function newestMonthEndOnOrBefore(date: string): string {
+  return date
+}
+
 /**
  * Turn the district's dated snapshots plus the month-end revision index into
  * the points the What Changed picker offers.

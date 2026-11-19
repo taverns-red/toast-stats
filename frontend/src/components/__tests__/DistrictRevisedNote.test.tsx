@@ -4,25 +4,37 @@ import { MemoryRouter } from 'react-router-dom'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { DistrictRevisedNote } from '../DistrictRevisedNote'
-import { useDistrictRevisedAsOf } from '../../hooks/useDistrictRevisedAsOf'
+import { useDistrictRevision } from '../../hooks/useDistrictRevision'
 
-vi.mock('../../hooks/useDistrictRevisedAsOf', () => ({
-  useDistrictRevisedAsOf: vi.fn(() => null),
+vi.mock('../../hooks/useDistrictRevision', () => ({
+  useDistrictRevision: vi.fn(() => null),
 }))
-const mockHook = vi.mocked(useDistrictRevisedAsOf)
+const mockHook = vi.mocked(useDistrictRevision)
 
 afterEach(() => cleanup())
+
+const LINK = {
+  revisedOn: '2026-11-03',
+  from: '2026-10-31@2026-11-02',
+  to: '2026-10-31',
+}
 
 const renderNote = ({
   districtId = '61',
   viewedDate = '2026-10-31',
+  latestSnapshotDate = '2026-10-31',
 }: {
   districtId?: string
   viewedDate?: string
+  latestSnapshotDate?: string
 } = {}) =>
   render(
     <MemoryRouter>
-      <DistrictRevisedNote districtId={districtId} viewedDate={viewedDate} />
+      <DistrictRevisedNote
+        districtId={districtId}
+        viewedDate={viewedDate}
+        latestSnapshotDate={latestSnapshotDate}
+      />
     </MemoryRouter>
   )
 
@@ -46,24 +58,42 @@ describe('DistrictRevisedNote (#2475)', () => {
   })
 
   it('renders nothing on a date that is not a month end', () => {
-    mockHook.mockReturnValue('2026-11-03')
-    renderNote({ viewedDate: '2026-11-12' })
+    mockHook.mockReturnValue(LINK)
+    renderNote({ viewedDate: '2026-11-12', latestSnapshotDate: '2026-11-12' })
     expect(screen.queryByTestId('district-revised-note')).toBeNull()
   })
 
-  it('says "Revised <date>" and links to the district What Changed page', () => {
-    mockHook.mockReturnValue('2026-11-03')
+  it('renders nothing on an older month end: What Changed only offers revisions for the newest', () => {
+    mockHook.mockReturnValue(LINK)
+    renderNote({ viewedDate: '2026-09-30', latestSnapshotDate: '2026-10-31' })
+    expect(screen.queryByTestId('district-revised-note')).toBeNull()
+    expect(mockHook).toHaveBeenLastCalledWith('61', undefined)
+  })
+
+  it('shows on the newest month end after later daily snapshots land', () => {
+    mockHook.mockReturnValue(LINK)
+    renderNote({ viewedDate: '2026-10-31', latestSnapshotDate: '2026-11-12' })
+    expect(
+      screen.getByTestId('district-revised-note')
+    ).not.toBeEmptyDOMElement()
+    expect(mockHook).toHaveBeenLastCalledWith('61', '2026-10-31')
+  })
+
+  it("opens What Changed on the month end's newest revision", () => {
+    mockHook.mockReturnValue(LINK)
     renderNote()
-    const link = screen.getByRole('link', { name: /revised nov 3/i })
-    expect(link).toHaveAttribute('href', '/district/61/changes')
+    expect(screen.getByRole('link', { name: /revised/i })).toHaveAttribute(
+      'href',
+      '/district/61/changes?from=2026-10-31%402026-11-02&to=2026-10-31'
+    )
   })
 
   it('links a letter district (F) by its own id', () => {
-    mockHook.mockReturnValue('2026-11-03')
+    mockHook.mockReturnValue(LINK)
     renderNote({ districtId: 'F' })
     expect(screen.getByRole('link', { name: /revised/i })).toHaveAttribute(
       'href',
-      '/district/F/changes'
+      '/district/F/changes?from=2026-10-31%402026-11-02&to=2026-10-31'
     )
   })
 })

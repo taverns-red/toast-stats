@@ -19,3 +19,22 @@ export function districtRevisedAsOf(
   }
   return null
 }
+
+/** What the header's revised note says and where it links (#2475). */
+export interface DistrictRevisionLink {
+  /** The date What Changed shows as the month end's "revised" date. */
+  revisedOn: string
+  /** What Changed `?from=` token: the district's previous version. */
+  from: string
+  /** What Changed `?to=` token: the month end as it stands now. */
+  to: string
+}
+
+/** Stub (#2475 red step). */
+export function districtRevisionLink(
+  _index: ReconciliationRevisionIndex | null | undefined,
+  _districtId: string,
+  _monthEndCollectionDate?: string | null
+): DistrictRevisionLink | null {
+  return null
+}

@@ -6,7 +6,7 @@ import { DistrictDetailHeader } from '../DistrictDetailHeader'
 import { DISTRICT_SECTIONS } from '../../config/districtSections'
 import { getProgramYear } from '../../utils/programYear'
 import { useLatestAsOfDate } from '../../hooks/useLatestAsOfDate'
-import { useDistrictRevisedAsOf } from '../../hooks/useDistrictRevisedAsOf'
+import { useDistrictRevision } from '../../hooks/useDistrictRevision'
 import { snap } from '../../test-utils/snapshotDate'
 import type { SnapshotDate } from '../../types/snapshotDate'
 import { USER_PICK } from '../../hooks/useUrlProgramYear'
@@ -23,10 +23,15 @@ const mockUseLatestAsOfDate = vi.mocked(useLatestAsOfDate)
 
 // The "Revised <date>" note reads the month-end revision index (#2475); the
 // header test has no QueryClientProvider, so it is mocked here.
-vi.mock('../../hooks/useDistrictRevisedAsOf', () => ({
-  useDistrictRevisedAsOf: vi.fn(() => null),
+vi.mock('../../hooks/useDistrictRevision', () => ({
+  useDistrictRevision: vi.fn(() => null),
 }))
-const mockRevised = vi.mocked(useDistrictRevisedAsOf)
+const mockRevised = vi.mocked(useDistrictRevision)
+const REVISION = {
+  revisedOn: '2026-04-03',
+  from: '2026-03-31@2026-04-02',
+  to: '2026-03-31',
+}
 
 afterEach(() => cleanup())
 beforeEach(() => {
@@ -107,12 +112,13 @@ describe('DistrictDetailHeader revised note (#2475)', () => {
   // Only a month end can be revised, so these views sit on one.
   const monthEnd = { latestSnapshotDate: latestOn('2026-03-31') }
 
-  it('shows "Revised <date>" linking to What Changed when the district has a revision', () => {
-    mockRevised.mockReturnValue('2026-04-03')
+  it("links to the month end's revision diff when the district has a revision", () => {
+    mockRevised.mockReturnValue(REVISION)
     renderHeader(monthEnd)
-    expect(
-      screen.getByRole('link', { name: /revised apr 3/i })
-    ).toHaveAttribute('href', '/district/61/changes')
+    expect(screen.getByRole('link', { name: /revised/i })).toHaveAttribute(
+      'href',
+      '/district/61/changes?from=2026-03-31%402026-04-02&to=2026-03-31'
+    )
   })
 
   it('shows no link when the district has no revision', () => {
@@ -121,13 +127,13 @@ describe('DistrictDetailHeader revised note (#2475)', () => {
   })
 
   it('reserves no line on a view that is not a month end', () => {
-    mockRevised.mockReturnValue('2026-04-03')
+    mockRevised.mockReturnValue(REVISION)
     renderHeader()
     expect(screen.queryByTestId('district-revised-note')).toBeNull()
   })
 
   it('leaves the freshness pill untouched (fixed width, #2472)', () => {
-    mockRevised.mockReturnValue('2026-04-03')
+    mockRevised.mockReturnValue(REVISION)
     renderHeader(monthEnd)
     const bar = screen.getByRole('toolbar', { name: /data controls/i })
     expect(within(bar).queryByText(/revised/i)).toBeNull()

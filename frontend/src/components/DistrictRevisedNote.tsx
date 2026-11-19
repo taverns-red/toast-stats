@@ -7,6 +7,7 @@ import { isMonthEnd } from '../utils/snapshotPoints'
 interface DistrictRevisedNoteProps {
   districtId: string
   viewedDate: string | undefined
+  latestSnapshotDate?: string | undefined
 }
 
 /**

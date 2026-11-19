@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { ReconciliationRevisionIndex } from '@taverns-red/shared-contracts'
-import { districtRevisedAsOf } from '../districtRevision'
+import { districtRevisedAsOf, districtRevisionLink } from '../districtRevision'
 
 const index = (
   revisions: Array<{ asOf: string; closing: boolean; districts: string[] }>
@@ -44,5 +44,48 @@ describe('districtRevisedAsOf (#2475)', () => {
   it('returns null with no index', () => {
     expect(districtRevisedAsOf(null, '61')).toBeNull()
     expect(districtRevisedAsOf(undefined, '61')).toBeNull()
+  })
+})
+
+describe('districtRevisionLink (#2475)', () => {
+  const idx = index([
+    { asOf: '2026-10-31', closing: false, districts: ['61', 'F'] },
+    { asOf: '2026-11-02', closing: true, districts: ['61'] },
+    { asOf: '2026-11-03', closing: true, districts: ['61', 'F'] },
+  ])
+
+  it('opens the diff from the previous revision to the month end as it stands', () => {
+    expect(districtRevisionLink(idx, '61', '2026-11-03')).toEqual({
+      revisedOn: '2026-11-03',
+      from: '2026-10-31@2026-11-02',
+      to: '2026-10-31',
+    })
+  })
+
+  it("skips a revision that lacks the district, as What Changed's list does", () => {
+    expect(districtRevisionLink(idx, 'F', '2026-11-03')).toEqual({
+      revisedOn: '2026-11-03',
+      from: '2026-10-31@2026-10-31',
+      to: '2026-10-31',
+    })
+  })
+
+  it('returns null with only the pre-close view', () => {
+    const only0 = index([
+      { asOf: '2026-10-31', closing: false, districts: ['61'] },
+    ])
+    expect(districtRevisionLink(only0, '61', '2026-10-31')).toBeNull()
+  })
+
+  it('returns null when the district has no earlier version to compare', () => {
+    const lone = index([
+      { asOf: '2026-11-03', closing: true, districts: ['61'] },
+    ])
+    expect(districtRevisionLink(lone, '61', '2026-11-03')).toBeNull()
+  })
+
+  it('returns null with no index', () => {
+    expect(districtRevisionLink(null, '61', null)).toBeNull()
+    expect(districtRevisionLink(undefined, '61', null)).toBeNull()
   })
 })
