@@ -157,6 +157,16 @@ describe('membershipRetentionBadgeFor (#1614)', () => {
     })
   })
 
+  it('leaves out the count when the rank is past the renderable rows', () => {
+    const rows = [...fiveRows.slice(0, 4), row('61', 7, 78.5, false)]
+    expect(
+      membershipRetentionBadgeFor(
+        standingsWith({ status: 'in-progress', standings: rows }),
+        '61'
+      )
+    ).toMatchObject({ rank: 7, of: null })
+  })
+
   it('returns null when the rank is not a positive finite number', () => {
     const rows = [{ ...row('61', Number.NaN, 78.5, false) }]
     expect(

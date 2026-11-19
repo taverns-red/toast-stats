@@ -101,6 +101,58 @@ describe('membership retention badge (#1614)', () => {
     )
   })
 
+  /* The 375 Overview has about 12px left under PAGE_MAX_H (4000), so phones
+     get one short line; the award name and long wording are md: and up. */
+  it('keeps phones to a compact line and the long wording to md: and up', () => {
+    renderWith(badge())
+    const el = screen.getByTestId('membership-retention-badge')
+    const compact = within(el).getByTestId('membership-retention-compact')
+    expect(compact).toHaveClass('md:hidden')
+    expect(compact).toHaveTextContent('Retention')
+    const long = within(el).getAllByTestId('membership-retention-long')
+    expect(long.length).toBeGreaterThan(0)
+    for (const part of long) {
+      expect(part).toHaveClass('hidden')
+      expect(part).toHaveClass('md:inline')
+    }
+    expect(long.map(p => p.textContent).join(' ')).toContain(
+      "President's Membership Retention Award"
+    )
+    // No top border or top padding on phones: one text line only.
+    expect(el).not.toHaveClass('border-t')
+    expect(el).not.toHaveClass('pt-4')
+    expect(el).toHaveClass('md:border-t', 'md:pt-4')
+  })
+
+  it('keeps one methodology link on phones, named in full', () => {
+    renderWith(badge())
+    const link = within(
+      screen.getByTestId('membership-retention-badge')
+    ).getByRole('link', {
+      name: "How we estimate the President's Membership Retention Award",
+    })
+    expect(link).toHaveTextContent('estimate')
+  })
+
+  it('gives screen readers the tie-break note, not only a title', () => {
+    renderWith(badge({ rank: 3, isWinner: true, final: true, tied: true }))
+    const el = screen.getByTestId('membership-retention-badge')
+    const note = within(el).getByText(/tie-break isn't published/, {
+      selector: '.sr-only',
+    })
+    expect(note).toBeInTheDocument()
+    expect(within(el).getByTitle("TI's tie-break isn't published")).toBe(
+      within(el).getByText('tied')
+    )
+  })
+
+  it('leaves out "of N" when the count is unknown', () => {
+    renderWith(badge({ rank: 7, of: null }))
+    const el = screen.getByTestId('membership-retention-badge')
+    expect(el).toHaveTextContent('#7')
+    expect(el).not.toHaveTextContent(/#7\s+of/)
+  })
+
   it('renders nothing without a badge', () => {
     renderWith(null)
     expect(

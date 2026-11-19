@@ -17,8 +17,8 @@ import { tiedWinnerIds } from './awardTies'
 /** One district's place in the membership retention estimate (#1614). */
 export interface MembershipRetentionBadge {
   rank: number
-  /** Districts ranked */
-  of: number
+  /** Districts ranked; null when the file's rank is past that count. */
+  of: number | null
   value: number
   isWinner: boolean
   /** True on the June 30 close; false while standings are so far. */
