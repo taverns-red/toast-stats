@@ -45,7 +45,8 @@ const py2526 = getProgramYear(2025)
  *  `undefined` and `renderHeader`'s `Partial<typeof baseProps>` would then
  *  reject a real date. */
 const noDate = (): SnapshotDate | undefined => undefined
-const latestDate = (): string | undefined => snap('2026-04-26')
+const latestOn = (date: string): string | undefined => snap(date)
+const latestDate = (): string | undefined => latestOn('2026-04-26')
 
 const baseProps = {
   districtId: '61',
@@ -103,22 +104,31 @@ describe('DistrictDetailHeader mobile sub-line collapse (#890)', () => {
 })
 
 describe('DistrictDetailHeader revised note (#2475)', () => {
+  // Only a month end can be revised, so these views sit on one.
+  const monthEnd = { latestSnapshotDate: latestOn('2026-03-31') }
+
   it('shows "Revised <date>" linking to What Changed when the district has a revision', () => {
-    mockRevised.mockReturnValue('2026-11-03')
-    renderHeader()
+    mockRevised.mockReturnValue('2026-04-03')
+    renderHeader(monthEnd)
     expect(
-      screen.getByRole('link', { name: /revised nov 3/i })
+      screen.getByRole('link', { name: /revised apr 3/i })
     ).toHaveAttribute('href', '/district/61/changes')
   })
 
-  it('shows no note when the district has no revision', () => {
+  it('shows no link when the district has no revision', () => {
+    renderHeader(monthEnd)
+    expect(screen.queryByRole('link', { name: /revised/i })).toBeNull()
+  })
+
+  it('reserves no line on a view that is not a month end', () => {
+    mockRevised.mockReturnValue('2026-04-03')
     renderHeader()
     expect(screen.queryByTestId('district-revised-note')).toBeNull()
   })
 
   it('leaves the freshness pill untouched (fixed width, #2472)', () => {
-    mockRevised.mockReturnValue('2026-11-03')
-    renderHeader()
+    mockRevised.mockReturnValue('2026-04-03')
+    renderHeader(monthEnd)
     const bar = screen.getByRole('toolbar', { name: /data controls/i })
     expect(within(bar).queryByText(/revised/i)).toBeNull()
   })

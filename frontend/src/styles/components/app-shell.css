@@ -5025,11 +5025,15 @@
   }
 
   /* #2475: "Revised <date>" link under the lede. Legacy link token, which
-     already remaps under [data-theme='dark']; no new colour. */
+     already remaps under [data-theme='dark']; no new colour. The line is
+     rendered empty on a month-end view while the revision index loads, so
+     its height is reserved: filling it must not push the page down. */
   .district-revised-note {
     margin: 6px 0 0;
     font-family: var(--sans);
     font-size: 13px;
+    line-height: 18px;
+    min-height: 18px;
   }
 
   .district-revised-note a {
