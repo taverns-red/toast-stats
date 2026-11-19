@@ -8,6 +8,8 @@
  * write-once, as a copy of its district files:
  *
  *   snapshots/<monthEnd>/revisions/<asOf>/district_<id>.json
+ *   snapshots/<monthEnd>/revisions/<asOf>/all-districts-rankings.json
+ *     (phase 3; when the copied month end has one, flagged `rankings`)
  *   snapshots/<monthEnd>/revisions/index.json   (ReconciliationRevisionIndex)
  *
  * `asOf` is the collection date (unique per raw-csv dir). Revision 0 is the
@@ -152,6 +154,22 @@ async function planCopies(
   return copies
 }
 
+/** The date's rankings file, copied with each revision (phase 3). */
+const RANKINGS_FILE_NAME = 'all-districts-rankings.json'
+
+/**
+ * The rankings file in `dir` as a planned copy under `revRel`, or null when
+ * `dir` has none (the revision is then kept without it, flag off).
+ */
+async function planRankings(dir: string, revRel: string): Promise<Copy | null> {
+  const src = path.join(dir, RANKINGS_FILE_NAME)
+  if (!(await exists(src))) return null
+  return {
+    rel: `${revRel}/${RANKINGS_FILE_NAME}`,
+    bytes: await fs.readFile(src),
+  }
+}
+
 /** Throws if any copy's target already holds different bytes. */
 async function assertWriteOnce(
   dir: string,
@@ -187,11 +205,14 @@ async function planRevisionZero(
       `${priorSnapshotDir}: prior copy is of ${prior.dataAsOfDate}, not ${date}`
     )
   }
+  const revRel = `${RECONCILIATION_REVISIONS_DIR}/${date}`
   const copies = await planCopies(
     priorSnapshotDir,
     prior.successfulDistricts,
-    `${RECONCILIATION_REVISIONS_DIR}/${date}`
+    revRel
   )
+  const rankings = await planRankings(priorSnapshotDir, revRel)
+  if (rankings) copies.push(rankings)
   await assertWriteOnce(dir, copies)
   return {
     copies,
@@ -200,6 +221,7 @@ async function planRevisionZero(
       collectedAt: prior.createdAt,
       closing: false,
       successfulDistricts: [...prior.successfulDistricts],
+      ...(rankings ? { rankings: true } : {}),
     },
   }
 }
@@ -311,11 +333,10 @@ export async function recordRevision(
     result.refused = partial
     if (added.length === 0) return result
   } else {
-    const closing = await planCopies(
-      dir,
-      metadata.successfulDistricts,
-      `${RECONCILIATION_REVISIONS_DIR}/${asOf}`
-    )
+    const revRel = `${RECONCILIATION_REVISIONS_DIR}/${asOf}`
+    const closing = await planCopies(dir, metadata.successfulDistricts, revRel)
+    const rankings = await planRankings(dir, revRel)
+    if (rankings) closing.push(rankings)
     // Write-once, checked for every file before any is written.
     await assertWriteOnce(dir, closing)
     copies.push(...closing)
@@ -324,6 +345,7 @@ export async function recordRevision(
       collectedAt: metadata.createdAt,
       closing: true,
       successfulDistricts: [...metadata.successfulDistricts],
+      ...(rankings ? { rankings: true } : {}),
     })
   }
 

@@ -109,7 +109,8 @@
 #                its month end) is also kept as a write-once reconciliation
 #                revision. Staging's revisions/index.json is hydrated (R2,
 #                R9) and, while staging's month end is still the pre-close
-#                in-month view, its district files too, for revision 0;
+#                in-month view, its district files and rankings file too,
+#                for revision 0;
 #                then collector-cli record-revision. Any failure here is a
 #                warning: no revision is uploaded, the month end still is.
 #  10. upload    snapshots/<date>/*.json, analytics/*.json and
@@ -650,6 +651,15 @@ record_revision() {
           echo "::warning::Could not read staging's in-month ${actual} for revision 0; no revision recorded for ${as_of} (#2475)"
           rm -rf "${rev}"
           return 0
+        fi
+        # Phase 3: its rankings file too. Absent is quiet (revision 0 is
+        # then kept without it); unreadable costs only the rankings copy.
+        if ! "${GCLOUD}" storage cp "${src}/all-districts-rankings.json" \
+          "${prior}/" 2>"${err}" &&
+          ! grep -q 'matched no objects' "${err}"; then
+          cat "${err}"
+          echo "::warning::Could not read staging's in-month ${actual}/all-districts-rankings.json; revision 0 is recorded without its rankings (#2475)"
+          rm -f "${prior}/all-districts-rankings.json"
         fi
         prior_args=(--prior-snapshot "${prior}")
         ;;

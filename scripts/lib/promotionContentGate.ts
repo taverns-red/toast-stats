@@ -55,9 +55,11 @@ import {
   REGION_ROLLUPS_FILE_NAME,
   REPORTS_ROLLUPS_FILE_NAME,
   RegionRollupsSchema,
+  ReconciliationRevisionIndexSchema,
   repairReportsPlaceText,
   ReportsRollupsSchema,
   type RegionRollupFigures,
+  validateAllDistrictsRankings,
 } from '@taverns-red/shared-contracts'
 import { programYearForSnapshotDate } from './ceoReportSnapshotDates.js'
 import { canonicalDistrictId } from '../../packages/analytics-core/src/rollup/globalRollup.js'
@@ -123,6 +125,8 @@ export type ObjectKind =
   | 'education-timeline'
   | 'meeting-times'
   | 'reconciliation-revision'
+  | 'reconciliation-revision-index'
+  | 'reconciliation-revision-rankings'
   | 'latest'
   | 'json'
 
@@ -194,6 +198,14 @@ const EDUCATION_ROLLUP_INDEX = `${EDUCATION_ROLLUP_PREFIX}/index.json`
  */
 const RECONCILIATION_REVISION =
   /^snapshots\/\d{4}-\d{2}-\d{2}\/revisions\/\d{4}-\d{2}-\d{2}\/district_[A-Za-z0-9]+\.json$/
+/**
+ * A month end's revision index and a revision's rankings file (#2475 phase
+ * 3): one of each per revision day, so both are always read.
+ */
+const RECONCILIATION_REVISION_INDEX =
+  /^snapshots\/(\d{4}-\d{2}-\d{2})\/revisions\/index\.json$/
+const RECONCILIATION_REVISION_RANKINGS =
+  /^snapshots\/\d{4}-\d{2}-\d{2}\/revisions\/\d{4}-\d{2}-\d{2}\/all-districts-rankings\.json$/
 const DISTRICT_ANALYTICS =
   /^snapshots\/\d{4}-\d{2}-\d{2}\/analytics\/district_[A-Za-z0-9]+_[a-z-]+\.json$/
 
@@ -262,6 +274,12 @@ export function classifyObject(path: string): ObjectKind | null {
   if (AWARDS.test(path)) return 'competitive-awards'
   if (DISTRICT_ANALYTICS.test(path)) return 'district-analytics'
   if (RECONCILIATION_REVISION.test(path)) return 'reconciliation-revision'
+  if (RECONCILIATION_REVISION_INDEX.test(path)) {
+    return 'reconciliation-revision-index'
+  }
+  if (RECONCILIATION_REVISION_RANKINGS.test(path)) {
+    return 'reconciliation-revision-rankings'
+  }
   if (REGION_ROLLUPS.test(path)) return 'region-rollups'
   if (CLUBS_BY_REGION_WORLD.test(path)) return 'clubs-by-region-world'
   if (CLUBS_BY_REGION_WORLD_POINTS.test(path))
@@ -423,7 +441,9 @@ export function planContentChecks(
       c.kind === 'clubs-by-region-world-points' ||
       c.kind === 'region-membership-series' ||
       c.kind === 'reports-rollups' ||
-      c.kind === 'meeting-times'
+      c.kind === 'meeting-times' ||
+      c.kind === 'reconciliation-revision-index' ||
+      c.kind === 'reconciliation-revision-rankings'
     ) {
       checks.push(c)
     } else {
@@ -1535,12 +1555,48 @@ export function checkObject(
       return checkEducationRollupIndex(value)
     case 'education-timeline':
       return checkEducationTimeline(check.path, value)
+    case 'reconciliation-revision-index':
+      return checkRevisionIndex(check.path, value)
+    case 'reconciliation-revision-rankings':
+      return checkRevisionRankings(value)
     case 'latest':
       return checkLatest(value)
     case 'reconciliation-revision':
     case 'json':
       return null
   }
+}
+
+/**
+ * `snapshots/<monthEnd>/revisions/index.json` (#2475): the shared contract
+ * (strictly ascending revisions, `final` a listed revision) and the month
+ * end its path names, so What Changed never reads another month's index.
+ */
+function checkRevisionIndex(path: string, value: unknown): string | null {
+  const parsed = ReconciliationRevisionIndexSchema.safeParse(value)
+  if (!parsed.success) {
+    return `schema validation failed: ${summarizeZodIssues(parsed.error.issues)}`
+  }
+  const served = RECONCILIATION_REVISION_INDEX.exec(path)?.[1]
+  return parsed.data.monthEnd === served
+    ? null
+    : `indexes ${parsed.data.monthEnd} but is served under ${served}`
+}
+
+/**
+ * `snapshots/<monthEnd>/revisions/<asOf>/all-districts-rankings.json`
+ * (#2475 phase 3): a copy of the month end's rankings file, so the same
+ * contract, and at least one district (the transform never writes an empty
+ * rankings file).
+ */
+function checkRevisionRankings(value: unknown): string | null {
+  const result = validateAllDistrictsRankings(value)
+  if (!result.success || !result.data) {
+    return result.error ?? 'not an all-districts rankings file'
+  }
+  return result.data.rankings.length === 0
+    ? 'no district — a rankings file always lists the districts it ranked'
+    : null
 }
 
 /**
@@ -1673,6 +1729,10 @@ export const ASSERTIONS: Record<ObjectKind | 'cross-check', string> = {
     'decoded, MeetingTimesSchema, served under its snapshotDate with that date’s program year, totals = Σ districts, each district’s counts within its clubs and every mode cell within the all-meetings cell (#1814)',
   'reconciliation-revision':
     'decoded, JSON, no club contact field; a sample of its own so revisions never displace month-end objects (#2486)',
+  'reconciliation-revision-index':
+    'decoded, ReconciliationRevisionIndexSchema (ascending revisions, final a listed revision), the month end its path names; always checked (#2475)',
+  'reconciliation-revision-rankings':
+    'decoded, the all-districts rankings contract (validateAllDistrictsRankings), at least one district; always checked (#2475)',
   latest: 'decoded, latestSnapshotDate is a real date',
   json: 'decoded (no nested gzip) and parses as JSON; every kind: no non-empty club email/phone (#2026)',
   'cross-check': 'latest.json’s date is listed by the snapshot index',

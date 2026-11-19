@@ -5,7 +5,8 @@
  *
  * `snapshots/<monthEnd>/` stays the newest revision (and, after rollover,
  * the final close) because awards, DCP and YoY read it. Each revision is
- * ALSO kept, write-once, as `revisions/<asOf>/district_<id>.json`, where
+ * ALSO kept, write-once, as `revisions/<asOf>/district_<id>.json` (and,
+ * since phase 3, `revisions/<asOf>/all-districts-rankings.json`), where
  * `asOf` is the collection date (unique per raw-csv dir), so What Changed can
  * diff one reconciliation day against the next.
  *
@@ -53,6 +54,12 @@ export const ReconciliationRevisionSchema = z.object({
   closing: z.boolean(),
   /** Districts whose `district_<id>.json` the revision holds. */
   successfulDistricts: z.array(z.string().min(1)),
+  /**
+   * True when the revision also holds `all-districts-rankings.json`
+   * (phase 3). Optional: absent means no rankings copy, as in every index
+   * written before it (ADR 0019).
+   */
+  rankings: z.boolean().optional(),
 })
 
 export const ReconciliationRevisionIndexSchema = z
