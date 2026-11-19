@@ -11,6 +11,8 @@ interface DistinguishedCompositionBarProps {
   select: number
   distinguished: number
   totalClubs: number
+  /** The Distinguished KPI card's basis, owned by the page (R3). The note
+   *  points to the confirmed count only when the card shows one. */
   kpiBasis?: 'confirmed' | 'qualifying-today' | undefined
 }
 
@@ -30,7 +32,7 @@ interface Segment {
 
 const DistinguishedCompositionBar: React.FC<
   DistinguishedCompositionBarProps
-> = ({ smedley, presidents, select, distinguished, totalClubs }) => {
+> = ({ smedley, presidents, select, distinguished, totalClubs, kpiBasis }) => {
   if (totalClubs <= 0) return null
 
   const distinguishedTotal = smedley + presidents + select + distinguished
@@ -134,8 +136,11 @@ const DistinguishedCompositionBar: React.FC<
         data-testid="distinguished-composition-basis"
         className="mt-2 text-xs font-tm-body text-gray-600"
       >
-        Clubs qualifying today on current membership. The confirmed count is in
-        the Distinguished card above.
+        Clubs qualifying today on current membership.
+        {kpiBasis === 'confirmed' &&
+          ' The confirmed count is in the Distinguished card above.'}
+        {kpiBasis === 'qualifying-today' &&
+          ' No confirmed count is available for this date.'}
       </p>
 
       <ul className="mt-3 flex flex-wrap gap-3 list-none text-xs font-tm-body text-gray-700">

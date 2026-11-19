@@ -845,6 +845,7 @@ const DistrictDetailPageInner: React.FC = () => {
                     /* On the phone hub the hub above IS the overview; this
                        panel is the detail under it (#1842). */
                     heading={isHubLayout ? 'Details' : 'Overview'}
+                    distinguishedBasis={kpiStripData?.distinguishedClubs.basis}
                   />
                 ) : (
                   /* While the date index resolves, hold the Overview's slot
