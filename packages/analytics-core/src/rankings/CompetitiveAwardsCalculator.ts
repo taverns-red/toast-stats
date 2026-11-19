@@ -14,6 +14,12 @@
 
 import type { DistrictRanking } from '@taverns-red/shared-contracts'
 
+import { assignCompetitionRanks } from './competitionRanks.js'
+import {
+  calculateMembershipRetention,
+  type MembershipRetentionAward,
+} from './MembershipRetentionCalculator.js'
+
 /**
  * Single ranked entry in a competitive award leaderboard.
  */
@@ -47,6 +53,10 @@ export interface CompetitiveAwardsByDistrict {
   retentionRank: number
   retentionValue: number
   retentionIsWinner: boolean
+  /** #1614: absent for districts left out of the estimate */
+  membershipRetentionRank?: number
+  membershipRetentionValue?: number
+  membershipRetentionIsWinner?: boolean
 }
 
 /**
@@ -59,15 +69,14 @@ export interface CompetitiveAwardStandings {
   twentyPlusAward: CompetitiveAwardRanking[]
   /** Top-ranked districts for District Club Retention Award (sorted, all districts) */
   retentionAward: CompetitiveAwardRanking[]
+  /** #1614: present only when a logical date is passed to calculate() */
+  membershipRetentionAward?: MembershipRetentionAward
   /** Per-district summary for fast lookup */
   byDistrict: Record<string, CompetitiveAwardsByDistrict>
 }
 
 /** Minimum retention % to qualify as a winner of the Retention Award */
 const RETENTION_WINNER_THRESHOLD = 90
-
-/** Number of top districts that earn each competitive award */
-const TOP_N_WINNERS = 3
 
 /**
  * Compute competitive award standings from already-ranked districts.
@@ -79,7 +88,10 @@ export class CompetitiveAwardsCalculator {
    * @param rankings - Array of district rankings from BordaCountRankingCalculator
    * @returns Complete competitive award standings
    */
-  calculate(rankings: DistrictRanking[]): CompetitiveAwardStandings {
+  calculate(
+    rankings: DistrictRanking[],
+    logicalDate?: string
+  ): CompetitiveAwardStandings {
     const extensionAward = this.rankByExtension(rankings)
     const twentyPlusAward = this.rankByTwentyPlus(rankings)
     const retentionAward = this.rankByRetention(rankings)
@@ -103,10 +115,28 @@ export class CompetitiveAwardsCalculator {
       }
     }
 
+    // #1614: only when a logical date is given, so existing callers are
+    // unchanged. Excluded districts get no membershipRetention* keys.
+    let membershipRetentionAward: MembershipRetentionAward | undefined
+    if (logicalDate !== undefined) {
+      membershipRetentionAward = calculateMembershipRetention(
+        rankings,
+        logicalDate
+      )
+      for (const s of membershipRetentionAward.standings) {
+        const entry = byDistrict[s.districtId]
+        if (!entry) continue
+        entry.membershipRetentionRank = s.rank
+        entry.membershipRetentionValue = s.value
+        entry.membershipRetentionIsWinner = s.isWinner
+      }
+    }
+
     return {
       extensionAward,
       twentyPlusAward,
       retentionAward,
+      ...(membershipRetentionAward ? { membershipRetentionAward } : {}),
       byDistrict,
     }
   }
@@ -182,36 +212,13 @@ export class CompetitiveAwardsCalculator {
     scored: Array<{ district: DistrictRanking; value: number }>,
     winnerThreshold?: number
   ): CompetitiveAwardRanking[] {
-    // Sort by value descending
-    const sorted = [...scored].sort((a, b) => b.value - a.value)
-
-    // Assign standard competition ranks (ties share rank, next rank skips)
-    const result: CompetitiveAwardRanking[] = []
-    let lastValue: number | null = null
-    let lastRank = 0
-
-    for (let i = 0; i < sorted.length; i++) {
-      const entry = sorted[i]
-      if (!entry) continue
-
-      const rank = entry.value === lastValue ? lastRank : i + 1
-      lastValue = entry.value
-      lastRank = rank
-
-      const meetsThreshold =
-        winnerThreshold === undefined || entry.value >= winnerThreshold
-      const isWinner = rank <= TOP_N_WINNERS && meetsThreshold
-
-      result.push({
-        districtId: entry.district.districtId,
-        districtName: entry.district.districtName,
-        region: entry.district.region,
-        rank,
-        value: entry.value,
-        isWinner,
-      })
-    }
-
-    return result
+    return assignCompetitionRanks(scored, winnerThreshold).map(e => ({
+      districtId: e.item.district.districtId,
+      districtName: e.item.district.districtName,
+      region: e.item.district.region,
+      rank: e.rank,
+      value: e.item.value,
+      isWinner: e.isWinner,
+    }))
   }
 }

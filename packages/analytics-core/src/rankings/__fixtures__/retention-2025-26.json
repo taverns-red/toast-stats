@@ -1,0 +1,1282 @@
+[
+  {
+    "districtId": "130",
+    "districtName": "130",
+    "region": "11",
+    "aprilPayments": 2557,
+    "octoberPayments": 2386,
+    "latePayments": 4,
+    "marchCloseNewPayments": 1126,
+    "marchCloseCharterPayments": 211
+  },
+  {
+    "districtId": "109",
+    "districtName": "109",
+    "region": "10",
+    "aprilPayments": 2679,
+    "octoberPayments": 2362,
+    "latePayments": 7,
+    "marchCloseNewPayments": 925,
+    "marchCloseCharterPayments": 108
+  },
+  {
+    "districtId": "94",
+    "districtName": "94",
+    "region": "11",
+    "aprilPayments": 3424,
+    "octoberPayments": 3175,
+    "latePayments": 17,
+    "marchCloseNewPayments": 1269,
+    "marchCloseCharterPayments": 358
+  },
+  {
+    "districtId": "93",
+    "districtName": "93",
+    "region": "09",
+    "aprilPayments": 1043,
+    "octoberPayments": 1009,
+    "latePayments": 3,
+    "marchCloseNewPayments": 526,
+    "marchCloseCharterPayments": 81
+  },
+  {
+    "districtId": "89",
+    "districtName": "89",
+    "region": "14",
+    "aprilPayments": 1730,
+    "octoberPayments": 1540,
+    "latePayments": 7,
+    "marchCloseNewPayments": 621,
+    "marchCloseCharterPayments": 121
+  },
+  {
+    "districtId": "104",
+    "districtName": "104",
+    "region": "11",
+    "aprilPayments": 919,
+    "octoberPayments": 1026,
+    "latePayments": 3,
+    "marchCloseNewPayments": 482,
+    "marchCloseCharterPayments": 84
+  },
+  {
+    "districtId": "87",
+    "districtName": "87",
+    "region": "09",
+    "aprilPayments": 1490,
+    "octoberPayments": 1394,
+    "latePayments": 7,
+    "marchCloseNewPayments": 548,
+    "marchCloseCharterPayments": 163
+  },
+  {
+    "districtId": "114",
+    "districtName": "114",
+    "region": "11",
+    "aprilPayments": 1484,
+    "octoberPayments": 1316,
+    "latePayments": 12,
+    "marchCloseNewPayments": 766,
+    "marchCloseCharterPayments": 193
+  },
+  {
+    "districtId": "49",
+    "districtName": "49",
+    "region": "02",
+    "aprilPayments": 838,
+    "octoberPayments": 760,
+    "latePayments": 1,
+    "marchCloseNewPayments": 244,
+    "marchCloseCharterPayments": 66
+  },
+  {
+    "districtId": "122",
+    "districtName": "122",
+    "region": "11",
+    "aprilPayments": 484,
+    "octoberPayments": 526,
+    "latePayments": 0,
+    "marchCloseNewPayments": 403,
+    "marchCloseCharterPayments": 42
+  },
+  {
+    "districtId": "110",
+    "districtName": "110",
+    "region": "10",
+    "aprilPayments": 1244,
+    "octoberPayments": 1116,
+    "latePayments": 14,
+    "marchCloseNewPayments": 532,
+    "marchCloseCharterPayments": 108
+  },
+  {
+    "districtId": "17",
+    "districtName": "17",
+    "region": "12",
+    "aprilPayments": 891,
+    "octoberPayments": 917,
+    "latePayments": 3,
+    "marchCloseNewPayments": 343,
+    "marchCloseCharterPayments": 64
+  },
+  {
+    "districtId": "74",
+    "districtName": "74",
+    "region": "11",
+    "aprilPayments": 1521,
+    "octoberPayments": 1648,
+    "latePayments": 32,
+    "marchCloseNewPayments": 764,
+    "marchCloseCharterPayments": 155
+  },
+  {
+    "districtId": "88",
+    "districtName": "88",
+    "region": "14",
+    "aprilPayments": 2454,
+    "octoberPayments": 2616,
+    "latePayments": 5,
+    "marchCloseNewPayments": 1206,
+    "marchCloseCharterPayments": 257
+  },
+  {
+    "districtId": "59",
+    "districtName": "59",
+    "region": "10",
+    "aprilPayments": 2716,
+    "octoberPayments": 2340,
+    "latePayments": 35,
+    "marchCloseNewPayments": 958,
+    "marchCloseCharterPayments": 102
+  },
+  {
+    "districtId": "124",
+    "districtName": "124",
+    "region": "08",
+    "aprilPayments": 1199,
+    "octoberPayments": 1250,
+    "latePayments": 6,
+    "marchCloseNewPayments": 806,
+    "marchCloseCharterPayments": 432
+  },
+  {
+    "districtId": "80",
+    "districtName": "80",
+    "region": "09",
+    "aprilPayments": 4221,
+    "octoberPayments": 4019,
+    "latePayments": 6,
+    "marchCloseNewPayments": 1216,
+    "marchCloseCharterPayments": 125
+  },
+  {
+    "districtId": "47",
+    "districtName": "47",
+    "region": "07",
+    "aprilPayments": 2483,
+    "octoberPayments": 2529,
+    "latePayments": 18,
+    "marchCloseNewPayments": 1097,
+    "marchCloseCharterPayments": 86
+  },
+  {
+    "districtId": "116",
+    "districtName": "116",
+    "region": "08",
+    "aprilPayments": 1822,
+    "octoberPayments": 1808,
+    "latePayments": 2,
+    "marchCloseNewPayments": 777,
+    "marchCloseCharterPayments": 165
+  },
+  {
+    "districtId": "82",
+    "districtName": "82",
+    "region": "13",
+    "aprilPayments": 3274,
+    "octoberPayments": 3364,
+    "latePayments": 12,
+    "marchCloseNewPayments": 1328,
+    "marchCloseCharterPayments": 44
+  },
+  {
+    "districtId": "92",
+    "districtName": "92",
+    "region": "13",
+    "aprilPayments": 2901,
+    "octoberPayments": 3098,
+    "latePayments": 11,
+    "marchCloseNewPayments": 1759,
+    "marchCloseCharterPayments": 395
+  },
+  {
+    "districtId": "108",
+    "districtName": "108",
+    "region": "10",
+    "aprilPayments": 1602,
+    "octoberPayments": 1442,
+    "latePayments": 6,
+    "marchCloseNewPayments": 936,
+    "marchCloseCharterPayments": 69
+  },
+  {
+    "districtId": "50",
+    "districtName": "50",
+    "region": "04",
+    "aprilPayments": 1720,
+    "octoberPayments": 1743,
+    "latePayments": 7,
+    "marchCloseNewPayments": 692,
+    "marchCloseCharterPayments": 61
+  },
+  {
+    "districtId": "27",
+    "districtName": "27",
+    "region": "06",
+    "aprilPayments": 1134,
+    "octoberPayments": 1109,
+    "latePayments": 17,
+    "marchCloseNewPayments": 312,
+    "marchCloseCharterPayments": 43
+  },
+  {
+    "districtId": "67",
+    "districtName": "67",
+    "region": "14",
+    "aprilPayments": 2307,
+    "octoberPayments": 2086,
+    "latePayments": 0,
+    "marchCloseNewPayments": 592,
+    "marchCloseCharterPayments": 153
+  },
+  {
+    "districtId": "41",
+    "districtName": "41",
+    "region": "08",
+    "aprilPayments": 2042,
+    "octoberPayments": 1984,
+    "latePayments": 4,
+    "marchCloseNewPayments": 1155,
+    "marchCloseCharterPayments": 324
+  },
+  {
+    "districtId": "95",
+    "districtName": "95",
+    "region": "10",
+    "aprilPayments": 2871,
+    "octoberPayments": 2696,
+    "latePayments": 23,
+    "marchCloseNewPayments": 1110,
+    "marchCloseCharterPayments": 60
+  },
+  {
+    "districtId": "127",
+    "districtName": "127",
+    "region": "08",
+    "aprilPayments": 2429,
+    "octoberPayments": 2529,
+    "latePayments": 4,
+    "marchCloseNewPayments": 1273,
+    "marchCloseCharterPayments": 184
+  },
+  {
+    "districtId": "10",
+    "districtName": "10",
+    "region": "05",
+    "aprilPayments": 934,
+    "octoberPayments": 930,
+    "latePayments": 2,
+    "marchCloseNewPayments": 293,
+    "marchCloseCharterPayments": 19
+  },
+  {
+    "districtId": "128",
+    "districtName": "128",
+    "region": "14",
+    "aprilPayments": 1560,
+    "octoberPayments": 1508,
+    "latePayments": 7,
+    "marchCloseNewPayments": 934,
+    "marchCloseCharterPayments": 134
+  },
+  {
+    "districtId": "105",
+    "districtName": "105",
+    "region": "08",
+    "aprilPayments": 1863,
+    "octoberPayments": 1923,
+    "latePayments": 3,
+    "marchCloseNewPayments": 824,
+    "marchCloseCharterPayments": 186
+  },
+  {
+    "districtId": "85",
+    "districtName": "85",
+    "region": "14",
+    "aprilPayments": 1650,
+    "octoberPayments": 1637,
+    "latePayments": 1,
+    "marchCloseNewPayments": 679,
+    "marchCloseCharterPayments": 140
+  },
+  {
+    "districtId": "48",
+    "districtName": "48",
+    "region": "07",
+    "aprilPayments": 1325,
+    "octoberPayments": 1307,
+    "latePayments": 3,
+    "marchCloseNewPayments": 533,
+    "marchCloseCharterPayments": 111
+  },
+  {
+    "districtId": "73",
+    "districtName": "73",
+    "region": "12",
+    "aprilPayments": 1691,
+    "octoberPayments": 1725,
+    "latePayments": 11,
+    "marchCloseNewPayments": 669,
+    "marchCloseCharterPayments": 48
+  },
+  {
+    "districtId": "91",
+    "districtName": "91",
+    "region": "10",
+    "aprilPayments": 3525,
+    "octoberPayments": 3357,
+    "latePayments": 20,
+    "marchCloseNewPayments": 1616,
+    "marchCloseCharterPayments": 65
+  },
+  {
+    "districtId": "120",
+    "districtName": "120",
+    "region": "13",
+    "aprilPayments": 2966,
+    "octoberPayments": 2964,
+    "latePayments": 0,
+    "marchCloseNewPayments": 1416,
+    "marchCloseCharterPayments": 310
+  },
+  {
+    "districtId": "54",
+    "districtName": "54",
+    "region": "04",
+    "aprilPayments": 647,
+    "octoberPayments": 694,
+    "latePayments": 1,
+    "marchCloseNewPayments": 203,
+    "marchCloseCharterPayments": 43
+  },
+  {
+    "districtId": "118",
+    "districtName": "118",
+    "region": "14",
+    "aprilPayments": 2798,
+    "octoberPayments": 2983,
+    "latePayments": 12,
+    "marchCloseNewPayments": 1223,
+    "marchCloseCharterPayments": 301
+  },
+  {
+    "districtId": "18",
+    "districtName": "18",
+    "region": "06",
+    "aprilPayments": 1458,
+    "octoberPayments": 1461,
+    "latePayments": 25,
+    "marchCloseNewPayments": 417,
+    "marchCloseCharterPayments": 46
+  },
+  {
+    "districtId": "86",
+    "districtName": "86",
+    "region": "05",
+    "aprilPayments": 1742,
+    "octoberPayments": 1581,
+    "latePayments": 6,
+    "marchCloseNewPayments": 614,
+    "marchCloseCharterPayments": 66
+  },
+  {
+    "districtId": "44",
+    "districtName": "44",
+    "region": "07",
+    "aprilPayments": 1885,
+    "octoberPayments": 1894,
+    "latePayments": 28,
+    "marchCloseNewPayments": 808,
+    "marchCloseCharterPayments": 69
+  },
+  {
+    "districtId": "71",
+    "districtName": "71",
+    "region": "10",
+    "aprilPayments": 3759,
+    "octoberPayments": 3470,
+    "latePayments": 6,
+    "marchCloseNewPayments": 1350,
+    "marchCloseCharterPayments": 41
+  },
+  {
+    "districtId": "34",
+    "districtName": "34",
+    "region": "02",
+    "aprilPayments": 2161,
+    "octoberPayments": 2204,
+    "latePayments": 12,
+    "marchCloseNewPayments": 1113,
+    "marchCloseCharterPayments": 71
+  },
+  {
+    "districtId": "66",
+    "districtName": "66",
+    "region": "06",
+    "aprilPayments": 1053,
+    "octoberPayments": 1033,
+    "latePayments": 3,
+    "marchCloseNewPayments": 388,
+    "marchCloseCharterPayments": 19
+  },
+  {
+    "districtId": "40",
+    "districtName": "40",
+    "region": "06",
+    "aprilPayments": 1440,
+    "octoberPayments": 1496,
+    "latePayments": 8,
+    "marchCloseNewPayments": 520,
+    "marchCloseCharterPayments": 66
+  },
+  {
+    "districtId": "113",
+    "districtName": "113",
+    "region": "02",
+    "aprilPayments": 1686,
+    "octoberPayments": 1632,
+    "latePayments": 7,
+    "marchCloseNewPayments": 821,
+    "marchCloseCharterPayments": 151
+  },
+  {
+    "districtId": "31",
+    "districtName": "31",
+    "region": "05",
+    "aprilPayments": 1793,
+    "octoberPayments": 1827,
+    "latePayments": 7,
+    "marchCloseNewPayments": 699,
+    "marchCloseCharterPayments": 40
+  },
+  {
+    "districtId": "69",
+    "districtName": "69",
+    "region": "12",
+    "aprilPayments": 2318,
+    "octoberPayments": 2428,
+    "latePayments": 24,
+    "marchCloseNewPayments": 724,
+    "marchCloseCharterPayments": 21
+  },
+  {
+    "districtId": "61",
+    "districtName": "61",
+    "region": "05",
+    "aprilPayments": 2371,
+    "octoberPayments": 2067,
+    "latePayments": 11,
+    "marchCloseNewPayments": 901,
+    "marchCloseCharterPayments": 41
+  },
+  {
+    "districtId": "81",
+    "districtName": "81",
+    "region": "07",
+    "aprilPayments": 2760,
+    "octoberPayments": 2884,
+    "latePayments": 14,
+    "marchCloseNewPayments": 700,
+    "marchCloseCharterPayments": 116
+  },
+  {
+    "districtId": "56",
+    "districtName": "56",
+    "region": "04",
+    "aprilPayments": 2099,
+    "octoberPayments": 2078,
+    "latePayments": 9,
+    "marchCloseNewPayments": 775,
+    "marchCloseCharterPayments": 307
+  },
+  {
+    "districtId": "24",
+    "districtName": "24",
+    "region": "03",
+    "aprilPayments": 612,
+    "octoberPayments": 566,
+    "latePayments": 1,
+    "marchCloseNewPayments": 146,
+    "marchCloseCharterPayments": 27
+  },
+  {
+    "districtId": "30",
+    "districtName": "30",
+    "region": "04",
+    "aprilPayments": 1263,
+    "octoberPayments": 1307,
+    "latePayments": 2,
+    "marchCloseNewPayments": 405,
+    "marchCloseCharterPayments": 114
+  },
+  {
+    "districtId": "90",
+    "districtName": "90",
+    "region": "12",
+    "aprilPayments": 1621,
+    "octoberPayments": 1678,
+    "latePayments": 7,
+    "marchCloseNewPayments": 547,
+    "marchCloseCharterPayments": 20
+  },
+  {
+    "districtId": "83",
+    "districtName": "83",
+    "region": "06",
+    "aprilPayments": 1920,
+    "octoberPayments": 1903,
+    "latePayments": 6,
+    "marchCloseNewPayments": 701,
+    "marchCloseCharterPayments": 54
+  },
+  {
+    "districtId": "107",
+    "districtName": "107",
+    "region": "10",
+    "aprilPayments": 1625,
+    "octoberPayments": 1561,
+    "latePayments": 3,
+    "marchCloseNewPayments": 626,
+    "marchCloseCharterPayments": 20
+  },
+  {
+    "districtId": "117",
+    "districtName": "117",
+    "region": "07",
+    "aprilPayments": 1592,
+    "octoberPayments": 1489,
+    "latePayments": 5,
+    "marchCloseNewPayments": 538,
+    "marchCloseCharterPayments": 46
+  },
+  {
+    "districtId": "70",
+    "districtName": "70",
+    "region": "12",
+    "aprilPayments": 1758,
+    "octoberPayments": 1807,
+    "latePayments": 10,
+    "marchCloseNewPayments": 664,
+    "marchCloseCharterPayments": 22
+  },
+  {
+    "districtId": "125",
+    "districtName": "125",
+    "region": "08",
+    "aprilPayments": 1412,
+    "octoberPayments": 1420,
+    "latePayments": 25,
+    "marchCloseNewPayments": 852,
+    "marchCloseCharterPayments": 236
+  },
+  {
+    "districtId": "26",
+    "districtName": "26",
+    "region": "03",
+    "aprilPayments": 2047,
+    "octoberPayments": 2055,
+    "latePayments": 8,
+    "marchCloseNewPayments": 798,
+    "marchCloseCharterPayments": 20
+  },
+  {
+    "districtId": "112",
+    "districtName": "112",
+    "region": "12",
+    "aprilPayments": 1659,
+    "octoberPayments": 1794,
+    "latePayments": 12,
+    "marchCloseNewPayments": 626,
+    "marchCloseCharterPayments": 20
+  },
+  {
+    "districtId": "12",
+    "districtName": "12",
+    "region": "02",
+    "aprilPayments": 877,
+    "octoberPayments": 893,
+    "latePayments": 1,
+    "marchCloseNewPayments": 279,
+    "marchCloseCharterPayments": 31
+  },
+  {
+    "districtId": "14",
+    "districtName": "14",
+    "region": "07",
+    "aprilPayments": 1490,
+    "octoberPayments": 1412,
+    "latePayments": 8,
+    "marchCloseNewPayments": 557,
+    "marchCloseCharterPayments": 115
+  },
+  {
+    "districtId": "84",
+    "districtName": "84",
+    "region": "07",
+    "aprilPayments": 1925,
+    "octoberPayments": 2012,
+    "latePayments": 9,
+    "marchCloseNewPayments": 757,
+    "marchCloseCharterPayments": 41
+  },
+  {
+    "districtId": "51",
+    "districtName": "51",
+    "region": "13",
+    "aprilPayments": 1787,
+    "octoberPayments": 1870,
+    "latePayments": 39,
+    "marchCloseNewPayments": 581,
+    "marchCloseCharterPayments": 126
+  },
+  {
+    "districtId": "55",
+    "districtName": "55",
+    "region": "03",
+    "aprilPayments": 1698,
+    "octoberPayments": 1733,
+    "latePayments": 21,
+    "marchCloseNewPayments": 620,
+    "marchCloseCharterPayments": 187
+  },
+  {
+    "districtId": "13",
+    "districtName": "13",
+    "region": "05",
+    "aprilPayments": 878,
+    "octoberPayments": 879,
+    "latePayments": 1,
+    "marchCloseNewPayments": 272,
+    "marchCloseCharterPayments": 30
+  },
+  {
+    "districtId": "F",
+    "districtName": "F",
+    "region": "02",
+    "aprilPayments": 1228,
+    "octoberPayments": 1256,
+    "latePayments": 5,
+    "marchCloseNewPayments": 430,
+    "marchCloseCharterPayments": 87
+  },
+  {
+    "districtId": "05",
+    "districtName": "05",
+    "region": "02",
+    "aprilPayments": 1552,
+    "octoberPayments": 1507,
+    "latePayments": 17,
+    "marchCloseNewPayments": 517,
+    "marchCloseCharterPayments": 90
+  },
+  {
+    "districtId": "121",
+    "districtName": "121",
+    "region": "13",
+    "aprilPayments": 2549,
+    "octoberPayments": 2730,
+    "latePayments": 2,
+    "marchCloseNewPayments": 1291,
+    "marchCloseCharterPayments": 282
+  },
+  {
+    "districtId": "99",
+    "districtName": "99",
+    "region": "03",
+    "aprilPayments": 937,
+    "octoberPayments": 852,
+    "latePayments": 2,
+    "marchCloseNewPayments": 299,
+    "marchCloseCharterPayments": 25
+  },
+  {
+    "districtId": "75",
+    "districtName": "75",
+    "region": "09",
+    "aprilPayments": 1996,
+    "octoberPayments": 2155,
+    "latePayments": 44,
+    "marchCloseNewPayments": 852,
+    "marchCloseCharterPayments": 144
+  },
+  {
+    "districtId": "29",
+    "districtName": "29",
+    "region": "06",
+    "aprilPayments": 1298,
+    "octoberPayments": 1349,
+    "latePayments": 3,
+    "marchCloseNewPayments": 395,
+    "marchCloseCharterPayments": 34
+  },
+  {
+    "districtId": "65",
+    "districtName": "65",
+    "region": "05",
+    "aprilPayments": 849,
+    "octoberPayments": 856,
+    "latePayments": 5,
+    "marchCloseNewPayments": 198,
+    "marchCloseCharterPayments": 24
+  },
+  {
+    "districtId": "63",
+    "districtName": "63",
+    "region": "04",
+    "aprilPayments": 851,
+    "octoberPayments": 859,
+    "latePayments": 4,
+    "marchCloseNewPayments": 255,
+    "marchCloseCharterPayments": 33
+  },
+  {
+    "districtId": "76",
+    "districtName": "76",
+    "region": "09",
+    "aprilPayments": 2827,
+    "octoberPayments": 2897,
+    "latePayments": 3,
+    "marchCloseNewPayments": 470,
+    "marchCloseCharterPayments": 16
+  },
+  {
+    "districtId": "39",
+    "districtName": "39",
+    "region": "01",
+    "aprilPayments": 1272,
+    "octoberPayments": 1303,
+    "latePayments": 8,
+    "marchCloseNewPayments": 355,
+    "marchCloseCharterPayments": 0
+  },
+  {
+    "districtId": "77",
+    "districtName": "77",
+    "region": "04",
+    "aprilPayments": 581,
+    "octoberPayments": 620,
+    "latePayments": 3,
+    "marchCloseNewPayments": 203,
+    "marchCloseCharterPayments": 44
+  },
+  {
+    "districtId": "58",
+    "districtName": "58",
+    "region": "07",
+    "aprilPayments": 697,
+    "octoberPayments": 730,
+    "latePayments": 5,
+    "marchCloseNewPayments": 258,
+    "marchCloseCharterPayments": 0
+  },
+  {
+    "districtId": "25",
+    "districtName": "25",
+    "region": "03",
+    "aprilPayments": 1559,
+    "octoberPayments": 1583,
+    "latePayments": 2,
+    "marchCloseNewPayments": 536,
+    "marchCloseCharterPayments": 94
+  },
+  {
+    "districtId": "37",
+    "districtName": "37",
+    "region": "07",
+    "aprilPayments": 1000,
+    "octoberPayments": 1000,
+    "latePayments": 4,
+    "marchCloseNewPayments": 410,
+    "marchCloseCharterPayments": 20
+  },
+  {
+    "districtId": "01",
+    "districtName": "01",
+    "region": "02",
+    "aprilPayments": 1448,
+    "octoberPayments": 1490,
+    "latePayments": 10,
+    "marchCloseNewPayments": 524,
+    "marchCloseCharterPayments": 18
+  },
+  {
+    "districtId": "53",
+    "districtName": "53",
+    "region": "05",
+    "aprilPayments": 1309,
+    "octoberPayments": 1361,
+    "latePayments": 8,
+    "marchCloseNewPayments": 395,
+    "marchCloseCharterPayments": 37
+  },
+  {
+    "districtId": "126",
+    "districtName": "126",
+    "region": "08",
+    "aprilPayments": 1079,
+    "octoberPayments": 1047,
+    "latePayments": 9,
+    "marchCloseNewPayments": 786,
+    "marchCloseCharterPayments": 177
+  },
+  {
+    "districtId": "60",
+    "districtName": "60",
+    "region": "05",
+    "aprilPayments": 1614,
+    "octoberPayments": 1542,
+    "latePayments": 7,
+    "marchCloseNewPayments": 644,
+    "marchCloseCharterPayments": 34
+  },
+  {
+    "districtId": "119",
+    "districtName": "119",
+    "region": "06",
+    "aprilPayments": 1489,
+    "octoberPayments": 1426,
+    "latePayments": 7,
+    "marchCloseNewPayments": 606,
+    "marchCloseCharterPayments": 99
+  },
+  {
+    "districtId": "98",
+    "districtName": "98",
+    "region": "08",
+    "aprilPayments": 1982,
+    "octoberPayments": 1981,
+    "latePayments": 9,
+    "marchCloseNewPayments": 1492,
+    "marchCloseCharterPayments": 212
+  },
+  {
+    "districtId": "08",
+    "districtName": "08",
+    "region": "04",
+    "aprilPayments": 865,
+    "octoberPayments": 843,
+    "latePayments": 1,
+    "marchCloseNewPayments": 267,
+    "marchCloseCharterPayments": 64
+  },
+  {
+    "districtId": "52",
+    "districtName": "52",
+    "region": "02",
+    "aprilPayments": 1010,
+    "octoberPayments": 1027,
+    "latePayments": 2,
+    "marchCloseNewPayments": 319,
+    "marchCloseCharterPayments": 0
+  },
+  {
+    "districtId": "62",
+    "districtName": "62",
+    "region": "05",
+    "aprilPayments": 676,
+    "octoberPayments": 700,
+    "latePayments": 2,
+    "marchCloseNewPayments": 179,
+    "marchCloseCharterPayments": 50
+  },
+  {
+    "districtId": "42",
+    "districtName": "42",
+    "region": "03",
+    "aprilPayments": 1399,
+    "octoberPayments": 1316,
+    "latePayments": 4,
+    "marchCloseNewPayments": 524,
+    "marchCloseCharterPayments": 0
+  },
+  {
+    "districtId": "22",
+    "districtName": "22",
+    "region": "03",
+    "aprilPayments": 785,
+    "octoberPayments": 718,
+    "latePayments": 9,
+    "marchCloseNewPayments": 245,
+    "marchCloseCharterPayments": 67
+  },
+  {
+    "districtId": "03",
+    "districtName": "03",
+    "region": "02",
+    "aprilPayments": 1931,
+    "octoberPayments": 2047,
+    "latePayments": 3,
+    "marchCloseNewPayments": 654,
+    "marchCloseCharterPayments": 47
+  },
+  {
+    "districtId": "38",
+    "districtName": "38",
+    "region": "06",
+    "aprilPayments": 1862,
+    "octoberPayments": 1854,
+    "latePayments": 6,
+    "marchCloseNewPayments": 647,
+    "marchCloseCharterPayments": 71
+  },
+  {
+    "districtId": "28",
+    "districtName": "28",
+    "region": "05",
+    "aprilPayments": 936,
+    "octoberPayments": 896,
+    "latePayments": 4,
+    "marchCloseNewPayments": 282,
+    "marchCloseCharterPayments": 35
+  },
+  {
+    "districtId": "100",
+    "districtName": "100",
+    "region": "02",
+    "aprilPayments": 1023,
+    "octoberPayments": 1075,
+    "latePayments": 6,
+    "marchCloseNewPayments": 351,
+    "marchCloseCharterPayments": 20
+  },
+  {
+    "districtId": "20",
+    "districtName": "20",
+    "region": "08",
+    "aprilPayments": 1422,
+    "octoberPayments": 1708,
+    "latePayments": 7,
+    "marchCloseNewPayments": 654,
+    "marchCloseCharterPayments": 128
+  },
+  {
+    "districtId": "97",
+    "districtName": "97",
+    "region": "13",
+    "aprilPayments": 610,
+    "octoberPayments": 678,
+    "latePayments": 0,
+    "marchCloseNewPayments": 484,
+    "marchCloseCharterPayments": 137
+  },
+  {
+    "districtId": "15",
+    "districtName": "15",
+    "region": "01",
+    "aprilPayments": 654,
+    "octoberPayments": 639,
+    "latePayments": 5,
+    "marchCloseNewPayments": 237,
+    "marchCloseCharterPayments": 21
+  },
+  {
+    "districtId": "57",
+    "districtName": "57",
+    "region": "01",
+    "aprilPayments": 1531,
+    "octoberPayments": 1505,
+    "latePayments": 5,
+    "marchCloseNewPayments": 493,
+    "marchCloseCharterPayments": 0
+  },
+  {
+    "districtId": "21",
+    "districtName": "21",
+    "region": "01",
+    "aprilPayments": 2418,
+    "octoberPayments": 2391,
+    "latePayments": 12,
+    "marchCloseNewPayments": 1010,
+    "marchCloseCharterPayments": 20
+  },
+  {
+    "districtId": "19",
+    "districtName": "19",
+    "region": "04",
+    "aprilPayments": 489,
+    "octoberPayments": 459,
+    "latePayments": 3,
+    "marchCloseNewPayments": 112,
+    "marchCloseCharterPayments": 22
+  },
+  {
+    "districtId": "45",
+    "districtName": "45",
+    "region": "05",
+    "aprilPayments": 846,
+    "octoberPayments": 806,
+    "latePayments": 3,
+    "marchCloseNewPayments": 311,
+    "marchCloseCharterPayments": 0
+  },
+  {
+    "districtId": "115",
+    "districtName": "115",
+    "region": "01",
+    "aprilPayments": 628,
+    "octoberPayments": 640,
+    "latePayments": 5,
+    "marchCloseNewPayments": 198,
+    "marchCloseCharterPayments": 0
+  },
+  {
+    "districtId": "129",
+    "districtName": "129",
+    "region": "11",
+    "aprilPayments": 1767,
+    "octoberPayments": 2224,
+    "latePayments": 16,
+    "marchCloseNewPayments": 815,
+    "marchCloseCharterPayments": 287
+  },
+  {
+    "districtId": "06",
+    "districtName": "06",
+    "region": "03",
+    "aprilPayments": 1286,
+    "octoberPayments": 1495,
+    "latePayments": 7,
+    "marchCloseNewPayments": 307,
+    "marchCloseCharterPayments": 43
+  },
+  {
+    "districtId": "111",
+    "districtName": "111",
+    "region": "07",
+    "aprilPayments": 280,
+    "octoberPayments": 297,
+    "latePayments": 2,
+    "marchCloseNewPayments": 134,
+    "marchCloseCharterPayments": 22
+  },
+  {
+    "districtId": "123",
+    "districtName": "123",
+    "region": "05",
+    "aprilPayments": 1681,
+    "octoberPayments": 1596,
+    "latePayments": 7,
+    "marchCloseNewPayments": 539,
+    "marchCloseCharterPayments": 45
+  },
+  {
+    "districtId": "16",
+    "districtName": "16",
+    "region": "03",
+    "aprilPayments": 703,
+    "octoberPayments": 624,
+    "latePayments": 2,
+    "marchCloseNewPayments": 182,
+    "marchCloseCharterPayments": 79
+  },
+  {
+    "districtId": "11",
+    "districtName": "11",
+    "region": "04",
+    "aprilPayments": 1185,
+    "octoberPayments": 1223,
+    "latePayments": 3,
+    "marchCloseNewPayments": 341,
+    "marchCloseCharterPayments": 33
+  },
+  {
+    "districtId": "102",
+    "districtName": "102",
+    "region": "13",
+    "aprilPayments": 1885,
+    "octoberPayments": 1916,
+    "latePayments": 18,
+    "marchCloseNewPayments": 670,
+    "marchCloseCharterPayments": 38
+  },
+  {
+    "districtId": "36",
+    "districtName": "36",
+    "region": "06",
+    "aprilPayments": 1762,
+    "octoberPayments": 1779,
+    "latePayments": 22,
+    "marchCloseNewPayments": 582,
+    "marchCloseCharterPayments": 67
+  },
+  {
+    "districtId": "46",
+    "districtName": "46",
+    "region": "06",
+    "aprilPayments": 1314,
+    "octoberPayments": 1346,
+    "latePayments": 9,
+    "marchCloseNewPayments": 454,
+    "marchCloseCharterPayments": 62
+  },
+  {
+    "districtId": "33",
+    "districtName": "33",
+    "region": "01",
+    "aprilPayments": 1322,
+    "octoberPayments": 1343,
+    "latePayments": 3,
+    "marchCloseNewPayments": 432,
+    "marchCloseCharterPayments": 41
+  },
+  {
+    "districtId": "106",
+    "districtName": "106",
+    "region": "03",
+    "aprilPayments": 1034,
+    "octoberPayments": 1078,
+    "latePayments": 6,
+    "marchCloseNewPayments": 225,
+    "marchCloseCharterPayments": 20
+  },
+  {
+    "districtId": "72",
+    "districtName": "72",
+    "region": "12",
+    "aprilPayments": 1061,
+    "octoberPayments": 1126,
+    "latePayments": 4,
+    "marchCloseNewPayments": 352,
+    "marchCloseCharterPayments": 22
+  },
+  {
+    "districtId": "35",
+    "districtName": "35",
+    "region": "04",
+    "aprilPayments": 862,
+    "octoberPayments": 867,
+    "latePayments": 6,
+    "marchCloseNewPayments": 214,
+    "marchCloseCharterPayments": 0
+  },
+  {
+    "districtId": "02",
+    "districtName": "02",
+    "region": "01",
+    "aprilPayments": 2472,
+    "octoberPayments": 2553,
+    "latePayments": 10,
+    "marchCloseNewPayments": 734,
+    "marchCloseCharterPayments": 114
+  },
+  {
+    "districtId": "101",
+    "districtName": "101",
+    "region": "01",
+    "aprilPayments": 1727,
+    "octoberPayments": 1805,
+    "latePayments": 12,
+    "marchCloseNewPayments": 561,
+    "marchCloseCharterPayments": 60
+  },
+  {
+    "districtId": "07",
+    "districtName": "07",
+    "region": "01",
+    "aprilPayments": 1238,
+    "octoberPayments": 1154,
+    "latePayments": 4,
+    "marchCloseNewPayments": 393,
+    "marchCloseCharterPayments": 22
+  },
+  {
+    "districtId": "78",
+    "districtName": "78",
+    "region": "03",
+    "aprilPayments": 668,
+    "octoberPayments": 684,
+    "latePayments": 6,
+    "marchCloseNewPayments": 171,
+    "marchCloseCharterPayments": 23
+  },
+  {
+    "districtId": "103",
+    "districtName": "103",
+    "region": "04",
+    "aprilPayments": 905,
+    "octoberPayments": 959,
+    "latePayments": 3,
+    "marchCloseNewPayments": 272,
+    "marchCloseCharterPayments": 44
+  },
+  {
+    "districtId": "64",
+    "districtName": "64",
+    "region": "03",
+    "aprilPayments": 727,
+    "octoberPayments": 635,
+    "latePayments": 1,
+    "marchCloseNewPayments": 233,
+    "marchCloseCharterPayments": 0
+  },
+  {
+    "districtId": "04",
+    "districtName": "04",
+    "region": "01",
+    "aprilPayments": 1011,
+    "octoberPayments": 1024,
+    "latePayments": 11,
+    "marchCloseNewPayments": 340,
+    "marchCloseCharterPayments": 71
+  },
+  {
+    "districtId": "79",
+    "districtName": "79",
+    "region": "11",
+    "aprilPayments": 1607,
+    "octoberPayments": 1839,
+    "latePayments": 8,
+    "marchCloseNewPayments": 991,
+    "marchCloseCharterPayments": 91
+  },
+  {
+    "districtId": "U",
+    "districtName": "U",
+    "region": "DNAR",
+    "aprilPayments": 435,
+    "octoberPayments": 418,
+    "latePayments": 5,
+    "marchCloseNewPayments": 260,
+    "marchCloseCharterPayments": 57
+  },
+  {
+    "districtId": "68",
+    "districtName": "68",
+    "region": "04",
+    "aprilPayments": 381,
+    "octoberPayments": 394,
+    "latePayments": 9,
+    "marchCloseNewPayments": 149,
+    "marchCloseCharterPayments": 34
+  },
+  {
+    "districtId": "43",
+    "districtName": "43",
+    "region": "04",
+    "aprilPayments": 875,
+    "octoberPayments": 877,
+    "latePayments": 6,
+    "marchCloseNewPayments": 288,
+    "marchCloseCharterPayments": 50
+  }
+]
