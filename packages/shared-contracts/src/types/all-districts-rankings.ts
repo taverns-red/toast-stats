@@ -117,6 +117,10 @@ export interface DistrictRanking {
   octoberPayments?: number
   latePayments?: number
   charterPayments?: number
+  /** #1614: March close's new payments (April to June dates only). */
+  marchCloseNewPayments?: number
+  /** #1614: March close's charter payments (April to June dates only). */
+  marchCloseCharterPayments?: number
 }
 
 /**
