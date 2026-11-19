@@ -38,8 +38,8 @@
 #                transient error is retried (MARCH_CLOSE_ATTEMPTS). After the
 #                remap (5b), a date whose logical month is April to June is
 #                counted present or absent (no March close: logged, the date
-#                goes on); a failed copy of an existing object stops the step
-#                (exit 1) before the date uploads. Outside the window the copy
+#                goes on); a failed copy of an existing object fails the date
+#                (nothing of it uploaded) and the run goes on. Outside the window the copy
 #                is dropped and not counted. See pull_march_close.
 #   4. transform rebuild, rescrape-historical: collector-cli transform
 #                --date <source> --force (FORCE_ARGS, always set: see FORCE).
@@ -231,7 +231,7 @@
 #   PLAN_GAP_REMOVALS      gap removal planner, rebuild only (default: tsx
 #                          plan-gap-removals.ts)
 #   MARCH_CLOSE_ATTEMPTS   copies of the March close tried before a window
-#                          date fails the step (default 3, #1614)
+#                          date fails (default 3, #1614)
 #   MARCH_CLOSE_RETRY_DELAY seconds between those tries (default 5)
 #
 # Output: stdout is ONE JSON line, {"succeeded":N,"refused":N,"failed":N}
@@ -433,7 +433,7 @@ pull_prior_year() {
 # next is an absent -> present change that holds the daily for review. A
 # transient failure is retried; a missing object is logged and the date goes
 # on (the award shows baseline-missing); an object that exists but will not
-# copy fails the step for a window date, before anything is uploaded.
+# copy fails the date for a window date, before anything of it is uploaded.
 MARCH_CLOSE_DIR="${CACHE_DIR}/baselines/march-close"
 MARCH_CLOSE_ATTEMPTS="${MARCH_CLOSE_ATTEMPTS:-3}"
 MARCH_CLOSE_RETRY_DELAY="${MARCH_CLOSE_RETRY_DELAY:-5}"
@@ -472,13 +472,15 @@ pull_march_close() {
         gzip -dc <"${tmp}" >"${tmp}.plain" 2>/dev/null || : >"${tmp}.plain"
         mv "${tmp}.plain" "${tmp}"
       fi
-      if jq -e 'type == "object"' "${tmp}" >/dev/null 2>&1; then
+      # The shape validateAllDistrictsRankings needs at the top level.
+      if jq -e 'type == "object" and (.rankings | type == "array")' \
+        "${tmp}" >/dev/null 2>&1; then
         mv "${tmp}" "${dest}"
         echo "March close ${BASELINE_YEAR}-03-31 copied to ${dest}"
         BASELINE=present
         return 0
       fi
-      echo "The March close copy from ${src} is not JSON (attempt ${attempt})" >"${err}"
+      echo "The March close copy from ${src} is not a rankings file (attempt ${attempt})" >"${err}"
     elif grep -q 'matched no objects' "${err}"; then
       echo "No March close at ${src}; the retention award shows baseline-missing for ${date}"
       BASELINE=absent
@@ -496,8 +498,9 @@ pull_march_close() {
   done
 }
 
-# After the remap: count the pull when <actual> is in April to June, and fail
-# the step (exit 1, nothing of the date uploaded) when its copy failed.
+# After the remap: count the pull when <actual> is in April to June. Returns
+# 1 when the date must fail (its copy failed, or it was not pulled); the
+# caller cleans up and moves to the next date, as for ENRICH=failed.
 # Outside the window the copy is removed and nothing is counted.
 check_march_close() {
   local actual="$1"
@@ -508,16 +511,24 @@ check_march_close() {
       return 0
       ;;
   esac
-  if [ "${actual:0:4}" != "${BASELINE_YEAR}" ]; then BASELINE=failed; fi
-  case "${BASELINE}" in
+  local year="${actual:0:4}" status="${BASELINE}"
+  # No pull for a window date, or one for another year: a remap the pull did
+  # not foresee.
+  if [ -z "${status}" ] || [ "${year}" != "${BASELINE_YEAR}" ]; then
+    status=not-pulled
+  fi
+  case "${status}" in
     present) MARCH_CLOSE_PRESENT=$((MARCH_CLOSE_PRESENT + 1)) ;;
     absent) MARCH_CLOSE_ABSENT=$((MARCH_CLOSE_ABSENT + 1)) ;;
-    *)
-      # failed, or no pull for a window date (a remap the pull did not foresee)
+    failed)
       MARCH_CLOSE_FAILED=$((MARCH_CLOSE_FAILED + 1))
-      echo "::error::process-dates: the March close ${actual:0:4}-03-31 exists but could not be copied for ${actual}; stopping before its rankings publish without the retention baseline (#1614)"
-      march_close_summary >>"${SUMMARY}"
-      exit 1
+      echo "::error::process-dates: the March close ${year}-03-31 exists but could not be copied for ${actual}; not publishing ${actual} without the retention baseline (#1614)"
+      return 1
+      ;;
+    *)
+      MARCH_CLOSE_FAILED=$((MARCH_CLOSE_FAILED + 1))
+      echo "::error::process-dates: the March close ${year}-03-31 was not pulled for ${actual}; not publishing ${actual} without the retention baseline (#1614)"
+      return 1
       ;;
   esac
   return 0
@@ -998,8 +1009,12 @@ process_one() {
   fi
   ACTUAL="${actual}"
 
-  # 5b. March-close baseline check, on the logical (remapped) date.
-  check_march_close "${actual}"
+  # 5b. March-close baseline check, on the logical (remapped) date. A failed
+  # check fails the date (OUTCOME stays failed), not the run.
+  if ! check_march_close "${actual}"; then
+    cleanup_date "${source}" "${actual}" "${prev}"
+    return 0
+  fi
 
   # 6. guard
   guard_status=0
