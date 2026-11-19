@@ -263,6 +263,41 @@ describe('sync-stores.sh (#1722)', () => {
     expect(r.status).not.toBe(0)
   })
 
+  // #3007: compute-analytics reads the closed-club index for
+  // reinstatable-clubs.json. Built by build-identity-history.sh like the
+  // region history, and the same kind of read-only input.
+  it('pulls config/closed-club-names.json into the cache, plain JSON', () => {
+    putObject('config/closed-club-names.json', doc(6))
+    const r = run(SYNC, ['closed-club-names'])
+    expect(r.status, r.stderr).toBe(0)
+    const body = fs.readFileSync(
+      path.join(cache, 'config/closed-club-names.json')
+    )
+    expect(body.equals(doc(6))).toBe(true)
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+      /closed-club-names\*\*: pulled/
+    )
+  })
+
+  it('treats a missing closed-club index as "not yet built": no file, exit 0', () => {
+    const r = run(SYNC, ['closed-club-names'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(
+      fs.existsSync(path.join(cache, 'config/closed-club-names.json'))
+    ).toBe(false)
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+      /closed-club-names\*\*: none yet/
+    )
+  })
+
+  it('fails when the closed-club index cannot be fetched', () => {
+    putObject('config/closed-club-names.json', doc(6))
+    const r = run(SYNC, ['closed-club-names'], {
+      SHIM_FAIL_MATCH: '^cp ',
+    })
+    expect(r.status).not.toBe(0)
+  })
+
   it('rejects an unknown store name', () => {
     const r = run(SYNC, ['snapshots'])
     expect(r.status).not.toBe(0)

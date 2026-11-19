@@ -710,6 +710,69 @@ describe('process-dates.sh: prior-year snapshot for YoY in every mode (#1769, D-
   })
 })
 
+describe('process-dates.sh: the previous program year’s June 30 suspended list (#3007)', () => {
+  // compute-analytics reads snapshots/<PY start>-06-30/suspended-clubs.json
+  // for reinstatable-clubs.json: a club suspended on Mar 31 drops off the
+  // date's own list on Jul 1 but stays suspended until Oct 1. The program
+  // year is the snapshot's logical date's (CLAUDE.md tripwire, #1284).
+  let diskLog: string
+
+  beforeEach(() => {
+    diskLog = path.join(tmp, 'disk.log')
+  })
+
+  function seenByCompute(): string[] {
+    return lines(diskLog)
+      .filter(l => l.startsWith('compute-analytics: '))
+      .map(l => l.slice('compute-analytics: '.length))
+  }
+
+  it('pulls only that one file before compute, and removes it afterwards', () => {
+    putObject('snapshots/2026-06-30/suspended-clubs.json', '{"s":1}', true)
+    putObject('snapshots/2026-06-30/district_61.json', '{"d":61}', true)
+    const r = run('rescrape', ['2026-08-31'], {
+      DISTRICTS: '61',
+      STUB_DISK_LOG: diskLog,
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    const seen = seenByCompute().filter(f => f.startsWith('snapshots/2026-06'))
+    expect(seen).toEqual(['snapshots/2026-06-30/suspended-clubs.json'])
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+
+  it('keys the program year on the date the transform wrote', () => {
+    // A close collected 2026-07-02 lands on 2026-06-30, in 2025-2026: the
+    // previous year's list is 2025-06-30, which is also its YoY date.
+    putObject('snapshots/2025-06-30/suspended-clubs.json', '{"s":1}', true)
+    putObject('snapshots/2025-06-30/district_61.json', '{"d":61}', true)
+    putObject('snapshots/2026-06-30/suspended-clubs.json', '{"s":2}', true)
+    const r = run('rescrape', ['2026-07-02'], {
+      DISTRICTS: '61',
+      STUB_REMAP: '2026-07-02=2026-06-30',
+      STUB_DISK_LOG: diskLog,
+    })
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(seenByCompute()).toEqual(
+      expect.arrayContaining([
+        'snapshots/2025-06-30/suspended-clubs.json',
+        'snapshots/2025-06-30/district_61.json',
+      ])
+    )
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+
+  it('is best effort: no list in the bucket still publishes the date', () => {
+    const r = run('rescrape', ['2026-08-31'], { DISTRICTS: '61' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.counts).toEqual({ succeeded: 1, refused: 0, failed: 0 })
+    expect(r.stdout + r.stderr).toMatch(
+      /No snapshots\/2026-06-30\/suspended-clubs\.json/
+    )
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+})
+
 describe('process-dates.sh rescrape: guard, compute and upload', () => {
   const env = { DISTRICTS: '61' }
 
@@ -2097,7 +2160,12 @@ describe('process-dates.sh daily (#1765)', () => {
   describe('after the date', () => {
     it('keeps the published snapshot and raw on disk for the post-loop steps (CDN manifests read the local latest), drops the prior year', () => {
       putObject('snapshots/2025-10-23/district_61.json', '{"districtId":"61"}')
+      // The previous program year's June 30 suspended list (#3007) goes too.
+      putObject('snapshots/2026-06-30/suspended-clubs.json', '{"s":1}')
       daily()
+      expect(lines(shimLog)).toContain(
+        `storage cp gs://${BUCKET}/snapshots/2026-06-30/suspended-clubs.json ${cache}/snapshots/2026-06-30/`
+      )
       expect(localDateDirs('snapshots')).toEqual([DATE])
       expect(localDateDirs('raw-csv')).toEqual([DATE])
     })
