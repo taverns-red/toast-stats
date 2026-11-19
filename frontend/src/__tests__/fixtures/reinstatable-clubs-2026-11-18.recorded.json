@@ -1,0 +1,230 @@
+{
+  "_format": {
+    "version": "1.0.0",
+    "type": "reinstatable-clubs"
+  },
+  "snapshotDate": "2026-11-18",
+  "baseProgramYear": "2026-2027",
+  "districts": {
+    "51": [
+      {
+        "clubNumber": "7787247",
+        "clubName": "HELP Synergy Toastmasters Club",
+        "division": "J",
+        "area": "02",
+        "status": "suspended",
+        "suspendDate": "2026-10-08",
+        "oldestPeriod": false,
+        "addsToBase": false,
+        "reason": "suspend_date_unexpected"
+      }
+    ],
+    "61": [
+      {
+        "clubNumber": "1849755",
+        "clubName": "Toastmasters At St. Lawrence College",
+        "division": "A",
+        "area": "01",
+        "status": "suspended",
+        "suspendDate": "2026-09-30",
+        "oldestPeriod": false,
+        "addsToBase": true,
+        "reason": "suspended_sept30_october_cycle"
+      },
+      {
+        "clubNumber": "613576",
+        "clubName": "Speak with Style Toastmasters Club",
+        "division": "G",
+        "area": "63",
+        "status": "suspended",
+        "suspendDate": "2026-09-30",
+        "oldestPeriod": false,
+        "addsToBase": true,
+        "reason": "suspended_sept30_october_cycle"
+      },
+      {
+        "clubNumber": "1269833",
+        "clubName": "FSA-Universite Laval",
+        "division": "I",
+        "area": "91",
+        "status": "suspended",
+        "suspendDate": "2026-09-30",
+        "oldestPeriod": false,
+        "addsToBase": true,
+        "reason": "suspended_sept30_october_cycle"
+      },
+      {
+        "clubNumber": "3475582",
+        "clubName": "Tunney's Toastmasters",
+        "status": "closed",
+        "lastSeen": "2026-06-30",
+        "oldestPeriod": false,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "7270199",
+        "clubName": "HULL Toastmasters Club",
+        "status": "closed",
+        "lastSeen": "2026-06-30",
+        "oldestPeriod": false,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "1025927",
+        "clubName": "Above & Beyond Toastmaster's Club 1025927",
+        "status": "closed",
+        "lastSeen": "2026-04-29",
+        "oldestPeriod": false,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "2150311",
+        "clubName": "Les Communicateurs Avertis Du CNVR",
+        "status": "closed",
+        "lastSeen": "2026-04-29",
+        "oldestPeriod": false,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "2279948",
+        "clubName": "Aim High Toastmasters",
+        "status": "closed",
+        "lastSeen": "2026-04-29",
+        "oldestPeriod": false,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "2285",
+        "clubName": "InfoMasters Club",
+        "status": "closed",
+        "lastSeen": "2026-04-29",
+        "oldestPeriod": false,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "2708969",
+        "clubName": "AIM HIGH AT MONTREAL CRA / VISEZ-HAUT À L'ARC",
+        "status": "closed",
+        "lastSeen": "2026-04-29",
+        "oldestPeriod": false,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "4679523",
+        "clubName": "R.I.S.E. Toastmasters Laval",
+        "status": "closed",
+        "lastSeen": "2026-04-29",
+        "oldestPeriod": false,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "7906623",
+        "clubName": "Canada Post Innovators",
+        "status": "closed",
+        "lastSeen": "2026-04-29",
+        "oldestPeriod": false,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "924107",
+        "clubName": "Renfrew Toastmasters",
+        "status": "closed",
+        "lastSeen": "2026-04-29",
+        "oldestPeriod": false,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "3778",
+        "clubName": "Club Le Marquis",
+        "status": "closed",
+        "lastSeen": "2025-06-30",
+        "oldestPeriod": true,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "7070084",
+        "clubName": "Good Morning! Ottawa Toastmasters Club",
+        "status": "closed",
+        "lastSeen": "2025-06-30",
+        "oldestPeriod": true,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "7857",
+        "clubName": "Deep River Toastmasters Club",
+        "status": "closed",
+        "lastSeen": "2025-06-30",
+        "oldestPeriod": true,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "9547",
+        "clubName": "Royal SpeakEasy Toastmasters Club",
+        "status": "closed",
+        "lastSeen": "2025-06-30",
+        "oldestPeriod": true,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "1314924",
+        "clubName": "Maitres Toastmasters",
+        "status": "closed",
+        "lastSeen": "2025-03-31",
+        "oldestPeriod": true,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "28675862",
+        "clubName": "Amazon Toastmasters Quebec",
+        "status": "closed",
+        "lastSeen": "2025-03-31",
+        "oldestPeriod": true,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "3492",
+        "clubName": "Sandy Hill Club",
+        "status": "closed",
+        "lastSeen": "2025-03-31",
+        "oldestPeriod": true,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "700580",
+        "clubName": "Club Interaction",
+        "status": "closed",
+        "lastSeen": "2025-03-31",
+        "oldestPeriod": true,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      },
+      {
+        "clubNumber": "7852257",
+        "clubName": "Les Passionnés",
+        "status": "closed",
+        "lastSeen": "2025-03-31",
+        "oldestPeriod": true,
+        "addsToBase": false,
+        "reason": "closed_does_not_add"
+      }
+    ],
+    "93": []
+  }
+}

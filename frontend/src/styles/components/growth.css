@@ -197,6 +197,54 @@
   }
 }
 
+/* ── Can reinstate (#3007) ─────────────────────────────────────────────── */
+
+.growth-reinstate__name {
+  display: block;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.growth-reinstate__number {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The reason is a sentence or two; let it wrap instead of widening the
+   table, and keep it readable. */
+.growth-reinstate__why {
+  min-width: 16rem;
+  max-width: 36rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 639px) {
+  .growth-reinstate__why {
+    min-width: 0;
+  }
+}
+
+.growth-reinstate__source {
+  margin-top: 0.5rem;
+}
+
+.growth-reinstate__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.growth-reinstate__link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 /* Region and world funnels (#1812, #1813): the prospective ladder prints TI's
    stage text as reported, which can run to several steps with no spaces
    around the `#N` joins, so let it wrap anywhere rather than widen the page. */

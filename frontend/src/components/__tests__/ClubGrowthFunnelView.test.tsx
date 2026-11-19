@@ -111,6 +111,37 @@ describe('ClubGrowthFunnelView', () => {
     }
   })
 
+  it('renders children inside its padded container, after the stages (#3007)', () => {
+    // The page passes "Can reinstate" as a child so it gets the same gutter
+    // and max width as the funnel (.growth-page), not x = 0 at the edge.
+    const funnel = buildClubGrowthFunnel({
+      districtId: '61',
+      reports: live,
+      counts: { chartered: 0, suspended: 2 },
+      programYear: { startDate: '2026-07-01', endDate: '2027-06-30' },
+      asOfDate: '2026-10-11',
+    })
+    const props = {
+      funnel,
+      asOfDate: '2026-10-11',
+      children: <section data-testid="after-funnel" />,
+    }
+    const { container } = render(
+      <MemoryRouter>
+        <ClubGrowthFunnelView {...props} />
+      </MemoryRouter>
+    )
+    const page = container.querySelector('.growth-page')
+    const child = screen.getByTestId('after-funnel')
+    expect(page).not.toBeNull()
+    expect(page).toContainElement(child)
+    const suspended = screen.getByTestId('growth-stage-suspended')
+    expect(
+      suspended.compareDocumentPosition(child) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+  })
+
   it('renders an unknown suspension count as unknown, not 0 (#1757)', () => {
     renderView(null)
     const stage = screen.getByTestId('growth-stage-suspended')

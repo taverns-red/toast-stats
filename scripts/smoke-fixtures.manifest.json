@@ -196,6 +196,9 @@
       "path": "snapshots/{date}/suspended-clubs.json"
     },
     {
+      "path": "snapshots/{date}/reinstatable-clubs.json"
+    },
+    {
       "path": "snapshots/{date}/meeting-times.json"
     },
     {

@@ -47,6 +47,10 @@ async function assertFunnel(page: Page): Promise<void> {
   }
 }
 
+/** The "Can reinstate" section's cited source (#3007): TI's Club
+ *  Reinstatement FAQ, the one external link that is not a club page. */
+const REINSTATEMENT_FAQ_URL = 'https://toastmasters.org/footer/faq/Club'
+
 async function assertPrivacy(page: Page): Promise<void> {
   const text = (await page.locator('.growth-page').textContent()) ?? ''
   expect(text).not.toMatch(/@|\+\d{10,}|passcode|zoom\.us|meet\.google/i)
@@ -54,6 +58,7 @@ async function assertPrivacy(page: Page): Promise<void> {
     .locator('.growth-page a[href^="http"]')
     .evaluateAll(as => as.map(a => a.getAttribute('href') ?? ''))
   for (const href of external) {
+    if (href === REINSTATEMENT_FAQ_URL) continue
     expect(href).toMatch(/^https:\/\/www\.toastmasters\.org\/Find-a-Club\//)
   }
 }
