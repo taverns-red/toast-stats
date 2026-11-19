@@ -70,6 +70,21 @@ describe('districtRevisionLink (#2475)', () => {
     })
   })
 
+  it('dates a refused later run by the month end collection date, as What Changed does', () => {
+    // The collector refused a closing run on Nov 5, so the month end holds
+    // newer data than the index records. What Changed labels the month end
+    // "revised Nov 5" and lists the Nov 3 revision as its own point.
+    expect(districtRevisionLink(idx, '61', '2026-11-05')).toEqual({
+      revisedOn: '2026-11-05',
+      from: '2026-10-31@2026-11-03',
+      to: '2026-10-31',
+    })
+  })
+
+  it('returns null while the collection date is unreadable, as What Changed shows no date', () => {
+    expect(districtRevisionLink(idx, '61', null)).toBeNull()
+  })
+
   it('returns null with only the pre-close view', () => {
     const only0 = index([
       { asOf: '2026-10-31', closing: false, districts: ['61'] },
