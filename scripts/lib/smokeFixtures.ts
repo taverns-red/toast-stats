@@ -29,6 +29,7 @@ import {
   ProgramYearIndexFileSchema,
   RegionMembershipSeriesReaderSchema,
   RegionRollupsReaderSchema,
+  ReinstatableClubsReaderSchema,
   ReportsRollupsReaderSchema,
   SuspendedClubsReaderSchema,
   TimeSeriesIndexMetadataSchema,
@@ -342,6 +343,11 @@ export const SCHEMA_RULES: SchemaRule[] = [
     'SuspendedClubs',
     /^snapshots\/[^/]+\/suspended-clubs\.json$/,
     SuspendedClubsReaderSchema
+  ),
+  rule(
+    'ReinstatableClubs',
+    /^snapshots\/[^/]+\/reinstatable-clubs\.json$/,
+    ReinstatableClubsReaderSchema
   ),
   rule(
     'ClubsByRegionWorld',
