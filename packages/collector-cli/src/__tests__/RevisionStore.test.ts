@@ -557,3 +557,67 @@ describe('recordRevision (#2475)', () => {
     })
   })
 })
+
+// #2475 phase 3 (review of PR #3070): once a non-closing daily stamped the
+// index `final`, the close is over. A later closing revision would make
+// `final` disagree with the month end, so it is refused, loudly (the
+// pipeline warns on any refusal that is not "already recorded").
+describe('recordRevision after the close is final (#2475 phase 3)', () => {
+  const putFinalIndex = () => {
+    fs.mkdirSync(revDir(), { recursive: true })
+    fs.writeFileSync(
+      path.join(revDir(), 'index.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        monthEnd: MONTH_END,
+        dataMonth: '2026-10',
+        revisions: [
+          {
+            asOf: '2026-11-01',
+            collectedAt: '2026-11-01T13:05:00.000Z',
+            closing: true,
+            successfulDistricts: ['61', 'F'],
+          },
+        ],
+        final: '2026-11-01',
+      })
+    )
+  }
+
+  it('refuses a closing revision and writes nothing', async () => {
+    writeSnapshot(monthEndDir(), { closing: { collectionDate: '2026-11-04' } })
+    putFinalIndex()
+    const before = fs.readFileSync(path.join(revDir(), 'index.json'), 'utf-8')
+
+    const r = await recordRevision({
+      snapshotsDir: snapshots,
+      date: MONTH_END,
+      asOf: '2026-11-04',
+    })
+
+    expect(r.recorded).toBe(false)
+    expect(r.written).toEqual([])
+    expect(r.refused).toMatch(/final.*2026-11-01.*2026-11-04 not recorded/)
+    expect(r.refused).not.toMatch(/already recorded/)
+    expect(fs.existsSync(path.join(revDir(), '2026-11-04'))).toBe(false)
+    expect(fs.readFileSync(path.join(revDir(), 'index.json'), 'utf-8')).toBe(
+      before
+    )
+  })
+
+  it('takes no revision 0 either', async () => {
+    writeSnapshot(monthEndDir(), { closing: { collectionDate: '2026-11-04' } })
+    writeSnapshot(prior)
+    putFinalIndex()
+
+    const r = await recordRevision({
+      snapshotsDir: snapshots,
+      date: MONTH_END,
+      asOf: '2026-11-04',
+      priorSnapshotDir: prior,
+    })
+
+    expect(r.written).toEqual([])
+    expect(readIndex().revisions.map(x => x.asOf)).toEqual(['2026-11-01'])
+  })
+})
