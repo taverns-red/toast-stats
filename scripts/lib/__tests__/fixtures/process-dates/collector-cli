@@ -45,8 +45,9 @@
 #   record-revision --date M --as-of A [--prior-snapshot P]
 #       [--revision-zero-only]   (#2475; the last: revision 0 only, the
 #       closing revision refused)
-#       copies snapshots/M/district_*.json to snapshots/M/revisions/A/ and,
-#       with P, P's district_*.json to revisions/M/ (revision 0); appends
+#       copies snapshots/M/district_*.json (and all-districts-rankings.json,
+#       when present) to snapshots/M/revisions/A/ and, with P, P's
+#       district_*.json and rankings to revisions/M/ (revision 0); appends
 #       the entries to snapshots/M/revisions/index.json (the hydrated one,
 #       if any) and prints the real result JSON (date, asOf, recorded,
 #       revisionZero, refused, written: paths under snapshots/M/, index
@@ -373,7 +374,7 @@ case "${CMD}" in
     zero=no-prior
     if [ -n "${PRIOR_DIR}" ]; then
       mkdir -p "${rev}/${DATE}"
-      for f in "${PRIOR_DIR}"/district_*.json; do
+      for f in "${PRIOR_DIR}"/district_*.json "${PRIOR_DIR}/all-districts-rankings.json"; do
         [ -f "${f}" ] || continue
         cp "${f}" "${rev}/${DATE}/"
         written+=("revisions/${DATE}/$(basename "${f}")")
@@ -386,7 +387,7 @@ case "${CMD}" in
       refused="manual district subset: revision ${AS_OF} not recorded (revision 0 only)"
     else
       mkdir -p "${rev}/${AS_OF}"
-      for f in "${dir}"/district_*.json; do
+      for f in "${dir}"/district_*.json "${dir}/all-districts-rankings.json"; do
         [ -f "${f}" ] || continue
         cp "${f}" "${rev}/${AS_OF}/"
         written+=("revisions/${AS_OF}/$(basename "${f}")")

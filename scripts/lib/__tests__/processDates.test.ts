@@ -2231,6 +2231,30 @@ describe('process-dates.sh daily: reconciliation revisions (#2475)', () => {
     ])
   })
 
+  // #2475 phase 3: revision 0 keeps the in-month rankings file too.
+  it('hydrates staging’s in-month rankings for revision 0', () => {
+    putInMonthMonthEnd()
+    const rankings = '{"metadata":{"view":"in-month"},"rankings":[]}\n'
+    putObject(
+      `snapshots/${MONTH_END}/all-districts-rankings.json`,
+      rankings,
+      true
+    )
+    const r = closingDaily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(gunzipped(`${REV}/${MONTH_END}/all-districts-rankings.json`)).toBe(
+      rankings
+    )
+  })
+
+  it('takes revision 0 without rankings, quietly, when staging has none', () => {
+    putInMonthMonthEnd()
+    const r = closingDaily()
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).not.toMatch(/::warning::.*rankings/)
+    expect(objectsUnder(`${REV}/${MONTH_END}`)).toEqual(['district_61.json'])
+  })
+
   it('passes no prior copy once staging’s month end is already a close', () => {
     putObject(
       `snapshots/${MONTH_END}/metadata.json`,
