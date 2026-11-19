@@ -365,6 +365,29 @@ describe('checkObject — competitive-awards (#1704)', () => {
     expect(check(AWARDS_PATH, plain(awards([20, null, 18])))).toBeNull()
   })
 
+  it('passes a file carrying the membershipRetentionAward key (#1614)', () => {
+    const withRetention = {
+      ...awards([20, 18]),
+      membershipRetentionAward: {
+        status: 'in-progress',
+        baselineDate: '2026-03-31',
+        standings: [
+          {
+            districtId: '1',
+            districtName: 'District 1',
+            region: '1',
+            rank: 1,
+            value: 80,
+            isWinner: true,
+            retained: 400,
+            base: 500,
+          },
+        ],
+      },
+    }
+    expect(check(AWARDS_PATH, plain(withRetention))).toBeNull()
+  })
+
   it('fails when priorYearAvgClubSize is null for every district', () => {
     expect(check(AWARDS_PATH, plain(awards([null, null, null])))).toMatch(
       /priorYearAvgClubSize/
