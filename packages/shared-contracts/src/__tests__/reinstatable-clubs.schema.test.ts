@@ -6,6 +6,7 @@ import {
   ReinstatableClubsSchema,
   type ReinstatableClubs,
 } from '../index.js'
+import { REINSTATABLE_CLUBS } from './__fixtures__/reader-payloads.js'
 
 /**
  * #3007 — `snapshots/{date}/reinstatable-clubs.json`: suspended and closed
@@ -17,36 +18,7 @@ import {
  * a date = unknown for every district; a district key absent = unknown for
  * that district; `[]` = a measured zero.
  */
-const FILE: ReinstatableClubs = {
-  _format: REINSTATABLE_CLUBS_FORMAT,
-  snapshotDate: '2026-11-17',
-  baseProgramYear: '2026-2027',
-  districts: {
-    '61': [
-      {
-        clubNumber: '1380016',
-        clubName: 'Example Suspended Club',
-        division: 'C',
-        area: '33',
-        status: 'suspended',
-        suspendDate: '2026-10-01',
-        oldestPeriod: false,
-        addsToBase: true,
-        reason: 'suspended_sept30_october_cycle',
-      },
-      {
-        clubNumber: '875053',
-        clubName: 'Example Closed Club',
-        status: 'closed',
-        lastSeen: '2025-03-31',
-        oldestPeriod: true,
-        addsToBase: false,
-        reason: 'closed_does_not_add',
-      },
-    ],
-    '83': [],
-  },
-}
+const FILE: ReinstatableClubs = REINSTATABLE_CLUBS
 
 const clone = (): ReinstatableClubs =>
   JSON.parse(JSON.stringify(FILE)) as ReinstatableClubs
