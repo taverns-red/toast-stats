@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.28.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.27.0...collector-cli-v1.28.0) (2026-11-19)
+
+
+### Features
+
+* **collector:** March-close baseline and retention award output ([#1614](https://github.com/taverns-red/toast-stats/issues/1614)) ([#3065](https://github.com/taverns-red/toast-stats/issues/3065)) ([430e258](https://github.com/taverns-red/toast-stats/commit/430e2583e201f896444b8c563150831d46c14e77))
+* **collector:** revision rankings file and final stamp ([#2475](https://github.com/taverns-red/toast-stats/issues/2475)) ([#3070](https://github.com/taverns-red/toast-stats/issues/3070)) ([5f102c9](https://github.com/taverns-red/toast-stats/commit/5f102c9e77fb69683d2ede6d7c72b4d18845fabc))
+* **contracts:** March-close payments on the rankings row ([#1614](https://github.com/taverns-red/toast-stats/issues/1614)) ([#3053](https://github.com/taverns-red/toast-stats/issues/3053)) ([8e3e345](https://github.com/taverns-red/toast-stats/commit/8e3e3450916a581fa69cca23eedbc0c5e6bf18dd))
+* pipeline writes reinstatable-clubs.json, phase 2 ([#3007](https://github.com/taverns-red/toast-stats/issues/3007)) ([#3064](https://github.com/taverns-red/toast-stats/issues/3064)) ([11e9c2f](https://github.com/taverns-red/toast-stats/commit/11e9c2ffe315174727371b9e4a0c5a4f7ec2d699))
+
 ## [1.27.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.26.2...collector-cli-v1.27.0) (2026-11-14)
 
 

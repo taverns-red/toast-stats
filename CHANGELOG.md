@@ -1,5 +1,66 @@
 # Changelog
 
+## [2.94.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.93.0...toast-stats-v2.94.0) (2026-11-19)
+
+
+### Features
+
+* **analytics-core:** membership retention estimate calculator ([#1614](https://github.com/taverns-red/toast-stats/issues/1614)) ([#3055](https://github.com/taverns-red/toast-stats/issues/3055)) ([0b1136d](https://github.com/taverns-red/toast-stats/commit/0b1136dc5c81c378d97b5bad50866292a5278349))
+* **club-growth:** reinstatement rule and contract ([#3007](https://github.com/taverns-red/toast-stats/issues/3007)) ([#3008](https://github.com/taverns-red/toast-stats/issues/3008)) ([2d3bc69](https://github.com/taverns-red/toast-stats/commit/2d3bc69ea74832bc3bbea79b5b93a075c433634d))
+* **collector:** March-close baseline and retention award output ([#1614](https://github.com/taverns-red/toast-stats/issues/1614)) ([#3065](https://github.com/taverns-red/toast-stats/issues/3065)) ([430e258](https://github.com/taverns-red/toast-stats/commit/430e2583e201f896444b8c563150831d46c14e77))
+* **collector:** revision rankings file and final stamp ([#2475](https://github.com/taverns-red/toast-stats/issues/2475)) ([#3070](https://github.com/taverns-red/toast-stats/issues/3070)) ([5f102c9](https://github.com/taverns-red/toast-stats/commit/5f102c9e77fb69683d2ede6d7c72b4d18845fabc))
+* **contracts:** March-close payments on the rankings row ([#1614](https://github.com/taverns-red/toast-stats/issues/1614)) ([#3053](https://github.com/taverns-red/toast-stats/issues/3053)) ([8e3e345](https://github.com/taverns-red/toast-stats/commit/8e3e3450916a581fa69cca23eedbc0c5e6bf18dd))
+* **map:** explain the dashed outline in the tier legend ([#2580](https://github.com/taverns-red/toast-stats/issues/2580)) ([#3061](https://github.com/taverns-red/toast-stats/issues/3061)) ([640cea1](https://github.com/taverns-red/toast-stats/commit/640cea129ef8c58b527807a43648c5694b3da13b))
+* pipeline writes reinstatable-clubs.json, phase 2 ([#3007](https://github.com/taverns-red/toast-stats/issues/3007)) ([#3064](https://github.com/taverns-red/toast-stats/issues/3064)) ([11e9c2f](https://github.com/taverns-red/toast-stats/commit/11e9c2ffe315174727371b9e4a0c5a4f7ec2d699))
+* **pipeline:** pull the March-close baseline before the transform ([#1614](https://github.com/taverns-red/toast-stats/issues/1614)) ([#3067](https://github.com/taverns-red/toast-stats/issues/3067)) ([53094db](https://github.com/taverns-red/toast-stats/commit/53094db786f3b061505c5da2f31b697d5e4578d2))
+* **ui:** membership retention badge on the district trophy case ([#1614](https://github.com/taverns-red/toast-stats/issues/1614)) ([#3074](https://github.com/taverns-red/toast-stats/issues/3074)) ([955ff28](https://github.com/taverns-red/toast-stats/commit/955ff2894c965fcd2283c43b44de34f471d7874e))
+* **ui:** membership retention estimate on Awards and Methodology ([#1614](https://github.com/taverns-red/toast-stats/issues/1614)) ([#3073](https://github.com/taverns-red/toast-stats/issues/3073)) ([5621787](https://github.com/taverns-red/toast-stats/commit/5621787804507415effe43bee0d0e66ca7e46362))
+* **ui:** Revised date on district pages, linking to What Changed ([#2475](https://github.com/taverns-red/toast-stats/issues/2475)) ([#3063](https://github.com/taverns-red/toast-stats/issues/3063)) ([f9b4979](https://github.com/taverns-red/toast-stats/commit/f9b4979f7fd6afdbfce7dea1fb78a0d90aafd01b))
+
+
+### Bug Fixes
+
+* **agent-cli:** live-version reads the version after [#2999](https://github.com/taverns-red/toast-stats/issues/2999) ([#3013](https://github.com/taverns-red/toast-stats/issues/3013)) ([#3014](https://github.com/taverns-red/toast-stats/issues/3014)) ([e19f5c1](https://github.com/taverns-red/toast-stats/commit/e19f5c1ca869156b276912bef0e157259ec5d994))
+* **agent-cli:** live-version timeout, body cancel, HEAD guard ([#3015](https://github.com/taverns-red/toast-stats/issues/3015)) ([#3023](https://github.com/taverns-red/toast-stats/issues/3023)) ([63de74a](https://github.com/taverns-red/toast-stats/commit/63de74a55027a3cc147c60d42a65245511649dd2))
+* **agent:** poll guard reads heredocs, $'..' and redirections in order ([#2918](https://github.com/taverns-red/toast-stats/issues/2918)) ([#3033](https://github.com/taverns-red/toast-stats/issues/3033)) ([c9ae0ca](https://github.com/taverns-red/toast-stats/commit/c9ae0caebff47b0263eadfbb0ae7ac922af2006b))
+* **build:** CDN base as a build-time constant, version as a meta tag ([#3000](https://github.com/taverns-red/toast-stats/issues/3000)) ([#3035](https://github.com/taverns-red/toast-stats/issues/3035)) ([096e136](https://github.com/taverns-red/toast-stats/commit/096e136985093b4bfabb8a31e05fdabfc814cc91))
+* **ci-wait:** no runs read while pending, active-runs read after merge state ([#2947](https://github.com/taverns-red/toast-stats/issues/2947)) ([#3041](https://github.com/taverns-red/toast-stats/issues/3041)) ([8cea443](https://github.com/taverns-red/toast-stats/commit/8cea4433b19c56a76601ed6f8f78b2ef2ab6910c))
+* **consent:** GA guard matches trailing-dot hosts and uppercase paths ([#2921](https://github.com/taverns-red/toast-stats/issues/2921)) ([#3021](https://github.com/taverns-red/toast-stats/issues/3021)) ([727e04e](https://github.com/taverns-red/toast-stats/commit/727e04eb3a2be03aaef59861014d0149b1cfe982))
+* **consent:** re-check skips publish when the level is unchanged ([#2945](https://github.com/taverns-red/toast-stats/issues/2945)) ([#3039](https://github.com/taverns-red/toast-stats/issues/3039)) ([0331d54](https://github.com/taverns-red/toast-stats/commit/0331d54a729e78ffe0ec2e6346d0fec30f44b47e))
+* **e2e:** smokes wait for the loaded table, map and shell ([#2959](https://github.com/taverns-red/toast-stats/issues/2959)) ([#3043](https://github.com/taverns-red/toast-stats/issues/3043)) ([ba2fafc](https://github.com/taverns-red/toast-stats/commit/ba2fafc81f0bbe3526154fee48e222769353ae32))
+* **gate:** sample reconciliation revisions separately from month-end files ([#2486](https://github.com/taverns-red/toast-stats/issues/2486)) ([#3057](https://github.com/taverns-red/toast-stats/issues/3057)) ([66b289b](https://github.com/taverns-red/toast-stats/commit/66b289bc4cb122bb4097f907cb74287f52689152))
+* **pipeline:** the alert hard guard backs off a half emoji at the cut ([#2940](https://github.com/taverns-red/toast-stats/issues/2940)) ([#3040](https://github.com/taverns-red/toast-stats/issues/3040)) ([9a23ed5](https://github.com/taverns-red/toast-stats/commit/9a23ed5ed17efe9dfeeb77b5109989efb8434687))
+* reinstatement review follow-ups and lastSeen finding ([#3011](https://github.com/taverns-red/toast-stats/issues/3011)) ([#3058](https://github.com/taverns-red/toast-stats/issues/3058)) ([a44d5ec](https://github.com/taverns-red/toast-stats/commit/a44d5eccb7c16866d18c0bfc96368181200ede9d))
+* **ui:** label the Distinguished composition bar as qualifying today ([#2580](https://github.com/taverns-red/toast-stats/issues/2580)) ([#3056](https://github.com/taverns-red/toast-stats/issues/3056)) ([00ad191](https://github.com/taverns-red/toast-stats/commit/00ad1916ebd8a3632a4aa6f2a48b015361a5a305))
+* **videos:** pin the probe timeout and silence the typeless-package warning ([#2939](https://github.com/taverns-red/toast-stats/issues/2939)) ([#3044](https://github.com/taverns-red/toast-stats/issues/3044)) ([6ea9fd6](https://github.com/taverns-red/toast-stats/commit/6ea9fd658d0cb2d8e2914879ae3422f8f8ff23b1))
+
+
+### Refactors
+
+* remove the unused exportDistrictStatistics CSV function ([#2580](https://github.com/taverns-red/toast-stats/issues/2580)) ([#3062](https://github.com/taverns-red/toast-stats/issues/3062)) ([2d9c00f](https://github.com/taverns-red/toast-stats/commit/2d9c00ffb35d59bd4041e14c299890caa60431d0))
+* **restore-plan:** pass the matching record's kind for a live object ([#2928](https://github.com/taverns-red/toast-stats/issues/2928)) ([#3022](https://github.com/taverns-red/toast-stats/issues/3022)) ([246d223](https://github.com/taverns-red/toast-stats/commit/246d223baadc147d929884b39646a9bd37abe409))
+
+
+### Documentation
+
+* backlog plan to zero unparked issues ([#3052](https://github.com/taverns-red/toast-stats/issues/3052)) ([#3054](https://github.com/taverns-red/toast-stats/issues/3054)) ([0b917f5](https://github.com/taverns-red/toast-stats/commit/0b917f5e085dcab2bcd1eb7dfcc8776ffe0394e8))
+* **ci:** record why cdn-schema-canary checks production only ([#2569](https://github.com/taverns-red/toast-stats/issues/2569)) ([#3029](https://github.com/taverns-red/toast-stats/issues/3029)) ([9ec8a70](https://github.com/taverns-red/toast-stats/commit/9ec8a70e04ef92b10e3e93820e811f45ba0409a2))
+* legacy DORA records removed from the prod bucket ([#2872](https://github.com/taverns-red/toast-stats/issues/2872)) ([#3026](https://github.com/taverns-red/toast-stats/issues/3026)) ([98a0cf8](https://github.com/taverns-red/toast-stats/commit/98a0cf8ffa241acaf8a393ee9865c33f11bb28b0))
+* point stale lesson citations at the archive ([#2957](https://github.com/taverns-red/toast-stats/issues/2957)) ([#3031](https://github.com/taverns-red/toast-stats/issues/3031)) ([5721f3a](https://github.com/taverns-red/toast-stats/commit/5721f3a5eeeaca2865c09adc2160cc0261ee386d))
+* prod soft delete is 30 days ([#3076](https://github.com/taverns-red/toast-stats/issues/3076)) ([#3077](https://github.com/taverns-red/toast-stats/issues/3077)) ([d80d5e5](https://github.com/taverns-red/toast-stats/commit/d80d5e5cb16b3feb3c7a09de02d87d904afee059))
+* **runbook:** what to do if GitHub drops performed_via_github_app ([#2529](https://github.com/taverns-red/toast-stats/issues/2529)) ([#3028](https://github.com/taverns-red/toast-stats/issues/3028)) ([e2d55e0](https://github.com/taverns-red/toast-stats/commit/e2d55e05a126036f57a93dd6eafc747b56650fdd))
+
+
+### Tests
+
+* **ci-gate:** a transient error resets the permanent-error count in one call ([#2920](https://github.com/taverns-red/toast-stats/issues/2920)) ([#3027](https://github.com/taverns-red/toast-stats/issues/3027)) ([39f2a35](https://github.com/taverns-red/toast-stats/commit/39f2a35cc5fb85cad56f2ff654434024bcd094a1))
+* **ci:** identity guard tests reject a disabled or soft-failing guard ([#2963](https://github.com/taverns-red/toast-stats/issues/2963)) ([#3018](https://github.com/taverns-red/toast-stats/issues/3018)) ([2d081ff](https://github.com/taverns-red/toast-stats/commit/2d081ff50c56e7cfe4ba1978853b5d4fdb4456ed))
+* gcloud shim names an empty counter, guards the stamp path ([#3005](https://github.com/taverns-red/toast-stats/issues/3005)) ([#3017](https://github.com/taverns-red/toast-stats/issues/3017)) ([117ba08](https://github.com/taverns-red/toast-stats/commit/117ba08de40c4655a8038d103a20126f5de967cc))
+* guard against dead links into tasks/lessons ([#2957](https://github.com/taverns-red/toast-stats/issues/2957)) ([#3050](https://github.com/taverns-red/toast-stats/issues/3050)) ([102e67f](https://github.com/taverns-red/toast-stats/commit/102e67f0a47993bfd00b577b8c1eb0ee68bd2302))
+* **restore:** ordering test, bulk-flag pin and runbook note ([#2977](https://github.com/taverns-red/toast-stats/issues/2977)) ([#3036](https://github.com/taverns-red/toast-stats/issues/3036)) ([aecff53](https://github.com/taverns-red/toast-stats/commit/aecff53459018b8da8674aba98ab169866581ea8))
+* **scripts:** independent oracle and re-run record check in the property suites ([#2934](https://github.com/taverns-red/toast-stats/issues/2934)) ([#3030](https://github.com/taverns-red/toast-stats/issues/3030)) ([b724160](https://github.com/taverns-red/toast-stats/commit/b724160586c49937972f660b54f5c9ca4b7ead6f))
+* **scripts:** rebuild-analytics stderr test checks exit status and times out clearly ([#2944](https://github.com/taverns-red/toast-stats/issues/2944)) ([#3042](https://github.com/taverns-red/toast-stats/issues/3042)) ([0e40248](https://github.com/taverns-red/toast-stats/commit/0e4024820689b67ff5c6608dd99e564fa6340474))
+
 ## [2.93.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.92.3...toast-stats-v2.93.0) (2026-11-18)
 
 
