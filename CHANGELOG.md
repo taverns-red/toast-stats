@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.98.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.97.0...toast-stats-v2.98.0) (2026-11-20)
+
+
+### Features
+
+* **ui:** Can reinstate approved review changes ([#3100](https://github.com/taverns-red/toast-stats/issues/3100)) ([#3102](https://github.com/taverns-red/toast-stats/issues/3102)) ([0f9f05c](https://github.com/taverns-red/toast-stats/commit/0f9f05c622991dc999a7612c8463aae010792be9))
+
 ## [2.97.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.96.0...toast-stats-v2.97.0) (2026-11-20)
 
 
