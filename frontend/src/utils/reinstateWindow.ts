@@ -68,6 +68,16 @@ export function reinstateWindowPeriods(
   return periods
 }
 
+/** A period the window can draw: a whole number from 1 to 5. */
+export function isWindowPeriod(period: number | undefined): period is number {
+  return (
+    period !== undefined &&
+    Number.isInteger(period) &&
+    period >= 1 &&
+    period <= WINDOW_PERIODS
+  )
+}
+
 /** The screen reader sentence: "Period 5 of 5, last chance March 31, 2027." */
 export function reinstateWindowSummary(
   inactivePeriod: number,
@@ -86,7 +96,9 @@ export function mustReinstateText(lastChanceBy: string): string {
  * The Can reinstate row line, for a row the pipeline gives a period.
  * Pattern approved by Ron (2026-11-20): "Period 5 of 5. Last chance: March
  * 31, 2027." Period 5 merges it with {@link mustReinstateText} while
- * {@link MERGE_PERIOD5_LINE} is on. Empty without a period or a date.
+ * {@link MERGE_PERIOD5_LINE} is on; with it off, period 5 shows only that
+ * approved sentence, as before #3111. Empty without a period in 1 to 5 or
+ * without a date.
  */
 export function reinstatePeriodLine(
   row: {
@@ -96,18 +108,19 @@ export function reinstatePeriodLine(
   { mergePeriod5 = MERGE_PERIOD5_LINE }: { mergePeriod5?: boolean } = {}
 ): string {
   const { inactivePeriod, lastChanceBy } = row
-  if (inactivePeriod === undefined || !lastChanceBy) return ''
+  if (!isWindowPeriod(inactivePeriod) || !lastChanceBy) return ''
   const lead = `Period ${inactivePeriod} of ${WINDOW_PERIODS}.`
   if (inactivePeriod !== WINDOW_PERIODS) {
     return `${lead} Last chance: ${formatLongDate(lastChanceBy)}.`
   }
   return mergePeriod5
     ? `${lead} ${mustReinstateText(lastChanceBy)}`
-    : `${lead} Last chance: ${formatLongDate(lastChanceBy)}. ${mustReinstateText(lastChanceBy)}`
+    : mustReinstateText(lastChanceBy)
 }
 
-/** The example the rule is written with (#3103): suspended at the
- *  September 30, 2024 renewal, so period 1 is Oct 2024 – Mar 2025 and the
- *  last chance is March 31, 2027. */
-export const EXAMPLE_SUSPENDED_AT = '2024-09-30'
-export const EXAMPLE_LAST_CHANCE = '2027-03-31'
+/** The Growth page example: suspended at the March 31, 2025 renewal, so
+ *  period 1 is Apr 2025 – Sep 2025 and the last chance is September 30,
+ *  2027. A September date can't match the base deadline on the same card,
+ *  which is March 31 in the October cycle (review of 09bb8f19c). */
+export const EXAMPLE_SUSPENDED_AT = '2025-03-31'
+export const EXAMPLE_LAST_CHANCE = '2027-09-30'

@@ -8,20 +8,23 @@
 
    - The club's period says "Now" in text and carries aria-current; the
      tint is never the only signal.
-   - The end marker names the last chance.
+   - The last-chance line names the date; a heavy rule on period 5 marks
+     where the window closes. On the club page the line comes first, the
+     answer before the detail (review of 09bb8f19c).
    - Screen readers get one sentence first ("Period 5 of 5, last chance
      March 31, 2027.").
-   - 1024px and up: one row of five. Phones: one line per period
+   - 768px and up: one row of five. Phones: one line per period
      (reinstate-window.css). Legacy tokens only (#2080).
 
-   A row with no `inactivePeriod` (placed from lastSeen alone) gets no
-   period UI at all. */
+   A row with no `inactivePeriod` (placed from lastSeen alone), or one
+   outside 1 to 5, gets no period UI at all. */
 
 import type { ReinstatableClub } from '@taverns-red/shared-contracts'
 import { formatLongDate } from '../utils/dateFormatting'
 import {
   EXAMPLE_LAST_CHANCE,
   EXAMPLE_SUSPENDED_AT,
+  isWindowPeriod,
   reinstateWindowPeriods,
   reinstateWindowSummary,
 } from '../utils/reinstateWindow'
@@ -35,15 +38,31 @@ export interface ReinstateWindowProps {
   inactivePeriod?: number | undefined
   /** Visible caption above the periods (the generic version). */
   caption?: string | undefined
+  /** The last-chance line above the periods instead of below them. */
+  lastChanceFirst?: boolean | undefined
 }
 
 export function ReinstateWindow({
   lastChanceBy,
   inactivePeriod,
   caption,
+  lastChanceFirst = false,
 }: ReinstateWindowProps) {
   const periods = reinstateWindowPeriods(lastChanceBy)
   if (!periods) return null
+  if (inactivePeriod !== undefined && !isWindowPeriod(inactivePeriod)) {
+    return null
+  }
+  const end = (
+    <p
+      className={`reinstate-window__end${
+        lastChanceFirst ? ' reinstate-window__end--first' : ''
+      }`}
+      data-testid="reinstate-window-end"
+    >
+      Last chance: {formatLongDate(lastChanceBy)}
+    </p>
+  )
   return (
     <figure className="reinstate-window" data-testid="reinstate-window">
       {caption && (
@@ -54,6 +73,7 @@ export function ReinstateWindow({
           {reinstateWindowSummary(inactivePeriod, lastChanceBy)}
         </p>
       )}
+      {lastChanceFirst && end}
       <ol className="reinstate-window__periods">
         {periods.map(p => {
           const now = p.number === inactivePeriod
@@ -75,21 +95,24 @@ export function ReinstateWindow({
           )
         })}
       </ol>
-      <p className="reinstate-window__end" data-testid="reinstate-window-end">
-        Last chance: {formatLongDate(lastChanceBy)}
-      </p>
+      {!lastChanceFirst && end}
     </figure>
   )
 }
 
-/** The generic version beside the Can reinstate intro: no club, no "Now".
- *  It uses the example the rule is written with (Sep 30, 2024). */
+/** The generic version under the Can reinstate intro: no club, no "Now",
+ *  closed by default so the list stays near the top (review of 09bb8f19c). */
 export function ReinstateWindowExample() {
   return (
-    <ReinstateWindow
-      lastChanceBy={EXAMPLE_LAST_CHANCE}
-      caption={`Example: a club suspended ${formatLongDate(EXAMPLE_SUSPENDED_AT)}`}
-    />
+    <details className="growth-reinstate__fold reinstate-window-example">
+      <summary className="growth-reinstate__summary">
+        How the five periods work
+      </summary>
+      <ReinstateWindow
+        lastChanceBy={EXAMPLE_LAST_CHANCE}
+        caption={`Example: a club suspended ${formatLongDate(EXAMPLE_SUSPENDED_AT)}`}
+      />
+    </details>
   )
 }
 
@@ -101,7 +124,9 @@ export function ClubReinstateWindow({
 }: {
   club: ReinstatableClub | undefined
 }) {
-  if (club?.inactivePeriod === undefined || !club.lastChanceBy) return null
+  if (!isWindowPeriod(club?.inactivePeriod) || !club?.lastChanceBy) {
+    return null
+  }
   if (!reinstateWindowPeriods(club.lastChanceBy)) return null
   return (
     <section
@@ -116,6 +141,7 @@ export function ClubReinstateWindow({
         <ReinstateWindow
           lastChanceBy={club.lastChanceBy}
           inactivePeriod={club.inactivePeriod}
+          lastChanceFirst
         />
       </div>
     </section>

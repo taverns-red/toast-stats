@@ -278,6 +278,7 @@ function groupColumns(
   cols.push({
     key: 'status',
     header: 'Status',
+    className: 'growth-reinstate__status',
     cell: c => {
       // #3111 — "Period 4 of 5. Last chance: September 30, 2027." for a row
       // the pipeline gives a period; period 5 carries the approved "must
@@ -390,8 +391,9 @@ export const ReinstatableClubsSection: React.FC<
         International makes the final call.
       </p>
       <p className="growth-stage__note">{NET_GROWTH_NOTE}</p>
-      {/* #3111 (draft) — the generic window, next to the intro. */}
-      <ReinstateWindowExample />
+      {/* #3111 (draft) — the generic window, next to the intro. Nothing to
+          explain when no club can reinstate. */}
+      {clubs.length > 0 && <ReinstateWindowExample />}
       {clubs.length > 0 && (
         <p className="growth-stage__note" data-testid="growth-reinstate-split">
           {splitLine(clubs, snapshotDate)}

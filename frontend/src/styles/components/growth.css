@@ -286,8 +286,10 @@
 }
 
 @media (max-width: 639px) {
-  /* A sentence or two: the full card width, not one narrow grid column. */
-  .growth-reinstate__why {
+  /* A sentence or two: the full card width, not one narrow grid column.
+     The status cell carries the period line (#3111), so it spans too. */
+  .growth-reinstate__why,
+  .growth-reinstate__status {
     min-width: 0;
     grid-column: 1 / -1;
   }

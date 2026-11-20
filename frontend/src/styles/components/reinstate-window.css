@@ -5,7 +5,13 @@
    repeat it.
 
    Phones: one line per period, stacked, text 16px. From 768px: one row of
-   five, the last-chance marker at the right end. */
+   five. */
+
+/* The Growth page example's disclosure (growth.css .growth-reinstate__fold
+   gives the 44px summary). */
+.reinstate-window-example .reinstate-window {
+  margin-top: 0.5rem;
+}
 
 .reinstate-window {
   margin: 0 0 1rem;
@@ -67,14 +73,23 @@
   border-radius: var(--rt-radius-sm, 2px);
 }
 
-/* The end marker: a heavy rule where the window closes. */
+/* Where the window closes: one heavy rule on period 5 (below it on
+   phones, at its right edge from 768px), and the last-chance line. */
+.reinstate-window__period:last-child {
+  border-bottom: 4px solid var(--ink);
+}
+
 .reinstate-window__end {
   margin: 0.5rem 0 0;
-  padding-left: 0.75rem;
   font-size: 1rem;
   font-weight: 700;
   color: var(--ink);
-  border-left: 4px solid var(--ink);
+}
+
+/* The club page: the answer first, the periods as detail. */
+.reinstate-window__end--first {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
 }
 
 @media (min-width: 768px) {
@@ -92,14 +107,16 @@
   }
 
   .reinstate-window__period:last-child {
+    border-bottom: 1px solid var(--line);
     border-right: 4px solid var(--ink);
   }
 
   .reinstate-window__end {
-    padding: 0 0.75rem 0 0;
     text-align: right;
-    border-left: 0;
-    border-right: 4px solid var(--ink);
+  }
+
+  .reinstate-window__end--first {
+    text-align: left;
   }
 }
 
