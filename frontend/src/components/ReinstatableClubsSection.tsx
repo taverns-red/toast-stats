@@ -19,19 +19,36 @@ import { ActionTable, type ActionTableColumn } from './ActionTable'
    Toastmasters' Club Reinstatement FAQ, and an unknown reason code (one added
    after this release) falls back to "confirm with World Headquarters".
 
-   #3100 (approved UX review items): the clubs that add come first and the
-   rest fold into a closed <details> (S1). #3103: there is no unknown-effect
+   #3100 (approved UX review items) folded one group into a closed
+   <details> (S1); since #3118 (Ron, 2026-11-20) the clubs that add to net
+   club growth come first and open, and the clubs that raise the club base
+   too fold below. #3103: there is no unknown-effect
    group; the pipeline always decides, and `oldestPeriod` (the old
    four-period flag, still set by older files) is ignored. An adding suspension names its deadline (M1), from the snapshot
    date the page passes in (R3).
 
    `clubs === null` means the date has no list: render nothing, quietly. */
 
+/** The two group headings, approved by Ron on 2026-11-20 (#3118). */
+const GROUP_HEADING = {
+  rest: (n: number) => `Adds to net club growth (${n})`,
+  adds: (n: number) => `Raises the club base too (${n})`,
+}
+
+/** #3118 — under the intro (Ron, 2026-11-20; TI DRP Item 1490 Rev.
+ *  07/2026, p. 5, 6 and 15). */
+const NET_GROWTH_NOTE =
+  'Net club growth is the number of paid clubs on June 30 minus the club base set on July 1. A Distinguished District needs net club growth of at least 1% of its club base.'
+
+/** #3118 item 5 (Ron, 2026-11-20): what a "doesn't raise the base" reason
+ *  means for net club growth. */
+const ADDS_NET_GROWTH = 'So reinstating it adds to net club growth.'
+
 const REINSTATEMENT_FAQ_URL = 'https://toastmasters.org/footer/faq/Club'
 
 const CONFIRM = 'Confirm with World Headquarters.'
 const CLOSED_QUOTE = 'closed clubs “will not increase the club base”'
-const CLOSED_TEXT = `Closed. The FAQ says ${CLOSED_QUOTE}.`
+const CLOSED_TEXT = `Closed. The FAQ says ${CLOSED_QUOTE}. ${ADDS_NET_GROWTH}`
 
 /** One line per reason code, from the FAQ's club base answer and table. */
 const REASON_TEXT: Record<string, string> = {
@@ -40,8 +57,8 @@ const REASON_TEXT: Record<string, string> = {
   suspended_mar31_before_oct1:
     'Suspended at the March 31 renewal. The FAQ says reinstating before October 1 increases the club base.',
   suspended_mar31_after_oct1:
-    'Suspended at the March 31 renewal. The FAQ says the club closes on October 1, and a reinstatement after that “will not increase the club base.”',
-  suspended_sept30_past_october_cycle: `Suspended at the September 30 renewal, and the October renewal cycle after it has ended. The club has likely closed by now, so reinstating won’t add to the club base. ${CONFIRM}`,
+    'Suspended at the March 31 renewal. The FAQ says the club closes on October 1, and a reinstatement after that “will not increase the club base.” So reinstating it adds to net club growth.',
+  suspended_sept30_past_october_cycle: `Suspended at the September 30 renewal, and the October renewal cycle after it has ended. The club has likely closed by now, so reinstating won’t add to the club base. ${ADDS_NET_GROWTH} ${CONFIRM}`,
   suspend_date_unexpected: `The suspension date isn’t at the end of a renewal period, so we can’t tell. ${CONFIRM}`,
   suspend_date_after_as_of: `The suspension date is after this snapshot’s date, so we can’t tell. ${CONFIRM}`,
   closed_does_not_add: CLOSED_TEXT,
@@ -62,7 +79,7 @@ const longDate = (iso: string) =>
 /** Ron, 2026-11-20: from April to June a March 31 suspension only counts
  *  toward next year's base. The page talks about this year's base only. */
 const MAR31_NOT_THIS_YEAR =
-  'Suspended at the March 31 renewal. Reinstating it doesn’t change this year’s club base.'
+  'Suspended at the March 31 renewal. Reinstating it adds a paid club without raising this year’s club base.'
 
 /** #3103 — the pipeline's own code for that window. */
 const REASON_TEXT_WITH_WINDOW: Record<string, string> = {
@@ -72,8 +89,9 @@ const REASON_TEXT_WITH_WINDOW: Record<string, string> = {
 
 interface ReasonContext {
   snapshotDate: string
-  /** The row is in the folded group, whose note says the closed reason once. */
-  folded: boolean
+  /** The row is in the net club growth group, whose note says the closed
+   *  reason once. */
+  closedNoteShown: boolean
 }
 
 function reasonText(club: ReinstatableClub, ctx: ReasonContext): string {
@@ -95,13 +113,13 @@ function reasonText(club: ReinstatableClub, ctx: ReasonContext): string {
       : null
   const known =
     deadline !== null
-      ? `${lead} If it reinstates by ${longDate(deadline)}, it adds to the club base.`
+      ? `${lead} If it reinstates by ${longDate(deadline)}, the club base goes up by one too, so net club growth doesn’t change.`
       : club.reason === 'suspended_mar31_before_oct1' && !adds
         ? MAR31_NOT_THIS_YEAR
         : REASON_TEXT_WITH_WINDOW[club.reason]
   // An unknown code (a later release) asks to confirm.
   if (known === undefined) return CONFIRM
-  return ctx.folded && known === CLOSED_TEXT ? '' : known
+  return ctx.closedNoteShown && known === CLOSED_TEXT ? '' : known
 }
 
 /** Ron approved this line on 2026-11-20 (#3103): only for a row the
@@ -299,25 +317,30 @@ function GroupTable({
   )
 }
 
-/** M1 — "3 of 22 add to the club base if they reinstate by March 31, 2027."
- *  One date only when every adding club shares it. */
+/** #3118 (Ron, 2026-11-20) — "19 of 22 add to net club growth if they
+ *  reinstate. The other 3 would raise the club base too if they reinstate
+ *  by March 31, 2027." The second sentence only when a club raises the
+ *  base; its date only when every such club shares it (M1). */
 function splitLine(
   clubs: readonly ReinstatableClub[],
   snapshotDate: string
 ): string {
   const adding = clubs.filter(c => addsNow(c, snapshotDate))
+  const restCount = clubs.length - adding.length
+  const reinstate = (n: number) =>
+    n === 1 ? 'it reinstates' : 'they reinstate'
+  const first =
+    `${restCount} of ${clubs.length} ${restCount === 1 ? 'adds' : 'add'} ` +
+    `to net club growth if ${reinstate(restCount)}.`
+  if (adding.length === 0) return first
   const deadlines = new Set(
     adding.map(c => reinstateDeadline(c.reason, snapshotDate))
   )
   const [only] = deadlines
-  const one = adding.length === 1
-  const by =
-    deadlines.size === 1 && only
-      ? ` if ${one ? 'it reinstates' : 'they reinstate'} by ${longDate(only)}`
-      : ''
+  const by = deadlines.size === 1 && only ? ` by ${longDate(only)}` : ''
   return (
-    `${adding.length} of ${clubs.length} ${one ? 'adds' : 'add'} to ` +
-    `the club base${by}.`
+    `${first} The other ${adding.length} would raise the club base too ` +
+    `if ${reinstate(adding.length)}${by}.`
   )
 }
 
@@ -336,13 +359,13 @@ export const ReinstatableClubsSection: React.FC<
   if (clubs === null) return null
   const ctx: GroupContext = {
     snapshotDate,
-    folded: false,
+    closedNoteShown: false,
     districtId,
   }
   const adds = clubs.filter(c => addsNow(c, snapshotDate))
   const rest = clubs.filter(c => !addsNow(c, snapshotDate))
-  const addsLabel = `Adds to the club base (${adds.length})`
-  const restLabel = `Doesn’t add to the club base (${rest.length})`
+  const addsLabel = GROUP_HEADING.adds(adds.length)
+  const restLabel = GROUP_HEADING.rest(rest.length)
 
   return (
     <section
@@ -359,6 +382,7 @@ export const ReinstatableClubsSection: React.FC<
         renewal period, counting the period it was suspended in. Toastmasters
         International makes the final call.
       </p>
+      <p className="growth-stage__note">{NET_GROWTH_NOTE}</p>
       {clubs.length > 0 && (
         <p className="growth-stage__note" data-testid="growth-reinstate-split">
           {splitLine(clubs, snapshotDate)}
@@ -369,27 +393,12 @@ export const ReinstatableClubsSection: React.FC<
           No suspended or recently closed clubs can reinstate right now.
         </p>
       )}
-      {adds.length > 0 && (
-        <div data-testid="growth-reinstate-adds">
-          <h4 className="growth-stage__subtitle">{addsLabel}</h4>
-          <GroupTable
-            rows={adds}
-            caption={addsLabel}
-            testId="growth-reinstate-table-adds"
-            ctx={ctx}
-          />
-        </div>
-      )}
+      {/* #3118 (Ron, 2026-11-20): the clubs that add to net club growth
+          come first and open. The clubs that raise the club base too fold
+          below, closed. */}
       {rest.length > 0 && (
-        <details
-          className="growth-reinstate__fold"
-          data-testid="growth-reinstate-rest"
-        >
-          {/* The label is a heading too, so heading navigation reaches the
-              folded group; the summary stays the toggle. */}
-          <summary className="growth-reinstate__summary">
-            <h4 className="growth-reinstate__summary-title">{restLabel}</h4>
-          </summary>
+        <div data-testid="growth-reinstate-rest">
+          <h4 className="growth-stage__subtitle">{restLabel}</h4>
           {rest.some(c => c.reason === 'closed_does_not_add') && (
             <p className="growth-stage__note">{CLOSED_TEXT}</p>
           )}
@@ -397,7 +406,25 @@ export const ReinstatableClubsSection: React.FC<
             rows={rest}
             caption={restLabel}
             testId="growth-reinstate-table-rest"
-            ctx={{ ...ctx, folded: true }}
+            ctx={{ ...ctx, closedNoteShown: true }}
+          />
+        </div>
+      )}
+      {adds.length > 0 && (
+        <details
+          className="growth-reinstate__fold"
+          data-testid="growth-reinstate-adds"
+        >
+          {/* The label is a heading too, so heading navigation reaches the
+              folded group; the summary stays the toggle. */}
+          <summary className="growth-reinstate__summary">
+            <h4 className="growth-reinstate__summary-title">{addsLabel}</h4>
+          </summary>
+          <GroupTable
+            rows={adds}
+            caption={addsLabel}
+            testId="growth-reinstate-table-adds"
+            ctx={ctx}
           />
         </details>
       )}
