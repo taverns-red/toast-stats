@@ -202,6 +202,24 @@ const NEGATED_MODE = new RegExp(
 /** Location text that names no place. */
 const NO_PLACE =
   /^(?:contact(?: us)?|to be determined|tbd|tba|n\/?a|suspended|see website|varies|various)$/
+/**
+ * Online wording that covers every meeting, so a venue beside it is an old
+ * or unused address (#3086): "online only", "currently meeting virtually",
+ * "online since April 2020", "Note: Online meetings". RT District's hand
+ * labels of D61 (red-district PR #2458) read these as online-only.
+ */
+const ALL_ONLINE = new RegExp(
+  [
+    `(?:${ONLINE_WORD.source})\\W{0,3}(?:only|seulement|uniquement)\\b`,
+    `\\b(?:only|seulement|uniquement|exclusivement|exlusivement)\\s+(?:(?:via|on|par|sur)\\s+)?(?:${ONLINE_WORD.source})`,
+    `\\b(?:currently|presently|actuellement|since|depuis|until further notice)\\b`,
+    `(?:${ONLINE_WORD.source})\\s+meetings?\\b`,
+    `\\b(?:meets?|meeting)\\s+(?:online|virtually)\\b`,
+    `\\b(?:rencontres?|reunions?)\\s+(?:virtuel\\w*|en ligne)`,
+  ].join('|')
+)
+/** Alternating with online meetings means some meetings are in person. */
+const ALTERNATING = /\balternat\w*|\balternance\b/
 
 function combineModes(modes: Iterable<MeetingMode>): MeetingMode | undefined {
   const set = new Set(modes)
@@ -222,10 +240,27 @@ function modesIn(text: string): MeetingMode[] {
   return modes
 }
 
+/** Folded text that names a place: three letters or more, not NO_PLACE. */
+function namesPlace(folded: string): boolean {
+  const bare = folded
+    .replace(/[^a-z/ ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return bare.replace(/[^a-z]/g, '').length >= 3 && !NO_PLACE.test(bare)
+}
+
+/** Folded online text whose wording covers every meeting (#3086). */
+function saysAllOnline(folded: string): boolean {
+  const text = folded.replace(NEGATED_MODE, ' ')
+  return ALL_ONLINE.test(text) && !ALTERNATING.test(text)
+}
+
 /**
  * How the club says it meets. With `place: true` (a Location), text that
- * names a place but no online word means in person; otherwise only explicit
- * words count. Undefined when the text says nothing.
+ * names a place but no online word means in person, and online text with
+ * a separate line naming a place is hybrid (#3086) unless its wording
+ * covers every meeting; otherwise only explicit words count. Undefined when
+ * the text says nothing.
  */
 export function meetingModeFromText(
   text: string | null | undefined,
@@ -234,15 +269,40 @@ export function meetingModeFromText(
   if (typeof text !== 'string') return undefined
   const folded = fold(text)
   const mode = combineModes(modesIn(folded))
-  if (mode || !options.place) return mode
-  const bare = folded
-    .replace(/[^a-z/ ]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-  if (bare.replace(/[^a-z]/g, '').length < 3 || NO_PLACE.test(bare)) {
-    return undefined
+  if (!options.place) return mode
+  if (mode === 'online') {
+    const venueLine = folded
+      .split(/\n|<br\s*\/?>/)
+      .some(line => modesIn(line).length === 0 && namesPlace(line))
+    return venueLine && !saysAllOnline(folded) ? 'hybrid' : 'online'
   }
-  return 'in-person'
+  if (mode) return mode
+  return namesPlace(folded) ? 'in-person' : undefined
+}
+
+/**
+ * The mode from FAC Location and Street. The raw Location's words count
+ * even on a line the scrubber drops; a place counts only on a public line
+ * left by the scrubber. Street is a signal only with an in-person or hybrid
+ * word next to an online Location (#3086): many online clubs keep an old
+ * street address.
+ */
+function locationMode(
+  location: string | null | undefined,
+  street: string | null | undefined
+): MeetingMode | undefined {
+  const raw = meetingModeFromText(location)
+  const placed = meetingModeFromText(scrubFacLocation(location), {
+    place: true,
+  })
+  if (raw !== 'online') return raw ?? placed
+  const folded = fold(location ?? '')
+  if (saysAllOnline(folded)) return 'online'
+  const streetModes = modesIn(fold(street ?? ''))
+  if (streetModes.includes('in-person') || streetModes.includes('hybrid')) {
+    return 'hybrid'
+  }
+  return combineModes(['online', ...(placed ? [placed] : [])])
 }
 
 /* ── Weekdays, cadence, weeks of the month ─────────────────────────── */
@@ -998,8 +1058,7 @@ export function parseMeetingSchedule(
     typeof source.meetingTime === 'string' ? fold(source.meetingTime) : ''
   const defaultMode =
     combineModes([...loose, ...modesIn(timeText)]) ??
-    meetingModeFromText(source.location) ??
-    meetingModeFromText(scrubFacLocation(source.location), { place: true })
+    locationMode(source.location, source.street)
 
   const slots = timeSlotsIn(source.meetingTime)
   const perDay = daySlotsIn(source.meetingTime)
