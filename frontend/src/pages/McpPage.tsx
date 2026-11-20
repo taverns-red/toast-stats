@@ -69,6 +69,50 @@ const JSON_CONFIG_SNIPPET = `{
   }
 }`
 
+/* #2657 REF-20: the one-liner gets a copy button. Same clipboard contract as
+   HeaderActionsMenu (guard the insecure-context undefined, absorb a rejected
+   write); the confirmation is a polite live region and stays put rather than
+   vanishing on a timer, so a slow reader still sees it. */
+const CopyCommand: React.FC<{ text: string; label: string }> = ({
+  text,
+  label,
+}) => {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try {
+      if (!navigator.clipboard) return
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+    } catch {
+      // Clipboard unavailable; the command stays selectable in the block.
+    }
+  }
+  return (
+    <>
+      <div className="mcp-page__snippet-wrap">
+        <pre
+          className="mcp-page__snippet mcp-page__snippet--command"
+          tabIndex={0}
+          role="region"
+          aria-label={label}
+        >
+          <code>{text}</code>
+        </pre>
+        <button
+          type="button"
+          className="tm-btn-secondary mcp-page__copy"
+          onClick={copy}
+        >
+          Copy
+        </button>
+      </div>
+      <span role="status" aria-live="polite" className="mcp-page__copy-status">
+        {copied ? 'Copied' : ''}
+      </span>
+    </>
+  )
+}
+
 const McpPage: React.FC = () => {
   useDocumentTitle('MCP Server')
 
@@ -153,15 +197,21 @@ const McpPage: React.FC = () => {
           Requires <strong>Node.js 22+</strong>. For{' '}
           <strong>Claude Code</strong>, one command:
         </p>
-        <pre className="mcp-page__snippet" tabIndex={0}>
-          <code>{CLAUDE_CODE_SNIPPET}</code>
-        </pre>
+        <CopyCommand
+          text={CLAUDE_CODE_SNIPPET}
+          label="Claude Code install command"
+        />
         <p>
           For <strong>Claude Desktop</strong> (
           <code>claude_desktop_config.json</code>) or any other MCP-capable
           client, add an <code>mcpServers</code> entry:
         </p>
-        <pre className="mcp-page__snippet" tabIndex={0}>
+        <pre
+          className="mcp-page__snippet"
+          tabIndex={0}
+          role="region"
+          aria-label="MCP client configuration"
+        >
           <code>{JSON_CONFIG_SNIPPET}</code>
         </pre>
         <p>

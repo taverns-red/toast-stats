@@ -97,6 +97,7 @@ export const ProgramYearSummaryCards: React.FC<
       {summaries.map(s => (
         <Link
           key={s.startYear}
+          id={`py-${s.startYear}`}
           to={`/?py=${s.startYear}`}
           className="history-year-card"
           data-testid="history-year-card"

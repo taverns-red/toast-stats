@@ -152,6 +152,10 @@ export const RaceTable: React.FC<RaceTableProps> = ({
     )
   }
 
+  // #2657 REF-35: TI confers no recognition before April, so the Official
+  // column was empty for most of the year. Show it once any row has a value.
+  const showOfficial = ranked.some(row => row.official !== null)
+
   return (
     <StaticTableScroll label={`First to ${title}`}>
       <table className="dt dt-static race-table">
@@ -166,7 +170,7 @@ export const RaceTable: React.FC<RaceTableProps> = ({
             <th scope="col">Reached</th>
             <th scope="col">Goals</th>
             <th scope="col">Members</th>
-            <th scope="col">Official</th>
+            {showOfficial && <th scope="col">Official</th>}
           </tr>
         </thead>
         <tbody>
@@ -238,21 +242,23 @@ export const RaceTable: React.FC<RaceTableProps> = ({
                     <span aria-label="Not in today's snapshot">—</span>
                   )}
                 </td>
-                <td data-label="Official">
-                  {row.official ? (
-                    <span
-                      className="race-official"
-                      data-testid={`race-official-${row.clubId}`}
-                      title={`Recognised by Toastmasters International ${reachWindowCopy(
-                        row.official.since,
-                        row.official.observedAfter
-                      )}`}
-                    >
-                      <RosetteIcon className="race-official__icon" />
-                      {raceTierTitle(CODE_TO_TIER[row.official.code])}
-                    </span>
-                  ) : null}
-                </td>
+                {showOfficial && (
+                  <td data-label="Official">
+                    {row.official ? (
+                      <span
+                        className="race-official"
+                        data-testid={`race-official-${row.clubId}`}
+                        title={`Recognised by Toastmasters International ${reachWindowCopy(
+                          row.official.since,
+                          row.official.observedAfter
+                        )}`}
+                      >
+                        <RosetteIcon className="race-official__icon" />
+                        {raceTierTitle(CODE_TO_TIER[row.official.code])}
+                      </span>
+                    ) : null}
+                  </td>
+                )}
               </tr>
             )
           })}

@@ -106,10 +106,20 @@ const VideoCard: React.FC<{ video: HowToVideo; cut: VideoCut }> = ({
         />
       </div>
       <p className="videos-page__links">
-        <a className="videos-page__link" href={video.desktopUrl}>
+        {/* #2657 REF-41: the visible text repeats on every card, so the
+            accessible name adds the video's title (label first, WCAG 2.5.3). */}
+        <a
+          className="videos-page__link"
+          href={video.desktopUrl}
+          aria-label={`Desktop MP4: ${video.title}`}
+        >
           Desktop MP4
         </a>
-        <a className="videos-page__link" href={video.mobileUrl}>
+        <a
+          className="videos-page__link"
+          href={video.mobileUrl}
+          aria-label={`Phone MP4: ${video.title}`}
+        >
           Phone MP4
         </a>
       </p>

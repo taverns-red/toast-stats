@@ -86,7 +86,10 @@ const ClubsRacePage: React.FC = () => {
           <p className="placeholder-page__body">
             Every club in the world that has reached {title} this program year,
             in the order they crossed the line. Ties share a rank.{' '}
-            <Link to="/clubs">Back to the overview</Link>.
+            <Link to="/clubs" className="methodology-link">
+              Back to the overview
+            </Link>
+            .
           </p>
         </div>
         <div className="districts-page-header__actions">
