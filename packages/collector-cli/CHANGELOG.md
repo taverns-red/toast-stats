@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.29.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.28.1...collector-cli-v1.29.0) (2026-11-20)
+
+
+### Features
+
+* carry division and area for closed reinstate rows ([#3097](https://github.com/taverns-red/toast-stats/issues/3097)) ([#3098](https://github.com/taverns-red/toast-stats/issues/3098)) ([72ad94d](https://github.com/taverns-red/toast-stats/commit/72ad94d9d114a2474eb91db2b6b9fa2ec5e36fc3))
+
 ## [1.28.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.28.0...collector-cli-v1.28.1) (2026-11-20)
 
 

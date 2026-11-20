@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.97.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.96.0...toast-stats-v2.97.0) (2026-11-20)
+
+
+### Features
+
+* carry division and area for closed reinstate rows ([#3097](https://github.com/taverns-red/toast-stats/issues/3097)) ([#3098](https://github.com/taverns-red/toast-stats/issues/3098)) ([72ad94d](https://github.com/taverns-red/toast-stats/commit/72ad94d9d114a2474eb91db2b6b9fa2ec5e36fc3))
+* **ui:** Can reinstate on the region and world growth pages ([#3094](https://github.com/taverns-red/toast-stats/issues/3094)) ([#3095](https://github.com/taverns-red/toast-stats/issues/3095)) ([b3b4d42](https://github.com/taverns-red/toast-stats/commit/b3b4d42bb417d9fe4587eb68b774942b38c2b0d4))
+
 ## [2.96.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.95.0...toast-stats-v2.96.0) (2026-11-20)
 
 

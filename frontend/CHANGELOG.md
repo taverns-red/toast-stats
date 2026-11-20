@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.73.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.72.0...frontend-v3.73.0) (2026-11-20)
+
+
+### Features
+
+* **ui:** Can reinstate on the region and world growth pages ([#3094](https://github.com/taverns-red/toast-stats/issues/3094)) ([#3095](https://github.com/taverns-red/toast-stats/issues/3095)) ([b3b4d42](https://github.com/taverns-red/toast-stats/commit/b3b4d42bb417d9fe4587eb68b774942b38c2b0d4))
+
 ## [3.72.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.71.0...frontend-v3.72.0) (2026-11-20)
 
 
