@@ -526,9 +526,10 @@ describe('ReinstatableClubsSection', () => {
       renderSection([
         closedRow({ inactivePeriod: 4, lastChanceBy: '2027-09-30' }),
       ])
-      expect(rowFor('Period Club')).toHaveTextContent(
-        'Period 4 of 5. Last chance: September 30, 2027.'
-      )
+      expect(
+        rowFor('Period Club').querySelector('.growth-reinstate__period')
+          ?.textContent
+      ).toBe('Period 4 of 5. Last chance: September 30, 2027')
       expect(rowFor('Period Club')).not.toHaveTextContent('charter')
     })
 

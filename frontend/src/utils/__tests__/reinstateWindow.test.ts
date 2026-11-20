@@ -111,13 +111,14 @@ describe('reinstateWindowSummary (the screen reader sentence)', () => {
 })
 
 describe('reinstatePeriodLine (the Can reinstate row line)', () => {
-  it('periods 1 to 4: the approved pattern', () => {
+  // Ron's approved pattern has no full stop after the date (2026-11-20).
+  it('periods 1 to 4: the approved pattern, exactly', () => {
     expect(
       reinstatePeriodLine({ inactivePeriod: 1, lastChanceBy: '2029-03-31' })
-    ).toBe('Period 1 of 5. Last chance: March 31, 2029.')
+    ).toBe('Period 1 of 5. Last chance: March 31, 2029')
     expect(
       reinstatePeriodLine({ inactivePeriod: 4, lastChanceBy: '2027-09-30' })
-    ).toBe('Period 4 of 5. Last chance: September 30, 2027.')
+    ).toBe('Period 4 of 5. Last chance: September 30, 2027')
   })
 
   // Review of 09bb8f19c: with the merge off, period 5 keeps only the
