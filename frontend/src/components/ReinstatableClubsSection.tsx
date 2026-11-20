@@ -220,7 +220,6 @@ function divisionArea(club: ReinstatableClub): string | null {
 
 interface GroupContext extends ReasonContext {
   districtId: string
-  clubPageIds: ReadonlySet<string>
 }
 
 /* One group's columns. The group heading already says the effect on the
@@ -239,20 +238,17 @@ function groupColumns(
       header: 'Club',
       className: 'action-table__subject growth-table__club',
       cell: c => {
-        // S4 — as the Suspended list decides: a page here, a link to it.
+        // #3115 — every club has a page (closed ones since #3107). The name
+        // is the row's one link, stretched over the row in growth.css.
         const id = normalizeClubId(c.clubNumber)
         return (
           <>
-            {ctx.clubPageIds.has(id) ? (
-              <Link
-                to={`/district/${ctx.districtId}/club/${id}`}
-                className="growth-table__link"
-              >
-                {c.clubName}
-              </Link>
-            ) : (
-              <span className="growth-reinstate__name">{c.clubName}</span>
-            )}
+            <Link
+              to={`/district/${ctx.districtId}/club/${id}`}
+              className="growth-table__link growth-reinstate__row-link"
+            >
+              {c.clubName}
+            </Link>
             <span className="growth-reinstate__number">
               Club {c.clubNumber}
             </span>
@@ -332,21 +328,16 @@ export interface ReinstatableClubsSectionProps {
    *  and which clubs add to this year's club base. */
   snapshotDate: string
   districtId: string
-  /** Clubs with a page here (the Suspended list's rule, S4). */
-  clubPageIds?: ReadonlySet<string>
 }
-
-const NO_PAGES: ReadonlySet<string> = new Set()
 
 export const ReinstatableClubsSection: React.FC<
   ReinstatableClubsSectionProps
-> = ({ clubs, snapshotDate, districtId, clubPageIds = NO_PAGES }) => {
+> = ({ clubs, snapshotDate, districtId }) => {
   if (clubs === null) return null
   const ctx: GroupContext = {
     snapshotDate,
     folded: false,
     districtId,
-    clubPageIds,
   }
   const adds = clubs.filter(c => addsNow(c, snapshotDate))
   const rest = clubs.filter(c => !addsNow(c, snapshotDate))
