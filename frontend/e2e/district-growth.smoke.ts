@@ -152,15 +152,22 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(heading).toBeInViewport()
     })
 
-    test('Can reinstate: adds first, the rest folded, contact links 44px (#3100)', async ({
+    test('Can reinstate: net club growth first, the club base group folded, contact links 44px (#3100, #3118)', async ({
       page,
     }) => {
       const section = page.locator('#growth-reinstate')
-      // Clubs that add come first; the rest sit in a closed <details>.
+      // #3118: the clubs that add to net club growth come first, open; the
+      // clubs that raise the club base too sit in a closed <details> below.
+      const adds = section.getByTestId('growth-reinstate-adds')
+      if ((await adds.count()) > 0) {
+        await expect(adds).not.toHaveAttribute('open', /.*/)
+        await expect(adds).toContainText('Raises the club base too')
+      }
       const rest = section.getByTestId('growth-reinstate-rest')
       if ((await rest.count()) > 0) {
-        await expect(rest).not.toHaveAttribute('open', /.*/)
+        await expect(rest).toContainText('Adds to net club growth')
       }
+      await expect(section).not.toContainText('Doesn’t add to the club base')
       await expect(section).not.toContainText('Not known')
       await assertTiRenewalsLinks(page)
       const overflow = await page.evaluate(

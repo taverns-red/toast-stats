@@ -13,6 +13,11 @@
  * the deadline (M1); "What it takes" says where to send it (M2); closed rows
  * print no "Not known" division (S3); the split counts the unknown-effect
  * clubs (S6). #3115: every row links to its club page.
+ *
+ * #3118 (Ron, 2026-11-20): the "Adds to net club growth" group comes first
+ * and open, "Raises the club base too" folds below; a net club growth line
+ * follows the intro; the split and the first group's Why text use his
+ * approved wording, verbatim.
  */
 import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
@@ -117,39 +122,65 @@ describe('ReinstatableClubsSection', () => {
   })
 
   describe('groups (S1)', () => {
-    it('puts the clubs that add first, open, and folds the rest closed', () => {
+    /* #3118 (Ron, 2026-11-20): the clubs that add to net club growth come
+       first and open; the clubs that raise the club base too fold below,
+       closed. Headings verbatim from the issue. */
+    it('puts the net club growth group first, open, and folds the club base group closed below', () => {
       renderSection(d61)
-      const adds = screen.getByTestId('growth-reinstate-adds')
+      const rest = screen.getByTestId('growth-reinstate-rest')
+      expect(rest.tagName).not.toBe('DETAILS')
+      expect(rest.closest('details')).toBeNull()
       expect(
-        within(adds).getByRole('heading', {
-          name: 'Adds to the club base (3)',
+        within(rest).getByRole('heading', {
+          name: 'Adds to net club growth (19)',
         })
       ).toBeInTheDocument()
       expect(
-        within(adds)
+        within(rest)
           .getAllByRole('row')
           .filter(r => r.closest('tbody'))
-      ).toHaveLength(3)
+      ).toHaveLength(19)
 
-      const rest = screen.getByTestId('growth-reinstate-rest')
-      expect(rest.tagName).toBe('DETAILS')
-      expect(rest).not.toHaveAttribute('open')
+      const adds = screen.getByTestId('growth-reinstate-adds')
+      expect(adds.tagName).toBe('DETAILS')
+      expect(adds).not.toHaveAttribute('open')
       // The label is a heading inside the summary, so heading navigation
       // reaches the folded group too.
-      const restHeading = within(rest).getByRole('heading', {
-        name: 'Doesn’t add to the club base (19)',
+      const addsHeading = within(adds).getByRole('heading', {
+        name: 'Raises the club base too (3)',
       })
-      expect(restHeading.closest('summary')).not.toBeNull()
+      expect(addsHeading.closest('summary')).not.toBeNull()
       expect(
-        within(rest)
+        within(adds)
           .getAllByRole('row', { hidden: true })
           .filter(r => r.closest('tbody'))
-      ).toHaveLength(19)
-      // Adds come before the folded group in reading order.
+      ).toHaveLength(3)
+      // The open group comes before the folded one in reading order.
       expect(
-        adds.compareDocumentPosition(rest) & Node.DOCUMENT_POSITION_FOLLOWING
+        rest.compareDocumentPosition(adds) & Node.DOCUMENT_POSITION_FOLLOWING
       ).toBeTruthy()
+      expect(section()).not.toHaveTextContent('Adds to the club base')
+      expect(section()).not.toHaveTextContent('Doesn’t add to the club base')
       expect(screen.queryByTestId('growth-reinstate-unknown')).toBeNull()
+    })
+
+    it('renders no club base group when every club adds to net club growth', () => {
+      renderSection(d61.slice(3))
+      expect(screen.getByTestId('growth-reinstate-rest')).toBeInTheDocument()
+      expect(screen.queryByTestId('growth-reinstate-adds')).toBeNull()
+      expect(section()).not.toHaveTextContent('Raises the club base too')
+    })
+
+    it('renders no net club growth group when every club raises the club base', () => {
+      renderSection(d61.slice(0, 3))
+      expect(screen.queryByTestId('growth-reinstate-rest')).toBeNull()
+      expect(section()).not.toHaveTextContent('Adds to net club growth')
+      expect(
+        within(screen.getByTestId('growth-reinstate-adds')).getByRole(
+          'heading',
+          { name: 'Raises the club base too (3)' }
+        )
+      ).toBeInTheDocument()
     })
 
     it('has no unknown-effect group: the pipeline’s answer decides (#3103)', () => {
@@ -166,11 +197,15 @@ describe('ReinstatableClubsSection', () => {
       ).toBeInTheDocument()
     })
 
-    it('says the closed-club reason once, not on every folded row', () => {
+    it('says the closed-club reason once, not on every row of its group', () => {
       renderSection(d61)
       const rest = screen.getByTestId('growth-reinstate-rest')
       const text = rest.textContent ?? ''
       expect(text.split('“will not increase the club base”')).toHaveLength(2)
+      // #3118 item 5 (Ron, 2026-11-20): the FAQ quote, then what it means.
+      expect(rest).toHaveTextContent(
+        'Closed. The FAQ says closed clubs “will not increase the club base”. So reinstating it adds to net club growth.'
+      )
       expect(rowFor("Tunney's Toastmasters")).not.toHaveTextContent(
         'will not increase the club base'
       )
@@ -195,21 +230,57 @@ describe('ReinstatableClubsSection', () => {
     )
   })
 
-  describe('deadline (M1)', () => {
-    it('names the March 31 deadline in the split for September 30 suspensions', () => {
+  it('explains net club growth directly under the intro (Ron, 2026-11-20, #3118)', () => {
+    renderSection(d61)
+    const intro = screen.getByText(/A suspended or closed club can reinstate/)
+    const next = intro.nextElementSibling
+    expect(next?.textContent).toBe(
+      'Net club growth is the number of paid clubs on June 30 minus the club base set on July 1. A Distinguished District needs net club growth of at least 1% of its club base.'
+    )
+  })
+
+  const splitText = () =>
+    screen.getByTestId('growth-reinstate-split').textContent
+
+  describe('split line (#3118, Ron 2026-11-20)', () => {
+    it('D61: both sentences, with the single reinstate-by date', () => {
       renderSection(d61)
-      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
-        '3 of 22 add to the club base if they reinstate by March 31, 2027.'
+      expect(splitText()).toBe(
+        '19 of 22 add to net club growth if they reinstate. The other 3 would raise the club base too if they reinstate by March 31, 2027.'
       )
     })
 
+    it('no club raises the club base: the first sentence only', () => {
+      renderSection(d61.slice(3))
+      expect(splitText()).toBe(
+        '19 of 19 add to net club growth if they reinstate.'
+      )
+    })
+
+    it('one club adds to net club growth: singular', () => {
+      const closed = d61.slice(3, 4)
+      renderSection([...closed, ...d61.slice(0, 3)])
+      expect(splitText()).toBe(
+        '1 of 4 adds to net club growth if it reinstates. The other 3 would raise the club base too if they reinstate by March 31, 2027.'
+      )
+    })
+
+    it('one club raises the club base: singular', () => {
+      renderSection([...d61.slice(3), d61[0]!])
+      expect(splitText()).toBe(
+        '19 of 20 add to net club growth if they reinstate. The other 1 would raise the club base too if it reinstates by March 31, 2027.'
+      )
+    })
+  })
+
+  describe('deadline (M1)', () => {
     it('names it in the Why cell of a September 30 suspension', () => {
       renderSection(d61)
       const row = rowFor('Toastmasters At St. Lawrence College')
       // The page's shared date format (formatDisplayDate), as the Suspended stage.
       expect(row).toHaveTextContent('Suspended Sep 30, 2026')
       expect(row).toHaveTextContent(
-        'Suspended at the September 30 renewal. If it reinstates by March 31, 2027, it adds to the club base.'
+        'Suspended at the September 30 renewal. If it reinstates by March 31, 2027, the club base goes up by one too, so net club growth doesn’t change.'
       )
     })
 
@@ -239,8 +310,8 @@ describe('ReinstatableClubsSection', () => {
             'Off Cycle Club'
           )
         ).toBeInTheDocument()
-        expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
-          '1 of 1 adds to the club base if it reinstates by March 31, 2027.'
+        expect(splitText()).toBe(
+          '0 of 1 add to net club growth if they reinstate. The other 1 would raise the club base too if it reinstates by March 31, 2027.'
         )
       })
 
@@ -290,10 +361,10 @@ describe('ReinstatableClubsSection', () => {
       // Ron approved this wording on 2026-11-20.
       renderSection([spring], { snapshotDate: '2026-07-31' })
       expect(rowFor('Spring Club')).toHaveTextContent(
-        'Suspended at the March 31 renewal. If it reinstates by September 30, 2026, it adds to the club base.'
+        'Suspended at the March 31 renewal. If it reinstates by September 30, 2026, the club base goes up by one too, so net club growth doesn’t change.'
       )
-      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
-        '1 of 1 adds to the club base if it reinstates by September 30, 2026.'
+      expect(splitText()).toBe(
+        '0 of 1 add to net club growth if they reinstate. The other 1 would raise the club base too if it reinstates by September 30, 2026.'
       )
     })
 
@@ -305,16 +376,16 @@ describe('ReinstatableClubsSection', () => {
         snapshotDate: '2027-04-30',
       })
       expect(rowFor('Spring Club')).toHaveTextContent(
-        'Suspended at the March 31 renewal. Reinstating it doesn’t change this year’s club base.'
+        'Suspended at the March 31 renewal. Reinstating it adds a paid club without raising this year’s club base.'
       )
-      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
-        '0 of 1 add to the club base.'
+      expect(splitText()).toBe(
+        '1 of 1 adds to net club growth if it reinstates.'
       )
       expect(screen.queryByTestId('growth-reinstate-adds')).toBeNull()
       const rest = screen.getByTestId('growth-reinstate-rest')
       expect(
         within(rest).getByRole('heading', {
-          name: 'Doesn’t add to the club base (1)',
+          name: 'Adds to net club growth (1)',
         })
       ).toBeInTheDocument()
       expect(section()).not.toHaveTextContent(/next year/i)
@@ -325,10 +396,10 @@ describe('ReinstatableClubsSection', () => {
         snapshotDate: '2027-07-01',
       })
       expect(rowFor('Spring Club')).toHaveTextContent(
-        'Suspended at the March 31 renewal. If it reinstates by September 30, 2027, it adds to the club base.'
+        'Suspended at the March 31 renewal. If it reinstates by September 30, 2027, the club base goes up by one too, so net club growth doesn’t change.'
       )
-      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
-        '1 of 1 adds to the club base if it reinstates by September 30, 2027.'
+      expect(splitText()).toBe(
+        '0 of 1 add to net club growth if they reinstate. The other 1 would raise the club base too if it reinstates by September 30, 2027.'
       )
     })
 
@@ -336,22 +407,26 @@ describe('ReinstatableClubsSection', () => {
       renderSection([{ ...spring, suspendDate: '2027-03-31' }], {
         snapshotDate: '2027-06-30',
       })
-      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
-        '0 of 1 add to the club base.'
+      expect(splitText()).toBe(
+        '1 of 1 adds to net club growth if it reinstates.'
       )
     })
 
     it('prints no single date when the deadlines differ', () => {
       renderSection([spring, d61[0]!], { snapshotDate: '2026-09-30' })
       const split = screen.getByTestId('growth-reinstate-split')
-      expect(split).toHaveTextContent('2 of 2 add to the club base.')
+      expect(split.textContent).toBe(
+        '0 of 2 add to net club growth if they reinstate. The other 2 would raise the club base too if they reinstate.'
+      )
       expect(split).not.toHaveTextContent('reinstate by')
     })
 
     it('prints no date when no club adds', () => {
       renderSection(d61.slice(3))
       const split = screen.getByTestId('growth-reinstate-split')
-      expect(split).toHaveTextContent('0 of 19 add to the club base.')
+      expect(split.textContent).toBe(
+        '19 of 19 add to net club growth if they reinstate.'
+      )
       expect(split).not.toHaveTextContent('reinstate by')
     })
   })
@@ -359,7 +434,9 @@ describe('ReinstatableClubsSection', () => {
   it('the split never counts an unknown effect (#3103)', () => {
     renderSection(d51)
     const split = screen.getByTestId('growth-reinstate-split')
-    expect(split).toHaveTextContent('0 of 1 add to the club base.')
+    expect(split.textContent).toBe(
+      '1 of 1 adds to net club growth if it reinstates.'
+    )
     expect(split).not.toHaveTextContent('not known')
   })
 
@@ -464,8 +541,8 @@ describe('ReinstatableClubsSection', () => {
   describe('every reason code the pipeline can list', () => {
     const CONFIRM = 'Confirm with World Headquarters.'
     const NOT_KNOWN = 'not known'
-    const ADDS = 'Adds to the club base'
-    const DOESNT = 'Doesn’t add to the club base'
+    const ADDS = 'Raises the club base too'
+    const DOESNT = 'Adds to net club growth'
 
     function club(
       reason: string,
@@ -508,7 +585,7 @@ describe('ReinstatableClubsSection', () => {
       suspended_sept30_october_cycle: {
         row: { suspendDate: '2026-09-30', addsToBase: true },
         tag: ADDS,
-        why: 'If it reinstates by March 31, 2027, it adds to the club base.',
+        why: 'If it reinstates by March 31, 2027, the club base goes up by one too, so net club growth doesn’t change.',
       },
       suspended_mar31_before_oct1: {
         row: { suspendDate: '2026-03-31', addsToBase: true },
@@ -518,12 +595,12 @@ describe('ReinstatableClubsSection', () => {
       suspended_mar31_after_oct1: {
         row: { suspendDate: '2026-03-31' },
         tag: DOESNT,
-        why: 'the club closes on October 1',
+        why: 'Suspended at the March 31 renewal. The FAQ says the club closes on October 1, and a reinstatement after that “will not increase the club base.” So reinstating it adds to net club growth.',
       },
       suspended_sept30_past_october_cycle: {
         row: { suspendDate: '2025-09-30' },
         tag: DOESNT,
-        why: 'has likely closed',
+        why: 'Suspended at the September 30 renewal, and the October renewal cycle after it has ended. The club has likely closed by now, so reinstating won’t add to the club base. So reinstating it adds to net club growth. Confirm with World Headquarters.',
       },
       // #3103: emitted now only for an unparseable date; older files keep it.
       suspend_date_unexpected: {
@@ -541,7 +618,7 @@ describe('ReinstatableClubsSection', () => {
       suspended_mar31_before_july1: {
         row: { suspendDate: '2026-03-31' },
         tag: DOESNT,
-        why: 'Reinstating it doesn’t change this year’s club base.',
+        why: 'Suspended at the March 31 renewal. Reinstating it adds a paid club without raising this year’s club base.',
       },
       closed_does_not_add: {
         row: {
@@ -550,7 +627,7 @@ describe('ReinstatableClubsSection', () => {
           lastSeen: '2026-06-30',
         },
         tag: DOESNT,
-        why: '“will not increase the club base”',
+        why: 'Closed. The FAQ says closed clubs “will not increase the club base”. So reinstating it adds to net club growth.',
       },
     }
 
