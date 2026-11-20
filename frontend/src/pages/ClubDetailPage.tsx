@@ -458,13 +458,15 @@ const ClubDetailPage: React.FC = () => {
     : null
   // #3111 (draft) — the five-period reinstate window, from the page date's
   // reinstatable-clubs.json (R3). Read only for a suspended club, like the
-  // suspended list; the closed-club page follows #3107.
+  // suspended list, or a closed one (#3104), in the district it was last in.
+  const wantsReinstate = isSuspended || isClosedClub
   const { clubs: reinstatableClubs } = useReinstatableClubs(
-    districtId,
-    isSuspended ? (effectiveEndDate ?? undefined) : undefined
+    isClosedClub && closed ? closed.lastDistrictId : districtId,
+    wantsReinstate ? (effectiveEndDate ?? undefined) : undefined
   )
-  const reinstatable = club
-    ? reinstatableClubs?.find(r => clubIdsMatch(r.clubNumber, club.clubId))
+  const reinstateClubId = club?.clubId ?? (isClosedClub ? clubId : undefined)
+  const reinstatable = reinstateClubId
+    ? reinstatableClubs?.find(r => clubIdsMatch(r.clubNumber, reinstateClubId))
     : undefined
   // #2169 — where our records start for the club's district: the earliest
   // date of the per-district snapshot index (the same shared index entry the
@@ -867,6 +869,7 @@ const ClubDetailPage: React.FC = () => {
               lastSeenDate={closedLastSeen}
               programYear={getProgramYearForDate(closedLastSeen)}
               suspendDate={closedSuspendDate}
+              reinstatable={reinstatable}
             />
             <ClubMemberDataNote />
             <Link
