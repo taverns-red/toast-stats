@@ -94,8 +94,8 @@ export function mustReinstateText(lastChanceBy: string): string {
 
 /**
  * The Can reinstate row line, for a row the pipeline gives a period.
- * Pattern approved by Ron (2026-11-20): "Period 5 of 5. Last chance: March
- * 31, 2027." Period 5 merges it with {@link mustReinstateText} while
+ * Pattern approved by Ron (2026-11-20), no full stop after the date:
+ * "Period 4 of 5. Last chance: September 30, 2027". Period 5 merges it with {@link mustReinstateText} while
  * {@link MERGE_PERIOD5_LINE} is on; with it off, period 5 shows only that
  * approved sentence, as before #3111. Empty without a period in 1 to 5 or
  * without a date.
@@ -111,7 +111,7 @@ export function reinstatePeriodLine(
   if (!isWindowPeriod(inactivePeriod) || !lastChanceBy) return ''
   const lead = `Period ${inactivePeriod} of ${WINDOW_PERIODS}.`
   if (inactivePeriod !== WINDOW_PERIODS) {
-    return `${lead} Last chance: ${formatLongDate(lastChanceBy)}.`
+    return `${lead} Last chance: ${formatLongDate(lastChanceBy)}`
   }
   return mergePeriod5
     ? `${lead} ${mustReinstateText(lastChanceBy)}`
