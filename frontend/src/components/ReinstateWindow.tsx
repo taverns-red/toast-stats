@@ -29,7 +29,11 @@ import {
   reinstateWindowSummary,
 } from '../utils/reinstateWindow'
 
-const STATUS_LABEL = { suspended: 'Suspended', closed: 'Closed' } as const
+/** Approved by Ron, 2026-11-20. */
+const STATUS_LABEL = {
+  suspended: 'Suspended',
+  closed: 'Closed, can still reinstate',
+} as const
 
 export interface ReinstateWindowProps {
   /** The last day of period 5, ISO (the row's `lastChanceBy`). */

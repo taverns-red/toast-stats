@@ -35,10 +35,18 @@
 }
 
 .reinstate-window__period {
-  display: flex;
-  flex-wrap: wrap;
+  /* Phones: the same two lines for every period, "Period N  range" then
+     the status on its own line, which never breaks mid-phrase. The current
+     period adds "Now" on a third line: at 320px there is no room beside
+     either. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'num range'
+    'status status'
+    'now now';
   align-items: baseline;
-  column-gap: 0.75rem;
+  column-gap: 0.5rem;
   row-gap: 0.125rem;
   min-width: 0;
   padding: 0.5rem 0.75rem;
@@ -51,7 +59,19 @@
 }
 
 .reinstate-window__num {
+  grid-area: num;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.reinstate-window__range {
+  grid-area: range;
+  white-space: nowrap;
+}
+
+.reinstate-window__status {
+  grid-area: status;
+  white-space: nowrap;
 }
 
 .reinstate-window__range,
@@ -65,7 +85,9 @@
 }
 
 .reinstate-window__now {
-  margin-left: auto;
+  grid-area: now;
+  justify-self: start;
+  margin-top: 0.25rem;
   padding: 0 0.5rem;
   font-weight: 700;
   color: var(--ink);
@@ -97,13 +119,26 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
+  /* One column card per period, the same stack in each: number, range,
+     status, then "Now". The status may wrap at a space, never mid-word,
+     and every card is the same width, so it wraps alike in all five. */
   .reinstate-window__period {
-    flex-direction: column;
-    align-items: flex-start;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'num'
+      'range'
+      'status'
+      'now';
+    align-content: start;
+  }
+
+  .reinstate-window__range,
+  .reinstate-window__status {
+    white-space: normal;
   }
 
   .reinstate-window__now {
-    margin-left: 0;
+    margin-top: 0;
   }
 
   .reinstate-window__period:last-child {
