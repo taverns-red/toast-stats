@@ -1,0 +1,267 @@
+{
+  "metadata": {
+    "schemaVersion": "1.0.0",
+    "computedAt": "2026-10-17T17:33:26.691Z",
+    "snapshotDate": "2025-06-30",
+    "districtId": "86",
+    "checksum": "d0c8e4e9a945223e83a6cdcbb485d3558e05e5aa82b799ea2723065f2d925c43",
+    "sourceSnapshotChecksum": "1488c8247c01f7bbdef2550cf7e6e4be53e3adebe5fcc8993071884d1e77b67b"
+  },
+  "data": {
+    "districtId": "86",
+    "dateRange": {
+      "start": "2024-06-30",
+      "end": "2025-06-30"
+    },
+    "allClubs": [
+      {
+        "clubId": "28676407",
+        "clubName": "Top Tier Toastmasters",
+        "divisionId": "S",
+        "divisionName": "Division S",
+        "areaId": "71",
+        "areaName": "Area 71",
+        "membershipTrend": [
+          {
+            "date": "2024-07-31",
+            "count": 10
+          },
+          {
+            "date": "2024-08-31",
+            "count": 10
+          },
+          {
+            "date": "2024-09-30",
+            "count": 10
+          },
+          {
+            "date": "2024-10-31",
+            "count": 10
+          },
+          {
+            "date": "2024-11-30",
+            "count": 10
+          },
+          {
+            "date": "2024-12-31",
+            "count": 10
+          },
+          {
+            "date": "2025-01-31",
+            "count": 10
+          },
+          {
+            "date": "2025-02-28",
+            "count": 10
+          },
+          {
+            "date": "2025-03-31",
+            "count": 10
+          },
+          {
+            "date": "2025-04-30",
+            "count": 0
+          },
+          {
+            "date": "2025-05-31",
+            "count": 0
+          },
+          {
+            "date": "2025-06-30",
+            "count": 0
+          }
+        ],
+        "dcpGoalsTrend": [
+          {
+            "date": "2024-07-31",
+            "goalsAchieved": 0
+          },
+          {
+            "date": "2024-08-31",
+            "goalsAchieved": 0
+          },
+          {
+            "date": "2024-09-30",
+            "goalsAchieved": 1
+          },
+          {
+            "date": "2024-10-31",
+            "goalsAchieved": 1
+          },
+          {
+            "date": "2024-11-30",
+            "goalsAchieved": 1
+          },
+          {
+            "date": "2024-12-31",
+            "goalsAchieved": 1
+          },
+          {
+            "date": "2025-01-31",
+            "goalsAchieved": 2
+          },
+          {
+            "date": "2025-02-28",
+            "goalsAchieved": 2
+          },
+          {
+            "date": "2025-03-31",
+            "goalsAchieved": 2
+          },
+          {
+            "date": "2025-04-30",
+            "goalsAchieved": 2
+          },
+          {
+            "date": "2025-05-31",
+            "goalsAchieved": 2
+          },
+          {
+            "date": "2025-06-30",
+            "goalsAchieved": 2
+          }
+        ],
+        "currentStatus": "intervention-required",
+        "healthScore": 0,
+        "membershipCount": 0,
+        "membershipBase": 10,
+        "paymentsCount": 10,
+        "riskFactors": [
+          "Membership below 12 (critical)",
+          "Net growth since July: -10 (need 3+ to override)"
+        ],
+        "distinguishedLevel": "NotDistinguished",
+        "octoberRenewals": 10,
+        "aprilRenewals": 0,
+        "newMembers": 0,
+        "clubStatus": "Suspended",
+        "cspSubmitted": true,
+        "isProvisionallyDistinguished": false
+      },
+      {
+        "clubId": "637857",
+        "clubName": "Leaders of Today Toastmasters Club",
+        "divisionId": "C",
+        "divisionName": "Division C",
+        "areaId": "41",
+        "areaName": "Area 41",
+        "membershipTrend": [
+          {
+            "date": "2024-07-31",
+            "count": 24
+          },
+          {
+            "date": "2024-08-31",
+            "count": 24
+          },
+          {
+            "date": "2024-09-30",
+            "count": 24
+          },
+          {
+            "date": "2024-10-31",
+            "count": 25
+          },
+          {
+            "date": "2024-11-30",
+            "count": 25
+          },
+          {
+            "date": "2024-12-31",
+            "count": 30
+          },
+          {
+            "date": "2025-01-31",
+            "count": 30
+          },
+          {
+            "date": "2025-02-28",
+            "count": 30
+          },
+          {
+            "date": "2025-03-31",
+            "count": 30
+          },
+          {
+            "date": "2025-04-30",
+            "count": 0
+          },
+          {
+            "date": "2025-05-31",
+            "count": 0
+          },
+          {
+            "date": "2025-06-30",
+            "count": 0
+          }
+        ],
+        "dcpGoalsTrend": [
+          {
+            "date": "2024-07-31",
+            "goalsAchieved": 1
+          },
+          {
+            "date": "2024-08-31",
+            "goalsAchieved": 1
+          },
+          {
+            "date": "2024-09-30",
+            "goalsAchieved": 2
+          },
+          {
+            "date": "2024-10-31",
+            "goalsAchieved": 3
+          },
+          {
+            "date": "2024-11-30",
+            "goalsAchieved": 3
+          },
+          {
+            "date": "2024-12-31",
+            "goalsAchieved": 5
+          },
+          {
+            "date": "2025-01-31",
+            "goalsAchieved": 6
+          },
+          {
+            "date": "2025-02-28",
+            "goalsAchieved": 8
+          },
+          {
+            "date": "2025-03-31",
+            "goalsAchieved": 8
+          },
+          {
+            "date": "2025-04-30",
+            "goalsAchieved": 8
+          },
+          {
+            "date": "2025-05-31",
+            "goalsAchieved": 8
+          },
+          {
+            "date": "2025-06-30",
+            "goalsAchieved": 8
+          }
+        ],
+        "currentStatus": "intervention-required",
+        "healthScore": 0.5,
+        "membershipCount": 0,
+        "membershipBase": 24,
+        "paymentsCount": 30,
+        "riskFactors": [
+          "Membership below 12 (critical)",
+          "Net growth since July: -24 (need 3+ to override)"
+        ],
+        "distinguishedLevel": "NotDistinguished",
+        "octoberRenewals": 18,
+        "aprilRenewals": 0,
+        "newMembers": 12,
+        "clubStatus": "Suspended",
+        "cspSubmitted": true,
+        "isProvisionallyDistinguished": false
+      }
+    ]
+  }
+}

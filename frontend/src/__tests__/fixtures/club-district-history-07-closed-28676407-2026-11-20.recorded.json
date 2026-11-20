@@ -1,0 +1,29 @@
+{
+  "_format": {
+    "version": "1.1.0",
+    "type": "club-district-history-shard"
+  },
+  "shard": "07",
+  "asOf": "2026-11-19",
+  "clubs": {
+    "28676407": {
+      "name": "Top Tier Toastmasters",
+      "formerNames": [],
+      "firstSeen": "2022-07-31",
+      "lastSeen": "2025-06-30",
+      "spans": [
+        {
+          "from": "2022-07-31",
+          "to": "2025-06-30",
+          "districtId": "86",
+          "lastSeenOn": "2025-06-30"
+        }
+      ],
+      "byProgramYear": {
+        "2022-2023": "86",
+        "2023-2024": "86",
+        "2024-2025": "86"
+      }
+    }
+  }
+}
