@@ -18,9 +18,10 @@ import { ActionTable, type ActionTableColumn } from './ActionTable'
    Toastmasters' Club Reinstatement FAQ, and an unknown reason code (one added
    after this release) falls back to "confirm with World Headquarters".
 
-   #3100 (approved UX review items): the clubs that add come first, the
-   unknown-effect clubs next, and the rest fold into a closed <details>
-   (S1). An adding suspension names its deadline (M1), from the snapshot
+   #3100 (approved UX review items): the clubs that add come first and the
+   rest fold into a closed <details> (S1). #3103: there is no unknown-effect
+   group; the pipeline always decides, and `oldestPeriod` (the old
+   four-period flag, still set by older files) is ignored. An adding suspension names its deadline (M1), from the snapshot
    date the page passes in (R3).
 
    `clubs === null` means the date has no list: render nothing, quietly. */
@@ -53,12 +54,6 @@ const DEADLINE_LEAD: Record<string, string> = {
   suspended_mar31_before_oct1: 'Suspended at the March 31 renewal.',
 }
 
-/** Reasons where the pipeline could not decide the effect on the base. */
-const UNDECIDED = new Set([
-  'suspend_date_unexpected',
-  'suspend_date_after_as_of',
-])
-
 /** "March 31, 2027" */
 const longDate = (iso: string) =>
   formatDisplayDate(iso, { year: 'numeric', month: 'long', day: 'numeric' })
@@ -67,6 +62,12 @@ const longDate = (iso: string) =>
  *  toward next year's base. The page talks about this year's base only. */
 const MAR31_NOT_THIS_YEAR =
   'Suspended at the March 31 renewal. Reinstating it doesn’t change this year’s club base.'
+
+/** #3103 — the pipeline's own code for that window. */
+const REASON_TEXT_WITH_WINDOW: Record<string, string> = {
+  ...REASON_TEXT,
+  suspended_mar31_before_july1: MAR31_NOT_THIS_YEAR,
+}
 
 interface ReasonContext {
   snapshotDate: string
@@ -86,30 +87,16 @@ function reasonText(club: ReinstatableClub, ctx: ReasonContext): string {
       ? `${lead} If it reinstates by ${longDate(deadline)}, it adds to the club base.`
       : club.reason === 'suspended_mar31_before_oct1' && !adds
         ? MAR31_NOT_THIS_YEAR
-        : REASON_TEXT[club.reason]
-  const parts =
-    known === undefined || (ctx.folded && known === CLOSED_TEXT) ? [] : [known]
-  if (club.oldestPeriod) {
-    parts.push('Closed in the oldest of the four renewal periods.')
-  }
-  // An unknown code or the oldest period asks to confirm; say it once.
-  const needsConfirm = known === undefined || club.oldestPeriod
-  if (needsConfirm && !parts.some(p => p.endsWith(CONFIRM))) {
-    parts.push(CONFIRM)
-  }
-  return parts.join(' ')
+        : REASON_TEXT_WITH_WINDOW[club.reason]
+  // An unknown code (a later release) asks to confirm.
+  if (known === undefined) return CONFIRM
+  return ctx.folded && known === CLOSED_TEXT ? '' : known
 }
-
-const baseKnown = (club: ReinstatableClub): boolean =>
-  !UNDECIDED.has(club.reason) && club.reason in REASON_TEXT
 
 /** Adds to this year's club base on the snapshot date: the one rule the
  *  groups, the split, the card and the rollups all count with. */
 function addsNow(club: ReinstatableClub, snapshotDate: string): boolean {
-  return (
-    baseKnown(club) &&
-    addsToThisYearsBase(club.reason, club.addsToBase, snapshotDate)
-  )
+  return addsToThisYearsBase(club.reason, club.addsToBase, snapshotDate)
 }
 
 /** #3088 — how many clubs are tagged "Adds to the club base", and the line
@@ -125,25 +112,12 @@ export function reinstateSplit(
   }
 }
 
-/** #3094 — how many clubs are tagged "Effect on the club base not known".
- *  Same rule as the tag. */
-export function baseUnknownCount(clubs: readonly ReinstatableClub[]): number {
-  return clubs.filter(c => !baseKnown(c)).length
-}
-
-/** "2 effect on the club base not known", the tag's own wording (#3094). */
-export const unknownPhrase = (n: number): string =>
-  `${n.toLocaleString('en-US')} effect on the club base not known`
-
-/** The stage card's third line, the same at every level (#3094, #3100 S6):
- *  the split, then the unknown-effect count when there is one. */
+/** The stage card's third line, the same at every level (#3094, #3100). */
 export function reinstateCard(
   clubs: readonly ReinstatableClub[],
   snapshotDate: string
 ): string {
-  const { card } = reinstateSplit(clubs, snapshotDate)
-  const unknown = baseUnknownCount(clubs)
-  return unknown > 0 ? `${card} · ${unknownPhrase(unknown)}` : card
+  return reinstateSplit(clubs, snapshotDate).card
 }
 
 /** The cited source, shared with the region and world sections (#3094). */
@@ -310,8 +284,7 @@ function GroupTable({
 }
 
 /** M1 — "3 of 22 add to the club base if they reinstate by March 31, 2027."
- *  One date only when every adding club shares it. S6 — then the
- *  unknown-effect count, when there is one. */
+ *  One date only when every adding club shares it. */
 function splitLine(
   clubs: readonly ReinstatableClub[],
   snapshotDate: string
@@ -326,11 +299,9 @@ function splitLine(
     deadlines.size === 1 && only
       ? ` if ${one ? 'it reinstates' : 'they reinstate'} by ${longDate(only)}`
       : ''
-  const unknown = baseUnknownCount(clubs)
   return (
     `${adding.length} of ${clubs.length} ${one ? 'adds' : 'add'} to ` +
-    `the club base${by}.` +
-    (unknown > 0 ? ` ${unknownPhrase(unknown)}.` : '')
+    `the club base${by}.`
   )
 }
 
@@ -358,10 +329,8 @@ export const ReinstatableClubsSection: React.FC<
     clubPageIds,
   }
   const adds = clubs.filter(c => addsNow(c, snapshotDate))
-  const unknown = clubs.filter(c => !baseKnown(c))
-  const rest = clubs.filter(c => baseKnown(c) && !addsNow(c, snapshotDate))
+  const rest = clubs.filter(c => !addsNow(c, snapshotDate))
   const addsLabel = `Adds to the club base (${adds.length})`
-  const unknownLabel = `Effect on the club base not known (${unknown.length})`
   const restLabel = `Doesn’t add to the club base (${rest.length})`
 
   return (
@@ -375,8 +344,9 @@ export const ReinstatableClubsSection: React.FC<
         Can reinstate ({clubs.length})
       </h3>
       <p className="growth-stage__note">
-        Suspended clubs, and clubs closed in the past four renewal periods, can
-        reinstate. Toastmasters International makes the final call.
+        Suspended clubs, and closed clubs within five renewal periods of their
+        suspension, can reinstate. Toastmasters International makes the final
+        call.
       </p>
       {clubs.length > 0 && (
         <p className="growth-stage__note" data-testid="growth-reinstate-split">
@@ -395,17 +365,6 @@ export const ReinstatableClubsSection: React.FC<
             rows={adds}
             caption={addsLabel}
             testId="growth-reinstate-table-adds"
-            ctx={ctx}
-          />
-        </div>
-      )}
-      {unknown.length > 0 && (
-        <div data-testid="growth-reinstate-unknown">
-          <h4 className="growth-stage__subtitle">{unknownLabel}</h4>
-          <GroupTable
-            rows={unknown}
-            caption={unknownLabel}
-            testId="growth-reinstate-table-unknown"
             ctx={ctx}
           />
         </div>

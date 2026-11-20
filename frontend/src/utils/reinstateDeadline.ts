@@ -45,9 +45,10 @@ export function reinstateDeadline(
    on July 1. A March 31 suspension reinstated from April 1 to June 30 only
    counts toward next year's base, so it doesn't add; from July 1 to
    September 30 it does. Decided here from the reason code and the snapshot
-   date, not the row's `addsToBase`, which the pipeline sets for next year's
-   base in that window (#3103 changes that). Every other code keeps the
-   pipeline's flag. */
+   date, not the row's `addsToBase`, which files written before #3103 set
+   for next year's base in that window. Since #3103 the pipeline itself
+   emits `suspended_mar31_before_july1` (addsToBase false) there. Every other
+   code keeps the pipeline's flag. */
 const MAR31_ADDING = 'suspended_mar31_before_oct1'
 
 /** Whether reinstating this club now adds to this year's club base. */
