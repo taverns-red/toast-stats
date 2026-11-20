@@ -83,6 +83,30 @@ export function reinstateSplit(
   return { adds, card: `${adds} ${adds === 1 ? 'adds' : 'add'} to ${base}` }
 }
 
+/** #3094 — how many clubs are tagged "Effect on the club base not known".
+ *  Same rule as the tag. */
+export function baseUnknownCount(clubs: readonly ReinstatableClub[]): number {
+  return clubs.filter(c => !baseKnown(c)).length
+}
+
+/** The cited source, shared with the region and world sections (#3094). */
+export function ReinstatementFaqSource() {
+  return (
+    <p className="growth-reinstate__source">
+      Source:{' '}
+      <a
+        href={REINSTATEMENT_FAQ_URL}
+        className="growth-reinstate__link"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Toastmasters’ Club Reinstatement FAQ
+        <span className="sr-only"> (opens toastmasters.org)</span>
+      </a>
+    </p>
+  )
+}
+
 function statusText(club: ReinstatableClub): string {
   if (club.status === 'suspended' && club.suspendDate) {
     return `Suspended ${formatDisplayDate(club.suspendDate)}`
@@ -171,18 +195,7 @@ export const ReinstatableClubsSection: React.FC<
           for the current period plus one full future period, paid through World
           Headquarters.
         </p>
-        <p className="growth-reinstate__source">
-          Source:{' '}
-          <a
-            href={REINSTATEMENT_FAQ_URL}
-            className="growth-reinstate__link"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Toastmasters’ Club Reinstatement FAQ
-            <span className="sr-only"> (opens toastmasters.org)</span>
-          </a>
-        </p>
+        <ReinstatementFaqSource />
       </div>
       {clubs.length === 0 ? (
         <p className="growth-stage__note">

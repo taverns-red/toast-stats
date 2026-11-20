@@ -4,12 +4,14 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useRegionRollups } from '../hooks/useRegionRollups'
 import { useReportsRollups } from '../hooks/useReportsRollups'
+import { useReinstatableClubsFile } from '../hooks/useReinstatableClubs'
 import {
   RollupPageShell,
   RollupSkeleton,
 } from '../components/rollups/RollupPageShell'
 import { RollupGrowthFunnelView } from '../components/rollups/RollupGrowthFunnelView'
 import { buildRollupGrowthFunnel } from '../utils/rollupGrowthFunnel'
+import { buildRollupReinstate } from '../utils/rollupReinstate'
 
 /* /regions/growth (#1813, epic #1781) — the worldwide Club Growth funnel:
    the district funnel (#1794) rolled up over every district, each stage
@@ -36,7 +38,23 @@ const WorldGrowthPage: React.FC = () => {
     [reports, rollups, search]
   )
   useDocumentTitle('Worldwide Club Growth')
-  const loading = reportsLoading || rollupsLoading
+  // #3094: the "Can reinstate" card, summed from the one dated file. The
+  // funnel waits for it, so the strip renders once with its final number of
+  // cards (no layout shift, the trap in #3092). The fetch never throws: a
+  // date without the file settles to null quickly.
+  const { file, isLoading: reinstateLoading } = useReinstatableClubsFile(date)
+  const reinstate = useMemo(
+    () =>
+      buildRollupReinstate({
+        file,
+        date,
+        districtIds: 'all',
+        programYearStart: controls.selectedProgramYear.year,
+        search,
+      }),
+    [file, date, controls.selectedProgramYear.year, search]
+  )
+  const loading = reportsLoading || rollupsLoading || reinstateLoading
   const asOf = date ?? reports?.snapshotDate ?? rollups?.snapshotDate ?? null
 
   return (
@@ -61,6 +79,7 @@ const WorldGrowthPage: React.FC = () => {
           scopeLabel="worldwide"
           childNoun="Region"
           asOfDate={asOf}
+          reinstate={reinstate}
         />
       )}
     </RollupPageShell>

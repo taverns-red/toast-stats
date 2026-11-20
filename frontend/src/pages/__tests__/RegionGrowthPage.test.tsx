@@ -6,12 +6,13 @@
  * region-rollups of that date. Both queries are pinned to the page's own
  * snapshot date (R3).
  */
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   RegionRollupsSchema,
+  ReinstatableClubsSchema,
   ReportsRollupsSchema,
 } from '@taverns-red/shared-contracts'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
@@ -19,10 +20,12 @@ import RegionGrowthPage from '../RegionGrowthPage'
 import WorldGrowthPage from '../WorldGrowthPage'
 import {
   fetchCdnRegionRollups,
+  fetchCdnReinstatableClubs,
   fetchCdnReportsRollups,
 } from '../../services/cdn'
 import reportsRecorded from '../../__tests__/fixtures/reports-rollups-2026-10-15.recorded.json'
 import rollupsRecorded from '../../__tests__/fixtures/region-rollups-2026-10-15.recorded.json'
+import reinstatableRecorded from '../../__tests__/fixtures/reinstatable-clubs-2026-11-18.recorded.json'
 
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => false }))
 
@@ -30,6 +33,7 @@ vi.mock('../../services/cdn', () => ({
   fetchCdnDates: vi.fn().mockResolvedValue({ dates: ['2026-10-15'], count: 1 }),
   fetchCdnRegionRollups: vi.fn(),
   fetchCdnReportsRollups: vi.fn(),
+  fetchCdnReinstatableClubs: vi.fn(),
   fetchLatestSnapshotDate: vi.fn().mockResolvedValue('2026-10-15'),
   fetchCdnManifest: vi
     .fn()
@@ -40,6 +44,18 @@ const mockedRollups = vi.mocked(fetchCdnRegionRollups)
 const mockedReports = vi.mocked(fetchCdnReportsRollups)
 const reports = ReportsRollupsSchema.parse(reportsRecorded)
 const rollups = RegionRollupsSchema.parse(rollupsRecorded)
+const mockedReinstatable = vi.mocked(fetchCdnReinstatableClubs)
+// The recorded 2026-11-18 list (Districts 51, 61 and 93), dated to the
+// page's snapshot so the hook accepts it.
+const reinstatable = ReinstatableClubsSchema.parse({
+  ...reinstatableRecorded,
+  snapshotDate: '2026-10-15',
+})
+
+beforeEach(() => {
+  // Dates before 2026-11-18 have no reinstate file.
+  mockedReinstatable.mockResolvedValue(null)
+})
 
 afterEach(() => {
   cleanup()
@@ -175,5 +191,76 @@ describe('WorldGrowthPage', () => {
     expect(screen.getByTestId('rollup-growth-coverage')).toHaveTextContent(
       /12 districts/
     )
+  })
+})
+
+/* #3094 — the "Can reinstate" card, summed over the scope's districts from
+   the one dated file. The funnel waits for it, so the strip renders once
+   with its final card count (no layout shift, #3092). */
+describe('Can reinstate on the region and world funnels (#3094)', () => {
+  it('region: sums the region’s districts only', async () => {
+    mockedReports.mockResolvedValue(reports)
+    mockedRollups.mockResolvedValue(rollups)
+    mockedReinstatable.mockResolvedValue(reinstatable)
+    renderAt('/region/05/growth')
+    const strip = await funnel()
+    expect(within(strip).getAllByRole('listitem')).toHaveLength(5)
+    // Region 05 has District 61 (22 clubs, 3 add); 51 and 93 are elsewhere.
+    const card = screen.getByTestId('growth-stage-reinstate')
+    expect(card).toHaveTextContent(/Can reinstate\s*22/)
+    expect(card).toHaveTextContent('3 add to the club base')
+    expect(mockedReinstatable).toHaveBeenCalledWith('2026-10-15')
+    const table = screen.getByTestId('rollup-growth-reinstate-table')
+    expect(
+      within(table)
+        .getAllByRole('link')
+        .map(a => a.textContent)
+    ).toEqual(['District 61'])
+  })
+
+  it('world: sums every district in the file', async () => {
+    mockedReports.mockResolvedValue(reports)
+    mockedRollups.mockResolvedValue(rollups)
+    mockedReinstatable.mockResolvedValue(reinstatable)
+    renderAt('/regions/growth')
+    await funnel()
+    const card = screen.getByTestId('growth-stage-reinstate')
+    expect(card).toHaveTextContent(/Can reinstate\s*23/)
+    expect(card).toHaveTextContent('3 add to the club base')
+    const table = screen.getByTestId('rollup-growth-reinstate-table')
+    expect(
+      within(table)
+        .getAllByRole('link')
+        .map(a => a.textContent)
+    ).toEqual(['District 61', 'District 51'])
+  })
+
+  it('a date without the file: four cards, no section', async () => {
+    mockedReports.mockResolvedValue(reports)
+    mockedRollups.mockResolvedValue(rollups)
+    renderAt('/regions/growth')
+    const strip = await funnel()
+    expect(within(strip).getAllByRole('listitem')).toHaveLength(4)
+    expect(document.getElementById('growth-reinstate')).toBeNull()
+  })
+
+  it('holds the skeleton until the file settles, so the strip never reflows', async () => {
+    mockedReports.mockResolvedValue(reports)
+    mockedRollups.mockResolvedValue(rollups)
+    let resolve: (v: null) => void = () => {}
+    mockedReinstatable.mockReturnValue(
+      new Promise(r => {
+        resolve = r
+      })
+    )
+    renderAt('/region/05/growth')
+    await vi.waitFor(() => expect(mockedReports).toHaveBeenCalled())
+    await new Promise(r => setTimeout(r, 50))
+    expect(
+      screen.queryByRole('list', { name: 'Club Growth funnel' })
+    ).toBeNull()
+    resolve(null)
+    const strip = await funnel()
+    expect(within(strip).getAllByRole('listitem')).toHaveLength(4)
   })
 })
