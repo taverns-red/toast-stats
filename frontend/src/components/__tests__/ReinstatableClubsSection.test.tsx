@@ -511,8 +511,11 @@ describe('ReinstatableClubsSection', () => {
       renderSection([
         closedRow({ clubNumber: '9547', clubName: 'No Period Club' }),
       ])
-      expect(section()).not.toHaveTextContent('Last chance')
-      expect(section()).not.toHaveTextContent(/Period \d of 5/)
+      // The row, not the section: the section's example names a last
+      // chance of its own (#3111).
+      const row = rowFor('No Period Club')
+      expect(row).not.toHaveTextContent('Last chance')
+      expect(row).not.toHaveTextContent(/Period \d of 5/)
     })
 
     /* #3111 — Ron approved "Period 5 of 5. Last chance: March 31, 2027" for

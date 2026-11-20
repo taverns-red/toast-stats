@@ -10,7 +10,9 @@ import {
   isOffCycleSuspendDate,
   reinstateDeadline,
 } from '../utils/reinstateDeadline'
+import { reinstatePeriodLine } from '../utils/reinstateWindow'
 import { ActionTable, type ActionTableColumn } from './ActionTable'
+import { ReinstateWindowExample } from './ReinstateWindow'
 
 /* #3007 — "Can reinstate" on the district Club Growth page, after the
    Suspended stage. The pipeline decides who can reinstate and whether it adds
@@ -121,12 +123,14 @@ function reasonText(club: ReinstatableClub, ctx: ReasonContext): string {
   return ctx.closedNoteShown && known === CLOSED_TEXT ? '' : known
 }
 
-/** Ron approved this line on 2026-11-20 (#3103): only for a row the
- *  pipeline puts in inactive period 5, dated from its `lastChanceBy`. A row
- *  placed from `lastSeen` alone has no period and never gets it. */
+/** #3111 — the row's period line, only for a row the pipeline gives an
+ *  inactive period and its `lastChanceBy`: "Period 4 of 5. Last chance:
+ *  September 30, 2027." Period 5 carries Ron's approved "must reinstate
+ *  by …, or charter as a new club." line (#3103), merged into one in the
+ *  draft (MERGE_PERIOD5_LINE in utils/reinstateWindow.ts). A row placed
+ *  from `lastSeen` alone has no period and gets no line. */
 function lastChanceText(club: ReinstatableClub): string {
-  if (club.inactivePeriod !== 5 || !club.lastChanceBy) return ''
-  return `Last chance: must reinstate by ${longDate(club.lastChanceBy)}, or charter as a new club.`
+  return reinstatePeriodLine(club)
 }
 
 /** Adds to this year's club base on the snapshot date: the one rule the
@@ -247,8 +251,7 @@ function groupColumns(
   rows: readonly ReinstatableClub[],
   ctx: GroupContext
 ): ActionTableColumn<ReinstatableClub>[] {
-  const why = (c: ReinstatableClub) =>
-    [reasonText(c, ctx), lastChanceText(c)].filter(Boolean).join(' ') || null
+  const why = (c: ReinstatableClub) => reasonText(c, ctx) || null
   const cols: ActionTableColumn<ReinstatableClub>[] = [
     {
       key: 'club',
@@ -282,7 +285,19 @@ function groupColumns(
       cell: divisionArea,
     })
   }
-  cols.push({ key: 'status', header: 'Status', cell: statusText })
+  cols.push({
+    key: 'status',
+    header: 'Status',
+    cell: c => {
+      const period = lastChanceText(c)
+      return (
+        <>
+          {statusText(c)}
+          {period && <span className="growth-reinstate__period">{period}</span>}
+        </>
+      )
+    },
+  })
   if (rows.some(c => why(c) !== null)) {
     cols.push({
       key: 'why',
@@ -382,6 +397,8 @@ export const ReinstatableClubsSection: React.FC<
         International makes the final call.
       </p>
       <p className="growth-stage__note">{NET_GROWTH_NOTE}</p>
+      {/* #3111 (draft) — the generic window, next to the intro. */}
+      <ReinstateWindowExample />
       {clubs.length > 0 && (
         <p className="growth-stage__note" data-testid="growth-reinstate-split">
           {splitLine(clubs, snapshotDate)}

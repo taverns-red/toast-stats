@@ -518,3 +518,10 @@
   white-space: normal;
   text-overflow: clip;
 }
+
+/* #3111 (draft) — the row's period line, under the status. */
+.growth-reinstate__period {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--ink);
+}

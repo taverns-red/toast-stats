@@ -1,19 +1,128 @@
-/* #3111 — the five-period reinstate window (stub for the red commit). */
+/* #3111 (DRAFT for Ron, not to ship until he approves the copy) — the five
+   renewal periods a suspended or closed club can reinstate in.
+
+   Period 1 is the period the club is suspended in, periods 2 to 5 it is
+   closed (Ron, 2026-11-20, #3103). The periods come from the pipeline's
+   `lastChanceBy` and `inactivePeriod` (`classifyReinstatement`, R3); this
+   view only draws them.
+
+   - The club's period says "Now" in text and carries aria-current; the
+     tint is never the only signal.
+   - The end marker names the last chance.
+   - Screen readers get one sentence first ("Period 5 of 5, last chance
+     March 31, 2027.").
+   - 1024px and up: one row of five. Phones: one line per period
+     (reinstate-window.css). Legacy tokens only (#2080).
+
+   A row with no `inactivePeriod` (placed from lastSeen alone) gets no
+   period UI at all. */
+
 import type { ReinstatableClub } from '@taverns-red/shared-contracts'
+import { formatDisplayDate } from '../utils/dateFormatting'
+import {
+  EXAMPLE_LAST_CHANCE,
+  EXAMPLE_SUSPENDED_AT,
+  reinstateWindowPeriods,
+  reinstateWindowSummary,
+} from '../utils/reinstateWindow'
 
-export function ReinstateWindow(_props: {
+const STATUS_LABEL = { suspended: 'Suspended', closed: 'Closed' } as const
+
+const longDate = (iso: string) =>
+  formatDisplayDate(iso, { year: 'numeric', month: 'long', day: 'numeric' })
+
+export interface ReinstateWindowProps {
+  /** The last day of period 5, ISO (the row's `lastChanceBy`). */
   lastChanceBy: string
-  inactivePeriod?: number
-}) {
-  return null
+  /** The club's period on the snapshot date. Absent: no "Now" marker. */
+  inactivePeriod?: number | undefined
+  /** Visible caption above the periods (the generic version). */
+  caption?: string | undefined
 }
 
+export function ReinstateWindow({
+  lastChanceBy,
+  inactivePeriod,
+  caption,
+}: ReinstateWindowProps) {
+  const periods = reinstateWindowPeriods(lastChanceBy)
+  if (!periods) return null
+  return (
+    <figure className="reinstate-window" data-testid="reinstate-window">
+      {caption && (
+        <figcaption className="reinstate-window__caption">{caption}</figcaption>
+      )}
+      {inactivePeriod !== undefined && (
+        <p className="sr-only">
+          {reinstateWindowSummary(inactivePeriod, lastChanceBy)}
+        </p>
+      )}
+      <ol className="reinstate-window__periods">
+        {periods.map(p => {
+          const now = p.number === inactivePeriod
+          return (
+            <li
+              key={p.number}
+              className={`reinstate-window__period reinstate-window__period--${p.status}${
+                now ? ' reinstate-window__period--now' : ''
+              }`}
+              aria-current={now ? 'step' : undefined}
+            >
+              <span className="reinstate-window__num">Period {p.number}</span>
+              <span className="reinstate-window__range">{p.range}</span>
+              <span className="reinstate-window__status">
+                {STATUS_LABEL[p.status]}
+              </span>
+              {now && <strong className="reinstate-window__now">Now</strong>}
+            </li>
+          )
+        })}
+      </ol>
+      <p className="reinstate-window__end" data-testid="reinstate-window-end">
+        Last chance: {longDate(lastChanceBy)}
+      </p>
+    </figure>
+  )
+}
+
+/** The generic version beside the Can reinstate intro: no club, no "Now".
+ *  It uses the example the rule is written with (Sep 30, 2024). */
 export function ReinstateWindowExample() {
-  return null
+  return (
+    <ReinstateWindow
+      lastChanceBy={EXAMPLE_LAST_CHANCE}
+      caption={`Example: a club suspended ${longDate(EXAMPLE_SUSPENDED_AT)}`}
+    />
+  )
 }
 
-export function ClubReinstateWindow(_props: {
+/** The club page panel, for a suspended or closed club the pipeline gives
+ *  a period. Nothing for a club not in the list or with no period. Not
+ *  collapsible: for these clubs it is what's next. */
+export function ClubReinstateWindow({
+  club,
+}: {
   club: ReinstatableClub | undefined
 }) {
-  return null
+  if (club?.inactivePeriod === undefined || !club.lastChanceBy) return null
+  if (!reinstateWindowPeriods(club.lastChanceBy)) return null
+  return (
+    <section
+      className="club-panel reinstate-window-panel"
+      aria-labelledby="reinstate-window-title"
+      data-testid="club-reinstate-window"
+    >
+      <div className="club-panel__head">
+        <h2 id="reinstate-window-title">Time left to reinstate</h2>
+      </div>
+      <div className="club-panel__body">
+        <ReinstateWindow
+          lastChanceBy={club.lastChanceBy}
+          inactivePeriod={club.inactivePeriod}
+        />
+      </div>
+    </section>
+  )
 }
+
+export default ReinstateWindow

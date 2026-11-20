@@ -1,0 +1,113 @@
+/* Five-period reinstate window (#3111, draft). Legacy palette only (#2080):
+   --ink*, --surface, --line, and the --tm-loyal-blue accent with its -10/-20
+   tints, all remapped under [data-theme='dark']. The club's period is
+   marked by the "Now" text and aria-current; the tint and border only
+   repeat it.
+
+   Phones: one line per period, stacked, text 16px. From 768px: one row of
+   five, the last-chance marker at the right end. */
+
+.reinstate-window {
+  margin: 0 0 1rem;
+  min-width: 0;
+}
+
+.reinstate-window__caption {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.reinstate-window__periods {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.25rem;
+}
+
+.reinstate-window__period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.75rem;
+  row-gap: 0.125rem;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 4px);
+}
+
+.reinstate-window__num {
+  font-weight: 700;
+}
+
+.reinstate-window__range,
+.reinstate-window__status {
+  color: var(--ink-2);
+}
+
+.reinstate-window__period--now {
+  background: var(--tm-loyal-blue-10);
+  border: 2px solid var(--tm-loyal-blue);
+}
+
+.reinstate-window__now {
+  margin-left: auto;
+  padding: 0 0.5rem;
+  font-weight: 700;
+  color: var(--ink);
+  border: 1px solid var(--tm-loyal-blue);
+  border-radius: var(--rt-radius-sm, 2px);
+}
+
+/* The end marker: a heavy rule where the window closes. */
+.reinstate-window__end {
+  margin: 0.5rem 0 0;
+  padding-left: 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+  border-left: 4px solid var(--ink);
+}
+
+@media (min-width: 768px) {
+  .reinstate-window__periods {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .reinstate-window__period {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .reinstate-window__now {
+    margin-left: 0;
+  }
+
+  .reinstate-window__period:last-child {
+    border-right: 4px solid var(--ink);
+  }
+
+  .reinstate-window__end {
+    padding: 0 0.75rem 0 0;
+    text-align: right;
+    border-left: 0;
+    border-right: 4px solid var(--ink);
+  }
+}
+
+/* The club page panel. */
+.reinstate-window-panel {
+  margin-bottom: var(--rt-space-4, 1rem);
+}
+
+.reinstate-window-panel .reinstate-window {
+  margin-bottom: 0;
+}
