@@ -128,6 +128,23 @@ for (const [label, url, child] of [
           'href',
           /\/district\/61\/growth(\?[^#]*)?#growth-reinstate$/
         )
+        if (width < 768) {
+          // Phone rows wrap their counts in full words; nothing is clipped.
+          const clipped = await page
+            .locator('#growth-reinstate .mobile-row__meta')
+            .evaluateAll(
+              els =>
+                els.filter(
+                  e =>
+                    e.scrollWidth > e.clientWidth ||
+                    e.scrollHeight > e.clientHeight
+                ).length
+            )
+          expect(clipped).toBe(0)
+          await expect(
+            page.locator('#growth-reinstate .mobile-row__meta').first()
+          ).toContainText(/add[s]? to the club base/)
+        }
 
         // Every stage drills down to the level below, at the same stage.
         for (const stage of STAGES) {

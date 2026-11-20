@@ -188,4 +188,23 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     })
     expect(row).toHaveAttribute('href', '/district/61/growth#growth-reinstate')
   })
+
+  it('on a phone: the row spells out every count in full words, in a wrapping list', () => {
+    mobile.value = true
+    renderView(reinstate)
+    const section = document.getElementById('growth-reinstate')!
+    const row = within(section).getByRole('link', { name: /^District 61:/ })
+    const meta = row.querySelector('.mobile-row__meta')!
+    const lines = Array.from(
+      meta.querySelectorAll('.rollup-reinstate__meta-line')
+    ).map(l => l.textContent)
+    expect(lines).toEqual([
+      '3 suspended · 2 closed',
+      '3 add to the club base · 1 to confirm with World Headquarters',
+    ])
+    // The CSS hook that lets the meta wrap instead of ellipsizing.
+    expect(section.querySelector('.rollup-reinstate__rows')).toContainElement(
+      row
+    )
+  })
 })

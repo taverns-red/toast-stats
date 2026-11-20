@@ -44,6 +44,8 @@ describe('useScrollToHashWhenReady', () => {
     rerender(true)
     expect(spy).toHaveBeenCalledTimes(1)
     expect(spy.mock.contexts[0]).toHaveProperty('id', 'growth-reinstate')
+    // Instant, so the landing doesn't depend on html smooth-scroll timing.
+    expect(spy).toHaveBeenCalledWith({ behavior: 'instant', block: 'start' })
   })
 
   it('does nothing without a hash', () => {
