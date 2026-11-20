@@ -38,7 +38,6 @@ const reinstate: RollupReinstate = {
   adds: 3,
   unknown: 0,
   card: '3 add to the club base',
-  nextYear: false,
   rows: [
     {
       id: '61',
@@ -167,18 +166,17 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     ).toHaveAttribute('href', 'tel:+17204395050')
   })
 
-  it('names next year’s club base between April 1 and June 30', () => {
-    renderView({
-      ...reinstate,
-      nextYear: true,
-      card: '3 add to next year’s club base',
-    })
+  it('always names this year’s club base, never next year’s (Ron, 2026-11-20)', () => {
+    renderView(reinstate)
     const table = screen.getByTestId('rollup-growth-reinstate-table')
     expect(
       within(table).getByRole('columnheader', {
-        name: 'Adds to next year’s club base',
+        name: 'Adds to the club base',
       })
     ).toBeInTheDocument()
+    expect(document.getElementById('growth-reinstate')).not.toHaveTextContent(
+      /next year/i
+    )
   })
 
   it('a measured zero: the card says 0 and the section says none', () => {

@@ -6,7 +6,7 @@
  * the snapshot date.
  */
 import { describe, expect, it } from 'vitest'
-import { reinstateDeadline } from '../reinstateDeadline'
+import { addsToThisYearsBase, reinstateDeadline } from '../reinstateDeadline'
 
 const SEPT30 = 'suspended_sept30_october_cycle'
 const MAR31 = 'suspended_mar31_before_oct1'
@@ -47,5 +47,32 @@ describe('reinstateDeadline', () => {
 
   it('has no deadline for a date that is not ISO', () => {
     expect(reinstateDeadline(SEPT30, 'Nov 18, 2026')).toBeNull()
+  })
+})
+
+/* Ron, 2026-11-20: always this year's club base. A March 31 suspension adds
+   from July 1 to September 30; from April 1 to June 30 a reinstatement only
+   counts toward next year's base, so it doesn't add, whatever the row's
+   addsToBase flag says. Every other code keeps the pipeline's flag. */
+describe('addsToThisYearsBase', () => {
+  it.each([
+    ['2027-04-01', false],
+    ['2027-05-15', false],
+    ['2027-06-30', false],
+    ['2027-07-01', true],
+    ['2027-09-30', true],
+  ])('a March 31 suspension on %s adds: %s', (snapshot, adds) => {
+    expect(addsToThisYearsBase(MAR31, true, snapshot)).toBe(adds)
+    expect(addsToThisYearsBase(MAR31, false, snapshot)).toBe(adds)
+  })
+
+  it('keeps the pipeline’s flag for every other code', () => {
+    expect(addsToThisYearsBase(SEPT30, true, '2026-11-18')).toBe(true)
+    expect(
+      addsToThisYearsBase('closed_does_not_add', false, '2027-05-15')
+    ).toBe(false)
+    expect(addsToThisYearsBase('some_future_code', true, '2027-05-15')).toBe(
+      true
+    )
   })
 })

@@ -91,7 +91,7 @@ describe('ReinstatableClubsSection', () => {
   })
 
   it('renders nothing when the list was not measured', () => {
-    const { container } = renderSection(null, { baseProgramYear: null })
+    const { container } = renderSection(null)
     expect(container).toBeEmptyDOMElement()
   })
 
@@ -244,18 +244,47 @@ describe('ReinstatableClubsSection', () => {
       )
     })
 
-    it('says "next year’s club base" from April to June', () => {
+    /* Ron, 2026-11-20: always this year's club base. From April to June a
+       March 31 suspension doesn't add to it, whatever the row's addsToBase
+       flag says (the pipeline sets it for next year's base until #3103). */
+    it('April to June: a March 31 suspension doesn’t add to this year’s base', () => {
       renderSection([{ ...spring, suspendDate: '2027-03-31' }], {
-        baseProgramYear: '2027-2028',
         snapshotDate: '2027-04-30',
       })
+      expect(rowFor('Spring Club')).toHaveTextContent(
+        'Suspended at the March 31 renewal. Reinstating it doesn’t change this year’s club base.'
+      )
+      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
+        '0 of 1 add to the club base.'
+      )
+      expect(screen.queryByTestId('growth-reinstate-adds')).toBeNull()
+      const rest = screen.getByTestId('growth-reinstate-rest')
       expect(
-        screen.getByRole('heading', {
-          name: 'Adds to next year’s club base (1)',
+        within(rest).getByRole('heading', {
+          name: 'Doesn’t add to the club base (1)',
         })
       ).toBeInTheDocument()
+      expect(section()).not.toHaveTextContent(/next year/i)
+    })
+
+    it('from July 1: the March 31 suspension adds, by September 30', () => {
+      renderSection([{ ...spring, suspendDate: '2027-03-31' }], {
+        snapshotDate: '2027-07-01',
+      })
       expect(rowFor('Spring Club')).toHaveTextContent(
-        'If it reinstates by September 30, 2027, it adds to next year’s club base.'
+        'Suspended at the March 31 renewal. If it reinstates by September 30, 2027, it adds to the club base.'
+      )
+      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
+        '1 of 1 adds to the club base if it reinstates by September 30, 2027.'
+      )
+    })
+
+    it('June 30: still doesn’t add', () => {
+      renderSection([{ ...spring, suspendDate: '2027-03-31' }], {
+        snapshotDate: '2027-06-30',
+      })
+      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
+        '0 of 1 add to the club base.'
       )
     })
 
@@ -518,16 +547,28 @@ describe('reinstateSplit', () => {
   })
 
   it('counts the recorded D61 clubs that add to the base', () => {
-    expect(reinstateSplit(d61, false)).toEqual({
+    expect(reinstateSplit(d61, '2026-11-18')).toEqual({
       adds: 3,
       card: '3 add to the club base',
     })
   })
 
-  it('uses the singular for one club and names next year’s base', () => {
+  it('uses the singular for one club', () => {
     expect(
-      reinstateSplit([one('suspended_sept30_october_cycle', true)], true)
-    ).toEqual({ adds: 1, card: '1 adds to next year’s club base' })
+      reinstateSplit(
+        [one('suspended_sept30_october_cycle', true)],
+        '2026-11-18'
+      )
+    ).toEqual({ adds: 1, card: '1 adds to the club base' })
+  })
+
+  it('does not count a March 31 suspension from April to June', () => {
+    const spring = {
+      ...one('suspended_mar31_before_oct1', true),
+      suspendDate: '2027-03-31',
+    }
+    expect(reinstateSplit([spring], '2027-05-15').adds).toBe(0)
+    expect(reinstateSplit([spring], '2027-07-01').adds).toBe(1)
   })
 
   it('does not count a club whose effect on the base is not known', () => {
@@ -540,7 +581,7 @@ describe('reinstateSplit', () => {
           one('suspend_date_after_as_of', true),
           one('some_future_code', true),
         ],
-        false
+        '2026-11-18'
       )
     ).toEqual({ adds: 0, card: '0 add to the club base' })
   })
@@ -550,11 +591,11 @@ describe('reinstateSplit', () => {
    world card (#3094). */
 describe('reinstateCard', () => {
   it('is the split alone when every effect is known', () => {
-    expect(reinstateCard(d61, false)).toBe('3 add to the club base')
+    expect(reinstateCard(d61, '2026-11-18')).toBe('3 add to the club base')
   })
 
   it('adds the unknown-effect count when there is one', () => {
-    expect(reinstateCard(d51, false)).toBe(
+    expect(reinstateCard(d51, '2026-11-18')).toBe(
       '0 add to the club base · 1 effect on the club base not known'
     )
   })
