@@ -213,6 +213,61 @@ describe('ReinstatableClubsSection', () => {
       )
     })
 
+    /* #3109 review (F1): an off-cycle suspend date (more than 3 days from
+       March 31 or September 30) gets no deadline-specific Why sentence
+       until Ron approves wording. Its group and the split's date stay. */
+    describe('off-cycle suspend dates', () => {
+      const offCycle = (over: Partial<ReinstatableClub>): ReinstatableClub => ({
+        clubNumber: '7787247',
+        clubName: 'Off Cycle Club',
+        status: 'suspended',
+        suspendDate: '2026-11-11',
+        oldestPeriod: false,
+        addsToBase: true,
+        reason: 'suspended_sept30_october_cycle',
+        ...over,
+      })
+
+      it('a November 11 suspension: no September 30 sentence, still adds by March 31', () => {
+        renderSection([offCycle({})])
+        const row = rowFor('Off Cycle Club')
+        expect(row).toHaveTextContent('Suspended Nov 11, 2026')
+        expect(row).not.toHaveTextContent('September 30 renewal')
+        expect(row).not.toHaveTextContent('reinstates by')
+        expect(
+          within(screen.getByTestId('growth-reinstate-adds')).getByText(
+            'Off Cycle Club'
+          )
+        ).toBeInTheDocument()
+        expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
+          '1 of 1 adds to the club base if it reinstates by March 31, 2027.'
+        )
+      })
+
+      it('a July 1 suspension (28678177): no March 31 sentence', () => {
+        renderSection(
+          [
+            offCycle({
+              clubNumber: '28678177',
+              suspendDate: '2026-07-01',
+              reason: 'suspended_mar31_before_oct1',
+            }),
+          ],
+          { snapshotDate: '2026-08-15' }
+        )
+        expect(rowFor('Off Cycle Club')).not.toHaveTextContent(
+          'March 31 renewal'
+        )
+      })
+
+      it('TI’s day-after stamp (October 1) is on the cycle and keeps its sentence', () => {
+        renderSection([offCycle({ suspendDate: '2026-10-01' })])
+        expect(rowFor('Off Cycle Club')).toHaveTextContent(
+          'Suspended at the September 30 renewal. If it reinstates by March 31, 2027'
+        )
+      })
+    })
+
     it('takes the year from the snapshot date, not the calendar', () => {
       // A deadline year the default fixture date (2026-11-18) can't give.
       renderSection(d61, { snapshotDate: '2027-10-15' })
