@@ -39,6 +39,7 @@ import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
 import {
   fetchCdnClubIndex,
+  fetchCdnReinstatableClubs,
   fetchCdnSuspendedClubs,
   fetchFromCdn,
 } from '../../services/cdn'
@@ -90,6 +91,7 @@ vi.mock('../../services/cdn', () => ({
   cdnAnalyticsUrl: (date: string, districtId: string, type: string) =>
     `https://cdn.test/snapshots/${date}/analytics/district_${districtId}_${type}.json`,
   fetchCdnSuspendedClubs: vi.fn().mockResolvedValue(null),
+  fetchCdnReinstatableClubs: vi.fn(),
   fetchCdnGlobalClubRace: vi.fn().mockResolvedValue(null),
   fetchCdnDates: vi.fn().mockResolvedValue({
     dates: ['2026-11-19'],
@@ -153,6 +155,33 @@ vi.mock('../../hooks/useDistrictAnalytics', () => ({
 const mockedShard = vi.mocked(fetchClubDistrictHistoryShard)
 const mockedClubIndex = vi.mocked(fetchCdnClubIndex)
 const mockedFetchFromCdn = vi.mocked(fetchFromCdn)
+const mockedReinstatable = vi.mocked(fetchCdnReinstatableClubs)
+
+// #3111 — the latest date's reinstatable-clubs.json, with the pipeline's
+// period for the closed club (or without one).
+function reinstatableFile(period?: {
+  inactivePeriod: number
+  lastChanceBy: string
+}) {
+  return {
+    _format: { version: '1.0.0', type: 'reinstatable-clubs' },
+    snapshotDate: '2026-11-19',
+    baseProgramYear: '2026-2027',
+    districts: {
+      '86': [
+        {
+          clubNumber: '28676407',
+          clubName: 'Top Tier Toastmasters',
+          status: 'closed',
+          lastSeen: '2025-06-30',
+          addsToBase: false,
+          reason: 'closed_does_not_add',
+          ...period,
+        },
+      ],
+    },
+  }
+}
 
 afterEach(() => cleanup())
 beforeEach(() => {
@@ -164,6 +193,7 @@ beforeEach(() => {
     throw new Error(`unexpected CDN read ${url}`)
   })
   mockedClubIndex.mockResolvedValue({ clubs: {} })
+  mockedReinstatable.mockResolvedValue(reinstatableFile() as never)
 })
 
 // Where the router is, and how it got there (PUSH, REPLACE or POP).
@@ -306,6 +336,40 @@ describe('ClubDetailPage — a closed club shows its history (#3104)', () => {
     fireEvent.click(screen.getByRole('button', { name: /retry/i }))
     expect(await screen.findByText('Membership Trend')).toBeInTheDocument()
     expect(mockedFetchFromCdn).toHaveBeenCalledTimes(2)
+  })
+
+  /* #3111 — a closed club the pipeline gives a period gets the same
+     "Time left to reinstate" panel as a suspended one. */
+  it('draws the reinstate window for a closed club with a period', async () => {
+    mockedReinstatable.mockResolvedValue(
+      reinstatableFile({
+        inactivePeriod: 5,
+        lastChanceBy: '2027-03-31',
+      }) as never
+    )
+    renderAt('/district/86/club/28676407')
+    const region = await screen.findByRole('region', {
+      name: 'Time left to reinstate',
+    })
+    expect(
+      within(region).getByTestId('reinstate-window-end')
+    ).toHaveTextContent('Last chance: March 31, 2027')
+    const now = within(region)
+      .getAllByRole('listitem')
+      .find(li => li.getAttribute('aria-current') === 'step')
+    expect(now).toHaveTextContent('Period 5')
+    expect(mockedReinstatable).toHaveBeenCalledWith('2026-11-19')
+  })
+
+  it('no reinstate window for a closed club without a period', async () => {
+    renderAt('/district/86/club/28676407')
+    await screen.findByText(
+      'Closed. Last on Toastmasters’ club list: June 30, 2025'
+    )
+    await settle()
+    expect(
+      screen.queryByRole('region', { name: 'Time left to reinstate' })
+    ).toBeNull()
   })
 })
 
