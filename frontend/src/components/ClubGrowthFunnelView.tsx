@@ -98,15 +98,24 @@ export function FunnelStrip({ stages }: { stages: StageSpec[] }) {
               </span>
               <span className="growth-funnel__text">
                 <span className="growth-funnel__label">{s.label}</span>
-                <span
-                  className={
-                    s.value.kind === 'count' && !s.pending
-                      ? 'growth-funnel__value'
-                      : 'growth-funnel__value growth-funnel__value--unknown'
-                  }
-                >
-                  {s.pending ? 'Loading' : valueText(s.value)}
-                </span>
+                {s.pending ? (
+                  // As wide as a 2-digit count, so the text column does not
+                  // rewrap when the number arrives (#3088).
+                  <span className="growth-funnel__value growth-funnel__value--pending">
+                    <span aria-hidden="true">…</span>
+                    <span className="sr-only">Loading</span>
+                  </span>
+                ) : (
+                  <span
+                    className={
+                      s.value.kind === 'count'
+                        ? 'growth-funnel__value'
+                        : 'growth-funnel__value growth-funnel__value--unknown'
+                    }
+                  >
+                    {valueText(s.value)}
+                  </span>
+                )}
                 <span className="growth-funnel__hint">
                   {s.value.kind === 'unknown' ? s.value.reason : s.hint}
                 </span>

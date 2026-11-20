@@ -120,6 +120,13 @@
   color: var(--ink-3);
 }
 
+/* While a value loads (#3088): a 2-digit-wide slot, so the text column keeps
+   its width and the card does not change height when the count arrives. */
+.growth-funnel__value--pending {
+  min-width: 2ch;
+  color: var(--ink-3);
+}
+
 .growth-funnel__hint {
   font-size: 0.8125rem;
   color: var(--ink-3);
