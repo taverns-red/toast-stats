@@ -226,6 +226,19 @@ describe('meetingModeFromText (#1789)', () => {
     }
   )
 
+  // #3083: D61 club 07872266. A negated "in person" is not an in-person word.
+  it.each([
+    ['Online only: greenTMvert.ca<br>NOT in person at City Hall!', 'online'],
+    ['Online only\nNot in-person', 'online'],
+    ['Zoom meetings, no in-person sessions', 'online'],
+    ['En ligne seulement, pas en personne', 'online'],
+    ['En ligne, pas en présentiel', 'online'],
+    ['Library, not online. In person only', 'in-person'],
+  ])('negated location %j → %s', (text, mode) => {
+    expect(meetingModeFromText(text)).toBe(mode)
+    expect(meetingModeFromText(text, { place: true })).toBe(mode)
+  })
+
   it('a plain day/time text with no mode word carries no signal', () => {
     expect(meetingModeFromText('Tuesday 7:00 pm')).toBeUndefined()
     expect(meetingModeFromText('Thursday - Virtual')).toBe('online')
