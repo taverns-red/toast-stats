@@ -592,6 +592,22 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
       expect('area' in club).toBe(false)
     })
 
+    it('a June row from another district (realigned since) adds no division or area', () => {
+      const out = known({
+        snapshotDate: SNAPSHOT,
+        suspended: suspendedList({ '61': [] }),
+        closed: D61_CLOSED,
+        previousSuspended: {
+          ...suspendedList({ '86': [tunneys('B', '15')] }),
+          snapshotDate: '2026-06-30',
+        },
+      })
+      const club = row(out, '3475582')!
+      expect(club.status).toBe('closed')
+      expect('division' in club).toBe(false)
+      expect('area' in club).toBe(false)
+    })
+
     it('a club on two June lists takes the newest list', () => {
       const out = known({
         snapshotDate: '2027-11-17',
