@@ -29,7 +29,9 @@ set -eu
 ZERO='0000000000000000000000000000000000000000'
 
 run_gate() {
-  exec npm run test:unit --workspace=frontend
+  # Cap workers at 2 (#3121): parallel builder pushes overloaded the shared
+  # Mac. Same `unit` project, nothing skipped; CI calls vitest directly.
+  exec npm run test:unit --workspace=frontend -- --maxWorkers=2
 }
 
 # git feeds pre-push one line per ref on stdin:
