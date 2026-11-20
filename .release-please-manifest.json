@@ -1,8 +1,8 @@
 {
-  ".": "2.94.0",
-  "frontend": "3.70.0",
+  ".": "2.95.0",
+  "frontend": "3.71.0",
   "packages/shared-contracts": "1.30.0",
-  "packages/collector-cli": "1.28.0",
+  "packages/collector-cli": "1.28.1",
   "packages/analytics-core": "1.26.0",
   "packages/mcp-server": "0.1.13",
   "videos": "0.1.5"
