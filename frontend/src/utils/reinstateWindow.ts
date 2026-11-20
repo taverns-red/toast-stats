@@ -26,11 +26,6 @@ export interface WindowPeriod {
   status: 'suspended' | 'closed'
 }
 
-/** Draft switch (#3111): period 5 shows one line that merges the approved
- *  period line with the approved "must reinstate by" line. Whether to merge
- *  is Ron's call; set false to show the two lines separately. */
-export const MERGE_PERIOD5_LINE = true
-
 const PERIOD_END = /^(\d{4})-(03-31|09-30)$/
 
 /** "Oct 2024" */
@@ -94,28 +89,23 @@ export function mustReinstateText(lastChanceBy: string): string {
 
 /**
  * The Can reinstate row line, for a row the pipeline gives a period.
- * Pattern approved by Ron (2026-11-20), no full stop after the date:
- * "Period 4 of 5. Last chance: September 30, 2027". Period 5 merges it with {@link mustReinstateText} while
- * {@link MERGE_PERIOD5_LINE} is on; with it off, period 5 shows only that
- * approved sentence, as before #3111. Empty without a period in 1 to 5 or
- * without a date.
+ * Approved by Ron (2026-11-20):
+ * - periods 1 to 4, no full stop after the date: "Period 4 of 5. Last
+ *   chance: September 30, 2027";
+ * - period 5, one line: "Period 5 of 5. Last chance: must reinstate by
+ *   March 31, 2027, or charter as a new club."
+ * Empty without a period in 1 to 5 or without a date.
  */
-export function reinstatePeriodLine(
-  row: {
-    inactivePeriod?: number | undefined
-    lastChanceBy?: string | undefined
-  },
-  { mergePeriod5 = MERGE_PERIOD5_LINE }: { mergePeriod5?: boolean } = {}
-): string {
+export function reinstatePeriodLine(row: {
+  inactivePeriod?: number | undefined
+  lastChanceBy?: string | undefined
+}): string {
   const { inactivePeriod, lastChanceBy } = row
   if (!isWindowPeriod(inactivePeriod) || !lastChanceBy) return ''
   const lead = `Period ${inactivePeriod} of ${WINDOW_PERIODS}.`
-  if (inactivePeriod !== WINDOW_PERIODS) {
-    return `${lead} Last chance: ${formatLongDate(lastChanceBy)}`
-  }
-  return mergePeriod5
+  return inactivePeriod === WINDOW_PERIODS
     ? `${lead} ${mustReinstateText(lastChanceBy)}`
-    : mustReinstateText(lastChanceBy)
+    : `${lead} Last chance: ${formatLongDate(lastChanceBy)}`
 }
 
 /** The Growth page example: suspended at the March 31, 2025 renewal, so

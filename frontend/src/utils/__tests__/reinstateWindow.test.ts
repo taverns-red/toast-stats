@@ -8,7 +8,6 @@
 import { describe, expect, it } from 'vitest'
 import { classifyReinstatement } from '@taverns-red/analytics-core'
 import {
-  MERGE_PERIOD5_LINE,
   reinstatePeriodLine,
   reinstateWindowPeriods,
   reinstateWindowSummary,
@@ -121,16 +120,12 @@ describe('reinstatePeriodLine (the Can reinstate row line)', () => {
     ).toBe('Period 4 of 5. Last chance: September 30, 2027')
   })
 
-  // Review of 09bb8f19c: with the merge off, period 5 keeps only the
-  // approved charter sentence that already ships, never both.
-  it('period 5: one merged line in the draft, the charter sentence alone when the merge is off', () => {
-    const row = { inactivePeriod: 5, lastChanceBy: '2027-03-31' }
-    expect(MERGE_PERIOD5_LINE).toBe(true)
-    expect(reinstatePeriodLine(row)).toBe(
+  // Ron approved the merged period-5 line on 2026-11-20, verbatim.
+  it('period 5: the approved merged line, exactly', () => {
+    expect(
+      reinstatePeriodLine({ inactivePeriod: 5, lastChanceBy: '2027-03-31' })
+    ).toBe(
       'Period 5 of 5. Last chance: must reinstate by March 31, 2027, or charter as a new club.'
-    )
-    expect(reinstatePeriodLine(row, { mergePeriod5: false })).toBe(
-      'Last chance: must reinstate by March 31, 2027, or charter as a new club.'
     )
   })
 

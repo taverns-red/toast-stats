@@ -280,9 +280,9 @@ function groupColumns(
     header: 'Status',
     className: 'growth-reinstate__status',
     cell: c => {
-      // #3111 — "Period 4 of 5. Last chance: September 30, 2027." for a row
+      // #3111 — "Period 4 of 5. Last chance: September 30, 2027" for a row
       // the pipeline gives a period; period 5 carries the approved "must
-      // reinstate by …" line (MERGE_PERIOD5_LINE). No period, no line.
+      // reinstate by …" line in the same sentence. No period, no line.
       const period = reinstatePeriodLine(c)
       return (
         <>
