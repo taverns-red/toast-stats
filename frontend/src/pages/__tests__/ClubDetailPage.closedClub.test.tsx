@@ -17,9 +17,21 @@
  * R22: this is a full-page mount, so it lives in `src/pages/__tests__/`.
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { screen, render, cleanup, within } from '@testing-library/react'
+import {
+  screen,
+  render,
+  cleanup,
+  within,
+  fireEvent,
+} from '@testing-library/react'
 import '@testing-library/jest-dom'
-import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import {
+  MemoryRouter,
+  Routes,
+  Route,
+  useLocation,
+  useNavigationType,
+} from 'react-router-dom'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import type { ClubDistrictHistoryShard } from '@taverns-red/shared-contracts'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
@@ -150,6 +162,17 @@ beforeEach(() => {
   mockedClubIndex.mockResolvedValue({ clubs: {} })
 })
 
+// Where the router is, and how it got there (PUSH, REPLACE or POP).
+const LocationProbe = () => {
+  const { pathname } = useLocation()
+  const type = useNavigationType()
+  return (
+    <div data-testid="loc">
+      {pathname} {type}
+    </div>
+  )
+}
+
 function renderAt(url: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -159,6 +182,7 @@ function renderAt(url: string) {
       <ProgramYearProvider>
         <DarkModeProvider>
           <MemoryRouter initialEntries={[url]}>
+            <LocationProbe />
             <Routes>
               <Route
                 path="/district/:districtId/club/:clubId"
@@ -237,5 +261,40 @@ describe('ClubDetailPage — a closed club shows its history (#3104)', () => {
     expect(await screen.findByText('Club Not Found')).toBeInTheDocument()
     expect(screen.queryByText(/Closed, last on/)).not.toBeInTheDocument()
     expect(mockedFetchFromCdn).not.toHaveBeenCalled()
+  })
+
+  it("replaces a URL naming another district with the club's last one", async () => {
+    renderAt('/district/61/club/28676407')
+
+    expect(
+      await screen.findByText(
+        "Closed, last on Toastmasters' list June 30, 2025"
+      )
+    ).toBeInTheDocument()
+    // One REPLACE navigation: no extra history entry, and the breadcrumb
+    // and hero agree on District 86.
+    expect(screen.getByTestId('loc')).toHaveTextContent(
+      '/district/86/club/28676407 REPLACE'
+    )
+    expect(screen.queryByText('District 61')).not.toBeInTheDocument()
+  })
+
+  it('shows the retry error, and no empty hero line, when the last-date read fails', async () => {
+    mockedFetchFromCdn.mockRejectedValue(new Error('network down'))
+    renderAt('/district/86/club/28676407')
+
+    expect(await screen.findByText('Failed to Load Club')).toBeInTheDocument()
+    const hero = screen.getByRole('banner')
+    expect(
+      within(hero).getByText("Closed, last on Toastmasters' list June 30, 2025")
+    ).toBeInTheDocument()
+    // No area or division: no separators around missing names.
+    expect(hero.querySelectorAll('.club-hero__sub-divider')).toHaveLength(0)
+    expect(within(hero).getByText('District 86')).toBeInTheDocument()
+
+    mockedFetchFromCdn.mockResolvedValue(lastAnalytics)
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }))
+    expect(await screen.findByText('Membership Trend')).toBeInTheDocument()
+    expect(mockedFetchFromCdn).toHaveBeenCalledTimes(2)
   })
 })
