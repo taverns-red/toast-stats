@@ -326,6 +326,7 @@ export function normaliseTiClub(club: TiClub): ClubEnrichment | null {
     meetingDay: club.MeetingDay,
     meetingTime: club.MeetingTime,
     location: club.Location,
+    street: club.Address?.Street,
   })
   if (meetingSchedule) result.meetingSchedule = meetingSchedule
 

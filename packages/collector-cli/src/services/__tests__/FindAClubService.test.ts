@@ -163,6 +163,21 @@ describe('normaliseTiClub', () => {
     ])
   })
 
+  // #3086 — D61 club 00006425: the Location says online, the Street says
+  // it meets in person once a month.
+  it('reads an in-person Street beside an online Location as hybrid (#3086)', () => {
+    const result = normaliseTiClub({
+      ...realClub,
+      Address: {
+        ...realClub.Address,
+        Street: 'In-Person last Thurs. of the month, 350 Legget Dr., room 100',
+      },
+      Location:
+        'Online. Click "Contact Club" above to <br>register and receive a Zoom link. ',
+    })
+    expect(result?.meetingSchedule?.[0]?.mode).toBe('hybrid')
+  })
+
   it('omits location and meetingSchedule when nothing public or parseable is left (#1789)', () => {
     const result = normaliseTiClub({
       ...realClub,
