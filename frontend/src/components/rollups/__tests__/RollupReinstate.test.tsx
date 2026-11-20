@@ -1,0 +1,191 @@
+/**
+ * #3094 — the "Can reinstate" card and its by-district breakdown on the
+ * region and world Club Growth funnels. `reinstate === null` (the date has
+ * no file) shows four cards and no section; a measured zero shows the card
+ * at 0 and says so; otherwise a table on desktop and stacked rows on phones.
+ */
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
+import { cleanup, render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import {
+  RegionRollupsSchema,
+  ReportsRollupsSchema,
+} from '@taverns-red/shared-contracts'
+import { RollupGrowthFunnelView } from '../RollupGrowthFunnelView'
+import { buildRollupGrowthFunnel } from '../../../utils/rollupGrowthFunnel'
+import type { RollupReinstate } from '../../../utils/rollupReinstate'
+import reportsRecorded from '../../../__tests__/fixtures/reports-rollups-2026-10-15.recorded.json'
+import rollupsRecorded from '../../../__tests__/fixtures/region-rollups-2026-10-15.recorded.json'
+
+const mobile = vi.hoisted(() => ({ value: false }))
+vi.mock('../../../hooks/useIsMobile', () => ({
+  useIsMobile: () => mobile.value,
+}))
+
+beforeEach(() => {
+  mobile.value = false
+})
+afterEach(cleanup)
+
+const funnel = buildRollupGrowthFunnel({
+  reports: ReportsRollupsSchema.parse(reportsRecorded),
+  rollups: RegionRollupsSchema.parse(rollupsRecorded),
+  scope: { kind: 'region', regionId: '05' },
+})
+
+const reinstate: RollupReinstate = {
+  count: 7,
+  adds: 3,
+  card: '3 add to the club base',
+  nextYear: false,
+  rows: [
+    {
+      id: '61',
+      label: 'District 61',
+      to: '/district/61/growth#growth-reinstate',
+      suspended: 3,
+      closed: 2,
+      adds: 3,
+      oldest: 1,
+      total: 5,
+    },
+    {
+      id: '86',
+      label: 'District 86',
+      to: '/district/86/growth#growth-reinstate',
+      suspended: 0,
+      closed: 2,
+      adds: 0,
+      oldest: 2,
+      total: 2,
+    },
+  ],
+}
+
+function renderView(r: RollupReinstate | null) {
+  return render(
+    <MemoryRouter>
+      <RollupGrowthFunnelView
+        funnel={funnel}
+        scopeLabel="in Region 05"
+        childNoun="District"
+        asOfDate="2026-11-18"
+        reinstate={r}
+      />
+    </MemoryRouter>
+  )
+}
+
+const strip = () => screen.getByRole('list', { name: 'Club Growth funnel' })
+
+describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
+  it('no file for the date: four cards and no section', () => {
+    renderView(null)
+    expect(within(strip()).getAllByRole('listitem')).toHaveLength(4)
+    expect(document.getElementById('growth-reinstate')).toBeNull()
+  })
+
+  it('a fifth card with the count, the hint and the split, linking to its section', () => {
+    renderView(reinstate)
+    const cards = within(strip()).getAllByRole('listitem')
+    expect(cards).toHaveLength(5)
+    const card = screen.getByTestId('growth-stage-reinstate')
+    expect(card).toHaveTextContent('Can reinstate')
+    expect(card).toHaveTextContent('7')
+    expect(card).toHaveTextContent(
+      'suspended or recently closed clubs that can come back'
+    )
+    expect(card).toHaveTextContent('3 add to the club base')
+    expect(within(card).getByRole('link')).toHaveAttribute(
+      'href',
+      '#growth-reinstate'
+    )
+    expect(document.getElementById('growth-reinstate')).not.toBeNull()
+  })
+
+  it('breaks the count down by district, each linking to its section', () => {
+    renderView(reinstate)
+    const section = document.getElementById('growth-reinstate')!
+    expect(
+      within(section).getByRole('heading', { name: 'Can reinstate (7)' })
+    ).toBeInTheDocument()
+    const table = within(section).getByTestId('rollup-growth-reinstate-table')
+    const headers = within(table)
+      .getAllByRole('columnheader')
+      .map(h => h.textContent)
+    expect(headers).toEqual([
+      'District',
+      'Suspended',
+      'Closed',
+      'Adds to the club base',
+      'Oldest period',
+    ])
+    const rows = within(table).getAllByRole('row').slice(1)
+    expect(rows.map(r => r.textContent)).toEqual([
+      'District 613233',
+      'District 860202',
+    ])
+    expect(
+      within(table).getByRole('link', { name: 'District 61' })
+    ).toHaveAttribute('href', '/district/61/growth#growth-reinstate')
+  })
+
+  it('says Toastmasters decides, links the FAQ and explains the oldest period', () => {
+    renderView(reinstate)
+    const section = document.getElementById('growth-reinstate')!
+    expect(section).toHaveTextContent(
+      'Toastmasters International makes the final call.'
+    )
+    expect(section).toHaveTextContent('3 of 7 add to the club base.')
+    expect(section).toHaveTextContent(/Confirm those with World Headquarters/)
+    const link = within(section).getByRole('link', {
+      name: /Club Reinstatement FAQ/,
+    })
+    expect(link).toHaveAttribute(
+      'href',
+      'https://toastmasters.org/footer/faq/Club'
+    )
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+
+  it('names next year’s club base between April 1 and June 30', () => {
+    renderView({
+      ...reinstate,
+      nextYear: true,
+      card: '3 add to next year’s club base',
+    })
+    const table = screen.getByTestId('rollup-growth-reinstate-table')
+    expect(
+      within(table).getByRole('columnheader', {
+        name: 'Adds to next year’s club base',
+      })
+    ).toBeInTheDocument()
+  })
+
+  it('a measured zero: the card says 0 and the section says none', () => {
+    renderView({
+      ...reinstate,
+      count: 0,
+      adds: 0,
+      card: '0 add to the club base',
+      rows: [],
+    })
+    expect(screen.getByTestId('growth-stage-reinstate')).toHaveTextContent('0')
+    const section = document.getElementById('growth-reinstate')!
+    expect(section).toHaveTextContent(
+      'No suspended or recently closed clubs can reinstate right now.'
+    )
+    expect(screen.queryByTestId('rollup-growth-reinstate-table')).toBeNull()
+  })
+
+  it('on a phone: stacked rows with the full counts, no table', () => {
+    mobile.value = true
+    renderView(reinstate)
+    const section = document.getElementById('growth-reinstate')!
+    expect(within(section).queryByRole('table')).toBeNull()
+    const row = within(section).getByRole('link', {
+      name: 'District 61: 5 can reinstate, 3 suspended, 2 closed, 3 add to the club base, 1 in the oldest period',
+    })
+    expect(row).toHaveAttribute('href', '/district/61/growth#growth-reinstate')
+  })
+})
