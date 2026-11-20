@@ -187,10 +187,10 @@ describe('ReinstatableClubsSection', () => {
     })
   })
 
-  it('keeps main’s approved intro until Ron approves new wording (#3109 review)', () => {
+  it('opens with Ron’s approved five-period intro (2026-11-20, #3103)', () => {
     renderSection(d61)
     expect(section()).toHaveTextContent(
-      'Suspended clubs, and clubs closed in the past four renewal periods, can reinstate. Toastmasters International makes the final call.'
+      'A suspended or closed club can reinstate until the end of its fifth renewal period, counting the period it was suspended in. Toastmasters International makes the final call.'
     )
   })
 
