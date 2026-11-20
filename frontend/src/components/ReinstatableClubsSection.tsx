@@ -56,8 +56,7 @@ const REASON_TEXT: Record<string, string> = {
     'Suspended at the September 30 renewal. The FAQ says: “Reinstatement during the October renewal cycle will increase the club base.”',
   suspended_mar31_before_oct1:
     'Suspended at the March 31 renewal. The FAQ says reinstating before October 1 increases the club base.',
-  suspended_mar31_after_oct1:
-    'Suspended at the March 31 renewal. The FAQ says the club closes on October 1, and a reinstatement after that “will not increase the club base.” So reinstating it adds to net club growth.',
+  suspended_mar31_after_oct1: `Suspended at the March 31 renewal. The FAQ says the club closes on October 1, and a reinstatement after that “will not increase the club base.” ${ADDS_NET_GROWTH}`,
   suspended_sept30_past_october_cycle: `Suspended at the September 30 renewal, and the October renewal cycle after it has ended. The club has likely closed by now, so reinstating won’t add to the club base. ${ADDS_NET_GROWTH} ${CONFIRM}`,
   suspend_date_unexpected: `The suspension date isn’t at the end of a renewal period, so we can’t tell. ${CONFIRM}`,
   suspend_date_after_as_of: `The suspension date is after this snapshot’s date, so we can’t tell. ${CONFIRM}`,
