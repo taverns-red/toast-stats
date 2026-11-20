@@ -355,8 +355,9 @@ export const ReinstatableClubsSection: React.FC<
         Can reinstate ({clubs.length})
       </h3>
       <p className="growth-stage__note">
-        Suspended clubs, and clubs closed in the past four renewal periods, can
-        reinstate. Toastmasters International makes the final call.
+        A suspended or closed club can reinstate until the end of its fifth
+        renewal period, counting the period it was suspended in. Toastmasters
+        International makes the final call.
       </p>
       {clubs.length > 0 && (
         <p className="growth-stage__note" data-testid="growth-reinstate-split">
