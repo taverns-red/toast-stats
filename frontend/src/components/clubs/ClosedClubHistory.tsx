@@ -24,6 +24,7 @@ import { ClubDCPGoalsPanel } from '../ClubDCPGoalsPanel'
 import { ChartSparklineExpand } from '../ChartSparklineExpand'
 import { MembershipHeadline } from './MembershipHeadline'
 import { LoadingSkeleton } from '../LoadingSkeleton'
+import { ErrorDisplay } from '../ErrorDisplay'
 import { MobileRowList } from '../MobileRowList'
 
 export interface ClosedClubHistoryProps {
@@ -54,9 +55,13 @@ export const ClosedClubHistory: React.FC<ClosedClubHistoryProps> = ({
   lastSeenDate,
   programYear,
 }) => {
-  const { data: analytics, isPending } = useQuery(
-    districtAnalyticsFileQueryOptions(districtId, lastSeenDate)
-  )
+  const {
+    data: analytics,
+    isPending,
+    isError,
+    error,
+    refetch,
+  } = useQuery(districtAnalyticsFileQueryOptions(districtId, lastSeenDate))
   const club = useMemo(
     () => analytics?.allClubs?.find(c => clubIdsMatch(c.clubId, clubId)),
     [analytics, clubId]
@@ -200,6 +205,16 @@ export const ClosedClubHistory: React.FC<ClosedClubHistoryProps> = ({
             />
           </div>
         </>
+      ) : isError ? (
+        // The page's own failed-read state (#1104), with its retry.
+        <ErrorDisplay
+          error={error ?? 'Failed to load club data'}
+          title="Failed to Load Club"
+          onRetry={() => {
+            refetch()
+          }}
+          showDetails={true}
+        />
       ) : null}
 
       <div className="club-panels-grid">
