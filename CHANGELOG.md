@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.96.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.95.0...toast-stats-v2.96.0) (2026-11-20)
+
+
+### Features
+
+* **ui:** add a Can reinstate card to the Club Growth stages ([#3088](https://github.com/taverns-red/toast-stats/issues/3088)) ([#3090](https://github.com/taverns-red/toast-stats/issues/3090)) ([1af15ac](https://github.com/taverns-red/toast-stats/commit/1af15acf5efa4789e57ea49bf049df6292ee8ea7))
+
+
+### Bug Fixes
+
+* **ui:** label the club counts in the Prospective summary ([#3089](https://github.com/taverns-red/toast-stats/issues/3089)) ([#3091](https://github.com/taverns-red/toast-stats/issues/3091)) ([8c205ff](https://github.com/taverns-red/toast-stats/commit/8c205ff19fb2d41a51f376de33ebafa884d8f44e))
+
 ## [2.95.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.94.0...toast-stats-v2.95.0) (2026-11-20)
 
 
