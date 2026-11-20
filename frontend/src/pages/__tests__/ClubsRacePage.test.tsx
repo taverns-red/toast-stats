@@ -225,3 +225,15 @@ describe('ClubsRacePage — phone context bar (#1831)', () => {
     ).toEqual(['Clubs worldwide', 'First to Select Distinguished'])
   })
 })
+
+describe('ClubsRacePage — prose links look like links (#2657 REF-07)', () => {
+  beforeEach(() => vi.mocked(useGlobalClubRace).mockReset())
+
+  it('"Back to the overview" uses the underlined prose-link style', () => {
+    mockHook({ race: RACE, snapshotDate: '2026-09-11' })
+    renderAt('/clubs/race/distinguished')
+    expect(
+      screen.getByRole('link', { name: 'Back to the overview' })
+    ).toHaveClass('methodology-link')
+  })
+})
