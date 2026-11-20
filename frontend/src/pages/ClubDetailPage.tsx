@@ -1,5 +1,11 @@
 import React, { useMemo, useState } from 'react'
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
+import {
+  useParams,
+  useNavigate,
+  useLocation,
+  Link,
+  Navigate,
+} from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 // One shared definition of "the same club" (#1440) — this file used to hold
 // two comparisons that disagreed with each other sixteen lines apart.
@@ -74,6 +80,10 @@ import { MobileRowList } from '../components/MobileRowList'
 import { ClubRecentChanges } from '../components/clubs/ClubRecentChanges'
 import { ClubRiskFactors } from '../components/clubs/ClubRiskFactors'
 import { buildClubMeetingInfo, meetingWhen } from '../utils/clubMeetingInfo'
+import { closedClubSummary } from '../utils/clubDistrictHistory'
+import { getProgramYearForDate } from '../utils/programYear'
+import { toSnapshotDate } from '../types/snapshotDate'
+import { ClosedClubHistory } from '../components/clubs/ClosedClubHistory'
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 
@@ -307,10 +317,25 @@ const ClubDetailPage: React.FC = () => {
     isTargetElsewhere ||
     (needsDistrictResolution && isLoadingHistory)
 
+  // #3104 — a club the history says has closed (its last span ended) is in
+  // no current file, so the page shows its last program year instead. The
+  // date and program year come from the history's last sighting (R3: passed
+  // to the view as props, not re-derived there).
+  const closed =
+    !club && clubDistrictHistory ? closedClubSummary(clubDistrictHistory) : null
+  const closedLastSeen = closed ? toSnapshotDate(closed.lastSeen) : undefined
+  const isClosedClub = !!closed && !!closedLastSeen
+
   // The current-district index, only when the history could not place the
   // club elsewhere for this year (#1804): it then says where the club is now.
+  // #3104 — never for a closed club: the index is built from the newest
+  // snapshot, so it cannot list one.
   const isClubIndexEnabled =
-    !!clubId && isClubAbsentHere && !isLoadingHistory && !isTargetElsewhere
+    !!clubId &&
+    isClubAbsentHere &&
+    !isLoadingHistory &&
+    !isTargetElsewhere &&
+    !isClosedClub
   const { data: clubIndex, isError: isClubIndexError } = useQuery({
     queryKey: ['club-index'],
     queryFn: fetchCdnClubIndex,
@@ -554,7 +579,13 @@ const ClubDetailPage: React.FC = () => {
 
   // Per-route title (#780): club + district, falling back to the branded
   // default while the club is still loading or absent.
-  useDocumentTitle(club ? `${club.clubName} — ${districtName}` : null)
+  useDocumentTitle(
+    club
+      ? `${club.clubName} — ${districtName}`
+      : isClosedClub && clubDistrictHistory
+        ? `${clubDistrictHistory.name} — ${districtName}`
+        : null
+  )
 
   // #1804 — the banner when the page shows another district's data than
   // its URL names (the breadcrumb keeps following the URL).
@@ -753,6 +784,85 @@ const ClubDetailPage: React.FC = () => {
   //      offer the link
   //   3. anything else (absent from the index, index unreachable, index agrees
   //      with this district) → the pre-existing cautious copy
+
+  // #3104 — a closed club: its last program year, under the URL's chrome.
+  if (
+    !club &&
+    isClubAbsentHere &&
+    closed &&
+    closedLastSeen &&
+    clubDistrictHistory
+  ) {
+    // A link can name a district the club was never last in: one REPLACE
+    // to its last district, so the breadcrumb, title and hero agree and
+    // the back button skips the wrong URL.
+    if (!sameDistrictId(closed.lastDistrictId, urlDistrictId ?? '')) {
+      return (
+        <Navigate
+          replace
+          to={`/district/${closed.lastDistrictId}/club/${clubId}`}
+        />
+      )
+    }
+    const name = clubDistrictHistory.name
+    return (
+      <ErrorBoundary>
+        <div className="min-h-screen">
+          <div className="mx-auto max-w-[1280px] px-4 pb-4 sm:px-6 sm:pb-6 md:pt-6 [--context-bar-bleed:16px] sm:[--context-bar-bleed:24px]">
+            <ContextBar
+              title={name}
+              back={parent}
+              about="This club has closed. The page shows its last program year on Toastmasters' list."
+              trail={[
+                { label: 'Districts', to: '/' },
+                { label: districtName, to: `/district/${urlDistrictId}` },
+                parent,
+                { label: name },
+              ]}
+            />
+            <SubpageBreadcrumb
+              crumbs={[
+                { label: districtName, to: `/district/${urlDistrictId}` },
+                parent,
+                { label: name },
+              ]}
+            />
+            <ClosedClubHistory
+              clubId={clubId ?? ''}
+              history={clubDistrictHistory}
+              districtId={closed.lastDistrictId}
+              lastSeenDate={closedLastSeen}
+              programYear={getProgramYearForDate(closedLastSeen)}
+            />
+            <ClubMemberDataNote />
+            <Link
+              to={parent.to}
+              className="club-back-link"
+              data-testid="club-back-link"
+            >
+              <svg
+                className="club-back-link__icon"
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M10 13L5 8l5-5"
+                />
+              </svg>
+              Back to {parent.label}
+            </Link>
+          </div>
+        </div>
+      </ErrorBoundary>
+    )
+  }
 
   // Unresolved = enabled, but neither settled to data nor to an error yet.
   // Deliberately NOT `isFetching`: on the render where `enabled` flips true the

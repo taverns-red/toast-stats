@@ -2258,6 +2258,15 @@
     color: rgba(255, 255, 255, 0.4);
   }
 
+  /* #3104 — a closed club's line under the name, on the fixed loyal-blue
+     hero (same in both themes); white from .club-hero. */
+  .club-hero__closed {
+    margin: 0 0 6px;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 16px;
+  }
+
   /* #2646 (UNIT-07): Area and Division are links to their pages. On the fixed
      loyal-blue hero (same in both themes): the sub-line's white, underlined
      so a link reads as one. The 44px touch floor (base.css) stays: the box
@@ -2974,6 +2983,14 @@
      Lifecycle timeline takes its own full-width row below them, so it is
      never stretched to a taller neighbour's height. Two fixed columns, not
      auto-fit: at 1280 auto-fit made room for a third. */
+  /* #3104 — a closed club's trend and DCP panels, one column. */
+  .club-closed-stack {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
   .club-panels-grid {
     display: grid;
     grid-template-columns: 1fr;

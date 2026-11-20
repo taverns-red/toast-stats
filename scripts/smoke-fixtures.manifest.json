@@ -87,6 +87,10 @@
       "optional": true
     },
     {
+      "path": "snapshots/2025-06-30/analytics/district_{district}_analytics.json",
+      "districts": ["86"]
+    },
+    {
       "path": "snapshots/2026-08-15/all-districts-rankings.json"
     },
     {
