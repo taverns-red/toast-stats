@@ -151,24 +151,18 @@ describe('ReinstatableClubsSection', () => {
       expect(screen.queryByTestId('growth-reinstate-unknown')).toBeNull()
     })
 
-    it('gives the unknown-effect clubs their own group, after the adds', () => {
+    it('has no unknown-effect group: the pipeline’s answer decides (#3103)', () => {
+      // Ron, 2026-11-20: the pipeline always places a suspension. An older
+      // file's suspend_date_unexpected row (addsToBase false) folds with
+      // the clubs that don't add.
       const adding: ReinstatableClub = { ...d61[0]!, clubNumber: '77' }
       renderSection([...d51, adding])
-      const unknown = screen.getByTestId('growth-reinstate-unknown')
+      expect(screen.queryByTestId('growth-reinstate-unknown')).toBeNull()
+      expect(section()).not.toHaveTextContent('not known')
+      const rest = screen.getByTestId('growth-reinstate-rest')
       expect(
-        within(unknown).getByRole('heading', {
-          name: 'Effect on the club base not known (1)',
-        })
+        within(rest).getByText('HELP Synergy Toastmasters Club')
       ).toBeInTheDocument()
-      expect(
-        within(unknown).getByText('HELP Synergy Toastmasters Club')
-      ).toBeInTheDocument()
-      const adds = screen.getByTestId('growth-reinstate-adds')
-      expect(
-        adds.compareDocumentPosition(unknown) & Node.DOCUMENT_POSITION_FOLLOWING
-      ).toBeTruthy()
-      // No folded group when every club adds or is unknown.
-      expect(screen.queryByTestId('growth-reinstate-rest')).toBeNull()
     })
 
     it('says the closed-club reason once, not on every folded row', () => {
@@ -181,18 +175,24 @@ describe('ReinstatableClubsSection', () => {
       )
     })
 
-    it('marks clubs in the oldest renewal period "Confirm with World Headquarters"', () => {
+    it('prints nothing about an oldest period, even from an older file that flags one (#3103)', () => {
+      // Five periods now (Ron, 2026-11-20); files written before #3103
+      // still set oldestPeriod on 9 of these rows.
       renderSection(d61)
-      expect(rowFor('Club Le Marquis')).toHaveTextContent(
+      expect(d61.filter(c => c.oldestPeriod)).toHaveLength(9)
+      expect(section()).not.toHaveTextContent(/oldest/i)
+      expect(rowFor('Club Le Marquis')).not.toHaveTextContent(
         'Confirm with World Headquarters'
       )
-      const oldest = d61.filter(c => c.oldestPeriod).length
-      expect(oldest).toBe(9)
-      const flagged = bodyRows().filter(r =>
-        r.textContent?.includes('Confirm with World Headquarters')
-      )
-      expect(flagged).toHaveLength(oldest)
     })
+  })
+
+  it('says closed clubs within five renewal periods of their suspension can reinstate (#3103)', () => {
+    renderSection(d61)
+    expect(section()).toHaveTextContent(
+      'closed clubs within five renewal periods of their suspension'
+    )
+    expect(section()).not.toHaveTextContent('four renewal periods')
   })
 
   describe('deadline (M1)', () => {
@@ -301,11 +301,11 @@ describe('ReinstatableClubsSection', () => {
     })
   })
 
-  it('counts the clubs whose effect is not known in the split (S6)', () => {
+  it('the split never counts an unknown effect (#3103)', () => {
     renderSection(d51)
-    expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
-      '0 of 1 add to the club base. 1 effect on the club base not known.'
-    )
+    const split = screen.getByTestId('growth-reinstate-split')
+    expect(split).toHaveTextContent('0 of 1 add to the club base.')
+    expect(split).not.toHaveTextContent('not known')
   })
 
   it('shows no split for an empty list (#3088)', () => {
@@ -368,7 +368,7 @@ describe('ReinstatableClubsSection', () => {
 
   describe('every reason code the pipeline can list', () => {
     const CONFIRM = 'Confirm with World Headquarters.'
-    const NOT_KNOWN = 'Effect on the club base not known'
+    const NOT_KNOWN = 'not known'
     const ADDS = 'Adds to the club base'
     const DOESNT = 'Doesn’t add to the club base'
 
@@ -430,15 +430,23 @@ describe('ReinstatableClubsSection', () => {
         tag: DOESNT,
         why: 'has likely closed',
       },
+      // #3103: emitted now only for an unparseable date; older files keep it.
       suspend_date_unexpected: {
         row: { suspendDate: '2026-06-15' },
-        tag: NOT_KNOWN,
+        tag: DOESNT,
         why: 'isn’t at the end of a renewal period',
       },
       suspend_date_after_as_of: {
         row: { suspendDate: '2026-12-31' },
-        tag: NOT_KNOWN,
+        tag: DOESNT,
         why: 'after this snapshot’s date',
+      },
+      // #3103: the pipeline's code for a March 31 suspension seen April to
+      // June. Same sentence #3100 shows for that window.
+      suspended_mar31_before_july1: {
+        row: { suspendDate: '2026-03-31' },
+        tag: DOESNT,
+        why: 'Reinstating it doesn’t change this year’s club base.',
       },
       closed_does_not_add: {
         row: {
@@ -461,14 +469,14 @@ describe('ReinstatableClubsSection', () => {
       }
     )
 
-    it('an unknown code (a later release) says the effect is not known', () => {
+    it('an unknown code (a later release) follows the pipeline’s addsToBase and asks to confirm (#3103)', () => {
       const tr = renderOne(club('some_future_code', { addsToBase: true }))
-      expect(section()).toHaveTextContent(`${NOT_KNOWN} (1)`)
-      expect(section()).not.toHaveTextContent(ADDS)
+      expect(section()).toHaveTextContent(`${ADDS} (1)`)
+      expect(section()).not.toHaveTextContent(NOT_KNOWN)
       expect(confirmCount(tr)).toBe(1)
     })
 
-    it('an unknown code in the oldest period says "Confirm with World Headquarters" once', () => {
+    it('an unknown code flagged oldestPeriod by an older file says "Confirm" once and nothing about the period (#3103)', () => {
       const tr = renderOne(
         club('some_future_code', {
           status: 'closed',
@@ -477,8 +485,8 @@ describe('ReinstatableClubsSection', () => {
           oldestPeriod: true,
         })
       )
-      expect(section()).toHaveTextContent(NOT_KNOWN)
-      expect(tr).toHaveTextContent('oldest of the four renewal periods')
+      expect(section()).toHaveTextContent(`${DOESNT} (1)`)
+      expect(tr).not.toHaveTextContent(/oldest/i)
       expect(confirmCount(tr)).toBe(1)
     })
 
@@ -569,19 +577,18 @@ describe('reinstateSplit', () => {
     expect(reinstateSplit([spring], '2027-07-01').adds).toBe(1)
   })
 
-  it('does not count a club whose effect on the base is not known', () => {
-    // Same rule as the table's tag: an undecided or unknown reason code is
-    // "Effect on the club base not known", even if addsToBase is true.
+  it('counts the pipeline’s addsToBase, whatever the reason code (#3103)', () => {
     expect(
       reinstateSplit(
         [
           one('suspend_date_unexpected', true),
-          one('suspend_date_after_as_of', true),
+          one('suspend_date_after_as_of', false),
           one('some_future_code', true),
+          one('suspended_mar31_before_july1', false),
         ],
         '2026-11-18'
       )
-    ).toEqual({ adds: 0, card: '0 add to the club base' })
+    ).toEqual({ adds: 2, card: '2 add to the club base' })
   })
 })
 
@@ -592,9 +599,7 @@ describe('reinstateCard', () => {
     expect(reinstateCard(d61, '2026-11-18')).toBe('3 add to the club base')
   })
 
-  it('adds the unknown-effect count when there is one', () => {
-    expect(reinstateCard(d51, '2026-11-18')).toBe(
-      '0 add to the club base · 1 effect on the club base not known'
-    )
+  it('never adds an unknown-effect count (#3103)', () => {
+    expect(reinstateCard(d51, '2026-11-18')).toBe('0 add to the club base')
   })
 })

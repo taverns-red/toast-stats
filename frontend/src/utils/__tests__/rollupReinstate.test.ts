@@ -96,8 +96,6 @@ describe('buildRollupReinstate', () => {
         suspended: 2,
         closed: 2,
         adds: 2,
-        oldest: 1,
-        unknown: 0,
         total: 4,
       },
       {
@@ -107,8 +105,6 @@ describe('buildRollupReinstate', () => {
         suspended: 1,
         closed: 0,
         adds: 0,
-        oldest: 0,
-        unknown: 0,
         total: 1,
       },
     ])
@@ -140,44 +136,34 @@ describe('buildRollupReinstate', () => {
     expect(r.count).toBe(1)
   })
 
-  it('counts the clubs in the oldest renewal period', () => {
+  it('keeps no oldest-period or unknown-effect counts (#3103)', () => {
+    // Ron's ruling (2026-11-20): five periods, and the pipeline always
+    // decides the effect on the club base. An older file still flags
+    // oldestPeriod; it is ignored.
     const r = build(
-      file({
-        '61': [
-          closed({ oldestPeriod: true }),
-          closed({ oldestPeriod: true }),
-          closed(),
-        ],
-      }),
+      file({ '61': [closed({ oldestPeriod: true }), closed()] }),
       'all'
     )!
-    expect(r.rows[0]!.oldest).toBe(2)
+    expect(r).not.toHaveProperty('unknown')
+    expect(r.rows[0]).not.toHaveProperty('oldest')
+    expect(r.rows[0]).not.toHaveProperty('unknown')
   })
 
-  it('uses the district card’s rule: an undecided reason never adds', () => {
+  it('uses the district card’s rule: the pipeline’s addsToBase, whatever the code (#3103)', () => {
     const r = build(
       file({
         '61': [
           club({ reason: 'suspend_date_unexpected', addsToBase: true }),
           club({ reason: 'a_code_from_a_later_release', addsToBase: true }),
+          club({ reason: 'suspended_mar31_before_july1', addsToBase: false }),
           club(),
         ],
       }),
       'all'
     )!
-    expect(r.adds).toBe(1)
-    // The clubs whose effect isn't known are counted, not dropped (S6).
-    expect(r.unknown).toBe(2)
-    expect(r.rows[0]!.unknown).toBe(2)
-    expect(r.card).toBe(
-      '1 adds to the club base · 2 effect on the club base not known'
-    )
-  })
-
-  it('says nothing about an unknown effect when every effect is known', () => {
-    const r = build(file({ '61': [club(), closed()] }), 'all')!
-    expect(r.unknown).toBe(0)
-    expect(r.card).toBe('1 adds to the club base')
+    expect(r.adds).toBe(3)
+    expect(r.rows[0]!.adds).toBe(3)
+    expect(r.card).toBe('3 add to the club base')
   })
 
   it('sorts by adds to the club base, then total, then district number', () => {

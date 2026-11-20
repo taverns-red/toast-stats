@@ -36,7 +36,6 @@ const funnel = buildRollupGrowthFunnel({
 const reinstate: RollupReinstate = {
   count: 7,
   adds: 3,
-  unknown: 0,
   card: '3 add to the club base',
   rows: [
     {
@@ -46,8 +45,6 @@ const reinstate: RollupReinstate = {
       suspended: 3,
       closed: 2,
       adds: 3,
-      oldest: 1,
-      unknown: 0,
       total: 5,
     },
     {
@@ -57,8 +54,6 @@ const reinstate: RollupReinstate = {
       suspended: 0,
       closed: 2,
       adds: 0,
-      oldest: 2,
-      unknown: 0,
       total: 2,
     },
   ],
@@ -120,26 +115,29 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
       'Suspended',
       'Closed',
       'Adds to the club base',
-      'Oldest period',
     ])
     const rows = within(table).getAllByRole('row').slice(1)
     expect(rows.map(r => r.textContent)).toEqual([
-      'District 613231',
-      'District 860202',
+      'District 61323',
+      'District 86020',
     ])
     expect(
       within(table).getByRole('link', { name: 'District 61' })
     ).toHaveAttribute('href', '/district/61/growth#growth-reinstate')
   })
 
-  it('says Toastmasters decides, links the FAQ and explains the oldest period', () => {
+  it('says Toastmasters decides and links the FAQ, with no oldest period (#3103)', () => {
     renderView(reinstate)
     const section = document.getElementById('growth-reinstate')!
     expect(section).toHaveTextContent(
       'Toastmasters International makes the final call.'
     )
     expect(section).toHaveTextContent('3 of 7 add to the club base.')
-    expect(section).toHaveTextContent(/Confirm those with World Headquarters/)
+    expect(section).toHaveTextContent(
+      'closed clubs within five renewal periods of their suspension'
+    )
+    expect(section).not.toHaveTextContent('four renewal periods')
+    expect(section).not.toHaveTextContent(/oldest/i)
     const link = within(section).getByRole('link', {
       name: /Club Reinstatement FAQ/,
     })
@@ -201,14 +199,14 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     const section = document.getElementById('growth-reinstate')!
     expect(within(section).queryByRole('table')).toBeNull()
     const row = within(section).getByRole('link', {
-      name: 'District 61: 3 add to the club base, 5 can reinstate, 3 suspended, 2 closed, 1 oldest period',
+      name: 'District 61: 3 add to the club base, 5 can reinstate, 3 suspended, 2 closed',
     })
     expect(row).toHaveAttribute('href', '/district/61/growth#growth-reinstate')
     expect(row.querySelector('.mobile-row__title')).toHaveTextContent(
       'District 61 — 3 add to the club base'
     )
     expect(row.querySelector('.mobile-row__meta')).toHaveTextContent(
-      '5 can reinstate · 3 suspended · 2 closed · 1 oldest period'
+      '5 can reinstate · 3 suspended · 2 closed'
     )
     // The large number is the sort key (adds), never the total.
     expect(row.querySelector('.mobile-row__chip')).toBeNull()
@@ -218,51 +216,7 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     )
   })
 
-  it('on a phone: counts the clubs whose effect isn’t known, only when there are some', () => {
-    mobile.value = true
-    renderView({
-      ...reinstate,
-      unknown: 1,
-      rows: [{ ...reinstate.rows[0]!, unknown: 1 }, reinstate.rows[1]!],
-    })
-    const section = document.getElementById('growth-reinstate')!
-    const [first, second] = within(section).getAllByRole('link', {
-      name: /^District \d+:/,
-    })
-    expect(first!.querySelector('.mobile-row__meta')).toHaveTextContent(
-      '5 can reinstate · 3 suspended · 2 closed · 1 oldest period · 1 effect on the club base not known'
-    )
-    expect(second!.querySelector('.mobile-row__meta')).not.toHaveTextContent(
-      'not known'
-    )
-  })
-
-  it('desktop: an unknown-effect column only when a row has one', () => {
-    renderView({
-      ...reinstate,
-      unknown: 1,
-      rows: [{ ...reinstate.rows[0]!, unknown: 1 }, reinstate.rows[1]!],
-    })
-    const table = screen.getByTestId('rollup-growth-reinstate-table')
-    expect(
-      within(table).getByRole('columnheader', {
-        name: 'Effect on the club base not known',
-      })
-    ).toBeInTheDocument()
-    expect(
-      within(table)
-        .getAllByRole('row')
-        .slice(1)
-        .map(r => r.textContent)
-    ).toEqual(['District 6132311', 'District 8602020'])
-    expect(
-      screen.getByTestId('rollup-growth-reinstate-split')
-    ).toHaveTextContent(
-      '3 of 7 add to the club base. 1 effect on the club base not known.'
-    )
-  })
-
-  it('desktop: no unknown-effect column when every effect is known', () => {
+  it('never mentions an unknown effect on the club base, on a desktop or a phone (#3103)', () => {
     renderView(reinstate)
     const table = screen.getByTestId('rollup-growth-reinstate-table')
     expect(
@@ -270,5 +224,13 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
         name: 'Effect on the club base not known',
       })
     ).toBeNull()
+    expect(
+      screen.getByTestId('rollup-growth-reinstate-split')
+    ).not.toHaveTextContent('not known')
+    cleanup()
+    mobile.value = true
+    renderView(reinstate)
+    const section = document.getElementById('growth-reinstate')!
+    expect(section).not.toHaveTextContent('not known')
   })
 })
