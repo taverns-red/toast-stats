@@ -507,12 +507,54 @@ describe('ReinstatableClubsSection', () => {
       expect(rowFor('Period Club')).toHaveTextContent(LINE)
     })
 
-    it('a period-4 row and a row with no period never say it', () => {
+    it('a row with no period never says it', () => {
       renderSection([
-        closedRow({ inactivePeriod: 4, lastChanceBy: '2027-09-30' }),
         closedRow({ clubNumber: '9547', clubName: 'No Period Club' }),
       ])
       expect(section()).not.toHaveTextContent('Last chance')
+      expect(section()).not.toHaveTextContent(/Period \d of 5/)
+    })
+
+    /* #3111 — Ron approved "Period 5 of 5. Last chance: March 31, 2027" for
+       every row with a period. For the draft, period 5 merges it with the
+       line above into one: "Period 5 of 5. Last chance: must reinstate by
+       …, or charter as a new club." */
+    it('a period-4 row says its period and last chance', () => {
+      renderSection([
+        closedRow({ inactivePeriod: 4, lastChanceBy: '2027-09-30' }),
+      ])
+      expect(rowFor('Period Club')).toHaveTextContent(
+        'Period 4 of 5. Last chance: September 30, 2027.'
+      )
+      expect(rowFor('Period Club')).not.toHaveTextContent('charter')
+    })
+
+    it('a period-5 row says it once, in one line', () => {
+      renderSection([
+        closedRow({ inactivePeriod: 5, lastChanceBy: '2027-03-31' }),
+      ])
+      const row = rowFor('Period Club')
+      expect(row).toHaveTextContent(`Period 5 of 5. ${LINE}`)
+      expect(row.textContent?.split('Last chance').length).toBe(2)
+    })
+  })
+
+  /* #3111 — the generic window sits with the intro, before the lists. */
+  describe('the five-period example', () => {
+    it('follows the intro and comes before the club lists', () => {
+      renderSection(d61)
+      const example = within(section()).getByTestId('reinstate-window')
+      expect(example).toHaveTextContent('Period 1')
+      expect(example).not.toHaveTextContent('Now')
+      const adds = within(section()).getByTestId('growth-reinstate-adds')
+      expect(
+        example.compareDocumentPosition(adds) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
+    })
+
+    it('is not drawn when the date has no list', () => {
+      renderSection(null)
+      expect(screen.queryByTestId('reinstate-window')).toBeNull()
     })
   })
 

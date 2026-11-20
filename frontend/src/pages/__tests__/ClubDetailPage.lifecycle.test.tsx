@@ -21,7 +21,10 @@ import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
-import { fetchCdnSuspendedClubs } from '../../services/cdn'
+import {
+  fetchCdnReinstatableClubs,
+  fetchCdnSuspendedClubs,
+} from '../../services/cdn'
 import { fetchClubDistrictHistoryShard } from '../../services/cdnClubDistrictHistory'
 import historyShard from '../../__tests__/fixtures/club-district-history-97-2026-10-13.recorded.json'
 import suspendedFile from '../../__tests__/fixtures/suspended-clubs-2026-10-13.recorded.json'
@@ -62,6 +65,7 @@ vi.mock('../../hooks/useDistrictData', () => ({
 vi.mock('../../services/cdn', () => ({
   fetchCdnClubIndex: vi.fn(),
   fetchCdnSuspendedClubs: vi.fn(),
+  fetchCdnReinstatableClubs: vi.fn(),
   fetchCdnDates: vi.fn().mockResolvedValue({
     dates: ['2026-10-13'],
     count: 1,
@@ -139,6 +143,7 @@ vi.mock('../../hooks/useDistrictAnalytics', () => ({
 
 const mockedShard = vi.mocked(fetchClubDistrictHistoryShard)
 const mockedSuspended = vi.mocked(fetchCdnSuspendedClubs)
+const mockedReinstatable = vi.mocked(fetchCdnReinstatableClubs)
 const mockedCachedDates = vi.mocked(useDistrictCachedDates)
 
 afterEach(() => cleanup())
@@ -148,6 +153,7 @@ beforeEach(() => {
   mockedCachedDates.mockReturnValue(DATES as never)
   mockedShard.mockResolvedValue(historyShard as never)
   mockedSuspended.mockResolvedValue(suspendedFile as never)
+  mockedReinstatable.mockResolvedValue(reinstatableFile as never)
 })
 
 function renderAt(url: string) {
@@ -170,6 +176,27 @@ function renderAt(url: string) {
       </ProgramYearProvider>
     </QueryClientProvider>
   )
+}
+
+// #3111 — the date's reinstatable-clubs.json, with the pipeline's period.
+const reinstatableFile = {
+  _format: { version: '1.0.0', type: 'reinstatable-clubs' },
+  snapshotDate: '2026-10-13',
+  baseProgramYear: '2026-2027',
+  districts: {
+    '83': [
+      {
+        clubNumber: '1380016',
+        clubName: 'Travelers Toastmasters',
+        status: 'suspended',
+        suspendDate: '2026-10-01',
+        addsToBase: true,
+        reason: 'suspended_sept30_october_cycle',
+        inactivePeriod: 1,
+        lastChanceBy: '2029-03-31',
+      },
+    ],
+  },
 }
 
 const settle = () => new Promise(resolve => setTimeout(resolve, 50))
@@ -279,5 +306,33 @@ describe('ClubDetailPage — Lifecycle timeline (#1843)', () => {
     } finally {
       raf.mockRestore()
     }
+  })
+
+  /* #3111 — the five-period window, for a suspended club the pipeline
+     gives a period. */
+  it('draws the reinstate window for a suspended club with a period', async () => {
+    currentClub = suspendedClub
+    renderAt('/district/83/club/1380016')
+    const region = await screen.findByRole('region', {
+      name: 'Time left to reinstate',
+    })
+    const now = within(region)
+      .getAllByRole('listitem')
+      .find(li => li.getAttribute('aria-current') === 'step')
+    expect(now).toHaveTextContent('Period 1')
+    expect(now).toHaveTextContent('Oct 2026 – Mar 2027')
+    expect(
+      within(region).getByText(/Last chance: March 31, 2029/)
+    ).toBeInTheDocument()
+  })
+
+  it('never reads the reinstatable list for an active club', async () => {
+    renderAt('/district/61/club/7238597')
+    await screen.findByText('In District 61')
+    await settle()
+    expect(mockedReinstatable).not.toHaveBeenCalled()
+    expect(
+      screen.queryByRole('region', { name: 'Time left to reinstate' })
+    ).toBeNull()
   })
 })
