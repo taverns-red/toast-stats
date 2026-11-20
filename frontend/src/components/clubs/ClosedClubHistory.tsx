@@ -17,6 +17,7 @@ import {
 } from '../../utils/netChangeBasis'
 import { buildClubLifecycle } from '../../utils/clubLifecycle'
 import { ClubHero } from './ClubHero'
+import { ClubHeroStatusChips } from './ClubHeroStatusChips'
 import { ClubStatStrip } from './ClubStatStrip'
 import { ClubMembershipTrendChart } from './ClubMembershipTrendChart'
 import { ClubLifecyclePanel } from './ClubLifecyclePanel'
@@ -37,6 +38,10 @@ export interface ClosedClubHistoryProps {
   lastSeenDate: SnapshotDate
   /** The program year holding `lastSeenDate` (R3). */
   programYear: ProgramYear
+  /** #3117 — the `Susp` date when the club is on its district's current
+   *  suspended list: it has not closed, so the hero shows the suspended
+   *  status instead of the closed line. */
+  suspendDate?: string | null | undefined
 }
 
 /**
@@ -54,6 +59,7 @@ export const ClosedClubHistory: React.FC<ClosedClubHistoryProps> = ({
   districtId,
   lastSeenDate,
   programYear,
+  suspendDate,
 }) => {
   const {
     data: analytics,
@@ -87,8 +93,13 @@ export const ClosedClubHistory: React.FC<ClosedClubHistoryProps> = ({
     lastSeenDate
   )
   const lifecycle = useMemo(
-    () => buildClubLifecycle({ charterDate: club?.charterDate, history }),
-    [club, history]
+    () =>
+      buildClubLifecycle({
+        charterDate: club?.charterDate,
+        history,
+        suspendDate: suspendDate ?? null,
+      }),
+    [club, history, suspendDate]
   )
 
   const base = club?.membershipBase ?? membershipTrend[0]?.count ?? 0
@@ -132,8 +143,19 @@ export const ClosedClubHistory: React.FC<ClosedClubHistoryProps> = ({
         districtId={districtId}
         club={heroClub}
         controls={null}
-        statusPills={<></>}
-        closedNotice={closedClubNotice(lastSeenDate)}
+        statusPills={
+          suspendDate ? (
+            <ClubHeroStatusChips
+              clubStatus="Suspended"
+              statusSince={
+                lifecycle.events.find(e => e.kind === 'suspended')?.when
+              }
+            />
+          ) : (
+            <></>
+          )
+        }
+        closedNotice={suspendDate ? undefined : closedClubNotice(lastSeenDate)}
       />
 
       {club ? (

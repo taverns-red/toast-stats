@@ -37,7 +37,11 @@ import type { ClubDistrictHistoryShard } from '@taverns-red/shared-contracts'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import { DarkModeProvider } from '../../contexts/DarkModeContext'
 import ClubDetailPage from '../ClubDetailPage'
-import { fetchCdnClubIndex, fetchFromCdn } from '../../services/cdn'
+import {
+  fetchCdnClubIndex,
+  fetchCdnSuspendedClubs,
+  fetchFromCdn,
+} from '../../services/cdn'
 import { fetchClubDistrictHistoryShard } from '../../services/cdnClubDistrictHistory'
 import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
 import shard07 from '../../__tests__/fixtures/club-district-history-07-closed-28676407-2026-11-20.recorded.json'
@@ -302,5 +306,90 @@ describe('ClubDetailPage — a closed club shows its history (#3104)', () => {
     fireEvent.click(screen.getByRole('button', { name: /retry/i }))
     expect(await screen.findByText('Membership Trend')).toBeInTheDocument()
     expect(mockedFetchFromCdn).toHaveBeenCalledTimes(2)
+  })
+})
+
+// #3117 — a club suspended on the first day of the program year is in no
+// current file either, and its history's last span ended on June 30. It is
+// still on the district's suspended list, so it can reinstate: the page
+// must not call it closed. (Live case: 28678177, District 53, suspended
+// 2026-07-01. The 28676407 fixtures stand in for it here.)
+describe('ClubDetailPage — a suspended club missing from analytics (#3117)', () => {
+  beforeEach(() => {
+    vi.mocked(fetchCdnSuspendedClubs).mockResolvedValue({
+      _format: { version: '1.0.0', type: 'suspended-clubs' },
+      snapshotDate: '2026-11-19',
+      programYear: { start: '2026-07-01', end: '2027-06-30' },
+      districts: {
+        '86': [
+          {
+            clubNumber: '28676407',
+            clubName: 'Top Tier Toastmasters',
+            division: 'S',
+            area: '71',
+            suspendDate: '2026-07-01',
+          },
+        ],
+      },
+    })
+  })
+
+  it('is not shown as closed and shows the suspended status', async () => {
+    renderAt('/district/86/club/28676407')
+
+    const hero = await screen.findByRole('banner')
+    expect(
+      await within(hero).findByText('Suspended since Jul 1, 2026')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Top Tier Toastmasters' })
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Closed\. Last on/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/This club has closed/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Club Not Found')).not.toBeInTheDocument()
+    // The lifecycle panel carries the suspension too.
+    expect(screen.getByText('Suspended')).toBeInTheDocument()
+  })
+
+  it('holds a skeleton while the suspended list loads', async () => {
+    vi.mocked(fetchCdnSuspendedClubs).mockReturnValue(new Promise(() => {}))
+    renderAt('/district/86/club/28676407')
+
+    await vi.waitFor(() =>
+      expect(vi.mocked(fetchCdnSuspendedClubs)).toHaveBeenCalled()
+    )
+    await settle()
+
+    expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument()
+    expect(screen.queryByText(/Closed\. Last on/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Suspended since/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Club Not Found')).not.toBeInTheDocument()
+  })
+
+  it('shows the closed page when the list does not include the club', async () => {
+    vi.mocked(fetchCdnSuspendedClubs).mockResolvedValue({
+      _format: { version: '1.0.0', type: 'suspended-clubs' },
+      snapshotDate: '2026-11-19',
+      programYear: { start: '2026-07-01', end: '2027-06-30' },
+      districts: {
+        '86': [
+          {
+            clubNumber: '1234',
+            clubName: 'Open Club',
+            division: 'A',
+            area: '01',
+            suspendDate: '2026-07-01',
+          },
+        ],
+      },
+    })
+    renderAt('/district/86/club/28676407')
+
+    expect(
+      await screen.findByText(
+        'Closed. Last on Toastmasters’ club list: June 30, 2025'
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Suspended since/)).not.toBeInTheDocument()
   })
 })
