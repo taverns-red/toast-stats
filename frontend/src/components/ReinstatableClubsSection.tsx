@@ -42,13 +42,12 @@ const REASON_TEXT: Record<string, string> = {
   closed_does_not_add: CLOSED_TEXT,
 }
 
-/** M1 — the renewal an adding suspension came from, before its deadline.
- *  A code not listed keeps its REASON_TEXT sentence in the Why cell.
- *  Pending Ron's OK (#3102): suspended_mar31_before_oct1 → "Suspended at
- *  the March 31 renewal. If it reinstates by September 30, YYYY, it adds to
- *  the club base." Add it here once approved. */
+/** M1 — the renewal an adding suspension came from, before its deadline
+ *  (both wordings approved by Ron, 2026-11-20). A code not listed keeps its
+ *  REASON_TEXT sentence in the Why cell. */
 const DEADLINE_LEAD: Record<string, string> = {
   suspended_sept30_october_cycle: 'Suspended at the September 30 renewal.',
+  suspended_mar31_before_oct1: 'Suspended at the March 31 renewal.',
 }
 
 /** Reasons where the pipeline could not decide the effect on the base. */
