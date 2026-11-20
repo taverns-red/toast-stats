@@ -63,3 +63,25 @@ export function addsToThisYearsBase(
   const month = Number(ISO_DATE.exec(snapshotDate)?.[2])
   return !(month >= 4 && month <= 6)
 }
+
+/* #3109 review (F1): a suspend date more than 3 days from March 31 or
+   September 30 is off the renewal cycle (the pipeline's tolerance,
+   CYCLE_TOLERANCE_DAYS in analytics-core; TI stamps a passed deadline the
+   day after). The pipeline places such a club by Ron's convention, but the
+   Why sentences name a renewal, so those rows get none until Ron approves
+   wording. */
+const CYCLE_TOLERANCE_DAYS = 3
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** Whether an ISO suspend date is off the Sep 30 / Mar 31 cycle. False
+ *  for a missing or malformed date. */
+export function isOffCycleSuspendDate(
+  suspendDate: string | undefined
+): boolean {
+  const m = ISO_DATE.exec(suspendDate ?? '')
+  if (!m) return false
+  const year = Number(m[1])
+  const at = Date.UTC(year, Number(m[2]) - 1, Number(m[3]))
+  const deadlines = [Date.UTC(year, 2, 31), Date.UTC(year, 8, 30)]
+  return deadlines.every(d => Math.abs(at - d) > CYCLE_TOLERANCE_DAYS * DAY_MS)
+}

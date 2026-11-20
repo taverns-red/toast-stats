@@ -7,6 +7,7 @@ import {
 import { formatDisplayDate } from '../utils/dateFormatting'
 import {
   addsToThisYearsBase,
+  isOffCycleSuspendDate,
   reinstateDeadline,
 } from '../utils/reinstateDeadline'
 import { ActionTable, type ActionTableColumn } from './ActionTable'
@@ -76,6 +77,16 @@ interface ReasonContext {
 }
 
 function reasonText(club: ReinstatableClub, ctx: ReasonContext): string {
+  // F1 (#3109 review): the suspended_* sentences name a renewal deadline,
+  // which is false for a club suspended off the cycle. No wording is
+  // approved for those yet, so they get no Why sentence. The check is the
+  // date itself, since the pipeline gives such a club an on-cycle code.
+  if (
+    club.reason.startsWith('suspended_') &&
+    isOffCycleSuspendDate(club.suspendDate)
+  ) {
+    return ''
+  }
   const lead = DEADLINE_LEAD[club.reason]
   const adds = addsNow(club, ctx.snapshotDate)
   const deadline =
