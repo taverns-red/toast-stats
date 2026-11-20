@@ -80,10 +80,10 @@ describe('suspended on Sept 30 (FAQ: "Reinstatement during the October renewal c
     ).toBe('suspended_sept30_past_october_cycle')
   })
 
-  it('a Sept 30 suspension two years back is still "unexpected", not past-cycle (#3011)', () => {
-    expect(
-      classifyReinstatement(suspended('2025-09-30'), '2027-06-15').reason
-    ).toBe('suspend_date_unexpected')
+  it('a Sept 30 suspension two years back is past its October cycle: does not add (#3103)', () => {
+    const r = classifyReinstatement(suspended('2025-09-30'), '2027-06-15')
+    expect(r.addsToBase).toBe(false)
+    expect(r.reason).toBe('suspended_sept30_past_october_cycle')
   })
 
   it('a suspend date after asOf is never a guess', () => {
@@ -150,27 +150,13 @@ describe('suspend dates near the cycle ends (TI is off by a day or two)', () => 
     }
   )
 
-  it.each([
-    '2026-09-26',
-    '2026-10-04',
-    '2026-03-27',
-    '2026-04-04',
-    '2026-06-15',
-  ])('%s is not a cycle end -> no guess', d => {
-    const r = classifyReinstatement(suspended(d), '2026-11-17')
-    expect(r.eligible).toBe(true)
+  it('a suspension from two years back has closed: does not add (#3103)', () => {
+    const r = classifyReinstatement(suspended('2024-09-30'), '2026-11-17')
     expect(r.addsToBase).toBe(false)
-    expect(r.reason).toBe('suspend_date_unexpected')
+    expect(r.reason).toBe('suspended_sept30_past_october_cycle')
   })
 
-  it('a suspension from two years back does not match this base year', () => {
-    // 2025-09-30 against asOf 2026-11-17 is the past-cycle case (#3011).
-    expect(
-      classifyReinstatement(suspended('2024-09-30'), '2026-11-17').reason
-    ).toBe('suspend_date_unexpected')
-  })
-
-  it('an unparseable suspend date is "unexpected", not a crash', () => {
+  it('an unparseable suspend date is "unexpected", not a crash (the only case left, #3103)', () => {
     expect(
       classifyReinstatement(suspended('Susp 10/01/26'), '2026-11-17').reason
     ).toBe('suspend_date_unexpected')
@@ -317,9 +303,10 @@ describe('the June 30 cap: District 61 closed clubs on 2026-11-19, from status h
 })
 
 describe('off-cycle suspend dates: period 1 contains the day after the suspend date (#3103)', () => {
-  it('suspended 2026-10-08 (D51 7787247): period 1, effect on the base still unknown', () => {
+  it('suspended 2026-10-08 (D51 7787247): period 1, like the Sept 30 suspensions, so it adds', () => {
     const r = classifyReinstatement(suspended('2026-10-08'), '2026-11-19')
-    expect(r.reason).toBe('suspend_date_unexpected')
+    expect(r.reason).toBe('suspended_sept30_october_cycle')
+    expect(r.addsToBase).toBe(true)
     expect(r.eligible).toBe(true)
     expect(r.inactivePeriod).toBe(1)
     expect(r.lastChanceBy).toBe('2029-03-31')
@@ -342,10 +329,64 @@ describe('off-cycle suspend dates: period 1 contains the day after the suspend d
     expect(r.inactivePeriod).toBe(2)
   })
 
+  it('closed, TI date 2024-06-15, last seen 2024-06-30: period 1 is Apr-Sep 2024, so period 6 and out', () => {
+    const r = classifyReinstatement(
+      closedWithSuspend('2024-06-30', '2024-06-15'),
+      '2026-11-19'
+    )
+    expect(r.eligible).toBe(false)
+    expect(r.reason).toBe('closed_outside_window')
+  })
+
   it('a suspend date after asOf gives no period, never a guess', () => {
     const r = classifyReinstatement(suspended('2026-11-20'), '2026-11-19')
     expect(r.inactivePeriod).toBeUndefined()
     expect(r.lastChanceBy).toBeUndefined()
+  })
+})
+
+describe('off-cycle suspensions and the club base: same as the deadline before their period (Ron, 2026-11-20, #3103)', () => {
+  // The period containing the day after the suspend date is the suspension
+  // period. The club adds, or doesn't, exactly like the deadline
+  // suspensions for that period, with the same reinstate-by date.
+  it.each(['2026-04-01', '2026-08-01', '2026-09-30'])(
+    'suspended 2026-06-15 is treated like Mar 31 2026: adds when reinstated by Sept 30 (asOf %s)',
+    asOf => {
+      const r = classifyReinstatement(suspended('2026-06-15'), asOf)
+      expect(r.addsToBase).toBe(true)
+      expect(r.reason).toBe('suspended_mar31_before_oct1')
+      expect(r.inactivePeriod).toBe(1)
+    }
+  )
+
+  it('suspended 2026-06-15, asOf 2026-10-01: like Mar 31 2026 after Oct 1, does not add', () => {
+    const r = classifyReinstatement(suspended('2026-06-15'), '2026-10-01')
+    expect(r.addsToBase).toBe(false)
+    expect(r.reason).toBe('suspended_mar31_after_oct1')
+    expect(r.inactivePeriod).toBe(2)
+  })
+
+  it.each([
+    ['2026-09-26', 'suspended_mar31_after_oct1', false],
+    ['2026-10-04', 'suspended_sept30_october_cycle', true],
+    ['2026-03-27', 'suspended_sept30_past_october_cycle', false],
+    ['2026-04-04', 'suspended_mar31_after_oct1', false],
+    ['2026-11-10', 'suspended_sept30_october_cycle', true],
+  ])(
+    '%s on 2026-11-17 -> %s (adds: %s), never "unexpected"',
+    (d, reason, adds) => {
+      const r = classifyReinstatement(suspended(d), '2026-11-17')
+      expect(r.eligible).toBe(true)
+      expect(r.reason).toBe(reason)
+      expect(r.addsToBase).toBe(adds)
+    }
+  )
+
+  it('a Sept 30 stamp on the snapshot dated Sept 30 itself is in the October cycle, not unknown', () => {
+    // The month-end close dated 09-30 already carries TI's 10-01 stamps.
+    const r = classifyReinstatement(suspended('2026-10-01'), '2026-09-30')
+    expect(r.reason).toBe('suspended_sept30_october_cycle')
+    expect(r.addsToBase).toBe(true)
   })
 })
 
