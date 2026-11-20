@@ -204,7 +204,7 @@ describe('ClubDetailPage — a closed club shows its history (#3104)', () => {
 
     expect(
       await screen.findByText(
-        "Closed, last on Toastmasters' list June 30, 2025"
+        'Closed. Last on Toastmasters’ club list: June 30, 2025'
       )
     ).toBeInTheDocument()
     expect(screen.queryByText('Club Not Found')).not.toBeInTheDocument()
@@ -227,7 +227,9 @@ describe('ClubDetailPage — a closed club shows its history (#3104)', () => {
 
   it('hides the sections that need current data', async () => {
     renderAt('/district/86/club/28676407')
-    await screen.findByText("Closed, last on Toastmasters' list June 30, 2025")
+    await screen.findByText(
+      'Closed. Last on Toastmasters’ club list: June 30, 2025'
+    )
 
     expect(
       screen.queryByRole('combobox', { name: /program year/i })
@@ -240,7 +242,9 @@ describe('ClubDetailPage — a closed club shows its history (#3104)', () => {
 
   it('reads one extra file and never the club index', async () => {
     renderAt('/district/86/club/28676407')
-    await screen.findByText("Closed, last on Toastmasters' list June 30, 2025")
+    await screen.findByText(
+      'Closed. Last on Toastmasters’ club list: June 30, 2025'
+    )
     await settle()
 
     expect(mockedFetchFromCdn).toHaveBeenCalledTimes(1)
@@ -259,7 +263,7 @@ describe('ClubDetailPage — a closed club shows its history (#3104)', () => {
     renderAt('/district/86/club/99999907')
 
     expect(await screen.findByText('Club Not Found')).toBeInTheDocument()
-    expect(screen.queryByText(/Closed, last on/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Closed\. Last on/)).not.toBeInTheDocument()
     expect(mockedFetchFromCdn).not.toHaveBeenCalled()
   })
 
@@ -268,7 +272,7 @@ describe('ClubDetailPage — a closed club shows its history (#3104)', () => {
 
     expect(
       await screen.findByText(
-        "Closed, last on Toastmasters' list June 30, 2025"
+        'Closed. Last on Toastmasters’ club list: June 30, 2025'
       )
     ).toBeInTheDocument()
     // One REPLACE navigation: no extra history entry, and the breadcrumb
@@ -286,7 +290,9 @@ describe('ClubDetailPage — a closed club shows its history (#3104)', () => {
     expect(await screen.findByText('Failed to Load Club')).toBeInTheDocument()
     const hero = screen.getByRole('banner')
     expect(
-      within(hero).getByText("Closed, last on Toastmasters' list June 30, 2025")
+      within(hero).getByText(
+        'Closed. Last on Toastmasters’ club list: June 30, 2025'
+      )
     ).toBeInTheDocument()
     // No area or division: no separators around missing names.
     expect(hero.querySelectorAll('.club-hero__sub-divider')).toHaveLength(0)

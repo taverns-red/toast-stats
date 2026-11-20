@@ -497,7 +497,7 @@ for (const width of [375, 1280]) {
         timeout: 60_000,
       })
       await expect(page.locator('.club-hero__closed')).toHaveText(
-        "Closed, last on Toastmasters' list June 30, 2025",
+        'Closed. Last on Toastmasters’ club list: June 30, 2025',
         { timeout: 30_000 }
       )
       await expect(
