@@ -218,7 +218,9 @@ describe('ClubGrowthFunnelView', () => {
         split: '0 add to the club base',
       })
       const card = screen.getByTestId('growth-stage-reinstate')
-      expect(card).toHaveTextContent(/\b0\b/)
+      expect(card.querySelector('.growth-funnel__value')).toHaveTextContent(
+        /^0$/
+      )
       expect(barWidth('reinstate')).toBe('0%')
     })
 

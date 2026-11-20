@@ -36,6 +36,18 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.75rem;
   }
+
+  /* The district strip has a fifth card, "Can reinstate" (#3088). Five
+     across is too narrow for the hints below 1024px, so it goes 3 + 2. */
+  .growth-funnel--five {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .growth-funnel--five {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 
 .growth-funnel__link {
@@ -109,6 +121,14 @@
 }
 
 .growth-funnel__hint {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+
+/* A third line under the hint, same type as the hint (the reinstate split,
+   #3088). It sits in the text column; the value spans the two lines above. */
+.growth-funnel__detail {
+  grid-column: 1;
   font-size: 0.8125rem;
   color: var(--ink-3);
 }

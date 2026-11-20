@@ -24,7 +24,8 @@ import type { MobileRow } from './MobileRowList'
    "Unknown" and why, never 0 (#1757). Privacy: club ids, names, dates and
    statuses only — no person, email or phone ever reaches this view. */
 
-export type StageId = 'prospective' | 'chartered' | 'coached' | 'suspended'
+export type StageId =
+  'prospective' | 'chartered' | 'coached' | 'suspended' | 'reinstate'
 
 /* The strip and the stage sections are shared with the region and world
    funnels (#1812, #1813), so the three levels read alike. */
@@ -33,12 +34,23 @@ export interface StageSpec {
   label: string
   hint: string
   value: StageValue
+  /** A third line under the hint (e.g. the reinstate split, #3088). */
+  detail?: string
+  /** The value is still loading: the card keeps its slot, no number yet. */
+  pending?: boolean
 }
+
+/** #3088 — the "Can reinstate" card. The page omits it when the date has no
+ *  reinstate file; while the file loads the card holds its place. */
+export type ReinstateStage =
+  { state: 'loading' } | { state: 'ready'; count: number; split: string }
 
 export interface ClubGrowthFunnelViewProps {
   funnel: ClubGrowthFunnel
   /** The displayed snapshot date (R3). */
   asOfDate: string
+  /** The fifth card, district page only (#3088). Absent: four cards. */
+  reinstate?: ReinstateStage | undefined
   /** Sections after the stages (e.g. "Can reinstate", #3007). They render
    *  inside .growth-page so they share its gutter and max width. */
   children?: React.ReactNode
@@ -61,10 +73,17 @@ export function FunnelStrip({ stages }: { stages: StageSpec[] }) {
     ...stages.map(s => (s.value.kind === 'count' ? s.value.value : 0))
   )
   return (
-    <ol className="growth-funnel" aria-label="Club Growth funnel">
+    <ol
+      className={
+        stages.length > 4
+          ? 'growth-funnel growth-funnel--five'
+          : 'growth-funnel'
+      }
+      aria-label="Club Growth funnel"
+    >
       {stages.map((s, i) => {
         const pct =
-          s.value.kind === 'count' && s.value.value > 0
+          !s.pending && s.value.kind === 'count' && s.value.value > 0
             ? Math.max(4, Math.round((s.value.value / max) * 100))
             : 0
         return (
@@ -81,16 +100,22 @@ export function FunnelStrip({ stages }: { stages: StageSpec[] }) {
                 <span className="growth-funnel__label">{s.label}</span>
                 <span
                   className={
-                    s.value.kind === 'count'
+                    s.value.kind === 'count' && !s.pending
                       ? 'growth-funnel__value'
                       : 'growth-funnel__value growth-funnel__value--unknown'
                   }
                 >
-                  {valueText(s.value)}
+                  {s.pending ? 'Loading' : valueText(s.value)}
                 </span>
                 <span className="growth-funnel__hint">
                   {s.value.kind === 'unknown' ? s.value.reason : s.hint}
                 </span>
+                {s.detail !== undefined && (
+                  // A non-breaking space holds the line while it loads.
+                  <span className="growth-funnel__detail">
+                    {s.detail || ' '}
+                  </span>
+                )}
               </span>
               <span className="growth-funnel__track" aria-hidden="true">
                 <span
@@ -458,6 +483,7 @@ function SponsorsMentors({
 export const ClubGrowthFunnelView: React.FC<ClubGrowthFunnelViewProps> = ({
   funnel,
   asOfDate,
+  reinstate,
   children,
 }) => {
   const { prospective, chartered, coached, suspended, sponsorsMentors } = funnel
@@ -488,6 +514,17 @@ export const ClubGrowthFunnelView: React.FC<ClubGrowthFunnelViewProps> = ({
       value: suspended.value,
     },
   ]
+  if (reinstate) {
+    const ready = reinstate.state === 'ready'
+    stages.push({
+      id: 'reinstate',
+      label: 'Can reinstate',
+      hint: 'suspended or recently closed clubs that can come back',
+      value: { kind: 'count', value: ready ? reinstate.count : 0 },
+      detail: ready ? reinstate.split : '',
+      pending: !ready,
+    })
+  }
 
   return (
     <div className="growth-page">
