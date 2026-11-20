@@ -26,9 +26,17 @@ async function load(page: Page): Promise<void> {
 async function assertFunnel(page: Page): Promise<void> {
   const funnel = page.getByRole('list', { name: 'Club Growth funnel' })
   const stages = funnel.getByRole('listitem')
-  await expect(stages).toHaveCount(4)
+  // The fifth card, "Can reinstate" (#3088), reads the dated reinstate file,
+  // which every daily since 2.94.0 writes.
+  await expect(stages).toHaveCount(5)
   const texts = await stages.allTextContents()
-  const labels = ['Prospective', 'Chartered', 'Coached', 'Suspended']
+  const labels = [
+    'Prospective',
+    'Chartered',
+    'Coached',
+    'Suspended',
+    'Can reinstate',
+  ]
   texts.forEach((t, i) => {
     expect(t).toContain(labels[i]!)
     expect(t).toMatch(/\d+|Unknown/)
@@ -41,6 +49,7 @@ async function assertFunnel(page: Page): Promise<void> {
     '#growth-chartered',
     '#growth-coached',
     '#growth-suspended',
+    '#growth-reinstate',
   ])
   for (const h of hrefs) {
     await expect(page.locator(h!)).toHaveCount(1)
@@ -117,10 +126,27 @@ for (const theme of ['light', 'dark'] as const) {
         page.getByRole('heading', { name: /Coached clubs/ })
       ).toBeInViewport()
     })
+
+    test('the Can reinstate card matches its section and jumps to it (#3088)', async ({
+      page,
+    }) => {
+      const card = page.getByTestId('growth-stage-reinstate')
+      const value = Number(
+        await card.locator('.growth-funnel__value').textContent()
+      )
+      const heading = page.locator('#growth-reinstate-heading')
+      const headingCount = Number(
+        /\((\d+)\)/.exec((await heading.textContent()) ?? '')?.[1] ?? NaN
+      )
+      expect(value).toBe(headingCount)
+      await card.getByRole('link').click()
+      await expect(page).toHaveURL(/#growth-reinstate$/)
+      await expect(heading).toBeInViewport()
+    })
   })
 }
 
-test('club growth at 1280: four-across funnel and linked club rows', async ({
+test('club growth at 1280: five-across funnel and linked club rows', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 })
