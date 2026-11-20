@@ -108,8 +108,8 @@ describe('suspended on Mar 31 before the base year (FAQ: "On October 1, the club
     })
   })
 
-  it.each(['2026-04-01', '2026-06-30', '2026-07-01', '2026-09-30'])(
-    'before Oct 1 (asOf %s) -> adds',
+  it.each(['2026-07-01', '2026-08-15', '2026-09-30'])(
+    'Jul 1 to Sep 30 (asOf %s) -> adds to this year’s club base',
     asOf => {
       const r = classifyReinstatement(suspended('2026-03-31'), asOf)
       expect(r.addsToBase).toBe(true)
@@ -117,6 +117,27 @@ describe('suspended on Mar 31 before the base year (FAQ: "On October 1, the club
       expect(r.baseProgramYear).toBe('2026-2027')
     }
   )
+
+  // Ron, 2026-11-20 (#3103): talk only about THIS year's club base. Before
+  // the July 1 base date a reinstatement doesn't change this year's base.
+  it.each(['2026-04-01', '2026-05-15', '2026-06-30'])(
+    'Apr 1 to Jun 30 (asOf %s) -> does not change this year’s club base',
+    asOf => {
+      const r = classifyReinstatement(suspended('2026-03-31'), asOf)
+      expect(r.eligible).toBe(true)
+      expect(r.addsToBase).toBe(false)
+      expect(r.reason).toBe('suspended_mar31_before_july1')
+    }
+  )
+
+  it('the boundary: 06-30 does not add, 07-01 adds', () => {
+    expect(
+      classifyReinstatement(suspended('2026-03-31'), '2026-06-30').addsToBase
+    ).toBe(false)
+    expect(
+      classifyReinstatement(suspended('2026-03-31'), '2026-07-01').addsToBase
+    ).toBe(true)
+  })
 
   it('on Oct 1 itself -> does not add', () => {
     const r = classifyReinstatement(suspended('2026-03-31'), '2026-10-01')
@@ -349,8 +370,8 @@ describe('off-cycle suspensions and the club base: same as the deadline before t
   // The period containing the day after the suspend date is the suspension
   // period. The club adds, or doesn't, exactly like the deadline
   // suspensions for that period, with the same reinstate-by date.
-  it.each(['2026-06-16', '2026-08-01', '2026-09-30'])(
-    'suspended 2026-06-15 is treated like Mar 31 2026: adds when reinstated by Sept 30 (asOf %s)',
+  it.each(['2026-07-01', '2026-08-01', '2026-09-30'])(
+    'suspended 2026-06-15 is treated like Mar 31 2026: adds when reinstated Jul 1 to Sept 30 (asOf %s)',
     asOf => {
       const r = classifyReinstatement(suspended('2026-06-15'), asOf)
       expect(r.addsToBase).toBe(true)
@@ -358,6 +379,12 @@ describe('off-cycle suspensions and the club base: same as the deadline before t
       expect(r.inactivePeriod).toBe(1)
     }
   )
+
+  it('suspended 2026-06-15, asOf 2026-06-16: like Mar 31 2026 before Jul 1, does not change this year’s base', () => {
+    const r = classifyReinstatement(suspended('2026-06-15'), '2026-06-16')
+    expect(r.addsToBase).toBe(false)
+    expect(r.reason).toBe('suspended_mar31_before_july1')
+  })
 
   it('suspended 2026-06-15, asOf 2026-10-01: like Mar 31 2026 after Oct 1, does not add', () => {
     const r = classifyReinstatement(suspended('2026-06-15'), '2026-10-01')
