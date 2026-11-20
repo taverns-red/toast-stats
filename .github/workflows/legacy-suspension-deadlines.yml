@@ -8,6 +8,9 @@
 # derives it once from the program year 2024-25 district files and writes
 # gs://toast-stats-data-staging/config/legacy-suspension-deadlines.json.
 #
+# It defaults to a dry run, and uploads only when the rows match the row
+# count and checksum in scripts/legacy-suspension-deadlines.expected.json.
+#
 # The daily reads its config inputs from staging (sync-stores.sh
 # legacy-suspension-deadlines), so nothing needs promoting. Without the file
 # the daily still works: closed clubs with no TI date are listed with no
@@ -32,7 +35,7 @@ on:
         description: 'Dry run: build and print the file, upload nothing'
         required: true
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -122,6 +125,14 @@ jobs:
             echo "- rows: $(jq -r '.rowCount' build.json)"
             echo "- rows sha256: $(jq -r '.rowsSha256' build.json)"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # The upload gate: the rows must match the row count and checksum
+      # committed with the script (#3109 review). Runs on a dry run too.
+      - name: Check rows against the committed checksum
+        run: |
+          npx tsx scripts/build-legacy-suspension-deadlines.ts verify \
+            --file legacy-suspension-deadlines.json \
+            --expected scripts/legacy-suspension-deadlines.expected.json
 
       - name: Upload to staging
         if: ${{ !inputs.dry_run }}

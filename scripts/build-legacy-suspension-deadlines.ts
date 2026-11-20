@@ -12,6 +12,9 @@
  *         Reads <dir>/snapshots/<date>/district_*.json, derives each club's
  *         suspension deadline and writes the file. Prints {rowCount,
  *         rowsSha256, filesRead, sourceDates} as JSON.
+ *   verify --file <file> --expected <file>
+ *         Exits non-zero unless the file's row count and rows checksum match
+ *         the committed expectation (the upload gate, #3109 review).
  *
  * Stdout carries only the JSON summary; logs go to stderr (R4).
  */
@@ -24,7 +27,9 @@ import {
   LEGACY_SOURCE_FROM,
   LEGACY_SOURCE_TO,
   buildLegacySuspensionDeadlines,
+  checkAgainstExpected,
   clubStatusesOf,
+  rowsSha256,
   deriveSuspensionDeadlines,
   planLegacySources,
   type ClubObservation,
@@ -95,6 +100,28 @@ function build(inputDir: string, outPath: string): void {
   )
 }
 
+function verify(filePath: string, expectedPath: string): void {
+  const file = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as {
+    rowCount: number
+    rows: Record<string, string>
+  }
+  const expected = JSON.parse(fs.readFileSync(expectedPath, 'utf-8')) as {
+    rowCount: number
+    rowsSha256: string
+  }
+  // Recount and rehash the rows themselves, not the file's own summary.
+  const built = {
+    rowCount: Object.keys(file.rows).length,
+    rowsSha256: rowsSha256(file.rows),
+  }
+  const problems = checkAgainstExpected(built, expected)
+  if (problems.length > 0) fail(`not uploading: ${problems.join('; ')}`)
+  console.error(
+    `verify: ${built.rowCount} rows, sha256 ${built.rowsSha256} match ${expectedPath}`
+  )
+  process.stdout.write(JSON.stringify({ ok: true, ...built }) + '\n')
+}
+
 const [command, ...rest] = process.argv.slice(2)
 const { values } = parseArgs({
   args: rest,
@@ -103,14 +130,18 @@ const { values } = parseArgs({
     urls: { type: 'string' },
     input: { type: 'string' },
     out: { type: 'string' },
+    file: { type: 'string' },
+    expected: { type: 'string' },
   },
 })
 if (command === 'plan' && values.listing && values.urls) {
   plan(values.listing, values.urls)
 } else if (command === 'build' && values.input && values.out) {
   build(values.input, values.out)
+} else if (command === 'verify' && values.file && values.expected) {
+  verify(values.file, values.expected)
 } else {
   fail(
-    'usage: plan --listing <file> --urls <file> | build --input <dir> --out <file>'
+    'usage: plan --listing <file> --urls <file> | build --input <dir> --out <file> | verify --file <file> --expected <file>'
   )
 }

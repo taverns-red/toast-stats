@@ -173,8 +173,17 @@ export function planLegacySources(listing: string): {
 /** The upload gate: each way the built file differs from the committed
  *  expectation. Empty means it may be uploaded. */
 export function checkAgainstExpected(
-  _built: { rowCount: number; rowsSha256: string },
-  _expected: { rowCount: number; rowsSha256: string }
+  built: { rowCount: number; rowsSha256: string },
+  expected: { rowCount: number; rowsSha256: string }
 ): string[] {
-  throw new Error('not implemented')
+  const problems: string[] = []
+  if (built.rowCount !== expected.rowCount) {
+    problems.push(`rowCount ${built.rowCount}, expected ${expected.rowCount}`)
+  }
+  if (built.rowsSha256 !== expected.rowsSha256) {
+    problems.push(
+      `rowsSha256 ${built.rowsSha256}, expected ${expected.rowsSha256}`
+    )
+  }
+  return problems
 }
