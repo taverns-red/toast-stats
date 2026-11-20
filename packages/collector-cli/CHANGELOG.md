@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.28.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.28.0...collector-cli-v1.28.1) (2026-11-20)
+
+
+### Bug Fixes
+
+* ignore negated mode words in meeting text ([#3083](https://github.com/taverns-red/toast-stats/issues/3083)) ([#3084](https://github.com/taverns-red/toast-stats/issues/3084)) ([6b56a3c](https://github.com/taverns-red/toast-stats/commit/6b56a3c4d38a5e468f9089307ee8363c39654244))
+* read a venue beside an online option as hybrid ([#3086](https://github.com/taverns-red/toast-stats/issues/3086)) ([#3087](https://github.com/taverns-red/toast-stats/issues/3087)) ([746cd5f](https://github.com/taverns-red/toast-stats/commit/746cd5f500f3f514d3723316e9ee76302ba33c4a))
+
 ## [1.28.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.27.0...collector-cli-v1.28.0) (2026-11-19)
 
 

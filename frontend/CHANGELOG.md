@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.71.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.70.0...frontend-v3.71.0) (2026-11-20)
+
+
+### Features
+
+* **ui:** Can reinstate section on the district Club Growth page ([#3007](https://github.com/taverns-red/toast-stats/issues/3007)) ([#3081](https://github.com/taverns-red/toast-stats/issues/3081)) ([ebef9f6](https://github.com/taverns-red/toast-stats/commit/ebef9f64657567897c9e2fc6a5da90f6ae159c0b))
+
 ## [3.70.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.69.4...frontend-v3.70.0) (2026-11-19)
 
 

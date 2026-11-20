@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.95.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.94.0...toast-stats-v2.95.0) (2026-11-20)
+
+
+### Features
+
+* **ui:** Can reinstate section on the district Club Growth page ([#3007](https://github.com/taverns-red/toast-stats/issues/3007)) ([#3081](https://github.com/taverns-red/toast-stats/issues/3081)) ([ebef9f6](https://github.com/taverns-red/toast-stats/commit/ebef9f64657567897c9e2fc6a5da90f6ae159c0b))
+
+
+### Bug Fixes
+
+* ignore negated mode words in meeting text ([#3083](https://github.com/taverns-red/toast-stats/issues/3083)) ([#3084](https://github.com/taverns-red/toast-stats/issues/3084)) ([6b56a3c](https://github.com/taverns-red/toast-stats/commit/6b56a3c4d38a5e468f9089307ee8363c39654244))
+* read a venue beside an online option as hybrid ([#3086](https://github.com/taverns-red/toast-stats/issues/3086)) ([#3087](https://github.com/taverns-red/toast-stats/issues/3087)) ([746cd5f](https://github.com/taverns-red/toast-stats/commit/746cd5f500f3f514d3723316e9ee76302ba33c4a))
+
 ## [2.94.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.93.0...toast-stats-v2.94.0) (2026-11-19)
 
 
