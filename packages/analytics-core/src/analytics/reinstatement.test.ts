@@ -349,7 +349,7 @@ describe('off-cycle suspensions and the club base: same as the deadline before t
   // The period containing the day after the suspend date is the suspension
   // period. The club adds, or doesn't, exactly like the deadline
   // suspensions for that period, with the same reinstate-by date.
-  it.each(['2026-04-01', '2026-08-01', '2026-09-30'])(
+  it.each(['2026-06-16', '2026-08-01', '2026-09-30'])(
     'suspended 2026-06-15 is treated like Mar 31 2026: adds when reinstated by Sept 30 (asOf %s)',
     asOf => {
       const r = classifyReinstatement(suspended('2026-06-15'), asOf)

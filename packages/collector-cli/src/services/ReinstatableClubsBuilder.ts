@@ -30,10 +30,17 @@
  *   it is a closed club like any other, but its closure is dated from its
  *   suspend date, not from `lastSeen`.
  * - Optional `olderSuspended` holds the June 30 lists of the program years
- *   before that. They only date closures: a March 31 suspension closes on
- *   October 1 and stays inside the four-period window until September 30
- *   two years later, when its suspend date is three June 30 lists back
- *   (#3064 review F2).
+ *   before that, and `marchSuspended` the March 31 lists (#3103). They only
+ *   give closed clubs their TI suspend date, the newest list first. A
+ *   March 31 suspension leaves the roster at the July rollover, so only its
+ *   own June 30 list has it; a September 30 suspension closes in April, so
+ *   only a March 31 list has it. Either can stay eligible for five renewal
+ *   periods, so lists up to three program years back matter.
+ * - Optional `legacyDeadlines` (club number → suspension deadline, from
+ *   `config/legacy-suspension-deadlines.json`) covers clubs suspended before
+ *   the suspended lists began (2025-07-31). A TI date wins over it. Without
+ *   either, the rule decides from `lastSeen` bounds and the row carries no
+ *   `inactivePeriod` or `lastChanceBy` (#3103).
  * - When `previousSuspended` is unknown, from July 1 to September 30 the
  *   list is unknown and the builder returns null: the clubs that list would
  *   add are missing, so an empty district would read as a measured zero
@@ -101,9 +108,27 @@ function suspendedRow(
     ...(club.area ? { area: club.area } : {}),
     status: 'suspended',
     suspendDate: club.suspendDate,
+    ...ruleFields(result),
+  }
+}
+
+/** The rule's output as row fields; the period only when it is known. */
+function ruleFields(
+  result: ReturnType<typeof classifyReinstatement>
+): Pick<
+  ReinstatableClub,
+  'oldestPeriod' | 'addsToBase' | 'reason' | 'inactivePeriod' | 'lastChanceBy'
+> {
+  return {
     oldestPeriod: result.oldestPeriod,
     addsToBase: result.addsToBase,
     reason: result.reason,
+    ...(result.inactivePeriod !== undefined && {
+      inactivePeriod: result.inactivePeriod,
+    }),
+    ...(result.lastChanceBy !== undefined && {
+      lastChanceBy: result.lastChanceBy,
+    }),
   }
 }
 
@@ -142,18 +167,24 @@ export function buildReinstatableClubs(
     return null
   }
   const previous = indexSuspended(input.previousSuspended)
-  // June 30 rows, from the newest list that has the club: its suspend date
-  // dates the closure, and its division and area place a closed club
-  // (#3097), as at its suspension, when it is in the same district.
+  // Rows of the earlier lists (June 30 and March 31), from the newest list
+  // that has the club: its suspend date places the suspension (#3103), and
+  // its division and area place a closed club (#3097), as at its
+  // suspension, when it is in the same district. A list dated after the
+  // snapshot is never read: a rebuild must not see the future.
+  const earlierLists = [
+    ...(input.olderSuspended ?? []),
+    ...(input.marchSuspended ?? []),
+    ...(input.previousSuspended ? [input.previousSuspended] : []),
+  ]
+    .filter(list => list.snapshotDate <= snapshotDate)
+    .sort((a, b) => a.snapshotDate.localeCompare(b.snapshotDate))
   const juneRows = new Map<
     string,
     { club: SuspendedClub; districtId: string }
   >()
-  for (const list of [
-    ...[...(input.olderSuspended ?? [])].reverse(),
-    input.previousSuspended,
-  ]) {
-    for (const [districtId, clubs] of Object.entries(list?.districts ?? {})) {
+  for (const list of earlierLists) {
+    for (const [districtId, clubs] of Object.entries(list.districts)) {
       for (const club of clubs) {
         juneRows.set(club.clubNumber, { club, districtId })
       }
@@ -221,11 +252,13 @@ export function buildReinstatableClubs(
     // A club realigned since its suspension: the old division is wrong.
     const june =
       juneRow?.districtId === row.districtId ? juneRow.club : undefined
+    const suspensionDeadline = input.legacyDeadlines?.get(row.clubNumber)
     const result = classifyReinstatement(
       {
         status: 'closed',
         lastSeen: row.lastSeen,
         ...(suspendDate !== undefined && { suspendDate }),
+        ...(suspensionDeadline !== undefined && { suspensionDeadline }),
       },
       snapshotDate
     )
@@ -238,9 +271,7 @@ export function buildReinstatableClubs(
       ...(june?.area ? { area: june.area } : {}),
       status: 'closed',
       lastSeen: row.lastSeen,
-      oldestPeriod: result.oldestPeriod,
-      addsToBase: result.addsToBase,
-      reason: result.reason,
+      ...ruleFields(result),
     })
     closedByDistrict.set(row.districtId, list)
   }

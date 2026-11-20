@@ -287,6 +287,8 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
           oldestPeriod: false,
           addsToBase: true,
           reason: 'suspended_mar31_before_oct1',
+          inactivePeriod: 1,
+          lastChanceBy: '2028-09-30',
         },
       ])
     })
