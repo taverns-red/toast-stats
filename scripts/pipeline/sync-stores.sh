@@ -4,6 +4,7 @@
 # Usage: scripts/pipeline/sync-stores.sh <bucket> <store>...
 #   <store>: time-series | club-trends | club-race | district-awards-history
 #            | district-region-history | closed-club-names
+#            | legacy-suspension-deadlines
 # Env:   GCLOUD     the gcloud binary (default `gcloud`; tests point it at a
 #                   shim over a temp dir, decision D10)
 #        CACHE_DIR  the runner cache (default ./cache)
@@ -51,6 +52,13 @@
 # Unlike the region history it is best effort: any other pull error is also
 # a warning and no file, so it can't fail the run (#3064 review N4).
 #
+# legacy-suspension-deadlines is a third input of the same kind (#3103):
+# config/legacy-suspension-deadlines.json, written once by the
+# legacy-suspension-deadlines workflow, gives the suspension deadline of
+# clubs suspended before TI's suspend date reached our data. Best effort
+# like closed-club-names: without it, closed clubs with no TI date are
+# listed with no inactive period. Nothing pushes it back.
+#
 # Exit codes: 0 ok · 1 a store could not be pulled or is corrupt · 2 usage
 set -euo pipefail
 
@@ -71,7 +79,7 @@ TSX="${TSX:-${REPO}/node_modules/.bin/tsx}"
 
 for store in "$@"; do
   case "${store}" in
-    time-series | club-trends | club-race | district-awards-history | district-region-history | closed-club-names) ;;
+    time-series | club-trends | club-race | district-awards-history | district-region-history | closed-club-names | legacy-suspension-deadlines) ;;
     *)
       echo "::error::sync-stores: unknown store '${store}'" >&2
       exit 2
@@ -202,6 +210,10 @@ for store in "$@"; do
   elif [ "${store}" = "closed-club-names" ]; then
     sync_config_input closed-club-names "no reinstatable-clubs.json" "#3007" \
       best-effort
+  elif [ "${store}" = "legacy-suspension-deadlines" ]; then
+    sync_config_input legacy-suspension-deadlines \
+      "closed clubs suspended before 2025-07-31 get no inactive period" \
+      "#3103" best-effort
   elif [ "${store}" = "club-trends" ]; then
     rm -f "${CACHE_DIR}/club-trends.scope"
     if [ "${#CLUB_TRENDS_PYS[@]}" -gt 0 ]; then

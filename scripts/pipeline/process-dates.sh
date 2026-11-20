@@ -97,7 +97,9 @@
 #                transform WROTE. None: YoY is omitted (dataAvailable:
 #                false) and the date is counted. Also best effort, the
 #                snapshots/<Y>-06-30/suspended-clubs.json of the three
-#                program years before the date's, for
+#                program years before the date's, and the <Y>-03-31 lists
+#                of the date's program year and the one before (and of the
+#                next once it is past, #3103), for
 #                reinstatable-clubs.json (#3007); download errors, not
 #                missing files, are counted in the summary.
 #                Then collector-cli
@@ -447,8 +449,24 @@ previous_py_end() {
   printf '%04d-06-30\n' "$((year - back))"
 }
 
+# The March 31 dates whose suspended lists compute reads for $1 (#3103):
+# those of the program year $1 falls in and the one before, plus the next
+# March 31 once it is on or before $1 (April to June). A Sept 30 suspension
+# closes in April, so only a March 31 list still has its TI date, and it
+# stays eligible for five renewal periods. Never a date after $1.
+march_31_dates() {
+  local year="$((10#${1:0:4}))" month="$((10#${1:5:2}))" py next
+  py="${year}"
+  if [ "${month}" -lt 7 ]; then py=$((year - 1)); fi
+  printf '%04d-03-31\n' "$((py - 1))" "${py}"
+  next="$(printf '%04d-03-31' "$((py + 1))")"
+  if ! [[ "${next}" > "$1" ]]; then echo "${next}"; fi
+  return 0
+}
+
 # Pull snapshots/<June 30>/suspended-clubs.json of each of the three program
-# years before $1's, for compute's reinstatable-clubs.json (#3007). A club
+# years before $1's, and the March 31 lists of march_31_dates (#3103), for
+# compute's reinstatable-clubs.json (#3007). A club
 # suspended on Mar 31 leaves the date's own list on Jul 1 but stays
 # suspended until Oct 1 (the previous year's list). Its closure then stays
 # in the four-period window until Sep 30 two years later, and only its own
@@ -460,9 +478,12 @@ previous_py_end() {
 # (PREV), which cleanup removes anyway. Any other existing directory is used
 # as it is.
 pull_previous_suspended() {
-  local back end dir err
+  local back end dir err ends=()
   for back in 1 2 3; do
-    end="$(previous_py_end "$1" "${back}")"
+    ends+=("$(previous_py_end "$1" "${back}")")
+  done
+  while IFS= read -r end; do ends+=("${end}"); done < <(march_31_dates "$1")
+  for end in "${ends[@]}"; do
     dir="${SNAPSHOTS}/${end}"
     if [ -d "${dir}" ] && [ "${end}" != "${PREV}" ]; then continue; fi
     if [ ! -d "${dir}" ]; then
