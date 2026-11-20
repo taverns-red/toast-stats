@@ -559,6 +559,32 @@ describe('ReinstatableClubsSection', () => {
       renderSection(null)
       expect(screen.queryByTestId('reinstate-window')).toBeNull()
     })
+
+    // Review of 09bb8f19c: nothing to explain when no club can reinstate.
+    it('is not drawn when the list is empty', () => {
+      renderSection([])
+      expect(screen.queryByTestId('reinstate-window')).toBeNull()
+      expect(screen.queryByText('How the five periods work')).toBeNull()
+    })
+  })
+
+  /* Review of 09bb8f19c: on phones the period line spans the card, like
+     the Why cell (growth.css, under 640px). */
+  it('the status cell carries its own class for the phone layout', () => {
+    renderSection([
+      {
+        clubNumber: '3492',
+        clubName: 'Period Club',
+        status: 'closed',
+        lastSeen: '2025-03-31',
+        addsToBase: false,
+        reason: 'closed_does_not_add',
+        inactivePeriod: 4,
+        lastChanceBy: '2027-09-30',
+      },
+    ])
+    const cell = rowFor('Period Club').querySelector('[data-label="Status"]')
+    expect(cell).toHaveClass('growth-reinstate__status')
   })
 
   describe('division and area (S3)', () => {

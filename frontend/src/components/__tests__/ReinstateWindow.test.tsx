@@ -67,13 +67,40 @@ describe('ReinstateWindow', () => {
   })
 })
 
+describe('ReinstateWindow, out-of-range period', () => {
+  it.each([0, 6, -1])('renders nothing for period %s', p => {
+    const { container } = render(
+      <ReinstateWindow lastChanceBy="2027-03-31" inactivePeriod={p} />
+    )
+    expect(container).toBeEmptyDOMElement()
+  })
+})
+
+/* Review of 09bb8f19c: the example sits behind a closed disclosure, and
+   its club (suspended March 31, 2025) has a September last chance, so it
+   can't be mistaken for the base deadline (always March 31 in the October
+   cycle) on the same card. */
 describe('ReinstateWindowExample (Growth page, no club)', () => {
-  it('explains the idea with no "Now" marker', () => {
+  it('is closed behind "How the five periods work"', () => {
+    const { container } = render(<ReinstateWindowExample />)
+    const details = container.querySelector('details')
+    expect(details).not.toBeNull()
+    expect(details).not.toHaveAttribute('open')
+    expect(details?.querySelector('summary')).toHaveTextContent(
+      'How the five periods work'
+    )
+  })
+
+  it('explains the idea with a September example and no "Now" marker', () => {
     render(<ReinstateWindowExample />)
     expect(items()).toHaveLength(5)
+    expect(items()[0]).toHaveTextContent('Apr 2025 – Sep 2025')
     expect(screen.queryByText('Now')).toBeNull()
+    expect(
+      screen.getByText('Example: a club suspended March 31, 2025')
+    ).toBeInTheDocument()
     expect(screen.getByTestId('reinstate-window-end')).toHaveTextContent(
-      'Last chance: March 31, 2027'
+      'Last chance: September 30, 2027'
     )
   })
 })
@@ -99,6 +126,33 @@ describe('ClubReinstateWindow (club page)', () => {
       screen.getByRole('region', { name: 'Time left to reinstate' })
     ).toBeInTheDocument()
     expect(items()[4]).toHaveTextContent('Now')
+  })
+
+  // Review of 09bb8f19c: the answer first, the five periods as detail.
+  it('puts the last chance first, before the periods', () => {
+    render(
+      <ClubReinstateWindow
+        club={row({ inactivePeriod: 5, lastChanceBy: '2027-03-31' })}
+      />
+    )
+    const region = screen.getByRole('region', {
+      name: 'Time left to reinstate',
+    })
+    const end = within(region).getByTestId('reinstate-window-end')
+    expect(end).toHaveTextContent('Last chance: March 31, 2027')
+    expect(
+      end.compareDocumentPosition(within(region).getByRole('list')) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+  })
+
+  it('shows no period UI for a period outside 1 to 5', () => {
+    const { container } = render(
+      <ClubReinstateWindow
+        club={row({ inactivePeriod: 6, lastChanceBy: '2027-03-31' })}
+      />
+    )
+    expect(container).toBeEmptyDOMElement()
   })
 
   it('shows no period UI at all without inactivePeriod', () => {

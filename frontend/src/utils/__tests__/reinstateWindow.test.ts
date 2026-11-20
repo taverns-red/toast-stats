@@ -120,14 +120,16 @@ describe('reinstatePeriodLine (the Can reinstate row line)', () => {
     ).toBe('Period 4 of 5. Last chance: September 30, 2027.')
   })
 
-  it('period 5: one line in the draft, two when the merge is switched off', () => {
+  // Review of 09bb8f19c: with the merge off, period 5 keeps only the
+  // approved charter sentence that already ships, never both.
+  it('period 5: one merged line in the draft, the charter sentence alone when the merge is off', () => {
     const row = { inactivePeriod: 5, lastChanceBy: '2027-03-31' }
     expect(MERGE_PERIOD5_LINE).toBe(true)
     expect(reinstatePeriodLine(row)).toBe(
       'Period 5 of 5. Last chance: must reinstate by March 31, 2027, or charter as a new club.'
     )
     expect(reinstatePeriodLine(row, { mergePeriod5: false })).toBe(
-      'Period 5 of 5. Last chance: March 31, 2027. Last chance: must reinstate by March 31, 2027, or charter as a new club.'
+      'Last chance: must reinstate by March 31, 2027, or charter as a new club.'
     )
   })
 
@@ -135,5 +137,11 @@ describe('reinstatePeriodLine (the Can reinstate row line)', () => {
     expect(reinstatePeriodLine({})).toBe('')
     expect(reinstatePeriodLine({ inactivePeriod: 3 })).toBe('')
     expect(reinstatePeriodLine({ lastChanceBy: '2027-03-31' })).toBe('')
+  })
+
+  it.each([0, 6, -1, 2.5])('no line for a period outside 1 to 5 (%s)', p => {
+    expect(
+      reinstatePeriodLine({ inactivePeriod: p, lastChanceBy: '2027-03-31' })
+    ).toBe('')
   })
 })
