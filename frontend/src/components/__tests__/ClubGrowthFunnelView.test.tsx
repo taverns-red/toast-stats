@@ -308,10 +308,39 @@ describe('ClubGrowthFunnelView', () => {
     renderView(2)
     const section = screen.getByRole('region', { name: /prospective clubs/i })
     const note = within(section).getByTestId('growth-prospective-note')
-    expect(note).toHaveTextContent('1 of 6 steps complete: 8')
+    // #3089: the count is labelled as clubs, never a bare ": 8".
+    expect(note.textContent).toMatch(/^8 clubs at 1 of 6 steps\. /)
+    expect(note).not.toHaveTextContent(/steps complete: \d/)
     expect(note).toHaveTextContent(/checklist/i)
     expect(note).toHaveTextContent(/any order/i)
     expect(note).not.toHaveTextContent(/Stage \d/)
+  })
+
+  it('labels each count as clubs, singular for one, and says which checklists it cannot read (#3089)', () => {
+    const reports = structuredClone(
+      checklistRecorded.d25_reports
+    ) as unknown as DistrictReportsDataset
+    // D25 recorded: one club at 5 of 6, one at 3 of 6. Make the second
+    // unreadable, as when TI changes the checklist text.
+    reports.sections.prospectiveClubs!.records[1]!.prospect =
+      'Checklist moved to a new format'
+    const funnel = buildClubGrowthFunnel({
+      districtId: '25',
+      reports,
+      counts: { chartered: 0, suspended: 0 },
+      programYear: { startDate: '2026-07-01', endDate: '2027-06-30' },
+      asOfDate: '2026-10-27',
+    })
+    render(
+      <MemoryRouter>
+        <ClubGrowthFunnelView funnel={funnel} asOfDate="2026-10-27" />
+      </MemoryRouter>
+    )
+    const note = screen.getByTestId('growth-prospective-note')
+    expect(note.textContent).toMatch(
+      /^1 club at 5 of 6 steps · 1 club whose checklist we can’t read\. /
+    )
+    expect(note).not.toHaveTextContent(/Not recognised/)
   })
 
   it('a recorded out-of-order checklist waits on the step that went back (D25, #2388)', () => {
