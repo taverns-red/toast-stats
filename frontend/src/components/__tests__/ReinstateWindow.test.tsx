@@ -29,9 +29,24 @@ describe('ReinstateWindow', () => {
     expect(li[0]).toHaveTextContent('Suspended')
     for (const i of [1, 2, 3, 4]) {
       expect(li[i]).toHaveTextContent(`Period ${i + 1}`)
-      expect(li[i]).toHaveTextContent('Closed')
     }
     expect(li[4]).toHaveTextContent('Oct 2026 – Mar 2027')
+  })
+
+  // Ron approved the labels on 2026-11-20: period 1 "Suspended", periods
+  // 2 to 5 "Closed, can still reinstate".
+  it('labels period 1 Suspended and periods 2 to 5 Closed, can still reinstate', () => {
+    render(<ReinstateWindow lastChanceBy="2027-03-31" inactivePeriod={5} />)
+    const labels = items().map(
+      li => li.querySelector('.reinstate-window__status')?.textContent
+    )
+    expect(labels).toEqual([
+      'Suspended',
+      'Closed, can still reinstate',
+      'Closed, can still reinstate',
+      'Closed, can still reinstate',
+      'Closed, can still reinstate',
+    ])
   })
 
   it('marks only the current period "Now", in text and aria-current', () => {
