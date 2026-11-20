@@ -103,6 +103,8 @@ export const EXPECTED: Record<string, string> = {
     PREVIEW,
     DATA_READER
   ),
+  // One-off staging config writer (#3103); pipeline identity, as contact-strip.yml.
+  'legacy-suspension-deadlines.yml::build': PIPELINE,
   'pr-preview-cleanup.yml::cleanup': PREVIEW,
   'pr-preview.yml::preview': PREVIEW,
   'validate-vs-ceo-report.yml::validate': DATA_READER,
