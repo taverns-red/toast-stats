@@ -54,13 +54,12 @@ function file(
 const build = (
   f: ReinstatableClubs | null,
   districtIds: readonly string[] | 'all',
-  extra: { date?: string; programYearStart?: number; search?: string } = {}
+  extra: { date?: string; search?: string } = {}
 ) =>
   buildRollupReinstate({
     file: f,
     date: extra.date ?? DATE,
     districtIds,
-    programYearStart: extra.programYearStart ?? 2026,
     search: extra.search,
   })
 
@@ -195,13 +194,45 @@ describe('buildRollupReinstate', () => {
     expect(r.rows.map(x => x.id)).toEqual(['2', '3', '10', '9', '1'])
   })
 
-  it('names next year’s club base between April 1 and June 30', () => {
+  /* Ron, 2026-11-20: always this year's club base. A March 31 suspension
+     doesn't add from April to June, whatever its addsToBase flag says. */
+  it('April to June: a March 31 suspension is not summed as adding', () => {
+    const spring = club({
+      suspendDate: '2027-03-31',
+      reason: 'suspended_mar31_before_oct1',
+      addsToBase: true,
+    })
+    const date = '2027-05-15'
     const r = build(
-      file({ '61': [club()] }, { baseProgramYear: '2027-2028' }),
-      ['61']
+      file(
+        { '61': [spring, closed()] },
+        { snapshotDate: date, baseProgramYear: '2027-2028' }
+      ),
+      ['61'],
+      { date }
     )!
-    expect(r.nextYear).toBe(true)
-    expect(r.card).toBe('1 adds to next year’s club base')
+    expect(r.adds).toBe(0)
+    expect(r.rows[0]!.adds).toBe(0)
+    expect(r.card).toBe('0 add to the club base')
+  })
+
+  it('from July 1: the March 31 suspension is summed as adding', () => {
+    const spring = club({
+      suspendDate: '2027-03-31',
+      reason: 'suspended_mar31_before_oct1',
+      addsToBase: true,
+    })
+    const date = '2027-07-01'
+    const r = build(
+      file(
+        { '61': [spring] },
+        { snapshotDate: date, baseProgramYear: '2027-2028' }
+      ),
+      ['61'],
+      { date }
+    )!
+    expect(r.adds).toBe(1)
+    expect(r.card).toBe('1 adds to the club base')
   })
 
   it('carries the page’s py and date on each district link', () => {

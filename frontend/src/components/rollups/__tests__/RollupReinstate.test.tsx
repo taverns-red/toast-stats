@@ -38,7 +38,6 @@ const reinstate: RollupReinstate = {
   adds: 3,
   unknown: 0,
   card: '3 add to the club base',
-  nextYear: false,
   rows: [
     {
       id: '61',
@@ -151,18 +150,33 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     expect(link).toHaveAttribute('target', '_blank')
   })
 
-  it('names next year’s club base between April 1 and June 30', () => {
-    renderView({
-      ...reinstate,
-      nextYear: true,
-      card: '3 add to next year’s club base',
-    })
+  it('says what it takes and where to send it, as the district does (#3100)', () => {
+    renderView(reinstate)
+    const section = document.getElementById('growth-reinstate')!
+    const steps = within(section).getByTestId('growth-reinstate-requirements')
+    expect(
+      within(steps).getByRole('heading', { name: 'What it takes' })
+    ).toBeInTheDocument()
+    expect(within(steps).getAllByRole('listitem')).toHaveLength(3)
+    expect(
+      within(steps).getByRole('link', { name: 'renewals@toastmasters.org' })
+    ).toHaveAttribute('href', 'mailto:renewals@toastmasters.org')
+    expect(
+      within(steps).getByRole('link', { name: '+1 720-439-5050' })
+    ).toHaveAttribute('href', 'tel:+17204395050')
+  })
+
+  it('always names this year’s club base, never next year’s (Ron, 2026-11-20)', () => {
+    renderView(reinstate)
     const table = screen.getByTestId('rollup-growth-reinstate-table')
     expect(
       within(table).getByRole('columnheader', {
-        name: 'Adds to next year’s club base',
+        name: 'Adds to the club base',
       })
     ).toBeInTheDocument()
+    expect(document.getElementById('growth-reinstate')).not.toHaveTextContent(
+      /next year/i
+    )
   })
 
   it('a measured zero: the card says 0 and the section says none', () => {

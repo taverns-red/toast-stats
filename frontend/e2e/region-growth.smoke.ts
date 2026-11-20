@@ -2,6 +2,10 @@ import { test, expect, type Page } from './fixtures/test'
 import reports from '../src/__tests__/fixtures/reports-rollups-2026-10-15.recorded.json' with { type: 'json' }
 import rollups from '../src/__tests__/fixtures/region-rollups-2026-10-15.recorded.json' with { type: 'json' }
 import reinstatable from '../src/__tests__/fixtures/reinstatable-clubs-2026-11-18.recorded.json' with { type: 'json' }
+import {
+  assertTiRenewalsLinks,
+  withoutTiRenewalsContact,
+} from './helpers/tiRenewalsContact'
 
 /* Region and world Club Growth funnels (#1812, #1813) — measured on the
  * deployed preview (BASE_URL) at 375, 768 and 1280, light and dark.
@@ -159,9 +163,13 @@ for (const [label, url, child] of [
           )
         }
 
-        // Counts only: no person data.
-        const text = (await page.locator('.growth-page').textContent()) ?? ''
+        // Counts only: no person data. TI's renewals contact in "What it
+        // takes" is the one address and phone allowed (#3100).
+        const text = withoutTiRenewalsContact(
+          (await page.locator('.growth-page').textContent()) ?? ''
+        )
         expect(text).not.toMatch(/@|\+\d{10,}/)
+        await assertTiRenewalsLinks(page)
 
         const m = await metrics(page)
         expect(m.small).toBe(0)

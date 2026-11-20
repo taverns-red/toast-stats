@@ -7,9 +7,16 @@
  * Tags are plain text (never colour alone). Reasons quote Toastmasters'
  * Club Reinstatement FAQ. A missing file renders nothing; a measured zero
  * says so.
+ *
+ * #3100 (approved UX review items): clubs that add come first and the rest
+ * fold into a closed <details> (S1); the adding rows and the split line name
+ * the deadline (M1); "What it takes" says where to send it (M2); closed rows
+ * print no "Not known" division (S3); a club with a page here links to it
+ * (S4); the split counts the unknown-effect clubs (S6).
  */
 import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom'
 import type {
   ReinstatableClub,
@@ -19,7 +26,9 @@ import type { ReinstatementReason } from '@taverns-red/analytics-core'
 import recordedJson from '../../__tests__/fixtures/reinstatable-clubs-2026-11-18.recorded.json'
 import {
   ReinstatableClubsSection,
+  reinstateCard,
   reinstateSplit,
+  type ReinstatableClubsSectionProps,
 } from '../ReinstatableClubsSection'
 
 const recorded = recordedJson as unknown as ReinstatableClubs
@@ -42,11 +51,35 @@ function stubMobile(matches: boolean) {
   )
 }
 
+function renderSection(
+  clubs: ReinstatableClub[] | null,
+  over: Partial<ReinstatableClubsSectionProps> = {}
+) {
+  return render(
+    <MemoryRouter>
+      <ReinstatableClubsSection
+        clubs={clubs}
+        snapshotDate="2026-11-18"
+        districtId="61"
+        {...over}
+      />
+    </MemoryRouter>
+  )
+}
+
 function rowFor(name: string): HTMLElement {
   const row = screen.getByText(name).closest('tr')
   if (!row) throw new Error(`no row for ${name}`)
   return row
 }
+
+const section = () => screen.getByTestId('growth-reinstate')
+
+/** Body rows across every group's table. */
+const bodyRows = () =>
+  within(section())
+    .getAllByRole('row')
+    .filter(r => r.closest('tbody') !== null)
 
 describe('ReinstatableClubsSection', () => {
   beforeEach(() => stubMobile(false))
@@ -56,24 +89,12 @@ describe('ReinstatableClubsSection', () => {
   })
 
   it('renders nothing when the list was not measured', () => {
-    const { container } = render(
-      <ReinstatableClubsSection
-        clubs={null}
-        baseProgramYear={null}
-        programYearStart={2026}
-      />
-    )
+    const { container } = renderSection(null)
     expect(container).toBeEmptyDOMElement()
   })
 
   it('says so when the file lists no clubs for the district', () => {
-    render(
-      <ReinstatableClubsSection
-        clubs={[]}
-        baseProgramYear="2026-2027"
-        programYearStart={2026}
-      />
-    )
+    renderSection([])
     expect(
       screen.getByRole('heading', { name: 'Can reinstate (0)' })
     ).toBeInTheDocument()
@@ -84,155 +105,265 @@ describe('ReinstatableClubsSection', () => {
   })
 
   it('lists every recorded D61 club with its number', () => {
-    render(
-      <ReinstatableClubsSection
-        clubs={d61}
-        baseProgramYear="2026-2027"
-        programYearStart={2026}
-      />
-    )
+    renderSection(d61)
     expect(
       screen.getByRole('heading', { name: 'Can reinstate (22)' })
     ).toBeInTheDocument()
-    const table = screen.getByTestId('growth-reinstate-table')
-    expect(within(table).getAllByRole('row')).toHaveLength(23)
+    expect(bodyRows()).toHaveLength(22)
     const row = rowFor('Toastmasters At St. Lawrence College')
     expect(row).toHaveTextContent('Club 1849755')
     expect(row).toHaveTextContent('A / 01')
   })
 
-  it('says how many of the clubs add to the club base (#3088)', () => {
-    render(
-      <ReinstatableClubsSection
-        clubs={d61}
-        baseProgramYear="2026-2027"
-        programYearStart={2026}
-      />
-    )
-    expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
-      '3 of 22 add to the club base.'
-    )
+  describe('groups (S1)', () => {
+    it('puts the clubs that add first, open, and folds the rest closed', () => {
+      renderSection(d61)
+      const adds = screen.getByTestId('growth-reinstate-adds')
+      expect(
+        within(adds).getByRole('heading', {
+          name: 'Adds to the club base (3)',
+        })
+      ).toBeInTheDocument()
+      expect(
+        within(adds)
+          .getAllByRole('row')
+          .filter(r => r.closest('tbody'))
+      ).toHaveLength(3)
+
+      const rest = screen.getByTestId('growth-reinstate-rest')
+      expect(rest.tagName).toBe('DETAILS')
+      expect(rest).not.toHaveAttribute('open')
+      // The label is a heading inside the summary, so heading navigation
+      // reaches the folded group too.
+      const restHeading = within(rest).getByRole('heading', {
+        name: 'Doesn’t add to the club base (19)',
+      })
+      expect(restHeading.closest('summary')).not.toBeNull()
+      expect(
+        within(rest)
+          .getAllByRole('row', { hidden: true })
+          .filter(r => r.closest('tbody'))
+      ).toHaveLength(19)
+      // Adds come before the folded group in reading order.
+      expect(
+        adds.compareDocumentPosition(rest) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
+      expect(screen.queryByTestId('growth-reinstate-unknown')).toBeNull()
+    })
+
+    it('gives the unknown-effect clubs their own group, after the adds', () => {
+      const adding: ReinstatableClub = { ...d61[0]!, clubNumber: '77' }
+      renderSection([...d51, adding])
+      const unknown = screen.getByTestId('growth-reinstate-unknown')
+      expect(
+        within(unknown).getByRole('heading', {
+          name: 'Effect on the club base not known (1)',
+        })
+      ).toBeInTheDocument()
+      expect(
+        within(unknown).getByText('HELP Synergy Toastmasters Club')
+      ).toBeInTheDocument()
+      const adds = screen.getByTestId('growth-reinstate-adds')
+      expect(
+        adds.compareDocumentPosition(unknown) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
+      // No folded group when every club adds or is unknown.
+      expect(screen.queryByTestId('growth-reinstate-rest')).toBeNull()
+    })
+
+    it('says the closed-club reason once, not on every folded row', () => {
+      renderSection(d61)
+      const rest = screen.getByTestId('growth-reinstate-rest')
+      const text = rest.textContent ?? ''
+      expect(text.split('“will not increase the club base”')).toHaveLength(2)
+      expect(rowFor("Tunney's Toastmasters")).not.toHaveTextContent(
+        'will not increase the club base'
+      )
+    })
+
+    it('marks clubs in the oldest renewal period "Confirm with World Headquarters"', () => {
+      renderSection(d61)
+      expect(rowFor('Club Le Marquis')).toHaveTextContent(
+        'Confirm with World Headquarters'
+      )
+      const oldest = d61.filter(c => c.oldestPeriod).length
+      expect(oldest).toBe(9)
+      const flagged = bodyRows().filter(r =>
+        r.textContent?.includes('Confirm with World Headquarters')
+      )
+      expect(flagged).toHaveLength(oldest)
+    })
   })
 
-  it('names next year’s club base in the split from April to June (#3088)', () => {
-    render(
-      <ReinstatableClubsSection
-        clubs={d61}
-        baseProgramYear="2027-2028"
-        programYearStart={2026}
-      />
-    )
-    expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
-      '3 of 22 add to next year’s club base.'
-    )
-  })
+  describe('deadline (M1)', () => {
+    it('names the March 31 deadline in the split for September 30 suspensions', () => {
+      renderSection(d61)
+      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
+        '3 of 22 add to the club base if they reinstate by March 31, 2027.'
+      )
+    })
 
-  it('shows no split for an empty list (#3088)', () => {
-    render(
-      <ReinstatableClubsSection
-        clubs={[]}
-        baseProgramYear="2026-2027"
-        programYearStart={2026}
-      />
-    )
-    expect(screen.queryByTestId('growth-reinstate-split')).toBeNull()
-  })
+    it('names it in the Why cell of a September 30 suspension', () => {
+      renderSection(d61)
+      const row = rowFor('Toastmasters At St. Lawrence College')
+      // The page's shared date format (formatDisplayDate), as the Suspended stage.
+      expect(row).toHaveTextContent('Suspended Sep 30, 2026')
+      expect(row).toHaveTextContent(
+        'Suspended at the September 30 renewal. If it reinstates by March 31, 2027, it adds to the club base.'
+      )
+    })
 
-  it('tags a suspended club that adds to the base, quoting the FAQ', () => {
-    render(
-      <ReinstatableClubsSection
-        clubs={d61}
-        baseProgramYear="2026-2027"
-        programYearStart={2026}
-      />
-    )
-    const row = rowFor('Toastmasters At St. Lawrence College')
-    // The page's shared date format (formatDisplayDate), as the Suspended stage.
-    expect(row).toHaveTextContent('Suspended Sep 30, 2026')
-    expect(row).toHaveTextContent('Adds to the club base')
-    expect(row).toHaveTextContent(
-      '“Reinstatement during the October renewal cycle will increase the club base.”'
-    )
-  })
+    it('takes the year from the snapshot date, not the calendar', () => {
+      // A deadline year the default fixture date (2026-11-18) can't give.
+      renderSection(d61, { snapshotDate: '2027-10-15' })
+      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
+        'by March 31, 2028.'
+      )
+    })
 
-  it('tags a closed club as not adding, with its last-seen date', () => {
-    render(
-      <ReinstatableClubsSection
-        clubs={d61}
-        baseProgramYear="2026-2027"
-        programYearStart={2026}
-      />
-    )
-    const row = rowFor("Tunney's Toastmasters")
-    expect(row).toHaveTextContent('Closed, last seen Jun 30, 2026')
-    expect(row).toHaveTextContent('Doesn’t add to the club base')
-    expect(row).toHaveTextContent('“will not increase the club base”')
-    expect(row).not.toHaveTextContent('Confirm with World Headquarters')
-  })
-
-  it('marks clubs in the oldest renewal period "Confirm with World Headquarters"', () => {
-    render(
-      <ReinstatableClubsSection
-        clubs={d61}
-        baseProgramYear="2026-2027"
-        programYearStart={2026}
-      />
-    )
-    expect(rowFor('Club Le Marquis')).toHaveTextContent(
-      'Confirm with World Headquarters'
-    )
-    const oldest = d61.filter(c => c.oldestPeriod).length
-    expect(oldest).toBe(9)
-    const flagged = within(screen.getByTestId('growth-reinstate-table'))
-      .getAllByRole('row')
-      .filter(r => r.textContent?.includes('Confirm with World Headquarters'))
-    expect(flagged).toHaveLength(oldest)
-  })
-
-  it('shows a closed club with no known division or area as not known', () => {
-    render(
-      <ReinstatableClubsSection
-        clubs={d61}
-        baseProgramYear="2026-2027"
-        programYearStart={2026}
-      />
-    )
-    expect(rowFor('Club Le Marquis')).toHaveTextContent('Not known')
-  })
-
-  it('says the effect is not known for a suspend date off the renewal cycle', () => {
-    render(
-      <ReinstatableClubsSection
-        clubs={d51}
-        baseProgramYear="2026-2027"
-        programYearStart={2026}
-      />
-    )
-    const row = rowFor('HELP Synergy Toastmasters Club')
-    expect(row).toHaveTextContent('Effect on the club base not known')
-    expect(row).not.toHaveTextContent('Doesn’t add to the club base')
-  })
-
-  it('says "next year’s club base" when the base year is after the displayed year', () => {
-    const club: ReinstatableClub = {
+    const spring: ReinstatableClub = {
       clubNumber: '1',
       clubName: 'Spring Club',
       status: 'suspended',
-      suspendDate: '2027-03-31',
+      suspendDate: '2026-03-31',
       oldestPeriod: false,
       addsToBase: true,
       reason: 'suspended_mar31_before_oct1',
     }
-    render(
-      <ReinstatableClubsSection
-        clubs={[club]}
-        baseProgramYear="2027-2028"
-        programYearStart={2026}
-      />
+
+    it('names September 30 for a March 31 suspension, July to September', () => {
+      // Ron approved this wording on 2026-11-20.
+      renderSection([spring], { snapshotDate: '2026-07-31' })
+      expect(rowFor('Spring Club')).toHaveTextContent(
+        'Suspended at the March 31 renewal. If it reinstates by September 30, 2026, it adds to the club base.'
+      )
+      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
+        '1 of 1 adds to the club base if it reinstates by September 30, 2026.'
+      )
+    })
+
+    /* Ron, 2026-11-20: always this year's club base. From April to June a
+       March 31 suspension doesn't add to it, whatever the row's addsToBase
+       flag says (the pipeline sets it for next year's base until #3103). */
+    it('April to June: a March 31 suspension doesn’t add to this year’s base', () => {
+      renderSection([{ ...spring, suspendDate: '2027-03-31' }], {
+        snapshotDate: '2027-04-30',
+      })
+      expect(rowFor('Spring Club')).toHaveTextContent(
+        'Suspended at the March 31 renewal. Reinstating it doesn’t change this year’s club base.'
+      )
+      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
+        '0 of 1 add to the club base.'
+      )
+      expect(screen.queryByTestId('growth-reinstate-adds')).toBeNull()
+      const rest = screen.getByTestId('growth-reinstate-rest')
+      expect(
+        within(rest).getByRole('heading', {
+          name: 'Doesn’t add to the club base (1)',
+        })
+      ).toBeInTheDocument()
+      expect(section()).not.toHaveTextContent(/next year/i)
+    })
+
+    it('from July 1: the March 31 suspension adds, by September 30', () => {
+      renderSection([{ ...spring, suspendDate: '2027-03-31' }], {
+        snapshotDate: '2027-07-01',
+      })
+      expect(rowFor('Spring Club')).toHaveTextContent(
+        'Suspended at the March 31 renewal. If it reinstates by September 30, 2027, it adds to the club base.'
+      )
+      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
+        '1 of 1 adds to the club base if it reinstates by September 30, 2027.'
+      )
+    })
+
+    it('June 30: still doesn’t add', () => {
+      renderSection([{ ...spring, suspendDate: '2027-03-31' }], {
+        snapshotDate: '2027-06-30',
+      })
+      expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
+        '0 of 1 add to the club base.'
+      )
+    })
+
+    it('prints no single date when the deadlines differ', () => {
+      renderSection([spring, d61[0]!], { snapshotDate: '2026-09-30' })
+      const split = screen.getByTestId('growth-reinstate-split')
+      expect(split).toHaveTextContent('2 of 2 add to the club base.')
+      expect(split).not.toHaveTextContent('reinstate by')
+    })
+
+    it('prints no date when no club adds', () => {
+      renderSection(d61.slice(3))
+      const split = screen.getByTestId('growth-reinstate-split')
+      expect(split).toHaveTextContent('0 of 19 add to the club base.')
+      expect(split).not.toHaveTextContent('reinstate by')
+    })
+  })
+
+  it('counts the clubs whose effect is not known in the split (S6)', () => {
+    renderSection(d51)
+    expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
+      '0 of 1 add to the club base. 1 effect on the club base not known.'
     )
-    expect(rowFor('Spring Club')).toHaveTextContent(
-      'Adds to next year’s club base'
-    )
+  })
+
+  it('shows no split for an empty list (#3088)', () => {
+    renderSection([])
+    expect(screen.queryByTestId('growth-reinstate-split')).toBeNull()
+  })
+
+  describe('club links (S4)', () => {
+    it('links a club that has a page here, as the Suspended list does', () => {
+      renderSection(d61, {
+        clubPageIds: new Set(['1849755', '3475582']),
+      })
+      expect(
+        screen.getByRole('link', {
+          name: 'Toastmasters At St. Lawrence College',
+        })
+      ).toHaveAttribute('href', '/district/61/club/1849755')
+      expect(
+        screen.getByRole('link', {
+          name: "Tunney's Toastmasters",
+          hidden: true,
+        })
+      ).toHaveAttribute('href', '/district/61/club/3475582')
+    })
+
+    it('leaves a club without a page here as plain text', () => {
+      renderSection(d61, { clubPageIds: new Set(['1849755']) })
+      expect(
+        screen.queryByRole('link', {
+          name: 'Speak with Style Toastmasters Club',
+        })
+      ).toBeNull()
+      expect(
+        screen.getByText('Speak with Style Toastmasters Club')
+      ).toBeInTheDocument()
+    })
+  })
+
+  describe('division and area (S3)', () => {
+    it('prints no "Not known" for closed clubs without one', () => {
+      renderSection(d61)
+      expect(section()).not.toHaveTextContent('Not known')
+      const cells = rowFor('Club Le Marquis').querySelectorAll(
+        '[data-label="Division / Area"]'
+      )
+      expect(cells).toHaveLength(0)
+    })
+
+    it('shows a closed club’s division when the file has it', () => {
+      const closed = d61.filter(c => c.status === 'closed')
+      renderSection([
+        ...closed.slice(1),
+        { ...closed[0]!, division: 'G', area: '63' },
+      ])
+      expect(rowFor("Tunney's Toastmasters")).toHaveTextContent('G / 63')
+      // Same table, a row without one: its cell is empty, never "Not known".
+      expect(section()).not.toHaveTextContent('Not known')
+    })
   })
 
   describe('every reason code the pipeline can list', () => {
@@ -262,13 +393,7 @@ describe('ReinstatableClubsSection', () => {
     }
 
     function renderOne(c: ReinstatableClub): HTMLElement {
-      render(
-        <ReinstatableClubsSection
-          clubs={[c]}
-          baseProgramYear="2026-2027"
-          programYearStart={2026}
-        />
-      )
+      renderSection([c])
       return rowFor(c.clubName)
     }
 
@@ -288,12 +413,12 @@ describe('ReinstatableClubsSection', () => {
       suspended_sept30_october_cycle: {
         row: { suspendDate: '2026-09-30', addsToBase: true },
         tag: ADDS,
-        why: '“Reinstatement during the October renewal cycle will increase the club base.”',
+        why: 'If it reinstates by March 31, 2027, it adds to the club base.',
       },
       suspended_mar31_before_oct1: {
         row: { suspendDate: '2026-03-31', addsToBase: true },
         tag: ADDS,
-        why: 'reinstating before October 1 increases the club base',
+        why: 'Suspended at the March 31 renewal. If it reinstates by',
       },
       suspended_mar31_after_oct1: {
         row: { suspendDate: '2026-03-31' },
@@ -327,19 +452,19 @@ describe('ReinstatableClubsSection', () => {
     }
 
     it.each(Object.entries(CASES))(
-      '%s: shows its tag and reason sentence',
+      '%s: shows its group and reason sentence',
       (reason, { row, tag, why }) => {
         const tr = renderOne(club(reason, row))
-        expect(tr).toHaveTextContent(tag)
-        expect(tr).toHaveTextContent(why)
+        expect(section()).toHaveTextContent(`${tag} (1)`)
+        expect(section()).toHaveTextContent(why)
         expect(confirmCount(tr)).toBeLessThanOrEqual(1)
       }
     )
 
     it('an unknown code (a later release) says the effect is not known', () => {
       const tr = renderOne(club('some_future_code', { addsToBase: true }))
-      expect(tr).toHaveTextContent(NOT_KNOWN)
-      expect(tr).not.toHaveTextContent(ADDS)
+      expect(section()).toHaveTextContent(`${NOT_KNOWN} (1)`)
+      expect(section()).not.toHaveTextContent(ADDS)
       expect(confirmCount(tr)).toBe(1)
     })
 
@@ -352,7 +477,7 @@ describe('ReinstatableClubsSection', () => {
           oldestPeriod: true,
         })
       )
-      expect(tr).toHaveTextContent(NOT_KNOWN)
+      expect(section()).toHaveTextContent(NOT_KNOWN)
       expect(tr).toHaveTextContent('oldest of the four renewal periods')
       expect(confirmCount(tr)).toBe(1)
     })
@@ -372,19 +497,27 @@ describe('ReinstatableClubsSection', () => {
     })
   })
 
-  it('explains what it takes, links the FAQ and says Toastmasters decides', () => {
-    render(
-      <ReinstatableClubsSection
-        clubs={d61}
-        baseProgramYear="2026-2027"
-        programYearStart={2026}
-      />
-    )
+  it('says what it takes and where to send it, and links the FAQ (M2)', () => {
+    renderSection(d61)
     const note = screen.getByTestId('growth-reinstate-requirements')
-    expect(note).toHaveTextContent('12 members')
-    expect(note).toHaveTextContent('3 of whom were active')
-    expect(note).toHaveTextContent('president, vice president and secretary')
-    expect(note).toHaveTextContent('World Headquarters')
+    expect(
+      within(note).getByRole('heading', { name: 'What it takes' })
+    ).toBeInTheDocument()
+    const items = within(note).getAllByRole('listitem')
+    expect(items.map(li => li.textContent)).toEqual([
+      'Membership applications for 12 members. 3 of them must have been members in the renewal period before the suspension.',
+      'A president, a secretary and one vice president (education, membership or public relations). Three different people.',
+      'Dues for each member: the rest of this renewal period, plus the next full one.',
+    ])
+    expect(note).toHaveTextContent(
+      'Reinstatement can’t be done online. Email everything to renewals@toastmasters.org and pay World Headquarters by phone at +1 720-439-5050.'
+    )
+    expect(
+      within(note).getByRole('link', { name: 'renewals@toastmasters.org' })
+    ).toHaveAttribute('href', 'mailto:renewals@toastmasters.org')
+    expect(
+      within(note).getByRole('link', { name: '+1 720-439-5050' })
+    ).toHaveAttribute('href', 'tel:+17204395050')
     const link = screen.getByRole('link', { name: /Club Reinstatement FAQ/ })
     expect(link).toHaveAttribute(
       'href',
@@ -412,16 +545,28 @@ describe('reinstateSplit', () => {
   })
 
   it('counts the recorded D61 clubs that add to the base', () => {
-    expect(reinstateSplit(d61, false)).toEqual({
+    expect(reinstateSplit(d61, '2026-11-18')).toEqual({
       adds: 3,
       card: '3 add to the club base',
     })
   })
 
-  it('uses the singular for one club and names next year’s base', () => {
+  it('uses the singular for one club', () => {
     expect(
-      reinstateSplit([one('suspended_sept30_october_cycle', true)], true)
-    ).toEqual({ adds: 1, card: '1 adds to next year’s club base' })
+      reinstateSplit(
+        [one('suspended_sept30_october_cycle', true)],
+        '2026-11-18'
+      )
+    ).toEqual({ adds: 1, card: '1 adds to the club base' })
+  })
+
+  it('does not count a March 31 suspension from April to June', () => {
+    const spring = {
+      ...one('suspended_mar31_before_oct1', true),
+      suspendDate: '2027-03-31',
+    }
+    expect(reinstateSplit([spring], '2027-05-15').adds).toBe(0)
+    expect(reinstateSplit([spring], '2027-07-01').adds).toBe(1)
   })
 
   it('does not count a club whose effect on the base is not known', () => {
@@ -434,8 +579,22 @@ describe('reinstateSplit', () => {
           one('suspend_date_after_as_of', true),
           one('some_future_code', true),
         ],
-        false
+        '2026-11-18'
       )
     ).toEqual({ adds: 0, card: '0 add to the club base' })
+  })
+})
+
+/* #3100 (S6) — the district card's third line, worded like the region and
+   world card (#3094). */
+describe('reinstateCard', () => {
+  it('is the split alone when every effect is known', () => {
+    expect(reinstateCard(d61, '2026-11-18')).toBe('3 add to the club base')
+  })
+
+  it('adds the unknown-effect count when there is one', () => {
+    expect(reinstateCard(d51, '2026-11-18')).toBe(
+      '0 add to the club base · 1 effect on the club base not known'
+    )
   })
 })

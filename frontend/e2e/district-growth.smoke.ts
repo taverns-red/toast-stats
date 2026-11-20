@@ -1,5 +1,9 @@
 import { test, expect, type Page } from './fixtures/test'
 import { fixtureFetch } from './helpers/cdnFixtures'
+import {
+  assertTiRenewalsLinks,
+  withoutTiRenewalsContact,
+} from './helpers/tiRenewalsContact'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -12,7 +16,8 @@ import { resolve } from 'node:path'
  *  - every stage links to its in-page club list, and the target exists;
  *  - prospective clubs link to toastmasters.org; chartered/coached clubs link
  *    to their club page here;
- *  - no contact data (email, phone, meeting links, passcodes) on the page;
+ *  - no contact data (email, phone, meeting links, passcodes) on the page,
+ *    except TI's own renewals address and phone in "What it takes" (#3100);
  *  - ≥44px stage targets and zero document horizontal overflow at 375. */
 
 const GROWTH = '/district/61/growth'
@@ -62,7 +67,9 @@ async function assertFunnel(page: Page): Promise<void> {
 const REINSTATEMENT_FAQ_URL = 'https://toastmasters.org/footer/faq/Club'
 
 async function assertPrivacy(page: Page): Promise<void> {
-  const text = (await page.locator('.growth-page').textContent()) ?? ''
+  const text = withoutTiRenewalsContact(
+    (await page.locator('.growth-page').textContent()) ?? ''
+  )
   expect(text).not.toMatch(/@|\+\d{10,}|passcode|zoom\.us|meet\.google/i)
   const external = await page
     .locator('.growth-page a[href^="http"]')
@@ -143,6 +150,25 @@ for (const theme of ['light', 'dark'] as const) {
       await card.getByRole('link').click()
       await expect(page).toHaveURL(/#growth-reinstate$/)
       await expect(heading).toBeInViewport()
+    })
+
+    test('Can reinstate: adds first, the rest folded, contact links 44px (#3100)', async ({
+      page,
+    }) => {
+      const section = page.locator('#growth-reinstate')
+      // Clubs that add come first; the rest sit in a closed <details>.
+      const rest = section.getByTestId('growth-reinstate-rest')
+      if ((await rest.count()) > 0) {
+        await expect(rest).not.toHaveAttribute('open', /.*/)
+      }
+      await expect(section).not.toContainText('Not known')
+      await assertTiRenewalsLinks(page)
+      const overflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth
+      )
+      expect(overflow).toBeLessThanOrEqual(0)
     })
   })
 }

@@ -3,8 +3,8 @@ import type {
   ReinstatableClubs,
 } from '@taverns-red/shared-contracts'
 import {
-  addsToNextYear,
   baseUnknownCount,
+  reinstateCard,
   reinstateSplit,
 } from '../components/ReinstatableClubsSection'
 import { keptQuery } from './rollupGrowthFunnel'
@@ -43,8 +43,6 @@ export interface RollupReinstate {
   unknown: number
   /** The card's third line, e.g. "12 add to the club base". */
   card: string
-  /** Reinstating now counts toward next program year's base. */
-  nextYear: boolean
   rows: ReinstateDistrictRow[]
 }
 
@@ -54,8 +52,6 @@ export interface BuildRollupReinstateInput {
   date: string | undefined
   /** Districts in scope (the region's, from its rollups); 'all' = world. */
   districtIds: readonly string[] | 'all'
-  /** Start year of the page's program year (R3). */
-  programYearStart: number
   /** The page's `location.search`; `py` and `date` ride the links. */
   search?: string | undefined
 }
@@ -69,19 +65,17 @@ const byDistrictId = (a: string, b: string): number => {
   return na - nb
 }
 
-/** "2 effect on the club base not known", the tag's own wording. */
-export const unknownPhrase = (n: number): string =>
-  `${n.toLocaleString('en-US')} effect on the club base not known`
+/** "2 effect on the club base not known", the tag's own wording. It lives
+ *  beside the tag so the district card says it the same way (#3100). */
+export { unknownPhrase } from '../components/ReinstatableClubsSection'
 
 export function buildRollupReinstate({
   file,
   date,
   districtIds,
-  programYearStart,
   search,
 }: BuildRollupReinstateInput): RollupReinstate | null {
   if (!file || !date || file.snapshotDate !== date) return null
-  const nextYear = addsToNextYear(file.baseProgramYear, programYearStart)
   const qs = keptQuery(search)
   const ids = (
     districtIds === 'all' ? Object.keys(file.districts) : districtIds
@@ -99,7 +93,7 @@ export function buildRollupReinstate({
       to: `/district/${id}/growth${qs}#growth-reinstate`,
       suspended: clubs.length - closed,
       closed,
-      adds: reinstateSplit(clubs, nextYear).adds,
+      adds: reinstateSplit(clubs, date).adds,
       oldest: clubs.filter(c => c.oldestPeriod).length,
       unknown: baseUnknownCount(clubs),
       total: clubs.length,
@@ -108,15 +102,11 @@ export function buildRollupReinstate({
   rows.sort(
     (a, b) => b.adds - a.adds || b.total - a.total || byDistrictId(a.id, b.id)
   )
-  const split = reinstateSplit(inScope, nextYear)
-  const unknown = baseUnknownCount(inScope)
   return {
     count: inScope.length,
-    adds: split.adds,
-    unknown,
-    card:
-      unknown > 0 ? `${split.card} · ${unknownPhrase(unknown)}` : split.card,
-    nextYear,
+    adds: reinstateSplit(inScope, date).adds,
+    unknown: baseUnknownCount(inScope),
+    card: reinstateCard(inScope, date),
     rows,
   }
 }

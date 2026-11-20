@@ -49,10 +49,9 @@ const WorldGrowthPage: React.FC = () => {
         file,
         date,
         districtIds: 'all',
-        programYearStart: controls.selectedProgramYear.year,
         search,
       }),
-    [file, date, controls.selectedProgramYear.year, search]
+    [file, date, search]
   )
   const loading = reportsLoading || rollupsLoading || reinstateLoading
   const asOf = date ?? reports?.snapshotDate ?? rollups?.snapshotDate ?? null

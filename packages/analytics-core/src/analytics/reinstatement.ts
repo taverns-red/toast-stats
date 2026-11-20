@@ -12,7 +12,10 @@
  * ## Renewal periods
  *
  * Two a year: Oct 1 to Mar 31, and Apr 1 to Sep 30. Everything below counts
- * in whole periods.
+ * in whole periods. Source for the October period ending Mar 31 (so the
+ * October cycle a Sep 30 suspension can reinstate in ends Mar 31): Ron
+ * (District 61 director, 2026-11-20) and TI Club FAQ footnote: 'by the end
+ * of the renewal cycle (September 30/March 31)' (#3100).
  *
  * ## Who is eligible
  *
@@ -35,9 +38,10 @@
  * is capped at a program year's last snapshot (Jun 30).
  * So `lastSeen` 2025-03-31 closed on 2025-04-01, in the Apr-Sep 2025 period,
  * and `lastSeen` 2025-03-30 closed on 2025-03-31, in the period before.
- * When the club's suspend date is known, the FAQ fixes the closure instead
- * (Oct 1 for the Mar 31 cycle, Apr 1 of the next year for the Sep 30 cycle),
- * unless the club was seen later than that. A club seen on `asOf` itself
+ * When the club's suspend date is known, it fixes the closure instead
+ * (Oct 1 for the Mar 31 cycle, from the FAQ; Apr 1 of the next year for the
+ * Sep 30 cycle, an inference from the District 61 snapshots above, which the
+ * FAQ doesn't state), unless the club was seen later than that. A club seen on `asOf` itself
  * was on the roster that day, so it is not closed yet (#3064 review).
  * With `asOf` 2026-11-17 the four periods are Oct 2026-Mar 2027, Apr-Sep 2026,
  * Oct 2025-Mar 2026 and Apr-Sep 2025 (the oldest). The window slides on each
@@ -189,8 +193,9 @@ function baseLabel(startYear: number): string {
 }
 
 /**
- * The FAQ closure for a suspend date: Oct 1 of the same year for the Mar 31
- * cycle, Apr 1 of the next year for the Sep 30 cycle. Null when the date is
+ * The closure for a suspend date: Oct 1 of the same year for the Mar 31
+ * cycle (the FAQ), Apr 1 of the next year for the Sep 30 cycle (inferred
+ * from District 61 snapshots; see the module comment). Null when the date is
  * not near either cycle end.
  */
 function closureFromSuspendDate(suspendDate: string): number | null {
@@ -224,7 +229,8 @@ function classifySuspended(
 
   const oct1 = day(s, 10, 1)
   if (near(day(s, 9, 30))) {
-    // The October cycle: Oct 1 of S through Mar 31 of S+1.
+    // The October cycle: Oct 1 of S through Mar 31 of S+1 (source in the
+    // module comment, "Renewal periods").
     const inOctoberCycle = asOf >= oct1 && asOf <= day(s + 1, 3, 31)
     return inOctoberCycle
       ? { addsToBase: true, reason: 'suspended_sept30_october_cycle' }

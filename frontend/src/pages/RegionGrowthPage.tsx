@@ -52,10 +52,9 @@ const RegionGrowthPage: React.FC = () => {
         file,
         date,
         districtIds: funnel.children.map(c => c.id),
-        programYearStart: controls.selectedProgramYear.year,
         search,
       }),
-    [file, date, funnel.children, controls.selectedProgramYear.year, search]
+    [file, date, funnel.children, search]
   )
   const loading = reportsLoading || rollupsLoading || reinstateLoading
   const asOf = date ?? reports?.snapshotDate ?? rollups?.snapshotDate ?? null
