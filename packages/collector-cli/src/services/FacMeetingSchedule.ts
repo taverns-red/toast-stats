@@ -958,6 +958,8 @@ export interface MeetingScheduleSource {
    * place only counts when a public line is left.
    */
   location?: string | null
+  /** FAC Address.Street, raw. Read only for the mode (#3086). */
+  street?: string | null
 }
 
 function compact(entry: MeetingScheduleEntry): MeetingScheduleEntry {

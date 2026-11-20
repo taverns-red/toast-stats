@@ -239,6 +239,17 @@ describe('meetingModeFromText (#1789)', () => {
     expect(meetingModeFromText(text, { place: true })).toBe(mode)
   })
 
+  // #3086: a venue line beside an online line is hybrid (shapes from the
+  // scrubbed D61 Locations, 2026-11-19).
+  it.each([
+    ['Lien zoom sur demande\n975 Rue des Lys, Sherbrooke, QC J1E 3N5'],
+    ['Paroisse Saint-Sebastien\nOu en ligne (valider)/Or online'],
+    ['NDG Community Council / PROMODEV\nZoom'],
+    ['Online (every week)\nRichcraft Recreation Complex (3rd week)'],
+  ])('venue plus online location %j → hybrid', text => {
+    expect(meetingModeFromText(text, { place: true })).toBe('hybrid')
+  })
+
   it('a plain day/time text with no mode word carries no signal', () => {
     expect(meetingModeFromText('Tuesday 7:00 pm')).toBeUndefined()
     expect(meetingModeFromText('Thursday - Virtual')).toBe('online')
@@ -1780,6 +1791,110 @@ describe('parseMeetingSchedule (#2627) — gap 9: a second time on the day', () 
     for (const entry of entries ?? []) {
       expect(entry).not.toHaveProperty('uncertain')
     }
+  })
+})
+
+/**
+ * #3086 — FAC Location and Street of D61 clubs that allow online
+ * attendance (FAC, 2026-11-19; meeting passwords replaced by a
+ * placeholder). Labels are RT District's hand reading
+ * (taverns-red/red-district PR #2458).
+ */
+describe('parseMeetingSchedule (#3086) — a venue named beside an online option', () => {
+  const modeOf = (location: string, street: string | null = null) =>
+    parseMeetingSchedule({ meetingDay: 'Tuesday', location, street })?.[0]?.mode
+
+  it.each([
+    [
+      '00003747',
+      '975 Rue des Lys, Sherbrooke,  QC J1E 3N5<br>Lien zoom sur demande',
+      '975 Rue des Lys, salle 9',
+    ],
+    [
+      '00005651',
+      "Online Via Zoom - English Speaking Club<br>Last Friday of month: at Cora Dejeuners, 1020 Rte de l'Eglise, St-Foy, Quebec",
+      'Online Via Zoom, Last Friday of month:Cora Dejeuners',
+    ],
+    [
+      '00006425',
+      'Online. Click "Contact Club" above to <br>register and receive a Zoom link. ',
+      'In-Person last Thurs. of the month, 350 Legget Dr., room 100',
+    ],
+    [
+      '00007027',
+      'Pratt & Whitney Canada Plant 1, WW2<br>https://us02web.zoom.us/j/00000000000?pwd=PLACEHOLDER',
+      '1000 Marie-Victorin',
+    ],
+    [
+      '00008861',
+      'UQO - Pavillon Alexandre-Taché<br> (ET en alternance avec des runions en ligne viia ZOOM)',
+      '283 boul. Alexandre-Taché',
+    ],
+    [
+      '00901116',
+      'Paroisse Saint-Sebastien<br>Ou en ligne (valider)/Or online (please check with the club)',
+      '780 Rue Pierre-Viger',
+    ],
+    [
+      '05488489',
+      'CAE MTL Campus<br>Online, contact us for the MS Teams private link',
+      '8585 Cote-de-Liesse',
+    ],
+    [
+      '07749943',
+      'Online (every week)<br>Richcraft Recreation Complex (3rd week of the month, September to June)',
+      '4101 Innovation Drive',
+    ],
+    [
+      '28678920',
+      'NDG Community Council / PROMODEV<br>Zoom',
+      '5964 Ave Notre Dame de Grace, Suite 206',
+    ],
+  ])('%s is hybrid', (_club, location, street) => {
+    expect(modeOf(location, street)).toBe('hybrid')
+  })
+
+  // Online-only by RT District's labels: "only", or wording that says how
+  // the meetings run now ("currently", "since", "online meetings").
+  it.each([
+    [
+      '00004673',
+      'MS Teams Meetings On-Line Only.<br>Bombardier Administration',
+      '400 Cote-Vertu Ouest Road West',
+    ],
+    [
+      '00002587',
+      "Rencontres virtuelle via TEAMS<br>5th Fl Salon d'accueil",
+      null,
+    ],
+    [
+      '00003279',
+      'Statistics Canada<br>Note: Online meetings',
+      "150 Tunney's Pasture Driveway ",
+    ],
+    ['00005407', 'Virtual meetings<br>3rd Floor, Room 0-083', null],
+    ['00006728', 'GoC <br>(Online since April 2020)', 'PO Box 9703, Terminal'],
+    [
+      '00985878',
+      'Place Vincent Massey<br>currently meeting virtually',
+      '351 Boulevard Saint-Joseph',
+    ],
+    ['00000180', 'Online', '110 Laurier Ave West'],
+    ['00777940', 'Online only<br>See website for Zoom contact', 'online only'],
+    [
+      '07872266',
+      'Online only: greenTMvert.ca<br>NOT in person at City Hall!',
+      '110 Laurier Ave W',
+    ],
+  ])('%s stays online', (_club, location, street) => {
+    expect(modeOf(location, street)).toBe('online')
+  })
+
+  it('a street is a mode signal only with an in-person word', () => {
+    expect(modeOf('Online', 'In person at 9 Main St')).toBe('hybrid')
+    expect(modeOf('Online', '9 Main St')).toBe('online')
+    expect(modeOf('Online only', 'In person at 9 Main St')).toBe('online')
+    expect(modeOf('Sandy Hill Community Center', 'Online')).toBe('in-person')
   })
 })
 
