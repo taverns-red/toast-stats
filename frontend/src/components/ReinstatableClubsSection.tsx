@@ -51,12 +51,36 @@ function reasonText(club: ReinstatableClub): string {
   return parts.join(' ')
 }
 
+const baseKnown = (club: ReinstatableClub): boolean =>
+  !UNDECIDED.has(club.reason) && club.reason in REASON_TEXT
+
 function baseTag(club: ReinstatableClub, nextYear: boolean): string {
-  if (UNDECIDED.has(club.reason) || !(club.reason in REASON_TEXT)) {
-    return 'Effect on the club base not known'
-  }
+  if (!baseKnown(club)) return 'Effect on the club base not known'
   if (!club.addsToBase) return 'Doesn’t add to the club base'
   return nextYear ? 'Adds to next year’s club base' : 'Adds to the club base'
+}
+
+/** Whether a reinstatement on this date counts toward the next program
+ *  year's base (April 1 to June 30), from the file's `baseProgramYear`. */
+export function addsToNextYear(
+  baseProgramYear: string | null,
+  programYearStart: number
+): boolean {
+  return (
+    baseProgramYear !== null &&
+    Number(baseProgramYear.slice(0, 4)) > programYearStart
+  )
+}
+
+/** #3088 — how many clubs are tagged "Adds to the club base", and the line
+ *  the stage card prints. Same rule as the tag, so they always agree. */
+export function reinstateSplit(
+  clubs: readonly ReinstatableClub[],
+  nextYear: boolean
+): { adds: number; card: string } {
+  const adds = clubs.filter(c => baseKnown(c) && c.addsToBase).length
+  const base = nextYear ? 'next year’s club base' : 'the club base'
+  return { adds, card: `${adds} ${adds === 1 ? 'adds' : 'add'} to ${base}` }
 }
 
 function statusText(club: ReinstatableClub): string {
@@ -112,9 +136,8 @@ export const ReinstatableClubsSection: React.FC<
   if (clubs === null) return null
   // Between April 1 and June 30 a reinstatement counts toward the next
   // program year's base; the pipeline says which year in `baseProgramYear`.
-  const nextYear =
-    baseProgramYear !== null &&
-    Number(baseProgramYear.slice(0, 4)) > programYearStart
+  const nextYear = addsToNextYear(baseProgramYear, programYearStart)
+  const split = reinstateSplit(clubs, nextYear)
 
   return (
     <section
@@ -130,6 +153,12 @@ export const ReinstatableClubsSection: React.FC<
         Suspended clubs, and clubs closed in the past four renewal periods, can
         reinstate. Toastmasters International makes the final call.
       </p>
+      {clubs.length > 0 && (
+        <p className="growth-stage__note" data-testid="growth-reinstate-split">
+          {split.adds} of {clubs.length} {split.adds === 1 ? 'adds' : 'add'} to{' '}
+          {nextYear ? 'next year’s club base' : 'the club base'}.
+        </p>
+      )}
       <div
         className="growth-stage__note"
         data-testid="growth-reinstate-requirements"

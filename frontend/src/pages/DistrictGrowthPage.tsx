@@ -18,8 +18,15 @@ import {
 import { buildClubGrowthFunnel } from '../utils/clubGrowthFunnel'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
 import { DistrictSubnav } from '../components/DistrictSubnav'
-import { ClubGrowthFunnelView } from '../components/ClubGrowthFunnelView'
-import { ReinstatableClubsSection } from '../components/ReinstatableClubsSection'
+import {
+  ClubGrowthFunnelView,
+  type ReinstateStage,
+} from '../components/ClubGrowthFunnelView'
+import {
+  ReinstatableClubsSection,
+  addsToNextYear,
+  reinstateSplit,
+} from '../components/ReinstatableClubsSection'
 import { GrowthSurvivalLink } from '../components/GrowthSurvivalLink'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import ErrorBoundary from '../components/ErrorBoundary'
@@ -113,10 +120,29 @@ const DistrictGrowthPage: React.FC = () => {
 
   // #3007: not part of `loading`. A date without the file renders nothing,
   // and the funnel never waits on it.
-  const { clubs: reinstatableClubs, baseProgramYear } = useReinstatableClubs(
-    districtId,
-    effectiveEndDate ?? undefined
-  )
+  const {
+    clubs: reinstatableClubs,
+    baseProgramYear,
+    isLoading: reinstatableLoading,
+  } = useReinstatableClubs(districtId, effectiveEndDate ?? undefined)
+
+  // #3088: the fifth stage card. It holds its slot while the file loads
+  // (no layout shift) and is left out when the date has no file.
+  const reinstateStage = useMemo((): ReinstateStage | undefined => {
+    if (reinstatableLoading) return { state: 'loading' }
+    if (reinstatableClubs === null || !effectiveProgramYear) return undefined
+    const nextYear = addsToNextYear(baseProgramYear, effectiveProgramYear.year)
+    return {
+      state: 'ready',
+      count: reinstatableClubs.length,
+      split: reinstateSplit(reinstatableClubs, nextYear).card,
+    }
+  }, [
+    reinstatableLoading,
+    reinstatableClubs,
+    baseProgramYear,
+    effectiveProgramYear,
+  ])
 
   // A suspended club keeps its page here while the analytics club list still
   // carries it; otherwise its row links out to toastmasters.org.
@@ -187,7 +213,11 @@ const DistrictGrowthPage: React.FC = () => {
           {loading || !funnel || !effectiveEndDate ? (
             <LoadingSkeleton variant="card" />
           ) : (
-            <ClubGrowthFunnelView funnel={funnel} asOfDate={effectiveEndDate}>
+            <ClubGrowthFunnelView
+              funnel={funnel}
+              asOfDate={effectiveEndDate}
+              reinstate={reinstateStage}
+            >
               {effectiveProgramYear && (
                 <ReinstatableClubsSection
                   clubs={reinstatableClubs}

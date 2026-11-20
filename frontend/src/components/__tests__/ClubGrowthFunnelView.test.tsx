@@ -17,7 +17,10 @@ import suspendedJson from '../../__tests__/fixtures/suspended-clubs-2026-10-13.r
 import checklistRecorded from '../../__tests__/fixtures/prospective-club-page.recorded.json'
 import sponsorsRecorded from '../../__tests__/fixtures/sponsors-mentors-2026-06-01.recorded.json'
 import { buildClubGrowthFunnel } from '../../utils/clubGrowthFunnel'
-import { ClubGrowthFunnelView } from '../ClubGrowthFunnelView'
+import {
+  ClubGrowthFunnelView,
+  type ReinstateStage,
+} from '../ClubGrowthFunnelView'
 
 const live = recorded.cdn_2026_10_11 as unknown as DistrictReportsDataset
 const suspendedRecorded = suspendedJson as unknown as SuspendedClubs
@@ -140,6 +143,119 @@ describe('ClubGrowthFunnelView', () => {
       suspended.compareDocumentPosition(child) &
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy()
+  })
+
+  describe('Can reinstate card (#3088)', () => {
+    function renderWithReinstate(reinstate: ReinstateStage | undefined) {
+      const funnel = buildClubGrowthFunnel({
+        districtId: '61',
+        reports: live,
+        counts: { chartered: 0, suspended: 2 },
+        programYear: { startDate: '2026-07-01', endDate: '2027-06-30' },
+        asOfDate: '2026-10-11',
+      })
+      return render(
+        <MemoryRouter>
+          <ClubGrowthFunnelView
+            funnel={funnel}
+            asOfDate="2026-10-11"
+            reinstate={reinstate}
+          >
+            <section id="growth-reinstate" />
+          </ClubGrowthFunnelView>
+        </MemoryRouter>
+      )
+    }
+
+    const barWidth = (id: string) =>
+      (
+        screen
+          .getByTestId(`growth-stage-${id}`)
+          .querySelector('.growth-funnel__bar') as HTMLElement
+      ).style.width
+
+    it('adds a fifth card after Suspended with its count, sub-line and split', () => {
+      renderWithReinstate({
+        state: 'ready',
+        count: 22,
+        split: '3 add to the club base',
+      })
+      const funnel = screen.getByRole('list', { name: /club growth funnel/i })
+      const stages = within(funnel).getAllByRole('listitem')
+      expect(stages).toHaveLength(5)
+      const card = stages[4]!
+      expect(card).toHaveAttribute('data-testid', 'growth-stage-reinstate')
+      expect(card).toHaveTextContent('5')
+      expect(card).toHaveTextContent('Can reinstate')
+      expect(card).toHaveTextContent('22')
+      expect(card).toHaveTextContent(
+        'suspended or recently closed clubs that can come back'
+      )
+      expect(card).toHaveTextContent('3 add to the club base')
+    })
+
+    it('links the card to the Can reinstate section, like the other stages', () => {
+      renderWithReinstate({ state: 'ready', count: 22, split: '' })
+      const link = within(
+        screen.getByTestId('growth-stage-reinstate')
+      ).getByRole('link')
+      expect(link).toHaveAttribute('href', '#growth-reinstate')
+      expect(document.getElementById('growth-reinstate')).not.toBeNull()
+    })
+
+    it('puts its bar on the same scale as the other cards', () => {
+      // D61 recorded: Prospective 8, Coached 6. 22 is the largest value.
+      renderWithReinstate({ state: 'ready', count: 22, split: '' })
+      expect(barWidth('reinstate')).toBe('100%')
+      expect(barWidth('prospective')).toBe(`${Math.round((8 / 22) * 100)}%`)
+      expect(barWidth('coached')).toBe(`${Math.round((6 / 22) * 100)}%`)
+    })
+
+    it('shows 0 for an empty list, the way the other stages do', () => {
+      renderWithReinstate({
+        state: 'ready',
+        count: 0,
+        split: '0 add to the club base',
+      })
+      const card = screen.getByTestId('growth-stage-reinstate')
+      expect(card.querySelector('.growth-funnel__value')).toHaveTextContent(
+        /^0$/
+      )
+      expect(barWidth('reinstate')).toBe('0%')
+    })
+
+    it('reserves the card while the list loads, without a number', () => {
+      renderWithReinstate({ state: 'loading' })
+      const card = screen.getByTestId('growth-stage-reinstate')
+      expect(card).toHaveTextContent('Can reinstate')
+      expect(card).toHaveTextContent(/loading/i)
+      expect(card).not.toHaveTextContent(/\d{2}/)
+      // The split line's slot is there too, so the card keeps its height.
+      expect(card.querySelector('.growth-funnel__detail')).not.toBeNull()
+      expect(barWidth('reinstate')).toBe('0%')
+    })
+
+    it('keeps the loading value as narrow as a count, so the text does not rewrap', () => {
+      // A visible "Loading" in the value column took width from the text
+      // column at 1280: the row went from 160px to 141px when the count
+      // arrived. The placeholder is "…" in a 2-digit-wide slot; screen
+      // readers still hear "Loading".
+      renderWithReinstate({ state: 'loading' })
+      const value = screen
+        .getByTestId('growth-stage-reinstate')
+        .querySelector('.growth-funnel__value')!
+      expect(value).toHaveClass('growth-funnel__value--pending')
+      const visible = value.querySelector('[aria-hidden="true"]')
+      expect(visible).toHaveTextContent(/^…$/)
+      expect(value.querySelector('.sr-only')).toHaveTextContent('Loading')
+    })
+
+    it('shows no card when the date has no reinstate file', () => {
+      renderWithReinstate(undefined)
+      const funnel = screen.getByRole('list', { name: /club growth funnel/i })
+      expect(within(funnel).getAllByRole('listitem')).toHaveLength(4)
+      expect(screen.queryByTestId('growth-stage-reinstate')).toBeNull()
+    })
   })
 
   it('renders an unknown suspension count as unknown, not 0 (#1757)', () => {

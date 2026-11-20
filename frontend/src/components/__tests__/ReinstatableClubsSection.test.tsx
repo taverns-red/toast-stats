@@ -17,7 +17,10 @@ import type {
 } from '@taverns-red/shared-contracts'
 import type { ReinstatementReason } from '@taverns-red/analytics-core'
 import recordedJson from '../../__tests__/fixtures/reinstatable-clubs-2026-11-18.recorded.json'
-import { ReinstatableClubsSection } from '../ReinstatableClubsSection'
+import {
+  ReinstatableClubsSection,
+  reinstateSplit,
+} from '../ReinstatableClubsSection'
 
 const recorded = recordedJson as unknown as ReinstatableClubs
 const d61 = recorded.districts['61'] ?? []
@@ -96,6 +99,43 @@ describe('ReinstatableClubsSection', () => {
     const row = rowFor('Toastmasters At St. Lawrence College')
     expect(row).toHaveTextContent('Club 1849755')
     expect(row).toHaveTextContent('A / 01')
+  })
+
+  it('says how many of the clubs add to the club base (#3088)', () => {
+    render(
+      <ReinstatableClubsSection
+        clubs={d61}
+        baseProgramYear="2026-2027"
+        programYearStart={2026}
+      />
+    )
+    expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
+      '3 of 22 add to the club base.'
+    )
+  })
+
+  it('names next year’s club base in the split from April to June (#3088)', () => {
+    render(
+      <ReinstatableClubsSection
+        clubs={d61}
+        baseProgramYear="2027-2028"
+        programYearStart={2026}
+      />
+    )
+    expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
+      '3 of 22 add to next year’s club base.'
+    )
+  })
+
+  it('shows no split for an empty list (#3088)', () => {
+    render(
+      <ReinstatableClubsSection
+        clubs={[]}
+        baseProgramYear="2026-2027"
+        programYearStart={2026}
+      />
+    )
+    expect(screen.queryByTestId('growth-reinstate-split')).toBeNull()
   })
 
   it('tags a suspended club that adds to the base, quoting the FAQ', () => {
@@ -354,5 +394,48 @@ describe('ReinstatableClubsSection', () => {
     expect(
       screen.getByText(/Toastmasters International makes the final call/)
     ).toBeInTheDocument()
+  })
+})
+
+/* #3088 — the split printed on the "Can reinstate" stage card. It counts the
+   clubs tagged "Adds to the club base", so it can never disagree with the
+   table's tags. */
+describe('reinstateSplit', () => {
+  const one = (reason: string, addsToBase: boolean): ReinstatableClub => ({
+    clubNumber: `${reason}-${addsToBase}`,
+    clubName: 'Split Club',
+    status: 'suspended',
+    suspendDate: '2026-09-30',
+    oldestPeriod: false,
+    addsToBase,
+    reason,
+  })
+
+  it('counts the recorded D61 clubs that add to the base', () => {
+    expect(reinstateSplit(d61, false)).toEqual({
+      adds: 3,
+      card: '3 add to the club base',
+    })
+  })
+
+  it('uses the singular for one club and names next year’s base', () => {
+    expect(
+      reinstateSplit([one('suspended_sept30_october_cycle', true)], true)
+    ).toEqual({ adds: 1, card: '1 adds to next year’s club base' })
+  })
+
+  it('does not count a club whose effect on the base is not known', () => {
+    // Same rule as the table's tag: an undecided or unknown reason code is
+    // "Effect on the club base not known", even if addsToBase is true.
+    expect(
+      reinstateSplit(
+        [
+          one('suspend_date_unexpected', true),
+          one('suspend_date_after_as_of', true),
+          one('some_future_code', true),
+        ],
+        false
+      )
+    ).toEqual({ adds: 0, card: '0 add to the club base' })
   })
 })
