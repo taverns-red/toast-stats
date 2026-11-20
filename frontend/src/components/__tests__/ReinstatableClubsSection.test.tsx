@@ -398,6 +398,39 @@ describe('ReinstatableClubsSection', () => {
     })
   })
 
+  /* Ron approved the final-period line on 2026-11-20 (#3103). It shows only
+     on rows the pipeline puts in inactive period 5, with their
+     lastChanceBy; a row placed from lastSeen alone has no period. */
+  describe('last chance (inactive period 5)', () => {
+    const LINE =
+      'Last chance: must reinstate by March 31, 2027, or charter as a new club.'
+    const closedRow = (over: Partial<ReinstatableClub>): ReinstatableClub => ({
+      clubNumber: '3492',
+      clubName: 'Period Club',
+      status: 'closed',
+      lastSeen: '2025-03-31',
+      oldestPeriod: false,
+      addsToBase: false,
+      reason: 'closed_does_not_add',
+      ...over,
+    })
+
+    it('a period-5 row says it must reinstate by its lastChanceBy', () => {
+      renderSection([
+        closedRow({ inactivePeriod: 5, lastChanceBy: '2027-03-31' }),
+      ])
+      expect(rowFor('Period Club')).toHaveTextContent(LINE)
+    })
+
+    it('a period-4 row and a row with no period never say it', () => {
+      renderSection([
+        closedRow({ inactivePeriod: 4, lastChanceBy: '2027-09-30' }),
+        closedRow({ clubNumber: '9547', clubName: 'No Period Club' }),
+      ])
+      expect(section()).not.toHaveTextContent('Last chance')
+    })
+  })
+
   describe('division and area (S3)', () => {
     it('prints no "Not known" for closed clubs without one', () => {
       renderSection(d61)
