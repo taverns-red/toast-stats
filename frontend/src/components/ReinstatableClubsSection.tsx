@@ -247,7 +247,7 @@ function groupColumns(
             {ctx.clubPageIds.has(id) ? (
               <Link
                 to={`/district/${ctx.districtId}/club/${id}`}
-                className="growth-table__link growth-reinstate__name"
+                className="growth-table__link"
               >
                 {c.clubName}
               </Link>

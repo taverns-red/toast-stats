@@ -261,8 +261,10 @@
 }
 
 @media (max-width: 639px) {
+  /* A sentence or two: the full card width, not one narrow grid column. */
   .growth-reinstate__why {
     min-width: 0;
+    grid-column: 1 / -1;
   }
 }
 
@@ -280,10 +282,13 @@
   margin-top: 1rem;
 }
 
+/* list-item keeps the browser's open/closed marker, the only cue that the
+   line opens; the padding makes it a 44px target. */
 .growth-reinstate__summary {
-  display: flex;
-  align-items: center;
+  display: list-item;
   min-height: 44px;
+  padding: 0.6875rem 0;
+  line-height: 1.4;
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--ink);
