@@ -36,6 +36,7 @@ const funnel = buildRollupGrowthFunnel({
 const reinstate: RollupReinstate = {
   count: 7,
   adds: 3,
+  unknown: 0,
   card: '3 add to the club base',
   nextYear: false,
   rows: [
@@ -47,6 +48,7 @@ const reinstate: RollupReinstate = {
       closed: 2,
       adds: 3,
       oldest: 1,
+      unknown: 0,
       total: 5,
     },
     {
@@ -57,6 +59,7 @@ const reinstate: RollupReinstate = {
       closed: 2,
       adds: 0,
       oldest: 2,
+      unknown: 0,
       total: 2,
     },
   ],
@@ -178,33 +181,80 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     expect(screen.queryByTestId('rollup-growth-reinstate-table')).toBeNull()
   })
 
-  it('on a phone: stacked rows with the full counts, no table', () => {
+  it('on a phone: rows lead with the sort key, adds, and give every count', () => {
     mobile.value = true
     renderView(reinstate)
     const section = document.getElementById('growth-reinstate')!
     expect(within(section).queryByRole('table')).toBeNull()
     const row = within(section).getByRole('link', {
-      name: 'District 61: 5 can reinstate, 3 suspended, 2 closed, 3 add to the club base, 1 in the oldest period',
+      name: 'District 61: 3 add to the club base, 5 can reinstate, 3 suspended, 2 closed, 1 oldest period',
     })
     expect(row).toHaveAttribute('href', '/district/61/growth#growth-reinstate')
-  })
-
-  it('on a phone: the row spells out every count in full words, in a wrapping list', () => {
-    mobile.value = true
-    renderView(reinstate)
-    const section = document.getElementById('growth-reinstate')!
-    const row = within(section).getByRole('link', { name: /^District 61:/ })
-    const meta = row.querySelector('.mobile-row__meta')!
-    const lines = Array.from(
-      meta.querySelectorAll('.rollup-reinstate__meta-line')
-    ).map(l => l.textContent)
-    expect(lines).toEqual([
-      '3 suspended · 2 closed',
-      '3 add to the club base · 1 to confirm with World Headquarters',
-    ])
-    // The CSS hook that lets the meta wrap instead of ellipsizing.
+    expect(row.querySelector('.mobile-row__title')).toHaveTextContent(
+      'District 61 — 3 add to the club base'
+    )
+    expect(row.querySelector('.mobile-row__meta')).toHaveTextContent(
+      '5 can reinstate · 3 suspended · 2 closed · 1 oldest period'
+    )
+    // The large number is the sort key (adds), never the total.
+    expect(row.querySelector('.mobile-row__chip')).toBeNull()
+    // The CSS hook that lets the row wrap instead of clipping.
     expect(section.querySelector('.rollup-reinstate__rows')).toContainElement(
       row
     )
+  })
+
+  it('on a phone: counts the clubs whose effect isn’t known, only when there are some', () => {
+    mobile.value = true
+    renderView({
+      ...reinstate,
+      unknown: 1,
+      rows: [{ ...reinstate.rows[0]!, unknown: 1 }, reinstate.rows[1]!],
+    })
+    const section = document.getElementById('growth-reinstate')!
+    const [first, second] = within(section).getAllByRole('link', {
+      name: /^District \d+:/,
+    })
+    expect(first!.querySelector('.mobile-row__meta')).toHaveTextContent(
+      '5 can reinstate · 3 suspended · 2 closed · 1 oldest period · 1 effect on the club base not known'
+    )
+    expect(second!.querySelector('.mobile-row__meta')).not.toHaveTextContent(
+      'not known'
+    )
+  })
+
+  it('desktop: an unknown-effect column only when a row has one', () => {
+    renderView({
+      ...reinstate,
+      unknown: 1,
+      rows: [{ ...reinstate.rows[0]!, unknown: 1 }, reinstate.rows[1]!],
+    })
+    const table = screen.getByTestId('rollup-growth-reinstate-table')
+    expect(
+      within(table).getByRole('columnheader', {
+        name: 'Effect on the club base not known',
+      })
+    ).toBeInTheDocument()
+    expect(
+      within(table)
+        .getAllByRole('row')
+        .slice(1)
+        .map(r => r.textContent)
+    ).toEqual(['District 6132311', 'District 8602020'])
+    expect(
+      screen.getByTestId('rollup-growth-reinstate-split')
+    ).toHaveTextContent(
+      '3 of 7 add to the club base. 1 effect on the club base not known.'
+    )
+  })
+
+  it('desktop: no unknown-effect column when every effect is known', () => {
+    renderView(reinstate)
+    const table = screen.getByTestId('rollup-growth-reinstate-table')
+    expect(
+      within(table).queryByRole('columnheader', {
+        name: 'Effect on the club base not known',
+      })
+    ).toBeNull()
   })
 })

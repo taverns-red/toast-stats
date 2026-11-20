@@ -30,12 +30,16 @@ export interface ReinstateDistrictRow {
   adds: number
   /** Clubs closed in the oldest of the four renewal periods. */
   oldest: number
+  /** Clubs whose effect on the club base isn't known (S6). */
+  unknown: number
   total: number
 }
 
 export interface RollupReinstate {
   count: number
   adds: number
+  /** Clubs whose effect on the club base isn't known. */
+  unknown: number
   /** The card's third line, e.g. "12 add to the club base". */
   card: string
   /** Reinstating now counts toward next program year's base. */
@@ -92,6 +96,7 @@ export function buildRollupReinstate({
       closed,
       adds: reinstateSplit(clubs, nextYear).adds,
       oldest: clubs.filter(c => c.oldestPeriod).length,
+      unknown: 0,
       total: clubs.length,
     })
   }
@@ -102,6 +107,7 @@ export function buildRollupReinstate({
   return {
     count: inScope.length,
     adds: split.adds,
+    unknown: 0,
     card: split.card,
     nextYear,
     rows,

@@ -129,9 +129,12 @@ for (const [label, url, child] of [
           /\/district\/61\/growth(\?[^#]*)?#growth-reinstate$/
         )
         if (width < 768) {
-          // Phone rows wrap their counts in full words; nothing is clipped.
+          // Phone rows lead with adds and wrap in full words; nothing is
+          // clipped.
           const clipped = await page
-            .locator('#growth-reinstate .mobile-row__meta')
+            .locator(
+              '#growth-reinstate .mobile-row__meta, #growth-reinstate .mobile-row__title'
+            )
             .evaluateAll(
               els =>
                 els.filter(
@@ -142,8 +145,8 @@ for (const [label, url, child] of [
             )
           expect(clipped).toBe(0)
           await expect(
-            page.locator('#growth-reinstate .mobile-row__meta').first()
-          ).toContainText(/add[s]? to the club base/)
+            page.locator('#growth-reinstate .mobile-row__title').first()
+          ).toContainText(/District \w+ — \d+ adds? to the club base/)
         }
 
         // Every stage drills down to the level below, at the same stage.

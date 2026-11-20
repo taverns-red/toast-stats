@@ -98,6 +98,7 @@ describe('buildRollupReinstate', () => {
         closed: 2,
         adds: 2,
         oldest: 1,
+        unknown: 0,
         total: 4,
       },
       {
@@ -108,6 +109,7 @@ describe('buildRollupReinstate', () => {
         closed: 0,
         adds: 0,
         oldest: 0,
+        unknown: 0,
         total: 1,
       },
     ])
@@ -165,6 +167,17 @@ describe('buildRollupReinstate', () => {
       'all'
     )!
     expect(r.adds).toBe(1)
+    // The clubs whose effect isn't known are counted, not dropped (S6).
+    expect(r.unknown).toBe(2)
+    expect(r.rows[0]!.unknown).toBe(2)
+    expect(r.card).toBe(
+      '1 adds to the club base · 2 effect on the club base not known'
+    )
+  })
+
+  it('says nothing about an unknown effect when every effect is known', () => {
+    const r = build(file({ '61': [club(), closed()] }), 'all')!
+    expect(r.unknown).toBe(0)
     expect(r.card).toBe('1 adds to the club base')
   })
 
