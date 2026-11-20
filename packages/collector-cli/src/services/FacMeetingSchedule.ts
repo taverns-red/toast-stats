@@ -193,6 +193,12 @@ const ONLINE_WORD =
 const HYBRID_WORD = /\bhybri\w*/
 const IN_PERSON_WORD =
   /\bin[\s-]?person\b|\ben personne\b|\bpresentiel\w*|\ben salle\b/
+/** A mode word after "not", "no", "never" or "pas" says how the club does
+ *  NOT meet (#3083: "Online only … NOT in person at City Hall!"). */
+const NEGATED_MODE = new RegExp(
+  `\\b(?:not|no|never|pas)\\s+(?:en\\s+)?(?:${IN_PERSON_WORD.source}|${ONLINE_WORD.source})`,
+  'g'
+)
 /** Location text that names no place. */
 const NO_PLACE =
   /^(?:contact(?: us)?|to be determined|tbd|tba|n\/?a|suspended|see website|varies|various)$/
@@ -207,7 +213,8 @@ function combineModes(modes: Iterable<MeetingMode>): MeetingMode | undefined {
   return undefined
 }
 
-function modesIn(folded: string): MeetingMode[] {
+function modesIn(text: string): MeetingMode[] {
+  const folded = text.replace(NEGATED_MODE, ' ')
   const modes: MeetingMode[] = []
   if (HYBRID_WORD.test(folded)) modes.push('hybrid')
   if (ONLINE_WORD.test(folded)) modes.push('online')
