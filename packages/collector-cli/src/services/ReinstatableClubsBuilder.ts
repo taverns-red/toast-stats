@@ -12,7 +12,10 @@
  *   real district and is.
  * - Closed clubs come from the closed-club index (`config/closed-club-names.json`),
  *   grouped by the district each club was last seen in. The index has no
- *   division or area, so those rows leave them out.
+ *   division or area. A closed club on a June 30 suspended list (below)
+ *   takes them from the newest such list, as at its suspension, when that
+ *   row is in the same district (#3097); any other closed club leaves them
+ *   out.
  * - A club in both lists is listed once, as suspended.
  * - Optional `previousSuspended` is the previous program year's last
  *   suspended list (its June 30 snapshot). The date's own list keeps only
@@ -135,14 +138,21 @@ export function buildReinstatableClubs(
     return null
   }
   const previous = indexSuspended(input.previousSuspended)
-  // Suspend dates for dating closures: the newest list that has the club.
-  const suspendDates = new Map<string, string>()
+  // June 30 rows, from the newest list that has the club: its suspend date
+  // dates the closure, and its division and area place a closed club
+  // (#3097), as at its suspension, when it is in the same district.
+  const juneRows = new Map<
+    string,
+    { club: SuspendedClub; districtId: string }
+  >()
   for (const list of [
     ...[...(input.olderSuspended ?? [])].reverse(),
     input.previousSuspended,
   ]) {
-    for (const club of indexSuspended(list).values()) {
-      suspendDates.set(club.clubNumber, club.suspendDate)
+    for (const [districtId, clubs] of Object.entries(list?.districts ?? {})) {
+      for (const club of clubs) {
+        juneRows.set(club.clubNumber, { club, districtId })
+      }
     }
   }
   const roster = input.roster ?? null
@@ -202,7 +212,11 @@ export function buildReinstatableClubs(
     }
     // On the date's roster: not closed, whatever a later index says.
     if (roster?.has(row.clubNumber)) continue
-    const suspendDate = suspendDates.get(row.clubNumber)
+    const juneRow = juneRows.get(row.clubNumber)
+    const suspendDate = juneRow?.club.suspendDate
+    // A club realigned since its suspension: the old division is wrong.
+    const june =
+      juneRow?.districtId === row.districtId ? juneRow.club : undefined
     const result = classifyReinstatement(
       {
         status: 'closed',
@@ -216,6 +230,8 @@ export function buildReinstatableClubs(
     list.push({
       clubNumber: row.clubNumber,
       clubName: row.clubName,
+      ...(june?.division ? { division: june.division } : {}),
+      ...(june?.area ? { area: june.area } : {}),
       status: 'closed',
       lastSeen: row.lastSeen,
       oldestPeriod: result.oldestPeriod,
