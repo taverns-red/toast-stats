@@ -20,6 +20,7 @@ import type {
 } from '../../utils/rollupGrowthFunnel'
 import { formatDisplayDate } from '../../utils/dateFormatting'
 import type { RollupReinstate } from '../../utils/rollupReinstate'
+import { RollupReinstateSection } from './RollupReinstateSection'
 
 /* RollupGrowthFunnelView (#1812 region, #1813 world) — the district Club
    Growth funnel (#1794) one and two levels up: the same four-stage strip,
@@ -215,6 +216,7 @@ export const RollupGrowthFunnelView: React.FC<RollupGrowthFunnelViewProps> = ({
   scopeLabel,
   childNoun,
   asOfDate,
+  reinstate,
 }) => {
   const { stages, children } = funnel
   const childPlural = childNoun === 'District' ? 'districts' : 'regions'
@@ -244,6 +246,15 @@ export const RollupGrowthFunnelView: React.FC<RollupGrowthFunnelViewProps> = ({
       value: stages.suspended,
     },
   ]
+  if (reinstate) {
+    specs.push({
+      id: 'reinstate',
+      label: 'Can reinstate',
+      hint: 'suspended or recently closed clubs that can come back',
+      value: { kind: 'count', value: reinstate.count },
+      detail: reinstate.card,
+    })
+  }
   const sm = funnel.sponsorsMentors
   const byChild = `by ${childNoun.toLowerCase()}`
 
@@ -442,6 +453,8 @@ export const RollupGrowthFunnelView: React.FC<RollupGrowthFunnelViewProps> = ({
           read={r => r.suspended}
         />
       </StageSection>
+
+      {reinstate && <RollupReinstateSection reinstate={reinstate} />}
 
       {children.length === 0 && (
         <p className="growth-stage__note">

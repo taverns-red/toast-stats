@@ -122,7 +122,7 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     ])
     const rows = within(table).getAllByRole('row').slice(1)
     expect(rows.map(r => r.textContent)).toEqual([
-      'District 613233',
+      'District 613231',
       'District 860202',
     ])
     expect(

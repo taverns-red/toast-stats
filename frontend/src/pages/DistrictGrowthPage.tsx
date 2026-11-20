@@ -9,6 +9,7 @@ import { useDistrictGrowthCounts } from '../hooks/useDistrictGrowthCounts'
 import { useSuspendedClubs } from '../hooks/useSuspendedClubs'
 import { useReinstatableClubs } from '../hooks/useReinstatableClubs'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
+import { useScrollToHashWhenReady } from '../hooks/useScrollToHashWhenReady'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
@@ -181,12 +182,16 @@ const DistrictGrowthPage: React.FC = () => {
     b.localeCompare(a)
   )
 
+  const loading =
+    !hasValidDates || analyticsLoading || countsLoading || suspendedLoading
+
+  // #3094: the region and world funnels link to `#growth-reinstate`, which
+  // exists only once the funnel and the reinstate file have loaded.
+  useScrollToHashWhenReady(!loading && funnel !== null && !reinstatableLoading)
+
   if (!districtId) {
     return null
   }
-
-  const loading =
-    !hasValidDates || analyticsLoading || countsLoading || suspendedLoading
 
   return (
     <ErrorBoundary>

@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import type { ReinstatableClub } from '@taverns-red/shared-contracts'
+import type {
+  ReinstatableClub,
+  ReinstatableClubs,
+} from '@taverns-red/shared-contracts'
 import { fetchCdnReinstatableClubs } from '../services/cdn'
 import type { SnapshotDate } from '../types/snapshotDate'
 
@@ -12,15 +15,19 @@ import type { SnapshotDate } from '../types/snapshotDate'
    the program year whose July 1 club base a reinstatement on that date
    affects, as the pipeline computed it. */
 
-export function useReinstatableClubs(
-  districtId: string | undefined,
-  date: SnapshotDate | undefined
-): {
-  clubs: ReinstatableClub[] | null
-  baseProgramYear: string | null
+/** #3094 — the whole dated file, every district, for the region and world
+ *  funnels. Same query as the district hook, so the cache is shared. `file`
+ *  is null when the date has no file. */
+export function useReinstatableClubsFile(date: SnapshotDate | undefined): {
+  file: ReinstatableClubs | null
   isLoading: boolean
 } {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useReinstatableQuery(date)
+  return { file: data ?? null, isLoading }
+}
+
+function useReinstatableQuery(date: SnapshotDate | undefined) {
+  return useQuery({
     queryKey: ['reinstatable-clubs', date ?? 'none'],
     queryFn: () => {
       if (!date) throw new Error('A snapshot date is required')
@@ -29,6 +36,17 @@ export function useReinstatableClubs(
     enabled: Boolean(date),
     staleTime: 15 * 60 * 1000,
   })
+}
+
+export function useReinstatableClubs(
+  districtId: string | undefined,
+  date: SnapshotDate | undefined
+): {
+  clubs: ReinstatableClub[] | null
+  baseProgramYear: string | null
+  isLoading: boolean
+} {
+  const { data, isLoading } = useReinstatableQuery(date)
 
   if (!data || !districtId || data.snapshotDate !== date) {
     return { clubs: null, baseProgramYear: null, isLoading }

@@ -84,7 +84,7 @@ export const NOT_AVAILABLE_YET = 'Not available yet for this date'
 
 const KEPT_PARAMS = ['py', 'date'] as const
 
-function keptQuery(search: string | undefined): string {
+export function keptQuery(search: string | undefined): string {
   if (!search) return ''
   const current = new URLSearchParams(search)
   const kept = new URLSearchParams()
