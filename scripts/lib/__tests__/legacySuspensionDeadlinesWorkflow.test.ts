@@ -76,6 +76,31 @@ describe('legacy-suspension-deadlines.yml (#3103)', () => {
     }
   })
 
+  it('defaults to a dry run, so a dispatch uploads only on purpose (#3109 review)', () => {
+    const dispatch = wf.on['workflow_dispatch'] as {
+      inputs: { dry_run: { default: boolean } }
+    }
+    expect(dispatch.inputs.dry_run.default).toBe(true)
+  })
+
+  it('checks the row count and checksum against the committed file before uploading (#3109 review)', () => {
+    const names = steps.map(s => s.name ?? '')
+    const check = steps.find(s =>
+      /build-legacy-suspension-deadlines\.ts verify/.test(s.run ?? '')
+    )
+    expect(check).toBeDefined()
+    expect(check!.run).toContain(
+      '--expected scripts/legacy-suspension-deadlines.expected.json'
+    )
+    // The check never skips on a dry run, and runs before the upload.
+    expect((check as { if?: string }).if).toBeUndefined()
+    expect(names.indexOf(check!.name!)).toBeLessThan(
+      names.indexOf('Upload to staging')
+    )
+    // No inline row count or checksum in the workflow.
+    expect(text).not.toMatch(/\b1303\b|40692ca8/)
+  })
+
   it('keeps the file as an artifact', () => {
     expect(
       steps.some(s => (s.uses ?? '').startsWith('actions/upload-artifact@'))

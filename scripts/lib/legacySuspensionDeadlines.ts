@@ -169,3 +169,12 @@ export function planLegacySources(listing: string): {
     dates: [...new Set(objects.map(o => o.date))].sort(),
   }
 }
+
+/** The upload gate: each way the built file differs from the committed
+ *  expectation. Empty means it may be uploaded. */
+export function checkAgainstExpected(
+  _built: { rowCount: number; rowsSha256: string },
+  _expected: { rowCount: number; rowsSha256: string }
+): string[] {
+  throw new Error('not implemented')
+}

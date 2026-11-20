@@ -10,6 +10,8 @@
  * Status values (report.md §3, read from the CDN on 2026-11-20).
  */
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import * as path from 'node:path'
 import { LegacySuspensionDeadlinesSchema } from '@taverns-red/shared-contracts'
 
 import {
@@ -19,6 +21,7 @@ import {
   clubStatusesOf,
   deriveSuspensionDeadlines,
   lastDeadlineOnOrBefore,
+  checkAgainstExpected,
   planLegacySources,
   rowsSha256,
   type ClubObservation,
@@ -223,5 +226,46 @@ describe('planLegacySources: which objects the job reads', () => {
     expect(plan.count).toBe(2)
     expect(plan.bytes).toBe(1808470 + 26124)
     expect(plan.dates).toEqual(['2024-07-31', '2025-03-31'])
+  })
+})
+
+describe('checkAgainstExpected: the upload gate (#3109 review)', () => {
+  const expected = { rowCount: 1303, rowsSha256: 'a'.repeat(64) }
+
+  it('passes when the row count and checksum both match', () => {
+    expect(
+      checkAgainstExpected(
+        { rowCount: 1303, rowsSha256: 'a'.repeat(64) },
+        expected
+      )
+    ).toEqual([])
+  })
+
+  it('names each mismatch', () => {
+    expect(
+      checkAgainstExpected(
+        { rowCount: 1302, rowsSha256: 'b'.repeat(64) },
+        expected
+      )
+    ).toEqual([
+      'rowCount 1302, expected 1303',
+      `rowsSha256 ${'b'.repeat(64)}, expected ${'a'.repeat(64)}`,
+    ])
+  })
+
+  it('the committed expectation is the PR’s figures: 1,303 rows and their checksum', () => {
+    const file = JSON.parse(
+      readFileSync(
+        path.join(
+          process.cwd(),
+          'scripts/legacy-suspension-deadlines.expected.json'
+        ),
+        'utf-8'
+      )
+    ) as { rowCount: number; rowsSha256: string }
+    expect(file.rowCount).toBe(1303)
+    expect(file.rowsSha256).toBe(
+      '40692ca8636d6b99f59cbd1070243c5d1f3219c4a941643e5e135e81ffe239a7'
+    )
   })
 })
