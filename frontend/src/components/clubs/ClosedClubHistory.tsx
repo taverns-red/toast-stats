@@ -24,6 +24,7 @@ import { ClubDCPGoalsPanel } from '../ClubDCPGoalsPanel'
 import { ChartSparklineExpand } from '../ChartSparklineExpand'
 import { MembershipHeadline } from './MembershipHeadline'
 import { LoadingSkeleton } from '../LoadingSkeleton'
+import { MobileRowList } from '../MobileRowList'
 
 export interface ClosedClubHistoryProps {
   clubId: string
@@ -145,62 +146,80 @@ export const ClosedClubHistory: React.FC<ClosedClubHistoryProps> = ({
             ]}
           />
 
-          <section className="club-panel">
-            <div className="club-panel__head">
-              <h2>
-                <svg
-                  className="club-panel__ico"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.6}
-                  aria-hidden="true"
+          <div className="club-closed-stack">
+            <section className="club-panel">
+              <div className="club-panel__head">
+                <h2>
+                  <svg
+                    className="club-panel__ico"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.6}
+                    aria-hidden="true"
+                  >
+                    <path d="M2 13l3-4 3 2 6-7" />
+                    <path d="M10 4h3v3" />
+                  </svg>
+                  Membership Trend
+                </h2>
+                <span className="club-panel__meta">
+                  {pyLabel} · {membershipTrend.length} data point
+                  {membershipTrend.length === 1 ? '' : 's'}
+                </span>
+              </div>
+              <div className="club-panel__body">
+                <ChartSparklineExpand
+                  urlId="membership"
+                  title="Membership Trend"
+                  sparklineData={membershipTrend.map(p => p.count)}
+                  headline={
+                    <MembershipHeadline
+                      latest={last}
+                      change={change}
+                      basis={basis}
+                    />
+                  }
                 >
-                  <path d="M2 13l3-4 3 2 6-7" />
-                  <path d="M10 4h3v3" />
-                </svg>
-                Membership Trend
-              </h2>
-              <span className="club-panel__meta">
-                {pyLabel} · {membershipTrend.length} data point
-                {membershipTrend.length === 1 ? '' : 's'}
-              </span>
-            </div>
-            <div className="club-panel__body">
-              <ChartSparklineExpand
-                urlId="membership"
-                title="Membership Trend"
-                sparklineData={membershipTrend.map(p => p.count)}
-                headline={
-                  <MembershipHeadline
-                    latest={last}
-                    change={change}
-                    basis={basis}
+                  <ClubMembershipTrendChart
+                    current={membershipTrend}
+                    priors={[]}
+                    programYearLabel={programYear.label}
                   />
-                }
-              >
-                <ClubMembershipTrendChart
-                  current={membershipTrend}
-                  priors={[]}
-                  programYearLabel={programYear.label}
-                />
-              </ChartSparklineExpand>
-            </div>
-          </section>
+                </ChartSparklineExpand>
+              </div>
+            </section>
 
-          <ClubDCPGoalsPanel
-            goalsAchieved={goals}
-            clubRecord={null}
-            isLoading={false}
-            timelineRows={timelineRows}
-          />
+            <ClubDCPGoalsPanel
+              goalsAchieved={goals}
+              clubRecord={null}
+              isLoading={false}
+              timelineRows={timelineRows}
+            />
+          </div>
         </>
       ) : null}
 
       <div className="club-panels-grid">
         <ClubLifecyclePanel lifecycle={lifecycle} isLoading={false} />
+      </div>
+
+      {/* Phones: the hero's history link becomes a row (as on the open
+          club page); from 768 the hero link shows and CSS hides this. */}
+      <div className="club-more">
+        <MobileRowList
+          label="More about this club"
+          rows={[
+            {
+              id: 'history',
+              to: `/district/${districtId}/club/${clubId}/history`,
+              title: 'Multi-year history',
+              meta: 'Every program year for this club',
+            },
+          ]}
+        />
       </div>
     </>
   )
