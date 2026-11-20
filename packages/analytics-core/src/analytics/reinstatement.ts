@@ -52,10 +52,12 @@
  *
  * ## Base year
  *
- * The club base belongs to a program year and is fixed on July 1. A
- * reinstatement between Apr 1 and Jun 30 counts toward the NEXT program year;
- * at any other time, toward the current one. `baseProgramYear` is that year,
- * as `YYYY-YYYY`. Its start year `S` is what the cycles below hang from.
+ * The club base belongs to a program year and is fixed on July 1.
+ * `baseProgramYear` is the program year whose July 1 base comes next or
+ * last came: from Apr 1 to Jun 30 that is the next program year, at any
+ * other time the current one. Its start year `S` is what the cycles below
+ * hang from. `addsToBase` only ever means THIS year's club base (Ron,
+ * 2026-11-20, #3103): from Apr 1 to Jun 30 no reinstatement adds to it.
  *
  * ## Does it add to the base (suspended clubs)
  *
@@ -65,7 +67,8 @@
  * | Suspended at              | Reinstated                 | Adds? |
  * | ------------------------- | -------------------------- | ----- |
  * | Sep 30 of `S`             | Oct 1 of `S` to Mar 31     | yes   |
- * | Mar 31 of `S`             | before Oct 1 of `S`        | yes   |
+ * | Mar 31 of `S`             | Apr 1 to Jun 30 of `S`     | no, this year's base is fixed (Ron, 2026-11-20) |
+ * | Mar 31 of `S`             | Jul 1 to Sep 30 of `S`     | yes   |
  * | Mar 31 of `S`             | on or after Oct 1 of `S`   | no    |
  * | Sep 30 of `S - 1`         | Apr 1 of `S` on            | no, the club has closed |
  * | an earlier deadline       |                            | no, the club has closed |
@@ -107,7 +110,13 @@ export type ReinstatementInput =
 export type ReinstatementReason =
   /** Suspended at the Sep 30 deadline of `S` and `asOf` is in the October cycle. Adds. */
   | 'suspended_sept30_october_cycle'
-  /** Suspended at the Mar 31 deadline of `S` and `asOf` is before Oct 1. Adds. */
+  /**
+   * Suspended at the Mar 31 deadline of `S` and `asOf` is Apr 1 - Jun 30,
+   * before the July 1 base date: this year's club base doesn't change
+   * (Ron, 2026-11-20, #3103). Does not add.
+   */
+  | 'suspended_mar31_before_july1'
+  /** Suspended at the Mar 31 deadline of `S` and `asOf` is Jul 1 - Sep 30. Adds. */
   | 'suspended_mar31_before_oct1'
   /** Suspended at a Mar 31 deadline and `asOf` is on or after Oct 1. Does not add. */
   | 'suspended_mar31_after_oct1'
@@ -260,6 +269,11 @@ function classifySuspended(
     return { addsToBase: true, reason: 'suspended_sept30_october_cycle' }
   }
   if (!isSept && y === s) {
+    // Apr 1 - Jun 30: before the July 1 base date, so this year's base
+    // doesn't change (Ron, 2026-11-20). Jul 1 - Sep 30: adds. Oct 1 on: no.
+    if (asOf < day(s, 7, 1)) {
+      return { addsToBase: false, reason: 'suspended_mar31_before_july1' }
+    }
     return asOf < day(s, 10, 1)
       ? { addsToBase: true, reason: 'suspended_mar31_before_oct1' }
       : { addsToBase: false, reason: 'suspended_mar31_after_oct1' }
