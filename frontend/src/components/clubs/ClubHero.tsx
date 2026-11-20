@@ -39,6 +39,11 @@ export interface ClubHeroProps {
   statusPills?: React.ReactNode
   /** #1805 — former districts and names; null/undefined renders no chip. */
   lineage?: ClubLineage | null | undefined
+  /**
+   * #3104 — a closed club's line under the name. When set, the hero drops
+   * what no longer holds for the club: where it met and the anniversary.
+   */
+  closedNotice?: string | undefined
 }
 
 const HeroEntity: React.FC<{
@@ -68,11 +73,13 @@ export const ClubHero: React.FC<ClubHeroProps> = ({
   controls,
   statusPills,
   lineage,
+  closedNotice,
 }) => {
   const charterLabel = formatCharterDate(club.charterDate)
-  const anniversary = club.charterDate
-    ? getClubAnniversary(club.charterDate)
-    : null
+  const anniversary =
+    club.charterDate && !closedNotice
+      ? getClubAnniversary(club.charterDate)
+      : null
   return (
     <header className="club-hero">
       <div className="club-hero__intro">
@@ -81,6 +88,7 @@ export const ClubHero: React.FC<ClubHeroProps> = ({
           {charterLabel ? ` · Chartered ${charterLabel}` : ''}
         </p>
         <h1 className="club-hero__title">{club.clubName}</h1>
+        {closedNotice && <p className="club-hero__closed">{closedNotice}</p>}
         <p className="club-hero__sub">
           {/* #2646: Area and Division link to their pages when the ids are
               known (the snapshot and analytics records both carry them). */}
@@ -129,7 +137,9 @@ export const ClubHero: React.FC<ClubHeroProps> = ({
         </p>
         {/* #1783: where the club meets (FAC enrichment for the viewed date;
             omitted when the snapshot has none). Never shows email or phone. */}
-        <ClubWhereItMeets info={buildClubMeetingInfo(club)} />
+        {!closedNotice && (
+          <ClubWhereItMeets info={buildClubMeetingInfo(club)} />
+        )}
         {/* #1229: deep link to the per-club multi-year history view. */}
         <Link
           to={`/district/${districtId}/club/${clubId}/history`}

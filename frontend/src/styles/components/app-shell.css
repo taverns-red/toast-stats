@@ -2258,6 +2258,16 @@
     color: rgba(255, 255, 255, 0.4);
   }
 
+  /* #3104 — a closed club's line under the name, on the fixed loyal-blue
+     hero (same in both themes). */
+  .club-hero__closed {
+    margin: 0 0 6px;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 16px;
+    color: #ffffff;
+  }
+
   /* #2646 (UNIT-07): Area and Division are links to their pages. On the fixed
      loyal-blue hero (same in both themes): the sub-line's white, underlined
      so a link reads as one. The 44px touch floor (base.css) stays: the box
