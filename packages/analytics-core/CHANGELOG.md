@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.27.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.26.0...analytics-core-v1.27.0) (2026-11-20)
+
+
+### Features
+
+* **ui:** Can reinstate approved review changes ([#3100](https://github.com/taverns-red/toast-stats/issues/3100)) ([#3102](https://github.com/taverns-red/toast-stats/issues/3102)) ([0f9f05c](https://github.com/taverns-red/toast-stats/commit/0f9f05c622991dc999a7612c8463aae010792be9))
+
 ## [1.26.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.25.4...analytics-core-v1.26.0) (2026-11-19)
 
 
