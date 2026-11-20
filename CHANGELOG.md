@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.99.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.98.0...toast-stats-v2.99.0) (2026-11-20)
+
+
+### Features
+
+* reinstate eligibility counts five periods from the suspension ([#3103](https://github.com/taverns-red/toast-stats/issues/3103)) ([#3109](https://github.com/taverns-red/toast-stats/issues/3109)) ([e3e08ed](https://github.com/taverns-red/toast-stats/commit/e3e08ed60ab95897c5c0e18ff7521672f793db40))
+* **ui:** club page shows a closed club's history instead of Not Found ([#3104](https://github.com/taverns-red/toast-stats/issues/3104)) ([#3107](https://github.com/taverns-red/toast-stats/issues/3107)) ([3f8dccf](https://github.com/taverns-red/toast-stats/commit/3f8dccfbc0f5e3a0015fbb78e9f54b824ac83c68))
+
+
+### Continuous Integration
+
+* remove one-off legacy deadlines workflow ([#3105](https://github.com/taverns-red/toast-stats/issues/3105)) ([#3113](https://github.com/taverns-red/toast-stats/issues/3113)) ([016261f](https://github.com/taverns-red/toast-stats/commit/016261fc5c0ddf28afe0cde7765ce58775f21d36))
+
 ## [2.98.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.97.0...toast-stats-v2.98.0) (2026-11-20)
 
 

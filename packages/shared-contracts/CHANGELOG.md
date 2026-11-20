@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.31.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.30.0...shared-contracts-v1.31.0) (2026-11-20)
+
+
+### Features
+
+* reinstate eligibility counts five periods from the suspension ([#3103](https://github.com/taverns-red/toast-stats/issues/3103)) ([#3109](https://github.com/taverns-red/toast-stats/issues/3109)) ([e3e08ed](https://github.com/taverns-red/toast-stats/commit/e3e08ed60ab95897c5c0e18ff7521672f793db40))
+
 ## [1.30.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.29.0...shared-contracts-v1.30.0) (2026-11-19)
 
 
