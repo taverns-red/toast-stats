@@ -350,4 +350,46 @@ describe('ClubDetailPage — a suspended club missing from analytics (#3117)', (
     // The lifecycle panel carries the suspension too.
     expect(screen.getByText('Suspended')).toBeInTheDocument()
   })
+
+  it('holds a skeleton while the suspended list loads', async () => {
+    vi.mocked(fetchCdnSuspendedClubs).mockReturnValue(new Promise(() => {}))
+    renderAt('/district/86/club/28676407')
+
+    await vi.waitFor(() =>
+      expect(vi.mocked(fetchCdnSuspendedClubs)).toHaveBeenCalled()
+    )
+    await settle()
+
+    expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument()
+    expect(screen.queryByText(/Closed\. Last on/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Suspended since/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Club Not Found')).not.toBeInTheDocument()
+  })
+
+  it('shows the closed page when the list does not include the club', async () => {
+    vi.mocked(fetchCdnSuspendedClubs).mockResolvedValue({
+      _format: { version: '1.0.0', type: 'suspended-clubs' },
+      snapshotDate: '2026-11-19',
+      programYear: { start: '2026-07-01', end: '2027-06-30' },
+      districts: {
+        '86': [
+          {
+            clubNumber: '1234',
+            clubName: 'Open Club',
+            division: 'A',
+            area: '01',
+            suspendDate: '2026-07-01',
+          },
+        ],
+      },
+    })
+    renderAt('/district/86/club/28676407')
+
+    expect(
+      await screen.findByText(
+        'Closed. Last on Toastmasters’ club list: June 30, 2025'
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Suspended since/)).not.toBeInTheDocument()
+  })
 })
