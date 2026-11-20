@@ -1,7 +1,8 @@
 /**
  * One-off generator for config/legacy-suspension-deadlines.json (#3103).
- * Run by .github/workflows/legacy-suspension-deadlines.yml; the rules live
- * in scripts/lib/legacySuspensionDeadlines.ts.
+ * The file was built once on 2026-11-20 by run 44803919564, and the
+ * workflow has since been removed (#3105). The rules live in
+ * scripts/lib/legacySuspensionDeadlines.ts.
  *
  *   plan  --listing <gcloud ls -l output> --urls <file>
  *         Picks the district_<id>.json objects of program year 2024-25 and
