@@ -401,24 +401,22 @@
   }
 }
 
-/* #3094 — the region and world "Can reinstate" phone rows. Their meta is two
-   lines of full words ("3 suspended · 2 closed" / "3 add to the club base ·
-   1 to confirm with World Headquarters"), so it wraps instead of ellipsizing,
-   and the row grows to fit rather than keeping the shared 82 px cap. */
+/* #3094 — the region and world "Can reinstate" phone rows. Line 1 is
+   "District 83 — 9 add to the club base", line 2 the other counts in full
+   words. Both wrap instead of ellipsizing or clamping, and the row grows to
+   fit rather than keeping the shared 82 px cap. */
 .rollup-reinstate__rows .mobile-row-list--wrap .mobile-row {
   max-height: none;
 }
 
-.rollup-reinstate__rows .mobile-row__line2 {
-  align-items: flex-start;
+.rollup-reinstate__rows .mobile-row-list--wrap .mobile-row__title {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: none;
 }
 
 .rollup-reinstate__rows .mobile-row__line2 .mobile-row__meta {
   overflow: visible;
   white-space: normal;
   text-overflow: clip;
-}
-
-.rollup-reinstate__meta-line {
-  display: block;
 }

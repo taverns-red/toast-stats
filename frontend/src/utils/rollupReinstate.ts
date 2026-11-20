@@ -4,6 +4,7 @@ import type {
 } from '@taverns-red/shared-contracts'
 import {
   addsToNextYear,
+  baseUnknownCount,
   reinstateSplit,
 } from '../components/ReinstatableClubsSection'
 import { keptQuery } from './rollupGrowthFunnel'
@@ -68,6 +69,10 @@ const byDistrictId = (a: string, b: string): number => {
   return na - nb
 }
 
+/** "2 effect on the club base not known", the tag's own wording. */
+export const unknownPhrase = (n: number): string =>
+  `${n.toLocaleString('en-US')} effect on the club base not known`
+
 export function buildRollupReinstate({
   file,
   date,
@@ -96,7 +101,7 @@ export function buildRollupReinstate({
       closed,
       adds: reinstateSplit(clubs, nextYear).adds,
       oldest: clubs.filter(c => c.oldestPeriod).length,
-      unknown: 0,
+      unknown: baseUnknownCount(clubs),
       total: clubs.length,
     })
   }
@@ -104,11 +109,13 @@ export function buildRollupReinstate({
     (a, b) => b.adds - a.adds || b.total - a.total || byDistrictId(a.id, b.id)
   )
   const split = reinstateSplit(inScope, nextYear)
+  const unknown = baseUnknownCount(inScope)
   return {
     count: inScope.length,
     adds: split.adds,
-    unknown: 0,
-    card: split.card,
+    unknown,
+    card:
+      unknown > 0 ? `${split.card} · ${unknownPhrase(unknown)}` : split.card,
     nextYear,
     rows,
   }

@@ -83,6 +83,12 @@ export function reinstateSplit(
   return { adds, card: `${adds} ${adds === 1 ? 'adds' : 'add'} to ${base}` }
 }
 
+/** #3094 — how many clubs are tagged "Effect on the club base not known".
+ *  Same rule as the tag. */
+export function baseUnknownCount(clubs: readonly ReinstatableClub[]): number {
+  return clubs.filter(c => !baseKnown(c)).length
+}
+
 /** The cited source, shared with the region and world sections (#3094). */
 export function ReinstatementFaqSource() {
   return (
