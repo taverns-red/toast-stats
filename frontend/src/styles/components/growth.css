@@ -300,6 +300,22 @@
   outline-offset: 2px;
 }
 
+/* The heading inside the summary stays inline, beside the marker, and takes
+   the summary's type. */
+.growth-reinstate__summary-title {
+  display: inline;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+
+/* S8: body text is 16px on phones; after the base rule, so it wins. */
+@media (max-width: 639px) {
+  .growth-reinstate__summary {
+    font-size: 1rem;
+  }
+}
+
 /* #3100 (M2) — one thing to collect per item. */
 .growth-reinstate__list {
   margin: 0.25rem 0 0.5rem;

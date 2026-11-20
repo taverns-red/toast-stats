@@ -42,10 +42,13 @@ const REASON_TEXT: Record<string, string> = {
   closed_does_not_add: CLOSED_TEXT,
 }
 
-/** M1 — the renewal an adding suspension came from, before its deadline. */
+/** M1 — the renewal an adding suspension came from, before its deadline.
+ *  A code not listed keeps its REASON_TEXT sentence in the Why cell.
+ *  Pending Ron's OK (#3102): suspended_mar31_before_oct1 → "Suspended at
+ *  the March 31 renewal. If it reinstates by September 30, YYYY, it adds to
+ *  the club base." Add it here once approved. */
 const DEADLINE_LEAD: Record<string, string> = {
   suspended_sept30_october_cycle: 'Suspended at the September 30 renewal.',
-  suspended_mar31_before_oct1: 'Suspended at the March 31 renewal.',
 }
 
 /** Reasons where the pipeline could not decide the effect on the base. */
@@ -69,12 +72,14 @@ interface ReasonContext {
 }
 
 function reasonText(club: ReinstatableClub, ctx: ReasonContext): string {
-  const deadline = club.addsToBase
-    ? reinstateDeadline(club.reason, ctx.snapshotDate)
-    : null
+  const lead = DEADLINE_LEAD[club.reason]
+  const deadline =
+    club.addsToBase && lead !== undefined
+      ? reinstateDeadline(club.reason, ctx.snapshotDate)
+      : null
   const known =
     deadline !== null
-      ? `${DEADLINE_LEAD[club.reason]} If it reinstates by ${longDate(deadline)}, it adds to ${baseName(ctx.nextYear)}.`
+      ? `${lead} If it reinstates by ${longDate(deadline)}, it adds to ${baseName(ctx.nextYear)}.`
       : REASON_TEXT[club.reason]
   const parts =
     known === undefined || (ctx.folded && known === CLOSED_TEXT) ? [] : [known]
@@ -425,7 +430,11 @@ export const ReinstatableClubsSection: React.FC<
           className="growth-reinstate__fold"
           data-testid="growth-reinstate-rest"
         >
-          <summary className="growth-reinstate__summary">{restLabel}</summary>
+          {/* The label is a heading too, so heading navigation reaches the
+              folded group; the summary stays the toggle. */}
+          <summary className="growth-reinstate__summary">
+            <h4 className="growth-reinstate__summary-title">{restLabel}</h4>
+          </summary>
           {rest.some(c => c.reason === 'closed_does_not_add') && (
             <p className="growth-stage__note">{CLOSED_TEXT}</p>
           )}
