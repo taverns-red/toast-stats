@@ -217,7 +217,6 @@ const DistrictGrowthPage: React.FC = () => {
                 clubs={reinstatableClubs}
                 snapshotDate={effectiveEndDate}
                 districtId={districtId}
-                clubPageIds={clubPageIds}
               />
             </ClubGrowthFunnelView>
           )}

@@ -238,10 +238,35 @@
 
 /* ── Can reinstate (#3007) ─────────────────────────────────────────────── */
 
-.growth-reinstate__name {
-  display: block;
-  font-weight: 600;
-  color: var(--ink);
+/* #3115 — the whole row opens the club. The name link's ::after covers its
+   row (a stretched link), so the row stays one tab stop with one accessible
+   name. The ring is drawn on the ::after, around the whole row.
+   The row is positioned with a plain selector; the stretch and the hover
+   tint need :has(), so a browser without it keeps name-only links instead
+   of every ::after covering the same table. */
+#growth-reinstate tbody tr {
+  position: relative;
+}
+
+@supports selector(:has(*)) {
+  .action-table__row:has(.growth-reinstate__row-link):hover {
+    background: var(--tm-loyal-blue-10);
+  }
+
+  .growth-reinstate__row-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .growth-reinstate__row-link:focus-visible {
+    outline: none;
+  }
+
+  .growth-reinstate__row-link:focus-visible::after {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
 }
 
 .growth-reinstate__number {

@@ -11,16 +11,17 @@
  * #3100 (approved UX review items): clubs that add come first and the rest
  * fold into a closed <details> (S1); the adding rows and the split line name
  * the deadline (M1); "What it takes" says where to send it (M2); closed rows
- * print no "Not known" division (S3); a club with a page here links to it
- * (S4); the split counts the unknown-effect clubs (S6).
+ * print no "Not known" division (S3); the split counts the unknown-effect
+ * clubs (S6). #3115: every row links to its club page.
  */
 import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom'
-import type {
-  ReinstatableClub,
-  ReinstatableClubs,
+import {
+  normalizeClubId,
+  type ReinstatableClub,
+  type ReinstatableClubs,
 } from '@taverns-red/shared-contracts'
 import type { ReinstatementReason } from '@taverns-red/analytics-core'
 import recordedJson from '../../__tests__/fixtures/reinstatable-clubs-2026-11-18.recorded.json'
@@ -367,34 +368,41 @@ describe('ReinstatableClubsSection', () => {
     expect(screen.queryByTestId('growth-reinstate-split')).toBeNull()
   })
 
-  describe('club links (S4)', () => {
-    it('links a club that has a page here, as the Suspended list does', () => {
-      renderSection(d61, {
-        clubPageIds: new Set(['1849755', '3475582']),
-      })
-      expect(
-        screen.getByRole('link', {
-          name: 'Toastmasters At St. Lawrence College',
-        })
-      ).toHaveAttribute('href', '/district/61/club/1849755')
-      expect(
-        screen.getByRole('link', {
-          name: "Tunney's Toastmasters",
+  /* #3115 — since #3107 a closed club has a page too, so every row opens
+     its club's page, and the club name is the row's one link: a stretched
+     target over the whole row, one tab stop, named after the club. */
+  describe('club links (#3115)', () => {
+    const allBodyRows = () =>
+      within(section())
+        .getAllByRole('row', { hidden: true })
+        .filter(r => r.closest('tbody') !== null)
+
+    it('links every row to its club page, closed clubs included', () => {
+      renderSection(d61)
+      const rows = allBodyRows()
+      expect(rows).toHaveLength(d61.length)
+      expect(d61.some(c => c.status === 'closed')).toBe(true)
+      for (const club of d61) {
+        const link = screen.getByRole('link', {
+          name: club.clubName,
           hidden: true,
         })
-      ).toHaveAttribute('href', '/district/61/club/3475582')
+        expect(link).toHaveAttribute(
+          'href',
+          `/district/61/club/${normalizeClubId(club.clubNumber)}`
+        )
+      }
     })
 
-    it('leaves a club without a page here as plain text', () => {
-      renderSection(d61, { clubPageIds: new Set(['1849755']) })
-      expect(
-        screen.queryByRole('link', {
-          name: 'Speak with Style Toastmasters Club',
-        })
-      ).toBeNull()
-      expect(
-        screen.getByText('Speak with Style Toastmasters Club')
-      ).toBeInTheDocument()
+    it('gives each row exactly one link, named after the club', () => {
+      renderSection(d61)
+      for (const row of allBodyRows()) {
+        const links = within(row).getAllByRole('link', { hidden: true })
+        expect(links).toHaveLength(1)
+        const club = d61.find(c => c.clubName === links[0]?.textContent)
+        expect(club).toBeDefined()
+        expect(links[0]).toHaveClass('growth-reinstate__row-link')
+      }
     })
   })
 
