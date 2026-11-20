@@ -135,9 +135,12 @@ describe('ReinstatableClubsSection', () => {
       const rest = screen.getByTestId('growth-reinstate-rest')
       expect(rest.tagName).toBe('DETAILS')
       expect(rest).not.toHaveAttribute('open')
-      expect(rest.querySelector('summary')).toHaveTextContent(
-        'Doesn’t add to the club base (19)'
-      )
+      // The label is a heading inside the summary, so heading navigation
+      // reaches the folded group too.
+      const restHeading = within(rest).getByRole('heading', {
+        name: 'Doesn’t add to the club base (19)',
+      })
+      expect(restHeading.closest('summary')).not.toBeNull()
       expect(
         within(rest)
           .getAllByRole('row', { hidden: true })
@@ -213,9 +216,10 @@ describe('ReinstatableClubsSection', () => {
     })
 
     it('takes the year from the snapshot date, not the calendar', () => {
-      renderSection(d61, { snapshotDate: '2027-02-27' })
+      // A deadline year the default fixture date (2026-11-18) can't give.
+      renderSection(d61, { snapshotDate: '2027-10-15' })
       expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
-        'by March 31, 2027.'
+        'by March 31, 2028.'
       )
     })
 
@@ -229,11 +233,15 @@ describe('ReinstatableClubsSection', () => {
       reason: 'suspended_mar31_before_oct1',
     }
 
-    it('names September 30 for a March 31 suspension, July to September', () => {
+    it('names September 30 for a March 31 suspension in the split, July to September', () => {
       renderSection([spring], { snapshotDate: '2026-07-31' })
-      expect(rowFor('Spring Club')).toHaveTextContent(
-        'Suspended at the March 31 renewal. If it reinstates by September 30, 2026, it adds to the club base.'
+      // The Why cell's deadline wording for this code waits for Ron's OK;
+      // until then it keeps the pre-existing sentence.
+      const row = rowFor('Spring Club')
+      expect(row).toHaveTextContent(
+        'Suspended at the March 31 renewal. The FAQ says reinstating before October 1 increases the club base.'
       )
+      expect(row).not.toHaveTextContent('If it reinstates by')
       expect(screen.getByTestId('growth-reinstate-split')).toHaveTextContent(
         '1 of 1 adds to the club base if it reinstates by September 30, 2026.'
       )
@@ -250,7 +258,7 @@ describe('ReinstatableClubsSection', () => {
         })
       ).toBeInTheDocument()
       expect(rowFor('Spring Club')).toHaveTextContent(
-        'If it reinstates by September 30, 2027, it adds to next year’s club base.'
+        'reinstating before October 1 increases the club base'
       )
     })
 
@@ -386,7 +394,7 @@ describe('ReinstatableClubsSection', () => {
       suspended_mar31_before_oct1: {
         row: { suspendDate: '2026-03-31', addsToBase: true },
         tag: ADDS,
-        why: 'Suspended at the March 31 renewal. If it reinstates by',
+        why: 'reinstating before October 1 increases the club base',
       },
       suspended_mar31_after_oct1: {
         row: { suspendDate: '2026-03-31' },
