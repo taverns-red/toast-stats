@@ -18,7 +18,7 @@
    period UI at all. */
 
 import type { ReinstatableClub } from '@taverns-red/shared-contracts'
-import { formatDisplayDate } from '../utils/dateFormatting'
+import { formatLongDate } from '../utils/dateFormatting'
 import {
   EXAMPLE_LAST_CHANCE,
   EXAMPLE_SUSPENDED_AT,
@@ -27,9 +27,6 @@ import {
 } from '../utils/reinstateWindow'
 
 const STATUS_LABEL = { suspended: 'Suspended', closed: 'Closed' } as const
-
-const longDate = (iso: string) =>
-  formatDisplayDate(iso, { year: 'numeric', month: 'long', day: 'numeric' })
 
 export interface ReinstateWindowProps {
   /** The last day of period 5, ISO (the row's `lastChanceBy`). */
@@ -79,7 +76,7 @@ export function ReinstateWindow({
         })}
       </ol>
       <p className="reinstate-window__end" data-testid="reinstate-window-end">
-        Last chance: {longDate(lastChanceBy)}
+        Last chance: {formatLongDate(lastChanceBy)}
       </p>
     </figure>
   )
@@ -91,7 +88,7 @@ export function ReinstateWindowExample() {
   return (
     <ReinstateWindow
       lastChanceBy={EXAMPLE_LAST_CHANCE}
-      caption={`Example: a club suspended ${longDate(EXAMPLE_SUSPENDED_AT)}`}
+      caption={`Example: a club suspended ${formatLongDate(EXAMPLE_SUSPENDED_AT)}`}
     />
   )
 }

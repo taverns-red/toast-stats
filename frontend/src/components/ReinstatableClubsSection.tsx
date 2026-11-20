@@ -123,16 +123,6 @@ function reasonText(club: ReinstatableClub, ctx: ReasonContext): string {
   return ctx.closedNoteShown && known === CLOSED_TEXT ? '' : known
 }
 
-/** #3111 — the row's period line, only for a row the pipeline gives an
- *  inactive period and its `lastChanceBy`: "Period 4 of 5. Last chance:
- *  September 30, 2027." Period 5 carries Ron's approved "must reinstate
- *  by …, or charter as a new club." line (#3103), merged into one in the
- *  draft (MERGE_PERIOD5_LINE in utils/reinstateWindow.ts). A row placed
- *  from `lastSeen` alone has no period and gets no line. */
-function lastChanceText(club: ReinstatableClub): string {
-  return reinstatePeriodLine(club)
-}
-
 /** Adds to this year's club base on the snapshot date: the one rule the
  *  groups, the split, the card and the rollups all count with. */
 function addsNow(club: ReinstatableClub, snapshotDate: string): boolean {
@@ -289,7 +279,10 @@ function groupColumns(
     key: 'status',
     header: 'Status',
     cell: c => {
-      const period = lastChanceText(c)
+      // #3111 — "Period 4 of 5. Last chance: September 30, 2027." for a row
+      // the pipeline gives a period; period 5 carries the approved "must
+      // reinstate by …" line (MERGE_PERIOD5_LINE). No period, no line.
+      const period = reinstatePeriodLine(c)
       return (
         <>
           {statusText(c)}

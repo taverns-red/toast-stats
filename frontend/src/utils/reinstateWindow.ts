@@ -10,7 +10,7 @@
    suspension deadline, the period the club is suspended in. Periods 2 to 5
    it is closed. */
 
-import { formatDisplayDate } from './dateFormatting'
+import { formatDisplayDate, formatLongDate } from './dateFormatting'
 
 export const WINDOW_PERIODS = 5
 
@@ -36,10 +36,6 @@ const PERIOD_END = /^(\d{4})-(03-31|09-30)$/
 /** "Oct 2024" */
 const monthYear = (iso: string) =>
   formatDisplayDate(iso, { month: 'short', year: 'numeric' })
-
-/** "March 31, 2027" */
-const longDate = (iso: string) =>
-  formatDisplayDate(iso, { year: 'numeric', month: 'long', day: 'numeric' })
 
 /**
  * The five periods ending on `lastChanceBy`. Null when it isn't a period
@@ -77,13 +73,13 @@ export function reinstateWindowSummary(
   inactivePeriod: number,
   lastChanceBy: string
 ): string {
-  return `Period ${inactivePeriod} of ${WINDOW_PERIODS}, last chance ${longDate(lastChanceBy)}.`
+  return `Period ${inactivePeriod} of ${WINDOW_PERIODS}, last chance ${formatLongDate(lastChanceBy)}.`
 }
 
 /** "Last chance: must reinstate by March 31, 2027, or charter as a new
  *  club." Approved by Ron on 2026-11-20 (#3103), period 5 only. */
 export function mustReinstateText(lastChanceBy: string): string {
-  return `Last chance: must reinstate by ${longDate(lastChanceBy)}, or charter as a new club.`
+  return `Last chance: must reinstate by ${formatLongDate(lastChanceBy)}, or charter as a new club.`
 }
 
 /**
@@ -103,11 +99,11 @@ export function reinstatePeriodLine(
   if (inactivePeriod === undefined || !lastChanceBy) return ''
   const lead = `Period ${inactivePeriod} of ${WINDOW_PERIODS}.`
   if (inactivePeriod !== WINDOW_PERIODS) {
-    return `${lead} Last chance: ${longDate(lastChanceBy)}.`
+    return `${lead} Last chance: ${formatLongDate(lastChanceBy)}.`
   }
   return mergePeriod5
     ? `${lead} ${mustReinstateText(lastChanceBy)}`
-    : `${lead} Last chance: ${longDate(lastChanceBy)}. ${mustReinstateText(lastChanceBy)}`
+    : `${lead} Last chance: ${formatLongDate(lastChanceBy)}. ${mustReinstateText(lastChanceBy)}`
 }
 
 /** The example the rule is written with (#3103): suspended at the
