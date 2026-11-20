@@ -104,6 +104,14 @@ function reasonText(club: ReinstatableClub, ctx: ReasonContext): string {
   return ctx.folded && known === CLOSED_TEXT ? '' : known
 }
 
+/** Ron approved this line on 2026-11-20 (#3103): only for a row the
+ *  pipeline puts in inactive period 5, dated from its `lastChanceBy`. A row
+ *  placed from `lastSeen` alone has no period and never gets it. */
+function lastChanceText(club: ReinstatableClub): string {
+  if (club.inactivePeriod !== 5 || !club.lastChanceBy) return ''
+  return `Last chance: must reinstate by ${longDate(club.lastChanceBy)}, or charter as a new club.`
+}
+
 /** Adds to this year's club base on the snapshot date: the one rule the
  *  groups, the split, the card and the rollups all count with. */
 function addsNow(club: ReinstatableClub, snapshotDate: string): boolean {
@@ -223,7 +231,8 @@ function groupColumns(
   rows: readonly ReinstatableClub[],
   ctx: GroupContext
 ): ActionTableColumn<ReinstatableClub>[] {
-  const why = (c: ReinstatableClub) => reasonText(c, ctx) || null
+  const why = (c: ReinstatableClub) =>
+    [reasonText(c, ctx), lastChanceText(c)].filter(Boolean).join(' ') || null
   const cols: ActionTableColumn<ReinstatableClub>[] = [
     {
       key: 'club',
