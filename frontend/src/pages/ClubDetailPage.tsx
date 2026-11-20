@@ -445,8 +445,15 @@ const ClubDetailPage: React.FC = () => {
   const { clubs: suspendedClubs, isLoading: isLoadingSuspended } =
     useSuspendedClubs(
       districtId,
-      isSuspended ? (effectiveEndDate ?? undefined) : undefined
+      isSuspended || isClosedClub ? (effectiveEndDate ?? undefined) : undefined
     )
+  // #3117 — a club suspended on the first day of the program year is in no
+  // current file and its history ended on June 30, so it looks closed. On
+  // the district's suspended list it has not closed: it can reinstate.
+  const closedSuspendDate = isClosedClub
+    ? (suspendedClubs?.find(s => clubIdsMatch(s.clubNumber, clubId ?? ''))
+        ?.suspendDate ?? null)
+    : null
   // #2169 — where our records start for the club's district: the earliest
   // date of the per-district snapshot index (the same shared index entry the
   // page's PY controls read, so no extra fetch). The district is the first
@@ -804,6 +811,16 @@ const ClubDetailPage: React.FC = () => {
         />
       )
     }
+    // #3117 — hold until the suspended list says whether it has closed.
+    if (isLoadingSuspended) {
+      return (
+        <div className="min-h-screen" aria-busy="true">
+          <div className="container mx-auto px-4 py-8">
+            <LoadingSkeleton variant="card" />
+          </div>
+        </div>
+      )
+    }
     const name = clubDistrictHistory.name
     return (
       <ErrorBoundary>
@@ -812,7 +829,11 @@ const ClubDetailPage: React.FC = () => {
             <ContextBar
               title={name}
               back={parent}
-              about="This club has closed. The page shows its last program year on Toastmasters' list."
+              about={
+                closedSuspendDate
+                  ? "The page shows its last program year on Toastmasters' list."
+                  : "This club has closed. The page shows its last program year on Toastmasters' list."
+              }
               trail={[
                 { label: 'Districts', to: '/' },
                 { label: districtName, to: `/district/${urlDistrictId}` },
@@ -833,6 +854,7 @@ const ClubDetailPage: React.FC = () => {
               districtId={closed.lastDistrictId}
               lastSeenDate={closedLastSeen}
               programYear={getProgramYearForDate(closedLastSeen)}
+              suspendDate={closedSuspendDate}
             />
             <ClubMemberDataNote />
             <Link

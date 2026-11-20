@@ -2,7 +2,8 @@ import React from 'react'
 import type { ClubHealthStatus } from '../../hooks/useDistrictAnalytics'
 
 export interface ClubHeroStatusChipsProps {
-  status: ClubHealthStatus
+  /** Absent for a club with no current analytics (#3117): no health chip. */
+  status?: ClubHealthStatus | undefined
   /** The analytics DCP level; 'NotDistinguished' or absent renders no chip. */
   distinguishedLevel?: string | undefined
   /** Set when the tier is provisional: the chip reads "(provisional)" and
@@ -37,7 +38,7 @@ export const ClubHeroStatusChips: React.FC<ClubHeroStatusChipsProps> = ({
   clubStatus,
   statusSince,
 }) => {
-  const { label, modifier } = STATUS[status] ?? STATUS.thriving
+  const health = status ? (STATUS[status] ?? STATUS.thriving) : null
   const showTier =
     Boolean(distinguishedLevel) && distinguishedLevel !== 'NotDistinguished'
   // Suspended, Low and Ineligible change what the club can do, so the first
@@ -50,10 +51,12 @@ export const ClubHeroStatusChips: React.FC<ClubHeroStatusChipsProps> = ({
       : null
   return (
     <>
-      <span className={`club-hero__chip ${modifier}`}>
-        <span aria-hidden="true" className="club-hero__chip-dot" />
-        {label}
-      </span>
+      {health && (
+        <span className={`club-hero__chip ${health.modifier}`}>
+          <span aria-hidden="true" className="club-hero__chip-dot" />
+          {health.label}
+        </span>
+      )}
       {operational && (
         <span
           className={`club-hero__chip ${
