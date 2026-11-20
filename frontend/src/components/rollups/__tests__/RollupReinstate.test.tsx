@@ -133,10 +133,10 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
       'Toastmasters International makes the final call.'
     )
     expect(section).toHaveTextContent('3 of 7 add to the club base.')
+    // Main's approved intro until Ron approves new wording (#3109 review).
     expect(section).toHaveTextContent(
-      'closed clubs within five renewal periods of their suspension'
+      'Suspended clubs, and clubs closed in the past four renewal periods, can reinstate. Toastmasters International makes the final call.'
     )
-    expect(section).not.toHaveTextContent('four renewal periods')
     expect(section).not.toHaveTextContent(/oldest/i)
     const link = within(section).getByRole('link', {
       name: /Club Reinstatement FAQ/,
