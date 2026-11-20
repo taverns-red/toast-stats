@@ -147,6 +147,25 @@ for (const theme of ['light', 'dark'] as const) {
   })
 }
 
+/* #3094 — the region and world funnels link to `#growth-reinstate`. The
+ * section renders after the data loads, so arriving with the hash must still
+ * land on it, not at the top of the page. */
+for (const width of [375, 1280] as const) {
+  test(`arriving with #growth-reinstate lands on the section at ${width} (#3094)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto(`${GROWTH}#growth-reinstate`, {
+      waitUntil: 'networkidle',
+      timeout: 60_000,
+    })
+    await expect(page.locator('#growth-reinstate-heading')).toBeInViewport({
+      timeout: 30_000,
+    })
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+  })
+}
+
 test('club growth at 1280: five-across funnel and linked club rows', async ({
   page,
 }) => {

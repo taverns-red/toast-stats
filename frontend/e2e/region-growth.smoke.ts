@@ -1,6 +1,7 @@
 import { test, expect, type Page } from './fixtures/test'
 import reports from '../src/__tests__/fixtures/reports-rollups-2026-10-15.recorded.json' with { type: 'json' }
 import rollups from '../src/__tests__/fixtures/region-rollups-2026-10-15.recorded.json' with { type: 'json' }
+import reinstatable from '../src/__tests__/fixtures/reinstatable-clubs-2026-11-18.recorded.json' with { type: 'json' }
 
 /* Region and world Club Growth funnels (#1812, #1813) — measured on the
  * deployed preview (BASE_URL) at 375, 768 and 1280, light and dark.
@@ -9,7 +10,11 @@ import rollups from '../src/__tests__/fixtures/region-rollups-2026-10-15.recorde
  * run writes it, so every test serves the recorded files (the #2117 builder
  * over the recorded prod 2026-10-15 sidecars of Regions 05 and 09; the
  * recorded prod region-rollups of that date) by route interception, or a
- * 404 to hold the "not available yet" state. */
+ * 404 to hold the "not available yet" state.
+ *
+ * #3094: the "Can reinstate" card reads the dated reinstate file. The tests
+ * serve the recorded 2026-11-18 list (Districts 51, 61 and 93), re-dated to
+ * the date the page asks for, or a 404 for a date without the file. */
 
 const REGION = '/region/05/growth'
 const WORLD = '/regions/growth'
@@ -17,8 +22,27 @@ const STAGES = ['prospective', 'chartered', 'coached', 'suspended'] as const
 
 async function serve(
   page: Page,
-  files: { reports: unknown | null; rollups: unknown | null }
+  files: {
+    reports: unknown | null
+    rollups: unknown | null
+    reinstate?: boolean
+  }
 ): Promise<void> {
+  await page.route('**/snapshots/*/reinstatable-clubs.json', r => {
+    const date = /snapshots\/([^/]+)\//.exec(r.request().url())?.[1] ?? ''
+    return files.reinstate === false
+      ? r.fulfill({
+          status: 404,
+          headers: { 'access-control-allow-origin': '*' },
+          body: '',
+        })
+      : r.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          headers: { 'access-control-allow-origin': '*' },
+          body: JSON.stringify({ ...reinstatable, snapshotDate: date }),
+        })
+  })
   for (const [name, body] of [
     ['reports-rollups.json', files.reports],
     ['region-rollups.json', files.rollups],
@@ -72,7 +96,7 @@ for (const [label, url, child] of [
 ] as const) {
   for (const theme of ['light', 'dark'] as const) {
     for (const width of [375, 768, 1280] as const) {
-      test(`${label} growth at ${width} (${theme}): four stages, drill-down, no overflow`, async ({
+      test(`${label} growth at ${width} (${theme}): five stages, drill-down, no overflow`, async ({
         page,
       }) => {
         test.setTimeout(120_000)
@@ -86,8 +110,24 @@ for (const [label, url, child] of [
 
         const funnel = page.getByRole('list', { name: 'Club Growth funnel' })
         const texts = await funnel.getByRole('listitem').allTextContents()
-        expect(texts).toHaveLength(4)
+        expect(texts).toHaveLength(5)
         texts.forEach(t => expect(t).toMatch(/\d/))
+
+        // #3094: the card sums the districts in scope, and each district
+        // links to its own section. Region 05 has District 61 (22); the
+        // world adds District 51 (1).
+        const card = page.getByTestId('growth-stage-reinstate')
+        await expect(card).toContainText(label === 'region' ? '22' : '23')
+        await expect(card).toContainText('3 add to the club base')
+        await expect(
+          page
+            .locator('#growth-reinstate')
+            .getByRole('link', { name: /District 61/ })
+            .first()
+        ).toHaveAttribute(
+          'href',
+          /\/district\/61\/growth(\?[^#]*)?#growth-reinstate$/
+        )
 
         // Every stage drills down to the level below, at the same stage.
         for (const stage of STAGES) {
@@ -135,3 +175,72 @@ test('an unpadded region id redirects to the canonical growth URL (#2130)', asyn
   await load(page, '/region/5/growth', '.growth-funnel__stage')
   await expect(page).toHaveURL(/\/region\/05\/growth$/)
 })
+
+/* #3094 — the card's number is the sum of the breakdown rows, the card
+ * jumps to them, and on a date without the file there are four cards drawn
+ * once (no layout shift from a fifth card coming or going). */
+for (const [label, url] of [
+  ['region', REGION],
+  ['world', WORLD],
+] as const) {
+  test(`${label} growth: Can reinstate equals its rows and jumps to them (#3094)`, async ({
+    page,
+  }) => {
+    test.setTimeout(120_000)
+    await serve(page, { reports, rollups })
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await load(page, url, '.growth-funnel__stage')
+    const card = page.getByTestId('growth-stage-reinstate')
+    const value = Number(
+      await card.locator('.growth-funnel__value').textContent()
+    )
+    const rows = page.locator(
+      '[data-testid="rollup-growth-reinstate-table"] tbody tr'
+    )
+    const sums = await rows.evaluateAll(trs =>
+      trs.map(tr =>
+        Array.from(tr.querySelectorAll('td'))
+          .slice(0, 2)
+          .reduce((s, td) => s + Number(td.textContent), 0)
+      )
+    )
+    expect(sums.reduce((a, b) => a + b, 0)).toBe(value)
+    await card.getByRole('link').click()
+    await expect(page).toHaveURL(/#growth-reinstate$/)
+    await expect(page.locator('#growth-reinstate-heading')).toBeInViewport()
+  })
+
+  test(`${label} growth without the reinstate file: four cards, no shift (#3094)`, async ({
+    page,
+  }) => {
+    test.setTimeout(120_000)
+    await serve(page, { reports, rollups, reinstate: false })
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.addInitScript(() => {
+      ;(window as unknown as { __cls: number }).__cls = 0
+      new PerformanceObserver(list => {
+        for (const e of list.getEntries() as unknown as {
+          value: number
+          hadRecentInput: boolean
+        }[]) {
+          if (!e.hadRecentInput) {
+            ;(window as unknown as { __cls: number }).__cls += e.value
+          }
+        }
+      }).observe({ type: 'layout-shift', buffered: true })
+    })
+    await load(page, url, '.growth-funnel__stage')
+    const funnel = page.getByRole('list', { name: 'Club Growth funnel' })
+    await expect(funnel.getByRole('listitem')).toHaveCount(4)
+    await expect(page.locator('#growth-reinstate')).toHaveCount(0)
+    const strip = await page.evaluate(() => {
+      const el = document.querySelector('.growth-funnel')
+      return el ? el.getBoundingClientRect().height : 0
+    })
+    expect(strip).toBeGreaterThan(0)
+    const cls = await page.evaluate(
+      () => (window as unknown as { __cls: number }).__cls
+    )
+    expect(cls).toBeLessThan(0.1)
+  })
+}
