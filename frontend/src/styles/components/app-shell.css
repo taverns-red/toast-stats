@@ -2259,13 +2259,12 @@
   }
 
   /* #3104 — a closed club's line under the name, on the fixed loyal-blue
-     hero (same in both themes). */
+     hero (same in both themes); white from .club-hero. */
   .club-hero__closed {
     margin: 0 0 6px;
     font-family: var(--sans);
     font-weight: 600;
     font-size: 16px;
-    color: #ffffff;
   }
 
   /* #2646 (UNIT-07): Area and Division are links to their pages. On the fixed
