@@ -224,6 +224,18 @@
   }
 }
 
+/* #3100 (S8) — body text is 16px on phones (docs/design-system.md, the
+   `--tm-font-size-base` minimum): stage notes, card hints and table cells.
+   The cell labels keep the 14px table floor. */
+@media (max-width: 639px) {
+  .growth-stage__note,
+  .growth-funnel__hint,
+  .growth-stage .action-table tbody th,
+  .growth-stage .action-table tbody td {
+    font-size: 1rem;
+  }
+}
+
 /* ── Can reinstate (#3007) ─────────────────────────────────────────────── */
 
 .growth-reinstate__name {
@@ -252,6 +264,46 @@
   .growth-reinstate__why {
     min-width: 0;
   }
+}
+
+/* #3100 (S3) — an optional cell with nothing in it (no division or area on
+   a closed club, no reason left on a folded row) is blank in the real table.
+   On the phone card rows its label would print over nothing, so it goes. */
+@media (max-width: 639px) {
+  .growth-stage .action-table td.growth-reinstate__optional:empty {
+    display: none;
+  }
+}
+
+/* #3100 (S1) — the clubs that don't add fold behind one 44px summary line. */
+.growth-reinstate__fold {
+  margin-top: 1rem;
+}
+
+.growth-reinstate__summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.growth-reinstate__summary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* #3100 (M2) — one thing to collect per item. */
+.growth-reinstate__list {
+  margin: 0.25rem 0 0.5rem;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.growth-reinstate__list li + li {
+  margin-top: 0.25rem;
 }
 
 .growth-reinstate__source {

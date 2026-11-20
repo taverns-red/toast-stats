@@ -180,15 +180,17 @@ describe('ReinstatableClubsSection', () => {
       )
     })
 
-    it('keeps the per-row text where it differs: the oldest period', () => {
+    it('marks clubs in the oldest renewal period "Confirm with World Headquarters"', () => {
       renderSection(d61)
       expect(rowFor('Club Le Marquis')).toHaveTextContent(
-        'Closed in the oldest of the four renewal periods. Confirm with World Headquarters.'
+        'Confirm with World Headquarters'
       )
+      const oldest = d61.filter(c => c.oldestPeriod).length
+      expect(oldest).toBe(9)
       const flagged = bodyRows().filter(r =>
         r.textContent?.includes('Confirm with World Headquarters')
       )
-      expect(flagged).toHaveLength(9)
+      expect(flagged).toHaveLength(oldest)
     })
   })
 

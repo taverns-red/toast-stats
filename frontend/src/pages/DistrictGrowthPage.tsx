@@ -26,7 +26,7 @@ import {
 import {
   ReinstatableClubsSection,
   addsToNextYear,
-  reinstateSplit,
+  reinstateCard,
 } from '../components/ReinstatableClubsSection'
 import { GrowthSurvivalLink } from '../components/GrowthSurvivalLink'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
@@ -136,7 +136,7 @@ const DistrictGrowthPage: React.FC = () => {
     return {
       state: 'ready',
       count: reinstatableClubs.length,
-      split: reinstateSplit(reinstatableClubs, nextYear).card,
+      split: reinstateCard(reinstatableClubs, nextYear),
     }
   }, [
     reinstatableLoading,
@@ -228,6 +228,9 @@ const DistrictGrowthPage: React.FC = () => {
                   clubs={reinstatableClubs}
                   baseProgramYear={baseProgramYear}
                   programYearStart={effectiveProgramYear.year}
+                  snapshotDate={effectiveEndDate}
+                  districtId={districtId}
+                  clubPageIds={clubPageIds}
                 />
               )}
             </ClubGrowthFunnelView>

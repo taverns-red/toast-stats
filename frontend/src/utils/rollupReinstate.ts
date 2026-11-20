@@ -5,6 +5,7 @@ import type {
 import {
   addsToNextYear,
   baseUnknownCount,
+  reinstateCard,
   reinstateSplit,
 } from '../components/ReinstatableClubsSection'
 import { keptQuery } from './rollupGrowthFunnel'
@@ -69,9 +70,9 @@ const byDistrictId = (a: string, b: string): number => {
   return na - nb
 }
 
-/** "2 effect on the club base not known", the tag's own wording. */
-export const unknownPhrase = (n: number): string =>
-  `${n.toLocaleString('en-US')} effect on the club base not known`
+/** "2 effect on the club base not known", the tag's own wording. It lives
+ *  beside the tag so the district card says it the same way (#3100). */
+export { unknownPhrase } from '../components/ReinstatableClubsSection'
 
 export function buildRollupReinstate({
   file,
@@ -108,14 +109,11 @@ export function buildRollupReinstate({
   rows.sort(
     (a, b) => b.adds - a.adds || b.total - a.total || byDistrictId(a.id, b.id)
   )
-  const split = reinstateSplit(inScope, nextYear)
-  const unknown = baseUnknownCount(inScope)
   return {
     count: inScope.length,
-    adds: split.adds,
-    unknown,
-    card:
-      unknown > 0 ? `${split.card} · ${unknownPhrase(unknown)}` : split.card,
+    adds: reinstateSplit(inScope, nextYear).adds,
+    unknown: baseUnknownCount(inScope),
+    card: reinstateCard(inScope, nextYear),
     nextYear,
     rows,
   }
