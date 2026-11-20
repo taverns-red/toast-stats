@@ -1,5 +1,11 @@
 import React, { useMemo, useState } from 'react'
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
+import {
+  useParams,
+  useNavigate,
+  useLocation,
+  Link,
+  Navigate,
+} from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 // One shared definition of "the same club" (#1440) — this file used to hold
 // two comparisons that disagreed with each other sixteen lines apart.
@@ -787,6 +793,17 @@ const ClubDetailPage: React.FC = () => {
     closedLastSeen &&
     clubDistrictHistory
   ) {
+    // A link can name a district the club was never last in: one REPLACE
+    // to its last district, so the breadcrumb, title and hero agree and
+    // the back button skips the wrong URL.
+    if (!sameDistrictId(closed.lastDistrictId, urlDistrictId ?? '')) {
+      return (
+        <Navigate
+          replace
+          to={`/district/${closed.lastDistrictId}/club/${clubId}`}
+        />
+      )
+    }
     const name = clubDistrictHistory.name
     return (
       <ErrorBoundary>
