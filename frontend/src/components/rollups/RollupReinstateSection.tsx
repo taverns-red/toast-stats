@@ -82,9 +82,8 @@ export function RollupReinstateSection({
   return (
     <StageSection id="reinstate" title={`Can reinstate (${n(count)})`}>
       <p className="growth-stage__note">
-        Suspended clubs, and closed clubs within five renewal periods of their
-        suspension, can reinstate. Toastmasters International makes the final
-        call.
+        Suspended clubs, and clubs closed in the past four renewal periods, can
+        reinstate. Toastmasters International makes the final call.
       </p>
       {count > 0 && (
         <p
