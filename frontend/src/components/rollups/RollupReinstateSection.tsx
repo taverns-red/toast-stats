@@ -98,8 +98,9 @@ export function RollupReinstateSection({
 }: {
   reinstate: RollupReinstate
 }) {
-  const { count, adds, unknown, nextYear, rows } = reinstate
-  const base = nextYear ? 'next year’s club base' : 'the club base'
+  const { count, adds, unknown, rows } = reinstate
+  // Always this year's club base (Ron, 2026-11-20).
+  const base = 'the club base'
   return (
     <StageSection id="reinstate" title={`Can reinstate (${n(count)})`}>
       <p className="growth-stage__note">

@@ -3,7 +3,6 @@ import type {
   ReinstatableClubs,
 } from '@taverns-red/shared-contracts'
 import {
-  addsToNextYear,
   baseUnknownCount,
   reinstateCard,
   reinstateSplit,
@@ -44,8 +43,6 @@ export interface RollupReinstate {
   unknown: number
   /** The card's third line, e.g. "12 add to the club base". */
   card: string
-  /** Reinstating now counts toward next program year's base. */
-  nextYear: boolean
   rows: ReinstateDistrictRow[]
 }
 
@@ -55,8 +52,6 @@ export interface BuildRollupReinstateInput {
   date: string | undefined
   /** Districts in scope (the region's, from its rollups); 'all' = world. */
   districtIds: readonly string[] | 'all'
-  /** Start year of the page's program year (R3). */
-  programYearStart: number
   /** The page's `location.search`; `py` and `date` ride the links. */
   search?: string | undefined
 }
@@ -78,11 +73,9 @@ export function buildRollupReinstate({
   file,
   date,
   districtIds,
-  programYearStart,
   search,
 }: BuildRollupReinstateInput): RollupReinstate | null {
   if (!file || !date || file.snapshotDate !== date) return null
-  const nextYear = addsToNextYear(file.baseProgramYear, programYearStart)
   const qs = keptQuery(search)
   const ids = (
     districtIds === 'all' ? Object.keys(file.districts) : districtIds
@@ -100,7 +93,7 @@ export function buildRollupReinstate({
       to: `/district/${id}/growth${qs}#growth-reinstate`,
       suspended: clubs.length - closed,
       closed,
-      adds: reinstateSplit(clubs, nextYear).adds,
+      adds: reinstateSplit(clubs, date).adds,
       oldest: clubs.filter(c => c.oldestPeriod).length,
       unknown: baseUnknownCount(clubs),
       total: clubs.length,
@@ -111,10 +104,9 @@ export function buildRollupReinstate({
   )
   return {
     count: inScope.length,
-    adds: reinstateSplit(inScope, nextYear).adds,
+    adds: reinstateSplit(inScope, date).adds,
     unknown: baseUnknownCount(inScope),
-    card: reinstateCard(inScope, nextYear),
-    nextYear,
+    card: reinstateCard(inScope, date),
     rows,
   }
 }

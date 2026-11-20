@@ -205,7 +205,7 @@ describe('buildRollupReinstate', () => {
     const date = '2027-05-15'
     const r = build(
       file(
-        { '61': [spring, club({ reason: 'closed_does_not_add' })] },
+        { '61': [spring, closed()] },
         { snapshotDate: date, baseProgramYear: '2027-2028' }
       ),
       ['61'],

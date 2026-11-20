@@ -5,7 +5,10 @@ import {
   type ReinstatableClub,
 } from '@taverns-red/shared-contracts'
 import { formatDisplayDate } from '../utils/dateFormatting'
-import { reinstateDeadline } from '../utils/reinstateDeadline'
+import {
+  addsToThisYearsBase,
+  reinstateDeadline,
+} from '../utils/reinstateDeadline'
 import { ActionTable, type ActionTableColumn } from './ActionTable'
 
 /* #3007 — "Can reinstate" on the district Club Growth page, after the
@@ -60,26 +63,30 @@ const UNDECIDED = new Set([
 const longDate = (iso: string) =>
   formatDisplayDate(iso, { year: 'numeric', month: 'long', day: 'numeric' })
 
-const baseName = (nextYear: boolean) =>
-  nextYear ? 'next year’s club base' : 'the club base'
+/** Ron, 2026-11-20: from April to June a March 31 suspension only counts
+ *  toward next year's base. The page talks about this year's base only. */
+const MAR31_NOT_THIS_YEAR =
+  'Suspended at the March 31 renewal. Reinstating it doesn’t change this year’s club base.'
 
 interface ReasonContext {
   snapshotDate: string
-  nextYear: boolean
   /** The row is in the folded group, whose note says the closed reason once. */
   folded: boolean
 }
 
 function reasonText(club: ReinstatableClub, ctx: ReasonContext): string {
   const lead = DEADLINE_LEAD[club.reason]
+  const adds = addsNow(club, ctx.snapshotDate)
   const deadline =
-    club.addsToBase && lead !== undefined
+    adds && lead !== undefined
       ? reinstateDeadline(club.reason, ctx.snapshotDate)
       : null
   const known =
     deadline !== null
-      ? `${lead} If it reinstates by ${longDate(deadline)}, it adds to ${baseName(ctx.nextYear)}.`
-      : REASON_TEXT[club.reason]
+      ? `${lead} If it reinstates by ${longDate(deadline)}, it adds to the club base.`
+      : club.reason === 'suspended_mar31_before_oct1' && !adds
+        ? MAR31_NOT_THIS_YEAR
+        : REASON_TEXT[club.reason]
   const parts =
     known === undefined || (ctx.folded && known === CLOSED_TEXT) ? [] : [known]
   if (club.oldestPeriod) {
@@ -96,31 +103,25 @@ function reasonText(club: ReinstatableClub, ctx: ReasonContext): string {
 const baseKnown = (club: ReinstatableClub): boolean =>
   !UNDECIDED.has(club.reason) && club.reason in REASON_TEXT
 
-const addsNow = (club: ReinstatableClub): boolean =>
-  baseKnown(club) && club.addsToBase
-
-/** Whether a reinstatement on this date counts toward the next program
- *  year's base (April 1 to June 30), from the file's `baseProgramYear`. */
-export function addsToNextYear(
-  baseProgramYear: string | null,
-  programYearStart: number
-): boolean {
+/** Adds to this year's club base on the snapshot date: the one rule the
+ *  groups, the split, the card and the rollups all count with. */
+function addsNow(club: ReinstatableClub, snapshotDate: string): boolean {
   return (
-    baseProgramYear !== null &&
-    Number(baseProgramYear.slice(0, 4)) > programYearStart
+    baseKnown(club) &&
+    addsToThisYearsBase(club.reason, club.addsToBase, snapshotDate)
   )
 }
 
 /** #3088 — how many clubs are tagged "Adds to the club base", and the line
- *  the stage card prints. Same rule as the tag, so they always agree. */
+ *  the stage card prints. Same rule as the groups, so they always agree. */
 export function reinstateSplit(
   clubs: readonly ReinstatableClub[],
-  nextYear: boolean
+  snapshotDate: string
 ): { adds: number; card: string } {
-  const adds = clubs.filter(addsNow).length
+  const adds = clubs.filter(c => addsNow(c, snapshotDate)).length
   return {
     adds,
-    card: `${adds} ${adds === 1 ? 'adds' : 'add'} to ${baseName(nextYear)}`,
+    card: `${adds} ${adds === 1 ? 'adds' : 'add'} to the club base`,
   }
 }
 
@@ -138,9 +139,9 @@ export const unknownPhrase = (n: number): string =>
  *  the split, then the unknown-effect count when there is one. */
 export function reinstateCard(
   clubs: readonly ReinstatableClub[],
-  nextYear: boolean
+  snapshotDate: string
 ): string {
-  const { card } = reinstateSplit(clubs, nextYear)
+  const { card } = reinstateSplit(clubs, snapshotDate)
   const unknown = baseUnknownCount(clubs)
   return unknown > 0 ? `${card} · ${unknownPhrase(unknown)}` : card
 }
@@ -313,10 +314,9 @@ function GroupTable({
  *  unknown-effect count, when there is one. */
 function splitLine(
   clubs: readonly ReinstatableClub[],
-  snapshotDate: string,
-  nextYear: boolean
+  snapshotDate: string
 ): string {
-  const adding = clubs.filter(addsNow)
+  const adding = clubs.filter(c => addsNow(c, snapshotDate))
   const deadlines = new Set(
     adding.map(c => reinstateDeadline(c.reason, snapshotDate))
   )
@@ -329,7 +329,7 @@ function splitLine(
   const unknown = baseUnknownCount(clubs)
   return (
     `${adding.length} of ${clubs.length} ${one ? 'adds' : 'add'} to ` +
-    `${baseName(nextYear)}${by}.` +
+    `the club base${by}.` +
     (unknown > 0 ? ` ${unknownPhrase(unknown)}.` : '')
   )
 }
@@ -337,11 +337,8 @@ function splitLine(
 export interface ReinstatableClubsSectionProps {
   /** `null`: no list for this date. `[]`: a measured zero. */
   clubs: ReinstatableClub[] | null
-  /** The file's `baseProgramYear`, `YYYY-YYYY`. */
-  baseProgramYear: string | null
-  /** Start year of the displayed program year (R3, from the page). */
-  programYearStart: number
-  /** The displayed snapshot date, ISO (R3, from the page): the deadlines. */
+  /** The displayed snapshot date, ISO (R3, from the page): the deadlines
+   *  and which clubs add to this year's club base. */
   snapshotDate: string
   districtId: string
   /** Clubs with a page here (the Suspended list's rule, S4). */
@@ -352,29 +349,18 @@ const NO_PAGES: ReadonlySet<string> = new Set()
 
 export const ReinstatableClubsSection: React.FC<
   ReinstatableClubsSectionProps
-> = ({
-  clubs,
-  baseProgramYear,
-  programYearStart,
-  snapshotDate,
-  districtId,
-  clubPageIds = NO_PAGES,
-}) => {
+> = ({ clubs, snapshotDate, districtId, clubPageIds = NO_PAGES }) => {
   if (clubs === null) return null
-  // Between April 1 and June 30 a reinstatement counts toward the next
-  // program year's base; the pipeline says which year in `baseProgramYear`.
-  const nextYear = addsToNextYear(baseProgramYear, programYearStart)
   const ctx: GroupContext = {
     snapshotDate,
-    nextYear,
     folded: false,
     districtId,
     clubPageIds,
   }
-  const adds = clubs.filter(addsNow)
+  const adds = clubs.filter(c => addsNow(c, snapshotDate))
   const unknown = clubs.filter(c => !baseKnown(c))
-  const rest = clubs.filter(c => baseKnown(c) && !c.addsToBase)
-  const addsLabel = `Adds to ${baseName(nextYear)} (${adds.length})`
+  const rest = clubs.filter(c => baseKnown(c) && !addsNow(c, snapshotDate))
+  const addsLabel = `Adds to the club base (${adds.length})`
   const unknownLabel = `Effect on the club base not known (${unknown.length})`
   const restLabel = `Doesn’t add to the club base (${rest.length})`
 
@@ -394,7 +380,7 @@ export const ReinstatableClubsSection: React.FC<
       </p>
       {clubs.length > 0 && (
         <p className="growth-stage__note" data-testid="growth-reinstate-split">
-          {splitLine(clubs, snapshotDate, nextYear)}
+          {splitLine(clubs, snapshotDate)}
         </p>
       )}
       {clubs.length === 0 && (

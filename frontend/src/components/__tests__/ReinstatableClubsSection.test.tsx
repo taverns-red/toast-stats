@@ -59,8 +59,6 @@ function renderSection(
     <MemoryRouter>
       <ReinstatableClubsSection
         clubs={clubs}
-        baseProgramYear="2026-2027"
-        programYearStart={2026}
         snapshotDate="2026-11-18"
         districtId="61"
         {...over}
