@@ -53,11 +53,12 @@
 # a warning and no file, so it can't fail the run (#3064 review N4).
 #
 # legacy-suspension-deadlines is a third input of the same kind (#3103):
-# config/legacy-suspension-deadlines.json, written once by the
-# legacy-suspension-deadlines workflow, gives the suspension deadline of
+# config/legacy-suspension-deadlines.json gives the suspension deadline of
 # clubs suspended before TI's suspend date reached our data. Best effort
 # like closed-club-names: without it, closed clubs with no TI date are
-# listed with no inactive period. Nothing pushes it back.
+# listed with no inactive period. Nothing pushes it back. The file was
+# built once on 2026-11-20 by run 44803919564, and the workflow has since
+# been removed (#3105).
 #
 # Exit codes: 0 ok · 1 a store could not be pulled or is corrupt · 2 usage
 set -euo pipefail
