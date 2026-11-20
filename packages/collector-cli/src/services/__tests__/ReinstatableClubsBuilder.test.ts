@@ -527,4 +527,129 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
       expect(numbers(out, 'F')).toEqual(['7777'])
     })
   })
+
+  describe('division and area of a closed club, from a June 30 suspended list (#3097)', () => {
+    // The closed index has no division or area. The June 30 suspended lists
+    // the builder already reads do, as at the club's suspension.
+    const june = (
+      snapshotDate: string,
+      clubs: SuspendedClubs['districts'][string]
+    ): SuspendedClubs => ({ ...suspendedList({ '61': clubs }), snapshotDate })
+    const tunneys = (division: string, area: string) => ({
+      clubNumber: '3475582',
+      clubName: "Tunney's Toastmasters",
+      division,
+      area,
+      suspendDate: '2026-03-31',
+    })
+    const row = (out: ReinstatableClubs, clubNumber: string) =>
+      out.districts['61']!.find(c => c.clubNumber === clubNumber)
+
+    it('a closed club on the previous June list gets its division and area', () => {
+      const out = known({
+        snapshotDate: SNAPSHOT,
+        suspended: suspendedList({ '61': [] }),
+        closed: D61_CLOSED,
+        previousSuspended: june('2026-06-30', [tunneys('B', '15')]),
+      })
+      expect(row(out, '3475582')).toMatchObject({
+        status: 'closed',
+        division: 'B',
+        area: '15',
+      })
+      expect(ReinstatableClubsSchema.safeParse(out).success).toBe(true)
+    })
+
+    it('a closed club on no June list has no division or area keys', () => {
+      const out = known({
+        snapshotDate: SNAPSHOT,
+        suspended: suspendedList({ '61': [] }),
+        closed: D61_CLOSED,
+        previousSuspended: june('2026-06-30', [tunneys('B', '15')]),
+      })
+      const maitres = row(out, '1314924')!
+      expect(maitres.status).toBe('closed')
+      expect('division' in maitres).toBe(false)
+      expect('area' in maitres).toBe(false)
+      expect(JSON.stringify(out)).not.toContain('undefined')
+    })
+
+    it('a June row without a division or area adds no keys', () => {
+      const out = known({
+        snapshotDate: SNAPSHOT,
+        suspended: suspendedList({ '61': [] }),
+        closed: D61_CLOSED,
+        previousSuspended: june('2026-06-30', [
+          {
+            clubNumber: '3475582',
+            clubName: "Tunney's Toastmasters",
+            suspendDate: '2026-03-31',
+          },
+        ]),
+      })
+      const club = row(out, '3475582')!
+      expect('division' in club).toBe(false)
+      expect('area' in club).toBe(false)
+    })
+
+    it('a club on two June lists takes the newest list', () => {
+      const out = known({
+        snapshotDate: '2027-11-17',
+        suspended: suspendedList({ '61': [] }),
+        closed: D61_CLOSED,
+        previousSuspended: june('2027-06-30', [tunneys('C', '22')]),
+        olderSuspended: [june('2026-06-30', [tunneys('B', '15')])],
+      })
+      expect(row(out, '3475582')).toMatchObject({
+        division: 'C',
+        area: '22',
+      })
+    })
+
+    it('an older list fills in when the previous list does not have the club', () => {
+      const out = known({
+        snapshotDate: '2027-11-17',
+        suspended: suspendedList({ '61': [] }),
+        closed: D61_CLOSED,
+        previousSuspended: june('2027-06-30', []),
+        olderSuspended: [june('2026-06-30', [tunneys('B', '15')])],
+      })
+      expect(row(out, '3475582')).toMatchObject({
+        division: 'B',
+        area: '15',
+      })
+    })
+  })
+
+  describe('the writer schema (#3097)', () => {
+    const closedRow = {
+      clubNumber: '3475582',
+      clubName: "Tunney's Toastmasters",
+      status: 'closed',
+      lastSeen: '2026-06-30',
+      oldestPeriod: false,
+      addsToBase: false,
+      reason: 'closed_does_not_add',
+    }
+    const file = (rows: unknown[]) => ({
+      _format: { version: '1.0.0', type: 'reinstatable-clubs' },
+      snapshotDate: SNAPSHOT,
+      baseProgramYear: '2026-2027',
+      districts: { '61': rows },
+    })
+
+    it('accepts a closed row without division and area (files written before)', () => {
+      expect(ReinstatableClubsSchema.safeParse(file([closedRow])).success).toBe(
+        true
+      )
+    })
+
+    it('accepts a closed row with division and area', () => {
+      expect(
+        ReinstatableClubsSchema.safeParse(
+          file([{ ...closedRow, division: 'B', area: '15' }])
+        ).success
+      ).toBe(true)
+    })
+  })
 })
