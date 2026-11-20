@@ -151,6 +151,22 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     expect(link).toHaveAttribute('target', '_blank')
   })
 
+  it('says what it takes and where to send it, as the district does (#3100)', () => {
+    renderView(reinstate)
+    const section = document.getElementById('growth-reinstate')!
+    const steps = within(section).getByTestId('growth-reinstate-requirements')
+    expect(
+      within(steps).getByRole('heading', { name: 'What it takes' })
+    ).toBeInTheDocument()
+    expect(within(steps).getAllByRole('listitem')).toHaveLength(3)
+    expect(
+      within(steps).getByRole('link', { name: 'renewals@toastmasters.org' })
+    ).toHaveAttribute('href', 'mailto:renewals@toastmasters.org')
+    expect(
+      within(steps).getByRole('link', { name: '+1 720-439-5050' })
+    ).toHaveAttribute('href', 'tel:+17204395050')
+  })
+
   it('names next year’s club base between April 1 and June 30', () => {
     renderView({
       ...reinstate,
