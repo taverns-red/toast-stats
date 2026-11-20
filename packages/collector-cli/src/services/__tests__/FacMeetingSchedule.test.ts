@@ -1906,6 +1906,14 @@ describe('parseMeetingSchedule (#3086) — a venue named beside an online option
     ['Zoom<br>1-438-555-0199 Canada'],
     ['Online<br>Ottawa'],
     ['Online only<br>alternate host required'],
+    // Re-review: a number is a civic number only before a street word.
+    ['Online<br>Tuesdays 7 pm'],
+    ['Zoom<br>7 pm to 9 pm'],
+    ['Online<br>Every 2 weeks'],
+    ['Online<br>45 minutes'],
+    ['Online<br>12 noon'],
+    ['Online<br>Our club is 25 years old'],
+    ['Online<br>Office workers welcome'],
   ])('%j stays online', location => {
     expect(modeOf(location)).toBe('online')
   })
@@ -1915,6 +1923,10 @@ describe('parseMeetingSchedule (#3086) — a venue named beside an online option
   it.each([
     ['City Hall, 110 Laurier<br>Since 2024 also on Zoom'],
     ['123 Main St<br>Zoom meeting link sent to guests'],
+    // Re-review: "online meetings" covers every meeting only as a line
+    // of its own ("Virtual meetings", D61 00005407), not when qualified.
+    ['123 Main St<br>Online meetings on the 3rd Tuesday'],
+    ['Community Centre<br>Online meetings in summer'],
   ])('%j is hybrid', location => {
     expect(modeOf(location)).toBe('hybrid')
   })
