@@ -6,7 +6,9 @@ import { useLocation } from 'react-router-dom'
  *  `useScrollRestoration` tries the hash on navigation, but a page whose
  *  sections render after its data loads (`/district/61/growth#growth-reinstate`
  *  from the region and world funnels) has no target yet, so the router lands
- *  at the top. Same pattern as the Education page's anchors. */
+ *  at the top. Same pattern as the Education page's anchors. `instant`
+ *  overrides `html { scroll-behavior: smooth }`, so the landing doesn't
+ *  depend on an animation finishing. */
 export function useScrollToHashWhenReady(ready: boolean): void {
   const { hash } = useLocation()
   useEffect(() => {
@@ -17,6 +19,8 @@ export function useScrollToHashWhenReady(ready: boolean): void {
     } catch {
       return
     }
-    document.getElementById(id)?.scrollIntoView?.({ block: 'start' })
+    document
+      .getElementById(id)
+      ?.scrollIntoView?.({ behavior: 'instant', block: 'start' })
   }, [ready, hash])
 }

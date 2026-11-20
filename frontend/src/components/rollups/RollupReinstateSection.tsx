@@ -60,12 +60,19 @@ function mobileRow(base: string) {
     to: r.to,
     title: r.label,
     chip: <span className="district-hub__count">{n(r.total)}</span>,
-    meta: [
-      `${n(r.suspended)} suspended`,
-      `${n(r.closed)} closed`,
-      `${n(r.adds)} ${r.adds === 1 ? 'adds' : 'add'}`,
-      `${n(r.oldest)} oldest period`,
-    ].join(' · '),
+    // Two full lines, never clipped (#3094 review): the list's CSS lets
+    // this meta wrap, unlike the single-line default.
+    meta: (
+      <>
+        <span className="rollup-reinstate__meta-line">
+          {n(r.suspended)} suspended · {n(r.closed)} closed
+        </span>
+        <span className="rollup-reinstate__meta-line">
+          {n(r.adds)} {r.adds === 1 ? 'adds' : 'add'} to {base} · {n(r.oldest)}{' '}
+          to confirm with World Headquarters
+        </span>
+      </>
+    ),
     ariaLabel: `${r.label}: ${[
       `${n(r.total)} can reinstate`,
       `${n(r.suspended)} suspended`,
@@ -112,14 +119,16 @@ export function RollupReinstateSection({
             renewal periods. Confirm those with World Headquarters. Select a
             district to see its clubs and why each one can come back.
           </p>
-          <ActionTable
-            caption="Clubs that can reinstate by district"
-            columns={columns(base)}
-            rows={rows}
-            rowKey={r => r.id}
-            mobileRow={mobileRow(base)}
-            testId="rollup-growth-reinstate-table"
-          />
+          <div className="rollup-reinstate__rows">
+            <ActionTable
+              caption="Clubs that can reinstate by district"
+              columns={columns(base)}
+              rows={rows}
+              rowKey={r => r.id}
+              mobileRow={mobileRow(base)}
+              testId="rollup-growth-reinstate-table"
+            />
+          </div>
         </>
       )}
     </StageSection>
