@@ -3,10 +3,9 @@ import { ActionTable, type ActionTableColumn } from '../ActionTable'
 import { StageSection } from '../ClubGrowthFunnelView'
 import { ReinstatementRequirements } from '../ReinstatableClubsSection'
 import type { MobileRow } from '../MobileRowList'
-import {
-  unknownPhrase,
-  type ReinstateDistrictRow,
-  type RollupReinstate,
+import type {
+  ReinstateDistrictRow,
+  RollupReinstate,
 } from '../../utils/rollupReinstate'
 
 /* #3094 — "Can reinstate" on the region and world funnels: the district
@@ -19,11 +18,8 @@ const n = (v: number) => v.toLocaleString('en-US')
 const addsText = (v: number, base: string) =>
   `${n(v)} ${v === 1 ? 'adds' : 'add'} to ${base}`
 
-function columns(
-  base: string,
-  withUnknown: boolean
-): ActionTableColumn<ReinstateDistrictRow>[] {
-  const cols: ActionTableColumn<ReinstateDistrictRow>[] = [
+function columns(base: string): ActionTableColumn<ReinstateDistrictRow>[] {
+  return [
     {
       key: 'district',
       header: 'District',
@@ -52,23 +48,7 @@ function columns(
       className: 'growth-table__num',
       cell: r => n(r.adds),
     },
-    {
-      key: 'oldest',
-      header: 'Oldest period',
-      className: 'growth-table__num',
-      cell: r => n(r.oldest),
-    },
   ]
-  // Only when a district in scope has one, so the table stays narrow.
-  if (withUnknown) {
-    cols.push({
-      key: 'unknown',
-      header: 'Effect on the club base not known',
-      className: 'growth-table__num',
-      cell: r => n(r.unknown),
-    })
-  }
-  return cols
 }
 
 /* Phone row (#3094 UX review): rows are sorted by adds, so line 1 leads
@@ -80,8 +60,6 @@ function mobileRow(base: string) {
       `${n(r.total)} can reinstate`,
       `${n(r.suspended)} suspended`,
       `${n(r.closed)} closed`,
-      `${n(r.oldest)} oldest period`,
-      ...(r.unknown > 0 ? [unknownPhrase(r.unknown)] : []),
     ]
     return {
       id: r.id,
@@ -98,14 +76,15 @@ export function RollupReinstateSection({
 }: {
   reinstate: RollupReinstate
 }) {
-  const { count, adds, unknown, rows } = reinstate
+  const { count, adds, rows } = reinstate
   // Always this year's club base (Ron, 2026-11-20).
   const base = 'the club base'
   return (
     <StageSection id="reinstate" title={`Can reinstate (${n(count)})`}>
       <p className="growth-stage__note">
-        Suspended clubs, and clubs closed in the past four renewal periods, can
-        reinstate. Toastmasters International makes the final call.
+        A suspended or closed club can reinstate until the end of its fifth
+        renewal period, counting the period it was suspended in. Toastmasters
+        International makes the final call.
       </p>
       {count > 0 && (
         <p
@@ -113,7 +92,6 @@ export function RollupReinstateSection({
           data-testid="rollup-growth-reinstate-split"
         >
           {n(adds)} of {n(count)} {adds === 1 ? 'adds' : 'add'} to {base}.
-          {unknown > 0 && ` ${unknownPhrase(unknown)}.`}
         </p>
       )}
       <ReinstatementRequirements />
@@ -125,17 +103,12 @@ export function RollupReinstateSection({
         <>
           <h4 className="growth-stage__subtitle">By district</h4>
           <p className="growth-stage__note">
-            Oldest period counts the clubs closed in the oldest of the four
-            renewal periods. Confirm those with World Headquarters. Select a
-            district to see its clubs and why each one can come back.
+            Select a district to see its clubs and why each one can come back.
           </p>
           <div className="rollup-reinstate__rows">
             <ActionTable
               caption="Clubs that can reinstate by district"
-              columns={columns(
-                base,
-                rows.some(r => r.unknown > 0)
-              )}
+              columns={columns(base)}
               rows={rows}
               rowKey={r => r.id}
               mobileRow={mobileRow(base)}

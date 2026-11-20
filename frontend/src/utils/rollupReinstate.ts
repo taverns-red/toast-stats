@@ -3,7 +3,6 @@ import type {
   ReinstatableClubs,
 } from '@taverns-red/shared-contracts'
 import {
-  baseUnknownCount,
   reinstateCard,
   reinstateSplit,
 } from '../components/ReinstatableClubsSection'
@@ -29,18 +28,12 @@ export interface ReinstateDistrictRow {
   suspended: number
   closed: number
   adds: number
-  /** Clubs closed in the oldest of the four renewal periods. */
-  oldest: number
-  /** Clubs whose effect on the club base isn't known (S6). */
-  unknown: number
   total: number
 }
 
 export interface RollupReinstate {
   count: number
   adds: number
-  /** Clubs whose effect on the club base isn't known. */
-  unknown: number
   /** The card's third line, e.g. "12 add to the club base". */
   card: string
   rows: ReinstateDistrictRow[]
@@ -64,10 +57,6 @@ const byDistrictId = (a: string, b: string): number => {
   if (Number.isNaN(na) || Number.isNaN(nb)) return a.localeCompare(b)
   return na - nb
 }
-
-/** "2 effect on the club base not known", the tag's own wording. It lives
- *  beside the tag so the district card says it the same way (#3100). */
-export { unknownPhrase } from '../components/ReinstatableClubsSection'
 
 export function buildRollupReinstate({
   file,
@@ -94,8 +83,6 @@ export function buildRollupReinstate({
       suspended: clubs.length - closed,
       closed,
       adds: reinstateSplit(clubs, date).adds,
-      oldest: clubs.filter(c => c.oldestPeriod).length,
-      unknown: baseUnknownCount(clubs),
       total: clubs.length,
     })
   }
@@ -105,7 +92,6 @@ export function buildRollupReinstate({
   return {
     count: inScope.length,
     adds: reinstateSplit(inScope, date).adds,
-    unknown: baseUnknownCount(inScope),
     card: reinstateCard(inScope, date),
     rows,
   }

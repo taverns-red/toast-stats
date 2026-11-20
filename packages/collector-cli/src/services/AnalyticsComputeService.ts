@@ -47,6 +47,8 @@ import type {
 } from '@taverns-red/shared-contracts'
 import {
   ClosedClubNameIndexSchema,
+  LEGACY_SUSPENSION_DEADLINES_PATH,
+  LegacySuspensionDeadlinesSchema,
   CLUBS_BY_REGION_DIR,
   CLUBS_BY_REGION_WORLD_FILE_NAME,
   CLUBS_BY_REGION_WORLD_POINTS_FILE_NAME,
@@ -2322,23 +2324,32 @@ export class AnalyticsComputeService {
       // Mar 31 suspension stays in the window until Sep 30 two years later.
       // The PY is the snapshot's logical date's (#1284).
       const pyStart = Number(calculateProgramYear(snapshotDate).slice(0, 4))
-      const readJuneList = async (
-        year: number
-      ): Promise<SuspendedClubs | null> => {
+      const readList = async (date: string): Promise<SuspendedClubs | null> => {
         const raw = await readOptional(
-          path.join(
-            this.getSnapshotDir(`${year}-06-30`),
-            SUSPENDED_CLUBS_FILE_NAME
-          )
+          path.join(this.getSnapshotDir(date), SUSPENDED_CLUBS_FILE_NAME)
         )
         return raw === null ? null : SuspendedClubsSchema.parse(JSON.parse(raw))
       }
+      const readJuneList = (year: number): Promise<SuspendedClubs | null> =>
+        readList(`${year}-06-30`)
       const previousSuspended = await readJuneList(pyStart)
       const olderSuspended: SuspendedClubs[] = []
       for (const year of [pyStart - 1, pyStart - 2]) {
         const list = await readJuneList(year)
         if (list !== null) olderSuspended.push(list)
       }
+      // The March 31 lists (#3103): a Sept 30 suspension closes in April,
+      // so only a March 31 list still has its TI date. The date's program
+      // year and the one before, and the next once it is not after the date
+      // (process-dates.sh pulls the same set).
+      const marchSuspended: SuspendedClubs[] = []
+      for (const year of [pyStart - 1, pyStart, pyStart + 1]) {
+        const date = `${year}-03-31`
+        if (date > snapshotDate) continue
+        const list = await readList(date)
+        if (list !== null) marchSuspended.push(list)
+      }
+      const legacyDeadlines = await this.readLegacyDeadlines(snapshotDate)
 
       // The date's roster: who is on it, and in what status.
       const roster = new Map<string, RosterEntry>()
@@ -2363,6 +2374,8 @@ export class AnalyticsComputeService {
         closed,
         previousSuspended,
         olderSuspended,
+        marchSuspended,
+        legacyDeadlines,
         roster,
       })
       if (built === null) {
@@ -2397,6 +2410,40 @@ export class AnalyticsComputeService {
         error: error instanceof Error ? error.message : 'Unknown error',
       })
       return { failed: true }
+    }
+  }
+
+  /**
+   * The synced `config/legacy-suspension-deadlines.json` (#3103) as club
+   * number → suspension deadline, or null. Best effort: a missing file is
+   * normal before the one-off generator runs, and an unreadable one is
+   * logged and ignored. Either way the rule falls back to lastSeen bounds,
+   * so the list is still right, only without some inactive periods.
+   */
+  private async readLegacyDeadlines(
+    snapshotDate: string
+  ): Promise<Map<string, string> | null> {
+    let raw: string
+    try {
+      raw = await fs.readFile(
+        path.join(this.cacheDir, LEGACY_SUSPENSION_DEADLINES_PATH),
+        'utf-8'
+      )
+    } catch {
+      return null
+    }
+    try {
+      const parsed = LegacySuspensionDeadlinesSchema.parse(JSON.parse(raw))
+      return new Map(Object.entries(parsed.rows))
+    } catch (error) {
+      this.logger.warn(
+        'Unreadable legacy-suspension-deadlines.json — closed clubs without a TI suspend date get no inactive period',
+        {
+          snapshotDate,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
+      )
+      return null
     }
   }
 

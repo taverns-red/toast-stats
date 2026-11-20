@@ -300,7 +300,7 @@ describe('AnalyticsComputeService — reinstatable-clubs.json is point in time (
       ['2028-04-01', ['2027-06-30']],
       ['2028-08-01', ['2028-06-30', '2027-06-30']],
     ] as const) {
-      it(`${date}: dates the closure from the older list, so it is listed in the oldest period`, async () => {
+      it(`${date}: dates the suspension from the older list, so it is listed in period 5 (#3103)`, async () => {
         const dir = await seed(date, date)
         await fs.writeFile(
           path.join(cacheDir, 'config/closed-club-names.json'),
@@ -321,8 +321,119 @@ describe('AnalyticsComputeService — reinstatable-clubs.json is point in time (
         const row = (await readOut(dir)).districts['61']!.find(
           c => c.clubNumber === '3475582'
         )
-        expect(row).toMatchObject({ status: 'closed', oldestPeriod: true })
+        expect(row).toMatchObject({
+          status: 'closed',
+          oldestPeriod: false,
+          inactivePeriod: 5,
+          lastChanceBy: '2028-09-30',
+        })
       })
     }
+  })
+
+  describe('March 31 lists and the legacy deadlines file (#3103)', () => {
+    // report.md §3: on 2026-11-19, 1025927 Above & Beyond (Sept 30 2025,
+    // last seen 2026-04-29) has its TI date only on the 2026-03-31 list, and
+    // 3778 Club Le Marquis (Mar 31 2025, last seen 2025-06-30) has no TI
+    // date at all: only the status-history deadline places it.
+    const NOV19 = '2026-11-19'
+    const closedWith = (rows: [string, string, string][]) =>
+      JSON.stringify({
+        ...CLOSED,
+        asOf: NOV19,
+        programYears: { '2025-2026': { '61': rows } },
+      })
+    const legacyPath = () =>
+      path.join(cacheDir, 'config/legacy-suspension-deadlines.json')
+    const LEGACY = {
+      _format: { version: '1.0.0', type: 'legacy-suspension-deadlines' },
+      generatedAt: '2026-11-21T12:00:00.000Z',
+      expires: '2027-10-01',
+      sourceDates: ['2025-03-31', '2025-04-30'],
+      rowCount: 1,
+      rowsSha256: 'a'.repeat(64),
+      rows: { '3778': '2025-03-31' },
+    }
+    const rowOf = async (dir: string, n: string) =>
+      (await readOut(dir)).districts['61']!.find(c => c.clubNumber === n)
+
+    it('reads the March 31 list, so a Sept 30 suspension that closed in April has its period', async () => {
+      const dir = await seed(NOV19, NOV19)
+      await fs.writeFile(
+        path.join(cacheDir, 'config/closed-club-names.json'),
+        closedWith([['1025927', 'Above & Beyond', '2026-04-29']])
+      )
+      const march = path.join(
+        cacheDir,
+        'snapshots/2026-03-31/suspended-clubs.json'
+      )
+      await fs.mkdir(path.dirname(march), { recursive: true })
+      await fs.writeFile(
+        march,
+        JSON.stringify({
+          _format: SUSPENDED_CLUBS_FORMAT,
+          snapshotDate: '2026-03-31',
+          programYear: { start: '2025-07-01', end: '2026-06-30' },
+          districts: {
+            '61': [
+              {
+                clubNumber: '1025927',
+                clubName: 'Above & Beyond',
+                division: 'D',
+                area: '41',
+                suspendDate: '2025-09-30',
+              },
+            ],
+          },
+        })
+      )
+      const result = await compute(NOV19)
+      expect(result.reinstatableClubsFailed).toBe(false)
+      expect(await rowOf(dir, '1025927')).toMatchObject({
+        inactivePeriod: 3,
+        lastChanceBy: '2028-03-31',
+      })
+    })
+
+    it('reads config/legacy-suspension-deadlines.json when it is synced', async () => {
+      const dir = await seed(NOV19, NOV19)
+      await fs.writeFile(
+        path.join(cacheDir, 'config/closed-club-names.json'),
+        closedWith([['3778', 'Club Le Marquis', '2025-06-30']])
+      )
+      await fs.writeFile(legacyPath(), JSON.stringify(LEGACY))
+      await compute(NOV19)
+      expect(await rowOf(dir, '3778')).toMatchObject({
+        inactivePeriod: 4,
+        lastChanceBy: '2027-09-30',
+      })
+    })
+
+    it('without the legacy file the club is listed with no period', async () => {
+      const dir = await seed(NOV19, NOV19)
+      await fs.writeFile(
+        path.join(cacheDir, 'config/closed-club-names.json'),
+        closedWith([['3778', 'Club Le Marquis', '2025-06-30']])
+      )
+      const result = await compute(NOV19)
+      expect(result.reinstatableClubsFailed).toBe(false)
+      const row = await rowOf(dir, '3778')
+      expect(row).toBeDefined()
+      expect(row!.inactivePeriod).toBeUndefined()
+    })
+
+    it('an unreadable legacy file is ignored with a warning: the list is still written, without periods', async () => {
+      const dir = await seed(NOV19, NOV19)
+      await fs.writeFile(
+        path.join(cacheDir, 'config/closed-club-names.json'),
+        closedWith([['3778', 'Club Le Marquis', '2025-06-30']])
+      )
+      await fs.writeFile(legacyPath(), '{"not":"valid"}')
+      const result = await compute(NOV19)
+      expect(result.reinstatableClubsFailed).toBe(false)
+      const row = await rowOf(dir, '3778')
+      expect(row).toBeDefined()
+      expect(row!.inactivePeriod).toBeUndefined()
+    })
   })
 })

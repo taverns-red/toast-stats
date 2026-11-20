@@ -3,8 +3,11 @@
  * and closed clubs that can still be reinstated, per district (#3007). It
  * feeds the "Can reinstate" section of the Club Growth page.
  *
- * `oldestPeriod`, `addsToBase` and `reason` come from `classifyReinstatement`
- * in analytics-core, which holds the rule and its sources. `reason` is one of
+ * `addsToBase`, `reason`, `inactivePeriod` and `lastChanceBy` come from
+ * `classifyReinstatement` in analytics-core, which holds the rule and its
+ * sources. `oldestPeriod` belonged to the four-period window that the
+ * five-period rule replaced (#3103): it is optional and written false, so
+ * readers deployed before that still parse the file (ADR 0019, expand only). `reason` is one of
  * that function's stable codes, kept as a string here so a code added later
  * doesn't make an already-deployed reader reject the file (ADR 0019, R24).
  *
@@ -47,12 +50,19 @@ export const ReinstatableClubSchema = z
     suspendDate: z.string().regex(ISO_DATE).optional(),
     /** Closed clubs: the last snapshot date the club was on the roster. */
     lastSeen: z.string().regex(ISO_DATE).optional(),
-    /** True: the closure is in the oldest renewal period, "confirm with World Headquarters". */
-    oldestPeriod: z.boolean(),
+    /** Retired (#3103): always false. Optional, kept for deployed readers. */
+    oldestPeriod: z.boolean().optional(),
     /** Whether reinstating now adds to the club base of `baseProgramYear`. */
     addsToBase: z.boolean(),
     /** Stable reason code from `classifyReinstatement`. */
     reason: z.string().min(1),
+    /**
+     * The inactive renewal period (1-5) the club is in on `snapshotDate`
+     * (#3103). Absent when the suspension isn't known, never guessed.
+     */
+    inactivePeriod: z.number().int().min(1).max(5).optional(),
+    /** The last day of inactive period 5, ISO. Absent with `inactivePeriod`. */
+    lastChanceBy: z.string().regex(ISO_DATE).optional(),
   })
   .superRefine((row, ctx) => {
     if (row.status === 'suspended' && row.suspendDate === undefined) {

@@ -45,9 +45,10 @@ export function reinstateDeadline(
    on July 1. A March 31 suspension reinstated from April 1 to June 30 only
    counts toward next year's base, so it doesn't add; from July 1 to
    September 30 it does. Decided here from the reason code and the snapshot
-   date, not the row's `addsToBase`, which the pipeline sets for next year's
-   base in that window (#3103 changes that). Every other code keeps the
-   pipeline's flag. */
+   date, not the row's `addsToBase`, which files written before #3103 set
+   for next year's base in that window. Since #3103 the pipeline itself
+   emits `suspended_mar31_before_july1` (addsToBase false) there. Every other
+   code keeps the pipeline's flag. */
 const MAR31_ADDING = 'suspended_mar31_before_oct1'
 
 /** Whether reinstating this club now adds to this year's club base. */
@@ -61,4 +62,26 @@ export function addsToThisYearsBase(
   // window whose reinstatements count toward next year's base.
   const month = Number(ISO_DATE.exec(snapshotDate)?.[2])
   return !(month >= 4 && month <= 6)
+}
+
+/* #3109 review (F1): a suspend date more than 3 days from March 31 or
+   September 30 is off the renewal cycle (the pipeline's tolerance,
+   CYCLE_TOLERANCE_DAYS in analytics-core; TI stamps a passed deadline the
+   day after). The pipeline places such a club by Ron's convention, but the
+   Why sentences name a renewal, so those rows get none until Ron approves
+   wording. */
+const CYCLE_TOLERANCE_DAYS = 3
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** Whether an ISO suspend date is off the Sep 30 / Mar 31 cycle. False
+ *  for a missing or malformed date. */
+export function isOffCycleSuspendDate(
+  suspendDate: string | undefined
+): boolean {
+  const m = ISO_DATE.exec(suspendDate ?? '')
+  if (!m) return false
+  const year = Number(m[1])
+  const at = Date.UTC(year, Number(m[2]) - 1, Number(m[3]))
+  const deadlines = [Date.UTC(year, 2, 31), Date.UTC(year, 8, 30)]
+  return deadlines.every(d => Math.abs(at - d) > CYCLE_TOLERANCE_DAYS * DAY_MS)
 }

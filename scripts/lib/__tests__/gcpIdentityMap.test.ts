@@ -357,6 +357,7 @@ describe('data-reader jobs (#2872 B2)', () => {
       'data-pipeline.yml::promote-reports',
       'education-timeline-backfill.yml::backfill',
       'gap-district-prune.yml::prune',
+      'legacy-suspension-deadlines.yml::build',
     ])
     const missing: string[] = []
     for (const [key] of pipelineJobs) {

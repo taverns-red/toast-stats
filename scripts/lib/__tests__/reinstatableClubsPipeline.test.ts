@@ -47,6 +47,25 @@ describe('data-pipeline.yml: the closed-club index is pulled before compute (#30
     })
   }
 
+  for (const mode of ['daily', 'rebuild', 'rescrape', 'rescrape-historical']) {
+    it(`${mode}: the same sync-stores.sh call pulls legacy-suspension-deadlines (#3103)`, () => {
+      const pull = steps.find(
+        s =>
+          (s.name ?? '').startsWith(`[${mode}]`) &&
+          /sync-stores\.sh[^\n]*(\\\n[^\n]*)*closed-club-names/.test(
+            s.run ?? ''
+          )
+      )
+      expect(pull?.run ?? '').toMatch(/legacy-suspension-deadlines/)
+    })
+  }
+
+  it('never pushes the legacy deadlines back: the one-off generator owns it (#3103)', () => {
+    expect(index(/publish-stores\.sh[^\n]*legacy-suspension-deadlines/)).toBe(
+      -1
+    )
+  })
+
   it('never pushes it back: it is an input, owned by build-identity-history.sh', () => {
     expect(index(/publish-stores\.sh[^\n]*closed-club-names/)).toBe(-1)
   })

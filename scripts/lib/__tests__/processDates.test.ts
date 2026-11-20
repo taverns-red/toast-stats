@@ -806,6 +806,42 @@ describe('process-dates.sh: the previous program year’s June 30 suspended list
     expect(localDateDirs('snapshots')).toEqual([])
   })
 
+  it('also pulls the March 31 lists of the date’s program year and the one before (#3103)', () => {
+    // A Sept 30 suspension closes in April, so only a March 31 list still has
+    // its TI date; it stays eligible for five renewal periods.
+    putObject('snapshots/2026-03-31/suspended-clubs.json', '{"m":2}', true)
+    putObject('snapshots/2025-03-31/suspended-clubs.json', '{"m":1}', true)
+    putObject('snapshots/2027-03-31/suspended-clubs.json', '{"m":3}', true)
+    const r = run('rescrape', ['2026-11-19'], {
+      DISTRICTS: '61',
+      STUB_DISK_LOG: diskLog,
+    })
+    expect(r.status, r.stderr).toBe(0)
+    const seen = seenByCompute()
+    expect(seen).toEqual(
+      expect.arrayContaining([
+        'snapshots/2026-03-31/suspended-clubs.json',
+        'snapshots/2025-03-31/suspended-clubs.json',
+      ])
+    )
+    // Dated after the snapshot: a rebuild must not read the future.
+    expect(seen).not.toContain('snapshots/2027-03-31/suspended-clubs.json')
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+
+  it('from April the current year’s March 31 list is pulled too (#3103)', () => {
+    putObject('snapshots/2027-03-31/suspended-clubs.json', '{"m":3}', true)
+    const r = run('rescrape', ['2027-05-10'], {
+      DISTRICTS: '61',
+      STUB_DISK_LOG: diskLog,
+    })
+    expect(r.status, r.stderr).toBe(0)
+    expect(seenByCompute()).toContain(
+      'snapshots/2027-03-31/suspended-clubs.json'
+    )
+    expect(localDateDirs('snapshots')).toEqual([])
+  })
+
   it('a download error is not "missing": it is logged and counted in the summary (#3064 review N1)', () => {
     putObject('snapshots/2026-06-30/suspended-clubs.json', '{"s":1}', true)
     const r = run('rescrape', ['2026-08-31'], {
