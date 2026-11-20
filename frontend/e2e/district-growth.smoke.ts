@@ -6,8 +6,9 @@ import { resolve } from 'node:path'
 /* District Club Growth funnel (#1794, epic #1781) — measured on the deployed
  * preview (BASE_URL) at 375 (light + dark) and 1280:
  *
- *  - the funnel is an ordered list of four stages, each printing its value as
- *    text (a number or "Unknown"), never colour alone;
+ *  - the funnel is an ordered list of five stages (the fifth, "Can
+ *    reinstate", #3088), each printing its value as text (a number or
+ *    "Unknown"), never colour alone;
  *  - every stage links to its in-page club list, and the target exists;
  *  - prospective clubs link to toastmasters.org; chartered/coached clubs link
  *    to their club page here;

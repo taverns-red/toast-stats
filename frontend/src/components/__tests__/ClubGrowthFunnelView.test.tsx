@@ -17,10 +17,10 @@ import suspendedJson from '../../__tests__/fixtures/suspended-clubs-2026-10-13.r
 import checklistRecorded from '../../__tests__/fixtures/prospective-club-page.recorded.json'
 import sponsorsRecorded from '../../__tests__/fixtures/sponsors-mentors-2026-06-01.recorded.json'
 import { buildClubGrowthFunnel } from '../../utils/clubGrowthFunnel'
-import { ClubGrowthFunnelView } from '../ClubGrowthFunnelView'
-
-type ReinstateStage =
-  { state: 'loading' } | { state: 'ready'; count: number; split: string }
+import {
+  ClubGrowthFunnelView,
+  type ReinstateStage,
+} from '../ClubGrowthFunnelView'
 
 const live = recorded.cdn_2026_10_11 as unknown as DistrictReportsDataset
 const suspendedRecorded = suspendedJson as unknown as SuspendedClubs
@@ -154,15 +154,15 @@ describe('ClubGrowthFunnelView', () => {
         programYear: { startDate: '2026-07-01', endDate: '2027-06-30' },
         asOfDate: '2026-10-11',
       })
-      const props = {
-        funnel,
-        asOfDate: '2026-10-11',
-        reinstate,
-        children: <section id="growth-reinstate" />,
-      }
       return render(
         <MemoryRouter>
-          <ClubGrowthFunnelView {...props} />
+          <ClubGrowthFunnelView
+            funnel={funnel}
+            asOfDate="2026-10-11"
+            reinstate={reinstate}
+          >
+            <section id="growth-reinstate" />
+          </ClubGrowthFunnelView>
         </MemoryRouter>
       )
     }

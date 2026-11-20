@@ -17,17 +17,10 @@ import type {
 } from '@taverns-red/shared-contracts'
 import type { ReinstatementReason } from '@taverns-red/analytics-core'
 import recordedJson from '../../__tests__/fixtures/reinstatable-clubs-2026-11-18.recorded.json'
-import * as SectionModule from '../ReinstatableClubsSection'
-
-const { ReinstatableClubsSection } = SectionModule
-const reinstateSplit = (
-  clubs: ReinstatableClub[],
-  nextYear: boolean
-): unknown => {
-  const fn = (SectionModule as Record<string, unknown>).reinstateSplit
-  if (typeof fn !== 'function') throw new Error('reinstateSplit is missing')
-  return fn(clubs, nextYear)
-}
+import {
+  ReinstatableClubsSection,
+  reinstateSplit,
+} from '../ReinstatableClubsSection'
 
 const recorded = recordedJson as unknown as ReinstatableClubs
 const d61 = recorded.districts['61'] ?? []
