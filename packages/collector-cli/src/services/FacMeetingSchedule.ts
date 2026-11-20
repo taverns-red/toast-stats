@@ -202,39 +202,46 @@ const NEGATED_MODE = new RegExp(
 /** Location text that names no place. */
 const NO_PLACE =
   /^(?:contact(?: us)?|to be determined|tbd|tba|n\/?a|suspended|see website|varies|various)$/
-/**
- * Online wording that covers every meeting, so a venue beside it is an old
- * or unused address (#3086): "online only", "currently meeting virtually",
- * "online since April 2020", "Note: Online meetings". RT District's hand
- * labels of D61 (red-district PR #2458) read these as online-only.
- */
 const ONLINE_ALT = `(?:${ONLINE_WORD.source})`
-/** "meeting(s)" naming the meetings, not a meeting link or ID. */
-const MEETINGS = `meetings?\\b(?!\\s+(?:link|id|details|invit\\w*|url|info\\w*))`
-const ALL_ONLINE = new RegExp(
+/** "Online only", "Exclusivement via Zoom": every meeting is online. */
+const ONLY_ONLINE = new RegExp(
   [
     `${ONLINE_ALT}\\W{0,3}(?:only|seulement|uniquement)\\b`,
     `\\b(?:only|seulement|uniquement|exclusivement|exlusivement)\\s+(?:(?:via|on|par|sur)\\s+)?${ONLINE_ALT}`,
-    // A status word next to the online phrase: "currently meeting
-    // virtually", "Currently ZOOM meetings", "Online since April 2020",
-    // "Online Meeting Until Further Notice".
-    `\\b(?:currently|presently|actuellement)\\s+(?:(?:meeting|meets|held)\\s+)?(?:(?:on|via|by|over|sur|par)\\s+)?${ONLINE_ALT}`,
-    `${ONLINE_ALT}\\s+(?:${MEETINGS}\\s*)?(?:since|depuis|until further notice)\\b`,
-    `${ONLINE_ALT}\\s+${MEETINGS}`,
-    `\\b(?:meets?|meeting)\\s+(?:online|virtually)\\b`,
-    `\\b(?:rencontres?|reunions?)\\s+(?:virtuel\\w*|en ligne)`,
   ].join('|')
+)
+/**
+ * A line that is nothing but a statement that the meetings are online:
+ * "Virtual meetings", "Note: Online meetings", "currently meeting
+ * virtually", "(Online since April 2020)", "Rencontres virtuelle via
+ * TEAMS". RT District labels D61 clubs with such a line beside a room
+ * online-only (red-district PR #2458: 00005407, 00985878, 00006728,
+ * 00002587). A qualified line ("Online meetings in summer") is not one.
+ */
+const VIA = `(?:\\s+(?:via|on|over|sur|par)\\s+${ONLINE_ALT})?`
+const STATUS_LINE = new RegExp(
+  `^\\W*(?:note\\W+)?(?:${[
+    `(?:currently|presently|actuellement)\\s+(?:(?:meeting|meets|held)\\s+)?(?:(?:on|via|by|over|sur|par)\\s+)?${ONLINE_ALT}(?:\\s+meetings?)?`,
+    `${ONLINE_ALT}(?:\\s+meetings?)?\\s+(?:since|depuis)\\b[^\\n]*`,
+    `${ONLINE_ALT}(?:\\s+meetings?)?\\s+until further notice`,
+    `${ONLINE_ALT}\\s+meetings?${VIA}`,
+    `(?:meets?|meeting)\\s+(?:online|virtually)${VIA}`,
+    `(?:rencontres?|reunions?)\\s+(?:virtuel\\w*|en ligne)${VIA}`,
+  ].join('|')})\\W*$`
 )
 /** Meetings that alternate with another mode or week: some are in
  *  person ("en alternance avec des réunions en ligne"). */
 const ALTERNATING = new RegExp(
   `\\b(?:alternat\\w*|alternance)\\b(?:\\W+\\w+){0,4}?\\W+(?:${ONLINE_ALT}|hybri\\w*|in[\\s-]?person|en personne|presentiel\\w*|weeks?|semaines?|reunions?|meetings?)`
 )
-/** A civic number before a word ("975 Rue des Lys", "350 Legget Dr."). */
-const CIVIC_NUMBER = /\b\d{1,6}[a-z]?,?\s+[a-z]/
+/** A civic number with a street word within three words ("975 Rue des
+ *  Lys", "1020 Rte de l'Eglise", "350 Legget Dr."), not "7 pm" or
+ *  "every 2 weeks". */
+const CIVIC_NUMBER =
+  /\b\d{1,6}[a-z]?,?(?:\s+[\w'.-]+){0,3}?\s+(?:rue|st|street|ave|avenue|rd|road|dr|drive|blvd|boul|boulevard|ch|chemin|rte|route|way|lane|ln|cres|crescent|pl|place|pkwy|parkway|ct|court|cote|hwy|highway|terrace|square)\b/
 /** Nouns that name a building or room, English and French, folded. */
 const PLACE_NOUN =
-  /\b(?:centre|center|centres|hall|church|eglise|paroisse|parish|chapel|campus|library|bibliotheque|school|ecole|college|cegep|university|universite|room|salle|complex|complexe|pavillon|community|communautaire|plant|building|batiment|edifice|restaurant|cafe|hotel|office|bureau|tower|floor|etage|residence|manor|mall|arena|club ?house|street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|chemin|rue|rte|route)\b/
+  /\b(?:centre|center|centres|hall|church|eglise|paroisse|parish|chapel|campus|library|bibliotheque|school|ecole|college|cegep|university|universite|room|salle|complex|complexe|pavillon|community|communautaire|plant|building|batiment|edifice|restaurant|cafe|hotel|tower|floor|etage|residence|manor|mall|arena)\b/
 
 function combineModes(modes: Iterable<MeetingMode>): MeetingMode | undefined {
   const set = new Set(modes)
@@ -275,10 +282,18 @@ function namesVenue(folded: string): boolean {
   )
 }
 
-/** Folded online text whose wording covers every meeting (#3086). */
+/**
+ * Folded online text whose wording covers every meeting (#3086): an
+ * only-word anywhere, or a line that only says the meetings are online.
+ * Meetings that alternate are never all online.
+ */
 function saysAllOnline(folded: string): boolean {
   const text = folded.replace(NEGATED_MODE, ' ')
-  return ALL_ONLINE.test(text) && !ALTERNATING.test(text)
+  if (ALTERNATING.test(text)) return false
+  return (
+    ONLY_ONLINE.test(text) ||
+    text.split(/\n|<br\s*\/?>/).some(line => STATUS_LINE.test(line.trim()))
+  )
 }
 
 /**
