@@ -28,13 +28,11 @@ const HistoryPage: React.FC = () => {
   useDocumentTitle('Program Year History')
   const { summaries, isLoading, isError } = useProgramYearSummaries()
   const currentPY = getCurrentProgramYear()
-  // The callout names the oldest year the cards show (#2657): it used to say
-  // "before 2019" above cards that start in 2016-17. Newest first, so the
-  // last summary is the oldest; the constant covers loading and errors.
-  const earliestOnFile =
-    summaries.length > 0
-      ? summaries[summaries.length - 1]!.startYear
-      : EARLIEST_ARCHIVED_PROGRAM_YEAR
+  // The callout names the archive start (#2657). It used to say "before
+  // 2019" above cards that start in 2016-17. It reads the same constant as
+  // /methodology, not the oldest card: the hook drops a year whose rankings
+  // fail to load, and the callout must not drift with it.
+  const earliestOnFile = EARLIEST_ARCHIVED_PROGRAM_YEAR
 
   // The worldwide scoreboard (#1500, epic #1496 Sprint 4) — a separately
   // resolving query, so its slot is reserved by the component itself rather

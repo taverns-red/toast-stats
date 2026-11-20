@@ -56,9 +56,9 @@ export const DEFAULT_TOP_N = 5
 /**
  * Earliest program year (start year) with a year-end snapshot on file —
  * `v1/dates.json` begins at 2017-01-31, so PY 2016-2017 is the first year that
- * can be carded. /history uses it to size the loading skeleton (#1500) and as
- * the callout's fallback before the cards load; /methodology's caveat names
- * it, so the two pages can't disagree again (#2657). The card list itself
+ * can be carded. /history uses it to size the loading skeleton (#1500) and
+ * in its archive callout; /methodology's caveat names it too, so the two
+ * pages can't disagree again (#2657). The card list itself
  * stays data-driven.
  */
 export const EARLIEST_ARCHIVED_PROGRAM_YEAR = 2016
