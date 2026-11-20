@@ -235,6 +235,21 @@ describe('ClubGrowthFunnelView', () => {
       expect(barWidth('reinstate')).toBe('0%')
     })
 
+    it('keeps the loading value as narrow as a count, so the text does not rewrap', () => {
+      // A visible "Loading" in the value column took width from the text
+      // column at 1280: the row went from 160px to 141px when the count
+      // arrived. The placeholder is "…" in a 2-digit-wide slot; screen
+      // readers still hear "Loading".
+      renderWithReinstate({ state: 'loading' })
+      const value = screen
+        .getByTestId('growth-stage-reinstate')
+        .querySelector('.growth-funnel__value')!
+      expect(value).toHaveClass('growth-funnel__value--pending')
+      const visible = value.querySelector('[aria-hidden="true"]')
+      expect(visible).toHaveTextContent(/^…$/)
+      expect(value.querySelector('.sr-only')).toHaveTextContent('Loading')
+    })
+
     it('shows no card when the date has no reinstate file', () => {
       renderWithReinstate(undefined)
       const funnel = screen.getByRole('list', { name: /club growth funnel/i })
