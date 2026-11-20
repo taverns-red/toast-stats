@@ -280,7 +280,7 @@ describe('ReinstatableClubsSection', () => {
       // The page's shared date format (formatDisplayDate), as the Suspended stage.
       expect(row).toHaveTextContent('Suspended Sep 30, 2026')
       expect(row).toHaveTextContent(
-        'Suspended at the September 30 renewal. If it reinstates by March 31, 2027, it adds to the club base.'
+        'Suspended at the September 30 renewal. If it reinstates by March 31, 2027, the club base goes up by one too, so net club growth doesn’t change.'
       )
     })
 
@@ -361,7 +361,7 @@ describe('ReinstatableClubsSection', () => {
       // Ron approved this wording on 2026-11-20.
       renderSection([spring], { snapshotDate: '2026-07-31' })
       expect(rowFor('Spring Club')).toHaveTextContent(
-        'Suspended at the March 31 renewal. If it reinstates by September 30, 2026, it adds to the club base.'
+        'Suspended at the March 31 renewal. If it reinstates by September 30, 2026, the club base goes up by one too, so net club growth doesn’t change.'
       )
       expect(splitText()).toBe(
         '0 of 1 add to net club growth if they reinstate. The other 1 would raise the club base too if it reinstates by September 30, 2026.'
@@ -396,7 +396,7 @@ describe('ReinstatableClubsSection', () => {
         snapshotDate: '2027-07-01',
       })
       expect(rowFor('Spring Club')).toHaveTextContent(
-        'Suspended at the March 31 renewal. If it reinstates by September 30, 2027, it adds to the club base.'
+        'Suspended at the March 31 renewal. If it reinstates by September 30, 2027, the club base goes up by one too, so net club growth doesn’t change.'
       )
       expect(splitText()).toBe(
         '0 of 1 add to net club growth if they reinstate. The other 1 would raise the club base too if it reinstates by September 30, 2027.'
@@ -585,7 +585,7 @@ describe('ReinstatableClubsSection', () => {
       suspended_sept30_october_cycle: {
         row: { suspendDate: '2026-09-30', addsToBase: true },
         tag: ADDS,
-        why: 'If it reinstates by March 31, 2027, it adds to the club base.',
+        why: 'If it reinstates by March 31, 2027, the club base goes up by one too, so net club growth doesn’t change.',
       },
       suspended_mar31_before_oct1: {
         row: { suspendDate: '2026-03-31', addsToBase: true },
