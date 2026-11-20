@@ -41,6 +41,34 @@ describe('McpPage — copy the install command (#2657)', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Copied')
   })
 
+  it('does nothing, and does not claim success, without a clipboard', async () => {
+    // navigator.clipboard is undefined on insecure (HTTP) contexts.
+    const user = userEvent.setup()
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+    Object.defineProperty(navigator, 'clipboard', {
+      value: undefined,
+      configurable: true,
+    })
+    try {
+      renderPage()
+      await user.click(screen.getByRole('button', { name: /copy/i }))
+      expect(screen.getByRole('status')).not.toHaveTextContent('Copied')
+    } finally {
+      if (original) Object.defineProperty(navigator, 'clipboard', original)
+      else delete (navigator as { clipboard?: unknown }).clipboard
+    }
+  })
+
+  it('does not claim success when the clipboard write is refused', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(
+      new Error('denied')
+    )
+    renderPage()
+    await user.click(screen.getByRole('button', { name: /copy/i }))
+    expect(screen.getByRole('status')).not.toHaveTextContent('Copied')
+  })
+
   it('names both focusable snippet blocks', () => {
     renderPage()
     const regions = screen.getAllByRole('region', { name: /./ })

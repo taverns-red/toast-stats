@@ -6,7 +6,7 @@
    aria-current. */
 
 import React from 'react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import HistoryPage from '../HistoryPage'
@@ -27,9 +27,13 @@ const summary = (startYear: number): ProgramYearSummary =>
 // Newest first, as the hook returns them; the oldest card is 2016-17.
 const SUMMARIES = [summary(2018), summary(2017), summary(2016)]
 
+// Each test may swap the hook's result (the hook can drop a year whose
+// year-end rankings fail to load).
+const hook = vi.hoisted(() => ({ summaries: null as unknown }))
+
 vi.mock('../../hooks/useProgramYearSummaries', () => ({
   useProgramYearSummaries: () => ({
-    summaries: SUMMARIES,
+    summaries: hook.summaries ?? SUMMARIES,
     isLoading: false,
     isError: false,
     error: null,
@@ -54,12 +58,27 @@ const renderPage = () =>
     </MemoryRouter>
   )
 
+afterEach(() => {
+  hook.summaries = null
+})
+
 describe('HistoryPage — callout and cards agree (#2657 REF-23)', () => {
   it('the callout names the earliest year with a card, not 2019', () => {
     renderPage()
     const callout = screen.getByTestId('history-archive-callout')
     expect(callout).toHaveTextContent(/before 2016/)
     expect(callout).not.toHaveTextContent(/2019/)
+  })
+
+  it('keeps naming the archive start when the oldest card fails to load', () => {
+    // 2016-17's rankings failed, so the hook returned no card for it. The
+    // archive still starts there, and /methodology says so; the callout
+    // must not drift to 2017.
+    hook.summaries = [summary(2018), summary(2017)]
+    renderPage()
+    const callout = screen.getByTestId('history-archive-callout')
+    expect(callout).toHaveTextContent(/before 2016/)
+    expect(callout).not.toHaveTextContent(/2017/)
   })
 })
 
