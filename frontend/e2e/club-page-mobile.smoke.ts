@@ -478,3 +478,51 @@ test('the mini-map link opens the district map with the club selected', async ({
     page.getByRole('region', { name: 'Selected club' })
   ).toContainText('90 Elgin Toastmasters', { timeout: 30_000 })
 })
+
+// #3104 — a closed club's page shows its last program year, not "Club Not
+// Found". Club 28676407 (Top Tier Toastmasters, D86) was last listed on
+// 2025-06-30: the page reads the club's history shard and the D86
+// analytics file at that date, and never the 975 KB club index.
+for (const width of [375, 1280]) {
+  for (const scheme of ['light', 'dark'] as const) {
+    test(`closed club shows its history at ${width} (${scheme})`, async ({
+      page,
+    }) => {
+      const requests: string[] = []
+      page.on('request', r => requests.push(r.url()))
+      await page.emulateMedia({ colorScheme: scheme })
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto('/district/86/club/28676407', {
+        waitUntil: 'networkidle',
+        timeout: 60_000,
+      })
+      await expect(page.locator('.club-hero__closed')).toHaveText(
+        "Closed, last on Toastmasters' list June 30, 2025",
+        { timeout: 30_000 }
+      )
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'Top Tier Toastmasters' })
+      ).toBeVisible()
+      await expect(page.getByText('Club Not Found')).toHaveCount(0)
+      await expect(
+        page.getByRole('heading', { name: 'Membership Trend' })
+      ).toBeVisible()
+      // The PY and date controls need current data: none for a closed club.
+      await expect(page.locator('.club-hero__controls *')).toHaveCount(0)
+      const docOverflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth
+      )
+      expect(docOverflow).toBe(0)
+      expect(requests.filter(u => /config\/club-index\.json/.test(u))).toEqual(
+        []
+      )
+      expect(
+        requests.filter(u =>
+          u.includes('/snapshots/2025-06-30/analytics/district_86_analytics')
+        )
+      ).toHaveLength(1)
+    })
+  }
+}
