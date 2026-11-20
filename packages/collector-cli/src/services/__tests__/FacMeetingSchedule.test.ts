@@ -1896,6 +1896,28 @@ describe('parseMeetingSchedule (#3086) — a venue named beside an online option
     expect(modeOf('Online only', 'In person at 9 Main St')).toBe('online')
     expect(modeOf('Sandy Hill Community Center', 'Online')).toBe('in-person')
   })
+
+  // Review of PR #3087: a line is a venue only with a civic number or a
+  // place noun, not any three letters.
+  it.each([
+    ['Zoom<br>Join us anytime!'],
+    ['Online<br>Everyone welcome'],
+    ['Zoom<br>Link available on request'],
+    ['Zoom<br>1-438-555-0199 Canada'],
+    ['Online<br>Ottawa'],
+    ['Online only<br>alternate host required'],
+  ])('%j stays online', location => {
+    expect(modeOf(location)).toBe('online')
+  })
+
+  // Review of PR #3087: "since", "currently" and "meeting" count only
+  // when they describe the online meetings themselves.
+  it.each([
+    ['City Hall, 110 Laurier<br>Since 2024 also on Zoom'],
+    ['123 Main St<br>Zoom meeting link sent to guests'],
+  ])('%j is hybrid', location => {
+    expect(modeOf(location)).toBe('hybrid')
+  })
 })
 
 describe('parseMeetingSchedule (#1789) — every recorded D61 row', () => {
