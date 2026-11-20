@@ -208,18 +208,33 @@ const NO_PLACE =
  * "online since April 2020", "Note: Online meetings". RT District's hand
  * labels of D61 (red-district PR #2458) read these as online-only.
  */
+const ONLINE_ALT = `(?:${ONLINE_WORD.source})`
+/** "meeting(s)" naming the meetings, not a meeting link or ID. */
+const MEETINGS = `meetings?\\b(?!\\s+(?:link|id|details|invit\\w*|url|info\\w*))`
 const ALL_ONLINE = new RegExp(
   [
-    `(?:${ONLINE_WORD.source})\\W{0,3}(?:only|seulement|uniquement)\\b`,
-    `\\b(?:only|seulement|uniquement|exclusivement|exlusivement)\\s+(?:(?:via|on|par|sur)\\s+)?(?:${ONLINE_WORD.source})`,
-    `\\b(?:currently|presently|actuellement|since|depuis|until further notice)\\b`,
-    `(?:${ONLINE_WORD.source})\\s+meetings?\\b`,
+    `${ONLINE_ALT}\\W{0,3}(?:only|seulement|uniquement)\\b`,
+    `\\b(?:only|seulement|uniquement|exclusivement|exlusivement)\\s+(?:(?:via|on|par|sur)\\s+)?${ONLINE_ALT}`,
+    // A status word next to the online phrase: "currently meeting
+    // virtually", "Currently ZOOM meetings", "Online since April 2020",
+    // "Online Meeting Until Further Notice".
+    `\\b(?:currently|presently|actuellement)\\s+(?:(?:meeting|meets|held)\\s+)?(?:(?:on|via|by|over|sur|par)\\s+)?${ONLINE_ALT}`,
+    `${ONLINE_ALT}\\s+(?:${MEETINGS}\\s*)?(?:since|depuis|until further notice)\\b`,
+    `${ONLINE_ALT}\\s+${MEETINGS}`,
     `\\b(?:meets?|meeting)\\s+(?:online|virtually)\\b`,
     `\\b(?:rencontres?|reunions?)\\s+(?:virtuel\\w*|en ligne)`,
   ].join('|')
 )
-/** Alternating with online meetings means some meetings are in person. */
-const ALTERNATING = /\balternat\w*|\balternance\b/
+/** Meetings that alternate with another mode or week: some are in
+ *  person ("en alternance avec des réunions en ligne"). */
+const ALTERNATING = new RegExp(
+  `\\b(?:alternat\\w*|alternance)\\b(?:\\W+\\w+){0,4}?\\W+(?:${ONLINE_ALT}|hybri\\w*|in[\\s-]?person|en personne|presentiel\\w*|weeks?|semaines?|reunions?|meetings?)`
+)
+/** A civic number before a word ("975 Rue des Lys", "350 Legget Dr."). */
+const CIVIC_NUMBER = /\b\d{1,6}[a-z]?,?\s+[a-z]/
+/** Nouns that name a building or room, English and French, folded. */
+const PLACE_NOUN =
+  /\b(?:centre|center|centres|hall|church|eglise|paroisse|parish|chapel|campus|library|bibliotheque|school|ecole|college|cegep|university|universite|room|salle|complex|complexe|pavillon|community|communautaire|plant|building|batiment|edifice|restaurant|cafe|hotel|office|bureau|tower|floor|etage|residence|manor|mall|arena|club ?house|street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|chemin|rue|rte|route)\b/
 
 function combineModes(modes: Iterable<MeetingMode>): MeetingMode | undefined {
   const set = new Set(modes)
@@ -249,6 +264,17 @@ function namesPlace(folded: string): boolean {
   return bare.replace(/[^a-z]/g, '').length >= 3 && !NO_PLACE.test(bare)
 }
 
+/**
+ * A folded line that names a venue: a civic number or a place noun
+ * (#3086). Stricter than namesPlace, so "Everyone welcome" or a lone city
+ * beside an online line does not make a club hybrid.
+ */
+function namesVenue(folded: string): boolean {
+  return (
+    namesPlace(folded) && (CIVIC_NUMBER.test(folded) || PLACE_NOUN.test(folded))
+  )
+}
+
 /** Folded online text whose wording covers every meeting (#3086). */
 function saysAllOnline(folded: string): boolean {
   const text = folded.replace(NEGATED_MODE, ' ')
@@ -273,7 +299,7 @@ export function meetingModeFromText(
   if (mode === 'online') {
     const venueLine = folded
       .split(/\n|<br\s*\/?>/)
-      .some(line => modesIn(line).length === 0 && namesPlace(line))
+      .some(line => modesIn(line).length === 0 && namesVenue(line))
     return venueLine && !saysAllOnline(folded) ? 'hybrid' : 'online'
   }
   if (mode) return mode
@@ -292,15 +318,22 @@ function locationMode(
   street: string | null | undefined
 ): MeetingMode | undefined {
   const raw = meetingModeFromText(location)
-  const placed = meetingModeFromText(scrubFacLocation(location), {
-    place: true,
-  })
+  const scrubbed = scrubFacLocation(location)
+  const placed = meetingModeFromText(scrubbed, { place: true })
   if (raw !== 'online') return raw ?? placed
   const folded = fold(location ?? '')
   if (saysAllOnline(folded)) return 'online'
   const streetModes = modesIn(fold(street ?? ''))
   if (streetModes.includes('in-person') || streetModes.includes('hybrid')) {
     return 'hybrid'
+  }
+  // The scrubber dropped every online line; what is left is a venue only
+  // if a line passes the venue test.
+  if (placed === 'in-person') {
+    const venue = fold(scrubbed ?? '')
+      .split('\n')
+      .some(namesVenue)
+    return venue ? 'hybrid' : 'online'
   }
   return combineModes(['online', ...(placed ? [placed] : [])])
 }
