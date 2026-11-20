@@ -266,6 +266,34 @@ describe('sync-stores.sh (#1722)', () => {
   // #3007: compute-analytics reads the closed-club index for
   // reinstatable-clubs.json. Built by build-identity-history.sh like the
   // region history, and the same kind of read-only input.
+  it('pulls config/legacy-suspension-deadlines.json into the cache (#3103)', () => {
+    putObject('config/legacy-suspension-deadlines.json', doc(7))
+    const r = run(SYNC, ['legacy-suspension-deadlines'])
+    expect(r.status, r.stderr).toBe(0)
+    expect(
+      fs.existsSync(path.join(cache, 'config/legacy-suspension-deadlines.json'))
+    ).toBe(true)
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+      /legacy-suspension-deadlines\*\*: pulled/
+    )
+  })
+
+  it('legacy-suspension-deadlines not built yet, or a failed pull, is a warning only (#3103)', () => {
+    const none = run(SYNC, ['legacy-suspension-deadlines'])
+    expect(none.status, none.stderr).toBe(0)
+    expect(fs.readFileSync(summary, 'utf-8')).toMatch(
+      /legacy-suspension-deadlines\*\*: none yet/
+    )
+    putObject('config/legacy-suspension-deadlines.json', doc(7))
+    const failed = run(SYNC, ['legacy-suspension-deadlines'], {
+      SHIM_FAIL_MATCH: '^cp .*legacy-suspension-deadlines',
+    })
+    expect(failed.status, failed.stderr).toBe(0)
+    expect(failed.stderr).toMatch(
+      /::warning::Failed to pull .*legacy-suspension-deadlines/
+    )
+  })
+
   it('pulls config/closed-club-names.json into the cache, plain JSON', () => {
     putObject('config/closed-club-names.json', doc(6))
     const r = run(SYNC, ['closed-club-names'])
