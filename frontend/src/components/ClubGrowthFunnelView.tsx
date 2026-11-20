@@ -195,15 +195,18 @@ function ClubLink({
   )
 }
 
-/** "5 of 6 steps complete: 1 · Not recognised: 1" (#2388). */
+/** "7 clubs at 1 of 6 steps · 1 club whose checklist we can’t read"
+ *  (#2388, #3089): every count says what it counts. */
 function progressSummary(
   groups: readonly { stepsComplete: number | null; count: number }[]
 ): string {
   return groups
-    .map(
-      g =>
-        `${g.stepsComplete === null ? 'Not recognised' : `${g.stepsComplete} of ${PROSPECT_CHECKLIST_STEPS.length} steps complete`}: ${g.count}`
-    )
+    .map(g => {
+      const clubs = `${g.count} ${g.count === 1 ? 'club' : 'clubs'}`
+      return g.stepsComplete === null
+        ? `${clubs} whose checklist we can’t read`
+        : `${clubs} at ${g.stepsComplete} of ${PROSPECT_CHECKLIST_STEPS.length} steps`
+    })
     .join(' · ')
 }
 
