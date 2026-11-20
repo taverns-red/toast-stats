@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.29.0...collector-cli-v1.30.0) (2026-11-20)
+
+
+### Features
+
+* reinstate eligibility counts five periods from the suspension ([#3103](https://github.com/taverns-red/toast-stats/issues/3103)) ([#3109](https://github.com/taverns-red/toast-stats/issues/3109)) ([e3e08ed](https://github.com/taverns-red/toast-stats/commit/e3e08ed60ab95897c5c0e18ff7521672f793db40))
+
 ## [1.29.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.28.1...collector-cli-v1.29.0) (2026-11-20)
 
 
