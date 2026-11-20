@@ -68,6 +68,10 @@ export interface BuildReinstatableClubsInput {
    * one, newest first, when they are known. Used only to date closures.
    */
   olderSuspended?: readonly SuspendedClubs[]
+  /** March 31 suspended lists, when known (#3103). */
+  marchSuspended?: readonly SuspendedClubs[]
+  /** Club number → suspension deadline from status history (#3103). */
+  legacyDeadlines?: ReadonlyMap<string, string> | null
   /** The date's roster: club number → its district and club status. */
   roster?: ReadonlyMap<string, RosterEntry> | null
 }

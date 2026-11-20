@@ -91,6 +91,11 @@ export type ReinstatementInput =
        * year for the Sep 30 cycle. A later sighting still wins.
        */
       suspendDate?: string
+      /**
+       * The club's suspension deadline from status history, for clubs
+       * suspended before TI's suspend date reached our data (#3103).
+       */
+      suspensionDeadline?: string
     }
 
 /** Stable codes: safe to store, test against and map to display text. */
@@ -128,6 +133,10 @@ export interface ReinstatementResult {
   /** The program year whose July 1 base a reinstatement now would affect. */
   baseProgramYear: string
   reason: ReinstatementReason
+  /** Inactive renewal period (1-5) the club is in on `asOf` (#3103). */
+  inactivePeriod?: number
+  /** ISO date: the end of inactive period 5 (#3103). */
+  lastChanceBy?: string
 }
 
 /** How far a suspend date may sit from Sep 30 or Mar 31 and still count. */

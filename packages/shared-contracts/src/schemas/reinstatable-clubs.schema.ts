@@ -53,6 +53,8 @@ export const ReinstatableClubSchema = z
     addsToBase: z.boolean(),
     /** Stable reason code from `classifyReinstatement`. */
     reason: z.string().min(1),
+    inactivePeriod: z.number().optional(),
+    lastChanceBy: z.string().optional(),
   })
   .superRefine((row, ctx) => {
     if (row.status === 'suspended' && row.suspendDate === undefined) {

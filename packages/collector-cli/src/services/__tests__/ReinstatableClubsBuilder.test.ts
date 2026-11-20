@@ -93,10 +93,12 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
       oldestPeriod: false,
       addsToBase: true,
       reason: 'suspended_sept30_october_cycle',
+      inactivePeriod: 1,
+      lastChanceBy: '2029-03-31',
     })
   })
 
-  it('lists a closed club inside the four-period window, flagging the oldest', () => {
+  it('lists a closed club with no suspension date from lastSeen bounds, with no period (#3103)', () => {
     const out = known({
       snapshotDate: SNAPSHOT,
       suspended: D61_SUSPENDED,
@@ -109,20 +111,24 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
       clubName: 'Maitres Toastmasters',
       status: 'closed',
       lastSeen: '2025-03-31',
-      oldestPeriod: true,
+      oldestPeriod: false,
       addsToBase: false,
       reason: 'closed_does_not_add',
     })
   })
 
-  it('leaves out a closed club that is outside the window', () => {
+  it('leaves out a closed club past its fifth inactive period (#3103)', () => {
     const out = known({
       snapshotDate: SNAPSHOT,
       suspended: D61_SUSPENDED,
-      closed: D61_CLOSED,
+      closed: closedIndex({
+        ...D61_CLOSED.programYears,
+        '2023-2024': { '61': [['9000006', 'Period Six Club', '2024-06-30']] },
+      }),
     })
     const numbers = out.districts['61']!.map(c => c.clubNumber)
-    expect(numbers).not.toContain('3492')
+    expect(numbers).toContain('3492')
+    expect(numbers).not.toContain('9000006')
   })
 
   it('puts suspended clubs first, then closed clubs, newest closure first', () => {
@@ -135,6 +141,7 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
       '1849755',
       '3475582',
       '1314924',
+      '3492',
     ])
   })
 
@@ -327,9 +334,8 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
       })
     })
 
-    it('once closed, its closure is Oct 1 (from the suspend date), not the day after lastSeen', () => {
-      // 2028-09-30: the oldest of the four periods is Oct 2026 - Mar 2027.
-      // Closed on Oct 1 2026 it is in it; on Jul 1 2026 it would be outside.
+    it('once closed, its period comes from the suspend date: 2028-09-30 is period 5 (#3103)', () => {
+      // Suspended Mar 31 2026: period 1 is Apr-Sep 2026, period 5 Apr-Sep 2028.
       const out = known({
         snapshotDate: '2028-09-30',
         suspended: suspendedList({ '61': [] }),
@@ -340,7 +346,9 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
       expect(row).toMatchObject({
         status: 'closed',
         lastSeen: '2026-06-30',
-        oldestPeriod: true,
+        oldestPeriod: false,
+        inactivePeriod: 5,
+        lastChanceBy: '2028-09-30',
       })
     })
 
@@ -364,7 +372,12 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
         suspended: suspendedList({ '61': [] }),
         closed: withRecent,
       })
-      expect(numbers(out, '61')).toEqual(['3475582', '9000001', '1314924'])
+      expect(numbers(out, '61')).toEqual([
+        '3475582',
+        '9000001',
+        '1314924',
+        '3492',
+      ])
     })
 
     it('a club the roster shows Ineligible was not reinstated, so it is listed (#3064 review N3)', () => {
@@ -458,41 +471,244 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
       })
 
     for (const date of ['2028-04-01', '2028-06-30']) {
-      it(`${date}: two years back, both are listed as closed in the oldest period`, () => {
+      it(`${date}: two years back, both are listed as closed in period 5 (#3103)`, () => {
         const out = build(date, list2027, [list2026])
         expect(
           out.districts['61']!.map(c => [
             c.clubNumber,
             c.status,
-            c.oldestPeriod,
+            c.inactivePeriod,
+            c.lastChanceBy,
           ])
         ).toEqual([
-          ['3475582', 'closed', true],
-          ['7270199', 'closed', true],
+          ['3475582', 'closed', 5, '2028-09-30'],
+          ['7270199', 'closed', 5, '2028-09-30'],
         ])
       })
     }
 
     for (const date of ['2028-08-01', '2028-09-30']) {
-      it(`${date}: three years back, both are still listed in the oldest period`, () => {
+      it(`${date}: three years back, both are still listed in period 5 (#3103)`, () => {
         const out = build(date, list2028, [list2027, list2026])
         expect(numbers(out, '61')).toEqual(['3475582', '7270199'])
-        expect(out.districts['61']!.every(c => c.oldestPeriod)).toBe(true)
+        expect(out.districts['61']!.every(c => c.inactivePeriod === 5)).toBe(
+          true
+        )
       })
     }
 
-    it('2027-10-01: closed Oct 1 2026, which is not the oldest period', () => {
-      // With the day after lastSeen (Jul 1 2026) it would be flagged oldest.
+    it('2027-10-01: Oct 2027 - Mar 2028 is period 4 (#3103)', () => {
       const out = build('2027-10-01', list2027, [list2026])
-      expect(out.districts['61']!.map(c => c.oldestPeriod)).toEqual([
-        false,
-        false,
-      ])
+      expect(out.districts['61']!.map(c => c.inactivePeriod)).toEqual([4, 4])
     })
 
-    it('2028-10-01: the window has moved past Oct 2026, so neither is listed', () => {
+    it('2028-10-01: period 6, so neither is listed', () => {
       const out = build('2028-10-01', list2028, [list2027, list2026])
       expect(out.districts['61']).toEqual([])
+    })
+  })
+
+  describe('five inactive periods: where the suspension comes from (#3103)', () => {
+    // report.md §3, District 61 on 2026-11-19. lastSeen is capped at the
+    // June 30 program-year artifact, so the suspension comes from TI's
+    // suspend date (the suspended lists) or, before 2025-07-31, from the
+    // legacy deadlines file built from status history.
+    const NOV19 = '2026-11-19'
+    const name = (n: string) => `Club ${n}`
+    const PERIOD4 = ['3778', '7070084', '7857', '9547']
+    const PERIOD5 = ['1314924', '28675862', '3492', '700580', '7852257']
+    const closed = closedIndex({
+      '2024-2025': {
+        '61': [
+          ...PERIOD4.map(
+            n => [n, name(n), '2025-06-30'] as [string, string, string]
+          ),
+          ...PERIOD5.map(
+            n => [n, name(n), '2025-03-31'] as [string, string, string]
+          ),
+          ['9000006', 'Period Six Club', '2025-06-30'],
+        ],
+      },
+      '2025-2026': {
+        '61': [['1025927', 'Above & Beyond', '2026-04-29']],
+      },
+    })
+    // Fixture map in the shape of config/legacy-suspension-deadlines.json rows.
+    const legacy = new Map<string, string>([
+      ...PERIOD4.map(n => [n, '2025-03-31'] as [string, string]),
+      ...PERIOD5.map(n => [n, '2024-09-30'] as [string, string]),
+      // A club last seen 2025-06-30 whose run started at Mar 31 2024.
+      ['9000006', '2024-03-31'],
+    ])
+    const march2026: SuspendedClubs = {
+      ...suspendedList({
+        '61': [
+          {
+            clubNumber: '1025927',
+            clubName: 'Above & Beyond',
+            division: 'D',
+            area: '41',
+            suspendDate: '2025-09-30',
+          },
+        ],
+      }),
+      snapshotDate: '2026-03-31',
+    }
+    const build = (extra: Partial<Parameters<typeof known>[0]> = {}) =>
+      known({
+        snapshotDate: NOV19,
+        suspended: suspendedList({ '61': [] }),
+        closed,
+        ...extra,
+      })
+    const row = (out: ReinstatableClubs, n: string) =>
+      out.districts['61']!.find(c => c.clubNumber === n)
+
+    it.each(PERIOD4)(
+      'with the legacy map, %s (Mar 31 2025) is period 4, last chance 2027-09-30',
+      n => {
+        expect(row(build({ legacyDeadlines: legacy }), n)).toMatchObject({
+          inactivePeriod: 4,
+          lastChanceBy: '2027-09-30',
+          oldestPeriod: false,
+        })
+      }
+    )
+
+    it.each(PERIOD5)(
+      'with the legacy map, %s (Sept 30 2024) is period 5, last chance 2027-03-31',
+      n => {
+        expect(row(build({ legacyDeadlines: legacy }), n)).toMatchObject({
+          inactivePeriod: 5,
+          lastChanceBy: '2027-03-31',
+        })
+      }
+    )
+
+    it('with the legacy map, a period-6 club is left out', () => {
+      expect(row(build({ legacyDeadlines: legacy }), '9000006')).toBeUndefined()
+    })
+
+    it('without the map, the same clubs are listed with no period or last chance', () => {
+      const out = build()
+      for (const n of [...PERIOD4, ...PERIOD5]) {
+        const r = row(out, n)
+        expect(r, n).toBeDefined()
+        expect('inactivePeriod' in r!, n).toBe(false)
+        expect('lastChanceBy' in r!, n).toBe(false)
+      }
+      // Its bounds (Oct 2024 at the earliest) keep it, as TI decides.
+      expect(row(out, '9000006')).toBeDefined()
+    })
+
+    it('a Sept 30 2025 suspension that closed in April gets its TI date from the March 31 list', () => {
+      const r = row(build({ marchSuspended: [march2026] }), '1025927')
+      expect(r).toMatchObject({
+        status: 'closed',
+        lastSeen: '2026-04-29',
+        inactivePeriod: 3,
+        lastChanceBy: '2028-03-31',
+        division: 'D',
+        area: '41',
+      })
+    })
+
+    it('without the March 31 list that club has no period', () => {
+      const r = row(build(), '1025927')
+      expect(r).toBeDefined()
+      expect(r!.inactivePeriod).toBeUndefined()
+    })
+
+    it('a TI suspend date wins over the legacy map', () => {
+      const r = row(
+        build({
+          marchSuspended: [march2026],
+          legacyDeadlines: new Map([['1025927', '2024-09-30']]),
+        }),
+        '1025927'
+      )
+      expect(r!.inactivePeriod).toBe(3)
+    })
+
+    it('District 61 lists all 22 clubs report.md counts, each with a period', () => {
+      const out = known({
+        snapshotDate: NOV19,
+        suspended: suspendedList({
+          '61': ['1849755', '613576', '1269833'].map(n => ({
+            clubNumber: n,
+            clubName: name(n),
+            division: 'A',
+            area: '01',
+            suspendDate: '2026-09-30',
+          })),
+        }),
+        closed: closedIndex({
+          '2024-2025': closed.programYears['2024-2025']!,
+          '2025-2026': {
+            '61': [
+              ['3475582', name('3475582'), '2026-06-30'],
+              ['7270199', name('7270199'), '2026-06-30'],
+              ...[
+                '1025927',
+                '2150311',
+                '2279948',
+                '2285',
+                '2708969',
+                '4679523',
+                '7906623',
+                '924107',
+              ].map(
+                n => [n, name(n), '2026-04-29'] as [string, string, string]
+              ),
+            ],
+          },
+        }),
+        previousSuspended: {
+          ...suspendedList({
+            '61': ['3475582', '7270199'].map(n => ({
+              clubNumber: n,
+              clubName: name(n),
+              division: 'B',
+              area: '15',
+              suspendDate: '2026-03-31',
+            })),
+          }),
+          snapshotDate: '2026-06-30',
+        },
+        marchSuspended: [
+          {
+            ...suspendedList({
+              '61': [
+                '1025927',
+                '2150311',
+                '2279948',
+                '2285',
+                '2708969',
+                '4679523',
+                '7906623',
+                '924107',
+              ].map(n => ({
+                clubNumber: n,
+                clubName: name(n),
+                division: 'C',
+                area: '30',
+                suspendDate: '2025-09-30',
+              })),
+            }),
+            snapshotDate: '2026-03-31',
+          },
+        ],
+        legacyDeadlines: legacy,
+      })
+      const rows = out.districts['61']!
+      expect(rows).toHaveLength(22)
+      expect(
+        rows.reduce<Record<number, number>>((acc, r) => {
+          acc[r.inactivePeriod!] = (acc[r.inactivePeriod!] ?? 0) + 1
+          return acc
+        }, {})
+      ).toEqual({ 1: 3, 2: 2, 3: 8, 4: 4, 5: 5 })
+      expect(ReinstatableClubsSchema.safeParse(out).success).toBe(true)
     })
   })
 

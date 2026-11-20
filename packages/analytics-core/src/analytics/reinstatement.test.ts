@@ -46,6 +46,8 @@ describe('suspended on Sept 30 (FAQ: "Reinstatement during the October renewal c
       addsToBase: true,
       baseProgramYear: '2026-2027',
       reason: 'suspended_sept30_october_cycle',
+      inactivePeriod: 1,
+      lastChanceBy: '2029-03-31',
     })
   })
 
@@ -101,6 +103,8 @@ describe('suspended on Mar 31 before the base year (FAQ: "On October 1, the club
       addsToBase: false,
       baseProgramYear: '2026-2027',
       reason: 'suspended_mar31_after_oct1',
+      inactivePeriod: 2,
+      lastChanceBy: '2028-09-30',
     })
   })
 
@@ -173,52 +177,219 @@ describe('suspend dates near the cycle ends (TI is off by a day or two)', () => 
   })
 })
 
-describe('closed clubs: four renewal periods, counting back from the current one', () => {
-  // asOf 2026-11-17 is in Oct 2026 - Mar 2027. The four periods are
-  // Oct26-Mar27, Apr26-Sep26, Oct25-Mar26, Apr25-Sep25 (the oldest). The
-  // closure is the day after the last sighting.
-  it('D61: closed, last seen 2025-03-31 -> eligible, oldest period, does not add', () => {
-    expect(classifyReinstatement(closed('2025-03-31'), '2026-11-17')).toEqual({
-      eligible: true,
-      oldestPeriod: true,
-      addsToBase: false,
-      baseProgramYear: '2026-2027',
-      reason: 'closed_does_not_add',
-    })
-  })
+/**
+ * #3103 — the five-period rule (Ron, District 61 director, 2026-11-20; TI Club
+ * FAQ: "Clubs that have been inactive for five (5) renewal periods must be
+ * chartered as new clubs"). Period 1 is the renewal period after the
+ * suspension deadline; suspended and closed periods both count. Eligible
+ * while the period containing asOf is period 5 or lower.
+ *
+ * The expectations are worked out from the ruling by hand, period by period,
+ * not read back from the implementation. Periods: 1 = the one after the
+ * deadline, so Sept 30 2024 -> 1 Oct24-Mar25, 2 Apr-Sep25, 3 Oct25-Mar26,
+ * 4 Apr-Sep26, 5 Oct26-Mar27 (last chance 2027-03-31).
+ */
+const closedWithSuspend = (lastSeen: string, suspendDate: string) =>
+  ({ status: 'closed', lastSeen, suspendDate }) as const
+const closedWithDeadline = (lastSeen: string, suspensionDeadline: string) =>
+  ({ status: 'closed', lastSeen, suspensionDeadline }) as const
 
-  it('last seen 2025-03-30 closed on Mar 31 2025, one day outside', () => {
-    const r = classifyReinstatement(closed('2025-03-30'), '2026-11-17')
-    expect(r.eligible).toBe(false)
-    expect(r.oldestPeriod).toBe(false)
-    expect(r.addsToBase).toBe(false)
-    expect(r.reason).toBe('closed_outside_window')
-  })
-
-  it.each(['2025-04-01', '2025-09-29'])(
-    'last seen %s is still in the oldest period',
-    d => {
-      const r = classifyReinstatement(closed(d), '2026-11-17')
+describe('five inactive periods: the period arithmetic at the boundaries (#3103)', () => {
+  it.each([
+    // Sept 30 2024: period 5 is Oct 2026 - Mar 2027.
+    ['2024-09-30', '2024-10-01', 1, '2027-03-31'],
+    ['2024-09-30', '2025-03-31', 1, '2027-03-31'],
+    ['2024-09-30', '2025-04-01', 2, '2027-03-31'],
+    ['2024-09-30', '2026-09-30', 4, '2027-03-31'],
+    ['2024-09-30', '2026-10-01', 5, '2027-03-31'],
+    ['2024-09-30', '2027-03-31', 5, '2027-03-31'],
+    // Mar 31 2025: period 1 is Apr-Sep 2025, period 5 Apr-Sep 2027.
+    ['2025-03-31', '2025-04-01', 1, '2027-09-30'],
+    ['2025-03-31', '2025-09-30', 1, '2027-09-30'],
+    ['2025-03-31', '2025-10-01', 2, '2027-09-30'],
+    ['2025-03-31', '2027-09-30', 5, '2027-09-30'],
+  ])(
+    'deadline %s, asOf %s -> period %i, last chance %s',
+    (deadline, asOf, period, lastChance) => {
+      // A suspended club, so the roster sighting doesn't get in the way.
+      const r = classifyReinstatement(suspended(deadline), asOf)
       expect(r.eligible).toBe(true)
-      expect(r.oldestPeriod).toBe(true)
+      expect(r.inactivePeriod).toBe(period)
+      expect(r.lastChanceBy).toBe(lastChance)
     }
   )
 
-  it('last seen 2025-09-30 (closed Oct 1) moves up to the next period', () => {
-    const r = classifyReinstatement(closed('2025-09-30'), '2026-11-17')
-    expect(r.eligible).toBe(true)
-    expect(r.oldestPeriod).toBe(false)
+  it.each([
+    ['2024-09-30', '2027-04-01'],
+    ['2025-03-31', '2027-10-01'],
+  ])('deadline %s: period 6 starts %s and the club is out', (d, asOf) => {
+    const r = classifyReinstatement(closedWithDeadline('2025-06-30', d), asOf)
+    expect(r.eligible).toBe(false)
+    expect(r.reason).toBe('closed_outside_window')
+    expect(r.inactivePeriod).toBeUndefined()
+    expect(r.lastChanceBy).toBeUndefined()
   })
 
-  it('a recent closure is eligible, not oldest', () => {
-    const r = classifyReinstatement(closed('2026-11-16'), '2026-11-17')
+  it('a suspended club carries its period too: Sept 30 2026 is period 1 on 2026-11-19', () => {
+    const r = classifyReinstatement(suspended('2026-09-30'), '2026-11-19')
+    expect(r.inactivePeriod).toBe(1)
+    expect(r.lastChanceBy).toBe('2029-03-31')
+  })
+
+  it('TI’s day-after stamps (10-01, 04-01) count as the deadline', () => {
+    expect(
+      classifyReinstatement(suspended('2026-10-01'), '2026-11-19')
+        .inactivePeriod
+    ).toBe(1)
+    const r = classifyReinstatement(
+      closedWithSuspend('2026-06-30', '2026-04-01'),
+      '2026-11-19'
+    )
+    expect(r.inactivePeriod).toBe(2)
+    expect(r.lastChanceBy).toBe('2028-09-30')
+  })
+
+  it('oldestPeriod is always false now; nothing relies on it (expand only, ADR 0019)', () => {
+    for (const input of [
+      suspended('2026-09-30'),
+      closed('2025-03-31'),
+      closedWithDeadline('2025-03-31', '2024-09-30'),
+    ]) {
+      expect(classifyReinstatement(input, '2026-11-19').oldestPeriod).toBe(
+        false
+      )
+    }
+  })
+})
+
+describe('the June 30 cap: District 61 closed clubs on 2026-11-19, from status history (#3103)', () => {
+  // report.md §3. lastSeen is capped at the June 30 program-year artifact,
+  // so it can't tell these apart; the suspension deadline can.
+  it.each(['3778', '7070084', '7857', '9547'])(
+    '%s: Suspended from 2025-04-30, last on the roster 2025-06-30 -> Mar 31 2025, period 4',
+    () => {
+      const r = classifyReinstatement(
+        closedWithDeadline('2025-06-30', '2025-03-31'),
+        '2026-11-19'
+      )
+      expect(r).toEqual({
+        eligible: true,
+        oldestPeriod: false,
+        addsToBase: false,
+        baseProgramYear: '2026-2027',
+        reason: 'closed_does_not_add',
+        inactivePeriod: 4,
+        lastChanceBy: '2027-09-30',
+      })
+    }
+  )
+
+  it.each(['1314924', '28675862', '3492', '700580', '7852257'])(
+    '%s: Suspended through 2025-03-31, gone 2025-04-30 -> Sept 30 2024, period 5',
+    () => {
+      const r = classifyReinstatement(
+        closedWithDeadline('2025-03-31', '2024-09-30'),
+        '2026-11-19'
+      )
+      expect(r.eligible).toBe(true)
+      expect(r.inactivePeriod).toBe(5)
+      expect(r.lastChanceBy).toBe('2027-03-31')
+    }
+  )
+
+  it('Sept 30 2025 suspension closed in April (1025927): TI date gives period 3', () => {
+    const r = classifyReinstatement(
+      closedWithSuspend('2026-04-29', '2025-09-30'),
+      '2026-11-19'
+    )
+    expect(r.inactivePeriod).toBe(3)
+    expect(r.lastChanceBy).toBe('2028-03-31')
+  })
+
+  it('a Mar 31 2024 suspension (last seen 2024-06-30) is period 6: excluded', () => {
+    const r = classifyReinstatement(
+      closedWithDeadline('2024-06-30', '2024-03-31'),
+      '2026-11-19'
+    )
+    expect(r.eligible).toBe(false)
+    expect(r.reason).toBe('closed_outside_window')
+  })
+})
+
+describe('off-cycle suspend dates: period 1 contains the day after the suspend date (#3103)', () => {
+  it('suspended 2026-10-08 (D51 7787247): period 1, effect on the base still unknown', () => {
+    const r = classifyReinstatement(suspended('2026-10-08'), '2026-11-19')
+    expect(r.reason).toBe('suspend_date_unexpected')
     expect(r.eligible).toBe(true)
-    expect(r.oldestPeriod).toBe(false)
+    expect(r.inactivePeriod).toBe(1)
+    expect(r.lastChanceBy).toBe('2029-03-31')
+  })
+
+  it('closed, TI date 2025-10-17 (D21 28676909): period 1 is Oct 2025 - Mar 2026, so period 3', () => {
+    const r = classifyReinstatement(
+      closedWithSuspend('2026-06-30', '2025-10-17'),
+      '2026-11-19'
+    )
+    expect(r.inactivePeriod).toBe(3)
+    expect(r.lastChanceBy).toBe('2028-03-31')
+  })
+
+  it('suspended on the last day of a period (2026-06-29, D51 7912519): the next day is still Apr-Sep, period 2', () => {
+    const r = classifyReinstatement(
+      closedWithSuspend('2026-06-30', '2026-06-29'),
+      '2026-11-19'
+    )
+    expect(r.inactivePeriod).toBe(2)
+  })
+
+  it('a suspend date after asOf gives no period, never a guess', () => {
+    const r = classifyReinstatement(suspended('2026-11-20'), '2026-11-19')
+    expect(r.inactivePeriod).toBeUndefined()
+    expect(r.lastChanceBy).toBeUndefined()
+  })
+})
+
+describe('no suspend date and no deadline: eligibility from lastSeen bounds, period absent (#3103)', () => {
+  // A club listed in program year P was suspended no earlier than the start
+  // of P (TI drops the previous year's suspensions at the rollover) and no
+  // later than the day after lastSeen. Eligible when even the earliest
+  // reading is period 5 or lower; out when even the latest is past 5.
+  it('last seen 2025-06-30 (3778 without the legacy file): eligible, no period, no last chance', () => {
+    const r = classifyReinstatement(closed('2025-06-30'), '2026-11-19')
+    expect(r.eligible).toBe(true)
+    expect(r.reason).toBe('closed_does_not_add')
+    expect(r.inactivePeriod).toBeUndefined()
+    expect(r.lastChanceBy).toBeUndefined()
+    expect('inactivePeriod' in r).toBe(false)
+  })
+
+  it('last seen 2025-03-31: eligible on 2026-11-19 (period 5 at most)', () => {
+    const r = classifyReinstatement(closed('2025-03-31'), '2026-11-19')
+    expect(r.eligible).toBe(true)
+    expect(r.inactivePeriod).toBeUndefined()
+  })
+
+  it('last seen 2024-06-30: period 6 at the least, excluded', () => {
+    const r = classifyReinstatement(closed('2024-06-30'), '2026-11-19')
+    expect(r.eligible).toBe(false)
+    expect(r.reason).toBe('closed_outside_window')
+  })
+
+  it('when the bounds straddle period 5 the club stays listed: TI decides', () => {
+    // 2027-04-01: a Sept 30 2024 suspension is period 6, a Mar 31 2025 one
+    // period 5. lastSeen 2025-06-30 can't tell them apart.
+    const r = classifyReinstatement(closed('2025-06-30'), '2027-04-01')
+    expect(r.eligible).toBe(true)
+    expect(r.inactivePeriod).toBeUndefined()
+  })
+
+  it('a recent closure is eligible', () => {
+    expect(
+      classifyReinstatement(closed('2026-11-16'), '2026-11-17').eligible
+    ).toBe(true)
   })
 
   it('a sighting on asOf itself means the club was on the roster that day, so not closed yet (#3064 review)', () => {
-    // A rebuild reads a closed index built later than the date it computes:
-    // a club seen on asOf had not closed by asOf.
     const r = classifyReinstatement(closed('2026-11-17'), '2026-11-17')
     expect(r.eligible).toBe(false)
     expect(r.reason).toBe('closed_last_seen_after_as_of')
@@ -228,42 +399,6 @@ describe('closed clubs: four renewal periods, counting back from the current one
     const r = classifyReinstatement(closed('2026-11-18'), '2026-11-17')
     expect(r.eligible).toBe(false)
     expect(r.reason).toBe('closed_last_seen_after_as_of')
-  })
-
-  it('the window holds until Mar 31 and slides on Apr 1', () => {
-    expect(
-      classifyReinstatement(closed('2025-03-31'), '2027-03-31').eligible
-    ).toBe(true)
-    expect(
-      classifyReinstatement(closed('2025-03-31'), '2027-04-01').eligible
-    ).toBe(false)
-    const slid = classifyReinstatement(closed('2025-09-30'), '2027-04-01')
-    expect(slid.eligible).toBe(true)
-    expect(slid.oldestPeriod).toBe(true)
-  })
-
-  it('the window slides on Oct 1: lastSeen 2024-09-30 is oldest on Sep 30 and gone on Oct 1 (#3011)', () => {
-    // asOf 2026-09-30 is in Apr-Sep 2026: the four periods start Oct 2024.
-    const before = classifyReinstatement(closed('2024-09-30'), '2026-09-30')
-    expect(before.eligible).toBe(true)
-    expect(before.oldestPeriod).toBe(true)
-    // asOf 2026-10-01 is in Oct 2026-Mar 2027: the four periods start Apr 2025.
-    const after = classifyReinstatement(closed('2024-09-30'), '2026-10-01')
-    expect(after.eligible).toBe(false)
-    expect(after.reason).toBe('closed_outside_window')
-  })
-
-  it('works in the Apr-Sep half too (asOf 2026-06-15)', () => {
-    // Periods: Apr26-Sep26, Oct25-Mar26, Apr25-Sep25, Oct24-Mar25 (oldest).
-    const oldest = classifyReinstatement(closed('2024-09-30'), '2026-06-15')
-    expect(oldest.eligible).toBe(true)
-    expect(oldest.oldestPeriod).toBe(true)
-    expect(
-      classifyReinstatement(closed('2024-09-29'), '2026-06-15').eligible
-    ).toBe(false)
-    expect(
-      classifyReinstatement(closed('2026-06-15'), '2026-06-15').baseProgramYear
-    ).toBe('2026-2027')
   })
 
   it('a closed club never adds to the base, in any month', () => {
@@ -277,76 +412,6 @@ describe('closed clubs: four renewal periods, counting back from the current one
         false
       )
     }
-  })
-})
-
-describe('closed clubs with a known suspend date: closure by the FAQ, not by lastSeen (#3064 review)', () => {
-  // A club suspended Mar 31 closes on Oct 1 (FAQ). When it left the roster
-  // early (lastSeen 2026-06-30), the day after lastSeen (Jul 1) is one period
-  // too early. asOf 2028-09-30 is in Apr-Sep 2028: the four periods are
-  // Apr28-Sep28, Oct27-Mar28, Apr27-Sep27 and Oct26-Mar27 (the oldest).
-  const closedWithSuspend = (lastSeen: string, suspendDate: string) =>
-    ({ status: 'closed', lastSeen, suspendDate }) as const
-
-  it('suspended 2026-03-31, last seen 2026-06-30: closed Oct 1 2026, in the oldest period', () => {
-    const r = classifyReinstatement(
-      closedWithSuspend('2026-06-30', '2026-03-31'),
-      '2028-09-30'
-    )
-    expect(r.eligible).toBe(true)
-    expect(r.oldestPeriod).toBe(true)
-    expect(r.reason).toBe('closed_does_not_add')
-  })
-
-  it('without the suspend date the same club falls one period earlier, outside the window', () => {
-    const r = classifyReinstatement(closed('2026-06-30'), '2028-09-30')
-    expect(r.eligible).toBe(false)
-    expect(r.reason).toBe('closed_outside_window')
-  })
-
-  it('TI’s Apr 1 stamp for the Mar 31 cycle closes on the same Oct 1', () => {
-    const r = classifyReinstatement(
-      closedWithSuspend('2026-06-30', '2026-04-01'),
-      '2028-09-30'
-    )
-    expect(r.eligible).toBe(true)
-    expect(r.oldestPeriod).toBe(true)
-  })
-
-  it('a Sep 30 suspension closes on Apr 1 of the next year', () => {
-    // asOf 2029-03-31 is in Oct28-Mar29: the oldest period is Apr27-Sep27.
-    // Closure Apr 1 2027 is inside; the day after lastSeen (Jan 1 2027) is not.
-    const r = classifyReinstatement(
-      closedWithSuspend('2026-12-31', '2026-09-30'),
-      '2029-03-31'
-    )
-    expect(r.eligible).toBe(true)
-    expect(r.oldestPeriod).toBe(true)
-  })
-
-  it('a sighting later than the FAQ closure wins: the club was still on the roster', () => {
-    const r = classifyReinstatement(
-      closedWithSuspend('2026-11-30', '2026-03-31'),
-      '2028-09-30'
-    )
-    expect(r.eligible).toBe(true)
-    expect(r.oldestPeriod).toBe(true)
-    // 2026-12-01 is in Oct26-Mar27 as well; a later sighting moves it on.
-    expect(
-      classifyReinstatement(
-        closedWithSuspend('2027-03-31', '2026-03-31'),
-        '2028-09-30'
-      ).oldestPeriod
-    ).toBe(false)
-  })
-
-  it('a suspend date at no cycle end falls back to the day after lastSeen', () => {
-    const r = classifyReinstatement(
-      closedWithSuspend('2026-06-30', '2026-05-15'),
-      '2028-09-30'
-    )
-    expect(r.eligible).toBe(false)
-    expect(r.reason).toBe('closed_outside_window')
   })
 })
 

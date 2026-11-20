@@ -126,4 +126,37 @@ describe('ReinstatableClubsSchema (#3007)', () => {
     f.districts['61']![1]!.suspendDate = '2026-10-01'
     expect(ReinstatableClubsSchema.safeParse(f).success).toBe(false)
   })
+
+  describe('five inactive periods (#3103)', () => {
+    it('accepts inactivePeriod 1 to 5 and a lastChanceBy date', () => {
+      for (const period of [1, 5]) {
+        const f = clone()
+        Object.assign(f.districts['61']![0]!, {
+          inactivePeriod: period,
+          lastChanceBy: '2027-03-31',
+        })
+        expect(ReinstatableClubsSchema.safeParse(f).success, `${period}`).toBe(
+          true
+        )
+      }
+    })
+
+    it.each([0, 6, 2.5])('rejects inactivePeriod %s', period => {
+      const f = clone()
+      Object.assign(f.districts['61']![0]!, { inactivePeriod: period })
+      expect(ReinstatableClubsSchema.safeParse(f).success).toBe(false)
+    })
+
+    it('rejects a lastChanceBy that is not an ISO date', () => {
+      const f = clone()
+      Object.assign(f.districts['61']![0]!, { lastChanceBy: '31/03/2027' })
+      expect(ReinstatableClubsSchema.safeParse(f).success).toBe(false)
+    })
+
+    it('oldestPeriod is optional now: nothing relies on it (expand only, ADR 0019)', () => {
+      const f = clone()
+      delete (f.districts['61']![0] as { oldestPeriod?: boolean }).oldestPeriod
+      expect(ReinstatableClubsSchema.safeParse(f).success).toBe(true)
+    })
+  })
 })
