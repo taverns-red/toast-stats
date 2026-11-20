@@ -4,7 +4,7 @@
  * our data (the suspended lists start 2025-07-31).
  *
  * Built once by `scripts/build-legacy-suspension-deadlines.ts` from the
- * 2024-25 monthly district snapshots: for a club whose last run of Club
+ * monthly district snapshots from July 2024 to June 2025: for a club whose last run of Club
  * Status "Suspended" started in that history, the Sep 30 or Mar 31 deadline
  * just before the run's first snapshot. The five-period rule reads it for
  * closed clubs with no TI suspend date; a TI date always wins.

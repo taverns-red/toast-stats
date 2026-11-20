@@ -86,8 +86,6 @@ const ACKNOWLEDGED_SITES: Record<string, string> = {
     'the deadline table (#2298) has ONE era; its `fromProgramYear` floor is not a rule change, and the CSP row reuses CSP_REQUIRED_FROM_PROGRAM_YEAR from the logged CSP entry. A future TI date change adds a row here AND a log entry',
   'packages/collector-cli/src/utils/districtSetForDate.ts':
     'names the PY 2026-27 district renumbering as the DATA defect it guards against (#1465); no recognition rule differs by year here',
-  'packages/shared-contracts/src/schemas/legacy-suspension-deadlines.schema.ts':
-    'names the 2024-25 snapshots the one-off legacy deadlines file is built from (#3103); data source, not a rule that differs by year',
 }
 
 /**
