@@ -187,6 +187,72 @@ describe('RebuildService', () => {
       expect(d49.history[0].overallRank).toBe(0)
     })
 
+    it('flags a category every district is tied in (#2797)', async () => {
+      const d1 = path.join(testDir, 'snapshots', '2026-07-31')
+      await fs.mkdir(d1, { recursive: true })
+      const row = (districtId: string, clubGrowthPercent: number) => ({
+        districtId,
+        districtName: `District ${districtId}`,
+        aggregateScore: 10,
+        clubGrowthPercent,
+        paymentGrowthPercent: 0,
+        distinguishedPercent: 0,
+        clubsRank: 1,
+        paymentsRank: 1,
+        distinguishedRank: 1,
+        overallRank: 1,
+      })
+      await fs.writeFile(
+        path.join(d1, 'all-districts-rankings.json'),
+        JSON.stringify({
+          rankings: [row('49', 3), row('61', -2)],
+          metadata: { sourceCsvDate: '2026-07-31', totalDistricts: 2 },
+        })
+      )
+
+      const service = new RebuildService({ cacheDir: testDir })
+      const outDir = await service.generateRankHistory()
+
+      for (const id of ['49', '61']) {
+        const file = JSON.parse(
+          await fs.readFile(path.join(outDir, `${id}.json`), 'utf-8')
+        )
+        const [point] = file.history
+        expect(point.paymentsTied).toBe(true)
+        expect(point.distinguishedTied).toBe(true)
+        expect(point).not.toHaveProperty('clubsTied')
+      }
+    })
+
+    it('writes no tie flag when the ranked values are missing (#2797)', async () => {
+      const d1 = path.join(testDir, 'snapshots', '2026-07-31')
+      await fs.mkdir(d1, { recursive: true })
+      const row = (districtId: string) => ({
+        districtId,
+        districtName: `District ${districtId}`,
+        aggregateScore: 10,
+        clubsRank: 1,
+        paymentsRank: 1,
+        distinguishedRank: 1,
+      })
+      await fs.writeFile(
+        path.join(d1, 'all-districts-rankings.json'),
+        JSON.stringify({
+          rankings: [row('49'), row('61')],
+          metadata: { sourceCsvDate: '2026-07-31', totalDistricts: 2 },
+        })
+      )
+
+      const service = new RebuildService({ cacheDir: testDir })
+      const outDir = await service.generateRankHistory()
+
+      const file = JSON.parse(
+        await fs.readFile(path.join(outDir, '49.json'), 'utf-8')
+      )
+      const keys = Object.keys(file.history[0])
+      expect(keys.filter(k => k.endsWith('Tied'))).toEqual([])
+    })
+
     it('returns empty dir when no snapshots exist', async () => {
       await fs.rm(path.join(testDir, 'snapshots'), {
         recursive: true,

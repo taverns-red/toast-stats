@@ -3,9 +3,9 @@
  * (#186, #302; moved out of inline `node -e` by #1743, plan P3-3).
  *
  * Input is one all-districts-rankings.json per snapshot date, named
- * `{date}.json` by scripts/pull-rank-history.ts. Ported verbatim from the
- * inline block so the published bytes do not change
- * (__tests__/goldenParity.test.ts). In particular:
+ * `{date}.json` by scripts/pull-rank-history.ts. Ported from the inline
+ * block: the output is byte for byte the same apart from the tie flags
+ * (#2797) (__tests__/goldenParity.test.ts). In particular:
  * - files are processed in the order given (the CLI passes readdirSync's);
  * - a file that cannot be read or parsed is skipped, never fatal;
  * - a "District N" placeholder name is replaced by the next real one seen;
@@ -14,6 +14,10 @@
 
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
+import {
+  MetricRankingsCalculator,
+  type TiedCategories,
+} from '@taverns-red/analytics-core'
 
 export interface RankHistorySourceFile {
   name: string
@@ -42,6 +46,9 @@ interface RankingRow {
   paymentsRank?: number
   distinguishedRank?: number
   overallRank?: number
+  clubGrowthPercent?: number
+  paymentGrowthPercent?: number
+  distinguishedPercent?: number
 }
 
 interface RankingsFile {
@@ -49,7 +56,7 @@ interface RankingsFile {
   metadata: { totalDistricts?: number }
 }
 
-interface HistoryPoint {
+interface HistoryPoint extends TiedCategories {
   date: string
   aggregateScore?: number
   clubsRank?: number
@@ -65,6 +72,8 @@ interface IndexEntry {
   history: HistoryPoint[]
 }
 
+const calculator = new MetricRankingsCalculator()
+
 export function buildRankHistory(
   files: RankHistorySourceFile[],
   onSkip: (message: string) => void
@@ -76,6 +85,9 @@ export function buildRankHistory(
       // Use the snapshot date (filename) not sourceCsvDate (raw-csv date) (#302)
       const date = basename(file.name, '.json')
       if (!date || !data.rankings) continue
+      // Flags only when true, so untied files keep their bytes
+      // (__tests__/goldenParity.test.ts); absent reads as not tied (#2797).
+      const ties = calculator.tiedCategories({ rankings: data.rankings })
       for (const r of data.rankings) {
         let entry = index.get(r.districtId)
         if (!entry) {
@@ -97,6 +109,7 @@ export function buildRankHistory(
           distinguishedRank: r.distinguishedRank,
           totalDistricts: data.metadata.totalDistricts,
           overallRank: r.overallRank ?? 0,
+          ...ties,
         })
       }
     } catch (e) {

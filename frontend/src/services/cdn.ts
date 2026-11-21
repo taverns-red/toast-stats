@@ -1113,6 +1113,9 @@ export interface CdnRankHistoryData {
     distinguishedRank: number
     totalDistricts: number
     overallRank?: number
+    clubsTied?: boolean
+    paymentsTied?: boolean
+    distinguishedTied?: boolean
   }>
 }
 

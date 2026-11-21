@@ -14,7 +14,11 @@
 
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import type { Logger } from '@taverns-red/analytics-core'
+import {
+  MetricRankingsCalculator,
+  type Logger,
+  type TiedCategories,
+} from '@taverns-red/analytics-core'
 import { TransformService } from './TransformService.js'
 import { AnalyticsComputeService } from './AnalyticsComputeService.js'
 import type { ClosingDateEntry } from '../utils/ClosingDateRegistry.js'
@@ -379,17 +383,20 @@ export class RebuildService {
       {
         districtId: string
         districtName: string
-        history: Array<{
-          date: string
-          aggregateScore: number
-          clubsRank: number
-          paymentsRank: number
-          distinguishedRank: number
-          totalDistricts: number
-          overallRank: number
-        }>
+        history: Array<
+          {
+            date: string
+            aggregateScore: number
+            clubsRank: number
+            paymentsRank: number
+            distinguishedRank: number
+            totalDistricts: number
+            overallRank: number
+          } & TiedCategories
+        >
       }
     >()
+    const calculator = new MetricRankingsCalculator()
 
     try {
       const dateDirs = await fs.readdir(snapshotsDir, { withFileTypes: true })
@@ -414,6 +421,9 @@ export class RebuildService {
               paymentsRank: number
               distinguishedRank: number
               overallRank?: number
+              clubGrowthPercent?: number
+              paymentGrowthPercent?: number
+              distinguishedPercent?: number
             }>
             metadata: {
               sourceCsvDate?: string
@@ -423,6 +433,10 @@ export class RebuildService {
 
           const date = data.metadata.sourceCsvDate ?? dateDir.name
           const totalDistricts = data.metadata.totalDistricts ?? 0
+          // Flags only when true, as scripts/manifests/rankHistory.ts
+          // writes them; absent reads as not tied (RebuildService.test.ts,
+          // "flags a category every district is tied in").
+          const ties = calculator.tiedCategories(data)
 
           for (const r of data.rankings) {
             if (!index.has(r.districtId)) {
@@ -445,6 +459,7 @@ export class RebuildService {
               distinguishedRank: r.distinguishedRank,
               totalDistricts,
               overallRank: r.overallRank ?? 0,
+              ...ties,
             })
           }
         } catch {

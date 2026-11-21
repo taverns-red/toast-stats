@@ -25,6 +25,9 @@ export interface RankPosition {
   totalDistricts: number
   /** Percentile (0-100, higher = better) */
   percentile: number
+  /** Every district has the same value, so the rank says nothing (#2797).
+   *  Absent when not tied. */
+  tied?: boolean
 }
 
 /**
@@ -202,16 +205,19 @@ export function extractEndOfYearRankings(
       rank: latestPoint.clubsRank,
       totalDistricts,
       percentile: calculatePercentile(latestPoint.clubsRank),
+      ...(latestPoint.clubsTied === true && { tied: true }),
     },
     membershipPayments: {
       rank: latestPoint.paymentsRank,
       totalDistricts,
       percentile: calculatePercentile(latestPoint.paymentsRank),
+      ...(latestPoint.paymentsTied === true && { tied: true }),
     },
     distinguishedClubs: {
       rank: latestPoint.distinguishedRank,
       totalDistricts,
       percentile: calculatePercentile(latestPoint.distinguishedRank),
+      ...(latestPoint.distinguishedTied === true && { tied: true }),
     },
     asOfDate: latestPoint.date,
     isPartialYear: programYearData ? !programYearData.hasCompleteData : true,

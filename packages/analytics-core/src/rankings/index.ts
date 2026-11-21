@@ -25,6 +25,8 @@ export {
   MetricRankingsCalculator,
   type MetricType,
   type RegionRankResult,
+  type TiedCategories,
+  type TieInputRow,
 } from './MetricRankingsCalculator.js'
 
 export {

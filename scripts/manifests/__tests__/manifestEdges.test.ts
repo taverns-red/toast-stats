@@ -96,6 +96,51 @@ describe('buildRankHistory', () => {
     expect(skipped).toEqual(['Skipping 2026-10-09.json: EISDIR'])
     expect(r.entries.map(e => e.districtId)).toEqual(['1'])
   })
+
+  it('flags a category every district is tied in, on every district (#2797)', () => {
+    const row = (districtId: string, clubGrowthPercent: number) => ({
+      districtId,
+      districtName: 'D' + districtId,
+      clubGrowthPercent,
+      paymentGrowthPercent: 0,
+      distinguishedPercent: 0,
+      clubsRank: 1,
+      paymentsRank: 1,
+      distinguishedRank: 1,
+    })
+    const r = buildRankHistory(
+      [
+        file('2026-07-31.json', {
+          metadata: { totalDistricts: 2 },
+          rankings: [row('1', 2.5), row('2', -1)],
+        }),
+      ],
+      () => {}
+    )
+    for (const e of r.entries) {
+      const [point] = JSON.parse(e.json).history
+      expect(point.paymentsTied).toBe(true)
+      expect(point.distinguishedTied).toBe(true)
+      expect(point).not.toHaveProperty('clubsTied')
+    }
+  })
+
+  it('writes no tie flag when the ranked values are missing (#2797)', () => {
+    const r = buildRankHistory(
+      [
+        file('2026-07-31.json', {
+          metadata: { totalDistricts: 2 },
+          rankings: [
+            { districtId: '1', districtName: 'One', clubsRank: 1 },
+            { districtId: '2', districtName: 'Two', clubsRank: 1 },
+          ],
+        }),
+      ],
+      () => {}
+    )
+    const [point] = JSON.parse(r.entries[0].json).history
+    expect(Object.keys(point).filter(k => k.endsWith('Tied'))).toEqual([])
+  })
 })
 
 describe('snapshotIndexFromListing', () => {

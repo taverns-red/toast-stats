@@ -219,6 +219,7 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
             rank={rankings?.paidClubs.rank ?? 0}
             totalDistricts={rankings?.paidClubs.totalDistricts ?? 0}
             percentile={rankings?.paidClubs.percentile ?? 0}
+            tied={rankings?.paidClubs.tied === true}
             icon={<ClubsIcon />}
             colorScheme="green"
             isLoading={isLoading}
@@ -235,6 +236,7 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
             rank={rankings?.membershipPayments.rank ?? 0}
             totalDistricts={rankings?.membershipPayments.totalDistricts ?? 0}
             percentile={rankings?.membershipPayments.percentile ?? 0}
+            tied={rankings?.membershipPayments.tied === true}
             icon={<PaymentsIcon />}
             colorScheme="purple"
             isLoading={isLoading}
@@ -252,6 +254,7 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
             rank={rankings?.distinguishedClubs.rank ?? 0}
             totalDistricts={rankings?.distinguishedClubs.totalDistricts ?? 0}
             percentile={rankings?.distinguishedClubs.percentile ?? 0}
+            tied={rankings?.distinguishedClubs.tied === true}
             icon={<DistinguishedIcon />}
             colorScheme="yellow"
             isLoading={isLoading}

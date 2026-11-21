@@ -284,4 +284,41 @@ describe('RankingCard', () => {
       expect(screen.getByText('36th percentile')).toBeInTheDocument()
     })
   })
+
+  describe('Tied category (#2797)', () => {
+    it('shows "Tied" with no rank, total or percentile', () => {
+      renderWithProviders(
+        <RankingCard
+          {...baseProps}
+          title="Distinguished"
+          rank={1}
+          totalDistricts={94}
+          percentile={98.9}
+          tied
+          previousYearRank={10}
+        />
+      )
+
+      expect(screen.getByText('Tied')).toBeInTheDocument()
+      expect(
+        screen.getByText('Every district has the same value')
+      ).toBeInTheDocument()
+      expect(screen.queryByText('1')).not.toBeInTheDocument()
+      expect(screen.queryByText('of 94')).not.toBeInTheDocument()
+      expect(screen.queryByText(/percentile/)).not.toBeInTheDocument()
+      expect(screen.queryByText('+9')).not.toBeInTheDocument()
+      expect(
+        screen.getByLabelText(
+          'Distinguished: Tied, every district has the same value'
+        )
+      ).toBeInTheDocument()
+    })
+
+    it('shows the rank as before when not tied', () => {
+      renderWithProviders(<RankingCard {...baseProps} tied={false} />)
+
+      expect(screen.getByText('15')).toBeInTheDocument()
+      expect(screen.queryByText('Tied')).not.toBeInTheDocument()
+    })
+  })
 })

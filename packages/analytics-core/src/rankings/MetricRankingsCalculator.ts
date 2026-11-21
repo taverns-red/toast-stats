@@ -22,6 +22,28 @@ import type { MetricRankings } from '../types.js'
  */
 export type MetricType = 'clubs' | 'payments' | 'distinguished'
 
+/** The value each metric is ranked by. */
+const RANKED_VALUE_FIELD = {
+  clubs: 'clubGrowthPercent',
+  payments: 'paymentGrowthPercent',
+  distinguished: 'distinguishedPercent',
+} as const satisfies Record<MetricType, keyof DistrictRanking>
+
+/** A rankings row as isWorldTied reads it: only the ranked values, any of
+ *  which an old file may lack. */
+export type TieInputRow = Partial<
+  Pick<DistrictRanking, (typeof RANKED_VALUE_FIELD)[MetricType]>
+>
+
+/** The rank-history tie flags for one date (#2797). A flag is present only
+ *  when true, so untied files keep their old bytes (scripts/manifests
+ *  goldenParity.test.ts and manifestEdges.test.ts). */
+export interface TiedCategories {
+  clubsTied?: true
+  paymentsTied?: true
+  distinguishedTied?: true
+}
+
 /**
  * Result of region rank calculation.
  */
@@ -57,14 +79,7 @@ function createNullRankings(): MetricRankings {
  * @returns The metric value (percentage for growth metrics)
  */
 function getMetricValue(ranking: DistrictRanking, metric: MetricType): number {
-  switch (metric) {
-    case 'clubs':
-      return ranking.clubGrowthPercent
-    case 'payments':
-      return ranking.paymentGrowthPercent
-    case 'distinguished':
-      return ranking.distinguishedPercent
-  }
+  return ranking[RANKED_VALUE_FIELD[metric]]
 }
 
 /**
@@ -152,13 +167,31 @@ export class MetricRankingsCalculator {
    */
   isWorldTied(
     metric: MetricType,
-    allDistrictsRankings: AllDistrictsRankingsData
+    allDistrictsRankings: { rankings: ReadonlyArray<TieInputRow> }
   ): boolean {
     const rankings = allDistrictsRankings.rankings
     const first = rankings[0]
     if (!first || rankings.length < 2) return false
-    const value = getMetricValue(first, metric)
-    return rankings.every(r => getMetricValue(r, metric) === value)
+    const value = first[RANKED_VALUE_FIELD[metric]]
+    // Old rankings files can lack the value; missing everywhere is not a tie
+    // (MetricRankingsCalculator.test, "is false when the ranked value is missing").
+    if (typeof value !== 'number' || !Number.isFinite(value)) return false
+    return rankings.every(r => r[RANKED_VALUE_FIELD[metric]] === value)
+  }
+
+  /** isWorldTied for each category, as rank-history flags (#2797). */
+  tiedCategories(allDistrictsRankings: {
+    rankings: ReadonlyArray<TieInputRow>
+  }): TiedCategories {
+    const flags: TiedCategories = {}
+    if (this.isWorldTied('clubs', allDistrictsRankings)) flags.clubsTied = true
+    if (this.isWorldTied('payments', allDistrictsRankings)) {
+      flags.paymentsTied = true
+    }
+    if (this.isWorldTied('distinguished', allDistrictsRankings)) {
+      flags.distinguishedTied = true
+    }
+    return flags
   }
 
   /**
