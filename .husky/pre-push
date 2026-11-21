@@ -26,6 +26,13 @@
 # invoked via the CLI bridge so there is no parallel bash reimplementation.
 set -eu
 
+# A fresh worktree has no node_modules until `npm install` (#3124). Stop with
+# a clear message rather than a confusing npm error.
+if [ ! -d node_modules ]; then
+  echo "pre-push: this worktree has no node_modules, so the hook cannot run the tests. Run 'npm install' here, then push again." >&2
+  exit 1
+fi
+
 ZERO='0000000000000000000000000000000000000000'
 
 run_gate() {
