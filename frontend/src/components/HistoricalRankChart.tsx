@@ -9,8 +9,9 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { RankHistoryResponse } from '../types/districts'
-import { isRankTied } from '../utils/rankTies'
+import { ALL_TIED_MESSAGE, isRankTied } from '../utils/rankTies'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
+import { AllTiedPlot } from './charts/AllTiedPlot'
 import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { dateAxisLayout } from './charts/compactAxis'
@@ -209,6 +210,11 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
     return dataPoint
   })
 
+  // The Overall Score is never left out, so only a category can be all tied.
+  const allTied =
+    tiedKeys.size > 0 &&
+    chartData.every(row => data.every(d => row[d.districtId] == null))
+
   // The phone readout drops null values, so a tied date would show only
   // its date; describe it as the desktop tooltip does.
   const describeTiedReading = (label: string): ChartReading | null => {
@@ -236,7 +242,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
     distinguished: 'Distinguished Clubs Rank',
   }[selectedMetric]
 
-  const chartDescription = `Line chart showing ${metricLabel} progression for ${data.length} district${data.length !== 1 ? 's' : ''} over the program year from ${programYear?.startDate || 'July 1'} to ${programYear?.endDate || 'June 30'}.`
+  const chartDescription = `Line chart showing ${metricLabel} progression for ${data.length} district${data.length !== 1 ? 's' : ''} over the program year from ${programYear?.startDate || 'July 1'} to ${programYear?.endDate || 'June 30'}.${allTied ? ` ${ALL_TIED_MESSAGE}` : ''}`
 
   return (
     <section
@@ -266,107 +272,113 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
       >
         {/* The desktop min-width; a phone sheet is narrower (#1835). */}
         <div className={compact ? undefined : 'min-w-[320px]'}>
-          <ResponsiveContainer
-            width="100%"
-            height={PLOT_HEIGHT}
-            minWidth={compact ? 0 : 320}
-          >
-            <LineChart
-              {...readout.chartProps}
-              data={chartData}
-              margin={{
-                top: 5,
-                right: compact ? 16 : 10,
-                left: 0,
-                bottom: compact ? 5 : 60,
-              }}
-              aria-hidden="true"
+          {allTied ? (
+            <AllTiedPlot height={PLOT_HEIGHT} />
+          ) : (
+            <ResponsiveContainer
+              width="100%"
+              height={PLOT_HEIGHT}
+              minWidth={compact ? 0 : 320}
             >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="var(--tm-cool-gray-20)"
-              />
-              <XAxis
-                dataKey="date"
-                stroke="var(--tm-cool-gray)"
-                tick={AXIS_TICK}
-                {...dateAxisLayout(
-                  compact,
-                  sortedDates,
-                  tickInterval || 'preserveStartEnd'
-                )}
-                tickFormatter={value => {
-                  const date = parseLocalDate(value)
-                  return date.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  })
+              <LineChart
+                {...readout.chartProps}
+                data={chartData}
+                margin={{
+                  top: 5,
+                  right: compact ? 16 : 10,
+                  left: 0,
+                  bottom: compact ? 5 : 60,
                 }}
-              />
-              <YAxis
-                stroke="var(--tm-cool-gray)"
-                tick={AXIS_TICK}
-                allowDecimals={false}
-                width={50}
-                reversed={selectedMetric !== 'aggregate'}
-                label={
-                  selectedMetric === 'aggregate'
-                    ? {
-                        value: 'Score (higher is better)',
-                        angle: -90,
-                        position: 'insideLeft',
-                        style: AXIS_LABEL_STYLE,
-                      }
-                    : {
-                        value: 'Rank (lower is better)',
-                        angle: -90,
-                        position: 'insideLeft',
-                        style: AXIS_LABEL_STYLE,
-                      }
-                }
-              />
-              <Tooltip
-                content={
-                  <CustomTooltip
-                    data={data}
-                    selectedMetric={selectedMetric}
-                    isTied={isTied}
-                  />
-                }
-                // Keep tied districts, whose value is null, so they read
-                // "Tied"; the tooltip drops other empty and hidden entries.
-                filterNull={false}
-                {...readout.tooltipProps}
-              />
-              {data.map((district, index) => {
-                const color = districtColor(index)
-                return (
-                  <Line
-                    key={district.districtId}
-                    // Integer ranks: a spline would draw dips that never happened.
-                    type="linear"
-                    dataKey={district.districtId}
-                    stroke={color}
-                    strokeWidth={2}
-                    dot={{
-                      fill: color,
-                      r: 0.3,
-                    }}
-                    activeDot={{ r: 0.5 }}
-                    name={district.districtId}
-                    hide={!legend.isVisible(district.districtId)}
-                    connectNulls
-                  />
-                )
-              })}
-            </LineChart>
-          </ResponsiveContainer>
+                aria-hidden="true"
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--tm-cool-gray-20)"
+                />
+                <XAxis
+                  dataKey="date"
+                  stroke="var(--tm-cool-gray)"
+                  tick={AXIS_TICK}
+                  {...dateAxisLayout(
+                    compact,
+                    sortedDates,
+                    tickInterval || 'preserveStartEnd'
+                  )}
+                  tickFormatter={value => {
+                    const date = parseLocalDate(value)
+                    return date.toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    })
+                  }}
+                />
+                <YAxis
+                  stroke="var(--tm-cool-gray)"
+                  tick={AXIS_TICK}
+                  allowDecimals={false}
+                  width={50}
+                  reversed={selectedMetric !== 'aggregate'}
+                  label={
+                    selectedMetric === 'aggregate'
+                      ? {
+                          value: 'Score (higher is better)',
+                          angle: -90,
+                          position: 'insideLeft',
+                          style: AXIS_LABEL_STYLE,
+                        }
+                      : {
+                          value: 'Rank (lower is better)',
+                          angle: -90,
+                          position: 'insideLeft',
+                          style: AXIS_LABEL_STYLE,
+                        }
+                  }
+                />
+                <Tooltip
+                  content={
+                    <CustomTooltip
+                      data={data}
+                      selectedMetric={selectedMetric}
+                      isTied={isTied}
+                    />
+                  }
+                  // Keep tied districts, whose value is null, so they read
+                  // "Tied"; the tooltip drops other empty and hidden entries.
+                  filterNull={false}
+                  {...readout.tooltipProps}
+                />
+                {data.map((district, index) => {
+                  const color = districtColor(index)
+                  return (
+                    <Line
+                      key={district.districtId}
+                      // Integer ranks: a spline would draw dips that never happened.
+                      type="linear"
+                      dataKey={district.districtId}
+                      stroke={color}
+                      strokeWidth={2}
+                      dot={{
+                        fill: color,
+                        r: 0.3,
+                      }}
+                      activeDot={{ r: 0.5 }}
+                      name={district.districtId}
+                      hide={!legend.isVisible(district.districtId)}
+                      connectNulls
+                    />
+                  )
+                })}
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
       <ChartReadout
         readout={readout}
         labelFormatter={formatReadoutDate}
         describe={describeTiedReading}
+        // An all-tied chart has nothing to tap; the empty line keeps its height.
+        {...(allTied ? { hint: '' } : {})}
         nameFormatter={id =>
           data.find(d => d.districtId === id)?.districtName ?? id
         }
