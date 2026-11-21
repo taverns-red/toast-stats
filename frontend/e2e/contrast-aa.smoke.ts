@@ -134,7 +134,7 @@ const CASES: {
   {
     path: '/this/route/does/not/exist',
     width: 375,
-    ready: '.error-page__code',
+    ready: '.not-found-panel__heading',
   },
   // The active year chip's green "· LIVE" on its tinted surface (4.27:1).
   { path: '/history', width: 375, ready: '.history-page-year-chip__live' },

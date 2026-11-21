@@ -157,7 +157,7 @@ for (const theme of ['light', 'dark'] as const) {
   test(`404 "Go home" button shows a ring (${theme})`, async ({ page }) => {
     test.setTimeout(90_000)
     await open(page, '/no-such-page-2667', theme)
-    await tabTo(page, page.getByRole('link', { name: 'Go home' }))
+    await tabTo(page, page.getByRole('link', { name: 'Go to all districts' }))
     await expectVisibleRing(page, `Go home (${theme})`)
   })
 

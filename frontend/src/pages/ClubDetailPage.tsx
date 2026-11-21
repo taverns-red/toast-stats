@@ -981,7 +981,7 @@ const ClubDetailPage: React.FC = () => {
     return (
       <NotFoundPanel
         heading={`Club ${clubId} isn't in ${districtName}`}
-        message="The club may have closed or moved, or the number in the link may be wrong. Search for the club by name or number."
+        message="The club may have been removed or moved, or the number in the link may be wrong. Search for the club by name or number."
         suggestionsLead={`Go to ${districtName}:`}
         suggestions={[
           {
