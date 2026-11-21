@@ -82,42 +82,51 @@ function enclosingMedia(css: string, index: number): string[] {
 }
 
 describe('phone rankings card clips to its radius (#2694)', () => {
-  it('the base wrap clips', () => {
-    const base = declsFor(appShell, '.districts-rankings-table-wrap')
-    expect(prop(base, 'overflow')).toBe('hidden')
+  const rulesFor = (re: RegExp) => [...appShell.matchAll(re)]
+
+  it('the card wrap stays visible at every width (popovers, sticky header)', () => {
+    const visible = rulesFor(
+      /\.districts-rankings-table-wrap--dt\s*\{([^}]*)\}/g
+    ).filter(m => /overflow:\s*visible/.test(m[1]))
+    expect(visible.length).toBeGreaterThan(0)
+    for (const m of visible)
+      expect(enclosingMedia(appShell, m.index)).toEqual([])
   })
 
-  it('overflow: visible on the card wrap applies from 768px up only', () => {
-    const re = /\.districts-rankings-table-wrap--dt\s*\{([^}]*)\}/g
-    const visible = [...appShell.matchAll(re)].filter(m =>
-      /overflow:\s*visible/.test(m[1])
-    )
-    expect(visible.length).toBeGreaterThan(0)
-    for (const m of visible) {
-      const media = enclosingMedia(appShell, m.index)
-      expect(media.join(' ')).toMatch(/min-width:\s*768px/)
+  it('an inner clip rounds the bottom corners below 768px only', () => {
+    const clips = rulesFor(/\.districts-rankings-clip\s*\{([^}]*)\}/g)
+    expect(clips.length).toBeGreaterThan(0)
+    for (const m of clips) {
+      expect(enclosingMedia(appShell, m.index).join(' ')).toMatch(
+        /max-width:\s*767px/
+      )
     }
+    const body = clips.map(m => m[1]).join(';')
+    expect(prop(body, 'overflow')).toBe('hidden')
+    expect(prop(body, 'border-radius')).toMatch(/var\(--rds-radius-md\)/)
   })
 })
 
 describe('the phone methodology tooltip is not clipped by the card (#2694)', () => {
   // InfoTooltip opens upward inside its parent and is not portaled, so any
-  // ancestor with overflow: hidden cuts it off. The phone affordance sits
-  // above the card, not inside the clipped wrap.
-  it('renders {aboutMetrics} for phones before the clipped wrap opens', () => {
-    const page = readFileSync(
-      resolve(srcDir, 'pages/DistrictsPage.tsx'),
-      'utf-8'
+  // ancestor with overflow: hidden cuts it off. The phone affordance stays in
+  // the visible wrap; only the table below it sits in the clip.
+  const page = readFileSync(resolve(srcDir, 'pages/DistrictsPage.tsx'), 'utf-8')
+
+  it('wraps the phone list in the clip element', () => {
+    expect(page).toMatch(
+      /<div className="districts-rankings-clip">\s*<PriorityColumnsTable/
     )
-    const wrapAt = page.indexOf('districts-rankings-table-wrap ')
-    const phoneAbove = page.search(
+  })
+
+  it('renders {aboutMetrics} for phones outside the clip element', () => {
+    const phoneAt = page.search(
       /isMobile && \(\s*<div[^>]*>\s*\{aboutMetrics\}/
     )
-    expect(wrapAt).toBeGreaterThan(-1)
-    expect(phoneAbove, 'a phone block rendering aboutMetrics').toBeGreaterThan(
-      -1
-    )
-    expect(phoneAbove).toBeLessThan(wrapAt)
+    const clipAt = page.indexOf('districts-rankings-clip')
+    expect(phoneAt).toBeGreaterThan(-1)
+    expect(clipAt).toBeGreaterThan(-1)
+    expect(phoneAt).toBeLessThan(clipAt)
   })
 })
 
