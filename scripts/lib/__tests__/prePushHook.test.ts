@@ -36,12 +36,12 @@ describe('.husky/pre-push worker cap (#3121)', () => {
 })
 
 /**
- * The hook runs the suite through the shared test-slot wrapper when the
- * machine has one (#3142, ops#425), and directly when it doesn't (cloud VM).
- * These run the real hook with empty stdin, which always reaches run_gate,
- * against a stub `npm` on PATH and a stub wrapper.
+ * The hook runs the suite through scripts/test-lock.sh (#3172, #3142), which
+ * takes the repo lock and a machine slot when the machine has them. These run
+ * the real hook with empty stdin, which always reaches run_gate, against a
+ * stub `npm` on PATH and a stub test-lock.sh.
  */
-describe('.husky/pre-push test-slot wrapper (#3142)', () => {
+describe('.husky/pre-push test-lock routing (#3142, #3172)', () => {
   const NPM_ARGS = 'run test:unit --workspace=frontend -- --maxWorkers=2'
   let dir: string
   let log: string
@@ -83,71 +83,37 @@ describe('.husky/pre-push test-slot wrapper (#3142)', () => {
     }
   }
 
-  it('runs the npm command through the wrapper when it is executable', () => {
-    const wrapper = path.join(dir, 'run.sh')
-    writeStub(wrapper, `echo "wrapper $*" >> "${log}"\nexec "$@"`)
-
-    const result = runHook({ TOAST_TEST_SLOT_RUN: wrapper })
-
-    expect(result.status).toBe(0)
-    expect(calls()).toEqual([`wrapper npm ${NPM_ARGS}`, `npm ${NPM_ARGS}`])
-  })
-
-  it('looks for the wrapper under $HOME/code/ops by default', () => {
-    const wrapper = path.join(dir, 'code/ops/tools/test-slot/run.sh')
-    mkdirSync(path.dirname(wrapper), { recursive: true })
-    writeStub(wrapper, `echo "wrapper $*" >> "${log}"\nexec "$@"`)
-
-    const result = runHook({})
-
-    expect(result.status).toBe(0)
-    expect(calls()[0]).toBe(`wrapper npm ${NPM_ARGS}`)
-  })
-
-  it('runs the npm command directly when there is no wrapper', () => {
-    const result = runHook({
-      TOAST_TEST_SLOT_RUN: path.join(dir, 'missing/run.sh'),
-    })
-
-    expect(result.status).toBe(0)
-    expect(calls()).toEqual([`npm ${NPM_ARGS}`])
-  })
-
-  it('fails the push when the wrapper times out (exit 75), never unthrottled', () => {
-    const wrapper = path.join(dir, 'run.sh')
-    writeStub(
-      wrapper,
-      `echo "test-slot: timed out" >&2\necho "wrapper $*" >> "${log}"\nexit 75`
-    )
-
-    const result = runHook({ TOAST_TEST_SLOT_RUN: wrapper })
-
-    expect(result.status).toBe(75)
-    expect(result.stderr).toContain('test-slot: timed out')
-    expect(calls()).toEqual([`wrapper npm ${NPM_ARGS}`])
-  })
-
   it('runs the suite through scripts/test-lock.sh, not the slot wrapper directly (#3172)', () => {
     mkdirSync(path.join(dir, 'scripts'))
     writeStub(
       path.join(dir, 'scripts/test-lock.sh'),
       `echo "lock $*" >> "${log}"\nexec "$@"`
     )
-    const wrapper = path.join(dir, 'run.sh')
-    writeStub(wrapper, `echo "wrapper $*" >> "${log}"\nexec "$@"`)
 
-    const result = runHook({ TOAST_TEST_SLOT_RUN: wrapper })
+    const result = runHook({})
 
     expect(result.status).toBe(0)
     expect(calls()).toEqual([`lock npm ${NPM_ARGS}`, `npm ${NPM_ARGS}`])
   })
 
+  it('fails the push when the lock times out (exit 75), never unthrottled', () => {
+    mkdirSync(path.join(dir, 'scripts'))
+    writeStub(
+      path.join(dir, 'scripts/test-lock.sh'),
+      `echo "test-slot: timed out" >&2\necho "lock $*" >> "${log}"\nexit 75`
+    )
+
+    const result = runHook({})
+
+    expect(result.status).toBe(75)
+    expect(result.stderr).toContain('test-slot: timed out')
+    expect(calls()).toEqual([`lock npm ${NPM_ARGS}`])
+  })
+
   it('still stops with the npm install message when node_modules is missing', () => {
     rmSync(path.join(dir, 'node_modules'), { recursive: true })
 
-    const result = runHook({
-      TOAST_TEST_SLOT_RUN: path.join(dir, 'missing/run.sh'),
-    })
+    const result = runHook({})
 
     expect(result.status).toBe(1)
     expect(result.stderr).toContain("Run 'npm install' here")

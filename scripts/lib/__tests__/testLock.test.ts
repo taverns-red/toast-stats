@@ -62,7 +62,11 @@ describe('scripts/test-lock.sh (#3166)', () => {
     const r = runLock(['suite', '--a'], { TOAST_TEST_SLOT_RUN: wrapper })
 
     expect(r.status).toBe(0)
-    expect(calls()).toEqual([`slot ${repoLock} 1`, 'suite --a unset unset'])
+    expect(calls()).toEqual([
+      `slot ${repoLock} 1`,
+      'slot machine 3',
+      'suite --a unset unset',
+    ])
   })
 
   it('runs the command directly when there is no wrapper', () => {
@@ -76,37 +80,31 @@ describe('scripts/test-lock.sh (#3166)', () => {
     expect(calls()).toEqual(['suite --a'])
   })
 
-  it('always takes the repo lock, even inside a held machine slot (ops#428)', () => {
-    const wrapper = stub(
-      'run.sh',
-      `echo "slot \${RT_TEST_SLOT_MAX:-3} held=\${RT_TEST_SLOT_HELD:-none}" >> "${log}"\nexec "$@"`
-    )
-    stub('suite', `echo "suite held=\${RT_TEST_SLOT_HELD:-none}" >> "${log}"`)
+  const REAL_RUN = path.join(
+    process.env.HOME ?? '',
+    'code/ops/tools/test-slot/run.sh'
+  )
+  it.skipIf(!existsSync(REAL_RUN))(
+    'still takes the repo lock inside a held machine slot (#3172)',
+    () => {
+      stub('suite', `ls "${repoLock}" >> "${log}"`)
 
-    const r = runLock(['suite'], {
-      TOAST_TEST_SLOT_RUN: wrapper,
-      RT_TEST_SLOT_HELD: '123|/outer/slot-1',
-    })
+      const r = spawnSync('sh', ['-c', `"${REAL_RUN}" sh "${LOCK}" suite`], {
+        cwd: root,
+        encoding: 'utf-8',
+        env: {
+          PATH: `${dir}:/usr/bin:/bin`,
+          HOME: dir,
+          TOAST_TEST_SLOT_RUN: REAL_RUN,
+          RT_TEST_SLOT_DIR: path.join(dir, 'outer-slots'),
+          RT_TEST_SLOT_TIMEOUT: '4',
+        },
+      })
 
-    expect(r.status).toBe(0)
-    expect(calls()).toEqual([
-      'slot 1 held=none',
-      'suite held=123|/outer/slot-1',
-    ])
-  })
-
-  it('does not hand the command the repo lock as a held machine slot', () => {
-    const wrapper = stub(
-      'run.sh',
-      `export RT_TEST_SLOT_HELD="999|$RT_TEST_SLOT_DIR/slot-1"\nexec "$@"`
-    )
-    stub('suite', `echo "suite held=\${RT_TEST_SLOT_HELD:-none}" >> "${log}"`)
-
-    const r = runLock(['suite'], { TOAST_TEST_SLOT_RUN: wrapper })
-
-    expect(r.status).toBe(0)
-    expect(calls()).toEqual(['suite held=none'])
-  })
+      expect(r.status).toBe(0)
+      expect(calls()).toEqual(['slot-1'])
+    }
+  )
 
   it('passes the exit code through', () => {
     const wrapper = stub('run.sh', 'exec "$@"')
