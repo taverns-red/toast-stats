@@ -232,6 +232,12 @@ function renderAt(url: string) {
 
 const settle = () => new Promise(resolve => setTimeout(resolve, 50))
 
+// Open the ContextBar sheet, where the "About this page" text lives.
+async function openPageInfo() {
+  fireEvent.click(await screen.findByRole('button', { name: /Page options/ }))
+  await screen.findByRole('heading', { name: 'About this page' })
+}
+
 describe('ClubDetailPage — a closed club shows its history (#3104)', () => {
   it('shows the closed line and the last program year instead of Not Found', async () => {
     renderAt('/district/86/club/28676407')
@@ -361,6 +367,20 @@ describe('ClubDetailPage — a closed club shows its history (#3104)', () => {
     expect(mockedReinstatable).toHaveBeenCalledWith('2026-11-19')
   })
 
+  // #3126 — a closed club's Page info doesn't change.
+  it('Page info still says the club has closed', async () => {
+    renderAt('/district/86/club/28676407')
+    await openPageInfo()
+    expect(
+      screen.getByText(
+        "This club has closed. The page shows its last program year on Toastmasters' list."
+      )
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/suspended at the start of the program year/)
+    ).not.toBeInTheDocument()
+  })
+
   it('no reinstate window for a closed club without a period', async () => {
     renderAt('/district/86/club/28676407')
     await screen.findByText(
@@ -455,5 +475,57 @@ describe('ClubDetailPage — a suspended club missing from analytics (#3117)', (
       )
     ).toBeInTheDocument()
     expect(screen.queryByText(/Suspended since/)).not.toBeInTheDocument()
+  })
+
+  // #3126 — Page info says why the page shows last year's numbers, with
+  // the club's own last program year (the 28676407 stand-in was last seen
+  // on 2025-06-30, so 2024–25).
+  it('Page info says it was suspended at the start of the program year', async () => {
+    renderAt('/district/86/club/28676407')
+    await openPageInfo()
+
+    expect(
+      screen.getByText(
+        'This club was suspended at the start of the program year, so the page shows its 2024–25 numbers.'
+      )
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        "The page shows its last program year on Toastmasters' list."
+      )
+    ).not.toBeInTheDocument()
+  })
+
+  // #3126 — the sentence claims a July 1 suspension. The suspended list
+  // holds any suspend date in the program year, so a later one keeps the
+  // plain line.
+  it('Page info keeps the plain line for a suspension after July 1', async () => {
+    vi.mocked(fetchCdnSuspendedClubs).mockResolvedValue({
+      _format: { version: '1.0.0', type: 'suspended-clubs' },
+      snapshotDate: '2026-11-19',
+      programYear: { start: '2026-07-01', end: '2027-06-30' },
+      districts: {
+        '86': [
+          {
+            clubNumber: '28676407',
+            clubName: 'Top Tier Toastmasters',
+            division: 'S',
+            area: '71',
+            suspendDate: '2026-10-01',
+          },
+        ],
+      },
+    })
+    renderAt('/district/86/club/28676407')
+    await openPageInfo()
+
+    expect(
+      screen.getByText(
+        "The page shows its last program year on Toastmasters' list."
+      )
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/suspended at the start of the program year/)
+    ).not.toBeInTheDocument()
   })
 })
