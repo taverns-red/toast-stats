@@ -119,19 +119,50 @@ describe('visible focus rings (#2632)', () => {
     }
   }
 
-  it('the club hero history link has a white focus-visible outline', () => {
-    const css = read(resolve(stylesDir, 'components/club-history.css'))
-    const body = ruleBody(css, '.club-hero__history-link:focus-visible')
-    expect(body, 'focus-visible rule missing').not.toBeNull()
-    expect(body).toMatch(/outline:\s*2px solid #ffffff/)
-  })
+  for (const [theme, isDark] of [
+    ['light', false],
+    ['dark', true],
+  ] as const) {
+    it(`the club hero history link ring clears 3:1 on every hero gradient stop (${theme})`, () => {
+      const hero = ruleBody(
+        read(resolve(stylesDir, 'components/app-shell.css')),
+        '.club-hero'
+      )
+      expect(hero, '.club-hero rule missing').not.toBeNull()
+      const gradient = /background-image:\s*linear-gradient\(([^;]*)\);/.exec(
+        hero!
+      )?.[1]
+      const stops = [...(gradient ?? '').matchAll(/var\(--[\w-]+\)/g)].map(
+        m => m[0]
+      )
+      expect(stops.length).toBeGreaterThanOrEqual(2)
+
+      const body = ruleBody(
+        read(resolve(stylesDir, 'components/club-history.css')),
+        '.club-hero__history-link:focus-visible'
+      )
+      expect(body, 'focus-visible rule missing').not.toBeNull()
+      const color = /outline:\s*\d+px\s+solid\s+([^;]+);/.exec(body!)?.[1]
+      expect(color, 'outline colour missing').toBeDefined()
+      for (const stop of stops) {
+        expect(
+          calculateContrastRatio(
+            resolveColor(color!, isDark),
+            resolveColor(stop, isDark)
+          ),
+          stop
+        ).toBeGreaterThanOrEqual(3)
+      }
+    })
+  }
 
   it('InfoTooltip trigger keeps a visible focus indicator', () => {
     const src = readFileSync(
       resolve(srcDir, 'components/InfoTooltip.tsx'),
       'utf8'
     )
-    const cls = /className="([^"]*)"\s*\n\s*onMouseEnter/.exec(src)?.[1] ?? ''
+    const cls = /className="(info-tooltip__trigger[^"]*)"/.exec(src)?.[1] ?? ''
+    expect(cls, 'trigger className not found').not.toBe('')
     expect(cls).not.toMatch(/focus:outline-hidden/)
     expect(cls).toMatch(/focus-visible:(outline|ring)/)
   })

@@ -49,7 +49,6 @@
     text-shadow: none !important;
     -webkit-text-stroke: none !important;
     text-stroke: none !important;
-    outline: none;
     /* Ensure no glow effects */
     box-shadow: none;
   }

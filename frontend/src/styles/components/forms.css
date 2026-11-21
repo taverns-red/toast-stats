@@ -285,6 +285,16 @@
     box-shadow: 0 0 0 2px var(--tm-loyal-blue-20);
   }
 
+  /* The 20% tint above is a hover-like glow, under 3:1 on white; keyboard
+     focus gets a solid ring (OutlineRemovalSweep.test.ts). */
+  .tm-form-input:focus-visible,
+  .tm-form-textarea:focus-visible,
+  .tm-form-select:focus-visible,
+  .tm-form-checkbox:focus-visible,
+  .tm-form-radio:focus-visible {
+    box-shadow: 0 0 0 2px var(--focus-ring);
+  }
+
   /* Error States for Checkbox and Radio */
   .tm-form-checkbox--error .tm-form-checkbox,
   .tm-form-radio--error .tm-form-radio {

@@ -99,7 +99,7 @@ export function DatePairPresetChips<T extends string>({
             className={cn(
               CHIP_LAYOUT,
               'date-preset-chip',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue focus-visible:ring-offset-1'
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1'
             )}
             onClick={() => {
               if (pair) onSelect(pair.from, pair.to)

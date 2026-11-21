@@ -95,7 +95,7 @@ export const ProgramYearSelector: React.FC<ProgramYearSelectorProps> = ({
           {onRetry && (
             <button
               onClick={onRetry}
-              className="px-4 py-2 text-sm font-medium text-tm-loyal-blue border-2 border-tm-loyal-blue rounded-lg hover:bg-tm-loyal-blue hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:ring-offset-2"
+              className="px-4 py-2 text-sm font-medium text-tm-loyal-blue border-2 border-tm-loyal-blue rounded-lg hover:bg-tm-loyal-blue hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2"
               aria-label="Retry loading program years"
             >
               Retry
@@ -153,7 +153,7 @@ export const ProgramYearSelector: React.FC<ProgramYearSelectorProps> = ({
           id="program-year-selector"
           value={selectedProgramYear.year}
           onChange={handleChange}
-          className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue focus:border-transparent bg-white text-gray-900 text-sm appearance-none pr-10 font-tm-body"
+          className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-focus-ring focus:border-transparent bg-white text-gray-900 text-sm appearance-none pr-10 font-tm-body"
           style={{ color: 'var(--tm-black)' }}
         >
           {availableProgramYears.map(programYear => (

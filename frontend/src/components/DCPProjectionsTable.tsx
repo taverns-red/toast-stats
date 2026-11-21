@@ -294,7 +294,7 @@ export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
           <select
             value={filterTier}
             onChange={e => setFilterTier(e.target.value as FilterTier)}
-            className="text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white focus:ring-tm-loyal-blue focus:border-tm-loyal-blue"
+            className="text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white focus:ring-focus-ring focus:border-tm-loyal-blue"
             aria-label="Filter by tier"
           >
             <option value="all">All Tiers</option>
@@ -308,7 +308,7 @@ export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
           <select
             value={filterDivision}
             onChange={e => setFilterDivision(e.target.value)}
-            className="text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white focus:ring-tm-loyal-blue focus:border-tm-loyal-blue"
+            className="text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white focus:ring-focus-ring focus:border-tm-loyal-blue"
             aria-label="Filter by division"
           >
             <option value="all">All Divisions</option>
@@ -324,7 +324,7 @@ export const DCPProjectionsTable: React.FC<DCPProjectionsTableProps> = ({
               type="checkbox"
               checked={showCloseOnly}
               onChange={e => setShowCloseOnly(e.target.checked)}
-              className="rounded border-gray-300 text-tm-loyal-blue focus:ring-tm-loyal-blue"
+              className="rounded border-gray-300 text-tm-loyal-blue focus:ring-focus-ring"
             />
             Close to next tier only
           </label>

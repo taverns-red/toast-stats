@@ -82,7 +82,7 @@ export const TextFilter: React.FC<TextFilterProps> = ({
                 e.currentTarget.click()
               }
             }}
-            className={`px-3 py-1 text-xs font-medium rounded border transition-all duration-200 focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue clubs-filter-btn${
+            className={`px-3 py-1 text-xs font-medium rounded border transition-all duration-200 focus:outline-hidden focus:ring-2 focus:ring-focus-ring clubs-filter-btn${
               operator === 'contains' ? ' clubs-filter-btn--active' : ''
             }`}
             tabIndex={0}
@@ -100,7 +100,7 @@ export const TextFilter: React.FC<TextFilterProps> = ({
                 e.currentTarget.click()
               }
             }}
-            className={`px-3 py-1 text-xs font-medium rounded border transition-all duration-200 focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue clubs-filter-btn${
+            className={`px-3 py-1 text-xs font-medium rounded border transition-all duration-200 focus:outline-hidden focus:ring-2 focus:ring-focus-ring clubs-filter-btn${
               operator === 'startsWith' ? ' clubs-filter-btn--active' : ''
             }`}
             tabIndex={0}
@@ -118,7 +118,7 @@ export const TextFilter: React.FC<TextFilterProps> = ({
             value={localValue}
             onChange={e => handleInputChange(e.target.value)}
             placeholder={placeholder}
-            className="w-full px-3 py-2 text-sm rounded clubs-filter-input focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue focus:border-transparent transition-colors duration-200"
+            className="w-full px-3 py-2 text-sm rounded clubs-filter-input focus:outline-hidden focus:ring-2 focus:ring-focus-ring focus:border-transparent transition-colors duration-200"
             tabIndex={0}
             aria-label={`Filter text input. Current operator: ${operator}`}
           />
@@ -126,7 +126,7 @@ export const TextFilter: React.FC<TextFilterProps> = ({
             <button
               type="button"
               onClick={handleClear}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 clubs-filter-x focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue rounded p-1 transition-all duration-200"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 clubs-filter-x focus:outline-hidden focus:ring-2 focus:ring-focus-ring rounded p-1 transition-all duration-200"
               aria-label="Clear filter"
               tabIndex={0}
             >
@@ -155,7 +155,7 @@ export const TextFilter: React.FC<TextFilterProps> = ({
           <button
             type="button"
             onClick={handleClear}
-            className="text-xs clubs-filter-link font-medium focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue rounded transition-all duration-200"
+            className="text-xs clubs-filter-link font-medium focus:outline-hidden focus:ring-2 focus:ring-focus-ring rounded transition-all duration-200"
             tabIndex={0}
             aria-label="Clear text filter"
           >

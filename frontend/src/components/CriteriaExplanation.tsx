@@ -76,7 +76,7 @@ const CriteriaExplanationView: React.FC<{
       {/* Header with expand/collapse toggle */}
       <button
         onClick={toggleExpanded}
-        className="w-full flex items-center justify-between min-h-[44px] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue focus-visible:ring-offset-2 rounded-md"
+        className="w-full flex items-center justify-between min-h-[44px] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 rounded-md"
         aria-expanded={isExpanded}
         aria-controls="criteria-content"
       >

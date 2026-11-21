@@ -110,7 +110,7 @@ export const NumericFilter: React.FC<NumericFilterProps> = ({
             <button
               type="button"
               onClick={handleClear}
-              className="text-xs clubs-filter-link font-medium focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue rounded transition-all duration-200"
+              className="text-xs clubs-filter-link font-medium focus:outline-hidden focus:ring-2 focus:ring-focus-ring rounded transition-all duration-200"
               tabIndex={0}
               aria-label="Clear numeric filter"
             >
@@ -132,7 +132,7 @@ export const NumericFilter: React.FC<NumericFilterProps> = ({
               placeholder="Min"
               min={min}
               max={max}
-              className="w-full px-3 py-2 text-sm rounded clubs-filter-input focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue focus:border-transparent transition-colors duration-200"
+              className="w-full px-3 py-2 text-sm rounded clubs-filter-input focus:outline-hidden focus:ring-2 focus:ring-focus-ring focus:border-transparent transition-colors duration-200"
               tabIndex={0}
               aria-label={`Minimum ${label.toLowerCase()} value`}
             />
@@ -148,7 +148,7 @@ export const NumericFilter: React.FC<NumericFilterProps> = ({
               placeholder="Max"
               min={min}
               max={max}
-              className="w-full px-3 py-2 text-sm rounded clubs-filter-input focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue focus:border-transparent transition-colors duration-200"
+              className="w-full px-3 py-2 text-sm rounded clubs-filter-input focus:outline-hidden focus:ring-2 focus:ring-focus-ring focus:border-transparent transition-colors duration-200"
               tabIndex={0}
               aria-label={`Maximum ${label.toLowerCase()} value`}
             />
