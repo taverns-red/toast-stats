@@ -993,6 +993,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     </div>
   )
 
+  const overflowHint = `Scroll sideways for more columns · ${columns.shownCount} of ${columns.totalCount} shown`
+
   // While loading there is no count yet: hold the line's height with a space
   // rather than claim "Total: 0 clubs".
   const resultCount = (
@@ -1173,6 +1175,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
             testId="clubs-table-skeleton"
             columns={table.getVisibleLeafColumns()}
             rowHeaderColumnId={STICKY_COLUMN_FIELD}
+            headerClassName={clubColumnStickyClass}
+            overflowHint={overflowHint}
           />
         ))}
 
@@ -1330,7 +1334,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           headerClassName={clubColumnStickyClass}
           cellClassName={clubColumnTdClass}
           rowClassName="clubs-table-row"
-          overflowHint={`Scroll sideways for more columns · ${columns.shownCount} of ${columns.totalCount} shown`}
+          overflowHint={overflowHint}
         />
       )}
 
