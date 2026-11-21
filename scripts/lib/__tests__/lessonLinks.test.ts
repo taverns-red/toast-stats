@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { gitEnv } from './gitEnv'
 
 const ROOT = resolve(__dirname, '../../..')
 const SELF = 'scripts/lib/__tests__/lessonLinks.test.ts'
@@ -21,6 +22,7 @@ const FIXTURE_FILES = new Set([
 function trackedTextFiles(): string[] {
   const out = execFileSync('git', ['ls-files', '-z'], {
     cwd: ROOT,
+    env: gitEnv(),
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   })

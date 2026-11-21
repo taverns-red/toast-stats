@@ -10,6 +10,7 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { gitEnv } from './gitEnv'
 
 const ROOT = resolve(__dirname, '../../..')
 
@@ -58,6 +59,7 @@ export function findExecutableWrites(source: string): string[] {
 function trackedTestFiles(): string[] {
   const out = execFileSync('git', ['ls-files'], {
     cwd: ROOT,
+    env: gitEnv(),
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   })

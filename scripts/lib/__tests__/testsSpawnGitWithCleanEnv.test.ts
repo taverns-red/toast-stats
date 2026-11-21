@@ -13,7 +13,8 @@ import { gitEnv } from './gitEnv'
  *
  * Sees: a child_process call whose first argument is the literal "git".
  * Can't see: git reached through a variable or inside a launched shell
- * script; those scripts must unset GIT_* themselves.
+ * script; those scripts must unset GIT_* themselves. A line holding a
+ * command string that is only data marks itself `// not-a-git-spawn`.
  */
 
 const repoRoot = join(__dirname, '..', '..', '..')
@@ -38,6 +39,12 @@ export function findGitSpawnsWithoutCleanEnv(
   for (const m of source.matchAll(SPAWNER)) {
     const open = m.index! + m[1]!.length
     if (/\benv\s*:\s*gitEnv\(/.test(callText(source, open))) continue
+    const lineEnd = source.indexOf('\n', m.index)
+    const line = source.slice(
+      source.lastIndexOf('\n', m.index) + 1,
+      lineEnd === -1 ? undefined : lineEnd
+    )
+    if (line.includes('// not-a-git-spawn')) continue
     findings.push({
       line: source.slice(0, m.index).split('\n').length,
       excerpt: source.slice(m.index, m.index! + 60).split('\n')[0]!,
@@ -80,11 +87,16 @@ describe('tests that spawn git pass an env without GIT_*', () => {
 
   it('flags a bare spawn and accepts one with gitEnv', () => {
     expect(
-      findGitSpawnsWithoutCleanEnv("execFileSync('git', ['init'])")
+      findGitSpawnsWithoutCleanEnv("execFileSync('git', ['init'])") // not-a-git-spawn
     ).toHaveLength(1)
     expect(
       findGitSpawnsWithoutCleanEnv(
         "execFileSync('git', ['init'], { env: gitEnv() })"
+      )
+    ).toEqual([])
+    expect(
+      findGitSpawnsWithoutCleanEnv(
+        "`execSync('git push')`, // not-a-git-spawn: guard input"
       )
     ).toEqual([])
   })

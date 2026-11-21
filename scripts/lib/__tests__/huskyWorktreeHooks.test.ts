@@ -3,6 +3,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import * as path from 'node:path'
+import { gitEnv } from './gitEnv'
 
 /**
  * Fresh worktrees must not skip git hooks (#3124).
@@ -25,6 +26,7 @@ const HUSKY_STUB = '#!/usr/bin/env sh\n. "$(dirname "$0")/h"'
 function indexEntries(): Map<string, string> {
   const out = execFileSync('git', ['ls-files', '-s', '--', '.husky/_'], {
     cwd: root,
+    env: gitEnv(),
     encoding: 'utf-8',
   })
   const modes = new Map<string, string>()
@@ -38,6 +40,7 @@ function indexEntries(): Map<string, string> {
 function tracked(file: string): string {
   return execFileSync('git', ['show', `HEAD:${file}`], {
     cwd: root,
+    env: gitEnv(),
     encoding: 'utf-8',
   })
 }
