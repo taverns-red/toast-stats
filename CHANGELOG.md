@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.100.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.99.0...toast-stats-v2.100.0) (2026-11-21)
+
+
+### Features
+
+* **ui:** Can reinstate leads with net club growth ([#3118](https://github.com/taverns-red/toast-stats/issues/3118)) ([#3122](https://github.com/taverns-red/toast-stats/issues/3122)) ([57e4ab9](https://github.com/taverns-red/toast-stats/commit/57e4ab9b9b3582d0b018a1b8c7f0f49a4e3a089f))
+* **ui:** draft five-period reinstate window ([#3111](https://github.com/taverns-red/toast-stats/issues/3111)) ([#3114](https://github.com/taverns-red/toast-stats/issues/3114)) ([2ff2dd7](https://github.com/taverns-red/toast-stats/commit/2ff2dd77d296ffb2afa0f151177efa2497096826))
+* **ui:** whole Can reinstate row opens the club page ([#3115](https://github.com/taverns-red/toast-stats/issues/3115)) ([#3116](https://github.com/taverns-red/toast-stats/issues/3116)) ([b1e2306](https://github.com/taverns-red/toast-stats/commit/b1e2306ae5b721b4554c920670fd2ad4c6ec4ab0))
+
+
+### Bug Fixes
+
+* show a suspended club missing from analytics as suspended ([#3117](https://github.com/taverns-red/toast-stats/issues/3117)) ([#3119](https://github.com/taverns-red/toast-stats/issues/3119)) ([73e9b2f](https://github.com/taverns-red/toast-stats/commit/73e9b2f927415a24eb1b8bd8c7b6c40db60608c5))
+
 ## [2.99.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.98.0...toast-stats-v2.99.0) (2026-11-20)
 
 
