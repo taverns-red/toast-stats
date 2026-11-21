@@ -35,6 +35,7 @@ import {
   TimeSeriesIndexMetadataSchema,
 } from '@taverns-red/shared-contracts'
 import { decodeCdnJson } from './cdnSchemaCanary.js'
+import { isReportSidecar } from './reportSidecarPlan.js'
 import { summarizeZodIssues } from './zodIssueSummary.js'
 
 export interface ManifestEntry {
@@ -528,6 +529,7 @@ export async function refreshFixtures(options: {
   const outDir = resolve(options.outDir)
   const failures: string[] = []
   const unvalidated: string[] = []
+  const pendingSidecars: string[] = []
   const report = (date: string, written = 0, bytes = 0): RefreshReport => ({
     ok: failures.length === 0,
     date,
@@ -535,6 +537,7 @@ export async function refreshFixtures(options: {
     bytes,
     failures,
     unvalidated,
+    pendingSidecars: pendingSidecars.sort(),
   })
 
   // One fetch per object, whoever asks first (the roles and the entries).
@@ -611,7 +614,17 @@ export async function refreshFixtures(options: {
       )
       return
     }
-    if (res.status !== 200 && !(entry.optional && res.status === 404)) {
+    const pending =
+      res.status === 404 &&
+      !entry.optional &&
+      isReportSidecar(entry.path) &&
+      entry.path.startsWith(`snapshots/${date}/`)
+    if (pending) pendingSidecars.push(entry.path)
+    if (
+      res.status !== 200 &&
+      !(entry.optional && res.status === 404) &&
+      !pending
+    ) {
       failures.push(`${entry.path}: HTTP ${res.status}`)
       return
     }
@@ -646,6 +659,12 @@ export function formatReport(report: RefreshReport): string {
     `${report.ok ? 'OK' : 'FAILED'}: ${report.written} objects, ${kb} KiB, snapshot ${report.date}`,
   ]
   for (const f of report.failures) lines.push(`  fail  ${f}`)
+  if (report.pendingSidecars && report.pendingSidecars.length > 0) {
+    lines.push(
+      `${report.pendingSidecars.length} report sidecar(s) of the newest date are not written yet (the daily reports job is still running); recorded as 404, like the CDN serves them:`
+    )
+    for (const p of report.pendingSidecars) lines.push(`  ${p}`)
+  }
   if (report.unvalidated.length > 0) {
     lines.push(
       `${report.unvalidated.length} JSON object(s) have no schema rule (unvalidated):`
