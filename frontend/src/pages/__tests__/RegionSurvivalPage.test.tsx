@@ -116,12 +116,14 @@ describe('RegionSurvivalPage (#1818)', () => {
     expect(screen.queryByText('0%')).not.toBeInTheDocument()
   })
 
-  it('says it could not load on a server error', async () => {
+  it('shows the shared error panel with Try again on a server error', async () => {
     mocked.mockRejectedValue(new Error('503'))
     renderAt('/region/09/growth/survival')
-    expect(
-      await screen.findByTestId('survival-not-available')
-    ).toHaveTextContent(/could not be loaded/i)
+    expect(await screen.findByTestId('survival-error')).toHaveTextContent(
+      /couldn't load the club survival for Region 09/i
+    )
+    expect(screen.getByRole('button', { name: /try again/i })).toBeVisible()
+    expect(screen.queryByTestId('survival-not-available')).toBeNull()
   })
 })
 

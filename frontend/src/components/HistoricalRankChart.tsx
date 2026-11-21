@@ -40,6 +40,8 @@ interface HistoricalRankChartProps {
   isLoading: boolean
   isError: boolean
   error?: Error | null
+  /** Try again on the error panel; omitted, the panel has no button. */
+  onRetry?: () => void
   /** Override program year label (prevents stale label from cached data) */
   selectedProgramYear?: {
     year: string | number
@@ -123,6 +125,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   isLoading,
   isError,
   error,
+  onRetry,
   selectedProgramYear,
 }) => {
   const [selectedMetric, setSelectedMetric] = useState<RankMetric>('aggregate')
@@ -148,7 +151,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   }
 
   if (isError) {
-    return <HistoricalRankChartError error={error} />
+    return <HistoricalRankChartError error={error} onRetry={onRetry} />
   }
 
   if (!data || data.length === 0) {

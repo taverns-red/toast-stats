@@ -16,7 +16,16 @@ import { dirname, join, relative, resolve } from 'node:path'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const src = resolve(__dirname, '..')
 
-const ALLOWED: Record<string, string> = {}
+const ALLOWED: Record<string, string> = {
+  'components/ColumnsMenu.tsx':
+    'One status line inside an open menu, where a panel does not fit. It tells the reader how to retry.',
+  'components/EndOfYearRankingsPanel.tsx':
+    'A one-line note in a stat-card section. The panel gets rankings=null with no error or retry, so absent and failed look alike.',
+  'components/LandingSearch.tsx':
+    'A status line inside the search popup, with its own Retry button. A panel does not fit the popup.',
+  'components/ProgramYearSelector.tsx':
+    'A message inside a compact dropdown control. A panel does not fit the control.',
+}
 
 const LOAD_FAILURE =
   /(couldn[’']t|could not|unable to|failed to|can[’']t|cannot) (be )?(load|fetch)/i

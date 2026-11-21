@@ -82,7 +82,7 @@ export const ProgramYearSummaryCards: React.FC<
   if (isError) {
     return (
       <ErrorDisplay
-        error="Failed to fetch"
+        error="Request failed"
         title="Could not load year-end standings"
         subject="the year-end standings"
         {...(onRetry ? { onRetry } : {})}

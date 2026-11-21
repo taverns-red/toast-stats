@@ -79,7 +79,6 @@ export function useGlobalClubsByCountry(
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
-    retry: failureCount => failureCount < 2,
   })
 
   return {

@@ -22,6 +22,8 @@ import { CLUB_DISTRICT_HISTORY_STALE_MS } from './clubDistrictHistoryQuery'
 export interface CharterCohortSurvivalRollupState {
   status: 'loading' | 'ready' | 'not-available' | 'error'
   survival: CharterCohortSurvivalRollup | null
+  /** Re-run a failed load (Try again). Absent when there is nothing to retry. */
+  refetch?: () => void
 }
 
 export function useCharterCohortSurvivalRollup(
@@ -41,7 +43,13 @@ export function useCharterCohortSurvivalRollup(
   const file = query.data
   return useMemo((): CharterCohortSurvivalRollupState => {
     if (!valid) return { status: 'not-available', survival: null }
-    if (query.isError) return { status: 'error', survival: null }
+    if (query.isError) {
+      return {
+        status: 'error',
+        survival: null,
+        refetch: () => void query.refetch(),
+      }
+    }
     if (file === null) return { status: 'not-available', survival: null }
     if (!file || !throughProgramYear) {
       return { status: 'loading', survival: null }
@@ -50,5 +58,5 @@ export function useCharterCohortSurvivalRollup(
       status: 'ready',
       survival: charterCohortSurvivalFromRollupFile(file, throughProgramYear),
     }
-  }, [valid, file, query.isError, throughProgramYear])
+  }, [valid, file, query.isError, query.refetch, throughProgramYear])
 }

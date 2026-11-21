@@ -523,7 +523,7 @@ const RegionMapPage: React.FC = () => {
   else if (isError)
     body = (
       <ErrorDisplay
-        error="Failed to fetch"
+        error="Request failed"
         title="Could not load the region map"
         subject="the region's clubs"
         onRetry={refetch}

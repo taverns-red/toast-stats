@@ -132,7 +132,7 @@ const RankingsChangesPage: React.FC = () => {
         {!invalidPair && !pair.isLoading && pair.isError && (
           <div data-testid="changes-error">
             <ErrorDisplay
-              error="Failed to fetch"
+              error="Request failed"
               title="Could not load what changed"
               subject="the rankings for these dates"
               onRetry={pair.refetch}

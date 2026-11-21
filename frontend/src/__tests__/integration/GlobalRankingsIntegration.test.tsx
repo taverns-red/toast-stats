@@ -481,9 +481,9 @@ describe('GlobalRankingsIntegration', () => {
       renderWithProviders(<GlobalRankingsTab {...baseProps} />)
 
       // Verify error message is displayed
-      expect(screen.getByText('Unable to Load Rankings')).toBeInTheDocument()
+      expect(screen.getByText('Could not load rankings')).toBeInTheDocument()
       expect(
-        screen.getByText('Network error: Failed to fetch ranking data')
+        screen.getByText(/couldn't load the global rankings/i)
       ).toBeInTheDocument()
     })
 
@@ -564,10 +564,11 @@ describe('GlobalRankingsIntegration', () => {
 
       renderWithProviders(<GlobalRankingsTab {...baseProps} />)
 
-      // Verify the custom error message is displayed
+      // The raw API text stays out of sight; the panel names what failed.
       expect(
-        screen.getByText('Custom API error: Rate limit exceeded')
+        screen.getByText(/couldn't load the global rankings/i)
       ).toBeInTheDocument()
+      expect(screen.queryByText(/Rate limit exceeded/)).toBeNull()
     })
 
     it('should have accessible error state with proper ARIA attributes', async () => {
@@ -587,7 +588,6 @@ describe('GlobalRankingsIntegration', () => {
       // Verify accessibility attributes
       const errorAlert = screen.getByRole('alert')
       expect(errorAlert).toBeInTheDocument()
-      expect(errorAlert).toHaveAttribute('aria-live', 'polite')
     })
 
     it('should handle empty data gracefully', async () => {
@@ -623,11 +623,9 @@ describe('GlobalRankingsIntegration', () => {
 
       renderWithProviders(<GlobalRankingsTab {...baseProps} />)
 
-      expect(screen.getByText('Unable to Load Rankings')).toBeInTheDocument()
+      expect(screen.getByText('Could not load rankings')).toBeInTheDocument()
       expect(
-        screen.getByText(
-          /An error occurred while loading the global rankings data/
-        )
+        screen.getByText(/couldn't load the global rankings/i)
       ).toBeInTheDocument()
     })
 
@@ -649,7 +647,7 @@ describe('GlobalRankingsIntegration', () => {
       )
 
       // Verify error state
-      expect(screen.getByText('Unable to Load Rankings')).toBeInTheDocument()
+      expect(screen.getByText('Could not load rankings')).toBeInTheDocument()
 
       // Click retry
       const retryButton = screen.getByRole('button', { name: /retry/i })

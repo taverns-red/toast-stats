@@ -160,7 +160,7 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
           data-testid="worldwide-scoreboard-error"
         >
           <ErrorDisplay
-            error="Failed to fetch"
+            error="Request failed"
             title="Could not load the worldwide series"
             subject="the worldwide series"
             {...(onRetryHistory ? { onRetry: onRetryHistory } : {})}
@@ -384,7 +384,7 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
               data-testid="wws-country-error"
             >
               <ErrorDisplay
-                error="Failed to fetch"
+                error="Request failed"
                 title="Could not load clubs by country"
                 subject="clubs by country"
                 {...(onRetryCountry ? { onRetry: onRetryCountry } : {})}

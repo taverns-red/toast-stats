@@ -58,6 +58,7 @@ const WorldCountriesPage: React.FC = () => {
 
   const [geometry, setGeometry] = useState<WorldGeometry | null>(null)
   const [geometryError, setGeometryError] = useState(false)
+  const [geometryAttempt, setGeometryAttempt] = useState(0)
   useEffect(() => {
     let live = true
     loadWorldGeometry().then(
@@ -67,7 +68,7 @@ const WorldCountriesPage: React.FC = () => {
     return () => {
       live = false
     }
-  }, [])
+  }, [geometryAttempt])
 
   // Before the geometry arrives every country counts as placeable, so the
   // summary never flashes a "can't be placed" note that then disappears.
@@ -183,9 +184,15 @@ const WorldCountriesPage: React.FC = () => {
                 onSelect={select}
               />
             ) : geometryError ? (
-              <div className="wm-unavailable" role="status">
-                The map is not showing. The table has every value.
-              </div>
+              <ErrorDisplay
+                error="Request failed"
+                title="Could not load the map"
+                subject="the map"
+                onRetry={() => {
+                  setGeometryError(false)
+                  setGeometryAttempt(n => n + 1)
+                }}
+              />
             ) : (
               <div
                 className="wm-skeleton"

@@ -3,6 +3,7 @@ import type { CharterCohortSurvivalRollupState } from '../../hooks/useCharterCoh
 import type { CharterCohortSurvivalScope } from '../../utils/charterCohortSurvival'
 import { CharterSurvivalView } from '../CharterSurvivalView'
 import { LoadingSkeleton } from '../LoadingSkeleton'
+import { ErrorDisplay } from '../ErrorDisplay'
 
 /* The body of `/region/:n/growth/survival` and `/regions/growth/survival`
    (#1818): the shared survival view once the file is in, and an honest
@@ -29,13 +30,18 @@ export const RollupSurvivalBody: React.FC<{
   }
   if (state.status === 'error') {
     return (
-      <p
-        className="rollup-page__empty"
-        role="status"
-        data-testid="survival-not-available"
-      >
-        {name} club survival could not be loaded right now. Try again later.
-      </p>
+      <div data-testid="survival-error">
+        <ErrorDisplay
+          error="Request failed"
+          title="Could not load club survival"
+          subject={
+            scope.kind === 'world'
+              ? 'the worldwide club survival'
+              : `the club survival for ${name}`
+          }
+          {...(state.refetch ? { onRetry: state.refetch } : {})}
+        />
+      </div>
     )
   }
   if (!state.survival) {
