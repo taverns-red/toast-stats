@@ -215,6 +215,16 @@ describe('ReinstatableClubsSection', () => {
       )
     })
 
+    it('says "it" in the group note when the group has one closed club (#3130)', () => {
+      const oneClosed = d61.filter(c => c.status === 'closed').slice(0, 1)
+      renderSection([...d61.filter(c => c.status !== 'closed'), ...oneClosed])
+      const rest = screen.getByTestId('growth-reinstate-rest')
+      expect(rest).toHaveTextContent(
+        'Closed. The FAQ says closed clubs “will not increase the club base”. So reinstating it adds to net club growth.'
+      )
+      expect(rest).not.toHaveTextContent('any of them')
+    })
+
     it('prints nothing about an oldest period, even from an older file that flags one (#3103)', () => {
       // Five periods now (Ron, 2026-11-20); files written before #3103
       // still set oldestPeriod on 9 of these rows.
@@ -703,8 +713,8 @@ describe('ReinstatableClubsSection', () => {
           lastSeen: '2026-06-30',
         },
         tag: DOESNT,
-        // The group note says it (#3130); the row's own Why stays empty.
-        why: 'Closed. The FAQ says closed clubs “will not increase the club base”. So reinstating any of them adds to net club growth.',
+        // The group note says it (#3130): one closed club reads "it".
+        why: 'Closed. The FAQ says closed clubs “will not increase the club base”. So reinstating it adds to net club growth.',
       },
     }
 
@@ -859,7 +869,7 @@ describe('reinstateCard', () => {
     expect(reinstateCard(d61, '2026-11-18')).toBe('19 add to net club growth')
   })
 
-  it('counts a club the pipeline says doesn’t raise the base (#3103, #3130)', () => {
+  it('counts an unknown effect toward net club growth (#3103, #3130)', () => {
     expect(reinstateCard(d51, '2026-11-18')).toBe('1 adds to net club growth')
   })
 

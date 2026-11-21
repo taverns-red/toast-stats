@@ -27,13 +27,13 @@ export interface ReinstateDistrictRow {
   to: string
   suspended: number
   closed: number
-  adds: number
+  netGrowth: number
   total: number
 }
 
 export interface RollupReinstate {
   count: number
-  adds: number
+  netGrowth: number
   /** The card's third line, e.g. "12 add to net club growth" (#3130). */
   card: string
   rows: ReinstateDistrictRow[]
@@ -82,16 +82,17 @@ export function buildRollupReinstate({
       to: `/district/${id}/growth${qs}#growth-reinstate`,
       suspended: clubs.length - closed,
       closed,
-      adds: reinstateSplit(clubs, date).adds,
+      netGrowth: reinstateSplit(clubs, date).adds,
       total: clubs.length,
     })
   }
   rows.sort(
-    (a, b) => b.adds - a.adds || b.total - a.total || byDistrictId(a.id, b.id)
+    (a, b) =>
+      b.netGrowth - a.netGrowth || b.total - a.total || byDistrictId(a.id, b.id)
   )
   return {
     count: inScope.length,
-    adds: reinstateSplit(inScope, date).adds,
+    netGrowth: reinstateSplit(inScope, date).adds,
     card: reinstateCard(inScope, date),
     rows,
   }

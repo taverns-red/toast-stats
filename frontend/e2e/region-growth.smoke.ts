@@ -6,6 +6,7 @@ import {
   assertTiRenewalsLinks,
   withoutTiRenewalsContact,
 } from './helpers/tiRenewalsContact'
+import { addsToThisYearsBase } from '../src/utils/reinstateDeadline'
 
 /* Region and world Club Growth funnels (#1812, #1813) — measured on the
  * deployed preview (BASE_URL) at 375, 768 and 1280, light and dark.
@@ -24,6 +25,24 @@ const REGION = '/region/05/growth'
 const WORLD = '/regions/growth'
 const STAGES = ['prospective', 'chartered', 'coached', 'suspended'] as const
 
+/** The date the page last asked the reinstate file for (it is re-dated). */
+let servedReinstateDate = ''
+
+type RecordedClub = { reason: string; addsToBase: boolean }
+
+/** #3130 — the card's n, by the app's own rule on the served date: the
+ *  clubs that don't raise this year's club base. Computed, not hard-coded,
+ *  because the recorded clubs stop raising the base after March 31. */
+function netGrowthIn(districtIds: readonly string[], date: string): number {
+  const districts = reinstatable.districts as unknown as Record<
+    string,
+    RecordedClub[]
+  >
+  return districtIds
+    .flatMap(id => districts[id] ?? [])
+    .filter(c => !addsToThisYearsBase(c.reason, c.addsToBase, date)).length
+}
+
 async function serve(
   page: Page,
   files: {
@@ -34,6 +53,7 @@ async function serve(
 ): Promise<void> {
   await page.route('**/snapshots/*/reinstatable-clubs.json', r => {
     const date = /snapshots\/([^/]+)\//.exec(r.request().url())?.[1] ?? ''
+    servedReinstateDate = date
     return files.reinstate === false
       ? r.fulfill({
           status: 404,
@@ -122,11 +142,15 @@ for (const [label, url, child] of [
         // world adds District 51 (1).
         const card = page.getByTestId('growth-stage-reinstate')
         await expect(card).toContainText(label === 'region' ? '22' : '23')
-        // #3130: the clubs that add to net club growth (19 + D51's 1).
-        await expect(card).toContainText(
+        // #3130: the clubs that add to net club growth, by the app's rule.
+        const n = netGrowthIn(
           label === 'region'
-            ? '19 add to net club growth'
-            : '20 add to net club growth'
+            ? ['61']
+            : Object.keys(reinstatable.districts).filter(id => id !== 'U'),
+          servedReinstateDate
+        )
+        await expect(card).toContainText(
+          `${n} ${n === 1 ? 'adds' : 'add'} to net club growth`
         )
         await expect(
           page
@@ -155,7 +179,7 @@ for (const [label, url, child] of [
           expect(clipped).toBe(0)
           await expect(
             page.locator('#growth-reinstate .mobile-row__title').first()
-          ).toContainText(/District \w+ — \d+ adds? to the club base/)
+          ).toContainText(/District \w+ — \d+ adds? to net club growth/)
         }
 
         // Every stage drills down to the level below, at the same stage.

@@ -35,7 +35,7 @@ const funnel = buildRollupGrowthFunnel({
 
 const reinstate: RollupReinstate = {
   count: 7,
-  adds: 3,
+  netGrowth: 4,
   card: '4 add to net club growth',
   rows: [
     {
@@ -44,7 +44,7 @@ const reinstate: RollupReinstate = {
       to: '/district/61/growth#growth-reinstate',
       suspended: 3,
       closed: 2,
-      adds: 3,
+      netGrowth: 2,
       total: 5,
     },
     {
@@ -53,7 +53,7 @@ const reinstate: RollupReinstate = {
       to: '/district/86/growth#growth-reinstate',
       suspended: 0,
       closed: 2,
-      adds: 0,
+      netGrowth: 2,
       total: 2,
     },
   ],
@@ -114,12 +114,12 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
       'District',
       'Suspended',
       'Closed',
-      'Adds to the club base',
+      'Adds to net club growth',
     ])
     const rows = within(table).getAllByRole('row').slice(1)
     expect(rows.map(r => r.textContent)).toEqual([
-      'District 61323',
-      'District 86020',
+      'District 61322',
+      'District 86022',
     ])
     expect(
       within(table).getByRole('link', { name: 'District 61' })
@@ -132,7 +132,8 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     expect(section).toHaveTextContent(
       'Toastmasters International makes the final call.'
     )
-    expect(section).toHaveTextContent('3 of 7 add to the club base.')
+    // #3130: the same n as the card.
+    expect(section).toHaveTextContent('4 of 7 add to net club growth.')
     // Ron's approved intro (2026-11-20, #3103), the same as the district's.
     expect(section).toHaveTextContent(
       'A suspended or closed club can reinstate until the end of its fifth renewal period, counting the period it was suspended in. Toastmasters International makes the final call.'
@@ -169,7 +170,7 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     const table = screen.getByTestId('rollup-growth-reinstate-table')
     expect(
       within(table).getByRole('columnheader', {
-        name: 'Adds to the club base',
+        name: 'Adds to net club growth',
       })
     ).toBeInTheDocument()
     expect(document.getElementById('growth-reinstate')).not.toHaveTextContent(
@@ -181,7 +182,7 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     renderView({
       ...reinstate,
       count: 0,
-      adds: 0,
+      netGrowth: 0,
       card: '0 add to net club growth',
       rows: [],
     })
@@ -193,27 +194,48 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     expect(screen.queryByTestId('rollup-growth-reinstate-table')).toBeNull()
   })
 
-  it('on a phone: rows lead with the sort key, adds, and give every count', () => {
+  it('on a phone: rows lead with the sort key, net club growth, and give every count', () => {
     mobile.value = true
     renderView(reinstate)
     const section = document.getElementById('growth-reinstate')!
     expect(within(section).queryByRole('table')).toBeNull()
     const row = within(section).getByRole('link', {
-      name: 'District 61: 3 add to the club base, 5 can reinstate, 3 suspended, 2 closed',
+      name: 'District 61: 2 add to net club growth, 5 can reinstate, 3 suspended, 2 closed',
     })
     expect(row).toHaveAttribute('href', '/district/61/growth#growth-reinstate')
     expect(row.querySelector('.mobile-row__title')).toHaveTextContent(
-      'District 61 — 3 add to the club base'
+      'District 61 — 2 add to net club growth'
     )
     expect(row.querySelector('.mobile-row__meta')).toHaveTextContent(
       '5 can reinstate · 3 suspended · 2 closed'
     )
-    // The large number is the sort key (adds), never the total.
+    // The large number is the sort key (net club growth), never the total.
     expect(row.querySelector('.mobile-row__chip')).toBeNull()
     // The CSS hook that lets the row wrap instead of clipping.
     expect(section.querySelector('.rollup-reinstate__rows')).toContainElement(
       row
     )
+  })
+
+  it('one club: the phone row and the split say "1 adds to net club growth" (#3130)', () => {
+    mobile.value = true
+    renderView({
+      ...reinstate,
+      count: 1,
+      netGrowth: 1,
+      card: '1 adds to net club growth',
+      rows: [{ ...reinstate.rows[1]!, closed: 1, netGrowth: 1, total: 1 }],
+    })
+    const section = document.getElementById('growth-reinstate')!
+    const row = within(section).getByRole('link', {
+      name: 'District 86: 1 adds to net club growth, 1 can reinstate, 0 suspended, 1 closed',
+    })
+    expect(row.querySelector('.mobile-row__title')).toHaveTextContent(
+      'District 86 — 1 adds to net club growth'
+    )
+    expect(
+      screen.getByTestId('rollup-growth-reinstate-split')
+    ).toHaveTextContent('1 of 1 adds to net club growth.')
   })
 
   it('never mentions an unknown effect on the club base, on a desktop or a phone (#3103)', () => {

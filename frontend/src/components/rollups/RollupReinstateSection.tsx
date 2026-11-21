@@ -46,7 +46,7 @@ function columns(base: string): ActionTableColumn<ReinstateDistrictRow>[] {
       key: 'adds',
       header: `Adds to ${base}`,
       className: 'growth-table__num',
-      cell: r => n(r.adds),
+      cell: r => n(r.netGrowth),
     },
   ]
 }
@@ -64,9 +64,9 @@ function mobileRow(base: string) {
     return {
       id: r.id,
       to: r.to,
-      title: `${r.label} — ${addsText(r.adds, base)}`,
+      title: `${r.label} — ${addsText(r.netGrowth, base)}`,
       meta: details.join(' · '),
-      ariaLabel: `${r.label}: ${[addsText(r.adds, base), ...details].join(', ')}`,
+      ariaLabel: `${r.label}: ${[addsText(r.netGrowth, base), ...details].join(', ')}`,
     }
   }
 }
@@ -76,7 +76,7 @@ export function RollupReinstateSection({
 }: {
   reinstate: RollupReinstate
 }) {
-  const { count, adds, rows } = reinstate
+  const { count, netGrowth, rows } = reinstate
   // Always this year's club base (Ron, 2026-11-20).
   const base = 'the club base'
   return (
@@ -91,7 +91,8 @@ export function RollupReinstateSection({
           className="growth-stage__note"
           data-testid="rollup-growth-reinstate-split"
         >
-          {n(adds)} of {n(count)} {adds === 1 ? 'adds' : 'add'} to {base}.
+          {n(netGrowth)} of {n(count)} {netGrowth === 1 ? 'adds' : 'add'} to{' '}
+          {base}.
         </p>
       )}
       <ReinstatementRequirements />
