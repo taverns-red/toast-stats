@@ -1870,7 +1870,9 @@
      column is absent from the DOM, so there is no per-column display rule. The
      sticky header follows the PAGE (data-table.css), so from 768px nothing
      between the table and the page may clip. Below 768px the phone card list
-     has no sticky header, so the wrap keeps its rounded clip. Pinned by
+     has no sticky header, so the wrap keeps the base overflow: hidden and
+     clips its content to the rounded corners. Nothing with a popover may sit
+     inside it there (the methodology tooltip sits above it). Pinned by
      rankingsGrowthContrast.test.ts. */
   @media (min-width: 768px) {
     .districts-rankings-table-wrap--dt {
@@ -1898,8 +1900,8 @@
     color: var(--red-600);
   }
 
-  /* Dark --red-600 is 4.42:1 on the raised surface; --red-500 is the lifted
-     red there. */
+  /* Dark --red-600 is 4.42:1 on --surface-2 and 4.21:1 on the row-hover
+     surface; --red-500 is the lifted red there. */
   [data-theme='dark'] .rankings-growth--down {
     color: var(--red-500);
   }

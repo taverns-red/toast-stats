@@ -1600,20 +1600,21 @@ const DistrictsPage: React.FC = () => {
             rather than a placeholder that could drift (#1359). */}
         <RecognitionLegend />
 
+        {/* Methodology affordance: one visible "i" beside a quiet "About these
+            metrics" label. On phones it sits above the card, because the
+            card clips its content and the tooltip opens upward without a
+            portal; at 768px and up it lives in the table toolbar. Pinned by
+            rankingsGrowthContrast.test.ts. */}
+        {isMobile && (
+          <div className="flex items-center justify-end mb-2 px-2">
+            {aboutMetrics}
+          </div>
+        )}
+
         {/* Rankings Table */}
         <div className="districts-rankings-table-wrap districts-rankings-table-wrap--dt">
           {/* #2249 — the table keeps the name the page used to carry as H1. */}
           <h2 className="districts-rankings-title">District Rankings</h2>
-          {/* Methodology affordance — single visible "i" beside a quiet
-              "About these metrics" label, replacing the four per-column
-              tooltips that used to wrap the header row (#546). Kept
-              outside the table so its focus ring is visible to keyboard
-              users (Lesson 58 / WCAG 2.4.7). */}
-          {isMobile && (
-            <div className="flex items-center justify-end mb-2 px-2">
-              {aboutMetrics}
-            </div>
-          )}
           {/* A LEADERBOARD keeps the table (its value is comparing districts
               across rows; a card collapse would destroy that). Which columns
               show is a choice, not CSS (#2689): the width picks the default
