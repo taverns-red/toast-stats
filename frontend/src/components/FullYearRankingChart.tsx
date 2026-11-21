@@ -254,7 +254,7 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
               className="flex items-center justify-center"
               style={{ height: PLOT_HEIGHT }}
             >
-              <p className="text-base text-gray-600 font-tm-body text-center">
+              <p className="text-base text-[var(--ink-2)] font-tm-body text-center">
                 {ALL_TIED_MESSAGE}
               </p>
             </div>
