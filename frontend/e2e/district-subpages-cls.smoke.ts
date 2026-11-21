@@ -1,4 +1,4 @@
-import { test, expect, type Page } from './fixtures/test'
+import { test, expect, type Page, type Route } from './fixtures/test'
 import { reportCls } from './helpers/clsReport'
 
 /* CLS budget for the routed district subpages `/district/:id/*` (#1837).
@@ -223,9 +223,9 @@ test.describe('district subpages CLS on a throttled cold load (#1837)', () => {
  * the final sentence was one line shorter and the controls and sections moved
  * up ~21px (CLS ~0.01) once the skeleton dropped. That is far inside the 0.1
  * budget above, so this asserts the cause: the reserve is one set of clauses
- * for its whole life, and it is the set the final sentence names. (Heights
- * are not compared: a web-font swap moves the intro at its own moment, for
- * reserve and final alike.) 2026-10-24 sits between officer-training rounds. */
+ * for its whole life, and it is the set the final sentence names. The font
+ * swap is checked separately below (#2922). 2026-10-24 sits between
+ * officer-training rounds. */
 test.describe('Action List intro off-season, cold load (#2830)', () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
@@ -286,6 +286,82 @@ test.describe('Action List intro off-season, cold load (#2830)', () => {
         intro.reserved[0],
         `The reserve names other clauses than the final sentence on ${page.url()}`
       ).toBe(intro.final)
+    })
+  }
+})
+
+/* The Action List intro across the web-font swap (#2922). When the swap lands
+ * is a race, so the woff2 requests are held until the page settles on the
+ * fallback faces, then released. Its old `max-width: 60ch` narrowed from
+ * 438.8px to 417.5px at the swap and moved the controls down 21px (1280). At
+ * 375 the column is narrower than the measure, so that case is a guard. */
+test.describe('Action List intro across the web-font swap (#2922)', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'measured in Chromium, like the CLS budgets above'
+  )
+
+  const introGeometry = (page: Page) =>
+    page.evaluate(() => {
+      const box = (sel: string) =>
+        document.querySelector(sel)?.getBoundingClientRect()
+      const intro = box('.action-list-page__subtitle')
+      return {
+        introW: Math.round(intro?.width ?? -1),
+        introH: Math.round(intro?.height ?? -1),
+        controlsY: Math.round(box('.action-list-page__controls')?.y ?? -1),
+      }
+    })
+
+  for (const vp of VIEWPORTS) {
+    test(`/district/61/action-list?date=2026-10-24 at ${vp.width}px keeps the controls in place when the fonts swap in`, async ({
+      page,
+    }) => {
+      test.setTimeout(180_000)
+      await page.setViewportSize({ width: vp.width, height: vp.height })
+      const held: Route[] = []
+      await page.route('**/*.woff2', route => {
+        held.push(route)
+      })
+      await page.goto('/district/61/action-list?date=2026-10-24', {
+        waitUntil: 'domcontentloaded',
+        timeout: 120_000,
+      })
+      await page
+        .locator(
+          '.action-list-page__subtitle:not(.action-list-page__subtitle--reserved)'
+        )
+        .waitFor({ state: 'visible', timeout: 120_000 })
+      await page.waitForFunction(
+        sel => document.querySelector(sel) === null,
+        PENDING_SELECTOR,
+        { timeout: 120_000 }
+      )
+      // The settle measureCls uses. Not networkidle: the held fonts are
+      // in-flight requests, so the page never goes idle until they are freed.
+      await page.waitForTimeout(3_000)
+      expect(
+        held.some(route => route.request().url().includes('source-sans-3')),
+        'the page requested no Source Sans 3 woff2'
+      ).toBe(true)
+      const fallback = await introGeometry(page)
+
+      await page.unroute('**/*.woff2')
+      await Promise.all(held.map(route => route.fallback()))
+      const loaded = await page.evaluate(async () => {
+        const faces = await document.fonts.load('400 14px "Source Sans 3"', 'a')
+        await document.fonts.ready
+        await new Promise(r => requestAnimationFrame(() => r(null)))
+        await new Promise(r => requestAnimationFrame(() => r(null)))
+        return faces.filter(f => f.status === 'loaded').length
+      })
+      expect(loaded, 'Source Sans 3 never loaded').toBeGreaterThan(0)
+      const swapped = await introGeometry(page)
+
+      expect(
+        swapped,
+        `The intro or controls moved at the font swap on ${page.url()}`
+      ).toEqual(fallback)
     })
   }
 })

@@ -18,7 +18,11 @@
   margin-top: 0.25rem;
   font-size: 0.875rem;
   color: var(--ink-3);
-  max-width: 60ch;
+  /* 60 "0"s of Source Sans 3 at weight 400, the intro's weight (60 x 0.497em;
+     500 is 0.505em, 700 is 0.528em). A ch width follows the current font's
+     "0", so it narrowed at the web-font swap and re-wrapped the intro.
+     Enforced by fontIndependentWidths.test.ts. */
+  max-width: 29.82em;
 }
 
 /* #2511 — holds the longest intro sentence's lines while the section order is
