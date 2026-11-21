@@ -1066,11 +1066,12 @@ describe('DistrictClubsPage states (#2676)', () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useDistrictCachedDates>)
 
-    // 2025-07-10 has no snapshot; the page resolves to one that does (#2635).
+    // 2025-07-10 has no snapshot, so the page shows the nearest earlier one
+    // (resolveRequestedDate, #2635): Jul 1, not the later Jul 15.
     renderAt('/district/61/clubs?date=2025-07-10')
 
     await screen.findByText(/alpha toastmasters/i)
     const line = screen.getByText(/^Clubs as of /)
-    expect(line.textContent).toMatch(/^Clubs as of Jul (1|15), 2025$/)
+    expect(line.textContent).toBe('Clubs as of Jul 1, 2025')
   })
 })
