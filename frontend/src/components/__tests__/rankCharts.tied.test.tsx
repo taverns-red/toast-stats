@@ -362,3 +362,83 @@ describe('Tie explanations (#3151)', () => {
     )
   })
 })
+
+describe('HistoricalRankChart when every date is tied (#3157)', () => {
+  const message = 'Every district has the same value so far.'
+  const allTiedData = [
+    history('61', [
+      point('2026-07-15', 1, { distinguishedTied: true }),
+      point('2026-07-22', 1, { distinguishedTied: true }),
+    ]),
+    history('49', [
+      point('2026-07-15', 1, { distinguishedTied: true }),
+      point('2026-07-22', 1, { distinguishedTied: true }),
+    ]),
+  ]
+
+  it('says every district has the same value, at the plot height', () => {
+    render(
+      <HistoricalRankChart
+        data={allTiedData}
+        isLoading={false}
+        isError={false}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Distinguished' }))
+
+    expect(screen.getByText(message)).toBeInTheDocument()
+    expect(
+      screen.getByRole('img', {
+        name: /Every district has the same value so far\./,
+      })
+    ).toBeInTheDocument()
+    expect(screen.getByText(message).parentElement).toHaveStyle({
+      height: '400px',
+    })
+  })
+
+  it('shows no tap hint on a phone when every date is tied', () => {
+    media.touch = true
+    render(
+      <HistoricalRankChart
+        data={allTiedData}
+        isLoading={false}
+        isError={false}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Distinguished' }))
+
+    expect(screen.getByTestId('chart-readout')).not.toHaveTextContent(
+      'Tap the chart'
+    )
+  })
+
+  it('keeps drawing the Overall Score, which is a score, not a rank', () => {
+    render(
+      <HistoricalRankChart
+        data={allTiedData}
+        isLoading={false}
+        isError={false}
+      />
+    )
+    expect(screen.queryByText(message)).not.toBeInTheDocument()
+    expect(plotted().map(p => p['61'])).toEqual([100, 100])
+  })
+
+  it('draws the plot when one district is ranked on one date', () => {
+    const data = [
+      allTiedData[0]!,
+      history('49', [
+        point('2026-07-15', 1, { distinguishedTied: true }),
+        point('2026-07-22', 3),
+      ]),
+    ]
+    render(
+      <HistoricalRankChart data={data} isLoading={false} isError={false} />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Distinguished' }))
+
+    expect(screen.queryByText(message)).not.toBeInTheDocument()
+    expect(screen.getByTestId('line-chart')).toBeInTheDocument()
+  })
+})
