@@ -347,4 +347,31 @@ describe('DistrictDivisionsPage (#571 — Phase 3)', () => {
       if (restoreStats) statsMock.mockImplementation(restoreStats)
     }
   })
+
+  // The third branch (#2793): the snapshot read failed, so nothing is
+  // pending. The criteria still help, and no reserve holds empty space.
+  it('shows the criteria and no reserve once the snapshot read has failed', async () => {
+    const statsMock = vi.mocked(useDistrictStatistics)
+    const restoreStats = statsMock.getMockImplementation()
+    statsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isPending: false,
+      isError: true,
+    } as unknown as ReturnType<typeof useDistrictStatistics>)
+    try {
+      renderAt('/district/61/divisions')
+      expect(
+        await screen.findByTestId('ddp-criteria-explainer')
+      ).toBeInTheDocument()
+      expect(screen.getByTestId('division-performance-cards')).toHaveAttribute(
+        'data-loading',
+        'false'
+      )
+      expect(screen.queryByTestId('divisions-below-reserve')).toBeNull()
+      expect(screen.queryByTestId('division-area-recognition-panel')).toBeNull()
+    } finally {
+      if (restoreStats) statsMock.mockImplementation(restoreStats)
+    }
+  })
 })

@@ -137,25 +137,23 @@
   white-space: nowrap;
 }
 
-/* Area table: cells hold one line, except the count columns below; only the
-   headers wrap. */
+/* Area table: cells hold one line (badges included, #2718); only the
+   headers and "+N qualifying today" wrap. */
 .entity-table--areas td {
   white-space: nowrap;
 }
 
-/* The two columns the published counts fill have a set width, shared by
-   their placeholders and their content, so nothing re-flows when the counts
-   land (#2793; pinned by countPlaceholderBox.test.tsx, measured by
-   district-subpages-cls.smoke.ts). In em so they scale with the text.
-   "+N qualifying today" and a long recognition label wrap inside the column
-   instead of widening it; the three-line visit cells make the row taller
-   than either, so the row height holds too. */
+/* Count columns: one em width for placeholder and content, so nothing
+   re-flows when the counts land (#2793; countPlaceholderBox.test.tsx,
+   district-subpages-cls.smoke.ts). Recognition fits the longest badge,
+   "President's Distinguished (Provisional)", plus its info button on one
+   line (280px at 14px). */
 .entity-table--areas .entity-table__dist {
   width: 10em;
 }
 
 .entity-table--areas .entity-table__recognition {
-  width: 15em;
+  width: 21em;
 }
 
 .entity-table__pending {
@@ -173,12 +171,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  max-width: 100%;
 }
 
 .entity-table__badge {
-  min-width: 0;
-  white-space: normal;
+  white-space: nowrap;
 }
 
 /* ── Criteria reference tables ───────────────────────────────────────────── */

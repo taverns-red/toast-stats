@@ -146,6 +146,17 @@ describe('area table count columns (#2793)', () => {
     }
   })
 
+  it('keeps the recognition badge on one line (#2718)', () => {
+    expect(rule(css, '.entity-table__badge')['white-space']).toBe('nowrap')
+    // 21em at 14px is 294px; the longest badge plus its info button
+    // measured 280px on the preview.
+    expect(
+      parseFloat(
+        rule(css, '.entity-table--areas .entity-table__recognition')['width']!
+      )
+    ).toBeGreaterThanOrEqual(20)
+  })
+
   it('puts the column rule on both header cells', () => {
     render(<AreaPerformanceTable areas={[AREA]} countsPending />)
     expect(
