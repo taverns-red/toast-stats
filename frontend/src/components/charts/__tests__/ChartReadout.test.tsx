@@ -189,6 +189,34 @@ describe('ChartReadout with a chart-owned description (#1705 axis)', () => {
     expect(line).toHaveTextContent('2026-27 4,242')
     expect(line).not.toHaveTextContent('Members')
   })
+
+  it('a null describe() keeps the payload and still formats the label (#3151)', async () => {
+    // The rank charts describe only tied dates and return null elsewhere.
+    stubHover(false)
+    function TiedHarness() {
+      const readout = useChartReadout()
+      return (
+        <div>
+          <LineChart width={400} height={200} data={DATA}>
+            <XAxis dataKey="date" />
+            <Tooltip {...readout.tooltipProps} />
+            <Line dataKey="members" name="Members" isAnimationActive={false} />
+          </LineChart>
+          <ChartReadout
+            readout={readout}
+            labelFormatter={l => `Snapshot ${l}`}
+            describe={() => null}
+          />
+        </div>
+      )
+    }
+    const { container } = render(<TiedHarness />)
+    await tap(container.querySelector('.recharts-wrapper')!, 395, 100)
+    await settle()
+    const line = screen.getByTestId('chart-readout')
+    expect(line).toHaveTextContent('Snapshot 2026-10-01')
+    expect(line).toHaveTextContent('Members 130')
+  })
 })
 
 describe('ChartReadout on a hover-capable device', () => {
