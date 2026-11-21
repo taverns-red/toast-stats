@@ -14,7 +14,10 @@
 
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
-import { MetricRankingsCalculator } from '@taverns-red/analytics-core'
+import {
+  MetricRankingsCalculator,
+  type TiedCategories,
+} from '@taverns-red/analytics-core'
 
 export interface RankHistorySourceFile {
   name: string
@@ -53,7 +56,7 @@ interface RankingsFile {
   metadata: { totalDistricts?: number }
 }
 
-interface HistoryPoint {
+interface HistoryPoint extends TiedCategories {
   date: string
   aggregateScore?: number
   clubsRank?: number
@@ -61,9 +64,6 @@ interface HistoryPoint {
   distinguishedRank?: number
   totalDistricts?: number
   overallRank: number
-  clubsTied?: boolean
-  paymentsTied?: boolean
-  distinguishedTied?: boolean
 }
 
 interface IndexEntry {
@@ -73,24 +73,6 @@ interface IndexEntry {
 }
 
 const calculator = new MetricRankingsCalculator()
-
-/**
- * The categories every district is tied in on one date (#2797). A flag is
- * written only when true, so untied files keep their bytes
- * (__tests__/goldenParity.test.ts) and readers treat absent as not tied.
- */
-function tieFlags(
-  rankings: RankingRow[]
-): Pick<HistoryPoint, 'clubsTied' | 'paymentsTied' | 'distinguishedTied'> {
-  const data = { rankings }
-  return {
-    ...(calculator.isWorldTied('clubs', data) && { clubsTied: true }),
-    ...(calculator.isWorldTied('payments', data) && { paymentsTied: true }),
-    ...(calculator.isWorldTied('distinguished', data) && {
-      distinguishedTied: true,
-    }),
-  }
-}
 
 export function buildRankHistory(
   files: RankHistorySourceFile[],
@@ -103,7 +85,9 @@ export function buildRankHistory(
       // Use the snapshot date (filename) not sourceCsvDate (raw-csv date) (#302)
       const date = basename(file.name, '.json')
       if (!date || !data.rankings) continue
-      const ties = tieFlags(data.rankings)
+      // Flags only when true, so untied files keep their bytes
+      // (__tests__/goldenParity.test.ts); absent reads as not tied (#2797).
+      const ties = calculator.tiedCategories({ rankings: data.rankings })
       for (const r of data.rankings) {
         let entry = index.get(r.districtId)
         if (!entry) {

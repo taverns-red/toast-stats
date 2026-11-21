@@ -294,6 +294,8 @@ export {
   type BordaCountRankingCalculatorConfig,
   type MetricType,
   type RegionRankResult,
+  type TiedCategories,
+  type TieInputRow,
   type CompetitiveAwardRanking,
   type CompetitiveAwardsByDistrict,
   type CompetitiveAwardStandings,

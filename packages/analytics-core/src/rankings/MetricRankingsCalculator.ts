@@ -22,7 +22,7 @@ import type { MetricRankings } from '../types.js'
  */
 export type MetricType = 'clubs' | 'payments' | 'distinguished'
 
-/** The value each metric is ranked by; same mapping as getMetricValue. */
+/** The value each metric is ranked by. */
 const RANKED_VALUE_FIELD = {
   clubs: 'clubGrowthPercent',
   payments: 'paymentGrowthPercent',
@@ -34,6 +34,14 @@ const RANKED_VALUE_FIELD = {
 export type TieInputRow = Partial<
   Pick<DistrictRanking, (typeof RANKED_VALUE_FIELD)[MetricType]>
 >
+
+/** The rank-history tie flags for one date (#2797). A flag is present only
+ *  when true, so untied files keep their old bytes. */
+export interface TiedCategories {
+  clubsTied?: true
+  paymentsTied?: true
+  distinguishedTied?: true
+}
 
 /**
  * Result of region rank calculation.
@@ -70,14 +78,7 @@ function createNullRankings(): MetricRankings {
  * @returns The metric value (percentage for growth metrics)
  */
 function getMetricValue(ranking: DistrictRanking, metric: MetricType): number {
-  switch (metric) {
-    case 'clubs':
-      return ranking.clubGrowthPercent
-    case 'payments':
-      return ranking.paymentGrowthPercent
-    case 'distinguished':
-      return ranking.distinguishedPercent
-  }
+  return ranking[RANKED_VALUE_FIELD[metric]]
 }
 
 /**
@@ -174,6 +175,21 @@ export class MetricRankingsCalculator {
     // Old rankings files can lack the value; missing everywhere is not a tie.
     if (typeof value !== 'number' || !Number.isFinite(value)) return false
     return rankings.every(r => r[RANKED_VALUE_FIELD[metric]] === value)
+  }
+
+  /** isWorldTied for each category, as rank-history flags (#2797). */
+  tiedCategories(allDistrictsRankings: {
+    rankings: ReadonlyArray<TieInputRow>
+  }): TiedCategories {
+    const flags: TiedCategories = {}
+    if (this.isWorldTied('clubs', allDistrictsRankings)) flags.clubsTied = true
+    if (this.isWorldTied('payments', allDistrictsRankings)) {
+      flags.paymentsTied = true
+    }
+    if (this.isWorldTied('distinguished', allDistrictsRankings)) {
+      flags.distinguishedTied = true
+    }
+    return flags
   }
 
   /**

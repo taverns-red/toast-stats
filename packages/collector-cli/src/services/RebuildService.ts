@@ -17,6 +17,7 @@ import * as path from 'node:path'
 import {
   MetricRankingsCalculator,
   type Logger,
+  type TiedCategories,
 } from '@taverns-red/analytics-core'
 import { TransformService } from './TransformService.js'
 import { AnalyticsComputeService } from './AnalyticsComputeService.js'
@@ -382,18 +383,17 @@ export class RebuildService {
       {
         districtId: string
         districtName: string
-        history: Array<{
-          date: string
-          aggregateScore: number
-          clubsRank: number
-          paymentsRank: number
-          distinguishedRank: number
-          totalDistricts: number
-          overallRank: number
-          clubsTied?: boolean
-          paymentsTied?: boolean
-          distinguishedTied?: boolean
-        }>
+        history: Array<
+          {
+            date: string
+            aggregateScore: number
+            clubsRank: number
+            paymentsRank: number
+            distinguishedRank: number
+            totalDistricts: number
+            overallRank: number
+          } & TiedCategories
+        >
       }
     >()
     const calculator = new MetricRankingsCalculator()
@@ -433,17 +433,10 @@ export class RebuildService {
 
           const date = data.metadata.sourceCsvDate ?? dateDir.name
           const totalDistricts = data.metadata.totalDistricts ?? 0
-          // Written only when true, as scripts/manifests/rankHistory.ts does
-          // (#2797): readers treat an absent flag as not tied.
-          const ties = {
-            ...(calculator.isWorldTied('clubs', data) && { clubsTied: true }),
-            ...(calculator.isWorldTied('payments', data) && {
-              paymentsTied: true,
-            }),
-            ...(calculator.isWorldTied('distinguished', data) && {
-              distinguishedTied: true,
-            }),
-          }
+          // Flags only when true, as scripts/manifests/rankHistory.ts
+          // writes them; absent reads as not tied (RebuildService.test.ts,
+          // "flags a category every district is tied in").
+          const ties = calculator.tiedCategories(data)
 
           for (const r of data.rankings) {
             if (!index.has(r.districtId)) {
