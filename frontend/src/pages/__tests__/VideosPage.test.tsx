@@ -100,6 +100,16 @@ describe('VideosPage (#2310)', () => {
     }
   })
 
+  it('names the video in each MP4 link, so 16 links are not identical (#2657)', () => {
+    renderPage()
+    for (const v of HOW_TO_VIDEOS) {
+      const card = screen.getByTestId(`video-${v.id}`)
+      for (const link of within(card).getAllByRole('link', { name: /mp4/i })) {
+        expect(link).toHaveAccessibleName(expect.stringContaining(v.title))
+      }
+    }
+  })
+
   it('names every role a video is for', () => {
     renderPage()
     for (const v of HOW_TO_VIDEOS) {

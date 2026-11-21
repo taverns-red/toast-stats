@@ -130,4 +130,14 @@ describe('programYearRuleChanges — the verified inventory (#1400)', () => {
     expect(change?.comparability).toMatch(/submitted/i)
     expect(change?.affects).toMatch(/distinguished|thriving/i)
   })
+
+  it('the 2018-19 entry agrees that the archive starts in 2016-17 (#2657)', () => {
+    // The archive starts at 2016-17, so "earliest years (2019-20 onward)"
+    // was false. Copy approved by Ron on 2026-11-21.
+    const change = byId('py-2018-2019-district-smedley-added')
+    expect(change?.comparability).toContain(
+      'Toast Stats has this year’s results. These rules applied until the 2022–23 change above.'
+    )
+    expect(change?.comparability).not.toMatch(/2019-20 onward/)
+  })
 })

@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useProgramYearSummaries } from '../hooks/useProgramYearSummaries'
 import {
@@ -11,6 +12,7 @@ import {
   getCurrentProgramYear,
   formatProgramYearShort,
 } from '../utils/programYear'
+import { EARLIEST_ARCHIVED_PROGRAM_YEAR } from '../utils/programYearSummary'
 
 /* History page (#367, #892). Per-year summary cards — top-5 districts +
    headline metrics for each COMPLETED program year — assembled from existing
@@ -22,20 +24,15 @@ import {
    years exist. (This comment used to cite 2021-22 as a missing "COVID gap"; the
    CEO Report oracle showed that year IS archived — see #1456.) */
 
-/**
- * Earliest program year (start year) with a year-end snapshot on file —
- * `v1/dates.json` begins at 2017-01-31, so PY 2016-2017 is the first year that
- * can be carded. Used ONLY to size the card grid's loading skeleton so it
- * reserves the height the loaded grid will occupy (#1500). The card list
- * itself stays entirely data-driven: a stale constant here costs a little
- * reserved whitespace, never a wrong or missing card.
- */
-const EARLIEST_ARCHIVED_PROGRAM_YEAR = 2016
-
 const HistoryPage: React.FC = () => {
   useDocumentTitle('Program Year History')
   const { summaries, isLoading, isError } = useProgramYearSummaries()
   const currentPY = getCurrentProgramYear()
+  // The callout names the archive start (#2657). It used to say "before
+  // 2019" above cards that start in 2016-17. It reads the same constant as
+  // /methodology, not the oldest card: the hook drops a year whose rankings
+  // fail to load, and the callout must not drift with it.
+  const earliestOnFile = EARLIEST_ARCHIVED_PROGRAM_YEAR
 
   // The worldwide scoreboard (#1500, epic #1496 Sprint 4) — a separately
   // resolving query, so its slot is reserved by the component itself rather
@@ -70,13 +67,19 @@ const HistoryPage: React.FC = () => {
         role="list"
         data-testid="history-year-strip"
       >
-        <span
-          role="listitem"
-          className="history-page-year-chip history-page-year-chip--current"
-          aria-current="page"
-        >
-          {formatProgramYearShort(currentPY.year)}
-          <span className="history-page-year-chip__live">· LIVE</span>
+        {/* #2657 REF-24: the chips are links. The live year opens the
+            landing page; each archived year jumps to its card below.
+            The live chip is the current date in the strip, not this page,
+            so it carries aria-current="date". */}
+        <span role="listitem">
+          <Link
+            to="/"
+            aria-current="date"
+            className="history-page-year-chip history-page-year-chip--current"
+          >
+            {formatProgramYearShort(currentPY.year)}
+            <span className="history-page-year-chip__live">· LIVE</span>
+          </Link>
         </span>
         {isLoading
           ? // The strip's boxes before the years arrive (#2634): one hidden
@@ -97,12 +100,13 @@ const HistoryPage: React.FC = () => {
               </span>
             ))
           : summaries.map(s => (
-              <span
-                key={s.startYear}
-                role="listitem"
-                className="history-page-year-chip"
-              >
-                {s.label}
+              <span key={s.startYear} role="listitem">
+                <a
+                  href={`#py-${s.startYear}`}
+                  className="history-page-year-chip"
+                >
+                  {s.label}
+                </a>
               </span>
             ))}
         <span
@@ -131,9 +135,13 @@ const HistoryPage: React.FC = () => {
         countryError={countryError}
       />
 
-      <div className="districts-methodology-callout" style={{ marginTop: 32 }}>
-        <strong>Pre-2019 data.</strong> Years before 2019 aren’t on file here.
-        For those, see the official{' '}
+      <div
+        className="districts-methodology-callout"
+        style={{ marginTop: 32 }}
+        data-testid="history-archive-callout"
+      >
+        <strong>Pre-{earliestOnFile} data.</strong> Years before{' '}
+        {earliestOnFile} aren’t on file here. For those, see the official{' '}
         <a
           href="https://dashboards.toastmasters.org"
           target="_blank"

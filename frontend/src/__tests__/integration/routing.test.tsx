@@ -14,7 +14,7 @@
 
 import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import HistoryPage from '../../pages/HistoryPage'
 import MethodologyPage from '../../pages/MethodologyPage'
@@ -65,12 +65,15 @@ describe('Routing scaffolding (#355)', () => {
 
     it('renders the year strip with the current PY marked aria-current', () => {
       renderRoute(HistoryPage, '/history')
-      // First chip in the year strip (current year) is announced as
-      // aria-current=page so screen-reader users can locate it quickly.
+      // The current year's chip is announced with aria-current so
+      // screen-reader users can locate it quickly. Since #2657 (REF-24) the
+      // chips are links and the live chip opens `/`, so it is the current
+      // date in the strip (aria-current="date"), not the current page.
       const strip = screen.getByRole('list')
-      const items = screen.getAllByRole('listitem')
       expect(strip).toBeInTheDocument()
-      const current = items.find(i => i.getAttribute('aria-current') === 'page')
+      const current = within(strip)
+        .getAllByRole('link')
+        .find(a => a.getAttribute('aria-current') === 'date')
       expect(current).toBeDefined()
       expect(current?.textContent).toContain('LIVE')
     })

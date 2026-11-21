@@ -6,6 +6,7 @@ import { useUrlState } from '../hooks/useUrlState'
 import CollapsibleSection from '../components/CollapsibleSection'
 import JumpToChip, { type JumpToGroup } from '../components/JumpToChip'
 import { RedVoteMadeByLine } from '../components/RedVotePromo'
+import { EARLIEST_ARCHIVED_PROGRAM_YEAR } from '../utils/programYearSummary'
 import {
   OPEN_SECTIONS_PARAM,
   parseOpenSections,
@@ -378,8 +379,12 @@ const MethodologyPage: React.FC = () => {
         >
           <ul>
             <li>
-              <strong>Pre-2019 data</strong> — Toast Stats only stores snapshots
-              from PY 2019–20 onward. Earlier seasons live in TI's own archive.
+              {/* #2657: the same earliest year /history shows. */}
+              <strong>Pre-{EARLIEST_ARCHIVED_PROGRAM_YEAR} data.</strong> Toast
+              Stats only stores snapshots from program year{' '}
+              {EARLIEST_ARCHIVED_PROGRAM_YEAR}–
+              {String(EARLIEST_ARCHIVED_PROGRAM_YEAR + 1).slice(-2)} onward.
+              Earlier years are in Toastmasters International's own archive.
             </li>
             <li>
               <strong>Mid-PY restatements</strong> — TI occasionally republishes

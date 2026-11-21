@@ -313,6 +313,15 @@
     color: var(--ink-3);
   }
 
+  /* #2657 REF-07: club and district names in the table are links. */
+  .race-table a {
+    color: var(--link);
+  }
+
+  .race-table a:hover {
+    text-decoration: underline;
+  }
+
   .race-table__rank {
     font-family: var(--serif);
     font-weight: 700;
@@ -488,6 +497,17 @@
 
   .race-basis p {
     margin: 0 0 0.5rem;
+    /* #2657 REF-32: a readable measure; the box ran 133-163 characters. */
+    max-width: 70ch;
+  }
+
+  /* #2657 REF-07 (WCAG 1.4.1): links in the basis prose were the paragraph's
+     colour with no underline. Same treatment as .methodology-link. */
+  .race-basis a {
+    color: var(--link);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
   }
 
   .race-basis p:last-child {

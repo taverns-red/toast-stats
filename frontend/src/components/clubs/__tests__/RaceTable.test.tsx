@@ -123,3 +123,28 @@ describe('RaceTable (#1556)', () => {
     expect(body).not.toHaveTextContent(/lost|dropped/i)
   })
 })
+
+describe('RaceTable — Official column only when it has something (#2657 REF-35)', () => {
+  it('hides the Official column while no row is officially recognised', () => {
+    renderTable([row({ clubId: '1' }), row({ clubId: '2' })])
+    expect(
+      screen.queryByRole('columnheader', { name: 'Official' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getAllByRole('row')[1]!.querySelectorAll('td, th')
+    ).toHaveLength(6)
+  })
+
+  it('shows the Official column once any row is recognised', () => {
+    renderTable([
+      row({ clubId: '1' }),
+      row({
+        clubId: '2',
+        official: { code: 'D', since: '2027-04-02', observedAfter: null },
+      }),
+    ])
+    expect(
+      screen.getByRole('columnheader', { name: 'Official' })
+    ).toBeInTheDocument()
+  })
+})

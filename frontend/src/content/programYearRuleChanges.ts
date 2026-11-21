@@ -265,7 +265,7 @@ export const PROGRAM_YEAR_RULE_CHANGES: readonly ProgramYearRuleChange[] = [
     whatChanged:
       'The Board added a fourth district tier — 8% payments growth, 8% club growth, 55% Distinguished — and set the ladder at 1.5/3/5/8% growth with 40/45/50/55% Distinguished. The change applied to the whole 2018-19 program year.',
     comparability:
-      'No district can be Smedley before 2018-19, so the tier’s absence in earlier years is a rules artefact, not a performance story. These are the rules behind the earliest program years Toast Stats stores (2019-20 onward), and they held until the 2022-23 change above.',
+      'No district can be Smedley before 2018-19, so the tier’s absence in earlier years is a rules artefact, not a performance story. Toast Stats has this year’s results. These rules applied until the 2022–23 change above.',
     issues: [1116],
     sources: [
       'packages/analytics-core/src/rankings/DistinguishedDistrictCalculator.ts',

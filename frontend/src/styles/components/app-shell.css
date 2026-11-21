@@ -673,6 +673,8 @@
     margin: 0;
     font-size: 14px;
     color: var(--ink-2);
+    /* #2657 REF-32: a readable measure on wide headers. */
+    max-width: 70ch;
   }
 
   /* "What does this page answer?" lede for the long-text/doc-style routes
@@ -6280,6 +6282,18 @@
     font-weight: 500;
   }
 
+  /* #2657 REF-24: the chips are links to their year cards (the live chip to
+     the landing page), so they say so on hover. The focus ring is the
+     global :focus-visible one. */
+  a.history-page-year-chip {
+    text-decoration: none;
+  }
+
+  a.history-page-year-chip:hover {
+    text-decoration: underline;
+    border-color: var(--link);
+  }
+
   .history-page-year-chip--current {
     background-color: var(--loyal-50);
     border-color: var(--loyal-200);
@@ -6348,6 +6362,8 @@
     min-height: 220px;
     padding: 18px;
     border-radius: 12px;
+    /* #2657: the year chips jump here; clear the sticky header. */
+    scroll-margin-top: 80px;
     background-color: var(--surface);
     border: 1px solid var(--line);
     color: var(--ink);
@@ -7068,6 +7084,40 @@
     margin: 8px 0 14px;
   }
 
+  /* #2657 REF-20: the one-line command clipped at 375 and 1280. It wraps
+     instead; a long package name may break mid-token rather than overflow. */
+  .mcp-page__snippet--command {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .mcp-page__snippet-wrap {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 8px 0 14px;
+  }
+
+  .mcp-page__snippet-wrap .mcp-page__snippet {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .mcp-page__copy {
+    flex: 0 0 auto;
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .mcp-page__copy-status {
+    display: block;
+    min-height: 1.4em;
+    margin: -8px 0 10px;
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+
   .mcp-page__snippet code {
     /* Reset the inline-code chip styling inside the block. */
     background-color: transparent;
@@ -7090,6 +7140,13 @@
     display: grid;
     gap: 16px;
     grid-template-columns: 1fr;
+  }
+
+  /* #2657 REF-31: two columns from 640px; it was one column up to 979. */
+  @media (min-width: 640px) {
+    .awards-page__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 
   @media (min-width: 980px) {
