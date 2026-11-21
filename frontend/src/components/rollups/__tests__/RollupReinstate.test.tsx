@@ -274,12 +274,11 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     const retiredRow = rows.find(li =>
       li.textContent?.includes('District 124 —')
     )!
-    expect(retiredRow).toHaveTextContent(
-      'District 124 was retired on July 1, 2026.'
-    )
-    expect(retiredRow).toHaveTextContent(
-      '2 can reinstate · 0 suspended · 2 closed'
-    )
+    // The note replaces the counts on line 2, so the row stays one line
+    // of meta and keeps the 56-64 px row height.
+    const meta = retiredRow.querySelector('.mobile-row__meta')!
+    expect(meta.textContent).toBe('District 124 was retired on July 1, 2026.')
+    expect(meta).not.toHaveTextContent('can reinstate')
     expect(within(retiredRow).queryByRole('link')).toBeNull()
     expect(
       within(section).getAllByRole('link', { name: /^District (61|86):/ })
