@@ -17,6 +17,7 @@ import { useDistinguishedCountsAt } from '../hooks/useDistinguishedCountsAt'
 import { resolveDistinguishedCounts } from '../utils/distinguishedCounts'
 import { DistrictSectionIntro } from '../components/DistrictSectionIntro'
 import { DistrictSubnav } from '../components/DistrictSubnav'
+import { WatchHowLink } from '../components/WatchHowLink'
 import { ContextBar } from '../components/ContextBar'
 import { DatePairPicker } from '../components/DatePairPicker'
 import { DatePairPresetChips } from '../components/DatePairPresetChips'
@@ -420,7 +421,11 @@ const DistrictChangesPage: React.FC = () => {
             title={districtName}
             back={{ label: districtName, to: `/district/${districtId}` }}
             chipLabel="About"
-            about={CHANGES_ABOUT}
+            about={
+              <>
+                {CHANGES_ABOUT} <WatchHowLink segment="changes" />
+              </>
+            }
             trail={[
               { label: 'Districts', to: '/' },
               { label: districtName, to: `/district/${districtId}` },

@@ -88,7 +88,14 @@ for (const theme of THEMES) {
         await expect(
           card.getByRole('link', { name: /phone mp4/i })
         ).toHaveAttribute('href', /-mobile\.mp4$/)
+        await expect(
+          card.getByRole('link', { name: /open this page/i })
+        ).toHaveAttribute('href', /^\//)
+        await expect(card.locator('details li').first()).toBeAttached()
       }
+      await expect(
+        page.getByRole('navigation', { name: /jump to a role/i })
+      ).toBeVisible()
 
       if (width === 1280) {
         const readyState = await page
