@@ -88,7 +88,7 @@ function lastSpanIndex(
 }
 
 /** "2024-2025" → "2024–25". */
-function shortProgramYear(label: string): string {
+export function shortProgramYear(label: string): string {
   const m = /^(\d{4})-\d{2}(\d{2})$/.exec(label)
   return m ? `${m[1]}–${m[2]}` : label
 }
