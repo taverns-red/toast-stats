@@ -54,14 +54,14 @@ export interface EndOfYearRankings {
  * Negative values indicate decline (rank went up numerically)
  */
 export interface YearOverYearChange {
-  /** Overall rank change */
-  overall: number
+  /** Overall rank change. Absent when either year is tied (#3145). */
+  overall?: number
   /** Clubs rank change */
-  clubs: number
+  clubs?: number
   /** Payments rank change */
-  payments: number
+  payments?: number
   /** Distinguished rank change */
-  distinguished: number
+  distinguished?: number
 }
 
 /**
@@ -82,6 +82,12 @@ export interface YearlyRankingSummary {
   totalDistricts: number
   /** Whether this is partial year data */
   isPartialYear: boolean
+  /** Every district had the same value in that category, so its rank says
+   *  nothing (#3145). Absent when not tied. */
+  overallTied?: boolean
+  clubsTied?: boolean
+  paymentsTied?: boolean
+  distinguishedTied?: boolean
   /** Year-over-year change (null for oldest year) */
   yearOverYearChange: YearOverYearChange | null
 }
