@@ -307,7 +307,7 @@ function UrlProbe() {
 function renderAt(url: string) {
   seenSearches.length = 0
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   })
   render(
     <QueryClientProvider client={client}>
@@ -447,7 +447,9 @@ describe('DistrictDetailPage — degraded view year selector (#1436)', () => {
   })
 
   it('shows the not-found panel for a district with no snapshots and no rank history (#2647)', async () => {
-    mockedRankHistory.mockRejectedValue(new Error('404'))
+    mockedRankHistory.mockRejectedValue(
+      new Error('CDN fetch failed: 404 for https://cdn.test/rank-history/999')
+    )
     const client = renderAt('/district/999?py=2025')
     await districtListLanded(client)
 
@@ -462,6 +464,19 @@ describe('DistrictDetailPage — degraded view year selector (#1436)', () => {
     expect(
       screen.queryByTestId('degraded-program-year-selector')
     ).not.toBeInTheDocument()
+  })
+
+  it('keeps the limited view when the rank history fails for a reason other than 404', async () => {
+    mockedRankHistory.mockRejectedValue(
+      new Error('CDN fetch failed: 503 for https://cdn.test/rank-history/999')
+    )
+    const client = renderAt('/district/999?py=2025')
+    await districtListLanded(client)
+
+    // The query retries twice, so three calls means it has given up.
+    await waitFor(() => expect(mockedRankHistory).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(screen.getByText(LIMITED)).toBeInTheDocument())
+    expect(screen.queryByTestId('not-found-panel')).not.toBeInTheDocument()
   })
 
   it('leaves the happy path unchanged — no degraded chrome for a current district', async () => {
