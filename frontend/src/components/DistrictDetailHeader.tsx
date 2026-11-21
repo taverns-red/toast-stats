@@ -6,7 +6,7 @@ import { ContextSheetControls } from './ContextSheetControls'
 import { DistrictSheetActions } from './DistrictSheetActions'
 import { DISTRICT_SECTIONS } from '../config/districtSections'
 import { sectionVideoId } from '../config/sectionVideos'
-import { WatchHowLink } from './WatchHowLink'
+import { HowToVideosLink, WatchHowLink } from './WatchHowLink'
 import { formatFreshnessLine } from '../utils/contextBar'
 import { HeaderActionsMenu } from './HeaderActionsMenu'
 import { DistrictRevisedNote } from './DistrictRevisedNote'
@@ -106,16 +106,23 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
     ? section?.about
     : DISTRICT_SECTIONS.find(s => s.segment === '')?.about
   const hasVideo = sectionVideoId(segment) !== undefined
-  // The eyebrow that carries the link is hidden on phones, so the context
-  // sheet's "About" text carries it there.
-  const aboutWithVideo =
-    hasVideo && lede ? (
-      <>
-        {lede} <WatchHowLink segment={segment} />
-      </>
-    ) : (
-      lede
-    )
+  // The eyebrow that carries the links is hidden on phones, so the context
+  // sheet's "About" text carries them there.
+  const aboutWithVideo = (
+    <>
+      {lede}
+      {lede && ' '}
+      <span>
+        {hasVideo && (
+          <>
+            <WatchHowLink segment={segment} />
+            {' · '}
+          </>
+        )}
+        <HowToVideosLink />
+      </span>
+    </>
+  )
   const hubUrl = `/district/${districtId}`
   const back = segment
     ? { label: districtName, to: hubUrl }
@@ -171,6 +178,8 @@ export const DistrictDetailHeader: React.FC<DistrictDetailHeaderProps> = ({
                 <WatchHowLink segment={segment} />
               </>
             )}
+            {' · '}
+            <HowToVideosLink />
           </p>
           <h1 className="district-detail-page-header__title">
             {districtName}
