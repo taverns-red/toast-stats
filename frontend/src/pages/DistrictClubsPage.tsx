@@ -324,7 +324,7 @@ const DistrictClubsPage: React.FC = () => {
               // are already on screen; that case is the inline note below.
               <ErrorDisplay
                 error={datesError as Error}
-                title="Failed to Load Clubs"
+                title="Couldn't load clubs"
                 subject="the clubs list"
                 onRetry={retryFailed}
               />
@@ -335,7 +335,7 @@ const DistrictClubsPage: React.FC = () => {
               // error never wipes already-rendered rows.
               <ErrorDisplay
                 error={error ?? 'Failed to load clubs data'}
-                title="Failed to Load Clubs"
+                title="Couldn't load clubs"
                 subject="the clubs list"
                 onRetry={retryFailed}
                 showDetails={true}
