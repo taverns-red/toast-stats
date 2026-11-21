@@ -1604,11 +1604,10 @@ const DistrictsPage: React.FC = () => {
         <div className="districts-rankings-table-wrap districts-rankings-table-wrap--dt">
           {/* #2249 — the table keeps the name the page used to carry as H1. */}
           <h2 className="districts-rankings-title">District Rankings</h2>
-          {/* Methodology affordance — single visible "i" beside a quiet
-              "About these metrics" label, replacing the four per-column
-              tooltips that used to wrap the header row (#546). Kept
-              outside the table so its focus ring is visible to keyboard
-              users (Lesson 58 / WCAG 2.4.7). */}
+          {/* Methodology affordance: one visible "i" beside a quiet "About
+              these metrics" label (#546). On phones it stays out of the
+              clip element below, because the tooltip opens upward without a
+              portal; at 768px and up it lives in the table toolbar. */}
           {isMobile && (
             <div className="flex items-center justify-end mb-2 px-2">
               {aboutMetrics}
@@ -1620,37 +1619,39 @@ const DistrictsPage: React.FC = () => {
               set, one Columns menu changes it, and the header sticks to the
               page. Below 768 the PriorityColumnsTable phone view takes over
               (#1834) and its full-table sheet shows every column. */}
-          <PriorityColumnsTable<RankedDistrict, SortFieldT>
-            label="District rankings"
-            rows={phoneRows}
-            rowKey={d => d.districtId}
-            rowTestId={d => `district-row-${d.districtId}`}
-            identityHeader="District"
-            renderIdentity={d => (
-              <PhoneDistrictIdentity
-                district={d}
-                isMine={isMyDistrict(d.districtId)}
-                onToggleMine={() =>
-                  setMyDistrict(
-                    isMyDistrict(d.districtId) ? null : d.districtId
-                  )
-                }
-                pinnedRank={
-                  pinnedIds.has(d.districtId) ? d.displayRank : undefined
-                }
-              />
-            )}
-            footer={phoneReveal}
-            metrics={phoneRankingMetrics}
-            defaultMetricIds={['rank', 'score']}
-            sort={sort}
-            onSort={toggleSort}
-            empty={rankingsEmptyState}
-            fullTableTitle="District rankings — all columns"
-            sheetTable={rankingsTable('sheet')}
-            sheetRegionClassName="districts-rankings-table__sheet"
-            fullTable={rankingsTable('page')}
-          />
+          <div className="districts-rankings-clip">
+            <PriorityColumnsTable<RankedDistrict, SortFieldT>
+              label="District rankings"
+              rows={phoneRows}
+              rowKey={d => d.districtId}
+              rowTestId={d => `district-row-${d.districtId}`}
+              identityHeader="District"
+              renderIdentity={d => (
+                <PhoneDistrictIdentity
+                  district={d}
+                  isMine={isMyDistrict(d.districtId)}
+                  onToggleMine={() =>
+                    setMyDistrict(
+                      isMyDistrict(d.districtId) ? null : d.districtId
+                    )
+                  }
+                  pinnedRank={
+                    pinnedIds.has(d.districtId) ? d.displayRank : undefined
+                  }
+                />
+              )}
+              footer={phoneReveal}
+              metrics={phoneRankingMetrics}
+              defaultMetricIds={['rank', 'score']}
+              sort={sort}
+              onSort={toggleSort}
+              empty={rankingsEmptyState}
+              fullTableTitle="District rankings — all columns"
+              sheetTable={rankingsTable('sheet')}
+              sheetRegionClassName="districts-rankings-table__sheet"
+              fullTable={rankingsTable('page')}
+            />
+          </div>
           {worldCounts && <DistinguishedBasisNote className="text-sm mt-2" />}
         </div>
 

@@ -1868,10 +1868,20 @@
   /* ── Landing rankings table on the shared DataTable (#2689, #2676 M1) ──
      Which columns show is a choice (one Columns menu), never CSS: a hidden
      column is absent from the DOM, so there is no per-column display rule. The
-     header sticks to the PAGE (data-table.css), so nothing between the table
-     and the page may scroll or clip: the wrap below is visible, not hidden. */
+     sticky header follows the PAGE (data-table.css), so nothing between the
+     table and the page may clip, and the methodology tooltip opens upward
+     without a portal, so the wrap stays visible at every width. Below 768px
+     the phone list sits in an inner clip that rounds its bottom corners.
+     Pinned by rankingsGrowthContrast.test.ts. */
   .districts-rankings-table-wrap--dt {
     overflow: visible;
+  }
+
+  @media (max-width: 767px) {
+    .districts-rankings-clip {
+      overflow: hidden;
+      border-radius: 0 0 var(--rds-radius-md) var(--rds-radius-md);
+    }
   }
 
   /* Corners the clip used to round. */
@@ -1881,6 +1891,27 @@
 
   .districts-rankings-table-wrap--dt .dt thead th:last-child {
     border-top-right-radius: var(--rds-radius-md);
+  }
+
+  /* Growth % under a rankings metric. Legacy tokens that remap with the
+     theme; the +/U+2212 sign is in the text, so colour is never the only
+     carrier. Contrast pinned by rankingsGrowthContrast.test.ts. */
+  .rankings-growth--up {
+    color: var(--green-600);
+  }
+
+  .rankings-growth--down {
+    color: var(--red-600);
+  }
+
+  /* Dark --red-600 is 4.42:1 on --surface-2 and 4.21:1 on the row-hover
+     surface; --red-500 is the lifted red there. */
+  [data-theme='dark'] .rankings-growth--down {
+    color: var(--red-500);
+  }
+
+  .rankings-growth--flat {
+    color: var(--ink-3);
   }
 
   .rankings-toolbar {

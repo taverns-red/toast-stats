@@ -76,7 +76,7 @@ describe('DistrictsPage - Percentage Formatting', () => {
       // Wait for data to load and check for positive percentage with + prefix
       const element = await screen.findByText('+12.5%')
       expect(element).toBeInTheDocument()
-      expect(element).toHaveClass('text-green-600')
+      expect(element).toHaveClass('rankings-growth--up')
     })
 
     it('should return "-" prefix and red color for negative percentages', async () => {
@@ -113,7 +113,7 @@ describe('DistrictsPage - Percentage Formatting', () => {
       // Wait for data to load and check for negative percentage
       const element = await screen.findByText('\u221211.1%')
       expect(element).toBeInTheDocument()
-      expect(element).toHaveClass('text-red-600')
+      expect(element).toHaveClass('rankings-growth--down')
     })
 
     it('should return "0.0%" with gray color for zero percentages', async () => {
@@ -150,7 +150,7 @@ describe('DistrictsPage - Percentage Formatting', () => {
       // Wait for data to load and check for zero percentage
       const element = await screen.findByText('0.0%')
       expect(element).toBeInTheDocument()
-      expect(element).toHaveClass('text-gray-600')
+      expect(element).toHaveClass('rankings-growth--flat')
     })
 
     it('should format percentages to 1 decimal place precision', async () => {
@@ -368,9 +368,9 @@ describe('DistrictsPage - Table Cell Rendering', () => {
     const positivePercent = await screen.findByText('+15.5%')
     const negativePercent = await screen.findByText('\u221211.1%')
     expect(positivePercent).toBeInTheDocument()
-    expect(positivePercent).toHaveClass('text-green-600')
+    expect(positivePercent).toHaveClass('rankings-growth--up')
     expect(negativePercent).toBeInTheDocument()
-    expect(negativePercent).toHaveClass('text-red-600')
+    expect(negativePercent).toHaveClass('rankings-growth--down')
   })
 
   it('should display bullet separator between rank and percentage', async () => {
