@@ -40,9 +40,10 @@ describe.each(MEASURES)(
     })
 
     it(`keeps ${selector} at the ${chars}-character measure of Source Sans 3, in em`, () => {
-      const escaped = selector.replace(/[.]/g, '\\.')
-      const rule = css.match(new RegExp(`${escaped}\\s*\\{[^}]*\\}`))?.[0]
-      const em = Number(rule?.match(/max-width:\s*([\d.]+)em/)?.[1])
+      const start = css.indexOf(`${selector} {`)
+      expect(start, `no ${selector} rule`).toBeGreaterThanOrEqual(0)
+      const rule = css.slice(start, css.indexOf('}', start))
+      const em = Number(rule.match(/max-width:\s*([\d.]+)em/)?.[1])
       expect(Math.abs(em - chars * SOURCE_SANS_3_ZERO_EM)).toBeLessThanOrEqual(
         TOLERANCE_EM
       )
