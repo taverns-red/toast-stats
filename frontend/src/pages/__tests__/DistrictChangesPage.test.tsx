@@ -150,6 +150,25 @@ beforeEach(() => {
 })
 
 describe('DistrictChangesPage', () => {
+  it('links the videos page from the About sheet', () => {
+    mockedDates.mockReturnValue({
+      data: { dates: ['2026-05-25', '2026-05-26'] },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    mockedDiff.mockReturnValue({
+      data: diffFixture(),
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useSnapshotDiff>)
+    renderPage()
+    fireEvent.click(screen.getByTestId('context-bar-chip'))
+    expect(
+      within(screen.getByRole('dialog')).getByRole('link', {
+        name: 'All how-to videos',
+      })
+    ).toHaveAttribute('href', '/videos')
+  })
+
   it('renders headline, four KPI cards, and grouped events for a real diff', () => {
     mockedDates.mockReturnValue({
       data: { dates: ['2026-05-25', '2026-05-26'] },
