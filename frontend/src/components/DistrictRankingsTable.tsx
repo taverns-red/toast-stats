@@ -37,6 +37,7 @@ import {
   type RankingsTableFeatures,
   type RankingsTableMeta,
 } from './rankingsTableFeatures'
+import type { ColumnVisibilityApi } from '../hooks/useColumnVisibility'
 import { useBreakpointTier } from '../hooks/useBreakpointTier'
 import { useTierColumnVisibility } from '../hooks/useTierColumnVisibility'
 import { formatDisplayDate } from '../utils/dateFormatting'
@@ -95,32 +96,25 @@ interface DistrictRankingsTableProps extends RankingsTableMeta {
   variant?: 'page' | 'sheet'
 }
 
-export const DistrictRankingsTable: React.FC<DistrictRankingsTableProps> = ({
+/** The table itself. `columns` is the page's column choice; the sheet has none
+ *  (every column shows, no menu, no "N of M shown" hint). */
+const RankingsGrid: React.FC<
+  Omit<DistrictRankingsTableProps, 'variant'> & {
+    columns: ColumnVisibilityApi | null
+  }
+> = ({
   rows,
   sort,
   onSort,
   asOfDate,
   toolbarLead,
   emptyState,
-  variant = 'page',
   isMyDistrict,
   setMyDistrict,
   competitiveAwards,
   clubGrowthHeld,
+  columns,
 }) => {
-  const isSheet = variant === 'sheet'
-  const tier = useBreakpointTier()
-  const sortColumn = rankingsColumnForSortField(sort.field)
-  const reveal = useMemo(() => (sortColumn ? [sortColumn] : []), [sortColumn])
-  const columns = useTierColumnVisibility({
-    storageName: 'rankings-table:columns',
-    ids: RANKINGS_COLUMN_IDS,
-    alwaysShown: ALWAYS_SHOWN_RANKINGS_IDS,
-    defaultsFor: rankingsTierDefaults,
-    tier,
-    reveal,
-  })
-
   const meta = useMemo<RankingsTableMeta>(
     () => ({ isMyDistrict, setMyDistrict, competitiveAwards, clubGrowthHeld }),
     [isMyDistrict, setMyDistrict, competitiveAwards, clubGrowthHeld]
@@ -132,7 +126,7 @@ export const DistrictRankingsTable: React.FC<DistrictRankingsTableProps> = ({
     columns: rankingsColumns,
     getRowId: d => d.districtId,
     state: {
-      columnVisibility: isSheet ? ALL_VISIBLE : columns.visibility,
+      columnVisibility: columns ? columns.visibility : ALL_VISIBLE,
       columnSizing: COLUMN_SIZING,
     },
     meta,
@@ -151,16 +145,16 @@ export const DistrictRankingsTable: React.FC<DistrictRankingsTableProps> = ({
 
   return (
     <>
-      {isSheet ? null : (
+      {columns ? (
         <div className="rankings-toolbar">
           {toolbarLead}
           <ColumnsMenu columns={columns} spec={MENU_SPEC} />
         </div>
-      )}
+      ) : null}
       <DataTable
         table={table}
         id={
-          isSheet ? 'district-rankings-sheet-table' : 'district-rankings-table'
+          columns ? 'district-rankings-table' : 'district-rankings-sheet-table'
         }
         label="District rankings"
         tableLabel="District rankings"
@@ -183,9 +177,40 @@ export const DistrictRankingsTable: React.FC<DistrictRankingsTableProps> = ({
               : {}
         }
         emptyState={emptyState}
-        inScroller={isSheet}
-        overflowHint={`Scroll sideways for more columns · ${columns.shownCount} of ${columns.totalCount} shown`}
+        inScroller={!columns}
+        overflowHint={
+          columns
+            ? `Scroll sideways for more columns · ${columns.shownCount} of ${columns.totalCount} shown`
+            : undefined
+        }
       />
     </>
   )
 }
+
+const PageRankingsTable: React.FC<
+  Omit<DistrictRankingsTableProps, 'variant'>
+> = props => {
+  const tier = useBreakpointTier()
+  const sortColumn = rankingsColumnForSortField(props.sort.field)
+  const reveal = useMemo(() => (sortColumn ? [sortColumn] : []), [sortColumn])
+  const columns = useTierColumnVisibility({
+    storageName: 'rankings-table:columns',
+    ids: RANKINGS_COLUMN_IDS,
+    alwaysShown: ALWAYS_SHOWN_RANKINGS_IDS,
+    defaultsFor: rankingsTierDefaults,
+    tier,
+    reveal,
+  })
+  return <RankingsGrid {...props} columns={columns} />
+}
+
+export const DistrictRankingsTable: React.FC<DistrictRankingsTableProps> = ({
+  variant = 'page',
+  ...props
+}) =>
+  variant === 'sheet' ? (
+    <RankingsGrid {...props} columns={null} />
+  ) : (
+    <PageRankingsTable {...props} />
+  )
