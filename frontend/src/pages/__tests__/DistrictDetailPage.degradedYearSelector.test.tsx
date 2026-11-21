@@ -37,6 +37,7 @@ import {
   useSearchParams,
 } from 'react-router-dom'
 import DistrictDetailPage from '../DistrictDetailPage'
+import { CdnFetchError } from '../../services/cdnFetchError'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import {
   fetchCdnRankings,
@@ -448,7 +449,7 @@ describe('DistrictDetailPage — degraded view year selector (#1436)', () => {
 
   it('shows the not-found panel for a district with no snapshots and no rank history (#2647)', async () => {
     mockedRankHistory.mockRejectedValue(
-      new Error('CDN fetch failed: 404 for https://cdn.test/rank-history/999')
+      new CdnFetchError(404, 'https://cdn.test/rank-history/999')
     )
     const client = renderAt('/district/999?py=2025')
     await districtListLanded(client)
@@ -468,7 +469,7 @@ describe('DistrictDetailPage — degraded view year selector (#1436)', () => {
 
   it('keeps the limited view when the rank history fails for a reason other than 404', async () => {
     mockedRankHistory.mockRejectedValue(
-      new Error('CDN fetch failed: 503 for https://cdn.test/rank-history/999')
+      new CdnFetchError(503, 'https://cdn.test/rank-history/999')
     )
     const client = renderAt('/district/999?py=2025')
     await districtListLanded(client)

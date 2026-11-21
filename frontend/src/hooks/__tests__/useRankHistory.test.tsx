@@ -13,6 +13,7 @@ vi.mock('../../services/cdn', () => ({
 }))
 
 import { fetchCdnRankHistory } from '../../services/cdn'
+import { CdnFetchError } from '../../services/cdnFetchError'
 import { useRankHistory } from '../useRankHistory'
 
 const mockedFetch = vi.mocked(fetchCdnRankHistory)
@@ -33,7 +34,7 @@ beforeEach(() => {
 describe('useRankHistory failures', () => {
   it('resolves an empty history for a 404', async () => {
     mockedFetch.mockRejectedValue(
-      new Error('CDN fetch failed: 404 for https://cdn.test/999.json')
+      new CdnFetchError(404, 'https://cdn.test/999.json')
     )
     const { result } = renderHook(useDistrict999, { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -43,7 +44,7 @@ describe('useRankHistory failures', () => {
 
   it('errors, after retrying, for a 503', async () => {
     mockedFetch.mockRejectedValue(
-      new Error('CDN fetch failed: 503 for https://cdn.test/999.json')
+      new CdnFetchError(503, 'https://cdn.test/999.json')
     )
     const { result } = renderHook(useDistrict999, { wrapper })
     await waitFor(() => expect(result.current.isError).toBe(true))

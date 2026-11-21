@@ -155,6 +155,7 @@ const DistrictDetailPageInner: React.FC = () => {
   const {
     programYears: rankHistoryProgramYears,
     isLoading: isLoadingRankHistoryYears,
+    isError: isRankHistoryError,
   } = useDistrictRankHistoryYears(districtId, needsRankHistoryYears)
 
   // The snapshot dates inside the program year on screen.
@@ -613,9 +614,14 @@ const DistrictDetailPageInner: React.FC = () => {
   // 88KB, so without this the past-year district page would flash the "limited
   // data" fallback before the dated roster arrived.
   if (cachedDatesData && districtsData && !selectedDistrict && districtId) {
-    // No snapshot and no rank-history year anywhere: the id is not a district
-    // we have ever tracked, so the Global Rankings view would be empty.
-    if (!isLoadingRankHistoryYears && degradedDataYears.length === 0) {
+    // The rank-history read finished (a 404 counts) and names no year, so
+    // this id was never ranked. A failed read proves nothing: keep the
+    // limited view. Enforced by degradedYearSelector.test.tsx.
+    if (
+      !isLoadingRankHistoryYears &&
+      !isRankHistoryError &&
+      degradedDataYears.length === 0
+    ) {
       return (
         <NotFoundPanel
           heading={`District ${districtId} isn't in Toast Stats`}
