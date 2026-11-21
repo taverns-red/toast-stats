@@ -18,6 +18,9 @@ describe('MethodologyPage — archive start (#2657)', () => {
     const txt = document.body.textContent || ''
     expect(txt).not.toMatch(/Pre-2019|2019–20 onward/)
     // v1/dates.json starts at 2017-01-31, so PY 2016-17 is the first year.
-    expect(txt).toContain('from PY 2016-17 onward')
+    // Wording approved by Ron on 2026-11-21.
+    expect(txt).toContain(
+      "Pre-2016 data. Toast Stats only stores snapshots from program year 2016–17 onward. Earlier years are in Toastmasters International's own archive."
+    )
   })
 })
