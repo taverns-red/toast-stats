@@ -336,23 +336,28 @@
   background: var(--map-surface);
 }
 
-/* From 768 the panel is as tall as the map box, and the lists scroll inside
-   what is left, so their data landing moves nothing. */
+/* From 768 the panel is as tall as the map box and is one scroller, so a
+   tall legend or a selected club never spills its border and the data
+   landing moves nothing outside it. Its children keep their size.
+   Pinned by mapLoadingReserve.test.ts. */
 @media (min-width: 768px) {
   .map-panel--fixed {
     height: min(72dvh, 760px);
     min-height: 420px;
     box-sizing: border-box;
+    overflow-y: auto;
+  }
+
+  .map-panel--fixed > * {
+    flex-shrink: 0;
   }
 }
 
 .map-panel__lists {
   display: flex;
-  flex: 1;
+  flex: 1 0 auto;
   flex-direction: column;
   gap: var(--rt-space-4);
-  min-height: 0;
-  overflow-y: auto;
 }
 
 .map-panel__section {

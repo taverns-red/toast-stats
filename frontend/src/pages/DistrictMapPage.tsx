@@ -18,6 +18,7 @@ import {
   isDateInProgramYear,
 } from '../utils/programYear'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
 // #2248: eager, not a lazy chunk. It is ~0.6 KB gzip, and a lazy first
@@ -202,7 +203,8 @@ const DistrictMapPage: React.FC = () => {
     setProgramYearAndDate,
   } = useUrlProgramYear()
   const { data: districtsData } = useDistricts()
-  const { data: cachedDatesData } = useDistrictCachedDates(districtId)
+  const { data: cachedDatesData, isLoading: datesLoading } =
+    useDistrictCachedDates(districtId)
   const allCachedDates = useMemo(
     () => cachedDatesData?.dates || [],
     [cachedDatesData?.dates]
@@ -225,7 +227,11 @@ const DistrictMapPage: React.FC = () => {
     return getMostRecentDateInProgramYear(allCachedDates, effectiveProgramYear)
   }, [selectedDate, effectiveProgramYear, allCachedDates])
 
-  const { data: analytics } = useDistrictAnalytics(
+  const {
+    data: analytics,
+    error: analyticsError,
+    refetch: refetchAnalytics,
+  } = useDistrictAnalytics(
     effectiveEndDate ? districtId : null,
     effectiveProgramYear?.startDate,
     effectiveEndDate ?? undefined
@@ -408,7 +414,15 @@ const DistrictMapPage: React.FC = () => {
         className="map-legend__slot"
         style={
           {
-            '--legend-slot': `${limit === undefined ? legendSlotHeight(estimateLegendLabels(model)) : 0}px`,
+            '--legend-slot': `${
+              limit === undefined
+                ? legendSlotHeight(
+                    analytics
+                      ? chips.map(c => c.label)
+                      : estimateLegendLabels(model)
+                  )
+                : 0
+            }px`,
           } as React.CSSProperties
         }
       >
@@ -432,6 +446,7 @@ const DistrictMapPage: React.FC = () => {
   )
   // Until the analytics land the lists would read "Every club in view has a
   // location", which is not yet known.
+  const noDate = !datesLoading && !effectiveEndDate
   const lists = analytics ? (
     <React.Suspense fallback={null}>
       <MapLists
@@ -441,6 +456,14 @@ const DistrictMapPage: React.FC = () => {
         onSandbox={() => setSheet(null)}
       />
     </React.Suspense>
+  ) : analyticsError ? (
+    <ErrorDisplay
+      error={analyticsError}
+      onRetry={() => void refetchAnalytics()}
+      subject="this district's clubs"
+    />
+  ) : noDate ? (
+    <p className="map-panel__note">No club data for this date yet.</p>
   ) : null
 
   const filterPanel = (wantsFilters || filtersSeen) && (
@@ -627,7 +650,9 @@ const DistrictMapPage: React.FC = () => {
               {!isPhone && (
                 <aside
                   className="map-panel map-panel--fixed"
+                  role="region"
                   aria-label="Map legend and lists"
+                  tabIndex={0}
                 >
                   {filterPanel}
                   {legend()}

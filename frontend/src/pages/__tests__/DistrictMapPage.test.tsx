@@ -665,7 +665,9 @@ describe('DistrictMapPage — the side panel (#2673)', () => {
     mockAnalyticsData = false
     mockAnalyticsFails = new Error('Network request failed')
     renderAt('/district/61/map?date=2026-10-01')
-    fireEvent.click(await screen.findByRole('button', { name: /Try again/i }))
+    fireEvent.click(
+      await screen.findByRole('button', { name: /Retry loading data/i })
+    )
     expect(refetchAnalytics).toHaveBeenCalled()
     expect(screen.queryByText(/Every club in view has a location/)).toBeNull()
   })
