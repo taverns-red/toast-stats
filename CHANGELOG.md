@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.101.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.100.0...toast-stats-v2.101.0) (2026-11-21)
+
+
+### Features
+
+* **ui:** card counts clubs that add to net club growth ([#3130](https://github.com/taverns-red/toast-stats/issues/3130)) ([#3131](https://github.com/taverns-red/toast-stats/issues/3131)) ([74a6800](https://github.com/taverns-red/toast-stats/commit/74a6800483523341931aff1c94c8799891c54215))
+* **ui:** say why a July 1 suspended club shows last year ([#3126](https://github.com/taverns-red/toast-stats/issues/3126)) ([#3127](https://github.com/taverns-red/toast-stats/issues/3127)) ([516f12f](https://github.com/taverns-red/toast-stats/commit/516f12f2fd62f19d713dd8601ebcd0c7c8c5836b))
+
+
+### Bug Fixes
+
+* fresh worktrees run git hooks or stop loudly ([#3124](https://github.com/taverns-red/toast-stats/issues/3124)) ([#3129](https://github.com/taverns-red/toast-stats/issues/3129)) ([5b7e7f1](https://github.com/taverns-red/toast-stats/commit/5b7e7f171fe652aa10a37cb261c133bbb9d88fec))
+* hold suspended club page for its suspension date ([#3108](https://github.com/taverns-red/toast-stats/issues/3108)) ([#3132](https://github.com/taverns-red/toast-stats/issues/3132)) ([4358d50](https://github.com/taverns-red/toast-stats/commit/4358d502065970588d0b35fb52d67d27fea41ac6))
+* **ui:** reference-page links look like links, History agrees with itself, MCP copy button ([#2657](https://github.com/taverns-red/toast-stats/issues/2657)) ([#3125](https://github.com/taverns-red/toast-stats/issues/3125)) ([0b2bb44](https://github.com/taverns-red/toast-stats/commit/0b2bb442bd3efd9aa896e0d4ea075bcbfe883fbf))
+
 ## [2.100.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.99.0...toast-stats-v2.100.0) (2026-11-21)
 
 
