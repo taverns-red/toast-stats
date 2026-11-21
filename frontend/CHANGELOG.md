@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.78.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.78.0...frontend-v3.78.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* **rankings:** Overall card, yearly table, change and chart skip tied dates ([#3145](https://github.com/taverns-red/toast-stats/issues/3145)) ([#3149](https://github.com/taverns-red/toast-stats/issues/3149)) ([b3446f6](https://github.com/taverns-red/toast-stats/commit/b3446f65d8fcca881cb6a9596f9ca82e82e85e53))
+* **rankings:** show "Tied" on the Rankings page when a whole category is tied ([#2797](https://github.com/taverns-red/toast-stats/issues/2797)) ([#3144](https://github.com/taverns-red/toast-stats/issues/3144)) ([4f76b28](https://github.com/taverns-red/toast-stats/commit/4f76b28e05c89d004ecc69c1880d82a3b808e436))
+
 ## [3.78.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.77.0...frontend-v3.78.0) (2026-11-21)
 
 
