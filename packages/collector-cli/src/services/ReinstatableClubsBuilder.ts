@@ -53,7 +53,8 @@
  *   list is listed under its old number with `districtRetiredOn`, the
  *   July 1 the district was retired. A district in the set but not in the
  *   suspended list stays unknown: its list was not read. Without the set,
- *   no district is taken as retired and those clubs are left out.
+ *   or with one that is empty or lacks a suspended-list district, no
+ *   district is taken as retired and those clubs are left out.
  *
  * Rows are public club-level facts only, as in `suspended-clubs.json`.
  *
@@ -185,7 +186,11 @@ function programYearStart(date: string): number {
  * in the closed index, or a row in an earlier suspended list. A June 30
  * list carries a district through its program year even when none of its
  * clubs closed then. The date's own program year lacks it, so that year is
- * the latest it can be.
+ * the latest it can be. Known limit: a district with no sign in its last
+ * year is dated from an earlier one.
+ *
+ * An empty set, or one missing a district of the suspended list, is
+ * unusable, and no district is taken as retired.
  */
 function findRetiredDistricts(
   districtIds: readonly string[] | null | undefined,
@@ -195,12 +200,15 @@ function findRetiredDistricts(
   snapshotDate: string
 ): Map<string, string> {
   const retired = new Map<string, string>()
-  if (!districtIds) return retired
-  const onDate = new Set(
-    [...districtIds, ...Object.keys(suspended.districts)].map(
-      canonicalDistrictId
-    )
+  if (!districtIds || districtIds.length === 0) return retired
+  const onDate = new Set(districtIds.map(canonicalDistrictId))
+  // A set that lacks a district the suspended list has is partial: a
+  // district missing from it may only have failed to read (#1757), so
+  // none is taken as retired.
+  const partial = Object.keys(suspended.districts).some(
+    id => !isUndistricted(id) && !onDate.has(canonicalDistrictId(id))
   )
+  if (partial) return retired
   // Newest program year (start year) each absent district is seen in.
   const newest = new Map<string, number>()
   const seen = (districtId: string, start: number, addNew: boolean) => {
