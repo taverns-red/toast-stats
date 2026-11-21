@@ -35,6 +35,13 @@ function indexEntries(): Map<string, string> {
   return modes
 }
 
+function tracked(file: string): string {
+  return execFileSync('git', ['show', `HEAD:${file}`], {
+    cwd: root,
+    encoding: 'utf-8',
+  })
+}
+
 describe('husky dispatcher is tracked so fresh worktrees run hooks (#3124)', () => {
   it('tracks h, pre-commit and pre-push under .husky/_', () => {
     const entries = indexEntries()
@@ -49,16 +56,20 @@ describe('husky dispatcher is tracked so fresh worktrees run hooks (#3124)', () 
     expect(entries.get('.husky/_/pre-push')).toBe('100755')
   })
 
+  // Read the committed content, not the working copy: `npm ci` runs husky
+  // before tests and rewrites the files on disk, which would hide drift.
   it('matches what the installed husky writes, so npm install leaves no diff', () => {
-    const installed = readFileSync(
-      path.join(root, 'node_modules/husky/husky'),
-      'utf-8'
+    const huskyDir = path.join(root, 'node_modules/husky')
+    const installedH = readFileSync(path.join(huskyDir, 'husky'), 'utf-8')
+    expect(tracked('.husky/_/h')).toBe(installedH)
+
+    // husky's index.js holds the stub as a template literal.
+    const huskyIndex = readFileSync(path.join(huskyDir, 'index.js'), 'utf-8')
+    expect(huskyIndex).toContain(
+      '`#!/usr/bin/env sh\\n. "\\$(dirname "\\$0")/h"`'
     )
-    expect(readFileSync(path.join(root, '.husky/_/h'), 'utf-8')).toBe(installed)
     for (const hook of ['pre-commit', 'pre-push']) {
-      expect(readFileSync(path.join(root, '.husky/_', hook), 'utf-8')).toBe(
-        HUSKY_STUB
-      )
+      expect(tracked(`.husky/_/${hook}`)).toBe(HUSKY_STUB)
     }
   })
 })
