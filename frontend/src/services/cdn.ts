@@ -703,47 +703,41 @@ export async function fetchCdnGlobalHistory(): Promise<GlobalHistory | null> {
  * (45% unknown at 2026-06-30 vs ~2% at 2026-08-30), so a per-year country
  * series would describe our coverage rather than Toastmasters.
  *
- * Tolerant like the reports reader — absent is `null`, not a thrown error.
+ * Absent (a 404) is `null`; an off-contract body is `null` too. Any other
+ * failure (server error, network) throws, so a page can say the load failed
+ * instead of "not available".
  */
 export async function fetchCdnGlobalTotals(
   date: SnapshotDate
 ): Promise<GlobalTotals | null> {
-  try {
-    const res = await fetch(
-      `${cdnBaseUrl()}/snapshots/${date}/${GLOBAL_TOTALS_FILE_NAME}`
-    )
-    if (!res.ok) return null
-    recordCdnResponse(res)
-    const parsed = GlobalTotalsSchema.safeParse(await res.json())
-    return parsed.success ? parsed.data : null
-  } catch {
-    return null
-  }
+  const url = `${cdnBaseUrl()}/snapshots/${date}/${GLOBAL_TOTALS_FILE_NAME}`
+  const res = await fetch(url)
+  if (res.status === 404) return null
+  if (!res.ok) throw new CdnFetchError(res.status, url)
+  recordCdnResponse(res)
+  const parsed = GlobalTotalsSchema.safeParse(await res.json())
+  return parsed.success ? parsed.data : null
 }
 
 /**
  * A date's worldwide race to Distinguished —
  * `snapshots/{date}/global-club-race.json` (#1556).
  *
- * The ONE request the whole `/clubs` area makes. Tolerant like the other
- * global readers: absent (a date before the feature, or a skipped fold) is
- * `null`, and an off-contract body is `null` too — never a half-rendered
- * race.
+ * The ONE request the whole `/clubs` area makes. Absent (a 404: a date
+ * before the feature, or a skipped fold) is `null`, and an off-contract body
+ * is `null` too, never a half-rendered race. Any other failure (server
+ * error, network) throws, so the page says the load failed.
  */
 export async function fetchCdnGlobalClubRace(
   date: SnapshotDate
 ): Promise<GlobalClubRace | null> {
-  try {
-    const res = await fetch(
-      `${cdnBaseUrl()}/snapshots/${date}/${GLOBAL_CLUB_RACE_FILE_NAME}`
-    )
-    if (!res.ok) return null
-    recordCdnResponse(res)
-    const parsed = GlobalClubRaceReaderSchema.safeParse(await res.json())
-    return parsed.success ? parsed.data : null
-  } catch {
-    return null
-  }
+  const url = `${cdnBaseUrl()}/snapshots/${date}/${GLOBAL_CLUB_RACE_FILE_NAME}`
+  const res = await fetch(url)
+  if (res.status === 404) return null
+  if (!res.ok) throw new CdnFetchError(res.status, url)
+  recordCdnResponse(res)
+  const parsed = GlobalClubRaceReaderSchema.safeParse(await res.json())
+  return parsed.success ? parsed.data : null
 }
 
 /** `snapshots/{date}/region-rollups.json` (#1799) — region and world
