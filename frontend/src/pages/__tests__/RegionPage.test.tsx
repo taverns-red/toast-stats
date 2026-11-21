@@ -126,7 +126,7 @@ describe('RegionPage empty & error recovery affordances (#883)', () => {
     // role="status", so the role alone can't tell the states apart.
     const heading = await screen.findByRole('heading', {
       level: 1,
-      name: 'Region 99 has no districts',
+      name: "Region 99 isn't in Toast Stats",
     })
     expect(heading.closest('[data-testid="not-found-panel"]')).not.toBeNull()
     expect(

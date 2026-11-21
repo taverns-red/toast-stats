@@ -253,7 +253,7 @@ describe('EndOfYearRankingsPanel', () => {
   })
 
   describe('Null Rankings Handling', () => {
-    it('says no districts are ranked, instead of showing zeros (#2647)', () => {
+    it('says the rankings could not load, instead of showing zeros (#2647)', () => {
       renderWithProviders(
         <EndOfYearRankingsPanel
           {...baseProps}
@@ -262,9 +262,8 @@ describe('EndOfYearRankingsPanel', () => {
         />
       )
 
-      expect(
-        screen.getByText(/no districts are ranked for this program year/i)
-      ).toBeInTheDocument()
+      expect(screen.getByText("Couldn't load rankings.")).toBeInTheDocument()
+      expect(screen.queryByText(/no districts are ranked/i)).toBeNull()
     })
 
     it('does not show as-of date when rankings are null', () => {
@@ -386,6 +385,9 @@ describe('EndOfYearRankingsPanel', () => {
 
       expect(screen.queryByText('Overall Rank')).not.toBeInTheDocument()
       expect(screen.queryByText(/0 of 0/)).not.toBeInTheDocument()
+      expect(
+        screen.getByText('No districts are ranked for this program year yet.')
+      ).toBeInTheDocument()
     })
 
     it('hides the rank cards when there are no rankings at all', () => {

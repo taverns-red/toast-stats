@@ -18,7 +18,13 @@ import {
   beforeEach,
   afterEach,
 } from 'vitest'
-import { render, cleanup, screen, within } from '@testing-library/react'
+import {
+  render,
+  cleanup,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { setupCdnFetchMock } from './utils/mockCdnData'
 import { preloadAppRoutes } from './utils/preloadAppRoutes'
@@ -43,7 +49,12 @@ async function notFoundHeading(name: RegExp) {
   const panel = await within(main).findByTestId('not-found-panel', undefined, {
     timeout: 8000,
   })
-  return within(panel).getByRole('heading', { level: 1, name })
+  const h1 = within(panel).getByRole('heading', { level: 1, name })
+  // The tab title names what was not found, the same words as the h1.
+  await waitFor(() =>
+    expect(document.title).toBe(`${h1.textContent} — Toast Stats`)
+  )
+  return h1
 }
 
 describe('not found renders one panel inside the shell (#2647)', () => {
@@ -101,6 +112,8 @@ describe('not found renders one panel inside the shell (#2647)', () => {
 
   it('names the unknown region', async () => {
     await openApp('/region/99')
-    expect(await notFoundHeading(/region 99/i)).toBeInTheDocument()
+    expect(
+      await notFoundHeading(/^Region 99 isn't in Toast Stats$/)
+    ).toBeInTheDocument()
   })
 })
