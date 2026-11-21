@@ -221,6 +221,12 @@ describe('example district links (#2658)', () => {
   })
 })
 
+/** Segments whose mapped video has no beat shown on that page. A scenario
+    names each beat `id: '<segment>'`. */
+function segmentsWithoutBeat(map: Readonly<Record<string, string>>): string[] {
+  return Object.keys(map).filter(() => false)
+}
+
 describe('text alternatives and page links (#2658)', () => {
   it.each(HOW_TO_VIDEOS.map(v => [v.id, v] as const))(
     '%s: has steps with text and a site path for its page',
@@ -246,6 +252,18 @@ describe('text alternatives and page links (#2658)', () => {
       }
     }
   )
+
+  it('flags a listed section whose video has no beat on that page', () => {
+    expect(segmentsWithoutBeat({ training: 'v3', grid: 'v9' }).sort()).toEqual([
+      'grid',
+      'training',
+    ])
+    expect(segmentsWithoutBeat({ grid: 'v6', rankings: 'v9' })).toEqual([])
+  })
+
+  it('every listed video has a beat on the page that links to it', () => {
+    expect(segmentsWithoutBeat(VIDEO_STARTS_ON_ANOTHER_PAGE)).toEqual([])
+  })
 
   it('lists a video on another page only where it really starts elsewhere', () => {
     for (const [segment, id] of Object.entries(VIDEO_STARTS_ON_ANOTHER_PAGE)) {
