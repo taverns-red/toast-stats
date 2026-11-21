@@ -968,6 +968,45 @@ describe('DistrictClubsPage states (#2676)', () => {
     expect(screen.getByText(/alpha toastmasters/i)).toBeVisible()
   })
 
+  // #3020: the spec's error title, for either failed query.
+  it.each(['dates', 'analytics'] as const)(
+    'titles the error panel "Couldn\'t load clubs" when the %s query fails',
+    async failed => {
+      vi.mocked(useDistrictAnalytics).mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isError: failed === 'analytics',
+        error: failed === 'analytics' ? new Error('Failed to fetch') : null,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useDistrictAnalytics>)
+      vi.mocked(useDistrictCachedDates).mockReturnValue(
+        (failed === 'dates'
+          ? {
+              data: undefined,
+              isPending: false,
+              isLoading: false,
+              isError: true,
+              error: new Error('Failed to fetch'),
+              refetch: vi.fn(),
+            }
+          : {
+              data: {
+                dates: ['2025-07-15', '2025-07-01'],
+                dateRange: { startDate: '2025-07-01', endDate: '2025-07-15' },
+              },
+              isPending: false,
+              isLoading: false,
+              refetch: vi.fn(),
+            }) as unknown as ReturnType<typeof useDistrictCachedDates>
+      )
+
+      renderAt('/district/61/clubs')
+
+      expect(await screen.findByText("Couldn't load clubs")).toBeVisible()
+      expect(screen.queryByText(/failed to load clubs/i)).toBeNull()
+    }
+  )
+
   // #3020: Retry retries whatever failed, not only one of the two queries.
   it('retries both queries from the error panel when both failed', async () => {
     const refetch = vi.fn()
