@@ -453,10 +453,9 @@ describe('DistrictDetailHeader link to the videos page (#3167)', () => {
     ['a page with no video', '/district/61/training'],
   ])('links the videos page from the header on %s', (_name, path) => {
     renderAt(path)
-    expect(screen.getByRole('link', { name: 'How-to videos' })).toHaveAttribute(
-      'href',
-      '/videos'
-    )
+    expect(
+      screen.getByRole('link', { name: 'All how-to videos' })
+    ).toHaveAttribute('href', '/videos')
   })
 
   it('links the videos page from the About this page sheet on a phone', async () => {
@@ -464,7 +463,7 @@ describe('DistrictDetailHeader link to the videos page (#3167)', () => {
     await userEvent.click(screen.getByTestId('context-bar-chip'))
     const sheet = screen.getByRole('dialog')
     expect(
-      within(sheet).getByRole('link', { name: 'How-to videos' })
+      within(sheet).getByRole('link', { name: 'All how-to videos' })
     ).toHaveAttribute('href', '/videos')
   })
 })

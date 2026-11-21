@@ -150,6 +150,16 @@ beforeEach(() => {
 })
 
 describe('DistrictChangesPage', () => {
+  it('links the videos page from the About sheet', () => {
+    renderPage()
+    fireEvent.click(screen.getByTestId('context-bar-chip'))
+    expect(
+      within(screen.getByRole('dialog')).getByRole('link', {
+        name: 'All how-to videos',
+      })
+    ).toHaveAttribute('href', '/videos')
+  })
+
   it('renders headline, four KPI cards, and grouped events for a real diff', () => {
     mockedDates.mockReturnValue({
       data: { dates: ['2026-05-25', '2026-05-26'] },

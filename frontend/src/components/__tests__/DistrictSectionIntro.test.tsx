@@ -24,4 +24,14 @@ describe('DistrictSectionIntro link to the section video (#2658)', () => {
     renderIntro('council')
     expect(screen.queryByRole('link', { name: /watch how/i })).toBeNull()
   })
+
+  it.each(['changes', 'council'])(
+    'links the videos page from the %s eyebrow',
+    segment => {
+      renderIntro(segment)
+      expect(
+        screen.getByRole('link', { name: 'All how-to videos' })
+      ).toHaveAttribute('href', '/videos')
+    }
+  )
 })
