@@ -130,7 +130,7 @@
     },
     {
       "path": "snapshots/{date}/analytics/district_{district}_analytics.json",
-      "districts": ["61", "86"]
+      "districts": ["61", "86", "U"]
     },
     {
       "path": "snapshots/{date}/analytics/district_{district}_analytics.json",
@@ -167,6 +167,11 @@
     },
     {
       "path": "snapshots/{date}/district_{district}_reports.json",
+      "optional": true
+    },
+    {
+      "path": "snapshots/{date}/district_{district}_reports.json",
+      "districts": ["U"],
       "optional": true
     },
     {
