@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { ColumnVisibilityApi } from '../hooks/useColumnVisibility'
+import { PartialFailureNote } from './PartialFailureNote'
 import {
   ALWAYS_SHOWN_COLUMN_ID,
   CHOOSER_GROUPS,
@@ -30,6 +31,8 @@ interface ColumnsMenuProps {
   changesLoading?: boolean
   /** The Changes diff failed to load; the group says so and is disabled. */
   changesFailed?: boolean
+  /** Re-reads the Changes diff after a failure; it is the note's Try again. */
+  onRetryChanges?: (() => void) | undefined
   /** Called when the menu opens (starts the on-demand diff read, #2740). */
   onOpen?: (() => void) | undefined
   /** Heading for the Changes group, e.g. "Changes since Nov 10". */
@@ -69,6 +72,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
   changesAvailable = false,
   changesLoading = false,
   changesFailed = false,
+  onRetryChanges,
   onOpen,
   changesLabel,
   sinceActive = false,
@@ -213,18 +217,26 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
               <fieldset key={group.id} className="clubs-columns-menu__group">
                 <legend className="clubs-columns-menu__legend">{legend}</legend>
                 {group.id === 'changes' && (
-                  <span
+                  <div
                     className="clubs-columns-menu__note"
                     role="status"
                     aria-live="polite"
                     data-testid="columns-changes-status"
                   >
-                    {changesFailed
-                      ? 'Changes could not be loaded. Close and reopen this menu to try again.'
-                      : changesLoading
-                        ? 'Loading changes…'
-                        : ''}
-                  </span>
+                    {changesFailed ? (
+                      <PartialFailureNote
+                        subject="the changes"
+                        announce={false}
+                        onRetry={onRetryChanges}
+                      >
+                        The other columns still work.
+                      </PartialFailureNote>
+                    ) : changesLoading ? (
+                      'Loading changes…'
+                    ) : (
+                      ''
+                    )}
+                  </div>
                 )}
                 {ids.map(id => {
                   const meta = metaOf(id)

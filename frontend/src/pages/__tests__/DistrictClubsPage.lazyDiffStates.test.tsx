@@ -271,9 +271,13 @@ describe('Changes group in the Columns menu (#2740)', () => {
     await openColumns()
     act(() => fake.set({ ...fake.idle, isError: true }))
     expect(
-      await screen.findByText(/changes could not be loaded/i)
+      await screen.findByText(/we couldn't load the changes/i)
     ).toBeVisible()
     expect(changesCheckbox()).toBeDisabled()
+    const callsBefore = fake.refetch.mock.calls.length
+    await userEvent.click(screen.getByRole('button', { name: /try again/i }))
+    expect(fake.refetch.mock.calls.length).toBeGreaterThan(callsBefore)
+    fake.refetch.mockClear()
     await userEvent.keyboard('{Escape}')
     await openColumns()
     expect(fake.refetch).toHaveBeenCalled()

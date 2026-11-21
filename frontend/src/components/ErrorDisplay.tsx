@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { couldntLoad } from '../utils/loadFailureText'
 
 interface ErrorDisplayProps {
   error: Error | string | null
@@ -91,12 +92,12 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
 
   const getUserFriendlyMessage = () => {
     if (isNetworkError) {
-      return `We couldn't load ${subject}. Check your connection and try again.`
+      return `${couldntLoad(subject)} Check your connection and try again.`
     }
     if (isNotFoundError) {
       return `${subject.charAt(0).toUpperCase()}${subject.slice(1)} could not be found.`
     }
-    return `We couldn't load ${subject}. Try again in a moment.`
+    return `${couldntLoad(subject)} Try again in a moment.`
   }
 
   if (variant === 'inline') {

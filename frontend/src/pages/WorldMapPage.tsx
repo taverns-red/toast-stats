@@ -58,6 +58,7 @@ import {
   worldTopClubs,
 } from '../utils/worldClubs'
 import { ErrorDisplay } from '../components/ErrorDisplay'
+import { PartialFailureNote } from '../components/PartialFailureNote'
 import '../components/map/districtMap.css'
 import './regionMap.css'
 
@@ -420,16 +421,20 @@ const WorldMapPage: React.FC = () => {
     </p>
   )
   const failedNote = failedShards.length > 0 && (
-    <div className="map-panel__note world-map__failed" role="alert">
-      <p>
-        {failedShards.length === 1
-          ? `1 region could not be loaded (${worldRegionLabel(failedShards[0]!)}). Its clubs are missing from the map and the list.`
-          : `${failedShards.length} regions could not be loaded (${failedShards.map(worldRegionLabel).join(', ')}). Their clubs are missing from the map and the list.`}
-      </p>
-      <button type="button" className="map-pill" onClick={retryShards}>
-        Try again
-      </button>
-    </div>
+    <PartialFailureNote
+      className="map-panel__note world-map__failed"
+      buttonClassName="map-pill min-h-[44px]"
+      subject={
+        failedShards.length === 1
+          ? `1 region (${worldRegionLabel(failedShards[0]!)})`
+          : `${failedShards.length} regions (${failedShards.map(worldRegionLabel).join(', ')})`
+      }
+      onRetry={retryShards}
+    >
+      {failedShards.length === 1
+        ? 'Its clubs are missing from the map and the list.'
+        : 'Their clubs are missing from the map and the list.'}
+    </PartialFailureNote>
   )
 
   const filterControls = isPhone ? (
