@@ -20,7 +20,7 @@
   color: var(--ink-3);
   /* 60 "0"s of Source Sans 3 (60 x 0.497em). A ch width follows the current
      font's "0", so it narrowed at the web-font swap and re-wrapped the intro.
-     Enforced by actionListFontIndependentWidth.test.ts. */
+     Enforced by fontIndependentWidths.test.ts. */
   max-width: 29.82em;
 }
 
