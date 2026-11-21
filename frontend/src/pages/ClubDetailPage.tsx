@@ -83,6 +83,7 @@ import { ClubRecentChanges } from '../components/clubs/ClubRecentChanges'
 import { ClubRiskFactors } from '../components/clubs/ClubRiskFactors'
 import { buildClubMeetingInfo, meetingWhen } from '../utils/clubMeetingInfo'
 import { closedClubSummary } from '../utils/clubDistrictHistory'
+import { shortProgramYear } from '../utils/clubDistrictSpan'
 import { getProgramYearForDate } from '../utils/programYear'
 import { toSnapshotDate } from '../types/snapshotDate'
 import { ClosedClubHistory } from '../components/clubs/ClosedClubHistory'
@@ -844,9 +845,13 @@ const ClubDetailPage: React.FC = () => {
               title={name}
               back={parent}
               about={
-                closedSuspendDate
-                  ? "The page shows its last program year on Toastmasters' list."
-                  : "This club has closed. The page shows its last program year on Toastmasters' list."
+                // #3126 — the "start of the program year" sentence only for
+                // a July 1 suspension; the list holds any date in the year.
+                closedSuspendDate === programYear.startDate
+                  ? `This club was suspended at the start of the program year, so the page shows its ${shortProgramYear(getProgramYearForDate(closedLastSeen).label)} numbers.`
+                  : closedSuspendDate
+                    ? "The page shows its last program year on Toastmasters' list."
+                    : "This club has closed. The page shows its last program year on Toastmasters' list."
               }
               trail={[
                 { label: 'Districts', to: '/' },
