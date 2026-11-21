@@ -506,5 +506,24 @@ describe('MetricRankingsCalculator', () => {
           .worldTied
       ).toBe(true)
     })
+
+    it('is false when the ranked value is missing, as in old rankings files (#2797)', () => {
+      const rows = [
+        { districtId: '1', clubsRank: 1 },
+        { districtId: '2', clubsRank: 2 },
+      ]
+      expect(calculator.isWorldTied('clubs', { rankings: rows })).toBe(false)
+    })
+
+    it('takes bare ranking rows, as the rank-history builders read them (#2797)', () => {
+      const rows = [
+        { distinguishedPercent: 0 },
+        { distinguishedPercent: 0 },
+        { distinguishedPercent: 0 },
+      ]
+      expect(calculator.isWorldTied('distinguished', { rankings: rows })).toBe(
+        true
+      )
+    })
   })
 })

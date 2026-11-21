@@ -106,6 +106,31 @@ describe('EndOfYearRankingsPanel', () => {
       expect(screen.getByText('83rd percentile')).toBeInTheDocument() // Payments
       expect(screen.getByText('64th percentile')).toBeInTheDocument() // Distinguished
     })
+
+    it('shows "Tied" for a category every district is tied in (#2797)', () => {
+      // Early in the year every district can be at 0% Distinguished, so
+      // every district is rank 1 of 94.
+      const tiedRankings: EndOfYearRankings = {
+        ...mockRankings,
+        distinguishedClubs: {
+          rank: 1,
+          totalDistricts: 94,
+          percentile: 98.9,
+          tied: true,
+        },
+      }
+
+      renderWithProviders(
+        <EndOfYearRankingsPanel {...baseProps} rankings={tiedRankings} />
+      )
+
+      expect(screen.getByText('Tied')).toBeInTheDocument()
+      expect(screen.queryByText('of 94')).not.toBeInTheDocument()
+      expect(screen.queryByText('99th percentile')).not.toBeInTheDocument()
+      // The other categories keep their rank.
+      expect(screen.getByText('8')).toBeInTheDocument()
+      expect(screen.getByText('94th percentile')).toBeInTheDocument()
+    })
   })
 
   describe('Loading State', () => {
