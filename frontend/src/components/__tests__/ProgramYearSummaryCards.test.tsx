@@ -6,8 +6,9 @@
  */
 
 import React from 'react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ProgramYearSummaryCards } from '../ProgramYearSummaryCards'
 import type { ProgramYearSummary } from '../../utils/programYearSummary'
@@ -59,9 +60,14 @@ describe('ProgramYearSummaryCards (#892)', () => {
     ).toBeGreaterThan(0)
   })
 
-  it('shows an error notice when the fetch failed', () => {
-    renderCards({ isError: true })
-    expect(screen.getByRole('status')).toHaveTextContent(/load|try again/i)
+  it('shows the shared error panel with Try again when the fetch failed', async () => {
+    const onRetry = vi.fn()
+    renderCards({ isError: true, onRetry })
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /couldn't load the year-end standings/i
+    )
+    await userEvent.click(screen.getByRole('button', { name: /try again/i }))
+    expect(onRetry).toHaveBeenCalledTimes(1)
   })
 
   it('shows an empty notice when no completed years are on file', () => {

@@ -279,9 +279,9 @@ describe('GlobalRankingsTab', () => {
       renderWithProviders(<GlobalRankingsTab {...baseProps} />)
 
       // Should show error message
-      expect(screen.getByText('Unable to Load Rankings')).toBeInTheDocument()
+      expect(screen.getByText('Could not load rankings')).toBeInTheDocument()
       expect(
-        screen.getByText('Failed to fetch ranking data')
+        screen.getByText(/couldn't load the global rankings/i)
       ).toBeInTheDocument()
     })
 
@@ -299,11 +299,9 @@ describe('GlobalRankingsTab', () => {
 
       renderWithProviders(<GlobalRankingsTab {...baseProps} />)
 
-      expect(screen.getByText('Unable to Load Rankings')).toBeInTheDocument()
+      expect(screen.getByText('Could not load rankings')).toBeInTheDocument()
       expect(
-        screen.getByText(
-          /An error occurred while loading the global rankings data/
-        )
+        screen.getByText(/couldn't load the global rankings/i)
       ).toBeInTheDocument()
     })
 
@@ -345,7 +343,7 @@ describe('GlobalRankingsTab', () => {
       expect(mockRefetch).toHaveBeenCalledTimes(1)
     })
 
-    it('error state has proper accessibility attributes', () => {
+    it('error state is announced as an alert', () => {
       mockUseGlobalRankings.mockReturnValue(
         createMockHookResult({
           isError: true,
@@ -361,7 +359,6 @@ describe('GlobalRankingsTab', () => {
 
       const errorAlert = screen.getByRole('alert')
       expect(errorAlert).toBeInTheDocument()
-      expect(errorAlert).toHaveAttribute('aria-live', 'polite')
     })
   })
 

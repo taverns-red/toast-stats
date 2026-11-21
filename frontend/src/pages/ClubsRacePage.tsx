@@ -5,6 +5,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useProgramYearControls } from '../hooks/useProgramYearControls'
 import { useLatestAsOfDate } from '../hooks/useLatestAsOfDate'
 import { useGlobalClubRace } from '../hooks/useGlobalClubRace'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import { DataControlsBar } from '../components/DataControlsBar'
 import { ClubsWorldContextBar } from '../components/clubs/ClubsWorldContextBar'
 import { ClubsSubnav } from '../components/clubs/ClubsSubnav'
@@ -35,7 +36,8 @@ const ClubsRaceTierPage: React.FC<{ tier: ClubRaceTier }> = ({ tier }) => {
     isDatesPending,
   } = useProgramYearControls()
   const { asOfDate: globalAsOfDate } = useLatestAsOfDate()
-  const { race, snapshotDate, isLoading } = useGlobalClubRace(effectiveDate)
+  const { race, snapshotDate, isLoading, isError, error, refetch } =
+    useGlobalClubRace(effectiveDate)
 
   const title = raceTierTitle(tier)
   useDocumentTitle(title)
@@ -111,7 +113,16 @@ const ClubsRaceTierPage: React.FC<{ tier: ClubRaceTier }> = ({ tier }) => {
         </p>
       )}
 
-      {!isLoading && !race && (
+      {isError && (
+        <ErrorDisplay
+          error={error ?? 'Failed to fetch'}
+          title="Could not load the club race"
+          subject="the worldwide club race"
+          onRetry={refetch}
+        />
+      )}
+
+      {!isLoading && !isError && !race && (
         <p className="clubs-page__empty" data-testid="clubs-race-unavailable">
           The worldwide race is not available for this date. It is published
           daily from the collector's crossing store; earlier dates predate it.

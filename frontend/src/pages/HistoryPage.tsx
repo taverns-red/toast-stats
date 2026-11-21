@@ -26,7 +26,7 @@ import { EARLIEST_ARCHIVED_PROGRAM_YEAR } from '../utils/programYearSummary'
 
 const HistoryPage: React.FC = () => {
   useDocumentTitle('Program Year History')
-  const { summaries, isLoading, isError } = useProgramYearSummaries()
+  const { summaries, isLoading, isError, refetch } = useProgramYearSummaries()
   const currentPY = getCurrentProgramYear()
   // The callout names the archive start (#2657). It used to say "before
   // 2019" above cards that start in 2016-17. It reads the same constant as
@@ -41,6 +41,7 @@ const HistoryPage: React.FC = () => {
     history: globalHistory,
     isLoading: globalLoading,
     isError: globalError,
+    refetch: refetchHistory,
   } = useGlobalHistory()
   const {
     clubsByCountry,
@@ -48,6 +49,7 @@ const HistoryPage: React.FC = () => {
     snapshotDate: countrySnapshotDate,
     isLoading: countryLoading,
     isError: countryError,
+    refetch: refetchCountry,
   } = useGlobalClubsByCountry()
 
   return (
@@ -123,6 +125,7 @@ const HistoryPage: React.FC = () => {
         summaries={summaries}
         isLoading={isLoading}
         isError={isError}
+        onRetry={refetch}
         expectedCount={currentPY.year - EARLIEST_ARCHIVED_PROGRAM_YEAR}
       />
 
@@ -130,11 +133,13 @@ const HistoryPage: React.FC = () => {
         history={globalHistory}
         historyLoading={globalLoading}
         historyError={globalError}
+        onRetryHistory={refetchHistory}
         clubsByCountry={clubsByCountry}
         clubsCounted={clubsCounted}
         countrySnapshotDate={countrySnapshotDate}
         countryLoading={countryLoading}
         countryError={countryError}
+        onRetryCountry={refetchCountry}
       />
 
       <div

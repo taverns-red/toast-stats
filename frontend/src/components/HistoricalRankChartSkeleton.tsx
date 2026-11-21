@@ -1,5 +1,6 @@
 import React from 'react'
 import { ChartSkeleton } from './ChartSkeleton'
+import { ErrorDisplay } from './ErrorDisplay'
 import { TOUCH_QUERY } from './charts/ChartReadout'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 
@@ -116,25 +117,18 @@ export const HistoricalRankChartSkeleton: React.FC<{
 
 export const HistoricalRankChartError: React.FC<{
   error?: Error | null | undefined
-}> = ({ error }) => (
-  <section
-    className="redesign-panel"
-    role="alert"
-    aria-label="Historical rank data error"
-  >
+  onRetry?: (() => void) | undefined
+}> = ({ error, onRetry }) => (
+  <section className="redesign-panel" aria-label="Historical rank data error">
     <h2 className="text-xl font-semibold text-gray-900 mb-4">
       Historical Rank Progression
     </h2>
-    <div className="flex items-center justify-center h-80">
-      <div className="text-center">
-        <p className="text-red-600 font-medium mb-2">
-          Failed to load historical rank data
-        </p>
-        <p className="text-gray-600 text-sm">
-          {error?.message || 'An unexpected error occurred'}
-        </p>
-      </div>
-    </div>
+    <ErrorDisplay
+      error={error ?? 'Failed to fetch'}
+      title="Could not load historical ranks"
+      subject="the historical rank data"
+      {...(onRetry ? { onRetry } : {})}
+    />
   </section>
 )
 
@@ -166,11 +160,13 @@ export const HistoricalRankChartFallback: React.FC<{
   isLoading: boolean
   isError: boolean
   error?: Error | null | undefined
+  onRetry?: (() => void) | undefined
   selectedProgramYear?: ProgramYearLabel
-}> = ({ data, isLoading, isError, error, selectedProgramYear }) => {
+}> = ({ data, isLoading, isError, error, onRetry, selectedProgramYear }) => {
   if (isLoading)
     return <HistoricalRankChartSkeleton programYear={selectedProgramYear} />
-  if (isError) return <HistoricalRankChartError error={error} />
+  if (isError)
+    return <HistoricalRankChartError error={error} onRetry={onRetry} />
   if (!data || data.length === 0) return <HistoricalRankChartEmpty />
   return <HistoricalRankChartSkeleton programYear={selectedProgramYear} />
 }

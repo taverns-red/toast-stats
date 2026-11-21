@@ -1236,6 +1236,7 @@ describe('membership trend with prior program years (#1791)', () => {
       isLoading: false,
       isError: false,
       error: null,
+      refetch: vi.fn(),
     })
   })
 

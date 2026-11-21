@@ -27,6 +27,8 @@ export interface CouncilPackData {
   isPending: boolean
   /** The analytics file failed or is absent once settled. */
   isError: boolean
+  /** Re-run the failed analytics read (Try again). */
+  refetch?: () => void
   /** The snapshot loaded and the scope is not in it: a bad URL (404). */
   isNotFound: boolean
   pack: CouncilPack | null
@@ -58,7 +60,7 @@ export function useCouncilPack(
     isLatestSnapshot,
   })
 
-  const { data, error } = useDistrictAnalytics(
+  const { data, error, refetch } = useDistrictAnalytics(
     hasValidDates ? (districtId ?? null) : null,
     undefined,
     effectiveEndDate ?? undefined
@@ -100,6 +102,7 @@ export function useCouncilPack(
   return {
     isPending,
     isError: !isPending && (!!error || !data),
+    refetch: () => void refetch(),
     isNotFound: !!snapshot && !!effectiveEndDate && pack === null,
     pack,
     divisionName: scopedClub?.divisionName,

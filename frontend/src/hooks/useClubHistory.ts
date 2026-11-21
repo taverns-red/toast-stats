@@ -96,6 +96,7 @@ export interface UseClubHistoryResult {
   isLoading: boolean
   isError: boolean
   error: Error | null
+  refetch: () => void
 }
 
 /** Well-formed `YYYY-MM-DD`; anything else in a remote index is ignored. */
@@ -327,5 +328,6 @@ export function useClubHistory(
     isLoading: enabled ? query.isLoading : false,
     isError: query.isError,
     error: query.error,
+    refetch: () => void query.refetch(),
   }
 }

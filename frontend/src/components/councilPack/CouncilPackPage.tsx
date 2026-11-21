@@ -6,7 +6,7 @@
 import React from 'react'
 import { SubpageBreadcrumb } from '../SubpageBreadcrumb'
 import { LoadingSkeleton } from '../LoadingSkeleton'
-import { EmptyState } from '../ErrorDisplay'
+import { ErrorDisplay } from '../ErrorDisplay'
 import { CouncilPackDocument } from './CouncilPackDocument'
 import type { CouncilPackData } from '../../hooks/useCouncilPack'
 
@@ -36,10 +36,11 @@ export const CouncilPackPage: React.FC<CouncilPackPageProps> = ({
 
   if (data.isError) {
     return (
-      <EmptyState
+      <ErrorDisplay
+        error="Request failed"
         title="Could not load the print pack"
-        message="The district analytics file is unavailable. Try again in a moment."
-        icon="data"
+        subject="the district analytics"
+        {...(data.refetch ? { onRetry: data.refetch } : {})}
       />
     )
   }

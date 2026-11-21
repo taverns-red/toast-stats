@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { ErrorDisplay } from './ErrorDisplay'
 import type {
   GlobalHistory,
   GlobalTotalsClubsByCountry,
@@ -54,6 +55,8 @@ export interface WorldwideScoreboardProps {
   history: GlobalHistory | null
   historyLoading: boolean
   historyError: boolean
+  /** Re-run the failed history load (Try again). */
+  onRetryHistory?: () => void
   /** Clubs-by-country from the LATEST snapshot only — never a per-year series. */
   clubsByCountry: GlobalTotalsClubsByCountry | null
   /** Clubs the latest rollup counted — the whole every country share is of. */
@@ -62,6 +65,8 @@ export interface WorldwideScoreboardProps {
   countrySnapshotDate: string | null
   countryLoading: boolean
   countryError: boolean
+  /** Re-run the failed country load (Try again). */
+  onRetryCountry?: () => void
 }
 
 const NUM = new Intl.NumberFormat('en-US')
@@ -104,11 +109,13 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
   history,
   historyLoading,
   historyError,
+  onRetryHistory,
   clubsByCountry,
   clubsCounted,
   countrySnapshotDate,
   countryLoading,
   countryError,
+  onRetryCountry,
 }) => {
   const model = useMemo(
     () => (history ? buildScoreboardModel(history) : null),
@@ -151,10 +158,13 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
         <div
           className="wws__reserve wws__placeholder"
           data-testid="worldwide-scoreboard-error"
-          role="status"
         >
-          Couldn’t load the worldwide series right now. Please try again
-          shortly.
+          <ErrorDisplay
+            error="Request failed"
+            title="Could not load the worldwide series"
+            subject="the worldwide series"
+            {...(onRetryHistory ? { onRetry: onRetryHistory } : {})}
+          />
         </div>
       </Shell>
     )
@@ -368,7 +378,21 @@ export const WorldwideScoreboard: React.FC<WorldwideScoreboardProps> = ({
             />
           )}
 
-          {!countryLoading && (countryError || !countryView) && (
+          {!countryLoading && countryError && (
+            <div
+              className="wws__country-reserve wws__placeholder"
+              data-testid="wws-country-error"
+            >
+              <ErrorDisplay
+                error="Request failed"
+                title="Could not load clubs by country"
+                subject="clubs by country"
+                {...(onRetryCountry ? { onRetry: onRetryCountry } : {})}
+              />
+            </div>
+          )}
+
+          {!countryLoading && !countryError && !countryView && (
             <div
               className="wws__country-reserve wws__placeholder"
               data-testid="wws-country-placeholder"

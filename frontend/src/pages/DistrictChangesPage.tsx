@@ -25,6 +25,7 @@ import { KpiDeltaCard } from '../components/KpiDeltaCard'
 import { PROVISIONAL_NOTE } from '../components/DistinguishedCount'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import ErrorBoundary from '../components/ErrorBoundary'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import { ChangeGroup } from '../components/ChangeGroup'
 import { ExportButton } from '../components/ExportButton'
 import { exportSnapshotDiff } from '../utils/csvExport'
@@ -345,6 +346,8 @@ const DistrictChangesPage: React.FC = () => {
     data: diff,
     isLoading: diffLoading,
     isError,
+    error,
+    refetch,
   } = useSnapshotDiff(
     districtId,
     holdForRevisions ? undefined : diffArg(from),
@@ -499,13 +502,14 @@ const DistrictChangesPage: React.FC = () => {
               )}
 
             {enoughHistory && !invalidPair && isError && (
-              <p
-                className="district-changes__empty"
-                data-testid="changes-error"
-              >
-                Couldn’t load the change digest for {districtName}. Please try
-                again.
-              </p>
+              <div data-testid="changes-error">
+                <ErrorDisplay
+                  error={error ?? 'Failed to fetch'}
+                  title="Could not load what changed"
+                  subject={`the change digest for ${districtName}`}
+                  onRetry={() => void refetch()}
+                />
+              </div>
             )}
 
             {!invalidPair && diff && shownDiff && (

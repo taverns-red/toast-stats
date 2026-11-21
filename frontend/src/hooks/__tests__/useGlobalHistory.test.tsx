@@ -72,6 +72,8 @@ describe('useGlobalHistory', () => {
       history: null,
       isLoading: true,
       isError: false,
+      error: null,
+      refetch: expect.any(Function),
     })
   })
 

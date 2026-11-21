@@ -49,6 +49,7 @@ import {
   type RegionClub,
   type RegionMetric,
 } from '../utils/regionClubs'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import '../components/map/districtMap.css'
 import './regionMap.css'
 
@@ -521,12 +522,12 @@ const RegionMapPage: React.FC = () => {
   if (isLoading) body = <ExplorerSkeleton />
   else if (isError)
     body = (
-      <div className="rollup-page__empty" role="alert">
-        <p>The region’s clubs could not be loaded.</p>
-        <button type="button" className="map-pill" onClick={refetch}>
-          Try again
-        </button>
-      </div>
+      <ErrorDisplay
+        error="Request failed"
+        title="Could not load the region map"
+        subject="the region's clubs"
+        onRetry={refetch}
+      />
     )
   else if (!shard)
     body = (

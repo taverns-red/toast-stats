@@ -12,6 +12,7 @@ import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { ExportButton } from '../components/ExportButton'
 import { RedVotePromo } from '../components/RedVotePromo'
 import ErrorBoundary from '../components/ErrorBoundary'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import { DISTRICT_SECTIONS } from '../config/districtSections'
 import { exportCouncilStanding } from '../utils/csvExport'
 import { HowToVideosLink } from '../components/WatchHowLink'
@@ -162,6 +163,8 @@ const DistrictCouncilPage: React.FC = () => {
     data: standing,
     isLoading: standingLoading,
     isError,
+    error,
+    refetch,
   } = useCouncilStanding(districtId, snapshotDate)
 
   if (!districtId) return null
@@ -270,9 +273,14 @@ const DistrictCouncilPage: React.FC = () => {
             )}
 
             {usable && isError && (
-              <p className="council-note" data-testid="council-error">
-                Couldn’t load the TI data for {districtName}. Please try again.
-              </p>
+              <div data-testid="council-error">
+                <ErrorDisplay
+                  error={error ?? 'Failed to fetch'}
+                  title="Could not load council credentials"
+                  subject={`the TI data for ${districtName}`}
+                  onRetry={() => void refetch()}
+                />
+              </div>
             )}
 
             {usable && standing && (

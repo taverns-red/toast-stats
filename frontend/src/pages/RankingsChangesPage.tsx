@@ -13,6 +13,7 @@ import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { normaliseRegionId } from '../utils/regionId'
 import { regionMembershipFor } from '../utils/regionHistory'
 import { getProgramYearForDate } from '../utils/programYear'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 
 /* Region and world What Changed (#2476, phase 1): `/region/:n/changes` and
    `/regions/changes`, routed subpages of the region pages (ADR-005). What
@@ -129,9 +130,14 @@ const RankingsChangesPage: React.FC = () => {
           <LoadingSkeleton variant="card" height="600px" />
         )}
         {!invalidPair && !pair.isLoading && pair.isError && (
-          <p className="district-changes__empty" data-testid="changes-error">
-            Couldn’t load the rankings for these dates. Please try again.
-          </p>
+          <div data-testid="changes-error">
+            <ErrorDisplay
+              error="Request failed"
+              title="Could not load what changed"
+              subject="the rankings for these dates"
+              onRetry={pair.refetch}
+            />
+          </div>
         )}
         {!invalidPair && !pair.isLoading && pair.missing.length > 0 && (
           <p className="district-changes__empty" data-testid="changes-missing">

@@ -123,7 +123,9 @@ describe('ErrorDisplay', () => {
       props: { error: new Error('Test error message') },
       customAssertion: () => {
         expect(screen.getByRole('alert')).toBeInTheDocument()
-        expect(screen.getByText(/Test error message/i)).toBeInTheDocument()
+        // The raw message stays out of sight (ErrorDisplay.rawMessage.test.tsx).
+        expect(screen.getByText(/couldn't load this data/i)).toBeInTheDocument()
+        expect(screen.queryByText(/Test error message/i)).toBeNull()
       },
     },
     {

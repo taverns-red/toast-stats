@@ -148,7 +148,7 @@ export function useUrlProgramYear() {
       setContextPY(py)
       setContextDate(undefined)
     },
-    [setSearchParams, setContextPY, defaultPY.year]
+    [setSearchParams, setContextPY, setContextDate, defaultPY.year]
   )
 
   const setSelectedDate = useCallback(

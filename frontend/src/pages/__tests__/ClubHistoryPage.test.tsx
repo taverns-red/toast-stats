@@ -89,6 +89,7 @@ describe('ClubHistoryPage (#1229)', () => {
       isLoading: false,
       isError: false,
       error: null,
+      refetch: vi.fn(),
     })
     renderPage()
     const nav = screen.getByRole('navigation', { name: /breadcrumb/i })
@@ -106,6 +107,7 @@ describe('ClubHistoryPage (#1229)', () => {
       isLoading: false,
       isError: false,
       error: null,
+      refetch: vi.fn(),
     })
     renderPage()
     expect(screen.getByText('2023-2024')).toBeInTheDocument()
@@ -123,6 +125,7 @@ describe('ClubHistoryPage (#1229)', () => {
       isLoading: false,
       isError: false,
       error: null,
+      refetch: vi.fn(),
     })
     renderPage()
     expect(screen.getByText(/no completed program years/i)).toBeInTheDocument()
@@ -131,17 +134,23 @@ describe('ClubHistoryPage (#1229)', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows an error state when the history query fails', () => {
+  it('shows the shared error panel with Try again when the history query fails', async () => {
+    const refetch = vi.fn()
     mockedHistory.mockReturnValue({
       rows: [],
       gaps: [],
       clubName: null,
       isLoading: false,
       isError: true,
-      error: new Error('boom'),
+      error: new Error('Failed to fetch'),
+      refetch,
     })
     renderPage()
-    expect(screen.getByText(/could not load this club/i)).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /couldn't load this club's history/i
+    )
+    await userEvent.click(screen.getByRole('button', { name: /try again/i }))
+    expect(refetch).toHaveBeenCalledTimes(1)
   })
 
   it('falls back to "Club <id>" when the name is not yet resolved', () => {
@@ -152,6 +161,7 @@ describe('ClubHistoryPage (#1229)', () => {
       isLoading: false,
       isError: false,
       error: null,
+      refetch: vi.fn(),
     })
     renderPage()
     expect(
@@ -183,6 +193,7 @@ describe('ClubHistoryPage gap reporting (#1437)', () => {
       isLoading: false,
       isError: false,
       error: null,
+      refetch: vi.fn(),
     })
     renderPage()
     // Bounded query — "District 61" also appears in the breadcrumb.
@@ -208,6 +219,7 @@ describe('ClubHistoryPage gap reporting (#1437)', () => {
       isLoading: false,
       isError: false,
       error: null,
+      refetch: vi.fn(),
     })
     renderPage()
     expect(screen.getByText(/could not be loaded/i)).toBeInTheDocument()
@@ -221,6 +233,7 @@ describe('ClubHistoryPage gap reporting (#1437)', () => {
       isLoading: false,
       isError: false,
       error: null,
+      refetch: vi.fn(),
     })
     renderPage()
     expect(screen.getByText('2023-2024')).toBeInTheDocument()
@@ -235,6 +248,7 @@ describe('ClubHistoryPage gap reporting (#1437)', () => {
       isLoading: false,
       isError: false,
       error: null,
+      refetch: vi.fn(),
     })
     renderPage()
     expect(screen.getByText(/no completed program years/i)).toBeInTheDocument()
@@ -250,6 +264,7 @@ describe('ClubHistoryPage phone context bar (#1831)', () => {
       isLoading: false,
       isError: false,
       error: null,
+      refetch: vi.fn(),
     })
   )
 
@@ -306,6 +321,7 @@ describe('ClubHistoryPage — District column (#1803)', () => {
     isLoading: false,
     isError: false,
     error: null,
+    refetch: vi.fn(),
   })
 
   it('shows the District column when a year was recorded under another district', () => {

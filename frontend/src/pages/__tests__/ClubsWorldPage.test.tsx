@@ -135,6 +135,8 @@ const mockHook = (value: Partial<ReturnType<typeof useGlobalClubRace>>) =>
     reachedById: new Map(),
     isLoading: false,
     isError: false,
+    error: null,
+    refetch: vi.fn(),
     ...value,
   })
 
@@ -194,6 +196,18 @@ describe('ClubsWorldPage (#1556)', () => {
       screen.getByRole('list', { name: 'First to Distinguished' })
     ).toHaveTextContent('1+ Toastmasters Club')
     expect(screen.getAllByTestId('race-podium-empty')).toHaveLength(3)
+  })
+
+  it('shows the shared error panel with Try again when the race fails to load, not "not available"', async () => {
+    const refetch = vi.fn()
+    mockHook({ isError: true, error: new Error('Failed to fetch'), refetch })
+    renderPage()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /couldn't load the worldwide club race/i
+    )
+    expect(screen.queryByTestId('clubs-race-unavailable')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /try again/i }))
+    expect(refetch).toHaveBeenCalledTimes(1)
   })
 
   it('renders the "not available" state when the artifact is absent', () => {

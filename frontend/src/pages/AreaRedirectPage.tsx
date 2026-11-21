@@ -19,7 +19,7 @@ import {
 } from '../utils/extractDivisionPerformance'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
-import { EmptyState } from '../components/ErrorDisplay'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import NotFoundPanel from '../components/NotFoundPanel'
 import { buildDistrictSectionUrl } from '../config/districtSections'
 
@@ -34,6 +34,7 @@ const AreaRedirectPage: React.FC = () => {
     data: snapshot,
     isLoading,
     error,
+    refetch,
   } = useDistrictStatistics(districtId ?? '', undefined, 'divisions')
 
   const normalizedAreaId = areaId?.toUpperCase()
@@ -83,10 +84,11 @@ const AreaRedirectPage: React.FC = () => {
 
   if (error) {
     return (
-      <EmptyState
+      <ErrorDisplay
+        error={error}
         title="Could not load area"
-        message="The district analytics file is unavailable. Try again in a moment."
-        icon="data"
+        subject="this area"
+        onRetry={() => void refetch()}
       />
     )
   }
@@ -97,10 +99,11 @@ const AreaRedirectPage: React.FC = () => {
   // Unreachable against the live wire, which always carries `data.snapshotDate`.
   if (snapshot && !snapshotDate) {
     return (
-      <EmptyState
+      <ErrorDisplay
+        error="Request failed"
         title="Could not load area"
-        message="The district snapshot is missing its date, so this area link can't be resolved. Try again in a moment."
-        icon="data"
+        subject="this area"
+        onRetry={() => void refetch()}
       />
     )
   }

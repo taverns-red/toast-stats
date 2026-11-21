@@ -36,6 +36,7 @@ export interface UseProgramYearSummariesResult {
   isLoading: boolean
   isError: boolean
   error: Error | null
+  refetch: () => void
 }
 
 /**
@@ -107,5 +108,6 @@ export function useProgramYearSummaries(): UseProgramYearSummariesResult {
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,
+    refetch: () => void query.refetch(),
   }
 }
