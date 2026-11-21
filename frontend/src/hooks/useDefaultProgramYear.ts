@@ -28,6 +28,16 @@ import type { ProgramYear } from '../utils/programYear'
 import { snapshotDatesFrom } from '../types/snapshotDate'
 
 export function useDefaultProgramYear(): ProgramYear {
+  return useNewestProgramYearWithData() ?? getCurrentProgramYear()
+}
+
+/**
+ * The newest program year that has snapshots site-wide, or undefined until
+ * the dates arrive. No calendar fallback: callers deciding whether a year
+ * has ended must not guess before the data says so (useDefaultProgramYear
+ * tests).
+ */
+export function useNewestProgramYearWithData(): ProgramYear | undefined {
   // Shares the cache with DateSelector's identical dates query.
   const { data } = useQuery({
     queryKey: ['available-dates'],
@@ -50,9 +60,5 @@ export function useDefaultProgramYear(): ProgramYear {
   )
 
   // getAvailableProgramYears sorts newest first; [0] is the latest PY-with-data.
-  return availableProgramYears[0] ?? getCurrentProgramYear()
-}
-
-export function useNewestProgramYearWithData(): ProgramYear | undefined {
-  return undefined
+  return availableProgramYears[0]
 }
