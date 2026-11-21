@@ -1,9 +1,12 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { useScrollToHashWhenReady } from '../hooks/useScrollToHashWhenReady'
 import {
   HOW_TO_VIDEOS,
   groupByPrimaryRole,
+  roleAnchorId,
   type HowToVideo,
   type VideoCut,
 } from '../content/howToVideos'
@@ -80,6 +83,7 @@ const VideoCard: React.FC<{ video: HowToVideo; cut: VideoCut }> = ({
   const headingId = `video-${video.id}-title`
   return (
     <article
+      id={`video-${video.id}`}
       className="videos-page__card"
       data-testid={`video-${video.id}`}
       aria-labelledby={headingId}
@@ -105,9 +109,26 @@ const VideoCard: React.FC<{ video: HowToVideo; cut: VideoCut }> = ({
           aria-label={`${video.title} (${cut === 'mobile' ? 'phone' : 'desktop'} video)`}
         />
       </div>
+      {/* The videos have no narration or caption track, so this list is
+          their text alternative (#2658, WCAG 1.2.1). */}
+      <details className="videos-page__steps">
+        <summary>Steps shown</summary>
+        <ol>
+          {video.steps.map(step => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      </details>
       <p className="videos-page__links">
         {/* #2657 REF-41: the visible text repeats on every card, so the
             accessible name adds the video's title (label first, WCAG 2.5.3). */}
+        <Link
+          className="videos-page__link"
+          to={video.pageUrl}
+          aria-label={`Open this page: ${video.title}`}
+        >
+          Open this page
+        </Link>
         <a
           className="videos-page__link"
           href={video.desktopUrl}
@@ -129,6 +150,8 @@ const VideoCard: React.FC<{ video: HowToVideo; cut: VideoCut }> = ({
 
 const VideosPage: React.FC = () => {
   useDocumentTitle('How-to videos')
+  // The page is static, so a #video-… link from a district page can scroll at once.
+  useScrollToHashWhenReady(true)
   const cut: VideoCut = useIsMobile() ? 'mobile' : 'desktop'
   const groups = groupByPrimaryRole(HOW_TO_VIDEOS)
 
@@ -142,10 +165,25 @@ const VideosPage: React.FC = () => {
           no narration: the captions on screen carry the message. Grouped by the
           role each one is for.
         </p>
+        {/* Nine role groups make a long page; these links skip to one. */}
+        <nav aria-label="Jump to a role" className="videos-page__jump">
+          <ul>
+            {groups.map(group => (
+              <li key={group.role}>
+                <a
+                  className="videos-page__link"
+                  href={`#${roleAnchorId(group.role)}`}
+                >
+                  {group.role}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </header>
 
       {groups.map(group => {
-        const id = `role-${group.role.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+        const id = roleAnchorId(group.role)
         return (
           <section
             key={group.role}

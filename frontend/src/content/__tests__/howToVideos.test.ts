@@ -11,11 +11,17 @@ import {
   videoUrl,
   type HowToVideo,
 } from '../howToVideos'
+import {
+  SECTION_VIDEO_SEGMENTS,
+  sectionVideoId,
+} from '../../config/sectionVideos'
 
 const entry = (over: Partial<HowToVideo> & { id: string }): HowToVideo => ({
   title: `Title ${over.id}`,
   roles: ['Area Director'],
   description: 'One line.',
+  pageUrl: '/district/86',
+  steps: ['One step.'],
   version: '2026-10-27',
   desktopUrl: videoUrl(over.id, over.version ?? '2026-10-27', 'desktop'),
   mobileUrl: videoUrl(over.id, over.version ?? '2026-10-27', 'mobile'),
@@ -189,4 +195,27 @@ describe('groupByPrimaryRole', () => {
   it('returns no groups for no videos', () => {
     expect(groupByPrimaryRole([])).toEqual([])
   })
+})
+
+describe('text alternatives and page links (#2658)', () => {
+  it.each(HOW_TO_VIDEOS.map(v => [v.id, v] as const))(
+    '%s: has steps with text and a site path for its page',
+    (_id, v) => {
+      expect(v.steps.length).toBeGreaterThan(0)
+      for (const step of v.steps) expect(step.trim()).not.toBe('')
+      expect(v.pageUrl).toMatch(/^\/[a-z0-9]/)
+    }
+  )
+
+  it.each(SECTION_VIDEO_SEGMENTS.map(s => [s || '(hub)', s] as const))(
+    'the %s header link goes to a video that shows that district page',
+    (_name, segment) => {
+      const id = sectionVideoId(segment)
+      const video = HOW_TO_VIDEOS.find(v => v.id === id)
+      expect(video, `no catalogue entry for ${id}`).toBeDefined()
+      const path = (video?.pageUrl ?? '').split('?')[0] ?? ''
+      const match = /^\/district\/\d+\/?([^/]*)$/.exec(path)
+      expect(match?.[1] ?? null).toBe(segment)
+    }
+  )
 })
