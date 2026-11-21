@@ -24,7 +24,10 @@ import LazyBasemapMap from '../components/map/LazyBasemapMap'
 // render suspends and pays React's 300 ms Suspense reveal throttle.
 import OnlineClubsChip from '../components/map/OnlineClubsChip'
 import { useClubPins } from '../components/map/useClubPins'
-import { legendSlotHeight } from '../components/map/legendSlot'
+import {
+  estimateLegendLabels,
+  legendSlotHeight,
+} from '../components/map/legendSlot'
 import MapViewControls from '../components/map/MapViewControls'
 import {
   CLUSTER_LAYER_ID,
@@ -405,7 +408,7 @@ const DistrictMapPage: React.FC = () => {
         className="map-legend__slot"
         style={
           {
-            '--legend-slot': `${limit === undefined ? legendSlotHeight(model.categories.length) : 0}px`,
+            '--legend-slot': `${limit === undefined ? legendSlotHeight(estimateLegendLabels(model)) : 0}px`,
           } as React.CSSProperties
         }
       >

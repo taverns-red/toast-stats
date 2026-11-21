@@ -40,10 +40,11 @@ vi.mock('../../hooks/useDistricts', () => ({
   })),
 }))
 
+let mockDates = ['2026-10-11', '2026-10-01']
 vi.mock('../../hooks/useDistrictData', () => ({
   useDistrictCachedDates: vi.fn(() => ({
     data: {
-      dates: ['2026-10-11', '2026-10-01'],
+      dates: mockDates,
       dateRange: { startDate: '2026-07-01', endDate: '2026-10-11' },
     },
     isLoading: false,
@@ -160,19 +161,26 @@ const PROSPECTIVE: ProspectiveClub[] = [
 let mockClubs = CLUBS
 // The reports sidecar the analytics query returns with the clubs (#1787).
 let mockReports: unknown = null
+// A query that never lands: errored, or never run for want of a date (#2673).
+let mockAnalyticsFails: Error | null = null
+let mockAnalyticsData = true
+const refetchAnalytics = vi.fn()
 vi.mock('../../hooks/useDistrictAnalytics', async importOriginal => {
   const actual =
     await importOriginal<typeof import('../../hooks/useDistrictAnalytics')>()
   return {
     ...actual,
     useDistrictAnalytics: vi.fn(() => ({
-      data: {
-        allClubs: mockClubs,
-        prospectiveClubs: PROSPECTIVE,
-        districtReports: mockReports,
-      },
+      data: mockAnalyticsData
+        ? {
+            allClubs: mockClubs,
+            prospectiveClubs: PROSPECTIVE,
+            districtReports: mockReports,
+          }
+        : undefined,
       isLoading: false,
-      error: null,
+      error: mockAnalyticsFails,
+      refetch: refetchAnalytics,
     })),
   }
 })
@@ -268,6 +276,10 @@ afterEach(() => {
   cleanup()
   mockClubs = CLUBS
   mockReports = null
+  mockDates = ['2026-10-11', '2026-10-01']
+  mockAnalyticsFails = null
+  mockAnalyticsData = true
+  refetchAnalytics.mockClear()
   mockIsMobile = false
   sheetsChunk = null
   fetchSnapshot.mockClear()
@@ -636,6 +648,35 @@ describe('DistrictMapPage — clubs not on the map', () => {
     ).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: /Latest date/ }))
     expect(search()).not.toContain('date=2026-10-01')
+  })
+})
+
+describe('DistrictMapPage — the side panel (#2673)', () => {
+  it('is one keyboard-reachable scroller, named for what it holds', async () => {
+    renderAt('/district/61/map?date=2026-10-01')
+    const panel = await screen.findByRole('region', {
+      name: 'Map legend and lists',
+    })
+    expect(panel).toHaveAttribute('tabindex', '0')
+    expect(panel).toHaveClass('map-panel--fixed')
+  })
+
+  it('says so, with Try again, when the club data failed to load', async () => {
+    mockAnalyticsData = false
+    mockAnalyticsFails = new Error('Network request failed')
+    renderAt('/district/61/map?date=2026-10-01')
+    fireEvent.click(await screen.findByRole('button', { name: /Try again/i }))
+    expect(refetchAnalytics).toHaveBeenCalled()
+    expect(screen.queryByText(/Every club in view has a location/)).toBeNull()
+  })
+
+  it('says there is no club data when the district has no snapshot date', async () => {
+    mockAnalyticsData = false
+    mockDates = []
+    renderAt('/district/61/map')
+    expect(
+      await screen.findByText('No club data for this date yet.')
+    ).toBeVisible()
   })
 })
 
