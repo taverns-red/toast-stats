@@ -5,10 +5,12 @@ import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { resolveRouteRecovery } from '../utils/errorRecovery'
 
+const HEADING = "We couldn't find that page"
+
 /** The catch-all route: any URL that matches no page, shown inside the shell. */
 const NotFoundPage: React.FC = () => {
   const { pathname } = useLocation()
-  useDocumentTitle('Page not found')
+  useDocumentTitle(HEADING)
   const { data } = useDistricts()
   const recovery = resolveRouteRecovery(
     pathname,
@@ -21,7 +23,7 @@ const NotFoundPage: React.FC = () => {
 
   return (
     <NotFoundPanel
-      heading="We couldn't find that page"
+      heading={HEADING}
       message={`Nothing is at ${pathname}. The link may be old or mistyped.`}
       suggestionsLead={`Did you mean one of District ${recovery.districtId}'s pages?`}
       suggestions={suggestions}

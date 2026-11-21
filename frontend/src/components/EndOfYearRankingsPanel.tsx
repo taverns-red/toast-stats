@@ -204,7 +204,9 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
       {/* "0 of 0" cards say nothing, so with no ranked districts, say so. */}
       {!isLoading && !hasRankedDistricts && (
         <p className="text-sm text-gray-600 font-tm-body" role="note">
-          No districts are ranked for this program year yet.
+          {rankings
+            ? 'No districts are ranked for this program year yet.'
+            : "Couldn't load rankings."}
         </p>
       )}
 

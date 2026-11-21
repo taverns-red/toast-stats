@@ -7785,8 +7785,7 @@
   }
 
   /* The not-found panel renders inside the shell's <main>, so it
-     takes the shell's header and footer and only owns its own body. The 16px
-     side padding keeps text off the screen edge at 375. */
+     takes the shell's header and footer and only owns its own body. */
   .not-found-panel {
     padding: 32px 16px 48px;
   }

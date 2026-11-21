@@ -105,11 +105,17 @@ const ClubRedirectPage: React.FC = () => {
     !data ||
     (data && clubId && !findClubEntry(data.clubs, clubId))
   ) {
+    // "Isn't in our records" needs a lookup that worked and found no club.
+    const lookupSucceeded = isShardAvailable && !isError
     return (
       <NotFoundPanel
-        heading={`Club ${clubId} isn't in our records`}
+        heading={
+          lookupSucceeded
+            ? `Club ${clubId} isn't in our records`
+            : `We couldn't find club ${clubId}`
+        }
         message={
-          isShardAvailable
+          lookupSucceeded
             ? 'No club with this number has been seen since 2017. Check the number, or search for the club by name.'
             : "We couldn't find this club number in the current data. Check the number, or search for the club by name."
         }

@@ -418,7 +418,7 @@ const RegionPage: React.FC = () => {
   if (regionDistricts.length === 0) {
     return (
       <NotFoundPanel
-        heading={`Region ${region} has no districts`}
+        heading={`Region ${region} isn't in Toast Stats`}
         message="We don't have any districts on record for this region. Pick a region from the list."
         suggestionsLead="Go to:"
         suggestions={[{ label: 'All regions', to: '/regions' }]}

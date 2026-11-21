@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { formatPageTitle } from '../hooks/useDocumentTitle'
 import { useShellContext } from './AppShell/shellContext'
 import type { RecoverySuggestion } from '../utils/errorRecovery'
 
@@ -21,6 +22,17 @@ const NotFoundPanel: React.FC<NotFoundPanelProps> = ({
   suggestions = [],
 }) => {
   const shell = useShellContext()
+
+  // The hosting page sets its own title in an effect that runs after this
+  // child's on the same commit, so set ours a tick later to win.
+  // Enforced by notFoundRoutes.test.tsx (title equals the h1).
+  useEffect(() => {
+    const title = formatPageTitle(heading)
+    const id = window.setTimeout(() => {
+      document.title = title
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [heading])
 
   return (
     <div className="not-found-panel" data-testid="not-found-panel">

@@ -686,7 +686,7 @@ const router = createBrowserRouter(
           ),
         },
         // Unknown URLs render inside the shell; the root errorElement
-        // is left for real crashes.
+        // is left for real crashes. Enforced by notFoundRoutes.test.tsx.
         { path: '*', element: <NotFoundPage /> },
       ],
     },

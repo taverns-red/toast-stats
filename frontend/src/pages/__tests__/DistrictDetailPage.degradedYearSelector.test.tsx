@@ -474,8 +474,11 @@ describe('DistrictDetailPage — degraded view year selector (#1436)', () => {
     const client = renderAt('/district/999?py=2025')
     await districtListLanded(client)
 
-    // The query retries twice, so three calls means it has given up.
-    await waitFor(() => expect(mockedRankHistory).toHaveBeenCalledTimes(3))
+    // Each attempt run is three calls (two retries); the page and the
+    // rankings tab both read it, so wait for at least one full run.
+    await waitFor(() =>
+      expect(mockedRankHistory.mock.calls.length).toBeGreaterThanOrEqual(3)
+    )
     await waitFor(() => expect(screen.getByText(LIMITED)).toBeInTheDocument())
     expect(screen.queryByTestId('not-found-panel')).not.toBeInTheDocument()
   })
