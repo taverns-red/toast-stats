@@ -17,10 +17,11 @@ const SECTION_VIDEO_IDS: Readonly<Record<string, string>> = {
   meetings: 'v11',
 }
 
-/* Sections whose video starts on a different page, on purpose: v6 opens on
-   Grid and goes on to Divisions; v9 opens on Trends and ends on Rankings.
-   Every other section must map to a video that starts on that page;
-   howToVideos.test.ts and howToVideos.sources.test.ts enforce both ways. */
+/* Sections whose video does not open on that page, on purpose: v6 and v9
+   both open on the district Overview and reach Grid and Rankings in a later
+   beat. Every other section must map to a video whose catalogue page is that
+   section. howToVideos.test.ts enforces both: unlisted sections match their
+   page, and a listed video's scenario has a beat with that section's id. */
 export const VIDEO_STARTS_ON_ANOTHER_PAGE: Readonly<Record<string, string>> = {
   grid: 'v6',
   rankings: 'v9',

@@ -4,6 +4,9 @@
    is `npm run videos:check-urls`, which reads this same catalogue. */
 
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   HOW_TO_VIDEOS,
   VIDEO_CDN_BASE,
@@ -224,7 +227,19 @@ describe('example district links (#2658)', () => {
 /** Segments whose mapped video has no beat shown on that page. A scenario
     names each beat `id: '<segment>'`. */
 function segmentsWithoutBeat(map: Readonly<Record<string, string>>): string[] {
-  return Object.keys(map).filter(() => false)
+  const here = dirname(fileURLToPath(import.meta.url))
+  return Object.entries(map)
+    .filter(([segment, id]) => {
+      const file = resolve(here, `../../../../videos/src/scenarios/${id}.ts`)
+      let text: string
+      try {
+        text = readFileSync(file, 'utf-8')
+      } catch {
+        return true
+      }
+      return !new RegExp(`\\bid:\\s*['"]${segment}['"]`).test(text)
+    })
+    .map(([segment]) => segment)
 }
 
 describe('text alternatives and page links (#2658)', () => {

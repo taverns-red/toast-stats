@@ -13,8 +13,8 @@ export const WatchHowLink: React.FC<{ segment: string }> = ({ segment }) => {
   )
 }
 
-/** "How-to videos": a link to the videos page, for pages with no video of
-    their own and for the phone sheet. Same style as the Watch how link. */
+/** "How-to videos": a link to the videos page, shown on every district page
+    and in the phone sheet. Same style as the Watch how link. */
 export const HowToVideosLink: React.FC = () => (
   <Link className="watch-how-link" to="/videos">
     How-to videos
