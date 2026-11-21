@@ -1,15 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import {
-  chmodSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import * as path from 'node:path'
+import { writeStubExecutable } from './stubExecutable.js'
 
 /**
  * The pre-push hook caps vitest at 2 workers (#3121).
@@ -65,8 +59,7 @@ describe('.husky/pre-push test-slot wrapper (#3142)', () => {
   })
 
   function writeStub(file: string, body: string): void {
-    writeFileSync(file, `#!/bin/sh\n${body}\n`)
-    chmodSync(file, 0o755)
+    writeStubExecutable(file, `${body}\n`)
   }
 
   function runHook(env: Record<string, string>, cwd = dir) {
