@@ -304,6 +304,12 @@
   gap: 8px;
 }
 
+/* The chips arrive after the first paint; the slot holds their room so the
+   lists below don't move. The phone peek is out of flow and has no slot. */
+.map-legend__slot {
+  min-height: var(--legend-slot);
+}
+
 .map-legend__code {
   font-family: var(--rt-font-mono, monospace);
 }
@@ -328,6 +334,25 @@
   border: 1px solid var(--map-border);
   border-radius: var(--rt-radius-md);
   background: var(--map-surface);
+}
+
+/* From 768 the panel is as tall as the map box, and the lists scroll inside
+   what is left, so their data landing moves nothing. */
+@media (min-width: 768px) {
+  .map-panel--fixed {
+    height: min(72dvh, 760px);
+    min-height: 420px;
+    box-sizing: border-box;
+  }
+}
+
+.map-panel__lists {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--rt-space-4);
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .map-panel__section {

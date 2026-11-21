@@ -24,6 +24,7 @@ import LazyBasemapMap from '../components/map/LazyBasemapMap'
 // render suspends and pays React's 300 ms Suspense reveal throttle.
 import OnlineClubsChip from '../components/map/OnlineClubsChip'
 import { useClubPins } from '../components/map/useClubPins'
+import { legendSlotHeight } from '../components/map/legendSlot'
 import MapViewControls from '../components/map/MapViewControls'
 import {
   CLUSTER_LAYER_ID,
@@ -400,24 +401,35 @@ const DistrictMapPage: React.FC = () => {
           <span> · as of {formatDateText(effectiveEndDate)}</span>
         )}
       </p>
-      {pending ? null : (
-        <React.Suspense fallback={<div className="map-legend__chips" />}>
-          <Chips
-            model={model}
-            chips={chips}
-            pressed={pressed}
-            onToggle={toggleChip}
-            limit={limit}
-            onMore={onMore}
-          />
-        </React.Suspense>
-      )}
+      <div
+        className="map-legend__slot"
+        style={
+          {
+            '--legend-slot': `${limit === undefined ? legendSlotHeight(model.categories.length) : 0}px`,
+          } as React.CSSProperties
+        }
+      >
+        {pending ? null : (
+          <React.Suspense fallback={<div className="map-legend__chips" />}>
+            <Chips
+              model={model}
+              chips={chips}
+              pressed={pressed}
+              onToggle={toggleChip}
+              limit={limit}
+              onMore={onMore}
+            />
+          </React.Suspense>
+        )}
+      </div>
       {limit === undefined && online.length > 0 && (
         <OnlineClubsChip clubs={online} districtId={districtId} />
       )}
     </div>
   )
-  const lists = (
+  // Until the analytics land the lists would read "Every club in view has a
+  // location", which is not yet known.
+  const lists = analytics ? (
     <React.Suspense fallback={null}>
       <MapLists
         unmapped={unmapped}
@@ -426,7 +438,7 @@ const DistrictMapPage: React.FC = () => {
         onSandbox={() => setSheet(null)}
       />
     </React.Suspense>
-  )
+  ) : null
 
   const filterPanel = (wantsFilters || filtersSeen) && (
     <React.Suspense fallback={null}>
@@ -610,7 +622,10 @@ const DistrictMapPage: React.FC = () => {
                 )}
               </div>
               {!isPhone && (
-                <aside className="map-panel" aria-label="Map legend and lists">
+                <aside
+                  className="map-panel map-panel--fixed"
+                  aria-label="Map legend and lists"
+                >
                   {filterPanel}
                   {legend()}
                   {selected.length > 0 && (
@@ -629,7 +644,7 @@ const DistrictMapPage: React.FC = () => {
                       </React.Suspense>
                     </section>
                   )}
-                  {lists}
+                  <div className="map-panel__lists">{lists}</div>
                 </aside>
               )}
               {sandbox && (
