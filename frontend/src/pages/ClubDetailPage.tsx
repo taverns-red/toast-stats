@@ -63,6 +63,8 @@ import { ClubLifecyclePanel } from '../components/clubs/ClubLifecyclePanel'
 import { useClubDistrictHistoryEntry } from '../hooks/useClubDistrictHistoryEntry'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useSuspendedClubs } from '../hooks/useSuspendedClubs'
+import { useReinstatableClubs } from '../hooks/useReinstatableClubs'
+import { ClubReinstateWindow } from '../components/ReinstateWindow'
 import { buildClubLifecycle } from '../utils/clubLifecycle'
 import { buildClubLineage, type ClubLineage } from '../utils/clubLineage'
 import {
@@ -454,6 +456,18 @@ const ClubDetailPage: React.FC = () => {
     ? (suspendedClubs?.find(s => clubIdsMatch(s.clubNumber, clubId ?? ''))
         ?.suspendDate ?? null)
     : null
+  // #3111 (draft) — the five-period reinstate window, from the page date's
+  // reinstatable-clubs.json (R3). Read only for a suspended club, like the
+  // suspended list, or a closed one (#3104), in the district it was last in.
+  const wantsReinstate = isSuspended || isClosedClub
+  const { clubs: reinstatableClubs } = useReinstatableClubs(
+    isClosedClub && closed ? closed.lastDistrictId : districtId,
+    wantsReinstate ? (effectiveEndDate ?? undefined) : undefined
+  )
+  const reinstateClubId = club?.clubId ?? (isClosedClub ? clubId : undefined)
+  const reinstatable = reinstateClubId
+    ? reinstatableClubs?.find(r => clubIdsMatch(r.clubNumber, reinstateClubId))
+    : undefined
   // #2169 — where our records start for the club's district: the earliest
   // date of the per-district snapshot index (the same shared index entry the
   // page's PY controls read, so no extra fetch). The district is the first
@@ -855,6 +869,7 @@ const ClubDetailPage: React.FC = () => {
               lastSeenDate={closedLastSeen}
               programYear={getProgramYearForDate(closedLastSeen)}
               suspendDate={closedSuspendDate}
+              reinstatable={reinstatable}
             />
             <ClubMemberDataNote />
             <Link
@@ -983,6 +998,10 @@ const ClubDetailPage: React.FC = () => {
             />,
             lineage
           )}
+
+          {/* #3111 (draft) — what's next for a suspended club: how long it
+              has to reinstate. Nothing without a period. */}
+          <ClubReinstateWindow club={reinstatable} />
 
           {/* Stat strip (#618; #1843 review §6.3) — 2×2 at 375, 4×2 from
               768; the cells past the first four fold behind `?stats=1` on

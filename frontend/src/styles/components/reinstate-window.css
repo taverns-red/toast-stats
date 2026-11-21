@@ -1,0 +1,165 @@
+/* Five-period reinstate window (#3111, draft). Legacy palette only (#2080):
+   --ink*, --surface, --line, and the --tm-loyal-blue accent with its -10/-20
+   tints, all remapped under [data-theme='dark']. The club's period is
+   marked by the "Now" text and aria-current; the tint and border only
+   repeat it.
+
+   Phones: one line per period, stacked, text 16px. From 768px: one row of
+   five. */
+
+/* The Growth page example's disclosure (growth.css .growth-reinstate__fold
+   gives the 44px summary). */
+.reinstate-window-example .reinstate-window {
+  margin-top: 0.5rem;
+}
+
+.reinstate-window {
+  margin: 0 0 1rem;
+  min-width: 0;
+}
+
+.reinstate-window__caption {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.reinstate-window__periods {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.25rem;
+}
+
+.reinstate-window__period {
+  /* Phones: the same two lines for every period, "Period N  range" then
+     the status on its own line, which never breaks mid-phrase. The current
+     period adds "Now" on a third line: at 320px there is no room beside
+     either. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'num range'
+    'status status'
+    'now now';
+  align-items: baseline;
+  column-gap: 0.5rem;
+  row-gap: 0.125rem;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rt-radius-md, 4px);
+}
+
+.reinstate-window__num {
+  grid-area: num;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.reinstate-window__range {
+  grid-area: range;
+  white-space: nowrap;
+}
+
+.reinstate-window__status {
+  grid-area: status;
+  white-space: nowrap;
+}
+
+.reinstate-window__range,
+.reinstate-window__status {
+  color: var(--ink-2);
+}
+
+.reinstate-window__period--now {
+  background: var(--tm-loyal-blue-10);
+  border: 2px solid var(--tm-loyal-blue);
+}
+
+.reinstate-window__now {
+  grid-area: now;
+  justify-self: start;
+  margin-top: 0.25rem;
+  padding: 0 0.5rem;
+  font-weight: 700;
+  color: var(--ink);
+  border: 1px solid var(--tm-loyal-blue);
+  border-radius: var(--rt-radius-sm, 2px);
+}
+
+/* Where the window closes: one heavy rule on period 5 (below it on
+   phones, at its right edge from 768px), and the last-chance line. */
+.reinstate-window__period:last-child {
+  border-bottom: 4px solid var(--ink);
+}
+
+.reinstate-window__end {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* The club page: the answer first, the periods as detail. */
+.reinstate-window__end--first {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+}
+
+@media (min-width: 768px) {
+  .reinstate-window__periods {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  /* One column card per period, the same stack in each: number, range,
+     status, then "Now". The status may wrap at a space, never mid-word,
+     and every card is the same width, so it wraps alike in all five. */
+  .reinstate-window__period {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'num'
+      'range'
+      'status'
+      'now';
+    align-content: start;
+  }
+
+  .reinstate-window__range,
+  .reinstate-window__status {
+    white-space: normal;
+  }
+
+  .reinstate-window__now {
+    margin-top: 0;
+  }
+
+  .reinstate-window__period:last-child {
+    border-bottom: 1px solid var(--line);
+    border-right: 4px solid var(--ink);
+  }
+
+  .reinstate-window__end {
+    text-align: right;
+  }
+
+  .reinstate-window__end--first {
+    text-align: left;
+  }
+}
+
+/* The club page panel. */
+.reinstate-window-panel {
+  margin-bottom: var(--rt-space-4, 1rem);
+}
+
+.reinstate-window-panel .reinstate-window {
+  margin-bottom: 0;
+}

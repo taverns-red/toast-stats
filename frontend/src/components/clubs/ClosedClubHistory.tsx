@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   clubIdsMatch,
   type ClubDistrictHistoryClub,
+  type ReinstatableClub,
 } from '@taverns-red/shared-contracts'
 import { districtAnalyticsFileQueryOptions } from '../../hooks/districtAnalyticsFileQuery'
 import { useClubGoalTimeline } from '../../hooks/useClubGoalTimeline'
@@ -27,6 +28,7 @@ import { MembershipHeadline } from './MembershipHeadline'
 import { LoadingSkeleton } from '../LoadingSkeleton'
 import { ErrorDisplay } from '../ErrorDisplay'
 import { MobileRowList } from '../MobileRowList'
+import { ClubReinstateWindow } from '../ReinstateWindow'
 
 export interface ClosedClubHistoryProps {
   clubId: string
@@ -42,6 +44,9 @@ export interface ClosedClubHistoryProps {
    *  suspended list: it has not closed, so the hero shows the suspended
    *  status instead of the closed line. */
   suspendDate?: string | null | undefined
+  /** #3111 — the club's row in the latest reinstatable-clubs.json, when
+   *  it has one (the page reads it, R3). No period, no panel. */
+  reinstatable?: ReinstatableClub | undefined
 }
 
 /**
@@ -60,6 +65,7 @@ export const ClosedClubHistory: React.FC<ClosedClubHistoryProps> = ({
   lastSeenDate,
   programYear,
   suspendDate,
+  reinstatable,
 }) => {
   const {
     data: analytics,
@@ -157,6 +163,9 @@ export const ClosedClubHistory: React.FC<ClosedClubHistoryProps> = ({
         }
         closedNotice={suspendDate ? undefined : closedClubNotice(lastSeenDate)}
       />
+
+      {/* #3111 (draft) — what's next: how long the club has to reinstate. */}
+      <ClubReinstateWindow club={reinstatable} />
 
       {club ? (
         <>
