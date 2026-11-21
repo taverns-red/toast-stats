@@ -106,7 +106,9 @@ async function contrastFailures(page: Page): Promise<Fail[]> {
 const forceProvisional = (page: Page) =>
   page.route('**/analytics/district_61_analytics.json', async route => {
     const res = await fixtureFetch(route)
-    const body = await res.json()
+    const body = (await res.json()) as {
+      data?: { allClubs?: Record<string, unknown>[] }
+    }
     const club = body.data?.allClubs?.[0]
     if (club) {
       club.distinguishedLevel = 'Distinguished'
