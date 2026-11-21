@@ -67,7 +67,7 @@ function run(script: string, cwd: string, env: NodeJS.ProcessEnv) {
 function git(cwd: string, ...args: string[]) {
   const r = spawnSync('git', args, {
     cwd,
-    env: gitEnv({}, hookEnv()),
+    env: gitEnv({ GIT_CONFIG_NOSYSTEM: '1' }, hookEnv()),
     encoding: 'utf8',
   })
   if (r.status !== 0) throw new Error(`git ${args.join(' ')}: ${r.stderr}`)

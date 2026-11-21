@@ -5,16 +5,11 @@ import { join } from 'node:path'
 import { gitEnv } from './gitEnv'
 
 /*
- * The pre-push hook exports GIT_DIR and friends. A child git that inherits
- * them works on the hook's repository, not its cwd, so a test's `git init`
- * or `git config` can rewrite the shared .git/config (core.bare=true and a
- * fake [user] in red-vote and RT Vote). Read-only spawns read the wrong
- * repository: the same defect, smaller blast radius, so no exception.
- *
- * Sees: a child_process call whose first argument is the literal "git".
- * Can't see: git reached through a variable or inside a launched shell
- * script; those scripts must unset GIT_* themselves. A line holding a
- * command string that is only data marks itself `// not-a-git-spawn`.
+ * A child git that inherits the pre-push hook's GIT_DIR works on the shared
+ * repository, not its cwd, and can rewrite .git/config. Reads hit the wrong
+ * repository too, so there is no read-only exception.
+ * Sees only a literal "git" first argument; a launched shell script must
+ * unset GIT_* itself. Data strings opt out: `// not-a-git-spawn: <reason>`.
  */
 
 const repoRoot = join(__dirname, '..', '..', '..')
@@ -44,7 +39,7 @@ export function findGitSpawnsWithoutCleanEnv(
       source.lastIndexOf('\n', m.index) + 1,
       lineEnd === -1 ? undefined : lineEnd
     )
-    if (line.includes('// not-a-git-spawn')) continue
+    if (/\/\/ not-a-git-spawn: \S/.test(line)) continue
     findings.push({
       line: source.slice(0, m.index).split('\n').length,
       excerpt: source.slice(m.index, m.index! + 60).split('\n')[0]!,
@@ -87,7 +82,7 @@ describe('tests that spawn git pass an env without GIT_*', () => {
 
   it('flags a bare spawn and accepts one with gitEnv', () => {
     expect(
-      findGitSpawnsWithoutCleanEnv("execFileSync('git', ['init'])") // not-a-git-spawn
+      findGitSpawnsWithoutCleanEnv("execFileSync('git', ['init'])") // not-a-git-spawn: sample input
     ).toHaveLength(1)
     expect(
       findGitSpawnsWithoutCleanEnv(
@@ -99,6 +94,11 @@ describe('tests that spawn git pass an env without GIT_*', () => {
         "`execSync('git push')`, // not-a-git-spawn: guard input"
       )
     ).toEqual([])
+    expect(
+      findGitSpawnsWithoutCleanEnv(
+        'exec' + "Sync('git push') // not-a-git-spawn"
+      )
+    ).toHaveLength(1)
   })
 
   it('gitEnv drops every GIT_* variable and keeps the rest and the extras', () => {
