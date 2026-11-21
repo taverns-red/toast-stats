@@ -444,6 +444,62 @@ describe('refreshFixtures', () => {
     expect(report.failures.join('\n')).toMatch(/v1\/gone\.json.*404/)
   })
 
+  describe('while the daily reports job is still writing the newest date (#2750)', () => {
+    const rollups = 'snapshots/2026-11-07/reports-rollups.json'
+    const sidecar = 'snapshots/2026-11-07/district_61_reports.json'
+
+    it('records a 404 on the newest date’s report sidecars and names them', async () => {
+      const report = await refreshFixtures({
+        manifest: manifest([{ path: rollups }, { path: sidecar }]),
+        outDir: out,
+        fetchFn: fetchFrom(world),
+        rules,
+      })
+      expect(report.failures).toEqual([])
+      expect(report.ok).toBe(true)
+      expect(report.pendingSidecars).toEqual([rollups, sidecar].sort())
+      const index = JSON.parse(readFileSync(join(out, '_index.json'), 'utf8'))
+      expect(index[rollups].status).toBe(404)
+      expect(index[sidecar].status).toBe(404)
+      expect(formatReport(report)).toContain(rollups)
+    })
+
+    it('still fails on a 404 for a report sidecar of an older date', async () => {
+      const older = 'snapshots/2026-11-06/reports-rollups.json'
+      const report = await refreshFixtures({
+        manifest: manifest([{ path: older }]),
+        outDir: out,
+        fetchFn: fetchFrom(world),
+        rules,
+      })
+      expect(report.ok).toBe(false)
+      expect(report.failures.join('\n')).toContain(`${older}: HTTP 404`)
+    })
+
+    it('still fails on a 404 for a newest-date file that is not a report sidecar', async () => {
+      const regions = 'snapshots/2026-11-07/region-rollups.json'
+      const report = await refreshFixtures({
+        manifest: manifest([{ path: regions }]),
+        outDir: out,
+        fetchFn: fetchFrom(world),
+        rules,
+      })
+      expect(report.ok).toBe(false)
+      expect(report.failures.join('\n')).toContain(`${regions}: HTTP 404`)
+    })
+
+    it('still fails when the newest date’s sidecar answers 500', async () => {
+      const report = await refreshFixtures({
+        manifest: manifest([{ path: rollups }]),
+        outDir: out,
+        fetchFn: fetchFrom({ ...world, [rollups]: json({}, 500) }),
+        rules,
+      })
+      expect(report.ok).toBe(false)
+      expect(report.failures.join('\n')).toContain(`${rollups}: HTTP 500`)
+    })
+  })
+
   it('fails, without fetching more, when latest.json is unreadable', async () => {
     const calls: string[] = []
     const report = await refreshFixtures({

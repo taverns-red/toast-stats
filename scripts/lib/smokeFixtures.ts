@@ -113,6 +113,9 @@ export interface RefreshReport {
   bytes: number
   failures: string[]
   unvalidated: string[]
+  /** Newest-date report sidecars recorded as 404s: the daily reports job
+   *  writes them after v1/latest.json moves (reportSidecarPlan.ts). */
+  pendingSidecars?: string[]
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
