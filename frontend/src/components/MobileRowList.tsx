@@ -26,7 +26,8 @@ export interface MobileRow {
   /** Stable key. */
   id: string
   /** Routed destination for the whole row. Absent: a plain row with no
-   *  chevron, for an item with no page to open. */
+   *  chevron, for an item with no page to open. Such a row ignores
+   *  `ariaLabel` (a plain div can't carry one) and `current`. */
   to?: string
   /** Router location state for the destination (e.g. back-link context). */
   state?: unknown
@@ -161,7 +162,7 @@ const RowItem: React.FC<{ row: MobileRow; chipPlacement: ChipPlacement }> = ({
     <li>
       {row.to === undefined ? (
         <div
-          className={`${className} mobile-row--static`}
+          className="mobile-row mobile-row--static"
           data-testid="mobile-row"
           id={row.domId}
         >

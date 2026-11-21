@@ -71,19 +71,13 @@ function mobileRow() {
       `${n(r.suspended)} suspended`,
       `${n(r.closed)} closed`,
     ]
-    const counts = details.join(' · ')
     return {
       id: r.id,
       ...(r.to !== undefined && { to: r.to }),
       title: `${r.label} — ${addsText(r.netGrowth)}`,
-      meta: r.retiredNote ? (
-        <>
-          {counts}
-          <span className="rollup-reinstate__retired">{r.retiredNote}</span>
-        </>
-      ) : (
-        counts
-      ),
+      // One meta line keeps the 56-64 px row (RollupReinstate.test, "a
+      // retired district on a phone"), so the note takes the counts' place.
+      meta: r.retiredNote ?? details.join(' · '),
       ariaLabel: `${r.label}: ${[addsText(r.netGrowth), ...details].join(', ')}`,
     }
   }
