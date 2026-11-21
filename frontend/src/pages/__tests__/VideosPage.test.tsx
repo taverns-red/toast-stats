@@ -21,6 +21,15 @@ vi.mock('../../hooks/useIsMobile', () => ({
   useIsMobile: () => mobile.value,
 }))
 
+const mine = vi.hoisted(() => ({ id: null as string | null }))
+vi.mock('../../hooks/useMyDistrict', () => ({
+  useMyDistrict: () => ({
+    myDistrictId: mine.id,
+    setMyDistrict: () => undefined,
+    isMyDistrict: (id: string) => id === mine.id,
+  }),
+}))
+
 const renderPage = () =>
   render(
     <MemoryRouter>
@@ -31,6 +40,7 @@ const renderPage = () =>
 afterEach(() => {
   cleanup()
   mobile.value = false
+  mine.id = null
 })
 
 // The page shows videos grouped by primary role, so two videos for the same
@@ -143,6 +153,54 @@ describe('VideosPage (#2310)', () => {
       expect(link.getAttribute('href'), v.id).toMatch(/^\/[a-z0-9]/)
       expect(link).toHaveAccessibleName(expect.stringContaining(v.title))
     }
+  })
+
+  it('with no saved district, names the example district in the link (#2658)', () => {
+    renderPage()
+    const v1 = within(screen.getByTestId('video-v1')).getByRole('link', {
+      name: /open this page/i,
+    })
+    expect(v1).toHaveTextContent('Open this page (District 86 example)')
+    expect(v1).toHaveAttribute('href', '/district/86')
+    expect(v1).toHaveAccessibleName(
+      expect.stringContaining('How far from Distinguished District?')
+    )
+    const v5 = within(screen.getByTestId('video-v5')).getByRole('link', {
+      name: /open this page/i,
+    })
+    expect(v5).toHaveTextContent('Open this page (District 114 example)')
+  })
+
+  it('with a saved district, swaps it into district links (#2658)', () => {
+    mine.id = '61'
+    renderPage()
+    const link = (id: string) =>
+      within(screen.getByTestId(`video-${id}`)).getByRole('link', {
+        name: /open this page/i,
+      })
+    expect(link('v2')).toHaveAttribute('href', '/district/61/action-list')
+    expect(link('v3')).toHaveAttribute(
+      'href',
+      '/district/61/clubs?preset=close-to-distinguished'
+    )
+    expect(link('v15')).toHaveAttribute('href', '/district/61/action-list')
+    expect(link('v2')).toHaveTextContent(/^Open this page$/)
+    expect(link('v2')).toHaveAccessibleName(
+      expect.stringContaining('What should I do this week?')
+    )
+  })
+
+  it('leaves the club and world links as they are (#2658)', () => {
+    mine.id = '61'
+    renderPage()
+    const text = (id: string) =>
+      within(screen.getByTestId(`video-${id}`)).getByRole('link', {
+        name: /open this page/i,
+      })
+    expect(text('v4')).toHaveAttribute('href', '/club/2728')
+    expect(text('v4')).toHaveTextContent(/^Open this page$/)
+    expect(text('v12')).toHaveAttribute('href', '/regions')
+    expect(text('v12')).toHaveTextContent(/^Open this page$/)
   })
 
   it('gives each video card an anchor id for links from the pages (#2658)', () => {
