@@ -501,6 +501,27 @@ function isPendingSidecar(path: string, newest: string): boolean {
   return isReportSidecar(path) && path.startsWith(`snapshots/${newest}/`)
 }
 
+/**
+ * How long after v1/latest.json moves a missing newest-date sidecar counts
+ * as pending. The reports job finished about 22 minutes after the move on
+ * 2026-11-20 and 2026-11-21; past this, a missing file is a real failure,
+ * and this step is its only alarm. Tested in smokeFixtures.test.ts.
+ */
+export const PENDING_SIDECAR_WINDOW_MS = 3 * 3_600_000
+
+/** True while latest.json's `generatedAt` is a timestamp within the window;
+ *  missing or unparseable fails closed. */
+export function withinPendingWindow(
+  generatedAt: unknown,
+  nowMs: number
+): boolean {
+  if (typeof generatedAt !== 'string') return false
+  const movedMs = Date.parse(generatedAt)
+  if (Number.isNaN(movedMs)) return false
+  const age = nowMs - movedMs
+  return age >= 0 && age <= PENDING_SIDECAR_WINDOW_MS
+}
+
 const CONCURRENCY = 8
 
 async function inBatches<T, R>(
@@ -579,6 +600,11 @@ export async function refreshFixtures(options: {
     return report('')
   }
   const date = vars.date
+  const latest = (await getJson('v1/latest.json')) as { generatedAt?: unknown }
+  const sidecarsMayBePending = withinPendingWindow(
+    latest.generatedAt,
+    (options.now ?? Date.now)()
+  )
 
   const entries = expandManifest(manifest, vars)
   const index: Record<string, { status: number; contentType: string }> = {}
@@ -626,8 +652,13 @@ export async function refreshFixtures(options: {
       return
     }
     if (res.status === 404 && !entry.optional) {
-      if (!isPendingSidecar(entry.path, date)) {
-        failures.push(`${entry.path}: HTTP 404`)
+      const pending = isPendingSidecar(entry.path, date)
+      if (!pending || !sidecarsMayBePending) {
+        failures.push(
+          pending
+            ? `${entry.path}: HTTP 404, and v1/latest.json's generatedAt is missing or more than 3 hours old, so the reports job is not still writing it`
+            : `${entry.path}: HTTP 404`
+        )
         return
       }
       pendingSidecars.push(entry.path)
