@@ -15,10 +15,12 @@ import type {
 
 const n = (v: number) => v.toLocaleString('en-US')
 
-const addsText = (v: number, base: string) =>
-  `${n(v)} ${v === 1 ? 'adds' : 'add'} to ${base}`
+/** #3130 (Ron, 2026-11-21): the rollups count the clubs that add to net
+ *  club growth, the same n as the card. */
+const addsText = (v: number) =>
+  `${n(v)} ${v === 1 ? 'adds' : 'add'} to net club growth`
 
-function columns(base: string): ActionTableColumn<ReinstateDistrictRow>[] {
+function columns(): ActionTableColumn<ReinstateDistrictRow>[] {
   return [
     {
       key: 'district',
@@ -43,18 +45,19 @@ function columns(base: string): ActionTableColumn<ReinstateDistrictRow>[] {
       cell: r => n(r.closed),
     },
     {
-      key: 'adds',
-      header: `Adds to ${base}`,
+      key: 'netGrowth',
+      header: 'Adds to net club growth',
       className: 'growth-table__num',
       cell: r => n(r.netGrowth),
     },
   ]
 }
 
-/* Phone row (#3094 UX review): rows are sorted by adds, so line 1 leads
+/* Phone row (#3094 UX review): rows are sorted by net club growth (#3130),
+   so line 1 leads
    with it and there is no total chip to read as the sort key. Both lines
    wrap in full words (see growth.css), never clipped. */
-function mobileRow(base: string) {
+function mobileRow() {
   return (r: ReinstateDistrictRow): MobileRow => {
     const details = [
       `${n(r.total)} can reinstate`,
@@ -64,9 +67,9 @@ function mobileRow(base: string) {
     return {
       id: r.id,
       to: r.to,
-      title: `${r.label} — ${addsText(r.netGrowth, base)}`,
+      title: `${r.label} — ${addsText(r.netGrowth)}`,
       meta: details.join(' · '),
-      ariaLabel: `${r.label}: ${[addsText(r.netGrowth, base), ...details].join(', ')}`,
+      ariaLabel: `${r.label}: ${[addsText(r.netGrowth), ...details].join(', ')}`,
     }
   }
 }
@@ -77,8 +80,6 @@ export function RollupReinstateSection({
   reinstate: RollupReinstate
 }) {
   const { count, netGrowth, rows } = reinstate
-  // Always this year's club base (Ron, 2026-11-20).
-  const base = 'the club base'
   return (
     <StageSection id="reinstate" title={`Can reinstate (${n(count)})`}>
       <p className="growth-stage__note">
@@ -91,8 +92,8 @@ export function RollupReinstateSection({
           className="growth-stage__note"
           data-testid="rollup-growth-reinstate-split"
         >
-          {n(netGrowth)} of {n(count)} {netGrowth === 1 ? 'adds' : 'add'} to{' '}
-          {base}.
+          {n(netGrowth)} of {n(count)} {netGrowth === 1 ? 'adds' : 'add'} to net
+          club growth.
         </p>
       )}
       <ReinstatementRequirements />
@@ -109,10 +110,10 @@ export function RollupReinstateSection({
           <div className="rollup-reinstate__rows">
             <ActionTable
               caption="Clubs that can reinstate by district"
-              columns={columns(base)}
+              columns={columns()}
               rows={rows}
               rowKey={r => r.id}
-              mobileRow={mobileRow(base)}
+              mobileRow={mobileRow()}
               testId="rollup-growth-reinstate-table"
             />
           </div>

@@ -12,8 +12,9 @@ import { keptQuery } from './rollupGrowthFunnel'
    (#3088): region and world. Summed in the browser over the dated
    `reinstatable-clubs.json`, one file covering every district.
 
-   Same rules as the district card, so the levels agree: "adds to the club
-   base" is `reinstateSplit`'s count. District U (undistricted clubs) is never
+   Same rules as the district card, so the levels agree: "adds to net club
+   growth" counts the clubs that don't raise the club base, from
+   `reinstateSplit` (#3130). District U (undistricted clubs) is never
    in scope; District F is a district like any other. A district absent from
    the file was not measured and adds nothing; an empty list is a measured
    zero. Only districts with at least one club get a breakdown row, so the
@@ -27,12 +28,14 @@ export interface ReinstateDistrictRow {
   to: string
   suspended: number
   closed: number
+  /** Clubs that add to net club growth (#3130). */
   netGrowth: number
   total: number
 }
 
 export interface RollupReinstate {
   count: number
+  /** Clubs that add to net club growth: the card's n (#3130). */
   netGrowth: number
   /** The card's third line, e.g. "12 add to net club growth" (#3130). */
   card: string
@@ -58,6 +61,10 @@ const byDistrictId = (a: string, b: string): number => {
   return na - nb
 }
 
+/** The clubs that don't raise the club base: they add to net club growth. */
+const netGrowth = (clubs: readonly ReinstatableClub[], date: string): number =>
+  clubs.length - reinstateSplit(clubs, date).adds
+
 export function buildRollupReinstate({
   file,
   date,
@@ -82,7 +89,7 @@ export function buildRollupReinstate({
       to: `/district/${id}/growth${qs}#growth-reinstate`,
       suspended: clubs.length - closed,
       closed,
-      netGrowth: reinstateSplit(clubs, date).adds,
+      netGrowth: netGrowth(clubs, date),
       total: clubs.length,
     })
   }
@@ -92,7 +99,7 @@ export function buildRollupReinstate({
   )
   return {
     count: inScope.length,
-    netGrowth: reinstateSplit(inScope, date).adds,
+    netGrowth: netGrowth(inScope, date),
     card: reinstateCard(inScope, date),
     rows,
   }

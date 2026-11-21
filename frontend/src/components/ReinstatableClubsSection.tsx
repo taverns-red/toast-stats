@@ -51,9 +51,12 @@ const REINSTATEMENT_FAQ_URL = 'https://toastmasters.org/footer/faq/Club'
 const CONFIRM = 'Confirm with World Headquarters.'
 const CLOSED_QUOTE = 'closed clubs “will not increase the club base”'
 const CLOSED_TEXT = `Closed. The FAQ says ${CLOSED_QUOTE}. ${ADDS_NET_GROWTH}`
-/** #3130 (Ron, 2026-11-21): the note over the group speaks for all of its
- *  closed clubs; a row's own Why keeps CLOSED_TEXT. */
-const CLOSED_GROUP_NOTE = `Closed. The FAQ says ${CLOSED_QUOTE}. So reinstating any of them adds to net club growth.`
+/** #3130 (Ron, 2026-11-21): the note over the group speaks for its closed
+ *  clubs: "it" for one, "any of them" for more. */
+const closedGroupNote = (closedCount: number): string =>
+  closedCount === 1
+    ? CLOSED_TEXT
+    : `Closed. The FAQ says ${CLOSED_QUOTE}. So reinstating any of them adds to net club growth.`
 
 /** One line per reason code, from the FAQ's club base answer and table. */
 const REASON_TEXT: Record<string, string> = {
@@ -380,6 +383,9 @@ export const ReinstatableClubsSection: React.FC<
   const rest = clubs.filter(c => !addsNow(c, snapshotDate))
   const addsLabel = GROUP_HEADING.adds(adds.length)
   const restLabel = GROUP_HEADING.rest(rest.length)
+  const closedInRest = rest.filter(
+    c => c.reason === 'closed_does_not_add'
+  ).length
 
   return (
     <section
@@ -416,8 +422,10 @@ export const ReinstatableClubsSection: React.FC<
       {rest.length > 0 && (
         <div data-testid="growth-reinstate-rest">
           <h4 className="growth-stage__subtitle">{restLabel}</h4>
-          {rest.some(c => c.reason === 'closed_does_not_add') && (
-            <p className="growth-stage__note">{CLOSED_GROUP_NOTE}</p>
+          {closedInRest > 0 && (
+            <p className="growth-stage__note">
+              {closedGroupNote(closedInRest)}
+            </p>
           )}
           <GroupTable
             rows={rest}
