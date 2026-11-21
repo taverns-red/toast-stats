@@ -68,10 +68,13 @@ const HistoryPage: React.FC = () => {
         data-testid="history-year-strip"
       >
         {/* #2657 REF-24: the chips are links. The live year opens the
-            landing page; each archived year jumps to its card below. */}
+            landing page; each archived year jumps to its card below.
+            The live chip is the current date in the strip, not this page,
+            so it carries aria-current="date". */}
         <span role="listitem">
           <Link
             to="/"
+            aria-current="date"
             className="history-page-year-chip history-page-year-chip--current"
           >
             {formatProgramYearShort(currentPY.year)}
