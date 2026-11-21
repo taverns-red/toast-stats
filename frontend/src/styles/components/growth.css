@@ -502,8 +502,8 @@
 }
 
 /* #3094 — the region and world "Can reinstate" phone rows. Line 1 is
-   "District 83 — 9 add to the club base", line 2 the other counts in full
-   words. Both wrap instead of ellipsizing or clamping, and the row grows to
+   "District 83 — 9 add to net club growth" (#3130), line 2 the other
+   counts in full words. Both wrap instead of ellipsizing or clamping, and the row grows to
    fit rather than keeping the shared 82 px cap. */
 .rollup-reinstate__rows .mobile-row-list--wrap .mobile-row {
   max-height: none;

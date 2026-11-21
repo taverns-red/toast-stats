@@ -203,12 +203,26 @@ describe('ReinstatableClubsSection', () => {
       const text = rest.textContent ?? ''
       expect(text.split('“will not increase the club base”')).toHaveLength(2)
       // #3118 item 5 (Ron, 2026-11-20): the FAQ quote, then what it means.
+      // #3130 (Ron, 2026-11-21): the group note speaks for all of them.
       expect(rest).toHaveTextContent(
-        'Closed. The FAQ says closed clubs “will not increase the club base”. So reinstating it adds to net club growth.'
+        'Closed. The FAQ says closed clubs “will not increase the club base”. So reinstating any of them adds to net club growth.'
+      )
+      expect(rest).not.toHaveTextContent(
+        'So reinstating it adds to net club growth.'
       )
       expect(rowFor("Tunney's Toastmasters")).not.toHaveTextContent(
         'will not increase the club base'
       )
+    })
+
+    it('says "it" in the group note when the group has one closed club (#3130)', () => {
+      const oneClosed = d61.filter(c => c.status === 'closed').slice(0, 1)
+      renderSection([...d61.filter(c => c.status !== 'closed'), ...oneClosed])
+      const rest = screen.getByTestId('growth-reinstate-rest')
+      expect(rest).toHaveTextContent(
+        'Closed. The FAQ says closed clubs “will not increase the club base”. So reinstating it adds to net club growth.'
+      )
+      expect(rest).not.toHaveTextContent('any of them')
     })
 
     it('prints nothing about an oldest period, even from an older file that flags one (#3103)', () => {
@@ -699,6 +713,7 @@ describe('ReinstatableClubsSection', () => {
           lastSeen: '2026-06-30',
         },
         tag: DOESNT,
+        // The group note says it (#3130): one closed club reads "it".
         why: 'Closed. The FAQ says closed clubs “will not increase the club base”. So reinstating it adds to net club growth.',
       },
     }
@@ -796,20 +811,31 @@ describe('reinstateSplit', () => {
     reason,
   })
 
-  it('counts the recorded D61 clubs that add to the base', () => {
+  // #3130 (Ron, 2026-11-21): `adds` still counts the clubs that raise the
+  // base; the card counts the clubs that add to net club growth.
+  it('counts the recorded D61 clubs: 3 raise the base, 19 add to net club growth', () => {
     expect(reinstateSplit(d61, '2026-11-18')).toEqual({
       adds: 3,
-      card: '3 add to the club base',
+      card: '19 add to net club growth',
     })
   })
 
-  it('uses the singular for one club', () => {
+  it('uses the singular for one club that adds to net club growth', () => {
+    expect(
+      reinstateSplit(
+        [one('suspended_sept30_october_cycle', false)],
+        '2026-11-18'
+      )
+    ).toEqual({ adds: 0, card: '1 adds to net club growth' })
+  })
+
+  it('says 0 when every club raises the base too', () => {
     expect(
       reinstateSplit(
         [one('suspended_sept30_october_cycle', true)],
         '2026-11-18'
       )
-    ).toEqual({ adds: 1, card: '1 adds to the club base' })
+    ).toEqual({ adds: 1, card: '0 add to net club growth' })
   })
 
   it('does not count a March 31 suspension from April to June', () => {
@@ -832,7 +858,7 @@ describe('reinstateSplit', () => {
         ],
         '2026-11-18'
       )
-    ).toEqual({ adds: 2, card: '2 add to the club base' })
+    ).toEqual({ adds: 2, card: '2 add to net club growth' })
   })
 })
 
@@ -840,10 +866,14 @@ describe('reinstateSplit', () => {
    world card (#3094). */
 describe('reinstateCard', () => {
   it('is the split alone when every effect is known', () => {
-    expect(reinstateCard(d61, '2026-11-18')).toBe('3 add to the club base')
+    expect(reinstateCard(d61, '2026-11-18')).toBe('19 add to net club growth')
   })
 
-  it('never adds an unknown-effect count (#3103)', () => {
-    expect(reinstateCard(d51, '2026-11-18')).toBe('0 add to the club base')
+  it('counts an unknown effect toward net club growth (#3103, #3130)', () => {
+    expect(reinstateCard(d51, '2026-11-18')).toBe('1 adds to net club growth')
+  })
+
+  it('says 0 when no club can reinstate', () => {
+    expect(reinstateCard([], '2026-11-18')).toBe('0 add to net club growth')
   })
 })

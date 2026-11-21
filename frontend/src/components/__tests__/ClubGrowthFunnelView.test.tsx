@@ -178,7 +178,7 @@ describe('ClubGrowthFunnelView', () => {
       renderWithReinstate({
         state: 'ready',
         count: 22,
-        split: '3 add to the club base',
+        split: '19 add to net club growth',
       })
       const funnel = screen.getByRole('list', { name: /club growth funnel/i })
       const stages = within(funnel).getAllByRole('listitem')
@@ -191,7 +191,7 @@ describe('ClubGrowthFunnelView', () => {
       expect(card).toHaveTextContent(
         'suspended or recently closed clubs that can come back'
       )
-      expect(card).toHaveTextContent('3 add to the club base')
+      expect(card).toHaveTextContent('19 add to net club growth')
     })
 
     it('links the card to the Can reinstate section, like the other stages', () => {
@@ -215,7 +215,7 @@ describe('ClubGrowthFunnelView', () => {
       renderWithReinstate({
         state: 'ready',
         count: 0,
-        split: '0 add to the club base',
+        split: '0 add to net club growth',
       })
       const card = screen.getByTestId('growth-stage-reinstate')
       expect(card.querySelector('.growth-funnel__value')).toHaveTextContent(

@@ -86,8 +86,9 @@ describe('buildRollupReinstate', () => {
       ['61', '86']
     )!
     expect(r.count).toBe(5)
-    expect(r.adds).toBe(2)
-    expect(r.card).toBe('2 add to the club base')
+    expect(r.netGrowth).toBe(3)
+    // #3130: the card counts the 3 that add to net club growth.
+    expect(r.card).toBe('3 add to net club growth')
     expect(r.rows).toEqual([
       {
         id: '61',
@@ -95,7 +96,7 @@ describe('buildRollupReinstate', () => {
         to: '/district/61/growth#growth-reinstate',
         suspended: 2,
         closed: 2,
-        adds: 2,
+        netGrowth: 2,
         total: 4,
       },
       {
@@ -104,7 +105,7 @@ describe('buildRollupReinstate', () => {
         to: '/district/86/growth#growth-reinstate',
         suspended: 1,
         closed: 0,
-        adds: 0,
+        netGrowth: 1,
         total: 1,
       },
     ])
@@ -118,8 +119,8 @@ describe('buildRollupReinstate', () => {
 
   it('counts an empty list as a measured zero, with no row', () => {
     const r = build(file({ '61': [], '86': [] }), ['61', '86'])!
-    expect(r).toMatchObject({ count: 0, adds: 0, rows: [] })
-    expect(r.card).toBe('0 add to the club base')
+    expect(r).toMatchObject({ count: 0, netGrowth: 0, rows: [] })
+    expect(r.card).toBe('0 add to net club growth')
   })
 
   it('takes every district worldwide, F included and U left out', () => {
@@ -161,12 +162,13 @@ describe('buildRollupReinstate', () => {
       }),
       'all'
     )!
-    expect(r.adds).toBe(3)
-    expect(r.rows[0]!.adds).toBe(3)
-    expect(r.card).toBe('3 add to the club base')
+    expect(r.netGrowth).toBe(1)
+    expect(r.rows[0]!.netGrowth).toBe(1)
+    expect(r.card).toBe('1 adds to net club growth')
   })
 
-  it('sorts by adds to the club base, then total, then district number', () => {
+  // #3130: the table counts net club growth, like the card.
+  it('sorts by net club growth, then total, then district number', () => {
     const r = build(
       file({
         '9': [closed(), closed(), closed()],
@@ -177,7 +179,7 @@ describe('buildRollupReinstate', () => {
       }),
       'all'
     )!
-    expect(r.rows.map(x => x.id)).toEqual(['2', '3', '10', '9', '1'])
+    expect(r.rows.map(x => x.id)).toEqual(['9', '2', '3', '1', '10'])
   })
 
   /* Ron, 2026-11-20: always this year's club base. A March 31 suspension
@@ -197,9 +199,9 @@ describe('buildRollupReinstate', () => {
       ['61'],
       { date }
     )!
-    expect(r.adds).toBe(0)
-    expect(r.rows[0]!.adds).toBe(0)
-    expect(r.card).toBe('0 add to the club base')
+    expect(r.netGrowth).toBe(2)
+    expect(r.rows[0]!.netGrowth).toBe(2)
+    expect(r.card).toBe('2 add to net club growth')
   })
 
   it('from July 1: the March 31 suspension is summed as adding', () => {
@@ -217,8 +219,8 @@ describe('buildRollupReinstate', () => {
       ['61'],
       { date }
     )!
-    expect(r.adds).toBe(1)
-    expect(r.card).toBe('1 adds to the club base')
+    expect(r.netGrowth).toBe(0)
+    expect(r.card).toBe('0 add to net club growth')
   })
 
   it('carries the page’s py and date on each district link', () => {
