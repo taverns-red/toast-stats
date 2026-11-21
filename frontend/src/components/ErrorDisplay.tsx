@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 
 interface ErrorDisplayProps {
   error: Error | string | null
@@ -27,9 +27,19 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   variant = 'card',
   className = '',
 }) => {
-  if (!error) return null
+  const errorMessage = !error
+    ? ''
+    : typeof error === 'string'
+      ? error
+      : error.message
 
-  const errorMessage = typeof error === 'string' ? error : error.message
+  // The raw text is for developers: the panel says it in plain words.
+  useEffect(() => {
+    // eslint-disable-next-line no-console -- devtools only; see ErrorDisplay.rawMessage.test.tsx
+    if (errorMessage) console.error(`ErrorDisplay: ${errorMessage}`)
+  }, [errorMessage])
+
+  if (!error) return null
 
   // Determine if this is a network error
   const isNetworkError =
@@ -86,7 +96,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
     if (isNotFoundError) {
       return `${subject.charAt(0).toUpperCase()}${subject.slice(1)} could not be found.`
     }
-    return errorMessage
+    return `We couldn't load ${subject}. Try again in a moment.`
   }
 
   if (variant === 'inline') {

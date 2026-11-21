@@ -259,13 +259,13 @@ describe('Component Migrations - Brand Compliance Tests', () => {
       rerender(<ErrorDisplay error="String error message" variant="inline" />)
 
       expect(screen.getByRole('alert')).toBeInTheDocument()
-      expect(screen.getByText(/string error message/i)).toBeInTheDocument()
+      expect(screen.getByText(/couldn't load this data/i)).toBeInTheDocument()
 
       // Test with Error object
       const errorObj = new Error('Error object message')
       rerender(<ErrorDisplay error={errorObj} variant="card" />)
 
-      expect(screen.getByText(/error object message/i)).toBeInTheDocument()
+      expect(screen.getByText(/couldn't load this data/i)).toBeInTheDocument()
     })
   })
 
