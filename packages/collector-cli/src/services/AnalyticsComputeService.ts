@@ -2269,7 +2269,9 @@ export class AnalyticsComputeService {
    * More inputs, all optional: the June 30 `suspended-clubs.json` of each
    * of the three program years before the date's (process-dates.sh pulls
    * them into the cache) and the date's district snapshots, for each club's
-   * status on the roster. Without the previous year's list, from Jul 1 to
+   * status on the roster, and the date's `all-districts-rankings.json`, whose
+   * district set tells a retired district from one not read (#3101).
+   * Without the previous year's list, from Jul 1 to
    * Sep 30, there is no file: the list is unknown.
    *
    * Never publish-blocking: the file is new and nothing reads it yet. A
@@ -2368,6 +2370,17 @@ export class AnalyticsComputeService {
         }
       }
 
+      // The date's district set (#3101): a district in neither it nor the
+      // suspended list was retired. No rankings file: none is taken as
+      // retired.
+      const rankingsRaw = await readOptional(
+        path.join(snapshotDir, 'all-districts-rankings.json')
+      )
+      const districtIds =
+        rankingsRaw === null
+          ? null
+          : readSnapshotRankings(snapshotDir).map(row => row.districtId)
+
       const built = buildReinstatableClubs({
         snapshotDate,
         suspended,
@@ -2377,6 +2390,7 @@ export class AnalyticsComputeService {
         marchSuspended,
         legacyDeadlines,
         roster,
+        districtIds,
       })
       if (built === null) {
         // Jul 1 - Sep 30 without the previous list: Mar 31 suspensions that
