@@ -55,7 +55,9 @@ describe('rankings growth % clears AA in both themes (#2694)', () => {
         const colour = prop(decls, 'color')
         expect(colour, `a .${cls} colour rule in app-shell.css`).toBeDefined()
         const fg = parseColor(colour!, tokens(theme))
-        for (const bg of surfaces(theme)) {
+        // --surface-3 is the .rankings-row:hover surface.
+        const hover = parseColor('var(--surface-3)', tokens(theme))
+        for (const bg of [...surfaces(theme), hover]) {
           expect(contrast(over(fg, bg), bg)).toBeGreaterThanOrEqual(AA)
         }
       }
@@ -95,6 +97,27 @@ describe('phone rankings card clips to its radius (#2694)', () => {
       const media = enclosingMedia(appShell, m.index)
       expect(media.join(' ')).toMatch(/min-width:\s*768px/)
     }
+  })
+})
+
+describe('the phone methodology tooltip is not clipped by the card (#2694)', () => {
+  // InfoTooltip opens upward inside its parent and is not portaled, so any
+  // ancestor with overflow: hidden cuts it off. The phone affordance sits
+  // above the card, not inside the clipped wrap.
+  it('renders {aboutMetrics} for phones before the clipped wrap opens', () => {
+    const page = readFileSync(
+      resolve(srcDir, 'pages/DistrictsPage.tsx'),
+      'utf-8'
+    )
+    const wrapAt = page.indexOf('districts-rankings-table-wrap ')
+    const phoneAbove = page.search(
+      /isMobile && \(\s*<div[^>]*>\s*\{aboutMetrics\}/
+    )
+    expect(wrapAt).toBeGreaterThan(-1)
+    expect(phoneAbove, 'a phone block rendering aboutMetrics').toBeGreaterThan(
+      -1
+    )
+    expect(phoneAbove).toBeLessThan(wrapAt)
   })
 })
 
