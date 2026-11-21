@@ -183,6 +183,12 @@ export interface HistoricalRankPoint {
   totalDistricts: number
   /** Overall rank based on aggregateScore position (1 = best). Optional for backward compatibility with existing snapshots. */
   overallRank?: number
+  /** True when every district had the same value in that category on this
+   *  date (#2797). The pipeline writes it only when true; older files lack
+   *  it, which reads as not tied. */
+  clubsTied?: boolean
+  paymentsTied?: boolean
+  distinguishedTied?: boolean
 }
 
 export interface DistrictRankHistory {

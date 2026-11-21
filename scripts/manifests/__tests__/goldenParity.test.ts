@@ -48,6 +48,23 @@ const EXPECTED = join(FIXTURES, 'expected')
 const input = (name: string): string => readFileSync(join(INPUT, name), 'utf-8')
 const expected = (name: string): string =>
   readFileSync(join(EXPECTED, name), 'utf-8')
+/**
+ * The tie flags (#2797) are new since the inline block, so parity is checked
+ * on everything else. Deleting keys keeps the order, so the bytes match.
+ * Every district in these October captures is at 0% Distinguished, so that
+ * flag is set; the growth measures differ, so theirs are not.
+ */
+const TIE_FLAGS = ['clubsTied', 'paymentsTied', 'distinguishedTied']
+const withoutTieFlags = (json: string): string => {
+  const entry = JSON.parse(json) as { history: Record<string, unknown>[] }
+  for (const point of entry.history) {
+    expect(point.distinguishedTied).toBe(true)
+    expect(point).not.toHaveProperty('clubsTied')
+    expect(point).not.toHaveProperty('paymentsTied')
+    for (const k of TIE_FLAGS) delete point[k]
+  }
+  return JSON.stringify(entry)
+}
 /** The old block's console.log line, which the CLIs now send to stderr (R4). */
 const oldLog = (dir: string): string => expected(`${dir}/stdout.txt`).trim()
 
@@ -100,7 +117,9 @@ describe('pure builders reproduce the inline output byte for byte', () => {
       wanted
     )
     for (const e of result.entries) {
-      expect(e.json).toBe(expected(`rank-history/${e.districtId}.json`))
+      expect(withoutTieFlags(e.json)).toBe(
+        expected(`rank-history/${e.districtId}.json`)
+      )
     }
     expect(result.summary).toBe(oldLog('rank-history'))
     // The corrupt file and the metadata-less file are skipped, not fatal.
@@ -213,7 +232,7 @@ globalThis.Date = Frozen
         .sort()
     )
     for (const f of written) {
-      expect(readFileSync(join(rhOut, f), 'utf-8')).toBe(
+      expect(withoutTieFlags(readFileSync(join(rhOut, f), 'utf-8'))).toBe(
         expected(`rank-history/${f}`)
       )
     }

@@ -54,6 +54,9 @@ export interface RankingCardProps {
   icon: React.ReactNode
   /** Color scheme for the card accent */
   colorScheme: ColorScheme
+  /** Every district has the same value, so the card shows "Tied" with no
+   *  rank, percentile or change (#2797). */
+  tied?: boolean
   /** Previous year's rank for showing year-over-year change */
   previousYearRank?: number
   /** Whether the card is in loading state */
@@ -80,18 +83,21 @@ const RankingCard: React.FC<RankingCardProps> = ({
   icon,
   colorScheme,
   previousYearRank,
+  tied = false,
   isLoading = false,
 }) => {
   const colors = colorSchemeMap[colorScheme]
 
   // Calculate year-over-year change (negative = improved, positive = declined)
   const yearOverYearChange =
-    previousYearRank !== undefined ? previousYearRank - rank : null
+    previousYearRank !== undefined && !tied ? previousYearRank - rank : null
 
   // Format percentile as ordinal (e.g., "12th percentile") (#305)
   const rounded = Math.round(percentile)
   const percentileDisplay = `${toOrdinal(rounded)} percentile`
-  const ariaSummary = `${title}: Rank ${rank} of ${totalDistricts}, ${percentileDisplay}`
+  const ariaSummary = tied
+    ? `${title}: Tied, every district has the same value`
+    : `${title}: Rank ${rank} of ${totalDistricts}, ${percentileDisplay}`
 
   if (isLoading) {
     return (
@@ -143,34 +149,49 @@ const RankingCard: React.FC<RankingCardProps> = ({
             {title}
           </h3>
 
-          {/* Rank display */}
-          <div className="flex items-baseline gap-2 mb-1">
-            <span
-              className="ranking-card__rank tm-text-black font-bold"
-              aria-label={`Rank ${rank}`}
-            >
-              {rank}
-            </span>
-            <span className="tm-body-small tm-text-cool-gray">
-              of {totalDistricts}
-            </span>
-          </div>
+          {tied ? (
+            <>
+              <div className="mb-1">
+                <span className="ranking-card__rank tm-text-black font-bold">
+                  Tied
+                </span>
+              </div>
+              <p className="tm-body-small tm-text-cool-gray">
+                Every district has the same value
+              </p>
+            </>
+          ) : (
+            <>
+              {/* Rank display */}
+              <div className="flex items-baseline gap-2 mb-1">
+                <span
+                  className="ranking-card__rank tm-text-black font-bold"
+                  aria-label={`Rank ${rank}`}
+                >
+                  {rank}
+                </span>
+                <span className="tm-body-small tm-text-cool-gray">
+                  of {totalDistricts}
+                </span>
+              </div>
 
-          {/* Percentile badge */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 tm-rounded-lg tm-body-small font-medium ${colors.iconBg} ${colors.iconText}`}
-              role="status"
-              aria-label={percentileDisplay}
-            >
-              {percentileDisplay}
-            </span>
+              {/* Percentile badge */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 tm-rounded-lg tm-body-small font-medium ${colors.iconBg} ${colors.iconText}`}
+                  role="status"
+                  aria-label={percentileDisplay}
+                >
+                  {percentileDisplay}
+                </span>
 
-            {/* Year-over-year change indicator */}
-            {yearOverYearChange !== null && (
-              <YearOverYearIndicator change={yearOverYearChange} />
-            )}
-          </div>
+                {/* Year-over-year change indicator */}
+                {yearOverYearChange !== null && (
+                  <YearOverYearIndicator change={yearOverYearChange} />
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </Card>

@@ -14,7 +14,10 @@
 
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import type { Logger } from '@taverns-red/analytics-core'
+import {
+  MetricRankingsCalculator,
+  type Logger,
+} from '@taverns-red/analytics-core'
 import { TransformService } from './TransformService.js'
 import { AnalyticsComputeService } from './AnalyticsComputeService.js'
 import type { ClosingDateEntry } from '../utils/ClosingDateRegistry.js'
@@ -387,9 +390,13 @@ export class RebuildService {
           distinguishedRank: number
           totalDistricts: number
           overallRank: number
+          clubsTied?: boolean
+          paymentsTied?: boolean
+          distinguishedTied?: boolean
         }>
       }
     >()
+    const calculator = new MetricRankingsCalculator()
 
     try {
       const dateDirs = await fs.readdir(snapshotsDir, { withFileTypes: true })
@@ -414,6 +421,9 @@ export class RebuildService {
               paymentsRank: number
               distinguishedRank: number
               overallRank?: number
+              clubGrowthPercent?: number
+              paymentGrowthPercent?: number
+              distinguishedPercent?: number
             }>
             metadata: {
               sourceCsvDate?: string
@@ -423,6 +433,17 @@ export class RebuildService {
 
           const date = data.metadata.sourceCsvDate ?? dateDir.name
           const totalDistricts = data.metadata.totalDistricts ?? 0
+          // Written only when true, as scripts/manifests/rankHistory.ts does
+          // (#2797): readers treat an absent flag as not tied.
+          const ties = {
+            ...(calculator.isWorldTied('clubs', data) && { clubsTied: true }),
+            ...(calculator.isWorldTied('payments', data) && {
+              paymentsTied: true,
+            }),
+            ...(calculator.isWorldTied('distinguished', data) && {
+              distinguishedTied: true,
+            }),
+          }
 
           for (const r of data.rankings) {
             if (!index.has(r.districtId)) {
@@ -445,6 +466,7 @@ export class RebuildService {
               distinguishedRank: r.distinguishedRank,
               totalDistricts,
               overallRank: r.overallRank ?? 0,
+              ...ties,
             })
           }
         } catch {

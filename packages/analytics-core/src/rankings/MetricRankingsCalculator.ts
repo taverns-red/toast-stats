@@ -22,6 +22,19 @@ import type { MetricRankings } from '../types.js'
  */
 export type MetricType = 'clubs' | 'payments' | 'distinguished'
 
+/** The value each metric is ranked by; same mapping as getMetricValue. */
+const RANKED_VALUE_FIELD = {
+  clubs: 'clubGrowthPercent',
+  payments: 'paymentGrowthPercent',
+  distinguished: 'distinguishedPercent',
+} as const satisfies Record<MetricType, keyof DistrictRanking>
+
+/** A rankings row as isWorldTied reads it: only the ranked values, any of
+ *  which an old file may lack. */
+export type TieInputRow = Partial<
+  Pick<DistrictRanking, (typeof RANKED_VALUE_FIELD)[MetricType]>
+>
+
 /**
  * Result of region rank calculation.
  */
@@ -152,13 +165,15 @@ export class MetricRankingsCalculator {
    */
   isWorldTied(
     metric: MetricType,
-    allDistrictsRankings: AllDistrictsRankingsData
+    allDistrictsRankings: { rankings: ReadonlyArray<TieInputRow> }
   ): boolean {
     const rankings = allDistrictsRankings.rankings
     const first = rankings[0]
     if (!first || rankings.length < 2) return false
-    const value = getMetricValue(first, metric)
-    return rankings.every(r => getMetricValue(r, metric) === value)
+    const value = first[RANKED_VALUE_FIELD[metric]]
+    // Old rankings files can lack the value; missing everywhere is not a tie.
+    if (typeof value !== 'number' || !Number.isFinite(value)) return false
+    return rankings.every(r => r[RANKED_VALUE_FIELD[metric]] === value)
   }
 
   /**
