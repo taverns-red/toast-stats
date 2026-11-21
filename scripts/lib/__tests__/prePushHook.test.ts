@@ -127,6 +127,21 @@ describe('.husky/pre-push test-slot wrapper (#3142)', () => {
     expect(calls()).toEqual([`wrapper npm ${NPM_ARGS}`])
   })
 
+  it('runs the suite through scripts/test-lock.sh, not the slot wrapper directly (#3172)', () => {
+    mkdirSync(path.join(dir, 'scripts'))
+    writeStub(
+      path.join(dir, 'scripts/test-lock.sh'),
+      `echo "lock $*" >> "${log}"\nexec "$@"`
+    )
+    const wrapper = path.join(dir, 'run.sh')
+    writeStub(wrapper, `echo "wrapper $*" >> "${log}"\nexec "$@"`)
+
+    const result = runHook({ TOAST_TEST_SLOT_RUN: wrapper })
+
+    expect(result.status).toBe(0)
+    expect(calls()).toEqual([`lock npm ${NPM_ARGS}`, `npm ${NPM_ARGS}`])
+  })
+
   it('still stops with the npm install message when node_modules is missing', () => {
     rmSync(path.join(dir, 'node_modules'), { recursive: true })
 
