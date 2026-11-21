@@ -253,7 +253,7 @@ describe('EndOfYearRankingsPanel', () => {
   })
 
   describe('Null Rankings Handling', () => {
-    it('renders with null rankings (shows zeros)', () => {
+    it('says no districts are ranked, instead of showing zeros (#2647)', () => {
       renderWithProviders(
         <EndOfYearRankingsPanel
           {...baseProps}
@@ -262,9 +262,9 @@ describe('EndOfYearRankingsPanel', () => {
         />
       )
 
-      // Should render cards with zero values
-      const zeroRanks = screen.getAllByText('0')
-      expect(zeroRanks.length).toBeGreaterThanOrEqual(4)
+      expect(
+        screen.getByText(/no districts are ranked for this program year/i)
+      ).toBeInTheDocument()
     })
 
     it('does not show as-of date when rankings are null', () => {
