@@ -10,6 +10,7 @@
  */
 import type {
   CompetitiveAwardStandings,
+  MembershipRetentionAward,
   MembershipRetentionStanding,
 } from '../services/cdn'
 import { tiedWinnerIds } from './awardTies'
@@ -21,7 +22,7 @@ export interface MembershipRetentionBadge {
   of: number | null
   value: number
   isWinner: boolean
-  /** True on the June 30 close; false while standings are so far. */
+  /** True on the June 30 close or a past year's last snapshot. */
   final: boolean
   /** Shares a winning rank with another district (#1610). */
   tied: boolean
@@ -43,10 +44,21 @@ export const isRenderableStanding = (
   )
 }
 
+/**
+ * The file says final only on a June 30 snapshot. `yearClosed` (from
+ * isPastProgramYearClose) also makes a past year's last snapshot final, so a
+ * year without a June 30 snapshot doesn't say "so far" forever. Tested in
+ * membershipRetentionBadge.test.ts and AwardsPage.membershipRetention.test.tsx.
+ */
+export const isRetentionFinal = (
+  status: MembershipRetentionAward['status'],
+  yearClosed: boolean
+): boolean => status === 'final' || (status === 'in-progress' && yearClosed)
+
 export function membershipRetentionBadgeFor(
   standings: CompetitiveAwardStandings | null | undefined,
   districtId: string | undefined,
-  _yearClosed = false
+  yearClosed = false
 ): MembershipRetentionBadge | null {
   const award = standings?.membershipRetentionAward
   if (!award || !districtId) return null
@@ -64,7 +76,7 @@ export function membershipRetentionBadgeFor(
     of: own.rank <= rows.length ? rows.length : null,
     value: own.value,
     isWinner: own.isWinner === true,
-    final: award.status === 'final',
+    final: isRetentionFinal(award.status, yearClosed),
     tied: tiedWinnerIds(rows).has(districtId),
   }
 }

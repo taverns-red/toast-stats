@@ -8,9 +8,9 @@
  * charter members as of the March 31 close (MembershipRetentionCalculator in
  * analytics-core). The card says so in text, with a tag and a footnote.
  *
- * States: not started (before April), so far (April to June), final (June 30)
- * and not available (no March baseline, or a status this build doesn't
- * know). Not available never renders zeros.
+ * States: not started (before April), so far (April to June), final (June 30,
+ * or a past year's last snapshot) and not available (no March baseline, or a
+ * status this build doesn't know). Not available never renders zeros.
  *
  * The file is read without schema validation, so the props are treated as
  * untrusted: an unknown status or missing standings read as not available,
@@ -20,7 +20,10 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import { DistrictLinkText } from './DistrictLinkText'
 import { tiedWinnerIds, TIE_BREAK_UNPUBLISHED } from '../utils/awardTies'
-import { isRenderableStanding } from '../utils/membershipRetentionBadge'
+import {
+  isRenderableStanding,
+  isRetentionFinal,
+} from '../utils/membershipRetentionBadge'
 import type {
   MembershipRetentionAward,
   MembershipRetentionStanding,
@@ -28,6 +31,8 @@ import type {
 
 export interface MembershipRetentionCardProps {
   award: MembershipRetentionAward
+  /** The snapshot is a past year's last one (isPastProgramYearClose). */
+  yearClosed?: boolean
 }
 
 const MEMBERSHIP_RETENTION_METHODOLOGY_HREF =
@@ -42,7 +47,7 @@ type View =
   | { kind: 'unavailable' }
   | { kind: 'standings'; final: boolean; rows: MembershipRetentionStanding[] }
 
-function viewOf(award: MembershipRetentionAward): View {
+function viewOf(award: MembershipRetentionAward, yearClosed: boolean): View {
   if (award.status === 'not-started') return { kind: 'not-started' }
   const rows = Array.isArray(award.standings)
     ? award.standings.filter(isRenderableStanding)
@@ -53,7 +58,7 @@ function viewOf(award: MembershipRetentionAward): View {
   ) {
     return {
       kind: 'standings',
-      final: award.status === 'final',
+      final: isRetentionFinal(award.status, yearClosed),
       rows: rows.slice(0, MAX_ROWS),
     }
   }
@@ -62,8 +67,8 @@ function viewOf(award: MembershipRetentionAward): View {
 
 export const MembershipRetentionCard: React.FC<
   MembershipRetentionCardProps
-> = ({ award }) => {
-  const view = viewOf(award)
+> = ({ award, yearClosed = false }) => {
+  const view = viewOf(award, yearClosed)
   const winnerCount =
     view.kind === 'standings' ? view.rows.filter(r => r.isWinner).length : 0
   const winnerLabel =

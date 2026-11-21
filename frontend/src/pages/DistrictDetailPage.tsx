@@ -27,6 +27,7 @@ import { ProgramYearSelector } from '../components/ProgramYearSelector'
 import {
   filterDatesByProgramYear,
   getMostRecentDateInProgramYear,
+  isPastProgramYearClose,
 } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
 import {
@@ -352,9 +353,19 @@ const DistrictDetailPageInner: React.FC = () => {
   }, [districtId, competitiveAwards])
 
   // Our President's Membership Retention Award estimate (#1614).
+  const retentionYearClosed = isPastProgramYearClose(
+    effectiveEndDate ?? undefined,
+    cachedDatesInProgramYear,
+    availableProgramYears[0]
+  )
   const membershipRetentionBadge = React.useMemo(
-    () => membershipRetentionBadgeFor(competitiveAwards, districtId),
-    [districtId, competitiveAwards]
+    () =>
+      membershipRetentionBadgeFor(
+        competitiveAwards,
+        districtId,
+        retentionYearClosed
+      ),
+    [districtId, competitiveAwards, retentionYearClosed]
   )
 
   const officerAwardsResult = React.useMemo(() => {

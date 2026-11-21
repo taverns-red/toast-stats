@@ -11,6 +11,7 @@ import { ClubGrowthRecipientsSection } from '../components/ClubGrowthRecipientsS
 import { useClubGrowthRecipients } from '../hooks/useClubGrowthRecipients'
 import { ErrorDisplay } from '../components/ErrorDisplay'
 import { tiedWinnerIds, TIE_BREAK_UNPUBLISHED } from '../utils/awardTies'
+import { isPastProgramYearClose } from '../utils/programYear'
 import type {
   CompetitiveAwardRanking,
   CompetitiveAwardStandings,
@@ -94,6 +95,12 @@ const AwardsPage: React.FC = () => {
   // snapshot, never a finalized historical date selected via the picker.
   const { asOfDate: globalAsOfDate } = useLatestAsOfDate()
 
+  const retentionYearClosed = isPastProgramYearClose(
+    effectiveDate,
+    cachedDates,
+    availableProgramYears[0]
+  )
+
   return (
     <div className="awards-page">
       {/* Adopt the shared page-header layout (Districts/Regions/Region) so the
@@ -174,6 +181,7 @@ const AwardsPage: React.FC = () => {
           {standings.membershipRetentionAward && (
             <MembershipRetentionCard
               award={standings.membershipRetentionAward}
+              yearClosed={retentionYearClosed}
             />
           )}
         </div>
