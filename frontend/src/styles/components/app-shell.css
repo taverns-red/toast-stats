@@ -674,7 +674,7 @@
     font-size: 14px;
     color: var(--ink-2);
     /* #2657 REF-32: a readable measure on wide headers. */
-    max-width: 70ch;
+    max-width: 34.8em;
   }
 
   /* "What does this page answer?" lede for the long-text/doc-style routes

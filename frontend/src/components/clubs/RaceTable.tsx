@@ -136,7 +136,7 @@ export const RaceTable: React.FC<RaceTableProps> = ({
           current
             ? `, ${current.goalsMet} of 10 goals, ${current.members} members (${signed(
                 current.netGrowth
-              )})`
+              )} vs base)`
             : ''
         }${row.official ? ', officially recognised' : ''}`,
       }
@@ -227,7 +227,7 @@ export const RaceTable: React.FC<RaceTableProps> = ({
                         {current.members}
                       </span>{' '}
                       <span className="race-table__growth">
-                        {signed(current.netGrowth)}
+                        {signed(current.netGrowth)} vs base
                       </span>
                       {unconfirmed && (
                         <span
