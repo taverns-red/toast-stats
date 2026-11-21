@@ -64,14 +64,16 @@ function toDivisionRow(
       id: division.divisionId,
       to: `/district/${districtId}/division/${division.divisionId}`,
       title: `Division ${division.divisionId}`,
-      // A real chip's own box, so the row is the height it will be.
+      // A chip with no text: `.mobile-chip` gives it the same box as the
+      // longest label (#2793), so the chip that replaces it moves nothing.
       chip: (
         <span
           data-testid="distinguished-pending"
           aria-hidden="true"
           className="mobile-chip animate-pulse bg-gray-200"
-          style={{ display: 'block', width: '81px', height: '26px' }}
-        />
+        >
+          {' '}
+        </span>
       ),
       meta: [paid, net].join(' \u00b7 '),
       ariaLabel: `Division ${division.divisionId} — ${paid}, net ${net}`,

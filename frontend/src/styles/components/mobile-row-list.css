@@ -322,8 +322,13 @@
    like .clubs-status-pill, so contrast holds in both themes; always paired
    with a glyph + text by the caller (WCAG 1.4.1). */
 
+/* min-width fits the longest label, "○ Not distinguished" (138px at 14px), so
+   every chip and its loading placeholder share one box and a chip landing
+   moves nothing (#2793; countPlaceholderBox.test.tsx). */
 .mobile-chip {
   display: inline-block;
+  min-width: 10.5em;
+  text-align: center;
   padding: 2px 8px;
   border-radius: var(--radius-sm, 4px);
   font-size: 14px;
