@@ -114,6 +114,9 @@ const DISTRICT_COLORS = [
   'var(--tm-happy-yellow-80)', // Additional series with opacity
 ]
 
+const districtColor = (index: number): string =>
+  DISTRICT_COLORS[index % DISTRICT_COLORS.length] ?? 'var(--tm-loyal-blue)'
+
 const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   data,
   isLoading,
@@ -217,9 +220,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
               key: district.districtId,
               name: district.districtId,
               value: 'Tied',
-              color:
-                DISTRICT_COLORS[index % DISTRICT_COLORS.length] ??
-                'var(--tm-loyal-blue)',
+              color: districtColor(index),
             },
           ]
         : []
@@ -252,9 +253,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
         series={data.map((district, index) => ({
           key: district.districtId,
           name: district.districtName || district.districtId,
-          color:
-            DISTRICT_COLORS[index % DISTRICT_COLORS.length] ??
-            'var(--tm-loyal-blue)',
+          color: districtColor(index),
         }))}
         visibility={legend}
       />
@@ -340,9 +339,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 {...readout.tooltipProps}
               />
               {data.map((district, index) => {
-                const color =
-                  DISTRICT_COLORS[index % DISTRICT_COLORS.length] ??
-                  'var(--tm-loyal-blue)'
+                const color = districtColor(index)
                 return (
                   <Line
                     key={district.districtId}
