@@ -3,16 +3,11 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
-/* A `ch` width is the width of the current font's "0". While Montserrat /
-   Source Sans 3 download, the metric-matched Arial fallback is in force, and
-   its size-adjust matches the average letter width, not the "0": at 14px,
-   60ch is 438.8px under the fallback and 417.5px once Source Sans 3 loads.
-   Text measured in ch narrows at the swap, re-wraps, and moves everything
-   below it (council notes h105 -> h126, #2685; Action List intro h63 -> h84,
-   #2922). A measure stated in em tracks font-size only, so these files keep
-   Source Sans 3's ch measure as N x 0.497em (its "0" is 497/1000). The live
-   check for the Action List is the font-swap test in
-   e2e/district-subpages-cls.smoke.ts. */
+/* A `ch` width is the current font's "0", and the Arial fallback's "0" is
+   wider than Source Sans 3's: 60ch is 438.8px before the swap, 417.5px after.
+   Text measured in ch re-wraps at the swap and moves what follows it (#2685,
+   #2922). So these measures are N x 0.497em, Source Sans 3's "0" at 400.
+   The live check is the font-swap test in district-subpages-cls.smoke.ts. */
 
 const SOURCE_SANS_3_ZERO_EM = 0.497
 const TOLERANCE_EM = 0.05
