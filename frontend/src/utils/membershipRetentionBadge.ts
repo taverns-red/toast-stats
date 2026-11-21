@@ -45,7 +45,8 @@ export const isRenderableStanding = (
 
 export function membershipRetentionBadgeFor(
   standings: CompetitiveAwardStandings | null | undefined,
-  districtId: string | undefined
+  districtId: string | undefined,
+  _yearClosed = false
 ): MembershipRetentionBadge | null {
   const award = standings?.membershipRetentionAward
   if (!award || !districtId) return null

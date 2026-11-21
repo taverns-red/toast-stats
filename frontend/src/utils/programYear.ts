@@ -173,6 +173,14 @@ export function getMostRecentDateInProgramYear<T extends string>(
   return filteredDates.sort((a, b) => b.localeCompare(a))[0] ?? null
 }
 
+export function isPastProgramYearClose(
+  _snapshotDate: string | undefined,
+  _dates: readonly string[],
+  _newestProgramYear: ProgramYear | undefined
+): boolean {
+  return false
+}
+
 /**
  * Format program year for display
  */

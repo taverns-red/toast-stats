@@ -4,7 +4,7 @@
 
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
@@ -46,8 +46,9 @@ vi.mock('../../hooks/useCompetitiveAwards', () => ({
 }))
 
 import AwardsPage from '../AwardsPage'
+import { fetchCdnDates } from '../../services/cdn'
 
-const renderPage = () =>
+const renderPage = (url = '/') =>
   render(
     <QueryClientProvider
       client={
@@ -55,7 +56,7 @@ const renderPage = () =>
       }
     >
       <ProgramYearProvider>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={[url]}>
           <AwardsPage />
         </MemoryRouter>
       </ProgramYearProvider>
@@ -67,6 +68,7 @@ const TITLE = /President.s Membership Retention Award/
 describe('AwardsPage — membership retention estimate (#1614)', () => {
   beforeEach(() => {
     mockStandings = base
+    vi.mocked(fetchCdnDates).mockResolvedValue({ dates: [], count: 0 })
   })
 
   it('shows the card when the file has the award', () => {
@@ -106,5 +108,50 @@ describe('AwardsPage — membership retention estimate (#1614)', () => {
     expect(
       screen.getByRole('heading', { name: /President.s Extension Award/ })
     ).toBeInTheDocument()
+  })
+
+  describe('a year whose last snapshot is not June 30 (#3075)', () => {
+    const inProgress: CompetitiveAwardStandings = {
+      ...base,
+      membershipRetentionAward: {
+        status: 'in-progress',
+        baselineDate: '2025-03-31',
+        standings: [
+          {
+            districtId: '64',
+            districtName: '64',
+            region: '7',
+            rank: 1,
+            value: 83.66,
+            isWinner: true,
+            retained: 727,
+            base: 869,
+          },
+        ],
+      },
+    }
+    const card = () => screen.getByTestId('membership-retention-card')
+
+    it('shows a past year as final, not "so far"', async () => {
+      vi.mocked(fetchCdnDates).mockResolvedValue({
+        dates: ['2025-04-30', '2025-06-27', '2026-07-31'],
+        count: 3,
+      })
+      mockStandings = inProgress
+      renderPage('/?py=2024')
+      await waitFor(() => expect(card().textContent).toMatch(/winner/))
+      expect(card().textContent).not.toMatch(/so far/)
+    })
+
+    it('still shows the newest year as "so far" before June 30', async () => {
+      vi.mocked(fetchCdnDates).mockResolvedValue({
+        dates: ['2026-04-30', '2026-06-27'],
+        count: 2,
+      })
+      mockStandings = inProgress
+      renderPage('/?py=2025')
+      await waitFor(() => expect(card().textContent).toMatch(/top 3 so far/))
+      expect(card().textContent).toMatch(/Standings so far/)
+    })
   })
 })

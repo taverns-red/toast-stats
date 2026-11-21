@@ -23,7 +23,13 @@ const caller = stripComments(
 describe('membership retention badge wiring (#1614)', () => {
   it('builds the badge from the page competitive-awards read', () => {
     expect(caller).toMatch(
-      /membershipRetentionBadgeFor\(\s*competitiveAwards,\s*districtId\s*\)/
+      /membershipRetentionBadgeFor\(\s*competitiveAwards,\s*districtId,\s*retentionYearClosed\s*\)/
+    )
+  })
+
+  it("treats a past year's last snapshot as final (#3075)", () => {
+    expect(caller).toMatch(
+      /retentionYearClosed\s*=[\s\S]{0,200}?isPastProgramYearClose\(/
     )
   })
 

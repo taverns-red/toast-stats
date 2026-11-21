@@ -69,6 +69,30 @@ describe('membershipRetentionBadgeFor (#1614)', () => {
     expect(badge).toMatchObject({ rank: 2, isWinner: true, final: true })
   })
 
+  it('is final on a past year’s last snapshot when the file says in progress (#3075)', () => {
+    const standings = standingsWith({
+      status: 'in-progress',
+      standings: fiveRows,
+    })
+    expect(membershipRetentionBadgeFor(standings, '76', true)).toMatchObject({
+      isWinner: true,
+      final: true,
+    })
+    expect(membershipRetentionBadgeFor(standings, '76', false)).toMatchObject({
+      final: false,
+    })
+  })
+
+  it('does not make a not-started year final (#3075)', () => {
+    expect(
+      membershipRetentionBadgeFor(
+        standingsWith({ status: 'not-started', standings: fiveRows }),
+        '61',
+        true
+      )
+    ).toBeNull()
+  })
+
   it('ranks District F like any other district', () => {
     const badge = membershipRetentionBadgeFor(
       standingsWith({ status: 'in-progress', standings: fiveRows }),
