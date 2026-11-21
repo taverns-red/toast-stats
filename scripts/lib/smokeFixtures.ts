@@ -533,6 +533,8 @@ export async function refreshFixtures(options: {
   fetchFn: FetchFn
   rules?: SchemaRule[]
   readLocal?: (relativePath: string) => Uint8Array
+  /** The clock, in epoch ms; tests set it. */
+  now?: () => number
 }): Promise<RefreshReport> {
   const { manifest, fetchFn } = options
   const outDir = resolve(options.outDir)

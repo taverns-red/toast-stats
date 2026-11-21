@@ -447,13 +447,23 @@ describe('refreshFixtures', () => {
   describe('while the daily reports job is still writing the newest date (#2750)', () => {
     const rollups = 'snapshots/2026-11-07/reports-rollups.json'
     const sidecar = 'snapshots/2026-11-07/district_61_reports.json'
+    const movedAt = Date.parse('2026-11-08T10:07:53.084Z')
+    const HOUR = 3_600_000
+    const moved = {
+      ...world,
+      'v1/latest.json': json({
+        latestSnapshotDate: '2026-11-07',
+        generatedAt: new Date(movedAt).toISOString(),
+      }),
+    }
 
     it('records a 404 on the newest date’s report sidecars and names them', async () => {
       const report = await refreshFixtures({
         manifest: manifest([{ path: rollups }, { path: sidecar }]),
         outDir: out,
-        fetchFn: fetchFrom(world),
+        fetchFn: fetchFrom(moved),
         rules,
+        now: () => movedAt + 20 * 60_000,
       })
       expect(report.failures).toEqual([])
       expect(report.ok).toBe(true)
@@ -462,6 +472,49 @@ describe('refreshFixtures', () => {
       expect(index[rollups].status).toBe(404)
       expect(index[sidecar].status).toBe(404)
       expect(formatReport(report)).toContain(rollups)
+    })
+
+    it('fails on the newest date’s sidecar 404 once latest.json moved over 3 hours ago', async () => {
+      const report = await refreshFixtures({
+        manifest: manifest([{ path: rollups }]),
+        outDir: out,
+        fetchFn: fetchFrom(moved),
+        rules,
+        now: () => movedAt + 3 * HOUR + 60_000,
+      })
+      expect(report.ok).toBe(false)
+      expect(report.pendingSidecars).toEqual([])
+      expect(report.failures.join('\n')).toContain(`${rollups}: HTTP 404`)
+    })
+
+    it('fails closed on the newest date’s sidecar 404 when latest.json has no generatedAt', async () => {
+      const report = await refreshFixtures({
+        manifest: manifest([{ path: rollups }]),
+        outDir: out,
+        fetchFn: fetchFrom(world),
+        rules,
+        now: () => movedAt,
+      })
+      expect(report.ok).toBe(false)
+      expect(report.failures.join('\n')).toContain(`${rollups}: HTTP 404`)
+    })
+
+    it('fails closed when generatedAt is not a timestamp', async () => {
+      const report = await refreshFixtures({
+        manifest: manifest([{ path: rollups }]),
+        outDir: out,
+        fetchFn: fetchFrom({
+          ...world,
+          'v1/latest.json': json({
+            latestSnapshotDate: '2026-11-07',
+            generatedAt: 'soon',
+          }),
+        }),
+        rules,
+        now: () => movedAt,
+      })
+      expect(report.ok).toBe(false)
+      expect(report.failures.join('\n')).toContain(`${rollups}: HTTP 404`)
     })
 
     it('still fails on a 404 for a report sidecar of an older date', async () => {
