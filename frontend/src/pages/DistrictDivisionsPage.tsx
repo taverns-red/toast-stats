@@ -20,7 +20,6 @@ import { DistrictSubnav } from '../components/DistrictSubnav'
 import { DivisionPerformanceCards } from '../components/DivisionPerformanceCards'
 import DistinguishedProgramCriteriaExplainer from '../components/DistinguishedProgramCriteriaExplainer'
 import { DivisionAreaRecognitionPanel } from '../components/DivisionAreaRecognitionPanel'
-import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { isDistrictSlotPending } from '../utils/districtSlotPending'
 import ErrorBoundary from '../components/ErrorBoundary'
 
@@ -200,24 +199,36 @@ const DistrictDivisionsPage: React.FC = () => {
               )
             )}
 
-            <DistinguishedProgramCriteriaExplainer />
-
             {districtStatistics && effectiveEndDate ? (
-              <DivisionAreaRecognitionPanel
-                divisions={applyPipelineDistinguished(
-                  extractDivisionPerformance(
-                    districtStatistics,
+              <>
+                <DistinguishedProgramCriteriaExplainer />
+                <DivisionAreaRecognitionPanel
+                  divisions={applyPipelineDistinguished(
+                    extractDivisionPerformance(
+                      districtStatistics,
+                      effectiveEndDate
+                    ),
+                    publishedCounts,
                     effectiveEndDate
-                  ),
-                  publishedCounts,
-                  effectiveEndDate
-                )}
-                isLoading={isLoadingStatistics || isLoadingCounts}
-                openDivisions={openSummaryDivisions}
-                onOpenDivisionsChange={setOpenSummaryDivisions}
+                  )}
+                  isLoading={isLoadingStatistics || isLoadingCounts}
+                  openDivisions={openSummaryDivisions}
+                  onOpenDivisionsChange={setOpenSummaryDivisions}
+                />
+              </>
+            ) : isSlotPending ? (
+              // Nothing is drawn under the skeleton list: the real list has
+              // 6 to 9 rows, so anything there moved when it landed (130px on
+              // D86, #2793). The criteria and panel arrive with the list
+              // instead, and this reserve keeps the shell footer off screen
+              // (DistrictDivisionsPage.test.tsx, district-subpages-cls.smoke.ts).
+              <div
+                data-testid="divisions-below-reserve"
+                aria-hidden="true"
+                style={{ minHeight: '100vh' }}
               />
             ) : (
-              isSlotPending && <LoadingSkeleton variant="table" count={3} />
+              <DistinguishedProgramCriteriaExplainer />
             )}
           </div>
         </div>

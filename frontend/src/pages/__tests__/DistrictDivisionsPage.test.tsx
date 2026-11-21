@@ -336,11 +336,41 @@ describe('DistrictDivisionsPage (#571 — Phase 3)', () => {
       renderAt('/district/61/divisions')
       const cards = await screen.findByTestId('division-performance-cards')
       expect(cards).toHaveAttribute('data-loading', 'true')
-      expect(
-        screen.getByRole('status', { name: 'Loading table' })
-      ).toBeInTheDocument()
+      // Nothing sits below the skeleton list: the criteria moved 130px when a
+      // district's real list was shorter than the skeleton (#2793). A reserve
+      // keeps the shell footer off screen instead.
+      expect(screen.queryByTestId('ddp-criteria-explainer')).toBeNull()
+      expect(screen.queryByTestId('division-area-recognition-panel')).toBeNull()
+      expect(screen.getByTestId('divisions-below-reserve')).toBeInTheDocument()
     } finally {
       if (restoreDates) datesMock.mockImplementation(restoreDates)
+      if (restoreStats) statsMock.mockImplementation(restoreStats)
+    }
+  })
+
+  // The third branch (#2793): the snapshot read failed, so nothing is
+  // pending. The criteria still help, and no reserve holds empty space.
+  it('shows the criteria and no reserve once the snapshot read has failed', async () => {
+    const statsMock = vi.mocked(useDistrictStatistics)
+    const restoreStats = statsMock.getMockImplementation()
+    statsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isPending: false,
+      isError: true,
+    } as unknown as ReturnType<typeof useDistrictStatistics>)
+    try {
+      renderAt('/district/61/divisions')
+      expect(
+        await screen.findByTestId('ddp-criteria-explainer')
+      ).toBeInTheDocument()
+      expect(screen.getByTestId('division-performance-cards')).toHaveAttribute(
+        'data-loading',
+        'false'
+      )
+      expect(screen.queryByTestId('divisions-below-reserve')).toBeNull()
+      expect(screen.queryByTestId('division-area-recognition-panel')).toBeNull()
+    } finally {
       if (restoreStats) statsMock.mockImplementation(restoreStats)
     }
   })

@@ -63,20 +63,22 @@ export const QualifyingTodayExtra: React.FC<{
     </>
   ) : null
 
-/** A fixed-size placeholder for a value the published counts decide while they
- *  load (#2580): nothing is drawn on the qualifying-today basis first and then
- *  flipped. Sized to the real content so its arrival moves nothing; not read
- *  out (the page is loading). Same pulse as the list skeletons. */
+/** A placeholder for a value the published counts decide while they load
+ *  (#2580): nothing is drawn on the qualifying-today basis first and then
+ *  flipped. Its arrival must move nothing, so where the content can vary in
+ *  length the size comes from a CSS rule the content shares (`className`, no
+ *  width or height; countPlaceholderBox.test.tsx). Not read out (the page is
+ *  loading). Same pulse as the list skeletons. */
 export const CountPending: React.FC<{
-  width: string
-  height: string
+  width?: string
+  height?: string
   className?: string
 }> = ({ width, height, className }) => (
   <span
     data-testid="distinguished-pending"
     aria-hidden="true"
     className={`animate-pulse bg-gray-200 rounded-sm inline-block align-middle ${className ?? ''}`}
-    style={{ width, height }}
+    style={width || height ? { width, height } : undefined}
   />
 )
 

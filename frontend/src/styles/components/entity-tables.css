@@ -137,10 +137,60 @@
   white-space: nowrap;
 }
 
-/* Area table: cells hold one line (the recognition badge wrapped to a
-   two-line pill); only the headers wrap. */
+/* Area table: cells hold one line; only the headers, "+N qualifying today"
+   and, below 1280, the two longest recognition badges wrap. */
 .entity-table--areas td {
   white-space: nowrap;
+}
+
+/* Count columns: one em width per breakpoint for placeholder and content, so
+   nothing re-flows when the counts land (#2793; countPlaceholderBox.test.tsx,
+   district-subpages-cls.smoke.ts). At 1024 a one-line Recognition column
+   would push the headers past four lines, so the longest badges wrap there
+   as a two-line tag; from 1280 every badge fits on one line (#2718). */
+.entity-table--areas .entity-table__dist {
+  width: 10em;
+}
+
+.entity-table--areas .entity-table__recognition {
+  width: 15em;
+}
+
+.entity-table__pending {
+  display: block;
+  width: 100%;
+  height: 1.4em;
+}
+
+.entity-table__pending--gap {
+  width: 2em;
+  margin: 0 auto;
+}
+
+.entity-table__recognition-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+}
+
+.entity-table__badge {
+  min-width: 0;
+  white-space: normal;
+  border-radius: 0.5rem;
+}
+
+/* "President's Distinguished (Provisional)" plus its info button measured
+   280px at 14px. */
+@media (min-width: 1280px) {
+  .entity-table--areas .entity-table__recognition {
+    width: 21em;
+  }
+
+  .entity-table__badge {
+    white-space: nowrap;
+    border-radius: 9999px;
+  }
 }
 
 /* ── Criteria reference tables ───────────────────────────────────────────── */

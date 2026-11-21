@@ -64,14 +64,16 @@ function toDivisionRow(
       id: division.divisionId,
       to: `/district/${districtId}/division/${division.divisionId}`,
       title: `Division ${division.divisionId}`,
-      // A real chip's own box, so the row is the height it will be.
+      // A chip with no text: `.mobile-chip` gives it the same box as the
+      // longest label (#2793), so the chip that replaces it moves nothing.
       chip: (
         <span
           data-testid="distinguished-pending"
           aria-hidden="true"
           className="mobile-chip animate-pulse bg-gray-200"
-          style={{ display: 'block', width: '81px', height: '26px' }}
-        />
+        >
+          {' '}
+        </span>
       ),
       meta: [paid, net].join(' \u00b7 '),
       ariaLabel: `Division ${division.divisionId} — ${paid}, net ${net}`,
@@ -87,19 +89,12 @@ function toDivisionRow(
   }
 }
 
-/* Loading skeleton (#1837). It must occupy the loaded list's box, because the
- * page renders the static DDP criteria directly below it: a short spinner
- * panel put the criteria at the top and the list landed above it (CLS 0.20 at
- * 375px). Built from the loaded state's own structure (Lesson 158) — the
- * MobileRowList classes and row CSS below 768, card-sized panels above — so
- * row heights, gaps and borders come from the same rules as the real list.
- *
- * Only the row COUNT is pinned: districts carry 6–9 divisions (prod 2026-10:
- * D42 6, D61 8, D80 9), so 8 rows lands within a row or two of every one.
- * Desktop cards are 471–563px each and every district has several, so two
- * card-shaped panels (header + five area-row bars) push everything below
- * them past a 900px fold just as the real list does. The CLS smoke
- * (e2e/district-subpages-cls.smoke.ts) re-verifies this on every PR. */
+/* Loading skeleton (#1837), built from the real list's classes so rows match.
+ * Districts carry 6 to 9 divisions and the count arrives with the snapshot,
+ * so the page draws nothing under the skeleton, only a reserve that keeps the
+ * shell footer off screen; the criteria and panel arrive with the real list
+ * and a shorter list moves nothing (#2793; DistrictDivisionsPage.test.tsx,
+ * e2e/district-subpages-cls.smoke.ts). */
 const SKELETON_DIVISION_ROWS = 8
 const SKELETON_DIVISION_CARDS = 2
 

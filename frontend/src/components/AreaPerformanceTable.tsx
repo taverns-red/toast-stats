@@ -278,7 +278,7 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
             Paid / Base
             <span className="entity-table__sub">(≥ club base required)</span>
           </th>
-          <th scope="col" className="entity-table__c">
+          <th scope="col" className="entity-table__c entity-table__dist">
             Distinguished
             <span className="entity-table__sub">(of club base)</span>
           </th>
@@ -290,7 +290,7 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
             Second round visits
             <span className="entity-table__sub">(75% of club base)</span>
           </th>
-          <th scope="col" className="entity-table__c">
+          <th scope="col" className="entity-table__c entity-table__recognition">
             Recognition
           </th>
           <th scope="col" className="entity-table__c">
@@ -334,12 +334,15 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
               </td>
               <td className="entity-table__c tabular">
                 {countsPending ? (
-                  <CountPending width="73px" height="20px" />
+                  <CountPending className="entity-table__pending" />
                 ) : (
                   <>
                     {confirmedClubs}/{area.clubBase} {distinguishedPercentage}%
+                    {/* On its own line, so the column keeps the width its
+                        placeholder had (#2793). */}
                     <QualifyingTodayExtra
                       provisional={area.provisionalDistinguishedClubs}
+                      stacked
                     />
                   </>
                 )}
@@ -353,31 +356,33 @@ export const AreaPerformanceTable: React.FC<AreaPerformanceTableProps> = ({
               {countsPending ? (
                 <>
                   <td className="entity-table__c">
-                    <CountPending width="123px" height="20px" />
+                    <CountPending className="entity-table__pending" />
                   </td>
                   {[0, 1, 2].map(i => (
                     <td key={i} className="entity-table__c tabular">
-                      <CountPending width="2rem" height="20px" />
+                      <CountPending className="entity-table__pending entity-table__pending--gap" />
                     </td>
                   ))}
                 </>
               ) : (
                 <>
                   <td className="entity-table__c">
-                    <span
-                      className={`px-2 py-1 text-sm font-medium rounded-full border ${badge.className}`}
-                      aria-label={`Recognition status: ${badge.label}`}
-                    >
-                      {badge.label}
+                    <span className="entity-table__recognition-cell">
+                      <span
+                        className={`entity-table__badge px-2 py-1 text-sm font-medium rounded-full border ${badge.className}`}
+                        aria-label={`Recognition status: ${badge.label}`}
+                      >
+                        {badge.label}
+                      </span>
+                      {/* The meaning was a `title`: touch and keyboard now open it
+                        (#2644). */}
+                      {badge.tooltip && (
+                        <InfoTooltip
+                          label={`area ${area.areaId} recognition`}
+                          text={badge.tooltip}
+                        />
+                      )}
                     </span>
-                    {/* The meaning was a `title`: touch and keyboard now open it
-                      (#2644). */}
-                    {badge.tooltip && (
-                      <InfoTooltip
-                        label={`area ${area.areaId} recognition`}
-                        text={badge.tooltip}
-                      />
-                    )}
                   </td>
                   <td className="entity-table__c tabular">
                     {gapCell(gapAnalysis.distinguishedGap)}

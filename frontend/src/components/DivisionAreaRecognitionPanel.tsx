@@ -110,33 +110,8 @@ export const DivisionAreaRecognitionPanel: React.FC<
     )
   }, [divisions, isLoading])
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <section
-        className="space-y-6"
-        aria-label="Division and Area Recognition"
-        aria-busy="true"
-      >
-        {/* Section Header Skeleton */}
-        <div className="redesign-panel">
-          <div className="animate-pulse">
-            <div className="h-7 bg-gray-200 rounded w-1/3 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-          </div>
-        </div>
-
-        {/* Criteria Explanation Skeleton */}
-        <LoadingSkeleton variant="card" />
-
-        {/* Progress Table Skeleton */}
-        <LoadingSkeleton variant="table" count={5} />
-      </section>
-    )
-  }
-
   // Empty state - no divisions provided
-  if (!divisions || divisions.length === 0) {
+  if (!isLoading && (!divisions || divisions.length === 0)) {
     return (
       <section className="space-y-6" aria-label="Division and Area Recognition">
         {/* Section Header */}
@@ -189,11 +164,16 @@ export const DivisionAreaRecognitionPanel: React.FC<
     )
   }
 
-  // Main render - display section with criteria and progress table
+  // Main render - display section with criteria and progress table. While
+  // the counts load, only the progress summary is a skeleton: the header and
+  // criteria are static, so drawing them as loaded means nothing above the
+  // summary moves when the counts land (#2793; DivisionAreaRecognitionPanel
+  // tests, district-subpages-cls.smoke.ts).
   return (
     <section
       className="space-y-6"
       aria-label="Division and Area Recognition"
+      aria-busy={isLoading ? 'true' : undefined}
       role="region"
     >
       {/* Section Header - Requirement 10.2, 10.7: Updated header */}
@@ -234,25 +214,32 @@ export const DivisionAreaRecognitionPanel: React.FC<
         urlParam="expandAreaCriteria"
       />
 
-      {/* Area Progress Summary - Requirements 5, 6, 10.2, 10.3 */}
-      <DivisionAreaProgressSummary
-        divisions={divisions}
-        isLoading={false}
-        openDivisions={openDivisions}
-        onOpenDivisionsChange={onOpenDivisionsChange}
-      />
+      {isLoading ? (
+        <LoadingSkeleton variant="table" count={5} />
+      ) : (
+        <>
+          {/* Area Progress Summary - Requirements 5, 6, 10.2, 10.3 */}
+          <DivisionAreaProgressSummary
+            divisions={divisions}
+            isLoading={false}
+            openDivisions={openDivisions}
+            onOpenDivisionsChange={onOpenDivisionsChange}
+          />
 
-      {/* Summary Footer - Requirement 1.3: Consistent styling */}
-      <div className="redesign-panel">
-        <p
-          className="font-tm-body text-gray-600 text-center"
-          style={{ fontSize: '14px' }}
-        >
-          Showing {totalAreaCount} area
-          {totalAreaCount !== 1 ? 's' : ''} across {divisions.length} division
-          {divisions.length !== 1 ? 's' : ''}
-        </p>
-      </div>
+          {/* Summary Footer - Requirement 1.3: Consistent styling */}
+          <div className="redesign-panel">
+            <p
+              className="font-tm-body text-gray-600 text-center"
+              style={{ fontSize: '14px' }}
+            >
+              Showing {totalAreaCount} area
+              {totalAreaCount !== 1 ? 's' : ''} across {divisions.length}{' '}
+              division
+              {divisions.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+        </>
+      )}
     </section>
   )
 }

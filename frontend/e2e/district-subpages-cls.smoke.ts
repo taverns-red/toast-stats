@@ -123,16 +123,35 @@ const INSTALL_OBSERVER = () => {
       }
       if (e.hadRecentInput) continue
       const rect = (r?: DOMRect) =>
-        r ? `y${Math.round(r.y)} h${Math.round(r.height)}` : '-'
+        r
+          ? `x${Math.round(r.x)} y${Math.round(r.y)} w${Math.round(r.width)} h${Math.round(r.height)}`
+          : '-'
+      const name = (el: Element) => {
+        const cls = (el.className ?? '').toString().split(' ')[0]
+        const label =
+          el.getAttribute('data-testid') ?? el.getAttribute('aria-label')
+        return `${el.tagName}.${cls}${label ? `[${label}]` : ''}`
+      }
       window.__clsEntries?.push({
         t: Math.round(e.startTime),
         value: Number(e.value.toFixed(5)),
         sources: (e.sources ?? []).map(s => {
           const el = s.node as HTMLElement | undefined
-          const tag = el?.tagName ?? 'DETACHED'
-          const cls = (el?.className ?? '').toString().split(' ')[0]
-          const testId = el?.dataset?.['testid']
-          return `<${tag}.${cls}${testId ? `[${testId}]` : ''}> ${rect(s.previousRect)} -> ${rect(s.currentRect)}`
+          if (!el) {
+            return `<DETACHED> ${rect(s.previousRect)} -> ${rect(s.currentRect)}`
+          }
+          // A bare `div.flex` names nothing; the ancestors and the opening
+          // markup say which component moved.
+          const path: string[] = []
+          for (
+            let p = el.parentElement, i = 0;
+            p && i < 3;
+            p = p.parentElement, i++
+          ) {
+            path.push(name(p))
+          }
+          const html = el.outerHTML.slice(0, 100).replace(/\s+/g, ' ')
+          return `<${name(el)}> in ${path.join(' < ')} ${rect(s.previousRect)} -> ${rect(s.currentRect)} | ${html}`
         }),
       })
     }
@@ -455,6 +474,124 @@ test.describe('region and world What Changed CLS (#2476)', () => {
           vp,
           '[data-testid="rankings-changes"]'
         )
+        expect(
+          total,
+          `${path} CLS at ${vp.width}px is ${total} (budget ${CLS_BUDGET}) on ${page.url()}\n` +
+            `Largest contributors — read the sources, not the total:\n${breakdown}`
+        ).toBeLessThan(CLS_BUDGET)
+      })
+    }
+  }
+})
+
+/* Count placeholders on the Divisions page take the same box as the counts
+ * (#2793). District 86 has longer labels than District 61: "○ Not
+ * distinguished" chips, a "Distinguished (Provisional)" badge with its info
+ * button, and "+N qualifying today" in the area table. Placeholders sized to
+ * D61's labels re-flowed those columns when the counts landed. The analytics
+ * read is held so the placeholders paint for certain; then every area-table
+ * column and every division chip must keep its width, and CLS stays in budget.
+ * 375 shows the chips, 768 the compact table, 1280 the full table. */
+const COUNT_BOX_DISTRICTS = ['61', '86'] as const
+const COUNT_BOX_VIEWPORTS = [
+  { name: 'phone', width: 375, height: 812 },
+  { name: 'tablet', width: 768, height: 1024 },
+  { name: 'desktop', width: 1280, height: 900 },
+] as const
+const ANALYTICS_HOLD_MS = 2_000
+/* Font metrics may nudge a box by a pixel or two; the D61-tuned sizes were
+ * 50–70px off. */
+const BOX_TOLERANCE_PX = 4
+
+type BoxWidths = Record<string, number>
+interface CountBoxLog {
+  pending: BoxWidths | null
+  final: BoxWidths | null
+}
+
+const INSTALL_COUNT_BOX_SAMPLER = () => {
+  const log: CountBoxLog = { pending: null, final: null }
+  ;(window as unknown as { __countBoxes: CountBoxLog }).__countBoxes = log
+  const widths = (): BoxWidths => {
+    const out: BoxWidths = {}
+    document
+      .querySelectorAll(
+        'table.entity-table--areas, table.priority-columns__table'
+      )
+      .forEach((table, t) => {
+        table.querySelectorAll('thead th').forEach((th, i) => {
+          out[`table ${t + 1} column ${i + 1}`] = Math.round(
+            th.getBoundingClientRect().width
+          )
+        })
+      })
+    document.querySelectorAll('.mobile-row__chip').forEach((chip, i) => {
+      out[`chip ${i + 1}`] = Math.round(chip.getBoundingClientRect().width)
+    })
+    return out
+  }
+  const tick = () => {
+    if (document.querySelector('[data-testid="distinguished-pending"]')) {
+      log.pending = widths()
+    } else if (log.pending) {
+      log.final = widths()
+    }
+    requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+}
+
+test.describe('Divisions page count placeholders keep their box (#2793)', () => {
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'layout-shift + CDP throttling are Chromium-only'
+  )
+
+  for (const district of COUNT_BOX_DISTRICTS) {
+    for (const vp of COUNT_BOX_VIEWPORTS) {
+      const path = `/district/${district}/divisions`
+      test(`${path} at ${vp.width}px: placeholders and counts share one box`, async ({
+        page,
+      }) => {
+        test.setTimeout(180_000)
+        await page.addInitScript(INSTALL_COUNT_BOX_SAMPLER)
+        await page.route(
+          '**/analytics/district_*_analytics.json',
+          async route => {
+            await new Promise(r => setTimeout(r, ANALYTICS_HOLD_MS))
+            await route.fallback()
+          }
+        )
+        const { total, breakdown } = await measureCls(
+          page,
+          path,
+          vp,
+          '.district-detail-page'
+        )
+        const log = await page.evaluate(
+          () =>
+            (window as unknown as { __countBoxes: CountBoxLog }).__countBoxes
+        )
+        expect(log.pending, 'the count placeholders never painted').not.toBe(
+          null
+        )
+        const boxes = Object.entries(log.pending ?? {})
+          .filter(([key]) => log.final?.[key] !== undefined)
+          .map(([key, before]) => ({
+            key,
+            before,
+            after: log.final?.[key] ?? 0,
+          }))
+        const moved = boxes.filter(
+          b => Math.abs(b.after - b.before) > BOX_TOLERANCE_PX
+        )
+        expect(
+          moved,
+          `Boxes that changed width when the counts landed on ${page.url()}:\n` +
+            boxes
+              .map(b => `  ${b.key}: ${b.before}px -> ${b.after}px`)
+              .join('\n')
+        ).toEqual([])
         expect(
           total,
           `${path} CLS at ${vp.width}px is ${total} (budget ${CLS_BUDGET}) on ${page.url()}\n` +
