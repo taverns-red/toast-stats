@@ -36,7 +36,7 @@ const funnel = buildRollupGrowthFunnel({
 const reinstate: RollupReinstate = {
   count: 7,
   adds: 3,
-  card: '3 add to the club base',
+  card: '4 add to net club growth',
   rows: [
     {
       id: '61',
@@ -92,7 +92,7 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     expect(card).toHaveTextContent(
       'suspended or recently closed clubs that can come back'
     )
-    expect(card).toHaveTextContent('3 add to the club base')
+    expect(card).toHaveTextContent('4 add to net club growth')
     expect(within(card).getByRole('link')).toHaveAttribute(
       'href',
       '#growth-reinstate'
@@ -182,7 +182,7 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
       ...reinstate,
       count: 0,
       adds: 0,
-      card: '0 add to the club base',
+      card: '0 add to net club growth',
       rows: [],
     })
     expect(screen.getByTestId('growth-stage-reinstate')).toHaveTextContent('0')

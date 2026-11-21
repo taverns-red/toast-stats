@@ -87,7 +87,8 @@ describe('buildRollupReinstate', () => {
     )!
     expect(r.count).toBe(5)
     expect(r.adds).toBe(2)
-    expect(r.card).toBe('2 add to the club base')
+    // #3130: the card counts the 3 that add to net club growth.
+    expect(r.card).toBe('3 add to net club growth')
     expect(r.rows).toEqual([
       {
         id: '61',
@@ -119,7 +120,7 @@ describe('buildRollupReinstate', () => {
   it('counts an empty list as a measured zero, with no row', () => {
     const r = build(file({ '61': [], '86': [] }), ['61', '86'])!
     expect(r).toMatchObject({ count: 0, adds: 0, rows: [] })
-    expect(r.card).toBe('0 add to the club base')
+    expect(r.card).toBe('0 add to net club growth')
   })
 
   it('takes every district worldwide, F included and U left out', () => {
@@ -163,7 +164,7 @@ describe('buildRollupReinstate', () => {
     )!
     expect(r.adds).toBe(3)
     expect(r.rows[0]!.adds).toBe(3)
-    expect(r.card).toBe('3 add to the club base')
+    expect(r.card).toBe('1 adds to net club growth')
   })
 
   it('sorts by adds to the club base, then total, then district number', () => {
@@ -199,7 +200,7 @@ describe('buildRollupReinstate', () => {
     )!
     expect(r.adds).toBe(0)
     expect(r.rows[0]!.adds).toBe(0)
-    expect(r.card).toBe('0 add to the club base')
+    expect(r.card).toBe('2 add to net club growth')
   })
 
   it('from July 1: the March 31 suspension is summed as adding', () => {
@@ -218,7 +219,7 @@ describe('buildRollupReinstate', () => {
       { date }
     )!
     expect(r.adds).toBe(1)
-    expect(r.card).toBe('1 adds to the club base')
+    expect(r.card).toBe('0 add to net club growth')
   })
 
   it('carries the page’s py and date on each district link', () => {

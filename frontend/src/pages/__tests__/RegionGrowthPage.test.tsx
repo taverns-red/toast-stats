@@ -208,7 +208,8 @@ describe('Can reinstate on the region and world funnels (#3094)', () => {
     // Region 05 has District 61 (22 clubs, 3 add); 51 and 93 are elsewhere.
     const card = screen.getByTestId('growth-stage-reinstate')
     expect(card).toHaveTextContent(/Can reinstate\s*22/)
-    expect(card).toHaveTextContent('3 add to the club base')
+    // #3130: the other 19 add to net club growth.
+    expect(card).toHaveTextContent('19 add to net club growth')
     expect(mockedReinstatable).toHaveBeenCalledWith('2026-10-15')
     const table = screen.getByTestId('rollup-growth-reinstate-table')
     expect(
@@ -226,7 +227,7 @@ describe('Can reinstate on the region and world funnels (#3094)', () => {
     await funnel()
     const card = screen.getByTestId('growth-stage-reinstate')
     expect(card).toHaveTextContent(/Can reinstate\s*23/)
-    expect(card).toHaveTextContent('3 add to the club base')
+    expect(card).toHaveTextContent('20 add to net club growth')
     const table = screen.getByTestId('rollup-growth-reinstate-table')
     expect(
       within(table)

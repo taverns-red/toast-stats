@@ -122,7 +122,12 @@ for (const [label, url, child] of [
         // world adds District 51 (1).
         const card = page.getByTestId('growth-stage-reinstate')
         await expect(card).toContainText(label === 'region' ? '22' : '23')
-        await expect(card).toContainText('3 add to the club base')
+        // #3130: the clubs that add to net club growth (19 + D51's 1).
+        await expect(card).toContainText(
+          label === 'region'
+            ? '19 add to net club growth'
+            : '20 add to net club growth'
+        )
         await expect(
           page
             .locator('#growth-reinstate')
