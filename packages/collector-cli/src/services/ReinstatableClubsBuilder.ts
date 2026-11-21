@@ -46,12 +46,25 @@
  *   add are missing, so an empty district would read as a measured zero
  *   (#1757, #3064 review N2).
  *
+ * - Optional `districtIds` is the date's district set, from its
+ *   `all-districts-rankings.json` (#3101). Toastmasters retires districts
+ *   at a rollover (64 on 2026-07-01, four on 2025-07-01). A closed or
+ *   carried club whose district is in neither that set nor the suspended
+ *   list is listed under its old number with `districtRetiredOn`, the
+ *   July 1 the district was retired. A district in the set but not in the
+ *   suspended list stays unknown: its list was not read. Without the set,
+ *   or with one that is empty or lacks a suspended-list district, no
+ *   district is taken as retired and those clubs are left out.
+ *
  * Rows are public club-level facts only, as in `suspended-clubs.json`.
  *
  * @module ReinstatableClubsBuilder
  */
 
-import { classifyReinstatement } from '@taverns-red/analytics-core'
+import {
+  canonicalDistrictId,
+  classifyReinstatement,
+} from '@taverns-red/analytics-core'
 import {
   REINSTATABLE_CLUBS_FORMAT,
   type ClosedClubNameIndex,
@@ -81,6 +94,12 @@ export interface BuildReinstatableClubsInput {
   legacyDeadlines?: ReadonlyMap<string, string> | null
   /** The date's roster: club number → its district and club status. */
   roster?: ReadonlyMap<string, RosterEntry> | null
+  /**
+   * The date's district set, from its `all-districts-rankings.json` (#3101).
+   * A district in neither it nor the suspended list was retired. Without
+   * it, no district is taken as retired.
+   */
+  districtIds?: readonly string[] | null
 }
 
 /** One club on the date's roster (`district_{id}.json` `clubs[]`). */
@@ -153,6 +172,75 @@ interface ClosedRow {
 /** Roster statuses of a club in good standing: it was reinstated. */
 const REINSTATED_STATUSES = new Set(['active', 'low'])
 
+/** The start year of the program year a date falls in. */
+function programYearStart(date: string): number {
+  const year = Number(date.slice(0, 4))
+  return date.slice(5, 7) >= '07' ? year : year - 1
+}
+
+/**
+ * The districts of the closed index that Toastmasters retired (#3101), by
+ * canonical id → the July 1 it retired them, ISO. A district is retired
+ * when the date's district set lacks it. It was retired at the start of
+ * the first program year after the newest one with a sign of it: a closure
+ * in the closed index, or a row in an earlier suspended list. A June 30
+ * list carries a district through its program year even when none of its
+ * clubs closed then. The date's own program year lacks it, so that year is
+ * the latest it can be. Known limit: a district with no sign in its last
+ * year is dated from an earlier one.
+ *
+ * An empty set, or one missing a district of the suspended list, is
+ * unusable, and no district is taken as retired.
+ */
+function findRetiredDistricts(
+  districtIds: readonly string[] | null | undefined,
+  suspended: SuspendedClubs,
+  closed: ClosedClubNameIndex,
+  earlierLists: readonly SuspendedClubs[],
+  snapshotDate: string
+): Map<string, string> {
+  const retired = new Map<string, string>()
+  if (!districtIds || districtIds.length === 0) return retired
+  const onDate = new Set(districtIds.map(canonicalDistrictId))
+  // A set that lacks a district the suspended list has is partial: a
+  // district missing from it may only have failed to read (#1757), so
+  // none is taken as retired.
+  const partial = Object.keys(suspended.districts).some(
+    id => !isUndistricted(id) && !onDate.has(canonicalDistrictId(id))
+  )
+  if (partial) return retired
+  // Newest program year (start year) each absent district is seen in.
+  const newest = new Map<string, number>()
+  const seen = (districtId: string, start: number, addNew: boolean) => {
+    if (isUndistricted(districtId)) return
+    const id = canonicalDistrictId(districtId)
+    if (onDate.has(id)) return
+    const prior = newest.get(id)
+    if (prior === undefined && !addNew) return
+    newest.set(id, Math.max(prior ?? start, start))
+  }
+  for (const [programYear, districts] of Object.entries(closed.programYears)) {
+    for (const districtId of Object.keys(districts)) {
+      seen(districtId, Number(programYear.slice(0, 4)), true)
+    }
+  }
+  for (const list of earlierLists) {
+    for (const districtId of Object.keys(list.districts)) {
+      seen(districtId, programYearStart(list.snapshotDate), false)
+    }
+  }
+  const currentStart = programYearStart(snapshotDate)
+  for (const [id, start] of newest) {
+    retired.set(id, `${Math.min(start + 1, currentStart)}-07-01`)
+  }
+  return retired
+}
+
+/** Newest closure first; club number breaks ties so the file is stable. */
+const byNewestClosure = (a: ReinstatableClub, b: ReinstatableClub): number =>
+  (b.lastSeen ?? '').localeCompare(a.lastSeen ?? '') ||
+  a.clubNumber.localeCompare(b.clubNumber)
+
 /** July 1 - September 30: the previous list is needed to place clubs. */
 function needsPreviousList(snapshotDate: string): boolean {
   const month = snapshotDate.slice(5, 7)
@@ -197,6 +285,19 @@ export function buildReinstatableClubs(
     id => !isUndistricted(id)
   )
   const known = new Set(districtIds)
+  // A district Toastmasters retired keeps its rows under the old number,
+  // with the date it was retired (#3101).
+  const retired = findRetiredDistricts(
+    input.districtIds,
+    suspended,
+    closed,
+    earlierLists,
+    snapshotDate
+  )
+  const retiredOn = (districtId: string): string | undefined =>
+    known.has(districtId)
+      ? undefined
+      : retired.get(canonicalDistrictId(districtId))
 
   // Closed index rows, by club number.
   const closedByNumber = new Map<string, ClosedRow>()
@@ -230,9 +331,13 @@ export function buildReinstatableClubs(
     } else {
       districtId = closedByNumber.get(club.clubNumber)?.districtId
     }
-    if (districtId === undefined || !known.has(districtId)) continue
+    if (districtId === undefined) continue
+    const districtRetiredOn = retiredOn(districtId)
+    if (!known.has(districtId) && districtRetiredOn === undefined) continue
     const list = carried.get(districtId) ?? []
-    list.push(row)
+    list.push(
+      districtRetiredOn === undefined ? row : { ...row, districtRetiredOn }
+    )
     carried.set(districtId, list)
   }
   const carriedNumbers = new Set(
@@ -241,7 +346,8 @@ export function buildReinstatableClubs(
 
   const closedByDistrict = new Map<string, ReinstatableClub[]>()
   for (const row of closedByNumber.values()) {
-    if (!known.has(row.districtId)) continue
+    const districtRetiredOn = retiredOn(row.districtId)
+    if (!known.has(row.districtId) && districtRetiredOn === undefined) continue
     if (current.has(row.clubNumber) || carriedNumbers.has(row.clubNumber)) {
       continue
     }
@@ -272,6 +378,7 @@ export function buildReinstatableClubs(
       status: 'closed',
       lastSeen: row.lastSeen,
       ...ruleFields(result),
+      ...(districtRetiredOn !== undefined && { districtRetiredOn }),
     })
     closedByDistrict.set(row.districtId, list)
   }
@@ -281,16 +388,23 @@ export function buildReinstatableClubs(
     const rows = suspended.districts[districtId]!.map(club =>
       suspendedRow(club, snapshotDate)
     )
-    // Newest closure first; club number breaks ties so the file is stable.
-    const fromClosed = (closedByDistrict.get(districtId) ?? []).sort(
-      (a, b) =>
-        (b.lastSeen ?? '').localeCompare(a.lastSeen ?? '') ||
-        a.clubNumber.localeCompare(b.clubNumber)
-    )
     districts[districtId] = [
       ...rows,
       ...(carried.get(districtId) ?? []),
-      ...fromClosed,
+      ...(closedByDistrict.get(districtId) ?? []).sort(byNewestClosure),
+    ]
+  }
+  // Retired districts, after the date's own: no suspended list of their
+  // own, so carried suspensions first, then closures.
+  const retiredIds = [
+    ...new Set([...carried.keys(), ...closedByDistrict.keys()]),
+  ]
+    .filter(id => !known.has(id))
+    .sort()
+  for (const districtId of retiredIds) {
+    districts[districtId] = [
+      ...(carried.get(districtId) ?? []),
+      ...(closedByDistrict.get(districtId) ?? []).sort(byNewestClosure),
     ]
   }
 

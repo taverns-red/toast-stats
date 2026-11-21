@@ -25,8 +25,10 @@ import { Link } from 'react-router-dom'
 export interface MobileRow {
   /** Stable key. */
   id: string
-  /** Routed destination for the whole row. */
-  to: string
+  /** Routed destination for the whole row. Absent: a plain row with no
+   *  chevron, for an item with no page to open. Such a row ignores
+   *  `ariaLabel` (a plain div can't carry one) and `current`. */
+  to?: string
   /** Router location state for the destination (e.g. back-link context). */
   state?: unknown
   /** Line 1: the entity's name. */
@@ -153,12 +155,20 @@ const RowItem: React.FC<{ row: MobileRow; chipPlacement: ChipPlacement }> = ({
       {row.trailing != null && (
         <span className="mobile-row__trailing">{row.trailing}</span>
       )}
-      <Chevron className="mobile-row__chevron" />
+      {row.to !== undefined && <Chevron className="mobile-row__chevron" />}
     </>
   )
   return (
     <li>
-      {row.external ? (
+      {row.to === undefined ? (
+        <div
+          className="mobile-row mobile-row--static"
+          data-testid="mobile-row"
+          id={row.domId}
+        >
+          {body}
+        </div>
+      ) : row.external ? (
         <a
           href={row.to}
           target="_blank"

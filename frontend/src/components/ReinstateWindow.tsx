@@ -21,6 +21,7 @@
 
 import type { ReinstatableClub } from '@taverns-red/shared-contracts'
 import { formatLongDate } from '../utils/dateFormatting'
+import { retiredDistrictNote } from '../utils/retiredDistrictNote'
 import {
   EXAMPLE_LAST_CHANCE,
   EXAMPLE_SUSPENDED_AT,
@@ -125,8 +126,11 @@ export function ReinstateWindowExample() {
  *  collapsible: for these clubs it is what's next. */
 export function ClubReinstateWindow({
   club,
+  districtId,
 }: {
   club: ReinstatableClub | undefined
+  /** The district the row is filed under, named in the retired note. */
+  districtId?: string | undefined
 }) {
   if (!isWindowPeriod(club?.inactivePeriod) || !club?.lastChanceBy) {
     return null
@@ -147,6 +151,14 @@ export function ClubReinstateWindow({
           inactivePeriod={club.inactivePeriod}
           lastChanceFirst
         />
+        {club.districtRetiredOn && districtId && (
+          <p
+            className="reinstate-window__retired"
+            data-testid="reinstate-window-retired"
+          >
+            {retiredDistrictNote(districtId, club.districtRetiredOn)}
+          </p>
+        )}
       </div>
     </section>
   )

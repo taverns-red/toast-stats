@@ -10,7 +10,8 @@ import type {
 
 /* #3094 — "Can reinstate" on the region and world funnels: the district
    section (#3007) summed, broken down by district. Each district links to
-   its own section, where the clubs and the reasons are listed. Counts only,
+   its own section, where the clubs and the reasons are listed; a retired
+   district gets Ron's note instead, as it has no current page. Counts only,
    like the rest of the rollup funnel. */
 
 const n = (v: number) => v.toLocaleString('en-US')
@@ -26,11 +27,17 @@ function columns(): ActionTableColumn<ReinstateDistrictRow>[] {
       key: 'district',
       header: 'District',
       className: 'action-table__subject growth-table__club',
-      cell: r => (
-        <Link to={r.to} className="growth-table__link">
-          {r.label}
-        </Link>
-      ),
+      cell: r =>
+        r.to === undefined ? (
+          <>
+            <span className="rollup-reinstate__name">{r.label}</span>
+            <span className="rollup-reinstate__retired">{r.retiredNote}</span>
+          </>
+        ) : (
+          <Link to={r.to} className="growth-table__link">
+            {r.label}
+          </Link>
+        ),
     },
     {
       key: 'suspended',
@@ -66,9 +73,11 @@ function mobileRow() {
     ]
     return {
       id: r.id,
-      to: r.to,
+      ...(r.to !== undefined && { to: r.to }),
       title: `${r.label} — ${addsText(r.netGrowth)}`,
-      meta: details.join(' · '),
+      // One meta line keeps the 56-64 px row (RollupReinstate.test, "a
+      // retired district on a phone"), so the note takes the counts' place.
+      meta: r.retiredNote ?? details.join(' · '),
       ariaLabel: `${r.label}: ${[addsText(r.netGrowth), ...details].join(', ')}`,
     }
   }

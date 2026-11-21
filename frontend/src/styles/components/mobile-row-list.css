@@ -46,6 +46,11 @@
   background-color: var(--surface-3);
 }
 
+/* A row with no page to open does not react to the pointer. */
+.mobile-row--static:hover {
+  background-color: var(--surface);
+}
+
 .mobile-row--current {
   box-shadow: inset 4px 0 0 var(--loyal-600);
   background-color: var(--surface-3);

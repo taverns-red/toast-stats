@@ -223,6 +223,77 @@ describe('buildRollupReinstate', () => {
     expect(r.card).toBe('0 add to net club growth')
   })
 
+  /* Ron's ruling: a retired district's clubs count in the world total and
+     in no region, with a note instead of a link, because the retired
+     district has no current growth page. */
+  describe('retired districts (#3101)', () => {
+    const retired = (over: Partial<ReinstatableClub> = {}) =>
+      closed({ districtRetiredOn: '2026-07-01', ...over })
+
+    it('counts a retired district in the world total', () => {
+      const r = build(
+        file({ '61': [club()], '124': [retired(), retired()] }),
+        'all'
+      )!
+      expect(r.count).toBe(3)
+      expect(r.rows.map(x => x.id)).toEqual(['61', '124'])
+    })
+
+    it('counts it in no region: a region lists only its live districts', () => {
+      const r = build(file({ '61': [club()], '124': [retired(), retired()] }), [
+        '61',
+        '86',
+      ])!
+      expect(r.count).toBe(1)
+      expect(r.rows.map(x => x.id)).toEqual(['61'])
+    })
+
+    it('gives its row the note and no link', () => {
+      const r = build(file({ '124': [retired()] }), 'all', {
+        search: '?py=2026-2027',
+      })!
+      const row = r.rows[0]!
+      expect(row).not.toHaveProperty('to')
+      expect(row.label).toBe('District 124')
+      expect(row.retiredNote).toBe('District 124 was retired on July 1, 2026.')
+    })
+
+    it('names the district as its row label does, and the year from the row', () => {
+      const r = build(
+        file({ '09': [retired({ districtRetiredOn: '2025-07-01' })] }),
+        'all'
+      )!
+      expect(r.rows[0]!.label).toBe('District 09')
+      expect(r.rows[0]!.retiredNote).toBe(
+        'District 09 was retired on July 1, 2025.'
+      )
+    })
+
+    it('gives a live district no note', () => {
+      const r = build(file({ '61': [club()] }), 'all')!
+      expect(r.rows[0]).not.toHaveProperty('retiredNote')
+    })
+
+    it('sorts retired districts after every live one', () => {
+      const r = build(
+        file({
+          // Retired rows lead on net club growth (3 and 2), yet sort last.
+          '124': [retired(), retired(), retired()],
+          '98': [retired(), retired()],
+          '61': [closed()],
+          '86': [club()],
+        }),
+        'all'
+      )!
+      expect(r.rows.map(x => [x.id, x.netGrowth])).toEqual([
+        ['61', 1],
+        ['86', 0],
+        ['124', 3],
+        ['98', 2],
+      ])
+    })
+  })
+
   it('carries the page’s py and date on each district link', () => {
     const r = build(file({ '61': [club()] }), 'all', {
       search: '?py=2026-2027&date=2026-11-18&sort=x',

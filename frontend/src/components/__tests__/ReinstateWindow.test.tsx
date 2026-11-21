@@ -179,4 +179,34 @@ describe('ClubReinstateWindow (club page)', () => {
     const { container } = render(<ClubReinstateWindow club={undefined} />)
     expect(container).toBeEmptyDOMElement()
   })
+
+  // The note names the district as the page's hero does.
+  it('says when the club’s district was retired', () => {
+    render(
+      <ClubReinstateWindow
+        districtId="124"
+        club={row({
+          inactivePeriod: 3,
+          lastChanceBy: '2028-09-30',
+          districtRetiredOn: '2026-07-01',
+        })}
+      />
+    )
+    const region = screen.getByRole('region', {
+      name: 'Time left to reinstate',
+    })
+    expect(
+      within(region).getByTestId('reinstate-window-retired')
+    ).toHaveTextContent('District 124 was retired on July 1, 2026.')
+  })
+
+  it('no note for a club whose district is live', () => {
+    render(
+      <ClubReinstateWindow
+        districtId="61"
+        club={row({ inactivePeriod: 5, lastChanceBy: '2027-03-31' })}
+      />
+    )
+    expect(screen.queryByTestId('reinstate-window-retired')).toBeNull()
+  })
 })

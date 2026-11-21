@@ -7,6 +7,7 @@ import {
   reinstateSplit,
 } from '../components/ReinstatableClubsSection'
 import { keptQuery } from './rollupGrowthFunnel'
+import { retiredDistrictNote } from './retiredDistrictNote'
 
 /* #3094 — the "Can reinstate" card one and two levels up from the district
    (#3088): region and world. Summed in the browser over the dated
@@ -24,8 +25,11 @@ import { keptQuery } from './rollupGrowthFunnel'
 export interface ReinstateDistrictRow {
   id: string
   label: string
-  /** The district's own section: `/district/{id}/growth#growth-reinstate`. */
-  to: string
+  /** The district's own section: `/district/{id}/growth#growth-reinstate`.
+   *  Absent for a retired district, whose growth page has no current data. */
+  to?: string
+  /** Set only for a retired district; shown instead of the link. */
+  retiredNote?: string
   suspended: number
   closed: number
   /** Clubs that add to net club growth (#3130). */
@@ -83,19 +87,27 @@ export function buildRollupReinstate({
     if (!clubs || clubs.length === 0) continue
     inScope.push(...clubs)
     const closed = clubs.filter(c => c.status === 'closed').length
+    const retiredOn = clubs.find(c => c.districtRetiredOn)?.districtRetiredOn
     rows.push({
       id,
       label: `District ${id}`,
-      to: `/district/${id}/growth${qs}#growth-reinstate`,
+      ...(retiredOn
+        ? { retiredNote: retiredDistrictNote(id, retiredOn) }
+        : { to: `/district/${id}/growth${qs}#growth-reinstate` }),
       suspended: clubs.length - closed,
       closed,
       netGrowth: netGrowth(clubs, date),
       total: clubs.length,
     })
   }
+  // Retired districts last: they have no page to act on.
+  const retired = (r: ReinstateDistrictRow) => (r.retiredNote ? 1 : 0)
   rows.sort(
     (a, b) =>
-      b.netGrowth - a.netGrowth || b.total - a.total || byDistrictId(a.id, b.id)
+      retired(a) - retired(b) ||
+      b.netGrowth - a.netGrowth ||
+      b.total - a.total ||
+      byDistrictId(a.id, b.id)
   )
   return {
     count: inScope.length,

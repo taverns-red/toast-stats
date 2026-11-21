@@ -10,7 +10,7 @@ import { useQuery } from '@tanstack/react-query'
 // One shared definition of "the same club" (#1440) — this file used to hold
 // two comparisons that disagreed with each other sixteen lines apart.
 import { clubIdsMatch, findClubEntry } from '@taverns-red/shared-contracts'
-import { fetchCdnClubIndex } from '../services/cdn'
+import { fetchCdnClubIndex, fetchCdnManifest } from '../services/cdn'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { LazyWorldwideStanding } from '../components/clubs/LazyWorldwideStanding'
 import { useDistricts } from '../hooks/useDistricts'
@@ -85,7 +85,7 @@ import { buildClubMeetingInfo, meetingWhen } from '../utils/clubMeetingInfo'
 import { closedClubSummary } from '../utils/clubDistrictHistory'
 import { shortProgramYear } from '../utils/clubDistrictSpan'
 import { getProgramYearForDate } from '../utils/programYear'
-import { toSnapshotDate } from '../types/snapshotDate'
+import { snapshotDateFromManifest, toSnapshotDate } from '../types/snapshotDate'
 import { ClosedClubHistory } from '../components/clubs/ClosedClubHistory'
 
 // ── Main Page ──────────────────────────────────────────────────────────────
@@ -460,10 +460,23 @@ const ClubDetailPage: React.FC = () => {
   // #3111 (draft) — the five-period reinstate window, from the page date's
   // reinstatable-clubs.json (R3). Read only for a suspended club, like the
   // suspended list, or a closed one (#3104), in the district it was last in.
+  // A closed club's page has no date picker, so the list is read at the
+  // newest global date: a retired district's own dates stop at its last
+  // close, which has no list (ClubDetailPage.closedClub.test, "reads the
+  // list at the newest global date").
+  const { data: manifest } = useQuery({
+    queryKey: ['cdn-manifest'],
+    queryFn: fetchCdnManifest,
+    staleTime: 15 * 60 * 1000,
+    enabled: isClosedClub,
+  })
   const wantsReinstate = isSuspended || isClosedClub
+  const reinstateDate = isClosedClub
+    ? snapshotDateFromManifest(manifest)
+    : (effectiveEndDate ?? undefined)
   const { clubs: reinstatableClubs } = useReinstatableClubs(
     isClosedClub && closed ? closed.lastDistrictId : districtId,
-    wantsReinstate ? (effectiveEndDate ?? undefined) : undefined
+    wantsReinstate ? reinstateDate : undefined
   )
   const reinstateClubId = club?.clubId ?? (isClosedClub ? clubId : undefined)
   const reinstatable = reinstateClubId

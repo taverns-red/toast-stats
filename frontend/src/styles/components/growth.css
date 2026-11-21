@@ -521,6 +521,20 @@
   text-overflow: clip;
 }
 
+/* A retired district's row: its name, then the note on its own line. */
+.rollup-reinstate__name {
+  display: block;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rollup-reinstate__retired {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}
+
 /* #3111 (draft) — the row's period line, under the status. */
 .growth-reinstate__period {
   display: block;
