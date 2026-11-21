@@ -7,7 +7,10 @@ import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictGrowthCounts } from '../hooks/useDistrictGrowthCounts'
 import { useSuspendedClubs } from '../hooks/useSuspendedClubs'
-import { useReinstatableClubs } from '../hooks/useReinstatableClubs'
+import {
+  REINSTATABLE_CLUBS_FIRST_DATE,
+  useReinstatableClubs,
+} from '../hooks/useReinstatableClubs'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import { useScrollToHashWhenReady } from '../hooks/useScrollToHashWhenReady'
 import {
@@ -123,10 +126,15 @@ const DistrictGrowthPage: React.FC = () => {
   const { clubs: reinstatableClubs, isLoading: reinstatableLoading } =
     useReinstatableClubs(districtId, effectiveEndDate ?? undefined)
 
-  // #3088: the fifth stage card. It holds its slot while the file loads
-  // (no layout shift) and is left out when the date has no file.
+  // The fifth stage card holds its slot while the file loads, so the strip
+  // does not shift, but only on dates that can have the file.
   const reinstateStage = useMemo((): ReinstateStage | undefined => {
-    if (reinstatableLoading) return { state: 'loading' }
+    if (reinstatableLoading) {
+      return effectiveEndDate &&
+        effectiveEndDate >= REINSTATABLE_CLUBS_FIRST_DATE
+        ? { state: 'loading' }
+        : undefined
+    }
     if (reinstatableClubs === null || !effectiveEndDate) return undefined
     return {
       state: 'ready',
