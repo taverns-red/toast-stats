@@ -99,8 +99,19 @@ describe('fetchCdnGlobalClubRace (#1556)', () => {
     expect(await fetchCdnGlobalClubRace(snap('2026-09-11'))).toBeNull()
   })
 
-  it('returns null when the network throws', async () => {
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'))
-    expect(await fetchCdnGlobalClubRace(snap('2026-09-11'))).toBeNull()
+  it('throws on a server error, so the page can say the load failed', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 503,
+      headers: new Headers(),
+    } as unknown as Response)
+    await expect(fetchCdnGlobalClubRace(snap('2026-09-11'))).rejects.toThrow()
+  })
+
+  it('throws when the network fails, rather than reporting an absent race', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('offline'))
+    await expect(fetchCdnGlobalClubRace(snap('2026-09-11'))).rejects.toThrow(
+      'offline'
+    )
   })
 })

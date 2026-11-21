@@ -68,13 +68,13 @@ describe('useGlobalHistory', () => {
       wrapper: Wrapper,
     })
 
-    expect(result.current).toMatchObject({
+    expect(result.current).toEqual({
       history: null,
       isLoading: true,
       isError: false,
       error: null,
+      refetch: expect.any(Function),
     })
-    expect(typeof result.current.refetch).toBe('function')
   })
 
   it('returns the published series once fetched, under the shared query key', async () => {
