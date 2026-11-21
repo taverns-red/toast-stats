@@ -11,7 +11,6 @@ import { ClubTrend } from '../hooks/useDistrictAnalytics'
 import { calculateClubProjection } from '../utils/dcpProjections'
 import { isCloseToDistinguished } from '../utils/closeToDistinguished'
 import { ExportButton } from './ExportButton'
-import { LoadingSkeleton } from './LoadingSkeleton'
 import { exportClubPerformance, exportSnapshotDiff } from '../utils/csvExport'
 import { useColumnFilters } from '../hooks/useColumnFilters'
 import { FiltersPanel } from './filters/FiltersPanel'
@@ -53,6 +52,7 @@ import {
 import { CHANGES_COLUMN_IDS, COLUMN_SIZING } from './clubsColumnMeta'
 import { DataTable } from './dataTable/DataTable'
 import { DataTableSkeleton } from './dataTable/DataTableSkeleton'
+import { RowListSkeleton } from './dataTable/RowListSkeleton'
 import {
   clubsTableFeatures,
   type ClubsTableFeatures,
@@ -1166,10 +1166,10 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
 
       {/* Loading State */}
       {/* Sized to the columns shown at this width (spec §7), so the table
-          lands on it without a shift. Phone widths have no table to match. */}
+          lands on it without a shift. Phone widths get the phone rows' shape. */}
       {isLoading &&
         (isMobile ? (
-          <LoadingSkeleton variant="table" count={5} />
+          <RowListSkeleton testId="clubs-rows-skeleton" />
         ) : (
           <DataTableSkeleton
             testId="clubs-table-skeleton"
