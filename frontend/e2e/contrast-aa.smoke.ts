@@ -110,10 +110,13 @@ const forceProvisional = (page: Page) =>
       data?: { allClubs?: Record<string, unknown>[] }
     }
     const club = body.data?.allClubs?.[0]
-    if (club) {
-      club.distinguishedLevel = 'Distinguished'
-      club.isProvisionallyDistinguished = true
+    if (!club) {
+      throw new Error(
+        `forceProvisional: ${route.request().url()} has no allClubs to mark provisional`
+      )
     }
+    club.distinguishedLevel = 'Distinguished'
+    club.isProvisionallyDistinguished = true
     await route.fulfill({
       status: res.status(),
       json: body,
