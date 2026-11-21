@@ -15,6 +15,13 @@ import type { SnapshotDate } from '../types/snapshotDate'
    the program year whose July 1 club base a reinstatement on that date
    affects, as the pipeline computed it. */
 
+/** The first snapshot date with a reinstatable-clubs file. No index lists
+ *  which dates have one, so the Club Growth strip uses this to decide its
+ *  fifth slot before the fetch settles and does not shift on older dates.
+ *  Enforced by DistrictGrowthPage.test.tsx ("missing: a date before the
+ *  first file never reserves the slot"). */
+export const REINSTATABLE_CLUBS_FIRST_DATE = '2026-11-18'
+
 /** #3094 — the whole dated file, every district, for the region and world
  *  funnels. Same query as the district hook, so the cache is shared. `file`
  *  is null when the date has no file. */
