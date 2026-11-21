@@ -106,6 +106,118 @@ describe('loading skeleton is sized to the columns (#2676, spec §7)', () => {
   })
 })
 
+// The skeleton must wrap like the real table, or it spills sideways where the
+// table would scroll and the hint then pushes the table down on load (#3020).
+describe('loading skeleton matches the table shell (#3020)', () => {
+  const stubWrapperWidth = (width: number) => {
+    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(width)
+  }
+  const scroller = () =>
+    screen
+      .getByTestId('clubs-table-skeleton')
+      .querySelector('.dt-scroll') as HTMLElement
+
+  it('scrolls sideways, with the hint, when the columns do not fit', () => {
+    stubViewportWidth(1024)
+    stubWrapperWidth(500)
+    render(<ClubsTable clubs={[]} districtId="61" isLoading />)
+    expect(scroller()).toHaveAttribute('data-overflow', 'true')
+    expect(
+      screen.getByText(/scroll sideways for more columns/i)
+    ).toBeInTheDocument()
+  })
+
+  it('is a focusable, named scroll region while it overflows', () => {
+    stubViewportWidth(1024)
+    stubWrapperWidth(500)
+    render(<ClubsTable clubs={[]} districtId="61" isLoading />)
+    expect(scroller()).toHaveAttribute('role', 'region')
+    expect(scroller()).toHaveAttribute('tabindex', '0')
+    expect(scroller()).toHaveAccessibleName(
+      /all clubs table, scrolls sideways/i
+    )
+  })
+
+  it('does not scroll or show the hint when the columns fit', () => {
+    stubViewportWidth(1024)
+    stubWrapperWidth(2000)
+    render(<ClubsTable clubs={[]} districtId="61" isLoading />)
+    expect(scroller()).toHaveAttribute('data-overflow', 'false')
+    expect(scroller()).not.toHaveAttribute('role')
+    expect(scroller()).not.toHaveAttribute('tabindex')
+    expect(screen.queryByText(/scroll sideways for more columns/i)).toBeNull()
+  })
+
+  it('gives the Club header the sticky class the table header has', () => {
+    stubViewportWidth(1024)
+    render(<ClubsTable clubs={[]} districtId="61" isLoading />)
+    const first = screen
+      .getByTestId('clubs-table-skeleton')
+      .querySelector('thead th') as HTMLElement
+    expect(first).toHaveTextContent('Club')
+    expect(first).toHaveClass('clubs-table__sticky-col')
+  })
+})
+
+// Below 768 the clubs are phone rows, not a table, so the loading state takes
+// the rows' shape rather than the generic grey block (#3020).
+describe('phone loading skeleton (#3020)', () => {
+  const skeleton = () => screen.getByTestId('clubs-rows-skeleton')
+
+  it("is one status, with no table, in the real list's wrapper", () => {
+    stubViewportWidth(375)
+    render(<ClubsTable clubs={[]} districtId="61" isLoading />)
+    expect(skeleton()).toHaveAttribute('role', 'status')
+    expect(skeleton()).toHaveAccessibleName('Loading table')
+    expect(skeleton().querySelector('table')).toBeNull()
+    expect(screen.queryByTestId('clubs-table-skeleton')).toBeNull()
+    // The same bleed and list modifiers as the loaded phone list.
+    expect(skeleton().parentElement).toHaveClass('pb-4', 'clubs-mobile-rows')
+    expect(skeleton()).toHaveClass(
+      'mobile-row-list',
+      'mobile-row-list--flush',
+      'mobile-row-list--wrap'
+    )
+  })
+
+  it('reserves collapsed division toggles in the default view', () => {
+    stubViewportWidth(375)
+    render(<ClubsTable clubs={[]} districtId="61" isLoading />)
+    expect(
+      skeleton().querySelectorAll(
+        '.mobile-row-group > .mobile-row-group__heading > .mobile-row-group__toggle'
+      ).length
+    ).toBeGreaterThan(0)
+    expect(skeleton().querySelector('.mobile-row')).toBeNull()
+  })
+
+  it('reserves two-line club rows when the view is narrowed', () => {
+    stubViewportWidth(375)
+    render(
+      <ClubsTable
+        clubs={[]}
+        districtId="61"
+        isLoading
+        initialSortField="membership"
+        initialSortDirection="desc"
+      />
+    )
+    const rows = skeleton().querySelectorAll(
+      '.mobile-row-list__rows > li > .mobile-row'
+    )
+    expect(rows.length).toBeGreaterThan(0)
+    for (const row of rows) {
+      expect(
+        row.querySelector('.mobile-row__line1 .dt-skeleton__bar--title')
+      ).not.toBeNull()
+      expect(
+        row.querySelector('.mobile-row__line2 .dt-skeleton__bar')
+      ).not.toBeNull()
+    }
+    expect(skeleton().querySelector('.mobile-row-group')).toBeNull()
+  })
+})
+
 describe('empty states (#2676, spec §7)', () => {
   it('says no clubs were recorded for the date, with no "cached" wording', () => {
     render(<ClubsTable clubs={[]} districtId="61" dataDate="2026-11-11" />)

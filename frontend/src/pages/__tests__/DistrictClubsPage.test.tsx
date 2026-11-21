@@ -968,6 +968,132 @@ describe('DistrictClubsPage states (#2676)', () => {
     expect(screen.getByText(/alpha toastmasters/i)).toBeVisible()
   })
 
+  // #3020: the spec's error title, for either failed query.
+  it.each(['dates', 'analytics'] as const)(
+    'titles the error panel "Couldn\'t load clubs" when the %s query fails',
+    async failed => {
+      vi.mocked(useDistrictAnalytics).mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isError: failed === 'analytics',
+        error: failed === 'analytics' ? new Error('Failed to fetch') : null,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useDistrictAnalytics>)
+      vi.mocked(useDistrictCachedDates).mockReturnValue(
+        (failed === 'dates'
+          ? {
+              data: undefined,
+              isPending: false,
+              isLoading: false,
+              isError: true,
+              error: new Error('Failed to fetch'),
+              refetch: vi.fn(),
+            }
+          : {
+              data: {
+                dates: ['2025-07-15', '2025-07-01'],
+                dateRange: { startDate: '2025-07-01', endDate: '2025-07-15' },
+              },
+              isPending: false,
+              isLoading: false,
+              refetch: vi.fn(),
+            }) as unknown as ReturnType<typeof useDistrictCachedDates>
+      )
+
+      renderAt('/district/61/clubs')
+
+      expect(await screen.findByText("Couldn't load clubs")).toBeVisible()
+      expect(screen.queryByText(/failed to load clubs/i)).toBeNull()
+    }
+  )
+
+  // #3020: Retry retries whatever failed, not only one of the two queries.
+  it('retries both queries from the error panel when both failed', async () => {
+    const refetch = vi.fn()
+    const refetchDates = vi.fn()
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('Failed to fetch'),
+      refetch,
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: undefined,
+      isPending: false,
+      isLoading: false,
+      isError: true,
+      error: new Error('Failed to fetch'),
+      refetch: refetchDates,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+
+    renderAt('/district/61/clubs')
+
+    fireEvent.click(await screen.findByRole('button', { name: /try again/i }))
+    expect(refetchDates).toHaveBeenCalledTimes(1)
+    expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('retries both queries from the refresh note when both failed', async () => {
+    const refetch = vi.fn()
+    const refetchDates = vi.fn()
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      ...loaded,
+      isError: true,
+      error: new Error('Failed to fetch'),
+      refetch,
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: {
+        dates: ['2025-07-15', '2025-07-01'],
+        dateRange: { startDate: '2025-07-01', endDate: '2025-07-15' },
+      },
+      isPending: false,
+      isLoading: false,
+      isError: true,
+      error: new Error('Failed to fetch'),
+      refetch: refetchDates,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    const user = userEvent.setup()
+
+    renderAt('/district/61/clubs')
+
+    await screen.findByText(/alpha toastmasters/i)
+    const note = screen.getByRole('status', { name: /couldn.t refresh/i })
+    await user.click(within(note).getByRole('button', { name: /retry/i }))
+    expect(refetchDates).toHaveBeenCalledTimes(1)
+    expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('retries only the analytics when only the analytics refresh failed', async () => {
+    const refetch = vi.fn()
+    const refetchDates = vi.fn()
+    vi.mocked(useDistrictAnalytics).mockReturnValue({
+      ...loaded,
+      isError: true,
+      error: new Error('Failed to fetch'),
+      refetch,
+    } as unknown as ReturnType<typeof useDistrictAnalytics>)
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: {
+        dates: ['2025-07-15', '2025-07-01'],
+        dateRange: { startDate: '2025-07-01', endDate: '2025-07-15' },
+      },
+      isPending: false,
+      isLoading: false,
+      refetch: refetchDates,
+    } as unknown as ReturnType<typeof useDistrictCachedDates>)
+    const user = userEvent.setup()
+
+    renderAt('/district/61/clubs')
+
+    await screen.findByText(/alpha toastmasters/i)
+    const note = screen.getByRole('status', { name: /couldn.t refresh/i })
+    await user.click(within(note).getByRole('button', { name: /retry/i }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+    expect(refetchDates).not.toHaveBeenCalled()
+  })
+
   it('names the date the data is from, not the date asked for', async () => {
     vi.mocked(useDistrictAnalytics).mockReturnValue(loaded)
     vi.mocked(useDistrictCachedDates).mockReturnValue({
@@ -979,11 +1105,12 @@ describe('DistrictClubsPage states (#2676)', () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useDistrictCachedDates>)
 
-    // 2025-07-10 has no snapshot; the page resolves to one that does (#2635).
+    // 2025-07-10 has no snapshot, so the page shows the nearest earlier one
+    // (resolveRequestedDate, #2635): Jul 1, not the later Jul 15.
     renderAt('/district/61/clubs?date=2025-07-10')
 
     await screen.findByText(/alpha toastmasters/i)
     const line = screen.getByText(/^Clubs as of /)
-    expect(line.textContent).toMatch(/^Clubs as of Jul (1|15), 2025$/)
+    expect(line.textContent).toBe('Clubs as of Jul 1, 2025')
   })
 })

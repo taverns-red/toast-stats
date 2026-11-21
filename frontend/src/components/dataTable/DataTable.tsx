@@ -25,9 +25,10 @@
  * header's scrollport and the header stops sticking to the page.
  */
 
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import React, { useLayoutEffect } from 'react'
 import { flexRender } from '@tanstack/react-table'
 import { SortableHeader } from '../SortableHeader'
+import { useTableOverflow } from './useTableOverflow'
 
 export interface DataTableSort {
   field: string | null
@@ -115,14 +116,6 @@ interface DataTableProps {
   inScroller?: boolean
 }
 
-/** Is there more content past each horizontal edge of the scroller? */
-function edgesOf(el: HTMLElement): { start: boolean; end: boolean } {
-  return {
-    start: el.scrollLeft > 1,
-    end: el.scrollWidth - el.clientWidth - el.scrollLeft > 1,
-  }
-}
-
 export function DataTable({
   table,
   id,
@@ -142,43 +135,11 @@ export function DataTable({
   overflowHint,
   inScroller = false,
 }: DataTableProps): React.JSX.Element {
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const shellRef = useRef<HTMLDivElement>(null)
-  const [overflow, setOverflow] = useState(false)
   const totalSize = table.getTotalSize()
-
-  const syncEdges = useCallback(() => {
-    const wrap = wrapRef.current
-    const shell = shellRef.current
-    if (!wrap || !shell) return
-    const { start, end } = edgesOf(wrap)
-    shell.setAttribute('data-scrollable-start', String(start))
-    shell.setAttribute('data-scrollable-end', String(end))
-  }, [])
-
-  // Measured before paint, so the first frame is already in the right mode and
-  // nothing shifts (CLS). A wrapper with no layout (width 0, as in jsdom) is
-  // never "overflowing".
-  useLayoutEffect(() => {
-    const wrap = wrapRef.current
-    if (!wrap || inScroller) return
-    const measure = () => {
-      const width = wrap.clientWidth
-      setOverflow(width > 0 && totalSize > width)
-      syncEdges()
-    }
-    measure()
-    wrap.addEventListener('scroll', syncEdges, { passive: true })
-    let ro: ResizeObserver | undefined
-    if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(measure)
-      ro.observe(wrap)
-    }
-    return () => {
-      wrap.removeEventListener('scroll', syncEdges)
-      ro?.disconnect()
-    }
-  }, [totalSize, syncEdges, inScroller])
+  const { wrapRef, shellRef, overflow, syncEdges } = useTableOverflow(
+    totalSize,
+    inScroller
+  )
 
   // The edges also change when the rows do (a filter can shrink the content).
   const rows = table.getRowModel().rows

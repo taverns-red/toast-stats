@@ -1,4 +1,5 @@
 import { test, expect, type Page } from './fixtures/test'
+import { fixtureFetch } from './helpers/cdnFixtures'
 
 /* WCAG AA text contrast on the routes #1839 fixed (epic #1827).
  *
@@ -99,7 +100,36 @@ async function contrastFailures(page: Page): Promise<Fail[]> {
   })
 }
 
-const CASES: { path: string; width: number; ready: string }[] = [
+/** Rewrite District 61's analytics so its first club is a provisional
+ *  Distinguished club. Real data has one only in some months, so without
+ *  this the provisional tier text would go unmeasured (or the wait hang). */
+const forceProvisional = (page: Page) =>
+  page.route('**/analytics/district_61_analytics.json', async route => {
+    const res = await fixtureFetch(route)
+    const body = (await res.json()) as {
+      data?: { allClubs?: Record<string, unknown>[] }
+    }
+    const club = body.data?.allClubs?.[0]
+    if (!club) {
+      throw new Error(
+        `forceProvisional: ${route.request().url()} has no allClubs to mark provisional`
+      )
+    }
+    club.distinguishedLevel = 'Distinguished'
+    club.isProvisionallyDistinguished = true
+    await route.fulfill({
+      status: res.status(),
+      json: body,
+      headers: { 'access-control-allow-origin': '*' },
+    })
+  })
+
+const CASES: {
+  path: string
+  width: number
+  ready: string
+  prep?: (page: Page) => Promise<void>
+}[] = [
   // 404 code + "Go home" (dark).
   {
     path: '/this/route/does/not/exist',
@@ -134,6 +164,7 @@ const CASES: { path: string; width: number; ready: string }[] = [
       path: '/district/61/clubs',
       width,
       ready: '.dt-tier__provisional',
+      prep: forceProvisional,
     },
     {
       path: '/district/61/trends',
@@ -145,7 +176,7 @@ const CASES: { path: string; width: number; ready: string }[] = [
 ]
 
 for (const theme of ['light', 'dark'] as const) {
-  for (const { path, width, ready } of CASES) {
+  for (const { path, width, ready, prep } of CASES) {
     test(`0 AA contrast failures at ${width} ${theme} — ${path}`, async ({
       page,
     }) => {
@@ -159,6 +190,7 @@ for (const theme of ['light', 'dark'] as const) {
         }
       }, theme)
       await page.setViewportSize({ width, height: 900 })
+      await prep?.(page)
       await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
       await page.locator(ready).first().waitFor({ timeout: 30_000 })
       // #2959: `ready` can match while sibling placeholders are still on the
