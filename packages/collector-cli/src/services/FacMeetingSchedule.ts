@@ -508,9 +508,11 @@ const HHMM_RANGE_MERIDIEM =
  *  Only a range, never a lone 4-digit number (a year); see hhmmRange. */
 const HHMM_RANGE_24 =
   /(?<![\d:.+\-−])([01]\d|2[0-3])([0-5]\d)(\s*(?:-|–|—|to)\s*)([01]\d|2[0-3])([0-5]\d)(?:\s*(?:hrs?|hours?)\b\.?)?(?![\d:.-])/g
-/** A label that makes the number after it a room, box, phone or id. */
+/** A label that makes the number after it part of an address, a phone or an
+ *  id, also when a labelled number comes first ("Room 12, 1200-1300").
+ *  Tested by the label and address-word rows in FacMeetingSchedule.test.ts. */
 const NUMBER_LABEL_BEFORE =
-  /(?:\b(?:room|rm|suite|ste|unit|apt|box|tel|ph|phone|salle)\b\.?:?|#)\s*$/
+  /(?:\b(?:room|rm|suite|ste|unit|apt|box|tel|ph|phone|salle|bldg|building|floor|office)\b\.?:?|\bno\.|#)\s*(?:\d+[a-z]?\s*[,;]\s*)?$/
 /** 12-hour only: "2026 pm" is a year, not 20:26. */
 const HHMM_MERIDIEM = /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
 const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
@@ -1024,9 +1026,11 @@ function daySlotsIn(time: string | null | undefined): DaySlots | undefined {
 /* ── Time zone and guest restriction (#2627) ───────────────────────── */
 
 /** A zone abbreviation, upper case only, so the French "et" ("and") is not
- *  Eastern Time. */
+ *  Eastern Time. Only a two-letter "PT" or "ET" before a place word is read
+ *  as a name ("PT Building"); "EST Church basement" keeps its zone. Tested
+ *  in FacMeetingSchedule.test.ts, "gap 11: time zone" and the leftovers. */
 const ZONE_ABBREVIATION =
-  /(?<![A-Za-z])(?:AK[SD]T|[ECMPAN][SD]T|[ECMP]T|HST|UTC|GMT|CEST|CET|EET|BST|IST|WAT|EAT|SAST|AES?T|AEDT|JST|KST|SGT|HKT|PHT|WIB)(?![A-Za-z])(?!\s*[+\-−]\s*\d)(?!\s+(?:Building|Bldg|Hall|Room|Centre|Center|Street|Avenue|Church|School|Library|Office|Clinic)\b)/g
+  /(?<![A-Za-z])(?:AK[SD]T|[ECMPAN][SD]T|[ECMP]T(?!\s+(?:Building|Bldg|Hall|Room|Centre|Center|Street|Avenue|Church|School|Library|Office|Clinic)\b)|HST|UTC|GMT|CEST|CET|EET|BST|IST|WAT|EAT|SAST|AES?T|AEDT|JST|KST|SGT|HKT|PHT|WIB)(?![A-Za-z])(?!\s*[+\-−]\s*\d)/g
 
 /**
  * The time zone the club wrote next to its time ("7:00 PM EST"), as
@@ -1045,11 +1049,13 @@ function timeZoneIn(
 /**
  * The club says it is closed to guests: "No guests", "workers only",
  * "members only", "by invitation", "closed meeting". Matched on folded
- * text. A negation in front ("not members only") or a fee after ("no guest
- * fee") is not a restriction.
+ * text. A negation in front ("not members only"), a fee after ("no guest
+ * fee") or a member's invitation ("guests welcome by invitation of a
+ * member", any guest a member brings) is not a restriction. Tested in
+ * FacMeetingSchedule.test.ts, "gap 12: guest restriction" and the leftovers.
  */
 const RESTRICTED =
-  /(?<!\bnot\s)(?<!\bnot\s+for\s)\b(?:no\s+guests?\b(?!\s+(?:fees?|under|below|younger))|(?:members?|workers?|employees?|staff)\s+only\b|by\s+invitation\b|invitation[\s-]only\b|invite[\s-]only\b|closed\s+(?:club|meeting)s?\b|guests?\s+not\s+(?:allowed|permitted|welcome)\b|membres?\s+seulement\b|reserve\s+aux\s+membres\b|pas\s+d'invites?\b)/
+  /(?<!\bnot\s)(?<!\bnot\s+for\s)\b(?:no\s+guests?\b(?!\s+(?:fees?|under|below|younger))|(?:members?|workers?|employees?|staff)\s+only\b|by\s+invitation\b(?!\s+of\s+(?:a|an|any|our)?\s*members?\b)|invitation[\s-]only\b|invite[\s-]only\b|closed\s+(?:club|meeting)s?\b|guests?\s+not\s+(?:allowed|permitted|welcome)\b|membres?\s+seulement\b|reserve\s+aux\s+membres\b|pas\s+d'invites?\b)/
 
 function isRestricted(...texts: (string | null | undefined)[]): boolean {
   return texts.some(t => typeof t === 'string' && RESTRICTED.test(fold(t)))
