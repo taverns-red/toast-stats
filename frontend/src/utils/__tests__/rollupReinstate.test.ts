@@ -277,18 +277,20 @@ describe('buildRollupReinstate', () => {
     it('sorts retired districts after every live one', () => {
       const r = build(
         file({
-          '124': [
-            retired({ addsToBase: true, reason: 'x' }),
-            retired({ addsToBase: true, reason: 'x' }),
-            retired(),
-          ],
+          // Retired rows lead on net club growth (3 and 2), yet sort last.
+          '124': [retired(), retired(), retired()],
           '98': [retired(), retired()],
           '61': [closed()],
           '86': [club()],
         }),
         'all'
       )!
-      expect(r.rows.map(x => x.id)).toEqual(['86', '61', '124', '98'])
+      expect(r.rows.map(x => [x.id, x.netGrowth])).toEqual([
+        ['61', 1],
+        ['86', 0],
+        ['124', 3],
+        ['98', 2],
+      ])
     })
   })
 
