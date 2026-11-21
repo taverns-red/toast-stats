@@ -38,14 +38,11 @@ ZERO='0000000000000000000000000000000000000000'
 run_gate() {
   # Cap workers at 2 (#3121): parallel builder pushes overloaded the shared
   # Mac. Same `unit` project, nothing skipped; CI calls vitest directly.
-  # On a machine with the shared test-slot wrapper (ops#425), run through it so
-  # at most 3 full suites run at once. Its exit 75 (no slot in 20 min) fails the
-  # push; there is no unthrottled fallback. Tested in prePushHook.test.ts.
-  slot_run="${TOAST_TEST_SLOT_RUN:-$HOME/code/ops/tools/test-slot/run.sh}"
-  if [ -x "$slot_run" ]; then
-    exec "$slot_run" npm run test:unit --workspace=frontend -- --maxWorkers=2
-  fi
-  exec npm run test:unit --workspace=frontend -- --maxWorkers=2
+  # Run through scripts/test-lock.sh: this repo's one-run lock, then a machine
+  # slot (ops#425). A caller already inside test-lock.sh passes straight
+  # through. Its exit 75 (no slot in 20 min) fails the push; there is no
+  # unthrottled fallback. Tested in prePushHook.test.ts.
+  exec sh scripts/test-lock.sh npm run test:unit --workspace=frontend -- --maxWorkers=2
 }
 
 # git feeds pre-push one line per ref on stdin:
