@@ -6320,10 +6320,8 @@
   }
 
   .history-page-year-chip--gap {
-    font-style: italic;
-    color: var(--ink-3);
+    color: var(--link);
     background-color: transparent;
-    border: 1px dashed var(--line);
   }
 
   /* Per-year summary cards (#892). Responsive grid; each card links into the

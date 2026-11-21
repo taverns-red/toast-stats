@@ -11,12 +11,14 @@ import { reachWindowCopy } from '../../utils/reachWindowCopy'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { MobileRowList, type MobileRow } from '../MobileRowList'
 import { StaticTableScroll } from '../dataTable/StaticTableScroll'
+import InfoTooltip from '../InfoTooltip'
+import { PROGRAM_YEAR_START_BASIS } from '../../utils/netChangeBasis'
 
 /* #1556 — the full "first to reach" table for one tier. Every row is a club
    that HAS reached (the artifact carries no other club), so the table has no
    bottom. Columns: Rank · Club · District · Reached (window copy) · Goals
    (10-dot strip from the INDEPENDENT boolean array — never goals 1–N) ·
-   Members (+ growth vs base) · Official (TI's rosette, only when the code exists).
+   Members (+ net growth) · Official (TI's rosette, only when the code exists).
 
    Today's numbers live under `current`; a club absent from today's snapshot
    keeps its crossing and shows "—" for today, with no "lost" label (spec §6).
@@ -136,7 +138,7 @@ export const RaceTable: React.FC<RaceTableProps> = ({
           current
             ? `, ${current.goalsMet} of 10 goals, ${current.members} members (${signed(
                 current.netGrowth
-              )} vs base)`
+              )} ${PROGRAM_YEAR_START_BASIS})`
             : ''
         }${row.official ? ', officially recognised' : ''}`,
       }
@@ -169,7 +171,13 @@ export const RaceTable: React.FC<RaceTableProps> = ({
             <th scope="col">District</th>
             <th scope="col">Reached</th>
             <th scope="col">Goals</th>
-            <th scope="col">Members</th>
+            <th scope="col">
+              Members
+              <InfoTooltip
+                label="the members change"
+                text={`Change ${PROGRAM_YEAR_START_BASIS}`}
+              />
+            </th>
             {showOfficial && <th scope="col">Official</th>}
           </tr>
         </thead>
@@ -227,7 +235,7 @@ export const RaceTable: React.FC<RaceTableProps> = ({
                         {current.members}
                       </span>{' '}
                       <span className="race-table__growth">
-                        {signed(current.netGrowth)} vs base
+                        {signed(current.netGrowth)}
                       </span>
                       {unconfirmed && (
                         <span

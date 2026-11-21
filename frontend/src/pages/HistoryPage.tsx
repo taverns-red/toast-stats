@@ -139,6 +139,7 @@ const HistoryPage: React.FC = () => {
 
       <div
         id="history-archive-callout"
+        tabIndex={-1}
         className="districts-methodology-callout"
         style={{ marginTop: 32 }}
         data-testid="history-archive-callout"
