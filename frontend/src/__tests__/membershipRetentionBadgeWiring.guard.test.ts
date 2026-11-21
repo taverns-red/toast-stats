@@ -23,7 +23,24 @@ const caller = stripComments(
 describe('membership retention badge wiring (#1614)', () => {
   it('builds the badge from the page competitive-awards read', () => {
     expect(caller).toMatch(
-      /membershipRetentionBadgeFor\(\s*competitiveAwards,\s*districtId\s*\)/
+      /membershipRetentionBadgeFor\(\s*competitiveAwards,\s*districtId,\s*retentionYearClosed\s*\)/
+    )
+  })
+
+  it("treats a past year's last snapshot as final (#3075)", () => {
+    expect(caller).toMatch(
+      /\bconst\s+retentionYearClosed\s*=(?!=)\s*isPastProgramYearClose\(/
+    )
+  })
+
+  it('judges the year against the site-wide newest year (#3075)', () => {
+    // A district's own index can end early (a retired district, or a lag in
+    // July), so it must not decide whether the year has ended.
+    expect(caller).toMatch(
+      /isPastProgramYearClose\(\s*effectiveEndDate\s*\?\?\s*undefined,\s*cachedDatesInProgramYear,\s*newestProgramYearWithData\s*\)/
+    )
+    expect(caller).toMatch(
+      /\bconst\s+newestProgramYearWithData\s*=(?!=)\s*useNewestProgramYearWithData\(\s*\)/
     )
   })
 

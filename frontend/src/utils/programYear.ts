@@ -174,6 +174,24 @@ export function getMostRecentDateInProgramYear<T extends string>(
 }
 
 /**
+ * True when `snapshotDate` is the last snapshot of a program year that has
+ * ended. The year comes from the snapshot's own date, and it has ended when a
+ * newer year has data, not by the calendar: June's close is collected in
+ * July. Tested in programYear.pastYearClose.test.ts.
+ */
+export function isPastProgramYearClose(
+  snapshotDate: string | undefined,
+  dates: readonly string[],
+  newestProgramYear: ProgramYear | undefined
+): boolean {
+  if (!snapshotDate || !newestProgramYear) return false
+  if (!dates.includes(snapshotDate)) return false
+  const programYear = getProgramYearForDate(snapshotDate)
+  if (programYear.year >= newestProgramYear.year) return false
+  return !dates.some(d => d > snapshotDate && d <= programYear.endDate)
+}
+
+/**
  * Format program year for display
  */
 export function formatProgramYear(programYear: ProgramYear): string {

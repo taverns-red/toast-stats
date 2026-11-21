@@ -27,6 +27,7 @@ import { ProgramYearSelector } from '../components/ProgramYearSelector'
 import {
   filterDatesByProgramYear,
   getMostRecentDateInProgramYear,
+  isPastProgramYearClose,
 } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
 import {
@@ -39,6 +40,7 @@ import { MobileDisclosure } from '../components/MobileDisclosure'
 import { DistinguishedDistrictTrophyCase } from '../components/DistinguishedDistrictTrophyCase'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
 import { membershipRetentionBadgeFor } from '../utils/membershipRetentionBadge'
+import { useNewestProgramYearWithData } from '../hooks/useDefaultProgramYear'
 import { useNearViewport } from '../hooks/useNearViewport'
 import { usePrintRequested } from '../hooks/usePrintRequested'
 import { useDistrictRanking } from '../hooks/useDistrictRanking'
@@ -352,9 +354,23 @@ const DistrictDetailPageInner: React.FC = () => {
   }, [districtId, competitiveAwards])
 
   // Our President's Membership Retention Award estimate (#1614).
+  // Site-wide, as on AwardsPage: this district's own index can end early (a
+  // retired district, or a lag in July). Enforced by
+  // membershipRetentionBadgeWiring.guard.test.ts.
+  const newestProgramYearWithData = useNewestProgramYearWithData()
+  const retentionYearClosed = isPastProgramYearClose(
+    effectiveEndDate ?? undefined,
+    cachedDatesInProgramYear,
+    newestProgramYearWithData
+  )
   const membershipRetentionBadge = React.useMemo(
-    () => membershipRetentionBadgeFor(competitiveAwards, districtId),
-    [districtId, competitiveAwards]
+    () =>
+      membershipRetentionBadgeFor(
+        competitiveAwards,
+        districtId,
+        retentionYearClosed
+      ),
+    [districtId, competitiveAwards, retentionYearClosed]
   )
 
   const officerAwardsResult = React.useMemo(() => {

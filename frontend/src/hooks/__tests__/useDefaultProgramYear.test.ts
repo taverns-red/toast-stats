@@ -17,7 +17,10 @@ vi.mock('../../services/cdn', () => ({
 }))
 
 import { fetchCdnDates } from '../../services/cdn'
-import { useDefaultProgramYear } from '../useDefaultProgramYear'
+import {
+  useDefaultProgramYear,
+  useNewestProgramYearWithData,
+} from '../useDefaultProgramYear'
 import { getCurrentProgramYear } from '../../utils/programYear'
 
 function createWrapper() {
@@ -103,5 +106,31 @@ describe('useDefaultProgramYear (#1300)', () => {
     await waitFor(() => expect(result.current.year).toBe(2020))
     expect(Number.isNaN(result.current.year)).toBe(false)
     expect(result.current.label).toBe('2020-2021')
+  })
+})
+
+describe('useNewestProgramYearWithData (#3075)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns the site-wide newest year with data', async () => {
+    vi.mocked(fetchCdnDates).mockResolvedValue({
+      dates: ['2025-06-27', '2026-07-31'],
+      count: 2,
+      generatedAt: '2026-08-01T00:00:00Z',
+    })
+    const { result } = renderHook(() => useNewestProgramYearWithData(), {
+      wrapper: createWrapper(),
+    })
+    await waitFor(() => expect(result.current?.year).toBe(2026))
+  })
+
+  it('returns undefined, not the calendar year, until dates arrive', () => {
+    vi.mocked(fetchCdnDates).mockReturnValue(new Promise(() => {}))
+    const { result } = renderHook(() => useNewestProgramYearWithData(), {
+      wrapper: createWrapper(),
+    })
+    expect(result.current).toBeUndefined()
   })
 })
