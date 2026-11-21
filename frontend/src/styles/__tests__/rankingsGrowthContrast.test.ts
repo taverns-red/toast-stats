@@ -46,7 +46,13 @@ describe('rankings growth % clears AA in both themes (#2694)', () => {
       `$name clears 4.5:1 on every surface (${theme})`,
       ({ pct }) => {
         const cls = formatPercentage(pct).color.split(/\s+/).pop()!
-        const colour = prop(declsFor(appShell, `.${cls}`), 'color')
+        const decls =
+          declsFor(appShell, `.${cls}`) +
+          ';' +
+          (theme === 'dark'
+            ? declsFor(appShell, `[data-theme='dark'] .${cls}`)
+            : '')
+        const colour = prop(decls, 'color')
         expect(colour, `a .${cls} colour rule in app-shell.css`).toBeDefined()
         const fg = parseColor(colour!, tokens(theme))
         for (const bg of surfaces(theme)) {
