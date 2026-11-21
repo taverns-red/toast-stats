@@ -146,6 +146,23 @@ describe('loading skeleton matches the table shell (#3020)', () => {
   })
 })
 
+// Below 768 the clubs are phone rows, not a table, so the loading state takes
+// the rows' shape rather than the generic grey block (#3020).
+describe('phone loading skeleton (#3020)', () => {
+  it('reserves phone rows, announced once, with no table', () => {
+    stubViewportWidth(375)
+    render(<ClubsTable clubs={[]} districtId="61" isLoading />)
+    const skeleton = screen.getByTestId('clubs-rows-skeleton')
+    expect(skeleton).toHaveAttribute('role', 'status')
+    expect(skeleton).toHaveAccessibleName('Loading table')
+    expect(skeleton.querySelector('table')).toBeNull()
+    expect(
+      skeleton.querySelectorAll('.mobile-row-list__rows > li > .mobile-row')
+    ).toHaveLength(8)
+    expect(screen.queryByTestId('clubs-table-skeleton')).toBeNull()
+  })
+})
+
 describe('empty states (#2676, spec §7)', () => {
   it('says no clubs were recorded for the date, with no "cached" wording', () => {
     render(<ClubsTable clubs={[]} districtId="61" dataDate="2026-11-11" />)
