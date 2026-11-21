@@ -35,7 +35,7 @@ import {
   TimeSeriesIndexMetadataSchema,
 } from '@taverns-red/shared-contracts'
 import { decodeCdnJson } from './cdnSchemaCanary.js'
-import { isReportSidecar } from './reportSidecarPlan.js'
+import { isReportSidecar } from './reportSidecarPath.js'
 import { summarizeZodIssues } from './zodIssueSummary.js'
 
 export interface ManifestEntry {
