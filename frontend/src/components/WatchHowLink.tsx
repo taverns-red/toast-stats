@@ -17,6 +17,6 @@ export const WatchHowLink: React.FC<{ segment: string }> = ({ segment }) => {
     and in the phone sheet. Same style as the Watch how link. */
 export const HowToVideosLink: React.FC = () => (
   <Link className="watch-how-link" to="/videos">
-    How-to videos
+    All how-to videos
   </Link>
 )
