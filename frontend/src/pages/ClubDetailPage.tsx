@@ -743,7 +743,15 @@ const ClubDetailPage: React.FC = () => {
   // instead of pushing painted content down on its own. The shard is ~12 KB
   // and starts with the ~150 KB analytics read, so this rarely waits.
   const isHoldingForHistory = !!club && isLoadingHistory
-  if ((isLoading || isHoldingForHistory) && snapshotHeroClub) {
+  // #3108 — likewise for a suspended club's list: it dates the hero's
+  // "Suspended since …" chip. Shown without it, the chip grew by the date
+  // a moment later and, at 375px, wrapped the pills onto a second row,
+  // pushing the stat strip down (CLS 0.134).
+  const isHoldingForSuspended = isSuspended && isLoadingSuspended
+  if (
+    (isLoading || isHoldingForHistory || isHoldingForSuspended) &&
+    snapshotHeroClub
+  ) {
     return (
       <ErrorBoundary>
         <div className="min-h-screen" aria-busy="true">
