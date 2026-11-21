@@ -106,6 +106,46 @@ describe('loading skeleton is sized to the columns (#2676, spec §7)', () => {
   })
 })
 
+// The skeleton must wrap like the real table, or it spills sideways where the
+// table would scroll and the hint then pushes the table down on load (#3020).
+describe('loading skeleton matches the table shell (#3020)', () => {
+  const stubWrapperWidth = (width: number) => {
+    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(width)
+  }
+  const scroller = () =>
+    screen
+      .getByTestId('clubs-table-skeleton')
+      .querySelector('.dt-scroll') as HTMLElement
+
+  it('scrolls sideways, with the hint, when the columns do not fit', () => {
+    stubViewportWidth(1024)
+    stubWrapperWidth(500)
+    render(<ClubsTable clubs={[]} districtId="61" isLoading />)
+    expect(scroller()).toHaveAttribute('data-overflow', 'true')
+    expect(
+      screen.getByText(/scroll sideways for more columns/i)
+    ).toBeInTheDocument()
+  })
+
+  it('does not scroll or show the hint when the columns fit', () => {
+    stubViewportWidth(1024)
+    stubWrapperWidth(2000)
+    render(<ClubsTable clubs={[]} districtId="61" isLoading />)
+    expect(scroller()).toHaveAttribute('data-overflow', 'false')
+    expect(screen.queryByText(/scroll sideways for more columns/i)).toBeNull()
+  })
+
+  it('gives the Club header the sticky class the table header has', () => {
+    stubViewportWidth(1024)
+    render(<ClubsTable clubs={[]} districtId="61" isLoading />)
+    const first = screen
+      .getByTestId('clubs-table-skeleton')
+      .querySelector('thead th') as HTMLElement
+    expect(first).toHaveTextContent('Club')
+    expect(first).toHaveClass('clubs-table__sticky-col')
+  })
+})
+
 describe('empty states (#2676, spec §7)', () => {
   it('says no clubs were recorded for the date, with no "cached" wording', () => {
     render(<ClubsTable clubs={[]} districtId="61" dataDate="2026-11-11" />)
