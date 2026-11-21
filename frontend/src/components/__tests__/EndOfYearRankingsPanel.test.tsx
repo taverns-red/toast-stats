@@ -369,6 +369,48 @@ describe('EndOfYearRankingsPanel', () => {
     })
   })
 
+  describe('no ranked districts (#2647)', () => {
+    const empty = { rank: 0, totalDistricts: 0, percentile: 0 }
+    const noDistricts: EndOfYearRankings = {
+      ...mockRankings,
+      overall: empty,
+      paidClubs: empty,
+      membershipPayments: empty,
+      distinguishedClubs: empty,
+    }
+
+    it('hides the rank cards instead of showing "0 of 0"', () => {
+      renderWithProviders(
+        <EndOfYearRankingsPanel {...baseProps} rankings={noDistricts} />
+      )
+
+      expect(screen.queryByText('Overall Rank')).not.toBeInTheDocument()
+      expect(screen.queryByText(/0 of 0/)).not.toBeInTheDocument()
+    })
+
+    it('hides the rank cards when there are no rankings at all', () => {
+      renderWithProviders(
+        <EndOfYearRankingsPanel {...baseProps} rankings={null} />
+      )
+
+      expect(screen.queryByText('Overall Rank')).not.toBeInTheDocument()
+    })
+
+    it('still shows the cards while rankings load', () => {
+      renderWithProviders(
+        <EndOfYearRankingsPanel
+          {...baseProps}
+          rankings={null}
+          isLoading={true}
+        />
+      )
+
+      expect(
+        screen.getByRole('status', { name: /loading overall rank ranking/i })
+      ).toBeInTheDocument()
+    })
+  })
+
   describe('Date Formatting', () => {
     it('formats as-of date correctly for different dates', () => {
       const rankingsWithDifferentDate: EndOfYearRankings = {
