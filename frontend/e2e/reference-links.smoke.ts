@@ -28,6 +28,7 @@ async function linkInTextBlock(page: Page): Promise<Violation[]> {
     const axe = (
       window as unknown as {
         axe: {
+          configure: (spec: object) => void
           run: (
             context: string,
             options: object
@@ -35,6 +36,16 @@ async function linkInTextBlock(page: Page): Promise<Violation[]> {
         }
       }
     ).axe
+    // By default axe passes a link the same colour as its text with no
+    // underline, which is the REF-07 bug itself.
+    axe.configure({
+      checks: [
+        {
+          id: 'link-in-text-block',
+          options: { requiredContrastRatio: 3, allowSameColor: false },
+        },
+      ],
+    })
     const result = await axe.run('.clubs-page', {
       runOnly: { type: 'rule', values: ['link-in-text-block'] },
     })
