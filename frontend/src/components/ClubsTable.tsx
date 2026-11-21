@@ -1169,7 +1169,14 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           lands on it without a shift. Phone widths get the phone rows' shape. */}
       {isLoading &&
         (isMobile ? (
-          <RowListSkeleton testId="clubs-rows-skeleton" />
+          <div className="pb-4 clubs-mobile-rows">
+            <RowListSkeleton
+              testId="clubs-rows-skeleton"
+              groups={isDefaultMobileView}
+              flush
+              wrapTitle
+            />
+          </div>
         ) : (
           <DataTableSkeleton
             testId="clubs-table-skeleton"
