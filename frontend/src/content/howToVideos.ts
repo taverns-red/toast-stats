@@ -32,7 +32,8 @@ export interface HowToVideo {
   /**
    * The captions burned into the video, one per step, in order. The videos
    * have no narration or caption track, so this is their text alternative
-   * (WCAG 1.2.1). Copy them from the scenario file when a video changes.
+   * (WCAG 1.2.1). They must equal the scenario's beat captions;
+   * howToVideos.sources.test.ts checks it.
    */
   steps: readonly string[]
   /** Published version: the path segment under `videos/<id>/`. */
@@ -306,6 +307,22 @@ export const HOW_TO_VIDEOS: readonly HowToVideo[] = [
 export interface RoleGroup {
   role: string
   videos: readonly HowToVideo[]
+}
+
+const DISTRICT_PATH = /^\/district\/(\d+)(?=\/|\?|$)/
+
+/** The example district a video's page URL names, or undefined (club, world). */
+export function exampleDistrictId(pageUrl: string): string | undefined {
+  return DISTRICT_PATH.exec(pageUrl)?.[1]
+}
+
+/** The page URL with the viewer's district in place of the example district. */
+export function pageUrlForDistrict(
+  pageUrl: string,
+  districtId: string | null
+): string {
+  if (!districtId || exampleDistrictId(pageUrl) === undefined) return pageUrl
+  return pageUrl.replace(DISTRICT_PATH, `/district/${districtId}`)
 }
 
 /** The anchor id of a role group's heading, which the jump links target. */

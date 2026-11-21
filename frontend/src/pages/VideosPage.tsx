@@ -3,10 +3,13 @@ import { Link } from 'react-router-dom'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useScrollToHashWhenReady } from '../hooks/useScrollToHashWhenReady'
+import { useMyDistrict } from '../hooks/useMyDistrict'
 import {
   HOW_TO_VIDEOS,
   groupByPrimaryRole,
   roleAnchorId,
+  exampleDistrictId,
+  pageUrlForDistrict,
   type HowToVideo,
   type VideoCut,
 } from '../content/howToVideos'
@@ -75,11 +78,18 @@ function posterFor(title: string, cut: VideoCut): string {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`
 }
 
-const VideoCard: React.FC<{ video: HowToVideo; cut: VideoCut }> = ({
-  video,
-  cut,
-}) => {
+const VideoCard: React.FC<{
+  video: HowToVideo
+  cut: VideoCut
+  myDistrictId: string | null
+}> = ({ video, cut, myDistrictId }) => {
   const src = cut === 'mobile' ? video.mobileUrl : video.desktopUrl
+  const example = exampleDistrictId(video.pageUrl)
+  // Without a saved district the link opens the video's example district, so say so.
+  const linkText =
+    example !== undefined && !myDistrictId
+      ? `Open this page (District ${example} example)`
+      : 'Open this page'
   const headingId = `video-${video.id}-title`
   return (
     <article
@@ -125,10 +135,10 @@ const VideoCard: React.FC<{ video: HowToVideo; cut: VideoCut }> = ({
             accessible name adds the video's title (label first, WCAG 2.5.3). */}
         <Link
           className="videos-page__link"
-          to={video.pageUrl}
-          aria-label={`Open this page: ${video.title}`}
+          to={pageUrlForDistrict(video.pageUrl, myDistrictId)}
+          aria-label={`${linkText}: ${video.title}`}
         >
-          Open this page
+          {linkText}
         </Link>
         <a
           className="videos-page__link"
@@ -153,6 +163,7 @@ const VideosPage: React.FC = () => {
   useDocumentTitle('How-to videos')
   // The page is static, so a #video-… link from a district page can scroll at once.
   useScrollToHashWhenReady(true)
+  const { myDistrictId } = useMyDistrict()
   const cut: VideoCut = useIsMobile() ? 'mobile' : 'desktop'
   const groups = groupByPrimaryRole(HOW_TO_VIDEOS)
 
@@ -196,7 +207,7 @@ const VideosPage: React.FC = () => {
             <ul className="videos-page__list">
               {group.videos.map(v => (
                 <li key={v.id}>
-                  <VideoCard video={v} cut={cut} />
+                  <VideoCard video={v} cut={cut} myDistrictId={myDistrictId} />
                 </li>
               ))}
             </ul>

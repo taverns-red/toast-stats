@@ -135,11 +135,13 @@
   color: var(--ink-2);
 }
 
+/* A list-item display keeps the native open/closed marker; flex would drop it. */
 .videos-page__steps summary {
   cursor: pointer;
   min-height: 44px;
-  display: flex;
-  align-items: center;
+  line-height: 44px;
+  display: list-item;
+  list-style-position: inside;
   font-weight: 600;
   color: var(--tm-loyal-blue);
 }

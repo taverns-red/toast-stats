@@ -1,7 +1,8 @@
 /* Kept apart from content/howToVideos.ts so the district header does not
    pull every video's steps into its bundle. The key is the section segment
-   after /district/:id ('' is the hub). content/__tests__/howToVideos.test.ts
-   checks each id exists and its pageUrl is that section. */
+   after /district/:id ('' is the hub). howToVideos.sources.test.ts checks
+   that this file does not import the catalogue and that every mapped page
+   shows the link; howToVideos.test.ts checks each id and its pageUrl. */
 
 const SECTION_VIDEO_IDS: Readonly<Record<string, string>> = {
   '': 'v1',

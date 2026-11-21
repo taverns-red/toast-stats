@@ -7,6 +7,8 @@ import { describe, it, expect } from 'vitest'
 import {
   HOW_TO_VIDEOS,
   VIDEO_CDN_BASE,
+  exampleDistrictId,
+  pageUrlForDistrict,
   groupByPrimaryRole,
   videoUrl,
   type HowToVideo,
@@ -194,6 +196,27 @@ describe('groupByPrimaryRole', () => {
 
   it('returns no groups for no videos', () => {
     expect(groupByPrimaryRole([])).toEqual([])
+  })
+})
+
+describe('example district links (#2658)', () => {
+  it('finds the example district in district routes only', () => {
+    expect(exampleDistrictId('/district/86')).toBe('86')
+    expect(exampleDistrictId('/district/114/growth')).toBe('114')
+    expect(exampleDistrictId('/club/2728')).toBeUndefined()
+    expect(exampleDistrictId('/regions')).toBeUndefined()
+  })
+
+  it('swaps in the viewer district and keeps the rest of the URL', () => {
+    expect(
+      pageUrlForDistrict(
+        '/district/86/clubs?preset=close-to-distinguished',
+        '61'
+      )
+    ).toBe('/district/61/clubs?preset=close-to-distinguished')
+    expect(pageUrlForDistrict('/district/86', 'F')).toBe('/district/F')
+    expect(pageUrlForDistrict('/district/86', null)).toBe('/district/86')
+    expect(pageUrlForDistrict('/club/2728', '61')).toBe('/club/2728')
   })
 })
 

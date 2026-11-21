@@ -1,5 +1,7 @@
 import React from 'react'
 import { DISTRICT_SECTIONS } from '../config/districtSections'
+import { sectionVideoId } from '../config/sectionVideos'
+import { WatchHowLink } from './WatchHowLink'
 
 /* The title block of a district section page that has no program-year or date
    controls of its own (What Changed, Council): the same markup and classes as
@@ -22,7 +24,15 @@ export const DistrictSectionIntro: React.FC<DistrictSectionIntroProps> = ({
   return (
     <div className="district-detail-page-header">
       <div className="district-detail-page-header__intro">
-        <p className="district-detail-page-header__eyebrow">{section?.label}</p>
+        <p className="district-detail-page-header__eyebrow">
+          {section?.label}
+          {sectionVideoId(segment) && (
+            <>
+              {' · '}
+              <WatchHowLink segment={segment} />
+            </>
+          )}
+        </p>
         <h1 className="district-detail-page-header__title">{districtName}</h1>
         {section && (
           <p
