@@ -57,6 +57,7 @@ import {
   worldSummary,
   worldTopClubs,
 } from '../utils/worldClubs'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import '../components/map/districtMap.css'
 import './regionMap.css'
 
@@ -593,12 +594,12 @@ const WorldMapPage: React.FC = () => {
   if (isLoading) body = <ExplorerSkeleton />
   else if (isError)
     body = (
-      <div className="rollup-page__empty" role="alert">
-        <p>The world’s clubs could not be loaded.</p>
-        <button type="button" className="map-pill" onClick={refetch}>
-          Try again
-        </button>
-      </div>
+      <ErrorDisplay
+        error="Failed to fetch"
+        title="Could not load the world map"
+        subject="the world's clubs"
+        onRetry={refetch}
+      />
     )
   else if (!world || !world.shards || !summary)
     body = (

@@ -168,6 +168,18 @@ describe('ClubsRacePage (#1556)', () => {
     expect(table).not.toHaveTextContent('Nine')
   })
 
+  it('shows the shared error panel with Try again when the race fails to load', async () => {
+    const refetch = vi.fn()
+    mockHook({ isError: true, error: new Error('Failed to fetch'), refetch })
+    renderAt('/clubs/race/select')
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /couldn't load the worldwide club race/i
+    )
+    expect(screen.queryByTestId('clubs-race-unavailable')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /try again/i }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
   it('renders the not-found panel for an unknown tier', () => {
     mockHook({ race: RACE, snapshotDate: '2026-09-11' })
     renderAt('/clubs/race/foo')

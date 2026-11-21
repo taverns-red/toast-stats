@@ -131,17 +131,23 @@ describe('ClubHistoryPage (#1229)', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows an error state when the history query fails', () => {
+  it('shows the shared error panel with Try again when the history query fails', async () => {
+    const refetch = vi.fn()
     mockedHistory.mockReturnValue({
       rows: [],
       gaps: [],
       clubName: null,
       isLoading: false,
       isError: true,
-      error: new Error('boom'),
+      error: new Error('Failed to fetch'),
+      refetch,
     })
     renderPage()
-    expect(screen.getByText(/could not load this club/i)).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /couldn't load this club's history/i
+    )
+    await userEvent.click(screen.getByRole('button', { name: /try again/i }))
+    expect(refetch).toHaveBeenCalledTimes(1)
   })
 
   it('falls back to "Club <id>" when the name is not yet resolved', () => {

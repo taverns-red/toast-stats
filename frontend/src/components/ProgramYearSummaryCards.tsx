@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { ErrorDisplay } from './ErrorDisplay'
 import type { ProgramYearSummary } from '../utils/programYearSummary'
 
 export interface ProgramYearSummaryCardsProps {
@@ -7,6 +8,8 @@ export interface ProgramYearSummaryCardsProps {
   summaries: ProgramYearSummary[]
   isLoading: boolean
   isError: boolean
+  /** Re-run the failed load; shown as Try again on the error panel. */
+  onRetry?: () => void
   /**
    * How many cards the page expects to render, so the loading skeleton
    * reserves the grid height the loaded list will occupy. Passed from the page
@@ -54,7 +57,7 @@ const METRICS: Array<{
  */
 export const ProgramYearSummaryCards: React.FC<
   ProgramYearSummaryCardsProps
-> = ({ summaries, isLoading, isError, expectedCount }) => {
+> = ({ summaries, isLoading, isError, onRetry, expectedCount }) => {
   if (isLoading) {
     const skeletonCount = Math.max(
       1,
@@ -78,9 +81,12 @@ export const ProgramYearSummaryCards: React.FC<
 
   if (isError) {
     return (
-      <div className="history-year-cards__notice" role="status">
-        Couldn’t load year-end standings right now. Please try again shortly.
-      </div>
+      <ErrorDisplay
+        error="Failed to fetch"
+        title="Could not load year-end standings"
+        subject="the year-end standings"
+        {...(onRetry ? { onRetry } : {})}
+      />
     )
   }
 

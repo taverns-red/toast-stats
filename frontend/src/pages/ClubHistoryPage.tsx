@@ -33,10 +33,8 @@ export default function ClubHistoryPage() {
   }, [districtsData, districtId])
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
 
-  const { rows, gaps, clubName, isLoading, isError } = useClubHistory(
-    districtId,
-    clubId
-  )
+  const { rows, gaps, clubName, isLoading, isError, error, refetch } =
+    useClubHistory(districtId, clubId)
 
   // Which completed years produced no row, and why (#1437). Without this,
   // "this club moved districts", "that snapshot is missing" and "this club has
@@ -155,7 +153,12 @@ export default function ClubHistoryPage() {
           aria-label="Loading history"
         />
       ) : isError ? (
-        <ErrorDisplay error="Could not load this club's history. Please try again." />
+        <ErrorDisplay
+          error={error ?? 'Failed to fetch'}
+          title="Could not load club history"
+          subject="this club's history"
+          onRetry={refetch}
+        />
       ) : rows.length === 0 ? (
         <EmptyState
           message={

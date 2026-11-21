@@ -15,6 +15,7 @@ import {
   loadWorldGeometry,
   type WorldGeometry,
 } from '../components/worldmap/worldGeometry'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import '../components/worldmap/worldmap.css'
 
 /* /history/countries — worldwide country choropleth (#1797, epic #1781).
@@ -45,8 +46,15 @@ const WorldCountriesPage: React.FC = () => {
   const [params, setParams] = useSearchParams()
   const selectedId = params.get('country')
 
-  const { clubsByCountry, clubsCounted, snapshotDate, isLoading, isError } =
-    useGlobalClubsByCountry()
+  const {
+    clubsByCountry,
+    clubsCounted,
+    snapshotDate,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useGlobalClubsByCountry()
 
   const [geometry, setGeometry] = useState<WorldGeometry | null>(null)
   const [geometryError, setGeometryError] = useState(false)
@@ -111,7 +119,7 @@ const WorldCountriesPage: React.FC = () => {
     mapRef.current?.scrollIntoView({ block: 'nearest' })
   }
 
-  const unavailable = !isLoading && (isError || !view)
+  const unavailable = !isLoading && !isError && !view
 
   return (
     <div className="placeholder-page wm-page">
@@ -121,7 +129,7 @@ const WorldCountriesPage: React.FC = () => {
       <p className="placeholder-page__eyebrow">Worldwide</p>
       <h1 className="placeholder-page__title">Clubs by country</h1>
 
-      {view && (
+      {view && !isError && (
         <p className="long-text-lede" data-testid="wm-summary">
           Clubs in <strong>{view.rows.length} countries</strong> at the{' '}
           {snapshotDate} snapshot. {NUM.format(view.unknown.clubs)} clubs (
@@ -133,7 +141,7 @@ const WorldCountriesPage: React.FC = () => {
         </p>
       )}
 
-      {!view && !unavailable && (
+      {!view && !unavailable && !isError && (
         // The summary's box before its numbers arrive (#2634): same sentence,
         // placeholder figures, hidden.
         <p
@@ -148,13 +156,22 @@ const WorldCountriesPage: React.FC = () => {
         </p>
       )}
 
+      {isError && (
+        <ErrorDisplay
+          error={error ?? 'Failed to fetch'}
+          title="Could not load clubs by country"
+          subject="clubs by country"
+          onRetry={refetch}
+        />
+      )}
+
       {unavailable && (
         <div className="wm-unavailable" role="status">
           Clubs by country isn’t available for the latest snapshot right now.
         </div>
       )}
 
-      {!unavailable && (
+      {!unavailable && !isError && (
         <div className="wm-layout">
           <div className="wm-layout__map" ref={mapRef}>
             {view && geometry ? (
@@ -167,7 +184,7 @@ const WorldCountriesPage: React.FC = () => {
               />
             ) : geometryError ? (
               <div className="wm-unavailable" role="status">
-                The map couldn’t load. The table has every value.
+                The map is not showing. The table has every value.
               </div>
             ) : (
               <div

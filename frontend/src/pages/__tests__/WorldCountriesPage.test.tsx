@@ -25,6 +25,8 @@ const state = {
   snapshotDate: fixture.date,
   isLoading: false,
   isError: false,
+  error: null,
+  refetch: vi.fn(),
 }
 
 vi.mock('../../hooks/useGlobalHistory', () => ({
@@ -124,7 +126,7 @@ describe('/history/countries (#1797)', () => {
     expect(within(sheet).getAllByRole('row')).toHaveLength(160)
   })
 
-  it('reserves the map slot while loading and says so on error', () => {
+  it('reserves the map slot while loading and shows the shared error panel with Try again on error', () => {
     state.isLoading = true
     const { unmount } = renderAt('/history/countries')
     expect(screen.getByTestId('wm-skeleton')).toBeInTheDocument()
@@ -132,6 +134,17 @@ describe('/history/countries (#1797)', () => {
     state.isLoading = false
     state.isError = true
     renderAt('/history/countries')
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /couldn't load clubs by country/i
+    )
+    fireEvent.click(screen.getByRole('button', { name: /try again/i }))
+    expect(state.refetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the "isn’t available" notice for a published-nothing answer', () => {
+    state.clubsByCountry = null as unknown as typeof fixture.clubsByCountry
+    renderAt('/history/countries')
     expect(screen.getByRole('status')).toHaveTextContent(/isn’t available/i)
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 })

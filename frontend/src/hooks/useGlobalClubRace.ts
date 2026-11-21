@@ -41,6 +41,8 @@ export interface UseGlobalClubRaceResult {
   reachedById: ReadonlyMap<string, GlobalClubRaceReached>
   isLoading: boolean
   isError: boolean
+  error: Error | null
+  refetch: () => void
 }
 
 const EMPTY: ReadonlyMap<string, GlobalClubRaceReached> = new Map()
@@ -73,5 +75,7 @@ export function useGlobalClubRace(
     reachedById,
     isLoading: query.isLoading,
     isError: query.isError,
+    error: query.error,
+    refetch: () => void query.refetch(),
   }
 }

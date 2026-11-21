@@ -36,6 +36,7 @@ export function useRankingsPair(
   toRows: RankingsDiffRow[]
   isLoading: boolean
   isError: boolean
+  refetch: () => void
   /** Dates whose rankings file is missing. */
   missing: SnapshotDate[]
 } {
@@ -47,6 +48,9 @@ export function useRankingsPair(
     toRows: b?.data?.rankings ?? [],
     isLoading: !!a?.isLoading || !!b?.isLoading,
     isError: !!a?.isError || !!b?.isError,
+    refetch: () => {
+      for (const q of [a, b]) if (q?.isError) void q.refetch()
+    },
     missing,
   }
 }

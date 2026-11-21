@@ -33,6 +33,8 @@ export interface UseGlobalHistoryResult {
   history: GlobalHistory | null
   isLoading: boolean
   isError: boolean
+  error: Error | null
+  refetch: () => void
 }
 
 export function useGlobalHistory(): UseGlobalHistoryResult {
@@ -49,6 +51,8 @@ export function useGlobalHistory(): UseGlobalHistoryResult {
     history: query.data ?? null,
     isLoading: query.isLoading,
     isError: query.isError,
+    error: query.error,
+    refetch: () => void query.refetch(),
   }
 }
 
@@ -60,6 +64,8 @@ export interface UseGlobalClubsByCountryResult {
   snapshotDate: string | null
   isLoading: boolean
   isError: boolean
+  error: Error | null
+  refetch: () => void
 }
 
 export function useGlobalClubsByCountry(
@@ -81,5 +87,7 @@ export function useGlobalClubsByCountry(
     snapshotDate: query.data?.date ?? null,
     isLoading: query.isLoading,
     isError: query.isError,
+    error: query.error,
+    refetch: () => void query.refetch(),
   }
 }
