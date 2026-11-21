@@ -238,6 +238,54 @@ describe('RollupGrowthFunnelView — Can reinstate (#3094)', () => {
     ).toHaveTextContent('1 of 1 adds to net club growth.')
   })
 
+  // A retired district's growth page has no current data, so no link.
+  const withRetired: RollupReinstate = {
+    ...reinstate,
+    count: 9,
+    rows: [
+      ...reinstate.rows,
+      {
+        id: '124',
+        label: 'District 124',
+        retiredNote: 'District 124 was retired on July 1, 2026.',
+        suspended: 0,
+        closed: 2,
+        netGrowth: 0,
+        total: 2,
+      },
+    ],
+  }
+
+  it('a retired district: the note on its row, and no link (#3101)', () => {
+    renderView(withRetired)
+    const table = screen.getByTestId('rollup-growth-reinstate-table')
+    const row = within(table).getAllByRole('row')[3]!
+    expect(row).toHaveTextContent('District 124')
+    expect(row).toHaveTextContent('District 124 was retired on July 1, 2026.')
+    expect(within(row).queryByRole('link')).toBeNull()
+    expect(within(table).getAllByRole('link')).toHaveLength(2)
+  })
+
+  it('a retired district on a phone: a row with the note that links nowhere (#3101)', () => {
+    mobile.value = true
+    renderView(withRetired)
+    const section = document.getElementById('growth-reinstate')!
+    const rows = within(section).getAllByRole('listitem')
+    const retiredRow = rows.find(li =>
+      li.textContent?.includes('District 124 —')
+    )!
+    expect(retiredRow).toHaveTextContent(
+      'District 124 was retired on July 1, 2026.'
+    )
+    expect(retiredRow).toHaveTextContent(
+      '2 can reinstate · 0 suspended · 2 closed'
+    )
+    expect(within(retiredRow).queryByRole('link')).toBeNull()
+    expect(
+      within(section).getAllByRole('link', { name: /^District (61|86):/ })
+    ).toHaveLength(2)
+  })
+
   it('never mentions an unknown effect on the club base, on a desktop or a phone (#3103)', () => {
     renderView(reinstate)
     const table = screen.getByTestId('rollup-growth-reinstate-table')

@@ -45,6 +45,7 @@ import {
 } from '../../services/cdn'
 import { fetchClubDistrictHistoryShard } from '../../services/cdnClubDistrictHistory'
 import { useDistrictAnalytics } from '../../hooks/useDistrictAnalytics'
+import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 import shard07 from '../../__tests__/fixtures/club-district-history-07-closed-28676407-2026-11-20.recorded.json'
 import lastAnalytics from '../../__tests__/fixtures/district-86-analytics-2025-06-30-closed-28676407.recorded.json'
 
@@ -527,5 +528,50 @@ describe('ClubDetailPage — a suspended club missing from analytics (#3117)', (
     expect(
       screen.queryByText(/suspended at the start of the program year/)
     ).not.toBeInTheDocument()
+  })
+})
+
+/* A retired district's dates stop at its last close (District 124's at
+   2026-07-30), and that date has no reinstatable-clubs.json (404 on the
+   live CDN). The list is one global file, so a closed club reads it at the
+   newest global date. District 86 plays the retired district here. */
+describe('ClubDetailPage — a closed club from a retired district (#3101)', () => {
+  beforeEach(() => {
+    vi.mocked(useDistrictCachedDates).mockReturnValue({
+      data: {
+        districtId: '86',
+        dates: ['2025-06-30'],
+        count: 1,
+        dateRange: { startDate: '2025-06-30', endDate: '2025-06-30' },
+      },
+      isPending: false,
+      isError: false,
+    } as never)
+    const f = reinstatableFile({
+      inactivePeriod: 5,
+      lastChanceBy: '2027-03-31',
+    })
+    Object.assign(f.districts['86']![0]!, { districtRetiredOn: '2025-07-01' })
+    mockedReinstatable.mockResolvedValue(f as never)
+  })
+  afterEach(() => {
+    vi.mocked(useDistrictCachedDates).mockRestore()
+  })
+
+  it('reads the list at the newest global date, not the district’s', async () => {
+    renderAt('/district/86/club/28676407')
+    await screen.findByRole('region', { name: 'Time left to reinstate' })
+    expect(mockedReinstatable).toHaveBeenCalledWith('2026-11-19')
+    expect(mockedReinstatable).not.toHaveBeenCalledWith('2025-06-30')
+  })
+
+  it('says the district was retired, beside the window', async () => {
+    renderAt('/district/86/club/28676407')
+    const region = await screen.findByRole('region', {
+      name: 'Time left to reinstate',
+    })
+    expect(
+      within(region).getByTestId('reinstate-window-retired')
+    ).toHaveTextContent('District 86 was retired on July 1, 2025.')
   })
 })
