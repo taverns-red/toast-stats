@@ -126,6 +126,8 @@ const mockHook = (value: Partial<ReturnType<typeof useGlobalClubRace>>) =>
     reachedById: new Map(),
     isLoading: false,
     isError: false,
+    error: null,
+    refetch: vi.fn(),
     ...value,
   })
 

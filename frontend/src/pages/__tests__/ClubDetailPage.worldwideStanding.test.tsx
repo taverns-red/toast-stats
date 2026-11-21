@@ -171,6 +171,8 @@ const mockRace = (race: GlobalClubRace | null) =>
     reachedById: new Map(race ? race.reached.map(r => [r.clubId, r]) : []),
     isLoading: false,
     isError: false,
+    error: null,
+    refetch: vi.fn(),
   })
 
 const renderPage = () =>

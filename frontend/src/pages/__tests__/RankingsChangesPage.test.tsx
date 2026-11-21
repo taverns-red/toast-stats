@@ -67,6 +67,7 @@ beforeEach(() => {
     toRows: [row('61', '05', 103), row('9', '07', 52)],
     isLoading: false,
     isError: false,
+    refetch: vi.fn(),
     missing: [],
   })
 })
@@ -114,6 +115,7 @@ describe('RankingsChangesPage', () => {
       toRows: [],
       isLoading: false,
       isError: false,
+      refetch: vi.fn(),
       missing: snapshotDatesFrom({ dates: ['2026-10-15'] }),
     })
     renderAt('/region/05/changes')
