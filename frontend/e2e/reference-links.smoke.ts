@@ -2,10 +2,9 @@ import { test, expect, type Page } from './fixtures/test'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 
-/* Links in running text must not rely on colour alone (#2657 REF-07, WCAG
-   1.4.1). jsdom applies no stylesheet, so axe's link-in-text-block rule only
-   means something in a real browser. The engine is the axe-core that jest-axe
-   already runs for the unit a11y tests. */
+/* WCAG 1.4.1: links in text need more than colour. jsdom has no stylesheet,
+   so axe's link-in-text-block rule runs here, in a real browser, with the
+   axe-core jest-axe already ships. */
 
 const require = createRequire(import.meta.url)
 const AXE_SOURCE = readFileSync(

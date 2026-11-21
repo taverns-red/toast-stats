@@ -1,11 +1,6 @@
-// Reference-page link and layout contracts (#2657, Fable UX review REF-07,
-// REF-20, REF-24, REF-31). The REF-32 measures are in
-// fontIndependentWidths.test.ts.
-//
-// jsdom applies no stylesheet, so an axe `link-in-text-block` run here sees
-// unstyled links on both main and a fix and proves nothing. The contract is
-// pinned on the stylesheet; e2e/reference-links.smoke.ts runs the axe rule
-// in a real browser.
+// jsdom applies no stylesheet, so these reference-page link and layout rules
+// are pinned on the CSS. reference-links.smoke.ts runs axe in a browser;
+// the REF-32 measures are in fontIndependentWidths.test.ts.
 
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
