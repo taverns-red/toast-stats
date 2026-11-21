@@ -71,16 +71,18 @@ describe('REF-07 links on /clubs and /clubs/race look like links', () => {
 })
 
 describe('REF-32 prose keeps a readable measure', () => {
-  it('basis-box paragraphs stop at 70ch', () => {
+  // 34.8em is 70 of Source Sans 3's "0"; ch would re-wrap at the font swap
+  // (fontIndependentWidths.test.ts).
+  it('basis-box paragraphs stop at about 70 characters', () => {
     expect(decls(load('clubs-race.css'), '.race-basis p')['max-width']).toBe(
-      '70ch'
+      '34.8em'
     )
   })
 
-  it('page body copy stops at 70ch', () => {
+  it('page body copy stops at about 70 characters', () => {
     expect(
       decls(load('app-shell.css'), '.placeholder-page__body')['max-width']
-    ).toBe('70ch')
+    ).toBe('34.8em')
   })
 })
 

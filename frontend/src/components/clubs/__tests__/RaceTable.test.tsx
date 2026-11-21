@@ -1,9 +1,18 @@
 import React from 'react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { GlobalClubRaceReached } from '@taverns-red/shared-contracts'
 import { RaceTable } from '../RaceTable'
+
+const viewport = vi.hoisted(() => ({ isMobile: false }))
+vi.mock('../../../hooks/useIsMobile', () => ({
+  useIsMobile: () => viewport.isMobile,
+}))
+
+afterEach(() => {
+  viewport.isMobile = false
+})
 
 /**
  * #1556 — the per-tier race table. The 10-dot goal strip renders from the
@@ -145,6 +154,22 @@ describe('RaceTable — Official column only when it has something (#2657 REF-35
     ])
     expect(
       screen.getByRole('columnheader', { name: 'Official' })
+    ).toBeInTheDocument()
+  })
+})
+
+describe('RaceTable — net growth says what it is measured against (#2657 REF-35)', () => {
+  it('labels the growth figure "vs base" on desktop', () => {
+    renderTable([row({ clubId: '1' })])
+    const body = screen.getAllByRole('row')[1]!
+    expect(body).toHaveTextContent('+2 vs base')
+  })
+
+  it('says "vs base" in the phone row’s accessible name', () => {
+    viewport.isMobile = true
+    renderTable([row({ clubId: '1' })])
+    expect(
+      screen.getByRole('link', { name: /22 members \(\+2 vs base\)/ })
     ).toBeInTheDocument()
   })
 })
