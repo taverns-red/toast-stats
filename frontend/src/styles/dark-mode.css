@@ -1028,9 +1028,9 @@
   background-color: rgba(192, 200, 199, 0.12) !important;
 }
 
-/* #3161: Tailwind's ring offset defaults to #fff, a white band on dark pages.
-   The registered property doesn't inherit, so set it on the elements that use
-   an offset. Controls sit on cards, so match --surface-card. */
+/* #3161: the ring offset defaults to #fff, a white band on dark pages. The
+   property doesn't inherit, so set it on the element; cards sit behind
+   controls. Enforced by DarkRingOffset.test.ts. */
 [data-theme='dark'] [class*='ring-offset'] {
   --tw-ring-offset-color: var(--surface-card);
 }
