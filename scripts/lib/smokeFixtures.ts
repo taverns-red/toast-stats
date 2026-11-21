@@ -114,8 +114,7 @@ export interface RefreshReport {
   bytes: number
   failures: string[]
   unvalidated: string[]
-  /** Newest-date report sidecars recorded as 404s: the daily reports job
-   *  writes them after v1/latest.json moves (reportSidecarPlan.ts). */
+  /** Newest-date report sidecars recorded as 404s (see isPendingSidecar). */
   pendingSidecars?: string[]
 }
 
@@ -492,6 +491,16 @@ export async function loadExpandVars(
   return vars
 }
 
+/**
+ * A report sidecar of the newest date. The daily moves v1/latest.json before
+ * the reports job writes these, so a 404 is the CDN's real state for a while,
+ * not drift. Older dates must have them. Tested in smokeFixtures.test.ts
+ * ("while the daily reports job is still writing the newest date").
+ */
+function isPendingSidecar(path: string, newest: string): boolean {
+  return isReportSidecar(path) && path.startsWith(`snapshots/${newest}/`)
+}
+
 const CONCURRENCY = 8
 
 async function inBatches<T, R>(
@@ -614,17 +623,13 @@ export async function refreshFixtures(options: {
       )
       return
     }
-    const pending =
-      res.status === 404 &&
-      !entry.optional &&
-      isReportSidecar(entry.path) &&
-      entry.path.startsWith(`snapshots/${date}/`)
-    if (pending) pendingSidecars.push(entry.path)
-    if (
-      res.status !== 200 &&
-      !(entry.optional && res.status === 404) &&
-      !pending
-    ) {
+    if (res.status === 404 && !entry.optional) {
+      if (!isPendingSidecar(entry.path, date)) {
+        failures.push(`${entry.path}: HTTP 404`)
+        return
+      }
+      pendingSidecars.push(entry.path)
+    } else if (res.status !== 200 && res.status !== 404) {
       failures.push(`${entry.path}: HTTP ${res.status}`)
       return
     }
