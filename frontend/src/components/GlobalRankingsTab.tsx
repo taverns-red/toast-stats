@@ -110,7 +110,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => (
       {/* Retry Button */}
       <button
         onClick={onRetry}
-        className="inline-flex items-center px-6 py-3 bg-tm-loyal-blue text-white font-medium font-tm-headline rounded-lg hover:bg-tm-loyal-blue-80 focus:outline-none focus:ring-2 focus:ring-tm-loyal-blue focus:ring-offset-2 transition-colors min-h-[44px]"
+        className="inline-flex items-center px-6 py-3 bg-tm-loyal-blue text-white font-medium font-tm-headline rounded-lg hover:bg-tm-loyal-blue-80 focus:outline-none focus:ring-2 focus:ring-focus-ring focus:ring-offset-2 transition-colors min-h-[44px]"
         aria-label="Retry loading rankings data"
       >
         <svg

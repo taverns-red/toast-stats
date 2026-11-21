@@ -65,6 +65,13 @@
   background: var(--surface-2);
 }
 
+/* The frame clips the player (overflow: hidden), so the video's own outline
+   never shows; the frame draws it instead (REF-19, OutlineRemovalSweep.test.ts). */
+.videos-page__frame:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 .videos-page__frame--desktop {
   width: 100%;
   aspect-ratio: 16 / 9;

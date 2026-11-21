@@ -66,7 +66,7 @@ export const KpiDeltaCard: React.FC<KpiDeltaCardProps> = ({
             <button
               type="button"
               aria-label="More info"
-              className="inline-flex items-center justify-center rounded-full p-1 cursor-help focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue"
+              className="inline-flex items-center justify-center rounded-full p-1 cursor-help focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
               <InfoIcon />
             </button>

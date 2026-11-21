@@ -593,7 +593,7 @@ export const ClubGrowthAchievementCard: React.FC<
         </div>
         <a
           href={METHODOLOGY_HREF}
-          className="inline-flex min-h-11 items-center text-xs font-semibold text-tm-loyal-blue font-tm-body hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue rounded"
+          className="inline-flex min-h-11 items-center text-xs font-semibold text-tm-loyal-blue font-tm-body hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded"
         >
           How this is measured
         </a>

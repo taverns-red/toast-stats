@@ -419,6 +419,14 @@
   --color-tm-cool-gray-end: #f5f5f5;
 }
 
+/* `ring-focus-ring` for Tailwind focus rings. Inline, so the utility reads
+   var(--focus-ring) on the element and follows its [data-theme='dark'] remap;
+   --color-tm-loyal-blue is #004165 in both themes. Enforced by
+   OutlineRemovalSweep.test.ts. */
+@theme inline {
+  --color-focus-ring: var(--focus-ring);
+}
+
 /* ========================================
  * GRADIENT CUSTOM PROPERTIES
  * Per Toastmasters Brand Guidelines

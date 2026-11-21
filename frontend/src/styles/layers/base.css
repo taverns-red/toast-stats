@@ -76,14 +76,11 @@
     }
   }
 
-  /* Focus indicator defaults
-   * Provides WCAG AA compliant focus indicators for all interactive elements.
-   * Uses :focus-visible to show focus only for keyboard navigation.
-   * Component-specific focus styles in the brand layer can override these.
-   * Requirements: WCAG AA accessibility compliance
-   */
+  /* Default keyboard focus ring. --focus-ring (= --link) remaps under
+   * [data-theme='dark']. A component that removes this outline must draw its
+   * own ring in --focus-ring: OutlineRemovalSweep.test.ts. */
   :focus-visible {
-    outline: 2px solid var(--tm-loyal-blue);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 

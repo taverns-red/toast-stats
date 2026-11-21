@@ -755,7 +755,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
             aria-controls="prerequisite-list"
             onClick={() => setUserExpanded(prev => !prev)}
             // min-h-11 = 44px touch target on mobile per WCAG 2.5.5.
-            className="flex items-center gap-2 min-h-11 px-1 -mx-1 text-sm font-semibold font-tm-body text-tm-loyal-blue hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue rounded"
+            className="flex items-center gap-2 min-h-11 px-1 -mx-1 text-sm font-semibold font-tm-body text-tm-loyal-blue hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded"
           >
             <span aria-hidden="true">✓</span>
             {summaryText}
@@ -840,7 +840,7 @@ export const DistinguishedDistrictTrophyCase: React.FC<
                 aria-expanded={allTiersOpen}
                 aria-controls={TIER_GAPS_ID}
                 onClick={() => setAllTiersOpen(prev => !prev)}
-                className="md:hidden -my-3 py-3 px-1 text-sm font-semibold font-tm-body text-tm-loyal-blue whitespace-nowrap hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-loyal-blue rounded"
+                className="md:hidden -my-3 py-3 px-1 text-sm font-semibold font-tm-body text-tm-loyal-blue whitespace-nowrap hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring rounded"
               >
                 Every tier{' '}
                 <span aria-hidden="true" className="text-xs">
