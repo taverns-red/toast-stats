@@ -8,7 +8,28 @@ import { test, expect, type Locator, type Page } from './fixtures/test'
 
 type Theme = 'light' | 'dark'
 
+/** Tabbing through the header focuses its search box, which fetches the club
+ *  and division indexes. They have no recorded CDN fixture (#2545), and these
+ *  tests never search, so empty indexes keep the fetch off the network. */
+async function stubSearchIndexes(page: Page): Promise<void> {
+  await page.route('**/config/club-index.json', route =>
+    route.fulfill({ json: { clubs: {} } })
+  )
+  await page.route('**/config/divisions-areas-index.json', route =>
+    route.fulfill({
+      json: {
+        generatedAt: '2026-11-12T00:00:00Z',
+        snapshotDate: '2026-11-12',
+        totalDivisions: 0,
+        totalAreas: 0,
+        districts: {},
+      },
+    })
+  )
+}
+
 async function open(page: Page, path: string, theme: Theme, width = 1280) {
+  await stubSearchIndexes(page)
   await page.emulateMedia({ colorScheme: theme })
   await page.addInitScript(t => {
     try {
@@ -121,10 +142,9 @@ async function ringOfFocused(page: Page): Promise<Ring> {
 
 async function expectVisibleRing(page: Page, what: string): Promise<void> {
   const ring = await ringOfFocused(page)
-  test.info().annotations.push({
-    type: 'ring',
-    description: `${what}: ${ring.kind} ${ring.width}px, ${ring.ratio}:1`,
-  })
+  const line = `${what}: ${ring.kind} ${ring.width}px, ${ring.ratio}:1`
+  test.info().annotations.push({ type: 'ring', description: line })
+  console.log(`[focus-ring] ${test.info().project.name} ${line}`)
   expect(ring.focusVisible, `${what} matches :focus-visible`).toBe(true)
   expect(
     ring.width,
