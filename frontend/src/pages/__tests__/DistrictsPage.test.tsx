@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { useRankHistory } from '../../hooks/useRankHistory'
 import DistrictsPage from '../DistrictsPage'
 import '../../__tests__/preloadRankingsTable'
 import { fetchCdnRankings } from '../../services/cdn'
@@ -29,6 +31,18 @@ vi.mock('../../hooks/useDistricts', () => ({
     isLoading: false,
     isError: false,
   }),
+}))
+
+// useRankHistory retries twice with backoff before it reports an error, so the
+// failed state is set directly here. Idle (no regions picked) is the default.
+vi.mock('../../hooks/useRankHistory', () => ({
+  useRankHistory: vi.fn(() => ({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  })),
 }))
 
 const mockedFetchCdnRankings = vi.mocked(fetchCdnRankings)
@@ -949,5 +963,34 @@ describe('DistrictsPage - Region filter multi-select (#1374)', () => {
     // Add Region 3 → 2 of 3 selected
     fireEvent.click(screen.getByRole('button', { name: 'Region 3' }))
     expect(screen.getByText(/showing 2 of 3 regions/i)).toBeInTheDocument()
+  })
+})
+
+describe('DistrictsPage - Historical Rank Progression load failure (#3174)', () => {
+  it('offers Try again on the rank chart panel and refetches the history', async () => {
+    const refetch = vi.fn()
+    vi.mocked(useRankHistory).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('HTTP 503'),
+      refetch,
+    } as unknown as ReturnType<typeof useRankHistory>)
+    mockedFetchCdnRankings.mockResolvedValue({
+      rankings: [],
+      asOfDate: '2025-11-22',
+      generatedAt: '2025-11-22T00:00:00Z',
+    })
+
+    renderWithProviders(<DistrictsPage />)
+
+    const message = await screen.findByText(
+      /couldn't load the historical rank data/i
+    )
+    const panel = message.closest('[role="alert"]') as HTMLElement
+    await userEvent.click(
+      within(panel).getByRole('button', { name: /try again/i })
+    )
+    expect(refetch).toHaveBeenCalledTimes(1)
   })
 })

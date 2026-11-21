@@ -238,13 +238,15 @@ describe('LandingSearch — keyboard and failure states (#2250 review)', () => {
     load = vi.spyOn(searchIndex, 'loadSearchIndex').mockResolvedValue(INDEX)
   })
 
-  it('says so and offers Retry when the index fails to load, then recovers', async () => {
+  it('says so and offers Try again when the index fails to load, then recovers', async () => {
     load.mockRejectedValueOnce(new Error('cdn down'))
     renderSearch()
     fireEvent.focus(input())
     fireEvent.change(input(), { target: { value: 'dis' } })
-    const retry = await screen.findByRole('button', { name: /retry/i })
-    expect(screen.getByRole('status')).toHaveTextContent(/could not load/i)
+    const retry = await screen.findByRole('button', { name: /try again/i })
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /we couldn't load search/i
+    )
     fireEvent.click(retry)
     expect(await screen.findByRole('listbox')).toBeInTheDocument()
   })

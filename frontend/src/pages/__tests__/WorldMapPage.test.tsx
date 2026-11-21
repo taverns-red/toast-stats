@@ -263,7 +263,7 @@ describe('WorldMapPage', () => {
     })
     renderAt('/regions/map')
     expect(
-      await screen.findByText(/1 region could not be loaded/)
+      await screen.findByText(/We couldn't load 1 region/)
     ).toBeInTheDocument()
     expect(
       await screen.findByText(`Showing ${318 - 63} of ${318 - 63} clubs`)
