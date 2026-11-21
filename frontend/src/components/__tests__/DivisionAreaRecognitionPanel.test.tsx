@@ -361,10 +361,10 @@ describe('DivisionAreaRecognitionPanel', () => {
     })
 
     /**
-     * Validates: Requirement 10.3
-     * DivisionCriteriaExplanation should NOT be rendered during loading
+     * The criteria are static, so the loading state draws them as loaded and
+     * nothing below the header moves when the counts land (#2793).
      */
-    it('should not render DivisionCriteriaExplanation during loading', () => {
+    it('renders DivisionCriteriaExplanation during loading too', () => {
       const divisions = [createDivision()]
 
       renderWithProviders(
@@ -372,10 +372,10 @@ describe('DivisionAreaRecognitionPanel', () => {
       )
 
       expect(
-        screen.queryByRole('button', {
+        screen.getByRole('button', {
           name: /Distinguished Division Program Criteria/i,
         })
-      ).not.toBeInTheDocument()
+      ).toHaveAttribute('aria-expanded', 'false')
     })
   })
 
@@ -483,9 +483,11 @@ describe('DivisionAreaRecognitionPanel', () => {
     })
 
     /**
-     * Tests that content is not rendered during loading
+     * The loading state is the loaded panel's header and criteria with a
+     * skeleton only where the progress summary goes. A skeleton header of
+     * another height moved the real one 52px when the counts landed (#2793).
      */
-    it('should not render CriteriaExplanation during loading', () => {
+    it('renders the loaded header and CriteriaExplanation during loading', () => {
       const divisions = [createDivision()]
 
       renderWithProviders(
@@ -493,10 +495,16 @@ describe('DivisionAreaRecognitionPanel', () => {
       )
 
       expect(
-        screen.queryByRole('button', {
+        screen.getByRole('heading', {
+          level: 2,
+          name: 'Division and Area Recognition',
+        })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', {
           name: /Distinguished Area Program Criteria/i,
         })
-      ).not.toBeInTheDocument()
+      ).toBeInTheDocument()
     })
 
     /**

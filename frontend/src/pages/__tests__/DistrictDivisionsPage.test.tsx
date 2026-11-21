@@ -336,9 +336,12 @@ describe('DistrictDivisionsPage (#571 — Phase 3)', () => {
       renderAt('/district/61/divisions')
       const cards = await screen.findByTestId('division-performance-cards')
       expect(cards).toHaveAttribute('data-loading', 'true')
-      expect(
-        screen.getByRole('status', { name: 'Loading table' })
-      ).toBeInTheDocument()
+      // Nothing sits below the skeleton list: the criteria moved 130px when a
+      // district's real list was shorter than the skeleton (#2793). A reserve
+      // keeps the shell footer off screen instead.
+      expect(screen.queryByTestId('ddp-criteria-explainer')).toBeNull()
+      expect(screen.queryByTestId('division-area-recognition-panel')).toBeNull()
+      expect(screen.getByTestId('divisions-below-reserve')).toBeInTheDocument()
     } finally {
       if (restoreDates) datesMock.mockImplementation(restoreDates)
       if (restoreStats) statsMock.mockImplementation(restoreStats)

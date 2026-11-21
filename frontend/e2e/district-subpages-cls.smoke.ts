@@ -123,16 +123,35 @@ const INSTALL_OBSERVER = () => {
       }
       if (e.hadRecentInput) continue
       const rect = (r?: DOMRect) =>
-        r ? `y${Math.round(r.y)} h${Math.round(r.height)}` : '-'
+        r
+          ? `x${Math.round(r.x)} y${Math.round(r.y)} w${Math.round(r.width)} h${Math.round(r.height)}`
+          : '-'
+      const name = (el: Element) => {
+        const cls = (el.className ?? '').toString().split(' ')[0]
+        const label =
+          el.getAttribute('data-testid') ?? el.getAttribute('aria-label')
+        return `${el.tagName}.${cls}${label ? `[${label}]` : ''}`
+      }
       window.__clsEntries?.push({
         t: Math.round(e.startTime),
         value: Number(e.value.toFixed(5)),
         sources: (e.sources ?? []).map(s => {
           const el = s.node as HTMLElement | undefined
-          const tag = el?.tagName ?? 'DETACHED'
-          const cls = (el?.className ?? '').toString().split(' ')[0]
-          const testId = el?.dataset?.['testid']
-          return `<${tag}.${cls}${testId ? `[${testId}]` : ''}> ${rect(s.previousRect)} -> ${rect(s.currentRect)}`
+          if (!el) {
+            return `<DETACHED> ${rect(s.previousRect)} -> ${rect(s.currentRect)}`
+          }
+          // A bare `div.flex` names nothing; the ancestors and the opening
+          // markup say which component moved.
+          const path: string[] = []
+          for (
+            let p = el.parentElement, i = 0;
+            p && i < 3;
+            p = p.parentElement, i++
+          ) {
+            path.push(name(p))
+          }
+          const html = el.outerHTML.slice(0, 100).replace(/\s+/g, ' ')
+          return `<${name(el)}> in ${path.join(' < ')} ${rect(s.previousRect)} -> ${rect(s.currentRect)} | ${html}`
         }),
       })
     }
