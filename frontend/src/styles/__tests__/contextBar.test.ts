@@ -69,6 +69,8 @@ describe('context-bar.css (#1831)', () => {
       below.match(/\.district-detail-page-header__title[^{]*\{[^}]*\}/)?.[0] ??
       ''
     expect(title).toMatch(/clip/)
+    // The title's one-line reserve must not hold the clipped H1 open (#2673).
+    expect(title).toMatch(/min-height:\s*0/)
     expect(title).not.toMatch(/display:\s*none/)
     // A page whose H1 is a sibling of the bar (What Changed) gets the same.
     expect(below).toMatch(/\.context-bar\s*~\s*h1[\s\S]*?clip/)

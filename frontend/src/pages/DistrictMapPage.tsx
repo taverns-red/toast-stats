@@ -18,12 +18,17 @@ import {
   isDateInProgramYear,
 } from '../utils/programYear'
 import { DistrictDetailHeader } from '../components/DistrictDetailHeader'
+import { ErrorDisplay } from '../components/ErrorDisplay'
 import { DistrictSubnav } from '../components/DistrictSubnav'
 import LazyBasemapMap from '../components/map/LazyBasemapMap'
 // #2248: eager, not a lazy chunk. It is ~0.6 KB gzip, and a lazy first
 // render suspends and pays React's 300 ms Suspense reveal throttle.
 import OnlineClubsChip from '../components/map/OnlineClubsChip'
 import { useClubPins } from '../components/map/useClubPins'
+import {
+  estimateLegendLabels,
+  legendSlotHeight,
+} from '../components/map/legendSlot'
 import MapViewControls from '../components/map/MapViewControls'
 import {
   CLUSTER_LAYER_ID,
@@ -198,7 +203,8 @@ const DistrictMapPage: React.FC = () => {
     setProgramYearAndDate,
   } = useUrlProgramYear()
   const { data: districtsData } = useDistricts()
-  const { data: cachedDatesData } = useDistrictCachedDates(districtId)
+  const { data: cachedDatesData, isLoading: datesLoading } =
+    useDistrictCachedDates(districtId)
   const allCachedDates = useMemo(
     () => cachedDatesData?.dates || [],
     [cachedDatesData?.dates]
@@ -221,7 +227,11 @@ const DistrictMapPage: React.FC = () => {
     return getMostRecentDateInProgramYear(allCachedDates, effectiveProgramYear)
   }, [selectedDate, effectiveProgramYear, allCachedDates])
 
-  const { data: analytics } = useDistrictAnalytics(
+  const {
+    data: analytics,
+    error: analyticsError,
+    refetch: refetchAnalytics,
+  } = useDistrictAnalytics(
     effectiveEndDate ? districtId : null,
     effectiveProgramYear?.startDate,
     effectiveEndDate ?? undefined
@@ -400,24 +410,44 @@ const DistrictMapPage: React.FC = () => {
           <span> · as of {formatDateText(effectiveEndDate)}</span>
         )}
       </p>
-      {pending ? null : (
-        <React.Suspense fallback={<div className="map-legend__chips" />}>
-          <Chips
-            model={model}
-            chips={chips}
-            pressed={pressed}
-            onToggle={toggleChip}
-            limit={limit}
-            onMore={onMore}
-          />
-        </React.Suspense>
-      )}
+      <div
+        className="map-legend__slot"
+        style={
+          {
+            '--legend-slot': `${
+              limit === undefined
+                ? legendSlotHeight(
+                    analytics
+                      ? chips.map(c => c.label)
+                      : estimateLegendLabels(model)
+                  )
+                : 0
+            }px`,
+          } as React.CSSProperties
+        }
+      >
+        {pending ? null : (
+          <React.Suspense fallback={<div className="map-legend__chips" />}>
+            <Chips
+              model={model}
+              chips={chips}
+              pressed={pressed}
+              onToggle={toggleChip}
+              limit={limit}
+              onMore={onMore}
+            />
+          </React.Suspense>
+        )}
+      </div>
       {limit === undefined && online.length > 0 && (
         <OnlineClubsChip clubs={online} districtId={districtId} />
       )}
     </div>
   )
-  const lists = (
+  // Until the analytics land the lists would read "Every club in view has a
+  // location", which is not yet known.
+  const noDate = !datesLoading && !effectiveEndDate
+  const lists = analytics ? (
     <React.Suspense fallback={null}>
       <MapLists
         unmapped={unmapped}
@@ -426,7 +456,15 @@ const DistrictMapPage: React.FC = () => {
         onSandbox={() => setSheet(null)}
       />
     </React.Suspense>
-  )
+  ) : analyticsError ? (
+    <ErrorDisplay
+      error={analyticsError}
+      onRetry={() => void refetchAnalytics()}
+      subject="this district's clubs"
+    />
+  ) : noDate ? (
+    <p className="map-panel__note">No club data for this date yet.</p>
+  ) : null
 
   const filterPanel = (wantsFilters || filtersSeen) && (
     <React.Suspense fallback={null}>
@@ -610,7 +648,12 @@ const DistrictMapPage: React.FC = () => {
                 )}
               </div>
               {!isPhone && (
-                <aside className="map-panel" aria-label="Map legend and lists">
+                <aside
+                  className="map-panel map-panel--fixed"
+                  role="region"
+                  aria-label="Map legend and lists"
+                  tabIndex={0}
+                >
                   {filterPanel}
                   {legend()}
                   {selected.length > 0 && (
@@ -629,7 +672,7 @@ const DistrictMapPage: React.FC = () => {
                       </React.Suspense>
                     </section>
                   )}
-                  {lists}
+                  <div className="map-panel__lists">{lists}</div>
                 </aside>
               )}
               {sandbox && (

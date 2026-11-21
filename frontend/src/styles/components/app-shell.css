@@ -5121,6 +5121,9 @@
     font-weight: 800;
     font-size: 28px;
     line-height: 1.15;
+    /* Holds one line while the district name resolves; measured by
+       e2e/loading-shells-cls.smoke.ts (/district/U/map). */
+    min-height: 1.15em;
     letter-spacing: -0.015em;
     color: var(--ink);
   }

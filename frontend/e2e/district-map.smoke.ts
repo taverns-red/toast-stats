@@ -207,7 +207,7 @@ for (const theme of ['light', 'dark'] as const) {
       const summary =
         width < 768
           ? page.getByRole('dialog', { name: /Club details|Clubs here/ })
-          : page.getByRole('complementary', { name: 'Map legend and lists' })
+          : page.getByRole('region', { name: 'Map legend and lists' })
       const link = summary.getByRole('link', { name: /Open club page/ }).first()
       await expect(link).toBeVisible()
       await expect(link).toHaveAttribute('href', /\/district\/61\/club\/\w+/)
