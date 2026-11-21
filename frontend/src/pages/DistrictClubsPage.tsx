@@ -275,6 +275,12 @@ const DistrictClubsPage: React.FC = () => {
   const refreshError: unknown = datesError ?? (isError ? error : null)
   const [dismissedRefreshError, setDismissedRefreshError] =
     useState<unknown>(null)
+  // Only a query that failed is refetched. While the date index is down the
+  // analytics query is disabled on purpose (it has no date to ask for).
+  const retryFailed = useCallback(() => {
+    if (datesError) void refetchDates()
+    if (isError) void refetch()
+  }, [datesError, isError, refetchDates, refetch])
 
   const rawName = selectedDistrict?.name || districtId || ''
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
@@ -320,9 +326,7 @@ const DistrictClubsPage: React.FC = () => {
                 error={datesError as Error}
                 title="Failed to Load Clubs"
                 subject="the clubs list"
-                onRetry={() => {
-                  refetchDates()
-                }}
+                onRetry={retryFailed}
               />
             ) : isError && allClubs.length === 0 ? (
               // #1104 — a fetch reject must surface a retryable error state,
@@ -333,9 +337,7 @@ const DistrictClubsPage: React.FC = () => {
                 error={error ?? 'Failed to load clubs data'}
                 title="Failed to Load Clubs"
                 subject="the clubs list"
-                onRetry={() => {
-                  refetch()
-                }}
+                onRetry={retryFailed}
                 showDetails={true}
               />
             ) : (
@@ -352,13 +354,7 @@ const DistrictClubsPage: React.FC = () => {
                         Couldn&apos;t refresh. The clubs shown may be out of
                         date.
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (datesError) refetchDates()
-                          else refetch()
-                        }}
-                      >
+                      <button type="button" onClick={retryFailed}>
                         Retry
                       </button>
                       <button
