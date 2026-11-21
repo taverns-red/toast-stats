@@ -63,6 +63,14 @@ export const ReinstatableClubSchema = z
     inactivePeriod: z.number().int().min(1).max(5).optional(),
     /** The last day of inactive period 5, ISO. Absent with `inactivePeriod`. */
     lastChanceBy: z.string().regex(ISO_DATE).optional(),
+    /**
+     * The July 1 Toastmasters retired the club's district, ISO (#3101).
+     * Only on a row filed under a district that is no longer in the date's
+     * district set: the row keeps its old number, counts in the world total
+     * and in no region. Absent for every other row, and in files written
+     * before (ADR 0019, expand only).
+     */
+    districtRetiredOn: z.string().regex(ISO_DATE).optional(),
   })
   .superRefine((row, ctx) => {
     if (row.status === 'suspended' && row.suspendDate === undefined) {
