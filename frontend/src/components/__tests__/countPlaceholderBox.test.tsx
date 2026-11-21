@@ -146,15 +146,26 @@ describe('area table count columns (#2793)', () => {
     }
   })
 
-  it('keeps the recognition badge on one line (#2718)', () => {
-    expect(rule(css, '.entity-table__badge')['white-space']).toBe('nowrap')
+  it('from 1280px, a one-line badge in a 21em column (#2718)', () => {
+    const wide = /@media \(min-width: 1280px\)\s*\{([\s\S]*?\})\s*\}/.exec(
+      css
+    )?.[1]
+    expect(wide, 'no 1280px block').toBeDefined()
+    expect(rule(wide!, '.entity-table__badge')['white-space']).toBe('nowrap')
     // 21em at 14px is 294px; the longest badge plus its info button
     // measured 280px on the preview.
     expect(
-      parseFloat(
-        rule(css, '.entity-table--areas .entity-table__recognition')['width']!
-      )
-    ).toBeGreaterThanOrEqual(20)
+      rule(wide!, '.entity-table--areas .entity-table__recognition')['width']
+    ).toBe('21em')
+  })
+
+  it('from 1024 to 1279px, a 15em column where long badges wrap as a tag', () => {
+    expect(
+      rule(css, '.entity-table--areas .entity-table__recognition')['width']
+    ).toBe('15em')
+    const badge = rule(css, '.entity-table__badge')
+    expect(badge['white-space']).toBe('normal')
+    expect(badge['border-radius']).toBe('0.5rem')
   })
 
   it('puts the column rule on both header cells', () => {
