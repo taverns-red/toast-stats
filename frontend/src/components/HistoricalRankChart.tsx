@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { RankHistoryResponse } from '../types/districts'
+import { isRankTied } from '../utils/rankTies'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
 import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -47,8 +48,9 @@ interface HistoricalRankChartProps {
 
 interface TooltipPayload {
   dataKey: string
-  value: number
+  value: number | null | undefined
   color: string
+  hide?: boolean
 }
 
 // Custom tooltip moved outside render
@@ -57,11 +59,13 @@ const CustomTooltip = ({
   payload,
   data,
   selectedMetric,
+  isTied,
 }: {
   active?: boolean
   payload?: TooltipPayload[]
   data: RankHistoryResponse[]
   selectedMetric: RankMetric
+  isTied: (districtId: string, date: string) => boolean
 }) => {
   if (active && payload && payload.length) {
     const date = (payload[0] as unknown as { payload: { date: string } })
@@ -74,15 +78,21 @@ const CustomTooltip = ({
           {formattedDate}
         </p>
         {payload.map((entry: TooltipPayload, index: number) => {
+          const tied = isTied(entry.dataKey, date)
+          if (entry.hide === true || (entry.value == null && !tied)) {
+            return null
+          }
           const districtData = data.find(d => d.districtId === entry.dataKey)
           return (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               <span className="font-semibold">
                 {districtData?.districtName || entry.dataKey}:
               </span>{' '}
-              {selectedMetric === 'aggregate'
-                ? `Score ${Math.round(entry.value)}`
-                : `Rank #${entry.value}`}
+              {tied
+                ? 'Tied'
+                : selectedMetric === 'aggregate'
+                  ? `Score ${Math.round(entry.value ?? 0)}`
+                  : `Rank #${entry.value}`}
             </p>
           )
         })}
@@ -154,13 +164,26 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   // Sort dates chronologically
   const sortedDates = Array.from(allDates).sort()
 
+  // The overall line plots the score, not a rank, so only a category is
+  // left out on a date every district is tied in.
+  const tiedKeys = new Set<string>()
+  const isTied = (districtId: string, date: string): boolean =>
+    tiedKeys.has(`${districtId}|${date}`)
+
   // Transform data for chart
   const chartData = sortedDates.map(date => {
-    const dataPoint: Record<string, string | number> = { date }
+    const dataPoint: Record<string, string | number | null> = { date }
 
     data.forEach(district => {
       const point = district.history.find(p => p.date === date)
-      if (point) {
+      if (
+        point &&
+        selectedMetric !== 'aggregate' &&
+        isRankTied(point, selectedMetric)
+      ) {
+        tiedKeys.add(`${district.districtId}|${date}`)
+        dataPoint[district.districtId] = null
+      } else if (point) {
         let value: number
         switch (selectedMetric) {
           case 'clubs':
@@ -283,8 +306,15 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
               />
               <Tooltip
                 content={
-                  <CustomTooltip data={data} selectedMetric={selectedMetric} />
+                  <CustomTooltip
+                    data={data}
+                    selectedMetric={selectedMetric}
+                    isTied={isTied}
+                  />
                 }
+                // Keep tied districts, whose value is null, so they read
+                // "Tied"; the tooltip drops other empty and hidden entries.
+                filterNull={false}
                 {...readout.tooltipProps}
               />
               {data.map((district, index) => {

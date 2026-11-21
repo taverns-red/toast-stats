@@ -1,4 +1,5 @@
 import type { HistoricalRankPoint } from '../types/districts'
+import type { RankCategory } from '../utils/rankTies'
 
 /* Ranking Progression metrics, shared by the chart and its Recharts-free
  * loading state (#1835). */
@@ -44,4 +45,12 @@ export const METRIC_CONFIG: Record<RankMetric, MetricConfig> = {
     description:
       'Ranking based on percentage of clubs achieving distinguished status',
   },
+}
+
+/** The tie flag each metric's line reads (#3145). */
+export const METRIC_TIE_CATEGORY: Record<RankMetric, RankCategory> = {
+  aggregate: 'overall',
+  clubs: 'clubs',
+  payments: 'payments',
+  distinguished: 'distinguished',
 }

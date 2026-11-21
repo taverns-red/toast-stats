@@ -1,6 +1,9 @@
 import React from 'react'
 import RankingCard from './RankingCard'
-import type { EndOfYearRankings } from '../hooks/useGlobalRankings'
+import type {
+  EndOfYearRankings,
+  RankPosition,
+} from '../hooks/useGlobalRankings'
 import type { ProgramYear } from '../utils/programYear'
 
 /**
@@ -22,6 +25,12 @@ export interface EndOfYearRankingsPanelProps {
    */
   comparisonUnavailableNote?: string | null
 }
+
+/** A tied previous year has no rank to compare against, so no change. */
+const previousRankProp = (
+  previous: RankPosition | undefined
+): { previousYearRank?: number } =>
+  previous && previous.tied !== true ? { previousYearRank: previous.rank } : {}
 
 /**
  * Trophy icon for Overall Rank
@@ -203,12 +212,11 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
             rank={rankings?.overall.rank ?? 0}
             totalDistricts={rankings?.overall.totalDistricts ?? 0}
             percentile={rankings?.overall.percentile ?? 0}
+            tied={rankings?.overall.tied === true}
             icon={<TrophyIcon />}
             colorScheme="blue"
             isLoading={isLoading}
-            {...(previousYearRankings?.overall.rank !== undefined && {
-              previousYearRank: previousYearRankings.overall.rank,
-            })}
+            {...previousRankProp(previousYearRankings?.overall)}
           />
         </div>
 
@@ -223,9 +231,7 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
             icon={<ClubsIcon />}
             colorScheme="green"
             isLoading={isLoading}
-            {...(previousYearRankings?.paidClubs.rank !== undefined && {
-              previousYearRank: previousYearRankings.paidClubs.rank,
-            })}
+            {...previousRankProp(previousYearRankings?.paidClubs)}
           />
         </div>
 
@@ -240,10 +246,7 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
             icon={<PaymentsIcon />}
             colorScheme="purple"
             isLoading={isLoading}
-            {...(previousYearRankings?.membershipPayments.rank !==
-              undefined && {
-              previousYearRank: previousYearRankings.membershipPayments.rank,
-            })}
+            {...previousRankProp(previousYearRankings?.membershipPayments)}
           />
         </div>
 
@@ -258,10 +261,7 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
             icon={<DistinguishedIcon />}
             colorScheme="yellow"
             isLoading={isLoading}
-            {...(previousYearRankings?.distinguishedClubs.rank !==
-              undefined && {
-              previousYearRank: previousYearRankings.distinguishedClubs.rank,
-            })}
+            {...previousRankProp(previousYearRankings?.distinguishedClubs)}
           />
         </div>
       </div>

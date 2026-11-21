@@ -21,6 +21,7 @@ const METRIC_TO_URL: Record<RankMetric, string> = {
 }
 import MultiYearComparisonTable from './MultiYearComparisonTable'
 import { useGlobalRankings } from '../hooks/useGlobalRankings'
+import { toPreviousYearRankings } from '../utils/globalRankingsUtils'
 import type { ProgramYear } from '../utils/programYear'
 import { formatLongDate } from '../utils/dateFormatting'
 import {
@@ -342,33 +343,7 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
     // Get the previous year (next in the array since it's sorted most recent first)
     if (currentYearIndex >= 0 && currentYearIndex < yearlyRankings.length - 1) {
       const prevYearSummary = yearlyRankings[currentYearIndex + 1]
-      if (prevYearSummary) {
-        // Convert YearlyRankingSummary to EndOfYearRankings format for the panel
-        return {
-          overall: {
-            rank: prevYearSummary.overallRank,
-            totalDistricts: prevYearSummary.totalDistricts,
-            percentile: 0, // Not needed for comparison
-          },
-          paidClubs: {
-            rank: prevYearSummary.clubsRank,
-            totalDistricts: prevYearSummary.totalDistricts,
-            percentile: 0,
-          },
-          membershipPayments: {
-            rank: prevYearSummary.paymentsRank,
-            totalDistricts: prevYearSummary.totalDistricts,
-            percentile: 0,
-          },
-          distinguishedClubs: {
-            rank: prevYearSummary.distinguishedRank,
-            totalDistricts: prevYearSummary.totalDistricts,
-            percentile: 0,
-          },
-          asOfDate: '',
-          isPartialYear: prevYearSummary.isPartialYear,
-        }
-      }
+      if (prevYearSummary) return toPreviousYearRankings(prevYearSummary)
     }
     return null
   }, [effectiveSelectedYear, yearlyRankings, rankFieldDiscontinuity])

@@ -12,6 +12,7 @@ import type {
 } from '../types/districts'
 import type { ProgramYear } from '../utils/programYear'
 import { MetricRankingsCalculator } from '@taverns-red/analytics-core'
+import { isRankTied, type RankCategory } from './rankTies'
 
 // ========== Type Definitions ==========
 
@@ -54,14 +55,14 @@ export interface EndOfYearRankings {
  * Negative values indicate decline (rank went up numerically)
  */
 export interface YearOverYearChange {
-  /** Overall rank change */
-  overall: number
+  /** Overall rank change. Absent when either year is tied (#3145). */
+  overall?: number
   /** Clubs rank change */
-  clubs: number
+  clubs?: number
   /** Payments rank change */
-  payments: number
+  payments?: number
   /** Distinguished rank change */
-  distinguished: number
+  distinguished?: number
 }
 
 /**
@@ -82,6 +83,12 @@ export interface YearlyRankingSummary {
   totalDistricts: number
   /** Whether this is partial year data */
   isPartialYear: boolean
+  /** Every district had the same value in that category, so its rank says
+   *  nothing (#3145). Absent when not tied. */
+  overallTied?: boolean
+  clubsTied?: boolean
+  paymentsTied?: boolean
+  distinguishedTied?: boolean
   /** Year-over-year change (null for oldest year) */
   yearOverYearChange: YearOverYearChange | null
 }
@@ -200,6 +207,7 @@ export function extractEndOfYearRankings(
       rank: overallRank,
       totalDistricts,
       percentile: calculatePercentile(overallRank),
+      ...(isRankTied(latestPoint, 'overall') && { tied: true }),
     },
     paidClubs: {
       rank: latestPoint.clubsRank,
@@ -268,6 +276,39 @@ export function getLatestRankPoint(
   return sorted[sorted.length - 1] ?? null
 }
 
+const RANK_CATEGORIES: readonly RankCategory[] = [
+  'overall',
+  'clubs',
+  'payments',
+  'distinguished',
+]
+
+/**
+ * A previous year's summary in the shape the ranking cards compare against.
+ * Its tie flags travel with it, so a tied year gives no change.
+ */
+export function toPreviousYearRankings(
+  summary: YearlyRankingSummary
+): EndOfYearRankings {
+  const position = (rank: number, tied: boolean | undefined) => ({
+    rank,
+    totalDistricts: summary.totalDistricts,
+    percentile: 0, // Not needed for comparison
+    ...(tied === true && { tied: true }),
+  })
+  return {
+    overall: position(summary.overallRank, summary.overallTied),
+    paidClubs: position(summary.clubsRank, summary.clubsTied),
+    membershipPayments: position(summary.paymentsRank, summary.paymentsTied),
+    distinguishedClubs: position(
+      summary.distinguishedRank,
+      summary.distinguishedTied
+    ),
+    asOfDate: '',
+    isPartialYear: summary.isPartialYear,
+  }
+}
+
 /**
  * Build yearly ranking summaries from available program years and their history data
  */
@@ -282,11 +323,8 @@ export function buildYearlyRankingSummaries(
 
   const summaries: YearlyRankingSummary[] = []
 
-  // Track previous year's ranks for year-over-year calculation
-  let previousOverallRank: number | null = null
-  let previousClubsRank: number | null = null
-  let previousPaymentsRank: number | null = null
-  let previousDistinguishedRank: number | null = null
+  // The previous year's ranks; null for a category that year was tied in
+  let previous: Record<RankCategory, number | null> | null = null
 
   // Process in reverse order (oldest first) to calculate year-over-year changes
   const reversedYears = [...sortedYears].reverse()
@@ -311,24 +349,26 @@ export function buildYearlyRankingSummaries(
           3
       )
 
-    // Calculate year-over-year change directly from previous ranks
-    // Positive change = improvement (rank number decreased)
-    // Negative change = decline (rank number increased)
-    let yearOverYearChange: YearOverYearChange | null = null
+    const ranks: Record<RankCategory, number> = {
+      overall: overallRank,
+      clubs: latestPoint.clubsRank,
+      payments: latestPoint.paymentsRank,
+      distinguished: latestPoint.distinguishedRank,
+    }
+    const tied = (category: RankCategory) => isRankTied(latestPoint, category)
 
-    if (
-      previousOverallRank !== null &&
-      previousClubsRank !== null &&
-      previousPaymentsRank !== null &&
-      previousDistinguishedRank !== null
-    ) {
-      yearOverYearChange = {
-        overall: previousOverallRank - overallRank,
-        clubs: previousClubsRank - latestPoint.clubsRank,
-        payments: previousPaymentsRank - latestPoint.paymentsRank,
-        distinguished:
-          previousDistinguishedRank - latestPoint.distinguishedRank,
+    // Positive change = improvement (rank number decreased). A category tied
+    // in either year has no change.
+    let yearOverYearChange: YearOverYearChange | null = null
+    if (previous) {
+      const change: YearOverYearChange = {}
+      for (const category of RANK_CATEGORIES) {
+        const before = previous[category]
+        if (before !== null && !tied(category)) {
+          change[category] = before - ranks[category]
+        }
       }
+      if (Object.keys(change).length > 0) yearOverYearChange = change
     }
 
     summaries.push({
@@ -339,14 +379,18 @@ export function buildYearlyRankingSummaries(
       distinguishedRank: latestPoint.distinguishedRank,
       totalDistricts: latestPoint.totalDistricts,
       isPartialYear: !yearData.hasCompleteData,
+      ...(tied('overall') && { overallTied: true }),
+      ...(tied('clubs') && { clubsTied: true }),
+      ...(tied('payments') && { paymentsTied: true }),
+      ...(tied('distinguished') && { distinguishedTied: true }),
       yearOverYearChange,
     })
 
-    // Update previous ranks for next iteration
-    previousOverallRank = overallRank
-    previousClubsRank = latestPoint.clubsRank
-    previousPaymentsRank = latestPoint.paymentsRank
-    previousDistinguishedRank = latestPoint.distinguishedRank
+    const next = { ...ranks } as Record<RankCategory, number | null>
+    for (const category of RANK_CATEGORIES) {
+      if (tied(category)) next[category] = null
+    }
+    previous = next
   }
 
   // Reverse to get most recent first
