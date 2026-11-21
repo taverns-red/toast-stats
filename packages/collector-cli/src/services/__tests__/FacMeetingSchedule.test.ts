@@ -1762,6 +1762,38 @@ describe('parseMeetingSchedule (#2627) — gap 12: guest restriction', () => {
   })
 })
 
+describe('parseMeetingSchedule (#2811) — #2808 leftovers', () => {
+  it.each([
+    ['Bldg 1200-1300'],
+    ['Floor 1200-1300'],
+    ['Office 1200-1300'],
+    ['No. 1200-1300'],
+    ['Room 12, 1200-1300'],
+  ])('%j (an address word before the numbers) gives no time', meetingTime => {
+    expect(
+      parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime })
+    ).toEqual([{ day: 'Thursday', cadence: 'weekly' }])
+  })
+
+  it('"7 PM EST Church basement" keeps the zone written after the time', () => {
+    const [entry] =
+      parseMeetingSchedule({
+        meetingDay: 'Thursday',
+        meetingTime: '7 PM EST Church basement',
+      }) ?? []
+    expect(entry).toMatchObject({ startTime: '19:00', timeZone: 'EST' })
+  })
+
+  it('"Guests welcome by invitation of a member" is not restricted', () => {
+    const entries = parseMeetingSchedule({
+      meetingDay: 'Thursday',
+      meetingTime: '7 pm',
+      location: 'Guests welcome by invitation of a member',
+    })
+    expect(entries?.[0]).not.toHaveProperty('restricted')
+  })
+})
+
 describe('parseMeetingSchedule (#2627) — gap 9: a second time on the day', () => {
   it.each([
     ['Thursday', '18h30 pm et 7:00 am'],
