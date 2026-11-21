@@ -1,7 +1,5 @@
-// Full-page axe scan of /videos (#2658), with the steps lists open.
-//
-// axe's `color-contrast` rule is off under JSDOM; this file owns the
-// structural rules (list semantics, link names, the jump nav's label).
+// axe's `color-contrast` rule is off under JSDOM, so this scan covers the
+// structural rules only (list semantics, link names, the jump nav's label).
 
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup } from '@testing-library/react'

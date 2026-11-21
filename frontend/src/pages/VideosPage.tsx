@@ -110,7 +110,8 @@ const VideoCard: React.FC<{ video: HowToVideo; cut: VideoCut }> = ({
         />
       </div>
       {/* The videos have no narration or caption track, so this list is
-          their text alternative (#2658, WCAG 1.2.1). */}
+          their text alternative (WCAG 1.2.1). VideosPage.test.tsx and
+          VideosPage.axe.test.tsx check it. */}
       <details className="videos-page__steps">
         <summary>Steps shown</summary>
         <ol>
@@ -165,7 +166,6 @@ const VideosPage: React.FC = () => {
           no narration: the captions on screen carry the message. Grouped by the
           role each one is for.
         </p>
-        {/* Nine role groups make a long page; these links skip to one. */}
         <nav aria-label="Jump to a role" className="videos-page__jump">
           <ul>
             {groups.map(group => (

@@ -1,7 +1,7 @@
-/* Which how-to video explains which district page (#2658). Kept apart from
-   content/howToVideos.ts so the district header does not pull the whole
-   catalogue (every video's steps) into its bundle; a test keeps the two in
-   step. The key is the section segment after /district/:id ('' is the hub). */
+/* Kept apart from content/howToVideos.ts so the district header does not
+   pull every video's steps into its bundle. The key is the section segment
+   after /district/:id ('' is the hub). content/__tests__/howToVideos.test.ts
+   checks each id exists and its pageUrl is that section. */
 
 const SECTION_VIDEO_IDS: Readonly<Record<string, string>> = {
   '': 'v1',
