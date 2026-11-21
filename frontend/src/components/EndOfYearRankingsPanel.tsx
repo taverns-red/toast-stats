@@ -127,6 +127,8 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
   previousYearRankings,
   comparisonUnavailableNote = null,
 }) => {
+  const hasRankedDistricts = (rankings?.overall.totalDistricts ?? 0) > 0
+
   // Format the as-of date for display
   // Uses UTC to ensure consistent display regardless of timezone
   const formatAsOfDate = (dateString: string): string => {
@@ -199,72 +201,83 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
         </p>
       )}
 
+      {/* "0 of 0" cards say nothing, so with no ranked districts, say so. */}
+      {!isLoading && !hasRankedDistricts && (
+        <p className="text-sm text-gray-600 font-tm-body" role="note">
+          {rankings
+            ? 'No districts are ranked for this program year yet.'
+            : "Couldn't load rankings."}
+        </p>
+      )}
+
       {/* Rankings Grid - 4 columns on large screens, 2 on medium, 1 on mobile */}
-      <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-        role="list"
-        aria-label="End-of-year ranking metrics"
-      >
-        {/* Overall Rank Card */}
-        <div role="listitem">
-          <RankingCard
-            title="Overall Rank"
-            rank={rankings?.overall.rank ?? 0}
-            totalDistricts={rankings?.overall.totalDistricts ?? 0}
-            percentile={rankings?.overall.percentile ?? 0}
-            tied={rankings?.overall.tied === true}
-            icon={<TrophyIcon />}
-            colorScheme="blue"
-            isLoading={isLoading}
-            {...previousRankProp(previousYearRankings?.overall)}
-          />
-        </div>
+      {(isLoading || hasRankedDistricts) && (
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+          role="list"
+          aria-label="End-of-year ranking metrics"
+        >
+          {/* Overall Rank Card */}
+          <div role="listitem">
+            <RankingCard
+              title="Overall Rank"
+              rank={rankings?.overall.rank ?? 0}
+              totalDistricts={rankings?.overall.totalDistricts ?? 0}
+              percentile={rankings?.overall.percentile ?? 0}
+              tied={rankings?.overall.tied === true}
+              icon={<TrophyIcon />}
+              colorScheme="blue"
+              isLoading={isLoading}
+              {...previousRankProp(previousYearRankings?.overall)}
+            />
+          </div>
 
-        {/* Paid Clubs Rank Card */}
-        <div role="listitem">
-          <RankingCard
-            title="Paid Clubs"
-            rank={rankings?.paidClubs.rank ?? 0}
-            totalDistricts={rankings?.paidClubs.totalDistricts ?? 0}
-            percentile={rankings?.paidClubs.percentile ?? 0}
-            tied={rankings?.paidClubs.tied === true}
-            icon={<ClubsIcon />}
-            colorScheme="green"
-            isLoading={isLoading}
-            {...previousRankProp(previousYearRankings?.paidClubs)}
-          />
-        </div>
+          {/* Paid Clubs Rank Card */}
+          <div role="listitem">
+            <RankingCard
+              title="Paid Clubs"
+              rank={rankings?.paidClubs.rank ?? 0}
+              totalDistricts={rankings?.paidClubs.totalDistricts ?? 0}
+              percentile={rankings?.paidClubs.percentile ?? 0}
+              tied={rankings?.paidClubs.tied === true}
+              icon={<ClubsIcon />}
+              colorScheme="green"
+              isLoading={isLoading}
+              {...previousRankProp(previousYearRankings?.paidClubs)}
+            />
+          </div>
 
-        {/* Membership Payments Rank Card */}
-        <div role="listitem">
-          <RankingCard
-            title="Payments"
-            rank={rankings?.membershipPayments.rank ?? 0}
-            totalDistricts={rankings?.membershipPayments.totalDistricts ?? 0}
-            percentile={rankings?.membershipPayments.percentile ?? 0}
-            tied={rankings?.membershipPayments.tied === true}
-            icon={<PaymentsIcon />}
-            colorScheme="purple"
-            isLoading={isLoading}
-            {...previousRankProp(previousYearRankings?.membershipPayments)}
-          />
-        </div>
+          {/* Membership Payments Rank Card */}
+          <div role="listitem">
+            <RankingCard
+              title="Payments"
+              rank={rankings?.membershipPayments.rank ?? 0}
+              totalDistricts={rankings?.membershipPayments.totalDistricts ?? 0}
+              percentile={rankings?.membershipPayments.percentile ?? 0}
+              tied={rankings?.membershipPayments.tied === true}
+              icon={<PaymentsIcon />}
+              colorScheme="purple"
+              isLoading={isLoading}
+              {...previousRankProp(previousYearRankings?.membershipPayments)}
+            />
+          </div>
 
-        {/* Distinguished Clubs Rank Card */}
-        <div role="listitem">
-          <RankingCard
-            title="Distinguished"
-            rank={rankings?.distinguishedClubs.rank ?? 0}
-            totalDistricts={rankings?.distinguishedClubs.totalDistricts ?? 0}
-            percentile={rankings?.distinguishedClubs.percentile ?? 0}
-            tied={rankings?.distinguishedClubs.tied === true}
-            icon={<DistinguishedIcon />}
-            colorScheme="yellow"
-            isLoading={isLoading}
-            {...previousRankProp(previousYearRankings?.distinguishedClubs)}
-          />
+          {/* Distinguished Clubs Rank Card */}
+          <div role="listitem">
+            <RankingCard
+              title="Distinguished"
+              rank={rankings?.distinguishedClubs.rank ?? 0}
+              totalDistricts={rankings?.distinguishedClubs.totalDistricts ?? 0}
+              percentile={rankings?.distinguishedClubs.percentile ?? 0}
+              tied={rankings?.distinguishedClubs.tied === true}
+              icon={<DistinguishedIcon />}
+              colorScheme="yellow"
+              isLoading={isLoading}
+              {...previousRankProp(previousYearRankings?.distinguishedClubs)}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </section>
   )
 }

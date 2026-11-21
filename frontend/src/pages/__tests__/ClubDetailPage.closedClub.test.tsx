@@ -248,7 +248,7 @@ describe('ClubDetailPage — a closed club shows its history (#3104)', () => {
         'Closed. Last on Toastmasters’ club list: June 30, 2025'
       )
     ).toBeInTheDocument()
-    expect(screen.queryByText('Club Not Found')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('not-found-panel')).not.toBeInTheDocument()
     expect(
       screen.getByRole('heading', { level: 1, name: 'Top Tier Toastmasters' })
     ).toBeInTheDocument()
@@ -303,7 +303,12 @@ describe('ClubDetailPage — a closed club shows its history (#3104)', () => {
   it('keeps Not Found for a club no file knows', async () => {
     renderAt('/district/86/club/99999907')
 
-    expect(await screen.findByText('Club Not Found')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: /^Club 99999907 isn't in /,
+      })
+    ).toBeInTheDocument()
     expect(screen.queryByText(/Closed\. Last on/)).not.toBeInTheDocument()
     expect(mockedFetchFromCdn).not.toHaveBeenCalled()
   })
@@ -431,7 +436,7 @@ describe('ClubDetailPage — a suspended club missing from analytics (#3117)', (
     ).toBeInTheDocument()
     expect(screen.queryByText(/Closed\. Last on/)).not.toBeInTheDocument()
     expect(screen.queryByText(/This club has closed/)).not.toBeInTheDocument()
-    expect(screen.queryByText('Club Not Found')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('not-found-panel')).not.toBeInTheDocument()
     // The lifecycle panel carries the suspension too.
     expect(screen.getByText('Suspended')).toBeInTheDocument()
   })
@@ -448,7 +453,7 @@ describe('ClubDetailPage — a suspended club missing from analytics (#3117)', (
     expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument()
     expect(screen.queryByText(/Closed\. Last on/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Suspended since/)).not.toBeInTheDocument()
-    expect(screen.queryByText('Club Not Found')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('not-found-panel')).not.toBeInTheDocument()
   })
 
   it('shows the closed page when the list does not include the club', async () => {

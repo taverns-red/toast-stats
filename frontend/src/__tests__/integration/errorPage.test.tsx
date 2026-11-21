@@ -121,6 +121,17 @@ describe('Branded error boundary (#1011)', () => {
     })
   })
 
+  describe('standalone landmarks (#2647)', () => {
+    it('wraps the crash page in a main that names the product', () => {
+      renderWithRouter('/boom')
+      const main = screen.getByRole('main')
+      expect(within(main).getByText('Toast Stats')).toBeInTheDocument()
+      expect(
+        within(main).getByRole('heading', { level: 1 })
+      ).toBeInTheDocument()
+    })
+  })
+
   describe('thrown runtime error', () => {
     it('renders the same branded ErrorPage with error-variant copy', () => {
       renderWithRouter('/boom')

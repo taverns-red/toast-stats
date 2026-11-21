@@ -178,7 +178,7 @@
     },
     {
       "path": "/no-such-page",
-      "sentinel": "[data-testid=\"error-page\"] .error-page__panel",
+      "sentinel": "[data-testid=\"not-found-panel\"] .not-found-panel__heading",
       "firstContentMaxPx": 230,
       "maxShareUnder14": 0.01
     }

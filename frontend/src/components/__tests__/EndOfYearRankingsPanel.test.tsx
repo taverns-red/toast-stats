@@ -253,7 +253,7 @@ describe('EndOfYearRankingsPanel', () => {
   })
 
   describe('Null Rankings Handling', () => {
-    it('renders with null rankings (shows zeros)', () => {
+    it('says the rankings could not load, instead of showing zeros (#2647)', () => {
       renderWithProviders(
         <EndOfYearRankingsPanel
           {...baseProps}
@@ -262,9 +262,8 @@ describe('EndOfYearRankingsPanel', () => {
         />
       )
 
-      // Should render cards with zero values
-      const zeroRanks = screen.getAllByText('0')
-      expect(zeroRanks.length).toBeGreaterThanOrEqual(4)
+      expect(screen.getByText("Couldn't load rankings.")).toBeInTheDocument()
+      expect(screen.queryByText(/no districts are ranked/i)).toBeNull()
     })
 
     it('does not show as-of date when rankings are null', () => {
@@ -366,6 +365,51 @@ describe('EndOfYearRankingsPanel', () => {
       )
 
       expect(screen.getByText('2023-2024 Program Year')).toBeInTheDocument()
+    })
+  })
+
+  describe('no ranked districts (#2647)', () => {
+    const empty = { rank: 0, totalDistricts: 0, percentile: 0 }
+    const noDistricts: EndOfYearRankings = {
+      ...mockRankings,
+      overall: empty,
+      paidClubs: empty,
+      membershipPayments: empty,
+      distinguishedClubs: empty,
+    }
+
+    it('hides the rank cards instead of showing "0 of 0"', () => {
+      renderWithProviders(
+        <EndOfYearRankingsPanel {...baseProps} rankings={noDistricts} />
+      )
+
+      expect(screen.queryByText('Overall Rank')).not.toBeInTheDocument()
+      expect(screen.queryByText(/0 of 0/)).not.toBeInTheDocument()
+      expect(
+        screen.getByText('No districts are ranked for this program year yet.')
+      ).toBeInTheDocument()
+    })
+
+    it('hides the rank cards when there are no rankings at all', () => {
+      renderWithProviders(
+        <EndOfYearRankingsPanel {...baseProps} rankings={null} />
+      )
+
+      expect(screen.queryByText('Overall Rank')).not.toBeInTheDocument()
+    })
+
+    it('still shows the cards while rankings load', () => {
+      renderWithProviders(
+        <EndOfYearRankingsPanel
+          {...baseProps}
+          rankings={null}
+          isLoading={true}
+        />
+      )
+
+      expect(
+        screen.getByRole('status', { name: /loading overall rank ranking/i })
+      ).toBeInTheDocument()
     })
   })
 

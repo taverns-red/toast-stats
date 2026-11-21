@@ -4,7 +4,7 @@
  * Decision: implement the operator's `/district/61/area/A1` example as a REDIRECT
  * to the canonical nested route (precedent: ClubRedirectPage #320), resolving the
  * division from the divisions snapshot — never string-parsing the area id (R3/R8).
- * A bad area id (no division owns it) throws a 404 to the branded error page,
+ * A bad area id (no division owns it) shows the not-found panel,
  * exactly like the nested AreaPage.
  */
 import React from 'react'
@@ -105,9 +105,15 @@ describe('AreaRedirectPage flat alias (#1017)', () => {
     )
   })
 
-  it('throws a 404 for an area id no division owns', () => {
+  it('shows the not-found panel for an area id no division owns', () => {
     renderAt('/district/61/area/99')
-    expect(screen.getByTestId('boundary')).toHaveTextContent('404')
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: "Area 99 isn't in District 61",
+      })
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('boundary')).not.toBeInTheDocument()
   })
 
   /**
