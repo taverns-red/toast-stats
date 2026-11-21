@@ -26,6 +26,7 @@ import { spawnSync, execFileSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { gitEnv } from './gitEnv'
 
 const ROOT = process.cwd()
 const GUARD = resolve(ROOT, 'scripts/cloud-session-guard.sh')
@@ -65,7 +66,7 @@ function expectAllowed(command: string, cwd = ROOT) {
 function makeRepo(branch = BRANCH) {
   const dir = mkdtempSync(join(tmpdir(), 'guard-2528-'))
   const git = (...a: string[]) =>
-    execFileSync('git', ['-C', dir, ...a], { stdio: 'pipe' })
+    execFileSync('git', ['-C', dir, ...a], { stdio: 'pipe', env: gitEnv() })
   git('init', '-q', '-b', 'main')
   git('config', 'user.email', 't@example.com')
   git('config', 'user.name', 't')
@@ -580,7 +581,7 @@ describe('git push: only the session’s own branch (#2528)', () => {
 describe('inline code that drives GitHub is refused (#2528)', () => {
   it.each([
     `python3 -c "import subprocess; subprocess.run(['gh','pr','merge','1'])"`,
-    `node -e "require('child_process').execSync('git push origin HEAD:main')"`,
+    `node -e "require('child_process').execSync('git push origin HEAD:main')"`, // not-a-git-spawn: guard input
     `perl -e 'system("gh workflow disable ci.yml")'`,
     `node -e "fetch('${API}/pulls/1/merge',{method:'PUT'})"`,
   ])('%s', command => expectRefused(command))

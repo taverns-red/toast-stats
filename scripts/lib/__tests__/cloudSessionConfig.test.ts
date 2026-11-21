@@ -23,6 +23,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { writeStubExecutable } from './stubExecutable.js'
+import { gitEnv } from './gitEnv'
 
 const ROOT = process.cwd()
 const SETTINGS = resolve(ROOT, '.claude/settings.json')
@@ -64,7 +65,11 @@ function run(script: string, cwd: string, env: NodeJS.ProcessEnv) {
 }
 
 function git(cwd: string, ...args: string[]) {
-  const r = spawnSync('git', args, { cwd, env: hookEnv(), encoding: 'utf8' })
+  const r = spawnSync('git', args, {
+    cwd,
+    env: gitEnv({ GIT_CONFIG_NOSYSTEM: '1' }, hookEnv()),
+    encoding: 'utf8',
+  })
   if (r.status !== 0) throw new Error(`git ${args.join(' ')}: ${r.stderr}`)
   return r.stdout
 }
