@@ -414,7 +414,7 @@ const RegionPage: React.FC = () => {
     )
   }
 
-  // No districts map to this region number, so it is a bad link (#2647).
+  // No districts map to this region number, so it is a bad link.
   if (regionDistricts.length === 0) {
     return (
       <NotFoundPanel

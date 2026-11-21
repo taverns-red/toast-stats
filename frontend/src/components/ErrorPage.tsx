@@ -23,7 +23,7 @@ import {
  * Error! … Hey developer 👋 You can provide a way better UX…") with a calm,
  * branded page for the failure modes that bubble to the root route. Unknown
  * URLs and ids no longer reach it: the shell's `*` route and each page render
- * the not-found panel instead (#2647). What remains is:
+ * the not-found panel instead. What remains is:
  *   - any child route that throws at render → a runtime error
  *   - a stale-build chunk failure
  *   - a thrown 404 `Response`, kept as a fallback for a page that still throws

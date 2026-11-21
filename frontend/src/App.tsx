@@ -452,7 +452,7 @@ const router = createBrowserRouter(
           ),
         },
         {
-          // An unknown :tier shows the not-found panel inside the page (#2647).
+          // An unknown :tier shows the not-found panel inside the page.
           path: 'clubs/race/:tier',
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
@@ -685,7 +685,7 @@ const router = createBrowserRouter(
             </Suspense>
           ),
         },
-        // Unknown URLs render inside the shell (#2647); the root errorElement
+        // Unknown URLs render inside the shell; the root errorElement
         // is left for real crashes.
         { path: '*', element: <NotFoundPage /> },
       ],

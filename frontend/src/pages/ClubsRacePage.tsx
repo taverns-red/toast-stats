@@ -16,7 +16,7 @@ import { raceTierFromSlug, raceTierTitle } from '../utils/raceTierRoute'
 
 /* /clubs/race/:tier (#1556, phase 3) — the full "first to reach" leaderboard
    for ONE tier, a real route per tier (ADR-005). An unknown `:tier` shows
-   the not-found panel (#2647), never an empty race. `?highlight=<clubId>` marks and scrolls to one row, the deep link the
+   the not-found panel, never an empty race. `?highlight=<clubId>` marks and scrolls to one row, the deep link the
    club page will use. */
 
 const ClubsRaceTierPage: React.FC<{ tier: ClubRaceTier }> = ({ tier }) => {

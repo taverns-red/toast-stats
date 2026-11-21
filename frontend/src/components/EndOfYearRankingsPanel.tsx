@@ -201,7 +201,7 @@ const EndOfYearRankingsPanel: React.FC<EndOfYearRankingsPanelProps> = ({
         </p>
       )}
 
-      {/* "0 of 0" cards say nothing, so with no ranked districts say so (#2647). */}
+      {/* "0 of 0" cards say nothing, so with no ranked districts, say so. */}
       {!isLoading && !hasRankedDistricts && (
         <p className="text-sm text-gray-600 font-tm-body" role="note">
           No districts are ranked for this program year yet.

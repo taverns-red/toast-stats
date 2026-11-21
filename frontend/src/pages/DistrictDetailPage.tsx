@@ -614,7 +614,7 @@ const DistrictDetailPageInner: React.FC = () => {
   // data" fallback before the dated roster arrived.
   if (cachedDatesData && districtsData && !selectedDistrict && districtId) {
     // No snapshot and no rank-history year anywhere: the id is not a district
-    // we have ever tracked (#2647), so the Global Rankings view would be empty.
+    // we have ever tracked, so the Global Rankings view would be empty.
     if (!isLoadingRankHistoryYears && degradedDataYears.length === 0) {
       return (
         <NotFoundPanel
