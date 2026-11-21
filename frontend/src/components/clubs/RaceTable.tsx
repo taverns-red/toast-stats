@@ -16,7 +16,7 @@ import { StaticTableScroll } from '../dataTable/StaticTableScroll'
    that HAS reached (the artifact carries no other club), so the table has no
    bottom. Columns: Rank · Club · District · Reached (window copy) · Goals
    (10-dot strip from the INDEPENDENT boolean array — never goals 1–N) ·
-   Members (+ net growth) · Official (TI's rosette, only when the code exists).
+   Members (+ growth vs base) · Official (TI's rosette, only when the code exists).
 
    Today's numbers live under `current`; a club absent from today's snapshot
    keeps its crossing and shows "—" for today, with no "lost" label (spec §6).

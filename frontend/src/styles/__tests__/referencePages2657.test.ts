@@ -1,10 +1,11 @@
-// Reference-page link, measure and layout contracts (#2657, Fable UX review
-// REF-07, REF-20, REF-24, REF-31, REF-32).
+// Reference-page link and layout contracts (#2657, Fable UX review REF-07,
+// REF-20, REF-24, REF-31). The REF-32 measures are in
+// fontIndependentWidths.test.ts.
 //
-// jsdom applies no stylesheet, so an axe `link-in-text-block` run there sees
+// jsdom applies no stylesheet, so an axe `link-in-text-block` run here sees
 // unstyled links on both main and a fix and proves nothing. The contract is
-// pinned on the stylesheet instead; the PR screenshots show the rendered
-// result.
+// pinned on the stylesheet; e2e/reference-links.smoke.ts runs the axe rule
+// in a real browser.
 
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
@@ -67,22 +68,6 @@ describe('REF-07 links on /clubs and /clubs/race look like links', () => {
   it('race-table links use the link colour', () => {
     const r = decls(race, '.race-table a')
     expect(r['color']).toBe('var(--link)')
-  })
-})
-
-describe('REF-32 prose keeps a readable measure', () => {
-  // 34.8em is 70 of Source Sans 3's "0"; ch would re-wrap at the font swap
-  // (fontIndependentWidths.test.ts).
-  it('basis-box paragraphs stop at about 70 characters', () => {
-    expect(decls(load('clubs-race.css'), '.race-basis p')['max-width']).toBe(
-      '34.8em'
-    )
-  })
-
-  it('page body copy stops at about 70 characters', () => {
-    expect(
-      decls(load('app-shell.css'), '.placeholder-page__body')['max-width']
-    ).toBe('34.8em')
   })
 })
 
