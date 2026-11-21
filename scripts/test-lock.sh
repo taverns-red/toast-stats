@@ -5,6 +5,10 @@
 # Takes the ops test-slot wrapper with this repo's own lock folder and a limit
 # of 1. Without the wrapper (CI, cloud) it runs the command directly.
 # Enforced by scripts/lib/__tests__/testLock.test.ts.
+# Never wrap this script in run.sh by hand: that takes a machine slot before
+# the repo lock, the reverse of the pre-push hook's order, and enough such
+# callers deadlock until the 20-minute timeout. Call it directly. No test
+# enforces this; CLAUDE.md states the order.
 if [ $# -eq 0 ]; then
   echo "usage: scripts/test-lock.sh <command> [args...]" >&2
   exit 64

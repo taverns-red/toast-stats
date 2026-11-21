@@ -79,7 +79,7 @@ npm run quality:check
 npm run pre-commit
 ```
 
-**Local test runs:** run full local suites only through `~/code/ops/tools/test-slot/run.sh` (at most 3 machine-wide) and this repo's one-run lock, `scripts/test-lock.sh <command>`; targeted runs use `--maxWorkers=2` and touched files only; full suites belong on CI (ops#425, #3166).
+**Local test runs:** run a full local suite only as `scripts/test-lock.sh ~/code/ops/tools/test-slot/run.sh <command>` (this repo's one-run lock first, then a machine slot, at most 3 machine-wide), never the other way round; targeted runs use `--maxWorkers=2` and touched files only; full suites belong on CI (ops#425, #3166).
 
 ## Architecture
 

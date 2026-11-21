@@ -143,7 +143,7 @@ describe('scripts/test-lock.sh (#3166)', () => {
         'sh',
         [
           '-c',
-          `sh "${LOCK}" slow a & n=0; while [ ! -f "${started}" ] && [ $n -lt 100 ]; do n=$((n+1)); sleep 0.1; done; sh "${LOCK}" slow b; wait`,
+          `sh "${LOCK}" slow a & n=0; while [ ! -f "${started}" ] && [ $n -lt 50 ]; do n=$((n+1)); sleep 0.1; done; sh "${LOCK}" slow b; wait`,
         ],
         {
           cwd: root,
