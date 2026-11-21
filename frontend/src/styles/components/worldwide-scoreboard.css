@@ -138,8 +138,10 @@
   color: var(--ink);
 }
 
-.wws__metric-head,
-.wws__year-head {
+/* Every header cell, the country table's included: a plain header with the
+   shared `padding: 0` sits 10px below a `.wws__num` neighbour
+   (table-header-alignment smoke, /history). */
+.wws__table thead th {
   background: var(--surface);
   border-bottom: 2px solid var(--line);
   font-size: var(--dt-header-font);
@@ -236,11 +238,18 @@
 .wws__cell,
 .wws__num {
   text-align: right;
-  vertical-align: top;
   padding: 10px 14px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
+}
+
+/* Body cells only. This file is unlayered, so on a header it would beat the
+   shared `.dt thead th { vertical-align: bottom }` and lift Clubs and Share
+   10px above Country (table-header-alignment smoke, /history). */
+.wws__cell,
+tbody .wws__num {
+  vertical-align: top;
 }
 
 /* An absent value is a fact, not a blank. It is rendered in the muted ink so

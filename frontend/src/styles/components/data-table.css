@@ -222,8 +222,13 @@
     table-layout: auto;
   }
 
+  /* `top: auto` too: a static table that pins a header cell sideways
+     (`position: sticky; left: 0`) would otherwise pick up the page-pinned
+     top offset and drop that cell 56px below the rest of its row
+     (table-header-alignment smoke, /history). */
   .dt.dt-static thead th {
     position: static;
+    top: auto;
   }
 
   @media (pointer: coarse) {
