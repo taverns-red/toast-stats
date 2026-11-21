@@ -39,6 +39,7 @@ export const PREVIEW_PATHS = [
   'scripts/lib/smokeFixtures.ts',
   'scripts/lib/cdnSchemaCanary.ts', // its schema pass reuses these
   'scripts/lib/zodIssueSummary.ts',
+  'scripts/lib/reportSidecarPath.ts',
   'scripts/smoke-fixtures.manifest.json',
 ] as const
 

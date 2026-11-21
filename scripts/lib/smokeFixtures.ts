@@ -35,6 +35,7 @@ import {
   TimeSeriesIndexMetadataSchema,
 } from '@taverns-red/shared-contracts'
 import { decodeCdnJson } from './cdnSchemaCanary.js'
+import { isReportSidecar } from './reportSidecarPath.js'
 import { summarizeZodIssues } from './zodIssueSummary.js'
 
 export interface ManifestEntry {
@@ -113,6 +114,8 @@ export interface RefreshReport {
   bytes: number
   failures: string[]
   unvalidated: string[]
+  /** Newest-date report sidecars recorded as 404s (see isPendingSidecar). */
+  pendingSidecars?: string[]
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -488,6 +491,37 @@ export async function loadExpandVars(
   return vars
 }
 
+/**
+ * A report sidecar of the newest date. The daily moves v1/latest.json before
+ * the reports job writes these, so a 404 is the CDN's real state for a while,
+ * not drift. Older dates must have them. Tested in smokeFixtures.test.ts
+ * ("while the daily reports job is still writing the newest date").
+ */
+function isPendingSidecar(path: string, newest: string): boolean {
+  return isReportSidecar(path) && path.startsWith(`snapshots/${newest}/`)
+}
+
+/**
+ * How long after v1/latest.json moves a missing newest-date sidecar counts
+ * as pending. The reports job finished about 22 minutes after the move on
+ * 2026-11-20 and 2026-11-21; past this, a missing file is a real failure,
+ * and this step is its only alarm. Tested in smokeFixtures.test.ts.
+ */
+export const PENDING_SIDECAR_WINDOW_MS = 3 * 3_600_000
+
+/** True while latest.json's `generatedAt` is a timestamp within the window;
+ *  missing or unparseable fails closed. */
+export function withinPendingWindow(
+  generatedAt: unknown,
+  nowMs: number
+): boolean {
+  if (typeof generatedAt !== 'string') return false
+  const movedMs = Date.parse(generatedAt)
+  if (Number.isNaN(movedMs)) return false
+  const age = nowMs - movedMs
+  return age >= 0 && age <= PENDING_SIDECAR_WINDOW_MS
+}
+
 const CONCURRENCY = 8
 
 async function inBatches<T, R>(
@@ -520,11 +554,14 @@ export async function refreshFixtures(options: {
   fetchFn: FetchFn
   rules?: SchemaRule[]
   readLocal?: (relativePath: string) => Uint8Array
+  /** The clock, in epoch ms; tests set it. */
+  now?: () => number
 }): Promise<RefreshReport> {
   const { manifest, fetchFn } = options
   const outDir = resolve(options.outDir)
   const failures: string[] = []
   const unvalidated: string[] = []
+  const pendingSidecars: string[] = []
   const report = (date: string, written = 0, bytes = 0): RefreshReport => ({
     ok: failures.length === 0,
     date,
@@ -532,6 +569,7 @@ export async function refreshFixtures(options: {
     bytes,
     failures,
     unvalidated,
+    pendingSidecars: pendingSidecars.sort(),
   })
 
   // One fetch per object, whoever asks first (the roles and the entries).
@@ -562,6 +600,11 @@ export async function refreshFixtures(options: {
     return report('')
   }
   const date = vars.date
+  const latest = (await getJson('v1/latest.json')) as { generatedAt?: unknown }
+  const sidecarsMayBePending = withinPendingWindow(
+    latest.generatedAt,
+    (options.now ?? Date.now)()
+  )
 
   const entries = expandManifest(manifest, vars)
   const index: Record<string, { status: number; contentType: string }> = {}
@@ -608,7 +651,18 @@ export async function refreshFixtures(options: {
       )
       return
     }
-    if (res.status !== 200 && !(entry.optional && res.status === 404)) {
+    if (res.status === 404 && !entry.optional) {
+      const pending = isPendingSidecar(entry.path, date)
+      if (!pending || !sidecarsMayBePending) {
+        failures.push(
+          pending
+            ? `${entry.path}: HTTP 404, and v1/latest.json's generatedAt is missing or more than 3 hours old, so the reports job is not still writing it`
+            : `${entry.path}: HTTP 404`
+        )
+        return
+      }
+      pendingSidecars.push(entry.path)
+    } else if (res.status !== 200 && res.status !== 404) {
       failures.push(`${entry.path}: HTTP ${res.status}`)
       return
     }
@@ -643,6 +697,12 @@ export function formatReport(report: RefreshReport): string {
     `${report.ok ? 'OK' : 'FAILED'}: ${report.written} objects, ${kb} KiB, snapshot ${report.date}`,
   ]
   for (const f of report.failures) lines.push(`  fail  ${f}`)
+  if (report.pendingSidecars && report.pendingSidecars.length > 0) {
+    lines.push(
+      `${report.pendingSidecars.length} report sidecar(s) of the newest date are not written yet (the daily reports job is still running); recorded as 404, like the CDN serves them:`
+    )
+    for (const p of report.pendingSidecars) lines.push(`  ${p}`)
+  }
   if (report.unvalidated.length > 0) {
     lines.push(
       `${report.unvalidated.length} JSON object(s) have no schema rule (unvalidated):`

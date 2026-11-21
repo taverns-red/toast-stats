@@ -8,7 +8,7 @@ import picomatch from 'picomatch'
 import { PREVIEW_PATHS, isPreviewPath, needsPreview } from '../previewPaths'
 
 describe('PREVIEW_PATHS', () => {
-  it('is the list pr-preview.yml carried as `paths:`, unchanged (20 entries)', () => {
+  it('is the list pr-preview.yml carried as `paths:`, plus the sidecar path rule the fixtures use (#2750)', () => {
     expect([...PREVIEW_PATHS]).toEqual([
       'frontend/**',
       'packages/shared-contracts/**',
@@ -29,6 +29,7 @@ describe('PREVIEW_PATHS', () => {
       'scripts/lib/smokeFixtures.ts',
       'scripts/lib/cdnSchemaCanary.ts',
       'scripts/lib/zodIssueSummary.ts',
+      'scripts/lib/reportSidecarPath.ts',
       'scripts/smoke-fixtures.manifest.json',
     ])
   })

@@ -35,16 +35,12 @@ import {
 } from './runManifest.js'
 import type { CompletenessVerdict } from './manifestPromotion.js'
 
-/** A sidecar or the reports rollup, directly under its date. */
-export const REPORT_SIDECAR =
-  /^snapshots\/(\d{4}-\d{2}-\d{2})\/(district_[A-Za-z0-9]+_reports\.json|reports-rollups\.json)$/
+import { REPORT_SIDECAR, isReportSidecar } from './reportSidecarPath.js'
+
+export { REPORT_SIDECAR, isReportSidecar } from './reportSidecarPath.js'
 
 export const CARRY_STAGE = 'carry-reports'
 export const DEFAULT_CARRY_DAYS = 7
-
-export function isReportSidecar(path: string): boolean {
-  return REPORT_SIDECAR.test(path)
-}
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
