@@ -27,6 +27,7 @@ import {
   useChartReadout,
   ChartReadout,
   formatReadoutDate,
+  type ChartReading,
 } from './charts/ChartReadout'
 import {
   ChartLegendChips,
@@ -205,6 +206,27 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
     return dataPoint
   })
 
+  // The phone readout drops null values, so a tied date would show only
+  // its date; describe it as the desktop tooltip does.
+  const describeTiedReading = (label: string): ChartReading | null => {
+    const rows = data.flatMap((district, index) =>
+      legend.isVisible(district.districtId) &&
+      isTied(district.districtId, label)
+        ? [
+            {
+              key: district.districtId,
+              name: district.districtId,
+              value: 'Tied',
+              color:
+                DISTRICT_COLORS[index % DISTRICT_COLORS.length] ??
+                'var(--tm-loyal-blue)',
+            },
+          ]
+        : []
+    )
+    return rows.length > 0 ? { label: formatReadoutDate(label), rows } : null
+  }
+
   // Generate chart description for accessibility
   const metricLabel = {
     aggregate: 'Overall Score',
@@ -291,7 +313,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 label={
                   selectedMetric === 'aggregate'
                     ? {
-                        value: 'Score (lower is better)',
+                        value: 'Score (higher is better)',
                         angle: -90,
                         position: 'insideLeft',
                         style: AXIS_LABEL_STYLE,
@@ -347,6 +369,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
       <ChartReadout
         readout={readout}
         labelFormatter={formatReadoutDate}
+        describe={describeTiedReading}
         nameFormatter={id =>
           data.find(d => d.districtId === id)?.districtName ?? id
         }

@@ -18,6 +18,7 @@ import {
   useChartReadout,
   ChartReadout,
   formatReadoutDate,
+  type ChartReading,
 } from './charts/ChartReadout'
 import {
   ChartHeader,
@@ -33,6 +34,8 @@ import {
 import { isRankTied } from '../utils/rankTies'
 
 export type { RankMetric }
+
+const ALL_TIED_MESSAGE = 'Every district has the same value so far.'
 
 /**
  * Props for the FullYearRankingChart component
@@ -195,6 +198,25 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
       : (point[metricConfig.dataKey] as number),
   }))
 
+  const allTied = chartData.every(d => d.value === null)
+
+  // The phone readout drops null values, so a tied date would show only
+  // its date; describe it as the desktop tooltip does.
+  const describeReading = (label: string): ChartReading | null =>
+    tiedDates.has(label)
+      ? {
+          label: formatReadoutDate(label),
+          rows: [
+            {
+              key: 'value',
+              name: metricConfig.shortLabel,
+              value: 'Tied',
+              color: 'var(--tm-loyal-blue)',
+            },
+          ],
+        }
+      : null
+
   // One labelled tick per month (the first snapshot of it), not 30 dates.
   const monthTicks = firstDatePerMonth(chartData.map(d => d.date))
 
@@ -227,96 +249,111 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
       >
         {/* The desktop min-width; a phone sheet is narrower (#1835). */}
         <div className={compact ? undefined : 'min-w-[320px]'}>
-          <ResponsiveContainer
-            width="100%"
-            height={PLOT_HEIGHT}
-            minWidth={compact ? 0 : 320}
-          >
-            <LineChart
-              {...readout.chartProps}
-              data={chartData}
-              margin={{
-                top: 5,
-                right: compact ? 16 : 10,
-                left: 0,
-                bottom: compact ? 5 : 60,
-              }}
-              aria-hidden="true"
-              // The wrapper is the accessible role="img"; Recharts' default
-              // layer would put tabindex=0 inside aria-hidden (#1660).
-              accessibilityLayer={false}
+          {allTied ? (
+            <div
+              className="flex items-center justify-center"
+              style={{ height: PLOT_HEIGHT }}
             >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="var(--tm-cool-gray-20)"
-              />
-              <XAxis
-                dataKey="date"
-                stroke="var(--tm-cool-gray)"
-                tick={AXIS_TICK}
-                ticks={monthTicks}
-                {...dateAxisLayout(
-                  compact,
-                  chartData.map(d => d.date)
-                )}
-                tickFormatter={value => {
-                  const date = parseLocalDate(value)
-                  return date.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  })
+              <p className="text-base text-gray-600 font-tm-body text-center">
+                {ALL_TIED_MESSAGE}
+              </p>
+            </div>
+          ) : (
+            <ResponsiveContainer
+              width="100%"
+              height={PLOT_HEIGHT}
+              minWidth={compact ? 0 : 320}
+            >
+              <LineChart
+                {...readout.chartProps}
+                data={chartData}
+                margin={{
+                  top: 5,
+                  right: compact ? 16 : 10,
+                  left: 0,
+                  bottom: compact ? 5 : 60,
                 }}
-              />
-              <YAxis
-                stroke="var(--tm-cool-gray)"
-                tick={AXIS_TICK}
-                width={50}
-                reversed={true}
-                // Rank 1 is the floor; ranks are whole numbers.
-                domain={[1, 'dataMax'] as const}
-                allowDecimals={false}
-                label={{
-                  value: 'Rank (1 = best)',
-                  angle: -90,
-                  position: 'insideLeft',
-                  style: AXIS_LABEL_STYLE,
-                }}
-              />
-              <Tooltip
-                content={
-                  <CustomTooltip
-                    selectedMetric={selectedMetric}
-                    tiedDates={tiedDates}
-                  />
-                }
-                // Keep tied dates, whose value is null, so they read "Tied"
-                filterNull={false}
-                {...readout.tooltipProps}
-              />
-              <Line
-                // Integer ranks: a spline would dip below the axis floor.
-                type="linear"
-                dataKey="value"
-                stroke="var(--tm-loyal-blue)"
-                strokeWidth={2}
-                dot={{
-                  fill: 'var(--tm-loyal-blue)',
-                  r: 0.3,
-                }}
-                activeDot={{
-                  r: 6,
-                  fill: 'var(--tm-loyal-blue)',
-                  stroke: 'var(--tm-white)',
-                  strokeWidth: 2,
-                }}
-                name={metricConfig.label}
-                connectNulls
-              />
-            </LineChart>
-          </ResponsiveContainer>
+                aria-hidden="true"
+                // The wrapper is the accessible role="img"; Recharts' default
+                // layer would put tabindex=0 inside aria-hidden (#1660).
+                accessibilityLayer={false}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--tm-cool-gray-20)"
+                />
+                <XAxis
+                  dataKey="date"
+                  stroke="var(--tm-cool-gray)"
+                  tick={AXIS_TICK}
+                  ticks={monthTicks}
+                  {...dateAxisLayout(
+                    compact,
+                    chartData.map(d => d.date)
+                  )}
+                  tickFormatter={value => {
+                    const date = parseLocalDate(value)
+                    return date.toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    })
+                  }}
+                />
+                <YAxis
+                  stroke="var(--tm-cool-gray)"
+                  tick={AXIS_TICK}
+                  width={50}
+                  reversed={true}
+                  // Rank 1 is the floor; ranks are whole numbers.
+                  domain={[1, 'dataMax'] as const}
+                  allowDecimals={false}
+                  label={{
+                    value: 'Rank (1 = best)',
+                    angle: -90,
+                    position: 'insideLeft',
+                    style: AXIS_LABEL_STYLE,
+                  }}
+                />
+                <Tooltip
+                  content={
+                    <CustomTooltip
+                      selectedMetric={selectedMetric}
+                      tiedDates={tiedDates}
+                    />
+                  }
+                  // Keep tied dates, whose value is null, so they read "Tied"
+                  filterNull={false}
+                  {...readout.tooltipProps}
+                />
+                <Line
+                  // Integer ranks: a spline would dip below the axis floor.
+                  type="linear"
+                  dataKey="value"
+                  stroke="var(--tm-loyal-blue)"
+                  strokeWidth={2}
+                  dot={{
+                    fill: 'var(--tm-loyal-blue)',
+                    r: 0.3,
+                  }}
+                  activeDot={{
+                    r: 6,
+                    fill: 'var(--tm-loyal-blue)',
+                    stroke: 'var(--tm-white)',
+                    strokeWidth: 2,
+                  }}
+                  name={metricConfig.label}
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
-      <ChartReadout readout={readout} labelFormatter={formatReadoutDate} />
+      <ChartReadout
+        readout={readout}
+        labelFormatter={formatReadoutDate}
+        describe={describeReading}
+      />
 
       {/* Screen reader accessible description */}
       <p id="full-year-rank-chart-desc" className="sr-only">
@@ -360,7 +397,7 @@ function generateChartDescription(
   const lastPoint = ranked[ranked.length - 1]
 
   if (!firstPoint || !lastPoint) {
-    return `${metricConfig.label} chart for ${data.districtName} in the ${programYear.label} program year.`
+    return `${metricConfig.label} chart for ${data.districtName} in the ${programYear.label} program year. ${ALL_TIED_MESSAGE}`
   }
 
   // Calculate trend
