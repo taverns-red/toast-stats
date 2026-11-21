@@ -86,6 +86,15 @@ describe('REF-24 History year chips read as links', () => {
   })
 })
 
+describe('REF-24 the "earlier" chip reads as a link, not a placeholder', () => {
+  it('uses the link colour, upright text and a solid border', () => {
+    const r = decls(load('app-shell.css'), '.history-page-year-chip--gap')
+    expect(r['color']).toBe('var(--link)')
+    expect(r['font-style']).not.toBe('italic')
+    expect(r['border'] ?? '').not.toMatch(/dashed/)
+  })
+})
+
 describe('REF-31 Awards uses two columns from 640px', () => {
   it('the award grid has two columns at 640px', () => {
     const block = mediaBlocks(load('app-shell.css'), '(min-width: 640px)')

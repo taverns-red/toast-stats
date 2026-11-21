@@ -107,9 +107,10 @@ describe('HistoryPage — year chips are links (#2657 REF-24)', () => {
     const strip = screen.getByTestId('history-year-strip')
     const chip = within(strip).getByRole('link', { name: /earlier/i })
     const target = chip.getAttribute('href')!.slice(1)
-    expect(document.getElementById(target)).toBe(
-      screen.getByTestId('history-archive-callout')
-    )
+    const callout = screen.getByTestId('history-archive-callout')
+    expect(document.getElementById(target)).toBe(callout)
+    // Safari moves focus to an in-page target only if it is focusable.
+    expect(callout).toHaveAttribute('tabindex', '-1')
   })
 
   it('every chip in the strip is a link once the years have loaded', () => {
