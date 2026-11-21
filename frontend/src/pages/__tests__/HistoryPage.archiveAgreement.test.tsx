@@ -102,6 +102,25 @@ describe('HistoryPage — year chips are links (#2657 REF-24)', () => {
     )
   })
 
+  it('the "earlier" chip links to the callout that explains it', () => {
+    renderPage()
+    const strip = screen.getByTestId('history-year-strip')
+    const chip = within(strip).getByRole('link', { name: /earlier/i })
+    const target = chip.getAttribute('href')!.slice(1)
+    const callout = screen.getByTestId('history-archive-callout')
+    expect(document.getElementById(target)).toBe(callout)
+    // Safari moves focus to an in-page target only if it is focusable.
+    expect(callout).toHaveAttribute('tabindex', '-1')
+  })
+
+  it('every chip in the strip is a link once the years have loaded', () => {
+    renderPage()
+    const strip = screen.getByTestId('history-year-strip')
+    for (const item of within(strip).getAllByRole('listitem')) {
+      expect(within(item).getByRole('link')).toBeInTheDocument()
+    }
+  })
+
   it('nothing in the strip that is not a link carries aria-current', () => {
     renderPage()
     const strip = screen.getByTestId('history-year-strip')

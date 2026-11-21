@@ -1,10 +1,6 @@
-// Reference-page link, measure and layout contracts (#2657, Fable UX review
-// REF-07, REF-20, REF-24, REF-31, REF-32).
-//
-// jsdom applies no stylesheet, so an axe `link-in-text-block` run there sees
-// unstyled links on both main and a fix and proves nothing. The contract is
-// pinned on the stylesheet instead; the PR screenshots show the rendered
-// result.
+// jsdom applies no stylesheet, so these reference-page link and layout rules
+// are pinned on the CSS. reference-links.smoke.ts runs axe in a browser;
+// the REF-32 measures are in fontIndependentWidths.test.ts.
 
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
@@ -70,20 +66,6 @@ describe('REF-07 links on /clubs and /clubs/race look like links', () => {
   })
 })
 
-describe('REF-32 prose keeps a readable measure', () => {
-  it('basis-box paragraphs stop at 70ch', () => {
-    expect(decls(load('clubs-race.css'), '.race-basis p')['max-width']).toBe(
-      '70ch'
-    )
-  })
-
-  it('page body copy stops at 70ch', () => {
-    expect(
-      decls(load('app-shell.css'), '.placeholder-page__body')['max-width']
-    ).toBe('70ch')
-  })
-})
-
 describe('REF-20 the MCP one-liner wraps instead of clipping', () => {
   it('the command snippet wraps, breaking anywhere if it must', () => {
     const r = decls(load('app-shell.css'), '.mcp-page__snippet--command')
@@ -96,6 +78,15 @@ describe('REF-24 History year chips read as links', () => {
   it('chip links show an underline on hover', () => {
     const r = decls(load('app-shell.css'), 'a.history-page-year-chip:hover')
     expect(r['text-decoration']).toMatch(/underline/)
+  })
+})
+
+describe('REF-24 the "earlier" chip reads as a link, not a placeholder', () => {
+  it('uses the link colour, upright text and a solid border', () => {
+    const r = decls(load('app-shell.css'), '.history-page-year-chip--gap')
+    expect(r['color']).toBe('var(--link)')
+    expect(r['font-style']).not.toBe('italic')
+    expect(r['border'] ?? '').not.toMatch(/dashed/)
   })
 })
 

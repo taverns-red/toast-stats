@@ -109,11 +109,13 @@ const HistoryPage: React.FC = () => {
                 </a>
               </span>
             ))}
-        <span
-          className="history-page-year-chip history-page-year-chip--gap"
-          role="listitem"
-        >
-          earlier · TI archive only
+        <span role="listitem">
+          <a
+            href="#history-archive-callout"
+            className="history-page-year-chip history-page-year-chip--gap"
+          >
+            earlier · TI archive only
+          </a>
         </span>
       </div>
 
@@ -136,6 +138,8 @@ const HistoryPage: React.FC = () => {
       />
 
       <div
+        id="history-archive-callout"
+        tabIndex={-1}
         className="districts-methodology-callout"
         style={{ marginTop: 32 }}
         data-testid="history-archive-callout"

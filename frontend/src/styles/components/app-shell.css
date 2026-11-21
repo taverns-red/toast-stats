@@ -682,7 +682,7 @@
     font-size: 14px;
     color: var(--ink-2);
     /* #2657 REF-32: a readable measure on wide headers. */
-    max-width: 70ch;
+    max-width: 34.8em;
   }
 
   /* "What does this page answer?" lede for the long-text/doc-style routes
@@ -6337,10 +6337,8 @@
   }
 
   .history-page-year-chip--gap {
-    font-style: italic;
-    color: var(--ink-3);
+    color: var(--link);
     background-color: transparent;
-    border: 1px dashed var(--line);
   }
 
   /* Per-year summary cards (#892). Responsive grid; each card links into the

@@ -23,7 +23,38 @@ const MEASURES = [
     selector: '.action-list-page__subtitle',
     chars: 60,
   },
+  { file: 'clubs-race.css', selector: '.race-basis p', chars: 70 },
 ] as const
+
+/* app-shell.css still has older ch measures elsewhere, so only these rules
+   are held to em here. */
+const RULE_MEASURES = [
+  { file: 'app-shell.css', selector: '.placeholder-page__body', chars: 70 },
+] as const
+
+const ruleOf = (css: string, selector: string) => {
+  const start = css.indexOf(`${selector} {`)
+  expect(start, `no ${selector} rule`).toBeGreaterThanOrEqual(0)
+  return css.slice(start, css.indexOf('}', start))
+}
+
+describe.each(RULE_MEASURES)(
+  '$file $selector does not depend on the loaded font',
+  ({ file, selector, chars }) => {
+    const rule = ruleOf(read(file), selector)
+
+    it('uses no ch unit', () => {
+      expect(rule.match(/[\d.]+ch\b/g)).toBeNull()
+    })
+
+    it(`keeps the ${chars}-character measure of Source Sans 3, in em`, () => {
+      const em = Number(rule.match(/max-width:\s*([\d.]+)em/)?.[1])
+      expect(Math.abs(em - chars * SOURCE_SANS_3_ZERO_EM)).toBeLessThanOrEqual(
+        TOLERANCE_EM
+      )
+    })
+  }
+)
 
 describe.each(MEASURES)(
   '$file widths do not depend on the loaded font',

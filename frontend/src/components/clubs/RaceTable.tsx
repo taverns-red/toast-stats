@@ -11,6 +11,8 @@ import { reachWindowCopy } from '../../utils/reachWindowCopy'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { MobileRowList, type MobileRow } from '../MobileRowList'
 import { StaticTableScroll } from '../dataTable/StaticTableScroll'
+import InfoTooltip from '../InfoTooltip'
+import { PROGRAM_YEAR_START_BASIS } from '../../utils/netChangeBasis'
 
 /* #1556 — the full "first to reach" table for one tier. Every row is a club
    that HAS reached (the artifact carries no other club), so the table has no
@@ -136,7 +138,7 @@ export const RaceTable: React.FC<RaceTableProps> = ({
           current
             ? `, ${current.goalsMet} of 10 goals, ${current.members} members (${signed(
                 current.netGrowth
-              )})`
+              )} ${PROGRAM_YEAR_START_BASIS})`
             : ''
         }${row.official ? ', officially recognised' : ''}`,
       }
@@ -169,7 +171,13 @@ export const RaceTable: React.FC<RaceTableProps> = ({
             <th scope="col">District</th>
             <th scope="col">Reached</th>
             <th scope="col">Goals</th>
-            <th scope="col">Members</th>
+            <th scope="col">
+              Members
+              <InfoTooltip
+                label="the members change"
+                text={`Change ${PROGRAM_YEAR_START_BASIS}`}
+              />
+            </th>
             {showOfficial && <th scope="col">Official</th>}
           </tr>
         </thead>

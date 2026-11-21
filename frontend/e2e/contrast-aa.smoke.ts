@@ -147,9 +147,10 @@ const CASES: {
   // #1904: the provisional tier text (dark; was the projected pill, now plain
   // text with "provisional" on a second line, #2676) and the chart legend
   // text, at the tablet and desktop widths #1839's 375 gate did not cover.
-  // #2643 / #2774: the two routes the light-mode contrast issue named. There
-  // is no axe dependency, so this text-contrast walk stands in for axe's
-  // `color-contrast` rule (non-text glyphs: light-glyph-contrast.smoke.ts).
+  // #2643 / #2774: the two routes the light-mode contrast issue named. This
+  // text-contrast walk stands in for axe's `color-contrast` rule (non-text
+  // glyphs: light-glyph-contrast.smoke.ts); reference-links.smoke.ts is the
+  // only smoke that runs axe itself.
   ...[375, 1280].flatMap(width => [
     { path: '/', width, ready: '.landing-search__input' },
     {

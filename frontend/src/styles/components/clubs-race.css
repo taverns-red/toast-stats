@@ -498,7 +498,7 @@
   .race-basis p {
     margin: 0 0 0.5rem;
     /* #2657 REF-32: a readable measure; the box ran 133-163 characters. */
-    max-width: 70ch;
+    max-width: 34.8em;
   }
 
   /* #2657 REF-07 (WCAG 1.4.1): links in the basis prose were the paragraph's
