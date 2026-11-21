@@ -9,12 +9,18 @@ import { writeStubExecutable } from './stubExecutable.js'
  * scripts/test-lock.sh keeps local test runs to one at a time (#3166, ops#425).
  *
  * These run the real script with a stub wrapper named by TOAST_TEST_SLOT_RUN
- * that logs the lock folder and limit it was given. The last case uses the
- * real ops wrapper and is skipped where it is not installed (CI, cloud).
+ * that logs the lock folder and limit it was given. The cases that need real
+ * locking use the ops wrapper and are skipped where it is not installed (CI,
+ * cloud). Lock folders live under a temp HOME, never the real ones.
  */
 
 const root = path.resolve(__dirname, '../../..')
 const LOCK = path.join(root, 'scripts/test-lock.sh')
+
+const REAL = path.join(
+  process.env.HOME ?? '',
+  'code/ops/tools/test-slot/run.sh'
+)
 
 describe('scripts/test-lock.sh (#3166)', () => {
   let dir: string
@@ -80,22 +86,18 @@ describe('scripts/test-lock.sh (#3166)', () => {
     expect(calls()).toEqual(['suite --a'])
   })
 
-  const REAL_RUN = path.join(
-    process.env.HOME ?? '',
-    'code/ops/tools/test-slot/run.sh'
-  )
-  it.skipIf(!existsSync(REAL_RUN))(
+  it.skipIf(!existsSync(REAL))(
     'still takes the repo lock inside a held machine slot (#3172)',
     () => {
       stub('suite', `ls "${repoLock}" >> "${log}"`)
 
-      const r = spawnSync('sh', ['-c', `"${REAL_RUN}" sh "${LOCK}" suite`], {
+      const r = spawnSync('sh', ['-c', `"${REAL}" sh "${LOCK}" suite`], {
         cwd: root,
         encoding: 'utf-8',
         env: {
           PATH: `${dir}:/usr/bin:/bin`,
           HOME: dir,
-          TOAST_TEST_SLOT_RUN: REAL_RUN,
+          TOAST_TEST_SLOT_RUN: REAL,
           RT_TEST_SLOT_DIR: path.join(dir, 'outer-slots'),
           RT_TEST_SLOT_TIMEOUT: '4',
         },
@@ -131,11 +133,6 @@ describe('scripts/test-lock.sh (#3166)', () => {
     expect(r.status).toBe(0)
     expect(calls()).toEqual([`slot ${repoLock} 1`, 'slot machine 3', 'suite'])
   })
-
-  const REAL = path.join(
-    process.env.HOME ?? '',
-    'code/ops/tools/test-slot/run.sh'
-  )
 
   it.skipIf(!existsSync(REAL))(
     'a nested test-lock.sh inside a held repo lock passes through without waiting (#3172)',
