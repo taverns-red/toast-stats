@@ -408,6 +408,7 @@ const DistrictsPage: React.FC = () => {
     isLoading: isLoadingRankHistory,
     isError: isErrorRankHistory,
     error: rankHistoryError,
+    refetch: refetchRankHistory,
   } = useRankHistory({
     districtIds: selectedDistricts,
     startDate: selectedProgramYear.startDate,
@@ -1773,6 +1774,7 @@ const DistrictsPage: React.FC = () => {
                 isLoading={isLoadingRankHistory}
                 isError={isErrorRankHistory}
                 error={rankHistoryError}
+                onRetry={() => void refetchRankHistory()}
                 selectedProgramYear={selectedProgramYear}
               />
             </ChartSparklineExpand>

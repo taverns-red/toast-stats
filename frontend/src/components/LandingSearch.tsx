@@ -24,6 +24,7 @@ import { useNavigate } from 'react-router-dom'
 import { useOmniSearch } from '../hooks/useOmniSearch'
 import OmniSearchResults from './AppShell/OmniSearchResults'
 import { type SearchEntity } from '../services/searchIndex'
+import { couldntLoad } from '../utils/loadFailureText'
 
 const LISTBOX_ID = 'landing-search-results'
 const OPTION_PREFIX = 'landing-search-option'
@@ -259,14 +260,14 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
               aria-live="polite"
               className="command-palette__empty landing-search__status"
             >
-              Could not load search.{' '}
+              {couldntLoad('search')}{' '}
               <button
                 type="button"
                 className="landing-search__retry"
                 onMouseDown={e => e.preventDefault()}
                 onClick={retryIndex}
               >
-                Retry
+                Try again
               </button>
             </p>
           ) : status ? (

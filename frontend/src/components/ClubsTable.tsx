@@ -1073,6 +1073,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                 changesAvailable={changesOffered}
                 changesLoading={!snapshotDiff && !!deferredChanges?.isLoading}
                 changesFailed={!snapshotDiff && diffFailed}
+                onRetryChanges={retryChanges}
                 onOpen={onColumnsOpen}
                 changesLabel={changesLabel}
                 sinceActive={!!sinceByClub}
