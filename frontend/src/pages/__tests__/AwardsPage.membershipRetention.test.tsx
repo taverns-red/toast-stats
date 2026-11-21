@@ -68,7 +68,11 @@ const TITLE = /President.s Membership Retention Award/
 describe('AwardsPage — membership retention estimate (#1614)', () => {
   beforeEach(() => {
     mockStandings = base
-    vi.mocked(fetchCdnDates).mockResolvedValue({ dates: [], count: 0 })
+    vi.mocked(fetchCdnDates).mockResolvedValue({
+      dates: [],
+      count: 0,
+      generatedAt: '2026-08-01T00:00:00Z',
+    })
   })
 
   it('shows the card when the file has the award', () => {
@@ -136,6 +140,7 @@ describe('AwardsPage — membership retention estimate (#1614)', () => {
       vi.mocked(fetchCdnDates).mockResolvedValue({
         dates: ['2025-04-30', '2025-06-27', '2026-07-31'],
         count: 3,
+        generatedAt: '2026-08-01T00:00:00Z',
       })
       mockStandings = inProgress
       renderPage('/?py=2024')
@@ -147,6 +152,7 @@ describe('AwardsPage — membership retention estimate (#1614)', () => {
       vi.mocked(fetchCdnDates).mockResolvedValue({
         dates: ['2026-04-30', '2026-06-27'],
         count: 2,
+        generatedAt: '2026-08-01T00:00:00Z',
       })
       mockStandings = inProgress
       renderPage('/?py=2025')
