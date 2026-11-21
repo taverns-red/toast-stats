@@ -21,15 +21,18 @@ import {
  *
  * Replaces React Router's raw developer default ("Unexpected Application
  * Error! … Hey developer 👋 You can provide a way better UX…") with a calm,
- * branded page for the two failure modes that bubble to the root route:
- *   - an unmatched route → a 404 `ErrorResponse` (no route matched)
+ * branded page for the failure modes that bubble to the root route. Unknown
+ * URLs and ids no longer reach it: the shell's `*` route and each page render
+ * the not-found panel instead (#2647). What remains is:
  *   - any child route that throws at render → a runtime error
+ *   - a stale-build chunk failure
+ *   - a thrown 404 `Response`, kept as a fallback for a page that still throws
  *
  * `useRouteError()` + `isRouteErrorResponse()` distinguish the two: a 404 gets
  * "page not found" copy, anything else gets "something went wrong". Both share
  * the same chrome and the same Home + Back recovery. It renders standalone
- * (the errorElement replaces `AppShell`, so the shell — which could itself be
- * what threw — is not re-mounted); the dark-mode-aware tokens + `redesign-panel`
+ * in its own <main> with the brand name (the errorElement replaces `AppShell`,
+ * so the shell — which could itself be what threw — is not re-mounted); the dark-mode-aware tokens + `redesign-panel`
  * surface give it the product look without rebuilding the nav.
  *
  * Sprint 2 (#1012) adds route-aware smart recovery: for a malformed
@@ -138,12 +141,13 @@ const ErrorPage: React.FC = () => {
     : null
 
   return (
-    <div
+    <main
       className="error-page"
       data-testid="error-page"
       data-error-variant={variant}
     >
       <div className="error-page__panel redesign-panel">
+        <p className="error-page__brand">Toast Stats</p>
         {/* role=alert announces the error context on mount; scope it to the
             message region so the recovery buttons below aren't read as part of
             the live region (they're separately focusable affordances). */}
@@ -255,7 +259,7 @@ const ErrorPage: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
+    </main>
   )
 }
 

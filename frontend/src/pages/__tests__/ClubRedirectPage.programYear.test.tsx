@@ -104,7 +104,7 @@ describe('ClubRedirectPage — the district for the requested PY (#1804)', () =>
     renderAt('/club/5577?py=2024')
     expect(
       await screen.findByText(
-        /No club with number 5577 has been seen since 2017/
+        /No club with this number has been seen since 2017/
       )
     ).toBeInTheDocument()
   })

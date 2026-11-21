@@ -111,11 +111,9 @@ const renderRegionWithRegionsRoute = (region: string) => {
 }
 
 describe('RegionPage empty & error recovery affordances (#883)', () => {
-  // Sprint 3 (epic #884, Epic F): kill the bare-prose empty state on
-  // /region/:n. A sparse region (no matching districts) must render the
-  // shared card-based EmptyState with a real CTA button, not a prose
-  // paragraph + inline <Link>.
-  it('renders a card EmptyState (not prose) for a region with no districts', async () => {
+  // A region with no matching districts is a bad link (#2647): it renders the
+  // shared not-found panel, with an h1 and a way to the regions list.
+  it('renders the not-found panel for a region with no districts', async () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       // Only region "1" exists; region "99" is empty.
       rankings: [mkRanking({ districtId: '1', region: '1' })],
@@ -124,18 +122,19 @@ describe('RegionPage empty & error recovery affordances (#883)', () => {
     })
     renderRegionWithRegionsRoute('99')
 
-    // The shared EmptyState renders a tm-card. The old prose block used
-    // .placeholder-page__body with an inline <Link>. Wait on the
-    // distinguishing copy first — the loading skeleton also uses
-    // role="status", so we can't key off the role alone.
-    const heading = await screen.findByText(/no districts in region 99/i)
-    expect(heading.closest('.tm-card')).not.toBeNull()
+    // Wait on the distinguishing copy first: the loading skeleton also uses
+    // role="status", so the role alone can't tell the states apart.
+    const heading = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Region 99 has no districts',
+    })
+    expect(heading.closest('[data-testid="not-found-panel"]')).not.toBeNull()
     expect(
       document.querySelector('.placeholder-page__body')
     ).not.toBeInTheDocument()
   })
 
-  it('offers a "View all regions" CTA that navigates to /regions', async () => {
+  it('offers an "All regions" link that navigates to /regions', async () => {
     mockedFetchCdnRankings.mockResolvedValueOnce({
       rankings: [mkRanking({ districtId: '1', region: '1' })],
       asOfDate: '2026-05-12',
@@ -143,9 +142,7 @@ describe('RegionPage empty & error recovery affordances (#883)', () => {
     })
     renderRegionWithRegionsRoute('99')
 
-    const cta = await screen.findByRole('button', {
-      name: /view all regions/i,
-    })
+    const cta = await screen.findByRole('link', { name: /^all regions$/i })
     fireEvent.click(cta)
     expect(await screen.findByTestId('regions-overview')).toBeInTheDocument()
   })

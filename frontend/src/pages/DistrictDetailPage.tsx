@@ -74,6 +74,7 @@ const NULL_RANKINGS = {
 }
 
 import ErrorBoundary from '../components/ErrorBoundary'
+import NotFoundPanel from '../components/NotFoundPanel'
 import { RedVotePromo } from '../components/RedVotePromo'
 import { useAfterIdle } from '../hooks/useAfterIdle'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
@@ -612,6 +613,16 @@ const DistrictDetailPageInner: React.FC = () => {
   // 88KB, so without this the past-year district page would flash the "limited
   // data" fallback before the dated roster arrived.
   if (cachedDatesData && districtsData && !selectedDistrict && districtId) {
+    // No snapshot and no rank-history year anywhere: the id is not a district
+    // we have ever tracked (#2647), so the Global Rankings view would be empty.
+    if (!isLoadingRankHistoryYears && degradedDataYears.length === 0) {
+      return (
+        <NotFoundPanel
+          heading={`District ${districtId} isn't in Toast Stats`}
+          message="We have no data for a district with this number. Check the number in the link, or pick a district from the list."
+        />
+      )
+    }
     return (
       <ErrorBoundary>
         <div className="district-detail-page-root">

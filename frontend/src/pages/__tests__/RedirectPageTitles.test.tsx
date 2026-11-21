@@ -56,7 +56,10 @@ describe('redirect pages title their own states (#2640)', () => {
 
   it('ClubRedirectPage titles "Club Not Found"', async () => {
     renderAt('/club/5577')
-    await screen.findByText('Club Not Found')
+    await screen.findByRole('heading', {
+      level: 1,
+      name: "Club 5577 isn't in our records",
+    })
     expect(document.title).toBe('Club not found — Toast Stats')
   })
 

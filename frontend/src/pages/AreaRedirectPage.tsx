@@ -7,8 +7,8 @@
    id). Mirrors the ClubRedirectPage pattern (#320): the nested route stays
    canonical, this is a memorable alias (operator example: /district/61/area/A1).
 
-   A bad area id (no division owns it, once the snapshot has loaded) throws a 404
-   to the branded error page (#1011/#1012), exactly like the nested AreaPage. */
+   A bad area id (no division owns it, once the snapshot has loaded) shows the
+   not-found panel, as the nested AreaPage does. */
 
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -20,6 +20,8 @@ import {
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState } from '../components/ErrorDisplay'
+import NotFoundPanel from '../components/NotFoundPanel'
+import { buildDistrictSectionUrl } from '../config/districtSections'
 
 const AreaRedirectPage: React.FC = () => {
   const { districtId, areaId } = useParams<{
@@ -59,7 +61,7 @@ const AreaRedirectPage: React.FC = () => {
   }, [snapshot, normalizedAreaId, snapshotDate])
 
   // The page waits for data and can stop on a state of its own, so each state
-  // is titled; a bad slug throws and takes ErrorPage's "Page not found".
+  // is titled; a bad slug shows the not-found panel.
   useDocumentTitle(
     error || (snapshot && !snapshotDate)
       ? 'Could not load area'
@@ -106,7 +108,19 @@ const AreaRedirectPage: React.FC = () => {
   // Snapshot loaded but no division owns this area → bad slug → branded 404,
   // never 404 while loading/errored (data-unavailable ≠ not-found).
   if (snapshot && !target) {
-    throw new Response(null, { status: 404, statusText: 'Area not found' })
+    return (
+      <NotFoundPanel
+        heading={`Area ${normalizedAreaId} isn't in District ${districtId}`}
+        message="Check the area number in the link, or open the district to see its divisions."
+        suggestionsLead={`Go to District ${districtId}:`}
+        suggestions={[
+          {
+            label: `District ${districtId} divisions`,
+            to: buildDistrictSectionUrl(districtId ?? '', 'divisions'),
+          },
+        ]}
+      />
+    )
   }
 
   // target resolved — the effect is navigating; show a brief skeleton meanwhile.

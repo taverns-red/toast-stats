@@ -433,12 +433,17 @@ describe('ClubDetailPage (#208)', () => {
   })
 
   // #1441 — now async: the page waits for the club index to settle before it
-  // will claim a club is gone, so an unknown id resolves to "Club Not Found"
+  // will claim a club is gone, so an unknown id resolves to the not-found panel
   // only once the index comes back without it.
   it('renders not found state for invalid club ID', async () => {
     renderWithRoute('99999999')
 
-    expect(await screen.findByText('Club Not Found')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: /^Club 99999999 isn't in /,
+      })
+    ).toBeInTheDocument()
   })
 
   // #2408 — the breadcrumb, freshness-pill and worldwide-race reads wait for
@@ -477,7 +482,7 @@ describe('ClubDetailPage (#208)', () => {
 
     renderWithRoute()
 
-    expect(screen.queryByText('Club Not Found')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('not-found-panel')).not.toBeInTheDocument()
     const retry = screen.getByRole('button', { name: /retry loading data/i })
     expect(retry).toBeInTheDocument()
     fireEvent.click(retry)

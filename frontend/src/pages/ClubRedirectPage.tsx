@@ -12,6 +12,7 @@
  * `config/club-index.json` (a CURRENT mapping, ~975 KB) is now only the
  * fallback, read when the shard does not list the club or is unavailable.
  */
+import NotFoundPanel from '../components/NotFoundPanel'
 import React from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -105,29 +106,14 @@ const ClubRedirectPage: React.FC = () => {
     (data && clubId && !findClubEntry(data.clubs, clubId))
   ) {
     return (
-      <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-lg mx-auto text-center">
-          <h2 className="text-xl font-semibold text-red-800 mb-2">
-            Club Not Found
-          </h2>
-          <p className="text-red-600 mb-4 font-tm-body">
-            {isShardAvailable ? (
-              `No club with number ${clubId} has been seen since 2017.`
-            ) : (
-              <>
-                Club ID <code className="font-mono">{clubId}</code> was not
-                found in the current data.
-              </>
-            )}
-          </p>
-          <a
-            href="/"
-            className="inline-block px-4 py-2 bg-tm-loyal-blue text-white rounded hover:bg-tm-loyal-blue-80 transition-colors"
-          >
-            Back to Rankings
-          </a>
-        </div>
-      </div>
+      <NotFoundPanel
+        heading={`Club ${clubId} isn't in our records`}
+        message={
+          isShardAvailable
+            ? 'No club with this number has been seen since 2017. Check the number, or search for the club by name.'
+            : "We couldn't find this club number in the current data. Check the number, or search for the club by name."
+        }
+      />
     )
   }
 

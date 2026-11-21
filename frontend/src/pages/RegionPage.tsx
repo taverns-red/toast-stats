@@ -9,7 +9,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnRankings, fetchCdnRankingsForDate } from '../services/cdn'
 import { RegionPageLoadingShell } from '../components/RegionLoadingShells'
-import { EmptyState, ErrorDisplay } from '../components/ErrorDisplay'
+import { ErrorDisplay } from '../components/ErrorDisplay'
+import NotFoundPanel from '../components/NotFoundPanel'
 import type { DistrictRanking } from '../types/districts'
 import { computeTiedRanks } from '../utils/tieRankingUtils'
 import { useCompetitiveAwards } from '../hooks/useCompetitiveAwards'
@@ -413,21 +414,14 @@ const RegionPage: React.FC = () => {
     )
   }
 
-  // Sparse region: no districts map to this region number. Use the shared
-  // card-based EmptyState with a real recovery CTA instead of a bare-prose
-  // paragraph (#883, Epic F — kill CC-10 prose empty state). EmptyState
-  // shares the loaded-state card geometry, so the empty/error/loaded
-  // terminal states stay layout-consistent (lesson 125).
+  // No districts map to this region number, so it is a bad link (#2647).
   if (regionDistricts.length === 0) {
     return (
-      <EmptyState
-        title={`No districts in Region ${region}`}
-        message={`We don't have any districts on record for Region ${region}. Browse all regions to find the one you're looking for.`}
-        icon="data"
-        action={{
-          label: 'View all regions',
-          onClick: () => navigate('/regions'),
-        }}
+      <NotFoundPanel
+        heading={`Region ${region} has no districts`}
+        message="We don't have any districts on record for this region. Pick a region from the list."
+        suggestionsLead="Go to:"
+        suggestions={[{ label: 'All regions', to: '/regions' }]}
       />
     )
   }

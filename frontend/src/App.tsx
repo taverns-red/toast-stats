@@ -10,6 +10,7 @@ import { queryClient } from './config/queryClient'
 import { ProgramYearProvider } from './contexts/ProgramYearContext'
 import { DarkModeProvider } from './contexts/DarkModeContext'
 import DistrictsPage from './pages/DistrictsPage'
+import NotFoundPage from './pages/NotFoundPage'
 import AppShell from './components/AppShell'
 import ErrorPage from './components/ErrorPage'
 import { DistrictHubRouteFallback } from './components/DistrictHubRouteFallback'
@@ -451,8 +452,7 @@ const router = createBrowserRouter(
           ),
         },
         {
-          // An unknown :tier throws a 404 Response inside the page, which the
-          // root errorElement renders as the branded not-found (#1011).
+          // An unknown :tier shows the not-found panel inside the page (#2647).
           path: 'clubs/race/:tier',
           element: (
             <Suspense fallback={<PageLoadingFallback />}>
@@ -685,6 +685,9 @@ const router = createBrowserRouter(
             </Suspense>
           ),
         },
+        // Unknown URLs render inside the shell (#2647); the root errorElement
+        // is left for real crashes.
+        { path: '*', element: <NotFoundPage /> },
       ],
     },
   ]

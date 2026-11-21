@@ -446,18 +446,22 @@ describe('DistrictDetailPage — degraded view year selector (#1436)', () => {
     assertNoInconsistentUrl()
   })
 
-  it('degrades gracefully for a district with no snapshots and no rank history', async () => {
+  it('shows the not-found panel for a district with no snapshots and no rank history (#2647)', async () => {
     mockedRankHistory.mockRejectedValue(new Error('404'))
     const client = renderAt('/district/999?py=2025')
     await districtListLanded(client)
 
-    await waitFor(() => expect(screen.getByText(LIMITED)).toBeInTheDocument())
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: "District 999 isn't in Toast Stats",
+      })
+    ).toBeInTheDocument()
+    expect(screen.queryByText(LIMITED)).not.toBeInTheDocument()
+    expect(screen.queryByTestId('limited-data-banner')).not.toBeInTheDocument()
     expect(
       screen.queryByTestId('degraded-program-year-selector')
     ).not.toBeInTheDocument()
-    expect(screen.getByTestId('limited-data-banner')).toHaveTextContent(
-      /not yet tracked/i
-    )
   })
 
   it('leaves the happy path unchanged — no degraded chrome for a current district', async () => {
