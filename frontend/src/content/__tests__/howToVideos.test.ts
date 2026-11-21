@@ -15,6 +15,7 @@ import {
 } from '../howToVideos'
 import {
   SECTION_VIDEO_SEGMENTS,
+  VIDEO_STARTS_ON_ANOTHER_PAGE,
   sectionVideoId,
 } from '../../config/sectionVideos'
 
@@ -238,7 +239,18 @@ describe('text alternatives and page links (#2658)', () => {
       expect(video, `no catalogue entry for ${id}`).toBeDefined()
       const path = (video?.pageUrl ?? '').split('?')[0] ?? ''
       const match = /^\/district\/\d+\/?([^/]*)$/.exec(path)
-      expect(match?.[1] ?? null).toBe(segment)
+      if (segment in VIDEO_STARTS_ON_ANOTHER_PAGE) {
+        expect(match?.[1] ?? null).not.toBe(segment)
+      } else {
+        expect(match?.[1] ?? null).toBe(segment)
+      }
     }
   )
+
+  it('lists a video on another page only where it really starts elsewhere', () => {
+    for (const [segment, id] of Object.entries(VIDEO_STARTS_ON_ANOTHER_PAGE)) {
+      expect(sectionVideoId(segment)).toBe(id)
+      expect(HOW_TO_VIDEOS.some(v => v.id === id)).toBe(true)
+    }
+  })
 })
