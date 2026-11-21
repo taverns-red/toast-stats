@@ -25,7 +25,12 @@ import {
   FullYearRankingChartSkeleton,
   PLOT_HEIGHT,
 } from './FullYearRankingChartSkeleton'
-import { METRIC_CONFIG, type RankMetric } from './fullYearRankingMetrics'
+import {
+  METRIC_CONFIG,
+  METRIC_TIE_CATEGORY,
+  type RankMetric,
+} from './fullYearRankingMetrics'
+import { isRankTied } from '../utils/rankTies'
 
 export type { RankMetric }
 
@@ -50,7 +55,7 @@ export interface FullYearRankingChartProps {
  */
 interface TooltipPayload {
   dataKey: string
-  value: number
+  value: number | null
   color: string
   payload: ChartDataPoint
 }
@@ -60,7 +65,8 @@ interface TooltipPayload {
  */
 interface ChartDataPoint {
   date: string
-  value: number
+  /** Null on a tied date, which leaves a gap in the line. */
+  value: number | null
 }
 
 /**
@@ -71,6 +77,7 @@ interface CustomTooltipProps {
   payload?: TooltipPayload[]
   label?: string
   selectedMetric: RankMetric
+  tiedDates: ReadonlySet<string>
 }
 
 const CustomTooltip: React.FC<CustomTooltipProps> = ({
@@ -78,6 +85,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
   payload,
   label,
   selectedMetric,
+  tiedDates,
 }) => {
   if (!active || !payload || payload.length === 0) {
     return null
@@ -96,7 +104,9 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
   const metricConfig = METRIC_CONFIG[selectedMetric]
 
   // Get the value - it could be in dataPoint.value or dataPoint.payload.value
-  const value = dataPoint.value ?? dataPoint.payload?.value ?? 0
+  const value = dataPoint.value ?? dataPoint.payload?.value ?? null
+  const tied = dateToFormat !== undefined && tiedDates.has(dateToFormat)
+  if (value === null && !tied) return null
 
   return (
     <div
@@ -108,7 +118,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
         {formattedDate}
       </p>
       <p className="text-sm whitespace-nowrap" style={{ color: 'var(--link)' }}>
-        {metricConfig.shortLabel}: Rank #{value}
+        {metricConfig.shortLabel}: {tied ? 'Tied' : `Rank #${value}`}
       </p>
     </div>
   )
@@ -171,10 +181,18 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
     a.date.localeCompare(b.date)
   )
 
-  // Transform data for the chart
+  // A tied date is rank 1 for every district, so it is not plotted
+  const tieCategory = METRIC_TIE_CATEGORY[selectedMetric]
+  const tiedDates = new Set(
+    sortedHistory
+      .filter(point => isRankTied(point, tieCategory))
+      .map(point => point.date)
+  )
   const chartData: ChartDataPoint[] = sortedHistory.map(point => ({
     date: point.date,
-    value: point[metricConfig.dataKey] as number,
+    value: tiedDates.has(point.date)
+      ? null
+      : (point[metricConfig.dataKey] as number),
   }))
 
   // One labelled tick per month (the first snapshot of it), not 30 dates.
@@ -265,7 +283,14 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
                 }}
               />
               <Tooltip
-                content={<CustomTooltip selectedMetric={selectedMetric} />}
+                content={
+                  <CustomTooltip
+                    selectedMetric={selectedMetric}
+                    tiedDates={tiedDates}
+                  />
+                }
+                // Keep tied dates, whose value is null, so they read "Tied"
+                filterNull={false}
                 {...readout.tooltipProps}
               />
               <Line
@@ -323,13 +348,16 @@ function generateChartDescription(
 ): string {
   const metricConfig = METRIC_CONFIG[selectedMetric]
   const dataPointCount = chartData.length
+  const ranked = chartData.filter(
+    (d): d is { date: string; value: number } => d.value !== null
+  )
 
   if (dataPointCount === 0) {
     return `No ${metricConfig.label} data available for ${data.districtName} in the ${programYear.label} program year.`
   }
 
-  const firstPoint = chartData[0]
-  const lastPoint = chartData[dataPointCount - 1]
+  const firstPoint = ranked[0]
+  const lastPoint = ranked[ranked.length - 1]
 
   if (!firstPoint || !lastPoint) {
     return `${metricConfig.label} chart for ${data.districtName} in the ${programYear.label} program year.`

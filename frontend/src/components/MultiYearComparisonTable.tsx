@@ -139,6 +139,8 @@ interface RankCellProps {
   totalDistricts: number
   change: number | undefined
   metricLabel: string
+  /** Every district had the same value, so there is no rank to show. */
+  tied?: boolean | undefined
 }
 
 const RankCell: React.FC<RankCellProps> = ({
@@ -146,11 +148,18 @@ const RankCell: React.FC<RankCellProps> = ({
   totalDistricts,
   change,
   metricLabel,
+  tied = false,
 }) => (
   <div className="flex flex-col items-start gap-1">
     <span className="text-base font-medium text-gray-900 font-tm-body">
-      {rank}
-      <span className="text-sm text-gray-500 ml-1">/{totalDistricts}</span>
+      {tied ? (
+        'Tied'
+      ) : (
+        <>
+          {rank}
+          <span className="text-sm text-gray-500 ml-1">/{totalDistricts}</span>
+        </>
+      )}
     </span>
     {change !== undefined && (
       <ChangeIndicator change={change} metricLabel={metricLabel} />
@@ -192,6 +201,7 @@ const MobileYearCard: React.FC<MobileYearCardProps> = ({ ranking }) => (
           totalDistricts={ranking.totalDistricts}
           change={ranking.yearOverYearChange?.overall}
           metricLabel="Overall rank"
+          tied={ranking.overallTied}
         />
       </div>
 
@@ -205,6 +215,7 @@ const MobileYearCard: React.FC<MobileYearCardProps> = ({ ranking }) => (
           totalDistricts={ranking.totalDistricts}
           change={ranking.yearOverYearChange?.clubs}
           metricLabel="Clubs rank"
+          tied={ranking.clubsTied}
         />
       </div>
 
@@ -218,6 +229,7 @@ const MobileYearCard: React.FC<MobileYearCardProps> = ({ ranking }) => (
           totalDistricts={ranking.totalDistricts}
           change={ranking.yearOverYearChange?.payments}
           metricLabel="Payments rank"
+          tied={ranking.paymentsTied}
         />
       </div>
 
@@ -231,6 +243,7 @@ const MobileYearCard: React.FC<MobileYearCardProps> = ({ ranking }) => (
           totalDistricts={ranking.totalDistricts}
           change={ranking.yearOverYearChange?.distinguished}
           metricLabel="Distinguished rank"
+          tied={ranking.distinguishedTied}
         />
       </div>
     </div>
@@ -375,6 +388,7 @@ const MultiYearComparisonTable: React.FC<MultiYearComparisonTableProps> = ({
                     totalDistricts={ranking.totalDistricts}
                     change={ranking.yearOverYearChange?.overall}
                     metricLabel="Overall rank"
+                    tied={ranking.overallTied}
                   />
                 </td>
 
@@ -385,6 +399,7 @@ const MultiYearComparisonTable: React.FC<MultiYearComparisonTableProps> = ({
                     totalDistricts={ranking.totalDistricts}
                     change={ranking.yearOverYearChange?.clubs}
                     metricLabel="Clubs rank"
+                    tied={ranking.clubsTied}
                   />
                 </td>
 
@@ -395,6 +410,7 @@ const MultiYearComparisonTable: React.FC<MultiYearComparisonTableProps> = ({
                     totalDistricts={ranking.totalDistricts}
                     change={ranking.yearOverYearChange?.payments}
                     metricLabel="Payments rank"
+                    tied={ranking.paymentsTied}
                   />
                 </td>
 
@@ -405,6 +421,7 @@ const MultiYearComparisonTable: React.FC<MultiYearComparisonTableProps> = ({
                     totalDistricts={ranking.totalDistricts}
                     change={ranking.yearOverYearChange?.distinguished}
                     metricLabel="Distinguished rank"
+                    tied={ranking.distinguishedTied}
                   />
                 </td>
               </tr>
