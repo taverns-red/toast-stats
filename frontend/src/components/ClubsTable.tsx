@@ -1184,6 +1184,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
             rowHeaderColumnId={STICKY_COLUMN_FIELD}
             headerClassName={clubColumnStickyClass}
             overflowHint={overflowHint}
+            label="All clubs table"
           />
         ))}
 

@@ -32,6 +32,8 @@ interface DataTableSkeletonProps {
   headerClassName?: (columnId: string) => string
   /** The table's sideways-scroll hint, shown where the table would show it. */
   overflowHint?: React.ReactNode
+  /** The table's scroll-region name, e.g. "All clubs table". */
+  label?: string
 }
 
 export function DataTableSkeleton({
@@ -41,6 +43,7 @@ export function DataTableSkeleton({
   testId,
   headerClassName,
   overflowHint,
+  label,
 }: DataTableSkeletonProps): React.JSX.Element {
   const minWidth = columns.reduce((sum, c) => sum + c.getSize(), 0)
   const { wrapRef, shellRef, overflow } = useTableOverflow(minWidth)
@@ -62,6 +65,13 @@ export function DataTableSkeleton({
           ref={wrapRef}
           className="dt-scroll"
           data-overflow={overflow ? 'true' : 'false'}
+          {...(overflow && label
+            ? {
+                role: 'region' as const,
+                tabIndex: 0,
+                'aria-label': `${label}, scrolls sideways`,
+              }
+            : {})}
         >
           <table className="dt" aria-hidden="true" style={{ minWidth }}>
             <colgroup>
