@@ -5,8 +5,8 @@
  * the standard `SubpageBreadcrumb` every other routed sub-page uses (Lesson 085),
  * so both pages render a proper District › Division › Area trail with a strong
  * link affordance and `aria-current` on the leaf. It also validates the slug:
- * an unknown division/area id throws a 404 that the root errorElement renders as
- * the branded not-found page (#1011/#1012) — not an empty "no clubs" page.
+ * an unknown division/area id shows the not-found panel (#2647), not an empty
+ * "no clubs" page.
  */
 import React from 'react'
 import { describe, it, expect, afterEach, vi } from 'vitest'
@@ -235,12 +235,10 @@ describe('AreaPage wayfinding (#1017)', () => {
   })
 })
 
-// --- Slug validation → branded 404 (#1017) ---------------------------------
-// A bad division/area id must throw a 404 Response so the root errorElement
-// (#1011/#1012) renders the branded not-found page, NOT an empty "no clubs"
-// page. The throw-to-boundary mechanism only exists in a data router, so these
-// tests mount via createMemoryRouter with a test boundary that reports the
-// thrown status.
+// --- Slug validation → not-found panel (#1017, #2647) -----------------------
+// A bad division/area id must render the not-found panel naming the id, NOT an
+// empty "no clubs" page. The boundary stays in the harness to prove the page
+// no longer throws.
 function StatusBoundary() {
   const err = useRouteError()
   const status = isRouteErrorResponse(err)
@@ -251,9 +249,8 @@ function StatusBoundary() {
   return <div data-testid="boundary">{status}</div>
 }
 
-// Mirror the production router shape (#1011): errorElement on the root route,
-// the page as a child, so a child render-throw bubbles to the root boundary —
-// exactly how a real bad-slug 404 is handled in App.tsx.
+// Mirror the production router shape (#1011): errorElement on the root route
+// and the page as a child.
 function renderViaDataRouter(
   path: string,
   routePath: string,
@@ -275,13 +272,19 @@ function renderViaDataRouter(
 }
 
 describe('DivisionPage slug validation (#1017)', () => {
-  it('throws a 404 for a division id absent from the snapshot', () => {
-    const { getByTestId } = renderViaDataRouter(
+  it('shows the not-found panel for a division id absent from the snapshot', () => {
+    const { getByRole, queryByTestId } = renderViaDataRouter(
       '/district/61/division/Z',
       '/district/:districtId/division/:divId',
       DivisionPage
     )
-    expect(getByTestId('boundary')).toHaveTextContent('404')
+    expect(
+      getByRole('heading', {
+        level: 1,
+        name: "Division Z isn't in District 61",
+      })
+    ).toBeInTheDocument()
+    expect(queryByTestId('boundary')).toBeNull()
   })
 
   it('does NOT throw for a valid division id', () => {
@@ -295,22 +298,33 @@ describe('DivisionPage slug validation (#1017)', () => {
 })
 
 describe('AreaPage slug validation (#1017)', () => {
-  it('throws a 404 for an area id absent from the snapshot', () => {
-    const { getByTestId } = renderViaDataRouter(
+  it('shows the not-found panel for an area id absent from the snapshot', () => {
+    const { getByRole, queryByTestId } = renderViaDataRouter(
       '/district/61/division/A/area/99',
       '/district/:districtId/division/:divId/area/:areaId',
       AreaPage
     )
-    expect(getByTestId('boundary')).toHaveTextContent('404')
+    expect(
+      getByRole('heading', {
+        level: 1,
+        name: "Area 99 isn't in Division A of District 61",
+      })
+    ).toBeInTheDocument()
+    expect(queryByTestId('boundary')).toBeNull()
   })
 
-  it('throws a 404 when the division id itself is unknown', () => {
-    const { getByTestId } = renderViaDataRouter(
+  it('shows the not-found panel when the division id itself is unknown', () => {
+    const { getByRole } = renderViaDataRouter(
       '/district/61/division/Z/area/10',
       '/district/:districtId/division/:divId/area/:areaId',
       AreaPage
     )
-    expect(getByTestId('boundary')).toHaveTextContent('404')
+    expect(
+      getByRole('heading', {
+        level: 1,
+        name: "Area 10 isn't in Division Z of District 61",
+      })
+    ).toBeInTheDocument()
   })
 
   it('does NOT throw for a valid area id', () => {

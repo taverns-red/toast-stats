@@ -114,3 +114,62 @@
   outline-offset: 2px;
   border-radius: 2px;
 }
+
+/* Anchor targets sit under the pinned app bar; leave room above them. */
+.videos-page__card,
+.videos-page__group h2 {
+  scroll-margin-top: 6rem;
+}
+
+.videos-page__jump ul {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+}
+
+.videos-page__steps {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+/* A list-item display keeps the native open/closed marker; flex would drop it. */
+.videos-page__steps summary {
+  cursor: pointer;
+  min-height: 44px;
+  line-height: 44px;
+  display: list-item;
+  list-style-position: inside;
+  font-weight: 600;
+  color: var(--tm-loyal-blue);
+}
+
+.videos-page__steps summary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.videos-page__steps ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+/* The link from a district page to its video: set in the eyebrow line, so
+   it reads as a link, not as eyebrow text. */
+.watch-how-link {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--tm-loyal-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.watch-how-link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}

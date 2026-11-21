@@ -42,6 +42,7 @@ import {
 import { isCloseToDistinguished } from '../utils/closeToDistinguished'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
 import { EmptyState, ErrorDisplay } from '../components/ErrorDisplay'
+import NotFoundPanel from '../components/NotFoundPanel'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ChartSparklineExpand } from '../components/ChartSparklineExpand'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
@@ -978,19 +979,21 @@ const ClubDetailPage: React.FC = () => {
 
   if (!club) {
     return (
-      <div className="min-h-screen">
-        <div className="container mx-auto px-4 py-8">
-          <EmptyState
-            title="Club Not Found"
-            message={`Club ${clubId} was not found in ${districtName}. It may have been removed or the club ID may be incorrect.`}
-            icon="data"
-            action={{
-              label: 'Back to District',
-              onClick: () => navigate(`/district/${urlDistrictId}`),
-            }}
-          />
-        </div>
-      </div>
+      <NotFoundPanel
+        heading={`Club ${clubId} isn't in ${districtName}`}
+        message="The club may have been removed or moved, or the number in the link may be wrong. Search for the club by name or number."
+        suggestionsLead={`Go to ${districtName}:`}
+        suggestions={[
+          {
+            label: `${districtName} clubs`,
+            to: `/district/${urlDistrictId}/clubs`,
+          },
+          {
+            label: `${districtName} overview`,
+            to: `/district/${urlDistrictId}`,
+          },
+        ]}
+      />
     )
   }
 

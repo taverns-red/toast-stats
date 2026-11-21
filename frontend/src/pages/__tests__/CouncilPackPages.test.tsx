@@ -328,22 +328,32 @@ function renderViaDataRouter(
 }
 
 describe('print pack slug validation (#2299)', () => {
-  it('404s an unknown area', () => {
+  it('shows the not-found panel for an unknown area', () => {
     renderViaDataRouter(
       '/district/61/division/A/area/99/print',
       AREA_PRINT,
       AreaPrintPage
     )
-    expect(screen.getByTestId('boundary')).toHaveTextContent('404')
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: "Area 99 isn't in Division A of District 61",
+      })
+    ).toBeInTheDocument()
   })
 
-  it('404s an unknown division', () => {
+  it('shows the not-found panel for an unknown division', () => {
     renderViaDataRouter(
       '/district/61/division/Z/print',
       DIVISION_PRINT,
       DivisionPrintPage
     )
-    expect(screen.getByTestId('boundary')).toHaveTextContent('404')
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: "Division Z isn't in District 61",
+      })
+    ).toBeInTheDocument()
   })
 })
 

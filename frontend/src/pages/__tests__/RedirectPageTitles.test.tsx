@@ -5,7 +5,7 @@
  * generic document title in the tab.
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { screen, render, cleanup } from '@testing-library/react'
+import { screen, render, cleanup, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
@@ -56,8 +56,13 @@ describe('redirect pages title their own states (#2640)', () => {
 
   it('ClubRedirectPage titles "Club Not Found"', async () => {
     renderAt('/club/5577')
-    await screen.findByText('Club Not Found')
-    expect(document.title).toBe('Club not found — Toast Stats')
+    await screen.findByRole('heading', {
+      level: 1,
+      name: "We couldn't find club 5577",
+    })
+    await waitFor(() =>
+      expect(document.title).toBe("We couldn't find club 5577 — Toast Stats")
+    )
   })
 
   it('AreaRedirectPage titles the lookup', () => {

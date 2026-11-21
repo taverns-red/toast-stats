@@ -8,6 +8,7 @@
 
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
+import { AreaNotFound } from '../components/EntityNotFound'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
@@ -203,7 +204,13 @@ const AreaPage: React.FC = () => {
   // real area whose clubs are all suspended (Lesson 147): `matched` is membership
   // in the snapshot's division.areas, the same source of truth the table reads.
   if (snapshot && !areaPerformance) {
-    throw new Response(null, { status: 404, statusText: 'Area not found' })
+    return (
+      <AreaNotFound
+        districtId={districtId ?? ''}
+        divId={divId ?? ''}
+        areaId={areaId ?? ''}
+      />
+    )
   }
 
   const clubs = (data?.allClubs ?? []).filter(

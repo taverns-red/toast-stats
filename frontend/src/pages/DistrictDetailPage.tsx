@@ -74,6 +74,7 @@ const NULL_RANKINGS = {
 }
 
 import ErrorBoundary from '../components/ErrorBoundary'
+import NotFoundPanel from '../components/NotFoundPanel'
 import { RedVotePromo } from '../components/RedVotePromo'
 import { useAfterIdle } from '../hooks/useAfterIdle'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
@@ -154,6 +155,7 @@ const DistrictDetailPageInner: React.FC = () => {
   const {
     programYears: rankHistoryProgramYears,
     isLoading: isLoadingRankHistoryYears,
+    isError: isRankHistoryError,
   } = useDistrictRankHistoryYears(districtId, needsRankHistoryYears)
 
   // The snapshot dates inside the program year on screen.
@@ -612,6 +614,21 @@ const DistrictDetailPageInner: React.FC = () => {
   // 88KB, so without this the past-year district page would flash the "limited
   // data" fallback before the dated roster arrived.
   if (cachedDatesData && districtsData && !selectedDistrict && districtId) {
+    // The rank-history read finished (a 404 counts) and names no year, so
+    // this id was never ranked. A failed read proves nothing: keep the
+    // limited view. Enforced by degradedYearSelector.test.tsx.
+    if (
+      !isLoadingRankHistoryYears &&
+      !isRankHistoryError &&
+      degradedDataYears.length === 0
+    ) {
+      return (
+        <NotFoundPanel
+          heading={`District ${districtId} isn't in Toast Stats`}
+          message="We have no data for a district with this number. Check the number in the link, or pick a district from the list."
+        />
+      )
+    }
     return (
       <ErrorBoundary>
         <div className="district-detail-page-root">

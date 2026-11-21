@@ -37,6 +37,7 @@ import {
   useSearchParams,
 } from 'react-router-dom'
 import DistrictDetailPage from '../DistrictDetailPage'
+import { CdnFetchError } from '../../services/cdnFetchError'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
 import {
   fetchCdnRankings,
@@ -307,7 +308,7 @@ function UrlProbe() {
 function renderAt(url: string) {
   seenSearches.length = 0
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   })
   render(
     <QueryClientProvider client={client}>
@@ -446,18 +447,40 @@ describe('DistrictDetailPage — degraded view year selector (#1436)', () => {
     assertNoInconsistentUrl()
   })
 
-  it('degrades gracefully for a district with no snapshots and no rank history', async () => {
-    mockedRankHistory.mockRejectedValue(new Error('404'))
+  it('shows the not-found panel for a district with no snapshots and no rank history (#2647)', async () => {
+    mockedRankHistory.mockRejectedValue(
+      new CdnFetchError(404, 'https://cdn.test/rank-history/999')
+    )
     const client = renderAt('/district/999?py=2025')
     await districtListLanded(client)
 
-    await waitFor(() => expect(screen.getByText(LIMITED)).toBeInTheDocument())
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: "District 999 isn't in Toast Stats",
+      })
+    ).toBeInTheDocument()
+    expect(screen.queryByText(LIMITED)).not.toBeInTheDocument()
+    expect(screen.queryByTestId('limited-data-banner')).not.toBeInTheDocument()
     expect(
       screen.queryByTestId('degraded-program-year-selector')
     ).not.toBeInTheDocument()
-    expect(screen.getByTestId('limited-data-banner')).toHaveTextContent(
-      /not yet tracked/i
+  })
+
+  it('keeps the limited view when the rank history fails for a reason other than 404', async () => {
+    mockedRankHistory.mockRejectedValue(
+      new CdnFetchError(503, 'https://cdn.test/rank-history/999')
     )
+    const client = renderAt('/district/999?py=2025')
+    await districtListLanded(client)
+
+    // Each attempt run is three calls (two retries); the page and the
+    // rankings tab both read it, so wait for at least one full run.
+    await waitFor(() =>
+      expect(mockedRankHistory.mock.calls.length).toBeGreaterThanOrEqual(3)
+    )
+    await waitFor(() => expect(screen.getByText(LIMITED)).toBeInTheDocument())
+    expect(screen.queryByTestId('not-found-panel')).not.toBeInTheDocument()
   })
 
   it('leaves the happy path unchanged — no degraded chrome for a current district', async () => {

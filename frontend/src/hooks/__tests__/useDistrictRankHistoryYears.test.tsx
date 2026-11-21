@@ -22,6 +22,7 @@ vi.mock('../../services/cdn', () => ({
 }))
 
 import { fetchCdnRankHistory } from '../../services/cdn'
+import { CdnFetchError } from '../../services/cdnFetchError'
 import {
   programYearsFromRankHistory,
   useDistrictRankHistoryYears,
@@ -43,7 +44,7 @@ function point(date: string) {
 
 function wrapper({ children }: { children: React.ReactNode }) {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   })
   return React.createElement(QueryClientProvider, { client }, children)
 }
@@ -110,7 +111,7 @@ describe('useDistrictRankHistoryYears (#1436)', () => {
   })
 
   it('degrades to an empty list when the rank history 404s', async () => {
-    mockedFetch.mockRejectedValue(new Error('404'))
+    mockedFetch.mockRejectedValue(new CdnFetchError(404, 'https://cdn.test/x'))
 
     const { result } = renderHook(
       () => useDistrictRankHistoryYears('999', true),
@@ -119,5 +120,17 @@ describe('useDistrictRankHistoryYears (#1436)', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.programYears).toEqual([])
+    expect(result.current.isError).toBe(false)
+  })
+
+  it('reports an error, not an empty list, when the fetch fails otherwise', async () => {
+    mockedFetch.mockRejectedValue(new CdnFetchError(503, 'https://cdn.test/x'))
+
+    const { result } = renderHook(
+      () => useDistrictRankHistoryYears('999', true),
+      { wrapper }
+    )
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
   })
 })

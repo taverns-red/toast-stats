@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import AppShellTopBar from './AppShellTopBar'
 import AppShellFooter from './AppShellFooter'
 import CommandPalette from './CommandPalette'
+import type { ShellOutletContext } from './shellContext'
 import { ConsentBanner } from '../consent/ConsentBanner'
 import { DateNotice } from '../DateNotice'
 import { useIsMobile } from '../../hooks/useIsMobile'
@@ -55,7 +56,9 @@ const AppShell: React.FC = () => {
       <AppShellTopBar onOpenSearch={openPalette} />
       <main id="main-content" className="app-shell__main" tabIndex={-1}>
         <DateNotice />
-        <Outlet />
+        <Outlet
+          context={{ openSearch: openPalette } satisfies ShellOutletContext}
+        />
       </main>
       {!isMobile && <AppShellFooter />}
       <CommandPalette isOpen={paletteOpen} onClose={closePalette} />

@@ -99,12 +99,24 @@ describe('ClubRedirectPage — the district for the requested PY (#1804)', () =>
     expect(mockedIndex).toHaveBeenCalled()
   })
 
+  it("does not say the club isn't in our records when the history is unavailable", async () => {
+    mockedShard.mockResolvedValue(null)
+    mockedIndex.mockResolvedValue({ clubs: {} })
+    renderAt('/club/5577?py=2024')
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: "We couldn't find club 5577",
+      })
+    ).toBeInTheDocument()
+  })
+
   it('says no club with the number has been seen when neither source knows it', async () => {
     mockedIndex.mockResolvedValue({ clubs: {} })
     renderAt('/club/5577?py=2024')
     expect(
       await screen.findByText(
-        /No club with number 5577 has been seen since 2017/
+        /No club with this number has been seen since 2017/
       )
     ).toBeInTheDocument()
   })

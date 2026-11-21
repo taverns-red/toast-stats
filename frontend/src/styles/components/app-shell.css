@@ -7694,6 +7694,14 @@
     padding: 32px 24px;
   }
 
+  .error-page__brand {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--ink-2);
+    margin: 0 0 16px;
+  }
+
   .error-page__badge {
     display: flex;
     align-items: center;
@@ -7782,7 +7790,9 @@
   }
 
   .error-page__suggestion-link {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     font-family: var(--sans);
     font-size: 14px;
     color: var(--link, #2563eb);
@@ -7797,6 +7807,92 @@
   .error-page__suggestion-link:focus-visible {
     text-decoration: underline;
     border-color: var(--link, #2563eb);
+  }
+
+  /* The not-found panel renders inside the shell's <main>, so it
+     takes the shell's header and footer and only owns its own body. */
+  .not-found-panel {
+    padding: 32px 16px 48px;
+  }
+
+  .not-found-panel__body {
+    max-width: 36rem;
+    margin: 0 auto;
+  }
+
+  .not-found-panel__heading {
+    font-family: var(--serif);
+    font-weight: var(--heading-page-weight);
+    font-size: var(--heading-page-size);
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin: 0 0 8px;
+    overflow-wrap: anywhere;
+  }
+
+  .not-found-panel__message {
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    margin: 0 0 24px;
+    overflow-wrap: anywhere;
+  }
+
+  .not-found-panel__lead {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-2);
+    margin: 0 0 10px;
+  }
+
+  .not-found-panel__chips {
+    list-style: none;
+    margin: 0 0 24px;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .not-found-panel__chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--link);
+    text-decoration: none;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--rds-radius-sm, 6px);
+    background-color: var(--surface-2);
+  }
+
+  .not-found-panel__chip:hover {
+    text-decoration: underline;
+    border-color: var(--link);
+  }
+
+  .not-found-panel__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .not-found-panel__action {
+    text-decoration: none;
+  }
+
+  @media (max-width: 400px) {
+    .not-found-panel__actions {
+      flex-direction: column;
+    }
+
+    .not-found-panel__action {
+      width: 100%;
+    }
   }
 
   .error-page__actions {

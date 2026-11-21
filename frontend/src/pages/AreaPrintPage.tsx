@@ -8,6 +8,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { useCouncilPack } from '../hooks/useCouncilPack'
+import { AreaNotFound } from '../components/EntityNotFound'
 import { CouncilPackPage } from '../components/councilPack/CouncilPackPage'
 
 const AreaPrintPage: React.FC = () => {
@@ -25,7 +26,13 @@ const AreaPrintPage: React.FC = () => {
     area: areaId ?? '',
   })
   if (data.isNotFound) {
-    throw new Response(null, { status: 404, statusText: 'Area not found' })
+    return (
+      <AreaNotFound
+        districtId={districtId ?? ''}
+        divId={divId ?? ''}
+        areaId={areaId ?? ''}
+      />
+    )
   }
   const areaLabel = data.pack ? `Area ${data.pack.areaId}` : `Area ${areaId}`
   return (
