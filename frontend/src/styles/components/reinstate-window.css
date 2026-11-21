@@ -163,3 +163,10 @@
 .reinstate-window-panel .reinstate-window {
   margin-bottom: 0;
 }
+
+/* Under the periods on the club page of a retired district's club. */
+.reinstate-window__retired {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: var(--ink-3);
+}

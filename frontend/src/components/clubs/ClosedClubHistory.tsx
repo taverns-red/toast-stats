@@ -165,7 +165,7 @@ export const ClosedClubHistory: React.FC<ClosedClubHistoryProps> = ({
       />
 
       {/* #3111 (draft) — what's next: how long the club has to reinstate. */}
-      <ClubReinstateWindow club={reinstatable} />
+      <ClubReinstateWindow club={reinstatable} districtId={districtId} />
 
       {club ? (
         <>
