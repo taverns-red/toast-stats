@@ -171,8 +171,11 @@ describe('area table count columns (#2793)', () => {
 describe('phone division chip (#2793)', () => {
   it('has a min-width in em or ch that fits the longest label', () => {
     const chip = rule(stylesheet('mobile-row-list.css'), '.mobile-chip')
-    expect(chip['display']).toBe('inline-block')
+    expect(chip['display']).toBe('block')
     expect(chip['min-width']).toMatch(FONT_RELATIVE)
+    // A set height: a glyph's fallback font must not make a real chip taller
+    // than the empty placeholder.
+    expect(chip['height']).toBe(chip['line-height'])
   })
 
   it('the placeholder is a chip box with no pixel size of its own', () => {
