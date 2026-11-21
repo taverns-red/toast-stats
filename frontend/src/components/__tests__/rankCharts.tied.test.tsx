@@ -330,6 +330,25 @@ describe('Tie explanations (#3151)', () => {
     })
   })
 
+  it('shows no tap hint on a phone when the whole history is tied', () => {
+    media.touch = true
+    render(
+      <FullYearRankingChart
+        data={history('61', [
+          point('2026-07-15', 1, ALL_TIED),
+          point('2026-07-22', 1, ALL_TIED),
+        ])}
+        selectedMetric="distinguished"
+        onMetricChange={() => {}}
+        isLoading={false}
+        programYear={PY}
+      />
+    )
+    // The readout line stays to hold the layout; there is nothing to tap.
+    const readout = screen.getByTestId('chart-readout')
+    expect(readout).not.toHaveTextContent('Tap the chart')
+  })
+
   it('labels the Overall Score axis "higher is better"', () => {
     render(
       <HistoricalRankChart

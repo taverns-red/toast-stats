@@ -217,7 +217,8 @@ export interface ChartReadoutProps {
    * The chart describes the pinned x itself — for an axis that is not a
    * date (e.g. program-year days), where each series is read at its own
    * nearest point. Replaces the payload's label and rows; null keeps them,
-   * and then `labelFormatter` still formats the label.
+   * and then `labelFormatter` still formats the label (ChartReadout.test.tsx:
+   * "a null describe() keeps the payload and still formats the label").
    */
   describe?: (label: string) => ChartReading | null
   /** Formats each series name (e.g. a district id → its name). */

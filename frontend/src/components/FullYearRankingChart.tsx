@@ -353,6 +353,8 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
         readout={readout}
         labelFormatter={formatReadoutDate}
         describe={describeReading}
+        // An all-tied chart has nothing to tap; the empty line keeps its height.
+        {...(allTied ? { hint: '' } : {})}
       />
 
       {/* Screen reader accessible description */}
