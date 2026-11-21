@@ -159,4 +159,27 @@ describe('ReinstatableClubsSchema (#3007)', () => {
       expect(ReinstatableClubsSchema.safeParse(f).success).toBe(true)
     })
   })
+
+  describe('a club of a retired district (#3101)', () => {
+    it('accepts districtRetiredOn as an ISO date', () => {
+      const f = clone()
+      Object.assign(f.districts['61']![1]!, { districtRetiredOn: '2026-07-01' })
+      expect(ReinstatableClubsSchema.safeParse(f).success).toBe(true)
+    })
+
+    it('rejects a districtRetiredOn that is not an ISO date', () => {
+      const f = clone()
+      Object.assign(f.districts['61']![1]!, { districtRetiredOn: '2026' })
+      expect(ReinstatableClubsSchema.safeParse(f).success).toBe(false)
+    })
+
+    it('keeps it optional: files written before still parse (ADR 0019)', () => {
+      expect(
+        Object.values(FILE.districts)
+          .flat()
+          .some(row => 'districtRetiredOn' in row)
+      ).toBe(false)
+      expect(ReinstatableClubsSchema.safeParse(FILE).success).toBe(true)
+    })
+  })
 })
