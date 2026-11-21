@@ -1768,27 +1768,48 @@ describe('parseMeetingSchedule (#2811) — #2808 leftovers', () => {
     ['Floor 1200-1300'],
     ['Office 1200-1300'],
     ['No. 1200-1300'],
-    ['Room 12, 1200-1300'],
   ])('%j (an address word before the numbers) gives no time', meetingTime => {
     expect(
       parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime })
     ).toEqual([{ day: 'Thursday', cadence: 'weekly' }])
   })
 
-  it('"7 PM EST Church basement" keeps the zone written after the time', () => {
-    const [entry] =
-      parseMeetingSchedule({
-        meetingDay: 'Thursday',
-        meetingTime: '7 PM EST Church basement',
-      }) ?? []
-    expect(entry).toMatchObject({ startTime: '19:00', timeZone: 'EST' })
-  })
+  it.each([
+    ['Room 5, 1900-2000', '19:00', '20:00'],
+    ['Room 204, 1830-2000', '18:30', '20:00'],
+    ['#1234, 1900-2000', '19:00', '20:00'],
+    ['Club no. 1234, 1900-2000', '19:00', '20:00'],
+    ['Box 12; 1900-2000', '19:00', '20:00'],
+    ['2nd floor 1900-2000', '19:00', '20:00'],
+    ['Main floor 1830-2000', '18:30', '20:00'],
+    ['Head office 1200-1300', '12:00', '13:00'],
+    ['Main building 1900-2000', '19:00', '20:00'],
+  ])(
+    '%j (a place, then the meeting time) still gives %s-%s',
+    (meetingTime, startTime, endTime) => {
+      expect(
+        parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime })
+      ).toEqual([{ day: 'Thursday', cadence: 'weekly', startTime, endTime }])
+    }
+  )
 
-  it('"Guests welcome by invitation of a member" is not restricted', () => {
+  it.each([['7 PM EST Church basement'], ['7 pm EST Building']])(
+    '%j keeps the zone written after the time',
+    meetingTime => {
+      const [entry] =
+        parseMeetingSchedule({ meetingDay: 'Thursday', meetingTime }) ?? []
+      expect(entry).toMatchObject({ startTime: '19:00', timeZone: 'EST' })
+    }
+  )
+
+  it.each([
+    ['Guests welcome by invitation of a member'],
+    ['Guests welcome by invitation of the members'],
+  ])('%j is not restricted', location => {
     const entries = parseMeetingSchedule({
       meetingDay: 'Thursday',
       meetingTime: '7 pm',
-      location: 'Guests welcome by invitation of a member',
+      location,
     })
     expect(entries?.[0]).not.toHaveProperty('restricted')
   })
