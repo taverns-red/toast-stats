@@ -53,4 +53,14 @@ describe('MultiYearComparisonTable tied years (#3145)', () => {
     expect(screen.getAllByText('Tied')).toHaveLength(4)
     expect(screen.getAllByText('40')).toHaveLength(2)
   })
+
+  it('tells a screen reader every district has the same value (#3151)', () => {
+    render(
+      <MultiYearComparisonTable yearlyRankings={[tiedYear]} isLoading={false} />
+    )
+
+    expect(
+      screen.getAllByText('Tied, every district has the same value')
+    ).toHaveLength(8)
+  })
 })
