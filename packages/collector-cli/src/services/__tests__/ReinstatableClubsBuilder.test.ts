@@ -746,6 +746,172 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
     })
   })
 
+  describe('a district Toastmasters retired (#3101)', () => {
+    // At the 2026-07-01 rollover TI retired 64 districts (124 among them),
+    // and 09 at the 2025-07-01 one. Their closed clubs are listed under the
+    // old number, with the date the district was retired. The date's
+    // district set is its all-districts-rankings.json.
+    const NOW = '2026-11-19'
+    const TODAY_DISTRICTS = ['61', '225']
+    const nowSuspended = (districts: SuspendedClubs['districts']) => ({
+      ...suspendedList(districts),
+      snapshotDate: NOW,
+    })
+    const RETIRED_CLOSED = closedIndex({
+      '2024-2025': {
+        '09': [['8000009', 'Old Nine Club', '2025-03-31']],
+        '61': [['1314924', 'Maitres Toastmasters', '2025-03-31']],
+      },
+      '2025-2026': {
+        '124': [['8000124', 'Old 124 Club', '2026-03-31']],
+      },
+    })
+    const build = (
+      extra: Partial<Parameters<typeof buildReinstatableClubs>[0]> = {}
+    ) =>
+      known({
+        snapshotDate: NOW,
+        suspended: nowSuspended({ '61': [], '225': [] }),
+        closed: { ...RETIRED_CLOSED, asOf: NOW },
+        districtIds: TODAY_DISTRICTS,
+        ...extra,
+      })
+
+    it('lists a closed club of a district retired in 2026 under its old number', () => {
+      const out = build()
+      expect(out.districts['124']).toEqual([
+        {
+          clubNumber: '8000124',
+          clubName: 'Old 124 Club',
+          status: 'closed',
+          lastSeen: '2026-03-31',
+          oldestPeriod: false,
+          addsToBase: false,
+          reason: 'closed_does_not_add',
+          districtRetiredOn: '2026-07-01',
+        },
+      ])
+    })
+
+    it('dates a district retired in 2025 July 1, 2025, from the data', () => {
+      const out = build()
+      expect(out.districts['09']!.map(c => c.districtRetiredOn)).toEqual([
+        '2025-07-01',
+      ])
+    })
+
+    it('a June 30 list that still has the district dates it from that year', () => {
+      // No 2025-26 closure of district 09, but the 2026-06-30 list has it:
+      // it still existed in 2025-26.
+      const june = {
+        ...suspendedList({
+          '09': [
+            {
+              clubNumber: '8000999',
+              clubName: 'June Nine Club',
+              division: 'A',
+              area: '1',
+              suspendDate: '2026-03-31',
+            },
+          ],
+        }),
+        snapshotDate: '2026-06-30',
+        programYear: { start: '2025-07-01', end: '2026-06-30' },
+      }
+      const out = build({ previousSuspended: june })
+      expect(
+        out.districts['09']!.find(c => c.clubNumber === '8000009')
+          ?.districtRetiredOn
+      ).toBe('2026-07-01')
+    })
+
+    it('leaves rows of a district on the date unchanged, with no districtRetiredOn', () => {
+      const out = build()
+      expect(out.districts['61']).toEqual([
+        {
+          clubNumber: '1314924',
+          clubName: 'Maitres Toastmasters',
+          status: 'closed',
+          lastSeen: '2025-03-31',
+          oldestPeriod: false,
+          addsToBase: false,
+          reason: 'closed_does_not_add',
+        },
+      ])
+      expect(out.districts['225']).toEqual([])
+    })
+
+    it('matches district ids whatever their zero-padding', () => {
+      const out = build({ districtIds: ['9', '61', '225'] })
+      expect(out.districts).not.toHaveProperty('09')
+    })
+
+    it('a district on the date whose suspended list was not read stays unknown, not retired', () => {
+      const out = build({ districtIds: ['61', '124', '225'] })
+      expect(out.districts).not.toHaveProperty('124')
+    })
+
+    it('without the date’s district set, no district is taken as retired', () => {
+      const out = build({ districtIds: undefined })
+      expect(Object.keys(out.districts).sort()).toEqual(['225', '61'])
+    })
+
+    it('never lists district U as retired', () => {
+      const out = build({
+        closed: closedIndex({
+          '2025-2026': { U: [['1', 'Undistricted Club', '2026-06-30']] },
+        }),
+      })
+      expect(out.districts).not.toHaveProperty('U')
+    })
+
+    it('a Mar 31 suspension carried over from a retired district is listed under it, as suspended', () => {
+      const AUGUST = '2026-08-15'
+      const june = {
+        ...suspendedList({
+          '124': [
+            {
+              clubNumber: '8000125',
+              clubName: 'Carried 124 Club',
+              division: 'C',
+              area: '3',
+              suspendDate: '2026-03-31',
+            },
+          ],
+        }),
+        snapshotDate: '2026-06-30',
+        programYear: { start: '2025-07-01', end: '2026-06-30' },
+      }
+      const out = known({
+        snapshotDate: AUGUST,
+        suspended: { ...nowSuspended({ '61': [] }), snapshotDate: AUGUST },
+        closed: closedIndex({
+          '2025-2026': {
+            '124': [['8000125', 'Carried 124 Club', '2026-06-30']],
+          },
+        }),
+        previousSuspended: june,
+        districtIds: ['61'],
+      })
+      expect(out.districts['124']).toEqual([
+        expect.objectContaining({
+          clubNumber: '8000125',
+          status: 'suspended',
+          suspendDate: '2026-03-31',
+          division: 'C',
+          area: '3',
+          addsToBase: true,
+          reason: 'suspended_mar31_before_oct1',
+          districtRetiredOn: '2026-07-01',
+        }),
+      ])
+    })
+
+    it('passes the writer schema', () => {
+      expect(ReinstatableClubsSchema.safeParse(build()).success).toBe(true)
+    })
+  })
+
   describe('division and area of a closed club, from a June 30 suspended list (#3097)', () => {
     // The closed index has no division or area. The June 30 suspended lists
     // the builder already reads do, as at the club's suspension.

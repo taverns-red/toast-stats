@@ -108,6 +108,52 @@ describe('AnalyticsComputeService — reinstatable-clubs.json (#3007)', () => {
     expect(file.districts['17']).toEqual([])
   })
 
+  it('lists a closed club of a retired district, one the date’s rankings lack (#3101)', async () => {
+    await fs.writeFile(
+      path.join(cacheDir, 'config/closed-club-names.json'),
+      JSON.stringify({
+        ...CLOSED,
+        programYears: {
+          ...CLOSED.programYears,
+          '2025-2026': {
+            '124': [['8000124', 'Old 124 Club', '2026-03-31']],
+          },
+        },
+      })
+    )
+    await compute()
+    const file = ReinstatableClubsSchema.parse(
+      JSON.parse(await fs.readFile(outPath(), 'utf-8'))
+    )
+    expect(
+      file.districts['124']!.map(c => [c.clubNumber, c.districtRetiredOn])
+    ).toEqual([['8000124', '2026-07-01']])
+    expect(file.districts['61']!.every(c => !('districtRetiredOn' in c))).toBe(
+      true
+    )
+  })
+
+  it('without the date’s rankings, takes no district as retired (#3101)', async () => {
+    await fs.writeFile(
+      path.join(cacheDir, 'config/closed-club-names.json'),
+      JSON.stringify({
+        ...CLOSED,
+        programYears: {
+          ...CLOSED.programYears,
+          '2025-2026': {
+            '124': [['8000124', 'Old 124 Club', '2026-03-31']],
+          },
+        },
+      })
+    )
+    await fs.rm(path.join(snapshotDir(), 'all-districts-rankings.json'))
+    await compute()
+    const file = ReinstatableClubsSchema.parse(
+      JSON.parse(await fs.readFile(outPath(), 'utf-8'))
+    )
+    expect(Object.keys(file.districts).sort()).toEqual(['17', '61'])
+  })
+
   it('writes no file when the closed-club index is not synced (unknown, not zero)', async () => {
     await fs.rm(path.join(cacheDir, 'config'), { recursive: true })
     const result = await compute()

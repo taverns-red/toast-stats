@@ -81,6 +81,12 @@ export interface BuildReinstatableClubsInput {
   legacyDeadlines?: ReadonlyMap<string, string> | null
   /** The date's roster: club number → its district and club status. */
   roster?: ReadonlyMap<string, RosterEntry> | null
+  /**
+   * The date's district set, from its `all-districts-rankings.json` (#3101).
+   * A district in neither it nor the suspended list was retired. Without
+   * it, no district is taken as retired.
+   */
+  districtIds?: readonly string[] | null
 }
 
 /** One club on the date's roster (`district_{id}.json` `clubs[]`). */
