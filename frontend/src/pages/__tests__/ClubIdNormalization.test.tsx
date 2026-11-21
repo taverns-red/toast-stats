@@ -175,7 +175,7 @@ describe('ClubDetailPage club-id normalization (#1440)', () => {
 
       // The name renders twice — breadcrumb and hero title.
       expect((await screen.findAllByText(CLUB_NAME)).length).toBeGreaterThan(0)
-      expect(screen.queryByText(/Club Not Found/i)).not.toBeInTheDocument()
+      expect(screen.queryByTestId('not-found-panel')).not.toBeInTheDocument()
     }
   )
 
@@ -256,7 +256,7 @@ describe('ClubRedirectPage club-index normalization (#1440)', () => {
     renderRedirect('1234')
 
     await waitFor(() => {
-      expect(screen.getByText(/Club Not Found/i)).toBeInTheDocument()
+      expect(screen.getByTestId('not-found-panel')).toBeInTheDocument()
     })
   })
 })

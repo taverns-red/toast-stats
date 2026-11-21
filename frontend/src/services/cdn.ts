@@ -76,6 +76,7 @@ import {
 } from '../types/snapshotDate'
 
 import { recordCdnResponse } from './cdnCacheTracker'
+import { CdnFetchError } from './cdnFetchError'
 
 // CDN base URL — set via VITE_CDN_BASE_URL at build time (#316)
 // Production build: https://cdn.taverns.red (default)
@@ -573,7 +574,7 @@ export function cdnSnapshotIndexUrl(): string {
 export async function fetchFromCdn<T>(url: string): Promise<T> {
   const res = await fetch(url)
   if (!res.ok) {
-    throw new Error(`CDN fetch failed: ${res.status} for ${url}`)
+    throw new CdnFetchError(res.status, url)
   }
   recordCdnResponse(res)
   return res.json() as Promise<T>

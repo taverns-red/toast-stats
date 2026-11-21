@@ -7,6 +7,7 @@
 
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
+import { DivisionNotFound } from '../components/EntityNotFound'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
@@ -183,7 +184,9 @@ const DivisionPage: React.FC = () => {
   // division whose clubs are all suspended (Lesson 147): the snapshot's division
   // list is the source of truth, the same one the recognition card reads.
   if (snapshot && !divisionPerformance) {
-    throw new Response(null, { status: 404, statusText: 'Division not found' })
+    return (
+      <DivisionNotFound districtId={districtId ?? ''} divId={divId ?? ''} />
+    )
   }
 
   const clubs = (data?.allClubs ?? []).filter(

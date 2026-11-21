@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnRankHistory } from '../services/cdn'
+import { CdnFetchError } from '../services/cdnFetchError'
 import type { RankHistoryResponse } from '../types/districts'
 import { getProgramYearForDate } from '../utils/programYear'
 
@@ -47,8 +48,12 @@ export const useRankHistory = ({
               history,
               programYear,
             } satisfies RankHistoryResponse
-          } catch {
-            // Return empty history for districts not found on CDN
+          } catch (error) {
+            // Only a 404 means no history exists; any other failure must
+            // throw so the query retries and callers can tell it from a miss.
+            if (!(error instanceof CdnFetchError && error.status === 404)) {
+              throw error
+            }
             return {
               districtId: id,
               districtName: `District ${id}`,

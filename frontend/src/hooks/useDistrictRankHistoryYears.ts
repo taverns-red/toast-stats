@@ -38,6 +38,8 @@ export function programYearsFromRankHistory(
 export interface DistrictRankHistoryYears {
   programYears: ProgramYear[]
   isLoading: boolean
+  /** The history could not be read, which says nothing about the district. */
+  isError: boolean
 }
 
 /**
@@ -58,12 +60,16 @@ export function useDistrictRankHistoryYears(
 
   // No date bounds — the whole history is wanted, which is what makes the year
   // list complete. `useRankHistory` is itself gated on a non-empty id list.
-  const { data, isLoading } = useRankHistory({ districtIds })
+  const { data, isLoading, isError } = useRankHistory({ districtIds })
 
   const programYears = useMemo(
     () => programYearsFromRankHistory(data?.[0]?.history ?? []),
     [data]
   )
 
-  return { programYears, isLoading: active ? isLoading : false }
+  return {
+    programYears,
+    isLoading: active ? isLoading : false,
+    isError: active ? isError : false,
+  }
 }

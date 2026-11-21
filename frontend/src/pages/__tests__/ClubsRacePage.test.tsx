@@ -1,6 +1,7 @@
 /* /clubs/race/:tier (#1556, phase 3). Mounted through a real memory router
    with the app's branded ErrorPage as the boundary, so an unknown tier is
-   proven to land on the 404 rather than an empty race (integration project). */
+   proven to show the not-found panel rather than an empty race (integration
+   project). */
 
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -167,11 +168,14 @@ describe('ClubsRacePage (#1556)', () => {
     expect(table).not.toHaveTextContent('Nine')
   })
 
-  it('renders the branded 404 for an unknown tier', () => {
+  it('renders the not-found panel for an unknown tier', () => {
     mockHook({ race: RACE, snapshotDate: '2026-09-11' })
     renderAt('/clubs/race/foo')
     expect(
-      screen.getByRole('heading', { name: 'Page not found' })
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'There is no club race called "foo"',
+      })
     ).toBeInTheDocument()
     expect(screen.queryByRole('table')).toBeNull()
   })
