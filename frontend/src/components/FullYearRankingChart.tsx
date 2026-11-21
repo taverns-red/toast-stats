@@ -31,11 +31,10 @@ import {
   METRIC_TIE_CATEGORY,
   type RankMetric,
 } from './fullYearRankingMetrics'
-import { isRankTied } from '../utils/rankTies'
+import { ALL_TIED_MESSAGE, isRankTied } from '../utils/rankTies'
+import { AllTiedPlot } from './charts/AllTiedPlot'
 
 export type { RankMetric }
-
-const ALL_TIED_MESSAGE = 'Every district has the same value so far.'
 
 /**
  * Props for the FullYearRankingChart component
@@ -250,14 +249,7 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
         {/* The desktop min-width; a phone sheet is narrower (#1835). */}
         <div className={compact ? undefined : 'min-w-[320px]'}>
           {allTied ? (
-            <div
-              className="flex items-center justify-center"
-              style={{ height: PLOT_HEIGHT }}
-            >
-              <p className="text-base text-[var(--ink-2)] font-tm-body text-center">
-                {ALL_TIED_MESSAGE}
-              </p>
-            </div>
+            <AllTiedPlot height={PLOT_HEIGHT} />
           ) : (
             <ResponsiveContainer
               width="100%"

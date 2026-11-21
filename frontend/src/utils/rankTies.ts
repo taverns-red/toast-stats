@@ -1,5 +1,8 @@
 import type { HistoricalRankPoint } from '../types/districts'
 
+/** What a rank chart says when every date it would plot is tied. */
+export const ALL_TIED_MESSAGE = 'Every district has the same value so far.'
+
 export type RankCategory = 'overall' | 'clubs' | 'payments' | 'distinguished'
 
 type TieFlags = Pick<

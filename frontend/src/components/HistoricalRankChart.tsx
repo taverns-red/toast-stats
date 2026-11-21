@@ -9,8 +9,9 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { RankHistoryResponse } from '../types/districts'
-import { isRankTied } from '../utils/rankTies'
+import { ALL_TIED_MESSAGE, isRankTied } from '../utils/rankTies'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
+import { AllTiedPlot } from './charts/AllTiedPlot'
 import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { dateAxisLayout } from './charts/compactAxis'
@@ -113,8 +114,6 @@ const DISTRICT_COLORS = [
   'var(--tm-cool-gray-80)', // Additional series with opacity
   'var(--tm-happy-yellow-80)', // Additional series with opacity
 ]
-
-const ALL_TIED_MESSAGE = 'Every district has the same value so far.'
 
 const districtColor = (index: number): string =>
   DISTRICT_COLORS[index % DISTRICT_COLORS.length] ?? 'var(--tm-loyal-blue)'
@@ -274,14 +273,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
         {/* The desktop min-width; a phone sheet is narrower (#1835). */}
         <div className={compact ? undefined : 'min-w-[320px]'}>
           {allTied ? (
-            <div
-              className="flex items-center justify-center"
-              style={{ height: PLOT_HEIGHT }}
-            >
-              <p className="text-base text-[var(--ink-2)] font-tm-body text-center">
-                {ALL_TIED_MESSAGE}
-              </p>
-            </div>
+            <AllTiedPlot height={PLOT_HEIGHT} />
           ) : (
             <ResponsiveContainer
               width="100%"
