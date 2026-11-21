@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.31.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.31.0...collector-cli-v1.31.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* **collector:** FAC parser leftovers: address words, zone after text, invitation of a member ([#2811](https://github.com/taverns-red/toast-stats/issues/2811)) ([#3147](https://github.com/taverns-red/toast-stats/issues/3147)) ([5b0d56a](https://github.com/taverns-red/toast-stats/commit/5b0d56a0b2efc6827c97bc848c39a3b21ef87ebb))
+* **rankings:** show "Tied" on the Rankings page when a whole category is tied ([#2797](https://github.com/taverns-red/toast-stats/issues/2797)) ([#3144](https://github.com/taverns-red/toast-stats/issues/3144)) ([4f76b28](https://github.com/taverns-red/toast-stats/commit/4f76b28e05c89d004ecc69c1880d82a3b808e436))
+
 ## [1.31.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.30.0...collector-cli-v1.31.0) (2026-11-21)
 
 
