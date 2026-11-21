@@ -41,6 +41,14 @@ describe('sectionVideos', () => {
     )
   })
 
+  it('links Grid to the division and area video and Rankings to the trends video', () => {
+    expect(sectionVideoId('grid')).toBe('v6')
+    expect(sectionVideoId('rankings')).toBe('v9')
+    expect(SECTION_VIDEO_SEGMENTS).toEqual(
+      expect.arrayContaining(['grid', 'rankings'])
+    )
+  })
+
   it.each(SECTION_VIDEO_SEGMENTS.map(s => [s || '(hub)', s] as const))(
     'the %s page renders a component that shows the Watch how link',
     (_name, segment) => {

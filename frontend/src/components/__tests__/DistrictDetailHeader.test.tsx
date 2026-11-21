@@ -424,6 +424,8 @@ describe('DistrictDetailHeader link to the section video (#2658)', () => {
     ['the hub', '/district/61', '/videos#video-v1'],
     ['Clubs', '/district/61/clubs', '/videos#video-v3'],
     ['Action List', '/district/61/action-list', '/videos#video-v2'],
+    ['Grid', '/district/61/grid', '/videos#video-v6'],
+    ['Rankings', '/district/61/rankings', '/videos#video-v9'],
   ])('links %s to its video card', (_name, path, href) => {
     renderAt(path)
     expect(
@@ -432,7 +434,7 @@ describe('DistrictDetailHeader link to the section video (#2658)', () => {
   })
 
   it('adds no link where no video demonstrates the page', () => {
-    renderAt('/district/61/rankings')
+    renderAt('/district/61/training')
     expect(screen.queryByRole('link', { name: /watch how/i })).toBeNull()
   })
 })
