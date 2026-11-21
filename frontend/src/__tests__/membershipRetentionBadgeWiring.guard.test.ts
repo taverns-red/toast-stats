@@ -29,7 +29,18 @@ describe('membership retention badge wiring (#1614)', () => {
 
   it("treats a past year's last snapshot as final (#3075)", () => {
     expect(caller).toMatch(
-      /retentionYearClosed\s*=[\s\S]{0,200}?isPastProgramYearClose\(/
+      /\bconst\s+retentionYearClosed\s*=(?!=)\s*isPastProgramYearClose\(/
+    )
+  })
+
+  it('judges the year against the site-wide newest year (#3075)', () => {
+    // A district's own index can end early (a retired district, or a lag in
+    // July), so it must not decide whether the year has ended.
+    expect(caller).toMatch(
+      /isPastProgramYearClose\(\s*effectiveEndDate\s*\?\?\s*undefined,\s*cachedDatesInProgramYear,\s*newestProgramYearWithData\s*\)/
+    )
+    expect(caller).toMatch(
+      /\bconst\s+newestProgramYearWithData\s*=(?!=)\s*useNewestProgramYearWithData\(\s*\)/
     )
   })
 

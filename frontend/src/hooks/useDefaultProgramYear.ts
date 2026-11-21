@@ -52,3 +52,7 @@ export function useDefaultProgramYear(): ProgramYear {
   // getAvailableProgramYears sorts newest first; [0] is the latest PY-with-data.
   return availableProgramYears[0] ?? getCurrentProgramYear()
 }
+
+export function useNewestProgramYearWithData(): ProgramYear | undefined {
+  return undefined
+}
