@@ -851,6 +851,47 @@ describe('buildReinstatableClubs (#3007 phase 2)', () => {
       expect(out.districts).not.toHaveProperty('124')
     })
 
+    it('an empty district set is unusable: no district is taken as retired', () => {
+      const out = build({ districtIds: [] })
+      expect(Object.keys(out.districts).sort()).toEqual(['225', '61'])
+      expect(
+        Object.values(out.districts)
+          .flat()
+          .some(c => 'districtRetiredOn' in c)
+      ).toBe(false)
+    })
+
+    it('a district set missing a suspended-list key is unusable: no district is taken as retired', () => {
+      // 225 is on the suspended list but not in the set: the set is partial,
+      // so a district missing from it can't be told retired from not read.
+      const out = build({ districtIds: ['61'] })
+      expect(Object.keys(out.districts).sort()).toEqual(['225', '61'])
+      expect(
+        Object.values(out.districts)
+          .flat()
+          .some(c => 'districtRetiredOn' in c)
+      ).toBe(false)
+    })
+
+    it('known limit: a retired district with no closure or list row in its last year is dated a year early', () => {
+      // District 07 existed in 2025-26 (retired 2026-07-01), but the only
+      // sign of it is a 2024-25 closure. The evidence rule dates it from
+      // that year. Exact dates need each year's June 30 district set.
+      const out = build({
+        closed: {
+          ...closedIndex({
+            '2024-2025': {
+              '07': [['8000007', 'Old Seven Club', '2025-03-31']],
+            },
+          }),
+          asOf: NOW,
+        },
+      })
+      expect(out.districts['07']!.map(c => c.districtRetiredOn)).toEqual([
+        '2025-07-01',
+      ])
+    })
+
     it('without the date’s district set, no district is taken as retired', () => {
       const out = build({ districtIds: undefined })
       expect(Object.keys(out.districts).sort()).toEqual(['225', '61'])
