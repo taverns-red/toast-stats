@@ -17,7 +17,7 @@ import { useDistinguishedCountsAt } from '../hooks/useDistinguishedCountsAt'
 import { resolveDistinguishedCounts } from '../utils/distinguishedCounts'
 import { DistrictSectionIntro } from '../components/DistrictSectionIntro'
 import { DistrictSubnav } from '../components/DistrictSubnav'
-import { WatchHowLink } from '../components/WatchHowLink'
+import { HowToVideosLink, WatchHowLink } from '../components/WatchHowLink'
 import { ContextBar } from '../components/ContextBar'
 import { DatePairPicker } from '../components/DatePairPicker'
 import { DatePairPresetChips } from '../components/DatePairPresetChips'
@@ -427,6 +427,8 @@ const DistrictChangesPage: React.FC = () => {
             about={
               <>
                 {CHANGES_ABOUT} <WatchHowLink segment="changes" />
+                {' · '}
+                <HowToVideosLink />
               </>
             }
             trail={[

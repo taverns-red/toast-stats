@@ -4,6 +4,9 @@
    is `npm run videos:check-urls`, which reads this same catalogue. */
 
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   HOW_TO_VIDEOS,
   VIDEO_CDN_BASE,
@@ -15,6 +18,7 @@ import {
 } from '../howToVideos'
 import {
   SECTION_VIDEO_SEGMENTS,
+  VIDEO_STARTS_ON_ANOTHER_PAGE,
   sectionVideoId,
 } from '../../config/sectionVideos'
 
@@ -220,6 +224,24 @@ describe('example district links (#2658)', () => {
   })
 })
 
+/** Segments whose mapped video has no beat shown on that page. A scenario
+    names each beat `id: '<segment>'`. */
+function segmentsWithoutBeat(map: Readonly<Record<string, string>>): string[] {
+  const here = dirname(fileURLToPath(import.meta.url))
+  return Object.entries(map)
+    .filter(([segment, id]) => {
+      const file = resolve(here, `../../../../videos/src/scenarios/${id}.ts`)
+      let text: string
+      try {
+        text = readFileSync(file, 'utf-8')
+      } catch {
+        return true
+      }
+      return !new RegExp(`\\bid:\\s*['"]${segment}['"]`).test(text)
+    })
+    .map(([segment]) => segment)
+}
+
 describe('text alternatives and page links (#2658)', () => {
   it.each(HOW_TO_VIDEOS.map(v => [v.id, v] as const))(
     '%s: has steps with text and a site path for its page',
@@ -238,7 +260,30 @@ describe('text alternatives and page links (#2658)', () => {
       expect(video, `no catalogue entry for ${id}`).toBeDefined()
       const path = (video?.pageUrl ?? '').split('?')[0] ?? ''
       const match = /^\/district\/\d+\/?([^/]*)$/.exec(path)
-      expect(match?.[1] ?? null).toBe(segment)
+      if (segment in VIDEO_STARTS_ON_ANOTHER_PAGE) {
+        expect(match?.[1] ?? null).not.toBe(segment)
+      } else {
+        expect(match?.[1] ?? null).toBe(segment)
+      }
     }
   )
+
+  it('flags a listed section whose video has no beat on that page', () => {
+    expect(segmentsWithoutBeat({ training: 'v3', grid: 'v9' }).sort()).toEqual([
+      'grid',
+      'training',
+    ])
+    expect(segmentsWithoutBeat({ grid: 'v6', rankings: 'v9' })).toEqual([])
+  })
+
+  it('every listed video has a beat on the page that links to it', () => {
+    expect(segmentsWithoutBeat(VIDEO_STARTS_ON_ANOTHER_PAGE)).toEqual([])
+  })
+
+  it('lists a video on another page only where it really starts elsewhere', () => {
+    for (const [segment, id] of Object.entries(VIDEO_STARTS_ON_ANOTHER_PAGE)) {
+      expect(sectionVideoId(segment)).toBe(id)
+      expect(HOW_TO_VIDEOS.some(v => v.id === id)).toBe(true)
+    }
+  })
 })

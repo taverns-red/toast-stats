@@ -15,6 +15,7 @@ import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay } from '../components/ErrorDisplay'
 import { DISTRICT_SECTIONS } from '../config/districtSections'
 import { exportCouncilStanding } from '../utils/csvExport'
+import { HowToVideosLink } from '../components/WatchHowLink'
 import {
   COUNCIL_DISCLAIMER,
   COUNCIL_STALE_DAYS,
@@ -176,7 +177,11 @@ const DistrictCouncilPage: React.FC = () => {
             title={districtName}
             back={{ label: districtName, to: `/district/${districtId}` }}
             chipLabel="About"
-            about={ABOUT}
+            about={
+              <>
+                {ABOUT} <HowToVideosLink />
+              </>
+            }
             trail={[
               { label: 'Districts', to: '/' },
               { label: districtName, to: `/district/${districtId}` },
