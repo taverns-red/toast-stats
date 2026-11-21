@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.32.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.31.0...shared-contracts-v1.32.0) (2026-11-21)
+
+
+### Features
+
+* **ui:** retired districts' clubs count worldwide, with a note instead of a link ([#3101](https://github.com/taverns-red/toast-stats/issues/3101)) ([#3135](https://github.com/taverns-red/toast-stats/issues/3135)) ([e773d6a](https://github.com/taverns-red/toast-stats/commit/e773d6ab9591b899fbf14cc0db34fbdb7b45c82f))
+
 ## [1.31.0](https://github.com/taverns-red/toast-stats/compare/shared-contracts-v1.30.0...shared-contracts-v1.31.0) (2026-11-20)
 
 

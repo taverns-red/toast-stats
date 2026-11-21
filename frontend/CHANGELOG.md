@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.78.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.77.0...frontend-v3.78.0) (2026-11-21)
+
+
+### Features
+
+* **ui:** retired districts' clubs count worldwide, with a note instead of a link ([#3101](https://github.com/taverns-red/toast-stats/issues/3101)) ([#3135](https://github.com/taverns-red/toast-stats/issues/3135)) ([e773d6a](https://github.com/taverns-red/toast-stats/commit/e773d6ab9591b899fbf14cc0db34fbdb7b45c82f))
+
+
+### Bug Fixes
+
+* a past year's last snapshot shows the retention estimate as final ([#3075](https://github.com/taverns-red/toast-stats/issues/3075)) ([#3141](https://github.com/taverns-red/toast-stats/issues/3141)) ([b0fbd4c](https://github.com/taverns-red/toast-stats/commit/b0fbd4c0f3a303b5382ef475323d26a84a5efaa0))
+* Club Growth strip no longer shifts on dates with no reinstate file ([#3092](https://github.com/taverns-red/toast-stats/issues/3092)) ([#3137](https://github.com/taverns-red/toast-stats/issues/3137)) ([a5fb441](https://github.com/taverns-red/toast-stats/commit/a5fb4410ba396ed12882ee7b8420e13284f7acf7))
+* line up /history table header text ([#2795](https://github.com/taverns-red/toast-stats/issues/2795)) ([#3140](https://github.com/taverns-red/toast-stats/issues/3140)) ([7cdcba2](https://github.com/taverns-red/toast-stats/commit/7cdcba2639c34a1ac8e468b9173fcb1c8dca425f))
+* **ui:** Clubs table spec leftovers: skeleton, retry, phone loading ([#3020](https://github.com/taverns-red/toast-stats/issues/3020)) ([#3139](https://github.com/taverns-red/toast-stats/issues/3139)) ([658bfef](https://github.com/taverns-red/toast-stats/commit/658bfefa0d118ecfa3742472b6d9d018ec0728ca))
+
 ## [3.77.0](https://github.com/taverns-red/toast-stats/compare/frontend-v3.76.0...frontend-v3.77.0) (2026-11-21)
 
 
