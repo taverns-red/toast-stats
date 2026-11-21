@@ -79,6 +79,8 @@ npm run quality:check
 npm run pre-commit
 ```
 
+**Local test runs:** run full local suites only through `~/code/ops/tools/test-slot/run.sh` (at most 3 machine-wide) and this repo's one-run lock, `scripts/test-lock.sh <command>`; targeted runs use `--maxWorkers=2` and touched files only; full suites belong on CI (ops#425, #3166).
+
 ## Architecture
 
 **Data flow:** Collector CLI scrapes Toastmasters dashboards → transforms + computes analytics → uploads to GCS as CSV/JSON snapshots → Frontend reads pre-computed snapshots from CDN via TanStack Query (5-min stale, 10-min GC).
