@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.102.2](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.102.1...toast-stats-v2.102.2) (2026-11-21)
+
+
+### Bug Fixes
+
+* **a11y:** match the focus-ring offset to the dark surface ([#3161](https://github.com/taverns-red/toast-stats/issues/3161)) ([#3163](https://github.com/taverns-red/toast-stats/issues/3163)) ([d82d5b8](https://github.com/taverns-red/toast-stats/commit/d82d5b88ce131a5508bb0665dea50586b134299e))
+* **a11y:** visible keyboard focus everywhere: base rule, outline sweep, smoke ([#2667](https://github.com/taverns-red/toast-stats/issues/2667)) ([#3158](https://github.com/taverns-red/toast-stats/issues/3158)) ([016448f](https://github.com/taverns-red/toast-stats/commit/016448f1c5e3f5bfb54dfac8cf6fae7386d261e8))
+* **cls:** size division and area placeholders with the same box as their content ([#2793](https://github.com/taverns-red/toast-stats/issues/2793)) ([#3152](https://github.com/taverns-red/toast-stats/issues/3152)) ([4600898](https://github.com/taverns-red/toast-stats/commit/4600898012483db23ebfa1bbbc97fdf45907db12))
+* **fonts:** keep the Action List intro's line breaks across the web-font swap ([#2922](https://github.com/taverns-red/toast-stats/issues/2922)) ([#3150](https://github.com/taverns-red/toast-stats/issues/3150)) ([8e3a415](https://github.com/taverns-red/toast-stats/commit/8e3a41546ad8ccb01ca8704a9773644bf72dd2c5))
+* **landing:** rankings growth contrast, phone card clip, star colour ([#2694](https://github.com/taverns-red/toast-stats/issues/2694)) ([#3165](https://github.com/taverns-red/toast-stats/issues/3165)) ([1ccfe17](https://github.com/taverns-red/toast-stats/commit/1ccfe17295ee121c05abadc002c37391bb12928f))
+* **rankings:** explain ties on phone readouts, empty charts and table cells; fix the score axis label ([#3151](https://github.com/taverns-red/toast-stats/issues/3151)) ([#3155](https://github.com/taverns-red/toast-stats/issues/3155)) ([b1ab7b3](https://github.com/taverns-red/toast-stats/commit/b1ab7b38b54e8c16ec82131f71408d1e31530788))
+* **rankings:** say why the district comparison chart is empty when every date is tied ([#3157](https://github.com/taverns-red/toast-stats/issues/3157)) ([#3159](https://github.com/taverns-red/toast-stats/issues/3159)) ([8458269](https://github.com/taverns-red/toast-stats/commit/8458269dec3729c3a362a066d732cc9313aac912))
+* **reference:** visible links, MCP copy button, History years agree, Awards and race table tidy ([#2657](https://github.com/taverns-red/toast-stats/issues/2657)) ([#3160](https://github.com/taverns-red/toast-stats/issues/3160)) ([8460e0a](https://github.com/taverns-red/toast-stats/commit/8460e0a13305e0c93da38da351cc4b2c727d954b))
+* **ui:** one not-found panel inside the shell ([#2647](https://github.com/taverns-red/toast-stats/issues/2647)) ([#3162](https://github.com/taverns-red/toast-stats/issues/3162)) ([000bd2f](https://github.com/taverns-red/toast-stats/commit/000bd2ffa60ff1971d09fdbd3cb5d9a161e8abb8))
+* **videos:** link the videos page beyond the footer; Grid and Rankings get Watch how links ([#3167](https://github.com/taverns-red/toast-stats/issues/3167)) ([#3170](https://github.com/taverns-red/toast-stats/issues/3170)) ([cba1161](https://github.com/taverns-red/toast-stats/commit/cba1161766844a4714554492367e0a0c5f2c3509))
+* **videos:** text alternatives and links between videos and screens ([#2658](https://github.com/taverns-red/toast-stats/issues/2658)) ([#3164](https://github.com/taverns-red/toast-stats/issues/3164)) ([8b13697](https://github.com/taverns-red/toast-stats/commit/8b136979e9ec741b6abd9da806c8ae6867f7474d))
+
+
+### Tests
+
+* **ci:** don't fail PR previews while the daily reports job is still writing sidecars ([#2750](https://github.com/taverns-red/toast-stats/issues/2750)) ([#3156](https://github.com/taverns-red/toast-stats/issues/3156)) ([3ac2a7c](https://github.com/taverns-red/toast-stats/commit/3ac2a7cb88802998285974bca00c6a9b97945af8))
+
 ## [2.102.1](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.102.0...toast-stats-v2.102.1) (2026-11-21)
 
 
