@@ -3,9 +3,9 @@
  * (#186, #302; moved out of inline `node -e` by #1743, plan P3-3).
  *
  * Input is one all-districts-rankings.json per snapshot date, named
- * `{date}.json` by scripts/pull-rank-history.ts. Ported verbatim from the
- * inline block so the published bytes do not change
- * (__tests__/goldenParity.test.ts). In particular:
+ * `{date}.json` by scripts/pull-rank-history.ts. Ported from the inline
+ * block: the output is byte for byte the same apart from the tie flags
+ * (#2797) (__tests__/goldenParity.test.ts). In particular:
  * - files are processed in the order given (the CLI passes readdirSync's);
  * - a file that cannot be read or parsed is skipped, never fatal;
  * - a "District N" placeholder name is replaced by the next real one seen;

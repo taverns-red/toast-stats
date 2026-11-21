@@ -185,7 +185,7 @@ export interface HistoricalRankPoint {
   overallRank?: number
   /** True when every district had the same value in that category on this
    *  date (#2797). The pipeline writes it only when true; older files lack
-   *  it, which reads as not tied. */
+   *  it, which reads as not tied (globalRankingsUtils.tied.test.ts). */
   clubsTied?: boolean
   paymentsTied?: boolean
   distinguishedTied?: boolean

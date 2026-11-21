@@ -36,7 +36,8 @@ export type TieInputRow = Partial<
 >
 
 /** The rank-history tie flags for one date (#2797). A flag is present only
- *  when true, so untied files keep their old bytes. */
+ *  when true, so untied files keep their old bytes (scripts/manifests
+ *  goldenParity.test.ts and manifestEdges.test.ts). */
 export interface TiedCategories {
   clubsTied?: true
   paymentsTied?: true
@@ -172,7 +173,8 @@ export class MetricRankingsCalculator {
     const first = rankings[0]
     if (!first || rankings.length < 2) return false
     const value = first[RANKED_VALUE_FIELD[metric]]
-    // Old rankings files can lack the value; missing everywhere is not a tie.
+    // Old rankings files can lack the value; missing everywhere is not a tie
+    // (MetricRankingsCalculator.test, "is false when the ranked value is missing").
     if (typeof value !== 'number' || !Number.isFinite(value)) return false
     return rankings.every(r => r[RANKED_VALUE_FIELD[metric]] === value)
   }
