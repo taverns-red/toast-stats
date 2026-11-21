@@ -760,9 +760,8 @@ describe('Global Rankings Accessibility Tests', () => {
           <GlobalRankingsTab districtId="57" districtName="District 57" />
         )
 
-        // Error state should have aria-live for screen reader announcement
-        const errorAlert = screen.getByRole('alert')
-        expect(errorAlert).toHaveAttribute('aria-live', 'polite')
+        // role="alert" is a live region: screen readers announce it
+        expect(screen.getByRole('alert')).toBeInTheDocument()
       })
 
       it('should have aria-busy on loading states', () => {

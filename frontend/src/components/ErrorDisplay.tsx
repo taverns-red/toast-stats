@@ -201,7 +201,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
           {onRetry && (
             <button
               onClick={onRetry}
-              className="tm-btn-secondary text-sm"
+              className="tm-btn-secondary text-sm min-h-[44px]"
               aria-label="Try again: retry loading data"
             >
               Try again

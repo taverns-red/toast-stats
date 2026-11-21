@@ -238,8 +238,11 @@ describe('DistrictsPage - Error Handling', () => {
     const errorHeading = await screen.findByText('Error Loading Rankings')
     expect(errorHeading).toBeInTheDocument()
 
-    // Check for generic error message
-    expect(screen.getByText('Something went wrong')).toBeInTheDocument()
+    // The panel says what failed in plain words; the raw message stays out of sight
+    expect(
+      screen.getByText(/couldn't load the district rankings/i)
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Something went wrong')).toBeNull()
 
     // Check for "Try Again" button
     expect(
