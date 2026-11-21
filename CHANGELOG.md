@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.102.3](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.102.2...toast-stats-v2.102.3) (2026-11-21)
+
+
+### Bug Fixes
+
+* **cls:** reserve the district map's heading, legend and lists while loading ([#2673](https://github.com/taverns-red/toast-stats/issues/2673)) ([#3173](https://github.com/taverns-red/toast-stats/issues/3173)) ([bc3a170](https://github.com/taverns-red/toast-stats/commit/bc3a170ed73018af962a80577efa332cb7f00b56))
+* **test:** git spawns in scripts tests drop the hook's GIT_* ([#3179](https://github.com/taverns-red/toast-stats/issues/3179)) ([#3181](https://github.com/taverns-red/toast-stats/issues/3181)) ([b42cc17](https://github.com/taverns-red/toast-stats/commit/b42cc1717aa68732a2638b5aae5afcffab1e3f73))
+* **ui:** remaining pages use the shared error panel ([#2682](https://github.com/taverns-red/toast-stats/issues/2682)) ([#3171](https://github.com/taverns-red/toast-stats/issues/3171)) ([ebd47b8](https://github.com/taverns-red/toast-stats/commit/ebd47b81dd6321f7f317860ad64d1aef4b00f339))
+* **ui:** Try again on the Districts rank chart; one wording for partial failures ([#3174](https://github.com/taverns-red/toast-stats/issues/3174)) ([#3180](https://github.com/taverns-red/toast-stats/issues/3180)) ([5d9aeb1](https://github.com/taverns-red/toast-stats/commit/5d9aeb1e23cf45b0ab77f5d1ab944a141ec2b5bc))
+
 ## [2.102.2](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.102.1...toast-stats-v2.102.2) (2026-11-21)
 
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.78.3](https://github.com/taverns-red/toast-stats/compare/frontend-v3.78.2...frontend-v3.78.3) (2026-11-21)
+
+
+### Bug Fixes
+
+* **cls:** reserve the district map's heading, legend and lists while loading ([#2673](https://github.com/taverns-red/toast-stats/issues/2673)) ([#3173](https://github.com/taverns-red/toast-stats/issues/3173)) ([bc3a170](https://github.com/taverns-red/toast-stats/commit/bc3a170ed73018af962a80577efa332cb7f00b56))
+* **ui:** remaining pages use the shared error panel ([#2682](https://github.com/taverns-red/toast-stats/issues/2682)) ([#3171](https://github.com/taverns-red/toast-stats/issues/3171)) ([ebd47b8](https://github.com/taverns-red/toast-stats/commit/ebd47b81dd6321f7f317860ad64d1aef4b00f339))
+* **ui:** Try again on the Districts rank chart; one wording for partial failures ([#3174](https://github.com/taverns-red/toast-stats/issues/3174)) ([#3180](https://github.com/taverns-red/toast-stats/issues/3180)) ([5d9aeb1](https://github.com/taverns-red/toast-stats/commit/5d9aeb1e23cf45b0ab77f5d1ab944a141ec2b5bc))
+
 ## [3.78.2](https://github.com/taverns-red/toast-stats/compare/frontend-v3.78.1...frontend-v3.78.2) (2026-11-21)
 
 
