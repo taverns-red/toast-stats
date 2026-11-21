@@ -51,6 +51,9 @@ const REINSTATEMENT_FAQ_URL = 'https://toastmasters.org/footer/faq/Club'
 const CONFIRM = 'Confirm with World Headquarters.'
 const CLOSED_QUOTE = 'closed clubs “will not increase the club base”'
 const CLOSED_TEXT = `Closed. The FAQ says ${CLOSED_QUOTE}. ${ADDS_NET_GROWTH}`
+/** #3130 (Ron, 2026-11-21): the note over the group speaks for all of its
+ *  closed clubs; a row's own Why keeps CLOSED_TEXT. */
+const CLOSED_GROUP_NOTE = `Closed. The FAQ says ${CLOSED_QUOTE}. So reinstating any of them adds to net club growth.`
 
 /** One line per reason code, from the FAQ's club base answer and table. */
 const REASON_TEXT: Record<string, string> = {
@@ -129,16 +132,19 @@ function addsNow(club: ReinstatableClub, snapshotDate: string): boolean {
   return addsToThisYearsBase(club.reason, club.addsToBase, snapshotDate)
 }
 
-/** #3088 — how many clubs are tagged "Adds to the club base", and the line
- *  the stage card prints. Same rule as the groups, so they always agree. */
+/** #3088 — how many clubs raise the club base (`adds`), and the line the
+ *  stage card prints. Same rule as the groups, so they always agree. Since
+ *  #3130 (Ron, 2026-11-21) the card counts the other group, the clubs that
+ *  add to net club growth: "19 add to net club growth". */
 export function reinstateSplit(
   clubs: readonly ReinstatableClub[],
   snapshotDate: string
 ): { adds: number; card: string } {
   const adds = clubs.filter(c => addsNow(c, snapshotDate)).length
+  const rest = clubs.length - adds
   return {
     adds,
-    card: `${adds} ${adds === 1 ? 'adds' : 'add'} to the club base`,
+    card: `${rest} ${rest === 1 ? 'adds' : 'add'} to net club growth`,
   }
 }
 
@@ -411,7 +417,7 @@ export const ReinstatableClubsSection: React.FC<
         <div data-testid="growth-reinstate-rest">
           <h4 className="growth-stage__subtitle">{restLabel}</h4>
           {rest.some(c => c.reason === 'closed_does_not_add') && (
-            <p className="growth-stage__note">{CLOSED_TEXT}</p>
+            <p className="growth-stage__note">{CLOSED_GROUP_NOTE}</p>
           )}
           <GroupTable
             rows={rest}

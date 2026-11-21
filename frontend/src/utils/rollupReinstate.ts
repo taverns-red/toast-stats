@@ -34,7 +34,7 @@ export interface ReinstateDistrictRow {
 export interface RollupReinstate {
   count: number
   adds: number
-  /** The card's third line, e.g. "12 add to the club base". */
+  /** The card's third line, e.g. "12 add to net club growth" (#3130). */
   card: string
   rows: ReinstateDistrictRow[]
 }
