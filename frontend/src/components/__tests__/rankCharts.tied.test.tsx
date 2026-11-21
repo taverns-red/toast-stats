@@ -17,6 +17,12 @@ const tooltip = vi.hoisted(() => ({
   props: null as null | Record<string, unknown>,
 }))
 
+// Phone readout tests flip this to act as a device without hover.
+const media = vi.hoisted(() => ({ touch: false }))
+vi.mock('../../hooks/useMediaQuery', () => ({
+  useMediaQuery: (query: string) => query === '(hover: none)' && media.touch,
+}))
+
 vi.mock('recharts', () => ({
   LineChart: ({
     children,
@@ -31,7 +37,8 @@ vi.mock('recharts', () => ({
   ),
   Line: () => null,
   XAxis: () => null,
-  YAxis: () => null,
+  YAxis: ({ label }: { label?: { value?: string } }) =>
+    label?.value ? <span data-testid="y-axis-label">{label.value}</span> : null,
   CartesianGrid: () => null,
   Tooltip: ({ content }: { content: React.ReactElement }) =>
     tooltip.props
@@ -91,6 +98,7 @@ const plotted = (): Array<Record<string, unknown>> =>
 
 afterEach(() => {
   tooltip.props = null
+  media.touch = false
   cleanup()
 })
 
@@ -232,5 +240,125 @@ describe('HistoricalRankChart on tied dates (#3145)', () => {
       .map(el => el.textContent)
     expect(lines).toContain('District 61: Tied')
     expect(lines).toContain('District 49: Tied')
+  })
+})
+
+describe('Tie explanations (#3151)', () => {
+  const tiedPayload = (keys: string[]) =>
+    keys.map(dataKey => ({
+      dataKey,
+      name: dataKey,
+      value: null,
+      color: 'blue',
+      payload: { date: '2026-07-15' },
+    }))
+
+  it('the phone readout on FullYearRankingChart says "Tied" on a tied date', () => {
+    media.touch = true
+    tooltip.props = {
+      active: true,
+      label: '2026-07-15',
+      payload: tiedPayload(['value']),
+    }
+    render(
+      <FullYearRankingChart
+        data={history('61', [
+          point('2026-07-15', 1, ALL_TIED),
+          point('2026-07-22', 6),
+        ])}
+        selectedMetric="distinguished"
+        onMetricChange={() => {}}
+        isLoading={false}
+        programYear={PY}
+      />
+    )
+    expect(screen.getByTestId('chart-readout')).toHaveTextContent(
+      'Jul 15, 2026Distinguished Tied'
+    )
+  })
+
+  it('the phone readout on HistoricalRankChart says "Tied" for each district', () => {
+    media.touch = true
+    tooltip.props = {
+      active: true,
+      label: '2026-07-15',
+      payload: tiedPayload(['61', '49']),
+    }
+    const data = [
+      history('61', [
+        point('2026-07-15', 1, { distinguishedTied: true }),
+        point('2026-07-22', 6),
+      ]),
+      history('49', [
+        point('2026-07-15', 1, { distinguishedTied: true }),
+        point('2026-07-22', 3),
+      ]),
+    ]
+    render(
+      <HistoricalRankChart data={data} isLoading={false} isError={false} />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Distinguished' }))
+
+    const readout = screen.getByTestId('chart-readout')
+    expect(readout).toHaveTextContent('District 61 Tied')
+    expect(readout).toHaveTextContent('District 49 Tied')
+  })
+
+  it('says every district has the same value when the whole history is tied', () => {
+    render(
+      <FullYearRankingChart
+        data={history('61', [
+          point('2026-07-15', 1, ALL_TIED),
+          point('2026-07-22', 1, ALL_TIED),
+        ])}
+        selectedMetric="distinguished"
+        onMetricChange={() => {}}
+        isLoading={false}
+        programYear={PY}
+      />
+    )
+    const message = 'Every district has the same value so far.'
+    expect(screen.getByText(message)).toBeInTheDocument()
+    expect(
+      screen.getByRole('img', {
+        name: /Every district has the same value so far\./,
+      })
+    ).toBeInTheDocument()
+    // The message takes the plot's place at the plot's height.
+    expect(screen.getByText(message).parentElement).toHaveStyle({
+      height: '400px',
+    })
+  })
+
+  it('shows no tap hint on a phone when the whole history is tied', () => {
+    media.touch = true
+    render(
+      <FullYearRankingChart
+        data={history('61', [
+          point('2026-07-15', 1, ALL_TIED),
+          point('2026-07-22', 1, ALL_TIED),
+        ])}
+        selectedMetric="distinguished"
+        onMetricChange={() => {}}
+        isLoading={false}
+        programYear={PY}
+      />
+    )
+    // The readout line stays to hold the layout; there is nothing to tap.
+    const readout = screen.getByTestId('chart-readout')
+    expect(readout).not.toHaveTextContent('Tap the chart')
+  })
+
+  it('labels the Overall Score axis "higher is better"', () => {
+    render(
+      <HistoricalRankChart
+        data={[history('61', [point('2026-07-15', 6)])]}
+        isLoading={false}
+        isError={false}
+      />
+    )
+    expect(screen.getByTestId('y-axis-label')).toHaveTextContent(
+      'Score (higher is better)'
+    )
   })
 })

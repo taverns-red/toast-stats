@@ -153,7 +153,12 @@ const RankCell: React.FC<RankCellProps> = ({
   <div className="flex flex-col items-start gap-1">
     <span className="text-base font-medium text-gray-900 font-tm-body">
       {tied ? (
-        'Tied'
+        <>
+          <span aria-hidden="true">Tied</span>
+          <span className="sr-only">
+            Tied, every district has the same value
+          </span>
+        </>
       ) : (
         <>
           {rank}

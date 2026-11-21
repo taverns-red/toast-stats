@@ -27,6 +27,7 @@ import {
   useChartReadout,
   ChartReadout,
   formatReadoutDate,
+  type ChartReading,
 } from './charts/ChartReadout'
 import {
   ChartLegendChips,
@@ -112,6 +113,9 @@ const DISTRICT_COLORS = [
   'var(--tm-cool-gray-80)', // Additional series with opacity
   'var(--tm-happy-yellow-80)', // Additional series with opacity
 ]
+
+const districtColor = (index: number): string =>
+  DISTRICT_COLORS[index % DISTRICT_COLORS.length] ?? 'var(--tm-loyal-blue)'
 
 const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   data,
@@ -205,6 +209,25 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
     return dataPoint
   })
 
+  // The phone readout drops null values, so a tied date would show only
+  // its date; describe it as the desktop tooltip does.
+  const describeTiedReading = (label: string): ChartReading | null => {
+    const rows = data.flatMap((district, index) =>
+      legend.isVisible(district.districtId) &&
+      isTied(district.districtId, label)
+        ? [
+            {
+              key: district.districtId,
+              name: district.districtId,
+              value: 'Tied',
+              color: districtColor(index),
+            },
+          ]
+        : []
+    )
+    return rows.length > 0 ? { label: formatReadoutDate(label), rows } : null
+  }
+
   // Generate chart description for accessibility
   const metricLabel = {
     aggregate: 'Overall Score',
@@ -230,9 +253,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
         series={data.map((district, index) => ({
           key: district.districtId,
           name: district.districtName || district.districtId,
-          color:
-            DISTRICT_COLORS[index % DISTRICT_COLORS.length] ??
-            'var(--tm-loyal-blue)',
+          color: districtColor(index),
         }))}
         visibility={legend}
       />
@@ -291,7 +312,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 label={
                   selectedMetric === 'aggregate'
                     ? {
-                        value: 'Score (lower is better)',
+                        value: 'Score (higher is better)',
                         angle: -90,
                         position: 'insideLeft',
                         style: AXIS_LABEL_STYLE,
@@ -318,9 +339,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 {...readout.tooltipProps}
               />
               {data.map((district, index) => {
-                const color =
-                  DISTRICT_COLORS[index % DISTRICT_COLORS.length] ??
-                  'var(--tm-loyal-blue)'
+                const color = districtColor(index)
                 return (
                   <Line
                     key={district.districtId}
@@ -347,6 +366,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
       <ChartReadout
         readout={readout}
         labelFormatter={formatReadoutDate}
+        describe={describeTiedReading}
         nameFormatter={id =>
           data.find(d => d.districtId === id)?.districtName ?? id
         }
