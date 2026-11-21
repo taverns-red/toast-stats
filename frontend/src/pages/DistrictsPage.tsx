@@ -1603,10 +1603,12 @@ const DistrictsPage: React.FC = () => {
         {/* Methodology affordance: one visible "i" beside a quiet "About these
             metrics" label. On phones it sits above the card, because the
             card clips its content and the tooltip opens upward without a
-            portal; at 768px and up it lives in the table toolbar. Pinned by
+            portal; at 768px and up it lives in the table toolbar. The 16px
+            gap keeps the card heading off the icon's 44px hit area (the
+            mobile-375 gate fails on a covered corner). Pinned by
             rankingsGrowthContrast.test.ts. */}
         {isMobile && (
-          <div className="flex items-center justify-end mb-2 px-2">
+          <div className="flex items-center justify-end mb-4 px-2">
             {aboutMetrics}
           </div>
         )}
