@@ -438,3 +438,33 @@ describe('DistrictDetailHeader link to the section video (#2658)', () => {
     expect(screen.queryByRole('link', { name: /watch how/i })).toBeNull()
   })
 })
+
+describe('DistrictDetailHeader link to the videos page (#3167)', () => {
+  const renderAt = (path: string) =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <DistrictDetailHeader {...baseProps} />
+      </MemoryRouter>
+    )
+
+  it.each([
+    ['the hub', '/district/61'],
+    ['a page with a video', '/district/61/clubs'],
+    ['a page with no video', '/district/61/training'],
+  ])('links the videos page from the header on %s', (_name, path) => {
+    renderAt(path)
+    expect(screen.getByRole('link', { name: 'How-to videos' })).toHaveAttribute(
+      'href',
+      '/videos'
+    )
+  })
+
+  it('links the videos page from the About this page sheet on a phone', async () => {
+    renderAt('/district/61/training')
+    await userEvent.click(screen.getByTestId('context-bar-chip'))
+    const sheet = screen.getByRole('dialog')
+    expect(
+      within(sheet).getByRole('link', { name: 'How-to videos' })
+    ).toHaveAttribute('href', '/videos')
+  })
+})
