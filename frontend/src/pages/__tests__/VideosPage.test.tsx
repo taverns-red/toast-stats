@@ -119,6 +119,54 @@ describe('VideosPage (#2310)', () => {
     }
   })
 
+  it('gives every video a collapsed "Steps shown" list with text (#2658)', () => {
+    renderPage()
+    for (const v of HOW_TO_VIDEOS) {
+      const card = screen.getByTestId(`video-${v.id}`)
+      const details = card.querySelector('details')
+      expect(details, v.id).not.toBeNull()
+      expect(details).not.toHaveAttribute('open')
+      expect(within(card).getByText('Steps shown')).toBeInTheDocument()
+      const items = within(details as HTMLElement).getAllByRole('listitem', {
+        hidden: true,
+      })
+      expect(items.length, v.id).toBeGreaterThan(0)
+      for (const li of items) expect(li.textContent?.trim()).not.toBe('')
+    }
+  })
+
+  it('links every video to the page it shows (#2658)', () => {
+    renderPage()
+    for (const v of HOW_TO_VIDEOS) {
+      const card = screen.getByTestId(`video-${v.id}`)
+      const link = within(card).getByRole('link', { name: /open this page/i })
+      expect(link.getAttribute('href'), v.id).toMatch(/^\/[a-z0-9]/)
+      expect(link).toHaveAccessibleName(expect.stringContaining(v.title))
+    }
+  })
+
+  it('gives each video card an anchor id for links from the pages (#2658)', () => {
+    renderPage()
+    for (const v of HOW_TO_VIDEOS) {
+      expect(document.getElementById(`video-${v.id}`), v.id).not.toBeNull()
+    }
+  })
+
+  it('jumps to each role group from a nav under the lede (#2658)', () => {
+    renderPage()
+    const nav = screen.getByRole('navigation', { name: /jump to a role/i })
+    const groups = groupByPrimaryRole(HOW_TO_VIDEOS)
+    const links = within(nav).getAllByRole('link')
+    expect(links.map(a => a.textContent)).toEqual(groups.map(g => g.role))
+    for (const a of links) {
+      const target = document.getElementById(
+        (a.getAttribute('href') ?? '').replace(/^#/, '')
+      )
+      expect(target?.tagName).toBe('H2')
+      expect(target?.textContent).toBe(a.textContent)
+    }
+  })
+
   it('groups the videos under a heading per primary role', () => {
     renderPage()
     const groups = groupByPrimaryRole(HOW_TO_VIDEOS)

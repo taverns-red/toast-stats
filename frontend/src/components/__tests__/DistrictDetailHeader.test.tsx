@@ -411,3 +411,28 @@ describe('DistrictDetailHeader per-section lede (#2161)', () => {
     expect(screen.queryByText(/Membership, payments/)).toBeNull()
   })
 })
+
+describe('DistrictDetailHeader link to the section video (#2658)', () => {
+  const renderAt = (path: string) =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <DistrictDetailHeader {...baseProps} />
+      </MemoryRouter>
+    )
+
+  it.each([
+    ['the hub', '/district/61', '/videos#video-v1'],
+    ['Clubs', '/district/61/clubs', '/videos#video-v3'],
+    ['Action List', '/district/61/action-list', '/videos#video-v2'],
+  ])('links %s to its video card', (_name, path, href) => {
+    renderAt(path)
+    expect(
+      screen.getByRole('link', { name: 'Watch how (30s)' })
+    ).toHaveAttribute('href', href)
+  })
+
+  it('adds no link where no video demonstrates the page', () => {
+    renderAt('/district/61/rankings')
+    expect(screen.queryByRole('link', { name: /watch how/i })).toBeNull()
+  })
+})
