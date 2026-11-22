@@ -205,7 +205,7 @@ export interface PromotionInputs {
    * Held when the verdict holds that date or gave no verdict. Held dates
    * the pointer does not name do not hold it.
    */
-  latestPointer?: { date: string | null }
+  latestPointer?: { date: string | null; promotedDates?: readonly string[] }
 }
 
 export type CopyPhase = 'dates' | 'globals' | 'rollup' | 'og' | 'entry'

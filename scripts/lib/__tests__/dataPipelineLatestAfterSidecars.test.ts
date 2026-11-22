@@ -35,7 +35,9 @@ const workflow = parse(
     path.join(process.cwd(), '.github/workflows/data-pipeline.yml'),
     'utf-8'
   )
-) as Workflow & { jobs: Record<string, { steps?: Step[] }> }
+) as Workflow & {
+  jobs: Record<string, { steps?: Step[]; outputs?: Record<string, string> }>
+}
 
 const steps = (job: string) => (workflow.jobs[job]?.steps ?? []) as Step[]
 const step = (job: string, name: string) =>
@@ -90,6 +92,20 @@ describe('promote-reports moves latest.json last (#3183)', () => {
     const c = topLevelConjuncts(move?.if ?? '')
     expect(c).toContain("steps.completeness.outcome == 'success'")
     expect(c).toContain("needs.pipeline.outputs.promoted_dates != ''")
+  })
+
+  it('moves only when the main promote also promoted the globals', () => {
+    expect(workflow.jobs.pipeline?.outputs?.globals_promoted).toBe(
+      '${{ steps.promotemanifest.outputs.globals_promoted }}'
+    )
+    const c = topLevelConjuncts(move?.if ?? '')
+    expect(c).toContain("needs.pipeline.outputs.globals_promoted == 'true'")
+  })
+
+  it('tells the promoter which dates this run promoted', () => {
+    expect(move?.env?.PROMOTED_DATES).toBe(
+      '${{ needs.pipeline.outputs.promoted_dates }}'
+    )
   })
 
   it('a failure fails the job, so the existing alert path fires', () => {

@@ -990,10 +990,13 @@ describe('v1/latest.json moves after the report sidecars (#3183)', () => {
     expect(PROD_LATEST()).toBe(LATEST_JSON('2026-10-11'))
   })
 
+  const PTR = ['--execute', '--latest-pointer']
+  const NEW_DAY = { PROMOTED_DATES: '2026-10-11' }
+
   it('--latest-pointer copies only latest.json, once the verdict holds nothing for its date', async () => {
     writeInputs({ promote: true, heldDates: [] })
     const before = tree(PROD)
-    const r = await run(['--execute', '--latest-pointer'])
+    const r = await run(PTR, NEW_DAY)
     expect(r.status, r.stderr).toBe(0)
     const after = tree(PROD)
     expect(Object.keys(after).filter(k => after[k] !== before[k])).toEqual([
@@ -1004,23 +1007,52 @@ describe('v1/latest.json moves after the report sidecars (#3183)', () => {
 
   it('--latest-pointer is not held by an older date the verdict holds', async () => {
     writeInputs({ promote: false, heldDates: ['2026-10-09'] })
-    const r = await run(['--execute', '--latest-pointer'])
+    const r = await run(PTR, NEW_DAY)
     expect(r.status, r.stderr).toBe(0)
     expect(PROD_LATEST()).toBe(LATEST_JSON('2026-10-11'))
   })
 
-  it('--latest-pointer fails and leaves latest.json alone when its date is held', async () => {
+  it('--latest-pointer skips cleanly with a warning when its date is held', async () => {
     writeInputs({ promote: false, heldDates: ['2026-10-11'] })
     const before = tree(PROD)
-    const r = await run(['--execute', '--latest-pointer'])
-    expect(r.status).toBe(1)
+    const r = await run(PTR, NEW_DAY)
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toContain('::warning')
+    expect(tree(PROD)).toEqual(before)
+  })
+
+  it('--latest-pointer skips cleanly when staging latest.json names a date this run did not promote', async () => {
+    writeInputs({ promote: true, heldDates: [] })
+    const before = tree(PROD)
+    const r = await run(PTR, { PROMOTED_DATES: '2026-10-09' })
+    expect(r.status, r.stderr).toBe(0)
+    expect(r.stderr).toContain('::warning')
+    expect(tree(PROD)).toEqual(before)
+  })
+
+  it('--latest-pointer refuses without PROMOTED_DATES, changing nothing', async () => {
+    writeInputs({ promote: true, heldDates: [] })
+    const before = tree(PROD)
+    const r = await run(PTR)
+    expect(r.status).toBe(2)
     expect(tree(PROD)).toEqual(before)
   })
 
   it('--latest-pointer fails with no verdict, changing nothing', async () => {
     writeInputs(undefined)
     const before = tree(PROD)
-    const r = await run(['--execute', '--latest-pointer'])
+    const r = await run(PTR, NEW_DAY)
+    expect(r.status).not.toBe(0)
+    expect(tree(PROD)).toEqual(before)
+  })
+
+  it('--latest-pointer fails when staging latest.json cannot be read, changing nothing', async () => {
+    writeInputs({ promote: true, heldDates: [] })
+    const before = tree(PROD)
+    const r = await run(PTR, {
+      ...NEW_DAY,
+      SHIM_FAIL_MATCH: '^cat .*v1/latest.json',
+    })
     expect(r.status).not.toBe(0)
     expect(tree(PROD)).toEqual(before)
   })
@@ -1028,10 +1060,14 @@ describe('v1/latest.json moves after the report sidecars (#3183)', () => {
   it('--latest-pointer fails when the copy fails, changing nothing', async () => {
     writeInputs({ promote: true, heldDates: [] })
     const before = tree(PROD)
-    const r = await run(['--execute', '--latest-pointer'], {
-      SHIM_FAIL_MATCH: 'latest',
+    const r = await run(PTR, {
+      ...NEW_DAY,
+      SHIM_FAIL_MATCH: '^cp .*v1/latest.json',
     })
     expect(r.status).toBe(1)
     expect(tree(PROD)).toEqual(before)
+    expect(fs.readFileSync(shimLog, 'utf-8')).toMatch(
+      /^storage cp .*v1\/latest\.json/m
+    )
   })
 })

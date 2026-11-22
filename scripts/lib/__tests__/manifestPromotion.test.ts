@@ -672,10 +672,10 @@ describe('v1/latest.json moves after the report sidecars (#3183)', () => {
     expect(copied(run())).toContain('v1/latest.json')
   })
 
+  const POINTER = { date: '2026-10-11', promotedDates: ['2026-10-11'] }
+
   it('latest-pointer mode copies only latest.json', () => {
-    const plan = run({
-      latestPointer: { date: '2026-10-11' },
-    })
+    const plan = run({ latestPointer: POINTER })
     expect(copied(plan)).toEqual(['v1/latest.json'])
     expect(plan.heldAll).toBeNull()
   })
@@ -684,23 +684,30 @@ describe('v1/latest.json moves after the report sidecars (#3183)', () => {
     [
       'its date is held',
       resolveHeldDates({ promote: false, heldDates: ['2026-10-11'] }),
-      '2026-10-11',
+      POINTER,
     ],
-    ['there is no verdict', resolveHeldDates(null), '2026-10-11'],
-    ['staging latest.json was unreadable', resolveHeldDates(pass), null],
-  ])('latest-pointer mode holds latest.json when %s', (_n, held, date) => {
-    const plan = run({
-      held,
-      latestPointer: { date },
-    })
+    ['there is no verdict', resolveHeldDates(null), POINTER],
+    [
+      'its date is not one this run promoted',
+      resolveHeldDates(pass),
+      { ...POINTER, promotedDates: ['2026-10-09'] },
+    ],
+  ])('latest-pointer mode holds latest.json when %s', (_n, held, pointer) => {
+    const plan = run({ held, latestPointer: pointer })
     expect(copied(plan)).toEqual([])
     expect(plan.heldAll).not.toBeNull()
+  })
+
+  it('latest-pointer mode throws when staging latest.json is unreadable', () => {
+    expect(() =>
+      run({ latestPointer: { date: null, promotedDates: ['2026-10-11'] } })
+    ).toThrow(/latest\.json/)
   })
 
   it('latest-pointer mode ignores a held date it does not point at', () => {
     const plan = run({
       held: resolveHeldDates({ promote: false, heldDates: ['2026-10-09'] }),
-      latestPointer: { date: '2026-10-11' },
+      latestPointer: POINTER,
     })
     expect(copied(plan)).toEqual(['v1/latest.json'])
   })
