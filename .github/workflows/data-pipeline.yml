@@ -262,6 +262,9 @@ jobs:
       # (and carries older ones); every other date the run wrote holds its
       # sidecars (#1763 PR 2, #1767).
       promoted_dates: ${{ steps.promotemanifest.outputs.promoted_dates }}
+      # Whether the same promote also promoted the globals. promote-reports
+      # moves v1/latest.json only when it did (#3183).
+      globals_promoted: ${{ steps.promotemanifest.outputs.globals_promoted }}
       # 'true' | 'false' — a staging-only proof run (#1754). Downstream jobs
       # gate their prod writes on it.
       skip_promotion: ${{ steps.mode.outputs.skip_promotion }}
@@ -2072,9 +2075,10 @@ jobs:
           && steps.mode.outputs.skip_promotion != 'true'
         env:
           COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
-        # --defer-latest (#3183): v1/latest.json waits for the report sidecars.
-        # promote-reports moves it last, so no visitor is pointed at a date
-        # whose district_*_reports.json is not in prod yet.
+        # --defer-latest: v1/latest.json waits for the report sidecars, so no
+        # visitor is pointed at a date whose district_*_reports.json is not
+        # in prod yet. promote-reports moves it; pinned by
+        # dataPipelineLatestAfterSidecars.test.ts.
         run: npx tsx scripts/promote-run-manifest.ts --execute --defer-latest
 
       # Prune reconcile (#1133) through the manifest (#1767, ADR-015 step 9).
@@ -3494,13 +3498,11 @@ jobs:
           PROMOTED_DATES: ${{ needs.pipeline.outputs.promoted_dates }}
         run: bash scripts/pipeline/check-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" "${PROMOTED_DATES}"
 
-      # The pipeline job withheld v1/latest.json (--defer-latest, #3183). Move
-      # it now, the last prod write of the run: the sidecars are promoted and
-      # the completeness check above passed. If anything before failed, this
-      # does not run and prod stays on the previous date; if the verdict holds
-      # the date or the copy fails, the step fails and so does the run, which
-      # data-smoke and the pipeline alerts already read. A run that promoted
-      # no date had nothing withheld and skips this.
+      # Moves the v1/latest.json the pipeline withheld (--defer-latest), last,
+      # once the sidecars and the completeness check passed and the main
+      # promote also promoted the globals. A held date skips with a warning
+      # (the held-promotion alert covers it); a copy or read error fails the
+      # run. Pinned by dataPipelineLatestAfterSidecars.test.ts.
       - name: '[reports] Move v1/latest.json after the sidecars (#3183)'
         id: movelatest
         if: >-
@@ -3508,9 +3510,11 @@ jobs:
           && steps.promote.outcome != 'failure'
           && steps.completeness.outcome == 'success'
           && needs.pipeline.outputs.promoted_dates != ''
+          && needs.pipeline.outputs.globals_promoted == 'true'
         env:
           RUN_MANIFEST_FILE: ${{ env.RUN_MANIFEST_FILE }}
           COMPLETENESS_GATE_FILE: ${{ env.REPORT_SIDECAR_VERDICT_FILE }}
+          PROMOTED_DATES: ${{ needs.pipeline.outputs.promoted_dates }}
         run: npx tsx scripts/promote-run-manifest.ts --execute --latest-pointer
 
       # Non-fatal, as the pipeline job's purge: the edge expires latest.json

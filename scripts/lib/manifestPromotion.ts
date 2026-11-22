@@ -193,19 +193,21 @@ export interface PromotionInputs {
    */
   ogCards?: boolean
   /**
-   * Withhold v1/latest.json when this promotion promotes a date (#3183):
-   * the pipeline job's promote only. That date's report sidecars reach
-   * prod later, in promote-reports, which moves latest.json with
-   * `latestPointer`. A promotion that promotes no date still moves it.
+   * Withhold v1/latest.json when this promotion promotes a date and its
+   * globals: promote-reports moves it after the sidecars (`latestPointer`).
+   * Pinned by promoteRunManifest.test.ts and dataPipelineLatestAfterSidecars.test.ts.
    */
   deferLatest?: boolean
   /**
-   * Move only v1/latest.json (#3183): the last step of promote-reports.
-   * `date` is the date staging's latest.json names (null = unreadable).
-   * Held when the verdict holds that date or gave no verdict. Held dates
-   * the pointer does not name do not hold it.
+   * Move only v1/latest.json, as promote-reports' last step. `date` is what
+   * staging's latest.json names (null throws); the date must be one of
+   * `promotedDates` and not held by the verdict, else it is held.
+   * Pinned by promoteRunManifest.test.ts.
    */
-  latestPointer?: { date: string | null; promotedDates?: readonly string[] }
+  latestPointer?: {
+    date: string | null
+    promotedDates: readonly string[]
+  }
 }
 
 export type CopyPhase = 'dates' | 'globals' | 'rollup' | 'og' | 'entry'
@@ -238,7 +240,7 @@ export interface PromotionPlan {
 export const LATEST_POINTER_PATH = 'v1/latest.json'
 
 function planLatestPointer(inputs: PromotionInputs): PromotionPlan {
-  const date = inputs.latestPointer!.date
+  const { date, promotedDates } = inputs.latestPointer!
   const paths = [...latestByPath(inputs.entries).keys()]
   const wrote = paths.includes(LATEST_POINTER_PATH)
   const excluded = paths
@@ -254,8 +256,11 @@ function planLatestPointer(inputs: PromotionInputs): PromotionPlan {
       heldAll =
         'no sidecar verdict (missing, unreadable or it could not run): v1/latest.json stays on the previous date'
     } else if (date === null) {
-      heldAll =
+      throw new Error(
         "staging's v1/latest.json could not be read: it stays on the previous date"
+      )
+    } else if (!promotedDates.includes(date)) {
+      heldAll = `${date} is not a date this run promoted: v1/latest.json stays on the previous date`
     } else if (inputs.held.dates.includes(date)) {
       heldAll = `${date} is held, so its report sidecars are not in prod: v1/latest.json stays on the previous date`
     }

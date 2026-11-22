@@ -285,6 +285,15 @@ export async function runPromoteRunManifest(
   )
   const checkIndex =
     wroteGlobals && !latestPointer && !held.all && held.dates.length === 0
+  // --latest-pointer needs the dates this run promoted (#3183).
+  const promotedDates = (env.PROMOTED_DATES ?? '')
+    .split(',')
+    .map(d => d.trim())
+    .filter(Boolean)
+  if (latestPointer && promotedDates.length === 0) {
+    log('[promote] --latest-pointer needs PROMOTED_DATES (comma-separated)')
+    return 2
+  }
   // The date staging's v1/latest.json names, for --latest-pointer (#3183).
   const latestDate = (): string | null => {
     const text = gcloudRead([
@@ -312,7 +321,9 @@ export async function runPromoteRunManifest(
       educationRollup: args.has('--education-rollup'),
       ogCards: args.has('--og-cards'),
       deferLatest: args.has('--defer-latest'),
-      latestPointer: latestPointer ? { date: latestDate() } : undefined,
+      latestPointer: latestPointer
+        ? { date: latestDate(), promotedDates }
+        : undefined,
     })
   } catch (e) {
     log(`::error title=Scoped promotion::${String(e)} — nothing promoted`)
@@ -392,7 +403,11 @@ export async function runPromoteRunManifest(
 
   if (!execute) return 0
   if (plan.heldAll) {
-    log(`::error title=Scoped promotion::${plan.heldAll}`)
+    // latest.json held back is a clean skip: the held-promotion alert
+    // already covers a held date (#3183).
+    log(
+      `::${latestPointer ? 'warning' : 'error'} title=Scoped promotion::${plan.heldAll}`
+    )
     emit('objects_copied', 0)
     emit('objects_removed', 0)
     emit('complete', false)
@@ -402,9 +417,6 @@ export async function runPromoteRunManifest(
     // step ran out of order or the file was lost — fail the step. A prune
     // reconcile has no promotion-held flow: its held deletes fail it (#1767).
     if (verdict === null) return 2
-    // latest.json held back is a failed run, not a hold: promote-reports
-    // has no promotion-held flow of its own for it (#3183).
-    if (latestPointer) return 1
     return plan.deletes.paths.length > 0 ? 1 : 0
   }
 
