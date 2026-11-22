@@ -654,21 +654,17 @@ describe('v1/latest.json moves after the report sidecars (#3183)', () => {
     )
 
   it('withholds latest.json from a promotion that promotes a date, and says so', () => {
-    const plan = run({ deferLatest: true } as Partial<PromotionInputs>)
+    const plan = run({ deferLatest: true })
     expect(copied(plan)).toContain('v1/dates.json')
     expect(copied(plan)).not.toContain('v1/latest.json')
-    expect(
-      (plan as unknown as { deferred: Array<{ path: string }> }).deferred.map(
-        d => d.path
-      )
-    ).toEqual(['v1/latest.json'])
+    expect(plan.deferred.map(d => d.path)).toEqual(['v1/latest.json'])
   })
 
   it('still moves latest.json when the run promotes no date', () => {
     const plan = run({
       entries: [entry('v1/dates.json'), entry('v1/latest.json')],
       deferLatest: true,
-    } as Partial<PromotionInputs>)
+    })
     expect(copied(plan)).toContain('v1/latest.json')
   })
 
@@ -679,7 +675,7 @@ describe('v1/latest.json moves after the report sidecars (#3183)', () => {
   it('latest-pointer mode copies only latest.json', () => {
     const plan = run({
       latestPointer: { date: '2026-10-11' },
-    } as Partial<PromotionInputs>)
+    })
     expect(copied(plan)).toEqual(['v1/latest.json'])
     expect(plan.heldAll).toBeNull()
   })
@@ -696,7 +692,7 @@ describe('v1/latest.json moves after the report sidecars (#3183)', () => {
     const plan = run({
       held,
       latestPointer: { date },
-    } as Partial<PromotionInputs>)
+    })
     expect(copied(plan)).toEqual([])
     expect(plan.heldAll).not.toBeNull()
   })
@@ -705,7 +701,7 @@ describe('v1/latest.json moves after the report sidecars (#3183)', () => {
     const plan = run({
       held: resolveHeldDates({ promote: false, heldDates: ['2026-10-09'] }),
       latestPointer: { date: '2026-10-11' },
-    } as Partial<PromotionInputs>)
+    })
     expect(copied(plan)).toEqual(['v1/latest.json'])
   })
 })
