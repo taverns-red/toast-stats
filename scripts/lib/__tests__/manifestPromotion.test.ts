@@ -639,3 +639,73 @@ describe('planManifestPromotion: prune reconcile deletes (#1767)', () => {
     expect(text).toMatch(/^hold\tsnapshots\/2026-09-15\/\t/m)
   })
 })
+
+describe('v1/latest.json moves after the report sidecars (#3183)', () => {
+  const run = (over: Partial<PromotionInputs> = {}) =>
+    planManifestPromotion(
+      inputs({
+        entries: [
+          entry('snapshots/2026-10-11/district_61.json'),
+          entry('v1/dates.json'),
+          entry('v1/latest.json'),
+        ],
+        ...over,
+      })
+    )
+
+  it('withholds latest.json from a promotion that promotes a date, and says so', () => {
+    const plan = run({ deferLatest: true } as Partial<PromotionInputs>)
+    expect(copied(plan)).toContain('v1/dates.json')
+    expect(copied(plan)).not.toContain('v1/latest.json')
+    expect(
+      (plan as unknown as { deferred: Array<{ path: string }> }).deferred.map(
+        d => d.path
+      )
+    ).toEqual(['v1/latest.json'])
+  })
+
+  it('still moves latest.json when the run promotes no date', () => {
+    const plan = run({
+      entries: [entry('v1/dates.json'), entry('v1/latest.json')],
+      deferLatest: true,
+    } as Partial<PromotionInputs>)
+    expect(copied(plan)).toContain('v1/latest.json')
+  })
+
+  it('without the option, latest.json is copied as before', () => {
+    expect(copied(run())).toContain('v1/latest.json')
+  })
+
+  it('latest-pointer mode copies only latest.json', () => {
+    const plan = run({
+      latestPointer: { date: '2026-10-11' },
+    } as Partial<PromotionInputs>)
+    expect(copied(plan)).toEqual(['v1/latest.json'])
+    expect(plan.heldAll).toBeNull()
+  })
+
+  it.each([
+    [
+      'its date is held',
+      resolveHeldDates({ promote: false, heldDates: ['2026-10-11'] }),
+      '2026-10-11',
+    ],
+    ['there is no verdict', resolveHeldDates(null), '2026-10-11'],
+    ['staging latest.json was unreadable', resolveHeldDates(pass), null],
+  ])('latest-pointer mode holds latest.json when %s', (_n, held, date) => {
+    const plan = run({
+      held,
+      latestPointer: { date },
+    } as Partial<PromotionInputs>)
+    expect(copied(plan)).toEqual([])
+    expect(plan.heldAll).not.toBeNull()
+  })
+
+  it('latest-pointer mode ignores a held date it does not point at', () => {
+    const plan = run({
+      held: resolveHeldDates({ promote: false, heldDates: ['2026-10-09'] }),
+      latestPointer: { date: '2026-10-11' },
+    } as Partial<PromotionInputs>)
+    expect(copied(plan)).toEqual(['v1/latest.json'])
+  })
+})
