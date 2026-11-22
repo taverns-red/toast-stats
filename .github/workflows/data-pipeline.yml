@@ -262,6 +262,9 @@ jobs:
       # (and carries older ones); every other date the run wrote holds its
       # sidecars (#1763 PR 2, #1767).
       promoted_dates: ${{ steps.promotemanifest.outputs.promoted_dates }}
+      # Whether the same promote also promoted the globals. promote-reports
+      # moves v1/latest.json only when it did (#3183).
+      globals_promoted: ${{ steps.promotemanifest.outputs.globals_promoted }}
       # 'true' | 'false' — a staging-only proof run (#1754). Downstream jobs
       # gate their prod writes on it.
       skip_promotion: ${{ steps.mode.outputs.skip_promotion }}
@@ -2011,7 +2014,7 @@ jobs:
           # A prune reconcile previews its deletes too (#1767).
           PROD_DELETES_FILE: ${{ steps.mode.outputs.mode == 'prune' && '/tmp/prod-reconcile-paths.txt' || '' }}
         run: |
-          if npx tsx scripts/promote-run-manifest.ts --dry-run > /tmp/manifest-promotion-plan.tsv; then
+          if npx tsx scripts/promote-run-manifest.ts --dry-run --defer-latest > /tmp/manifest-promotion-plan.tsv; then
             cat /tmp/manifest-promotion-plan.tsv
           else
             echo "::warning::Scoped promotion plan could not be built (see the log above)"
@@ -2072,7 +2075,11 @@ jobs:
           && steps.mode.outputs.skip_promotion != 'true'
         env:
           COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
-        run: npx tsx scripts/promote-run-manifest.ts --execute
+        # --defer-latest: v1/latest.json waits for the report sidecars, so no
+        # visitor is pointed at a date whose district_*_reports.json is not
+        # in prod yet. promote-reports moves it; pinned by
+        # dataPipelineLatestAfterSidecars.test.ts.
+        run: npx tsx scripts/promote-run-manifest.ts --execute --defer-latest
 
       # Prune reconcile (#1133) through the manifest (#1767, ADR-015 step 9).
       # The same promoter as above, so there is one prod-write mechanism: it
@@ -3485,10 +3492,37 @@ jobs:
           fi
 
       - name: '[reports] Completeness gate: promoted dates have their reports (#2144)'
+        id: completeness
         if: ${{ !cancelled() && needs.pipeline.outputs.promoted_dates != '' }}
         env:
           PROMOTED_DATES: ${{ needs.pipeline.outputs.promoted_dates }}
         run: bash scripts/pipeline/check-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" "${PROMOTED_DATES}"
+
+      # Moves the v1/latest.json the pipeline withheld (--defer-latest), last,
+      # once the sidecars and the completeness check passed and the main
+      # promote also promoted the globals. A held date skips with a warning
+      # (the held-promotion alert covers it); a copy or read error fails the
+      # run. Pinned by dataPipelineLatestAfterSidecars.test.ts.
+      - name: '[reports] Move v1/latest.json after the sidecars (#3183)'
+        id: movelatest
+        if: >-
+          !cancelled()
+          && steps.promote.outcome != 'failure'
+          && steps.completeness.outcome == 'success'
+          && needs.pipeline.outputs.promoted_dates != ''
+          && needs.pipeline.outputs.globals_promoted == 'true'
+        env:
+          RUN_MANIFEST_FILE: ${{ env.RUN_MANIFEST_FILE }}
+          COMPLETENESS_GATE_FILE: ${{ env.REPORT_SIDECAR_VERDICT_FILE }}
+          PROMOTED_DATES: ${{ needs.pipeline.outputs.promoted_dates }}
+        run: npx tsx scripts/promote-run-manifest.ts --execute --latest-pointer
+
+      # Non-fatal, as the pipeline job's purge: the edge expires latest.json
+      # on its own short TTL.
+      - name: '[reports] Purge the CDN edge after latest.json moves (#3183)'
+        if: ${{ !cancelled() && steps.movelatest.outcome == 'success' }}
+        continue-on-error: true
+        run: gcloud compute url-maps invalidate-cdn-cache toast-stats-cdn-url-map --path '/v1/latest.json' --async
 
   # ══════════════════════════════════════════════════════════
   # DATA SMOKE AFTER THE PROMOTION (#2538, epic #2492)

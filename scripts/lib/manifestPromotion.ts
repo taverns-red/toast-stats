@@ -192,6 +192,22 @@ export interface PromotionInputs {
    * its own manifest and source-data verdict. Omitted, they are excluded.
    */
   ogCards?: boolean
+  /**
+   * Withhold v1/latest.json when this promotion promotes a date and its
+   * globals: promote-reports moves it after the sidecars (`latestPointer`).
+   * Pinned by promoteRunManifest.test.ts and dataPipelineLatestAfterSidecars.test.ts.
+   */
+  deferLatest?: boolean
+  /**
+   * Move only v1/latest.json, as promote-reports' last step. `date` is what
+   * staging's latest.json names (null throws); the date must be one of
+   * `promotedDates` and not held by the verdict, else it is held.
+   * Pinned by promoteRunManifest.test.ts.
+   */
+  latestPointer?: {
+    date: string | null
+    promotedDates: readonly string[]
+  }
 }
 
 export type CopyPhase = 'dates' | 'globals' | 'rollup' | 'og' | 'entry'
@@ -217,6 +233,52 @@ export interface PromotionPlan {
   objectCount: number
   /** Prod prefixes removed after the entry phase (#1767). */
   deletes: { promote: boolean; reason: string; paths: string[] }
+  /** Objects this promotion leaves for a later one (#3183), with why. */
+  deferred: Array<{ path: string; reason: string }>
+}
+
+export const LATEST_POINTER_PATH = 'v1/latest.json'
+
+function planLatestPointer(inputs: PromotionInputs): PromotionPlan {
+  const { date, promotedDates } = inputs.latestPointer!
+  const paths = [...latestByPath(inputs.entries).keys()]
+  const wrote = paths.includes(LATEST_POINTER_PATH)
+  const excluded = paths
+    .filter(p => p !== LATEST_POINTER_PATH)
+    .sort()
+    .map(path => ({
+      path,
+      reason: 'only v1/latest.json moves in this promotion (#3183)',
+    }))
+  let heldAll: string | null = null
+  if (wrote) {
+    if (inputs.held.all) {
+      heldAll =
+        'no sidecar verdict (missing, unreadable or it could not run): v1/latest.json stays on the previous date'
+    } else if (date === null) {
+      throw new Error(
+        "staging's v1/latest.json could not be read: it stays on the previous date"
+      )
+    } else if (!promotedDates.includes(date)) {
+      heldAll = `${date} is not a date this run promoted: v1/latest.json stays on the previous date`
+    } else if (inputs.held.dates.includes(date)) {
+      heldAll = `${date} is held, so its report sidecars are not in prod: v1/latest.json stays on the previous date`
+    }
+  }
+  const batches: CopyBatch[] =
+    wrote && heldAll === null ? batch('entry', [LATEST_POINTER_PATH]) : []
+  return {
+    promotedDates: [],
+    heldDates: [],
+    heldAll,
+    globals: { promote: true, reason: 'not applicable', paths: [] },
+    held: [],
+    excluded,
+    batches,
+    objectCount: batches.reduce((n, b) => n + b.paths.length, 0),
+    deletes: { promote: false, reason: 'no deletes requested', paths: [] },
+    deferred: [],
+  }
 }
 
 function dirOf(path: string): string {
@@ -335,6 +397,7 @@ function deletesVerdict(
 }
 
 export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
+  if (inputs.latestPointer) return planLatestPointer(inputs)
   const deletePaths = resolveDeletes(inputs.deletes)
   const deletedSnapshotDates = deletePaths
     .map(p => DELETED_SNAPSHOT_DATE.exec(p)?.[1])
@@ -399,6 +462,7 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
         reason: deletePaths.length > 0 ? reason : 'no deletes requested',
         paths: deletePaths,
       },
+      deferred: [],
     }
   }
 
@@ -427,7 +491,19 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
     ...promotedDates.flatMap(d => batch('dates', datePaths(d))),
     ...batch('entry', revisionIndexes),
   ]
+  const deferred: PromotionPlan['deferred'] = []
   if (globals.promote) {
+    const withhold =
+      inputs.deferLatest === true &&
+      promotedDates.length > 0 &&
+      globalPaths.includes(LATEST_POINTER_PATH)
+    if (withhold) {
+      deferred.push({
+        path: LATEST_POINTER_PATH,
+        reason:
+          "left for promote-reports, which moves it after this run's report sidecars are in prod (#3183)",
+      })
+    }
     batches.push(
       ...batch(
         'globals',
@@ -437,7 +513,9 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
     batches.push(
       ...batch(
         'entry',
-        globalPaths.filter(p => entry.has(p))
+        globalPaths.filter(
+          p => entry.has(p) && !(withhold && p === LATEST_POINTER_PATH)
+        )
       )
     )
   } else {
@@ -470,6 +548,7 @@ export function planManifestPromotion(inputs: PromotionInputs): PromotionPlan {
       ...deletesVerdict(deletePaths, globals, globalPaths),
       paths: deletePaths,
     },
+    deferred,
   }
 }
 
@@ -532,6 +611,7 @@ export function formatPromotionPlan(
         : `hold\t${d}/\t${plan.deletes.reason}`
     )
   }
+  for (const d of plan.deferred) lines.push(`defer\t${d.path}\t${d.reason}`)
   for (const h of plan.held) lines.push(`hold\t${h.path}\t${h.reason}`)
   for (const e of plan.excluded) lines.push(`skip\t${e.path}\t${e.reason}`)
   return lines.join('\n') + '\n'

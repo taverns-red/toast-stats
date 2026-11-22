@@ -200,6 +200,11 @@ bytes and headers arrive as staged. Rules (`scripts/lib/manifestPromotion.ts`):
 - Order: dates → globals → `v1/dates.json` + `v1/latest.json` last. A failed copy stops the run
   before the next phase. Nothing in prod is deleted; a rename leaves the old object until a
   reconcile removes it.
+- `v1/latest.json` moves last of all (#3183). When the pipeline job promotes a date it withholds
+  `latest.json` (`--defer-latest`); `promote-reports` moves it (`--latest-pointer`) after the date's
+  sidecars are in prod and the completeness check passed. If the sidecar promote or that check fails,
+  or the verdict holds the date, prod stays on the previous date and the run fails. A run that
+  promotes no date still moves it in the main promote.
 - Never promoted: the stores, `raw-*/`, `derived/` and `runs/`. Staging path == prod path, so an
   identity artifact becomes promotable by being written under `config/` once it is gated.
 
