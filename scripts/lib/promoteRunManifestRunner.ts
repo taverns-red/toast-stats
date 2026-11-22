@@ -219,7 +219,19 @@ export async function runPromoteRunManifest(
   const execute = args.has('--execute')
   if (execute === args.has('--dry-run')) {
     log(
-      'usage: promote-run-manifest.ts --dry-run [--assume-pass] | --execute [--education-rollup | --og-cards]'
+      'usage: promote-run-manifest.ts --dry-run [--assume-pass] | --execute [--education-rollup | --og-cards | --latest-pointer] [--defer-latest]'
+    )
+    return 2
+  }
+  const latestPointer = args.has('--latest-pointer')
+  if (
+    latestPointer &&
+    (args.has('--defer-latest') ||
+      args.has('--education-rollup') ||
+      args.has('--og-cards'))
+  ) {
+    log(
+      '[promote] --latest-pointer stands alone: it cannot combine with --defer-latest, --education-rollup or --og-cards'
     )
     return 2
   }
@@ -271,7 +283,24 @@ export async function runPromoteRunManifest(
   const wroteGlobals = entries.some(e =>
     /^(v1|config|time-series)\//.test(e.path)
   )
-  const checkIndex = wroteGlobals && !held.all && held.dates.length === 0
+  const checkIndex =
+    wroteGlobals && !latestPointer && !held.all && held.dates.length === 0
+  // The date staging's v1/latest.json names, for --latest-pointer (#3183).
+  const latestDate = (): string | null => {
+    const text = gcloudRead([
+      'storage',
+      'cat',
+      `gs://${staging}/v1/latest.json`,
+    ])
+    if (text === null) return null
+    try {
+      const d = (JSON.parse(text) as { latestSnapshotDate?: unknown })
+        .latestSnapshotDate
+      return typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null
+    } catch {
+      return null
+    }
+  }
   let plan: PromotionPlan
   try {
     plan = planManifestPromotion({
@@ -282,6 +311,8 @@ export async function runPromoteRunManifest(
       deletes,
       educationRollup: args.has('--education-rollup'),
       ogCards: args.has('--og-cards'),
+      deferLatest: args.has('--defer-latest'),
+      latestPointer: latestPointer ? { date: latestDate() } : undefined,
     })
   } catch (e) {
     log(`::error title=Scoped promotion::${String(e)} — nothing promoted`)
@@ -371,6 +402,9 @@ export async function runPromoteRunManifest(
     // step ran out of order or the file was lost — fail the step. A prune
     // reconcile has no promotion-held flow: its held deletes fail it (#1767).
     if (verdict === null) return 2
+    // latest.json held back is a failed run, not a hold: promote-reports
+    // has no promotion-held flow of its own for it (#3183).
+    if (latestPointer) return 1
     return plan.deletes.paths.length > 0 ? 1 : 0
   }
 
@@ -526,6 +560,9 @@ function summaryMarkdown(
     `- **Never promoted (internal)**: ${plan.excluded.length}`,
     plan.deletes.paths.length > 0
       ? `- **Prod prefixes to delete (#1767)**: ${plan.deletes.paths.length} — ${plan.deletes.promote ? 'after the entry points' : `HELD — ${plan.deletes.reason}`}`
+      : '',
+    plan.deferred.length > 0
+      ? `- **Left for promote-reports (#3183)**: ${plan.deferred.map(d => d.path).join(', ')}`
       : '',
     plan.heldAll ? `- ⚠️ ${plan.heldAll}` : '',
     '',

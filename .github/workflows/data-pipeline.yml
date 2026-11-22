@@ -2011,7 +2011,7 @@ jobs:
           # A prune reconcile previews its deletes too (#1767).
           PROD_DELETES_FILE: ${{ steps.mode.outputs.mode == 'prune' && '/tmp/prod-reconcile-paths.txt' || '' }}
         run: |
-          if npx tsx scripts/promote-run-manifest.ts --dry-run > /tmp/manifest-promotion-plan.tsv; then
+          if npx tsx scripts/promote-run-manifest.ts --dry-run --defer-latest > /tmp/manifest-promotion-plan.tsv; then
             cat /tmp/manifest-promotion-plan.tsv
           else
             echo "::warning::Scoped promotion plan could not be built (see the log above)"
@@ -2072,7 +2072,10 @@ jobs:
           && steps.mode.outputs.skip_promotion != 'true'
         env:
           COMPLETENESS_GATE_FILE: /tmp/completeness-gate.json
-        run: npx tsx scripts/promote-run-manifest.ts --execute
+        # --defer-latest (#3183): v1/latest.json waits for the report sidecars.
+        # promote-reports moves it last, so no visitor is pointed at a date
+        # whose district_*_reports.json is not in prod yet.
+        run: npx tsx scripts/promote-run-manifest.ts --execute --defer-latest
 
       # Prune reconcile (#1133) through the manifest (#1767, ADR-015 step 9).
       # The same promoter as above, so there is one prod-write mechanism: it
@@ -3485,10 +3488,37 @@ jobs:
           fi
 
       - name: '[reports] Completeness gate: promoted dates have their reports (#2144)'
+        id: completeness
         if: ${{ !cancelled() && needs.pipeline.outputs.promoted_dates != '' }}
         env:
           PROMOTED_DATES: ${{ needs.pipeline.outputs.promoted_dates }}
         run: bash scripts/pipeline/check-report-sidecars.sh "${GCS_BUCKET}" "${GCS_BUCKET_PRODUCTION}" "${PROMOTED_DATES}"
+
+      # The pipeline job withheld v1/latest.json (--defer-latest, #3183). Move
+      # it now, the last prod write of the run: the sidecars are promoted and
+      # the completeness check above passed. If anything before failed, this
+      # does not run and prod stays on the previous date; if the verdict holds
+      # the date or the copy fails, the step fails and so does the run, which
+      # data-smoke and the pipeline alerts already read. A run that promoted
+      # no date had nothing withheld and skips this.
+      - name: '[reports] Move v1/latest.json after the sidecars (#3183)'
+        id: movelatest
+        if: >-
+          !cancelled()
+          && steps.promote.outcome != 'failure'
+          && steps.completeness.outcome == 'success'
+          && needs.pipeline.outputs.promoted_dates != ''
+        env:
+          RUN_MANIFEST_FILE: ${{ env.RUN_MANIFEST_FILE }}
+          COMPLETENESS_GATE_FILE: ${{ env.REPORT_SIDECAR_VERDICT_FILE }}
+        run: npx tsx scripts/promote-run-manifest.ts --execute --latest-pointer
+
+      # Non-fatal, as the pipeline job's purge: the edge expires latest.json
+      # on its own short TTL.
+      - name: '[reports] Purge the CDN edge after latest.json moves (#3183)'
+        if: ${{ !cancelled() && steps.movelatest.outcome == 'success' }}
+        continue-on-error: true
+        run: gcloud compute url-maps invalidate-cdn-cache toast-stats-cdn-url-map --path '/v1/latest.json' --async
 
   # ══════════════════════════════════════════════════════════
   # DATA SMOKE AFTER THE PROMOTION (#2538, epic #2492)
