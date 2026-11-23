@@ -55,6 +55,71 @@ export interface RetryOptions {
   sleep?: (ms: number) => Promise<void>
 }
 
+export const DEFAULT_READ_ATTEMPTS = 3
+const BACKOFF_BASE_MS = 1000
+
+const TRANSIENT_CODES = new Set([
+  'ETIMEDOUT',
+  'ECONNRESET',
+  'ECONNABORTED',
+  'EPIPE',
+  'EAI_AGAIN',
+])
+const TRANSIENT_MESSAGE =
+  /timeout|timed out|socket hang up|rate limit|too many requests|unavailable|ECONNRESET|ETIMEDOUT/i
+
+/**
+ * A storage error worth another try: a timeout, a dropped connection, 429 or
+ * a 5xx. Anything else (403, 404, a malformed request) fails on the first
+ * read. Decode, parse and shape failures never reach here: they are results
+ * of reading successfully, not read errors.
+ * Covered by "retries a 503 but not a 403" in promotionContentGateIo.test.ts.
+ */
+export function isTransientReadError(err: unknown): boolean {
+  const e = (err ?? {}) as { code?: unknown; message?: unknown }
+  if (typeof e.code === 'number') return e.code === 429 || e.code >= 500
+  if (typeof e.code === 'string' && TRANSIENT_CODES.has(e.code)) return true
+  return typeof e.message === 'string' && TRANSIENT_MESSAGE.test(e.message)
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  { attempts = DEFAULT_READ_ATTEMPTS, sleep }: RetryOptions
+): Promise<T> {
+  const wait =
+    sleep ?? ((ms: number) => new Promise<void>(r => setTimeout(r, ms)))
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      if (!isTransientReadError(err)) throw err
+      if (attempt >= attempts) {
+        const message = err instanceof Error ? err.message : String(err)
+        throw new Error(`${message} (gave up after ${attempts} attempts)`, {
+          cause: err,
+        })
+      }
+      await wait(BACKOFF_BASE_MS * 2 ** (attempt - 1))
+    }
+  }
+}
+
+/** The same bucket, with every list and download retried on transient errors. */
+export function retryingBucket(
+  bucket: GateBucket,
+  opts: RetryOptions = {}
+): GateBucket {
+  return {
+    getFiles: query => withRetry(() => bucket.getFiles(query), opts),
+    file(name) {
+      const file = bucket.file(name)
+      return {
+        download: o => withRetry(() => file.download(o), opts),
+      }
+    },
+  }
+}
+
 export async function mapLimit<T, R>(
   items: readonly T[],
   limit: number,
@@ -277,8 +342,8 @@ async function readContext(
  * #1763). Without it, the #1715 diff-and-sample plan.
  */
 export async function runContentGate(
-  staging: GateBucket,
-  prod: GateBucket,
+  stagingBucket: GateBucket,
+  prodBucket: GateBucket,
   log: (msg: string) => void = () => {},
   opts: {
     random?: () => number
@@ -295,6 +360,8 @@ export async function runContentGate(
   if (opts.manifestOnly && !opts.manifest) {
     throw new Error('manifestOnly needs a run manifest')
   }
+  const staging = retryingBucket(stagingBucket, opts.retry)
+  const prod = retryingBucket(prodBucket, opts.retry)
   const started = Date.now()
   // The full gate also lists the manifest's directories outside the
   // promoted prefixes (#2322). The planner reads every manifest object under
