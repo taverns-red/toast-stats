@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.102.4](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.102.3...toast-stats-v2.102.4) (2026-11-23)
+
+
+### Bug Fixes
+
+* hold suspended club page for its reinstate window ([#3108](https://github.com/taverns-red/toast-stats/issues/3108)) ([#3193](https://github.com/taverns-red/toast-stats/issues/3193)) ([d2921c2](https://github.com/taverns-red/toast-stats/commit/d2921c2077a5220e48f2089c57dc6b5875e55d3a))
+* **infra:** keep red-vote release tags for 90 days ([#2104](https://github.com/taverns-red/toast-stats/issues/2104)) ([#3186](https://github.com/taverns-red/toast-stats/issues/3186)) ([a2c286d](https://github.com/taverns-red/toast-stats/commit/a2c286daeb6399da5ee4688414ba25d988bcb17c))
+* **pipeline:** move latest.json only after the report sidecars are in prod ([#3183](https://github.com/taverns-red/toast-stats/issues/3183)) ([#3184](https://github.com/taverns-red/toast-stats/issues/3184)) ([a35c137](https://github.com/taverns-red/toast-stats/commit/a35c137c7e48d51a215071d98ededae1799bbde9))
+* **pipeline:** retry transient reads in the report content gate ([#3188](https://github.com/taverns-red/toast-stats/issues/3188)) ([#3189](https://github.com/taverns-red/toast-stats/issues/3189)) ([556db2d](https://github.com/taverns-red/toast-stats/commit/556db2dd214ce033ba754d6f39c2643012185ce7))
+
 ## [2.102.3](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.102.2...toast-stats-v2.102.3) (2026-11-21)
 
 
