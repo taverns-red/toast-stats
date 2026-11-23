@@ -343,4 +343,16 @@ describe('Artifact Registry cleanup policies (#2104)', () => {
       })
     })
   }
+
+  // red-vote's repository fails its probe at 1,000 versions, and release
+  // tags kept forever fill it. COO-approved bound, red-vote#3450.
+  it('keeps red-vote release tags for 90 days, not forever', () => {
+    const policies = readJson(
+      path.join(AR_DIR, 'northamerica-northeast1--red-vote.json')
+    ) as ArPolicy[]
+    const release = policies.find(p => p.name === 'keep-release-tags')
+    expect(release?.action.type).toBe('KEEP')
+    expect(release?.condition?.tagPrefixes).toEqual(['red-vote-v'])
+    expect(release?.condition?.newerThan).toBe('90d')
+  })
 })

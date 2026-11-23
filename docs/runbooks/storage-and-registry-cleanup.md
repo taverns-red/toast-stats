@@ -328,8 +328,10 @@ Every file has:
 - `keep-deployed`: keeps any version with a tag starting `deployed-`. This is
   how a deployed digest is protected. AR cannot see Cloud Run, so the digest
   must be tagged; see step 0 below.
-- `keep-release-tags`: `red-vote-v` for red-vote and `v` for red-club, with
-  no age limit.
+- `keep-release-tags`: `red-vote-v` for red-vote, newer than 90 days, and `v`
+  for red-club, with no age limit. red-vote's bound (red-vote#3450) keeps its
+  repository under the 1,000-version limit its probe fails at. Release images
+  can be rebuilt from git tags.
 - `keep-env-tags`: `latest` and `staging`, newer than 90 days.
 - `delete-untagged`: untagged versions older than 7 days.
 - `delete-pr-previews` (red-vote only): `pr-` tags older than 14 days.
