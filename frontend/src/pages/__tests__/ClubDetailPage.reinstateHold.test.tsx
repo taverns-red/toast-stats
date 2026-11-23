@@ -244,7 +244,10 @@ describe('ClubDetailPage — suspended club reinstate window (#3108)', () => {
     renderAt('/district/61/club/1849755')
     await waitFor(() => expect(mockedReinstatable).toHaveBeenCalled())
     // The suspended list has resolved and the hero is up.
-    await screen.findByTitle('Club status')
+    await waitFor(() => expect(mockedSuspended).toHaveBeenCalled())
+    await screen.findByText('Toastmasters At St. Lawrence College', {
+      selector: 'h1',
+    })
     await new Promise(resolve => setTimeout(resolve, 50))
 
     expect(document.querySelector('.club-stats-grid')).toBeNull()

@@ -475,10 +475,11 @@ const ClubDetailPage: React.FC = () => {
   const reinstateDate = isClosedClub
     ? snapshotDateFromManifest(manifest)
     : (effectiveEndDate ?? undefined)
-  const { clubs: reinstatableClubs } = useReinstatableClubs(
-    isClosedClub && closed ? closed.lastDistrictId : districtId,
-    wantsReinstate ? reinstateDate : undefined
-  )
+  const { clubs: reinstatableClubs, isLoading: isLoadingReinstatable } =
+    useReinstatableClubs(
+      isClosedClub && closed ? closed.lastDistrictId : districtId,
+      wantsReinstate ? reinstateDate : undefined
+    )
   const reinstateClubId = club?.clubId ?? (isClosedClub ? clubId : undefined)
   const reinstatable = reinstateClubId
     ? reinstatableClubs?.find(r => clubIdsMatch(r.clubNumber, reinstateClubId))
@@ -762,8 +763,16 @@ const ClubDetailPage: React.FC = () => {
   // a moment later and, at 375px, wrapped the pills onto a second row,
   // pushing the stat strip down (CLS 0.134).
   const isHoldingForSuspended = isSuspended && isLoadingSuspended
+  // The reinstate window panel sits above the stat strip and is built from
+  // the reinstatable list, which is read after the club is known to be
+  // suspended. Landing later, it pushed the strip and trend grid down (CLS
+  // 0.42 at 375px). Enforced by ClubDetailPage.reinstateHold.test.tsx.
+  const isHoldingForReinstatable = isSuspended && isLoadingReinstatable
   if (
-    (isLoading || isHoldingForHistory || isHoldingForSuspended) &&
+    (isLoading ||
+      isHoldingForHistory ||
+      isHoldingForSuspended ||
+      isHoldingForReinstatable) &&
     snapshotHeroClub
   ) {
     return (
