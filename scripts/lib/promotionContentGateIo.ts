@@ -49,6 +49,12 @@ export interface GateBucket {
   file(name: string): GateFile
 }
 
+export interface RetryOptions {
+  /** Total tries per storage call, the first included. */
+  attempts?: number
+  sleep?: (ms: number) => Promise<void>
+}
+
 export async function mapLimit<T, R>(
   items: readonly T[],
   limit: number,
@@ -283,6 +289,7 @@ export async function runContentGate(
      * only its manifest. Lists just the directories the manifest names.
      */
     manifestOnly?: boolean
+    retry?: RetryOptions
   } = {}
 ): Promise<ContentGateResult> {
   if (opts.manifestOnly && !opts.manifest) {

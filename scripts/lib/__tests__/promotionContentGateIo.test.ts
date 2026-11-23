@@ -713,3 +713,159 @@ describe('full gate lists every directory the manifest is gated under (#2322)', 
     expect(result.failures[0]?.reason).toMatch(/sha256/)
   })
 })
+
+describe('runContentGate retries transient read errors (#3188)', () => {
+  const noSleep = { attempts: 3, sleep: async () => {} }
+
+  /** Fails the first `failures` downloads of `target` with `error`. */
+  function flaky(
+    bucket: GateBucket,
+    target: string,
+    failures: number,
+    error: () => Error
+  ) {
+    let reads = 0
+    const wrapped: GateBucket & { reads: () => number } = {
+      getFiles: q => bucket.getFiles(q),
+      file(name) {
+        const file = bucket.file(name)
+        if (name !== target) return file
+        return {
+          async download(opts) {
+            reads++
+            if (reads <= failures) throw error()
+            return file.download(opts)
+          },
+        }
+      },
+      reads: () => reads,
+    }
+    return wrapped
+  }
+  const timeout = () => new Error('upstream request timeout')
+
+  const SIDECAR = JSON.parse(
+    fs.readFileSync(
+      path.resolve(
+        __dirname,
+        'fixtures/district-reports/district_61_reports.json'
+      ),
+      'utf-8'
+    )
+  ) as Record<string, unknown>
+  const DATE = '2026-10-20'
+  const P = `snapshots/${DATE}/district_61_reports.json`
+  const entry = (s: Stored) => ({
+    path: P,
+    sha256: createHash('sha256')
+      .update(gunzipSync(Buffer.from(s.bytes)))
+      .digest('hex'),
+    date: DATE,
+    stage: 'place-reports',
+  })
+
+  it('does not hold a date when one object read times out once', async () => {
+    const good = gz(SIDECAR)
+    const { staging, prod } = buckets({ [P]: good })
+    const bucket = flaky(staging, P, 1, timeout)
+    const result = await runContentGate(bucket, prod, () => {}, {
+      manifest: [entry(good)],
+      manifestOnly: true,
+      retry: noSleep,
+    })
+    expect(result.failures).toEqual([])
+    expect(result.promote).toBe(true)
+    expect(bucket.reads()).toBe(2)
+  })
+
+  it('does not fail the gate when the latest.json context read times out once', async () => {
+    const { staging, prod } = buckets()
+    const bucket = flaky(staging, 'v1/latest.json', 1, timeout)
+    const result = await runContentGate(bucket, prod, () => {}, {
+      random: () => 0,
+      retry: noSleep,
+    })
+    expect(result.failures).toEqual([])
+    expect(result.promote).toBe(true)
+  })
+
+  it('still holds, naming the read error, when every attempt times out', async () => {
+    const good = gz(SIDECAR)
+    const { staging, prod } = buckets({ [P]: good })
+    const bucket = flaky(staging, P, 99, timeout)
+    const result = await runContentGate(bucket, prod, () => {}, {
+      manifest: [entry(good)],
+      manifestOnly: true,
+      retry: noSleep,
+    })
+    expect(result.promote).toBe(false)
+    expect(result.failures[0]?.reason).toMatch(/upstream request timeout/)
+    expect(bucket.reads()).toBe(3)
+  })
+
+  it('throws the read error, after 3 attempts, when a context read never succeeds', async () => {
+    const { staging, prod } = buckets()
+    const bucket = flaky(staging, 'v1/latest.json', 99, timeout)
+    await expect(
+      runContentGate(bucket, prod, () => {}, {
+        random: () => 0,
+        retry: noSleep,
+      })
+    ).rejects.toThrow(/upstream request timeout/)
+    expect(bucket.reads()).toBe(3)
+  })
+
+  it('retries a 503 but not a 403', async () => {
+    const good = gz(SIDECAR)
+    const { staging, prod } = buckets({ [P]: good })
+    const unavailable = flaky(staging, P, 1, () =>
+      Object.assign(new Error('Service Unavailable'), { code: 503 })
+    )
+    const ok = await runContentGate(unavailable, prod, () => {}, {
+      manifest: [entry(good)],
+      manifestOnly: true,
+      retry: noSleep,
+    })
+    expect(ok.promote).toBe(true)
+
+    const denied = flaky(staging, P, 99, () =>
+      Object.assign(new Error('Forbidden'), { code: 403 })
+    )
+    const held = await runContentGate(denied, prod, () => {}, {
+      manifest: [entry(good)],
+      manifestOnly: true,
+      retry: noSleep,
+    })
+    expect(held.promote).toBe(false)
+    expect(denied.reads()).toBe(1)
+  })
+
+  it('does not retry an object that reads fine but fails the contract', async () => {
+    const bad = gz({ ...SIDECAR, districtId: 42 })
+    const { staging, prod } = buckets({ [P]: bad })
+    const bucket = flaky(staging, P, 0, timeout)
+    const result = await runContentGate(bucket, prod, () => {}, {
+      manifest: [entry(bad)],
+      manifestOnly: true,
+      retry: noSleep,
+    })
+    expect(result.promote).toBe(false)
+    expect(bucket.reads()).toBe(1)
+  })
+
+  it('does not retry an object that fails to decode', async () => {
+    const nested: Stored = {
+      bytes: gzipSync(gzipSync(Buffer.from('{}'))),
+      contentEncoding: 'gzip',
+    }
+    const { staging, prod } = buckets({ [P]: nested })
+    const bucket = flaky(staging, P, 0, timeout)
+    const result = await runContentGate(bucket, prod, () => {}, {
+      manifest: [entry(gz(SIDECAR))],
+      manifestOnly: true,
+      retry: noSleep,
+    })
+    expect(result.promote).toBe(false)
+    expect(bucket.reads()).toBe(1)
+  })
+})
