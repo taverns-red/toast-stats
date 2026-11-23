@@ -25,7 +25,8 @@
     },
     "condition": {
       "tagState": "TAGGED",
-      "tagPrefixes": ["red-vote-v"]
+      "tagPrefixes": ["red-vote-v"],
+      "newerThan": "90d"
     }
   },
   {
