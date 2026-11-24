@@ -299,7 +299,7 @@ export const DistrictEducationView: React.FC<DistrictEducationViewProps> = ({
         <p role="status" className="education-empty">
           {isPriorProgramYear
             ? 'No education report for this date. For past program years, education awards are shown on the June 30 year-end snapshot.'
-            : 'No education report for this date yet. This is not zero awards — the report has not been collected for this snapshot.'}
+            : 'No education report for this date yet. This is not zero awards. The report is not published for this date, so no awards are shown.'}
         </p>
       </div>
     )
