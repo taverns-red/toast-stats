@@ -55,8 +55,9 @@ describe('useDistrictProgramYearControls with a held date (#3195)', () => {
     const { result } = renderHook(() => useDistrictProgramYearControls('61'), {
       wrapper: wrapperFor('/district/61'),
     })
-    await waitFor(() => expect(result.current.hasValidDates).toBe(true))
-    expect(result.current.effectiveEndDate).toBe('2026-11-21')
+    await waitFor(() =>
+      expect(result.current.effectiveEndDate).toBe('2026-11-21')
+    )
     expect(result.current.isLatestSnapshot).toBe(true)
   })
 
@@ -78,6 +79,7 @@ describe('useDistrictProgramYearControls with a held date (#3195)', () => {
     })
     await waitFor(() => expect(result.current.hasValidDates).toBe(true))
     expect(result.current.effectiveEndDate).toBe('2026-11-22')
-    expect(result.current.isLatestSnapshot).toBe(false)
+    await waitFor(() => expect(result.current.isLatestSnapshot).toBe(false))
+    expect(result.current.effectiveEndDate).toBe('2026-11-22')
   })
 })

@@ -39,6 +39,7 @@ import {
   filterDatesByProgramYear,
 } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
+import { datesForDefaultSelection } from '../utils/publishedDates'
 import type { SnapshotDate } from '../types/snapshotDate'
 import type {
   ProgramYearSetter,
@@ -160,9 +161,23 @@ export function useDistrictProgramYearControls(
   // element of the list — null is unreachable once a year has resolved (see
   // getMostRecentDateInProgramYear for why a `|| endDate` fallback must not
   // come back, #1323).
+  // Only the default stops at the published date; an explicit `?date=` may
+  // still name a held one (tested in useDistrictProgramYearControls.heldDate).
+  const publishedThrough = cachedDatesData?.publishedThrough
+  const selectableDates = useMemo(
+    () =>
+      requestedDate
+        ? allCachedDates
+        : datesForDefaultSelection(
+            allCachedDates,
+            publishedThrough,
+            healedProgramYear
+          ),
+    [requestedDate, allCachedDates, publishedThrough, healedProgramYear]
+  )
   const resolution = useResolvedDateSelection({
     requested: requestedDate,
-    dates: allCachedDates,
+    dates: selectableDates,
     programYear: healedProgramYear,
     writeUrl: selfHeal,
     setProgramYearAndDate,
@@ -188,7 +203,11 @@ export function useDistrictProgramYearControls(
   const hasValidDates =
     effectiveProgramYear !== null && effectiveEndDate !== null
 
-  const latestSnapshotDate = cachedDatesData?.dateRange?.endDate
+  const indexEndDate = cachedDatesData?.dateRange?.endDate
+  const latestSnapshotDate =
+    indexEndDate && publishedThrough && publishedThrough < indexEndDate
+      ? publishedThrough
+      : indexEndDate
   const isLatestSnapshot =
     !!effectiveEndDate && effectiveEndDate === latestSnapshotDate
 

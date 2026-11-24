@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import { queryOptions, useQuery } from '@tanstack/react-query'
+import { usePublishedThrough } from './usePublishedThrough'
 import { snapshotIndexQueryOptions } from './snapshotIndexQuery'
 import { snapshotDatesFrom, type SnapshotDate } from '../types/snapshotDate'
 
@@ -13,6 +15,10 @@ export interface CachedDatesResponse {
     startDate: SnapshotDate
     endDate: SnapshotDate
   } | null
+  /** `v1/latest.json`'s date: the newest date whose reports are in prod. Set by
+   * `useDistrictCachedDates`, not the index query, so the route prefetch stays
+   * at one request (routePrefetch.test.tsx). Absent until the manifest reads. */
+  publishedThrough?: SnapshotDate
 }
 
 /**
@@ -69,8 +75,18 @@ export const useDistrictCachedDates = (
   districtId: string | null,
   enabled: boolean = true
 ) => {
-  return useQuery({
+  const isEnabled = enabled && !!districtId
+  const query = useQuery({
     ...districtCachedDatesQueryOptions(districtId),
-    enabled: enabled && !!districtId,
+    enabled: isEnabled,
   })
+  const { publishedThrough } = usePublishedThrough(isEnabled)
+  const data = useMemo(
+    () =>
+      query.data && publishedThrough
+        ? { ...query.data, publishedThrough }
+        : query.data,
+    [query.data, publishedThrough]
+  )
+  return { ...query, data }
 }
