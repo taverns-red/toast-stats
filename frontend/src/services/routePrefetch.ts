@@ -1,6 +1,9 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { districtCachedDatesQueryOptions } from '../hooks/useDistrictData'
 import { districtStatisticsQueryOptions } from '../hooks/useMembershipData'
+import { manifestQueryOptions } from '../hooks/usePublishedThrough'
+import { snapshotDateFromManifest } from '../types/snapshotDate'
+import { capDatesAtPublished } from '../utils/publishedDates'
 
 /**
  * Start a route's first-paint data reads from the entry (#1901 option A).
@@ -56,9 +59,21 @@ export function prefetchRouteData(
   const isDeepLink = params.has('py') || params.has('date')
 
   const datesQuery = districtCachedDatesQueryOptions(districtId)
-  void client.prefetchQuery(datesQuery).then(() => {
+  // The page opens on the newest date whose reports are in prod, which can be
+  // a day behind the index (#3195), so read the manifest to pick the snapshot.
+  const manifestQuery = manifestQueryOptions()
+  const reads = [
+    client.prefetchQuery(datesQuery),
+    isDeepLink ? undefined : client.prefetchQuery(manifestQuery),
+  ]
+  void Promise.all(reads).then(() => {
     if (isDeepLink) return
-    const latest = client.getQueryData(datesQuery.queryKey)?.dateRange?.endDate
+    const dates = client.getQueryData(datesQuery.queryKey)?.dates ?? []
+    const published = snapshotDateFromManifest(
+      client.getQueryData(manifestQuery.queryKey)
+    )
+    const capped = capDatesAtPublished(dates, published)
+    const latest = capped[capped.length - 1]
     if (!latest) return
     return client.prefetchQuery(
       districtStatisticsQueryOptions(districtId, latest)

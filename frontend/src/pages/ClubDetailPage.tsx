@@ -10,7 +10,8 @@ import { useQuery } from '@tanstack/react-query'
 // One shared definition of "the same club" (#1440) — this file used to hold
 // two comparisons that disagreed with each other sixteen lines apart.
 import { clubIdsMatch, findClubEntry } from '@taverns-red/shared-contracts'
-import { fetchCdnClubIndex, fetchCdnManifest } from '../services/cdn'
+import { fetchCdnClubIndex } from '../services/cdn'
+import { manifestQueryOptions } from '../hooks/usePublishedThrough'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { LazyWorldwideStanding } from '../components/clubs/LazyWorldwideStanding'
 import { useDistricts } from '../hooks/useDistricts'
@@ -466,9 +467,7 @@ const ClubDetailPage: React.FC = () => {
   // close, which has no list (ClubDetailPage.closedClub.test, "reads the
   // list at the newest global date").
   const { data: manifest } = useQuery({
-    queryKey: ['cdn-manifest'],
-    queryFn: fetchCdnManifest,
-    staleTime: 15 * 60 * 1000,
+    ...manifestQueryOptions(),
     enabled: isClosedClub,
   })
   const wantsReinstate = isSuspended || isClosedClub

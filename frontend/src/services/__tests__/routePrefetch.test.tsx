@@ -30,9 +30,10 @@ const SNAPSHOT = { districtId: '61', clubs: [] }
 
 let fetchMock: ReturnType<typeof vi.fn>
 
-// The cached-dates hook also reads v1/latest.json (#3195). The prefetch never
-// does, so the manifest is left out of what these tests count: they pin the
-// index and snapshot requests.
+// The manifest (v1/latest.json) is read by the cached-dates hook and by the
+// club-route prefetch (#3195). It is left out of what these tests count: they
+// pin the index and snapshot requests. routePrefetch.heldDate.test.tsx counts
+// every request.
 function urls(): string[] {
   return fetchMock.mock.calls
     .map(c => String(c[0]))

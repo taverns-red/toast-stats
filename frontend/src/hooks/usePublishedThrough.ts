@@ -1,26 +1,31 @@
-import { useQuery } from '@tanstack/react-query'
-import { fetchCdnManifest } from '../services/cdn'
+import { queryOptions, useQuery } from '@tanstack/react-query'
+import { fetchCdnManifest, type CdnManifest } from '../services/cdn'
 import {
   snapshotDateFromManifest,
   type SnapshotDate,
 } from '../types/snapshotDate'
 
 /**
- * The newest date whose reports are in prod: `v1/latest.json` (#3195).
- *
- * Shares `useLatestAsOfDate`'s `['cdn-manifest']` entry, and `fetchCdnManifest`
- * is module-cached, so this adds no request. A manifest that cannot be read
- * leaves the result undefined, and a page falls back to the index.
+ * The `['cdn-manifest']` entry (`v1/latest.json`), shared by the date hooks,
+ * the club-route prefetch and the club page so they all hit one cache entry.
+ * `fetchCdnManifest` is module-cached, so reading it adds no request.
  */
-export function usePublishedThrough(enabled = true): {
-  publishedThrough: SnapshotDate | undefined
-} {
-  const { data } = useQuery({
+export function manifestQueryOptions() {
+  return queryOptions<CdnManifest, Error>({
     queryKey: ['cdn-manifest'],
     queryFn: () => fetchCdnManifest(),
     staleTime: 15 * 60 * 1000,
     retry: false,
-    enabled,
   })
+}
+
+/**
+ * The newest date whose reports are in prod (#3195). A manifest that cannot
+ * be read leaves it undefined, and a page falls back to the index.
+ */
+export function usePublishedThrough(enabled = true): {
+  publishedThrough: SnapshotDate | undefined
+} {
+  const { data } = useQuery({ ...manifestQueryOptions(), enabled })
   return { publishedThrough: snapshotDateFromManifest(data) }
 }

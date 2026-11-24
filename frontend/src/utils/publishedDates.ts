@@ -1,28 +1,18 @@
-import { filterDatesByProgramYear } from './programYear'
-import type { ProgramYear } from './programYear'
 import type { SnapshotDate } from '../types/snapshotDate'
 
 /**
- * The dates a page may pick as its default "latest" (#3195).
- *
- * The per-district index lists a date as soon as its base snapshot is
- * promoted, but the pipeline can hold that date's report files. `v1/latest.json`
- * only moves once they are in prod, so the default stops there. When the cap
- * would leave the program year with no date at all, the full list stands:
- * a page must never open empty because of it.
+ * The dates a page may default to: those up to `v1/latest.json` (#3195).
+ * The index lists a date once its snapshot is promoted, but the pipeline can
+ * hold its reports. Without a manifest date, or if the cap would leave
+ * nothing, the list is returned whole. Tested in publishedDates.test.ts.
  */
-export function datesForDefaultSelection(
-  dates: readonly SnapshotDate[],
-  publishedThrough: SnapshotDate | undefined,
-  programYear: ProgramYear | null
-): readonly SnapshotDate[] {
+export function capDatesAtPublished(
+  dates: SnapshotDate[],
+  publishedThrough: SnapshotDate | undefined
+): SnapshotDate[] {
   if (!publishedThrough) return dates
   const published = dates.filter(d => d <= publishedThrough)
-  if (published.length === dates.length) return dates
-  if (
-    programYear &&
-    filterDatesByProgramYear(published, programYear).length === 0
-  )
-    return dates
-  return published
+  return published.length === 0 || published.length === dates.length
+    ? dates
+    : published
 }

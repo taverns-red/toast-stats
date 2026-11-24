@@ -13,7 +13,6 @@ import {
   getMostRecentDateInProgramYear,
   isDateInProgramYear,
 } from '../utils/programYear'
-import { datesForDefaultSelection } from '../utils/publishedDates'
 import { buildDistrictEducation } from '../utils/districtEducation'
 import { computeEducationAwardRankings } from '../utils/educationAwardRankings'
 import { extractEducationLevels } from '../utils/extractEducationLevels'
@@ -116,22 +115,8 @@ const DistrictEducationPage: React.FC = () => {
       return selectedDate
     }
     // null is unreachable here — see getMostRecentDateInProgramYear (#1323).
-    return getMostRecentDateInProgramYear(
-      [
-        ...datesForDefaultSelection(
-          allCachedDates,
-          cachedDatesData?.publishedThrough,
-          effectiveProgramYear
-        ),
-      ],
-      effectiveProgramYear
-    )
-  }, [
-    selectedDate,
-    effectiveProgramYear,
-    allCachedDates,
-    cachedDatesData?.publishedThrough,
-  ])
+    return getMostRecentDateInProgramYear(allCachedDates, effectiveProgramYear)
+  }, [selectedDate, effectiveProgramYear, allCachedDates])
 
   const hasValidDates =
     effectiveProgramYear !== null && effectiveEndDate !== null

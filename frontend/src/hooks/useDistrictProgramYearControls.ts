@@ -39,7 +39,6 @@ import {
   filterDatesByProgramYear,
 } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
-import { datesForDefaultSelection } from '../utils/publishedDates'
 import type { SnapshotDate } from '../types/snapshotDate'
 import type {
   ProgramYearSetter,
@@ -104,10 +103,12 @@ export function useDistrictProgramYearControls(
     error: datesError = null,
     refetch: refetchDates,
   } = useDistrictCachedDates(districtId || '')
-  const allCachedDates = useMemo(
+  // `dates` stops at the published date (#3195); `allDates` is the full index.
+  const defaultDates = useMemo(
     () => cachedDatesData?.dates || EMPTY_DATES,
     [cachedDatesData?.dates]
   )
+  const allCachedDates = cachedDatesData?.allDates ?? defaultDates
 
   const availableProgramYears = useMemo(
     () => getAvailableProgramYears(allCachedDates),
@@ -161,20 +162,16 @@ export function useDistrictProgramYearControls(
   // element of the list — null is unreachable once a year has resolved (see
   // getMostRecentDateInProgramYear for why a `|| endDate` fallback must not
   // come back, #1323).
-  // Only the default stops at the published date; an explicit `?date=` may
-  // still name a held one (tested in useDistrictProgramYearControls.heldDate).
-  const publishedThrough = cachedDatesData?.publishedThrough
-  const selectableDates = useMemo(
-    () =>
-      requestedDate
-        ? allCachedDates
-        : datesForDefaultSelection(
-            allCachedDates,
-            publishedThrough,
-            healedProgramYear
-          ),
-    [requestedDate, allCachedDates, publishedThrough, healedProgramYear]
-  )
+  const selectableDates = useMemo(() => {
+    const namesASnapshot =
+      !!requestedDate && allCachedDates.some(d => d === requestedDate)
+    if (namesASnapshot) return allCachedDates
+    // A year whose only dates are held keeps the full list rather than none.
+    const hasPublishedDate =
+      !healedProgramYear ||
+      filterDatesByProgramYear(defaultDates, healedProgramYear).length > 0
+    return hasPublishedDate ? defaultDates : allCachedDates
+  }, [requestedDate, allCachedDates, defaultDates, healedProgramYear])
   const resolution = useResolvedDateSelection({
     requested: requestedDate,
     dates: selectableDates,
@@ -203,11 +200,7 @@ export function useDistrictProgramYearControls(
   const hasValidDates =
     effectiveProgramYear !== null && effectiveEndDate !== null
 
-  const indexEndDate = cachedDatesData?.dateRange?.endDate
-  const latestSnapshotDate =
-    indexEndDate && publishedThrough && publishedThrough < indexEndDate
-      ? publishedThrough
-      : indexEndDate
+  const latestSnapshotDate = cachedDatesData?.dateRange?.endDate
   const isLatestSnapshot =
     !!effectiveEndDate && effectiveEndDate === latestSnapshotDate
 

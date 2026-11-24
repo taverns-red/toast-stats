@@ -3,6 +3,7 @@ import { queryOptions, useQuery } from '@tanstack/react-query'
 import { usePublishedThrough } from './usePublishedThrough'
 import { snapshotIndexQueryOptions } from './snapshotIndexQuery'
 import { snapshotDatesFrom, type SnapshotDate } from '../types/snapshotDate'
+import { capDatesAtPublished } from '../utils/publishedDates'
 
 /**
  * Interface for cached dates response (CDN-compatible shape)
@@ -15,10 +16,28 @@ export interface CachedDatesResponse {
     startDate: SnapshotDate
     endDate: SnapshotDate
   } | null
-  /** `v1/latest.json`'s date: the newest date whose reports are in prod. Set by
-   * `useDistrictCachedDates`, not the index query, so the route prefetch stays
-   * at one request (routePrefetch.test.tsx). Absent until the manifest reads. */
-  publishedThrough?: SnapshotDate
+  /** Every date in the index, held ones included. Set by `useDistrictCachedDates`
+   * only when it capped `dates` at `v1/latest.json`; absent otherwise. Use it
+   * for the date picker and to validate an explicit `?date=`. */
+  allDates?: SnapshotDate[]
+}
+
+/** The hook's view of the index: `dates` and `dateRange` stop at the manifest
+ * date, so a date whose reports are held is never a page's default (#3195). */
+function capCachedDates(
+  data: CachedDatesResponse | undefined,
+  publishedThrough: SnapshotDate | undefined
+): CachedDatesResponse | undefined {
+  if (!data) return data
+  const dates = capDatesAtPublished(data.dates, publishedThrough)
+  if (dates === data.dates) return data
+  return {
+    ...data,
+    dates,
+    allDates: data.dates,
+    count: dates.length,
+    dateRange: { startDate: dates[0]!, endDate: dates[dates.length - 1]! },
+  }
 }
 
 /**
@@ -82,10 +101,7 @@ export const useDistrictCachedDates = (
   })
   const { publishedThrough } = usePublishedThrough(isEnabled)
   const data = useMemo(
-    () =>
-      query.data && publishedThrough
-        ? { ...query.data, publishedThrough }
-        : query.data,
+    () => capCachedDates(query.data, publishedThrough),
     [query.data, publishedThrough]
   )
   return { ...query, data }

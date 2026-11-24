@@ -23,6 +23,11 @@ vi.mock('../../services/cdn', () => ({
     latestSnapshotDate: '2026-11-21',
     generatedAt: '2026-11-23T00:00:00Z',
   }),
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: ['2026-11-20', '2026-11-21', '2026-11-22'],
+    count: 3,
+    generatedAt: '2026-11-23T00:00:00Z',
+  }),
 }))
 
 afterEach(() => cleanup())
