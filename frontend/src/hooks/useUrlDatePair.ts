@@ -33,7 +33,10 @@ import { previousRecordedDate } from './useSnapshotDiff'
  */
 export function useUrlDatePair<T extends string>(
   dates: readonly T[],
-  options: { aliases?: Readonly<Record<string, T>> } = {}
+  options: {
+    aliases?: Readonly<Record<string, T>>
+    defaultFrom?: readonly T[]
+  } = {}
 ): {
   from: T | undefined
   to: T | undefined

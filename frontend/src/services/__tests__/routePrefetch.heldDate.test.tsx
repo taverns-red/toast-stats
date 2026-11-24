@@ -45,6 +45,37 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+describe('prefetchRouteData — manifest read (#3195)', () => {
+  it('reads the manifest alongside the index on the district overview', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    prefetchRouteData(client, { pathname: '/district/61', search: '' })
+    await waitFor(() => expect(urls()).toHaveLength(2))
+    await new Promise(r => setTimeout(r, 20))
+    expect(urls().sort()).toEqual([
+      expect.stringMatching(/\/config\/district-snapshot-index\.json$/),
+      expect.stringMatching(/\/v1\/latest\.json$/),
+    ])
+  })
+
+  it('requests exactly the index and the manifest on a club deep link', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    prefetchRouteData(client, {
+      pathname: '/district/61/club/7238597',
+      search: '?date=2026-10-11',
+    })
+    await waitFor(() => expect(urls()).toHaveLength(2))
+    await new Promise(r => setTimeout(r, 20))
+    expect(urls().sort()).toEqual([
+      expect.stringMatching(/\/config\/district-snapshot-index\.json$/),
+      expect.stringMatching(/\/v1\/latest\.json$/),
+    ])
+  })
+})
+
 describe('prefetchRouteData — club route on a held day (#3195)', () => {
   it('prefetches the manifest date, not the held one, and mounting refetches nothing', async () => {
     const client = new QueryClient({
