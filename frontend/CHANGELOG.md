@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.78.5](https://github.com/taverns-red/toast-stats/compare/frontend-v3.78.4...frontend-v3.78.5) (2026-11-24)
+
+
+### Bug Fixes
+
+* **ui:** open district pages on the newest date with its reports ([#3195](https://github.com/taverns-red/toast-stats/issues/3195)) ([#3196](https://github.com/taverns-red/toast-stats/issues/3196)) ([1b93d45](https://github.com/taverns-red/toast-stats/commit/1b93d455d3795083691b9f92d9bb65f388e64cfe))
+
 ## [3.78.4](https://github.com/taverns-red/toast-stats/compare/frontend-v3.78.3...frontend-v3.78.4) (2026-11-23)
 
 
