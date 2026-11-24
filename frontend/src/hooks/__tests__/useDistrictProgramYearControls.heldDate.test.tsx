@@ -73,6 +73,15 @@ describe('useDistrictProgramYearControls with a held date (#3195)', () => {
     ])
   })
 
+  it('names the manifest date, not the held one, when ?date= has no snapshot', async () => {
+    const { result } = renderHook(() => useDistrictProgramYearControls('61'), {
+      wrapper: wrapperFor('/district/61?date=2026-11-23'),
+    })
+    await waitFor(() =>
+      expect(result.current.effectiveEndDate).toBe('2026-11-21')
+    )
+  })
+
   it('opens an explicit ?date= for the held date as asked', async () => {
     const { result } = renderHook(() => useDistrictProgramYearControls('61'), {
       wrapper: wrapperFor('/district/61?date=2026-11-22'),
