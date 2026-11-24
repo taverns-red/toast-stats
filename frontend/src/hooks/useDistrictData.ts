@@ -111,6 +111,7 @@ export const useDistrictCachedDates = (
     return {
       ...query,
       data: undefined,
+      status: 'pending' as const,
       isPending: true,
       isLoading: isEnabled,
       isSuccess: false,

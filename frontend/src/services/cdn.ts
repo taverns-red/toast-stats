@@ -109,6 +109,7 @@ export interface CdnDatesIndex {
 // Cache the latest snapshot date to avoid re-fetching on every hook call
 let cachedManifest: CdnManifest | null = null
 let manifestPromise: Promise<CdnManifest> | null = null
+const MANIFEST_TIMEOUT_MS = 5000
 
 /**
  * Fetch the CDN manifest to discover the current snapshot date.
@@ -118,7 +119,14 @@ export async function fetchCdnManifest(): Promise<CdnManifest> {
   if (cachedManifest) return cachedManifest
   if (manifestPromise) return manifestPromise
 
-  manifestPromise = fetch(`${cdnBaseUrl()}/v1/latest.json`)
+  // Pages wait on this read (#3195), so a stall must become an error. The
+  // catch below clears manifestPromise, so the next call retries. Tested in
+  // useDistrictCachedDates.manifestStall.test.tsx.
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), MANIFEST_TIMEOUT_MS)
+  manifestPromise = fetch(`${cdnBaseUrl()}/v1/latest.json`, {
+    signal: controller.signal,
+  })
     .then(res => {
       if (!res.ok) throw new Error(`CDN manifest fetch failed: ${res.status}`)
       recordCdnResponse(res)
@@ -132,6 +140,7 @@ export async function fetchCdnManifest(): Promise<CdnManifest> {
       manifestPromise = null // Allow retry on next call
       throw err
     })
+    .finally(() => clearTimeout(timer))
 
   return manifestPromise
 }
