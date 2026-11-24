@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.78.4](https://github.com/taverns-red/toast-stats/compare/frontend-v3.78.3...frontend-v3.78.4) (2026-11-23)
+
+
+### Bug Fixes
+
+* hold suspended club page for its reinstate window ([#3108](https://github.com/taverns-red/toast-stats/issues/3108)) ([#3193](https://github.com/taverns-red/toast-stats/issues/3193)) ([d2921c2](https://github.com/taverns-red/toast-stats/commit/d2921c2077a5220e48f2089c57dc6b5875e55d3a))
+
 ## [3.78.3](https://github.com/taverns-red/toast-stats/compare/frontend-v3.78.2...frontend-v3.78.3) (2026-11-21)
 
 
