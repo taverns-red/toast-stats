@@ -31,7 +31,7 @@ const SNAPSHOT = { districtId: '61', clubs: [] }
 let fetchMock: ReturnType<typeof vi.fn>
 
 // The manifest (v1/latest.json) is read by the cached-dates hook and by the
-// club-route prefetch (#3195). It is left out of what these tests count: they
+// district route prefetches (#3195). It is left out of what these tests count: they
 // pin the index and snapshot requests. routePrefetch.heldDate.test.tsx counts
 // every request.
 function urls(): string[] {
@@ -99,7 +99,10 @@ describe('prefetchRouteData — club route', () => {
       { wrapper }
     )
     await waitFor(() => expect(result.current.stats.isSuccess).toBe(true))
-    expect(result.current.dates.data?.dateRange?.endDate).toBe('2026-10-12')
+    // The hook holds the index until the manifest settles (#3195).
+    await waitFor(() =>
+      expect(result.current.dates.data?.dateRange?.endDate).toBe('2026-10-12')
+    )
     expect(urls()).toHaveLength(2)
   })
 

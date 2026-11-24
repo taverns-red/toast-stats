@@ -6,11 +6,12 @@ import type { SnapshotDate } from '../types/snapshotDate'
  * hold its reports. Without a manifest date, or if the cap would leave
  * nothing, the list is returned whole. Tested in publishedDates.test.ts.
  */
+/** Every date a picker may offer, held ones included; defaults use `dates`.
+ * Tested in pickerDatesFrom.test.ts. */
 export function pickerDatesFrom(
   data: { dates: SnapshotDate[]; allDates?: SnapshotDate[] } | undefined
 ): SnapshotDate[] {
-  void data
-  return []
+  return data?.allDates ?? data?.dates ?? []
 }
 
 export function capDatesAtPublished(

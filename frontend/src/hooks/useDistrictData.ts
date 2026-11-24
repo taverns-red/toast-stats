@@ -99,10 +99,22 @@ export const useDistrictCachedDates = (
     ...districtCachedDatesQueryOptions(districtId),
     enabled: isEnabled,
   })
-  const { publishedThrough } = usePublishedThrough(isEnabled)
+  const { publishedThrough, isSettled } = usePublishedThrough(isEnabled)
   const data = useMemo(
     () => capCachedDates(query.data, publishedThrough),
     [query.data, publishedThrough]
   )
+  // Hold the index until the manifest settles, so no page reads a held date
+  // and then flips to the published one. Tested in
+  // useDistrictCachedDates.raceManifest.test.tsx.
+  if (!isSettled) {
+    return {
+      ...query,
+      data: undefined,
+      isPending: true,
+      isLoading: isEnabled,
+      isSuccess: false,
+    }
+  }
   return { ...query, data }
 }

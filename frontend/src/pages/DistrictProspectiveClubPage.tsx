@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
+import { pickerDatesFrom } from '../utils/publishedDates'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import {
@@ -122,7 +123,7 @@ const DistrictProspectiveClubPage: React.FC = () => {
   )
 
   const availableDates = filterDatesByProgramYear(
-    allCachedDates,
+    pickerDatesFrom(cachedDatesData),
     selectedProgramYear
   ).sort((a, b) => b.localeCompare(a))
 

@@ -7,6 +7,7 @@ import type { MapFilter } from '../components/map/MapFilterPanel'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
+import { pickerDatesFrom } from '../utils/publishedDates'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useUrlProgramYear, USER_PICK } from '../hooks/useUrlProgramYear'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -499,7 +500,7 @@ const DistrictMapPage: React.FC = () => {
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
           availableDates={filterDatesByProgramYear(
-            allCachedDates,
+            pickerDatesFrom(cachedDatesData),
             selectedProgramYear
           ).sort((a, b) => b.localeCompare(a))}
           latestSnapshotDate={cachedDatesData?.dateRange?.endDate}

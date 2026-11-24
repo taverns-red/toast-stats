@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
+import { pickerDatesFrom } from '../utils/publishedDates'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import { useCharterCohortSurvival } from '../hooks/useCharterCohortSurvival'
 import {
@@ -85,7 +86,7 @@ const DistrictSurvivalPage: React.FC = () => {
   useDocumentTitle(districtName ? `${districtName} Club Survival` : null)
 
   const availableDates = filterDatesByProgramYear(
-    allCachedDates,
+    pickerDatesFrom(cachedDatesData),
     selectedProgramYear
   ).sort((a, b) => b.localeCompare(a))
 

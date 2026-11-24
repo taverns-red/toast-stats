@@ -28,7 +28,7 @@
  *   `v1/latest.json` manifest instead. See the follow-up issue.
  */
 import { useQuery } from '@tanstack/react-query'
-import { fetchCdnManifest } from '../services/cdn'
+import { manifestQueryOptions } from './usePublishedThrough'
 import { districtRankingsQueryOptions } from './districtRankingsQuery'
 import {
   snapshotDateFromManifest,
@@ -53,12 +53,7 @@ export function useLatestAsOfDate(
     ...districtRankingsQueryOptions(),
     enabled,
   })
-  const { data: manifest } = useQuery({
-    queryKey: ['cdn-manifest'],
-    queryFn: fetchCdnManifest,
-    staleTime: 15 * 60 * 1000,
-    enabled,
-  })
+  const { data: manifest } = useQuery({ ...manifestQueryOptions(), enabled })
 
   return {
     asOfDate: rankings?.asOfDate,

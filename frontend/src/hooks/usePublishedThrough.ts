@@ -25,7 +25,12 @@ export function manifestQueryOptions() {
  */
 export function usePublishedThrough(enabled = true): {
   publishedThrough: SnapshotDate | undefined
+  /** The read finished, with a date or an error (or was not asked for). */
+  isSettled: boolean
 } {
-  const { data } = useQuery({ ...manifestQueryOptions(), enabled })
-  return { publishedThrough: snapshotDateFromManifest(data) }
+  const { data, status } = useQuery({ ...manifestQueryOptions(), enabled })
+  return {
+    publishedThrough: snapshotDateFromManifest(data),
+    isSettled: !enabled || status !== 'pending',
+  }
 }

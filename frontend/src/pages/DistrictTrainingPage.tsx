@@ -4,6 +4,7 @@ import { getOfficerTrainingRounds } from '@taverns-red/analytics-core'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
+import { pickerDatesFrom } from '../utils/publishedDates'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { useTimeSeries } from '../hooks/useTimeSeries'
 import { useRegionRollups } from '../hooks/useRegionRollups'
@@ -220,8 +221,12 @@ const DistrictTrainingPage: React.FC = () => {
   }, [availableProgramYears, selectedProgramYear.year, setSelectedProgramYear])
 
   const cachedDatesInProgramYear = useMemo(
-    () => filterDatesByProgramYear(allCachedDates, selectedProgramYear),
-    [allCachedDates, selectedProgramYear]
+    () =>
+      filterDatesByProgramYear(
+        pickerDatesFrom(cachedDatesData),
+        selectedProgramYear
+      ),
+    [cachedDatesData, selectedProgramYear]
   )
 
   const effectiveProgramYear = useMemo(() => {

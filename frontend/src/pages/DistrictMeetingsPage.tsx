@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
+import { pickerDatesFrom } from '../utils/publishedDates'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import {
@@ -68,8 +69,12 @@ const DistrictMeetingsPage: React.FC = () => {
   }, [availableProgramYears, selectedProgramYear.year, setSelectedProgramYear])
 
   const cachedDatesInProgramYear = useMemo(
-    () => filterDatesByProgramYear(allCachedDates, selectedProgramYear),
-    [allCachedDates, selectedProgramYear]
+    () =>
+      filterDatesByProgramYear(
+        pickerDatesFrom(cachedDatesData),
+        selectedProgramYear
+      ),
+    [cachedDatesData, selectedProgramYear]
   )
 
   const effectiveProgramYear = useMemo(() => {

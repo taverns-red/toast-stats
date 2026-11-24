@@ -46,8 +46,11 @@ export function prefetchRouteData(
   location: { pathname: string; search: string }
 ): void {
   const overviewId = DISTRICT_OVERVIEW_ROUTE.exec(location.pathname)?.[1]
+  // The cached-dates hook holds its data until the manifest settles (#3195),
+  // so every district route starts that read next to the index.
   if (overviewId) {
     void client.prefetchQuery(districtCachedDatesQueryOptions(overviewId))
+    void client.prefetchQuery(manifestQueryOptions())
     return
   }
 
@@ -64,7 +67,7 @@ export function prefetchRouteData(
   const manifestQuery = manifestQueryOptions()
   const reads = [
     client.prefetchQuery(datesQuery),
-    isDeepLink ? undefined : client.prefetchQuery(manifestQuery),
+    client.prefetchQuery(manifestQuery),
   ]
   void Promise.all(reads).then(() => {
     if (isDeepLink) return

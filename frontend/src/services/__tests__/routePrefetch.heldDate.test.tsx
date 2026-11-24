@@ -8,6 +8,7 @@ import React from 'react'
 import { renderHook, waitFor, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { prefetchRouteData } from '../routePrefetch'
+import { resetCdnManifestCache } from '../cdn'
 import { useDistrictCachedDates } from '../../hooks/useDistrictData'
 import { useDistrictStatistics } from '../../hooks/useMembershipData'
 import { snap } from '../../test-utils/snapshotDate'
@@ -28,6 +29,7 @@ let fetchMock: ReturnType<typeof vi.fn>
 const urls = (): string[] => fetchMock.mock.calls.map(c => String(c[0]))
 
 beforeEach(() => {
+  resetCdnManifestCache()
   fetchMock = vi.fn(async (input: string | URL) => {
     const url = String(input)
     const key = Object.keys(BODIES).find(k => url.endsWith(k))
