@@ -29,11 +29,16 @@ import { previousRecordedDate } from './useSnapshotDiff'
  * write bails early so it can't clobber a same-batch URL update (Lesson 070).
  *
  * @param dates Ascending list of the district's recorded snapshot dates.
+ * @param options.defaultFrom The list the default pair is taken from, when it
+ *   stops short of `dates` (a date whose reports are held, #3195).
  * @see docs/design/what-changed-feature.md §5, §4
  */
 export function useUrlDatePair<T extends string>(
   dates: readonly T[],
-  options: { aliases?: Readonly<Record<string, T>> } = {}
+  options: {
+    aliases?: Readonly<Record<string, T>>
+    defaultFrom?: readonly T[]
+  } = {}
 ): {
   from: T | undefined
   to: T | undefined
@@ -43,7 +48,11 @@ export function useUrlDatePair<T extends string>(
 } {
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const defaultPair = useMemo(() => previousRecordedDate(dates), [dates])
+  const defaultFrom = options.defaultFrom
+  const defaultPair = useMemo(
+    () => previousRecordedDate(defaultFrom ?? dates),
+    [defaultFrom, dates]
+  )
 
   const urlFrom = searchParams.get('from')
   const urlTo = searchParams.get('to')

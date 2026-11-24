@@ -1,6 +1,9 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { districtCachedDatesQueryOptions } from '../hooks/useDistrictData'
 import { districtStatisticsQueryOptions } from '../hooks/useMembershipData'
+import { manifestQueryOptions } from '../hooks/usePublishedThrough'
+import { snapshotDateFromManifest } from '../types/snapshotDate'
+import { capDatesAtPublished } from '../utils/publishedDates'
 
 /**
  * Start a route's first-paint data reads from the entry (#1901 option A).
@@ -17,11 +20,12 @@ import { districtStatisticsQueryOptions } from '../hooks/useMembershipData'
  *
  * Scope, deliberately narrow:
  * - `/district/:id/club/:clubId` (not `/history`): the route this was
- *   measured on. `/district/:id` gets the index only (#2444, below).
- * - The snapshot is the district's newest date, which is what the page reads
+ *   measured on. `/district/:id` gets the index and the manifest (#2444, below).
+ * - The snapshot is the district's newest published date (the manifest's date
+ *   when the index runs ahead of it, #3195), which is what the page reads
  *   when the URL carries no `?py=` / `?date=`. A deep link may read another
- *   date, so it gets the index only — a guessed snapshot would be ~50 KB of
- *   wasted bytes.
+ *   date, so it gets the index and the manifest but no snapshot — a guessed
+ *   snapshot would be ~50 KB of wasted bytes.
  *
  * Fire-and-forget: `prefetchQuery` never throws, and a failed prefetch leaves
  * the page's own query to fetch (and retry) as before.
@@ -32,9 +36,9 @@ const CLUB_ROUTE = /^\/district\/([A-Za-z0-9]+)\/club\/[^/]+\/?$/
  * The district overview (#2444). Its LCP element is the next-deadline strip,
  * whose text waits on the snapshot index (`asOfDate`). Behind the lazy route
  * chunk and `v1/dates.json`, the index landed after the date's snapshot
- * fetches had started, and Lighthouse charged them all to LCP. Index only:
- * the page reads it on every visit, deep links included, so nothing is
- * wasted.
+ * fetches had started, and Lighthouse charged them all to LCP. Index and
+ * manifest (#3195), no snapshot: the page reads both on every visit, deep
+ * links included, so nothing is wasted.
  */
 const DISTRICT_OVERVIEW_ROUTE = /^\/district\/([A-Za-z0-9]+)\/?$/
 
@@ -43,8 +47,11 @@ export function prefetchRouteData(
   location: { pathname: string; search: string }
 ): void {
   const overviewId = DISTRICT_OVERVIEW_ROUTE.exec(location.pathname)?.[1]
+  // The cached-dates hook holds its data until the manifest settles (#3195),
+  // so the overview and club routes start that read next to the index.
   if (overviewId) {
     void client.prefetchQuery(districtCachedDatesQueryOptions(overviewId))
+    void client.prefetchQuery(manifestQueryOptions())
     return
   }
 
@@ -56,9 +63,21 @@ export function prefetchRouteData(
   const isDeepLink = params.has('py') || params.has('date')
 
   const datesQuery = districtCachedDatesQueryOptions(districtId)
-  void client.prefetchQuery(datesQuery).then(() => {
+  // The page opens on the newest date whose reports are in prod, which can be
+  // a day behind the index (#3195), so read the manifest to pick the snapshot.
+  const manifestQuery = manifestQueryOptions()
+  const reads = [
+    client.prefetchQuery(datesQuery),
+    client.prefetchQuery(manifestQuery),
+  ]
+  void Promise.all(reads).then(() => {
     if (isDeepLink) return
-    const latest = client.getQueryData(datesQuery.queryKey)?.dateRange?.endDate
+    const dates = client.getQueryData(datesQuery.queryKey)?.dates ?? []
+    const published = snapshotDateFromManifest(
+      client.getQueryData(manifestQuery.queryKey)
+    )
+    const capped = capDatesAtPublished(dates, published)
+    const latest = capped[capped.length - 1]
     if (!latest) return
     return client.prefetchQuery(
       districtStatisticsQueryOptions(districtId, latest)

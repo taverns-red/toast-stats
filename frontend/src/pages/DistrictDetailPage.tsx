@@ -17,6 +17,7 @@ import { useAggregatedAnalytics } from '../hooks/useAggregatedAnalytics'
 import { usePerformanceTargets } from '../hooks/usePerformanceTargets'
 import { resolveDistinguishedCounts } from '../utils/distinguishedCounts'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
+import { pickerDatesFrom } from '../utils/publishedDates'
 import { useDistrictRankHistoryYears } from '../hooks/useDistrictRankHistoryYears'
 import { type UrlWriteOptions } from '../hooks/useUrlProgramYear'
 import { useDistrictProgramYearControls } from '../hooks/useDistrictProgramYearControls'
@@ -162,10 +163,10 @@ const DistrictDetailPageInner: React.FC = () => {
   const cachedDatesInProgramYear = React.useMemo(
     () =>
       filterDatesByProgramYear(
-        allCachedDates,
+        pickerDatesFrom(cachedDatesData),
         effectiveProgramYear ?? selectedProgramYear
       ),
-    [allCachedDates, effectiveProgramYear, selectedProgramYear]
+    [cachedDatesData, effectiveProgramYear, selectedProgramYear]
   )
 
   // Fetch district info. Scoped to the snapshot this page is DISPLAYING: the

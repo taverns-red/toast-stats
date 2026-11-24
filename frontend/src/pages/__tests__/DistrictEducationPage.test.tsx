@@ -268,7 +268,9 @@ describe('DistrictEducationPage (#1793)', () => {
     )
     renderAt('/district/61/education')
     expect(
-      await screen.findByText(/No education report for this date/)
+      await screen.findByText(
+        /Education awards for this date are not published/
+      )
     ).toHaveAttribute('role', 'status')
     expect(
       screen.queryByRole('list', { name: /education at a glance/i })
@@ -308,7 +310,9 @@ describe('DistrictEducationPage (#1793)', () => {
       } as unknown as ReturnType<typeof useDistrictStatistics>)
       renderAt('/district/61/education?date=2026-10-12')
       expect(
-        await screen.findByText(/No education report for this date/)
+        await screen.findByText(
+          /Education awards for this date are not published/
+        )
       ).toBeInTheDocument()
       const fallback = await screen.findByRole('region', {
         name: /from the club performance report/i,

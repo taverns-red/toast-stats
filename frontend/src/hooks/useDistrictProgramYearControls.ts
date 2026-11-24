@@ -103,10 +103,12 @@ export function useDistrictProgramYearControls(
     error: datesError = null,
     refetch: refetchDates,
   } = useDistrictCachedDates(districtId || '')
-  const allCachedDates = useMemo(
+  // `dates` stops at the published date (#3195); `allDates` is the full index.
+  const defaultDates = useMemo(
     () => cachedDatesData?.dates || EMPTY_DATES,
     [cachedDatesData?.dates]
   )
+  const allCachedDates = cachedDatesData?.allDates ?? defaultDates
 
   const availableProgramYears = useMemo(
     () => getAvailableProgramYears(allCachedDates),
@@ -160,9 +162,19 @@ export function useDistrictProgramYearControls(
   // element of the list — null is unreachable once a year has resolved (see
   // getMostRecentDateInProgramYear for why a `|| endDate` fallback must not
   // come back, #1323).
+  const selectableDates = useMemo(() => {
+    const namesASnapshot =
+      !!requestedDate && allCachedDates.some(d => d === requestedDate)
+    if (namesASnapshot) return allCachedDates
+    // A year whose only dates are held keeps the full list rather than none.
+    const hasPublishedDate =
+      !healedProgramYear ||
+      filterDatesByProgramYear(defaultDates, healedProgramYear).length > 0
+    return hasPublishedDate ? defaultDates : allCachedDates
+  }, [requestedDate, allCachedDates, defaultDates, healedProgramYear])
   const resolution = useResolvedDateSelection({
     requested: requestedDate,
-    dates: allCachedDates,
+    dates: selectableDates,
     programYear: healedProgramYear,
     writeUrl: selfHeal,
     setProgramYearAndDate,

@@ -30,6 +30,7 @@ import { ChangeGroup } from '../components/ChangeGroup'
 import { ExportButton } from '../components/ExportButton'
 import { exportSnapshotDiff } from '../utils/csvExport'
 import { pointToken, type SnapshotPoint } from '../utils/snapshotPoints'
+import { pickerDatesFrom } from '../utils/publishedDates'
 import type { SnapshotDate } from '../types/snapshotDate'
 import type {
   DiffEvent,
@@ -278,7 +279,13 @@ const DistrictChangesPage: React.FC = () => {
   const { data: cachedDates, isLoading: datesLoading } = useDistrictCachedDates(
     districtId || ''
   )
-  const dates = useMemo(() => cachedDates?.dates ?? [], [cachedDates?.dates])
+  // The picker and an explicit `?to=` may name a held date; the default pair
+  // stops at the published one (#3195).
+  const dates = useMemo(() => pickerDatesFrom(cachedDates), [cachedDates])
+  const publishedDates = useMemo(
+    () => new Set<string>(cachedDates?.dates ?? []),
+    [cachedDates?.dates]
+  )
   // The date list the picker offers is POINTS (#2475): the dated snapshots plus,
   // while a month end is being reconciled, its earlier revisions. A point is a
   // URL token (`2026-10-31`, or `2026-10-31@2026-11-02` for a revision) and
@@ -293,8 +300,13 @@ const DistrictChangesPage: React.FC = () => {
     () => new Map(pointSet.points.map(p => [pointToken(p), p])),
     [pointSet.points]
   )
+  const defaultTokens = useMemo(
+    () => tokens.filter(t => publishedDates.has(t.slice(0, 10))),
+    [tokens, publishedDates]
+  )
   const { from, to, setFrom, setTo, setPair } = useUrlDatePair<string>(tokens, {
     aliases: pointSet.aliases,
+    defaultFrom: defaultTokens,
   })
   /** What the diff hook fetches: the plain date, or the revision point. */
   const diffArg = (
