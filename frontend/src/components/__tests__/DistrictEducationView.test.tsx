@@ -259,8 +259,9 @@ describe('DistrictEducationView', () => {
   it('not available says why, and is not a page of zeros', () => {
     renderView({ reports: null })
     expect(screen.getByRole('status')).toHaveTextContent(
-      /No education report for this date/
+      'Education awards for this date are not published yet. This does not mean zero awards.'
     )
+    expect(screen.getByRole('status')).not.toHaveTextContent(/collected/)
     expect(
       screen.queryByRole('list', { name: /education at a glance/i })
     ).toBeNull()
