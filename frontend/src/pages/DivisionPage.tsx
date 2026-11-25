@@ -7,10 +7,7 @@
 
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
-import {
-  DivisionNotFound,
-  divisionNotFoundHeading,
-} from '../components/EntityNotFound'
+import { DivisionNotFound } from '../components/EntityNotFound'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
@@ -118,7 +115,7 @@ const DivisionPage: React.FC = () => {
   ])
   useDocumentTitle(
     snapshot && !divisionPerformance
-      ? divisionNotFoundHeading(districtId ?? '', divId ?? '')
+      ? `Division ${divId?.toUpperCase()} isn't in District ${districtId}`
       : `Division ${divId?.toUpperCase()} — District ${districtId}`
   )
 

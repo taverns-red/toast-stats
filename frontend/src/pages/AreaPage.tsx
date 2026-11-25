@@ -8,7 +8,7 @@
 
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
-import { AreaNotFound, areaNotFoundHeading } from '../components/EntityNotFound'
+import { AreaNotFound } from '../components/EntityNotFound'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
@@ -128,7 +128,7 @@ const AreaPage: React.FC = () => {
   ])
   useDocumentTitle(
     snapshot && !matched
-      ? areaNotFoundHeading(districtId ?? '', divId ?? '', areaId ?? '')
+      ? `Area ${areaId?.toUpperCase()} isn't in Division ${divId?.toUpperCase()} of District ${districtId}`
       : `Area ${areaId} — Division ${divId?.toUpperCase()} — District ${districtId}`
   )
   const areaPerformance = matched?.area
