@@ -239,6 +239,32 @@ describe('meetingModeFromText (#1789)', () => {
     expect(meetingModeFromText(text, { place: true })).toBe(mode)
   })
 
+  it.each(['En ligne, pas de présentiel', 'En ligne, non présentiel'])(
+    'negated French location %j stays online',
+    text => {
+      expect(meetingModeFromText(text, { place: true })).toBe('online')
+    }
+  )
+
+  it('does not treat "not on Zoom" as online', () => {
+    expect(
+      meetingModeFromText('City Hall - not on Zoom', { place: true })
+    ).toBe('in-person')
+  })
+
+  it('does not treat a negated hybrid word as hybrid', () => {
+    expect(meetingModeFromText('Not hybrid in summer')).toBeUndefined()
+  })
+
+  it('limits online "only" to the meetings it describes', () => {
+    expect(
+      meetingModeFromText(
+        'City Hall    Zoom only for those who cannot attend',
+        { place: true }
+      )
+    ).toBe('hybrid')
+  })
+
   // #3086: a venue line beside an online line is hybrid (shapes from the
   // scrubbed D61 Locations, 2026-11-19).
   it.each([
@@ -260,6 +286,15 @@ describe('meetingModeFromText (#1789)', () => {
 })
 
 describe('parseMeetingSchedule (#1789) — recorded D61 vocabulary', () => {
+  it('uses a negated mode in MeetingDay', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Tuesday, not in person',
+        meetingTime: '7pm Zoom',
+      })?.[0]?.mode
+    ).toBe('online')
+  })
+
   it.each([
     [
       'Tuesday',
