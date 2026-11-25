@@ -218,7 +218,9 @@ describe('DistrictClubsPage snapshot diff is lazy (#2740)', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledTimes(6)
-    expect(screen.getByRole('alert')).toHaveTextContent(/could not load/i)
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /couldn.t load the changes/i
+    )
     expect(
       screen.getByRole('button', { name: /export changes/i })
     ).toHaveAttribute('aria-busy', 'false')

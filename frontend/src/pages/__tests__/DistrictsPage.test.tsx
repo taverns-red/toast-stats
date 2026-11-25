@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useRankHistory } from '../../hooks/useRankHistory'
@@ -48,6 +48,16 @@ vi.mock('../../hooks/useRankHistory', () => ({
 const mockedFetchCdnRankings = vi.mocked(fetchCdnRankings)
 
 // renderWithProviders is provided by test-utils to include ProgramYearProvider and common wrappers
+
+afterEach(() => {
+  vi.mocked(useRankHistory).mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  } as unknown as ReturnType<typeof useRankHistory>)
+})
 
 describe('DistrictsPage - Percentage Formatting', () => {
   beforeEach(() => {
@@ -992,5 +1002,16 @@ describe('DistrictsPage - Historical Rank Progression load failure (#3174)', () 
       within(panel).getByRole('button', { name: /try again/i })
     )
     expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
+  // Must stay last in this describe: it proves the reset only by running
+  // after the error tests above.
+  it('resets rank history to its idle default after the error tests above', () => {
+    expect(useRankHistory({ districtIds: [] })).toMatchObject({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      error: null,
+    })
   })
 })

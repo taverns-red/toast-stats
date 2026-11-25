@@ -15,6 +15,7 @@
 import type { ClubStatisticsFile } from '@taverns-red/shared-contracts'
 import { getProgramYear } from './programYear'
 import { lifecycleDistrictLabel } from './clubLifecycle'
+import { couldntLoad } from './loadFailureText'
 import {
   distinguishedTierName,
   normalizeTierCode,
@@ -237,7 +238,7 @@ export function summarizeClubHistoryGaps(
     )
     .map(g => g.label)
   if (unloadable.length > 0) {
-    clauses.push(`${listYears(unloadable)} could not be loaded.`)
+    clauses.push(couldntLoad(`the data for ${listYears(unloadable)}`))
   }
 
   return clauses.join(' ')

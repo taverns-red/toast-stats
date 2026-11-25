@@ -74,6 +74,7 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { SHORT_LANDSCAPE_QUERY } from '../utils/contextBar'
 import { ClubSearchBox } from './ClubSearchBox'
+import { couldntLoad } from '../utils/loadFailureText'
 
 // The column model — order, headers, per-cell render and the sort fns — lives in
 // `clubsColumns.tsx` (the TanStack migration, #835); which columns show at which
@@ -83,8 +84,7 @@ import { ClubSearchBox } from './ClubSearchBox'
 /**
  * Props for the ClubsTable component
  */
-const CHANGES_FAILED_NOTE =
-  'The changes could not load, so nothing was exported. Try again in a moment.'
+const CHANGES_FAILED_NOTE = `${couldntLoad('the changes')} Nothing was exported. Try again in a moment.`
 const CHANGES_EMPTY_NOTE =
   'There are no changes to export between these two dates.'
 type ChangesExportResult =

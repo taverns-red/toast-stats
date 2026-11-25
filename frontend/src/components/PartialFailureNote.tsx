@@ -13,6 +13,8 @@ interface PartialFailureNoteProps {
   className?: string
   /** Replaces the default button style, for a page's own pill. */
   buttonClassName?: string
+  /** Disables the retry and announces that it is in progress. */
+  retrying?: boolean
 }
 
 /**
@@ -27,6 +29,7 @@ export const PartialFailureNote: React.FC<PartialFailureNoteProps> = ({
   announce = true,
   className = '',
   buttonClassName = 'tm-btn-secondary text-sm min-h-[44px]',
+  retrying = false,
 }) => (
   <div
     className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${className}`}
@@ -37,8 +40,14 @@ export const PartialFailureNote: React.FC<PartialFailureNoteProps> = ({
       {children ? <> {children}</> : null}
     </p>
     {onRetry && (
-      <button type="button" className={buttonClassName} onClick={onRetry}>
-        Try again
+      <button
+        type="button"
+        className={buttonClassName}
+        onClick={onRetry}
+        disabled={retrying}
+        aria-busy={retrying || undefined}
+      >
+        {retrying ? 'Trying again…' : 'Try again'}
       </button>
     )}
   </div>

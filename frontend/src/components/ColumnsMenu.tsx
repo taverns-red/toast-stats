@@ -88,8 +88,15 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
       : idsFor(group, changesAvailable, sinceActive)
   const [isOpen, setIsOpen] = useState(false)
   const [announcement, setAnnouncement] = useState('')
+  const [isRetryingChanges, setIsRetryingChanges] = useState(false)
+  const [lastChangesFailed, setLastChangesFailed] = useState(changesFailed)
+  if (changesFailed !== lastChangesFailed) {
+    setLastChangesFailed(changesFailed)
+    if (!changesFailed) setIsRetryingChanges(false)
+  }
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
+  const refocusAfterRetry = useRef(false)
   const onOpenRef = useRef(onOpen)
   useEffect(() => {
     onOpenRef.current = onOpen
@@ -132,6 +139,15 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
     }
   }, [isOpen, close, focusFirstCheckbox])
 
+  // The Try again button unmounts with its note once the retry starts, which
+  // would drop focus to the page body inside the open menu
+  // (ColumnsMenu.lazyChanges: "keeps the failed-load retry … focused").
+  useEffect(() => {
+    if (changesFailed || !refocusAfterRetry.current) return
+    refocusAfterRetry.current = false
+    if (isOpen) focusFirstCheckbox()
+  }, [changesFailed, focusFirstCheckbox, isOpen])
+
   const { shownCount, totalCount, isCustom } = columns
   const accessibleName = `Columns, ${shownCount} of ${totalCount} shown${
     isCustom ? ', customised' : ''
@@ -158,6 +174,13 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
       setAnnouncement(`${label} ${columns.isVisible(id) ? 'hidden' : 'shown'}`)
     }
     columns.toggle(id)
+  }
+
+  const retryChanges = () => {
+    if (isRetryingChanges) return
+    refocusAfterRetry.current = true
+    setIsRetryingChanges(true)
+    onRetryChanges?.()
   }
 
   return (
@@ -227,7 +250,9 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
                       <PartialFailureNote
                         subject="the changes"
                         announce={false}
-                        onRetry={onRetryChanges}
+                        onRetry={onRetryChanges ? retryChanges : undefined}
+                        retrying={isRetryingChanges || changesLoading}
+                        buttonClassName="inline-flex min-h-[44px] items-center text-sm font-semibold font-tm-body text-[var(--tm-loyal-blue)] underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                       >
                         The other columns still work.
                       </PartialFailureNote>

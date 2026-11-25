@@ -4,7 +4,7 @@
 
 import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
 import { ColumnsMenu } from '../ColumnsMenu'
@@ -12,8 +12,10 @@ import { useColumnVisibility } from '../../hooks/useColumnVisibility'
 
 const Harness: React.FC<{
   loading?: boolean
+  failed?: boolean
+  onRetry?: (() => void) | undefined
   onOpen?: (() => void) | undefined
-}> = ({ loading = false, onOpen }) => {
+}> = ({ loading = false, failed = false, onRetry, onOpen }) => {
   const columns = useColumnVisibility({
     tier: 'desktop',
     changesAvailable: true,
@@ -24,6 +26,8 @@ const Harness: React.FC<{
       columns={columns}
       changesAvailable
       changesLoading={loading}
+      changesFailed={failed}
+      onRetryChanges={onRetry}
       onOpen={onOpen}
     />
   )
@@ -57,5 +61,39 @@ describe('ColumnsMenu lazy Changes group (#2740)', () => {
     render(<Harness onOpen={onOpen} />)
     await userEvent.click(screen.getByRole('button', { name: /^columns/i }))
     expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the failed-load retry light, busy, single-flight, and focused', async () => {
+    const onRetry = vi.fn()
+    const user = userEvent.setup()
+    const { rerender } = render(<Harness failed onRetry={onRetry} />)
+    await user.click(screen.getByRole('button', { name: /^columns/i }))
+
+    const retry = screen.getByRole('button', { name: /^try again$/i })
+    expect(retry).toHaveClass(
+      'underline',
+      'text-sm',
+      'min-h-[44px]',
+      'text-[var(--tm-loyal-blue)]'
+    )
+    expect(retry).not.toHaveClass('tm-btn-secondary')
+
+    await user.click(retry)
+    expect(retry).toBeDisabled()
+    expect(retry).toHaveAttribute('aria-busy', 'true')
+    expect(retry).toHaveTextContent('Trying again…')
+    await user.click(retry)
+    expect(onRetry).toHaveBeenCalledTimes(1)
+
+    rerender(<Harness onRetry={onRetry} />)
+    await waitFor(() => {
+      const popover = document.getElementById(
+        screen
+          .getByRole('button', { name: /^columns/i })
+          .getAttribute('aria-controls') ?? ''
+      )
+      expect(popover).toContainElement(document.activeElement as HTMLElement)
+      expect(document.activeElement).not.toBe(document.body)
+    })
   })
 })

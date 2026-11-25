@@ -20,6 +20,7 @@ import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom'
 import { ClubsTable, type SinceLastYearProps } from '../ClubsTable'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
+import { couldntLoad } from '../../utils/loadFailureText'
 import type { PriorYearClubGoals } from '../../utils/sinceLastYear'
 
 const render = (ui: ReactElement) =>
@@ -183,9 +184,15 @@ describe('ClubsTable — since last year preset (#2432)', () => {
 
   it('says so when last year cannot be loaded, and marks no club as a climber', () => {
     renderTable({ mode: 'climbed', prior: undefined, isError: true })
+    const note = screen.getByText(/no club is marked/i)
     expect(
-      screen.getByText(/last year.s dcp goals could not be loaded/i)
-    ).toBeInTheDocument()
+      note.textContent?.startsWith(couldntLoad('last year’s DCP goals'))
+    ).toBe(true)
+    expect(note).toHaveTextContent(
+      `${couldntLoad(
+        'last year’s DCP goals'
+      )} No club is marked as climbed or slipped.`
+    )
     expect(screen.queryByTestId('since-last-year-1')).not.toBeInTheDocument()
   })
 })

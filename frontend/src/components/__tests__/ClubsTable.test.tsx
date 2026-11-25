@@ -27,6 +27,7 @@ import type { DistrictReportsDataset } from '@taverns-red/shared-contracts'
 import recordedReports from '../../__tests__/fixtures/d61-growth-reports.recorded.json'
 import { applyCoachOverlay, buildCoachLookup } from '../../utils/clubCoach'
 import { paramsToFilterState } from '../../utils/clubFilterUrl'
+import { couldntLoad } from '../../utils/loadFailureText'
 
 // CC-7 (#872): ClubsTable now renders real <Link>s (desktop club-name cell +
 // mobile ClubCard), so every render needs a router context. Shadow `render`
@@ -555,6 +556,35 @@ describe('ClubsTable', () => {
         name: /export csv \(all columns\)/i,
       })
       expect(exportButton).toBeDisabled()
+    })
+
+    it('uses the shared load-failure sentence for a failed changes export', () => {
+      render(
+        <ClubsTable
+          clubs={[createMockClub()]}
+          districtId="test-district"
+          isLoading={false}
+          deferredChanges={{
+            available: true,
+            isLoading: false,
+            isError: true,
+            onRequest: vi.fn(),
+            onRetry: vi.fn(),
+          }}
+        />
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: /export changes/i }))
+
+      const note = screen.getByRole('alert')
+      expect(note.textContent?.startsWith(couldntLoad('the changes'))).toBe(
+        true
+      )
+      expect(note).toHaveTextContent(
+        `${couldntLoad(
+          'the changes'
+        )} Nothing was exported. Try again in a moment.`
+      )
     })
   })
 
