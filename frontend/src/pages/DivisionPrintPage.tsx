@@ -17,10 +17,12 @@ const DivisionPrintPage: React.FC = () => {
     divId: string
   }>()
   const { search } = useLocation()
-  useDocumentTitle(
-    `Division ${divId?.toUpperCase()} Print Pack — District ${districtId}`
-  )
   const data = useCouncilPack(districtId, { division: divId ?? '' })
+  useDocumentTitle(
+    data.isNotFound
+      ? `Division ${divId?.toUpperCase()} isn't in District ${districtId}`
+      : `Division ${divId?.toUpperCase()} Print Pack — District ${districtId}`
+  )
   if (data.isNotFound) {
     return (
       <DivisionNotFound districtId={districtId ?? ''} divId={divId ?? ''} />

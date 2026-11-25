@@ -45,9 +45,6 @@ const AreaPage: React.FC = () => {
     divId: string
     areaId: string
   }>()
-  useDocumentTitle(
-    `Area ${areaId} — Division ${divId?.toUpperCase()} — District ${districtId}`
-  )
   const { search } = useLocation()
   const isMobile = useIsMobile()
 
@@ -129,6 +126,11 @@ const AreaPage: React.FC = () => {
     effectiveEndDate,
     data?.distinguishedCountsByDivision,
   ])
+  useDocumentTitle(
+    snapshot && !matched
+      ? `Area ${areaId?.toUpperCase()} isn't in Division ${divId?.toUpperCase()} of District ${districtId}`
+      : `Area ${areaId} — Division ${divId?.toUpperCase()} — District ${districtId}`
+  )
   const areaPerformance = matched?.area
 
   const areaNarrative = React.useMemo(() => {

@@ -39,7 +39,6 @@ const DivisionPage: React.FC = () => {
     districtId: string
     divId: string
   }>()
-  useDocumentTitle(`Division ${divId?.toUpperCase()} — District ${districtId}`)
   const { search } = useLocation()
   const isMobile = useIsMobile()
 
@@ -114,6 +113,11 @@ const DivisionPage: React.FC = () => {
     effectiveEndDate,
     data?.distinguishedCountsByDivision,
   ])
+  useDocumentTitle(
+    snapshot && !divisionPerformance
+      ? `Division ${divId?.toUpperCase()} isn't in District ${districtId}`
+      : `Division ${divId?.toUpperCase()} — District ${districtId}`
+  )
 
   // Scoped division-level narrative — the same prose the overview's Division and
   // Area Progress Summary shows, scoped to this division (#1016 S2 refactor).

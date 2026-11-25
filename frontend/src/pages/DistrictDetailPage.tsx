@@ -218,7 +218,6 @@ const DistrictDetailPageInner: React.FC = () => {
 
   const rawName = selectedDistrict?.name || districtId || ''
   const districtName = /^\d+$/.test(rawName) ? `District ${rawName}` : rawName
-  useDocumentTitle(districtName)
 
   // Get all clubs from analytics
   const allClubs = analytics?.allClubs || []
@@ -588,6 +587,16 @@ const DistrictDetailPageInner: React.FC = () => {
       null,
     [degradedDataYears, selectedProgramYear]
   )
+  const notFoundHeading = `District ${districtId} isn't in Toast Stats`
+  const isDistrictNotFound =
+    cachedDatesData &&
+    districtsData &&
+    !selectedDistrict &&
+    districtId &&
+    !isLoadingRankHistoryYears &&
+    !isRankHistoryError &&
+    degradedDataYears.length === 0
+  useDocumentTitle(isDistrictNotFound ? notFoundHeading : districtName)
 
   // Move BOTH `?py=` and `?date=` in one navigation. `useUrlProgramYear` reads
   // them independently, so a `?date=` left over from the previous year would
@@ -625,7 +634,7 @@ const DistrictDetailPageInner: React.FC = () => {
     ) {
       return (
         <NotFoundPanel
-          heading={`District ${districtId} isn't in Toast Stats`}
+          heading={notFoundHeading}
           message="We have no data for a district with this number. Check the number in the link, or pick a district from the list."
         />
       )

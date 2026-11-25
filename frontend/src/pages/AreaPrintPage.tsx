@@ -18,13 +18,15 @@ const AreaPrintPage: React.FC = () => {
     areaId: string
   }>()
   const { search } = useLocation()
-  useDocumentTitle(
-    `Area ${areaId} Print Pack — Division ${divId?.toUpperCase()} — District ${districtId}`
-  )
   const data = useCouncilPack(districtId, {
     division: divId ?? '',
     area: areaId ?? '',
   })
+  useDocumentTitle(
+    data.isNotFound
+      ? `Area ${areaId?.toUpperCase()} isn't in Division ${divId?.toUpperCase()} of District ${districtId}`
+      : `Area ${areaId} Print Pack — Division ${divId?.toUpperCase()} — District ${districtId}`
+  )
   if (data.isNotFound) {
     return (
       <AreaNotFound
