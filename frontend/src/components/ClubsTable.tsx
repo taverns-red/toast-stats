@@ -87,6 +87,10 @@ const CHANGES_FAILED_NOTE =
   'The changes could not load, so nothing was exported. Try again in a moment.'
 const CHANGES_EMPTY_NOTE =
   'There are no changes to export between these two dates.'
+type ChangesExportResult =
+  | { status: 'loaded'; diff: SnapshotDiff }
+  | { status: 'failed' }
+  | { status: 'cancelled' }
 
 interface ClubsTableProps {
   /** Array of club trends to display in the table */
@@ -912,15 +916,10 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     setExportNote(null)
   }
   const exportAttempt = useRef(0)
-  const pendingChangesExport = useRef<
-    | ((
-        result:
-          | { status: 'loaded'; diff: SnapshotDiff }
-          | { status: 'failed' }
-          | { status: 'cancelled' }
-      ) => void)
-    | null
-  >(null)
+  const pendingChangesExport = useRef<{
+    districtId: string
+    settle: (result: ChangesExportResult) => void
+  } | null>(null)
   const diffFailed = !!deferredChanges?.isError
   const runChangesExport = (diff: SnapshotDiff, attempt: number): void => {
     const empty =
@@ -940,32 +939,32 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       return
     }
     requestChanges?.()
-    const result = await new Promise<
-      | { status: 'loaded'; diff: SnapshotDiff }
-      | { status: 'failed' }
-      | { status: 'cancelled' }
-    >(resolve => {
-      pendingChangesExport.current = resolve
+    const result = await new Promise<ChangesExportResult>(settle => {
+      pendingChangesExport.current = { districtId, settle }
     })
     if (result.status === 'cancelled') return
     if (result.status === 'loaded') runChangesExport(result.diff, attempt)
     else setExportNote({ message: CHANGES_FAILED_NOTE, attempt })
   }
+  // An export waits for the diff of the district it started on. A diff that
+  // arrives after a district switch belongs to another district and must not
+  // download (DistrictClubsPage.lazyDiffStates: "cancels a pending export").
   useEffect(() => {
-    const done = pendingChangesExport.current
+    const pending = pendingChangesExport.current
+    if (!pending) return
+    if (pending.districtId !== districtId) {
+      pendingChangesExport.current = null
+      pending.settle({ status: 'cancelled' })
+      return
+    }
+    if (!(snapshotDiff || diffFailed)) return
     pendingChangesExport.current = null
-    done?.({ status: 'cancelled' })
-  }, [districtId])
-  useEffect(() => {
-    const done = pendingChangesExport.current
-    if (!done || !(snapshotDiff || diffFailed)) return
-    pendingChangesExport.current = null
-    done(
+    pending.settle(
       snapshotDiff
         ? { status: 'loaded', diff: snapshotDiff }
         : { status: 'failed' }
     )
-  }, [snapshotDiff, diffFailed])
+  }, [districtId, snapshotDiff, diffFailed])
 
   const exportGroup = (
     <div className="clubs-export-group">
