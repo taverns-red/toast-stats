@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.31.2](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.31.1...collector-cli-v1.31.2) (2026-11-25)
+
+
+### Bug Fixes
+
+* **meeting-mode:** read four more negation forms ([#3085](https://github.com/taverns-red/toast-stats/issues/3085)) ([#3210](https://github.com/taverns-red/toast-stats/issues/3210)) ([f41bd5e](https://github.com/taverns-red/toast-stats/commit/f41bd5e6c7dd84645d84cf507e314caf87550d7f))
+
 ## [1.31.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.31.0...collector-cli-v1.31.1) (2026-11-21)
 
 
