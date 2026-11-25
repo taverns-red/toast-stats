@@ -142,7 +142,7 @@ const BUCKETS = {
  */
 const CODE_BYTES = {
   // worst 51440 B (/regions)
-  stylesheet: 56 * KB,
+  stylesheet: 40 * KB, // CANARY (#2752): must fail; reverted next commit
   // worst 65416 B (/)
   font: 71 * KB,
   // worst 4672 B (/district/61)
@@ -155,7 +155,7 @@ const DATA_BYTES = {
   landing: 67 * KB, // worst 62121 B
   district: 158 * KB, // worst 147010 B
   clubs: 147 * KB, // worst 136433 B
-  club: 215 * KB, // worst 199466 B
+  club: 150 * KB, // CANARY (#2752): must fail; reverted next commit
   regions: 41 * KB, // worst 37901 B (samples range 28-38 KB)
 }
 
