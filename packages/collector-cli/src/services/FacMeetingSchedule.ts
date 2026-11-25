@@ -198,6 +198,11 @@ const MODE_WORDS: [MeetingMode, string][] = [
   ['in-person', IN_PERSON_WORD.source],
   ['online', ONLINE_WORD.source],
 ]
+/** A mode word right after not/no/never/non/pas (de), with at most one
+ *  connector between ("not on Zoom"), says how the club does NOT meet. It
+ *  must sit right before the word, so "not only online" still counts as
+ *  online. Enforced by the "negated location" and #3085 negation tests in
+ *  FacMeetingSchedule.test.ts. */
 const MODE_NEGATION =
   /\b(?:not|no|never|non|pas(?:\s+de)?)\s+(?:(?:en|on|via|by|over|sur|par)\s+)?$/
 
@@ -429,11 +434,20 @@ const ORDINAL_WORDS: [number, string][] = [
 const LAST_WEEK = new RegExp(
   `\\b(?:last|dernier|derniere)\\s+(?:${Object.values(WEEKDAY_WORDS).join('|')})\\b|\\b(?:last|dernier|derniere)\\b.*\\b(?:of the month|du mois)\\b`
 )
+/** Mode words read in MeetingDay text. Narrower than the location words on
+ *  purpose: a day-text mode overrides the venue, so "Tuesday, remote
+ *  attendance available" at a hall must stay in-person (test: "keeps the
+ *  day-text mode words"). */
+const DAY_MODE_WORDS: [MeetingMode, string][] = [
+  ['hybrid', 'hybri\\w*'],
+  ['in-person', 'in[\\s-]?person|en personne|presentiel\\w*'],
+  ['online', 'online|on-line|virtual\\w*|virtuel\\w*|en ligne|zoom|teams'],
+]
 /** One token at a time: an ordinal week or a mode word. */
 const ORDINAL_OR_MODE = new RegExp(
   [
     ...ORDINAL_WORDS.map(([n, w]) => `(?<w${n}>\\b(?:${w})\\b)`),
-    ...MODE_WORDS.map(([, w], i) => `(?<m${i}>\\b(?:${w})\\b)`),
+    ...DAY_MODE_WORDS.map(([, w], i) => `(?<m${i}>\\b(?:${w})\\b)`),
   ].join('|'),
   'g'
 )
@@ -463,8 +477,8 @@ function weekGroupsIn(folded: string): {
       pending.push(week[0])
       continue
     }
-    const modeIndex = MODE_WORDS.findIndex((_, i) => named[`m${i}`])
-    const mode = MODE_WORDS[modeIndex]?.[0]
+    const modeIndex = DAY_MODE_WORDS.findIndex((_, i) => named[`m${i}`])
+    const mode = DAY_MODE_WORDS[modeIndex]?.[0]
     if (!mode) continue
     if (isNegatedMode(folded, match.index)) {
       if (pending.length > 0) {
