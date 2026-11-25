@@ -99,6 +99,96 @@ describe('lighthouserc.mobile.js (#1830)', () => {
       }
     })
 
+    // #2752 item 4 (from #2740): the total alone can't tell a code regression
+    // from a data one. Code (what the build ships) and data (the CDN JSON,
+    // which Lighthouse counts as `other`) each get their own byte budgets.
+    describe('code bytes and data bytes are gated apart (#2752)', () => {
+      // Every resourceType Lighthouse's resource-summary reports, except
+      // `total` (the sum, still asserted) and `third-party` (a cross-cut of
+      // the others by origin, not a type of its own).
+      const LIGHTHOUSE_TYPES = [
+        'document',
+        'script',
+        'stylesheet',
+        'image',
+        'media',
+        'font',
+        'other',
+      ]
+
+      it('puts every resource type in exactly one bucket', () => {
+        const { code = [], data = [] } = rc.BUCKETS ?? {}
+        expect([...code, ...data].sort()).toEqual([...LIGHTHOUSE_TYPES].sort())
+        expect(code.filter((t: string) => data.includes(t))).toEqual([])
+        expect(data).toEqual(['other'])
+      })
+
+      it('asserts each type in each bucket on every route, at error', () => {
+        for (const entry of matrix) {
+          for (const type of LIGHTHOUSE_TYPES) {
+            const a = entry.assertions[`resource-summary:${type}:size`]
+            expect(a, type).toBeDefined()
+            expect(a![0]).toBe('error')
+          }
+        }
+      })
+
+      it('keeps the total and script budgets as they were, so the gate is only stricter', () => {
+        // Literal values from before #2752, not rc.BUDGETS, so this diff
+        // can't loosen them and still pass.
+        const KB = 1024
+        const BEFORE: Record<string, { total: number; script: number }> = {
+          landing: { total: 500 * KB, script: 300 * KB },
+          district: { total: 530 * KB, script: 300 * KB },
+          clubs: { total: 620 * KB, script: 300 * KB },
+          club: { total: 640 * KB, script: 300 * KB },
+          regions: { total: 500 * KB, script: 300 * KB },
+        }
+        for (const [i, entry] of matrix.entries()) {
+          const key = Object.keys(rc.ROUTES)[i]!
+          expect(
+            entry.assertions['resource-summary:total:size']![1].maxNumericValue
+          ).toBe(BEFORE[key]!.total)
+          expect(
+            entry.assertions['resource-summary:script:size']![1].maxNumericValue
+          ).toBe(BEFORE[key]!.script)
+        }
+      })
+
+      it('sets the split budgets from the measured bytes plus ~10% (2026-11-25)', () => {
+        // The 2026-10-21 rule: worst per-run best (LHCI asserts the best of
+        // 3) + 10%, rounded up to the KB, over PR Preview runs 45692737961
+        // and 45693408894. Stylesheet, font and document are the same files
+        // on every route, so they share the worst route's value. Image and
+        // media measured 0.
+        const KB = 1024
+        const SHARED = {
+          stylesheet: 55 * KB,
+          font: 70 * KB,
+          document: 6 * KB,
+          image: 0,
+          media: 0,
+        }
+        const OTHER: Record<string, number> = {
+          landing: 67 * KB,
+          district: 158 * KB,
+          clubs: 146 * KB,
+          club: 214 * KB,
+          regions: 32 * KB,
+        }
+        for (const [i, entry] of matrix.entries()) {
+          const key = Object.keys(rc.ROUTES)[i]!
+          const max = (type: string) =>
+            entry.assertions[`resource-summary:${type}:size`]?.[1]
+              .maxNumericValue
+          for (const [type, bytes] of Object.entries(SHARED)) {
+            expect(max(type), `${key} ${type}`).toBe(bytes)
+          }
+          expect(max('other'), `${key} other`).toBe(OTHER[key])
+        }
+      })
+    })
+
     // Promoted after the green week (#1830): 23 preview runs on 2026-10-19
     // passed every budget, best-of-3, with the least headroom on club LCP
     // (worst 3480 ms vs 3800 ms).

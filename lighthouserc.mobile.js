@@ -120,6 +120,58 @@ const BUDGETS = {
   },
 }
 
+/**
+ * Code bytes and data bytes, gated apart (#2752, from #2740). The total alone
+ * can't tell a bigger bundle from a bigger CDN file. Every resource type
+ * Lighthouse reports sits in one bucket: code is what the build ships, data is
+ * the CDN JSON, which Lighthouse counts as `other`. `total` and `script` keep
+ * their budgets above, so the split only adds limits.
+ */
+const BUCKETS = {
+  code: ['script', 'stylesheet', 'font', 'document', 'image', 'media'],
+  data: ['other'],
+}
+
+/**
+ * Split budgets (2026-11-25), by the 2026-10-21 rule: LHCI asserts the best of
+ * a run's 3 samples, so each budget is the worst per-run best + 10%, rounded
+ * up to the KB. Two PR Preview runs (45692737961 and 45693408894). Script
+ * keeps its budget in BUDGETS. Stylesheet, font and document are the same
+ * files on every route, so they share the worst route's value. Image and media
+ * were 0 bytes on every route, so a page that adds one fails until its PR sets
+ * a budget for it on purpose. Never raise one to make a run pass.
+ */
+const CODE_BYTES = {
+  stylesheet: 55 * KB, // worst per-run best 50690 B
+  font: 70 * KB, // 64612 B (/)
+  document: 6 * KB, // 4659 B (/district/61)
+  image: 0,
+  media: 0,
+}
+
+/** Data (`other`) bytes per route: worst per-run best + 10%. */
+const DATA_BYTES = {
+  landing: 67 * KB, // 61879 B
+  district: 158 * KB, // 146438 B
+  clubs: 146 * KB, // 135367 B
+  club: 214 * KB, // 198399 B
+  regions: 32 * KB, // 28990 B (single samples reach 38 KB; LHCI asserts the best)
+}
+
+/** A type's byte budget on a route. Throws if a bucket type has none. */
+function bytesBudget(type, key) {
+  const max =
+    type === 'script'
+      ? BUDGETS[key].scriptBytes
+      : BUCKETS.data.includes(type)
+        ? DATA_BYTES[key]
+        : CODE_BYTES[type]
+  if (typeof max !== 'number') {
+    throw new Error(`No ${type} byte budget for route ${key}`)
+  }
+  return max
+}
+
 const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 function routeAssertions(base, key) {
@@ -130,14 +182,17 @@ function routeAssertions(base, key) {
     assertions: {
       'largest-contentful-paint': ['error', { maxNumericValue: b.lcpMs }],
       'cumulative-layout-shift': ['error', { maxNumericValue: b.cls }],
-      'resource-summary:script:size': [
-        'error',
-        { maxNumericValue: b.scriptBytes },
-      ],
       'resource-summary:total:size': [
         'error',
         { maxNumericValue: b.totalBytes },
       ],
+      // One assertion per type in each bucket, script included (#2752).
+      ...Object.fromEntries(
+        [...BUCKETS.code, ...BUCKETS.data].map(type => [
+          `resource-summary:${type}:size`,
+          ['error', { maxNumericValue: bytesBudget(type, key) }],
+        ])
+      ),
     },
   }
 }
@@ -208,6 +263,9 @@ module.exports = {
   ROUTES,
   TARGET,
   BUDGETS,
+  BUCKETS,
+  CODE_BYTES,
+  DATA_BYTES,
   ciConfig,
   ci: ciConfig(process.env),
 }
