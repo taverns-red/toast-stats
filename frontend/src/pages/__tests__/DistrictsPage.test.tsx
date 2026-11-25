@@ -56,7 +56,7 @@ afterEach(() => {
     isError: false,
     error: null,
     refetch: vi.fn(),
-  } as ReturnType<typeof useRankHistory>)
+  } as unknown as ReturnType<typeof useRankHistory>)
 })
 
 describe('DistrictsPage - Percentage Formatting', () => {
@@ -1007,7 +1007,7 @@ describe('DistrictsPage - Historical Rank Progression load failure (#3174)', () 
   // Must stay last in this describe: it proves the reset only by running
   // after the error tests above.
   it('resets rank history to its idle default after the error tests above', () => {
-    expect(useRankHistory()).toMatchObject({
+    expect(useRankHistory({ districtIds: [] })).toMatchObject({
       data: undefined,
       isLoading: false,
       isError: false,
