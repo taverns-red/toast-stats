@@ -326,6 +326,10 @@
   color: var(--map-text-2);
 }
 
+.map-legend__note--placeholder {
+  visibility: hidden;
+}
+
 .map-panel {
   display: flex;
   flex-direction: column;

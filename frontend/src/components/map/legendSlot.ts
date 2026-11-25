@@ -41,3 +41,23 @@ export function estimateLegendLabels(model: ModeModel): string[] {
     .filter(c => c.shape !== 'suspended' && c.shape !== 'na')
     .map(c => c.label)
 }
+
+export function legendNotes(model: ModeModel): string[] {
+  const notes: string[] = []
+  if (model.kind !== 'categorical') {
+    const cluster =
+      model.kind === 'ordinal' ? 'middle level' : 'most common status'
+    const exception = model.exceptionKey
+    let pip = ''
+    if (exception === 'intervention-required') {
+      pip = '; a red “!” badge marks clusters with clubs needing intervention'
+    } else if (exception) {
+      const label = model.categories.find(c => c.key === exception)?.label
+      if (label)
+        pip = `; a small “!” badge marks clusters with “${label}” clubs`
+    }
+    notes.push(`Clusters show the ${cluster}${pip}.`)
+  }
+  if (model.note) notes.push(model.note)
+  return notes
+}

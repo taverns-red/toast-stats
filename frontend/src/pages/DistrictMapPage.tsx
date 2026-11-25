@@ -28,6 +28,7 @@ import OnlineClubsChip from '../components/map/OnlineClubsChip'
 import { useClubPins } from '../components/map/useClubPins'
 import {
   estimateLegendLabels,
+  legendNotes,
   legendSlotHeight,
 } from '../components/map/legendSlot'
 import MapViewControls from '../components/map/MapViewControls'
@@ -428,7 +429,23 @@ const DistrictMapPage: React.FC = () => {
         }
       >
         {pending ? null : (
-          <React.Suspense fallback={<div className="map-legend__chips" />}>
+          <React.Suspense
+            fallback={
+              <>
+                <div className="map-legend__chips" />
+                {limit === undefined &&
+                  legendNotes(model).map(note => (
+                    <p
+                      className="map-legend__note map-legend__note--placeholder"
+                      aria-hidden="true"
+                      key={note}
+                    >
+                      {note}
+                    </p>
+                  ))}
+              </>
+            }
+          >
             <Chips
               model={model}
               chips={chips}

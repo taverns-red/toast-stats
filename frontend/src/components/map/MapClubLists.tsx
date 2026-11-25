@@ -6,6 +6,7 @@ import type {
 } from '../../hooks/useDistrictAnalytics'
 import type { LegendChip, ModeModel } from './pinModes'
 import { PinSwatch } from './PinSwatch'
+import { legendNotes } from './legendSlot'
 import { MobileRowList, type MobileRow } from '../MobileRowList'
 
 /* The map page's club lists (#1784): clubs not on the map, prospective
@@ -164,16 +165,6 @@ const SandboxEntry: React.FC<{ onOpen?: (() => void) | undefined }> = ({
   )
 }
 
-/** What the cluster pip means, in the mode's own words (#1787). */
-function pipNote(model: ModeModel): string {
-  const k = model.exceptionKey
-  if (!k) return ''
-  if (k === 'intervention-required')
-    return '; a red “!” badge marks clusters with clubs needing intervention'
-  const label = model.categories.find(c => c.key === k)?.label
-  return label ? `; a small “!” badge marks clusters with “${label}” clubs` : ''
-}
-
 /** Legend chips (#1784): aria-pressed toggles writing the mode facet. */
 export const LegendChips: React.FC<{
   model: ModeModel
@@ -222,17 +213,12 @@ export const LegendChips: React.FC<{
           </button>
         )}
       </div>
-      {/* The full legend explains how clusters summarise their clubs. */}
-      {model.kind !== 'categorical' && limit === undefined && (
-        <p className="map-legend__note">
-          Clusters show the{' '}
-          {model.kind === 'ordinal' ? 'middle level' : 'most common status'}
-          {pipNote(model)}.
-        </p>
-      )}
-      {model.note && limit === undefined && (
-        <p className="map-legend__note">{model.note}</p>
-      )}
+      {limit === undefined &&
+        legendNotes(model).map(note => (
+          <p className="map-legend__note" key={note}>
+            {note}
+          </p>
+        ))}
     </>
   )
 }
