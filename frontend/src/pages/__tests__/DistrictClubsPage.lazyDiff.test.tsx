@@ -18,7 +18,14 @@ import {
   it,
   vi,
 } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -138,10 +145,13 @@ const renderAt = (url: string) => {
 const fetchMock = vi.mocked(fetchCdnDistrictSnapshot)
 
 beforeEach(() => {
-  fetchMock.mockClear()
+  fetchMock.mockReset().mockImplementation(() => new Promise(() => {}))
   window.localStorage.clear()
 })
-afterEach(() => cleanup())
+afterEach(() => {
+  cleanup()
+  vi.useRealTimers()
+})
 
 describe('DistrictClubsPage snapshot diff is lazy (#2740)', () => {
   it('requests neither dated snapshot on first render', async () => {
@@ -190,5 +200,27 @@ describe('DistrictClubsPage snapshot diff is lazy (#2740)', () => {
     renderAt('/district/61/clubs?sort=deltaMembership&dir=desc')
     await screen.findByText(/alpha toastmasters/i)
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+  })
+
+  it('shows an export failure when the real snapshot diff read fails', async () => {
+    renderAt('/district/61/clubs')
+    await screen.findByText(/alpha toastmasters/i)
+    fetchMock.mockRejectedValue(new Error('snapshot read failed'))
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+    fireEvent.click(screen.getByRole('button', { name: /export changes/i }))
+    await act(() => vi.advanceTimersByTimeAsync(0))
+    await act(() => vi.advanceTimersByTimeAsync(1000))
+    await act(() => vi.advanceTimersByTimeAsync(2000))
+    await act(() => vi.runOnlyPendingTimersAsync())
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(6)
+    expect(screen.getByRole('alert')).toHaveTextContent(/could not load/i)
+    expect(
+      screen.getByRole('button', { name: /export changes/i })
+    ).toHaveAttribute('aria-busy', 'false')
   })
 })

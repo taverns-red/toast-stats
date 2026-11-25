@@ -238,6 +238,21 @@ describe('Export Changes when the lazy diff fails (#2740)', () => {
     )
     expect(exportButton()).toHaveAttribute('aria-busy', 'false')
   })
+
+  it('announces a fresh alert for repeated identical failures', async () => {
+    renderAt('/district/61/clubs')
+    await screen.findByText(/alpha toastmasters/i)
+    act(() => fake.set({ ...fake.idle, isError: true }))
+    await openColumns()
+    await userEvent.keyboard('{Escape}')
+
+    await userEvent.click(exportButton())
+    const firstAlert = await screen.findByRole('alert')
+    await userEvent.click(exportButton())
+
+    expect(await screen.findByRole('alert')).not.toBe(firstAlert)
+    expect(exportSnapshotDiff).not.toHaveBeenCalled()
+  })
 })
 
 describe('Export Changes with a resolved lazy diff (#2740)', () => {
@@ -308,5 +323,30 @@ describe('Lazy diff follows the district (#2740)', () => {
       await router.navigate('/district/62/clubs')
     })
     await waitFor(() => expect(lastEnabled()).toBe(false))
+  })
+
+  it('cancels a pending export when the district changes', async () => {
+    const { router } = renderAt('/district/61/clubs')
+    await screen.findByText(/alpha toastmasters/i)
+    await userEvent.click(exportButton())
+    await waitFor(() =>
+      expect(exportButton()).toHaveAttribute('aria-busy', 'true')
+    )
+
+    await act(async () => {
+      await router.navigate('/district/62/clubs')
+    })
+    await openColumns()
+    act(() =>
+      fake.set({
+        ...fake.idle,
+        data: { ...diffOf([{ clubId: '1001' }]), districtId: '62' },
+      })
+    )
+
+    await waitFor(() =>
+      expect(exportButton()).toHaveAttribute('aria-busy', 'false')
+    )
+    expect(exportSnapshotDiff).not.toHaveBeenCalled()
   })
 })
