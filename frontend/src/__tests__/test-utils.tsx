@@ -65,6 +65,7 @@ if (
 
 interface RenderOptions {
   initialEntries?: string[]
+  withProgramYear?: boolean
 }
 
 export const renderWithProviders = (
