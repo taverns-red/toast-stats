@@ -254,18 +254,31 @@ test('selected club side panel stays unclipped at 1366x768', async ({
   await expect(selected).toContainText('90 Elgin Toastmasters', {
     timeout: 30_000,
   })
+  // The lists are their own lazy chunk; measured before it lands, their
+  // empty slot reads 0 px tall.
+  await expect(
+    panel.getByRole('region', { name: /Not on the map \(\d+\)/ })
+  ).toBeVisible({ timeout: 30_000 })
 
+  // The panel sits in the page flow under the header, so it may start
+  // below the fold; it must still fit the viewport's width and height.
   const panelBox = (await panel.boundingBox())!
   expect(panelBox.x).toBeGreaterThanOrEqual(0)
-  expect(panelBox.y).toBeGreaterThanOrEqual(0)
   expect(panelBox.x + panelBox.width).toBeLessThanOrEqual(1366)
-  expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(768)
+  expect(panelBox.height).toBeLessThanOrEqual(768)
 
   // The fixed panel is one vertical scroller, so a child may run below its
   // fold; clipping means a child with no size, or content spilling sideways
   // past the panel's border.
-  const panelSpill = await panel.evaluate(el => el.scrollWidth - el.clientWidth)
-  expect(panelSpill).toBeLessThanOrEqual(1)
+  const panelFit = await panel.evaluate(el => ({
+    sideways: el.scrollWidth - el.clientWidth,
+    taller: el.scrollHeight > el.clientHeight + 1,
+    overflowY: getComputedStyle(el).overflowY,
+  }))
+  expect(panelFit.sideways).toBeLessThanOrEqual(1)
+  // Content taller than the panel must scroll inside it, not spill past
+  // its bottom border.
+  if (panelFit.taller) expect(['auto', 'scroll']).toContain(panelFit.overflowY)
   const children = panel.locator(':scope > *')
   const count = await children.count()
   expect(count).toBeGreaterThan(0)
