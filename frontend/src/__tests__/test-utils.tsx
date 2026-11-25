@@ -65,11 +65,15 @@ if (
 
 interface RenderOptions {
   initialEntries?: string[]
+  skipProgramYearProvider?: boolean
 }
 
 export const renderWithProviders = (
   ui: React.ReactElement,
-  { initialEntries = ['/'] }: RenderOptions = {}
+  {
+    initialEntries = ['/'],
+    skipProgramYearProvider = false,
+  }: RenderOptions = {}
 ) => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -82,11 +86,17 @@ export const renderWithProviders = (
   // transitions). The 20+ test files that mount full pages don't need
   // any data-router features — they just need a router context for
   // useNavigate / useLocation / useSearchParams (#473).
+  const content = (
+    <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
+  )
+
   return render(
     <QueryClientProvider client={queryClient}>
-      <ProgramYearProvider>
-        <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
-      </ProgramYearProvider>
+      {skipProgramYearProvider ? (
+        content
+      ) : (
+        <ProgramYearProvider>{content}</ProgramYearProvider>
+      )}
     </QueryClientProvider>
   )
 }

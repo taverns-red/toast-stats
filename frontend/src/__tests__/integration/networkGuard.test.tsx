@@ -7,6 +7,7 @@ import {
   settleAndTakeUnmockedFetches,
   takeUnmockedFetches,
 } from '../networkGuard'
+import { renderWithProviders } from '../test-utils'
 
 // #2405 — the integration project's setup replaces `fetch` with a guard that
 // rejects at once, naming the URL, and fails the test that called it.
@@ -15,6 +16,12 @@ const urls = () => takeUnmockedFetches().map(f => f.url)
 describe('integration network guard', () => {
   it('is the global fetch in the integration project', () => {
     expect(globalThis.fetch).toBe(networkGuardFetch)
+  })
+
+  it('does not fetch when renderWithProviders mounts by itself', async () => {
+    renderWithProviders(<div />, { skipProgramYearProvider: true })
+
+    expect(await settleAndTakeUnmockedFetches()).toEqual([])
   })
 
   it('rejects an un-mocked fetch at once with the URL in the error', async () => {
