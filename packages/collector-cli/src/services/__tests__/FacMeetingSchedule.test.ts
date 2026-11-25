@@ -239,6 +239,70 @@ describe('meetingModeFromText (#1789)', () => {
     expect(meetingModeFromText(text, { place: true })).toBe(mode)
   })
 
+  it('ignores a negated in-person word in the meeting day', () => {
+    expect(
+      parseMeetingSchedule({
+        meetingDay: 'Tuesday, not in person',
+        meetingTime: '7pm Zoom',
+      })
+    ).toEqual([
+      {
+        day: 'Tuesday',
+        cadence: 'weekly',
+        startTime: '19:00',
+        mode: 'online',
+      },
+    ])
+  })
+
+  it.each(['Zoom, pas de présentiel', 'Zoom, non présentiel'])(
+    'ignores the French in-person negation in %j',
+    text => {
+      expect(meetingModeFromText(text)).toBe('online')
+      expect(meetingModeFromText(text, { place: true })).toBe('online')
+    }
+  )
+
+  it('treats "not on Zoom" as an in-person location', () => {
+    expect(
+      meetingModeFromText('City Hall - not on Zoom', { place: true })
+    ).toBe('in-person')
+  })
+
+  it('does not count a negated hybrid word', () => {
+    expect(meetingModeFromText('Not hybrid in summer')).toBeUndefined()
+  })
+
+  it.each(['City Hall - not via Zoom', 'Salle 101, pas sur Zoom'])(
+    'reads a negation with a connector in %j',
+    text => {
+      expect(meetingModeFromText(text, { place: true })).toBe('in-person')
+    }
+  )
+
+  it('keeps the day-text mode words: "remote" in the day does not override a venue', () => {
+    const [slot] =
+      parseMeetingSchedule({
+        meetingDay: 'Tuesday, remote attendance available',
+        meetingTime: '7pm',
+        location: 'City Hall',
+      }) ?? []
+    expect(slot?.mode).toBe('in-person')
+  })
+
+  it('takes the venue mode for a week whose day-text mode is negated', () => {
+    const slots =
+      parseMeetingSchedule({
+        meetingDay: '1st Tuesday online, 3rd Tuesday not online',
+        meetingTime: '7pm',
+        location: 'City Hall',
+      }) ?? []
+    const modeOfWeek = (week: number) =>
+      slots.find(s => s.weeksOfMonth?.includes(week))?.mode
+    expect(modeOfWeek(1)).toBe('online')
+    expect(modeOfWeek(3)).toBe('in-person')
+  })
+
   // #3086: a venue line beside an online line is hybrid (shapes from the
   // scrubbed D61 Locations, 2026-11-19).
   it.each([
