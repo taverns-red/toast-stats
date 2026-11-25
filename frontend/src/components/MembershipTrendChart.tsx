@@ -357,9 +357,9 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
           District Membership Trend
           <a
             href="/methodology#district-membership-trend"
-            aria-label="info"
+            aria-label="How the District Membership Trend is calculated"
             title="How is this calculated?"
-            className="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full text-[var(--ink-3)] hover:text-[var(--ink-2)] transition-colors"
+            className="info-tooltip__trigger ml-2 inline-flex items-center justify-center rounded-full text-[var(--ink-3)] hover:text-[var(--ink-2)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
           >
             <svg
               className="w-3.5 h-3.5"
