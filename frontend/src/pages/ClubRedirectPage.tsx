@@ -86,7 +86,11 @@ const ClubRedirectPage: React.FC = () => {
   const notFound =
     !isLoading &&
     (isError || !data || (data && clubId && !findClubEntry(data.clubs, clubId)))
-  useDocumentTitle(notFound ? 'Club not found' : `Looking up club ${clubId}`)
+  const notFoundHeading =
+    isShardAvailable && !isError
+      ? `Club ${clubId} isn't in our records`
+      : `We couldn't find club ${clubId}`
+  useDocumentTitle(notFound ? notFoundHeading : `Looking up club ${clubId}`)
 
   if (isLoading) {
     return (
@@ -109,11 +113,7 @@ const ClubRedirectPage: React.FC = () => {
     const lookupSucceeded = isShardAvailable && !isError
     return (
       <NotFoundPanel
-        heading={
-          lookupSucceeded
-            ? `Club ${clubId} isn't in our records`
-            : `We couldn't find club ${clubId}`
-        }
+        heading={notFoundHeading}
         message={
           lookupSucceeded
             ? 'No club with this number has been seen since 2017. Check the number, or search for the club by name.'

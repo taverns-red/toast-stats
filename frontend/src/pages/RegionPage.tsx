@@ -221,7 +221,6 @@ const RegionPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
   const navigate = useNavigate()
   const region = normaliseRegionId(n) // "1" → "01", as rankings key it (#2130)
-  useDocumentTitle(`Region ${region}`)
 
   // URL-synced click-header sort (#851). Default keeps the historical
   // behaviour — aggregate score, highest first.
@@ -378,6 +377,18 @@ const RegionPage: React.FC = () => {
         return sort.direction === 'asc' ? arr.reverse() : arr
     }
   })()
+  const notFoundHeading = `Region ${region} isn't in Toast Stats`
+  useDocumentTitle(
+    !isLoading &&
+      !error &&
+      !awardsPending &&
+      !historyPending &&
+      !pace.isPending &&
+      !!data &&
+      regionDistricts.length === 0
+      ? notFoundHeading
+      : `Region ${region}`
+  )
 
   // One transition from the structural shell to the page (#2634): the
   // membership (region history), the awards and the pace decide the KPI
@@ -418,7 +429,7 @@ const RegionPage: React.FC = () => {
   if (regionDistricts.length === 0) {
     return (
       <NotFoundPanel
-        heading={`Region ${region} isn't in Toast Stats`}
+        heading={notFoundHeading}
         message="We don't have any districts on record for this region. Pick a region from the list."
         suggestionsLead="Go to:"
         suggestions={[{ label: 'All regions', to: '/regions' }]}

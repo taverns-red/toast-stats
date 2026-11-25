@@ -8,7 +8,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { useCouncilPack } from '../hooks/useCouncilPack'
-import { AreaNotFound } from '../components/EntityNotFound'
+import { AreaNotFound, areaNotFoundHeading } from '../components/EntityNotFound'
 import { CouncilPackPage } from '../components/councilPack/CouncilPackPage'
 
 const AreaPrintPage: React.FC = () => {
@@ -18,13 +18,15 @@ const AreaPrintPage: React.FC = () => {
     areaId: string
   }>()
   const { search } = useLocation()
-  useDocumentTitle(
-    `Area ${areaId} Print Pack — Division ${divId?.toUpperCase()} — District ${districtId}`
-  )
   const data = useCouncilPack(districtId, {
     division: divId ?? '',
     area: areaId ?? '',
   })
+  useDocumentTitle(
+    data.isNotFound
+      ? areaNotFoundHeading(districtId ?? '', divId ?? '', areaId ?? '')
+      : `Area ${areaId} Print Pack — Division ${divId?.toUpperCase()} — District ${districtId}`
+  )
   if (data.isNotFound) {
     return (
       <AreaNotFound

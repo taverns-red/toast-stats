@@ -8,7 +8,10 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { useCouncilPack } from '../hooks/useCouncilPack'
-import { DivisionNotFound } from '../components/EntityNotFound'
+import {
+  DivisionNotFound,
+  divisionNotFoundHeading,
+} from '../components/EntityNotFound'
 import { CouncilPackPage } from '../components/councilPack/CouncilPackPage'
 
 const DivisionPrintPage: React.FC = () => {
@@ -17,10 +20,12 @@ const DivisionPrintPage: React.FC = () => {
     divId: string
   }>()
   const { search } = useLocation()
-  useDocumentTitle(
-    `Division ${divId?.toUpperCase()} Print Pack — District ${districtId}`
-  )
   const data = useCouncilPack(districtId, { division: divId ?? '' })
+  useDocumentTitle(
+    data.isNotFound
+      ? divisionNotFoundHeading(districtId ?? '', divId ?? '')
+      : `Division ${divId?.toUpperCase()} Print Pack — District ${districtId}`
+  )
   if (data.isNotFound) {
     return (
       <DivisionNotFound districtId={districtId ?? ''} divId={divId ?? ''} />

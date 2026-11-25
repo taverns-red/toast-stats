@@ -7,7 +7,10 @@
 
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
-import { DivisionNotFound } from '../components/EntityNotFound'
+import {
+  DivisionNotFound,
+  divisionNotFoundHeading,
+} from '../components/EntityNotFound'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
@@ -39,7 +42,6 @@ const DivisionPage: React.FC = () => {
     districtId: string
     divId: string
   }>()
-  useDocumentTitle(`Division ${divId?.toUpperCase()} — District ${districtId}`)
   const { search } = useLocation()
   const isMobile = useIsMobile()
 
@@ -114,6 +116,11 @@ const DivisionPage: React.FC = () => {
     effectiveEndDate,
     data?.distinguishedCountsByDivision,
   ])
+  useDocumentTitle(
+    snapshot && !divisionPerformance
+      ? divisionNotFoundHeading(districtId ?? '', divId ?? '')
+      : `Division ${divId?.toUpperCase()} — District ${districtId}`
+  )
 
   // Scoped division-level narrative — the same prose the overview's Division and
   // Area Progress Summary shows, scoped to this division (#1016 S2 refactor).

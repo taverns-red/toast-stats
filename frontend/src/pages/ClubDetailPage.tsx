@@ -613,14 +613,32 @@ const ClubDetailPage: React.FC = () => {
   // The shared PY spelling ("PY 2025–26") for the panel meta (#2648).
   const programYearLabelDisplay = formatPY(programYear.label)
 
+  // Unresolved = enabled, but neither settled to data nor to an error yet.
+  // Deliberately NOT `isFetching`: on the render where `enabled` flips true the
+  // query is still 'idle', which would leak one frame of "may have been
+  // removed" before the lookup even starts.
+  const isClubIndexUnresolved =
+    !!clubId &&
+    (isDatesPending ||
+      (!isShowingOtherDistrict && !clubIndex && !isClubIndexError))
+  const clubNotFoundHeading = `Club ${clubId} isn't in ${districtName}`
+
   // Per-route title (#780): club + district, falling back to the branded
   // default while the club is still loading or absent.
   useDocumentTitle(
-    club
-      ? `${club.clubName} — ${districtName}`
-      : isClosedClub && clubDistrictHistory
-        ? `${clubDistrictHistory.name} — ${districtName}`
-        : null
+    !club &&
+      !isLoading &&
+      !isError &&
+      !isResolvingDistrict &&
+      !isClosedClub &&
+      !isClubIndexUnresolved &&
+      !movedTo
+      ? clubNotFoundHeading
+      : club
+        ? `${club.clubName} — ${districtName}`
+        : isClosedClub && clubDistrictHistory
+          ? `${clubDistrictHistory.name} — ${districtName}`
+          : null
   )
 
   // #1804 — the banner when the page shows another district's data than
@@ -936,18 +954,6 @@ const ClubDetailPage: React.FC = () => {
     )
   }
 
-  // Unresolved = enabled, but neither settled to data nor to an error yet.
-  // Deliberately NOT `isFetching`: on the render where `enabled` flips true the
-  // query is still 'idle', which would leak one frame of "may have been
-  // removed" before the lookup even starts.
-  // #1804 — on another district's data the index is not read (the history
-  // already placed the club); a district whose dates are still loading has
-  // not answered yet either.
-  const isClubIndexUnresolved =
-    !!clubId &&
-    (isDatesPending ||
-      (!isShowingOtherDistrict && !clubIndex && !isClubIndexError))
-
   if (!club && isClubIndexUnresolved) {
     return (
       <div className="min-h-screen">
@@ -988,7 +994,7 @@ const ClubDetailPage: React.FC = () => {
   if (!club) {
     return (
       <NotFoundPanel
-        heading={`Club ${clubId} isn't in ${districtName}`}
+        heading={clubNotFoundHeading}
         message="The club may have been removed or moved, or the number in the link may be wrong. Search for the club by name or number."
         suggestionsLead={`Go to ${districtName}:`}
         suggestions={[

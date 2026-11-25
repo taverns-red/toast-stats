@@ -8,7 +8,7 @@
 
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import React from 'react'
-import { AreaNotFound } from '../components/EntityNotFound'
+import { AreaNotFound, areaNotFoundHeading } from '../components/EntityNotFound'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
@@ -45,9 +45,6 @@ const AreaPage: React.FC = () => {
     divId: string
     areaId: string
   }>()
-  useDocumentTitle(
-    `Area ${areaId} — Division ${divId?.toUpperCase()} — District ${districtId}`
-  )
   const { search } = useLocation()
   const isMobile = useIsMobile()
 
@@ -129,6 +126,11 @@ const AreaPage: React.FC = () => {
     effectiveEndDate,
     data?.distinguishedCountsByDivision,
   ])
+  useDocumentTitle(
+    snapshot && !matched
+      ? areaNotFoundHeading(districtId ?? '', divId ?? '', areaId ?? '')
+      : `Area ${areaId} — Division ${divId?.toUpperCase()} — District ${districtId}`
+  )
   const areaPerformance = matched?.area
 
   const areaNarrative = React.useMemo(() => {

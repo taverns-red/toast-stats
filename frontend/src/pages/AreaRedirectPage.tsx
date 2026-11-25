@@ -60,13 +60,16 @@ const AreaRedirectPage: React.FC = () => {
       ? { divId: division.divisionId, areaId: area.areaId }
       : undefined
   }, [snapshot, normalizedAreaId, snapshotDate])
+  const notFoundHeading = `Area ${normalizedAreaId} isn't in District ${districtId}`
 
   // The page waits for data and can stop on a state of its own, so each state
   // is titled; a bad slug shows the not-found panel.
   useDocumentTitle(
     error || (snapshot && !snapshotDate)
       ? 'Could not load area'
-      : `Area ${normalizedAreaId} — District ${districtId}`
+      : snapshot && !target
+        ? notFoundHeading
+        : `Area ${normalizedAreaId} — District ${districtId}`
   )
 
   React.useEffect(() => {
@@ -113,7 +116,7 @@ const AreaRedirectPage: React.FC = () => {
   if (snapshot && !target) {
     return (
       <NotFoundPanel
-        heading={`Area ${normalizedAreaId} isn't in District ${districtId}`}
+        heading={notFoundHeading}
         message="Check the area number in the link, or open the district to see its divisions."
         suggestionsLead={`Go to District ${districtId}:`}
         suggestions={[

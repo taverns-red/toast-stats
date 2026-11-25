@@ -159,19 +159,25 @@ const ClubsRaceTierPage: React.FC<{ tier: ClubRaceTier }> = ({ tier }) => {
 }
 
 /** Not-found panel for a race slug that names no tier. */
+const ClubsRaceNotFound: React.FC<{ slug: string }> = ({ slug }) => {
+  const heading = `There is no club race called "${slug}"`
+  useDocumentTitle(heading)
+  return (
+    <NotFoundPanel
+      heading={heading}
+      message="Pick one of the Distinguished club races from the clubs page."
+      suggestionsLead="Go to:"
+      suggestions={[{ label: 'Club races', to: '/clubs' }]}
+    />
+  )
+}
+
 /** The `/clubs/race/:tier` route: the tier's race, or not-found for a bad tier. */
 const ClubsRacePage: React.FC = () => {
   const { tier: slug } = useParams<{ tier: string }>()
   const tier = raceTierFromSlug(slug)
   if (tier === null) {
-    return (
-      <NotFoundPanel
-        heading={`There is no club race called "${slug}"`}
-        message="Pick one of the Distinguished club races from the clubs page."
-        suggestionsLead="Go to:"
-        suggestions={[{ label: 'Club races', to: '/clubs' }]}
-      />
-    )
+    return <ClubsRaceNotFound slug={slug ?? ''} />
   }
   return <ClubsRaceTierPage tier={tier} />
 }
