@@ -70,7 +70,7 @@ interface RenderOptions {
 
 export const renderWithProviders = (
   ui: React.ReactElement,
-  { initialEntries = ['/'] }: RenderOptions = {}
+  { initialEntries = ['/'], withProgramYear = true }: RenderOptions = {}
 ) => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -83,11 +83,20 @@ export const renderWithProviders = (
   // transitions). The 20+ test files that mount full pages don't need
   // any data-router features — they just need a router context for
   // useNavigate / useLocation / useSearchParams (#473).
+  const routedUi = (
+    <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
+  )
+
+  // ProgramYearProvider fetches v1/dates.json, which trips the network guard
+  // in a test with no CDN mock; `withProgramYear: false` skips it
+  // (test-utils.test: "can render isolated UI without fetching …").
   return render(
     <QueryClientProvider client={queryClient}>
-      <ProgramYearProvider>
-        <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
-      </ProgramYearProvider>
+      {withProgramYear ? (
+        <ProgramYearProvider>{routedUi}</ProgramYearProvider>
+      ) : (
+        routedUi
+      )}
     </QueryClientProvider>
   )
 }
