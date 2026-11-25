@@ -120,6 +120,45 @@ const BUDGETS = {
   },
 }
 
+/**
+ * Code bytes and data bytes, gated apart (#2752, from #2740). The total alone
+ * can't tell a bigger bundle from a bigger CDN file. Every resource type
+ * Lighthouse reports sits in one bucket: code is what the build ships, data is
+ * the CDN JSON, which Lighthouse counts as `other`. `total` and `script` keep
+ * their budgets above, so the split only adds limits.
+ */
+const BUCKETS = {
+  code: ['script', 'stylesheet', 'font', 'document', 'image', 'media'],
+  data: ['other'],
+}
+
+/**
+ * Split budgets (2026-11-25): the worst of 6 samples per route (PR Preview
+ * runs 45692737961 and 45693408894) + 10%, rounded up to the KB. Same rule as
+ * the 2026-10-21 re-baseline. Stylesheet, font and document are the same files
+ * on every route, so they share the worst route's value. Image and media were
+ * 0 bytes on every route, so a page that adds one fails until its PR sets a
+ * budget for it on purpose. Never raise one to make a run pass.
+ */
+const CODE_BYTES = {
+  // worst 51440 B (/regions)
+  stylesheet: 56 * KB,
+  // worst 65416 B (/)
+  font: 71 * KB,
+  // worst 4672 B (/district/61)
+  document: 6 * KB,
+  image: 0,
+  media: 0,
+}
+
+const DATA_BYTES = {
+  landing: 67 * KB, // worst 62121 B
+  district: 158 * KB, // worst 147010 B
+  clubs: 147 * KB, // worst 136433 B
+  club: 215 * KB, // worst 199466 B
+  regions: 41 * KB, // worst 37901 B (samples range 28-38 KB)
+}
+
 const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 function routeAssertions(base, key) {
@@ -137,6 +176,16 @@ function routeAssertions(base, key) {
       'resource-summary:total:size': [
         'error',
         { maxNumericValue: b.totalBytes },
+      ],
+      ...Object.fromEntries(
+        Object.entries(CODE_BYTES).map(([type, max]) => [
+          `resource-summary:${type}:size`,
+          ['error', { maxNumericValue: max }],
+        ])
+      ),
+      'resource-summary:other:size': [
+        'error',
+        { maxNumericValue: DATA_BYTES[key] },
       ],
     },
   }
@@ -208,6 +257,9 @@ module.exports = {
   ROUTES,
   TARGET,
   BUDGETS,
+  BUCKETS,
+  CODE_BYTES,
+  DATA_BYTES,
   ciConfig,
   ci: ciConfig(process.env),
 }
