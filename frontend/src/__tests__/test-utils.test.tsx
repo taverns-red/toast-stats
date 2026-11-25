@@ -1,18 +1,40 @@
 import { renderWithProviders } from './test-utils'
-import { expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-it('can render isolated UI without fetching program-year dates', async () => {
-  const fetchSpy = vi
-    .spyOn(globalThis, 'fetch')
-    .mockRejectedValue(new Error('un-mocked dates.json fetch'))
+// Wait a macrotask, as the network guard does, so a deferred fetch still
+// lands inside the assertion window.
+const settle = () => new Promise(resolve => setTimeout(resolve, 0))
 
-  try {
-    renderWithProviders(<div>test content</div>, { withProgramYear: false })
+describe('renderWithProviders program-year fetch', () => {
+  it('can render isolated UI without fetching program-year dates', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new Error('un-mocked dates.json fetch'))
 
-    await Promise.resolve()
+    try {
+      renderWithProviders(<div>test content</div>, { withProgramYear: false })
+      await settle()
 
-    expect(fetchSpy).not.toHaveBeenCalled()
-  } finally {
-    fetchSpy.mockRestore()
-  }
+      expect(fetchSpy).not.toHaveBeenCalled()
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
+  it('still fetches dates.json by default, so the probe above can see one', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new Error('un-mocked dates.json fetch'))
+
+    try {
+      renderWithProviders(<div>test content</div>)
+      await settle()
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('v1/dates.json')
+      )
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
 })

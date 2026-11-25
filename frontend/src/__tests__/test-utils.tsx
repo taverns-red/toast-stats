@@ -87,9 +87,10 @@ export const renderWithProviders = (
     <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
   )
 
-  // ProgramYearProvider fetches v1/dates.json, which trips the network guard
-  // in a test with no CDN mock; `withProgramYear: false` skips it
-  // (test-utils.test: "can render isolated UI without fetching …").
+  // ProgramYearProvider fetches v1/dates.json: in a test with no CDN mock that
+  // trips the network guard (integration project) or hits the real CDN (unit
+  // project). `withProgramYear: false` skips it; a component that calls
+  // useProgramYear then throws (test-utils.test: "can render isolated UI …").
   return render(
     <QueryClientProvider client={queryClient}>
       {withProgramYear ? (
