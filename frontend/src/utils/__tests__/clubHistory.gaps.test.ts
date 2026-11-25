@@ -60,7 +60,7 @@ describe('summarizeClubHistoryGaps (#1437)', () => {
     )
     expect(text).toMatch(/not in District 70/i)
     expect(text).toContain('2021-2022')
-    expect(text).not.toMatch(/could not be loaded/i)
+    expect(text).not.toContain(couldntLoad('2021-2022'))
   })
 
   it('reports load failures as a load problem, not as missing history', () => {

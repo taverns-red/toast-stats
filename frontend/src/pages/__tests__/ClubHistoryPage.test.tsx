@@ -222,7 +222,7 @@ describe('ClubHistoryPage gap reporting (#1437)', () => {
       refetch: vi.fn(),
     })
     renderPage()
-    expect(screen.getByText(/could not be loaded/i)).toBeInTheDocument()
+    expect(screen.getByText(/couldn.t load 2023-2024/i)).toBeInTheDocument()
   })
 
   it('notes the skipped years alongside a partially-populated table', () => {

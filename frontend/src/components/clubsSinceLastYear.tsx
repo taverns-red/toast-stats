@@ -6,6 +6,7 @@
  */
 import React from 'react'
 import { formatLongDate } from '../utils/dateFormatting'
+import { couldntLoad } from '../utils/loadFailureText'
 import type {
   PriorYearClubGoals,
   SinceLastYearMode,
@@ -72,8 +73,9 @@ export const SinceLastYearLine: React.FC<SinceLastYearLineProps> = ({
 }) => {
   let text: React.ReactNode
   if (isError) {
-    text =
-      'Last year’s DCP goals could not be loaded, so no club is marked as climbed or slipped.'
+    text = `${couldntLoad(
+      'last year’s DCP goals'
+    )} No club is marked as climbed or slipped.`
   } else if (!prior || !summary) {
     text = 'Loading last year’s DCP goals…'
   } else if (prior.comparisonDate === null) {

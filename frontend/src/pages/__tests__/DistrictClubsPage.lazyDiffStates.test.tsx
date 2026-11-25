@@ -220,7 +220,7 @@ describe('Export Changes when the lazy diff fails (#2740)', () => {
     expect(exportButton()).toHaveAttribute('aria-busy', 'true')
     act(() => fake.set({ ...fake.idle, isError: true }))
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      /could not load/i
+      /couldn.t load the changes/i
     )
     expect(exportButton()).toHaveAttribute('aria-busy', 'false')
     expect(exportSnapshotDiff).not.toHaveBeenCalled()
@@ -234,7 +234,7 @@ describe('Export Changes when the lazy diff fails (#2740)', () => {
     await userEvent.keyboard('{Escape}')
     await userEvent.click(exportButton())
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      /could not load/i
+      /couldn.t load the changes/i
     )
     expect(exportButton()).toHaveAttribute('aria-busy', 'false')
   })
