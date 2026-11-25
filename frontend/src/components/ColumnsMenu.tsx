@@ -252,7 +252,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
                         announce={false}
                         onRetry={onRetryChanges ? retryChanges : undefined}
                         retrying={isRetryingChanges || changesLoading}
-                        buttonClassName="inline-flex min-h-[44px] items-center text-sm font-semibold font-tm-body text-[var(--tm-loyal-blue)] underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                        buttonClassName="inline-flex min-h-[44px] items-center text-sm font-semibold font-tm-body text-[var(--tm-loyal-blue)] underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                       >
                         The other columns still work.
                       </PartialFailureNote>
