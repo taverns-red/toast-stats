@@ -35,8 +35,11 @@ describe('MembershipTrendChart — methodology surfacing (#438)', () => {
 
   it('renders an info link to /methodology#district-membership-trend', () => {
     render(<MembershipTrendChart membershipTrend={TREND} />)
-    const infoLink = screen.getByRole('link', { name: /^info$/i })
+    const infoLink = screen.getByRole('link', {
+      name: 'How the District Membership Trend is calculated',
+    })
     expect(infoLink).toBeInTheDocument()
+    expect(infoLink).toHaveClass('info-tooltip__trigger')
     expect(infoLink.getAttribute('href')).toBe(
       '/methodology#district-membership-trend'
     )
