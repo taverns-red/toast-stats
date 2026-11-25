@@ -234,6 +234,62 @@ for (const theme of ['light', 'dark'] as const) {
   }
 }
 
+test('selected club side panel stays unclipped at 1366x768', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  await page.setViewportSize({ width: 1366, height: 768 })
+  await page.goto(`${MAP}?club=7238597`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60_000,
+  })
+
+  await expect(
+    page
+      .getByRole('region', { name: 'Club map, coloured by club health' })
+      .locator('canvas.maplibregl-canvas')
+  ).toBeVisible({ timeout: 30_000 })
+  const panel = page.getByRole('region', { name: 'Map legend and lists' })
+  const selected = panel.getByRole('region', { name: 'Selected club' })
+  await expect(selected).toContainText('90 Elgin Toastmasters', {
+    timeout: 30_000,
+  })
+
+  const panelBox = (await panel.boundingBox())!
+  expect(panelBox.x).toBeGreaterThanOrEqual(0)
+  expect(panelBox.y).toBeGreaterThanOrEqual(0)
+  expect(panelBox.x + panelBox.width).toBeLessThanOrEqual(1366)
+  expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(768)
+
+  // The fixed panel is one vertical scroller, so a child may run below its
+  // fold; clipping means a child with no size, or content spilling sideways
+  // past the panel's border.
+  const panelSpill = await panel.evaluate(el => el.scrollWidth - el.clientWidth)
+  expect(panelSpill).toBeLessThanOrEqual(1)
+  const children = panel.locator(':scope > *')
+  const count = await children.count()
+  expect(count).toBeGreaterThan(0)
+  for (let i = 0; i < count; i++) {
+    const child = children.nth(i)
+    const size = await child.evaluate(el => {
+      const r = el.getBoundingClientRect()
+      return {
+        width: r.width,
+        height: r.height,
+        spill: el.scrollWidth - el.clientWidth,
+      }
+    })
+    expect(size.width, `panel child ${i} width`).toBeGreaterThan(0)
+    expect(size.height, `panel child ${i} height`).toBeGreaterThan(0)
+    expect(size.spill, `panel child ${i} sideways spill`).toBeLessThanOrEqual(1)
+    const childBox = (await child.boundingBox())!
+    expect(childBox.x).toBeGreaterThanOrEqual(panelBox.x - 1)
+    expect(childBox.x + childBox.width).toBeLessThanOrEqual(
+      panelBox.x + panelBox.width + 1
+    )
+  }
+})
+
 /* Extended colour modes (#1787): picked from the grouped picker (the sheet
  * at 375, the popover at 1280), the mode lands in `?color=`, the map says
  * what it is coloured by, and the legend names every club's category in

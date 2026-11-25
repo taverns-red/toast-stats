@@ -13,6 +13,10 @@ import { buildModeModel } from '../pinModes'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const css = readFileSync(resolve(__dirname, '../districtMap.css'), 'utf-8')
+const page = readFileSync(
+  resolve(__dirname, '../../../pages/DistrictMapPage.tsx'),
+  'utf-8'
+)
 
 describe('legendSlotHeight', () => {
   it('holds one 44px row for chips that share a line', () => {
@@ -57,6 +61,12 @@ describe('districtMap.css reserve', () => {
   it('sizes the chips slot from its own custom property', () => {
     expect(css).toMatch(
       /\.map-legend__slot\s*\{[^}]*min-height:\s*var\(--legend-slot\)/
+    )
+  })
+
+  it('keeps the legend footnote in the lazy loading fallback', () => {
+    expect(page).toMatch(
+      /React\.Suspense[\s\S]*fallback=\{[\s\S]*map-legend__note[\s\S]*<Chips/
     )
   })
 
