@@ -2,8 +2,12 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import { estimateLegendLabels, legendSlotHeight } from '../legendSlot'
-import { buildModeModel } from '../pinModes'
+import {
+  estimateLegendLabels,
+  legendNotes,
+  legendSlotHeight,
+} from '../legendSlot'
+import { buildModeModel, type ModeModel } from '../pinModes'
 
 /* The district map's loading reserve. The legend chips and the club lists
    arrive after the first paint, so the panel reserves their room from the
@@ -13,6 +17,60 @@ import { buildModeModel } from '../pinModes'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const css = readFileSync(resolve(__dirname, '../districtMap.css'), 'utf-8')
+const page = readFileSync(
+  resolve(__dirname, '../../../pages/DistrictMapPage.tsx'),
+  'utf-8'
+)
+
+describe('legendNotes', () => {
+  const base = buildModeModel('health')
+  const model = (o: Partial<ModeModel>): ModeModel => ({ ...base, ...o })
+  const cats = [{ ...base.categories[0]!, key: 'gold', label: 'Gold' }]
+
+  it('names the intervention badge for a status mode', () => {
+    expect(
+      legendNotes(
+        model({ kind: 'status', exceptionKey: 'intervention-required' })
+      )
+    ).toEqual([
+      'Clusters show the most common status; a red “!” badge marks clusters with clubs needing intervention.',
+    ])
+  })
+
+  it('names a custom exception category by its label', () => {
+    expect(
+      legendNotes(
+        model({ kind: 'ordinal', exceptionKey: 'gold', categories: cats })
+      )
+    ).toEqual([
+      'Clusters show the middle level; a small “!” badge marks clusters with “Gold” clubs.',
+    ])
+  })
+
+  it('drops the badge when the exception has no matching label', () => {
+    expect(
+      legendNotes(
+        model({ kind: 'ordinal', exceptionKey: 'none', categories: cats })
+      )
+    ).toEqual(['Clusters show the middle level.'])
+  })
+
+  it('has no cluster line for a categorical mode, only its note', () => {
+    expect(
+      legendNotes(
+        model({ kind: 'categorical', exceptionKey: undefined, note: 'Caveat.' })
+      )
+    ).toEqual(['Caveat.'])
+  })
+
+  it('adds the mode note after the cluster line', () => {
+    expect(
+      legendNotes(
+        model({ kind: 'status', exceptionKey: undefined, note: 'Caveat.' })
+      )
+    ).toEqual(['Clusters show the most common status.', 'Caveat.'])
+  })
+})
 
 describe('legendSlotHeight', () => {
   it('holds one 44px row for chips that share a line', () => {
@@ -57,6 +115,12 @@ describe('districtMap.css reserve', () => {
   it('sizes the chips slot from its own custom property', () => {
     expect(css).toMatch(
       /\.map-legend__slot\s*\{[^}]*min-height:\s*var\(--legend-slot\)/
+    )
+  })
+
+  it('keeps the legend footnote in the lazy loading fallback', () => {
+    expect(page).toMatch(
+      /React\.Suspense[\s\S]*fallback=\{[\s\S]*map-legend__note[\s\S]*<Chips/
     )
   })
 
