@@ -193,21 +193,24 @@ const ONLINE_WORD =
 const HYBRID_WORD = /\bhybri\w*/
 const IN_PERSON_WORD =
   /\bin[\s-]?person\b|\ben personne\b|\bpresentiel\w*|\ben salle\b/
-/** A mode word after "not", "no", "never" or "pas" says how the club does
- *  NOT meet (#3083: "Online only … NOT in person at City Hall!"). */
+/** A negated mode word says how the club does NOT meet (#3083:
+ * "Online only … NOT in person at City Hall!"). */
 const NEGATED_MODE = new RegExp(
-  `\\b(?:not|no|never|pas)\\s+(?:en\\s+)?(?:${IN_PERSON_WORD.source}|${ONLINE_WORD.source})`,
+  `\\b(?:not|no|never|pas(?:\\s+de)?|non)\\s+(?:(?:en|on|via)\\s+)?(?:${HYBRID_WORD.source}|${IN_PERSON_WORD.source}|${ONLINE_WORD.source})`,
   'g'
 )
 /** Location text that names no place. */
 const NO_PLACE =
   /^(?:contact(?: us)?|to be determined|tbd|tba|n\/?a|suspended|see website|varies|various)$/
 const ONLINE_ALT = `(?:${ONLINE_WORD.source})`
-/** "Online only", "Exclusivement via Zoom": every meeting is online. */
+/** "Online only", "Exclusivement via Zoom": every meeting is online.
+ *  A qualifier such as "Zoom only for those who cannot attend" does not
+ *  describe every meeting. */
+const ONLY_ONLINE_END = `(?=\\s*(?:$|[\\n<,.;:!?)\\-]))`
 const ONLY_ONLINE = new RegExp(
   [
-    `${ONLINE_ALT}\\W{0,3}(?:only|seulement|uniquement)\\b`,
-    `\\b(?:only|seulement|uniquement|exclusivement|exlusivement)\\s+(?:(?:via|on|par|sur)\\s+)?${ONLINE_ALT}`,
+    `${ONLINE_ALT}\\W{0,3}(?:only|seulement|uniquement)\\b${ONLY_ONLINE_END}`,
+    `\\b(?:only|seulement|uniquement|exclusivement|exlusivement)\\s+(?:(?:via|on|par|sur)\\s+)?${ONLINE_ALT}${ONLY_ONLINE_END}`,
   ].join('|')
 )
 /**
@@ -299,9 +302,9 @@ function saysAllOnline(folded: string): boolean {
 /**
  * How the club says it meets. With `place: true` (a Location), text that
  * names a place but no online word means in person, and online text with
- * a separate line naming a place is hybrid (#3086) unless its wording
- * covers every meeting; otherwise only explicit words count. Undefined when
- * the text says nothing.
+ * text naming a place is hybrid (#3086) unless its wording covers every
+ * meeting; otherwise only explicit words count. Undefined when the text
+ * says nothing.
  */
 export function meetingModeFromText(
   text: string | null | undefined,
@@ -312,9 +315,7 @@ export function meetingModeFromText(
   const mode = combineModes(modesIn(folded))
   if (!options.place) return mode
   if (mode === 'online') {
-    const venueLine = folded
-      .split(/\n|<br\s*\/?>/)
-      .some(line => modesIn(line).length === 0 && namesVenue(line))
+    const venueLine = folded.split(/\n|<br\s*\/?>/).some(namesVenue)
     return venueLine && !saysAllOnline(folded) ? 'hybrid' : 'online'
   }
   if (mode) return mode
@@ -445,7 +446,8 @@ function weekGroupsIn(folded: string): {
   const loose: MeetingMode[] = []
   let pending: number[] = []
   ORDINAL_OR_MODE.lastIndex = 0
-  for (const match of folded.matchAll(ORDINAL_OR_MODE)) {
+  const modeText = folded.replace(NEGATED_MODE, ' ')
+  for (const match of modeText.matchAll(ORDINAL_OR_MODE)) {
     const named = match.groups ?? {}
     const week = ORDINAL_WORDS.find(([n]) => named[`w${n}`] !== undefined)
     if (week) {
