@@ -74,6 +74,7 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { SHORT_LANDSCAPE_QUERY } from '../utils/contextBar'
 import { ClubSearchBox } from './ClubSearchBox'
+import { PartialFailureNote } from './PartialFailureNote'
 
 // The column model — order, headers, per-cell render and the sort fns — lives in
 // `clubsColumns.tsx` (the TanStack migration, #835); which columns show at which
@@ -83,10 +84,9 @@ import { ClubSearchBox } from './ClubSearchBox'
 /**
  * Props for the ClubsTable component
  */
-const CHANGES_FAILED_NOTE =
-  'The changes could not load, so nothing was exported. Try again in a moment.'
 const CHANGES_EMPTY_NOTE =
   'There are no changes to export between these two dates.'
+type ExportNote = 'empty' | 'failed' | null
 
 interface ClubsTableProps {
   /** Array of club trends to display in the table */
@@ -140,7 +140,7 @@ interface ClubsTableProps {
     isError?: boolean
     onRequest: () => void
     /** Read again after a failure (the Columns menu opens, Export clicked). */
-    onRetry?: () => void
+    onRetry?: () => void | Promise<unknown>
   }
   /**
    * Program year being shown ("YYYY-YYYY"), from the page that owns the
@@ -902,7 +902,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   // "Export Changes" before the diff has loaded: ask for it, wait, then
   // export (#2740). The button shows its own busy state meanwhile. A failed or
   // empty read ends the wait with a visible, announced message, never a hang.
-  const [exportNote, setExportNote] = useState('')
+  const [exportNote, setExportNote] = useState<ExportNote>(null)
   const pendingChangesExport = useRef<
     ((diff: SnapshotDiff | null) => void) | null
   >(null)
@@ -912,14 +912,14 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       diff.clubs.bothPresent.length === 0 &&
       diff.clubs.onlyInFrom.length === 0 &&
       diff.clubs.onlyInTo.length === 0
-    if (empty) setExportNote(CHANGES_EMPTY_NOTE)
+    if (empty) setExportNote('empty')
     else exportSnapshotDiff(diff)
   }
   const exportChanges = async (): Promise<void> => {
-    setExportNote('')
+    setExportNote(null)
     if (snapshotDiff) return runChangesExport(snapshotDiff)
     if (diffFailed) {
-      setExportNote(CHANGES_FAILED_NOTE)
+      setExportNote('failed')
       deferredChanges?.onRetry?.()
       return
     }
@@ -928,7 +928,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
       pendingChangesExport.current = resolve
     })
     if (loaded) runChangesExport(loaded)
-    else setExportNote(CHANGES_FAILED_NOTE)
+    else setExportNote('failed')
   }
   useEffect(() => {
     const done = pendingChangesExport.current
@@ -986,9 +986,15 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         />
       )}
       {exportNote && (
-        <p role="alert" className="basis-full text-sm">
-          {exportNote}
-        </p>
+        <div role="alert" className="basis-full text-sm">
+          {exportNote === 'failed' ? (
+            <PartialFailureNote subject="the changes" announce={false}>
+              Nothing was exported. Try again in a moment.
+            </PartialFailureNote>
+          ) : (
+            CHANGES_EMPTY_NOTE
+          )}
+        </div>
       )}
     </div>
   )

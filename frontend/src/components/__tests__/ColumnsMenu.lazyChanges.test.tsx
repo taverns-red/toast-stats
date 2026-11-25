@@ -11,9 +11,11 @@ import { ColumnsMenu } from '../ColumnsMenu'
 import { useColumnVisibility } from '../../hooks/useColumnVisibility'
 
 const Harness: React.FC<{
+  failed?: boolean
   loading?: boolean
   onOpen?: (() => void) | undefined
-}> = ({ loading = false, onOpen }) => {
+  onRetry?: (() => void) | undefined
+}> = ({ failed = false, loading = false, onOpen, onRetry }) => {
   const columns = useColumnVisibility({
     tier: 'desktop',
     changesAvailable: true,
@@ -24,6 +26,8 @@ const Harness: React.FC<{
       columns={columns}
       changesAvailable
       changesLoading={loading}
+      changesFailed={failed}
+      onRetryChanges={onRetry}
       onOpen={onOpen}
     />
   )
@@ -57,5 +61,23 @@ describe('ColumnsMenu lazy Changes group (#2740)', () => {
     render(<Harness onOpen={onOpen} />)
     await userEvent.click(screen.getByRole('button', { name: /^columns/i }))
     expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses a light retry and keeps feedback and focus while retrying', async () => {
+    const onRetry = vi.fn(() => new Promise<void>(() => {}))
+    render(<Harness failed onRetry={onRetry} />)
+    await userEvent.click(screen.getByRole('button', { name: /^columns/i }))
+
+    const retry = screen.getByRole('button', { name: /try again/i })
+    expect(retry).not.toHaveClass('tm-btn-secondary')
+    expect(retry).toHaveClass('clubs-columns-menu__retry')
+    await userEvent.click(retry)
+
+    expect(onRetry).toHaveBeenCalledTimes(1)
+    expect(screen.getByText(/loading changes/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /try again/i })).toBeNull()
+    expect(document.activeElement).toBe(
+      screen.getAllByRole('checkbox').find(box => !box.hasAttribute('disabled'))
+    )
   })
 })

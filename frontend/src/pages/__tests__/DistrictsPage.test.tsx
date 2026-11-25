@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useRankHistory } from '../../hooks/useRankHistory'
@@ -48,6 +48,17 @@ vi.mock('../../hooks/useRankHistory', () => ({
 const mockedFetchCdnRankings = vi.mocked(fetchCdnRankings)
 
 // renderWithProviders is provided by test-utils to include ProgramYearProvider and common wrappers
+
+afterEach(() => {
+  vi.mocked(useRankHistory).mockReset()
+  vi.mocked(useRankHistory).mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  } as unknown as ReturnType<typeof useRankHistory>)
+})
 
 describe('DistrictsPage - Percentage Formatting', () => {
   beforeEach(() => {

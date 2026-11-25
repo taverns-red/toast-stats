@@ -184,7 +184,7 @@ describe('ClubsTable — since last year preset (#2432)', () => {
   it('says so when last year cannot be loaded, and marks no club as a climber', () => {
     renderTable({ mode: 'climbed', prior: undefined, isError: true })
     expect(
-      screen.getByText(/last year.s dcp goals could not be loaded/i)
+      screen.getByText(/we couldn't load last year's dcp goals/i)
     ).toBeInTheDocument()
     expect(screen.queryByTestId('since-last-year-1')).not.toBeInTheDocument()
   })

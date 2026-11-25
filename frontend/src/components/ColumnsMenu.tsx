@@ -32,7 +32,7 @@ interface ColumnsMenuProps {
   /** The Changes diff failed to load; the group says so and is disabled. */
   changesFailed?: boolean
   /** Re-reads the Changes diff after a failure; it is the note's Try again. */
-  onRetryChanges?: (() => void) | undefined
+  onRetryChanges?: (() => void | Promise<unknown>) | undefined
   /** Called when the menu opens (starts the on-demand diff read, #2740). */
   onOpen?: (() => void) | undefined
   /** Heading for the Changes group, e.g. "Changes since Nov 10". */
@@ -88,6 +88,7 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
       : idsFor(group, changesAvailable, sinceActive)
   const [isOpen, setIsOpen] = useState(false)
   const [announcement, setAnnouncement] = useState('')
+  const [retrying, setRetrying] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
   const onOpenRef = useRef(onOpen)
@@ -102,6 +103,17 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
       ?.querySelector<HTMLInputElement>('input[type="checkbox"]:not(:disabled)')
       ?.focus()
   }, [])
+
+  const retryChanges = useCallback(async () => {
+    if (retrying || changesLoading || !onRetryChanges) return
+    focusFirstCheckbox()
+    setRetrying(true)
+    try {
+      await onRetryChanges()
+    } finally {
+      setRetrying(false)
+    }
+  }, [changesLoading, focusFirstCheckbox, onRetryChanges, retrying])
 
   const close = useCallback(() => {
     setIsOpen(false)
@@ -223,16 +235,17 @@ export const ColumnsMenu: React.FC<ColumnsMenuProps> = ({
                     aria-live="polite"
                     data-testid="columns-changes-status"
                   >
-                    {changesFailed ? (
+                    {retrying || changesLoading ? (
+                      'Loading changes…'
+                    ) : changesFailed ? (
                       <PartialFailureNote
                         subject="the changes"
                         announce={false}
-                        onRetry={onRetryChanges}
+                        onRetry={retryChanges}
+                        buttonClassName="clubs-columns-menu__retry"
                       >
                         The other columns still work.
                       </PartialFailureNote>
-                    ) : changesLoading ? (
-                      'Loading changes…'
                     ) : (
                       ''
                     )}

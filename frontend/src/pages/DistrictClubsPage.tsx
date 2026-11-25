@@ -267,7 +267,7 @@ const DistrictClubsPage: React.FC = () => {
     enabled: diffWanted,
   })
   const retryChanges = useCallback(() => {
-    void refetchDiff()
+    return refetchDiff()
   }, [refetchDiff])
 
   // A refresh that fails while clubs are on screen keeps them (spec §7) and

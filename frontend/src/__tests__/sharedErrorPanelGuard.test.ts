@@ -17,10 +17,18 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const src = resolve(__dirname, '..')
 
 const ALLOWED: Record<string, string> = {
+  'pages/AreaRedirectPage.tsx':
+    'The redirect owns a compact browser title and heading when lookup fails; the body uses ErrorDisplay.',
+  'components/DateSelector.tsx':
+    'A compact message inside the date selector control; a panel does not fit the control.',
   'components/EndOfYearRankingsPanel.tsx':
     'A one-line note in a stat-card section. The panel gets rankings=null with no error or retry, so absent and failed look alike.',
+  'components/ErrorPage.tsx':
+    'A stale-bundle explanation, not a failed data read; reloading is the recovery.',
   'components/ProgramYearSelector.tsx':
     'A message inside a compact dropdown control. A panel does not fit the control.',
+  'utils/loadFailureText.ts':
+    'The shared wording belongs here, and all partial-failure consumers call it.',
 }
 
 const LOAD_FAILURE =
@@ -32,7 +40,7 @@ function sourceFiles(dir: string): string[] {
     const full = join(dir, name)
     if (statSync(full).isDirectory()) {
       if (name !== '__tests__') out.push(...sourceFiles(full))
-    } else if (full.endsWith('.tsx') && !full.endsWith('.test.tsx')) {
+    } else if (/\.[jt]sx?$/.test(full) && !/\.test\.[jt]sx?$/.test(full)) {
       out.push(full)
     }
   }
@@ -64,16 +72,29 @@ function stringProps(source: string): string[] {
   return out
 }
 
+/** Plain strings, including constants whose wording JSX-text scanning misses. */
+function stringLiterals(source: string): string[] {
+  const out: string[] = []
+  const re = /(["'`])((?:\\.|(?!\1)[^\\])*)\1/gms
+  for (const m of source.matchAll(re)) out.push(m[2] ?? '')
+  return out
+}
+
 function offendersIn(file: string): string[] {
   const source = stripCommentsAndErrorDisplays(readFileSync(file, 'utf8'))
-  return [...jsxTexts(source), ...stringProps(source)].filter(t =>
-    LOAD_FAILURE.test(t)
-  )
+  return [
+    ...jsxTexts(source),
+    ...stringProps(source),
+    ...stringLiterals(source),
+  ]
+    .filter(t => LOAD_FAILURE.test(t))
+    .filter((value, index, all) => all.indexOf(value) === index)
 }
 
 const FILES = [
   ...sourceFiles(join(src, 'pages')),
   ...sourceFiles(join(src, 'components')),
+  ...sourceFiles(join(src, 'utils')),
 ].map(f => relative(src, f))
 
 describe('shared error panel guard', () => {

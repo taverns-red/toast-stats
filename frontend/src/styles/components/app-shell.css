@@ -5836,6 +5836,28 @@
     font-style: italic;
   }
 
+  .clubs-columns-menu__retry {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 0.25rem;
+    border: 0;
+    background: transparent;
+    color: var(--tm-loyal-blue);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    cursor: pointer;
+  }
+
+  .clubs-columns-menu__retry:hover {
+    color: var(--tm-loyal-blue-80);
+  }
+
+  .clubs-columns-menu__retry:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
   .clubs-columns-menu__footer {
     position: sticky;
     bottom: -0.5rem;

@@ -80,7 +80,7 @@ describe('summarizeClubHistoryGaps (#1437)', () => {
       ],
       opts
     )
-    expect(text).toMatch(/could not be loaded/i)
+    expect(text).toMatch(/we couldn't load 2020-2021, 2019-2020/i)
     expect(text).toContain('2020-2021')
     expect(text).toContain('2019-2020')
   })
