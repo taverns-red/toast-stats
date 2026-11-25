@@ -238,7 +238,7 @@ export function summarizeClubHistoryGaps(
     )
     .map(g => g.label)
   if (unloadable.length > 0) {
-    clauses.push(couldntLoad(listYears(unloadable)))
+    clauses.push(couldntLoad(`the data for ${listYears(unloadable)}`))
   }
 
   return clauses.join(' ')
