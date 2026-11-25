@@ -193,12 +193,30 @@ const ONLINE_WORD =
 const HYBRID_WORD = /\bhybri\w*/
 const IN_PERSON_WORD =
   /\bin[\s-]?person\b|\ben personne\b|\bpresentiel\w*|\ben salle\b/
-/** A mode word after "not", "no", "never" or "pas" says how the club does
- *  NOT meet (#3083: "Online only … NOT in person at City Hall!"). */
-const NEGATED_MODE = new RegExp(
-  `\\b(?:not|no|never|pas)\\s+(?:en\\s+)?(?:${IN_PERSON_WORD.source}|${ONLINE_WORD.source})`,
-  'g'
-)
+const MODE_WORDS: [MeetingMode, string][] = [
+  ['hybrid', HYBRID_WORD.source],
+  ['in-person', IN_PERSON_WORD.source],
+  ['online', ONLINE_WORD.source],
+]
+const MODE_NEGATION =
+  /\b(?:not|no|never|non|pas(?:\s+de)?)\s+(?:(?:en|on|via|by|over|sur|par)\s+)?$/
+
+function isNegatedMode(text: string, modeIndex: number): boolean {
+  return MODE_NEGATION.test(text.slice(0, modeIndex))
+}
+
+function withoutNegatedModes(text: string): string {
+  let folded: string[] | undefined
+  for (const [, source] of MODE_WORDS) {
+    for (const match of text.matchAll(new RegExp(`(?:${source})`, 'g'))) {
+      if (!isNegatedMode(text, match.index)) continue
+      folded ??= text.split('')
+      folded.fill(' ', match.index, match.index + match[0].length)
+    }
+  }
+  return folded?.join('') ?? text
+}
+
 /** Location text that names no place. */
 const NO_PLACE =
   /^(?:contact(?: us)?|to be determined|tbd|tba|n\/?a|suspended|see website|varies|various)$/
@@ -254,12 +272,10 @@ function combineModes(modes: Iterable<MeetingMode>): MeetingMode | undefined {
 }
 
 function modesIn(text: string): MeetingMode[] {
-  const folded = text.replace(NEGATED_MODE, ' ')
-  const modes: MeetingMode[] = []
-  if (HYBRID_WORD.test(folded)) modes.push('hybrid')
-  if (ONLINE_WORD.test(folded)) modes.push('online')
-  if (IN_PERSON_WORD.test(folded)) modes.push('in-person')
-  return modes
+  const unnegated = withoutNegatedModes(text)
+  return MODE_WORDS.filter(([, source]) =>
+    new RegExp(`(?:${source})`).test(unnegated)
+  ).map(([mode]) => mode)
 }
 
 /** Folded text that names a place: three letters or more, not NO_PLACE. */
@@ -288,11 +304,11 @@ function namesVenue(folded: string): boolean {
  * Meetings that alternate are never all online.
  */
 function saysAllOnline(folded: string): boolean {
-  const text = folded.replace(NEGATED_MODE, ' ')
-  if (ALTERNATING.test(text)) return false
+  const unnegated = withoutNegatedModes(folded)
+  if (ALTERNATING.test(unnegated)) return false
   return (
-    ONLY_ONLINE.test(text) ||
-    text.split(/\n|<br\s*\/?>/).some(line => STATUS_LINE.test(line.trim()))
+    ONLY_ONLINE.test(unnegated) ||
+    unnegated.split(/\n|<br\s*\/?>/).some(line => STATUS_LINE.test(line.trim()))
   )
 }
 
@@ -413,11 +429,6 @@ const ORDINAL_WORDS: [number, string][] = [
 const LAST_WEEK = new RegExp(
   `\\b(?:last|dernier|derniere)\\s+(?:${Object.values(WEEKDAY_WORDS).join('|')})\\b|\\b(?:last|dernier|derniere)\\b.*\\b(?:of the month|du mois)\\b`
 )
-const MODE_WORDS: [MeetingMode, string][] = [
-  ['hybrid', 'hybri\\w*'],
-  ['in-person', 'in[\\s-]?person|en personne|presentiel\\w*'],
-  ['online', 'online|on-line|virtual\\w*|virtuel\\w*|en ligne|zoom|teams'],
-]
 /** One token at a time: an ordinal week or a mode word. */
 const ORDINAL_OR_MODE = new RegExp(
   [
@@ -455,6 +466,13 @@ function weekGroupsIn(folded: string): {
     const modeIndex = MODE_WORDS.findIndex((_, i) => named[`m${i}`])
     const mode = MODE_WORDS[modeIndex]?.[0]
     if (!mode) continue
+    if (isNegatedMode(folded, match.index)) {
+      if (pending.length > 0) {
+        groups.push({ weeks: pending })
+        pending = []
+      }
+      continue
+    }
     if (pending.length > 0) {
       groups.push({ weeks: pending, mode })
       pending = []
