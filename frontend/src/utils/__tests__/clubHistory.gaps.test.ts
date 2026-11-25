@@ -10,6 +10,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { summarizeClubHistoryGaps, type ClubHistoryGap } from '../clubHistory'
+import { couldntLoad } from '../loadFailureText'
 
 function gap(overrides: Partial<ClubHistoryGap> = {}): ClubHistoryGap {
   return {
@@ -80,7 +81,7 @@ describe('summarizeClubHistoryGaps (#1437)', () => {
       ],
       opts
     )
-    expect(text).toMatch(/could not be loaded/i)
+    expect(text?.startsWith(couldntLoad('2020-2021, 2019-2020'))).toBe(true)
     expect(text).toContain('2020-2021')
     expect(text).toContain('2019-2020')
   })
