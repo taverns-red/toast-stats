@@ -18,7 +18,7 @@
   margin-top: 0.25rem;
   font-size: 0.875rem;
   color: var(--ink-3);
-  max-width: 65ch;
+  max-width: 32.31em;
 }
 
 .education-provenance,
@@ -26,7 +26,7 @@
   margin-top: 0.25rem;
   font-size: 0.875rem;
   color: var(--ink-3);
-  max-width: 70ch;
+  max-width: 34.79em;
   overflow-wrap: anywhere;
 }
 

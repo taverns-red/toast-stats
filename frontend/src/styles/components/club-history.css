@@ -36,7 +36,7 @@
   color: var(--ink-3);
   font-size: 0.9rem;
   margin: 0.35rem 0 0;
-  max-width: 52ch;
+  max-width: 25.84em;
 }
 
 .club-history-page__export {
