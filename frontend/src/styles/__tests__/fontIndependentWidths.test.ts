@@ -24,12 +24,40 @@ const MEASURES = [
     chars: 60,
   },
   { file: 'clubs-race.css', selector: '.race-basis p', chars: 70 },
+  { file: 'training.css', selector: '.training-page__subtitle', chars: 70 },
+  { file: 'training.css', selector: '.training-context', chars: 75 },
+  { file: 'training.css', selector: '.training-note', chars: 75 },
+  { file: 'education.css', selector: '.education-page__subtitle', chars: 65 },
+  { file: 'education.css', selector: '.education-note', chars: 70 },
+  { file: 'meetings.css', selector: '.meetings-note', chars: 70 },
+  { file: 'survival.css', selector: '.survival-note', chars: 70 },
+  {
+    file: 'worldwide-scoreboard.css',
+    selector: '.wws__methodology',
+    chars: 70,
+  },
+  { file: 'worldwide-scoreboard.css', selector: '.wws__group-note', chars: 68 },
+  { file: 'club-history.css', selector: '.club-history-page__sub', chars: 52 },
 ] as const
 
-/* app-shell.css still has older ch measures elsewhere, so only these rules
-   are held to em here. */
+/* These files still have ch measures in non-max-width properties, so only
+   the converted rules are held to em here. */
 const RULE_MEASURES = [
   { file: 'app-shell.css', selector: '.placeholder-page__body', chars: 70 },
+  { file: 'app-shell.css', selector: '.long-text-lede', chars: 60 },
+  {
+    file: 'app-shell.css',
+    selector: '.districts-page-header__lede',
+    chars: 60,
+  },
+  {
+    file: 'app-shell.css',
+    selector: '.districts-page-header__orientation',
+    chars: 70,
+  },
+  { file: 'app-shell.css', selector: '.methodology-section', chars: 70 },
+  { file: 'growth.css', selector: '.growth-page__subtitle', chars: 65 },
+  { file: 'growth.css', selector: '.growth-stage__note', chars: 70 },
 ] as const
 
 const ruleOf = (css: string, selector: string) => {
@@ -37,6 +65,21 @@ const ruleOf = (css: string, selector: string) => {
   expect(start, `no ${selector} rule`).toBeGreaterThanOrEqual(0)
   return css.slice(start, css.indexOf('}', start))
 }
+
+describe('app-shell.css .methodology-page--how-it-works text column', () => {
+  const rule = ruleOf(read('app-shell.css'), '.methodology-page--how-it-works')
+
+  it('uses no ch unit', () => {
+    expect(rule.match(/[\d.]+ch\b/g)).toBeNull()
+  })
+
+  it('keeps the 70-character Source Sans 3 column, in em', () => {
+    const em = Number(rule.match(/minmax\(0,\s*([\d.]+)em\)/)?.[1])
+    expect(Math.abs(em - 70 * SOURCE_SANS_3_ZERO_EM)).toBeLessThanOrEqual(
+      TOLERANCE_EM
+    )
+  })
+})
 
 describe.each(RULE_MEASURES)(
   '$file $selector does not depend on the loaded font',

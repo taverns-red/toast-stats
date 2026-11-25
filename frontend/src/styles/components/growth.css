@@ -17,7 +17,7 @@
   margin-top: 0.25rem;
   font-size: 0.875rem;
   color: var(--ink-3);
-  max-width: 65ch;
+  max-width: 32.31em;
 }
 
 /* ── Funnel strip ──────────────────────────────────────────────────────── */
@@ -181,7 +181,7 @@
   margin: 0.25rem 0 0.75rem;
   font-size: 0.875rem;
   color: var(--ink-3);
-  max-width: 70ch;
+  max-width: 34.79em;
 }
 
 .growth-table__link {
