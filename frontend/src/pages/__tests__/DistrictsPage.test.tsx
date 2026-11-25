@@ -1004,7 +1004,9 @@ describe('DistrictsPage - Historical Rank Progression load failure (#3174)', () 
     expect(refetch).toHaveBeenCalledTimes(1)
   })
 
-  it('resets rank history to its idle default after an error test', () => {
+  // Must stay last in this describe: it proves the reset only by running
+  // after the error tests above.
+  it('resets rank history to its idle default after the error tests above', () => {
     expect(useRankHistory()).toMatchObject({
       data: undefined,
       isLoading: false,
