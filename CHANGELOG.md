@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.102.6](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.102.5...toast-stats-v2.102.6) (2026-11-25)
+
+
+### Bug Fixes
+
+* **a11y:** name the membership trend info link ([#2784](https://github.com/taverns-red/toast-stats/issues/2784)) ([#3207](https://github.com/taverns-red/toast-stats/issues/3207)) ([6d09c78](https://github.com/taverns-red/toast-stats/commit/6d09c78badee956befe691ae51fc15fcc937eb64))
+* **clubs:** cancel a pending Changes export when the district changes ([#2752](https://github.com/taverns-red/toast-stats/issues/2752)) ([#3209](https://github.com/taverns-red/toast-stats/issues/3209)) ([1c1948c](https://github.com/taverns-red/toast-stats/commit/1c1948c62283fcdd86227cac09da6038414f2329))
+* **css:** size the remaining prose measures in em, not ch ([#3153](https://github.com/taverns-red/toast-stats/issues/3153)) ([#3211](https://github.com/taverns-red/toast-stats/issues/3211)) ([ba4114c](https://github.com/taverns-red/toast-stats/commit/ba4114cf4922ddffbb87e0fa8083803698683534))
+* **map:** reserve the legend footnote and smoke the pinned panel at 1366x768 ([#3178](https://github.com/taverns-red/toast-stats/issues/3178)) ([#3216](https://github.com/taverns-red/toast-stats/issues/3216)) ([4bb8c6e](https://github.com/taverns-red/toast-stats/commit/4bb8c6e9a2721a583556f80ba0eb07cca1d7db30))
+* **meeting-mode:** read four more negation forms ([#3085](https://github.com/taverns-red/toast-stats/issues/3085)) ([#3210](https://github.com/taverns-red/toast-stats/issues/3210)) ([f41bd5e](https://github.com/taverns-red/toast-stats/commit/f41bd5e6c7dd84645d84cf507e314caf87550d7f))
+* **test:** let renderWithProviders skip the program-year fetch ([#3068](https://github.com/taverns-red/toast-stats/issues/3068)) ([#3215](https://github.com/taverns-red/toast-stats/issues/3215)) ([d569154](https://github.com/taverns-red/toast-stats/commit/d569154697a5bad2cb89d06bd151f2ecfc4b9cb4))
+* **ui:** shared load-failure wording and a lighter busy retry ([#3182](https://github.com/taverns-red/toast-stats/issues/3182)) ([#3212](https://github.com/taverns-red/toast-stats/issues/3212)) ([43baa0a](https://github.com/taverns-red/toast-stats/commit/43baa0a3bab63f99ee086b785e2c765032a8744a))
+
 ## [2.102.5](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.102.4...toast-stats-v2.102.5) (2026-11-24)
 
 
