@@ -434,11 +434,11 @@ const DistrictMapPage: React.FC = () => {
               <>
                 <div className="map-legend__chips" />
                 {limit === undefined &&
-                  legendNotes(model).map(note => (
+                  legendNotes(model).map((note, i) => (
                     <p
                       className="map-legend__note map-legend__note--placeholder"
                       aria-hidden="true"
-                      key={note}
+                      key={i}
                     >
                       {note}
                     </p>

@@ -42,6 +42,9 @@ export function estimateLegendLabels(model: ModeModel): string[] {
     .map(c => c.label)
 }
 
+/** The lines under the full legend: how clusters summarise their clubs (and
+ *  what the "!" badge marks), then the mode's own note. Shared by the legend
+ *  and its loading placeholder so the reserved height matches the text. */
 export function legendNotes(model: ModeModel): string[] {
   const notes: string[] = []
   if (model.kind !== 'categorical') {

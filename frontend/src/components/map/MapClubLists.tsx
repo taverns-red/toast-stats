@@ -214,8 +214,8 @@ export const LegendChips: React.FC<{
         )}
       </div>
       {limit === undefined &&
-        legendNotes(model).map(note => (
-          <p className="map-legend__note" key={note}>
+        legendNotes(model).map((note, i) => (
+          <p className="map-legend__note" key={i}>
             {note}
           </p>
         ))}
