@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.102.5](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.102.4...toast-stats-v2.102.5) (2026-11-24)
+
+
+### Bug Fixes
+
+* **ui:** open district pages on the newest date with its reports ([#3195](https://github.com/taverns-red/toast-stats/issues/3195)) ([#3196](https://github.com/taverns-red/toast-stats/issues/3196)) ([1b93d45](https://github.com/taverns-red/toast-stats/commit/1b93d455d3795083691b9f92d9bb65f388e64cfe))
+
 ## [2.102.4](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.102.3...toast-stats-v2.102.4) (2026-11-23)
 
 
