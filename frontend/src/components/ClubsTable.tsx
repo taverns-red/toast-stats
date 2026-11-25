@@ -87,6 +87,10 @@ const CHANGES_FAILED_NOTE =
   'The changes could not load, so nothing was exported. Try again in a moment.'
 const CHANGES_EMPTY_NOTE =
   'There are no changes to export between these two dates.'
+type ChangesExportResult =
+  | { status: 'loaded'; diff: SnapshotDiff }
+  | { status: 'failed' }
+  | { status: 'cancelled' }
 
 interface ClubsTableProps {
   /** Array of club trends to display in the table */
@@ -902,40 +906,65 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   // "Export Changes" before the diff has loaded: ask for it, wait, then
   // export (#2740). The button shows its own busy state meanwhile. A failed or
   // empty read ends the wait with a visible, announced message, never a hang.
-  const [exportNote, setExportNote] = useState('')
-  const pendingChangesExport = useRef<
-    ((diff: SnapshotDiff | null) => void) | null
-  >(null)
+  const [exportNote, setExportNote] = useState<{
+    message: string
+    attempt: number
+  } | null>(null)
+  const [exportDistrictId, setExportDistrictId] = useState(districtId)
+  if (exportDistrictId !== districtId) {
+    setExportDistrictId(districtId)
+    setExportNote(null)
+  }
+  const exportAttempt = useRef(0)
+  const pendingChangesExport = useRef<{
+    districtId: string
+    settle: (result: ChangesExportResult) => void
+  } | null>(null)
   const diffFailed = !!deferredChanges?.isError
-  const runChangesExport = (diff: SnapshotDiff): void => {
+  const runChangesExport = (diff: SnapshotDiff, attempt: number): void => {
     const empty =
       diff.clubs.bothPresent.length === 0 &&
       diff.clubs.onlyInFrom.length === 0 &&
       diff.clubs.onlyInTo.length === 0
-    if (empty) setExportNote(CHANGES_EMPTY_NOTE)
+    if (empty) setExportNote({ message: CHANGES_EMPTY_NOTE, attempt })
     else exportSnapshotDiff(diff)
   }
   const exportChanges = async (): Promise<void> => {
-    setExportNote('')
-    if (snapshotDiff) return runChangesExport(snapshotDiff)
+    const attempt = ++exportAttempt.current
+    setExportNote(null)
+    if (snapshotDiff) return runChangesExport(snapshotDiff, attempt)
     if (diffFailed) {
-      setExportNote(CHANGES_FAILED_NOTE)
+      setExportNote({ message: CHANGES_FAILED_NOTE, attempt })
       deferredChanges?.onRetry?.()
       return
     }
     requestChanges?.()
-    const loaded = await new Promise<SnapshotDiff | null>(resolve => {
-      pendingChangesExport.current = resolve
+    const result = await new Promise<ChangesExportResult>(settle => {
+      pendingChangesExport.current = { districtId, settle }
     })
-    if (loaded) runChangesExport(loaded)
-    else setExportNote(CHANGES_FAILED_NOTE)
+    if (result.status === 'cancelled') return
+    if (result.status === 'loaded') runChangesExport(result.diff, attempt)
+    else setExportNote({ message: CHANGES_FAILED_NOTE, attempt })
   }
+  // An export waits for the diff of the district it started on. A diff that
+  // arrives after a district switch belongs to another district and must not
+  // download (DistrictClubsPage.lazyDiffStates: "cancels a pending export").
   useEffect(() => {
-    const done = pendingChangesExport.current
-    if (!done || !(snapshotDiff || diffFailed)) return
+    const pending = pendingChangesExport.current
+    if (!pending) return
+    if (pending.districtId !== districtId) {
+      pendingChangesExport.current = null
+      pending.settle({ status: 'cancelled' })
+      return
+    }
+    if (!(snapshotDiff || diffFailed)) return
     pendingChangesExport.current = null
-    done(snapshotDiff ?? null)
-  }, [snapshotDiff, diffFailed])
+    pending.settle(
+      snapshotDiff
+        ? { status: 'loaded', diff: snapshotDiff }
+        : { status: 'failed' }
+    )
+  }, [districtId, snapshotDiff, diffFailed])
 
   const exportGroup = (
     <div className="clubs-export-group">
@@ -986,8 +1015,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         />
       )}
       {exportNote && (
-        <p role="alert" className="basis-full text-sm">
-          {exportNote}
+        <p key={exportNote.attempt} role="alert" className="basis-full text-sm">
+          {exportNote.message}
         </p>
       )}
     </div>
