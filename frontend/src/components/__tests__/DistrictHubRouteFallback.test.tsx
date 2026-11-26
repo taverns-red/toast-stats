@@ -3,7 +3,7 @@
  * (#1901, mobile epic #1827).
  *
  * The hub's LCP element is a static caption in its loading skeleton
- * ("payments vs. program-year base"). It used to paint only once the lazy
+ * ("payments vs. the payment base"). It used to paint only once the lazy
  * route chunk had loaded and React had revealed it. React holds a Suspense
  * reveal for up to 300 ms after the fallback commits, unless another update
  * flushes it first. On a fast load that update was the CDN date index
@@ -66,7 +66,7 @@ describe('DistrictHubRouteFallback (#1901)', () => {
 
     expect(screen.getAllByTestId('district-hub-tile')).toHaveLength(4)
     expect(
-      screen.getByText('payments vs. program-year base')
+      screen.getByText('payments vs. the payment base')
     ).toBeInTheDocument()
     expect(screen.queryByTestId('generic-fallback')).not.toBeInTheDocument()
   })

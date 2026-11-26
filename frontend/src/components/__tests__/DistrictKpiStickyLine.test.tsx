@@ -117,11 +117,12 @@ describe('DistrictKpiStickyLine (#2708)', () => {
     expect(dist?.textContent).not.toMatch(/\+\d|provisional|qualifying/)
   })
 
-  it('names the basis of Net: payments against the program-year base (D9)', () => {
+  it('names the basis of Net in plain words: payments against the payment base (D9, #2717)', () => {
     render(<DistrictKpiStickyLine kpis={kpis} />)
     const net = line().querySelectorAll('.district-kpi-stuck__item')[3]
     expect(net?.textContent).toContain('−1.2K')
-    expect(net?.textContent).toContain('payments vs. program-year base')
+    expect(net?.textContent).toContain('payments vs. the payment base')
+    expect(net?.textContent).not.toContain('program-year')
   })
 
   it('marks Payments as the item dropped whole at narrow widths', () => {
