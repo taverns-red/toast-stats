@@ -145,8 +145,9 @@ describe('RegionGrowthPage', () => {
     mockedReports.mockResolvedValue(null)
     mockedRollups.mockResolvedValue(null)
     renderAt('/region/05/growth')
+    // Sentence case, like the h1 "Region 05 club growth" (#3244).
     expect(await screen.findByTestId('rollups-unavailable')).toHaveTextContent(
-      /not available yet/i
+      /^Region 05 club growth is not available yet for this date\./
     )
     expect(
       screen.queryByRole('list', { name: 'Club Growth funnel' })
@@ -190,6 +191,15 @@ describe('WorldGrowthPage', () => {
     // Coverage is stated: the reports figures cover the districts they cover.
     expect(screen.getByTestId('rollup-growth-coverage')).toHaveTextContent(
       /12 districts/
+    )
+  })
+
+  it('says worldwide club growth is not available, in sentence case (#3244)', async () => {
+    mockedReports.mockResolvedValue(null)
+    mockedRollups.mockResolvedValue(null)
+    renderAt('/regions/growth')
+    expect(await screen.findByTestId('rollups-unavailable')).toHaveTextContent(
+      /^Worldwide club growth is not available yet for this date\./
     )
   })
 })

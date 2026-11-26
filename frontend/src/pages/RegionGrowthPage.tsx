@@ -82,7 +82,7 @@ const RegionGrowthPage: React.FC = () => {
             rollups?.regionMembershipNote ??
             (reports || rollups
               ? `Region ${region} is not in the rollups for this date.`
-              : 'Region Club Growth is not available yet for this date. It is computed with each snapshot; earlier dates predate it.')}
+              : `Region ${region} club growth is not available yet for this date. It is computed with each snapshot; earlier dates predate it.`)}
         </p>
       )}
       {!loading && funnel.found && asOf && (

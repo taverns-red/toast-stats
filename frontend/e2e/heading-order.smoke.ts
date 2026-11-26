@@ -36,10 +36,10 @@ const ROUTES = [
 const PAGE_NAMES: ReadonlyArray<readonly [string, string]> = [
   ['/regions/education', 'Worldwide education'],
   ['/regions/health', 'Worldwide health & compliance'],
-  ['/regions/changes', 'Worldwide: what changed'],
+  ['/regions/changes', 'Worldwide: What Changed'],
   ['/region/4/education', 'Region 04 education'],
   ['/region/4/growth', 'Region 04 club growth'],
-  ['/region/4/changes', 'Region 04: what changed'],
+  ['/region/4/changes', 'Region 04: What Changed'],
 ]
 
 for (const [route, name] of PAGE_NAMES) {

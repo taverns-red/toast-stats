@@ -79,10 +79,10 @@ describe('RankingsChangesPage', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'Region 05: what changed',
+        name: 'Region 05: What Changed',
       })
     ).toBeInTheDocument()
-    expect(document.title).toBe('Region 05: what changed — Toast Stats')
+    expect(document.title).toBe('Region 05: What Changed — Toast Stats')
     expect(screen.getByTestId('changes-headline')).toHaveTextContent(
       'Changes for Region 05 from Oct 15, 2026 to Oct 31, 2026'
     )
@@ -102,10 +102,10 @@ describe('RankingsChangesPage', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'Worldwide: what changed',
+        name: 'Worldwide: What Changed',
       })
     ).toBeInTheDocument()
-    expect(document.title).toBe('Worldwide: what changed — Toast Stats')
+    expect(document.title).toBe('Worldwide: What Changed — Toast Stats')
     expect(
       screen.getByRole('table', { name: 'Changes by region' })
     ).toBeInTheDocument()
