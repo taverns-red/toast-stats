@@ -15,7 +15,7 @@ import {
   type PriorityMetric,
 } from './PriorityColumnsTable'
 import { DistrictTrendSparkline } from './DistrictTrendSparkline'
-import { DistinguishedCount } from './DistinguishedCount'
+import { DistinguishedCount, QualifyingTodayExtra } from './DistinguishedCount'
 import { DataTable } from './dataTable/DataTable'
 import {
   LEADERBOARD_SIZES,
@@ -596,15 +596,17 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
       id: 'distinguished',
       header: 'Distinguished',
       cell: info => (
-        <>
+        <span className="regions-leaderboard__distinguished">
           <DistinguishedCount
             confirmed={info.row.original.distinguishedClubs}
-            provisional={provisionalByRegion?.get(info.row.original.region)}
           />
           <span className="text-gray-600 theme-dark:text-gray-300 ml-1">
             {'\u00b7'} {Math.round(info.row.original.distinguishedPercent)}%
           </span>
-        </>
+          <QualifyingTodayExtra
+            provisional={provisionalByRegion?.get(info.row.original.region)}
+          />
+        </span>
       ),
     }),
     colHelper.accessor(r => r.aggregateScore, {

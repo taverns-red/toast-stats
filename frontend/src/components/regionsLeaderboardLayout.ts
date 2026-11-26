@@ -18,7 +18,7 @@ export const LEADERBOARD_SIZES: Readonly<Record<string, number>> = {
   districts: 80,
   paidClubs: 72,
   payments: 88,
-  distinguished: 112,
+  distinguished: 120,
   score: 64,
   r1Dcp: 88,
   r1AllSeven: 88,

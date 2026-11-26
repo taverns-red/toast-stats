@@ -259,4 +259,13 @@
     line-height: 1.25;
     white-space: normal;
   }
+
+  /* Regions leaderboard from 768 up (#3264): the extra is wider than the
+     Distinguished column, so it takes its own line under "count · %" and may
+     wrap at its spaces rather than run into Score
+     (distinguishedCountAlignment.test.ts, regions-training.smoke.ts). */
+  .regions-leaderboard__distinguished .distinguished-count__provisional {
+    display: block;
+    white-space: normal;
+  }
 }

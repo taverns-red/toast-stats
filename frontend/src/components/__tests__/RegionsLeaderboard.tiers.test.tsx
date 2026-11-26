@@ -189,7 +189,7 @@ describe('RegionsLeaderboard columns per width tier (#2716)', () => {
         extra.closest('.regions-leaderboard__distinguished')
       ).not.toBeNull()
       expect(extra.closest('td')?.textContent).toMatch(
-        /^200 · 40%\s*\+12 qualifying today/
+        /^200\s*· 40%\s*\+12 qualifying today/
       )
     }
   )
