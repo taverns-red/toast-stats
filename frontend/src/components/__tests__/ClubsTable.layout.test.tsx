@@ -147,7 +147,7 @@ describe('table semantics (#2676, spec §7, §11, test 6)', () => {
     const btn = screen.getByRole('button', { name: 'Members' })
     expect(btn).toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: /click to flip direction/i })
+      screen.queryByRole('button', { name: /to flip direction/i })
     ).toBeNull()
   })
 
