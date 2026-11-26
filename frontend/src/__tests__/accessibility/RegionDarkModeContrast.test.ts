@@ -312,6 +312,20 @@ describe('Region pages dark-mode contrast (#609)', () => {
   // MUST be a theme token (var(--surface)/var(--surface-2)), never a hardcoded
   // light literal, or dark mode shows light cells with light text (lesson 092).
   const surface2 = resolveVar('var(--surface-2)')
+  // The row hover surface, read from the rule itself so a change to it is
+  // checked here too (#2716: --surface-3 went unchecked).
+  const hoverToken = ruleValue(
+    appShellCss,
+    '.rankings-row:hover',
+    'background-color'
+  )
+  const hoverSurface = resolveVar(hoverToken ?? '')
+  const stickySurfaces = [surface, surface2, hoverSurface]
+
+  it('the row hover surface is a theme token that remaps in dark', () => {
+    expect(hoverToken, 'row hover rule must exist').toMatch(/var\(--/)
+    expect(hoverSurface).not.toBe(lightTokens.get(hoverToken!.slice(4, -1)))
+  })
 
   it('sticky identity cells use a THEMED background, not a hardcoded literal', () => {
     // The lesson-092 trap: a fixed light bg under theme-adaptive text. Assert
@@ -329,10 +343,10 @@ describe('Region pages dark-mode contrast (#609)', () => {
 
   it('district-cell text clears AA on the sticky column in dark (default + hover)', () => {
     // The pinned district cell wears --ink. It sits on the sticky bg, which is
-    // --surface at rest and --surface-3 on hover. Lesson 095: size for the
-    // LIGHTEST surface it lands on.
+    // --surface at rest and the row hover surface on hover. Lesson 095: size
+    // for every surface it lands on.
     const fg = resolveVar('var(--ink)')
-    for (const bg of [surface, surface2]) {
+    for (const bg of stickySurfaces) {
       const ratio = calculateContrastRatio(fg, bg)
       expect(
         ratio,
@@ -388,11 +402,11 @@ describe('Region pages dark-mode contrast (#609)', () => {
   it('Region-cell text clears AA on the overview sticky column in dark (#965)', () => {
     // The pinned Region cell carries the region link (text-tm-loyal-blue) and
     // the "leader: …" sublabel (text-gray-700). Both sit on the sticky bg,
-    // which is --surface at rest and --surface-2 on hover/header. Size for the
-    // LIGHTEST surface it lands on (--surface-2, Lesson 095).
+    // which is --surface at rest, --surface-2 under the header and the row
+    // hover surface on hover. Size for every surface it lands on (Lesson 095).
     for (const cls of ['text-tm-loyal-blue', 'text-gray-700']) {
       const fg = utilityDark(cls, 'color', surface)
-      for (const bg of [surface, surface2]) {
+      for (const bg of stickySurfaces) {
         const ratio = calculateContrastRatio(fg, bg)
         expect(
           ratio,
@@ -401,6 +415,37 @@ describe('Region pages dark-mode contrast (#609)', () => {
       }
     }
   })
+
+  // The other cells of a hovered row (#2716): the Distinguished share, the
+  // score, the training links and "not started" / "not available".
+  const ROW_TEXT: ReadonlyArray<{ name: string; fg: string }> = [
+    {
+      name: 'share (text-gray-600)',
+      fg: utilityDark('text-gray-600', 'color', surface),
+    },
+    {
+      name: 'score (text-gray-900)',
+      fg: utilityDark('text-gray-900', 'color', surface),
+    },
+    {
+      name: 'training link (text-tm-loyal-blue)',
+      fg: utilityDark('text-tm-loyal-blue', 'color', surface),
+    },
+    { name: 'training muted (--ink-3)', fg: resolveVar('var(--ink-3)') },
+  ]
+
+  it.each(ROW_TEXT)(
+    '$name clears AA on every row surface in dark',
+    ({ fg }) => {
+      for (const bg of stickySurfaces) {
+        const ratio = calculateContrastRatio(fg, bg)
+        expect(
+          ratio,
+          `${fg} on row ${bg} = ${ratio.toFixed(2)}:1`
+        ).toBeGreaterThanOrEqual(4.5)
+      }
+    }
+  )
 
   it('scroll-cue overlay is themed, not a hardcoded colour (lesson 092)', () => {
     // #2702: the region tables use the DataTable's edge cues.
