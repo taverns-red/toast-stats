@@ -5,6 +5,7 @@ import {
   type PriorYearTrend,
   type TrendPoint,
   type TrendSeries,
+  type TrendSeriesPoint,
 } from '../membershipTrendChartData'
 import { formatDisplayDate } from '../../utils/dateFormatting'
 
@@ -21,8 +22,8 @@ import { formatDisplayDate } from '../../utils/dateFormatting'
  *
  * Prior years come from the club's year-end rows (base on July 1, close at
  * the year-end snapshot): two points each, so they say nothing about the
- * path and are not drawn as lines (#2504). The newest one's year-end is a
- * single labelled reference line instead.
+ * path and are not drawn as lines (#2504). The newest year-end on record is
+ * a single labelled reference line instead.
  *
  * Hand-rolled SVG (not Recharts): the club route keeps Recharts off its
  * static graph (#1901), and CSS classes carry the dark-mode swap (R10).
@@ -50,6 +51,14 @@ const KEY_DATES = [
 const shortYearLabel = (label: string): string => {
   const m = /^(\d{4})-\d{2}(\d{2})$/.exec(label)
   return m ? `${m[1]}–${m[2]}` : label
+}
+
+/** A prior year's close: its last point after July 1. A year with only its
+    start has none, so its start is never shown as a year-end
+    (ClubMembershipTrendChart.test.tsx, "close is missing"). */
+const closeOf = (s: TrendSeries): TrendSeriesPoint | undefined => {
+  const last = lastOf(s.points)
+  return last && last.day > 0 ? last : undefined
 }
 
 export interface ClubMembershipTrendChartProps {
@@ -91,9 +100,10 @@ export function ClubMembershipTrendChart({
 
   // #2504 — prior years have only a start and a year-end, so a line between
   // them would imply a path we don't have. Context is one labelled reference
-  // at the newest prior year-end instead.
-  const refClose = priorSeries[0] ? lastOf(priorSeries[0].points) : undefined
-  const refLabel = priorSeries[0] ? shortYearLabel(priorSeries[0].label) : ''
+  // at the newest prior year-end on record instead.
+  const refSeries = priorSeries.find(s => closeOf(s))
+  const refClose = refSeries ? closeOf(refSeries) : undefined
+  const refLabel = refSeries ? shortYearLabel(refSeries.label) : ''
 
   // y over every plotted value; ±4 keeps a flat series off the edges and
   // makes the range provably non-zero (the `range === 0` tripwire).
@@ -145,7 +155,7 @@ export function ClubMembershipTrendChart({
   const pyDisplay = shortYearLabel(programYearLabel)
   // The three most recent closes keep the readout to two lines at 375.
   const closes = priorSeries.slice(0, 3).flatMap(s => {
-    const close = lastOf(s.points)
+    const close = closeOf(s)
     return close ? [{ label: shortYearLabel(s.label), count: close.count }] : []
   })
 
