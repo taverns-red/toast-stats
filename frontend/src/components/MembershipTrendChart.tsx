@@ -204,7 +204,7 @@ const TrendTooltip = ({
             period.type === 'growth' ? 'text-green-600' : 'text-red-600'
           }`}
         >
-          {period.type === 'growth' ? '📈 Growth Period' : '📉 Decline Period'}
+          {PERIOD_STYLE[period.type].label}
         </p>
       )}
     </div>

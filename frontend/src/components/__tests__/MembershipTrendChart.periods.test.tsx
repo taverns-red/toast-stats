@@ -4,9 +4,17 @@
    legend chip beneath the chart carries the same colour and the word. */
 
 import React from 'react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MembershipTrendChart } from '../MembershipTrendChart'
+
+const tooltip = vi.hoisted(() => ({
+  props: null as null | Record<string, unknown>,
+}))
+
+afterEach(() => {
+  tooltip.props = null
+})
 
 vi.mock('recharts', () => ({
   LineChart: ({ children }: { children: React.ReactNode }) => (
@@ -16,7 +24,8 @@ vi.mock('recharts', () => ({
   XAxis: () => null,
   YAxis: () => null,
   CartesianGrid: () => null,
-  Tooltip: () => null,
+  Tooltip: ({ content }: { content: React.ReactElement }) =>
+    tooltip.props ? React.cloneElement(content, tooltip.props) : null,
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
@@ -51,5 +60,18 @@ describe('MembershipTrendChart periods (#2659)', () => {
     const swatch = chip.previousElementSibling as HTMLElement
     const band = screen.getByTestId('reference-area')
     expect(swatch.style.background).toBe(band.getAttribute('data-fill'))
+  })
+
+  it('names the period in the tooltip with the legend wording (#2746)', () => {
+    // Day 102 of the program year is October 11, the last rising snapshot.
+    tooltip.props = { active: true, label: 102 }
+    render(
+      <MembershipTrendChart membershipTrend={RISING} programYear="2026-2027" />
+    )
+    expect(screen.getByText(/October 11, 2026/)).toBeInTheDocument()
+    // One in the legend chip, one in the tooltip.
+    expect(screen.getAllByText('Growth period')).toHaveLength(2)
+    expect(screen.queryByText(/Growth Period/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/📈/)).not.toBeInTheDocument()
   })
 })
