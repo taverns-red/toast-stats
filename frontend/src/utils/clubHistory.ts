@@ -167,7 +167,10 @@ export interface ClubHistoryGap {
 const MAX_LISTED_YEARS = 6
 
 function listYears(labels: readonly string[]): string {
-  if (labels.length <= MAX_LISTED_YEARS) return labels.join(', ')
+  if (labels.length <= 1) return labels.join('')
+  if (labels.length <= MAX_LISTED_YEARS) {
+    return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`
+  }
   return `${labels.slice(0, MAX_LISTED_YEARS).join(', ')} and ${
     labels.length - MAX_LISTED_YEARS
   } more`
