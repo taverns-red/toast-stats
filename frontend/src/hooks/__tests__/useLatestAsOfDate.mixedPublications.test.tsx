@@ -84,3 +84,36 @@ describe('useLatestAsOfDate with two publications cached (#3220)', () => {
     await waitFor(() => expect(result.current.asOfDate).toBe('2026-07-02'))
   })
 })
+
+/**
+ * A page that views a dates.json date (Awards, /clubs, /clubs/race) checks
+ * rankings.json against that date, not latest.json, which can lag after
+ * promotion while it waits for report sidecars (#3221).
+ */
+describe('useLatestAsOfDate with a viewed snapshot date (#3221)', () => {
+  it('shows the as-of date when rankings.json matches the viewed date, even though latest.json lags', async () => {
+    serve(
+      { asOfDate: '2026-11-24', sourceSnapshotDate: '2026-11-24' },
+      '2026-11-23'
+    )
+    const { result } = renderHook(
+      () => useLatestAsOfDate({ viewedSnapshotDate: '2026-11-24' }),
+      { wrapper }
+    )
+    await waitFor(() => expect(result.current.asOfDate).toBe('2026-11-24'))
+    expect(result.current.latestSnapshotDate).toBe('2026-11-23')
+  })
+
+  it('shows no as-of date when rankings.json is older than the viewed date', async () => {
+    serve(
+      { asOfDate: '2026-11-23', sourceSnapshotDate: '2026-11-23' },
+      '2026-11-23'
+    )
+    const { result } = renderHook(
+      () => useLatestAsOfDate({ viewedSnapshotDate: '2026-11-24' }),
+      { wrapper }
+    )
+    await settled()
+    expect(result.current.asOfDate).toBeUndefined()
+  })
+})
