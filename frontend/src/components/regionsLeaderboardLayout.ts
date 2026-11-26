@@ -32,7 +32,10 @@ export const LEADERBOARD_SIZES: Readonly<Record<string, number>> = {
   region: 160,
   trend: 80,
   districts: 80,
-  paidClubs: 72,
+  // The header wraps to "Paid / clubs" at any width here; "clubs" and its
+  // sort icon need 52px (Chromium, Source Sans 3). No cell may spill its
+  // content box (regions-classic-scrollbar.smoke.ts).
+  paidClubs: 56,
   payments: 88,
   distinguished: 120,
   score: 64,
