@@ -1002,6 +1002,27 @@
   background-color: rgba(93, 173, 226, 0.1) !important;
 }
 
+/* The education levels bar (EducationLevelsCard): navy at 80% was about
+   1.6:1 on the dark surface. The dark blue at 80% clears 3:1 for non-text
+   graphics; brandUtilityContrast.test.ts checks both themes. */
+[data-theme='light'] .bg-tm-loyal-blue\/80 {
+  background-color: rgba(0, 65, 101, 0.8);
+}
+
+[data-theme='dark'] .bg-tm-loyal-blue\/80 {
+  background-color: rgba(93, 173, 226, 0.8) !important;
+}
+
+/* The anniversary row highlight (UpcomingAnniversariesPanel), in the dark
+   yellow the /20 tint below uses. */
+[data-theme='light'] .bg-tm-happy-yellow\/10 {
+  background-color: rgba(242, 223, 116, 0.1);
+}
+
+[data-theme='dark'] .bg-tm-happy-yellow\/10 {
+  background-color: rgba(247, 209, 100, 0.1) !important;
+}
+
 /* The /20 tints that replaced `bg-tm-x bg-opacity-20` (#2642): the solid base
    class used to carry the dark overrides, the /N class does not. Dark values
    are the ones their -20 twins use. */
