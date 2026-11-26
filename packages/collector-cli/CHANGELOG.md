@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.31.3](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.31.2...collector-cli-v1.31.3) (2026-11-26)
+
+
+### Bug Fixes
+
+* **fac:** keep the arrival time when the next time is an end time ([#3226](https://github.com/taverns-red/toast-stats/issues/3226)) ([#3233](https://github.com/taverns-red/toast-stats/issues/3233)) ([df4d9cc](https://github.com/taverns-red/toast-stats/commit/df4d9cc7fb9cf20e4ea1821d56ccb91bfd611521))
+* **fac:** read networking and accueil as arrival times ([#2627](https://github.com/taverns-red/toast-stats/issues/2627)) ([#3228](https://github.com/taverns-red/toast-stats/issues/3228)) ([6a7d035](https://github.com/taverns-red/toast-stats/commit/6a7d03539073203483fca9f555deef233c480ef2))
+
 ## [1.31.2](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.31.1...collector-cli-v1.31.2) (2026-11-25)
 
 

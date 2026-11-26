@@ -1,5 +1,49 @@
 # Changelog
 
+## [2.102.7](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.102.6...toast-stats-v2.102.7) (2026-11-26)
+
+
+### Bug Fixes
+
+* **a11y:** let touch and keyboard open a shortened area award chip ([#2762](https://github.com/taverns-red/toast-stats/issues/2762)) ([#3243](https://github.com/taverns-red/toast-stats/issues/3243)) ([f5e09e7](https://github.com/taverns-red/toast-stats/commit/f5e09e7b88ab5be3307e063c6f62d5bb518305ab))
+* **a11y:** name each region and world subpage in its h1 ([#2756](https://github.com/taverns-red/toast-stats/issues/2756)) ([#3245](https://github.com/taverns-red/toast-stats/issues/3245)) ([f7adf8f](https://github.com/taverns-red/toast-stats/commit/f7adf8f346bf69582152466982e5b3e90e3ffabe))
+* **a11y:** phone table rows with an info button are tall enough for its tap area ([#3242](https://github.com/taverns-red/toast-stats/issues/3242)) ([#3247](https://github.com/taverns-red/toast-stats/issues/3247)) ([12db32e](https://github.com/taverns-red/toast-stats/commit/12db32eaaf0fd1e6b4ea0b1188ccdec9abdaaaa4))
+* **a11y:** pin the education bar and anniversary tint per theme ([#2779](https://github.com/taverns-red/toast-stats/issues/2779)) ([#3225](https://github.com/taverns-red/toast-stats/issues/3225)) ([0b8f73c](https://github.com/taverns-red/toast-stats/commit/0b8f73c69f7450af0da31a8903f9cf59dccf87b0))
+* **a11y:** say Select, not Click, in the star and sort-header labels ([#3229](https://github.com/taverns-red/toast-stats/issues/3229)) ([#3235](https://github.com/taverns-red/toast-stats/issues/3235)) ([b2c4cab](https://github.com/taverns-red/toast-stats/commit/b2c4cabf295e7e85c7da87630fa449b2594d0d1e))
+* **a11y:** the landing search closes its results when focus leaves it ([#2745](https://github.com/taverns-red/toast-stats/issues/2745)) ([#3250](https://github.com/taverns-red/toast-stats/issues/3250)) ([3282148](https://github.com/taverns-red/toast-stats/commit/3282148468164d3e56ae0795a89a90b2459a087a))
+* an easy way back to Red Taverns from every page ([#3199](https://github.com/taverns-red/toast-stats/issues/3199)) ([#3239](https://github.com/taverns-red/toast-stats/issues/3239)) ([97729e7](https://github.com/taverns-red/toast-stats/commit/97729e717b0b152597894af931f44ad54286b317))
+* **charts:** no 0 rank on the landing rank chart; tooltip matches the legend ([#2746](https://github.com/taverns-red/toast-stats/issues/2746)) ([#3251](https://github.com/taverns-red/toast-stats/issues/3251)) ([a8cce72](https://github.com/taverns-red/toast-stats/commit/a8cce72542425c47d6d0bfde9d79c3e0f9d26b18))
+* **club:** never label a past year's start as its year-end ([#2822](https://github.com/taverns-red/toast-stats/issues/2822)) ([#3254](https://github.com/taverns-red/toast-stats/issues/3254)) ([5b2ef73](https://github.com/taverns-red/toast-stats/commit/5b2ef73d17e4e67f36e4d5493cef013c919ed965))
+* **clubs:** join the last year in club history gap notes with "and" ([#3213](https://github.com/taverns-red/toast-stats/issues/3213)) ([#3223](https://github.com/taverns-red/toast-stats/issues/3223)) ([64b21d7](https://github.com/taverns-red/toast-stats/commit/64b21d7e9ddb76a2d5797fd7240855e2d70afe4c))
+* **clubs:** name the since-last-year filter when it hides every club ([#3020](https://github.com/taverns-red/toast-stats/issues/3020)) ([#3227](https://github.com/taverns-red/toast-stats/issues/3227)) ([2bcb544](https://github.com/taverns-red/toast-stats/commit/2bcb544358662a5195146d5d16dc863ee991ff4a))
+* **copy:** keep the What Changed name on region pages; sentence-case growth empty states ([#3244](https://github.com/taverns-red/toast-stats/issues/3244)) ([#3246](https://github.com/taverns-red/toast-stats/issues/3246)) ([56c41f2](https://github.com/taverns-red/toast-stats/commit/56c41f2f807fc004d0a59eb71013321a9dcd9765))
+* **dates:** stop the date resolver looping on a fresh dates array ([#2678](https://github.com/taverns-red/toast-stats/issues/2678)) ([#3231](https://github.com/taverns-red/toast-stats/issues/3231)) ([f1d1aff](https://github.com/taverns-red/toast-stats/commit/f1d1affb25fba14da530dd5e0e55118d28f659fa))
+* draw map pin labels in Source Sans 3, not Inter ([#2770](https://github.com/taverns-red/toast-stats/issues/2770)) ([#3240](https://github.com/taverns-red/toast-stats/issues/3240)) ([30acaf5](https://github.com/taverns-red/toast-stats/commit/30acaf5b12f9628b4014552d85ca1656aa3a30c7))
+* **fac:** keep the arrival time when the next time is an end time ([#3226](https://github.com/taverns-red/toast-stats/issues/3226)) ([#3233](https://github.com/taverns-red/toast-stats/issues/3233)) ([df4d9cc](https://github.com/taverns-red/toast-stats/commit/df4d9cc7fb9cf20e4ea1821d56ccb91bfd611521))
+* **fac:** read networking and accueil as arrival times ([#2627](https://github.com/taverns-red/toast-stats/issues/2627)) ([#3228](https://github.com/taverns-red/toast-stats/issues/3228)) ([6a7d035](https://github.com/taverns-red/toast-stats/commit/6a7d03539073203483fca9f555deef233c480ef2))
+* **freshness:** keep the as-of date on global pages after promotion ([#3221](https://github.com/taverns-red/toast-stats/issues/3221)) ([#3253](https://github.com/taverns-red/toast-stats/issues/3253)) ([a550cca](https://github.com/taverns-red/toast-stats/commit/a550cca569f60b67a05d537df6a4fc15848edb3f))
+* **freshness:** show the rankings as-of date only when it matches latest.json ([#3220](https://github.com/taverns-red/toast-stats/issues/3220)) ([#3222](https://github.com/taverns-red/toast-stats/issues/3222)) ([bba6341](https://github.com/taverns-red/toast-stats/commit/bba6341b2435a7299d5a636d9a177ab2074cee5f))
+* **lighthouse:** gate code bytes and data bytes apart on the mobile gate ([#2752](https://github.com/taverns-red/toast-stats/issues/2752)) ([#3217](https://github.com/taverns-red/toast-stats/issues/3217)) ([dca2960](https://github.com/taverns-red/toast-stats/commit/dca29608ac83831211557d6552fb9166bcee9280))
+* **regions:** say Select, not Click, in the region ledes ([#2653](https://github.com/taverns-red/toast-stats/issues/2653)) ([#3230](https://github.com/taverns-red/toast-stats/issues/3230)) ([4993cea](https://github.com/taverns-red/toast-stats/commit/4993ceaac25a9c2a8a3f93b8f5264907d81a327d))
+* **restore:** read every array in a gcloud listing ([#3258](https://github.com/taverns-red/toast-stats/issues/3258)) ([#3260](https://github.com/taverns-red/toast-stats/issues/3260)) ([e3d63ad](https://github.com/taverns-red/toast-stats/commit/e3d63adfb69fa2351dc2fc364c977903d1200aec))
+* say 'payment base', not 'program-year base', on the Net caption ([#2717](https://github.com/taverns-red/toast-stats/issues/2717)) ([#3241](https://github.com/taverns-red/toast-stats/issues/3241)) ([ad61311](https://github.com/taverns-red/toast-stats/commit/ad613115aba6e79d4bcc2d6e8c26d6e1f01d65a2))
+* **search:** name the How it works page in site search ([#2720](https://github.com/taverns-red/toast-stats/issues/2720)) ([#3252](https://github.com/taverns-red/toast-stats/issues/3252)) ([a83f7d1](https://github.com/taverns-red/toast-stats/commit/a83f7d14fad7e29bfaaf419aff4b12dae1f3f6bb))
+* show hover and press on dark-mode buttons ([#3224](https://github.com/taverns-red/toast-stats/issues/3224)) ([#3237](https://github.com/taverns-red/toast-stats/issues/3237)) ([3522959](https://github.com/taverns-red/toast-stats/commit/35229596eef82a24dfd5084a2c773075908bb4f9))
+* **ux:** fit the regions leaderboard at 768 with training ([#2716](https://github.com/taverns-red/toast-stats/issues/2716)) ([#3263](https://github.com/taverns-red/toast-stats/issues/3263)) ([5244518](https://github.com/taverns-red/toast-stats/commit/52445185e438df953dd1b92be456b6d1daf13ea1))
+* **ux:** put +N qualifying today on its own line in the regions leaderboard ([#3264](https://github.com/taverns-red/toast-stats/issues/3264)) ([#3265](https://github.com/taverns-red/toast-stats/issues/3265)) ([ab6b6f3](https://github.com/taverns-red/toast-stats/commit/ab6b6f3a215eb9c8001e510186594ba165cd7c1f))
+* **ux:** stuck KPI line fits and sticks on a 320px phone ([#2717](https://github.com/taverns-red/toast-stats/issues/2717)) ([#3261](https://github.com/taverns-red/toast-stats/issues/3261)) ([6aeabd2](https://github.com/taverns-red/toast-stats/commit/6aeabd2ce7795b15e652c412a0be85154cf9c91a))
+* white text on dark secondary button hover ([#3236](https://github.com/taverns-red/toast-stats/issues/3236)) ([#3238](https://github.com/taverns-red/toast-stats/issues/3238)) ([8aca19a](https://github.com/taverns-red/toast-stats/commit/8aca19ab72503274bd61244742893ffec8fcf06b))
+
+
+### Tests
+
+* **ci:** ratchet every workspace's lint cap at its current value ([#3248](https://github.com/taverns-red/toast-stats/issues/3248)) ([#3249](https://github.com/taverns-red/toast-stats/issues/3249)) ([7cee89d](https://github.com/taverns-red/toast-stats/commit/7cee89deff041e12a360cfd645c7203f254507fe))
+
+
+### Continuous Integration
+
+* **restore:** dispatch-only staging drill of the restore plan ([#3019](https://github.com/taverns-red/toast-stats/issues/3019)) ([#3256](https://github.com/taverns-red/toast-stats/issues/3256)) ([aaf723d](https://github.com/taverns-red/toast-stats/commit/aaf723dbbf149fe09191aa169d77eed1031321c6))
+
 ## [2.102.6](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.102.5...toast-stats-v2.102.6) (2026-11-25)
 
 
