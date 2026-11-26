@@ -2,10 +2,11 @@
  * CDN manifest builders: v1/latest.json, v1/dates.json, v1/rankings.json
  * (#1743, plan P3-3).
  *
- * Ported verbatim from the inline `node -e` blocks in data-pipeline.yml's
- * "Generate CDN manifests" step. Output must stay byte-identical: the
- * frontend, the MCP server and the promotion diff all read these files, and
- * __tests__/goldenParity.test.ts pins the bytes against the original code.
+ * Ported from the inline `node -e` blocks in data-pipeline.yml's "Generate CDN
+ * manifests" step. The frontend, the MCP server and the promotion diff all
+ * read these files, so the output stays byte-identical to that code, except
+ * the additive `snapshotDate` on rankings (#3220).
+ * __tests__/goldenParity.test.ts pins the bytes.
  * `generatedAt` is a parameter so the bytes are testable.
  */
 
@@ -65,6 +66,7 @@ export function rankingsManifestJson(
     _format: { version: '1.0.0', type: 'rankings' },
     rankings: src.rankings,
     date: src.metadata.sourceCsvDate || latestDate,
+    snapshotDate: latestDate,
     generatedAt,
   }
   return { json: JSON.stringify(data, null, 2), count: src.rankings.length }

@@ -42,6 +42,27 @@ export interface LatestAsOfDate {
   latestSnapshotDate: SnapshotDate | undefined
 }
 
+/**
+ * The rankings as-of date, only when rankings.json was built for the snapshot
+ * latest.json names. The two files publish and cache separately, so a browser
+ * can hold one from each run (#3220). A file without `sourceSnapshotDate`
+ * predates the field and keeps the old behaviour. Enforced by
+ * useLatestAsOfDate.publications.test.ts and .mixedPublications.test.tsx.
+ */
+export function rankingsAsOfDate(
+  rankings: { asOfDate: string; sourceSnapshotDate?: string } | undefined,
+  latestSnapshotDate: string | undefined
+): string | undefined {
+  if (!rankings) return undefined
+  if (
+    rankings.sourceSnapshotDate !== undefined &&
+    rankings.sourceSnapshotDate !== latestSnapshotDate
+  ) {
+    return undefined
+  }
+  return rankings.asOfDate
+}
+
 export function useLatestAsOfDate(
   options: { enabled?: boolean } = {}
 ): LatestAsOfDate {
@@ -54,10 +75,11 @@ export function useLatestAsOfDate(
     enabled,
   })
   const { data: manifest } = useQuery({ ...manifestQueryOptions(), enabled })
+  const latestSnapshotDate = snapshotDateFromManifest(manifest)
 
   return {
-    asOfDate: rankings?.asOfDate,
-    latestSnapshotDate: snapshotDateFromManifest(manifest),
+    asOfDate: rankingsAsOfDate(rankings, latestSnapshotDate),
+    latestSnapshotDate,
   }
 }
 
@@ -67,6 +89,22 @@ export interface GlobalFreshness {
   asOfDate: string | undefined
   /** True when the viewed snapshot is the district's latest AND the global one. */
   isLatest: boolean
+}
+
+export function resolveGlobalFreshness(params: {
+  asOfDate: string | undefined
+  latestSnapshotDate: string | undefined
+  districtLatestSnapshotDate: string | undefined
+  isLatestSnapshot: boolean
+}): GlobalFreshness {
+  // The `!!districtLatestSnapshotDate` term matters for callers whose
+  // `isLatestSnapshot` doesn't already imply it (a bare `undefined ===
+  // undefined` would otherwise read as "latest").
+  const isLatest =
+    params.isLatestSnapshot &&
+    !!params.districtLatestSnapshotDate &&
+    params.districtLatestSnapshotDate === params.latestSnapshotDate
+  return { asOfDate: isLatest ? params.asOfDate : undefined, isLatest }
 }
 
 /**
@@ -96,12 +134,10 @@ export function useGlobalFreshness(params: {
     useLatestAsOfDate(
       params.enabled === undefined ? {} : { enabled: params.enabled }
     )
-  // The `!!districtLatestSnapshotDate` term matters for callers whose
-  // `isLatestSnapshot` doesn't already imply it (a bare `undefined ===
-  // undefined` would otherwise read as "latest").
-  const isLatest =
-    params.isLatestSnapshot &&
-    !!params.districtLatestSnapshotDate &&
-    params.districtLatestSnapshotDate === globalLatestSnapshot
-  return { asOfDate: isLatest ? asOfDate : undefined, isLatest }
+  return resolveGlobalFreshness({
+    asOfDate,
+    latestSnapshotDate: globalLatestSnapshot,
+    districtLatestSnapshotDate: params.districtLatestSnapshotDate,
+    isLatestSnapshot: params.isLatestSnapshot,
+  })
 }

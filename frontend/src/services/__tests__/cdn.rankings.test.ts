@@ -69,5 +69,22 @@ describe('fetchCdnRankings — latest path (#1320)', () => {
     expect(data.snapshotDate).toBeUndefined()
     // @ts-expect-error — no bare `date` on the returned shape
     expect(data.date).toBeUndefined()
+    expect(data.sourceSnapshotDate).toBeUndefined()
+  })
+
+  it('maps the raw `snapshotDate` to `sourceSnapshotDate` (#3220)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      okResponse({
+        rankings: [],
+        date: '2026-07-05',
+        snapshotDate: '2026-06-30',
+        generatedAt: 'x',
+      })
+    )
+
+    const data = await fetchCdnRankings()
+
+    expect(data.sourceSnapshotDate).toBe('2026-06-30')
+    expect(data.snapshotDate).toBeUndefined()
   })
 })

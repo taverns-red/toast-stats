@@ -1,5 +1,5 @@
 /**
- * Byte parity with the retired inline generators (#1743, plan P3-3).
+ * Golden parity with the retired inline generators (#1743, plan P3-3).
  *
  * Until #1743, data-pipeline.yml built v1/latest.json, v1/dates.json,
  * v1/rankings.json, v1/rank-history/*.json and
@@ -10,9 +10,12 @@
  * fixtures/expected/ was produced by running those ORIGINAL blocks, cut from
  * the workflow at the pre-change commit, against fixtures/input/
  * (fixtures/generate-expected.mjs, Date frozen at FROZEN_NOW). Nothing in
- * expected/ is hand-written. The inputs are trimmed captures of live prod
- * objects (2026-10-08..10): rankings files, a `gcloud storage ls` listing
- * and the live snapshot index. Edge files (a corrupt one, one without
+ * expected/ is hand-written except one line in each rankings expectation:
+ * `snapshotDate`, which the frontend compares with v1/latest.json so a
+ * cached mix of two publications shows no "as of" date (#3220). The inputs
+ * are trimmed captures of live prod objects (2026-10-08..10): rankings
+ * files, a `gcloud storage ls` listing and the live snapshot index. Edge
+ * files (a corrupt one, one without
  * rankings, one without metadata, a duplicate row, a placeholder
  * "District 61" name) are jq edits of those captures.
  *
@@ -68,7 +71,7 @@ const withoutTieFlags = (json: string): string => {
 /** The old block's console.log line, which the CLIs now send to stderr (R4). */
 const oldLog = (dir: string): string => expected(`${dir}/stdout.txt`).trim()
 
-describe('pure builders reproduce the inline output byte for byte', () => {
+describe('pure builders reproduce the pinned output byte for byte', () => {
   it('v1/latest.json', () => {
     expect(latestManifestJson('2026-10-10', FROZEN_NOW)).toBe(
       expected('latest/latest.json')
@@ -87,6 +90,7 @@ describe('pure builders reproduce the inline output byte for byte', () => {
       '2026-10-10',
       FROZEN_NOW
     )
+    expect(JSON.parse(json)).toHaveProperty('snapshotDate', '2026-10-10')
     expect(json).toBe(expected('rankings/rankings.json'))
     expect(count).toBe(4)
   })
@@ -97,6 +101,7 @@ describe('pure builders reproduce the inline output byte for byte', () => {
       '2026-10-10',
       FROZEN_NOW
     )
+    expect(JSON.parse(json)).toHaveProperty('snapshotDate', '2026-10-10')
     expect(json).toBe(expected('rankings-no-source-date/rankings.json'))
   })
 

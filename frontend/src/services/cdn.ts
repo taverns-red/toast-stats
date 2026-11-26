@@ -243,6 +243,8 @@ export interface CdnRankingsData {
    * page-owned snapshot date (`effectiveDate`) per R3.
    */
   asOfDate: string
+  /** Snapshot used to build the latest rankings publication, when known. */
+  sourceSnapshotDate?: string
   /**
    * The pinned snapshot date this data lives under. Set to its `date` argument
    * by `fetchCdnRankingsForDate`; `undefined` on the `fetchCdnRankings()` latest
@@ -264,6 +266,7 @@ export async function fetchCdnRankings(): Promise<CdnRankingsData> {
     _format?: CdnRankingsData['_format']
     rankings: CdnRankingsData['rankings']
     date: string
+    snapshotDate?: string
     generatedAt: string
   }
   // The latest file carries its as-of date as a bare `date`; expose it under the
@@ -272,6 +275,9 @@ export async function fetchCdnRankings(): Promise<CdnRankingsData> {
     rankings: raw.rankings,
     asOfDate: raw.date,
     generatedAt: raw.generatedAt,
+  }
+  if (raw.snapshotDate !== undefined) {
+    data.sourceSnapshotDate = raw.snapshotDate
   }
   if (raw._format) data._format = raw._format
   return data
