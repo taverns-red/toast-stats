@@ -551,10 +551,11 @@ const NUMBER_LABEL_BEFORE =
 const HHMM_MERIDIEM = /(?<![\d:.])(0?[1-9]|1[0-2])([0-5]\d)(?=\s*[ap]m\b)/g
 const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
 /** A label before the first time that says it is an arrival, not the
- *  start: "Doors open 6:45 pm, meeting 7:00 pm", "Zoom opens at 6:45"
+ *  start: "Doors open 6:45 pm, meeting 7:00 pm", "Zoom opens at 6:45",
+ *  "Networking 6:30 pm" or "Accueil 18 h 30".
  *  (#2617). Treated like "6:45 for 7:00". */
 const ARRIVE_LABEL =
-  /(?:doors?\s+open\w*|\bopens?|\barriv\w*|log[\s-]?in|check[\s-]?in)\s*(?:at|:|@)?\s*$/
+  /(?:doors?\s+open\w*|\bopens?|\barriv\w*|\bnetworking\b|\baccueil\b|log[\s-]?in|check[\s-]?in)\s*(?:at|:|@)?\s*$/
 /** "UTC-5", "GMT + 6", "-4DT": the number after is an offset, not a time.
  *  A dash after a word and a space ("Saturday- 7-9 pm") is not a sign. */
 const OFFSET_BEFORE = /(?:utc|gmt)\s*(?:[+\-−]\s*)?$|[+\-−]$/
