@@ -144,6 +144,13 @@ describe('RegionsLeaderboard columns per width tier (#2716)', () => {
     ])
   })
 
+  // The one-column round is 88px at this tier, so its header wraps; the
+  // date must not split across lines ("opens Nov" over "1").
+  it('tablet: the round-not-open header keeps its date on one line', () => {
+    renderAt(800)
+    expect(pageHeaders()).toContain('Round 2 training, opens Nov 1')
+  })
+
   it('tablet without training: every column, Trend included', () => {
     renderAt(800, false)
     expect(pageHeaders()).toEqual([
