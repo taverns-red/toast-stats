@@ -30,7 +30,7 @@ function clickHits(path: string): string[] {
 }
 
 describe('reader-facing copy says Select, not Click', () => {
-  it('has no "Click a/an/any/the/on" outside comments', () => {
+  it('has no "Click a/an/any/the/on/to/here" outside comments', () => {
     const hits = ['src/pages', 'src/components']
       .flatMap(dir => sourceFiles(join(frontend, dir)))
       .flatMap(clickHits)
