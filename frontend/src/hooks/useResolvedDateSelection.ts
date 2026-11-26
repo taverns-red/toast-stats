@@ -9,14 +9,14 @@
  * the PY's latest) and raises the "No snapshot for …" notice.
  */
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import {
   resolveRequestedDate,
   type DateResolution,
 } from '../utils/resolveRequestedDate'
 import { getMostRecentDateInProgramYear } from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
-import type { SnapshotDate } from '../types/snapshotDate'
+import { snapshotDatesFrom, type SnapshotDate } from '../types/snapshotDate'
 import { setDateNotice } from './dateNoticeStore'
 import type { UrlWriteOptions } from './useUrlProgramYear'
 
@@ -41,19 +41,37 @@ export function useResolvedDateSelection({
     options?: UrlWriteOptions
   ) => void
 }): DateResolution | null {
+  const datesKey = dates.join(',')
+  const stableDates = useMemo(
+    () =>
+      snapshotDatesFrom({
+        dates: datesKey ? datesKey.split(',') : [],
+      }),
+    [datesKey]
+  )
   const resolution = useMemo(
     () =>
       programYear
-        ? resolveRequestedDate({ requested, dates, programYear })
+        ? resolveRequestedDate({
+            requested,
+            dates: stableDates,
+            programYear,
+          })
         : null,
-    [requested, dates, programYear]
+    [requested, stableDates, programYear]
   )
 
   const status = resolution?.status
   const resolvedDate = resolution?.date ?? null
-  const resolvedYear = resolution?.programYear
+  const resolvedYearStartDate = resolution?.programYear.startDate
+  const resolutionRef = useRef(resolution)
 
   useEffect(() => {
+    resolutionRef.current = resolution
+  }, [resolution])
+
+  useEffect(() => {
+    const resolvedYear = resolutionRef.current?.programYear
     if (!resolvedYear || !resolvedDate) return
     if (status !== 'fallback' && status !== 'switched-py') return
 
@@ -62,7 +80,7 @@ export function useResolvedDateSelection({
     }
     if (!writeUrl) return
 
-    const latest = getMostRecentDateInProgramYear([...dates], resolvedYear)
+    const latest = getMostRecentDateInProgramYear(stableDates, resolvedYear)
     const keep =
       status === 'switched-py' || resolvedDate !== latest
         ? resolvedDate
@@ -71,9 +89,9 @@ export function useResolvedDateSelection({
   }, [
     status,
     resolvedDate,
-    resolvedYear,
+    resolvedYearStartDate,
     requested,
-    dates,
+    stableDates,
     writeUrl,
     setProgramYearAndDate,
   ])
