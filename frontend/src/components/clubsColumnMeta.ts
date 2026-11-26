@@ -65,11 +65,11 @@ export interface ClubColumnMeta {
 export const CLASSIC_SCROLLBAR_PX = 17
 
 /** Usable table width per tier: `min(viewport, 1600) - 86px` (spec §4.1),
- *  with 17px off the 1280 tier for a classic Windows scrollbar. */
+ *  with a classic scrollbar off the 1280 tier only. */
 export const TIER_BUDGET_PX: Readonly<Record<BreakpointTier, number>> = {
   tablet: 682,
   laptop: 938,
-  desktop: 1177,
+  desktop: 1280 - 86 - CLASSIC_SCROLLBAR_PX,
   wide: 1514,
 }
 

@@ -86,7 +86,7 @@ export const leaderboardShowsTrend = (
 
 /**
  * At the tablet tier the training columns leave no room for everything
- * (928px against 682), so Districts and each round's All 7 column yield.
+ * (920px against 665 with a classic scrollbar), so Districts and each round's All 7 column yield.
  * Paid clubs, Payments and Distinguished stay: Score ranks all three. 4+ is
  * DCP goal 9, and each figure links to the Training page, which has All 7.
  * Checked per tier and shape by regionsLeaderboardLayout.test.ts.
