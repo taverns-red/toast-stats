@@ -131,6 +131,31 @@ describe('DistrictKpiStickyLine (#2708)', () => {
     expect(pay).toHaveClass('district-kpi-stuck__item--optional')
   })
 
+  it('marks the +N extra as droppable below 360, apart from the count (#2717)', () => {
+    render(<DistrictKpiStickyLine kpis={kpis} />)
+    const extra = line().querySelector('.district-kpi-stuck__extra')
+    expect(extra?.textContent).toContain('+12 qualifying today')
+    expect(line().querySelector('.district-kpi-stuck__basis')).toBeNull()
+  })
+
+  it('marks a qualifying-today count as its basis, never as a droppable extra (#2717)', () => {
+    render(
+      <DistrictKpiStickyLine
+        kpis={{
+          ...kpis,
+          distinguishedClubs: {
+            ...kpis.distinguishedClubs,
+            basis: 'qualifying-today',
+          },
+        }}
+      />
+    )
+    expect(line().querySelector('.district-kpi-stuck__basis')).not.toBeNull()
+    expect(line().querySelector('.district-kpi-stuck__extra')).toBeNull()
+    const paid = line().querySelectorAll('.district-kpi-stuck__item')[0]
+    expect(paid).toHaveClass('district-kpi-stuck__item--paid')
+  })
+
   it('is hidden from assistive tech: the same figures sit in the strip above', () => {
     render(<DistrictKpiStickyLine kpis={kpis} />)
     expect(line()).toHaveAttribute('aria-hidden', 'true')
@@ -168,8 +193,15 @@ describe('DistrictKpiStickyLine (#2708)', () => {
     expect(wrapper()).toHaveAttribute('data-stuck', 'false')
   })
 
-  it('observes against the top-bar pin line', () => {
+  /* A jump from below the viewport to above the pin line (a short phone, a
+     fling, a restored scroll) never crosses the viewport's lower edge, so a
+     viewport-sized root reports no change and the line stays hidden (#2717,
+     measured at 320x568). The root runs far below the viewport instead: the
+     sentinel leaves it only by passing the pin line. */
+  it('observes from the top-bar pin line to far below the viewport', () => {
     render(<DistrictKpiStickyLine kpis={kpis} />)
-    expect(ioOptions?.rootMargin).toBe('-56px 0px 0px 0px')
+    const m = ioOptions?.rootMargin?.match(/^-56px 0px (\d+)px 0px$/)
+    expect(m, ioOptions?.rootMargin).not.toBeNull()
+    expect(Number(m?.[1])).toBeGreaterThanOrEqual(100_000)
   })
 })
