@@ -5,7 +5,10 @@
  */
 import { describe, it, expect } from 'vitest'
 import {
+  CELL_PADDING_PX,
+  QUALIFYING_TODAY_LINE_PX,
   TIER_BUDGET_PX,
+  leaderboardSizes,
   leaderboardColumnIds,
   leaderboardShowsTrend,
   leaderboardWidth,
@@ -90,6 +93,17 @@ describe('regions leaderboard layout', () => {
       expect.arrayContaining(['paidClubs', 'payments', 'distinguished'])
     )
   })
+
+  // A wider column would overrun the tablet and laptop budgets above, so a
+  // three-digit count wraps instead (#3264).
+  it.each(TIERS)(
+    'holds a two-digit "+N qualifying today" on one line at %s',
+    tier => {
+      expect(
+        (leaderboardSizes(tier)['distinguished'] ?? 0) - CELL_PADDING_PX
+      ).toBeGreaterThanOrEqual(QUALIFYING_TODAY_LINE_PX)
+    }
+  )
 
   it('keeps Trend where it fits', () => {
     expect(leaderboardShowsTrend('desktop', true, true)).toBe(true)

@@ -28,6 +28,14 @@ export const LEADERBOARD_SIZES: Readonly<Record<string, number>> = {
   r2: 112,
 }
 
+/** The 8px a side of cell padding that each size includes. */
+export const CELL_PADDING_PX = 16
+
+/** "+99 qualifying today" at the table's 12px, measured in Chromium with
+ *  Source Sans 3 (103.1px). The Distinguished column holds it on one line;
+ *  a wider count wraps "today" (regionsLeaderboardLayout.test.ts). */
+export const QUALIFYING_TODAY_LINE_PX = 104
+
 /** Sizes at a tier. At the tablet tier a round's one column ("Round 2
  *  training, opens Nov 1") is as narrow as a 4+ column; its header wraps. */
 export const leaderboardSizes = (
