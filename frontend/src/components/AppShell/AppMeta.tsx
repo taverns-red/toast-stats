@@ -43,8 +43,6 @@ const AppMeta: React.FC = () => {
             A{' '}
             <a
               href="https://taverns.red?utm_source=toast-stats&utm_medium=footer"
-              target="_blank"
-              rel="noopener noreferrer"
               className="app-shell-footer__link"
             >
               Red Taverns
