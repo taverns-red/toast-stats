@@ -1025,6 +1025,14 @@
   background-color: rgba(26, 107, 138, 0.65) !important;
 }
 
+[data-theme='dark'] .hover\:bg-tm-loyal-blue:hover:not(:disabled) {
+  background-color: rgba(26, 107, 138, 1) !important;
+}
+
+[data-theme='dark'] .hover\:text-white:hover:not(:disabled) {
+  color: var(--tm-white-100) !important;
+}
+
 [data-theme='dark'] .bg-tm-happy-yellow.text-tm-black {
   color: var(--tm-black-100) !important;
 }
