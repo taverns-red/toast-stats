@@ -9,8 +9,7 @@ import { test, expect } from './fixtures/test'
  * - the world reference renders (figures, "not started" or "not available",
  *   never an empty box);
  * - each region's training figure links to /region/:n/training;
- * - no horizontal page scroll (the ≥768 table scrolls inside its own
- *   labelled region, #689).
+ * - no horizontal page scroll.
  * Phones show two chosen columns (#1834); the URL picks the one training
  * column (the current round, 4+ over all seven). On phones the world line sits
  * below the table (375 first-content budget). */
@@ -89,12 +88,12 @@ for (const theme of THEMES) {
   }
 }
 
-/* The leaderboard fits its container at desktop widths (#2330 review, #2702):
- * it has no Columns menu, so its defaults must fit. At 1024 and 1280 the whole
- * table, every header cell, is visible without scrolling it sideways, and no
- * "more to the right" cue sits over the last column. */
+/* The leaderboard fits its container from 768 up (#2330 review, #2702, #2716):
+ * it has no Columns menu, so its defaults must fit. At 768, 1024 and 1280 the
+ * whole table, every header cell, is visible without scrolling it sideways,
+ * and no "more to the right" cue sits over the last column. */
 for (const theme of THEMES) {
-  for (const width of [1024, 1280]) {
+  for (const width of [768, 1024, 1280]) {
     test(`regions leaderboard fits without side-scroll at ${width}px (${theme})`, async ({
       page,
     }) => {
