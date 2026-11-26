@@ -55,11 +55,17 @@ export function findLiteralNodeVersions(yamlSource: string): WorkflowMatch[] {
 
 /**
  * Extract the integer `--max-warnings` cap from a lint script, or `null` if
- * the flag is absent (an uncapped lint — the AC5 gap).
+ * the flag is absent (an uncapped lint — the AC5 gap). When the flag is
+ * repeated, ESLint obeys the last one, so that is the cap. A negative last
+ * value (--max-warnings=-1) means no limit to ESLint, so it reads as null,
+ * uncapped. Both are sentinel tests in ciConfigGuard.test.ts.
  */
 export function parseLintMaxWarnings(lintScript: string): number | null {
-  const m = lintScript.match(/--max-warnings[=\s]+(\d+)/)
-  return m ? Number(m[1]) : null
+  const all = [...lintScript.matchAll(/--max-warnings[=\s]+(-?\d+)/g)]
+  const last = all.at(-1)
+  if (!last) return null
+  const cap = Number(last[1])
+  return cap < 0 ? null : cap
 }
 
 /**

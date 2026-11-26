@@ -149,14 +149,43 @@ describe('lint caps (AC5)', () => {
     expect(parseLintMaxWarnings('eslint . --ext .ts')).toBeNull()
   })
 
+  it('reads the last of repeated caps, the one ESLint obeys (sentinel)', () => {
+    expect(
+      parseLintMaxWarnings('eslint . --max-warnings 0 --max-warnings 999')
+    ).toBe(999)
+  })
+
+  it('reads a last negative cap, which ESLint treats as no limit, as uncapped (sentinel)', () => {
+    // ESLint accepts --max-warnings=-1 and then allows any number of
+    // warnings; the space form "--max-warnings -1" is rejected as an option.
+    expect(
+      parseLintMaxWarnings('eslint . --max-warnings 0 --max-warnings=-1')
+    ).toBeNull()
+  })
+
   it.each(WORKSPACE_PKGS)('%s lint carries a --max-warnings cap', rel => {
     const lint: string = readJson(rel).scripts?.lint ?? ''
     expect(parseLintMaxWarnings(lint)).not.toBeNull()
   })
 
-  it('frontend cap is ratcheted to <= 60', () => {
-    const lint: string = readJson('frontend/package.json').scripts.lint
-    expect(parseLintMaxWarnings(lint)).toBeLessThanOrEqual(60)
+  // Each cap may only go down. When you clear warnings, lower the package.json
+  // cap and this number together. A new workspace needs an entry here.
+  const LINT_CAPS: Record<string, number> = {
+    'frontend/package.json': 52,
+    'packages/collector-cli/package.json': 5,
+    'packages/analytics-core/package.json': 0,
+    'packages/shared-contracts/package.json': 0,
+    'packages/mcp-server/package.json': 0,
+    'videos/package.json': 0,
+  }
+
+  it('lists a ratchet cap for every workspace', () => {
+    expect(Object.keys(LINT_CAPS).sort()).toEqual([...WORKSPACE_PKGS].sort())
+  })
+
+  it.each(WORKSPACE_PKGS)('%s cap is at or below its ratchet', rel => {
+    const lint: string = readJson(rel).scripts?.lint ?? ''
+    expect(parseLintMaxWarnings(lint)).toBeLessThanOrEqual(LINT_CAPS[rel]!)
   })
 })
 
