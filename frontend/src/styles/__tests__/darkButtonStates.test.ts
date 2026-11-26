@@ -6,98 +6,117 @@ import {
   parseColor,
   prop,
   readSrcCss,
+  surfaces,
   tokens,
   type Rgba,
 } from './cssColor'
 
 const AA = 4.5
-const VISIBLE = 1.1
+// 1.2:1 between rest and hover is about the smallest step a reader notices
+// on these dark fills; below it the state change is easy to miss.
+const VISIBLE = 1.2
 const darkCss = readSrcCss('styles/dark-mode.css')
 const darkTokens = tokens('dark')
-const cardSurface = parseColor('var(--surface-card)', darkTokens)
+const darkSurfaces: Rgba[] = [
+  ...surfaces('dark'),
+  parseColor('var(--surface-3)', darkTokens),
+]
 
-const darkFill = (selector: string): Rgba => {
-  const declarations = declsFor(darkCss, `[data-theme='dark'] ${selector}`)
-  const colour = prop(declarations, 'background-color')
-  expect(colour, `dark fill rule for ${selector}`).toBeDefined()
-  expect(declarations, `important dark fill rule for ${selector}`).toMatch(
-    /background-color:[^;]+!important/
+const ruleColour = (selector: string, name: string): string => {
+  const decls = declsFor(darkCss, `[data-theme='dark'] ${selector}`)
+  const colour = prop(decls, name)
+  expect(colour, `dark ${name} rule for ${selector}`).toBeDefined()
+  expect(decls, `important dark ${name} rule for ${selector}`).toMatch(
+    new RegExp(`${name}:[^;]+!important`)
   )
-  return over(parseColor(colour!, darkTokens), cardSurface)
+  return colour!
 }
 
-const darkText = (selector: string): Rgba => {
-  const colour = prop(
-    declsFor(darkCss, `[data-theme='dark'] ${selector}`),
-    'color'
+const fill = (selector: string) => {
+  const colour = parseColor(
+    ruleColour(selector, 'background-color'),
+    darkTokens
   )
-  expect(colour, `dark text rule for ${selector}`).toBeDefined()
-  return parseColor(colour!, darkTokens)
+  return (surface: Rgba) => over(colour, surface)
 }
 
-type ButtonState = {
+type Variant = {
   name: string
-  rest: Rgba
+  rest: (surface: Rgba) => Rgba
   text: Rgba
   states: { name: string; selector: string }[]
 }
 
-const variants: ButtonState[] = [
-  {
+const variants: Record<string, () => Variant> = {
+  primary: () => ({
     name: 'primary',
-    rest: darkFill('.bg-tm-loyal-blue'),
+    rest: fill('.bg-tm-loyal-blue'),
     text: parseColor('#ffffff', darkTokens),
     states: [
       {
         name: 'hover',
-        selector: '.hover\\:bg-tm-loyal-blue\\/90:hover',
+        selector: '.hover\\:bg-tm-loyal-blue\\/90:hover:not(:disabled)',
       },
       {
         name: 'active',
-        selector: '.active\\:bg-tm-loyal-blue\\/80:active',
+        selector: '.active\\:bg-tm-loyal-blue\\/80:active:not(:disabled)',
       },
     ],
-  },
-  {
+  }),
+  accent: () => ({
     name: 'accent',
-    rest: darkFill('.bg-tm-happy-yellow'),
-    text: darkText('.text-tm-black'),
+    rest: fill('.bg-tm-happy-yellow'),
+    text: parseColor(
+      ruleColour('.bg-tm-happy-yellow.text-tm-black', 'color'),
+      darkTokens
+    ),
     states: [
       {
         name: 'hover',
-        selector: '.hover\\:bg-tm-happy-yellow\\/90:hover',
+        selector: '.hover\\:bg-tm-happy-yellow\\/90:hover:not(:disabled)',
       },
       {
         name: 'active',
-        selector: '.active\\:bg-tm-happy-yellow\\/80:active',
+        selector: '.active\\:bg-tm-happy-yellow\\/80:active:not(:disabled)',
       },
     ],
-  },
-  {
+  }),
+  ghost: () => ({
     name: 'ghost',
-    rest: cardSurface,
-    text: darkText('.text-tm-loyal-blue'),
+    rest: surface => surface,
+    text: parseColor(ruleColour('.text-tm-loyal-blue', 'color'), darkTokens),
     states: [
       {
         name: 'hover',
-        selector: '.hover\\:bg-tm-loyal-blue\\/10:hover',
+        selector: '.hover\\:bg-tm-loyal-blue\\/10:hover:not(:disabled)',
       },
     ],
-  },
-]
+  }),
+}
 
 describe('dark button state feedback', () => {
-  it.each(variants)('$name states are visible and readable', variant => {
-    for (const state of variant.states) {
-      const fill = darkFill(state.selector)
-      expect(
-        contrast(fill, variant.rest),
-        `${variant.name} ${state.name} differs from rest`
-      ).toBeGreaterThanOrEqual(VISIBLE)
-      expect(
-        contrast(variant.text, fill),
-        `${variant.name} ${state.name} text`
-      ).toBeGreaterThanOrEqual(AA)
+  it.each(['primary', 'accent', 'ghost'])(
+    '%s is readable at rest and shows hover and press',
+    name => {
+      const variant = variants[name]()
+      for (const surface of darkSurfaces) {
+        const rest = variant.rest(surface)
+        expect(
+          contrast(variant.text, rest),
+          `${variant.name} rest text`
+        ).toBeGreaterThanOrEqual(AA)
+        for (const state of variant.states) {
+          const stateFill = fill(state.selector)(surface)
+          expect(
+            contrast(stateFill, rest),
+            `${variant.name} ${state.name} differs from rest`
+          ).toBeGreaterThanOrEqual(VISIBLE)
+          expect(
+            contrast(variant.text, stateFill),
+            `${variant.name} ${state.name} text`
+          ).toBeGreaterThanOrEqual(AA)
+        }
+      }
     }
-  })
+  )
 })
