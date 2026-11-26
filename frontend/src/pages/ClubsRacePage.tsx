@@ -35,7 +35,9 @@ const ClubsRaceTierPage: React.FC<{ tier: ClubRaceTier }> = ({ tier }) => {
     isLatestSnapshot,
     isDatesPending,
   } = useProgramYearControls()
-  const { asOfDate: globalAsOfDate } = useLatestAsOfDate()
+  const { asOfDate: globalAsOfDate } = useLatestAsOfDate({
+    viewedSnapshotDate: effectiveDate,
+  })
   const { race, snapshotDate, isLoading, isError, error, refetch } =
     useGlobalClubRace(effectiveDate)
 

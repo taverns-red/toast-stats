@@ -44,19 +44,22 @@ export interface LatestAsOfDate {
 
 /**
  * The rankings as-of date, only when rankings.json was built for the snapshot
- * latest.json names. The two files publish and cache separately, so a browser
- * can hold one from each run (#3220). A file without `sourceSnapshotDate`
- * predates the field and keeps the old behaviour. Enforced by
- * useLatestAsOfDate.publications.test.ts and .mixedPublications.test.tsx.
+ * the page views: `viewedSnapshotDate` when given, else the one latest.json
+ * names. The files publish and cache separately, and latest.json can lag a
+ * promoted dates.json day, so a browser can hold one from each run. A file
+ * without `sourceSnapshotDate` predates the field and keeps the old behaviour.
+ * Enforced by useLatestAsOfDate.publications.test.ts and .mixedPublications.test.tsx.
  */
 export function rankingsAsOfDate(
   rankings: { asOfDate: string; sourceSnapshotDate?: string } | undefined,
-  latestSnapshotDate: string | undefined
+  latestSnapshotDate: string | undefined,
+  viewedSnapshotDate?: string
 ): string | undefined {
   if (!rankings) return undefined
+  const describedDate = viewedSnapshotDate ?? latestSnapshotDate
   if (
     rankings.sourceSnapshotDate !== undefined &&
-    rankings.sourceSnapshotDate !== latestSnapshotDate
+    rankings.sourceSnapshotDate !== describedDate
   ) {
     return undefined
   }
@@ -64,7 +67,11 @@ export function rankingsAsOfDate(
 }
 
 export function useLatestAsOfDate(
-  options: { enabled?: boolean } = {}
+  options: {
+    enabled?: boolean
+    /** The dates.json date the page shows; see `rankingsAsOfDate`. */
+    viewedSnapshotDate?: SnapshotDate | undefined
+  } = {}
 ): LatestAsOfDate {
   // #1852 — false holds both reads; the result reads as "not loaded yet".
   const enabled = options.enabled ?? true
@@ -78,7 +85,11 @@ export function useLatestAsOfDate(
   const latestSnapshotDate = snapshotDateFromManifest(manifest)
 
   return {
-    asOfDate: rankingsAsOfDate(rankings, latestSnapshotDate),
+    asOfDate: rankingsAsOfDate(
+      rankings,
+      latestSnapshotDate,
+      options.viewedSnapshotDate
+    ),
     latestSnapshotDate,
   }
 }

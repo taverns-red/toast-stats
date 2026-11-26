@@ -93,7 +93,9 @@ const AwardsPage: React.FC = () => {
   // shared global freshness signal so the pill matches every other page (#1310).
   // Gated on isLatestSnapshot: the global as-of date only describes the latest
   // snapshot, never a finalized historical date selected via the picker.
-  const { asOfDate: globalAsOfDate } = useLatestAsOfDate()
+  const { asOfDate: globalAsOfDate } = useLatestAsOfDate({
+    viewedSnapshotDate: effectiveDate,
+  })
 
   const retentionYearClosed = isPastProgramYearClose(
     effectiveDate,
