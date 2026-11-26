@@ -155,6 +155,14 @@ describe('lint caps (AC5)', () => {
     ).toBe(999)
   })
 
+  it('reads a last negative cap, which ESLint treats as no limit, as uncapped (sentinel)', () => {
+    // ESLint accepts --max-warnings=-1 and then allows any number of
+    // warnings; the space form "--max-warnings -1" is rejected as an option.
+    expect(
+      parseLintMaxWarnings('eslint . --max-warnings 0 --max-warnings=-1')
+    ).toBeNull()
+  })
+
   it.each(WORKSPACE_PKGS)('%s lint carries a --max-warnings cap', rel => {
     const lint: string = readJson(rel).scripts?.lint ?? ''
     expect(parseLintMaxWarnings(lint)).not.toBeNull()
