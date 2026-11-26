@@ -74,6 +74,19 @@ describe('ClubMembershipTrendChart', () => {
     )
   })
 
+  it('never labels a prior year start as its year-end when the close is missing', () => {
+    const { container } = renderChart({
+      priors: [
+        { label: '2025-2026', data: [{ date: '2025-07-01', count: 20 }] },
+        PRIORS[1]!,
+      ],
+    })
+    expect(container.textContent).not.toMatch(/2025–26 year-end/)
+    expect(container.querySelector('text.ref-text')).toHaveTextContent(
+      '2024–25 year-end 18'
+    )
+  })
+
   it('anchors the current line at day 0 on the predecessor 06-30 close (D15)', () => {
     const { container } = renderChart()
     const current = pointsOf(container.querySelector('polyline.line')!)
