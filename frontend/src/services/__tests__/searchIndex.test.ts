@@ -625,8 +625,18 @@ describe('site pages (#2249)', () => {
       ['Clubs worldwide', '/clubs'],
       ['Awards', '/awards'],
       ['History', '/history'],
-      ['Methodology', '/methodology'],
+      ['How it works', '/methodology'],
     ])
+  })
+
+  it('finds How it works by its name and by its old name, Methodology', () => {
+    for (const q of ['how it works', 'works', 'methodology']) {
+      const flat = flatten(searchEntities(q, index))
+      expect(
+        flat.map(e => e.route),
+        q
+      ).toContain('/methodology')
+    }
   })
 
   it('finds a page by a word of its name, in a trailing Pages group', () => {
