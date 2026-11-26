@@ -27,12 +27,17 @@ export type SearchEntityType =
 /* Site pages (#2249) — the worldwide views where districts, regions and
    clubs are found. Static, so they cost no fetch; ranked last (TYPE_RANK)
    so a page never displaces a place on a shared term. */
-const SITE_PAGES: ReadonlyArray<{ label: string; route: string }> = [
+const SITE_PAGES: ReadonlyArray<{
+  label: string
+  route: string
+  aliases?: string[]
+}> = [
   { label: 'Regions', route: '/regions' },
   { label: 'Clubs worldwide', route: '/clubs' },
   { label: 'Awards', route: '/awards' },
   { label: 'History', route: '/history' },
-  { label: 'Methodology', route: '/methodology' },
+  // The page's old name still finds it (searchIndex.test.ts).
+  { label: 'How it works', route: '/methodology', aliases: ['Methodology'] },
 ]
 
 export interface SearchEntity {
@@ -274,7 +279,11 @@ export function buildSearchIndex(
       id: page.route,
       label: page.label,
       route: page.route,
-      terms: dedupeTerms([page.label, ...page.label.split(' ')]),
+      terms: dedupeTerms([
+        page.label,
+        ...page.label.split(' '),
+        ...(page.aliases ?? []),
+      ]),
     })
   }
 
