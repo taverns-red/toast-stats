@@ -19,8 +19,10 @@ import { needsAttention, worldBreakdown } from '../utils/regionRollupView'
    When region membership is unavailable for the date, the world block still
    renders and the region table is replaced by the artifact's own note. */
 
+const HEADING = 'Worldwide health & compliance'
+
 const WorldHealthPage: React.FC = () => {
-  useDocumentTitle('Worldwide Health & Compliance')
+  useDocumentTitle(HEADING)
   const controls = useProgramYearControls()
   const { rollups, snapshotDate, isLoading } = useRegionRollups(
     controls.effectiveDate
@@ -33,6 +35,7 @@ const WorldHealthPage: React.FC = () => {
   return (
     <RollupPageShell
       title="Regions"
+      heading={HEADING}
       eyebrow="Worldwide · Health & compliance"
       lede="Club health, status, Distinguished levels and compliance for every club worldwide. Select a region to drill into its districts."
       trail={[

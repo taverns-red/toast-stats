@@ -43,11 +43,13 @@ const RegionEducationPage: React.FC = () => {
     [index, region]
   )
   const title = `Region ${region}`
-  useDocumentTitle(`${title} Education`)
+  const heading = `${title} education`
+  useDocumentTitle(heading)
 
   return (
     <RollupPageShell
       title={title}
+      heading={heading}
       eyebrow={`Toastmasters Region ${region} · Education`}
       lede={`Education awards across the districts of Region ${region} — Pathways levels, DTMs and legacy awards from Toastmasters' education ledger. Select a district for its own education page.`}
       back={{ label: title, to: `/region/${region}` }}

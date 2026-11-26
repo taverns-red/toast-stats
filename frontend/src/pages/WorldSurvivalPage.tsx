@@ -13,17 +13,20 @@ import type { CharterCohortSurvivalScope } from '../utils/charterCohortSurvival'
 
 const WORLD: CharterCohortSurvivalScope = { kind: 'world' }
 
+const HEADING = 'Worldwide club survival'
+
 const WorldSurvivalPage: React.FC = () => {
   const controls = useProgramYearControls()
   const state = useCharterCohortSurvivalRollup(
     WORLD,
     controls.selectedProgramYear.label
   )
-  useDocumentTitle('Worldwide Club Survival')
+  useDocumentTitle(HEADING)
 
   return (
     <RollupPageShell
       title="Regions"
+      heading={HEADING}
       eyebrow="Worldwide · Club survival"
       lede="How many of the clubs chartered worldwide each program year are still active 1, 3 and 5 years later."
       trail={[{ label: 'Regions', to: '/regions' }, { label: 'Club survival' }]}

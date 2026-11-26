@@ -32,11 +32,13 @@ const RegionHealthPage: React.FC = () => {
     [rollups, region]
   )
   const title = `Region ${region}`
-  useDocumentTitle(`${title} Health & Compliance`)
+  const heading = `${title} health & compliance`
+  useDocumentTitle(heading)
 
   return (
     <RollupPageShell
       title={title}
+      heading={heading}
       eyebrow={`Toastmasters Region ${region} · Health & compliance`}
       lede={`Club health, status, Distinguished levels and compliance across the districts of Region ${region}. Select a district to drill into its clubs.`}
       back={{ label: title, to: `/region/${region}` }}

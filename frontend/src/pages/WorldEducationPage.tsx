@@ -17,17 +17,20 @@ import {
    shares) for the PY its controls selected and passes it down. A rollup
    that is not there yet says so — never zeros. */
 
+const HEADING = 'Worldwide education'
+
 const WorldEducationPage: React.FC = () => {
   const controls = useProgramYearControls()
   const programYear = controls.selectedProgramYear.label
   const { rollup, index, isLoading } = useEducationRollup(programYear)
   const education = useMemo(() => buildWorldEducation({ rollup }), [rollup])
   const trend = useMemo(() => worldEducationTrend(index), [index])
-  useDocumentTitle('Worldwide Education')
+  useDocumentTitle(HEADING)
 
   return (
     <RollupPageShell
       title="Regions"
+      heading={HEADING}
       eyebrow="Worldwide · Education"
       lede="Education awards for every district worldwide — Pathways levels, DTMs and legacy awards from Toastmasters' education ledger. Select a region for its own education page."
       trail={[{ label: 'Regions', to: '/regions' }, { label: 'Education' }]}
