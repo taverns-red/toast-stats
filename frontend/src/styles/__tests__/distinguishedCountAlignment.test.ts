@@ -43,6 +43,15 @@ describe('.distinguished-count__confirmed alignment (#2580)', () => {
     ).toBe('inherit')
   })
 
+  // The regions leaderboard column is narrower than the extra (#3264).
+  it('puts "+N qualifying today" on its own, wrapping line in the regions leaderboard', () => {
+    const rule = standaloneRule(
+      '.regions-leaderboard__distinguished .distinguished-count__provisional'
+    )
+    expect(rule['display']).toBe('block')
+    expect(rule['white-space']).toBe('normal')
+  })
+
   it('leaves the provisional span on the global line-height (it was never the cause)', () => {
     expect(
       standaloneRule('.distinguished-count__provisional')['line-height']

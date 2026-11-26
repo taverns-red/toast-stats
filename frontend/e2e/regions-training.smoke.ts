@@ -125,6 +125,36 @@ for (const theme of THEMES) {
       const ctx = JSON.stringify(m)
       expect(m.tableWidth, ctx).toBeLessThanOrEqual(m.containerWidth)
       expect(m.clipped, ctx).toEqual([])
+
+      // No Distinguished cell's text runs past its own content box into Score
+      // (#3264). "+N qualifying today" is the long part.
+      const spills = await table.evaluate(t => {
+        const heads = [...t.querySelectorAll('thead th')]
+        const col = heads.findIndex(th =>
+          (th.textContent ?? '').trim().startsWith('Distinguished')
+        )
+        return [...t.querySelectorAll('tbody tr')].flatMap(tr => {
+          const td = tr.children[col] as HTMLElement | undefined
+          if (!td) return []
+          const box = td.getBoundingClientRect()
+          const right =
+            box.right - parseFloat(getComputedStyle(td).paddingRight)
+          let textRight = -Infinity
+          const walk = document.createTreeWalker(td, NodeFilter.SHOW_TEXT)
+          for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+            if (n.parentElement?.closest('.sr-only')) continue
+            const range = document.createRange()
+            range.selectNodeContents(n)
+            for (const r of range.getClientRects()) {
+              textRight = Math.max(textRight, r.right)
+            }
+          }
+          return textRight > right + 0.5
+            ? [`${(td.textContent ?? '').trim()} (${textRight} > ${right})`]
+            : []
+        })
+      })
+      expect(spills, `Distinguished cells spill at ${width}px`).toEqual([])
       // Nothing to scroll to, so no "more to the right" cue over the last
       // column.
       await expect(

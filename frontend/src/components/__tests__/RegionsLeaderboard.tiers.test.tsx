@@ -93,7 +93,8 @@ const renderAt = (
   width: number,
   withTraining = true,
   url = '/regions',
-  rollups = ROLLUPS
+  rollups = ROLLUPS,
+  provisional?: ReadonlyMap<string, number>
 ) => {
   stubViewportWidth(width)
   render(
@@ -102,6 +103,7 @@ const renderAt = (
         rollups={rollups}
         trends={TRENDS}
         training={withTraining ? TRAINING : undefined}
+        provisionalByRegion={provisional}
       />
     </MemoryRouter>
   )
@@ -173,6 +175,24 @@ describe('RegionsLeaderboard columns per width tier (#2716)', () => {
     expect(heads).toContain('Payments')
     expect(heads).toContain('Round 1 (Jun–Aug): All 7 officers trained')
   })
+
+  /* "+N qualifying today" is wider than the Distinguished column at every
+     tier, so it goes on its own line under "count · %", where the stylesheet
+     lets it wrap (#3264). jsdom does no layout; the region smoke measures. */
+  it.each([800, 1024, 1280])(
+    '%ipx: "+N qualifying today" sits on its own line under count and share',
+    width => {
+      renderAt(width, true, '/regions', ROLLUPS, new Map([['01', 12]]))
+      const table = screen.getByRole('table', { name: 'Region rankings' })
+      const extra = within(table).getByTestId('distinguished-provisional')
+      expect(
+        extra.closest('.regions-leaderboard__distinguished')
+      ).not.toBeNull()
+      expect(extra.closest('td')?.textContent).toMatch(
+        /^200\s*· 40%\s*\+12 qualifying today/
+      )
+    }
+  )
 
   /* A shared link can sort by a column this width hides. The rows must not
      follow a column nobody can see, so the table uses its default order. */
