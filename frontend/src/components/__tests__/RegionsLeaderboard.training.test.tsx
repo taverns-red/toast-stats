@@ -18,6 +18,13 @@ import { regionsTrainingOverview } from '../../utils/regionTraining'
    each linking to /region/:n/training. Round 2 before Nov 1 reads "not
    started"; a date without the figures reads "not available", never 0%. */
 
+// Every training column shows from 1024 up; at the tablet tier the All 7
+// columns yield (#2716, RegionsLeaderboard.tiers.test.tsx). These tests read
+// both, so they run at a desktop width.
+vi.mock('../../hooks/useBreakpointTier', () => ({
+  useBreakpointTier: () => 'desktop',
+}))
+
 const mobile = vi.hoisted(() => ({ value: false }))
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => mobile.value }))
 

@@ -12,6 +12,13 @@ import RegionsPage from '../RegionsPage'
    distributions below are the real 2026-10-25 file's world, Region 01 and
    Region 05 blocks (cdn.taverns.red, read 2026-10-26). */
 
+// Every training column shows from 1024 up; at the tablet tier the All 7
+// columns yield (#2716, RegionsLeaderboard.tiers.test.tsx). This test reads
+// both, so it runs at a desktop width.
+vi.mock('../../hooks/useBreakpointTier', () => ({
+  useBreakpointTier: () => 'desktop',
+}))
+
 const cdn = vi.hoisted(() => ({
   series: null as unknown,
   rollups: null as unknown,

@@ -19,6 +19,7 @@ import { DistinguishedCount } from './DistinguishedCount'
 import { DataTable } from './dataTable/DataTable'
 import {
   LEADERBOARD_SIZES,
+  leaderboardColumnIds,
   leaderboardShowsTrend,
 } from './regionsLeaderboardLayout'
 import { useBreakpointTier } from '../hooks/useBreakpointTier'
@@ -592,10 +593,22 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
     ...(showTraining ? roundColumns : []),
   ])
 
+  // The page table renders only from 768 up, where the tier is exact; the
+  // phone sheet scrolls sideways, so it keeps every column.
+  const pageIds = new Set(
+    leaderboardColumnIds({
+      tier,
+      showTrend,
+      showTraining,
+      expanded: [expanded(1), expanded(2)],
+    })
+  )
+  const pageColumns = columns.filter(c => pageIds.has(c.id ?? ''))
+
   const leaderboardTable = (variant: 'page' | 'sheet') => (
     <LeaderboardTable
       rows={sorted}
-      columns={columns}
+      columns={variant === 'page' ? pageColumns : columns}
       sort={sort}
       onSort={toggleSort}
       inScroller={variant === 'sheet'}
