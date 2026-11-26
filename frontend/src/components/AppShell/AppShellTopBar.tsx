@@ -172,6 +172,14 @@ const AppShellTopBar: React.FC<AppShellTopBarProps> = ({ onOpenSearch }) => {
           </Link>
         ))}
         {isMobile && (
+          <a
+            href="https://taverns.red?utm_source=toast-stats&utm_medium=menu"
+            className="app-shell-nav__link"
+          >
+            Red Taverns
+          </a>
+        )}
+        {isMobile && (
           <details className="app-shell-nav-about">
             <summary className="app-shell-nav__link app-shell-nav-about__summary">
               About
