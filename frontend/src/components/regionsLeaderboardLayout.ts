@@ -29,13 +29,17 @@ export const LEADERBOARD_BUDGET_PX: Readonly<Record<BreakpointTier, number>> = {
 /** Fixed widths in px (8px padding per side included); Region takes the rest
  *  but is counted at its size here. */
 export const LEADERBOARD_SIZES: Readonly<Record<string, number>> = {
-  region: 160,
+  // The widest region cell ("Region 14" chip, nowrap "leader:" line) is
+  // 108px with padding (Chromium, Source Sans 3); the smoke named below
+  // checks it.
+  region: 156,
   trend: 80,
   districts: 80,
-  // The header wraps to "Paid / clubs" at any width here; "clubs" and its
-  // sort icon need 52px (Chromium, Source Sans 3). No cell may spill its
-  // content box (regions-classic-scrollbar.smoke.ts).
-  paidClubs: 56,
+  // The header wraps to "Paid / clubs"; "clubs", the 4px gap and the 8px
+  // sort icon need about 44px inside the sort button's 8px padding.
+  // regions-classic-scrollbar.smoke.ts fails if header text or an icon
+  // leaves the button's content box, or cell text leaves the cell's.
+  paidClubs: 60,
   payments: 88,
   distinguished: 120,
   score: 64,
@@ -86,7 +90,8 @@ export const leaderboardShowsTrend = (
 
 /**
  * At the tablet tier the training columns leave no room for everything
- * (920px against 665 with a classic scrollbar), so Districts and each round's All 7 column yield.
+ * (920px against 665 with a classic scrollbar), so Districts and each
+ * round's All 7 column yield.
  * Paid clubs, Payments and Distinguished stay: Score ranks all three. 4+ is
  * DCP goal 9, and each figure links to the Training page, which has All 7.
  * Checked per tier and shape by regionsLeaderboardLayout.test.ts.
