@@ -71,7 +71,7 @@ const WorldGrowthPage: React.FC = () => {
       {loading && <RollupSkeleton />}
       {!loading && !funnel.found && (
         <p className="rollup-page__empty" data-testid="rollups-unavailable">
-          Worldwide Club Growth is not available yet for this date. It is
+          Worldwide club growth is not available yet for this date. It is
           computed with each snapshot; earlier dates predate it.
         </p>
       )}

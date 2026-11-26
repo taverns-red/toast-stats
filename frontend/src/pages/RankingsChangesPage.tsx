@@ -33,7 +33,7 @@ const RankingsChangesPage: React.FC = () => {
   const title = region ? `Region ${region}` : 'All regions'
   // The h1 says "Worldwide" like its siblings; the context bar's scope
   // stays "All regions".
-  const heading = region ? `${title}: what changed` : 'Worldwide: what changed'
+  const heading = region ? `${title}: What Changed` : 'Worldwide: What Changed'
   useDocumentTitle(heading)
 
   const { dates, isLoading: datesLoading } = useRecordedDates()
