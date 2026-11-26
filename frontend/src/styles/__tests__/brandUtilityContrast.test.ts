@@ -133,13 +133,19 @@ describe('dark remaps of the tint tokens match their Tailwind twins (#2642)', ()
 describe('tinted /N fills carry an explicit rule per theme (#2642)', () => {
   // `bg-tm-x/N` compiles to an oklab() color-mix that axe cannot resolve and
   // that ignores the dark palette; dark-mode.css pins an rgba per theme (the
-  // `bg-tm-loyal-blue\/10` pattern). These two replaced `bg-tm-x bg-opacity-20`
-  // pairs, whose solid base class used to match the dark overrides.
-  const fills = ['bg-tm-happy-yellow/20', 'bg-tm-cool-gray/20']
+  // `bg-tm-loyal-blue\/10` pattern). Every plain /N fill in source is listed,
+  // so a new one fails here until it gets both rules (#2779). Variant uses
+  // (`hover:`, `theme-dark:`) are other selectors and are not covered.
+  const fills = [
+    ...new Set(
+      sourceTexts().flatMap(text =>
+        [...text.matchAll(/(?<![\w:/-])bg-tm-[a-z-]+\/\d+/g)].map(m => m[0])
+      )
+    ),
+  ].sort()
 
-  it('are still the fills the source uses', () => {
-    const all = sourceTexts().join('\n')
-    for (const cls of fills) expect(all).toContain(cls)
+  it('finds the education levels bar fill in source', () => {
+    expect(fills).toContain('bg-tm-loyal-blue/80')
   })
 
   it.each(fills)('%s has a light and a dark rule', cls => {
@@ -152,6 +158,23 @@ describe('tinted /N fills carry an explicit rule per theme (#2642)', () => {
       ).toMatch(/^rgba\(/)
     }
   })
+
+  it.each(THEMES)(
+    'EducationLevelsCard bar fill clears non-text contrast (%s)',
+    theme => {
+      const toks = tokens(theme)
+      const fill = parseColor(
+        prop(
+          declsFor(darkCss, `[data-theme='${theme}'] .bg-tm-loyal-blue\\/80`),
+          'background-color'
+        )!,
+        toks
+      )
+      for (const surface of surfaces(theme)) {
+        expect(contrast(over(fill, surface), surface)).toBeGreaterThanOrEqual(3)
+      }
+    }
+  )
 
   // DistrictDetailPage limited-data banner: bg-tm-happy-yellow/20 with
   // text-tm-black copy and a text-tm-loyal-blue icon, on the page surfaces.
