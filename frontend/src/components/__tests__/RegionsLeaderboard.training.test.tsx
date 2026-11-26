@@ -18,6 +18,13 @@ import { regionsTrainingOverview } from '../../utils/regionTraining'
    each linking to /region/:n/training. Round 2 before Nov 1 reads "not
    started"; a date without the figures reads "not available", never 0%. */
 
+// Every training column shows from 1024 up; at the tablet tier the All 7
+// columns yield (#2716, RegionsLeaderboard.tiers.test.tsx). These tests read
+// both, so they run at a desktop width.
+vi.mock('../../hooks/useBreakpointTier', () => ({
+  useBreakpointTier: () => 'desktop',
+}))
+
 const mobile = vi.hoisted(() => ({ value: false }))
 vi.mock('../../hooks/useIsMobile', () => ({ useIsMobile: () => mobile.value }))
 
@@ -122,7 +129,8 @@ describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
     // Review of #2334: two "not started" columns overflowed the table at
     // 1024. Until it opens, Round 2 is one narrow column.
     expect(heads.filter(h => /^Round 2/.test(h))).toEqual([
-      expect.stringMatching(/^Round 2 training.*opens Nov 1/),
+      // The date keeps a non-breaking space (tiers test).
+      expect.stringMatching(/^Round 2 training.*opens Nov\s1/),
     ])
     const cells = within(rowOf('01')).getAllByRole('cell')
     expect(cells.filter(td => td.textContent === 'not started')).toHaveLength(1)

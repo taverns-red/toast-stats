@@ -28,7 +28,17 @@ export const LEADERBOARD_SIZES: Readonly<Record<string, number>> = {
   r2: 112,
 }
 
+/** Sizes at a tier. At the tablet tier a round's one column ("Round 2
+ *  training, opens Nov 1") is as narrow as a 4+ column; its header wraps. */
+export const leaderboardSizes = (
+  tier: BreakpointTier
+): Readonly<Record<string, number>> =>
+  tier === 'tablet'
+    ? { ...LEADERBOARD_SIZES, r1: 88, r2: 88 }
+    : LEADERBOARD_SIZES
+
 export interface LeaderboardShape {
+  tier: BreakpointTier
   showTrend: boolean
   showTraining: boolean
   /** Per round: split into 4+ and All 7 (true) or one column (false). */
@@ -47,23 +57,43 @@ export const leaderboardShowsTrend = (
 ): boolean =>
   hasTrends && !(showTraining && (tier === 'tablet' || tier === 'laptop'))
 
-/** Column ids in table order. */
-export const leaderboardColumnIds = (shape: LeaderboardShape): string[] => [
-  'region',
-  ...(shape.showTrend ? ['trend'] : []),
-  'districts',
-  'paidClubs',
-  'payments',
-  'distinguished',
-  'score',
-  ...(shape.showTraining
-    ? ([1, 2] as const).flatMap(round =>
-        shape.expanded[round - 1]
-          ? [`r${round}Dcp`, `r${round}AllSeven`]
-          : [`r${round}`]
-      )
-    : []),
-]
+/**
+ * At the tablet tier the training columns leave no room for everything
+ * (928px against 682), so Districts and each round's All 7 column yield.
+ * Paid clubs, Payments and Distinguished stay: Score ranks all three. 4+ is
+ * DCP goal 9, and each figure links to the Training page, which has All 7.
+ * Checked per tier and shape by regionsLeaderboardLayout.test.ts.
+ */
+const tabletCompact = (shape: LeaderboardShape): boolean =>
+  shape.tier === 'tablet' && shape.showTraining
 
-export const leaderboardWidth = (ids: readonly string[]): number =>
-  ids.reduce((sum, id) => sum + (LEADERBOARD_SIZES[id] ?? 0), 0)
+/** Column ids in table order. */
+export const leaderboardColumnIds = (shape: LeaderboardShape): string[] => {
+  const compact = tabletCompact(shape)
+  return [
+    'region',
+    ...(shape.showTrend ? ['trend'] : []),
+    ...(compact ? [] : ['districts']),
+    'paidClubs',
+    'payments',
+    'distinguished',
+    'score',
+    ...(shape.showTraining
+      ? ([1, 2] as const).flatMap(round =>
+          shape.expanded[round - 1]
+            ? compact
+              ? [`r${round}Dcp`]
+              : [`r${round}Dcp`, `r${round}AllSeven`]
+            : [`r${round}`]
+        )
+      : []),
+  ]
+}
+
+export const leaderboardWidth = (
+  ids: readonly string[],
+  tier: BreakpointTier
+): number => {
+  const sizes = leaderboardSizes(tier)
+  return ids.reduce((sum, id) => sum + (sizes[id] ?? 0), 0)
+}

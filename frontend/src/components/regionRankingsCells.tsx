@@ -129,7 +129,8 @@ type AchievedTier = Exclude<
   'NotDistinguished' | 'Unknown'
 >
 
-/* The achieved tier as a plain label; tints stay on the legacy palette. */
+/* The achieved tier as a tinted pill in legacy palette colours. Each tint's
+   dark-mode contrast is checked in RegionDarkModeContrast.test.ts. */
 const TIER_LABEL: Record<AchievedTier, string> = {
   Distinguished: 'Distinguished',
   Select: 'Select',

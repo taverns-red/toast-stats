@@ -19,9 +19,12 @@ import { DistinguishedCount } from './DistinguishedCount'
 import { DataTable } from './dataTable/DataTable'
 import {
   LEADERBOARD_SIZES,
+  leaderboardColumnIds,
+  leaderboardSizes,
   leaderboardShowsTrend,
 } from './regionsLeaderboardLayout'
 import { useBreakpointTier } from '../hooks/useBreakpointTier'
+import { useIsMobile } from '../hooks/useIsMobile'
 import {
   regionTrainingUrl,
   type RegionsTrainingOverview,
@@ -150,6 +153,11 @@ const sortValue = (
   }
 }
 
+const DEFAULT_SORT = { field: 'region', direction: 'asc' } as const satisfies {
+  field: SortField
+  direction: 'asc' | 'desc'
+}
+
 const isTrainingField = (field: SortField): field is TrainingField =>
   TRAINING_COLUMNS.some(c => c.field === field)
 
@@ -252,13 +260,14 @@ const LeaderboardTable: React.FC<{
   sort: { field: SortField; direction: 'asc' | 'desc' }
   onSort: (field: SortField) => void
   inScroller: boolean
-}> = ({ rows, columns, sort, onSort, inScroller }) => {
+  sizes: Readonly<Record<string, number>>
+}> = ({ rows, columns, sort, onSort, inScroller, sizes }) => {
   const table = useTable<LeaderboardFeatures, RegionRollup>({
     features: leaderboardFeatures,
     data: rows as RegionRollup[],
     columns,
     getRowId: r => r.region,
-    state: { columnSizing: LEADERBOARD_SIZES },
+    state: { columnSizing: { ...sizes } },
     // The component owns the order (region number by default, Lesson 138).
     manualSorting: true,
   })
@@ -314,12 +323,39 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
       : undefined
   // URL-synced click-header sort. Default: region number ascending (#964).
   // A new-column click starts descending (metric columns read "best first").
-  const { sort, toggleSort } = useUrlSort<SortField>({
+  const { sort: urlSort, toggleSort } = useUrlSort<SortField>({
     fields: SORT_FIELDS,
     defaultField: 'region',
     defaultDirection: 'asc',
     newFieldDirection: 'desc',
   })
+
+  /* A round is split into 4+ and All 7 only when some region has a figure
+     for it (#2334 review): before it opens, or on a date without the
+     figures, it is ONE narrow column, so the table fits its container at
+     1024 and 1280 instead of spending two columns on "not started". */
+  const expanded = (round: TrainingRound): boolean =>
+    !!overview &&
+    [...overview.regions.values()].some(
+      b => b.rounds[round - 1]!.state === 'measured'
+    )
+
+  // The page table renders only from 768 up, where the tier is exact; the
+  // phone sheet scrolls sideways, so it keeps every column.
+  const pageIds = new Set(
+    leaderboardColumnIds({
+      tier,
+      showTrend,
+      showTraining,
+      expanded: [expanded(1), expanded(2)],
+    })
+  )
+  // A shared link can sort by a column this width hides; rows ordered by a
+  // column nobody can see read as random, so the default order applies
+  // (RegionsLeaderboard.tiers.test.tsx). Phones sort from the chips and the
+  // sheet, which show every field.
+  const isPhone = useIsMobile(768)
+  const sort = isPhone || pageIds.has(urlSort.field) ? urlSort : DEFAULT_SORT
 
   const sorted = useMemo(() => {
     const dir = sort.direction === 'asc' ? 1 : -1
@@ -451,16 +487,6 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
     )
   }
 
-  /* A round is split into 4+ and All 7 only when some region has a figure
-     for it (#2334 review): before it opens, or on a date without the
-     figures, it is ONE narrow column, so the table fits its container at
-     1024 and 1280 instead of spending two columns on "not started". */
-  const expanded = (round: TrainingRound): boolean =>
-    !!overview &&
-    [...overview.regions.values()].some(
-      b => b.rounds[round - 1]!.state === 'measured'
-    )
-
   /** A round column: sortable once the round has started. */
   const trainingColumn = (
     id: string,
@@ -502,7 +528,8 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
             id: `r${round}`,
             header: `Round ${round} training, ${
               round === 2 && overview && !overview.round2Started
-                ? `opens ${formatShortDate(overview.round2Opens)}`
+                ? // No break inside the date when the header wraps.
+                  `opens ${formatShortDate(overview.round2Opens).replace(/ /g, ' ')}`
                 : roundMonths(round)
             }`,
             cell: info => trainingCell(info.row.original.region, round, 'Dcp'),
@@ -592,13 +619,16 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
     ...(showTraining ? roundColumns : []),
   ])
 
+  const pageColumns = columns.filter(c => pageIds.has(c.id ?? ''))
+
   const leaderboardTable = (variant: 'page' | 'sheet') => (
     <LeaderboardTable
       rows={sorted}
-      columns={columns}
+      columns={variant === 'page' ? pageColumns : columns}
       sort={sort}
       onSort={toggleSort}
       inScroller={variant === 'sheet'}
+      sizes={variant === 'page' ? leaderboardSizes(tier) : LEADERBOARD_SIZES}
     />
   )
 
