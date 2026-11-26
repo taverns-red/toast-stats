@@ -1,0 +1,225 @@
+# Staging restore drill: the data-auto-restore decide job's read-only plan,
+# run on demand against the STAGING bucket as the read-only data reader. The
+# "break" is a recent data-pipeline run's own writes to staging: the plan
+# undoes them on paper, so nothing is broken and nothing is written. There is
+# no execute job here, so the restore identity is out of reach.
+# Pinned by scripts/lib/__tests__/dataRestoreDrill.test.ts.
+#
+# Dispatch from main (the reader's binding admits only main); see
+# docs/runbooks/data-restore.md, "CI drill".
+
+name: Data Restore Drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: >-
+          The data-pipeline run whose staging writes to plan against: its
+          runs/<id>/written.jsonl in staging. Use the newest run that wrote staging,
+          within the last 7 days.
+        required: true
+        type: string
+      since:
+        description: 'Window start, UTC with Z (e.g. 2026-11-26T10:00:00Z): when that run started.'
+        required: true
+        type: string
+      until:
+        description: 'Window end, UTC with Z: when that run finished.'
+        required: true
+        type: string
+      report_issues:
+        description: 'Issue numbers to comment the plan on, space or comma separated.'
+        required: true
+        type: string
+        default: '2858 2856'
+
+# Its own group: sharing data-pipeline's would let a queued drill cancel a
+# pending daily (one pending run per group). dataRestoreDrill.test.ts.
+concurrency:
+  group: data-restore-drill
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  GCS_BUCKET: 'toast-stats-data-staging'
+
+jobs:
+  drill:
+    name: 'plan a restore against staging (#3019)'
+    runs-on: ubuntu-26.04
+    # The same scope as data-auto-restore-decide: id-token only to mint the
+    # read-only reader's token, issues to comment the plan. No environment:
+    # it would change the OIDC subject the reader's binding admits.
+    permissions:
+      contents: read
+      id-token: write
+      issues: write
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Refuse any ref but main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error title=Restore drill::dispatch from main; the reader's binding admits no other ref"
+          exit 1
+
+      - name: Check the drill inputs
+        env:
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SINCE: ${{ inputs.since }}
+          UNTIL: ${{ inputs.until }}
+          REPORT_ISSUES: ${{ inputs.report_issues }}
+        run: |
+          stamp='^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\.[0-9]+)?)?Z$'
+          issues='^[0-9]+([ ,]+[0-9]+)*$'
+          [[ "${SOURCE_RUN_ID}" =~ ^[0-9]+$ ]] || { echo "::error::source_run_id must be a run number"; exit 1; }
+          [[ "${SINCE}" =~ ${stamp} ]] || { echo "::error::since must be UTC with Z"; exit 1; }
+          [[ "${UNTIL}" =~ ${stamp} ]] || { echo "::error::until must be UTC with Z"; exit 1; }
+          [[ "${REPORT_ISSUES}" =~ ${issues} ]] || { echo "::error::report_issues must be issue numbers"; exit 1; }
+
+      # An empty reader variable must fail here, before auth: the auth action
+      # given no service account would fall back to direct workload identity.
+      # Soft failures, as in the decide job, so the comment still says
+      # "enumeration failed: auth-failed".
+      - name: Require the read-only data reader variable
+        id: reader
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          READER_SA: ${{ vars.GCP_DATA_READER_SA }}
+        run: |
+          if [ -z "${READER_SA}" ]; then
+            echo "::error title=Restore drill::the repository variable GCP_DATA_READER_SA is empty"
+            exit 1
+          fi
+
+      - name: Authenticate to GCP as the read-only data reader
+        id: auth
+        if: ${{ !cancelled() && steps.reader.outcome == 'success' }}
+        continue-on-error: true
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DATA_READER_SA }}
+
+      - name: Set up Cloud SDK
+        if: ${{ !cancelled() && steps.auth.outcome == 'success' }}
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        with:
+          version: '588.0.0'
+
+      - name: Log Cloud SDK version
+        if: ${{ !cancelled() && steps.auth.outcome == 'success' }}
+        run: gcloud version
+
+      # READ-ONLY. The decide job's enumerate step with two changes: the
+      # listed bucket is staging, and the manifest and removal record are the
+      # source run's, not this run's.
+      - name: Enumerate the restore plan against staging (read-only)
+        id: enumerate
+        if: ${{ !cancelled() && steps.auth.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          PROD_BUCKET: 'toast-stats-data-staging'
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          PROMOTE_STARTED: ${{ inputs.since }}
+          WINDOW_END: ${{ inputs.until }}
+        run: |
+          W="${RUNNER_TEMP}/data-restore-decide"
+          mkdir -p "${W}"
+          fail() { echo "$1" > "${W}/error-class"; exit 1; }
+          gcloud storage cat "gs://${GCS_BUCKET}/runs/${SOURCE_RUN_ID}/written.jsonl" > "${W}/written.jsonl" || fail manifest-unreadable
+          rc=0
+          npx tsx scripts/data-auto-restore.ts paths --manifest "${W}/written.jsonl" --out "${W}/paths.txt" || rc=$?
+          if [ "${rc}" -eq 1 ]; then fail no-in-scope-objects; fi
+          if [ "${rc}" -ne 0 ]; then fail manifest-unreadable; fi
+          bash scripts/pipeline/read-prod-removals.sh "${GCS_BUCKET}" "${SOURCE_RUN_ID}" "${W}/removed.jsonl" || fail removal-record-unreadable
+          bash scripts/pipeline/list-restore-candidates.sh "${W}" "${W}/paths.txt" || fail listing-failed
+          rc=0
+          npx tsx scripts/plan-data-restore.ts \
+            --live "${W}/live.json" --soft-deleted "${W}/soft.json" \
+            --live-errors "${W}/live.err" --soft-errors "${W}/soft.err" \
+            --since "${PROMOTE_STARTED}" --until "${WINDOW_END}" \
+            --paths "${W}/paths.txt" --removals "${W}/removed.jsonl" \
+            --out "${W}/plan.json" 2> "${W}/plan.err" || rc=$?
+          cat "${W}/plan.err" >&2
+          if [ "${rc}" -ne 0 ]; then
+            npx tsx scripts/data-auto-restore.ts plan-failure \
+              --stderr "${W}/plan.err" --plan "${W}/plan.json" --out "${W}/error-class" \
+              || echo plan-failed > "${W}/error-class"
+            exit 1
+          fi
+
+      - name: Attach the full plan
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: data-restore-drill-plan
+          path: |
+            ${{ runner.temp }}/data-restore-decide/plan.json
+            ${{ runner.temp }}/data-restore-decide/paths.txt
+          if-no-files-found: ignore
+
+      # The issue body a real failure gets, from the same CLI. The mode is the
+      # literal dry-run and the run mode is not daily or rebuild, so the
+      # decision can never be execute. GITHUB_RUN_ID is unset so the body
+      # names the source run (the CLI falls back to RUN_ID).
+      - name: Write the plan up the way a real failure would
+        id: intent
+        if: ${{ !cancelled() }}
+        run: env -u GITHUB_RUN_ID npx tsx scripts/data-auto-restore.ts intent
+        env:
+          DATA_AUTO_RESTORE: 'dry-run'
+          RUN_MODE: 'drill'
+          UNHEALTHY: 'true'
+          RESTORE_ELIGIBLE: 'true'
+          FAILED: 'a staging restore drill, not a real failure'
+          RUN_ID: ${{ inputs.source_run_id }}
+          PROMOTE_STARTED: ${{ inputs.since }}
+          WINDOW_END: ${{ inputs.until }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ENUM_PRECHECK_OUTCOME: ${{ steps.reader.outcome }}
+          ENUM_AUTH_OUTCOME: ${{ steps.auth.outcome }}
+          ENUM_STEP_OUTCOME: ${{ steps.enumerate.outcome }}
+          ENUM_PLAN_FILE: ${{ runner.temp }}/data-restore-decide/plan.json
+          ENUM_ERROR_CLASS_FILE: ${{ runner.temp }}/data-restore-decide/error-class
+
+      - name: Comment the drill plan on the report issues
+        if: ${{ !cancelled() && steps.intent.outputs.file_issue == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BODY_FILE: ${{ steps.intent.outputs.body_file }}
+          REPORT_ISSUES: ${{ inputs.report_issues }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          OUT="${RUNNER_TEMP}/data-restore-drill-comment.md"
+          {
+            printf '%s\n\n' '**Staging restore drill (#3019). No real failure, and nothing was written.**'
+            printf 'The plan below was listed against `gs://%s` as the read-only data reader. The break it undoes is what run %s wrote to staging. This workflow has no execute job. The "Plan it by hand" commands are the template a real failure gets, so they name the prod bucket.\n\n---\n\n' "${GCS_BUCKET}" "${SOURCE_RUN_ID}"
+            cat "${BODY_FILE}"
+          } > "${OUT}"
+          for n in ${REPORT_ISSUES//,/ }; do
+            gh issue comment "${n}" --body-file "${OUT}"
+          done
+
+      - name: Fail the drill when the plan was not enumerated
+        if: ${{ !cancelled() && steps.enumerate.outcome != 'success' }}
+        run: |
+          echo "::error title=Restore drill::the plan was not enumerated cleanly (refused entries or a failure); the comment and the enumerate step log say which"
+          exit 1

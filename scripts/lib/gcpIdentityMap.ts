@@ -92,6 +92,7 @@ export const EXPECTED: Record<string, string> = {
   'data-pipeline.yml::data-auto-restore-execute': RESTORE,
   'data-pipeline.yml::og-cards': PIPELINE,
   'data-pipeline.yml::education-ledger-history': PIPELINE,
+  'data-restore-drill.yml::drill': DATA_READER,
   'deploy.yml::deploy-frontend': HOSTING_DEPLOY,
   'education-timeline-backfill.yml::backfill': PIPELINE,
   'gap-district-prune.yml::prune': PIPELINE,
