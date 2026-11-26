@@ -280,11 +280,12 @@ describe('DistrictKpiStrip (#572)', () => {
   })
 
   describe('net-change disambiguation (#1023)', () => {
-    it('names the metric AND baseline in the secondary line (payments vs. program-year base)', () => {
+    it('names the metric AND baseline in the secondary line, in plain words (#2717)', () => {
       renderStrip(<DistrictKpiStrip kpis={sampleKpis} />)
       expect(
-        screen.getByText('payments vs. program-year base')
+        screen.getByText('payments vs. the payment base')
       ).toBeInTheDocument()
+      expect(screen.queryByText(/program-year/)).not.toBeInTheDocument()
     })
 
     it('tooltip contrasts the payment-base delta with the Trends member-count metric', async () => {
@@ -295,7 +296,7 @@ describe('DistrictKpiStrip (#572)', () => {
       })
       fireEvent.focus(infoBtn)
       const tip = await waitFor(() => within(deltaCard).getByRole('tooltip'))
-      // Overview basis: payments minus the program-year payment base.
+      // Overview basis: payments minus this year's payment base.
       expect(tip).toHaveTextContent(/payment base/i)
       // Explicitly distinguished from the Trends "Net Change" member-count metric.
       expect(tip).toHaveTextContent(/member counts/i)
