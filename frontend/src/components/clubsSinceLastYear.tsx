@@ -7,17 +7,12 @@
 import React from 'react'
 import { formatLongDate } from '../utils/dateFormatting'
 import { couldntLoad } from '../utils/loadFailureText'
-import type {
-  PriorYearClubGoals,
-  SinceLastYearMode,
-  SinceLastYearSummary,
+import {
+  SINCE_LAST_YEAR_MODE_LABELS,
+  type PriorYearClubGoals,
+  type SinceLastYearMode,
+  type SinceLastYearSummary,
 } from '../utils/sinceLastYear'
-
-export const SINCE_LAST_YEAR_MODE_LABELS: Record<SinceLastYearMode, string> = {
-  climbed: 'Climbed since last year',
-  slipped: 'Slipped since last year',
-  'no-prior': 'No prior-year data',
-}
 
 const MODE_LABELS: Record<SinceLastYearMode, string> = {
   climbed: `▲ ${SINCE_LAST_YEAR_MODE_LABELS.climbed}`,

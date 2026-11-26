@@ -21,14 +21,11 @@ import {
   lookupSinceLastYear,
   matchesSinceLastYear,
   summarizeSinceLastYear,
+  SINCE_LAST_YEAR_MODE_LABELS,
   type PriorYearClubGoals,
   type SinceLastYearMode,
 } from '../utils/sinceLastYear'
-import {
-  SINCE_LAST_YEAR_MODE_LABELS,
-  SinceLastYearLine,
-  SinceLastYearSelect,
-} from './clubsSinceLastYear'
+import { SinceLastYearLine, SinceLastYearSelect } from './clubsSinceLastYear'
 import {
   buildSinceLastYearColumn,
   sinceLastYearMeta,
