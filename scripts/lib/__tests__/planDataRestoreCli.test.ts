@@ -158,11 +158,14 @@ describe('plan-data-restore CLI: gcloud listings of many URLs (#3258)', () => {
     })
   })
 
-  it('plans from an empty listing file: no URL matched', () => {
+  it('reads an empty soft listing as no copies, and refuses on that', () => {
     soft = file('soft-empty.json', '')
     const r = cli(planArgs())
-    expect(r.status, r.stderr).not.toBe(2)
+    expect(r.status, r.stderr).toBe(1)
     expect(r.stderr).not.toMatch(/JSON/)
+    expect(JSON.parse(r.stdout).entries[0].reason).toMatch(
+      /soft-deleted listing is empty/
+    )
   })
 
   it('reads the same listings in --execute mode', () => {
