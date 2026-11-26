@@ -1614,6 +1614,14 @@ describe('parseMeetingSchedule (#2617) — an arrival lead before the time', () 
     expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
   })
 
+  it.each([
+    ['Doors open 7:00 pm, ends 8:00 pm', '19:00'],
+    ['Networking 7:00 pm, ends 8:00 pm', '19:00'],
+    ['Accueil 19 h, fin 19 h 45', '19:00'],
+  ])('%j keeps the first time as the start: %s', (time, start) => {
+    expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
+  })
+
   it('keeps a lone networking time', () => {
     expect(starts('Wednesday', 'Networking 6:30 pm')).toEqual([
       'Wednesday 18:30',
