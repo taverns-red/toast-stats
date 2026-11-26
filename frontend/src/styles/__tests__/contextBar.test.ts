@@ -45,7 +45,17 @@ describe('context-bar.css (#1831)', () => {
     // 56px under the top bar; the token drops to the top inset in short
     // landscape, where the top bar scrolls away (#1847, safe-area.css).
     expect(bar).toMatch(/top:\s*var\(--app-top-offset,\s*56px\)/)
-    expect(bar).toMatch(/height:\s*44px/)
+    expect(bar).toMatch(/height:\s*var\(--context-bar-h\)/)
+  })
+
+  // One token for the bar's height, so whatever pins under the bar (page
+  // sticky rows, the stuck KPI line's scroll padding) follows it (#2717).
+  it('owns its 44px height as a root token that the sticky offsets read', () => {
+    expect(css).toMatch(/:root\s*\{[^}]*--context-bar-h:\s*44px/)
+    const appShell = read('../components/app-shell.css')
+    expect(appShell).toMatch(
+      /--mobile-sticky-top:\s*calc\(\s*var\(--app-top-offset,\s*56px\)\s*\+\s*var\(--context-bar-h\)\s*\)/
+    )
   })
 
   it('is hidden from 768 up, where the desktop header is unchanged', () => {

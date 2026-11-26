@@ -25,6 +25,23 @@ describe('stuck KPI line CSS (#2708)', () => {
     )
   })
 
+  /* At 320 the three items left need three 20px rows, and the box holds two
+     (#2717). Below 360 the "+N qualifying today" extra goes; when the count is
+     itself "qualifying today", that label must stay, so Paid clubs goes. */
+  it('fits two rows below 360 by dropping whole items, never by clipping (#2717)', () => {
+    const below360 =
+      code.match(
+        /@media\s*\(max-width:\s*359px\)\s*\{([\s\S]*?)\n {2}\}/
+      )?.[1] ?? ''
+    expect(below360).toMatch(
+      /\.district-kpi-stuck__extra\s*\{[^}]*display:\s*none/
+    )
+    expect(below360).toMatch(
+      /\.district-kpi-stuck__line:has\(\.district-kpi-stuck__basis\)\s*\.district-kpi-stuck__item--paid\s*\{[^}]*display:\s*none/
+    )
+    expect(below360).not.toMatch(/overflow|text-overflow|clip/)
+  })
+
   it('is a zero-height sticky wrapper under the top bar (takes no layout, no CLS)', () => {
     const b = block('.district-kpi-stuck')
     expect(b).toMatch(/position:\s*sticky/)
@@ -87,6 +104,15 @@ describe('stuck KPI line CSS (#2708)', () => {
     expect(code).toMatch(
       /\.app-shell:has\(\.district-kpi-stuck\[data-stuck='true'\]\)\s*\{[^}]*--table-sticky-top/
     )
+  })
+
+  it('reads the phone context bar height from its token, not a literal (#2717)', () => {
+    const below768 =
+      code.match(
+        /@media\s*\(max-width:\s*767px\)\s*\{\s*html:has\(\.district-kpi-stuck\[data-stuck='true'\]\)\s*\{([^}]*)\}/
+      )?.[1] ?? ''
+    expect(below768).toMatch(/scroll-padding-top:[^;]*var\(--context-bar-h\)/)
+    expect(below768).not.toMatch(/44px/)
   })
 
   it('no longer pins the full strip at any width', () => {

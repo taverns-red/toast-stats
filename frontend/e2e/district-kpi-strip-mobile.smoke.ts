@@ -166,6 +166,7 @@ test('no vertically sticky element taller than 64px on /district/61 at 768px', a
 const STUCK_LINE = '[data-testid="district-kpi-stuck-line"]'
 
 for (const [width, height] of [
+  [320, 568],
   [375, 812],
   [768, 1024],
   [1280, 900],

@@ -8,13 +8,19 @@
 @layer brand {
   /* ---------- The bar ---------- */
 
+  /* On :root so html's scroll-padding can read it too (district-narrative.css).
+     contextBar.test.ts checks the bar and --mobile-sticky-top use it. */
+  :root {
+    --context-bar-h: 44px;
+  }
+
   .context-bar {
     position: sticky;
     /* Under .app-shell-top-bar (56px + top inset, z-index 40); at the top
        inset in short landscape, where the top bar scrolls away (safe-area.css). */
     top: var(--app-top-offset, 56px);
     z-index: var(--z-sub-bar);
-    height: 44px;
+    height: var(--context-bar-h);
     display: flex;
     align-items: center;
     gap: 4px;

@@ -10,6 +10,7 @@ import { HUB_NET_CAPTION } from './districtHubTileMeta'
    aria-hidden: the same figures are in the block above. */
 
 const PIN_FALLBACK_PX = 56
+const ROOT_BELOW_PX = 100_000
 
 /** True once `sentinel` has scrolled above the wrapper's pin line. */
 function useStuck(
@@ -43,7 +44,10 @@ function useStuck(
         if (!entry) return
         setStuck(!entry.isIntersecting && entry.boundingClientRect.top < pin)
       },
-      { rootMargin: `-${pin}px 0px 0px 0px` }
+      /* The root runs far below the viewport, so a jump from below it to
+         above the pin line still crosses an edge and reports (#2717).
+         DistrictKpiStickyLine.test.tsx checks the margin. */
+      { rootMargin: `-${pin}px 0px ${ROOT_BELOW_PX}px 0px` }
     )
     observer.observe(el)
     return () => observer.disconnect()
@@ -86,7 +90,7 @@ export const DistrictKpiStickyLine: React.FC<DistrictKpiStickyLineProps> = ({
           data-testid="district-kpi-stuck-line"
           aria-hidden="true"
         >
-          <span className="district-kpi-stuck__item">
+          <span className="district-kpi-stuck__item district-kpi-stuck__item--paid">
             <span className="district-kpi-stuck__label">Paid clubs</span>{' '}
             <strong>{formatCompact(kpis.paidClubs.current)}</strong>
           </span>
@@ -101,13 +105,13 @@ export const DistrictKpiStickyLine: React.FC<DistrictKpiStickyLineProps> = ({
                 unless it says "qualifying today"; the extra is "+N
                 qualifying today", never a bare "+N". */}
             {qualifyingToday ? (
-              <span className="district-kpi-stuck__label">
+              <span className="district-kpi-stuck__label district-kpi-stuck__basis">
                 {' '}
                 qualifying today
               </span>
             ) : (
               provisional > 0 && (
-                <span className="district-kpi-stuck__label">
+                <span className="district-kpi-stuck__label district-kpi-stuck__extra">
                   {' '}
                   +{formatCompact(provisional)} qualifying today
                 </span>
