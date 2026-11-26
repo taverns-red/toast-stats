@@ -310,6 +310,64 @@ for (const theme of THEMES) {
     })
   }
 
+  // One-line rows (Award + Gap D) are shorter than an info button's 44px
+  // tap area, so a tap near a row's edge could open the next row's tooltip
+  // (#3242). Tap areas in neighbouring rows must not overlap.
+  test(`area info buttons' tap areas don't overlap between rows at 375px (${theme})`, async ({
+    page,
+  }) => {
+    test.setTimeout(60_000)
+    await prep(page, theme, 375)
+    await page.goto('/district/61/division/A?cols=award%2CgapD', {
+      waitUntil: 'networkidle',
+      timeout: 60_000,
+    })
+    await page
+      .getByRole('table', { name: /Division A area performance/ })
+      .first()
+      .waitFor({ state: 'visible' })
+    const r = await page.evaluate(() =>
+      [...document.querySelectorAll('table.priority-columns__table')].map(
+        table => {
+          const areas = [
+            ...table.querySelectorAll('tbody .info-tooltip__trigger'),
+          ].map(t => {
+            const b = t.getBoundingClientRect()
+            const inset = -parseFloat(getComputedStyle(t, '::after').top)
+            return {
+              name: t.getAttribute('aria-label'),
+              inset,
+              top: b.top - inset,
+              bottom: b.bottom + inset,
+            }
+          })
+          const overlaps = areas.slice(1).flatMap((a, i) => {
+            const prev = areas[i]!
+            return prev.bottom > a.top + 0.5
+              ? [
+                  `${prev.name} ends at ${prev.bottom}, ${a.name} starts at ${a.top}`,
+                ]
+              : []
+          })
+          return { insets: areas.map(a => a.inset), overlaps }
+        }
+      )
+    )
+    const insets = r.flatMap(t => t.insets)
+    // No trigger renders while the Award column is pending (rollover) or
+    // when every area is Net Loss; there is then nothing to tap.
+    test.skip(insets.length === 0, 'no area info buttons in this data')
+    // Measure the real ::after tap area, not just the 14px icon.
+    expect(
+      insets.every(i => i === 15),
+      'tap-area inset'
+    ).toBe(true)
+    expect(
+      r.flatMap(t => t.overlaps),
+      'overlapping tap areas'
+    ).toEqual([])
+  })
+
   for (const width of WIDE) {
     test(`full table unchanged at ${width}px (${theme})`, async ({ page }) => {
       test.setTimeout(120_000)
