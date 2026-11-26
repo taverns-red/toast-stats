@@ -55,27 +55,60 @@ for (const theme of THEMES) {
         const heads = [...t.querySelectorAll('thead th')]
         const rows = [...t.querySelectorAll('tbody tr')]
         const spills: string[] = []
+        // A header's sort button has its own padding, and the th has none,
+        // so header text and icons are held to the button's content box.
+        const contentBox = (el: Element) => {
+          const box = el.getBoundingClientRect()
+          const cs = getComputedStyle(el)
+          return {
+            left:
+              box.left +
+              parseFloat(cs.borderLeftWidth) +
+              parseFloat(cs.paddingLeft),
+            right:
+              box.right -
+              parseFloat(cs.borderRightWidth) -
+              parseFloat(cs.paddingRight),
+          }
+        }
         heads.forEach((th, i) => {
           const name = (th.textContent ?? '').trim()
           for (const cell of [th, ...rows.map(tr => tr.children[i])]) {
             if (!(cell instanceof HTMLElement)) continue
-            const box = cell.getBoundingClientRect()
-            const cs = getComputedStyle(cell)
-            const left = box.left + parseFloat(cs.paddingLeft)
-            const right = box.right - parseFloat(cs.paddingRight)
-            const walk = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT)
-            for (let n = walk.nextNode(); n; n = walk.nextNode()) {
-              if (n.parentElement?.closest('.sr-only')) continue
-              if (!(n.textContent ?? '').trim()) continue
-              const range = document.createRange()
-              range.selectNodeContents(n)
-              for (const r of range.getClientRects()) {
+            const boxOf = (el: Element) => {
+              const button = el.closest('button')
+              return contentBox(button && cell.contains(button) ? button : cell)
+            }
+            const check = (
+              el: Element,
+              rects: Iterable<DOMRect>,
+              what: string
+            ) => {
+              const { left, right } = boxOf(el)
+              for (const r of rects) {
                 if (
                   r.width > 0 &&
                   (r.right > right + 0.5 || r.left < left - 0.5)
                 )
-                  spills.push(`${name}: "${(n.textContent ?? '').trim()}"`)
+                  spills.push(`${name}: ${what}`)
               }
+            }
+            const walk = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT)
+            for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+              const parent = n.parentElement
+              if (!parent || parent.closest('.sr-only')) continue
+              if (!(n.textContent ?? '').trim()) continue
+              const range = document.createRange()
+              range.selectNodeContents(n)
+              check(
+                parent,
+                range.getClientRects(),
+                `"${n.textContent!.trim()}"`
+              )
+            }
+            for (const icon of cell.querySelectorAll('svg')) {
+              if (icon.closest('.sr-only')) continue
+              check(icon, [icon.getBoundingClientRect()], 'icon')
             }
           }
         })
