@@ -10,8 +10,8 @@ import {
 import { formatDisplayDate } from '../../utils/dateFormatting'
 
 /**
- * #1791 — the club page's membership trend, with last year's year-end as
- * context behind the current line.
+ * The club page's membership trend, with the newest prior year-end on record
+ * as context behind the current line.
  *
  * Placement and the D15 anchor come from #1705's shared builder
  * (`buildMembershipTrendChartData`), the one the district membership chart
@@ -22,8 +22,8 @@ import { formatDisplayDate } from '../../utils/dateFormatting'
  *
  * Prior years come from the club's year-end rows (base on July 1, close at
  * the year-end snapshot): two points each, so they say nothing about the
- * path and are not drawn as lines (#2504). The newest year-end on record is
- * a single labelled reference line instead.
+ * path and are not drawn as lines. The newest year-end on record is a single
+ * labelled reference line instead (ClubMembershipTrendChart.test.tsx).
  *
  * Hand-rolled SVG (not Recharts): the club route keeps Recharts off its
  * static graph (#1901), and CSS classes carry the dark-mode swap (R10).
@@ -98,9 +98,10 @@ export function ClubMembershipTrendChart({
   const priorSeries = series.slice(1).filter(s => s.points.length > 0)
   const dataPoints = currentSeries.points.filter(p => !p.anchor)
 
-  // #2504 — prior years have only a start and a year-end, so a line between
-  // them would imply a path we don't have. Context is one labelled reference
-  // at the newest prior year-end on record instead.
+  // Prior years have only a start and a year-end, so a line between them
+  // would imply a path we don't have. Context is one labelled reference at
+  // the newest prior year-end on record instead (test.tsx: "prior years are
+  // one reference", "close is missing").
   const refSeries = priorSeries.find(s => closeOf(s))
   const refClose = refSeries ? closeOf(refSeries) : undefined
   const refLabel = refSeries ? shortYearLabel(refSeries.label) : ''
