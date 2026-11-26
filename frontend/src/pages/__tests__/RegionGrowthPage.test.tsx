@@ -265,3 +265,19 @@ describe('Can reinstate on the region and world funnels (#3094)', () => {
     expect(within(strip).getAllByRole('listitem')).toHaveLength(4)
   })
 })
+
+describe('the h1 and the tab title name the page (#2756)', () => {
+  it.each([
+    ['/region/05/growth', 'Region 05 club growth'],
+    ['/regions/growth', 'Worldwide club growth'],
+  ])('%s reads "%s"', async (url, name) => {
+    mockedReports.mockResolvedValue(reports)
+    mockedRollups.mockResolvedValue(rollups)
+    renderAt(url)
+    expect(
+      await screen.findByRole('heading', { level: 1, name })
+    ).toBeInTheDocument()
+    await funnel()
+    expect(document.title).toBe(`${name} — Toast Stats`)
+  })
+})

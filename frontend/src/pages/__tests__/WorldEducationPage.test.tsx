@@ -86,12 +86,16 @@ describe('WorldEducationPage', () => {
     serveRecorded()
     renderAt('/regions/education')
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Regions' })
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Worldwide education',
+      })
     ).toBeInTheDocument()
     const kpis = await screen.findByRole('list', {
       name: 'Education at a glance',
     })
     expect(within(kpis).getByText('26,497')).toBeInTheDocument()
+    expect(document.title).toBe('Worldwide education — Toast Stats')
     expect(
       screen.getByRole('table', { name: 'Regions, education awards' })
     ).toBeInTheDocument()

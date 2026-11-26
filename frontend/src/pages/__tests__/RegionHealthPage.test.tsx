@@ -121,3 +121,18 @@ describe('WorldHealthPage', () => {
     )
   })
 })
+
+describe('the h1 and the tab title name the page (#2756)', () => {
+  it.each([
+    ['/region/07/health', 'Region 07 health & compliance'],
+    ['/regions/health', 'Worldwide health & compliance'],
+  ])('%s reads "%s"', async (url, name) => {
+    mocked.mockResolvedValue(rollups)
+    renderAt(url)
+    expect(
+      await screen.findByRole('heading', { level: 1, name })
+    ).toBeInTheDocument()
+    await screen.findByTestId('rollup-kpis')
+    expect(document.title).toBe(`${name} — Toast Stats`)
+  })
+})

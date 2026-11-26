@@ -30,6 +30,31 @@ const ROUTES = [
   '/district/61/division/A/area/01/print',
 ]
 
+/* Each region and world rollup subpage names itself in the h1, in sentence
+ * case, and the tab title is the same text (#2756). The /region/4 routes
+ * render the padded id, "Region 04". */
+const PAGE_NAMES: ReadonlyArray<readonly [string, string]> = [
+  ['/regions/education', 'Worldwide education'],
+  ['/regions/health', 'Worldwide health & compliance'],
+  ['/regions/changes', 'Worldwide: what changed'],
+  ['/region/4/education', 'Region 04 education'],
+  ['/region/4/growth', 'Region 04 club growth'],
+  ['/region/4/changes', 'Region 04: what changed'],
+]
+
+for (const [route, name] of PAGE_NAMES) {
+  test(`${route}: the h1 and the tab title read "${name}"`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.goto(route, { waitUntil: 'domcontentloaded' })
+    await expect(page.locator('h1:visible')).toHaveText(name, {
+      timeout: 15_000,
+    })
+    await expect(page).toHaveTitle(`${name} — Toast Stats`)
+  })
+}
+
 interface Heading {
   level: number
   text: string

@@ -69,7 +69,7 @@ describe('RegionMeetingsPage', () => {
     expect(
       screen.getByRole('list', { name: /meetings at a glance/i })
     ).toHaveTextContent('936 of 972')
-    expect(document.title).toMatch(/Region 05 Meeting Times/)
+    expect(document.title).toMatch(/Region 05 meeting times/)
   })
 
   it('narrows to a district from the URL (?district=)', async () => {
@@ -144,5 +144,20 @@ describe('WorldMeetingsPage', () => {
     expect(await screen.findByTestId('meetings-unavailable')).toHaveTextContent(
       /not available yet/i
     )
+  })
+})
+
+describe('the h1 and the tab title name the page (#2756)', () => {
+  it.each([
+    ['/region/05/meetings', 'Region 05 meeting times'],
+    ['/regions/meetings', 'Worldwide meeting times'],
+  ])('%s reads "%s"', async (url, name) => {
+    mocked.mockResolvedValue(view)
+    renderAt(url)
+    expect(
+      await screen.findByRole('heading', { level: 1, name })
+    ).toBeInTheDocument()
+    await grid()
+    expect(document.title).toBe(`${name} — Toast Stats`)
   })
 })

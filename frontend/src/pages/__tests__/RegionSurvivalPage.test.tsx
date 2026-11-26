@@ -149,3 +149,18 @@ describe('WorldSurvivalPage (#1818)', () => {
     ).toHaveTextContent(/not available yet/i)
   })
 })
+
+describe('the h1 and the tab title name the page (#2756)', () => {
+  it.each([
+    ['/region/09/growth/survival', 'Region 09 club survival', r09],
+    ['/regions/growth/survival', 'Worldwide club survival', world],
+  ])('%s reads "%s"', async (url, name, file) => {
+    mocked.mockResolvedValue(file)
+    renderAt(url)
+    expect(
+      await screen.findByRole('heading', { level: 1, name })
+    ).toBeInTheDocument()
+    await survivalTable()
+    expect(document.title).toBe(`${name} — Toast Stats`)
+  })
+})

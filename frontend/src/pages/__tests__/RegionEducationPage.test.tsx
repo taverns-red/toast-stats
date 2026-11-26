@@ -240,3 +240,16 @@ describe('RegionEducationPage — awards over time (#2592)', () => {
     ).toBeVisible()
   })
 })
+
+describe('the h1 and the tab title name the page (#2756)', () => {
+  it('reads "Region 01 education"', async () => {
+    serveRecorded()
+    renderAt('/region/01/education')
+    const name = 'Region 01 education'
+    expect(
+      await screen.findByRole('heading', { level: 1, name })
+    ).toBeInTheDocument()
+    await screen.findByRole('list', { name: 'Education at a glance' })
+    expect(document.title).toBe(`${name} — Toast Stats`)
+  })
+})

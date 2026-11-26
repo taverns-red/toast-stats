@@ -150,13 +150,17 @@ describe('WorldMapPage', () => {
     serve()
     renderAt('/regions/map')
     expect(
-      await screen.findByRole('heading', { level: 1, name: /Regions/ })
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Worldwide club map',
+      })
     ).toBeInTheDocument()
     const summary = await screen.findByTestId('world-map-summary')
     expect(within(summary).getByText('318')).toBeInTheDocument()
     expect(within(summary).getByText('4')).toBeInTheDocument()
     const rows = await rowsOf()
     expect(rows).toHaveLength(50)
+    expect(document.title).toBe('Worldwide club map — Toast Stats')
     expect(rows[0]).toHaveTextContent('Club Toastmasters de Sainte-Foy')
     expect(rows[0]).toHaveAttribute('href', '/district/61/club/5097')
     expect(fetchWorld).toHaveBeenCalledWith('2026-10-16')
