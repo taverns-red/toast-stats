@@ -9,6 +9,7 @@ import {
   type TieredKpiKey,
 } from '../utils/successPlanTargets'
 import { formatCompact, formatSignedCompact } from '../utils/formatCompact'
+import { HUB_NET_ABOUT, HUB_NET_CAPTION } from './districtHubTileMeta'
 
 /* #572 — sticky KPI strip extracted from DistrictOverview.
 
@@ -222,8 +223,8 @@ const KpiExpanded: React.FC<KpiBodyProps> = ({ kpis, ghost, planGoals }) => (
       <KpiDeltaCard
         title="Net Member Change"
         current={kpis.netMemberChange.current}
-        secondaryLabel="payments vs. the payment base"
-        tooltipContent="Membership payments minus this year's payment base, the starting figure recognition is measured from. This differs from the Trends 'Net Change', which compares member counts against the first snapshot of the year."
+        secondaryLabel={HUB_NET_CAPTION}
+        tooltipContent={HUB_NET_ABOUT}
       />
     </div>
     <p

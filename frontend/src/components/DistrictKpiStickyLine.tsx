@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import type { DistrictKpiStripData } from './DistrictKpiStrip'
 import { formatCompact, formatSignedCompact } from '../utils/formatCompact'
+import { HUB_NET_CAPTION } from './districtHubTileMeta'
 
 /* #2708 (D4) — the KPI block (strip or phone hub) is tall, so it scrolls away.
    Once it has, this one opaque line of the four headline figures pins under
@@ -116,9 +117,7 @@ export const DistrictKpiStickyLine: React.FC<DistrictKpiStickyLineProps> = ({
           <span className="district-kpi-stuck__item">
             <span className="district-kpi-stuck__label">Net</span>{' '}
             <strong>{formatSignedCompact(kpis.netMemberChange.current)}</strong>{' '}
-            <span className="district-kpi-stuck__label">
-              payments vs. the payment base
-            </span>
+            <span className="district-kpi-stuck__label">{HUB_NET_CAPTION}</span>
           </span>
         </div>
       </div>

@@ -296,7 +296,7 @@ describe('DistrictKpiStrip (#572)', () => {
       })
       fireEvent.focus(infoBtn)
       const tip = await waitFor(() => within(deltaCard).getByRole('tooltip'))
-      // Overview basis: payments minus the program-year payment base.
+      // Overview basis: payments minus this year's payment base.
       expect(tip).toHaveTextContent(/payment base/i)
       // Explicitly distinguished from the Trends "Net Change" member-count metric.
       expect(tip).toHaveTextContent(/member counts/i)
