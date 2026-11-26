@@ -639,6 +639,18 @@ describe('site pages (#2249)', () => {
     }
   })
 
+  it('does not match a page on a short word of its name, such as "it"', () => {
+    // An exact word match outranks a club's prefix match, so a page would
+    // take one of the capped result slots on common short queries.
+    for (const q of ['it', 'how']) {
+      const flat = flatten(searchEntities(q, index))
+      expect(
+        flat.map(e => e.route),
+        q
+      ).not.toContain('/methodology')
+    }
+  })
+
   it('finds a page by a word of its name, in a trailing Pages group', () => {
     const groups = searchEntities('method', index)
     expect(groups.map(g => g.type)).toEqual(['page'])
