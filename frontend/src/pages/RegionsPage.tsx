@@ -175,7 +175,7 @@ const RegionsPage: React.FC = () => {
   }
 
   const lede =
-    'Aggregate ranking of the Toastmasters regions. Click any region to drill into its districts.'
+    'Aggregate ranking of the Toastmasters regions. Select a region to drill into its districts.'
 
   return (
     <div className="districts-page">

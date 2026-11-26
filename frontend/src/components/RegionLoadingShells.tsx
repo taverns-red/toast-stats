@@ -45,7 +45,7 @@ export const RegionPageLoadingShell: React.FC<{ region: string }> = ({
         </p>
         <h1 className="districts-page-header__title">Region {region}</h1>
         <p className="districts-page-header__lede shell-ghost-text">
-          0 districts in this region. Click a district to drill into its clubs.
+          0 districts in this region. Select a district to drill into its clubs.
         </p>
       </div>
       <div className="districts-page-header__actions">
@@ -85,7 +85,7 @@ export const RegionsPageLoadingShell: React.FC = () => (
         <p className="districts-page-header__eyebrow">All regions</p>
         <h1 className="districts-page-header__title">Regions</h1>
         <p className="districts-page-header__lede">
-          Aggregate ranking of the Toastmasters regions. Click any region to
+          Aggregate ranking of the Toastmasters regions. Select a region to
           drill into its districts.
         </p>
       </div>
