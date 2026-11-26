@@ -1608,8 +1608,20 @@ describe('parseMeetingSchedule (#2617) — an arrival lead before the time', () 
     ['Doors open 6:45 pm, meeting 7:00 pm', '19:00'],
     ['Zoom opens at 6:45pm, meeting at 7pm', '19:00'],
     ['Arrive 6:45 pm, start 7:00 pm', '19:00'],
+    ['Networking 6:30 pm, meeting 7:00 pm', '19:00'],
+    ['accueil 18 h 30, réunion 19 h', '19:00'],
   ])('%j starts at %s', (time, start) => {
     expect(starts('Wednesday', time)).toEqual([`Wednesday ${start}`])
+  })
+
+  it('keeps a lone networking time', () => {
+    expect(starts('Wednesday', 'Networking 6:30 pm')).toEqual([
+      'Wednesday 18:30',
+    ])
+  })
+
+  it('keeps a lone accueil time', () => {
+    expect(starts('Wednesday', 'Accueil 18 h 30')).toEqual(['Wednesday 18:30'])
   })
 
   it('"Open 6:30 - 7:30 pm" is still a range', () => {
