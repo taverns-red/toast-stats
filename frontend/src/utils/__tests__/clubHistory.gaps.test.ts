@@ -82,10 +82,31 @@ describe('summarizeClubHistoryGaps (#1437)', () => {
       opts
     )
     expect(
-      text?.startsWith(couldntLoad('the data for 2020-2021, 2019-2020'))
+      text?.startsWith(couldntLoad('the data for 2020-2021 and 2019-2020'))
     ).toBe(true)
     expect(text).toContain('2020-2021')
     expect(text).toContain('2019-2020')
+  })
+
+  it.each([
+    [['2022-2023'], '2022-2023'],
+    [['2022-2023', '2021-2022'], '2022-2023 and 2021-2022'],
+    [
+      ['2022-2023', '2021-2022', '2020-2021'],
+      '2022-2023, 2021-2022 and 2020-2021',
+    ],
+  ])('lists %j as %s', (labels, expected) => {
+    const gaps = labels.map((label, index) =>
+      gap({
+        startYear: 2022 - index,
+        label,
+        reason: 'snapshot-unavailable',
+      })
+    )
+
+    expect(summarizeClubHistoryGaps(gaps, opts)).toBe(
+      couldntLoad(`the data for ${expected}`)
+    )
   })
 
   it('truncates a long year list rather than printing every one', () => {
