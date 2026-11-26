@@ -393,6 +393,22 @@ describe('LandingSearch — why a result matched (#2652)', () => {
     expect(screen.queryByRole('listbox')).toBeNull()
   })
 
+  it('keeps the list open when the window loses focus, so a keyboard user returns to the same result (#2745)', async () => {
+    const user = userEvent.setup()
+    renderSearch()
+    await user.click(input())
+    await user.type(input(), 'method')
+    const listbox = await screen.findByRole('listbox')
+    const link = within(listbox).getByRole('link', { name: /methodology/i })
+    link.focus()
+    // Switching tabs or apps blurs with no relatedTarget while the document
+    // no longer has focus.
+    const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(false)
+    fireEvent.blur(link, { relatedTarget: null })
+    hasFocus.mockRestore()
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
+  })
+
   it('has a short placeholder that fits a 259px field and does not repeat the label (LAND-25)', () => {
     renderSearch()
     expect(input()).toHaveAttribute('placeholder', 'e.g. 61 or Rock On')
