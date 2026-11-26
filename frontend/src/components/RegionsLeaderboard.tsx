@@ -523,7 +523,7 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
             className="flex flex-wrap items-center gap-x-3 gap-y-1 min-h-[44px] text-tm-loyal-blue hover:underline"
           >
             <span
-              className="inline-block whitespace-nowrap px-2 py-0.5 text-sm font-mono rounded bg-tm-loyal-blue/10 text-tm-loyal-blue theme-dark:bg-tm-loyal-blue/30 theme-dark:text-blue-200"
+              className="inline-block whitespace-nowrap px-2 py-0.5 text-sm font-mono rounded bg-tm-loyal-blue/10 text-tm-loyal-blue theme-dark:text-blue-200"
               aria-hidden="true"
             >
               Region {r.region}
