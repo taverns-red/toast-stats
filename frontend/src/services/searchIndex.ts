@@ -27,12 +27,17 @@ export type SearchEntityType =
 /* Site pages (#2249) — the worldwide views where districts, regions and
    clubs are found. Static, so they cost no fetch; ranked last (TYPE_RANK)
    so a page never displaces a place on a shared term. */
-const SITE_PAGES: ReadonlyArray<{ label: string; route: string }> = [
+const SITE_PAGES: ReadonlyArray<{
+  label: string
+  route: string
+  aliases?: string[]
+}> = [
   { label: 'Regions', route: '/regions' },
   { label: 'Clubs worldwide', route: '/clubs' },
   { label: 'Awards', route: '/awards' },
   { label: 'History', route: '/history' },
-  { label: 'Methodology', route: '/methodology' },
+  // The page's old name still finds it (searchIndex.test.ts).
+  { label: 'How it works', route: '/methodology', aliases: ['Methodology'] },
 ]
 
 export interface SearchEntity {
@@ -267,14 +272,20 @@ export function buildSearchIndex(
     }
   }
 
-  // Site pages (#2249) — matched on the label and each of its words.
+  // A page matches on its label and each word longer than 3 letters. An
+  // exact word outranks a club's prefix match, so "it" or "how" would put a
+  // page in a capped result slot (searchIndex.test.ts, "no exact term").
   for (const page of SITE_PAGES) {
     entities.push({
       type: 'page',
       id: page.route,
       label: page.label,
       route: page.route,
-      terms: dedupeTerms([page.label, ...page.label.split(' ')]),
+      terms: dedupeTerms([
+        page.label,
+        ...page.label.split(' ').filter(word => word.length > 3),
+        ...(page.aliases ?? []),
+      ]),
     })
   }
 

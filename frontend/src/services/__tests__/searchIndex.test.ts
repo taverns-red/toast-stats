@@ -625,8 +625,27 @@ describe('site pages (#2249)', () => {
       ['Clubs worldwide', '/clubs'],
       ['Awards', '/awards'],
       ['History', '/history'],
-      ['Methodology', '/methodology'],
+      ['How it works', '/methodology'],
     ])
+  })
+
+  it('finds How it works by its name and by its old name, Methodology', () => {
+    for (const q of ['how it works', 'works', 'methodology']) {
+      const flat = flatten(searchEntities(q, index))
+      expect(
+        flat.map(e => e.route),
+        q
+      ).toContain('/methodology')
+    }
+  })
+
+  it('gives a page no exact term for a short word of its name, such as "it"', () => {
+    // An exact word match outranks a club's prefix match, so a page would
+    // take one of the capped result slots on common short queries. A
+    // substring match on the full label still ranks last, which is fine.
+    const page = index.entities.find(e => e.route === '/methodology')!
+    expect(page.terms).not.toContain('it')
+    expect(page.terms).not.toContain('how')
   })
 
   it('finds a page by a word of its name, in a trailing Pages group', () => {
