@@ -556,6 +556,11 @@ const ARRIVE_FOR = /^\s*\(?\s*for\s*(?:an?\s+)?$/
  *  "6:45 for 7:00". */
 const ARRIVE_LABEL =
   /(?:doors?\s+open\w*|\bopens?|\barriv\w*|\bnetworking\b|\baccueil\b|log[\s-]?in|check[\s-]?in)\s*(?:at|:|@)?\s*$/
+/** "Doors open 7:00 pm, ends 8:00 pm": a second time after an end word is
+ *  the end, so the first time stays the start. Test: "keeps the first time
+ *  as the start". */
+const ARRIVE_END =
+  /\b(?:ends?|ending|finish(?:es)?|closes?|until|till|fin|(?:se\s+)?termine|jusqu['’]?a)\b\s*[,:;.]?\s*$/
 /** "UTC-5", "GMT + 6", "-4DT": the number after is an offset, not a time.
  *  A dash after a word and a space ("Saturday- 7-9 pm") is not a sign. */
 const OFFSET_BEFORE = /(?:utc|gmt)\s*(?:[+\-−]\s*)?$|[+\-−]$/
@@ -824,7 +829,8 @@ function slotsFrom(found: readonly TimeToken[], text: string): Slot[] {
       next &&
       (ARRIVE_FOR.test(between(start, next)) ||
         (ARRIVE_LABEL.test(text.slice(0, start.start)) &&
-          !RANGE_SEPARATOR.test(between(start, next)))) &&
+          !RANGE_SEPARATOR.test(between(start, next)) &&
+          !ARRIVE_END.test(between(start, next)))) &&
       arrivalLead(start, next)
     ) {
       // "7:15pm for a 7.30 start": B takes A's am/pm when it has none.
