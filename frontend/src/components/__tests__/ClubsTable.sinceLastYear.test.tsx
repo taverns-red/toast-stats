@@ -22,6 +22,7 @@ import { ClubsTable, type SinceLastYearProps } from '../ClubsTable'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
 import { couldntLoad } from '../../utils/loadFailureText'
 import type { PriorYearClubGoals } from '../../utils/sinceLastYear'
+import type { FilterState } from '../filters/types'
 
 const render = (ui: ReactElement) =>
   rtlRender(<MemoryRouter>{ui}</MemoryRouter>)
@@ -65,13 +66,17 @@ const PRIOR: PriorYearClubGoals = {
   ],
 }
 
-const renderTable = (since: Partial<SinceLastYearProps> = {}) => {
+const renderTable = (
+  since: Partial<SinceLastYearProps> = {},
+  initialFilterState?: FilterState
+) => {
   const onModeChange = vi.fn()
   const view = render(
     <ClubsTable
       clubs={CLUBS}
       districtId="61"
       isLoading={false}
+      initialFilterState={initialFilterState}
       sinceLastYear={{
         mode: null,
         onModeChange,
@@ -161,6 +166,36 @@ describe('ClubsTable — since last year preset (#2432)', () => {
     expect(screen.getByTestId('since-last-year-9472')).toHaveTextContent(
       'Not in district then'
     )
+  })
+
+  it('names the since-last-year mode when it excludes every club', () => {
+    renderTable({
+      mode: 'climbed',
+      prior: {
+        ...PRIOR,
+        clubs: [{ clubId: '1', dcpGoals: 6 }, ...(PRIOR.clubs?.slice(1) ?? [])],
+      },
+    })
+
+    expect(screen.getByText('Active: Climbed since last year')).toBeVisible()
+  })
+
+  it('lists a column filter before the since-last-year mode', () => {
+    renderTable(
+      { mode: 'climbed', prior: PRIOR },
+      {
+        name: {
+          field: 'name',
+          type: 'text',
+          value: 'ZZZ',
+          operator: 'contains',
+        },
+      }
+    )
+
+    expect(
+      screen.getByText('Active: Club ZZZ · Climbed since last year')
+    ).toBeVisible()
   })
 
   it('labels every club no prior-year data when the district has no prior-year snapshot (the 200-series)', () => {
