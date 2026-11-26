@@ -9,12 +9,15 @@
  * the PY's latest) and raises the "No snapshot for …" notice.
  */
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo } from 'react'
 import {
   resolveRequestedDate,
   type DateResolution,
 } from '../utils/resolveRequestedDate'
-import { getMostRecentDateInProgramYear } from '../utils/programYear'
+import {
+  getMostRecentDateInProgramYear,
+  getProgramYearForDate,
+} from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
 import { snapshotDatesFrom, type SnapshotDate } from '../types/snapshotDate'
 import { setDateNotice } from './dateNoticeStore'
@@ -41,6 +44,9 @@ export function useResolvedDateSelection({
     options?: UrlWriteOptions
   ) => void
 }): DateResolution | null {
+  // Keyed on values, not identity: a caller passing a fresh dates array or
+  // year object each render would loop the URL repair with useUrlProgramYear.
+  // Test: "repairs a fallback URL once when dates are recreated".
   const datesKey = dates.join(',')
   const stableDates = useMemo(
     () =>
@@ -64,14 +70,15 @@ export function useResolvedDateSelection({
   const status = resolution?.status
   const resolvedDate = resolution?.date ?? null
   const resolvedYearStartDate = resolution?.programYear.startDate
-  const resolutionRef = useRef(resolution)
+  const resolvedYear = useMemo(
+    () =>
+      resolvedYearStartDate
+        ? getProgramYearForDate(resolvedYearStartDate)
+        : undefined,
+    [resolvedYearStartDate]
+  )
 
   useEffect(() => {
-    resolutionRef.current = resolution
-  }, [resolution])
-
-  useEffect(() => {
-    const resolvedYear = resolutionRef.current?.programYear
     if (!resolvedYear || !resolvedDate) return
     if (status !== 'fallback' && status !== 'switched-py') return
 
@@ -89,7 +96,7 @@ export function useResolvedDateSelection({
   }, [
     status,
     resolvedDate,
-    resolvedYearStartDate,
+    resolvedYear,
     requested,
     stableDates,
     writeUrl,

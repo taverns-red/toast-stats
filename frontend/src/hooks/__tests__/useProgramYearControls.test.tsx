@@ -263,6 +263,10 @@ describe('useProgramYearControls (#1301)', () => {
       await waitFor(() => expect(setProgramYearAndDate).toHaveBeenCalled())
       expect(result.current?.date).toBe('2025-08-01')
       expect(setProgramYearAndDate).toHaveBeenCalledTimes(1)
+      expect(setProgramYearAndDate).toHaveBeenCalledWith(
+        expect.objectContaining({ year: 2025 }),
+        '2025-08-01'
+      )
       expect(renders).toBeLessThanOrEqual(3)
     })
   })
