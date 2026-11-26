@@ -123,6 +123,14 @@
     vertical-align: middle;
   }
 
+  /* An info button's tap area is 44px tall (tooltip.css). A one-line row is
+     shorter, so neighbouring rows' tap areas would overlap. A table cell's
+     height works as a minimum. Checked by priorityColumns.test.ts and the
+     tap-area test in e2e/priority-columns.smoke.ts. */
+  .priority-columns__table td:has(.info-tooltip__trigger) {
+    height: 44px;
+  }
+
   .priority-columns__identity {
     overflow: hidden;
     text-overflow: ellipsis;
