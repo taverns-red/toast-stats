@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const frontend = join(dirname(fileURLToPath(import.meta.url)), '../../..')
+// "Click" is wrong on a phone or tablet, so desktop-and-touch copy says
+// "Select". Phone-only copy (ContextBar, below 768 px) may say "Tap".
 const CLICK_INSTRUCTION = /\bClick (?:a|an|any|the|on)\b/
 const COMMENT_LINE = /^\s*(?:\/\/|\/\*|\*|\{\/\*)/
 
