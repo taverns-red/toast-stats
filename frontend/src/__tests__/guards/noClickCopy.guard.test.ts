@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 const frontend = join(dirname(fileURLToPath(import.meta.url)), '../../..')
 // "Click" is wrong on a phone or tablet, so desktop-and-touch copy says
 // "Select". Phone-only copy (ContextBar, below 768 px) may say "Tap".
-const CLICK_INSTRUCTION = /\bClick (?:a|an|any|the|on)\b/
+const CLICK_INSTRUCTION = /\bClick (?:a|an|any|the|on|to|here)\b/
 const COMMENT_LINE = /^\s*(?:\/\/|\/\*|\*|\{\/\*)/
 
 function sourceFiles(directory: string): string[] {
@@ -30,7 +30,7 @@ function clickHits(path: string): string[] {
 }
 
 describe('reader-facing copy says Select, not Click', () => {
-  it('has no "Click a/an/any/the/on" outside comments', () => {
+  it('has no "Click a/an/any/the/on/to/here" outside comments', () => {
     const hits = ['src/pages', 'src/components']
       .flatMap(dir => sourceFiles(join(frontend, dir)))
       .flatMap(clickHits)

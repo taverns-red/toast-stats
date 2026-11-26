@@ -35,8 +35,8 @@ export const DistrictCell: React.FC<{
   const tier = rawTier && rawTier !== 'NotDistinguished' ? rawTier : null
   const held = meta.clubGrowthHeld.get(id)
   const starHelper = isMine
-    ? 'Click to clear · this district pins to top across visits'
-    : 'Click to mark as my district · pins to top across visits'
+    ? 'Select to clear · this district pins to top across visits'
+    : 'Select to mark as my district · pins to top across visits'
   return (
     <div className="rankings-district">
       <button
