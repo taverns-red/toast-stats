@@ -9,6 +9,7 @@ import React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useLatestAsOfDate } from '../useLatestAsOfDate'
 import { fetchCdnManifest, fetchCdnRankings } from '../../services/cdn'
+import { toSnapshotDate } from '../../types/snapshotDate'
 
 vi.mock('../../services/cdn', () => ({
   fetchCdnRankings: vi.fn(),
@@ -97,7 +98,10 @@ describe('useLatestAsOfDate with a viewed snapshot date (#3221)', () => {
       '2026-11-23'
     )
     const { result } = renderHook(
-      () => useLatestAsOfDate({ viewedSnapshotDate: '2026-11-24' }),
+      () =>
+        useLatestAsOfDate({
+          viewedSnapshotDate: toSnapshotDate('2026-11-24')!,
+        }),
       { wrapper }
     )
     await waitFor(() => expect(result.current.asOfDate).toBe('2026-11-24'))
@@ -110,7 +114,10 @@ describe('useLatestAsOfDate with a viewed snapshot date (#3221)', () => {
       '2026-11-23'
     )
     const { result } = renderHook(
-      () => useLatestAsOfDate({ viewedSnapshotDate: '2026-11-24' }),
+      () =>
+        useLatestAsOfDate({
+          viewedSnapshotDate: toSnapshotDate('2026-11-24')!,
+        }),
       { wrapper }
     )
     await settled()
