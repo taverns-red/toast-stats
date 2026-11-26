@@ -272,7 +272,9 @@ export function buildSearchIndex(
     }
   }
 
-  // Site pages (#2249) — matched on the label and each of its words.
+  // A page matches on its label and each word longer than 3 letters. An
+  // exact word outranks a club's prefix match, so "it" or "how" would put a
+  // page in a capped result slot (searchIndex.test.ts, "no exact term").
   for (const page of SITE_PAGES) {
     entities.push({
       type: 'page',
@@ -281,7 +283,7 @@ export function buildSearchIndex(
       route: page.route,
       terms: dedupeTerms([
         page.label,
-        ...page.label.split(' '),
+        ...page.label.split(' ').filter(word => word.length > 3),
         ...(page.aliases ?? []),
       ]),
     })
