@@ -6,6 +6,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   CELL_PADDING_PX,
+  CLASSIC_SCROLLBAR_PX,
+  LEADERBOARD_BUDGET_PX,
   QUALIFYING_TODAY_LINE_PX,
   TIER_BUDGET_PX,
   leaderboardSizes,
@@ -40,11 +42,21 @@ const widthWithTraining = (
   )
 
 describe('regions leaderboard layout', () => {
+  // A Windows visitor at 768 or 1024 has a classic scrollbar (#3266).
+  it.each(['tablet', 'laptop'] as const)(
+    'leaves room at %s for a classic scrollbar',
+    tier => {
+      expect(LEADERBOARD_BUDGET_PX[tier]).toBe(
+        TIER_BUDGET_PX[tier] - CLASSIC_SCROLLBAR_PX
+      )
+    }
+  )
+
   it.each(TIERS.flatMap(tier => SHAPES.map(shape => [tier, shape] as const)))(
-    'fits %s with the training columns (rounds expanded: %j)',
+    'fits %s with the training columns and a classic scrollbar (rounds expanded: %j)',
     (tier, shape) => {
       expect(widthWithTraining(tier, shape), tier).toBeLessThanOrEqual(
-        TIER_BUDGET_PX[tier]
+        LEADERBOARD_BUDGET_PX[tier]
       )
     }
   )
@@ -57,7 +69,7 @@ describe('regions leaderboard layout', () => {
       expanded: [false, false],
     })
     expect(leaderboardWidth(ids, 'tablet')).toBeLessThanOrEqual(
-      TIER_BUDGET_PX.tablet
+      LEADERBOARD_BUDGET_PX.tablet
     )
   })
 

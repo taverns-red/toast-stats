@@ -6,9 +6,25 @@
  * "fits" is a sum against the budget, not a layout guess.
  */
 
-import { TIER_BUDGET_PX, type BreakpointTier } from './clubsColumnMeta'
+import {
+  CLASSIC_SCROLLBAR_PX,
+  TIER_BUDGET_PX,
+  type BreakpointTier,
+} from './clubsColumnMeta'
 
-export { TIER_BUDGET_PX, type BreakpointTier }
+export { CLASSIC_SCROLLBAR_PX, TIER_BUDGET_PX, type BreakpointTier }
+
+/** The leaderboard's width per tier with a classic scrollbar showing. It has
+ *  no Columns menu to recover from an overflow, so it budgets for Windows at
+ *  every tier; the desktop budget already has the scrollbar off.
+ *  Checked by regionsLeaderboardLayout.test.ts and the classic-scrollbar
+ *  smoke (regions-classic-scrollbar.smoke.ts). */
+export const LEADERBOARD_BUDGET_PX: Readonly<Record<BreakpointTier, number>> = {
+  tablet: TIER_BUDGET_PX.tablet - CLASSIC_SCROLLBAR_PX,
+  laptop: TIER_BUDGET_PX.laptop - CLASSIC_SCROLLBAR_PX,
+  desktop: TIER_BUDGET_PX.desktop,
+  wide: TIER_BUDGET_PX.wide - CLASSIC_SCROLLBAR_PX,
+}
 
 /** Fixed widths in px (8px padding per side included); Region takes the rest
  *  but is counted at its size here. */

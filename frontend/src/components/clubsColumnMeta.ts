@@ -59,6 +59,11 @@ export interface ClubColumnMeta {
   defaultVisible: Readonly<Record<BreakpointTier, boolean>>
 }
 
+/** A classic (non-overlay) scrollbar takes 17px of the viewport in Chrome,
+ *  Edge and Firefox on Windows at 100% zoom. macOS, iOS and Android overlay
+ *  theirs, so only a Windows visitor loses this width. */
+export const CLASSIC_SCROLLBAR_PX = 17
+
 /** Usable table width per tier: `min(viewport, 1600) - 86px` (spec §4.1),
  *  with 17px off the 1280 tier for a classic Windows scrollbar. */
 export const TIER_BUDGET_PX: Readonly<Record<BreakpointTier, number>> = {
