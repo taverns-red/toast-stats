@@ -89,12 +89,17 @@ const TRAINING = regionsTrainingOverview(
   '2026-2027'
 )
 
-const renderAt = (width: number, withTraining = true) => {
+const renderAt = (
+  width: number,
+  withTraining = true,
+  url = '/regions',
+  rollups = ROLLUPS
+) => {
   stubViewportWidth(width)
   render(
-    <MemoryRouter initialEntries={['/regions']}>
+    <MemoryRouter initialEntries={[url]}>
       <RegionsLeaderboard
-        rollups={ROLLUPS}
+        rollups={rollups}
         trends={TRENDS}
         training={withTraining ? TRAINING : undefined}
       />
@@ -124,11 +129,14 @@ describe('RegionsLeaderboard columns per width tier (#2716)', () => {
     expect(pageHeaders()).toContain('Trend')
   })
 
-  it('tablet with training: drops Districts, Payments and the All 7 columns', () => {
+  // Score ranks paid clubs, payments and Distinguished (product spec), so all
+  // three stay at every tier.
+  it('tablet with training: drops Districts and the All 7 columns', () => {
     renderAt(800)
     expect(pageHeaders()).toEqual([
       'Region',
       'Paid clubs',
+      'Payments',
       'Distinguished',
       'Score',
       'Round 1 (Jun–Aug): 4+ officers trained',
@@ -157,5 +165,35 @@ describe('RegionsLeaderboard columns per width tier (#2716)', () => {
     expect(heads).toContain('Districts')
     expect(heads).toContain('Payments')
     expect(heads).toContain('Round 1 (Jun–Aug): All 7 officers trained')
+  })
+
+  /* A shared link can sort by a column this width hides. The rows must not
+     follow a column nobody can see, so the table uses its default order. */
+  describe('a sort on a column hidden at this width', () => {
+    const SORTABLE = [
+      { ...mkRollup('01'), districtCount: 3, totalPayments: 9000 },
+      { ...mkRollup('02'), districtCount: 9, totalPayments: 15000 },
+    ]
+    const regionOrder = () =>
+      within(screen.getByRole('table', { name: 'Region rankings' }))
+        .getAllByRole('link')
+        .map(a => a.getAttribute('href'))
+        .filter(h => /^\/region\/\d+$/.test(h ?? ''))
+
+    it.each(['districts', 'r1AllSeven'])(
+      'tablet, ?sort=%s: region order, Region marked ascending',
+      field => {
+        renderAt(800, true, `/regions?sort=${field}&dir=desc`, SORTABLE)
+        expect(regionOrder()).toEqual(['/region/01', '/region/02'])
+        expect(
+          screen.getByRole('columnheader', { name: /^Region/ })
+        ).toHaveAttribute('aria-sort', 'ascending')
+      }
+    )
+
+    it('a visible column still sorts: tablet, ?sort=payments', () => {
+      renderAt(800, true, '/regions?sort=payments&dir=desc', SORTABLE)
+      expect(regionOrder()).toEqual(['/region/02', '/region/01'])
+    })
   })
 })

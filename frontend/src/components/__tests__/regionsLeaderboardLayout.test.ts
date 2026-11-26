@@ -32,7 +32,8 @@ const widthWithTraining = (
       showTrend: leaderboardShowsTrend(tier, true, true),
       showTraining: true,
       expanded,
-    })
+    }),
+    tier
   )
 
 describe('regions leaderboard layout', () => {
@@ -52,7 +53,9 @@ describe('regions leaderboard layout', () => {
       showTraining: false,
       expanded: [false, false],
     })
-    expect(leaderboardWidth(ids)).toBeLessThanOrEqual(TIER_BUDGET_PX.tablet)
+    expect(leaderboardWidth(ids, 'tablet')).toBeLessThanOrEqual(
+      TIER_BUDGET_PX.tablet
+    )
   })
 
   it('keeps every column at the tablet width when there is no training', () => {
@@ -72,6 +75,20 @@ describe('regions leaderboard layout', () => {
       'distinguished',
       'score',
     ])
+  })
+
+  // Score ranks paid clubs, payments and Distinguished, so a reader at any
+  // width sees all three.
+  it.each(TIERS)('keeps the three Score inputs at %s with training', tier => {
+    const ids = leaderboardColumnIds({
+      tier,
+      showTrend: leaderboardShowsTrend(tier, true, true),
+      showTraining: true,
+      expanded: [true, false],
+    })
+    expect(ids).toEqual(
+      expect.arrayContaining(['paidClubs', 'payments', 'distinguished'])
+    )
   })
 
   it('keeps Trend where it fits', () => {
