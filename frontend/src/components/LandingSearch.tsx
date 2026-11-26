@@ -123,10 +123,13 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
     return () => document.removeEventListener('mousedown', onPointerDown)
   }, [focused, ref])
 
-  // Tabbing away collapses the list too. Bound on the container, so focus
-  // leaving from the clear button or a result closes it, not only from the
-  // input (tested: "tabbing from the clear button out of the search").
+  // On the container, so tabbing out from the clear button or a result
+  // closes the list too ("tabbing from the clear button out of the search").
+  // Switching tabs or apps blurs with no relatedTarget while the element
+  // stays active; closing then would drop the focused result ("keeps the
+  // list open when the window loses focus").
   const onBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    if (e.relatedTarget === null && document.activeElement === e.target) return
     if (!containerRef.current?.contains(e.relatedTarget as Node | null)) {
       setFocused(false)
     }

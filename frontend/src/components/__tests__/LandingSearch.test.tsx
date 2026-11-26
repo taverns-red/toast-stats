@@ -401,11 +401,10 @@ describe('LandingSearch — why a result matched (#2652)', () => {
     const listbox = await screen.findByRole('listbox')
     const link = within(listbox).getByRole('link', { name: /methodology/i })
     link.focus()
-    // Switching tabs or apps blurs with no relatedTarget while the document
-    // no longer has focus.
-    const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(false)
+    // Switching tabs or apps blurs with no relatedTarget, and the link stays
+    // the document's active element.
     fireEvent.blur(link, { relatedTarget: null })
-    hasFocus.mockRestore()
+    expect(document.activeElement).toBe(link)
     expect(screen.getByRole('listbox')).toBeInTheDocument()
   })
 
