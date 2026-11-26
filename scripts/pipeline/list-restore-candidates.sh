@@ -11,7 +11,8 @@
 # stderr files and refuses the whole plan on any line that is not gcloud's
 # "matched no objects" (a missing soft-deleted copy would make an overwritten
 # object look new and get deleted). A call may exit non-zero for that benign
-# message, so this script does not stop on it.
+# message, so this script does not stop on it; any other non-zero exit adds
+# a line to the errors file.
 #
 # Env: PROD_BUCKET (required), GCLOUD (default `gcloud`).
 # Exit codes: 0 listed (judge the files, not the code) - 2 usage
@@ -35,6 +36,19 @@ done <"${PATHS}"
   exit 2
 }
 
-"${GCLOUD}" storage ls --json "${URLS[@]}" >"${OUT}/live.json" 2>"${OUT}/live.err" || true
-"${GCLOUD}" storage ls --soft-deleted --json "${URLS[@]}" >"${OUT}/soft.json" 2>"${OUT}/soft.err" || true
+# gcloud exits 1 for "matched no objects", which the planner accepts. Any
+# other failure, or exit 1 without that line (killed part way, no stderr),
+# gets a line of its own, so the planner refuses rather than read a shorter
+# listing (listRestoreCandidates.test.ts).
+NONE='ERROR: (gcloud.storage.ls) One or more URLs matched no objects.'
+list() {
+  local name="$1" rc=0
+  shift
+  "${GCLOUD}" storage ls "$@" --json "${URLS[@]}" >"${OUT}/${name}.json" 2>"${OUT}/${name}.err" || rc=$?
+  if [ "${rc}" -ne 0 ] && { [ "${rc}" -ne 1 ] || ! grep -qxF "${NONE}" "${OUT}/${name}.err"; }; then
+    echo "ERROR: list-restore-candidates: gcloud storage ls exited ${rc}" >>"${OUT}/${name}.err"
+  fi
+}
+list live
+list soft --soft-deleted
 echo "listed ${#URLS[@]} object name(s) into ${OUT}" >&2

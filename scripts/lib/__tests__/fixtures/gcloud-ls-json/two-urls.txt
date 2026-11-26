@@ -1,0 +1,52 @@
+[
+{
+  "url": "gs://gcp-public-data-landsat/index.csv.gz#1642651542972116",
+  "type": "cloud_object",
+  "metadata": {
+    "bucket": "gcp-public-data-landsat",
+    "contentType": "text/csv",
+    "crc32c": "FnKFFQ==",
+    "etag": "CNTN1e25v/UCEAE=",
+    "generation": "1642651542972116",
+    "id": "gcp-public-data-landsat/index.csv.gz/1642651542972116",
+    "kind": "storage#object",
+    "md5Hash": "EivGmzgsUzAdL6zmtp0zRw==",
+    "mediaLink": "https://storage.googleapis.com/download/storage/v1/b/gcp-public-data-landsat/o/index.csv.gz?generation=1642651542972116&alt=media",
+    "metageneration": "1",
+    "name": "index.csv.gz",
+    "selfLink": "https://www.googleapis.com/storage/v1/b/gcp-public-data-landsat/o/index.csv.gz",
+    "size": "767466786",
+    "storageClass": "STANDARD",
+    "timeCreated": "2022-01-20T04:05:43.150000+00:00",
+    "timeFinalized": "2022-01-20T04:05:43.150000+00:00",
+    "timeStorageClassUpdated": "2022-01-20T04:05:43.150000+00:00",
+    "updated": "2022-01-20T04:05:43.150000+00:00"
+  }
+}
+]
+[
+{
+  "url": "gs://gcp-public-data-landsat/LC08/01/044/034/LC08_L1GT_044034_20130330_20170310_01_T2/LC08_L1GT_044034_20130330_20170310_01_T2_MTL.txt#1504863031559385",
+  "type": "cloud_object",
+  "metadata": {
+    "bucket": "gcp-public-data-landsat",
+    "contentType": "application/octet-stream",
+    "crc32c": "TeBDMA==",
+    "etag": "CNmJutOjldYCEAE=",
+    "generation": "1504863031559385",
+    "id": "gcp-public-data-landsat/LC08/01/044/034/LC08_L1GT_044034_20130330_20170310_01_T2/LC08_L1GT_044034_20130330_20170310_01_T2_MTL.txt/1504863031559385",
+    "kind": "storage#object",
+    "md5Hash": "ziZNd8uikTtDCkBTgS5Riw==",
+    "mediaLink": "https://storage.googleapis.com/download/storage/v1/b/gcp-public-data-landsat/o/LC08%2F01%2F044%2F034%2FLC08_L1GT_044034_20130330_20170310_01_T2%2FLC08_L1GT_044034_20130330_20170310_01_T2_MTL.txt?generation=1504863031559385&alt=media",
+    "metageneration": "1",
+    "name": "LC08/01/044/034/LC08_L1GT_044034_20130330_20170310_01_T2/LC08_L1GT_044034_20130330_20170310_01_T2_MTL.txt",
+    "selfLink": "https://www.googleapis.com/storage/v1/b/gcp-public-data-landsat/o/LC08%2F01%2F044%2F034%2FLC08_L1GT_044034_20130330_20170310_01_T2%2FLC08_L1GT_044034_20130330_20170310_01_T2_MTL.txt",
+    "size": "8454",
+    "storageClass": "STANDARD",
+    "timeCreated": "2017-09-08T09:30:31.442000+00:00",
+    "timeFinalized": "2017-09-08T09:30:31.442000+00:00",
+    "timeStorageClassUpdated": "2017-09-08T09:30:31.442000+00:00",
+    "updated": "2017-09-08T09:30:31.442000+00:00"
+  }
+}
+]

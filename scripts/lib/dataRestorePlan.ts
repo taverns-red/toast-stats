@@ -262,6 +262,65 @@ export function parseListing(json: unknown): ObjectCopy[] {
   return out
 }
 
+/**
+ * Read a listing file's text. `gcloud storage ls --json` prints one array per
+ * URL, back to back, and nothing for a URL that matched no objects, so an
+ * empty file is an empty listing. Anything else between or after the arrays,
+ * or an array cut short, refuses the listing (dataRestorePlan.test.ts). A
+ * file cut cleanly between arrays parses; list-restore-candidates.sh catches
+ * that case from gcloud's exit code (listRestoreCandidates.test.ts).
+ */
+export function parseListingText(text: string): ObjectCopy[] {
+  const out: ObjectCopy[] = []
+  let i = 0
+  while (i < text.length) {
+    if (/\s/.test(text[i])) {
+      i++
+      continue
+    }
+    if (text[i] !== '[') {
+      throw new RestorePlanError(
+        `listing has "${text[i]}" at offset ${i}, where an array should start`
+      )
+    }
+    const end = arrayEnd(text, i)
+    let items: unknown
+    try {
+      items = JSON.parse(text.slice(i, end))
+    } catch (e) {
+      throw new RestorePlanError(
+        `listing array at offset ${i} is unreadable: ${(e as Error).message}`
+      )
+    }
+    out.push(...parseListing(items))
+    i = end
+  }
+  return out
+}
+
+/** Offset just past the array that opens at `start`, skipping strings. */
+function arrayEnd(text: string, start: number): number {
+  let depth = 0
+  let inString = false
+  for (let i = start; i < text.length; i++) {
+    const c = text[i]
+    if (inString) {
+      if (c === '\\') i++
+      else if (c === '"') inString = false
+    } else if (c === '"') {
+      inString = true
+    } else if (c === '[' || c === '{') {
+      depth++
+    } else if (c === ']' || c === '}') {
+      depth--
+      if (depth === 0) return i + 1
+    }
+  }
+  throw new RestorePlanError(
+    `listing array at offset ${start} is cut short: no closing bracket`
+  )
+}
+
 function planOne(
   live: ObjectCopy,
   copies: ObjectCopy[],

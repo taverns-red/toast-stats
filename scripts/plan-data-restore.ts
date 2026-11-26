@@ -45,7 +45,7 @@ import {
   RestorePlanError,
   checkListingErrors,
   executePlan,
-  parseListing,
+  parseListingText,
   parseRemovalRecord,
   parseSavedPlan,
   planRestore,
@@ -106,8 +106,10 @@ try {
   } else if (!values.since || !values.until || !values.paths) {
     usage()
   }
-  const live = parseListing(readJson(values.live))
-  const softDeleted = parseListing(readJson(values['soft-deleted']))
+  const live = parseListingText(readFileSync(values.live, 'utf8'))
+  const softDeleted = parseListingText(
+    readFileSync(values['soft-deleted'], 'utf8')
+  )
   // The run's record of prod removals made on purpose (#2856). Optional: a
   // run that removed nothing publishes none. A file named but unreadable, or
   // malformed, refuses the plan.

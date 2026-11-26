@@ -132,6 +132,76 @@ describe('plan-data-restore CLI: --removals (#2856)', () => {
   })
 })
 
+describe('plan-data-restore CLI: gcloud listings of many URLs (#3258)', () => {
+  // gcloud prints one JSON array per URL, back to back (see
+  // fixtures/gcloud-ls-json/two-urls.txt).
+  const arrays = (...lists: unknown[][]): string =>
+    lists.map(l => JSON.stringify(l, null, 2)).join('\n') + '\n'
+
+  it('plans from listings that hold one array per URL', () => {
+    live = file(
+      'live-many.json',
+      arrays(
+        [obj('v1/latest.json', '300', BAD)],
+        [obj('v1/other.json', '5', BAD)]
+      )
+    )
+    soft = file(
+      'soft-many.json',
+      arrays([obj('v1/latest.json', '200', '2026-11-07T10:00:00Z', BAD)], [])
+    )
+    const r = cli(planArgs())
+    expect(r.status, r.stderr).toBe(0)
+    expect(JSON.parse(r.stdout).entries[0]).toMatchObject({
+      action: 'restore',
+      generation: '200',
+    })
+  })
+
+  it('reads an empty soft listing as no copies, and refuses on that', () => {
+    soft = file('soft-empty.json', '')
+    const r = cli(planArgs())
+    expect(r.status, r.stderr).toBe(1)
+    expect(r.stderr).not.toMatch(/JSON/)
+    expect(JSON.parse(r.stdout).entries[0].reason).toMatch(
+      /soft-deleted listing is empty/
+    )
+  })
+
+  it('reads the same listings in --execute mode', () => {
+    live = file(
+      'live-many-x.json',
+      arrays([obj('v1/latest.json', '300', BAD)], [])
+    )
+    const r = cli([
+      '--execute',
+      '--plan',
+      file('p.json', {}),
+      '--live',
+      live,
+      '--soft-deleted',
+      soft,
+      '--live-errors',
+      liveErr,
+      '--soft-errors',
+      softErr,
+    ])
+    expect(r.status).toBe(1)
+    expect(r.stderr).not.toMatch(/JSON/)
+    expect(r.stderr).toMatch(/plan/i)
+  })
+
+  it('refuses a truncated listing', () => {
+    live = file(
+      'live-cut.json',
+      arrays([obj('v1/latest.json', '300', BAD)]).slice(0, -4)
+    )
+    const r = cli(planArgs())
+    expect(r.status).toBe(1)
+    expect(r.stdout).toBe('')
+  })
+})
+
 describe('plan-data-restore CLI', () => {
   it('plans when an errors file holds only "matched no objects" lines', () => {
     softErr = file('soft2.err', NONE + NONE)
