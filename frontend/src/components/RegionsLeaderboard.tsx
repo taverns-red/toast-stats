@@ -528,7 +528,8 @@ export const RegionsLeaderboard: React.FC<RegionsLeaderboardProps> = ({
             id: `r${round}`,
             header: `Round ${round} training, ${
               round === 2 && overview && !overview.round2Started
-                ? `opens ${formatShortDate(overview.round2Opens)}`
+                ? // No break inside the date when the header wraps.
+                  `opens ${formatShortDate(overview.round2Opens).replace(/ /g, ' ')}`
                 : roundMonths(round)
             }`,
             cell: info => trainingCell(info.row.original.region, round, 'Dcp'),

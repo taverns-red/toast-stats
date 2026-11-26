@@ -129,7 +129,8 @@ describe('RegionsLeaderboard officer training ≥768 (#2330)', () => {
     // Review of #2334: two "not started" columns overflowed the table at
     // 1024. Until it opens, Round 2 is one narrow column.
     expect(heads.filter(h => /^Round 2/.test(h))).toEqual([
-      expect.stringMatching(/^Round 2 training.*opens Nov 1/),
+      // The date keeps a non-breaking space (tiers test).
+      expect.stringMatching(/^Round 2 training.*opens Nov\s1/),
     ])
     const cells = within(rowOf('01')).getAllByRole('cell')
     expect(cells.filter(td => td.textContent === 'not started')).toHaveLength(1)
