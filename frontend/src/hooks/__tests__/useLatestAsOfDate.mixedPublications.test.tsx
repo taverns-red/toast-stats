@@ -37,12 +37,15 @@ const settled = () =>
     expect(queryClient.isFetching()).toBe(0)
   })
 
-function serve(rankings: Record<string, unknown>, latest: string) {
+function serve(
+  rankings: { asOfDate: string; sourceSnapshotDate: string },
+  latest: string
+) {
   vi.mocked(fetchCdnRankings).mockResolvedValue({
     rankings: [],
     generatedAt: '2026-11-25T00:00:00Z',
     ...rankings,
-  } as Awaited<ReturnType<typeof fetchCdnRankings>>)
+  })
   vi.mocked(fetchCdnManifest).mockResolvedValue({
     latestSnapshotDate: latest,
     generatedAt: '2026-11-25T00:00:00Z',
