@@ -15,6 +15,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LandingSearch } from '../LandingSearch'
@@ -357,6 +358,39 @@ describe('LandingSearch — why a result matched (#2652)', () => {
         'No matches. Try a district number such as 61, or part of a club name.'
       )
     )
+  })
+
+  it('tabbing from the clear button out of the search closes the list (#2745)', async () => {
+    const user = userEvent.setup()
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <LandingSearch />
+          <button type="button">After the search</button>
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+    await user.click(input())
+    await user.type(input(), 'method')
+    const listbox = await screen.findByRole('listbox')
+    await user.tab()
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: /clear search/i })
+    )
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
+    await user.tab()
+    expect(document.activeElement).toBe(
+      within(listbox).getByRole('link', { name: /methodology/i })
+    )
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
+    await user.tab()
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: /after the search/i })
+    )
+    expect(screen.queryByRole('listbox')).toBeNull()
   })
 
   it('has a short placeholder that fits a 259px field and does not repeat the label (LAND-25)', () => {
