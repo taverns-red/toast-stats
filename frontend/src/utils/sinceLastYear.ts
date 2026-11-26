@@ -23,6 +23,12 @@ import { getProgramYearForDate } from './programYear'
 
 export type SinceLastYearMode = 'climbed' | 'slipped' | 'no-prior'
 
+export const SINCE_LAST_YEAR_MODE_LABELS: Record<SinceLastYearMode, string> = {
+  climbed: 'Climbed since last year',
+  slipped: 'Slipped since last year',
+  'no-prior': 'No prior-year data',
+}
+
 export const SINCE_LAST_YEAR_MODES: readonly SinceLastYearMode[] = [
   'climbed',
   'slipped',
