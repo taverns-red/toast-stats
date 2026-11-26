@@ -23,7 +23,7 @@
  * `layers(…, { lang })`: those need a sprite (town dots, shields, arrows) and
  * five Noto fontstacks, where we ship one font and no sprite.
  *
- * - **Font.** Inter Regular (OFL 1.1), the app's body font, as glyph PBFs on
+ * - **Font.** Inter Regular (OFL 1.1), as glyph PBFs on
  *   our own origin (`public/basemap/glyphs/`, built with `build_pbf_glyphs`),
  *   with Noto Sans Arabic and Noto Sans Hebrew (OFL 1.1) filling the Arabic
  *   and Hebrew ranges Inter does not cover (#2085). Only the ranges in
