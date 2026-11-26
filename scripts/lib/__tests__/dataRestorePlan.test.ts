@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
 import {
   checkListingErrors,
   parseListing,
+  parseListingText,
   planRestore,
   parseSavedPlan,
   verifyPlan,
@@ -204,6 +206,60 @@ describe('planRestore', () => {
       parseListing([{ url: 'gs://b/x', type: 'cloud_object' }])
     ).toThrow(RestorePlanError)
     expect(() => parseListing({})).toThrow(RestorePlanError)
+  })
+
+  describe('parseListingText (#3258)', () => {
+    // Captured verbatim from `gcloud storage ls --json URL1 URL2` on two
+    // public objects: gcloud prints one array per URL, back to back.
+    const TWO_URLS = readFileSync(
+      new URL('./fixtures/gcloud-ls-json/two-urls.txt', import.meta.url),
+      'utf8'
+    )
+
+    it("reads gcloud's real output for two URLs as one listing", () => {
+      expect(parseListingText(TWO_URLS).map(o => o.name)).toEqual([
+        'index.csv.gz',
+        'LC08/01/044/034/LC08_L1GT_044034_20130330_20170310_01_T2/LC08_L1GT_044034_20130330_20170310_01_T2_MTL.txt',
+      ])
+    })
+
+    it('reads an empty file as no objects: no URL matched', () => {
+      expect(parseListingText('')).toEqual([])
+      expect(parseListingText('\n')).toEqual([])
+    })
+
+    it('reads one array', () => {
+      const one = TWO_URLS.slice(0, TWO_URLS.indexOf(']\n[') + 2)
+      expect(parseListingText(one).map(o => o.generation)).toEqual([
+        '1642651542972116',
+      ])
+    })
+
+    it('refuses a truncated listing rather than reading it short', () => {
+      expect(() => parseListingText(TWO_URLS.slice(0, -3))).toThrow(
+        RestorePlanError
+      )
+      expect(() => parseListingText('[')).toThrow(RestorePlanError)
+    })
+
+    it('refuses anything but arrays between and after them', () => {
+      for (const bad of [
+        TWO_URLS + 'x',
+        TWO_URLS.replace(']\n[', '],\n['),
+        '{}',
+        '[] {}',
+        'null',
+      ]) {
+        expect(() => parseListingText(bad), bad.slice(-20)).toThrow(
+          RestorePlanError
+        )
+      }
+    })
+
+    it('is not fooled by brackets inside strings', () => {
+      const tricky = JSON.stringify([obj('a]b[c".json', '1', BAD)])
+      expect(parseListingText(tricky + '\n' + tricky)).toHaveLength(2)
+    })
   })
 
   it('limits the plan to the given paths', () => {

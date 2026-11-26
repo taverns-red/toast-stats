@@ -262,6 +262,11 @@ export function parseListing(json: unknown): ObjectCopy[] {
   return out
 }
 
+/** Read a listing file's text. */
+export function parseListingText(text: string): ObjectCopy[] {
+  return parseListing(JSON.parse(text))
+}
+
 function planOne(
   live: ObjectCopy,
   copies: ObjectCopy[],
