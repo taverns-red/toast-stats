@@ -52,15 +52,20 @@ function sourceFiles(dir: string): string[] {
 /** Comments are prose, not rendered CSS. */
 const stripComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '')
 
-/* A banned family in a TS/TSX font value: a font stack ("Inter, system-ui")
-   or a canvas shorthand ("12px Inter"). Matching stacks and sizes, not the
-   bare word, keeps prose such as "Inter-district" out. */
+/* A banned family in a TS/TSX font value: a font stack ("Inter, system-ui"),
+   a canvas shorthand ("12px Inter", "${size}px Inter") or a font key or
+   constant ("fontFamily: 'Inter'", "FONT = 'Inter'"). Matching these shapes,
+   not the bare word, keeps prose such as "Inter-district" out. */
 const BANNED_STACK =
   /\b(?:Inter|Space Grotesk)\b['"]?\s*,[^\n]*\b(?:system-ui|sans-serif|serif)\b/
-const BANNED_SHORTHAND = /\d(?:px|pt|em|rem)\s+['"]?(?:Inter|Space Grotesk)\b/
+const BANNED_SHORTHAND =
+  /(?:\d|\})(?:px|pt|em|rem)\s+['"]?(?:Inter|Space Grotesk)\b/
+const BANNED_KEY =
+  /\b(?:fontFamily|font-family|FONT\w*)['"]?\s*[:=]\s*['"`]\s*['"]?(?:Inter|Space Grotesk)\b/
 const isCommentLine = (line: string) => /^\s*(?:\/\/|\/\*|\*|\{\/\*)/.test(line)
-/* The video poster is an SVG data URI shown as an <img>. An image cannot
-   load the page's web fonts, so naming Inter there downloads nothing. */
+/* The video poster is an SVG data URI shown as a <video> poster image. An
+   image cannot load the page's web fonts, so naming Inter there downloads
+   nothing. */
 const ALLOWED_SOURCES = new Set(['pages/VideosPage.tsx'])
 
 const files = [
@@ -103,6 +108,7 @@ describe('no Phase-2 brand fonts in rendered UI (#2765)', () => {
             !isCommentLine(line) &&
             (BANNED_STACK.test(line) ||
               BANNED_SHORTHAND.test(line) ||
+              BANNED_KEY.test(line) ||
               /--rt-font-(?:display|body)/.test(line))
         )
         .map(({ n }) => `${rel(full)}:${n}`)
