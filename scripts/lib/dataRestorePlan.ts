@@ -266,8 +266,9 @@ export function parseListing(json: unknown): ObjectCopy[] {
  * Read a listing file's text. `gcloud storage ls --json` prints one array per
  * URL, back to back, and nothing for a URL that matched no objects, so an
  * empty file is an empty listing. Anything else between or after the arrays,
- * or an array cut short, refuses the listing: a damaged file must never read
- * as "fewer objects" (dataRestorePlan.test.ts, parseListingText).
+ * or an array cut short, refuses the listing (dataRestorePlan.test.ts). A
+ * file cut cleanly between arrays parses; list-restore-candidates.sh catches
+ * that case from gcloud's exit code (listRestoreCandidates.test.ts).
  */
 export function parseListingText(text: string): ObjectCopy[] {
   const out: ObjectCopy[] = []
