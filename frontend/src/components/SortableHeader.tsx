@@ -65,7 +65,7 @@ export function SortableHeader<F extends string>({
   const ariaLabel = apg
     ? undefined
     : isActive
-      ? `Sort by ${label}, currently ${direction === 'asc' ? 'ascending' : 'descending'}. Click to flip direction.`
+      ? `Sort by ${label}, currently ${direction === 'asc' ? 'ascending' : 'descending'}. Select to flip direction.`
       : `Sort by ${label}.`
 
   return (
