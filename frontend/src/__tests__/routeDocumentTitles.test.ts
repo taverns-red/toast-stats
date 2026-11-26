@@ -66,15 +66,16 @@ describe('every route sets a specific document title (#2640)', () => {
   })
 
   // Region and world rollup subpages use their h1, in sentence case, as the
-  // tab title (#2756). The page mounts in src/pages/__tests__ check the
-  // rendered h1 and document.title match.
+  // tab title (#2756). "What Changed" keeps its capitals as the feature's
+  // name (#3244, docs/product-spec.md). The page mounts in
+  // src/pages/__tests__ check the rendered h1 and document.title match.
   it.each([
     ['RegionHealthPage', '${title} health & compliance'],
     ['WorldHealthPage', 'Worldwide health & compliance'],
     ['RegionTrainingPage', '${title} officer training'],
     ['WorldMapPage', 'Worldwide club map'],
-    ['RankingsChangesPage', 'Worldwide: what changed'],
-  ])('%s title is its sentence-case h1: %s', (name, expected) => {
+    ['RankingsChangesPage', 'Worldwide: What Changed'],
+  ])('%s title is its h1: %s', (name, expected) => {
     expect(sourceOf(name)).toContain(expected)
   })
 
