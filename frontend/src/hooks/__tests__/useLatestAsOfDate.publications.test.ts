@@ -58,4 +58,11 @@ describe('freshness publication agreement', () => {
       }).asOfDate
     ).toBe(D1)
   })
+
+  it('compares rankings with the viewed date when the caller passes one (#3221)', () => {
+    const rankings = { asOfDate: D2, sourceSnapshotDate: D2 }
+
+    expect(rankingsAsOfDate(rankings, D1, D2)).toBe(D2)
+    expect(rankingsAsOfDate(rankings, D2, D1)).toBeUndefined()
+  })
 })
