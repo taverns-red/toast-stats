@@ -14,9 +14,12 @@ import {
   resolveRequestedDate,
   type DateResolution,
 } from '../utils/resolveRequestedDate'
-import { getMostRecentDateInProgramYear } from '../utils/programYear'
+import {
+  getMostRecentDateInProgramYear,
+  getProgramYearForDate,
+} from '../utils/programYear'
 import type { ProgramYear } from '../utils/programYear'
-import type { SnapshotDate } from '../types/snapshotDate'
+import { snapshotDatesFrom, type SnapshotDate } from '../types/snapshotDate'
 import { setDateNotice } from './dateNoticeStore'
 import type { UrlWriteOptions } from './useUrlProgramYear'
 
@@ -41,17 +44,39 @@ export function useResolvedDateSelection({
     options?: UrlWriteOptions
   ) => void
 }): DateResolution | null {
+  // Keyed on values, not identity: a caller passing a fresh dates array or
+  // year object each render would loop the URL repair with useUrlProgramYear.
+  // Test: "repairs a fallback URL once when dates are recreated".
+  const datesKey = dates.join(',')
+  const stableDates = useMemo(
+    () =>
+      snapshotDatesFrom({
+        dates: datesKey ? datesKey.split(',') : [],
+      }),
+    [datesKey]
+  )
   const resolution = useMemo(
     () =>
       programYear
-        ? resolveRequestedDate({ requested, dates, programYear })
+        ? resolveRequestedDate({
+            requested,
+            dates: stableDates,
+            programYear,
+          })
         : null,
-    [requested, dates, programYear]
+    [requested, stableDates, programYear]
   )
 
   const status = resolution?.status
   const resolvedDate = resolution?.date ?? null
-  const resolvedYear = resolution?.programYear
+  const resolvedYearStartDate = resolution?.programYear.startDate
+  const resolvedYear = useMemo(
+    () =>
+      resolvedYearStartDate
+        ? getProgramYearForDate(resolvedYearStartDate)
+        : undefined,
+    [resolvedYearStartDate]
+  )
 
   useEffect(() => {
     if (!resolvedYear || !resolvedDate) return
@@ -62,7 +87,7 @@ export function useResolvedDateSelection({
     }
     if (!writeUrl) return
 
-    const latest = getMostRecentDateInProgramYear([...dates], resolvedYear)
+    const latest = getMostRecentDateInProgramYear(stableDates, resolvedYear)
     const keep =
       status === 'switched-py' || resolvedDate !== latest
         ? resolvedDate
@@ -73,7 +98,7 @@ export function useResolvedDateSelection({
     resolvedDate,
     resolvedYear,
     requested,
-    dates,
+    stableDates,
     writeUrl,
     setProgramYearAndDate,
   ])

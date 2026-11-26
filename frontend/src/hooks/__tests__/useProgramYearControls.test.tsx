@@ -16,6 +16,8 @@ import React from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
+import { getProgramYear } from '../../utils/programYear'
+import { snapshotDatesFrom } from '../../types/snapshotDate'
 
 // Dates spanning three program years (Jul 1 – Jun 30 each), two per year.
 //   PY2026: 2026-08-01, 2026-09-15
@@ -42,6 +44,7 @@ vi.mock('../../services/cdn', () => {
 })
 
 import { useProgramYearControls } from '../useProgramYearControls'
+import { useResolvedDateSelection } from '../useResolvedDateSelection'
 
 function createWrapper(initialEntries: string[] = ['/']) {
   const queryClient = new QueryClient({
@@ -233,6 +236,38 @@ describe('useProgramYearControls (#1301)', () => {
       await new Promise(resolve => setTimeout(resolve, 50))
       expect(result.current.selectedProgramYear.year).toBe(2026)
       expect(result.current.effectiveDate).toBe('2026-09-15')
+    })
+
+    it('repairs a fallback URL once when dates are recreated', async () => {
+      let renders = 0
+      const setProgramYearAndDate = vi.fn()
+      const { result } = renderHook(() => {
+        const [, setRevision] = React.useState(0)
+        setProgramYearAndDate.mockImplementation(() =>
+          setRevision(revision => revision + 1)
+        )
+        renders += 1
+        if (renders > 50) throw new Error('date resolution did not settle')
+
+        return useResolvedDateSelection({
+          requested: '2026-02-10',
+          dates: snapshotDatesFrom({
+            dates: ['2025-08-01', '2026-05-01', '2026-08-01'],
+          }),
+          programYear: getProgramYear(2025),
+          writeUrl: true,
+          setProgramYearAndDate,
+        })
+      })
+
+      await waitFor(() => expect(setProgramYearAndDate).toHaveBeenCalled())
+      expect(result.current?.date).toBe('2025-08-01')
+      expect(setProgramYearAndDate).toHaveBeenCalledTimes(1)
+      expect(setProgramYearAndDate).toHaveBeenCalledWith(
+        expect.objectContaining({ year: 2025 }),
+        '2025-08-01'
+      )
+      expect(renders).toBeLessThanOrEqual(3)
     })
   })
 
