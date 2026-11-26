@@ -310,6 +310,46 @@ for (const theme of THEMES) {
     })
   }
 
+  // One-line rows (Award + Gap D) are shorter than an info button's 44px
+  // tap area, so a tap near a row's edge could open the next row's tooltip
+  // (#3242). Each tap area must stay inside its own row.
+  test(`area info buttons' tap areas stay in their rows at 375px (${theme})`, async ({
+    page,
+  }) => {
+    test.setTimeout(60_000)
+    await prep(page, theme, 375)
+    await page.goto('/district/61/division/A?cols=award%2CgapD', {
+      waitUntil: 'networkidle',
+      timeout: 60_000,
+    })
+    await page
+      .getByRole('table', { name: /Division A area performance/ })
+      .first()
+      .waitFor({ state: 'visible' })
+    const r = await page.evaluate(() => {
+      const triggers = [
+        ...document.querySelectorAll(
+          'table.priority-columns__table .info-tooltip__trigger'
+        ),
+      ]
+      const escapes = triggers.flatMap(t => {
+        const b = t.getBoundingClientRect()
+        const inset = -parseFloat(getComputedStyle(t, '::after').top) || 0
+        const row = t.closest('tr')!.getBoundingClientRect()
+        const top = b.top - inset
+        const bottom = b.bottom + inset
+        return top < row.top - 0.5 || bottom > row.bottom + 0.5
+          ? [
+              `${t.getAttribute('aria-label')}: ${top}–${bottom} in ${row.top}–${row.bottom}`,
+            ]
+          : []
+      })
+      return { triggers: triggers.length, escapes }
+    })
+    expect(r.triggers, 'info buttons measured').toBeGreaterThan(0)
+    expect(r.escapes, 'tap areas past their row').toEqual([])
+  })
+
   for (const width of WIDE) {
     test(`full table unchanged at ${width}px (${theme})`, async ({ page }) => {
       test.setTimeout(120_000)

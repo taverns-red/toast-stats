@@ -76,6 +76,15 @@ describe('priority-columns.css (#1834)', () => {
     expect(px(row, 'gap')).toBeGreaterThanOrEqual(8)
   })
 
+  it('a row with an info button is at least as tall as its 44px tap area (#3242)', () => {
+    expect(
+      px(
+        rule('.priority-columns__table td:has(.info-tooltip__trigger)'),
+        'height'
+      )
+    ).toBeGreaterThanOrEqual(44)
+  })
+
   it('the Full table button is a 44px target', () => {
     expect(
       px(rule('.priority-columns__full'), 'min-height')
