@@ -1,7 +1,7 @@
 /**
- * #1791 — the club page's membership trend with prior program years faint
- * behind the current line, built on #1705's shared program-year-position
- * helper (`buildMembershipTrendChartData`): every series is placed by its
+ * The club page's membership trend, with the newest prior year-end as one
+ * reference line, built on the shared program-year-position helper
+ * (`buildMembershipTrendChartData`): every series is placed by its
  * program-year day, and the current line is anchored at day 0 on the
  * predecessor's 06-30 close (D15). Tap-to-pin: a persistent readout under
  * the chart names the pinned day's value for each year (no hover-only

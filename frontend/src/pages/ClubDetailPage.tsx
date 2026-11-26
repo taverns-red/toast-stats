@@ -1177,9 +1177,9 @@ const ClubDetailPage: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* #1791 — prior program years faint behind the
-                          current line (#1705's shared builder, D15 anchor);
-                          their read starts only where this mounts. */}
+                      {/* Prior program years load only where this mounts.
+                          They show as one year-end reference line, not as
+                          lines of their own. */}
                       <ClubMembershipTrend
                         districtId={districtId ?? ''}
                         clubId={clubId ?? club.clubId}
