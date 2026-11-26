@@ -110,6 +110,37 @@ describe('AreaPerformanceTable priority columns below 768 (#1834)', () => {
     )
   })
 
+  it('opens what a shortened chip means by tap or keyboard, not only by title (#2762)', () => {
+    const provisional = withRecognitionState({
+      areaId: 'C3',
+      status: 'presidents-distinguished',
+      clubBase: 10,
+      paidClubs: 12,
+      netGrowth: 2,
+      distinguishedClubs: 7,
+      requiredDistinguishedClubs: 5,
+      firstRoundVisits: visits(9, 8),
+      secondRoundVisits: visits(2, 8),
+      isQualified: false,
+    })
+    render(
+      <MemoryRouter>
+        <AreaPerformanceTable areas={[provisional]} label="Division C" />
+      </MemoryRouter>
+    )
+    const row = within(screen.getByRole('table', { name: 'Division C' }))
+      .getByText('C3')
+      .closest('tr')!
+    expect(row.textContent).toContain('Pres. (prov.)')
+    const trigger = within(row).getByRole('button', {
+      name: 'About area C3 recognition',
+    })
+    fireEvent.click(trigger)
+    const tip = screen.getByRole('tooltip')
+    expect(tip).toHaveTextContent("President's Distinguished (Provisional)")
+    expect(tip).toHaveTextContent(/2nd-round visits due/)
+  })
+
   it('a chip swaps a metric in and persists it as ?cols=', () => {
     renderAt()
     fireEvent.click(screen.getByRole('button', { name: 'Gap D' }))
