@@ -12,6 +12,7 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { checkListingErrors, RestorePlanError } from '../dataRestorePlan.js'
+import { writeStubExecutable } from './stubExecutable.js'
 
 const SCRIPT = path.join(
   process.cwd(),
@@ -31,7 +32,7 @@ let out: string
 beforeEach(() => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'list-restore-candidates-'))
   out = path.join(tmp, 'out')
-  fs.writeFileSync(path.join(tmp, 'gcloud'), FAKE, { mode: 0o755 })
+  writeStubExecutable(path.join(tmp, 'gcloud'), FAKE)
   fs.writeFileSync(path.join(tmp, 'paths.txt'), 'a.json\nb.json\n')
 })
 afterEach(() => {
