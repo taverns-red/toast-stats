@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint . --report-unused-disable-directives --max-warnings 60",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 52",
     "test": "vitest --run",
     "test:unit": "vitest --run --project unit",
     "test:integration": "vitest --run --project integration",
