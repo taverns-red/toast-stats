@@ -123,8 +123,13 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
     return () => document.removeEventListener('mousedown', onPointerDown)
   }, [focused, ref])
 
-  // Tabbing away collapses the list too (focus leaving the container).
-  const onBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+  // On the container, so tabbing out from the clear button or a result
+  // closes the list too ("tabbing from the clear button out of the search").
+  // Switching tabs or apps blurs with no relatedTarget while the element
+  // stays active; closing then would drop the focused result ("keeps the
+  // list open when the window loses focus").
+  const onBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    if (e.relatedTarget === null && document.activeElement === e.target) return
     if (!containerRef.current?.contains(e.relatedTarget as Node | null)) {
       setFocused(false)
     }
@@ -168,7 +173,7 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
           : EMPTY_STATE
 
   return (
-    <div className="landing-search" ref={containerRef}>
+    <div className="landing-search" ref={containerRef} onBlur={onBlur}>
       <label htmlFor={INPUT_ID} className="landing-search__label">
         {LANDING_SEARCH_LABEL}
       </label>
@@ -204,7 +209,6 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ inputRef }) => {
             setFocused(true)
             setListOpen(true)
           }}
-          onBlur={onBlur}
           onKeyDown={onKeyDown}
           placeholder="e.g. 61 or Rock On"
           aria-autocomplete="list"
