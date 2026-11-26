@@ -321,6 +321,9 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                   allowDecimals={false}
                   width={50}
                   reversed={selectedMetric !== 'aggregate'}
+                  {...(selectedMetric !== 'aggregate' && {
+                    domain: [1, 'dataMax'],
+                  })}
                   label={
                     selectedMetric === 'aggregate'
                       ? {
