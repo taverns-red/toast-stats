@@ -24,7 +24,11 @@ import {
   type PriorYearClubGoals,
   type SinceLastYearMode,
 } from '../utils/sinceLastYear'
-import { SinceLastYearLine, SinceLastYearSelect } from './clubsSinceLastYear'
+import {
+  SINCE_LAST_YEAR_MODE_LABELS,
+  SinceLastYearLine,
+  SinceLastYearSelect,
+} from './clubsSinceLastYear'
 import {
   buildSinceLastYearColumn,
   sinceLastYearMeta,
@@ -1270,7 +1274,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           </p>
           {/* Name the filters doing the excluding (#817) — a dead "adjust your
               filters" leaves the user guessing which one to loosen. */}
-          {(describeActiveFilters(filterState).length > 0 || presetActive) && (
+          {isNarrowed && (
             <p className="clubs-text-muted text-sm mt-1">
               Active:{' '}
               {[
@@ -1278,6 +1282,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                   d => `${d.label} ${d.value}`
                 ),
                 ...(presetActive ? ['Close to Distinguished'] : []),
+                ...(sinceMode ? [SINCE_LAST_YEAR_MODE_LABELS[sinceMode]] : []),
               ].join(' · ')}
             </p>
           )}
