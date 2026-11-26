@@ -44,7 +44,7 @@ type Variant = {
   name: string
   rest: (surface: Rgba) => Rgba
   text: Rgba
-  states: { name: string; selector: string }[]
+  states: { name: string; selector: string; text?: Rgba }[]
 }
 
 const variants: Record<string, () => Variant> = {
@@ -92,10 +92,25 @@ const variants: Record<string, () => Variant> = {
       },
     ],
   }),
+  secondary: () => ({
+    name: 'secondary',
+    rest: surface => surface,
+    text: parseColor(ruleColour('.text-tm-loyal-blue', 'color'), darkTokens),
+    states: [
+      {
+        name: 'hover',
+        selector: '.hover\\:bg-tm-loyal-blue:hover:not(:disabled)',
+        text: parseColor(
+          ruleColour('.hover\\:text-white:hover:not(:disabled)', 'color'),
+          darkTokens
+        ),
+      },
+    ],
+  }),
 }
 
 describe('dark button state feedback', () => {
-  it.each(['primary', 'accent', 'ghost'])(
+  it.each(['primary', 'accent', 'ghost', 'secondary'])(
     '%s is readable at rest and shows hover and press',
     name => {
       const variant = variants[name]()
@@ -112,7 +127,7 @@ describe('dark button state feedback', () => {
             `${variant.name} ${state.name} differs from rest`
           ).toBeGreaterThanOrEqual(VISIBLE)
           expect(
-            contrast(variant.text, stateFill),
+            contrast(state.text ?? variant.text, stateFill),
             `${variant.name} ${state.name} text`
           ).toBeGreaterThanOrEqual(AA)
         }
