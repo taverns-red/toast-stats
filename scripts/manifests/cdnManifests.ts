@@ -5,8 +5,8 @@
  * Ported from the inline `node -e` blocks in data-pipeline.yml's "Generate CDN
  * manifests" step. The frontend, the MCP server and the promotion diff all
  * read these files, so the output stays byte-identical to that code, except
- * the additive `snapshotDate` on rankings (#3220). Only add fields here
- * (ADR 0019). __tests__/goldenParity.test.ts pins the bytes.
+ * the additive `snapshotDate` on rankings (#3220).
+ * __tests__/goldenParity.test.ts pins the bytes.
  * `generatedAt` is a parameter so the bytes are testable.
  */
 

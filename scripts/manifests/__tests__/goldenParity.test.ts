@@ -13,9 +13,9 @@
  * expected/ is hand-written except one line in each rankings expectation:
  * `snapshotDate`, which the frontend compares with v1/latest.json so a
  * cached mix of two publications shows no "as of" date (#3220). The inputs
- * are trimmed captures of live prod
- * objects (2026-10-08..10): rankings files, a `gcloud storage ls` listing
- * and the live snapshot index. Edge files (a corrupt one, one without
+ * are trimmed captures of live prod objects (2026-10-08..10): rankings
+ * files, a `gcloud storage ls` listing and the live snapshot index. Edge
+ * files (a corrupt one, one without
  * rankings, one without metadata, a duplicate row, a placeholder
  * "District 61" name) are jq edits of those captures.
  *
