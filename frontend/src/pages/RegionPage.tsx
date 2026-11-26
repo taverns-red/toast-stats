@@ -586,7 +586,7 @@ const RegionPage: React.FC = () => {
           <h1 className="districts-page-header__title">Region {region}</h1>
           <p className="districts-page-header__lede">
             {regionDistricts.length} district
-            {regionDistricts.length === 1 ? '' : 's'} in this region. Click a
+            {regionDistricts.length === 1 ? '' : 's'} in this region. Select a
             district to drill into its clubs.
           </p>
         </div>
