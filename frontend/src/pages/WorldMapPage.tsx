@@ -154,13 +154,15 @@ const ExplorerSkeleton: React.FC = () => (
   </div>
 )
 
+const HEADING = 'Worldwide club map'
+
 const WorldMapPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const controls = useProgramYearControls()
   const date = controls.effectiveDate
   const isPhone = useIsMobile()
   const theme = useDarkMode().isDark ? 'dark' : 'light'
-  useDocumentTitle('Worldwide Club Map')
+  useDocumentTitle(HEADING)
 
   const mode = parseWorldColorMode(searchParams.get('color'))
   const metric = parseRegionMetric(searchParams.get('sort'))
@@ -791,6 +793,7 @@ const WorldMapPage: React.FC = () => {
   return (
     <RollupPageShell
       title="Regions"
+      heading={HEADING}
       eyebrow="Worldwide · Club map"
       lede="Every Toastmasters club in the world: where they meet, which lead, and which need help. Search by name or number; the list is the full alternative to the map."
       trail={[{ label: 'Regions', to: '/regions' }, { label: 'Club map' }]}

@@ -215,4 +215,15 @@ describe('RegionTrainingPage (#2296)', () => {
       within(nav).getByRole('link', { name: 'Officer training' })
     ).toHaveAttribute('href', '/region/05/training')
   })
+
+  it('names the page in its h1 and tab title (#2756)', async () => {
+    mocked.mockResolvedValue(withTraining())
+    renderAt('/region/05/training')
+    const name = 'Region 05 officer training'
+    expect(
+      await screen.findByRole('heading', { level: 1, name })
+    ).toBeInTheDocument()
+    await screen.findByTestId('region-training-table')
+    expect(document.title).toBe(`${name} — Toast Stats`)
+  })
 })

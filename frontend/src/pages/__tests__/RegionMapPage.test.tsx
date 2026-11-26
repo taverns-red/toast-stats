@@ -288,4 +288,15 @@ describe('RegionMapPage', () => {
     await rowsOf()
     expect(fetchShard).toHaveBeenCalledWith('2026-10-16', '05')
   })
+
+  it('names the page in its h1 and tab title (#2756)', async () => {
+    fetchShard.mockResolvedValue(shard05)
+    renderAt('/region/05/map')
+    const name = 'Region 05 club map'
+    expect(
+      await screen.findByRole('heading', { level: 1, name })
+    ).toBeInTheDocument()
+    await rowsOf()
+    expect(document.title).toBe(`${name} — Toast Stats`)
+  })
 })

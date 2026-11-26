@@ -21,6 +21,8 @@ import { buildRollupReinstate } from '../utils/rollupReinstate'
    stated. Without region membership for the date, the world block still
    renders and the region tables are empty. */
 
+const HEADING = 'Worldwide club growth'
+
 const WorldGrowthPage: React.FC = () => {
   const { search } = useLocation()
   const controls = useProgramYearControls()
@@ -37,7 +39,7 @@ const WorldGrowthPage: React.FC = () => {
       }),
     [reports, rollups, search]
   )
-  useDocumentTitle('Worldwide Club Growth')
+  useDocumentTitle(HEADING)
   // #3094: the "Can reinstate" card, summed from the one dated file. The
   // funnel waits for it, so the strip renders once with its final number of
   // cards (no layout shift, the trap in #3092). The fetch never throws: a
@@ -59,6 +61,7 @@ const WorldGrowthPage: React.FC = () => {
   return (
     <RollupPageShell
       title="Regions"
+      heading={HEADING}
       eyebrow="Worldwide · Club growth"
       lede="Prospective clubs, new charters, coached clubs and suspensions for every district worldwide. Select a region to open its own funnel."
       trail={[{ label: 'Regions', to: '/regions' }, { label: 'Club growth' }]}

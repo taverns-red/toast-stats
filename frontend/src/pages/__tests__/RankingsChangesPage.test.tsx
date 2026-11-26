@@ -77,8 +77,12 @@ describe('RankingsChangesPage', () => {
     renderAt('/region/05/changes')
     expect(mockedPair).toHaveBeenLastCalledWith('2026-10-15', '2026-10-31')
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Region 05' })
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'Region 05: what changed',
+      })
     ).toBeInTheDocument()
+    expect(document.title).toBe('Region 05: what changed — Toast Stats')
     expect(screen.getByTestId('changes-headline')).toHaveTextContent(
       'Changes for Region 05 from Oct 15, 2026 to Oct 31, 2026'
     )
@@ -96,8 +100,12 @@ describe('RankingsChangesPage', () => {
   it('renders the world view at /regions/changes', () => {
     renderAt('/regions/changes')
     expect(
-      screen.getByRole('heading', { level: 1, name: 'All regions' })
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'Worldwide: what changed',
+      })
     ).toBeInTheDocument()
+    expect(document.title).toBe('Worldwide: what changed — Toast Stats')
     expect(
       screen.getByRole('table', { name: 'Changes by region' })
     ).toBeInTheDocument()

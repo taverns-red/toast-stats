@@ -40,7 +40,8 @@ const RegionGrowthPage: React.FC = () => {
     [reports, rollups, region, search]
   )
   const title = `Region ${region}`
-  useDocumentTitle(`${title} Club Growth`)
+  const heading = `${title} club growth`
+  useDocumentTitle(heading)
   // #3094: the "Can reinstate" card, summed from the one dated file. The
   // funnel waits for it, so the strip renders once with its final number of
   // cards (no layout shift, the trap in #3092). The fetch never throws: a
@@ -62,6 +63,7 @@ const RegionGrowthPage: React.FC = () => {
   return (
     <RollupPageShell
       title={title}
+      heading={heading}
       eyebrow={`Toastmasters Region ${region} · Club growth`}
       lede={`Prospective clubs, new charters, coached clubs and suspensions across the districts of Region ${region}. Select a district to open its own funnel.`}
       back={{ label: title, to: `/region/${region}` }}

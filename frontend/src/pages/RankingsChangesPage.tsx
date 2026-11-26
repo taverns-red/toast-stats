@@ -31,9 +31,10 @@ const RankingsChangesPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
   const region = n === undefined ? undefined : normaliseRegionId(n)
   const title = region ? `Region ${region}` : 'All regions'
-  // The tab says "Worldwide" like its siblings; the on-page scope stays
-  // "All regions".
-  useDocumentTitle(`${region ? title : 'Worldwide'} — What Changed`)
+  // The h1 says "Worldwide" like its siblings; the context bar's scope
+  // stays "All regions".
+  const heading = region ? `${title}: what changed` : 'Worldwide: what changed'
+  useDocumentTitle(heading)
 
   const { dates, isLoading: datesLoading } = useRecordedDates()
   const { from, to, setFrom, setTo, setPair } = useUrlDatePair(dates)
@@ -74,6 +75,7 @@ const RankingsChangesPage: React.FC = () => {
   return (
     <RollupPageShell
       title={title}
+      heading={heading}
       eyebrow={`${region ? `Toastmasters Region ${region}` : 'Toastmasters regions'} · What Changed`}
       lede={lede}
       back={{ label: title, to: base }}

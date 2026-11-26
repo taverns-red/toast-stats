@@ -42,11 +42,13 @@ const RegionMeetingsPage: React.FC = () => {
     [view, region, district]
   )
   const title = `Region ${region}`
-  useDocumentTitle(`${title} Meeting Times`)
+  const heading = `${title} meeting times`
+  useDocumentTitle(heading)
 
   return (
     <RollupPageShell
       title={title}
+      heading={heading}
       eyebrow={`Toastmasters Region ${region} · Meetings`}
       lede={`When the clubs of Region ${region} meet, by weekday and local start hour. Select a cell for its districts.`}
       back={{ label: title, to: `/region/${region}` }}

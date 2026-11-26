@@ -16,7 +16,11 @@ import { formatShare, type AttentionRow } from '../../utils/regionRollupView'
    subnav. The page supplies the body. */
 
 export interface RollupPageShellProps {
+  /** The scope ("Regions", "Region 05"): the context bar and the section
+      nav's label. */
   title: string
+  /** The h1, naming the page ("Region 05 education"). Defaults to title. */
+  heading?: string
   eyebrow: string
   lede: string
   back?: { label: string; to: string }
@@ -30,6 +34,7 @@ export interface RollupPageShellProps {
 
 export const RollupPageShell: React.FC<RollupPageShellProps> = ({
   title,
+  heading,
   eyebrow,
   lede,
   back,
@@ -70,7 +75,7 @@ export const RollupPageShell: React.FC<RollupPageShellProps> = ({
       <header className="districts-page-header">
         <div className="districts-page-header__intro">
           <p className="districts-page-header__eyebrow">{eyebrow}</p>
-          <h1 className="districts-page-header__title">{title}</h1>
+          <h1 className="districts-page-header__title">{heading ?? title}</h1>
           <p className="districts-page-header__lede">{lede}</p>
         </div>
         {c && (

@@ -29,11 +29,13 @@ const RegionSurvivalPage: React.FC = () => {
     controls.selectedProgramYear.label
   )
   const title = `Region ${region}`
-  useDocumentTitle(`${title} Club Survival`)
+  const heading = `${title} club survival`
+  useDocumentTitle(heading)
 
   return (
     <RollupPageShell
       title={title}
+      heading={heading}
       eyebrow={`Toastmasters Region ${region} · Club survival`}
       lede={`How many of the clubs chartered in Region ${region} each program year are still active 1, 3 and 5 years later.`}
       back={{ label: title, to: `/region/${region}` }}

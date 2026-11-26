@@ -18,6 +18,8 @@ import { scopeMeetingTimes } from '../utils/meetingTimesRollup'
    owns program year and date (R3). Until a date has the file the page says
    "not available yet", never zeros. */
 
+const HEADING = 'Worldwide meeting times'
+
 const WorldMeetingsPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const mode = parseMeetingMode(searchParams.get('mode'))
@@ -29,11 +31,12 @@ const WorldMeetingsPage: React.FC = () => {
     () => (view ? scopeMeetingTimes(view, { kind: 'world', region }) : null),
     [view, region]
   )
-  useDocumentTitle('Worldwide Meeting Times')
+  useDocumentTitle(HEADING)
 
   return (
     <RollupPageShell
       title="Regions"
+      heading={HEADING}
       eyebrow="Worldwide · Meetings"
       lede="When clubs meet worldwide, by weekday and local start hour. Select a cell for its regions, or a region to narrow the grid."
       trail={[{ label: 'Regions', to: '/regions' }, { label: 'Meetings' }]}

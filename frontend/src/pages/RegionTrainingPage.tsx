@@ -60,7 +60,9 @@ const parseField = (
 const RegionTrainingPage: React.FC = () => {
   const { n } = useParams<{ n: string }>()
   const region = normaliseRegionId(n)
-  useDocumentTitle(`Region ${region} Officer Training`)
+  const title = `Region ${region}`
+  const heading = `${title} officer training`
+  useDocumentTitle(heading)
   const controls = useProgramYearControls()
   const [searchParams, setSearchParams] = useSearchParams()
   const threshold = parseTrainingThreshold(searchParams.get('threshold'))
@@ -114,11 +116,11 @@ const RegionTrainingPage: React.FC = () => {
     { metric: 'dcp', label: '4+' },
     { metric: 'allSeven', label: 'All 7' },
   ]
-  const title = `Region ${region}`
 
   return (
     <RollupPageShell
       title={title}
+      heading={heading}
       eyebrow={`Toastmasters Region ${region} · Officer training`}
       lede={`Club officer training (DCP goal 9) across the districts of Region ${region}: the share of clubs with 4+ officers trained and with all seven, in each round. Select a district for its clubs.`}
       back={{ label: title, to: `/region/${region}` }}

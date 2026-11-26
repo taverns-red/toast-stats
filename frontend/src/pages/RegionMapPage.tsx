@@ -153,7 +153,8 @@ const RegionMapPage: React.FC = () => {
   const isPhone = useIsMobile()
   const theme = useDarkMode().isDark ? 'dark' : 'light'
   const title = `Region ${region}`
-  useDocumentTitle(`${title} Club Map`)
+  const heading = `${title} club map`
+  useDocumentTitle(heading)
 
   const mode = parseRegionColorMode(searchParams.get('color'))
   const metric = parseRegionMetric(searchParams.get('sort'))
@@ -711,6 +712,7 @@ const RegionMapPage: React.FC = () => {
   return (
     <RollupPageShell
       title={title}
+      heading={heading}
       eyebrow={`Toastmasters Region ${region} · Club map`}
       lede={`Every club in Region ${region}: where they meet, which lead, and which need help. Search by name or number; the list is the full alternative to the map.`}
       back={{ label: title, to: `/region/${region}` }}

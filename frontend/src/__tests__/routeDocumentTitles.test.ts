@@ -55,19 +55,26 @@ describe('every route sets a specific document title (#2640)', () => {
     }
   )
 
-  // The new titles match their Region/World siblings ("Club Growth",
-  // "Meeting Times"): Title Case suffixes, and "Worldwide", never "World".
+  // "Worldwide", never "World".
   it.each([
-    ['RegionHealthPage', '${title} Health & Compliance'],
-    ['WorldHealthPage', 'Worldwide Health & Compliance'],
-    ['RegionTrainingPage', 'Officer Training'],
     ['DivisionPrintPage', 'Print Pack'],
     ['AreaPrintPage', 'Print Pack'],
     ['AwardsPage', 'District Awards'],
     ['ClubsWorldPage', 'Clubs Worldwide'],
-    ['WorldMapPage', 'Worldwide Club Map'],
-    ['RankingsChangesPage', "'Worldwide'"],
   ])('%s title reads in Title Case / Worldwide: %s', (name, expected) => {
+    expect(sourceOf(name)).toContain(expected)
+  })
+
+  // Region and world rollup subpages use their h1, in sentence case, as the
+  // tab title (#2756). The page mounts in src/pages/__tests__ check the
+  // rendered h1 and document.title match.
+  it.each([
+    ['RegionHealthPage', '${title} health & compliance'],
+    ['WorldHealthPage', 'Worldwide health & compliance'],
+    ['RegionTrainingPage', '${title} officer training'],
+    ['WorldMapPage', 'Worldwide club map'],
+    ['RankingsChangesPage', 'Worldwide: what changed'],
+  ])('%s title is its sentence-case h1: %s', (name, expected) => {
     expect(sourceOf(name)).toContain(expected)
   })
 
