@@ -11,8 +11,9 @@ import { describe, it, expect } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { parse } from 'yaml'
-import { prodWriteReasons } from '../prodWriteGuard.js'
+import { prodWriteReasons, topLevelConjuncts } from '../prodWriteGuard.js'
 import { DATA_READER, EXPECTED } from '../gcpIdentityMap.js'
+import { buildDecisionIssueBody } from '../dataAutoRestore.js'
 
 interface Step {
   name?: string
@@ -55,6 +56,17 @@ const authSteps = steps.filter(s =>
   (s.uses ?? '').startsWith('google-github-actions/auth@')
 )
 const runs = steps.map(s => s.run ?? '').join('\n')
+
+/** The conjuncts every step after the two guards must carry (B1). */
+const GATE = [
+  "github.ref == 'refs/heads/main'",
+  "steps.ref.outcome == 'success'",
+  "steps.inputcheck.outcome == 'success'",
+]
+const unwrap = (v: unknown): string =>
+  String(v ?? '')
+    .replace(/^\s*\$\{\{([\s\S]*)\}\}\s*$/, '$1')
+    .trim()
 
 const pipeline = parse(
   fs.readFileSync(path.join(WORKFLOWS, 'data-pipeline.yml'), 'utf-8')
@@ -149,15 +161,42 @@ describe('data-restore-drill.yml: only as the read-only data reader (#3019)', ()
     expect(EXPECTED['data-restore-drill.yml::drill']).toBe(DATA_READER)
   })
 
-  it('stops on any ref but main before it authenticates', () => {
-    const authAt = steps.findIndex(s => authSteps.includes(s))
-    const guardAt = steps.findIndex(
-      s =>
-        /github\.ref\s*!=\s*'refs\/heads\/main'/.test(s.if ?? '') &&
-        /exit 1/.test(s.run ?? '')
-    )
-    expect(guardAt).toBeGreaterThanOrEqual(0)
-    expect(guardAt).toBeLessThan(authAt)
+  it('checks the ref first of all, before checkout or npm ci, on every run', () => {
+    const ref = steps[0]
+    expect(ref?.id).toBe('ref')
+    // No `if`: it must run (and succeed) on main for the gate below to open.
+    expect(ref?.if).toBeUndefined()
+    expect(ref?.env?.['REF']).toBe('${{ github.ref }}')
+    expect(ref?.run ?? '').toMatch(/"\$\{REF\}" != "refs\/heads\/main"/)
+    expect(ref?.run ?? '').toMatch(/exit 1/)
+  })
+
+  it('checks the inputs second, before checkout or npm ci', () => {
+    const check = steps[1]
+    expect(check?.id).toBe('inputcheck')
+    expect(check?.if).toBeUndefined()
+    expect(check?.run ?? '').toMatch(/exit 1/)
+  })
+
+  it('gates every later step on main and both guards succeeding, so a failed guard stops everything (B1)', () => {
+    const later = steps.slice(2)
+    expect(later.length).toBeGreaterThan(0)
+    const ungated = later
+      .filter(s => {
+        const c = topLevelConjuncts(unwrap(s.if))
+        return !GATE.every(g => c.includes(g))
+      })
+      .map(s => s.name)
+    expect(ungated).toEqual([])
+  })
+
+  it('splits the report issues into an array and checks each is a number before commenting', () => {
+    const comment = steps.find(s => /gh issue comment/.test(s.run ?? ''))
+    const run = comment?.run ?? ''
+    expect(run).not.toMatch(/for \w+ in \$\{?REPORT_ISSUES/)
+    expect(run).toMatch(/read -r -a \w+/)
+    expect(run).toMatch(/\[\[ "\$\{n\}" =~ \^\[0-9\]\+\$ \]\]/)
+    expect(run).toMatch(/gh issue comment "\$\{n\}"/)
   })
 
   it('fails before auth when the reader variable is empty', () => {
@@ -183,6 +222,33 @@ describe('data-restore-drill.yml: only against staging (#3019)', () => {
     expect(enumerate!.run).toMatch(/list-restore-candidates\.sh/)
   })
 
+  it('never sets a bucket variable to anything but the staging literal, at any level (N3)', () => {
+    const envs: Array<[string, Record<string, string> | undefined]> = [
+      ['workflow', wf.env],
+      ...jobs.map(
+        ([n, j]) =>
+          [`job ${n}`, (j as { env?: Record<string, string> }).env] as [
+            string,
+            Record<string, string> | undefined,
+          ]
+      ),
+      ...steps.map(
+        s =>
+          [`step ${s.name}`, s.env] as [
+            string,
+            Record<string, string> | undefined,
+          ]
+      ),
+    ]
+    const bad: string[] = []
+    for (const [where, env] of envs) {
+      for (const [k, v] of Object.entries(env ?? {})) {
+        if (/BUCKET/.test(k) && v !== STAGING) bad.push(`${where}: ${k}=${v}`)
+      }
+    }
+    expect(bad).toEqual([])
+  })
+
   it('reads the source run manifest and removal record from staging, never this run', () => {
     const run = byId('enumerate')!.run ?? ''
     expect(run).toContain(
@@ -205,6 +271,9 @@ describe('data-restore-drill.yml: only the plan, execute unreachable (#3019)', (
 
   it('has no write: no gcloud write verb, restore, purge or prod write anywhere', () => {
     expect(runs).not.toMatch(/storage\s+(restore|rm|cp|mv|rsync)\b/)
+    expect(runs).not.toMatch(/storage\s+objects\s+(update|compose)\b/)
+    expect(runs).not.toMatch(/storage\s+buckets\b/)
+    expect(runs).not.toMatch(/\bgsutil\b/)
     expect(runs).not.toMatch(/invalidate-cdn-cache/)
     for (const s of steps) {
       expect(prodWriteReasons(s.run ?? '', s.env ?? {}), s.name).toEqual([])
@@ -235,12 +304,47 @@ describe('data-restore-drill.yml: only the plan, execute unreachable (#3019)', (
     expect(runs).not.toMatch(/data-rollback/)
   })
 
-  it('attaches the full plan as its own artifact', () => {
+  it('attaches the full plan under the artifact name the comment body gives (N1)', () => {
     const upload = steps.find(s =>
       (s.uses ?? '').startsWith('actions/upload-artifact@')
     )
-    expect(upload?.with?.['name']).toBe('data-restore-drill-plan')
+    const name = upload?.with?.['name'] ?? '<none>'
+    // The shared CLI's body, as a real failure gets it.
+    const body = buildDecisionIssueBody({
+      mode: 'dry-run',
+      decision: {
+        action: 'dry-run',
+        execute: false,
+        fileIssue: true,
+        reason: 'r',
+      },
+      runId: '1',
+      runUrl: 'u',
+      failed: 'f',
+      stagingBucket: STAGING,
+      prodBucket: PROD,
+      promoteStarted: '',
+      windowEnd: '',
+      enumeration: {
+        kind: 'plan',
+        plan: {
+          version: 1,
+          bucket: STAGING,
+          since: '2026-11-26T10:00:00Z',
+          until: '2026-11-26T11:00:00Z',
+          entries: [],
+          refused: 0,
+        },
+      },
+    })
+    expect(body).toContain(`\`${name}\``)
     expect(upload?.with?.['path'] ?? '').toContain('plan.json')
+  })
+
+  it('says in the header that the decision is the drill fixed dry-run and prod auto-restore is unchanged (N2)', () => {
+    const comment = steps.find(s => /gh issue comment/.test(s.run ?? ''))
+    expect(comment?.run ?? '').toMatch(/fixed dry-run/)
+    expect(comment?.run ?? '').toMatch(/auto-restore setting is unchanged/)
   })
 
   it('is bounded', () => {
