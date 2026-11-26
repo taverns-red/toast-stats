@@ -574,7 +574,7 @@ the run created as `delete`). It has no execute job and writes nothing.
 
 3. The job comments on each issue: a drill header, then the same body a real
    failure files (`Bucket: toast-stats-data-staging` in the plan). The full
-   plan is the `data-restore-drill-plan` artifact. The run fails if the plan
+   plan is the drill run's `data-restore-plan-dry-run` artifact. The run fails if the plan
    was not clean; refused entries are listed in the comment.
 
 An object that a later run rewrote shows as `refuse` (newer than `until`).

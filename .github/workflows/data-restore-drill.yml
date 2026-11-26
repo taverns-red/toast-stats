@@ -53,32 +53,29 @@ jobs:
     # The same scope as data-auto-restore-decide: id-token only to mint the
     # read-only reader's token, issues to comment the plan. No environment:
     # it would change the OIDC subject the reader's binding admits.
+    # dataRestoreDrill.test.ts pins both.
     permissions:
       contents: read
       id-token: write
       issues: write
     timeout-minutes: 10
 
+    # Every step after the two guards carries their gate, because a later
+    # `!cancelled()` would otherwise run past a failed guard (the gate test in
+    # dataRestoreDrill.test.ts).
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
       - name: Refuse any ref but main
-        if: github.ref != 'refs/heads/main'
+        id: ref
+        env:
+          REF: ${{ github.ref }}
         run: |
-          echo "::error title=Restore drill::dispatch from main; the reader's binding admits no other ref"
-          exit 1
+          if [ "${REF}" != "refs/heads/main" ]; then
+            echo "::error title=Restore drill::dispatch from main; the reader's binding admits no other ref"
+            exit 1
+          fi
 
       - name: Check the drill inputs
+        id: inputcheck
         env:
           SOURCE_RUN_ID: ${{ inputs.source_run_id }}
           SINCE: ${{ inputs.since }}
@@ -92,13 +89,30 @@ jobs:
           [[ "${UNTIL}" =~ ${stamp} ]] || { echo "::error::until must be UTC with Z"; exit 1; }
           [[ "${REPORT_ISSUES}" =~ ${issues} ]] || { echo "::error::report_issues must be issue numbers"; exit 1; }
 
+      - name: Checkout code
+        if: github.ref == 'refs/heads/main' && steps.ref.outcome == 'success' && steps.inputcheck.outcome == 'success'
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        if: github.ref == 'refs/heads/main' && steps.ref.outcome == 'success' && steps.inputcheck.outcome == 'success'
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: github.ref == 'refs/heads/main' && steps.ref.outcome == 'success' && steps.inputcheck.outcome == 'success'
+        run: npm ci
+
       # An empty reader variable must fail here, before auth: the auth action
-      # given no service account would fall back to direct workload identity.
-      # Soft failures, as in the decide job, so the comment still says
-      # "enumeration failed: auth-failed".
+      # given no service account would fall back to direct workload identity
+      # (gcpIdentityMap.test.ts). Soft, as in the decide job, so the comment
+      # still says "enumeration failed: auth-failed".
       - name: Require the read-only data reader variable
         id: reader
-        if: ${{ !cancelled() }}
+        if: >-
+          !cancelled() && github.ref == 'refs/heads/main'
+          && steps.ref.outcome == 'success' && steps.inputcheck.outcome == 'success'
         continue-on-error: true
         env:
           READER_SA: ${{ vars.GCP_DATA_READER_SA }}
@@ -110,7 +124,10 @@ jobs:
 
       - name: Authenticate to GCP as the read-only data reader
         id: auth
-        if: ${{ !cancelled() && steps.reader.outcome == 'success' }}
+        if: >-
+          !cancelled() && github.ref == 'refs/heads/main'
+          && steps.ref.outcome == 'success' && steps.inputcheck.outcome == 'success'
+          && steps.reader.outcome == 'success'
         continue-on-error: true
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
@@ -118,21 +135,30 @@ jobs:
           service_account: ${{ vars.GCP_DATA_READER_SA }}
 
       - name: Set up Cloud SDK
-        if: ${{ !cancelled() && steps.auth.outcome == 'success' }}
+        if: >-
+          !cancelled() && github.ref == 'refs/heads/main'
+          && steps.ref.outcome == 'success' && steps.inputcheck.outcome == 'success'
+          && steps.auth.outcome == 'success'
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
         with:
           version: '588.0.0'
 
       - name: Log Cloud SDK version
-        if: ${{ !cancelled() && steps.auth.outcome == 'success' }}
+        if: >-
+          !cancelled() && github.ref == 'refs/heads/main'
+          && steps.ref.outcome == 'success' && steps.inputcheck.outcome == 'success'
+          && steps.auth.outcome == 'success'
         run: gcloud version
 
-      # READ-ONLY. The decide job's enumerate step with two changes: the
-      # listed bucket is staging, and the manifest and removal record are the
-      # source run's, not this run's.
+      # READ-ONLY (no write verb: dataRestoreDrill.test.ts). The decide job's
+      # enumerate step with two changes: the listed bucket is staging, and the
+      # manifest and removal record are the source run's, not this run's.
       - name: Enumerate the restore plan against staging (read-only)
         id: enumerate
-        if: ${{ !cancelled() && steps.auth.outcome == 'success' }}
+        if: >-
+          !cancelled() && github.ref == 'refs/heads/main'
+          && steps.ref.outcome == 'success' && steps.inputcheck.outcome == 'success'
+          && steps.auth.outcome == 'success'
         continue-on-error: true
         env:
           PROD_BUCKET: 'toast-stats-data-staging'
@@ -165,11 +191,16 @@ jobs:
             exit 1
           fi
 
+      # The name the shared comment body points readers to (N1 test in
+      # dataRestoreDrill.test.ts). It is per run, so it can't collide with a
+      # real failure's artifact.
       - name: Attach the full plan
-        if: ${{ !cancelled() }}
+        if: >-
+          !cancelled() && github.ref == 'refs/heads/main'
+          && steps.ref.outcome == 'success' && steps.inputcheck.outcome == 'success'
         uses: actions/upload-artifact@v7
         with:
-          name: data-restore-drill-plan
+          name: data-restore-plan-dry-run
           path: |
             ${{ runner.temp }}/data-restore-decide/plan.json
             ${{ runner.temp }}/data-restore-decide/paths.txt
@@ -177,11 +208,13 @@ jobs:
 
       # The issue body a real failure gets, from the same CLI. The mode is the
       # literal dry-run and the run mode is not daily or rebuild, so the
-      # decision can never be execute. GITHUB_RUN_ID is unset so the body
-      # names the source run (the CLI falls back to RUN_ID).
+      # decision can never be execute (dataRestoreDrill.test.ts). GITHUB_RUN_ID
+      # is unset so the body names the source run (the CLI falls back to RUN_ID).
       - name: Write the plan up the way a real failure would
         id: intent
-        if: ${{ !cancelled() }}
+        if: >-
+          !cancelled() && github.ref == 'refs/heads/main'
+          && steps.ref.outcome == 'success' && steps.inputcheck.outcome == 'success'
         run: env -u GITHUB_RUN_ID npx tsx scripts/data-auto-restore.ts intent
         env:
           DATA_AUTO_RESTORE: 'dry-run'
@@ -200,7 +233,10 @@ jobs:
           ENUM_ERROR_CLASS_FILE: ${{ runner.temp }}/data-restore-decide/error-class
 
       - name: Comment the drill plan on the report issues
-        if: ${{ !cancelled() && steps.intent.outputs.file_issue == 'true' }}
+        if: >-
+          !cancelled() && github.ref == 'refs/heads/main'
+          && steps.ref.outcome == 'success' && steps.inputcheck.outcome == 'success'
+          && steps.intent.outputs.file_issue == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -211,15 +247,23 @@ jobs:
           OUT="${RUNNER_TEMP}/data-restore-drill-comment.md"
           {
             printf '%s\n\n' '**Staging restore drill (#3019). No real failure, and nothing was written.**'
-            printf 'The plan below was listed against `gs://%s` as the read-only data reader. The break it undoes is what run %s wrote to staging. This workflow has no execute job. The "Plan it by hand" commands are the template a real failure gets, so they name the prod bucket.\n\n---\n\n' "${GCS_BUCKET}" "${SOURCE_RUN_ID}"
+            printf 'The plan below was listed against `gs://%s` as the read-only data reader. The break it undoes is what run %s wrote to staging. This workflow has no execute job. The decision shown is the fixed dry-run of the drill; the prod auto-restore setting is unchanged and was not read. The "Plan it by hand" commands are the template a real failure gets, so they name the prod bucket.\n\n---\n\n' "${GCS_BUCKET}" "${SOURCE_RUN_ID}"
             cat "${BODY_FILE}"
           } > "${OUT}"
-          for n in ${REPORT_ISSUES//,/ }; do
+          read -r -a nums < <(printf '%s\n' "${REPORT_ISSUES//,/ }")
+          [ "${#nums[@]}" -gt 0 ] || { echo "::error::no report issues"; exit 1; }
+          for n in "${nums[@]}"; do
+            [[ "${n}" =~ ^[0-9]+$ ]] || { echo "::error::report issue is not a number"; exit 1; }
+          done
+          for n in "${nums[@]}"; do
             gh issue comment "${n}" --body-file "${OUT}"
           done
 
       - name: Fail the drill when the plan was not enumerated
-        if: ${{ !cancelled() && steps.enumerate.outcome != 'success' }}
+        if: >-
+          !cancelled() && github.ref == 'refs/heads/main'
+          && steps.ref.outcome == 'success' && steps.inputcheck.outcome == 'success'
+          && steps.enumerate.outcome != 'success'
         run: |
           echo "::error title=Restore drill::the plan was not enumerated cleanly (refused entries or a failure); the comment and the enumerate step log say which"
           exit 1
