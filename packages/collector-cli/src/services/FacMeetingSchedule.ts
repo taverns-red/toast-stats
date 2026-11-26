@@ -559,7 +559,8 @@ const ARRIVE_LABEL =
 /** "Doors open 7:00 pm, ends 8:00 pm": a second time after an end word is
  *  the end, so the first time stays the start. Test: "keeps the first time
  *  as the start". */
-const ARRIVE_END = /\b(?:ends?|ending|until|till|fin|jusqu'?a)\b\s*[,:;.]?\s*$/
+const ARRIVE_END =
+  /\b(?:ends?|ending|finish(?:es)?|closes?|until|till|fin|(?:se\s+)?termine|jusqu['’]?a)\b\s*[,:;.]?\s*$/
 /** "UTC-5", "GMT + 6", "-4DT": the number after is an offset, not a time.
  *  A dash after a word and a space ("Saturday- 7-9 pm") is not a sign. */
 const OFFSET_BEFORE = /(?:utc|gmt)\s*(?:[+\-−]\s*)?$|[+\-−]$/
