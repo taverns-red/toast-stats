@@ -41,8 +41,8 @@ export const HUB_BULLET_TILES: {
 
 export const HUB_NET_TITLE = 'Net Member Change'
 export const HUB_NET_LABEL = 'Net change'
-export const HUB_NET_CAPTION = 'payments vs. program-year base'
+export const HUB_NET_CAPTION = 'payments vs. the payment base'
 export const HUB_NET_ABOUT =
-  "Membership payments minus the program-year payment base (the recognition baseline). This differs from the Trends 'Net Change', which compares member counts against the first snapshot of the year."
+  "Membership payments minus this year's payment base, the starting figure recognition is measured from. This differs from the Trends 'Net Change', which compares member counts against the first snapshot of the year."
 
 export const HUB_DASH = '—'

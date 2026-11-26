@@ -222,8 +222,8 @@ const KpiExpanded: React.FC<KpiBodyProps> = ({ kpis, ghost, planGoals }) => (
       <KpiDeltaCard
         title="Net Member Change"
         current={kpis.netMemberChange.current}
-        secondaryLabel="payments vs. program-year base"
-        tooltipContent="Membership payments minus the program-year payment base (the recognition baseline). This differs from the Trends 'Net Change', which compares member counts against the first snapshot of the year."
+        secondaryLabel="payments vs. the payment base"
+        tooltipContent="Membership payments minus this year's payment base, the starting figure recognition is measured from. This differs from the Trends 'Net Change', which compares member counts against the first snapshot of the year."
       />
     </div>
     <p

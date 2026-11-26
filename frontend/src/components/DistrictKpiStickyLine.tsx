@@ -117,7 +117,7 @@ export const DistrictKpiStickyLine: React.FC<DistrictKpiStickyLineProps> = ({
             <span className="district-kpi-stuck__label">Net</span>{' '}
             <strong>{formatSignedCompact(kpis.netMemberChange.current)}</strong>{' '}
             <span className="district-kpi-stuck__label">
-              payments vs. program-year base
+              payments vs. the payment base
             </span>
           </span>
         </div>
