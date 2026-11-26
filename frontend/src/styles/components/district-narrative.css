@@ -92,6 +92,22 @@
     }
   }
 
+  /* At 320 the three items need three rows, one more than the box holds.
+     Below 360 the "+N qualifying today" extra goes. A count that is itself
+     "qualifying today" keeps that label (it says the count is not
+     confirmed), so Paid clubs goes instead. Measured by the 320 case in
+     e2e/district-kpi-strip-mobile.smoke.ts. */
+  @media (max-width: 359px) {
+    .district-kpi-stuck__extra {
+      display: none;
+    }
+
+    .district-kpi-stuck__line:has(.district-kpi-stuck__basis)
+      .district-kpi-stuck__item--paid {
+      display: none;
+    }
+  }
+
   .district-kpi-stuck[data-stuck='false'] .district-kpi-stuck__line {
     visibility: hidden;
   }
@@ -117,7 +133,9 @@
 
   @media (max-width: 767px) {
     html:has(.district-kpi-stuck[data-stuck='true']) {
-      scroll-padding-top: calc(var(--app-top-offset, 56px) + 44px + 56px + 8px);
+      scroll-padding-top: calc(
+        var(--app-top-offset, 56px) + var(--context-bar-h) + 56px + 8px
+      );
     }
   }
 

@@ -9,7 +9,9 @@
     min-height: 100vh;
     /* Where a page's own sticky row pins: under the top bar and the 44px
        phone context bar (#2638, CHR-11). */
-    --mobile-sticky-top: calc(var(--app-top-offset, 56px) + 44px);
+    --mobile-sticky-top: calc(
+      var(--app-top-offset, 56px) + var(--context-bar-h)
+    );
     /* Where a data table's header sticks to the page (#2676, spec 5.2): under
        the 56px top bar. The phone context bar is hidden from 768, where the
        table renders, so it adds nothing here. */
