@@ -552,6 +552,34 @@ CDN purge issued → verified healthy, the four generation numbers, and
 whether the restored objects' headers (`Content-Encoding`, `Cache-Control`)
 matched step 1.
 
+### CI drill (#3019)
+
+`.github/workflows/data-restore-drill.yml` runs the decide job's read-only
+plan in CI, as the data reader, against staging. It breaks nothing: the
+"bad run" is a recent pipeline run's own writes to staging, so the plan
+undoes that run on paper (overwritten objects come out as `restore`, objects
+the run created as `delete`). It has no execute job and writes nothing.
+
+1. Pick the newest data-pipeline run that wrote staging, within the last 7
+   days (staging's soft-delete window), and before the next one starts:
+   `gh run list --workflow data-pipeline.yml --limit 3`. Take its start and
+   end times, in UTC with `Z`: `gh run view <id> --json createdAt,updatedAt`.
+2. Dispatch from main:
+
+   ```bash
+   gh workflow run data-restore-drill.yml --ref main \
+     -f source_run_id=<id> -f since=<createdAt> -f until=<updatedAt> \
+     -f report_issues='2858 2856'
+   ```
+
+3. The job comments on each issue: a drill header, then the same body a real
+   failure files (`Bucket: toast-stats-data-staging` in the plan). The full
+   plan is the `data-restore-drill-plan` artifact. The run fails if the plan
+   was not clean; refused entries are listed in the comment.
+
+An object that a later run rewrote shows as `refuse` (newer than `until`).
+That is the planner working, not a drill failure.
+
 ### Then production
 
 A prod drill reuses steps 1–8 on `toast-stats-data-ca`, the prod URL map and
