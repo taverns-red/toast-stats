@@ -147,7 +147,19 @@ const PHONE_METRICS: PriorityMetric<AreaPerformance, never>[] = [
         ? `${badge.label}. ${badge.tooltip}`
         : badge.label
       return (
-        <span className="entity-table__recognition-cell">
+        <span className="entity-table__recognition-cell gap-1">
+          {/* A title only opens on hover, so a shortened chip also gets a
+              button that opens on tap and keyboard. The #2762 test in
+              AreaPerformanceTable.priorityColumns.test.tsx checks it. It
+              comes first because Award is often the last column, and its
+              44px tap area would stick out past the table's right edge
+              (priority-columns.smoke.ts "hidden table px"). */}
+          {(short !== badge.label || badge.tooltip) && (
+            <InfoTooltip
+              label={`area ${a.areaId} recognition`}
+              text={meaning}
+            />
+          )}
           <span
             className={`priority-columns__badge border ${badge.className}`}
             title={meaning}
@@ -155,15 +167,6 @@ const PHONE_METRICS: PriorityMetric<AreaPerformance, never>[] = [
             <span aria-hidden="true">{short}</span>
             <span className="sr-only">{badge.label}</span>
           </span>
-          {/* A title only opens on hover, so a shortened chip also gets a
-              button that opens on tap and keyboard. The #2762 test in
-              AreaPerformanceTable.priorityColumns.test.tsx checks it. */}
-          {(short !== badge.label || badge.tooltip) && (
-            <InfoTooltip
-              label={`area ${a.areaId} recognition`}
-              text={meaning}
-            />
-          )}
         </span>
       )
     },
