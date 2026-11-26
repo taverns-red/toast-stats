@@ -149,6 +149,12 @@ describe('lint caps (AC5)', () => {
     expect(parseLintMaxWarnings('eslint . --ext .ts')).toBeNull()
   })
 
+  it('reads the last of repeated caps, the one ESLint obeys (sentinel)', () => {
+    expect(
+      parseLintMaxWarnings('eslint . --max-warnings 0 --max-warnings 999')
+    ).toBe(999)
+  })
+
   it.each(WORKSPACE_PKGS)('%s lint carries a --max-warnings cap', rel => {
     const lint: string = readJson(rel).scripts?.lint ?? ''
     expect(parseLintMaxWarnings(lint)).not.toBeNull()
