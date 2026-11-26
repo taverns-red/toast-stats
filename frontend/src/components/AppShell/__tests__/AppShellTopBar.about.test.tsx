@@ -85,3 +85,29 @@ describe('AppShellTopBar "About ▾" disclosure (#889)', () => {
     })
   })
 })
+
+// Phones drop the footer, so the way back to Red Taverns sits at the top of
+// the menu: two taps (menu, link) instead of three (menu, About, link).
+describe('AppShellTopBar Red Taverns menu link', () => {
+  it('lists Red Taverns in the phone menu, same tab', () => {
+    vi.mocked(useIsMobile).mockReturnValue(true)
+    renderBar()
+    const nav = screen.getByRole('navigation', { name: /primary/i })
+    const link = within(nav)
+      .getAllByRole('link', { name: 'Red Taverns' })
+      .find(a => !a.closest('details'))
+    expect(link).toBeDefined()
+    expect(link).toHaveAttribute(
+      'href',
+      'https://taverns.red?utm_source=toast-stats&utm_medium=menu'
+    )
+    expect(link).not.toHaveAttribute('target')
+  })
+
+  it('leaves it out of the desktop bar, where the footer has it', () => {
+    renderBar()
+    expect(
+      screen.queryByRole('link', { name: 'Red Taverns' })
+    ).not.toBeInTheDocument()
+  })
+})

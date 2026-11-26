@@ -41,10 +41,10 @@ const AppMeta: React.FC = () => {
           <Item>ts.taverns.red</Item>
           <Item>
             A{' '}
+            {/* Same tab, unlike the links around it: it is the way back to
+                Red Taverns. AppShell.test.tsx checks it has no target. */}
             <a
               href="https://taverns.red?utm_source=toast-stats&utm_medium=footer"
-              target="_blank"
-              rel="noopener noreferrer"
               className="app-shell-footer__link"
             >
               Red Taverns

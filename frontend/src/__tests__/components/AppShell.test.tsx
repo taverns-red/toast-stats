@@ -225,9 +225,9 @@ describe('AppShell (#354)', () => {
         'href',
         'https://taverns.red?utm_source=toast-stats&utm_medium=footer'
       )
-      // External link hygiene — matches the existing data-source / license links.
-      expect(link).toHaveAttribute('target', '_blank')
-      expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+      // Same tab, unlike the other external links: it is the way back to Red
+      // Taverns for a visitor who arrived from a shared link.
+      expect(link).not.toHaveAttribute('target')
     })
 
     it('renders the data source + license + version line', () => {
