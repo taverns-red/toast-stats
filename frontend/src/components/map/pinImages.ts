@@ -25,7 +25,7 @@ export const HALO: Record<MapTheme, string> = {
   light: '#FFFFFF',
   dark: '#161F2A',
 }
-const FONT = 'Inter, system-ui, sans-serif'
+const FONT = "'Source Sans 3', 'Source Sans 3 Fallback', system-ui, sans-serif"
 
 export interface DrawnIcon {
   width: number

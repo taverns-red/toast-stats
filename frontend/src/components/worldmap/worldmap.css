@@ -186,6 +186,7 @@
 .wm-readout__name {
   font-family: var(--serif);
   font-size: 18px;
+  font-weight: 600;
 }
 
 .wm-readout__value {
